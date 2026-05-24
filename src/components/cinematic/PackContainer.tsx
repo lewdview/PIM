@@ -1128,7 +1128,7 @@ export default function PackContainer({ meta, cards, onComplete, onBuyAnother, i
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.98 }}
             >
-              Go to Collection →
+              {meta.category === 'daily_claim' || meta.redirectPath === '/tutorial' ? 'Start PIM' : 'Go to Collection →'}
             </motion.button>
           </motion.div>
         )}

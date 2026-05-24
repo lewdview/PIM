@@ -61,9 +61,8 @@ function VaultLogo() {
         <span
           style={{
             fontFamily: '"Impact", "Arial Black", sans-serif',
-            fontSize: '22px',
+            fontSize: '15px',
             fontWeight: 900,
-            textTransform: 'uppercase',
             letterSpacing: '-0.5px',
             color: '#fff',
             textShadow: '0 0 16px rgba(255,56,0,0.5), 2px 2px 0 rgba(0,0,0,0.9)',
@@ -72,7 +71,7 @@ function VaultLogo() {
             display: 'block',
           }}
         >
-          TH3V4ULT
+          th3v4ult: Now Featuring PIM!
         </span>
         {/* Attribution - Moved OUT of the inner Link to fix hydration warning if needed, 
            but actually we just need to make it a non-anchor if it's inside a Link, 

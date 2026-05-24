@@ -105,8 +105,7 @@ export default function RC1WelcomeModal() {
             </div>
             <h1 style={{
               fontFamily: '"Impact", "Arial Black", sans-serif',
-              fontSize: '42px',
-              textTransform: 'uppercase',
+              fontSize: '28px',
               letterSpacing: '-0.02em',
               background: 'linear-gradient(135deg, #ff3800, #ff9900)',
               WebkitBackgroundClip: 'text',
@@ -114,7 +113,7 @@ export default function RC1WelcomeModal() {
               margin: 0,
               lineHeight: 0.9,
             }}>
-              TH3V4ULT
+              th3v4ult: Now Featuring PIM!
             </h1>
             <p style={{
               fontFamily: '"JetBrains Mono", monospace',

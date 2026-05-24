@@ -17,7 +17,7 @@ import { type PackCategory, type PackSize, RARITY_CONFIG, PACK_CONFIGS } from '.
 import { useLocation } from 'wouter';
 
 // ===== BRUTALIST TICKER =====
-const TICKER_TEXT = 'TH3V4ULT — 365 DAYS OF DARK AND LIGHT — GEN 0 ARCHIVE — COLLECT. SELL. EARN. — DAILY DROPS — V⚡ TOKEN ECONOMY — RARITY PULLS — MYTHIC POSSIBLE — CLAIM NOW — ';
+const TICKER_TEXT = 'TH3V4ULT: NOW FEATURING PIM! — 365 DAYS OF DARK AND LIGHT — GEN 0 ARCHIVE — COLLECT. SELL. EARN. — DAILY DROPS — V⚡ TOKEN ECONOMY — RARITY PULLS — MYTHIC POSSIBLE — CLAIM NOW — ';
 
 function BrutalistTicker() {
   return (
@@ -161,6 +161,7 @@ export default function HomePage() {
           price: 'FREE',
           cardCount: 1,
           revealType: 'cinematic',
+          redirectPath: '/tutorial',
         });
         setTimeout(() => {
           setIsClaimingAnimation(false);

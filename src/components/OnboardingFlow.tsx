@@ -188,13 +188,13 @@ export default function OnboardingFlow({ onComplete }: Props) {
           transition={{ delay: 0.5 }}
           style={{
             fontFamily: '"Impact", "Arial Black", sans-serif',
-            fontSize: '36px', fontWeight: 900,
-            textTransform: 'uppercase', letterSpacing: '-1px',
+            fontSize: '28px', fontWeight: 900,
+            letterSpacing: '-1px',
             color: '#fff', margin: '0 0 8px',
             textShadow: '0 0 20px rgba(255,56,0,0.5), 2px 2px 0 rgba(0,0,0,0.9)',
           }}
         >
-          TH3V4ULT
+          th3v4ult: Now Featuring PIM!
         </motion.h1>
 
         {/* Invite form */}
@@ -332,8 +332,7 @@ export default function OnboardingFlow({ onComplete }: Props) {
           transition={{ delay: 0.5, duration: 0.6 }}
           style={{
             fontFamily: '"Impact", "Arial Black", sans-serif',
-            fontSize: '48px', fontWeight: 900,
-            textTransform: 'uppercase',
+            fontSize: '32px', fontWeight: 900,
             letterSpacing: '-1px',
             color: '#fff',
             textShadow: '0 0 30px rgba(255,56,0,0.6), 3px 3px 0 rgba(0,0,0,0.9)',
@@ -341,7 +340,7 @@ export default function OnboardingFlow({ onComplete }: Props) {
             margin: 0,
           }}
         >
-          TH3V4ULT
+          th3v4ult: Now Featuring PIM!
         </motion.h1>
 
         {/* Subtitle */}

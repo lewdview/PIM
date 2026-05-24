@@ -17,7 +17,7 @@ import { type PackCategory, type PackSize, RARITY_CONFIG, PACK_CONFIGS } from '.
 import { loadCatalog } from '../game/api';
 
 // ===== BRUTALIST TICKER =====
-const TICKER_TEXT = 'TH3V4ULT — 365 DAYS OF RETENTION — COLLECT. SELL. EARN. — DAILY LEVEL UNLOCKS — V⚡ TOKENS — MYTHIC ROLLS — LIVE PLAY — ';
+const TICKER_TEXT = 'TH3V4ULT: NOW FEATURING PIM! — 365 DAYS OF RETENTION — COLLECT. SELL. EARN. — DAILY LEVEL UNLOCKS — V⚡ TOKENS — MYTHIC ROLLS — LIVE PLAY — ';
 
 function BrutalistTicker() {
   return (
@@ -195,7 +195,7 @@ export default function LandingPage() {
           price: 'FREE',
           cardCount: 1,
           revealType: 'cinematic',
-          redirectPath: songId ? `/play/${songId}` : '/vault/collection',
+          redirectPath: '/tutorial',
         });
         setTimeout(() => {
           setIsClaimingAnimation(false);
@@ -308,21 +308,17 @@ export default function LandingPage() {
       {/* ===== HERO ONBOARDING HEADER ===== */}
       <section className="relative z-10 pt-16 pb-6 text-center flex flex-col items-center">
         <motion.div
-          initial={{ opacity: 0, y: -20, rotate: -2 }}
-          animate={{ opacity: 1, y: 0, rotate: -3 }}
-          transition={{ duration: 0.6 }}
-          className="sticker-gun-tag sticker-slits mb-8"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
           style={{
-            background: '#ff3800',
-            color: '#fff',
-            padding: '8px 20px',
-            '--slit-color': 'rgba(255,255,255,0.15)',
+            background: '#fff', border: '3.5px solid #000',
+            color: '#000', padding: '6px 14px', marginBottom: '32px',
             boxShadow: '4px 4px 0 #000, 0 0 24px rgba(255,56,0,0.4)',
             transform: 'rotate(-3deg)'
           } as any}
         >
           <span className="text-[11px] font-black tracking-[0.2em] uppercase font-mono">
-            TH3V4ULT // NEURAL GATEWAY
+            th3v4ult: Now Featuring PIM! // NEURAL GATEWAY
           </span>
         </motion.div>
 
@@ -331,9 +327,9 @@ export default function LandingPage() {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5, delay: 0.1 }}
           className="text-[44px] sm:text-6xl md:text-8xl brutalist-xl mb-4"
-          style={{ '--neon-accent': '#ff3800' } as any}
+          style={{ '--neon-accent': '#ff3800', textTransform: 'none' } as any}
         >
-          TH3V4ULT
+          th3v4ult: Now Featuring PIM!
         </motion.h1>
 
         <motion.p

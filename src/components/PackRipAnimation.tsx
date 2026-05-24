@@ -72,10 +72,10 @@ function PackBagArt({ meta }: { meta: RevealPackMeta }) {
         <div style={{
           fontFamily: '"JetBrains Mono", monospace',
           fontSize: '8px', fontWeight: 700,
-          letterSpacing: '0.25em', textTransform: 'uppercase',
+          letterSpacing: '0.2em',
           color: 'rgba(255,255,255,0.35)',
         }}>
-          TH3V4ULT · GEN 0
+          th3v4ult: Now Featuring PIM! · GEN 0
         </div>
       </div>
 

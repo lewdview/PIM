@@ -298,7 +298,11 @@ export default function PackRevealPage() {
                 color: 'var(--color-void-black)',
               }}
             >
-              Collection <ArrowRight size={16} />
+              {revealPackMeta?.category === 'daily_claim' || revealPackMeta?.redirectPath === '/tutorial' ? (
+                <>Start PIM <ArrowRight size={16} /></>
+              ) : (
+                <>Collection <ArrowRight size={16} /></>
+              )}
             </button>
           </div>
         </motion.div>
