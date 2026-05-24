@@ -41,7 +41,7 @@ interface Props {
 }
 
 export default function OnboardingFlow({ onComplete }: Props) {
-  const [phase, setPhase] = useState<Phase>('invite');
+  const [phase, setPhase] = useState<Phase>('welcome');
   const [cards, setCards] = useState<OwnedCard[]>([]);
   const [loadError, setLoadError] = useState(false);
   const [inviteCode, setInviteCode] = useState('');

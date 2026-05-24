@@ -3,10 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Wallet, Package, Flame, Zap, AlertTriangle, BookOpen, Gift } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 
-const RC1_SEEN_KEY = 'th3v4ult_rc1_seen';
+const RC2_SEEN_KEY = 'th3v4ult_rc2_seen';
 
 /**
- * Full-screen RC1 welcome modal — shows once per device.
+ * Full-screen RC2 welcome modal — shows once per device.
  * Also doubles as the "connect wallet" CTA for unauthenticated users.
  */
 export default function RC1WelcomeModal() {
@@ -14,14 +14,14 @@ export default function RC1WelcomeModal() {
   const { user, signInWithWallet, status } = useAuthStore();
 
   useEffect(() => {
-    const seen = localStorage.getItem(RC1_SEEN_KEY);
+    const seen = localStorage.getItem(RC2_SEEN_KEY);
     if (!seen) {
       setVisible(true);
     }
   }, []);
 
   const handleDismiss = () => {
-    localStorage.setItem(RC1_SEEN_KEY, '1');
+    localStorage.setItem(RC2_SEEN_KEY, '1');
     setVisible(false);
   };
 
@@ -101,7 +101,7 @@ export default function RC1WelcomeModal() {
               color: '#ff3800',
               marginBottom: '8px',
             }}>
-              RELEASE CANDIDATE 1
+              RELEASE CANDIDATE 2
             </div>
             <h1 style={{
               fontFamily: '"Impact", "Arial Black", sans-serif',
@@ -148,7 +148,7 @@ export default function RC1WelcomeModal() {
                 textTransform: 'uppercase',
                 color: '#ffb800',
               }}>
-                RC1 TEST MODE
+                RC2 TEST MODE
               </span>
             </div>
             <p style={{
@@ -243,9 +243,8 @@ export default function RC1WelcomeModal() {
             }}>
               {[
                 { step: '1', text: 'Connect your wallet (MetaMask, Coinbase, or any EVM wallet)' },
-                { step: '2', text: 'Enter your invite code during onboarding' },
-                { step: '3', text: 'Claim your first daily drop — it\'s free' },
-                { step: '4', text: 'Rip packs, burn cards, explore the Codex' },
+                { step: '2', text: 'Claim your first daily drop — it\'s free' },
+                { step: '3', text: 'Rip packs, burn cards, explore the Codex' },
               ].map(({ step, text }) => (
                 <div key={step} style={{
                   display: 'flex',
@@ -342,7 +341,7 @@ export default function RC1WelcomeModal() {
               letterSpacing: '0.1em',
               textTransform: 'uppercase',
             }}>
-              Invite-only • RC1 test build • No real-money transactions
+              Public beta • RC2 test build • No real-money transactions
             </p>
           </div>
         </motion.div>
