@@ -2,6 +2,7 @@ import { Route, Switch, useLocation } from 'wouter';
 import { useEffect } from 'react';
 import { useAuthStore } from './store/useAuthStore';
 import { useVaultStore } from './store/useVaultStore';
+import { useGlobalPlayer } from './store/useGlobalPlayer';
 import BackgroundMusic from './components/audio/BackgroundMusic';
 
 // Component imports
@@ -44,6 +45,13 @@ export default function App() {
   useEffect(() => {
     initializeAuth();
   }, [initializeAuth]);
+
+  // Stop global preview player on gameplay routes to prevent dual-audio
+  useEffect(() => {
+    if (location.startsWith('/play/') || location === '/tutorial') {
+      useGlobalPlayer.getState().stop();
+    }
+  }, [location]);
 
   // If loading authentication state, show a clean loading screen
   if (authStatus === 'idle' || authStatus === 'loading') {
