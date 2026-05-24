@@ -2,6 +2,7 @@ import { Route, Switch, useLocation } from 'wouter';
 import { useEffect } from 'react';
 import { useAuthStore } from './store/useAuthStore';
 import { useVaultStore } from './store/useVaultStore';
+import BackgroundMusic from './components/audio/BackgroundMusic';
 
 // Component imports
 import Navbar from './components/Navbar';
@@ -70,6 +71,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#050402] text-white flex flex-col select-none">
+      <BackgroundMusic />
       {!hideNavbar && <Navbar />}
 
       <main className="flex-1 flex flex-col">

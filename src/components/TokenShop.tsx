@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Zap, Tag, ShoppingBag, ChevronDown, ChevronUp, TrendingUp } from 'lucide-react';
 import { useVaultStore } from '../store/useVaultStore';
 import { sellCard, buyTokenPack, getTokenPackCost } from '../services/vaultService';
+import { audioManager } from '../game/audio';
 import { RARITY_CONFIG } from '../utils/rarity';
 import { canProduceEcho } from '../utils/echoSystem';
 
@@ -52,6 +53,7 @@ export default function TokenShop({ onPackOpened }: TokenShopProps) {
     setBuyFlash(false);
     if (result === 'insufficient' || result.length === 0) return;
     addToCollection(result);
+    audioManager.playSfx('open_chest', 0.9);
     startReveal(result, {
       category: 'vault_token',
       size: 'single',

@@ -11,6 +11,7 @@ import PackRipAnimation from '../components/PackRipAnimation';
 import PackContainer from '../components/cinematic/PackContainer';
 
 import { purchasePack, sellCard } from '../services/vaultService';
+import { audioManager } from '../game/audio';
 
 export default function PackRevealPage() {
   const [, setLocation] = useLocation();
@@ -69,6 +70,7 @@ export default function PackRevealPage() {
     setIsRepurchasing(true);
     const cards = await purchasePack(category as any, size as any);
     if (cards.length > 0) {
+      audioManager.playSfx('open_chest', 0.9);
       addToCollection(cards);
       setRevealedIndex(0);
       setShowSummary(false);

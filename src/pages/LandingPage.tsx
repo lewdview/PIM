@@ -11,6 +11,7 @@ import {
   getCardByDay, hasClaimedToday, claimDailyCard,
   purchasePack, getCompletedMonths, getMonthName, getClaimedCountForDay
 } from '../services/vaultService';
+import { audioManager } from '../game/audio';
 import { getCurrentDay, getTimeUntilNextDay, formatDate } from '../utils/dayCalc';
 import { type PackCategory, type PackSize, RARITY_CONFIG, PACK_CONFIGS } from '../utils/rarity';
 import { loadCatalog } from '../game/api';
@@ -184,6 +185,7 @@ export default function LandingPage() {
         setIsClaimingAnimation(true);
         addToCollection([owned]);
         setHasClaimed(true);
+        audioManager.playSfx('open_chest', 0.9);
         startReveal([owned], {
           category: 'daily_claim',
           label: 'Daily Drop',
@@ -235,6 +237,7 @@ export default function LandingPage() {
           const cards = await purchasePack(category, size, undefined, txHash);
           if (cards.length > 0) {
             addToCollection(cards);
+            audioManager.playSfx('open_chest', 0.9);
             startReveal(cards, cfg && tier ? {
               category, size, label: cfg.label, icon: cfg.icon,
               accent: cfg.accent, gradient: cfg.gradient,
@@ -259,6 +262,7 @@ export default function LandingPage() {
       useLoadingToast.getState().hide();
       if (cards.length > 0) {
         addToCollection(cards);
+        audioManager.playSfx('open_chest', 0.9);
         startReveal(cards, cfg && tier ? {
           category,
           size,

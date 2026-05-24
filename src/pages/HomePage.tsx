@@ -11,6 +11,7 @@ import {
   getCardByDay, hasClaimedToday, claimDailyCard,
   purchasePack, getCompletedMonths, getMonthName,
 } from '../services/vaultService';
+import { audioManager } from '../game/audio';
 import { getCurrentDay } from '../utils/dayCalc';
 import { type PackCategory, type PackSize, RARITY_CONFIG, PACK_CONFIGS } from '../utils/rarity';
 import { useLocation } from 'wouter';
@@ -150,6 +151,7 @@ export default function HomePage() {
         setIsClaimingAnimation(true);
         addToCollection([owned]);
         setHasClaimed(true);
+        audioManager.playSfx('open_chest', 0.9);
         startReveal([owned], {
           category: 'daily_claim',
           label: 'Daily Drop',
@@ -219,6 +221,7 @@ export default function HomePage() {
       if (cards.length > 0) {
         addToCollection(cards);
         const revealType = 'cinematic' as const;
+        audioManager.playSfx('open_chest', 0.9);
         startReveal(cards, cfg && tier ? {
           category,
           size,

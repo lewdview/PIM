@@ -10,6 +10,7 @@ import {
   targetedPull, upgradeRarity, fuseDuplicates,
   type OwnedCard,
 } from '../services/vaultService';
+import { audioManager } from '../game/audio';
 import {
   getAdminConfig, buildModifierContext, isModifierActive,
   type ConditionalModifier, type ModifierContext,
@@ -602,6 +603,7 @@ export default function ForgePage() {
       }
       addToCollection(cards);
       await loadVaultData();
+      audioManager.playSfx('open_chest', 0.9);
       startReveal(cards, {
         category: 'vault_token',
         size: 'single',
@@ -633,6 +635,7 @@ export default function ForgePage() {
     useLoadingToast.getState().hide();
     if (card) {
       addToCollection([card]);
+      audioManager.playSfx('open_chest', 0.9);
       startReveal([card], {
         category: 'targeted', label: `Targeted Pull: Day ${day}`, icon: '🎯',
         accent: '#ff9900', gradient: 'linear-gradient(145deg, #1a1000, #0a0800)',
