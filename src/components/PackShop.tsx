@@ -25,7 +25,7 @@ type RipPhase = 'idle' | 'spotlight' | 'tearing' | 'cards_fly' | 'done';
 function PackEmblem({ accent, size = 80 }: { accent: string; size?: number }) {
   return (
     <div className="relative flex justify-center items-center my-2 rounded-full mx-auto" style={{ width: size, height: size, boxShadow: `0 0 30px ${accent}20` }}>
-      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" style={{ animation: 'spin-slow 16s linear infinite' }}>
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" style={{ animation: 'spin-slow 16s linear infinite', transformOrigin: 'center', willChange: 'transform' }}>
         <path id="circlePath" d="M 50, 50 m -35, 0 a 35,35 0 1,1 70,0 a 35,35 0 1,1 -70,0" fill="transparent" />
         <text fill={accent} fontWeight="bold" style={{ textTransform: 'uppercase', fontSize: '8.5px', textShadow: `0 0 10px ${accent}60`, letterSpacing: '1px' }}>
           <textPath href="#circlePath" startOffset="0%">

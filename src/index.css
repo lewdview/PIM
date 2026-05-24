@@ -373,6 +373,11 @@ body {
 }
 
 /* ===== KEYFRAMES ===== */
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 @keyframes rare-pulse {
   0%, 100% { box-shadow: 0 0 12px rgba(77, 143, 255, 0.2); }
   50%       { box-shadow: 0 0 22px rgba(77, 143, 255, 0.38); }
