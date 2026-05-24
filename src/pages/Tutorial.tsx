@@ -455,7 +455,13 @@ export default function Tutorial() {
               onClick={() => {
                 localStorage.setItem("pim_tutorial_completed", "true");
                 audioManager.playSfx("tap_nav", 0.15);
-                setLocation("/arcade");
+                const params = new URLSearchParams(window.location.search);
+                const songId = params.get("songId");
+                if (songId) {
+                  setLocation(`/play/${songId}`);
+                } else {
+                  setLocation("/arcade");
+                }
               }}
               className="font-mono text-xs font-bold tracking-[0.3em] px-8 py-3.5 bg-[#39FF14] text-black hover:bg-[#39FF14]/90 hover:shadow-[0_0_20px_rgba(57,255,20,0.4)] transition-all duration-150 border border-transparent"
               onMouseEnter={() => audioManager.playSfx("tap_nav", 0.08)}
@@ -575,7 +581,13 @@ export default function Tutorial() {
           <button
             onClick={() => {
               localStorage.setItem("pim_tutorial_completed", "true");
-              setLocation("/arcade");
+              const params = new URLSearchParams(window.location.search);
+              const songId = params.get("songId");
+              if (songId) {
+                setLocation(`/play/${songId}`);
+              } else {
+                setLocation("/arcade");
+              }
             }}
             className="font-mono text-xs font-bold tracking-[0.3em] px-8 py-3"
             style={{ background: "#39FF14", color: "#080808", border: "none", cursor: "pointer" }}

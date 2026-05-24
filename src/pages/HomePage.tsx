@@ -161,7 +161,7 @@ export default function HomePage() {
           price: 'FREE',
           cardCount: 1,
           revealType: 'cinematic',
-          redirectPath: '/tutorial',
+          redirectPath: `/tutorial?songId=${owned.cardId}`,
         });
         setTimeout(() => {
           setIsClaimingAnimation(false);
