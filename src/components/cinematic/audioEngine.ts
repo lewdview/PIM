@@ -9,7 +9,7 @@
 let ctx: AudioContext | null = null;
 
 function getCtx(): AudioContext {
-  if (!ctx) ctx = new AudioContext();
+  if (!ctx) ctx = new AudioContext({ latencyHint: 'interactive' });
   if (ctx.state === 'suspended') ctx.resume();
   return ctx;
 }

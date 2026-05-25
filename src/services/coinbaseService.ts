@@ -9,7 +9,7 @@ const sdk = new CoinbaseWalletSDK({
 const provider = sdk.makeWeb3Provider();
 
 // The address that receives the crypto payments on Base
-export const VAULT_COLLECTOR_ADDRESS = import.meta.env.VITE_VAULT_COLLECTOR_ADDRESS || '0x4386926955a80509a20A05481745424D0E763f03';
+export const VAULT_COLLECTOR_ADDRESS = import.meta.env.VITE_VAULT_COLLECTOR_ADDRESS || 'th3scr1b3.eth';
 
 /**
  * Handle crypto payment via Coinbase Wallet SDK on Base Mainnet.
