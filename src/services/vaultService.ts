@@ -251,7 +251,7 @@ export async function fetchAllCards(): Promise<VaultCard[]> {
     else if (rarityRoll < 0.35 + traitScore * 0.05) rarity = 'uncommon';
 
     // Use actual URLs from the data — they already point to Supabase
-    const coverUrl = r.coverArt || '';
+    const coverUrl = (r.coverArt || '').replace(/\.png$/i, '.jpg');
     const audioUrl = r.storedAudioUrl || '';
 
     const description = dayOverride?.info || r.description || '';
@@ -315,7 +315,7 @@ export async function fetchAllCards(): Promise<VaultCard[]> {
       tempo,
       genre,
       tags,
-      coverUrl: r.coverArt || '',
+      coverUrl: (r.coverArt || '').replace(/\.png$/i, '.jpg'),
       audioUrl: r.storedAudioUrl || '',
       description: dayOverride?.info || r.description || '',
       claimedCount: 0,
