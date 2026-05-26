@@ -258,7 +258,7 @@ export default function Chapter() {
 
   useEffect(() => {
     loadCatalog().then(catalog => {
-      setSongs(catalog.filter(s => new Date(s.date).getMonth() + 1 === monthNum).sort((a, b) => a.day - b.day));
+      setSongs(catalog.filter(s => parseInt(s.date.split('-')[1], 10) === monthNum).sort((a, b) => a.day - b.day));
       setLoading(false);
     });
   }, [monthNum]);

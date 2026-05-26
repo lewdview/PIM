@@ -317,7 +317,7 @@ export default function Campaign() {
     setTotals({ score: getTotalScore(), platinums: getTotalPlatinums(), cleared: getTotalCleared() });
     loadCatalog().then(catalog => {
       const data = CHAPTERS.map(meta => {
-        const songs      = catalog.filter(s => new Date(s.date).getMonth() + 1 === meta.month).sort((a, b) => a.day - b.day);
+        const songs      = catalog.filter(s => parseInt(s.date.split('-')[1], 10) === meta.month).sort((a, b) => a.day - b.day);
         const regularIds = songs.slice(0, -5).map(s => s.id);
         const bonusCount = Math.min(5, Math.max(0, songs.length - regularIds.length));
         const platinums  = getChapterPlatinums(regularIds);
