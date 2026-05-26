@@ -148,7 +148,7 @@ const STEPS: Step[] = [
     title: "YOU'RE READY",
     lines: [
       "Campaign unlocks songs day by day.",
-      "Free Play lets you browse all 365.",
+      "Award Play lets you browse all 365.",
       "",
       "Good luck.",
     ],

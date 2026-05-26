@@ -343,7 +343,7 @@ export default function SongDetail() {
             </div>
           )}
 
-          {/* Difficulty override — free play only */}
+          {/* Difficulty override — award play only */}
           {isFromFreePlay && unlocked && (
             <div className="border border-[#39FF14]/25 bg-black/40" style={{ padding: '14px 16px' }}>
               <div className="flex items-center justify-between mb-3">
@@ -515,7 +515,7 @@ export default function SongDetail() {
         style={{ background: 'rgba(8,8,12,0.7)', backdropFilter: 'blur(16px)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <button onClick={handleBack}
           className="neon-btn-outline text-xs px-3 py-1.5 tracking-widest">
-          ← {isFromFreePlay ? 'FREE PLAY' : from.startsWith('chapter') ? 'CHAPTER' : 'CAMPAIGN'}
+          ← {isFromFreePlay ? 'AWARD PLAY' : from.startsWith('chapter') ? 'CHAPTER' : 'CAMPAIGN'}
         </button>
         <div className="font-mono font-bold text-xs tracking-[0.4em]" style={{ color: 'rgba(255,255,255,0.2)' }}>
           DAY {String(song.day).padStart(3, '0')}
@@ -640,7 +640,7 @@ export default function SongDetail() {
           </div>
         )}
 
-        {/* Difficulty override — free play only */}
+        {/* Difficulty override — award play only */}
         {isFromFreePlay && unlocked && (
           <div className="glass-panel" style={{ padding: '14px 16px', borderRadius: 10 }}>
             <div className="flex items-center justify-between mb-3">

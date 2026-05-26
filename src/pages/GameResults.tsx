@@ -653,7 +653,7 @@ export default function Results() {
               }}
                 className="w-full py-3.5 font-mono font-bold text-xs tracking-[0.2em] transition-all bg-transparent border border-zinc-800 text-zinc-500 hover:text-zinc-300 hover:border-zinc-700"
                 onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}>
-                ← {fromFreePlayFail ? 'BACK TO SYSTEM' : 'RETURN TO CHAPTER'}
+                ← {fromFreePlayFail ? 'BACK TO AWARD PLAY' : 'BACK TO LEVEL PATH'}
               </button>
             </div>
           </div>
@@ -765,7 +765,7 @@ export default function Results() {
               style={{ border: '2px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.35)', background: 'transparent', minHeight: 48 }}
               onMouseEnter={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.6)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)'; }}
               onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.35)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}>
-              ← {fromFreePlayFail ? 'BACK TO FREE PLAY' : 'BACK TO CHAPTER'}
+              ← {fromFreePlayFail ? 'BACK TO AWARD PLAY' : 'BACK TO LEVEL PATH'}
             </button>
           </div>
         </div>
@@ -778,6 +778,14 @@ export default function Results() {
   const acc = Math.round(accuracy);
   const fromFreePlay = gameOrigin === 'songs';
   const backRoute = fromFreePlay ? '/songs' : `/chapter/${chapterMonth}`;
+
+  // Pack reward eligibility (Award Play + default difficulty + no modifier cards)
+  const activeMod = sessionStorage.getItem(`active_modifier_type_${songId}`);
+  const hasModifier = activeMod && activeMod !== 'none';
+  const diffOverride = sessionStorage.getItem(`diff_override_${songId}`);
+  const diffVal = diffOverride ? parseInt(diffOverride, 10) : NaN;
+  const hasDiffModified = !isNaN(diffVal) && song && diffVal !== song.difficultyLevel;
+  const isEligibleForReward = fromFreePlay && !hasModifier && !hasDiffModified;
 
   // ── CLEARED path (Avant-Garde) ───────────────────────────────
   if (isAvant) {
@@ -824,7 +832,7 @@ export default function Results() {
           {/* Top telemetry bar */}
           <div className="w-full flex items-center justify-between mb-8 results-fade-in">
             <span className="font-mono text-[10px] text-[#39FF14] tracking-[0.3em] font-bold">
-              [ TRANSMISSION_DECODED ]
+              {fromFreePlay ? '[ TRANSMISSION_DECODED ]' : '[ CAMPAIGN_MISSION_ACQUIRED ]'}
             </span>
             <div className="flex-1 h-px bg-[#39FF14]/20 mx-4" />
             {isNew && (phase === 'stats' || phase === 'actions') && (
@@ -861,7 +869,9 @@ export default function Results() {
 
           {/* Score Counter Dashboard */}
           <div className="text-center mb-5 results-fade-in w-full" style={{ animationDelay: '0.3s' }}>
-            <div className="font-mono text-[9px] text-[#39FF14]/50 tracking-[0.35em] mb-1">SIGNAL_OUTPUT_VAL</div>
+            <div className="font-mono text-[9px] text-[#39FF14]/50 tracking-[0.35em] mb-1">
+              {fromFreePlay ? 'SIGNAL_OUTPUT_VAL' : 'CAMPAIGN_DISPATCH_VAL'}
+            </div>
             <div className="font-mono font-bold tabular-nums text-[#39FF14]" data-testid="text-final-score"
               style={{ fontSize: 'clamp(38px, 10vw, 50px)', lineHeight: 1.1, textShadow: '0 0 15px rgba(57,255,20,0.2)' }}>
               {scoreVal.toLocaleString()}
@@ -949,44 +959,52 @@ export default function Results() {
             <div className="w-full stats-slide-up flex flex-col gap-2.5" style={{ animationDelay: '0.15s' }}>
               {result.medal !== 'NONE' && (
                 <div className="mb-2">
-                  {claimStatus === 'ready' && (
-                    <button
-                      onClick={handleClaimReward}
-                      className="w-full py-4 font-mono font-bold text-sm tracking-[0.3em] transition-all bg-gradient-to-r from-[#ffd700] to-[#ffb800] text-black hover:shadow-[0_0_25px_rgba(255,215,0,0.45)] hover:scale-[1.01] active:scale-[0.99] animate-pulse"
-                      onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}
-                    >
-                      🎁 CLAIM {PACK_CONFIGS[currentTier]?.label || currentTier.toUpperCase()} 🎁
-                    </button>
-                  )}
-                  {claimStatus === 'claiming' && (
-                    <button
-                      disabled
-                      className="w-full py-4 font-mono font-bold text-sm tracking-[0.3em] bg-zinc-800 text-zinc-500 cursor-not-allowed flex items-center justify-center gap-2"
-                    >
-                      <div className="w-4 h-4 border-2 border-zinc-500 border-t-transparent rounded-full animate-spin" />
-                      AUTHENTICATING REWARD...
-                    </button>
-                  )}
-                  {claimStatus === 'claimed' && (
-                    <button
-                      disabled
-                      className="w-full py-4 font-mono font-bold text-sm tracking-[0.3em] bg-zinc-900 border border-zinc-800 text-zinc-600 cursor-not-allowed"
-                    >
-                      ✓ REWARD CLAIMED
-                    </button>
-                  )}
-                  {claimStatus === 'failed' && (
-                    <button
-                      onClick={handleClaimReward}
-                      className="w-full py-4 font-mono font-bold text-sm tracking-[0.3em] bg-red-950 border border-red-500 text-red-500 hover:bg-red-900/20"
-                      onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}
-                    >
-                      ⚠️ CLAIM FAILED - RETRY?
-                    </button>
-                  )}
+                  {isEligibleForReward ? (
+                    <>
+                      {claimStatus === 'ready' && (
+                        <button
+                          onClick={handleClaimReward}
+                          className="w-full py-4 font-mono font-bold text-sm tracking-[0.3em] transition-all bg-gradient-to-r from-[#ffd700] to-[#ffb800] text-black hover:shadow-[0_0_25px_rgba(255,215,0,0.45)] hover:scale-[1.01] active:scale-[0.99] animate-pulse"
+                          onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}
+                        >
+                          🎁 CLAIM {PACK_CONFIGS[currentTier]?.label || currentTier.toUpperCase()} 🎁
+                        </button>
+                      )}
+                      {claimStatus === 'claiming' && (
+                        <button
+                          disabled
+                          className="w-full py-4 font-mono font-bold text-sm tracking-[0.3em] bg-zinc-800 text-zinc-500 cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                          <div className="w-4 h-4 border-2 border-zinc-500 border-t-transparent rounded-full animate-spin" />
+                          AUTHENTICATING REWARD...
+                        </button>
+                      )}
+                      {claimStatus === 'claimed' && (
+                        <button
+                          disabled
+                          className="w-full py-4 font-mono font-bold text-sm tracking-[0.3em] bg-zinc-900 border border-zinc-800 text-zinc-600 cursor-not-allowed"
+                        >
+                          ✓ REWARD CLAIMED
+                        </button>
+                      )}
+                      {claimStatus === 'failed' && (
+                        <button
+                          onClick={handleClaimReward}
+                          className="w-full py-4 font-mono font-bold text-sm tracking-[0.3em] bg-red-950 border border-red-500 text-red-500 hover:bg-red-900/20"
+                          onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}
+                        >
+                          ⚠️ CLAIM FAILED - RETRY?
+                        </button>
+                      )}
+                    </>
+                  ) : fromFreePlay ? (
+                    <div className="border border-yellow-500/30 bg-yellow-500/5 p-3 text-center rounded text-[10px] font-mono text-yellow-500 uppercase tracking-wider mb-2">
+                      ⚠️ AWARDS DISABLED // MODIFIER ACTIVE OR DIFF OVERRIDE
+                    </div>
+                  ) : null}
                 </div>
               )}
-              {nextSong ? (
+              {fromFreePlay && nextSong ? (
                 <div className="mb-2">
                   <div className="font-mono text-[9px] mb-1 px-1 text-zinc-500 tracking-[0.25em]">
                     QUEUE_NEXT // DAY_{nextSong.day}
@@ -1007,7 +1025,7 @@ export default function Results() {
                 }}
                   className="w-full py-4 mb-1 font-mono font-bold text-sm tracking-[0.3em] transition-all bg-zinc-950 border border-[#39FF14] text-[#39FF14] hover:bg-[#39FF14]/10 hover:shadow-[0_0_15px_rgba(57,255,20,0.2)]"
                   onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}>
-                  ← {fromFreePlay ? '[ RETURN TO SYSTEM ]' : '[ RETURN TO CHAPTER ]'}
+                  ← {fromFreePlay ? '[ RETURN TO AWARD PLAY ]' : '[ CONTINUE TO LEVEL PATH ]'}
                 </button>
               )}
               <div className="flex gap-2">
@@ -1026,7 +1044,7 @@ export default function Results() {
                   }}
                   className="flex-1 py-3 font-mono font-bold text-xs tracking-[0.2em] transition-all bg-transparent border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-600"
                   onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}>
-                  {fromFreePlay ? '⌂ SYSTEM_HOME' : '◈ CAMPAIGN_INDEX'}
+                  {fromFreePlay ? '⌂ AWARD PLAY' : '◈ CAMPAIGN_INDEX'}
                 </button>
               </div>
             </div>
@@ -1058,7 +1076,7 @@ export default function Results() {
         <div className="w-full flex items-center gap-0 mb-6 results-fade-in">
           <div className="font-mono font-bold text-xs px-3 py-1.5 tracking-[0.4em]"
             style={{ color: '#080808', background: '#F2F0E8' }}>
-            TRANSMISSION COMPLETE
+            {fromFreePlay ? 'TRANSMISSION COMPLETE' : 'CAMPAIGN MISSION COMPLETED'}
           </div>
           <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.1)' }} />
           {isNew && (phase === 'stats' || phase === 'actions') && (
@@ -1168,69 +1186,77 @@ export default function Results() {
         {/* ── Action Buttons ── */}
         {phase === 'actions' && (
           <div className="w-full stats-slide-up" style={{ animationDelay: '0.15s' }}>
-            {result.medal !== 'NONE' && (
+            {result.medal !== 'NONE' && fromFreePlay && (
               <div className="mb-3">
-                {claimStatus === 'ready' && (
-                  <button
-                    onClick={handleClaimReward}
-                    className="w-full py-4 font-mono font-bold text-sm tracking-[0.35em] transition-all bg-gradient-to-r from-[#ffd700] to-[#ffb800] text-black hover:scale-[1.01] active:scale-[0.99] animate-pulse"
-                    style={{ border: '3px solid #F2F0E8', boxShadow: `6px 6px 0 ${mc}`, minHeight: 48 }}
-                    onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}
-                  >
-                    🎁 CLAIM {PACK_CONFIGS[currentTier]?.label || currentTier.toUpperCase()} 🎁
-                  </button>
-                )}
-                {claimStatus === 'claiming' && (
-                  <button
-                    disabled
-                    className="w-full py-4 font-mono font-bold text-sm tracking-[0.35em] bg-zinc-800 text-zinc-500 cursor-not-allowed flex items-center justify-center gap-2"
-                    style={{ border: '3px solid rgba(255,255,255,0.1)', minHeight: 48 }}
-                  >
-                    <div className="w-4 h-4 border-2 border-zinc-500 border-t-transparent rounded-full animate-spin" />
-                    AUTHENTICATING REWARD...
-                  </button>
-                )}
-                {claimStatus === 'claimed' && (
-                  <button
-                    disabled
-                    className="w-full py-4 font-mono font-bold text-sm tracking-[0.35em] bg-zinc-900 border border-zinc-800 text-zinc-600 cursor-not-allowed"
-                    style={{ border: '3px solid rgba(255,255,255,0.05)', minHeight: 48 }}
-                  >
-                    ✓ REWARD CLAIMED
-                  </button>
-                )}
-                {claimStatus === 'failed' && (
-                  <button
-                    onClick={handleClaimReward}
-                    className="w-full py-4 font-mono font-bold text-sm tracking-[0.35em] bg-red-950 border border-red-500 text-red-500 hover:bg-red-900/20"
-                    style={{ border: '3px solid #ef4444', minHeight: 48 }}
-                    onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}
-                  >
-                    ⚠️ CLAIM FAILED - RETRY?
-                  </button>
+                {isEligibleForReward ? (
+                  <>
+                    {claimStatus === 'ready' && (
+                      <button
+                        onClick={handleClaimReward}
+                        className="w-full py-4 font-mono font-bold text-sm tracking-[0.35em] transition-all bg-gradient-to-r from-[#ffd700] to-[#ffb800] text-black hover:scale-[1.01] active:scale-[0.99] animate-pulse"
+                        style={{ border: '3px solid #F2F0E8', boxShadow: `6px 6px 0 ${mc}`, minHeight: 48 }}
+                        onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}
+                      >
+                        🎁 CLAIM {PACK_CONFIGS[currentTier]?.label || currentTier.toUpperCase()} 🎁
+                      </button>
+                    )}
+                    {claimStatus === 'claiming' && (
+                      <button
+                        disabled
+                        className="w-full py-4 font-mono font-bold text-sm tracking-[0.35em] bg-zinc-800 text-zinc-500 cursor-not-allowed flex items-center justify-center gap-2"
+                        style={{ border: '3px solid rgba(255,255,255,0.1)', minHeight: 48 }}
+                      >
+                        <div className="w-4 h-4 border-2 border-zinc-500 border-t-transparent rounded-full animate-spin" />
+                        AUTHENTICATING REWARD...
+                      </button>
+                    )}
+                    {claimStatus === 'claimed' && (
+                      <button
+                        disabled
+                        className="w-full py-4 font-mono font-bold text-sm tracking-[0.35em] bg-zinc-900 border border-zinc-800 text-zinc-600 cursor-not-allowed"
+                        style={{ border: '3px solid rgba(255,255,255,0.05)', minHeight: 48 }}
+                      >
+                        ✓ REWARD CLAIMED
+                      </button>
+                    )}
+                    {claimStatus === 'failed' && (
+                      <button
+                        onClick={handleClaimReward}
+                        className="w-full py-4 font-mono font-bold text-sm tracking-[0.35em] bg-red-950 border border-red-500 text-red-500 hover:bg-red-900/20"
+                        style={{ border: '3px solid #ef4444', minHeight: 48 }}
+                        onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}
+                      >
+                        ⚠️ CLAIM FAILED - RETRY?
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <div className="glass-panel border border-yellow-500/30 bg-yellow-500/10 p-3.5 text-center text-xs font-mono text-yellow-500 uppercase rounded-xl mb-3">
+                    ⚠️ AWARDS DISABLED // MODIFIER ACTIVE OR DIFF OVERRIDE
+                  </div>
                 )}
               </div>
             )}
-            {nextSong ? (
+            {fromFreePlay && nextSong ? (
               <div className="mb-2">
-                <div className="font-mono text-xs mb-1.5 px-1" style={{ color: 'rgba(255,255,255,0.2)', letterSpacing: '0.3em' }}>
-                  NEXT — DAY {nextSong.day}
-                </div>
-                <button onClick={() => setLocation(`/play/${nextSong.id}`)}
-                  className="w-full py-4 font-mono font-bold text-sm tracking-[0.35em] transition-all duration-75"
-                  style={{ border: '3px solid #F2F0E8', color: '#080808', background: '#F2F0E8', boxShadow: `6px 6px 0 ${mc}`, minHeight: 48 }}
-                  onMouseEnter={e => { const el = e.currentTarget; el.style.boxShadow = `3px 3px 0 ${mc}`; el.style.transform = 'translate(3px,3px)'; }}
-                  onMouseLeave={e => { const el = e.currentTarget; el.style.boxShadow = `6px 6px 0 ${mc}`; el.style.transform = ''; }}>
-                  ▶ NEXT — {nextSong.title.length > 20 ? nextSong.title.slice(0, 20) + '…' : nextSong.title}
+                <button onClick={() => {
+                  audioManager.playSfx('tap_nav', 0.15);
+                  setLocation(`/play/${nextSong.id}`);
+                }}
+                  className="neon-btn w-full py-4 mb-1 font-mono font-bold text-sm tracking-[0.35em]"
+                  onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}>
+                  ▶ DEPLOY: {nextSong.title.length > 20 ? nextSong.title.slice(0, 20) + '…' : nextSong.title}
                 </button>
               </div>
             ) : (
-              <button onClick={() => setLocation(backRoute)}
-                className="w-full py-4 mb-2 font-mono font-bold text-sm tracking-[0.35em] transition-all duration-75"
-                style={{ border: '3px solid #F2F0E8', color: '#080808', background: '#F2F0E8', boxShadow: '6px 6px 0 rgba(255,255,255,0.15)', minHeight: 48 }}
-                onMouseEnter={e => { const el = e.currentTarget; el.style.boxShadow = '3px 3px 0 rgba(255,255,255,0.15)'; el.style.transform = 'translate(3px,3px)'; }}
-                onMouseLeave={e => { const el = e.currentTarget; el.style.boxShadow = '6px 6px 0 rgba(255,255,255,0.15)'; el.style.transform = ''; }}>
-                ← {fromFreePlay ? 'BACK TO FREE PLAY' : 'BACK TO CHAPTER'}
+              <button onClick={() => {
+                audioManager.playSfx('tap_nav', 0.15);
+                setLocation(backRoute);
+              }}
+                className="neon-btn w-full py-4 mb-1 font-mono font-bold text-sm tracking-[0.35em]"
+                style={{ background: !fromFreePlay ? `linear-gradient(90deg, ${mc}80, ${mc})` : '' }}
+                onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}>
+                ← {fromFreePlay ? 'BACK TO AWARD PLAY' : 'CONTINUE TO LEVEL PATH'}
               </button>
             )}
             <div className="flex gap-2">
@@ -1247,7 +1273,7 @@ export default function Results() {
                 style={{ border: '2px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.5)', background: 'transparent', minHeight: 48 }}
                 onMouseEnter={e => { e.currentTarget.style.color = '#39FF14'; e.currentTarget.style.borderColor = '#39FF14'; }}
                 onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; }}>
-                {fromFreePlay ? '⌂ HOME' : '◈ CAMPAIGN'}
+                {fromFreePlay ? '⌂ AWARD PLAY' : '◈ CAMPAIGN INDEX'}
               </button>
             </div>
           </div>
