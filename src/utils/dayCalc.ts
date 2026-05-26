@@ -62,7 +62,9 @@ export function getTimeUntilNextDay(): { hours: number; minutes: number; seconds
 }
 
 export function getDayFromDate(dateInput: Date | string): number {
-  const d = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+  const d = typeof dateInput === 'string' 
+    ? new Date(dateInput.includes('T') ? dateInput : dateInput + 'T00:00:00') 
+    : dateInput;
   const diff = d.getTime() - EPOCH.getTime();
   const day = Math.floor(diff / (1000 * 60 * 60 * 24)) + 1;
   return Math.max(1, Math.min(365, day));

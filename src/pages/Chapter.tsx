@@ -69,7 +69,7 @@ export default function Chapter() {
   useEffect(() => {
     loadCatalog().then(catalog => {
       const filtered = catalog
-        .filter(s => parseInt(s.date.split('-')[1], 10) === monthNum)
+        .filter(s => s.date && parseInt(s.date.split('-')[1], 10) === monthNum)
         .sort((a, b) => a.day - b.day);
       setSongs(filtered);
       setLoading(false);
@@ -92,18 +92,20 @@ export default function Chapter() {
       }
 
       // Otherwise, default select to player's active level (first uncleared unlocked level)
-      const regularSongsList = filtered.slice(0, -5);
-      const bonusSongsList = filtered.slice(-5);
+      const regularSongsList = filtered.length > 5 ? filtered.slice(0, -5) : filtered;
+      const bonusSongsList = filtered.length > 5 ? filtered.slice(-5) : [];
       const plats = getChapterPlatinums(regularSongsList.map(s => s.id));
-      const bUnlocked = plats >= meta.platNeeded;
+      const bUnlocked = filtered.length > 5 ? (plats >= meta.platNeeded) : true;
       
-      const hasClearedLocal = (song: GameSong) => {
+      const hasClearedLocal = (song?: GameSong) => {
+        if (!song) return false;
         const medalVal = getMedalForSong(song.id);
         const scoreVal = getHighScore(song.id);
         return (medalVal && medalVal !== '') || scoreVal > 0;
       };
 
       const isUnlockedLocal = (idx: number) => {
+        if (idx < 0) return false;
         if (idx < regularSongsList.length) {
           if (idx === 0) return true;
           return hasClearedLocal(regularSongsList[idx - 1]);
@@ -138,13 +140,14 @@ export default function Chapter() {
     );
   }
 
-  const regularSongs  = songs.slice(0, -5);
-  const bonusSongs    = songs.slice(-5);
+  const regularSongs  = songs.length > 5 ? songs.slice(0, -5) : songs;
+  const bonusSongs    = songs.length > 5 ? songs.slice(-5) : [];
   const platinums     = getChapterPlatinums(regularSongs.map(s => s.id));
-  const bonusUnlocked = platinums >= meta.platNeeded;
+  const bonusUnlocked = songs.length > 5 ? (platinums >= meta.platNeeded) : true;
 
   // Clear tracking
-  const hasCleared = (song: GameSong) => {
+  const hasCleared = (song?: GameSong) => {
+    if (!song) return false;
     const medal = getMedalForSong(song.id);
     const score = getHighScore(song.id);
     return (medal && medal !== '') || score > 0;
@@ -154,6 +157,7 @@ export default function Chapter() {
 
   // Winding level map progression locks
   const isUnlocked = (idx: number) => {
+    if (idx < 0) return false;
     if (idx < regularSongs.length) {
       if (idx === 0) return true;
       return hasCleared(regularSongs[idx - 1]);
@@ -587,7 +591,7 @@ export default function Chapter() {
             <div className="h-2 w-full mb-5 relative rounded-full" style={{ background: 'rgba(255,255,255,0.05)' }}>
               <div className="h-full rounded-full transition-all duration-500"
                 style={{
-                  width: `${Math.min(100, (clearsCount / regularSongs.length) * 100)}%`,
+                  width: `${regularSongs.length > 0 ? Math.min(100, (clearsCount / regularSongs.length) * 100) : 0}%`,
                   background: isAvant ? '#39FF14' : `linear-gradient(90deg, ${meta.dc}80, ${meta.dc})`,
                   boxShadow: `0 0 8px ${isAvant ? '#39FF14' : meta.dc}40`,
                 }}
