@@ -464,13 +464,13 @@ export async function claimDailyCard(day: number): Promise<OwnedCard | null> {
 }
 
 // ===== PACK PURCHASE =====
-export async function purchasePack(category: PackCategory, size: PackSize = 'single', sessionId?: string, txHash?: string): Promise<OwnedCard[]> {
+export async function purchasePack(category: PackCategory, size: PackSize = 'single', sessionId?: string, txHash?: string, isGameplayReward?: boolean): Promise<OwnedCard[]> {
   try {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) throw new Error('Not authenticated');
 
     const { data: result, error } = await supabase.functions.invoke('vault-engine', {
-      body: { action: 'purchasePack', payload: { packType: category, size, sessionId, txHash } },
+      body: { action: 'purchasePack', payload: { packType: category, size, sessionId, txHash, isGameplayReward } },
     });
 
     if (error || !result?.success) {

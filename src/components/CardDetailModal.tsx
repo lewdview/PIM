@@ -1,5 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ExternalLink, Download, ShieldCheck, Share2, Info, Flame } from 'lucide-react';
+import { useLocation } from 'wouter';
+import { useGlobalPlayer } from '../store/useGlobalPlayer';
 import type { OwnedCard } from '../services/vaultService';
 import { generateCardMetadata } from '../services/vaultService';
 import { RARITY_CONFIG, getSupplyCap, type Rarity } from '../utils/rarity';
@@ -35,11 +37,26 @@ function TraitBar({ label, value, color }: { label: string; value: number; color
 }
 
 export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardDetailModalProps) {
+  const [, setLocation] = useLocation();
+  const stop = useGlobalPlayer((s) => s.stop);
+
   if (!card) return null;
 
   const rc = RARITY_CONFIG[card.card.rarity];
   const metadata = generateCardMetadata(card);
   const claimedDay = getDayFromDate(card.claimedAt);
+
+  const rarity = card.card.rarity;
+  const isDailyClaim = card.source === 'daily_claim';
+  const DURATION_LIMITS: Record<string, number> = {
+    common: 15,
+    uncommon: 60,
+    rare: 0,
+    legendary: 0,
+    mythic: 0,
+  };
+  const maxDuration = isDailyClaim ? 0 : (DURATION_LIMITS[rarity] ?? 15);
+  const isFullSong = maxDuration === 0;
 
   const downloadJson = () => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(metadata, null, 2));
@@ -51,7 +68,6 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
     downloadAnchorNode.remove();
   };
 
-  const rarity = card.card.rarity;
   let basePoints = 0;
   if (rarity === 'common') basePoints = 10;
   else if (rarity === 'uncommon') basePoints = 25;
@@ -285,6 +301,21 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
                       <Share2 size={14} />
                       Share Card
                     </button>
+                    {isFullSong && (
+                      <button
+                        onClick={() => {
+                          stop();
+                          setLocation(`/play/card-${card.card.day}`);
+                        }}
+                        className="flex items-center gap-2 px-5 py-3 bg-[rgba(0,240,255,0.1)] border border-neon-cyan text-neon-cyan rounded-xl text-[11px] font-mono font-bold uppercase tracking-widest transition-all hover:bg-[rgba(0,240,255,0.2)] hover:scale-[1.02] active:scale-95 shadow-[0_0_15px_rgba(0,240,255,0.15)]"
+                        style={{
+                          borderColor: 'var(--color-neon-cyan, #00f0ff)',
+                          color: 'var(--color-neon-cyan, #00f0ff)',
+                        }}
+                      >
+                        PLAY PIM
+                      </button>
+                    )}
                     <button className="ml-auto flex items-center gap-2 px-6 py-3 bg-white text-black rounded-xl text-[11px] font-mono font-bold uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-95">
                       View on Chain
                       <ExternalLink size={14} />

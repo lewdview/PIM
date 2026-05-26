@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Pause, X, Volume2 } from 'lucide-react';
+import { useLocation } from 'wouter';
 import { useGlobalPlayer } from '../store/useGlobalPlayer';
 import { RARITY_CONFIG } from '../utils/rarity';
 
@@ -10,6 +11,7 @@ function formatTime(seconds: number): string {
 }
 
 export default function GlobalPlayerBar() {
+  const [, setLocation] = useLocation();
   const { currentTrack, isPlaying, progress, currentTime, duration, toggle, stop, seek } = useGlobalPlayer();
 
   if (!currentTrack) return null;
@@ -174,6 +176,39 @@ export default function GlobalPlayerBar() {
           >
             {isPlaying ? <Pause size={16} /> : <Play size={16} style={{ marginLeft: '2px' }} />}
           </button>
+
+          {/* Play PIM */}
+          {!isPreview && (
+            <button
+              onClick={() => {
+                stop();
+                setLocation(`/play/card-${currentTrack.day}`);
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '0 12px',
+                height: '36px',
+                borderRadius: '4px',
+                background: 'rgba(0, 240, 255, 0.1)',
+                border: '1px solid var(--color-neon-cyan, #00f0ff)',
+                color: 'var(--color-neon-cyan, #00f0ff)',
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '11px',
+                fontWeight: 700,
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
+                cursor: 'pointer',
+                boxShadow: '0 0 8px rgba(0, 240, 255, 0.2)',
+                transition: 'all 0.2s ease',
+                flexShrink: 0,
+              }}
+              className="hover:bg-[rgba(0,240,255,0.2)] hover:scale-105"
+            >
+              <span>Play PIM</span>
+            </button>
+          )}
 
           {/* Close */}
           <button

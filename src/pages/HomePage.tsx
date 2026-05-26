@@ -150,6 +150,7 @@ export default function HomePage() {
       if (owned) {
         setIsClaimingAnimation(true);
         addToCollection([owned]);
+        localStorage.setItem("pim_tutorial_redirect_song_id", owned.cardId);
         setHasClaimed(true);
         audioManager.playSfx('open_chest', 0.9);
         startReveal([owned], {

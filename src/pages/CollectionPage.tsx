@@ -1,6 +1,8 @@
 import { useState, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Filter, Grid3X3, List, Flame } from 'lucide-react';
+import { useLocation } from 'wouter';
+import { useGlobalPlayer } from '../store/useGlobalPlayer';
 import Card from '../components/Card';
 import RarityBadge from '../components/RarityBadge';
 import UltraRewardModal from '../components/UltraRewardModal';
@@ -28,6 +30,9 @@ export default function CollectionPage() {
   const streakCount = useVaultStore((s) => s.streakCount);
   const echoPrestigeScore = useVaultStore((s) => s.echoPrestigeScore);
   const { addToCollection, removeFromCollection, loadVaultData } = useVaultStore();
+
+  const [, setLocation] = useLocation();
+  const stop = useGlobalPlayer((s) => s.stop);
 
   // Fusion state
   const [fusionLoading, setFusionLoading] = useState(false);
@@ -287,6 +292,18 @@ export default function CollectionPage() {
             const count = group.length;
             const mainCard = group[0];
             
+            const rarity = mainCard.card.rarity;
+            const isDailyClaim = mainCard.source === 'daily_claim';
+            const DURATION_LIMITS: Record<string, number> = {
+              common: 15,
+              uncommon: 60,
+              rare: 0,
+              legendary: 0,
+              mythic: 0,
+            };
+            const maxDuration = isDailyClaim ? 0 : (DURATION_LIMITS[rarity] ?? 15);
+            const isFullSong = maxDuration === 0;
+            
             return (
               <div key={`${mainCard.cardId}-${mainCard.card.rarity}`} className="relative group">
                 {/* Visual back stacks */}
@@ -353,7 +370,7 @@ export default function CollectionPage() {
                   {/* Details button — visible on hover */}
                   <button
                     onClick={(e) => { e.stopPropagation(); setSelectedCard(mainCard); }}
-                    className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-105 active:scale-95"
+                    className={`absolute ${isFullSong ? 'bottom-12' : 'bottom-8'} left-1/2 -translate-x-1/2 z-30 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-105 active:scale-95`}
                     style={{
                       padding: '5px 14px',
                       background: 'rgba(0,0,0,0.85)',
@@ -370,6 +387,33 @@ export default function CollectionPage() {
                   >
                     DETAILS
                   </button>
+
+                  {/* Play PIM button — visible on hover for full songs */}
+                  {isFullSong && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        stop();
+                        setLocation(`/play/card-${mainCard.card.day}`);
+                      }}
+                      className="absolute bottom-2 left-1/2 -translate-x-1/2 z-30 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-105 active:scale-95"
+                      style={{
+                        padding: '5px 14px',
+                        background: 'rgba(0,240,255,0.15)',
+                        backdropFilter: 'blur(10px)',
+                        border: '1px solid var(--color-neon-cyan, #00f0ff)',
+                        borderRadius: '6px',
+                        fontFamily: '"JetBrains Mono", monospace',
+                        fontSize: '8px', fontWeight: 700,
+                        letterSpacing: '0.15em', textTransform: 'uppercase' as const,
+                        color: 'var(--color-neon-cyan, #00f0ff)',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 12px rgba(0, 240, 255, 0.25)',
+                      }}
+                    >
+                      PLAY PIM
+                    </button>
+                  )}
                 </div>
                 
                 {/* Count Badge — compact corner pill */}
@@ -435,6 +479,18 @@ export default function CollectionPage() {
             const count = group.length;
             const mainCard = group[0];
             
+            const rarity = mainCard.card.rarity;
+            const isDailyClaim = mainCard.source === 'daily_claim';
+            const DURATION_LIMITS: Record<string, number> = {
+              common: 15,
+              uncommon: 60,
+              rare: 0,
+              legendary: 0,
+              mythic: 0,
+            };
+            const maxDuration = isDailyClaim ? 0 : (DURATION_LIMITS[rarity] ?? 15);
+            const isFullSong = maxDuration === 0;
+
             return (
               <motion.div
                 key={`${mainCard.cardId}-${mainCard.card.rarity}`}
@@ -467,13 +523,31 @@ export default function CollectionPage() {
                   </div>
                 </div>
                 
-                <div className="flex flex-col items-end gap-1">
-                  <RarityBadge rarity={mainCard.card.rarity} size="sm" />
-                  {count > 1 && (
-                    <span className="text-[10px] font-mono font-bold" style={{ color: 'var(--color-neon-yellow)' }}>
-                      x{count} OWNED
-                    </span>
+                <div className="flex items-center gap-4">
+                  {isFullSong && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        stop();
+                        setLocation(`/play/card-${mainCard.card.day}`);
+                      }}
+                      className="px-2.5 py-1 rounded bg-[rgba(0,240,255,0.1)] border border-neon-cyan text-neon-cyan text-[10px] font-mono font-bold uppercase tracking-wider transition-all hover:bg-[rgba(0,240,255,0.2)] active:scale-95"
+                      style={{
+                        borderColor: 'var(--color-neon-cyan, #00f0ff)',
+                        color: 'var(--color-neon-cyan, #00f0ff)',
+                      }}
+                    >
+                      Play PIM
+                    </button>
                   )}
+                  <div className="flex flex-col items-end gap-1">
+                    <RarityBadge rarity={mainCard.card.rarity} size="sm" />
+                    {count > 1 && (
+                      <span className="text-[10px] font-mono font-bold" style={{ color: 'var(--color-neon-yellow)' }}>
+                        x{count} OWNED
+                      </span>
+                    )}
+                  </div>
                 </div>
               </motion.div>
             );

@@ -167,6 +167,14 @@ export default function Tutorial() {
   const [holdProgress, setHoldProgress] = useState(0);
   const holdIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const songId = params.get("songId");
+    if (songId) {
+      localStorage.setItem("pim_tutorial_redirect_song_id", songId);
+    }
+  }, []);
+
   const timerA = useRef<ReturnType<typeof setTimeout> | null>(null);
   const timerB = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -357,6 +365,7 @@ export default function Tutorial() {
           <button
             onClick={() => {
               audioManager.playSfx("tap_nav", 0.15);
+              localStorage.removeItem("pim_tutorial_redirect_song_id");
               setLocation("/");
             }}
             className="font-mono text-xs tracking-[0.25em] transition-all duration-150 border border-red-500/35 px-4 py-1.5 text-red-400 bg-red-950/10 hover:bg-red-500/20 hover:text-red-300 hover:border-red-400"
@@ -456,7 +465,8 @@ export default function Tutorial() {
                 localStorage.setItem("pim_tutorial_completed", "true");
                 audioManager.playSfx("tap_nav", 0.15);
                 const params = new URLSearchParams(window.location.search);
-                const songId = params.get("songId");
+                const songId = params.get("songId") || localStorage.getItem("pim_tutorial_redirect_song_id");
+                localStorage.removeItem("pim_tutorial_redirect_song_id");
                 if (songId) {
                   setLocation(`/play/${songId}`);
                 } else {
@@ -487,6 +497,7 @@ export default function Tutorial() {
         <button
           onClick={() => {
             localStorage.setItem("pim_tutorial_completed", "true");
+            localStorage.removeItem("pim_tutorial_redirect_song_id");
             setLocation("/");
           }}
           className="font-mono text-xs tracking-widest transition-colors"
@@ -582,7 +593,8 @@ export default function Tutorial() {
             onClick={() => {
               localStorage.setItem("pim_tutorial_completed", "true");
               const params = new URLSearchParams(window.location.search);
-              const songId = params.get("songId");
+              const songId = params.get("songId") || localStorage.getItem("pim_tutorial_redirect_song_id");
+              localStorage.removeItem("pim_tutorial_redirect_song_id");
               if (songId) {
                 setLocation(`/play/${songId}`);
               } else {

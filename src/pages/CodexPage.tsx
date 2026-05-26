@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Music, Lock, CheckCircle, Filter, Play, Pause, Search } from 'lucide-react';
+import { useLocation } from 'wouter';
 import { fetchAllCards, type VaultCard } from '../services/vaultService';
 import { useVaultStore } from '../store/useVaultStore';
 import { useGlobalPlayer } from '../store/useGlobalPlayer';
@@ -22,6 +23,7 @@ type SortMode = 'day-asc' | 'day-desc' | 'rarity';
 const PAGE_SIZE = 30;
 
 export default function CodexPage() {
+  const [, setLocation] = useLocation();
   const [allCards, setAllCards] = useState<VaultCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterMode>('all');
@@ -31,7 +33,7 @@ export default function CodexPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const collection = useVaultStore(s => s.collection);
-  const { currentTrack, isPlaying, play, pause } = useGlobalPlayer();
+  const { currentTrack, isPlaying, play, pause, stop } = useGlobalPlayer();
 
   const today = getCurrentDay();
 
@@ -478,10 +480,13 @@ export default function CodexPage() {
             const displayRarity = owned?.rarity || card.rarity;
             const rc = RARITY_CONFIG[displayRarity as Rarity] || RARITY_CONFIG.common;
             const isCurrentlyPlaying = currentTrack?.audioUrl === card.audioUrl && currentTrack?.day === card.day && isPlaying;
+            const maxDuration = isDailyClaim ? 0 : (owned ? PREVIEW_DURATION[owned.rarity] : (PREVIEW_DURATION[card.rarity] ?? 15));
+            const isFullSong = maxDuration === 0;
 
             return (
               <motion.div
                 key={card.day}
+                className="group"
                 whileHover={{ scale: 1.03, y: -2 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => handlePlay(card)}
@@ -664,6 +669,41 @@ export default function CodexPage() {
                       ? '0 0 10px rgba(180,77,255,0.5)'
                       : `0 0 6px ${rc.color}40`,
                   }} />
+                )}
+
+                {/* Hover Play Menu for Owned Cards */}
+                {isOwned && (
+                  <div 
+                    className="absolute inset-0 bg-black/85 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center gap-2 z-30 p-2.5"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handlePlay(card);
+                      }}
+                      className="w-full py-2 rounded bg-white text-black text-[10px] font-mono font-bold uppercase tracking-wider transition-all hover:scale-105 active:scale-95 text-center flex items-center justify-center gap-1.5"
+                    >
+                      {isCurrentlyPlaying ? <Pause size={10} /> : <Play size={10} />}
+                      {isCurrentlyPlaying ? 'Pause' : 'Play Audio'}
+                    </button>
+                    {isFullSong && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          stop();
+                          setLocation(`/play/card-${card.day}`);
+                        }}
+                        className="w-full py-2 rounded bg-[rgba(0,240,255,0.15)] border border-neon-cyan text-neon-cyan text-[10px] font-mono font-bold uppercase tracking-wider transition-all hover:bg-[rgba(0,240,255,0.25)] hover:scale-105 active:scale-95 text-center"
+                        style={{
+                          borderColor: 'var(--color-neon-cyan, #00f0ff)',
+                          color: 'var(--color-neon-cyan, #00f0ff)',
+                        }}
+                      >
+                        PLAY PIM
+                      </button>
+                    )}
+                  </div>
                 )}
               </motion.div>
             );

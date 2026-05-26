@@ -295,7 +295,7 @@ export default function Results() {
     const size = 'single';
 
     try {
-      const cards = await purchasePack(category, size);
+      const cards = await purchasePack(category, size, undefined, undefined, true);
       if (cards && cards.length > 0) {
         // Save score record — store reward_tier so progressive upgrade check works
         try {
