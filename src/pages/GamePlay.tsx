@@ -6,6 +6,7 @@ import type { GameSong } from "@/game/api";
 import type { Note, JudgmentDisplay, GameState } from "@/game/types";
 import { loadOpts, keyLabel, type GameOpts } from "@/lib/options";
 import { audioManager } from "@/game/audio";
+import { useVaultStore } from "@/store/useVaultStore";
 
 // ── constants ────────────────────────────────────────────────────
 const LANE_COUNT = 3;
@@ -2367,8 +2368,10 @@ export default function Game() {
         pausedRef.current = false;
         setPaused(false);
 
-        const isLocked = isSongTimeLocked(song);
-        console.log("[GamePlay Init] isSongTimeLocked evaluated:", isLocked, "for song day:", song.day, "date:", song.date);
+        const collection = useVaultStore.getState().collection;
+        const isOwned = collection.some(c => c.cardId === songId || `card-${c.card?.day}` === songId);
+        const isLocked = !isOwned && isSongTimeLocked(song);
+        console.log("[GamePlay Init] isSongTimeLocked evaluated:", isLocked, "for song day:", song.day, "date:", song.date, "isOwned:", isOwned);
         if (isLocked) {
           console.warn("[GamePlay Init] Song is time-locked! Redirecting to:", originRoute);
           setLocation(originRoute);

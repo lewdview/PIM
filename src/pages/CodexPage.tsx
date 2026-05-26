@@ -480,6 +480,7 @@ export default function CodexPage() {
             const displayRarity = owned?.rarity || card.rarity;
             const rc = RARITY_CONFIG[displayRarity as Rarity] || RARITY_CONFIG.common;
             const isCurrentlyPlaying = currentTrack?.audioUrl === card.audioUrl && currentTrack?.day === card.day && isPlaying;
+            const isDailyClaim = owned?.source === 'daily_claim';
             const maxDuration = isDailyClaim ? 0 : (owned ? PREVIEW_DURATION[owned.rarity] : (PREVIEW_DURATION[card.rarity] ?? 15));
             const isFullSong = maxDuration === 0;
 
