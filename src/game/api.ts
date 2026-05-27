@@ -121,18 +121,19 @@ function buildGameSong(r: any, useLocal = false): GameSong {
   const valence = r.valence ?? 0.5;
 
   const opts = loadOpts();
-  let useLyrics = false;
+  let notes: Note[];
   if (opts.noteGenerationSource === 'lyrics') {
-    useLyrics = lyricsWords.length > 0;
+    notes = lyricsWords.length > 0
+      ? generateNotesFromLyrics(lyricsWords, bpm)
+      : generateNotesFromBPM(bpm, duration);
   } else if (opts.noteGenerationSource === 'bpm') {
-    useLyrics = false;
+    notes = generateNotesFromBPM(bpm, duration);
   } else {
-    useLyrics = lyricsWords.length > 15;
+    // 'auto' mode: Interweave lyrics and BPM patterns if lyrics are available, otherwise fallback to pure BPM
+    notes = lyricsWords.length > 15
+      ? generateNotesInterwoven(lyricsWords, bpm, duration)
+      : generateNotesFromBPM(bpm, duration);
   }
-
-  const notes = useLyrics
-    ? generateNotesFromLyrics(lyricsWords, bpm)
-    : generateNotesFromBPM(bpm, duration);
 
   const difficultyLevel = calcDifficulty(bpm, valence, notes.length, duration);
 
@@ -686,6 +687,243 @@ export function generateNotesFromLyrics(words: LyricsWord[], bpm = 100): Note[] 
   return notes;
 }
 
+interface BPMPatternStep {
+  beat: number;
+  lane: number;
+  type?: 'tap' | 'hold' | 'swipe' | 'slide';
+  holdDurationBeats?: number;
+  targetLane?: number;
+  swipeDirection?: Note['swipeDirection'];
+}
+
+const BPM_PATTERNS: BPMPatternStep[][] = [
+  // 1. Quarter-note walk (basic tap pattern)
+  [
+    { beat: 0, lane: 1, type: 'tap' },
+    { beat: 1, lane: 2, type: 'tap' },
+    { beat: 2, lane: 0, type: 'tap' },
+    { beat: 3, lane: 1, type: 'tap' }
+  ],
+  // 2. 8th-note syncopation with swipes
+  [
+    { beat: 0, lane: 0, type: 'tap' },
+    { beat: 0.5, lane: 2, type: 'swipe', swipeDirection: 'right' },
+    { beat: 1.5, lane: 1, type: 'tap' },
+    { beat: 2, lane: 0, type: 'tap' },
+    { beat: 3, lane: 2, type: 'swipe', swipeDirection: 'up' },
+    { beat: 3.5, lane: 1, type: 'tap' }
+  ],
+  // 3. Ascending run + hold
+  [
+    { beat: 0, lane: 0, type: 'tap' },
+    { beat: 0.5, lane: 1, type: 'tap' },
+    { beat: 1, lane: 2, type: 'hold', holdDurationBeats: 1.0 },
+    { beat: 2.5, lane: 0, type: 'tap' },
+    { beat: 3, lane: 1, type: 'swipe', swipeDirection: 'left' }
+  ],
+  // 4. Clave rhythm with dual notes
+  [
+    { beat: 0, lane: 0, type: 'tap' },
+    { beat: 0, lane: 2, type: 'tap' },
+    { beat: 0.75, lane: 1, type: 'tap' },
+    { beat: 1.5, lane: 0, type: 'tap' },
+    { beat: 1.5, lane: 2, type: 'tap' },
+    { beat: 2.25, lane: 1, type: 'tap' },
+    { beat: 3, lane: 0, type: 'tap' },
+    { beat: 3, lane: 2, type: 'tap' }
+  ],
+  // 5. Lane slide transition (crossing)
+  [
+    { beat: 0, lane: 0, type: 'slide', holdDurationBeats: 1.5, targetLane: 2, swipeDirection: 'right' },
+    { beat: 1.5, lane: 2, type: 'tap' },
+    { beat: 2.0, lane: 2, type: 'slide', holdDurationBeats: 1.5, targetLane: 0, swipeDirection: 'left' },
+    { beat: 3.5, lane: 0, type: 'tap' }
+  ],
+  // 6. Triplet rush + swipes
+  [
+    { beat: 0, lane: 1, type: 'tap' },
+    { beat: 0.33, lane: 0, type: 'swipe', swipeDirection: 'left' },
+    { beat: 0.66, lane: 2, type: 'swipe', swipeDirection: 'right' },
+    { beat: 1.5, lane: 1, type: 'tap' },
+    { beat: 2.5, lane: 0, type: 'tap' },
+    { beat: 3, lane: 2, type: 'swipe', swipeDirection: 'up' }
+  ],
+  // 7. Heavy dual holds (shield)
+  [
+    { beat: 0, lane: 0, type: 'hold', holdDurationBeats: 1.5 },
+    { beat: 0, lane: 2, type: 'hold', holdDurationBeats: 1.5 },
+    { beat: 1.5, lane: 1, type: 'tap' },
+    { beat: 2.0, lane: 1, type: 'tap' },
+    { beat: 2.5, lane: 1, type: 'swipe', swipeDirection: 'up' }
+  ],
+  // 8. Staggered hold and tap
+  [
+    { beat: 0, lane: 0, type: 'hold', holdDurationBeats: 1.5 },
+    { beat: 0.5, lane: 2, type: 'tap' },
+    { beat: 1.0, lane: 1, type: 'tap' },
+    { beat: 2.0, lane: 2, type: 'hold', holdDurationBeats: 1.5 },
+    { beat: 2.5, lane: 0, type: 'tap' },
+    { beat: 3.0, lane: 1, type: 'tap' }
+  ],
+  // 9. Diagonal swipe hammer
+  [
+    { beat: 0, lane: 1, type: 'tap' },
+    { beat: 1, lane: 0, type: 'swipe', swipeDirection: 'down-left' },
+    { beat: 1.5, lane: 2, type: 'swipe', swipeDirection: 'down-right' },
+    { beat: 2.5, lane: 1, type: 'tap' },
+    { beat: 3, lane: 0, type: 'swipe', swipeDirection: 'up-left' },
+    { beat: 3.5, lane: 2, type: 'swipe', swipeDirection: 'up-right' }
+  ],
+  // 10. Zig-zag slide weave
+  [
+    { beat: 0, lane: 1, type: 'slide', holdDurationBeats: 1.0, targetLane: 0, swipeDirection: 'left' },
+    { beat: 1.0, lane: 0, type: 'slide', holdDurationBeats: 1.0, targetLane: 2, swipeDirection: 'right' },
+    { beat: 2.0, lane: 2, type: 'slide', holdDurationBeats: 1.0, targetLane: 1, swipeDirection: 'left' },
+    { beat: 3.0, lane: 1, type: 'swipe', swipeDirection: 'up' }
+  ],
+  // 11. Stutter syncopated dual taps
+  [
+    { beat: 0, lane: 0, type: 'tap' },
+    { beat: 0, lane: 1, type: 'tap' },
+    { beat: 0.75, lane: 1, type: 'tap' },
+    { beat: 0.75, lane: 2, type: 'tap' },
+    { beat: 1.5, lane: 0, type: 'tap' },
+    { beat: 1.5, lane: 2, type: 'tap' },
+    { beat: 2.5, lane: 1, type: 'swipe', swipeDirection: 'down' },
+    { beat: 3.0, lane: 0, type: 'tap' },
+    { beat: 3.5, lane: 2, type: 'tap' }
+  ],
+  // 12. Swirl slides
+  [
+    { beat: 0, lane: 0, type: 'slide', holdDurationBeats: 1.0, targetLane: 1, swipeDirection: 'right' },
+    { beat: 1.0, lane: 2, type: 'slide', holdDurationBeats: 1.0, targetLane: 1, swipeDirection: 'left' },
+    { beat: 2.0, lane: 1, type: 'hold', holdDurationBeats: 1.5 },
+    { beat: 2.5, lane: 0, type: 'tap' },
+    { beat: 3.0, lane: 2, type: 'tap' }
+  ]
+];
+
+export function generateNotesInterwoven(words: LyricsWord[], bpm: number, duration: number): Note[] {
+  const lyricNotes = generateNotesFromLyrics(words, bpm);
+  if (lyricNotes.length === 0) {
+    return generateNotesFromBPM(bpm, duration);
+  }
+
+  // Sort lyric notes chronologically
+  lyricNotes.sort((a, b) => a.time - b.time);
+
+  const beatDur = 60 / bpm;
+  const measureDur = beatDur * 4;
+
+  // Identify empty gaps between lyric vocal phrases where we can insert BPM pattern fills
+  interface Gap {
+    start: number;
+    end: number;
+  }
+  const gaps: Gap[] = [];
+
+  // 1. Initial gap before the first lyric starts
+  if (lyricNotes[0].time > 4.0) {
+    gaps.push({ start: 1.0, end: lyricNotes[0].time });
+  }
+
+  // 2. Instrumental gaps between consecutive lyrics phrases
+  for (let i = 0; i < lyricNotes.length - 1; i++) {
+    const currentNote = lyricNotes[i];
+    const nextNote = lyricNotes[i + 1];
+    const currentEnd = currentNote.time + (currentNote.holdDuration ?? 0);
+    const gapLen = nextNote.time - currentEnd;
+    
+    // Fill gaps larger than 3.5 seconds
+    if (gapLen > 3.5) {
+      gaps.push({ start: currentEnd, end: nextNote.time });
+    }
+  }
+
+  // 3. Outro gap after the last lyric ends
+  const lastNote = lyricNotes[lyricNotes.length - 1];
+  const lastEnd = lastNote.time + (lastNote.holdDuration ?? 0);
+  if (duration - lastEnd > 5.0) {
+    gaps.push({ start: lastEnd, end: duration - 3.0 });
+  }
+
+  const bpmNotes: Omit<Note, 'id'>[] = [];
+  let pi = 0;
+
+  for (const gap of gaps) {
+    // Leave a small spacing buffer (0.75s) to separate vocal and instrumental sections
+    const startBound = gap.start + 0.75;
+    const endBound = gap.end - 0.75;
+    if (endBound - startBound < measureDur) continue;
+
+    let measureStart = snapToBeat(startBound, bpm, 4);
+    if (measureStart < startBound) {
+      measureStart += beatDur;
+    }
+
+    while (measureStart + measureDur <= endBound) {
+      for (const e of BPM_PATTERNS[pi % BPM_PATTERNS.length]) {
+        const t = measureStart + e.beat * beatDur;
+        if (t >= startBound && t <= endBound) {
+          const type: Note['type'] = e.type === 'slide' ? 'hold' : (e.type ?? 'tap');
+          const holdDuration = e.type === 'hold' || e.type === 'slide'
+            ? (e.holdDurationBeats ?? 1.0) * beatDur
+            : undefined;
+
+          bpmNotes.push({
+            time: t,
+            lane: e.lane,
+            type,
+            holdDuration,
+            targetLane: e.targetLane,
+            swipeDirection: e.swipeDirection
+          });
+        }
+      }
+      measureStart += measureDur;
+      pi++;
+    }
+  }
+
+  // Merge and sort notes chronologically
+  const allRawNotes = [
+    ...lyricNotes.map(n => ({
+      time: n.time,
+      lane: n.lane,
+      type: n.type,
+      holdDuration: n.holdDuration,
+      targetLane: n.targetLane,
+      swipeDirection: n.swipeDirection
+    })),
+    ...bpmNotes
+  ];
+
+  allRawNotes.sort((a, b) => a.time - b.time);
+
+  // Eliminate duplicate or near-duplicate notes within 0.12s in the same lane
+  const uniqueNotes: typeof allRawNotes = [];
+  for (const note of allRawNotes) {
+    const isDuplicate = uniqueNotes.some(existing => 
+      Math.abs(existing.time - note.time) < 0.12 && existing.lane === note.lane
+    );
+    if (!isDuplicate) {
+      uniqueNotes.push(note);
+    }
+  }
+
+  // Assign sequential IDs
+  const merged: Note[] = [];
+  let nextId = 0;
+  for (const raw of uniqueNotes) {
+    merged.push({
+      id: nextId++,
+      ...raw
+    });
+  }
+
+  return merged;
+}
+
 export function generateNotesFromBPM(bpm: number, duration: number): Note[] {
   const beatDur    = 60 / bpm;
   const measureDur = beatDur * 4;
@@ -693,125 +931,9 @@ export function generateNotesFromBPM(bpm: number, duration: number): Note[] {
   let id = 0;
   let measureStart = 2.5;
 
-  interface BPMPatternStep {
-    beat: number;
-    lane: number;
-    type?: 'tap' | 'hold' | 'swipe' | 'slide';
-    holdDurationBeats?: number;
-    targetLane?: number;
-    swipeDirection?: Note['swipeDirection'];
-  }
-
-  const patterns: BPMPatternStep[][] = [
-    // 1. Quarter-note walk (basic tap pattern)
-    [
-      { beat: 0, lane: 1, type: 'tap' },
-      { beat: 1, lane: 2, type: 'tap' },
-      { beat: 2, lane: 0, type: 'tap' },
-      { beat: 3, lane: 1, type: 'tap' }
-    ],
-    // 2. 8th-note syncopation with swipes
-    [
-      { beat: 0, lane: 0, type: 'tap' },
-      { beat: 0.5, lane: 2, type: 'swipe', swipeDirection: 'right' },
-      { beat: 1.5, lane: 1, type: 'tap' },
-      { beat: 2, lane: 0, type: 'tap' },
-      { beat: 3, lane: 2, type: 'swipe', swipeDirection: 'up' },
-      { beat: 3.5, lane: 1, type: 'tap' }
-    ],
-    // 3. Ascending run + hold
-    [
-      { beat: 0, lane: 0, type: 'tap' },
-      { beat: 0.5, lane: 1, type: 'tap' },
-      { beat: 1, lane: 2, type: 'hold', holdDurationBeats: 1.0 },
-      { beat: 2.5, lane: 0, type: 'tap' },
-      { beat: 3, lane: 1, type: 'swipe', swipeDirection: 'left' }
-    ],
-    // 4. Clave rhythm with dual notes
-    [
-      { beat: 0, lane: 0, type: 'tap' },
-      { beat: 0, lane: 2, type: 'tap' },
-      { beat: 0.75, lane: 1, type: 'tap' },
-      { beat: 1.5, lane: 0, type: 'tap' },
-      { beat: 1.5, lane: 2, type: 'tap' },
-      { beat: 2.25, lane: 1, type: 'tap' },
-      { beat: 3, lane: 0, type: 'tap' },
-      { beat: 3, lane: 2, type: 'tap' }
-    ],
-    // 5. Lane slide transition (crossing)
-    [
-      { beat: 0, lane: 0, type: 'slide', holdDurationBeats: 1.5, targetLane: 2, swipeDirection: 'right' },
-      { beat: 1.5, lane: 2, type: 'tap' },
-      { beat: 2.0, lane: 2, type: 'slide', holdDurationBeats: 1.5, targetLane: 0, swipeDirection: 'left' },
-      { beat: 3.5, lane: 0, type: 'tap' }
-    ],
-    // 6. Triplet rush + swipes
-    [
-      { beat: 0, lane: 1, type: 'tap' },
-      { beat: 0.33, lane: 0, type: 'swipe', swipeDirection: 'left' },
-      { beat: 0.66, lane: 2, type: 'swipe', swipeDirection: 'right' },
-      { beat: 1.5, lane: 1, type: 'tap' },
-      { beat: 2.5, lane: 0, type: 'tap' },
-      { beat: 3, lane: 2, type: 'swipe', swipeDirection: 'up' }
-    ],
-    // 7. Heavy dual holds (shield)
-    [
-      { beat: 0, lane: 0, type: 'hold', holdDurationBeats: 1.5 },
-      { beat: 0, lane: 2, type: 'hold', holdDurationBeats: 1.5 },
-      { beat: 1.5, lane: 1, type: 'tap' },
-      { beat: 2.0, lane: 1, type: 'tap' },
-      { beat: 2.5, lane: 1, type: 'swipe', swipeDirection: 'up' }
-    ],
-    // 8. Staggered hold and tap
-    [
-      { beat: 0, lane: 0, type: 'hold', holdDurationBeats: 1.5 },
-      { beat: 0.5, lane: 2, type: 'tap' },
-      { beat: 1.0, lane: 1, type: 'tap' },
-      { beat: 2.0, lane: 2, type: 'hold', holdDurationBeats: 1.5 },
-      { beat: 2.5, lane: 0, type: 'tap' },
-      { beat: 3.0, lane: 1, type: 'tap' }
-    ],
-    // 9. Diagonal swipe hammer
-    [
-      { beat: 0, lane: 1, type: 'tap' },
-      { beat: 1, lane: 0, type: 'swipe', swipeDirection: 'down-left' },
-      { beat: 1.5, lane: 2, type: 'swipe', swipeDirection: 'down-right' },
-      { beat: 2.5, lane: 1, type: 'tap' },
-      { beat: 3, lane: 0, type: 'swipe', swipeDirection: 'up-left' },
-      { beat: 3.5, lane: 2, type: 'swipe', swipeDirection: 'up-right' }
-    ],
-    // 10. Zig-zag slide weave
-    [
-      { beat: 0, lane: 1, type: 'slide', holdDurationBeats: 1.0, targetLane: 0, swipeDirection: 'left' },
-      { beat: 1.0, lane: 0, type: 'slide', holdDurationBeats: 1.0, targetLane: 2, swipeDirection: 'right' },
-      { beat: 2.0, lane: 2, type: 'slide', holdDurationBeats: 1.0, targetLane: 1, swipeDirection: 'left' },
-      { beat: 3.0, lane: 1, type: 'swipe', swipeDirection: 'up' }
-    ],
-    // 11. Stutter syncopated dual taps
-    [
-      { beat: 0, lane: 0, type: 'tap' },
-      { beat: 0, lane: 1, type: 'tap' },
-      { beat: 0.75, lane: 1, type: 'tap' },
-      { beat: 0.75, lane: 2, type: 'tap' },
-      { beat: 1.5, lane: 0, type: 'tap' },
-      { beat: 1.5, lane: 2, type: 'tap' },
-      { beat: 2.5, lane: 1, type: 'swipe', swipeDirection: 'down' },
-      { beat: 3.0, lane: 0, type: 'tap' },
-      { beat: 3.5, lane: 2, type: 'tap' }
-    ],
-    // 12. Swirl slides
-    [
-      { beat: 0, lane: 0, type: 'slide', holdDurationBeats: 1.0, targetLane: 1, swipeDirection: 'right' },
-      { beat: 1.0, lane: 2, type: 'slide', holdDurationBeats: 1.0, targetLane: 1, swipeDirection: 'left' },
-      { beat: 2.0, lane: 1, type: 'hold', holdDurationBeats: 1.5 },
-      { beat: 2.5, lane: 0, type: 'tap' },
-      { beat: 3.0, lane: 2, type: 'tap' }
-    ]
-  ];
-
   let pi = 0;
   while (measureStart + measureDur < duration - 3) {
-    for (const e of patterns[pi % patterns.length]) {
+    for (const e of BPM_PATTERNS[pi % BPM_PATTERNS.length]) {
       const t = measureStart + e.beat * beatDur;
       if (t < duration - 3) {
         const type: Note['type'] = e.type === 'slide' ? 'hold' : (e.type ?? 'tap');
