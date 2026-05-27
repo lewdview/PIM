@@ -767,6 +767,21 @@ export async function getClaimedCountForDay(day: number): Promise<number> {
   return 0;
 }
 
+/** Fetch the claimed/minted count for a specific card day + rarity tier. */
+export async function getClaimedCountForRarity(day: number, rarity: string): Promise<number> {
+  try {
+    const { data } = await supabase
+      .from('global_supply')
+      .select('supply')
+      .eq('card_id_rarity', `${day}-${rarity}`)
+      .maybeSingle();
+    return data?.supply || 0;
+  } catch (e) {
+    console.error('Failed to fetch rarity supply', e);
+  }
+  return 0;
+}
+
 export async function getPackRipCount(category: string): Promise<number> {
   try {
     const { count } = await supabase

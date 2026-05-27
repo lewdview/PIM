@@ -400,7 +400,7 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
                         className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-red-500/10 border border-red-500/30 text-red-500 rounded-xl text-xs font-mono font-black uppercase tracking-[0.2em] transition-all hover:bg-red-500/20 active:scale-[0.98] mt-4"
                       >
                         <Flame size={16} />
-                        Burn Sold Out Card
+                         Burn Minted Out Card
                       </button>
                     )}
                   </div>

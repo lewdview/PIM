@@ -82,7 +82,7 @@ export default function PackRevealPage() {
   };
 
   const handleBurn = async (owned: any) => {
-    const confirm = window.confirm('Burn this sold-out card immediately?');
+    const confirm = window.confirm('Burn this minted-out card immediately?');
     if (!confirm) return;
     
     const res = await sellCard(owned);
@@ -152,7 +152,8 @@ export default function PackRevealPage() {
                     style={{ perspective: '1000px' }}
                   >
                     <Card 
-                      card={owned.card} 
+                      card={owned.card}
+                      edition={owned.edition}
                       interactive={false} 
                       showAudio 
                       isDailyOrigin={owned.source === 'daily_claim' || owned.source === 'pack_miss_out'} 
@@ -228,7 +229,8 @@ export default function PackRevealPage() {
                 transition={{ delay: i * 0.1 }}
               >
                 <Card 
-                  card={owned.card} 
+                  card={owned.card}
+                  edition={owned.edition}
                   interactive={false} 
                   delay={i} 
                   isDailyOrigin={owned.source === 'daily_claim' || owned.source === 'pack_miss_out'} 

@@ -9,6 +9,7 @@ import { Gift, Flame, ShieldCheck } from 'lucide-react';
 
 interface CardProps {
   card: VaultCard;
+  edition?: number;
   showAudio?: boolean;
   showClaim?: boolean;
   onClaim?: () => void;
@@ -83,6 +84,7 @@ function ProofSeal({ type }: { type: ProofType }) {
 
 export default function Card({
   card,
+  edition,
   showAudio = false,
   showClaim = false,
   onClaim,
@@ -107,10 +109,10 @@ export default function Card({
   const backVisibility  = useTransform(rotateY, v => (Math.abs(v % 360) >= 90 && Math.abs(v % 360) <= 270 ? 'visible' : 'hidden'));
 
   useEffect(() => {
-    import('../services/vaultService').then(({ getClaimedCountForDay }) => {
-      getClaimedCountForDay(card.day || 0).then(setRealClaimed);
+    import('../services/vaultService').then(({ getClaimedCountForRarity }) => {
+      getClaimedCountForRarity(card.day || 0, card.rarity || 'common').then(setRealClaimed);
     });
-  }, [card.day]);
+  }, [card.day, card.rarity]);
 
   useEffect(() => {
     // Only auto-flip to front when isRevealed prop transitions to true
@@ -140,13 +142,17 @@ export default function Card({
   const energy  = card.energy  ?? 0;
   const valence = card.valence ?? 0;
   const tempo   = card.tempo   ?? 0;
-  const claimed = realClaimed ?? card.claimedCount ?? 0;
   const supply  = getSupplyCap(card.rarity, card.day);
+  const claimed = realClaimed ?? card.claimedCount ?? 0;
   const coverUrl = card.coverUrl || '';
   const audioUrl = card.audioUrl || '';
   const hasArt   = !imgError && coverUrl;
 
-  const mintPct = supply > 0 ? (claimed / supply) * 100 : 0;
+  // Minted-out: true only when THIS specific copy exceeds the supply cap (excess edition)
+  // or when no edition prop is given and the rarity pool is fully claimed.
+  const isMintedOut = edition !== undefined ? edition > supply : claimed >= supply;
+
+  const mintPct = supply > 0 ? (Math.min(claimed, supply) / supply) * 100 : 0;
 
   const renderArt = (className = 'w-full h-full', rotated = false) =>
     hasArt ? (
@@ -215,43 +221,63 @@ export default function Card({
   );
 
 
-  // ── Sold out overlay shared ─────────────────────────────────────────────
-  const soldOut = claimed >= supply;
-  const soldOutOverlay = soldOut && (
+  // ── Minted out overlay — only shown when this copy is an excess edition ────
+  const mintedOutOverlay = isMintedOut && (
     <motion.div
       style={{
         position: 'absolute', inset: 0, zIndex: 40, pointerEvents: 'none', borderRadius: '12px',
-        background: 'rgba(0,0,0,0.45)', backdropFilter: 'grayscale(1) contrast(1.1)',
+        background: 'rgba(0,0,0,0.55)', backdropFilter: 'grayscale(1) contrast(1.1)',
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        gap: '20px',
         visibility: frontVisibility,
       }}
     >
+      {/* MINTED OUT stamp */}
       <div style={{
-        padding: '6px 14px', border: '3px solid #fff', color: '#fff',
-        fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '24px',
+        padding: '6px 14px', border: '3px solid #ff3800', color: '#ff3800',
+        fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '22px',
         fontWeight: 900, textTransform: 'uppercase', letterSpacing: '4px',
-        transform: 'rotate(-12deg)', background: '#000',
-        boxShadow: '0 0 20px rgba(0,0,0,0.8)',
+        transform: 'rotate(-12deg)', background: 'rgba(0,0,0,0.9)',
+        boxShadow: '0 0 24px rgba(255,56,0,0.5)',
+        textShadow: '0 0 12px rgba(255,56,0,0.8)',
       }}>
-        SOLD OUT
+        MINTED OUT
       </div>
 
+      {/* Burn button — always visible, permanent fixture */}
       {onBurn && (
         <button
           onClick={(e) => { e.stopPropagation(); onBurn(); }}
           style={{
-            marginTop: '24px', width: '48px', height: '48px', borderRadius: '50%',
-            background: 'rgba(255,56,0,0.85)', border: '2px solid rgba(255,255,255,0.8)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px',
+            width: '64px', height: '64px', borderRadius: '50%',
+            background: 'rgba(255,56,0,0.9)', border: '2.5px solid rgba(255,255,255,0.9)',
+            alignSelf: 'center', justifyContent: 'center',
             cursor: 'pointer', pointerEvents: 'auto',
-            boxShadow: '0 0 20px rgba(255,56,0,0.7)',
-            transition: 'transform 0.2s',
+            boxShadow: '0 0 28px rgba(255,56,0,0.85), 0 0 8px rgba(255,56,0,0.4)',
+            transition: 'transform 0.15s, box-shadow 0.15s',
           }}
-          onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}
-          onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+          title="Burn for V⚡ tokens"
+          onMouseEnter={e => {
+            e.currentTarget.style.transform = 'scale(1.12)';
+            e.currentTarget.style.boxShadow = '0 0 38px rgba(255,56,0,1), 0 0 12px rgba(255,56,0,0.6)';
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.transform = 'scale(1)';
+            e.currentTarget.style.boxShadow = '0 0 28px rgba(255,56,0,0.85), 0 0 8px rgba(255,56,0,0.4)';
+          }}
         >
-          <Flame size={24} color="#fff" />
+          <Flame size={28} color="#fff" />
         </button>
+      )}
+
+      {/* Burn label */}
+      {onBurn && (
+        <span style={{
+          fontFamily: '"JetBrains Mono", monospace', fontSize: '8px',
+          fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase',
+          color: 'rgba(255,255,255,0.7)',
+        }}>Burn for V⚡</span>
       )}
     </motion.div>
   );
@@ -749,7 +775,7 @@ export default function Card({
         {frontFace}
         {dailyOverlay}
         {cardBack}
-        {soldOutOverlay}
+        {mintedOutOverlay}
 
         {/* ===== ECHO GLITCH OVERLAY ===== */}
         {isEcho && (

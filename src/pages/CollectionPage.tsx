@@ -131,7 +131,7 @@ export default function CollectionPage() {
   // Burn handler
   const handleBurn = useCallback(async (ownedCard: OwnedCard) => {
     if (fusionLoading) return;
-    const confirm = window.confirm(`Burn this sold-out card for V⚡ tokens?`);
+    const confirm = window.confirm(`Burn this minted-out card for V⚡ tokens?`);
     if (!confirm) return;
 
     useLoadingToast.getState().show('Burning card…');
@@ -343,21 +343,22 @@ export default function CollectionPage() {
                   onDoubleClick={() => setSelectedCard(mainCard)}
                 >
                   <Card 
-                    card={mainCard.card} 
+                    card={mainCard.card}
+                    edition={mainCard.edition}
                     delay={i} 
                     showAudio 
                     isDailyOrigin={mainCard.source === 'daily_claim' || mainCard.source === 'pack_miss_out'} 
                     ultraReward={mainCard.ultraReward} 
-                    isEcho={mainCard.isEcho} 
-                    onBurn={getCardSupplyCount(mainCard.card.day, mainCard.card.rarity as Rarity) >= getSupplyCap(mainCard.card.rarity as Rarity, mainCard.card.day) ? () => handleBurn(mainCard) : undefined}
+                    isEcho={mainCard.isEcho}
+                    onBurn={(mainCard.edition || 0) > getSupplyCap(mainCard.card.rarity as Rarity, mainCard.card.day) ? () => handleBurn(mainCard) : undefined}
                     proof={mainCard.proof}
                   />
                   
-                  {/* Edition Status — rarity-specific supply */}
+                  {/* Edition Status — shows MINTED OUT only when this specific copy is excess */}
                   <div className="absolute bottom-1 right-1 z-30 pointer-events-none">
-                    {getCardSupplyCount(mainCard.card.day, mainCard.card.rarity as Rarity) >= getSupplyCap(mainCard.card.rarity as Rarity, mainCard.card.day) ? (
-                      <div className="px-1.5 py-0.5 bg-black/80 border border-white/20 text-[7px] font-black uppercase tracking-tighter text-white">
-                        SOLD OUT
+                    {(mainCard.edition || 0) > getSupplyCap(mainCard.card.rarity as Rarity, mainCard.card.day) ? (
+                      <div className="px-1.5 py-0.5 bg-black/80 border border-[#ff3800]/60 text-[7px] font-black uppercase tracking-tighter text-[#ff3800]">
+                        MINTED OUT
                       </div>
                     ) : (
                       <div className="px-1.5 py-0.5 bg-white/10 backdrop-blur-sm border border-white/10 text-[7px] font-black uppercase tracking-tighter text-white/40">
