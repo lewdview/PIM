@@ -73,15 +73,55 @@ export const RARITIES: Rarity[] = ['common', 'uncommon', 'rare', 'legendary', 'm
  * Get the default supply cap for a rarity tier.
  * Matches backend vault-engine logic.
  */
-export function getSupplyCap(rarity: Rarity): number {
+import { getCurrentDay } from './dayCalc';
+
+export function getSupplyCap(rarity: Rarity, cardDay?: number): number {
+  if (rarity === 'mythic') return 1;
+
+  const day = cardDay ?? 1;
+  const today = getCurrentDay();
+  const age = Math.max(0, today - day);
+
+  if (age >= 180) {
+    const caps: Record<Rarity, number> = {
+      mythic: 1,
+      legendary: 5,
+      rare: 50,
+      uncommon: 500,
+      common: 1000
+    };
+    return caps[rarity] || 1000;
+  } else if (age >= 30) {
+    const caps: Record<Rarity, number> = {
+      mythic: 1,
+      legendary: 3,
+      rare: 35,
+      uncommon: 250,
+      common: 500
+    };
+    return caps[rarity] || 500;
+  } else {
+    // Launch Week
+    const caps: Record<Rarity, number> = {
+      mythic: 1,
+      legendary: 2,
+      rare: 15,
+      uncommon: 100,
+      common: 250
+    };
+    return caps[rarity] || 250;
+  }
+}
+
+export function getMintableCap(rarity: Rarity): number {
   const caps: Record<Rarity, number> = {
     mythic: 1,
-    legendary: 2,
-    rare: 10,
-    uncommon: 20,
-    common: 50
+    legendary: 3,
+    rare: 25,
+    uncommon: 50,
+    common: 0
   };
-  return caps[rarity] || 50;
+  return caps[rarity] || 0;
 }
 
 // ===== SPECIAL PROOF TYPES =====

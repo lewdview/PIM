@@ -159,7 +159,7 @@ export default function PackRevealPage() {
                       ultraReward={owned.ultraReward} 
                       isEcho={owned.isEcho} 
                       echoGeneration={owned.echoGeneration}
-                      onBurn={(owned.edition || 0) > (owned.maxSupply || getSupplyCap(owned.card.rarity as Rarity)) ? () => handleBurn(owned) : undefined}
+                      onBurn={(owned.edition || 0) > getSupplyCap(owned.card.rarity as Rarity, owned.card.day) ? () => handleBurn(owned) : undefined}
                       proof={owned.proof}
                     />
 
@@ -235,7 +235,7 @@ export default function PackRevealPage() {
                   ultraReward={owned.ultraReward} 
                   isEcho={owned.isEcho} 
                   echoGeneration={owned.echoGeneration}
-                  onBurn={(owned.edition || 0) > (owned.maxSupply || getSupplyCap(owned.card.rarity as Rarity)) ? () => handleBurn(owned) : undefined}
+                  onBurn={(owned.edition || 0) > getSupplyCap(owned.card.rarity as Rarity, owned.card.day) ? () => handleBurn(owned) : undefined}
                   proof={owned.proof}
                 />
               </motion.div>

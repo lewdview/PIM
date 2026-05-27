@@ -4,6 +4,9 @@ import { Trophy, Medal, Crown, Star } from 'lucide-react';
 import { useVaultStore } from '../store/useVaultStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { RARITY_CONFIG } from '../utils/rarity';
+import { supabase } from '../services/supabaseClient';
+import { Link } from 'wouter';
+
 interface LeaderEntry {
   id: string;
   rank: number;
@@ -15,77 +18,112 @@ interface LeaderEntry {
   isYou: boolean;
 }
 
-// Generate mock leaderboard data (in V2: pull from Supabase)
-function generateLeaderboard(yourScore: number, yourUnique: number, user: any): LeaderEntry[] {
-  const names = [
-    'v0id_walker', 'neon_drift', 'signal_lost', 'dark_matter',
-    'echo_chamber', 'static_monk', 'pulse_rider', 'glitch_saint',
-    'data_ghost', 'byte_prophet', 'hex_oracle', 'null_sage',
-    'cache_wraith', 'root_nomad', 'cloud_seeker',
-  ];
-
-  const entries: LeaderEntry[] = names.map((name, i) => {
-    const base = 150 - i * 8;
-    const uniqueCards = Math.max(5, base + Math.floor(Math.random() * 20));
-    const totalCards = uniqueCards + Math.floor(Math.random() * 50);
-    const rarityScore = uniqueCards * 3 + Math.floor(Math.random() * 100);
-
-    return {
-      id: crypto.randomUUID(),
-      rank: 0,
-      name,
-      uniqueCards,
-      totalCards,
-      rarityScore,
-      topRarity: ['mythic', 'legendary', 'legendary', 'rare', 'rare'][Math.min(i, 4)],
-      isYou: false,
-    };
-  });
-
-  let displayName = 'anonymous';
-  if (user) {
-    if (user.email) {
-      const cleaned = user.email.split('@')[0];
-      if (cleaned.startsWith('0x') && cleaned.length === 42) {
-        displayName = `${cleaned.slice(0, 6)}...${cleaned.slice(-4)}`;
-      } else {
-        displayName = cleaned;
-      }
-    } else {
-      displayName = `anon_${user.id.slice(0, 6)}`;
-    }
-  }
-
-  // Add "you"
-  entries.push({
-    id: 'you',
-    rank: 0,
-    name: displayName.toUpperCase() + ' (YOU)',
-    uniqueCards: yourUnique,
-    totalCards: yourUnique,
-    rarityScore: yourScore,
-    topRarity: yourScore > 50 ? 'legendary' : yourScore > 20 ? 'rare' : 'uncommon',
-    isYou: true,
-  });
-
-  // Sort by rarity score
-  entries.sort((a, b) => b.rarityScore - a.rarityScore);
-  entries.forEach((e, i) => { e.rank = i + 1; });
-
-  return entries;
-}
-
-import { Link } from 'wouter';
-
 export default function LeaderboardPage() {
   const [entries, setEntries] = useState<LeaderEntry[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const collection = useVaultStore.getState().collection;
-    const unique = new Set(collection.map(c => c.cardId)).size;
-    const echoPrestigeScore = useVaultStore.getState().echoPrestigeScore;
-    const user = useAuthStore.getState().user;
-    setEntries(generateLeaderboard(echoPrestigeScore, unique, user));
+    async function fetchLeaderboard() {
+      try {
+        setLoading(true);
+        // 1. Fetch all profiles
+        const { data: profiles, error: pErr } = await supabase
+          .from('profiles')
+          .select('id, wallet_address, streak_count, total_pulls');
+        if (pErr) throw pErr;
+
+        // 2. Fetch all collections
+        const { data: collections, error: cErr } = await supabase
+          .from('vault_collections')
+          .select('owner_id, card_id, rarity, edition, proof, is_echo');
+        if (cErr) throw cErr;
+
+        const authUser = useAuthStore.getState().user;
+
+        // 3. Map collections by owner_id
+        const collectionsByOwner: Record<string, typeof collections> = {};
+        for (const col of collections || []) {
+          if (!collectionsByOwner[col.owner_id]) {
+            collectionsByOwner[col.owner_id] = [];
+          }
+          collectionsByOwner[col.owner_id].push(col);
+        }
+
+        // 4. Calculate score for each profile
+        const mappedEntries: LeaderEntry[] = (profiles || []).map((prof) => {
+          const userCols = collectionsByOwner[prof.id] || [];
+          const uniqueCards = new Set(userCols.map(c => c.card_id)).size;
+          const totalCards = userCols.length;
+
+          // Calculate score
+          let score = 0;
+          score += (prof.streak_count || 0) * 120;
+          score += (prof.total_pulls || 0) * 15;
+
+          const RARITY_ORDER = ['common', 'uncommon', 'rare', 'legendary', 'mythic'];
+          let maxRarityIdx = 0;
+
+          for (const c of userCols) {
+            const rarity = c.rarity || 'common';
+            if (rarity === 'common') score += 10;
+            else if (rarity === 'uncommon') score += 25;
+            else if (rarity === 'rare') score += 60;
+            else if (rarity === 'legendary') score += 350;
+            else if (rarity === 'mythic') score += 800;
+
+            if (c.edition === 1) score += 500;
+            if (c.proof && c.proof !== 'none') score += 200;
+            if (c.is_echo) score += 400;
+
+            const rarityIdx = RARITY_ORDER.indexOf(rarity);
+            if (rarityIdx > maxRarityIdx) {
+              maxRarityIdx = rarityIdx;
+            }
+          }
+
+          const topRarity = RARITY_ORDER[maxRarityIdx];
+
+          // Format Display Name
+          let name = 'ANONYMOUS';
+          if (prof.wallet_address) {
+            const wa = prof.wallet_address;
+            name = `${wa.slice(0, 6)}...${wa.slice(-4)}`;
+          } else {
+            name = `ANON_${prof.id.slice(0, 6)}`;
+          }
+
+          const isYou = authUser ? authUser.id === prof.id : false;
+          if (isYou) {
+            name = `${name} (YOU)`;
+          }
+
+          return {
+            id: prof.id,
+            rank: 0,
+            name: name.toUpperCase(),
+            uniqueCards,
+            totalCards,
+            rarityScore: score,
+            topRarity,
+            isYou,
+          };
+        });
+
+        // 5. Sort and rank
+        mappedEntries.sort((a, b) => b.rarityScore - a.rarityScore);
+        mappedEntries.forEach((entry, idx) => {
+          entry.rank = idx + 1;
+        });
+
+        setEntries(mappedEntries);
+      } catch (err) {
+        console.error("Failed to load real leaderboard:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchLeaderboard();
   }, []);
 
   const yourEntry = entries.find(e => e.isYou);
@@ -158,64 +196,70 @@ export default function LeaderboardPage() {
       )}
 
       {/* Leaderboard table */}
-      <div className="space-y-1.5">
-        {entries.map((entry, i) => {
-          const Wrapper = entry.isYou ? 'div' : Link;
-          const wrapperProps = entry.isYou ? {} : { to: `/vault/${entry.id}` };
-          
-          return (
-            <motion.div
-              key={entry.name}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.05 * i }}
-            >
-              <Wrapper
-                {...wrapperProps as any}
-                className={`flex items-center gap-3 px-4 py-3 border-b border-white/5 transition-all ${
-                  entry.isYou ? 'bg-white/5' : 'hover:bg-white/5 hover:translate-x-1 hover:border-yellow-500/30 group'
-                }`}
+      {loading ? (
+        <div className="text-center py-12 text-xs font-mono opacity-50">
+          Syncing with Base network...
+        </div>
+      ) : (
+        <div className="space-y-1.5">
+          {entries.map((entry, i) => {
+            const Wrapper = entry.isYou ? 'div' : Link;
+            const wrapperProps = entry.isYou ? {} : { to: `/vault/${entry.id}` };
+            
+            return (
+              <motion.div
+                key={entry.name}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.05 * i }}
               >
-            {/* Rank */}
-            <div className="w-6 flex-shrink-0 flex justify-center">
-              {getRankIcon(entry.rank)}
-            </div>
+                <Wrapper
+                  {...wrapperProps as any}
+                  className={`flex items-center gap-3 px-4 py-3 border-b border-white/5 transition-all ${
+                    entry.isYou ? 'bg-white/5' : 'hover:bg-white/5 hover:translate-x-1 hover:border-yellow-500/30 group'
+                  }`}
+                >
+                  {/* Rank */}
+                  <div className="w-6 flex-shrink-0 flex justify-center">
+                    {getRankIcon(entry.rank)}
+                  </div>
 
-            {/* Name */}
-            <div className="flex-1 min-w-0">
-              <span
-                className={`text-sm font-mono ${entry.isYou ? 'font-bold' : ''}`}
-                style={{
-                  color: entry.isYou ? 'var(--color-neon-yellow)' : 'var(--color-text-primary)',
-                }}
-              >
-                {entry.name}
-              </span>
-            </div>
+                  {/* Name */}
+                  <div className="flex-1 min-w-0">
+                    <span
+                      className={`text-sm font-mono ${entry.isYou ? 'font-bold' : ''}`}
+                      style={{
+                        color: entry.isYou ? 'var(--color-neon-yellow)' : 'var(--color-text-primary)',
+                      }}
+                    >
+                      {entry.name}
+                    </span>
+                  </div>
 
-            {/* Stats */}
-            <div className="flex items-center gap-4 text-xs font-mono">
-              <div className="text-right hidden sm:block">
-                <span style={{ color: 'var(--color-text-muted)' }}>{entry.uniqueCards}</span>
-                <span className="ml-0.5" style={{ color: 'var(--color-text-muted)' }}>cards</span>
-              </div>
-              <div
-                className="text-right font-bold min-w-[50px]"
-                style={{
-                  color: entry.rank <= 3
-                    ? RARITY_CONFIG[entry.topRarity as keyof typeof RARITY_CONFIG]?.color || 'var(--color-text-primary)'
-                    : 'var(--color-text-secondary)',
-                }}
-              >
-                {entry.rarityScore}
-                <span className="text-[10px] ml-0.5" style={{ color: 'var(--color-text-muted)' }}>score</span>
-              </div>
-            </div>
-              </Wrapper>
-            </motion.div>
-          );
-        })}
-      </div>
+                  {/* Stats */}
+                  <div className="flex items-center gap-4 text-xs font-mono">
+                    <div className="text-right hidden sm:block">
+                      <span style={{ color: 'var(--color-text-muted)' }}>{entry.uniqueCards}</span>
+                      <span className="ml-0.5" style={{ color: 'var(--color-text-muted)' }}>cards</span>
+                    </div>
+                    <div
+                      className="text-right font-bold min-w-[50px]"
+                      style={{
+                        color: entry.rank <= 3
+                          ? RARITY_CONFIG[entry.topRarity as keyof typeof RARITY_CONFIG]?.color || 'var(--color-text-primary)'
+                          : 'var(--color-text-secondary)',
+                      }}
+                    >
+                      {entry.rarityScore}
+                      <span className="text-[10px] ml-0.5" style={{ color: 'var(--color-text-muted)' }}>score</span>
+                    </div>
+                  </div>
+                </Wrapper>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Footer note */}
       <p className="text-center text-[10px] font-mono pt-4" style={{ color: 'var(--color-text-muted)' }}>

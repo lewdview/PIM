@@ -225,7 +225,15 @@ export default function Results() {
   const ringProgress = Math.min(accuracy / 100, 1);
 
   const user = useAuthStore(s => s.user);
+  const collection = useVaultStore(s => s.collection);
+  const loadVaultData = useVaultStore(s => s.loadVaultData);
   const [claimStatus, setClaimStatus] = useState<'idle' | 'checking' | 'ready' | 'claiming' | 'claimed' | 'failed'>('idle');
+
+  useEffect(() => {
+    if (user) {
+      loadVaultData().catch(err => console.warn("Failed to load vault data inside GameResults", err));
+    }
+  }, [user, loadVaultData]);
 
   // Accuracy → Pack tier mapping (per Growth Funnel spec)
   type ClaimableTier = 'free' | 'taste' | 'special_picks' | 'alpha' | 'prophecy';
@@ -779,13 +787,17 @@ export default function Results() {
   const fromFreePlay = gameOrigin === 'songs';
   const backRoute = fromFreePlay ? '/songs' : `/chapter/${chapterMonth}`;
 
-  // Pack reward eligibility (Award Play + default difficulty + no modifier cards)
+  // Card ownership check
+  const ownsCard = song ? collection.some(c => c.cardId === song.id || c.card?.day === song.day) : false;
+
+  // Pack reward eligibility (Owned Play + default difficulty + no modifier cards)
   const activeMod = sessionStorage.getItem(`active_modifier_type_${songId}`);
   const hasModifier = activeMod && activeMod !== 'none';
   const diffOverride = sessionStorage.getItem(`diff_override_${songId}`);
   const diffVal = diffOverride ? parseInt(diffOverride, 10) : NaN;
-  const hasDiffModified = !isNaN(diffVal) && song && diffVal !== song.difficultyLevel;
-  const isEligibleForReward = fromFreePlay && !hasModifier && !hasDiffModified;
+  // Difficulty modifier only disqualifies in Award Play (fromFreePlay)
+  const hasDiffModified = fromFreePlay && !isNaN(diffVal) && song && diffVal !== song.difficultyLevel;
+  const isEligibleForReward = ownsCard && !hasModifier && !hasDiffModified;
 
   // ── CLEARED path (Avant-Garde) ───────────────────────────────
   if (isAvant) {
@@ -997,11 +1009,14 @@ export default function Results() {
                         </button>
                       )}
                     </>
-                  ) : fromFreePlay ? (
+                  ) : (
                     <div className="border border-yellow-500/30 bg-yellow-500/5 p-3 text-center rounded text-[10px] font-mono text-yellow-500 uppercase tracking-wider mb-2">
-                      ⚠️ AWARDS DISABLED // MODIFIER ACTIVE OR DIFF OVERRIDE
+                      {!ownsCard 
+                        ? "⚠️ AWARDS DISABLED // NON-OWNED PLAY" 
+                        : "⚠️ AWARDS DISABLED // MODIFIER ACTIVE OR DIFF OVERRIDE"
+                      }
                     </div>
-                  ) : null}
+                  )}
                 </div>
               )}
               {fromFreePlay && nextSong ? (
@@ -1186,7 +1201,7 @@ export default function Results() {
         {/* ── Action Buttons ── */}
         {phase === 'actions' && (
           <div className="w-full stats-slide-up" style={{ animationDelay: '0.15s' }}>
-            {result.medal !== 'NONE' && fromFreePlay && (
+            {result.medal !== 'NONE' && (
               <div className="mb-3">
                 {isEligibleForReward ? (
                   <>
@@ -1232,7 +1247,10 @@ export default function Results() {
                   </>
                 ) : (
                   <div className="glass-panel border border-yellow-500/30 bg-yellow-500/10 p-3.5 text-center text-xs font-mono text-yellow-500 uppercase rounded-xl mb-3">
-                    ⚠️ AWARDS DISABLED // MODIFIER ACTIVE OR DIFF OVERRIDE
+                    {!ownsCard 
+                      ? "⚠️ AWARDS DISABLED // NON-OWNED PLAY" 
+                      : "⚠️ AWARDS DISABLED // MODIFIER ACTIVE OR DIFF OVERRIDE"
+                    }
                   </div>
                 )}
               </div>

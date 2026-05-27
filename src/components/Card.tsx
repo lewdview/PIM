@@ -141,7 +141,7 @@ export default function Card({
   const valence = card.valence ?? 0;
   const tempo   = card.tempo   ?? 0;
   const claimed = realClaimed ?? card.claimedCount ?? 0;
-  const supply  = card.maxSupply || getSupplyCap(card.rarity);
+  const supply  = getSupplyCap(card.rarity, card.day);
   const coverUrl = card.coverUrl || '';
   const audioUrl = card.audioUrl || '';
   const hasArt   = !imgError && coverUrl;

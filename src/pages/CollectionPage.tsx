@@ -349,20 +349,19 @@ export default function CollectionPage() {
                     isDailyOrigin={mainCard.source === 'daily_claim' || mainCard.source === 'pack_miss_out'} 
                     ultraReward={mainCard.ultraReward} 
                     isEcho={mainCard.isEcho} 
-                    echoGeneration={mainCard.echoGeneration}
-                    onBurn={getCardSupplyCount(mainCard.card.day, mainCard.card.rarity as Rarity) >= (mainCard.maxSupply || getSupplyCap(mainCard.card.rarity as Rarity)) ? () => handleBurn(mainCard) : undefined}
+                    onBurn={getCardSupplyCount(mainCard.card.day, mainCard.card.rarity as Rarity) >= getSupplyCap(mainCard.card.rarity as Rarity, mainCard.card.day) ? () => handleBurn(mainCard) : undefined}
                     proof={mainCard.proof}
                   />
                   
                   {/* Edition Status — rarity-specific supply */}
                   <div className="absolute bottom-1 right-1 z-30 pointer-events-none">
-                    {getCardSupplyCount(mainCard.card.day, mainCard.card.rarity as Rarity) >= (mainCard.maxSupply || getSupplyCap(mainCard.card.rarity as Rarity)) ? (
+                    {getCardSupplyCount(mainCard.card.day, mainCard.card.rarity as Rarity) >= getSupplyCap(mainCard.card.rarity as Rarity, mainCard.card.day) ? (
                       <div className="px-1.5 py-0.5 bg-black/80 border border-white/20 text-[7px] font-black uppercase tracking-tighter text-white">
                         SOLD OUT
                       </div>
                     ) : (
                       <div className="px-1.5 py-0.5 bg-white/10 backdrop-blur-sm border border-white/10 text-[7px] font-black uppercase tracking-tighter text-white/40">
-                        ED. {mainCard.edition || '?'}/{mainCard.maxSupply || getSupplyCap(mainCard.card.rarity as Rarity)}
+                        ED. {mainCard.edition || '?'}/{getSupplyCap(mainCard.card.rarity as Rarity, mainCard.card.day)}
                       </div>
                     )}
                   </div>
@@ -518,7 +517,7 @@ export default function CollectionPage() {
                       DAY {mainCard.card.day}
                     </span>
                     <span className="text-[8px] font-mono opacity-30">
-                      ED. {mainCard.edition || '?'}/{mainCard.maxSupply || 100}
+                      ED. {mainCard.edition || '?'}/{getSupplyCap(mainCard.card.rarity as Rarity, mainCard.card.day)}
                     </span>
                   </div>
                 </div>

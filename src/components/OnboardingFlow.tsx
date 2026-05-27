@@ -22,7 +22,7 @@ import { getAdminConfig } from '../utils/adminConfig';
 
 
 
-type Phase = 'invite' | 'welcome' | 'reveal' | 'explainer' | 'done';
+type Phase = 'welcome' | 'reveal' | 'explainer' | 'done';
 
 const WELCOME_META: RevealPackMeta = {
   category: 'taste',
@@ -44,9 +44,6 @@ export default function OnboardingFlow({ onComplete }: Props) {
   const [phase, setPhase] = useState<Phase>('welcome');
   const [cards, setCards] = useState<OwnedCard[]>([]);
   const [loadError, setLoadError] = useState(false);
-  const [inviteCode, setInviteCode] = useState('');
-  const [inviteError, setInviteError] = useState(false);
-  const [inviteLoading, setInviteLoading] = useState(false);
   const purchasedRef = useRef(false);
   const { addToCollection, loadVaultData } = useVaultStore();
 
@@ -104,180 +101,7 @@ export default function OnboardingFlow({ onComplete }: Props) {
     onComplete();
   }, [onComplete, loadVaultData]);
 
-  const handleInviteSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inviteCode.trim()) return;
-    setInviteLoading(true);
-    setInviteError(false);
-    const valid = await redeemInviteCode(inviteCode.trim());
-    setInviteLoading(false);
-    if (valid) {
-      setPhase('welcome');
-    } else {
-      setInviteError(true);
-      setTimeout(() => setInviteError(false), 2000);
-    }
-  }, [inviteCode]);
 
-  // ── INVITE CODE GATE ──────────────────────────────────────────────
-  if (phase === 'invite') {
-    return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        style={{
-          position: 'fixed', inset: 0, zIndex: 9999,
-          background: '#050402',
-          display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center',
-          overflow: 'hidden',
-        }}
-      >
-        {/* Ambient glow */}
-        <motion.div
-          animate={{ opacity: [0.1, 0.2, 0.1], scale: [1, 1.1, 1] }}
-          transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut' }}
-          style={{
-            position: 'absolute', width: 'min(500px, 150vw)', height: 'min(500px, 150vw)', borderRadius: '50%',
-            background: 'radial-gradient(ellipse, rgba(255,56,0,0.2), transparent 70%)',
-            filter: 'blur(80px)', pointerEvents: 'none',
-          }}
-        />
-
-        {/* RC1 badge */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          style={{
-            padding: '4px 16px', marginBottom: '24px',
-            border: '1px solid rgba(255, 56, 0, 0.4)',
-            background: 'rgba(255, 56, 0, 0.08)',
-            fontFamily: '"JetBrains Mono", monospace',
-            fontSize: '9px', fontWeight: 700,
-            letterSpacing: '0.2em', textTransform: 'uppercase',
-            color: '#ff3800',
-          }}
-        >
-          RC1 TEST MODE — INVITE ONLY
-        </motion.div>
-
-        {/* V icon */}
-        <motion.div
-          initial={{ scale: 0, rotate: -30 }}
-          animate={{ scale: 1, rotate: -4 }}
-          transition={{ type: 'spring', stiffness: 200, damping: 18, delay: 0.3 }}
-          style={{
-            width: '70px', height: '70px',
-            background: '#ff3800',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: '"Impact", "Arial Black", sans-serif',
-            fontSize: '44px', fontWeight: 900, color: '#fff',
-            boxShadow: '4px 4px 0 #000, 0 0 30px rgba(255,56,0,0.5)',
-            border: '3px solid #000',
-            marginBottom: '20px',
-          }}
-        >
-          V
-        </motion.div>
-
-        {/* Title */}
-        <motion.h1
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          style={{
-            fontFamily: '"Impact", "Arial Black", sans-serif',
-            fontSize: '28px', fontWeight: 900,
-            letterSpacing: '-1px',
-            color: '#fff', margin: '0 0 8px',
-            textShadow: '0 0 20px rgba(255,56,0,0.5), 2px 2px 0 rgba(0,0,0,0.9)',
-          }}
-        >
-          th3v4ult: Now Featuring PIM!
-        </motion.h1>
-
-        {/* Invite form */}
-        <motion.form
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.7 }}
-          onSubmit={handleInviteSubmit}
-          style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center',
-            gap: '12px', marginTop: '24px', width: '100%', maxWidth: '320px',
-          }}
-        >
-          <label style={{
-            fontFamily: '"JetBrains Mono", monospace',
-            fontSize: '9px', fontWeight: 700,
-            letterSpacing: '0.15em', textTransform: 'uppercase',
-            color: 'rgba(255,255,255,0.4)',
-          }}>
-            ENTER INVITE CODE
-          </label>
-          <input
-            type="text"
-            value={inviteCode}
-            onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-            placeholder="VAULT-RC1-ALPHA"
-            autoFocus
-            style={{
-              width: '100%', padding: '12px 16px',
-              background: 'rgba(255,255,255,0.04)',
-              border: `2px solid ${inviteError ? '#ff3800' : 'rgba(255,255,255,0.1)'}`,
-              fontFamily: '"JetBrains Mono", monospace',
-              fontSize: '14px', fontWeight: 700,
-              letterSpacing: '0.1em', textTransform: 'uppercase',
-              color: '#fff', textAlign: 'center',
-              outline: 'none',
-              transition: 'border-color 0.2s',
-            }}
-            onFocus={(e) => { if (!inviteError) e.currentTarget.style.borderColor = 'rgba(255,56,0,0.5)'; }}
-            onBlur={(e) => { if (!inviteError) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
-          />
-          {inviteError && (
-            <motion.div
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              style={{
-                fontFamily: '"JetBrains Mono", monospace',
-                fontSize: '10px', color: '#ff3800',
-                textTransform: 'uppercase', letterSpacing: '0.1em',
-              }}
-            >
-              INVALID OR EXPIRED CODE
-            </motion.div>
-          )}
-          <button
-            type="submit"
-            disabled={inviteLoading || !inviteCode.trim()}
-            style={{
-              width: '100%', padding: '12px',
-              background: inviteCode.trim() ? '#ff3800' : 'rgba(255,56,0,0.2)',
-              border: '2px solid #000',
-              fontFamily: '"JetBrains Mono", monospace',
-              fontSize: '11px', fontWeight: 700,
-              letterSpacing: '0.15em', textTransform: 'uppercase',
-              color: inviteCode.trim() ? '#fff' : 'rgba(255,255,255,0.3)',
-              cursor: inviteCode.trim() ? 'pointer' : 'default',
-              boxShadow: inviteCode.trim() ? '3px 3px 0 #000' : 'none',
-              transition: 'all 0.2s',
-            }}
-          >
-            {inviteLoading ? 'VALIDATING...' : 'ENTER THE VAULT'}
-          </button>
-        </motion.form>
-
-        {/* Film grain */}
-        <div style={{
-          position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 100,
-          opacity: 0.05, mixBlendMode: 'overlay' as const,
-          background: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
-        }} />
-      </motion.div>
-    );
-  }
 
   // ── WELCOME SPLASH ────────────────────────────────────────────────
   if (phase === 'welcome') {

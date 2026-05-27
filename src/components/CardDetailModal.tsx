@@ -1,13 +1,23 @@
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ExternalLink, Download, ShieldCheck, Share2, Info, Flame } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { useGlobalPlayer } from '../store/useGlobalPlayer';
+import { useVaultStore } from '../store/useVaultStore';
 import type { OwnedCard } from '../services/vaultService';
-import { generateCardMetadata } from '../services/vaultService';
+import { generateCardMetadata, requestNftMint } from '../services/vaultService';
 import { RARITY_CONFIG, getSupplyCap, type Rarity } from '../utils/rarity';
 import RarityBadge from './RarityBadge';
 import AudioPreview from './AudioPreview';
 import { getDayFromDate } from '../utils/dayCalc';
+
+const NFT_MINT_COSTS: Record<Rarity, number> = {
+  common: 0,
+  uncommon: 0,
+  rare: 300,
+  legendary: 600,
+  mythic: 1200,
+};
 
 interface CardDetailModalProps {
   card: OwnedCard | null;
@@ -39,8 +49,27 @@ function TraitBar({ label, value, color }: { label: string; value: number; color
 export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardDetailModalProps) {
   const [, setLocation] = useLocation();
   const stop = useGlobalPlayer((s) => s.stop);
+  const [isMinting, setIsMinting] = useState(false);
 
   if (!card) return null;
+
+  const handleMint = async () => {
+    if (!card || isMinting) return;
+    setIsMinting(true);
+    try {
+      const res = await requestNftMint(card.id);
+      if (res.success) {
+        alert(`Success! Minted NFT on Base. Tx: ${res.txHash}`);
+        await useVaultStore.getState().loadVaultData();
+      } else {
+        alert(`Minting failed: ${res.error}`);
+      }
+    } catch (e: any) {
+      alert(`Error: ${e.message}`);
+    } finally {
+      setIsMinting(false);
+    }
+  };
 
   const rc = RARITY_CONFIG[card.card.rarity];
   const metadata = generateCardMetadata(card);
@@ -137,8 +166,22 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
                           <span className="font-bold"># {String(card.card.day).padStart(3, '0')}</span>
                         </div>
                         <div className="flex justify-between text-[11px] font-mono">
-                          <span className="opacity-40">Mint:</span>
-                          <span className="font-bold text-white/90">{card.edition || '???'} / {card.maxSupply || getSupplyCap(card.card.rarity as Rarity)}</span>
+                          <span className="opacity-40">Playable Limit:</span>
+                          <span className="font-bold text-white/90">{card.edition || '???'} / {getSupplyCap(card.card.rarity as Rarity, card.card.day)}</span>
+                        </div>
+                        <div className="flex justify-between text-[11px] font-mono">
+                          <span className="opacity-40">Mintable Limit:</span>
+                          <span className="font-bold text-white/90">
+                            {getMintableCap(card.card.rarity as Rarity) > 0
+                              ? `${getMintableCap(card.card.rarity as Rarity)} Max`
+                              : 'Not Mintable'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-[11px] font-mono">
+                          <span className="opacity-40">Blockchain:</span>
+                          <span className="font-bold text-white/90">
+                            {card.blockchainStatus === 'minted' ? 'Minted (Base)' : card.blockchainStatus === 'pending' ? 'Pending' : 'Off-Chain'}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -222,10 +265,11 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
                        <Info size={12} />
                        Metadata Properties
                     </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
                       {[
                         { label: 'Rarity', value: card.card.rarity },
-                        { label: 'Edition', value: `${card.edition || 1} of ${card.maxSupply || getSupplyCap(card.card.rarity as Rarity)}` },
+                        { label: 'Playable Edition', value: `${card.edition || 1} of ${getSupplyCap(card.card.rarity as Rarity, card.card.day)}` },
+                        { label: 'Mintable Limit', value: getMintableCap(card.card.rarity as Rarity) > 0 ? `${getMintableCap(card.card.rarity as Rarity)} Max` : 'Not Mintable' },
                         { label: 'Claimed', value: new Date(card.claimedAt).toLocaleDateString() },
                         { label: 'Source', value: card.source.replace('pack_', '').replace('_', ' ') }
                       ].map((item, i) => (
@@ -316,12 +360,41 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
                         PLAY PIM
                       </button>
                     )}
-                    <button className="ml-auto flex items-center gap-2 px-6 py-3 bg-white text-black rounded-xl text-[11px] font-mono font-bold uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-95">
-                      View on Chain
-                      <ExternalLink size={14} />
-                    </button>
+                    {card.blockchainStatus === 'minted' ? (
+                      <a
+                        href={`https://base.blockscout.com/tx/${card.fingerprint}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="ml-auto flex items-center gap-2 px-6 py-3 bg-white text-black rounded-xl text-[11px] font-mono font-bold uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-95"
+                      >
+                        View on Chain
+                        <ExternalLink size={14} />
+                      </a>
+                    ) : card.blockchainStatus === 'pending' || isMinting ? (
+                      <button
+                        disabled
+                        className="ml-auto flex items-center gap-2 px-6 py-3 bg-white/10 text-white/50 border border-white/5 rounded-xl text-[11px] font-mono font-bold uppercase tracking-widest cursor-not-allowed"
+                      >
+                        Minting...
+                      </button>
+                    ) : rarity === 'common' ? (
+                      <button
+                        disabled
+                        className="ml-auto flex items-center gap-2 px-6 py-3 bg-white/5 text-white/30 border border-white/5 rounded-xl text-[11px] font-mono font-bold uppercase tracking-widest cursor-not-allowed"
+                      >
+                        Not Mintable
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleMint}
+                        disabled={useVaultStore.getState().tokenBalance < (NFT_MINT_COSTS[rarity] ?? 0)}
+                        className="ml-auto flex items-center gap-2 px-6 py-3 bg-[#E5B800] text-black hover:bg-yellow-400 disabled:bg-white/5 disabled:text-white/30 disabled:border disabled:border-white/5 rounded-xl text-[11px] font-mono font-bold uppercase tracking-widest transition-all hover:scale-[1.02] active:scale-95"
+                      >
+                        Mint NFT {(NFT_MINT_COSTS[rarity] ?? 0) > 0 ? `(${NFT_MINT_COSTS[rarity]} V⚡)` : '(FREE)'}
+                      </button>
+                    )}
 
-                    {(card.edition || 0) > (card.maxSupply || getSupplyCap(card.card.rarity as Rarity)) && onBurn && (
+                    {(card.edition || 0) > getSupplyCap(card.card.rarity as Rarity, card.card.day) && onBurn && (
                       <button 
                         onClick={() => { onBurn(card); onClose(); }}
                         className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-red-500/10 border border-red-500/30 text-red-500 rounded-xl text-xs font-mono font-black uppercase tracking-[0.2em] transition-all hover:bg-red-500/20 active:scale-[0.98] mt-4"

@@ -456,7 +456,9 @@ export async function claimDailyCard(day: number): Promise<OwnedCard | null> {
       edition: result.card.edition,
       maxSupply: result.card.max_supply,
       proof: result.card.proof,
-      ultraReward: result.card.ultra_reward
+      ultraReward: result.card.ultra_reward,
+      blockchainStatus: result.card.blockchain_status,
+      fingerprint: result.card.fingerprint
     };
   } catch {
     return null;
@@ -513,7 +515,9 @@ export async function purchasePack(category: PackCategory, size: PackSize = 'sin
         echoGeneration: c.echo_generation,
         echoSourceDay: c.echo_source_day,
         proof: c.proof,
-        ultraReward: c.ultra_reward
+        ultraReward: c.ultra_reward,
+        blockchainStatus: c.blockchain_status,
+        fingerprint: c.fingerprint
       };
     });
   } catch (e) {
@@ -628,7 +632,9 @@ export async function buyTokenPack(): Promise<OwnedCard[] | 'insufficient'> {
         echoGeneration: c.echo_generation,
         echoSourceDay: c.echo_source_day,
         proof: c.proof,
-        ultraReward: c.ultra_reward
+        ultraReward: c.ultra_reward,
+        blockchainStatus: c.blockchain_status,
+        fingerprint: c.fingerprint
       };
     });
   } catch (e) {
@@ -661,7 +667,9 @@ export async function targetedPull(day: number): Promise<OwnedCard | null> {
       card: { ...parent, rarity: data.card.rarity },
       source: 'targeted_pull', claimedAt: data.card.claimed_at,
       edition: data.card.edition, maxSupply: data.card.max_supply,
-      proof: data.card.proof
+      proof: data.card.proof,
+      blockchainStatus: data.card.blockchain_status,
+      fingerprint: data.card.fingerprint
     };
   } catch (e) { console.error('Targeted pull error:', e); return null; }
 }
@@ -697,6 +705,8 @@ export async function fuseDuplicates(cardIds: string[]): Promise<OwnedCard | nul
       card: { ...parent, rarity: data.fusedCard.rarity },
       source: 'fusion', claimedAt: data.fusedCard.claimed_at,
       edition: data.fusedCard.edition, maxSupply: data.fusedCard.max_supply,
+      blockchainStatus: data.fusedCard.blockchain_status,
+      fingerprint: data.fusedCard.fingerprint
     };
   } catch (e) { console.error('Fusion error:', e); return null; }
 }
@@ -722,14 +732,14 @@ export async function getDebugStats(): Promise<any> {
   } catch { return null; }
 }
 
-/** Request NFT mint (disabled in RC1) */
-export async function requestNftMint(cardOwnedId: string): Promise<{ success: boolean; error?: string }> {
+/** Request NFT mint */
+export async function requestNftMint(cardOwnedId: string): Promise<{ success: boolean; txHash?: string; error?: string }> {
   try {
     const { data, error } = await supabase.functions.invoke('vault-engine', {
       body: { action: 'requestNftMint', payload: { cardOwnedId } }
     });
     if (error || !data?.success) return { success: false, error: data?.error || 'Unknown error' };
-    return { success: true };
+    return { success: true, txHash: data.txHash };
   } catch (e: any) { return { success: false, error: e.message }; }
 }
 

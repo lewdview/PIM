@@ -207,7 +207,9 @@ export const useVaultStore = create<VaultState>((set) => ({
              echoGeneration: c.echo_generation,
              echoSourceDay: c.echo_source_day,
              proof: c.proof,
-             ultraReward: c.ultra_reward
+             ultraReward: c.ultra_reward,
+             blockchainStatus: c.blockchain_status,
+             fingerprint: c.fingerprint
            };
         });
       }
