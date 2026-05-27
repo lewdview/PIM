@@ -270,6 +270,11 @@ export default function Game() {
   const rewindToRef = useRef(0);
   const rewindAnimRef = useRef<{ wallStart: number; fromT: number; toT: number } | null>(null);
   const drawRef = useRef<(() => void) | null>(null);
+  
+  const isTutorialRef = useRef(new URLSearchParams(window.location.search).get("tutorial") === "true");
+  const isTutorial = isTutorialRef.current;
+  const [isTutorialHelpOpen, setIsTutorialHelpOpen] = useState(false);
+  const isTutorialHelpOpenRef = useRef(false);
 
   const [phase, setPhase] = useState<typeof phaseRef.current>("loading");
   const [countdown, setCountdown] = useState(3);
@@ -738,9 +743,13 @@ export default function Game() {
 
     // Shorter delay for a snappier transition to results
     setTimeout(() => {
-      setLocation(`/results/${songId}`);
+      if (isTutorial) {
+        setLocation(`/tutorial?phase=results&score=${gs.score}`);
+      } else {
+        setLocation(`/results/${songId}`);
+      }
     }, 300);
-  }, [songId, setLocation]);
+  }, [songId, setLocation, isTutorial]);
 
   const doAbandon = useCallback(() => {
     if (phaseRef.current === "finished") return;
@@ -834,7 +843,7 @@ export default function Game() {
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
     const phase = phaseRef.current;
-    if (!canvas || (phase !== "playing" && phase !== "rewinding") || pausedRef.current) return;
+    if (!canvas || (phase !== "playing" && phase !== "rewinding") || pausedRef.current || isTutorialHelpOpenRef.current) return;
     const ctx = canvas.getContext("2d");
     if (!ctx || !songRef.current) return;
     const song = songRef.current;
@@ -1401,7 +1410,18 @@ export default function Game() {
             }
             setMissCount(missCountRef.current);
             syncDisplay();
-            if (missCountRef.current >= 3 && optsRef.current.missSystem) {
+            if (isTutorial && missCountRef.current >= 3) {
+              const audio = audioRef.current;
+              if (audio) {
+                audio.pause();
+              }
+              isTutorialHelpOpenRef.current = true;
+              setIsTutorialHelpOpen(true);
+              cancelAnimationFrame(rafRef.current);
+              return;
+            }
+
+            if (missCountRef.current >= 3 && optsRef.current.missSystem && !isTutorial) {
               const audio = audioRef.current;
               if (audio) {
                 rewindToRef.current = Math.max(0, audio.currentTime - 2.5);
@@ -2007,6 +2027,11 @@ export default function Game() {
       // Only treat audio as "ended" if it naturally finished (not paused for rewind)
       const audioEnded = audio ? audio.ended : false;
 
+      if (isTutorial && t >= 60.0) {
+        finishGame();
+        return;
+      }
+
       if ((allDone && t > lastT + 1.2) || audioEnded || t >= song.duration) {
         finishGame();
         return;
@@ -2343,7 +2368,10 @@ export default function Game() {
         setLoadMsg("FETCHING TRANSMISSION...");
         phaseRef.current = "loading";
         setPhase("loading");
-        const song = await getSongById(songId);
+        let song = await getSongById(songId);
+        if (song) {
+          song = { ...song, notes: [...song.notes] };
+        }
         console.log("[GamePlay Init] Fetched song:", song);
 
         const origin = sessionStorage.getItem(`game_origin_${songId}`) ?? '';
@@ -2363,6 +2391,41 @@ export default function Game() {
           setLocation(originRoute);
           return;
         }
+
+        if (isTutorial) {
+          song.difficultyLevel = 1;
+          const bpm = song.bpm || 120;
+          const beatDur = 60 / bpm;
+          const generatedNotes: Note[] = [];
+          let time = 3.0;
+          let id = 0;
+          while (time < 58) {
+            const lane = id % 3;
+            let type: 'tap' | 'hold' | 'swipe' = 'tap';
+            let holdDuration: number | undefined;
+            let swipeDirection: 'up' | undefined;
+
+            if (id % 4 === 1) {
+              type = 'hold';
+              holdDuration = beatDur * 2;
+            } else if (id % 4 === 3) {
+              type = 'swipe';
+              swipeDirection = 'up';
+            }
+
+            generatedNotes.push({
+              id: id++,
+              time,
+              lane,
+              type,
+              holdDuration,
+              swipeDirection
+            });
+
+            time += beatDur * 4;
+          }
+          song.notes = generatedNotes;
+        }
         
         // Reset pause state on new song load
         pausedRef.current = false;
@@ -2380,7 +2443,7 @@ export default function Game() {
       songRef.current = song;
       // Apply difficulty override set by SongDetail page
       const diffOverrideNum = parseInt(sessionStorage.getItem(`diff_override_${songId}`) ?? '', 10);
-      if (!isNaN(diffOverrideNum) && diffOverrideNum >= 1 && diffOverrideNum <= 10) {
+      if (!isNaN(diffOverrideNum) && diffOverrideNum >= 1 && diffOverrideNum <= 10 && !isTutorial) {
         songRef.current.difficultyLevel = diffOverrideNum;
       }
       // Initialize ambient particles depending on difficulty
@@ -2776,6 +2839,45 @@ export default function Game() {
                 ABORT MISSION
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── TUTORIAL ONBOARDING MISS OVERLAY ── */}
+      {isTutorialHelpOpen && (
+        <div className="absolute inset-0 z-[101] flex items-center justify-center bg-black/95 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="glass-panel p-8 max-w-sm w-full mx-4 text-center border border-[#FF1493]/30 shadow-2xl relative">
+            {/* Cyberpunk details */}
+            <div className="absolute top-0 left-0 w-2.5 h-2.5 border-t border-l border-[#FF1493]" />
+            <div className="absolute top-0 right-0 w-2.5 h-2.5 border-t border-r border-[#FF1493]" />
+            <div className="absolute bottom-0 left-0 w-2.5 h-2.5 border-b border-l border-[#FF1493]" />
+            <div className="absolute bottom-0 right-0 w-2.5 h-2.5 border-b border-r border-[#FF1493]" />
+
+            <div className="font-mono font-bold text-[10px] tracking-[0.4em] text-[#FF1493] mb-4 uppercase">
+              // NEURAL OUT OF SYNC //
+            </div>
+            <h3 className="font-mono font-bold text-2xl text-white mb-6 uppercase tracking-wider">
+              TRANSMISSION FAILING
+            </h3>
+            <p className="font-mono text-zinc-400 text-xs leading-relaxed mb-8">
+              Your reactions failed to lock with the frequency. Tap the columns (or press A, S, D on desktop) exactly when notes reach the bottom glow line.
+            </p>
+            <button
+              onClick={() => {
+                isTutorialHelpOpenRef.current = false;
+                setIsTutorialHelpOpen(false);
+                missCountRef.current = 0;
+                setMissCount(0);
+                const audio = audioRef.current;
+                if (audio) {
+                  audio.play().catch(() => {});
+                }
+                rafRef.current = requestAnimationFrame(() => drawRef.current?.());
+              }}
+              className="w-full py-4 font-mono font-bold text-sm tracking-[0.25em] bg-[#FF1493] text-white hover:scale-[1.02] active:scale-95 transition-all shadow-lg rounded-sm border-none cursor-pointer"
+            >
+              TAP TO RE-SYNC
+            </button>
           </div>
         </div>
       )}
