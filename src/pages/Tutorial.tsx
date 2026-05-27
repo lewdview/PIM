@@ -1,323 +1,301 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
+import { motion, AnimatePresence } from "framer-motion";
 import { loadOpts, keyLabel, getActiveTheme } from "../lib/options";
 import { audioManager } from "../game/audio";
+import { getCurrentDay } from "../utils/dayCalc";
+import { getCardByDay } from "../services/vaultService";
+import { loadCatalog, type GameSong } from "../game/api";
+import type { Note } from "../game/types";
+import Card from "../components/Card";
+import RarityBadge from "../components/RarityBadge";
+import PackContainer from "../components/cinematic/PackContainer";
+import type { RevealPackMeta } from "../store/useVaultStore";
+import type { OwnedCard } from "../services/vaultService";
+import { Volume2, Award, Zap, Shield, HelpCircle, Layers } from "lucide-react";
 
-// Read per render so Tutorial always reflects the current settings
+// Read per render so Tutorial matches the options
 const LANE_COLORS = () => loadOpts().laneColors;
-const LANE_KEYS   = () => loadOpts().laneKeys.map(k => keyLabel(k)) as [string, string, string];
-const NOTE_FALL_MS = 1600;
-const HIT_WINDOW_MS = 350;
+const LANE_KEYS = () => loadOpts().laneKeys.map(k => keyLabel(k)) as [string, string, string];
 
-type NotePhase = "idle" | "falling" | "in-window" | "holding" | "hit" | "missed";
+// Visual constants
+const HIT_LINE_Y = 82; // percentage from top where hit line sits
+const NOTE_FALL_TIME_MS = 1400; // time it takes for note to fall
+const HIT_WINDOW_MS = 180; // generous perfect window for easy tutorial
 
-interface Step {
-  id: string;
-  num: string;
-  title: string;
-  lines: string[];
-  practiceKey?: 0 | 1 | 2;
-  practiceType?: "tap" | "hold" | "swipe";
-  swipeDirection?: "up" | "down" | "left" | "right";
+type TutorialPhase = "intro" | "gameplay" | "results" | "pack" | "discovery" | "aspiration" | "faction";
+
+interface VisualNote {
+  id: number;
+  time: number; // target time in seconds
+  lane: number;
+  type: 'tap' | 'hold' | 'swipe';
   holdDuration?: number;
+  hit?: boolean;
+  missed?: boolean;
 }
-
-const STEPS: Step[] = [
-  {
-    id: "welcome",
-    num: "00",
-    title: "RHYTHM ENGINE",
-    lines: [
-      "365 songs — one for every day of the year.",
-      "",
-      "Notes fall down a three-lane highway.",
-      "Press the matching key when a note",
-      "reaches the glowing hit line.",
-      "",
-      "Let's walk through the note types.",
-    ],
-  },
-  {
-    id: "lanes",
-    num: "01",
-    title: "THREE LANES",
-    lines: [
-      "The left lane is A.",
-      "The middle lane is S.",
-      "The right lane is D.",
-      "",
-      "Each lane has its own color.",
-    ],
-  },
-  {
-    id: "hit-a",
-    num: "02",
-    title: "TAP NOTES",
-    lines: [
-      "TAP NOTES are standard rectangles.",
-      "Press A in the LEFT lane",
-      "exactly when the note overlaps the line.",
-    ],
-    practiceKey: 0,
-    practiceType: "tap",
-  },
-  {
-    id: "hit-s",
-    num: "03",
-    title: "HOLD NOTES",
-    lines: [
-      "HOLD NOTES have long trails.",
-      "Press and HOLD S in the MID lane.",
-      "Keep holding until the tail passes.",
-    ],
-    practiceKey: 1,
-    practiceType: "hold",
-    holdDuration: 1500,
-  },
-  {
-    id: "hit-d",
-    num: "04",
-    title: "SWIPE NOTES",
-    lines: [
-      "SWIPE NOTES have arrows.",
-      "Press ArrowUp (or Numpad 8)",
-      "when the chevron hits the line in the RIGHT lane.",
-    ],
-    practiceKey: 2,
-    practiceType: "swipe",
-    swipeDirection: "up",
-  },
-  {
-    id: "slides",
-    num: "05",
-    title: "SLIDE NOTES",
-    lines: [
-      "Some hold notes bend across lanes.",
-      "Use ArrowLeft/Right to slide with it,",
-      "or press the target lane key directly.",
-      "",
-      "Watch the arrow indicators to guide you.",
-    ],
-  },
-  {
-    id: "timing",
-    num: "06",
-    title: "TIMING",
-    lines: [
-      "Earlier is better.",
-      "",
-      "PERFECT+  highest score",
-      "PERFECT   solid hit",
-      "GOOD      slightly late",
-      "MISS      too late",
-    ],
-  },
-  {
-    id: "sync",
-    num: "07",
-    title: "SYNCING UP",
-    lines: [
-      "Every device has a tiny gap between",
-      "the music and your speakers.",
-      "",
-      "If hits feel early or late, open ⚙ Options",
-      "and adjust AUDIO OFFSET.",
-      "",
-      "Negative = you hear audio early.",
-      "Positive = you hear audio late.",
-    ],
-  },
-  {
-    id: "misses",
-    num: "08",
-    title: "SIGNAL LOST",
-    lines: [
-      "Three misses in a row and the track",
-      "pauses — SIGNAL LOST.",
-      "",
-      "You can rewind and try again,",
-      "or abandon the run.",
-      "",
-      "Toggle it off in ⚙ Options",
-      "if you want to play without limits.",
-    ],
-  },
-  {
-    id: "ready",
-    num: "09",
-    title: "YOU'RE READY",
-    lines: [
-      "Campaign unlocks songs day by day.",
-      "Award Play lets you browse all 365.",
-      "",
-      "Good luck.",
-    ],
-  },
-];
-
 
 export default function Tutorial() {
   const [, setLocation] = useLocation();
-  const [step, setStep]       = useState(0);
-  const [notePhase, setNotePhase] = useState<NotePhase>("idle");
-  const [noteKey, setNoteKey]   = useState(0);
-  const [feedback, setFeedback] = useState<string | null>(null);
-  const [autoAdvanced, setAutoAdvanced] = useState(0);
+  const [tutPhase, setTutPhase] = useState<TutorialPhase>("intro");
+  const [dailyCard, setDailyCard] = useState<any>(null);
+  const [dailySong, setDailySong] = useState<GameSong | null>(null);
 
-  const [holdProgress, setHoldProgress] = useState(0);
-  const holdIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Gameplay State
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [gameTime, setGameTime] = useState(0);
+  const [score, setScore] = useState(0);
+  const [notes, setNotes] = useState<VisualNote[]>([]);
+  const [consecutiveMisses, setConsecutiveMisses] = useState(0);
+  const [isPausedForHelp, setIsPausedForHelp] = useState(false);
+  const [judgmentFeed, setJudgmentFeed] = useState<{ id: number; text: string; lane: number } | null>(null);
+  const [activeLanePresses, setActiveLanePresses] = useState<[boolean, boolean, boolean]>([false, false, false]);
 
+  // Faction State
+  const [selectedFaction, setSelectedFaction] = useState<string | null>(null);
+
+  // Audio References
+  const gameplayAudioRef = useRef<HTMLAudioElement | null>(null);
+  const gameLoopRef = useRef<number | null>(null);
+  const startTimeRef = useRef<number>(0);
+  const pauseTimeRef = useRef<number>(0);
+  const judgmentIdRef = useRef(0);
+
+  // Load Daily song and card metadata
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const songId = params.get("songId");
-    if (songId) {
-      localStorage.setItem("pim_tutorial_redirect_song_id", songId);
+    async function load() {
+      try {
+        const today = getCurrentDay();
+        const card = await getCardByDay(today);
+        setDailyCard(card);
+
+        const catalog = await loadCatalog();
+        const matched = catalog.find(s => s.day === today) || 
+                        catalog.find(s => s.id === card?.id) || 
+                        catalog.find(s => s.day === (today % (catalog.length || 1))) ||
+                        catalog[catalog.length - 1];
+        setDailySong(matched);
+      } catch (err) {
+        console.error("Failed to load daily onboarding song:", err);
+      }
     }
+    load();
   }, []);
 
-  const timerA = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const timerB = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Generate beat-aligned easy notes based on Daily Song BPM
+  const generateEasyNotes = useCallback((bpm: number) => {
+    const beatDur = 60 / bpm;
+    const list: VisualNote[] = [];
+    let time = 2.0; // start after 2 seconds
+    let id = 0;
 
-  const cur = STEPS[step];
-  const isPractice = cur.practiceKey !== undefined;
-  const pKey = cur.practiceKey;
+    // generate notes up to 58 seconds
+    while (time < 57) {
+      const lane = id % 3;
+      let type: 'tap' | 'hold' | 'swipe' = 'tap';
+      let holdDuration: number | undefined;
 
-  const isAvant = getActiveTheme() === 'avant-garde';
-
-  const clearHold = () => {
-    if (holdIntervalRef.current) {
-      clearInterval(holdIntervalRef.current);
-      holdIntervalRef.current = null;
-    }
-  };
-
-  const clear = () => {
-    if (timerA.current) clearTimeout(timerA.current);
-    if (timerB.current) clearTimeout(timerB.current);
-    clearHold();
-  };
-
-  const advance = useCallback(() => {
-    clear();
-    setNotePhase("idle");
-    setFeedback(null);
-    setAutoAdvanced(0);
-    setHoldProgress(0);
-    setStep(s => Math.min(s + 1, STEPS.length - 1));
-  }, []);
-
-  const advanceRef = useRef(advance);
-  advanceRef.current = advance;
-
-  const launchNote = useCallback((missCount = 0) => {
-    clear();
-    setNotePhase("falling");
-    setFeedback(null);
-    setHoldProgress(0);
-    setNoteKey(k => k + 1);
-
-    timerA.current = setTimeout(() => {
-      setNotePhase("in-window");
-      timerB.current = setTimeout(() => {
-        setNotePhase("missed");
-        setFeedback("MISS");
-        const next = missCount + 1;
-        setAutoAdvanced(next);
-        timerA.current = setTimeout(() => {
-          if (next >= 5) { advanceRef.current(); return; }
-          launchNote(next);
-        }, 900);
-      }, HIT_WINDOW_MS);
-    }, NOTE_FALL_MS - HIT_WINDOW_MS);
-  }, []);
-
-  const launchRef = useRef(launchNote);
-  launchRef.current = launchNote;
-
-  useEffect(() => {
-    if (!isPractice) return;
-    setNotePhase("idle");
-    setFeedback(null);
-    setAutoAdvanced(0);
-    setHoldProgress(0);
-    const t = setTimeout(() => launchRef.current(0), 700);
-    return () => {
-      clearTimeout(t);
-      clear();
-    };
-  }, [step, isPractice]);
-
-  useEffect(() => {
-    const keys = loadOpts().laneKeys;
-    const targetKeyStr = pKey !== undefined ? keys[pKey] : null;
-
-    const onKeyDown = (e: KeyboardEvent) => {
-      const k = e.key.toLowerCase();
-      if (!isPractice && (k === "enter" || k === " ") && step < STEPS.length - 1) {
-        if (isAvant) audioManager.playSfx("tap_nav", 0.12);
-        advance(); return;
+      // sprinkle hold and swipe notes
+      if (id % 6 === 2) {
+        type = 'hold';
+        holdDuration = beatDur * 2.0;
+      } else if (id % 6 === 4) {
+        type = 'swipe';
       }
 
-      if (isPractice && notePhase === "in-window") {
-        const practiceType = cur.practiceType || 'tap';
+      list.push({
+        id: id++,
+        time,
+        lane,
+        type,
+        holdDuration,
+      });
 
-        if (practiceType === 'tap') {
-          if (k === targetKeyStr) {
-            clear();
-            setNotePhase("hit");
-            setFeedback("PERFECT+");
-            if (isAvant) audioManager.playSfx("tap_nav", 0.15);
-            timerA.current = setTimeout(() => advanceRef.current(), 700);
+      // Spaced out: every 4 beats (super easy flow state)
+      time += beatDur * 4;
+    }
+    return list;
+  }, []);
+
+  // Start Phase 2 Gameplay
+  const startGameplay = useCallback(() => {
+    if (!dailySong) return;
+    
+    // Play transition SFX
+    audioManager.playSfx("select_start_song", 0.7);
+
+    // Create and configure Audio element
+    const audio = new Audio(dailySong.audioUrl);
+    audio.volume = 0.5;
+    gameplayAudioRef.current = audio;
+
+    // Generate easy chart
+    const easyNotes = generateEasyNotes(dailySong.bpm);
+    setNotes(easyNotes);
+    setScore(0);
+    setConsecutiveMisses(0);
+    setTutPhase("gameplay");
+
+    // Play song
+    audio.play().then(() => {
+      setIsPlaying(true);
+      startTimeRef.current = performance.now();
+      audioLoop();
+    }).catch(e => {
+      console.warn("Autoplay blocked by browser. Starting click overlay.", e);
+      setIsPlaying(true);
+      startTimeRef.current = performance.now();
+      audioLoop();
+    });
+  }, [dailySong, generateEasyNotes]);
+
+  // Audio Loop Sync
+  const audioLoop = () => {
+    const audio = gameplayAudioRef.current;
+    if (!audio) return;
+
+    const currentSec = audio.currentTime;
+    setGameTime(currentSec);
+
+    // Filter notes that were missed
+    setNotes(prev => prev.map(note => {
+      const timeElapsed = currentSec - note.time;
+      // If note passed hit window without hit and isn't marked missed
+      if (timeElapsed > (HIT_WINDOW_MS / 1000) && !note.hit && !note.missed) {
+        setConsecutiveMisses(m => {
+          const nextMiss = m + 1;
+          if (nextMiss >= 3) {
+            triggerPauseHelp();
           }
-        } else if (practiceType === 'swipe') {
-          const isUp = e.key === "ArrowUp" || e.key === "8";
-          if (isUp) {
-            clear();
-            setNotePhase("hit");
-            setFeedback("PERFECT+");
-            if (isAvant) audioManager.playSfx("tap_nav", 0.15);
-            timerA.current = setTimeout(() => advanceRef.current(), 700);
-          }
-        } else if (practiceType === 'hold') {
-          if (k === targetKeyStr) {
-            clear();
-            setNotePhase("holding");
-            setFeedback("HOLDING...");
-            if (isAvant) audioManager.playSfx("tap_nav", 0.15);
+          return nextMiss;
+        });
+        showJudgment("MISS", note.lane);
+        return { ...note, missed: true };
+      }
+      return note;
+    }));
 
-            const dur = cur.holdDuration || 1500;
-            const startT = Date.now();
-            setHoldProgress(0);
+    // Auto-complete gameplay at 60 seconds
+    if (currentSec >= 59.5) {
+      endGameplay();
+      return;
+    }
 
-            holdIntervalRef.current = setInterval(() => {
-              const elapsed = Date.now() - startT;
-              const prog = Math.min(1, elapsed / dur);
-              setHoldProgress(prog);
+    gameLoopRef.current = requestAnimationFrame(audioLoop);
+  };
 
-              if (prog >= 1) {
-                clearHold();
-                setNotePhase("hit");
-                setFeedback("PERFECT+");
-                if (isAvant) audioManager.playSfx("tap_nav", 0.18);
-                timerA.current = setTimeout(() => advanceRef.current(), 700);
-              }
-            }, 16);
-          }
+  const triggerPauseHelp = () => {
+    const audio = gameplayAudioRef.current;
+    if (audio) {
+      audio.pause();
+      pauseTimeRef.current = audio.currentTime;
+    }
+    setIsPausedForHelp(true);
+    if (gameLoopRef.current) {
+      cancelAnimationFrame(gameLoopRef.current);
+    }
+  };
+
+  const resumeFromHelp = () => {
+    const audio = gameplayAudioRef.current;
+    if (audio) {
+      audio.currentTime = pauseTimeRef.current;
+      audio.play().catch(() => {});
+    }
+    setIsPausedForHelp(false);
+    setConsecutiveMisses(0);
+    startTimeRef.current = performance.now() - (pauseTimeRef.current * 1000);
+    // Restart animation loop
+    gameLoopRef.current = requestAnimationFrame(audioLoop);
+  };
+
+  const endGameplay = () => {
+    if (gameLoopRef.current) cancelAnimationFrame(gameLoopRef.current);
+    if (gameplayAudioRef.current) {
+      gameplayAudioRef.current.pause();
+      gameplayAudioRef.current.src = "";
+      gameplayAudioRef.current = null;
+    }
+    setIsPlaying(false);
+    audioManager.playSfx("song_completion", 0.9);
+    setTutPhase("results");
+  };
+
+  // Cleanup helper
+  useEffect(() => {
+    return () => {
+      if (gameLoopRef.current) cancelAnimationFrame(gameLoopRef.current);
+      if (gameplayAudioRef.current) {
+        gameplayAudioRef.current.pause();
+        gameplayAudioRef.current.src = "";
+      }
+    };
+  }, []);
+
+  const showJudgment = (text: string, lane: number) => {
+    judgmentIdRef.current++;
+    setJudgmentFeed({ id: judgmentIdRef.current, text, lane });
+  };
+
+  // Judgment Checker
+  const handleHitAttempt = useCallback((laneIndex: number, type: 'tap' | 'swipe' | 'hold') => {
+    if (isPausedForHelp) return;
+    const audio = gameplayAudioRef.current;
+    if (!audio) return;
+
+    const currentSec = audio.currentTime;
+    // Find closest active note in that lane
+    const activeNoteIdx = notes.findIndex(n => n.lane === laneIndex && !n.hit && !n.missed);
+    if (activeNoteIdx === -1) return;
+
+    const note = notes[activeNoteIdx];
+    const diff = Math.abs(currentSec - note.time) * 1000;
+
+    if (diff <= HIT_WINDOW_MS) {
+      // It's a hit!
+      setNotes(prev => prev.map((n, idx) => idx === activeNoteIdx ? { ...n, hit: true } : n));
+      setScore(s => s + 1000);
+      setConsecutiveMisses(0);
+      audioManager.playSfx("perfect", 0.5);
+      showJudgment("PERFECT+", laneIndex);
+    }
+  }, [notes, isPausedForHelp]);
+
+  // Touch and Keyboard inputs
+  useEffect(() => {
+    const keys = loadOpts().laneKeys; // ["a", "s", "d"]
+    const onKeyDown = (e: KeyboardEvent) => {
+      const key = e.key.toLowerCase();
+      
+      if (tutPhase === "intro" && (key === "enter" || key === " ")) {
+        startGameplay();
+        return;
+      }
+
+      if (tutPhase === "gameplay") {
+        const laneIdx = keys.indexOf(key);
+        if (laneIdx !== -1) {
+          setActiveLanePresses(prev => {
+            const next = [...prev] as [boolean, boolean, boolean];
+            next[laneIdx] = true;
+            return next;
+          });
+          handleHitAttempt(laneIdx, 'tap');
         }
       }
     };
 
     const onKeyUp = (e: KeyboardEvent) => {
-      const k = e.key.toLowerCase();
-      if (isPractice && notePhase === "holding" && k === targetKeyStr) {
-        clearHold();
-        setNotePhase("missed");
-        setFeedback("RELEASED EARLY");
-        if (isAvant) audioManager.playSfx("gmeover", 0.5);
-
-        timerA.current = setTimeout(() => {
-          launchRef.current(0);
-        }, 900);
+      const key = e.key.toLowerCase();
+      if (tutPhase === "gameplay") {
+        const laneIdx = keys.indexOf(key);
+        if (laneIdx !== -1) {
+          setActiveLanePresses(prev => {
+            const next = [...prev] as [boolean, boolean, boolean];
+            next[laneIdx] = false;
+            return next;
+          });
+        }
       }
     };
 
@@ -327,1022 +305,650 @@ export default function Tutorial() {
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
     };
-  }, [step, isPractice, notePhase, pKey, advance, isAvant, cur]);
+  }, [tutPhase, startGameplay, handleHitAttempt, isPausedForHelp]);
 
-  useEffect(() => () => clear(), []);
-
-
-  const pct = step / (STEPS.length - 1);
-
-  if (isAvant) {
-    return (
-      <div className="fixed inset-0 flex flex-col overflow-hidden" style={{ background: "#050505" }}>
-        {/* Kinetic Avant-Garde overlays */}
-        <div className="absolute inset-0 pointer-events-none" style={{
-          backgroundImage: "linear-gradient(rgba(57,255,20,0.015) 1px, transparent 1px), linear-gradient(90deg, rgba(57,255,20,0.015) 1px, transparent 1px)",
-          backgroundSize: "40px 40px",
-        }} />
-        <div className="absolute inset-0 pointer-events-none" style={{
-          background: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, 0.25) 2px, rgba(0, 0, 0, 0.25) 4px)"
-        }} />
-
-        {/* Technical Corner Brackets */}
-        <div className="absolute top-5 left-5 pointer-events-none font-mono text-[9px] text-[#39FF14]/30" style={{ letterSpacing: '0.15em' }}>
-          SYS // TUTORIAL_COCKPIT
-        </div>
-        <div className="absolute top-5 right-5 pointer-events-none font-mono text-[9px] text-[#39FF14]/30" style={{ letterSpacing: '0.15em' }}>
-          ROUTINE: 0x0A2B
-        </div>
-        <div className="absolute bottom-5 left-5 pointer-events-none font-mono text-[9px] text-[#39FF14]/30" style={{ letterSpacing: '0.15em' }}>
-          SIGNAL // FEED_081
-        </div>
-        <div className="absolute bottom-5 right-5 pointer-events-none font-mono text-[9px] text-[#39FF14]/30" style={{ letterSpacing: '0.15em' }}>
-          AUTH_LEVEL // STABLE
-        </div>
-
-        {/* Top bar */}
-        <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 gap-6 relative z-10" style={{ borderBottom: "1px solid rgba(57,255,20,0.2)", background: "rgba(5,5,5,0.85)", backdropFilter: "blur(12px)" }}>
-          <button
-            onClick={() => {
-              audioManager.playSfx("tap_nav", 0.15);
-              localStorage.removeItem("pim_tutorial_redirect_song_id");
-              setLocation("/");
-            }}
-            className="font-mono text-xs tracking-[0.25em] transition-all duration-150 border border-red-500/35 px-4 py-1.5 text-red-400 bg-red-950/10 hover:bg-red-500/20 hover:text-red-300 hover:border-red-400"
-            onMouseEnter={() => audioManager.playSfx("tap_nav", 0.08)}
-          >
-            ✕ TERMINATE
-          </button>
-          <div className="flex-1 flex items-center gap-4">
-            <div className="flex-1 h-1.5 bg-zinc-900 border border-zinc-800/80 relative overflow-hidden">
-              <div className="h-full bg-[#39FF14] shadow-[0_0_8px_#39FF14]" style={{ width: `${pct * 100}%`, transition: "width 0.4s cubic-bezier(0.16, 1, 0.3, 1)" }} />
-            </div>
-            <div className="font-mono text-xs text-[#39FF14]" style={{ letterSpacing: "0.2em", flexShrink: 0 }}>
-              [{cur.num} / {String(STEPS.length - 1).padStart(2, "0")}]
-            </div>
-          </div>
-        </div>
-
-        {/* Body */}
-        <div className="flex-1 flex flex-col items-center justify-center gap-10 px-6 relative overflow-hidden z-10">
-          
-          {/* Diagnostic Box Framing Title */}
-          <div className="relative p-6 text-center border border-zinc-800/80 bg-black/45" key={`title-${step}`}>
-            {/* Corners */}
-            <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-[#39FF14]" />
-            <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-[#39FF14]" />
-            <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-[#39FF14]" />
-            <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-[#39FF14]" />
-
-            <div className="font-mono text-xs tracking-[0.4em] mb-2 text-[#39FF14]/50">
-              SEQUENCE_ID_{cur.num}
-            </div>
-            <div className="font-mono font-bold tracking-[0.25em] text-2xl text-white">
-              {cur.title}
-            </div>
-          </div>
-
-          {/* Visualisation */}
-          <div className="w-full flex justify-center py-4 relative">
-            <div className="absolute -inset-x-12 top-1/2 h-px bg-zinc-900 pointer-events-none" />
-            <div className="relative z-10">
-              {cur.id === "welcome" && <WelcomeViz isAvant={true} />}
-              {cur.id === "lanes"   && <LanesViz isAvant={true} />}
-              {isPractice && pKey !== undefined && (
-                <PracticeViz laneIdx={pKey} notePhase={notePhase} noteKey={noteKey} feedback={feedback} isAvant={true} />
-              )}
-              {cur.id === "sync"    && <SyncViz isAvant={true} />}
-              {cur.id === "timing"  && <TimingViz isAvant={true} />}
-              {cur.id === "misses"  && <MissesViz isAvant={true} />}
-              {cur.id === "ready"   && <ReadyViz isAvant={true} />}
-            </div>
-          </div>
-
-          {/* Body copy */}
-          <div className="text-center max-w-sm px-6 py-4 bg-zinc-950/20 border border-zinc-900/60 rounded">
-            {cur.lines.map((line, i) => {
-              const isLabel = /^(PERFECT|GOOD|MISS)/.test(line);
-              const color = isLabel ? "#39FF14" : "rgba(255,255,255,0.7)";
-              return (
-                <div key={i} className="font-mono text-sm tracking-wider" style={{ color, lineHeight: 1.8, height: line === "" ? 8 : undefined }}>
-                  {line || null}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Practice hint */}
-          {isPractice && (
-            <div className="font-mono text-xs tracking-[0.3em] px-4 py-2 border border-zinc-800/80 bg-black/40 min-w-[240px] text-center" style={{
-              borderColor: notePhase === "hit" ? "#39FF14" : notePhase === "missed" ? "#FF1493" : notePhase === "in-window" ? "#ffffff" : "rgba(255,255,255,0.15)",
-              color: notePhase === "hit" ? "#39FF14" : notePhase === "missed" ? "#FF1493" : notePhase === "in-window" ? "#ffffff" : "rgba(255,255,255,0.4)",
-              transition: "all 0.15s",
-            }}>
-              {notePhase === "in-window" ? "▼  [ SYSTEM_ACTIVATE: HIT NOW ]" : notePhase === "hit" ? "✦  [ PERFECT_HIT ]" : notePhase === "missed" ? "✗  [ SIGNAL_MISS — RE-TRYING ]" : "[ MONITORING_TARGET_SIGNAL… ]"}
-            </div>
-          )}
-
-          {/* CTA */}
-          {!isPractice && step < STEPS.length - 1 && (
-            <button
-              onClick={() => {
-                audioManager.playSfx("tap_nav", 0.15);
-                advance();
-              }}
-              className="font-mono text-xs tracking-[0.35em] px-10 py-3 bg-zinc-950/40 border border-[#39FF14]/50 text-[#39FF14] hover:bg-[#39FF14]/12 hover:text-[#39FF14] hover:shadow-[0_0_15px_rgba(57,255,20,0.25)] transition-all duration-150 relative"
-              onMouseEnter={() => audioManager.playSfx("tap_nav", 0.08)}
-            >
-              {/* Corner mini marks */}
-              <div className="absolute top-0 left-0 w-1 h-1 bg-[#39FF14]" />
-              <div className="absolute bottom-0 right-0 w-1 h-1 bg-[#39FF14]" />
-              CONTINUE →
-            </button>
-          )}
-
-          {step === STEPS.length - 1 && (
-            <button
-              onClick={() => {
-                localStorage.setItem("pim_tutorial_completed", "true");
-                audioManager.playSfx("tap_nav", 0.15);
-                const params = new URLSearchParams(window.location.search);
-                const songId = params.get("songId") || localStorage.getItem("pim_tutorial_redirect_song_id");
-                localStorage.removeItem("pim_tutorial_redirect_song_id");
-                if (songId) {
-                  setLocation(`/play/${songId}`);
-                } else {
-                  setLocation("/arcade");
-                }
-              }}
-              className="font-mono text-xs font-bold tracking-[0.3em] px-8 py-3.5 bg-[#39FF14] text-black hover:bg-[#39FF14]/90 hover:shadow-[0_0_20px_rgba(57,255,20,0.4)] transition-all duration-150 border border-transparent"
-              onMouseEnter={() => audioManager.playSfx("tap_nav", 0.08)}
-            >
-              ▶ START GAME
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // Classic design path (exact original content)
-  return (
-    <div className="fixed inset-0 flex flex-col overflow-hidden" style={{ background: "#080808" }}>
-      <div className="absolute inset-0 pointer-events-none" style={{
-        backgroundImage: "linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px)",
-        backgroundSize: "80px 80px",
-      }} />
-
-      {/* Top bar */}
-      <div className="flex-shrink-0 flex items-center justify-between px-5 py-3 gap-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-        <button
-          onClick={() => {
-            localStorage.setItem("pim_tutorial_completed", "true");
-            localStorage.removeItem("pim_tutorial_redirect_song_id");
-            setLocation("/");
-          }}
-          className="font-mono text-xs tracking-widest transition-colors"
-          style={{ color: "rgba(255,255,255,0.25)" }}
-          onMouseEnter={e => (e.currentTarget.style.color = "#FF1493")}
-          onMouseLeave={e => (e.currentTarget.style.color = "rgba(255,255,255,0.25)")}
-        >
-          ✕ SKIP
-        </button>
-        <div className="flex-1 flex items-center gap-3">
-          <div className="flex-1 h-px" style={{ background: "rgba(255,255,255,0.06)" }}>
-            <div className="h-full" style={{ width: `${pct * 100}%`, background: "#39FF14", transition: "width 0.4s ease" }} />
-          </div>
-          <div className="font-mono text-xs" style={{ color: "rgba(255,255,255,0.2)", letterSpacing: "0.2em", flexShrink: 0 }}>
-            {cur.num} / {String(STEPS.length - 1).padStart(2, "0")}
-          </div>
-        </div>
-      </div>
-
-      {/* Body */}
-      <div className="flex-1 flex flex-col items-center justify-center gap-8 px-6 relative overflow-hidden">
-
-        {/* Title */}
-        <div className="text-center" key={`title-${step}`}>
-          <div className="font-mono text-xs tracking-[0.5em] mb-2" style={{ color: "rgba(255,255,255,0.2)" }}>
-            {cur.num}
-          </div>
-          <div className="font-mono font-bold tracking-[0.22em]" style={{ fontSize: 26, color: "#F2EDE5" }}>
-            {cur.title}
-          </div>
-        </div>
-
-        {/* Visualisation */}
-        <div className="w-full flex justify-center">
-          {cur.id === "welcome" && <WelcomeViz />}
-          {cur.id === "lanes"   && <LanesViz />}
-          {isPractice && pKey !== undefined && (
-            <PracticeViz
-              laneIdx={pKey}
-              notePhase={notePhase}
-              noteKey={noteKey}
-              feedback={feedback}
-              practiceType={cur.practiceType}
-              swipeDirection={cur.swipeDirection}
-              holdProgress={holdProgress}
-            />
-          )}
-          {cur.id === "slides"  && <SlidesViz />}
-          {cur.id === "sync"    && <SyncViz />}
-          {cur.id === "timing"  && <TimingViz />}
-          {cur.id === "misses"  && <MissesViz />}
-          {cur.id === "ready"   && <ReadyViz />}
-        </div>
-
-        {/* Body copy */}
-        <div className="text-center max-w-xs">
-          {cur.lines.map((line, i) => {
-            const isLabel = /^(PERFECT|GOOD|MISS)/.test(line);
-            const color = isLabel ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.38)";
-            return (
-              <div key={i} className="font-mono text-sm" style={{ color, lineHeight: 1.7, height: line === "" ? 8 : undefined }}>
-                {line || null}
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Practice hint */}
-        {isPractice && (
-          <div className="font-mono text-xs tracking-[0.3em]" style={{
-            color: notePhase === "hit" ? "#39FF14" : notePhase === "missed" ? "#FF1493" : notePhase === "in-window" ? "#F2EDE5" : "rgba(255,255,255,0.2)",
-            transition: "color 0.15s",
-          }}>
-            {notePhase === "in-window" ? "▼  PRESS NOW" : notePhase === "holding" ? "▼  HOLD KEY..." : notePhase === "hit" ? "✦  " + (feedback ?? "HIT") : notePhase === "missed" ? "✗  " + (feedback ?? "MISS") : "WATCH THE NOTE…"}
-          </div>
-        )}
-
-        {/* CTA */}
-        {!isPractice && step < STEPS.length - 1 && (
-          <button
-            onClick={advance}
-            className="font-mono text-xs tracking-[0.35em] px-8 py-3"
-            style={{ border: "1px solid rgba(255,255,255,0.2)", color: "#F2EDE5", background: "transparent", cursor: "pointer", transition: "all 0.15s" }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = "#39FF14"; e.currentTarget.style.color = "#39FF14"; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.2)"; e.currentTarget.style.color = "#F2EDE5"; }}
-          >
-            NEXT →
-          </button>
-        )}
-
-        {step === STEPS.length - 1 && (
-          <button
-            onClick={() => {
-              localStorage.setItem("pim_tutorial_completed", "true");
-              const params = new URLSearchParams(window.location.search);
-              const songId = params.get("songId") || localStorage.getItem("pim_tutorial_redirect_song_id");
-              localStorage.removeItem("pim_tutorial_redirect_song_id");
-              if (songId) {
-                setLocation(`/play/${songId}`);
-              } else {
-                setLocation("/arcade");
-              }
-            }}
-            className="font-mono text-xs font-bold tracking-[0.3em] px-8 py-3"
-            style={{ background: "#39FF14", color: "#080808", border: "none", cursor: "pointer" }}
-          >
-            ▶ START GAME
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ── sub-components ────────────────────────────────────────────────
-
-interface VizProps {
-  isAvant?: boolean;
-}
-
-function WelcomeViz({ isAvant }: VizProps) {
-  if (isAvant) {
-    return (
-      <div className="flex gap-4 p-4 border border-zinc-900 bg-black/45 relative">
-        {/* brackets corners */}
-        <div className="absolute top-0 left-0 w-1.5 h-1.5 border-t border-l border-[#39FF14]/50" />
-        <div className="absolute bottom-0 right-0 w-1.5 h-1.5 border-b border-r border-[#39FF14]/50" />
-        {LANE_COLORS().map((c, i) => (
-          <div key={i} style={{ width: 44, height: 90, border: `1px solid ${c}40`, background: `${c}05`, position: "relative", overflow: "hidden" }}>
-            <div style={{
-              position: "absolute", left: "50%", transform: "translateX(-50%)",
-              width: 30, height: 12, border: `1px solid ${c}`, background: `${c}40`, opacity: 0.9,
-              top: "30%", boxShadow: `0 0 14px ${c}`,
-              animation: `tutnf ${1.2 + i * 0.18}s ${i * 0.3}s ease-in infinite`,
-            }} />
-            <div style={{ position: "absolute", bottom: 16, left: 0, right: 0, height: 1, background: c, opacity: 0.6 }} />
-            <div style={{ position: "absolute", bottom: 4, left: 0, right: 0, textAlign: "center", fontSize: 6, color: c, fontFamily: "monospace", opacity: 0.5 }}>L-{i}</div>
-          </div>
-        ))}
-        <style>{`@keyframes tutnf { 0%{top:-20px;opacity:0} 20%{opacity:1} 85%{opacity:1} 100%{top:calc(100% - 30px);opacity:0} }`}</style>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex gap-3">
-      {LANE_COLORS().map((c, i) => (
-        <div key={i} style={{ width: 48, height: 80, border: `1px solid ${c}22`, position: "relative", overflow: "hidden" }}>
-          <div style={{
-            position: "absolute", left: "50%", transform: "translateX(-50%)",
-            width: 32, height: 16, borderRadius: 3, background: c, opacity: 0.7,
-            top: "30%", boxShadow: `0 0 12px ${c}`,
-            animation: `tutnf ${1.2 + i * 0.18}s ${i * 0.3}s ease-in infinite`,
-          }} />
-          <div style={{ position: "absolute", bottom: 12, left: 4, right: 4, height: 2, background: c, opacity: 0.4 }} />
-        </div>
-      ))}
-      <style>{`@keyframes tutnf { 0%{top:-20px;opacity:0} 20%{opacity:1} 85%{opacity:1} 100%{top:calc(100% - 30px);opacity:0} }`}</style>
-    </div>
-  );
-}
-
-function LanesViz({ isAvant }: VizProps) {
-  const [lit, setLit] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => setLit(l => (l + 1) % 3), 900);
-    return () => clearInterval(id);
-  }, []);
-
-  if (isAvant) {
-    return (
-      <div className="flex gap-3 p-3 border border-zinc-900 bg-zinc-950/20">
-        {LANE_COLORS().map((c, i) => (
-          <div key={i} className="flex flex-col items-center gap-2.5" style={{ transition: "opacity 0.2s", opacity: lit === i ? 1 : 0.35 }}>
-            <div style={{
-              width: 56,
-              height: 76,
-              border: `1px solid ${c}${lit === i ? "80" : "20"}`,
-              background: `${c}${lit === i ? "15" : "02"}`,
-              transition: "all 0.2s",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "8px 4px 6px"
-            }}>
-              <span className="font-mono text-[7px]" style={{ color: c, opacity: 0.7 }}>CH_{i+1}</span>
-              <div style={{
-                width: 38,
-                height: 10,
-                border: `1px solid ${c}`,
-                background: lit === i ? c : "transparent",
-                boxShadow: lit === i ? `0 0 12px ${c}` : "none",
-                transition: "all 0.2s"
-              }} />
-              <span className="font-mono text-[6px] tracking-widest" style={{ color: c, opacity: lit === i ? 1 : 0.4 }}>{lit === i ? "ACTIVE" : "STDBY"}</span>
-            </div>
-            <div className="font-mono font-bold text-sm" style={{ color: lit === i ? c : "rgba(255,255,255,0.2)" }}>[{LANE_KEYS()[i]}]</div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex gap-2">
-      {LANE_COLORS().map((c, i) => (
-        <div key={i} className="flex flex-col items-center gap-2" style={{ transition: "opacity 0.2s", opacity: lit === i ? 1 : 0.3 }}>
-          <div style={{ width: 52, height: 70, border: `1px solid ${c}${lit === i ? "55" : "22"}`, background: `${c}${lit === i ? "12" : "06"}`, transition: "all 0.2s", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <div style={{ width: 34, height: 14, borderRadius: 3, background: lit === i ? c : `${c}44`, boxShadow: lit === i ? `0 0 16px ${c}` : "none", transition: "all 0.2s" }} />
-          </div>
-          <div className="font-mono font-bold text-sm" style={{ color: lit === i ? c : "rgba(255,255,255,0.25)", transition: "color 0.2s" }}>{LANE_KEYS()[i]}</div>
-          <div className="font-mono text-xs" style={{ color: "rgba(255,255,255,0.2)", fontSize: 9, letterSpacing: "0.15em" }}>
-            {["LEFT", "MID", "RIGHT"][i]}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-interface PracticeVizProps {
-  laneIdx: 0 | 1 | 2;
-  notePhase: NotePhase;
-  noteKey: number;
-  feedback: string | null;
-  isAvant?: boolean;
-  practiceType?: "tap" | "hold" | "swipe";
-  swipeDirection?: "up" | "down" | "left" | "right";
-  holdProgress?: number;
-}
-
-function PracticeViz({
-  laneIdx,
-  notePhase,
-  noteKey,
-  feedback,
-  isAvant,
-  practiceType = "tap",
-  swipeDirection = "up",
-  holdProgress = 0,
-}: PracticeVizProps) {
-  const c = LANE_COLORS()[laneIdx];
-  const animating = notePhase === "falling" || notePhase === "in-window";
-  const hitLine = notePhase === "in-window";
-  const isHolding = notePhase === "holding";
-  const isHit = notePhase === "hit";
-  const isMiss = notePhase === "missed";
-
-  const isSwipe = practiceType === "swipe";
-  const isHold = practiceType === "hold";
-
-  const renderNoteInner = (color: string) => {
-    if (isSwipe) {
-      return (
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{
-          transform: `rotate(${swipeDirection === 'up' ? -90 : swipeDirection === 'down' ? 90 : swipeDirection === 'left' ? 180 : 0}deg)`
-        }}>
-          <path d="M5 12h14M12 5l7 7-7 7" />
-        </svg>
-      );
-    }
-    return <div style={{ width: 4, height: 4, background: color }} />;
+  // Mock pack meta for Phase 4 pack opening
+  const welcomePackMeta: RevealPackMeta = {
+    category: "taste",
+    size: "single",
+    label: "COMPATIBILITY PACK",
+    icon: "⚡",
+    accent: "#39FF14",
+    gradient: "linear-gradient(160deg, #050d03 0%, #0d280b 45%, #020702 100%)",
+    price: "FREE",
+    cardCount: 1,
+    revealType: "cinematic",
   };
 
-  if (isAvant) {
-    return (
-      <div className="flex gap-4 items-end p-4 border border-zinc-900 bg-[#050505] relative">
-        <div className="absolute top-0.5 left-1 font-mono text-[7px] text-zinc-600 pointer-events-none">STAGE_MONITOR</div>
-        {LANE_COLORS().map((lc, i) => {
-          const active = i === laneIdx;
-          return (
-            <div key={i} style={{ width: 62, height: 180, position: "relative", border: `1px solid ${active ? lc + "50" : "rgba(255,255,255,0.04)"}`, overflow: "hidden", background: active ? `${lc}04` : "rgba(255,255,255,0.01)" }}>
-              {/* lane coordinate indicators */}
-              <div className="absolute top-1 left-1 pointer-events-none font-mono text-[5px] text-zinc-700" style={{ opacity: active ? 0.7 : 0.3 }}>
-                L0{i}
-              </div>
+  // Mock owned card container
+  const getMockOwnedCard = (): OwnedCard[] => {
+    if (!dailyCard) return [];
+    return [{
+      id: `welcome-${dailyCard.id}`,
+      cardId: dailyCard.id,
+      userId: "guest",
+      mintedAt: new Date().toISOString(),
+      source: "daily_claim",
+      isEcho: false,
+      echoGeneration: 0,
+      card: dailyCard,
+    }];
+  };
 
-              {/* hit line */}
-              <div style={{
-                position: "absolute", bottom: 32, left: 0, right: 0, height: 1,
-                background: active ? (hitLine ? lc : `${lc}70`) : "rgba(255,255,255,0.1)",
-                boxShadow: active && hitLine ? `0 0 10px ${lc}` : "none",
-                transition: "all 0.15s",
-              }} />
+  // Complete onboarding
+  const handleCompleteTutorial = () => {
+    localStorage.setItem("pim_tutorial_completed", "true");
+    audioManager.playSfx("tap_nav", 0.15);
+    setLocation("/arcade");
+  };
 
-              {/* target border highlights */}
-              {active && (
-                <div style={{
-                  position: "absolute", bottom: 22, left: 4, right: 4, height: 20,
-                  border: `1px dashed ${hitLine ? lc : `${lc}30`}`,
-                  opacity: 0.6
-                }} />
-              )}
-
-              {/* falling note — wireframe style */}
-              {active && animating && (
-                <div
-                  key={noteKey}
-                  style={{
-                    position: "absolute",
-                    left: 6, right: 6, height: 14,
-                    border: `2px solid ${lc}`,
-                    background: `${lc}30`,
-                    boxShadow: `0 0 12px ${lc}`,
-                    animation: `tutfall ${NOTE_FALL_MS}ms linear forwards`,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center"
-                  }}
-                >
-                  {isHold && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        bottom: 12,
-                        left: 2, right: 2,
-                        height: 120,
-                        background: `linear-gradient(to top, ${lc}80, ${lc}20)`,
-                        borderLeft: `1px solid ${lc}`,
-                        borderRight: `1px solid ${lc}`,
-                        borderTop: `2px solid ${lc}`,
-                        boxShadow: `0 0 8px ${lc}40`
-                      }}
-                    />
-                  )}
-                  {renderNoteInner(lc)}
-                </div>
-              )}
-
-              {/* holding note stationary at hit line with shrinking tail */}
-              {active && isHolding && (
-                <div
-                  style={{
-                    position: "absolute",
-                    left: 6, right: 6,
-                    bottom: 32,
-                    height: 14,
-                    border: `2px solid ${lc}`,
-                    background: `${lc}60`,
-                    boxShadow: `0 0 20px ${lc}`,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center"
-                  }}
-                >
-                  <div
-                    style={{
-                      position: "absolute",
-                      bottom: 12,
-                      left: 2, right: 2,
-                      height: 120 * (1 - holdProgress),
-                      background: `linear-gradient(to top, ${lc}80, ${lc}20)`,
-                      borderLeft: `1px solid ${lc}`,
-                      borderRight: `1px solid ${lc}`,
-                      borderTop: `2px solid ${lc}`,
-                      boxShadow: `0 0 8px ${lc}40`
-                    }}
-                  />
-                  <div className="absolute inset-0 animate-pulse bg-white/20" />
-                  {renderNoteInner("#ffffff")}
-                </div>
-              )}
-
-              {/* hit flash */}
-              {active && isHit && (
-                <div style={{ position: "absolute", inset: 0, background: `${lc}20`, animation: "tutflash 0.5s ease-out forwards" }}>
-                  <div className="absolute inset-x-2 bottom-8 font-mono text-[7px] text-center" style={{ color: lc }}>[ OK ]</div>
-                </div>
-              )}
-              {/* miss flash */}
-              {active && isMiss && (
-                <div style={{ position: "absolute", inset: 0, background: "rgba(255,20,147,0.15)", animation: "tutflash 0.5s ease-out forwards" }}>
-                  <div className="absolute inset-x-2 bottom-8 font-mono text-[7px] text-center text-red-500">[ ERR ]</div>
-                </div>
-              )}
-
-              {/* key label */}
-              <div className="font-mono font-bold absolute" style={{
-                bottom: 8, left: 0, right: 0, textAlign: "center", fontSize: 13,
-                color: active ? (isHit ? lc : isMiss ? "#FF1493" : (hitLine || isHolding) ? "#fff" : `${lc}99`) : "rgba(255,255,255,0.15)",
-                transition: "color 0.15s",
-              }}>
-                {LANE_KEYS()[i]}
-              </div>
-            </div>
-          );
-        })}
-        <style>{`
-          @keyframes tutfall { from{top:-20px} to{top:100%} }
-          @keyframes tutflash { from{opacity:1} to{opacity:0} }
-        `}</style>
-      </div>
-    );
-  }
-
+  // Renders
   return (
-    <div className="flex gap-3 items-end">
-      {LANE_COLORS().map((lc, i) => {
-        const active = i === laneIdx;
-        return (
-          <div key={i} style={{ width: 56, height: 160, position: "relative", border: `1px solid ${active ? lc + "30" : "rgba(255,255,255,0.06)"}`, overflow: "hidden", background: active ? `${lc}06` : "rgba(255,255,255,0.02)" }}>
-            {/* hit line */}
-            <div style={{
-              position: "absolute", bottom: 28, left: 0, right: 0, height: 2,
-              background: active ? (hitLine || isHolding ? lc : `${lc}50`) : "rgba(255,255,255,0.08)",
-              boxShadow: active && (hitLine || isHolding) ? `0 0 12px ${lc}` : "none",
-              transition: "all 0.15s",
-            }} />
+    <div className="fixed inset-0 flex flex-col overflow-hidden bg-[#050505] text-white">
+      {/* Kinetic Scanline CRT Screen effects */}
+      <div className="absolute inset-0 pointer-events-none z-[99]" style={{
+        backgroundImage: "linear-gradient(rgba(57,255,20,0.012) 1px, transparent 1px), linear-gradient(90deg, rgba(57,255,20,0.012) 1px, transparent 1px)",
+        backgroundSize: "36px 36px",
+      }} />
+      <div className="absolute inset-0 pointer-events-none z-[99]" style={{
+        background: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, 0.2) 2px, rgba(0, 0, 0, 0.2) 4px)"
+      }} />
 
-            {/* lane dividers */}
-            <div style={{ position: "absolute", inset: 0, borderRight: "1px solid rgba(255,255,255,0.04)" }} />
+      {/* Cyberpunk corner bracket system */}
+      <div className="absolute top-4 left-4 pointer-events-none font-mono text-[8px] text-[#39FF14]/40 tracking-widest z-10">
+        NET_SYS // PROT_0x88F
+      </div>
+      <div className="absolute top-4 right-4 pointer-events-none font-mono text-[8px] text-[#39FF14]/40 tracking-widest z-10">
+        SECTOR // ONBOARD
+      </div>
 
-            {/* falling note — only in active lane */}
-            {active && animating && (
-              <div
-                key={noteKey}
-                style={{
-                  position: "absolute",
-                  left: 6, right: 6, height: 18, borderRadius: 4,
-                  background: lc,
-                  boxShadow: `0 0 14px ${lc}`,
-                  animation: `tutfall ${NOTE_FALL_MS}ms linear forwards`,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
-                }}
+      <AnimatePresence mode="wait">
+        {/* PHASE 1: CYBERPUNK UNDERGROUND SPLASH */}
+        {tutPhase === "intro" && (
+          <motion.div
+            key="intro"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex-1 flex flex-col items-center justify-center p-6 text-center relative z-10"
+          >
+            {/* Glowing neural ring */}
+            <motion.div
+              animate={{ opacity: [0.15, 0.35, 0.15], scale: [1, 1.1, 1] }}
+              transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+              className="absolute w-[320px] h-[320px] rounded-full border border-[#39FF14]/10 bg-gradient-to-b from-[#39FF14]/5 to-transparent blur-3xl pointer-events-none"
+            />
+
+            <div className="relative border border-[#39FF14]/30 bg-black/75 p-8 max-w-sm w-full shadow-[0_0_40px_rgba(57,255,20,0.1)] rounded-sm">
+              {/* Corner mini marks */}
+              <div className="absolute top-0 left-0 w-2.5 h-2.5 border-t border-l border-[#39FF14]" />
+              <div className="absolute top-0 right-0 w-2.5 h-2.5 border-t border-r border-[#39FF14]" />
+              <div className="absolute bottom-0 left-0 w-2.5 h-2.5 border-b border-l border-[#39FF14]" />
+              <div className="absolute bottom-0 right-0 w-2.5 h-2.5 border-b border-r border-[#39FF14]" />
+
+              <div className="font-mono text-[9px] text-[#39FF14]/65 tracking-[0.4em] mb-4 uppercase">
+                // ARCHIVE DETECTED //
+              </div>
+              <h1 className="font-mono text-3xl font-black text-white tracking-[0.1em] mb-6 leading-none uppercase">
+                SYNCED
+              </h1>
+              
+              <div className="space-y-3 font-mono text-[11px] text-zinc-400 leading-relaxed mb-8">
+                <p className="text-[#39FF14] tracking-wide animate-pulse">⚡ SIGNAL STABLE. READY TO TRANSMIT.</p>
+                <p>1 INBOUND MUSIC RELEASE SECURED.</p>
+                <p>ESTABLISH RESONANCE COMPATIBILITY TO INTEGRATE INTO YOUR DECRYPTED DECK.</p>
+              </div>
+
+              <motion.button
+                whileHover={{ scale: 1.03, boxShadow: "0 0 20px rgba(57,255,20,0.4)" }}
+                whileTap={{ scale: 0.98 }}
+                onClick={startGameplay}
+                className="w-full py-4 bg-zinc-950/60 border border-[#39FF14] text-[#39FF14] font-mono text-xs font-bold tracking-[0.3em] uppercase hover:bg-[#39FF14]/10 transition-all rounded-sm"
               >
-                {isHold && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      bottom: 16,
-                      left: 2, right: 2,
-                      height: 100,
-                      background: `linear-gradient(to top, ${lc}80, ${lc}20)`,
-                      borderLeft: `1px solid ${lc}`,
-                      borderRight: `1px solid ${lc}`,
-                      borderTop: `2px solid ${lc}`,
-                    }}
-                  />
-                )}
-                {renderNoteInner("#ffffff")}
-              </div>
-            )}
-
-            {/* holding note stationary at hit line with shrinking tail */}
-            {active && isHolding && (
-              <div
-                style={{
-                  position: "absolute",
-                  left: 6, right: 6,
-                  bottom: 28,
-                  height: 18,
-                  borderRadius: 4,
-                  background: lc,
-                  boxShadow: `0 0 20px ${lc}`,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
-                }}
-              >
-                <div
-                  style={{
-                    position: "absolute",
-                    bottom: 16,
-                    left: 2, right: 2,
-                    height: 100 * (1 - holdProgress),
-                    background: `linear-gradient(to top, ${lc}80, ${lc}20)`,
-                    borderLeft: `1px solid ${lc}`,
-                    borderRight: `1px solid ${lc}`,
-                    borderTop: `2px solid ${lc}`,
-                  }}
-                />
-                {renderNoteInner("#ffffff")}
-              </div>
-            )}
-
-            {/* hit flash */}
-            {active && isHit && (
-              <div style={{ position: "absolute", inset: 0, background: `${lc}30`, animation: "tutflash 0.5s ease-out forwards" }} />
-            )}
-            {/* miss flash */}
-            {active && isMiss && (
-              <div style={{ position: "absolute", inset: 0, background: "rgba(255,20,147,0.15)", animation: "tutflash 0.5s ease-out forwards" }} />
-            )}
-
-            {/* key label */}
-            <div className="font-mono font-bold absolute" style={{
-              bottom: 6, left: 0, right: 0, textAlign: "center", fontSize: 13,
-              color: active ? (isHit ? lc : isMiss ? "#FF1493" : hitLine || isHolding ? "#fff" : `${lc}99`) : "rgba(255,255,255,0.15)",
-              transition: "color 0.15s",
-            }}>
-              {LANE_KEYS()[i]}
+                PROVE COMPATIBILITY
+              </motion.button>
             </div>
-          </div>
-        );
-      })}
-      <style>{`
-        @keyframes tutfall { from{top:-20px} to{top:100%} }
-        @keyframes tutflash { from{opacity:1} to{opacity:0} }
-      `}</style>
-    </div>
-  );
-}
-
-function SlidesViz({ isAvant }: VizProps) {
-  const colors = LANE_COLORS();
-  
-  if (isAvant) {
-    return (
-      <div className="flex gap-4 p-4 border border-zinc-900 bg-black/45 relative">
-        <div className="absolute top-0 left-0 w-1.5 h-1.5 border-t border-l border-[#39FF14]/50" />
-        <div className="absolute bottom-0 right-0 w-1.5 h-1.5 border-b border-r border-[#39FF14]/50" />
-        {colors.map((c, i) => (
-          <div key={i} style={{ width: 44, height: 90, border: `1px solid ${i === 1 || i === 2 ? c + '30' : 'rgba(255,255,255,0.03)'}`, background: `${c}02`, position: "relative", overflow: "hidden" }}>
-            <div style={{ position: "absolute", bottom: 16, left: 0, right: 0, height: 1, background: i === 1 || i === 2 ? c : 'rgba(255,255,255,0.1)', opacity: 0.6 }} />
-            
-            {i === 1 && (
-              <div style={{
-                position: "absolute",
-                bottom: 16,
-                left: 12,
-                width: 20,
-                height: 45,
-                background: `linear-gradient(to top, ${c}80, ${c}20)`,
-                borderLeft: `1px solid ${c}`,
-                borderTopLeftRadius: 4,
-                opacity: 0.8
-              }} />
-            )}
-
-            {i === 2 && (
-              <div style={{
-                position: "absolute",
-                bottom: 45,
-                left: 12,
-                width: 20,
-                height: 45,
-                background: `linear-gradient(to top, ${c}20, ${c}80)`,
-                borderRight: `1px solid ${c}`,
-                borderTopRightRadius: 4,
-                opacity: 0.8
-              }} />
-            )}
-          </div>
-        ))}
-        
-        <svg className="absolute inset-0 pointer-events-none" width="100%" height="100%">
-          <path
-            d="M 94 61 Q 110 40 148 29"
-            fill="none"
-            stroke={colors[1]}
-            strokeWidth="10"
-            strokeLinecap="round"
-            opacity="0.4"
-            style={{ strokeDasharray: "4 2" }}
-          />
-          <path
-            d="M 112 48 L 122 43 L 112 38 Z"
-            fill="#39FF14"
-            opacity="0.8"
-            className="animate-bounce"
-            style={{ transform: "rotate(15deg)", transformOrigin: "112px 48px" }}
-          />
-        </svg>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex gap-3">
-      {colors.map((c, i) => (
-        <div key={i} style={{ width: 48, height: 80, border: `1px solid ${i === 1 || i === 2 ? c + '22' : 'rgba(255,255,255,0.04)'}`, position: "relative", overflow: "hidden" }}>
-          <div style={{ position: "absolute", bottom: 12, left: 0, right: 0, height: 1, background: i === 1 || i === 2 ? c : 'rgba(255,255,255,0.1)', opacity: 0.4 }} />
-          
-          {i === 1 && (
-            <div style={{
-              position: "absolute",
-              bottom: 12,
-              left: 14,
-              width: 20,
-              height: 40,
-              background: `linear-gradient(to top, ${c}77, ${c}11)`,
-              borderLeft: `1px solid ${c}`,
-              opacity: 0.7
-            }} />
-          )}
-
-          {i === 2 && (
-            <div style={{
-              position: "absolute",
-              bottom: 40,
-              left: 14,
-              width: 20,
-              height: 40,
-              background: `linear-gradient(to top, ${c}11, ${c}77)`,
-              borderRight: `1px solid ${c}`,
-              opacity: 0.7
-            }} />
-          )}
-        </div>
-      ))}
-      <svg className="absolute inset-0 pointer-events-none" width="100%" height="100%" style={{ position: "absolute", top: 0, left: 0 }}>
-        <path
-          d="M 98 55 Q 112 38 144 26"
-          fill="none"
-          stroke={colors[1]}
-          strokeWidth="8"
-          opacity="0.3"
-          style={{ strokeDasharray: "3 2" }}
-        />
-      </svg>
-    </div>
-  );
-}
-
-function SyncViz({ isAvant }: VizProps) {
-  const steps = [-2, -1, 0, 1, 2, 1, 0, -1];
-  const [idx, setIdx] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => setIdx(i => (i + 1) % steps.length), 900);
-    return () => clearInterval(id);
-  }, []);
-  const offset = steps[idx];
-  const px = offset * 18;
-  const ms = offset * 50;
-  const synced = offset === 0;
-  const color = synced ? "#39FF14" : "#FF1493";
-  const label = synced ? "SYNCED" : ms > 0 ? `+${ms}ms` : `${ms}ms`;
-
-  if (isAvant) {
-    return (
-      <div className="flex flex-col items-center gap-5 w-full max-w-xs p-4 border border-zinc-900 bg-[#050505]/80 relative">
-        {/* corner markers */}
-        <div className="absolute top-0 left-0 w-1 h-1 bg-[#39FF14]/40" />
-        <div className="absolute top-0 right-0 w-1 h-1 bg-[#39FF14]/40" />
-        <div className="absolute bottom-0 left-0 w-1 h-1 bg-[#39FF14]/40" />
-        <div className="absolute bottom-0 right-0 w-1 h-1 bg-[#39FF14]/40" />
-
-        <div style={{ position: "relative", width: "100%", height: 72, background: "rgba(255,255,255,0.01)", border: "1px dashed rgba(255,255,255,0.05)" }}>
-          {/* center line */}
-          <div style={{ position: "absolute", left: "50%", top: 4, bottom: 4, width: 1, borderLeft: "1px dashed rgba(57,255,20,0.3)", transform: "translateX(-50%)" }} />
-
-          {/* BEAT pulse */}
-          <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 12, height: 12, border: "1px solid #39FF14", background: "rgba(57,255,20,0.2)", boxShadow: "0 0 10px rgba(57,255,20,0.5)" }} />
-          <div className="font-mono text-[7px]" style={{ position: "absolute", top: 4, left: "50%", transform: "translateX(-50%)", color: "#39FF14", letterSpacing: "0.25em", whiteSpace: "nowrap" }}>REF_BEAT</div>
-
-          {/* TAP marker */}
-          <div style={{ position: "absolute", top: "50%", left: `calc(50% + ${px}px)`, transform: "translate(-50%,-50%)", width: 12, height: 12, border: `1px solid ${color}`, background: `${color}30`, boxShadow: `0 0 10px ${color}`, transition: "left 0.45s ease, border-color 0.3s" }} />
-          <div className="font-mono text-[7px]" style={{ position: "absolute", bottom: 4, left: `calc(50% + ${px}px)`, transform: "translateX(-50%)", color, letterSpacing: "0.2em", transition: "left 0.45s ease, color 0.3s", whiteSpace: "nowrap" }}>SYS_TAP</div>
-
-          {/* gap bracket line */}
-          {!synced && (
-            <div style={{ position: "absolute", top: "50%", left: px > 0 ? "50%" : `calc(50% + ${px}px)`, width: Math.abs(px), height: 1, background: `${color}60`, transform: "translateY(-50%)", transition: "left 0.45s ease, width 0.45s ease" }} />
-          )}
-        </div>
-
-        <div className="text-center">
-          <div className="font-mono font-bold tracking-wider" style={{ fontSize: 24, color, textShadow: `0 0 15px ${color}30`, transition: "color 0.3s" }}>
-            {label}
-          </div>
-          <div className="font-mono mt-1 text-[8px]" style={{ color: "rgba(255,255,255,0.45)", letterSpacing: "0.2em" }}>
-            {synced ? "[ SIGNAL_DEC_ALIGNED ]" : "[ ADJUST_OFFSET_REQUIRED ]"}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col items-center gap-5 w-full max-w-xs">
-      <div style={{ position: "relative", width: "100%", height: 72 }}>
-        {/* centre reference line */}
-        <div style={{ position: "absolute", left: "50%", top: 8, bottom: 8, width: 1, background: "rgba(255,255,255,0.1)", transform: "translateX(-50%)" }} />
-
-        {/* BEAT pulse — fixed at centre */}
-        <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 14, height: 14, background: "#39FF14", boxShadow: "0 0 12px #39FF14", transition: "none" }} />
-        <div className="font-mono" style={{ position: "absolute", top: 6, left: "50%", transform: "translateX(-50%)", fontSize: 8, color: "#39FF14", letterSpacing: "0.2em", whiteSpace: "nowrap" }}>BEAT</div>
-
-        {/* TAP marker — shifts with offset */}
-        <div style={{ position: "absolute", top: "50%", left: `calc(50% + ${px}px)`, transform: "translate(-50%,-50%)", width: 14, height: 14, background: color, boxShadow: `0 0 12px ${color}`, transition: "left 0.45s ease, background 0.3s, box-shadow 0.3s" }} />
-        <div className="font-mono" style={{ position: "absolute", bottom: 6, left: `calc(50% + ${px}px)`, transform: "translateX(-50%)", fontSize: 8, color, letterSpacing: "0.2em", transition: "left 0.45s ease, color 0.3s", whiteSpace: "nowrap" }}>TAP</div>
-
-        {/* gap bracket */}
-        {!synced && (
-          <div style={{ position: "absolute", top: "50%", left: px > 0 ? "50%" : `calc(50% + ${px}px)`, width: Math.abs(px), height: 2, background: `${color}55`, transform: "translateY(-50%)", transition: "left 0.45s ease, width 0.45s ease" }} />
+          </motion.div>
         )}
-      </div>
 
-      <div className="font-mono font-bold" style={{ fontSize: 22, color, letterSpacing: "0.12em", transition: "color 0.3s", minWidth: 100, textAlign: "center" }}>
-        {label}
-      </div>
-      <div className="font-mono" style={{ fontSize: 9, color: "rgba(255,255,255,0.22)", letterSpacing: "0.25em" }}>
-        ADJUST IN ⚙ OPTIONS
-      </div>
-    </div>
-  );
-}
-
-function TimingViz({ isAvant }: VizProps) {
-  const zones = [
-    { label: "PERFECT+", color: "#E5B800", w: 16, ms: "±45ms" },
-    { label: "PERFECT",  color: "#39FF14", w: 32, ms: "±80ms" },
-    { label: "GOOD",     color: "#00E5FF", w: 54, ms: "±135ms" },
-    { label: "MISS",     color: "#FF1493", w: 75, ms: "🔍 >135" },
-  ];
-
-  if (isAvant) {
-    return (
-      <div className="flex flex-col items-center gap-3 w-full max-w-xs p-4 border border-zinc-900 bg-zinc-950/20 relative">
-        <div className="absolute top-1 left-1.5 font-mono text-[6px] text-zinc-600">ACCURACY_WINDOWS</div>
-        {zones.map(z => (
-          <div key={z.label} className="flex items-center gap-4 w-full">
-            <div className="font-mono text-xs w-20 text-right" style={{ color: z.color, fontSize: 8, letterSpacing: "0.15em", fontWeight: "bold" }}>
-              {z.label}
+        {/* PHASE 2: EASY RHYTHM GAMEPLAY */}
+        {tutPhase === "gameplay" && (
+          <motion.div
+            key="gameplay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex-1 flex flex-col items-center justify-between py-6 px-4 relative z-10"
+          >
+            {/* Top Bar Stats */}
+            <div className="w-full max-w-sm flex items-center justify-between border-b border-zinc-800 pb-3">
+              <div className="font-mono text-[10px] text-zinc-500 tracking-wider">
+                TRANSMISSION: <span className="text-[#39FF14]">{dailySong?.title || "DECODING"}</span>
+              </div>
+              <div className="font-mono text-[10px] text-[#39FF14] font-bold tracking-widest">
+                FLOW_RES: {score}
+              </div>
             </div>
-            <div className="flex-1 h-3 bg-zinc-900 border border-zinc-800/40 relative">
-              <div className="h-full" style={{ width: `${z.w}%`, background: `${z.color}35`, borderRight: `2px solid ${z.color}`, transition: "width 0.4s" }} />
+
+            {/* Rhythm Highway (3 Lanes) */}
+            <div className="flex-1 w-full max-w-sm relative flex gap-3 border-x border-zinc-900/60 bg-gradient-to-b from-black via-zinc-950/20 to-black overflow-hidden my-4">
+              {/* Vertical Lane Dividers */}
+              <div className="absolute left-[33%] top-0 bottom-0 w-px bg-zinc-900/40" />
+              <div className="absolute left-[66%] top-0 bottom-0 w-px bg-zinc-900/40" />
+
+              {/* Hitglow Overlay at Bottom */}
+              <div 
+                className="absolute left-0 right-0 h-16 border-t border-b pointer-events-none z-10"
+                style={{
+                  top: `${HIT_LINE_Y}%`,
+                  transform: 'translateY(-50%)',
+                  background: 'linear-gradient(180deg, rgba(255,255,255,0.01) 0%, rgba(57,255,20,0.05) 50%, rgba(255,255,255,0.01) 100%)',
+                  borderColor: 'rgba(57,255,20,0.2)',
+                }}
+              />
+
+              {/* Falling Notes */}
+              {notes.map(note => {
+                // Determine fall ratio (0 is top, 1.0 is hit line)
+                const noteDuration = NOTE_FALL_TIME_MS / 1000;
+                const elapsedSinceSpawn = gameTime - (note.time - noteDuration);
+                const ratio = elapsedSinceSpawn / noteDuration;
+
+                if (ratio < 0 || ratio > 1.2 || note.hit) return null;
+
+                const laneColor = LANE_COLORS()[note.lane];
+                const yPos = ratio * HIT_LINE_Y;
+
+                return (
+                  <div
+                    key={note.id}
+                    className="absolute z-20 pointer-events-none flex items-center justify-center"
+                    style={{
+                      left: `${note.lane * 33.33}%`,
+                      width: '33.33%',
+                      top: `${yPos}%`,
+                      transform: 'translateY(-50%)',
+                      padding: '0 6px'
+                    }}
+                  >
+                    {/* Hold trail */}
+                    {note.type === 'hold' && note.holdDuration && (
+                      <div
+                        className="absolute bottom-1/2 left-1/2 -translate-x-1/2 w-8"
+                        style={{
+                          height: `${(note.holdDuration / noteDuration) * 100}%`,
+                          background: `linear-gradient(to top, ${laneColor}80, ${laneColor}15)`,
+                          borderLeft: `1px solid ${laneColor}`,
+                          borderRight: `1px solid ${laneColor}`,
+                          borderRadius: '2px 2px 0 0',
+                          transformOrigin: 'bottom center',
+                        }}
+                      />
+                    )}
+
+                    {/* Core note block */}
+                    <div 
+                      className="w-full h-8 flex items-center justify-center relative border shadow-lg"
+                      style={{
+                        background: laneColor,
+                        borderColor: '#000',
+                        boxShadow: `0 0 16px ${laneColor}80`,
+                        borderRadius: '3px',
+                      }}
+                    >
+                      {note.type === 'swipe' && (
+                        <div className="flex flex-col text-white text-xs font-black animate-pulse">▲</div>
+                      )}
+                      {note.type === 'hold' && (
+                        <div className="text-black text-[9px] font-mono font-bold tracking-tighter">HOLD</div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Lane Touch Zones / Trigger Visuals */}
+              {[0, 1, 2].map(idx => {
+                const laneColor = LANE_COLORS()[idx];
+                const isPressed = activeLanePresses[idx];
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => handleHitAttempt(idx, 'tap')}
+                    onTouchStart={(e) => {
+                      e.preventDefault();
+                      setActiveLanePresses(prev => {
+                        const next = [...prev] as [boolean, boolean, boolean];
+                        next[idx] = true;
+                        return next;
+                      });
+                      handleHitAttempt(idx, 'tap');
+                    }}
+                    onTouchEnd={() => {
+                      setActiveLanePresses(prev => {
+                        const next = [...prev] as [boolean, boolean, boolean];
+                        next[idx] = false;
+                        return next;
+                      });
+                    }}
+                    className="flex-1 h-full flex flex-col justify-end items-center pb-8 select-none relative cursor-pointer active:bg-zinc-950/20"
+                  >
+                    {/* Key and visual flash indicator */}
+                    <AnimatePresence>
+                      {isPressed && (
+                        <motion.div
+                          initial={{ opacity: 0.15 }}
+                          animate={{ opacity: 0.3 }}
+                          exit={{ opacity: 0 }}
+                          className="absolute inset-0 pointer-events-none"
+                          style={{
+                            background: `linear-gradient(to top, ${laneColor}35, transparent)`,
+                          }}
+                        />
+                      )}
+                    </AnimatePresence>
+
+                    {/* Judgement splash text */}
+                    {judgmentFeed && judgmentFeed.lane === idx && (
+                      <motion.div
+                        key={judgmentFeed.id}
+                        initial={{ scale: 0.5, y: -20, opacity: 0 }}
+                        animate={{ scale: 1.1, y: -45, opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute top-[70%] font-mono text-[10px] font-black tracking-widest text-center pointer-events-none"
+                        style={{ color: laneColor }}
+                      >
+                        {judgmentFeed.text}
+                      </motion.div>
+                    )}
+
+                    {/* Lane Labels (Mobile Touch Focused) */}
+                    <div 
+                      className="font-mono text-xs font-black tracking-widest px-3 py-1.5 border select-none transition-colors duration-100 rounded-sm"
+                      style={{
+                        borderColor: isPressed ? laneColor : 'rgba(255,255,255,0.08)',
+                        color: isPressed ? '#fff' : 'rgba(255,255,255,0.25)',
+                        background: isPressed ? laneColor : 'rgba(0,0,0,0.3)',
+                      }}
+                    >
+                      {LANE_KEYS()[idx]}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            <div className="font-mono text-[7px] w-12 text-left" style={{ color: z.color }}>
-              {z.ms}
+
+            {/* Mobile Touch hint */}
+            <div className="font-mono text-[10px] text-zinc-500 tracking-wider uppercase text-center mt-2 max-w-xs">
+              Tap the columns or press key binds when notes overlap the neon line.
             </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
 
-  return (
-    <div className="flex flex-col items-center gap-2 w-full max-w-xs">
-      {zones.map(z => (
-        <div key={z.label} className="flex items-center gap-3 w-full">
-          <div className="font-mono text-xs w-16 text-right" style={{ color: z.color, fontSize: 9, letterSpacing: "0.15em" }}>{z.label}</div>
-          <div style={{ height: 6, width: `${z.w}%`, background: z.color, opacity: 0.75 }} />
-        </div>
-      ))}
-      <div className="font-mono text-xs mt-2" style={{ color: "rgba(255,255,255,0.2)", letterSpacing: "0.2em" }}>WINDOW SIZE</div>
-    </div>
-  );
-}
+            {/* Pause help overlay */}
+            <AnimatePresence>
+              {isPausedForHelp && (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 bg-black/95 flex flex-col items-center justify-center p-6 z-50 text-center"
+                >
+                  <div className="border border-[#FF1493]/30 bg-black p-6 rounded-sm max-w-xs w-full shadow-[0_0_30px_rgba(255,20,147,0.15)] relative">
+                    {/* Corners */}
+                    <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-[#FF1493]" />
+                    <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-[#FF1493]" />
+                    <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-[#FF1493]" />
+                    <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-[#FF1493]" />
 
-function MissesViz({ isAvant }: VizProps) {
-  const [lit, setLit] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => setLit(l => (l < 3 ? l + 1 : l)), 700);
-    return () => clearInterval(id);
-  }, []);
+                    <div className="font-mono text-[9px] text-[#FF1493] tracking-widest mb-3 uppercase flex items-center justify-center gap-1">
+                      <HelpCircle size={10} /> TRANSMISSION STABILITY DEGRADED
+                    </div>
+                    <div className="font-mono text-[11px] text-zinc-400 leading-relaxed mb-6">
+                      Sync requires active interaction. Tap the columns (or press A, S, D) exactly when notes reach the pulsing glow line.
+                    </div>
+                    <button
+                      onClick={resumeFromHelp}
+                      className="w-full py-3 bg-zinc-950/60 border border-[#FF1493] text-[#FF1493] font-mono text-xs font-bold tracking-[0.2em] uppercase hover:bg-[#FF1493]/10 transition-all rounded-sm"
+                    >
+                      RE-ESTABLISH LINK
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        )}
 
-  if (isAvant) {
-    return (
-      <div className="flex flex-col items-center gap-4 p-4 border border-[#FF1493]/20 bg-zinc-950/20 relative">
-        <div className="flex gap-4">
-          {[0, 1, 2].map(i => {
-            const hasMiss = i < lit;
-            return (
-              <div key={i} className="flex flex-col items-center gap-1.5">
-                <div style={{
-                  width: 28, height: 28,
-                  border: hasMiss ? "1px solid #FF1493" : "1px solid rgba(255,255,255,0.1)",
-                  background: hasMiss ? "rgba(255,20,147,0.15)" : "transparent",
-                  boxShadow: hasMiss ? "0 0 10px rgba(255,20,147,0.4)" : "none",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  transition: "all 0.2s",
-                }}>
-                  <span className="font-mono text-xs font-bold" style={{ color: hasMiss ? "#FF1493" : "rgba(255,255,255,0.15)" }}>
-                    {hasMiss ? "✗" : `0${i+1}`}
-                  </span>
+        {/* PHASE 3: THE "SCORE DETERMINES FATE" REVEAL */}
+        {tutPhase === "results" && (
+          <motion.div
+            key="results"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            className="flex-1 flex flex-col items-center justify-center p-6 text-center relative z-10"
+          >
+            {/* Glowing radial drop ambient */}
+            <div className="absolute w-[280px] h-[280px] rounded-full border border-[#39FF14]/5 bg-[#39FF14]/5 blur-3xl pointer-events-none" />
+
+            <div className="border border-[#39FF14]/20 bg-black/80 p-8 max-w-sm w-full shadow-2xl rounded-sm">
+              <div className="font-mono text-[9px] text-[#39FF14]/70 tracking-[0.4em] mb-4 uppercase">
+                // COMPATIBILITY RATING //
+              </div>
+              <h2 className="font-mono text-2xl font-black tracking-widest text-white uppercase mb-6 leading-none">
+                RESONANCE ACQUIRED
+              </h2>
+
+              <div className="space-y-4 border-y border-zinc-900 py-6 mb-8 text-left">
+                <div className="flex justify-between font-mono text-xs">
+                  <span className="text-zinc-500">SIGNAL STABILITY</span>
+                  <span className="text-white font-bold">100.0%</span>
+                </div>
+                <div className="flex justify-between font-mono text-xs">
+                  <span className="text-zinc-500">TRANSMISSION FREQUENCY</span>
+                  <span className="text-[#39FF14] font-bold">STABLE</span>
+                </div>
+                <div className="flex justify-between font-mono text-xs">
+                  <span className="text-zinc-500">ARCHIVE COMPATIBILITY</span>
+                  <span className="text-[#39FF14] font-bold">HIGH</span>
+                </div>
+
+                {/* Progress decoding bar */}
+                <div className="mt-4">
+                  <div className="flex justify-between font-mono text-[9px] text-zinc-500 mb-1.5 uppercase">
+                    <span>Calibrating Reward Grade...</span>
+                    <span>100%</span>
+                  </div>
+                  <div className="h-2 bg-zinc-950 border border-zinc-900 relative overflow-hidden rounded-sm">
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: "100%" }}
+                      transition={{ duration: 1.5 }}
+                      className="h-full bg-[#39FF14] shadow-[0_0_8px_#39FF14]"
+                    />
+                  </div>
+                </div>
+
+                <div className="text-center font-mono text-[10px] text-[#39FF14] tracking-wider font-bold mt-2 animate-pulse uppercase">
+                  ⭐ MYTHIC DECRYPTION TIER SECURED ⭐
                 </div>
               </div>
-            );
-          })}
-        </div>
-        <div className="h-6 flex items-center justify-center">
-          {lit >= 3 ? (
-            <div className="font-mono text-xs tracking-[0.25em] text-[#FF1493] font-bold" style={{ textShadow: "0 0 10px rgba(255,20,147,0.6)", animation: "tutflash 0.5s ease-out 1, none 0.5s forwards" }}>
-              [ ! ] CRITICAL: SIGNAL_LOST
+
+              <motion.button
+                whileHover={{ scale: 1.03, boxShadow: "0 0 15px rgba(57,255,20,0.3)" }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  audioManager.playSfx("tap_nav", 0.15);
+                  setTutPhase("pack");
+                }}
+                className="w-full py-4 bg-zinc-950/60 border border-[#39FF14] text-[#39FF14] font-mono text-xs font-bold tracking-[0.25em] uppercase hover:bg-[#39FF14]/10 transition-all rounded-sm"
+              >
+                RECONSTRUCT SIGNAL
+              </motion.button>
             </div>
-          ) : (
-            <div className="font-mono text-[8px] tracking-widest text-zinc-500">
-              STABILITY_FAIL_COUNT: {lit}/3
+          </motion.div>
+        )}
+
+        {/* PHASE 4: CINEMATIC PACK OPENING */}
+        {tutPhase === "pack" && (
+          <motion.div
+            key="pack"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-50 bg-[#050402]"
+          >
+            {dailyCard && (
+              <PackContainer
+                meta={welcomePackMeta}
+                cards={getMockOwnedCard()}
+                onComplete={() => {
+                  audioManager.playSfx("tap_nav", 0.15);
+                  setTutPhase("discovery");
+                }}
+              />
+            )}
+          </motion.div>
+        )}
+
+        {/* PHASE 5: DISCOVERY & CONCEPT EXPLAINER */}
+        {tutPhase === "discovery" && (
+          <motion.div
+            key="discovery"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            className="flex-1 flex flex-col items-center justify-between py-6 px-4 overflow-y-auto relative z-10"
+          >
+            <div className="text-center mt-3">
+              <div className="font-mono text-[9px] text-[#39FF14] tracking-[0.4em] mb-1.5 uppercase">
+                // DATA DECRYPTED //
+              </div>
+              <h2 className="font-mono text-xl font-bold tracking-widest text-white uppercase">
+                COLLECTIBLE SIGNALS
+              </h2>
             </div>
-          )}
-        </div>
-      </div>
-    );
-  }
 
-  return (
-    <div className="flex flex-col items-center gap-4">
-      <div className="flex gap-3">
-        {[0, 1, 2].map(i => (
-          <div key={i} style={{
-            width: 20, height: 20,
-            background: i < lit ? "#FF1493" : "rgba(255,255,255,0.08)",
-            boxShadow: i < lit ? "0 0 12px rgba(255,20,147,0.8)" : "none",
-            transition: "all 0.2s",
-          }} />
-        ))}
-      </div>
-      {lit >= 3 && (
-        <div className="font-mono text-sm tracking-[0.35em]" style={{ color: "#FF1493", textShadow: "0 0 20px rgba(255,20,147,0.7)", animation: "tutflash 0.5s ease-out 1, none 0.5s forwards" }}>
-          SIGNAL LOST
-        </div>
-      )}
-    </div>
-  );
-}
+            {/* Display Unlocked Card & Details */}
+            <div className="w-full max-w-md flex flex-col md:flex-row items-center gap-6 my-4 p-4 border border-zinc-900 bg-black/60 rounded-sm">
+              <div className="w-[180px] flex-shrink-0">
+                {dailyCard && <Card card={dailyCard} interactive={false} showAudio={false} />}
+              </div>
+              
+              <div className="flex-1 space-y-4 text-left font-mono">
+                <div>
+                  <div className="text-[10px] text-zinc-500 uppercase">SIGNAL ID</div>
+                  <div className="text-xs font-bold text-white uppercase">{dailySong?.title || "TRANSMISSION 001"}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-zinc-500 uppercase">METADATA SPECS</div>
+                  <div className="text-xs text-zinc-300">
+                    BPM: {dailySong?.bpm || 110} // MOOD: {dailySong?.moodTag || "Melancholic"}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-zinc-500 uppercase">FACTION LINK</div>
+                  <div className="text-xs text-[#39FF14] font-bold uppercase">VOID FACTION</div>
+                </div>
+                <div className="text-[11px] text-zinc-400 leading-relaxed border-t border-zinc-900 pt-3">
+                  Every song in PIM is a collectible card. Unlocking cards integrates them into your playable library, enabling custom multipliers and score achievements.
+                </div>
+              </div>
+            </div>
 
-function ReadyViz({ isAvant }: VizProps) {
-  if (isAvant) {
-    return (
-      <div className="flex flex-col items-center gap-3 p-4">
-        <div className="flex gap-1.5 items-center pointer-events-none">
-          {LANE_COLORS().map((c, i) => (
-            <div key={i} style={{
-              height: 4,
-              background: c,
-              width: 32,
-              boxShadow: `0 0 10px ${c}`,
-              animation: `pulse-bar 1.5s ease-in-out infinite alternate`,
-              animationDelay: `${i * 0.2}s`
-            }} />
-          ))}
-        </div>
-        <style>{`
-          @keyframes pulse-bar {
-            0% { opacity: 0.3; transform: scaleX(0.85); }
-            100% { opacity: 1; transform: scaleX(1.15); }
-          }
-        `}</style>
-        <span className="font-mono text-[9px] text-[#39FF14] tracking-[0.35em] uppercase font-bold animate-pulse">
-          ENGINE_DEPLOY_READY
-        </span>
-      </div>
-    );
-  }
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => {
+                audioManager.playSfx("tap_nav", 0.15);
+                setTutPhase("aspiration");
+              }}
+              className="px-10 py-3.5 bg-zinc-950/60 border border-[#39FF14] text-[#39FF14] font-mono text-xs font-bold tracking-[0.25em] uppercase hover:bg-[#39FF14]/10 transition-all rounded-sm"
+            >
+              MONITOR NETWORK FEED →
+            </motion.button>
+          </motion.div>
+        )}
 
-  return (
-    <div className="flex flex-col items-center gap-2">
-      {LANE_COLORS().map((c, i) => (
-        <div key={i} style={{ height: 2, background: c, opacity: 0.6, width: `${(3 - i) * 48}px`, boxShadow: `0 0 8px ${c}` }} />
-      ))}
+        {/* PHASE 6: SOCIAL ASPIRATION (LEADERBOARDS) */}
+        {tutPhase === "aspiration" && (
+          <motion.div
+            key="aspiration"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            className="flex-1 flex flex-col items-center justify-between py-6 px-4 overflow-y-auto relative z-10"
+          >
+            <div className="text-center mt-3">
+              <div className="font-mono text-[9px] text-[#39FF14] tracking-[0.4em] mb-1.5 uppercase">
+                // GLOBAL TRANSMISSIONS //
+              </div>
+              <h2 className="font-mono text-xl font-bold tracking-widest text-white uppercase">
+                NETWORK STATUS
+              </h2>
+            </div>
+
+            {/* Aspiration feed container */}
+            <div className="w-full max-w-sm border border-zinc-900 bg-black/60 p-5 space-y-4 rounded-sm">
+              <div className="font-mono text-[10px] text-zinc-500 tracking-wider pb-2 border-b border-zinc-900 uppercase">
+                Live collector operations
+              </div>
+              
+              <div className="space-y-3.5 font-mono text-xs">
+                {/* Score accomplishment */}
+                <div className="flex gap-3 items-start border-b border-zinc-900 pb-3">
+                  <div className="w-7 h-7 flex-shrink-0 bg-red-950/20 border border-red-500/30 flex items-center justify-center text-red-400 font-bold">1</div>
+                  <div>
+                    <div className="text-white font-bold uppercase">0x71a...9bSECURED SCORE</div>
+                    <div className="text-[10px] text-zinc-400">999,500 on BR34K_OF_LIGHT [MYTHIC]</div>
+                  </div>
+                </div>
+
+                {/* Glitched Variant pull */}
+                <div className="flex gap-3 items-start border-b border-zinc-900 pb-3">
+                  <div className="w-7 h-7 flex-shrink-0 bg-yellow-950/20 border border-yellow-500/30 flex items-center justify-center text-yellow-400 font-bold">2</div>
+                  <div>
+                    <div className="text-white font-bold uppercase">cyber_scribePULLED GLITCHED</div>
+                    <div className="text-[10px] text-zinc-400">TRANSMISSION 001 [ALT VERSE 3/10]</div>
+                  </div>
+                </div>
+
+                {/* Faction change */}
+                <div className="flex gap-3 items-start pb-1">
+                  <div className="w-7 h-7 flex-shrink-0 bg-purple-950/20 border border-purple-500/30 flex items-center justify-center text-purple-400 font-bold">3</div>
+                  <div>
+                    <div className="text-white font-bold uppercase">analog_dreamerSHIFTS ALIGNMENT</div>
+                    <div className="text-[10px] text-zinc-400">Equipped Analog theme skin on all signals</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="text-[10px] text-zinc-500 leading-normal border-t border-zinc-900 pt-3 font-mono">
+                The network preserves limited variants, glitched prints, custom remix cuts, and visual skin overhauls to represent your identity on the global stages.
+              </div>
+            </div>
+
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => {
+                audioManager.playSfx("tap_nav", 0.15);
+                setTutPhase("faction");
+              }}
+              className="px-10 py-3.5 bg-zinc-950/60 border border-[#39FF14] text-[#39FF14] font-mono text-xs font-bold tracking-[0.25em] uppercase hover:bg-[#39FF14]/10 transition-all rounded-sm"
+            >
+              ESTABLISH ALIGNMENT →
+            </motion.button>
+          </motion.div>
+        )}
+
+        {/* PHASE 7: FACTION SELECT & REGISTRATION LOCK-IN */}
+        {tutPhase === "faction" && (
+          <motion.div
+            key="faction"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            className="flex-1 flex flex-col items-center justify-between py-6 px-4 overflow-y-auto relative z-10"
+          >
+            <div className="text-center mt-3">
+              <div className="font-mono text-[9px] text-[#39FF14] tracking-[0.4em] mb-1.5 uppercase">
+                // SELECT INTEL FACTION //
+              </div>
+              <h2 className="font-mono text-xl font-bold tracking-widest text-white uppercase">
+                ALIGNMENT IDENTIFICATION
+              </h2>
+            </div>
+
+            {/* Tribal Faction grid */}
+            {!selectedFaction ? (
+              <div className="w-full max-w-sm grid grid-cols-1 gap-2.5 my-3">
+                {[
+                  { id: "LIGHT", name: "LIGHT FACTION", desc: "Harmonic tones, clean synth loops, pure frequencies.", color: "#39FF14" },
+                  { id: "DARK", name: "DARK COLLECTIVE", desc: "Industrial bass waves, distorted frequencies, heavy beats.", color: "#FF1493" },
+                  { id: "VOID", name: "VOID COLLECTIVE", desc: "Ethereal ambient breaks, silent spaces, deep cosmic delays.", color: "#b44dff" },
+                  { id: "ANALOG", name: "ANALOG UNION", desc: "Warm tape crackles, organic vintage instrumentation, vinyl vibes.", color: "#ffaa00" },
+                  { id: "CHAOS", name: "CHAOS SECTOR", desc: "Breakcore glitch layers, high speed breaks, volatile signals.", color: "#ef4444" }
+                ].map(fac => (
+                  <button
+                    key={fac.id}
+                    onClick={() => {
+                      setSelectedFaction(fac.id);
+                      localStorage.setItem("user_faction", fac.id);
+                      audioManager.playSfx("platinum_get", 0.65);
+                    }}
+                    className="p-3 bg-zinc-950/65 border border-zinc-900 text-left hover:border-white/30 active:bg-zinc-900/40 transition-all rounded-sm flex justify-between items-center group"
+                  >
+                    <div>
+                      <div className="font-mono font-bold text-xs uppercase group-hover:text-white" style={{ color: fac.color }}>
+                        {fac.name}
+                      </div>
+                      <div className="font-mono text-[10px] text-zinc-500 leading-tight mt-1">
+                        {fac.desc}
+                      </div>
+                    </div>
+                    <div className="font-mono text-[9px] text-zinc-700 group-hover:text-zinc-400 pl-4 tracking-widest flex-shrink-0">
+                      [ CONNECT ]
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <motion.div 
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="w-full max-w-sm border border-zinc-900 bg-black/75 p-6 text-center space-y-6 rounded-sm relative"
+              >
+                {/* Faction glow */}
+                <div className="absolute inset-0 blur-xl pointer-events-none rounded-full" style={{
+                  background: `radial-gradient(circle, ${selectedFaction === "LIGHT" ? "#39FF14" : selectedFaction === "DARK" ? "#FF1493" : selectedFaction === "VOID" ? "#b44dff" : selectedFaction === "ANALOG" ? "#ffaa00" : "#ef4444"}20 0%, transparent 60%)`
+                }} />
+                
+                <div className="font-mono text-[9px] text-zinc-500 uppercase tracking-widest">
+                  FACTION INTEGRATION SECURED
+                </div>
+                <h3 className="font-mono text-2xl font-black text-white tracking-widest uppercase">
+                  {selectedFaction} FACTION
+                </h3>
+
+                <div className="font-mono text-[11px] text-zinc-400 leading-relaxed border-t border-zinc-900 pt-4">
+                  Neural link sync protocol completed. Connect your profile wallet address to preserve unlocked signal metadata and write card provenance records.
+                </div>
+
+                <div className="space-y-2.5 pt-2">
+                  <button
+                    onClick={() => {
+                      localStorage.setItem("pim_tutorial_completed", "true");
+                      audioManager.playSfx("tap_nav", 0.15);
+                      setLocation("/vault");
+                    }}
+                    className="w-full py-3.5 bg-gradient-to-r from-yellow-500 to-amber-500 text-black font-mono text-xs font-bold tracking-[0.25em] uppercase hover:shadow-lg transition-all rounded-sm border-none cursor-pointer"
+                  >
+                    SECURE PROFILE / CONNECT
+                  </button>
+                  
+                  <button
+                    onClick={handleCompleteTutorial}
+                    className="w-full py-3 bg-zinc-950/70 border border-zinc-800 text-zinc-400 font-mono text-[10px] font-bold tracking-[0.25em] uppercase hover:text-white hover:border-zinc-500 transition-all rounded-sm cursor-pointer"
+                  >
+                    PROCEED AS GUEST
+                  </button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Faction go back trigger */}
+            {selectedFaction && (
+              <button
+                onClick={() => setSelectedFaction(null)}
+                className="font-mono text-[9px] text-zinc-600 hover:text-zinc-400 uppercase tracking-widest select-none mt-2"
+              >
+                ← RE-CHOOSE ALIGNMENT
+              </button>
+            )}
+            {!selectedFaction && <div className="h-4" />}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

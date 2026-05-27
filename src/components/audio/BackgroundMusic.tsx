@@ -36,7 +36,7 @@ export default function BackgroundMusic() {
     return () => window.removeEventListener("intro_finished", onIntroDone);
   }, []);
 
-  const isSilentRoute = location.startsWith("/play/") || location.startsWith("/results/") || (location === "/" && !introDone);
+  const isSilentRoute = location.startsWith("/play/") || location.startsWith("/results/") || location.startsWith("/tutorial") || (location === "/" && !introDone);
 
   // Create (but don't play) the bg audio element once
   useEffect(() => {

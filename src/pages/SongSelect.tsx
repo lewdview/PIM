@@ -270,7 +270,7 @@ export default function SongSelect() {
   const today = getCurrentDay();
   const isSongUnlocked = (song: GameSong) => {
     if (song.day === today) return true;
-    return collection.some(c => c.cardId === song.id || c.card?.day === song.day);
+    return Array.isArray(collection) && collection.some(c => c && (c.cardId === song.id || c.card?.day === song.day));
   };
 
   const selectedUnlocked = selected ? isSongUnlocked(selected) : false;

@@ -188,10 +188,10 @@ export default function Chapter() {
   const score = selectedSong ? getHighScore(selectedSong.id) : 0;
   const history = selectedSong ? getScoreHistory(selectedSong.id) : [];
   const bestScore = history.length > 0 ? Math.max(...history) : 0;
-  const modifierType = selectedSong ? getModifierForSong(selectedSong.id as any) : 'none';
+  const modifierType = selectedSong ? getModifierForSong(selectedSong) : 'none';
 
   // Card ownership
-  const ownsCard = selectedSong ? collection.some(c => c.cardId === selectedSong.id || c.card?.day === selectedSong.day) : false;
+  const ownsCard = selectedSong && Array.isArray(collection) ? collection.some(c => c && (c.cardId === selectedSong.id || c.card?.day === selectedSong.day)) : false;
   const isCleared = selectedSong ? hasCleared(selectedSong) : false;
 
   // Check locks
@@ -778,7 +778,7 @@ export default function Chapter() {
                       // LINKED CARD MODIFIER
                     </div>
                     <div className="font-mono text-[9px] text-white/80 font-bold uppercase mt-0.5">
-                      {modifierType.replace('_', ' ')}
+                      {(modifierType || '').replace('_', ' ')}
                     </div>
                   </div>
                   <button

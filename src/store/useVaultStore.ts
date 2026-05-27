@@ -115,19 +115,23 @@ export const useVaultStore = create<VaultState>((set) => ({
 
   setDailyCard: (card) => set({ dailyCard: card }),
   setHasClaimed: (claimed) => set({ hasClaimed: claimed }),
-  setCollection: (cards) => set((state) => ({ 
-    collection: cards,
-    echoPrestigeScore: calculateEchoPrestigeScore(cards, state.streakCount, state.totalPulls)
-  })),
+  setCollection: (cards) => set((state) => {
+    const valid = cards.filter(c => c && c.card);
+    return { 
+      collection: valid,
+      echoPrestigeScore: calculateEchoPrestigeScore(valid, state.streakCount, state.totalPulls)
+    };
+  }),
   addToCollection: (cards) => set((state) => {
-    const nextCollection = [...state.collection, ...cards];
+    const valid = cards.filter(c => c && c.card);
+    const nextCollection = [...state.collection, ...valid];
     return {
       collection: nextCollection,
       echoPrestigeScore: calculateEchoPrestigeScore(nextCollection, state.streakCount, state.totalPulls),
     };
   }),
   removeFromCollection: (ownedId) => set((state) => {
-    const nextCollection = state.collection.filter(c => c.id !== ownedId);
+    const nextCollection = state.collection.filter(c => c && c.id !== ownedId && c.card);
     return {
       collection: nextCollection,
       echoPrestigeScore: calculateEchoPrestigeScore(nextCollection, state.streakCount, state.totalPulls),
@@ -214,10 +218,11 @@ export const useVaultStore = create<VaultState>((set) => ({
         });
       }
 
+      const validMappedCards = mappedCards.filter(c => c && c.card);
       // Single set to update collection and computed prestige score simultaneously
       set({ 
-        collection: mappedCards,
-        echoPrestigeScore: calculateEchoPrestigeScore(mappedCards, currentStreak, currentPulls)
+        collection: validMappedCards,
+        echoPrestigeScore: calculateEchoPrestigeScore(validMappedCards, currentStreak, currentPulls)
       });
 
     } finally {

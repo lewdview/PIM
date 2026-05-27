@@ -186,11 +186,11 @@ export default function SongDetail() {
 
   // Determine locking: unlock if today's song of the day OR owned in collection
   const today = getCurrentDay();
-  const unlocked = song.day === today || collection.some(c => c.cardId === song.id || c.card?.day === song.day);
+  const hasCard = song && Array.isArray(collection) ? collection.some(c => c && (c.cardId === song.id || c.card?.day === song.day)) : false;
+  const unlocked = song && (song.day === today || hasCard);
 
   const moodColor = song.mood === 'light' ? '#39FF14' : '#FF1493';
   const bestScore = history.length > 0 ? Math.max(...history) : 0;
-  const hasCard = collection.some(c => c.cardId === song.id || c.card?.day === song.day);
   const modifierType = getModifierForSong(song);
 
   if (isAvant) {

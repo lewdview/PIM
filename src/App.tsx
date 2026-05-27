@@ -34,7 +34,7 @@ import SongDetail from './pages/SongDetail';
 import LandingPage from './pages/LandingPage';
 
 export default function App() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const initializeAuth = useAuthStore((s) => s.initialize);
   const authStatus = useAuthStore((s) => s.status);
   const user = useAuthStore((s) => s.user);
@@ -45,6 +45,16 @@ export default function App() {
   useEffect(() => {
     initializeAuth();
   }, [initializeAuth]);
+
+  // Automatically redirect guests who haven't completed the tutorial to /tutorial
+  useEffect(() => {
+    if (location === '/') {
+      const isTutorialCompleted = localStorage.getItem('pim_tutorial_completed');
+      if (!isTutorialCompleted) {
+        setLocation('/tutorial');
+      }
+    }
+  }, [location, setLocation]);
 
   // Stop global preview player on gameplay routes to prevent dual-audio
   useEffect(() => {

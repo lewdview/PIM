@@ -1956,7 +1956,7 @@ export default function Game() {
       ctx.font = "bold 9px 'Roboto Mono', monospace";
       ctx.textAlign = "center";
       
-      const bannerText = `[ SYSTEM MODIFIER: ACTIVE // ${activeMod.replace('_', ' ').toUpperCase()} ]`;
+      const bannerText = `[ SYSTEM MODIFIER: ACTIVE // ${(activeMod || 'none').replace('_', ' ').toUpperCase()} ]`;
       const bannerColor = activeMod === 'bass_realm' ? '#a855f7' : activeMod === 'corrupted_signal' ? '#f97316' : '#ffd700';
       
       // Draw background bar
@@ -2369,7 +2369,7 @@ export default function Game() {
         setPaused(false);
 
         const collection = useVaultStore.getState().collection;
-        const isOwned = collection.some(c => c.cardId === songId || `card-${c.card?.day}` === songId);
+        const isOwned = Array.isArray(collection) ? collection.some(c => c && (c.cardId === songId || `card-${c.card?.day}` === songId)) : false;
         const isLocked = !isOwned && isSongTimeLocked(song);
         console.log("[GamePlay Init] isSongTimeLocked evaluated:", isLocked, "for song day:", song.day, "date:", song.date, "isOwned:", isOwned);
         if (isLocked) {

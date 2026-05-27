@@ -1,7 +1,8 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { RevealPackMeta } from '../../store/useVaultStore';
+import { useVaultStore, type RevealPackMeta } from '../../store/useVaultStore';
 import type { OwnedCard } from '../../services/vaultService';
+import { audioManager } from '../../game/audio';
 import { RARITY_CONFIG, type Rarity } from '../../utils/rarity';
 import Card from '../Card';
 import RarityBadge from '../RarityBadge';
@@ -415,6 +416,47 @@ export default function PackContainer({ meta, cards, onComplete, onBuyAnother, i
   const sequenceRunning = useRef(false);
   const abortRef = useRef(false); // Aborts in-flight reveal sequences on re-purchase
 
+  const collection = useVaultStore(s => s.collection);
+  const [firstUnlockCard, setFirstUnlockCard] = useState<OwnedCard | null>(null);
+  const unlockResolveRef = useRef<(() => void) | null>(null);
+  const unlockAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  const checkFirstUnlock = useCallback((cardId: string) => {
+    if (!collection || collection.length === 0) return true;
+    const count = collection.filter(c => c && c.cardId === cardId).length;
+    return count <= 1;
+  }, [collection]);
+
+  useEffect(() => {
+    if (firstUnlockCard && firstUnlockCard.card.audioUrl) {
+      const audio = new Audio(firstUnlockCard.card.audioUrl);
+      audio.volume = 0.55;
+      audio.play().catch(e => console.warn("Audio snippet play failed:", e));
+      unlockAudioRef.current = audio;
+    } else {
+      if (unlockAudioRef.current) {
+        const audio = unlockAudioRef.current;
+        let vol = audio.volume;
+        const fade = setInterval(() => {
+          vol = Math.max(0, vol - 0.05);
+          audio.volume = vol;
+          if (vol <= 0) {
+            clearInterval(fade);
+            audio.pause();
+            audio.src = "";
+          }
+        }, 30);
+        unlockAudioRef.current = null;
+      }
+    }
+    return () => {
+      if (unlockAudioRef.current) {
+        unlockAudioRef.current.pause();
+        unlockAudioRef.current.src = "";
+      }
+    };
+  }, [firstUnlockCard]);
+
   // ── Manage Ambient Audio & State Reset ──────────────────────────
   useEffect(() => {
     // Abort any in-flight reveal sequence from the previous cards
@@ -577,6 +619,17 @@ export default function PackContainer({ meta, cards, onComplete, onBuyAnother, i
         setFlippedCards(prev => new Set(prev).add(i));
         playTick();
         if (await abortableWait(500)) return;
+      }
+
+      // First-time card unlock overlay step (paused until resolved)
+      if (checkFirstUnlock(card.card.id)) {
+        setFirstUnlockCard(card);
+        audioManager.playSfx('hidden_secret_found', 1.0);
+        await new Promise<void>((resolve) => {
+          unlockResolveRef.current = resolve;
+        });
+        setFirstUnlockCard(null);
+        if (await abortableWait(400)) return;
       }
     }
 
@@ -1129,6 +1182,161 @@ export default function PackContainer({ meta, cards, onComplete, onBuyAnother, i
               whileTap={{ scale: 0.98 }}
             >
               {meta.category === 'daily_claim' || meta.redirectPath === '/tutorial' ? 'Start PIM' : 'Go to Collection →'}
+            </motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── FIRST-TIME UNLOCK OVERLAY ────────────────────────────── */}
+      <AnimatePresence>
+        {firstUnlockCard && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 1000,
+              background: '#050402',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              overflow: 'hidden',
+              padding: '24px'
+            }}
+          >
+            {/* Pulsing glow background in rarity color */}
+            <motion.div
+              animate={{ opacity: [0.3, 0.6, 0.3], scale: [1, 1.15, 1] }}
+              transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut' }}
+              style={{
+                position: 'absolute',
+                width: '600px',
+                height: '600px',
+                borderRadius: '50%',
+                background: `radial-gradient(circle, ${RARITY_CONFIG[firstUnlockCard.card.rarity]?.color || '#ffd700'}30, transparent 75%)`,
+                filter: 'blur(80px)',
+                pointerEvents: 'none',
+              }}
+            />
+
+            {/* Scanning monitor scanlines */}
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              pointerEvents: 'none',
+              background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, 0.15) 2px, rgba(0, 0, 0, 0.15) 4px)'
+            }} />
+
+            {/* Underground header */}
+            <motion.div
+              initial={{ y: -20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              style={{ textAlign: 'center', zIndex: 10, marginBottom: '32px' }}
+            >
+              <div style={{
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '11px',
+                fontWeight: 900,
+                color: RARITY_CONFIG[firstUnlockCard.card.rarity]?.color || '#ffd700',
+                letterSpacing: '0.4em',
+                textTransform: 'uppercase',
+                textShadow: `0 0 10px ${RARITY_CONFIG[firstUnlockCard.card.rarity]?.color || '#ffd700'}50`
+              }}>
+                [ NEW SIGNAL UNLOCKED ]
+              </div>
+              <div style={{
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '8px',
+                color: 'rgba(255,255,255,0.4)',
+                letterSpacing: '0.2em',
+                marginTop: '6px',
+                textTransform: 'uppercase'
+              }}>
+                Neural Compatibility Confirmed // Minting Provenance
+              </div>
+            </motion.div>
+
+            {/* Rising card in the center */}
+            <motion.div
+              initial={{ scale: 0.3, rotateY: -180, y: 100, opacity: 0 }}
+              animate={{ scale: 1.15, rotateY: 0, y: 0, opacity: 1 }}
+              exit={{ scale: 0.5, opacity: 0, transition: { duration: 0.2 } }}
+              transition={{ type: 'spring', stiffness: 180, damping: 20, delay: 0.3 }}
+              style={{
+                perspective: '1000px',
+                zIndex: 10,
+                marginBottom: '40px',
+                filter: `drop-shadow(0 0 35px ${RARITY_CONFIG[firstUnlockCard.card.rarity]?.color || '#ffd700'}30)`
+              }}
+            >
+              <Card card={firstUnlockCard.card} interactive={false} showAudio={false} isRevealed={true} />
+            </motion.div>
+
+            {/* Title / Artist details */}
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.6 }}
+              style={{ textAlign: 'center', zIndex: 10, marginBottom: '36px', maxWidth: '300px' }}
+            >
+              <h2 style={{
+                fontFamily: 'Impact, sans-serif',
+                fontSize: '24px',
+                fontWeight: 900,
+                color: '#fff',
+                margin: 0,
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
+                transform: 'scaleY(1.15)'
+              }}>
+                {firstUnlockCard.card.title}
+              </h2>
+              <p style={{
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '11px',
+                color: 'rgba(255,255,255,0.5)',
+                margin: '8px 0 0',
+                letterSpacing: '0.15em',
+                textTransform: 'uppercase'
+              }}>
+                by {firstUnlockCard.card.artist}
+              </p>
+            </motion.div>
+
+            {/* Continue / Integrate Button */}
+            <motion.button
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.8 }}
+              onClick={() => {
+                if (unlockResolveRef.current) {
+                  unlockResolveRef.current();
+                  unlockResolveRef.current = null;
+                }
+              }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              style={{
+                zIndex: 10,
+                padding: '14px 32px',
+                background: RARITY_CONFIG[firstUnlockCard.card.rarity]?.color || '#ffd700',
+                color: '#000',
+                fontFamily: '"JetBrains Mono", monospace',
+                fontWeight: 900,
+                letterSpacing: '0.2em',
+                textTransform: 'uppercase',
+                fontSize: '12px',
+                border: 'none',
+                cursor: 'pointer',
+                boxShadow: `0 8px 32px ${RARITY_CONFIG[firstUnlockCard.card.rarity]?.color || '#ffd700'}30`,
+                borderRadius: '4px'
+              }}
+            >
+              [ INTEGRATE SIGNAL ]
             </motion.button>
           </motion.div>
         )}

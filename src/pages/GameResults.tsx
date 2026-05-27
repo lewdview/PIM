@@ -788,7 +788,7 @@ export default function Results() {
   const backRoute = fromFreePlay ? '/songs' : `/chapter/${chapterMonth}`;
 
   // Card ownership check
-  const ownsCard = song ? collection.some(c => c.cardId === song.id || c.card?.day === song.day) : false;
+  const ownsCard = song && Array.isArray(collection) ? collection.some(c => c && (c.cardId === song.id || c.card?.day === song.day)) : false;
 
   // Pack reward eligibility (Owned Play + default difficulty + no modifier cards)
   const activeMod = sessionStorage.getItem(`active_modifier_type_${songId}`);
