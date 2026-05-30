@@ -17,7 +17,7 @@ import { type PackCategory, type PackSize, RARITY_CONFIG, PACK_CONFIGS } from '.
 import { loadCatalog } from '../game/api';
 
 // ===== BRUTALIST TICKER =====
-const TICKER_TEXT = 'TH3V4ULT: NOW FEATURING PIM! — 365 DAYS OF RETENTION — COLLECT. SELL. EARN. — DAILY LEVEL UNLOCKS — V⚡ TOKENS — MYTHIC ROLLS — LIVE PLAY — ';
+const TICKER_TEXT = 'TH3V4ULT : PIM — 365 DAYS OF RETENTION — COLLECT. SELL. EARN. — DAILY LEVEL UNLOCKS — V⚡ TOKENS — MYTHIC ROLLS — LIVE PLAY — ';
 
 function BrutalistTicker() {
   return (
@@ -319,7 +319,7 @@ export default function LandingPage() {
           } as any}
         >
           <span className="text-[11px] font-black tracking-[0.2em] uppercase font-mono">
-            th3v4ult: Now Featuring PIM! // NEURAL GATEWAY
+            th3v4ult : PIM // NEURAL GATEWAY
           </span>
         </motion.div>
 
@@ -330,7 +330,7 @@ export default function LandingPage() {
           className="text-[44px] sm:text-6xl md:text-8xl brutalist-xl mb-4"
           style={{ '--neon-accent': '#ff3800', textTransform: 'none' } as any}
         >
-          th3v4ult: Now Featuring PIM!
+          th3v4ult : PIM
         </motion.h1>
 
         <motion.p
@@ -339,7 +339,7 @@ export default function LandingPage() {
           transition={{ duration: 0.6, delay: 0.2 }}
           className="font-mono text-[11px] sm:text-xs tracking-[0.3em] uppercase max-w-xl text-center text-[#faf0d8] mb-8 leading-relaxed"
         >
-          THE HYBRID FUNNEL ENGINE BY <span className="text-[#ffb800] font-black">TH3SCR1B3</span>. MUSIC UNLOCKS GAMEPLAY · GAMEPLAY UNLOCKS OWNERSHIP · OWNERSHIP UNLOCKS STATUS.
+          AN EXPERIMENTAL PLAYABLE MUSIC PLATFORM BY <span className="text-[#ffb800] font-black">TH3SCR1B3</span>. MUSIC UNLOCKS GAMEPLAY · GAMEPLAY UNLOCKS OWNERSHIP · OWNERSHIP UNLOCKS STATUS.
         </motion.p>
       </section>
 

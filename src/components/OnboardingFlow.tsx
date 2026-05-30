@@ -164,7 +164,7 @@ export default function OnboardingFlow({ onComplete }: Props) {
             margin: 0,
           }}
         >
-          th3v4ult: Now Featuring PIM!
+          th3v4ult : PIM
         </motion.h1>
 
         {/* Subtitle */}

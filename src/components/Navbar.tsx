@@ -72,7 +72,7 @@ function VaultLogo() {
             display: 'block',
           }}
         >
-          th3v4ult: Now Featuring PIM!
+          th3v4ult : PIM
         </span>
         {/* Attribution - Moved OUT of the inner Link to fix hydration warning if needed, 
            but actually we just need to make it a non-anchor if it's inside a Link, 

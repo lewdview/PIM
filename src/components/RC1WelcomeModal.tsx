@@ -113,7 +113,7 @@ export default function RC1WelcomeModal() {
               margin: 0,
               lineHeight: 0.9,
             }}>
-              th3v4ult: Now Featuring PIM!
+              th3v4ult : PIM
             </h1>
             <p style={{
               fontFamily: '"JetBrains Mono", monospace',
