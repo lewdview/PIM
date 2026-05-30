@@ -354,18 +354,31 @@ export default function CollectionPage() {
                     proof={mainCard.proof}
                   />
                   
-                  {/* Edition Status — shows MINTED OUT only when this specific copy is excess */}
-                  <div className="absolute bottom-1 right-1 z-30 pointer-events-none">
-                    {(mainCard.edition || 0) > getSupplyCap(mainCard.card.rarity as Rarity, mainCard.card.day) ? (
-                      <div className="px-1.5 py-0.5 bg-black/80 border border-[#ff3800]/60 text-[7px] font-black uppercase tracking-tighter text-[#ff3800]">
+                  {/* Edition Status badge */}
+                  {(() => {
+                    const ed = mainCard.edition || 0;
+                    const cap = getSupplyCap(mainCard.card.rarity as Rarity, mainCard.card.day);
+                    if (ed > cap) return (
+                      <div className="absolute bottom-1 right-1 z-30 pointer-events-none px-1.5 py-0.5 bg-black/80 border border-[#ff3800]/60 text-[7px] font-black uppercase tracking-tighter text-[#ff3800]">
                         MINTED OUT
                       </div>
-                    ) : (
-                      <div className="px-1.5 py-0.5 bg-white/10 backdrop-blur-sm border border-white/10 text-[7px] font-black uppercase tracking-tighter text-white/40">
-                        ED. {mainCard.edition || '?'}/{getSupplyCap(mainCard.card.rarity as Rarity, mainCard.card.day)}
+                    );
+                    if (cap === 1 && ed === 1) return (
+                      <div className="absolute bottom-1 right-1 z-30 pointer-events-none px-1.5 py-0.5 bg-black/85 border border-yellow-400/60 text-[7px] font-black uppercase tracking-tighter text-yellow-400" style={{ textShadow: '0 0 6px rgba(255,215,0,0.6)' }}>
+                        1 OF 1
                       </div>
-                    )}
-                  </div>
+                    );
+                    if (ed === cap && cap > 1) return (
+                      <div className="absolute bottom-1 right-1 z-30 pointer-events-none px-1.5 py-0.5 bg-black/80 border border-white/30 text-[7px] font-black uppercase tracking-tighter text-white/70">
+                        LAST COPY
+                      </div>
+                    );
+                    return (
+                      <div className="absolute bottom-1 right-1 z-30 pointer-events-none px-1.5 py-0.5 bg-white/10 backdrop-blur-sm border border-white/10 text-[7px] font-black uppercase tracking-tighter text-white/40">
+                        ED. {mainCard.edition || '?'}/{cap}
+                      </div>
+                    );
+                  })()}
 
                   {/* Details button — visible on hover */}
                   <button

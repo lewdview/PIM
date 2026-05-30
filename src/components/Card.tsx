@@ -148,9 +148,14 @@ export default function Card({
   const audioUrl = card.audioUrl || '';
   const hasArt   = !imgError && coverUrl;
 
-  // Minted-out: true only when THIS specific copy exceeds the supply cap (excess edition)
-  // or when no edition prop is given and the rarity pool is fully claimed.
-  const isMintedOut = edition !== undefined ? edition > supply : claimed >= supply;
+  // ── Overlay state classification ──────────────────────────────────────────
+  // isMintedOut  : this specific copy EXCEEDS the supply (true excess, burnable)
+  // isOnlyOne    : supply is 1 and this copy is edition 1 — trophy pull, celebrate!
+  // isLastCopy   : this copy IS the last valid edition (edition === supply, supply > 1)
+  // Fallback when edition prop not passed: use claimed count, but strictly > not >=
+  const isExcessEdition = edition !== undefined ? edition > supply : claimed > supply;
+  const isOnlyOne       = supply === 1 && (edition === 1 || (edition === undefined && claimed <= 1));
+  const isLastCopy      = !isExcessEdition && !isOnlyOne && edition !== undefined && edition === supply && supply > 1;
 
   const mintPct = supply > 0 ? (Math.min(claimed, supply) / supply) * 100 : 0;
 
@@ -221,8 +226,87 @@ export default function Card({
   );
 
 
-  // ── Minted out overlay — only shown when this copy is an excess edition ────
-  const mintedOutOverlay = isMintedOut && (
+  // ── 1-of-1 / Only One overlay — celebratory, not a penalty ─────────────
+  const onlyOneOverlay = isOnlyOne && (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ delay: 0.4, type: 'spring', stiffness: 200 }}
+      style={{
+        position: 'absolute', inset: 0, zIndex: 40, pointerEvents: 'none', borderRadius: '12px',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        gap: '8px',
+        visibility: frontVisibility,
+      }}
+    >
+      {/* Glow bloom behind the stamp */}
+      <div style={{
+        position: 'absolute', inset: 0, borderRadius: '12px',
+        background: 'radial-gradient(ellipse at center, rgba(255,215,0,0.18) 0%, transparent 70%)',
+        border: '2px solid rgba(255,215,0,0.35)',
+        pointerEvents: 'none',
+      }} />
+      <div style={{
+        padding: '5px 14px',
+        border: '2.5px solid #ffd700',
+        color: '#ffd700',
+        fontFamily: '"Impact", "Arial Black", sans-serif',
+        fontSize: '20px',
+        fontWeight: 900,
+        textTransform: 'uppercase',
+        letterSpacing: '3px',
+        transform: 'rotate(-10deg)',
+        background: 'rgba(0,0,0,0.8)',
+        boxShadow: '0 0 28px rgba(255,215,0,0.55), inset 0 0 10px rgba(255,215,0,0.08)',
+        textShadow: '0 0 14px rgba(255,215,0,0.9)',
+      }}>
+        ONLY ONE!
+      </div>
+      <span style={{
+        fontFamily: '"JetBrains Mono", monospace',
+        fontSize: '9px',
+        fontWeight: 700,
+        letterSpacing: '0.2em',
+        textTransform: 'uppercase',
+        color: 'rgba(255,215,0,0.75)',
+        textShadow: '0 0 8px rgba(255,215,0,0.5)',
+      }}>1 of 1 in existence</span>
+    </motion.div>
+  );
+
+  // ── Last copy badge — subtle, not a penalty ──────────────────────────────
+  const lastCopyBadge = isLastCopy && (
+    <motion.div
+      initial={{ opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.3 }}
+      style={{
+        position: 'absolute', bottom: '38px', left: '50%', transform: 'translateX(-50%)',
+        zIndex: 41, pointerEvents: 'none',
+        visibility: frontVisibility,
+      }}
+    >
+      <div style={{
+        padding: '3px 10px',
+        border: `1.5px solid ${rc.color}88`,
+        color: rc.color,
+        fontFamily: '"JetBrains Mono", monospace',
+        fontSize: '7px',
+        fontWeight: 700,
+        textTransform: 'uppercase',
+        letterSpacing: '0.2em',
+        background: 'rgba(0,0,0,0.85)',
+        borderRadius: '3px',
+        boxShadow: `0 0 10px ${rc.color}30`,
+        whiteSpace: 'nowrap',
+      }}>
+        LAST COPY
+      </div>
+    </motion.div>
+  );
+
+  // ── Minted out overlay — only for actual excess copies (edition > supply) ─
+  const mintedOutOverlay = isExcessEdition && (
     <motion.div
       style={{
         position: 'absolute', inset: 0, zIndex: 40, pointerEvents: 'none', borderRadius: '12px',
@@ -776,6 +860,8 @@ export default function Card({
         {dailyOverlay}
         {cardBack}
         {mintedOutOverlay}
+        {onlyOneOverlay}
+        {lastCopyBadge}
 
         {/* ===== ECHO GLITCH OVERLAY ===== */}
         {isEcho && (

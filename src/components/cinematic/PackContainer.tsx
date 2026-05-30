@@ -1054,7 +1054,8 @@ export default function PackContainer({ meta, cards, onComplete, onBuyAnother, i
                         )}
 
                         <Card 
-                            card={owned.card} 
+                            card={owned.card}
+                            edition={owned.edition}
                             interactive={true} 
                             showAudio={false} 
                             isDailyOrigin={owned.source === 'daily_claim' || owned.source === 'pack_miss_out'} 
