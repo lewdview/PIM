@@ -6,6 +6,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { useVaultStore } from '../store/useVaultStore';
 import { useDisplayMode } from '../store/useDisplayMode';
 import GuideModal from './GuideModal';
+import { haptics } from '../utils/haptics';
 
 const links = [
   { to: '/arcade', label: 'Arcade', icon: Monitor },
@@ -190,6 +191,7 @@ export default function Navbar() {
                 <Link
                   key={to}
                   to={to}
+                  onClick={() => haptics.lightTap()}
                   className="sticker-gun-tag sticker-slits transition-all hover:scale-105 active:scale-95 no-underline flex flex-row items-center gap-1.5"
                   style={{
                     transform: `rotate(${(i - 1) * 1.2}deg)`,
@@ -206,7 +208,7 @@ export default function Navbar() {
             })}
 
             <button
-              onClick={() => setGuideOpen(true)}
+              onClick={() => { setGuideOpen(true); haptics.lightTap(); }}
               className="p-2 rounded-full transition-all hover:bg-white/10 active:scale-90 ml-1"
               style={{ color: 'var(--color-text-primary)' }}
               title="Vault Guide & Rules"
@@ -313,7 +315,7 @@ export default function Navbar() {
           <div className="flex md:hidden items-center gap-2">
             <TokenPill balance={tokenBalance} compact />
             <button
-              onClick={() => setMenuOpen(!menuOpen)}
+              onClick={() => { setMenuOpen(!menuOpen); haptics.lightTap(); }}
               className="flex items-center justify-center w-10 h-10 border-2 border-black transition-all active:scale-90"
               style={{
                 background: menuOpen ? '#ff3800' : '#1a1610',
@@ -384,7 +386,7 @@ export default function Navbar() {
                     <Link
                       key={to}
                       to={to}
-                      onClick={() => setMenuOpen(false)}
+                      onClick={() => { setMenuOpen(false); haptics.lightTap(); }}
                       className="flex items-center gap-3 px-4 py-3 no-underline transition-all"
                       style={{
                         background: active ? '#ff3800' : 'rgba(255,255,255,0.03)',
@@ -537,6 +539,7 @@ export default function Navbar() {
               <Link
                 key={to}
                 to={to}
+                onClick={() => haptics.lightTap()}
                 className="flex-1 flex flex-col items-center justify-center gap-1 no-underline transition-all active:scale-95"
                 style={{
                   color: active ? '#ff3800' : 'rgba(255,255,255,0.3)',
@@ -562,6 +565,7 @@ export default function Navbar() {
           {/* Legal — compact muted fourth tab */}
           <Link
             to="/vault/legal"
+            onClick={() => haptics.lightTap()}
             className="flex flex-col items-center justify-center gap-1 no-underline transition-all active:scale-95"
             style={{
               width: '52px',

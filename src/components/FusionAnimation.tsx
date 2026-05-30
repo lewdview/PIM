@@ -8,6 +8,8 @@ import {
   playShimmer, playTension, playSnap, playRareHit,
   disposeAudioContext,
 } from './cinematic/audioEngine';
+import { haptics } from '../utils/haptics';
+
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -102,6 +104,7 @@ export default function FusionAnimation({ sourceCards, resultCard, onClose, clos
 
       // Phase 2: ORBITING — cards circle each other
       setPhase('orbiting');
+      haptics.fusionProgress();
       playTension();
 
       // Animate orbit with shrinking radius
@@ -133,6 +136,7 @@ export default function FusionAnimation({ sourceCards, resultCard, onClose, clos
 
       // Phase 3: MERGING — flash + mystery card
       setPhase('merging');
+      haptics.heavyTap();
       setShowFlash(true);
       playSnap();
       await wait(150);
@@ -146,6 +150,7 @@ export default function FusionAnimation({ sourceCards, resultCard, onClose, clos
 
       // Phase 4: FLIPPING — mystery card flips to reveal
       setPhase('flipping');
+      haptics.fusionSuccess();
       playRareHit(); // THE DING
       setIsRevealed(true);
       await wait(600);
@@ -168,6 +173,7 @@ export default function FusionAnimation({ sourceCards, resultCard, onClose, clos
   }, []);
 
   const handleClose = useCallback(() => {
+    haptics.lightTap();
     setPhase('exiting');
     setTimeout(() => {
       onClose();

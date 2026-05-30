@@ -12,6 +12,7 @@ import PackContainer from '../components/cinematic/PackContainer';
 
 import { purchasePack, sellCard } from '../services/vaultService';
 import { audioManager } from '../game/audio';
+import { haptics } from '../utils/haptics';
 
 export default function PackRevealPage() {
   const [, setLocation] = useLocation();
@@ -41,6 +42,25 @@ export default function PackRevealPage() {
       return () => clearTimeout(timer);
     }
   }, [revealedIndex, revealCards.length, ripDone, revealPackMeta]);
+
+  // Haptic feedback triggers
+  useEffect(() => {
+    if (ripDone) {
+      haptics.packReveal();
+    }
+  }, [ripDone]);
+
+  useEffect(() => {
+    if (ripDone) {
+      haptics.cardFlip();
+    }
+  }, [revealedIndex, ripDone]);
+
+  useEffect(() => {
+    if (showSummary) {
+      haptics.mediumTap();
+    }
+  }, [showSummary]);
 
   useEffect(() => {
     const current = revealCards[revealedIndex];

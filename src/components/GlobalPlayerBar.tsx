@@ -3,6 +3,7 @@ import { Play, Pause, X, Volume2 } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { useGlobalPlayer } from '../store/useGlobalPlayer';
 import { RARITY_CONFIG } from '../utils/rarity';
+import { useIsMobile } from '../hooks/use-mobile';
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -11,7 +12,8 @@ function formatTime(seconds: number): string {
 }
 
 export default function GlobalPlayerBar() {
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
+  const isMobile = useIsMobile();
   const { currentTrack, isPlaying, progress, currentTime, duration, toggle, stop, seek } = useGlobalPlayer();
 
   if (!currentTrack) return null;
@@ -28,6 +30,18 @@ export default function GlobalPlayerBar() {
     seek(pct);
   };
 
+  const hideNavbar =
+    location.startsWith('/play/') ||
+    location === '/tutorial' ||
+    location === '/campaign' ||
+    location.startsWith('/chapter/') ||
+    location.startsWith('/song/') ||
+    location === '/songs' ||
+    location.startsWith('/results/') ||
+    location === '/options';
+
+  const bottomSpacing = isMobile ? (hideNavbar ? '0px' : '62px') : '0px';
+
   return (
     <AnimatePresence>
       <motion.div
@@ -37,7 +51,7 @@ export default function GlobalPlayerBar() {
         transition={{ type: 'spring', stiffness: 400, damping: 35 }}
         style={{
           position: 'fixed',
-          bottom: '62px', // above mobile nav
+          bottom: bottomSpacing, // dynamic position based on nav bar presence
           left: 0,
           right: 0,
           zIndex: 45,

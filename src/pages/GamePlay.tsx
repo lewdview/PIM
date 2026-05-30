@@ -7,6 +7,7 @@ import type { Note, JudgmentDisplay, GameState } from "@/game/types";
 import { loadOpts, keyLabel, type GameOpts } from "@/lib/options";
 import { audioManager } from "@/game/audio";
 import { useVaultStore } from "@/store/useVaultStore";
+import { haptics } from "../utils/haptics";
 
 // ── constants ────────────────────────────────────────────────────
 const LANE_COUNT = 3;
@@ -385,9 +386,11 @@ export default function Game() {
             shieldChargesRef.current = 2;
             // Distinct stinger for the defensive shield power-up
             audioManager.playSfx("hidden_secret_found", 0.9);
+            haptics.fusionSuccess();
           } else {
             // Energetic activation for FEVER / SURGE
             audioManager.playSfx("fusion", 0.75);
+            haptics.heavyTap();
           }
           break;
         }
@@ -548,6 +551,15 @@ export default function Game() {
         gs.goods++;
         audioManager.playSfx("tap_nav", 0.1);
       }
+      if (ns.note.type === "swipe") {
+        haptics.doubleTap();
+      } else {
+        if (j === "PERFECT+") {
+          haptics.mediumTap();
+        } else {
+          haptics.lightTap();
+        }
+      }
       checkPowerUps(gs.combo);
 
       jRef.current = [
@@ -620,6 +632,7 @@ export default function Game() {
           puRef.current.endTime = 0;
           setPuDisplay(null);
           puRef.current.triggered.clear();
+          haptics.error();
 
           muteLane(ns.note.lane);
           syncDisplay();
@@ -636,6 +649,7 @@ export default function Game() {
         gs.maxCombo = Math.max(gs.maxCombo, gs.combo);
         gs.perfectPlus++;
         checkPowerUps(gs.combo);
+        haptics.mediumTap();
         jRef.current = [
           ...jRef.current.filter((x) => Date.now() - x.ts < 600),
           { type: "PERFECT+", lane: ns.currentLane, id: ++jCounter.current, ts: Date.now() },
@@ -712,6 +726,9 @@ export default function Game() {
 
     if (!failed) {
       audioManager.playSfx("song_completion", 0.8);
+      haptics.fusionSuccess();
+    } else {
+      haptics.error();
     }
 
     // Save progress with error handling
@@ -765,6 +782,7 @@ export default function Game() {
   const doReturn = useCallback(() => {
     playRewindSound();
     continueUsedRef.current++;
+    haptics.fusionProgress();
 
     // Stop any existing draw loop first
     cancelAnimationFrame(rafRef.current);
@@ -1391,6 +1409,7 @@ export default function Game() {
             puRef.current.endTime = 0;
             setPuDisplay(null);
             puRef.current.triggered.clear();
+            haptics.error();
 
             jRef.current = [
               ...jRef.current.filter((x) => Date.now() - x.ts < 600),
@@ -2655,18 +2674,21 @@ export default function Game() {
       let count = 3;
       setCountdown(count);
       audioManager.playSfx('countdown', 0.7);
+      haptics.lightTap();
       await new Promise<void>((resolve) => {
         const tick = setInterval(() => {
           count--;
           if (count > 0) {
             setCountdown(count);
             audioManager.playSfx('countdown', 0.7);
+            haptics.lightTap();
           }
           else {
             clearInterval(tick);
             setCountdown(0);
             // "GO!" stinger
             audioManager.playSfx('select_start_song', 0.8);
+            haptics.mediumTap();
             resolve();
           }
         }, 1000);
