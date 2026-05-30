@@ -274,6 +274,8 @@ export default function Game() {
   
   const isTutorialRef = useRef(new URLSearchParams(window.location.search).get("tutorial") === "true");
   const isTutorial = isTutorialRef.current;
+  const isTutorialCompleted = localStorage.getItem("pim_tutorial_completed") === "true";
+  const activeTutorial = isTutorial && !isTutorialCompleted;
   const [isTutorialHelpOpen, setIsTutorialHelpOpen] = useState(false);
   const isTutorialHelpOpenRef = useRef(false);
 
@@ -1429,7 +1431,7 @@ export default function Game() {
             }
             setMissCount(missCountRef.current);
             syncDisplay();
-            if (isTutorial && missCountRef.current >= 3) {
+            if (activeTutorial && missCountRef.current >= 3) {
               const audio = audioRef.current;
               if (audio) {
                 audio.pause();
@@ -1440,7 +1442,7 @@ export default function Game() {
               return;
             }
 
-            if (missCountRef.current >= 3 && optsRef.current.missSystem && !isTutorial) {
+            if (missCountRef.current >= 3 && optsRef.current.missSystem && !activeTutorial) {
               const audio = audioRef.current;
               if (audio) {
                 rewindToRef.current = Math.max(0, audio.currentTime - 2.5);
@@ -2046,7 +2048,7 @@ export default function Game() {
       // Only treat audio as "ended" if it naturally finished (not paused for rewind)
       const audioEnded = audio ? audio.ended : false;
 
-      if (isTutorial && t >= 60.0) {
+      if (activeTutorial && t >= 60.0) {
         finishGame();
         return;
       }
@@ -2411,7 +2413,7 @@ export default function Game() {
           return;
         }
 
-        if (isTutorial) {
+        if (activeTutorial) {
           song.difficultyLevel = 1;
           const bpm = song.bpm || 120;
           const beatDur = 60 / bpm;
@@ -2462,7 +2464,7 @@ export default function Game() {
       songRef.current = song;
       // Apply difficulty override set by SongDetail page
       const diffOverrideNum = parseInt(sessionStorage.getItem(`diff_override_${songId}`) ?? '', 10);
-      if (!isNaN(diffOverrideNum) && diffOverrideNum >= 1 && diffOverrideNum <= 10 && !isTutorial) {
+      if (!isNaN(diffOverrideNum) && diffOverrideNum >= 1 && diffOverrideNum <= 10 && !activeTutorial) {
         songRef.current.difficultyLevel = diffOverrideNum;
       }
       // Initialize ambient particles depending on difficulty

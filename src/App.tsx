@@ -78,8 +78,10 @@ export default function App() {
     );
   }
 
-  // If user is authenticated but onboarding is explicitly false, show onboarding flow (restricted to /vault routes)
-  if (location.startsWith('/vault') && user && hasOnboarded === false) {
+  // If user is authenticated but onboarding is explicitly false, show onboarding flow (globally for real authenticated users, ignoring anonymous guests)
+  const isAnonymous = user?.is_anonymous || !user?.email;
+  const isGameplayRoute = location.startsWith('/play/') || location.startsWith('/results/') || location === '/tutorial';
+  if (user && !isAnonymous && hasOnboarded === false && !isGameplayRoute) {
     return <OnboardingFlow onComplete={completeOnboarding} />;
   }
 
