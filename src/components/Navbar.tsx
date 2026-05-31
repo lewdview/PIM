@@ -142,6 +142,7 @@ function TokenPill({ balance, compact = false }: { balance: number; compact?: bo
 export default function Navbar() {
   const [location] = useLocation();
   const { user, signInWithWallet, signOut, status, error: authError } = useAuthStore();
+  const isAnonymous = user?.is_anonymous || !user?.email;
   const tokenBalance = useVaultStore(s => s.tokenBalance);
   const [menuOpen, setMenuOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
@@ -250,7 +251,7 @@ export default function Navbar() {
             <TokenPill balance={tokenBalance} />
 
             {/* Wallet Integration */}
-            {user ? (
+            {user && !isAnonymous ? (
               <div className="flex items-center gap-2 ml-1">
                 <div
                   className="sticker-gun-tag sticker-slits"
@@ -282,6 +283,45 @@ export default function Navbar() {
                   title="Disconnect Wallet"
                 >
                   <LogOut size={15} />
+                </button>
+              </div>
+            ) : user && isAnonymous ? (
+              <div className="flex items-center gap-2 ml-1">
+                <div
+                  className="sticker-gun-tag sticker-slits"
+                  style={{
+                    background: '#f0f4ff',
+                    '--slit-color': 'rgba(0,100,255,0.1)',
+                    padding: '5px 10px',
+                    transform: 'rotate(-1deg)',
+                  } as any}
+                >
+                   <span className="text-[9px] font-black tracking-tighter uppercase" style={{ color: '#0033aa' }}>
+                     GUEST WALLET
+                  </span>
+                </div>
+                <button
+                  onClick={handleConnectWallet}
+                  disabled={walletConnecting}
+                  className="sticker-gun-tag sticker-slits ml-1 font-black text-[10px] uppercase tracking-wider transition-all hover:scale-105 active:scale-95 disabled:opacity-60 disabled:cursor-wait"
+                  style={{
+                    background: authError ? '#ff3800' : 'var(--color-neon-gold)',
+                    color: '#000',
+                    '--slit-color': 'rgba(0,0,0,0.12)',
+                    padding: '6px 14px',
+                    transform: 'rotate(1deg)',
+                    boxShadow: `2px 2px 0 #000, 0 0 10px ${authError ? 'rgba(255,56,0,0.3)' : 'rgba(255,215,0,0.3)'}`,
+                    border: '1.5px solid #000',
+                  } as any}
+                >
+                  <div className="flex items-center gap-1">
+                    {walletConnecting ? (
+                      <div className="w-2.5 h-2.5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Wallet size={11} />
+                    )}
+                    <span>{walletConnecting ? 'Connecting...' : 'Connect Wallet'}</span>
+                  </div>
                 </button>
               </div>
             ) : (
@@ -485,10 +525,13 @@ export default function Navbar() {
               <div className="mx-4 h-px" style={{ background: 'rgba(255,255,255,0.05)' }} />
 
               <div className="px-4 py-3">
-                {user ? (
+                {user && !isAnonymous ? (
                   <div className="flex items-center justify-between">
                     <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '10px', opacity: 0.45, textTransform: 'uppercase' }}>
-                      {user.email?.slice(0, 16) || user.id.slice(0, 16)}…
+                      {(() => {
+                        const val = user.email || user.id;
+                        return val.slice(0, 16) + (val.length > 16 ? '…' : '');
+                      })()}
                     </span>
                     <button
                       onClick={() => { signOut(); setMenuOpen(false); }}
@@ -500,21 +543,36 @@ export default function Navbar() {
                     </button>
                   </div>
                 ) : (
-                  <button
-                    onClick={() => { handleConnectWallet(); setMenuOpen(false); }}
-                    disabled={status === 'loading'}
-                    className="w-full flex items-center justify-center gap-2 py-3 border-2 border-black font-black uppercase tracking-wider transition-all active:scale-95"
-                    style={{
-                      background: '#ff3800',
-                      color: '#fff',
-                      boxShadow: '4px 4px 0 #000, 0 0 20px rgba(255,56,0,0.4)',
-                      fontFamily: '"Impact", "Arial Black", sans-serif',
-                      fontSize: '20px',
-                    }}
-                  >
-                    <Wallet size={18} />
-                    Connect Wallet
-                  </button>
+                  <div className="flex flex-col gap-2.5">
+                    {user && isAnonymous && (
+                      <div className="flex items-center justify-between px-1">
+                        <span style={{
+                          fontFamily: '"JetBrains Mono", monospace',
+                          fontSize: '10px',
+                          fontWeight: 900,
+                          color: '#5b8cff',
+                          textTransform: 'uppercase',
+                        }}>
+                          ✦ Guest Wallet active
+                        </span>
+                      </div>
+                    )}
+                    <button
+                      onClick={() => { handleConnectWallet(); setMenuOpen(false); }}
+                      disabled={status === 'loading'}
+                      className="w-full flex items-center justify-center gap-2 py-3 border-2 border-black font-black uppercase tracking-wider transition-all active:scale-95"
+                      style={{
+                        background: '#ff3800',
+                        color: '#fff',
+                        boxShadow: '4px 4px 0 #000, 0 0 20px rgba(255,56,0,0.4)',
+                        fontFamily: '"Impact", "Arial Black", sans-serif',
+                        fontSize: '20px',
+                      }}
+                    >
+                      <Wallet size={18} />
+                      {status === 'loading' ? 'Connecting...' : 'Connect Wallet'}
+                    </button>
+                  </div>
                 )}
               </div>
             </motion.div>
