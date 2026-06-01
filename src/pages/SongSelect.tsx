@@ -531,7 +531,7 @@ export default function SongSelect() {
                     </p>
                   )}
 
-                  {selected.moodTags.length > 0 && (
+                  {selected.moodTags && selected.moodTags.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 justify-center mb-6 max-w-sm mx-auto">
                       {selected.moodTags.map((tag) => (
                         <span key={tag} className="font-mono text-[8px] font-bold px-2 py-0.5 border border-[#39FF14]/15 text-[#39FF14]/60 bg-black/40 uppercase">
@@ -544,7 +544,7 @@ export default function SongSelect() {
                   <div className="grid grid-cols-4 gap-2 mb-6 max-w-sm mx-auto">
                     {[
                       { label: 'BPM', value: selected.bpm },
-                      { label: 'NODES', value: selected.notes.length },
+                      { label: 'NODES', value: (selected.notes || []).length },
                       {
                         label: 'DUR',
                         value: `${Math.floor(selected.duration / 60)}:${String(Math.round(selected.duration % 60)).padStart(2, '0')}`,
@@ -882,7 +882,7 @@ export default function SongSelect() {
                   </p>
                 )}
 
-                {selected.moodTags.length > 0 && (
+                {selected.moodTags && selected.moodTags.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-8">
                     {selected.moodTags.map((tag) => (
                       <span key={tag} className="pill-badge font-bold text-[9px]"
@@ -901,7 +901,7 @@ export default function SongSelect() {
                 <div className="grid grid-cols-4 gap-3 mb-8">
                   {[
                     { label: 'BPM', value: selected.bpm },
-                    { label: 'NODES', value: selected.notes.length },
+                    { label: 'NODES', value: (selected.notes || []).length },
                     {
                       label: 'DUR',
                       value: `${Math.floor(selected.duration / 60)}:${String(Math.round(selected.duration % 60)).padStart(2, '0')}`,

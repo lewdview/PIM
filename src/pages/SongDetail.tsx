@@ -314,7 +314,7 @@ export default function SongDetail() {
           <div className="grid grid-cols-4 gap-2">
             {[
               { label: 'BPM', value: song.bpm },
-              { label: 'NODES', value: song.notes.length },
+              { label: 'NODES', value: (song.notes || []).length },
               { label: 'LENGTH', value: `${durMin}:${durSec}` },
               { label: 'CALIB', value: song.difficultyLevel },
             ].map(({ label, value }) => (
@@ -611,7 +611,7 @@ export default function SongDetail() {
         <div className="grid grid-cols-4 gap-2">
           {[
             { label: 'BPM', value: song.bpm },
-            { label: 'NOTES', value: song.notes.length },
+            { label: 'NOTES', value: (song.notes || []).length },
             { label: 'LENGTH', value: `${durMin}:${durSec}` },
             { label: 'DIFF', value: song.difficultyLevel },
           ].map(({ label, value }) => (
@@ -718,7 +718,7 @@ export default function SongDetail() {
         </div>
 
         {/* Mood tags */}
-        {song.moodTags.length > 0 && (
+        {song.moodTags && song.moodTags.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {song.moodTags.map(tag => (
               <span key={tag} className="pill-badge"
