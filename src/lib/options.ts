@@ -10,6 +10,7 @@ export type GameOpts = {
   noteGenerationSource: 'auto' | 'lyrics' | 'bpm';
   bgMusic: boolean;
   gameBackground: string;
+  backgroundBlur: number;
 };
 
 export interface GameBackground {
@@ -40,6 +41,7 @@ export const DEFAULT_OPTS: GameOpts = {
   noteGenerationSource: "auto",
   bgMusic: false,
   gameBackground: "cover_blur",
+  backgroundBlur: 18,
 };
 
 export function loadOpts(): GameOpts {
@@ -68,6 +70,7 @@ export function loadOpts(): GameOpts {
     })(),
     bgMusic: bool("opt_bgMusic", false),
     gameBackground: localStorage.getItem("opt_gameBackground") ?? "cover_blur",
+    backgroundBlur: parseFloat(localStorage.getItem("opt_backgroundBlur") ?? "18") || 18,
   };
 }
 

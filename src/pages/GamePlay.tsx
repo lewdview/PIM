@@ -2969,6 +2969,8 @@ export default function Game() {
         }
         
         // Default: cover_blur
+        const blurValue = typeof opts.backgroundBlur === 'number' ? opts.backgroundBlur : 18;
+        const blurScale = 1.0 + (blurValue / 40) * 0.08;
         return song?.coverArt ? (
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <img
@@ -2978,8 +2980,8 @@ export default function Game() {
                 width: "100%",
                 height: "100%",
                 objectFit: "cover",
-                filter: "blur(18px) brightness(0.28) saturate(1.6)",
-                transform: "scale(1.08)",
+                filter: `blur(${blurValue}px) brightness(0.28) saturate(1.6)`,
+                transform: `scale(${blurScale})`,
               }}
             />
           </div>

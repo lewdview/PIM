@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { loadOpts, resetOpts, keyLabel, getActiveTheme, type GameOpts, GAME_BACKGROUNDS } from "@/lib/options";
 import { clearCatalogCache } from "@/game/api";
@@ -179,6 +179,139 @@ function BeatVisualizer({ offsetMs, isAvant }: { offsetMs: number; isAvant?: boo
       {/* labels */}
       <div style={{ position: "absolute", bottom: 3, left: `${beatPos * 100}%`, transform: "translateX(-50%)", fontFamily: "monospace", fontSize: 7, color: "#39FF14", letterSpacing: "0.1em" }}>BEAT</div>
       <div style={{ position: "absolute", top: 3, left: `${tapPos * 100}%`, transform: "translateX(-50%)", fontFamily: "monospace", fontSize: 7, color: "#FF1493", letterSpacing: "0.1em" }}>TAP</div>
+    </div>
+  );
+}
+
+function SvgBlurSlider({ value, onChange, isAvant }: { value: number; onChange: (v: number) => void; isAvant?: boolean }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleMove = useCallback((clientX: number) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const width = rect.width;
+    const clickX = Math.max(0, Math.min(clientX - rect.left, width));
+    const percentage = clickX / width;
+    const newValue = Math.round(percentage * 40); // 0px to 40px blur range
+    onChange(newValue);
+  }, [onChange]);
+
+  useEffect(() => {
+    if (!isDragging) return;
+    const onMouseMove = (e: MouseEvent) => {
+      handleMove(e.clientX);
+    };
+    const onMouseUp = () => {
+      setIsDragging(false);
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches[0]) handleMove(e.touches[0].clientX);
+    };
+    const onTouchEnd = () => {
+      setIsDragging(false);
+    };
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    window.addEventListener("touchmove", onTouchMove);
+    window.addEventListener("touchend", onTouchEnd);
+
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("touchend", onTouchEnd);
+    };
+  }, [isDragging, handleMove]);
+
+  const pct = (value / 40) * 100;
+  const strokeColor = isAvant ? "#39FF14" : "#FF1493";
+
+  return (
+    <div className="flex flex-col gap-2 mt-4 select-none animate-in fade-in slide-in-from-top-1 duration-200">
+      <div className="flex justify-between font-mono text-[9px] text-zinc-500 uppercase tracking-widest px-1">
+        <span>BLUR INTENSITY</span>
+        <span style={{ color: strokeColor, fontWeight: "bold" }}>{value}px</span>
+      </div>
+
+      <div 
+        ref={containerRef}
+        className="relative h-6 flex items-center cursor-pointer"
+        onMouseDown={(e) => {
+          setIsDragging(true);
+          handleMove(e.clientX);
+        }}
+        onTouchStart={(e) => {
+          if (e.touches[0]) {
+            setIsDragging(true);
+            handleMove(e.touches[0].clientX);
+          }
+        }}
+      >
+        {/* Customized SVG Track and Glow */}
+        <svg className="w-full h-4 overflow-visible" xmlns="http://www.w3.org/2000/svg">
+          {/* Background Track with segmented grid indicators */}
+          <line 
+            x1="0" y1="8" x2="100%" y2="8" 
+            stroke="rgba(255,255,255,0.08)" strokeWidth="4" 
+            strokeDasharray="4 2" 
+          />
+          {/* Active Track (with neon accent color) */}
+          <line 
+            x1="0" y1="8" x2={`${pct}%`} y2="8" 
+            stroke={strokeColor} strokeWidth="4" 
+            style={{ filter: `drop-shadow(0 0 4px ${strokeColor})` }}
+          />
+          
+          {/* Segmented notches at 0%, 25%, 50%, 75%, 100% */}
+          {[0, 25, 50, 75, 100].map((x) => (
+            <rect
+              key={x}
+              x={`${x}%`}
+              y="5"
+              width="2"
+              height="6"
+              fill={value >= (x / 100) * 40 ? strokeColor : "rgba(255,255,255,0.18)"}
+              transform="translateX(-1px)"
+            />
+          ))}
+        </svg>
+
+        {/* Custom Diamond Thumb */}
+        <div 
+          style={{
+            position: "absolute",
+            left: `${pct}%`,
+            transform: "translate(-50%, -50%)",
+            top: "50%",
+            width: 20,
+            height: 20,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            pointerEvents: "none"
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" overflow="visible">
+            <polygon 
+              points="8,1 15,8 8,15 1,8" 
+              fill={strokeColor} 
+              stroke="#ffffff" 
+              strokeWidth="1.5"
+              style={{
+                filter: `drop-shadow(0 0 6px ${strokeColor})`,
+              }}
+            />
+          </svg>
+        </div>
+      </div>
+      
+      <div className="flex justify-between font-mono text-[8px] text-zinc-600 tracking-wider px-1">
+        <span>0PX (SHARP)</span>
+        <span>20PX (BALANCED)</span>
+        <span>40PX (MAX BLUR)</span>
+      </div>
     </div>
   );
 }
@@ -662,6 +795,17 @@ export default function Options() {
                 );
               })}
             </div>
+
+            {opts.gameBackground === 'cover_blur' && (
+              <SvgBlurSlider
+                value={opts.backgroundBlur}
+                isAvant={isAvant}
+                onChange={(val) => {
+                  localStorage.setItem("opt_backgroundBlur", String(val));
+                  setOpts(o => ({ ...o, backgroundBlur: val }));
+                }}
+              />
+            )}
           </div>
         </section>
 
