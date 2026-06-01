@@ -6,7 +6,7 @@ import { useGlobalPlayer } from '../store/useGlobalPlayer';
 import { useVaultStore } from '../store/useVaultStore';
 import type { OwnedCard } from '../services/vaultService';
 import { generateCardMetadata, requestNftMint } from '../services/vaultService';
-import { RARITY_CONFIG, getSupplyCap, type Rarity } from '../utils/rarity';
+import { RARITY_CONFIG, getSupplyCap, getMintableCap, type Rarity } from '../utils/rarity';
 import RarityBadge from './RarityBadge';
 import AudioPreview from './AudioPreview';
 import { getDayFromDate } from '../utils/dayCalc';
