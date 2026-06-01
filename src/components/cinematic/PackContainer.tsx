@@ -475,7 +475,7 @@ export default function PackContainer({ meta, cards, accumulatedCards, onComplet
       return {
         cardId: card.id,
         title: card.title,
-        artist: card.artist,
+        artist: (card as any).artist || 'TH3SCR1B3',
         coverArt: card.coverUrl || null,
         rarity,
         added: totalGain,
@@ -1396,7 +1396,7 @@ export default function PackContainer({ meta, cards, accumulatedCards, onComplet
                 letterSpacing: '0.15em',
                 textTransform: 'uppercase'
               }}>
-                by {firstUnlockCard.card.artist}
+                by {(firstUnlockCard.card as any).artist || 'TH3SCR1B3'}
               </p>
             </motion.div>
 
