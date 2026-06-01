@@ -303,6 +303,48 @@ export default function CodexPage() {
               Day {today}/365
             </div>
           </div>
+
+          {/* Award Play info banner */}
+          <div style={{
+            marginTop: '20px',
+            padding: '12px 16px',
+            background: 'rgba(255,153,0,0.06)',
+            border: '1px solid rgba(255,153,0,0.2)',
+            borderLeft: '3px solid #ff9900',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '10px',
+          }}>
+            <div style={{
+              fontSize: '16px',
+              lineHeight: 1,
+              marginTop: '1px',
+              flexShrink: 0,
+            }}>🏆</div>
+            <div>
+              <div style={{
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '9px',
+                fontWeight: 900,
+                textTransform: 'uppercase',
+                letterSpacing: '0.12em',
+                color: '#ff9900',
+                marginBottom: '4px',
+              }}>AWARD PLAY MODE</div>
+              <div style={{
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '9px',
+                color: 'rgba(255,255,255,0.45)',
+                lineHeight: 1.6,
+                letterSpacing: '0.03em',
+              }}>
+                Launching a song from the Codex is <span style={{ color: '#ff9900', fontWeight: 700 }}>Award Play</span> — it requires{' '}
+                <span style={{ color: '#fff', fontWeight: 700 }}>10 decrypted fragments</span> for that song.{' '}
+                Don't have 10 yet?{' '}
+                <span style={{ color: 'rgba(255,255,255,0.65)' }}>Open a card from your <span style={{ color: '#00f0ff', fontWeight: 700 }}>Collection</span> for free play — any rarity unlocks full PIM access.</span>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 

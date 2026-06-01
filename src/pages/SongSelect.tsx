@@ -586,10 +586,10 @@ export default function SongSelect() {
                   {!selectedUnlocked && (
                     <div className="border border-[#FF3800]/30 bg-[#FF3800]/10 p-3 mb-2 text-center">
                       <div className="font-mono text-[9px] font-black text-[#FF3800] tracking-wider">
-                        LOCKED // OWNERSHIP CARD REQUIRED
+                        AWARD PLAY LOCKED // 10 FRAGMENTS REQUIRED
                       </div>
                       <div className="font-mono text-[7px] text-white/50 mt-1 uppercase">
-                        DECODE IN TASTE PACKS OR HIGHER
+                        DECRYPT FRAGMENTS FOR THIS SONG · OR PLAY FREE FROM COLLECTION
                       </div>
                     </div>
                   )}
@@ -936,10 +936,10 @@ export default function SongSelect() {
                 {!selectedUnlocked && (
                   <div className="border border-[#FF3800]/30 bg-[#FF3800]/10 p-3 mb-1 text-center rounded-xl">
                     <div className="font-mono text-[10px] font-black text-[#FF3800] tracking-wider">
-                      LOCKED // OWNERSHIP CARD REQUIRED
+                      AWARD PLAY LOCKED // 10 FRAGMENTS REQUIRED
                     </div>
                     <div className="font-mono text-[8px] text-white/50 mt-1 uppercase">
-                      DECODE IN TASTE PACKS OR HIGHER
+                      DECRYPT FRAGMENTS FOR THIS SONG · OR PLAY FREE FROM COLLECTION
                     </div>
                   </div>
                 )}
