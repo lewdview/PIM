@@ -9,7 +9,24 @@ export type GameOpts = {
   useLocalFiles: boolean;
   noteGenerationSource: 'auto' | 'lyrics' | 'bpm';
   bgMusic: boolean;
+  gameBackground: string;
 };
+
+export interface GameBackground {
+  id: string;
+  name: string;
+  desc: string;
+  unlockText: string;
+  unlockScore: number;
+}
+
+export const GAME_BACKGROUNDS: GameBackground[] = [
+  { id: 'cover_blur', name: 'Default Blur', desc: 'Ambient cover art blurring', unlockText: 'Unlocked', unlockScore: 0 },
+  { id: 'neon_grid', name: 'Neon Grid', desc: 'Synthwave neon network grid', unlockText: 'Requires 1,000 Echo Score', unlockScore: 1000 },
+  { id: 'cyber_streets', name: 'Matrix Cyber', desc: 'Green binary rain frequency', unlockText: 'Requires 5,000 Echo Score', unlockScore: 5000 },
+  { id: 'space_nebula', name: 'Void Space', desc: 'Moving nebula & stardust', unlockText: 'Requires 10,000 Echo Score', unlockScore: 10000 },
+  { id: 'glitch_matrix', name: 'Corrupted Signal', desc: 'Glitching digital terminal lines', unlockText: 'Requires 20,000 Echo Score', unlockScore: 20000 },
+];
 
 export const DEFAULT_OPTS: GameOpts = {
   missSystem: true,
@@ -22,6 +39,7 @@ export const DEFAULT_OPTS: GameOpts = {
   useLocalFiles: false,
   noteGenerationSource: "auto",
   bgMusic: false,
+  gameBackground: "cover_blur",
 };
 
 export function loadOpts(): GameOpts {
@@ -49,6 +67,7 @@ export function loadOpts(): GameOpts {
       return (v === "lyrics" || v === "bpm" || v === "auto") ? v : "auto";
     })(),
     bgMusic: bool("opt_bgMusic", false),
+    gameBackground: localStorage.getItem("opt_gameBackground") ?? "cover_blur",
   };
 }
 

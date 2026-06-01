@@ -15,7 +15,7 @@ import { Volume2, Award, Zap, Shield, HelpCircle, Layers, Lock } from "lucide-re
 import { supabase } from "../services/supabaseClient";
 import { useVaultStore } from "../store/useVaultStore";
 
-type TutorialPhase = "intro" | "gameplay" | "results" | "pack" | "discovery" | "aspiration" | "faction";
+type TutorialPhase = "intro" | "gameplay" | "results" | "pack" | "discovery" | "aspiration" | "complete";
 
 export default function Tutorial() {
   const [, setLocation] = useLocation();
@@ -23,7 +23,6 @@ export default function Tutorial() {
   const [dailyCard, setDailyCard] = useState<any>(null);
   const [dailySong, setDailySong] = useState<GameSong | null>(null);
   const [score, setScore] = useState(0);
-  const [selectedFaction, setSelectedFaction] = useState<string | null>(null);
 
   // Reward and replay management states
   const [isReplay, setIsReplay] = useState(false);
@@ -160,7 +159,7 @@ export default function Tutorial() {
         SECTOR // ONBOARDING
       </div>
 
-      {isReplay && tutPhase !== "faction" && (
+      {isReplay && tutPhase !== "complete" && (
         <div className="absolute top-12 left-1/2 -translate-x-1/2 bg-amber-500/10 border border-amber-500/30 text-amber-400 font-mono text-[9px] px-3 py-1 tracking-widest uppercase rounded-full z-20 flex items-center gap-1.5 shadow-[0_0_15px_rgba(245,158,11,0.1)]">
           <Lock size={10} /> REPLAY MODE — NO REWARDS CAN BE CLAIMED
         </div>
@@ -429,19 +428,19 @@ export default function Tutorial() {
               whileTap={{ scale: 0.98 }}
               onClick={() => {
                 audioManager.playSfx("tap_nav", 0.15);
-                setTutPhase("faction");
+                setTutPhase("complete");
               }}
               className="px-10 py-3.5 bg-zinc-950/60 border border-[#39FF14] text-[#39FF14] font-mono text-xs font-bold tracking-[0.25em] uppercase hover:bg-[#39FF14]/10 transition-all rounded-sm cursor-pointer"
             >
-              ESTABLISH ALIGNMENT →
+              COMPLETE CONNECTION →
             </motion.button>
           </motion.div>
         )}
 
         {/* PHASE 7: FACTION SELECT & REGISTRATION LOCK-IN */}
-        {tutPhase === "faction" && (
+        {tutPhase === "complete" && (
           <motion.div
-            key="faction"
+            key="complete"
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
@@ -449,97 +448,55 @@ export default function Tutorial() {
           >
             <div className="text-center mt-3">
               <div className="font-mono text-[9px] text-[#39FF14] tracking-[0.4em] mb-1.5 uppercase">
-                // SELECT INTEL FACTION //
+                // SYNC SYSTEM COMPLETE //
               </div>
               <h2 className="font-mono text-xl font-bold tracking-widest text-white uppercase">
-                ALIGNMENT IDENTIFICATION
+                CONNECTION SECURED
               </h2>
             </div>
 
-            {!selectedFaction ? (
-              <div className="w-full max-w-sm grid grid-cols-1 gap-2.5 my-3">
-                {[
-                  { id: "LIGHT", name: "LIGHT FACTION", desc: "Harmonic tones, clean synth loops, pure frequencies.", color: "#39FF14" },
-                  { id: "DARK", name: "DARK COLLECTIVE", desc: "Industrial bass waves, distorted frequencies, heavy beats.", color: "#FF1493" },
-                  { id: "VOID", name: "VOID COLLECTIVE", desc: "Ethereal ambient breaks, silent spaces, deep cosmic delays.", color: "#b44dff" },
-                  { id: "ANALOG", name: "ANALOG UNION", desc: "Warm tape crackles, organic vintage instrumentation, vinyl vibes.", color: "#ffaa00" },
-                  { id: "CHAOS", name: "CHAOS SECTOR", desc: "Breakcore glitch layers, high speed breaks, volatile signals.", color: "#ef4444" }
-                ].map(fac => (
-                  <button
-                    key={fac.id}
-                    onClick={() => {
-                      setSelectedFaction(fac.id);
-                      localStorage.setItem("user_faction", fac.id);
-                      audioManager.playSfx("platinum_get", 0.65);
-                    }}
-                    className="p-3 bg-zinc-950/65 border border-zinc-900 text-left hover:border-white/30 active:bg-zinc-900/40 transition-all rounded-sm flex justify-between items-center group cursor-pointer"
-                  >
-                    <div>
-                      <div className="font-mono font-bold text-xs uppercase group-hover:text-white" style={{ color: fac.color }}>
-                        {fac.name}
-                      </div>
-                      <div className="font-mono text-[10px] text-zinc-500 leading-tight mt-1">
-                        {fac.desc}
-                      </div>
-                    </div>
-                    <div className="font-mono text-[9px] text-zinc-700 group-hover:text-zinc-400 pl-4 tracking-widest flex-shrink-0">
-                      [ CONNECT ]
-                    </div>
-                  </button>
-                ))}
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="w-full max-w-sm border border-zinc-900 bg-black/75 p-6 text-center space-y-6 rounded-sm relative"
+            >
+              <div className="absolute inset-0 blur-xl pointer-events-none rounded-full" style={{
+                background: `radial-gradient(circle, #39FF1420 0%, transparent 60%)`
+              }} />
+              
+              <div className="font-mono text-[9px] text-zinc-500 uppercase tracking-widest">
+                NEURAL LINK ACTIVE
               </div>
-            ) : (
-              <motion.div 
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                className="w-full max-w-sm border border-zinc-900 bg-black/75 p-6 text-center space-y-6 rounded-sm relative"
-              >
-                <div className="absolute inset-0 blur-xl pointer-events-none rounded-full" style={{
-                  background: `radial-gradient(circle, ${selectedFaction === "LIGHT" ? "#39FF14" : selectedFaction === "DARK" ? "#FF1493" : selectedFaction === "VOID" ? "#b44dff" : selectedFaction === "ANALOG" ? "#ffaa00" : "#ef4444"}20 0%, transparent 60%)`
-                }} />
+              <h3 className="font-mono text-2xl font-black text-[#39FF14] tracking-widest uppercase">
+                ARCHIVE READY
+              </h3>
+
+              <div className="font-mono text-[11px] text-zinc-400 leading-relaxed border-t border-zinc-900 pt-4">
+                Neural link sync protocol completed. Connect your profile wallet address to preserve unlocked signal metadata and write card provenance records.
+              </div>
+
+              <div className="space-y-2.5 pt-2">
+                <button
+                  onClick={() => {
+                    localStorage.setItem("pim_tutorial_completed", "true");
+                    audioManager.playSfx("tap_nav", 0.15);
+                    setLocation("/vault");
+                  }}
+                  className="w-full py-3.5 bg-gradient-to-r from-yellow-500 to-amber-500 text-black font-mono text-xs font-bold tracking-[0.25em] uppercase hover:shadow-lg transition-all rounded-sm border-none cursor-pointer"
+                >
+                  SECURE PROFILE / CONNECT
+                </button>
                 
-                <div className="font-mono text-[9px] text-zinc-500 uppercase tracking-widest">
-                  FACTION INTEGRATION SECURED
-                </div>
-                <h3 className="font-mono text-2xl font-black text-white tracking-widest uppercase">
-                  {selectedFaction} FACTION
-                </h3>
+                <button
+                  onClick={handleCompleteTutorial}
+                  className="w-full py-3 bg-zinc-950/70 border border-zinc-800 text-zinc-400 font-mono text-[10px] font-bold tracking-[0.25em] uppercase hover:text-white hover:border-zinc-500 transition-all rounded-sm cursor-pointer"
+                >
+                  PROCEED AS GUEST
+                </button>
+              </div>
+            </motion.div>
 
-                <div className="font-mono text-[11px] text-zinc-400 leading-relaxed border-t border-zinc-900 pt-4">
-                  Neural link sync protocol completed. Connect your profile wallet address to preserve unlocked signal metadata and write card provenance records.
-                </div>
-
-                <div className="space-y-2.5 pt-2">
-                  <button
-                    onClick={() => {
-                      localStorage.setItem("pim_tutorial_completed", "true");
-                      audioManager.playSfx("tap_nav", 0.15);
-                      setLocation("/vault");
-                    }}
-                    className="w-full py-3.5 bg-gradient-to-r from-yellow-500 to-amber-500 text-black font-mono text-xs font-bold tracking-[0.25em] uppercase hover:shadow-lg transition-all rounded-sm border-none cursor-pointer"
-                  >
-                    SECURE PROFILE / CONNECT
-                  </button>
-                  
-                  <button
-                    onClick={handleCompleteTutorial}
-                    className="w-full py-3 bg-zinc-950/70 border border-zinc-800 text-zinc-400 font-mono text-[10px] font-bold tracking-[0.25em] uppercase hover:text-white hover:border-zinc-500 transition-all rounded-sm cursor-pointer"
-                  >
-                    PROCEED AS GUEST
-                  </button>
-                </div>
-              </motion.div>
-            )}
-
-            {selectedFaction && (
-              <button
-                onClick={() => setSelectedFaction(null)}
-                className="font-mono text-[9px] text-zinc-600 hover:text-zinc-400 uppercase tracking-widest select-none mt-2 cursor-pointer bg-transparent border-none"
-              >
-                ← RE-CHOOSE ALIGNMENT
-              </button>
-            )}
-            {!selectedFaction && <div className="h-4" />}
+            <div className="h-4" />
           </motion.div>
         )}
       </AnimatePresence>

@@ -2905,22 +2905,86 @@ export default function Game() {
           </div>
         </div>
       )}
-      {/* Blurred cover art — fills the full viewport edge to edge */}
-      {song?.coverArt && (
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <img
-            src={song.coverArt}
-            alt=""
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              filter: "blur(18px) brightness(0.28) saturate(1.6)",
-              transform: "scale(1.08)",
-            }}
-          />
-        </div>
-      )}
+      {/* Dynamic gameplay background system */}
+      {(() => {
+        const bg = opts.gameBackground || 'cover_blur';
+        if (bg === 'neon_grid') {
+          return (
+            <div className="absolute inset-0 overflow-hidden pointer-events-none bg-neon-grid-container">
+              <div className="bg-neon-grid-grid" />
+              <div className="bg-neon-grid-horizon" />
+            </div>
+          );
+        }
+        if (bg === 'cyber_streets') {
+          return (
+            <div className="absolute inset-0 overflow-hidden pointer-events-none bg-cyber-streets-container">
+              {Array.from({ length: 15 }).map((_, i) => {
+                const delay = `${(i * 0.4) % 4.5}s`;
+                const duration = `${5 + (i % 3) * 2}s`;
+                const opacity = 0.12 + ((i * 3) % 7) * 0.08;
+                const fontSize = `${10 + (i % 4) * 2.5}px`;
+                const left = `${i * 7 + 1.5}%`;
+                const content = Array.from({ length: 25 }).map((_, charIdx) => 
+                  ((i + charIdx) % 3 === 0) ? "1" : "0"
+                ).join("");
+                
+                return (
+                  <div
+                    key={i}
+                    className="matrix-rain"
+                    style={{
+                      left,
+                      animationDelay: delay,
+                      animationDuration: duration,
+                      opacity,
+                      fontSize,
+                    }}
+                  >
+                    {content}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        }
+        if (bg === 'space_nebula') {
+          return (
+            <div className="absolute inset-0 overflow-hidden pointer-events-none bg-space-nebula-container">
+              <div className="space-stars" />
+              <div className="space-nebula-cloud1" />
+              <div className="space-nebula-cloud2" />
+            </div>
+          );
+        }
+        if (bg === 'glitch_matrix') {
+          return (
+            <div className="absolute inset-0 overflow-hidden pointer-events-none bg-glitch-matrix-container">
+              <div className="glitch-grid" />
+              <div className="glitch-static" />
+              <div className="glitch-bar1" />
+              <div className="glitch-bar2" />
+            </div>
+          );
+        }
+        
+        // Default: cover_blur
+        return song?.coverArt ? (
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <img
+              src={song.coverArt}
+              alt=""
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                filter: "blur(18px) brightness(0.28) saturate(1.6)",
+                transform: "scale(1.08)",
+              }}
+            />
+          </div>
+        ) : null;
+      })()}
       {/* Vignette — full-screen radial dark gradient, no column boundary */}
       <div
         className="absolute inset-0 pointer-events-none"

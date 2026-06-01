@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
-import { loadOpts, resetOpts, keyLabel, getActiveTheme, type GameOpts } from "@/lib/options";
+import { loadOpts, resetOpts, keyLabel, getActiveTheme, type GameOpts, GAME_BACKGROUNDS } from "@/lib/options";
 import { clearCatalogCache } from "@/game/api";
 import { audioManager } from "@/game/audio";
+import { useVaultStore } from "@/store/useVaultStore";
 
 // ── colour palette presets (8 per lane, thematically grouped) ────
 const COLOR_PRESETS: [string[], string[], string[]] = [
@@ -186,6 +187,7 @@ function BeatVisualizer({ offsetMs, isAvant }: { offsetMs: number; isAvant?: boo
 export default function Options() {
   const [, setLocation] = useLocation();
   const [opts, setOpts] = useState<GameOpts>(loadOpts);
+  const echoPrestigeScore = useVaultStore(state => state.echoPrestigeScore);
   const [remapping, setRemapping] = useState<number | null>(null);
   const [resetState, setResetState] = useState<"idle" | "confirm">("idle");
   const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -590,6 +592,75 @@ export default function Options() {
               {opts.noteGenerationSource === "auto" && "AUTO: Map from lyrics if available, fallback to BPM rhythm patterns."}
               {opts.noteGenerationSource === "lyrics" && "LYRICS: Force mapping notes synced to song vocal syllables (requires lyrics)."}
               {opts.noteGenerationSource === "bpm" && "BPM: Force mapping notes using structured tempo/BPM patterns."}
+            </div>
+          </div>
+        </section>
+
+        {/* ── GAMEPLAY BACKGROUNDS ────────────────────────────── */}
+        <section className="flex flex-col gap-3">
+          <SectionLabel label="GAMEPLAY BACKGROUND" sub="Custom visual themes" isAvant={isAvant} />
+          <div style={{
+            border: isAvant ? "1px solid rgba(57,255,20,0.2)" : "2px solid rgba(255,255,255,0.08)",
+            background: isAvant ? "rgba(5,5,5,0.4)" : "rgba(255,255,255,0.015)",
+            padding: 12
+          }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {GAME_BACKGROUNDS.map(bg => {
+                const isUnlocked = echoPrestigeScore >= bg.unlockScore;
+                const active = opts.gameBackground === bg.id;
+                
+                return (
+                  <button
+                    key={bg.id}
+                    disabled={!isUnlocked}
+                    onClick={() => {
+                      if (!isUnlocked) return;
+                      if (isAvant) audioManager.playSfx('tap_nav', 0.12);
+                      localStorage.setItem("opt_gameBackground", bg.id);
+                      setOpts(o => ({ ...o, gameBackground: bg.id }));
+                    }}
+                    onMouseEnter={() => { if (isAvant && isUnlocked) audioManager.playSfx('tap_nav', 0.08); }}
+                    className="font-mono text-left p-3.5 transition-all relative flex flex-col justify-between border select-none"
+                    style={{
+                      minHeight: 88,
+                      cursor: isUnlocked ? "pointer" : "not-allowed",
+                      background: active
+                        ? (isAvant ? "rgba(57,255,20,0.12)" : "rgba(255,20,147,0.1)")
+                        : "rgba(255,255,255,0.02)",
+                      border: active
+                        ? (isAvant ? "1px solid #39FF14" : "1px solid #FF1493")
+                        : (isAvant ? "1px solid rgba(57,255,20,0.12)" : "1px solid rgba(255,255,255,0.08)"),
+                      opacity: isUnlocked ? 1 : 0.45,
+                      boxShadow: (isAvant && active) ? "0 0 10px rgba(57,255,20,0.15)" : "none",
+                    }}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-bold text-xs tracking-wider" style={{ color: active ? (isAvant ? "#39FF14" : "#FF1493") : "#ffffff" }}>
+                          {bg.name.toUpperCase()}
+                        </span>
+                        {!isUnlocked && (
+                          <span className="text-[9px] bg-zinc-900 text-zinc-500 px-1.5 py-0.5 border border-zinc-800 uppercase tracking-widest font-bold">
+                            LOCKED
+                          </span>
+                        )}
+                        {isUnlocked && active && (
+                          <span className="text-[9px] px-1.5 py-0.5 uppercase tracking-widest font-bold" style={{ color: isAvant ? "#39FF14" : "#FF1493" }}>
+                            ACTIVE
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-zinc-400 mt-1.5 leading-normal">
+                        {bg.desc}
+                      </div>
+                    </div>
+
+                    <div className="text-[9px] mt-2.5 uppercase tracking-wider" style={{ color: isUnlocked ? "rgba(255,255,255,0.3)" : "#FF1493" }}>
+                      {isUnlocked ? "UNLOCKED" : bg.unlockText}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </section>
