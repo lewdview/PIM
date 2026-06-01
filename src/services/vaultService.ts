@@ -84,11 +84,11 @@ function resolveUrls(r: Partial<ReleaseItem>): { audioUrl: string; coverUrl: str
         audioUrl = SUPABASE_BASE + encodeURIComponent(mapped.audio).replace(/%2F/g, '/');
       }
       if (mapped.cover) {
+        // Use verified path from day_file_map (most reliable)
         coverUrl = SUPABASE_BASE + encodeURIComponent(mapped.cover).replace(/%2F/g, '/');
-      } else if (dayNum >= 143 && dayNum <= 151) {
-        // May 23-31 covers are missing entirely
-        coverUrl = '';
       }
+      // If mapped.cover is null, fall through and keep coverUrl from DB/static JSON
+      // (it gets .png→.jpg normalized above)
     }
   }
 

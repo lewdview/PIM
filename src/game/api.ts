@@ -184,11 +184,11 @@ function buildGameSong(r: any, useLocal = false): GameSong {
         audioUrl = SUPABASE_BASE + encodeURIComponent(mapped.audio).replace(/%2F/g, '/');
       }
       if (mapped.cover) {
+        // Use verified path from day_file_map (most reliable)
         coverArt = SUPABASE_BASE + encodeURIComponent(mapped.cover).replace(/%2F/g, '/');
-      } else if (r.day >= 143 && r.day <= 151) {
-        // May 23-31 covers are missing entirely
-        coverArt = null;
       }
+      // If mapped.cover is null, fall through and keep r.coverArt from DB/static JSON
+      // (it gets .png→.jpg normalized at line ~145 above)
     }
   }
 
