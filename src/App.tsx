@@ -42,6 +42,8 @@ export default function App() {
   const hasOnboarded = useVaultStore((s) => s.hasOnboarded);
   const completeOnboarding = useVaultStore((s) => s.completeOnboarding);
 
+  const collection = useVaultStore((s) => s.collection);
+
   useEffect(() => {
     initializeAuth();
   }, [initializeAuth]);
@@ -49,12 +51,13 @@ export default function App() {
   // Automatically redirect guests who haven't completed the tutorial to /tutorial
   useEffect(() => {
     if (location === '/') {
-      const isTutorialCompleted = localStorage.getItem('pim_tutorial_completed');
-      if (!isTutorialCompleted) {
+      const isTutorialCompleted = localStorage.getItem('pim_tutorial_completed') === 'true';
+      const hasCollection = collection.length > 0;
+      if (!isTutorialCompleted && !hasCollection) {
         setLocation('/tutorial');
       }
     }
-  }, [location, setLocation]);
+  }, [location, setLocation, collection]);
 
   // Stop global preview player on gameplay routes to prevent dual-audio
   useEffect(() => {

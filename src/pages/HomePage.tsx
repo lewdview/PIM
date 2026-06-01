@@ -103,7 +103,7 @@ export default function HomePage() {
   const [, setLocation] = useLocation();
   const {
     dailyCard, hasClaimed, tokenBalance, loadVaultData, setDailyCard, setHasClaimed,
-    setCollection, startReveal, addToCollection, echoPrestigeScore
+    setCollection, startReveal, addToCollection, echoPrestigeScore, collection
   } = useVaultStore();
   const user = useAuthStore(s => s.user);
   const [isClaimingAnimation, setIsClaimingAnimation] = useState(false);
@@ -153,6 +153,9 @@ export default function HomePage() {
         localStorage.setItem("pim_tutorial_redirect_song_id", owned.cardId);
         setHasClaimed(true);
         audioManager.playSfx('open_chest', 0.9);
+        const completed = localStorage.getItem("pim_tutorial_completed") === "true";
+        const hasClaimedBefore = completed || (collection && collection.length > 0);
+
         startReveal([owned], {
           category: 'daily_claim',
           label: 'Daily Drop',
@@ -162,7 +165,7 @@ export default function HomePage() {
           price: 'FREE',
           cardCount: 1,
           revealType: 'cinematic',
-          redirectPath: `/tutorial?songId=${owned.cardId}`,
+          redirectPath: hasClaimedBefore ? `/play/${owned.cardId}` : `/tutorial?songId=${owned.cardId}`,
         });
         setTimeout(() => {
           setIsClaimingAnimation(false);
@@ -245,7 +248,6 @@ export default function HomePage() {
     }
   }, [startReveal, setLocation, addToCollection]);
 
-  const collection = useVaultStore.getState().collection;
   const uniqueCards = new Set(collection.map(c => c.cardId)).size;
   const totalScore = collection.reduce((sum, c) => sum + (RARITY_CONFIG[c.card.rarity]?.points || 1), 0);
   const proofs = collection.filter(c => c.proof).length;

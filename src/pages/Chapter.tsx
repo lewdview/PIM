@@ -720,7 +720,7 @@ export default function Chapter() {
                     {medal && (
                       <span className="font-mono text-[8px] px-1.5 py-px border rounded uppercase font-black"
                         style={{ borderColor: mc, color: mc, background: `${mc}10` }}>
-                        {nodeMedal ?? medal}
+                        {medal}
                       </span>
                     )}
                     {ownsCard && (

@@ -187,6 +187,9 @@ export default function LandingPage() {
         localStorage.setItem("pim_tutorial_redirect_song_id", owned.cardId);
         setHasClaimed(true);
         audioManager.playSfx('open_chest', 0.9);
+        const completed = localStorage.getItem("pim_tutorial_completed") === "true";
+        const hasClaimedBefore = completed || (collection && collection.length > 0);
+
         startReveal([owned], {
           category: 'daily_claim',
           label: 'Daily Drop',
@@ -196,7 +199,7 @@ export default function LandingPage() {
           price: 'FREE',
           cardCount: 1,
           revealType: 'cinematic',
-          redirectPath: `/tutorial?songId=${owned.cardId}`,
+          redirectPath: hasClaimedBefore ? `/play/${owned.cardId}` : `/tutorial?songId=${owned.cardId}`,
         });
         setTimeout(() => {
           setIsClaimingAnimation(false);

@@ -320,7 +320,7 @@ export default function PackRevealPage() {
                 color: 'var(--color-void-black)',
               }}
             >
-              {revealPackMeta?.category === 'daily_claim' || revealPackMeta?.redirectPath === '/tutorial' ? (
+              {revealPackMeta?.category === 'daily_claim' || revealPackMeta?.redirectPath === '/tutorial' || revealPackMeta?.redirectPath?.startsWith('/play/') ? (
                 <>Start PIM <ArrowRight size={16} /></>
               ) : (
                 <>Collection <ArrowRight size={16} /></>

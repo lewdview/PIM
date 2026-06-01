@@ -189,6 +189,14 @@ export default function Campaign() {
     setLocation(`/chapter/${selectedSector.meta.month}`);
   };
 
+  if (loading || !selectedSector) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: isAvant ? '#050505' : '#080808' }}>
+        <div className="font-mono text-xs tracking-widest animate-pulse animate-duration-1000" style={{ color: isAvant ? '#39FF14' : 'rgba(255,255,255,0.3)' }}>LOADING CAMPAIGN INTEL...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-dvh w-full flex flex-col"
       style={{
