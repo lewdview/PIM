@@ -192,8 +192,8 @@ export default function Chapter() {
   const isBonusLocked = selectedSong && (songs.indexOf(selectedSong) >= regularSongs.length) && !bonusUnlocked;
   const isProgLocked = selectedSong && !isUnlocked(songs.indexOf(selectedSong));
   
-  // A song is locked if they do not own the card AND have less than 10 fragments
-  const isUnlockReqLocked = !isCardUnlocked;
+  // A song is locked if it is a replay (already cleared) AND they have less than 10 fragments
+  const isUnlockReqLocked = isCleared ? (fragmentCount < 10) : false;
   const isPlayLocked = isTimeLocked || isBonusLocked || isProgLocked || isUnlockReqLocked;
 
   const difficultyLevel = selectedSong
@@ -806,10 +806,10 @@ export default function Chapter() {
                     🔒 TRANSMISSION LOCKED — CLEAR PREVIOUS LEVEL TO UNLOCK PATHWAY
                   </div>
                 )}
-                {!isCardUnlocked && !isTimeLocked && !isBonusLocked && !isProgLocked && (
+                {isUnlockReqLocked && !isTimeLocked && !isBonusLocked && !isProgLocked && (
                   <div className="p-3 border border-yellow-500/20 bg-yellow-500/5 rounded space-y-2">
                     <div className="flex justify-between items-baseline">
-                      <span className="font-mono text-[9px] text-yellow-500 font-bold uppercase tracking-wider">// SONG UNLOCK REQUISITE</span>
+                      <span className="font-mono text-[9px] text-yellow-500 font-bold uppercase tracking-wider">// SONG REPLAY REQUISITE</span>
                       <span className="font-mono text-[10px] text-white/90 font-black">{fragmentCount} / 10 FRAGMENTS</span>
                     </div>
                     <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden relative border border-white/5">
@@ -817,7 +817,7 @@ export default function Chapter() {
                         style={{ width: `${Math.min(100, (fragmentCount / 10) * 100)}%` }} />
                     </div>
                     <div className="font-mono text-[8px] text-white/40 leading-normal uppercase">
-                      Rip packs in the Pack Shop to pull cards/fragments for Day {selectedSong.day} or claim it on its featured daily drop to unlock!
+                      Decrypted fragments are required to replay transmissions. Rip packs in the Pack Shop to decrypt fragments, or claim daily drops to unlock!
                     </div>
                   </div>
                 )}
@@ -832,7 +832,7 @@ export default function Chapter() {
                     }`}
                     style={!isPlayLocked ? { boxShadow: `0 4px 12px ${isAvant ? '#39FF14' : meta.dc}30` } : {}}
                   >
-                    {!isCardUnlocked ? '🔒 DECODE REQUIRED' : isCleared ? 'REPLAY TRANSMISSION' : '▶ START TRANSMISSION'}
+                    {isUnlockReqLocked ? '🔒 DECODE REQUIRED' : isCleared ? 'REPLAY TRANSMISSION' : '▶ START TRANSMISSION'}
                   </button>
                   
                   {isUnlocked(songs.indexOf(selectedSong)) && (

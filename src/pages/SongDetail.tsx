@@ -184,13 +184,25 @@ export default function SongDetail() {
 
   if (!song) return null;
 
-  // Determine locking: unlock if today's song of the day OR owned in collection
   const today = getCurrentDay();
   const hasCard = song && Array.isArray(collection) ? collection.some(c => c && (c.cardId === song.id || c.card?.day === song.day)) : false;
-  const unlocked = song && (song.day === today || hasCard);
+  const bestScore = history.length > 0 ? Math.max(...history) : 0;
+  const isCleared = bestScore > 0 || (medal && medal !== '');
+  const fragmentCount = song ? parseInt(localStorage.getItem(`fragments_${song.id}`) || '0', 10) : 0;
+
+  let unlocked = false;
+  if (from === 'songs') {
+    // Award Play / Archive Play: requires 10 fragments decrypted
+    unlocked = fragmentCount >= 10;
+  } else if (from.startsWith('chapter')) {
+    // Campaign Play: first play is free, replay requires 10 fragments decrypted
+    unlocked = !isCleared || fragmentCount >= 10;
+  } else {
+    // Other (Playable in PIM by owning the card, even common)
+    unlocked = hasCard || song.day === today;
+  }
 
   const moodColor = song.mood === 'light' ? '#39FF14' : '#FF1493';
-  const bestScore = history.length > 0 ? Math.max(...history) : 0;
   const modifierType = getModifierForSong(song);
 
   if (isAvant) {
@@ -470,10 +482,10 @@ export default function SongDetail() {
             {!unlocked && (
               <div className="border border-[#FF3800]/30 bg-[#FF3800]/10 p-3 mb-2 text-center rounded">
                 <div className="font-mono text-[10px] font-black text-[#FF3800] tracking-wider">
-                  LOCKED // OWNERSHIP CARD REQUIRED
+                  LOCKED // DECRYPTION OR OWNERSHIP REQUIRED
                 </div>
                 <div className="font-mono text-[8px] text-white/50 mt-1 uppercase">
-                  DECODE IN TASTE PACKS OR HIGHER
+                  {from === 'songs' ? '10 FRAGMENTS DECRYPTED REQUIRED' : from.startsWith('chapter') ? '10 FRAGMENTS DECRYPTED REQUIRED FOR REPLAY' : 'DECODE IN TASTE PACKS OR FEATURED DROP'}
                 </div>
               </div>
             )}
@@ -768,10 +780,10 @@ export default function SongDetail() {
           {!unlocked && (
             <div className="border border-[#FF3800]/30 bg-[#FF3800]/10 p-3 mb-1 text-center rounded-xl">
               <div className="font-mono text-[10px] font-black text-[#FF3800] tracking-wider">
-                LOCKED // OWNERSHIP CARD REQUIRED
+                LOCKED // DECRYPTION OR OWNERSHIP REQUIRED
               </div>
               <div className="font-mono text-[8px] text-white/50 mt-1 uppercase">
-                DECODE IN TASTE PACKS OR HIGHER
+                {from === 'songs' ? '10 FRAGMENTS DECRYPTED REQUIRED' : from.startsWith('chapter') ? '10 FRAGMENTS DECRYPTED REQUIRED FOR REPLAY' : 'DECODE IN TASTE PACKS OR FEATURED DROP'}
               </div>
             </div>
           )}
