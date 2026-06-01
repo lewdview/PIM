@@ -403,7 +403,7 @@ export default function Game() {
   );
 
   const triggerHitFx = useCallback(
-    (lane: number, kind: "PERFECT+" | "PERFECT" | "GOOD" | "SHIELDED") => {
+    (lane: number, kind: "PERFECT+" | "PERFECT" | "GOOD" | "SHIELDED", customY?: number) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
       const W = canvas.width;
@@ -439,7 +439,7 @@ export default function Game() {
         lane,
         startMs: Date.now(),
         cx,
-        cy: hitY,
+        cy: customY !== undefined ? customY : hitY,
         color,
         kind,
         particles,
@@ -654,6 +654,21 @@ export default function Game() {
         gs.perfectPlus++;
         checkPowerUps(gs.combo);
         haptics.mediumTap();
+        audioManager.playSfx("tap_nav", 0.15);
+
+        // Calculate visual tail Y position (top) at release time to center the explosion
+        const H = canvasRef.current?.height || 600;
+        const hitY = H * HIT_RATIO;
+        const AT = approachTime(songRef.current?.difficultyLevel ?? 5);
+        const spawnT = ns.note.time - AT;
+        const prog = (getT() - spawnT) / AT;
+        const holdDur = ns.note.holdDuration || 0.5;
+        const headP = Math.max(0, prog - holdDur / AT);
+        const headY = headP * hitY;
+        const top = lerp(headY, hitY, ns.holdProgress);
+
+        triggerHitFx(ns.currentLane, "PERFECT+", top);
+
         jRef.current = [
           ...jRef.current.filter((x) => Date.now() - x.ts < 600),
           { type: "PERFECT+", lane: ns.currentLane, id: ++jCounter.current, ts: Date.now() },
@@ -1356,7 +1371,8 @@ export default function Game() {
         gs.perfectPlus++;
         checkPowerUps(gs.combo);
         haptics.mediumTap();
-        triggerHitFx(ns.currentLane, "PERFECT+");
+        audioManager.playSfx("tap_nav", 0.15);
+        triggerHitFx(ns.currentLane, "PERFECT+", hitY);
 
         jRef.current = [
           ...jRef.current.filter((x) => Date.now() - x.ts < 600),
