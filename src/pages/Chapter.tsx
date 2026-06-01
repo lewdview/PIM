@@ -13,16 +13,7 @@ import { PACK_CONFIGS } from "@/utils/rarity";
 const MEDAL_COLOR: Record<string, string> = {
   PLATINUM: '#39FF14', GOLD: '#E5B800', SILVER: '#A0AABB', BRONZE: '#C97A3A', NONE: '#333', '': '#1a1a1a',
 };
-const MEDAL_ABBR: Record<string, string> = {
-  PLATINUM: 'PT', GOLD: 'GO', SILVER: 'SI', BRONZE: 'BR', NONE: '—', '': '?',
-};
 
-const DIFF_COLORS = [
-  '#39FF14', '#39FF14', '#39FF14',
-  '#00E5FF', '#00E5FF', '#00E5FF',
-  '#E5B800', '#E5B800', '#E5B800',
-  '#FF1493',
-];
 
 export default function Chapter() {
   const { month } = useParams<{ month: string }>();
@@ -187,7 +178,6 @@ export default function Chapter() {
   const mc = MEDAL_COLOR[medal] ?? '#1a1a1a';
   const score = selectedSong ? getHighScore(selectedSong.id) : 0;
   const history = selectedSong ? getScoreHistory(selectedSong.id) : [];
-  const bestScore = history.length > 0 ? Math.max(...history) : 0;
   const modifierType = selectedSong ? getModifierForSong(selectedSong) : 'none';
 
   // Card ownership
@@ -694,7 +684,7 @@ export default function Chapter() {
                   {selectedSong.coverArt ? (
                     <img src={selectedSong.coverArt} alt={selectedSong.title}
                       className="object-cover rounded"
-                      style={{ width: 72, height: 72, filter: isPlayLocked && !isReplayLocked ? 'grayscale(100%) brightness(0.3)' : 'none', border: '1px solid rgba(255,255,255,0.1)' }} />
+                      style={{ width: 72, height: 72, filter: isPlayLocked ? 'grayscale(100%) brightness(0.3)' : 'none', border: '1px solid rgba(255,255,255,0.1)' }} />
                   ) : (
                     <div className="flex items-center justify-center font-mono font-bold text-lg rounded bg-white/5 border border-white/10"
                       style={{ width: 72, height: 72, color: 'rgba(255,255,255,0.2)' }}>
