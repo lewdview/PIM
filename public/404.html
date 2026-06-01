@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>404 // PATHWAY_COLLAPSED</title>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=Roboto+Mono:wght@400;700&display=swap');
+
+      :root {
+        --color-bg: #050402;
+        --color-neon-red: #ff3800;
+        --color-neon-cyan: #00f0ff;
+        --color-text: #ffffff;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background-color: var(--color-bg);
+        color: var(--color-text);
+        font-family: 'Roboto Mono', monospace;
+        height: 100vh;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        user-select: none;
+      }
+
+      /* Cyberpunk Scanlines overlay */
+      .scanlines {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          rgba(18, 16, 16, 0) 50%, 
+          rgba(0, 0, 0, 0.25) 50%
+        ), linear-gradient(
+          90deg,
+          rgba(255, 0, 0, 0.06),
+          rgba(0, 255, 0, 0.02),
+          rgba(0, 0, 255, 0.06)
+        );
+        background-size: 100% 4px, 6px 100%;
+        z-index: 2;
+        pointer-events: none;
+      }
+
+      .noise {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.02'/%3E%3C/svg%3E");
+        z-index: 1;
+        pointer-events: none;
+      }
+
+      /* Ambient Neon Vignette */
+      .vignette {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at 50% 50%, transparent 40%, rgba(5, 4, 2, 0.95) 90%),
+                    radial-gradient(circle at 50% 50%, rgba(255, 56, 0, 0.03) 0%, transparent 60%);
+        z-index: 0;
+        pointer-events: none;
+      }
+
+      .container {
+        position: relative;
+        z-index: 10;
+        text-align: center;
+        padding: 2.5rem;
+        max-width: 600px;
+        width: 100%;
+        border: 2px solid rgba(255, 56, 0, 0.15);
+        background: rgba(8, 8, 12, 0.6);
+        backdrop-filter: blur(12px);
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8),
+                    0 0 30px rgba(255, 56, 0, 0.05);
+        border-radius: 4px;
+      }
+
+      .glitch-title {
+        font-family: 'Outfit', sans-serif;
+        font-size: clamp(2.5rem, 8vw, 4.5rem);
+        font-weight: 900;
+        color: var(--color-neon-red);
+        text-transform: uppercase;
+        letter-spacing: -0.05em;
+        line-height: 0.95;
+        position: relative;
+        margin-bottom: 1.5rem;
+        text-shadow: 0 0 15px rgba(255, 56, 0, 0.35);
+        animation: pulse 2s infinite alternate;
+      }
+
+      .status-code {
+        font-size: 0.75rem;
+        letter-spacing: 0.3em;
+        color: rgba(255, 255, 255, 0.4);
+        margin-bottom: 1.5rem;
+        text-transform: uppercase;
+        font-weight: bold;
+      }
+
+      .message {
+        font-size: 0.8rem;
+        line-height: 1.6;
+        color: rgba(255, 255, 255, 0.65);
+        margin-bottom: 2.5rem;
+        text-transform: uppercase;
+      }
+
+      .tech-details {
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+        border-t: 1px solid rgba(255, 255, 255, 0.05);
+        border-top: 1px solid rgba(255, 255, 255, 0.06);
+        text-align: left;
+        font-size: 0.65rem;
+        color: rgba(255, 255, 255, 0.3);
+        line-height: 1.5;
+      }
+
+      .tech-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.25rem;
+      }
+
+      .tech-val {
+        color: rgba(255, 255, 255, 0.55);
+        font-weight: bold;
+      }
+
+      .btn-group {
+        display: flex;
+        flex-direction: column;
+        sm-flex-direction: row;
+        gap: 1rem;
+        justify-content: center;
+        margin-bottom: 1rem;
+      }
+
+      @media (min-width: 600px) {
+        .btn-group {
+          flex-direction: row;
+        }
+      }
+
+      .btn {
+        display: inline-block;
+        padding: 0.75rem 1.5rem;
+        font-family: 'Roboto Mono', monospace;
+        font-size: 0.7rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.15em;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        border-radius: 2px;
+      }
+
+      .btn-primary {
+        background-color: var(--color-neon-red);
+        color: #000000;
+        border: 2px solid var(--color-neon-red);
+        box-shadow: 4px 4px 0px #000000, 0 0 10px rgba(255, 56, 0, 0.2);
+      }
+
+      .btn-primary:hover {
+        transform: translate(-2px, -2px);
+        box-shadow: 6px 6px 0px #000000, 0 0 15px rgba(255, 56, 0, 0.35);
+      }
+
+      .btn-primary:active {
+        transform: translate(2px, 2px);
+        box-shadow: 2px 2px 0px #000000;
+      }
+
+      .btn-secondary {
+        background-color: transparent;
+        color: var(--color-neon-red);
+        border: 2px solid var(--color-neon-red);
+        box-shadow: 4px 4px 0px var(--color-neon-red);
+      }
+
+      .btn-secondary:hover {
+        transform: translate(-2px, -2px);
+        box-shadow: 6px 6px 0px var(--color-neon-red);
+        background-color: rgba(255, 56, 0, 0.05);
+      }
+
+      .btn-secondary:active {
+        transform: translate(2px, 2px);
+        box-shadow: 2px 2px 0px var(--color-neon-red);
+      }
+
+      @keyframes pulse {
+        from {
+          text-shadow: 0 0 12px rgba(255, 56, 0, 0.25);
+        }
+        to {
+          text-shadow: 0 0 20px rgba(255, 56, 0, 0.45);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="scanlines"></div>
+    <div class="noise"></div>
+    <div class="vignette"></div>
+
+    <div class="container">
+      <div class="status-code">404 // NEURAL_DESYNC</div>
+      <h1 class="glitch-title">NOT_FOUND</h1>
+      <p class="message">
+        The requested transmission pathway has collapsed. The sector query failed to resolve or has been quarantined by the archivist.
+      </p>
+
+      <div class="btn-group">
+        <a href="/arcade" class="btn btn-primary">Back to Arcade</a>
+        <a href="/" class="btn btn-secondary">Restart System</a>
+      </div>
+
+      <div class="tech-details">
+        <div class="tech-row">
+          <span>DESYNC_GATEWAY:</span>
+          <span class="tech-val" id="edge-id">SFO1::EDGE_B4N5C</span>
+        </div>
+        <div class="tech-row">
+          <span>DIAGNOSTIC_CODE:</span>
+          <span class="tech-val" style="color: var(--color-neon-red);">404_PATH_DECOMISSIONED</span>
+        </div>
+        <div class="tech-row">
+          <span>QUERY_LOCATION:</span>
+          <span class="tech-val" id="query-path">/quarantine/telemetry</span>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Dynamically display requested URL path
+      document.getElementById('query-path').textContent = window.location.pathname.toUpperCase();
+      
+      // Parse query params or fallback to mock typical Vercel SFO router ID format
+      const searchParams = new URLSearchParams(window.location.search);
+      const customId = searchParams.get('id');
+      if (customId) {
+        document.getElementById('edge-id').textContent = customId.toUpperCase();
+      } else {
+        // Generate pseudo unique request code resembling sfo1::...
+        const randHex = Math.random().toString(16).substr(2, 5);
+        const timestamp = Date.now();
+        const randSuffix = Math.random().toString(16).substr(2, 12);
+        document.getElementById('edge-id').textContent = `SFO1::B4N5C-${timestamp}-${randSuffix}`.toUpperCase();
+      }
+    </script>
+  </body>
+</html>
