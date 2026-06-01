@@ -173,6 +173,17 @@ export function playRareHit(): void {
   }, 80);
 }
 
+export function playUnlockChime(): void {
+  tone(523.25, 0.4, 0.08, 'sine'); // C5
+  setTimeout(() => {
+    tone(659.25, 0.3, 0.06, 'sine'); // E5
+    setTimeout(() => {
+      tone(783.99, 0.4, 0.08, 'sine'); // G5
+      tone(1046.50, 0.5, 0.05, 'sine'); // C6
+    }, 80);
+  }, 80);
+}
+
 export function disposeAudioContext(): void {
   if (ctx) {
     try { ctx.close(); } catch { /* noop */ }

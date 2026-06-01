@@ -7,21 +7,13 @@ import {
   ROLL_RATES, PROOF_RATES, RARITY_CONFIG,
   type Rarity
 } from '../utils/rarity';
-import { hasClaimedFreePackToday, type OwnedCard } from '../services/vaultService';
+import { hasClaimedFreePackToday } from '../services/vaultService';
 import { getTimeUntilNextDay } from '../utils/dayCalc';
 import { useVaultStore } from '../store/useVaultStore';
 import { getAdminConfig } from '../utils/adminConfig';
-import { useLocation } from 'wouter';
-
-interface FragmentRewardInfo {
-  songId: string;
-  title: string;
-  amount: number;
-  rarity: string;
-}
 
 interface PackShopProps {
-  onPurchase: (category: PackCategory, size: PackSize, revealType?: 'cinematic' | 'slide') => Promise<OwnedCard[]>;
+  onPurchase: (category: PackCategory, size: PackSize) => void;
 }
 
 const CARD_W = 280;
@@ -112,349 +104,6 @@ function RipTab({ onRip, accent, disabled, labelOverride }: { onRip: () => void;
         </div>
       </motion.div>
     </div>
-  );
-}
-
-// ===== RIP ANIMATION OVERLAY =====
-function RipOverlay({
-  category,
-  size,
-  phase,
-  accent,
-  packLabel,
-  onComplete,
-  fragmentRewards,
-}: {
-  category: PackCategory;
-  size: PackSize;
-  phase: RipPhase;
-  accent: string;
-  packLabel: string;
-  onComplete: () => void;
-  fragmentRewards?: FragmentRewardInfo[];
-}) {
-  const tier = PACK_CONFIGS[category].tiers.find(t => t.size === size) || PACK_CONFIGS[category].tiers[0];
-  const cardCount = tier.cardCount;
-
-  useEffect(() => {
-    if (phase === 'cards_fly') {
-      const timer = setTimeout(onComplete, 1800);
-      return () => clearTimeout(timer);
-    }
-  }, [phase, onComplete]);
-
-  if (phase === 'idle') return null;
-
-  return (
-    <motion.div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.3 }}
-    >
-      {/* Dark backdrop */}
-      <motion.div
-        className="absolute inset-0"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 0.92 }}
-        style={{ background: '#000' }}
-      />
-
-      {/* Spotlight */}
-      <motion.div
-        className="absolute inset-0"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        style={{
-          background: `radial-gradient(ellipse 300px 400px at 50% 45%, ${accent}15, transparent 70%)`,
-        }}
-      />
-
-      {/* Pack bag — tears open */}
-      <div className="relative" style={{ width: '260px', perspective: '800px' }}>
-        {/* TOP HALF — tears upward and rotates */}
-        <motion.div
-          className="relative overflow-hidden"
-          style={{
-            height: '200px',
-            borderRadius: '8px 8px 0 0',
-            background: `linear-gradient(180deg, ${accent}15, ${accent}08)`,
-            border: `1px solid ${accent}20`,
-            borderBottom: 'none',
-            transformOrigin: 'bottom center',
-          }}
-          initial={{ rotateX: 0, y: 0 }}
-          animate={
-            phase === 'tearing' || phase === 'cards_fly'
-              ? { rotateX: -75, y: -40, opacity: 0.4 }
-              : { rotateX: 0, y: 0 }
-          }
-          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-        >
-          {/* Top Crimp Edge */}
-          <div className="absolute inset-x-0 top-0 h-[14px] crimp-edge z-10" style={{
-            boxShadow: '0 3px 6px rgba(0,0,0,0.4)',
-            borderBottom: '1px solid rgba(255,255,255,0.1)',
-            borderTopLeftRadius: '8px',
-            borderTopRightRadius: '8px',
-          }} />
-        {/* VERTICAL TH3SCR1B3 SIDE BANNER */}
-        <div className="absolute left-1 bottom-12 w-8 flex items-center justify-center pointer-events-none z-20 mix-blend-overlay">
-          <div className="font-black leading-none uppercase whitespace-nowrap" style={{
-            transform: 'rotate(-90deg) scaleY(1.3) scaleX(0.9)',
-            color: 'rgba(255,255,255,0.6)',
-            fontFamily: '"Impact", "Arial Black", sans-serif',
-            fontSize: '16px',
-            letterSpacing: '-0.5px',
-            WebkitTextStroke: `1px ${accent}`,
-            textShadow: `0 0 10px ${accent}60`,
-          }}>
-            TH3SCR1B3
-          </div>
-        </div>
-
-        {/* Middle-Left: Price Sticker (Purple Annotation) */}
-        <div className="absolute left-0 top-1/2 -translate-y-12 z-30 pointer-events-none">
-          <div className="price-sticker-gun sticker-slits drop-shadow-lg" style={{ 
-            transform: 'rotate(-90deg) translateX(-50%)',
-            transformOrigin: 'left center',
-            background: `linear-gradient(${accent}99, ${accent}99), #ffffff`,
-            '--slit-color': `${accent}30`,
-          } as any}>
-            <span className="text-[6px] font-black tracking-tighter opacity-70 mb-0.5 leading-none" style={{ fontFamily: 'Impact, sans-serif' }}>
-              TH3SCR1B3 VAULT
-            </span>
-            <div className="flex items-baseline leading-none py-0.5">
-              <span className="text-[15px] font-black mr-0.5" style={{ transform: 'scaleY(1.3)', letterSpacing: '-0.8px' }}>
-                {tier.price === 'FREE' ? 'FREE' : tier.price}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Card Count removed from top-right in RipOverlay top half */}
-
-        {/* Sealed top */}
-        <div className="w-full h-5" style={{
-            background: 'linear-gradient(180deg, rgba(255,255,255,0.06), transparent)',
-            borderBottom: '2px dashed rgba(255,255,255,0.08)',
-          }} />
-          <div className="flex flex-col items-center justify-center h-[calc(100%-20px)] gap-2">
-            <h3 className="text-[32px] leading-[0.9] pack-label-neon uppercase font-black" style={{
-              '--neon-accent': accent,
-              color: '#ffffff',
-              fontFamily: '"Impact", "Arial Black", sans-serif',
-              letterSpacing: '0.02em',
-              transform: 'scaleY(1.22) scaleX(0.95)',
-              transformOrigin: 'center',
-              WebkitTextStroke: '1.2px #000000',
-              textShadow: `
-                0 0 10px ${accent}, 
-                0 0 20px ${accent}, 
-                1px 2px 0 #000000, 
-                2px 4px 10px rgba(0,0,0,0.8)
-              `,
-              margin: '12px 0 8px 0',
-            } as React.CSSProperties}>
-              {packLabel}
-            </h3>
-            <PackEmblem accent={accent} size={60} />
-            <div className="text-center mt-2">
-              <div className="inline-block">
-                <div className="sticker-gun-tag sticker-slits drop-shadow-md" style={{
-                  background: '#ffffff',
-                  border: `1px solid ${accent}30`,
-                  '--slit-color': `${accent}20`,
-                  padding: '3px 10px',
-                  transform: 'rotate(0.5deg)',
-                  minWidth: '150px'
-                } as any}>
-                  <span className="text-[8px] font-black tracking-tighter uppercase italic opacity-90" style={{ color: '#000' }}>
-                    365 DAYS OF LIGHT AND DARK
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* TEAR LINE */}
-        <motion.div
-          className="relative h-1 overflow-visible"
-          initial={{ opacity: 0 }}
-          animate={
-            phase === 'tearing' || phase === 'cards_fly'
-              ? { opacity: 1 }
-              : { opacity: 0 }
-          }
-        >
-          <div className="absolute inset-x-0 h-px" style={{
-            background: `linear-gradient(90deg, transparent, ${accent}60, ${accent}80, ${accent}60, transparent)`,
-            boxShadow: `0 0 8px ${accent}40`,
-          }} />
-          {/* Tear particles */}
-          {[...Array(8)].map((_, i) => (
-            <motion.div
-              key={i}
-              className="absolute w-1 h-1 rounded-full"
-              style={{ background: accent, left: `${12 + i * 12}%` }}
-              initial={{ y: 0, opacity: 0 }}
-              animate={phase === 'tearing' ? {
-                y: [0, -10 - Math.random() * 20, 30],
-                x: [0, (Math.random() - 0.5) * 30],
-                opacity: [0, 1, 0],
-              } : {}}
-              transition={{ duration: 0.6, delay: i * 0.04 }}
-            />
-          ))}
-        </motion.div>
-
-        {/* BOTTOM HALF — stays in place */}
-        <motion.div
-          className="relative overflow-hidden"
-          style={{
-            height: '180px',
-            borderRadius: '0 0 20px 20px',
-            background: `linear-gradient(180deg, ${accent}08, ${accent}04)`,
-            border: `1px solid ${accent}20`,
-            borderTop: 'none',
-          }}
-        >
-          {/* Bottom Crimp Edge */}
-          <div className="absolute inset-x-0 bottom-0 h-[14px] crimp-edge z-10" style={{
-            boxShadow: '0 -3px 6px rgba(0,0,0,0.4)',
-            borderTop: '1px solid rgba(255,255,255,0.1)',
-            borderBottomLeftRadius: '20px',
-            borderBottomRightRadius: '20px',
-          }} />
-
-          {/* Bottom Center: Card Count Sticker (Pink Annotation) */}
-          <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
-            <div className="price-sticker-gun sticker-slits drop-shadow-sm" style={{ 
-              transform: 'rotate(0.5deg)',
-              background: `linear-gradient(${accent}99, ${accent}99), #ffffff`,
-              '--slit-color': `${accent}20`
-            } as any}>
-              <span className="text-[11px] font-black leading-none" style={{ transform: 'scaleY(1.2)', letterSpacing: '-0.3px' }}>
-                {tier.cardCount} {tier.cardCount === 1 ? 'PACK' : 'CARDS'}
-              </span>
-            </div>
-          </div>
-
-          {/* Glow opening */}
-          <motion.div
-            className="absolute inset-x-0 top-0 h-24"
-            initial={{ opacity: 0 }}
-            animate={phase === 'tearing' || phase === 'cards_fly' ? { opacity: 1 } : {}}
-            style={{
-              background: `linear-gradient(180deg, ${accent}25, transparent)`,
-            }}
-          />
-        </motion.div>
-
-        {/* FLYING CARDS — emerge from the tear line */}
-        <AnimatePresence>
-          {phase === 'cards_fly' && (
-            <>
-              {(fragmentRewards && fragmentRewards.length > 0 ? fragmentRewards : [...Array(cardCount)]).map((rewardOrEmpty, i) => {
-                const isReward = rewardOrEmpty && typeof rewardOrEmpty === 'object';
-                const reward = isReward ? (rewardOrEmpty as FragmentRewardInfo) : null;
-                const rarityColor = reward ? (RARITY_CONFIG[reward.rarity as Rarity]?.color || accent) : accent;
-
-                return (
-                  <motion.div
-                    key={i}
-                    className="absolute rounded-lg flex flex-col items-center justify-center p-2"
-                    style={{
-                      width: '100px',
-                      height: '130px',
-                      left: '50%',
-                      top: '50%',
-                      marginLeft: '-50px',
-                      marginTop: '-65px',
-                      background: reward 
-                        ? `linear-gradient(135deg, ${rarityColor}25, rgba(0,0,0,0.85))` 
-                        : `linear-gradient(135deg, ${accent}30, ${accent}10)`,
-                      border: `1.5px solid ${rarityColor}`,
-                      boxShadow: `0 0 15px ${rarityColor}40`,
-                      zIndex: 20 + i,
-                    }}
-                    initial={{
-                      y: 0,
-                      x: 0,
-                      scale: 0.3,
-                      opacity: 0,
-                      rotateZ: 0,
-                    }}
-                    animate={{
-                      y: [-20, -320 - (i % 3) * 30],
-                      x: [0, (i - (cardCount - 1) / 2) * 90], // fan out nicely based on index and length
-                      scale: [0.3, 1.0, 0.95],
-                      opacity: [0, 1, 1, 0.9],
-                      rotate: [(i - (cardCount - 1) / 2) * 4, (i - (cardCount - 1) / 2) * 12],
-                    }}
-                    transition={{
-                      duration: 1.6,
-                      delay: i * 0.15,
-                      ease: [0.22, 1, 0.36, 1],
-                    }}
-                  >
-                    {reward ? (
-                      <div className="w-full h-full flex flex-col justify-between items-center text-center py-1">
-                        {/* Song title */}
-                        <div className="text-[7px] font-mono uppercase tracking-wider text-white/50 line-clamp-2 px-0.5 leading-tight select-none">
-                          {reward.title}
-                        </div>
-                        {/* Fragment increment count */}
-                        <div className="flex flex-col items-center justify-center flex-1 my-1">
-                          <span 
-                            className="text-3xl font-black italic tracking-tighter" 
-                            style={{ 
-                              color: rarityColor, 
-                              fontFamily: '"Impact", "Arial Black", sans-serif',
-                              textShadow: `0 0 8px ${rarityColor}80` 
-                            }}
-                          >
-                            +{reward.amount}
-                          </span>
-                          <span className="text-[6px] font-mono tracking-widest text-white/60 uppercase -mt-0.5 font-bold">
-                            FRAGMENTS
-                          </span>
-                        </div>
-                        {/* Rarity label */}
-                        <div 
-                          className="text-[7px] font-mono font-bold tracking-widest uppercase px-1.5 py-0.5 rounded"
-                          style={{ background: `${rarityColor}20`, color: rarityColor }}
-                        >
-                          {reward.rarity}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="w-full h-full rounded-lg flex items-center justify-center">
-                        <span className="text-xl font-black" style={{ color: `${accent}80` }}>?</span>
-                      </div>
-                    )}
-                  </motion.div>
-                );
-              })}
-            </>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* Status text */}
-      <motion.p
-        className="absolute bottom-20 text-sm font-mono tracking-wider uppercase text-center"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        style={{ color: accent }}
-      >
-        {phase === 'spotlight' ? 'ESTABLISHING SECURE CONNECTION...' :
-         phase === 'tearing' ? 'DECRYPTING ARCHIVE SEEDS...' :
-         phase === 'cards_fly' ? 'REVEALING CARDS...' : ''}
-      </motion.p>
-    </motion.div>
   );
 }
 
@@ -943,118 +592,45 @@ function PackBag({ category, isActive, onRip, isRipping, isFreeClaimed }: {
 }
 
 // ===== DRAGGABLE CAROUSEL =====
+// ===== DRAGGABLE CAROUSEL =====
 export default function PackShop({ onPurchase }: PackShopProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [freeClaimed, setFreeClaimed] = useState(false);
   const x = useMotionValue(0);
   const total = PACK_CAROUSEL_ORDER.length;
-  const [, setLocation] = useLocation();
 
   useEffect(() => {
     hasClaimedFreePackToday().then(setFreeClaimed);
   }, []);
 
-  // Rip animation state
-  const [ripPhase, setRipPhase] = useState<RipPhase>('idle');
-  const [rippingPack, setRippingPack] = useState<{ cat: PackCategory; size: PackSize } | null>(null);
-  const [fragmentRewards, setFragmentRewards] = useState<FragmentRewardInfo[]>([]);
-
   const goTo = useCallback((idx: number) => {
-    if (ripPhase !== 'idle') return;
     const i = (idx + total) % total; // wrap around loop
     setActiveIndex(i);
     animate(x, -i * SLIDE, { type: 'spring', stiffness: 300, damping: 32 });
-  }, [x, total, ripPhase]);
+  }, [x, total]);
 
   useEffect(() => { x.set(0); }, []);
 
   const onDragEnd = useCallback((_: never, info: PanInfo) => {
-    if (ripPhase !== 'idle') return;
     const vel = info.velocity.x;
     const off = info.offset.x;
     let next = activeIndex;
     if (Math.abs(vel) > 250) next = vel < 0 ? activeIndex + 1 : activeIndex - 1;
     else if (Math.abs(off) > SLIDE * 0.25) next = off < 0 ? activeIndex + 1 : activeIndex - 1;
     goTo(next);
-  }, [activeIndex, goTo, ripPhase]);
+  }, [activeIndex, goTo]);
 
   // Handle rip initiation — all packs go straight to cinematic reveal
-  const handleRip = useCallback(async (cat: PackCategory, size: PackSize) => {
-    if (ripPhase !== 'idle') return;
+  const handleRip = useCallback((cat: PackCategory, size: PackSize) => {
     // Block free pack if already claimed
     if (cat === 'free' && freeClaimed) return;
-
-    setRippingPack({ cat, size });
-    setRipPhase('spotlight');
-
-    try {
-      const cards = await onPurchase(cat, size);
-      
-      if (cards && cards.length > 0) {
-        // Calculate fragment rewards and increment localStorage
-        const rewards: FragmentRewardInfo[] = cards.map(c => {
-          let songId = c.card.song;
-          if (!songId) {
-            const dayNum = c.card.day || 1;
-            const paddedDay = String(dayNum).padStart(3, '0');
-            songId = `day-${paddedDay}`;
-          }
-          
-          let amount = 2;
-          const rarity = c.card.rarity;
-          if (rarity === 'common') amount = 2;
-          else if (rarity === 'uncommon') amount = 3;
-          else if (rarity === 'rare') amount = 5;
-          else if (rarity === 'legendary') amount = 10;
-          else if (rarity === 'mythic') amount = 10;
-          
-          const current = parseInt(localStorage.getItem(`fragments_${songId}`) || '0', 10);
-          localStorage.setItem(`fragments_${songId}`, String(Math.min(10, current + amount)));
-          
-          return {
-            songId,
-            title: c.card.title,
-            amount,
-            rarity
-          };
-        });
-
-        setFragmentRewards(rewards);
-        setRipPhase('tearing');
-        
-        // Progress to cards flying out
-        setTimeout(() => {
-          setRipPhase('cards_fly');
-        }, 600);
-      } else {
-        // Cancel/Failed purchase, reset rip phase
-        setRipPhase('idle');
-        setRippingPack(null);
-      }
-    } catch (err) {
-      console.error('Failed to rip pack:', err);
-      setRipPhase('idle');
-      setRippingPack(null);
-    }
-  }, [ripPhase, onPurchase, freeClaimed]);
-
-  // When cards_fly animation finishes → actually purchase and navigate
-  const handleRipComplete = useCallback(() => {
-    if (rippingPack) {
-      setRipPhase('idle');
-      if (rippingPack.cat === 'free') {
-        setFreeClaimed(true);
-      }
-      setRippingPack(null);
-      setFragmentRewards([]);
-      
-      // Navigate to /vault/reveal
-      setLocation('/vault/reveal');
-    }
-  }, [rippingPack, setLocation]);
+    // Immediately mark free pack as claimed to prevent double-rips
+    if (cat === 'free') setFreeClaimed(true);
+    // All packs now use the cinematic drag-to-rip reveal
+    onPurchase(cat, size);
+  }, [onPurchase, freeClaimed]);
 
   const activeCat = PACK_CAROUSEL_ORDER[activeIndex];
-  const activeCfg = PACK_CONFIGS[activeCat];
 
   return (
     <section className="space-y-3 py-2">
@@ -1080,12 +656,12 @@ export default function PackShop({ onPurchase }: PackShopProps) {
 
       {/* Carousel */}
       <div className="relative">
-        <button onClick={() => goTo(activeIndex - 1)} disabled={ripPhase !== 'idle'} title="Previous Pack"
+        <button onClick={() => goTo(activeIndex - 1)} title="Previous Pack"
           className="absolute left-2 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full flex items-center justify-center transition-all disabled:opacity-15"
           style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }}>
           <ChevronLeft size={20} />
         </button>
-        <button onClick={() => goTo(activeIndex + 1)} disabled={ripPhase !== 'idle'} title="Next Pack"
+        <button onClick={() => goTo(activeIndex + 1)} title="Next Pack"
           className="absolute right-2 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full flex items-center justify-center transition-all disabled:opacity-15"
           style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }}>
           <ChevronRight size={20} />
@@ -1093,7 +669,7 @@ export default function PackShop({ onPurchase }: PackShopProps) {
 
         <div className="overflow-hidden py-3">
           <motion.div
-            drag={ripPhase === 'idle' ? 'x' : false}
+            drag="x"
             // Removed tight drag constraints to allow elastic dragging past edges loosely
             onDragEnd={onDragEnd}
             style={{
@@ -1102,10 +678,10 @@ export default function PackShop({ onPurchase }: PackShopProps) {
               gap: `${GAP}px`,
               paddingLeft: `calc(50vw - ${CARD_W / 2}px)`,
               paddingRight: `calc(50vw - ${CARD_W / 2}px)`,
-              cursor: ripPhase === 'idle' ? 'grab' : 'default',
+              cursor: 'grab',
               touchAction: 'pan-y'
             }}
-            className={ripPhase === 'idle' ? 'active:cursor-grabbing' : ''}
+            className="active:cursor-grabbing"
           >
             {PACK_CAROUSEL_ORDER.map((cat, i) => (
               <PackBag
@@ -1113,7 +689,7 @@ export default function PackShop({ onPurchase }: PackShopProps) {
                 category={cat}
                 isActive={i === activeIndex}
                 onRip={handleRip}
-                isRipping={ripPhase !== 'idle'}
+                isRipping={false}
                 isFreeClaimed={freeClaimed}
               />
             ))}
@@ -1131,22 +707,6 @@ export default function PackShop({ onPurchase }: PackShopProps) {
             }} />
         ))}
       </div>
-
-      {/* Rip animation overlay */}
-      <AnimatePresence>
-        {ripPhase !== 'idle' && rippingPack && (
-          <RipOverlay
-            key="rip-overlay"
-            category={rippingPack.cat}
-            size={rippingPack.size}
-            phase={ripPhase}
-            accent={activeCfg.accent}
-            packLabel={activeCfg.label}
-            onComplete={handleRipComplete}
-            fragmentRewards={fragmentRewards}
-          />
-        )}
-      </AnimatePresence>
     </section>
   );
 }

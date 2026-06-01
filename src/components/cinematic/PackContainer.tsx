@@ -9,7 +9,7 @@ import RarityBadge from '../RarityBadge';
 import {
   playAmbient, playCrinkle, playTension, playTear,
   playSnap, playShimmer, playTick, playNearMiss, playRareHit,
-  disposeAudioContext,
+  playUnlockChime, disposeAudioContext,
 } from './audioEngine';
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -427,6 +427,55 @@ export default function PackContainer({ meta, cards, onComplete, onBuyAnother, i
     return count <= 1;
   }, [collection]);
 
+  const [showFragmentDecrypter, setShowFragmentDecrypter] = useState(false);
+  const [decrypterPhase, setDecrypterPhase] = useState<'idle' | 'shaking' | 'ripping' | 'revealed'>('idle');
+  interface FragmentReward {
+    cardId: string;
+    title: string;
+    artist: string;
+    coverArt: string | null;
+    rarity: Rarity;
+    added: number;
+    oldTotal: number;
+    newTotal: number;
+    unlocked: boolean;
+  }
+  const [fragmentRewards, setFragmentRewards] = useState<FragmentReward[]>([]);
+
+  const handleStartDecrypter = useCallback(() => {
+    const rewards: FragmentReward[] = cards.map((owned) => {
+      const card = owned.card;
+      const rarity = card.rarity as Rarity;
+      let gain = 2;
+      if (rarity === 'uncommon') gain = 3;
+      else if (rarity === 'rare') gain = 5;
+      else if (rarity === 'legendary' || rarity === 'mythic') gain = 10;
+
+      const storageKey = `fragments_${card.id}`;
+      const oldTotal = parseInt(localStorage.getItem(storageKey) || '0', 10);
+      const newTotal = Math.min(10, oldTotal + gain);
+
+      // Write to localStorage
+      localStorage.setItem(storageKey, newTotal.toString());
+
+      return {
+        cardId: card.id,
+        title: card.title,
+        artist: card.artist,
+        coverArt: card.coverUrl || null,
+        rarity,
+        added: gain,
+        oldTotal,
+        newTotal,
+        unlocked: newTotal >= 10 && oldTotal < 10,
+      };
+    });
+
+    setFragmentRewards(rewards);
+    setShowFragmentDecrypter(true);
+    setDecrypterPhase('idle');
+  }, [cards]);
+
   useEffect(() => {
     if (firstUnlockCard && firstUnlockCard.card.audioUrl) {
       const audio = new Audio(firstUnlockCard.card.audioUrl);
@@ -482,6 +531,11 @@ export default function PackContainer({ meta, cards, onComplete, onBuyAnother, i
     setExpandedIndex(null);
     setHasInteracted(false);
     sequenceRunning.current = false;
+    
+    // Reset decrypter states
+    setShowFragmentDecrypter(false);
+    setDecrypterPhase('idle');
+    setFragmentRewards([]);
 
     return () => {
       clearTimeout(resetTimer);
@@ -679,6 +733,30 @@ export default function PackContainer({ meta, cards, onComplete, onBuyAnother, i
       y: ((e.clientY - rect.top) / rect.height - 0.5) * 2,
     });
   }, [hasInteracted]);
+
+  const handleDecryptPodTap = useCallback(() => {
+    if (decrypterPhase !== 'idle') return;
+    setDecrypterPhase('shaking');
+    playTension();
+    
+    setTimeout(() => {
+      setDecrypterPhase('ripping');
+      playTear();
+      playSnap();
+
+      setTimeout(() => {
+        setDecrypterPhase('revealed');
+        playShimmer();
+
+        const hasUnlocks = fragmentRewards.some(r => r.unlocked);
+        if (hasUnlocks) {
+          setTimeout(() => {
+            playUnlockChime();
+          }, 400);
+        }
+      }, 500);
+    }, 600);
+  }, [decrypterPhase, fragmentRewards]);
 
   // ── Card offset properties ──────────────────────────────
 
@@ -1168,21 +1246,21 @@ export default function PackContainer({ meta, cards, onComplete, onBuyAnother, i
               </motion.button>
             )}
             <motion.button
-              onClick={onComplete}
+              onClick={handleStartDecrypter}
               style={{
                 padding: '12px 24px', borderRadius: '8px',
-                background: 'linear-gradient(135deg, #ffd700, #ffaa00)',
-                color: '#000',
+                background: 'linear-gradient(135deg, #00f0ff, #7000ff)',
+                color: '#fff',
                 fontFamily: '"JetBrains Mono", monospace', fontWeight: 900,
-                letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: '12px',
+                letterSpacing: '0.15em', textTransform: 'uppercase', fontSize: '11px',
                 border: 'none',
                 cursor: 'pointer',
-                boxShadow: '0 8px 32px rgba(255,215,0,0.25)'
+                boxShadow: '0 8px 32px rgba(0,240,255,0.25)'
               }}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.98 }}
             >
-              {meta.category === 'daily_claim' || meta.redirectPath === '/tutorial' || meta.redirectPath?.startsWith('/play/') ? 'Start PIM' : 'Go to Collection →'}
+              [ Decrypt Fragments ]
             </motion.button>
           </motion.div>
         )}
@@ -1339,6 +1417,388 @@ export default function PackContainer({ meta, cards, onComplete, onBuyAnother, i
             >
               [ INTEGRATE SIGNAL ]
             </motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── NEURAL FRAGMENT DECRYPTOR OVERLAY ───────────────────────── */}
+      <AnimatePresence>
+        {showFragmentDecrypter && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 900,
+              background: '#050402',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '24px',
+            }}
+          >
+            {/* Scanlines overlay */}
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              pointerEvents: 'none',
+              zIndex: 10,
+              background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, 0.15) 2px, rgba(0, 0, 0, 0.15) 4px)'
+            }} />
+
+            {/* Neon ambient glow */}
+            <motion.div
+              animate={{ opacity: [0.2, 0.4, 0.2], scale: [1, 1.15, 1] }}
+              transition={{ repeat: Infinity, duration: 4.5, ease: 'easeInOut' }}
+              style={{
+                position: 'absolute', width: '600px', height: '600px', borderRadius: '50%',
+                background: 'radial-gradient(circle, #00f0ff20, #7000ff10, transparent 70%)',
+                filter: 'blur(100px)', pointerEvents: 'none',
+              }}
+            />
+
+            {decrypterPhase === 'idle' && (
+              <div className="flex flex-col items-center gap-8 z-20">
+                {/* Cyberpunk Header */}
+                <div className="text-center space-y-2">
+                  <div style={{
+                    fontFamily: '"JetBrains Mono", monospace', fontSize: '10px',
+                    fontWeight: 900, color: '#00f0ff', letterSpacing: '0.4em',
+                    textShadow: '0 0 10px rgba(0,240,255,0.4)', textTransform: 'uppercase',
+                  }}>
+                    [ NEURAL DECRYPTOR SEED v2.0 ]
+                  </div>
+                  <div style={{
+                    fontFamily: '"JetBrains Mono", monospace', fontSize: '8px',
+                    color: 'rgba(255,255,255,0.4)', letterSpacing: '0.15em',
+                    textTransform: 'uppercase',
+                  }}>
+                    ESTABLISHING DENSITY CORRELATION DATA
+                  </div>
+                </div>
+
+                {/* The glowing rotating 3D capsule pod */}
+                <motion.div
+                  onClick={handleDecryptPodTap}
+                  animate={{
+                    y: [-6, 6, -6],
+                    rotateY: [0, 360],
+                  }}
+                  transition={{
+                    y: { repeat: Infinity, duration: 3.5, ease: 'easeInOut' },
+                    rotateY: { repeat: Infinity, duration: 20, ease: 'linear' },
+                  }}
+                  style={{
+                    width: '160px', height: '240px',
+                    position: 'relative',
+                    perspective: '800px',
+                    transformStyle: 'preserve-3d',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {/* Glowing Wireframe Pod Design */}
+                  <div style={{
+                    position: 'absolute', inset: 0,
+                    border: '2px solid #00f0ff',
+                    borderRadius: '80px / 30px',
+                    background: 'linear-gradient(180deg, rgba(0, 240, 255, 0.05), rgba(112, 0, 255, 0.15))',
+                    boxShadow: '0 0 40px rgba(0, 240, 255, 0.25), inset 0 0 30px rgba(0, 240, 255, 0.15)',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    overflow: 'hidden',
+                  }}>
+                    <div style={{
+                      position: 'absolute', top: '15%',
+                      width: '80%', height: '1px', background: '#00f0ff', opacity: 0.4
+                    }} />
+                    <div style={{
+                      position: 'absolute', bottom: '15%',
+                      width: '80%', height: '1px', background: '#00f0ff', opacity: 0.4
+                    }} />
+                    <span style={{
+                      fontFamily: '"Impact", sans-serif', fontSize: '32px', color: '#fff',
+                      transform: 'scaleY(1.2) scaleX(0.9)',
+                      textShadow: '0 0 15px rgba(0,240,255,0.8), 2px 2px 0 #000',
+                    }}>
+                      FRAG
+                    </span>
+                    <span style={{
+                      fontFamily: '"JetBrains Mono", monospace', fontSize: '9px', color: '#7000ff',
+                      fontWeight: 900, letterSpacing: '0.2em', marginTop: '6px',
+                    }}>
+                      POD {cards.length}x
+                    </span>
+                  </div>
+                </motion.div>
+
+                {/* Tap Prompt */}
+                <div className="text-center space-y-2 pointer-events-none">
+                  <motion.p
+                    animate={{ opacity: [0.4, 1, 0.4] }}
+                    transition={{ repeat: Infinity, duration: 1.8, ease: 'easeInOut' }}
+                    style={{
+                      fontFamily: '"JetBrains Mono", monospace', fontSize: '11px',
+                      fontWeight: 900, letterSpacing: '0.3em', textTransform: 'uppercase',
+                      color: '#00f0ff',
+                    }}
+                  >
+                    TAP TO EXTRACTION
+                  </motion.p>
+                  <p style={{
+                    fontFamily: '"JetBrains Mono", monospace', fontSize: '8px',
+                    letterSpacing: '0.12em', opacity: 0.3, color: '#fff',
+                  }}>
+                    EXTRACTS {cards.map(c => {
+                      const rarity = c.card.rarity;
+                      return rarity === 'common' ? 2 : rarity === 'uncommon' ? 3 : rarity === 'rare' ? 5 : 10;
+                    }).reduce((a, b) => a + b, 0)} TOTAL FRAGMENTS
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {decrypterPhase === 'shaking' && (
+              <motion.div
+                animate={{
+                  x: [-8, 8, -8, 8, -5, 5, -2, 2, 0],
+                  y: [-4, 4, -4, 4, -2, 2, -1, 1, 0],
+                }}
+                transition={{ duration: 0.5 }}
+                style={{
+                  width: '160px', height: '240px',
+                  border: '2.5px solid #ff3800',
+                  borderRadius: '80px / 30px',
+                  background: 'linear-gradient(180deg, rgba(255, 56, 0, 0.05), rgba(255, 184, 0, 0.15))',
+                  boxShadow: '0 0 50px rgba(255, 56, 0, 0.4), inset 0 0 35px rgba(255, 56, 0, 0.25)',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  zIndex: 20,
+                }}
+              >
+                <span style={{
+                  fontFamily: '"Impact", sans-serif', fontSize: '32px', color: '#fff',
+                  textShadow: '0 0 15px #ff3800, 2px 2px 0 #000',
+                }}>
+                  DECRYPT
+                </span>
+              </motion.div>
+            )}
+
+            {decrypterPhase === 'ripping' && (
+              <div style={{ position: 'relative', width: '160px', height: '240px', zIndex: 20 }}>
+                {/* Top half splits upwards */}
+                <motion.div
+                  initial={{ y: 0, rotate: 0, opacity: 1 }}
+                  animate={{ y: -200, rotate: -10, opacity: 0 }}
+                  transition={{ duration: 0.45, ease: 'easeOut' }}
+                  style={{
+                    position: 'absolute', inset: 0,
+                    clipPath: 'polygon(0 0, 100% 0, 100% 50%, 0 45%)',
+                    border: '2px solid #00f0ff',
+                    borderRadius: '80px / 30px',
+                    background: 'linear-gradient(180deg, rgba(0, 240, 255, 0.05), rgba(112, 0, 255, 0.15))',
+                  }}
+                />
+                {/* Bottom half splits downwards */}
+                <motion.div
+                  initial={{ y: 0, rotate: 0, opacity: 1 }}
+                  animate={{ y: 200, rotate: 8, opacity: 0 }}
+                  transition={{ duration: 0.45, ease: 'easeOut' }}
+                  style={{
+                    position: 'absolute', inset: 0,
+                    clipPath: 'polygon(0 45%, 100% 50%, 100% 100%, 0 100%)',
+                    border: '2px solid #00f0ff',
+                    borderRadius: '80px / 30px',
+                    background: 'linear-gradient(180deg, rgba(0, 240, 255, 0.05), rgba(112, 0, 255, 0.15))',
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Full Screen White Flash Overlay */}
+            <AnimatePresence>
+              {decrypterPhase === 'ripping' && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: [0, 0.95, 0] }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.4 }}
+                  style={{
+                    position: 'fixed', inset: 0, zIndex: 1000,
+                    background: '#00f0ff',
+                    pointerEvents: 'none',
+                  }}
+                />
+              )}
+            </AnimatePresence>
+
+            {decrypterPhase === 'revealed' && (
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="w-full max-w-lg flex flex-col items-center gap-6 z-20"
+              >
+                {/* Title */}
+                <div className="text-center space-y-1.5">
+                  <h3 style={{
+                    fontFamily: '"Impact", "Arial Black", sans-serif',
+                    fontSize: '28px', color: '#fff', textTransform: 'uppercase',
+                    letterSpacing: '0.05em', transform: 'scaleY(1.15)',
+                    textShadow: '0 0 20px rgba(0,240,255,0.4)', margin: 0
+                  }}>
+                    FRAGMENTS EXTRACTED
+                  </h3>
+                  <p style={{
+                    fontFamily: '"JetBrains Mono", monospace', fontSize: '9px',
+                    color: 'rgba(255,255,255,0.4)', letterSpacing: '0.15em',
+                    textTransform: 'uppercase'
+                  }}>
+                    Integrations synced to local cache
+                  </p>
+                </div>
+
+                {/* Rewards Grid */}
+                <div className="w-full space-y-4 max-h-[50vh] overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin' }}>
+                  {fragmentRewards.map((rew, index) => {
+                    const rarityColor = RARITY_CONFIG[rew.rarity]?.color || '#fff';
+                    return (
+                      <motion.div
+                        key={`${rew.cardId}-${index}`}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.15 }}
+                        className="flex items-center gap-4 border-2 border-black p-3.5 relative overflow-hidden"
+                        style={{
+                          background: '#0d0d0d',
+                          boxShadow: '4px 4px 0 #000',
+                          border: `1.5px solid ${rarityColor}35`,
+                        }}
+                      >
+                        {rew.coverArt ? (
+                          <img
+                            src={rew.coverArt}
+                            alt={rew.title}
+                            className="w-14 h-14 object-cover border-2 border-black flex-shrink-0"
+                            style={{ boxShadow: '2px 2px 0 #000' }}
+                          />
+                        ) : (
+                          <div
+                            className="w-14 h-14 border-2 border-black flex-shrink-0 flex items-center justify-center font-black"
+                            style={{
+                              background: rarityColor,
+                              color: '#000',
+                              boxShadow: '2px 2px 0 #000',
+                              fontFamily: 'Impact, sans-serif'
+                            }}
+                          >
+                            {rew.rarity.substring(0, 2).toUpperCase()}
+                          </div>
+                        )}
+
+                        {/* Song Details & Progress */}
+                        <div className="flex-1 min-w-0 space-y-2">
+                          <div className="flex justify-between items-start gap-2">
+                            <div className="min-w-0">
+                              <div
+                                className="font-black truncate leading-tight text-sm uppercase"
+                                style={{ fontFamily: '"Impact", "Arial Black", sans-serif', color: '#fff' }}
+                              >
+                                {rew.title}
+                              </div>
+                              <div className="text-[9px] font-mono opacity-50 truncate uppercase tracking-wider">
+                                by {rew.artist}
+                              </div>
+                            </div>
+                            
+                            <div className="flex-shrink-0 text-right">
+                              <span
+                                className="text-xs font-black italic tracking-tight font-mono"
+                                style={{ color: '#00f0ff' }}
+                              >
+                                +{rew.added} FRAGS
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Progress Bar Container */}
+                          <div className="space-y-1">
+                            <div className="flex justify-between items-center text-[8px] font-mono">
+                              <span style={{ color: rarityColor }} className="uppercase font-bold tracking-widest">
+                                {rew.rarity}
+                              </span>
+                              <span style={{ color: '#fff' }} className="font-bold">
+                                {rew.newTotal} / 10 FRAGMENTS
+                              </span>
+                            </div>
+                            
+                            <div className="h-2 w-full bg-black/80 rounded-full overflow-hidden border border-white/5 relative">
+                              {/* Old Total Bar */}
+                              <div
+                                className="absolute left-0 top-0 bottom-0 rounded-full"
+                                style={{
+                                  width: `${(rew.oldTotal / 10) * 100}%`,
+                                  background: 'rgba(255,255,255,0.15)',
+                                }}
+                              />
+                              {/* Animated Added Bar */}
+                              <motion.div
+                                initial={{ width: `${(rew.oldTotal / 10) * 100}%` }}
+                                animate={{ width: `${(rew.newTotal / 10) * 100}%` }}
+                                transition={{ duration: 1.2, delay: index * 0.15 + 0.3, ease: 'easeOut' }}
+                                className="absolute left-0 top-0 bottom-0 rounded-full"
+                                style={{
+                                  background: `linear-gradient(90deg, ${rarityColor}, #00f0ff)`,
+                                  boxShadow: `0 0 8px ${rarityColor}`,
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Blinking unlocked notification banner */}
+                        {rew.newTotal >= 10 && (
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: [0, 1, 0.4, 1], scale: 1 }}
+                            transition={{ duration: 0.8, delay: index * 0.15 + 0.9 }}
+                            className="absolute right-3 bottom-2 px-2 py-0.5 text-[8px] font-mono font-black rounded"
+                            style={{
+                              background: 'rgba(0, 240, 255, 0.15)',
+                              border: '1px solid #00f0ff',
+                              color: '#00f0ff',
+                              boxShadow: '0 0 10px rgba(0, 240, 255, 0.3)',
+                              letterSpacing: '0.15em',
+                              textTransform: 'uppercase',
+                            }}
+                          >
+                            UNLOCKED
+                          </motion.div>
+                        )}
+                      </motion.div>
+                    );
+                  })}
+                </div>
+
+                {/* Continue CTA */}
+                <motion.button
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: fragmentRewards.length * 0.15 + 1.2 }}
+                  onClick={onComplete}
+                  className="w-full py-4 text-sm font-black italic tracking-wider uppercase border-2 border-black drop-shadow-[0_0_20px_rgba(255,215,0,0.3)] cursor-pointer"
+                  style={{
+                    background: 'linear-gradient(135deg, #ffd700, #ffaa00)',
+                    color: '#000',
+                    fontFamily: '"Impact", "Arial Black", sans-serif',
+                    transform: 'rotate(-0.5deg)',
+                    boxShadow: '4px 4px 0 #000',
+                  }}
+                >
+                  {meta.category === 'daily_claim' || meta.redirectPath === '/tutorial' || meta.redirectPath?.startsWith('/play/') ? '[ START PIM GATEWAY ]' : '[ COMPLETE SYNC ]'}
+                </motion.button>
+              </motion.div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

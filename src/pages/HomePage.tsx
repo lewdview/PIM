@@ -181,12 +181,12 @@ export default function HomePage() {
     }
   }, [today, hasClaimed, setHasClaimed, addToCollection, startReveal, setLocation, user]);
 
-  const handlePurchasePack = useCallback(async (category: PackCategory, size: PackSize, sessionId?: string, txHashOverride?: string, revealTypeOverride?: 'cinematic' | 'slide') => {
+  const handlePurchasePack = useCallback(async (category: PackCategory, size: PackSize, sessionId?: string) => {
     const cfg = PACK_CONFIGS[category];
     const tier = cfg?.tiers.find(t => t.size === size) ?? cfg?.tiers[0];
 
     // ── CRYPTO PAYMENT FOR USD PACKS (COINBASE SDK) ─────────────────
-    if (tier && tier.priceValue > 0 && category !== 'vault_token' && tier.price !== 'FREE' && !sessionId && !txHashOverride) {
+    if (tier && tier.priceValue > 0 && category !== 'vault_token' && tier.price !== 'FREE' && !sessionId) {
       try {
         const { payWithCrypto } = await import('../services/coinbaseService');
         useLoadingToast.getState().show('Waiting for wallet confirmation…');
@@ -200,35 +200,32 @@ export default function HomePage() {
           const cards = await purchasePack(category, size, undefined, txHash);
           if (cards.length > 0) {
             addToCollection(cards);
-            const revealType = revealTypeOverride || ('cinematic' as const);
+            const revealType = 'cinematic' as const;
             startReveal(cards, cfg && tier ? {
               category, size, label: cfg.label, icon: cfg.icon,
               accent: cfg.accent, gradient: cfg.gradient,
               price: tier.price, cardCount: tier.cardCount, revealType,
             } : undefined);
-            if (revealType !== 'slide') {
-              setLocation('/vault/reveal');
-            }
-            return cards;
+            setLocation('/vault/reveal');
           }
-          return [];
+          return;
         }
       } catch (err: any) {
         console.error('Crypto payment failed:', err);
         useLoadingToast.getState().hide();
         alert(err.message || 'Payment failed');
-        return [];
+        return;
       }
     }
 
     setIsPurchasing(true);
     try {
       useLoadingToast.getState().show('Opening pack…');
-      const cards = await purchasePack(category, size, sessionId, txHashOverride);
+      const cards = await purchasePack(category, size, sessionId);
       useLoadingToast.getState().hide();
       if (cards.length > 0) {
         addToCollection(cards);
-        const revealType = revealTypeOverride || ('cinematic' as const);
+        const revealType = 'cinematic' as const;
         audioManager.playSfx('open_chest', 0.9);
         startReveal(cards, cfg && tier ? {
           category,
@@ -241,16 +238,11 @@ export default function HomePage() {
           cardCount: tier.cardCount,
           revealType,
         } : undefined);
-        if (revealType !== 'slide') {
-          setLocation('/vault/reveal');
-        }
-        return cards;
+        setLocation('/vault/reveal');
       }
-      return [];
     } catch (err) {
       console.error('Pack purchase failed:', err);
       useLoadingToast.getState().hide();
-      return [];
     } finally {
       setIsPurchasing(false);
     }
@@ -363,7 +355,7 @@ export default function HomePage() {
             Rip A Pack
           </h2>
         </div>
-        <PackShop onPurchase={(cat, size) => handlePurchasePack(cat, size, undefined, undefined, 'slide')} />
+        <PackShop onPurchase={handlePurchasePack} />
       </section>
 
       <div className="h-px mx-4 md:mx-8" style={{ background: 'rgba(255,255,255,0.06)' }} />
