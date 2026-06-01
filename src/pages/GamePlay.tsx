@@ -253,6 +253,7 @@ export default function Game() {
   const hitFxRef = useRef<HitEffect[]>([]);
   const shieldChargesRef = useRef<number>(0);
   const lastMissTimeRef = useRef<number>(0);
+  const lastMissLaneTimeRef = useRef<number[]>([0, 0, 0]);
   const continueUsedRef = useRef<number>(0); // how many continues the player has used (max 3)
   const coverImgRef = useRef<HTMLImageElement | null>(null);
   const coverBlurRef = useRef<HTMLCanvasElement | null>(null);
@@ -626,6 +627,7 @@ export default function Game() {
           // Did not finish the slide
           ns.holdActive = false;
           ns.missed = true;
+          lastMissLaneTimeRef.current[ns.note.lane] = Date.now();
           const gsx = gsRef.current;
           gsx.combo = 0;
           gsx.misses++;
@@ -1304,11 +1306,13 @@ export default function Game() {
     let dirty = false;
     for (const ns of notesRef.current) {
       if (ns.hit) continue;
-      if (!isRewinding && ns.missed) continue;
       const { note } = ns;
-      const lc = getDifficultyLaneColor(laneColorsRef.current[note.lane], songRef.current?.difficultyLevel ?? 5, note.lane);
       const spawnT = note.time - AT;
       const prog = (t - spawnT) / AT;
+      const maxMissProg = (H - 45) / hitY;
+      if (!isRewinding && ns.missed && prog >= maxMissProg) continue;
+
+      const lc = getDifficultyLaneColor(laneColorsRef.current[note.lane], songRef.current?.difficultyLevel ?? 5, note.lane);
       const noteY = prog * hitY;
 
       if (ns.visualLane === undefined) {
@@ -1342,7 +1346,7 @@ export default function Game() {
         }
       }
 
-      if (ns.holdActive && ns.holdProgress >= 1 && (isSurge || ns.autoplayedBySurge)) {
+      if (ns.holdActive && ns.holdProgress >= 1) {
         ns.hit = true;
         ns.holdActive = false;
         const gs = gsRef.current;
@@ -1351,6 +1355,9 @@ export default function Game() {
         gs.maxCombo = Math.max(gs.maxCombo, gs.combo);
         gs.perfectPlus++;
         checkPowerUps(gs.combo);
+        haptics.mediumTap();
+        triggerHitFx(ns.currentLane, "PERFECT+");
+
         jRef.current = [
           ...jRef.current.filter((x) => Date.now() - x.ts < 600),
           { type: "PERFECT+", lane: ns.currentLane, id: ++jCounter.current, ts: Date.now() },
@@ -1403,6 +1410,7 @@ export default function Game() {
             syncDisplay();
           } else {
             ns.missed = true;
+            lastMissLaneTimeRef.current[note.lane] = Date.now();
             const gsx = gsRef.current;
             gsx.combo = 0;
             gsx.misses++;
@@ -1477,8 +1485,20 @@ export default function Game() {
       }
       const r = noteH * 0.32;
 
+      const isMissedNote = ns.missed;
+      const noteColor = isMissedNote ? "#FF3800" : lc;
+      let drawX = noteX;
+
+      if (isMissedNote) {
+        ctx.save();
+        ctx.globalAlpha = 0.38 * Math.max(0, (maxMissProg - prog) / (maxMissProg - 1.0));
+        if (Math.random() < 0.2) {
+          drawX += (Math.random() - 0.5) * 6; // Glitch horizontal offset
+        }
+      }
+
       if (note.type === "tap" || note.type === "swipe") {
-        drawKey(ctx, noteX, noteY, noteW, noteH, r, lc, prog, false, note.swipeDirection);
+        drawKey(ctx, drawX, noteY, noteW, noteH, r, noteColor, prog, false, note.swipeDirection);
       } else {
         // Hold/Slide trail — ivory ribbon with colored stripe
         const holdDur = note.holdDuration || 0.5;
@@ -1491,6 +1511,51 @@ export default function Game() {
 
         if (ns.holdActive) {
           const top = lerp(headY, hitY, ns.holdProgress);
+
+          // Active hold dial and sparks visual exposition at the hit zone!
+          const { x: ax_hold, w: aw_hold } = laneAt(ns.visualLane, 1, W);
+          const holdX = ax_hold + aw_hold * 0.5;
+          ctx.save();
+          ctx.shadowColor = noteColor;
+          ctx.shadowBlur = 20;
+          const ringPulse = 1.0 + 0.12 * Math.sin(t * 18);
+          
+          // Glowing ring
+          ctx.strokeStyle = noteColor;
+          ctx.lineWidth = 3.5;
+          ctx.beginPath();
+          ctx.arc(holdX, hitY, 18 * ringPulse, 0, Math.PI * 2);
+          ctx.stroke();
+          
+          // Progress arc
+          ctx.strokeStyle = "#ffffff";
+          ctx.lineWidth = 2.0;
+          ctx.beginPath();
+          ctx.arc(holdX, hitY, 14, -Math.PI / 2, -Math.PI / 2 + ns.holdProgress * Math.PI * 2);
+          ctx.stroke();
+          
+          // Completion percent text
+          ctx.fillStyle = "#ffffff";
+          ctx.font = `900 8px "Space Mono", monospace`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(`${Math.round(ns.holdProgress * 100)}%`, holdX, hitY);
+          
+          // Sizzling sparks
+          ctx.fillStyle = noteColor;
+          ctx.shadowColor = noteColor;
+          ctx.shadowBlur = 8;
+          for (let s = 0; s < 2; s++) {
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 18 + Math.random() * 12;
+            const sx = holdX + Math.cos(angle) * dist * ringPulse;
+            const sy = hitY + Math.sin(angle) * dist * ringPulse;
+            ctx.beginPath();
+            ctx.arc(sx, sy, 1.5, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.restore();
+
           if (noteY > top) {
             // Determine lanes for the active trail segment
             const { x: hx, w: hw } = laneAt(endLane, headP, W);
@@ -1507,17 +1572,17 @@ export default function Game() {
             ctx.quadraticCurveTo(ax + aw * 0.25, midY, hx + hw * 0.25, top);
             ctx.fill();
 
-            // Parse lane color to RGB for proper alpha compositing
-            const lcR = parseInt(lc.slice(1, 3), 16);
-            const lcG = parseInt(lc.slice(3, 5), 16);
-            const lcB = parseInt(lc.slice(5, 7), 16);
+            // Parse note color to RGB for proper alpha compositing
+            const lcR = parseInt(noteColor.slice(1, 3), 16);
+            const lcG = parseInt(noteColor.slice(3, 5), 16);
+            const lcB = parseInt(noteColor.slice(5, 7), 16);
 
             // ── ELECTRIC LIGHTNING ARCS ──
             const waveCount = 5;
             const trailLen = noteY - top;
             if (trailLen > 20) {
               ctx.save();
-              ctx.shadowColor = lc;
+              ctx.shadowColor = noteColor;
               ctx.shadowBlur = 18;
               for (let i = 0; i < waveCount; i++) {
                 const t_wave = (i + (t * 2.5) % 1) / waveCount;
@@ -1557,9 +1622,9 @@ export default function Game() {
             }
 
             // Colored stripe (Curved) with glow
-            ctx.fillStyle = lc;
+            ctx.fillStyle = noteColor;
             ctx.globalAlpha = 0.65;
-            ctx.shadowColor = lc;
+            ctx.shadowColor = noteColor;
             ctx.shadowBlur = 12;
             ctx.beginPath();
             ctx.moveTo(hx + hw * 0.38, top);
@@ -1580,8 +1645,8 @@ export default function Game() {
               const arrowPulse = 0.5 + 0.5 * Math.sin(t * 8);
               ctx.save();
               ctx.globalAlpha = 0.6 + arrowPulse * 0.4;
-              ctx.fillStyle = lc;
-              ctx.shadowColor = lc;
+              ctx.fillStyle = noteColor;
+              ctx.shadowColor = noteColor;
               ctx.shadowBlur = 12;
               ctx.beginPath();
               ctx.moveTo(arrowX + arrowDir * 12, arrowY);
@@ -1591,6 +1656,15 @@ export default function Game() {
               ctx.fill();
               ctx.restore();
             }
+            
+            // Draw gold terminus block at top of active hold
+            const tailP = lerp(headP, 1.0, ns.holdProgress);
+            const { x: tx_active, w: tw_active } = laneAt(endLane, tailP, W);
+            const tailH_active = lerp(22, 54, tailP);
+            const tailW_active = tw_active - 14;
+            const tailX_active = tx_active + 7;
+            const tailR_active = tailH_active * 0.32;
+            drawKey(ctx, tailX_active, top, tailW_active, tailH_active, tailR_active, noteColor, tailP, true, note.swipeDirection);
           }
         } else if (headY < noteY) {
           // Inactive trail — SMOOTH CURVE if it's a slide
@@ -1623,9 +1697,9 @@ export default function Game() {
           ctx.fill();
 
           // Colored center ribbon (curved)
-          ctx.fillStyle = lc;
+          ctx.fillStyle = noteColor;
           ctx.globalAlpha = 0.5;
-          ctx.shadowColor = lc;
+          ctx.shadowColor = noteColor;
           ctx.shadowBlur = 8;
           ctx.beginPath();
           ctx.moveTo(hx + hw * 0.38, headY);
@@ -1646,8 +1720,8 @@ export default function Game() {
             const arrowPulse2 = 0.4 + 0.3 * Math.sin(t * 6);
             ctx.save();
             ctx.globalAlpha = arrowPulse2;
-            ctx.fillStyle = lc;
-            ctx.shadowColor = lc;
+            ctx.fillStyle = noteColor;
+            ctx.shadowColor = noteColor;
             ctx.shadowBlur = 8;
             ctx.beginPath();
             ctx.moveTo(arrowX + arrowDir * 10, arrowY2);
@@ -1657,8 +1731,19 @@ export default function Game() {
             ctx.fill();
             ctx.restore();
           }
+
+          // Draw gold terminus block at the tail of the inactive hold (at headY)
+          const tailH_inactive = lerp(22, 54, headP);
+          const tailW_inactive = hw - 14;
+          const tailX_inactive = hx + 7;
+          const tailR_inactive = tailH_inactive * 0.32;
+          drawKey(ctx, tailX_inactive, headY, tailW_inactive, tailH_inactive, tailR_inactive, noteColor, headP, true, note.swipeDirection);
         }
-        drawKey(ctx, noteX, noteY, noteW, noteH, r, lc, prog, true, note.swipeDirection);
+        drawKey(ctx, drawX, noteY, noteW, noteH, r, noteColor, prog, false, note.swipeDirection);
+      }
+
+      if (isMissedNote) {
+        ctx.restore();
       }
     }
 
@@ -1808,6 +1893,83 @@ export default function Game() {
     baseGlow.addColorStop(1, "rgba(255,255,255,0.0)");
     ctx.fillStyle = baseGlow;
     ctx.fillRect(hwBot.left - 16, hitY, hwBot.width + 32, bloomH);
+
+    // ── 6.5. MISSED SIGNAL RECLAIM TRAP (VOID TRAP / DATA LEAK COLLECTOR) ──
+    const trapY = H - 55;
+    for (let i = 0; i < LANE_COUNT; i++) {
+      // Use the lane width and x at progress 1.0 (the baseline) since perspective lanes stop there
+      const { x: lx, w: lw } = laneAt(i, 1.0, W);
+      const x_start = lx + 8;
+      const x_end = lx + lw - 8;
+      const x_center = lx + lw / 2;
+      
+      const missTime = lastMissLaneTimeRef.current[i];
+      const timeDiff = Date.now() - missTime;
+      const active = timeDiff < 400;
+      
+      ctx.save();
+      
+      // If a note was recently missed in this lane, pulse the tray filled neon red glow
+      if (active) {
+        const fillAlpha = (1 - timeDiff / 400) * 0.42;
+        ctx.fillStyle = `rgba(255, 56, 0, ${fillAlpha})`;
+        // Pulsing neon shadow for the flash
+        ctx.shadowColor = "#FF3800";
+        ctx.shadowBlur = 15 + Math.sin(t * 25) * 8;
+        ctx.fillRect(x_start, trapY, x_end - x_start, 12);
+      }
+      
+      // Draw the bracket tray outline
+      ctx.strokeStyle = active ? "#FF3800" : "rgba(255, 56, 0, 0.4)";
+      ctx.lineWidth = active ? 2.5 : 1.5;
+      if (active) {
+        ctx.shadowColor = "#FF3800";
+        ctx.shadowBlur = 10;
+      } else {
+        ctx.shadowColor = "transparent";
+        ctx.shadowBlur = 0;
+      }
+      
+      ctx.beginPath();
+      ctx.moveTo(x_start, trapY - 8);
+      ctx.lineTo(x_start, trapY + 4);
+      ctx.lineTo(x_end, trapY + 4);
+      ctx.lineTo(x_end, trapY - 8);
+      ctx.stroke();
+      
+      // Draw inner signal glitch lines in the tray if active
+      if (active) {
+        ctx.strokeStyle = "#FFFFFF";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        const glitchY = trapY + 4 - (timeDiff / 400) * 12;
+        ctx.moveTo(x_start + 4, glitchY);
+        ctx.lineTo(x_end - 4, glitchY);
+        ctx.stroke();
+      }
+      
+      ctx.restore();
+      
+      // Render text label under the bracket
+      ctx.save();
+      if (active) {
+        ctx.fillStyle = "#FF3800";
+        ctx.shadowColor = "#FF3800";
+        ctx.shadowBlur = 6;
+        ctx.font = `900 9px "Space Mono", monospace`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.fillText("DATA LEAK!", x_center, trapY + 8);
+      } else {
+        ctx.fillStyle = "rgba(255, 56, 0, 0.35)";
+        ctx.shadowBlur = 0;
+        ctx.font = `900 8px "Space Mono", monospace`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.fillText("VOID TRAP", x_center, trapY + 8);
+      }
+      ctx.restore();
+    }
 
     // ── 7. MEDAL PROGRESS METER ─────────────────────────────────
     const MEDAL_STOPS = [
@@ -2200,7 +2362,7 @@ export default function Game() {
     };
   }, [hitLane, releaseLane, moveHold, getT]);
 
-  const touchStartPos = useRef<Record<number, { x: number, y: number, lane: number }>>({});
+  const touchStartPos = useRef<Record<number, { x: number, y: number, lane: number, originLane?: number }>>({});
 
   // ── Gesture Lock (Prevent mobile browser back/forward swipe) ──
   useEffect(() => {
@@ -2229,6 +2391,52 @@ export default function Game() {
     };
   }, []);
 
+  const resetAllLanes = useCallback(() => {
+    touchStartPos.current = {};
+    for (let lane = 0; lane < LANE_COUNT; lane++) {
+      if (laneRef.current[lane].pressed) {
+        laneRef.current[lane].pressed = false;
+        laneRef.current[lane].touchId = undefined;
+        releaseLane(lane);
+      }
+    }
+  }, [releaseLane]);
+
+  const checkSwipeGesture = useCallback(
+    (touch: React.Touch | Touch, start: { x: number; y: number; lane: number; originLane?: number }) => {
+      const dx = touch.clientX - start.x;
+      const dy = touch.clientY - start.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > 25) { // Flick threshold
+        const angle = Math.atan2(dy, dx);
+        const dirs: Note['swipeDirection'][] = [
+          'right', 'down-right', 'down', 'down-left', 'left', 'up-left', 'up', 'up-right'
+        ];
+        let normAngle = angle;
+        if (normAngle < 0) normAngle += Math.PI * 2;
+        const bucket = Math.round(normAngle / (Math.PI / 4)) % 8;
+        const swipeDir = dirs[bucket];
+
+        const t = getT();
+        const checkLane = start.originLane !== undefined ? start.originLane : start.lane;
+        const cand = notesRef.current.find(n =>
+          !n.hit && !n.missed && n.note.type === 'swipe' &&
+          n.note.swipeDirection === swipeDir &&
+          n.note.lane === checkLane &&
+          Math.abs(n.note.time - t) < missWindow(songRef.current?.difficultyLevel ?? 5)
+        );
+        if (cand) {
+          hitLane(checkLane, swipeDir);
+          start.x = touch.clientX;
+          start.y = touch.clientY;
+          return true;
+        }
+      }
+      return false;
+    },
+    [getT, hitLane],
+  );
+
   const onTouchStart = useCallback(
     (e: React.TouchEvent<HTMLCanvasElement>) => {
       e.preventDefault();
@@ -2243,7 +2451,7 @@ export default function Game() {
         if (lane >= 0 && lane < LANE_COUNT) {
           laneRef.current[lane].pressed = true;
           laneRef.current[lane].touchId = touch.identifier;
-          touchStartPos.current[touch.identifier] = { x: touch.clientX, y: touch.clientY, lane };
+          touchStartPos.current[touch.identifier] = { x: touch.clientX, y: touch.clientY, lane, originLane: lane };
           hitLane(lane);
         }
       }
@@ -2266,38 +2474,7 @@ export default function Game() {
         // Swipe detection while moving
         const start = touchStartPos.current[touch.identifier];
         if (start) {
-          const dx = touch.clientX - start.x;
-          const dy = touch.clientY - start.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist > 30) {
-            // Determine 8-way direction
-            const angle = Math.atan2(dy, dx); // -PI to PI
-            const dirs: Note['swipeDirection'][] = [
-              'right', 'down-right', 'down', 'down-left', 'left', 'up-left', 'up', 'up-right'
-            ];
-            // Normalize angle to 0..2PI and map to 8 buckets
-            let normAngle = angle;
-            if (normAngle < 0) normAngle += Math.PI * 2;
-            const bucket = Math.round(normAngle / (Math.PI / 4)) % 8;
-            const swipeDir = dirs[bucket];
-
-            // Only trigger if we haven't already swiped for this touch?
-            // Actually, for multiple swipes it's tricky.
-            // Let's see if there's a swipe note to hit
-            const t = getT();
-            const cand = notesRef.current.find(n =>
-              !n.hit && !n.missed && n.note.type === 'swipe' &&
-              n.note.swipeDirection === swipeDir &&
-              n.note.lane === start.lane &&
-              Math.abs(n.note.time - t) < missWindow(songRef.current?.difficultyLevel ?? 5)
-            );
-            if (cand) {
-              hitLane(start.lane, swipeDir);
-              // Reset start pos so we don't double-trigger
-              start.x = touch.clientX;
-              start.y = touch.clientY;
-            }
-          }
+          checkSwipeGesture(touch, start);
         }
 
         if (newLane >= 0 && newLane < LANE_COUNT) {
@@ -2315,7 +2492,7 @@ export default function Game() {
         }
       }
     },
-    [moveHold, getT, hitLane],
+    [moveHold, checkSwipeGesture],
   );
 
   const releaseTouchById = useCallback(
@@ -2336,20 +2513,74 @@ export default function Game() {
     (e: React.TouchEvent<HTMLCanvasElement>) => {
       e.preventDefault();
       for (let i = 0; i < e.changedTouches.length; i++) {
-        releaseTouchById(e.changedTouches[i].identifier);
+        const touch = e.changedTouches[i];
+        const start = touchStartPos.current[touch.identifier];
+        if (start) {
+          checkSwipeGesture(touch, start);
+        }
+        releaseTouchById(touch.identifier);
+      }
+      if (e.touches.length === 0) {
+        resetAllLanes();
       }
     },
-    [releaseTouchById],
+    [releaseTouchById, checkSwipeGesture, resetAllLanes],
   );
 
   const onTouchCancel = useCallback(
     (e: React.TouchEvent<HTMLCanvasElement>) => {
       for (let i = 0; i < e.changedTouches.length; i++) {
-        releaseTouchById(e.changedTouches[i].identifier);
+        const touch = e.changedTouches[i];
+        const start = touchStartPos.current[touch.identifier];
+        if (start) {
+          checkSwipeGesture(touch, start);
+        }
+        releaseTouchById(touch.identifier);
+      }
+      if (e.touches.length === 0) {
+        resetAllLanes();
       }
     },
-    [releaseTouchById],
+    [releaseTouchById, checkSwipeGesture, resetAllLanes],
   );
+
+  const onTouchMoveRef = useRef(onTouchMove);
+  const onTouchEndRef = useRef(onTouchEnd);
+  const onTouchCancelRef = useRef(onTouchCancel);
+
+  useEffect(() => {
+    onTouchMoveRef.current = onTouchMove;
+    onTouchEndRef.current = onTouchEnd;
+    onTouchCancelRef.current = onTouchCancel;
+  }, [onTouchMove, onTouchEnd, onTouchCancel]);
+
+  useEffect(() => {
+    const handleMove = (e: TouchEvent) => {
+      const p = phaseRef.current;
+      if (p !== 'playing' && p !== 'rewinding') return;
+      onTouchMoveRef.current(e as unknown as React.TouchEvent<HTMLCanvasElement>);
+    };
+    const handleEnd = (e: TouchEvent) => {
+      const p = phaseRef.current;
+      if (p !== 'playing' && p !== 'rewinding') return;
+      onTouchEndRef.current(e as unknown as React.TouchEvent<HTMLCanvasElement>);
+    };
+    const handleCancel = (e: TouchEvent) => {
+      const p = phaseRef.current;
+      if (p !== 'playing' && p !== 'rewinding') return;
+      onTouchCancelRef.current(e as unknown as React.TouchEvent<HTMLCanvasElement>);
+    };
+
+    window.addEventListener('touchmove', handleMove, { passive: false });
+    window.addEventListener('touchend', handleEnd, { passive: false });
+    window.addEventListener('touchcancel', handleCancel, { passive: false });
+
+    return () => {
+      window.removeEventListener('touchmove', handleMove);
+      window.removeEventListener('touchend', handleEnd);
+      window.removeEventListener('touchcancel', handleCancel);
+    };
+  }, []);
 
   // ── canvas resize — useLayoutEffect so dimensions are set before first paint ──
   useLayoutEffect(() => {
@@ -2784,7 +3015,8 @@ export default function Game() {
     setPaused(true);
     audioRef.current?.pause();
     audioManager.playSfx('pause', 0.5);
-  }, []);
+    resetAllLanes();
+  }, [resetAllLanes]);
 
   const doResume = useCallback(() => {
     if (!pausedRef.current) return;
@@ -2803,10 +3035,13 @@ export default function Game() {
 
   // Auto-pause on blur
   useEffect(() => {
-    const onBlur = () => { if (phaseRef.current === 'playing') doPause(); };
+    const onBlur = () => { 
+      if (phaseRef.current === 'playing') doPause(); 
+      resetAllLanes();
+    };
     window.addEventListener('blur', onBlur);
     return () => window.removeEventListener('blur', onBlur);
-  }, [doPause]);
+  }, [doPause, resetAllLanes]);
 
   // Handle manual keyboard pause (Escape)
   useEffect(() => {
@@ -3271,9 +3506,6 @@ export default function Game() {
             className="absolute inset-0"
             style={{ touchAction: 'none' }}
             onTouchStart={onTouchStart}
-            onTouchMove={onTouchMove}
-            onTouchEnd={onTouchEnd}
-            onTouchCancel={onTouchCancel}
             data-testid="canvas-game"
           />
 
@@ -3733,7 +3965,7 @@ function drawKey(
   r: number,
   lc: string,
   prog: number,
-  _isHold: boolean,
+  isHold: boolean,
   swipeDirection?: Note['swipeDirection'],
 ) {
   const centerX = noteX + noteW / 2;
@@ -3777,78 +4009,125 @@ function drawKey(
     ctx.roundRect(-noteW / 2, -noteH / 2, noteW, noteH, r);
   }
 
-  // ── 2. Render Ivory Body ──
-  ctx.shadowColor = "rgba(0,0,0,0.65)";
-  ctx.shadowBlur = lerp(4, 14, prog);
-  ctx.shadowOffsetY = lerp(2, 5, prog);
+  // ── 2. Render Ivory or Gold Body ──
+  if (isHold) {
+    // Rich metallic gold gradient
+    const goldGrad = ctx.createLinearGradient(0, -noteH / 2, 0, noteH / 2);
+    goldGrad.addColorStop(0, "#FFF5C0");
+    goldGrad.addColorStop(0.2, "#FFD700");
+    goldGrad.addColorStop(0.5, "#FFA500");
+    goldGrad.addColorStop(0.8, "#D4AF37");
+    goldGrad.addColorStop(1, "#8B6508");
+    ctx.fillStyle = goldGrad;
+    ctx.shadowColor = "rgba(212,175,55,0.7)";
+    ctx.shadowBlur = lerp(8, 20, prog);
+    ctx.shadowOffsetY = 0;
+  } else {
+    ctx.shadowColor = "rgba(0,0,0,0.65)";
+    ctx.shadowBlur = lerp(4, 14, prog);
+    ctx.shadowOffsetY = lerp(2, 5, prog);
 
-  const bodyGrad = ctx.createLinearGradient(0, -noteH / 2, 0, noteH / 2);
-  bodyGrad.addColorStop(0, "rgba(255, 252, 243, 0.98)");
-  bodyGrad.addColorStop(0.22, "rgba(252, 248, 238, 0.97)");
-  bodyGrad.addColorStop(0.75, "rgba(242, 236, 220, 0.97)");
-  bodyGrad.addColorStop(1, "rgba(228, 220, 204, 0.96)");
-  ctx.fillStyle = bodyGrad;
+    const bodyGrad = ctx.createLinearGradient(0, -noteH / 2, 0, noteH / 2);
+    bodyGrad.addColorStop(0, "rgba(255, 252, 243, 0.98)");
+    bodyGrad.addColorStop(0.22, "rgba(252, 248, 238, 0.97)");
+    bodyGrad.addColorStop(0.75, "rgba(242, 236, 220, 0.97)");
+    bodyGrad.addColorStop(1, "rgba(228, 220, 204, 0.96)");
+    ctx.fillStyle = bodyGrad;
+  }
   ctx.fill();
 
-  // ── 3. Subtle edge border ──
+  // ── 3. Subtle Edge Border or White Double-Stroke Border ──
   ctx.shadowColor = "transparent";
   ctx.shadowBlur = 0;
   ctx.shadowOffsetY = 0;
-  ctx.strokeStyle = "rgba(160, 150, 132, 0.45)";
-  ctx.lineWidth = 1;
-  ctx.stroke();
-
-  // ── 4. COLORED CENTER STRIPE ──
-  const stripeH = Math.max(6, noteH * 0.26);
-  ctx.shadowColor = lc;
-  ctx.shadowBlur = lerp(20, 42, prog);
-  ctx.fillStyle = lc;
-  ctx.globalAlpha = 0.9;
-
-  ctx.beginPath();
-  if (swipeDirection) {
-    const sw = noteW / 2 - 4;
-    const sh = stripeH / 2;
-    const sr = 4; // stripe radius
-    ctx.moveTo(-sw + sr, -sh);
-    ctx.arcTo(sw * 0.2, -sh, sw, 0, sr);
-    ctx.arcTo(sw, 0, sw * 0.2, sh, sr);
-    ctx.arcTo(sw * 0.2, sh, -sw, sh, sr);
-    ctx.arcTo(-sw, sh, -sw * 0.35, 0, sr);
-    ctx.arcTo(-sw * 0.35, 0, -sw, -sh, sr);
-    ctx.arcTo(-sw, -sh, -sw + sr, -sh, sr);
-    ctx.closePath();
+  if (isHold) {
+    // Outer white stroke
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.95)";
+    ctx.lineWidth = 3.5;
+    ctx.stroke();
+    // Inner gold separation
+    ctx.strokeStyle = "#D4AF37";
+    ctx.lineWidth = 2.0;
+    ctx.stroke();
+    // Inner white core stroke
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.95)";
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
   } else {
-    ctx.roundRect(-noteW / 2 + 2, -stripeH / 2, noteW - 4, stripeH, stripeH * 0.35);
+    ctx.strokeStyle = "rgba(160, 150, 132, 0.45)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
   }
-  ctx.fill();
 
-  // ── 5. Bright inner core of stripe ──
-  const coreH = stripeH * 0.48;
-  const coreGrad = ctx.createLinearGradient(0, -coreH / 2, 0, coreH / 2);
-  coreGrad.addColorStop(0, "rgba(255,255,255,0.5)");
-  coreGrad.addColorStop(0.4, "rgba(255,255,255,0.85)");
-  coreGrad.addColorStop(1, "rgba(255,255,255,0.2)");
-  ctx.fillStyle = coreGrad;
-  ctx.globalAlpha = 0.75;
-
-  ctx.beginPath();
-  if (swipeDirection) {
-    const cw = noteW / 2 - 10;
-    const ch = coreH / 2;
-    const cr = 2; // core radius
-    ctx.moveTo(-cw + cr, -ch);
-    ctx.arcTo(cw * 0.2, -ch, cw, 0, cr);
-    ctx.arcTo(cw, 0, cw * 0.2, ch, cr);
-    ctx.arcTo(cw * 0.2, ch, -cw, ch, cr);
-    ctx.arcTo(-cw, ch, -cw * 0.35, 0, cr);
-    ctx.arcTo(-cw * 0.35, 0, -cw, -ch, cr);
-    ctx.arcTo(-cw, -ch, -cw + cr, -ch, cr);
-    ctx.closePath();
+  if (isHold) {
+    // ── 4. WHITE CORE DOT FOR HOLD TERMINUS ──
+    ctx.fillStyle = "#FFFFFF";
+    ctx.shadowColor = "#FFFFFF";
+    ctx.shadowBlur = 12;
+    ctx.globalAlpha = 0.95;
+    ctx.beginPath();
+    ctx.arc(0, 0, 5, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Add outer white glowing ring for the core dot
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, 8, 0, Math.PI * 2);
+    ctx.stroke();
   } else {
-    ctx.roundRect(-noteW / 2 + 5, -coreH / 2, noteW - 10, coreH, stripeH * 0.2);
+    // ── 4. COLORED CENTER STRIPE ──
+    const stripeH = Math.max(6, noteH * 0.26);
+    ctx.shadowColor = lc;
+    ctx.shadowBlur = lerp(20, 42, prog);
+    ctx.fillStyle = lc;
+    ctx.globalAlpha = 0.9;
+
+    ctx.beginPath();
+    if (swipeDirection) {
+      const sw = noteW / 2 - 4;
+      const sh = stripeH / 2;
+      const sr = 4; // stripe radius
+      ctx.moveTo(-sw + sr, -sh);
+      ctx.arcTo(sw * 0.2, -sh, sw, 0, sr);
+      ctx.arcTo(sw, 0, sw * 0.2, sh, sr);
+      ctx.arcTo(sw * 0.2, sh, -sw, sh, sr);
+      ctx.arcTo(-sw, sh, -sw * 0.35, 0, sr);
+      ctx.arcTo(-sw * 0.35, 0, -sw, -sh, sr);
+      ctx.arcTo(-sw, -sh, -sw + sr, -sh, sr);
+      ctx.closePath();
+    } else {
+      ctx.roundRect(-noteW / 2 + 2, -stripeH / 2, noteW - 4, stripeH, stripeH * 0.35);
+    }
+    ctx.fill();
+
+    // ── 5. Bright inner core of stripe ──
+    const coreH = stripeH * 0.48;
+    const coreGrad = ctx.createLinearGradient(0, -coreH / 2, 0, coreH / 2);
+    coreGrad.addColorStop(0, "rgba(255,255,255,0.5)");
+    coreGrad.addColorStop(0.4, "rgba(255,255,255,0.85)");
+    coreGrad.addColorStop(1, "rgba(255,255,255,0.2)");
+    ctx.fillStyle = coreGrad;
+    ctx.globalAlpha = 0.75;
+
+    ctx.beginPath();
+    if (swipeDirection) {
+      const cw = noteW / 2 - 10;
+      const ch = coreH / 2;
+      const cr = 2; // core radius
+      ctx.moveTo(-cw + cr, -ch);
+      ctx.arcTo(cw * 0.2, -ch, cw, 0, cr);
+      ctx.arcTo(cw, 0, cw * 0.2, ch, cr);
+      ctx.arcTo(cw * 0.2, ch, -cw, ch, cr);
+      ctx.arcTo(-cw, ch, -cw * 0.35, 0, cr);
+      ctx.arcTo(-cw * 0.35, 0, -cw, -ch, cr);
+      ctx.arcTo(-cw, -ch, -cw + cr, -ch, cr);
+      ctx.closePath();
+    } else {
+      ctx.roundRect(-noteW / 2 + 5, -coreH / 2, noteW - 10, coreH, stripeH * 0.2);
+    }
+    ctx.fill();
   }
-  ctx.fill();
 
   ctx.restore();
   ctx.globalAlpha = 1;
