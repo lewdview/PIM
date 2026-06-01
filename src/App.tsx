@@ -136,12 +136,20 @@ export default function App() {
               <p className="font-mono text-xs text-white/40 mb-8 max-w-md uppercase">
                 The neural pathway you requested does not exist or has been decommissioned.
               </p>
-              <a
-                href="/arcade"
-                className="px-6 py-3 border-2 border-black bg-[#ff3800] text-black font-black uppercase text-xs tracking-wider shadow-[4px_4px_0_#000] hover:scale-105 active:scale-95 transition-all"
-              >
-                Back to Arcade
-              </a>
+              <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">
+                <a
+                  href="/arcade"
+                  className="px-6 py-3 border-2 border-black bg-[#ff3800] text-black font-black uppercase text-xs tracking-wider shadow-[4px_4px_0_#000] hover:scale-105 active:scale-95 transition-all"
+                >
+                  Back to Arcade
+                </a>
+                <button
+                  onClick={() => { window.location.href = '/'; }}
+                  className="px-6 py-3 border-2 border-[#ff3800] bg-transparent text-[#ff3800] font-black uppercase text-xs tracking-wider shadow-[4px_4px_0_#ff3800] hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                >
+                  Restart System
+                </button>
+              </div>
             </div>
           </Route>
         </Switch>
