@@ -30,6 +30,7 @@ type Phase =
 interface Props {
   meta: RevealPackMeta;
   cards: OwnedCard[];
+  accumulatedCards: OwnedCard[];
   onComplete: () => void;
   onBuyAnother?: () => void;
   isRepurchasing?: boolean;
@@ -400,7 +401,7 @@ const shimmerKeyframes = `
 
 // ── Main Component ───────────────────────────────────────────────────
 
-export default function PackContainer({ meta, cards, onComplete, onBuyAnother, isRepurchasing }: Props) {
+export default function PackContainer({ meta, cards, accumulatedCards, onComplete, onBuyAnother, isRepurchasing }: Props) {
   const [phase, setPhase] = useState<Phase>('preloading');
   const [flipIndex, setFlipIndex] = useState(-1); // current card being flipped
   const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
@@ -443,17 +444,30 @@ export default function PackContainer({ meta, cards, onComplete, onBuyAnother, i
   const [fragmentRewards, setFragmentRewards] = useState<FragmentReward[]>([]);
 
   const handleStartDecrypter = useCallback(() => {
-    const rewards: FragmentReward[] = cards.map((owned) => {
+    const grouped: { [cardId: string]: { card: OwnedCard['card']; totalGain: number } } = {};
+    
+    accumulatedCards.forEach((owned) => {
       const card = owned.card;
       const rarity = card.rarity as Rarity;
       let gain = 2;
       if (rarity === 'uncommon') gain = 3;
       else if (rarity === 'rare') gain = 5;
       else if (rarity === 'legendary' || rarity === 'mythic') gain = 10;
+      
+      if (!grouped[card.id]) {
+        grouped[card.id] = {
+          card,
+          totalGain: 0
+        };
+      }
+      grouped[card.id].totalGain += gain;
+    });
 
+    const rewards: FragmentReward[] = Object.values(grouped).map(({ card, totalGain }) => {
+      const rarity = card.rarity as Rarity;
       const storageKey = `fragments_${card.id}`;
       const oldTotal = parseInt(localStorage.getItem(storageKey) || '0', 10);
-      const newTotal = Math.min(10, oldTotal + gain);
+      const newTotal = Math.min(10, oldTotal + totalGain);
 
       // Write to localStorage
       localStorage.setItem(storageKey, newTotal.toString());
@@ -464,7 +478,7 @@ export default function PackContainer({ meta, cards, onComplete, onBuyAnother, i
         artist: card.artist,
         coverArt: card.coverUrl || null,
         rarity,
-        added: gain,
+        added: totalGain,
         oldTotal,
         newTotal,
         unlocked: newTotal >= 10 && oldTotal < 10,
@@ -474,7 +488,7 @@ export default function PackContainer({ meta, cards, onComplete, onBuyAnother, i
     setFragmentRewards(rewards);
     setShowFragmentDecrypter(true);
     setDecrypterPhase('idle');
-  }, [cards]);
+  }, [accumulatedCards]);
 
   useEffect(() => {
     if (firstUnlockCard && firstUnlockCard.card.audioUrl) {
@@ -1528,7 +1542,7 @@ export default function PackContainer({ meta, cards, onComplete, onBuyAnother, i
                       fontFamily: '"JetBrains Mono", monospace', fontSize: '9px', color: '#7000ff',
                       fontWeight: 900, letterSpacing: '0.2em', marginTop: '6px',
                     }}>
-                      POD {cards.length}x
+                      POD {accumulatedCards.length}x
                     </span>
                   </div>
                 </motion.div>
@@ -1550,7 +1564,7 @@ export default function PackContainer({ meta, cards, onComplete, onBuyAnother, i
                     fontFamily: '"JetBrains Mono", monospace', fontSize: '8px',
                     letterSpacing: '0.12em', opacity: 0.3, color: '#fff',
                   }}>
-                    EXTRACTS {cards.map(c => {
+                    EXTRACTS {accumulatedCards.map(c => {
                       const rarity = c.card.rarity;
                       return rarity === 'common' ? 2 : rarity === 'uncommon' ? 3 : rarity === 'rare' ? 5 : 10;
                     }).reduce((a, b) => a + b, 0)} TOTAL FRAGMENTS

@@ -10,7 +10,7 @@ import UltraRewardModal from '../components/UltraRewardModal';
 import PackRipAnimation from '../components/PackRipAnimation';
 import PackContainer from '../components/cinematic/PackContainer';
 
-import { purchasePack, sellCard } from '../services/vaultService';
+import { purchasePack, sellCard, type OwnedCard } from '../services/vaultService';
 import { audioManager } from '../game/audio';
 import { haptics } from '../utils/haptics';
 
@@ -18,6 +18,7 @@ export default function PackRevealPage() {
   const [, setLocation] = useLocation();
   const { revealCards, endReveal, revealPackMeta, startReveal, addToCollection, removeFromCollection, loadVaultData } = useVaultStore();
   const [isRepurchasing, setIsRepurchasing] = useState(false);
+  const [accumulatedCards, setAccumulatedCards] = useState<OwnedCard[]>(() => revealCards);
   const [revealedIndex, setRevealedIndex] = useState(0);
   const [showSummary, setShowSummary] = useState(false);
   const [ultraModalOpen, setUltraModalOpen] = useState(false);
@@ -94,6 +95,7 @@ export default function PackRevealPage() {
       addToCollection(cards);
       setRevealedIndex(0);
       setShowSummary(false);
+      setAccumulatedCards((prev) => [...prev, ...cards]);
       const newRipDone = revealPackMeta.revealType !== 'tap' && revealPackMeta.revealType !== 'cinematic';
       setRipDone(newRipDone);
       startReveal(cards, revealPackMeta);
@@ -129,6 +131,7 @@ export default function PackRevealPage() {
         key={`pack-${revealCards[0]?.id}`}
         meta={revealPackMeta}
         cards={revealCards}
+        accumulatedCards={accumulatedCards}
         onComplete={handleDone}
         onBuyAnother={revealPackMeta?.showRipAnother ? handleBuyAnother : undefined}
         isRepurchasing={isRepurchasing}
