@@ -7,6 +7,7 @@ import {
 } from '../utils/adminConfig';
 import { type BurnResult } from '../utils/echoSystem';
 import { supabase } from './supabaseClient';
+import dayFileMap from '../game/day_file_map.json';
 
 // ===== TYPES =====
 export interface VaultCard {
@@ -29,9 +30,80 @@ export interface VaultCard {
   maxSupply: number;
 }
 
+// Helper to resolve supabase / local paths based on day_file_map
+function resolveUrls(r: Partial<ReleaseItem>): { audioUrl: string; coverUrl: string } {
+  const useLocal = (typeof localStorage !== 'undefined' && (localStorage.getItem('opt_useLocalFiles') === 'true' || localStorage.getItem('useLocalFiles') === 'true')) || 
+                   (import.meta.env && import.meta.env.VITE_USE_LOCAL_FILES === 'true');
+
+  const dayNum = typeof r.day === 'string' ? parseInt(r.day, 10) : (r.day || 1);
+  const dayStr = String(dayNum);
+  const mapped = (dayFileMap as any)[dayStr];
+
+  let audioUrl = r.storedAudioUrl || '';
+  let coverUrl = r.coverArt || '';
+  if (coverUrl) {
+    coverUrl = coverUrl.replace(/\.png$/i, '.jpg');
+  }
+
+  const SUPABASE_BASE = 'https://pznmptudgicrmljjafex.supabase.co/storage/v1/object/public/releaseready/';
+  const LOCAL_BASE = '/@fs/Volumes/extremeUno/th3scr1b3-365-warp/365-releases/';
+
+  if (useLocal) {
+    if (mapped && mapped.audio) {
+      audioUrl = LOCAL_BASE + mapped.audio;
+    } else {
+      const raw = r as any;
+      if (raw.manifestAudioPath) {
+        audioUrl = LOCAL_BASE + decodeURIComponent(raw.manifestAudioPath);
+      } else if (raw.fileName && raw.date) {
+        const parts = raw.date.split('-');
+        const monthNum = parseInt(parts[1], 10);
+        const months = [
+          'january', 'february', 'march', 'april', 'may', 'june',
+          'july', 'august', 'september', 'october', 'november', 'december'
+        ];
+        const monthStr = months[monthNum - 1];
+        audioUrl = LOCAL_BASE + `audio/${monthStr}/${decodeURIComponent(raw.fileName)}`;
+      }
+    }
+
+    if (mapped && mapped.cover) {
+      coverUrl = LOCAL_BASE + mapped.cover;
+    } else {
+      if (coverUrl && coverUrl.includes('/releaseready/')) {
+        const parts = coverUrl.split('/releaseready/');
+        if (parts.length > 1) {
+          coverUrl = LOCAL_BASE + decodeURIComponent(parts[1]);
+        }
+      }
+    }
+  } else {
+    // Online mode: Correct URLs using database-storage mappings
+    if (mapped) {
+      if (mapped.audio) {
+        audioUrl = SUPABASE_BASE + encodeURIComponent(mapped.audio).replace(/%2F/g, '/');
+      }
+      if (mapped.cover) {
+        coverUrl = SUPABASE_BASE + encodeURIComponent(mapped.cover).replace(/%2F/g, '/');
+      } else if (dayNum >= 143 && dayNum <= 151) {
+        // May 23-31 covers are missing entirely
+        coverUrl = '';
+      }
+    }
+  }
+
+  return { audioUrl, coverUrl };
+}
+
 export function getSafeFallbackCard(cardId: string, rarity: Rarity): VaultCard {
   const dayMatch = cardId?.match(/(\d+)/);
   const dayNum = dayMatch ? parseInt(dayMatch[1], 10) : 1;
+  const { audioUrl, coverUrl } = resolveUrls({
+    day: dayNum,
+    title: `Card ${cardId}`,
+    storageTitle: `card-${cardId}`,
+    mood: 'dark'
+  });
   return {
     id: cardId || 'unknown-card',
     day: dayNum || 1,
@@ -44,8 +116,8 @@ export function getSafeFallbackCard(cardId: string, rarity: Rarity): VaultCard {
     tempo: 120,
     genre: [],
     tags: [],
-    coverUrl: '',
-    audioUrl: '',
+    coverUrl,
+    audioUrl,
     description: `Fallback representation for card ${cardId}`,
     claimedCount: 0,
     maxSupply: 100,
@@ -250,9 +322,8 @@ export async function fetchAllCards(): Promise<VaultCard[]> {
     else if (rarityRoll < 0.12 + traitScore * 0.05) rarity = 'rare';
     else if (rarityRoll < 0.35 + traitScore * 0.05) rarity = 'uncommon';
 
-    // Use actual URLs from the data — they already point to Supabase
-    const coverUrl = (r.coverArt || '').replace(/\.png$/i, '.jpg');
-    const audioUrl = r.storedAudioUrl || '';
+    // Use actual URLs from the data — resolved via day_file_map
+    const { audioUrl, coverUrl } = resolveUrls(r);
 
     const description = dayOverride?.info || r.description || '';
 
@@ -303,6 +374,8 @@ export async function fetchAllCards(): Promise<VaultCard[]> {
     try { genre = typeof r.genre === 'string' ? JSON.parse(r.genre.replace(/'/g, '"')) : (r.genre || []); } catch { genre = []; }
     try { tags = typeof r.tags === 'string' ? JSON.parse(r.tags.replace(/'/g, '"')) : (r.tags || []); } catch { tags = []; }
 
+    const { audioUrl, coverUrl } = resolveUrls(r);
+
     cards.push({
       id: `card-${dayNum}`,
       day: dayNum,
@@ -315,8 +388,8 @@ export async function fetchAllCards(): Promise<VaultCard[]> {
       tempo,
       genre,
       tags,
-      coverUrl: (r.coverArt || '').replace(/\.png$/i, '.jpg'),
-      audioUrl: r.storedAudioUrl || '',
+      coverUrl,
+      audioUrl,
       description: dayOverride?.info || r.description || '',
       claimedCount: 0,
       maxSupply: 100,

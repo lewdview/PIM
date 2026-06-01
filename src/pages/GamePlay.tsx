@@ -8,6 +8,7 @@ import { loadOpts, keyLabel, type GameOpts } from "@/lib/options";
 import { audioManager } from "@/game/audio";
 import { useVaultStore } from "@/store/useVaultStore";
 import { haptics } from "../utils/haptics";
+import { motion } from "framer-motion";
 
 // ── constants ────────────────────────────────────────────────────
 const LANE_COUNT = 3;
@@ -153,6 +154,7 @@ interface HitParticle {
   vx: number;
   vy: number;
   size: number;
+  isSwipeLine?: boolean;
 }
 interface HitEffect {
   lane: number;
@@ -254,6 +256,17 @@ export default function Game() {
   const shieldChargesRef = useRef<number>(0);
   const lastMissTimeRef = useRef<number>(0);
   const lastMissLaneTimeRef = useRef<number[]>([0, 0, 0]);
+  
+  // Visual polish tracking refs
+  interface MilestoneEffect {
+    combo: number;
+    startMs: number;
+    color: string;
+  }
+  const lastTapTimeRef = useRef<number[]>([0, 0, 0]);
+  const lastMilestoneRef = useRef<number>(0);
+  const milestoneFxRef = useRef<MilestoneEffect[]>([]);
+
   const continueUsedRef = useRef<number>(0); // how many continues the player has used (max 3)
   const coverImgRef = useRef<HTMLImageElement | null>(null);
   const coverBlurRef = useRef<HTMLCanvasElement | null>(null);
@@ -403,7 +416,7 @@ export default function Game() {
   );
 
   const triggerHitFx = useCallback(
-    (lane: number, kind: "PERFECT+" | "PERFECT" | "GOOD" | "SHIELDED", customY?: number) => {
+    (lane: number, kind: "PERFECT+" | "PERFECT" | "GOOD" | "SHIELDED", customY?: number, swipeDir?: Note['swipeDirection']) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
       const W = canvas.width;
@@ -425,14 +438,38 @@ export default function Game() {
               ? 13
               : 9;
 
+      let swipeAngle: number | null = null;
+      if (swipeDir) {
+        if (swipeDir === 'up') swipeAngle = -Math.PI / 2;
+        else if (swipeDir === 'down') swipeAngle = Math.PI / 2;
+        else if (swipeDir === 'left') swipeAngle = Math.PI;
+        else if (swipeDir === 'right') swipeAngle = 0;
+        else if (swipeDir === 'up-left') swipeAngle = -Math.PI * 0.75;
+        else if (swipeDir === 'up-right') swipeAngle = -Math.PI * 0.25;
+        else if (swipeDir === 'down-left') swipeAngle = Math.PI * 0.75;
+        else if (swipeDir === 'down-right') swipeAngle = Math.PI * 0.25;
+      }
+
       const particles: HitParticle[] = [];
       for (let i = 0; i < count; i++) {
-        const angle = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * (kind === "SHIELDED" ? 0.4 : 0.6);
-        const speed = kind === "SHIELDED" ? 120 + Math.random() * 200 : 90 + Math.random() * 160;
+        let angle: number;
+        let speed: number;
+        let isSwipeLine = false;
+
+        if (swipeAngle !== null) {
+          angle = swipeAngle + (Math.random() - 0.5) * 0.45;
+          speed = 220 + Math.random() * 220;
+          isSwipeLine = true;
+        } else {
+          angle = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * (kind === "SHIELDED" ? 0.4 : 0.6);
+          speed = kind === "SHIELDED" ? 120 + Math.random() * 200 : 90 + Math.random() * 160;
+        }
+
         particles.push({
           vx: Math.cos(angle) * speed,
-          vy: Math.sin(angle) * speed - (kind === "SHIELDED" ? 40 : 80),
+          vy: Math.sin(angle) * speed - (swipeAngle !== null ? 0 : (kind === "SHIELDED" ? 40 : 80)),
           size: (kind === "SHIELDED" ? 3 : 2.5) + Math.random() * 4.5,
+          isSwipeLine,
         });
       }
       hitFxRef.current.push({
@@ -571,7 +608,7 @@ export default function Game() {
       ];
 
       // ── Hit explosion effect ──
-      triggerHitFx(lane, j);
+      triggerHitFx(lane, j, undefined, direction || ns.note.swipeDirection);
 
       syncDisplay();
     },
@@ -912,6 +949,18 @@ export default function Game() {
     const pu = puRef.current;
     gs.progress = Math.min(1, t / song.duration);
 
+    // Combo milestone tracking
+    if (gs.combo === 0) {
+      lastMilestoneRef.current = 0;
+    } else if (gs.combo % 50 === 0 && gs.combo !== lastMilestoneRef.current) {
+      lastMilestoneRef.current = gs.combo;
+      milestoneFxRef.current.push({
+        combo: gs.combo,
+        startMs: Date.now(),
+        color: gs.combo >= 100 ? "#39FF14" : "#E5B800",
+      });
+    }
+
     // Power-up display sync
     if (pu.active && t < pu.endTime) {
       setPuDisplay({
@@ -938,6 +987,21 @@ export default function Game() {
     if (modifierRef.current === 'corrupted_signal') {
       if (Math.random() < 0.07) {
         ctx.translate((Math.random() - 0.5) * 14, 0);
+      }
+    }
+
+    // ── Miss screen jitter shake ──
+    {
+      const nowMs = Date.now();
+      const missAge = Math.min(
+        ...lastMissLaneTimeRef.current.map((t2) => nowMs - t2),
+      );
+      if (missAge < 280) {
+        const strength = (1 - missAge / 280) * 9;
+        ctx.translate(
+          (Math.random() - 0.5) * strength,
+          (Math.random() - 0.5) * strength * 0.5,
+        );
       }
     }
 
@@ -1840,19 +1904,25 @@ export default function Game() {
       ctx.save();
       for (const p of e.particles) {
         const px = e.cx + p.vx * dt;
-        const py = e.cy + p.vy * dt + 180 * dt * dt; // gravity
+        const py = e.cy + p.vy * dt + (p.isSwipeLine ? 0 : 180 * dt * dt); // gravity only for tap particles
         const life = Math.max(0, 1 - t01 * 1.4);
         const size = p.size * (0.3 + 0.7 * (1 - t01));
         ctx.shadowColor = e.color;
-        ctx.shadowBlur = size * 2.5;
-        ctx.fillStyle =
-          e.color +
-          Math.round(life * 255)
-            .toString(16)
-            .padStart(2, "0");
-        ctx.beginPath();
-        ctx.arc(px, py, size, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.shadowBlur = size * (p.isSwipeLine ? 4.5 : 2.5);
+
+        if (p.isSwipeLine) {
+          ctx.strokeStyle = e.color + Math.round(life * 255).toString(16).padStart(2, "0");
+          ctx.lineWidth = size * 1.6;
+          ctx.beginPath();
+          ctx.moveTo(px - p.vx * 0.035, py - p.vy * 0.035);
+          ctx.lineTo(px, py);
+          ctx.stroke();
+        } else {
+          ctx.fillStyle = e.color + Math.round(life * 255).toString(16).padStart(2, "0");
+          ctx.beginPath();
+          ctx.arc(px, py, size, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
       ctx.shadowBlur = 0;
       ctx.shadowColor = "transparent";
@@ -1888,6 +1958,58 @@ export default function Game() {
       }
       ctx.restore();
       void easeOut; // suppress unused warning
+    }
+
+    // ── 5d. KEY PRESS SHOCKWAVE RIPPLES ───────────────────────────
+    for (let i = 0; i < LANE_COUNT; i++) {
+      const tapAge = nowMs - lastTapTimeRef.current[i];
+      if (tapAge < 250) {
+        const rt = tapAge / 250;
+        const { x: lx, w: lw } = laneAt(i, 1, W);
+        const cx = lx + lw / 2;
+        const ringR = rt * lw * 0.85;
+        const ringAlpha = Math.pow(1 - rt, 1.4) * 0.65;
+        const lc = getDifficultyLaneColor(laneColorsRef.current[i], songRef.current?.difficultyLevel ?? 5, i);
+
+        ctx.save();
+        ctx.strokeStyle = `rgba(255, 255, 255, ${ringAlpha})`;
+        ctx.lineWidth = lerp(4, 0.5, rt);
+        ctx.shadowColor = lc;
+        ctx.shadowBlur = 15 * (1 - rt);
+        ctx.beginPath();
+        ctx.arc(cx, hitY, ringR, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    // ── 5e. COMBO MILESTONE EFFECTS ──────────────────────────────
+    const MILESTONE_DURATION = 1000;
+    milestoneFxRef.current = milestoneFxRef.current.filter(
+      (m) => nowMs - m.startMs < MILESTONE_DURATION,
+    );
+    for (const m of milestoneFxRef.current) {
+      const t01 = (nowMs - m.startMs) / MILESTONE_DURATION;
+      const alpha = 1 - t01;
+
+      ctx.save();
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.shadowColor = m.color;
+      ctx.shadowBlur = 20 * (1 - t01);
+
+      // Expanding glow ring behind the text
+      ctx.strokeStyle = `${m.color}${Math.round(alpha * 0.25 * 255).toString(16).padStart(2, "0")}`;
+      ctx.lineWidth = 4 * (1 - t01);
+      ctx.beginPath();
+      ctx.arc(W / 2, H * 0.25, t01 * 180, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Floating text
+      ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
+      ctx.font = `900 24px "Impact", sans-serif`;
+      ctx.fillText(`${m.combo} COMBO!`, W / 2, H * 0.25 - t01 * 60);
+      ctx.restore();
     }
 
     // ── 6. HIT ZONE BASELINE ────────────────────────────────────
@@ -2164,6 +2286,25 @@ export default function Game() {
       }
     }
 
+    // ── Red vignette flash on miss ──
+    {
+      const nowMs = Date.now();
+      const missAge = Math.min(
+        ...lastMissLaneTimeRef.current.map((t2) => nowMs - t2),
+      );
+      if (missAge < 350) {
+        const intensity = (1 - missAge / 350) * 0.13;
+        const vg = ctx.createRadialGradient(
+          W / 2, H / 2, H * 0.25,
+          W / 2, H / 2, H * 0.82,
+        );
+        vg.addColorStop(0, "rgba(255,0,0,0)");
+        vg.addColorStop(1, `rgba(255,0,0,${intensity.toFixed(3)})`);
+        ctx.fillStyle = vg;
+        ctx.fillRect(0, 0, W, H);
+      }
+    }
+
     // Restore context for entire frame drawing
     ctx.restore();
 
@@ -2343,12 +2484,14 @@ export default function Game() {
           laneRef.current[prevLaneIdx].pressed = false;
         }
         laneRef.current[lane].pressed = true;
+        lastTapTimeRef.current[lane] = Date.now();
         laneRef.current[lane].isArrow = null;
         moveHold(activeHold.currentLane, lane);
         return;
       }
 
       laneRef.current[lane].pressed = true;
+      lastTapTimeRef.current[lane] = Date.now();
       laneRef.current[lane].isArrow = null;
       hitLane(lane);
     };
@@ -2466,6 +2609,7 @@ export default function Game() {
         );
         if (lane >= 0 && lane < LANE_COUNT) {
           laneRef.current[lane].pressed = true;
+          lastTapTimeRef.current[lane] = Date.now();
           laneRef.current[lane].touchId = touch.identifier;
           touchStartPos.current[touch.identifier] = { x: touch.clientX, y: touch.clientY, lane, originLane: lane };
           hitLane(lane);
@@ -3367,19 +3511,24 @@ export default function Game() {
           {opts.comboDisplay ? (
             <div className="text-center">
               <div className="font-mono" style={{ fontSize: 8, color: "hsl(30 15% 32%)", letterSpacing: "0.3em" }}>COMBO</div>
-              <div
+              <motion.div
+                key={gs.combo}
                 className={`font-mono font-bold leading-none${gs.combo >= 20 ? ' breathe-glow' : ''}`}
                 data-testid="text-combo"
+                initial={{ scale: gs.combo > 0 ? 1.35 : 1 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 520, damping: 18, mass: 0.6 }}
                 style={{
                   fontSize: 22,
                   color: comboColor,
                   textShadow: gs.combo >= 20 ? `0 0 16px ${comboColor}, 0 0 32px ${comboColor}60` : "none",
                   '--breathe-color': `${comboColor}60`,
                   transition: 'color 0.2s, text-shadow 0.2s',
+                  display: 'block',
                 } as React.CSSProperties}
               >
                 {gs.combo > 0 ? gs.combo : "—"}
-              </div>
+              </motion.div>
             </div>
           ) : <div />}
 
