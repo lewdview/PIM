@@ -30,7 +30,7 @@ type Phase =
 interface Props {
   meta: RevealPackMeta;
   cards: OwnedCard[];
-  accumulatedCards: OwnedCard[];
+  accumulatedCards?: OwnedCard[];
   onComplete: () => void;
   onBuyAnother?: () => void;
   isRepurchasing?: boolean;
@@ -401,7 +401,7 @@ const shimmerKeyframes = `
 
 // ── Main Component ───────────────────────────────────────────────────
 
-export default function PackContainer({ meta, cards, accumulatedCards, onComplete, onBuyAnother, isRepurchasing }: Props) {
+export default function PackContainer({ meta, cards, accumulatedCards = cards, onComplete, onBuyAnother, isRepurchasing }: Props) {
   const [phase, setPhase] = useState<Phase>('preloading');
   const [flipIndex, setFlipIndex] = useState(-1); // current card being flipped
   const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
