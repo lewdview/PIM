@@ -1,10 +1,7 @@
 import type { Note } from './types';
 import { supabase } from '../lib/supabase';
-import { loadOpts } from '../lib/options';
 import { getCurrentDay } from '../utils/dayCalc';
 import dayFileMap from './day_file_map.json';
-
-const RELEASE_DATA_URL = 'https://th3scr1b3.art/release-data.json';
 
 export interface LyricsWord {
   word: string;
@@ -30,6 +27,12 @@ export interface GameSong {
   key: string;
   genre: string[];
   difficultyLevel: number;
+  unlock?: {
+    card: string;
+    fragments: number;
+  };
+  lyrics?: string;
+  lyricsSegments?: any[];
 }
 
 /** True if the song's release date is still in the future (not yet playable). */
@@ -55,13 +58,50 @@ export function clearCatalogCache() {
   loadingPromise = null;
 }
 
+// Helper to resolve URLs dynamically
+function resolveSongUrls(song: any, useLocal = false): GameSong {
+  const dayStr = String(song.day);
+  const mapped = (dayFileMap as any)[dayStr];
+
+  let audioUrl = song.audioUrl;
+  let coverArt = song.coverArt;
+
+  const SUPABASE_BASE = 'https://pznmptudgicrmljjafex.supabase.co/storage/v1/object/public/releaseready/';
+  const LOCAL_BASE = '/@fs/Volumes/extremeUno/th3scr1b3-365-warp/365-releases/';
+
+  if (useLocal) {
+    if (mapped && mapped.audio) {
+      audioUrl = LOCAL_BASE + mapped.audio;
+    } else if (song.manifestAudioPath) {
+      audioUrl = LOCAL_BASE + decodeURIComponent(song.manifestAudioPath);
+    }
+    if (mapped && mapped.cover) {
+      coverArt = LOCAL_BASE + mapped.cover;
+    }
+  } else {
+    if (mapped) {
+      if (mapped.audio) {
+        audioUrl = SUPABASE_BASE + encodeURIComponent(mapped.audio).replace(/%2F/g, '/');
+      }
+      if (mapped.cover) {
+        coverArt = SUPABASE_BASE + encodeURIComponent(mapped.cover).replace(/%2F/g, '/');
+      }
+    }
+  }
+
+  return {
+    ...song,
+    audioUrl,
+    coverArt
+  };
+}
+
 export async function loadCatalog(): Promise<GameSong[]> {
   if (catalogCache) return catalogCache;
   if (loadingPromise) return loadingPromise;
 
   const promise = (async (): Promise<GameSong[]> => {
     try {
-      // Development switch for local files
       const useLocal = (typeof localStorage !== 'undefined' && (localStorage.getItem('opt_useLocalFiles') === 'true' || localStorage.getItem('useLocalFiles') === 'true')) || 
                        (import.meta.env && import.meta.env.VITE_USE_LOCAL_FILES === 'true');
 
@@ -75,19 +115,39 @@ export async function loadCatalog(): Promise<GameSong[]> {
 
         if (!error && data && data.length > 0) {
           console.log('Fetched catalog from Supabase');
-          catalogCache = data.map((r) => buildGameSong(r, false));
+          catalogCache = data.map((r) => resolveSongUrls({
+            id: r.id,
+            day: r.day,
+            date: r.date,
+            title: r.title || r.canonicalTitle || `Day ${r.day}`,
+            artist: 'TH3SCR1B3',
+            bpm: r.tempo || 100,
+            duration: Math.ceil(r.duration || 180),
+            mood: r.mood === 'light' ? 'light' : 'dark',
+            valence: r.valence ?? 0.5,
+            moodTags: Array.isArray(r.tags) ? r.tags.slice(0, 3) : [],
+            description: r.description || '',
+            audioUrl: r.storedAudioUrl,
+            coverArt: r.coverArt || null,
+            notes: [],
+            key: r.key || '',
+            genre: Array.isArray(r.genre) ? r.genre : [],
+            difficultyLevel: 5, // default catalog difficulty
+            unlock: {
+              card: `card-${r.day}`,
+              fragments: 10
+            }
+          }, false));
           return catalogCache;
         }
         if (error) console.error('Supabase fetch error:', error);
       }
 
-      // 2. [Firebase fallback removed — keys not configured in this environment]
-
-      // 3. Fallback to static JSON
-      const r = await fetch(RELEASE_DATA_URL);
-      const data = await r.json();
-      console.log(`Fetched catalog from Static JSON fallback (useLocal: ${useLocal})`);
-      catalogCache = (data.releases as any[]).map((r: any) => buildGameSong(r, useLocal));
+      // 2. Load from local static catalog file
+      const r = await fetch('/data/song_catalog.json');
+      const catalog = await r.json();
+      console.log(`Fetched catalog from song_catalog.json fallback (useLocal: ${useLocal})`);
+      catalogCache = catalog.map((s: any) => resolveSongUrls(s, useLocal));
       return catalogCache;
     } catch (err) {
       console.error('Failed to load catalog:', err);
@@ -101,860 +161,34 @@ export async function loadCatalog(): Promise<GameSong[]> {
 
 export async function getSongById(id: string): Promise<GameSong | null> {
   const catalog = await loadCatalog();
-  const exact = catalog.find((s) => s.id === id);
-  if (exact) return exact;
+  let basicSong = catalog.find((s) => s.id === id);
 
-  // Robust fallback: extract the day number (e.g., 'card-50' -> 50, 'day-050' -> 50)
-  const match = id.match(/\d+/);
-  if (match) {
-    const dayNum = parseInt(match[0], 10);
-    const foundByDay = catalog.find((s) => s.day === dayNum);
-    if (foundByDay) return foundByDay;
-  }
-  return null;
-}
-
-function buildGameSong(r: any, useLocal = false): GameSong {
-  const lyricsWords: LyricsWord[] = r.lyricsWords || [];
-  const bpm = r.tempo || 100;
-  const duration = Math.ceil(r.duration || 180);
-  const valence = r.valence ?? 0.5;
-
-  const opts = loadOpts();
-  let notes: Note[];
-  if (opts.noteGenerationSource === 'lyrics') {
-    notes = lyricsWords.length > 0
-      ? generateNotesFromLyrics(lyricsWords, bpm)
-      : generateNotesFromBPM(bpm, duration);
-  } else if (opts.noteGenerationSource === 'bpm') {
-    notes = generateNotesFromBPM(bpm, duration);
-  } else {
-    // 'auto' mode: Interweave lyrics and BPM patterns if lyrics are available, otherwise fallback to pure BPM
-    notes = lyricsWords.length > 15
-      ? generateNotesInterwoven(lyricsWords, bpm, duration)
-      : generateNotesFromBPM(bpm, duration);
-  }
-
-  const difficultyLevel = calcDifficulty(bpm, valence, notes.length, duration);
-
-  const dayStr = String(r.day);
-  const mapped = (dayFileMap as any)[dayStr];
-
-  let audioUrl = r.storedAudioUrl;
-  let coverArt = r.coverArt || null;
-  if (coverArt) {
-    coverArt = coverArt.replace(/\.png$/i, '.jpg');
-  }
-
-  const SUPABASE_BASE = 'https://pznmptudgicrmljjafex.supabase.co/storage/v1/object/public/releaseready/';
-  const LOCAL_BASE = '/@fs/Volumes/extremeUno/th3scr1b3-365-warp/365-releases/';
-
-  if (useLocal) {
-    if (mapped && mapped.audio) {
-      audioUrl = LOCAL_BASE + mapped.audio;
-    } else {
-      if (r.manifestAudioPath) {
-        audioUrl = LOCAL_BASE + decodeURIComponent(r.manifestAudioPath);
-      } else if (r.fileName && r.date) {
-        const parts = r.date.split('-');
-        const monthNum = parseInt(parts[1], 10);
-        const months = [
-          'january', 'february', 'march', 'april', 'may', 'june',
-          'july', 'august', 'september', 'october', 'november', 'december'
-        ];
-        const monthStr = months[monthNum - 1];
-        audioUrl = LOCAL_BASE + `audio/${monthStr}/${decodeURIComponent(r.fileName)}`;
-      }
-    }
-
-    if (mapped && mapped.cover) {
-      coverArt = LOCAL_BASE + mapped.cover;
-    } else {
-      if (coverArt && coverArt.includes('/releaseready/')) {
-        const parts = coverArt.split('/releaseready/');
-        if (parts.length > 1) {
-          coverArt = LOCAL_BASE + decodeURIComponent(parts[1]);
-        }
-      }
-    }
-  } else {
-    // Online mode: Correct URLs using database-storage mappings
-    if (mapped) {
-      if (mapped.audio) {
-        audioUrl = SUPABASE_BASE + encodeURIComponent(mapped.audio).replace(/%2F/g, '/');
-      }
-      if (mapped.cover) {
-        // Use verified path from day_file_map (most reliable)
-        coverArt = SUPABASE_BASE + encodeURIComponent(mapped.cover).replace(/%2F/g, '/');
-      }
-      // If mapped.cover is null, fall through and keep r.coverArt from DB/static JSON
-      // (it gets .png→.jpg normalized at line ~145 above)
+  if (!basicSong) {
+    const match = id.match(/\d+/);
+    if (match) {
+      const dayNum = parseInt(match[0], 10);
+      basicSong = catalog.find((s) => s.day === dayNum);
     }
   }
 
-  return {
-    id: r.id,
-    day: r.day,
-    date: r.date,
-    title: r.title || r.canonicalTitle || `Day ${r.day}`,
-    artist: 'TH3SCR1B3',
-    bpm,
-    duration,
-    mood: r.mood === 'light' ? 'light' : 'dark',
-    valence,
-    moodTags: Array.isArray(r.tags) ? r.tags.slice(0, 3) : [],
-    description: r.description || '',
-    audioUrl,
-    coverArt,
-    notes,
-    key: r.key || '',
-    genre: Array.isArray(r.genre) ? r.genre : [],
-    difficultyLevel,
-  };
-}
+  if (!basicSong) return null;
 
-function calcDifficulty(bpm: number, valence: number, noteCount: number, duration = 180): number {
-  // BPM scoring: sigmoid-like curve centered at 120 BPM
-  // <80 → 1-2, 100-120 → 3-5, 140-160 → 6-8, 180+ → 9-10
-  const bpmNorm = (bpm - 80) / 100; // 0 at 80, 1 at 180
-  const bpmScore = Math.min(10, Math.max(1, Math.round(1 + 9 * Math.max(0, Math.min(1, bpmNorm)))));
+  try {
+    const useLocal = (typeof localStorage !== 'undefined' && (localStorage.getItem('opt_useLocalFiles') === 'true' || localStorage.getItem('useLocalFiles') === 'true')) || 
+                     (import.meta.env && import.meta.env.VITE_USE_LOCAL_FILES === 'true');
 
-  // Note density: notes per second, normalized (0.5 nps=easy, 3+ nps=brutal)
-  const nps = noteCount / Math.max(30, duration);
-  const densityScore = Math.min(10, Math.max(1, Math.round(nps * 3.5)));
+    const fileId = basicSong.id.startsWith('day-') ? basicSong.id : `day-${String(basicSong.day).padStart(3, '0')}`;
+    const fetchId = basicSong.id.includes('-') && !basicSong.id.startsWith('day-') ? basicSong.id : fileId;
 
-  // Valence as intensity modifier: dark/intense songs (low valence) feel harder
-  const valenceBoost = valence < 0.35 ? 1 : valence > 0.7 ? -1 : 0;
+    const res = await fetch(`/data/songs/${fetchId}.json`);
+    if (!res.ok) throw new Error(`Failed to fetch song detail for ${fetchId}`);
+    const fullDetail = await res.json();
 
-  const raw = (bpmScore * 0.4 + densityScore * 0.5) + valenceBoost;
-  return Math.max(1, Math.min(10, Math.round(raw)));
-}
-
-/** Snap a timestamp to the nearest 16th-note grid at the given BPM. */
-function snapToBeat(time: number, bpm: number, subdivision = 16): number {
-  const subDur = (60 / bpm) * (4 / subdivision);
-  return Math.round(time / subDur) * subDur;
-}
-
-/**
- * Musical phrase patterns. Each is an 8-slot lane sequence (0=left, 1=center, 2=right).
- */
-const PHRASE_PATTERNS: number[][] = [
-  [0, 1, 2, 1, 0, 2, 1, 0],  // ascending bounce
-  [2, 1, 0, 1, 2, 0, 1, 2],  // descending bounce
-  [0, 2, 1, 0, 2, 1, 0, 2],  // outer ping-pong
-  [1, 0, 2, 1, 0, 2, 1, 0],  // center-out alternating
-  [0, 2, 0, 1, 2, 1, 2, 0],  // irregular cross
-  [1, 1, 0, 2, 1, 1, 2, 0],  // stutter step (center-heavy)
-  [0, 0, 1, 2, 2, 1, 0, 2],  // gallop (repeated starts)
-  [0, 1, 0, 2, 1, 2, 0, 1],  // triplet feel
-  [2, 0, 2, 0, 1, 1, 2, 0],  // wide bounce
-  [1, 0, 1, 2, 1, 0, 1, 2],  // rapid center
-  // --- New Extended Patterns ---
-  [0, 1, 1, 2, 2, 1, 1, 0],  // staircase climb and fall
-  [2, 2, 1, 1, 0, 0, 1, 1],  // reverse staircase
-  [0, 2, 2, 0, 1, 1, 1, 1],  // outside-in rush
-  [1, 2, 0, 1, 2, 0, 1, 2],  // relentless swirl right
-  [1, 0, 2, 1, 0, 2, 1, 0],  // relentless swirl left
-  [0, 1, 2, 2, 1, 0, 0, 1],  // double end bounce
-  [1, 1, 1, 0, 2, 0, 2, 0],  // machine gun center to spread
-  [0, 0, 2, 2, 0, 0, 2, 2],  // hard alternating corners
-  [1, 2, 1, 0, 1, 2, 1, 0],  // anchor center, weave out
-  [0, 2, 1, 1, 0, 2, 1, 1],  // snap to middle
-  // --- Advanced Dynamic Patterns ---
-  [0, 1, 2, 0, 1, 2, 0, 1],  // rolling right
-  [2, 1, 0, 2, 1, 0, 2, 1],  // rolling left
-  [1, 0, 1, 0, 1, 2, 1, 2],  // center-left then center-right weave
-  [0, 0, 0, 1, 2, 2, 2, 1],  // triple tap corners with transition
-  [1, 2, 2, 1, 0, 0, 1, 1],  // double taps moving left/right
-  [0, 2, 0, 2, 1, 0, 2, 1],  // corner ping-pong with center step
-  [0, 1, 0, 1, 2, 1, 2, 1],  // zig-zag steps
-  [1, 0, 2, 0, 1, 2, 0, 2],  // outer focus crossing center
-  [2, 2, 0, 0, 1, 1, 2, 2],  // heavy doubles
-  [1, 1, 2, 0, 1, 1, 0, 2],  // stutter-heavy flow
-];
-
-/** Unified pattern step to support mixed note types in a single template */
-interface PatternStep {
-  type: 'tap' | 'swipe' | 'hold' | 'slide';
-  lane: number;
-  target?: number;
-  dir?: Note['swipeDirection'];
-}
-
-/** Dual note step — two notes at the same time */
-interface DualStep {
-  a: PatternStep;
-  b: PatternStep;
-}
-
-/** Mixed patterns incorporating swipes with regular taps */
-const SWIPE_MIXED_PATTERNS: PatternStep[][] = [
-  [{ type: 'tap', lane: 1 }, { type: 'swipe', lane: 0, dir: 'up-left' }, { type: 'tap', lane: 1 }, { type: 'swipe', lane: 2, dir: 'up-right' }],
-  [{ type: 'swipe', lane: 1, dir: 'up' }, { type: 'tap', lane: 0 }, { type: 'tap', lane: 2 }, { type: 'swipe', lane: 1, dir: 'down' }],
-  [{ type: 'swipe', lane: 0, dir: 'left' }, { type: 'swipe', lane: 2, dir: 'right' }, { type: 'tap', lane: 1 }, { type: 'tap', lane: 1 }],
-  [{ type: 'tap', lane: 0 }, { type: 'swipe', lane: 1, dir: 'right' }, { type: 'swipe', lane: 2, dir: 'up-right' }, { type: 'tap', lane: 2 }],
-  [{ type: 'swipe', lane: 0, dir: 'up' }, { type: 'tap', lane: 1 }, { type: 'swipe', lane: 2, dir: 'down' }, { type: 'tap', lane: 1 }],
-  // --- New Extended Patterns ---
-  [{ type: 'swipe', lane: 0, dir: 'down' }, { type: 'swipe', lane: 2, dir: 'down' }, { type: 'tap', lane: 1 }, { type: 'swipe', lane: 1, dir: 'up' }],
-  [{ type: 'tap', lane: 1 }, { type: 'tap', lane: 1 }, { type: 'swipe', lane: 0, dir: 'left' }, { type: 'swipe', lane: 2, dir: 'right' }],
-  [{ type: 'swipe', lane: 2, dir: 'right' }, { type: 'tap', lane: 1 }, { type: 'swipe', lane: 0, dir: 'left' }, { type: 'tap', lane: 1 }],
-  [{ type: 'tap', lane: 0 }, { type: 'tap', lane: 2 }, { type: 'swipe', lane: 1, dir: 'down' }, { type: 'swipe', lane: 1, dir: 'up' }],
-  [{ type: 'swipe', lane: 1, dir: 'up-left' }, { type: 'swipe', lane: 1, dir: 'up-right' }, { type: 'tap', lane: 0 }, { type: 'tap', lane: 2 }],
-  // --- Advanced Dynamic Patterns ---
-  [{ type: 'swipe', lane: 1, dir: 'up' }, { type: 'swipe', lane: 1, dir: 'down' }, { type: 'tap', lane: 0 }, { type: 'tap', lane: 2 }], // rapid vertical center
-  [{ type: 'swipe', lane: 0, dir: 'left' }, { type: 'swipe', lane: 2, dir: 'right' }, { type: 'tap', lane: 1 }, { type: 'swipe', lane: 1, dir: 'up' }], // outward swipe spread
-  [{ type: 'swipe', lane: 0, dir: 'left' }, { type: 'swipe', lane: 1, dir: 'up' }, { type: 'swipe', lane: 2, dir: 'right' }, { type: 'tap', lane: 1 }], // circular movement
-  [{ type: 'swipe', lane: 0, dir: 'up-left' }, { type: 'tap', lane: 2 }, { type: 'swipe', lane: 2, dir: 'up-right' }, { type: 'tap', lane: 0 }], // alternate side-swipes
-  [{ type: 'tap', lane: 1 }, { type: 'swipe', lane: 0, dir: 'down' }, { type: 'swipe', lane: 2, dir: 'down' }, { type: 'swipe', lane: 1, dir: 'down' }], // downward hammer slam
-  [{ type: 'swipe', lane: 1, dir: 'down-left' }, { type: 'tap', lane: 0 }, { type: 'swipe', lane: 1, dir: 'down-right' }, { type: 'tap', lane: 2 }], // diagonal sweeps
-  [{ type: 'tap', lane: 0 }, { type: 'swipe', lane: 0, dir: 'up' }, { type: 'tap', lane: 2 }, { type: 'swipe', lane: 2, dir: 'up' }], // asymmetric syncopated swipes
-  [{ type: 'swipe', lane: 1, dir: 'left' }, { type: 'swipe', lane: 1, dir: 'right' }, { type: 'tap', lane: 0 }, { type: 'tap', lane: 2 }], // center cross sweeps
-  [{ type: 'swipe', lane: 0, dir: 'up' }, { type: 'swipe', lane: 1, dir: 'up' }, { type: 'swipe', lane: 2, dir: 'up' }, { type: 'tap', lane: 1 }], // escalating up swipes
-  [{ type: 'tap', lane: 1 }, { type: 'swipe', lane: 0, dir: 'up-left' }, { type: 'tap', lane: 1 }, { type: 'swipe', lane: 2, dir: 'down-right' }], // opposite diagonal flickers
-];
-
-/** Mixed patterns incorporating lane-change slides with rhythmic taps */
-const SLIDE_MIXED_PATTERNS: PatternStep[][] = [
-  [{ type: 'slide', lane: 0, target: 1, dir: 'right' }, { type: 'tap', lane: 1 }, { type: 'slide', lane: 1, target: 2, dir: 'right' }, { type: 'tap', lane: 2 }],
-  [{ type: 'slide', lane: 0, target: 2, dir: 'right' }, { type: 'tap', lane: 1 }, { type: 'slide', lane: 2, target: 0, dir: 'left' }, { type: 'tap', lane: 1 }],
-  [{ type: 'tap', lane: 1 }, { type: 'slide', lane: 1, target: 0, dir: 'left' }, { type: 'tap', lane: 0 }, { type: 'slide', lane: 0, target: 1, dir: 'right' }],
-  [{ type: 'tap', lane: 0 }, { type: 'slide', lane: 1, target: 2, dir: 'right' }, { type: 'tap', lane: 2 }, { type: 'slide', lane: 2, target: 1, dir: 'left' }],
-  // --- New Extended Patterns ---
-  [{ type: 'slide', lane: 2, target: 0, dir: 'left' }, { type: 'tap', lane: 0 }, { type: 'slide', lane: 0, target: 2, dir: 'right' }, { type: 'tap', lane: 2 }],
-  [{ type: 'tap', lane: 1 }, { type: 'tap', lane: 1 }, { type: 'slide', lane: 0, target: 2, dir: 'right' }, { type: 'tap', lane: 2 }],
-  [{ type: 'slide', lane: 1, target: 0, dir: 'left' }, { type: 'slide', lane: 0, target: 1, dir: 'right' }, { type: 'tap', lane: 2 }, { type: 'tap', lane: 1 }],
-  [{ type: 'tap', lane: 2 }, { type: 'slide', lane: 2, target: 0, dir: 'left' }, { type: 'tap', lane: 0 }, { type: 'slide', lane: 0, target: 2, dir: 'right' }],
-  // --- Advanced Dynamic Patterns ---
-  [{ type: 'slide', lane: 1, target: 0, dir: 'left' }, { type: 'tap', lane: 2 }, { type: 'slide', lane: 1, target: 2, dir: 'right' }, { type: 'tap', lane: 0 }], // center split slides
-  [{ type: 'slide', lane: 0, target: 2, dir: 'right' }, { type: 'slide', lane: 2, target: 0, dir: 'left' }, { type: 'tap', lane: 1 }, { type: 'tap', lane: 1 }], // long crossing diagonals
-  [{ type: 'slide', lane: 0, target: 1, dir: 'right' }, { type: 'slide', lane: 1, target: 0, dir: 'left' }, { type: 'slide', lane: 0, target: 2, dir: 'right' }, { type: 'tap', lane: 2 }], // zig-zag slide
-  [{ type: 'slide', lane: 2, target: 1, dir: 'left' }, { type: 'slide', lane: 1, target: 2, dir: 'right' }, { type: 'tap', lane: 0 }, { type: 'tap', lane: 1 }], // bounce slide
-  [{ type: 'tap', lane: 1 }, { type: 'slide', lane: 0, target: 2, dir: 'right' }, { type: 'slide', lane: 2, target: 1, dir: 'left' }, { type: 'tap', lane: 0 }], // continuous shift loop
-  [{ type: 'slide', lane: 1, target: 0, dir: 'left' }, { type: 'slide', lane: 0, target: 2, dir: 'right' }, { type: 'tap', lane: 1 }, { type: 'tap', lane: 2 }], // sweeping arc
-  [{ type: 'slide', lane: 0, target: 1, dir: 'right' }, { type: 'tap', lane: 2 }, { type: 'slide', lane: 2, target: 1, dir: 'left' }, { type: 'tap', lane: 0 }], // inward slides
-  [{ type: 'slide', lane: 1, target: 2, dir: 'right' }, { type: 'slide', lane: 2, target: 0, dir: 'left' }, { type: 'tap', lane: 1 }, { type: 'swipe', lane: 1, dir: 'up' }], // slide slide tap swipe mix
-  [{ type: 'tap', lane: 0 }, { type: 'slide', lane: 1, target: 0, dir: 'left' }, { type: 'tap', lane: 2 }, { type: 'slide', lane: 1, target: 2, dir: 'right' }], // symmetrical outer transitions
-  [{ type: 'slide', lane: 0, target: 2, dir: 'right' }, { type: 'tap', lane: 1 }, { type: 'swipe', lane: 2, dir: 'down' }, { type: 'tap', lane: 0 }], // long slide with quick recovery swipe
-];
-
-/** Dual TAP patterns — two notes fired at the same time */
-const DUAL_TAP_PATTERNS: DualStep[][] = [
-  // Outer pair -> single -> outer pair -> single
-  [
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } },
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } },
-  ],
-  // Left pair -> right pair -> both outer
-  [
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 1 } },
-    { a: { type: 'tap', lane: 2 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } },
-  ],
-  // Alternating pairs
-  [
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 1 } },
-    { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 1 } },
-  ],
-  // --- New Extended Patterns ---
-  // Double tap center -> burst outside
-  [
-    { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } },
-    { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } },
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } },
-  ],
-  // Syncopated side shifts
-  [
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 1 } },
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 2 } },
-  ],
-  // Hard cross
-  [
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 1 } },
-    { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 1 } },
-    { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 2 } },
-  ],
-  // --- Advanced Dynamic Patterns ---
-  [
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } },
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 1 } },
-    { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 2 } },
-  ], // inward pinch and split
-  [
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 1 } },
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } },
-  ], // staggered duals
-  [
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } },
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } },
-  ], // corner storm
-  [
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 1 } },
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 1 } },
-    { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 2 } },
-  ], // shifting double-taps
-  [
-    { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } },
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } },
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } },
-  ], // center-outer pulse
-  [
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 1 } },
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } },
-  ], // tri-directional mix
-  [
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 1 } },
-  ], // asymmetrical outer weave
-  [
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 1 } },
-    { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } },
-  ], // cross transitions to center
-  [
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } },
-  ], // corner heavy bounce
-  [
-    { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 1 } },
-    { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } },
-  ], // shifting weaving pairs
-];
-
-/** Dual HOLD patterns — hold one lane while tapping another */
-const DUAL_HOLD_PATTERNS: DualStep[][] = [
-  // Hold left + tap right, then hold right + tap left
-  [
-    { a: { type: 'hold', lane: 0 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } },
-    { a: { type: 'hold', lane: 2 }, b: { type: 'tap', lane: 0 } },
-    { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } },
-  ],
-  // Dual hold outer lanes
-  [
-    { a: { type: 'hold', lane: 0 }, b: { type: 'hold', lane: 2 } },
-    { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } },
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } },
-  ],
-  // Hold center + tap sides
-  [
-    { a: { type: 'hold', lane: 1 }, b: { type: 'tap', lane: 0 } },
-    { a: { type: 'tap', lane: 2 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'hold', lane: 1 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 0 } },
-  ],
-  // --- New Extended Patterns ---
-  // Hold side + intense center tapping
-  [
-    { a: { type: 'hold', lane: 0 }, b: { type: 'tap', lane: 1 } },
-    { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } },
-    { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } },
-    { a: { type: 'hold', lane: 2 }, b: { type: 'tap', lane: 1 } },
-  ],
-  // Hold outer + tap inner alternating
-  [
-    { a: { type: 'hold', lane: 2 }, b: { type: 'tap', lane: 0 } },
-    { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } },
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 0 } },
-    { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } },
-  ],
-  // Dual split holds
-  [
-    { a: { type: 'hold', lane: 0 }, b: { type: 'tap', lane: 1 } },
-    { a: { type: 'hold', lane: 2 }, b: { type: 'tap', lane: 1 } },
-    { a: { type: 'hold', lane: 0 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } },
-  ],
-  // --- Advanced Dynamic Patterns ---
-  [
-    { a: { type: 'hold', lane: 0 }, b: { type: 'tap', lane: 1 } },
-    { a: { type: 'tap', lane: 2 }, b: { type: 'hold', lane: 1 } },
-    { a: { type: 'hold', lane: 2 }, b: { type: 'tap', lane: 1 } },
-    { a: { type: 'tap', lane: 0 }, b: { type: 'hold', lane: 1 } },
-  ], // cross hold-tap alternation
-  [
-    { a: { type: 'hold', lane: 0 }, b: { type: 'hold', lane: 1 } },
-    { a: { type: 'tap', lane: 2 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'hold', lane: 1 }, b: { type: 'hold', lane: 2 } },
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 0 } },
-  ], // moving double hold
-  [
-    { a: { type: 'hold', lane: 1 }, b: { type: 'hold', lane: 1 } },
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'hold', lane: 1 }, b: { type: 'hold', lane: 1 } },
-  ], // shield layout (center hold, outer taps)
-  [
-    { a: { type: 'hold', lane: 0 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'hold', lane: 0 }, b: { type: 'tap', lane: 1 } },
-    { a: { type: 'hold', lane: 2 }, b: { type: 'tap', lane: 0 } },
-    { a: { type: 'hold', lane: 2 }, b: { type: 'tap', lane: 1 } },
-  ], // continuous side anchor holds
-  [
-    { a: { type: 'hold', lane: 1 }, b: { type: 'tap', lane: 0 } },
-    { a: { type: 'tap', lane: 2 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'hold', lane: 1 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 0 } },
-  ], // center anchor hold with staggered outer taps
-  [
-    { a: { type: 'hold', lane: 0 }, b: { type: 'hold', lane: 2 } },
-    { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } },
-    { a: { type: 'hold', lane: 1 }, b: { type: 'hold', lane: 1 } },
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } },
-  ], // outer double hold to center single hold transition
-  [
-    { a: { type: 'hold', lane: 0 }, b: { type: 'tap', lane: 1 } },
-    { a: { type: 'hold', lane: 2 }, b: { type: 'tap', lane: 1 } },
-    { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'hold', lane: 1 }, b: { type: 'tap', lane: 1 } },
-  ], // staggered split holds
-  [
-    { a: { type: 'hold', lane: 2 }, b: { type: 'tap', lane: 0 } },
-    { a: { type: 'hold', lane: 1 }, b: { type: 'tap', lane: 0 } },
-    { a: { type: 'hold', lane: 0 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'hold', lane: 1 }, b: { type: 'tap', lane: 2 } },
-  ], // progressive anchor shifts
-  [
-    { a: { type: 'hold', lane: 0 }, b: { type: 'hold', lane: 2 } },
-    { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } },
-    { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } },
-    { a: { type: 'hold', lane: 0 }, b: { type: 'hold', lane: 2 } },
-  ], // double side hold wall with inner taps
-  [
-    { a: { type: 'hold', lane: 1 }, b: { type: 'tap', lane: 0 } },
-    { a: { type: 'hold', lane: 2 }, b: { type: 'tap', lane: 1 } },
-    { a: { type: 'hold', lane: 0 }, b: { type: 'tap', lane: 2 } },
-    { a: { type: 'hold', lane: 1 }, b: { type: 'tap', lane: 0 } },
-  ], // swirling holds
-];
-
-export function generateNotesFromLyrics(words: LyricsWord[], bpm = 100): Note[] {
-  const notes: Note[] = [];
-  let id = 0;
-  let patternIdx = 0;
-  let noteInPattern = 0;
-  let lastSnapped = -1;
-  const MIN_GAP = 0.15;
-  let phraseCount = 0;
-
-  let phraseType: 'tap' | 'swipe' | 'slide' | 'dual' | 'dual_hold' = 'tap';
-
-  for (const word of words) {
-    if (word.start < 1.0) continue;
-
-    const snapped = snapToBeat(word.start, bpm, 16);
-    if (snapped - lastSnapped < MIN_GAP) continue;
-
-    // Phrase boundary: silence > 0.65 s → advance to next template
-    if (lastSnapped > 0 && snapped - lastSnapped > 0.65) {
-      phraseCount++;
-      noteInPattern = 0;
-      patternIdx++;
-
-      // First 2 phrases are always tap-only to establish rhythm
-      if (phraseCount < 3) {
-        phraseType = 'tap';
-      } else {
-        // Cyclical variety with all phrase types, expanded to 16 cycles for less repetition
-        const cycle = (phraseCount - 2) % 16;
-        if (cycle === 1 || cycle === 9) phraseType = 'dual';
-        else if (cycle === 2 || cycle === 10) phraseType = 'swipe';
-        else if (cycle === 4 || cycle === 12) phraseType = 'slide';
-        else if (cycle === 5 || cycle === 13) phraseType = 'dual_hold';
-        else if (cycle === 7 || cycle === 15) phraseType = 'swipe';
-        else phraseType = 'tap';
-      }
-    }
-
-    const dur = word.end - word.start;
-
-    // ── Dual note phrases ──
-    if (phraseType === 'dual') {
-      const p = DUAL_TAP_PATTERNS[patternIdx % DUAL_TAP_PATTERNS.length];
-      const step = p[noteInPattern % p.length];
-      noteInPattern++;
-      lastSnapped = snapped;
-      notes.push({
-        id: id++, time: snapped, lane: step.a.lane,
-        type: step.a.type === 'slide' ? 'hold' : step.a.type,
-        holdDuration: step.a.type === 'hold' ? Math.max(0.5, dur) : undefined,
-      });
-      if (step.b.lane !== step.a.lane) {
-        notes.push({
-          id: id++, time: snapped, lane: step.b.lane,
-          type: step.b.type === 'slide' ? 'hold' : step.b.type,
-          holdDuration: step.b.type === 'hold' ? Math.max(0.5, dur) : undefined,
-        });
-      }
-      continue;
-    }
-
-    if (phraseType === 'dual_hold') {
-      const p = DUAL_HOLD_PATTERNS[patternIdx % DUAL_HOLD_PATTERNS.length];
-      const step = p[noteInPattern % p.length];
-      noteInPattern++;
-      lastSnapped = snapped;
-      const isHoldA = step.a.type === 'hold';
-      notes.push({
-        id: id++, time: snapped, lane: step.a.lane,
-        type: step.a.type === 'slide' ? 'hold' : step.a.type,
-        holdDuration: isHoldA ? Math.max(0.5, Math.min(dur * 0.8, 1.5)) : undefined,
-      });
-      if (step.b.lane !== step.a.lane) {
-        const isHoldB = step.b.type === 'hold';
-        notes.push({
-          id: id++, time: snapped, lane: step.b.lane,
-          type: step.b.type === 'slide' ? 'hold' : step.b.type,
-          holdDuration: isHoldB ? Math.max(0.5, Math.min(dur * 0.8, 1.5)) : undefined,
-        });
-      }
-      continue;
-    }
-
-    // ── Single note phrases ──
-    let lane: number;
-    let type: Note['type'] = 'tap';
-    let targetLane: number | undefined;
-    let swipeDirection: Note['swipeDirection'];
-    let holdDuration: number | undefined;
-
-    if (phraseType === 'swipe') {
-      const p = SWIPE_MIXED_PATTERNS[patternIdx % SWIPE_MIXED_PATTERNS.length];
-      const entry = p[noteInPattern % p.length];
-      lane = entry.lane;
-      type = entry.type === 'slide' ? 'hold' : entry.type;
-      swipeDirection = entry.dir;
-      if (type === 'hold') holdDuration = Math.max(0.5, dur);
-    } else if (phraseType === 'slide') {
-      const p = SLIDE_MIXED_PATTERNS[patternIdx % SLIDE_MIXED_PATTERNS.length];
-      const entry = p[noteInPattern % p.length];
-      lane = entry.lane;
-      targetLane = entry.target;
-      swipeDirection = entry.dir;
-      type = entry.type === 'slide' ? 'hold' : entry.type;
-      if (type === 'hold') holdDuration = Math.max(0.6, Math.min(dur, 2.0));
-    } else {
-      const p = PHRASE_PATTERNS[patternIdx % PHRASE_PATTERNS.length];
-      lane = p[noteInPattern % p.length];
-      if (dur > 0.6) {
-        type = 'hold';
-        holdDuration = Math.min(dur * 0.8, 2.0);
-      } else {
-        type = 'tap';
-      }
-    }
-
-    noteInPattern++;
-    lastSnapped = snapped;
-
-    notes.push({
-      id: id++,
-      time: snapped,
-      lane,
-      type,
-      holdDuration,
-      targetLane,
-      swipeDirection,
-    });
+    return resolveSongUrls(fullDetail, useLocal);
+  } catch (err) {
+    console.error(`Failed to load full song detail for ${id}:`, err);
+    return basicSong;
   }
-
-  return notes;
-}
-
-interface BPMPatternStep {
-  beat: number;
-  lane: number;
-  type?: 'tap' | 'hold' | 'swipe' | 'slide';
-  holdDurationBeats?: number;
-  targetLane?: number;
-  swipeDirection?: Note['swipeDirection'];
-}
-
-const BPM_PATTERNS: BPMPatternStep[][] = [
-  // 1. Quarter-note walk (basic tap pattern)
-  [
-    { beat: 0, lane: 1, type: 'tap' },
-    { beat: 1, lane: 2, type: 'tap' },
-    { beat: 2, lane: 0, type: 'tap' },
-    { beat: 3, lane: 1, type: 'tap' }
-  ],
-  // 2. 8th-note syncopation with swipes
-  [
-    { beat: 0, lane: 0, type: 'tap' },
-    { beat: 0.5, lane: 2, type: 'swipe', swipeDirection: 'right' },
-    { beat: 1.5, lane: 1, type: 'tap' },
-    { beat: 2, lane: 0, type: 'tap' },
-    { beat: 3, lane: 2, type: 'swipe', swipeDirection: 'up' },
-    { beat: 3.5, lane: 1, type: 'tap' }
-  ],
-  // 3. Ascending run + hold
-  [
-    { beat: 0, lane: 0, type: 'tap' },
-    { beat: 0.5, lane: 1, type: 'tap' },
-    { beat: 1, lane: 2, type: 'hold', holdDurationBeats: 1.0 },
-    { beat: 2.5, lane: 0, type: 'tap' },
-    { beat: 3, lane: 1, type: 'swipe', swipeDirection: 'left' }
-  ],
-  // 4. Clave rhythm with dual notes
-  [
-    { beat: 0, lane: 0, type: 'tap' },
-    { beat: 0, lane: 2, type: 'tap' },
-    { beat: 0.75, lane: 1, type: 'tap' },
-    { beat: 1.5, lane: 0, type: 'tap' },
-    { beat: 1.5, lane: 2, type: 'tap' },
-    { beat: 2.25, lane: 1, type: 'tap' },
-    { beat: 3, lane: 0, type: 'tap' },
-    { beat: 3, lane: 2, type: 'tap' }
-  ],
-  // 5. Lane slide transition (crossing)
-  [
-    { beat: 0, lane: 0, type: 'slide', holdDurationBeats: 1.5, targetLane: 2, swipeDirection: 'right' },
-    { beat: 1.5, lane: 2, type: 'tap' },
-    { beat: 2.0, lane: 2, type: 'slide', holdDurationBeats: 1.5, targetLane: 0, swipeDirection: 'left' },
-    { beat: 3.5, lane: 0, type: 'tap' }
-  ],
-  // 6. Triplet rush + swipes
-  [
-    { beat: 0, lane: 1, type: 'tap' },
-    { beat: 0.33, lane: 0, type: 'swipe', swipeDirection: 'left' },
-    { beat: 0.66, lane: 2, type: 'swipe', swipeDirection: 'right' },
-    { beat: 1.5, lane: 1, type: 'tap' },
-    { beat: 2.5, lane: 0, type: 'tap' },
-    { beat: 3, lane: 2, type: 'swipe', swipeDirection: 'up' }
-  ],
-  // 7. Heavy dual holds (shield)
-  [
-    { beat: 0, lane: 0, type: 'hold', holdDurationBeats: 1.5 },
-    { beat: 0, lane: 2, type: 'hold', holdDurationBeats: 1.5 },
-    { beat: 1.5, lane: 1, type: 'tap' },
-    { beat: 2.0, lane: 1, type: 'tap' },
-    { beat: 2.5, lane: 1, type: 'swipe', swipeDirection: 'up' }
-  ],
-  // 8. Staggered hold and tap
-  [
-    { beat: 0, lane: 0, type: 'hold', holdDurationBeats: 1.5 },
-    { beat: 0.5, lane: 2, type: 'tap' },
-    { beat: 1.0, lane: 1, type: 'tap' },
-    { beat: 2.0, lane: 2, type: 'hold', holdDurationBeats: 1.5 },
-    { beat: 2.5, lane: 0, type: 'tap' },
-    { beat: 3.0, lane: 1, type: 'tap' }
-  ],
-  // 9. Diagonal swipe hammer
-  [
-    { beat: 0, lane: 1, type: 'tap' },
-    { beat: 1, lane: 0, type: 'swipe', swipeDirection: 'down-left' },
-    { beat: 1.5, lane: 2, type: 'swipe', swipeDirection: 'down-right' },
-    { beat: 2.5, lane: 1, type: 'tap' },
-    { beat: 3, lane: 0, type: 'swipe', swipeDirection: 'up-left' },
-    { beat: 3.5, lane: 2, type: 'swipe', swipeDirection: 'up-right' }
-  ],
-  // 10. Zig-zag slide weave
-  [
-    { beat: 0, lane: 1, type: 'slide', holdDurationBeats: 1.0, targetLane: 0, swipeDirection: 'left' },
-    { beat: 1.0, lane: 0, type: 'slide', holdDurationBeats: 1.0, targetLane: 2, swipeDirection: 'right' },
-    { beat: 2.0, lane: 2, type: 'slide', holdDurationBeats: 1.0, targetLane: 1, swipeDirection: 'left' },
-    { beat: 3.0, lane: 1, type: 'swipe', swipeDirection: 'up' }
-  ],
-  // 11. Stutter syncopated dual taps
-  [
-    { beat: 0, lane: 0, type: 'tap' },
-    { beat: 0, lane: 1, type: 'tap' },
-    { beat: 0.75, lane: 1, type: 'tap' },
-    { beat: 0.75, lane: 2, type: 'tap' },
-    { beat: 1.5, lane: 0, type: 'tap' },
-    { beat: 1.5, lane: 2, type: 'tap' },
-    { beat: 2.5, lane: 1, type: 'swipe', swipeDirection: 'down' },
-    { beat: 3.0, lane: 0, type: 'tap' },
-    { beat: 3.5, lane: 2, type: 'tap' }
-  ],
-  // 12. Swirl slides
-  [
-    { beat: 0, lane: 0, type: 'slide', holdDurationBeats: 1.0, targetLane: 1, swipeDirection: 'right' },
-    { beat: 1.0, lane: 2, type: 'slide', holdDurationBeats: 1.0, targetLane: 1, swipeDirection: 'left' },
-    { beat: 2.0, lane: 1, type: 'hold', holdDurationBeats: 1.5 },
-    { beat: 2.5, lane: 0, type: 'tap' },
-    { beat: 3.0, lane: 2, type: 'tap' }
-  ]
-];
-
-export function generateNotesInterwoven(words: LyricsWord[], bpm: number, duration: number): Note[] {
-  const lyricNotes = generateNotesFromLyrics(words, bpm);
-  if (lyricNotes.length === 0) {
-    return generateNotesFromBPM(bpm, duration);
-  }
-
-  // Sort lyric notes chronologically
-  lyricNotes.sort((a, b) => a.time - b.time);
-
-  const beatDur = 60 / bpm;
-  const measureDur = beatDur * 4;
-
-  // Identify empty gaps between lyric vocal phrases where we can insert BPM pattern fills
-  interface Gap {
-    start: number;
-    end: number;
-  }
-  const gaps: Gap[] = [];
-
-  // 1. Initial gap before the first lyric starts
-  if (lyricNotes[0].time > 4.0) {
-    gaps.push({ start: 1.0, end: lyricNotes[0].time });
-  }
-
-  // 2. Instrumental gaps between consecutive lyrics phrases
-  for (let i = 0; i < lyricNotes.length - 1; i++) {
-    const currentNote = lyricNotes[i];
-    const nextNote = lyricNotes[i + 1];
-    const currentEnd = currentNote.time + (currentNote.holdDuration ?? 0);
-    const gapLen = nextNote.time - currentEnd;
-    
-    // Fill gaps larger than 3.5 seconds
-    if (gapLen > 3.5) {
-      gaps.push({ start: currentEnd, end: nextNote.time });
-    }
-  }
-
-  // 3. Outro gap after the last lyric ends
-  const lastNote = lyricNotes[lyricNotes.length - 1];
-  const lastEnd = lastNote.time + (lastNote.holdDuration ?? 0);
-  if (duration - lastEnd > 5.0) {
-    gaps.push({ start: lastEnd, end: duration - 3.0 });
-  }
-
-  const bpmNotes: Omit<Note, 'id'>[] = [];
-  let pi = 0;
-
-  for (const gap of gaps) {
-    // Leave a small spacing buffer (0.75s) to separate vocal and instrumental sections
-    const startBound = gap.start + 0.75;
-    const endBound = gap.end - 0.75;
-    if (endBound - startBound < measureDur) continue;
-
-    let measureStart = snapToBeat(startBound, bpm, 4);
-    if (measureStart < startBound) {
-      measureStart += beatDur;
-    }
-
-    while (measureStart + measureDur <= endBound) {
-      for (const e of BPM_PATTERNS[pi % BPM_PATTERNS.length]) {
-        const t = measureStart + e.beat * beatDur;
-        if (t >= startBound && t <= endBound) {
-          const type: Note['type'] = e.type === 'slide' ? 'hold' : (e.type ?? 'tap');
-          const holdDuration = e.type === 'hold' || e.type === 'slide'
-            ? (e.holdDurationBeats ?? 1.0) * beatDur
-            : undefined;
-
-          bpmNotes.push({
-            time: t,
-            lane: e.lane,
-            type,
-            holdDuration,
-            targetLane: e.targetLane,
-            swipeDirection: e.swipeDirection
-          });
-        }
-      }
-      measureStart += measureDur;
-      pi++;
-    }
-  }
-
-  // Merge and sort notes chronologically
-  const allRawNotes = [
-    ...lyricNotes.map(n => ({
-      time: n.time,
-      lane: n.lane,
-      type: n.type,
-      holdDuration: n.holdDuration,
-      targetLane: n.targetLane,
-      swipeDirection: n.swipeDirection
-    })),
-    ...bpmNotes
-  ];
-
-  allRawNotes.sort((a, b) => a.time - b.time);
-
-  // Eliminate duplicate or near-duplicate notes within 0.12s in the same lane
-  const uniqueNotes: typeof allRawNotes = [];
-  for (const note of allRawNotes) {
-    const isDuplicate = uniqueNotes.some(existing => 
-      Math.abs(existing.time - note.time) < 0.12 && existing.lane === note.lane
-    );
-    if (!isDuplicate) {
-      uniqueNotes.push(note);
-    }
-  }
-
-  // Assign sequential IDs
-  const merged: Note[] = [];
-  let nextId = 0;
-  for (const raw of uniqueNotes) {
-    merged.push({
-      id: nextId++,
-      ...raw
-    });
-  }
-
-  return merged;
-}
-
-export function generateNotesFromBPM(bpm: number, duration: number): Note[] {
-  const beatDur    = 60 / bpm;
-  const measureDur = beatDur * 4;
-  const notes: Note[] = [];
-  let id = 0;
-  let measureStart = 2.5;
-
-  let pi = 0;
-  while (measureStart + measureDur < duration - 3) {
-    for (const e of BPM_PATTERNS[pi % BPM_PATTERNS.length]) {
-      const t = measureStart + e.beat * beatDur;
-      if (t < duration - 3) {
-        const type: Note['type'] = e.type === 'slide' ? 'hold' : (e.type ?? 'tap');
-        const holdDuration = e.type === 'hold' || e.type === 'slide'
-          ? (e.holdDurationBeats ?? 1.0) * beatDur
-          : undefined;
-        notes.push({
-          id: id++,
-          time: t,
-          lane: e.lane,
-          type,
-          holdDuration,
-          targetLane: e.targetLane,
-          swipeDirection: e.swipeDirection
-        });
-      }
-    }
-    measureStart += measureDur;
-    pi++;
-  }
-  return notes;
 }
 
 export function getHighScore(songId: string): number {

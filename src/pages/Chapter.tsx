@@ -194,15 +194,17 @@ export default function Chapter() {
   const ownsCard = selectedSong && Array.isArray(collection) ? collection.some(c => c && (c.cardId === selectedSong.id || c.card?.day === selectedSong.day)) : false;
   const isCleared = selectedSong ? hasCleared(selectedSong) : false;
 
+  const fragmentCount = selectedSong ? parseInt(localStorage.getItem(`fragments_${selectedSong.id}`) || '0', 10) : 0;
+  const isCardUnlocked = ownsCard || fragmentCount >= 10;
+
   // Check locks
   const isTimeLocked = selectedSong ? isSongTimeLocked(selectedSong) : false;
   const isBonusLocked = selectedSong && (songs.indexOf(selectedSong) >= regularSongs.length) && !bonusUnlocked;
   const isProgLocked = selectedSong && !isUnlocked(songs.indexOf(selectedSong));
   
-  // Locked status for first play vs replay
-  const isReplay = isCleared;
-  const isReplayLocked = isReplay && !ownsCard;
-  const isPlayLocked = isTimeLocked || isBonusLocked || isProgLocked || isReplayLocked;
+  // A song is locked if they do not own the card AND have less than 10 fragments
+  const isUnlockReqLocked = !isCardUnlocked;
+  const isPlayLocked = isTimeLocked || isBonusLocked || isProgLocked || isUnlockReqLocked;
 
   const difficultyLevel = selectedSong
     ? calculateCampaignDifficulty(
@@ -814,13 +816,18 @@ export default function Chapter() {
                     🔒 TRANSMISSION LOCKED — CLEAR PREVIOUS LEVEL TO UNLOCK PATHWAY
                   </div>
                 )}
-                {isReplayLocked && (
-                  <div className="p-2.5 border border-yellow-500/30 bg-yellow-500/10 rounded">
-                    <div className="font-mono text-[10px] font-bold text-yellow-500 uppercase text-center">
-                      ⚠️ REPLAY LOCKED: OWNERSHIP CARD REQUIRED
+                {!isCardUnlocked && !isTimeLocked && !isBonusLocked && !isProgLocked && (
+                  <div className="p-3 border border-yellow-500/20 bg-yellow-500/5 rounded space-y-2">
+                    <div className="flex justify-between items-baseline">
+                      <span className="font-mono text-[9px] text-yellow-500 font-bold uppercase tracking-wider">// SONG UNLOCK REQUISITE</span>
+                      <span className="font-mono text-[10px] text-white/90 font-black">{fragmentCount} / 10 FRAGMENTS</span>
                     </div>
-                    <div className="font-mono text-[8px] text-white/40 mt-1 uppercase text-center leading-normal">
-                      You cleared this stage on your free run. Decode this card in Packs to replay for medals.
+                    <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden relative border border-white/5">
+                      <div className="h-full bg-gradient-to-r from-yellow-600 to-yellow-400 rounded-full transition-all duration-300"
+                        style={{ width: `${Math.min(100, (fragmentCount / 10) * 100)}%` }} />
+                    </div>
+                    <div className="font-mono text-[8px] text-white/40 leading-normal uppercase">
+                      Rip packs in the Pack Shop to pull cards/fragments for Day {selectedSong.day} or claim it on its featured daily drop to unlock!
                     </div>
                   </div>
                 )}
@@ -835,7 +842,7 @@ export default function Chapter() {
                     }`}
                     style={!isPlayLocked ? { boxShadow: `0 4px 12px ${isAvant ? '#39FF14' : meta.dc}30` } : {}}
                   >
-                    {isReplayLocked ? '🔒 REPLAY LOCKED' : isReplay ? 'REPLAY TRANSMISSION' : '▶ START TRANSMISSION'}
+                    {!isCardUnlocked ? '🔒 DECODE REQUIRED' : isCleared ? 'REPLAY TRANSMISSION' : '▶ START TRANSMISSION'}
                   </button>
                   
                   {isUnlocked(songs.indexOf(selectedSong)) && (

@@ -4,15 +4,24 @@ import { ChevronLeft, ChevronRight, Users, Info, X } from 'lucide-react';
 import {
   PACK_CONFIGS, PACK_CAROUSEL_ORDER,
   type PackCategory, type PackSize,
-  ROLL_RATES, PROOF_RATES, RARITY_CONFIG
+  ROLL_RATES, PROOF_RATES, RARITY_CONFIG,
+  type Rarity
 } from '../utils/rarity';
-import { hasClaimedFreePackToday } from '../services/vaultService';
+import { hasClaimedFreePackToday, type OwnedCard } from '../services/vaultService';
 import { getTimeUntilNextDay } from '../utils/dayCalc';
 import { useVaultStore } from '../store/useVaultStore';
 import { getAdminConfig } from '../utils/adminConfig';
+import { useLocation } from 'wouter';
+
+interface FragmentRewardInfo {
+  songId: string;
+  title: string;
+  amount: number;
+  rarity: string;
+}
 
 interface PackShopProps {
-  onPurchase: (category: PackCategory, size: PackSize) => void;
+  onPurchase: (category: PackCategory, size: PackSize, revealType?: 'cinematic' | 'slide') => Promise<OwnedCard[]>;
 }
 
 const CARD_W = 280;
@@ -114,6 +123,7 @@ function RipOverlay({
   accent,
   packLabel,
   onComplete,
+  fragmentRewards,
 }: {
   category: PackCategory;
   size: PackSize;
@@ -121,6 +131,7 @@ function RipOverlay({
   accent: string;
   packLabel: string;
   onComplete: () => void;
+  fragmentRewards?: FragmentRewardInfo[];
 }) {
   const tier = PACK_CONFIGS[category].tiers.find(t => t.size === size) || PACK_CONFIGS[category].tiers[0];
   const cardCount = tier.cardCount;
@@ -346,47 +357,87 @@ function RipOverlay({
         <AnimatePresence>
           {phase === 'cards_fly' && (
             <>
-              {[...Array(cardCount)].map((_, i) => (
-                <motion.div
-                  key={i}
-                  className="absolute rounded-lg"
-                  style={{
-                    width: '60px',
-                    height: '82px',
-                    left: '50%',
-                    top: '50%',
-                    marginLeft: '-30px',
-                    marginTop: '-41px',
-                    background: `linear-gradient(135deg, ${accent}30, ${accent}10)`,
-                    border: `1.5px solid ${accent}50`,
-                    boxShadow: `0 4px 16px ${accent}25`,
-                    zIndex: 20 + i,
-                  }}
-                  initial={{
-                    y: 0,
-                    x: 0,
-                    scale: 0.3,
-                    opacity: 0,
-                    rotateZ: 0,
-                  }}
-                  animate={{
-                    y: [-20, -300 - i * 40],
-                    x: [(i - 2) * 15, (i - 2) * 60],
-                    scale: [0.3, 0.8, 0.6],
-                    opacity: [0, 1, 1, 0],
-                    rotate: [(i - 2) * 5, (i - 2) * 15],
-                  }}
-                  transition={{
-                    duration: 1.2,
-                    delay: i * 0.12,
-                    ease: [0.22, 1, 0.36, 1],
-                  }}
-                >
-                  <div className="w-full h-full rounded-lg flex items-center justify-center">
-                    <span className="text-sm font-black" style={{ color: `${accent}80` }}>?</span>
-                  </div>
-                </motion.div>
-              ))}
+              {(fragmentRewards && fragmentRewards.length > 0 ? fragmentRewards : [...Array(cardCount)]).map((rewardOrEmpty, i) => {
+                const isReward = rewardOrEmpty && typeof rewardOrEmpty === 'object';
+                const reward = isReward ? (rewardOrEmpty as FragmentRewardInfo) : null;
+                const rarityColor = reward ? (RARITY_CONFIG[reward.rarity as Rarity]?.color || accent) : accent;
+
+                return (
+                  <motion.div
+                    key={i}
+                    className="absolute rounded-lg flex flex-col items-center justify-center p-2"
+                    style={{
+                      width: '100px',
+                      height: '130px',
+                      left: '50%',
+                      top: '50%',
+                      marginLeft: '-50px',
+                      marginTop: '-65px',
+                      background: reward 
+                        ? `linear-gradient(135deg, ${rarityColor}25, rgba(0,0,0,0.85))` 
+                        : `linear-gradient(135deg, ${accent}30, ${accent}10)`,
+                      border: `1.5px solid ${rarityColor}`,
+                      boxShadow: `0 0 15px ${rarityColor}40`,
+                      zIndex: 20 + i,
+                    }}
+                    initial={{
+                      y: 0,
+                      x: 0,
+                      scale: 0.3,
+                      opacity: 0,
+                      rotateZ: 0,
+                    }}
+                    animate={{
+                      y: [-20, -320 - (i % 3) * 30],
+                      x: [0, (i - (cardCount - 1) / 2) * 90], // fan out nicely based on index and length
+                      scale: [0.3, 1.0, 0.95],
+                      opacity: [0, 1, 1, 0.9],
+                      rotate: [(i - (cardCount - 1) / 2) * 4, (i - (cardCount - 1) / 2) * 12],
+                    }}
+                    transition={{
+                      duration: 1.6,
+                      delay: i * 0.15,
+                      ease: [0.22, 1, 0.36, 1],
+                    }}
+                  >
+                    {reward ? (
+                      <div className="w-full h-full flex flex-col justify-between items-center text-center py-1">
+                        {/* Song title */}
+                        <div className="text-[7px] font-mono uppercase tracking-wider text-white/50 line-clamp-2 px-0.5 leading-tight select-none">
+                          {reward.title}
+                        </div>
+                        {/* Fragment increment count */}
+                        <div className="flex flex-col items-center justify-center flex-1 my-1">
+                          <span 
+                            className="text-3xl font-black italic tracking-tighter" 
+                            style={{ 
+                              color: rarityColor, 
+                              fontFamily: '"Impact", "Arial Black", sans-serif',
+                              textShadow: `0 0 8px ${rarityColor}80` 
+                            }}
+                          >
+                            +{reward.amount}
+                          </span>
+                          <span className="text-[6px] font-mono tracking-widest text-white/60 uppercase -mt-0.5 font-bold">
+                            FRAGMENTS
+                          </span>
+                        </div>
+                        {/* Rarity label */}
+                        <div 
+                          className="text-[7px] font-mono font-bold tracking-widest uppercase px-1.5 py-0.5 rounded"
+                          style={{ background: `${rarityColor}20`, color: rarityColor }}
+                        >
+                          {reward.rarity}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="w-full h-full rounded-lg flex items-center justify-center">
+                        <span className="text-xl font-black" style={{ color: `${accent}80` }}>?</span>
+                      </div>
+                    )}
+                  </motion.div>
+                );
+              })}
             </>
           )}
         </AnimatePresence>
@@ -394,12 +445,14 @@ function RipOverlay({
 
       {/* Status text */}
       <motion.p
-        className="absolute bottom-20 text-sm font-mono tracking-wider"
+        className="absolute bottom-20 text-sm font-mono tracking-wider uppercase text-center"
         initial={{ opacity: 0 }}
-        animate={{ opacity: phase === 'cards_fly' ? 1 : 0 }}
+        animate={{ opacity: 1 }}
         style={{ color: accent }}
       >
-        REVEALING CARDS...
+        {phase === 'spotlight' ? 'ESTABLISHING SECURE CONNECTION...' :
+         phase === 'tearing' ? 'DECRYPTING ARCHIVE SEEDS...' :
+         phase === 'cards_fly' ? 'REVEALING CARDS...' : ''}
       </motion.p>
     </motion.div>
   );
@@ -895,6 +948,7 @@ export default function PackShop({ onPurchase }: PackShopProps) {
   const [freeClaimed, setFreeClaimed] = useState(false);
   const x = useMotionValue(0);
   const total = PACK_CAROUSEL_ORDER.length;
+  const [, setLocation] = useLocation();
 
   useEffect(() => {
     hasClaimedFreePackToday().then(setFreeClaimed);
@@ -903,6 +957,7 @@ export default function PackShop({ onPurchase }: PackShopProps) {
   // Rip animation state
   const [ripPhase, setRipPhase] = useState<RipPhase>('idle');
   const [rippingPack, setRippingPack] = useState<{ cat: PackCategory; size: PackSize } | null>(null);
+  const [fragmentRewards, setFragmentRewards] = useState<FragmentRewardInfo[]>([]);
 
   const goTo = useCallback((idx: number) => {
     if (ripPhase !== 'idle') return;
@@ -924,14 +979,63 @@ export default function PackShop({ onPurchase }: PackShopProps) {
   }, [activeIndex, goTo, ripPhase]);
 
   // Handle rip initiation — all packs go straight to cinematic reveal
-  const handleRip = useCallback((cat: PackCategory, size: PackSize) => {
+  const handleRip = useCallback(async (cat: PackCategory, size: PackSize) => {
     if (ripPhase !== 'idle') return;
     // Block free pack if already claimed
     if (cat === 'free' && freeClaimed) return;
-    // Immediately mark free pack as claimed to prevent double-rips
-    if (cat === 'free') setFreeClaimed(true);
-    // All packs now use the cinematic drag-to-rip reveal
-    onPurchase(cat, size);
+
+    setRippingPack({ cat, size });
+    setRipPhase('spotlight');
+
+    try {
+      const cards = await onPurchase(cat, size);
+      
+      if (cards && cards.length > 0) {
+        // Calculate fragment rewards and increment localStorage
+        const rewards: FragmentRewardInfo[] = cards.map(c => {
+          let songId = c.card.song;
+          if (!songId) {
+            const dayNum = c.card.day || 1;
+            const paddedDay = String(dayNum).padStart(3, '0');
+            songId = `day-${paddedDay}`;
+          }
+          
+          let amount = 2;
+          const rarity = c.card.rarity;
+          if (rarity === 'common') amount = 2;
+          else if (rarity === 'uncommon') amount = 3;
+          else if (rarity === 'rare') amount = 5;
+          else if (rarity === 'legendary') amount = 10;
+          else if (rarity === 'mythic') amount = 10;
+          
+          const current = parseInt(localStorage.getItem(`fragments_${songId}`) || '0', 10);
+          localStorage.setItem(`fragments_${songId}`, String(Math.min(10, current + amount)));
+          
+          return {
+            songId,
+            title: c.card.title,
+            amount,
+            rarity
+          };
+        });
+
+        setFragmentRewards(rewards);
+        setRipPhase('tearing');
+        
+        // Progress to cards flying out
+        setTimeout(() => {
+          setRipPhase('cards_fly');
+        }, 600);
+      } else {
+        // Cancel/Failed purchase, reset rip phase
+        setRipPhase('idle');
+        setRippingPack(null);
+      }
+    } catch (err) {
+      console.error('Failed to rip pack:', err);
+      setRipPhase('idle');
+      setRippingPack(null);
+    }
   }, [ripPhase, onPurchase, freeClaimed]);
 
   // When cards_fly animation finishes → actually purchase and navigate
@@ -941,10 +1045,13 @@ export default function PackShop({ onPurchase }: PackShopProps) {
       if (rippingPack.cat === 'free') {
         setFreeClaimed(true);
       }
-      onPurchase(rippingPack.cat, rippingPack.size);
       setRippingPack(null);
+      setFragmentRewards([]);
+      
+      // Navigate to /vault/reveal
+      setLocation('/vault/reveal');
     }
-  }, [rippingPack, onPurchase]);
+  }, [rippingPack, setLocation]);
 
   const activeCat = PACK_CAROUSEL_ORDER[activeIndex];
   const activeCfg = PACK_CONFIGS[activeCat];
@@ -1036,6 +1143,7 @@ export default function PackShop({ onPurchase }: PackShopProps) {
             accent={activeCfg.accent}
             packLabel={activeCfg.label}
             onComplete={handleRipComplete}
+            fragmentRewards={fragmentRewards}
           />
         )}
       </AnimatePresence>

@@ -260,175 +260,34 @@ function seededRandom(seed: number): () => number {
 export async function fetchAllCards(): Promise<VaultCard[]> {
   if (cardCache) return cardCache;
 
-  const today = getCurrentDay();
-  let releases: ReleaseItem[] = [];
-  let overrides: Record<string, ContentOverride> = {};
-
-  // Fetch release data
-  const sources = [
-    'https://th3scr1b3.art/release-data.json',
-    '/release-data.json',
-  ];
-
-  for (const url of sources) {
-    try {
-      const res = await fetch(url, { cache: 'no-cache' });
-      if (res.ok) {
-        const data = await res.json();
-        // Handle both wrapper object { releases: [...] } and direct array [...]
-        releases = Array.isArray(data) ? data : (data.releases || []);
-        console.log(`[Vault] Loaded ${releases.length} cards from ${url}`);
-        break;
-      }
-    } catch { /* try next */ }
-  }
-
-  // Fetch content overrides
-  const overrideSources = [
-    'https://th3scr1b3.art/content-overrides.json',
-    '/content-overrides.json',
-  ];
-
-  for (const url of overrideSources) {
-    try {
-      const res = await fetch(url, { cache: 'no-cache' });
-      if (res.ok) {
-        overrides = await res.json();
-        break;
-      }
-    } catch { /* try next */ }
-  }
-
-  // Build VaultCards
-  const cards: VaultCard[] = [];
-
-  for (const r of releases) {
-    const dayNum = typeof r.day === 'string' ? parseInt(r.day, 10) : r.day;
-    if (dayNum > today) continue; // Only cards up to today exist as "real" cards
-
-    const rng = seededRandom(dayNum * 7919 + 31337);
-    const dayOverride = overrides[String(dayNum)];
-    const displayTitle = dayOverride?.title || r.canonicalTitle || r.title;
-
-    const energy = typeof r.energy === 'string' ? parseFloat(r.energy) : (r.energy ?? rng());
-    const valence = typeof r.valence === 'string' ? parseFloat(r.valence) : (r.valence ?? rng());
-    const tempo = typeof r.tempo === 'string' ? parseInt(r.tempo, 10) : (r.tempo ?? Math.round(70 + rng() * 110));
-
-    // Deterministic rarity from traits
-    const traitScore = (Math.abs(energy - 0.5) * 2 + Math.abs(valence - 0.5) * 2) / 2;
-    const rarityRoll = rng();
-    let rarity: Rarity = 'common';
-    if (rarityRoll < 0.02 + traitScore * 0.01) rarity = 'legendary';
-    else if (rarityRoll < 0.12 + traitScore * 0.05) rarity = 'rare';
-    else if (rarityRoll < 0.35 + traitScore * 0.05) rarity = 'uncommon';
-
-    // Use actual URLs from the data — resolved via day_file_map
-    const { audioUrl, coverUrl } = resolveUrls(r);
-
-    const description = dayOverride?.info || r.description || '';
-
-    // Parse genre/tags — might be stringified arrays
-    let genre: string[] = [];
-    let tags: string[] = [];
-    try {
-      genre = typeof r.genre === 'string' ? JSON.parse(r.genre.replace(/'/g, '"')) : (r.genre || []);
-    } catch { genre = []; }
-    try {
-      tags = typeof r.tags === 'string' ? JSON.parse(r.tags.replace(/'/g, '"')) : (r.tags || []);
-    } catch { tags = []; }
-
-    cards.push({
-      id: `card-${dayNum}`,
-      day: dayNum,
-      title: displayTitle,
-      storageTitle: r.storageTitle,
-      mood: r.mood || 'dark',
-      rarity,
-      energy,
-      valence,
-      tempo,
-      genre,
-      tags,
-      coverUrl,
-      audioUrl,
-      description,
-      claimedCount: Math.floor(seededRandom(dayNum * 9973)() * 45),
-      maxSupply: 100,
-    });
-  }
-
-  // Also build "future" cards (for Prophecy Pull)
-  for (const r of releases) {
-    const dayNum = typeof r.day === 'string' ? parseInt(r.day, 10) : r.day;
-    if (dayNum <= today) continue;
-    const rng = seededRandom(dayNum * 7919 + 31337);
-    const dayOverride = overrides[String(dayNum)];
-    const displayTitle = dayOverride?.title || r.canonicalTitle || r.title;
-
-    const energy = typeof r.energy === 'string' ? parseFloat(r.energy) : (r.energy ?? rng());
-    const valence = typeof r.valence === 'string' ? parseFloat(r.valence) : (r.valence ?? rng());
-    const tempo = typeof r.tempo === 'string' ? parseInt(r.tempo, 10) : (r.tempo ?? Math.round(70 + rng() * 110));
-
-    let genre: string[] = [];
-    let tags: string[] = [];
-    try { genre = typeof r.genre === 'string' ? JSON.parse(r.genre.replace(/'/g, '"')) : (r.genre || []); } catch { genre = []; }
-    try { tags = typeof r.tags === 'string' ? JSON.parse(r.tags.replace(/'/g, '"')) : (r.tags || []); } catch { tags = []; }
-
-    const { audioUrl, coverUrl } = resolveUrls(r);
-
-    cards.push({
-      id: `card-${dayNum}`,
-      day: dayNum,
-      title: displayTitle,
-      storageTitle: r.storageTitle,
-      mood: r.mood || 'dark',
-      rarity: 'rare',
-      energy,
-      valence,
-      tempo,
-      genre,
-      tags,
-      coverUrl,
-      audioUrl,
-      description: dayOverride?.info || r.description || '',
-      claimedCount: 0,
-      maxSupply: 100,
-    });
-  }
-
-  if (cards.length === 0) {
-    // Fallback generated cards
-    for (let day = 1; day <= Math.min(today, 365); day++) {
-      const rng = seededRandom(day * 7919 + 31337);
-      let rarity: Rarity = 'common';
-      const rr = rng();
-      if (rr < 0.03) rarity = 'legendary';
-      else if (rr < 0.12) rarity = 'rare';
-      else if (rr < 0.35) rarity = 'uncommon';
-
-      cards.push({
-        id: `card-${day}`,
-        day,
-        title: `Day ${day}`,
-        storageTitle: `day-${day}`,
-        mood: rng() > 0.5 ? 'light' : 'dark',
-        rarity,
-        energy: rng(),
-        valence: rng(),
-        tempo: Math.round(70 + rng() * 110),
-        genre: [],
-        tags: [],
-        coverUrl: '',
-        audioUrl: '',
-        description: '',
-        claimedCount: Math.floor(rng() * 45),
-        maxSupply: 100,
+  try {
+    const res = await fetch('/data/card_catalog.json');
+    if (!res.ok) throw new Error('Failed to fetch card catalog');
+    const catalog: any[] = await res.json();
+    
+    // Resolve URLs dynamically
+    const cards: VaultCard[] = catalog.map(c => {
+      const { audioUrl, coverUrl } = resolveUrls({
+        day: c.day,
+        title: c.title,
+        storageTitle: c.storageTitle,
+        mood: c.mood,
+        coverArt: c.coverUrl,
+        storedAudioUrl: c.audioUrl
       });
-    }
+      return {
+        ...c,
+        audioUrl,
+        coverUrl
+      };
+    });
+    
+    cardCache = cards;
+    return cards;
+  } catch (err) {
+    console.error('[Vault] Failed to load card catalog:', err);
+    return [];
   }
-
-  cardCache = cards;
-  return cards;
 }
 
 // ===== CARD QUERIES =====
