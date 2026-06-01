@@ -2911,6 +2911,7 @@ export default function Game() {
         if (bg === 'neon_grid') {
           return (
             <div className="absolute inset-0 overflow-hidden pointer-events-none bg-neon-grid-container">
+              <div className="bg-neon-grid-sun" />
               <div className="bg-neon-grid-grid" />
               <div className="bg-neon-grid-horizon" />
             </div>
@@ -2919,15 +2920,28 @@ export default function Game() {
         if (bg === 'cyber_streets') {
           return (
             <div className="absolute inset-0 overflow-hidden pointer-events-none bg-cyber-streets-container">
-              {Array.from({ length: 15 }).map((_, i) => {
-                const delay = `${(i * 0.4) % 4.5}s`;
-                const duration = `${5 + (i % 3) * 2}s`;
-                const opacity = 0.12 + ((i * 3) % 7) * 0.08;
-                const fontSize = `${10 + (i % 4) * 2.5}px`;
-                const left = `${i * 7 + 1.5}%`;
-                const content = Array.from({ length: 25 }).map((_, charIdx) => 
-                  ((i + charIdx) % 3 === 0) ? "1" : "0"
-                ).join("");
+              <div className="cyber-streets-grille" />
+              {Array.from({ length: 18 }).map((_, i) => {
+                const delay = `${(i * 0.3) % 5}s`;
+                const duration = `${3.5 + (i % 4) * 1.5}s`;
+                const opacity = 0.22 + ((i * 4) % 8) * 0.08;
+                const fontSize = `${9 + (i % 3) * 3.5}px`;
+                const left = `${i * 5.5 + 2}%`;
+                
+                const chars = ["P", "I", "M", "0", "1", "X", "Y", "Ø", "Δ", "Ω", "7", "5", "A", "C", "F"];
+                const content = Array.from({ length: 30 }).map((_, charIdx) => {
+                  const ch = chars[(i + charIdx * 7) % chars.length];
+                  const isFirst = charIdx === 0;
+                  return (
+                    <span 
+                      key={charIdx} 
+                      className={isFirst ? "matrix-char-head" : "matrix-char"}
+                      style={isFirst ? { color: '#fff', textShadow: '0 0 8px #fff, 0 0 15px #39FF14' } : {}}
+                    >
+                      {ch}
+                    </span>
+                  );
+                });
                 
                 return (
                   <div
@@ -2951,9 +2965,12 @@ export default function Game() {
         if (bg === 'space_nebula') {
           return (
             <div className="absolute inset-0 overflow-hidden pointer-events-none bg-space-nebula-container">
-              <div className="space-stars" />
+              <div className="space-stars space-stars-back" />
+              <div className="space-stars space-stars-mid" />
+              <div className="space-stars space-stars-front" />
               <div className="space-nebula-cloud1" />
               <div className="space-nebula-cloud2" />
+              <div className="space-nebula-cloud3" />
             </div>
           );
         }
@@ -2962,8 +2979,20 @@ export default function Game() {
             <div className="absolute inset-0 overflow-hidden pointer-events-none bg-glitch-matrix-container">
               <div className="glitch-grid" />
               <div className="glitch-static" />
+              
+              <div className="glitch-hud glitch-hud-top-left font-mono">
+                SYS_STATUS: COMPROMISED<br />
+                BITRATE_STREAM: [14.2 KB/S]<br />
+                DECODING: SEC_92B...
+              </div>
+              <div className="glitch-hud glitch-hud-bottom-right font-mono text-right">
+                VAULT_DOOR: STAGE_UNLOCKED<br />
+                INTEGRITY_PIM: 99.98%
+              </div>
+              
               <div className="glitch-bar1" />
               <div className="glitch-bar2" />
+              <div className="glitch-flash-overlay" />
             </div>
           );
         }
