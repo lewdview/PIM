@@ -149,6 +149,7 @@ export class AudioManager {
   private bufferCache: Map<string, AudioBuffer> = new Map();
   private loadingPromises: Map<string, Promise<void>> = new Map();
   private preloaded = false;
+  private activeSources: Map<SfxName, AudioBufferSourceNode[]> = new Map();
 
   // ── lifecycle ──────────────────────────────────────────────────
 
@@ -256,6 +257,39 @@ export class AudioManager {
     source.connect(gain);
     gain.connect(this.masterGain);
     source.start(0);
+
+    // Track active sources so we can stop them later
+    if (!this.activeSources.has(name)) {
+      this.activeSources.set(name, []);
+    }
+    const sources = this.activeSources.get(name)!;
+    sources.push(source);
+
+    source.onended = () => {
+      const active = this.activeSources.get(name);
+      if (active) {
+        const idx = active.indexOf(source);
+        if (idx !== -1) {
+          active.splice(idx, 1);
+        }
+      }
+    };
+  }
+
+  /** Stop all active playing nodes of a specific SFX name. */
+  stopSfx(name: SfxName): void {
+    const sources = this.activeSources.get(name);
+    if (sources) {
+      const toStop = [...sources];
+      sources.length = 0;
+      toStop.forEach((s) => {
+        try {
+          s.stop();
+        } catch (e) {
+          // ignore if already stopped or not started
+        }
+      });
+    }
   }
 
   // ── teardown ───────────────────────────────────────────────────

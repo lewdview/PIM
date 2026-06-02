@@ -838,6 +838,8 @@ export default function Game() {
   }, [songId, setLocation]);
 
   const doReturn = useCallback(() => {
+    if (phaseRef.current !== "continue") return; // guard against double-firing!
+    audioManager.stopSfx("gameover_countdown");
     playRewindSound();
     continueUsedRef.current++;
     haptics.fusionProgress();
@@ -3217,17 +3219,24 @@ export default function Game() {
     return () => window.removeEventListener('blur', onBlur);
   }, [doPause, resetAllLanes]);
 
-  // Handle manual keyboard pause (Escape)
+  // Handle manual keyboard pause (Escape) and Continue (Enter)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') {
-        if (pausedRef.current) doResume();
-        else doPause();
+      const p = phaseRef.current;
+      if (p === 'playing') {
+        if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') {
+          if (pausedRef.current) doResume();
+          else doPause();
+        }
+      } else if (p === 'continue') {
+        if (e.key === 'Enter') {
+          doReturn();
+        }
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [doPause, doResume]);
+  }, [doPause, doResume, doReturn]);
 
   return (
     <div
