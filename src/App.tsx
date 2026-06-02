@@ -1,5 +1,6 @@
 import { Route, Switch, useLocation } from 'wouter';
 import { useEffect } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import { useAuthStore } from './store/useAuthStore';
 import { useVaultStore } from './store/useVaultStore';
 import { useGlobalPlayer } from './store/useGlobalPlayer';
@@ -161,6 +162,7 @@ export default function App() {
       <LoadingToast />
       <GlobalPlayerBar />
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+      <Analytics />
     </div>
   );
 }
