@@ -11,7 +11,7 @@ const RC2_SEEN_KEY = 'th3v4ult_rc2_seen';
  */
 export default function RC1WelcomeModal() {
   const [visible, setVisible] = useState(false);
-  const { user, signInWithWallet, status } = useAuthStore();
+  const { user, status, setShowAuthModal } = useAuthStore();
 
   useEffect(() => {
     const seen = localStorage.getItem(RC2_SEEN_KEY);
@@ -25,9 +25,8 @@ export default function RC1WelcomeModal() {
     setVisible(false);
   };
 
-  const handleConnect = async () => {
-    await signInWithWallet();
-    // Don't auto-dismiss — let them read, they can close after
+  const handleConnect = () => {
+    setShowAuthModal(true);
   };
 
   if (!visible) return null;

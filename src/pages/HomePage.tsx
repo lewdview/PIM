@@ -15,6 +15,7 @@ import { audioManager } from '../game/audio';
 import { getCurrentDay } from '../utils/dayCalc';
 import { type PackCategory, type PackSize, RARITY_CONFIG, PACK_CONFIGS } from '../utils/rarity';
 import { useLocation } from 'wouter';
+import PaymentSelectModal from '../components/PaymentSelectModal';
 
 // ===== BRUTALIST TICKER =====
 const TICKER_TEXT = 'TH3V4ULT : PIM — 365 DAYS OF DARK AND LIGHT — GEN 0 ARCHIVE — COLLECT. SELL. EARN. — DAILY DROPS — V⚡ TOKEN ECONOMY — RARITY PULLS — MYTHIC POSSIBLE — CLAIM NOW — ';
@@ -108,6 +109,7 @@ export default function HomePage() {
   const user = useAuthStore(s => s.user);
   const [isClaimingAnimation, setIsClaimingAnimation] = useState(false);
   const [isPurchasing, setIsPurchasing] = useState(false);
+  const [checkoutInfo, setCheckoutInfo] = useState<{ category: PackCategory; size: PackSize; label: string; price: string; priceValue: number; accent: string } | null>(null);
   const today = getCurrentDay();
   const completedMonths = getCompletedMonths();
 
@@ -185,37 +187,17 @@ export default function HomePage() {
     const cfg = PACK_CONFIGS[category];
     const tier = cfg?.tiers.find(t => t.size === size) ?? cfg?.tiers[0];
 
-    // ── CRYPTO PAYMENT FOR USD PACKS (COINBASE SDK) ─────────────────
+    // ── INTERCEPT FOR USD PACKS (REQUIRES CLEARANCE OPTION) ─────────
     if (tier && tier.priceValue > 0 && category !== 'vault_token' && tier.price !== 'FREE' && !sessionId) {
-      try {
-        const { payWithCrypto } = await import('../services/coinbaseService');
-        useLoadingToast.getState().show('Waiting for wallet confirmation…');
-        
-        // Use the priceValue from the tier (e.g. 5.00 for Prophecy)
-        const txHash = await payWithCrypto(tier.priceValue);
-        
-        if (txHash) {
-          useLoadingToast.getState().show('Verifying transaction…');
-          // Once we have txHash, we can proceed to purchasePack
-          const cards = await purchasePack(category, size, undefined, txHash);
-          if (cards.length > 0) {
-            addToCollection(cards);
-            const revealType = 'cinematic' as const;
-            startReveal(cards, cfg && tier ? {
-              category, size, label: cfg.label, icon: cfg.icon,
-              accent: cfg.accent, gradient: cfg.gradient,
-              price: tier.price, cardCount: tier.cardCount, revealType,
-            } : undefined);
-            setLocation('/vault/reveal');
-          }
-          return;
-        }
-      } catch (err: any) {
-        console.error('Crypto payment failed:', err);
-        useLoadingToast.getState().hide();
-        alert(err.message || 'Payment failed');
-        return;
-      }
+      setCheckoutInfo({
+        category,
+        size,
+        label: cfg.label,
+        price: tier.price,
+        priceValue: tier.priceValue,
+        accent: cfg.accent,
+      });
+      return;
     }
 
     setIsPurchasing(true);
@@ -247,6 +229,50 @@ export default function HomePage() {
       setIsPurchasing(false);
     }
   }, [startReveal, setLocation, addToCollection]);
+
+  const handlePaymentSelect = useCallback(async (method: 'crypto' | 'stripe') => {
+    if (!checkoutInfo) return;
+    const { category, size, priceValue, label, price, accent } = checkoutInfo;
+    setCheckoutInfo(null);
+
+    const cfg = PACK_CONFIGS[category];
+    const tier = cfg?.tiers.find(t => t.size === size) ?? cfg?.tiers[0];
+
+    if (method === 'crypto') {
+      try {
+        const { payWithCrypto } = await import('../services/coinbaseService');
+        useLoadingToast.getState().show('Waiting for wallet confirmation…');
+        
+        const txHash = await payWithCrypto(priceValue);
+        
+        if (txHash) {
+          useLoadingToast.getState().show('Verifying transaction…');
+          const cards = await purchasePack(category, size, undefined, txHash);
+          if (cards.length > 0) {
+            addToCollection(cards);
+            const revealType = 'cinematic' as const;
+            startReveal(cards, cfg && tier ? {
+              category, size, label: cfg.label, icon: cfg.icon,
+              accent: cfg.accent, gradient: cfg.gradient,
+              price: tier.price, cardCount: tier.cardCount, revealType,
+            } : undefined);
+            setLocation('/vault/reveal');
+          }
+        }
+      } catch (err: any) {
+        console.error('Crypto payment failed:', err);
+        useLoadingToast.getState().hide();
+        alert(err.message || 'Payment failed');
+      }
+    } else {
+      // Stripe payment simulation redirect
+      useLoadingToast.getState().show('Connecting to Stripe checkout...');
+      setTimeout(() => {
+        const mockSessionId = 'cs_live_mock_' + Math.random().toString(36).substr(2, 9);
+        window.location.href = `/?session_id=${mockSessionId}&category=${category}&size=${size}`;
+      }, 1200);
+    }
+  }, [checkoutInfo, startReveal, setLocation, addToCollection]);
 
   const uniqueCards = new Set(collection.map(c => c.cardId)).size;
   const totalScore = collection.reduce((sum, c) => sum + (RARITY_CONFIG[c.card.rarity]?.points || 1), 0);
@@ -526,6 +552,16 @@ export default function HomePage() {
         </motion.div>
       )}
 
+      {checkoutInfo && (
+        <PaymentSelectModal
+          isOpen={!!checkoutInfo}
+          onClose={() => setCheckoutInfo(null)}
+          onSelect={handlePaymentSelect}
+          packLabel={checkoutInfo.label}
+          price={checkoutInfo.price}
+          accent={checkoutInfo.accent}
+        />
+      )}
       <div className="h-8" />
     </div>
   );

@@ -141,22 +141,15 @@ function TokenPill({ balance, compact = false }: { balance: number; compact?: bo
 // ── Main nav ──────────────────────────────────────────────────────────────────
 export default function Navbar() {
   const [location] = useLocation();
-  const { user, signInWithWallet, signOut, status, error: authError } = useAuthStore();
+  const { user, signOut, status, error: authError, setShowAuthModal } = useAuthStore();
   const isAnonymous = user?.is_anonymous || !user?.email;
   const tokenBalance = useVaultStore(s => s.tokenBalance);
   const [menuOpen, setMenuOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
-  const [walletConnecting, setWalletConnecting] = useState(false);
   const { is4K, toggle: toggle4K, detectCapability } = useDisplayMode();
 
-  const handleConnectWallet = async () => {
-    if (walletConnecting) return;
-    setWalletConnecting(true);
-    try {
-      await signInWithWallet();
-    } finally {
-      setWalletConnecting(false);
-    }
+  const handleConnectWallet = () => {
+    setShowAuthModal(true);
   };
 
   useEffect(() => {
@@ -302,7 +295,7 @@ export default function Navbar() {
                 </div>
                 <button
                   onClick={handleConnectWallet}
-                  disabled={walletConnecting}
+                  disabled={status === 'loading'}
                   className="sticker-gun-tag sticker-slits ml-1 font-black text-[10px] uppercase tracking-wider transition-all hover:scale-105 active:scale-95 disabled:opacity-60 disabled:cursor-wait"
                   style={{
                     background: authError ? '#ff3800' : 'var(--color-neon-gold)',
@@ -315,19 +308,19 @@ export default function Navbar() {
                   } as any}
                 >
                   <div className="flex items-center gap-1">
-                    {walletConnecting ? (
+                    {status === 'loading' ? (
                       <div className="w-2.5 h-2.5 border-2 border-black border-t-transparent rounded-full animate-spin" />
                     ) : (
                       <Wallet size={11} />
                     )}
-                    <span>{walletConnecting ? 'Connecting...' : 'Connect Wallet'}</span>
+                    <span>{status === 'loading' ? 'Connecting...' : 'Connect Identity'}</span>
                   </div>
                 </button>
               </div>
             ) : (
               <button
                 onClick={handleConnectWallet}
-                disabled={walletConnecting}
+                disabled={status === 'loading'}
                 className="sticker-gun-tag sticker-slits ml-1 font-black text-[10px] uppercase tracking-wider transition-all hover:scale-105 active:scale-95 disabled:opacity-60 disabled:cursor-wait"
                 style={{
                   background: authError ? '#ff3800' : 'var(--color-neon-gold)',
@@ -340,12 +333,12 @@ export default function Navbar() {
                 } as any}
               >
                 <div className="flex items-center gap-1.5">
-                  {walletConnecting ? (
+                  {status === 'loading' ? (
                     <div className="w-3 h-3 border-2 border-black border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <Wallet size={13} />
                   )}
-                  <span>{walletConnecting ? 'Connecting...' : authError ? 'Retry Connect' : 'Connect Wallet'}</span>
+                  <span>{status === 'loading' ? 'Connecting...' : authError ? 'Retry Connect' : 'Connect Identity'}</span>
                 </div>
               </button>
             )}

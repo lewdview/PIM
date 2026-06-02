@@ -10,6 +10,7 @@ import Navbar from './components/Navbar';
 import LoadingToast from './components/LoadingToast';
 import GlobalPlayerBar from './components/GlobalPlayerBar';
 import OnboardingFlow from './components/OnboardingFlow';
+import AuthModal from './components/AuthModal';
 
 // Page imports
 import RhythmHome from './pages/RhythmHome';
@@ -38,6 +39,8 @@ export default function App() {
   const initializeAuth = useAuthStore((s) => s.initialize);
   const authStatus = useAuthStore((s) => s.status);
   const user = useAuthStore((s) => s.user);
+  const showAuthModal = useAuthStore((s) => s.showAuthModal);
+  const setShowAuthModal = useAuthStore((s) => s.setShowAuthModal);
   
   const hasOnboarded = useVaultStore((s) => s.hasOnboarded);
   const completeOnboarding = useVaultStore((s) => s.completeOnboarding);
@@ -157,6 +160,7 @@ export default function App() {
 
       <LoadingToast />
       <GlobalPlayerBar />
+      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
     </div>
   );
 }

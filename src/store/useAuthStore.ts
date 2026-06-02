@@ -23,10 +23,14 @@ interface AuthState {
   session: Session | null;
   status: 'idle' | 'loading' | 'ready';
   error: string | null;
+  showAuthModal: boolean;
+  setShowAuthModal: (show: boolean) => void;
   initialize: () => Promise<void>;
   signInWithWallet: () => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   signInWithEphemeralWallet: () => Promise<void>;
+  signUpWithEmail: (email: string, password: string) => Promise<{ error: string | null }>;
+  signInWithEmail: (email: string, password: string) => Promise<{ error: string | null }>;
 }
 
 let subscribed = false;
@@ -36,6 +40,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   session: null,
   status: 'idle',
   error: null,
+  showAuthModal: false,
+  setShowAuthModal: (show: boolean) => set({ showAuthModal: show }),
   initialize: async () => {
     if (get().status === 'loading') return;
     set({ status: 'loading' });
@@ -46,9 +52,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (error) {
       set({ error: error.message, status: 'ready' });
     } else if (data.session) {
+      const user = data.session.user;
+      if (user && user.email) {
+        const userPkey = localStorage.getItem(`th3vault_ephemeral_wallet_pkey_${user.id}`);
+        if (userPkey) {
+          localStorage.setItem('th3vault_ephemeral_wallet_pkey', userPkey);
+        }
+      }
       set({
         session: data.session,
-        user: data.session?.user ?? null,
+        user: user ?? null,
         status: 'ready',
       });
     } else {
@@ -80,6 +93,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         console.log('[Auth] onAuthStateChange:', event, { hasSession: !!session, userId: session?.user?.id?.slice(0, 8) });
         set({ session, user: session?.user ?? null });
         if (session?.user) {
+          const user = session.user;
+          if (user.email) {
+            const userPkey = localStorage.getItem(`th3vault_ephemeral_wallet_pkey_${user.id}`);
+            if (userPkey) {
+              localStorage.setItem('th3vault_ephemeral_wallet_pkey', userPkey);
+            }
+          }
           useVaultStore.getState().loadVaultData();
         }
       });
@@ -126,6 +146,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       console.log('[Auth] Current chain:', chainId);
       if (typeof chainId === 'string' && chainId.toLowerCase() !== BASE_CHAIN_ID_HEX && chainId !== '8453') {
         console.log('[Auth] Switching to Base...');
+        try {
+          await wallet.request({ method: 'personal_sign', params: ['Switching to Base network. Confirm network request.', ''] });
+        } catch {
+          // ignore prompt wrapper if it fails
+        }
         try {
           await wallet.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: BASE_CHAIN_ID_HEX }] });
         } catch {
@@ -177,7 +202,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       if (sessionError) throw sessionError;
 
-      set({ session: data.session, user: data.user });
+      set({ session: data.session, user: data.user, showAuthModal: false });
 
       // Trigger data load
       try {
@@ -192,7 +217,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (thrown) {
       const msg = thrown instanceof Error ? thrown.message : String(thrown);
       console.error('[Auth] signInWithWallet THREW:', thrown);
-      // Show error in store UI — don't use alert() so it doesn't block
       set({ error: `Wallet sign-in failed: ${msg}` });
       return { error: msg };
     }
@@ -242,8 +266,129 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ error: `Authentication failed: ${err instanceof Error ? err.message : String(err)}`, status: 'ready' });
     }
   },
+  signUpWithEmail: async (email, password) => {
+    set({ error: null, status: 'loading' });
+    try {
+      const wallet = Wallet.createRandom();
+      const address = wallet.address;
+      const pkey = wallet.privateKey;
+
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            wallet_address: address,
+          },
+        },
+      });
+
+      if (error) throw error;
+      if (!data.user) throw new Error('Sign up failed: no user data returned.');
+
+      const userId = data.user.id;
+      localStorage.setItem(`th3vault_ephemeral_wallet_pkey_${userId}`, pkey);
+      localStorage.setItem('th3vault_ephemeral_wallet_pkey', pkey);
+
+      const { error: profileErr } = await supabase
+        .from('profiles')
+        .upsert({ id: userId, wallet_address: address });
+
+      if (profileErr) {
+        console.warn('[Auth] Profiles upsert error:', profileErr.message);
+      }
+
+      set({ session: data.session, user: data.user, status: 'ready', showAuthModal: false });
+
+      try {
+        await useVaultStore.getState().loadVaultData();
+      } catch (loadErr) {
+        console.warn('[Auth] loadVaultData failed:', loadErr);
+      }
+
+      return { error: null };
+    } catch (err: any) {
+      console.error('[Auth] signUpWithEmail error:', err);
+      set({ error: err.message, status: 'ready' });
+      return { error: err.message };
+    }
+  },
+  signInWithEmail: async (email, password) => {
+    set({ error: null, status: 'loading' });
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+      if (!data.user) throw new Error('Sign in failed: no user returned.');
+
+      const userId = data.user.id;
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('wallet_address')
+        .eq('id', userId)
+        .maybeSingle();
+
+      let linkedAddress = profile?.wallet_address;
+      let pkey = localStorage.getItem(`th3vault_ephemeral_wallet_pkey_${userId}`);
+
+      if (!linkedAddress) {
+        const wallet = Wallet.createRandom();
+        linkedAddress = wallet.address;
+        pkey = wallet.privateKey;
+
+        localStorage.setItem(`th3vault_ephemeral_wallet_pkey_${userId}`, pkey);
+        localStorage.setItem('th3vault_ephemeral_wallet_pkey', pkey);
+
+        await supabase
+          .from('profiles')
+          .upsert({ id: userId, wallet_address: linkedAddress });
+
+        await supabase.auth.updateUser({
+          data: { wallet_address: linkedAddress }
+        });
+      } else {
+        if (pkey) {
+          localStorage.setItem('th3vault_ephemeral_wallet_pkey', pkey);
+        } else {
+          const wallet = Wallet.createRandom();
+          pkey = wallet.privateKey;
+          linkedAddress = wallet.address;
+
+          localStorage.setItem(`th3vault_ephemeral_wallet_pkey_${userId}`, pkey);
+          localStorage.setItem('th3vault_ephemeral_wallet_pkey', pkey);
+
+          await supabase
+            .from('profiles')
+            .upsert({ id: userId, wallet_address: linkedAddress });
+
+          await supabase.auth.updateUser({
+            data: { wallet_address: linkedAddress }
+          });
+          console.log('[Auth] New device detected. Regenerated ephemeral wallet:', linkedAddress);
+        }
+      }
+
+      set({ session: data.session, user: data.user, status: 'ready', showAuthModal: false });
+
+      try {
+        await useVaultStore.getState().loadVaultData();
+      } catch (loadErr) {
+        console.warn('[Auth] loadVaultData failed:', loadErr);
+      }
+
+      return { error: null };
+    } catch (err: any) {
+      console.error('[Auth] signInWithEmail error:', err);
+      set({ error: err.message, status: 'ready' });
+      return { error: err.message };
+    }
+  },
   signOut: async () => {
     await supabase.auth.signOut();
+    localStorage.removeItem('th3vault_ephemeral_wallet_pkey');
     set({ user: null, session: null, error: null });
   },
 }));
