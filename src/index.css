@@ -1471,25 +1471,25 @@ html.ultra-hd::-webkit-scrollbar {
 .bg-living-vault-container {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 50% 50%, #0d0602 0%, #040201 100%);
+  background: radial-gradient(circle at 50% 50%, #1e110a 0%, #060201 100%);
   overflow: hidden;
   perspective: 800px;
   transition: filter 0.8s cubic-bezier(0.25, 0.8, 0.25, 1);
-  filter: brightness(0.25) saturate(0.8);
+  filter: brightness(0.65) saturate(0.9);
 }
 
 /* Reactor states mapping to combo thresholds */
 .bg-living-vault-container.combo-reactor-dormant {
-  filter: brightness(0.25) saturate(0.8);
+  filter: brightness(0.65) saturate(0.9);
 }
 .bg-living-vault-container.combo-reactor-level1 {
-  filter: brightness(0.4) saturate(1.1);
+  filter: brightness(0.85) saturate(1.1);
 }
 .bg-living-vault-container.combo-reactor-level2 {
-  filter: brightness(0.65) saturate(1.4);
+  filter: brightness(1.1) saturate(1.3);
 }
 .bg-living-vault-container.combo-reactor-active {
-  filter: brightness(0.95) saturate(1.8);
+  filter: brightness(1.35) saturate(1.6);
 }
 
 /* Corridor Grid Panel System creating 3D depth */
@@ -1500,26 +1500,26 @@ html.ultra-hd::-webkit-scrollbar {
   top: -50%;
   left: -50%;
   background-image: 
-    linear-gradient(to right, rgba(255, 85, 0, 0.08) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 85, 0, 0.08) 1px, transparent 1px);
+    linear-gradient(to right, rgba(255, 90, 0, 0.28) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 90, 0, 0.28) 1px, transparent 1px);
   background-size: 60px 60px;
   transform: translate3d(0, 0, -200px);
   mask-image: radial-gradient(circle at 50% 50%, black 20%, transparent 80%);
   -webkit-mask-image: radial-gradient(circle at 50% 50%, black 20%, transparent 80%);
-  opacity: 0.6;
+  opacity: 0.9;
 }
 
 .vault-corridor-glow {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 50% 50%, rgba(255, 68, 0, 0.05) 0%, transparent 70%);
+  background: radial-gradient(circle at 50% 50%, rgba(255, 75, 0, 0.16) 0%, transparent 70%);
   mix-blend-mode: screen;
   pointer-events: none;
   animation: reactor-breathing 4s ease-in-out infinite alternate;
 }
 @keyframes reactor-breathing {
-  0% { opacity: 0.3; }
-  100% { opacity: 0.7; }
+  0% { opacity: 0.35; }
+  100% { opacity: 0.85; }
 }
 
 /* Pulsing network cables */
@@ -1527,11 +1527,11 @@ html.ultra-hd::-webkit-scrollbar {
   position: absolute;
   background: linear-gradient(90deg, transparent, #ff5500, transparent);
   mix-blend-mode: screen;
-  opacity: 0.2;
+  opacity: 0.55;
 }
 
-.combo-reactor-level1 .vault-cable { opacity: 0.5; }
-.combo-reactor-level2 .vault-cable { opacity: 0.8; }
+.combo-reactor-level1 .vault-cable { opacity: 0.75; }
+.combo-reactor-level2 .vault-cable { opacity: 0.9; }
 .combo-reactor-active .vault-cable { 
   opacity: 1.0; 
   background: linear-gradient(90deg, transparent, #ffaa00, #ff5500, #ffaa00, transparent);
@@ -1541,7 +1541,7 @@ html.ultra-hd::-webkit-scrollbar {
   left: 10%;
   top: 0;
   bottom: 0;
-  width: 2px;
+  width: 3px;
   background: linear-gradient(to bottom, transparent, #ff5500, transparent);
   animation: cable-flow-down var(--pulse-speed) linear infinite;
 }
@@ -1549,7 +1549,7 @@ html.ultra-hd::-webkit-scrollbar {
   right: 10%;
   top: 0;
   bottom: 0;
-  width: 2px;
+  width: 3px;
   background: linear-gradient(to bottom, transparent, #ff5500, transparent);
   animation: cable-flow-down var(--pulse-speed) linear infinite reverse;
 }
@@ -1557,7 +1557,7 @@ html.ultra-hd::-webkit-scrollbar {
   left: 0;
   right: 0;
   top: 15%;
-  height: 2px;
+  height: 3px;
   background: linear-gradient(to right, transparent, #ff5500, transparent);
   animation: cable-flow-right var(--pulse-speed) linear infinite;
 }
@@ -1585,13 +1585,13 @@ html.ultra-hd::-webkit-scrollbar {
 .door-panel-left, .door-panel-right {
   width: 50%;
   height: 100%;
-  background: rgba(12, 6, 4, 0.96);
+  background: rgba(12, 6, 4, 0.97);
   background-image: 
-    linear-gradient(rgba(255, 68, 0, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 68, 0, 0.03) 1px, transparent 1px);
+    linear-gradient(rgba(255, 85, 0, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 85, 0, 0.08) 1px, transparent 1px);
   background-size: 30px 30px;
   transition: transform 1.6s cubic-bezier(0.77, 0, 0.175, 1);
-  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.8);
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.85);
 }
 
 .door-panel-left {
@@ -1611,9 +1611,10 @@ html.ultra-hd::-webkit-scrollbar {
   font-weight: 900;
   letter-spacing: 0.4em;
   padding: 8px 16px;
-  background: #080301;
-  border: 1px solid rgba(255, 85, 0, 0.4);
-  box-shadow: 0 0 15px rgba(255, 85, 0, 0.15);
+  background: #0d0401;
+  border: 1px solid rgba(255, 85, 0, 0.8);
+  box-shadow: 0 0 20px rgba(255, 85, 0, 0.35);
+  text-shadow: 0 0 8px #ff5500;
   transition: all 0.8s ease;
 }
 
@@ -1657,8 +1658,8 @@ html.ultra-hd::-webkit-scrollbar {
   position: absolute;
   width: 110px;
   height: 160px;
-  border: 1px dashed rgba(255, 85, 0, 0.15);
-  background: rgba(255, 85, 0, 0.01);
+  border: 1px dashed rgba(255, 85, 0, 0.45);
+  background: rgba(255, 85, 0, 0.015);
   border-radius: 4px;
 }
 
@@ -1666,10 +1667,10 @@ html.ultra-hd::-webkit-scrollbar {
   position: absolute;
   width: 45px;
   height: 65px;
-  background: rgba(12, 6, 4, 0.85);
-  border: 1px solid rgba(255, 85, 0, 0.5);
+  background: rgba(18, 9, 5, 0.9);
+  border: 1.5px solid rgba(255, 85, 0, 0.8);
   border-radius: 3px;
-  box-shadow: 0 0 10px rgba(255, 85, 0, 0.15);
+  box-shadow: 0 0 12px rgba(255, 85, 0, 0.3);
   transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.4s ease;
 }
 
@@ -1677,24 +1678,25 @@ html.ultra-hd::-webkit-scrollbar {
   content: '';
   position: absolute;
   inset: 4px;
-  border: 1px solid rgba(255, 85, 0, 0.15);
-  background-image: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255, 85, 0, 0.05) 4px, rgba(255, 85, 0, 0.05) 5px);
+  border: 1px solid rgba(255, 85, 0, 0.25);
+  background-image: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255, 85, 0, 0.08) 4px, rgba(255, 85, 0, 0.08) 5px);
 }
 
-/* Micro-glitch animation for cards */
+/* Micro-glitch animation for cards without layout thrashing */
 .card-shard.glitching {
   animation: shard-glitch 5s steps(3) infinite;
 }
 
 @keyframes shard-glitch {
-  0%, 100% { filter: hue-rotate(0deg); opacity: 0.8; }
-  33% { transform: translate(calc(var(--scatter-x) * 1.05), calc(var(--scatter-y) * 1.05)) skewX(3deg); filter: hue-rotate(15deg); opacity: 0.6; }
-  66% { transform: translate(calc(var(--scatter-x) * 0.95), calc(var(--scatter-y) * 0.95)) skewY(-2deg); filter: hue-rotate(-10deg); opacity: 0.9; }
+  0%, 100% { opacity: 0.85; filter: hue-rotate(0deg) brightness(1); }
+  25% { opacity: 0.45; filter: hue-rotate(20deg) brightness(1.25) contrast(1.1); }
+  50% { opacity: 0.9; filter: hue-rotate(-15deg) brightness(0.85); }
+  75% { opacity: 0.35; filter: hue-rotate(10deg) brightness(1.35); }
 }
 
 .card-shard.crystallized {
   border-color: #ff5500;
-  box-shadow: 0 0 15px rgba(255, 85, 0, 0.4);
+  box-shadow: 0 0 20px rgba(255, 85, 0, 0.65);
 }
 
 /* Finished crystallized card container */
@@ -1702,13 +1704,13 @@ html.ultra-hd::-webkit-scrollbar {
   position: absolute;
   width: 110px;
   height: 160px;
-  background: linear-gradient(135deg, #180903 0%, #080301 100%);
+  background: linear-gradient(135deg, #1e0b04 0%, #0d0401 100%);
   border: 2px solid #ff5500;
   border-radius: 6px;
   box-shadow: 
-    0 0 25px rgba(255, 85, 0, 0.45),
-    0 0 50px rgba(255, 85, 0, 0.15),
-    inset 0 0 15px rgba(255, 85, 0, 0.3);
+    0 0 28px rgba(255, 85, 0, 0.65),
+    0 0 60px rgba(255, 85, 0, 0.25),
+    inset 0 0 18px rgba(255, 85, 0, 0.4);
   z-index: 6;
   animation: card-float 4s ease-in-out infinite alternate;
 }
@@ -1718,7 +1720,7 @@ html.ultra-hd::-webkit-scrollbar {
   inset: -1px;
   border: 1px solid #ffaa00;
   border-radius: 5px;
-  opacity: 0.5;
+  opacity: 0.6;
   pointer-events: none;
 }
 
@@ -1733,8 +1735,8 @@ html.ultra-hd::-webkit-scrollbar {
   font-size: 9px;
   letter-spacing: 0.15em;
   line-height: 1.6;
-  color: rgba(255, 85, 0, 0.5);
-  text-shadow: 0 0 5px rgba(255, 85, 0, 0.15);
+  color: rgba(255, 85, 0, 0.65);
+  text-shadow: 0 0 5px rgba(255, 85, 0, 0.25);
   z-index: 8;
   padding: 16px;
 }

@@ -865,8 +865,6 @@ export default function Game() {
     // After the 1.2 s animation: restore notes, seek audio, resume
     setTimeout(() => {
       if (phaseRef.current !== "rewinding") return; // guard against double-fire
-      cancelAnimationFrame(rafRef.current);
-
       // Undo misses that happened in the rewind window
       notesRef.current.forEach((ns) => {
         if (ns.missed && ns.note.time >= rewindTo - 0.5) {
@@ -891,7 +889,6 @@ export default function Game() {
 
       phaseRef.current = "playing";
       setPhase("playing");
-      rafRef.current = requestAnimationFrame(() => drawRef.current?.());
     }, 1200);
   }, [restoreLane]);
 
