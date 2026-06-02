@@ -30,6 +30,7 @@ export const GAME_BACKGROUNDS: GameBackground[] = [
   { id: 'glitch_matrix', name: 'Corrupted Signal', desc: 'Glitching digital terminal lines', unlockText: 'Requires 20,000 Echo Score', unlockScore: 20000 },
   { id: 'cyber_cityscape', name: 'Neon Cityscape', desc: 'Skyscrapers & glowing holo adverts', unlockText: 'Requires 25,000 Echo Score', unlockScore: 25000 },
   { id: 'toxic_hazard', name: 'Acid Hazard', desc: 'Toxic warnings & hex grid waves', unlockText: 'Requires 30,000 Echo Score', unlockScore: 30000 },
+  { id: 'living_vault', name: 'The Living Vault', desc: 'Corridor overrides & crystallizing card shards', unlockText: 'Requires 35,000 Echo Score', unlockScore: 35000 },
   { id: 'prismatic_aurora', name: 'Chroma Aurora', desc: 'Shimmering chromatic light ribbons', unlockText: 'Requires 40,000 Echo Score', unlockScore: 40000 },
   { id: 'hyperdrive_warp', name: 'Hyperspace Warp', desc: 'Speed tunnel lines warping past', unlockText: 'Requires 50,000 Echo Score', unlockScore: 50000 },
 ];

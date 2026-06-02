@@ -317,6 +317,8 @@ export default function Game() {
   laneKeysRef.current = opts.laneKeys;
   const [showOptions, setShowOptions] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [maxPossibleScore, setMaxPossibleScore] = useState(1);
+  const triggeredThresholdsRef = useRef<{ [key: number]: boolean }>({ 50: false, 75: false, 90: false });
   useEffect(() => {
     const handler = () => setIsFullscreen(!!document.fullscreenElement);
     document.addEventListener("fullscreenchange", handler);
@@ -2959,6 +2961,21 @@ export default function Game() {
           return true;
         });
       }
+      // Calculate max possible score for percentage metrics
+      let maxScore = 0;
+      let tempCombo = 0;
+      const getComboMul = (c: number) => {
+        if (dLevel <= 3) return c < 10 ? 1 : c < 25 ? 1.5 : c < 50 ? 2 : 3;
+        if (dLevel <= 6) return c < 10 ? 1 : c < 25 ? 1.5 : c < 50 ? 2 : c < 75 ? 3 : 4;
+        return c < 10 ? 1 : c < 25 ? 1.5 : c < 50 ? 2 : c < 75 ? 3 : c < 100 ? 4 : 5;
+      };
+      for (const ns of notesRef.current) {
+        maxScore += Math.round(500 * getComboMul(tempCombo));
+        tempCombo++;
+      }
+      setMaxPossibleScore(maxScore || 1);
+      triggeredThresholdsRef.current = { 50: false, 75: false, 90: false };
+
       gsRef.current = {
         score: 0,
         combo: 0,
@@ -3463,7 +3480,125 @@ export default function Game() {
             </div>
           );
         }
-        
+        if (bg === 'living_vault') {
+          const fragments = parseInt(localStorage.getItem(`fragments_${songId}`) || '0', 10);
+          const fragmentProgress = Math.min(fragments, 10) / 10;
+          const isCrystallized = fragments >= 10;
+          const pct = maxPossibleScore > 0 ? (gs.score / maxPossibleScore) * 100 : 0;
+          const pulseSpeed = Math.max(0.18, 1.2 - Math.min(gs.combo, 100) * 0.0102);
+
+          // Audio triggers inside render
+          [50, 75, 90].forEach(threshold => {
+            if (pct >= threshold && !triggeredThresholdsRef.current[threshold]) {
+              triggeredThresholdsRef.current[threshold] = true;
+              audioManager.playSfx("hidden_secret_found", 0.5);
+            }
+          });
+
+          return (
+            <div
+              className={`absolute inset-0 overflow-hidden pointer-events-none bg-living-vault-container ${
+                gs.combo >= 100 ? "combo-reactor-active" :
+                gs.combo >= 50 ? "combo-reactor-level2" :
+                gs.combo >= 20 ? "combo-reactor-level1" : "combo-reactor-dormant"
+              }`}
+              style={{
+                '--combo-intensity': Math.min(gs.combo, 100) / 100,
+                '--fragment-progress': fragmentProgress,
+                '--pulse-speed': `${pulseSpeed}s`,
+              } as React.CSSProperties}
+            >
+              {/* Parallax Server Hall / Corridor grid elements */}
+              <div className="vault-corridor-grid" />
+              <div className="vault-corridor-glow" />
+
+              {/* Pulsing energy cables */}
+              <div className="vault-cable cable-left" />
+              <div className="vault-cable cable-right" />
+              <div className="vault-cable cable-top" />
+
+              {/* Shifting Neural Pathways (Hydraulic Doors) */}
+              <div className={`hydraulic-door door-wing-a ${pct >= 50 ? 'door-open' : ''}`}>
+                <div className="door-panel-left border-r border-[#FF5500]/30" />
+                <div className="door-panel-right border-l border-[#FF5500]/30" />
+                <div className="door-lock font-mono">WING A [SECURE]</div>
+              </div>
+
+              <div className={`hydraulic-door door-wing-b ${pct >= 75 ? 'door-open' : ''}`}>
+                <div className="door-panel-left border-r border-[#FF5500]/30" />
+                <div className="door-panel-right border-l border-[#FF5500]/30" />
+                <div className="door-lock font-mono">WING B [ENCRYPTED]</div>
+              </div>
+
+              <div className={`hydraulic-door door-wing-c ${pct >= 90 ? 'door-open' : ''}`}>
+                <div className="door-panel-left border-r border-[#FF8800]/40" />
+                <div className="door-panel-right border-l border-[#FF8800]/40" />
+                <div className="door-lock font-mono">CORE CHAMBER</div>
+              </div>
+
+              {/* Glitching/Assembling Card Shards in the center */}
+              <div className="vault-shard-assembler">
+                <div className="vault-card-silhouette" />
+
+                {/* Shard 1 to 6 - positions transition toward the center as fragments increment */}
+                {Array.from({ length: 6 }).map((_, i) => {
+                  const baseAngle = (i * 360) / 6;
+                  const angleRad = (baseAngle * Math.PI) / 180;
+                  // Random direction vector for scatter
+                  const scatterX = Math.cos(angleRad) * 140;
+                  const scatterY = Math.sin(angleRad) * 90;
+                  const rotation = baseAngle + 15;
+
+                  return (
+                    <div
+                      key={i}
+                      className={`card-shard shard-${i} ${isCrystallized ? 'crystallized' : 'glitching'}`}
+                      style={{
+                        transform: `translate(
+                          calc(${scatterX}px * (1 - var(--fragment-progress))),
+                          calc(${scatterY}px * (1 - var(--fragment-progress)))
+                        ) rotate(
+                          calc(${rotation}deg * (1 - var(--fragment-progress)))
+                        ) scale(
+                          calc(0.7 + (var(--fragment-progress) * 0.3))
+                        )`,
+                        opacity: isCrystallized ? 1 : 0.4 + (fragmentProgress * 0.5) + (Math.random() * 0.1),
+                      }}
+                    />
+                  );
+                })}
+
+                {/* Solid Card Overlay representing Crystallization at 10/10 */}
+                {isCrystallized && (
+                  <div className="vault-solid-crystallized-card flex items-center justify-center font-mono">
+                    <div className="glowing-card-accent animate-pulse" />
+                    <span className="text-[10px] text-[#ff5500] font-bold tracking-[0.2em]">{song?.title?.toUpperCase()}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Living Vault Cyber HUD Overlays */}
+              <div className="vault-hud-status top-left font-mono">
+                SYS_LOC: COGNITIVE_VAULT_CORRIDOR<br />
+                DEC_FRAGMENTS: {fragments} / 10 <span className={isCrystallized ? "text-[#39FF14]" : "text-[#FF8800]"}>
+                  {isCrystallized ? "[CRYSTALLIZED]" : `[DECRYPTING_${Math.round(fragmentProgress * 100)}%]`}
+                </span>
+              </div>
+
+              <div className="vault-hud-status bottom-left font-mono">
+                COMBO REACTOR: {gs.combo >= 100 ? "POWER_GRID_ACTIVE" : gs.combo >= 50 ? "ENERGY_SURGE" : gs.combo >= 20 ? "SYS_AWAKE" : "DORMANT"}<br />
+                PULSE_FREQUENCY: {(1 / pulseSpeed).toFixed(1)}Hz
+              </div>
+
+              <div className="vault-hud-status top-right font-mono text-right">
+                WING_A (50%): {pct >= 50 ? "BYPASSED" : "SEALED"}<br />
+                WING_B (75%): {pct >= 75 ? "BYPASSED" : "SEALED"}<br />
+                CORE_CHAMBER (90%): {pct >= 90 ? "BYPASSED" : "SEALED"}
+              </div>
+            </div>
+          );
+        }
+
         // Default: cover_blur
         const blurValue = typeof opts.backgroundBlur === 'number' ? opts.backgroundBlur : 18;
         const blurScale = 1.0 + (blurValue / 40) * 0.08;
