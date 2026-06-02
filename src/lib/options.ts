@@ -26,7 +26,12 @@ export const GAME_BACKGROUNDS: GameBackground[] = [
   { id: 'neon_grid', name: 'Neon Grid', desc: 'Synthwave neon network grid', unlockText: 'Requires 1,000 Echo Score', unlockScore: 1000 },
   { id: 'cyber_streets', name: 'Matrix Cyber', desc: 'Green binary rain frequency', unlockText: 'Requires 5,000 Echo Score', unlockScore: 5000 },
   { id: 'space_nebula', name: 'Void Space', desc: 'Moving nebula & stardust', unlockText: 'Requires 10,000 Echo Score', unlockScore: 10000 },
+  { id: 'sunset_skyline', name: 'Sunset Skyline', desc: 'Vibrant retro sun & wireframe city', unlockText: 'Requires 15,000 Echo Score', unlockScore: 15000 },
   { id: 'glitch_matrix', name: 'Corrupted Signal', desc: 'Glitching digital terminal lines', unlockText: 'Requires 20,000 Echo Score', unlockScore: 20000 },
+  { id: 'cyber_cityscape', name: 'Neon Cityscape', desc: 'Skyscrapers & glowing holo adverts', unlockText: 'Requires 25,000 Echo Score', unlockScore: 25000 },
+  { id: 'toxic_hazard', name: 'Acid Hazard', desc: 'Toxic warnings & hex grid waves', unlockText: 'Requires 30,000 Echo Score', unlockScore: 30000 },
+  { id: 'prismatic_aurora', name: 'Chroma Aurora', desc: 'Shimmering chromatic light ribbons', unlockText: 'Requires 40,000 Echo Score', unlockScore: 40000 },
+  { id: 'hyperdrive_warp', name: 'Hyperspace Warp', desc: 'Speed tunnel lines warping past', unlockText: 'Requires 50,000 Echo Score', unlockScore: 50000 },
 ];
 
 export const DEFAULT_OPTS: GameOpts = {

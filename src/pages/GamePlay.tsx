@@ -3391,6 +3391,78 @@ export default function Game() {
             </div>
           );
         }
+        if (bg === 'sunset_skyline') {
+          return (
+            <div className="absolute inset-0 overflow-hidden pointer-events-none bg-sunset-skyline-container">
+              <div className="sunset-sun" />
+              <div className="sunset-city-grid" />
+              <div className="sunset-mountains" />
+              <div className="sunset-horizon" />
+            </div>
+          );
+        }
+        if (bg === 'cyber_cityscape') {
+          return (
+            <div className="absolute inset-0 overflow-hidden pointer-events-none bg-cyber-cityscape-container">
+              <div className="cityscape-stars" />
+              <div className="cityscape-buildings" />
+              <div className="cityscape-holograms">
+                <div className="holo-billboard holo-ad1">PIM_NET</div>
+                <div className="holo-billboard holo-ad2">VAULT_ACTIVE</div>
+              </div>
+            </div>
+          );
+        }
+        if (bg === 'toxic_hazard') {
+          return (
+            <div className="absolute inset-0 overflow-hidden pointer-events-none bg-toxic-hazard-container">
+              <div className="toxic-grid-mesh" />
+              <div className="toxic-hazard-stripes" />
+              <div className="toxic-pulses">
+                <div className="toxic-pulse pulse1" />
+                <div className="toxic-pulse pulse2" />
+              </div>
+              <div className="toxic-alert-text font-mono">
+                HAZARD LEVEL: CRITICAL // RADIATION LEVEL: HIGH // COOLANT LEAK DETECTED
+              </div>
+            </div>
+          );
+        }
+        if (bg === 'prismatic_aurora') {
+          return (
+            <div className="absolute inset-0 overflow-hidden pointer-events-none bg-prismatic-aurora-container">
+              <div className="aurora-wave wave-1" />
+              <div className="aurora-wave wave-2" />
+              <div className="aurora-wave wave-3" />
+              <div className="aurora-stars" />
+            </div>
+          );
+        }
+        if (bg === 'hyperdrive_warp') {
+          return (
+            <div className="absolute inset-0 overflow-hidden pointer-events-none bg-hyperdrive-warp-container">
+              <div className="warp-core" />
+              {Array.from({ length: 24 }).map((_, i) => {
+                const delay = `${(i * 0.15) % 3.6}s`;
+                const duration = `${1.2 + (i % 3) * 0.6}s`;
+                const rotation = `${i * 15}deg`;
+                const opacity = 0.35 + (i % 4) * 0.15;
+                return (
+                  <div
+                    key={i}
+                    className="warp-star-streak"
+                    style={{
+                      '--rotation': rotation,
+                      animationDelay: delay,
+                      animationDuration: duration,
+                      opacity,
+                    } as React.CSSProperties}
+                  />
+                );
+              })}
+            </div>
+          );
+        }
         
         // Default: cover_blur
         const blurValue = typeof opts.backgroundBlur === 'number' ? opts.backgroundBlur : 18;

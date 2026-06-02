@@ -1009,3 +1009,285 @@ html.ultra-hd::-webkit-scrollbar {
   pointer-events: none;
   animation: screen-flash-glitch 6s infinite;
 }
+
+/* ===== GAMEPLAY BACKGROUNDS: NEW MULTI-THEMES ===== */
+
+/* Sunset Skyline */
+.bg-sunset-skyline-container {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, #1d032e 0%, #3d054d 40%, #8c096b 75%, #d95d39 100%);
+  overflow: hidden;
+}
+.sunset-sun {
+  position: absolute;
+  width: 140px;
+  height: 140px;
+  background: linear-gradient(to bottom, #f2059f 0%, #f28705 100%);
+  border-radius: 50%;
+  top: 45%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 40px rgba(242, 5, 159, 0.45);
+  opacity: 0.8;
+  mask-image: repeating-linear-gradient(to bottom, black, black 6px, transparent 6px, transparent 10px);
+  -webkit-mask-image: repeating-linear-gradient(to bottom, black, black 6px, transparent 6px, transparent 10px);
+}
+.sunset-city-grid {
+  position: absolute;
+  width: 300%;
+  height: 200%;
+  top: 45%;
+  left: -100%;
+  background-image: 
+    linear-gradient(to right, rgba(242, 5, 159, 0.18) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(242, 5, 159, 0.12) 1px, transparent 1px);
+  background-size: 50px 50px;
+  transform: perspective(120px) rotateX(80deg);
+  transform-origin: center top;
+  animation: grid-scroll 3s linear infinite;
+  mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 100%);
+}
+.sunset-mountains {
+  position: absolute;
+  bottom: 55%;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: linear-gradient(to top, rgba(29, 3, 46, 0.95) 0%, transparent 100%);
+  border-bottom: 2px solid #f2059f;
+  box-shadow: 0 -4px 12px rgba(242, 5, 159, 0.4);
+  opacity: 0.6;
+}
+.sunset-horizon {
+  position: absolute;
+  top: 45%; left: 0; right: 0; height: 1px;
+  background: #f28705;
+  box-shadow: 0 0 8px #f28705;
+  opacity: 0.7;
+}
+
+/* Neon Cityscape */
+.bg-cyber-cityscape-container {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, #020813 0%, #000205 100%);
+  overflow: hidden;
+}
+.cityscape-stars {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    radial-gradient(1px 1px at 40px 80px, rgba(255,255,255,0.4) 100%, transparent),
+    radial-gradient(1.2px 1.2px at 150px 220px, rgba(255,255,255,0.3) 100%, transparent),
+    radial-gradient(1px 1px at 280px 140px, rgba(255,255,255,0.5) 100%, transparent);
+  background-size: 320px 320px;
+  opacity: 0.55;
+  animation: stars-scroll-slow 60s linear infinite;
+}
+.cityscape-buildings {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60%;
+  background: linear-gradient(to top, rgba(2, 8, 19, 0.95) 0%, transparent 100%);
+  background-image: 
+    repeating-linear-gradient(90deg, transparent, transparent 15px, rgba(0, 229, 255, 0.04) 15px, rgba(0, 229, 255, 0.04) 17px),
+    repeating-linear-gradient(0deg, transparent, transparent 12px, rgba(255, 20, 147, 0.04) 12px, rgba(255, 20, 147, 0.04) 14px);
+  background-size: 60px 100%, 100% 45px;
+  opacity: 0.4;
+  mask-image: linear-gradient(to top, black 30%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to top, black 30%, transparent 100%);
+}
+.cityscape-holograms {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.holo-billboard {
+  position: absolute;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 900;
+  font-size: 9px;
+  padding: 4px 8px;
+  border: 1px solid;
+  letter-spacing: 0.2em;
+  opacity: 0.25;
+  animation: hud-flicker 5s infinite;
+  user-select: none;
+}
+.holo-ad1 {
+  top: 15%;
+  left: 8%;
+  color: #00e5ff;
+  border-color: rgba(0, 229, 255, 0.3);
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.2);
+  transform: rotate(-8deg);
+}
+.holo-ad2 {
+  top: 25%;
+  right: 8%;
+  color: #ff1493;
+  border-color: rgba(255, 20, 147, 0.3);
+  box-shadow: 0 0 10px rgba(255, 20, 147, 0.2);
+  transform: rotate(6deg);
+}
+
+/* Acid Hazard */
+.bg-toxic-hazard-container {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 60%, #031206 0%, #000000 100%);
+  overflow: hidden;
+}
+.toxic-grid-mesh {
+  position: absolute;
+  inset: -100px;
+  background-image: 
+    radial-gradient(rgba(57, 255, 20, 0.035) 1px, transparent 0),
+    linear-gradient(30deg, transparent 48%, rgba(57, 255, 20, 0.015) 50%, transparent 52%),
+    linear-gradient(-30deg, transparent 48%, rgba(57, 255, 20, 0.015) 50%, transparent 52%);
+  background-size: 16px 16px, 80px 80px, 80px 80px;
+  opacity: 0.75;
+}
+.toxic-hazard-stripes {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: repeating-linear-gradient(
+    -45deg,
+    #39ff14,
+    #39ff14 10px,
+    #000000 10px,
+    #000000 20px
+  );
+  box-shadow: 0 2px 10px rgba(57, 255, 20, 0.35);
+  opacity: 0.6;
+}
+.toxic-pulses {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.toxic-pulse {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(57, 255, 20, 0.12);
+  width: 300px;
+  height: 300px;
+  animation: toxic-pulse-expand 6s cubic-bezier(0.1, 0.8, 0.3, 1) infinite;
+  box-shadow: inset 0 0 20px rgba(57, 255, 20, 0.03);
+}
+.pulse2 {
+  animation-delay: 3s;
+}
+.toxic-alert-text {
+  position: absolute;
+  bottom: 8%;
+  left: 5%;
+  right: 5%;
+  font-size: 7px;
+  color: #39ff14;
+  letter-spacing: 0.18em;
+  opacity: 0.28;
+  text-align: center;
+  animation: hud-flicker 4s infinite alternate;
+  line-height: 1.6;
+}
+
+/* Chroma Aurora */
+.bg-prismatic-aurora-container {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 10%, #030a1c 0%, #010208 100%);
+  overflow: hidden;
+}
+.aurora-stars {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    radial-gradient(1px 1px at 60px 40px, rgba(255,255,255,0.45) 100%, transparent),
+    radial-gradient(1.5px 1.5px at 210px 130px, rgba(255,255,255,0.2) 100%, transparent);
+  background-size: 260px 260px;
+  opacity: 0.45;
+}
+.aurora-wave {
+  position: absolute;
+  left: -20%;
+  right: -20%;
+  height: 150px;
+  filter: blur(28px);
+  opacity: 0.33;
+  mix-blend-mode: screen;
+  transform-origin: center;
+}
+.wave-1 {
+  top: 15%;
+  background: linear-gradient(90deg, #00f0ff, #00e5ff 40%, #ff1493 80%, #ffd700);
+  animation: aurora-flow-1 25s ease-in-out infinite alternate;
+}
+.wave-2 {
+  top: 25%;
+  background: linear-gradient(90deg, #b44dff, #00f0ff 30%, #39ff14 70%, #ff1493);
+  animation: aurora-flow-2 30s ease-in-out infinite alternate;
+}
+.wave-3 {
+  top: 8%;
+  background: linear-gradient(90deg, #ff1493, #b44dff 45%, #00f0ff 75%, #39ff14);
+  animation: aurora-flow-3 20s ease-in-out infinite alternate;
+}
+@keyframes aurora-flow-1 {
+  0% { transform: translateY(0) scaleY(1) rotate(-2deg); }
+  100% { transform: translateY(30px) scaleY(1.35) rotate(4deg); }
+}
+@keyframes aurora-flow-2 {
+  0% { transform: translateY(0) scaleY(1.1) rotate(3deg); }
+  100% { transform: translateY(-25px) scaleY(0.85) rotate(-3deg); }
+}
+@keyframes aurora-flow-3 {
+  0% { transform: translateY(0) scaleY(0.9) rotate(-1deg); }
+  100% { transform: translateY(20px) scaleY(1.2) rotate(2deg); }
+}
+
+/* Hyperspace Warp */
+.bg-hyperdrive-warp-container {
+  position: absolute;
+  inset: 0;
+  background: #000000;
+  overflow: hidden;
+}
+.warp-core {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: #ffffff;
+  border-radius: 50%;
+  top: 42%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 25px 5px #ffffff, 0 0 50px 15px rgba(0, 229, 255, 0.4);
+  opacity: 0.85;
+}
+.warp-star-streak {
+  position: absolute;
+  top: 42%;
+  left: 50%;
+  width: 1px;
+  height: 120px;
+  background: linear-gradient(to top, rgba(0, 229, 255, 0.8) 0%, rgba(255, 255, 255, 0.9) 80%, transparent 100%);
+  transform-origin: center top;
+  animation: warp-streak-anim linear infinite;
+}
+@keyframes warp-streak-anim {
+  0% { transform: rotate(var(--rotation, 0deg)) translateY(10px) scaleY(0.1); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: rotate(var(--rotation, 0deg)) translateY(280px) scaleY(1.8); opacity: 0; }
+}
+
