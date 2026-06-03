@@ -48,6 +48,11 @@ export default function OnboardingFlow({ onComplete }: Props) {
   const purchasedRef = useRef(false);
   const { addToCollection, loadVaultData } = useVaultStore();
 
+  // Track start of onboarding funnel
+  useEffect(() => {
+    logAnalyticsEvent('onboarding_start');
+  }, []);
+
   // Phase 0 → 1: Purchase pack after invite is validated
   useEffect(() => {
     if (phase !== 'welcome') return;
@@ -61,12 +66,20 @@ export default function OnboardingFlow({ onComplete }: Props) {
         if (result.length > 0) {
           addToCollection(result);
           setCards(result);
+          logAnalyticsEvent('onboarding_welcome_pull', {
+            packType: 'taste',
+            cards: result.map(r => ({ cardId: r.cardId, rarity: r.card.rarity, isEcho: !!r.isEcho }))
+          });
         } else {
           // Fallback — try free pack
           const free = await purchasePack('free', 'single');
           if (free.length > 0) {
             addToCollection(free);
             setCards(free);
+            logAnalyticsEvent('onboarding_welcome_pull', {
+              packType: 'free',
+              cards: free.map(r => ({ cardId: r.cardId, rarity: r.card.rarity, isEcho: !!r.isEcho }))
+            });
           } else {
             setLoadError(true);
           }

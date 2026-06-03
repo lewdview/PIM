@@ -832,7 +832,18 @@ export default function Game() {
     phaseRef.current = "finished";
     cancelAnimationFrame(rafRef.current);
     audioRef.current?.pause();
+    const elapsedTime = audioRef.current?.currentTime || 0;
     audioRef.current && (audioRef.current.currentTime = 0);
+
+    // Log game abandon event
+    const gs = gsRef.current;
+    logAnalyticsEvent('game_abandon', {
+      songId: songId,
+      score: gs.score,
+      maxCombo: gs.maxCombo,
+      elapsedTime: Number(elapsedTime.toFixed(2))
+    });
+
     const origin = sessionStorage.getItem(`game_origin_${songId}`) ?? '';
     const dest = origin === 'songs' ? '/songs' : origin ? `/${origin}` : '/campaign';
     setTimeout(() => setLocation(dest), 100);
@@ -3209,7 +3220,14 @@ export default function Game() {
     audioRef.current?.pause();
     audioManager.playSfx('pause', 0.5);
     resetAllLanes();
-  }, [resetAllLanes]);
+
+    // Log pause telemetry event
+    logAnalyticsEvent('game_pause', {
+      songId: songId,
+      score: gsRef.current.score,
+      elapsedTime: Number((audioRef.current?.currentTime || 0).toFixed(2))
+    });
+  }, [resetAllLanes, songId]);
 
   const doResume = useCallback(() => {
     if (!pausedRef.current) return;
@@ -3224,7 +3242,12 @@ export default function Game() {
       // Restart the loop
       rafRef.current = requestAnimationFrame(() => drawRef.current?.());
     }
-  }, []);
+
+    // Log resume telemetry event
+    logAnalyticsEvent('game_resume', {
+      songId: songId
+    });
+  }, [songId]);
 
   // Auto-pause on blur
   useEffect(() => {

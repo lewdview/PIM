@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { loadOpts, resetOpts, keyLabel, getActiveTheme, type GameOpts, GAME_BACKGROUNDS } from "@/lib/options";
 import { clearCatalogCache } from "@/game/api";
 import { audioManager } from "@/game/audio";
+import { logAnalyticsEvent } from "@/services/telemetryService";
 import { useVaultStore } from "@/store/useVaultStore";
 
 // ── colour palette presets (8 per lane, thematically grouped) ────
@@ -332,6 +333,23 @@ export default function Options() {
 
   const isAvant = getActiveTheme() === "avant-garde";
 
+  // Telemetry: Log unmount settings summary for slider adjustments
+  const initialOffsetRef = useRef(opts.audioOffset);
+  const initialBlurRef = useRef(opts.backgroundBlur);
+  const currentOptsRef = useRef(opts);
+  currentOptsRef.current = opts;
+
+  useEffect(() => {
+    return () => {
+      if (currentOptsRef.current.audioOffset !== initialOffsetRef.current) {
+        logAnalyticsEvent('setting_change', { key: 'audioOffset', value: currentOptsRef.current.audioOffset });
+      }
+      if (currentOptsRef.current.backgroundBlur !== initialBlurRef.current) {
+        logAnalyticsEvent('setting_change', { key: 'backgroundBlur', value: currentOptsRef.current.backgroundBlur });
+      }
+    };
+  }, []);
+
   // keyboard listener for remapping
   useEffect(() => {
     if (remapping === null) return;
@@ -354,6 +372,7 @@ export default function Options() {
     localStorage.setItem(`opt_laneKey_${lane}`, k);
     setOpts(o => ({ ...o, laneKeys: newKeys }));
     setRemapping(null);
+    logAnalyticsEvent('setting_change', { key: `laneKey_${lane}`, value: k });
   }
 
   function setColor(lane: number, color: string) {
@@ -361,6 +380,7 @@ export default function Options() {
     newColors[lane] = color;
     localStorage.setItem(`opt_laneColor_${lane}`, color);
     setOpts(o => ({ ...o, laneColors: newColors }));
+    logAnalyticsEvent('setting_change', { key: `laneColor_${lane}`, value: color });
   }
 
   function toggle(k: "missSystem" | "hudMisses" | "comboDisplay" | "judgmentText" | "useLocalFiles" | "bgMusic") {
@@ -375,6 +395,7 @@ export default function Options() {
     if (k === "bgMusic") {
       window.dispatchEvent(new Event("bgmusic_toggle"));
     }
+    logAnalyticsEvent('setting_change', { key: k, value: v });
   }
 
   function handleReset() {
@@ -386,6 +407,7 @@ export default function Options() {
       resetOpts();
       setOpts(loadOpts());
       setResetState("idle");
+      logAnalyticsEvent('setting_reset');
     }
   }
 
@@ -699,6 +721,7 @@ export default function Options() {
                       localStorage.setItem("opt_noteGenerationSource", mode);
                       setOpts(o => ({ ...o, noteGenerationSource: mode }));
                       clearCatalogCache();
+                      logAnalyticsEvent('setting_change', { key: 'noteGenerationSource', value: mode });
                     }}
                     onMouseEnter={() => { if (isAvant) audioManager.playSfx('tap_nav', 0.08); }}
                     className="font-mono text-xs font-bold flex-1 py-2.5 transition-all"
@@ -751,6 +774,7 @@ export default function Options() {
                       if (isAvant) audioManager.playSfx('tap_nav', 0.12);
                       localStorage.setItem("opt_gameBackground", bg.id);
                       setOpts(o => ({ ...o, gameBackground: bg.id }));
+                      logAnalyticsEvent('setting_change', { key: 'gameBackground', value: bg.id });
                     }}
                     onMouseEnter={() => { if (isAvant && isUnlocked) audioManager.playSfx('tap_nav', 0.08); }}
                     className="font-mono text-left p-3.5 transition-all relative flex flex-col justify-between border select-none"

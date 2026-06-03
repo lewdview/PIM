@@ -6,9 +6,6 @@ import { supabase } from './supabaseClient';
  */
 export async function logAnalyticsEvent(eventType: string, payload: any = {}) {
   try {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return; // Do not log if user is not authenticated
-
     // Call vault-engine backend to write to telemetry_events securely
     await supabase.functions.invoke('vault-engine', {
       body: {
@@ -20,3 +17,4 @@ export async function logAnalyticsEvent(eventType: string, payload: any = {}) {
     console.warn('[Analytics] Failed to log event:', eventType, err);
   }
 }
+

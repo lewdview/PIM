@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import { getTotalScore, getTotalPlatinums, getTotalCleared } from "@/game/progress";
 import { loadOpts, keyLabel } from "@/lib/options";
 import { audioManager } from "@/game/audio";
+import { logAnalyticsEvent } from "@/services/telemetryService";
 
 let hasPlayedIntroThisSession = false;
 let sessionIntroType: 'classic' | 'avant-garde' | null = null;
@@ -143,7 +144,8 @@ export default function Home() {
 
   useEffect(() => {
     setStats({ score: getTotalScore(), platinums: getTotalPlatinums(), cleared: getTotalCleared() });
-  }, []);
+    logAnalyticsEvent('theme_load', { theme: introType });
+  }, [introType]);
 
   return (
     <>

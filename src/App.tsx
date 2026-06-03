@@ -1,6 +1,7 @@
 import { Route, Switch, useLocation } from 'wouter';
 import { useEffect } from 'react';
 import { useAuthStore } from './store/useAuthStore';
+import { logAnalyticsEvent } from './services/telemetryService';
 import { useVaultStore } from './store/useVaultStore';
 import { useGlobalPlayer } from './store/useGlobalPlayer';
 import BackgroundMusic from './components/audio/BackgroundMusic';
@@ -50,6 +51,11 @@ export default function App() {
   useEffect(() => {
     initializeAuth();
   }, [initializeAuth]);
+
+  // Track page views on route transitions
+  useEffect(() => {
+    logAnalyticsEvent('page_view', { path: location });
+  }, [location]);
 
   // Automatically redirect guests who haven't completed the tutorial to /tutorial
   useEffect(() => {

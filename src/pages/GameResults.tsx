@@ -156,7 +156,11 @@ export default function Results() {
       accuracy: data.total > 0 ? Number((((data.perfectPlus * 1.0 + data.perfects * 0.9 + data.goods * 0.5) / data.total) * 100).toFixed(2)) : 0,
       maxCombo: data.maxCombo,
       medal: data.medal,
-      missCount: data.misses,
+      perfectPlus: data.perfectPlus,
+      perfects: data.perfects,
+      goods: data.goods,
+      misses: data.misses,
+      totalNotes: data.total,
       continuesUsed: data.continuesUsed || 0,
       completed: !data.failed
     });
