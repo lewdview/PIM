@@ -33,6 +33,7 @@ export const GAME_BACKGROUNDS: GameBackground[] = [
   { id: 'living_vault', name: 'The Living Vault', desc: 'Corridor overrides & crystallizing card shards', unlockText: 'Requires 35,000 Echo Score', unlockScore: 35000 },
   { id: 'prismatic_aurora', name: 'Chroma Aurora', desc: 'Shimmering chromatic light ribbons', unlockText: 'Requires 40,000 Echo Score', unlockScore: 40000 },
   { id: 'hyperdrive_warp', name: 'Hyperspace Warp', desc: 'Speed tunnel lines warping past', unlockText: 'Requires 50,000 Echo Score', unlockScore: 50000 },
+  { id: 'gold_record', name: 'Gold Record', desc: 'Prestige gold vinyl spin & golden audio waves', unlockText: 'Requires Promo Code', unlockScore: 999999 },
 ];
 
 export const DEFAULT_OPTS: GameOpts = {

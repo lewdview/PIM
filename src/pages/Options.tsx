@@ -322,6 +322,7 @@ export default function Options() {
   const [, setLocation] = useLocation();
   const [opts, setOpts] = useState<GameOpts>(loadOpts);
   const echoPrestigeScore = useVaultStore(state => state.echoPrestigeScore);
+  const unlockedSkins = useVaultStore(state => state.unlockedSkins || []);
   const [remapping, setRemapping] = useState<number | null>(null);
   const [resetState, setResetState] = useState<"idle" | "confirm">("idle");
   const resetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -762,7 +763,7 @@ export default function Options() {
           }}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {GAME_BACKGROUNDS.map(bg => {
-                const isUnlocked = echoPrestigeScore >= bg.unlockScore;
+                const isUnlocked = echoPrestigeScore >= bg.unlockScore || unlockedSkins.includes(bg.id);
                 const active = opts.gameBackground === bg.id;
                 
                 return (

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
-import { Home, Layers, Trophy, Wallet, LogOut, Zap, Menu, X, FileText, Flame, BookOpen, Monitor } from 'lucide-react';
+import { Home, Layers, Trophy, Wallet, LogOut, Zap, Menu, X, FileText, Flame, BookOpen, Monitor, Gift } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../store/useAuthStore';
 import { useVaultStore } from '../store/useVaultStore';
@@ -15,6 +15,7 @@ const links = [
   { to: '/vault/codex', label: 'Codex', icon: BookOpen },
   { to: '/vault/leaderboard', label: 'Ranks', icon: Trophy },
   { to: '/vault/forge', label: 'Forge', icon: Flame },
+  { to: '/vault/claim', label: 'Redeem', icon: Gift },
 ];
 
 // ── The new logotype ──────────────────────────────────────────────────────────
@@ -584,7 +585,7 @@ export default function Navbar() {
         }}
       >
         <div className="flex items-stretch h-[62px]">
-          {links.map(({ to, label, icon: Icon }) => {
+          {links.filter(l => l.to !== '/vault/codex' && l.to !== '/vault/leaderboard').map(({ to, label, icon: Icon }) => {
             const active = location === to;
             return (
               <Link

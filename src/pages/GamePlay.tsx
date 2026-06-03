@@ -3464,6 +3464,16 @@ export default function Game() {
             </div>
           );
         }
+        if (bg === 'gold_record') {
+          return (
+            <div className="absolute inset-0 overflow-hidden pointer-events-none bg-gold-record-container">
+              <div className="gold-record-vinyl" />
+              <div className="gold-record-grooves" />
+              <div className="gold-record-spindle" />
+              <div className="gold-record-waves" />
+            </div>
+          );
+        }
         if (bg === 'cyber_cityscape') {
           return (
             <div className="absolute inset-0 overflow-hidden pointer-events-none bg-cyber-cityscape-container">

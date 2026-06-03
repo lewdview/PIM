@@ -1,10 +1,21 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { useVaultStore } from '../store/useVaultStore';
-import { Gift, Music, CheckCircle, AlertTriangle, ExternalLink } from 'lucide-react';
+import { useAuthStore } from '../store/useAuthStore';
+import { useLoadingToast } from '../store/useLoadingToast';
+import { 
+  Gift, Music, CheckCircle, AlertTriangle, ExternalLink, 
+  Zap, Award, Image as ImageIcon, Sparkles, KeyRound 
+} from 'lucide-react';
+import { 
+  redeemBonusCode, fetchAllCards, findCardWithFallback, 
+  type VaultCard, type OwnedCard 
+} from '../services/vaultService';
+import { audioManager } from '../game/audio';
 
 type FormState = 'idle' | 'submitting' | 'done' | 'error';
+type CodeState = 'idle' | 'redeeming' | 'success' | 'error';
 
 interface ClaimForm {
   name: string;
@@ -25,10 +36,10 @@ function InputField({
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-baseline justify-between">
-        <label className="text-[10px] font-mono font-bold uppercase tracking-widest" style={{ color: 'rgba(255,215,0,0.6)' }}>
-          {label}{required && <span style={{ color: '#ef4444' }}> *</span>}
+        <label className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#ffd700]/70">
+          {label}{required && <span style={{ color: '#ff3800' }}> *</span>}
         </label>
-        {sublabel && <span className="text-[9px] font-mono" style={{ color: 'rgba(255,255,255,0.2)' }}>{sublabel}</span>}
+        {sublabel && <span className="text-[9px] font-mono text-white/20">{sublabel}</span>}
       </div>
       <input
         type={type}
@@ -69,10 +80,10 @@ function TextareaField({
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-baseline justify-between">
-        <label className="text-[10px] font-mono font-bold uppercase tracking-widest" style={{ color: 'rgba(255,215,0,0.6)' }}>
+        <label className="text-[10px] font-mono font-bold uppercase tracking-widest text-[#ffd700]/70">
           {label}
         </label>
-        {sublabel && <span className="text-[9px] font-mono" style={{ color: 'rgba(255,255,255,0.2)' }}>{sublabel}</span>}
+        {sublabel && <span className="text-[9px] font-mono text-white/20">{sublabel}</span>}
       </div>
       <textarea
         value={value}
@@ -110,8 +121,25 @@ export default function ClaimPage() {
   const [form, setForm] = useState<ClaimForm>(EMPTY);
   const [state, setState] = useState<FormState>('idle');
 
+  // Bonus Code States
+  const [bonusCode, setBonusCode] = useState('');
+  const [codeState, setCodeState] = useState<CodeState>('idle');
+  const [codeError, setCodeError] = useState('');
+  const [rewardClaimed, setRewardClaimed] = useState<{
+    type: string;
+    value: string;
+    details?: {
+      tokensGranted?: number;
+      card?: VaultCard;
+      skinUnlocked?: string;
+    };
+  } | null>(null);
+
+  const [, setLocation] = useLocation();
+  const { user, setShowAuthModal } = useAuthStore();
+  const { collection, loadVaultData, startReveal, addToCollection } = useVaultStore();
+
   // Check for ultra rewards in the user's collection
-  const collection = useVaultStore((s) => s.collection);
   const ultraCards = useMemo(() => {
     return collection.filter(c => c.ultraReward);
   }, [collection]);
@@ -123,16 +151,143 @@ export default function ClaimPage() {
     onChange: (v: string) => setForm(f => ({ ...f, [key]: v })),
   });
 
+  const handleBonusRedeem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bonusCode.trim()) return;
+
+    setCodeState('redeeming');
+    setCodeError('');
+    setRewardClaimed(null);
+    useLoadingToast.getState().show('Decrypting bonus code…');
+
+    try {
+      const res = await redeemBonusCode(bonusCode);
+      useLoadingToast.getState().hide();
+
+      if (res.success && res.rewardType && res.rewardValue) {
+        // --- 1. Handle Cinematic Card/Pack Reveals ---
+        if (res.rewardType === 'pack' && res.result?.cards) {
+          const pool = await fetchAllCards();
+          const mappedCards = res.result.cards.map((c: any) => {
+            const parent = findCardWithFallback(pool, c.card_id, c.rarity);
+            return {
+              id: c.id || crypto.randomUUID(),
+              cardId: parent.id,
+              card: { ...parent, rarity: c.rarity },
+              source: c.source || 'promo_code',
+              claimedAt: c.claimed_at,
+              edition: c.edition,
+              maxSupply: c.max_supply,
+              isEcho: c.is_echo,
+              echoGeneration: c.echo_generation,
+              echoSourceDay: c.echo_source_day,
+              proof: c.proof,
+              ultraReward: c.ultra_reward,
+              blockchainStatus: c.blockchain_status,
+              fingerprint: c.fingerprint
+            };
+          });
+          if (mappedCards.length > 0) {
+            addToCollection(mappedCards);
+            audioManager.playSfx('open_chest', 0.9);
+            startReveal(mappedCards, {
+              category: 'promo_code',
+              label: 'Promo Pack',
+              icon: '🎁',
+              accent: '#ffd700',
+              gradient: 'linear-gradient(145deg, #1a1200, #0c0800)',
+              price: 'PROMO',
+              cardCount: mappedCards.length,
+              revealType: 'cinematic',
+              redirectPath: '/vault'
+            });
+            await loadVaultData();
+            setLocation('/vault/reveal');
+            return;
+          }
+        }
+
+        if (res.rewardType === 'card' && res.result?.card) {
+          const pool = await fetchAllCards();
+          const c = res.result.card;
+          const parent = findCardWithFallback(pool, c.card_id, c.rarity);
+          const mappedCard = {
+            id: c.id || crypto.randomUUID(),
+            cardId: parent.id,
+            card: { ...parent, rarity: c.rarity },
+            source: c.source || 'promo_code',
+            claimedAt: c.claimed_at,
+            edition: c.edition,
+            maxSupply: c.max_supply,
+            isEcho: c.is_echo,
+            echoGeneration: c.echo_generation,
+            echoSourceDay: c.echo_source_day,
+            proof: c.proof,
+            ultraReward: c.ultra_reward,
+            blockchainStatus: c.blockchain_status,
+            fingerprint: c.fingerprint
+          };
+          addToCollection([mappedCard]);
+          audioManager.playSfx('open_chest', 0.9);
+          startReveal([mappedCard], {
+            category: 'promo_code',
+            label: 'Promo Card',
+            icon: '⭐',
+            accent: '#ffd700',
+            gradient: 'linear-gradient(145deg, #1a1200, #0c0800)',
+            price: 'PROMO',
+            cardCount: 1,
+            revealType: 'cinematic',
+            redirectPath: '/vault'
+          });
+          await loadVaultData();
+          setLocation('/vault/reveal');
+          return;
+        }
+
+        // --- 2. Handle Non-Card/Pack static displays (Tokens/Skins) ---
+        let details: any = {};
+        audioManager.playSfx('song_completion', 0.85);
+
+        if (res.rewardType === 'tokens') {
+          details.tokensGranted = parseInt(res.rewardValue, 10);
+        } else if (res.rewardType === 'background_skin') {
+          details.skinUnlocked = res.rewardValue;
+        }
+
+        setRewardClaimed({
+          type: res.rewardType,
+          value: res.rewardValue,
+          details
+        });
+        setCodeState('success');
+        setBonusCode('');
+
+        // Refresh store balances & inventory
+        await loadVaultData();
+      } else {
+        audioManager.playSfx('error', 0.6);
+        setCodeError(res.error || 'Invalid or expired code.');
+        setCodeState('error');
+      }
+    } catch (err: any) {
+      useLoadingToast.getState().hide();
+      audioManager.playSfx('error', 0.6);
+      setCodeError(err.message || 'Verification link failed.');
+      setCodeState('error');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.email) return;
 
     setState('submitting');
+    audioManager.playSfx('tap_nav', 0.3);
 
-    // Simulate submission (no backend yet — mailto fallback)
+    // Simulate submission (mailto fallback)
     await new Promise(r => setTimeout(r, 1400));
 
-    // Build mailto as the real delivery mechanism until a backend exists
     const subject = encodeURIComponent('TH3V4ULT ULTRA REWARD CLAIM');
     const body = encodeURIComponent(
       `Name: ${form.name}\nEmail: ${form.email}\nFarcaster: ${form.farcaster || '-'}\nWallet: ${form.wallet || '-'}\n\nNote from winner:\n${form.note || '-'}\n\n---\nCard IDs: ${ultraCards.map(c => c.cardId).join(', ')}\nClaim submitted via th3vault`
@@ -142,243 +297,272 @@ export default function ClaimPage() {
     setState('done');
   };
 
-  // ── No Reward Found ──────────────────────────────────────────────────────
-  if (!hasReward) {
+  // ── 1. Unauthenticated Wall ────────────────────────────────────────────────
+  if (!user) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center px-4 py-16 min-h-[70vh]">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col items-center gap-6 text-center max-w-sm"
+          className="flex flex-col items-center gap-6 text-center max-w-sm glass-panel p-8 border border-white/10"
         >
           <div style={{
-            width: '72px', height: '72px', borderRadius: '50%',
-            background: 'rgba(255,255,255,0.04)',
+            width: '64px', height: '64px', borderRadius: '50%',
+            background: 'rgba(255,255,255,0.03)',
             border: '1px solid rgba(255,255,255,0.1)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <AlertTriangle size={28} style={{ color: 'rgba(255,255,255,0.25)' }} />
+            <KeyRound size={26} className="text-[#ff3800]" />
           </div>
           <div>
-            <h1 className="text-2xl font-black uppercase mb-2" style={{ fontFamily: '"Impact", "Arial Black", sans-serif', color: '#faf0d8' }}>
-              No Prize Found
+            <h1 className="text-2xl font-black uppercase mb-2 text-white" style={{ fontFamily: '"Impact", "Arial Black", sans-serif' }}>
+              Identity Required
             </h1>
-            <p className="text-sm font-mono leading-relaxed" style={{ color: 'rgba(255,255,255,0.4)' }}>
-              You don't have an Ultra Reward card in your collection yet. Flip every card you own — the prize is hidden on the back.
+            <p className="text-xs font-mono leading-relaxed text-zinc-400">
+              You must connect your Web3 Identity or guest account before claiming promotional rewards or elite prizes.
             </p>
           </div>
-          <Link
-            to="/vault/collection"
-            style={{
-              padding: '10px 24px', borderRadius: '6px',
-              background: 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(255,255,255,0.12)',
-              color: '#faf0d8', fontSize: '11px',
-              fontFamily: '"JetBrains Mono", monospace',
-              fontWeight: 700, letterSpacing: '0.15em',
-              textDecoration: 'none', textTransform: 'uppercase',
+          <button
+            onClick={() => {
+              audioManager.playSfx('tap_nav', 0.4);
+              setShowAuthModal(true);
             }}
+            className="px-6 py-3 font-mono font-bold text-xs uppercase tracking-wider text-black bg-[#ff3800] border-2 border-black rounded shadow-[3px_3px_0_#000] hover:scale-105 active:scale-95 transition-all cursor-pointer"
           >
-            Go to Collection →
-          </Link>
+            Connect Identity
+          </button>
         </motion.div>
       </div>
     );
   }
 
-  // ── Success State ─────────────────────────────────────────────────────────
+  // ── 2. Claim Done State ────────────────────────────────────────────────────
   if (state === 'done') {
     return (
       <div className="flex-1 flex flex-col items-center justify-center px-4 py-16 min-h-[70vh]">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ type: 'spring', stiffness: 260, damping: 22 }}
-          className="flex flex-col items-center gap-6 text-center max-w-sm"
+          className="flex flex-col items-center gap-6 text-center max-w-sm glass-panel p-8 border border-[#ffd700]/30 shadow-2xl"
         >
-          {/* Pulsing seal */}
           <motion.div
             animate={{ scale: [1, 1.06, 1] }}
             transition={{ repeat: Infinity, duration: 2.4, ease: 'easeInOut' }}
             style={{
-              width: '88px', height: '88px', borderRadius: '50%',
+              width: '80px', height: '80px', borderRadius: '50%',
               background: 'linear-gradient(145deg, #ffd700, #ff9900)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 0 40px rgba(255,180,0,0.45), 0 0 0 8px rgba(255,215,0,0.08)',
+              display: 'flex', alignItems: 'center', justify: 'center',
+              boxShadow: '0 0 30px rgba(255,180,0,0.4), 0 0 0 6px rgba(255,215,0,0.06)',
             }}
           >
-            <CheckCircle size={36} color="#000" strokeWidth={2.5} />
+            <CheckCircle size={32} color="#000" strokeWidth={2.5} />
           </motion.div>
 
           <div>
-            <p className="text-[10px] font-mono font-bold tracking-widest uppercase mb-2" style={{ color: 'rgba(255,215,0,0.55)' }}>
+            <p className="text-[9px] font-mono font-bold tracking-widest uppercase mb-2 text-[#ffd700]">
               ★ CLAIM RECEIVED ★
             </p>
-            <h1 className="text-3xl font-black uppercase mb-3" style={{ fontFamily: '"Impact", "Arial Black", sans-serif', color: '#ffd700', textShadow: '0 0 30px rgba(255,215,0,0.4)' }}>
-              You're In
+            <h1 className="text-3xl font-black uppercase mb-3 text-white" style={{ fontFamily: '"Impact", "Arial Black", sans-serif' }}>
+              Success
             </h1>
-            <p className="text-sm font-mono leading-relaxed" style={{ color: 'rgba(255,255,255,0.45)' }}>
-              th3scr1b3 will reach out to coordinate your custom song. Keep an eye on your email and Farcaster DMs.
-            </p>
-          </div>
-
-          <div style={{
-            padding: '12px 20px', borderRadius: '8px',
-            background: 'rgba(255,215,0,0.05)',
-            border: '1px solid rgba(255,215,0,0.15)',
-            display: 'flex', alignItems: 'center', gap: '10px',
-          }}>
-            <Music size={16} style={{ color: '#ffd700', flexShrink: 0 }} />
-            <p className="text-[11px] font-mono text-left" style={{ color: 'rgba(255,240,200,0.5)' }}>
-              Your custom song is a one-of-one — written and recorded specifically for you by th3scr1b3.
+            <p className="text-xs font-mono leading-relaxed text-zinc-400">
+              th3scr1b3 will review your creative direction and reach out to coordinate your custom track.
             </p>
           </div>
 
           <Link
             to="/vault"
-            style={{
-              padding: '10px 24px', borderRadius: '6px',
-              background: 'rgba(255,215,0,0.08)',
-              border: '1px solid rgba(255,215,0,0.2)',
-              color: '#ffd700', fontSize: '11px',
-              fontFamily: '"JetBrains Mono", monospace',
-              fontWeight: 700, letterSpacing: '0.15em',
-              textDecoration: 'none', textTransform: 'uppercase',
-            }}
+            onClick={() => audioManager.playSfx('tap_nav', 0.2)}
+            className="px-6 py-2.5 bg-white/5 border border-white/10 rounded font-mono font-bold text-xs uppercase tracking-wider text-white hover:bg-white/10"
           >
-            Back to Vault
+            Return to Vault
           </Link>
         </motion.div>
       </div>
     );
   }
 
-  // ── Main Claim Form ───────────────────────────────────────────────────────
+  // ── 3. Unified Claim & Redeem View ─────────────────────────────────────────
   return (
-    <div className="flex-1 px-4 py-12 max-w-xl mx-auto w-full">
+    <div className="flex-1 px-4 py-12 max-w-xl mx-auto w-full space-y-12">
       <motion.div
-        initial={{ opacity: 0, y: 24 }}
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
         className="space-y-8"
       >
+        {/* Title */}
+        <div className="text-center space-y-2">
+          <h1 className="text-4xl font-black uppercase tracking-tight text-white" style={{ fontFamily: '"Impact", "Arial Black", sans-serif' }}>
+            Redeem Rewards
+          </h1>
+          <p className="text-xs font-mono text-zinc-400 uppercase tracking-widest">// DECRYPT TRANSMISSIONS & EXCLUSIVE CODES</p>
+        </div>
 
-        {/* Header */}
-        <div className="text-center space-y-4">
-          {/* Animated seal */}
-          <motion.div
-            animate={{ scale: [1, 1.05, 1] }}
-            transition={{ repeat: Infinity, duration: 2.8, ease: 'easeInOut' }}
-            className="mx-auto"
-            style={{
-              width: '80px', height: '80px', borderRadius: '50%',
-              background: 'linear-gradient(145deg, #ffd700, #ff9900)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 0 50px rgba(255,180,0,0.35), 0 0 0 8px rgba(255,215,0,0.07)',
-            }}
-          >
-            <span style={{ fontSize: '34px', lineHeight: 1 }}>🎵</span>
-          </motion.div>
+        {/* SECTION A: BONUS CODE DECRYPTOR */}
+        <div className="glass-panel p-6 border-t-2 border-white/20 shadow-xl space-y-6 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-2.5 h-2.5 border-t border-r border-[#ffd700]/30" />
+          <div className="absolute bottom-0 left-0 w-2.5 h-2.5 border-b border-l border-[#ffd700]/30" />
 
           <div>
-            <p className="text-[9px] font-mono font-bold tracking-[0.3em] uppercase mb-2" style={{ color: 'rgba(255,215,0,0.5)' }}>
-              ★ ULTRA REWARD ★
-            </p>
-            <h1 className="text-4xl font-black uppercase" style={{
-              fontFamily: '"Impact", "Arial Black", sans-serif',
-              color: '#ffd700',
-              textShadow: '0 0 40px rgba(255,215,0,0.4)',
-              letterSpacing: '-0.5px',
-            }}>
-              Claim Your<br />Custom Song
-            </h1>
+            <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-[0.3em]">// PROMO_DECRYPTOR_v1.02</span>
+            <h2 className="text-lg font-mono font-bold uppercase text-white mt-1">Enter Bonus Code</h2>
           </div>
 
-          <p className="text-sm font-mono leading-relaxed" style={{ color: 'rgba(255,255,255,0.4)', maxWidth: '360px', margin: '0 auto' }}>
-            You found one of only <strong style={{ color: 'rgba(255,215,0,0.8)' }}>5 hidden prizes</strong> in the vault. th3scr1b3 will write and record a personal song just for you.
-          </p>
+          <form onSubmit={handleBonusRedeem} className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <input
+                type="text"
+                value={bonusCode}
+                onChange={e => setBonusCode(e.target.value)}
+                placeholder="e.g. BETA2026"
+                disabled={codeState === 'redeeming'}
+                className="flex-1 bg-white/5 border border-white/10 rounded-lg px-4 py-3 font-mono text-sm tracking-wider uppercase text-white outline-none focus:border-[#ffd700]/50"
+              />
+              <button
+                type="submit"
+                disabled={codeState === 'redeeming' || !bonusCode.trim()}
+                className="px-6 py-3 font-mono font-bold text-xs uppercase tracking-wider text-black bg-[#ffd700] rounded hover:scale-102 active:scale-98 transition-all disabled:opacity-40"
+              >
+                {codeState === 'redeeming' ? 'Decrypting...' : 'Redeem Code'}
+              </button>
+            </div>
 
-          {/* Prize card indicator */}
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: '8px',
-            padding: '7px 16px', borderRadius: '20px',
-            background: 'rgba(255,215,0,0.06)',
-            border: '1px solid rgba(255,215,0,0.2)',
-          }}>
-            <Gift size={12} style={{ color: '#ffd700' }} />
-            <span className="text-[10px] font-mono font-bold" style={{ color: 'rgba(255,215,0,0.7)' }}>
-              {ultraCards.length} PRIZE CARD{ultraCards.length > 1 ? 'S' : ''} DETECTED
-            </span>
-          </div>
-        </div>
+            {/* Error Message */}
+            {codeState === 'error' && (
+              <div className="flex items-center gap-2 text-xs font-mono text-[#ff3800] bg-[#ff3800]/5 border border-[#ff3800]/20 p-3 rounded">
+                <AlertTriangle size={14} className="shrink-0" />
+                <span>{codeError}</span>
+              </div>
+            )}
+          </form>
 
-        {/* Divider */}
-        <div style={{ height: '1px', background: 'linear-gradient(90deg, transparent, rgba(255,215,0,0.2), transparent)' }} />
+          {/* Success Reward Splash */}
+          <AnimatePresence>
+            {codeState === 'success' && rewardClaimed && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="border border-[#39FF14]/30 bg-[#39FF14]/5 p-5 rounded-lg space-y-4 text-center animate-in fade-in zoom-in-95 duration-200"
+              >
+                <div className="flex items-center justify-center gap-1.5 text-xs font-mono font-bold text-[#39FF14] tracking-widest uppercase">
+                  <Sparkles size={13} />
+                  <span>Reward Unlocked successfully</span>
+                </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <InputField label="Your Name" required placeholder="First & last" {...field('name')} />
-            <InputField label="Email" type="email" required placeholder="you@example.com" sublabel="keeps it private" {...field('email')} />
-          </div>
+                {/* Tokens display */}
+                {rewardClaimed.type === 'tokens' && (
+                  <div className="py-2 flex flex-col items-center">
+                    <Zap size={36} className="text-[#ffb800] animate-bounce" />
+                    <div className="text-3xl font-black font-mono text-[#ffb800] mt-2">
+                      +{rewardClaimed.details?.tokensGranted?.toLocaleString()}
+                    </div>
+                    <div className="text-[9px] font-mono text-white/50 tracking-wider mt-1 uppercase">VAULT TOKENS CREDITED</div>
+                  </div>
+                )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <InputField label="Farcaster" placeholder="@handle" sublabel="optional" {...field('farcaster')} />
-            <InputField label="Wallet Address" placeholder="0x..." sublabel="optional" {...field('wallet')} />
-          </div>
+                {/* Card display */}
+                {rewardClaimed.type === 'card' && rewardClaimed.details?.card && (
+                  <div className="py-2 flex flex-col items-center">
+                    <div className="w-16 h-16 rounded overflow-hidden border border-white/20 mb-3 shadow-lg">
+                      <img 
+                        src={rewardClaimed.details.card.coverUrl} 
+                        alt="Reward card Art" 
+                        className="w-full h-full object-cover" 
+                      />
+                    </div>
+                    <div className="font-mono text-[9px] tracking-widest uppercase" style={{ color: 'var(--color-neon-cyan)' }}>
+                      [{rewardClaimed.details.card.rarity}] CARD CLAIM
+                    </div>
+                    <div className="text-lg font-black uppercase text-white mt-1 leading-none">
+                      {rewardClaimed.details.card.title}
+                    </div>
+                    <div className="text-[8px] font-mono text-white/40 mt-1 uppercase">
+                      ADDED TO YOUR COLLECTION
+                    </div>
+                  </div>
+                )}
 
-          <TextareaField
-            label="Song Direction"
-            sublabel="optional — helps th3scr1b3 write for you"
-            placeholder="Tell th3scr1b3 anything — a mood, a memory, a theme, a colour. Don't overthink it."
-            {...field('note')}
-          />
-
-          {/* Fine print */}
-          <div style={{
-            padding: '12px 14px', borderRadius: '6px',
-            background: 'rgba(255,215,0,0.03)',
-            border: '1px solid rgba(255,215,0,0.1)',
-          }}>
-            <p className="text-[10px] font-mono leading-relaxed" style={{ color: 'rgba(255,255,255,0.3)' }}>
-              Submitting this form opens your email client (mailto). Your prize is verified by the Ultra Reward card in your collection. th3scr1b3 will reach out within 2–4 weeks. One prize per winner.
-            </p>
-          </div>
-
-          {/* Submit */}
-          <AnimatePresence mode="wait">
-            <motion.button
-              key={state}
-              type="submit"
-              disabled={!form.name || !form.email || state === 'submitting'}
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.98 }}
-              style={{
-                width: '100%', padding: '14px',
-                borderRadius: '8px',
-                background: (!form.name || !form.email || state === 'submitting')
-                  ? 'rgba(255,215,0,0.15)'
-                  : 'linear-gradient(135deg, #ffd700, #ff9900)',
-                color: (!form.name || !form.email || state === 'submitting') ? 'rgba(255,215,0,0.4)' : '#000',
-                fontFamily: '"JetBrains Mono", monospace',
-                fontWeight: 900, fontSize: '12px',
-                letterSpacing: '0.2em', textTransform: 'uppercase',
-                border: 'none', cursor: (!form.name || !form.email || state === 'submitting') ? 'not-allowed' : 'pointer',
-                boxShadow: (!form.name || !form.email || state === 'submitting') ? 'none' : '0 4px 30px rgba(255,180,0,0.35)',
-                transition: 'all 0.2s',
-              }}
-            >
-              {state === 'submitting' ? '✦ Sending...' : '✦ Submit Claim'}
-            </motion.button>
+                {/* Skin display */}
+                {rewardClaimed.type === 'background_skin' && (
+                  <div className="py-2 flex flex-col items-center">
+                    <div className="w-20 h-10 rounded border border-[#ff3800]/40 bg-radial-gradient flex items-center justify-center mb-3 shadow-[0_0_15px_rgba(255,56,0,0.15)]">
+                      <ImageIcon size={20} className="text-[#ffd700]" />
+                    </div>
+                    <div className="font-mono text-[9px] tracking-widest text-[#ffd700] uppercase">
+                      EXCLUSIVE THEME
+                    </div>
+                    <div className="text-base font-black uppercase text-white mt-1">
+                      {rewardClaimed.details?.skinUnlocked?.replace('_', ' ')}
+                    </div>
+                    <div className="text-[8px] font-mono text-white/40 mt-1.5 leading-relaxed max-w-xs mx-auto uppercase">
+                      Background theme is now permanently unlocked in options.
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            )}
           </AnimatePresence>
-        </form>
-
-        {/* External link note */}
-        <div className="flex items-center justify-center gap-2 opacity-30">
-          <ExternalLink size={10} />
-          <p className="text-[9px] font-mono tracking-widest uppercase">Claim opens your email client</p>
         </div>
 
+        {/* SECTION B: ELITE REWARDS (CUSTOM SONGS FOR ULTRA CARD OWNERS) */}
+        <div className="glass-panel p-6 border border-white/10 shadow-xl space-y-6 relative">
+          <div>
+            <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-[0.3em]">// ELITE_REPLAY_GATE</span>
+            <h2 className="text-lg font-mono font-bold uppercase text-white mt-1">Elite Custom Song Claim</h2>
+          </div>
+
+          {!hasReward ? (
+            <div className="border border-white/5 bg-white/[0.01] p-6 rounded-lg text-center space-y-3">
+              <AlertTriangle size={24} className="mx-auto text-white/20" />
+              <div className="text-xs font-mono font-bold text-white/40 uppercase tracking-widest">Locked — No Ultra Card Found</div>
+              <p className="text-[10px] font-mono text-zinc-500 leading-relaxed max-w-sm mx-auto uppercase">
+                Flip cards in your collection. If they have an Ultra reward hidden on the back, this section will unlock to claim your personalized track.
+              </p>
+              <Link
+                to="/vault/collection"
+                onClick={() => audioManager.playSfx('tap_nav', 0.2)}
+                className="inline-block mt-2 px-4 py-2 border border-white/10 rounded font-mono font-bold text-[9px] uppercase tracking-wider text-white hover:bg-white/5"
+              >
+                Inspect Collection
+              </Link>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-5 animate-in fade-in duration-300">
+              <div className="flex items-center gap-2.5 p-3.5 bg-[#ffd700]/5 border border-[#ffd700]/20 rounded-lg">
+                <Gift size={16} className="text-[#ffd700]" />
+                <span className="text-[10px] font-mono font-bold text-[#ffd700] uppercase tracking-wider">
+                  {ultraCards.length} Prize Card{ultraCards.length > 1 ? 's' : ''} detected. Form Unlocked!
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <InputField label="Your Name" required placeholder="First & last" {...field('name')} />
+                <InputField label="Email Address" type="email" required placeholder="you@example.com" sublabel="keeps it private" {...field('email')} />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <InputField label="Farcaster Handle" placeholder="@handle" sublabel="optional" {...field('farcaster')} />
+                <InputField label="Recipient Wallet" placeholder="0x..." sublabel="optional" {...field('wallet')} />
+              </div>
+
+              <TextareaField
+                label="Creative Direction"
+                sublabel="optional — helps th3scr1b3 write"
+                placeholder="Give th3scr1b3 a mood, a topic, a specific speed/bpm, or general direction. We will write and record this just for you."
+                {...field('note')}
+              />
+
+              <button
+                type="submit"
+                disabled={!form.name || !form.email || state === 'submitting'}
+                className="w-full py-3.5 font-mono font-bold text-xs uppercase tracking-widest text-black bg-[#ffd700] rounded hover:scale-101 active:scale-98 transition-all disabled:opacity-40"
+              >
+                {state === 'submitting' ? 'Submitting...' : '✦ Submit Creative Claim'}
+              </button>
+            </form>
+          )}
+        </div>
       </motion.div>
     </div>
   );

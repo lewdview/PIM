@@ -130,7 +130,9 @@ export default function App() {
           <Route path="/vault/claim" component={ClaimPage} />
           <Route path="/vault/legal" component={LegalPage} />
           <Route path="/vault/:userId" component={VoyeurPage} />
-          <Route path="/admin" component={AdminPage} />
+          { (import.meta.env.DEV || localStorage.getItem('th3vault_dev_mode') === 'true') && (
+            <Route path="/admin" component={AdminPage} />
+          ) }
           <Route path="/campaign" component={Campaign} />
           <Route path="/chapter/:month" component={Chapter} />
           <Route path="/tutorial" component={Tutorial} />

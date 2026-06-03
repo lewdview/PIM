@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Layers, Flame, Star, Calendar, Zap } from 'lucide-react';
+import { Layers, Flame, Star, Calendar, Zap, Gift } from 'lucide-react';
 import HeroCard from '../components/HeroCard';
 import PackShop from '../components/PackShop';
+import SolitaireCanvas from '../components/SolitaireCanvas';
 // TokenShop imported no longer since replaced with Forge
 import { useVaultStore } from '../store/useVaultStore';
 import { useLoadingToast } from '../store/useLoadingToast';
@@ -102,6 +103,7 @@ function StatSticker({ icon: Icon, label, value, color, rot }: {
 // ===== MAIN PAGE =====
 export default function HomePage() {
   const [, setLocation] = useLocation();
+  const [showSolitaire, setShowSolitaire] = useState(false);
   const {
     dailyCard, hasClaimed, tokenBalance, loadVaultData, setDailyCard, setHasClaimed,
     setCollection, startReveal, addToCollection, echoPrestigeScore, collection
@@ -327,8 +329,13 @@ export default function HomePage() {
               <div>
                 <SectionLabel label="Token Balance" accent="#ff9900" />
                 <div
-                  className="flex items-center gap-3 border-2 border-black px-4 py-3 w-fit"
+                  className="flex items-center gap-3 border-2 border-black px-4 py-3 w-fit cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all"
                   style={{ background: '#0d0d0d', boxShadow: '4px 4px 0 #000' }}
+                  onClick={() => {
+                    audioManager.playSfx('open_chest', 0.85);
+                    setShowSolitaire(true);
+                  }}
+                  title="Click to trigger Solitaire Easter Egg!"
                 >
                   <Zap size={20} style={{ color: '#ff9900' }} />
                   <div>
@@ -420,6 +427,48 @@ export default function HomePage() {
               <div className="sticker-gun-tag sticker-slits" style={{ background: '#ff9900', color: '#000', padding: '8px 16px', transform: 'rotate(-1deg)', '--slit-color': 'rgba(0,0,0,0.15)' } as any}>
                 <span className="text-[10px] font-black tracking-tighter uppercase flex items-center gap-1">
                   <Zap size={11} /> {tokenBalance} V⚡
+                </span>
+              </div>
+              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '20px', opacity: 0.3 }}>→</span>
+            </div>
+          </div>
+        </motion.div>
+      </section>
+
+      {/* ===== REDEEM CODES CTA ===== */}
+      <section className="py-8 px-4 md:px-8">
+        <SectionLabel label="Promotions & Decryption" accent="var(--color-neon-gold)" />
+        <motion.div
+          whileHover={{ scale: 1.01 }}
+          onClick={() => setLocation('/vault/claim')}
+          className="relative overflow-hidden cursor-pointer"
+          style={{
+            padding: '24px 32px',
+            border: '3px solid #000',
+            background: 'linear-gradient(135deg, #0d0d0d, #1a1300)',
+            boxShadow: '6px 6px 0 #000, 0 0 40px rgba(255,215,0,0.08)',
+          }}
+        >
+          <div className="scanlines absolute inset-0 opacity-10" />
+          <div className="relative z-10 flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <h2 style={{
+                fontFamily: '"Impact", "Arial Black", sans-serif',
+                fontSize: '32px', textTransform: 'uppercase',
+                letterSpacing: '-0.02em', margin: 0,
+                background: 'linear-gradient(135deg, #ffd700, #ff9900)',
+                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+              }}>
+                Redeem Center
+              </h2>
+              <p className="text-[9px] font-mono uppercase tracking-[0.2em] opacity-45 mt-1">
+                Enter promotional codes · Unlock V⚡ tokens · Claim exclusive background skins
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="sticker-gun-tag sticker-slits" style={{ background: '#ffd700', color: '#000', padding: '8px 16px', transform: 'rotate(1.5deg)', '--slit-color': 'rgba(0,0,0,0.15)' } as any}>
+                <span className="text-[10px] font-black tracking-tighter uppercase flex items-center gap-1">
+                  <Gift size={11} /> Decrypt Code
                 </span>
               </div>
               <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '20px', opacity: 0.3 }}>→</span>
@@ -562,6 +611,7 @@ export default function HomePage() {
           accent={checkoutInfo.accent}
         />
       )}
+      {showSolitaire && <SolitaireCanvas onClose={() => setShowSolitaire(false)} />}
       <div className="h-8" />
     </div>
   );

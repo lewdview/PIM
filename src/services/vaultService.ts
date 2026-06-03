@@ -653,6 +653,27 @@ export async function redeemInviteCode(code: string): Promise<boolean> {
   } catch { return false; }
 }
 
+/** Redeem a bonus/promo code */
+export async function redeemBonusCode(code: string): Promise<{ success: boolean; rewardType?: string; rewardValue?: string; result?: any; error?: string }> {
+  try {
+    const { data, error } = await supabase.functions.invoke('vault-engine', {
+      body: { action: 'redeemBonusCode', payload: { code } }
+    });
+    if (error || !data?.success) {
+      const detailedError = await extractDetailedError(error) || data?.error || 'Unknown validation failure';
+      return { success: false, error: detailedError };
+    }
+    return { 
+      success: true, 
+      rewardType: data.rewardType, 
+      rewardValue: data.rewardValue,
+      result: data.result
+    };
+  } catch (e: any) {
+    return { success: false, error: e.message || 'Unknown network error' };
+  }
+}
+
 /** Get player debug stats (RC1) */
 export async function getDebugStats(): Promise<any> {
   try {

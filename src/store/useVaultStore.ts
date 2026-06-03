@@ -54,6 +54,7 @@ interface VaultState {
 
   // Modifiers
   equippedCardId: string | null;
+  unlockedSkins: string[];
 
   // Actions
   setDailyCard: (card: VaultCard | null) => void;
@@ -112,6 +113,7 @@ export const useVaultStore = create<VaultState>((set) => ({
   totalPulls: 0,
   pullsSinceRarePlus: 0,
   equippedCardId: null,
+  unlockedSkins: [],
 
   setDailyCard: (card) => set({ dailyCard: card }),
   setHasClaimed: (claimed) => set({ hasClaimed: claimed }),
@@ -150,13 +152,19 @@ export const useVaultStore = create<VaultState>((set) => ({
     set({ isLoading: true });
     try {
       const { getCurrentDay } = await import('../utils/dayCalc');
+      const { initAdminConfig } = await import('../utils/adminConfig');
+      
       const today = getCurrentDay();
+      
+      // Initialize global admin configuration settings from the database
+      await initAdminConfig();
+
       const [
         profileRes, 
         vaultRes, 
         supplyRes
       ] = await Promise.all([
-        supabase.from('profiles').select('tokens, daily_standard_claims, daily_premium_claims, last_claim_day, has_onboarded, streak_count, total_pulls, pulls_since_rare_plus').eq('id', userId).single(),
+        supabase.from('profiles').select('tokens, daily_standard_claims, daily_premium_claims, last_claim_day, has_onboarded, streak_count, total_pulls, pulls_since_rare_plus, unlocked_skins').eq('id', userId).single(),
         supabase.from('vault_collections').select('*').eq('owner_id', userId),
         supabase.from('global_supply').select('*')
       ]);
@@ -178,6 +186,7 @@ export const useVaultStore = create<VaultState>((set) => ({
           streakCount: currentStreak,
           totalPulls: currentPulls,
           pullsSinceRarePlus: profile.pulls_since_rare_plus || 0,
+          unlockedSkins: profile.unlocked_skins || [],
         });
         if (profile.last_claim_day === today) {
           set({ dailyLimits: { standard: profile.daily_standard_claims || 0, premium: profile.daily_premium_claims || 0 } });
