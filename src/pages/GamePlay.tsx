@@ -9,6 +9,7 @@ import { audioManager } from "@/game/audio";
 import { useVaultStore } from "@/store/useVaultStore";
 import { haptics } from "../utils/haptics";
 import { motion } from "framer-motion";
+import { logAnalyticsEvent } from "../services/telemetryService";
 
 // ── constants ────────────────────────────────────────────────────
 const LANE_COUNT = 3;
@@ -842,6 +843,13 @@ export default function Game() {
     audioManager.stopSfx("gameover_countdown");
     playRewindSound();
     continueUsedRef.current++;
+
+    // Log game continue telemetry event
+    logAnalyticsEvent('game_continue', {
+      songId: songId,
+      continueIndex: continueUsedRef.current
+    });
+
     haptics.fusionProgress();
 
     // Stop any existing draw loop first
@@ -2859,6 +2867,15 @@ export default function Game() {
       if (!isNaN(diffOverrideNum) && diffOverrideNum >= 1 && diffOverrideNum <= 10 && !activeTutorial) {
         songRef.current.difficultyLevel = diffOverrideNum;
       }
+
+      // Log game start telemetry event
+      logAnalyticsEvent('game_start', {
+        songId: songId,
+        songTitle: songRef.current.title,
+        difficulty: songRef.current.difficultyLevel,
+        background: opts.gameBackground || 'cover_blur'
+      });
+
       // Initialize ambient particles depending on difficulty
       const diffLvl = songRef.current.difficultyLevel;
       const partCount = diffLvl <= 3 ? 8 : diffLvl <= 6 ? 12 : 18;

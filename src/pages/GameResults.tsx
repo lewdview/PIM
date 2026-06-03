@@ -10,6 +10,7 @@ import { useVaultStore } from "@/store/useVaultStore";
 import { supabase } from "@/services/supabaseClient";
 import { purchasePack } from "@/services/vaultService";
 import { PACK_CONFIGS } from "@/utils/rarity";
+import { logAnalyticsEvent } from "@/services/telemetryService";
 
 interface ResultData {
   score: number; maxCombo: number; perfectPlus: number;
@@ -147,6 +148,18 @@ export default function Results() {
     setGameOrigin(sessionStorage.getItem(`game_origin_${songId}`) ?? '');
     const prev = getHighScore(songId);
     if (data.score >= prev) setIsNew(true);
+
+    // Log game end telemetry event
+    logAnalyticsEvent('game_end', {
+      songId: songId,
+      score: data.score,
+      accuracy: data.total > 0 ? Number((((data.perfectPlus * 1.0 + data.perfects * 0.9 + data.goods * 0.5) / data.total) * 100).toFixed(2)) : 0,
+      maxCombo: data.maxCombo,
+      medal: data.medal,
+      missCount: data.misses,
+      continuesUsed: data.continuesUsed || 0,
+      completed: !data.failed
+    });
 
     Promise.all([getSongById(songId), loadCatalog()])
       .then(([s, catalog]) => {

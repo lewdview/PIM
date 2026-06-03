@@ -4,6 +4,7 @@ import { supabase } from '../services/supabaseClient';
 import { useVaultStore } from './useVaultStore';
 import { CoinbaseWalletSDK } from '@coinbase/wallet-sdk';
 import { Wallet } from 'ethers';
+import { logAnalyticsEvent } from '../services/telemetryService';
 
 const BASE_CHAIN_ID_HEX = '0x2105';
 const BASE_CHAIN_CONFIG = {
@@ -204,6 +205,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       set({ session: data.session, user: data.user, showAuthModal: false });
 
+      // Log EVM Wallet connect event
+      logAnalyticsEvent('wallet_connect', { address });
+
       // Trigger data load
       try {
         await useVaultStore.getState().loadVaultData();
@@ -255,6 +259,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (sessionError) throw sessionError;
       
       set({ session: data.session, user: data.user, status: 'ready' });
+
+      // Log Ephemeral Wallet create event
+      logAnalyticsEvent('ephemeral_wallet_create', { address });
       
       try {
         await useVaultStore.getState().loadVaultData();

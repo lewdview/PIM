@@ -19,6 +19,7 @@ import { purchasePack, redeemInviteCode } from '../services/vaultService';
 import { useVaultStore } from '../store/useVaultStore';
 import { RARITY_CONFIG } from '../utils/rarity';
 import { getAdminConfig } from '../utils/adminConfig';
+import { logAnalyticsEvent } from '../services/telemetryService';
 
 
 
@@ -96,6 +97,7 @@ export default function OnboardingFlow({ onComplete }: Props) {
   }, []);
 
   const handleExplainerDone = useCallback(async () => {
+    await logAnalyticsEvent('onboarding_complete');
     await loadVaultData(); // Sync with Supabase after welcome pull
     setPhase('done');
     onComplete();
