@@ -209,11 +209,17 @@
 /* Graduating artwork size classes */
 .h-common { height: 40% !important; }
 .h-uncommon { height: 50% !important; }
-.h-rare { height: 60% !important; }
+.h-rare { height: 100% !important; } /* Rare is now full-bleed 100% */
 .h-legendary { height: 100% !important; }
 .h-mythic { height: 100% !important; }
 
-/* Translucent floating info drawer for Legendary/Mythic full-bleed art */
+/* Rotate & Zoom Cover Art (For Legendary and Mythic cards) */
+.rotate-zoom-art {
+  transform: rotate(90deg) scale(1.35) !important;
+  transform-origin: center !important;
+}
+
+/* Translucent floating info drawer for Rare/Legendary/Mythic full-bleed art */
 .floating-overlay-info {
   position: absolute;
   bottom: 0;
@@ -336,7 +342,7 @@
 .theme-glitch.rarity-rare .card-face-front {
   border: 4px solid #00bcff;
   background: #000b14;
-  padding: 8px;
+  padding: 0;
   box-shadow: 0 0 18px rgba(0, 188, 255, 0.45), inset 0 0 12px rgba(0, 188, 255, 0.2);
 }
 .theme-glitch.rarity-rare .terminal-scanline {
@@ -352,6 +358,7 @@
   );
   animation: scanline-roll 4s linear infinite;
   pointer-events: none;
+  z-index: 10;
 }
 .theme-glitch.rarity-rare .brutalist-badge {
   background: #00bcff;
@@ -467,9 +474,10 @@
 
 /* Rare Glass (Cobalt Blue + Stat Pills) */
 .theme-glass.rarity-rare .card-face-front {
-  background: rgba(59, 130, 246, 0.06);
+  background: transparent;
   border: 1px solid rgba(59, 130, 246, 0.35);
   box-shadow: 0 8px 32px 0 rgba(59, 130, 246, 0.25);
+  padding: 0;
 }
 .theme-glass.rarity-rare .glass-stat-pill {
   background: rgba(59, 130, 246, 0.25);
@@ -629,6 +637,7 @@
 .theme-arcade.rarity-rare .card-face-front {
   border: 4px solid #00f0ff;
   background: #0f1c24;
+  padding: 0;
 }
 .theme-arcade.rarity-rare .diagonal-stripes {
   background: repeating-linear-gradient(
@@ -671,7 +680,7 @@
   mask-image: repeating-linear-gradient(0deg, black, black 4px, transparent 4px, transparent 8px);
   -webkit-mask-image: repeating-linear-gradient(0deg, black, black 4px, transparent 4px, transparent 8px);
 }
-.theme-arcade.wireframe-grid {
+.theme-arcade.rarity-legendary .wireframe-grid {
   position: absolute;
   bottom: 0;
   left: -20%;
@@ -740,7 +749,7 @@
    DESIGN 4: MAGIC: THE GATHERING (MTG Glass-Outrun Hybrid Edition)
    ========================================================================== */
 .theme-mtg {
-  font-family: 'JetBrains Mono', monospace; /* Replaced serif with monospace/sans */
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .theme-mtg .card-face-front {
@@ -757,7 +766,7 @@
   background: rgba(255, 255, 255, 0.03);
   backdrop-filter: blur(14px) saturate(140%);
   -webkit-backdrop-filter: blur(14px) saturate(140%);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
   border-radius: 6px;
   padding: 5px;
   height: 100%;
@@ -786,6 +795,7 @@
   color: #fff;
   letter-spacing: 0.5px;
   text-transform: uppercase;
+  text-shadow: 0 0 6px rgba(255, 255, 255, 0.2);
 }
 
 /* Mana circles representation */
@@ -808,9 +818,9 @@
   box-shadow: 0 1px 2px rgba(0,0,0,0.5);
 }
 
-.theme-mtg .mtg-mana-nrg { background: rgba(0, 212, 170, 0.8); color: #000; }
-.theme-mtg .mtg-mana-val { background: rgba(59, 130, 246, 0.8); color: #fff; }
-.theme-mtg .mtg-mana-bpm { background: rgba(255, 56, 0, 0.85); color: #fff; }
+.theme-mtg .mtg-mana-nrg { background: rgba(0, 212, 170, 0.85); color: #000; }
+.theme-mtg .mtg-mana-val { background: rgba(59, 130, 246, 0.85); color: #fff; }
+.theme-mtg .mtg-mana-bpm { background: rgba(255, 56, 0, 0.9); color: #fff; }
 
 /* Artwork Frame */
 .theme-mtg .mtg-art-frame {
@@ -849,6 +859,7 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  position: relative;
 }
 
 .theme-mtg .mtg-flavor-text {
@@ -863,8 +874,8 @@
 /* Power & Toughness box */
 .theme-mtg .mtg-pt-box {
   align-self: flex-end;
-  background: rgba(0, 0, 0, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 3px;
   padding: 2px 6px;
   font-weight: bold;
@@ -898,27 +909,36 @@
   border-color: rgba(255, 255, 255, 0.08);
 }
 
-/* Uncommon MTG */
+/* Uncommon MTG: Neon Green Glow accents */
 .theme-mtg.rarity-uncommon .card-face-front {
-  border-color: rgba(0, 212, 170, 0.3);
-  box-shadow: 0 0 15px rgba(0, 212, 170, 0.15);
+  border-color: #00d4aa;
+  box-shadow: 0 0 15px rgba(0, 212, 170, 0.25), inset 0 0 10px rgba(0, 212, 170, 0.15);
 }
 .theme-mtg.rarity-uncommon .mtg-glass-frame {
-  background: rgba(0, 212, 170, 0.02);
-  border-color: rgba(0, 212, 170, 0.2);
+  background: rgba(0, 212, 170, 0.03);
+  border-color: rgba(0, 212, 170, 0.3);
+}
+.theme-mtg.rarity-uncommon .mtg-title-text {
+  color: #00d4aa;
+  text-shadow: 0 0 6px rgba(0, 212, 170, 0.3);
 }
 
-/* Rare MTG */
+/* Rare MTG: Full-bleed vertical art, Gold Inner frame, Blue tint glows */
 .theme-mtg.rarity-rare .card-face-front {
-  border-color: rgba(59, 130, 246, 0.35);
-  box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);
+  border-color: #3b82f6;
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.35);
+  padding: 0;
 }
 .theme-mtg.rarity-rare .mtg-glass-frame {
-  background: rgba(59, 130, 246, 0.02);
-  border-color: rgba(59, 130, 246, 0.25);
+  background: rgba(59, 130, 246, 0.03);
+  border-color: rgba(59, 130, 246, 0.35);
+}
+.theme-mtg.rarity-rare .mtg-title-text {
+  color: #3b82f6;
+  text-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
 }
 
-/* Legendary MTG: Borderless Full-art layout */
+/* Legendary MTG: Borderless Full-art layout, rotated/zoomed art, Magenta-Pink glow */
 .theme-mtg.rarity-legendary .card-face-front {
   border: 4px solid #ff007f;
   padding: 0;
@@ -961,7 +981,7 @@
   flex-direction: column;
 }
 
-/* Mythic MTG: Borderless Full-art with Iridescent Shifting TextBox */
+/* Mythic MTG: Borderless Full-art, rotated/zoomed art, Rainbow border sweep, Iridescent text box */
 .theme-mtg.rarity-mythic .card-face-front {
   border: 4px solid #ffd700;
   padding: 0;
