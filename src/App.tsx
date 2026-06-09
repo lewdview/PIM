@@ -29,6 +29,7 @@ import LegalPage from './pages/LegalPage';
 import VoyeurPage from './pages/VoyeurPage';
 import AdminPage from './pages/AdminPage';
 import BeatmapEditor from './pages/BeatmapEditor';
+import CardDesignShowcase from './pages/CardDesignShowcase';
 import Campaign from './pages/Campaign';
 import Chapter from './pages/Chapter';
 import Tutorial from './pages/Tutorial';
@@ -109,7 +110,8 @@ export default function App() {
     location === '/songs' ||
     location.startsWith('/results/') ||
     location === '/options' ||
-    location === '/admin/editor';
+    location === '/admin/editor' ||
+    location === '/admin/card-designs';
 
   return (
     <div className="min-h-screen bg-[#050402] text-white flex flex-col select-none">
@@ -136,6 +138,7 @@ export default function App() {
             <>
               <Route path="/admin" component={AdminPage} />
               <Route path="/admin/editor" component={BeatmapEditor} />
+              <Route path="/admin/card-designs" component={CardDesignShowcase} />
             </>
           ) }
           <Route path="/campaign" component={Campaign} />
