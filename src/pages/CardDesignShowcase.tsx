@@ -109,6 +109,136 @@ const getRarityMaxSupply = (r: Rarity) => {
   return 1000;
 };
 
+const RARITY_COLORS: Record<Rarity, string> = {
+  common: '#8a8ea0',
+  uncommon: '#4ade80',
+  rare: '#3b82f6',
+  legendary: '#b44dff',
+  mythic: '#ffd700',
+};
+
+// --------------------------------------------------------------------------
+// PRODUCTION-MATCHING STANDARD VAULT CARD BACK COMPONENT
+// --------------------------------------------------------------------------
+function StandardVaultCardBack({ card }: { card: VaultCard }) {
+  const rcColor = RARITY_COLORS[card.rarity];
+  const pulseRarity = ['rare', 'legendary', 'mythic'].includes(card.rarity);
+
+  return (
+    <div className="relative w-full h-full overflow-hidden select-none">
+      {/* Base Dark Cover */}
+      <div className="absolute inset-0 bg-[#0c0a07]" />
+
+      {/* Rarity-tinted radial glow */}
+      <div 
+        className="card-back-radial-glow absolute inset-0" 
+        style={{ background: `radial-gradient(ellipse at 50% 40%, ${rcColor}14, transparent 65%)` }} 
+      />
+
+      {/* Animated sweeps for high rarities */}
+      {card.rarity === 'mythic' && <div className="card-back-foil-sweep" />}
+      {card.rarity === 'legendary' && <div className="card-back-foil-sweep" style={{ opacity: 0.6 }} />}
+
+      {/* Diamond grid SVG */}
+      <svg className="absolute inset-0 w-full h-full opacity-[0.055]" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <pattern id={`bp-${card.id}`} x="0" y="0" width="22" height="22" patternUnits="userSpaceOnUse">
+            <path d="M11 0L22 11L11 22L0 11Z" fill="none" stroke={rcColor} strokeWidth="0.6" />
+          </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill={`url(#bp-${card.id})`} />
+      </svg>
+
+      {/* Inner double frames */}
+      <div 
+        className="absolute inset-3 border rounded-lg" 
+        style={{ borderColor: `${rcColor}22` }}
+      >
+        <div 
+          className="absolute inset-1.5 border rounded" 
+          style={{ borderColor: `${rcColor}10` }}
+        >
+          {/* Center emblem */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+            
+            {/* V mark frame */}
+            <div className="relative">
+              <div 
+                className="w-16 h-16 rounded-xl border-2 flex items-center justify-center"
+                style={{
+                  background: `linear-gradient(145deg, ${rcColor}18, transparent)`,
+                  borderColor: `${rcColor}30`,
+                  boxShadow: `0 0 30px ${rcColor}10, inset 0 0 16px ${rcColor}05`,
+                }}
+              >
+                <span 
+                  className="font-black text-2xl uppercase tracking-tighter"
+                  style={{
+                    fontFamily: '"Impact", "Arial Black", sans-serif',
+                    color: rcColor,
+                    textShadow: `0 0 18px ${rcColor}60`
+                  }}
+                >
+                  V
+                </span>
+              </div>
+              
+              {pulseRarity && (
+                <div 
+                  className="center-ring-pulsing" 
+                  style={{ background: `radial-gradient(circle, ${rcColor}12, transparent 70%)` }} 
+                />
+              )}
+            </div>
+
+            {/* Branding Details */}
+            <div className="text-center flex flex-col gap-1 items-center">
+              <span 
+                className="font-bold text-[10px] uppercase tracking-[0.35em]"
+                style={{ color: rcColor, textShadow: `0 0 10px ${rcColor}40` }}
+              >
+                th3v4ult
+              </span>
+              <div className="w-10 h-[1px]" style={{ background: `${rcColor}30` }} />
+              <span className="text-[7.5px] uppercase tracking-wider text-[#fff0d8]/40">
+                GEN 0 · {card.rarity.toUpperCase()}
+              </span>
+            </div>
+
+            {/* Day pill */}
+            <div 
+              className="px-3.5 py-1 border rounded-full"
+              style={{
+                borderColor: `${rcColor}22`,
+                background: `${rcColor}06`
+              }}
+            >
+              <span className="font-bold text-[9px] tracking-widest" style={{ color: rcColor }}>
+                #{String(card.day).padStart(3, '0')}
+              </span>
+            </div>
+
+          </div>
+
+          {/* Corner borders */}
+          {[{t:true,l:true},{t:true,l:false},{t:false,l:true},{t:false,l:false}].map(({t,l},i) => (
+            <div key={i} style={{
+              position: 'absolute', width: '12px', height: '12px',
+              top: t ? '6px' : undefined, bottom: !t ? '6px' : undefined,
+              left: l ? '6px' : undefined, right: !l ? '6px' : undefined,
+              borderTop:    t ? `1px solid ${rcColor}25` : 'none',
+              borderBottom: !t ? `1px solid ${rcColor}25` : 'none',
+              borderLeft:   l ? `1px solid ${rcColor}25` : 'none',
+              borderRight:  !l ? `1px solid ${rcColor}25` : 'none',
+            }} />
+          ))}
+
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // --------------------------------------------------------------------------
 // 3D FLIP CONTAINER WRAPPER
 // --------------------------------------------------------------------------
@@ -151,7 +281,6 @@ function CardGlitch({ card }: { card: VaultCard }) {
   const activeColor = rarityColors[card.rarity];
   const isFullBleed = card.rarity === 'legendary' || card.rarity === 'mythic';
   
-  // Height class selector for graduating art sizes
   const heightClass = 
     card.rarity === 'common' ? 'h-common' :
     card.rarity === 'uncommon' ? 'h-uncommon' :
@@ -159,7 +288,7 @@ function CardGlitch({ card }: { card: VaultCard }) {
     card.rarity === 'legendary' ? 'h-legendary' : 'h-mythic';
 
   const metadataInfo = (
-    <div className="flex flex-col flex-1 z-10 pt-1">
+    <div className="flex flex-col flex-grow z-10 pt-1">
       <h3 className="brutalist-title text-sm font-black tracking-tight leading-none truncate mb-1">
         {card.title}
       </h3>
@@ -433,7 +562,7 @@ function CardArcade({ card }: { card: VaultCard }) {
     card.rarity === 'legendary' ? 'h-legendary' : 'h-mythic';
 
   const metadataInfo = (
-    <div className="flex flex-col flex-1 z-10 pt-1 font-mono">
+    <div className="flex flex-col flex-grow z-10 pt-1 font-mono">
       <h3 className="text-xs font-black uppercase text-white tracking-wide truncate mb-1 text-shadow-retro">
         {card.title}
       </h3>
@@ -581,7 +710,7 @@ function CardArcade({ card }: { card: VaultCard }) {
 }
 
 // --------------------------------------------------------------------------
-// DESIGN 4: MAGIC: THE GATHERING (MTG Retro Fantasy / Borderless Showcase)
+// DESIGN 4: MAGIC: THE GATHERING (MTG Glass-Outrun Hybrid Edition)
 // --------------------------------------------------------------------------
 function CardMtg({ card }: { card: VaultCard }) {
   const isFullBleed = card.rarity === 'legendary' || card.rarity === 'mythic';
@@ -592,9 +721,9 @@ function CardMtg({ card }: { card: VaultCard }) {
     card.rarity === 'rare' ? 'h-rare' :
     card.rarity === 'legendary' ? 'h-legendary' : 'h-mythic';
 
-  // Traditional Framed MTG Layout (Common, Uncommon, Rare)
+  // Front layout: Glassmorphic borders, type panels, textboxes, and clean modern font
   const traditionalFace = (
-    <div className="mtg-parchment-frame">
+    <div className="mtg-glass-frame">
       {/* Title block */}
       <div className="mtg-title-bar">
         <span className="mtg-title-text truncate max-w-[130px]">{card.title}</span>
@@ -612,17 +741,17 @@ function CardMtg({ card }: { card: VaultCard }) {
       </div>
 
       {/* Type line bar */}
-      <div className="mtg-type-bar truncate">
+      <div className="mtg-type-bar truncate text-[8px] font-sans">
         Song — {card.genre[0] || 'Unknown'} {card.genre[1] ? `/ ${card.genre[1]}` : ''}
       </div>
 
       {/* Text Box / Ability Card details */}
-      <div className="mtg-text-box">
-        <div className="text-[8px] font-sans font-medium text-slate-800">
-          <p className="margin-0 font-bold text-slate-900">// Day {card.day} Codex Entry:</p>
-          <p className="margin-0 leading-snug">{card.description}</p>
+      <div className="mtg-text-box font-sans">
+        <div className="text-[7.5px] leading-snug">
+          <p className="margin-0 font-bold opacity-60 uppercase text-[6.5px] mb-0.5">// Day {card.day} Codex Entry:</p>
+          <p className="margin-0 leading-normal">{card.description}</p>
         </div>
-        <div className="mtg-flavor-text text-[7px]">
+        <div className="mtg-flavor-text">
           "{card.tags.map(t => `#${t}`).join(' ')} · {card.mood.toUpperCase()} TIME"
         </div>
         <div className="mtg-pt-box">
@@ -632,16 +761,20 @@ function CardMtg({ card }: { card: VaultCard }) {
     </div>
   );
 
-  // Borderless Full-art MTG Layout (Legendary, Mythic)
+  // Borderless Full-art MTG Layout (Legendary, Mythic) with Glassmorphism Overlays and Sweeping Gradients
   const borderlessFace = (
     <div className="relative h-full w-full">
       {/* Background cover image 100% size */}
-      <img src={card.coverUrl} alt={card.title} className="absolute inset-0 w-full h-full object-cover z-0" />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/20 to-transparent z-5" />
+      <img src={card.coverUrl} alt={card.title} className="absolute inset-0 w-full h-full object-cover z-0 scale-105" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/25 to-transparent z-5" />
+
+      {/* Iridescent active gradient sweeps on mythic/legendary front face */}
+      {card.rarity === 'mythic' && <div className="mythic-foil-wash" />}
+      {card.rarity === 'legendary' && <div className="mythic-foil-wash" style={{ opacity: 0.5 }} />}
 
       {/* Frame overlay wrapper */}
       <div className="mtg-borderless-frame">
-        {/* Floating title bar */}
+        {/* Floating glass title bar */}
         <div className="mtg-floating-title">
           <span className="mtg-title-text truncate max-w-[130px]">{card.title}</span>
           <div className="mtg-mana-cost">
@@ -651,15 +784,15 @@ function CardMtg({ card }: { card: VaultCard }) {
           </div>
         </div>
 
-        {/* Floating rules text block */}
-        <div className="mtg-floating-textbox">
+        {/* Floating glass rules text block */}
+        <div className="mtg-floating-textbox font-sans">
           {card.rarity === 'mythic' && <div className="mtg-iridescent-overlay" />}
           
-          <div className="text-[7.5px] font-sans text-slate-300 relative z-10">
-            <span className="font-bold text-amber-400 block border-b border-white/10 pb-0.5 mb-1">
+          <div className="text-[7.5px] relative z-10">
+            <span className="font-bold text-amber-300 block border-b border-white/10 pb-0.5 mb-1 uppercase text-[6.5px] tracking-wide">
               Legendary Song — {card.genre.join(' / ')}
             </span>
-            <p className="margin-0 leading-snug italic opacity-85">
+            <p className="margin-0 leading-normal opacity-90">
               "{card.description}"
             </p>
           </div>
@@ -668,7 +801,7 @@ function CardMtg({ card }: { card: VaultCard }) {
             <span className="text-[7px] text-white/50 uppercase tracking-widest">
               DAY {card.day} · GEN 0
             </span>
-            <div className="mtg-pt-box bg-slate-900 border-amber-400 text-amber-400 m-0">
+            <div className="mtg-pt-box bg-black border-amber-400 text-amber-400 m-0">
               {Math.round(card.energy * 100)} / {Math.round(card.valence * 100)}
             </div>
           </div>
@@ -684,21 +817,7 @@ function CardMtg({ card }: { card: VaultCard }) {
     </div>
   );
 
-  const backFace = (
-    <div className="mtg-card-back-frame">
-      <div className="text-center mt-4">
-        <div className="mtg-back-orb">
-          <Volume2 size={16} className="text-amber-500" />
-        </div>
-        <span className="text-[9px] uppercase tracking-widest text-[#a8825c] font-serif block mt-2">MAGIC DECK</span>
-      </div>
-      <div className="text-center">
-        <span className="text-[12px] font-serif italic text-amber-600 block">th3v4ult</span>
-        <span className="text-[7px] font-mono text-white/30 uppercase tracking-widest block mt-1">GENESIS DECK SYSTEM</span>
-      </div>
-      <div className="w-16 h-[1.5px] bg-[#a8825c]/40" />
-    </div>
-  );
+  const backFace = <StandardVaultCardBack card={card} />;
 
   return (
     <Card3DWrapper rarity={card.rarity} themeClass="mtg" backSide={backFace}>
@@ -846,7 +965,7 @@ export default function CardDesignShowcase() {
               Concept 4: Magic: The Gathering (MTG) Classic & Borderless
             </h2>
             <p className="text-[11px] text-white/50 mb-4 font-mono uppercase tracking-wide">
-              Fantasy cardboard aesthetic. Common/Uncommon/Rare feature traditional parchment frames and textboxes. Legendary/Mythic use borderless full-art layouts with floating rule overlays.
+              Cyberpunk Glassmorphism edition of standard MTG. Rules textboxes and title bars are styled as glass slabs with modern sans-serif fonts, using full-bleed artwork and animated background sweeps on Legendary/Mythic.
             </p>
             <div className="showcase-grid">
               {mockCards.map(card => (
