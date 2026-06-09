@@ -1126,3 +1126,499 @@
   border-radius: 24px;
   animation: ring-glow-pulse 3s ease-in-out infinite;
 }
+
+/* ==========================================================================
+   DESIGN 5: CLASSIC TAROT / POKER PLAYING CARD (theme-poker)
+   ========================================================================== */
+.theme-poker {
+  font-family: 'Times New Roman', Times, Georgia, serif;
+}
+
+.theme-poker .card-face-front {
+  border: 4px double #b89c66;
+  box-shadow: inset 0 0 15px rgba(184, 156, 102, 0.2), 0 8px 24px rgba(0,0,0,0.85);
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* Rarity Backgrounds */
+.theme-poker.rarity-common .card-face-front,
+.theme-poker.rarity-uncommon .card-face-front {
+  background: #f7eed8;
+  color: #1f1b14;
+  border-color: #7c6846;
+}
+
+.theme-poker.rarity-rare .card-face-front {
+  background: #500d17;
+  color: #f7eed8;
+  border-color: #d1b887;
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.6), 0 0 20px rgba(209, 184, 135, 0.25);
+}
+
+.theme-poker.rarity-legendary .card-face-front {
+  background: linear-gradient(135deg, #0e0d0b 0%, #221c15 50%, #0e0d0b 100%);
+  color: #ffd700;
+  border-color: #ffd700;
+  box-shadow: inset 0 0 25px rgba(255, 215, 0, 0.15), 0 0 25px rgba(255, 215, 0, 0.25);
+}
+
+.theme-poker.rarity-mythic .card-face-front {
+  background: linear-gradient(135deg, #120e0b 0%, #302418 50%, #120e0b 100%);
+  color: #ffd700;
+  border-color: #ffd700;
+  box-shadow: inset 0 0 30px rgba(255, 215, 0, 0.2), 0 0 35px rgba(255, 215, 0, 0.4);
+}
+
+/* Corner Indexes */
+.theme-poker .poker-index {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 13px;
+  font-weight: bold;
+  line-height: 1.1;
+  letter-spacing: -0.5px;
+}
+.theme-poker .poker-index-tl {
+  top: 8px;
+  left: 8px;
+}
+.theme-poker .poker-index-br {
+  bottom: 8px;
+  right: 8px;
+  transform: rotate(180deg);
+}
+
+.theme-poker .poker-suit {
+  font-size: 14px;
+}
+.theme-poker.rarity-common .poker-suit-red,
+.theme-poker.rarity-uncommon .poker-suit-red {
+  color: #b91c1c;
+}
+.theme-poker.rarity-rare .poker-suit-red {
+  color: #fca5a5;
+}
+.theme-poker.rarity-legendary .poker-suit-red,
+.theme-poker.rarity-mythic .poker-suit-red {
+  color: #f59e0b;
+}
+
+/* Art Oval Frame */
+.theme-poker .poker-art-frame {
+  width: 72%;
+  aspect-ratio: 1 / 1.25;
+  margin: 14px auto auto;
+  border: 1.5px solid #b89c66;
+  border-radius: 50% 50% 0 0;
+  overflow: hidden;
+  position: relative;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  background: #000;
+}
+.theme-poker.rarity-common .poker-art-frame,
+.theme-poker.rarity-uncommon .poker-art-frame {
+  border-color: #7c6846;
+}
+.theme-poker.rarity-rare .poker-art-frame {
+  border-color: #d1b887;
+}
+
+/* Mirrored center divider line for playing card */
+.theme-poker .poker-divider-line {
+  height: 1px;
+  width: 50%;
+  margin: 6px auto;
+  background: linear-gradient(90deg, transparent, #b89c66, transparent);
+}
+.theme-poker.rarity-common .poker-divider-line,
+.theme-poker.rarity-uncommon .poker-divider-line {
+  background: linear-gradient(90deg, transparent, #7c6846, transparent);
+}
+
+/* Banner Title at the bottom */
+.theme-poker .poker-title-banner {
+  background: rgba(0, 0, 0, 0.85);
+  border: 1px solid #b89c66;
+  color: #fff;
+  border-radius: 4px;
+  font-size: 8px;
+  padding: 4px 6px;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: bold;
+  margin: 2px 14px 4px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+}
+.theme-poker.rarity-common .poker-title-banner,
+.theme-poker.rarity-uncommon .poker-title-banner {
+  background: #fff;
+  border-color: #7c6846;
+  color: #1f1b14;
+}
+.theme-poker.rarity-rare .poker-title-banner {
+  border-color: #d1b887;
+}
+
+/* ==========================================================================
+   DESIGN 6: DUELIST MONSTER CARD (theme-duelist)
+   ========================================================================== */
+.theme-duelist {
+  font-family: 'Arial', sans-serif;
+  font-weight: bold;
+}
+
+.theme-duelist .card-face-front {
+  border: 5px solid #000;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.85);
+  padding: 6px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Frame Colors based on Rarity */
+.theme-duelist.rarity-common .card-face-front {
+  background: linear-gradient(135deg, #a88158 0%, #5f3e20 100%); /* Normal Monster */
+}
+.theme-duelist.rarity-uncommon .card-face-front {
+  background: linear-gradient(135deg, #d36a38 0%, #852e0f 100%); /* Effect Monster */
+}
+.theme-duelist.rarity-rare .card-face-front {
+  background: linear-gradient(135deg, #f1f5f9 0%, #cbd5e1 100%); /* Synchro Monster */
+  color: #000;
+}
+.theme-duelist.rarity-legendary .card-face-front {
+  background: linear-gradient(135deg, #27272a 0%, #09090b 100%); /* Xyz Monster */
+  border-color: #18181b;
+}
+.theme-duelist.rarity-mythic .card-face-front {
+  background: linear-gradient(135deg, #8b5cf6 0%, #4c1d95 100%); /* Fusion Monster */
+}
+
+/* Header row styling */
+.theme-duelist .duelist-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid #000;
+  padding: 2px 4px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 3px;
+  margin-bottom: 4px;
+}
+.theme-duelist.rarity-rare .duelist-header {
+  background: rgba(0,0,0,0.05);
+  border-color: #475569;
+}
+
+.theme-duelist .duelist-title {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #fff;
+  text-shadow: 1px 1px 0 #000;
+}
+.theme-duelist.rarity-rare .duelist-title {
+  color: #0f172a;
+  text-shadow: none;
+}
+
+/* Attribute symbol bubble */
+.theme-duelist .duelist-attr {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid #fff;
+  background: #991b1b;
+  color: #fff;
+  font-size: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.theme-duelist.rarity-rare .duelist-attr {
+  border-color: #0f172a;
+}
+
+/* Stars rating alignment */
+.theme-duelist .duelist-stars {
+  display: flex;
+  gap: 1.5px;
+  padding: 0 4px;
+  margin-bottom: 4px;
+}
+.theme-duelist .duelist-star-icon {
+  width: 8px;
+  height: 8px;
+  background: #ffb800;
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  box-shadow: 0 0 2px rgba(255, 184, 0, 0.8);
+}
+
+/* Art Screen Container */
+.theme-duelist .duelist-art-frame {
+  border: 3px solid #78716c;
+  background: #000;
+  margin: 0 4px;
+  overflow: hidden;
+  box-shadow: inset 0 0 10px #000;
+}
+.theme-duelist.rarity-legendary .duelist-art-frame {
+  border-color: #d97706; /* Xyz gold trim */
+}
+
+/* Text box / abilities section */
+.theme-duelist .duelist-textbox {
+  border: 2px solid #a8a29e;
+  background: #ebdcb9;
+  color: #1f1b14;
+  margin: 4px 4px 0;
+  padding: 4px;
+  border-radius: 2px;
+  font-size: 7px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: normal;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: inset 0 0 8px rgba(0,0,0,0.15);
+}
+.theme-duelist.rarity-legendary .duelist-textbox,
+.theme-duelist.rarity-mythic .duelist-textbox {
+  background: rgba(0,0,0,0.85);
+  border-color: #44403c;
+  color: #e2e8f0;
+}
+
+/* Duelist Card description */
+.theme-duelist .duelist-effect {
+  line-height: 1.2;
+}
+
+/* ATK/DEF battle lines */
+.theme-duelist .duelist-stats-line {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  font-weight: bold;
+  border-top: 1px solid rgba(0,0,0,0.1);
+  padding-top: 2px;
+  margin-top: 2px;
+  font-size: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  text-transform: uppercase;
+}
+.theme-duelist.rarity-legendary .duelist-stats-line,
+.theme-duelist.rarity-mythic .duelist-stats-line {
+  border-top-color: rgba(255,255,255,0.1);
+}
+
+.theme-duelist .duelist-stat-value {
+  color: #b91c1c;
+  font-weight: 900;
+}
+.theme-duelist.rarity-legendary .duelist-stat-value,
+.theme-duelist.rarity-mythic .duelist-stat-value {
+  color: #ffd700;
+}
+
+/* ==========================================================================
+   DESIGN 7: POCKET BEATS BATTLE CARD (theme-monster)
+   ========================================================================== */
+.theme-monster {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: bold;
+}
+
+.theme-monster .card-face-front {
+  border: 6px solid #eab308; /* Classic TCG Yellow Border */
+  background: linear-gradient(135deg, #2d2a25 0%, #171513 100%);
+  color: #fff;
+  padding: 6px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.theme-monster.rarity-rare .card-face-front {
+  border-color: #94a3b8; /* Holographic silver border */
+  box-shadow: 0 0 15px rgba(255,255,255,0.25);
+}
+
+.theme-monster.rarity-legendary .card-face-front {
+  border-color: #ffd700;
+  background: linear-gradient(135deg, #1e1b18 0%, #0d0c0a 100%);
+}
+
+.theme-monster.rarity-mythic .card-face-front {
+  border-color: #ffd700;
+  box-shadow: 0 0 25px rgba(255, 215, 0, 0.4);
+}
+
+/* Top Header */
+.theme-monster .monster-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 0 2px;
+  margin-bottom: 2px;
+}
+
+.theme-monster .monster-title-block {
+  display: flex;
+  flex-direction: column;
+}
+
+.theme-monster .monster-stage {
+  font-size: 5px;
+  color: #ffd700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  line-height: 1;
+}
+
+.theme-monster .monster-title {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: #fff;
+  letter-spacing: -0.2px;
+  line-height: 1.1;
+}
+
+.theme-monster .monster-hp-block {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.theme-monster .monster-hp {
+  color: #ef4444;
+  font-size: 11px;
+  font-weight: 900;
+}
+.theme-monster .monster-hp-label {
+  font-size: 5px;
+  color: #a1a1aa;
+}
+
+.theme-monster .monster-energy-badge {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #f59e0b;
+  color: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+}
+
+/* Art Box */
+.theme-monster .monster-art-frame {
+  border: 2px solid #e2e8f0;
+  margin: 0 2px 4px;
+  overflow: hidden;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  background: #000;
+}
+.theme-monster.rarity-rare .monster-art-frame,
+.theme-monster.rarity-legendary .monster-art-frame,
+.theme-monster.rarity-mythic .monster-art-frame {
+  border-color: #ffd700;
+}
+
+/* Attack Moves Container */
+.theme-monster .monster-moves-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+
+.theme-monster .monster-move-row {
+  display: flex;
+  align-items: center;
+  padding: 3px 4px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 3px;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+.theme-monster .monster-move-cost {
+  display: flex;
+  gap: 1.5px;
+  width: 32px;
+  flex-shrink: 0;
+}
+
+.theme-monster .monster-cost-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #71717a;
+  border: 0.5px solid rgba(255,255,255,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 5px;
+}
+
+.theme-monster .monster-move-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.theme-monster .monster-move-title {
+  font-size: 8px;
+  color: #fff;
+  text-transform: uppercase;
+}
+
+.theme-monster .monster-move-desc {
+  font-size: 5.5px;
+  color: #a1a1aa;
+  font-weight: normal;
+  line-height: 1.1;
+}
+
+.theme-monster .monster-move-damage {
+  font-size: 9px;
+  font-weight: 900;
+  color: #fff;
+  margin-left: 4px;
+}
+
+/* Bottom TCG Weakness bar */
+.theme-monster .monster-bottom-bar {
+  display: flex;
+  justify-content: space-between;
+  border-top: 1.5px solid rgba(255,255,255,0.1);
+  padding: 3px 4px 1px;
+  font-size: 5px;
+  color: #a1a1aa;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.theme-monster .monster-bottom-stat {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.theme-monster .monster-rarity-symbol {
+  font-size: 7px;
+  color: #eab308;
+}
+
