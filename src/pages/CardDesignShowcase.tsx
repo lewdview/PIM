@@ -267,9 +267,330 @@ function Card3DWrapper({ rarity, themeClass, children, backSide }: CardWrapperPr
 }
 
 // --------------------------------------------------------------------------
+// THEMATIC CARD BACK COMPONENTS
+// --------------------------------------------------------------------------
+function BackOriginal({ card }: { card: VaultCard }) {
+  return <StandardVaultCardBack card={card} />;
+}
+
+function BackGlitch({ card }: { card: VaultCard }) {
+  return (
+    <div className="back-glitch flex flex-col justify-between p-3 select-none">
+      <div className="glitch-scanner" />
+      <div className="flex justify-between items-center text-[8px] font-mono opacity-60">
+        <span>// DECRYPT_KEY //</span>
+        <span>SYSTEM_INIT</span>
+      </div>
+      <div className="glitch-emblem-box py-5 px-3 rounded text-center border border-[#00d4aa]/30 flex flex-col gap-1 items-center my-auto">
+        <span className="font-mono text-xs font-black tracking-widest text-[#ff007f]">// VAULT_V //</span>
+        <span className="text-[7px] text-[#00d4aa] opacity-70">TELEMETRY_LINK_0{card.day}</span>
+      </div>
+      <div className="flex justify-between items-center text-[7.5px] font-mono">
+        <span className="text-[#ff007f] font-bold">DAY #{String(card.day).padStart(3, '0')}</span>
+        <span className="opacity-40">{card.rarity.toUpperCase()}</span>
+      </div>
+    </div>
+  );
+}
+
+function BackGlass({ card }: { card: VaultCard }) {
+  return (
+    <div className="back-glass flex flex-col justify-between p-4 select-none">
+      <div className="glass-blob-1" />
+      <div className="glass-blob-2" />
+      <div className="flex justify-between items-center text-[8px] font-mono text-white/40 z-10">
+        <span>TH3_VAULT</span>
+        <span>{card.rarity.toUpperCase()}</span>
+      </div>
+      <div className="z-10 py-4 px-2 rounded bg-white/5 border border-white/10 backdrop-blur-md text-center flex flex-col items-center gap-2 my-auto">
+        <div className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-white font-bold text-xs bg-white/10">V</div>
+        <span className="text-[7.5px] text-white/50 tracking-[0.2em] font-mono">GEN 0</span>
+      </div>
+      <div className="flex justify-center z-10">
+        <span className="text-[9px] font-mono font-bold text-white/60 tracking-wider">#{String(card.day).padStart(3, '0')}</span>
+      </div>
+    </div>
+  );
+}
+
+function BackArcade({ card }: { card: VaultCard }) {
+  return (
+    <div className="back-arcade flex flex-col justify-between p-3 select-none">
+      <div className="arcade-grid" />
+      <div className="flex justify-between items-center text-[8px] font-mono text-cyan-400">
+        <span>READY PLAYER 1</span>
+        <span>INSERT COIN</span>
+      </div>
+      <div className="flex flex-col items-center justify-center gap-1.5 py-4 border-y border-cyan-400/30 my-auto bg-black/60 z-10">
+        <span className="text-[18px] font-mono font-black text-pink-500 animate-pulse" style={{ textShadow: '0 0 8px #ff007f' }}>★ V ★</span>
+        <span className="text-[7.5px] text-cyan-400 font-mono tracking-widest">ARCADE EDITION</span>
+      </div>
+      <div className="flex justify-between items-center text-[8px] font-mono text-pink-500">
+        <span>DAY {card.day}</span>
+        <span>GEN-80S</span>
+      </div>
+    </div>
+  );
+}
+
+function BackMtg({ card }: { card: VaultCard }) {
+  return (
+    <div className="back-mtg p-3 select-none flex flex-col justify-between items-center">
+      <div className="mtg-oval-back flex flex-col items-center justify-center gap-1.5 my-auto">
+        <span className="font-mono text-[9px] text-[#b89c66] tracking-[0.2em] uppercase font-bold">VAULT</span>
+        <div className="flex gap-1 justify-center my-1.5">
+          <span className="w-3.5 h-3.5 rounded-full bg-amber-500 text-[6.5px] flex items-center justify-center text-black font-bold">🎸</span>
+          <span className="w-3.5 h-3.5 rounded-full bg-emerald-500 text-[6.5px] flex items-center justify-center text-black font-bold">🌌</span>
+          <span className="w-3.5 h-3.5 rounded-full bg-blue-500 text-[6.5px] flex items-center justify-center text-white font-bold">⚡</span>
+        </div>
+        <span className="font-serif text-[7.5px] text-[#ffd700] italic">Gen 0 Edition</span>
+      </div>
+      <span className="text-[8px] font-mono text-[#b89c66]/80 self-end">DAY #{String(card.day).padStart(3, '0')}</span>
+    </div>
+  );
+}
+
+function BackPoker({ card }: { card: VaultCard }) {
+  const isLight = card.mood === 'light';
+  const suit = isLight ? '♥' : '♠';
+  return (
+    <div className="back-poker p-2 select-none flex flex-col justify-between items-center">
+      <div className="poker-scroll-pattern" />
+      <div className="w-full flex justify-between text-[10px] text-white/85 font-serif">
+        <span>{suit}</span>
+        <span>{suit}</span>
+      </div>
+      <div className="w-14 h-20 border border-white/20 rounded flex flex-col items-center justify-center gap-1 bg-red-950/70 z-10 shadow-md my-auto">
+        <span className="font-serif text-lg text-amber-400">{suit}</span>
+        <span className="font-mono text-[7px] text-amber-200 tracking-wider">DAY {card.day}</span>
+      </div>
+      <div className="w-full flex justify-between text-[10px] text-white/85 font-serif transform rotate-180">
+        <span>{suit}</span>
+        <span>{suit}</span>
+      </div>
+    </div>
+  );
+}
+
+function BackDuelist({ card }: { card: VaultCard }) {
+  return (
+    <div className="back-duelist p-3 select-none flex flex-col justify-between items-center">
+      <div className="duelist-swirl" />
+      <span className="text-[7.5px] font-mono text-orange-500/80 tracking-widest uppercase">DUEL BEAT</span>
+      <div className="duelist-circle flex items-center justify-center my-auto">
+        <div className="w-16 h-16 rounded-full border border-orange-500/30 flex items-center justify-center bg-black/80">
+          <span className="text-xl text-orange-500">🌀</span>
+        </div>
+      </div>
+      <div className="w-full flex justify-between text-[6.5px] font-mono text-orange-400/60 uppercase">
+        <span>Vault Card</span>
+        <span>Day {card.day}</span>
+      </div>
+    </div>
+  );
+}
+
+function BackMonster({ card }: { card: VaultCard }) {
+  return (
+    <div className="back-monster p-2.5 select-none">
+      <div className="monster-inner-card flex flex-col justify-between p-2">
+        <div className="flex justify-between items-center text-[7.5px] text-amber-400 font-bold tracking-wider">
+          <span>POCKET BEATS</span>
+          <span>TCG</span>
+        </div>
+        <div className="monster-center-ball self-center my-auto">
+          <span>💿</span>
+        </div>
+        <div className="flex justify-between items-center text-[7px] text-white/40">
+          <span>VAULT CARD</span>
+          <span>DAY #{card.day}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --------------------------------------------------------------------------
+// DESIGN 0: ORIGINAL PRODUCTION LAYOUT (theme-original)
+// --------------------------------------------------------------------------
+function CardOriginal({ card, backSide }: { card: VaultCard; backSide?: React.ReactNode }) {
+  const activeColor = RARITY_COLORS[card.rarity];
+  const maxSupply = getRarityMaxSupply(card.rarity);
+  const mintPct = Math.min((card.claimedCount / maxSupply) * 100, 100);
+  const finalBack = backSide || <StandardVaultCardBack card={card} />;
+
+  const StatBox = ({ label, value }: { label: string; value: string | number }) => (
+    <div className="flex flex-col items-center p-1 bg-black/35 border border-white/5 rounded">
+      <span className="font-mono text-[7px] text-white/35 uppercase tracking-wider">{label}</span>
+      <span className="font-mono text-[9px] font-bold leading-tight" style={{ color: activeColor }}>{value}</span>
+    </div>
+  );
+
+  const mintBar = (
+    <div className="h-[2px] w-full bg-white/10 rounded overflow-hidden">
+      <div 
+        className="h-full rounded" 
+        style={{ 
+          width: `${mintPct}%`, 
+          background: activeColor,
+          boxShadow: `0 0 6px ${activeColor}`
+        }} 
+      />
+    </div>
+  );
+
+  // Common original front
+  const commonFront = (
+    <div className="flex flex-col h-full bg-[#0c0a07] border border-white/10 select-none overflow-hidden rounded-xl">
+      <div className="px-3 py-1.5 border-b border-white/10 flex justify-between items-center bg-white/5">
+        <span className="font-mono text-[8px] font-bold text-white/60">#{String(card.day).padStart(3, '0')}</span>
+        <span className="font-mono text-[8px] font-extrabold uppercase text-white/40">★ COMMON</span>
+      </div>
+      <div className="relative h-[44%] overflow-hidden border-b border-white/10">
+        <img src={card.coverUrl} alt={card.title} className="w-full h-full object-cover" />
+      </div>
+      <div className="p-2 flex flex-col gap-2 flex-grow justify-between">
+        <div>
+          <h3 className="font-sans font-black text-sm uppercase text-[#faf0d8] truncate mb-1">{card.title}</h3>
+          <div className="grid grid-cols-4 gap-1">
+            <StatBox label="NRG" value={`${Math.round(card.energy * 100)}%`} />
+            <StatBox label="VAL" value={`${Math.round(card.valence * 100)}%`} />
+            <StatBox label="BPM" value={card.tempo} />
+            <StatBox label="MOD" value={card.mood === 'light' ? '☀' : '🌙'} />
+          </div>
+        </div>
+        <div className="flex flex-col gap-1">
+          {mintBar}
+          <span className="font-mono text-[7px] text-white/20 uppercase">{card.claimedCount} PULLED</span>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Uncommon original front
+  const uncommonFront = (
+    <div className="flex flex-col h-full bg-[#0c0a07] border border-[#4ade80]/40 select-none overflow-hidden rounded-xl relative">
+      <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent pointer-events-none" />
+      <div className="relative h-[58%] overflow-hidden border-b border-[#4ade80]/20">
+        <img src={card.coverUrl} alt={card.title} className="w-full h-full object-cover" />
+        <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/80 border border-[#4ade80]/40 rounded font-mono text-[8px] font-bold text-white">
+          #{String(card.day).padStart(3, '0')}
+        </div>
+      </div>
+      <div className="p-2.5 flex flex-col gap-2 flex-grow justify-between">
+        <div>
+          <div className="flex justify-between items-start mb-1">
+            <h3 className="font-sans font-black text-xs uppercase text-[#faf0d8] truncate flex-1">{card.title}</h3>
+            <span className="font-mono text-[7px] font-bold text-[#4ade80] uppercase tracking-wider ml-1 bg-[#4ade80]/10 border border-[#4ade80]/30 px-1 rounded">UNCOMMON</span>
+          </div>
+          <div className="flex gap-2 text-[8px] font-mono text-[#4ade80]">
+            <span>{Math.round(card.energy * 100)}% NRG</span>
+            <span className="opacity-30">•</span>
+            <span>{card.tempo} BPM</span>
+            <span className="opacity-30">•</span>
+            <span className="text-white/40">{card.mood === 'light' ? '☀ Light' : '🌙 Dark'}</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-[7px] text-white/20 whitespace-nowrap">{card.claimedCount} PULLED</span>
+          {mintBar}
+        </div>
+      </div>
+    </div>
+  );
+
+  // Rare original front
+  const rareFront = (
+    <div className="relative h-full w-full select-none overflow-hidden rounded-xl border border-[#3b82f6]/40">
+      <img src={card.coverUrl} alt={card.title} className="absolute inset-0 w-full h-full object-cover" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/40" />
+      <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/60 border border-[#3b82f6]/40 rounded font-mono text-[8px] font-bold text-white">
+        #{String(card.day).padStart(3, '0')}
+      </div>
+      <div className="absolute top-2 right-2 px-2 py-0.5 bg-[#3b82f6]/20 border border-[#3b82f6]/60 rounded font-mono text-[7px] font-bold text-[#3b82f6] uppercase tracking-wider">
+        ★ RARE
+      </div>
+      <div className="absolute bottom-0 left-0 right-0 p-3 bg-black/60 backdrop-blur border-t border-white/10">
+        <h3 className="font-sans font-black text-sm uppercase text-[#faf0d8] truncate mb-1">{card.title}</h3>
+        <div className="flex justify-between items-center text-[8px] font-mono text-white/40 mb-1.5">
+          <span>{card.claimedCount} PULLED</span>
+          <span className="text-[#3b82f6]">{card.tempo} BPM</span>
+        </div>
+        {mintBar}
+      </div>
+    </div>
+  );
+
+  // Legendary original front
+  const legendaryFront = (
+    <div className="relative h-full w-full select-none overflow-hidden rounded-xl border-2 border-[#b44dff]/60">
+      <img src={card.coverUrl} alt={card.title} className="absolute inset-0 w-full h-full object-cover rotate-zoom-art" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-transparent to-black/60" />
+      <div className="absolute inset-0 pointer-events-none bg-gradient-to-r from-transparent via-[#b44dff]/20 to-transparent bg-[length:300%_100%] animate-[foil-sweep_4s_linear_infinite]" />
+      
+      <div className="absolute top-2 left-2 px-2 py-0.5 bg-[#b44dff]/20 border border-[#b44dff]/60 rounded font-mono text-[7px] font-bold text-[#b44dff] uppercase tracking-widest">
+        ★ LEGENDARY
+      </div>
+      <div className="absolute top-2 right-2 px-2 py-0.5 bg-black/60 border border-white/10 rounded font-mono text-[8px] font-bold text-white">
+        #{String(card.day).padStart(3, '0')}
+      </div>
+      
+      <div className="absolute bottom-0 left-0 right-0 p-3 flex flex-col gap-1.5">
+        <h3 className="font-sans font-black text-base uppercase text-[#faf0d8] truncate text-stroke-outline">{card.title}</h3>
+        <div className="flex gap-2 text-[8px] font-mono text-white/50">
+          <span className="text-[#b44dff] font-bold">DAY {card.day}</span>
+          <span>•</span>
+          <span>{card.claimedCount} PULLED</span>
+        </div>
+        {mintBar}
+      </div>
+    </div>
+  );
+
+  // Mythic original front
+  const mythicFront = (
+    <div className="relative h-full w-full select-none overflow-hidden rounded-xl border-2 border-[#ffd700]">
+      <img src={card.coverUrl} alt={card.title} className="absolute inset-0 w-full h-full object-cover rotate-zoom-mythic" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-transparent to-black/60" />
+      <div className="absolute inset-0 pointer-events-none bg-gradient-to-r from-[#ffd700]/10 via-[#ff007f]/15 to-[#00f0ff]/10 bg-[length:300%_100%] animate-[foil-sweep_3s_linear_infinite]" />
+      
+      <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/80 border border-[#ffd700]/60 rounded font-mono text-[8px] font-bold text-white">
+        #{String(card.day).padStart(3, '0')}
+      </div>
+      <div className="absolute top-2 right-2 px-2 py-0.5 bg-[#ffd700]/20 border border-[#ffd700] rounded font-mono text-[7px] font-black text-[#ffd700] uppercase tracking-widest shadow-[0_0_8px_rgba(255,215,0,0.4)]">
+        ✦ MYTHIC
+      </div>
+
+      <div className="absolute bottom-0 left-0 right-0 p-3 flex flex-col gap-1.5">
+        <h3 className="font-sans font-black text-base uppercase text-white tracking-wide text-stroke-outline" style={{ textShadow: '0 0 10px rgba(255,215,0,0.6)' }}>{card.title}</h3>
+        <div className="flex gap-2 text-[8px] font-mono text-white/50">
+          <span className="text-[#ffd700] font-bold">DAY {card.day}</span>
+          <span>•</span>
+          <span>1 OF 1</span>
+        </div>
+        {mintBar}
+      </div>
+    </div>
+  );
+
+  const frontFace =
+    card.rarity === 'common' ? commonFront :
+    card.rarity === 'uncommon' ? uncommonFront :
+    card.rarity === 'rare' ? rareFront :
+    card.rarity === 'legendary' ? legendaryFront :
+    mythicFront;
+
+  return (
+    <Card3DWrapper rarity={card.rarity} themeClass="original" backSide={finalBack}>
+      {frontFace}
+    </Card3DWrapper>
+  );
+}
+
+// --------------------------------------------------------------------------
 // DESIGN 1: NEON-BRUTALIST GLITCH (High Contrast Cyberpunk)
 // --------------------------------------------------------------------------
-function CardGlitch({ card }: { card: VaultCard }) {
+function CardGlitch({ card, backSide }: { card: VaultCard; backSide?: React.ReactNode }) {
   const rarityColors: Record<Rarity, string> = {
     common: '#ffffff',
     uncommon: '#00d4aa',
@@ -392,10 +713,10 @@ function CardGlitch({ card }: { card: VaultCard }) {
     </div>
   );
 
-  const backFace = <StandardVaultCardBack card={card} />;
+  const finalBack = backSide || <StandardVaultCardBack card={card} />;
 
   return (
-    <Card3DWrapper rarity={card.rarity} themeClass="glitch" backSide={backFace}>
+    <Card3DWrapper rarity={card.rarity} themeClass="glitch" backSide={finalBack}>
       {frontFace}
     </Card3DWrapper>
   );
@@ -404,7 +725,7 @@ function CardGlitch({ card }: { card: VaultCard }) {
 // --------------------------------------------------------------------------
 // DESIGN 2: GLASS-OUTRUN MINIMALIST (Premium Sleek Glassmorphism)
 // --------------------------------------------------------------------------
-function CardGlass({ card }: { card: VaultCard }) {
+function CardGlass({ card, backSide }: { card: VaultCard; backSide?: React.ReactNode }) {
   const rarityGlows: Record<Rarity, string> = {
     common: 'rgba(255,255,255,0.15)',
     uncommon: 'rgba(0, 212, 170, 0.35)',
@@ -509,10 +830,10 @@ function CardGlass({ card }: { card: VaultCard }) {
     </div>
   );
 
-  const backFace = <StandardVaultCardBack card={card} />;
+  const finalBack = backSide || <StandardVaultCardBack card={card} />;
 
   return (
-    <Card3DWrapper rarity={card.rarity} themeClass="glass" backSide={backFace}>
+    <Card3DWrapper rarity={card.rarity} themeClass="glass" backSide={finalBack}>
       {frontFace}
     </Card3DWrapper>
   );
@@ -521,7 +842,7 @@ function CardGlass({ card }: { card: VaultCard }) {
 // --------------------------------------------------------------------------
 // DESIGN 3: RETRO-ARCADE 80s (Vintage Synthesizer Deck)
 // --------------------------------------------------------------------------
-function CardArcade({ card }: { card: VaultCard }) {
+function CardArcade({ card, backSide }: { card: VaultCard; backSide?: React.ReactNode }) {
   const stripeColors: Record<Rarity, string[]> = {
     common: ['#ff3800', '#ffffff'],
     uncommon: ['#ffcc00', '#000000'],
@@ -666,10 +987,10 @@ function CardArcade({ card }: { card: VaultCard }) {
     </div>
   );
 
-  const backFace = <StandardVaultCardBack card={card} />;
+  const finalBack = backSide || <StandardVaultCardBack card={card} />;
 
   return (
-    <Card3DWrapper rarity={card.rarity} themeClass="arcade" backSide={backFace}>
+    <Card3DWrapper rarity={card.rarity} themeClass="arcade" backSide={finalBack}>
       {frontFace}
     </Card3DWrapper>
   );
@@ -678,7 +999,7 @@ function CardArcade({ card }: { card: VaultCard }) {
 // --------------------------------------------------------------------------
 // DESIGN 4: MAGIC: THE GATHERING (MTG Glass-Outrun Hybrid Edition)
 // --------------------------------------------------------------------------
-function CardMtg({ card }: { card: VaultCard }) {
+function CardMtg({ card, backSide }: { card: VaultCard; backSide?: React.ReactNode }) {
   const isFullBleed = card.rarity === 'legendary' || card.rarity === 'mythic';
   const isRotatedZoom = card.rarity === 'legendary' || card.rarity === 'mythic';
   
@@ -790,10 +1111,10 @@ function CardMtg({ card }: { card: VaultCard }) {
     </div>
   );
 
-  const backFace = <StandardVaultCardBack card={card} />;
+  const finalBack = backSide || <StandardVaultCardBack card={card} />;
 
   return (
-    <Card3DWrapper rarity={card.rarity} themeClass="mtg" backSide={backFace}>
+    <Card3DWrapper rarity={card.rarity} themeClass="mtg" backSide={finalBack}>
       {isFullBleed ? borderlessFace : traditionalFace}
     </Card3DWrapper>
   );
@@ -802,7 +1123,7 @@ function CardMtg({ card }: { card: VaultCard }) {
 // --------------------------------------------------------------------------
 // DESIGN 5: CLASSIC TAROT / POKER PLAYING CARD (theme-poker)
 // --------------------------------------------------------------------------
-function CardPoker({ card }: { card: VaultCard }) {
+function CardPoker({ card, backSide }: { card: VaultCard; backSide?: React.ReactNode }) {
   const isFullBleed = card.rarity === 'legendary' || card.rarity === 'mythic';
   
   // Choose suit: Hearts/Diamonds for light mood, Spades/Clubs for dark mood
@@ -817,7 +1138,7 @@ function CardPoker({ card }: { card: VaultCard }) {
     card.rarity === 'rare' ? 'h-rare' :
     card.rarity === 'legendary' ? 'h-legendary' : 'h-mythic';
 
-  const backFace = <StandardVaultCardBack card={card} />;
+  const finalBack = backSide || <StandardVaultCardBack card={card} />;
 
   // Common/Uncommon/Rare Traditional Face
   const traditionalFace = (
@@ -884,7 +1205,7 @@ function CardPoker({ card }: { card: VaultCard }) {
   );
 
   return (
-    <Card3DWrapper rarity={card.rarity} themeClass="poker" backSide={backFace}>
+    <Card3DWrapper rarity={card.rarity} themeClass="poker" backSide={finalBack}>
       {isFullBleed ? borderlessFace : traditionalFace}
     </Card3DWrapper>
   );
@@ -893,7 +1214,7 @@ function CardPoker({ card }: { card: VaultCard }) {
 // --------------------------------------------------------------------------
 // DESIGN 6: DUELIST MONSTER CARD (theme-duelist)
 // --------------------------------------------------------------------------
-function CardDuelist({ card }: { card: VaultCard }) {
+function CardDuelist({ card, backSide }: { card: VaultCard; backSide?: React.ReactNode }) {
   const isFullBleed = card.rarity === 'legendary' || card.rarity === 'mythic';
   
   // Kanji Attribute
@@ -914,7 +1235,7 @@ function CardDuelist({ card }: { card: VaultCard }) {
     card.rarity === 'rare' ? 'h-rare' :
     card.rarity === 'legendary' ? 'h-legendary' : 'h-mythic';
 
-  const backFace = <StandardVaultCardBack card={card} />;
+  const finalBack = backSide || <StandardVaultCardBack card={card} />;
 
   // ATK / DEF stats
   const atk = Math.round(card.energy * 3000) + 500;
@@ -1001,7 +1322,7 @@ function CardDuelist({ card }: { card: VaultCard }) {
   );
 
   return (
-    <Card3DWrapper rarity={card.rarity} themeClass="duelist" backSide={backFace}>
+    <Card3DWrapper rarity={card.rarity} themeClass="duelist" backSide={finalBack}>
       {isFullBleed ? borderlessFace : traditionalFace}
     </Card3DWrapper>
   );
@@ -1010,7 +1331,7 @@ function CardDuelist({ card }: { card: VaultCard }) {
 // --------------------------------------------------------------------------
 // DESIGN 7: POCKET BEATS BATTLE CARD (theme-monster)
 // --------------------------------------------------------------------------
-function CardMonster({ card }: { card: VaultCard }) {
+function CardMonster({ card, backSide }: { card: VaultCard; backSide?: React.ReactNode }) {
   const isFullBleed = card.rarity === 'legendary' || card.rarity === 'mythic';
   
   // HP rating: BPM/Tempo
@@ -1037,7 +1358,7 @@ function CardMonster({ card }: { card: VaultCard }) {
     card.rarity === 'rare' ? 'h-rare' :
     card.rarity === 'legendary' ? 'h-legendary' : 'h-mythic';
 
-  const backFace = <StandardVaultCardBack card={card} />;
+  const finalBack = backSide || <StandardVaultCardBack card={card} />;
 
   // Attack Damages
   const move1Dmg = Math.round(card.energy * 80) + 10;
@@ -1163,7 +1484,7 @@ function CardMonster({ card }: { card: VaultCard }) {
   );
 
   return (
-    <Card3DWrapper rarity={card.rarity} themeClass="monster" backSide={backFace}>
+    <Card3DWrapper rarity={card.rarity} themeClass="monster" backSide={finalBack}>
       {isFullBleed ? borderlessFace : traditionalFace}
     </Card3DWrapper>
   );
@@ -1173,17 +1494,19 @@ function CardMonster({ card }: { card: VaultCard }) {
 // MAIN SHOWCASE PAGE COMPONENT
 // --------------------------------------------------------------------------
 export default function CardDesignShowcase() {
-  const [activeTab, setActiveTab] = useState<'compare' | 'glitch' | 'glass' | 'arcade' | 'mtg' | 'poker' | 'duelist' | 'monster' | 'mint'>('compare');
+  const [activeTab, setActiveTab] = useState<'compare' | 'original' | 'glitch' | 'glass' | 'arcade' | 'mtg' | 'poker' | 'duelist' | 'monster' | 'mint'>('compare');
 
   // Mint Simulator States
-  const [unlockedSkins, setUnlockedSkins] = useState<string[]>(['glitch', 'glass']);
+  const [unlockedSkins, setUnlockedSkins] = useState<string[]>(['original', 'glitch', 'glass']);
+  const [unlockedBackSkins, setUnlockedBackSkins] = useState<string[]>(['original', 'glass']);
   const [sparks, setSparks] = useState<number>(250);
   const [selectedSong, setSelectedSong] = useState<VaultCard>(mockCards[0]);
   const [selectedRarity, setSelectedRarity] = useState<Rarity>('common');
-  const [selectedSkin, setSelectedSkin] = useState<string>('glitch');
+  const [selectedSkin, setSelectedSkin] = useState<string>('original');
+  const [selectedBackSkin, setSelectedBackSkin] = useState<string>('original');
   const [mintState, setMintState] = useState<'idle' | 'minting' | 'success'>('idle');
   const [mintLogs, setMintLogs] = useState<string[]>([]);
-  const [mintedInventory, setMintedInventory] = useState<{ card: VaultCard; skin: string }[]>([]);
+  const [mintedInventory, setMintedInventory] = useState<{ card: VaultCard; skin: string; backSkin: string }[]>([]);
 
   // Sparks transaction handler
   const handleUnlockSkin = (skin: string, cost: number) => {
@@ -1195,10 +1518,23 @@ export default function CardDesignShowcase() {
     }
   };
 
+  const handleUnlockBackSkin = (skin: string, cost: number) => {
+    if (sparks >= cost) {
+      setSparks(prev => prev - cost);
+      setUnlockedBackSkins(prev => [...prev, skin]);
+    } else {
+      alert("Not enough Vault Sparks! Click '+100 Sparks' to reload.");
+    }
+  };
+
   // Simulated Mint sequence
   const handleSimulateMint = () => {
     if (!unlockedSkins.includes(selectedSkin)) {
-      alert("This skin is locked! Please unlock it first.");
+      alert("Selected Front Skin is locked! Please unlock it first.");
+      return;
+    }
+    if (!unlockedBackSkins.includes(selectedBackSkin)) {
+      alert("Selected Back Skin is locked! Please unlock it first.");
       return;
     }
     setMintState('minting');
@@ -1207,7 +1543,8 @@ export default function CardDesignShowcase() {
     const logs = [
       "⚡ ESTABLISHING VAULT STATE CONNECTION...",
       "🔐 AUTHORIZING GEN 0 CONTRACT MINT PROTOCOL...",
-      `🎨 BOUND SKIN PATTERN: ${selectedSkin.toUpperCase()}`,
+      `🎨 BOUND FRONT SKIN: ${selectedSkin.toUpperCase()}`,
+      `🎨 BOUND BACK SKIN: ${selectedBackSkin.toUpperCase()}`,
       `📝 BINDING METADATA: "${selectedSong.title}"`,
       `🧬 rarity: ${selectedRarity.toUpperCase()} // day: #${String(selectedSong.day).padStart(3, '0')}`,
       "🔒 GENERATING ON-CHAIN TOKEN RECORD...",
@@ -1226,7 +1563,7 @@ export default function CardDesignShowcase() {
               rarity: selectedRarity,
               claimedCount: selectedSong.claimedCount + 1,
             };
-            setMintedInventory(prev => [{ card: cardCopy, skin: selectedSkin }, ...prev]);
+            setMintedInventory(prev => [{ card: cardCopy, skin: selectedSkin, backSkin: selectedBackSkin }, ...prev]);
             setMintState('success');
           }, 400);
         }
@@ -1234,15 +1571,29 @@ export default function CardDesignShowcase() {
     });
   };
 
+  // Helper to render configured card back
+  const renderCardBack = (card: VaultCard, backSkin: string) => {
+    if (backSkin === 'original') return <BackOriginal card={card} />;
+    if (backSkin === 'glitch') return <BackGlitch card={card} />;
+    if (backSkin === 'glass') return <BackGlass card={card} />;
+    if (backSkin === 'arcade') return <BackArcade card={card} />;
+    if (backSkin === 'mtg') return <BackMtg card={card} />;
+    if (backSkin === 'poker') return <BackPoker card={card} />;
+    if (backSkin === 'duelist') return <BackDuelist card={card} />;
+    return <BackMonster card={card} />;
+  };
+
   // Helper to render configured card preview
-  const renderCardWithSkin = (card: VaultCard, skin: string) => {
-    if (skin === 'glitch') return <CardGlitch card={card} />;
-    if (skin === 'glass') return <CardGlass card={card} />;
-    if (skin === 'arcade') return <CardArcade card={card} />;
-    if (skin === 'mtg') return <CardMtg card={card} />;
-    if (skin === 'poker') return <CardPoker card={card} />;
-    if (skin === 'duelist') return <CardDuelist card={card} />;
-    return <CardMonster card={card} />;
+  const renderCardWithSkin = (card: VaultCard, skin: string, backSkin = 'original') => {
+    const backSide = renderCardBack(card, backSkin);
+    if (skin === 'original') return <CardOriginal card={card} backSide={backSide} />;
+    if (skin === 'glitch') return <CardGlitch card={card} backSide={backSide} />;
+    if (skin === 'glass') return <CardGlass card={card} backSide={backSide} />;
+    if (skin === 'arcade') return <CardArcade card={card} backSide={backSide} />;
+    if (skin === 'mtg') return <CardMtg card={card} backSide={backSide} />;
+    if (skin === 'poker') return <CardPoker card={card} backSide={backSide} />;
+    if (skin === 'duelist') return <CardDuelist card={card} backSide={backSide} />;
+    return <CardMonster card={card} backSide={backSide} />;
   };
 
   return (
@@ -1280,6 +1631,12 @@ export default function CardDesignShowcase() {
               onClick={() => setActiveTab('compare')}
             >
               Side-by-side
+            </button>
+            <button 
+              className={`btn-tab ${activeTab === 'original' ? 'active' : ''}`}
+              onClick={() => setActiveTab('original')}
+            >
+              Original Style
             </button>
             <button 
               className={`btn-tab ${activeTab === 'glitch' ? 'active' : ''}`}
@@ -1336,6 +1693,26 @@ export default function CardDesignShowcase() {
       {/* Grid rendering options */}
       {activeTab === 'compare' ? (
         <div className="flex flex-col gap-12">
+          {/* Row 0: Original Production Style */}
+          <div>
+            <h2 className="section-title text-[#8a8ea0] border-b border-[#8a8ea0]/20 pb-2">
+              Concept 0: Original Production Style
+            </h2>
+            <p className="text-[11px] text-white/50 mb-4 font-mono uppercase tracking-wide">
+              The standard production layouts. Artwork height progresses from bounded (Common/Uncommon), to vertical full-bleed (Rare), to rotated & zoomed full-bleed cards (Legendary/Mythic) with standard footer stats.
+            </p>
+            <div className="showcase-grid">
+              {mockCards.map(card => (
+                <div key={`original-${card.id}`} className="rarity-column">
+                  <div className="rarity-column-title text-center text-xs py-1 font-mono uppercase border border-white/20 bg-white/5">
+                    {card.rarity}
+                  </div>
+                  <CardOriginal card={card} />
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Row 1: Neon-Brutalist */}
           <div>
             <h2 className="section-title text-[#ff3800] border-b border-[#ff3800]/20 pb-2">
@@ -1506,7 +1883,13 @@ export default function CardDesignShowcase() {
                     +100 Sparks
                   </button>
                   <button 
-                    onClick={() => { setSparks(250); setUnlockedSkins(['glitch', 'glass']); }} 
+                    onClick={() => { 
+                      setSparks(250); 
+                      setUnlockedSkins(['original', 'glitch', 'glass']); 
+                      setUnlockedBackSkins(['original', 'glass']); 
+                      setSelectedSkin('original');
+                      setSelectedBackSkin('original');
+                    }} 
                     className="text-[9px] font-mono border border-white/20 text-white/50 hover:bg-white/5 px-2 py-1 rounded"
                   >
                     Reset
@@ -1551,11 +1934,12 @@ export default function CardDesignShowcase() {
                 </div>
               </div>
 
-              {/* 3. Skin Selection & Achievements */}
+              {/* 3. Skin Selection (Front) */}
               <div className="flex flex-col gap-2">
-                <label className="text-[10px] text-white/40 uppercase tracking-widest font-mono">3. Apply Unlocked Card Front Skin:</label>
+                <label className="text-[10px] text-white/40 uppercase tracking-widest font-mono">3. Select Card Front Skin:</label>
                 <div className="grid grid-cols-2 gap-2">
                   {[
+                    { id: 'original', name: 'Original Front', cost: 0 },
                     { id: 'glitch', name: 'Neon-Brutalist', cost: 0 },
                     { id: 'glass', name: 'Frosted Glass', cost: 0 },
                     { id: 'arcade', name: 'Retro-Arcade', cost: 50 },
@@ -1571,7 +1955,7 @@ export default function CardDesignShowcase() {
                       <div 
                         key={skin.id}
                         onClick={() => isUnlocked && setSelectedSkin(skin.id)}
-                        className={`border rounded p-2.5 flex flex-col justify-between h-20 transition-all ${
+                        className={`border rounded p-2 flex flex-col justify-between h-[64px] transition-all ${
                           isUnlocked 
                             ? isSelected 
                               ? 'border-[#ff3800] bg-[#ff3800]/5 cursor-pointer' 
@@ -1580,23 +1964,79 @@ export default function CardDesignShowcase() {
                         }`}
                       >
                         <div className="flex justify-between items-start">
-                          <span className={`text-[10px] font-bold font-mono ${isSelected && isUnlocked ? 'text-[#ff3800]' : 'text-white'}`}>
+                          <span className={`text-[9.5px] font-bold font-mono ${isSelected && isUnlocked ? 'text-[#ff3800]' : 'text-white'}`}>
                             {skin.name}
                           </span>
                           {!isUnlocked && <span className="text-[9px]">🔒</span>}
                         </div>
 
-                        {/* Unlock buttons / info */}
                         <div className="mt-auto">
                           {isUnlocked ? (
-                            <span className="text-[8px] text-emerald-400 font-mono font-bold uppercase tracking-wider">Unlocked</span>
+                            <span className="text-[7.5px] text-emerald-400 font-mono font-bold uppercase tracking-wider">Unlocked</span>
                           ) : (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleUnlockSkin(skin.id, skin.cost);
                               }}
-                              className="w-full text-center text-[8px] font-mono font-bold uppercase tracking-wider bg-[#ffd700] hover:bg-[#ffe240] text-black py-1 px-1.5 rounded transition-all"
+                              className="w-full text-center text-[7.5px] font-mono font-bold uppercase tracking-wider bg-[#ffd700] hover:bg-[#ffe240] text-black py-0.5 px-1 rounded transition-all"
+                            >
+                              Unlock ({skin.cost} ⚡)
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 4. Skin Selection (Back) */}
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] text-white/40 uppercase tracking-widest font-mono">4. Select Card Back Skin:</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: 'original', name: 'Original Back', cost: 0 },
+                    { id: 'glass', name: 'Frosted Glass', cost: 0 },
+                    { id: 'glitch', name: 'Neon-Brutalist', cost: 25 },
+                    { id: 'arcade', name: 'Retro-Arcade', cost: 40 },
+                    { id: 'mtg', name: 'Magic Layout', cost: 60 },
+                    { id: 'poker', name: 'Classic Poker', cost: 40 },
+                    { id: 'duelist', name: 'Duelist Frame', cost: 50 },
+                    { id: 'monster', name: 'Pocket Beats', cost: 50 }
+                  ].map(skin => {
+                    const isUnlocked = unlockedBackSkins.includes(skin.id);
+                    const isSelected = selectedBackSkin === skin.id;
+
+                    return (
+                      <div 
+                        key={skin.id}
+                        onClick={() => isUnlocked && setSelectedBackSkin(skin.id)}
+                        className={`border rounded p-2 flex flex-col justify-between h-[64px] transition-all ${
+                          isUnlocked 
+                            ? isSelected 
+                              ? 'border-[#ff3800] bg-[#ff3800]/5 cursor-pointer' 
+                              : 'border-white/15 bg-black/40 hover:border-white/30 cursor-pointer'
+                            : 'border-white/5 bg-black/20 opacity-60 cursor-not-allowed'
+                        }`}
+                      >
+                        <div className="flex justify-between items-start">
+                          <span className={`text-[9.5px] font-bold font-mono ${isSelected && isUnlocked ? 'text-[#ff3800]' : 'text-white'}`}>
+                            {skin.name}
+                          </span>
+                          {!isUnlocked && <span className="text-[9px]">🔒</span>}
+                        </div>
+
+                        <div className="mt-auto">
+                          {isUnlocked ? (
+                            <span className="text-[7.5px] text-emerald-400 font-mono font-bold uppercase tracking-wider">Unlocked</span>
+                          ) : (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleUnlockBackSkin(skin.id, skin.cost);
+                              }}
+                              className="w-full text-center text-[7.5px] font-mono font-bold uppercase tracking-wider bg-[#ffd700] hover:bg-[#ffe240] text-black py-0.5 px-1 rounded transition-all"
                             >
                               Unlock ({skin.cost} ⚡)
                             </button>
@@ -1638,12 +2078,13 @@ export default function CardDesignShowcase() {
                     ...selectedSong,
                     rarity: selectedRarity
                   },
-                  selectedSkin
+                  selectedSkin,
+                  selectedBackSkin
                 )}
               </div>
 
-              <span className="text-[8px] text-white/30 font-mono text-center max-w-[200px]">
-                * PREVIEW RENDERS SKIN: <span className="text-[#ffd700] font-bold">{selectedSkin.toUpperCase()}</span> AT RARITY <span className="text-[#ff3800] font-bold">{selectedRarity.toUpperCase()}</span>
+              <span className="text-[8px] text-white/30 font-mono text-center max-w-[220px] leading-normal">
+                * PREVIEW RENDERS FRONT: <span className="text-[#ffd700] font-bold">{selectedSkin.toUpperCase()}</span> BACK: <span className="text-[#ffd700] font-bold">{selectedBackSkin.toUpperCase()}</span> AT RARITY <span className="text-[#ff3800] font-bold">{selectedRarity.toUpperCase()}</span>
               </span>
             </div>
           </div>
@@ -1700,14 +2141,17 @@ export default function CardDesignShowcase() {
                 {mintedInventory.map((item, idx) => (
                   <div key={idx} className="flex flex-col gap-2">
                     <div className="aspect-[3/4]">
-                      {renderCardWithSkin(item.card, item.skin)}
+                      {renderCardWithSkin(item.card, item.skin, item.backSkin)}
                     </div>
-                    <div className="text-center flex flex-col">
-                      <span className="text-[9px] font-black text-white font-mono uppercase truncate max-w-full">
+                    <div className="text-center flex flex-col mt-1">
+                      <span className="text-[9px] font-black text-white font-mono uppercase truncate max-w-full block mb-0.5">
                         {item.card.title}
                       </span>
-                      <span className="text-[7.5px] text-white/40 font-mono uppercase tracking-widest">
-                        {item.skin === 'glitch' ? 'Brutalist' : item.skin === 'glass' ? 'Glass' : item.skin === 'arcade' ? 'Arcade' : item.skin === 'mtg' ? 'MTG Edition' : item.skin === 'poker' ? 'Poker' : item.skin === 'duelist' ? 'Duelist' : 'Pocket Beats'}
+                      <span className="text-[7px] text-white/50 font-mono uppercase tracking-wider block">
+                        F: {item.skin === 'original' ? 'Original' : item.skin === 'glitch' ? 'Brutalist' : item.skin === 'glass' ? 'Glass' : item.skin === 'arcade' ? 'Arcade' : item.skin === 'mtg' ? 'MTG' : item.skin === 'poker' ? 'Poker' : item.skin === 'duelist' ? 'Duelist' : 'Beats'}
+                      </span>
+                      <span className="text-[7px] text-[#ffd700]/60 font-mono uppercase tracking-wider block mt-0.5">
+                        B: {item.backSkin === 'original' ? 'Original' : item.backSkin === 'glitch' ? 'Brutalist' : item.backSkin === 'glass' ? 'Glass' : item.backSkin === 'arcade' ? 'Arcade' : item.backSkin === 'mtg' ? 'MTG' : item.backSkin === 'poker' ? 'Poker' : item.backSkin === 'duelist' ? 'Duelist' : 'Beats'}
                       </span>
                     </div>
                   </div>
@@ -1719,6 +2163,7 @@ export default function CardDesignShowcase() {
       ) : (
         <div>
           <h2 className="section-title border-b border-white/10 pb-2">
+            {activeTab === 'original' && 'Concept 0: Original Production Style'}
             {activeTab === 'glitch' && 'Concept 1: Neon-Brutalist Glitch'}
             {activeTab === 'glass' && 'Concept 2: Glass-Outrun Minimalist'}
             {activeTab === 'arcade' && 'Concept 3: Retro-Arcade 80s'}
@@ -1733,6 +2178,7 @@ export default function CardDesignShowcase() {
                 <div className="rarity-column-title text-center text-xs py-1.5 font-bold uppercase border border-white/20 bg-white/5">
                   {card.rarity}
                 </div>
+                {activeTab === 'original' && <CardOriginal card={card} />}
                 {activeTab === 'glitch' && <CardGlitch card={card} />}
                 {activeTab === 'glass' && <CardGlass card={card} />}
                 {activeTab === 'arcade' && <CardArcade card={card} />}

@@ -1622,3 +1622,184 @@
   color: #eab308;
 }
 
+/* ==========================================================================
+   CUSTOM THEMATIC CARD BACK STYLES
+   ========================================================================== */
+
+/* 1. Glitch Back */
+.back-glitch {
+  background: #080808 !important;
+  border: 2px solid #00d4aa !important;
+  color: #00d4aa;
+  font-family: 'JetBrains Mono', monospace;
+  position: relative;
+  overflow: hidden;
+  height: 100%;
+  width: 100%;
+}
+.back-glitch .glitch-scanner {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 212, 170, 0.03) 2px, rgba(0, 212, 170, 0.04) 4px);
+  pointer-events: none;
+}
+.back-glitch .glitch-emblem-box {
+  border: 1px solid #ff007f;
+  box-shadow: 0 0 10px rgba(255, 0, 127, 0.25);
+  background: rgba(0, 0, 0, 0.8);
+}
+
+/* 2. Glass Back */
+.back-glass {
+  background: rgba(10, 8, 12, 0.45) !important;
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1.5px solid rgba(255, 255, 255, 0.08) !important;
+  position: relative;
+  overflow: hidden;
+  height: 100%;
+  width: 100%;
+}
+.back-glass .glass-blob-1 {
+  position: absolute;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 0, 127, 0.16) 0%, transparent 70%);
+  top: -15%;
+  left: -15%;
+  pointer-events: none;
+}
+.back-glass .glass-blob-2 {
+  position: absolute;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0, 188, 255, 0.16) 0%, transparent 70%);
+  bottom: -15%;
+  right: -15%;
+  pointer-events: none;
+}
+
+/* 3. Arcade Back */
+.back-arcade {
+  background: #0f0a14 !important;
+  border: 4px solid #ff007f !important;
+  position: relative;
+  overflow: hidden;
+  height: 100%;
+  width: 100%;
+}
+.back-arcade .arcade-grid {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(rgba(0, 240, 255, 0.08) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(0, 240, 255, 0.08) 1px, transparent 1px);
+  background-size: 14px 14px;
+  pointer-events: none;
+}
+
+/* 4. MTG Back */
+.back-mtg {
+  background: #361f12 !important;
+  border: 6px solid #1a0f0a !important;
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.85);
+  position: relative;
+  overflow: hidden;
+  height: 100%;
+  width: 100%;
+}
+.back-mtg .mtg-oval-back {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 82%;
+  height: 62%;
+  border-radius: 50%;
+  border: 2px solid #b89c66;
+  background: #1f110a;
+  box-shadow: inset 0 0 15px rgba(0,0,0,0.7);
+}
+
+/* 5. Poker Back */
+.back-poker {
+  background: #991b1b !important;
+  border: 6px solid #ffffff !important;
+  box-shadow: inset 0 0 12px rgba(0,0,0,0.4);
+  position: relative;
+  overflow: hidden;
+  height: 100%;
+  width: 100%;
+}
+.back-poker .poker-scroll-pattern {
+  position: absolute;
+  inset: 4px;
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  background-image: radial-gradient(rgba(255, 215, 0, 0.15) 1.5px, transparent 0),
+                    radial-gradient(rgba(255, 215, 0, 0.15) 1.5px, transparent 0);
+  background-size: 12px 12px;
+  background-position: 0 0, 6px 6px;
+  pointer-events: none;
+}
+
+/* 6. Duelist Back */
+.back-duelist {
+  background: #3e220e !important;
+  border: 5px solid #000000 !important;
+  position: relative;
+  overflow: hidden;
+  height: 100%;
+  width: 100%;
+}
+.back-duelist .duelist-swirl {
+  position: absolute;
+  inset: -30%;
+  background: radial-gradient(circle at center, rgba(235, 94, 40, 0.28) 0%, transparent 60%);
+  pointer-events: none;
+}
+.back-duelist .duelist-circle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  border: 1.5px dashed rgba(235, 94, 40, 0.5);
+  box-shadow: 0 0 10px rgba(235, 94, 40, 0.25);
+  pointer-events: none;
+}
+
+/* 7. Monster Back */
+.back-monster {
+  background: #1e3a8a !important;
+  border: 6px solid #1e40af !important;
+  position: relative;
+  overflow: hidden;
+  height: 100%;
+  width: 100%;
+}
+.back-monster .monster-inner-card {
+  position: absolute;
+  inset: 3px;
+  border: 2px solid #eab308;
+  background: #0f172a;
+}
+.back-monster .monster-center-ball {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 65px;
+  height: 65px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #eab308 0%, #2563eb 80%);
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 12px rgba(234, 179, 8, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
