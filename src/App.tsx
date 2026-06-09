@@ -28,6 +28,7 @@ import ClaimPage from './pages/ClaimPage';
 import LegalPage from './pages/LegalPage';
 import VoyeurPage from './pages/VoyeurPage';
 import AdminPage from './pages/AdminPage';
+import BeatmapEditor from './pages/BeatmapEditor';
 import Campaign from './pages/Campaign';
 import Chapter from './pages/Chapter';
 import Tutorial from './pages/Tutorial';
@@ -107,7 +108,8 @@ export default function App() {
     location.startsWith('/song/') ||
     location === '/songs' ||
     location.startsWith('/results/') ||
-    location === '/options';
+    location === '/options' ||
+    location === '/admin/editor';
 
   return (
     <div className="min-h-screen bg-[#050402] text-white flex flex-col select-none">
@@ -131,7 +133,10 @@ export default function App() {
           <Route path="/vault/legal" component={LegalPage} />
           <Route path="/vault/:userId" component={VoyeurPage} />
           { (import.meta.env.DEV || localStorage.getItem('th3vault_dev_mode') === 'true') && (
-            <Route path="/admin" component={AdminPage} />
+            <>
+              <Route path="/admin" component={AdminPage} />
+              <Route path="/admin/editor" component={BeatmapEditor} />
+            </>
           ) }
           <Route path="/campaign" component={Campaign} />
           <Route path="/chapter/:month" component={Chapter} />

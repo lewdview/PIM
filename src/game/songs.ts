@@ -1,4 +1,5 @@
 import type { Note, Song } from './types';
+import { getHighScore as progGetHighScore, saveHighScore as progSaveHighScore } from './progress';
 
 function genBeats(
   bpm: number,
@@ -196,14 +197,9 @@ export function getSong(id: string): Song | undefined {
 }
 
 export function getHighScore(songId: string): number {
-  const key = `hs_${songId}`;
-  return parseInt(localStorage.getItem(key) || '0', 10);
+  return progGetHighScore(songId);
 }
 
 export function saveHighScore(songId: string, score: number): void {
-  const key = `hs_${songId}`;
-  const current = getHighScore(songId);
-  if (score > current) {
-    localStorage.setItem(key, score.toString());
-  }
+  progSaveHighScore(songId, score);
 }

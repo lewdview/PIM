@@ -1,7 +1,11 @@
+import { useVaultStore } from '../store/useVaultStore';
+
 // ── medal/score persistence ──────────────────────────────────────
 const MEDAL_ORDER = ['', 'NONE', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM'] as const;
 
 export function getMedalForSong(songId: string): string {
+  const storeMedal = useVaultStore.getState().medals[songId];
+  if (storeMedal !== undefined) return storeMedal;
   return localStorage.getItem(`medal_${songId}`) ?? '';
 }
 
@@ -9,16 +13,22 @@ export function saveMedal(songId: string, medal: string): void {
   const current = getMedalForSong(songId);
   if (MEDAL_ORDER.indexOf(medal as any) > MEDAL_ORDER.indexOf(current as any)) {
     localStorage.setItem(`medal_${songId}`, medal);
+    useVaultStore.getState().syncMedal(songId, medal);
   }
 }
 
 export function getHighScore(songId: string): number {
+  const storeScore = useVaultStore.getState().highScores[songId];
+  if (storeScore !== undefined) return storeScore;
   return parseInt(localStorage.getItem(`hs_${songId}`) ?? '0', 10);
 }
 
 export function saveHighScore(songId: string, score: number): void {
   const current = getHighScore(songId);
-  if (score > current) localStorage.setItem(`hs_${songId}`, String(score));
+  if (score > current) {
+    localStorage.setItem(`hs_${songId}`, String(score));
+    useVaultStore.getState().syncHighScore(songId, score, 0, 0, getMedalForSong(songId) || 'NONE');
+  }
 }
 
 export function getSongScore(songId: string): number {
@@ -26,6 +36,10 @@ export function getSongScore(songId: string): number {
 }
 
 export function getTotalScore(): number {
+  const highScores = useVaultStore.getState().highScores;
+  if (Object.keys(highScores).length > 0) {
+    return Object.values(highScores).reduce((sum, score) => sum + score, 0);
+  }
   let total = 0;
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
@@ -35,6 +49,10 @@ export function getTotalScore(): number {
 }
 
 export function getTotalPlatinums(): number {
+  const medals = useVaultStore.getState().medals;
+  if (Object.keys(medals).length > 0) {
+    return Object.values(medals).filter(m => m === 'PLATINUM').length;
+  }
   let count = 0;
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
@@ -45,6 +63,19 @@ export function getTotalPlatinums(): number {
 
 export function getTotalCleared(): number {
   const cleared = new Set<string>();
+  const highScores = useVaultStore.getState().highScores;
+  const medals = useVaultStore.getState().medals;
+
+  if (Object.keys(highScores).length > 0 || Object.keys(medals).length > 0) {
+    Object.keys(highScores).forEach(id => {
+      if (highScores[id] > 0) cleared.add(id);
+    });
+    Object.keys(medals).forEach(id => {
+      if (medals[id] && medals[id] !== '') cleared.add(id);
+    });
+    return cleared.size;
+  }
+
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
     if (key?.startsWith('medal_')) {
@@ -84,3 +115,4 @@ export function getScoreHistory(songId: string): number[] {
   try { return JSON.parse(localStorage.getItem(`scores_${songId}`) ?? '[]'); }
   catch { return []; }
 }
+

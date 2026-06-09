@@ -56,6 +56,12 @@ interface VaultState {
   equippedCardId: string | null;
   unlockedSkins: string[];
 
+  // User Progress Database Sync State
+  highScores: Record<string, number>;
+  medals: Record<string, string>;
+  fragments: Record<string, number>;
+  milestoneClaims: Record<string, boolean>;
+
   // Actions
   setDailyCard: (card: VaultCard | null) => void;
   setHasClaimed: (claimed: boolean) => void;
@@ -69,6 +75,12 @@ interface VaultState {
   setEquippedCardId: (id: string | null) => void;
   loadVaultData: () => Promise<void>;
   completeOnboarding: () => Promise<void>;
+
+  // Database Sync Actions
+  syncHighScore: (songId: string, score: number, accuracy: number, maxCombo: number, medal: string) => Promise<void>;
+  syncMedal: (songId: string, medal: string) => Promise<void>;
+  syncFragments: (songId: string, count: number) => Promise<void>;
+  syncMilestoneClaim: (monthNum: number, milestoneNum: number) => Promise<void>;
 }
 
 export function calculateEchoPrestigeScore(
@@ -96,7 +108,7 @@ export function calculateEchoPrestigeScore(
   return score;
 }
 
-export const useVaultStore = create<VaultState>((set) => ({
+export const useVaultStore = create<VaultState>((set, get) => ({
   dailyCard: null,
   hasClaimed: false,
   collection: [],
@@ -114,6 +126,12 @@ export const useVaultStore = create<VaultState>((set) => ({
   pullsSinceRarePlus: 0,
   equippedCardId: null,
   unlockedSkins: [],
+
+  // Initial Sync State
+  highScores: {},
+  medals: {},
+  fragments: {},
+  milestoneClaims: {},
 
   setDailyCard: (card) => set({ dailyCard: card }),
   setHasClaimed: (claimed) => set({ hasClaimed: claimed }),
@@ -162,11 +180,17 @@ export const useVaultStore = create<VaultState>((set) => ({
       const [
         profileRes, 
         vaultRes, 
-        supplyRes
+        supplyRes,
+        gameplayRes,
+        fragmentsRes,
+        milestonesRes
       ] = await Promise.all([
         supabase.from('profiles').select('tokens, daily_standard_claims, daily_premium_claims, last_claim_day, has_onboarded, streak_count, total_pulls, pulls_since_rare_plus, unlocked_skins').eq('id', userId).single(),
         supabase.from('vault_collections').select('*').eq('owner_id', userId),
-        supabase.from('global_supply').select('*')
+        supabase.from('global_supply').select('*'),
+        supabase.from('gameplay_records').select('*').eq('user_id', userId),
+        supabase.from('user_fragments').select('*').eq('user_id', userId),
+        supabase.from('campaign_milestone_claims').select('*').eq('user_id', userId),
       ]);
       
       const profile = profileRes.data;
@@ -234,6 +258,143 @@ export const useVaultStore = create<VaultState>((set) => ({
         echoPrestigeScore: calculateEchoPrestigeScore(validMappedCards, currentStreak, currentPulls)
       });
 
+      // --- USER PROGRESS MERGING & MIGRATION ---
+      const MEDAL_ORDER = ['', 'NONE', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM'] as const;
+      const dbHighScores: Record<string, number> = {};
+      const dbMedals: Record<string, string> = {};
+      const dbFragments: Record<string, number> = {};
+      const dbMilestoneClaims: Record<string, boolean> = {};
+
+      if (gameplayRes.data) {
+        for (const row of gameplayRes.data) {
+          const songId = row.song_id;
+          if (row.score > (dbHighScores[songId] || 0)) {
+            dbHighScores[songId] = row.score;
+          }
+          const currentMedal = dbMedals[songId] || '';
+          if (MEDAL_ORDER.indexOf(row.medal as any) > MEDAL_ORDER.indexOf(currentMedal as any)) {
+            dbMedals[songId] = row.medal;
+          }
+        }
+      }
+
+      if (fragmentsRes.data) {
+        for (const row of fragmentsRes.data) {
+          dbFragments[row.song_id] = row.count;
+        }
+      }
+
+      if (milestonesRes.data) {
+        for (const row of milestonesRes.data) {
+          const claimKey = `campaign_claimed_${row.month_num}_${row.milestone_num}`;
+          dbMilestoneClaims[claimKey] = true;
+        }
+      }
+
+      const finalHighScores = { ...dbHighScores };
+      const finalMedals = { ...dbMedals };
+      const finalFragments = { ...dbFragments };
+      const finalMilestoneClaims = { ...dbMilestoneClaims };
+
+      // Scan local storage for migration to DB
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (!key) continue;
+
+        if (key.startsWith('hs_')) {
+          const songId = key.substring(3);
+          const localScore = parseInt(localStorage.getItem(key) || '0', 10);
+          const dbScore = dbHighScores[songId] || 0;
+          if (localScore > dbScore) {
+            finalHighScores[songId] = localScore;
+            supabase.from('gameplay_records').insert({
+              user_id: userId,
+              song_id: songId,
+              score: localScore,
+              accuracy: 0,
+              max_combo: 0,
+              medal: finalMedals[songId] || 'NONE',
+              pack_rewarded: false,
+              reward_tier: 'none'
+            }).then(({ error }) => {
+              if (error) console.warn(`[Migrate] Failed to sync score for ${songId}:`, error.message);
+            });
+          }
+        } else if (key.startsWith('medal_')) {
+          const songId = key.substring(6);
+          const localMedal = localStorage.getItem(key) || '';
+          const dbMedal = dbMedals[songId] || '';
+          if (MEDAL_ORDER.indexOf(localMedal as any) > MEDAL_ORDER.indexOf(dbMedal as any)) {
+            finalMedals[songId] = localMedal;
+            supabase.from('gameplay_records').insert({
+              user_id: userId,
+              song_id: songId,
+              score: finalHighScores[songId] || 0,
+              accuracy: 0,
+              max_combo: 0,
+              medal: localMedal,
+              pack_rewarded: false,
+              reward_tier: 'none'
+            }).then(({ error }) => {
+              if (error) console.warn(`[Migrate] Failed to sync medal for ${songId}:`, error.message);
+            });
+          }
+        } else if (key.startsWith('fragments_')) {
+          const songId = key.substring(10);
+          const localCount = parseInt(localStorage.getItem(key) || '0', 10);
+          const dbCount = dbFragments[songId] || 0;
+          if (localCount > dbCount) {
+            finalFragments[songId] = localCount;
+            supabase.from('user_fragments').upsert({
+              user_id: userId,
+              song_id: songId,
+              count: localCount,
+              updated_at: new Date().toISOString()
+            }, { onConflict: 'user_id,song_id' }).then(({ error }) => {
+              if (error) console.warn(`[Migrate] Failed to sync fragments for ${songId}:`, error.message);
+            });
+          }
+        } else if (key.startsWith('campaign_claimed_')) {
+          const parts = key.split('_');
+          if (parts.length === 4) {
+            const monthNum = parseInt(parts[2], 10);
+            const milestoneNum = parseInt(parts[3], 10);
+            if (localStorage.getItem(key) === 'true' && !dbMilestoneClaims[key]) {
+              finalMilestoneClaims[key] = true;
+              supabase.from('campaign_milestone_claims').upsert({
+                user_id: userId,
+                month_num: monthNum,
+                milestone_num: milestoneNum,
+                claimed_at: new Date().toISOString()
+              }, { onConflict: 'user_id,month_num,milestone_num' }).then(({ error }) => {
+                if (error) console.warn(`[Migrate] Failed to sync milestone claim for ${key}:`, error.message);
+              });
+            }
+          }
+        }
+      }
+
+      // Keep localStorage in sync with merged database state
+      Object.entries(finalHighScores).forEach(([songId, score]) => {
+        localStorage.setItem(`hs_${songId}`, String(score));
+      });
+      Object.entries(finalMedals).forEach(([songId, medal]) => {
+        localStorage.setItem(`medal_${songId}`, medal);
+      });
+      Object.entries(finalFragments).forEach(([songId, count]) => {
+        localStorage.setItem(`fragments_${songId}`, String(count));
+      });
+      Object.entries(finalMilestoneClaims).forEach(([k, val]) => {
+        if (val) localStorage.setItem(k, 'true');
+      });
+
+      set({
+        highScores: finalHighScores,
+        medals: finalMedals,
+        fragments: finalFragments,
+        milestoneClaims: finalMilestoneClaims,
+      });
+
     } finally {
       set({ isLoading: false });
     }
@@ -245,6 +406,109 @@ export const useVaultStore = create<VaultState>((set) => ({
     if (userId) {
       await supabase.from('profiles').update({ has_onboarded: true }).eq('id', userId);
       set({ hasOnboarded: true });
+    }
+  },
+
+  syncHighScore: async (songId, score, accuracy, maxCombo, medal) => {
+    set((state) => {
+      const current = state.highScores[songId] || 0;
+      if (score > current) {
+        return { highScores: { ...state.highScores, [songId]: score } };
+      }
+      return {};
+    });
+
+    const session = await supabase.auth.getSession();
+    const userId = session.data.session?.user.id;
+    if (userId) {
+      try {
+        await supabase.from('gameplay_records').insert({
+          user_id: userId,
+          song_id: songId,
+          score,
+          accuracy,
+          max_combo: maxCombo,
+          medal,
+          pack_rewarded: false,
+          reward_tier: 'none'
+        });
+      } catch (err) {
+        console.warn('Failed to sync high score to database:', err);
+      }
+    }
+  },
+
+  syncMedal: async (songId, medal) => {
+    const MEDAL_ORDER = ['', 'NONE', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM'] as const;
+    set((state) => {
+      const current = state.medals[songId] || '';
+      if (MEDAL_ORDER.indexOf(medal as any) > MEDAL_ORDER.indexOf(current as any)) {
+        return { medals: { ...state.medals, [songId]: medal } };
+      }
+      return {};
+    });
+
+    const session = await supabase.auth.getSession();
+    const userId = session.data.session?.user.id;
+    if (userId) {
+      try {
+        const currentScore = get().highScores[songId] || 0;
+        await supabase.from('gameplay_records').insert({
+          user_id: userId,
+          song_id: songId,
+          score: currentScore,
+          accuracy: 0,
+          max_combo: 0,
+          medal,
+          pack_rewarded: false,
+          reward_tier: 'none'
+        });
+      } catch (err) {
+        console.warn('Failed to sync medal to database:', err);
+      }
+    }
+  },
+
+  syncFragments: async (songId, count) => {
+    set((state) => ({
+      fragments: { ...state.fragments, [songId]: count }
+    }));
+
+    const session = await supabase.auth.getSession();
+    const userId = session.data.session?.user.id;
+    if (userId) {
+      try {
+        await supabase.from('user_fragments').upsert({
+          user_id: userId,
+          song_id: songId,
+          count,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id,song_id' });
+      } catch (err) {
+        console.warn('Failed to sync fragments to database:', err);
+      }
+    }
+  },
+
+  syncMilestoneClaim: async (monthNum, milestoneNum) => {
+    const claimKey = `campaign_claimed_${monthNum}_${milestoneNum}`;
+    set((state) => ({
+      milestoneClaims: { ...state.milestoneClaims, [claimKey]: true }
+    }));
+
+    const session = await supabase.auth.getSession();
+    const userId = session.data.session?.user.id;
+    if (userId) {
+      try {
+        await supabase.from('campaign_milestone_claims').upsert({
+          user_id: userId,
+          month_num: monthNum,
+          milestone_num: milestoneNum,
+          claimed_at: new Date().toISOString()
+        }, { onConflict: 'user_id,month_num,milestone_num' });
+      } catch (err) {
+        console.warn('Failed to sync milestone claim to database:', err);
+      }
     }
   },
 }));

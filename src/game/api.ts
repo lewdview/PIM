@@ -2,6 +2,7 @@ import type { Note } from './types';
 import { supabase } from '../lib/supabase';
 import { getCurrentDay } from '../utils/dayCalc';
 import dayFileMap from './day_file_map.json';
+import { getHighScore as progGetHighScore, saveHighScore as progSaveHighScore } from './progress';
 
 export interface LyricsWord {
   word: string;
@@ -192,12 +193,11 @@ export async function getSongById(id: string): Promise<GameSong | null> {
 }
 
 export function getHighScore(songId: string): number {
-  return parseInt(localStorage.getItem(`hs_${songId}`) || '0', 10);
+  return progGetHighScore(songId);
 }
 
 export function saveHighScore(songId: string, score: number): void {
-  const current = getHighScore(songId);
-  if (score > current) localStorage.setItem(`hs_${songId}`, score.toString());
+  progSaveHighScore(songId, score);
 }
 
 export type SongModifierType = 'vocal_isolation' | 'bass_realm' | 'corrupted_signal' | 'none';

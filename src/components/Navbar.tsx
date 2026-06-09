@@ -244,6 +244,23 @@ export default function Navbar() {
 
             <TokenPill balance={tokenBalance} />
 
+            { (import.meta.env.DEV || localStorage.getItem('th3vault_dev_mode') === 'true') && (
+              <Link
+                to="/admin/editor"
+                className="sticker-gun-tag sticker-slits transition-all hover:scale-105 active:scale-95 no-underline flex flex-row items-center gap-1"
+                style={{
+                  background: '#ff007f',
+                  padding: '6px 14px',
+                  boxShadow: '2px 2px 0 #000',
+                  border: '1.5px solid #000',
+                  color: '#fff',
+                  transform: 'rotate(-2deg)',
+                } as any}
+              >
+                <span className="text-[10px] font-black uppercase tracking-tighter text-white">Editor</span>
+              </Link>
+            )}
+
             {/* Wallet Integration */}
             {user && !isAnonymous ? (
               <div className="flex items-center gap-2 ml-1">

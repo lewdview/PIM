@@ -466,11 +466,12 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
     const rewards: FragmentReward[] = Object.values(grouped).map(({ card, totalGain }) => {
       const rarity = card.rarity as Rarity;
       const storageKey = `fragments_${card.id}`;
-      const oldTotal = parseInt(localStorage.getItem(storageKey) || '0', 10);
+      const oldTotal = useVaultStore.getState().fragments[card.id] ?? parseInt(localStorage.getItem(storageKey) || '0', 10);
       const newTotal = Math.min(10, oldTotal + totalGain);
 
-      // Write to localStorage
+      // Write to localStorage and database
       localStorage.setItem(storageKey, newTotal.toString());
+      useVaultStore.getState().syncFragments(card.id, newTotal);
 
       return {
         cardId: card.id,

@@ -39,6 +39,7 @@ export default function Chapter() {
   const loadVaultData = useVaultStore((s) => s.loadVaultData);
   const equippedCardId = useVaultStore((s) => s.equippedCardId);
   const setEquippedCardId = useVaultStore((s) => s.setEquippedCardId);
+  const milestoneClaims = useVaultStore((s) => s.milestoneClaims);
 
   // Milestone claimed states tracked in localStorage to persist
   const [claimedM1, setClaimedM1] = useState(false);
@@ -51,11 +52,14 @@ export default function Chapter() {
   }, [loadVaultData]);
 
   useEffect(() => {
-    // Load local storage claim states
-    setClaimedM1(localStorage.getItem(`campaign_claimed_${monthNum}_1`) === 'true');
-    setClaimedM2(localStorage.getItem(`campaign_claimed_${monthNum}_2`) === 'true');
-    setClaimedM3(localStorage.getItem(`campaign_claimed_${monthNum}_3`) === 'true');
-  }, [monthNum]);
+    // Load local storage or Zustand store claim states
+    const c1 = milestoneClaims[`campaign_claimed_${monthNum}_1`] || localStorage.getItem(`campaign_claimed_${monthNum}_1`) === 'true';
+    const c2 = milestoneClaims[`campaign_claimed_${monthNum}_2`] || localStorage.getItem(`campaign_claimed_${monthNum}_2`) === 'true';
+    const c3 = milestoneClaims[`campaign_claimed_${monthNum}_3`] || localStorage.getItem(`campaign_claimed_${monthNum}_3`) === 'true';
+    setClaimedM1(c1);
+    setClaimedM2(c2);
+    setClaimedM3(c3);
+  }, [monthNum, milestoneClaims]);
 
   useEffect(() => {
     loadCatalog().then(catalog => {
@@ -294,6 +298,7 @@ export default function Chapter() {
     const cards = await purchasePack(category, 'single', undefined, undefined, true);
     if (cards && cards.length > 0) {
       localStorage.setItem(claimKey, 'true');
+      useVaultStore.getState().syncMilestoneClaim(monthNum, milestoneNum);
       
       // Update claimed state UI
       if (milestoneNum === 1) setClaimedM1(true);
