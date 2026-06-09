@@ -137,7 +137,7 @@ function Card3DWrapper({ rarity, themeClass, children, backSide }: CardWrapperPr
 }
 
 // --------------------------------------------------------------------------
-// DESIGN 1: NEON-BRUTALIST GLITCH
+// DESIGN 1: NEON-BRUTALIST GLITCH (High Contrast Cyberpunk)
 // --------------------------------------------------------------------------
 function CardGlitch({ card }: { card: VaultCard }) {
   const rarityColors: Record<Rarity, string> = {
@@ -149,6 +149,68 @@ function CardGlitch({ card }: { card: VaultCard }) {
   };
 
   const activeColor = rarityColors[card.rarity];
+  const isFullBleed = card.rarity === 'legendary' || card.rarity === 'mythic';
+  
+  // Height class selector for graduating art sizes
+  const heightClass = 
+    card.rarity === 'common' ? 'h-common' :
+    card.rarity === 'uncommon' ? 'h-uncommon' :
+    card.rarity === 'rare' ? 'h-rare' :
+    card.rarity === 'legendary' ? 'h-legendary' : 'h-mythic';
+
+  const metadataInfo = (
+    <div className="flex flex-col flex-1 z-10 pt-1">
+      <h3 className="brutalist-title text-sm font-black tracking-tight leading-none truncate mb-1">
+        {card.title}
+      </h3>
+
+      {/* Tags */}
+      <div className="flex gap-1 mb-1.5 overflow-hidden whitespace-nowrap">
+        {card.tags.map(tag => (
+          <span key={tag} className="text-[8px] px-1 bg-white/10 text-white/70 border border-white/20 uppercase">
+            {tag}
+          </span>
+        ))}
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 mb-1.5">
+        <div className="flex justify-between text-[8px] border-b border-white/20 pb-0.5">
+          <span className="opacity-50">NRG:</span>
+          <span style={{ color: activeColor }}>{Math.round(card.energy * 100)}%</span>
+        </div>
+        <div className="flex justify-between text-[8px] border-b border-white/20 pb-0.5">
+          <span className="opacity-50">VAL:</span>
+          <span style={{ color: activeColor }}>{Math.round(card.valence * 100)}%</span>
+        </div>
+        <div className="flex justify-between text-[8px] border-b border-white/20 pb-0.5">
+          <span className="opacity-50">BPM:</span>
+          <span style={{ color: activeColor }}>{card.tempo}</span>
+        </div>
+        <div className="flex justify-between text-[8px] border-b border-white/20 pb-0.5">
+          <span className="opacity-50">MOD:</span>
+          <span>{card.mood === 'light' ? 'LGT' : 'DRK'}</span>
+        </div>
+      </div>
+
+      {/* Supply progress */}
+      <div className="mt-auto">
+        <div className="flex justify-between text-[7px] opacity-40 mb-0.5">
+          <span>SUPPLY CAP</span>
+          <span>{card.claimedCount} / {getRarityMaxSupply(card.rarity)}</span>
+        </div>
+        <div className="h-1 w-full bg-white/10 border border-black overflow-hidden">
+          <div 
+            className="h-full" 
+            style={{ 
+              width: `${(card.claimedCount / getRarityMaxSupply(card.rarity)) * 100}%`,
+              background: activeColor 
+            }} 
+          />
+        </div>
+      </div>
+    </div>
+  );
 
   const frontFace = (
     <div className="flex flex-col h-full relative overflow-hidden select-none">
@@ -156,87 +218,43 @@ function CardGlitch({ card }: { card: VaultCard }) {
       {card.rarity === 'mythic' && <div className="mythic-foil-wash" />}
       {card.rarity === 'rare' && <div className="terminal-scanline" />}
 
-      {/* Header */}
-      <div className="flex justify-between items-center mb-1 z-10">
-        <span className="font-mono text-[10px]" style={{ color: activeColor }}>
+      {/* Top Header Row */}
+      <div className="flex justify-between items-center mb-1 z-20 p-2 pb-0">
+        <span className="font-mono text-[9px]" style={{ color: activeColor }}>
           SYS.LOC // #{String(card.day).padStart(3, '0')}
         </span>
         <span className="brutalist-badge">{card.rarity}</span>
       </div>
 
-      {/* Album Art Cover */}
-      <div className="card-image-box h-[45%] border-2 border-black relative">
+      {/* Album Art Cover (Graduating in size) */}
+      <div className={`card-image-box ${heightClass} ${isFullBleed ? 'absolute inset-0 z-0' : 'border-2 border-black m-2'}`}>
         <img src={card.coverUrl} alt={card.title} className="w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-transparent" />
         
         {/* Play indicator */}
-        <div className="absolute bottom-2 right-2 p-1 bg-black border border-white/40 rounded">
+        <div className="absolute bottom-2 right-2 p-1 bg-black border border-white/40 rounded z-10">
           <Play size={10} style={{ color: activeColor }} />
         </div>
       </div>
 
-      {/* Metadata Detail */}
-      <div className="card-info-box flex flex-col flex-1 pt-2 z-10">
-        {card.rarity === 'legendary' && <div className="hazard-strip mb-2" />}
-
-        <h3 className="brutalist-title text-sm font-black tracking-tight leading-none truncate mb-1">
-          {card.title}
-        </h3>
-
-        {/* Tags */}
-        <div className="flex gap-1 mb-2 overflow-hidden whitespace-nowrap">
-          {card.tags.map(tag => (
-            <span key={tag} className="text-[8px] px-1 bg-white/10 text-white/70 border border-white/20 uppercase">
-              {tag}
-            </span>
-          ))}
-        </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-columns-2 gap-1 mb-2">
-          <div className="flex justify-between text-[9px] border-b border-white/20 pb-0.5">
-            <span className="opacity-50">NRG:</span>
-            <span style={{ color: activeColor }}>{Math.round(card.energy * 100)}%</span>
-          </div>
-          <div className="flex justify-between text-[9px] border-b border-white/20 pb-0.5">
-            <span className="opacity-50">VAL:</span>
-            <span style={{ color: activeColor }}>{Math.round(card.valence * 100)}%</span>
-          </div>
-          <div className="flex justify-between text-[9px] border-b border-white/20 pb-0.5">
-            <span className="opacity-50">BPM:</span>
-            <span style={{ color: activeColor }}>{card.tempo}</span>
-          </div>
-          <div className="flex justify-between text-[9px] border-b border-white/20 pb-0.5">
-            <span className="opacity-50">MOD:</span>
-            <span>{card.mood === 'light' ? 'LGT' : 'DRK'}</span>
-          </div>
-        </div>
-
-        {/* Supply progress */}
-        <div className="mt-auto">
-          <div className="flex justify-between text-[8px] opacity-40 mb-0.5">
-            <span>SUPPLY RECORD</span>
-            <span>{card.claimedCount} / {getRarityMaxSupply(card.rarity)}</span>
-          </div>
-          <div className="h-1.5 w-full bg-white/10 border border-black overflow-hidden">
-            <div 
-              className="h-full" 
-              style={{ 
-                width: `${(card.claimedCount / getRarityMaxSupply(card.rarity)) * 100}%`,
-                background: activeColor 
-              }} 
-            />
-          </div>
-        </div>
-
-        {card.rarity === 'mythic' && (
-          <div className="scrolling-metadata-wrapper mt-2">
-            <div className="scrolling-metadata-text">
-              INITIALIZED // DIGITAL_GRAIL // ID: {card.id.toUpperCase()} // STATUS: AUTHENTICATED
+      {/* Info Box - either overlay drawer or static below */}
+      {isFullBleed ? (
+        <div className="floating-overlay-info">
+          {card.rarity === 'legendary' && <div className="hazard-strip mb-2" />}
+          {metadataInfo}
+          {card.rarity === 'mythic' && (
+            <div className="scrolling-metadata-wrapper">
+              <div className="scrolling-metadata-text">
+                INITIALIZED // DIGITAL_GRAIL // ID: {card.id.toUpperCase()} // STATUS: AUTHENTICATED
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      ) : (
+        <div className="p-2 pt-0 flex flex-col flex-1">
+          {metadataInfo}
+        </div>
+      )}
     </div>
   );
 
@@ -268,7 +286,7 @@ function CardGlitch({ card }: { card: VaultCard }) {
 }
 
 // --------------------------------------------------------------------------
-// DESIGN 2: GLASS-OUTRUN MINIMALIST
+// DESIGN 2: GLASS-OUTRUN MINIMALIST (Premium Sleek Glassmorphism)
 // --------------------------------------------------------------------------
 function CardGlass({ card }: { card: VaultCard }) {
   const rarityGlows: Record<Rarity, string> = {
@@ -279,7 +297,47 @@ function CardGlass({ card }: { card: VaultCard }) {
     mythic: 'rgba(255, 215, 0, 0.65)',
   };
 
-  const textGradient = card.rarity === 'mythic' ? 'text-amber-300' : 'text-white';
+  const isFullBleed = card.rarity === 'legendary' || card.rarity === 'mythic';
+  
+  const heightClass = 
+    card.rarity === 'common' ? 'h-common' :
+    card.rarity === 'uncommon' ? 'h-uncommon' :
+    card.rarity === 'rare' ? 'h-rare' :
+    card.rarity === 'legendary' ? 'h-legendary' : 'h-mythic';
+
+  const metadataInfo = (
+    <div className="flex flex-col flex-grow z-10 pt-1">
+      <h3 className="text-sm font-bold leading-tight tracking-tight mb-1 truncate text-white">
+        {card.title}
+      </h3>
+
+      <div className="glass-divider my-1" />
+
+      {/* Stats List */}
+      <div className="flex flex-wrap gap-1 mb-2">
+        <span className="glass-stat-pill">⚡ NRG {Math.round(card.energy * 100)}</span>
+        <span className="glass-stat-pill">🧬 VAL {Math.round(card.valence * 100)}</span>
+        <span className="glass-stat-pill">💿 {card.tempo} BPM</span>
+      </div>
+
+      {/* Mint bar */}
+      <div className="mt-auto pt-1">
+        <div className="flex justify-between text-[7px] text-white/30 mb-0.5">
+          <span>RELEASE MINT INDEX</span>
+          <span>{card.claimedCount} / {getRarityMaxSupply(card.rarity)}</span>
+        </div>
+        <div className="h-[2px] w-full bg-white/5 rounded-full overflow-hidden">
+          <div 
+            className="h-full rounded-full" 
+            style={{ 
+              width: `${(card.claimedCount / getRarityMaxSupply(card.rarity)) * 100}%`,
+              background: rarityGlows[card.rarity] 
+            }} 
+          />
+        </div>
+      </div>
+    </div>
+  );
 
   const frontFace = (
     <div className="flex flex-col h-full relative overflow-hidden select-none">
@@ -297,58 +355,36 @@ function CardGlass({ card }: { card: VaultCard }) {
         </>
       )}
 
-      {/* Top Header */}
-      <div className="flex justify-between items-center mb-2 z-10">
+      {/* Top Header Row */}
+      <div className="flex justify-between items-center mb-1.5 z-20 p-2 pb-0">
         <div className="flex flex-col">
-          <span className="text-[8px] text-white/40 tracking-wider font-sans">ARCHIVE ENTRY</span>
-          <span className="text-[10px] font-bold font-sans">#00{card.day}</span>
+          <span className="text-[7px] text-white/40 tracking-wider font-sans">ENTRY</span>
+          <span className="text-[9px] font-bold font-sans">#00{card.day}</span>
         </div>
-        <span className="text-[8px] px-2 py-0.5 rounded-full border bg-black/40 text-white/80" style={{ borderColor: rarityGlows[card.rarity] }}>
+        <span className="text-[7px] px-2 py-0.5 rounded-full border bg-black/40 text-white/80" style={{ borderColor: rarityGlows[card.rarity] }}>
           {card.rarity.toUpperCase()}
         </span>
       </div>
 
-      {/* Image box - minimal glass border */}
-      <div className="card-image-box h-[52%] rounded-lg border border-white/10 overflow-hidden relative mb-2">
+      {/* Album Art Cover (Graduating in size) */}
+      <div className={`card-image-box ${heightClass} ${isFullBleed ? 'absolute inset-0 z-0' : 'rounded-lg border border-white/10 m-1'}`}>
         <img src={card.coverUrl} alt={card.title} className="w-full h-full object-cover scale-105" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/20 to-transparent" />
         
         {/* Subtle hover bloom */}
         <div className="absolute top-2 right-2 w-2 h-2 rounded-full animate-pulse" style={{ background: rarityGlows[card.rarity] }} />
       </div>
 
-      {/* Info drawer */}
-      <div className="card-info-box flex flex-col flex-1 z-10 pt-1">
-        <h3 className={`text-md font-bold leading-tight tracking-tight mb-1 truncate ${textGradient}`}>
-          {card.title}
-        </h3>
-
-        <div className="glass-divider my-1" />
-
-        {/* Stats List */}
-        <div className="flex flex-wrap gap-1 mb-2">
-          <span className="glass-stat-pill">⚡ NRG {Math.round(card.energy * 100)}</span>
-          <span className="glass-stat-pill">🧬 VAL {Math.round(card.valence * 100)}</span>
-          <span className="glass-stat-pill">💿 {card.tempo} BPM</span>
+      {/* Info drawer - overlays on full art or sits statically below */}
+      {isFullBleed ? (
+        <div className="floating-overlay-info">
+          {metadataInfo}
         </div>
-
-        {/* Mint bar */}
-        <div className="mt-auto pt-1">
-          <div className="flex justify-between text-[7px] text-white/30 mb-0.5">
-            <span>RELEASE MINT INDEX</span>
-            <span>{card.claimedCount} / {getRarityMaxSupply(card.rarity)}</span>
-          </div>
-          <div className="h-[2px] w-full bg-white/5 rounded-full overflow-hidden">
-            <div 
-              className="h-full rounded-full" 
-              style={{ 
-                width: `${(card.claimedCount / getRarityMaxSupply(card.rarity)) * 100}%`,
-                background: rarityGlows[card.rarity] 
-              }} 
-            />
-          </div>
+      ) : (
+        <div className="p-2 pt-0 flex flex-col flex-1">
+          {metadataInfo}
         </div>
-      </div>
+      )}
     </div>
   );
 
@@ -376,7 +412,7 @@ function CardGlass({ card }: { card: VaultCard }) {
 }
 
 // --------------------------------------------------------------------------
-// DESIGN 3: RETRO-ARCADE 80s
+// DESIGN 3: RETRO-ARCADE 80s (Vintage Synthesizer Deck)
 // --------------------------------------------------------------------------
 function CardArcade({ card }: { card: VaultCard }) {
   const stripeColors: Record<Rarity, string[]> = {
@@ -388,6 +424,75 @@ function CardArcade({ card }: { card: VaultCard }) {
   };
 
   const outlineColor = stripeColors[card.rarity][0];
+  const isFullBleed = card.rarity === 'legendary' || card.rarity === 'mythic';
+  
+  const heightClass = 
+    card.rarity === 'common' ? 'h-common' :
+    card.rarity === 'uncommon' ? 'h-uncommon' :
+    card.rarity === 'rare' ? 'h-rare' :
+    card.rarity === 'legendary' ? 'h-legendary' : 'h-mythic';
+
+  const metadataInfo = (
+    <div className="flex flex-col flex-1 z-10 pt-1 font-mono">
+      <h3 className="text-xs font-black uppercase text-white tracking-wide truncate mb-1 text-shadow-retro">
+        {card.title}
+      </h3>
+
+      {/* Synthesizer Knobs */}
+      {card.rarity === 'uncommon' && (
+        <div className="knobs-container mb-1.5">
+          <div className="flex items-center gap-1">
+            <div className="retro-knob" />
+            <span className="text-[7px] text-white/50">EQ-A</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="retro-knob" />
+            <span className="text-[7px] text-white/50">EQ-B</span>
+          </div>
+        </div>
+      )}
+
+      {/* Stats */}
+      <div className="bg-black/60 p-1 border border-white/10 rounded mb-1.5 text-[8px]">
+        <div className="flex justify-between mb-0.5">
+          <span className="text-slate-400">ENERGY:</span>
+          <span className="text-amber-400">{Math.round(card.energy * 100)}</span>
+        </div>
+        <div className="flex justify-between mb-0.5">
+          <span className="text-slate-400">VALENCE:</span>
+          <span className="text-amber-400">{Math.round(card.valence * 100)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-slate-400">TEMPO:</span>
+          <span className="text-cyan-400">{card.tempo} BPM</span>
+        </div>
+      </div>
+
+      {/* Synth Step buttons */}
+      <div className="mt-auto">
+        <div className="flex justify-between text-[7px] opacity-40 mb-1">
+          <span>UNITS CLAIMED</span>
+          <span>{card.claimedCount} / {getRarityMaxSupply(card.rarity)}</span>
+        </div>
+        {/* LED Bar */}
+        <div className="flex gap-0.5 h-1.5">
+          {Array.from({ length: 8 }).map((_, idx) => {
+            const active = idx < Math.round((card.claimedCount / getRarityMaxSupply(card.rarity)) * 8);
+            return (
+              <div 
+                key={idx} 
+                className="flex-1 rounded-sm" 
+                style={{ 
+                  background: active ? outlineColor : '#222',
+                  boxShadow: active ? `0 0 4px ${outlineColor}` : 'none'
+                }} 
+              />
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
 
   const frontFace = (
     <div className="flex flex-col h-full relative overflow-hidden select-none">
@@ -409,93 +514,43 @@ function CardArcade({ card }: { card: VaultCard }) {
 
       {/* Vintage Stripes */}
       {card.rarity === 'common' && (
-        <div className="retro-stripe-bar">
+        <div className="retro-stripe-bar z-20">
           <div className="retro-stripe-red" />
           <div className="retro-stripe-white" />
         </div>
       )}
-      {card.rarity === 'rare' && <div className="diagonal-stripes mb-1" />}
+      {card.rarity === 'rare' && <div className="diagonal-stripes mb-1 z-20" />}
 
-      {/* Header */}
-      <div className="flex justify-between items-center mb-1 z-10">
+      {/* Header Row */}
+      <div className="flex justify-between items-center mb-1 z-20 p-1">
         <span className="text-[9px] font-bold text-amber-500 uppercase tracking-tighter">
           DECK: {String(card.day).padStart(3, '0')}
         </span>
         {card.rarity === 'rare' ? (
           <span className="pixel-badge">RARE STEP</span>
         ) : (
-          <span className="text-[8px] bg-black px-1.5 py-0.5 border border-white/20 rounded">
+          <span className="text-[7px] bg-black px-1.5 py-0.5 border border-white/20 rounded text-slate-300">
             {card.rarity.toUpperCase()}
           </span>
         )}
       </div>
 
-      {/* Art Screen */}
-      <div className="card-image-box h-[42%] border-4 border-slate-800 relative z-10">
+      {/* Album Art Cover (Graduating in size) */}
+      <div className={`card-image-box ${heightClass} ${isFullBleed ? 'absolute inset-0 z-0' : 'border-4 border-slate-800 m-1 z-10'}`}>
         <img src={card.coverUrl} alt={card.title} className="w-full h-full object-cover filter contrast-125 saturate-150" />
-        <div className="absolute inset-0 bg-gradient-to-t from-[#121214] via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-transparent to-transparent" />
       </div>
 
-      {/* Synth Dials & Stats */}
-      <div className="card-info-box flex flex-col flex-1 z-10 pt-1.5 font-mono">
-        <h3 className="text-xs font-black uppercase text-white tracking-wide truncate mb-1 text-shadow-retro">
-          {card.title}
-        </h3>
-
-        {/* Synthesizer Knobs */}
-        {card.rarity === 'uncommon' && (
-          <div className="knobs-container mb-2">
-            <div className="flex items-center gap-1">
-              <div className="retro-knob" />
-              <span className="text-[7px] text-white/50">EQ-A</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="retro-knob" />
-              <span className="text-[7px] text-white/50">EQ-B</span>
-            </div>
-          </div>
-        )}
-
-        {/* Stats */}
-        <div className="bg-black/60 p-1 border border-white/10 rounded mb-1 text-[8px]">
-          <div className="flex justify-between mb-0.5">
-            <span className="text-slate-400">ENERGY:</span>
-            <span className="text-amber-400">{Math.round(card.energy * 100)}</span>
-          </div>
-          <div className="flex justify-between mb-0.5">
-            <span className="text-slate-400">VALENCE:</span>
-            <span className="text-amber-400">{Math.round(card.valence * 100)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-slate-400">TEMPO:</span>
-            <span className="text-cyan-400">{card.tempo} BPM</span>
-          </div>
+      {/* Overlay or static info block */}
+      {isFullBleed ? (
+        <div className="floating-overlay-info">
+          {metadataInfo}
         </div>
-
-        {/* Synth Step buttons */}
-        <div className="mt-auto">
-          <div className="flex justify-between text-[7px] opacity-40 mb-1">
-            <span>UNITS CLAIMED</span>
-            <span>{card.claimedCount} / {getRarityMaxSupply(card.rarity)}</span>
-          </div>
-          {/* LED Bar */}
-          <div className="flex gap-0.5 h-1.5">
-            {Array.from({ length: 8 }).map((_, idx) => {
-              const active = idx < Math.round((card.claimedCount / getRarityMaxSupply(card.rarity)) * 8);
-              return (
-                <div 
-                  key={idx} 
-                  className="flex-1 rounded-sm" 
-                  style={{ 
-                    background: active ? outlineColor : '#222',
-                    boxShadow: active ? `0 0 4px ${outlineColor}` : 'none'
-                  }} 
-                />
-              );
-            })}
-          </div>
+      ) : (
+        <div className="p-1.5 pt-0 flex flex-col flex-1 z-10">
+          {metadataInfo}
         </div>
-      </div>
+      )}
     </div>
   );
 
@@ -526,10 +581,137 @@ function CardArcade({ card }: { card: VaultCard }) {
 }
 
 // --------------------------------------------------------------------------
+// DESIGN 4: MAGIC: THE GATHERING (MTG Retro Fantasy / Borderless Showcase)
+// --------------------------------------------------------------------------
+function CardMtg({ card }: { card: VaultCard }) {
+  const isFullBleed = card.rarity === 'legendary' || card.rarity === 'mythic';
+  
+  const heightClass = 
+    card.rarity === 'common' ? 'h-common' :
+    card.rarity === 'uncommon' ? 'h-uncommon' :
+    card.rarity === 'rare' ? 'h-rare' :
+    card.rarity === 'legendary' ? 'h-legendary' : 'h-mythic';
+
+  // Traditional Framed MTG Layout (Common, Uncommon, Rare)
+  const traditionalFace = (
+    <div className="mtg-parchment-frame">
+      {/* Title block */}
+      <div className="mtg-title-bar">
+        <span className="mtg-title-text truncate max-w-[130px]">{card.title}</span>
+        <div className="mtg-mana-cost">
+          <div className="mtg-mana-bubble mtg-mana-nrg" title="Energy">{Math.round(card.energy * 10)}</div>
+          <div className="mtg-mana-bubble mtg-mana-val" title="Valence">{Math.round(card.valence * 10)}</div>
+          <div className="mtg-mana-bubble mtg-mana-bpm" title="BPM">{Math.round(card.tempo / 10)}</div>
+        </div>
+      </div>
+
+      {/* Artwork Screen */}
+      <div className={`mtg-art-frame ${heightClass}`}>
+        <img src={card.coverUrl} alt={card.title} className="w-full h-full object-cover" />
+        {card.rarity === 'rare' && <div className="mtg-holo-seal" />}
+      </div>
+
+      {/* Type line bar */}
+      <div className="mtg-type-bar truncate">
+        Song — {card.genre[0] || 'Unknown'} {card.genre[1] ? `/ ${card.genre[1]}` : ''}
+      </div>
+
+      {/* Text Box / Ability Card details */}
+      <div className="mtg-text-box">
+        <div className="text-[8px] font-sans font-medium text-slate-800">
+          <p className="margin-0 font-bold text-slate-900">// Day {card.day} Codex Entry:</p>
+          <p className="margin-0 leading-snug">{card.description}</p>
+        </div>
+        <div className="mtg-flavor-text text-[7px]">
+          "{card.tags.map(t => `#${t}`).join(' ')} · {card.mood.toUpperCase()} TIME"
+        </div>
+        <div className="mtg-pt-box">
+          {Math.round(card.energy * 100)} / {Math.round(card.valence * 100)}
+        </div>
+      </div>
+    </div>
+  );
+
+  // Borderless Full-art MTG Layout (Legendary, Mythic)
+  const borderlessFace = (
+    <div className="relative h-full w-full">
+      {/* Background cover image 100% size */}
+      <img src={card.coverUrl} alt={card.title} className="absolute inset-0 w-full h-full object-cover z-0" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/20 to-transparent z-5" />
+
+      {/* Frame overlay wrapper */}
+      <div className="mtg-borderless-frame">
+        {/* Floating title bar */}
+        <div className="mtg-floating-title">
+          <span className="mtg-title-text truncate max-w-[130px]">{card.title}</span>
+          <div className="mtg-mana-cost">
+            <div className="mtg-mana-bubble mtg-mana-nrg">{Math.round(card.energy * 10)}</div>
+            <div className="mtg-mana-bubble mtg-mana-val">{Math.round(card.valence * 10)}</div>
+            <div className="mtg-mana-bubble mtg-mana-bpm">{Math.round(card.tempo / 10)}</div>
+          </div>
+        </div>
+
+        {/* Floating rules text block */}
+        <div className="mtg-floating-textbox">
+          {card.rarity === 'mythic' && <div className="mtg-iridescent-overlay" />}
+          
+          <div className="text-[7.5px] font-sans text-slate-300 relative z-10">
+            <span className="font-bold text-amber-400 block border-b border-white/10 pb-0.5 mb-1">
+              Legendary Song — {card.genre.join(' / ')}
+            </span>
+            <p className="margin-0 leading-snug italic opacity-85">
+              "{card.description}"
+            </p>
+          </div>
+
+          <div className="flex justify-between items-center mt-2 relative z-10 border-t border-white/10 pt-1">
+            <span className="text-[7px] text-white/50 uppercase tracking-widest">
+              DAY {card.day} · GEN 0
+            </span>
+            <div className="mtg-pt-box bg-slate-900 border-amber-400 text-amber-400 m-0">
+              {Math.round(card.energy * 100)} / {Math.round(card.valence * 100)}
+            </div>
+          </div>
+
+          {/* Mythic visual stamp */}
+          {card.rarity === 'mythic' && (
+            <div className="mtg-holo-seal-gold" title="Mythic Rare">
+              <span className="text-[7px] text-black">★</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  const backFace = (
+    <div className="mtg-card-back-frame">
+      <div className="text-center mt-4">
+        <div className="mtg-back-orb">
+          <Volume2 size={16} className="text-amber-500" />
+        </div>
+        <span className="text-[9px] uppercase tracking-widest text-[#a8825c] font-serif block mt-2">MAGIC DECK</span>
+      </div>
+      <div className="text-center">
+        <span className="text-[12px] font-serif italic text-amber-600 block">th3v4ult</span>
+        <span className="text-[7px] font-mono text-white/30 uppercase tracking-widest block mt-1">GENESIS DECK SYSTEM</span>
+      </div>
+      <div className="w-16 h-[1.5px] bg-[#a8825c]/40" />
+    </div>
+  );
+
+  return (
+    <Card3DWrapper rarity={card.rarity} themeClass="mtg" backSide={backFace}>
+      {isFullBleed ? borderlessFace : traditionalFace}
+    </Card3DWrapper>
+  );
+}
+
+// --------------------------------------------------------------------------
 // MAIN SHOWCASE PAGE COMPONENT
 // --------------------------------------------------------------------------
 export default function CardDesignShowcase() {
-  const [activeTab, setActiveTab] = useState<'compare' | 'glitch' | 'glass' | 'arcade'>('compare');
+  const [activeTab, setActiveTab] = useState<'compare' | 'glitch' | 'glass' | 'arcade' | 'mtg'>('compare');
 
   return (
     <div className="showcase-page">
@@ -549,7 +731,7 @@ export default function CardDesignShowcase() {
         <div className="showcase-title-row">
           <div>
             <h1 className="showcase-title">Vault Card Design Lab</h1>
-            <p className="showcase-subtitle">Interactive showcase comparing three cyberpunk design styles across all rarity levels</p>
+            <p className="showcase-subtitle">Interactive showcase comparing card layout systems featuring graduating artwork dimensions</p>
           </div>
           <div className="flex items-center gap-2 px-3 py-1.5 bg-[#ff3800]/10 border border-[#ff3800]/30 rounded">
             <RotateCcw size={14} className="text-[#ff3800] animate-spin" style={{ animationDuration: '6s' }} />
@@ -585,6 +767,12 @@ export default function CardDesignShowcase() {
             >
               Retro-Arcade 80s
             </button>
+            <button 
+              className={`btn-tab ${activeTab === 'mtg' ? 'active' : ''}`}
+              onClick={() => setActiveTab('mtg')}
+            >
+              MTG / Magic Layout
+            </button>
           </div>
         </div>
       </div>
@@ -598,7 +786,7 @@ export default function CardDesignShowcase() {
               Concept 1: Neon-Brutalist Glitch
             </h2>
             <p className="text-[11px] text-white/50 mb-4 font-mono uppercase tracking-wide">
-              High contrast industrial digital layout featuring raw borders, stencils, scanlines, hazard strips and hover glitches.
+              High contrast industrial layout. Artwork size scales from bounded boxes (Common/Uncommon/Rare) to full-bleed (Legendary/Mythic) with floating overlays.
             </p>
             <div className="showcase-grid">
               {mockCards.map(card => (
@@ -618,7 +806,7 @@ export default function CardDesignShowcase() {
               Concept 2: Glass-Outrun Minimalist
             </h2>
             <p className="text-[11px] text-white/50 mb-4 font-mono uppercase tracking-wide">
-              Sleek frosted-glass paneling using backdrop-filter blur, cobalt/amethyst colors, spinning light meshes, and gold borders.
+              Sleek frosted-glass paneling. Features smaller art in low rarities, expanding to absolute full-bleed cards with translucent floating drawers in high rarities.
             </p>
             <div className="showcase-grid">
               {mockCards.map(card => (
@@ -638,7 +826,7 @@ export default function CardDesignShowcase() {
               Concept 3: Retro-Arcade 80s
             </h2>
             <p className="text-[11px] text-white/50 mb-4 font-mono uppercase tracking-wide">
-              Vintage Roland TR-808 synthesizer board aesthetic with yellow grids, retro knobs, dual racing stripes, and Outrun vector perspective grids.
+              Synth-deck inspired layout. Graduating art containers combined with glowing vector perspective wireframes and pixel step sequencers.
             </p>
             <div className="showcase-grid">
               {mockCards.map(card => (
@@ -651,6 +839,26 @@ export default function CardDesignShowcase() {
               ))}
             </div>
           </div>
+
+          {/* Row 4: Magic: The Gathering (MTG) */}
+          <div className="comparison-section">
+            <h2 className="section-title text-[#a8825c] border-b border-[#a8825c]/20 pb-2">
+              Concept 4: Magic: The Gathering (MTG) Classic & Borderless
+            </h2>
+            <p className="text-[11px] text-white/50 mb-4 font-mono uppercase tracking-wide">
+              Fantasy cardboard aesthetic. Common/Uncommon/Rare feature traditional parchment frames and textboxes. Legendary/Mythic use borderless full-art layouts with floating rule overlays.
+            </p>
+            <div className="showcase-grid">
+              {mockCards.map(card => (
+                <div key={`mtg-${card.id}`} className="rarity-column">
+                  <div className="rarity-column-title text-center text-xs py-1 font-mono uppercase border border-white/20 bg-white/5">
+                    {card.rarity}
+                  </div>
+                  <CardMtg card={card} />
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       ) : (
         <div>
@@ -658,6 +866,7 @@ export default function CardDesignShowcase() {
             {activeTab === 'glitch' && 'Concept 1: Neon-Brutalist Glitch'}
             {activeTab === 'glass' && 'Concept 2: Glass-Outrun Minimalist'}
             {activeTab === 'arcade' && 'Concept 3: Retro-Arcade 80s'}
+            {activeTab === 'mtg' && 'Concept 4: Magic: The Gathering (MTG) Classic'}
           </h2>
           <div className="showcase-grid mt-6">
             {mockCards.map(card => (
@@ -668,6 +877,7 @@ export default function CardDesignShowcase() {
                 {activeTab === 'glitch' && <CardGlitch card={card} />}
                 {activeTab === 'glass' && <CardGlass card={card} />}
                 {activeTab === 'arcade' && <CardArcade card={card} />}
+                {activeTab === 'mtg' && <CardMtg card={card} />}
               </div>
             ))}
           </div>
