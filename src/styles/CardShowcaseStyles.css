@@ -209,7 +209,7 @@
 /* Graduating artwork size classes */
 .h-common { height: 40% !important; }
 .h-uncommon { height: 50% !important; }
-.h-rare { height: 100% !important; } /* Rare is now full-bleed 100% */
+.h-rare { height: 58% !important; } /* Dialed back from full-bleed 100% to 58% */
 .h-legendary { height: 100% !important; }
 .h-mythic { height: 100% !important; }
 
@@ -217,6 +217,20 @@
 .rotate-zoom-art {
   transform: rotate(90deg) scale(1.35) !important;
   transform-origin: center !important;
+}
+
+.rotate-zoom-mythic {
+  transform: rotate(90deg) scale(1.6) !important;
+  transform-origin: center !important;
+}
+
+.text-stroke-outline {
+  text-shadow: 
+    -1px -1px 0 #000, 
+     1px -1px 0 #000, 
+    -1px  1px 0 #000, 
+     1px  1px 0 #000,
+     0px  0px 4px rgba(0, 0, 0, 0.85);
 }
 
 /* Translucent floating info drawer for Rare/Legendary/Mythic full-bleed art */
@@ -342,7 +356,7 @@
 .theme-glitch.rarity-rare .card-face-front {
   border: 4px solid #00bcff;
   background: #000b14;
-  padding: 0;
+  padding: 8px;
   box-shadow: 0 0 18px rgba(0, 188, 255, 0.45), inset 0 0 12px rgba(0, 188, 255, 0.2);
 }
 .theme-glitch.rarity-rare .terminal-scanline {
@@ -477,7 +491,7 @@
   background: transparent;
   border: 1px solid rgba(59, 130, 246, 0.35);
   box-shadow: 0 8px 32px 0 rgba(59, 130, 246, 0.25);
-  padding: 0;
+  padding: 12px;
 }
 .theme-glass.rarity-rare .glass-stat-pill {
   background: rgba(59, 130, 246, 0.25);
@@ -637,7 +651,7 @@
 .theme-arcade.rarity-rare .card-face-front {
   border: 4px solid #00f0ff;
   background: #0f1c24;
-  padding: 0;
+  padding: 10px;
 }
 .theme-arcade.rarity-rare .diagonal-stripes {
   background: repeating-linear-gradient(
@@ -769,7 +783,7 @@
   border: 1.5px solid rgba(255, 255, 255, 0.08);
   border-radius: 6px;
   padding: 5px;
-  height: 100%;
+  flex: 1;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -927,7 +941,7 @@
 .theme-mtg.rarity-rare .card-face-front {
   border-color: #3b82f6;
   box-shadow: 0 0 20px rgba(59, 130, 246, 0.35);
-  padding: 0;
+  padding: 8px;
 }
 .theme-mtg.rarity-rare .mtg-glass-frame {
   background: rgba(59, 130, 246, 0.03);

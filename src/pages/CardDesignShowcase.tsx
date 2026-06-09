@@ -207,7 +207,7 @@ function StandardVaultCardBack({ card }: { card: VaultCard }) {
 
             {/* Day pill */}
             <div 
-              className="px-3.5 py-1 border rounded-full"
+              className="px-5 py-1.5 border rounded-full"
               style={{
                 borderColor: `${rcColor}22`,
                 background: `${rcColor}06`
@@ -279,7 +279,7 @@ function CardGlitch({ card }: { card: VaultCard }) {
   };
 
   const activeColor = rarityColors[card.rarity];
-  const isFullBleed = card.rarity === 'rare' || card.rarity === 'legendary' || card.rarity === 'mythic';
+  const isFullBleed = card.rarity === 'legendary' || card.rarity === 'mythic';
   const isRotatedZoom = card.rarity === 'legendary' || card.rarity === 'mythic';
   
   const heightClass = 
@@ -350,7 +350,7 @@ function CardGlitch({ card }: { card: VaultCard }) {
 
       {/* Top Header Row */}
       <div className="flex justify-between items-center mb-1 z-20 p-2 pb-0">
-        <span className="font-mono text-[9px]" style={{ color: activeColor }}>
+        <span className={`font-mono text-[9px] ${isFullBleed ? 'text-stroke-outline' : ''}`} style={{ color: activeColor }}>
           SYS.LOC // #{String(card.day).padStart(3, '0')}
         </span>
         <span className="brutalist-badge">{card.rarity}</span>
@@ -361,7 +361,7 @@ function CardGlitch({ card }: { card: VaultCard }) {
         <img 
           src={card.coverUrl} 
           alt={card.title} 
-          className={`w-full h-full object-cover ${isRotatedZoom ? 'rotate-zoom-art' : ''}`} 
+          className={`w-full h-full object-cover ${card.rarity === 'mythic' ? 'rotate-zoom-mythic' : card.rarity === 'legendary' ? 'rotate-zoom-art' : ''}`} 
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-transparent" />
         
@@ -413,7 +413,7 @@ function CardGlass({ card }: { card: VaultCard }) {
     mythic: 'rgba(255, 215, 0, 0.65)',
   };
 
-  const isFullBleed = card.rarity === 'rare' || card.rarity === 'legendary' || card.rarity === 'mythic';
+  const isFullBleed = card.rarity === 'legendary' || card.rarity === 'mythic';
   const isRotatedZoom = card.rarity === 'legendary' || card.rarity === 'mythic';
   
   const heightClass = 
@@ -475,8 +475,8 @@ function CardGlass({ card }: { card: VaultCard }) {
       {/* Top Header Row */}
       <div className="flex justify-between items-center mb-1.5 z-20 p-2 pb-0">
         <div className="flex flex-col">
-          <span className="text-[7px] text-white/40 tracking-wider font-sans">ENTRY</span>
-          <span className="text-[9px] font-bold font-sans">#00{card.day}</span>
+          <span className={`text-[7px] text-white/40 tracking-wider font-sans ${isFullBleed ? 'text-stroke-outline' : ''}`}>ENTRY</span>
+          <span className={`text-[9px] font-bold font-sans ${isFullBleed ? 'text-stroke-outline' : ''}`}>#00{card.day}</span>
         </div>
         <span className="text-[7px] px-2 py-0.5 rounded-full border bg-black/40 text-white/80" style={{ borderColor: rarityGlows[card.rarity] }}>
           {card.rarity.toUpperCase()}
@@ -488,7 +488,7 @@ function CardGlass({ card }: { card: VaultCard }) {
         <img 
           src={card.coverUrl} 
           alt={card.title} 
-          className={`w-full h-full object-cover ${isRotatedZoom ? 'rotate-zoom-art' : 'scale-105'}`} 
+          className={`w-full h-full object-cover ${card.rarity === 'mythic' ? 'rotate-zoom-mythic' : card.rarity === 'legendary' ? 'rotate-zoom-art' : 'scale-105'}`} 
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/20 to-transparent" />
         
@@ -531,7 +531,7 @@ function CardArcade({ card }: { card: VaultCard }) {
   };
 
   const outlineColor = stripeColors[card.rarity][0];
-  const isFullBleed = card.rarity === 'rare' || card.rarity === 'legendary' || card.rarity === 'mythic';
+  const isFullBleed = card.rarity === 'legendary' || card.rarity === 'mythic';
   const isRotatedZoom = card.rarity === 'legendary' || card.rarity === 'mythic';
   
   const heightClass = 
@@ -631,7 +631,7 @@ function CardArcade({ card }: { card: VaultCard }) {
 
       {/* Header Row */}
       <div className="flex justify-between items-center mb-1 z-20 p-1">
-        <span className="text-[9px] font-bold text-amber-500 uppercase tracking-tighter">
+        <span className={`text-[9px] font-bold text-amber-500 uppercase tracking-tighter ${isFullBleed ? 'text-stroke-outline' : ''}`}>
           DECK: {String(card.day).padStart(3, '0')}
         </span>
         {card.rarity === 'rare' ? (
@@ -648,7 +648,7 @@ function CardArcade({ card }: { card: VaultCard }) {
         <img 
           src={card.coverUrl} 
           alt={card.title} 
-          className={`w-full h-full object-cover ${isRotatedZoom ? 'rotate-zoom-art' : 'filter contrast-125 saturate-150'}`} 
+          className={`w-full h-full object-cover ${card.rarity === 'mythic' ? 'rotate-zoom-mythic' : card.rarity === 'legendary' ? 'rotate-zoom-art' : 'filter contrast-125 saturate-150'}`} 
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-transparent to-transparent" />
       </div>
@@ -679,7 +679,7 @@ function CardArcade({ card }: { card: VaultCard }) {
 // DESIGN 4: MAGIC: THE GATHERING (MTG Glass-Outrun Hybrid Edition)
 // --------------------------------------------------------------------------
 function CardMtg({ card }: { card: VaultCard }) {
-  const isFullBleed = card.rarity === 'rare' || card.rarity === 'legendary' || card.rarity === 'mythic';
+  const isFullBleed = card.rarity === 'legendary' || card.rarity === 'mythic';
   const isRotatedZoom = card.rarity === 'legendary' || card.rarity === 'mythic';
   
   const heightClass = 
@@ -688,7 +688,7 @@ function CardMtg({ card }: { card: VaultCard }) {
     card.rarity === 'rare' ? 'h-rare' :
     card.rarity === 'legendary' ? 'h-legendary' : 'h-mythic';
 
-  // Traditional Framed MTG Layout (Common, Uncommon)
+  // Traditional Framed MTG Layout (Common, Uncommon, Rare)
   const traditionalFace = (
     <div className="mtg-glass-frame">
       {/* Title block */}
@@ -704,6 +704,7 @@ function CardMtg({ card }: { card: VaultCard }) {
       {/* Artwork Screen */}
       <div className={`mtg-art-frame ${heightClass}`}>
         <img src={card.coverUrl} alt={card.title} className="w-full h-full object-cover" />
+        {card.rarity === 'rare' && <div className="mtg-holo-seal" />}
       </div>
 
       {/* Type line bar */}
@@ -714,12 +715,14 @@ function CardMtg({ card }: { card: VaultCard }) {
       {/* Text Box / Ability Card details */}
       <div className="mtg-text-box font-sans">
         <div className="text-[7.5px] leading-snug">
-          <p className="margin-0 font-bold opacity-60 uppercase text-[6.5px] mb-0.5">// Day {card.day} Codex Entry:</p>
-          <p className="margin-0 leading-normal">{card.description}</p>
+          <p className="m-0 font-bold opacity-60 uppercase text-[6.5px] mb-0.5">// Day {card.day} Codex Entry:</p>
+          <p className="m-0 leading-normal">{card.description}</p>
         </div>
-        <div className="mtg-flavor-text">
-          "{card.tags.map(t => `#${t}`).join(' ')} · {card.mood.toUpperCase()} TIME"
-        </div>
+        {card.rarity !== 'rare' && (
+          <div className="mtg-flavor-text">
+            "{card.tags.map(t => `#${t}`).join(' ')} · {card.mood.toUpperCase()} TIME"
+          </div>
+        )}
         <div className="mtg-pt-box">
           {Math.round(card.energy * 100)} / {Math.round(card.valence * 100)}
         </div>
@@ -727,14 +730,14 @@ function CardMtg({ card }: { card: VaultCard }) {
     </div>
   );
 
-  // Borderless Full-art MTG Layout (Rare, Legendary, Mythic) with Glassmorphism Overlays
+  // Borderless Full-art MTG Layout (Legendary, Mythic) with Glassmorphism Overlays
   const borderlessFace = (
     <div className="relative h-full w-full">
       {/* Background cover image 100% size (rotated and zoomed ONLY on legendary/mythic) */}
       <img 
         src={card.coverUrl} 
         alt={card.title} 
-        className={`absolute inset-0 w-full h-full object-cover z-0 ${isRotatedZoom ? 'rotate-zoom-art' : 'scale-105'}`} 
+        className={`absolute inset-0 w-full h-full object-cover z-0 ${card.rarity === 'mythic' ? 'rotate-zoom-mythic' : 'rotate-zoom-art'}`} 
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/25 to-transparent z-5" />
 
@@ -760,9 +763,9 @@ function CardMtg({ card }: { card: VaultCard }) {
           
           <div className="text-[7.5px] relative z-10">
             <span className="font-bold text-amber-300 block border-b border-white/10 pb-0.5 mb-1 uppercase text-[6.5px] tracking-wide">
-              {card.rarity === 'rare' ? 'Rare' : card.rarity === 'legendary' ? 'Legendary' : 'Mythic'} Song — {card.genre.join(' / ')}
+              {card.rarity === 'legendary' ? 'Legendary' : 'Mythic'} Song — {card.genre.join(' / ')}
             </span>
-            <p className="margin-0 leading-normal opacity-90">
+            <p className="m-0 leading-normal opacity-90">
               "{card.description}"
             </p>
           </div>
@@ -777,7 +780,6 @@ function CardMtg({ card }: { card: VaultCard }) {
           </div>
 
           {/* Holo stamps */}
-          {card.rarity === 'rare' && <div className="mtg-holo-seal" style={{ bottom: '-4px', left: '20px', transform: 'none' }} />}
           {card.rarity === 'mythic' && (
             <div className="mtg-holo-seal-gold" title="Mythic Rare">
               <span className="text-[7px] text-black">★</span>
@@ -801,7 +803,74 @@ function CardMtg({ card }: { card: VaultCard }) {
 // MAIN SHOWCASE PAGE COMPONENT
 // --------------------------------------------------------------------------
 export default function CardDesignShowcase() {
-  const [activeTab, setActiveTab] = useState<'compare' | 'glitch' | 'glass' | 'arcade' | 'mtg'>('compare');
+  const [activeTab, setActiveTab] = useState<'compare' | 'glitch' | 'glass' | 'arcade' | 'mtg' | 'mint'>('compare');
+
+  // Mint Simulator States
+  const [unlockedSkins, setUnlockedSkins] = useState<string[]>(['glitch', 'glass']);
+  const [sparks, setSparks] = useState<number>(250);
+  const [selectedSong, setSelectedSong] = useState<VaultCard>(mockCards[0]);
+  const [selectedRarity, setSelectedRarity] = useState<Rarity>('common');
+  const [selectedSkin, setSelectedSkin] = useState<string>('glitch');
+  const [mintState, setMintState] = useState<'idle' | 'minting' | 'success'>('idle');
+  const [mintLogs, setMintLogs] = useState<string[]>([]);
+  const [mintedInventory, setMintedInventory] = useState<{ card: VaultCard; skin: string }[]>([]);
+
+  // Sparks transaction handler
+  const handleUnlockSkin = (skin: string, cost: number) => {
+    if (sparks >= cost) {
+      setSparks(prev => prev - cost);
+      setUnlockedSkins(prev => [...prev, skin]);
+    } else {
+      alert("Not enough Vault Sparks! Click '+100 Sparks' to reload.");
+    }
+  };
+
+  // Simulated Mint sequence
+  const handleSimulateMint = () => {
+    if (!unlockedSkins.includes(selectedSkin)) {
+      alert("This skin is locked! Please unlock it first.");
+      return;
+    }
+    setMintState('minting');
+    setMintLogs([]);
+
+    const logs = [
+      "⚡ ESTABLISHING VAULT STATE CONNECTION...",
+      "🔐 AUTHORIZING GEN 0 CONTRACT MINT PROTOCOL...",
+      `🎨 BOUND SKIN PATTERN: ${selectedSkin.toUpperCase()}`,
+      `📝 BINDING METADATA: "${selectedSong.title}"`,
+      `🧬 rarity: ${selectedRarity.toUpperCase()} // day: #${String(selectedSong.day).padStart(3, '0')}`,
+      "🔒 GENERATING ON-CHAIN TOKEN RECORD...",
+      "📡 BROADCASTING META-INJECTION COMPLETE...",
+      "🎉 SUCCESS! daily-card-token INITIALIZED IN SESSION INVENTORY."
+    ];
+
+    logs.forEach((log, index) => {
+      setTimeout(() => {
+        setMintLogs(prev => [...prev, log]);
+        if (index === logs.length - 1) {
+          setTimeout(() => {
+            const cardCopy: VaultCard = {
+              ...selectedSong,
+              id: `minted-${Date.now()}`,
+              rarity: selectedRarity,
+              claimedCount: selectedSong.claimedCount + 1,
+            };
+            setMintedInventory(prev => [{ card: cardCopy, skin: selectedSkin }, ...prev]);
+            setMintState('success');
+          }, 400);
+        }
+      }, (index + 1) * 300);
+    });
+  };
+
+  // Helper to render configured card preview
+  const renderCardWithSkin = (card: VaultCard, skin: string) => {
+    if (skin === 'glitch') return <CardGlitch card={card} />;
+    if (skin === 'glass') return <CardGlass card={card} />;
+    if (skin === 'arcade') return <CardArcade card={card} />;
+    return <CardMtg card={card} />;
+  };
 
   return (
     <div className="showcase-page">
@@ -862,6 +931,12 @@ export default function CardDesignShowcase() {
               onClick={() => setActiveTab('mtg')}
             >
               MTG / Magic Layout
+            </button>
+            <button 
+              className={`btn-tab ${activeTab === 'mint' ? 'active' : ''} border-[#ffd700] text-[#ffd700] hover:bg-[#ffd700]/10`}
+              onClick={() => setActiveTab('mint')}
+            >
+              🌌 Mint Theme Selector
             </button>
           </div>
         </div>
@@ -948,6 +1023,243 @@ export default function CardDesignShowcase() {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      ) : activeTab === 'mint' ? (
+        /* Mint Configuration Simulator Tab */
+        <div className="flex flex-col gap-8">
+          <div>
+            <h2 className="section-title text-[#ffd700] border-b border-[#ffd700]/20 pb-2 font-mono">
+              🌌 Player Mint Configuration Simulator
+            </h2>
+            <p className="text-[11px] text-white/60 mt-1 mb-6 max-w-2xl font-mono uppercase tracking-wider leading-relaxed">
+              Demonstrates the upcoming Web3 front-end flow. Players can unlock custom skin designs using daily Vault Sparks, choose which layout style to apply before minting, and preview the cards dynamically.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+            {/* Left Column: Controls */}
+            <div className="bg-[#0c0a07] border-2 border-white/10 rounded-lg p-6 flex flex-col gap-6">
+              
+              {/* Sparks Counter */}
+              <div className="flex justify-between items-center bg-black/40 border border-white/5 p-3 rounded">
+                <div className="flex flex-col">
+                  <span className="text-[8px] text-white/40 uppercase tracking-widest font-mono">Vault Balance</span>
+                  <span className="text-sm font-black text-[#ffd700] font-mono">⚡ {sparks} Sparks</span>
+                </div>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => setSparks(prev => prev + 100)} 
+                    className="text-[9px] font-mono border border-[#ffd700]/40 text-[#ffd700] bg-[#ffd700]/5 hover:bg-[#ffd700]/20 px-2 py-1 rounded"
+                  >
+                    +100 Sparks
+                  </button>
+                  <button 
+                    onClick={() => { setSparks(250); setUnlockedSkins(['glitch', 'glass']); }} 
+                    className="text-[9px] font-mono border border-white/20 text-white/50 hover:bg-white/5 px-2 py-1 rounded"
+                  >
+                    Reset
+                  </button>
+                </div>
+              </div>
+
+              {/* 1. Song Choice */}
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] text-white/40 uppercase tracking-widest font-mono">1. Select Song Catalog Track:</label>
+                <select 
+                  value={selectedSong.id} 
+                  onChange={(e) => setSelectedSong(mockCards.find(c => c.id === e.target.value) || mockCards[0])}
+                  className="bg-black border border-white/20 rounded p-2 text-xs font-mono text-white focus:outline-none focus:border-[#ff3800]"
+                >
+                  {mockCards.map(c => (
+                    <option key={c.id} value={c.id}>
+                      Day {c.day} · {c.title} ({c.genre[0]})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 2. Rarity Choice */}
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] text-white/40 uppercase tracking-widest font-mono">2. Select Card Rarity Tier:</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {(['common', 'uncommon', 'rare', 'legendary', 'mythic'] as Rarity[]).map(r => (
+                    <button
+                      key={r}
+                      onClick={() => setSelectedRarity(r)}
+                      className={`px-3 py-1.5 border rounded text-[9px] font-mono uppercase tracking-wider transition-all ${
+                        selectedRarity === r 
+                          ? 'bg-white/10 text-white font-bold' 
+                          : 'border-white/10 text-white/40 hover:text-white/80'
+                      }`}
+                      style={{ borderLeftColor: RARITY_COLORS[r], borderLeftWidth: selectedRarity === r ? '4px' : '2px' }}
+                    >
+                      {r}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 3. Skin Selection & Achievements */}
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] text-white/40 uppercase tracking-widest font-mono">3. Apply Unlocked Card Front Skin:</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: 'glitch', name: 'Neon-Brutalist', cost: 0 },
+                    { id: 'glass', name: 'Frosted Glass', cost: 0 },
+                    { id: 'arcade', name: 'Retro-Arcade', cost: 50 },
+                    { id: 'mtg', name: 'Magic Layout', cost: 100 }
+                  ].map(skin => {
+                    const isUnlocked = unlockedSkins.includes(skin.id);
+                    const isSelected = selectedSkin === skin.id;
+
+                    return (
+                      <div 
+                        key={skin.id}
+                        onClick={() => isUnlocked && setSelectedSkin(skin.id)}
+                        className={`border rounded p-2.5 flex flex-col justify-between h-20 transition-all ${
+                          isUnlocked 
+                            ? isSelected 
+                              ? 'border-[#ff3800] bg-[#ff3800]/5 cursor-pointer' 
+                              : 'border-white/15 bg-black/40 hover:border-white/30 cursor-pointer'
+                            : 'border-white/5 bg-black/20 opacity-60 cursor-not-allowed'
+                        }`}
+                      >
+                        <div className="flex justify-between items-start">
+                          <span className={`text-[10px] font-bold font-mono ${isSelected && isUnlocked ? 'text-[#ff3800]' : 'text-white'}`}>
+                            {skin.name}
+                          </span>
+                          {!isUnlocked && <span className="text-[9px]">🔒</span>}
+                        </div>
+
+                        {/* Unlock buttons / info */}
+                        <div className="mt-auto">
+                          {isUnlocked ? (
+                            <span className="text-[8px] text-emerald-400 font-mono font-bold uppercase tracking-wider">Unlocked</span>
+                          ) : (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleUnlockSkin(skin.id, skin.cost);
+                              }}
+                              className="w-full text-center text-[8px] font-mono font-bold uppercase tracking-wider bg-[#ffd700] hover:bg-[#ffe240] text-black py-1 px-1.5 rounded transition-all"
+                            >
+                              Unlock ({skin.cost} ⚡)
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Mint Trigger */}
+              <div className="mt-2">
+                {mintState === 'minting' ? (
+                  <button disabled className="w-full font-mono font-bold text-xs uppercase tracking-widest bg-white/5 border border-white/20 text-white/30 py-3 rounded cursor-not-allowed">
+                    ⚙️ Executing Blockchain Authorization...
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleSimulateMint}
+                    className="w-full font-mono font-bold text-xs uppercase tracking-widest bg-[#ff3800] hover:bg-[#ff5020] text-black py-3 rounded transition-all shadow-md active:scale-[0.98]"
+                  >
+                    Confirm & Mint daily-card-token
+                  </button>
+                )}
+              </div>
+
+            </div>
+
+            {/* Right Column: Holographic Preview */}
+            <div className="flex flex-col items-center gap-4 bg-[#0a0806] border border-white/10 rounded-lg p-6 min-h-[420px] justify-center">
+              <span className="text-[9px] text-white/40 uppercase tracking-widest font-mono border-b border-white/10 pb-1 mb-2">
+                Holographic Preview (Click to Flip)
+              </span>
+              
+              <div className="w-[200px] aspect-[3/4]">
+                {renderCardWithSkin(
+                  {
+                    ...selectedSong,
+                    rarity: selectedRarity
+                  },
+                  selectedSkin
+                )}
+              </div>
+
+              <span className="text-[8px] text-white/30 font-mono text-center max-w-[200px]">
+                * PREVIEW RENDERS SKIN: <span className="text-[#ffd700] font-bold">{selectedSkin.toUpperCase()}</span> AT RARITY <span className="text-[#ff3800] font-bold">{selectedRarity.toUpperCase()}</span>
+              </span>
+            </div>
+          </div>
+
+          {/* Terminal Console Logs & Success Splash */}
+          {mintState === 'minting' && (
+            <div className="bg-black border border-emerald-500/20 rounded p-4 font-mono text-xs text-emerald-400 flex flex-col gap-1.5 shadow-lg">
+              <span className="text-[10px] text-emerald-500/60 uppercase tracking-wider border-b border-emerald-500/10 pb-1 mb-1 font-bold">
+                Console readout log / injection telemetry
+              </span>
+              {mintLogs.map((log, idx) => (
+                <div key={idx} className="flex gap-2">
+                  <span className="text-emerald-500/40">[{idx + 1}]</span>
+                  <span>{log}</span>
+                </div>
+              ))}
+              <div className="flex gap-1.5 items-center mt-1 text-emerald-300 font-bold animate-pulse">
+                <span>▶</span>
+                <span className="w-1.5 h-3 bg-emerald-300" />
+              </div>
+            </div>
+          )}
+
+          {mintState === 'success' && (
+            <div className="bg-emerald-950/20 border-2 border-emerald-500/40 rounded-lg p-5 flex flex-col md:flex-row justify-between items-center gap-4 shadow-lg animate-bounce" style={{ animationIterationCount: 1, animationDuration: '0.6s' }}>
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">🎉</span>
+                <div className="flex flex-col">
+                  <span className="font-bold text-emerald-400 font-mono text-xs uppercase tracking-widest">daily-card-token minted successfully!</span>
+                  <span className="text-[10px] text-white/60 mt-0.5 font-mono">The card has been registered and added to your session inventory below.</span>
+                </div>
+              </div>
+              <button 
+                onClick={() => setMintState('idle')} 
+                className="px-4 py-1.5 border-2 border-emerald-400 text-emerald-400 hover:bg-emerald-400 hover:text-black font-mono font-bold text-xs uppercase rounded transition-all"
+              >
+                Mint Another
+              </button>
+            </div>
+          )}
+
+          {/* Minted Inventory */}
+          <div className="border-t border-white/10 pt-8 mt-4">
+            <h3 className="section-title text-white font-mono mb-4">
+              🎒 Your Session Card Inventory ({mintedInventory.length})
+            </h3>
+            
+            {mintedInventory.length === 0 ? (
+              <div className="text-center py-10 bg-black/20 border border-dashed border-white/10 rounded font-mono text-xs text-white/40 uppercase tracking-wider">
+                No cards minted in this session yet. Complete the configuration steps above.
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                {mintedInventory.map((item, idx) => (
+                  <div key={idx} className="flex flex-col gap-2">
+                    <div className="aspect-[3/4]">
+                      {renderCardWithSkin(item.card, item.skin)}
+                    </div>
+                    <div className="text-center flex flex-col">
+                      <span className="text-[9px] font-black text-white font-mono uppercase truncate max-w-full">
+                        {item.card.title}
+                      </span>
+                      <span className="text-[7.5px] text-white/40 font-mono uppercase tracking-widest">
+                        {item.skin === 'glitch' ? 'Brutalist' : item.skin === 'glass' ? 'Glass' : item.skin === 'arcade' ? 'Arcade' : 'MTG Edition'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       ) : (
