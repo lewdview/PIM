@@ -120,6 +120,37 @@ const RARITY_COLORS: Record<Rarity, string> = {
 // --------------------------------------------------------------------------
 // PRODUCTION-MATCHING STANDARD VAULT CARD BACK COMPONENT
 // --------------------------------------------------------------------------
+function PimLogo({ color, cardId }: { color: string; cardId: string }) {
+  return (
+    <svg width="44" height="26" viewBox="0 0 120 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id={`pimGrad-${cardId}`} x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="100%" stopColor={color} />
+        </linearGradient>
+      </defs>
+      <text
+        x="60"
+        y="42"
+        textAnchor="middle"
+        dominantBaseline="middle"
+        fill={`url(#pimGrad-${cardId})`}
+        fontFamily="'Impact', 'Arial Black', 'Helvetica Neue', sans-serif"
+        fontSize="54"
+        fontWeight="900"
+        letterSpacing="-3.5"
+        stroke="#000000"
+        strokeWidth="6"
+        strokeLinejoin="miter"
+        paintOrder="stroke fill"
+        style={{ filter: `drop-shadow(0 0 8px ${color}80)` }}
+      >
+        PIM
+      </text>
+    </svg>
+  );
+}
+
 function StandardVaultCardBack({ card }: { card: VaultCard }) {
   const rcColor = RARITY_COLORS[card.rarity];
   const pulseRarity = ['rare', 'legendary', 'mythic'].includes(card.rarity);
@@ -171,16 +202,7 @@ function StandardVaultCardBack({ card }: { card: VaultCard }) {
                   boxShadow: `0 0 30px ${rcColor}10, inset 0 0 16px ${rcColor}05`,
                 }}
               >
-                <span 
-                  className="font-black text-2xl uppercase tracking-tighter"
-                  style={{
-                    fontFamily: '"Impact", "Arial Black", sans-serif',
-                    color: rcColor,
-                    textShadow: `0 0 18px ${rcColor}60`
-                  }}
-                >
-                  V
-                </span>
+                <PimLogo color={rcColor} cardId={card.id} />
               </div>
               
               {pulseRarity && (

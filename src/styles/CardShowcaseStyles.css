@@ -309,14 +309,7 @@
   text-transform: uppercase;
 }
 .theme-glitch.rarity-common .brutalist-title {
-  border-bottom: 2px solid #fff;
-  font-size: 1.1rem;
-  font-weight: 900;
-  text-transform: uppercase;
-  letter-spacing: -0.02em;
-  color: #fff;
-  padding: 4px 0;
-  margin: 0;
+  border-bottom: 2px solid #fff !important;
 }
 .theme-glitch.rarity-common .stat-grid {
   display: grid;
@@ -458,10 +451,10 @@
   padding: 1px 4px;
 }
 
-/* White Stroke Outline readability styling for other rarities in Neon-Brutalist (Glitch) theme */
-.theme-glitch:not(.rarity-common) .brutalist-title {
+/* White Stroke Outline readability styling for all card titles in Neon-Brutalist (Glitch) theme */
+.theme-glitch .brutalist-title {
   font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', Monaco, 'Courier New', Courier, monospace !important;
-  font-size: 1.05rem !important;
+  font-size: 0.82rem !important;
   font-weight: 900 !important;
   text-transform: uppercase !important;
   letter-spacing: -0.02em !important;
