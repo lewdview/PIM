@@ -10,13 +10,13 @@ import UltraRewardModal from '../components/UltraRewardModal';
 import PackRipAnimation from '../components/PackRipAnimation';
 import PackContainer from '../components/cinematic/PackContainer';
 
-import { purchasePack, sellCard, type OwnedCard } from '../services/vaultService';
+import { purchasePack, sellCard, getTokenPackCost, type OwnedCard } from '../services/vaultService';
 import { audioManager } from '../game/audio';
 import { haptics } from '../utils/haptics';
 
 export default function PackRevealPage() {
   const [, setLocation] = useLocation();
-  const { revealCards, endReveal, revealPackMeta, startReveal, addToCollection, removeFromCollection, loadVaultData } = useVaultStore();
+  const { revealCards, endReveal, revealPackMeta, startReveal, addToCollection, removeFromCollection, loadVaultData, tokenBalance } = useVaultStore();
   const [isRepurchasing, setIsRepurchasing] = useState(false);
   const [accumulatedCards, setAccumulatedCards] = useState<OwnedCard[]>(() => revealCards);
   const [revealedIndex, setRevealedIndex] = useState(0);
@@ -88,6 +88,13 @@ export default function PackRevealPage() {
       return;
     }
     const { category, size } = revealPackMeta;
+
+    // Client-side balance guard for token packs
+    if (category === 'vault_token' && tokenBalance < getTokenPackCost()) {
+      alert(`Not enough V⚡ tokens. You need ${getTokenPackCost()} V⚡ but only have ${tokenBalance}.`);
+      return;
+    }
+
     setIsRepurchasing(true);
     const cards = await purchasePack(category as any, size as any);
     if (cards.length > 0) {
@@ -300,21 +307,28 @@ export default function PackRevealPage() {
             >
               ←
             </button>
-            {revealPackMeta?.showRipAnother && (
-              <button
-                onClick={handleBuyAnother}
-                disabled={isRepurchasing || !revealPackMeta?.size}
-                className="flex-1 py-3 rounded-xl font-bold text-sm tracking-wider uppercase flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-[0.99]"
-                style={{
-                  background: 'var(--color-surface-2)',
-                  border: '1px solid var(--color-neon-purple)',
-                  color: 'var(--color-text-primary)',
-                  opacity: (isRepurchasing || !revealPackMeta?.size) ? 0.5 : 1,
-                }}
-              >
-                {isRepurchasing ? 'RIPPING...' : 'RIP ANOTHER'}
-              </button>
-            )}
+            {revealPackMeta?.showRipAnother && (() => {
+              const isTokenPack = revealPackMeta?.category === 'vault_token';
+              const cantAfford = isTokenPack && tokenBalance < getTokenPackCost();
+              const isDisabled = isRepurchasing || !revealPackMeta?.size || cantAfford;
+              return (
+                <button
+                  onClick={handleBuyAnother}
+                  disabled={isDisabled}
+                  title={cantAfford ? `Need ${getTokenPackCost()} V⚡ (you have ${tokenBalance})` : undefined}
+                  className="flex-1 py-3 rounded-xl font-bold text-sm tracking-wider uppercase flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-[0.99]"
+                  style={{
+                    background: cantAfford ? 'var(--color-surface-1)' : 'var(--color-surface-2)',
+                    border: `1px solid ${cantAfford ? 'var(--color-border-subtle)' : 'var(--color-neon-purple)'}`,
+                    color: cantAfford ? 'var(--color-text-muted)' : 'var(--color-text-primary)',
+                    opacity: isDisabled ? 0.5 : 1,
+                    cursor: isDisabled ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {isRepurchasing ? 'RIPPING...' : cantAfford ? `NEED ${getTokenPackCost()} V⚡` : 'RIP ANOTHER'}
+                </button>
+              );
+            })()}
             <button
               onClick={handleDone}
               className="flex-1 py-3 rounded-xl font-bold text-sm tracking-wider uppercase flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-[0.99]"
