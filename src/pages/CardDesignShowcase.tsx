@@ -340,20 +340,45 @@ function ArcadeIcon() {
 function MtgSigil({ cardId }: { cardId: string }) {
   return (
     <svg width="44" height="44" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id={`mtgGrad-${cardId}`} x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#ffd700" />
+          <stop offset="100%" stopColor="#b89c66" />
+        </linearGradient>
+      </defs>
+      
       <circle cx="16" cy="16" r="14" stroke="#b89c66" strokeWidth="1.2" strokeDasharray="3 2" />
       <circle cx="16" cy="16" r="11" stroke="#b89c66" strokeWidth="0.8" />
       
-      {/* Melody / Rock Note (Top) */}
-      <circle cx="16" cy="9" r="2.5" fill="#ff9900" stroke="#b89c66" strokeWidth="0.8" />
-      <path d="M15.5 10v-2.5h1.5v1" stroke="#000" strokeWidth="0.5" fill="none" />
+      {/* Center stylized PIM in MTG style */}
+      <text
+        x="16"
+        y="16.8"
+        textAnchor="middle"
+        dominantBaseline="middle"
+        fill={`url(#mtgGrad-${cardId})`}
+        fontFamily="'Georgia', 'Times New Roman', 'Palatino', serif"
+        fontSize="7.5"
+        fontWeight="bold"
+        letterSpacing="-0.3"
+        stroke="#0c0a07"
+        strokeWidth="0.8"
+        paintOrder="stroke fill"
+      >
+        PIM
+      </text>
+
+      {/* Melody / Rock Note (Top) - Repositioned to sit on outer edge to clear the center PIM */}
+      <circle cx="16" cy="4.5" r="2.5" fill="#ff9900" stroke="#b89c66" strokeWidth="0.8" />
+      <path d="M15.5 5.5v-2.5h1.5v1" stroke="#000" strokeWidth="0.5" fill="none" />
       
-      {/* Vibe Nebula (Bottom Right) */}
-      <circle cx="21.5" cy="18.5" r="2.5" fill="#00d4aa" stroke="#b89c66" strokeWidth="0.8" />
-      <circle cx="21.5" cy="18.5" r="0.8" fill="#fff" />
+      {/* Vibe Nebula (Bottom Right) - Repositioned to sit on outer edge to clear the center PIM */}
+      <circle cx="26" cy="21.8" r="2.5" fill="#00d4aa" stroke="#b89c66" strokeWidth="0.8" />
+      <circle cx="26" cy="21.8" r="0.8" fill="#fff" />
       
-      {/* Energy Spark (Bottom Left) */}
-      <circle cx="10.5" cy="18.5" r="2.5" fill="#00bcff" stroke="#b89c66" strokeWidth="0.8" />
-      <path d="M10.5 17l-0.8 1.8h1.6l-0.8 1.8" stroke="#fff" strokeWidth="0.5" strokeLinejoin="round" />
+      {/* Energy Spark (Bottom Left) - Repositioned to sit on outer edge to clear the center PIM */}
+      <circle cx="6" cy="21.8" r="2.5" fill="#00bcff" stroke="#b89c66" strokeWidth="0.8" />
+      <path d="M6 20.3l-0.8 1.8h1.6l-0.8 1.8" stroke="#fff" strokeWidth="0.5" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -469,7 +494,7 @@ function BackMtg({ card }: { card: VaultCard }) {
   return (
     <div className="back-mtg p-3 select-none flex flex-col justify-between items-center">
       <div className="mtg-oval-back flex flex-col items-center justify-center gap-2.5 my-auto">
-        <span className="font-mono text-[9px] text-[#b89c66] tracking-[0.2em] uppercase font-bold">VAULT</span>
+        <span className="font-mono text-[9px] text-[#b89c66] tracking-[0.2em] uppercase font-bold">th3v4ult</span>
         <MtgSigil cardId={card.id} />
         <span className="font-serif text-[7.5px] text-[#ffd700] italic">Gen 0 Edition</span>
       </div>
