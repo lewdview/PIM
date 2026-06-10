@@ -179,7 +179,7 @@ export default function OnboardingFlow({ onComplete }: Props) {
             margin: 0,
           }}
         >
-          th3v4ult : PIM
+          PIM : th3v4ult
         </motion.h1>
 
         {/* Subtitle */}

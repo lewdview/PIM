@@ -19,7 +19,7 @@ import { useLocation } from 'wouter';
 import PaymentSelectModal from '../components/PaymentSelectModal';
 
 // ===== BRUTALIST TICKER =====
-const TICKER_TEXT = 'TH3V4ULT : PIM — 365 DAYS OF DARK AND LIGHT — GEN 0 ARCHIVE — COLLECT. SELL. EARN. — DAILY DROPS — V⚡ TOKEN ECONOMY — RARITY PULLS — MYTHIC POSSIBLE — CLAIM NOW — ';
+const TICKER_TEXT = 'PIM : TH3V4ULT — 365 DAYS OF DARK AND LIGHT — GEN 0 ARCHIVE — COLLECT. SELL. EARN. — DAILY DROPS — V⚡ TOKEN ECONOMY — RARITY PULLS — MYTHIC POSSIBLE — CLAIM NOW — ';
 
 function BrutalistTicker() {
   return (

@@ -75,7 +75,7 @@ function PackBagArt({ meta }: { meta: RevealPackMeta }) {
           letterSpacing: '0.2em',
           color: 'rgba(255,255,255,0.35)',
         }}>
-          th3v4ult : PIM · GEN 0
+          PIM : th3v4ult · GEN 0
         </div>
       </div>
 

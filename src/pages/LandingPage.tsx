@@ -17,7 +17,7 @@ import { type PackCategory, type PackSize, RARITY_CONFIG, PACK_CONFIGS } from '.
 import { loadCatalog } from '../game/api';
 
 // ===== BRUTALIST TICKER =====
-const TICKER_TEXT = 'TH3V4ULT : PIM — 365 DAYS OF RETENTION — COLLECT. SELL. EARN. — DAILY LEVEL UNLOCKS — V⚡ TOKENS — MYTHIC ROLLS — LIVE PLAY — ';
+const TICKER_TEXT = 'PIM : TH3V4ULT — 365 DAYS OF RETENTION — COLLECT. SELL. EARN. — DAILY LEVEL UNLOCKS — V⚡ TOKENS — MYTHIC ROLLS — LIVE PLAY — ';
 
 function BrutalistTicker() {
   return (
@@ -324,7 +324,7 @@ export default function LandingPage() {
           } as any}
         >
           <span className="text-[11px] font-black tracking-[0.2em] uppercase font-mono">
-            th3v4ult : PIM // NEURAL GATEWAY
+            PIM : th3v4ult // NEURAL GATEWAY
           </span>
         </motion.div>
 
@@ -335,7 +335,7 @@ export default function LandingPage() {
           className="text-[44px] sm:text-6xl md:text-8xl brutalist-xl mb-4"
           style={{ '--neon-accent': '#ff3800', textTransform: 'none' } as any}
         >
-          th3v4ult : PIM
+          PIM : th3v4ult
         </motion.h1>
 
         <motion.p

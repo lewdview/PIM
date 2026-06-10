@@ -32,17 +32,30 @@ function VaultLogo() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontFamily: '"Impact", "Arial Black", sans-serif',
-            fontSize: '24px',
-            fontWeight: 900,
-            color: '#fff',
             transform: 'rotate(-4deg)',
             boxShadow: '3px 3px 0 #000, 0 0 18px rgba(255,56,0,0.5)',
             border: '2px solid #000',
-            letterSpacing: '-2px',
           }}
         >
-          V
+          <svg width="34" height="34" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <text
+              x="50"
+              y="55"
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fill="#ffffff"
+              fontFamily="'Impact', 'Arial Black', 'Helvetica Neue', sans-serif"
+              fontSize="68"
+              fontWeight="900"
+              letterSpacing="-3.5"
+              stroke="#000000"
+              strokeWidth="8"
+              strokeLinejoin="miter"
+              paintOrder="stroke fill"
+            >
+              PIM
+            </text>
+          </svg>
         </div>
         {/* small accent tick */}
         <div style={{
@@ -73,7 +86,7 @@ function VaultLogo() {
             display: 'block',
           }}
         >
-          th3v4ult : PIM
+          PIM : th3v4ult
         </span>
         {/* Attribution - Moved OUT of the inner Link to fix hydration warning if needed, 
            but actually we just need to make it a non-anchor if it's inside a Link, 
