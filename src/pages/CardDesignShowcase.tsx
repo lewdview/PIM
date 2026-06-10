@@ -273,6 +273,115 @@ function BackOriginal({ card }: { card: VaultCard }) {
   return <StandardVaultCardBack card={card} />;
 }
 
+// Custom SVG Icons for Card Backs & Designs
+function GlitchIcon({ color, accentColor, cardId }: { color: string; accentColor: string; cardId: string }) {
+  return (
+    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" className="animate-pulse" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color }}>
+      <path d="M5 3H3v18h2M19 3h2v18h-2" stroke={accentColor} strokeWidth="2" />
+      <rect x="8" y="7" width="8" height="10" rx="1.5" stroke={color} fill="rgba(0,0,0,0.4)" />
+      <path d="M12 9v3M10 14h4" stroke={color} />
+      <circle cx="12" cy="12" r="1" fill={accentColor} />
+      <path d="M12 4V2M12 22v-2M2 12h2M22 12h-2" stroke={color} opacity="0.3" />
+    </svg>
+  );
+}
+
+function GlassIcon({ cardId }: { cardId: string }) {
+  return (
+    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id={`glassGrad-${cardId}`} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.85" />
+          <stop offset="50%" stopColor="#c44dff" stopOpacity="0.4" />
+          <stop offset="100%" stopColor="#00d4aa" stopOpacity="0.85" />
+        </linearGradient>
+      </defs>
+      <path d="M12 2L22 12L12 22L2 12Z" stroke={`url(#glassGrad-${cardId})`} strokeWidth="1.5" fill="rgba(255,255,255,0.03)" />
+      <path d="M12 6L18 12L12 18L6 12Z" stroke="rgba(255,255,255,0.25)" strokeWidth="1" />
+      <circle cx="12" cy="12" r="2" fill="#ffffff" />
+    </svg>
+  );
+}
+
+function ArcadeIcon() {
+  return (
+    <svg width="40" height="28" viewBox="0 0 24 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="1" y="1" width="22" height="14" rx="3" stroke="#00f0ff" strokeWidth="1.5" fill="rgba(0,0,0,0.85)" />
+      <path d="M5 8h4M7 6v4" stroke="#ff007f" strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="15.5" cy="8" r="1.5" fill="#ff007f" />
+      <circle cx="18.5" cy="8" r="1.5" fill="#00f0ff" />
+      <line x1="11" y1="10" x2="13" y2="10" stroke="#ffffff" strokeWidth="1" />
+    </svg>
+  );
+}
+
+function MtgSigil({ cardId }: { cardId: string }) {
+  return (
+    <svg width="44" height="44" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="16" cy="16" r="14" stroke="#b89c66" strokeWidth="1.2" strokeDasharray="3 2" />
+      <circle cx="16" cy="16" r="11" stroke="#b89c66" strokeWidth="0.8" />
+      
+      {/* Melody / Rock Note (Top) */}
+      <circle cx="16" cy="9" r="2.5" fill="#ff9900" stroke="#b89c66" strokeWidth="0.8" />
+      <path d="M15.5 10v-2.5h1.5v1" stroke="#000" strokeWidth="0.5" fill="none" />
+      
+      {/* Vibe Nebula (Bottom Right) */}
+      <circle cx="21.5" cy="18.5" r="2.5" fill="#00d4aa" stroke="#b89c66" strokeWidth="0.8" />
+      <circle cx="21.5" cy="18.5" r="0.8" fill="#fff" />
+      
+      {/* Energy Spark (Bottom Left) */}
+      <circle cx="10.5" cy="18.5" r="2.5" fill="#00bcff" stroke="#b89c66" strokeWidth="0.8" />
+      <path d="M10.5 17l-0.8 1.8h1.6l-0.8 1.8" stroke="#fff" strokeWidth="0.5" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function PokerEmblem({ suit, color }: { suit: string; color: string }) {
+  return (
+    <svg width="28" height="34" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="2" y="2" width="20" height="20" rx="2" stroke={color} strokeWidth="1" fill="rgba(0,0,0,0.6)" />
+      {suit === '♠' ? (
+        <path d="M12 5.5c-.2 0-3.2 3.5-3.2 6.5c0 1.8 1.4 3 3.2 3s3.2-1.2 3.2-6.5c0-3-3-6.5-3.2-6.5z M12 14v4.5c0 .3-.1.5-.3.5h-2.2c0-.5.3-1 1-1.5h3c.7.5 1 1 1 1.5h-2.2c-.2 0-.3-.2-.3-.5V14z" fill={color} />
+      ) : (
+        <path d="M12 17.5l-1.1-1C6.9 12.8 4 10.4 4 7.5C4 5.3 5.7 3.5 7.9 3.5c1.2 0 2.4.6 3.1 1.6c.7-1 1.9-1.6 3.1-1.6c2.2 0 3.9 1.8 3.9 4c0 2.9-2.9 5.3-6.9 9l-1.1 1z" fill={color} />
+      )}
+    </svg>
+  );
+}
+
+function DuelistEmblem({ cardId }: { cardId: string }) {
+  return (
+    <svg width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" className="animate-spin" style={{ animationDuration: '12s' }}>
+      <defs>
+        <radialGradient id={`portalGlow-${cardId}`} cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#ff7700" stopOpacity="0.8" />
+          <stop offset="70%" stopColor="#ff3300" stopOpacity="0.2" />
+          <stop offset="100%" stopColor="#000" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <circle cx="32" cy="32" r="30" fill={`url(#portalGlow-${cardId})`} />
+      <path d="M32 2a30 30 0 0 1 30 30c0 8.3-3.4 15.8-8.8 21.2L42.4 42.4A15 15 0 0 0 47 32a15 15 0 0 0-15-15V2z" fill="#ff7700" opacity="0.5" />
+      <path d="M32 62a30 30 0 0 1-30-30c0-8.3 3.4-15.8 8.8-21.2l10.8 10.8A15 15 0 0 0 17 32a15 15 0 0 0 15 15v15z" fill="#ff3300" opacity="0.5" />
+      <circle cx="32" cy="32" r="9" fill="#000000" stroke="#ffaa00" strokeWidth="1.2" />
+      <polygon points="32,27 36,34 28,34" fill="#ff7700" />
+    </svg>
+  );
+}
+
+function MonsterRecordBall() {
+  return (
+    <svg width="52" height="52" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="30" cy="30" r="28" stroke="#ffffff" strokeWidth="2" fill="#222222" />
+      <path d="M2 30A28 28 0 0 1 58 30Z" fill="#ff3800" stroke="#ffffff" strokeWidth="2" />
+      <circle cx="30" cy="30" r="21" stroke="#ffffff" strokeWidth="1" strokeDasharray="4 4" opacity="0.25" />
+      <circle cx="30" cy="30" r="15" stroke="#ffffff" strokeWidth="1" strokeDasharray="2 2" opacity="0.25" />
+      <rect x="1" y="27" width="58" height="6" fill="#111111" stroke="#ffffff" strokeWidth="1.5" />
+      <circle cx="30" cy="30" r="9" fill="#ffffff" stroke="#111111" strokeWidth="1.5" />
+      <circle cx="30" cy="30" r="4" fill="#111111" />
+    </svg>
+  );
+}
+
 function BackGlitch({ card }: { card: VaultCard }) {
   return (
     <div className="back-glitch flex flex-col justify-between p-3 select-none">
@@ -281,9 +390,10 @@ function BackGlitch({ card }: { card: VaultCard }) {
         <span>// DECRYPT_KEY //</span>
         <span>SYSTEM_INIT</span>
       </div>
-      <div className="glitch-emblem-box py-5 px-3 rounded text-center border border-[#00d4aa]/30 flex flex-col gap-1 items-center my-auto">
-        <span className="font-mono text-xs font-black tracking-widest text-[#ff007f]">// VAULT_V //</span>
-        <span className="text-[7px] text-[#00d4aa] opacity-70">TELEMETRY_LINK_0{card.day}</span>
+      <div className="flex flex-col items-center justify-center my-auto z-10 gap-2">
+        <GlitchIcon color="#00d4aa" accentColor="#ff007f" cardId={card.id} />
+        <span className="font-mono text-[8px] text-[#ff007f] tracking-widest">// DECRYPT_CORE //</span>
+        <span className="text-[6.5px] text-[#00d4aa] opacity-70 font-mono">LINK_0{card.day}_SYS</span>
       </div>
       <div className="flex justify-between items-center text-[7.5px] font-mono">
         <span className="text-[#ff007f] font-bold">DAY #{String(card.day).padStart(3, '0')}</span>
@@ -303,7 +413,7 @@ function BackGlass({ card }: { card: VaultCard }) {
         <span>{card.rarity.toUpperCase()}</span>
       </div>
       <div className="z-10 py-4 px-2 rounded bg-white/5 border border-white/10 backdrop-blur-md text-center flex flex-col items-center gap-2 my-auto">
-        <div className="w-8 h-8 rounded-full border border-white/20 flex items-center justify-center text-white font-bold text-xs bg-white/10">V</div>
+        <GlassIcon cardId={card.id} />
         <span className="text-[7.5px] text-white/50 tracking-[0.2em] font-mono">GEN 0</span>
       </div>
       <div className="flex justify-center z-10">
@@ -321,8 +431,8 @@ function BackArcade({ card }: { card: VaultCard }) {
         <span>READY PLAYER 1</span>
         <span>INSERT COIN</span>
       </div>
-      <div className="flex flex-col items-center justify-center gap-1.5 py-4 border-y border-cyan-400/30 my-auto bg-black/60 z-10">
-        <span className="text-[18px] font-mono font-black text-pink-500 animate-pulse" style={{ textShadow: '0 0 8px #ff007f' }}>★ V ★</span>
+      <div className="flex flex-col items-center justify-center gap-2 py-4 border-y border-cyan-400/30 my-auto bg-black/60 z-10">
+        <ArcadeIcon />
         <span className="text-[7.5px] text-cyan-400 font-mono tracking-widest">ARCADE EDITION</span>
       </div>
       <div className="flex justify-between items-center text-[8px] font-mono text-pink-500">
@@ -336,13 +446,9 @@ function BackArcade({ card }: { card: VaultCard }) {
 function BackMtg({ card }: { card: VaultCard }) {
   return (
     <div className="back-mtg p-3 select-none flex flex-col justify-between items-center">
-      <div className="mtg-oval-back flex flex-col items-center justify-center gap-1.5 my-auto">
+      <div className="mtg-oval-back flex flex-col items-center justify-center gap-2.5 my-auto">
         <span className="font-mono text-[9px] text-[#b89c66] tracking-[0.2em] uppercase font-bold">VAULT</span>
-        <div className="flex gap-1 justify-center my-1.5">
-          <span className="w-3.5 h-3.5 rounded-full bg-amber-500 text-[6.5px] flex items-center justify-center text-black font-bold">🎸</span>
-          <span className="w-3.5 h-3.5 rounded-full bg-emerald-500 text-[6.5px] flex items-center justify-center text-black font-bold">🌌</span>
-          <span className="w-3.5 h-3.5 rounded-full bg-blue-500 text-[6.5px] flex items-center justify-center text-white font-bold">⚡</span>
-        </div>
+        <MtgSigil cardId={card.id} />
         <span className="font-serif text-[7.5px] text-[#ffd700] italic">Gen 0 Edition</span>
       </div>
       <span className="text-[8px] font-mono text-[#b89c66]/80 self-end">DAY #{String(card.day).padStart(3, '0')}</span>
@@ -360,8 +466,8 @@ function BackPoker({ card }: { card: VaultCard }) {
         <span>{suit}</span>
         <span>{suit}</span>
       </div>
-      <div className="w-14 h-20 border border-white/20 rounded flex flex-col items-center justify-center gap-1 bg-red-950/70 z-10 shadow-md my-auto">
-        <span className="font-serif text-lg text-amber-400">{suit}</span>
+      <div className="w-14 h-20 border border-white/20 rounded flex flex-col items-center justify-center gap-2 bg-red-950/70 z-10 shadow-md my-auto">
+        <PokerEmblem suit={suit} color="#fbbf24" />
         <span className="font-mono text-[7px] text-amber-200 tracking-wider">DAY {card.day}</span>
       </div>
       <div className="w-full flex justify-between text-[10px] text-white/85 font-serif transform rotate-180">
@@ -377,10 +483,8 @@ function BackDuelist({ card }: { card: VaultCard }) {
     <div className="back-duelist p-3 select-none flex flex-col justify-between items-center">
       <div className="duelist-swirl" />
       <span className="text-[7.5px] font-mono text-orange-500/80 tracking-widest uppercase">DUEL BEAT</span>
-      <div className="duelist-circle flex items-center justify-center my-auto">
-        <div className="w-16 h-16 rounded-full border border-orange-500/30 flex items-center justify-center bg-black/80">
-          <span className="text-xl text-orange-500">🌀</span>
-        </div>
+      <div className="duelist-circle flex items-center justify-center my-auto z-10">
+        <DuelistEmblem cardId={card.id} />
       </div>
       <div className="w-full flex justify-between text-[6.5px] font-mono text-orange-400/60 uppercase">
         <span>Vault Card</span>
@@ -398,8 +502,8 @@ function BackMonster({ card }: { card: VaultCard }) {
           <span>POCKET BEATS</span>
           <span>TCG</span>
         </div>
-        <div className="monster-center-ball self-center my-auto">
-          <span>💿</span>
+        <div className="monster-center-ball self-center my-auto z-10">
+          <MonsterRecordBall />
         </div>
         <div className="flex justify-between items-center text-[7px] text-white/40">
           <span>VAULT CARD</span>
@@ -1337,15 +1441,43 @@ function CardMonster({ card, backSide }: { card: VaultCard; backSide?: React.Rea
   // HP rating: BPM/Tempo
   const hp = card.tempo;
   
-  // Element badge
+  // Element badge helper
   const mainGenre = card.genre[0] || 'Alternative';
-  const getElementBadge = (genre: string) => {
-    if (genre.includes('Synth') || genre.includes('Outrun')) return '🌌';
-    if (genre.includes('Electron') || genre.includes('Dance')) return '⚡';
-    if (genre.includes('Rock') || genre.includes('Metal')) return '🎸';
-    return '🎤';
+  const renderMonsterEnergyBadge = (genre: string, className = "w-2.5 h-2.5 text-current") => {
+    if (genre.includes('Synth') || genre.includes('Outrun') || genre === '🌌') {
+      return (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+          <path d="M2 12h20" />
+        </svg>
+      );
+    }
+    if (genre.includes('Electron') || genre.includes('Dance') || genre === '⚡') {
+      return (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+          <path d="M19 9h-4V3H9v8h4v10l6-12z" />
+        </svg>
+      );
+    }
+    if (genre.includes('Rock') || genre.includes('Metal') || genre === '🎸') {
+      return (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M9 18V5l12-2v13" />
+          <circle cx="6" cy="18" r="3" />
+          <circle cx="18" cy="16" r="3" />
+        </svg>
+      );
+    }
+    // Default microphone / pop genre
+    return (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+        <line x1="12" y1="19" x2="12" y2="22" />
+      </svg>
+    );
   };
-  const elementBadge = getElementBadge(mainGenre);
 
   // Rarity Symbol
   const raritySymbol = 
@@ -1375,7 +1507,9 @@ function CardMonster({ card, backSide }: { card: VaultCard; backSide?: React.Rea
         <div className="monster-hp-block">
           <span className="monster-hp-label">HP</span>
           <span className="monster-hp">{hp}</span>
-          <div className="monster-energy-badge">{elementBadge}</div>
+          <div className="monster-energy-badge flex items-center justify-center">
+            {renderMonsterEnergyBadge(mainGenre)}
+          </div>
         </div>
       </div>
 
@@ -1389,7 +1523,9 @@ function CardMonster({ card, backSide }: { card: VaultCard; backSide?: React.Rea
         {/* Attack 1 */}
         <div className="monster-move-row">
           <div className="monster-move-cost">
-            <div className="monster-cost-dot">{elementBadge}</div>
+            <div className="monster-cost-dot flex items-center justify-center">
+              {renderMonsterEnergyBadge(mainGenre)}
+            </div>
           </div>
           <div className="monster-move-info">
             <span className="monster-move-title">Bass Blast</span>
@@ -1401,8 +1537,16 @@ function CardMonster({ card, backSide }: { card: VaultCard; backSide?: React.Rea
         {/* Attack 2 */}
         <div className="monster-move-row">
           <div className="monster-move-cost">
-            <div className="monster-cost-dot">{elementBadge}</div>
-            <div className="monster-cost-dot">💿</div>
+            <div className="monster-cost-dot flex items-center justify-center">
+              {renderMonsterEnergyBadge(mainGenre)}
+            </div>
+            <div className="monster-cost-dot flex items-center justify-center text-white">
+              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <circle cx="12" cy="12" r="10" />
+                <circle cx="12" cy="12" r="4" />
+                <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+              </svg>
+            </div>
           </div>
           <div className="monster-move-info">
             <span className="monster-move-title">Valence Harmony</span>
@@ -1414,9 +1558,11 @@ function CardMonster({ card, backSide }: { card: VaultCard; backSide?: React.Rea
 
       {/* Bottom TCG Weakness slot */}
       <div className="monster-bottom-bar font-mono">
-        <div className="monster-bottom-stat">
+        <div className="monster-bottom-stat flex items-center gap-0.5">
           <span>weakness</span>
-          <span className="text-red-500">{card.mood === 'light' ? '🖤' : '💛'}</span>
+          <svg width="8" height="8" viewBox="0 0 24 24" fill={card.mood === 'light' ? '#6b7280' : '#fbbf24'}>
+            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+          </svg>
         </div>
         <div className="monster-bottom-stat">
           <span>resistance</span>
@@ -1449,7 +1595,9 @@ function CardMonster({ card, backSide }: { card: VaultCard; backSide?: React.Rea
           <div className="monster-hp-block">
             <span className="monster-hp-label">HP</span>
             <span className="monster-hp text-[#ffd700]">{hp}</span>
-            <div className="monster-energy-badge bg-[#ffd700] text-black">{elementBadge}</div>
+            <div className="monster-energy-badge bg-[#ffd700] text-black flex items-center justify-center">
+              {renderMonsterEnergyBadge(mainGenre)}
+            </div>
           </div>
         </div>
 
@@ -1458,7 +1606,9 @@ function CardMonster({ card, backSide }: { card: VaultCard; backSide?: React.Rea
           {/* Attack 1 */}
           <div className="monster-move-row border-none bg-transparent p-0">
             <div className="monster-move-cost">
-              <div className="monster-cost-dot bg-amber-500 text-black">{elementBadge}</div>
+              <div className="monster-cost-dot bg-amber-500 text-black flex items-center justify-center">
+                {renderMonsterEnergyBadge(mainGenre)}
+              </div>
             </div>
             <div className="monster-move-info">
               <span className="monster-move-title text-[#ffd700]">Mega Bass Wave</span>
@@ -1468,9 +1618,11 @@ function CardMonster({ card, backSide }: { card: VaultCard; backSide?: React.Rea
           </div>
 
           <div className="monster-bottom-bar font-mono border-t border-white/10 pt-1 p-0 bg-transparent mt-1">
-            <div className="monster-bottom-stat">
+            <div className="monster-bottom-stat flex items-center gap-0.5">
               <span>weakness</span>
-              <span className="text-red-500">{card.mood === 'light' ? '🖤' : '💛'}</span>
+              <svg width="8" height="8" viewBox="0 0 24 24" fill={card.mood === 'light' ? '#6b7280' : '#fbbf24'}>
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+              </svg>
             </div>
             <div className="monster-bottom-stat">
               <span>resistance</span>
