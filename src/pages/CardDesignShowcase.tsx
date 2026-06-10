@@ -122,7 +122,7 @@ const RARITY_COLORS: Record<Rarity, string> = {
 // --------------------------------------------------------------------------
 function PimLogo({ color, cardId }: { color: string; cardId: string }) {
   return (
-    <svg width="58" height="34" viewBox="0 0 120 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg width="64" height="64" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id={`pimGrad-${cardId}`} x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" stopColor="#ffffff" />
@@ -131,16 +131,16 @@ function PimLogo({ color, cardId }: { color: string; cardId: string }) {
       </defs>
       <text
         x="60"
-        y="42"
+        y="68"
         textAnchor="middle"
         dominantBaseline="middle"
         fill={`url(#pimGrad-${cardId})`}
         fontFamily="'Impact', 'Arial Black', 'Helvetica Neue', sans-serif"
-        fontSize="60"
+        fontSize="85"
         fontWeight="900"
-        letterSpacing="-3.5"
+        letterSpacing="-4"
         stroke="#000000"
-        strokeWidth="6"
+        strokeWidth="7"
         strokeLinejoin="miter"
         paintOrder="stroke fill"
         style={{ filter: `drop-shadow(0 0 8px ${color}80)` }}
@@ -195,7 +195,7 @@ function StandardVaultCardBack({ card }: { card: VaultCard }) {
             {/* V mark frame */}
             <div className="relative">
               <div 
-                className="w-16 h-16 rounded-xl border-2 flex items-center justify-center"
+                className="w-16 h-16 rounded-full border-2 flex items-center justify-center overflow-hidden"
                 style={{
                   background: `linear-gradient(145deg, ${rcColor}18, transparent)`,
                   borderColor: `${rcColor}30`,
