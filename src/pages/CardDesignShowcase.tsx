@@ -122,7 +122,7 @@ const RARITY_COLORS: Record<Rarity, string> = {
 // --------------------------------------------------------------------------
 function PimLogo({ color, cardId }: { color: string; cardId: string }) {
   return (
-    <svg width="44" height="26" viewBox="0 0 120 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg width="58" height="34" viewBox="0 0 120 70" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <linearGradient id={`pimGrad-${cardId}`} x1="0%" y1="0%" x2="0%" y2="100%">
           <stop offset="0%" stopColor="#ffffff" />
@@ -136,7 +136,7 @@ function PimLogo({ color, cardId }: { color: string; cardId: string }) {
         dominantBaseline="middle"
         fill={`url(#pimGrad-${cardId})`}
         fontFamily="'Impact', 'Arial Black', 'Helvetica Neue', sans-serif"
-        fontSize="54"
+        fontSize="60"
         fontWeight="900"
         letterSpacing="-3.5"
         stroke="#000000"
