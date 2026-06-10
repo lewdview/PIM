@@ -450,6 +450,44 @@
   padding-left: 100%;
 }
 
+.theme-glitch.rarity-mythic .brutalist-badge {
+  background: #ffd700;
+  color: #000;
+  font-weight: 900;
+  font-size: 0.65rem;
+  padding: 1px 4px;
+}
+
+/* White Stroke Outline readability styling for other rarities in Neon-Brutalist (Glitch) theme */
+.theme-glitch:not(.rarity-common) .brutalist-title {
+  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', Monaco, 'Courier New', Courier, monospace !important;
+  font-size: 1.05rem !important;
+  font-weight: 900 !important;
+  text-transform: uppercase !important;
+  letter-spacing: -0.02em !important;
+  transform: none !important;
+  color: #000000 !important;
+  -webkit-text-stroke: 1.2px #ffffff !important;
+  paint-order: stroke fill;
+  text-shadow: 
+    -1.5px -1.5px 0 #ffffff,
+     1.5px -1.5px 0 #ffffff,
+    -1.5px  1.5px 0 #ffffff,
+     1.5px  1.5px 0 #ffffff,
+     0px  0px 4px rgba(255, 255, 255, 0.8) !important;
+  padding: 4px 0 !important;
+  margin: 0 0 6px 0 !important;
+  line-height: 1.1 !important;
+}
+
+.theme-glitch.rarity-uncommon .brutalist-title { border-bottom: 2px solid #00d4aa !important; }
+.theme-glitch.rarity-rare .brutalist-title { border-bottom: 2px solid #00bcff !important; }
+.theme-glitch.rarity-legendary .brutalist-title { border-bottom: 2px solid #ff007f !important; }
+.theme-glitch.rarity-mythic .brutalist-title { border-bottom: 2px solid #ffd700 !important; }
+
+
+
+
 
 /* ==========================================================================
    DESIGN 2: GLASS-OUTRUN MINIMALIST (Premium Sleek Glassmorphism)
