@@ -449,6 +449,163 @@ function MonsterRecordBall() {
   );
 }
 
+function ChromeMedal({ cardId }: { cardId: string }) {
+  return (
+    <svg width="38" height="38" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id={`chromeBadge-${cardId}`} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="35%" stopColor="#d1d5db" />
+          <stop offset="50%" stopColor="#9ca3af" />
+          <stop offset="65%" stopColor="#4b5563" />
+          <stop offset="100%" stopColor="#111827" />
+        </linearGradient>
+      </defs>
+      <circle cx="24" cy="24" r="22" stroke="url(#chromeBadge-${cardId})" strokeWidth="2.5" fill="rgba(0,0,0,0.8)" />
+      <circle cx="24" cy="24" r="18" stroke="#374151" strokeWidth="1" />
+      <path d="M16 24l5 5 11-11" stroke="#fbbf24" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+      <polygon points="24,6 27,13 35,13 29,18 31,25 24,21 17,25 19,18 13,13 21,13" fill="#fbbf24" opacity="0.3" />
+    </svg>
+  );
+}
+
+function FantasyRune({ cardId }: { cardId: string }) {
+  return (
+    <svg width="38" height="38" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id={`runeGlow-${cardId}`} cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#a78bfa" stopOpacity="0.8" />
+          <stop offset="100%" stopColor="#000" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <circle cx="16" cy="16" r="15" fill={`url(#runeGlow-${cardId})`} />
+      <polygon points="16,3 27,10 27,22 16,29 5,22 5,10" stroke="#b45309" strokeWidth="1.2" fill="rgba(20,10,5,0.7)" />
+      <path d="M16 7v18M9 12h14M9 20h14" stroke="#d97706" strokeWidth="0.8" strokeLinecap="round" />
+      <circle cx="16" cy="16" r="4" stroke="#ffd700" strokeWidth="1" fill="#1e1b4b" />
+    </svg>
+  );
+}
+
+function CyberpunkNode({ cardId }: { cardId: string }) {
+  return (
+    <svg width="38" height="38" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="animate-pulse">
+      <rect x="6" y="6" width="36" height="36" rx="4" stroke="#00f0ff" strokeWidth="1.5" fill="rgba(0,0,0,0.85)" />
+      <path d="M6 14h36M6 34h36M14 6v36M34 6v36" stroke="rgba(0,240,255,0.2)" strokeWidth="1" />
+      <circle cx="24" cy="24" r="10" stroke="#f43f5e" strokeWidth="1.5" />
+      <circle cx="24" cy="24" r="3" fill="#00f0ff" />
+      <line x1="24" y1="6" x2="24" y2="14" stroke="#00f0ff" strokeWidth="1.5" />
+      <line x1="24" y1="34" x2="24" y2="42" stroke="#00f0ff" strokeWidth="1.5" />
+      <line x1="6" y1="24" x2="14" y2="24" stroke="#00f0ff" strokeWidth="1.5" />
+      <line x1="34" y1="24" x2="42" y2="24" stroke="#00f0ff" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+function AnimeCrest({ cardId }: { cardId: string }) {
+  return (
+    <svg width="38" height="38" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="24" cy="24" r="21" stroke="#ff007f" strokeWidth="1.5" fill="rgba(24,0,16,0.8)" />
+      <path d="M12 24A12 12 0 0 1 36 24A12 12 0 0 1 12 24" stroke="#ffd700" strokeWidth="1" strokeDasharray="3 2" />
+      <path d="M22 14a8 8 0 0 0 9 9 9 9 0 1 1-9-9z" fill="#ffd700" />
+      <polygon points="16,16 17.5,19 21,19.5 18,22 19,25.5 16,23.5 13,25.5 14,22 11,19.5 14.5,19" fill="#ff007f" />
+      <polygon points="32,28 33,30 35,30 33.5,31 34,33 32,32 30,33 30.5,31 29,30 31,30" fill="#00f0ff" />
+    </svg>
+  );
+}
+
+function BackMonster({ card }: { card: VaultCard }) {
+  return (
+    <div className="back-monster h-full w-full p-2.5 select-none">
+      <div className="monster-inner-card flex flex-col justify-between p-2">
+        <div className="flex justify-between items-center text-[7.5px] text-amber-400 font-bold tracking-wider">
+          <span>POCKET BEATS</span>
+          <span>TCG</span>
+        </div>
+        <div className="monster-center-ball self-center my-auto z-10">
+          <MonsterRecordBall />
+        </div>
+        <div className="flex justify-between items-center text-[7px] text-white/40">
+          <span>VAULT CARD</span>
+          <span>DAY #{card.day}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BackChrome({ card }: { card: VaultCard }) {
+  return (
+    <div className="back-chrome p-2 select-none">
+      <div className="chrome-inner-grid">
+        <div className="flex justify-between items-start">
+          <span className="text-[7px] text-white/90 font-bold italic tracking-tighter">CHROME BASE</span>
+          <span className="text-[5.5px] font-mono text-amber-400">#001/365</span>
+        </div>
+        <div className="self-center z-10">
+          <ChromeMedal cardId={card.id} />
+        </div>
+        <div className="chrome-stats-grid flex justify-between items-end">
+          <div className="flex flex-col">
+            <span>BPM: {card.tempo}</span>
+            <span>DAY: {card.day}</span>
+          </div>
+          <span className="font-bold">GEN 0</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BackFantasy({ card }: { card: VaultCard }) {
+  return (
+    <div className="back-fantasy p-3 select-none flex flex-col justify-between items-center">
+      <div className="fantasy-scrollwork" />
+      <span className="text-[7px] font-serif text-[#d97706]/85 tracking-[0.15em] uppercase z-10">Runic Record</span>
+      <div className="fantasy-center-seal flex items-center justify-center my-auto z-10">
+        <FantasyRune cardId={card.id} />
+      </div>
+      <div className="w-full flex justify-between text-[6.5px] font-serif text-[#b45309]/80 uppercase z-10">
+        <span>Day {card.day}</span>
+        <span>Spell card</span>
+      </div>
+    </div>
+  );
+}
+
+function BackCyberpunk({ card }: { card: VaultCard }) {
+  return (
+    <div className="back-cyberpunk p-3 select-none flex flex-col justify-between">
+      <div className="cyber-circuit" />
+      <div className="flex justify-between items-center text-[7px] font-mono text-cyan-400 z-10">
+        <span>GATE_BACK.LOG</span>
+        <span>STABLE</span>
+      </div>
+      <div className="self-center my-auto z-10">
+        <CyberpunkNode cardId={card.id} />
+      </div>
+      <div className="flex justify-between items-center text-[6px] font-mono text-rose-500 z-10">
+        <span>SECTOR_{card.day}</span>
+        <span>v1.0.9</span>
+      </div>
+    </div>
+  );
+}
+
+function BackAnime({ card }: { card: VaultCard }) {
+  return (
+    <div className="back-anime p-3 select-none flex flex-col justify-between items-center">
+      <span className="text-[7.5px] text-pink-400 font-bold tracking-[0.2em] uppercase z-10">Celestial Symphony</span>
+      <div className="anime-star-crest flex items-center justify-center my-auto z-10">
+        <AnimeCrest cardId={card.id} />
+      </div>
+      <div className="w-full flex justify-between text-[7px] text-yellow-300 font-bold z-10">
+        <span>LEVEL 0</span>
+        <span>DAY {card.day}</span>
+      </div>
+    </div>
+  );
+}
+
 function BackGlitch({ card }: { card: VaultCard }) {
   return (
     <div className="back-glitch flex flex-col justify-between p-3 select-none">
@@ -561,25 +718,7 @@ function BackDuelist({ card }: { card: VaultCard }) {
   );
 }
 
-function BackMonster({ card }: { card: VaultCard }) {
-  return (
-    <div className="back-monster p-2.5 select-none">
-      <div className="monster-inner-card flex flex-col justify-between p-2">
-        <div className="flex justify-between items-center text-[7.5px] text-amber-400 font-bold tracking-wider">
-          <span>POCKET BEATS</span>
-          <span>TCG</span>
-        </div>
-        <div className="monster-center-ball self-center my-auto z-10">
-          <MonsterRecordBall />
-        </div>
-        <div className="flex justify-between items-center text-[7px] text-white/40">
-          <span>VAULT CARD</span>
-          <span>DAY #{card.day}</span>
-        </div>
-      </div>
-    </div>
-  );
-}
+
 
 // --------------------------------------------------------------------------
 // DESIGN 0: ORIGINAL PRODUCTION LAYOUT (theme-original)
@@ -1713,10 +1852,328 @@ function CardMonster({ card, backSide }: { card: VaultCard; backSide?: React.Rea
 }
 
 // --------------------------------------------------------------------------
+// DESIGN 8: SPORTS CHROME STYLE (theme-chrome)
+// --------------------------------------------------------------------------
+function CardChrome({ card, backSide }: { card: VaultCard; backSide?: React.ReactNode }) {
+  const isFullBleed = card.rarity === 'legendary' || card.rarity === 'mythic';
+  const finalBack = backSide || <StandardVaultCardBack card={card} />;
+  
+  const heightClass = 
+    card.rarity === 'common' ? 'h-common' :
+    card.rarity === 'uncommon' ? 'h-uncommon' :
+    card.rarity === 'rare' ? 'h-rare' : 'h-legendary';
+
+  const traditionalFace = (
+    <>
+      <div className="chrome-rookie-badge">ROOKIE BEAT</div>
+      <div className="chrome-header flex justify-between items-center">
+        <span className="text-[7.5px] font-mono text-white/50 tracking-wider">ALL-STAR SERIES</span>
+        <span className="chrome-brand">CHROME™</span>
+      </div>
+      
+      <div className={`chrome-art-frame ${heightClass}`}>
+        <img src={card.coverUrl} alt={card.title} className="w-full h-full object-cover" />
+        <div className="chrome-refractor-wash" />
+      </div>
+
+      <div className="chrome-stats-panel">
+        <div className="chrome-stat-box">
+          <span className="chrome-stat-val">{card.tempo}</span>
+          <span className="chrome-stat-lbl">BPM</span>
+        </div>
+        <div className="chrome-stat-box">
+          <span className="chrome-stat-val">{(card.energy * 100).toFixed(0)}</span>
+          <span className="chrome-stat-lbl">ENG</span>
+        </div>
+        <div className="chrome-stat-box">
+          <span className="chrome-stat-val">{card.keySignature}</span>
+          <span className="chrome-stat-lbl">KEY</span>
+        </div>
+      </div>
+
+      <div className="chrome-signature-box">
+        <div className="chrome-signature-line truncate max-w-[130px]">{card.artist}</div>
+        <div className="text-[4.5px] font-mono opacity-40 uppercase tracking-widest mt-0.5">certified audio autograph</div>
+      </div>
+    </>
+  );
+
+  const borderlessFace = (
+    <div className="relative h-full w-full">
+      <img 
+        src={card.coverUrl} 
+        alt={card.title} 
+        className={`absolute inset-0 w-full h-full object-cover z-0 ${card.rarity === 'mythic' ? 'rotate-zoom-mythic' : 'rotate-zoom-art'}`} 
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent z-5" />
+      <div className="chrome-refractor-wash" />
+      
+      {card.rarity === 'mythic' && <div className="mythic-foil-wash" />}
+      <div className="chrome-rookie-badge">REFRACTOR</div>
+
+      <div className="absolute inset-x-2 top-2 z-10 flex justify-between items-center bg-black/60 p-1 rounded border border-white/10">
+        <span className="text-[7px] text-[#fbbf24] font-black uppercase tracking-widest">{card.rarity} CHROME</span>
+        <span className="chrome-brand">REFRACTOR™</span>
+      </div>
+
+      <div className="absolute inset-x-2 bottom-2 z-10 flex flex-col gap-1 bg-black/85 p-2 rounded border border-white/15">
+        <div className="chrome-stats-panel m-0 border-none bg-transparent p-0">
+          <div className="chrome-stat-box">
+            <span className="chrome-stat-val text-[#fbbf24]">{card.tempo}</span>
+            <span className="chrome-stat-lbl">BPM</span>
+          </div>
+          <div className="chrome-stat-box">
+            <span className="chrome-stat-val text-[#fbbf24]">{(card.energy * 100).toFixed(0)}</span>
+            <span className="chrome-stat-lbl">ENG</span>
+          </div>
+          <div className="chrome-stat-box">
+            <span className="chrome-stat-val text-[#fbbf24]">{card.keySignature}</span>
+            <span className="chrome-stat-lbl">KEY</span>
+          </div>
+        </div>
+        <div className="chrome-signature-box border-t border-white/10 mt-1 pt-1 text-center">
+          <div className="chrome-signature-line text-white truncate">{card.artist}</div>
+          <div className="text-[4px] font-mono opacity-55 uppercase tracking-widest">certified digital signature</div>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <Card3DWrapper rarity={card.rarity} themeClass="chrome" backSide={finalBack}>
+      {isFullBleed ? borderlessFace : traditionalFace}
+    </Card3DWrapper>
+  );
+}
+
+// --------------------------------------------------------------------------
+// DESIGN 9: CARVED RUNIC FANTASY (theme-fantasy)
+// --------------------------------------------------------------------------
+function CardFantasy({ card, backSide }: { card: VaultCard; backSide?: React.ReactNode }) {
+  const isFullBleed = card.rarity === 'legendary' || card.rarity === 'mythic';
+  const finalBack = backSide || <StandardVaultCardBack card={card} />;
+  
+  const heightClass = 
+    card.rarity === 'common' ? 'h-common' :
+    card.rarity === 'uncommon' ? 'h-uncommon' :
+    card.rarity === 'rare' ? 'h-rare' : 'h-legendary';
+
+  const atkValue = Math.round(card.energy * 7) + 1;
+  const defValue = Math.round(card.valence * 9) + 1;
+
+  const traditionalFace = (
+    <>
+      <div className="fantasy-header">
+        <span className="fantasy-title truncate max-w-[105px]">{card.title}</span>
+        <div className="fantasy-mana-gem">★</div>
+      </div>
+
+      <div className={`fantasy-art-oval ${heightClass}`}>
+        <img src={card.coverUrl} alt={card.title} className="w-full h-full object-cover" />
+      </div>
+
+      <div className="fantasy-textbox">
+        <div className="fantasy-desc">
+          <span className="font-bold text-[#b45309] block uppercase text-[5px] mb-0.5">{card.genre[0] || 'Spells'} Spell</span>
+          "{card.description}"
+        </div>
+      </div>
+
+      <div className="fantasy-bottom-combat">
+        <span className="fantasy-combat-icon fantasy-atk">⚔ {atkValue}</span>
+        <span className="fantasy-combat-icon fantasy-def">🛡 {defValue}</span>
+      </div>
+    </>
+  );
+
+  const borderlessFace = (
+    <div className="relative h-full w-full">
+      <img 
+        src={card.coverUrl} 
+        alt={card.title} 
+        className={`absolute inset-0 w-full h-full object-cover z-0 ${card.rarity === 'mythic' ? 'rotate-zoom-mythic' : 'rotate-zoom-art'}`} 
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-transparent z-5" />
+      
+      {card.rarity === 'mythic' && <div className="mythic-foil-wash" />}
+
+      <div className="absolute inset-x-2 top-2 z-10 flex justify-between items-center bg-black/70 p-1 rounded border border-white/10">
+        <span className="fantasy-title text-[#fbbf24] truncate max-w-[100px]">{card.title}</span>
+        <div className="fantasy-mana-gem bg-amber-500 shadow-md">★</div>
+      </div>
+
+      <div className="absolute inset-x-2 bottom-2 z-10 flex flex-col gap-1.5 bg-black/85 p-2 rounded border border-white/15">
+        <div className="fantasy-desc text-[5.5px] text-gray-300 text-center leading-tight">
+          <span className="font-bold text-[#f59e0b] block uppercase text-[4.5px] mb-0.5">Mythic Spell / {card.genre[0] || 'Harmony'}</span>
+          "{card.description}"
+        </div>
+        <div className="fantasy-bottom-combat border-t border-white/10 pt-1 mt-1">
+          <span className="fantasy-combat-icon fantasy-atk text-red-400">⚔ {atkValue + 2}</span>
+          <span className="fantasy-combat-icon fantasy-def text-emerald-400">🛡 {defValue + 2}</span>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <Card3DWrapper rarity={card.rarity} themeClass="fantasy" backSide={finalBack}>
+      {isFullBleed ? borderlessFace : traditionalFace}
+    </Card3DWrapper>
+  );
+}
+
+// --------------------------------------------------------------------------
+// DESIGN 10: CYBERPUNK TERMINAL (theme-cyberpunk)
+// --------------------------------------------------------------------------
+function CardCyberpunk({ card, backSide }: { card: VaultCard; backSide?: React.ReactNode }) {
+  const isFullBleed = card.rarity === 'legendary' || card.rarity === 'mythic';
+  const finalBack = backSide || <StandardVaultCardBack card={card} />;
+  
+  const heightClass = 
+    card.rarity === 'common' ? 'h-common' :
+    card.rarity === 'uncommon' ? 'h-uncommon' :
+    card.rarity === 'rare' ? 'h-rare' : 'h-legendary';
+
+  const traditionalFace = (
+    <>
+      <div className="cyber-header">
+        <span className="truncate max-w-[95px]">{card.title}</span>
+        <span>MU_{card.day}</span>
+      </div>
+
+      <div className={`cyber-art-box ${heightClass}`}>
+        <img src={card.coverUrl} alt={card.title} className="w-full h-full object-cover filter brightness-90 contrast-125" />
+        <div className="cyber-grid-overlay" />
+      </div>
+
+      <div className="cyber-details font-mono text-[5.5px] flex flex-col justify-center bg-black/40 p-1 border border-current/20 mt-1">
+        <div className="cyber-log-line text-white">SYS.SIG: {card.id.slice(0, 8).toUpperCase()}</div>
+        <div className="cyber-log-line">BPM.REF: {card.tempo} / KEY: {card.keySignature}</div>
+        <div className="cyber-log-line">VALENCE: {card.valence} / ENERGY: {card.energy}</div>
+      </div>
+
+      <div className="cyber-footer">
+        <span>SECTOR: {card.genre[0]?.slice(0, 8).toUpperCase() || 'NET'}</span>
+        <span>G0_ACT</span>
+      </div>
+    </>
+  );
+
+  const borderlessFace = (
+    <div className="relative h-full w-full">
+      <img 
+        src={card.coverUrl} 
+        alt={card.title} 
+        className={`absolute inset-0 w-full h-full object-cover z-0 ${card.rarity === 'mythic' ? 'rotate-zoom-mythic' : 'rotate-zoom-art'}`} 
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/35 to-transparent z-5" />
+      <div className="cyber-grid-overlay z-6" />
+      
+      {card.rarity === 'mythic' && <div className="mythic-foil-wash" />}
+
+      <div className="absolute inset-x-2 top-2 z-10 flex justify-between items-center bg-black/80 p-1.5 rounded border border-current">
+        <span className="font-bold tracking-wider truncate max-w-[100px]">{card.title}</span>
+        <span>SYS.LVL_9</span>
+      </div>
+
+      <div className="absolute inset-x-2 bottom-2 z-10 flex flex-col gap-1 bg-black/90 p-2 rounded border border-current">
+        <div className="cyber-details m-0 font-mono text-[5px]">
+          <div className="cyber-log-line text-white">ID: {card.id.toUpperCase()}</div>
+          <div className="cyber-log-line">BPM: {card.tempo} | KEY: {card.keySignature} | MOOD: {card.mood.toUpperCase()}</div>
+          <div className="cyber-log-line opacity-55">DESC: {card.description}</div>
+        </div>
+        <div className="cyber-footer border-t border-current/30 pt-1 mt-1">
+          <span>PORT: {card.genre[0]?.toUpperCase() || 'CORE'}</span>
+          <span>SYSTEM_ONLINE</span>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <Card3DWrapper rarity={card.rarity} themeClass="cyberpunk" backSide={finalBack}>
+      {isFullBleed ? borderlessFace : traditionalFace}
+    </Card3DWrapper>
+  );
+}
+
+// --------------------------------------------------------------------------
+// DESIGN 11: WEISS ANIME HOLO SIGNATURE (theme-anime)
+// --------------------------------------------------------------------------
+function CardAnime({ card, backSide }: { card: VaultCard; backSide?: React.ReactNode }) {
+  const isFullBleed = card.rarity === 'legendary' || card.rarity === 'mythic';
+  const finalBack = backSide || <StandardVaultCardBack card={card} />;
+  
+  const heightClass = 
+    card.rarity === 'common' ? 'h-common' :
+    card.rarity === 'uncommon' ? 'h-uncommon' :
+    card.rarity === 'rare' ? 'h-rare' : 'h-legendary';
+
+  const power = Math.round(card.tempo * 35) + 2000;
+
+  const traditionalFace = (
+    <>
+      <div className="anime-header">
+        <div className="anime-level-badge">1</div>
+        <span className="anime-title truncate max-w-[100px]">{card.title}</span>
+      </div>
+
+      <div className={`anime-art-frame ${heightClass}`}>
+        <img src={card.coverUrl} alt={card.title} className="w-full h-full object-cover" />
+        {card.rarity !== 'common' && (
+          <div className="anime-signature-overlay">{card.artist.split(' ')[0]}</div>
+        )}
+      </div>
+
+      <div className="anime-stats-strip mt-1.5">
+        <span className="text-pink-400">POW: {power}</span>
+        <span className="anime-soul-trigger">✦✦</span>
+      </div>
+    </>
+  );
+
+  const borderlessFace = (
+    <div className="relative h-full w-full">
+      <img 
+        src={card.coverUrl} 
+        alt={card.title} 
+        className={`absolute inset-0 w-full h-full object-cover z-0 ${card.rarity === 'mythic' ? 'rotate-zoom-mythic' : 'rotate-zoom-art'}`} 
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent z-5" />
+      
+      {card.rarity === 'mythic' && <div className="mythic-foil-wash" />}
+      
+      <div className="anime-signature-overlay">{card.artist}</div>
+
+      <div className="absolute inset-x-2 top-2 z-10 flex justify-between items-center bg-black/60 p-1 rounded border border-white/15">
+        <div className="anime-level-badge bg-yellow-400 text-black border-yellow-400 font-black">2</div>
+        <span className="anime-title text-yellow-300 truncate max-w-[100px]">{card.title}</span>
+      </div>
+
+      <div className="absolute inset-x-2 bottom-2 z-10 flex flex-col bg-black/80 p-2 rounded border border-white/15">
+        <p className="text-[5px] font-mono text-gray-300 mb-1 leading-tight opacity-75">
+          "{card.description}"
+        </p>
+        <div className="anime-stats-strip m-0 border-none bg-transparent p-0">
+          <span className="text-yellow-300">POWER: {power + 1500}</span>
+          <span className="anime-soul-trigger">✦✦✦</span>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <Card3DWrapper rarity={card.rarity} themeClass="anime" backSide={finalBack}>
+      {isFullBleed ? borderlessFace : traditionalFace}
+    </Card3DWrapper>
+  );
+}
+
+// --------------------------------------------------------------------------
 // MAIN SHOWCASE PAGE COMPONENT
 // --------------------------------------------------------------------------
 export default function CardDesignShowcase() {
-  const [activeTab, setActiveTab] = useState<'compare' | 'original' | 'glitch' | 'glass' | 'arcade' | 'mtg' | 'poker' | 'duelist' | 'monster' | 'mint'>('compare');
+  const [activeTab, setActiveTab] = useState<'compare' | 'original' | 'glitch' | 'glass' | 'arcade' | 'mtg' | 'poker' | 'duelist' | 'monster' | 'chrome' | 'fantasy' | 'cyberpunk' | 'anime' | 'mint'>('compare');
 
   // Mint Simulator States
   const [unlockedSkins, setUnlockedSkins] = useState<string[]>(['original', 'glitch', 'glass']);
@@ -1802,7 +2259,12 @@ export default function CardDesignShowcase() {
     if (backSkin === 'mtg') return <BackMtg card={card} />;
     if (backSkin === 'poker') return <BackPoker card={card} />;
     if (backSkin === 'duelist') return <BackDuelist card={card} />;
-    return <BackMonster card={card} />;
+    if (backSkin === 'monster') return <BackMonster card={card} />;
+    if (backSkin === 'chrome') return <BackChrome card={card} />;
+    if (backSkin === 'fantasy') return <BackFantasy card={card} />;
+    if (backSkin === 'cyberpunk') return <BackCyberpunk card={card} />;
+    if (backSkin === 'anime') return <BackAnime card={card} />;
+    return <BackOriginal card={card} />;
   };
 
   // Helper to render configured card preview
@@ -1815,7 +2277,12 @@ export default function CardDesignShowcase() {
     if (skin === 'mtg') return <CardMtg card={card} backSide={backSide} />;
     if (skin === 'poker') return <CardPoker card={card} backSide={backSide} />;
     if (skin === 'duelist') return <CardDuelist card={card} backSide={backSide} />;
-    return <CardMonster card={card} backSide={backSide} />;
+    if (skin === 'monster') return <CardMonster card={card} backSide={backSide} />;
+    if (skin === 'chrome') return <CardChrome card={card} backSide={backSide} />;
+    if (skin === 'fantasy') return <CardFantasy card={card} backSide={backSide} />;
+    if (skin === 'cyberpunk') return <CardCyberpunk card={card} backSide={backSide} />;
+    if (skin === 'anime') return <CardAnime card={card} backSide={backSide} />;
+    return <CardOriginal card={card} backSide={backSide} />;
   };
 
   return (
@@ -1901,6 +2368,30 @@ export default function CardDesignShowcase() {
               onClick={() => setActiveTab('monster')}
             >
               Pocket Beats
+            </button>
+            <button 
+              className={`btn-tab ${activeTab === 'chrome' ? 'active' : ''}`}
+              onClick={() => setActiveTab('chrome')}
+            >
+              Sports Chrome
+            </button>
+            <button 
+              className={`btn-tab ${activeTab === 'fantasy' ? 'active' : ''}`}
+              onClick={() => setActiveTab('fantasy')}
+            >
+              Runic Fantasy
+            </button>
+            <button 
+              className={`btn-tab ${activeTab === 'cyberpunk' ? 'active' : ''}`}
+              onClick={() => setActiveTab('cyberpunk')}
+            >
+              Cyberpunk Terminal
+            </button>
+            <button 
+              className={`btn-tab ${activeTab === 'anime' ? 'active' : ''}`}
+              onClick={() => setActiveTab('anime')}
+            >
+              Anime Signature
             </button>
             <button 
               className={`btn-tab ${activeTab === 'mint' ? 'active' : ''} border-[#ffd700] text-[#ffd700] hover:bg-[#ffd700]/10`}
@@ -2074,6 +2565,86 @@ export default function CardDesignShowcase() {
               ))}
             </div>
           </div>
+
+          {/* Row 8: Sports Chrome */}
+          <div className="comparison-section">
+            <h2 className="section-title text-[#a8b2c1] border-b border-[#a8b2c1]/20 pb-2">
+              Concept 8: Sports Chrome & Refractor
+            </h2>
+            <p className="text-[11px] text-white/50 mb-4 font-mono uppercase tracking-wide">
+              Inspired by sports trading cards. Features bold condensed typography, refractor foil sheens, printed signatures, and a dedicated Rookie Beat stamp on the cover art.
+            </p>
+            <div className="showcase-grid">
+              {mockCards.map(card => (
+                <div key={`chrome-${card.id}`} className="rarity-column">
+                  <div className="rarity-column-title text-center text-xs py-1 font-mono uppercase border border-white/20 bg-white/5">
+                    {card.rarity}
+                  </div>
+                  <CardChrome card={card} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Row 9: Runic Fantasy */}
+          <div className="comparison-section">
+            <h2 className="section-title text-[#d97706] border-b border-[#d97706]/20 pb-2">
+              Concept 9: Carved Runic Fantasy
+            </h2>
+            <p className="text-[11px] text-white/50 mb-4 font-mono uppercase tracking-wide">
+              Inspired by fantasy card games. Features heavy stone or wooden border styling, oval cover art frames, glowing blue mana gem costs, parchment textboxes, and ATK/DEF combat markers.
+            </p>
+            <div className="showcase-grid">
+              {mockCards.map(card => (
+                <div key={`fantasy-${card.id}`} className="rarity-column">
+                  <div className="rarity-column-title text-center text-xs py-1 font-mono uppercase border border-white/20 bg-white/5">
+                    {card.rarity}
+                  </div>
+                  <CardFantasy card={card} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Row 10: Cyberpunk Terminal */}
+          <div className="comparison-section">
+            <h2 className="section-title text-[#00f0ff] border-b border-[#00f0ff]/20 pb-2">
+              Concept 10: Cyberpunk Netrunner Terminal
+            </h2>
+            <p className="text-[11px] text-white/50 mb-4 font-mono uppercase tracking-wide">
+              Inspired by Netrunner. Features hacker terminal styling, cybernetic status telemetry grids, scanlines overlays, memory unit costs, and glowing faction headers.
+            </p>
+            <div className="showcase-grid">
+              {mockCards.map(card => (
+                <div key={`cyberpunk-${card.id}`} className="rarity-column">
+                  <div className="rarity-column-title text-center text-xs py-1 font-mono uppercase border border-white/20 bg-white/5">
+                    {card.rarity}
+                  </div>
+                  <CardCyberpunk card={card} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Row 11: Anime Signature */}
+          <div className="comparison-section">
+            <h2 className="section-title text-[#ff007f] border-b border-[#ff007f]/20 pb-2">
+              Concept 11: Weiss Anime Holo Signature
+            </h2>
+            <p className="text-[11px] text-white/50 mb-4 font-mono uppercase tracking-wide">
+              Inspired by anime card games. Features thin borders focusing on large character art, level/cost badge circles, power levels, and shiny hot-stamped gold foil signature overlays.
+            </p>
+            <div className="showcase-grid">
+              {mockCards.map(card => (
+                <div key={`anime-${card.id}`} className="rarity-column">
+                  <div className="rarity-column-title text-center text-xs py-1 font-mono uppercase border border-white/20 bg-white/5">
+                    {card.rarity}
+                  </div>
+                  <CardAnime card={card} />
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       ) : activeTab === 'mint' ? (
         /* Mint Configuration Simulator Tab */
@@ -2168,7 +2739,11 @@ export default function CardDesignShowcase() {
                     { id: 'mtg', name: 'Magic Layout', cost: 100 },
                     { id: 'poker', name: 'Classic Poker', cost: 50 },
                     { id: 'duelist', name: 'Duelist Frame', cost: 75 },
-                    { id: 'monster', name: 'Pocket Beats', cost: 75 }
+                    { id: 'monster', name: 'Pocket Beats', cost: 75 },
+                    { id: 'chrome', name: 'Sports Chrome', cost: 100 },
+                    { id: 'fantasy', name: 'Runic Fantasy', cost: 120 },
+                    { id: 'cyberpunk', name: 'Cyber Terminal', cost: 120 },
+                    { id: 'anime', name: 'Anime Signature', cost: 150 }
                   ].map(skin => {
                     const isUnlocked = unlockedSkins.includes(skin.id);
                     const isSelected = selectedSkin === skin.id;
@@ -2225,7 +2800,11 @@ export default function CardDesignShowcase() {
                     { id: 'mtg', name: 'Magic Layout', cost: 60 },
                     { id: 'poker', name: 'Classic Poker', cost: 40 },
                     { id: 'duelist', name: 'Duelist Frame', cost: 50 },
-                    { id: 'monster', name: 'Pocket Beats', cost: 50 }
+                    { id: 'monster', name: 'Pocket Beats', cost: 50 },
+                    { id: 'chrome', name: 'Sports Chrome', cost: 50 },
+                    { id: 'fantasy', name: 'Runic Fantasy', cost: 60 },
+                    { id: 'cyberpunk', name: 'Cyber Terminal', cost: 60 },
+                    { id: 'anime', name: 'Anime Signature', cost: 80 }
                   ].map(skin => {
                     const isUnlocked = unlockedBackSkins.includes(skin.id);
                     const isSelected = selectedBackSkin === skin.id;
@@ -2370,10 +2949,10 @@ export default function CardDesignShowcase() {
                         {item.card.title}
                       </span>
                       <span className="text-[7px] text-white/50 font-mono uppercase tracking-wider block">
-                        F: {item.skin === 'original' ? 'Original' : item.skin === 'glitch' ? 'Brutalist' : item.skin === 'glass' ? 'Glass' : item.skin === 'arcade' ? 'Arcade' : item.skin === 'mtg' ? 'MTG' : item.skin === 'poker' ? 'Poker' : item.skin === 'duelist' ? 'Duelist' : 'Beats'}
+                        F: {item.skin === 'original' ? 'Original' : item.skin === 'glitch' ? 'Brutalist' : item.skin === 'glass' ? 'Glass' : item.skin === 'arcade' ? 'Arcade' : item.skin === 'mtg' ? 'MTG' : item.skin === 'poker' ? 'Poker' : item.skin === 'duelist' ? 'Duelist' : item.skin === 'monster' ? 'Beats' : item.skin === 'chrome' ? 'Chrome' : item.skin === 'fantasy' ? 'Fantasy' : item.skin === 'cyberpunk' ? 'Cyber' : 'Anime'}
                       </span>
                       <span className="text-[7px] text-[#ffd700]/60 font-mono uppercase tracking-wider block mt-0.5">
-                        B: {item.backSkin === 'original' ? 'Original' : item.backSkin === 'glitch' ? 'Brutalist' : item.backSkin === 'glass' ? 'Glass' : item.backSkin === 'arcade' ? 'Arcade' : item.backSkin === 'mtg' ? 'MTG' : item.backSkin === 'poker' ? 'Poker' : item.backSkin === 'duelist' ? 'Duelist' : 'Beats'}
+                        B: {item.backSkin === 'original' ? 'Original' : item.backSkin === 'glitch' ? 'Brutalist' : item.backSkin === 'glass' ? 'Glass' : item.backSkin === 'arcade' ? 'Arcade' : item.backSkin === 'mtg' ? 'MTG' : item.backSkin === 'poker' ? 'Poker' : item.backSkin === 'duelist' ? 'Duelist' : item.backSkin === 'monster' ? 'Beats' : item.backSkin === 'chrome' ? 'Chrome' : item.backSkin === 'fantasy' ? 'Fantasy' : item.backSkin === 'cyberpunk' ? 'Cyber' : 'Anime'}
                       </span>
                     </div>
                   </div>
@@ -2393,6 +2972,10 @@ export default function CardDesignShowcase() {
             {activeTab === 'poker' && 'Concept 5: Classic Poker / Tarot Playing Card'}
             {activeTab === 'duelist' && 'Concept 6: Duelist Monster Card'}
             {activeTab === 'monster' && 'Concept 7: Pocket Beats Battle Card'}
+            {activeTab === 'chrome' && 'Concept 8: Sports Chrome & Refractor'}
+            {activeTab === 'fantasy' && 'Concept 9: Carved Runic Fantasy'}
+            {activeTab === 'cyberpunk' && 'Concept 10: Cyberpunk Netrunner Terminal'}
+            {activeTab === 'anime' && 'Concept 11: Weiss Anime Holo Signature'}
           </h2>
           <div className="showcase-grid mt-6">
             {mockCards.map(card => (
@@ -2408,6 +2991,10 @@ export default function CardDesignShowcase() {
                 {activeTab === 'poker' && <CardPoker card={card} />}
                 {activeTab === 'duelist' && <CardDuelist card={card} />}
                 {activeTab === 'monster' && <CardMonster card={card} />}
+                {activeTab === 'chrome' && <CardChrome card={card} />}
+                {activeTab === 'fantasy' && <CardFantasy card={card} />}
+                {activeTab === 'cyberpunk' && <CardCyberpunk card={card} />}
+                {activeTab === 'anime' && <CardAnime card={card} />}
               </div>
             ))}
           </div>

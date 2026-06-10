@@ -16,6 +16,9 @@ import type { Rarity } from '../utils/rarity';
 import { ROLL_RATES } from '../utils/rarity';
 import { getEchoPoolStats, flushEchoPool } from '../utils/echoSystem';
 import '../styles/AdminStyles.css';
+import { supabase } from '../services/supabaseClient';
+import { fetchAllCards, type VaultCard } from '../services/vaultService';
+import { Users, BarChart3, RefreshCw, Filter, Calendar, Zap, Flame } from 'lucide-react';
 
 // ===== RARITY DISPLAY HELPERS =====
 const RARITIES: Rarity[] = ['common', 'uncommon', 'rare', 'legendary', 'mythic'];
@@ -372,10 +375,26 @@ export default function AdminPage() {
   const [showImport, setShowImport] = useState(false);
   const [saveFlash, setSaveFlash] = useState(false);
   const [pushStatus, setPushStatus] = useState<'idle' | 'pushing' | 'success' | 'error'>('idle');
-  const [activeSection, setActiveSection] = useState<'rates' | 'modifiers' | 'economy' | 'echo' | 'simulation' | 'config'>('rates');
+  const [activeSection, setActiveSection] = useState<'rates' | 'modifiers' | 'economy' | 'echo' | 'simulation' | 'config' | 'analytics'>('rates');
+
+  // Analytics States
+  const [catalog, setCatalog] = useState<VaultCard[]>([]);
+  const [usersList, setUsersList] = useState<any[]>([]);
+  const [telemetryLogs, setTelemetryLogs] = useState<any[]>([]);
+  const [filteredEvents, setFilteredEvents] = useState<any[]>([]);
+  const [summaryStats, setSummaryStats] = useState({
+    totalUsers: 0,
+    totalCards: 0,
+    totalTokens: 0,
+    totalBurns: 0
+  });
+  const [loadingAnalytics, setLoadingAnalytics] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<string>('all');
+  const [selectedEventType, setSelectedEventType] = useState<string>('all');
 
   useEffect(() => {
     initAdminConfig().then(cfg => setConfig(cfg));
+    fetchAllCards().then(cards => setCatalog(cards));
   }, []);
 
   // Track streak for display
@@ -452,6 +471,104 @@ export default function AdminPage() {
     return config.rollRates?.[activePackTab] || ROLL_RATES[activePackTab] || [60, 25, 12, 3];
   }, [config, activePackTab]);
 
+  const loadAnalyticsData = useCallback(async () => {
+    setLoadingAnalytics(true);
+    try {
+      // 1. Fetch users list
+      const { data: users, error: usersErr } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (usersErr) throw usersErr;
+      setUsersList(users || []);
+
+      // 2. Fetch total collected cards count
+      const { count: cardCount, error: cardErr } = await supabase
+        .from('vault_collections')
+        .select('*', { count: 'exact', head: true });
+
+      // 3. Compute stats
+      const totalTokens = (users || []).reduce((sum, u) => sum + (u.tokens || 0), 0);
+      const totalBurns = (users || []).reduce((sum, u) => sum + (u.total_burns || 0), 0);
+
+      setSummaryStats({
+        totalUsers: users?.length || 0,
+        totalCards: cardCount || 0,
+        totalTokens,
+        totalBurns
+      });
+
+      // 4. Fetch telemetry events
+      const validTypes = [
+        'pack_purchase', 'game_end', 'card_burn', 'daily_claim', 
+        'targeted_pull', 'rarity_upgrade', 'duplicate_fusion', 
+        'nft_mint', 'bonus_code_redeem', 'invite_redeem'
+      ];
+      
+      const { data: events, error: eventsErr } = await supabase
+        .from('telemetry_events')
+        .select('*')
+        .in('event_type', validTypes)
+        .order('created_at', { ascending: false })
+        .limit(200);
+
+      if (eventsErr) throw eventsErr;
+      setTelemetryLogs(events || []);
+    } catch (err) {
+      console.error('Failed to load admin analytics:', err);
+    } finally {
+      setLoadingAnalytics(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeSection === 'analytics') {
+      loadAnalyticsData();
+    }
+  }, [activeSection, loadAnalyticsData]);
+
+  useEffect(() => {
+    let filtered = telemetryLogs;
+    if (selectedUser !== 'all') {
+      filtered = filtered.filter(e => e.user_id === selectedUser);
+    }
+    if (selectedEventType !== 'all') {
+      filtered = filtered.filter(e => e.event_type === selectedEventType);
+    }
+    setFilteredEvents(filtered);
+  }, [telemetryLogs, selectedUser, selectedEventType]);
+
+  const formatEventDetails = (type: string, payload: any) => {
+    if (!payload) return '—';
+    switch (type) {
+      case 'game_end': {
+        const songDay = payload.songId?.replace('card-', '') || 'unknown';
+        const matched = catalog.find(c => String(c.day) === songDay || c.id === payload.songId);
+        const songTitle = matched ? matched.title : `Day ${songDay}`;
+        return `Song: "${songTitle}" | Score: ${payload.score?.toLocaleString() || 0} (${payload.accuracy || 0}%) | Medal: ${payload.medal || 'None'}`;
+      }
+      case 'card_burn':
+        return `Burned ${String(payload.rarity).toUpperCase()} for +${payload.tokensEarned || 0} V⚡${payload.willEcho ? ' (Echoed)' : ''}`;
+      case 'pack_purchase':
+        return `Ripped ${String(payload.packType).toUpperCase()} pack (${payload.count || 1} cards)`;
+      case 'daily_claim':
+        return `Claimed Day ${payload.day} drop (${String(payload.rarity).toUpperCase()})`;
+      case 'targeted_pull':
+        return `Targeted Day ${payload.day} pull (Cost: ${payload.cost || 0} V⚡)`;
+      case 'rarity_upgrade':
+        return `Upgraded card to ${String(payload.to || 'rare').toUpperCase()}`;
+      case 'duplicate_fusion':
+        return `Fused duplicates into ${String(payload.to || 'rare').toUpperCase()}`;
+      case 'nft_mint':
+        return `Minted card #${payload.cardId?.replace('card-', '') || ''} | TX: ${payload.txHash ? `${payload.txHash.slice(0, 8)}...` : 'Success'}`;
+      case 'bonus_code_redeem':
+        return `Redeemed code for ${String(payload.rewardType).toUpperCase()}`;
+      default:
+        return JSON.stringify(payload);
+    }
+  };
+
   const rateSum = useMemo(() => activeRates.reduce((a: number, b: number) => a + b, 0), [activeRates]);
 
   if (!authenticated) {
@@ -512,6 +629,7 @@ export default function AdminPage() {
           { key: 'echo', label: '◎ ECHO SYSTEM', color: '#00d4aa' },
           { key: 'simulation', label: '🎲 SIMULATION', color: '#4d8fff' },
           { key: 'config', label: '⚙️ CONFIG', color: '#c44dff' },
+          { key: 'analytics', label: '📈 ANALYTICS & USERS', color: '#00ffff' },
         ] as const).map(tab => (
           <button
             key={tab.key}
@@ -1542,6 +1660,238 @@ export default function AdminPage() {
               <pre className="admin-textarea" style={{ minHeight: '300px', overflow: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                 {JSON.stringify(config, null, 2)}
               </pre>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== SECTION: ANALYTICS & USERS ===== */}
+      {activeSection === 'analytics' && (
+        <div className="admin-panel" style={{ '--panel-accent': '#00ffff' } as React.CSSProperties}>
+          <div className="admin-panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <BarChart3 size={20} style={{ color: '#00ffff' }} />
+              <h2>Analytics & Users</h2>
+            </div>
+            <button
+              onClick={loadAnalyticsData}
+              disabled={loadingAnalytics}
+              className="config-btn"
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+            >
+              <RefreshCw size={12} className={loadingAnalytics ? 'animate-spin' : ''} />
+              {loadingAnalytics ? 'Refreshing...' : 'Refresh'}
+            </button>
+          </div>
+
+          <div className="admin-panel-body">
+            {/* KPI Cards */}
+            <div className="admin-grid-3" style={{ gridTemplateColumns: 'repeat(4, 1fr)', marginBottom: '24px' }}>
+              <div className="stat-readout" style={{ '--stat-color': '#00ffff' } as React.CSSProperties}>
+                <div className="stat-value">{summaryStats.totalUsers}</div>
+                <div className="stat-label">Total Users</div>
+              </div>
+              <div className="stat-readout" style={{ '--stat-color': '#c44dff' } as React.CSSProperties}>
+                <div className="stat-value">{summaryStats.totalCards}</div>
+                <div className="stat-label">Cards Collected</div>
+              </div>
+              <div className="stat-readout" style={{ '--stat-color': '#ffb800' } as React.CSSProperties}>
+                <div className="stat-value">{summaryStats.totalTokens.toLocaleString()}</div>
+                <div className="stat-label">V⚡ in Circulation</div>
+              </div>
+              <div className="stat-readout" style={{ '--stat-color': '#ff3800' } as React.CSSProperties}>
+                <div className="stat-value">{summaryStats.totalBurns}</div>
+                <div className="stat-label">Total Burns</div>
+              </div>
+            </div>
+
+            {/* Split Grid: Users Left, Events Right */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '24px' }} className="admin-grid-layout">
+              {/* Users Directory */}
+              <div style={{ border: '1px solid rgba(255,255,255,0.06)', background: 'rgba(0,0,0,0.2)', padding: '16px' }}>
+                <div style={{
+                  fontFamily: '"Impact", "Arial Black", sans-serif',
+                  fontSize: '18px',
+                  textTransform: 'uppercase',
+                  marginBottom: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <Users size={16} />
+                  <span>Users Directory</span>
+                </div>
+
+                <div style={{ maxHeight: '500px', overflowY: 'auto' }}>
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>Wallet / Display Name</th>
+                        <th style={{ textAlign: 'right' }}>Tokens</th>
+                        <th style={{ textAlign: 'right' }}>Pulls</th>
+                        <th style={{ textAlign: 'right' }}>Streak</th>
+                        <th>Created At</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {usersList.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} style={{ textAlign: 'center', opacity: 0.4, padding: '20px' }}>No users registered</td>
+                        </tr>
+                      ) : (
+                        usersList.map((user) => {
+                          const display = user.display_name || (user.wallet_address ? `${user.wallet_address.slice(0, 6)}...${user.wallet_address.slice(-4)}` : `User_${user.id.slice(0, 4)}`);
+                          return (
+                            <tr key={user.id} style={{ background: selectedUser === user.id ? 'rgba(0,255,255,0.05)' : 'transparent' }}>
+                              <td style={{ fontWeight: 700 }} title={user.wallet_address || user.id}>{display}</td>
+                              <td style={{ textAlign: 'right', color: '#ffb800', fontWeight: 'bold' }}>{user.tokens || 0}</td>
+                              <td style={{ textAlign: 'right' }}>{user.total_pulls || 0}</td>
+                              <td style={{ textAlign: 'right', color: '#39ff14' }}>{user.streak_count || 0}d</td>
+                              <td style={{ opacity: 0.6 }}>{new Date(user.created_at).toLocaleDateString()}</td>
+                              <td style={{ textAlign: 'right' }}>
+                                <button
+                                  className="config-btn"
+                                  onClick={() => setSelectedUser(selectedUser === user.id ? 'all' : user.id)}
+                                  style={{
+                                    padding: '2px 8px',
+                                    fontSize: '8px',
+                                    border: selectedUser === user.id ? '1px solid #00ffff' : '1px solid rgba(255,255,255,0.15)',
+                                    color: selectedUser === user.id ? '#00ffff' : 'inherit'
+                                  }}
+                                >
+                                  {selectedUser === user.id ? 'Selected' : 'Filter'}
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Telemetry Events Feed */}
+              <div style={{ border: '1px solid rgba(255,255,255,0.06)', background: 'rgba(0,0,0,0.2)', padding: '16px' }}>
+                <div style={{
+                  fontFamily: '"Impact", "Arial Black", sans-serif',
+                  fontSize: '18px',
+                  textTransform: 'uppercase',
+                  marginBottom: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <BarChart3 size={16} />
+                    <span>Live Telemetry logs</span>
+                  </div>
+                  <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '9px', opacity: 0.4 }}>
+                    showing {filteredEvents.length} events
+                  </span>
+                </div>
+
+                {/* Dropdowns Filter Bar */}
+                <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                  {/* Event Type Filter */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: '120px' }}>
+                    <label style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', opacity: 0.5, textTransform: 'uppercase' }}>Event Type</label>
+                    <select
+                      className="admin-input"
+                      value={selectedEventType}
+                      onChange={(e) => setSelectedEventType(e.target.value)}
+                      style={{ width: '100%', textAlign: 'left', background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)' }}
+                    >
+                      <option value="all">All Events</option>
+                      <option value="game_end">game_end (Song Clears)</option>
+                      <option value="card_burn">card_burn (Burns)</option>
+                      <option value="pack_purchase">pack_purchase (Packs)</option>
+                      <option value="daily_claim">daily_claim (Daily Drop)</option>
+                      <option value="targeted_pull">targeted_pull (Targeted)</option>
+                      <option value="rarity_upgrade">rarity_upgrade (Upgrades)</option>
+                      <option value="duplicate_fusion">duplicate_fusion (Fusions)</option>
+                      <option value="nft_mint">nft_mint (Mints)</option>
+                      <option value="bonus_code_redeem">bonus_code_redeem (Promo Codes)</option>
+                    </select>
+                  </div>
+
+                  {/* User Filter Dropdown */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1.2, minWidth: '160px' }}>
+                    <label style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', opacity: 0.5, textTransform: 'uppercase' }}>Filter User</label>
+                    <select
+                      className="admin-input"
+                      value={selectedUser}
+                      onChange={(e) => setSelectedUser(e.target.value)}
+                      style={{ width: '100%', textAlign: 'left', background: '#0a0a0a', border: '1px solid rgba(255,255,255,0.1)' }}
+                    >
+                      <option value="all">All Users</option>
+                      {usersList.map((user) => {
+                        const label = user.display_name || (user.wallet_address ? `${user.wallet_address.slice(0, 10)}...${user.wallet_address.slice(-6)}` : `User_${user.id.slice(0, 8)}`);
+                        return (
+                          <option key={user.id} value={user.id}>
+                            {label}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Events Feed Table */}
+                <div style={{ maxHeight: '438px', overflowY: 'auto' }}>
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>Time</th>
+                        <th>User</th>
+                        <th>Event</th>
+                        <th>Details</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredEvents.length === 0 ? (
+                        <tr>
+                          <td colSpan={4} style={{ textAlign: 'center', opacity: 0.4, padding: '20px' }}>No events match filters</td>
+                        </tr>
+                      ) : (
+                        filteredEvents.map((evt) => {
+                          const matchedUser = usersList.find(u => u.id === evt.user_id);
+                          const userLabel = matchedUser 
+                            ? (matchedUser.display_name || (matchedUser.wallet_address ? `${matchedUser.wallet_address.slice(0, 5)}...${matchedUser.wallet_address.slice(-3)}` : `User_${evt.user_id.slice(0, 3)}`))
+                            : 'Guest';
+                          
+                          // Style colors for events
+                          const badgeColor = 
+                            evt.event_type === 'game_end' ? '#00ffff' :
+                            evt.event_type === 'card_burn' ? '#ff7700' :
+                            evt.event_type === 'pack_purchase' ? '#ff007f' :
+                            evt.event_type === 'nft_mint' ? '#3b82f6' :
+                            evt.event_type === 'daily_claim' ? '#39ff14' : '#ffd700';
+
+                          return (
+                            <tr key={evt.id}>
+                              <td style={{ whiteSpace: 'nowrap', opacity: 0.6 }}>{new Date(evt.created_at).toLocaleTimeString()}</td>
+                              <td style={{ fontWeight: 'bold' }}>{userLabel}</td>
+                              <td>
+                                <span style={{
+                                  fontSize: '8px', padding: '1px 4px', border: `1px solid ${badgeColor}`, color: badgeColor,
+                                  fontWeight: 'bold', textTransform: 'uppercase', background: `${badgeColor}10`
+                                }}>
+                                  {evt.event_type}
+                                </span>
+                              </td>
+                              <td style={{ opacity: 0.85, wordBreak: 'break-all', fontSize: '10px' }}>
+                                {formatEventDetails(evt.event_type, evt.payload)}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
         </div>

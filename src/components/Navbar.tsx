@@ -7,6 +7,7 @@ import { useVaultStore } from '../store/useVaultStore';
 import { useDisplayMode } from '../store/useDisplayMode';
 import GuideModal from './GuideModal';
 import { haptics } from '../utils/haptics';
+import FloatingTicker from './FloatingTicker';
 
 const links = [
   { to: '/arcade', label: 'Arcade', icon: Monitor },
@@ -692,6 +693,7 @@ export default function Navbar() {
       <div className="h-[130px] md:hidden" />
 
       <GuideModal isOpen={guideOpen} onClose={() => setGuideOpen(false)} />
+      <FloatingTicker />
     </>
   );
 }
