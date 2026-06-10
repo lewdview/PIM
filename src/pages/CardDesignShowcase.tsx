@@ -151,6 +151,36 @@ function PimLogo({ color, cardId }: { color: string; cardId: string }) {
   );
 }
 
+function DayNumberBadge({ day, color }: { day: number; color: string }) {
+  const formattedDay = `#${String(day).padStart(3, '0')}`;
+  return (
+    <svg width="68" height="24" viewBox="0 0 100 34" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
+      <path 
+        d="M 12 2 L 88 2 L 98 12 L 98 22 L 88 32 L 12 32 L 2 22 L 2 12 Z" 
+        fill={`${color}08`} 
+        stroke={`${color}33`} 
+        strokeWidth="1.5" 
+      />
+      <line x1="10" y1="17" x2="16" y2="17" stroke={`${color}55`} strokeWidth="1.5" />
+      <line x1="84" y1="17" x2="90" y2="17" stroke={`${color}55`} strokeWidth="1.5" />
+      <text
+        x="50"
+        y="18.5"
+        textAnchor="middle"
+        dominantBaseline="middle"
+        fill={color}
+        fontFamily="'JetBrains Mono', 'Courier New', monospace"
+        fontSize="12"
+        fontWeight="bold"
+        letterSpacing="1"
+        style={{ filter: `drop-shadow(0 0 3px ${color}50)` }}
+      >
+        {formattedDay}
+      </text>
+    </svg>
+  );
+}
+
 function StandardVaultCardBack({ card }: { card: VaultCard }) {
   const rcColor = RARITY_COLORS[card.rarity];
   const pulseRarity = ['rare', 'legendary', 'mythic'].includes(card.rarity);
@@ -227,18 +257,8 @@ function StandardVaultCardBack({ card }: { card: VaultCard }) {
               </span>
             </div>
 
-            {/* Day pill */}
-            <div 
-              className="px-5 py-1.5 border rounded-full"
-              style={{
-                borderColor: `${rcColor}22`,
-                background: `${rcColor}06`
-              }}
-            >
-              <span className="font-bold text-[9px] tracking-widest" style={{ color: rcColor }}>
-                #{String(card.day).padStart(3, '0')}
-              </span>
-            </div>
+            {/* Day pill replaced by custom SVG DayNumberBadge */}
+            <DayNumberBadge day={card.day} color={rcColor} />
 
           </div>
 
@@ -593,8 +613,10 @@ function CardOriginal({ card, backSide }: { card: VaultCard; backSide?: React.Re
   // Common original front
   const commonFront = (
     <div className="flex flex-col h-full bg-[#0c0a07] border border-white/10 select-none overflow-hidden rounded-xl">
-      <div className="px-3 py-1.5 border-b border-white/10 flex justify-between items-center bg-white/5">
-        <span className="font-mono text-[8px] font-bold text-white/60">#{String(card.day).padStart(3, '0')}</span>
+      <div className="px-3 py-1 border-b border-white/10 flex justify-between items-center bg-white/5">
+        <div className="scale-85 origin-left">
+          <DayNumberBadge day={card.day} color={activeColor} />
+        </div>
         <span className="font-mono text-[8px] font-extrabold uppercase text-white/40">★ COMMON</span>
       </div>
       <div className="relative h-[44%] overflow-hidden border-b border-white/10">
@@ -624,8 +646,9 @@ function CardOriginal({ card, backSide }: { card: VaultCard; backSide?: React.Re
       <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-transparent pointer-events-none" />
       <div className="relative h-[58%] overflow-hidden border-b border-[#4ade80]/20">
         <img src={card.coverUrl} alt={card.title} className="w-full h-full object-cover" />
-        <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/80 border border-[#4ade80]/40 rounded font-mono text-[8px] font-bold text-white">
-          #{String(card.day).padStart(3, '0')}
+        {/* Day badge replaced by custom SVG */}
+        <div className="absolute top-2 left-2 scale-85 origin-top-left">
+          <DayNumberBadge day={card.day} color={activeColor} />
         </div>
       </div>
       <div className="p-2.5 flex flex-col gap-2 flex-grow justify-between">
@@ -655,8 +678,8 @@ function CardOriginal({ card, backSide }: { card: VaultCard; backSide?: React.Re
     <div className="relative h-full w-full select-none overflow-hidden rounded-xl border border-[#3b82f6]/40">
       <img src={card.coverUrl} alt={card.title} className="absolute inset-0 w-full h-full object-cover" />
       <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/40" />
-      <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/60 border border-[#3b82f6]/40 rounded font-mono text-[8px] font-bold text-white">
-        #{String(card.day).padStart(3, '0')}
+      <div className="absolute top-2 left-2 scale-85 origin-top-left">
+        <DayNumberBadge day={card.day} color={activeColor} />
       </div>
       <div className="absolute top-2 right-2 px-2 py-0.5 bg-[#3b82f6]/20 border border-[#3b82f6]/60 rounded font-mono text-[7px] font-bold text-[#3b82f6] uppercase tracking-wider">
         ★ RARE
@@ -682,8 +705,8 @@ function CardOriginal({ card, backSide }: { card: VaultCard; backSide?: React.Re
       <div className="absolute top-2 left-2 px-2 py-0.5 bg-[#b44dff]/20 border border-[#b44dff]/60 rounded font-mono text-[7px] font-bold text-[#b44dff] uppercase tracking-widest">
         ★ LEGENDARY
       </div>
-      <div className="absolute top-2 right-2 px-2 py-0.5 bg-black/60 border border-white/10 rounded font-mono text-[8px] font-bold text-white">
-        #{String(card.day).padStart(3, '0')}
+      <div className="absolute top-2 right-2 scale-85 origin-top-right">
+        <DayNumberBadge day={card.day} color={activeColor} />
       </div>
       
       <div className="absolute bottom-0 left-0 right-0 p-3 flex flex-col gap-1.5">
@@ -705,8 +728,8 @@ function CardOriginal({ card, backSide }: { card: VaultCard; backSide?: React.Re
       <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-transparent to-black/60" />
       <div className="absolute inset-0 pointer-events-none bg-gradient-to-r from-[#ffd700]/10 via-[#ff007f]/15 to-[#00f0ff]/10 bg-[length:300%_100%] animate-[foil-sweep_3s_linear_infinite]" />
       
-      <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/80 border border-[#ffd700]/60 rounded font-mono text-[8px] font-bold text-white">
-        #{String(card.day).padStart(3, '0')}
+      <div className="absolute top-2 left-2 scale-85 origin-top-left">
+        <DayNumberBadge day={card.day} color={activeColor} />
       </div>
       <div className="absolute top-2 right-2 px-2 py-0.5 bg-[#ffd700]/20 border border-[#ffd700] rounded font-mono text-[7px] font-black text-[#ffd700] uppercase tracking-widest shadow-[0_0_8px_rgba(255,215,0,0.4)]">
         ✦ MYTHIC

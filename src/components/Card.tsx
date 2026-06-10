@@ -25,6 +25,67 @@ interface CardProps {
   proof?: ProofType;
 }
 
+function PimLogo({ color, cardId }: { color: string; cardId: string }) {
+  return (
+    <svg width="68" height="68" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id={`pimGrad-${cardId}`} x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="100%" stopColor={color} />
+        </linearGradient>
+      </defs>
+      <text
+        x="60"
+        y="68"
+        textAnchor="middle"
+        dominantBaseline="middle"
+        fill={`url(#pimGrad-${cardId})`}
+        fontFamily="'Impact', 'Arial Black', 'Helvetica Neue', sans-serif"
+        fontSize="85"
+        fontWeight="900"
+        letterSpacing="-4"
+        stroke="#000000"
+        strokeWidth="7"
+        strokeLinejoin="miter"
+        paintOrder="stroke fill"
+        style={{ filter: `drop-shadow(0 0 8px ${color}80)` }}
+      >
+        PIM
+      </text>
+    </svg>
+  );
+}
+
+function DayNumberBadge({ day, color }: { day: number; color: string }) {
+  const formattedDay = `#${String(day).padStart(3, '0')}`;
+  return (
+    <svg width="68" height="24" viewBox="0 0 100 34" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
+      <path 
+        d="M 12 2 L 88 2 L 98 12 L 98 22 L 88 32 L 12 32 L 2 22 L 2 12 Z" 
+        fill={`${color}08`} 
+        stroke={`${color}33`} 
+        strokeWidth="1.5" 
+      />
+      <line x1="10" y1="17" x2="16" y2="17" stroke={`${color}55`} strokeWidth="1.5" />
+      <line x1="84" y1="17" x2="90" y2="17" stroke={`${color}55`} strokeWidth="1.5" />
+      <text
+        x="50"
+        y="18.5"
+        textAnchor="middle"
+        dominantBaseline="middle"
+        fill={color}
+        fontFamily="'JetBrains Mono', 'Courier New', monospace"
+        fontSize="12"
+        fontWeight="bold"
+        letterSpacing="1"
+        style={{ filter: `drop-shadow(0 0 3px ${color}50)` }}
+      >
+        {formattedDay}
+      </text>
+    </svg>
+  );
+}
+
 // Shared stat box primitive
 function StatBox({ label, value, color }: { label: string; value: string | number; color: string }) {
   return (
@@ -535,19 +596,20 @@ export default function Card({
           {/* Centre emblem */}
           <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '14px' }}>
 
-            {/* V mark */}
+            {/* PimLogo in circular frame */}
             <div style={{ position: 'relative' }}>
               <div style={{
-                width: '68px', height: '68px', borderRadius: '14px',
+                width: '68px', height: '68px', borderRadius: '50%',
                 background: `linear-gradient(145deg, ${rc.color}18, transparent)`,
                 border: `2px solid ${rc.color}30`,
                 boxShadow: `0 0 30px ${rc.color}10, inset 0 0 16px ${rc.color}05`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
+                overflow: 'hidden',
               }}>
-                <span style={{ fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '32px', fontWeight: 900, color: rc.color, textShadow: `0 0 18px ${rc.color}60` }}>V</span>
+                <PimLogo color={rc.color} cardId={card.id} />
               </div>
               {['rare','legendary','mythic'].includes(card.rarity) && (
-                <div style={{ position: 'absolute', inset: '-10px', borderRadius: '24px', background: `radial-gradient(circle, ${rc.color}12, transparent 70%)`, animation: 'pulse-glow 3s ease-in-out infinite' }} />
+                <div style={{ position: 'absolute', inset: '-10px', borderRadius: '50%', background: `radial-gradient(circle, ${rc.color}12, transparent 70%)`, animation: 'pulse-glow 2.5s ease-in-out infinite' }} />
               )}
             </div>
 
@@ -562,12 +624,8 @@ export default function Card({
               </span>
             </div>
 
-            {/* Day pill */}
-            <div style={{ padding: '4px 14px', border: `1px solid ${rc.color}22`, borderRadius: '20px', background: `${rc.color}06` }}>
-              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '10px', fontWeight: 700, letterSpacing: '0.15em', color: rc.color }}>
-                #{String(day).padStart(3, '0')}
-              </span>
-            </div>
+            {/* Day badge replaced by custom SVG */}
+            <DayNumberBadge day={day} color={rc.color} />
 
             {/* Mythic CTA */}
             {card.rarity === 'mythic' && interactive && (
@@ -633,8 +691,10 @@ export default function Card({
   const commonFront = (
     <motion.div style={{ ...sharedFrontStyle, background: '#0c0a07', border: `1.5px solid ${rc.color}50` }}>
       {/* Top strip */}
-      <div style={{ padding: '6px 10px', borderBottom: `1px solid ${rc.color}20`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: `${rc.color}08`, flexShrink: 0 }}>
-        <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '9px', fontWeight: 700, color: rc.color }}>#{String(day).padStart(3, '0')}</span>
+      <div style={{ padding: '4px 10px', borderBottom: `1px solid ${rc.color}20`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: `${rc.color}08`, flexShrink: 0 }}>
+        <div style={{ transform: 'scale(0.85)', transformOrigin: 'left center' }}>
+          <DayNumberBadge day={day} color={rc.color} />
+        </div>
         <RarityBadge rarity={card.rarity} size="sm" />
       </div>
 
@@ -676,8 +736,8 @@ export default function Card({
       <div style={{ position: 'relative', height: '62%', overflow: 'hidden', borderBottom: `1.5px solid ${rc.color}40` }}>
         {renderArt('w-full h-full')}
         {/* Day badge */}
-        <div style={{ position: 'absolute', top: '8px', left: '8px', padding: '3px 8px', background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(6px)', border: `1px solid ${rc.color}40`, borderRadius: '3px' }}>
-          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '9px', fontWeight: 700, color: 'rgba(255,255,255,0.85)' }}>#{String(day).padStart(3, '0')}</span>
+        <div style={{ position: 'absolute', top: '8px', left: '8px', transform: 'scale(0.85)', transformOrigin: 'top left' }}>
+          <DayNumberBadge day={day} color={rc.color} />
         </div>
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, transparent 55%, rgba(0,0,0,0.55) 100%)' }} />
       </div>
@@ -717,8 +777,8 @@ export default function Card({
       <div style={{ position: 'absolute', inset: 0, background: `${rc.color}08`, pointerEvents: 'none' }} />
 
       {/* Day */}
-      <div style={{ position: 'absolute', top: '10px', left: '10px', padding: '4px 10px', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(10px)', border: `1px solid ${rc.color}40`, borderRadius: '4px' }}>
-        <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '10px', fontWeight: 700, color: 'rgba(255,255,255,0.9)' }}>#{String(day).padStart(3, '0')}</span>
+      <div style={{ position: 'absolute', top: '10px', left: '10px', transform: 'scale(0.9)', transformOrigin: 'top left' }}>
+        <DayNumberBadge day={day} color={rc.color} />
       </div>
       <div style={{ position: 'absolute', top: '10px', right: '10px' }}><RarityBadge rarity={card.rarity} size="sm" /></div>
 
@@ -757,8 +817,8 @@ export default function Card({
         <div style={{ padding: '3px 9px', background: `${rc.color}30`, border: `1px solid ${rc.color}70`, borderRadius: '3px' }}>
           <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', fontWeight: 700, color: rc.color, letterSpacing: '0.1em', textTransform: 'uppercase' }}>★ LEGENDARY</span>
         </div>
-        <div style={{ padding: '3px 8px', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '3px' }}>
-          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '9px', fontWeight: 700, color: 'rgba(255,255,255,0.85)' }}>#{String(day).padStart(3, '0')}</span>
+        <div style={{ transform: 'scale(0.85)', transformOrigin: 'right center' }}>
+          <DayNumberBadge day={day} color={rc.color} />
         </div>
       </div>
 
@@ -798,8 +858,8 @@ export default function Card({
 
       {/* Top */}
       <div style={{ position: 'absolute', top: '10px', left: '10px', right: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ padding: '3px 8px', background: 'rgba(0,0,0,0.85)', border: `1px solid ${rc.color}90`, borderRadius: '3px', boxShadow: `0 0 10px ${rc.color}40` }}>
-          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '9px', fontWeight: 700, color: rc.color }}>#{String(day).padStart(3, '0')}</span>
+        <div style={{ transform: 'scale(0.85)', transformOrigin: 'left center' }}>
+          <DayNumberBadge day={day} color={rc.color} />
         </div>
         <div style={{ padding: '3px 9px', background: `${rc.color}22`, border: `1px solid ${rc.color}`, borderRadius: '3px', boxShadow: `0 0 14px ${rc.color}55` }}>
           <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', fontWeight: 900, letterSpacing: '0.15em', color: rc.color, textShadow: `0 0 8px ${rc.color}`, textTransform: 'uppercase' }}>✦ MYTHIC</span>
