@@ -1,12 +1,22 @@
 import { CoinbaseWalletSDK } from '@coinbase/wallet-sdk';
 
-const sdk = new CoinbaseWalletSDK({
-  appName: 'Th3vault',
-  appLogoUrl: 'https://th3scr1b3.art/icon.png',
-});
+let provider: any = null;
 
-// v4 uses makeWeb3Provider() — getProvider() was removed in SDK v4
-const provider = sdk.makeWeb3Provider();
+function getProvider() {
+  if (!provider) {
+    try {
+      const sdk = new CoinbaseWalletSDK({
+        appName: 'Th3vault',
+        appLogoUrl: 'https://th3scr1b3.art/icon.png',
+      });
+      provider = sdk.makeWeb3Provider();
+    } catch (err) {
+      console.error('Failed to initialize Coinbase Wallet SDK:', err);
+      throw new Error('Coinbase Wallet SDK is not available or failed to initialize.');
+    }
+  }
+  return provider;
+}
 
 // The address that receives the crypto payments on Base
 export const VAULT_COLLECTOR_ADDRESS = import.meta.env.VITE_VAULT_COLLECTOR_ADDRESS || '0x985606faaad78887df96002a3555ccf2c8640a08';
@@ -15,9 +25,10 @@ export const VAULT_COLLECTOR_ADDRESS = import.meta.env.VITE_VAULT_COLLECTOR_ADDR
  * Handle crypto payment via Coinbase Wallet SDK on Base Mainnet.
  */
 export async function payWithCrypto(amountUsd: number) {
+  const prov = getProvider();
   // 1. Ensure wallet is on Base Mainnet (Chain ID 8453 / 0x2105)
   try {
-    await provider.request({
+    await prov.request({
       method: 'wallet_switchEthereumChain',
       params: [{ chainId: '0x2105' }],
     });
@@ -25,7 +36,7 @@ export async function payWithCrypto(amountUsd: number) {
     // This error code indicates that the chain has not been added to the wallet.
     if (switchError.code === 4902) {
       try {
-        await provider.request({
+        await prov.request({
           method: 'wallet_addEthereumChain',
           params: [
             {
@@ -52,7 +63,7 @@ export async function payWithCrypto(amountUsd: number) {
   }
 
   // 2. Ensure we have the account
-  const accounts = await provider.request({ method: 'eth_requestAccounts' }) as string[];
+  const accounts = await prov.request({ method: 'eth_requestAccounts' }) as string[];
   const from = accounts[0];
   if (!from) throw new Error('No account found');
 
@@ -69,7 +80,7 @@ export async function payWithCrypto(amountUsd: number) {
   console.log(`[Coinbase] Initiating USDC payment for $${amountUsd} to ${recipient}`);
 
   // 4. Send Transaction
-  const txHash = await provider.request({
+  const txHash = await prov.request({
     method: 'eth_sendTransaction',
     params: [{
       from,

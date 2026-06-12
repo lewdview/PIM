@@ -3175,6 +3175,8 @@ export default function Game() {
       setLoadMsg("BUFFERING AUDIO...");
       phaseRef.current = "buffering";
       setPhase("buffering");
+      
+      let loadFailed = false;
       audio = new Audio();
       audio.crossOrigin = "anonymous";
       audio.preload = "auto";
@@ -3198,14 +3200,55 @@ export default function Game() {
           return;
         }
         audio!.addEventListener("canplay", () => resolve(), { once: true });
-        audio!.addEventListener("error", () => resolve(), { once: true });
-        setTimeout(resolve, 15000);
+        audio!.addEventListener("error", () => {
+          loadFailed = true;
+          resolve();
+        }, { once: true });
+        setTimeout(() => {
+          if (audio!.readyState < 3) {
+            loadFailed = true;
+          }
+          resolve();
+        }, 12000);
       });
+
+      if (loadFailed && !cancelled) {
+        console.warn("[GamePlay Init] CORS audio load failed. Retrying without CORS (Web Audio filters will be bypassed)...");
+        audio = new Audio();
+        audio.preload = "auto";
+        audioRef.current = audio;
+        audio.addEventListener("progress", () => {
+          if (!audio?.duration) return;
+          const buf = audio.buffered;
+          if (buf.length)
+            setBufferPct(
+              Math.min(
+                100,
+                Math.round((buf.end(buf.length - 1) / audio.duration) * 100),
+              ),
+            );
+        });
+        audio.src = song.audioUrl;
+        audio.load();
+        await new Promise<void>((resolve) => {
+          if (audio!.readyState >= 3) {
+            resolve();
+            return;
+          }
+          audio!.addEventListener("canplay", () => resolve(), { once: true });
+          audio!.addEventListener("error", () => resolve(), { once: true });
+          setTimeout(resolve, 12000);
+        });
+      }
+
       if (cancelled) return;
 
       // ── Web Audio frequency-band routing (Init during fresh user gesture) ──
       // Lane 0 (A) → bass  · Lane 1 (S) → mids  · Lane 2 (D) → treble
       try {
+        if (!audio.crossOrigin) {
+          throw new Error("No-CORS audio fallback");
+        }
         const actx = new AudioContext({ latencyHint: 'interactive' });
         audioCtxRef.current = actx;
         await actx.resume();
@@ -3294,7 +3337,7 @@ export default function Game() {
         }
       }
 
-      rafRef.current = requestAnimationFrame(draw);
+      rafRef.current = requestAnimationFrame(() => drawRef.current?.());
 
       await audio.play();
 
@@ -3338,7 +3381,7 @@ export default function Game() {
       laneGainsRef.current = [];
       laneSilenced.current = [false, false, false];
     };
-  }, [songId, draw, setLocation]);
+  }, [songId, setLocation]);
 
   // ── render ──
   const gs = displayGs;
@@ -4212,7 +4255,7 @@ export default function Game() {
                   </div>
                 </div>
               )}
-              {phase === "buffering" && bufferPct > 0 && (
+              {phase === "buffering" && (
                 <div className="w-48">
                   <div
                     style={{ height: 4, borderRadius: 999, background: "rgba(255,255,255,0.08)", overflow: "hidden" }}
