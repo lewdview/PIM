@@ -19,6 +19,7 @@ import { getCurrentDay } from '../utils/dayCalc';
 import { type PackCategory, type PackSize, RARITY_CONFIG, PACK_CONFIGS, type Rarity } from '../utils/rarity';
 import { useLocation } from 'wouter';
 import PaymentSelectModal from '../components/PaymentSelectModal';
+import { payWithCrypto } from '../services/coinbaseService';
 
 // ===== BRUTALIST TICKER =====
 const TICKER_TEXT = 'PIM : TH3V4ULT — 365 DAYS OF DARK AND LIGHT — GEN 0 ARCHIVE — COLLECT. SELL. EARN. — DAILY DROPS — V⚡ TOKEN ECONOMY — RARITY PULLS — MYTHIC POSSIBLE — CLAIM NOW — ';
@@ -353,7 +354,6 @@ export default function HomePage() {
 
     if (method === 'crypto') {
       try {
-        const { payWithCrypto } = await import('../services/coinbaseService');
         useLoadingToast.getState().show('Waiting for wallet confirmation…');
         
         const txHash = await payWithCrypto(priceValue);

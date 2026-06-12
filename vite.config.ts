@@ -30,10 +30,16 @@ export default defineConfig({
       strict: false,
       allow: ["..", "/Volumes/extremeUno/th3scr1b3-365-warp/365-releases"],
     },
+    headers: {
+      "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
+    },
   },
   preview: {
     port,
     host: "0.0.0.0",
     allowedHosts: true,
+    headers: {
+      "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
+    },
   },
 });

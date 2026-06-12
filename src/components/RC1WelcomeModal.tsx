@@ -12,6 +12,7 @@ const RC2_SEEN_KEY = 'th3v4ult_rc2_seen';
 export default function RC1WelcomeModal() {
   const [visible, setVisible] = useState(false);
   const { user, status, setShowAuthModal } = useAuthStore();
+  const isAnonymous = user?.is_anonymous || !user?.email;
 
   useEffect(() => {
     const seen = localStorage.getItem(RC2_SEEN_KEY);
@@ -279,32 +280,56 @@ export default function RC1WelcomeModal() {
 
           {/* CTA */}
           <div style={{ padding: '24px 28px 28px' }}>
-            {!user ? (
-              <button
-                onClick={handleConnect}
-                disabled={status === 'loading'}
-                style={{
-                  width: '100%',
-                  padding: '14px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '10px',
-                  background: '#ff3800',
-                  border: '3px solid #000',
-                  fontFamily: '"Impact", "Arial Black", sans-serif',
-                  fontSize: '20px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.02em',
-                  color: '#fff',
-                  cursor: 'pointer',
-                  boxShadow: '4px 4px 0 #000, 0 0 30px rgba(255,56,0,0.3)',
-                  animation: 'cta-pulse 2s ease-in-out infinite',
-                }}
-              >
-                <Wallet size={20} />
-                {status === 'loading' ? 'CONNECTING...' : 'CONNECT WALLET TO START'}
-              </button>
+            {!user || isAnonymous ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <button
+                  onClick={handleConnect}
+                  disabled={status === 'loading'}
+                  style={{
+                    width: '100%',
+                    padding: '14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '10px',
+                    background: '#ff3800',
+                    border: '3px solid #000',
+                    fontFamily: '"Impact", "Arial Black", sans-serif',
+                    fontSize: '20px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.02em',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    boxShadow: '4px 4px 0 #000, 0 0 30px rgba(255,56,0,0.3)',
+                    animation: 'cta-pulse 2s ease-in-out infinite',
+                  }}
+                >
+                  <Wallet size={20} />
+                  {status === 'loading' ? 'CONNECTING...' : 'CONNECT WALLET TO START'}
+                </button>
+                {isAnonymous && (
+                  <button
+                    onClick={handleDismiss}
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: 'transparent',
+                      border: '1.5px solid rgba(255,255,255,0.2)',
+                      fontFamily: '"JetBrains Mono", monospace',
+                      fontSize: '11px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.1em',
+                      color: 'rgba(255,255,255,0.6)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    ENTER AS GUEST
+                  </button>
+                )}
+              </div>
             ) : (
               <button
                 onClick={handleDismiss}

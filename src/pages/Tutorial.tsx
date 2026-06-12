@@ -14,6 +14,7 @@ import type { OwnedCard } from "../services/vaultService";
 import { Volume2, Award, Zap, Shield, HelpCircle, Layers, Lock } from "lucide-react";
 import { supabase } from "../services/supabaseClient";
 import { useVaultStore } from "../store/useVaultStore";
+import { useAuthStore } from "../store/useAuthStore";
 
 type TutorialPhase = "intro" | "gameplay" | "results" | "pack" | "discovery" | "aspiration" | "complete";
 
@@ -481,6 +482,7 @@ export default function Tutorial() {
                     localStorage.setItem("pim_tutorial_completed", "true");
                     audioManager.playSfx("tap_nav", 0.15);
                     setLocation("/vault");
+                    useAuthStore.getState().setShowAuthModal(true);
                   }}
                   className="w-full py-3.5 bg-gradient-to-r from-yellow-500 to-amber-500 text-black font-mono text-xs font-bold tracking-[0.25em] uppercase hover:shadow-lg transition-all rounded-sm border-none cursor-pointer"
                 >
