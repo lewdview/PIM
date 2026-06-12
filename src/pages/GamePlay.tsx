@@ -1309,21 +1309,54 @@ export default function Game() {
       const g = parseInt(diffColor.slice(3, 5), 16);
       const b = parseInt(diffColor.slice(5, 7), 16);
 
-      // Key body — semi-transparent ivory tinted with difficulty hue
+      // Key body — semi-transparent frosted glass tinted with difficulty hue
       const kGrad = ctx.createLinearGradient(bx, bTop, bx, bTop + btnH);
       if (pressed) {
-        kGrad.addColorStop(0, "rgba(210,203,191,0.52)");
-        kGrad.addColorStop(0.66, "rgba(210,203,191,0.52)");
-        kGrad.addColorStop(1, `rgba(${r},${g},${b},0.48)`);
+        kGrad.addColorStop(0, "rgba(255, 255, 255, 0.42)");
+        kGrad.addColorStop(0.3, "rgba(220, 215, 205, 0.35)");
+        kGrad.addColorStop(0.7, `rgba(${r},${g},${b},0.32)`);
+        kGrad.addColorStop(1, `rgba(${r},${g},${b},0.55)`);
       } else {
-        kGrad.addColorStop(0, "rgba(255,252,245,0.32)");
-        kGrad.addColorStop(0.66, "rgba(252,248,238,0.24)");
-        kGrad.addColorStop(1, `rgba(${r},${g},${b},0.18)`);
+        kGrad.addColorStop(0, "rgba(255, 255, 255, 0.22)");
+        kGrad.addColorStop(0.3, "rgba(240, 235, 225, 0.14)");
+        kGrad.addColorStop(0.7, `rgba(${r},${g},${b},0.12)`);
+        kGrad.addColorStop(1, `rgba(${r},${g},${b},0.28)`);
       }
       ctx.fillStyle = kGrad;
       ctx.beginPath();
       ctx.roundRect(bx, bTop, bw, btnH, 10);
       ctx.fill();
+
+      // Frosted glass inner bevel highlights
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(bx, bTop, bw, btnH, 10);
+      ctx.clip();
+      
+      // Draw top edge white highlight
+      ctx.strokeStyle = pressed ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.45)";
+      ctx.lineWidth = 2.0;
+      ctx.beginPath();
+      ctx.moveTo(bx, bTop + btnH);
+      ctx.lineTo(bx, bTop);
+      ctx.lineTo(bx + bw, bTop);
+      ctx.stroke();
+
+      // Diagonal glass glare line across the button
+      const btnGlareX = bx + (bw * 0.45);
+      const glareGrad = ctx.createLinearGradient(btnGlareX, bTop, btnGlareX + 25, bTop + btnH);
+      glareGrad.addColorStop(0, "rgba(255, 255, 255, 0)");
+      glareGrad.addColorStop(0.5, pressed ? "rgba(255, 255, 255, 0.16)" : "rgba(255, 255, 255, 0.09)");
+      glareGrad.addColorStop(1, "rgba(255, 255, 255, 0)");
+      ctx.fillStyle = glareGrad;
+      ctx.beginPath();
+      ctx.moveTo(bx, bTop);
+      ctx.lineTo(bx + bw, bTop);
+      ctx.lineTo(bx + bw, bTop + btnH);
+      ctx.lineTo(bx, bTop + btnH);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
 
       // Subtle border — tinted with difficulty hue
       ctx.strokeStyle = pressed
@@ -1689,6 +1722,26 @@ export default function Game() {
             ctx.quadraticCurveTo(ax + aw * 0.25, midY, hx + hw * 0.25, top);
             ctx.fill();
 
+            // ── Scrolling Active Trail Gridlines ──
+            ctx.save();
+            ctx.clip();
+            const step = 28;
+            const offset = (Date.now() / 6) % step;
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.14)";
+            ctx.lineWidth = 2.0;
+            for (let y = top - offset; y < noteY + noteH; y += step) {
+              if (y < top) continue;
+              const p_y = (y - top) / (noteY - top || 1);
+              const trailP_y = lerp(headP, Math.min(prog, 1), p_y);
+              const trailLane_y = lerp(endLane, ns.visualLane, p_y);
+              const { x: wx, w: ww } = laneAt(trailLane_y, trailP_y, W);
+              ctx.beginPath();
+              ctx.moveTo(wx + ww * 0.25, y);
+              ctx.lineTo(wx + ww * 0.75, y);
+              ctx.stroke();
+            }
+            ctx.restore();
+
             // Parse note color to RGB for proper alpha compositing
             const lcR = parseInt(noteColor.slice(1, 3), 16);
             const lcG = parseInt(noteColor.slice(3, 5), 16);
@@ -1711,28 +1764,34 @@ export default function Game() {
                 const amp = ww * 0.25 * (0.5 + 0.5 * Math.sin(t * 10 + i * 2.1));
                 const flicker = 0.4 + 0.6 * Math.abs(Math.sin(t * 18 + i * 3.7));
 
-                // Main lightning arc
+                // Main lightning arc - jagged segments
                 ctx.strokeStyle = `rgba(${lcR},${lcG},${lcB},${flicker})`;
                 ctx.lineWidth = 2.5;
                 ctx.beginPath();
-                ctx.moveTo(centerX - amp, wy - 6);
-                ctx.bezierCurveTo(
-                  centerX + amp * 1.2, wy - 2,
-                  centerX - amp * 0.8, wy + 4,
-                  centerX + amp * 0.6, wy + 10
-                );
+                ctx.moveTo(centerX, wy - 6);
+                
+                const segments = 4;
+                for (let j = 1; j <= segments; j++) {
+                  const segY = lerp(wy - 6, wy + 10, j / segments);
+                  const seed = t * 38 + i * 17 + j * 9;
+                  const displacement = (Math.sin(seed) * 0.5 + Math.cos(seed * 1.6) * 0.5) * amp;
+                  const segX = centerX + displacement;
+                  ctx.lineTo(segX, segY);
+                }
                 ctx.stroke();
 
                 // Bright white core
-                ctx.strokeStyle = `rgba(255,255,255,${flicker * 0.5})`;
-                ctx.lineWidth = 1;
+                ctx.strokeStyle = `rgba(255,255,255,${flicker * 0.6})`;
+                ctx.lineWidth = 1.0;
                 ctx.beginPath();
-                ctx.moveTo(centerX - amp * 0.6, wy - 4);
-                ctx.bezierCurveTo(
-                  centerX + amp * 0.8, wy,
-                  centerX - amp * 0.5, wy + 3,
-                  centerX + amp * 0.4, wy + 8
-                );
+                ctx.moveTo(centerX, wy - 6);
+                for (let j = 1; j <= segments; j++) {
+                  const segY = lerp(wy - 6, wy + 10, j / segments);
+                  const seed = t * 38 + i * 17 + j * 9;
+                  const displacement = (Math.sin(seed) * 0.5 + Math.cos(seed * 1.6) * 0.5) * amp * 0.6;
+                  const segX = centerX + displacement;
+                  ctx.lineTo(segX, segY);
+                }
                 ctx.stroke();
               }
               ctx.restore();
@@ -1812,6 +1871,26 @@ export default function Game() {
           ctx.lineTo(tx + tw * 0.25, noteY + noteH / 2);
           ctx.quadraticCurveTo(tx + tw * 0.25, midY, hx + hw * 0.25, headY);
           ctx.fill();
+
+          // ── Scrolling Inactive Trail Gridlines ──
+          ctx.save();
+          ctx.clip();
+          const inactiveStep = 32;
+          const inactiveOffset = (Date.now() / 14) % inactiveStep;
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.07)";
+          ctx.lineWidth = 1.5;
+          for (let y = headY - inactiveOffset; y < noteY + noteH; y += inactiveStep) {
+            if (y < headY) continue;
+            const p_y = (y - headY) / (noteY - headY || 1);
+            const trailP_y = lerp(headP, Math.min(prog, 1), p_y);
+            const trailLane_y = lerp(endLane, startLane, p_y);
+            const { x: wx, w: ww } = laneAt(trailLane_y, trailP_y, W);
+            ctx.beginPath();
+            ctx.moveTo(wx + ww * 0.25, y);
+            ctx.lineTo(wx + ww * 0.75, y);
+            ctx.stroke();
+          }
+          ctx.restore();
 
           // Colored center ribbon (curved)
           ctx.fillStyle = noteColor;
@@ -4528,6 +4607,26 @@ function drawKey(
   }
   ctx.fill();
 
+  // ── 2b. Sweeping Glass/Gold Sheen ──
+  ctx.save();
+  ctx.clip();
+  const now = Date.now();
+  const sheenProgress = ((now % 2200) / 2200 + prog * 0.35) % 1.0;
+  const sheenX = -noteW + (noteW * 2) * sheenProgress;
+  const sheenGrad = ctx.createLinearGradient(sheenX, -noteH / 2, sheenX + noteW * 0.38, noteH / 2);
+  if (isHold) {
+    sheenGrad.addColorStop(0, "rgba(255, 255, 255, 0)");
+    sheenGrad.addColorStop(0.5, "rgba(255, 253, 230, 0.45)");
+    sheenGrad.addColorStop(1, "rgba(255, 255, 255, 0)");
+  } else {
+    sheenGrad.addColorStop(0, "rgba(255, 255, 255, 0)");
+    sheenGrad.addColorStop(0.5, "rgba(255, 255, 255, 0.38)");
+    sheenGrad.addColorStop(1, "rgba(255, 255, 255, 0)");
+  }
+  ctx.fillStyle = sheenGrad;
+  ctx.fill();
+  ctx.restore();
+
   // ── 3. Subtle Edge Border or White Double-Stroke Border ──
   ctx.shadowColor = "transparent";
   ctx.shadowBlur = 0;
@@ -4562,10 +4661,11 @@ function drawKey(
     ctx.fill();
     
     // Add outer white glowing ring for the core dot
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
-    ctx.lineWidth = 1.5;
+    const pulseR = 8 + 3 * Math.sin(Date.now() / 120);
+    ctx.strokeStyle = `rgba(255, 255, 255, ${0.85 - (pulseR - 8) / 6})`;
+    ctx.lineWidth = 1.8;
     ctx.beginPath();
-    ctx.arc(0, 0, 8, 0, Math.PI * 2);
+    ctx.arc(0, 0, pulseR, 0, Math.PI * 2);
     ctx.stroke();
   } else {
     // ── 4. COLORED CENTER STRIPE ──
@@ -4592,6 +4692,44 @@ function drawKey(
       ctx.roundRect(-noteW / 2 + 2, -stripeH / 2, noteW - 4, stripeH, stripeH * 0.35);
     }
     ctx.fill();
+
+    // ── 4b. Scrolling Neon Arrows inside Swipe Stripes ──
+    if (swipeDirection) {
+      ctx.save();
+      ctx.beginPath();
+      const sw = noteW / 2 - 4;
+      const sh = stripeH / 2;
+      const sr = 4;
+      ctx.moveTo(-sw + sr, -sh);
+      ctx.arcTo(sw * 0.2, -sh, sw, 0, sr);
+      ctx.arcTo(sw, 0, sw * 0.2, sh, sr);
+      ctx.arcTo(sw * 0.2, sh, -sw, sh, sr);
+      ctx.arcTo(-sw, sh, -sw * 0.35, 0, sr);
+      ctx.arcTo(-sw * 0.35, 0, -sw, -sh, sr);
+      ctx.arcTo(-sw, -sh, -sw + sr, -sh, sr);
+      ctx.closePath();
+      ctx.clip();
+
+      const arrowSpacing = 24;
+      const animTime = Date.now() / 280;
+      const offset = (animTime * 16) % arrowSpacing;
+
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.95)";
+      ctx.lineWidth = 2.0;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.shadowColor = "#FFFFFF";
+      ctx.shadowBlur = 6;
+
+      for (let xOff = -sw - 20 + offset; xOff < sw + 20; xOff += arrowSpacing) {
+        ctx.beginPath();
+        ctx.moveTo(xOff - 3, -3);
+        ctx.lineTo(xOff + 1, 0);
+        ctx.lineTo(xOff - 3, 3);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
 
     // ── 5. Bright inner core of stripe ──
     const coreH = stripeH * 0.48;
