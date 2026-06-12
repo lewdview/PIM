@@ -243,7 +243,7 @@ export function rollDailyClaimRarity(isFeaturedDay: boolean): Rarity {
 // Display ordering for the carousel (vault_token NOT in carousel — it has its own Token Shop section)
 export const PACK_CAROUSEL_ORDER: PackCategory[] = [
   'free', 'taste', 'light', 'dark', 'miss_out', 'month',
-  'special_picks', 'prophecy', 'alpha',
+  'special_picks', 'prophecy', 'alpha', 'vault_token',
 ];
 
 // Legacy compat — kept so existing code that imports PackType doesn't break

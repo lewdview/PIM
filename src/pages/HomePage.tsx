@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Layers, Flame, Star, Calendar, Zap, Gift } from 'lucide-react';
 import HeroCard from '../components/HeroCard';
@@ -11,10 +11,12 @@ import { useAuthStore } from '../store/useAuthStore';
 import {
   getCardByDay, hasClaimedToday, claimDailyCard,
   purchasePack, getCompletedMonths, getMonthName,
+  targetedPull, upgradeRarity, fuseDuplicates,
+  type OwnedCard,
 } from '../services/vaultService';
 import { audioManager } from '../game/audio';
 import { getCurrentDay } from '../utils/dayCalc';
-import { type PackCategory, type PackSize, RARITY_CONFIG, PACK_CONFIGS } from '../utils/rarity';
+import { type PackCategory, type PackSize, RARITY_CONFIG, PACK_CONFIGS, type Rarity } from '../utils/rarity';
 import { useLocation } from 'wouter';
 import PaymentSelectModal from '../components/PaymentSelectModal';
 
@@ -115,6 +117,103 @@ export default function HomePage() {
   const today = getCurrentDay();
   const completedMonths = getCompletedMonths();
 
+  // Token sinks states
+  const [targetDay, setTargetDay] = useState('');
+  const [targetLoading, setTargetLoading] = useState(false);
+  const [upgradeCardId, setUpgradeCardId] = useState('');
+  const [upgradeLoading, setUpgradeLoading] = useState(false);
+  const [fusionLoading, setFusionLoading] = useState(false);
+
+  // Upgradeable cards (not legendary or mythic)
+  const upgradeableCards = useMemo(() =>
+    collection.filter(c => c && c.card && !['legendary', 'mythic'].includes(c.card.rarity)),
+    [collection]
+  );
+
+  // Find fusable groups (3+ identical card_id + rarity)
+  const fusableGroups = useMemo(() => {
+    const groups: Record<string, OwnedCard[]> = {};
+    for (const c of collection) {
+      if (!c || !c.card) continue;
+      const key = `${c.cardId}-${c.card.rarity}`;
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(c);
+    }
+    return Object.entries(groups).filter(([, cards]) => cards.length >= 3);
+  }, [collection]);
+
+  // Callbacks for sinks
+  const handleTargetedPull = useCallback(async (dayNum: number) => {
+    if (!dayNum || dayNum < 1 || dayNum > 365 || tokenBalance < 500) return;
+    setTargetLoading(true);
+    useLoadingToast.getState().show('Targeted pull…');
+    try {
+      const card = await targetedPull(dayNum);
+      if (card) {
+        addToCollection([card]);
+        audioManager.playSfx('open_chest', 0.9);
+        startReveal([card], {
+          category: 'targeted', label: `Targeted Pull: Day ${dayNum}`, icon: '🎯',
+          accent: '#ff9900', gradient: 'linear-gradient(145deg, #1a1000, #0a0800)',
+          price: '500 V⚡', cardCount: 1, revealType: 'cinematic',
+        });
+        setLocation('/vault/reveal');
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      useLoadingToast.getState().hide();
+      await loadVaultData();
+      setTargetLoading(false);
+      setTargetDay('');
+    }
+  }, [tokenBalance, addToCollection, startReveal, setLocation, loadVaultData]);
+
+  const handleUpgrade = useCallback(async (cardOwnedId: string) => {
+    if (!cardOwnedId || tokenBalance < 150) return;
+    setUpgradeLoading(true);
+    useLoadingToast.getState().show('Upgrading rarity…');
+    try {
+      const result = await upgradeRarity(cardOwnedId);
+      if (result.success) {
+        audioManager.playSfx('upgrade', 0.9);
+        alert(`Success! Card upgraded to ${result.newRarity?.toUpperCase()}`);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      useLoadingToast.getState().hide();
+      await loadVaultData();
+      setUpgradeLoading(false);
+      setUpgradeCardId('');
+    }
+  }, [tokenBalance, loadVaultData]);
+
+  const handleFusion = useCallback(async (cardsToFuse: OwnedCard[]) => {
+    if (cardsToFuse.length !== 3) return;
+    setFusionLoading(true);
+    useLoadingToast.getState().show('Fusing cards…');
+    try {
+      const card = await fuseDuplicates(cardsToFuse.map(c => c.id));
+      if (card) {
+        addToCollection([card]);
+        audioManager.playSfx('fusion', 0.9);
+        startReveal([card], {
+          category: 'fusion', label: `Duplicate Fusion`, icon: '🔥',
+          accent: '#ff3800', gradient: 'linear-gradient(145deg, #1a0500, #0a0200)',
+          price: 'FREE', cardCount: 1, revealType: 'cinematic',
+        });
+        setLocation('/vault/reveal');
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      useLoadingToast.getState().hide();
+      await loadVaultData();
+      setFusionLoading(false);
+    }
+  }, [addToCollection, startReveal, setLocation, loadVaultData]);
+
   // Load daily card + sync token balance
   useEffect(() => {
     async function load() {
@@ -209,6 +308,7 @@ export default function HomePage() {
       useLoadingToast.getState().hide();
       if (cards.length > 0) {
         addToCollection(cards);
+        await loadVaultData();
         const revealType = 'cinematic' as const;
         audioManager.playSfx('open_chest', 0.9);
         startReveal(cards, cfg && tier ? {
@@ -230,7 +330,7 @@ export default function HomePage() {
     } finally {
       setIsPurchasing(false);
     }
-  }, [startReveal, setLocation, addToCollection]);
+  }, [startReveal, setLocation, addToCollection, loadVaultData]);
 
   const handlePaymentSelect = useCallback(async (method: 'crypto' | 'stripe') => {
     if (!checkoutInfo) return;
@@ -252,6 +352,7 @@ export default function HomePage() {
           const cards = await purchasePack(category, size, undefined, txHash);
           if (cards.length > 0) {
             addToCollection(cards);
+            await loadVaultData();
             const revealType = 'cinematic' as const;
             startReveal(cards, cfg && tier ? {
               category, size, label: cfg.label, icon: cfg.icon,
@@ -274,7 +375,7 @@ export default function HomePage() {
         window.location.href = `/?session_id=${mockSessionId}&category=${category}&size=${size}`;
       }, 1200);
     }
-  }, [checkoutInfo, startReveal, setLocation, addToCollection]);
+  }, [checkoutInfo, startReveal, setLocation, addToCollection, loadVaultData]);
 
   const uniqueCards = new Set(collection.map(c => c.cardId)).size;
   const totalScore = collection.reduce((sum, c) => sum + (RARITY_CONFIG[c.card.rarity]?.points || 1), 0);
@@ -389,6 +490,177 @@ export default function HomePage() {
           </h2>
         </div>
         <PackShop onPurchase={handlePurchasePack} />
+      </section>
+
+      {/* ===== V⚡ TOKEN ECONOMY CONSOLE ===== */}
+      <section className="py-8 px-4 md:px-8">
+        <SectionLabel label="Economy Deck" accent="var(--color-neon-gold)" />
+        <div 
+          className="relative overflow-hidden"
+          style={{
+            padding: '24px',
+            border: '3px solid #000',
+            background: 'linear-gradient(135deg, #120e00, #0a0600)',
+            boxShadow: '6px 6px 0 #000, 0 0 40px rgba(255,153,0,0.05)',
+          }}
+        >
+          <div className="scanlines absolute inset-0 opacity-10" />
+          <div className="relative z-10">
+            <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
+              <div>
+                <h2 style={{
+                  fontFamily: '"Impact", "Arial Black", sans-serif',
+                  fontSize: '28px', textTransform: 'uppercase',
+                  letterSpacing: '-0.02em', margin: 0,
+                  color: 'var(--color-neon-gold)',
+                  textShadow: '0 0 10px rgba(255,153,0,0.3)'
+                }}>
+                  V⚡ Token Sinks Console
+                </h2>
+                <p className="text-[9px] font-mono uppercase tracking-[0.2em] opacity-45 mt-1">
+                  Targeted pulls · Instant upgrades · Duplicate fusion
+                </p>
+              </div>
+              <div className="sticker-gun-tag sticker-slits" style={{ background: '#ff9900', color: '#000', padding: '6px 12px', transform: 'rotate(1deg)', '--slit-color': 'rgba(0,0,0,0.15)' } as any}>
+                <span className="text-[10px] font-black tracking-tighter uppercase flex items-center gap-1">
+                  <Zap size={11} /> {tokenBalance} V⚡ AVAILABLE
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* TARGETED PULL */}
+              <div className="border border-black p-4 flex flex-col justify-between" style={{ background: 'rgba(255,255,255,0.02)', border: '2px solid rgba(255,153,0,0.15)' }}>
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xl">🎯</span>
+                    <h3 className="font-bold text-sm uppercase tracking-wider text-white">Targeted Pull</h3>
+                  </div>
+                  <p className="text-[10px] font-mono opacity-50 mb-4 leading-normal">
+                    Choose a specific day to pull a card from that day's pool.
+                  </p>
+                  
+                  <div className="space-y-3 mb-4">
+                    <label className="block text-[9px] font-mono uppercase opacity-40">Target Day (1-365)</label>
+                    <input 
+                      type="number" 
+                      min="1" 
+                      max="365" 
+                      value={targetDay}
+                      onChange={(e) => setTargetDay(e.target.value)}
+                      placeholder="e.g. 45" 
+                      className="w-full bg-black border-2 border-zinc-800 text-white font-mono text-xs p-2 focus:border-amber-500 outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-[9px] font-mono uppercase tracking-widest opacity-40 mb-2">Cost: 500 V⚡</div>
+                  <button 
+                    disabled={targetLoading || !targetDay || parseInt(targetDay) < 1 || parseInt(targetDay) > 365 || tokenBalance < 500}
+                    onClick={() => handleTargetedPull(parseInt(targetDay))}
+                    className="w-full py-2 bg-[#ff9900] hover:bg-[#e08800] text-black font-black uppercase text-xs tracking-wider transition-all disabled:opacity-30 disabled:hover:bg-[#ff9900]"
+                    style={{ border: '2px solid #000', boxShadow: '2px 2px 0 #000' }}
+                  >
+                    {targetLoading ? 'PULLING...' : 'EXECUTE PULL'}
+                  </button>
+                </div>
+              </div>
+
+              {/* QUICK RARITY UPGRADE */}
+              <div className="border border-black p-4 flex flex-col justify-between" style={{ background: 'rgba(255,255,255,0.02)', border: '2px solid rgba(255,153,0,0.15)' }}>
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xl">⚡</span>
+                    <h3 className="font-bold text-sm uppercase tracking-wider text-white">Rarity Upgrade</h3>
+                  </div>
+                  <p className="text-[10px] font-mono opacity-50 mb-4 leading-normal">
+                    Instantly upgrade any card you own below Legendary tier by +1 tier.
+                  </p>
+
+                  <div className="space-y-3 mb-4">
+                    <label className="block text-[9px] font-mono uppercase opacity-40">Select Card</label>
+                    <select 
+                      value={upgradeCardId}
+                      onChange={(e) => setUpgradeCardId(e.target.value)}
+                      className="w-full bg-black border-2 border-zinc-800 text-white font-mono text-xs p-2 focus:border-amber-500 outline-none"
+                      style={{ colorScheme: 'dark' }}
+                    >
+                      <option value="">-- Choose Card --</option>
+                      {upgradeableCards.map(c => (
+                        <option key={c.id} value={c.id}>
+                          Day {c.card.day}: {c.card.title} ({c.card.rarity.toUpperCase()})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-[9px] font-mono uppercase tracking-widest opacity-40 mb-2">Cost: 150 V⚡</div>
+                  <button 
+                    disabled={upgradeLoading || !upgradeCardId || tokenBalance < 150}
+                    onClick={() => handleUpgrade(upgradeCardId)}
+                    className="w-full py-2 bg-[#ff9900] hover:bg-[#e08800] text-black font-black uppercase text-xs tracking-wider transition-all disabled:opacity-30 disabled:hover:bg-[#ff9900]"
+                    style={{ border: '2px solid #000', boxShadow: '2px 2px 0 #000' }}
+                  >
+                    {upgradeLoading ? 'UPGRADING...' : 'UPGRADE CARD'}
+                  </button>
+                </div>
+              </div>
+
+              {/* DUPLICATE FUSION */}
+              <div className="border border-black p-4 flex flex-col justify-between" style={{ background: 'rgba(255,255,255,0.02)', border: '2px solid rgba(255,153,0,0.15)' }}>
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xl">🔥</span>
+                    <h3 className="font-bold text-sm uppercase tracking-wider text-white">Duplicate Fusion</h3>
+                  </div>
+                  <p className="text-[10px] font-mono opacity-50 mb-4 leading-normal">
+                    Combine 3 identical cards (same day + rarity) into 1 upgraded card.
+                  </p>
+
+                  <div className="space-y-2 max-h-[120px] overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin' }}>
+                    {fusableGroups.length === 0 ? (
+                      <div className="text-[10px] font-mono opacity-30 text-center py-4">
+                        No fusable triplets found.
+                      </div>
+                    ) : (
+                      fusableGroups.map(([key, cards]) => {
+                        const first = cards[0];
+                        const rc = RARITY_CONFIG[first.card.rarity as Rarity];
+                        return (
+                          <div key={key} className="flex items-center justify-between p-2 border border-zinc-800 bg-black/40">
+                            <div className="text-[9px] font-mono text-zinc-300">
+                              Day {first.card.day}: {first.card.title} 
+                              <span className="ml-1 px-1 font-bold" style={{ color: rc?.color || '#fff' }}>
+                                {first.card.rarity.toUpperCase()}
+                              </span>
+                            </div>
+                            <button
+                              disabled={fusionLoading}
+                              onClick={() => handleFusion(cards.slice(0, 3))}
+                              className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white font-mono text-[8px] font-bold uppercase transition-all"
+                            >
+                              FUSE
+                            </button>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-[9px] font-mono uppercase tracking-widest opacity-40 mb-2">Cost: FREE</div>
+                  <div className="text-[9px] font-mono opacity-40 text-center py-2">
+                    Requires 3 identical cards
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       <div className="h-px mx-4 md:mx-8" style={{ background: 'rgba(255,255,255,0.06)' }} />

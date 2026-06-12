@@ -127,7 +127,6 @@ function PackBag({ category, isActive, onRip, isRipping, isFreeClaimed }: {
       getPackRipCount(category).then(setRippedCount);
     });
   }, [category]);
-
   const limits = useVaultStore((s) => s.dailyLimits);
   let isOverLimit = false;
   let limitLabel = '';
@@ -150,7 +149,12 @@ function PackBag({ category, isActive, onRip, isRipping, isFreeClaimed }: {
     }
   }
 
-  const disabledAction = isRipping || !isActive || isFreeDisabled || isOverLimit;
+  const tokenBalance = useVaultStore((s) => s.tokenBalance);
+  const tokenPackCost = adminCfg.tokenPackCost ?? 275;
+  const isVaultToken = category === 'vault_token';
+  const hasEnoughTokens = !isVaultToken || (tokenBalance >= tokenPackCost);
+
+  const disabledAction = isRipping || !isActive || isFreeDisabled || isOverLimit || (isVaultToken && !hasEnoughTokens);
 
   // Countdown timer for free pack cooldown
   const [countdown, setCountdown] = useState('');
@@ -168,6 +172,7 @@ function PackBag({ category, isActive, onRip, isRipping, isFreeClaimed }: {
   let dynamicLabelOverride = '';
   if (isFreeDisabled) dynamicLabelOverride = countdown || 'CLAIMED TODAY';
   else if (isOverLimit) dynamicLabelOverride = limitLabel;
+  else if (isVaultToken && !hasEnoughTokens) dynamicLabelOverride = `NEED ${tokenPackCost} V⚡`;
 
   const repeatedText = Array(5).fill(0).map(() => `365 DAYS OF LIGHT AND DARK \u2022 ${cfg.label}`).join(' \u2022 ');
 
