@@ -16,7 +16,7 @@ import {
 } from '../services/vaultService';
 import { audioManager } from '../game/audio';
 import { getCurrentDay } from '../utils/dayCalc';
-import { type PackCategory, type PackSize, RARITY_CONFIG, PACK_CONFIGS, type Rarity } from '../utils/rarity';
+import { type PackCategory, type PackSize, RARITY_CONFIG, PACK_CONFIGS, type Rarity, RARITIES } from '../utils/rarity';
 import { useLocation } from 'wouter';
 import PaymentSelectModal from '../components/PaymentSelectModal';
 import { payWithCrypto } from '../services/coinbaseService';

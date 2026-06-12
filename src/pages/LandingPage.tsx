@@ -16,7 +16,7 @@ import {
 } from '../services/vaultService';
 import { audioManager } from '../game/audio';
 import { getCurrentDay, getTimeUntilNextDay, formatDate } from '../utils/dayCalc';
-import { type PackCategory, type PackSize, RARITY_CONFIG, PACK_CONFIGS, type Rarity } from '../utils/rarity';
+import { type PackCategory, type PackSize, RARITY_CONFIG, PACK_CONFIGS, type Rarity, RARITIES } from '../utils/rarity';
 import { loadCatalog } from '../game/api';
 import { payWithCrypto } from '../services/coinbaseService';
 
