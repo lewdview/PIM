@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation } from 'wouter';
-import { Layers, Flame, Star, Calendar, Zap, Monitor, Clock, Play, Gift, Shield } from 'lucide-react';
+import { Layers, Flame, Star, Calendar, Zap, Monitor, Clock, Play, Gift, Shield, Sparkles, AlertTriangle, Image as ImageIcon } from 'lucide-react';
 import Card from '../components/Card';
 import PackShop from '../components/PackShop';
 import { useVaultStore } from '../store/useVaultStore';
@@ -11,7 +11,8 @@ import {
   getCardByDay, hasClaimedToday, claimDailyCard,
   purchasePack, getCompletedMonths, getMonthName, getClaimedCountForDay,
   targetedPull, upgradeRarity, fuseDuplicates,
-  type OwnedCard,
+  redeemBonusCode, fetchAllCards, findCardWithFallback,
+  type OwnedCard, type VaultCard,
 } from '../services/vaultService';
 import { audioManager } from '../game/audio';
 import { getCurrentDay, getTimeUntilNextDay, formatDate } from '../utils/dayCalc';
@@ -118,6 +119,20 @@ export default function LandingPage() {
   const [upgradeLoading, setUpgradeLoading] = useState(false);
   const [fusionLoading, setFusionLoading] = useState(false);
 
+  // Bonus Code States
+  const [bonusCode, setBonusCode] = useState('');
+  const [codeState, setCodeState] = useState<'idle' | 'redeeming' | 'success' | 'error'>('idle');
+  const [codeError, setCodeError] = useState('');
+  const [rewardClaimed, setRewardClaimed] = useState<{
+    type: string;
+    value: string;
+    details?: {
+      tokensGranted?: number;
+      card?: VaultCard;
+      skinUnlocked?: string;
+    };
+  } | null>(null);
+
   // Upgradeable cards (not legendary or mythic)
   const upgradeableCards = useMemo(() =>
     collection.filter(c => c && c.card && !['legendary', 'mythic'].includes(c.card.rarity)),
@@ -207,6 +222,134 @@ export default function LandingPage() {
       setFusionLoading(false);
     }
   }, [addToCollection, startReveal, setLocation, loadVaultData]);
+
+  const handleBonusRedeem = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bonusCode.trim()) return;
+
+    setCodeState('redeeming');
+    setCodeError('');
+    setRewardClaimed(null);
+    useLoadingToast.getState().show('Decrypting bonus code…');
+
+    try {
+      const res = await redeemBonusCode(bonusCode);
+      useLoadingToast.getState().hide();
+
+      if (res.success && res.rewardType && res.rewardValue) {
+        // --- 1. Handle Cinematic Card/Pack Reveals ---
+        if (res.rewardType === 'pack' && res.result?.cards) {
+          const pool = await fetchAllCards();
+          const mappedCards = res.result.cards.map((c: any) => {
+            const parent = findCardWithFallback(pool, c.card_id, c.rarity);
+            return {
+              id: c.id || crypto.randomUUID(),
+              cardId: parent.id,
+              card: { ...parent, rarity: c.rarity },
+              source: c.source || 'promo_code',
+              claimedAt: c.claimed_at,
+              edition: c.edition,
+              maxSupply: c.max_supply,
+              isEcho: c.is_echo,
+              echoGeneration: c.echo_generation,
+              echoSourceDay: c.echo_source_day,
+              proof: c.proof,
+              ultraReward: c.ultra_reward,
+              blockchainStatus: c.blockchain_status,
+              fingerprint: c.fingerprint
+            };
+          });
+          if (mappedCards.length > 0) {
+            addToCollection(mappedCards);
+            audioManager.playSfx('open_chest', 0.9);
+            startReveal(mappedCards, {
+              category: 'promo_code',
+              label: 'Promo Pack',
+              icon: '🎁',
+              accent: '#ffd700',
+              gradient: 'linear-gradient(145deg, #1a1200, #0c0800)',
+              price: 'PROMO',
+              cardCount: mappedCards.length,
+              revealType: 'cinematic',
+              redirectPath: '/vault'
+            });
+            await loadVaultData();
+            setLocation('/vault/reveal');
+            return;
+          }
+        }
+
+        if (res.rewardType === 'card' && res.result?.card) {
+          const pool = await fetchAllCards();
+          const c = res.result.card;
+          const parent = findCardWithFallback(pool, c.card_id, c.rarity);
+          const mappedCard = {
+            id: c.id || crypto.randomUUID(),
+            cardId: parent.id,
+            card: { ...parent, rarity: c.rarity },
+            source: c.source || 'promo_code',
+            claimedAt: c.claimed_at,
+            edition: c.edition,
+            maxSupply: c.max_supply,
+            isEcho: c.is_echo,
+            echoGeneration: c.echo_generation,
+            echoSourceDay: c.echo_source_day,
+            proof: c.proof,
+            ultraReward: c.ultra_reward,
+            blockchainStatus: c.blockchain_status,
+            fingerprint: c.fingerprint
+          };
+          addToCollection([mappedCard]);
+          audioManager.playSfx('open_chest', 0.9);
+          startReveal([mappedCard], {
+            category: 'promo_code',
+            label: 'Promo Card',
+            icon: '⭐',
+            accent: '#ffd700',
+            gradient: 'linear-gradient(145deg, #1a1200, #0c0800)',
+            price: 'PROMO',
+            cardCount: 1,
+            revealType: 'cinematic',
+            redirectPath: '/vault'
+          });
+          await loadVaultData();
+          setLocation('/vault/reveal');
+          return;
+        }
+
+        // --- 2. Handle Non-Card/Pack static displays (Tokens/Skins) ---
+        let details: any = {};
+        audioManager.playSfx('song_completion', 0.85);
+
+        if (res.rewardType === 'tokens') {
+          details.tokensGranted = parseInt(res.rewardValue, 10);
+        } else if (res.rewardType === 'background_skin') {
+          details.skinUnlocked = res.rewardValue;
+        }
+
+        setRewardClaimed({
+          type: res.rewardType,
+          value: res.rewardValue,
+          details
+        });
+        setCodeState('success');
+        setBonusCode('');
+
+        // Refresh store balances & inventory
+        await loadVaultData();
+      } else {
+        audioManager.playSfx('error', 0.6);
+        setCodeError(res.error || 'Invalid or expired code.');
+        setCodeState('error');
+      }
+    } catch (err: any) {
+      useLoadingToast.getState().hide();
+      audioManager.playSfx('error', 0.6);
+      setCodeError(err.message || 'Verification link failed.');
+      setCodeState('error');
+    }
+  }, [bonusCode, addToCollection, startReveal, setLocation, loadVaultData]);
+
   const [songId, setSongId] = useState<string | null>(null);
   const [realClaimedCount, setRealClaimedCount] = useState<number>(0);
   const [countdown, setCountdown] = useState(getTimeUntilNextDay());
@@ -845,6 +988,110 @@ export default function LandingPage() {
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </section>
+
+          <div className="h-px mx-4 md:mx-8 bg-white/5" />
+
+          {/* ===== V⚡ DECRYPTION CONSOLE ===== */}
+          <section className="py-12 px-4 md:px-8">
+            <SectionLabel label="Decryption Deck" accent="var(--color-neon-gold)" />
+            <div 
+              className="relative overflow-hidden"
+              style={{
+                padding: '24px',
+                border: '3px solid #000',
+                background: 'linear-gradient(135deg, #0d0d0d, #1a1300)',
+                boxShadow: '6px 6px 0 #000, 0 0 40px rgba(255,215,0,0.08)',
+              }}
+            >
+              <div className="scanlines absolute inset-0 opacity-10" />
+              <div className="relative z-10">
+                <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
+                  <div>
+                    <h2 style={{
+                      fontFamily: '"Impact", "Arial Black", sans-serif',
+                      fontSize: '28px', textTransform: 'uppercase',
+                      letterSpacing: '-0.02em', margin: 0,
+                      color: 'var(--color-neon-gold)',
+                      textShadow: '0 0 10px rgba(255,215,0,0.3)'
+                    }}>
+                      Decryption & Promo Code Console
+                    </h2>
+                    <p className="text-[9px] font-mono uppercase tracking-[0.2em] opacity-45 mt-1">
+                      Enter cryptographic code · Unlock exclusive skins & bonus tokens
+                    </p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleBonusRedeem} className="space-y-4">
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <input
+                      type="text"
+                      value={bonusCode}
+                      onChange={e => setBonusCode(e.target.value)}
+                      placeholder="e.g. BETA2026"
+                      disabled={codeState === 'redeeming'}
+                      className="flex-1 bg-black border-2 border-zinc-800 text-white font-mono text-sm p-3 focus:border-amber-500 outline-none uppercase tracking-wider"
+                    />
+                    <button
+                      type="submit"
+                      disabled={codeState === 'redeeming' || !bonusCode.trim()}
+                      className="px-8 py-3 bg-[#ffd700] hover:bg-[#e6c300] text-black font-black uppercase text-xs tracking-wider transition-all disabled:opacity-30 disabled:hover:bg-[#ffd700]"
+                      style={{ border: '2px solid #000', boxShadow: '2px 2px 0 #000' }}
+                    >
+                      {codeState === 'redeeming' ? 'DECRYPTING...' : 'REDEEM CODE'}
+                    </button>
+                  </div>
+
+                  {/* Error Message */}
+                  {codeState === 'error' && (
+                    <div className="flex items-center gap-2 text-xs font-mono text-[#ff3800] bg-[#ff3800]/5 border border-[#ff3800]/20 p-3 rounded">
+                      <AlertTriangle size={14} className="shrink-0" />
+                      <span>{codeError}</span>
+                    </div>
+                  )}
+                </form>
+
+                {/* Success Reward Splash */}
+                <AnimatePresence>
+                  {codeState === 'success' && rewardClaimed && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      className="mt-6 border border-[#39FF14]/30 bg-[#39FF14]/5 p-5 rounded-lg space-y-4 text-center"
+                    >
+                      <div className="flex items-center justify-center gap-1.5 text-xs font-mono font-bold text-[#39FF14] tracking-widest uppercase">
+                        <Sparkles size={13} />
+                        <span>Reward Unlocked successfully</span>
+                      </div>
+
+                      {/* Tokens display */}
+                      {rewardClaimed.type === 'tokens' && (
+                        <div className="py-2 flex flex-col items-center">
+                          <Zap size={36} className="text-[#ffb800] animate-bounce" />
+                          <div className="text-3xl font-black font-mono text-[#ffb800] mt-2">
+                            +{rewardClaimed.details?.tokensGranted?.toLocaleString()}
+                          </div>
+                          <div className="text-[9px] font-mono text-white/50 tracking-wider mt-1 uppercase">VAULT TOKENS CREDITED</div>
+                        </div>
+                      )}
+
+                      {/* Skin display */}
+                      {rewardClaimed.type === 'background_skin' && (
+                        <div className="py-2 flex flex-col items-center">
+                          <ImageIcon size={36} className="text-[#39FF14] animate-pulse" />
+                          <div className="text-xl font-bold font-mono text-[#39FF14] mt-2 uppercase">
+                            {rewardClaimed.value}
+                          </div>
+                          <div className="text-[9px] font-mono text-white/50 tracking-wider mt-1 uppercase">SKIN UNLOCKED</div>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
           </section>
