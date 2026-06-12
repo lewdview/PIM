@@ -176,11 +176,17 @@
   position: absolute;
   inset: 0;
   border-radius: 12px;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
+  /* Critical: !important prevents any theme style from accidentally
+     invalidating the backface — filter/opacity/transform on this element
+     would cause the compositor to promote it out of the 3D plane. */
+  backface-visibility: hidden !important;
+  -webkit-backface-visibility: hidden !important;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  /* Isolate stacking context so ::before/::after pseudo-elements never
+     bleed through to the opposite face */
+  isolation: isolate;
 }
 
 .card-face-back {
@@ -403,13 +409,16 @@
 }
 
 /* Mythic (Active Glitch Background + Gold Foil) */
+/* NOTE: glitch-shake is intentionally NOT on .card-face-front because
+   filter+transform on the face element breaks backface-visibility.
+   The animation lives on .mythic-foil-wash instead. */
 .theme-glitch.rarity-mythic .card-face-front {
   border: 4px solid #ffd700;
   background: black;
   padding: 0;
   box-shadow: 0 0 35px rgba(255, 215, 0, 0.6), inset 0 0 20px rgba(255, 215, 0, 0.3);
-  animation: glitch-shake 0.4s infinite alternate;
 }
+/* glitch-shake lives here — on an inner child, not on .card-face-front */
 .theme-glitch.rarity-mythic .mythic-foil-wash {
   position: absolute;
   inset: 0;
@@ -421,7 +430,7 @@
     rgba(255, 215, 0, 0.2) 100%
   );
   background-size: 300% 300%;
-  animation: foil-sweep 3s linear infinite;
+  animation: foil-sweep 3s linear infinite, glitch-shake 0.4s infinite alternate;
   pointer-events: none;
   z-index: 15;
 }
@@ -1835,295 +1844,867 @@
 }
 
 /* ==========================================================================
-   DESIGN 8: SPORTS CHROME STYLE (theme-chrome)
+   DESIGN 8: SPORTS CHROME REFRACTOR (theme-chrome)
    ========================================================================== */
+@keyframes chrome-shine {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes chrome-prism {
+  0%   { opacity: 0.15; filter: hue-rotate(0deg); }
+  33%  { opacity: 0.35; filter: hue-rotate(120deg); }
+  66%  { opacity: 0.25; filter: hue-rotate(240deg); }
+  100% { opacity: 0.15; filter: hue-rotate(360deg); }
+}
+@keyframes chrome-scanbar {
+  0%   { top: -20%; }
+  100% { top: 120%; }
+}
+
 .theme-chrome {
   font-family: 'Impact', 'Arial Black', sans-serif;
 }
-.theme-chrome .card-face-front {
-  border: 5px solid #d1d5db; /* Metallic Silver */
-  background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
-  color: #fff;
-  padding: 8px;
+
+/* Common Chrome – brushed steel plate */
+.theme-chrome.rarity-common .card-face-front {
+  border: 4px solid #6b7280;
+  background:
+    repeating-linear-gradient(
+      92deg,
+      rgba(255,255,255,0.025) 0px, rgba(255,255,255,0.025) 1px,
+      transparent 1px, transparent 6px
+    ),
+    linear-gradient(160deg, #1f2937 0%, #111827 55%, #0d1117 100%);
+  color: #e2e8f0;
+  padding: 7px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  box-shadow: inset 0 0 15px rgba(255,255,255,0.15);
+  box-shadow: inset 0 1px 1px rgba(255,255,255,0.18), inset 0 -1px 1px rgba(0,0,0,0.8), 0 6px 18px rgba(0,0,0,0.7);
   position: relative;
   height: 100%;
 }
+
+/* Uncommon Chrome – holographic silver */
+.theme-chrome.rarity-uncommon .card-face-front {
+  border: 4px solid #9ca3af;
+  background:
+    repeating-linear-gradient(
+      88deg,
+      rgba(255,255,255,0.04) 0px, rgba(255,255,255,0.04) 1px,
+      transparent 1px, transparent 5px
+    ),
+    linear-gradient(150deg, #1e2a38 0%, #0f1c2e 50%, #1a2332 100%);
+  color: #e2e8f0;
+  padding: 7px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  box-shadow: inset 0 0 20px rgba(255,255,255,0.08), 0 0 12px rgba(255,255,255,0.1);
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+}
+.theme-chrome.rarity-uncommon .card-face-front::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg,
+    transparent 25%,
+    rgba(255,255,255,0.08) 35%,
+    rgba(255,255,255,0.18) 50%,
+    rgba(255,255,255,0.08) 65%,
+    transparent 75%
+  );
+  background-size: 250% 100%;
+  animation: chrome-shine 3.5s linear infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Rare Chrome – gold prizm */
 .theme-chrome.rarity-rare .card-face-front {
-  border-color: #9ca3af;
-  box-shadow: inset 0 0 20px rgba(255,255,255,0.25), 0 0 15px rgba(255,255,255,0.15);
+  border: 5px solid #b8a03e;
+  background:
+    repeating-linear-gradient(
+      94deg,
+      rgba(251,191,36,0.03) 0px, rgba(251,191,36,0.03) 1px,
+      transparent 1px, transparent 4px
+    ),
+    linear-gradient(148deg, #1e1608 0%, #2a1e08 40%, #0f0c04 100%);
+  color: #fbbf24;
+  padding: 7px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  box-shadow: inset 0 0 25px rgba(251,191,36,0.12), 0 0 18px rgba(251,191,36,0.15);
+  position: relative;
+  height: 100%;
+  overflow: hidden;
 }
+.theme-chrome.rarity-rare .card-face-front::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  height: 30px;
+  background: linear-gradient(to bottom, rgba(251,191,36,0.18), transparent);
+  animation: chrome-scanbar 3s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Legendary Chrome – hypercolor refractor */
 .theme-chrome.rarity-legendary .card-face-front {
-  border-color: #fbbf24; /* Gold Chrome */
-  box-shadow: inset 0 0 25px rgba(251,191,36,0.3), 0 0 20px rgba(251,191,36,0.2);
+  border: 5px solid #fbbf24;
+  background: linear-gradient(148deg, #1a1200 0%, #261800 50%, #0d0800 100%);
+  color: #fbbf24;
+  padding: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  box-shadow: inset 0 0 30px rgba(251,191,36,0.2), 0 0 25px rgba(251,191,36,0.3);
+  position: relative;
+  height: 100%;
+  overflow: hidden;
 }
+.theme-chrome.rarity-legendary .card-face-front::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: conic-gradient(from 180deg at 35% 45%,
+    rgba(251,191,36,0.12) 0deg,
+    rgba(255,100,0,0.08) 60deg,
+    rgba(255,215,0,0.14) 120deg,
+    rgba(255,255,100,0.07) 180deg,
+    rgba(251,191,36,0.12) 360deg
+  );
+  animation: chrome-prism 6s linear infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Mythic Chrome – prismatic aurora refractor */
+/* NOTE: chrome-prism uses filter:hue-rotate which breaks backface-visibility.
+   It is moved to ::before (the spinning conic overlay) instead. */
 .theme-chrome.rarity-mythic .card-face-front {
-  border-color: #a855f7; /* Purple Chrome Refractor */
-  box-shadow: inset 0 0 30px rgba(168,85,247,0.4), 0 0 25px rgba(168,85,247,0.3);
+  border: 5px solid #a855f7;
+  background: linear-gradient(148deg, #0d0014 0%, #1a002a 50%, #080010 100%);
+  color: #e879f9;
+  padding: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  box-shadow: inset 0 0 40px rgba(168,85,247,0.3), 0 0 30px rgba(168,85,247,0.4);
+  position: relative;
+  height: 100%;
+  overflow: hidden;
 }
+.theme-chrome.rarity-mythic .card-face-front::before {
+  content: '';
+  position: absolute;
+  inset: -50%;
+  background: conic-gradient(from 0deg at 50% 50%,
+    rgba(168,85,247,0.15) 0deg,
+    rgba(59,130,246,0.12) 60deg,
+    rgba(0,240,255,0.12) 120deg,
+    rgba(255,0,127,0.1) 180deg,
+    rgba(168,85,247,0.15) 360deg
+  );
+  animation: spin-slow 8s linear infinite;
+  pointer-events: none;
+  mix-blend-mode: color-dodge;
+  z-index: 1;
+}
+
+/* Chrome Shared Elements */
 .theme-chrome .chrome-rookie-badge {
   position: absolute;
-  top: 8px;
-  left: 8px;
-  background: linear-gradient(135deg, #ff4500, #ff8c00);
+  top: 7px;
+  left: 7px;
+  background: linear-gradient(135deg, #dc2626 0%, #ea580c 50%, #f97316 100%);
   border: 1px solid #000;
+  border-bottom: 2px solid #7f1d1d;
   color: #fff;
-  font-size: 6px;
+  font-size: 5.5px;
   font-weight: 900;
-  padding: 2px 4px;
-  transform: rotate(-5deg);
-  box-shadow: 1px 1px 0 #000;
+  padding: 2px 5px;
+  transform: rotate(-6deg);
+  box-shadow: 2px 2px 0 #000, 0 0 6px rgba(220,38,38,0.4);
   z-index: 10;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
+  clip-path: polygon(0 0, 100% 0, 95% 100%, 5% 100%);
 }
 .theme-chrome .chrome-header {
   margin-bottom: 4px;
-  text-align: right;
+  padding: 0 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   line-height: 1;
+  z-index: 5;
 }
 .theme-chrome .chrome-brand {
-  font-size: 7px;
+  font-size: 6.5px;
   color: #fbbf24;
-  letter-spacing: 1px;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
+  text-shadow: 0 0 6px rgba(251,191,36,0.5);
+  font-style: italic;
 }
 .theme-chrome .chrome-art-frame {
-  border: 2px solid #374151;
   background: #000;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.6);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.8), inset 0 0 8px rgba(0,0,0,0.6);
+  border-top: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.theme-chrome.rarity-common .chrome-art-frame,
+.theme-chrome.rarity-uncommon .chrome-art-frame {
+  border: 2px solid #374151;
+}
+.theme-chrome.rarity-rare .chrome-art-frame {
+  border: 2px solid rgba(251,191,36,0.35);
+}
+.theme-chrome.rarity-legendary .chrome-art-frame,
+.theme-chrome.rarity-mythic .chrome-art-frame {
+  border: none;
 }
 .theme-chrome .chrome-refractor-wash {
   position: absolute;
   inset: 0;
-  background: linear-gradient(120deg, rgba(255,255,255,0) 30%, rgba(255,255,255,0.12) 40%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.12) 60%, rgba(255,255,255,0) 70%);
-  background-size: 200% 100%;
-  animation: chrome-shine 4s linear infinite;
+  background: linear-gradient(
+    118deg,
+    transparent 25%,
+    rgba(255,255,255,0.04) 36%,
+    rgba(255,255,255,0.22) 48%,
+    rgba(255,255,255,0.04) 60%,
+    transparent 72%
+  );
+  background-size: 250% 100%;
+  animation: chrome-shine 3.5s linear infinite;
   pointer-events: none;
   z-index: 2;
 }
 .theme-chrome .chrome-stats-panel {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 3px;
-  margin-top: 6px;
-  background: rgba(0,0,0,0.4);
-  padding: 4px;
-  border: 1px solid #374151;
+  gap: 0;
+  margin-top: 5px;
+  background: rgba(0,0,0,0.55);
+  padding: 5px 4px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-top: 2px solid rgba(255,255,255,0.12);
+  z-index: 5;
+  position: relative;
 }
 .theme-chrome .chrome-stat-box {
   display: flex;
   flex-direction: column;
   align-items: center;
-  border-right: 1px solid rgba(255,255,255,0.1);
+  padding: 0 4px;
+  border-right: 1px solid rgba(255,255,255,0.08);
 }
 .theme-chrome .chrome-stat-box:last-child {
   border-right: none;
 }
 .theme-chrome .chrome-stat-val {
-  font-size: 11px;
+  font-size: 12px;
   color: #fff;
   font-style: italic;
+  line-height: 1;
+  text-shadow: 0 0 8px rgba(255,255,255,0.25);
 }
 .theme-chrome .chrome-stat-lbl {
-  font-size: 5px;
-  color: #9ca3af;
+  font-size: 4.5px;
+  color: #6b7280;
   text-transform: uppercase;
-  font-family: monospace;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.5px;
+  margin-top: 1px;
 }
 .theme-chrome .chrome-signature-box {
   margin-top: auto;
-  border-top: 1px dashed rgba(255,255,255,0.2);
-  padding: 4px 0 2px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  background: rgba(0,0,0,0.4);
+  padding: 4px 6px 3px;
   text-align: center;
   position: relative;
+  z-index: 5;
 }
 .theme-chrome .chrome-signature-line {
-  font-family: 'Georgia', serif;
-  font-size: 8px;
+  font-family: 'Georgia', 'Times New Roman', serif;
+  font-size: 7.5px;
   color: #9ca3af;
   font-style: italic;
-  opacity: 0.7;
+  letter-spacing: 0.5px;
+  text-shadow: 0 0 4px rgba(255,255,255,0.1);
 }
+
 
 /* ==========================================================================
    DESIGN 9: CARVED RUNIC FANTASY (theme-fantasy)
    ========================================================================== */
+@keyframes rune-glow-pulse {
+  0%   { opacity: 0.35; text-shadow: 0 0 4px #d97706, 0 0 8px #b45309; }
+  50%  { opacity: 0.85; text-shadow: 0 0 8px #fbbf24, 0 0 16px #d97706, 0 0 30px rgba(251,191,36,0.4); }
+  100% { opacity: 0.35; text-shadow: 0 0 4px #d97706, 0 0 8px #b45309; }
+}
+@keyframes fantasy-float {
+  0%   { transform: translateY(0px); }
+  50%  { transform: translateY(-2px); }
+  100% { transform: translateY(0px); }
+}
+@keyframes runic-border-sweep {
+  0%   { box-shadow: inset 0 0 10px rgba(180,83,9,0.3), 0 0 8px rgba(180,83,9,0.15); }
+  33%  { box-shadow: inset 0 0 20px rgba(251,191,36,0.25), 0 0 15px rgba(251,191,36,0.2); }
+  66%  { box-shadow: inset 0 0 14px rgba(217,119,6,0.35), 0 0 10px rgba(217,119,6,0.2); }
+  100% { box-shadow: inset 0 0 10px rgba(180,83,9,0.3), 0 0 8px rgba(180,83,9,0.15); }
+}
+
 .theme-fantasy {
   font-family: 'Georgia', 'Times New Roman', serif;
 }
-.theme-fantasy .card-face-front {
-  border: 6px solid #4a3728; /* Stone/Wood Border */
-  background: #1c1510;
-  color: #f3f4f6;
+
+/* Common Fantasy – rough stone slab */
+.theme-fantasy.rarity-common .card-face-front {
+  border: 6px solid #44332a;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='%231c1510'/%3E%3Crect x='0' y='2' width='1' height='1' fill='rgba(80,60,40,0.3)'/%3E%3Crect x='2' y='0' width='1' height='1' fill='rgba(60,45,30,0.2)'/%3E%3C/svg%3E"),
+    linear-gradient(160deg, #221810 0%, #1a1008 60%, #120c06 100%);
+  color: #c4a882;
   padding: 6px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+  box-shadow: inset 0 0 18px rgba(0,0,0,0.9), inset 2px 2px 4px rgba(120,80,40,0.08);
+  position: relative;
   height: 100%;
 }
+.theme-fantasy.rarity-common .card-face-front::before {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border: 1px solid rgba(100,70,40,0.25);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+/* Uncommon Fantasy – polished wood frame */
+.theme-fantasy.rarity-uncommon .card-face-front {
+  border: 6px solid #5c3d1e;
+  background:
+    repeating-linear-gradient(
+      170deg,
+      rgba(140,80,30,0.04) 0px, rgba(140,80,30,0.04) 1px,
+      transparent 1px, transparent 6px
+    ),
+    linear-gradient(155deg, #1e1208 0%, #241609 45%, #0f0804 100%);
+  color: #c9a46c;
+  padding: 6px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.85), 0 0 8px rgba(92,61,30,0.2);
+  position: relative;
+  height: 100%;
+}
+.theme-fantasy.rarity-uncommon .card-face-front::before {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border: 1px solid rgba(180,120,50,0.2);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+/* Rare Fantasy – silver enchanted runic stone */
 .theme-fantasy.rarity-rare .card-face-front {
-  border-color: #6b7280;
+  border: 6px solid #7c6c88;
+  background:
+    radial-gradient(ellipse at 30% 30%, rgba(140,100,180,0.08) 0%, transparent 60%),
+    linear-gradient(155deg, #1a1424 0%, #140e1e 50%, #0c0810 100%);
+  color: #c4b8d8;
+  padding: 6px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  box-shadow: inset 0 0 20px rgba(90,50,140,0.15), 0 0 15px rgba(90,50,140,0.15);
+  position: relative;
+  height: 100%;
 }
+.theme-fantasy.rarity-rare .card-face-front::before {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border: 1px dashed rgba(140,100,180,0.2);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+/* Legendary Fantasy – golden tome illuminated */
 .theme-fantasy.rarity-legendary .card-face-front {
-  border-color: #b45309; /* Bronze Gold Wood */
+  border: 7px solid #b45309;
+  background:
+    radial-gradient(ellipse at 50% 10%, rgba(251,191,36,0.12) 0%, transparent 55%),
+    radial-gradient(ellipse at 80% 80%, rgba(180,83,9,0.1) 0%, transparent 55%),
+    linear-gradient(155deg, #1e1204 0%, #2c1b05 50%, #140d02 100%);
+  color: #fbbf24;
+  padding: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  animation: runic-border-sweep 4s ease-in-out infinite;
+  position: relative;
+  height: 100%;
+  overflow: hidden;
 }
+.theme-fantasy.rarity-legendary .card-face-front::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border: 1px solid rgba(251,191,36,0.18);
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 20;
+}
+
+/* Mythic Fantasy – arcane void crystal */
 .theme-fantasy.rarity-mythic .card-face-front {
-  border-color: #701a75; /* Magical Purple Runic Stone */
-  box-shadow: inset 0 0 15px rgba(162,28,175,0.3), 0 0 15px rgba(162,28,175,0.2);
+  border: 7px solid #7e22ce;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(167,139,250,0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 20% 80%, rgba(124,58,237,0.1) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 60%, rgba(219,39,119,0.08) 0%, transparent 45%),
+    linear-gradient(145deg, #1a0a2e 0%, #0f0618 50%, #1a0628 100%);
+  color: #c084fc;
+  padding: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  box-shadow: inset 0 0 30px rgba(126,34,206,0.3), 0 0 25px rgba(126,34,206,0.25);
+  position: relative;
+  height: 100%;
+  overflow: hidden;
 }
+.theme-fantasy.rarity-mythic .card-face-front::before {
+  content: '';
+  position: absolute;
+  inset: -50%;
+  background: conic-gradient(from 0deg at 50% 50%,
+    rgba(167,139,250,0.06) 0deg,
+    rgba(219,39,119,0.05) 90deg,
+    rgba(124,58,237,0.07) 180deg,
+    rgba(167,139,250,0.06) 360deg
+  );
+  animation: spin-slow 18s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Fantasy Shared Elements */
 .theme-fantasy .fantasy-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 4px;
+  padding: 0 2px;
+  z-index: 5;
+  position: relative;
 }
 .theme-fantasy .fantasy-mana-gem {
-  width: 14px;
-  height: 14px;
+  width: 15px;
+  height: 15px;
   border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
-  background: #2563eb; /* Mana Blue */
+  background: radial-gradient(circle at 35% 35%, #60a5fa, #1d4ed8);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 8px;
   font-weight: bold;
-  box-shadow: 0 0 6px rgba(37,99,235,0.8);
+  box-shadow: 0 0 8px rgba(37,99,235,0.8), 0 2px 4px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.3);
+  border: 1px solid rgba(255,255,255,0.2);
+  animation: fantasy-float 3.5s ease-in-out infinite;
 }
 .theme-fantasy .fantasy-title {
   font-size: 9px;
   font-weight: bold;
-  text-shadow: 1px 1px 2px #000;
+  text-shadow: 1px 1px 3px #000, 0 0 6px rgba(0,0,0,0.8);
   text-transform: capitalize;
+  letter-spacing: 0.3px;
 }
 .theme-fantasy .fantasy-art-oval {
-  border: 2px solid #5c443c;
-  border-radius: 50% / 25%; /* Oval frame */
   overflow: hidden;
   background: #000;
-  margin: 2px 8px 6px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.8);
+  margin: 2px 6px 5px;
+  position: relative;
+  z-index: 5;
+}
+.theme-fantasy.rarity-common .fantasy-art-oval,
+.theme-fantasy.rarity-uncommon .fantasy-art-oval {
+  border: 2.5px solid #5c443c;
+  border-radius: 50% / 28%;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.85), inset 0 0 4px rgba(0,0,0,0.5);
+}
+.theme-fantasy.rarity-rare .fantasy-art-oval {
+  border: 2.5px solid #7c6c88;
+  border-radius: 4px;
+  box-shadow: 0 3px 12px rgba(90,50,140,0.3), inset 0 0 6px rgba(90,50,140,0.15);
+}
+.theme-fantasy.rarity-legendary .fantasy-art-oval {
+  border: 3px solid rgba(180,83,9,0.7);
+  border-radius: 4px;
+  box-shadow: 0 0 12px rgba(251,191,36,0.3), inset 0 0 6px rgba(0,0,0,0.5);
+}
+.theme-fantasy.rarity-mythic .fantasy-art-oval {
+  border: 3px solid rgba(126,34,206,0.6);
+  border-radius: 4px;
+  box-shadow: 0 0 16px rgba(167,139,250,0.3), inset 0 0 8px rgba(0,0,0,0.6);
 }
 .theme-fantasy .fantasy-textbox {
-  background: #2c221a;
-  border: 1px solid #4a3728;
-  padding: 6px;
-  border-radius: 4px;
+  position: relative;
+  z-index: 5;
+  padding: 5px 7px;
+  border-radius: 3px;
   font-size: 6px;
   color: #d1d5db;
-  line-height: 1.2;
+  line-height: 1.3;
   flex: 1;
   display: flex;
-  align-items: center;
+  flex-direction: column;
   justify-content: center;
   text-align: center;
+}
+.theme-fantasy.rarity-common .fantasy-textbox,
+.theme-fantasy.rarity-uncommon .fantasy-textbox {
+  background: rgba(44, 34, 26, 0.95);
+  border: 1px solid rgba(74,55,40,0.8);
+  box-shadow: inset 0 0 8px rgba(0,0,0,0.6);
+}
+.theme-fantasy.rarity-rare .fantasy-textbox {
+  background: rgba(26, 20, 36, 0.9);
+  border: 1px solid rgba(124,108,136,0.4);
+  box-shadow: inset 0 0 8px rgba(90,50,140,0.1);
+}
+.theme-fantasy.rarity-legendary .fantasy-textbox {
+  background: rgba(30, 18, 4, 0.92);
+  border: 1px solid rgba(180,83,9,0.45);
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.7);
+}
+.theme-fantasy.rarity-mythic .fantasy-textbox {
+  background: rgba(20, 6, 30, 0.9);
+  border: 1px solid rgba(126,34,206,0.35);
+  box-shadow: inset 0 0 12px rgba(126,34,206,0.1);
 }
 .theme-fantasy .fantasy-bottom-combat {
   display: flex;
   justify-content: space-between;
-  padding: 4px 6px 0;
-  margin-top: auto;
+  padding: 4px 8px 0;
+  margin-top: 3px;
+  position: relative;
+  z-index: 5;
 }
 .theme-fantasy .fantasy-combat-icon {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
   font-size: 9px;
   font-weight: bold;
+  text-shadow: 1px 1px 2px #000;
 }
 .theme-fantasy .fantasy-atk {
-  color: #ef4444; /* Red attack sword strength */
+  color: #f87171;
+  filter: drop-shadow(0 0 4px rgba(248,113,113,0.5));
 }
 .theme-fantasy .fantasy-def {
-  color: #10b981; /* Green shield defense */
+  color: #34d399;
+  filter: drop-shadow(0 0 4px rgba(52,211,153,0.5));
 }
+.theme-fantasy .fantasy-desc {
+  font-size: 5.5px;
+  line-height: 1.3;
+  font-style: italic;
+}
+
 
 /* ==========================================================================
    DESIGN 10: CYBERPUNK TERMINAL (theme-cyberpunk)
    ========================================================================== */
+@keyframes cyber-flicker {
+  0%, 95%, 100% { opacity: 1; }
+  96% { opacity: 0.7; }
+  97% { opacity: 1; }
+  98% { opacity: 0.5; }
+  99% { opacity: 0.9; }
+}
+@keyframes cyber-scanline-roll {
+  0%   { transform: translateY(-100%); }
+  100% { transform: translateY(200%); }
+}
+@keyframes cyber-border-pulse {
+  0%, 100% { box-shadow: 0 0 6px currentColor, inset 0 0 6px rgba(0,240,255,0.05); }
+  50%       { box-shadow: 0 0 18px currentColor, inset 0 0 12px rgba(0,240,255,0.1); }
+}
+@keyframes terminal-cursor {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
 .theme-cyberpunk {
   font-family: 'JetBrains Mono', 'Courier New', monospace;
 }
-.theme-cyberpunk .card-face-front {
-  border: 4px solid #00f0ff; /* Neon Cyan */
-  background: #09090b;
+
+/* Common Cyberpunk – cyan terminal */
+.theme-cyberpunk.rarity-common .card-face-front {
+  border: 3px solid #0e8a99;
+  background: #07090c;
   color: #00f0ff;
   padding: 6px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   height: 100%;
+  box-shadow: inset 0 0 12px rgba(0,240,255,0.04);
+  /* cyber-flicker removed from here — opacity anim on card face breaks backface-visibility */
 }
+/* Flicker effect lives on ::before (child context), not the face itself */
+.theme-cyberpunk.rarity-common .card-face-front::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,240,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,240,255,0.015) 1px, transparent 1px);
+  background-size: 100% 3px, 8px 100%;
+  pointer-events: none;
+  z-index: 1;
+  animation: cyber-flicker 8s steps(1) infinite;
+}
+
+/* Uncommon Cyberpunk – magenta wire */
+.theme-cyberpunk.rarity-uncommon .card-face-front {
+  border: 3px solid #be185d;
+  background: linear-gradient(145deg, #0c0008 0%, #0e0010 100%);
+  color: #f472b6;
+  padding: 6px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-shadow: inset 0 0 14px rgba(244,114,182,0.06), 0 0 10px rgba(190,24,93,0.2);
+  /* cyber-flicker removed — opacity anim on face breaks backface-visibility */
+}
+.theme-cyberpunk.rarity-uncommon .card-face-front::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(244,114,182,0.03) 1px, transparent 1px);
+  background-size: 100% 3px;
+  pointer-events: none;
+  z-index: 1;
+  animation: cyber-flicker 12s steps(1) infinite;
+}
+
+/* Rare Cyberpunk – cyber pink breach */
+/* box-shadow-only cyber-border-pulse is safe; cyber-flicker (opacity) is moved to ::after */
 .theme-cyberpunk.rarity-rare .card-face-front {
-  border-color: #f43f5e; /* Cyber Pink */
+  border: 4px solid #f43f5e;
+  background: linear-gradient(145deg, #0c0005 0%, #100008 50%, #0a0004 100%);
   color: #f43f5e;
+  padding: 6px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-shadow: inset 0 0 18px rgba(244,63,94,0.08), 0 0 14px rgba(244,63,94,0.2);
+  animation: cyber-border-pulse 3s ease-in-out infinite;
+  overflow: hidden;
+  position: relative;
 }
+.theme-cyberpunk.rarity-rare .card-face-front::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  height: 60px;
+  background: linear-gradient(to bottom, transparent, rgba(244,63,94,0.06), transparent);
+  animation: cyber-scanline-roll 5s linear infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Legendary Cyberpunk – neo gold uplink */
 .theme-cyberpunk.rarity-legendary .card-face-front {
-  border-color: #eab308; /* Neo Gold */
-  color: #eab308;
+  border: 4px solid #ca8a04;
+  background: linear-gradient(145deg, #0e0c00 0%, #1a1400 50%, #0a0800 100%);
+  color: #fbbf24;
+  padding: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-shadow: inset 0 0 24px rgba(202,138,4,0.12), 0 0 20px rgba(202,138,4,0.22);
+  overflow: hidden;
+  position: relative;
 }
+.theme-cyberpunk.rarity-legendary .card-face-front::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(251,191,36,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(251,191,36,0.02) 1px, transparent 1px);
+  background-size: 100% 4px, 10px 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Mythic Cyberpunk – viral purple takeover */
 .theme-cyberpunk.rarity-mythic .card-face-front {
-  border-color: #a855f7; /* Purple Virus */
-  color: #a855f7;
-  box-shadow: 0 0 15px rgba(168,85,247,0.4);
+  border: 4px solid #9333ea;
+  background: linear-gradient(145deg, #07000e 0%, #0e0018 50%, #060010 100%);
+  color: #c084fc;
+  padding: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-shadow: inset 0 0 30px rgba(147,51,234,0.2), 0 0 25px rgba(147,51,234,0.35);
+  animation: cyber-border-pulse 2s ease-in-out infinite;
+  overflow: hidden;
+  position: relative;
 }
+.theme-cyberpunk.rarity-mythic .card-face-front::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(192,132,252,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(192,132,252,0.025) 1px, transparent 1px);
+  background-size: 100% 3px, 8px 100%;
+  pointer-events: none;
+  z-index: 1;
+  animation: cyber-flicker 5s steps(1) infinite;
+}
+
+/* Cyberpunk Shared Elements */
 .theme-cyberpunk .cyber-header {
   display: flex;
   justify-content: space-between;
   font-size: 7px;
   margin-bottom: 4px;
   border-bottom: 1px solid currentColor;
-  padding-bottom: 2px;
+  padding: 0 2px 3px;
   font-weight: 900;
   text-transform: uppercase;
+  letter-spacing: 0.5px;
+  position: relative;
+  z-index: 5;
+  background: rgba(0,0,0,0.5);
+}
+.theme-cyberpunk .cyber-header::after {
+  content: '█';
+  font-size: 5px;
+  opacity: 0;
+  animation: terminal-cursor 1s step-end infinite;
 }
 .theme-cyberpunk .cyber-art-box {
-  border: 1px solid currentColor;
   background: #000;
   position: relative;
+  overflow: hidden;
+  z-index: 5;
+}
+.theme-cyberpunk.rarity-common .cyber-art-box,
+.theme-cyberpunk.rarity-uncommon .cyber-art-box,
+.theme-cyberpunk.rarity-rare .cyber-art-box {
+  border: 1px solid currentColor;
+  margin: 0 0 4px;
 }
 .theme-cyberpunk .cyber-grid-overlay {
   position: absolute;
   inset: 0;
-  background-image: linear-gradient(rgba(0, 240, 255, 0.04) 1px, transparent 1px);
-  background-size: 100% 4px;
+  background-image:
+    linear-gradient(rgba(0,240,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,240,255,0.02) 1px, transparent 1px);
+  background-size: 100% 3px, 12px 100%;
   pointer-events: none;
+  z-index: 2;
+}
+.theme-cyberpunk.rarity-rare .cyber-grid-overlay,
+.theme-cyberpunk.rarity-legendary .cyber-grid-overlay {
+  animation: arcade-grid-move 2s linear infinite;
+}
+.theme-cyberpunk.rarity-mythic .cyber-grid-overlay {
+  animation: arcade-grid-move 1s linear infinite;
+  background-image:
+    linear-gradient(rgba(192,132,252,0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(192,132,252,0.03) 1px, transparent 1px);
 }
 .theme-cyberpunk .cyber-details {
   margin-top: 4px;
   font-size: 5.5px;
-  line-height: 1.2;
+  line-height: 1.35;
   flex: 1;
+  background: rgba(0,0,0,0.5);
+  border: 1px solid rgba(255,255,255,0.05);
+  padding: 4px 5px;
+  position: relative;
+  z-index: 5;
 }
 .theme-cyberpunk .cyber-log-line {
   margin: 1px 0;
-  opacity: 0.8;
+  opacity: 0.85;
+  letter-spacing: 0.3px;
+}
+.theme-cyberpunk .cyber-log-line::before {
+  content: '> ';
+  opacity: 0.4;
 }
 .theme-cyberpunk .cyber-footer {
   border-top: 1px solid currentColor;
-  padding-top: 2px;
+  padding: 3px 4px 2px;
   margin-top: auto;
   display: flex;
   justify-content: space-between;
   font-size: 6px;
   font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  background: rgba(0,0,0,0.6);
+  position: relative;
+  z-index: 5;
 }
+
 
 /* ==========================================================================
    DESIGN 11: WEISS ANIME HOLO SIGNATURE (theme-anime)
    ========================================================================== */
+@keyframes anime-sparkle {
+  0%   { opacity: 0; transform: scale(0.5) rotate(0deg); }
+  40%  { opacity: 1; transform: scale(1.2) rotate(90deg); }
+  100% { opacity: 0; transform: scale(0.6) rotate(180deg); }
+}
+@keyframes anime-holo-shift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes anime-border-glow {
+  0%, 100% { box-shadow: 0 0 6px currentColor, inset 0 0 4px rgba(255,0,127,0.05); }
+  50%       { box-shadow: 0 0 20px currentColor, inset 0 0 10px rgba(255,0,127,0.1); }
+}
+
 .theme-anime {
   font-family: 'Inter', system-ui, sans-serif;
 }
-.theme-anime .card-face-front {
-  border: 3px solid #ff007f; /* Anime Pink border */
-  background: #180010;
+
+/* Common Anime – Weiss base white-stock */
+.theme-anime.rarity-common .card-face-front {
+  border: 3px solid #ff007f;
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(255,0,127,0.06) 0%, transparent 50%),
+    linear-gradient(155deg, #180010 0%, #120008 60%, #0a0006 100%);
   color: #fff;
   padding: 5px;
   box-sizing: border-box;
@@ -2131,115 +2712,305 @@
   flex-direction: column;
   position: relative;
   height: 100%;
+  overflow: hidden;
 }
+.theme-anime.rarity-common .card-face-front::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(255,0,127,0.12) 1px, transparent 1px);
+  background-size: 12px 12px;
+  opacity: 0.4;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Uncommon Anime – teal climax trigger */
+.theme-anime.rarity-uncommon .card-face-front {
+  border: 3px solid #00d4aa;
+  background:
+    radial-gradient(ellipse at 70% 20%, rgba(0,212,170,0.08) 0%, transparent 50%),
+    linear-gradient(155deg, #00100c 0%, #00140e 60%, #000c08 100%);
+  color: #fff;
+  padding: 5px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  animation: anime-border-glow 4s ease-in-out infinite;
+}
+
+/* Rare Anime – SR holo cyan shimmer */
 .theme-anime.rarity-rare .card-face-front {
-  border-color: #00f0ff;
-  box-shadow: 0 0 10px rgba(0,240,255,0.25);
+  border: 3px solid #00f0ff;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(0,240,255,0.1) 0%, transparent 55%),
+    radial-gradient(ellipse at 80% 100%, rgba(0,212,170,0.06) 0%, transparent 50%),
+    linear-gradient(155deg, #000e14 0%, #000c12 60%, #00080c 100%);
+  color: #fff;
+  padding: 5px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  box-shadow: inset 0 0 15px rgba(0,240,255,0.08), 0 0 10px rgba(0,240,255,0.15);
 }
+.theme-anime.rarity-rare .card-face-front::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    120deg,
+    rgba(255,255,255,0) 20%,
+    rgba(0,240,255,0.12) 35%,
+    rgba(255,255,255,0.08) 50%,
+    rgba(0,240,255,0.12) 65%,
+    rgba(255,255,255,0) 80%
+  );
+  background-size: 250% 100%;
+  animation: chrome-shine 4s linear infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Legendary Anime – gold foil SSP */
 .theme-anime.rarity-legendary .card-face-front {
-  border-color: #ffd700;
-  box-shadow: 0 0 15px rgba(255,215,0,0.3);
+  border: 4px solid #d97706;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(251,191,36,0.14) 0%, transparent 50%),
+    radial-gradient(ellipse at 20% 100%, rgba(217,119,6,0.08) 0%, transparent 50%),
+    linear-gradient(155deg, #140e00 0%, #1e1600 60%, #0c0a00 100%);
+  color: #fbbf24;
+  padding: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  box-shadow: inset 0 0 20px rgba(217,119,6,0.15), 0 0 18px rgba(217,119,6,0.2);
 }
+.theme-anime.rarity-legendary .card-face-front::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(251,191,36,0.1) 0%,
+    rgba(255,215,0,0.18) 25%,
+    rgba(251,191,36,0.08) 50%,
+    rgba(255,200,0,0.15) 75%,
+    rgba(251,191,36,0.1) 100%
+  );
+  background-size: 300% 300%;
+  animation: anime-holo-shift 5s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Mythic Anime – rainbow prismatic SP */
 .theme-anime.rarity-mythic .card-face-front {
-  border-color: #ffd700;
-  box-shadow: inset 0 0 12px rgba(255,215,0,0.3), 0 0 25px rgba(255,56,0,0.45);
+  border: 4px solid #ffd700;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(255,215,0,0.18) 0%, transparent 50%),
+    radial-gradient(ellipse at 0% 80%, rgba(255,0,127,0.1) 0%, transparent 45%),
+    radial-gradient(ellipse at 100% 80%, rgba(0,240,255,0.08) 0%, transparent 45%),
+    linear-gradient(155deg, #130800 0%, #1a0c00 60%, #0c0600 100%);
+  color: #fff;
+  padding: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  box-shadow: inset 0 0 25px rgba(255,215,0,0.2), 0 0 25px rgba(255,56,0,0.35);
 }
+.theme-anime.rarity-mythic .card-face-front::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(255,0,127,0.08) 0%,
+    rgba(255,215,0,0.14) 25%,
+    rgba(0,240,255,0.08) 50%,
+    rgba(255,215,0,0.14) 75%,
+    rgba(255,0,127,0.08) 100%
+  );
+  background-size: 400% 400%;
+  animation: anime-holo-shift 3s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Anime Shared Elements */
 .theme-anime .anime-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 2px;
   z-index: 5;
+  position: relative;
+  padding: 0 1px;
 }
 .theme-anime .anime-level-badge {
-  background: #ff007f;
+  background: radial-gradient(circle at 35% 35%, #ff4da6, #cc005c);
   color: #fff;
   border-radius: 50%;
-  width: 13px;
-  height: 13px;
+  width: 14px;
+  height: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 8px;
   font-weight: 900;
-  border: 1px solid #fff;
+  border: 1px solid rgba(255,255,255,0.35);
+  box-shadow: 0 0 6px rgba(255,0,127,0.6), inset 0 1px 1px rgba(255,255,255,0.3);
+  flex-shrink: 0;
 }
 .theme-anime .anime-title {
   font-size: 9px;
   font-weight: 900;
-  text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+  text-shadow: 0 0 6px rgba(0,0,0,0.9), 1px 1px 3px rgba(0,0,0,0.8);
   letter-spacing: -0.2px;
+  text-align: right;
 }
 .theme-anime .anime-art-frame {
   flex: 1;
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(255,255,255,0.15);
   background: #000;
+  z-index: 5;
+}
+.theme-anime.rarity-common .anime-art-frame,
+.theme-anime.rarity-uncommon .anime-art-frame {
+  border: 1.5px solid rgba(255,0,127,0.35);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.7);
+}
+.theme-anime.rarity-rare .anime-art-frame {
+  border: 1.5px solid rgba(0,240,255,0.3);
+  box-shadow: 0 0 8px rgba(0,240,255,0.15);
+}
+.theme-anime.rarity-legendary .anime-art-frame {
+  border: 2px solid rgba(251,191,36,0.4);
+  box-shadow: 0 0 12px rgba(251,191,36,0.2);
+}
+.theme-anime.rarity-mythic .anime-art-frame {
+  border: 2px solid rgba(255,215,0,0.5);
+  box-shadow: 0 0 16px rgba(255,215,0,0.25), 0 0 30px rgba(255,56,0,0.15);
 }
 .theme-anime .anime-signature-overlay {
   position: absolute;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%) rotate(-10deg);
-  font-family: 'Brush Script MT', cursive, sans-serif;
-  font-size: 16px;
-  color: rgba(255,215,0,0.7); /* Gold Signature */
-  text-shadow: 0 0 8px rgba(255,215,0,0.8), 2px 2px 0 #000;
+  transform: translate(-50%, -50%) rotate(-12deg);
+  font-family: 'Brush Script MT', 'Segoe Script', cursive, sans-serif;
+  font-size: 15px;
+  color: rgba(255,215,0,0.6);
+  text-shadow: 0 0 10px rgba(255,215,0,0.9), 2px 2px 0 rgba(0,0,0,0.8);
   font-weight: bold;
   pointer-events: none;
   white-space: nowrap;
   z-index: 3;
+  letter-spacing: 1px;
 }
 .theme-anime .anime-stats-strip {
   display: flex;
   justify-content: space-between;
-  background: rgba(0,0,0,0.75);
-  border-top: 1px solid rgba(255,255,255,0.15);
-  padding: 4px 6px;
+  align-items: center;
+  background: rgba(0,0,0,0.85);
+  border-top: 1.5px solid rgba(255,255,255,0.12);
+  padding: 4px 7px;
   font-size: 6px;
   font-weight: bold;
   z-index: 5;
+  position: relative;
+  letter-spacing: 0.3px;
 }
 .theme-anime .anime-soul-trigger {
   color: #ffb800;
+  filter: drop-shadow(0 0 3px rgba(255,184,0,0.7));
+  letter-spacing: -1px;
 }
+
 
 /* ==========================================================================
    NEW CARD BACK STYLES
    ========================================================================== */
 
-/* 8. Chrome Back */
+/* 8. Chrome Back – brushed steel refractor */
 .back-chrome {
-  background: linear-gradient(135deg, #111827 0%, #1f2937 100%) !important;
-  border: 5px solid #d1d5db !important;
-  box-shadow: inset 0 0 20px rgba(255,255,255,0.1) !important;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(255,255,255,0.022) 0px, rgba(255,255,255,0.022) 1px,
+      transparent 1px, transparent 6px
+    ),
+    linear-gradient(160deg, #111827 0%, #1f2937 55%, #0d1117 100%) !important;
+  border: 5px solid #6b7280 !important;
+  box-shadow: inset 0 0 20px rgba(255,255,255,0.08), inset 0 1px 1px rgba(255,255,255,0.15) !important;
   position: relative;
   overflow: hidden;
   height: 100%;
   width: 100%;
 }
+.back-chrome::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    118deg,
+    transparent 30%,
+    rgba(255,255,255,0.04) 38%,
+    rgba(255,255,255,0.18) 50%,
+    rgba(255,255,255,0.04) 62%,
+    transparent 70%
+  );
+  background-size: 250% 100%;
+  animation: chrome-shine 5s linear infinite;
+  pointer-events: none;
+}
 .back-chrome .chrome-inner-grid {
   position: absolute;
   inset: 6px;
-  border: 1px solid #4b5563;
+  border: 1px solid rgba(107,114,128,0.6);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   padding: 8px;
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+}
+.back-chrome .chrome-inner-grid::before {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border: 1px dashed rgba(255,255,255,0.06);
+  pointer-events: none;
 }
 .back-chrome .chrome-stats-grid {
-  font-family: monospace;
+  font-family: 'JetBrains Mono', monospace;
   font-size: 5px;
-  color: #9ca3af;
+  color: #6b7280;
   text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-/* 9. Fantasy Back */
+/* 9. Fantasy Back – ancient tome with runic border */
+@keyframes rune-pulse-back {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 0.85; }
+}
 .back-fantasy {
-  background: #231912 !important;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='6'%3E%3Crect width='6' height='6' fill='%23231912'/%3E%3Crect x='0' y='3' width='2' height='1' fill='rgba(90,60,30,0.25)'/%3E%3Crect x='3' y='0' width='2' height='1' fill='rgba(70,45,20,0.18)'/%3E%3C/svg%3E"),
+    linear-gradient(145deg, #231912 0%, #1a120a 50%, #120c06 100%) !important;
   border: 6px solid #4a3728 !important;
-  box-shadow: inset 0 0 25px rgba(0,0,0,0.95);
+  box-shadow: inset 0 0 30px rgba(0,0,0,0.95), inset 2px 2px 6px rgba(120,80,40,0.06) !important;
   position: relative;
   overflow: hidden;
   height: 100%;
@@ -2247,58 +3018,130 @@
 }
 .back-fantasy .fantasy-scrollwork {
   position: absolute;
-  inset: 6px;
-  border: 2px solid #b45309;
+  inset: 5px;
+  border: 2px solid rgba(180,83,9,0.55);
   border-radius: 4px;
+  box-shadow: inset 0 0 8px rgba(0,0,0,0.7), 0 0 6px rgba(180,83,9,0.15);
+}
+.back-fantasy .fantasy-scrollwork::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border: 1px dashed rgba(180,83,9,0.2);
+  border-radius: 2px;
+  animation: rune-pulse-back 3s ease-in-out infinite;
 }
 .back-fantasy .fantasy-center-seal {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 70px;
-  height: 70px;
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
-  border: 2px solid #b45309;
-  background: #1a110a;
-  box-shadow: 0 0 10px rgba(0,0,0,0.8);
+  border: 2px solid rgba(180,83,9,0.7);
+  background: radial-gradient(circle at 35% 35%, #2a1a08, #1a110a);
+  box-shadow: 0 0 14px rgba(0,0,0,0.9), 0 0 6px rgba(180,83,9,0.2), inset 0 0 10px rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.back-fantasy .fantasy-center-seal::before {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  border: 1px dashed rgba(180,83,9,0.3);
+  animation: rune-pulse-back 2.5s ease-in-out infinite;
 }
 
-/* 10. Cyberpunk Back */
+/* 10. Cyberpunk Back – circuit board terminal */
 .back-cyberpunk {
-  background: #060608 !important;
-  border: 4px solid #00f0ff !important;
+  background: #04060a !important;
+  border: 4px solid #00c8d4 !important;
+  box-shadow: inset 0 0 14px rgba(0,200,212,0.06), 0 0 10px rgba(0,200,212,0.15) !important;
   position: relative;
   overflow: hidden;
   height: 100%;
   width: 100%;
+  animation: cyber-border-pulse 3s ease-in-out infinite;
 }
 .back-cyberpunk .cyber-circuit {
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(circle, rgba(0,240,255,0.05) 1px, transparent 1px);
-  background-size: 10px 10px;
+  background-image:
+    linear-gradient(rgba(0,240,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,240,255,0.04) 1px, transparent 1px),
+    radial-gradient(circle, rgba(0,240,255,0.06) 1.5px, transparent 1.5px);
+  background-size: 100% 8px, 8px 100%, 20px 20px;
+  animation: arcade-grid-move 2s linear infinite;
+}
+.back-cyberpunk::before {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border: 1px solid rgba(0,240,255,0.12);
+  pointer-events: none;
+}
+.back-cyberpunk::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  height: 40px;
+  background: linear-gradient(to bottom, transparent, rgba(0,240,255,0.04), transparent);
+  animation: cyber-scanline-roll 4s linear infinite;
+  pointer-events: none;
 }
 
-/* 11. Anime Back */
+/* 11. Anime Back – holo foil card backing */
 .back-anime {
-  background: #12000c !important;
+  background: radial-gradient(ellipse at 50% 30%, #2a0020, #12000c) !important;
   border: 5px solid #ff007f !important;
+  box-shadow: inset 0 0 20px rgba(255,0,127,0.12), 0 0 12px rgba(255,0,127,0.2) !important;
   position: relative;
   overflow: hidden;
   height: 100%;
   width: 100%;
+  animation: anime-border-glow 3.5s ease-in-out infinite;
+}
+.back-anime::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(255,0,127,0.12) 1px, transparent 1px);
+  background-size: 10px 10px;
+  opacity: 0.5;
+  pointer-events: none;
 }
 .back-anime .anime-star-crest {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 80px;
-  height: 80px;
+  width: 82px;
+  height: 82px;
   border-radius: 50%;
-  border: 2.5px solid #ffd700;
-  background: radial-gradient(circle, #ff007f 0%, #12000c 90%);
+  border: 2.5px solid rgba(255,215,0,0.6);
+  background: radial-gradient(circle at 35% 35%, #ff4da6, #cc005c 50%, #7b0038 100%);
+  box-shadow: 0 0 20px rgba(255,0,127,0.4), inset 0 0 12px rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.back-anime .anime-star-crest::before {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  border: 1px dashed rgba(255,215,0,0.3);
+  animation: spin-slow 8s linear infinite;
+}
+.back-anime .anime-star-crest::after {
+  content: '★';
+  color: rgba(255,215,0,0.7);
+  font-size: 28px;
+  text-shadow: 0 0 10px rgba(255,215,0,0.8);
+  line-height: 1;
 }
 
 @keyframes chrome-shine {

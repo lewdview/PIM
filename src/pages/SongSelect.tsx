@@ -248,6 +248,7 @@ export default function SongSelect() {
   const isAvant = getActiveTheme() === 'avant-garde';
 
   const collection = useVaultStore((s) => s.collection);
+  const fragments = useVaultStore((s) => s.fragments);
   const loadVaultData = useVaultStore((s) => s.loadVaultData);
 
   useEffect(() => {
@@ -270,8 +271,9 @@ export default function SongSelect() {
   const today = getCurrentDay();
   const isSongUnlocked = (song: GameSong) => {
     if (song.day === today) return true;
-    const fragmentCount = parseInt(localStorage.getItem(`fragments_${song.id}`) || '0', 10);
-    return fragmentCount >= 10;
+    const ownsCard = Array.isArray(collection) ? collection.some(c => c && (c.cardId === song.id || c.card?.day === song.day)) : false;
+    const fragmentCount = fragments[song.id] ?? parseInt(localStorage.getItem(`fragments_${song.id}`) || '0', 10);
+    return ownsCard || fragmentCount >= 10;
   };
 
   const selectedUnlocked = selected ? isSongUnlocked(selected) : false;

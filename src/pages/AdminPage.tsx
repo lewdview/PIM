@@ -543,7 +543,7 @@ export default function AdminPage() {
     if (!payload) return '—';
     switch (type) {
       case 'game_end': {
-        const songDay = payload.songId?.replace('card-', '') || 'unknown';
+        const songDay = payload.songId?.replace('card-', '').replace('day-', '') || 'unknown';
         const matched = catalog.find(c => String(c.day) === songDay || c.id === payload.songId);
         const songTitle = matched ? matched.title : `Day ${songDay}`;
         return `Song: "${songTitle}" | Score: ${payload.score?.toLocaleString() || 0} (${payload.accuracy || 0}%) | Medal: ${payload.medal || 'None'}`;
@@ -561,7 +561,7 @@ export default function AdminPage() {
       case 'duplicate_fusion':
         return `Fused duplicates into ${String(payload.to || 'rare').toUpperCase()}`;
       case 'nft_mint':
-        return `Minted card #${payload.cardId?.replace('card-', '') || ''} | TX: ${payload.txHash ? `${payload.txHash.slice(0, 8)}...` : 'Success'}`;
+        return `Minted card #${payload.cardId?.replace('card-', '').replace('day-', '') || ''} | TX: ${payload.txHash ? `${payload.txHash.slice(0, 8)}...` : 'Success'}`;
       case 'bonus_code_redeem':
         return `Redeemed code for ${String(payload.rewardType).toUpperCase()}`;
       default:

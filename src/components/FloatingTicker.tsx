@@ -111,7 +111,7 @@ export default function FloatingTicker() {
       // Helper to get song title
       const getSongTitle = (songId: string) => {
         if (!songId) return 'Unknown Release';
-        const idStr = songId.replace('card-', '');
+        const idStr = songId.replace('card-', '').replace('day-', '');
         const matched = catalogRef.current.find(c => String(c.day) === idStr || c.id === songId);
         return matched ? matched.title : `Day ${idStr}`;
       };

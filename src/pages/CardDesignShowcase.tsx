@@ -1886,13 +1886,13 @@ function CardChrome({ card, backSide }: { card: VaultCard; backSide?: React.Reac
           <span className="chrome-stat-lbl">ENG</span>
         </div>
         <div className="chrome-stat-box">
-          <span className="chrome-stat-val">{card.keySignature}</span>
+          <span className="chrome-stat-val">{['Am','C','G','D','Em','F','Bm','A'][card.tempo % 8]}</span>
           <span className="chrome-stat-lbl">KEY</span>
         </div>
       </div>
 
       <div className="chrome-signature-box">
-        <div className="chrome-signature-line truncate max-w-[130px]">{card.artist}</div>
+        <div className="chrome-signature-line truncate max-w-[130px]">th3scr1b3</div>
         <div className="text-[4.5px] font-mono opacity-40 uppercase tracking-widest mt-0.5">certified audio autograph</div>
       </div>
     </>
@@ -1927,12 +1927,12 @@ function CardChrome({ card, backSide }: { card: VaultCard; backSide?: React.Reac
             <span className="chrome-stat-lbl">ENG</span>
           </div>
           <div className="chrome-stat-box">
-            <span className="chrome-stat-val text-[#fbbf24]">{card.keySignature}</span>
+            <span className="chrome-stat-val text-[#fbbf24]">{['Am','C','G','D','Em','F','Bm','A'][card.tempo % 8]}</span>
             <span className="chrome-stat-lbl">KEY</span>
           </div>
         </div>
         <div className="chrome-signature-box border-t border-white/10 mt-1 pt-1 text-center">
-          <div className="chrome-signature-line text-white truncate">{card.artist}</div>
+          <div className="chrome-signature-line text-white truncate">th3scr1b3</div>
           <div className="text-[4px] font-mono opacity-55 uppercase tracking-widest">certified digital signature</div>
         </div>
       </div>
@@ -2048,7 +2048,7 @@ function CardCyberpunk({ card, backSide }: { card: VaultCard; backSide?: React.R
 
       <div className="cyber-details font-mono text-[5.5px] flex flex-col justify-center bg-black/40 p-1 border border-current/20 mt-1">
         <div className="cyber-log-line text-white">SYS.SIG: {card.id.slice(0, 8).toUpperCase()}</div>
-        <div className="cyber-log-line">BPM.REF: {card.tempo} / KEY: {card.keySignature}</div>
+        <div className="cyber-log-line">BPM.REF: {card.tempo} / KEY: {['Am','C','G','D','Em','F','Bm','A'][card.tempo % 8]}</div>
         <div className="cyber-log-line">VALENCE: {card.valence} / ENERGY: {card.energy}</div>
       </div>
 
@@ -2079,7 +2079,7 @@ function CardCyberpunk({ card, backSide }: { card: VaultCard; backSide?: React.R
       <div className="absolute inset-x-2 bottom-2 z-10 flex flex-col gap-1 bg-black/90 p-2 rounded border border-current">
         <div className="cyber-details m-0 font-mono text-[5px]">
           <div className="cyber-log-line text-white">ID: {card.id.toUpperCase()}</div>
-          <div className="cyber-log-line">BPM: {card.tempo} | KEY: {card.keySignature} | MOOD: {card.mood.toUpperCase()}</div>
+          <div className="cyber-log-line">BPM: {card.tempo} | KEY: {['Am','C','G','D','Em','F','Bm','A'][card.tempo % 8]} | MOOD: {card.mood.toUpperCase()}</div>
           <div className="cyber-log-line opacity-55">DESC: {card.description}</div>
         </div>
         <div className="cyber-footer border-t border-current/30 pt-1 mt-1">
@@ -2121,7 +2121,7 @@ function CardAnime({ card, backSide }: { card: VaultCard; backSide?: React.React
       <div className={`anime-art-frame ${heightClass}`}>
         <img src={card.coverUrl} alt={card.title} className="w-full h-full object-cover" />
         {card.rarity !== 'common' && (
-          <div className="anime-signature-overlay">{card.artist.split(' ')[0]}</div>
+          <div className="anime-signature-overlay">th3scr1b3</div>
         )}
       </div>
 
@@ -2143,7 +2143,7 @@ function CardAnime({ card, backSide }: { card: VaultCard; backSide?: React.React
       
       {card.rarity === 'mythic' && <div className="mythic-foil-wash" />}
       
-      <div className="anime-signature-overlay">{card.artist}</div>
+      <div className="anime-signature-overlay">th3scr1b3</div>
 
       <div className="absolute inset-x-2 top-2 z-10 flex justify-between items-center bg-black/60 p-1 rounded border border-white/15">
         <div className="anime-level-badge bg-yellow-400 text-black border-yellow-400 font-black">2</div>

@@ -36,6 +36,7 @@ export default function Chapter() {
 
   // Vault integration
   const collection = useVaultStore((s) => s.collection);
+  const fragments = useVaultStore((s) => s.fragments);
   const loadVaultData = useVaultStore((s) => s.loadVaultData);
   const equippedCardId = useVaultStore((s) => s.equippedCardId);
   const setEquippedCardId = useVaultStore((s) => s.setEquippedCardId);
@@ -188,7 +189,7 @@ export default function Chapter() {
   const ownsCard = selectedSong && Array.isArray(collection) ? collection.some(c => c && (c.cardId === selectedSong.id || c.card?.day === selectedSong.day)) : false;
   const isCleared = selectedSong ? hasCleared(selectedSong) : false;
 
-  const fragmentCount = selectedSong ? parseInt(localStorage.getItem(`fragments_${selectedSong.id}`) || '0', 10) : 0;
+  const fragmentCount = selectedSong ? (fragments[selectedSong.id] ?? parseInt(localStorage.getItem(`fragments_${selectedSong.id}`) || '0', 10)) : 0;
   const isCardUnlocked = ownsCard || fragmentCount >= 10;
 
   // Check locks
@@ -196,8 +197,8 @@ export default function Chapter() {
   const isBonusLocked = selectedSong && (songs.indexOf(selectedSong) >= regularSongs.length) && !bonusUnlocked;
   const isProgLocked = selectedSong && !isUnlocked(songs.indexOf(selectedSong));
   
-  // A song is locked if it is a replay (already cleared) AND they have less than 10 fragments
-  const isUnlockReqLocked = isCleared ? (fragmentCount < 10) : false;
+  // A song is locked if it is a replay (already cleared) AND they have less than 10 fragments AND they do NOT own the card
+  const isUnlockReqLocked = isCleared ? (!ownsCard && fragmentCount < 10) : false;
   const isPlayLocked = isTimeLocked || isBonusLocked || isProgLocked || isUnlockReqLocked;
 
   const difficultyLevel = selectedSong
