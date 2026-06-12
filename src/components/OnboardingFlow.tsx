@@ -254,6 +254,20 @@ export default function OnboardingFlow({ onComplete }: Props) {
     return <ExplainerOverlay cards={cards} onDone={handleExplainerDone} />;
   }
 
+  if (phase === 'done') {
+    return (
+      <div className="fixed inset-0 bg-[#050402] flex flex-col items-center justify-center z-[9999]">
+        <div
+          className="w-8 h-8 border-2 border-white/10 rounded-full animate-spin mb-4"
+          style={{ borderTopColor: '#ff3800' }}
+        />
+        <p className="font-mono text-[10px] tracking-widest text-[#ff3800] uppercase">
+          Synchronizing Vault Profile...
+        </p>
+      </div>
+    );
+  }
+
   return null;
 }
 

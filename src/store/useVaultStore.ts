@@ -401,11 +401,20 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   },
 
   completeOnboarding: async () => {
-    const session = await supabase.auth.getSession();
-    const userId = session.data.session?.user.id;
-    if (userId) {
-      await supabase.from('profiles').update({ has_onboarded: true }).eq('id', userId);
-      set({ hasOnboarded: true });
+    // Set local state synchronously first to instantly transition away from the onboarding flow
+    set({ hasOnboarded: true });
+
+    try {
+      const session = await supabase.auth.getSession();
+      const userId = session.data.session?.user.id;
+      if (userId) {
+        const { error } = await supabase.from('profiles').update({ has_onboarded: true }).eq('id', userId);
+        if (error) {
+          console.warn('[completeOnboarding] Failed to update has_onboarded in DB:', error.message);
+        }
+      }
+    } catch (err) {
+      console.warn('[completeOnboarding] Error during Supabase update:', err);
     }
   },
 
