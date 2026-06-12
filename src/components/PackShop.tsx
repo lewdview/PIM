@@ -151,10 +151,16 @@ function PackBag({ category, isActive, onRip, isRipping, isFreeClaimed }: {
 
   const tokenBalance = useVaultStore((s) => s.tokenBalance);
   const tokenPackCost = adminCfg.tokenPackCost ?? 275;
-  const isVaultToken = category === 'vault_token';
-  const hasEnoughTokens = !isVaultToken || (tokenBalance >= tokenPackCost);
+  
+  let requiredTokens = 0;
+  if (category === 'vault_token') requiredTokens = tokenPackCost;
+  else if (category === 'targeted_pull') requiredTokens = 500;
+  else if (category === 'rarity_upgrade') requiredTokens = 150;
 
-  const disabledAction = isRipping || !isActive || isFreeDisabled || isOverLimit || (isVaultToken && !hasEnoughTokens);
+  const hasEnoughTokens = tokenBalance >= requiredTokens;
+  const isTokenBased = category === 'vault_token' || category === 'targeted_pull' || category === 'rarity_upgrade';
+
+  const disabledAction = isRipping || !isActive || isFreeDisabled || isOverLimit || (isTokenBased && !hasEnoughTokens);
 
   // Countdown timer for free pack cooldown
   const [countdown, setCountdown] = useState('');
@@ -172,7 +178,7 @@ function PackBag({ category, isActive, onRip, isRipping, isFreeClaimed }: {
   let dynamicLabelOverride = '';
   if (isFreeDisabled) dynamicLabelOverride = countdown || 'CLAIMED TODAY';
   else if (isOverLimit) dynamicLabelOverride = limitLabel;
-  else if (isVaultToken && !hasEnoughTokens) dynamicLabelOverride = `NEED ${tokenPackCost} V⚡`;
+  else if (isTokenBased && !hasEnoughTokens) dynamicLabelOverride = `NEED ${requiredTokens} V⚡`;
 
   const repeatedText = Array(5).fill(0).map(() => `365 DAYS OF LIGHT AND DARK \u2022 ${cfg.label}`).join(' \u2022 ');
 

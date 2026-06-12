@@ -123,6 +123,8 @@ export default function HomePage() {
   const [upgradeCardId, setUpgradeCardId] = useState('');
   const [upgradeLoading, setUpgradeLoading] = useState(false);
   const [fusionLoading, setFusionLoading] = useState(false);
+  const [showTargetedPullModal, setShowTargetedPullModal] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   // Upgradeable cards (not legendary or mythic)
   const upgradeableCards = useMemo(() =>
@@ -285,6 +287,15 @@ export default function HomePage() {
   }, [today, hasClaimed, setHasClaimed, addToCollection, startReveal, setLocation, user]);
 
   const handlePurchasePack = useCallback(async (category: PackCategory, size: PackSize, sessionId?: string) => {
+    if (category === 'targeted_pull') {
+      setShowTargetedPullModal(true);
+      return;
+    }
+    if (category === 'rarity_upgrade') {
+      setShowUpgradeModal(true);
+      return;
+    }
+
     const cfg = PACK_CONFIGS[category];
     const tier = cfg?.tiers.find(t => t.size === size) ?? cfg?.tiers[0];
 
@@ -883,10 +894,199 @@ export default function HomePage() {
           accent={checkoutInfo.accent}
         />
       )}
+
+      {/* ── TARGETED PULL MODAL OVERLAY ──────────────────────────────── */}
+      <AnimatePresence>
+        {showTargetedPullModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              className="relative w-full max-w-md border-2 border-black"
+              style={{
+                background: 'linear-gradient(135deg, #120e00, #0a0600)',
+                padding: '24px',
+                boxShadow: '8px 8px 0 #000, 0 0 50px rgba(255,153,0,0.15)',
+              }}
+            >
+              <div className="scanlines absolute inset-0 opacity-10 pointer-events-none" />
+              <div className="relative z-10 space-y-5">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="text-2xl font-black uppercase text-[#ff9900]" style={{ fontFamily: '"Impact", sans-serif' }}>
+                      🎯 TARGETED PULL DECRYPTION
+                    </h3>
+                    <p className="text-[9px] font-mono uppercase tracking-widest opacity-40">VAULT PROTOCOL 0x5D3</p>
+                  </div>
+                  <button 
+                    onClick={() => { audioManager.playSfx('tap_nav', 0.4); setShowTargetedPullModal(false); setTargetDay(''); }}
+                    className="text-white hover:text-[#ff9900] font-mono text-xs font-bold uppercase transition-all"
+                  >
+                    [ ESC ]
+                  </button>
+                </div>
+
+                <div className="border border-zinc-800 p-4 bg-black/60 space-y-4">
+                  <p className="text-[10px] font-mono text-zinc-300 leading-normal">
+                    Enter the exact day (1-365) you wish to pull from. Ripping this pack will decrypt 1 card from that day's specific pool.
+                  </p>
+                  <div className="space-y-2">
+                    <label className="block text-[9px] font-mono uppercase tracking-wider text-zinc-400">Target Day Number</label>
+                    <input 
+                      type="number" 
+                      min="1" 
+                      max="365" 
+                      value={targetDay}
+                      onChange={(e) => setTargetDay(e.target.value)}
+                      placeholder="e.g. 45" 
+                      className="w-full bg-black border-2 border-zinc-800 text-white font-mono text-sm p-3 focus:border-amber-500 outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between border-t border-zinc-800 pt-4">
+                  <span className="text-[10px] font-mono uppercase text-zinc-400">Cost: 500 V⚡</span>
+                  <span className="text-[10px] font-mono uppercase text-zinc-400">Balance: {tokenBalance} V⚡</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => { audioManager.playSfx('tap_nav', 0.4); setShowTargetedPullModal(false); setTargetDay(''); }}
+                    className="py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white font-mono uppercase text-xs font-bold transition-all border border-black"
+                  >
+                    CANCEL
+                  </button>
+                  <button
+                    disabled={targetLoading || !targetDay || parseInt(targetDay) < 1 || parseInt(targetDay) > 365 || tokenBalance < 500}
+                    onClick={() => {
+                      setShowTargetedPullModal(false);
+                      handleTargetedPull(parseInt(targetDay));
+                    }}
+                    className="py-2.5 bg-[#ff9900] hover:bg-[#e08800] text-black font-black uppercase text-xs tracking-wider transition-all disabled:opacity-30 border border-black"
+                    style={{ boxShadow: '2px 2px 0 #000' }}
+                  >
+                    {targetLoading ? 'PULLING...' : 'DECRYPT PULL'}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── RARITY UPGRADE MODAL OVERLAY ─────────────────────────────── */}
+      <AnimatePresence>
+        {showUpgradeModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              className="relative w-full max-w-lg border-2 border-black"
+              style={{
+                background: 'linear-gradient(135deg, #0f1012, #07080a)',
+                padding: '24px',
+                boxShadow: '8px 8px 0 #000, 0 0 50px rgba(0,210,255,0.15)',
+              }}
+            >
+              <div className="scanlines absolute inset-0 opacity-10 pointer-events-none" />
+              <div className="relative z-10 space-y-5">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="text-2xl font-black uppercase text-[#00d2ff]" style={{ fontFamily: '"Impact", sans-serif' }}>
+                      ⚡ RARITY UPGRADE MODULE
+                    </h3>
+                    <p className="text-[9px] font-mono uppercase tracking-widest opacity-40">SELECT TARGET CARD TO UPGRADE TIER</p>
+                  </div>
+                  <button 
+                    onClick={() => { audioManager.playSfx('tap_nav', 0.4); setShowUpgradeModal(false); }}
+                    className="text-white hover:text-[#00d2ff] font-mono text-xs font-bold uppercase transition-all"
+                  >
+                    [ ESC ]
+                  </button>
+                </div>
+
+                <div className="border border-zinc-800 bg-black/60 p-4">
+                  <div className="flex justify-between items-center text-[10px] font-mono uppercase text-zinc-400 mb-2 px-1">
+                    <span>Available Cards ({upgradeableCards.length})</span>
+                    <span>Cost: 150 V⚡</span>
+                  </div>
+
+                  <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1" style={{ scrollbarWidth: 'thin' }}>
+                    {upgradeableCards.length === 0 ? (
+                      <div className="text-[10px] font-mono opacity-30 text-center py-8">
+                        No upgradeable cards found below Legendary.
+                      </div>
+                    ) : (
+                      upgradeableCards.map((c) => {
+                        const currentRarity = c.card.rarity;
+                        const idx = RARITIES.indexOf(currentRarity);
+                        const nextRarity = RARITIES[idx + 1] || currentRarity;
+                        const curColor = RARITY_CONFIG[currentRarity]?.color || '#fff';
+                        const nextColor = RARITY_CONFIG[nextRarity]?.color || '#fff';
+
+                        return (
+                          <div 
+                            key={c.id} 
+                            className="flex items-center justify-between p-3 border border-zinc-800 bg-black/40 hover:border-cyan-500/50 transition-all"
+                          >
+                            <div>
+                              <div className="text-xs font-bold text-white">
+                                Day {c.card.day}: {c.card.title}
+                              </div>
+                              <div className="text-[9px] font-mono mt-0.5 flex items-center gap-1.5">
+                                <span style={{ color: curColor }} className="font-bold">{currentRarity.toUpperCase()}</span>
+                                <span className="text-zinc-500">→</span>
+                                <span style={{ color: nextColor }} className="font-bold">{nextRarity.toUpperCase()}</span>
+                              </div>
+                            </div>
+                            <button
+                              disabled={upgradeLoading || tokenBalance < 150}
+                              onClick={() => {
+                                setShowUpgradeModal(false);
+                                handleUpgrade(c.id);
+                              }}
+                              className="px-3 py-1.5 bg-[#00d2ff] hover:bg-[#00b2d9] text-black font-black font-mono text-[9px] uppercase transition-all"
+                              style={{ border: '1px solid #000', boxShadow: '1.5px 1.5px 0 #000' }}
+                            >
+                              UPGRADE
+                            </button>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  <span className="text-[10px] font-mono uppercase text-zinc-400">Balance: {tokenBalance} V⚡</span>
+                  <button
+                    onClick={() => { audioManager.playSfx('tap_nav', 0.4); setShowUpgradeModal(false); }}
+                    className="px-5 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-white font-mono uppercase text-[10px] font-bold transition-all border border-black"
+                  >
+                    CLOSE
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {showSolitaire && <SolitaireCanvas onClose={() => setShowSolitaire(false)} />}
       <div className="h-8" />
     </div>
   );
 }
-
 
