@@ -105,14 +105,34 @@ export default function SongDetail() {
       .catch(() => setLocation(backRoute));
   }, [songId]);
 
+  const onTimeUpdate = () => {
+    const audio = previewRef.current;
+    if (audio && audio.duration) {
+      setPreviewProg(audio.currentTime / audio.duration);
+    }
+  };
+
+  const onEnded = () => {
+    setPreviewing(false);
+    setPreviewProg(0);
+  };
+
+  const cleanupPreview = () => {
+    const audio = previewRef.current;
+    if (audio) {
+      audio.pause();
+      audio.removeEventListener('timeupdate', onTimeUpdate);
+      audio.removeEventListener('ended', onEnded);
+      audio.src = '';
+      try { audio.load(); } catch {}
+    }
+  };
+
   // Cleanup audio preview on unmount
   useEffect(() => {
     return () => {
-      if (previewRef.current) {
-        previewRef.current.pause();
-        previewRef.current.src = '';
-        previewRef.current = null;
-      }
+      cleanupPreview();
+      previewRef.current = null;
     };
   }, []);
 
@@ -124,15 +144,14 @@ export default function SongDetail() {
       setPreviewing(false);
       return;
     }
-    if (!previewRef.current) {
-      const audio = new Audio(song.audioUrl);
-      audio.volume = 0.5;
-      audio.addEventListener('timeupdate', () => {
-        if (audio.duration) setPreviewProg(audio.currentTime / audio.duration);
-      });
-      audio.addEventListener('ended', () => { setPreviewing(false); setPreviewProg(0); });
-      previewRef.current = audio;
-    }
+    
+    cleanupPreview();
+
+    const audio = new Audio(song.audioUrl);
+    audio.volume = 0.5;
+    audio.addEventListener('timeupdate', onTimeUpdate);
+    audio.addEventListener('ended', onEnded);
+    previewRef.current = audio;
     // Start 15% into the track for a more interesting preview
     if (previewRef.current.currentTime < 1) {
       previewRef.current.currentTime = (song.duration * 0.15);
@@ -144,7 +163,8 @@ export default function SongDetail() {
   const handlePlay = () => {
     if (!songId || !unlocked || !song) return;
     // Stop preview if playing
-    if (previewRef.current) { previewRef.current.pause(); setPreviewing(false); }
+    cleanupPreview();
+    setPreviewing(false);
     audioManager.playSfx('tap_nav', 0.4);
     sessionStorage.setItem(`game_origin_${songId}`, from);
     sessionStorage.setItem(`diff_override_${songId}`, String(diffOverride));
@@ -161,7 +181,8 @@ export default function SongDetail() {
   };
 
   const handleBack = () => {
-    if (previewRef.current) { previewRef.current.pause(); setPreviewing(false); }
+    cleanupPreview();
+    setPreviewing(false);
     audioManager.playSfx('back', 0.5);
     setLocation(backRoute);
   };

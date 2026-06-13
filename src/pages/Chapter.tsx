@@ -71,11 +71,9 @@ export default function Chapter() {
       setLoading(false);
 
       // Stop any existing preview on song list change
-      if (previewRef.current) {
-        previewRef.current.pause();
-        setPreviewing(false);
-        setPreviewProg(0);
-      }
+      cleanupPreview();
+      setPreviewing(false);
+      setPreviewProg(0);
 
       // Check if we have a last played stage to restore focus
       const lastSongId = sessionStorage.getItem("campaign_last_song_id");
@@ -118,13 +116,34 @@ export default function Chapter() {
     });
   }, [monthNum]);
 
+  const onTimeUpdate = () => {
+    const audio = previewRef.current;
+    if (audio && audio.duration) {
+      setPreviewProg(audio.currentTime / audio.duration);
+    }
+  };
+
+  const onEnded = () => {
+    setPreviewing(false);
+    setPreviewProg(0);
+  };
+
+  const cleanupPreview = () => {
+    const audio = previewRef.current;
+    if (audio) {
+      audio.pause();
+      audio.removeEventListener('timeupdate', onTimeUpdate);
+      audio.removeEventListener('ended', onEnded);
+      audio.src = '';
+      try { audio.load(); } catch {}
+    }
+  };
+
   // Clean up preview audio on unmount
   useEffect(() => {
     return () => {
-      if (previewRef.current) {
-        previewRef.current.pause();
-        previewRef.current = null;
-      }
+      cleanupPreview();
+      previewRef.current = null;
     };
   }, []);
 
@@ -220,45 +239,26 @@ export default function Chapter() {
       return;
     }
 
-    if (!previewRef.current) {
-      const audio = new Audio(selectedSong.audioUrl);
-      audio.volume = 0.4;
-      audio.addEventListener('timeupdate', () => {
-        if (audio.duration) setPreviewProg(audio.currentTime / audio.duration);
-      });
-      audio.addEventListener('ended', () => {
-        setPreviewing(false);
-        setPreviewProg(0);
-      });
-      previewRef.current = audio;
-    } else if (previewRef.current.src !== selectedSong.audioUrl) {
-      previewRef.current.pause();
-      const audio = new Audio(selectedSong.audioUrl);
-      audio.volume = 0.4;
-      audio.addEventListener('timeupdate', () => {
-        if (audio.duration) setPreviewProg(audio.currentTime / audio.duration);
-      });
-      audio.addEventListener('ended', () => {
-        setPreviewing(false);
-        setPreviewProg(0);
-      });
-      previewRef.current = audio;
+    cleanupPreview();
+
+    const audio = new Audio(selectedSong.audioUrl);
+    audio.volume = 0.4;
+    audio.addEventListener('timeupdate', onTimeUpdate);
+    audio.addEventListener('ended', onEnded);
+    previewRef.current = audio;
+
+    if (audio.currentTime < 1) {
+      audio.currentTime = (selectedSong.duration * 0.15); // skip to middle
     }
 
-    if (previewRef.current.currentTime < 1) {
-      previewRef.current.currentTime = (selectedSong.duration * 0.15); // skip to middle
-    }
-
-    previewRef.current.play().catch(() => {});
+    audio.play().catch(() => {});
     setPreviewing(true);
   };
 
   const handlePlay = () => {
     if (isPlayLocked || !selectedSong) return;
-    if (previewRef.current) {
-      previewRef.current.pause();
-      setPreviewing(false);
-    }
+    cleanupPreview();
+    setPreviewing(false);
     
     audioManager.playSfx('tap_nav', 0.4);
     sessionStorage.setItem(`campaign_last_song_id`, selectedSong.id);

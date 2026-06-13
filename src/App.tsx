@@ -36,6 +36,7 @@ import Tutorial from './pages/Tutorial';
 import Options from './pages/Options';
 import SongDetail from './pages/SongDetail';
 import LandingPage from './pages/LandingPage';
+import PitchDeck from './pages/PitchDeck';
 
 export default function App() {
   const [location, setLocation] = useLocation();
@@ -121,6 +122,7 @@ export default function App() {
       <main className="flex-1 flex flex-col">
         <Switch>
           <Route path="/" component={LandingPage} />
+          <Route path="/pitch-deck" component={PitchDeck} />
           <Route path="/arcade" component={RhythmHome} />
           <Route path="/songs" component={SongSelect} />
           <Route path="/play/:songId" component={GamePlay} />

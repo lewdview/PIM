@@ -17,6 +17,7 @@ const links = [
   { to: '/vault/leaderboard', label: 'Ranks', icon: Trophy },
   { to: '/vault/forge', label: 'Forge', icon: Flame },
   { to: '/vault/claim', label: 'Redeem', icon: Gift },
+  { to: '/pitch-deck', label: 'Pitch', icon: FileText },
 ];
 
 // ── The new logotype ──────────────────────────────────────────────────────────
@@ -632,7 +633,7 @@ export default function Navbar() {
         }}
       >
         <div className="flex items-stretch h-[62px]">
-          {links.filter(l => l.to !== '/vault/codex' && l.to !== '/vault/leaderboard').map(({ to, label, icon: Icon }) => {
+          {links.filter(l => l.to !== '/vault/codex' && l.to !== '/vault/leaderboard' && l.to !== '/pitch-deck').map(({ to, label, icon: Icon }) => {
             const active = location === to;
             return (
               <Link
