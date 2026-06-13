@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Layers, Flame, Star, Calendar, Zap, Gift } from 'lucide-react';
 import HeroCard from '../components/HeroCard';
 import PackShop from '../components/PackShop';
