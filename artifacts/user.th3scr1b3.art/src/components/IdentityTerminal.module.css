@@ -1,0 +1,230 @@
+.terminalContainer {
+  background: rgba(10, 10, 12, 0.9);
+  border: 1px solid rgba(0, 245, 255, 0.15);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6), 0 0 32px rgba(0, 245, 255, 0.03);
+  border-radius: 12px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.terminalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(20, 20, 25, 0.5);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 0.65rem 1rem;
+}
+
+.terminalIcons {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.dotRed, .dotYellow, .dotGreen {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  opacity: 0.6;
+}
+
+.dotRed { background-color: #ef4444; }
+.dotYellow { background-color: #f59e0b; }
+.dotGreen { background-color: #10b981; }
+
+.terminalTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.termIcon {
+  color: #00f5ff;
+}
+
+.glitchGlow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #00f5ff;
+  border: 1px solid rgba(0, 245, 255, 0.3);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  background: rgba(0, 245, 255, 0.05);
+  letter-spacing: 0.1em;
+}
+
+.terminalScreen {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  position: relative;
+}
+
+.logStream {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.55);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  max-height: 120px;
+  overflow-y: auto;
+  border-left: 2px solid rgba(0, 245, 255, 0.3);
+}
+
+.logLine {
+  line-height: 1.4;
+  word-break: break-all;
+}
+
+.loadingLine {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #00f5ff;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+.statsLayout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .statsLayout {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.statsCard {
+  background: rgba(255, 255, 255, 0.01);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.statsCardTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #f5f5f7;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.cardIconTeal { color: #00f5ff; }
+.cardIconViolet { color: #bd00ff; }
+
+.statsGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.statItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.03);
+  padding-bottom: 0.35rem;
+}
+
+.statLabel {
+  color: rgba(255, 255, 255, 0.45);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.statValueTeal {
+  color: #00f5ff;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  text-shadow: 0 0 10px rgba(0, 245, 255, 0.3);
+}
+
+.statValueViolet {
+  color: #bd00ff;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  text-shadow: 0 0 10px rgba(189, 0, 255, 0.3);
+}
+
+.medalsRow {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(189, 0, 255, 0.03);
+  border: 1px solid rgba(189, 0, 255, 0.08);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+}
+
+.medalsLabel {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.medalsGroup {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.medalPlatinum, .medalGold, .medalSilver, .medalBronze {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid;
+}
+
+.medalPlatinum {
+  background: rgba(226, 232, 240, 0.1);
+  border-color: rgba(226, 232, 240, 0.3);
+  color: #e2e8f0;
+}
+
+.medalGold {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.3);
+  color: #fbbf24;
+}
+
+.medalSilver {
+  background: rgba(156, 163, 175, 0.1);
+  border-color: rgba(156, 163, 175, 0.3);
+  color: #d1d5db;
+}
+
+.medalBronze {
+  background: rgba(180, 83, 9, 0.1);
+  border-color: rgba(180, 83, 9, 0.3);
+  color: #f97316;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
