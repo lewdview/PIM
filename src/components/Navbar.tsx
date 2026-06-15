@@ -160,6 +160,8 @@ export default function Navbar() {
   const { user, signOut, status, error: authError, setShowAuthModal } = useAuthStore();
   const isAnonymous = user?.is_anonymous || !user?.email;
   const tokenBalance = useVaultStore(s => s.tokenBalance);
+  const displayName = useVaultStore(s => s.displayName);
+  const avatarUrl = useVaultStore(s => s.avatarUrl);
   const [menuOpen, setMenuOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const { is4K, toggle: toggle4K, detectCapability } = useDisplayMode();
@@ -295,6 +297,20 @@ export default function Navbar() {
             {/* Wallet Integration */}
             {user && !isAnonymous ? (
               <div className="flex items-center gap-2 ml-1">
+                {avatarUrl && (
+                  <img
+                    src={avatarUrl}
+                    alt="avatar"
+                    style={{
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '50%',
+                      border: '1.5px solid #ff3800',
+                      objectFit: 'cover',
+                      background: '#111',
+                    }}
+                  />
+                )}
                 <div
                   className="sticker-gun-tag sticker-slits"
                   style={{
@@ -305,7 +321,7 @@ export default function Navbar() {
                   } as any}
                 >
                    <span className="text-[9px] font-black tracking-tighter uppercase" style={{ color: '#1a0a00' }}>
-                    {(() => {
+                    {displayName || (() => {
                       const email = user?.email;
                       if (email) {
                         const cleaned = email.split('@')[0];
