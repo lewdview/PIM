@@ -32,6 +32,9 @@ interface AuthState {
   signInWithEphemeralWallet: () => Promise<void>;
   signUpWithEmail: (email: string, password: string) => Promise<{ error: string | null; confirmationRequired?: boolean }>;
   signInWithEmail: (email: string, password: string) => Promise<{ error: string | null }>;
+  signInWithProvider: (provider: string) => Promise<{ error: string | null }>;
+  signInWithMagicLink: (email: string) => Promise<{ error: string | null }>;
+  ensureProfileAndWallet: (user: User) => Promise<void>;
 }
 
 let subscribed = false;
@@ -65,6 +68,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         user: user ?? null,
         status: 'ready',
       });
+      if (user) {
+        void get().ensureProfileAndWallet(user);
+      }
     } else {
       // Frictionless flow: Auto sign in anonymously (or fallback to Ephemeral Wallet if disabled)
       try {
@@ -90,7 +96,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
 
     if (!subscribed) {
-      supabase.auth.onAuthStateChange((event, session) => {
+      supabase.auth.onAuthStateChange(async (event, session) => {
         console.log('[Auth] onAuthStateChange:', event, { hasSession: !!session, userId: session?.user?.id?.slice(0, 8) });
         set({ session, user: session?.user ?? null });
         if (session?.user) {
@@ -101,6 +107,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               localStorage.setItem('th3vault_ephemeral_wallet_pkey', userPkey);
             }
           }
+          await get().ensureProfileAndWallet(user);
           useVaultStore.getState().loadVaultData();
         }
       });
@@ -422,5 +429,97 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     await supabase.auth.signOut();
     localStorage.removeItem('th3vault_ephemeral_wallet_pkey');
     set({ user: null, session: null, error: null });
+  },
+  signInWithProvider: async (provider) => {
+    set({ error: null, status: 'loading' });
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: provider as any,
+      options: {
+        redirectTo: window.location.origin,
+      },
+    });
+
+    if (error) {
+      set({ error: error.message, status: 'ready' });
+      return { error: error.message };
+    }
+
+    return { error: null };
+  },
+  signInWithMagicLink: async (email) => {
+    set({ error: null, status: 'loading' });
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: window.location.origin,
+      },
+    });
+
+    if (error) {
+      set({ error: error.message, status: 'ready' });
+      return { error: error.message };
+    }
+
+    return { error: null };
+  },
+  ensureProfileAndWallet: async (user: User) => {
+    const userId = user.id;
+    // 1. Fetch profile
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('wallet_address')
+      .eq('id', userId)
+      .maybeSingle();
+
+    let linkedAddress = profile?.wallet_address;
+    let pkey = localStorage.getItem(`th3vault_ephemeral_wallet_pkey_${userId}`);
+
+    // If it's a real Web3 wallet login (has is_smart_wallet or no email, or signed in via Web3)
+    const isRealWallet = user.user_metadata?.is_smart_wallet || !user.email || user.email.endsWith('@smartwallet.th3vault.art');
+
+    if (isRealWallet) {
+      localStorage.removeItem('th3vault_ephemeral_wallet_pkey');
+      return;
+    }
+
+    if (!linkedAddress) {
+      // Generate new ephemeral wallet
+      const wallet = Wallet.createRandom();
+      linkedAddress = wallet.address;
+      pkey = wallet.privateKey;
+
+      localStorage.setItem(`th3vault_ephemeral_wallet_pkey_${userId}`, pkey);
+      localStorage.setItem('th3vault_ephemeral_wallet_pkey', pkey);
+
+      await supabase
+        .from('profiles')
+        .upsert({ id: userId, wallet_address: linkedAddress });
+
+      await supabase.auth.updateUser({
+        data: { wallet_address: linkedAddress }
+      });
+      console.log('[Auth] Generated new ephemeral wallet:', linkedAddress);
+    } else {
+      if (pkey) {
+        localStorage.setItem('th3vault_ephemeral_wallet_pkey', pkey);
+      } else {
+        // New device: regenerate ephemeral wallet
+        const wallet = Wallet.createRandom();
+        linkedAddress = wallet.address;
+        pkey = wallet.privateKey;
+
+        localStorage.setItem(`th3vault_ephemeral_wallet_pkey_${userId}`, pkey);
+        localStorage.setItem('th3vault_ephemeral_wallet_pkey', pkey);
+
+        await supabase
+          .from('profiles')
+          .upsert({ id: userId, wallet_address: linkedAddress });
+
+        await supabase.auth.updateUser({
+          data: { wallet_address: linkedAddress }
+        });
+        console.log('[Auth] New device detected. Regenerated ephemeral wallet:', linkedAddress);
+      }
+    }
   },
 }));

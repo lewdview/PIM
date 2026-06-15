@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Wallet, Mail, Lock, AlertTriangle, Key } from 'lucide-react';
+import { X, Wallet, Mail, Lock, AlertTriangle, Key, Github } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 
 interface AuthModalProps {
@@ -9,11 +9,9 @@ interface AuthModalProps {
 }
 
 export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
-  const { signInWithWallet, signUpWithEmail, signInWithEmail, status, error: storeError, setShowAuthModal } = useAuthStore();
+  const { signInWithWallet, signInWithProvider, signInWithMagicLink, status, error: storeError } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'wallet' | 'email'>('wallet');
-  const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [confirmationSent, setConfirmationSent] = useState(false);
@@ -30,37 +28,41 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     }
   };
 
-  const handleEmailSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleProviderSignIn = async (provider: string) => {
     setLocalError(null);
-    if (!email || !password) {
-      setLocalError('Please fill in all fields.');
-      return;
-    }
-    if (password.length < 6) {
-      setLocalError('Password must be at least 6 characters.');
-      return;
-    }
-
     setLoading(true);
     try {
-      let res;
-      if (isSignUp) {
-        res = await signUpWithEmail(email, password);
-        if (res && !res.error && res.confirmationRequired) {
-          setConfirmationSent(true);
-          return;
-        }
-      } else {
-        res = await signInWithEmail(email, password);
-      }
+      const res = await signInWithProvider(provider);
       if (res?.error) {
         setLocalError(res.error);
       } else {
         onClose();
       }
     } catch (err: any) {
-      setLocalError(err?.message || 'Authentication failed');
+      setLocalError(err?.message || 'OAuth authentication failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLocalError(null);
+    if (!email || !email.includes('@')) {
+      setLocalError('Please enter a valid email address.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await signInWithMagicLink(email.trim());
+      if (res?.error) {
+        setLocalError(res.error);
+      } else {
+        setConfirmationSent(true);
+      }
+    } catch (err: any) {
+      setLocalError(err?.message || 'Magic link request failed');
     } finally {
       setLoading(false);
     }
@@ -151,7 +153,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
               }}
             >
               <Mail size={12} />
-              Email Link
+              Email & Social
             </button>
           </div>
 
@@ -221,7 +223,6 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                   type="button"
                   onClick={() => {
                     setConfirmationSent(false);
-                    setIsSignUp(false);
                     setLocalError(null);
                   }}
                   className="w-full py-3 font-mono font-bold text-[10px] tracking-widest bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all uppercase"
@@ -230,77 +231,77 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 </button>
               </div>
             ) : (
-              <form onSubmit={handleEmailSubmit} className="space-y-4">
-                {/* Email field */}
-                <div className="space-y-1">
-                  <label className="block text-[9px] font-mono uppercase text-white/50 tracking-wider">
-                    Email Address
-                  </label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-3 text-white/20" size={13} />
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={e => setEmail(e.target.value)}
-                      placeholder="operator@domain.com"
-                      className="w-full pl-9 pr-4 py-2 bg-black/60 border border-white/10 text-white font-mono text-xs focus:outline-none focus:border-[#ff3800] transition-colors"
-                      required
-                    />
+              <div className="space-y-4">
+                {/* GitHub OAuth Button */}
+                <button
+                  onClick={() => handleProviderSignIn('github')}
+                  disabled={loading || status === 'loading'}
+                  className="w-full py-3 flex items-center justify-center gap-2 border-2 border-black font-black uppercase text-xs tracking-wider transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
+                  style={{
+                    background: '#24292e',
+                    color: '#fff',
+                    boxShadow: '3px 3px 0 #000',
+                    fontFamily: '"Impact", "Arial Black", sans-serif',
+                  }}
+                >
+                  <Github size={14} />
+                  <span>Continue with GitHub</span>
+                </button>
+
+                {/* Separator */}
+                <div className="flex items-center my-4">
+                  <div className="flex-1 h-[1px] bg-white/10" />
+                  <span className="px-3 text-[10px] font-mono text-white/30 uppercase tracking-widest">OR</span>
+                  <div className="flex-1 h-[1px] bg-white/10" />
+                </div>
+
+                <form onSubmit={handleEmailSubmit} className="space-y-4">
+                  {/* Email field */}
+                  <div className="space-y-1">
+                    <label className="block text-[9px] font-mono uppercase text-white/50 tracking-wider">
+                      Email Address
+                    </label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-3 text-white/20" size={13} />
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={e => setEmail(e.target.value)}
+                        placeholder="operator@domain.com"
+                        className="w-full pl-9 pr-4 py-2 bg-black/60 border border-white/10 text-white font-mono text-xs focus:outline-none focus:border-[#ff3800] transition-colors"
+                        required
+                      />
+                    </div>
                   </div>
-                </div>
 
-                {/* Password field */}
-                <div className="space-y-1">
-                  <label className="block text-[9px] font-mono uppercase text-white/50 tracking-wider">
-                    Secret Key (Password)
-                  </label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-3 text-white/20" size={13} />
-                    <input
-                      type="password"
-                      value={password}
-                      onChange={e => setPassword(e.target.value)}
-                      placeholder="••••••••••••"
-                      className="w-full pl-9 pr-4 py-2 bg-black/60 border border-white/10 text-white font-mono text-xs focus:outline-none focus:border-[#ff3800] transition-colors"
-                      required
-                    />
+                  {/* Action button */}
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      disabled={loading || status === 'loading'}
+                      className="w-full py-3.5 flex items-center justify-center gap-2 border-2 border-black font-black uppercase text-sm tracking-wider transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
+                      style={{
+                        background: '#ff3800',
+                        color: '#fff',
+                        boxShadow: '3px 3px 0 #000, 0 0 20px rgba(255,56,0,0.3)',
+                        fontFamily: '"Impact", "Arial Black", sans-serif',
+                      }}
+                    >
+                      {loading ? (
+                        <>
+                          <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <Mail size={14} />
+                          <span>Send Magic Link</span>
+                        </>
+                      )}
+                    </button>
                   </div>
-                </div>
-
-                {/* Action buttons */}
-                <div className="pt-2 space-y-2.5">
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full py-3.5 flex items-center justify-center gap-2 border-2 border-black font-black uppercase text-sm tracking-wider transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
-                    style={{
-                      background: '#ff3800',
-                      color: '#fff',
-                      boxShadow: '3px 3px 0 #000, 0 0 20px rgba(255,56,0,0.3)',
-                      fontFamily: '"Impact", "Arial Black", sans-serif',
-                    }}
-                  >
-                    {loading ? (
-                      <>
-                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        Processing...
-                      </>
-                    ) : isSignUp ? (
-                      'Initialize New Account'
-                    ) : (
-                      'Decrypt & Establish Session'
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => { setIsSignUp(!isSignUp); setLocalError(null); setConfirmationSent(false); }}
-                    className="w-full text-center text-[10px] font-mono uppercase text-white/40 hover:text-white/80 py-1 transition-colors"
-                  >
-                    {isSignUp ? 'Already registered? Log In' : 'Need email access? Register here'}
-                  </button>
-                </div>
-              </form>
+                </form>
+              </div>
             )}
 
             {/* Error notifications */}

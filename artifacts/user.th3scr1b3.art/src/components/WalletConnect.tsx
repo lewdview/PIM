@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { Zap, ShieldAlert, LogOut, Loader2 } from 'lucide-react';
+import { Zap, ShieldAlert, LogOut, Loader2, Github, Mail, User2 } from 'lucide-react';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 import styles from './WalletConnect.module.css';
 
 const BASE_CHAIN_ID_HEX = '0x2105'; // 8453
@@ -18,16 +19,27 @@ interface WalletRequest {
   request: (args: { method: string; params?: unknown }) => Promise<unknown>;
 }
 
-export default function WalletConnect() {
+interface WalletConnectProps {
+  redirectUri?: string;
+}
+
+export default function WalletConnect({ redirectUri }: WalletConnectProps) {
+  const [activeUser, setActiveUser] = useState<SupabaseUser | null>(null);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Auth view states
+  const [activeTab, setActiveTab] = useState<'wallet' | 'email'>('wallet');
+  const [magicEmail, setMagicEmail] = useState<string>('');
+  const [emailSent, setEmailSent] = useState<string | null>(null);
 
   useEffect(() => {
     // Check active session on load
     const fetchSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
+        setActiveUser(session.user);
         setWalletAddress(session.user.user_metadata?.wallet || null);
       }
     };
@@ -35,6 +47,7 @@ export default function WalletConnect() {
 
     // Subscribe to auth state updates
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setActiveUser(session?.user || null);
       setWalletAddress(session?.user?.user_metadata?.wallet || null);
     });
 
@@ -159,11 +172,57 @@ export default function WalletConnect() {
     }
   };
 
+  const connectGitHub = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const redirectUriParam = redirectUri ? `?redirect_uri=${encodeURIComponent(redirectUri)}` : '';
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'github',
+        options: {
+          redirectTo: window.location.origin + redirectUriParam,
+        },
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      setError(err?.message || 'GitHub connection failed');
+      setLoading(false);
+    }
+  };
+
+  const sendMagicLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!magicEmail || !magicEmail.includes('@')) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    setEmailSent(null);
+    try {
+      const redirectUriParam = redirectUri ? `?redirect_uri=${encodeURIComponent(redirectUri)}` : '';
+      const { error } = await supabase.auth.signInWithOtp({
+        email: magicEmail.trim(),
+        options: {
+          emailRedirectTo: window.location.origin + redirectUriParam,
+        },
+      });
+      if (error) throw error;
+      setEmailSent('Magic link sent. Check your inbox.');
+      setMagicEmail('');
+    } catch (err: any) {
+      setError(err?.message || 'Magic link request failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const disconnectWallet = async () => {
     setLoading(true);
     try {
       await supabase.auth.signOut();
       setWalletAddress(null);
+      setActiveUser(null);
     } catch (err: unknown) {
       console.error('Disconnect failed:', err);
     } finally {
@@ -175,14 +234,23 @@ export default function WalletConnect() {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
 
+  const displayIdentity = walletAddress 
+    ? truncateAddress(walletAddress) 
+    : (activeUser?.email || 'Authenticated User');
+
   return (
     <div className={styles.wrapper}>
-      {walletAddress ? (
+      {activeUser ? (
         <div className={styles.connectedBox}>
           <div className={styles.addressInfo}>
             <span className={styles.indicator} />
-            <span className={styles.addressText} title={walletAddress}>
-              {truncateAddress(walletAddress)}
+            {walletAddress ? (
+              <Zap size={14} className={styles.connectedIconZap} />
+            ) : (
+              <User2 size={14} className={styles.connectedIconUser} />
+            )}
+            <span className={styles.addressText} title={walletAddress || activeUser.email}>
+              {displayIdentity}
             </span>
           </div>
           <button onClick={disconnectWallet} className={styles.disconnectBtn} disabled={loading}>
@@ -191,15 +259,90 @@ export default function WalletConnect() {
           </button>
         </div>
       ) : (
-        <button onClick={connectWallet} className={styles.connectBtn} disabled={loading}>
-          {loading ? (
-            <Loader2 className={styles.spinner} size={16} />
-          ) : (
-            <Zap className={styles.zapIcon} size={16} />
-          )}
-          <span>{loading ? 'Authorizing...' : 'Connect Identity (Base)'}</span>
-        </button>
+        <div className={styles.authContainer}>
+          {/* Custom navigation tabs inside CSS module classes */}
+          <div className={styles.tabs}>
+            <button
+              onClick={() => { setActiveTab('wallet'); setError(null); setEmailSent(null); }}
+              className={`${styles.tabBtn} ${activeTab === 'wallet' ? styles.tabActive : ''}`}
+            >
+              <Zap size={13} />
+              <span>Base Wallet</span>
+            </button>
+            <button
+              onClick={() => { setActiveTab('email'); setError(null); setEmailSent(null); }}
+              className={`${styles.tabBtn} ${activeTab === 'email' ? styles.tabActive : ''}`}
+            >
+              <Mail size={13} />
+              <span>Email & Social</span>
+            </button>
+          </div>
+
+          {/* Tab content panels */}
+          <div className={styles.tabContent}>
+            {activeTab === 'wallet' ? (
+              <div className={styles.walletPanel}>
+                <p className={styles.descText}>
+                  Connect Base-compatible Web3 wallet to authenticate and synchronize assets.
+                </p>
+                <button onClick={connectWallet} className={styles.connectBtn} disabled={loading}>
+                  {loading ? (
+                    <Loader2 className={styles.spinner} size={16} />
+                  ) : (
+                    <Zap className={styles.zapIcon} size={16} />
+                  )}
+                  <span>{loading ? 'Authorizing...' : 'Connect Base Wallet'}</span>
+                </button>
+              </div>
+            ) : (
+              <div className={styles.identityPanel}>
+                {/* GitHub Auth */}
+                <button onClick={connectGitHub} className={styles.githubBtn} disabled={loading}>
+                  {loading ? (
+                    <Loader2 className={styles.spinner} size={14} />
+                  ) : (
+                    <Github size={14} />
+                  )}
+                  <span>Continue with GitHub</span>
+                </button>
+
+                <div className={styles.separator}>
+                  <div className={styles.sepLine} />
+                  <span className={styles.sepText}>OR</span>
+                  <div className={styles.sepLine} />
+                </div>
+
+                {/* Magic Link */}
+                {emailSent ? (
+                  <div className={styles.emailSentMsg}>
+                    <Mail size={14} className={styles.sentIcon} />
+                    <span>{emailSent}</span>
+                  </div>
+                ) : (
+                  <form onSubmit={sendMagicLink} className={styles.magicLinkForm}>
+                    <div className={styles.inputGroup}>
+                      <input
+                        type="email"
+                        value={magicEmail}
+                        onChange={(e) => setMagicEmail(e.target.value)}
+                        placeholder="operator@domain.com"
+                        className={styles.emailInput}
+                        required
+                        disabled={loading}
+                      />
+                      <button type="submit" className={styles.magicLinkBtn} disabled={loading}>
+                        {loading ? <Loader2 className={styles.spinner} size={14} /> : <Mail size={14} />}
+                        <span>Send Link</span>
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       )}
+      
       {error && (
         <div className={styles.errorAlert}>
           <ShieldAlert size={14} />

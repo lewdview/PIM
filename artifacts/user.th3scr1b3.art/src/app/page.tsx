@@ -184,7 +184,7 @@ export default function Home() {
                 Secure your cryptographic credentials. Connect your Base-compatible Web3 wallet to authenticate and synchronize assets across all th3scr1b3 endpoints.
               </p>
               
-              <WalletConnect />
+              <WalletConnect redirectUri={redirectUri} />
 
               {activeUser && (
                 <form onSubmit={updateProfile} className={styles.profileForm}>
