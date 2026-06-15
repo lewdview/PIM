@@ -297,45 +297,52 @@ export default function Navbar() {
             {/* Wallet Integration */}
             {user && !isAnonymous ? (
               <div className="flex items-center gap-2 ml-1">
-                {avatarUrl && (
-                  <img
-                    src={avatarUrl}
-                    alt="avatar"
-                    style={{
-                      width: '24px',
-                      height: '24px',
-                      borderRadius: '50%',
-                      border: '1.5px solid #ff3800',
-                      objectFit: 'cover',
-                      background: '#111',
-                    }}
-                  />
-                )}
-                <div
-                  className="sticker-gun-tag sticker-slits"
-                  style={{
-                    background: '#fff5f0',
-                    '--slit-color': 'rgba(255,56,0,0.1)',
-                    padding: '5px 10px',
-                    transform: 'rotate(-1deg)',
-                  } as any}
+                <a
+                  href={`https://user.th3scr1b3.art?redirect_uri=${encodeURIComponent(window.location.href)}`}
+                  className="flex items-center gap-2 no-underline transition-all hover:scale-105"
+                  title="Manage Scribe Identity"
                 >
-                   <span className="text-[9px] font-black tracking-tighter uppercase" style={{ color: '#1a0a00' }}>
-                    {displayName || (() => {
-                      const email = user?.email;
-                      if (email) {
-                        const cleaned = email.split('@')[0];
-                        if (cleaned.startsWith('0x') && cleaned.length === 42) {
-                          return `${cleaned.slice(0, 6)}...${cleaned.slice(-4)}`;
+                  {avatarUrl && (
+                    <img
+                      src={avatarUrl}
+                      alt="avatar"
+                      style={{
+                        width: '24px',
+                        height: '24px',
+                        borderRadius: '50%',
+                        border: '1.5px solid #ff3800',
+                        objectFit: 'cover',
+                        background: '#111',
+                      }}
+                    />
+                  )}
+                  <div
+                    className="sticker-gun-tag sticker-slits"
+                    style={{
+                      background: '#fff5f0',
+                      '--slit-color': 'rgba(255,56,0,0.1)',
+                      padding: '5px 10px',
+                      transform: 'rotate(-1deg)',
+                      cursor: 'pointer',
+                    } as any}
+                  >
+                     <span className="text-[9px] font-black tracking-tighter uppercase" style={{ color: '#1a0a00' }}>
+                      {displayName || (() => {
+                        const email = user?.email;
+                        if (email) {
+                          const cleaned = email.split('@')[0];
+                          if (cleaned.startsWith('0x') && cleaned.length === 42) {
+                            return `${cleaned.slice(0, 6)}...${cleaned.slice(-4)}`;
+                          }
+                          return cleaned;
                         }
-                        return cleaned;
-                      }
-                      return user?.id.slice(0, 8) || 'ANONYMOUS';
-                    })()}
-                  </span>
-                </div>
+                        return user?.id.slice(0, 8) || 'ANONYMOUS';
+                      })()}
+                    </span>
+                  </div>
+                </a>
                 <button
-                  onClick={signOut}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); signOut(); }}
                   className="p-2 rounded-full transition-all hover:bg-white/10 active:scale-90"
                   style={{ color: 'var(--color-text-muted)' }}
                   title="Disconnect Wallet"
@@ -584,13 +591,25 @@ export default function Navbar() {
 
               <div className="px-4 py-3">
                 {user && !isAnonymous ? (
-                  <div className="flex items-center justify-between">
-                    <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '10px', opacity: 0.45, textTransform: 'uppercase' }}>
-                      {(() => {
+                  <div className="flex items-center justify-between w-full">
+                    <a
+                      href={`https://user.th3scr1b3.art?redirect_uri=${encodeURIComponent(window.location.href)}`}
+                      style={{
+                        fontFamily: '"JetBrains Mono", monospace',
+                        fontSize: '10px',
+                        color: 'var(--color-neon-gold)',
+                        textTransform: 'uppercase',
+                        textDecoration: 'none',
+                        fontWeight: 900,
+                        letterSpacing: '0.05em',
+                      }}
+                      title="Manage Scribe Identity"
+                    >
+                      {displayName || (() => {
                         const val = user.email || user.id;
                         return val.slice(0, 16) + (val.length > 16 ? '…' : '');
-                      })()}
-                    </span>
+                      })()} ↗
+                    </a>
                     <button
                       onClick={() => { signOut(); setMenuOpen(false); }}
                       className="flex items-center gap-2 px-3 py-2 border border-white/10 hover:bg-white/5 transition-colors"
