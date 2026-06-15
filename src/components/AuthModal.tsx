@@ -16,6 +16,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const [password, setPassword] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [confirmationSent, setConfirmationSent] = useState(false);
 
   if (!isOpen) return null;
 
@@ -46,6 +47,10 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       let res;
       if (isSignUp) {
         res = await signUpWithEmail(email, password);
+        if (res && !res.error && res.confirmationRequired) {
+          setConfirmationSent(true);
+          return;
+        }
       } else {
         res = await signInWithEmail(email, password);
       }
@@ -125,7 +130,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
           {/* Navigation tabs */}
           <div className="flex bg-white/2">
             <button
-              onClick={() => { setActiveTab('wallet'); setLocalError(null); }}
+              onClick={() => { setActiveTab('wallet'); setLocalError(null); setConfirmationSent(false); }}
               className="flex-1 py-3 font-black text-xs uppercase tracking-wider text-center border-b-2 transition-all flex items-center justify-center gap-1.5"
               style={{
                 borderColor: activeTab === 'wallet' ? '#ff3800' : 'transparent',
@@ -137,7 +142,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
               Base Wallet
             </button>
             <button
-              onClick={() => { setActiveTab('email'); setLocalError(null); }}
+              onClick={() => { setActiveTab('email'); setLocalError(null); setConfirmationSent(false); }}
               className="flex-1 py-3 font-black text-xs uppercase tracking-wider text-center border-b-2 transition-all flex items-center justify-center gap-1.5"
               style={{
                 borderColor: activeTab === 'email' ? '#ff3800' : 'transparent',
@@ -200,6 +205,29 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                     ⚡ Base Gas fees covered by smart wallet integration
                   </span>
                 </div>
+              </div>
+            ) : confirmationSent ? (
+              <div className="space-y-5 text-center py-2">
+                <div className="w-12 h-12 rounded-full bg-[#ff3800]/10 border border-[#ff3800]/30 flex items-center justify-center mx-auto text-[#ff3800] animate-pulse">
+                  <Mail size={22} />
+                </div>
+                <h3 className="font-bold text-white text-sm tracking-wider uppercase" style={{ fontFamily: '"Impact", sans-serif' }}>
+                  Verification Link Sent
+                </h3>
+                <p className="font-mono text-zinc-400 text-[10px] leading-relaxed">
+                  A verification transmission was dispatched to <span className="text-white font-bold">{email}</span>. Click the activation link in the email, then return here to log in.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setConfirmationSent(false);
+                    setIsSignUp(false);
+                    setLocalError(null);
+                  }}
+                  className="w-full py-3 font-mono font-bold text-[10px] tracking-widest bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all uppercase"
+                >
+                  Return to Log In
+                </button>
               </div>
             ) : (
               <form onSubmit={handleEmailSubmit} className="space-y-4">
@@ -266,7 +294,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
                   <button
                     type="button"
-                    onClick={() => { setIsSignUp(!isSignUp); setLocalError(null); }}
+                    onClick={() => { setIsSignUp(!isSignUp); setLocalError(null); setConfirmationSent(false); }}
                     className="w-full text-center text-[10px] font-mono uppercase text-white/40 hover:text-white/80 py-1 transition-colors"
                   >
                     {isSignUp ? 'Already registered? Log In' : 'Need email access? Register here'}

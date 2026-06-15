@@ -30,7 +30,7 @@ interface AuthState {
   signInWithWallet: () => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   signInWithEphemeralWallet: () => Promise<void>;
-  signUpWithEmail: (email: string, password: string) => Promise<{ error: string | null }>;
+  signUpWithEmail: (email: string, password: string) => Promise<{ error: string | null; confirmationRequired?: boolean }>;
   signInWithEmail: (email: string, password: string) => Promise<{ error: string | null }>;
 }
 
@@ -142,28 +142,38 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     console.log('[Auth] Wallet provider detected:', typeof wallet);
 
     // Ensure Base chain 
+    // Ensure Base chain 
     try {
       const chainId = await wallet.request({ method: 'eth_chainId' });
       console.log('[Auth] Current chain:', chainId);
       if (typeof chainId === 'string' && chainId.toLowerCase() !== BASE_CHAIN_ID_HEX && chainId !== '8453') {
         console.log('[Auth] Switching to Base...');
         try {
-          await wallet.request({ method: 'personal_sign', params: ['Switching to Base network. Confirm network request.', ''] });
-        } catch {
-          // ignore prompt wrapper if it fails
-        }
-        try {
           await wallet.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: BASE_CHAIN_ID_HEX }] });
-        } catch {
-          try {
+        } catch (switchError: any) {
+          // Error code 4902 indicates that the chain has not been added to the wallet
+          if (switchError.code === 4902) {
+            console.log('[Auth] Base chain not added. Adding Base chain...');
             await wallet.request({ method: 'wallet_addEthereumChain', params: [BASE_CHAIN_CONFIG] });
-          } catch (addErr) {
-            console.warn('[Auth] Failed to switch or add Base network:', addErr);
+          } else {
+            throw switchError;
           }
         }
+        
+        // Wait a short duration to let the provider update its internal state
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Double check chainId
+        const verifyChainId = await wallet.request({ method: 'eth_chainId' });
+        if (typeof verifyChainId === 'string' && verifyChainId.toLowerCase() !== BASE_CHAIN_ID_HEX && verifyChainId !== '8453') {
+          throw new Error('Please switch to the Base network in your wallet to proceed.');
+        }
       }
-    } catch (chainErr) {
-      console.warn('[Auth] Chain check failed (non-fatal):', chainErr);
+    } catch (chainErr: any) {
+      console.error('[Auth] Chain switch failed:', chainErr);
+      const msg = chainErr?.message || String(chainErr);
+      set({ error: `Network switch failed: ${msg}` });
+      return { error: msg };
     }
 
     try {
@@ -297,20 +307,35 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       localStorage.setItem(`th3vault_ephemeral_wallet_pkey_${userId}`, pkey);
       localStorage.setItem('th3vault_ephemeral_wallet_pkey', pkey);
 
-      const { error: profileErr } = await supabase
-        .from('profiles')
-        .upsert({ id: userId, wallet_address: address });
+      // Only upsert profile if session is established. (Trigger handle_new_user automatically creates
+      // the profile row anyway, so this is redundant and would fail due to RLS if session is null)
+      if (data.session) {
+        const { error: profileErr } = await supabase
+          .from('profiles')
+          .upsert({ id: userId, wallet_address: address });
 
-      if (profileErr) {
-        console.warn('[Auth] Profiles upsert error:', profileErr.message);
+        if (profileErr) {
+          console.warn('[Auth] Profiles upsert error:', profileErr.message);
+        }
       }
 
-      set({ session: data.session, user: data.user, status: 'ready', showAuthModal: false });
+      set({ 
+        session: data.session, 
+        user: data.user, 
+        status: 'ready', 
+        showAuthModal: !data.session 
+      });
 
       try {
-        await useVaultStore.getState().loadVaultData();
+        if (data.session) {
+          await useVaultStore.getState().loadVaultData();
+        }
       } catch (loadErr) {
         console.warn('[Auth] loadVaultData failed:', loadErr);
+      }
+
+      if (!data.session) {
+        return { error: null, confirmationRequired: true };
       }
 
       return { error: null };

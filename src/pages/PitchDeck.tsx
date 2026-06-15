@@ -22,7 +22,7 @@ function DeckSectionLabel({ label, accent = '#ff3800' }: { label: string; accent
 export default function PitchDeck() {
   const [, setLocation] = useLocation();
   const [currentSlide, setCurrentSlide] = useState(0);
-  const totalSlides = 10;
+  const totalSlides = 12;
 
   // Slide navigation
   const nextSlide = useCallback(() => {
@@ -595,10 +595,74 @@ export default function PitchDeck() {
                 </>
               )}
 
-              {/* SLIDE 9: PROGRESSIVE DECENTRALIZATION & FIAT */}
+              {/* SLIDE 9: TRACTION & PRODUCTION METRICS */}
               {currentSlide === 8 && (
                 <>
-                  <DeckSectionLabel label="08 // User Onboarding" accent="#ff3800" />
+                  <DeckSectionLabel label="08 // Performance & Traction" accent="#ff3800" />
+                  <h2 className="text-3xl md:text-5xl font-black font-mono tracking-tighter uppercase leading-tight">
+                    LIVE SERVICE TRACTION
+                  </h2>
+                  <p className="text-xs text-[#faf0d8]/85 leading-relaxed">
+                    PIM operates as a live systems-driven game. The following metrics are aggregated directly from the Base-linked Supabase production database:
+                  </p>
+                  
+                  <div className="grid grid-cols-2 gap-3 font-mono text-[11px]">
+                    <div className="p-3 border border-white/5 bg-[#faf0d8]/5 flex flex-col justify-between">
+                      <span className="opacity-50 text-[8px] uppercase">Registered Users</span>
+                      <span className="text-base font-black text-[#ffb800]">146 PLAYERS</span>
+                    </div>
+                    <div className="p-3 border border-white/5 bg-[#faf0d8]/5 flex flex-col justify-between">
+                      <span className="opacity-50 text-[8px] uppercase">Ecosystem Timeframe</span>
+                      <span className="text-base font-black text-white">53 LIVE DAYS</span>
+                    </div>
+                    <div className="p-3 border border-white/5 bg-[#faf0d8]/5 flex flex-col justify-between">
+                      <span className="opacity-50 text-[8px] uppercase">Collectibles Minted</span>
+                      <span className="text-base font-black text-[#c44dff]">421 CARDS</span>
+                    </div>
+                    <div className="p-3 border border-white/5 bg-[#faf0d8]/5 flex flex-col justify-between">
+                      <span className="opacity-50 text-[8px] uppercase">Token Velocity</span>
+                      <span className="text-base font-black text-[#00f0ff]">31,077 V⚡ CIRC.</span>
+                    </div>
+                  </div>
+                  <p className="text-[9.5px] opacity-40 leading-relaxed font-mono uppercase">
+                    Verification: 467 total gacha pulls completed, including 231 V⚡ pack purchases and 1 duplicate fusion processed.
+                  </p>
+                </>
+              )}
+
+              {/* SLIDE 10: THE FOUNDER */}
+              {currentSlide === 9 && (
+                <>
+                  <DeckSectionLabel label="09 // Platform Creator" accent="#ffb800" />
+                  <h2 className="text-3xl md:text-5xl font-black font-mono tracking-tighter uppercase leading-tight">
+                    THE FOUNDER: TH3SCR1B3
+                  </h2>
+                  <p className="text-xs text-[#faf0d8]/85 leading-relaxed">
+                    PIM is architected and composed by **TH3SCR1B3**, a multi-disciplinary music artist, software engineer, and digital creator.
+                  </p>
+
+                  <div className="space-y-3 text-[11px] font-mono leading-relaxed">
+                    <div className="border-l-2 border-[#ff3800] pl-3">
+                      <strong className="text-white block uppercase">365 Songs in 365 Days</strong>
+                      <span className="text-[#faf0d8]/60 text-[10px]">
+                        Composing, producing, and releasing a new original track every single day for an entire year, using the PIM game engine as the primary release platform.
+                      </span>
+                    </div>
+                    
+                    <div className="border-l-2 border-[#ffb800] pl-3">
+                      <strong className="text-white block uppercase">Unified Cyber-Brutalist Vision</strong>
+                      <span className="text-[#faf0d8]/60 text-[10px]">
+                        Bridging high-fidelity audio engineering, responsive retro-canvas visuals, and signature Web3 smart wallet integration under one cohesive aesthetic.
+                      </span>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* SLIDE 11: PROGRESSIVE DECENTRALIZATION & FIAT */}
+              {currentSlide === 10 && (
+                <>
+                  <DeckSectionLabel label="10 // User Onboarding" accent="#ff3800" />
                   <h2 className="text-3xl md:text-5xl font-black font-mono tracking-tighter uppercase leading-tight">
                     WEB2 TO WEB3 BRIDGE
                   </h2>
@@ -630,10 +694,10 @@ export default function PitchDeck() {
                 </>
               )}
 
-              {/* SLIDE 10: ROADMAP */}
-              {currentSlide === 9 && (
+              {/* SLIDE 12: ROADMAP */}
+              {currentSlide === 11 && (
                 <>
-                  <DeckSectionLabel label="09 // Future Roadmap" accent="#ffb800" />
+                  <DeckSectionLabel label="11 // Future Roadmap" accent="#ffb800" />
                   <h2 className="text-3xl md:text-5xl font-black font-mono tracking-tighter uppercase leading-tight">
                     THE ROADMAP
                   </h2>
@@ -1044,8 +1108,95 @@ export default function PitchDeck() {
                 </div>
               )}
 
-              {/* SLIDE 9 PREVIEW: Ephemeral Wallet simulation */}
+              {/* SLIDE 9 (Index 8) PREVIEW: Analytics stats board */}
               {currentSlide === 8 && (
+                <div className="w-full max-w-[280px] border border-white/10 p-4 bg-[#0d0d0d] rounded font-mono text-[9px] text-[#faf0d8] space-y-3">
+                  <div className="flex justify-between items-center border-b border-white/10 pb-1.5">
+                    <span className="text-[#ff3800] uppercase font-bold flex items-center gap-1"><BarChart2 size={11} /> RARITY DISTRIBUTION</span>
+                    <span className="text-[7px] opacity-40">MINTED CARDS</span>
+                  </div>
+                  
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between">
+                      <span className="text-[#7a8090]">COMMON</span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-24 h-1.5 bg-white/10 rounded overflow-hidden">
+                          <div className="h-full bg-[#7a8090]" style={{ width: '26%' }} />
+                        </div>
+                        <span className="font-bold">111</span>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between">
+                      <span className="text-[#00d4aa]">UNCOMMON</span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-24 h-1.5 bg-white/10 rounded overflow-hidden">
+                          <div className="h-full bg-[#00d4aa]" style={{ width: '34%' }} />
+                        </div>
+                        <span className="font-bold">144</span>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between">
+                      <span className="text-[#4d8fff]">RARE</span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-24 h-1.5 bg-white/10 rounded overflow-hidden">
+                          <div className="h-full bg-[#4d8fff]" style={{ width: '21%' }} />
+                        </div>
+                        <span className="font-bold">89</span>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between">
+                      <span className="text-[#c44dff]">LEGENDARY</span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-24 h-1.5 bg-white/10 rounded overflow-hidden">
+                          <div className="h-full bg-[#c44dff]" style={{ width: '17%' }} />
+                        </div>
+                        <span className="font-bold">71</span>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between">
+                      <span className="text-[#ffd700]">MYTHIC</span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-24 h-1.5 bg-white/10 rounded overflow-hidden">
+                          <div className="h-full bg-[#ffd700]" style={{ width: '2%' }} />
+                        </div>
+                        <span className="font-bold">6</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* SLIDE 10 (Index 9) PREVIEW: Founder artist badge */}
+              {currentSlide === 9 && (
+                <div className="flex flex-col items-center gap-4 w-full">
+                  <div className="w-40 h-40 relative flex items-center justify-center">
+                    {/* Rotating vinyl disk pattern */}
+                    <div className="absolute inset-0 rounded-full border border-dashed border-[#ffb800]/25 animate-[spin-slow_16s_linear_infinite]" />
+                    <div className="absolute inset-3 rounded-full border border-white/5 bg-[#050402] flex items-center justify-center">
+                      <div className="w-24 h-24 rounded-full border-4 border-[#ff3800] bg-black flex items-center justify-center relative overflow-hidden">
+                        {/* Audio wave simulation inside founder avatar */}
+                        <div className="absolute inset-0 flex items-center justify-center gap-0.5 opacity-20">
+                          <div className="w-1 h-12 bg-white rounded animate-pulse" />
+                          <div className="w-1 h-8 bg-white rounded animate-pulse" />
+                          <div className="w-1 h-14 bg-white rounded animate-pulse" />
+                        </div>
+                        <span className="font-mono font-black text-[9px] tracking-widest text-[#ff3800] z-10">CREATOR</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="sticker-gun-tag sticker-slits flex flex-row items-center gap-2 p-2 px-4 shadow-lg rotate-[1.5deg] border border-black" style={{ background: '#fff', color: '#000' }}>
+                    <span className="text-[9px] font-black italic uppercase leading-none font-mono">TH3SCR1B3.ART // COMPOSER</span>
+                  </div>
+                </div>
+              )}
+
+              {/* SLIDE 11 PREVIEW: Ephemeral Wallet simulation */}
+              {currentSlide === 10 && (
                 <div className="w-full flex flex-col gap-3 font-mono text-[9px] text-[#faf0d8]">
                   <div className="border border-white/10 p-2 bg-[#050402] flex justify-between items-center rounded-t">
                     <span className="uppercase text-[#ff3800] font-bold flex items-center gap-1"><Cpu size={10} /> KEYGEN AGENT</span>
@@ -1082,8 +1233,8 @@ export default function PitchDeck() {
                 </div>
               )}
 
-              {/* SLIDE 10 PREVIEW: Future roadmap node preview */}
-              {currentSlide === 9 && (
+              {/* SLIDE 12 PREVIEW: Future roadmap node preview */}
+              {currentSlide === 11 && (
                 <div className="flex flex-col items-center gap-4 w-full">
                   <div className="w-full max-w-[280px] p-3 border border-[#ffb800]/30 bg-[#ffb800]/5 text-center font-mono text-[10px] uppercase text-[#ffb800] rounded">
                     Living Vault Node Overrides
