@@ -61,7 +61,7 @@ export async function GET(request: Request) {
     user: {
       id: user.id,
       email: user.email,
-      wallet: user.user_metadata?.wallet || (profile as Record<string, unknown> | null)?.wallet as string | undefined || null,
+      wallet: user.user_metadata?.wallet || (profile as Record<string, unknown> | null)?.wallet_address as string | undefined || null,
     },
     profile: profile || { display_name: null, avatar_url: null, lab_access: false },
   }, { headers: corsHeaders });

@@ -153,8 +153,7 @@ export default function WalletConnect({ redirectUri }: WalletConnectProps) {
           .upsert({
             id: user.id,
             display_name: user.user_metadata?.display_name || `scribe_${address.slice(2, 8)}`,
-            wallet: address,
-            updated_at: new Date().toISOString()
+            wallet_address: address,
           } as Record<string, unknown>);
           
         if (profileError) {
