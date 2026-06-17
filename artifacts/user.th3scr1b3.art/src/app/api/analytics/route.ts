@@ -49,18 +49,45 @@ export async function GET(request: Request) {
     return NextResponse.json({ authenticated: false, error: 'Invalid session or token' }, { status: 401, headers: corsHeaders });
   }
 
-  // 1. Fetch listening plays count
-  const { count: totalListens } = await client
-    .from('play_events_universal')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', user.id);
+  // 1. Fetch profiles table details
+  const { data: profile } = await client
+    .from('profiles')
+    .select('tokens, streak_count, total_pulls')
+    .eq('id', user.id)
+    .single();
 
-  // 2. Fetch gaming scores / history
+  // 2. Fetch listening plays count from telemetry_events where event_type is 'game_start'
+  const { count: totalListens } = await client
+    .from('telemetry_events')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+    .eq('event_type', 'game_start');
+
+  // 3. Fetch cards inventory breakdown from vault_collections
+  const { data: vaultCards } = await client
+    .from('vault_collections')
+    .select('rarity, is_echo')
+    .eq('owner_id', user.id);
+
+  const totalCards = vaultCards?.length || 0;
+  const rarityBreakdown = { common: 0, uncommon: 0, rare: 0, epic: 0, legendary: 0, mythic: 0 };
+  let echoesCount = 0;
+  
+  if (vaultCards) {
+    for (const card of vaultCards) {
+      if (card.is_echo) echoesCount++;
+      const r = String(card.rarity || '').toLowerCase();
+      if (r in rarityBreakdown) {
+        rarityBreakdown[r as keyof typeof rarityBreakdown]++;
+      }
+    }
+  }
+
+  // 4. Fetch gaming scores / history from gameplay_records
   const { data: gameplay } = await client
     .from('gameplay_records')
     .select('*')
-    .eq('user_id', user.id)
-    .order('timestamp', { ascending: false });
+    .eq('user_id', user.id);
 
   // Compute game stats
   const totalGames = gameplay?.length || 0;
@@ -75,7 +102,7 @@ export async function GET(request: Request) {
       if (record.score > maxScore) maxScore = record.score;
       if (record.max_combo > maxCombo) maxCombo = record.max_combo;
       accuracySum += Number(record.accuracy || 0);
-      const medalName = record.medal as keyof typeof medals;
+      const medalName = String(record.medal || '').toUpperCase() as keyof typeof medals;
       if (medalName in medals) {
         medals[medalName]++;
       }
@@ -86,6 +113,16 @@ export async function GET(request: Request) {
   return NextResponse.json({
     authenticated: true,
     stats: {
+      profile: {
+        tokens: profile?.tokens || 0,
+        streakCount: profile?.streak_count || 0,
+        totalPulls: profile?.total_pulls || 0,
+      },
+      collection: {
+        totalCards,
+        echoesCount,
+        rarityBreakdown,
+      },
       music: {
         totalListens: totalListens || 0,
       },

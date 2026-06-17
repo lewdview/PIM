@@ -50,8 +50,9 @@ export async function GET(request: Request) {
   }
 
   const { data: cards, error: cardsError } = await client
-    .from('user_cards')
+    .from('vault_collections')
     .select('*')
+    .eq('owner_id', user.id)
     .order('claimed_at', { ascending: false });
 
   if (cardsError) {
@@ -97,9 +98,9 @@ export async function POST(request: Request) {
     }
 
     const { data: newCard, error: insertError } = await client
-      .from('user_cards')
+      .from('vault_collections')
       .insert({
-        user_id: user.id,
+        owner_id: user.id,
         card_id: cardId,
         rarity,
         source: source || 'api',

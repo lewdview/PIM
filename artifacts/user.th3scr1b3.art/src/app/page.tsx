@@ -68,6 +68,18 @@ export default function Home() {
       if (session) {
         setActiveUser(session.user);
         
+        // Auto-redirect if redirect_uri exists and session is active
+        const params = new URLSearchParams(window.location.search);
+        const uri = params.get('redirect_uri');
+        if (uri) {
+          console.log('[SYSTEM] Active session detected. Redirecting with tokens...');
+          const url = new URL(uri);
+          url.searchParams.set('access_token', session.access_token);
+          url.searchParams.set('refresh_token', session.refresh_token);
+          window.location.href = url.toString();
+          return;
+        }
+
         // Fetch display name from profiles table
         const { data: profile } = await supabase
           .from('profiles')
@@ -86,6 +98,19 @@ export default function Home() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session) {
         setActiveUser(session.user);
+
+        // Auto-redirect if redirect_uri exists and session is active
+        const params = new URLSearchParams(window.location.search);
+        const uri = params.get('redirect_uri');
+        if (uri) {
+          console.log('[SYSTEM] Session state changed. Redirecting with tokens...');
+          const url = new URL(uri);
+          url.searchParams.set('access_token', session.access_token);
+          url.searchParams.set('refresh_token', session.refresh_token);
+          window.location.href = url.toString();
+          return;
+        }
+
         const { data: profile } = await supabase
           .from('profiles')
           .select('display_name')

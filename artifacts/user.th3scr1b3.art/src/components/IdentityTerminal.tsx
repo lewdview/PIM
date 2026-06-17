@@ -5,6 +5,25 @@ import { supabase } from '../lib/supabase';
 import { Terminal as TerminalIcon, Loader2, Sparkles } from 'lucide-react';
 import styles from './IdentityTerminal.module.css';
 
+interface ProfileStats {
+  tokens: number;
+  streakCount: number;
+  totalPulls: number;
+}
+
+interface CollectionStats {
+  totalCards: number;
+  echoesCount: number;
+  rarityBreakdown: {
+    common: number;
+    uncommon: number;
+    rare: number;
+    epic: number;
+    legendary: number;
+    mythic: number;
+  };
+}
+
 interface MusicStats {
   totalListens: number;
 }
@@ -23,11 +42,17 @@ interface GamingStats {
   };
 }
 
+interface UserStats {
+  profile: ProfileStats;
+  collection: CollectionStats;
+  music: MusicStats;
+  gaming: GamingStats;
+}
+
 export default function IdentityTerminal() {
   const [loading, setLoading] = useState<boolean>(true);
   const [logs, setLogs] = useState<string[]>([]);
-  const [stats, setStats] = useState<{ music: MusicStats; gaming: GamingStats } | null>(null);
-  const [cardsCount, setCardsCount] = useState<number>(0);
+  const [stats, setStats] = useState<UserStats | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -50,34 +75,18 @@ export default function IdentityTerminal() {
       addLog(`IDENTITY DECRYPTED: ${session.user.id.slice(0, 8)}...`);
       await new Promise(r => setTimeout(r, 500));
       
-      addLog('SYNCING AUDIO TELEMETRY (PLAY_EVENTS_UNIVERSAL)...');
+      addLog('CONNECTING TO ANALYTICS SECURE CORE...');
       
-      // Fetch data using backend APIs with JWT authorization header
       try {
         const token = session.access_token;
-
-        const [profileRes, analyticsRes] = await Promise.all([
-          fetch('/api/profile', { headers: { Authorization: `Bearer ${token}` } }),
-          fetch('/api/analytics', { headers: { Authorization: `Bearer ${token}` } })
-        ]);
-
-        await profileRes.json();
+        const analyticsRes = await fetch('/api/analytics', { headers: { Authorization: `Bearer ${token}` } });
         const analyticsData = await analyticsRes.json();
 
         if (analyticsData.authenticated) {
           setStats(analyticsData.stats);
-          addLog('AUDIO TELEMETRY SYNCED.');
+          addLog('TELEMETRY MATRIX ONLINE.');
         } else {
           addLog('ERROR: TELEMETRY ACCESS REJECTED.');
-        }
-
-        addLog('QUERYING SYSTEM CARDS FORGE MATRIX...');
-        const collectionRes = await fetch('/api/collection', { headers: { Authorization: `Bearer ${token}` } });
-        const collectionData = await collectionRes.json();
-
-        if (collectionData.authenticated) {
-          setCardsCount(collectionData.cards?.length || 0);
-          addLog('CARDS INVENTORY ONLINE.');
         }
 
         await new Promise(r => setTimeout(r, 400));
@@ -98,7 +107,6 @@ export default function IdentityTerminal() {
       if (event === 'SIGNED_OUT') {
         setLogs([`[${new Date().toLocaleTimeString()}] SYSTEM SHUTDOWN. IDLE.`]);
         setStats(null);
-        setCardsCount(0);
       } else if (event === 'SIGNED_IN') {
         setLogs([]);
         setLoading(true);
@@ -146,23 +154,53 @@ export default function IdentityTerminal() {
         {/* Stats Grid */}
         {stats && !loading && (
           <div className={styles.statsLayout}>
+            {/* Profile Matrix */}
             <div className={styles.statsCard}>
               <div className={styles.statsCardTitle}>
                 <Sparkles size={12} className={styles.cardIconTeal} />
-                <span>Ecosystem Listening</span>
+                <span>Ecosystem Identity</span>
               </div>
               <div className={styles.statsGrid}>
                 <div className={styles.statItem}>
-                  <span className={styles.statLabel}>Total Listens:</span>
-                  <span className={styles.statValueTeal}>{stats.music.totalListens}</span>
+                  <span className={styles.statLabel}>V⚡ Token Balance:</span>
+                  <span className={styles.statValueTeal}>{stats.profile.tokens} V⚡</span>
                 </div>
                 <div className={styles.statItem}>
-                  <span className={styles.statLabel}>Collection Size:</span>
-                  <span className={styles.statValueTeal}>{cardsCount} Cards</span>
+                  <span className={styles.statLabel}>Daily Claim Streak:</span>
+                  <span className={styles.statValueTeal}>{stats.profile.streakCount} Days</span>
+                </div>
+                <div className={styles.statItem}>
+                  <span className={styles.statLabel}>Total Pack Pulls:</span>
+                  <span className={styles.statValueTeal}>{stats.profile.totalPulls} Pulls</span>
                 </div>
               </div>
             </div>
 
+            {/* Collectibles Inventory */}
+            <div className={styles.statsCard}>
+              <div className={styles.statsCardTitle}>
+                <Sparkles size={12} className={styles.cardIconViolet} />
+                <span>Collectibles Inventory</span>
+              </div>
+              <div className={styles.statsGrid}>
+                <div className={styles.statItem}>
+                  <span className={styles.statLabel}>Total Cards Owned:</span>
+                  <span className={styles.statValueViolet}>{stats.collection.totalCards} Cards</span>
+                </div>
+                <div className={styles.statItem}>
+                  <span className={styles.statLabel}>Duplicates Fused (Echo):</span>
+                  <span className={styles.statValueViolet}>{stats.collection.echoesCount} Echoes</span>
+                </div>
+                <div className={styles.statItem}>
+                  <span className={styles.statLabel}>Rarity Breakdown:</span>
+                  <span className={styles.statValueViolet} style={{ fontSize: '9px' }}>
+                    C:{stats.collection.rarityBreakdown.common} | U:{stats.collection.rarityBreakdown.uncommon} | R:{stats.collection.rarityBreakdown.rare} | E:{stats.collection.rarityBreakdown.epic} | L:{stats.collection.rarityBreakdown.legendary} | M:{stats.collection.rarityBreakdown.mythic}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Gaming Performance */}
             <div className={styles.statsCard}>
               <div className={styles.statsCardTitle}>
                 <Sparkles size={12} className={styles.cardIconViolet} />
@@ -184,6 +222,24 @@ export default function IdentityTerminal() {
                 <div className={styles.statItem}>
                   <span className={styles.statLabel}>Avg Accuracy:</span>
                   <span className={styles.statValueViolet}>{stats.gaming.avgAccuracy}%</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Music Listening */}
+            <div className={styles.statsCard}>
+              <div className={styles.statsCardTitle}>
+                <Sparkles size={12} className={styles.cardIconTeal} />
+                <span>Ecosystem Listening</span>
+              </div>
+              <div className={styles.statsGrid}>
+                <div className={styles.statItem}>
+                  <span className={styles.statLabel}>Total Audio Listens:</span>
+                  <span className={styles.statValueTeal}>{stats.music.totalListens}</span>
+                </div>
+                <div className={styles.statItem}>
+                  <span className={styles.statLabel}>Sync Node:</span>
+                  <span className={styles.statValueTeal}>ONLINE</span>
                 </div>
               </div>
             </div>

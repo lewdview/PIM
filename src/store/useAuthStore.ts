@@ -45,18 +45,60 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   status: 'idle',
   error: null,
   showAuthModal: false,
-  setShowAuthModal: (show: boolean) => set({ showAuthModal: show }),
+  setShowAuthModal: (show: boolean) => {
+    if (show) {
+      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const hubBase = isLocal ? 'http://localhost:3000' : 'https://user.th3scr1b3.art';
+      const redirectUri = window.location.href;
+      window.location.href = `${hubBase}?redirect_uri=${encodeURIComponent(redirectUri)}`;
+    } else {
+      set({ showAuthModal: false });
+    }
+  },
   initialize: async () => {
     if (get().status === 'loading') return;
     set({ status: 'loading' });
-    console.log('[Auth] Initializing with Anonymous Sign-In check...');
-    
-    const { data, error } = await supabase.auth.getSession();
-    
-    if (error) {
-      set({ error: error.message, status: 'ready' });
-    } else if (data.session) {
-      const user = data.session.user;
+    console.log('[Auth] Initializing with Redirect Token check...');
+
+    // 1. Inspect URL parameters for redirect tokens
+    const urlParams = new URLSearchParams(window.location.search);
+    const accessToken = urlParams.get('access_token');
+    const refreshToken = urlParams.get('refresh_token');
+    let activeSession: Session | null = null;
+
+    if (accessToken && refreshToken) {
+      console.log('[Auth] Detected authorization redirect tokens in URL. Establishing session...');
+      try {
+        const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        if (sessionError) throw sessionError;
+
+        // Clean tokens from browser history/address bar
+        const cleanUrl = new URL(window.location.href);
+        cleanUrl.searchParams.delete('access_token');
+        cleanUrl.searchParams.delete('refresh_token');
+        window.history.replaceState({}, document.title, cleanUrl.toString());
+
+        activeSession = sessionData.session;
+      } catch (err) {
+        console.error('[Auth] Failed to set session from URL redirect tokens:', err);
+      }
+    }
+
+    // 2. Fetch existing session if we didn't just get one from redirect params
+    if (!activeSession) {
+      const { data, error } = await supabase.auth.getSession();
+      if (error) {
+        set({ error: error.message });
+      } else {
+        activeSession = data.session;
+      }
+    }
+
+    if (activeSession) {
+      const user = activeSession.user;
       if (user && user.email) {
         const userPkey = localStorage.getItem(`th3vault_ephemeral_wallet_pkey_${user.id}`);
         if (userPkey) {
@@ -64,7 +106,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
       }
       set({
-        session: data.session,
+        session: activeSession,
         user: user ?? null,
         status: 'ready',
       });
@@ -72,26 +114,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         void get().ensureProfileAndWallet(user);
       }
     } else {
-      // Frictionless flow: Auto sign in anonymously (or fallback to Ephemeral Wallet if disabled)
-      try {
-        console.log('[Auth] No session found. Signing in anonymously...');
-        const { data: anonData, error: anonError } = await supabase.auth.signInAnonymously();
-        if (anonError) {
-          console.warn('[Auth] Anonymous sign in failed (disabled or configuration mismatch):', anonError.message);
-          console.log('[Auth] Falling back to Ephemeral Wallet authentication...');
-          await get().signInWithEphemeralWallet();
-        } else {
-          console.log('[Auth] Anonymous session created:', anonData.session?.user?.id?.slice(0, 8));
-          set({
-            session: anonData.session,
-            user: anonData.session?.user ?? null,
-            status: 'ready',
-          });
-        }
-      } catch (err) {
-        console.error('[Auth] Anonymous sign in threw:', err);
-        console.log('[Auth] Falling back to Ephemeral Wallet authentication after throw...');
-        await get().signInWithEphemeralWallet();
+      // 3. No session found. Redirect to Identity Hub for anonymous authentication
+      const path = window.location.pathname;
+      const isPublicPath = path === '/pitch-deck' || path === '/vault/legal';
+      
+      if (!isPublicPath) {
+        console.log('[Auth] No session found. Redirecting to Identity Hub for anonymous authentication...');
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const hubBase = isLocal ? 'http://localhost:3000' : 'https://user.th3scr1b3.art';
+        const redirectUri = window.location.href;
+        window.location.href = `${hubBase}/auth/anon?redirect_uri=${encodeURIComponent(redirectUri)}`;
+        return; // Redirecting, stop initialization
+      } else {
+        // Public pages can continue in idle/ready state without a session
+        set({ status: 'ready' });
       }
     }
 
@@ -115,7 +151,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
 
     // Initial load if already signed in
-    if (data.session?.user) {
+    if (activeSession?.user) {
       useVaultStore.getState().loadVaultData();
     }
   },
