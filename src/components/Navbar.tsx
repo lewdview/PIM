@@ -9,6 +9,8 @@ import GuideModal from './GuideModal';
 import { haptics } from '../utils/haptics';
 import FloatingTicker from './FloatingTicker';
 
+const isDev = import.meta.env.DEV || localStorage.getItem('th3vault_dev_mode') === 'true';
+
 const links = [
   { to: '/arcade', label: 'Arcade', icon: Monitor },
   { to: '/vault', label: 'Vault', icon: Home },
@@ -17,7 +19,7 @@ const links = [
   { to: '/vault/leaderboard', label: 'Ranks', icon: Trophy },
   { to: '/vault/forge', label: 'Forge', icon: Flame },
   { to: '/vault/claim', label: 'Redeem', icon: Gift },
-  { to: '/pitch-deck', label: 'Pitch', icon: FileText },
+  ...(isDev ? [{ to: '/pitch-deck', label: 'Pitch', icon: FileText }] : []),
 ];
 
 // ── The new logotype ──────────────────────────────────────────────────────────

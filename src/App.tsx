@@ -5,6 +5,7 @@ import { logAnalyticsEvent } from './services/telemetryService';
 import { useVaultStore } from './store/useVaultStore';
 import { useGlobalPlayer } from './store/useGlobalPlayer';
 import BackgroundMusic from './components/audio/BackgroundMusic';
+import GamepadCursor from './components/ui/GamepadCursor';
 
 // Component imports
 import Navbar from './components/Navbar';
@@ -120,12 +121,12 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#050402] text-white flex flex-col select-none">
       <BackgroundMusic />
+      <GamepadCursor />
       {!hideNavbar && <Navbar />}
 
       <main className="flex-1 flex flex-col">
         <Switch>
           <Route path="/" component={LandingPage} />
-          <Route path="/pitch-deck" component={PitchDeck} />
           <Route path="/arcade" component={RhythmHome} />
           <Route path="/songs" component={SongSelect} />
           <Route path="/play/:songId" component={GamePlay} />
@@ -141,6 +142,7 @@ export default function App() {
           <Route path="/vault/:userId" component={VoyeurPage} />
           { (import.meta.env.DEV || localStorage.getItem('th3vault_dev_mode') === 'true') && (
             <>
+              <Route path="/pitch-deck" component={PitchDeck} />
               <Route path="/admin" component={AdminPage} />
               <Route path="/admin/editor" component={BeatmapEditor} />
               <Route path="/admin/card-designs" component={CardDesignShowcase} />
