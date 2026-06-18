@@ -1533,6 +1533,7 @@ export default function Game() {
       }
 
       if (ns.hit) continue;
+      if (ns.missed) continue; // Guard: already marked missed (e.g. hold released early), don't double-count
 
       // Miss detection — skip entirely during rewind (notes travel backwards; no new misses)
       if (!isRewinding && phaseRef.current === "playing") {
@@ -2835,12 +2836,14 @@ export default function Game() {
         // Button 2 is X (Left lane -> 0)
         // Button 3 is Y (Center lane -> 1)
         // Button 1 is B (Right lane -> 2)
-        // Button 0 is A (Slide trigger)
+        // Button 0 is A + D-pad Left/Right = slide trigger
+        // NOTE: A alone does NOT fire any lane — it needs an explicit D-pad direction to avoid
+        //       accidentally triggering the center (Y) lane when A is first pressed.
         const isAPressed = gp.buttons[0]?.pressed || false;
         
         const lanePressed: [boolean, boolean, boolean] = [
           (gp.buttons[2]?.pressed || false) || (isAPressed && slideDir === 'left'),
-          (gp.buttons[3]?.pressed || false) || (isAPressed && slideDir === 'center'),
+          (gp.buttons[3]?.pressed || false), // Y fires only when physically pressed; A alone does NOT map here
           (gp.buttons[1]?.pressed || false) || (isAPressed && slideDir === 'right')
         ];
 

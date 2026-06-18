@@ -29,6 +29,15 @@ export default function Home() {
       if (host.includes('pim.th3scr1b3.art') || host.includes('beatstar') || port === '5173') {
         return 'PIM : TH3V4ULT';
       }
+      if (host.includes('video.th3scr1b3.art')) {
+        return '365 POSTER';
+      }
+      if (host.includes('mood.th3scr1b3.art')) {
+        return 'MOOD BOARD';
+      }
+      if (host.includes('ce.th3scr1b3.art')) {
+        return 'SONG ANALYZER';
+      }
       if (host.includes('base.th3scr1b3.art')) {
         return 'BASE MINI-APP';
       }
@@ -47,6 +56,9 @@ export default function Home() {
         main: 'https://th3scr1b3.art',
         pim: 'https://pim.th3scr1b3.art',
         base: 'https://base.th3scr1b3.art',
+        video: 'https://video.th3scr1b3.art',
+        mood: 'https://th3scr1b3.art/mood-map',
+        ce: 'https://ce.th3scr1b3.art',
       };
     }
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -54,6 +66,9 @@ export default function Home() {
       main: isLocal ? 'http://localhost:3000' : 'https://th3scr1b3.art',
       pim: isLocal ? 'http://localhost:5173' : 'https://pim.th3scr1b3.art',
       base: 'https://base.th3scr1b3.art',
+      video: 'https://video.th3scr1b3.art',
+      mood: 'https://th3scr1b3.art/mood-map',
+      ce: 'https://ce.th3scr1b3.art',
     };
   };
 
@@ -66,22 +81,33 @@ export default function Home() {
       if (uri) {
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setRedirectUri(uri);
+        // Persist so OAuth callbacks (which strip query params) can still redirect back
+        sessionStorage.setItem('pim_redirect_uri', uri);
+      } else {
+        // Fallback: recover from sessionStorage if OAuth stripped the param
+        const saved = sessionStorage.getItem('pim_redirect_uri');
+        if (saved) setRedirectUri(saved);
       }
     }
+
+    /** Resolve the effective redirect_uri from URL or sessionStorage */
+    const getRedirectUri = (): string | null => {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('redirect_uri') || sessionStorage.getItem('pim_redirect_uri');
+    };
 
     const fetchUserAndProfile = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         setActiveUser(session.user);
-        
-        // Auto-redirect if redirect_uri exists, session is active, and user is NOT anonymous
-        const params = new URLSearchParams(window.location.search);
-        const uri = params.get('redirect_uri');
-        const isAnonymous = session.user.is_anonymous || 
-                             session.user.app_metadata?.provider === 'anonymous' || 
+
+        const uri = getRedirectUri();
+        const isAnonymous = session.user.is_anonymous ||
+                             session.user.app_metadata?.provider === 'anonymous' ||
                              (!session.user.email && !session.user.user_metadata?.wallet);
         if (uri && !isAnonymous) {
           console.log('[SYSTEM] Active non-anonymous session detected. Redirecting with tokens...');
+          sessionStorage.removeItem('pim_redirect_uri');
           const url = new URL(uri);
           url.searchParams.set('access_token', session.access_token);
           url.searchParams.set('refresh_token', session.refresh_token);
@@ -95,7 +121,7 @@ export default function Home() {
           .select('display_name')
           .eq('id', session.user.id)
           .single();
-          
+
         if (profile?.display_name) {
           setDisplayName(profile.display_name);
         }
@@ -108,14 +134,13 @@ export default function Home() {
       if (session) {
         setActiveUser(session.user);
 
-        // Auto-redirect if redirect_uri exists, session is active, and user is NOT anonymous
-        const params = new URLSearchParams(window.location.search);
-        const uri = params.get('redirect_uri');
-        const isAnonymous = session.user.is_anonymous || 
-                             session.user.app_metadata?.provider === 'anonymous' || 
+        const uri = getRedirectUri();
+        const isAnonymous = session.user.is_anonymous ||
+                             session.user.app_metadata?.provider === 'anonymous' ||
                              (!session.user.email && !session.user.user_metadata?.wallet);
         if (uri && !isAnonymous) {
           console.log('[SYSTEM] Session state changed to non-anonymous. Redirecting with tokens...');
+          sessionStorage.removeItem('pim_redirect_uri');
           const url = new URL(uri);
           url.searchParams.set('access_token', session.access_token);
           url.searchParams.set('refresh_token', session.refresh_token);
@@ -319,6 +344,48 @@ export default function Home() {
                   <span className={styles.gatewayCardStatus}>
                     <span className={styles.statusIndicator} />
                     ONLINE / WEB3_NODE
+                  </span>
+                </a>
+
+                <a href={links.video} className={`${styles.gatewayCard} ${styles.gatewayCardBase}`}>
+                  <h3 className={styles.gatewayCardTitle}>
+                    365 POSTER
+                    <ExternalLink size={14} className={styles.gatewayCardTitleIcon} />
+                  </h3>
+                  <p className={styles.gatewayCardDesc}>
+                    Visual archive of the 365 daily release poster series.
+                  </p>
+                  <span className={styles.gatewayCardStatus}>
+                    <span className={styles.statusIndicator} />
+                    ONLINE / VISUAL_NODE
+                  </span>
+                </a>
+
+                <a href={links.mood} className={`${styles.gatewayCard} ${styles.gatewayCardBase}`}>
+                  <h3 className={styles.gatewayCardTitle}>
+                    MOOD MAP
+                    <ExternalLink size={14} className={styles.gatewayCardTitleIcon} />
+                  </h3>
+                  <p className={styles.gatewayCardDesc}>
+                    Interactive mood map and poem analyzer on th3scr1b3.art.
+                  </p>
+                  <span className={styles.gatewayCardStatus}>
+                    <span className={styles.statusIndicator} />
+                    ONLINE / MOOD_NODE
+                  </span>
+                </a>
+
+                <a href={links.ce} className={`${styles.gatewayCard} ${styles.gatewayCardBase}`}>
+                  <h3 className={styles.gatewayCardTitle}>
+                    SONG ANALYZER
+                    <ExternalLink size={14} className={styles.gatewayCardTitleIcon} />
+                  </h3>
+                  <p className={styles.gatewayCardDesc}>
+                    CE — audio analysis, lyrics, and spectral telemetry engine.
+                  </p>
+                  <span className={styles.gatewayCardStatus}>
+                    <span className={styles.statusIndicator} />
+                    ONLINE / CE_NODE
                   </span>
                 </a>
               </div>

@@ -299,8 +299,8 @@ export default function Navbar() {
             {/* Wallet Integration */}
             {user && !isAnonymous ? (
               <div className="flex items-center gap-2 ml-1">
-                <a
-                  href={`https://user.th3scr1b3.art?redirect_uri=${encodeURIComponent(window.location.href)}`}
+                <Link
+                  to="/profile"
                   className="flex items-center gap-2 no-underline transition-all hover:scale-105"
                   title="Manage Scribe Identity"
                 >
@@ -342,7 +342,7 @@ export default function Navbar() {
                       })()}
                     </span>
                   </div>
-                </a>
+                </Link>
                 <button
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); signOut(); }}
                   className="p-2 rounded-full transition-all hover:bg-white/10 active:scale-90"
@@ -594,8 +594,9 @@ export default function Navbar() {
               <div className="px-4 py-3">
                 {user && !isAnonymous ? (
                   <div className="flex items-center justify-between w-full">
-                    <a
-                      href={`https://user.th3scr1b3.art?redirect_uri=${encodeURIComponent(window.location.href)}`}
+                    <Link
+                      to="/profile"
+                      onClick={() => setMenuOpen(false)}
                       style={{
                         fontFamily: '"JetBrains Mono", monospace',
                         fontSize: '10px',
@@ -610,8 +611,8 @@ export default function Navbar() {
                       {displayName || (() => {
                         const val = user.email || user.id;
                         return val.slice(0, 16) + (val.length > 16 ? '…' : '');
-                      })()} ↗
-                    </a>
+                      })()} →
+                    </Link>
                     <button
                       onClick={() => { signOut(); setMenuOpen(false); }}
                       className="flex items-center gap-2 px-3 py-2 border border-white/10 hover:bg-white/5 transition-colors"

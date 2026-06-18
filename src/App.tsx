@@ -37,6 +37,7 @@ import Options from './pages/Options';
 import SongDetail from './pages/SongDetail';
 import LandingPage from './pages/LandingPage';
 import PitchDeck from './pages/PitchDeck';
+import ProfilePage from './pages/ProfilePage';
 
 export default function App() {
   const [location, setLocation] = useLocation();
@@ -148,6 +149,7 @@ export default function App() {
           <Route path="/campaign" component={Campaign} />
           <Route path="/chapter/:month" component={Chapter} />
           <Route path="/tutorial" component={Tutorial} />
+          <Route path="/profile" component={ProfilePage} />
           <Route path="/options" component={Options} />
           <Route path="/song/:songId" component={SongDetail} />
           <Route>
