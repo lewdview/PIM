@@ -237,9 +237,17 @@ export default function WalletConnect({ redirectUri }: WalletConnectProps) {
     ? truncateAddress(walletAddress) 
     : (activeUser?.email || 'Authenticated User');
 
+  const isAnonymous = activeUser && (
+    activeUser.is_anonymous ||
+    activeUser.app_metadata?.provider === 'anonymous' ||
+    (!activeUser.email && !activeUser.user_metadata?.wallet)
+  );
+
+  const showConnected = activeUser && !isAnonymous;
+
   return (
     <div className={styles.wrapper}>
-      {activeUser ? (
+      {showConnected ? (
         <div className={styles.connectedBox}>
           <div className={styles.addressInfo}>
             <span className={styles.indicator} />

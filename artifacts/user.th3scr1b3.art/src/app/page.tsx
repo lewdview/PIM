@@ -15,6 +15,12 @@ export default function Home() {
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [redirectUri, setRedirectUri] = useState<string>('');
 
+  const isAnonymousUser = !!activeUser && (
+    activeUser.is_anonymous || 
+    activeUser.app_metadata?.provider === 'anonymous' || 
+    (!activeUser.email && !activeUser.user_metadata?.wallet)
+  );
+
   const getAppName = (urlStr: string): string => {
     try {
       const url = new URL(urlStr);
@@ -71,7 +77,9 @@ export default function Home() {
         // Auto-redirect if redirect_uri exists, session is active, and user is NOT anonymous
         const params = new URLSearchParams(window.location.search);
         const uri = params.get('redirect_uri');
-        const isAnonymous = session.user.is_anonymous || session.user.app_metadata?.provider === 'anonymous';
+        const isAnonymous = session.user.is_anonymous || 
+                             session.user.app_metadata?.provider === 'anonymous' || 
+                             (!session.user.email && !session.user.user_metadata?.wallet);
         if (uri && !isAnonymous) {
           console.log('[SYSTEM] Active non-anonymous session detected. Redirecting with tokens...');
           const url = new URL(uri);
@@ -103,7 +111,9 @@ export default function Home() {
         // Auto-redirect if redirect_uri exists, session is active, and user is NOT anonymous
         const params = new URLSearchParams(window.location.search);
         const uri = params.get('redirect_uri');
-        const isAnonymous = session.user.is_anonymous || session.user.app_metadata?.provider === 'anonymous';
+        const isAnonymous = session.user.is_anonymous || 
+                             session.user.app_metadata?.provider === 'anonymous' || 
+                             (!session.user.email && !session.user.user_metadata?.wallet);
         if (uri && !isAnonymous) {
           console.log('[SYSTEM] Session state changed to non-anonymous. Redirecting with tokens...');
           const url = new URL(uri);
@@ -213,7 +223,7 @@ export default function Home() {
               
               <WalletConnect redirectUri={redirectUri} />
 
-              {activeUser && (
+              {activeUser && !isAnonymousUser && (
                 <form onSubmit={updateProfile} className={styles.profileForm}>
                   <div className={styles.inputGroup}>
                     <label htmlFor="displayName" className={styles.inputLabel}>

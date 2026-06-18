@@ -158,7 +158,9 @@ function TokenPill({ balance, compact = false }: { balance: number; compact?: bo
 export default function Navbar() {
   const [location] = useLocation();
   const { user, signOut, status, error: authError, setShowAuthModal } = useAuthStore();
-  const isAnonymous = user?.is_anonymous || !user?.email;
+  const isAnonymous = user?.is_anonymous || 
+                      user?.app_metadata?.provider === 'anonymous' || 
+                      (!user?.email && !user?.user_metadata?.wallet && !user?.user_metadata?.wallet_address);
   const tokenBalance = useVaultStore(s => s.tokenBalance);
   const displayName = useVaultStore(s => s.displayName);
   const avatarUrl = useVaultStore(s => s.avatarUrl);
