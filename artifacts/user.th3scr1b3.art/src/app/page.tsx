@@ -68,11 +68,12 @@ export default function Home() {
       if (session) {
         setActiveUser(session.user);
         
-        // Auto-redirect if redirect_uri exists and session is active
+        // Auto-redirect if redirect_uri exists, session is active, and user is NOT anonymous
         const params = new URLSearchParams(window.location.search);
         const uri = params.get('redirect_uri');
-        if (uri) {
-          console.log('[SYSTEM] Active session detected. Redirecting with tokens...');
+        const isAnonymous = session.user.is_anonymous || session.user.app_metadata?.provider === 'anonymous';
+        if (uri && !isAnonymous) {
+          console.log('[SYSTEM] Active non-anonymous session detected. Redirecting with tokens...');
           const url = new URL(uri);
           url.searchParams.set('access_token', session.access_token);
           url.searchParams.set('refresh_token', session.refresh_token);
@@ -99,11 +100,12 @@ export default function Home() {
       if (session) {
         setActiveUser(session.user);
 
-        // Auto-redirect if redirect_uri exists and session is active
+        // Auto-redirect if redirect_uri exists, session is active, and user is NOT anonymous
         const params = new URLSearchParams(window.location.search);
         const uri = params.get('redirect_uri');
-        if (uri) {
-          console.log('[SYSTEM] Session state changed. Redirecting with tokens...');
+        const isAnonymous = session.user.is_anonymous || session.user.app_metadata?.provider === 'anonymous';
+        if (uri && !isAnonymous) {
+          console.log('[SYSTEM] Session state changed to non-anonymous. Redirecting with tokens...');
           const url = new URL(uri);
           url.searchParams.set('access_token', session.access_token);
           url.searchParams.set('refresh_token', session.refresh_token);
