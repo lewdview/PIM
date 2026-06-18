@@ -149,15 +149,17 @@ export default function App() {
           <Route path="/options" component={Options} />
           <Route path="/song/:songId" component={SongDetail} />
           <Route>
-
-            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center max-w-md mx-auto">
+              <div className="text-[10px] tracking-[0.3em] text-white/40 mb-4 uppercase font-bold">
+                404 // NEURAL_DESYNC
+              </div>
               <h1 className="text-4xl font-black text-[#ff3800] tracking-tighter mb-4 uppercase">
-                404 // ROUTE_NOT_FOUND
+                NOT_FOUND
               </h1>
-              <p className="font-mono text-xs text-white/40 mb-8 max-w-md uppercase">
-                The neural pathway you requested does not exist or has been decommissioned.
+              <p className="font-mono text-xs text-white/60 mb-8 uppercase leading-relaxed">
+                The requested transmission pathway has collapsed. The sector query failed to resolve or has been quarantined by the archivist.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">
+              <div className="flex flex-col sm:flex-row gap-4 items-center justify-center mb-8">
                 <a
                   href="/arcade"
                   className="px-6 py-3 border-2 border-black bg-[#ff3800] text-black font-black uppercase text-xs tracking-wider shadow-[4px_4px_0_#000] hover:scale-105 active:scale-95 transition-all"
@@ -170,6 +172,20 @@ export default function App() {
                 >
                   Restart System
                 </button>
+              </div>
+              <div className="w-full pt-6 border-t border-white/10 text-left font-mono text-[9px] text-white/30 space-y-1">
+                <div className="flex justify-between">
+                  <span>DESYNC_GATEWAY:</span>
+                  <span className="text-white/60 font-bold uppercase">SFO1::CLIENT_ROUTER</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>DIAGNOSTIC_CODE:</span>
+                  <span className="text-[#ff3800] font-bold">404_PATH_DECOMISSIONED</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>QUERY_LOCATION:</span>
+                  <span className="text-white/60 font-bold uppercase">{location}</span>
+                </div>
               </div>
             </div>
           </Route>
