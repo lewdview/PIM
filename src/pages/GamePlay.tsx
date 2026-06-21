@@ -209,6 +209,7 @@ export default function Game() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const canvasWrapperRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioObjectUrlRef = useRef<string | null>(null);
   const audioOffsetRef = useRef(0);
   const laneColorsRef = useRef<[string, string, string]>(["#FF1493", "#00E5FF", "#39FF14"]);
   const laneKeysRef = useRef<[string, string, string]>(["a", "s", "d"]);
@@ -243,6 +244,7 @@ export default function Game() {
     | "continue"
     | "rewinding"
     | "audioError"
+    | "loadError"
     | "unmounted"
   >("loading");
   const puRef = useRef<PUState>({
@@ -303,6 +305,7 @@ export default function Game() {
   const [isTutorialHelpOpen, setIsTutorialHelpOpen] = useState(false);
   const isTutorialHelpOpenRef = useRef(false);
 
+  const [retryCount, setRetryCount] = useState(0);
   const [phase, setPhase] = useState<typeof phaseRef.current>("loading");
   const [countdown, setCountdown] = useState(3);
   const [displayGs, setDisplayGs] = useState<GameState>(gsRef.current);
@@ -3566,86 +3569,86 @@ export default function Game() {
       missCountRef.current = 0;
       setMissCount(0);
 
+      setBufferPct(0);
       setLoadMsg("BUFFERING AUDIO...");
       phaseRef.current = "buffering";
       setPhase("buffering");
-      
-      let loadFailed = false;
-      audio = new Audio();
-      audio.crossOrigin = "anonymous";
-      audio.preload = "auto";
-      audioRef.current = audio;
-      onProgress = () => {
-        if (!audio?.duration) return;
-        const buf = audio.buffered;
-        if (buf.length)
-          setBufferPct(
-            Math.min(
-              100,
-              Math.round((buf.end(buf.length - 1) / audio.duration) * 100),
-            ),
-          );
-      };
-      audio.addEventListener("progress", onProgress);
-      audio.src = song.audioUrl;
-      audio.load();
-      await new Promise<void>((resolve) => {
-        if (audio!.readyState >= 3) {
-          resolve();
-          return;
-        }
-        onCanPlay = () => resolve();
-        onError = () => {
-          loadFailed = true;
-          resolve();
-        };
-        audio!.addEventListener("canplay", onCanPlay, { once: true });
-        audio!.addEventListener("error", onError, { once: true });
-        loadTimeoutRef.current = setTimeout(() => {
-          if (audio!.readyState < 3) {
-            loadFailed = true;
-          }
-          resolve();
-        }, 12000);
-      });
 
-      if (onCanPlay) audio!.removeEventListener("canplay", onCanPlay);
-      if (onError) audio!.removeEventListener("error", onError);
-      if (loadTimeoutRef.current) {
-        clearTimeout(loadTimeoutRef.current);
-        loadTimeoutRef.current = null;
+      if (audioObjectUrlRef.current) {
+        try {
+          URL.revokeObjectURL(audioObjectUrlRef.current);
+        } catch {}
+        audioObjectUrlRef.current = null;
       }
 
-      if (loadFailed && !cancelled) {
-        console.warn("[GamePlay Init] CORS audio load failed. Retrying without CORS (Web Audio filters will be bypassed)...");
-        if (onProgress) audio.removeEventListener("progress", onProgress);
+      let blob: Blob | null = null;
+      let objectUrl: string = "";
+      let fetchSuccess = false;
+
+      // ── Attempt 1: Fetch via stream reader for precise progress ──
+      try {
+        console.log("[GamePlay Init] Attempting stream-based audio fetch:", song.audioUrl);
+        const response = await fetch(song.audioUrl);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        const contentLength = response.headers.get("content-length");
+        const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
+
+        if (response.body && totalBytes > 0) {
+          const reader = response.body.getReader();
+          const chunks: Uint8Array[] = [];
+          let loadedBytes = 0;
+
+          while (true) {
+            if (cancelled) {
+              reader.cancel();
+              return;
+            }
+            const { done, value } = await reader.read();
+            if (done) break;
+            if (value) {
+              chunks.push(value);
+              loadedBytes += value.length;
+              setBufferPct(
+                Math.min(99, Math.round((loadedBytes / totalBytes) * 100))
+              );
+            }
+          }
+          blob = new Blob(chunks, { type: response.headers.get("content-type") || "audio/mpeg" });
+        } else {
+          blob = await response.blob();
+        }
+
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        audioObjectUrlRef.current = objectUrl;
+        fetchSuccess = true;
+        setBufferPct(100);
+      } catch (err) {
+        console.warn("[GamePlay Init] Stream-based fetch failed, falling back to standard audio loading:", err);
+      }
+
+      if (cancelled) return;
+
+      if (fetchSuccess) {
         audio = new Audio();
+        audio.crossOrigin = "anonymous";
         audio.preload = "auto";
         audioRef.current = audio;
-        onProgress = () => {
-          if (!audio?.duration) return;
-          const buf = audio.buffered;
-          if (buf.length)
-            setBufferPct(
-              Math.min(
-                100,
-                Math.round((buf.end(buf.length - 1) / audio.duration) * 100),
-              ),
-            );
-        };
-        audio.addEventListener("progress", onProgress);
-        audio.src = song.audioUrl;
+        audio.src = objectUrl;
         audio.load();
-        await new Promise<void>((resolve) => {
+
+        await new Promise<void>((resolve, reject) => {
           if (audio!.readyState >= 3) {
             resolve();
             return;
           }
           onCanPlay = () => resolve();
-          onError = () => resolve();
+          onError = () => reject(new Error("Audio element failed to load Blob URL"));
           audio!.addEventListener("canplay", onCanPlay, { once: true });
           audio!.addEventListener("error", onError, { once: true });
-          loadTimeoutRef.current = setTimeout(resolve, 12000);
+          loadTimeoutRef.current = setTimeout(resolve, 5000); // 5s timeout fallback
         });
 
         if (onCanPlay) audio!.removeEventListener("canplay", onCanPlay);
@@ -3653,6 +3656,133 @@ export default function Game() {
         if (loadTimeoutRef.current) {
           clearTimeout(loadTimeoutRef.current);
           loadTimeoutRef.current = null;
+        }
+      } else {
+        // ── Fallback 1: Standard Audio load with CORS ──
+        console.log("[GamePlay Init] Fallback: Standard Audio load with CORS");
+        let loadFailed = false;
+        audio = new Audio();
+        audio.crossOrigin = "anonymous";
+        audio.preload = "auto";
+        audioRef.current = audio;
+
+        const updateFallbackProgress = () => {
+          if (!audio || !audio.duration || isNaN(audio.duration)) return;
+          const buf = audio.buffered;
+          if (buf.length) {
+            const pct = Math.min(100, Math.round((buf.end(buf.length - 1) / audio.duration) * 100));
+            setBufferPct(pct);
+          }
+        };
+
+        onProgress = updateFallbackProgress;
+        audio.addEventListener("progress", onProgress);
+        audio.addEventListener("durationchange", updateFallbackProgress);
+        audio.addEventListener("loadedmetadata", updateFallbackProgress);
+        audio.addEventListener("canplay", updateFallbackProgress);
+        
+        const progressPoll = setInterval(updateFallbackProgress, 100);
+
+        audio.src = song.audioUrl;
+        audio.load();
+
+        await new Promise<void>((resolve) => {
+          if (audio!.readyState >= 3) {
+            resolve();
+            return;
+          }
+          onCanPlay = () => resolve();
+          onError = () => {
+            loadFailed = true;
+            resolve();
+          };
+          audio!.addEventListener("canplay", onCanPlay, { once: true });
+          audio!.addEventListener("error", onError, { once: true });
+          loadTimeoutRef.current = setTimeout(() => {
+            if (audio!.readyState < 3) {
+              loadFailed = true;
+            }
+            resolve();
+          }, 12000);
+        });
+
+        clearInterval(progressPoll);
+        if (onCanPlay) audio!.removeEventListener("canplay", onCanPlay);
+        if (onError) audio!.removeEventListener("error", onError);
+        audio.removeEventListener("progress", onProgress);
+        audio.removeEventListener("durationchange", updateFallbackProgress);
+        audio.removeEventListener("loadedmetadata", updateFallbackProgress);
+        audio.removeEventListener("canplay", updateFallbackProgress);
+        if (loadTimeoutRef.current) {
+          clearTimeout(loadTimeoutRef.current);
+          loadTimeoutRef.current = null;
+        }
+
+        // ── Fallback 2: Standard Audio load without CORS ──
+        if (loadFailed && !cancelled) {
+          console.warn("[GamePlay Init] CORS fallback audio load failed. Retrying without CORS (Web Audio filters will be bypassed)...");
+          loadFailed = false;
+          audio = new Audio();
+          audio.preload = "auto";
+          audioRef.current = audio;
+
+          const updateFallbackProgress2 = () => {
+            if (!audio || !audio.duration || isNaN(audio.duration)) return;
+            const buf = audio.buffered;
+            if (buf.length) {
+              const pct = Math.min(100, Math.round((buf.end(buf.length - 1) / audio.duration) * 100));
+              setBufferPct(pct);
+            }
+          };
+
+          onProgress = updateFallbackProgress2;
+          audio.addEventListener("progress", onProgress);
+          audio.addEventListener("durationchange", updateFallbackProgress2);
+          audio.addEventListener("loadedmetadata", updateFallbackProgress2);
+          audio.addEventListener("canplay", updateFallbackProgress2);
+
+          const progressPoll2 = setInterval(updateFallbackProgress2, 100);
+
+          audio.src = song.audioUrl;
+          audio.load();
+
+          await new Promise<void>((resolve) => {
+            if (audio!.readyState >= 3) {
+              resolve();
+              return;
+            }
+            onCanPlay = () => resolve();
+            onError = () => {
+              loadFailed = true;
+              resolve();
+            };
+            audio!.addEventListener("canplay", onCanPlay, { once: true });
+            audio!.addEventListener("error", onError, { once: true });
+            loadTimeoutRef.current = setTimeout(() => {
+              if (audio!.readyState < 3) {
+                loadFailed = true;
+              }
+              resolve();
+            }, 12000);
+          });
+
+          clearInterval(progressPoll2);
+          if (onCanPlay) audio!.removeEventListener("canplay", onCanPlay);
+          if (onError) audio!.removeEventListener("error", onError);
+          audio.removeEventListener("progress", onProgress);
+          audio.removeEventListener("durationchange", updateFallbackProgress2);
+          audio.removeEventListener("loadedmetadata", updateFallbackProgress2);
+          audio.removeEventListener("canplay", updateFallbackProgress2);
+          if (loadTimeoutRef.current) {
+            clearTimeout(loadTimeoutRef.current);
+            loadTimeoutRef.current = null;
+          }
+        }
+
+        if (loadFailed && !cancelled) {
+          phaseRef.current = "loadError";
+          setPhase("loadError");
+          return;
         }
       }
 
@@ -3801,6 +3931,12 @@ export default function Game() {
         try { audio.load(); } catch {}
       }
       audioRef.current = null;
+      if (audioObjectUrlRef.current) {
+        try {
+          URL.revokeObjectURL(audioObjectUrlRef.current);
+        } catch {}
+        audioObjectUrlRef.current = null;
+      }
       laneRestoreTimers.current.forEach(clearTimeout);
 
       if (continueTimeoutRef.current) {
@@ -3854,7 +3990,7 @@ export default function Game() {
       coverBlurRef.current = null;
       scanPatternRef.current = null;
     };
-  }, [songId, setLocation]);
+  }, [songId, setLocation, retryCount]);
 
   // ── render ──
   const gs = displayGs;
@@ -4804,6 +4940,44 @@ export default function Game() {
                 style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", letterSpacing: "0.2em", maxWidth: 220, lineHeight: 1.8 }}
               >
                 YOUR BROWSER NEEDS A TAP<br />TO ALLOW AUDIO PLAYBACK
+              </div>
+            </div>
+          )}
+
+          {/* Audio download/load error overlay */}
+          {phase === "loadError" && (
+            <div
+              className="absolute inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-md animate-in fade-in duration-300"
+            >
+              <div className="glass-panel p-8 max-w-sm w-full mx-4 text-center border-t-2 border-white/20 shadow-2xl">
+                <div className="font-mono font-bold text-xs tracking-[0.4em] text-red-500 mb-6 uppercase">
+                  TRANSMISSION FAILURE
+                </div>
+                <h2 className="font-mono font-bold text-2xl text-white mb-4 tracking-tighter">
+                  LOADING FAILED
+                </h2>
+                <p className="font-mono text-xs text-white/50 mb-8 leading-relaxed">
+                  We couldn't download the track audio. Please verify your connection and try again.
+                </p>
+                
+                <div className="flex flex-col gap-4">
+                  <button
+                    onClick={() => {
+                      setPhase("loading");
+                      setRetryCount((prev) => prev + 1);
+                    }}
+                    className="w-full py-4 font-mono font-bold text-sm tracking-[0.3em] bg-gradient-to-r from-[#FF1493] to-[#FF7A33] text-white rounded-lg hover:scale-[1.02] active:scale-95 transition-all shadow-lg cursor-pointer"
+                  >
+                    TRY AGAIN
+                  </button>
+                  
+                  <button
+                    onClick={doAbandon}
+                    className="w-full py-4 font-mono font-bold text-xs tracking-[0.2em] bg-white/5 text-white/60 border border-white/10 rounded-lg hover:bg-white/10 hover:text-white transition-all cursor-pointer"
+                  >
+                    ABORT MISSION
+                  </button>
+                </div>
               </div>
             </div>
           )}
