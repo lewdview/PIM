@@ -48,9 +48,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   setShowAuthModal: (show: boolean) => {
     if (show) {
       const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-      const hubBase = isLocal ? 'http://localhost:3000' : 'https://user.th3scr1b3.art';
-      const redirectUri = window.location.href;
-      window.location.href = `${hubBase}?redirect_uri=${encodeURIComponent(redirectUri)}`;
+      if (isLocal) {
+        set({ showAuthModal: true });
+      } else {
+        const hubBase = 'https://user.th3scr1b3.art';
+        const redirectUri = window.location.href;
+        window.location.href = `${hubBase}?redirect_uri=${encodeURIComponent(redirectUri)}`;
+      }
     } else {
       set({ showAuthModal: false });
     }
@@ -119,12 +123,35 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const isPublicPath = path === '/pitch-deck' || path === '/vault/legal';
       
       if (!isPublicPath) {
-        console.log('[Auth] No session found. Redirecting to Identity Hub for anonymous authentication...');
         const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-        const hubBase = isLocal ? 'http://localhost:3000' : 'https://user.th3scr1b3.art';
-        const redirectUri = window.location.href;
-        window.location.href = `${hubBase}/auth/anon?redirect_uri=${encodeURIComponent(redirectUri)}`;
-        return; // Redirecting, stop initialization
+        if (isLocal) {
+          console.log('[Auth] Local development: attempting direct anonymous sign in...');
+          try {
+            const { data: anonData, error: anonError } = await supabase.auth.signInAnonymously();
+            if (anonError) throw anonError;
+            console.log('[Auth] Direct anonymous sign-in successful:', anonData.session?.user?.id);
+            set({
+              session: anonData.session,
+              user: anonData.session?.user ?? null,
+              status: 'ready',
+            });
+            if (anonData.session?.user) {
+              void get().ensureProfileAndWallet(anonData.session.user);
+            }
+          } catch (err) {
+            console.error('[Auth] Direct anonymous sign-in failed, redirecting to hub...', err);
+            const hubBase = 'http://localhost:3000';
+            const redirectUri = window.location.href;
+            window.location.href = `${hubBase}/auth/anon?redirect_uri=${encodeURIComponent(redirectUri)}`;
+            return; // Redirecting, stop initialization
+          }
+        } else {
+          console.log('[Auth] No session found. Redirecting to Identity Hub for anonymous authentication...');
+          const hubBase = 'https://user.th3scr1b3.art';
+          const redirectUri = window.location.href;
+          window.location.href = `${hubBase}/auth/anon?redirect_uri=${encodeURIComponent(redirectUri)}`;
+          return; // Redirecting, stop initialization
+        }
       } else {
         // Public pages can continue in idle/ready state without a session
         set({ status: 'ready' });
