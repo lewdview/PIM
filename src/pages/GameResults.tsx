@@ -279,26 +279,29 @@ export default function Results() {
 
     async function checkClaim() {
       setClaimStatus('checking');
-      let maxClaimedTierValue = -1;
+      // Baselining maxClaimedTierValue from localStorage first
+      const localTier = localStorage.getItem(`reward_tier_${songId}`);
+      let maxClaimedTierValue = localTier ? (TIER_ORDER[localTier] ?? 0) : -1;
+
       try {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('gameplay_records')
           .select('reward_tier')
           .eq('user_id', user!.id)
           .eq('song_id', songId!)
           .eq('pack_rewarded', true);
+        
+        if (error) throw error;
+        
         if (data && data.length > 0) {
           // Find the highest tier already claimed
           maxClaimedTierValue = data.reduce((max: number, row: any) => {
             const tv = TIER_ORDER[row.reward_tier ?? 'none'] ?? 0;
             return Math.max(max, tv);
-          }, 0);
+          }, maxClaimedTierValue);
         }
       } catch (e) {
-        console.warn('Failed to query gameplay_records:', e);
-        // Fallback: check local storage for any prior claim on this song
-        const localTier = localStorage.getItem(`reward_tier_${songId}`);
-        maxClaimedTierValue = localTier ? (TIER_ORDER[localTier] ?? 0) : -1;
+        console.warn('Failed to query gameplay_records from Supabase (using localStorage baseline):', e);
       }
 
       // Allow claim if current run's tier is higher than any previous claim
@@ -315,34 +318,35 @@ export default function Results() {
   const handleClaimReward = async () => {
     if (claimStatus !== 'ready' || !user || !result || !songId) return;
     setClaimStatus('claiming');
-
+ 
     const category = currentTier;  // accuracy-mapped tier
     const size = 'single';
-
+ 
     try {
       const cards = await purchasePack(category, size, undefined, undefined, true);
       if (cards && cards.length > 0) {
-        // Save score record — store reward_tier so progressive upgrade check works
-        try {
-          await supabase.from('gameplay_records').insert({
-            user_id: user.id,
-            song_id: songId,
-            score: result.score,
-            accuracy: Number(accuracy.toFixed(2)),
-            max_combo: result.maxCombo,
-            medal: result.medal,
-            pack_rewarded: true,
-            reward_tier: category,
-          });
-        } catch (dbErr) {
+        // Unconditionally cache locally to prevent race conditions or back-button exploit
+        localStorage.setItem(`reward_tier_${songId}`, category);
+ 
+        // Save score record to Supabase
+        const { error: dbErr } = await supabase.from('gameplay_records').insert({
+          user_id: user.id,
+          song_id: songId,
+          score: result.score,
+          accuracy: Number(accuracy.toFixed(2)),
+          max_combo: result.maxCombo,
+          medal: result.medal,
+          pack_rewarded: true,
+          reward_tier: category,
+        });
+        
+        if (dbErr) {
           console.warn('Failed to insert gameplay_records to Supabase:', dbErr);
-          // Fallback to local storage
-          localStorage.setItem(`reward_tier_${songId}`, category);
         }
-
+ 
         // Add to collection in store
         useVaultStore.getState().addToCollection(cards);
-
+ 
         // Setup reveal metadata and start reveal
         const cfg = PACK_CONFIGS[category];
         useVaultStore.getState().startReveal(cards, {
@@ -356,7 +360,10 @@ export default function Results() {
           cardCount: cards.length,
           revealType: 'cinematic',
         });
-
+ 
+        // Clear result session storage to prevent going back to this results screen
+        sessionStorage.removeItem(`result_${songId}`);
+ 
         // Go to reveal page
         audioManager.playSfx('open_chest', 0.9);
         setLocation('/vault/reveal');
