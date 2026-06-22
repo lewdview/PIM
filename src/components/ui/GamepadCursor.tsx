@@ -57,6 +57,7 @@ export default function GamepadCursor() {
 
         setHoveredElement(null);
       }
+    };
     window.addEventListener("mousemove", handleMouseMove);
 
     const findScrollableContainer = (startEl: Element | null, x: number, y: number) => {

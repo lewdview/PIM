@@ -75,6 +75,9 @@ function SongRow({ song, selected, onClick, isAvant, unlocked }: {
   const durMin = Math.floor(song.duration / 60);
   const durSec = String(Math.round(song.duration % 60)).padStart(2, '0');
 
+  const claimedRewards = useVaultStore((s) => s.claimedRewards);
+  const isAllPrizesClaimed = claimedRewards[song.id]?.includes('prophecy') || localStorage.getItem(`reward_tier_${song.id}`) === 'prophecy';
+
   if (isAvant) {
     return (
       <button
@@ -141,10 +144,11 @@ function SongRow({ song, selected, onClick, isAvant, unlocked }: {
           </div>
 
           <div
-            className="font-mono font-black text-sm truncate uppercase tracking-tight"
+            className="font-mono font-black text-sm truncate uppercase tracking-tight flex items-center gap-1.5"
             style={{ color: selected ? '#39FF14' : '#F2F0E8' }}
           >
-            {song.title}
+            <span>{song.title}</span>
+            {isAllPrizesClaimed && <span title="All Prizes Claimed">🏆</span>}
           </div>
 
           <div className="flex items-center gap-3 mt-1 opacity-60 group-hover:opacity-100 transition-opacity">
@@ -210,10 +214,11 @@ function SongRow({ song, selected, onClick, isAvant, unlocked }: {
 
 
         <div
-          className="font-mono font-black text-sm truncate leading-tight uppercase tracking-tight"
+          className="font-mono font-black text-sm truncate leading-tight uppercase tracking-tight flex items-center gap-1.5"
           style={{ color: selected ? '#fff' : 'rgba(255,255,255,0.6)' }}
         >
-          {song.title}
+          <span>{song.title}</span>
+          {isAllPrizesClaimed && <span title="All Prizes Claimed">🏆</span>}
         </div>
 
         <div className="flex items-center gap-3 mt-1 opacity-40 group-hover:opacity-100 transition-opacity">
@@ -250,6 +255,7 @@ export default function SongSelect() {
   const collection = useVaultStore((s) => s.collection);
   const fragments = useVaultStore((s) => s.fragments);
   const loadVaultData = useVaultStore((s) => s.loadVaultData);
+  const claimedRewards = useVaultStore((s) => s.claimedRewards);
 
   useEffect(() => {
     if (collection.length === 0) {
@@ -518,10 +524,11 @@ export default function SongSelect() {
                   </div>
 
                   <h2
-                    className="font-mono font-black mb-1 leading-tight uppercase tracking-tight text-center"
+                    className="font-mono font-black mb-1 leading-tight uppercase tracking-tight text-center flex items-center justify-center gap-2"
                     style={{ fontSize: '26px', color: '#F2F0E8' }}
                   >
-                    {selected.title}
+                    <span>{selected.title}</span>
+                    {isAllPrizesClaimed && <span title="All Prizes Claimed">🏆</span>}
                   </h2>
 
                   <div className="font-mono font-bold text-xs mb-6 tracking-[0.1em] text-center" style={{ color: selected.mood === 'light' ? '#39FF14' : '#FF1493' }}>
@@ -869,10 +876,11 @@ export default function SongSelect() {
                 </div>
 
                 <h2
-                  className="font-mono font-black mb-2 leading-[1.1] text-glow uppercase"
+                  className="font-mono font-black mb-2 leading-[1.1] text-glow uppercase flex items-center gap-2"
                   style={{ fontSize: 'clamp(28px, 4vw, 44px)', color: '#F2F0E8', letterSpacing: '-0.02em' }}
                 >
-                  {selected.title}
+                  <span>{selected.title}</span>
+                  {isAllPrizesClaimed && <span title="All Prizes Claimed">🏆</span>}
                 </h2>
 
                 <div className="font-mono font-bold text-base mb-6 tracking-[0.1em]" style={{ color: selected.mood === 'light' ? '#39FF14' : '#FF1493' }}>

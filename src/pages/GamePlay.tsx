@@ -3794,9 +3794,22 @@ export default function Game() {
         if (!audio.crossOrigin) {
           throw new Error("No-CORS audio fallback");
         }
-        const actx = new AudioContext({ latencyHint: 'interactive' });
+        let actx = audioManager.getContext();
+        if (!actx) {
+          await audioManager.init();
+          actx = audioManager.getContext();
+        }
+        if (!actx) {
+          const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+          try {
+            actx = new AudioContextClass({ latencyHint: 'interactive' });
+          } catch {
+            actx = new AudioContextClass();
+          }
+        } else if (actx.state === 'suspended') {
+          await actx.resume();
+        }
         audioCtxRef.current = actx;
-        await actx.resume();
         const src = actx.createMediaElementSource(audio);
         audioSourceRef.current = src;
         const bandDefs: { type: BiquadFilterType; freq: number; Q: number }[] =
@@ -3980,7 +3993,9 @@ export default function Game() {
       }
 
       if (audioCtxRef.current) {
-        try { audioCtxRef.current.close(); } catch {}
+        if (audioCtxRef.current !== audioManager.getContext()) {
+          try { audioCtxRef.current.close(); } catch {}
+        }
         audioCtxRef.current = null;
       }
       laneSilenced.current = [false, false, false];

@@ -77,6 +77,7 @@ export default function SongDetail() {
   const loadVaultData = useVaultStore((s) => s.loadVaultData);
   const equippedCardId = useVaultStore((s) => s.equippedCardId);
   const setEquippedCardId = useVaultStore((s) => s.setEquippedCardId);
+  const claimedRewards = useVaultStore((s) => s.claimedRewards);
 
   useEffect(() => {
     // Proactively load vault data if not populated to check lock status accurately
@@ -211,6 +212,7 @@ export default function SongDetail() {
   const bestScore = history.length > 0 ? Math.max(...history) : 0;
   const isCleared = bestScore > 0 || (medal && medal !== '');
   const fragmentCount = song ? (fragments[song.id] ?? parseInt(localStorage.getItem(`fragments_${song.id}`) || '0', 10)) : 0;
+  const isAllPrizesClaimed = song ? (claimedRewards[song.id]?.includes('prophecy') || localStorage.getItem(`reward_tier_${song.id}`) === 'prophecy') : false;
 
   let unlocked = false;
   if (from === 'songs') {
@@ -307,6 +309,11 @@ export default function SongDetail() {
                   <span className="font-mono text-[8px] px-1.5 py-[2px] border font-black uppercase"
                     style={{ borderColor: mc, color: mc, background: `${mc}10` }}>
                     {medal}
+                  </span>
+                )}
+                {isAllPrizesClaimed && (
+                  <span className="font-mono text-[8px] px-1.5 py-[2px] border border-yellow-400 text-yellow-400 bg-yellow-400/10 font-black uppercase flex items-center gap-1">
+                    🏆 ALL PRIZES CLAIMED
                   </span>
                 )}
               </div>
@@ -606,6 +613,12 @@ export default function SongDetail() {
                 <span className="pill-badge"
                   style={{ background: mc, color: '#080808', boxShadow: `0 0 8px ${mc}40` }}>
                   {medal}
+                </span>
+              )}
+              {isAllPrizesClaimed && (
+                <span className="pill-badge border border-yellow-400 text-yellow-400 bg-yellow-400/10 font-bold"
+                  style={{ boxShadow: `0 0 8px rgba(234,179,8,0.2)` }}>
+                  🏆 ALL PRIZES CLAIMED
                 </span>
               )}
             </div>

@@ -63,6 +63,7 @@ interface VaultState {
   medals: Record<string, string>;
   fragments: Record<string, number>;
   milestoneClaims: Record<string, boolean>;
+  claimedRewards: Record<string, string[]>;
 
   // Actions
   setDailyCard: (card: VaultCard | null) => void;
@@ -83,6 +84,7 @@ interface VaultState {
   syncMedal: (songId: string, medal: string) => Promise<void>;
   syncFragments: (songId: string, count: number) => Promise<void>;
   syncMilestoneClaim: (monthNum: number, milestoneNum: number) => Promise<void>;
+  syncClaimedRewards: (songId: string, tiers: string[]) => void;
 }
 
 export function calculateEchoPrestigeScore(
@@ -136,6 +138,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   medals: {},
   fragments: {},
   milestoneClaims: {},
+  claimedRewards: {},
 
   setDailyCard: (card) => set({ dailyCard: card }),
   setHasClaimed: (claimed) => set({ hasClaimed: claimed }),
@@ -266,10 +269,14 @@ export const useVaultStore = create<VaultState>((set, get) => ({
 
       // --- USER PROGRESS MERGING & MIGRATION ---
       const MEDAL_ORDER = ['', 'NONE', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM'] as const;
+      const TIER_ORDER: Record<string, number> = {
+        none: 0, free: 1, taste: 2, special_picks: 3, alpha: 4, prophecy: 5
+      };
       const dbHighScores: Record<string, number> = {};
       const dbMedals: Record<string, string> = {};
       const dbFragments: Record<string, number> = {};
       const dbMilestoneClaims: Record<string, boolean> = {};
+      const dbClaimedRewards: Record<string, string[]> = {};
 
       if (gameplayRes.data) {
         for (const row of gameplayRes.data) {
@@ -280,6 +287,14 @@ export const useVaultStore = create<VaultState>((set, get) => ({
           const currentMedal = dbMedals[songId] || '';
           if (MEDAL_ORDER.indexOf(row.medal as any) > MEDAL_ORDER.indexOf(currentMedal as any)) {
             dbMedals[songId] = row.medal;
+          }
+          if (row.pack_rewarded && row.reward_tier && row.reward_tier !== 'none') {
+            if (!dbClaimedRewards[songId]) {
+              dbClaimedRewards[songId] = [];
+            }
+            if (!dbClaimedRewards[songId].includes(row.reward_tier)) {
+              dbClaimedRewards[songId].push(row.reward_tier);
+            }
           }
         }
       }
@@ -301,6 +316,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       const finalMedals = { ...dbMedals };
       const finalFragments = { ...dbFragments };
       const finalMilestoneClaims = { ...dbMilestoneClaims };
+      const finalClaimedRewards = { ...dbClaimedRewards };
 
       // Scan local storage for migration to DB
       for (let i = 0; i < localStorage.length; i++) {
@@ -360,6 +376,23 @@ export const useVaultStore = create<VaultState>((set, get) => ({
               if (error) console.warn(`[Migrate] Failed to sync fragments for ${songId}:`, error.message);
             });
           }
+        } else if (key.startsWith('reward_tier_')) {
+          const songId = key.substring(12);
+          const localTier = localStorage.getItem(key) || '';
+          if (localTier && localTier !== 'none') {
+            if (!finalClaimedRewards[songId]) {
+              finalClaimedRewards[songId] = [];
+            }
+            const valLimit = TIER_ORDER[localTier] ?? 0;
+            const TIERS = ['free', 'taste', 'special_picks', 'alpha', 'prophecy'];
+            for (const t of TIERS) {
+              if (TIER_ORDER[t] <= valLimit) {
+                if (!finalClaimedRewards[songId].includes(t)) {
+                  finalClaimedRewards[songId].push(t);
+                }
+              }
+            }
+          }
         } else if (key.startsWith('campaign_claimed_')) {
           const parts = key.split('_');
           if (parts.length === 4) {
@@ -399,6 +432,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         medals: finalMedals,
         fragments: finalFragments,
         milestoneClaims: finalMilestoneClaims,
+        claimedRewards: finalClaimedRewards,
       });
 
     } finally {
@@ -525,5 +559,15 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         console.warn('Failed to sync milestone claim to database:', err);
       }
     }
+  },
+
+  syncClaimedRewards: (songId, tiers) => {
+    set((state) => {
+      const current = state.claimedRewards[songId] || [];
+      const next = Array.from(new Set([...current, ...tiers]));
+      return {
+        claimedRewards: { ...state.claimedRewards, [songId]: next }
+      };
+    });
   },
 }));

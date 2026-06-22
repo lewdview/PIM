@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Music, Lock, CheckCircle, Filter, Play, Pause, Search } from 'lucide-react';
+import { Music, Lock, CheckCircle, Filter, Play, Pause, Search, Trophy } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { fetchAllCards, type VaultCard } from '../services/vaultService';
 import { useVaultStore } from '../store/useVaultStore';
@@ -33,6 +33,7 @@ export default function CodexPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const collection = useVaultStore(s => s.collection);
+  const claimedRewards = useVaultStore(s => s.claimedRewards);
   const { currentTrack, isPlaying, play, pause, stop } = useGlobalPlayer();
 
   const today = getCurrentDay();
@@ -525,6 +526,7 @@ export default function CodexPage() {
             const isDailyClaim = owned?.source === 'daily_claim';
             const maxDuration = isDailyClaim ? 0 : (owned ? PREVIEW_DURATION[owned.rarity] : (PREVIEW_DURATION[card.rarity] ?? 15));
             const isFullSong = maxDuration === 0;
+            const hasClaimedAll = claimedRewards[`card-${card.day}`]?.includes('prophecy') || localStorage.getItem(`reward_tier_card-${card.day}`) === 'prophecy';
 
             return (
               <motion.div
@@ -596,7 +598,13 @@ export default function CodexPage() {
                   position: 'absolute',
                   top: '6px',
                   right: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
                 }}>
+                  {hasClaimedAll && (
+                    <Trophy size={13} style={{ color: '#ffd700', filter: 'drop-shadow(0 0 4px rgba(255,215,0,0.6))' }} title="All Prizes Claimed" />
+                  )}
                   {isOwned ? (
                     <CheckCircle size={14} style={{ color: rc.color, filter: `drop-shadow(0 0 4px ${rc.color}80)` }} />
                   ) : (

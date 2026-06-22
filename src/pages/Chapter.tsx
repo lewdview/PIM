@@ -41,6 +41,7 @@ export default function Chapter() {
   const equippedCardId = useVaultStore((s) => s.equippedCardId);
   const setEquippedCardId = useVaultStore((s) => s.setEquippedCardId);
   const milestoneClaims = useVaultStore((s) => s.milestoneClaims);
+  const claimedRewards = useVaultStore((s) => s.claimedRewards);
 
   // Milestone claimed states tracked in localStorage to persist
   const [claimedM1, setClaimedM1] = useState(false);
@@ -207,6 +208,7 @@ export default function Chapter() {
   // Card ownership
   const ownsCard = selectedSong && Array.isArray(collection) ? collection.some(c => c && (c.cardId === selectedSong.id || c.card?.day === selectedSong.day)) : false;
   const isCleared = selectedSong ? hasCleared(selectedSong) : false;
+  const isAllPrizesClaimed = selectedSong ? (claimedRewards[selectedSong.id]?.includes('prophecy') || localStorage.getItem(`reward_tier_${selectedSong.id}`) === 'prophecy') : false;
 
   const fragmentCount = selectedSong ? (fragments[selectedSong.id] ?? parseInt(localStorage.getItem(`fragments_${selectedSong.id}`) || '0', 10)) : 0;
   const isCardUnlocked = ownsCard || fragmentCount >= 10;
@@ -486,6 +488,7 @@ export default function Chapter() {
                   const nodeMedal = getMedalForSong(song.id);
                   const isSel = activeIdx === idx;
                   const isBonus = idx >= regularSongs.length;
+                  const nodeAllClaimed = claimedRewards[song.id]?.includes('prophecy') || localStorage.getItem(`reward_tier_${song.id}`) === 'prophecy';
                   
                   const nColor = MEDAL_COLOR[nodeMedal] ?? '#1a1a1a';
                   
@@ -557,6 +560,12 @@ export default function Chapter() {
                       {isBonus && unl && (
                         <div className="absolute -top-1.5 -right-1.5 text-xs text-[#E5B800]" title="Bonus Stage">
                           ★
+                        </div>
+                      )}
+                      
+                      {nodeAllClaimed && unl && (
+                        <div className="absolute -bottom-1 -right-1.5 text-xs" title="All Prizes Claimed">
+                          🏆
                         </div>
                       )}
                     </button>
@@ -719,6 +728,11 @@ export default function Chapter() {
                       <span className="font-mono text-[8px] px-1.5 py-px border rounded uppercase font-black"
                         style={{ borderColor: mc, color: mc, background: `${mc}10` }}>
                         {medal}
+                      </span>
+                    )}
+                    {isAllPrizesClaimed && (
+                      <span className="font-mono text-[8px] px-1.5 py-px border border-yellow-400 text-yellow-400 bg-yellow-400/10 rounded uppercase font-black">
+                        🏆 ALL PRIZES CLAIMED
                       </span>
                     )}
                     {ownsCard && (

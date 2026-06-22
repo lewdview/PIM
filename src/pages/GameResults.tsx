@@ -245,6 +245,7 @@ export default function Results() {
   const collection = useVaultStore(s => s.collection);
   const loadVaultData = useVaultStore(s => s.loadVaultData);
   const [claimStatus, setClaimStatus] = useState<'idle' | 'checking' | 'ready' | 'claiming' | 'claimed' | 'failed'>('idle');
+  const [alreadyClaimedTiers, setAlreadyClaimedTiers] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (user) {
@@ -283,6 +284,16 @@ export default function Results() {
       const localTier = localStorage.getItem(`reward_tier_${songId}`);
       let maxClaimedTierValue = localTier ? (TIER_ORDER[localTier] ?? 0) : -1;
 
+      const claimedSet = new Set<string>();
+      if (localTier) {
+        const localVal = TIER_ORDER[localTier] ?? 0;
+        for (const [key, val] of Object.entries(TIER_ORDER)) {
+          if (val > 0 && val <= localVal) {
+            claimedSet.add(key);
+          }
+        }
+      }
+
       try {
         const { data, error } = await supabase
           .from('gameplay_records')
@@ -294,6 +305,9 @@ export default function Results() {
         if (error) throw error;
         
         if (data && data.length > 0) {
+          for (const row of data) {
+            if (row.reward_tier) claimedSet.add(row.reward_tier);
+          }
           // Find the highest tier already claimed
           maxClaimedTierValue = data.reduce((max: number, row: any) => {
             const tv = TIER_ORDER[row.reward_tier ?? 'none'] ?? 0;
@@ -304,8 +318,25 @@ export default function Results() {
         console.warn('Failed to query gameplay_records from Supabase (using localStorage baseline):', e);
       }
 
-      // Allow claim if current run's tier is higher than any previous claim
-      if (currentTierValue > maxClaimedTierValue) {
+      setAlreadyClaimedTiers(claimedSet);
+
+      const isPlatinum = result.medal === 'PLATINUM' || accuracy >= 93;
+      let hasUnclaimedTiers = false;
+      if (isPlatinum) {
+        const TIERS: ClaimableTier[] = ['free', 'taste', 'special_picks', 'alpha', 'prophecy'];
+        for (const t of TIERS) {
+          if (TIER_ORDER[t] <= TIER_ORDER[currentTier]) {
+            if (!claimedSet.has(t)) {
+              hasUnclaimedTiers = true;
+              break;
+            }
+          }
+        }
+      } else {
+        hasUnclaimedTiers = currentTierValue > maxClaimedTierValue;
+      }
+
+      if (hasUnclaimedTiers) {
         setClaimStatus('ready');
       } else {
         setClaimStatus('claimed');
@@ -319,17 +350,46 @@ export default function Results() {
     if (claimStatus !== 'ready' || !user || !result || !songId) return;
     setClaimStatus('claiming');
  
-    const category = currentTier;  // accuracy-mapped tier
-    const size = 'single';
- 
     try {
-      const cards = await purchasePack(category, size, undefined, undefined, true);
-      if (cards && cards.length > 0) {
-        // Unconditionally cache locally to prevent race conditions or back-button exploit
-        localStorage.setItem(`reward_tier_${songId}`, category);
+      const tiersToClaim: ClaimableTier[] = [];
+      const isPlatinum = result.medal === 'PLATINUM' || accuracy >= 93;
+      
+      if (isPlatinum) {
+        const TIERS: ClaimableTier[] = ['free', 'taste', 'special_picks', 'alpha', 'prophecy'];
+        for (const t of TIERS) {
+          if (TIER_ORDER[t] <= TIER_ORDER[currentTier]) {
+            if (!alreadyClaimedTiers.has(t)) {
+              tiersToClaim.push(t);
+            }
+          }
+        }
+      } else {
+        if (currentTierValue > maxClaimedTierValue) {
+          tiersToClaim.push(currentTier);
+        }
+      }
+
+      if (tiersToClaim.length === 0) {
+        setClaimStatus('claimed');
+        return;
+      }
+
+      const size = 'single';
+      const allCards: OwnedCard[] = [];
+
+      for (const tier of tiersToClaim) {
+        const cards = await purchasePack(tier, size, undefined, undefined, true);
+        if (cards && cards.length > 0) {
+          allCards.push(...cards);
+        }
+      }
+
+      if (allCards.length > 0) {
+        // Unconditionally cache the highest tier locally to prevent race conditions or back-button exploit
+        localStorage.setItem(`reward_tier_${songId}`, currentTier);
  
         // Save score record to Supabase
-        const { error: dbErr } = await supabase.from('gameplay_records').insert({
+        const inserts = tiersToClaim.map(tier => ({
           user_id: user.id,
           song_id: songId,
           score: result.score,
@@ -337,27 +397,33 @@ export default function Results() {
           max_combo: result.maxCombo,
           medal: result.medal,
           pack_rewarded: true,
-          reward_tier: category,
-        });
+          reward_tier: tier,
+        }));
+
+        const { error: dbErr } = await supabase.from('gameplay_records').insert(inserts);
         
         if (dbErr) {
           console.warn('Failed to insert gameplay_records to Supabase:', dbErr);
         }
  
         // Add to collection in store
-        useVaultStore.getState().addToCollection(cards);
+        useVaultStore.getState().addToCollection(allCards);
+        // Sync claimed rewards in store
+        useVaultStore.getState().syncClaimedRewards(songId, tiersToClaim);
  
         // Setup reveal metadata and start reveal
-        const cfg = PACK_CONFIGS[category];
-        useVaultStore.getState().startReveal(cards, {
-          category,
+        const cfg = PACK_CONFIGS[currentTier];
+        useVaultStore.getState().startReveal(allCards, {
+          category: currentTier,
           size,
-          label: `${cfg?.label || category.toUpperCase()} — ${result.medal} CLEAR`,
-          icon: cfg?.icon || '🏆',
+          label: isPlatinum 
+            ? `PLATINUM REWARD BUNDLE (${allCards.length} CARDS)` 
+            : `${cfg?.label || currentTier.toUpperCase()} — ${result.medal} CLEAR`,
+          icon: isPlatinum ? '🏆' : (cfg?.icon || '🏆'),
           accent: cfg?.accent || '#ffd700',
           gradient: cfg?.gradient || 'linear-gradient(145deg, #1a1200, #0c0800)',
           price: 'EARNED',
-          cardCount: cards.length,
+          cardCount: allCards.length,
           revealType: 'cinematic',
         });
  
