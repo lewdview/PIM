@@ -351,24 +351,6 @@ export default function Results() {
     setClaimStatus('claiming');
  
     try {
-      const tiersToClaim: ClaimableTier[] = [];
-      const isPlatinum = result.medal === 'PLATINUM' || accuracy >= 93;
-      
-      if (isPlatinum) {
-        const TIERS: ClaimableTier[] = ['free', 'taste', 'special_picks', 'alpha', 'prophecy'];
-        for (const t of TIERS) {
-          if (TIER_ORDER[t] <= TIER_ORDER[currentTier]) {
-            if (!alreadyClaimedTiers.has(t)) {
-              tiersToClaim.push(t);
-            }
-          }
-        }
-      } else {
-        if (currentTierValue > maxClaimedTierValue) {
-          tiersToClaim.push(currentTier);
-        }
-      }
-
       if (tiersToClaim.length === 0) {
         setClaimStatus('claimed');
         return;
@@ -889,6 +871,32 @@ export default function Results() {
   const hasDiffModified = fromFreePlay && !isNaN(diffVal) && song && diffVal !== song.difficultyLevel;
   const isEligibleForReward = ownsCard && !hasModifier && !hasDiffModified;
 
+  // Pre-calculate tiers to claim
+  const tiersToClaim: ClaimableTier[] = [];
+  if (result) {
+    const isPlatinum = result.medal === 'PLATINUM' || accuracy >= 93;
+    if (isPlatinum) {
+      const TIERS: ClaimableTier[] = ['free', 'taste', 'special_picks', 'alpha', 'prophecy'];
+      for (const t of TIERS) {
+        if (TIER_ORDER[t] <= TIER_ORDER[currentTier]) {
+          if (!alreadyClaimedTiers.has(t)) {
+            tiersToClaim.push(t);
+          }
+        }
+      }
+    } else {
+      const localTier = localStorage.getItem(`reward_tier_${songId}`);
+      let maxVal = localTier ? (TIER_ORDER[localTier] ?? 0) : -1;
+      for (const t of alreadyClaimedTiers) {
+        const val = TIER_ORDER[t] ?? 0;
+        if (val > maxVal) maxVal = val;
+      }
+      if (currentTierValue > maxVal) {
+        tiersToClaim.push(currentTier);
+      }
+    }
+  }
+
   // ── CLEARED path (Avant-Garde) ───────────────────────────────
   if (isAvant) {
     return (
@@ -1063,14 +1071,44 @@ export default function Results() {
                 <div className="mb-2">
                   {isEligibleForReward ? (
                     <>
-                      {claimStatus === 'ready' && (
-                        <button
-                          onClick={handleClaimReward}
-                          className="w-full py-4 font-mono font-bold text-sm tracking-[0.3em] transition-all bg-gradient-to-r from-[#ffd700] to-[#ffb800] text-black hover:shadow-[0_0_25px_rgba(255,215,0,0.45)] hover:scale-[1.01] active:scale-[0.99] animate-pulse"
-                          onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}
-                        >
-                          🎁 CLAIM {PACK_CONFIGS[currentTier]?.label || currentTier.toUpperCase()} 🎁
-                        </button>
+                       {claimStatus === 'ready' && (
+                        <div className="flex flex-col gap-2.5">
+                          <button
+                            onClick={handleClaimReward}
+                            className="w-full py-4 font-mono font-bold text-sm tracking-[0.3em] transition-all bg-gradient-to-r from-[#ffd700] to-[#ffb800] text-black hover:shadow-[0_0_25px_rgba(255,215,0,0.45)] hover:scale-[1.01] active:scale-[0.99] animate-pulse"
+                            onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}
+                          >
+                            {tiersToClaim.length > 1
+                              ? `🏆 CLAIM PLATINUM BUNDLE (${tiersToClaim.length} PRIZES) 🏆`
+                              : `🎁 CLAIM ${PACK_CONFIGS[tiersToClaim[0] || currentTier]?.label || (tiersToClaim[0] || currentTier).toUpperCase()} 🎁`}
+                          </button>
+                          {tiersToClaim.length > 1 && (
+                            <div className="bg-zinc-950/40 border border-zinc-900 rounded p-2.5 flex flex-col gap-1.5 animate-fade-in">
+                              <div className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest text-center border-b border-zinc-900/60 pb-1">
+                                PLATINUM RUN UNLOCKED:
+                              </div>
+                              <div className="flex flex-wrap gap-1.5 justify-center">
+                                {tiersToClaim.map((t) => {
+                                  const cfg = PACK_CONFIGS[t];
+                                  return (
+                                    <span
+                                      key={t}
+                                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-bold border"
+                                      style={{
+                                        color: cfg?.accent || '#FF1493',
+                                        borderColor: `${cfg?.accent || '#FF1493'}30`,
+                                        background: `${cfg?.accent || '#FF1493'}0a`,
+                                      }}
+                                    >
+                                      <span>{cfg?.icon || '🎁'}</span>
+                                      <span>{cfg?.label || t}</span>
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       )}
                       {claimStatus === 'claiming' && (
                         <button
@@ -1296,14 +1334,44 @@ export default function Results() {
                 {isEligibleForReward ? (
                   <>
                     {claimStatus === 'ready' && (
-                      <button
-                        onClick={handleClaimReward}
-                        className="w-full py-4 font-mono font-bold text-sm tracking-[0.35em] transition-all bg-gradient-to-r from-[#ffd700] to-[#ffb800] text-black hover:scale-[1.01] active:scale-[0.99] animate-pulse"
-                        style={{ border: '3px solid #F2F0E8', boxShadow: `6px 6px 0 ${mc}`, minHeight: 48 }}
-                        onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}
-                      >
-                        🎁 CLAIM {PACK_CONFIGS[currentTier]?.label || currentTier.toUpperCase()} 🎁
-                      </button>
+                      <div className="flex flex-col gap-3">
+                        <button
+                          onClick={handleClaimReward}
+                          className="w-full py-4 font-mono font-bold text-sm tracking-[0.35em] transition-all bg-gradient-to-r from-[#ffd700] to-[#ffb800] text-black hover:scale-[1.01] active:scale-[0.99] animate-pulse"
+                          style={{ border: '3px solid #F2F0E8', boxShadow: `6px 6px 0 ${mc}`, minHeight: 48 }}
+                          onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}
+                        >
+                          {tiersToClaim.length > 1
+                            ? `🏆 CLAIM PLATINUM BUNDLE (${tiersToClaim.length} PRIZES) 🏆`
+                            : `🎁 CLAIM ${PACK_CONFIGS[tiersToClaim[0] || currentTier]?.label || (tiersToClaim[0] || currentTier).toUpperCase()} 🎁`}
+                        </button>
+                        {tiersToClaim.length > 1 && (
+                          <div className="bg-black/80 border-2 border-[#F2F0E8] p-3 flex flex-col gap-2" style={{ boxShadow: `4px 4px 0 ${mc}` }}>
+                            <div className="text-[10px] font-mono text-[#F2F0E8] uppercase tracking-widest text-center border-b border-zinc-800 pb-1.5 font-bold">
+                              PLATINUM BUNDLE BREAKDOWN:
+                            </div>
+                            <div className="flex flex-wrap gap-2 justify-center">
+                              {tiersToClaim.map((t) => {
+                                const cfg = PACK_CONFIGS[t];
+                                return (
+                                  <span
+                                    key={t}
+                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-mono font-bold border-2"
+                                    style={{
+                                      color: '#F2F0E8',
+                                      borderColor: cfg?.accent || '#FF1493',
+                                      background: `${cfg?.accent || '#FF1493'}1a`,
+                                    }}
+                                  >
+                                    <span>{cfg?.icon || '🎁'}</span>
+                                    <span>{cfg?.label || t}</span>
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     )}
                     {claimStatus === 'claiming' && (
                       <button
