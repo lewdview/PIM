@@ -292,8 +292,16 @@ export const useVaultStore = create<VaultState>((set, get) => ({
             if (!dbClaimedRewards[songId]) {
               dbClaimedRewards[songId] = [];
             }
-            if (!dbClaimedRewards[songId].includes(row.reward_tier)) {
-              dbClaimedRewards[songId].push(row.reward_tier);
+            const DB_TO_APP_TIER: Record<string, string> = {
+              common: 'free',
+              enhanced: 'taste',
+              rare: 'special_picks',
+              epic: 'alpha',
+              legendary: 'prophecy'
+            };
+            const mappedTier = DB_TO_APP_TIER[row.reward_tier] || row.reward_tier;
+            if (!dbClaimedRewards[songId].includes(mappedTier)) {
+              dbClaimedRewards[songId].push(mappedTier);
             }
           }
         }

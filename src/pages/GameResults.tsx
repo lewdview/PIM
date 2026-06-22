@@ -379,7 +379,15 @@ export default function Results() {
           max_combo: result.maxCombo,
           medal: result.medal,
           pack_rewarded: true,
-          reward_tier: tier,
+          reward_tier: (
+            {
+              free: 'common',
+              taste: 'enhanced',
+              special_picks: 'rare',
+              alpha: 'epic',
+              prophecy: 'legendary'
+            }[tier] || tier
+          ),
         }));
 
         const { error: dbErr } = await supabase.from('gameplay_records').insert(inserts);
@@ -872,9 +880,9 @@ export default function Results() {
   const isEligibleForReward = ownsCard && !hasModifier && !hasDiffModified;
 
   // Pre-calculate tiers to claim
+  const isPlatinum = result ? (result.medal === 'PLATINUM' || accuracy >= 93) : false;
   const tiersToClaim: ClaimableTier[] = [];
   if (result) {
-    const isPlatinum = result.medal === 'PLATINUM' || accuracy >= 93;
     if (isPlatinum) {
       const TIERS: ClaimableTier[] = ['free', 'taste', 'special_picks', 'alpha', 'prophecy'];
       for (const t of TIERS) {
