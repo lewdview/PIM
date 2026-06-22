@@ -256,6 +256,9 @@ export default function SongSelect() {
   const fragments = useVaultStore((s) => s.fragments);
   const loadVaultData = useVaultStore((s) => s.loadVaultData);
   const claimedRewards = useVaultStore((s) => s.claimedRewards);
+  const isAllPrizesClaimed = selected
+    ? (claimedRewards[selected.id]?.includes('prophecy') || localStorage.getItem(`reward_tier_${selected.id}`) === 'prophecy')
+    : false;
 
   useEffect(() => {
     if (collection.length === 0) {
