@@ -192,7 +192,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         fragmentsRes,
         milestonesRes
       ] = await Promise.all([
-        supabase.from('profiles').select('tokens, daily_standard_claims, daily_premium_claims, last_claim_day, has_onboarded, streak_count, total_pulls, pulls_since_rare_plus, unlocked_skins, display_name, avatar_url').eq('id', userId).single(),
+        supabase.from('profiles').select('tokens, daily_standard_purchased, daily_premium_purchased, last_purchase_day, has_onboarded, streak_count, total_pulls, pulls_since_rare_plus, unlocked_skins, display_name, avatar_url').eq('id', userId).single(),
         supabase.from('vault_collections').select('*').eq('owner_id', userId),
         supabase.from('global_supply').select('*'),
         supabase.from('gameplay_records').select('*').eq('user_id', userId),
@@ -221,8 +221,8 @@ export const useVaultStore = create<VaultState>((set, get) => ({
           displayName: profile.display_name || null,
           avatarUrl: profile.avatar_url || null,
         });
-        if (profile.last_claim_day === today) {
-          set({ dailyLimits: { standard: profile.daily_standard_claims || 0, premium: profile.daily_premium_claims || 0 } });
+        if (profile.last_purchase_day === today) {
+          set({ dailyLimits: { standard: profile.daily_standard_purchased || 0, premium: profile.daily_premium_purchased || 0 } });
         } else {
           set({ dailyLimits: { standard: 0, premium: 0 } });
         }
