@@ -1218,6 +1218,8 @@ export default function Game() {
     const pulse = 0.5 + 0.5 * Math.sin(t * 10); // 1.6Hz pulse for polish
     const AT = approachTime(song.difficultyLevel);
     const hitY = H * HIT_RATIO;
+    const hillBow = W * 0.032; // how far rails bow outward at the shoulder
+    const bowY = hitY * 0.28; // where the shoulder bow peaks
     const gs = gsRef.current;
     const pu = puRef.current;
     gs.progress = Math.min(1, t / song.duration);
