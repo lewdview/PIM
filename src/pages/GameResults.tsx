@@ -349,6 +349,7 @@ export default function Results() {
   const handleClaimReward = async () => {
     if (claimStatus !== 'ready' || !user || !result || !songId) return;
     setClaimStatus('claiming');
+    const isPlatinum = result.medal === 'PLATINUM' || accuracy >= 93;
  
     try {
       if (tiersToClaim.length === 0) {

@@ -3298,6 +3298,52 @@ export default function Game() {
     };
   }, []);
 
+  // Synchronize gameplay overlay status to body classes for virtual controller cursor
+  useEffect(() => {
+    if (paused) {
+      document.body.classList.add("gameplay-paused");
+    } else {
+      document.body.classList.remove("gameplay-paused");
+    }
+    return () => {
+      document.body.classList.remove("gameplay-paused");
+    };
+  }, [paused]);
+
+  useEffect(() => {
+    if (phase === "continue") {
+      document.body.classList.add("gameplay-continue");
+    } else {
+      document.body.classList.remove("gameplay-continue");
+    }
+    if (phase === "audioError") {
+      document.body.classList.add("gameplay-audio-error");
+    } else {
+      document.body.classList.remove("gameplay-audio-error");
+    }
+    if (phase === "loadError") {
+      document.body.classList.add("gameplay-load-error");
+    } else {
+      document.body.classList.remove("gameplay-load-error");
+    }
+    return () => {
+      document.body.classList.remove("gameplay-continue");
+      document.body.classList.remove("gameplay-audio-error");
+      document.body.classList.remove("gameplay-load-error");
+    };
+  }, [phase]);
+
+  useEffect(() => {
+    if (isTutorialHelpOpen) {
+      document.body.classList.add("gameplay-tutorial-help");
+    } else {
+      document.body.classList.remove("gameplay-tutorial-help");
+    }
+    return () => {
+      document.body.classList.remove("gameplay-tutorial-help");
+    };
+  }, [isTutorialHelpOpen]);
+
   // ── canvas resize — useLayoutEffect so dimensions are set before first paint ──
   useLayoutEffect(() => {
     const canvas = canvasRef.current;
@@ -3812,6 +3858,21 @@ export default function Game() {
         audioCtxRef.current = actx;
         const src = actx.createMediaElementSource(audio);
         audioSourceRef.current = src;
+
+        // Master Limiter setup to prevent digital clipping (scratchy playback)
+        const masterGainNode = actx.createGain();
+        masterGainNode.gain.setValueAtTime(0.85, actx.currentTime);
+
+        const compressor = actx.createDynamicsCompressor();
+        compressor.threshold.setValueAtTime(-1.0, actx.currentTime);
+        compressor.knee.setValueAtTime(30, actx.currentTime);
+        compressor.ratio.setValueAtTime(12, actx.currentTime);
+        compressor.attack.setValueAtTime(0.003, actx.currentTime);
+        compressor.release.setValueAtTime(0.08, actx.currentTime);
+
+        masterGainNode.connect(compressor);
+        compressor.connect(actx.destination);
+
         const bandDefs: { type: BiquadFilterType; freq: number; Q: number }[] =
           [
             { type: "lowpass", freq: 300, Q: 0.8 },
@@ -3829,7 +3890,7 @@ export default function Game() {
           g.gain.value = getTargetGainForLane(idx);
           src.connect(f);
           f.connect(g);
-          g.connect(actx.destination);
+          g.connect(masterGainNode);
           return g;
         });
         audioFiltersRef.current = filters;

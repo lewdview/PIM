@@ -7,6 +7,8 @@
  */
 
 let ctx: AudioContext | null = null;
+let masterGain: GainNode | null = null;
+let compressor: DynamicsCompressorNode | null = null;
 
 function getCtx(): AudioContext {
   if (!ctx) {
@@ -16,11 +18,29 @@ function getCtx(): AudioContext {
     } catch {
       ctx = new AudioContextClass();
     }
+    // Set up master limiter chain for cinematic audio engine to prevent scratchy clipping
+    masterGain = ctx.createGain();
+    masterGain.gain.setValueAtTime(0.85, ctx.currentTime);
+
+    compressor = ctx.createDynamicsCompressor();
+    compressor.threshold.setValueAtTime(-1.0, ctx.currentTime);
+    compressor.knee.setValueAtTime(30, ctx.currentTime);
+    compressor.ratio.setValueAtTime(12, ctx.currentTime);
+    compressor.attack.setValueAtTime(0.003, ctx.currentTime);
+    compressor.release.setValueAtTime(0.08, ctx.currentTime);
+
+    masterGain.connect(compressor);
+    compressor.connect(ctx.destination);
   }
   if (ctx.state === 'suspended') {
     ctx.resume().catch(() => {});
   }
   return ctx;
+}
+
+function getDestination(): AudioNode {
+  getCtx();
+  return masterGain || ctx!.destination;
 }
 
 /** Safely schedule a gain ramp that avoids the "0 is not a valid value" error. */
@@ -54,9 +74,9 @@ function noise(
     const f = c.createBiquadFilter();
     f.type = filter.type;
     f.frequency.value = filter.freq;
-    src.connect(f).connect(g).connect(c.destination);
+    src.connect(f).connect(g).connect(getDestination());
   } else {
-    src.connect(g).connect(c.destination);
+    src.connect(g).connect(getDestination());
   }
   src.start();
 }
@@ -73,7 +93,7 @@ function tone(
   osc.frequency.value = freq;
   const g = c.createGain();
   safeGainRamp(g, gain, 0.001, duration);
-  osc.connect(g).connect(c.destination);
+  osc.connect(g).connect(getDestination());
   osc.start();
   osc.stop(c.currentTime + duration);
   return osc;
@@ -93,8 +113,8 @@ export function playAmbient(): () => void {
   osc2.frequency.value = 82.5;
   const g2 = c.createGain();
   g2.gain.value = 0.03;
-  osc.connect(g).connect(c.destination);
-  osc2.connect(g2).connect(c.destination);
+  osc.connect(g).connect(getDestination());
+  osc2.connect(g2).connect(getDestination());
   osc.start();
   osc2.start();
   return () => {
@@ -133,7 +153,7 @@ export function playTension(): void {
   const f = c.createBiquadFilter();
   f.type = 'lowpass';
   f.frequency.value = 1200;
-  osc.connect(f).connect(g).connect(c.destination);
+  osc.connect(f).connect(g).connect(getDestination());
   osc.start();
   osc.stop(c.currentTime + 0.35);
 }
@@ -166,7 +186,7 @@ export function playNearMiss(): void {
   osc.frequency.exponentialRampToValueAtTime(1200, c.currentTime + 0.1);
   const g = c.createGain();
   safeGainRamp(g, 0.08, 0.001, 0.12);
-  osc.connect(g).connect(c.destination);
+  osc.connect(g).connect(getDestination());
   osc.start();
   osc.stop(c.currentTime + 0.13);
 }
@@ -197,5 +217,7 @@ export function disposeAudioContext(): void {
   if (ctx) {
     try { ctx.close(); } catch { /* noop */ }
     ctx = null;
+    masterGain = null;
+    compressor = null;
   }
 }

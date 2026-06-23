@@ -15,11 +15,37 @@ export default function GamepadCursor() {
   const prevButtons = useRef<boolean[]>([]);
   const lastHoveredElRef = useRef<Element | null>(null);
 
-  // Disable gamepad cursor completely on gameplay / tutorial pages
+  // Disable gamepad cursor completely on gameplay / tutorial pages unless overlays are active
   const isPlaying = location.startsWith("/play/") || location === "/tutorial";
+  const [isOverlayActive, setIsOverlayActive] = useState(false);
 
   useEffect(() => {
-    if (isPlaying) {
+    if (!isPlaying) {
+      setIsOverlayActive(false);
+      return;
+    }
+
+    const checkOverlays = () => {
+      const active = document.body.classList.contains("gameplay-paused") ||
+                     document.body.classList.contains("gameplay-continue") ||
+                     document.body.classList.contains("gameplay-audio-error") ||
+                     document.body.classList.contains("gameplay-load-error") ||
+                     document.body.classList.contains("gameplay-tutorial-help");
+      setIsOverlayActive(active);
+    };
+
+    checkOverlays();
+
+    const observer = new MutationObserver(checkOverlays);
+    observer.observe(document.body, { attributes: true, attributeFilter: ["class"] });
+
+    return () => observer.disconnect();
+  }, [isPlaying, location]);
+
+  const showCursor = !isPlaying || isOverlayActive;
+
+  useEffect(() => {
+    if (!showCursor) {
       // Clean up hover state and class when entering gameplay
       if (hoveredElement) {
         hoveredElement.classList.remove("gamepad-hover");
@@ -335,9 +361,9 @@ export default function GamepadCursor() {
         lastHoveredElRef.current = null;
       }
     };
-  }, [isPlaying, hoveredElement]);
+  }, [showCursor, hoveredElement]);
 
-  if (!active || isPlaying) return null;
+  if (!active || !showCursor) return null;
 
   return (
     <div
