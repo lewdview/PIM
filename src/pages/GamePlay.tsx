@@ -1220,6 +1220,7 @@ export default function Game() {
     const hitY = H * HIT_RATIO;
     const hillBow = W * 0.032; // how far rails bow outward at the shoulder
     const bowY = hitY * 0.28; // where the shoulder bow peaks
+    const nowMs = Date.now();
     const gs = gsRef.current;
     const pu = puRef.current;
     gs.progress = Math.min(1, t / song.duration);
@@ -1272,7 +1273,6 @@ export default function Game() {
 
     // ── Miss screen jitter shake ──
     {
-      const nowMs = Date.now();
       const missAge = Math.min(
         ...lastMissLaneTimeRef.current.map((t2) => nowMs - t2),
       );
@@ -2257,7 +2257,6 @@ export default function Game() {
 
     // ── 5b. HIT EXPLOSION EFFECTS ───────────────────────────────
     const FX_DURATION = 520;
-    const nowMs = Date.now();
     hitFxRef.current = hitFxRef.current.filter(
       (e) => nowMs - e.startMs < FX_DURATION,
     );
@@ -2716,7 +2715,6 @@ export default function Game() {
 
     // ── Red vignette flash on miss ──
     {
-      const nowMs = Date.now();
       const missAge = Math.min(
         ...lastMissLaneTimeRef.current.map((t2) => nowMs - t2),
       );
