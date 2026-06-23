@@ -5,10 +5,17 @@
 export const haptics = {
   vibrate: (pattern: number | number[]) => {
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
-      try {
-        navigator.vibrate(pattern);
-      } catch (e) {
-        // Ignore errors (e.g. security blocks or permission issues in some frames)
+      // Check if user has activated the document (required for vibration)
+      const hasActivation = typeof navigator.userActivation !== 'undefined'
+        ? navigator.userActivation.hasBeenActive
+        : true; // fallback for older browsers
+
+      if (hasActivation) {
+        try {
+          navigator.vibrate(pattern);
+        } catch (e) {
+          // Ignore errors (e.g. security blocks or permission issues in some frames)
+        }
       }
     }
   },
