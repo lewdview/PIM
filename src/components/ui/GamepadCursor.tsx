@@ -15,8 +15,8 @@ export default function GamepadCursor() {
   const prevButtons = useRef<boolean[]>([]);
   const lastHoveredElRef = useRef<Element | null>(null);
 
-  // Disable gamepad cursor completely on gameplay / tutorial pages unless overlays are active
-  const isPlaying = location.startsWith("/play/") || location === "/tutorial";
+  // Disable gamepad cursor completely on gameplay pages unless overlays are active
+  const isPlaying = location.startsWith("/play/");
   const [isOverlayActive, setIsOverlayActive] = useState(false);
 
   useEffect(() => {
@@ -52,8 +52,6 @@ export default function GamepadCursor() {
         setHoveredElement(null);
       }
       document.body.classList.remove("gamepad-cursor-active");
-      setActive(false);
-      activeRef.current = false;
       return;
     }
 
