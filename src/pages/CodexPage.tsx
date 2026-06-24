@@ -34,9 +34,25 @@ export default function CodexPage() {
 
   const collection = useVaultStore(s => s.collection);
   const claimedRewards = useVaultStore(s => s.claimedRewards);
+  const fragments = useVaultStore(s => s.fragments);
   const { currentTrack, isPlaying, play, pause, stop } = useGlobalPlayer();
 
   const today = getCurrentDay();
+
+  const getFragmentsForDay = useCallback((day: number) => {
+    const cardKey = `card-${day}`;
+    const dayKey = `day-${String(day).padStart(3, '0')}`;
+    const dayKeyRaw = `day-${day}`;
+    return (
+      fragments[cardKey] ??
+      fragments[dayKey] ??
+      fragments[dayKeyRaw] ??
+      parseInt(localStorage.getItem(`fragments_${cardKey}`) || '0', 10) ??
+      parseInt(localStorage.getItem(`fragments_${dayKey}`) || '0', 10) ??
+      parseInt(localStorage.getItem(`fragments_${dayKeyRaw}`) || '0', 10) ??
+      0
+    );
+  }, [fragments]);
 
   // Owned card IDs for quick lookup
   const ownedDays = useMemo(() => {
@@ -703,6 +719,35 @@ export default function CodexPage() {
                       )}
                     </div>
                   </div>
+                  {/* Shard Progress Bar */}
+                  {(() => {
+                    const fragCount = getFragmentsForDay(card.day);
+                    if (isOwned) {
+                      return (
+                        <div style={{ marginTop: '5px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '7px', fontFamily: '"JetBrains Mono", monospace', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            <span>Shards</span>
+                            <span style={{ color: '#39FF14', fontWeight: 'bold' }}>Unlocked</span>
+                          </div>
+                          <div style={{ height: '3px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden', marginTop: '2px' }}>
+                            <div style={{ height: '100%', background: '#39FF14', width: '100%', boxShadow: '0 0 6px rgba(57,255,20,0.6)' }} />
+                          </div>
+                        </div>
+                      );
+                    } else {
+                      return (
+                        <div style={{ marginTop: '5px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '7px', fontFamily: '"JetBrains Mono", monospace', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            <span>Shards</span>
+                            <span style={{ color: fragCount > 0 ? '#ffd700' : 'rgba(255,255,255,0.2)' }}>{fragCount} / 10</span>
+                          </div>
+                          <div style={{ height: '3px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden', marginTop: '2px' }}>
+                            <div style={{ height: '100%', background: '#ffd700', width: `${Math.min(10, fragCount) * 10}%`, boxShadow: fragCount > 0 ? '0 0 6px rgba(255,215,0,0.6)' : 'none' }} />
+                          </div>
+                        </div>
+                      );
+                    }
+                  })()}
                 </div>
 
                 {/* Rarity accent line */}

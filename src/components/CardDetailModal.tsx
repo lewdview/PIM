@@ -50,8 +50,24 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
   const [, setLocation] = useLocation();
   const stop = useGlobalPlayer((s) => s.stop);
   const [isMinting, setIsMinting] = useState(false);
+  const fragments = useVaultStore((s) => s.fragments);
 
   if (!card) return null;
+
+  const getFragmentsForDay = (day: number) => {
+    const cardKey = `card-${day}`;
+    const dayKey = `day-${String(day).padStart(3, '0')}`;
+    const dayKeyRaw = `day-${day}`;
+    return (
+      fragments[cardKey] ??
+      fragments[dayKey] ??
+      fragments[dayKeyRaw] ??
+      parseInt(localStorage.getItem(`fragments_${cardKey}`) || '0', 10) ??
+      parseInt(localStorage.getItem(`fragments_${dayKey}`) || '0', 10) ??
+      parseInt(localStorage.getItem(`fragments_${dayKeyRaw}`) || '0', 10) ??
+      0
+    );
+  };
 
   const handleMint = async () => {
     if (!card || isMinting) return;
@@ -181,6 +197,12 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
                           <span className="opacity-40">Blockchain:</span>
                           <span className="font-bold text-white/90">
                             {card.blockchainStatus === 'minted' ? 'Minted (Base)' : card.blockchainStatus === 'pending' ? 'Pending' : 'Off-Chain'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-[11px] font-mono border-t border-white/5 pt-1.5 mt-1.5">
+                          <span className="opacity-40">Decrypt Shards:</span>
+                          <span className="font-bold text-[#39FF14]">
+                            {getFragmentsForDay(card.card.day)} / 10 (UNLOCKED)
                           </span>
                         </div>
                       </div>

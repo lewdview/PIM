@@ -13,6 +13,7 @@ import {
   type VaultCard, type OwnedCard 
 } from '../services/vaultService';
 import { audioManager } from '../game/audio';
+import DecryptionAnimation from '../components/DecryptionAnimation';
 
 type FormState = 'idle' | 'submitting' | 'done' | 'error';
 type CodeState = 'idle' | 'redeeming' | 'success' | 'error';
@@ -135,6 +136,14 @@ export default function ClaimPage() {
     };
   } | null>(null);
 
+  // Decryption Animation flow
+  const [animationReward, setAnimationReward] = useState<{
+    type: string;
+    value: string;
+    details?: any;
+    result?: any;
+  } | null>(null);
+
   const [, setLocation] = useLocation();
   const { user, setShowAuthModal } = useAuthStore();
   const { collection, loadVaultData, startReveal, addToCollection } = useVaultStore();
@@ -145,6 +154,111 @@ export default function ClaimPage() {
   }, [collection]);
 
   const hasReward = ultraCards.length > 0;
+
+  // Check claimed status for Ultra Cards
+  const ultraClaims = useMemo(() => {
+    const claimsMap: Record<string, boolean> = {};
+    let count = 0;
+    for (const c of ultraCards) {
+      const isClaimed = localStorage.getItem(`ultra_claimed_${c.id}`) === 'true';
+      claimsMap[c.id] = isClaimed;
+      if (isClaimed) count++;
+    }
+    return { claimsMap, claimedCount: count };
+  }, [ultraCards]);
+
+  const allPrizesClaimed = ultraCards.length > 0 && ultraClaims.claimedCount === ultraCards.length;
+
+  const handleAnimationClose = async () => {
+    if (!animationReward) return;
+
+    const reward = animationReward;
+    setAnimationReward(null);
+
+    // If card or pack, we trigger the redirect to reveal
+    if (reward.type === 'pack' && reward.result?.cards) {
+      const pool = await fetchAllCards();
+      const mappedCards = reward.result.cards.map((c: any) => {
+        const parent = findCardWithFallback(pool, c.card_id, c.rarity);
+        return {
+          id: c.id || crypto.randomUUID(),
+          cardId: parent.id,
+          card: { ...parent, rarity: c.rarity },
+          source: c.source || 'promo_code',
+          claimedAt: c.claimed_at,
+          edition: c.edition,
+          maxSupply: c.max_supply,
+          isEcho: c.is_echo,
+          echoGeneration: c.echo_generation,
+          echoSourceDay: c.echo_source_day,
+          proof: c.proof,
+          ultraReward: c.ultra_reward,
+          blockchainStatus: c.blockchain_status,
+          fingerprint: c.fingerprint
+        };
+      });
+      if (mappedCards.length > 0) {
+        addToCollection(mappedCards);
+        audioManager.playSfx('open_chest', 0.9);
+        startReveal(mappedCards, {
+          category: 'promo_code',
+          label: 'Promo Pack',
+          icon: '🎁',
+          accent: '#ffd700',
+          gradient: 'linear-gradient(145deg, #1a1200, #0c0800)',
+          price: 'PROMO',
+          cardCount: mappedCards.length,
+          revealType: 'cinematic',
+          redirectPath: '/vault'
+        });
+        await loadVaultData();
+        setLocation('/vault/reveal');
+        return;
+      }
+    }
+
+    if (reward.type === 'card' && reward.result?.card) {
+      const pool = await fetchAllCards();
+      const c = reward.result.card;
+      const parent = findCardWithFallback(pool, c.card_id, c.rarity);
+      const mappedCard = {
+        id: c.id || crypto.randomUUID(),
+        cardId: parent.id,
+        card: { ...parent, rarity: c.rarity },
+        source: c.source || 'promo_code',
+        claimedAt: c.claimed_at,
+        edition: c.edition,
+        maxSupply: c.max_supply,
+        isEcho: c.is_echo,
+        echoGeneration: c.echo_generation,
+        echoSourceDay: c.echo_source_day,
+        proof: c.proof,
+        ultraReward: c.ultra_reward,
+        blockchainStatus: c.blockchain_status,
+        fingerprint: c.fingerprint
+      };
+      addToCollection([mappedCard]);
+      audioManager.playSfx('open_chest', 0.9);
+      startReveal([mappedCard], {
+        category: 'promo_code',
+        label: 'Promo Card',
+        icon: '⭐',
+        accent: '#ffd700',
+        gradient: 'linear-gradient(145deg, #1a1200, #0c0800)',
+        price: 'PROMO',
+        cardCount: 1,
+        revealType: 'cinematic',
+        redirectPath: '/vault'
+      });
+      await loadVaultData();
+      setLocation('/vault/reveal');
+      return;
+    }
+
+    // Otherwise, show static success box on ClaimPage
+    setRewardClaimed(reward);
+    setCodeState('success');
+  };
 
   const field = (key: keyof ClaimForm) => ({
     value: form[key],
@@ -158,6 +272,7 @@ export default function ClaimPage() {
     setCodeState('redeeming');
     setCodeError('');
     setRewardClaimed(null);
+    setAnimationReward(null);
     useLoadingToast.getState().show('Decrypting bonus code…');
 
     try {
@@ -165,105 +280,31 @@ export default function ClaimPage() {
       useLoadingToast.getState().hide();
 
       if (res.success && res.rewardType && res.rewardValue) {
-        // --- 1. Handle Cinematic Card/Pack Reveals ---
-        if (res.rewardType === 'pack' && res.result?.cards) {
-          const pool = await fetchAllCards();
-          const mappedCards = res.result.cards.map((c: any) => {
-            const parent = findCardWithFallback(pool, c.card_id, c.rarity);
-            return {
-              id: c.id || crypto.randomUUID(),
-              cardId: parent.id,
-              card: { ...parent, rarity: c.rarity },
-              source: c.source || 'promo_code',
-              claimedAt: c.claimed_at,
-              edition: c.edition,
-              maxSupply: c.max_supply,
-              isEcho: c.is_echo,
-              echoGeneration: c.echo_generation,
-              echoSourceDay: c.echo_source_day,
-              proof: c.proof,
-              ultraReward: c.ultra_reward,
-              blockchainStatus: c.blockchain_status,
-              fingerprint: c.fingerprint
-            };
-          });
-          if (mappedCards.length > 0) {
-            addToCollection(mappedCards);
-            audioManager.playSfx('open_chest', 0.9);
-            startReveal(mappedCards, {
-              category: 'promo_code',
-              label: 'Promo Pack',
-              icon: '🎁',
-              accent: '#ffd700',
-              gradient: 'linear-gradient(145deg, #1a1200, #0c0800)',
-              price: 'PROMO',
-              cardCount: mappedCards.length,
-              revealType: 'cinematic',
-              redirectPath: '/vault'
-            });
-            await loadVaultData();
-            setLocation('/vault/reveal');
-            return;
-          }
-        }
-
-        if (res.rewardType === 'card' && res.result?.card) {
-          const pool = await fetchAllCards();
-          const c = res.result.card;
-          const parent = findCardWithFallback(pool, c.card_id, c.rarity);
-          const mappedCard = {
-            id: c.id || crypto.randomUUID(),
-            cardId: parent.id,
-            card: { ...parent, rarity: c.rarity },
-            source: c.source || 'promo_code',
-            claimedAt: c.claimed_at,
-            edition: c.edition,
-            maxSupply: c.max_supply,
-            isEcho: c.is_echo,
-            echoGeneration: c.echo_generation,
-            echoSourceDay: c.echo_source_day,
-            proof: c.proof,
-            ultraReward: c.ultra_reward,
-            blockchainStatus: c.blockchain_status,
-            fingerprint: c.fingerprint
-          };
-          addToCollection([mappedCard]);
-          audioManager.playSfx('open_chest', 0.9);
-          startReveal([mappedCard], {
-            category: 'promo_code',
-            label: 'Promo Card',
-            icon: '⭐',
-            accent: '#ffd700',
-            gradient: 'linear-gradient(145deg, #1a1200, #0c0800)',
-            price: 'PROMO',
-            cardCount: 1,
-            revealType: 'cinematic',
-            redirectPath: '/vault'
-          });
-          await loadVaultData();
-          setLocation('/vault/reveal');
-          return;
-        }
-
-        // --- 2. Handle Non-Card/Pack static displays (Tokens/Skins) ---
         let details: any = {};
-        audioManager.playSfx('song_completion', 0.85);
-
         if (res.rewardType === 'tokens') {
           details.tokensGranted = parseInt(res.rewardValue, 10);
         } else if (res.rewardType === 'background_skin') {
           details.skinUnlocked = res.rewardValue;
+        } else if (res.rewardType === 'card' && res.result?.card) {
+          const pool = await fetchAllCards();
+          const parent = findCardWithFallback(pool, res.result.card.card_id, res.result.card.rarity);
+          details.card = parent;
+        } else if (res.rewardType === 'pack' && res.result?.cards?.[0]) {
+          const pool = await fetchAllCards();
+          const parent = findCardWithFallback(pool, res.result.cards[0].card_id, res.result.cards[0].rarity);
+          details.card = parent;
         }
 
-        setRewardClaimed({
+        setAnimationReward({
           type: res.rewardType,
           value: res.rewardValue,
-          details
+          details,
+          result: res.result
         });
         setCodeState('success');
         setBonusCode('');
 
-        // Refresh store balances & inventory
+        // Refresh store balances in background
         await loadVaultData();
       } else {
         audioManager.playSfx('error', 0.6);
@@ -287,6 +328,11 @@ export default function ClaimPage() {
 
     // Simulate submission (mailto fallback)
     await new Promise(r => setTimeout(r, 1400));
+
+    // Save claim status in localStorage for all Ultra cards currently being claimed
+    ultraCards.forEach(c => {
+      localStorage.setItem(`ultra_claimed_${c.id}`, 'true');
+    });
 
     const subject = encodeURIComponent('TH3V4ULT ULTRA REWARD CLAIM');
     const body = encodeURIComponent(
@@ -436,9 +482,23 @@ export default function ClaimPage() {
             )}
           </form>
 
+          {/* Decryption Animation */}
+          <AnimatePresence>
+            {codeState === 'success' && animationReward && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="mt-4"
+              >
+                <DecryptionAnimation reward={animationReward} onClose={handleAnimationClose} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Success Reward Splash */}
           <AnimatePresence>
-            {codeState === 'success' && rewardClaimed && (
+            {codeState === 'success' && !animationReward && rewardClaimed && (
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -516,6 +576,11 @@ export default function ClaimPage() {
             <div className="border border-white/5 bg-white/[0.01] p-6 rounded-lg text-center space-y-3">
               <AlertTriangle size={24} className="mx-auto text-white/20" />
               <div className="text-xs font-mono font-bold text-white/40 uppercase tracking-widest">Locked — No Ultra Card Found</div>
+              
+              <div className="inline-block px-3 py-1 bg-white/5 border border-white/10 rounded font-mono text-[9px] text-[#ff3800] uppercase tracking-wider">
+                No Secret Prizes Claimed (0 / 5 Found)
+              </div>
+
               <p className="text-[10px] font-mono text-zinc-500 leading-relaxed max-w-sm mx-auto uppercase">
                 Flip cards in your collection. If they have an Ultra reward hidden on the back, this section will unlock to claim your personalized track.
               </p>
@@ -528,39 +593,97 @@ export default function ClaimPage() {
               </Link>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-5 animate-in fade-in duration-300">
-              <div className="flex items-center gap-2.5 p-3.5 bg-[#ffd700]/5 border border-[#ffd700]/20 rounded-lg">
-                <Gift size={16} className="text-[#ffd700]" />
-                <span className="text-[10px] font-mono font-bold text-[#ffd700] uppercase tracking-wider">
-                  {ultraCards.length} Prize Card{ultraCards.length > 1 ? 's' : ''} detected. Form Unlocked!
-                </span>
+            <div className="space-y-6 animate-in fade-in duration-300">
+              {/* Prize Count Statistics Banner */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 bg-white/5 border border-white/10 rounded-lg text-center">
+                  <div className="text-[8px] font-mono text-zinc-400 uppercase tracking-wider">Prizes Found</div>
+                  <div className="text-xl font-black font-mono text-white mt-1">{ultraCards.length} / 5</div>
+                </div>
+                <div className="p-3 bg-white/5 border border-white/10 rounded-lg text-center">
+                  <div className="text-[8px] font-mono text-zinc-400 uppercase tracking-wider">Prizes Claimed</div>
+                  <div className="text-xl font-black font-mono text-[#ffd700] mt-1">
+                    {ultraClaims.claimedCount} / {ultraCards.length}
+                  </div>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <InputField label="Your Name" required placeholder="First & last" {...field('name')} />
-                <InputField label="Email Address" type="email" required placeholder="you@example.com" sublabel="keeps it private" {...field('email')} />
+              {allPrizesClaimed && (
+                <div className="p-4 bg-[#39FF14]/10 border border-[#39FF14]/30 rounded-lg text-center space-y-2">
+                  <div className="text-xs font-mono font-bold text-[#39FF14] uppercase tracking-widest flex items-center justify-center gap-1.5">
+                    <span>🏆</span>
+                    <span>All Prizes Claimed</span>
+                  </div>
+                  <p className="text-[9px] font-mono text-zinc-400 leading-relaxed uppercase">
+                    You have successfully submitted claims for all secret prize cards in your collection. th3scr1b3 is preparing your custom tracks!
+                  </p>
+                </div>
+              )}
+
+              {/* List of Ultra Cards with claim badges */}
+              <div className="space-y-2.5">
+                <div className="text-[9px] font-mono text-zinc-500 uppercase tracking-wider">// SECRET_VAULT_ASSETS</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {ultraCards.map((c) => {
+                    const isClaimed = ultraClaims.claimsMap[c.id];
+                    return (
+                      <div key={c.id} className="flex items-center gap-3 p-2 bg-black/40 border border-white/5 rounded-lg">
+                        <div className="w-10 h-10 rounded overflow-hidden border border-white/10 shrink-0">
+                          <img src={c.card.coverUrl} alt="" className="w-full h-full object-cover" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-[9px] font-mono text-zinc-400">Day #{c.card.day}</div>
+                          <div className="text-xs font-bold text-white truncate leading-tight">{c.card.title}</div>
+                        </div>
+                        <span className={`px-2 py-0.5 rounded text-[8px] font-mono font-bold uppercase shrink-0 border ${
+                          isClaimed 
+                            ? 'bg-[#39FF14]/10 border-[#39FF14]/30 text-[#39FF14]' 
+                            : 'bg-[#ffd700]/10 border-[#ffd700]/30 text-[#ffd700]'
+                        }`}>
+                          {isClaimed ? 'Claimed' : 'Unclaimed'}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <InputField label="Farcaster Handle" placeholder="@handle" sublabel="optional" {...field('farcaster')} />
-                <InputField label="Recipient Wallet" placeholder="0x..." sublabel="optional" {...field('wallet')} />
-              </div>
+              {!allPrizesClaimed && (
+                <form onSubmit={handleSubmit} className="space-y-5 border-t border-white/5 pt-6">
+                  <div className="flex items-center gap-2.5 p-3.5 bg-[#ffd700]/5 border border-[#ffd700]/20 rounded-lg">
+                    <Gift size={16} className="text-[#ffd700]" />
+                    <span className="text-[10px] font-mono font-bold text-[#ffd700] uppercase tracking-wider">
+                      {ultraCards.length - ultraClaims.claimedCount} Unclaimed Prize Card{ultraCards.length - ultraClaims.claimedCount > 1 ? 's' : ''} detected. Form Unlocked!
+                    </span>
+                  </div>
 
-              <TextareaField
-                label="Creative Direction"
-                sublabel="optional — helps th3scr1b3 write"
-                placeholder="Give th3scr1b3 a mood, a topic, a specific speed/bpm, or general direction. We will write and record this just for you."
-                {...field('note')}
-              />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <InputField label="Your Name" required placeholder="First & last" {...field('name')} />
+                    <InputField label="Email Address" type="email" required placeholder="you@example.com" sublabel="keeps it private" {...field('email')} />
+                  </div>
 
-              <button
-                type="submit"
-                disabled={!form.name || !form.email || state === 'submitting'}
-                className="w-full py-3.5 font-mono font-bold text-xs uppercase tracking-widest text-black bg-[#ffd700] rounded hover:scale-101 active:scale-98 transition-all disabled:opacity-40"
-              >
-                {state === 'submitting' ? 'Submitting...' : '✦ Submit Creative Claim'}
-              </button>
-            </form>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <InputField label="Farcaster Handle" placeholder="@handle" sublabel="optional" {...field('farcaster')} />
+                    <InputField label="Recipient Wallet" placeholder="0x..." sublabel="optional" {...field('wallet')} />
+                  </div>
+
+                  <TextareaField
+                    label="Creative Direction"
+                    sublabel="optional — helps th3scr1b3 write"
+                    placeholder="Give th3scr1b3 a mood, a topic, a specific speed/bpm, or general direction. We will write and record this just for you."
+                    {...field('note')}
+                  />
+
+                  <button
+                    type="submit"
+                    disabled={!form.name || !form.email || state === 'submitting'}
+                    className="w-full py-3.5 font-mono font-bold text-xs uppercase tracking-widest text-black bg-[#ffd700] rounded hover:scale-101 active:scale-98 transition-all disabled:opacity-40"
+                  >
+                    {state === 'submitting' ? 'Submitting...' : '✦ Submit Creative Claim'}
+                  </button>
+                </form>
+              )}
+            </div>
           )}
         </div>
       </motion.div>
