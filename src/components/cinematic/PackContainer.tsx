@@ -27,6 +27,20 @@ type Phase =
   | 'layout'     // 8: post layout (arc spread)
   | 'inspect';   // 9: inspection mode
 
+interface ShardParticle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  size: number;
+  color: string;
+  angle: number;
+  spin: number;
+  alpha: number;
+  decay: number;
+  points: number;
+}
+
 interface Props {
   meta: RevealPackMeta;
   cards: OwnedCard[];
@@ -429,7 +443,43 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
   }, [collection]);
 
   const [showFragmentDecrypter, setShowFragmentDecrypter] = useState(false);
-  const [decrypterPhase, setDecrypterPhase] = useState<'idle' | 'shaking' | 'ripping' | 'revealed'>('idle');
+  const [decrypterPhase, setDecrypterPhase] = useState<'idle' | 'shaking' | 'bursting' | 'revealed'>('idle');
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const particlesRef = useRef<ShardParticle[]>([]);
+  const animationFrameRef = useRef<number | null>(null);
+
+  // Adjust canvas size when fragment decrypter is shown
+  useEffect(() => {
+    if (!showFragmentDecrypter) return;
+    
+    const timer = setTimeout(() => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      const resize = () => {
+        const parent = canvas.parentElement;
+        if (parent) {
+          canvas.width = parent.clientWidth;
+          canvas.height = parent.clientHeight;
+        }
+      };
+
+      resize();
+      window.addEventListener('resize', resize);
+      
+      return () => {
+        window.removeEventListener('resize', resize);
+      };
+    }, 50);
+
+    return () => {
+      clearTimeout(timer);
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [showFragmentDecrypter]);
+
   interface FragmentReward {
     cardId: string;
     title: string;
@@ -749,17 +799,100 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
     });
   }, [hasInteracted]);
 
-  const handleDecryptPodTap = useCallback(() => {
-    if (decrypterPhase !== 'idle') return;
-    setDecrypterPhase('shaking');
-    playTension();
-    
-    setTimeout(() => {
-      setDecrypterPhase('ripping');
-      playTear();
-      playSnap();
+  const triggerShardBurst = useCallback(() => {
+    setDecrypterPhase('bursting');
+    playTear();
+    playSnap();
 
-      setTimeout(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+
+    const rewardColors = fragmentRewards.map(r => RARITY_CONFIG[r.rarity]?.color).filter(Boolean);
+    const colors = rewardColors.length > 0 ? rewardColors : [
+      '#39FF14', // Neon Green
+      '#00F0FF', // Neon Cyan
+      '#FF007F', // Neon Pink
+      '#FFB800', // Neon Gold
+      '#BD00FF', // Neon Purple
+    ];
+
+    const particles: ShardParticle[] = [];
+    const count = Math.max(80, Math.min(150, fragmentRewards.length * 20));
+    
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 4 + Math.random() * 9;
+      
+      particles.push({
+        x: centerX,
+        y: centerY,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 5, // Shoot upward bias
+        size: 5 + Math.random() * 8,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        angle: Math.random() * Math.PI * 2,
+        spin: (Math.random() - 0.5) * 0.2,
+        alpha: 1,
+        decay: 0.012 + Math.random() * 0.012,
+        points: Math.floor(Math.random() * 3) + 3, // 3 to 5 points
+      });
+    }
+
+    particlesRef.current = particles;
+
+    let startTimestamp: number | null = null;
+    const loop = (timestamp: number) => {
+      if (!startTimestamp) startTimestamp = timestamp;
+      const elapsed = timestamp - startTimestamp;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const activeParticles = particlesRef.current.filter((p) => p.alpha > 0);
+      
+      for (const p of activeParticles) {
+        // Apply physics
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.16; // Gravity
+        p.vx *= 0.97; // Drag
+        p.vy *= 0.97;
+        p.angle += p.spin;
+        p.alpha -= p.decay;
+
+        // Draw glowing crystal shard
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.angle);
+        ctx.globalAlpha = Math.max(0, p.alpha);
+        ctx.fillStyle = p.color;
+        ctx.shadowBlur = 12;
+        ctx.shadowColor = p.color;
+
+        ctx.beginPath();
+        for (let j = 0; j < p.points; j++) {
+          const shardAngle = (j * Math.PI * 2) / p.points;
+          const r = j % 2 === 0 ? p.size : p.size / 2; // Make it star-like/crystal-like
+          const px = Math.cos(shardAngle) * r;
+          const py = Math.sin(shardAngle) * r;
+          if (j === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+
+      particlesRef.current = activeParticles;
+
+      // Transition to revealed phase once particles settle
+      if (elapsed > 1500) {
         setDecrypterPhase('revealed');
         playShimmer();
 
@@ -769,9 +902,26 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
             playUnlockChime();
           }, 400);
         }
-      }, 500);
-    }, 600);
-  }, [decrypterPhase, fragmentRewards]);
+      }
+
+      if (activeParticles.length > 0 || elapsed < 1600) {
+        animationFrameRef.current = requestAnimationFrame(loop);
+      }
+    };
+
+    animationFrameRef.current = requestAnimationFrame(loop);
+  }, [fragmentRewards]);
+
+  const handleDecryptPodTap = useCallback(() => {
+    if (decrypterPhase !== 'idle') return;
+    setDecrypterPhase('shaking');
+    playTension();
+    
+    setTimeout(() => {
+      triggerShardBurst();
+    }, 800);
+  }, [decrypterPhase, triggerShardBurst]);
+
 
   // ── Card offset properties ──────────────────────────────
 
@@ -1475,16 +1625,28 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
               }}
             />
 
-            {decrypterPhase === 'idle' && (
-              <div className="flex flex-col items-center gap-8 z-20">
+            {/* Canvas Layer for Shards */}
+            <canvas
+              ref={canvasRef}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                zIndex: 85,
+                pointerEvents: 'none',
+              }}
+            />
+
+            {/* Closed/Shaking Bag Phase */}
+            {(decrypterPhase === 'idle' || decrypterPhase === 'shaking') && (
+              <div className="flex flex-col items-center gap-8 z-20 select-none">
                 {/* Cyberpunk Header */}
                 <div className="text-center space-y-2">
                   <div style={{
                     fontFamily: '"JetBrains Mono", monospace', fontSize: '10px',
-                    fontWeight: 900, color: '#00f0ff', letterSpacing: '0.4em',
-                    textShadow: '0 0 10px rgba(0,240,255,0.4)', textTransform: 'uppercase',
+                    fontWeight: 900, color: '#ffb800', letterSpacing: '0.4em',
+                    textShadow: '0 0 10px rgba(255,184,0,0.4)', textTransform: 'uppercase',
                   }}>
-                    [ NEURAL DECRYPTOR SEED v2.0 ]
+                    [ NEURAL DECRYPTOR BAG v2.0 ]
                   </div>
                   <div style={{
                     fontFamily: '"JetBrains Mono", monospace', fontSize: '8px',
@@ -1495,57 +1657,78 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
                   </div>
                 </div>
 
-                {/* The glowing rotating 3D capsule pod */}
+                {/* Glowing Pouch Pushing / Shaking */}
                 <motion.div
                   onClick={handleDecryptPodTap}
-                  animate={{
-                    y: [-6, 6, -6],
-                    rotateY: [0, 360],
-                  }}
-                  transition={{
-                    y: { repeat: Infinity, duration: 3.5, ease: 'easeInOut' },
-                    rotateY: { repeat: Infinity, duration: 20, ease: 'linear' },
-                  }}
+                  animate={
+                    decrypterPhase === 'shaking'
+                      ? {
+                          x: [0, -8, 8, -6, 6, -3, 3, 0],
+                          y: [0, 4, -4, 3, -3, 1, -1, 0],
+                          scale: [1, 1.15, 1.25, 1.2, 1.3, 1.25, 1.35, 1.25],
+                          rotate: [0, -4, 4, -3, 3, -1, 1, 0],
+                        }
+                      : {
+                          y: [0, -10, 0],
+                          scale: [1, 1.04, 1],
+                        }
+                  }
+                  transition={
+                    decrypterPhase === 'shaking'
+                      ? { duration: 0.8, ease: 'easeInOut' }
+                      : { repeat: Infinity, duration: 3, ease: 'easeInOut' }
+                  }
                   style={{
-                    width: '160px', height: '240px',
+                    width: '160px', height: '160px',
                     position: 'relative',
-                    perspective: '800px',
-                    transformStyle: 'preserve-3d',
                     cursor: 'pointer',
                   }}
+                  className="filter drop-shadow-[0_0_35px_rgba(255,184,0,0.4)]"
                 >
-                  {/* Glowing Wireframe Pod Design */}
-                  <div style={{
-                    position: 'absolute', inset: 0,
-                    border: '2px solid #00f0ff',
-                    borderRadius: '80px / 30px',
-                    background: 'linear-gradient(180deg, rgba(0, 240, 255, 0.05), rgba(112, 0, 255, 0.15))',
-                    boxShadow: '0 0 40px rgba(0, 240, 255, 0.25), inset 0 0 30px rgba(0, 240, 255, 0.15)',
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                    overflow: 'hidden',
-                  }}>
-                    <div style={{
-                      position: 'absolute', top: '15%',
-                      width: '80%', height: '1px', background: '#00f0ff', opacity: 0.4
-                    }} />
-                    <div style={{
-                      position: 'absolute', bottom: '15%',
-                      width: '80%', height: '1px', background: '#00f0ff', opacity: 0.4
-                    }} />
-                    <span style={{
-                      fontFamily: '"Impact", sans-serif', fontSize: '32px', color: '#fff',
-                      transform: 'scaleY(1.2) scaleX(0.9)',
-                      textShadow: '0 0 15px rgba(0,240,255,0.8), 2px 2px 0 #000',
-                    }}>
-                      FRAG
-                    </span>
-                    <span style={{
-                      fontFamily: '"JetBrains Mono", monospace', fontSize: '9px', color: '#7000ff',
-                      fontWeight: 900, letterSpacing: '0.2em', marginTop: '6px',
-                    }}>
-                      POD {accumulatedCards.length}x
-                    </span>
-                  </div>
+                  {/* Premium Vector SVG Cyber Pouch */}
+                  <svg viewBox="0 0 120 120" className="w-full h-full">
+                    <defs>
+                      <linearGradient id="bagGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#1a1200" />
+                        <stop offset="50%" stopColor="#0a0700" />
+                        <stop offset="100%" stopColor="#251a02" />
+                      </linearGradient>
+                      <linearGradient id="neonTrim" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#ffb800" />
+                        <stop offset="50%" stopColor="#ff5500" />
+                        <stop offset="100%" stopColor="#ffb800" />
+                      </linearGradient>
+                    </defs>
+
+                    {/* Draw string ties */}
+                    <path d="M 50,22 Q 60,35 70,22 M 45,20 L 35,15 M 75,20 L 85,15" stroke="#ffb800" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+
+                    {/* Hexagonal Bag body */}
+                    <path
+                      d="M 60,18 L 92,38 L 98,82 L 60,108 L 22,82 L 28,38 Z"
+                      fill="url(#bagGrad)"
+                      stroke="url(#neonTrim)"
+                      strokeWidth="2.5"
+                      strokeLinejoin="round"
+                    />
+
+                    {/* Futuristic detailing panels */}
+                    <path d="M 34,42 L 54,34 L 54,92 L 28,78 Z" fill="#ffffff" fillOpacity="0.03" />
+                    <path d="M 86,42 L 66,34 L 66,92 L 92,78 Z" fill="#ffffff" fillOpacity="0.03" />
+
+                    {/* Matrix circuit lines */}
+                    <path d="M 30,55 L 42,50 L 42,75" stroke="#ffb800" strokeWidth="1.5" strokeOpacity="0.4" fill="none" />
+                    <path d="M 90,55 L 78,50 L 78,75" stroke="#ffb800" strokeWidth="1.5" strokeOpacity="0.4" fill="none" />
+
+                    {/* central power core padlock */}
+                    <circle cx="60" cy="62" r="14" fill="#111" stroke="#ffb800" strokeWidth="2" />
+                    
+                    {/* Glow Core */}
+                    <circle cx="60" cy="62" r="8" fill="#ffb800" className="animate-pulse" />
+
+                    {/* Lock icon grid */}
+                    <path d="M 56,60 L 64,60 M 60,56 L 60,68" stroke="#000" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
                 </motion.div>
 
                 {/* Tap Prompt */}
@@ -1556,10 +1739,10 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
                     style={{
                       fontFamily: '"JetBrains Mono", monospace', fontSize: '11px',
                       fontWeight: 900, letterSpacing: '0.3em', textTransform: 'uppercase',
-                      color: '#00f0ff',
+                      color: '#ffb800',
                     }}
                   >
-                    TAP TO EXTRACTION
+                    {decrypterPhase === 'shaking' ? '✦ DECRYPTING TRANSMISSION ✦' : '✦ CLICK BAG TO DECRYPT ✦'}
                   </motion.p>
                   <p style={{
                     fontFamily: '"JetBrains Mono", monospace', fontSize: '8px',
@@ -1574,66 +1757,28 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
               </div>
             )}
 
-            {decrypterPhase === 'shaking' && (
+            {decrypterPhase === 'bursting' && (
               <motion.div
-                animate={{
-                  x: [-8, 8, -8, 8, -5, 5, -2, 2, 0],
-                  y: [-4, 4, -4, 4, -2, 2, -1, 1, 0],
-                }}
-                transition={{ duration: 0.5 }}
+                key="burst-core"
+                initial={{ scale: 0 }}
+                animate={{ scale: [1, 2.5, 2], opacity: [0.8, 1, 0] }}
+                transition={{ duration: 0.8 }}
                 style={{
-                  width: '160px', height: '240px',
-                  border: '2.5px solid #ff3800',
-                  borderRadius: '80px / 30px',
-                  background: 'linear-gradient(180deg, rgba(255, 56, 0, 0.05), rgba(255, 184, 0, 0.15))',
-                  boxShadow: '0 0 50px rgba(255, 56, 0, 0.4), inset 0 0 35px rgba(255, 56, 0, 0.25)',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  position: 'absolute',
+                  width: '120px',
+                  height: '120px',
+                  borderRadius: '50%',
+                  background: '#ffb800',
+                  filter: 'blur(20px)',
+                  pointerEvents: 'none',
                   zIndex: 20,
                 }}
-              >
-                <span style={{
-                  fontFamily: '"Impact", sans-serif', fontSize: '32px', color: '#fff',
-                  textShadow: '0 0 15px #ff3800, 2px 2px 0 #000',
-                }}>
-                  DECRYPT
-                </span>
-              </motion.div>
-            )}
-
-            {decrypterPhase === 'ripping' && (
-              <div style={{ position: 'relative', width: '160px', height: '240px', zIndex: 20 }}>
-                {/* Top half splits upwards */}
-                <motion.div
-                  initial={{ y: 0, rotate: 0, opacity: 1 }}
-                  animate={{ y: -200, rotate: -10, opacity: 0 }}
-                  transition={{ duration: 0.45, ease: 'easeOut' }}
-                  style={{
-                    position: 'absolute', inset: 0,
-                    clipPath: 'polygon(0 0, 100% 0, 100% 50%, 0 45%)',
-                    border: '2px solid #00f0ff',
-                    borderRadius: '80px / 30px',
-                    background: 'linear-gradient(180deg, rgba(0, 240, 255, 0.05), rgba(112, 0, 255, 0.15))',
-                  }}
-                />
-                {/* Bottom half splits downwards */}
-                <motion.div
-                  initial={{ y: 0, rotate: 0, opacity: 1 }}
-                  animate={{ y: 200, rotate: 8, opacity: 0 }}
-                  transition={{ duration: 0.45, ease: 'easeOut' }}
-                  style={{
-                    position: 'absolute', inset: 0,
-                    clipPath: 'polygon(0 45%, 100% 50%, 100% 100%, 0 100%)',
-                    border: '2px solid #00f0ff',
-                    borderRadius: '80px / 30px',
-                    background: 'linear-gradient(180deg, rgba(0, 240, 255, 0.05), rgba(112, 0, 255, 0.15))',
-                  }}
-                />
-              </div>
+              />
             )}
 
             {/* Full Screen White Flash Overlay */}
             <AnimatePresence>
-              {decrypterPhase === 'ripping' && (
+              {decrypterPhase === 'bursting' && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: [0, 0.95, 0] }}
@@ -1641,7 +1786,7 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
                   transition={{ duration: 0.4 }}
                   style={{
                     position: 'fixed', inset: 0, zIndex: 1000,
-                    background: '#00f0ff',
+                    background: '#ffb800',
                     pointerEvents: 'none',
                   }}
                 />
