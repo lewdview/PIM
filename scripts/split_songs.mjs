@@ -448,8 +448,32 @@ function fetchJson(url) {
 }
 
 async function main() {
-  console.log(`Fetching release data from ${RELEASE_DATA_URL}...`);
-  const data = await fetchJson(RELEASE_DATA_URL);
+  let data;
+  const localPaths = [
+    path.join(__dirname, '../public/release-data.json'),
+    path.join(__dirname, '../release-data.json'),
+    '/Volumes/extremeUno/th3scr1b3-365-warp/public/release-data.json'
+  ];
+
+  let loadedLocal = false;
+  for (const localPath of localPaths) {
+    if (fs.existsSync(localPath)) {
+      try {
+        console.log(`Loading local release data from ${localPath}...`);
+        data = JSON.parse(fs.readFileSync(localPath, 'utf8'));
+        loadedLocal = true;
+        break;
+      } catch (e) {
+        console.warn(`Failed to parse local release data at ${localPath}:`, e.message);
+      }
+    }
+  }
+
+  if (!loadedLocal) {
+    console.log(`Fetching release data from remote URL ${RELEASE_DATA_URL}...`);
+    data = await fetchJson(RELEASE_DATA_URL);
+  }
+
   const releases = data.releases || [];
   console.log(`Got ${releases.length} releases.`);
 
