@@ -4010,8 +4010,23 @@ export default function Game() {
       let fetchSuccess = false;
 
       // ── Attempt 1: Fetch via stream reader for precise progress ──
+      // Skip blob download for large files (>10MB) — e.g. uncompressed WAV assets.
+      // For those, fall through to direct audio.src streaming which starts playback
+      // as soon as enough data is buffered rather than waiting for the full download.
       try {
         console.log("[GamePlay Init] Attempting stream-based audio fetch:", song.audioUrl);
+        const headRes = await fetch(song.audioUrl, { method: "HEAD" }).catch(() => null);
+        const headLen = headRes?.headers.get("content-length");
+        const headBytes = headLen ? parseInt(headLen, 10) : 0;
+        const LARGE_FILE_THRESHOLD = 10 * 1024 * 1024; // 10 MB
+
+        if (headBytes > LARGE_FILE_THRESHOLD) {
+          // Large file — skip blob approach; stream directly via audio.src instead
+          console.log(`[GamePlay Init] Large file detected (${Math.round(headBytes / 1024 / 1024)}MB) — skipping blob fetch, using streaming src`);
+          setBufferPct(100);
+          throw new Error("Large file — use streaming");
+        }
+
         const response = await fetch(song.audioUrl);
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
