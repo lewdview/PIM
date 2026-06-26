@@ -474,8 +474,20 @@ async function main() {
     data = await fetchJson(RELEASE_DATA_URL);
   }
 
-  const releases = data.releases || [];
-  console.log(`Got ${releases.length} releases.`);
+  const rawReleases = data.releases || [];
+
+  // Deduplicate by day — keep first occurrence if the source data has repeats
+  const seenDays = new Set();
+  const releases = rawReleases.filter(r => {
+    if (seenDays.has(r.day)) {
+      console.warn(`[split_songs] Skipping duplicate day ${r.day} in source data.`);
+      return false;
+    }
+    seenDays.add(r.day);
+    return true;
+  });
+
+  console.log(`Got ${rawReleases.length} raw releases → ${releases.length} unique days.`);
 
   const songCatalog = [];
   const cardCatalog = [];
