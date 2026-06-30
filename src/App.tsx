@@ -39,6 +39,123 @@ import SongDetail from './pages/SongDetail';
 import LandingPage from './pages/LandingPage';
 import PitchDeck from './pages/PitchDeck';
 import ProfilePage from './pages/ProfilePage';
+import { loadOpts } from './lib/options';
+
+function GlobalMenuBackground() {
+  const [bg, setBg] = useState('cover_blur');
+  const [location] = useLocation();
+
+  useEffect(() => {
+    try {
+      const opts = loadOpts();
+      setBg(opts.gameBackground || 'cover_blur');
+    } catch (e) {
+      // ignore
+    }
+  }, [location]);
+
+  const hideBg =
+    location.startsWith('/play/') ||
+    location === '/tutorial' ||
+    location.startsWith('/results/');
+
+  if (hideBg || bg === 'cover_blur') return null;
+
+  return (
+    <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden opacity-[0.18] select-none" style={{ mixBlendMode: 'screen' }}>
+      {bg === 'neon_grid' && (
+        <div className="absolute inset-0 overflow-hidden bg-neon-grid-container">
+          <div className="bg-neon-grid-sun" style={{ opacity: 0.12 }} />
+          <div className="bg-neon-grid-grid" />
+          <div className="bg-neon-grid-horizon" />
+        </div>
+      )}
+      {bg === 'cyber_streets' && (
+        <div className="absolute inset-0 overflow-hidden bg-cyber-streets-container">
+          <div className="cyber-streets-grille" style={{ opacity: 0.05 }} />
+          {Array.from({ length: 12 }).map((_, i) => {
+            const delay = `${(i * 0.4) % 5}s`;
+            const duration = `${4 + (i % 4) * 2}s`;
+            const opacity = 0.08 + ((i * 3) % 6) * 0.04;
+            const left = `${i * 8.5 + 2}%`;
+            const chars = ["P", "I", "M", "0", "1", "X", "Y"];
+            const content = Array.from({ length: 20 }).map((_, charIdx) => {
+              const ch = chars[(i + charIdx * 7) % chars.length];
+              return <span key={charIdx} className="matrix-char" style={{ color: '#39FF14' }}>{ch}</span>;
+            });
+            return (
+              <div
+                key={i}
+                className="matrix-rain"
+                style={{ left, animationDelay: delay, animationDuration: duration, opacity, fontSize: '10px' }}
+              >
+                {content}
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {bg === 'space_nebula' && (
+        <div className="absolute inset-0 overflow-hidden bg-space-nebula-container" style={{ filter: 'brightness(0.6)' }}>
+          <div className="space-stars space-stars-back" />
+          <div className="space-stars space-stars-mid" style={{ opacity: 0.4 }} />
+          <div className="space-nebula-cloud1" style={{ opacity: 0.5 }} />
+          <div className="space-nebula-cloud2" style={{ opacity: 0.5 }} />
+        </div>
+      )}
+      {bg === 'sunset_skyline' && (
+        <div className="absolute inset-0 overflow-hidden bg-sunset-skyline-container" style={{ filter: 'brightness(0.5)' }}>
+          <div className="sunset-sun" style={{ opacity: 0.1 }} />
+          <div className="sunset-city-grid" style={{ opacity: 0.6 }} />
+          <div className="sunset-mountains" style={{ opacity: 0.5 }} />
+        </div>
+      )}
+      {bg === 'glitch_matrix' && (
+        <div className="absolute inset-0 overflow-hidden bg-glitch-matrix-container" style={{ opacity: 0.6 }}>
+          <div className="glitch-grid" style={{ opacity: 0.2 }} />
+          <div className="glitch-static" style={{ opacity: 0.04 }} />
+          <div className="glitch-bar1" style={{ opacity: 0.3 }} />
+        </div>
+      )}
+      {bg === 'cyber_cityscape' && (
+        <div className="absolute inset-0 overflow-hidden bg-cyber-cityscape-container" style={{ filter: 'brightness(0.5)' }}>
+          <div className="cityscape-stars" />
+          <div className="cityscape-buildings" style={{ opacity: 0.5 }} />
+        </div>
+      )}
+      {bg === 'toxic_hazard' && (
+        <div className="absolute inset-0 overflow-hidden bg-toxic-hazard-container" style={{ opacity: 0.5 }}>
+          <div className="toxic-grid-mesh" style={{ opacity: 0.3 }} />
+          <div className="toxic-hazard-stripes" style={{ opacity: 0.1 }} />
+        </div>
+      )}
+      {bg === 'prismatic_aurora' && (
+        <div className="absolute inset-0 overflow-hidden bg-prismatic-aurora-container" style={{ filter: 'brightness(0.6)' }}>
+          <div className="aurora-wave wave-1" style={{ opacity: 0.5 }} />
+          <div className="aurora-wave wave-2" style={{ opacity: 0.5 }} />
+          <div className="aurora-stars" style={{ opacity: 0.4 }} />
+        </div>
+      )}
+      {bg === 'hyperdrive_warp' && (
+        <div className="absolute inset-0 overflow-hidden bg-hyperdrive-warp-container" style={{ opacity: 0.3 }}>
+          <div className="warp-core" style={{ opacity: 0.2 }} />
+        </div>
+      )}
+      {bg === 'living_vault' && (
+        <div className="absolute inset-0 overflow-hidden bg-living-vault-container" style={{ opacity: 0.4 }}>
+          <div className="vault-corridor-grid" />
+          <div className="vault-corridor-glow" style={{ opacity: 0.3 }} />
+        </div>
+      )}
+      {bg === 'gold_record' && (
+        <div className="absolute inset-0 overflow-hidden bg-gold-record-container" style={{ opacity: 0.3 }}>
+          <div className="gold-record-vinyl" style={{ transform: 'scale(0.8)', opacity: 0.3 }} />
+          <div className="gold-record-waves" />
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function App() {
   const [location, setLocation] = useLocation();
@@ -119,12 +236,13 @@ export default function App() {
     location === '/admin/card-designs';
 
   return (
-    <div className="min-h-screen bg-[#050402] text-white flex flex-col select-none">
+    <div className="min-h-screen bg-[#050402] text-white flex flex-col select-none relative">
+      <GlobalMenuBackground />
       <BackgroundMusic />
       <GamepadCursor />
       {!hideNavbar && <Navbar />}
 
-      <main className="flex-1 flex flex-col">
+      <main className="flex-1 flex flex-col relative z-10">
         <Switch>
           <Route path="/" component={LandingPage} />
           <Route path="/arcade" component={RhythmHome} />

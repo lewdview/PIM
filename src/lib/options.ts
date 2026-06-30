@@ -11,6 +11,9 @@ export type GameOpts = {
   bgMusic: boolean;
   gameBackground: string;
   backgroundBlur: number;
+  cardBack: string;
+  haptics: boolean;
+  noteTheme: string;
 };
 
 export interface GameBackground {
@@ -49,6 +52,9 @@ export const DEFAULT_OPTS: GameOpts = {
   bgMusic: false,
   gameBackground: "cover_blur",
   backgroundBlur: 18,
+  cardBack: "classic",
+  haptics: true,
+  noteTheme: "classic",
 };
 
 export function loadOpts(): GameOpts {
@@ -78,6 +84,9 @@ export function loadOpts(): GameOpts {
     bgMusic: bool("opt_bgMusic", false),
     gameBackground: localStorage.getItem("opt_gameBackground") ?? "cover_blur",
     backgroundBlur: parseFloat(localStorage.getItem("opt_backgroundBlur") ?? "18") || 18,
+    cardBack: localStorage.getItem("opt_cardBack") ?? "classic",
+    haptics: bool("opt_haptics", true),
+    noteTheme: localStorage.getItem("opt_noteTheme") ?? "classic",
   };
 }
 

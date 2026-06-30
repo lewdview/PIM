@@ -434,6 +434,26 @@ export default function HomePage() {
                   {proofs > 0 && (
                     <StatSticker icon={Star} label="Proofs" value={proofs} color="var(--color-neon-purple)" rot={2.5} />
                   )}
+                  <div
+                    onClick={() => { audioManager.playSfx('tap_nav', 0.1); setLocation('/options'); }}
+                    className="sticker-gun-tag sticker-slits hover:scale-105 transition-all cursor-pointer flex flex-col items-center justify-center border"
+                    style={{
+                      transform: 'rotate(-3deg)',
+                      padding: '10px 18px',
+                      '--slit-color': 'rgba(255, 56, 0, 0.15)',
+                      minWidth: '155px',
+                      boxShadow: `4px 4px 0 rgba(0,0,0,0.5)`,
+                      background: '#120502',
+                      borderColor: '#ff380066',
+                    } as any}
+                  >
+                    <span className="text-[7px] font-black tracking-widest opacity-80 mb-0.5 flex items-center gap-1 uppercase text-[#ff3800]">
+                      ⚙ CONFIG
+                    </span>
+                    <span className="font-mono text-[10px] font-black uppercase tracking-wider text-white">
+                      VAULT OPTIONS
+                    </span>
+                  </div>
                 </div>
               </div>
 

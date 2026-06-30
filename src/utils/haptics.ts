@@ -4,6 +4,11 @@
  */
 export const haptics = {
   vibrate: (pattern: number | number[]) => {
+    const isEnabled = typeof localStorage !== 'undefined'
+      ? localStorage.getItem('opt_haptics') !== 'false'
+      : true;
+    if (!isEnabled) return;
+
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       // Check if user has activated the document (required for vibration)
       const hasActivation = typeof navigator.userActivation !== 'undefined'

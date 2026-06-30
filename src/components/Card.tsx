@@ -164,6 +164,15 @@ export default function Card({
   const [imgError, setImgError] = useState(false);
   const [hasFlipped, setHasFlipped] = useState(isRevealed);
   const [realClaimed, setRealClaimed] = useState<number | null>(null);
+  const [activeCardBack, setActiveCardBack] = useState('classic');
+  useEffect(() => {
+    try {
+      const cb = localStorage.getItem('opt_cardBack') || 'classic';
+      setActiveCardBack(cb);
+    } catch (e) {
+      // ignore
+    }
+  }, []);
 
   const rotateY = useMotionValue(!isRevealed ? 180 : 0);
   const frontVisibility = useTransform(rotateY, v => (Math.abs(v % 360) < 90 || Math.abs(v % 360) > 270 ? 'visible' : 'hidden'));
@@ -561,119 +570,230 @@ export default function Card({
         <div key={i} style={{ position: 'absolute', width: '14px', height: '14px', top: t ? '16px' : undefined, bottom: !t ? '16px' : undefined, left: l ? '16px' : undefined, right: !l ? '16px' : undefined, borderTop: t ? '1px solid rgba(255,215,0,0.3)' : 'none', borderBottom: !t ? '1px solid rgba(255,215,0,0.3)' : 'none', borderLeft: l ? '1px solid rgba(255,215,0,0.3)' : 'none', borderRight: !l ? '1px solid rgba(255,215,0,0.3)' : 'none' }} />
       ))}
     </motion.div>
-  ) : (
-    <motion.div
-      style={{
-        position: 'absolute', inset: 0, borderRadius: '12px', overflow: 'hidden',
-        backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
-        rotateY: 180,
-        visibility: backVisibility,
-        willChange: 'transform',
-        clipPath: 'inset(0 round 12px)',
-        WebkitClipPath: 'inset(0 round 12px)',
-      }}
-    >
-      {/* Base */}
-      <div style={{ position: 'absolute', inset: 0, background: '#0c0a07' }} />
+  ) : (() => {
+    const isClassic = activeCardBack === 'classic';
+    const isHolo = activeCardBack === 'holo';
+    const isCarbon = activeCardBack === 'carbon';
+    const isGold = activeCardBack === 'gold_luxe';
+    const isMatrix = activeCardBack === 'matrix';
+    const isScribe = activeCardBack === 'th3scr1b3';
 
-      {/* Rarity-tinted radial */}
-      <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 50% 40%, ${rc.color}14, transparent 65%)` }} />
+    const backBg = isCarbon
+      ? '#090a0c'
+      : isHolo
+        ? 'linear-gradient(135deg, #0e1b29, #0c0a07, #210e29)'
+        : isGold
+          ? 'linear-gradient(135deg, #1f1a0f, #0d0c08, #1c150c)'
+          : isMatrix
+            ? '#030804'
+            : isScribe
+              ? '#0d0006'
+              : '#0c0a07';
 
-      {/* Diamond grid SVG */}
-      <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.055 }} xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <pattern id={`bp-${day}`} x="0" y="0" width="22" height="22" patternUnits="userSpaceOnUse">
-            <path d="M11 0L22 11L11 22L0 11Z" fill="none" stroke={rc.color} strokeWidth="0.6" />
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill={`url(#bp-${day})`} />
-      </svg>
+    const gridColor = isCarbon
+      ? 'rgba(0,255,255,0.08)'
+      : isGold
+        ? 'rgba(255,215,0,0.12)'
+        : isMatrix
+          ? 'rgba(57,255,20,0.12)'
+          : isScribe
+            ? 'rgba(255,20,147,0.12)'
+            : rc.color;
 
-      {/* Inner double frame */}
-      <div style={{ position: 'absolute', inset: '12px', border: `1px solid ${rc.color}22`, borderRadius: '8px' }}>
-        <div style={{ position: 'absolute', inset: '6px', border: `1px solid ${rc.color}10`, borderRadius: '5px' }}>
+    const borderCol = isCarbon
+      ? '#00ffff33'
+      : isGold
+        ? 'rgba(255,215,0,0.3)'
+        : isMatrix
+          ? 'rgba(57,255,20,0.25)'
+          : isScribe
+            ? 'rgba(255,20,147,0.25)'
+            : `${rc.color}22`;
 
-          {/* Centre emblem */}
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '14px' }}>
+    const borderInnerCol = isCarbon
+      ? '#00ffff15'
+      : isGold
+        ? 'rgba(255,215,0,0.12)'
+        : isMatrix
+          ? 'rgba(57,255,20,0.1)'
+          : isScribe
+            ? 'rgba(255,20,147,0.1)'
+            : `${rc.color}10`;
 
-            {/* PimLogo in circular frame */}
-            <div style={{ position: 'relative' }}>
-              <div style={{
-                width: '68px', height: '68px', borderRadius: '50%',
-                background: `linear-gradient(145deg, ${rc.color}18, transparent)`,
-                border: `2px solid ${rc.color}30`,
-                boxShadow: `0 0 30px ${rc.color}10, inset 0 0 16px ${rc.color}05`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                overflow: 'hidden',
-              }}>
-                <PimLogo color={rc.color} cardId={card.id} />
+    const emblemBorder = isCarbon
+      ? '2px solid #00ffff55'
+      : isGold
+        ? '2px solid rgba(255,215,0,0.5)'
+        : isMatrix
+          ? '2px solid rgba(57,255,20,0.5)'
+          : isScribe
+            ? '2px dashed rgba(255,20,147,0.5)'
+            : `2px solid ${rc.color}30`;
+
+    const emblemBg = isCarbon
+      ? 'rgba(0,255,255,0.05)'
+      : isGold
+        ? 'rgba(255,215,0,0.04)'
+        : isMatrix
+          ? 'rgba(57,255,20,0.04)'
+          : isScribe
+            ? 'rgba(255,20,147,0.04)'
+            : `linear-gradient(145deg, ${rc.color}18, transparent)`;
+
+    const logoColor = isCarbon
+      ? '#00ffff'
+      : isGold
+        ? '#ffd700'
+        : isMatrix
+          ? '#39ff14'
+          : isScribe
+            ? '#ff007f'
+            : rc.color;
+
+    return (
+      <motion.div
+        style={{
+          position: 'absolute', inset: 0, borderRadius: '12px', overflow: 'hidden',
+          backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
+          rotateY: 180,
+          visibility: backVisibility,
+          willChange: 'transform',
+          clipPath: 'inset(0 round 12px)',
+          WebkitClipPath: 'inset(0 round 12px)',
+        }}
+      >
+        {/* Base */}
+        <div style={{ position: 'absolute', inset: 0, background: backBg }} />
+
+        {/* Custom back styling effects */}
+        {(isClassic || isHolo) && (
+          <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 50% 40%, ${rc.color}14, transparent 65%)` }} />
+        )}
+        {isHolo && (
+          <>
+            <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 50% 40%, ${rc.color}22, rgba(0,229,255,0.12), transparent 70%)` }} />
+            <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(120deg, rgba(0,229,255,0.08) 0%, rgba(255,20,147,0.12) 30%, rgba(57,255,20,0.08) 60%, rgba(0,229,255,0.08) 100%)', backgroundSize: '300% 100%', animation: 'foil-sweep 3.5s linear infinite' }} />
+          </>
+        )}
+        {isCarbon && (
+          <>
+            <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(45deg, #121316 25%, transparent 25%), linear-gradient(-45deg, #121316 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #121316 75%), linear-gradient(-45deg, transparent 75%, #121316 75%)', backgroundSize: '8px 8px', opacity: 0.7 }} />
+            <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 50% 40%, rgba(0,255,255,0.12), transparent 70%)` }} />
+          </>
+        )}
+        {isGold && (
+          <>
+            <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 40%, rgba(255,215,0,0.14), transparent 65%)' }} />
+            <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(120deg, rgba(255,215,0,0.04) 0%, rgba(255,255,200,0.1) 25%, rgba(255,180,0,0.04) 50%, rgba(255,240,150,0.08) 75%, rgba(255,215,0,0.04) 100%)', backgroundSize: '300% 100%', animation: 'foil-sweep 4s linear infinite' }} />
+          </>
+        )}
+        {isMatrix && (
+          <>
+            <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 40%, rgba(57,255,20,0.14), transparent 70%)' }} />
+            <div className="absolute inset-0 scanlines opacity-[0.08]" style={{ background: 'linear-gradient(rgba(57,255,20,0.08) 50%, transparent 50%)', backgroundSize: '100% 4px' }} />
+          </>
+        )}
+        {isScribe && (
+          <>
+            <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 30% 20%, #4a002a 0%, transparent 60%), radial-gradient(circle at 70% 80%, #1a0033 0%, transparent 65%)', opacity: 0.8 }} />
+            <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 50% 40%, ${rc.color}15, transparent 70%)` }} />
+          </>
+        )}
+
+        {/* Diamond grid SVG */}
+        <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.055 }} xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <pattern id={`bp-${day}`} x="0" y="0" width="22" height="22" patternUnits="userSpaceOnUse">
+              <path d="M11 0L22 11L11 22L0 11Z" fill="none" stroke={gridColor} strokeWidth="0.6" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill={`url(#bp-${day})`} />
+        </svg>
+
+        {/* Inner double frame */}
+        <div style={{ position: 'absolute', inset: '12px', border: `1px solid ${borderCol}`, borderRadius: '8px' }}>
+          <div style={{ position: 'absolute', inset: '6px', border: `1px solid ${borderInnerCol}`, borderRadius: '5px' }}>
+
+            {/* Centre emblem */}
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '14px' }}>
+
+              {/* PimLogo in circular frame */}
+              <div style={{ position: 'relative' }}>
+                <div style={{
+                  width: '68px', height: '68px', borderRadius: isScribe ? '14px' : '50%',
+                  background: emblemBg,
+                  border: emblemBorder,
+                  boxShadow: isGold ? `0 0 25px rgba(255,215,0,0.15)` : isCarbon ? `0 0 25px rgba(0,255,255,0.15)` : isMatrix ? `0 0 25px rgba(57,255,20,0.15)` : `0 0 30px ${rc.color}10, inset 0 0 16px ${rc.color}05`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  overflow: 'hidden',
+                }}>
+                  <PimLogo color={logoColor} cardId={card.id} />
+                </div>
+                {['rare','legendary','mythic'].includes(card.rarity) && (
+                  <div style={{ position: 'absolute', inset: '-10px', borderRadius: '50%', background: `radial-gradient(circle, ${rc.color}12, transparent 70%)`, animation: 'pulse-glow 2.5s ease-in-out infinite' }} />
+                )}
               </div>
-              {['rare','legendary','mythic'].includes(card.rarity) && (
-                <div style={{ position: 'absolute', inset: '-10px', borderRadius: '50%', background: `radial-gradient(circle, ${rc.color}12, transparent 70%)`, animation: 'pulse-glow 2.5s ease-in-out infinite' }} />
+
+              {/* Branding */}
+              <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
+                <span style={{ fontFamily: isMatrix ? '"Courier New", monospace' : '"JetBrains Mono", monospace', fontSize: '10px', fontWeight: 700, letterSpacing: '0.35em', textTransform: 'uppercase', color: logoColor, textShadow: isMatrix ? '0 0 8px #39ff14' : `0 0 10px ${rc.color}40` }}>
+                  th3v4ult
+                </span>
+                <div style={{ width: '40px', height: '1px', background: isGold ? 'rgba(255,215,0,0.3)' : isCarbon ? 'rgba(0,255,255,0.3)' : `${rc.color}30` }} />
+                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,240,216,0.35)' }}>
+                  GEN 0 {isEcho ? `· RE-ENTRY 00${echoGeneration}` : ''} · {card.rarity.toUpperCase()}
+                </span>
+              </div>
+
+              {/* Day badge replaced by custom SVG */}
+              <DayNumberBadge day={day} color={logoColor} />
+
+              {/* Mythic CTA */}
+              {card.rarity === 'mythic' && interactive && (
+                <a href={`https://th3scr1b3.art/stems/${day}`} target="_blank" rel="noreferrer"
+                  onClick={e => e.stopPropagation()}
+                  style={{
+                    padding: '7px 18px', borderRadius: '6px',
+                    background: '#ffd700', color: '#000', fontWeight: 900,
+                    fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase',
+                    textDecoration: 'none', boxShadow: '0 0 20px rgba(255,215,0,0.4)',
+                  }}
+                >
+                  ⬇ Download Stems
+                </a>
               )}
             </div>
 
-            {/* Branding */}
-            <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
-              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '10px', fontWeight: 700, letterSpacing: '0.35em', textTransform: 'uppercase', color: rc.color, textShadow: `0 0 10px ${rc.color}40` }}>
-                th3v4ult
-              </span>
-              <div style={{ width: '40px', height: '1px', background: `${rc.color}30` }} />
-              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,240,216,0.35)' }}>
-                GEN 0 {isEcho ? `· RE-ENTRY 00${echoGeneration}` : ''} · {card.rarity.toUpperCase()}
-              </span>
-            </div>
-
-            {/* Day badge replaced by custom SVG */}
-            <DayNumberBadge day={day} color={rc.color} />
-
-            {/* Mythic CTA */}
-            {card.rarity === 'mythic' && interactive && (
-              <a href={`https://th3scr1b3.art/stems/${day}`} target="_blank" rel="noreferrer"
-                onClick={e => e.stopPropagation()}
-                style={{
-                  padding: '7px 18px', borderRadius: '6px',
-                  background: '#ffd700', color: '#000', fontWeight: 900,
-                  fontSize: '9px', letterSpacing: '0.15em', textTransform: 'uppercase',
-                  textDecoration: 'none', boxShadow: '0 0 20px rgba(255,215,0,0.4)',
-                }}
-              >
-                ⬇ Download Stems
-              </a>
-            )}
+            {/* Corner marks */}
+            {[{t:true,l:true},{t:true,l:false},{t:false,l:true},{t:false,l:false}].map(({t,l},i) => (
+              <div key={i} style={{
+                position: 'absolute', width: '14px', height: '14px',
+                top: t ? '6px' : undefined, bottom: !t ? '6px' : undefined,
+                left: l ? '6px' : undefined, right: !l ? '6px' : undefined,
+                borderTop:    t ? `1px solid ${borderCol}` : 'none',
+                borderBottom: !t ? `1px solid ${borderCol}` : 'none',
+                borderLeft:   l ? `1px solid ${borderCol}` : 'none',
+                borderRight:  !l ? `1px solid ${borderCol}` : 'none',
+              }} />
+            ))}
           </div>
-
-          {/* Corner marks */}
-          {[{t:true,l:true},{t:true,l:false},{t:false,l:true},{t:false,l:false}].map(({t,l},i) => (
-            <div key={i} style={{
-              position: 'absolute', width: '14px', height: '14px',
-              top: t ? '6px' : undefined, bottom: !t ? '6px' : undefined,
-              left: l ? '6px' : undefined, right: !l ? '6px' : undefined,
-              borderTop:    t ? `1px solid ${rc.color}25` : 'none',
-              borderBottom: !t ? `1px solid ${rc.color}25` : 'none',
-              borderLeft:   l ? `1px solid ${rc.color}25` : 'none',
-              borderRight:  !l ? `1px solid ${rc.color}25` : 'none',
-            }} />
-          ))}
         </div>
-      </div>
 
-      {/* Scanlines for rare+ */}
-      {['rare','legendary','mythic'].includes(card.rarity) && (
-        <div className="absolute inset-0 scanlines opacity-[0.12]" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' } as React.CSSProperties} />
-      )}
+        {/* Scanlines for rare+ */}
+        {['rare','legendary','mythic'].includes(card.rarity) && (
+          <div className="absolute inset-0 scanlines opacity-[0.12]" style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' } as React.CSSProperties} />
+        )}
 
-      {/* Outer rarity border — static only, NO animated box-shadow here.
-          Animated CSS classes (legendary-glow, mythic-pulse) cause GPU
-          compositing artifacts inside a preserve-3d container. */}
-      <div style={{
-        position: 'absolute', inset: 0, borderRadius: '12px', opacity: 0.6,
-        border: `1.5px solid ${rc.color}55`,
-        pointerEvents: 'none',
-        backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
-      } as React.CSSProperties} />
-    </motion.div>
-  );
+        {/* Outer rarity border — static only */}
+        <div style={{
+          position: 'absolute', inset: 0, borderRadius: '12px', opacity: 0.6,
+          border: `1.5px solid ${borderCol}`,
+          pointerEvents: 'none',
+          backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
+        } as React.CSSProperties} />
+      </motion.div>
+    );
+  })();
 
   // ════════════════════════════════════════════════════════════════════════
   // FRONT FACES

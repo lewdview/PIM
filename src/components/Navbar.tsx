@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
-import { Home, Layers, Trophy, Wallet, LogOut, Zap, Menu, X, FileText, Flame, BookOpen, Monitor, Gift } from 'lucide-react';
+import { Home, Layers, Trophy, Wallet, LogOut, Zap, Menu, X, FileText, Flame, BookOpen, Monitor, Gift, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../store/useAuthStore';
 import { useVaultStore } from '../store/useVaultStore';
@@ -16,8 +16,9 @@ const links = [
   { to: '/vault', label: 'Vault', icon: Home },
   { to: '/vault/collection', label: 'Collection', icon: Layers },
   { to: '/vault/codex', label: 'Codex', icon: BookOpen },
-  { to: '/vault/leaderboard', label: 'Ranks', icon: Trophy },
   { to: '/vault/forge', label: 'Forge', icon: Flame },
+  { to: '/options', label: 'Options', icon: Settings },
+  { to: '/vault/leaderboard', label: 'Ranks', icon: Trophy },
   { to: '/vault/claim', label: 'Redeem', icon: Gift },
   ...(isDev ? [{ to: '/pitch-deck', label: 'Pitch', icon: FileText }] : []),
 ];

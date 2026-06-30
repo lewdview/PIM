@@ -380,11 +380,28 @@ export default function Options() {
     const newColors = [...opts.laneColors] as [string, string, string];
     newColors[lane] = color;
     localStorage.setItem(`opt_laneColor_${lane}`, color);
-    setOpts(o => ({ ...o, laneColors: newColors }));
+    // Custom note color changes customizes the note theme preset to 'custom'
+    localStorage.setItem("opt_noteTheme", "custom");
+    setOpts(o => ({ ...o, laneColors: newColors, noteTheme: "custom" }));
     logAnalyticsEvent('setting_change', { key: `laneColor_${lane}`, value: color });
   }
 
-  function toggle(k: "missSystem" | "hudMisses" | "comboDisplay" | "judgmentText" | "useLocalFiles" | "bgMusic") {
+  function setCardBack(back: string) {
+    localStorage.setItem("opt_cardBack", back);
+    setOpts(o => ({ ...o, cardBack: back }));
+    logAnalyticsEvent('setting_change', { key: 'cardBack', value: back });
+  }
+
+  function selectNoteTheme(themeId: string, colors: string[]) {
+    localStorage.setItem("opt_noteTheme", themeId);
+    colors.forEach((c, idx) => {
+      localStorage.setItem(`opt_laneColor_${idx}`, c);
+    });
+    setOpts(o => ({ ...o, noteTheme: themeId, laneColors: colors as [string, string, string] }));
+    logAnalyticsEvent('setting_change', { key: 'noteTheme', value: themeId });
+  }
+
+  function toggle(k: "missSystem" | "hudMisses" | "comboDisplay" | "judgmentText" | "useLocalFiles" | "bgMusic" | "haptics") {
     const v = !opts[k];
     localStorage.setItem(`opt_${k}`, String(v));
     setOpts(o => ({ ...o, [k]: v }));
@@ -398,6 +415,25 @@ export default function Options() {
     }
     logAnalyticsEvent('setting_change', { key: k, value: v });
   }
+
+  const NOTE_THEME_PRESETS = [
+    { id: 'classic', name: 'Classic Vault', colors: ['#FF1493', '#00E5FF', '#39FF14'] },
+    { id: 'cyberpunk', name: 'Cyberpunk Neon', colors: ['#00F0FF', '#FFFF00', '#FF007F'] },
+    { id: 'sunset', name: 'Synth Sunset', colors: ['#FF0055', '#7B2CBF', '#FF8C00'] },
+    { id: 'acid', name: 'Acid Hazard', colors: ['#39FF14', '#E5B800', '#00E5FF'] },
+    { id: 'crimson', name: 'Midnight Crimson', colors: ['#FF0000', '#800000', '#CC2200'] },
+    { id: 'gold_prestige', name: 'Gold Prestige', colors: ['#FFD700', '#E5B800', '#FF8C00'] },
+    { id: 'ghost', name: 'Void Ghost', colors: ['#D8B4FE', '#374151', '#F3F4F6'] }
+  ];
+
+  const CARD_BACKS = [
+    { id: 'classic', name: 'Classic Vault', desc: 'Standard rarity-colored core grid', style: { background: '#0c0a07', border: '1px solid rgba(255,255,255,0.1)' } },
+    { id: 'holo', name: 'Holo Foil', desc: 'Shimmering rainbow overlay sheen', style: { background: 'linear-gradient(135deg, #0e1b29, #210e29)', border: '1px solid #00ffff' } },
+    { id: 'carbon', name: 'Carbon Tech', desc: 'High-tech composite carbon weave', style: { background: '#151619', border: '1.5px solid #00ffff', boxShadow: '0 0 8px #00ffff33' } },
+    { id: 'gold_luxe', name: 'Royal Gold', desc: 'Gilded gold leaf frame & starry dust', style: { background: 'linear-gradient(135deg, #1f1a0f, #1c150c)', border: '1px solid #ffd700', boxShadow: '0 0 8px rgba(255,215,0,0.2)' } },
+    { id: 'matrix', name: 'Matrix Code', desc: 'Binary rain & console grid lines', style: { background: '#030804', border: '1px solid #39ff14', boxShadow: '0 0 8px rgba(57,255,20,0.2)' } },
+    { id: 'th3scr1b3', name: 'th3scr1b3 Signature', desc: 'Abstract red splatters & gothic marks', style: { background: 'radial-gradient(circle, #4a002a, #0d0006)', border: '1px dashed #ff007f' } },
+  ];
 
   function handleReset() {
     if (resetState === "idle") {
@@ -494,6 +530,39 @@ export default function Options() {
         {/* ── CONTROLS ────────────────────────────────────────── */}
         <section className="flex flex-col gap-3">
           <SectionLabel label="CONTROLS" sub="Key binding & lane colour" isAvant={isAvant} />
+
+          {/* Note Themes Preset Selector */}
+          <div className="mb-2">
+            <div className="font-mono text-[9px] text-zinc-500 uppercase tracking-widest px-1 mb-2">NOTE COLOR THEMES</div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {NOTE_THEME_PRESETS.map(t => {
+                const active = opts.noteTheme === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => {
+                      if (isAvant) audioManager.playSfx('tap_nav', 0.1);
+                      selectNoteTheme(t.id, t.colors);
+                    }}
+                    className="font-mono text-[10px] py-1.5 px-2 flex flex-col items-center justify-between border cursor-pointer transition-all"
+                    style={{
+                      background: active ? (isAvant ? "rgba(57,255,20,0.12)" : "rgba(255,20,147,0.1)") : "rgba(255,255,255,0.02)",
+                      borderColor: active ? (isAvant ? "#39FF14" : "#FF1493") : "rgba(255,255,255,0.08)",
+                      color: active ? "#fff" : "rgba(255,255,255,0.55)",
+                      boxShadow: active ? `0 0 10px ${isAvant ? "rgba(57,255,20,0.2)" : "rgba(255,20,147,0.2)"}` : "none",
+                    }}
+                  >
+                    <span className="font-bold truncate text-center w-full mb-1">{t.name.toUpperCase()}</span>
+                    <div className="flex gap-1">
+                      {t.colors.map((c, i) => (
+                        <div key={i} style={{ width: 8, height: 8, background: c, borderRadius: '50%' }} />
+                      ))}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
           {/* 3 lane cards */}
           <div className="grid grid-cols-3 gap-2 mt-1">
@@ -834,12 +903,93 @@ export default function Options() {
           </div>
         </section>
 
+        {/* ── CARD BACK DESIGN ────────────────────────────────── */}
+        <section className="flex flex-col gap-3">
+          <SectionLabel label="CARD BACK DESIGN" sub="Customize card back faces" isAvant={isAvant} />
+          <div style={{
+            border: isAvant ? "1px solid rgba(57,255,20,0.2)" : "2px solid rgba(255,255,255,0.08)",
+            background: isAvant ? "rgba(5,5,5,0.4)" : "rgba(255,255,255,0.015)",
+            padding: 12
+          }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {CARD_BACKS.map(cb => {
+                const active = opts.cardBack === cb.id;
+                return (
+                  <button
+                    key={cb.id}
+                    onClick={() => {
+                      if (isAvant) audioManager.playSfx('tap_nav', 0.12);
+                      setCardBack(cb.id);
+                    }}
+                    onMouseEnter={() => { if (isAvant) audioManager.playSfx('tap_nav', 0.08); }}
+                    className="font-mono text-left p-3.5 transition-all relative flex gap-3.5 items-center border select-none cursor-pointer"
+                    style={{
+                      minHeight: 74,
+                      background: active
+                        ? (isAvant ? "rgba(57,255,20,0.12)" : "rgba(255,20,147,0.1)")
+                        : "rgba(255,255,255,0.02)",
+                      border: active
+                        ? (isAvant ? "1px solid #39FF14" : "1px solid #FF1493")
+                        : (isAvant ? "1px solid rgba(57,255,20,0.12)" : "1px solid rgba(255,255,255,0.08)"),
+                      boxShadow: (isAvant && active) ? "0 0 10px rgba(57,255,20,0.15)" : "none",
+                    }}
+                  >
+                    {/* card back miniature frame preview */}
+                    <div style={{
+                      width: 32, height: 44, borderRadius: 4, flexShrink: 0,
+                      position: 'relative', overflow: 'hidden',
+                      ...cb.style
+                    }}>
+                      {/* nested pattern design simulation */}
+                      {cb.id === 'classic' && (
+                        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle, #FF149333, transparent 70%)' }} />
+                      )}
+                      {cb.id === 'holo' && (
+                        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(120deg, rgba(0,255,255,0.2) 0%, rgba(255,0,255,0.2) 50%, rgba(57,255,20,0.2) 100%)' }} />
+                      )}
+                      {cb.id === 'carbon' && (
+                        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle, #00ffff22, transparent)' }} />
+                      )}
+                      {cb.id === 'gold_luxe' && (
+                        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle, #ffd70033, transparent)' }} />
+                      )}
+                      {cb.id === 'matrix' && (
+                        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle, #39ff1433, transparent)' }} />
+                      )}
+                      {cb.id === 'th3scr1b3' && (
+                        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle, #ff007f33, transparent)' }} />
+                      )}
+                    </div>
+
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-bold text-xs tracking-wider" style={{ color: active ? (isAvant ? "#39FF14" : "#FF1493") : "#ffffff" }}>
+                          {cb.name.toUpperCase()}
+                        </span>
+                        {active && (
+                          <span className="text-[8px] uppercase tracking-widest font-bold" style={{ color: isAvant ? "#39FF14" : "#FF1493" }}>
+                            ACTIVE
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-zinc-400 mt-1 leading-normal">
+                        {cb.desc}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
         {/* ── GAMEPLAY ────────────────────────────────────────── */}
         <section className="flex flex-col gap-3">
           <SectionLabel label="GAMEPLAY" sub="Mechanics & display" isAvant={isAvant} />
           <div style={{ border: isAvant ? "1px solid rgba(57,255,20,0.2)" : "2px solid rgba(255,255,255,0.08)", background: isAvant ? "rgba(5,5,5,0.4)" : "transparent" }}>
             {([
               { key: "bgMusic",      label: "BACKGROUND MUSIC", sub: "Ambient music loop in menus" },
+              { key: "haptics",      label: "HAPTIC FEEDBACK", sub: "Tactile clicks during navigation & play" },
               { key: "missSystem",   label: "MISS SYSTEM",   sub: "3 strikes trigger SIGNAL LOST" },
               { key: "hudMisses",    label: "HUD MISSES",    sub: "Miss pips shown in HUD" },
               { key: "comboDisplay", label: "COMBO DISPLAY", sub: "Combo counter" },
