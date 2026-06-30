@@ -1,5 +1,5 @@
 import { Route, Switch, useLocation } from 'wouter';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuthStore } from './store/useAuthStore';
 import { logAnalyticsEvent } from './services/telemetryService';
 import { useVaultStore } from './store/useVaultStore';
