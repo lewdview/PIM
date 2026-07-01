@@ -6,6 +6,7 @@ import { useVaultStore } from './store/useVaultStore';
 import { useGlobalPlayer } from './store/useGlobalPlayer';
 import BackgroundMusic from './components/audio/BackgroundMusic';
 import GamepadCursor from './components/ui/GamepadCursor';
+import './styles/CardShowcaseStyles.css';
 
 // Component imports
 import Navbar from './components/Navbar';
@@ -34,7 +35,7 @@ import CardDesignShowcase from './pages/CardDesignShowcase';
 import Campaign from './pages/Campaign';
 import Chapter from './pages/Chapter';
 import Tutorial from './pages/Tutorial';
-import Options from './pages/Options';
+import OptionsModal from './components/OptionsModal';
 import SongDetail from './pages/SongDetail';
 import LandingPage from './pages/LandingPage';
 import PitchDeck from './pages/PitchDeck';
@@ -157,6 +158,19 @@ function GlobalMenuBackground() {
   );
 }
 
+function OptionsRouteHandler() {
+  const setOptionsModalOpen = useVaultStore((s) => s.setOptionsModalOpen);
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    setOptionsModalOpen(true);
+    const lastPath = sessionStorage.getItem('last_path') || '/vault';
+    setLocation(lastPath);
+  }, [setOptionsModalOpen, setLocation]);
+
+  return null;
+}
+
 export default function App() {
   const [location, setLocation] = useLocation();
   const initializeAuth = useAuthStore((s) => s.initialize);
@@ -167,6 +181,8 @@ export default function App() {
   
   const hasOnboarded = useVaultStore((s) => s.hasOnboarded);
   const completeOnboarding = useVaultStore((s) => s.completeOnboarding);
+  const optionsModalOpen = useVaultStore((s) => s.optionsModalOpen);
+  const setOptionsModalOpen = useVaultStore((s) => s.setOptionsModalOpen);
 
   const collection = useVaultStore((s) => s.collection);
 
@@ -177,6 +193,9 @@ export default function App() {
   // Track page views on route transitions
   useEffect(() => {
     logAnalyticsEvent('page_view', { path: location });
+    if (location !== '/options') {
+      sessionStorage.setItem('last_path', location);
+    }
   }, [location]);
 
   // Automatically redirect guests who haven't completed the tutorial to /tutorial
@@ -238,6 +257,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#050402] text-white flex flex-col select-none relative">
       <GlobalMenuBackground />
+      <OptionsModal isOpen={optionsModalOpen} onClose={() => setOptionsModalOpen(false)} />
       <BackgroundMusic />
       <GamepadCursor />
       {!hideNavbar && <Navbar />}
@@ -270,7 +290,7 @@ export default function App() {
           <Route path="/chapter/:month" component={Chapter} />
           <Route path="/tutorial" component={Tutorial} />
           <Route path="/profile" component={ProfilePage} />
-          <Route path="/options" component={Options} />
+          <Route path="/options" component={OptionsRouteHandler} />
           <Route path="/song/:songId" component={SongDetail} />
           <Route>
             <div className="flex-1 flex flex-col items-center justify-center p-8 text-center max-w-md mx-auto">

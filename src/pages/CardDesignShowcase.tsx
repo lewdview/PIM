@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, createContext, useContext } from 'react';
 import type { VaultCard } from '../services/vaultService';
 import type { Rarity } from '../utils/rarity';
 import { Volume2, Play, ChevronLeft, Layers, Zap, Flame, RotateCcw } from 'lucide-react';
@@ -284,6 +284,8 @@ function StandardVaultCardBack({ card }: { card: VaultCard }) {
 // --------------------------------------------------------------------------
 // 3D FLIP CONTAINER WRAPPER
 // --------------------------------------------------------------------------
+export const CardSkinContext = createContext<{ staticFace?: 'front' | 'back' }>({});
+
 interface CardWrapperProps {
   rarity: Rarity;
   themeClass: string;
@@ -293,6 +295,23 @@ interface CardWrapperProps {
 
 function Card3DWrapper({ rarity, themeClass, children, backSide }: CardWrapperProps) {
   const [isFlipped, setIsFlipped] = useState(false);
+  const { staticFace } = useContext(CardSkinContext);
+
+  if (staticFace === 'front') {
+    return (
+      <div className={`h-full w-full select-none theme-${themeClass} rarity-${rarity}`}>
+        {children}
+      </div>
+    );
+  }
+
+  if (staticFace === 'back') {
+    return (
+      <div className={`h-full w-full select-none theme-${themeClass} rarity-${rarity}`}>
+        {backSide}
+      </div>
+    );
+  }
 
   return (
     <div className="card-wrapper-3d" onClick={() => setIsFlipped(!isFlipped)}>
@@ -311,7 +330,7 @@ function Card3DWrapper({ rarity, themeClass, children, backSide }: CardWrapperPr
 // --------------------------------------------------------------------------
 // THEMATIC CARD BACK COMPONENTS
 // --------------------------------------------------------------------------
-function BackOriginal({ card }: { card: VaultCard }) {
+export function BackOriginal({ card }: { card: VaultCard }) {
   return <StandardVaultCardBack card={card} />;
 }
 
@@ -513,7 +532,7 @@ function AnimeCrest({ cardId }: { cardId: string }) {
   );
 }
 
-function BackMonster({ card }: { card: VaultCard }) {
+export function BackMonster({ card }: { card: VaultCard }) {
   return (
     <div className="back-monster h-full w-full p-2.5 select-none">
       <div className="monster-inner-card flex flex-col justify-between p-2">
@@ -533,7 +552,7 @@ function BackMonster({ card }: { card: VaultCard }) {
   );
 }
 
-function BackChrome({ card }: { card: VaultCard }) {
+export function BackChrome({ card }: { card: VaultCard }) {
   return (
     <div className="back-chrome p-2 select-none">
       <div className="chrome-inner-grid">
@@ -556,7 +575,7 @@ function BackChrome({ card }: { card: VaultCard }) {
   );
 }
 
-function BackFantasy({ card }: { card: VaultCard }) {
+export function BackFantasy({ card }: { card: VaultCard }) {
   return (
     <div className="back-fantasy p-3 select-none flex flex-col justify-between items-center">
       <div className="fantasy-scrollwork" />
@@ -572,7 +591,7 @@ function BackFantasy({ card }: { card: VaultCard }) {
   );
 }
 
-function BackCyberpunk({ card }: { card: VaultCard }) {
+export function BackCyberpunk({ card }: { card: VaultCard }) {
   return (
     <div className="back-cyberpunk p-3 select-none flex flex-col justify-between">
       <div className="cyber-circuit" />
@@ -591,7 +610,7 @@ function BackCyberpunk({ card }: { card: VaultCard }) {
   );
 }
 
-function BackAnime({ card }: { card: VaultCard }) {
+export function BackAnime({ card }: { card: VaultCard }) {
   return (
     <div className="back-anime p-3 select-none flex flex-col justify-between items-center">
       <span className="text-[7.5px] text-pink-400 font-bold tracking-[0.2em] uppercase z-10">Celestial Symphony</span>
@@ -606,7 +625,7 @@ function BackAnime({ card }: { card: VaultCard }) {
   );
 }
 
-function BackGlitch({ card }: { card: VaultCard }) {
+export function BackGlitch({ card }: { card: VaultCard }) {
   return (
     <div className="back-glitch flex flex-col justify-between p-3 select-none">
       <div className="glitch-scanner" />
@@ -627,7 +646,7 @@ function BackGlitch({ card }: { card: VaultCard }) {
   );
 }
 
-function BackGlass({ card }: { card: VaultCard }) {
+export function BackGlass({ card }: { card: VaultCard }) {
   return (
     <div className="back-glass flex flex-col justify-between p-4 select-none">
       <div className="glass-blob-1" />
@@ -647,7 +666,7 @@ function BackGlass({ card }: { card: VaultCard }) {
   );
 }
 
-function BackArcade({ card }: { card: VaultCard }) {
+export function BackArcade({ card }: { card: VaultCard }) {
   return (
     <div className="back-arcade flex flex-col justify-between p-3 select-none">
       <div className="arcade-grid" />
@@ -667,7 +686,7 @@ function BackArcade({ card }: { card: VaultCard }) {
   );
 }
 
-function BackMtg({ card }: { card: VaultCard }) {
+export function BackMtg({ card }: { card: VaultCard }) {
   return (
     <div className="back-mtg p-3 select-none flex flex-col justify-between items-center">
       <div className="mtg-oval-back flex flex-col items-center justify-center gap-2.5 my-auto">
@@ -680,7 +699,7 @@ function BackMtg({ card }: { card: VaultCard }) {
   );
 }
 
-function BackPoker({ card }: { card: VaultCard }) {
+export function BackPoker({ card }: { card: VaultCard }) {
   const isLight = card.mood === 'light';
   const suit = isLight ? '♥' : '♠';
   return (
@@ -702,7 +721,7 @@ function BackPoker({ card }: { card: VaultCard }) {
   );
 }
 
-function BackDuelist({ card }: { card: VaultCard }) {
+export function BackDuelist({ card }: { card: VaultCard }) {
   return (
     <div className="back-duelist p-3 select-none flex flex-col justify-between items-center">
       <div className="duelist-swirl" />
@@ -723,7 +742,7 @@ function BackDuelist({ card }: { card: VaultCard }) {
 // --------------------------------------------------------------------------
 // DESIGN 0: ORIGINAL PRODUCTION LAYOUT (theme-original)
 // --------------------------------------------------------------------------
-function CardOriginal({ card, backSide }: { card: VaultCard; backSide?: React.ReactNode }) {
+export function CardOriginal({ card, backSide }: { card: VaultCard; backSide?: React.ReactNode }) {
   const activeColor = RARITY_COLORS[card.rarity];
   const maxSupply = getRarityMaxSupply(card.rarity);
   const mintPct = Math.min((card.claimedCount / maxSupply) * 100, 100);
@@ -903,7 +922,7 @@ function CardOriginal({ card, backSide }: { card: VaultCard; backSide?: React.Re
 // --------------------------------------------------------------------------
 // DESIGN 1: NEON-BRUTALIST GLITCH (High Contrast Cyberpunk)
 // --------------------------------------------------------------------------
-function CardGlitch({ card, backSide }: { card: VaultCard; backSide?: React.ReactNode }) {
+export function CardGlitch({ card, backSide }: { card: VaultCard; backSide?: React.ReactNode }) {
   const rarityColors: Record<Rarity, string> = {
     common: '#ffffff',
     uncommon: '#00d4aa',
@@ -1038,7 +1057,7 @@ function CardGlitch({ card, backSide }: { card: VaultCard; backSide?: React.Reac
 // --------------------------------------------------------------------------
 // DESIGN 2: GLASS-OUTRUN MINIMALIST (Premium Sleek Glassmorphism)
 // --------------------------------------------------------------------------
-function CardGlass({ card, backSide }: { card: VaultCard; backSide?: React.ReactNode }) {
+export function CardGlass({ card, backSide }: { card: VaultCard; backSide?: React.ReactNode }) {
   const rarityGlows: Record<Rarity, string> = {
     common: 'rgba(255,255,255,0.15)',
     uncommon: 'rgba(0, 212, 170, 0.35)',
@@ -1155,7 +1174,7 @@ function CardGlass({ card, backSide }: { card: VaultCard; backSide?: React.React
 // --------------------------------------------------------------------------
 // DESIGN 3: RETRO-ARCADE 80s (Vintage Synthesizer Deck)
 // --------------------------------------------------------------------------
-function CardArcade({ card, backSide }: { card: VaultCard; backSide?: React.ReactNode }) {
+export function CardArcade({ card, backSide }: { card: VaultCard; backSide?: React.ReactNode }) {
   const stripeColors: Record<Rarity, string[]> = {
     common: ['#ff3800', '#ffffff'],
     uncommon: ['#ffcc00', '#000000'],
@@ -1312,7 +1331,7 @@ function CardArcade({ card, backSide }: { card: VaultCard; backSide?: React.Reac
 // --------------------------------------------------------------------------
 // DESIGN 4: MAGIC: THE GATHERING (MTG Glass-Outrun Hybrid Edition)
 // --------------------------------------------------------------------------
-function CardMtg({ card, backSide }: { card: VaultCard; backSide?: React.ReactNode }) {
+export function CardMtg({ card, backSide }: { card: VaultCard; backSide?: React.ReactNode }) {
   const isFullBleed = card.rarity === 'legendary' || card.rarity === 'mythic';
   const isRotatedZoom = card.rarity === 'legendary' || card.rarity === 'mythic';
   
@@ -1436,7 +1455,7 @@ function CardMtg({ card, backSide }: { card: VaultCard; backSide?: React.ReactNo
 // --------------------------------------------------------------------------
 // DESIGN 5: CLASSIC TAROT / POKER PLAYING CARD (theme-poker)
 // --------------------------------------------------------------------------
-function CardPoker({ card, backSide }: { card: VaultCard; backSide?: React.ReactNode }) {
+export function CardPoker({ card, backSide }: { card: VaultCard; backSide?: React.ReactNode }) {
   const isFullBleed = card.rarity === 'legendary' || card.rarity === 'mythic';
   
   // Choose suit: Hearts/Diamonds for light mood, Spades/Clubs for dark mood
@@ -1527,7 +1546,7 @@ function CardPoker({ card, backSide }: { card: VaultCard; backSide?: React.React
 // --------------------------------------------------------------------------
 // DESIGN 6: DUELIST MONSTER CARD (theme-duelist)
 // --------------------------------------------------------------------------
-function CardDuelist({ card, backSide }: { card: VaultCard; backSide?: React.ReactNode }) {
+export function CardDuelist({ card, backSide }: { card: VaultCard; backSide?: React.ReactNode }) {
   const isFullBleed = card.rarity === 'legendary' || card.rarity === 'mythic';
   
   // Kanji Attribute
@@ -1644,7 +1663,7 @@ function CardDuelist({ card, backSide }: { card: VaultCard; backSide?: React.Rea
 // --------------------------------------------------------------------------
 // DESIGN 7: POCKET BEATS BATTLE CARD (theme-monster)
 // --------------------------------------------------------------------------
-function CardMonster({ card, backSide }: { card: VaultCard; backSide?: React.ReactNode }) {
+export function CardMonster({ card, backSide }: { card: VaultCard; backSide?: React.ReactNode }) {
   const isFullBleed = card.rarity === 'legendary' || card.rarity === 'mythic';
   
   // HP rating: BPM/Tempo
@@ -1854,7 +1873,7 @@ function CardMonster({ card, backSide }: { card: VaultCard; backSide?: React.Rea
 // --------------------------------------------------------------------------
 // DESIGN 8: SPORTS CHROME STYLE (theme-chrome)
 // --------------------------------------------------------------------------
-function CardChrome({ card, backSide }: { card: VaultCard; backSide?: React.ReactNode }) {
+export function CardChrome({ card, backSide }: { card: VaultCard; backSide?: React.ReactNode }) {
   const isFullBleed = card.rarity === 'legendary' || card.rarity === 'mythic';
   const finalBack = backSide || <StandardVaultCardBack card={card} />;
   
@@ -1949,7 +1968,7 @@ function CardChrome({ card, backSide }: { card: VaultCard; backSide?: React.Reac
 // --------------------------------------------------------------------------
 // DESIGN 9: CARVED RUNIC FANTASY (theme-fantasy)
 // --------------------------------------------------------------------------
-function CardFantasy({ card, backSide }: { card: VaultCard; backSide?: React.ReactNode }) {
+export function CardFantasy({ card, backSide }: { card: VaultCard; backSide?: React.ReactNode }) {
   const isFullBleed = card.rarity === 'legendary' || card.rarity === 'mythic';
   const finalBack = backSide || <StandardVaultCardBack card={card} />;
   
@@ -2025,7 +2044,7 @@ function CardFantasy({ card, backSide }: { card: VaultCard; backSide?: React.Rea
 // --------------------------------------------------------------------------
 // DESIGN 10: CYBERPUNK TERMINAL (theme-cyberpunk)
 // --------------------------------------------------------------------------
-function CardCyberpunk({ card, backSide }: { card: VaultCard; backSide?: React.ReactNode }) {
+export function CardCyberpunk({ card, backSide }: { card: VaultCard; backSide?: React.ReactNode }) {
   const isFullBleed = card.rarity === 'legendary' || card.rarity === 'mythic';
   const finalBack = backSide || <StandardVaultCardBack card={card} />;
   
@@ -2100,7 +2119,7 @@ function CardCyberpunk({ card, backSide }: { card: VaultCard; backSide?: React.R
 // --------------------------------------------------------------------------
 // DESIGN 11: WEISS ANIME HOLO SIGNATURE (theme-anime)
 // --------------------------------------------------------------------------
-function CardAnime({ card, backSide }: { card: VaultCard; backSide?: React.ReactNode }) {
+export function CardAnime({ card, backSide }: { card: VaultCard; backSide?: React.ReactNode }) {
   const isFullBleed = card.rarity === 'legendary' || card.rarity === 'mythic';
   const finalBack = backSide || <StandardVaultCardBack card={card} />;
   

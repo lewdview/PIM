@@ -6,6 +6,41 @@ import RarityBadge from './RarityBadge';
 import AudioPreview from './AudioPreview';
 import { formatDate } from '../utils/dayCalc';
 import { Gift, Flame, ShieldCheck } from 'lucide-react';
+import {
+  CardSkinContext,
+  CardOriginal, CardGlitch, CardGlass, CardArcade, CardMtg, CardPoker, CardDuelist, CardMonster, CardChrome, CardFantasy, CardCyberpunk, CardAnime,
+  BackOriginal, BackGlitch, BackGlass, BackArcade, BackMtg, BackPoker, BackDuelist, BackMonster, BackChrome, BackFantasy, BackCyberpunk, BackAnime
+} from '../pages/CardDesignShowcase';
+
+function renderCardBack(card: VaultCard, backSkin: string) {
+  if (backSkin === 'glitch') return <BackGlitch card={card} />;
+  if (backSkin === 'glass') return <BackGlass card={card} />;
+  if (backSkin === 'arcade') return <BackArcade card={card} />;
+  if (backSkin === 'mtg') return <BackMtg card={card} />;
+  if (backSkin === 'poker') return <BackPoker card={card} />;
+  if (backSkin === 'duelist') return <BackDuelist card={card} />;
+  if (backSkin === 'monster') return <BackMonster card={card} />;
+  if (backSkin === 'chrome') return <BackChrome card={card} />;
+  if (backSkin === 'fantasy') return <BackFantasy card={card} />;
+  if (backSkin === 'cyberpunk') return <BackCyberpunk card={card} />;
+  if (backSkin === 'anime') return <BackAnime card={card} />;
+  return <BackOriginal card={card} />;
+}
+
+function getSkinComponent(skin: string) {
+  if (skin === 'glitch') return CardGlitch;
+  if (skin === 'glass') return CardGlass;
+  if (skin === 'arcade') return CardArcade;
+  if (skin === 'mtg') return CardMtg;
+  if (skin === 'poker') return CardPoker;
+  if (skin === 'duelist') return CardDuelist;
+  if (skin === 'monster') return CardMonster;
+  if (skin === 'chrome') return CardChrome;
+  if (skin === 'fantasy') return CardFantasy;
+  if (skin === 'cyberpunk') return CardCyberpunk;
+  if (skin === 'anime') return CardAnime;
+  return CardOriginal;
+}
 
 interface CardProps {
   card: VaultCard;
@@ -165,13 +200,21 @@ export default function Card({
   const [hasFlipped, setHasFlipped] = useState(isRevealed);
   const [realClaimed, setRealClaimed] = useState<number | null>(null);
   const [activeCardBack, setActiveCardBack] = useState('classic');
+  const [activeCardSkin, setActiveCardSkin] = useState('original');
   useEffect(() => {
-    try {
-      const cb = localStorage.getItem('opt_cardBack') || 'classic';
-      setActiveCardBack(cb);
-    } catch (e) {
-      // ignore
-    }
+    const reloadSkins = () => {
+      try {
+        const cb = localStorage.getItem('opt_cardBack') || 'classic';
+        setActiveCardBack(cb);
+        const skin = localStorage.getItem('opt_cardSkin') || 'original';
+        setActiveCardSkin(skin);
+      } catch (e) {
+        // ignore
+      }
+    };
+    reloadSkins();
+    window.addEventListener('card_skins_changed', reloadSkins);
+    return () => window.removeEventListener('card_skins_changed', reloadSkins);
   }, []);
 
   const rotateY = useMotionValue(!isRevealed ? 180 : 0);
@@ -571,6 +614,25 @@ export default function Card({
       ))}
     </motion.div>
   ) : (() => {
+    if (!['classic', 'holo', 'carbon', 'gold_luxe', 'matrix', 'th3scr1b3'].includes(activeCardBack)) {
+      return (
+        <motion.div
+          style={{
+            position: 'absolute', inset: 0, borderRadius: '12px', overflow: 'hidden',
+            backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
+            rotateY: 180,
+            visibility: backVisibility,
+            willChange: 'transform',
+            background: '#0c0a07',
+            clipPath: 'inset(0 round 12px)',
+            WebkitClipPath: 'inset(0 round 12px)',
+          }}
+        >
+          {renderCardBack(card, activeCardBack)}
+        </motion.div>
+      );
+    }
+
     const isClassic = activeCardBack === 'classic';
     const isHolo = activeCardBack === 'holo';
     const isCarbon = activeCardBack === 'carbon';
@@ -1007,12 +1069,22 @@ export default function Card({
     </motion.div>
   );
 
-  const frontFace =
-    card.rarity === 'common'    ? commonFront :
-    card.rarity === 'uncommon'  ? uncommonFront :
-    card.rarity === 'rare'      ? rareFront :
-    card.rarity === 'legendary' ? legendaryFront :
-    mythicFront;
+  const frontFace = activeCardSkin !== 'original' && !ultraReward
+    ? (() => {
+        const SkinComponent = getSkinComponent(activeCardSkin);
+        return (
+          <CardSkinContext.Provider value={{ staticFace: 'front' }}>
+            <SkinComponent card={card} />
+          </CardSkinContext.Provider>
+        );
+      })()
+    : (
+        card.rarity === 'common'    ? commonFront :
+        card.rarity === 'uncommon'  ? uncommonFront :
+        card.rarity === 'rare'      ? rareFront :
+        card.rarity === 'legendary' ? legendaryFront :
+        mythicFront
+      );
 
   // ════════════════════════════════════════════════════════════════════════
   // OUTER WRAPPER

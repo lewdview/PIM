@@ -109,7 +109,7 @@ export default function HomePage() {
   const [showSolitaire, setShowSolitaire] = useState(false);
   const {
     dailyCard, hasClaimed, tokenBalance, loadVaultData, setDailyCard, setHasClaimed,
-    setCollection, startReveal, addToCollection, echoPrestigeScore, collection
+    setCollection, startReveal, addToCollection, echoPrestigeScore, collection, setOptionsModalOpen
   } = useVaultStore();
   const user = useAuthStore(s => s.user);
   const [isClaimingAnimation, setIsClaimingAnimation] = useState(false);
@@ -435,7 +435,7 @@ export default function HomePage() {
                     <StatSticker icon={Star} label="Proofs" value={proofs} color="var(--color-neon-purple)" rot={2.5} />
                   )}
                   <div
-                    onClick={() => { audioManager.playSfx('tap_nav', 0.1); setLocation('/options'); }}
+                    onClick={() => { audioManager.playSfx('tap_nav', 0.1); setOptionsModalOpen(true); }}
                     className="sticker-gun-tag sticker-slits hover:scale-105 transition-all cursor-pointer flex flex-col items-center justify-center border"
                     style={{
                       transform: 'rotate(-3deg)',

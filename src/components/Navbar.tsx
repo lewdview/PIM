@@ -170,6 +170,7 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const { is4K, toggle: toggle4K, detectCapability } = useDisplayMode();
+  const setOptionsModalOpen = useVaultStore((s) => s.setOptionsModalOpen);
 
   const handleConnectWallet = () => {
     setShowAuthModal(true);
@@ -208,7 +209,13 @@ export default function Navbar() {
                 <Link
                   key={to}
                   to={to}
-                  onClick={() => haptics.lightTap()}
+                  onClick={(e) => {
+                    haptics.lightTap();
+                    if (to === '/options') {
+                      e.preventDefault();
+                      setOptionsModalOpen(true);
+                    }
+                  }}
                   className="sticker-gun-tag sticker-slits transition-all hover:scale-105 active:scale-95 no-underline flex flex-row items-center gap-1.5"
                   style={{
                     transform: `rotate(${(i - 1) * 1.2}deg)`,
@@ -496,7 +503,14 @@ export default function Navbar() {
                     <Link
                       key={to}
                       to={to}
-                      onClick={() => { setMenuOpen(false); haptics.lightTap(); }}
+                      onClick={(e) => {
+                        setMenuOpen(false);
+                        haptics.lightTap();
+                        if (to === '/options') {
+                          e.preventDefault();
+                          setOptionsModalOpen(true);
+                        }
+                      }}
                       className="flex items-center gap-3 px-4 py-3 no-underline transition-all"
                       style={{
                         background: active ? '#ff3800' : 'rgba(255,255,255,0.03)',

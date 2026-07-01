@@ -78,6 +78,9 @@ interface VaultState {
   setEquippedCardId: (id: string | null) => void;
   loadVaultData: () => Promise<void>;
   completeOnboarding: () => Promise<void>;
+  unlockSkin: (skinId: string, cost: number) => Promise<boolean>;
+  optionsModalOpen: boolean;
+  setOptionsModalOpen: (open: boolean) => void;
 
   // Database Sync Actions
   syncHighScore: (songId: string, score: number, accuracy: number, maxCombo: number, medal: string) => Promise<void>;
@@ -129,9 +132,10 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   totalPulls: 0,
   pullsSinceRarePlus: 0,
   equippedCardId: null,
-  unlockedSkins: [],
+  unlockedSkins: JSON.parse(localStorage.getItem('local_unlocked_skins') || '["original", "glitch", "glass"]'),
   displayName: null,
   avatarUrl: null,
+  optionsModalOpen: false,
 
   // Initial Sync State
   highScores: {},
@@ -169,6 +173,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   setLoading: (loading) => set({ isLoading: loading }),
   setTokenBalance: (balance) => set({ tokenBalance: balance }),
   setEquippedCardId: (id) => set({ equippedCardId: id }),
+  setOptionsModalOpen: (open) => set({ optionsModalOpen: open }),
   loadVaultData: async () => {
     const session = await supabase.auth.getSession();
     const userId = session.data.session?.user.id;
@@ -577,5 +582,51 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         claimedRewards: { ...state.claimedRewards, [songId]: next }
       };
     });
+  },
+
+  unlockSkin: async (skinId, cost) => {
+    const state = get();
+    if (state.tokenBalance < cost) {
+      alert(`Insufficient Vault Tokens! Need ${cost} V⚡, but you only have ${state.tokenBalance} V⚡.`);
+      return false;
+    }
+    const session = await supabase.auth.getSession();
+    const userId = session.data.session?.user.id;
+    if (!userId) {
+      // Local storage fallback for guest/unauthenticated users
+      const localUnlocked = JSON.parse(localStorage.getItem('local_unlocked_skins') || '["original", "glitch", "glass"]');
+      if (!localUnlocked.includes(skinId)) {
+        localUnlocked.push(skinId);
+        localStorage.setItem('local_unlocked_skins', JSON.stringify(localUnlocked));
+      }
+      set((state) => ({
+        tokenBalance: state.tokenBalance - cost,
+        unlockedSkins: localUnlocked,
+      }));
+      return true;
+    }
+
+    const nextSkins = [...state.unlockedSkins, skinId];
+    const nextTokens = state.tokenBalance - cost;
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        unlocked_skins: nextSkins,
+        tokens: nextTokens,
+      })
+      .eq('id', userId);
+
+    if (error) {
+      console.error("Error unlocking skin in db:", error);
+      alert("Failed to unlock skin. Please try again.");
+      return false;
+    }
+
+    set({
+      unlockedSkins: nextSkins,
+      tokenBalance: nextTokens,
+    });
+    return true;
   },
 }));
