@@ -299,7 +299,18 @@ function Card3DWrapper({ rarity, themeClass, children, backSide }: CardWrapperPr
 
   if (staticFace === 'front') {
     return (
-      <div className={`h-full w-full select-none theme-${themeClass} rarity-${rarity}`}>
+      <div 
+        className={`card-face-front select-none theme-${themeClass} rarity-${rarity}`}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          backfaceVisibility: 'visible',
+          WebkitBackfaceVisibility: 'visible',
+          transform: 'none',
+          borderRadius: '12px',
+          overflow: 'hidden'
+        }}
+      >
         {children}
       </div>
     );
@@ -307,7 +318,18 @@ function Card3DWrapper({ rarity, themeClass, children, backSide }: CardWrapperPr
 
   if (staticFace === 'back') {
     return (
-      <div className={`h-full w-full select-none theme-${themeClass} rarity-${rarity}`}>
+      <div 
+        className={`card-face-back select-none theme-${themeClass} rarity-${rarity}`}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          backfaceVisibility: 'visible',
+          WebkitBackfaceVisibility: 'visible',
+          transform: 'none',
+          borderRadius: '12px',
+          overflow: 'hidden'
+        }}
+      >
         {backSide}
       </div>
     );
