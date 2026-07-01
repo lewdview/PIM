@@ -14,6 +14,7 @@ export default function GamepadCursor() {
   const animationFrameId = useRef<number | null>(null);
   const prevButtons = useRef<boolean[]>([]);
   const lastHoveredElRef = useRef<Element | null>(null);
+  const lastOverlayOrResultsTimeRef = useRef<number | null>(null);
 
   // Disable gamepad cursor completely on gameplay pages unless overlays are active
   const isPlaying = location.startsWith("/play/");
@@ -277,11 +278,30 @@ export default function GamepadCursor() {
         }
 
         // 4. Handle buttons
+        const isContinueOverlay = document.body.classList.contains("gameplay-continue");
+        const isResultsPage = location.startsWith("/results/");
+        const isProtected = isContinueOverlay || isResultsPage;
+
+        if (isProtected) {
+          if (lastOverlayOrResultsTimeRef.current === null) {
+            lastOverlayOrResultsTimeRef.current = performance.now();
+          }
+        } else {
+          lastOverlayOrResultsTimeRef.current = null;
+        }
+
+        const now = performance.now();
+        const timeSinceProtected = lastOverlayOrResultsTimeRef.current !== null
+          ? now - lastOverlayOrResultsTimeRef.current
+          : Infinity;
+
+        const isInputBlocked = isProtected && timeSinceProtected < 1000;
+
         // Button A (index 0) - Click
         const aPressed = gp.buttons[0]?.pressed || false;
         const aWasPressed = prevButtons.current[0] || false;
 
-        if (aPressed && !aWasPressed) {
+        if (aPressed && !aWasPressed && !isInputBlocked) {
           setClicking(true);
           audioManager.playSfx("tap_nav", 0.4);
 
@@ -314,8 +334,12 @@ export default function GamepadCursor() {
         const bWasPressed = prevButtons.current[1] || false;
 
         if (bPressed && !bWasPressed) {
-          audioManager.playSfx("back", 0.4);
-          window.history.back();
+          if (isResultsPage || isContinueOverlay) {
+            // Block B button entirely during continue and results pages to prevent accidental exits/abandonment
+          } else {
+            audioManager.playSfx("back", 0.4);
+            window.history.back();
+          }
         }
 
         // 5. Handle scrolling (Right Stick)
