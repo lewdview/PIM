@@ -23,9 +23,11 @@ export default function LeaderboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchLeaderboard() {
+    async function fetchLeaderboard(showLoading = false) {
       try {
-        setLoading(true);
+        if (showLoading) {
+          setLoading(true);
+        }
         // 1. Fetch all profiles
         const { data: profiles, error: pErr } = await supabase
           .from('profiles')
@@ -119,11 +121,36 @@ export default function LeaderboardPage() {
       } catch (err) {
         console.error("Failed to load real leaderboard:", err);
       } finally {
-        setLoading(false);
+        if (showLoading) {
+          setLoading(false);
+        }
       }
     }
 
-    fetchLeaderboard();
+    fetchLeaderboard(true);
+
+    // Set up realtime channel subscriptions to database events
+    const channel = supabase
+      .channel('leaderboard-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'vault_collections' },
+        () => {
+          fetchLeaderboard(false);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'profiles' },
+        () => {
+          fetchLeaderboard(false);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const yourEntry = entries.find(e => e.isYou);
