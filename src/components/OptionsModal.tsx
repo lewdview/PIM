@@ -440,6 +440,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
   const [activeCardBack, setActiveCardBack] = useState('classic');
   const [hoveredFrontSkin, setHoveredFrontSkin] = useState<string | null>(null);
   const [hoveredBackSkin, setHoveredBackSkin] = useState<string | null>(null);
+  const [previewCard, setPreviewCard] = useState<VaultCard>(SAMPLE_PREVIEW_CARD);
 
   useEffect(() => {
     if (isOpen) {
@@ -450,6 +451,21 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
       } catch (e) {
         // ignore
       }
+
+      // Load current Song of the Day as visual preview card
+      import("../utils/dayCalc").then(({ getCurrentDay }) => {
+        import("../services/vaultService").then(({ getCardByDay }) => {
+          const currentDay = getCurrentDay();
+          getCardByDay(currentDay).then(card => {
+            if (card) {
+              setPreviewCard({
+                ...card,
+                rarity: "legendary" // Mock to legendary to display active border effects at full fidelity
+              });
+            }
+          });
+        });
+      });
     }
   }, [isOpen]);
 
@@ -1118,7 +1134,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                       <div className="w-[170px] h-[240px] relative rounded-xl overflow-hidden shadow-2xl bg-zinc-950/80">
                         {(() => {
                           const SkinComp = getSkinComponent(hoveredFrontSkin || activeCardSkin);
-                          return <SkinComp card={SAMPLE_PREVIEW_CARD} />;
+                          return <SkinComp card={previewCard} />;
                         })()}
                       </div>
                     </CardSkinContext.Provider>
@@ -1213,7 +1229,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                         {(() => {
                           const SkinComp = getSkinComponent(activeCardSkin);
                           const BackComp = getBackComponent(hoveredBackSkin || activeCardBack);
-                          return <SkinComp card={SAMPLE_PREVIEW_CARD} backSide={<BackComp card={SAMPLE_PREVIEW_CARD} />} />;
+                          return <SkinComp card={previewCard} backSide={<BackComp card={previewCard} />} />;
                         })()}
                       </div>
                     </CardSkinContext.Provider>
