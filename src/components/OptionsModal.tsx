@@ -5,6 +5,62 @@ import { audioManager } from "../game/audio";
 import { logAnalyticsEvent } from "../services/telemetryService";
 import { useVaultStore } from "../store/useVaultStore";
 import { X, Volume2, Key, Info, Palette, Sparkles, Sliders, Check, Lock, Flame, ShieldAlert, Monitor, Sparkle } from "lucide-react";
+import type { VaultCard } from "../services/vaultService";
+import {
+  CardSkinContext,
+  CardOriginal, CardGlitch, CardGlass, CardArcade, CardMtg, CardPoker, CardDuelist, CardMonster, CardChrome, CardFantasy, CardCyberpunk, CardAnime,
+  BackOriginal, BackGlitch, BackGlass, BackArcade, BackMtg, BackPoker, BackDuelist, BackMonster, BackChrome, BackFantasy, BackCyberpunk, BackAnime
+} from '../pages/CardDesignShowcase';
+
+// ── DUMMY PREVIEW CARD FOR SKIN CONFIGS ──
+const SAMPLE_PREVIEW_CARD: VaultCard = {
+  id: "preview_sample",
+  day: 190,
+  title: "AESTHETIC ECHOES",
+  storageTitle: "aesthetic_echoes",
+  mood: "dark",
+  rarity: "legendary",
+  energy: 0.85,
+  valence: 0.72,
+  tempo: 128,
+  genre: ["ELECTRONIC", "CYBER"],
+  tags: ["SYNTH", "NEON", "PREVIEW"],
+  coverUrl: "/data/covers/day-190.jpg",
+  audioUrl: "",
+  description: "A digital hologram synthesized inside the beatstar vault system to preview skins.",
+  claimedCount: 42,
+  maxSupply: 100,
+};
+
+function getSkinComponent(skin: string) {
+  if (skin === 'glitch') return CardGlitch;
+  if (skin === 'glass') return CardGlass;
+  if (skin === 'arcade') return CardArcade;
+  if (skin === 'mtg') return CardMtg;
+  if (skin === 'poker') return CardPoker;
+  if (skin === 'duelist') return CardDuelist;
+  if (skin === 'monster') return CardMonster;
+  if (skin === 'chrome') return CardChrome;
+  if (skin === 'fantasy') return CardFantasy;
+  if (skin === 'cyberpunk') return CardCyberpunk;
+  if (skin === 'anime') return CardAnime;
+  return CardOriginal;
+}
+
+function getBackComponent(back: string) {
+  if (back === 'glitch') return BackGlitch;
+  if (back === 'glass') return BackGlass;
+  if (back === 'arcade') return BackArcade;
+  if (back === 'mtg') return BackMtg;
+  if (back === 'poker') return BackPoker;
+  if (back === 'duelist') return BackDuelist;
+  if (back === 'monster') return BackMonster;
+  if (back === 'chrome') return BackChrome;
+  if (back === 'fantasy') return BackFantasy;
+  if (back === 'cyberpunk') return BackCyberpunk;
+  if (back === 'anime') return BackAnime;
+  return BackOriginal;
+}
 
 // ── COLOR PRESETS FOR INDIVIDUAL LANES ──
 const COLOR_PRESETS: [string[], string[], string[]] = [
@@ -382,6 +438,8 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
 
   const [activeCardSkin, setActiveCardSkin] = useState('original');
   const [activeCardBack, setActiveCardBack] = useState('classic');
+  const [hoveredFrontSkin, setHoveredFrontSkin] = useState<string | null>(null);
+  const [hoveredBackSkin, setHoveredBackSkin] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -1051,123 +1109,34 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                   <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Unlock and select custom card borders for cards in your collection</p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                  {FRONT_SKINS.map(skin => {
-                    const isUnlocked = skin.cost === 0 || unlockedSkins.includes(skin.id);
-                    const isSelected = activeCardSkin === skin.id;
-
-                    return (
-                      <div 
-                        key={skin.id}
-                        className={`border rounded p-3 flex flex-col justify-between min-h-[96px] transition-all relative select-none ${
-                          isSelected 
-                            ? isAvant 
-                              ? 'border-[#39FF14] bg-[#39FF14]/5 shadow-[0_0_8px_rgba(57,255,20,0.1)]' 
-                              : 'border-[#FF1493] bg-[#FF1493]/5 shadow-[0_0_8px_rgba(255,20,147,0.1)]'
-                            : isUnlocked 
-                              ? 'border-white/5 bg-black/40 hover:border-white/15 cursor-pointer' 
-                              : 'border-white/5 bg-black/10 opacity-70'
-                        }`}
-                        onClick={() => isUnlocked && handleSelectFrontSkin(skin.id)}
-                      >
-                        <div className="flex justify-between items-start gap-2">
-                          <div className="flex flex-col">
-                            <span className="text-[10px] font-black font-mono text-white uppercase flex items-center gap-1.5">
-                              {skin.name}
-                              {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />}
-                            </span>
-                            <span className="text-[7.5px] text-zinc-500 font-mono mt-1 leading-snug uppercase">{skin.desc}</span>
-                          </div>
-                          {!isUnlocked && <Lock size={11} className="text-[#ffd700]" />}
-                        </div>
-
-                        <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-2">
-                          {isUnlocked ? (
-                            isSelected ? (
-                              <span className="text-[7.5px] text-emerald-400 font-mono font-black uppercase tracking-wider flex items-center gap-1">
-                                <Check size={10} /> ACTIVE SKIN
-                              </span>
-                            ) : (
-                              <span className="text-[7.5px] text-zinc-500 font-mono font-black uppercase tracking-wider">
-                                UNLOCKED
-                              </span>
-                            )
-                          ) : (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleUnlockFrontSkin(skin.id, skin.cost);
-                              }}
-                              className="w-full text-center text-[8px] font-mono font-black uppercase tracking-wider bg-[#ffd700] hover:bg-[#ffe045] text-black py-1 px-2 rounded transition-all flex items-center justify-center gap-1 cursor-pointer"
-                            >
-                              UNLOCK FOR {skin.cost} V⚡
-                            </button>
-                          )}
-                        </div>
+                <div className="flex flex-col lg:flex-row gap-6 items-center lg:items-start">
+                  
+                  {/* Visual Preview Side Column */}
+                  <div className="w-full lg:w-[220px] shrink-0 bg-black/45 border border-white/5 p-4 rounded-xl flex flex-col items-center gap-3 order-first lg:order-last">
+                    <span className="font-mono text-[9px] text-zinc-500 uppercase tracking-wider">LIVE SKIN PREVIEW</span>
+                    <CardSkinContext.Provider value={{ staticFace: 'front' }}>
+                      <div className="w-[170px] h-[240px] relative rounded-xl overflow-hidden shadow-2xl bg-zinc-950/80">
+                        {(() => {
+                          const SkinComp = getSkinComponent(hoveredFrontSkin || activeCardSkin);
+                          return <SkinComp card={SAMPLE_PREVIEW_CARD} />;
+                        })()}
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'backs' && (
-              <div className="space-y-5 animate-fade-in">
-                <div>
-                  <h2 className="font-mono text-xs font-bold text-white uppercase tracking-widest mb-1">Card Back Skins Catalog</h2>
-                  <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Select standard visual backings or unlock special card backings</p>
-                </div>
-
-                {/* Section 1: Standard Card Backs */}
-                <div className="space-y-3">
-                  <h3 className="font-mono text-[9px] font-black text-white/40 uppercase tracking-wider border-b border-white/5 pb-1">STANDARD CARD BACKS</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                    {STANDARD_CARD_BACKS.map(skin => {
-                      const isSelected = activeCardBack === skin.id;
-                      return (
-                        <div 
-                          key={skin.id}
-                          className={`border rounded p-3 flex flex-col justify-between min-h-[96px] transition-all cursor-pointer select-none ${
-                            isSelected 
-                              ? isAvant 
-                                ? 'border-[#39FF14] bg-[#39FF14]/5 shadow-[0_0_8px_rgba(57,255,20,0.1)]' 
-                                : 'border-[#FF1493] bg-[#FF1493]/5 shadow-[0_0_8px_rgba(255,20,147,0.1)]'
-                              : 'border-white/5 bg-black/40 hover:border-white/15'
-                          }`}
-                          onClick={() => handleSelectBackSkin(skin.id)}
-                        >
-                          <div className="flex flex-col">
-                            <span className="text-[10px] font-black font-mono text-white uppercase flex items-center gap-1.5">
-                              {skin.name}
-                              {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />}
-                            </span>
-                            <span className="text-[7.5px] text-zinc-500 font-mono mt-1 leading-snug uppercase">{skin.desc}</span>
-                          </div>
-
-                          <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-2">
-                            {isSelected ? (
-                              <span className="text-[7.5px] text-emerald-400 font-mono font-black uppercase tracking-wider flex items-center gap-1">
-                                <Check size={10} /> ACTIVE BACK
-                              </span>
-                            ) : (
-                              <span className="text-[7.5px] text-zinc-500 font-mono font-black uppercase tracking-wider">
-                                UNLOCKED (FREE)
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
+                    </CardSkinContext.Provider>
+                    <div className="text-center font-mono mt-1">
+                      <span className="text-[10px] text-white font-black block uppercase">
+                        {FRONT_SKINS.find(s => s.id === (hoveredFrontSkin || activeCardSkin))?.name}
+                      </span>
+                      <span className="text-[7.5px] text-zinc-500 uppercase mt-0.5 block">
+                        {hoveredFrontSkin ? "PREVIEWING HOVERED" : "CURRENTLY SELECTED"}
+                      </span>
+                    </div>
                   </div>
-                </div>
 
-                {/* Section 2: Special Unlockable Card Backs */}
-                <div className="space-y-3 pt-2">
-                  <h3 className="font-mono text-[9px] font-black text-white/40 uppercase tracking-wider border-b border-white/5 pb-1">MINT EDITOR UNLOCKABLE BACKS</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                    {BACK_SKINS.map(skin => {
-                      const isUnlocked = unlockedSkins.includes('back_' + skin.id);
-                      const isSelected = activeCardBack === skin.id;
+                  {/* Grid Selector */}
+                  <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {FRONT_SKINS.map(skin => {
+                      const isUnlocked = skin.cost === 0 || unlockedSkins.includes(skin.id);
+                      const isSelected = activeCardSkin === skin.id;
 
                       return (
                         <div 
@@ -1181,7 +1150,9 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                                 ? 'border-white/5 bg-black/40 hover:border-white/15 cursor-pointer' 
                                 : 'border-white/5 bg-black/10 opacity-70'
                           }`}
-                          onClick={() => isUnlocked && handleSelectBackSkin(skin.id)}
+                          onClick={() => isUnlocked && handleSelectFrontSkin(skin.id)}
+                          onMouseEnter={() => setHoveredFrontSkin(skin.id)}
+                          onMouseLeave={() => setHoveredFrontSkin(null)}
                         >
                           <div className="flex justify-between items-start gap-2">
                             <div className="flex flex-col">
@@ -1198,7 +1169,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                             {isUnlocked ? (
                               isSelected ? (
                                 <span className="text-[7.5px] text-emerald-400 font-mono font-black uppercase tracking-wider flex items-center gap-1">
-                                  <Check size={10} /> ACTIVE BACK
+                                  <Check size={10} /> ACTIVE SKIN
                                 </span>
                               ) : (
                                 <span className="text-[7.5px] text-zinc-500 font-mono font-black uppercase tracking-wider">
@@ -1209,7 +1180,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleUnlockBackSkin(skin.id, skin.cost);
+                                  handleUnlockFrontSkin(skin.id, skin.cost);
                                 }}
                                 className="w-full text-center text-[8px] font-mono font-black uppercase tracking-wider bg-[#ffd700] hover:bg-[#ffe045] text-black py-1 px-2 rounded transition-all flex items-center justify-center gap-1 cursor-pointer"
                               >
@@ -1222,7 +1193,153 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                     })}
                   </div>
                 </div>
+              </div>
+            )}
 
+            {activeTab === 'backs' && (
+              <div className="space-y-5 animate-fade-in">
+                <div>
+                  <h2 className="font-mono text-xs font-bold text-white uppercase tracking-widest mb-1">Card Back Skins Catalog</h2>
+                  <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Select standard visual backings or unlock special card backings</p>
+                </div>
+
+                <div className="flex flex-col lg:flex-row gap-6 items-center lg:items-start">
+                  
+                  {/* Visual Preview Side Column */}
+                  <div className="w-full lg:w-[220px] shrink-0 bg-black/45 border border-white/5 p-4 rounded-xl flex flex-col items-center gap-3 order-first lg:order-last">
+                    <span className="font-mono text-[9px] text-zinc-500 uppercase tracking-wider">LIVE BACK PREVIEW</span>
+                    <CardSkinContext.Provider value={{ staticFace: 'back' }}>
+                      <div className="w-[170px] h-[240px] relative rounded-xl overflow-hidden shadow-2xl bg-zinc-950/80">
+                        {(() => {
+                          const SkinComp = getSkinComponent(activeCardSkin);
+                          const BackComp = getBackComponent(hoveredBackSkin || activeCardBack);
+                          return <SkinComp card={SAMPLE_PREVIEW_CARD} backSide={<BackComp card={SAMPLE_PREVIEW_CARD} />} />;
+                        })()}
+                      </div>
+                    </CardSkinContext.Provider>
+                    <div className="text-center font-mono mt-1">
+                      <span className="text-[10px] text-white font-black block uppercase">
+                        {[...STANDARD_CARD_BACKS, ...BACK_SKINS.map(s => ({ id: s.id, name: s.name }))].find(b => b.id === (hoveredBackSkin || activeCardBack))?.name}
+                      </span>
+                      <span className="text-[7.5px] text-zinc-500 uppercase mt-0.5 block">
+                        {hoveredBackSkin ? "PREVIEWING HOVERED" : "CURRENTLY SELECTED"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Lists Container */}
+                  <div className="flex-1 w-full space-y-5">
+                    {/* Section 1: Standard Card Backs */}
+                    <div className="space-y-3">
+                      <h3 className="font-mono text-[9px] font-black text-white/40 uppercase tracking-wider border-b border-white/5 pb-1">STANDARD CARD BACKS</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        {STANDARD_CARD_BACKS.map(skin => {
+                          const isSelected = activeCardBack === skin.id;
+                          return (
+                            <div 
+                              key={skin.id}
+                              className={`border rounded p-3 flex flex-col justify-between min-h-[96px] transition-all cursor-pointer select-none ${
+                                isSelected 
+                                  ? isAvant 
+                                    ? 'border-[#39FF14] bg-[#39FF14]/5 shadow-[0_0_8px_rgba(57,255,20,0.1)]' 
+                                    : 'border-[#FF1493] bg-[#FF1493]/5 shadow-[0_0_8px_rgba(255,20,147,0.1)]'
+                                  : 'border-white/5 bg-black/40 hover:border-white/15'
+                              }`}
+                              onClick={() => handleSelectBackSkin(skin.id)}
+                              onMouseEnter={() => setHoveredBackSkin(skin.id)}
+                              onMouseLeave={() => setHoveredBackSkin(null)}
+                            >
+                              <div className="flex flex-col">
+                                <span className="text-[10px] font-black font-mono text-white uppercase flex items-center gap-1.5">
+                                  {skin.name}
+                                  {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />}
+                                </span>
+                                <span className="text-[7.5px] text-zinc-500 font-mono mt-1 leading-snug uppercase">{skin.desc}</span>
+                              </div>
+
+                              <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-2">
+                                {isSelected ? (
+                                  <span className="text-[7.5px] text-emerald-400 font-mono font-black uppercase tracking-wider flex items-center gap-1">
+                                    <Check size={10} /> ACTIVE BACK
+                                  </span>
+                                ) : (
+                                  <span className="text-[7.5px] text-zinc-500 font-mono font-black uppercase tracking-wider">
+                                    UNLOCKED (FREE)
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Section 2: Special Unlockable Card Backs */}
+                    <div className="space-y-3 pt-2">
+                      <h3 className="font-mono text-[9px] font-black text-white/40 uppercase tracking-wider border-b border-white/5 pb-1">MINT EDITOR UNLOCKABLE BACKS</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        {BACK_SKINS.map(skin => {
+                          const isUnlocked = unlockedSkins.includes('back_' + skin.id);
+                          const isSelected = activeCardBack === skin.id;
+
+                          return (
+                            <div 
+                              key={skin.id}
+                              className={`border rounded p-3 flex flex-col justify-between min-h-[96px] transition-all relative select-none ${
+                                isSelected 
+                                  ? isAvant 
+                                    ? 'border-[#39FF14] bg-[#39FF14]/5 shadow-[0_0_8px_rgba(57,255,20,0.1)]' 
+                                    : 'border-[#FF1493] bg-[#FF1493]/5 shadow-[0_0_8px_rgba(255,20,147,0.1)]'
+                                  : isUnlocked 
+                                    ? 'border-white/5 bg-black/40 hover:border-white/15 cursor-pointer' 
+                                    : 'border-white/5 bg-black/10 opacity-70'
+                              }`}
+                              onClick={() => isUnlocked && handleSelectBackSkin(skin.id)}
+                              onMouseEnter={() => setHoveredBackSkin(skin.id)}
+                              onMouseLeave={() => setHoveredBackSkin(null)}
+                            >
+                              <div className="flex justify-between items-start gap-2">
+                                <div className="flex flex-col">
+                                  <span className="text-[10px] font-black font-mono text-white uppercase flex items-center gap-1.5">
+                                    {skin.name}
+                                    {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />}
+                                  </span>
+                                  <span className="text-[7.5px] text-zinc-500 font-mono mt-1 leading-snug uppercase">{skin.desc}</span>
+                                </div>
+                                {!isUnlocked && <Lock size={11} className="text-[#ffd700]" />}
+                              </div>
+
+                              <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-2">
+                                {isUnlocked ? (
+                                  isSelected ? (
+                                    <span className="text-[7.5px] text-emerald-400 font-mono font-black uppercase tracking-wider flex items-center gap-1">
+                                      <Check size={10} /> ACTIVE BACK
+                                    </span>
+                                  ) : (
+                                    <span className="text-[7.5px] text-zinc-500 font-mono font-black uppercase tracking-wider">
+                                      UNLOCKED
+                                    </span>
+                                  )
+                                ) : (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleUnlockBackSkin(skin.id, skin.cost);
+                                    }}
+                                    className="w-full text-center text-[8px] font-mono font-black uppercase tracking-wider bg-[#ffd700] hover:bg-[#ffe045] text-black py-1 px-2 rounded transition-all flex items-center justify-center gap-1 cursor-pointer"
+                                  >
+                                    UNLOCK FOR {skin.cost} V⚡
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
               </div>
             )}
 
