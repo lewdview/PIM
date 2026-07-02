@@ -184,27 +184,137 @@ function DayNumberBadge({ day, color }: { day: number; color: string }) {
 function StandardVaultCardBack({ card }: { card: VaultCard }) {
   const rcColor = RARITY_COLORS[card.rarity];
   const pulseRarity = ['rare', 'legendary', 'mythic'].includes(card.rarity);
+  const { backSkin } = useContext(CardSkinContext);
+  const activeBack = backSkin || (typeof localStorage !== 'undefined' && localStorage.getItem('opt_cardBack')) || 'classic';
+
+  const isClassic = activeBack === 'classic';
+  const isHolo = activeBack === 'holo';
+  const isCarbon = activeBack === 'carbon';
+  const isGold = activeBack === 'gold_luxe';
+  const isMatrix = activeBack === 'matrix';
+  const isScribe = activeBack === 'th3scr1b3';
+
+  const backBg = isCarbon
+    ? '#090a0c'
+    : isHolo
+      ? 'linear-gradient(135deg, #0e1b29, #0c0a07, #210e29)'
+      : isGold
+        ? 'linear-gradient(135deg, #1f1a0f, #0d0c08, #1c150c)'
+        : isMatrix
+          ? '#030804'
+          : isScribe
+            ? '#0d0006'
+            : '#0c0a07';
+
+  const gridColor = isCarbon
+    ? 'rgba(0,255,255,0.08)'
+    : isGold
+      ? 'rgba(255,215,0,0.12)'
+      : isMatrix
+        ? 'rgba(57,255,20,0.12)'
+        : isScribe
+          ? 'rgba(255,20,147,0.12)'
+          : rcColor;
+
+  const borderCol = isCarbon
+    ? '#00ffff33'
+    : isGold
+      ? 'rgba(255,215,0,0.3)'
+      : isMatrix
+        ? 'rgba(57,255,20,0.25)'
+        : isScribe
+          ? 'rgba(255,20,147,0.25)'
+          : `${rcColor}22`;
+
+  const borderInnerCol = isCarbon
+    ? '#00ffff15'
+    : isGold
+      ? 'rgba(255,215,0,0.12)'
+      : isMatrix
+        ? 'rgba(57,255,20,0.1)'
+        : isScribe
+          ? 'rgba(255,20,147,0.1)'
+          : `${rcColor}10`;
+
+  const emblemBorder = isCarbon
+    ? '2px solid #00ffff55'
+    : isGold
+      ? '2px solid rgba(255,215,0,0.5)'
+      : isMatrix
+        ? '2px solid rgba(57,255,20,0.5)'
+        : isScribe
+          ? '2px dashed rgba(255,20,147,0.5)'
+          : `2px solid ${rcColor}30`;
+
+  const emblemBg = isCarbon
+    ? 'rgba(0,255,255,0.05)'
+    : isGold
+      ? 'rgba(255,215,0,0.04)'
+      : isMatrix
+        ? 'rgba(57,255,20,0.04)'
+        : isScribe
+          ? 'rgba(255,20,147,0.04)'
+          : `linear-gradient(145deg, ${rcColor}18, transparent)`;
+
+  const logoColor = isCarbon
+    ? '#00ffff'
+    : isGold
+      ? '#ffd700'
+      : isMatrix
+        ? '#39ff14'
+        : isScribe
+          ? '#ff007f'
+          : rcColor;
 
   return (
     <div className="relative w-full h-full overflow-hidden select-none">
-      {/* Base Dark Cover */}
-      <div className="absolute inset-0 bg-[#0c0a07]" />
+      {/* Base background cover */}
+      <div className="absolute inset-0" style={{ background: backBg }} />
 
-      {/* Rarity-tinted radial glow */}
-      <div 
-        className="card-back-radial-glow absolute inset-0" 
-        style={{ background: `radial-gradient(ellipse at 50% 40%, ${rcColor}14, transparent 65%)` }} 
-      />
+      {/* Custom back styling effects */}
+      {(isClassic || isHolo) && (
+        <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 50% 40%, ${rcColor}14, transparent 65%)` }} />
+      )}
+      {isHolo && (
+        <>
+          <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 50% 40%, ${rcColor}22, rgba(0,229,255,0.12), transparent 70%)` }} />
+          <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(120deg, rgba(0,229,255,0.08) 0%, rgba(255,20,147,0.12) 30%, rgba(57,255,20,0.08) 60%, rgba(0,229,255,0.08) 100%)', backgroundSize: '300% 100%', animation: 'foil-sweep 3.5s linear infinite' }} />
+        </>
+      )}
+      {isCarbon && (
+        <>
+          <div style={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(45deg, #121316 25%, transparent 25%), linear-gradient(-45deg, #121316 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #121316 75%), linear-gradient(-45deg, transparent 75%, #121316 75%)', backgroundSize: '8px 8px', opacity: 0.7 }} />
+          <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 50% 40%, rgba(0,255,255,0.12), transparent 70%)` }} />
+        </>
+      )}
+      {isGold && (
+        <>
+          <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 40%, rgba(255,215,0,0.14), transparent 65%)' }} />
+          <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(120deg, rgba(255,215,0,0.04) 0%, rgba(255,255,200,0.1) 25%, rgba(255,180,0,0.04) 50%, rgba(255,240,150,0.08) 75%, rgba(255,215,0,0.04) 100%)', backgroundSize: '300% 100%', animation: 'foil-sweep 4s linear infinite' }} />
+        </>
+      )}
+      {isMatrix && (
+        <>
+          <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 40%, rgba(57,255,20,0.14), transparent 70%)' }} />
+          <div className="absolute inset-0 scanlines opacity-[0.08]" style={{ background: 'linear-gradient(rgba(57,255,20,0.08) 50%, transparent 50%)', backgroundSize: '100% 4px' }} />
+        </>
+      )}
+      {isScribe && (
+        <>
+          <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 30% 20%, #4a002a 0%, transparent 60%), radial-gradient(circle at 70% 80%, #1a0033 0%, transparent 65%)', opacity: 0.8 }} />
+          <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(circle at 50% 50%, rgba(255,20,147,0.1) 0%, transparent 80%)' }} />
+        </>
+      )}
 
       {/* Animated sweeps for high rarities */}
-      {card.rarity === 'mythic' && <div className="card-back-foil-sweep" />}
-      {card.rarity === 'legendary' && <div className="card-back-foil-sweep" style={{ opacity: 0.6 }} />}
+      {(card.rarity === 'mythic' && isClassic) && <div className="card-back-foil-sweep" />}
+      {(card.rarity === 'legendary' && isClassic) && <div className="card-back-foil-sweep" style={{ opacity: 0.6 }} />}
 
       {/* Diamond grid SVG */}
       <svg className="absolute inset-0 w-full h-full opacity-[0.055]" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <pattern id={`bp-${card.id}`} x="0" y="0" width="22" height="22" patternUnits="userSpaceOnUse">
-            <path d="M11 0L22 11L11 22L0 11Z" fill="none" stroke={rcColor} strokeWidth="0.6" />
+            <path d="M11 0L22 11L11 22L0 11Z" fill="none" stroke={gridColor} strokeWidth="0.6" />
           </pattern>
         </defs>
         <rect width="100%" height="100%" fill={`url(#bp-${card.id})`} />
@@ -213,11 +323,11 @@ function StandardVaultCardBack({ card }: { card: VaultCard }) {
       {/* Inner double frames */}
       <div 
         className="absolute inset-3 border rounded-lg" 
-        style={{ borderColor: `${rcColor}22` }}
+        style={{ borderColor: borderCol }}
       >
         <div 
           className="absolute inset-1.5 border rounded" 
-          style={{ borderColor: `${rcColor}10` }}
+          style={{ borderColor: borderInnerCol }}
         >
           {/* Center emblem */}
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
@@ -225,14 +335,22 @@ function StandardVaultCardBack({ card }: { card: VaultCard }) {
             {/* V mark frame */}
             <div className="relative">
               <div 
-                className="w-16 h-16 rounded-full border-2 flex items-center justify-center overflow-hidden"
+                className="w-16 h-16 rounded-full border flex items-center justify-center overflow-hidden"
                 style={{
-                  background: `linear-gradient(145deg, ${rcColor}18, transparent)`,
-                  borderColor: `${rcColor}30`,
-                  boxShadow: `0 0 30px ${rcColor}10, inset 0 0 16px ${rcColor}05`,
+                  background: emblemBg,
+                  border: emblemBorder,
+                  boxShadow: isCarbon 
+                    ? '0 0 16px rgba(0,255,255,0.1)'
+                    : isGold
+                      ? '0 0 16px rgba(255,215,0,0.1)'
+                      : isMatrix
+                        ? '0 0 16px rgba(57,255,20,0.1)'
+                        : isScribe
+                          ? '0 0 16px rgba(255,20,147,0.1)'
+                          : `0 0 30px ${rcColor}10, inset 0 0 16px ${rcColor}05`,
                 }}
               >
-                <PimLogo color={rcColor} cardId={card.id} />
+                <PimLogo color={logoColor} cardId={card.id} />
               </div>
               
               {pulseRarity && (
@@ -247,18 +365,17 @@ function StandardVaultCardBack({ card }: { card: VaultCard }) {
             <div className="text-center flex flex-col gap-1 items-center">
               <span 
                 className="font-bold text-[10px] uppercase tracking-[0.35em]"
-                style={{ color: rcColor, textShadow: `0 0 10px ${rcColor}40` }}
+                style={{ color: logoColor, textShadow: isCarbon || isGold || isMatrix || isScribe ? `0 0 10px ${logoColor}60` : `0 0 10px ${rcColor}40` }}
               >
                 th3v4ult
               </span>
-              <div className="w-10 h-[1px]" style={{ background: `${rcColor}30` }} />
+              <div className="w-10 h-[1px]" style={{ background: isCarbon || isGold || isMatrix || isScribe ? `${logoColor}40` : `${rcColor}30` }} />
               <span className="text-[7.5px] uppercase tracking-wider text-[#fff0d8]/40">
                 GEN 0 · {card.rarity.toUpperCase()}
               </span>
             </div>
 
-            {/* Day pill replaced by custom SVG DayNumberBadge */}
-            <DayNumberBadge day={card.day} color={rcColor} />
+            <DayNumberBadge day={card.day} color={logoColor} />
 
           </div>
 
@@ -268,10 +385,10 @@ function StandardVaultCardBack({ card }: { card: VaultCard }) {
               position: 'absolute', width: '12px', height: '12px',
               top: t ? '6px' : undefined, bottom: !t ? '6px' : undefined,
               left: l ? '6px' : undefined, right: !l ? '6px' : undefined,
-              borderTop:    t ? `1px solid ${rcColor}25` : 'none',
-              borderBottom: !t ? `1px solid ${rcColor}25` : 'none',
-              borderLeft:   l ? `1px solid ${rcColor}25` : 'none',
-              borderRight:  !l ? `1px solid ${rcColor}25` : 'none',
+              borderTop:    t ? `1px solid ${borderCol}` : 'none',
+              borderBottom: !t ? `1px solid ${borderCol}` : 'none',
+              borderLeft:   l ? `1px solid ${borderCol}` : 'none',
+              borderRight:  !l ? `1px solid ${borderCol}` : 'none',
             }} />
           ))}
 

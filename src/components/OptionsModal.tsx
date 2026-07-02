@@ -1130,7 +1130,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                   {/* Visual Preview Side Column */}
                   <div className="w-full lg:w-[220px] shrink-0 bg-black/45 border border-white/5 p-4 rounded-xl flex flex-col items-center gap-3 order-first lg:order-last">
                     <span className="font-mono text-[9px] text-zinc-500 uppercase tracking-wider">LIVE SKIN PREVIEW</span>
-                    <CardSkinContext.Provider value={{ staticFace: 'front' }}>
+                    <CardSkinContext.Provider value={{ staticFace: 'front', backSkin: activeCardBack }}>
                       <div className="w-[170px] h-[240px] relative rounded-xl overflow-hidden shadow-2xl bg-zinc-950/80">
                         {(() => {
                           const SkinComp = getSkinComponent(hoveredFrontSkin || activeCardSkin);
@@ -1224,7 +1224,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                   {/* Visual Preview Side Column */}
                   <div className="w-full lg:w-[220px] shrink-0 bg-black/45 border border-white/5 p-4 rounded-xl flex flex-col items-center gap-3 order-first lg:order-last">
                     <span className="font-mono text-[9px] text-zinc-500 uppercase tracking-wider">LIVE BACK PREVIEW</span>
-                    <CardSkinContext.Provider value={{ staticFace: 'back' }}>
+                    <CardSkinContext.Provider value={{ staticFace: 'back', backSkin: hoveredBackSkin || activeCardBack }}>
                       <div className="w-[170px] h-[240px] relative rounded-xl overflow-hidden shadow-2xl bg-zinc-950/80">
                         {(() => {
                           const SkinComp = getSkinComponent(activeCardSkin);
