@@ -245,6 +245,129 @@ function SvgBlurSlider({ value, onChange, isAvant }: { value: number; onChange: 
   );
 }
 
+// ── SvgLatencySlider component ──
+function SvgLatencySlider({ value, onChange, isAvant }: { value: number; onChange: (v: number) => void; isAvant?: boolean }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleMove = useCallback((clientX: number) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const width = rect.width;
+    const clickX = Math.max(0, Math.min(clientX - rect.left, width));
+    const percentage = clickX / width;
+    
+    // Map percentage (0..1) to range -150..150 with step 5
+    const rawVal = -150 + percentage * 300;
+    const steppedValue = Math.round(rawVal / 5) * 5;
+    const clampedValue = Math.max(-150, Math.min(150, steppedValue));
+    onChange(clampedValue);
+  }, [onChange]);
+
+  useEffect(() => {
+    if (!isDragging) return;
+    const onMouseMove = (e: MouseEvent) => handleMove(e.clientX);
+    const onMouseUp = () => setIsDragging(false);
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches[0]) handleMove(e.touches[0].clientX);
+    };
+    const onTouchEnd = () => setIsDragging(false);
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    window.addEventListener("touchmove", onTouchMove);
+    window.addEventListener("touchend", onTouchEnd);
+
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("touchend", onTouchEnd);
+    };
+  }, [isDragging, handleMove]);
+
+  // Map value (-150..150) to percentage (0..100)
+  const pct = ((value + 150) / 300) * 100;
+  const strokeColor = isAvant ? "#39FF14" : "#FF1493";
+
+  return (
+    <div className="flex flex-col gap-2 mt-4 select-none animate-in fade-in slide-in-from-top-1 duration-200">
+      <div 
+        ref={containerRef}
+        className="relative h-6 flex items-center cursor-pointer"
+        onMouseDown={(e) => {
+          setIsDragging(true);
+          handleMove(e.clientX);
+        }}
+        onTouchStart={(e) => {
+          if (e.touches[0]) {
+            setIsDragging(true);
+            handleMove(e.touches[0].clientX);
+          }
+        }}
+      >
+        <svg className="w-full h-4 overflow-visible" xmlns="http://www.w3.org/2000/svg">
+          <line 
+            x1="0" y1="8" x2="100%" y2="8" 
+            stroke="rgba(255,255,255,0.08)" strokeWidth="4" 
+            strokeDasharray="4 2" 
+          />
+          <line 
+            x1="0" y1="8" x2={`${pct}%`} y2="8" 
+            stroke={strokeColor} strokeWidth="4" 
+            style={{ filter: `drop-shadow(0 0 4px ${strokeColor})` }}
+          />
+          {/* Ticks at -150, -75, 0, 75, 150 */}
+          {[0, 25, 50, 75, 100].map((x) => (
+            <rect
+              key={x}
+              x={`${x}%`}
+              y="5"
+              width="2"
+              height="6"
+              fill={((value + 150) / 300) * 100 >= x ? strokeColor : "rgba(255,255,255,0.18)"}
+              transform="translateX(-1px)"
+            />
+          ))}
+        </svg>
+
+        <div 
+          style={{
+            position: "absolute",
+            left: `${pct}%`,
+            transform: "translate(-50%, -50%)",
+            top: "50%",
+            width: 20,
+            height: 20,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            pointerEvents: "none"
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" overflow="visible">
+            <polygon 
+              points="8,1 15,8 8,15 1,8" 
+              fill={strokeColor} 
+              stroke="#ffffff" 
+              strokeWidth="1.5"
+              style={{ filter: `drop-shadow(0 0 6px ${strokeColor})` }}
+            />
+          </svg>
+        </div>
+      </div>
+      
+      <div className="flex justify-between font-mono text-[8px] text-zinc-600 tracking-wider px-1">
+        <span>−150ms (EARLY)</span>
+        <span style={{ color: value === 0 ? "rgba(255,255,255,0.4)" : strokeColor, fontWeight: "bold" }}>
+          {value === 0 ? "0ms (SYNCED)" : value > 0 ? `+${value}ms (LATE)` : `${value}ms (EARLY)`}
+        </span>
+        <span>+150ms (LATE)</span>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Modal Component ──
 export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
   const [opts, setOpts] = useState<GameOpts>(loadOpts());
@@ -314,6 +437,32 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
     if (k === "bgMusic") window.dispatchEvent(new Event("bgmusic_toggle"));
     logAnalyticsEvent('setting_change', { key: k, value: v });
     audioManager.playSfx('tap_nav', 0.1);
+  };
+
+  const renderToggle = (k: "missSystem" | "hudMisses" | "comboDisplay" | "judgmentText" | "useLocalFiles" | "bgMusic" | "haptics") => {
+    const val = opts[k];
+    const activeColor = isAvant ? "#39FF14" : "#FF1493";
+    return (
+      <button 
+        onClick={() => toggleSetting(k)}
+        className={`w-11 h-5 rounded-full p-0.5 transition-all relative cursor-pointer border ${
+          val 
+            ? isAvant 
+              ? 'bg-[#39FF14]/15 border-[#39FF14] shadow-[0_0_8px_rgba(57,255,20,0.25)]' 
+              : 'bg-[#FF1493]/15 border-[#FF1493] shadow-[0_0_8px_rgba(255,20,147,0.25)]'
+            : 'bg-black/40 border-white/10 hover:border-white/20'
+        }`}
+      >
+        <span 
+          className={`w-3.5 h-3.5 rounded-full block transition-all ${
+            val 
+              ? 'translate-x-[22px]' 
+              : 'translate-x-0 bg-zinc-600'
+          }`}
+          style={{ background: val ? activeColor : undefined }}
+        />
+      </button>
+    );
   };
 
   const setNoteThemePreset = (themeId: string, colors: string[]) => {
@@ -532,12 +681,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                         <span className="text-[10px] font-bold text-white font-mono uppercase">Miss System (Fails)</span>
                         <span className="text-[8px] text-zinc-500 font-mono">Quarantine note lanes and reset multipliers on misses</span>
                       </div>
-                      <button 
-                        onClick={() => toggleSetting('missSystem')}
-                        className={`w-11 h-5 rounded-full p-0.5 transition-colors relative cursor-pointer ${opts.missSystem ? 'bg-emerald-500' : 'bg-white/10'}`}
-                      >
-                        <span className={`w-4 h-4 rounded-full bg-black shadow-md block transition-transform ${opts.missSystem ? 'translate-x-6' : 'translate-x-0'}`} />
-                      </button>
+                      {renderToggle('missSystem')}
                     </div>
 
                     <div className="flex justify-between items-center">
@@ -545,12 +689,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                         <span className="text-[10px] font-bold text-white font-mono uppercase">HUD Miss Counters</span>
                         <span className="text-[8px] text-zinc-500 font-mono">Show live miss details at the top bar</span>
                       </div>
-                      <button 
-                        onClick={() => toggleSetting('hudMisses')}
-                        className={`w-11 h-5 rounded-full p-0.5 transition-colors relative cursor-pointer ${opts.hudMisses ? 'bg-emerald-500' : 'bg-white/10'}`}
-                      >
-                        <span className={`w-4 h-4 rounded-full bg-black shadow-md block transition-transform ${opts.hudMisses ? 'translate-x-6' : 'translate-x-0'}`} />
-                      </button>
+                      {renderToggle('hudMisses')}
                     </div>
 
                     <div className="flex justify-between items-center">
@@ -558,12 +697,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                         <span className="text-[10px] font-bold text-white font-mono uppercase">Combo Streak Display</span>
                         <span className="text-[8px] text-zinc-500 font-mono">Show combo streak counts overlay in mid panel</span>
                       </div>
-                      <button 
-                        onClick={() => toggleSetting('comboDisplay')}
-                        className={`w-11 h-5 rounded-full p-0.5 transition-colors relative cursor-pointer ${opts.comboDisplay ? 'bg-emerald-500' : 'bg-white/10'}`}
-                      >
-                        <span className={`w-4 h-4 rounded-full bg-black shadow-md block transition-transform ${opts.comboDisplay ? 'translate-x-6' : 'translate-x-0'}`} />
-                      </button>
+                      {renderToggle('comboDisplay')}
                     </div>
 
                     <div className="flex justify-between items-center">
@@ -571,12 +705,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                         <span className="text-[10px] font-bold text-white font-mono uppercase">Judgment Text Indicators</span>
                         <span className="text-[8px] text-zinc-500 font-mono">Perfect, Great, and Late markers on note hit timings</span>
                       </div>
-                      <button 
-                        onClick={() => toggleSetting('judgmentText')}
-                        className={`w-11 h-5 rounded-full p-0.5 transition-colors relative cursor-pointer ${opts.judgmentText ? 'bg-emerald-500' : 'bg-white/10'}`}
-                      >
-                        <span className={`w-4 h-4 rounded-full bg-black shadow-md block transition-transform ${opts.judgmentText ? 'translate-x-6' : 'translate-x-0'}`} />
-                      </button>
+                      {renderToggle('judgmentText')}
                     </div>
                   </div>
 
@@ -589,12 +718,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                         <span className="text-[10px] font-bold text-white font-mono uppercase">Ambient BGM</span>
                         <span className="text-[8px] text-zinc-500 font-mono">Casette tape radio hum loops in vault directories</span>
                       </div>
-                      <button 
-                        onClick={() => toggleSetting('bgMusic')}
-                        className={`w-11 h-5 rounded-full p-0.5 transition-colors relative cursor-pointer ${opts.bgMusic ? 'bg-emerald-500' : 'bg-white/10'}`}
-                      >
-                        <span className={`w-4 h-4 rounded-full bg-black shadow-md block transition-transform ${opts.bgMusic ? 'translate-x-6' : 'translate-x-0'}`} />
-                      </button>
+                      {renderToggle('bgMusic')}
                     </div>
 
                     <div className="flex justify-between items-center">
@@ -602,12 +726,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                         <span className="text-[10px] font-bold text-white font-mono uppercase">Force Local Audio Files</span>
                         <span className="text-[8px] text-zinc-500 font-mono">Read offline local files over slow public URLs</span>
                       </div>
-                      <button 
-                        onClick={() => toggleSetting('useLocalFiles')}
-                        className={`w-11 h-5 rounded-full p-0.5 transition-colors relative cursor-pointer ${opts.useLocalFiles ? 'bg-emerald-500' : 'bg-white/10'}`}
-                      >
-                        <span className={`w-4 h-4 rounded-full bg-black shadow-md block transition-transform ${opts.useLocalFiles ? 'translate-x-6' : 'translate-x-0'}`} />
-                      </button>
+                      {renderToggle('useLocalFiles')}
                     </div>
 
                     <div className="flex justify-between items-center">
@@ -615,12 +734,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                         <span className="text-[10px] font-bold text-white font-mono uppercase">System Haptic Vibrations</span>
                         <span className="text-[8px] text-zinc-500 font-mono">Subtle device feedback on hitting notes</span>
                       </div>
-                      <button 
-                        onClick={() => toggleSetting('haptics')}
-                        className={`w-11 h-5 rounded-full p-0.5 transition-colors relative cursor-pointer ${opts.haptics ? 'bg-emerald-500' : 'bg-white/10'}`}
-                      >
-                        <span className={`w-4 h-4 rounded-full bg-black shadow-md block transition-transform ${opts.haptics ? 'translate-x-6' : 'translate-x-0'}`} />
-                      </button>
+                      {renderToggle('haptics')}
                     </div>
                   </div>
                 </div>
@@ -753,29 +867,18 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                   
                   <BeatVisualizer offsetMs={opts.audioOffset} isAvant={isAvant} />
 
-                  <div className="flex items-center justify-between font-mono">
+                   <div className="flex items-center justify-between font-mono">
                     <span className="text-[9px] text-zinc-500 tracking-wider">LATENCY COMPENSATION</span>
-                    <span className="text-sm font-black" style={{ color: themeColor }}>
-                      {opts.audioOffset === 0 ? "0 MS (SYNCED)" : opts.audioOffset > 0 ? `+${opts.audioOffset} MS (LATE)` : `${opts.audioOffset} MS (EARLY)`}
-                    </span>
                   </div>
 
-                  <input
-                    type="range" min={-150} max={150} step={5} value={opts.audioOffset}
-                    onChange={e => {
-                      const v = parseInt(e.target.value);
+                  <SvgLatencySlider 
+                    value={opts.audioOffset}
+                    onChange={v => {
                       localStorage.setItem("opt_audioOffset", String(v));
                       setOpts(o => ({ ...o, audioOffset: v }));
                     }}
-                    className="w-full accent-current cursor-pointer"
-                    style={{ color: themeColor }}
+                    isAvant={isAvant}
                   />
-
-                  <div className="flex justify-between font-mono text-[7px] text-zinc-600">
-                    <span>−150 ms (notes pass early)</span>
-                    <span>0 ms (default)</span>
-                    <span>+150 ms (notes pass late)</span>
-                  </div>
                   
                   <p className="font-mono text-[7.5px] text-zinc-500 leading-normal uppercase">
                     DRAG LEFT IF NOTES SEEM TO PASS BEFORE THE BEAT SOUNDS · DRAG RIGHT IF BEAT SOUNDS BEFORE NOTES REACH TRIGGER BAR
