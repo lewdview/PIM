@@ -28,7 +28,11 @@ export default defineConfig({
     allowedHosts: true,
     fs: {
       strict: false,
-      allow: ["..", "/Volumes/extremeUno/th3scr1b3-365-warp/365-releases"],
+      allow: [
+        "..",
+        "/Volumes/extremeUno/th3scr1b3-365-warp/365-releases",
+        "/Volumes/extremeDos/temp music"
+      ],
     },
     headers: {
       "Cross-Origin-Opener-Policy": "same-origin-allow-popups",

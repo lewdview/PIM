@@ -170,7 +170,7 @@ export function generateCardMetadata(owned: OwnedCard) {
   const timelineStatus = currentWorldDay >= card.day ? "resolved" : "pending";
 
   return {
-    name: `${card.title} #Day ${card.day}`,
+    name: `th3scr1b3's 365 Days of Light and Dark - PIM : th3v4ult - Day ${String(card.day).padStart(3, '0')} : ${card.title}`,
     description: card.description || `TH3V4ULT Gen 0 Archive - Day ${card.day} of 365.`,
     image: card.coverUrl,
     animation_url: card.audioUrl,

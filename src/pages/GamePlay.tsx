@@ -1073,6 +1073,36 @@ export default function Game() {
       const isSurge = puRef.current.active === "SURGE" && getT() < puRef.current.endTime;
       if (isSurge || ns.autoplayedBySurge) return;
 
+      // If it requires a swipe-release, releasing it without swiping is a miss!
+      if (ns.note.swipeDirection) {
+        ns.holdActive = false;
+        ns.missed = true;
+        lastMissLaneTimeRef.current[ns.note.lane] = Date.now();
+        const gsx = gsRef.current;
+        gsx.combo = 0;
+        gsx.misses++;
+        puRef.current.active = null;
+        puRef.current.endTime = 0;
+        updatePuDisplayDOM(null);
+        puRef.current.triggered.clear();
+        haptics.error();
+
+        jRef.current = [
+          ...jRef.current.filter((x) => Date.now() - x.ts < 600),
+          { type: "MISS", lane: ns.note.lane, id: ++jCounter.current, ts: Date.now() },
+        ];
+        const now = Date.now();
+        if (now - lastMissTimeRef.current > 350) {
+          missCountRef.current++;
+          lastMissTimeRef.current = now;
+        }
+        setMissCount(missCountRef.current);
+
+        muteLane(ns.note.lane);
+        syncDisplay();
+        return;
+      }
+
       // If it's a slide note, it must end in the targetLane
       if (ns.note.targetLane !== undefined && ns.currentLane !== ns.note.targetLane) {
         const isSignalLock = puRef.current.active === "SIGNAL_LOCK" && getT() < puRef.current.endTime && shieldChargesRef.current > 0;
@@ -1180,6 +1210,56 @@ export default function Game() {
       completeHoldNote(ns);
     },
     [completeHoldNote],
+  );
+
+  const hitSwipeRelease = useCallback(
+    (ns: NoteState, swipeDir: Note['swipeDirection']) => {
+      ns.hit = true;
+      ns.holdActive = false;
+      const gs = gsRef.current;
+      const t = getT();
+      const dl = songRef.current?.difficultyLevel ?? 5;
+      const diff = Math.abs((ns.note.time + (ns.note.holdDuration || 0.5)) - t);
+
+      let j: "PERFECT+" | "PERFECT" | "GOOD" | null =
+        diff <= perfectPlusWindow(dl)
+          ? "PERFECT+"
+          : diff <= perfectWindow(dl)
+            ? "PERFECT"
+            : diff <= goodWindow(dl)
+              ? "GOOD"
+              : null;
+      if (!j) j = "GOOD"; // Fallback to GOOD inside miss window bounds
+
+      gs.score += calcScore(gs.combo, j);
+      gs.combo++;
+      gs.maxCombo = Math.max(gs.maxCombo, gs.combo);
+      if (j === "PERFECT+") {
+        gs.perfectPlus++;
+        audioManager.playSfx("tap_nav", 0.15);
+      } else if (j === "PERFECT") {
+        gs.perfects++;
+        audioManager.playSfx("tap_nav", 0.12);
+      } else {
+        gs.goods++;
+        audioManager.playSfx("tap_nav", 0.1);
+      }
+
+      checkPowerUps(gs.combo);
+      haptics.doubleTap();
+
+      const dpr = window.devicePixelRatio || 1;
+      const H = (canvasRef.current?.height ?? 600) / dpr;
+      const hitY = H * HIT_RATIO;
+      triggerHitFx(ns.currentLane, j, hitY, swipeDir);
+
+      jRef.current = [
+        ...jRef.current.filter((x) => Date.now() - x.ts < 600),
+        { type: j, lane: ns.currentLane, id: ++jCounter.current, ts: Date.now() },
+      ];
+      syncDisplay();
+    },
+    [getT, calcScore, checkPowerUps, syncDisplay, triggerHitFx],
   );
 
   const moveHold = useCallback(
@@ -2002,23 +2082,27 @@ export default function Game() {
         : laneRef.current[Math.round(ns.currentLane)]?.pressed;
 
       if (ns.holdActive && ns.holdProgress >= 1 && (isSurge || ns.autoplayedBySurge || isPressed)) {
-        ns.hit = true;
-        ns.holdActive = false;
-        const gs = gsRef.current;
-        gs.score += calcScore(gs.combo, "PERFECT+");
-        gs.combo++;
-        gs.maxCombo = Math.max(gs.maxCombo, gs.combo);
-        gs.perfectPlus++;
-        checkPowerUps(gs.combo);
-        haptics.mediumTap();
-        audioManager.playSfx("tap_nav", 0.15);
-        triggerHitFx(ns.currentLane, "PERFECT+", hitY);
+        if (note.swipeDirection && !isSurge && !ns.autoplayedBySurge) {
+          // Swipe-release hold note: wait for the swipe input. Do not auto-hit.
+        } else {
+          ns.hit = true;
+          ns.holdActive = false;
+          const gs = gsRef.current;
+          gs.score += calcScore(gs.combo, "PERFECT+");
+          gs.combo++;
+          gs.maxCombo = Math.max(gs.maxCombo, gs.combo);
+          gs.perfectPlus++;
+          checkPowerUps(gs.combo);
+          haptics.mediumTap();
+          audioManager.playSfx("tap_nav", 0.15);
+          triggerHitFx(ns.currentLane, "PERFECT+", hitY, note.swipeDirection);
 
-        jRef.current = [
-          ...jRef.current.filter((x) => Date.now() - x.ts < 600),
-          { type: "PERFECT+", lane: ns.currentLane, id: ++jCounter.current, ts: Date.now() },
-        ];
-        dirty = true;
+          jRef.current = [
+            ...jRef.current.filter((x) => Date.now() - x.ts < 600),
+            { type: "PERFECT+", lane: ns.currentLane, id: ++jCounter.current, ts: Date.now() },
+          ];
+          dirty = true;
+        }
       }
 
       if (ns.hit) continue;
@@ -2476,7 +2560,7 @@ export default function Game() {
           const tailR_inactive = tailH_inactive * 0.32;
           drawKey(ctx, tailX_inactive, headY, tailW_inactive, tailH_inactive, tailR_inactive, noteColor, headP, true, note.swipeDirection);
         }
-        drawKey(ctx, drawX, noteY, noteW, noteH, r, noteColor, prog, false, note.swipeDirection);
+        drawKey(ctx, drawX, noteY, noteW, noteH, r, noteColor, prog, false, note.type === "hold" ? undefined : note.swipeDirection);
       }
 
       if (isMissedNote) {
@@ -3107,6 +3191,16 @@ export default function Game() {
           return;
         }
 
+        const activeHoldWithSwipe = notesRef.current.find(n =>
+          n.holdActive && !n.hit && !n.missed &&
+          n.note.swipeDirection === swipeDir &&
+          Math.abs((n.note.time + (n.note.holdDuration || 0.5)) - t) < missWindow(songRef.current?.difficultyLevel ?? 5)
+        );
+        if (activeHoldWithSwipe) {
+          hitSwipeRelease(activeHoldWithSwipe, swipeDir);
+          return;
+        }
+
         // If it's an arrow-only press (left/right) and we are holding a slide, move it
         if (key === "ArrowLeft" || key === "ArrowRight") {
           for (let i = 0; i < LANE_COUNT; i++) {
@@ -3190,7 +3284,7 @@ export default function Game() {
       window.removeEventListener("keydown", onDown);
       window.removeEventListener("keyup", onUp);
     };
-  }, [hitLane, releaseLane, moveHold, getT]);
+  }, [hitLane, releaseLane, moveHold, getT, hitSwipeRelease]);
 
   // ── Gamepad API Controller Support ──
   const prevGamepadLanePressedRef = useRef<[boolean, boolean, boolean]>([false, false, false]);
@@ -3497,10 +3591,23 @@ export default function Game() {
           start.y = touch.clientY;
           return true;
         }
+
+        const activeHoldWithSwipe = notesRef.current.find(n =>
+          n.holdActive && !n.hit && !n.missed &&
+          n.note.swipeDirection === swipeDir &&
+          n.currentLane === checkLane &&
+          Math.abs((n.note.time + (n.note.holdDuration || 0.5)) - t) < missWindow(songRef.current?.difficultyLevel ?? 5)
+        );
+        if (activeHoldWithSwipe) {
+          hitSwipeRelease(activeHoldWithSwipe, swipeDir);
+          start.x = touch.clientX;
+          start.y = touch.clientY;
+          return true;
+        }
       }
       return false;
     },
-    [getT, hitLane],
+    [getT, hitLane, hitSwipeRelease],
   );
 
   const onPointerDown = useCallback(
@@ -5983,23 +6090,29 @@ function drawKey(
     'up-right': -Math.PI / 4,
   };
 
+  // Compute morph factor m (morphs from rounded rect (0) to chevron (1) as prog goes from 0.25 to 0.85)
+  const m = swipeDirection ? (isHold ? Math.max(0, Math.min(1, (prog - 0.25) / 0.6)) : 1.0) : 0;
+
   if (swipeDirection) {
-    ctx.rotate(rotations[swipeDirection] || 0);
+    ctx.rotate(m * (rotations[swipeDirection] || 0));
   }
 
   // ── 1. Define Key Body Path ──
   ctx.beginPath();
-  if (swipeDirection) {
+  if (m > 0) {
     const w = noteW / 2;
     const h = noteH / 2;
-    const br = 8; // body corner radius
-    // Rounded chevron pointing right
+    const br = lerp(r, 8, m);
+    // Interpolated chevron path
+    const pinchX = lerp(w, w * 0.2, m);
+    const indentX = lerp(-w, -w * 0.35, m);
+
     ctx.moveTo(-w + br, -h);
-    ctx.arcTo(w * 0.2, -h, w, 0, br);
-    ctx.arcTo(w, 0, w * 0.2, h, br);
-    ctx.arcTo(w * 0.2, h, -w, h, br);
-    ctx.arcTo(-w, h, -w * 0.35, 0, br);
-    ctx.arcTo(-w * 0.35, 0, -w, -h, br);
+    ctx.arcTo(pinchX, -h, w, 0, br);
+    ctx.arcTo(w, 0, pinchX, h, br);
+    ctx.arcTo(pinchX, h, -w, h, br);
+    ctx.arcTo(-w, h, indentX, 0, br);
+    ctx.arcTo(indentX, 0, -w, -h, br);
     ctx.arcTo(-w, -h, -w + br, -h, br);
     ctx.closePath();
   } else {
@@ -6077,22 +6190,32 @@ function drawKey(
   }
 
   if (isHold) {
-    // ── 4. WHITE CORE DOT FOR HOLD TERMINUS ──
+    // ── 4. WHITE CORE DOT OR ARROW FOR HOLD TERMINUS ──
     ctx.fillStyle = "#FFFFFF";
     ctx.shadowColor = "#FFFFFF";
     ctx.shadowBlur = 12;
     ctx.globalAlpha = 0.95;
     ctx.beginPath();
-    ctx.arc(0, 0, 5, 0, Math.PI * 2);
+    if (swipeDirection && m > 0.3) {
+      // Small arrow pointing right (rotated by ctx.rotate to correct direction)
+      ctx.moveTo(-4 * m, -3 * m);
+      ctx.lineTo(3 * m, 0);
+      ctx.lineTo(-4 * m, 3 * m);
+      ctx.closePath();
+    } else {
+      ctx.arc(0, 0, 5 * (1 - m), 0, Math.PI * 2);
+    }
     ctx.fill();
     
-    // Add outer white glowing ring for the core dot
-    const pulseR = 8 + 3 * Math.sin(Date.now() / 120);
-    ctx.strokeStyle = `rgba(255, 255, 255, ${0.85 - (pulseR - 8) / 6})`;
-    ctx.lineWidth = 1.8;
-    ctx.beginPath();
-    ctx.arc(0, 0, pulseR, 0, Math.PI * 2);
-    ctx.stroke();
+    // Add outer white glowing ring for the core dot (only if not fully morphed to arrow)
+    if (m < 0.8) {
+      const pulseR = 8 + 3 * Math.sin(Date.now() / 120);
+      ctx.strokeStyle = `rgba(255, 255, 255, ${(0.85 - (pulseR - 8) / 6) * (1 - m)})`;
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.arc(0, 0, pulseR, 0, Math.PI * 2);
+      ctx.stroke();
+    }
   } else {
     // ── 4. COLORED CENTER STRIPE ──
     const stripeH = Math.max(6, noteH * 0.26);
