@@ -397,6 +397,129 @@ function generateProceduralChart(song: any): Note[] {
   return notes;
 }
 
+// ── Audio Forge: Transient Onset Beatmap Generator ───────────────
+async function generateAudioForgeChart(song: any): Promise<Note[]> {
+  const audioUrl = song.audioUrl;
+  if (!audioUrl) {
+    throw new Error("No audioUrl found for song");
+  }
+
+  const bpm = song.bpm || 120;
+  const beatDuration = 60 / bpm;
+  const duration = Math.min(180, song.duration || 120);
+  const difficulty = song.difficultyLevel || 5;
+
+  console.log(`[Audio Forge] Running transient onset analysis on: ${audioUrl}`);
+  
+  const response = await fetch(audioUrl);
+  if (!response.ok) {
+    throw new Error(`Fetch failed with status ${response.status}`);
+  }
+  const arrayBuffer = await response.arrayBuffer();
+
+  const sampleRate = 22050;
+  const offlineCtx = new (window.OfflineAudioContext || (window as any).webkitOfflineAudioContext)(
+    1,
+    Math.floor(sampleRate * duration),
+    sampleRate
+  );
+
+  const audioBuffer = await offlineCtx.decodeAudioData(arrayBuffer);
+  const channelData = audioBuffer.getChannelData(0);
+  const totalSamples = channelData.length;
+
+  const blockSize = 512;
+  const movingAvgWindow = 43;
+  const blockEnergies: number[] = [];
+  const noteTimes: number[] = [];
+
+  for (let i = 0; i < totalSamples; i += blockSize) {
+    let sum = 0;
+    const end = Math.min(totalSamples, i + blockSize);
+    for (let j = i; j < end; j++) {
+      sum += channelData[j] * channelData[j];
+    }
+    const rms = Math.sqrt(sum / (end - i));
+    blockEnergies.push(rms);
+  }
+
+  const thresholdRatio = 1.35 - (difficulty * 0.035);
+  const minCooldown = Math.max(0.12, 0.45 - (difficulty * 0.035));
+  let lastNoteTime = 0;
+
+  for (let b = movingAvgWindow; b < blockEnergies.length; b++) {
+    const instantEnergy = blockEnergies[b];
+
+    let windowSum = 0;
+    for (let w = b - movingAvgWindow; w < b; w++) {
+      windowSum += blockEnergies[w];
+    }
+    const localAvgEnergy = windowSum / movingAvgWindow;
+    const blockTime = (b * blockSize) / sampleRate;
+
+    if (instantEnergy > localAvgEnergy * thresholdRatio && instantEnergy > 0.015) {
+      if (blockTime - lastNoteTime >= minCooldown && blockTime >= 3.0 && blockTime < duration - 4) {
+        noteTimes.push(blockTime);
+        lastNoteTime = blockTime;
+      }
+    }
+  }
+
+  const notes: Note[] = [];
+  let lastLane = 1;
+  let secondLastLane = 0;
+
+  noteTimes.forEach((time, index) => {
+    const availableLanes = [0, 1, 2].filter(l => l !== lastLane && l !== secondLastLane);
+    const lane = availableLanes[Math.floor((time * 17) % availableLanes.length)];
+    secondLastLane = lastLane;
+    lastLane = lane;
+
+    let noteType: 'tap' | 'hold' | 'swipe' = 'tap';
+    let holdDuration: number | undefined;
+    let swipeDirection: 'up' | 'down' | 'left' | 'right' | undefined;
+
+    const blockIndex = Math.floor((time * sampleRate) / blockSize);
+    const energy = blockEnergies[blockIndex] || 0;
+
+    if (difficulty >= 3 && energy > 0.12 && index % 4 === 1) {
+      noteType = 'hold';
+      holdDuration = beatDuration * (1.5 + (index % 2));
+    } else if (difficulty >= 5 && energy > 0.18 && index % 5 === 3) {
+      noteType = 'swipe';
+      const dirs: ('up' | 'down' | 'left' | 'right')[] = ['up', 'down', 'left', 'right'];
+      swipeDirection = dirs[(index + Math.round(time)) % dirs.length];
+    }
+
+    notes.push({
+      id: index,
+      time: parseFloat(time.toFixed(3)),
+      lane,
+      type: noteType,
+      holdDuration: holdDuration ? parseFloat(holdDuration.toFixed(3)) : undefined,
+      swipeDirection
+    });
+
+    if (difficulty >= 6 && noteType === 'tap' && energy > 0.15 && index % 6 === 0) {
+      const secondLane = (lane + 2) % 3;
+      notes.push({
+        id: 10000 + index,
+        time: parseFloat(time.toFixed(3)),
+        lane: secondLane,
+        type: 'tap'
+      });
+    }
+  });
+
+  if (notes.length < 10) {
+    console.warn(`[Audio Forge] Only detected ${notes.length} peaks. Falling back to math generation.`);
+    return generateProceduralChart(song);
+  }
+
+  console.log(`[Audio Forge] Success! Analyzed ${duration}s audio and forged ${notes.length} notes.`);
+  return notes;
+}
+
 // ── game options (shared with /options page via @/lib/options) ────
 
 export default function Game() {
@@ -3847,7 +3970,14 @@ export default function Game() {
         if (song) {
           song = { ...song, notes: [...(song.notes || [])] };
           if (song.notes.length === 0 && !activeTutorial) {
-            song.notes = generateProceduralChart(song);
+            setLoadMsg("FORGING AUDIO BEATMAP...");
+            try {
+              song.notes = await generateAudioForgeChart(song);
+            } catch (err) {
+              console.warn("[GamePlay Init] Audio Forge failed, falling back to procedural grid:", err);
+              // Fallback to math generation on fetch/CORS/decode error
+              song.notes = generateProceduralChart(song);
+            }
           }
         }
         console.log("[GamePlay Init] Fetched song:", song);
