@@ -211,7 +211,7 @@ export default function SongDetail() {
   const hasCard = song && Array.isArray(collection) ? collection.some(c => c && (c.cardId === song.id || c.card?.day === song.day)) : false;
   const bestScore = history.length > 0 ? Math.max(...history) : 0;
   const isCleared = bestScore > 0 || (medal && medal !== '');
-  const fragmentCount = song ? (fragments[song.id] ?? parseInt(localStorage.getItem(`fragments_${song.id}`) || '0', 10)) : 0;
+  const fragmentCount = song ? (fragments[song.id] ?? 0) : 0;
   const isAllPrizesClaimed = song ? (claimedRewards[song.id]?.includes('prophecy') || localStorage.getItem(`reward_tier_${song.id}`) === 'prophecy') : false;
 
   let unlocked = false;

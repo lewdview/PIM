@@ -281,7 +281,7 @@ export default function SongSelect() {
   const isSongUnlocked = (song: GameSong) => {
     if (song.day === today) return true;
     const ownsCard = Array.isArray(collection) ? collection.some(c => c && (c.cardId === song.id || c.card?.day === song.day)) : false;
-    const fragmentCount = fragments[song.id] ?? parseInt(localStorage.getItem(`fragments_${song.id}`) || '0', 10);
+    const fragmentCount = fragments[song.id] ?? 0;
     return ownsCard || fragmentCount >= 10;
   };
 

@@ -210,7 +210,7 @@ export default function Chapter() {
   const isCleared = selectedSong ? hasCleared(selectedSong) : false;
   const isAllPrizesClaimed = selectedSong ? (claimedRewards[selectedSong.id]?.includes('prophecy') || localStorage.getItem(`reward_tier_${selectedSong.id}`) === 'prophecy') : false;
 
-  const fragmentCount = selectedSong ? (fragments[selectedSong.id] ?? parseInt(localStorage.getItem(`fragments_${selectedSong.id}`) || '0', 10)) : 0;
+  const fragmentCount = selectedSong ? (fragments[selectedSong.id] ?? 0) : 0;
   const isCardUnlocked = ownsCard || fragmentCount >= 10;
 
   // Check locks

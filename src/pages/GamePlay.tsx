@@ -4830,7 +4830,7 @@ export default function Game() {
           );
         }
         if (bg === 'living_vault') {
-          const fragments = parseInt(localStorage.getItem(`fragments_${songId}`) || '0', 10);
+          const fragments = useVaultStore.getState().fragments[songId] ?? 0;
           const fragmentProgress = Math.min(fragments, 10) / 10;
           const isCrystallized = fragments >= 10;
           const pct = maxPossibleScore > 0 ? (gs.score / maxPossibleScore) * 100 : 0;

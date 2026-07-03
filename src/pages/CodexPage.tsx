@@ -47,9 +47,6 @@ export default function CodexPage() {
       fragments[cardKey] ??
       fragments[dayKey] ??
       fragments[dayKeyRaw] ??
-      parseInt(localStorage.getItem(`fragments_${cardKey}`) || '0', 10) ??
-      parseInt(localStorage.getItem(`fragments_${dayKey}`) || '0', 10) ??
-      parseInt(localStorage.getItem(`fragments_${dayKeyRaw}`) || '0', 10) ??
       0
     );
   }, [fragments]);
