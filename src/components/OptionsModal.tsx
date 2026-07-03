@@ -424,6 +424,62 @@ function SvgLatencySlider({ value, onChange, isAvant }: { value: number; onChang
   );
 }
 
+// ── Custom SVG Icons for Options Categories ──
+function GameplayIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="w-5 h-5 md:w-4 md:h-4 stroke-current fill-none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+    </svg>
+  );
+}
+
+function ControlsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="w-5 h-5 md:w-4 md:h-4 stroke-current fill-none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="4" width="20" height="16" rx="2" />
+      <path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M6 12h.01M18 12h.01M7 16h10" />
+    </svg>
+  );
+}
+
+function ThemesIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="w-5 h-5 md:w-4 md:h-4 stroke-current fill-none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 18V5l12-2v13" />
+      <circle cx="6" cy="18" r="3" />
+      <circle cx="18" cy="16" r="3" />
+    </svg>
+  );
+}
+
+function DisplayIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="w-5 h-5 md:w-4 md:h-4 stroke-current fill-none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="12" rx="2" />
+      <path d="M9 21h6M12 15v6M3 9h18M12 3v12" />
+    </svg>
+  );
+}
+
+function FrontsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="w-5 h-5 md:w-4 md:h-4 stroke-current fill-none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="4" y="3" width="16" height="18" rx="2" />
+      <path d="M12 8v8M8 12h8" />
+      <path d="M12 12l2-2m-4 4l-2 2" />
+    </svg>
+  );
+}
+
+function BacksIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="w-5 h-5 md:w-4 md:h-4 stroke-current fill-none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="4" y="3" width="16" height="18" rx="2" />
+      <path d="M12 3v18M4 12h16M8 7l8 10" />
+    </svg>
+  );
+}
+
 // ── Main Modal Component ──
 export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
   const [opts, setOpts] = useState<GameOpts>(loadOpts());
@@ -684,18 +740,18 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
           
           {/* Left Sidebar / Top Mobile Tab Selection */}
-          <div className="w-full md:w-[240px] shrink-0 bg-black/35 border-b md:border-b-0 md:border-r border-white/5 flex flex-col justify-between p-3 md:p-4 overflow-x-auto md:overflow-x-visible">
+          <div className="w-full md:w-[240px] shrink-0 bg-black/35 border-b md:border-b-0 md:border-r border-white/5 flex flex-col justify-between p-2 md:p-4">
             <div 
-              className="flex flex-row md:flex-col gap-1.5 w-full overflow-x-auto md:overflow-x-visible pb-1 md:pb-0"
+              className="grid grid-cols-6 md:flex md:flex-col gap-1 md:gap-1.5 w-full pb-1 md:pb-0"
               style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}
             >
               {[
-                { id: 'gameplay', label: 'Gameplay Core', desc: 'Combos, HUD, local library' },
-                { id: 'controls', label: 'Keys & Latency', desc: 'Remapping, visual sync' },
-                { id: 'themes', label: 'Note Themes', desc: 'Lane colors & presets' },
-                { id: 'backgrounds', label: 'Display & Blur', desc: 'Background grid options' },
-                { id: 'fronts', label: 'Card Fronts', desc: 'Unlockable custom skins' },
-                { id: 'backs', label: 'Card Backs', desc: 'Standard & unlockable backs' }
+                { id: 'gameplay', label: 'Gameplay Core', short: 'Core', desc: 'Combos, HUD, local library', icon: <GameplayIcon /> },
+                { id: 'controls', label: 'Keys & Latency', short: 'Keys', desc: 'Remapping, visual sync', icon: <ControlsIcon /> },
+                { id: 'themes', label: 'Note Themes', short: 'Themes', desc: 'Lane colors & presets', icon: <ThemesIcon /> },
+                { id: 'backgrounds', label: 'Display & Blur', short: 'Display', desc: 'Background grid options', icon: <DisplayIcon /> },
+                { id: 'fronts', label: 'Card Fronts', short: 'Fronts', desc: 'Unlockable custom skins', icon: <FrontsIcon /> },
+                { id: 'backs', label: 'Card Backs', short: 'Backs', desc: 'Standard & unlockable backs', icon: <BacksIcon /> }
               ].map(tab => {
                 const active = activeTab === tab.id;
                 return (
@@ -705,7 +761,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                       audioManager.playSfx('tap_nav', 0.1);
                       setActiveTab(tab.id as any);
                     }}
-                    className={`shrink-0 md:shrink-1 text-left p-2.5 rounded border transition-all flex flex-col gap-0.5 group cursor-pointer ${
+                    className={`shrink-0 md:shrink-1 text-center md:text-left p-1.5 md:p-2.5 rounded border transition-all flex flex-col items-center md:items-start gap-1 group cursor-pointer ${
                       active
                         ? isAvant 
                           ? 'border-[#39FF14] bg-[#39FF14]/5 text-white shadow-[0_0_8px_rgba(57,255,20,0.05)]' 
@@ -713,7 +769,21 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                         : 'border-transparent hover:bg-white/5 text-white/60 hover:text-white'
                     }`}
                   >
-                    <span className="font-mono text-[9px] md:text-[10px] font-black uppercase tracking-wider whitespace-nowrap">{tab.label}</span>
+                    {/* SVG Icon */}
+                    <div 
+                      className={`transition-colors duration-200 ${
+                        active 
+                          ? isAvant ? 'text-[#39FF14]' : 'text-[#FF1493]' 
+                          : 'text-white/35 group-hover:text-white'
+                      }`}
+                    >
+                      {tab.icon}
+                    </div>
+
+                    <span className="font-mono text-[6.5px] sm:text-[7.5px] md:text-[10px] font-black uppercase tracking-wider whitespace-nowrap">
+                      <span className="md:hidden">{tab.short}</span>
+                      <span className="hidden md:inline">{tab.label}</span>
+                    </span>
                     <span className="hidden md:inline text-[7.5px] opacity-60 font-mono font-medium">{tab.desc}</span>
                   </button>
                 );
