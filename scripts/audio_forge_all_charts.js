@@ -62,7 +62,7 @@ function readWavPcm(filePath) {
   return { buffer, fmtInfo, dataInfo };
 }
 
-// Perform transient onset detection and generate note array
+// Perform transient onset detection and generate note array using a hybrid math-grid and audio-reactive peak algorithm
 function forgeBeatmap(song, wavData) {
   const bpm = song.bpm || 120;
   const beatDuration = 60 / bpm;
@@ -86,7 +86,6 @@ function forgeBeatmap(song, wavData) {
   const movingAvgWindow = Math.round(1.0 / (blockSize / sampleRate));
 
   const blockEnergies = [];
-  const noteTimes = [];
 
   // 1. Calculate RMS energy for each block
   for (let i = 0; i < totalFrames; i += blockSize) {
@@ -127,10 +126,9 @@ function forgeBeatmap(song, wavData) {
     blockEnergies.push(rms);
   }
 
-  // 2. Adaptive threshold peak detection
+  // 2. Identify physical onset peak locations (transients)
   const thresholdRatio = 1.35 - (difficulty * 0.035); // 1.31 to 1.0
-  const minCooldown = Math.max(0.12, 0.45 - (difficulty * 0.035)); // spacing cooldown
-  let lastNoteTime = 0;
+  const peaks = []; // array of block indices representing peaks
 
   for (let b = movingAvgWindow; b < blockEnergies.length; b++) {
     const instantEnergy = blockEnergies[b];
@@ -140,73 +138,98 @@ function forgeBeatmap(song, wavData) {
       windowSum += blockEnergies[w];
     }
     const localAvgEnergy = windowSum / movingAvgWindow;
-    const blockTime = (b * blockSize) / sampleRate;
 
-    if (instantEnergy > localAvgEnergy * thresholdRatio && instantEnergy > 0.015) {
-      if (blockTime - lastNoteTime >= minCooldown && blockTime >= 3.0 && blockTime < duration - 4) {
-        noteTimes.push(blockTime);
-        lastNoteTime = blockTime;
-      }
+    if (instantEnergy > localAvgEnergy * thresholdRatio && instantEnergy > 0.012) {
+      peaks.push(b);
     }
   }
 
-  // 3. Convert peaks to quantized notes and resolve lane routing
+  // 3. Step through math-grid intervals, syncing notes on peaks, adding filler taps on energy
   let notes = [];
   let lastLane = 1;
   let secondLastLane = 0;
+  let time = 3.0; // Wait 3 seconds to let player get ready
+  let index = 0;
 
-  noteTimes.forEach((time, index) => {
-    // Snap to nearest 1/16th beat grid
-    const snappedTime = Math.round(time / beatFraction) * beatFraction;
-    
-    // Check if a note already exists at this snapped time
-    const exists = notes.some(n => Math.abs(n.time - snappedTime) < 0.01);
-    if (exists) return; // Skip overlapping peaks to avoid collisions
+  // Step interval based on difficulty scaling
+  const stepTime = beatDuration / (difficulty >= 8 ? 2 : difficulty >= 5 ? 1 : 0.5);
 
-    // Clean lane alternation
-    const availableLanes = [0, 1, 2].filter(l => l !== lastLane && l !== secondLastLane);
-    const lane = availableLanes[Math.floor((snappedTime * 17) % availableLanes.length)];
-    secondLastLane = lastLane;
-    lastLane = lane;
+  while (time < duration - 4) {
+    const blockIndex = Math.floor((time * sampleRate) / blockSize);
+    const energy = blockEnergies[blockIndex] || 0;
 
+    // Check if there is an audio onset peak within ~120ms (search radius in blocks)
+    const searchRadiusBlocks = Math.round(0.12 * sampleRate / blockSize);
+    const hasPeakNear = peaks.some(pb => Math.abs(pb - blockIndex) <= searchRadiusBlocks);
+
+    let shouldSpawn = false;
     let noteType = 'tap';
     let holdDuration = undefined;
     let swipeDirection = undefined;
 
-    const blockIndex = Math.floor((time * sampleRate) / blockSize);
-    const energy = blockEnergies[blockIndex] || 0;
-
-    // Premium note upgrades (holds & swipes) on accent peaks
-    if (difficulty >= 3 && energy > 0.12 && index % 4 === 1) {
-      noteType = 'hold';
-      const rawHold = beatDuration * (1.5 + (index % 2));
-      holdDuration = Math.round(rawHold / beatFraction) * beatFraction;
-    } else if (difficulty >= 5 && energy > 0.18 && index % 5 === 3) {
-      noteType = 'swipe';
-      const dirs = ['up', 'down', 'left', 'right'];
-      swipeDirection = dirs[(index + Math.round(snappedTime)) % dirs.length];
+    if (hasPeakNear) {
+      // Audio peak transient matched!
+      shouldSpawn = true;
+      
+      // Premium note upgrades (holds & swipes) on accent peaks
+      if (difficulty >= 3 && energy > 0.12 && index % 6 === 2) {
+        noteType = 'hold';
+        const rawHold = beatDuration * (1.5 + (index % 2));
+        holdDuration = Math.round(rawHold / beatFraction) * beatFraction;
+      } else if (difficulty >= 5 && energy > 0.16 && index % 7 === 4) {
+        noteType = 'swipe';
+        const dirs = ['up', 'down', 'left', 'right'];
+        swipeDirection = dirs[(index + Math.round(time)) % dirs.length];
+      }
+    } else {
+      // Math filler check: if local energy is strong (>0.035) and difficulty is medium+,
+      // spawn a standard tap on grid steps with a probability to sustain the song's energy.
+      const fillProbability = difficulty >= 7 ? 0.65 : difficulty >= 5 ? 0.45 : 0.25;
+      if (energy > 0.035 && Math.random() < fillProbability) {
+        shouldSpawn = true;
+      }
     }
 
-    notes.push({
-      id: index,
-      time: parseFloat(snappedTime.toFixed(3)),
-      lane,
-      type: noteType,
-      holdDuration: holdDuration ? parseFloat(holdDuration.toFixed(3)) : undefined,
-      swipeDirection
-    });
+    if (shouldSpawn) {
+      // Snap to nearest 1/16th beat grid
+      const snappedTime = Math.round(time / beatFraction) * beatFraction;
+      
+      // Prevent duplicate notes
+      const exists = notes.some(n => Math.abs(n.time - snappedTime) < 0.01);
+      if (!exists) {
+        const availableLanes = [0, 1, 2].filter(l => l !== lastLane && l !== secondLastLane);
+        const lane = availableLanes[Math.floor((snappedTime * 17) % availableLanes.length)];
+        secondLastLane = lastLane;
+        lastLane = lane;
 
-    // Inject double notes on major transient drops
-    if (difficulty >= 6 && noteType === 'tap' && energy > 0.15 && index % 6 === 0) {
-      const secondLane = (lane + 2) % 3;
-      notes.push({
-        id: 10000 + index,
-        time: parseFloat(snappedTime.toFixed(3)),
-        lane: secondLane,
-        type: 'tap'
-      });
+        notes.push({
+          time: parseFloat(snappedTime.toFixed(3)),
+          lane,
+          type: noteType,
+          holdDuration: holdDuration ? parseFloat(holdDuration.toFixed(3)) : undefined,
+          swipeDirection
+        });
+
+        // Inject double notes on major transient drops
+        if (difficulty >= 6 && noteType === 'tap' && energy > 0.15 && index % 8 === 0) {
+          const secondLane = (lane + 2) % 3;
+          notes.push({
+            time: parseFloat(snappedTime.toFixed(3)),
+            lane: secondLane,
+            type: 'tap'
+          });
+        }
+        
+        index++;
+      }
     }
-  });
+
+    if (noteType === 'hold' && holdDuration) {
+      time += holdDuration + beatDuration * 1.5;
+    } else {
+      time += stepTime;
+    }
+  }
 
   // Sort notes chronologically
   notes.sort((a, b) => a.time - b.time || a.lane - b.lane);
