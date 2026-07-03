@@ -350,7 +350,7 @@ export default function Campaign() {
 
                 {/* 4. Glassmorphic Interaction Card */}
                 <div 
-                  className="relative z-10 w-full max-w-[450px] mx-4 p-8 border rounded-2xl backdrop-blur-xl bg-black/75 flex flex-col justify-between min-h-[350px] shadow-2xl transition-all duration-300"
+                  className="relative z-10 w-full max-w-[450px] mx-4 p-8 border rounded-2xl backdrop-blur-xl bg-black/75 flex flex-col justify-between min-h-[350px] shadow-2xl transition-all duration-300 overflow-hidden"
                   style={{
                     borderColor: isAvant
                       ? 'rgba(57,255,20,0.2)'
@@ -358,8 +358,32 @@ export default function Campaign() {
                   }}
                 >
                   
+                  {/* Blended Album Art Collage Background Layer */}
+                  <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none z-0 opacity-20">
+                    <div className="grid grid-cols-3 gap-1.5 h-full w-full p-3 rotate-6 scale-115">
+                      {ch.songs.slice(0, 9).map((song, sIdx) => (
+                        song.coverArt ? (
+                          <div key={sIdx} className="relative aspect-square overflow-hidden rounded bg-zinc-900 border border-white/5 shadow-md">
+                            <img 
+                              src={song.coverArt} 
+                              alt={song.title} 
+                              className="w-full h-full object-cover filter brightness-[0.6] contrast-[1.1] grayscale" 
+                            />
+                          </div>
+                        ) : null
+                      ))}
+                    </div>
+                    {/* Radial dark mask to keep text foreground readable */}
+                    <div 
+                      className="absolute inset-0"
+                      style={{
+                        background: 'radial-gradient(circle at center, rgba(0,0,0,0.5) 0%, rgba(0,0,0,0.85) 75%, rgba(0,0,0,0.95) 100%)'
+                      }}
+                    />
+                  </div>
+
                   {/* Title Info Block */}
-                  <div className="space-y-4">
+                  <div className="space-y-4 relative z-10">
                     <div className="flex items-center justify-between">
                       <span className="font-mono text-[9px] font-bold tracking-[0.25em]" style={{ color: isAvant ? '#39FF14' : ch.meta.dc }}>
                         SECTOR_{String(ch.meta.month).padStart(2, '0')} //
@@ -391,7 +415,7 @@ export default function Campaign() {
                   </div>
 
                   {/* Node clear progress and lock screens */}
-                  <div className="my-6">
+                  <div className="my-6 relative z-10">
                     {!unlocked ? (
                       <div className="p-4 border border-[#FF3800]/30 bg-[#FF3800]/05 font-mono text-xs">
                         <div className="flex items-center gap-2 text-[#FF3800] font-black uppercase mb-1">
@@ -447,7 +471,7 @@ export default function Campaign() {
                   </div>
 
                   {/* Actions Engage bar */}
-                  <div>
+                  <div className="relative z-10">
                     <button
                       disabled={!unlocked}
                       onClick={() => {
