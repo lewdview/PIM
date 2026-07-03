@@ -28,17 +28,55 @@ export default function LeaderboardPage() {
         if (showLoading) {
           setLoading(true);
         }
-        // 1. Fetch all profiles
-        const { data: profiles, error: pErr } = await supabase
-          .from('profiles')
-          .select('id, wallet_address, streak_count, total_pulls');
-        if (pErr) throw pErr;
+        // 1. Fetch all profiles using pagination to bypass PostgREST query row limit
+        let profiles: any[] = [];
+        let pPage = 0;
+        const P_PAGE_SIZE = 1000;
+        let pHasMore = true;
 
-        // 2. Fetch all collections
-        const { data: collections, error: cErr } = await supabase
-          .from('vault_collections')
-          .select('owner_id, card_id, rarity, edition, proof, is_echo');
-        if (cErr) throw cErr;
+        while (pHasMore) {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('id, wallet_address, streak_count, total_pulls')
+            .range(pPage * P_PAGE_SIZE, (pPage + 1) * P_PAGE_SIZE - 1);
+          
+          if (error) throw error;
+          if (!data || data.length === 0) {
+            pHasMore = false;
+          } else {
+            profiles = [...profiles, ...data];
+            if (data.length < P_PAGE_SIZE) {
+              pHasMore = false;
+            } else {
+              pPage++;
+            }
+          }
+        }
+
+        // 2. Fetch all collections using pagination to bypass PostgREST query row limit
+        let collections: any[] = [];
+        let cPage = 0;
+        const C_PAGE_SIZE = 1000;
+        let cHasMore = true;
+
+        while (cHasMore) {
+          const { data, error } = await supabase
+            .from('vault_collections')
+            .select('owner_id, card_id, rarity, edition, proof, is_echo')
+            .range(cPage * C_PAGE_SIZE, (cPage + 1) * C_PAGE_SIZE - 1);
+          
+          if (error) throw error;
+          if (!data || data.length === 0) {
+            cHasMore = false;
+          } else {
+            collections = [...collections, ...data];
+            if (data.length < C_PAGE_SIZE) {
+              cHasMore = false;
+            } else {
+              cPage++;
+            }
+          }
+        }
 
         const authUser = useAuthStore.getState().user;
 
@@ -267,7 +305,7 @@ export default function LeaderboardPage() {
                   <div className="flex items-center gap-4 text-xs font-mono">
                     <div className="text-right hidden sm:block">
                       <span style={{ color: 'var(--color-text-muted)' }}>{entry.uniqueCards}</span>
-                      <span className="ml-0.5" style={{ color: 'var(--color-text-muted)' }}>cards</span>
+                      <span className="ml-0.5" style={{ color: 'var(--color-text-muted)' }}>unique</span>
                     </div>
                     <div
                       className="text-right font-bold min-w-[50px]"
