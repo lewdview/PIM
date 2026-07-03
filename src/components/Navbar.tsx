@@ -186,11 +186,11 @@ export default function Navbar() {
       <nav
         className="sticky top-0 z-50 px-4 md:px-8"
         style={{
-          background: 'rgba(8, 6, 4, 0.94)',
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
-          borderBottom: '1px solid rgba(255,56,0,0.15)',
-          boxShadow: '0 1px 0 rgba(255,56,0,0.08)',
+          background: 'rgba(8, 6, 4, 0.45)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          borderBottom: '1px solid rgba(255,56,0,0.12)',
+          boxShadow: '0 4px 30px rgba(0,0,0,0.4)',
         }}
       >
         <div className="flex items-center justify-between h-14">
