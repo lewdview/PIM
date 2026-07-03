@@ -303,6 +303,9 @@ export default function Campaign() {
             const ringY  = relativeScroll * 0.25;
             const gridY  = relativeScroll * 0.12;
 
+            const completed = ch.cleared >= ch.regularIds.length && ch.regularIds.length > 0;
+            const unlocked = ch.unlocked;
+
             return (
               <section
                 key={ch.meta.month}
