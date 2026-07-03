@@ -104,8 +104,7 @@ export async function loadCatalog(): Promise<GameSong[]> {
   const promise = (async (): Promise<GameSong[]> => {
     try {
       const useLocal = (typeof localStorage !== 'undefined' && (localStorage.getItem('opt_useLocalFiles') === 'true' || localStorage.getItem('useLocalFiles') === 'true')) || 
-                       (import.meta.env && import.meta.env.VITE_USE_LOCAL_FILES === 'true') ||
-                       !(import.meta.env && import.meta.env.VITE_LOAD_CATALOG_FROM_SUPABASE === 'true');
+                       (import.meta.env && import.meta.env.VITE_USE_LOCAL_FILES === 'true');
 
       // 1. Try Supabase first if configured and not forcing local
       if (supabase && !useLocal) {
