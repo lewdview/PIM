@@ -320,6 +320,7 @@ export default function Campaign() {
                   style={{
                     transform: `translateY(${titleY}px)`,
                     color: `${ch.meta.dc}08`,
+                    WebkitTextStroke: `1.5px ${ch.meta.dc}22`,
                   }}
                 >
                   CH_{String(ch.meta.month).padStart(2, '0')}
