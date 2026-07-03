@@ -303,6 +303,100 @@ function useAnimatedCount(target: number) {
   return val;
 }
 
+// ── procedural chart generator for empty beatmaps ────────────────
+function generateProceduralChart(song: any): Note[] {
+  const bpm = song.bpm || 120;
+  const beatDuration = 60 / bpm;
+  const duration = song.duration || 180;
+  const difficulty = song.difficultyLevel || 5;
+
+  const notes: Note[] = [];
+  let time = 3.5; // Start notes after 3.5 seconds to let the player prepare
+  let id = 0;
+  let lastLane = 1;
+
+  // Density factor based on difficulty level (1 to 10)
+  let stepMultiplier = 4; // default to every 4 beats
+  if (difficulty >= 10) stepMultiplier = 0.5; // Every half-beat (extremely dense!)
+  else if (difficulty >= 8) stepMultiplier = 1;  // Every beat
+  else if (difficulty >= 5) stepMultiplier = 2;  // Every 2 beats
+  else if (difficulty >= 3) stepMultiplier = 3;  // Every 3 beats
+  
+  // Section ranges
+  const introEnd = 15;
+  const bridgeStart = duration * 0.65;
+  const bridgeEnd = duration * 0.8;
+
+  while (time < duration - 4) {
+    // Determine dynamic step multiplier based on song section
+    let currentMultiplier = stepMultiplier;
+    let isChorus = time > 30 && time < bridgeStart && (Math.floor(time / 20) % 2 === 0);
+
+    if (time < introEnd) {
+      currentMultiplier = Math.max(4, stepMultiplier * 2); // Slow start
+    } else if (time >= bridgeStart && time < bridgeEnd) {
+      currentMultiplier = Math.max(4, stepMultiplier * 1.5); // Breather bridge
+    } else if (isChorus) {
+      currentMultiplier = Math.max(0.5, stepMultiplier * 0.5); // Intense chorus drops
+    }
+
+    // Determine target lanes to alternate cleanly and avoid bad patterns
+    let lanesToPick = [0, 1, 2].filter(l => l !== lastLane);
+    let nextLane = lanesToPick[Math.floor((time * 7 + id) % lanesToPick.length)];
+    lastLane = nextLane;
+
+    // Roll note types based on difficulty and time section
+    let noteType: 'tap' | 'hold' | 'swipe' = 'tap';
+    let holdDuration: number | undefined;
+    let swipeDirection: 'up' | 'down' | 'left' | 'right' | undefined;
+
+    const roll = (time * 13 + id * 7) % 100;
+    
+    // Tap is standard. Holds and swipes appear at medium/high difficulties
+    if (difficulty >= 3 && roll < 20) {
+      noteType = 'hold';
+      holdDuration = beatDuration * (1.5 + (id % 3));
+    } else if (difficulty >= 5 && roll >= 85) {
+      noteType = 'swipe';
+      const dirIndex = (id + Math.floor(time)) % 4;
+      const dirs: ('up' | 'down' | 'left' | 'right')[] = ['up', 'down', 'left', 'right'];
+      swipeDirection = dirs[dirIndex];
+    }
+
+    notes.push({
+      id: id++,
+      time: parseFloat(time.toFixed(3)),
+      lane: nextLane,
+      type: noteType,
+      holdDuration: holdDuration ? parseFloat(holdDuration.toFixed(3)) : undefined,
+      swipeDirection
+    });
+
+    // Check for double notes (taps in two lanes simultaneously) on hard difficulties
+    if (difficulty >= 6 && noteType === 'tap' && (id % 7 === 2 || (isChorus && id % 4 === 0))) {
+      const otherLane = (nextLane + 1) % 3;
+      notes.push({
+        id: id++,
+        time: parseFloat(time.toFixed(3)),
+        lane: otherLane,
+        type: 'tap'
+      });
+    }
+
+    // Advance time by the current beat step duration
+    const stepTime = beatDuration * currentMultiplier;
+    
+    if (noteType === 'hold' && holdDuration) {
+      time += holdDuration + beatDuration * 1.5;
+    } else {
+      time += stepTime;
+    }
+  }
+
+  console.log(`[Procedural Generator] Generated chart for ${song.title}: ${notes.length} notes, difficulty ${difficulty}`);
+  return notes;
+}
+
 // ── game options (shared with /options page via @/lib/options) ────
 
 export default function Game() {
@@ -3751,7 +3845,10 @@ export default function Game() {
         setPhase("loading");
         let song = await getSongById(songId);
         if (song) {
-          song = { ...song, notes: [...song.notes] };
+          song = { ...song, notes: [...(song.notes || [])] };
+          if (song.notes.length === 0 && !activeTutorial) {
+            song.notes = generateProceduralChart(song);
+          }
         }
         console.log("[GamePlay Init] Fetched song:", song);
 
