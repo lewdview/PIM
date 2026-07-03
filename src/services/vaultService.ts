@@ -655,6 +655,19 @@ export async function redeemInviteCode(code: string): Promise<boolean> {
 
 /** Redeem a bonus/promo code */
 export async function redeemBonusCode(code: string): Promise<{ success: boolean; rewardType?: string; rewardValue?: string; result?: any; error?: string }> {
+  const cleanCode = code.trim().toLowerCase();
+  if (cleanCode === 'idnoclip' || cleanCode === 'iddqd') {
+    const key = cleanCode === 'idnoclip' ? 'opt_unlocked_noclip' : 'opt_unlocked_iddqd';
+    localStorage.setItem(key, 'true');
+    window.dispatchEvent(new Event('cheat_code_activated'));
+    return {
+      success: true,
+      rewardType: 'cheat_code',
+      rewardValue: cleanCode,
+      result: { success: true }
+    };
+  }
+
   try {
     const { data, error } = await supabase.functions.invoke('vault-engine', {
       body: { action: 'redeemBonusCode', payload: { code } }

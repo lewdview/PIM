@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Zap, Sparkles, Image as ImageIcon } from 'lucide-react';
+import { Zap, Sparkles, Image as ImageIcon, Terminal } from 'lucide-react';
 import { audioManager } from '../game/audio';
 import type { VaultCard } from '../services/vaultService';
 
@@ -397,6 +397,30 @@ export default function DecryptionAnimation({ reward, onClose }: DecryptionAnima
                   </div>
                   <div className="text-[9px] font-mono text-zinc-500 mt-2 max-w-[240px] leading-relaxed uppercase">
                     Background theme is now permanently unlocked in options.
+                  </div>
+                </motion.div>
+              )}
+
+              {reward.type === 'cheat_code' && (
+                <motion.div
+                  initial={{ y: 20, scale: 0.5 }}
+                  animate={{ y: 0, scale: 1 }}
+                  transition={{ type: 'spring', damping: 12 }}
+                  className="py-2 flex flex-col items-center"
+                >
+                  <div className="w-20 h-20 rounded border border-[#39FF14]/40 bg-black/60 flex items-center justify-center mb-4 shadow-[0_0_20px_rgba(57,255,20,0.2)]">
+                    <Terminal size={36} className="text-[#39FF14] animate-pulse" />
+                  </div>
+                  <div className="font-mono text-[9px] tracking-widest text-[#39FF14] uppercase">
+                    ACCESS OVERRIDE DECRYPTED
+                  </div>
+                  <div className="text-2xl font-black uppercase text-white mt-1 font-mono tracking-wider">
+                    {reward.value}
+                  </div>
+                  <div className="text-[10px] font-mono text-zinc-400 mt-2 max-w-[280px] leading-relaxed uppercase text-center">
+                    {reward.value === 'idnoclip' 
+                      ? "MISS SYSTEM SAFETY BYPASSED. CONFIGURATION SETTINGS UNLOCKED." 
+                      : "PROCEDURAL GENERATOR DECRYPTED. LYRIC & BPM ENGINE ENGAGED."}
                   </div>
                 </motion.div>
               )}

@@ -525,6 +525,14 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    const handler = () => {
+      setOpts(loadOpts());
+    };
+    window.addEventListener("cheat_code_activated", handler);
+    return () => window.removeEventListener("cheat_code_activated", handler);
+  }, []);
+
   // Handle ESC key to close modal or cancel remapping
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -560,6 +568,10 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
 
   // Save specific settings helper
   const toggleSetting = (k: "missSystem" | "hudMisses" | "comboDisplay" | "judgmentText" | "useLocalFiles" | "bgMusic" | "haptics") => {
+    if (k === "missSystem" && localStorage.getItem("opt_unlocked_noclip") !== "true") {
+      audioManager.playSfx('locked_out', 0.15);
+      return;
+    }
     const v = !opts[k];
     localStorage.setItem(`opt_${k}`, String(v));
     setOpts(o => ({ ...o, [k]: v }));
@@ -570,6 +582,18 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
   };
 
   const renderToggle = (k: "missSystem" | "hudMisses" | "comboDisplay" | "judgmentText" | "useLocalFiles" | "bgMusic" | "haptics") => {
+    const isNoclipLocked = k === "missSystem" && localStorage.getItem("opt_unlocked_noclip") !== "true";
+    if (isNoclipLocked) {
+      return (
+        <button 
+          onClick={() => audioManager.playSfx('locked_out', 0.15)}
+          className="w-11 h-5 rounded-full p-0.5 border border-red-500/20 bg-red-950/20 flex items-center justify-center cursor-not-allowed"
+          title="LOCKED — Enter code idnoclip in Redeem Center"
+        >
+          <Lock size={10} className="text-red-500 animate-pulse" />
+        </button>
+      );
+    }
     const val = opts[k];
     const activeColor = isAvant ? "#39FF14" : "#FF1493";
     return (
@@ -889,6 +913,22 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                   <div className="flex gap-2">
                     {(["auto", "lyrics", "bpm"] as const).map(mode => {
                       const active = opts.noteGenerationSource === mode;
+                      const isLocked = (mode === 'lyrics' || mode === 'bpm') && localStorage.getItem("opt_unlocked_iddqd") !== "true";
+                      if (isLocked) {
+                        return (
+                          <button
+                            key={mode}
+                            onClick={() => {
+                              audioManager.playSfx('locked_out', 0.15);
+                            }}
+                            className="flex-1 py-2 font-mono text-[9px] font-black uppercase rounded border border-red-500/10 bg-red-950/5 text-red-500/30 flex items-center justify-center gap-1 cursor-not-allowed opacity-50"
+                            title="LOCKED — Enter code iddqd in Redeem Center"
+                          >
+                            <Lock size={8} className="text-red-500" />
+                            {mode === 'lyrics' ? 'LYRIC' : 'BPM'}
+                          </button>
+                        );
+                      }
                       return (
                         <button
                           key={mode}

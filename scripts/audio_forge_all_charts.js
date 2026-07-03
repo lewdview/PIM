@@ -202,11 +202,23 @@ function forgeBeatmap(song, wavData) {
         secondLastLane = lastLane;
         lastLane = lane;
 
+        let targetLane = undefined;
+        if (noteType === 'hold') {
+          if (difficulty >= 5 && index % 3 === 0) {
+            targetLane = (lane + 1 + (index % 2)) % 3;
+          }
+          if (difficulty >= 4 && index % 2 === 1) {
+            const dirs = ['up', 'down', 'left', 'right'];
+            swipeDirection = dirs[(index + Math.round(snappedTime)) % dirs.length];
+          }
+        }
+
         notes.push({
           time: parseFloat(snappedTime.toFixed(3)),
           lane,
           type: noteType,
           holdDuration: holdDuration ? parseFloat(holdDuration.toFixed(3)) : undefined,
+          targetLane,
           swipeDirection
         });
 
@@ -269,11 +281,21 @@ function generateProceduralFallback(song) {
     let holdDuration = undefined;
     let swipeDirection = undefined;
 
+    let targetLane = undefined;
+
     // Introduce variety based on difficulty
     const triggerIndex = Math.round(time / stepTime);
     if (difficulty >= 3 && triggerIndex % 8 === 2) {
       noteType = 'hold';
       holdDuration = beatDuration * (1.5 + (triggerIndex % 2));
+      
+      if (difficulty >= 5 && triggerIndex % 3 === 0) {
+        targetLane = (lane + 1 + (triggerIndex % 2)) % 3;
+      }
+      if (difficulty >= 4 && triggerIndex % 2 === 1) {
+        const dirs = ['up', 'down', 'left', 'right'];
+        swipeDirection = dirs[triggerIndex % dirs.length];
+      }
     } else if (difficulty >= 5 && triggerIndex % 8 === 5) {
       noteType = 'swipe';
       const dirs = ['up', 'down', 'left', 'right'];
@@ -286,6 +308,7 @@ function generateProceduralFallback(song) {
       lane,
       type: noteType,
       holdDuration: holdDuration ? parseFloat(holdDuration.toFixed(3)) : undefined,
+      targetLane,
       swipeDirection
     });
 

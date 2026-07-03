@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation } from 'wouter';
-import { Layers, Flame, Star, Calendar, Zap, Monitor, Clock, Play, Gift, Shield, Sparkles, AlertTriangle, Image as ImageIcon } from 'lucide-react';
+import { Layers, Flame, Star, Calendar, Zap, Monitor, Clock, Play, Gift, Shield, Sparkles, AlertTriangle, Image as ImageIcon, Terminal } from 'lucide-react';
 import Card from '../components/Card';
 import PackShop from '../components/PackShop';
 import { useVaultStore } from '../store/useVaultStore';
@@ -1098,6 +1098,22 @@ export default function LandingPage() {
                             {rewardClaimed.value}
                           </div>
                           <div className="text-[9px] font-mono text-white/50 tracking-wider mt-1 uppercase">SKIN UNLOCKED</div>
+                        </div>
+                      )}
+
+                      {/* Cheat code display */}
+                      {rewardClaimed.type === 'cheat_code' && (
+                        <div className="py-2 flex flex-col items-center">
+                          <Terminal size={36} className="text-[#39FF14] animate-pulse" />
+                          <div className="text-xl font-bold font-mono text-white mt-2 uppercase tracking-wider">
+                            {rewardClaimed.value}
+                          </div>
+                          <div className="text-[9px] font-mono text-[#39FF14] tracking-wider mt-1 uppercase">ACCESS DECRYPTED</div>
+                          <div className="text-[10px] font-mono text-zinc-400 mt-2 max-w-[240px] leading-relaxed uppercase">
+                            {rewardClaimed.value === 'idnoclip' 
+                              ? "MISS SYSTEM SAFETY BYPASSED. CONFIGURATION SETTINGS UNLOCKED." 
+                              : "PROCEDURAL GENERATOR DECRYPTED. LYRIC & BPM ENGINE ENGAGED."}
+                          </div>
                         </div>
                       )}
                     </motion.div>
