@@ -701,7 +701,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-4 bg-black/90 backdrop-blur-md animate-fade-in"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-0 md:p-4 bg-black/90 backdrop-blur-md animate-fade-in"
       onClick={onClose}
     >
       <div 
@@ -1195,31 +1195,31 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                   <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Unlock and select custom card borders for cards in your collection</p>
                 </div>
 
-                <div className="flex flex-col lg:flex-row gap-6 items-center lg:items-start">
+                <div className="flex flex-col lg:flex-row gap-6 items-center lg:items-start relative">
                   
                   {/* Visual Preview Side Column */}
-                  <div className="w-full lg:w-[220px] shrink-0 bg-black/45 border border-white/5 p-4 rounded-xl flex flex-col items-center gap-3 order-first lg:order-last">
-                    <span className="font-mono text-[9px] text-zinc-500 uppercase tracking-wider">LIVE SKIN PREVIEW</span>
+                  <div className="w-full lg:w-[220px] shrink-0 bg-black/95 lg:bg-black/45 border border-white/10 lg:border-white/5 p-3 lg:p-4 rounded-xl flex flex-row lg:flex-col items-center justify-center gap-4 lg:gap-3 sticky lg:relative top-[-16px] lg:top-0 z-20 lg:z-0 shadow-xl lg:shadow-none backdrop-blur-md lg:backdrop-blur-none">
+                    <span className="font-mono text-[9px] text-zinc-500 uppercase tracking-wider hidden lg:block">LIVE SKIN PREVIEW</span>
                     <CardSkinContext.Provider value={{ staticFace: 'front', backSkin: activeCardBack }}>
-                      <div className="w-[170px] h-[240px] relative rounded-xl overflow-hidden shadow-2xl bg-zinc-950/80">
+                      <div className="w-[115px] h-[162px] lg:w-[170px] lg:h-[240px] relative rounded-lg lg:rounded-xl overflow-hidden shadow-2xl bg-zinc-950/80 shrink-0">
                         {(() => {
                           const SkinComp = getSkinComponent(hoveredFrontSkin || activeCardSkin);
                           return <SkinComp card={previewCard} />;
                         })()}
                       </div>
                     </CardSkinContext.Provider>
-                    <div className="text-center font-mono mt-1">
-                      <span className="text-[10px] text-white font-black block uppercase">
+                    <div className="text-left lg:text-center font-mono">
+                      <span className="text-[11px] lg:text-[10px] text-white font-black block uppercase">
                         {FRONT_SKINS.find(s => s.id === (hoveredFrontSkin || activeCardSkin))?.name}
                       </span>
-                      <span className="text-[7.5px] text-zinc-500 uppercase mt-0.5 block">
+                      <span className="text-[7.5px] text-zinc-400 lg:text-zinc-500 uppercase mt-0.5 block">
                         {hoveredFrontSkin ? "PREVIEWING HOVERED" : "CURRENTLY SELECTED"}
                       </span>
                     </div>
                   </div>
 
                   {/* Grid Selector */}
-                  <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 gap-2.5 lg:mt-0 mt-4">
                     {FRONT_SKINS.map(skin => {
                       const isUnlocked = skin.cost === 0 || unlockedSkins.includes(skin.id);
                       const isSelected = activeCardSkin === skin.id;
@@ -1289,13 +1289,13 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                   <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Select standard visual backings or unlock special card backings</p>
                 </div>
 
-                <div className="flex flex-col lg:flex-row gap-6 items-center lg:items-start">
+                <div className="flex flex-col lg:flex-row gap-6 items-center lg:items-start relative">
                   
                   {/* Visual Preview Side Column */}
-                  <div className="w-full lg:w-[220px] shrink-0 bg-black/45 border border-white/5 p-4 rounded-xl flex flex-col items-center gap-3 order-first lg:order-last">
-                    <span className="font-mono text-[9px] text-zinc-500 uppercase tracking-wider">LIVE BACK PREVIEW</span>
+                  <div className="w-full lg:w-[220px] shrink-0 bg-black/95 lg:bg-black/45 border border-white/10 lg:border-white/5 p-3 lg:p-4 rounded-xl flex flex-row lg:flex-col items-center justify-center gap-4 lg:gap-3 sticky lg:relative top-[-16px] lg:top-0 z-20 lg:z-0 shadow-xl lg:shadow-none backdrop-blur-md lg:backdrop-blur-none">
+                    <span className="font-mono text-[9px] text-zinc-500 uppercase tracking-wider hidden lg:block">LIVE BACK PREVIEW</span>
                     <CardSkinContext.Provider value={{ staticFace: 'back', backSkin: hoveredBackSkin || activeCardBack }}>
-                      <div className="w-[170px] h-[240px] relative rounded-xl overflow-hidden shadow-2xl bg-zinc-950/80">
+                      <div className="w-[115px] h-[162px] lg:w-[170px] lg:h-[240px] relative rounded-lg lg:rounded-xl overflow-hidden shadow-2xl bg-zinc-950/80 shrink-0">
                         {(() => {
                           const SkinComp = getSkinComponent(activeCardSkin);
                           const BackComp = getBackComponent(hoveredBackSkin || activeCardBack);
@@ -1303,18 +1303,18 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                         })()}
                       </div>
                     </CardSkinContext.Provider>
-                    <div className="text-center font-mono mt-1">
-                      <span className="text-[10px] text-white font-black block uppercase">
+                    <div className="text-left lg:text-center font-mono">
+                      <span className="text-[11px] lg:text-[10px] text-white font-black block uppercase font-mono">
                         {[...STANDARD_CARD_BACKS, ...BACK_SKINS.map(s => ({ id: s.id, name: s.name }))].find(b => b.id === (hoveredBackSkin || activeCardBack))?.name}
                       </span>
-                      <span className="text-[7.5px] text-zinc-500 uppercase mt-0.5 block">
+                      <span className="text-[7.5px] text-zinc-400 lg:text-zinc-500 uppercase mt-0.5 block">
                         {hoveredBackSkin ? "PREVIEWING HOVERED" : "CURRENTLY SELECTED"}
                       </span>
                     </div>
                   </div>
 
                   {/* Lists Container */}
-                  <div className="flex-1 w-full space-y-5">
+                  <div className="flex-1 w-full space-y-5 lg:mt-0 mt-4">
                     {/* Section 1: Standard Card Backs */}
                     <div className="space-y-3">
                       <h3 className="font-mono text-[9px] font-black text-white/40 uppercase tracking-wider border-b border-white/5 pb-1">STANDARD CARD BACKS</h3>
