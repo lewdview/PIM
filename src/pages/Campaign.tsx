@@ -327,6 +327,29 @@ export default function Campaign() {
                   CH_{String(ch.meta.month).padStart(2, '0')}
                 </div>
 
+                {/* 1.5 Giant Background Album Art Collage Layer */}
+                <div 
+                  className="absolute inset-0 pointer-events-none z-0 opacity-5 overflow-hidden flex items-center justify-center scale-125"
+                  style={{
+                    transform: `translateY(${gridY}px)`
+                  }}
+                >
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-3.5 w-full h-full p-8 -rotate-12">
+                    {Array.from({ length: 24 }).map((_, rIdx) => {
+                      const song = ch.songs[rIdx % ch.songs.length];
+                      return song && song.coverArt ? (
+                        <div key={rIdx} className="aspect-square w-full overflow-hidden rounded-lg bg-zinc-900 border border-white/5 shadow-2xl">
+                          <img 
+                            src={song.coverArt} 
+                            alt={song.title} 
+                            className="w-full h-full object-cover filter grayscale contrast-125 brightness-75 blur-[0.5px]"
+                          />
+                        </div>
+                      ) : null;
+                    })}
+                  </div>
+                </div>
+
                 {/* 2. Glowing Radial Light Layer */}
                 <div
                   className="absolute w-[600px] h-[600px] rounded-full blur-[110px] pointer-events-none opacity-20"
