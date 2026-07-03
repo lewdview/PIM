@@ -270,16 +270,16 @@ export default function Campaign() {
                 onClick={() => scrollToSection(idx)}
                 className="w-3.5 h-3.5 rounded-full border transition-all relative flex items-center justify-center cursor-pointer"
                 style={{
-                  borderColor: active ? (isAvant ? '#39FF14' : ch.meta.dc) : 'rgba(255,255,255,0.15)',
-                  backgroundColor: active ? (isAvant ? '#39FF14' : ch.meta.dc) : 'transparent',
-                  boxShadow: active && !isAvant ? `0 0 10px ${ch.meta.dc}` : 'none'
+                  borderColor: active ? ch.meta.dc : 'rgba(255,255,255,0.15)',
+                  backgroundColor: active ? ch.meta.dc : 'transparent',
+                  boxShadow: active ? `0 0 10px ${ch.meta.dc}60` : 'none'
                 }}
                 title={ch.meta.name}
               >
                 {active && (
                   <span 
                     className="absolute -inset-1 rounded-full border animate-ping opacity-35"
-                    style={{ borderColor: isAvant ? '#39FF14' : ch.meta.dc }}
+                    style={{ borderColor: ch.meta.dc }}
                   />
                 )}
               </button>
@@ -303,17 +303,12 @@ export default function Campaign() {
             const ringY  = relativeScroll * 0.25;
             const gridY  = relativeScroll * 0.12;
 
-            const completed = ch.cleared >= ch.regularIds.length && ch.regularIds.length > 0;
-            const unlocked = ch.unlocked;
-
             return (
               <section
                 key={ch.meta.month}
                 className="w-full h-full snap-start relative flex items-center justify-center overflow-hidden border-b border-white/5"
                 style={{
-                  background: isAvant 
-                    ? '#050505'
-                    : 'radial-gradient(circle at 50% 50%, #0c0d24 0%, #080808 100%)'
+                  background: `radial-gradient(circle at 50% 50%, ${ch.meta.dc}0a 0%, #080808 100%)`
                 }}
               >
                 {/* 1. Background Giant Text Layer */}
@@ -321,7 +316,7 @@ export default function Campaign() {
                   className="absolute font-mono font-black select-none pointer-events-none text-[22vw] tracking-wider leading-none text-center"
                   style={{
                     transform: `translateY(${titleY}px)`,
-                    color: isAvant ? 'rgba(57,255,20,0.015)' : `${ch.meta.dc}05`,
+                    color: `${ch.meta.dc}08`,
                   }}
                 >
                   CH_{String(ch.meta.month).padStart(2, '0')}
@@ -352,9 +347,9 @@ export default function Campaign() {
 
                 {/* 2. Glowing Radial Light Layer */}
                 <div
-                  className="absolute w-[600px] h-[600px] rounded-full blur-[110px] pointer-events-none opacity-20"
+                  className="absolute w-[600px] h-[600px] rounded-full blur-[110px] pointer-events-none opacity-15"
                   style={{
-                    background: `radial-gradient(circle, ${isAvant ? '#39FF14' : ch.meta.dc} 0%, transparent 70%)`,
+                    background: `radial-gradient(circle, ${ch.meta.dc} 0%, transparent 70%)`,
                     transform: `translateY(${ringY}px)`,
                   }}
                 />
@@ -373,11 +368,10 @@ export default function Campaign() {
 
                 {/* 4. Glassmorphic Interaction Card */}
                 <div 
-                  className="relative z-10 w-full max-w-[450px] mx-4 p-8 border rounded-2xl backdrop-blur-xl bg-black/75 flex flex-col justify-between min-h-[350px] shadow-2xl transition-all duration-300 overflow-hidden"
+                  className="relative z-10 w-full max-w-[450px] mx-4 p-8 border rounded-2xl backdrop-blur-xl bg-black/80 flex flex-col justify-between min-h-[350px] shadow-2xl transition-all duration-300 overflow-hidden"
                   style={{
-                    borderColor: isAvant
-                      ? 'rgba(57,255,20,0.2)'
-                      : `${ch.meta.dc}22`
+                    borderColor: `${ch.meta.dc}44`,
+                    boxShadow: `0 0 30px ${ch.meta.dc}15`
                   }}
                 >
                   
@@ -408,15 +402,15 @@ export default function Campaign() {
                   {/* Title Info Block */}
                   <div className="space-y-4 relative z-10">
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-[9px] font-bold tracking-[0.25em]" style={{ color: isAvant ? '#39FF14' : ch.meta.dc }}>
+                      <span className="font-mono text-[9px] font-bold tracking-[0.25em]" style={{ color: ch.meta.dc }}>
                         SECTOR_{String(ch.meta.month).padStart(2, '0')} //
                       </span>
                       
                       <div className="flex gap-2">
                         <span className="font-mono text-[8px] px-2 py-0.5 border"
                           style={{ 
-                            color: isAvant ? '#39FF14' : ch.meta.dc, 
-                            borderColor: isAvant ? 'rgba(57,255,20,0.3)' : `${ch.meta.dc}30`,
+                            color: ch.meta.dc, 
+                            borderColor: `${ch.meta.dc}40`,
                             background: 'rgba(0,0,0,0.2)' 
                           }}>
                           {ch.meta.diff}
@@ -455,7 +449,7 @@ export default function Campaign() {
                         <div>
                           <div className="flex justify-between text-[9px] text-zinc-400 mb-1.5 uppercase">
                             <span>Sector Decoded</span>
-                            <span style={{ color: ch.cleared > 0 ? (isAvant ? '#39FF14' : ch.meta.dc) : 'rgba(255,255,255,0.2)' }}>
+                            <span style={{ color: ch.cleared > 0 ? ch.meta.dc : 'rgba(255,255,255,0.2)' }}>
                               {ch.cleared} / {ch.regularIds.length} tracks
                             </span>
                           </div>
@@ -464,8 +458,8 @@ export default function Campaign() {
                               className="h-full transition-all duration-500 rounded-full"
                               style={{
                                 width: `${(ch.cleared / (ch.regularIds.length || 1)) * 100}%`,
-                                background: isAvant ? '#39FF14' : ch.meta.dc,
-                                boxShadow: ch.cleared > 0 && !isAvant ? `0 0 10px ${ch.meta.dc}` : 'none'
+                                background: ch.meta.dc,
+                                boxShadow: ch.cleared > 0 ? `0 0 10px ${ch.meta.dc}` : 'none'
                               }}
                             />
                           </div>
@@ -475,7 +469,7 @@ export default function Campaign() {
                         <div className="grid grid-cols-2 gap-3 pt-1">
                           <div className="p-2.5 border border-white/5 bg-zinc-950/40">
                             <div className="text-[7.5px] text-zinc-500 tracking-wider uppercase mb-0.5">PLATINUMS</div>
-                            <div className="text-sm font-black text-[#39FF14]">
+                            <div className="text-sm font-black" style={{ color: ch.meta.dc }}>
                               ✦ {ch.platinums}
                             </div>
                             <div className="text-[6.5px] text-zinc-500 uppercase">Needed: {ch.meta.platNeeded} PT</div>
@@ -483,7 +477,7 @@ export default function Campaign() {
 
                           <div className="p-2.5 border border-white/5 bg-zinc-950/40">
                             <div className="text-[7.5px] text-zinc-500 tracking-wider uppercase mb-0.5">BONUS STAGES</div>
-                            <div className={`text-sm font-black ${ch.bonusUnlocked ? 'text-[#E5B800]' : 'text-zinc-600'}`}>
+                            <div className="text-sm font-black" style={{ color: ch.bonusUnlocked ? '#E5B800' : '#4b5563' }}>
                               {ch.bonusUnlocked ? '★ UNLOCKED' : '🔒 LOCKED'}
                             </div>
                             <div className="text-[6.5px] text-zinc-500 uppercase">{ch.bonusCount} locked tracks</div>
@@ -501,14 +495,12 @@ export default function Campaign() {
                         audioManager.playSfx("tap_nav", 0.18);
                         setLocation(`/chapter/${ch.meta.month}`);
                       }}
-                      className={`w-full py-3.5 font-mono font-bold text-xs tracking-[0.25em] border transition-all uppercase flex items-center justify-center gap-2 cursor-pointer ${
-                        unlocked
-                          ? (isAvant
-                            ? "border-[#39FF14] text-[#39FF14] hover:bg-[#39FF14]/10"
-                            : "neon-btn text-white"
-                          )
-                          : "border-zinc-800 bg-zinc-950/20 text-zinc-600 cursor-not-allowed"
-                      }`}
+                      className={`w-full py-3.5 font-mono font-bold text-xs tracking-[0.25em] border transition-all uppercase flex items-center justify-center gap-2 cursor-pointer bg-black/45 hover:bg-white/5`}
+                      style={{
+                        borderColor: unlocked ? ch.meta.dc : '#27272a',
+                        color: unlocked ? ch.meta.dc : '#52525b',
+                        boxShadow: unlocked ? `0 0 12px ${ch.meta.dc}25` : 'none'
+                      }}
                     >
                       {unlocked ? (
                         <>
