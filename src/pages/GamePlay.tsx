@@ -8,7 +8,7 @@ import { loadOpts, keyLabel, type GameOpts } from "@/lib/options";
 import { audioManager } from "@/game/audio";
 import { useVaultStore } from "@/store/useVaultStore";
 import { haptics } from "../utils/haptics";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Lock } from "lucide-react";
 import { logAnalyticsEvent } from "../services/telemetryService";
 
@@ -305,6 +305,99 @@ function useAnimatedCount(target: number) {
 }
 
 // ── procedural chart generator for empty beatmaps ────────────────
+interface Stage {
+  stage: number;
+  name: string;
+  startTime: number;
+  endTime: number;
+  difficulty: string;
+  noteCount: number;
+}
+
+function stageifyNotes(notes: Note[], duration: number, bpm: number): { notes: Note[], stages: Stage[] } {
+  const beatDuration = 60 / bpm;
+  const stageBounds = [
+    { stage: 1, name: "Stage 1", startTime: 0, endTime: duration * 0.20, difficulty: "Very Easy", noteCount: 0 },
+    { stage: 2, name: "Stage 2", startTime: duration * 0.20, endTime: duration * 0.40, difficulty: "Easy", noteCount: 0 },
+    { stage: 3, name: "Stage 3", startTime: duration * 0.40, endTime: duration * 0.65, difficulty: "Medium", noteCount: 0 },
+    { stage: 4, name: "Stage 4", startTime: duration * 0.65, endTime: duration * 0.80, difficulty: "Hard", noteCount: 0 },
+    { stage: 5, name: "Stage 5", startTime: duration * 0.80, endTime: duration, difficulty: "Expert", noteCount: 0 }
+  ];
+
+  const processed: Note[] = [];
+
+  notes.forEach(note => {
+    let stage = 5;
+    for (let i = 0; i < stageBounds.length; i++) {
+      if (note.time >= stageBounds[i].startTime && note.time < stageBounds[i].endTime) {
+        stage = stageBounds[i].stage;
+        break;
+      }
+    }
+
+    const clone: Note = { ...note, stage };
+
+    if (stage === 1) {
+      clone.type = 'tap';
+      delete clone.holdDuration;
+      delete clone.targetLane;
+      delete clone.swipeDirection;
+      const lastNote = processed.filter(n => n.stage === 1).pop();
+      if (lastNote && clone.time - lastNote.time < beatDuration * 0.85) {
+        return;
+      }
+    } else if (stage === 2) {
+      if (clone.type === 'swipe') {
+        clone.type = 'tap';
+        delete clone.swipeDirection;
+      }
+      const lastNote = processed.filter(n => n.stage === 2).pop();
+      if (lastNote && clone.time - lastNote.time < beatDuration * 0.45) {
+        return;
+      }
+    } else if (stage === 3) {
+      const lastNote = processed.filter(n => n.stage === 3).pop();
+      if (lastNote && clone.time - lastNote.time < beatDuration * 0.22) {
+        return;
+      }
+    } else if (stage === 4) {
+      const lastNote = processed.filter(n => n.stage === 4).pop();
+      if (lastNote && clone.time - lastNote.time < beatDuration * 0.15) {
+        return;
+      }
+    } else if (stage === 5) {
+      const lastNote = processed.filter(n => n.stage === 5).pop();
+      if (lastNote && clone.time - lastNote.time < beatDuration * 0.08) {
+        return;
+      }
+    }
+
+    if (stage <= 3) {
+      const duplicateTime = processed.some(n => Math.abs(n.time - clone.time) < 0.02);
+      if (duplicateTime) {
+        return;
+      }
+    }
+
+    processed.push(clone);
+  });
+
+  const finalNotes = processed.map((note, index) => ({
+    ...note,
+    id: index
+  }));
+
+  const stagesWithCounts = stageBounds.map(sb => {
+    const noteCount = finalNotes.filter(n => n.stage === sb.stage).length;
+    return {
+      ...sb,
+      noteCount
+    };
+  });
+
+  return { notes: finalNotes, stages: stagesWithCounts };
+}
+
 function generateProceduralChart(song: any): Note[] {
   const bpm = song.bpm || 120;
   const beatDuration = 60 / bpm;
@@ -394,8 +487,10 @@ function generateProceduralChart(song: any): Note[] {
     }
   }
 
-  console.log(`[Procedural Generator] Generated chart for ${song.title}: ${notes.length} notes, difficulty ${difficulty}`);
-  return notes;
+  const stageified = stageifyNotes(notes, duration, bpm);
+  song.stages = stageified.stages;
+  console.log(`[Procedural Generator] Generated chart for ${song.title}: ${stageified.notes.length} notes (stages applied), difficulty ${difficulty}`);
+  return stageified.notes;
 }
 
 // ── Audio Forge: Transient Onset Beatmap Generator ───────────────
@@ -517,8 +612,10 @@ async function generateAudioForgeChart(song: any): Promise<Note[]> {
     return generateProceduralChart(song);
   }
 
-  console.log(`[Audio Forge] Success! Analyzed ${duration}s audio and forged ${notes.length} notes.`);
-  return notes;
+  const stageified = stageifyNotes(notes, duration, bpm);
+  song.stages = stageified.stages;
+  console.log(`[Audio Forge] Success! Analyzed ${duration}s audio and forged ${stageified.notes.length} notes (stages applied).`);
+  return stageified.notes;
 }
 
 // ── game options (shared with /options page via @/lib/options) ────
@@ -635,6 +732,9 @@ export default function Game() {
   const [displayJudge, setDisplayJudge] = useState<JudgmentDisplay[]>([]);
   const [bufferPct, setBufferPct] = useState(0);
   const [loadMsg, setLoadMsg] = useState("FETCHING TRANSMISSION...");
+  const [currentStage, setCurrentStage] = useState(1);
+  const [stageTransitionText, setStageTransitionText] = useState<string | null>(null);
+  const lastDetectedStageRef = useRef(1);
   const puPanelRef = useRef<HTMLDivElement | null>(null);
   const puTextRef = useRef<HTMLDivElement | null>(null);
   const puBarRef = useRef<HTMLDivElement | null>(null);
@@ -1532,6 +1632,35 @@ export default function Game() {
     const gs = gsRef.current;
     const pu = puRef.current;
     gs.progress = Math.min(1, t / song.duration);
+
+    // Stage transition tracking
+    const stageBounds = [
+      { stage: 1, name: "Stage 1", pct: 0.00, difficulty: "Very Easy" },
+      { stage: 2, name: "Stage 2", pct: 0.20, difficulty: "Easy" },
+      { stage: 3, name: "Stage 3", pct: 0.40, difficulty: "Medium" },
+      { stage: 4, name: "Stage 4", pct: 0.65, difficulty: "Hard" },
+      { stage: 5, name: "Stage 5", pct: 0.80, difficulty: "Expert" }
+    ];
+    let calculatedStage = 1;
+    for (let i = 0; i < stageBounds.length; i++) {
+      if (gs.progress >= stageBounds[i].pct) {
+        calculatedStage = stageBounds[i].stage;
+      }
+    }
+    if (calculatedStage !== lastDetectedStageRef.current) {
+      const prevStage = lastDetectedStageRef.current;
+      lastDetectedStageRef.current = calculatedStage;
+      setCurrentStage(calculatedStage);
+      
+      const sb = stageBounds.find(s => s.stage === calculatedStage);
+      if (sb && prevStage > 0 && calculatedStage > prevStage) {
+        audioManager.playSfx("fusion", 0.7);
+        setStageTransitionText(`${sb.name.toUpperCase()} - ${sb.difficulty.toUpperCase()}`);
+        setTimeout(() => {
+          setStageTransitionText(prev => prev === `${sb.name.toUpperCase()} - ${sb.difficulty.toUpperCase()}` ? null : prev);
+        }, 2200);
+      }
+    }
 
     // Combo milestone tracking
     if (gs.combo === 0) {
@@ -4077,6 +4206,9 @@ export default function Game() {
 
     const init = async () => {
       resetPuDisplayDOM();
+      lastDetectedStageRef.current = 1;
+      setCurrentStage(1);
+      setStageTransitionText(null);
       try {
         console.log("[GamePlay Init] Fetching song for ID:", songId);
         setLoadMsg("FETCHING TRANSMISSION...");
@@ -4658,6 +4790,9 @@ export default function Game() {
       if (cancelled) return;
 
       resetPuDisplayDOM();
+      lastDetectedStageRef.current = 1;
+      setCurrentStage(1);
+      setStageTransitionText(null);
       phaseRef.current = "countdown";
       setPhase("countdown");
       let count = 3;
@@ -5563,8 +5698,8 @@ export default function Game() {
 
         {/* Progress bar — rounded pill with glow */}
         <div
-          className="flex-shrink-0 mx-2 my-1"
-          style={{ height: 4, borderRadius: 999, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}
+          className="flex-shrink-0 mx-2 my-1.5 relative"
+          style={{ height: 6, borderRadius: 999, background: "rgba(255,255,255,0.06)" }}
         >
           <div
             style={{
@@ -5576,6 +5711,14 @@ export default function Game() {
               transition: "width 0.2s linear",
             }}
           />
+          {/* Stage dividers */}
+          {[20, 40, 65, 80].map((pct, idx) => (
+            <div
+              key={idx}
+              className="absolute top-0 w-[2px] h-full bg-white opacity-40 transition-opacity"
+              style={{ left: `${pct}%`, transform: "translateX(-50%)" }}
+            />
+          ))}
         </div>
 
         {/* Canvas */}
@@ -5584,6 +5727,31 @@ export default function Game() {
           className="relative flex-1 min-h-0 overflow-hidden"
           style={{ touchAction: 'none' }}
         >
+          {/* Stage Transition Alert Banner */}
+          <AnimatePresence>
+            {stageTransitionText && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8, y: "-50%", x: "-50%" }}
+                animate={{ opacity: 1, scale: 1.0, y: "-50%", x: "-50%" }}
+                exit={{ opacity: 0, scale: 0.9, y: "-50%", x: "-50%" }}
+                transition={{ duration: 0.35, ease: "easeOut" }}
+                className="absolute top-1/3 left-1/2 pointer-events-none font-mono text-center z-30"
+                style={{
+                  background: "rgba(12, 12, 20, 0.92)",
+                  border: "1px solid #FF1493",
+                  boxShadow: "0 0 20px rgba(255, 20, 147, 0.4), inset 0 0 10px rgba(255, 20, 147, 0.2)",
+                  padding: "12px 28px",
+                  borderRadius: 4,
+                  backdropFilter: "blur(8px)",
+                  minWidth: 260
+                }}
+              >
+                <div className="text-[9px] text-[#00E5FF] tracking-[0.4em] mb-1 font-bold animate-pulse">STAGE CLEAR</div>
+                <div className="text-sm text-white font-bold tracking-[0.2em]">{stageTransitionText}</div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <canvas
             ref={canvasRef}
             className="absolute inset-0"

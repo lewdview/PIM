@@ -415,6 +415,91 @@ function generateNotesInterwoven(words, bpm, duration) {
   return merged;
 }
 
+function stageifyNotes(notes, duration, bpm, difficultyLevel) {
+  const beatDuration = 60 / bpm;
+  const stageBounds = [
+    { stage: 1, name: "Stage 1", startTime: 0, endTime: duration * 0.20, difficulty: "Very Easy" },
+    { stage: 2, name: "Stage 2", startTime: duration * 0.20, endTime: duration * 0.40, difficulty: "Easy" },
+    { stage: 3, name: "Stage 3", startTime: duration * 0.40, endTime: duration * 0.65, difficulty: "Medium" },
+    { stage: 4, name: "Stage 4", startTime: duration * 0.65, endTime: duration * 0.80, difficulty: "Hard" },
+    { stage: 5, name: "Stage 5", startTime: duration * 0.80, endTime: duration, difficulty: "Expert" }
+  ];
+
+  const processed = [];
+
+  notes.forEach(note => {
+    let stage = 5;
+    for (let i = 0; i < stageBounds.length; i++) {
+      if (note.time >= stageBounds[i].startTime && note.time < stageBounds[i].endTime) {
+        stage = stageBounds[i].stage;
+        break;
+      }
+    }
+
+    const clone = { ...note, stage };
+
+    if (stage === 1) {
+      clone.type = 'tap';
+      delete clone.holdDuration;
+      delete clone.targetLane;
+      delete clone.swipeDirection;
+      const lastNote = processed.filter(n => n.stage === 1).pop();
+      if (lastNote && clone.time - lastNote.time < beatDuration * 0.85) {
+        return;
+      }
+    } else if (stage === 2) {
+      if (clone.type === 'swipe') {
+        clone.type = 'tap';
+        delete clone.swipeDirection;
+      }
+      const lastNote = processed.filter(n => n.stage === 2).pop();
+      if (lastNote && clone.time - lastNote.time < beatDuration * 0.45) {
+        return;
+      }
+    } else if (stage === 3) {
+      const lastNote = processed.filter(n => n.stage === 3).pop();
+      if (lastNote && clone.time - lastNote.time < beatDuration * 0.22) {
+        return;
+      }
+    } else if (stage === 4) {
+      const lastNote = processed.filter(n => n.stage === 4).pop();
+      if (lastNote && clone.time - lastNote.time < beatDuration * 0.15) {
+        return;
+      }
+    } else if (stage === 5) {
+      const lastNote = processed.filter(n => n.stage === 5).pop();
+      if (lastNote && clone.time - lastNote.time < beatDuration * 0.08) {
+        return;
+      }
+    }
+
+    if (stage <= 3) {
+      const duplicateTime = processed.some(n => Math.abs(n.time - clone.time) < 0.02);
+      if (duplicateTime) {
+        return;
+      }
+    }
+
+    processed.push(clone);
+  });
+
+  const finalNotes = processed.map((note, index) => ({
+    ...note,
+    id: index
+  }));
+
+  const stagesWithCounts = stageBounds.map(sb => {
+    const noteCount = finalNotes.filter(n => n.stage === sb.stage).length;
+    return {
+      ...sb,
+      noteCount
+    };
+  });
+
+  return { notes: finalNotes, stages: stagesWithCounts };
+}
+
+
 function calcDifficulty(bpm, valence, noteCount, duration = 180) {
   const bpmNorm = (bpm - 80) / 100;
   const bpmScore = Math.min(10, Math.max(1, Math.round(1 + 9 * Math.max(0, Math.min(1, bpmNorm)))));
@@ -500,11 +585,12 @@ async function main() {
     const valence = r.valence ?? 0.5;
 
     // Default note generation strategy (similar to 'auto' mode in api.ts)
-    const notes = lyricsWords.length > 15
+    const rawNotes = lyricsWords.length > 15
       ? generateNotesInterwoven(lyricsWords, bpm, duration)
       : generateNotesFromBPM(bpm, duration);
 
-    const difficultyLevel = calcDifficulty(bpm, valence, notes.length, duration);
+    const difficultyLevel = calcDifficulty(bpm, valence, rawNotes.length, duration);
+    const { notes, stages } = stageifyNotes(rawNotes, duration, bpm, difficultyLevel);
     const { audioUrl, coverArt } = resolveUrls(r);
 
     const songId = `day-${String(day).padStart(3, '0')}`;
@@ -542,6 +628,7 @@ async function main() {
       audioUrl,
       coverArt,
       notes,
+      stages,
       key: r.key || '',
       genre: Array.isArray(r.genre) ? r.genre : [],
       difficultyLevel,
@@ -571,6 +658,7 @@ async function main() {
       key: songDetail.key,
       genre: songDetail.genre,
       difficultyLevel,
+      stages,
       unlock: unlockReq
     });
 
