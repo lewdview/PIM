@@ -4472,18 +4472,50 @@ export default function Game() {
           return true;
         });
       }
-      // Calculate max possible score for percentage metrics
-      let maxScore = 0;
-      let tempCombo = 0;
+      // Calculate max possible score for percentage metrics simulating perfect play
       const getComboMul = (c: number) => {
         if (dLevel <= 3) return c < 10 ? 1 : c < 25 ? 1.5 : c < 50 ? 2 : 3;
         if (dLevel <= 6) return c < 10 ? 1 : c < 25 ? 1.5 : c < 50 ? 2 : c < 75 ? 3 : 4;
         return c < 10 ? 1 : c < 25 ? 1.5 : c < 50 ? 2 : c < 75 ? 3 : c < 100 ? 4 : 5;
       };
-      for (const ns of notesRef.current) {
-        maxScore += Math.round(500 * getComboMul(tempCombo));
+
+      interface ScoreEvent {
+        time: number;
+      }
+      const scoreEvents: ScoreEvent[] = [];
+      notesRef.current.forEach(ns => {
+        if (ns.note.type === "hold") {
+          scoreEvents.push({ time: ns.note.time });
+          scoreEvents.push({ time: ns.note.time + (ns.note.holdDuration || 0.5) });
+        } else {
+          scoreEvents.push({ time: ns.note.time });
+        }
+      });
+      scoreEvents.sort((a, b) => a.time - b.time);
+
+      let maxScore = 0;
+      let tempCombo = 0;
+      const triggered = new Set<number>();
+      let activePu: { endTime: number; multiplier: number } | null = null;
+
+      for (const event of scoreEvents) {
+        // Check power up triggers
+        for (const pw of POWER_UPS) {
+          if (tempCombo >= pw.threshold && !triggered.has(pw.threshold)) {
+            triggered.add(pw.threshold);
+            activePu = {
+              endTime: event.time + pw.duration,
+              multiplier: pw.multiplier,
+            };
+          }
+        }
+
+        const puMul = activePu && event.time < activePu.endTime ? activePu.multiplier : 1;
+        const comboMul = getComboMul(tempCombo);
+        maxScore += Math.round(500 * puMul * comboMul);
         tempCombo++;
       }
+
       setMaxPossibleScore(maxScore || 1);
       triggeredThresholdsRef.current = { 50: false, 75: false, 90: false };
 
