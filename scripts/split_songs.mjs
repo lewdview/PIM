@@ -425,9 +425,21 @@ function stageifyNotes(notes, duration, bpm, difficultyLevel) {
     { stage: 5, name: "Stage 5", startTime: duration * 0.80, endTime: duration, difficulty: "Expert" }
   ];
 
+  const boundaries = [
+    duration * 0.20,
+    duration * 0.40,
+    duration * 0.65,
+    duration * 0.80
+  ];
+
   const processed = [];
 
   notes.forEach(note => {
+    const isInTransitionGap = boundaries.some(b => Math.abs(note.time - b) < 1.5);
+    if (isInTransitionGap) {
+      return;
+    }
+
     let stage = 5;
     for (let i = 0; i < stageBounds.length; i++) {
       if (note.time >= stageBounds[i].startTime && note.time < stageBounds[i].endTime) {
