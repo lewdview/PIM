@@ -1221,6 +1221,7 @@ export default function Game() {
           lastMissTimeRef.current = now;
         }
         setMissCount(missCountRef.current);
+        if (triggerGameFail()) return;
 
         muteLane(ns.note.lane);
         syncDisplay();
@@ -1278,8 +1279,22 @@ export default function Game() {
           puRef.current.triggered.clear();
           haptics.error();
 
+          jRef.current = [
+            ...jRef.current.filter((x) => Date.now() - x.ts < 600),
+            { type: "MISS", lane: ns.note.lane, id: ++jCounter.current, ts: Date.now() },
+          ];
+
+          const now = Date.now();
+          if (now - lastMissTimeRef.current > 350) {
+            missCountRef.current++;
+            lastMissTimeRef.current = now;
+          }
+          setMissCount(missCountRef.current);
+
           muteLane(ns.note.lane);
           syncDisplay();
+          
+          if (triggerGameFail()) return;
           return;
         }
       }
@@ -1523,6 +1538,40 @@ export default function Game() {
       setLocation(dest);
     }, 100);
   }, [songId, setLocation]);
+
+  function triggerGameFail(): boolean {
+    if (missCountRef.current >= 3 && optsRef.current.missSystem && !activeTutorial) {
+      const audio = audioRef.current;
+      if (audio) {
+        rewindToRef.current = Math.max(0, audio.currentTime - 2.5);
+        audio.pause();
+      }
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (continueUsedRef.current >= 3) {
+        audioManager.playSfx("outof_continues", 0.85);
+        finishGame(true);
+      } else {
+        phaseRef.current = "continue";
+        setPhase("continue");
+        audioManager.playSfx("gmeover", 0.7);
+        laneRestoreTimers.current.forEach(clearTimeout);
+        if (continueTimeoutRef.current) {
+          clearTimeout(continueTimeoutRef.current);
+          continueTimeoutRef.current = null;
+        }
+        if (finishGameTimeoutRef.current) {
+          clearTimeout(finishGameTimeoutRef.current);
+          finishGameTimeoutRef.current = null;
+        }
+        if (abandonTimeoutRef.current) {
+          clearTimeout(abandonTimeoutRef.current);
+          abandonTimeoutRef.current = null;
+        }
+      }
+      return true;
+    }
+    return false;
+  }
 
   const doReturn = useCallback(() => {
     if (phaseRef.current !== "continue") return; // guard against double-firing!
@@ -2358,38 +2407,7 @@ export default function Game() {
               return;
             }
 
-            if (missCountRef.current >= 3 && optsRef.current.missSystem && !activeTutorial) {
-              const audio = audioRef.current;
-              if (audio) {
-                rewindToRef.current = Math.max(0, audio.currentTime - 2.5);
-                audio.pause();
-              }
-              cancelAnimationFrame(rafRef.current);
-              if (continueUsedRef.current >= 3) {
-                // All continues exhausted — play the out-of-continues sting then fail
-                audioManager.playSfx("outof_continues", 0.85);
-                finishGame(true);
-              } else {
-                phaseRef.current = "continue";
-                setPhase("continue");
-                audioManager.playSfx("gmeover", 0.7);
-                // Clear any pending timers during continue transition
-                laneRestoreTimers.current.forEach(clearTimeout);
-                if (continueTimeoutRef.current) {
-                  clearTimeout(continueTimeoutRef.current);
-                  continueTimeoutRef.current = null;
-                }
-                if (finishGameTimeoutRef.current) {
-                  clearTimeout(finishGameTimeoutRef.current);
-                  finishGameTimeoutRef.current = null;
-                }
-                if (abandonTimeoutRef.current) {
-                  clearTimeout(abandonTimeoutRef.current);
-                  abandonTimeoutRef.current = null;
-                }
-              }
-              return;
-            }
+            if (triggerGameFail()) return;
           }
           continue;
         }
@@ -5140,9 +5158,25 @@ export default function Game() {
             <h3 className="font-mono font-bold text-2xl text-white mb-6 uppercase tracking-wider">
               TRANSMISSION FAILING
             </h3>
-            <p className="font-mono text-zinc-400 text-xs leading-relaxed mb-8">
-              Your reactions failed to lock with the frequency. Tap the columns (or press A, S, D on desktop) exactly when notes reach the bottom glow line.
-            </p>
+            <div className="font-mono text-zinc-400 text-[10px] leading-relaxed mb-8 text-left space-y-3.5 max-h-[220px] overflow-y-auto pr-1">
+              <p className="text-zinc-500 uppercase tracking-widest text-[9px]">// TRAINING MODULE: NOTE TYPES //</p>
+              <div>
+                <span className="text-[#39FF14] font-bold block mb-0.5">■ TAPS:</span>
+                Press the column exactly when the note block aligns with the bottom glowing line.
+              </div>
+              <div>
+                <span className="text-[#00E5FF] font-bold block mb-0.5">▬ HOLD RAILS:</span>
+                Hold down the key/column until the note tail fully finishes crossing the bottom line.
+              </div>
+              <div>
+                <span className="text-[#FF1493] font-bold block mb-0.5">➔ SWIPE RELEASES:</span>
+                Hold the rail, then at the arrow release AND swipe/flick (or press matching Arrow key).
+              </div>
+              <div>
+                <span className="text-[#FFaa00] font-bold block mb-0.5">↝ SLIDE TRANSITIONS:</span>
+                Hold starting lane, then shift/press the target lane as the path bends sideways.
+              </div>
+            </div>
             <button
               onClick={() => {
                 isTutorialHelpOpenRef.current = false;

@@ -1069,6 +1069,29 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                   </p>
                 </div>
 
+                {/* Gameplay note types guide */}
+                <div className="bg-black/40 border border-white/5 p-4 rounded-lg space-y-4">
+                  <h3 className="font-mono text-[9px] font-black text-white/40 uppercase tracking-wider border-b border-white/5 pb-1">GAMEPLAY NOTE TYPES GUIDE</h3>
+                  <div className="grid gap-3.5 font-mono text-[10px] text-zinc-400">
+                    <div className="flex gap-2">
+                      <span className="text-[#39FF14] font-bold min-w-[120px] uppercase">■ TAPS:</span>
+                      <span>Press lane key when the note matches the bottom glow line.</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="text-[#00E5FF] font-bold min-w-[120px] uppercase">▬ HOLD RAILS:</span>
+                      <span>Hold down lane key until the tail passes the bottom line.</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="text-[#FF1493] font-bold min-w-[120px] uppercase">➔ SWIPE RELEASES:</span>
+                      <span>Hold the rail, then at the arrow release and flick (or press matching Arrow key).</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="text-[#FFaa00] font-bold min-w-[120px] uppercase">↝ SLIDE TRANSITIONS:</span>
+                      <span>Hold starting lane, then shift to the target lane key as the path bends sideways.</span>
+                    </div>
+                  </div>
+                </div>
+
               </div>
             )}
 
