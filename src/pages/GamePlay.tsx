@@ -334,7 +334,7 @@ function stageifyNotes(notes: Note[], duration: number, bpm: number): { notes: N
   const processed: Note[] = [];
 
   notes.forEach(note => {
-    const isInTransitionGap = boundaries.some(b => Math.abs(note.time - b) < 1.5);
+    const isInTransitionGap = boundaries.some(b => note.time >= b + 1.2 && note.time <= b + 4.2);
     if (isInTransitionGap) {
       return;
     }
@@ -1727,11 +1727,11 @@ export default function Game() {
         
         stingerTimeout1Ref.current = setTimeout(() => {
           setStageStingerPhase('start');
-        }, 1200);
+        }, 2200);
         
         stingerTimeout2Ref.current = setTimeout(() => {
           setStageStingerNumber(null);
-        }, 2700);
+        }, 4200);
       }
     }
 
