@@ -6559,7 +6559,7 @@ function drawKey(
       ctx.lineTo(-4 * m, 3 * m);
       ctx.closePath();
     } else {
-      ctx.arc(0, 0, 5 * (1 - m), 0, Math.PI * 2);
+      ctx.arc(0, 0, Math.max(0, 5 * (1 - m)), 0, Math.PI * 2);
     }
     ctx.fill();
     
