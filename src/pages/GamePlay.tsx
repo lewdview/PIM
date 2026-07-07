@@ -5877,7 +5877,7 @@ export default function Game() {
           {/* Stage Transition Alert Banner */}
           <AnimatePresence>
             {stageStingerNumber && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30 overflow-hidden">
+              <div className="absolute inset-x-0 top-[22%] flex justify-center pointer-events-none z-30 overflow-visible">
                 <motion.div
                   initial="initial"
                   animate="animate"
@@ -6004,47 +6004,70 @@ export default function Game() {
                     }}
                   />
 
-                  {/* Slide-in Top Text */}
+                  {/* Slide-in Top Text Label */}
                   <motion.div
                     key={`top-${stageStingerPhase}-${stageStingerNumber}`}
                     variants={{
-                      initial: { scale: 0.5, y: -45, opacity: 0 },
+                      initial: { scale: 0.5, y: -85, opacity: 0 },
                       animate: { 
                         scale: 1, 
-                        y: -22, 
+                        y: -65, 
                         opacity: 1, 
                         transition: { type: "spring", stiffness: 150, damping: 12, delay: 0.2 } 
                       },
-                      exit: { scale: 1.2, y: -30, opacity: 0, transition: { ease: "easeIn", duration: 0.2 } }
+                      exit: { scale: 1.2, y: -85, opacity: 0, transition: { ease: "easeIn", duration: 0.2 } }
                     }}
-                    className="absolute text-white font-black text-4xl md:text-5xl uppercase tracking-[0.2em] z-10"
+                    className="absolute text-white/90 font-black text-xs md:text-sm tracking-[0.6em] z-10"
                     style={{ 
-                      fontFamily: '"Impact", "Arial Black", sans-serif',
-                      textShadow: "0 0 20px rgba(255,255,255,0.95), 0 0 40px rgba(0,229,255,0.6)",
+                      fontFamily: '"JetBrains Mono", monospace',
+                      textShadow: "0 0 10px rgba(255,255,255,0.6)",
                     }}
                   >
-                    STAGE {stageStingerPhase === 'cleared' ? stageStingerNumber - 1 : stageStingerNumber}
+                    STAGE
                   </motion.div>
 
-                  {/* Slide-in Bottom Text */}
+                  {/* Giant Center Number */}
+                  <motion.div
+                    key={`num-${stageStingerPhase}-${stageStingerNumber}`}
+                    variants={{
+                      initial: { scale: 0.2, rotate: -45, opacity: 0 },
+                      animate: { 
+                        scale: 1.1, 
+                        rotate: 0, 
+                        opacity: 1, 
+                        transition: { type: "spring", stiffness: 180, damping: 10, delay: 0.1 } 
+                      },
+                      exit: { scale: 1.6, opacity: 0, transition: { ease: "easeIn", duration: 0.2 } }
+                    }}
+                    className="absolute text-white font-black text-7xl md:text-8xl z-10"
+                    style={{ 
+                      fontFamily: '"Impact", "Arial Black", sans-serif',
+                      textShadow: "0 0 25px rgba(255,255,255,0.95), 0 0 50px rgba(0,229,255,0.6)",
+                      lineHeight: 1,
+                    }}
+                  >
+                    {stageStingerPhase === 'cleared' ? stageStingerNumber - 1 : stageStingerNumber}
+                  </motion.div>
+
+                  {/* Slide-in Bottom Status Text */}
                   <motion.div
                     key={`bottom-${stageStingerPhase}-${stageStingerNumber}`}
                     variants={{
-                      initial: { scale: 0.5, y: 35, opacity: 0 },
+                      initial: { scale: 0.5, y: 85, opacity: 0 },
                       animate: { 
                         scale: 1, 
-                        y: 28, 
+                        y: 65, 
                         opacity: 1, 
                         transition: { type: "spring", stiffness: 150, damping: 12, delay: 0.3 } 
                       },
-                      exit: { scale: 1.2, y: 30, opacity: 0, transition: { ease: "easeIn", duration: 0.2 } }
+                      exit: { scale: 1.2, y: 85, opacity: 0, transition: { ease: "easeIn", duration: 0.2 } }
                     }}
-                    className="absolute font-black text-xl md:text-2xl uppercase tracking-[0.4em] z-10"
+                    className="absolute font-black text-xs md:text-sm tracking-[0.4em] z-10"
                     style={{ 
-                      fontFamily: '"Impact", "Arial Black", sans-serif',
+                      fontFamily: '"JetBrains Mono", monospace',
                       textShadow: stageStingerPhase === 'cleared' 
-                        ? "0 0 20px rgba(255,20,147,0.95), 0 0 40px rgba(255,20,147,0.6)"
-                        : "0 0 20px rgba(0,229,255,0.95), 0 0 40px rgba(0,229,255,0.6)",
+                        ? "0 0 15px rgba(255,20,147,0.95), 0 0 30px rgba(255,20,147,0.5)"
+                        : "0 0 15px rgba(0,229,255,0.95), 0 0 30px rgba(0,229,255,0.5)",
                       color: stageStingerPhase === 'cleared' ? '#FF1493' : '#00E5FF',
                     }}
                   >
