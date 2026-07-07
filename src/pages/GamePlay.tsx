@@ -3516,6 +3516,7 @@ export default function Game() {
   const getTRef = useRef<typeof getT | null>(null);
   const doPauseRef = useRef<typeof doPause | null>(null);
   const doResumeRef = useRef<typeof doResume | null>(null);
+  const hitSwipeReleaseRef = useRef<typeof hitSwipeRelease | null>(null);
 
   useEffect(() => {
     hitLaneRef.current = hitLane;
@@ -3524,6 +3525,7 @@ export default function Game() {
     getTRef.current = getT;
     doPauseRef.current = doPause;
     doResumeRef.current = doResume;
+    hitSwipeReleaseRef.current = hitSwipeRelease;
   }); // No dependency array so it runs on every render
 
   useEffect(() => {
@@ -3558,6 +3560,15 @@ export default function Game() {
           );
           if (cand && hitLaneRef.current) {
             hitLaneRef.current(cand.note.lane, swipeDir);
+          } else {
+            const activeHoldWithSwipe = notesRef.current.find(n =>
+              n.holdActive && !n.hit && !n.missed &&
+              n.note.swipeDirection === swipeDir &&
+              Math.abs((n.note.time + (n.note.holdDuration || 0.5)) - t) < missWindow(songRef.current?.difficultyLevel ?? 5)
+            );
+            if (activeHoldWithSwipe && hitSwipeReleaseRef.current) {
+              hitSwipeReleaseRef.current(activeHoldWithSwipe, swipeDir);
+            }
           }
         }
       }
@@ -3637,6 +3648,15 @@ export default function Game() {
             );
             if (cand && hitLaneRef.current) {
               hitLaneRef.current(cand.note.lane, dpadSwipe);
+            } else {
+              const activeHoldWithSwipe = notesRef.current.find(n =>
+                n.holdActive && !n.hit && !n.missed &&
+                n.note.swipeDirection === dpadSwipe &&
+                Math.abs((n.note.time + (n.note.holdDuration || 0.5)) - t) < missWindow(songRef.current?.difficultyLevel ?? 5)
+              );
+              if (activeHoldWithSwipe && hitSwipeReleaseRef.current) {
+                hitSwipeReleaseRef.current(activeHoldWithSwipe, dpadSwipe);
+              }
             }
           }
         }
@@ -3673,7 +3693,7 @@ export default function Game() {
         
         const lanePressed: [boolean, boolean, boolean] = [
           (gp.buttons[2]?.pressed || false) || (isAPressed && slideDir === 'left'),
-          (gp.buttons[3]?.pressed || false), // Y fires only when physically pressed; A alone does NOT map here
+          (gp.buttons[3]?.pressed || false) || (isAPressed && slideDir === 'center'),
           (gp.buttons[1]?.pressed || false) || (isAPressed && slideDir === 'right')
         ];
 
