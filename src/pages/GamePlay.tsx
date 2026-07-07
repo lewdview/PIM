@@ -1299,6 +1299,38 @@ export default function Game() {
         }
       }
 
+      if (ns.note.swipeDirection) {
+        // Did not swipe! This is a miss!
+        ns.holdActive = false;
+        ns.missed = true;
+        const gsx = gsRef.current;
+        gsx.combo = 0;
+        gsx.misses++;
+        puRef.current.active = null;
+        puRef.current.endTime = 0;
+        updatePuDisplayDOM(null);
+        puRef.current.triggered.clear();
+        haptics.error();
+
+        jRef.current = [
+          ...jRef.current.filter((x) => Date.now() - x.ts < 600),
+          { type: "MISS", lane: ns.note.lane, id: ++jCounter.current, ts: Date.now() },
+        ];
+
+        const now = Date.now();
+        if (now - lastMissTimeRef.current > 350) {
+          missCountRef.current++;
+          lastMissTimeRef.current = now;
+        }
+        setMissCount(missCountRef.current);
+
+        muteLane(ns.note.lane);
+        syncDisplay();
+        
+        if (triggerGameFail()) return;
+        return;
+      }
+
       ns.hit = true;
       ns.holdActive = false;
       if (ns.holdProgress > 0.6) {
