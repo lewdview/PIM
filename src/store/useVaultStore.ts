@@ -3,6 +3,34 @@ import type { VaultCard, OwnedCard } from '../services/vaultService';
 import { supabase } from '../services/supabaseClient';
 
 
+export interface ProfileSettings {
+  audioOffset: number;
+  laneKeys: [string, string, string];
+  laneColors: [string, string, string];
+  noteTheme: string;
+  cardSkin: string;
+  cardBack: string;
+  gameBackground: string;
+  backgroundBlur: number;
+  hudMisses: boolean;
+  comboDisplay: boolean;
+  judgmentText: boolean;
+  bgMusic: boolean;
+  haptics: boolean;
+  missSystem: boolean;
+}
+
+export interface ProfileProgression {
+  tutorialCompleted: boolean;
+  seenWelcomeModal: boolean;
+  noteGenerationSource: 'auto' | 'lyrics' | 'bpm';
+}
+
+export interface ProfileCheats {
+  noclip: boolean;
+  iddqd: boolean;
+}
+
 export interface RevealPackMeta {
   category: string;
   size?: string;
@@ -65,6 +93,10 @@ interface VaultState {
   milestoneClaims: Record<string, boolean>;
   claimedRewards: Record<string, string[]>;
 
+  settings: ProfileSettings;
+  progression: ProfileProgression;
+  unlockedCheats: ProfileCheats;
+
   // Actions
   setDailyCard: (card: VaultCard | null) => void;
   setHasClaimed: (claimed: boolean) => void;
@@ -81,6 +113,9 @@ interface VaultState {
   unlockSkin: (skinId: string, cost: number) => Promise<boolean>;
   optionsModalOpen: boolean;
   setOptionsModalOpen: (open: boolean) => void;
+  updateSettings: (settings: Partial<ProfileSettings>) => Promise<void>;
+  updateProgression: (progression: Partial<ProfileProgression>) => Promise<void>;
+  updateCheats: (cheats: Partial<ProfileCheats>) => Promise<void>;
 
   // Database Sync Actions
   syncHighScore: (songId: string, score: number, accuracy: number, maxCombo: number, medal: string) => Promise<void>;
@@ -137,6 +172,40 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   avatarUrl: null,
   optionsModalOpen: false,
 
+  settings: {
+    audioOffset: parseFloat(localStorage.getItem("opt_audioOffset") ?? "0") || 0,
+    laneKeys: [
+      localStorage.getItem("opt_laneKey_0") ?? "a",
+      localStorage.getItem("opt_laneKey_1") ?? "s",
+      localStorage.getItem("opt_laneKey_2") ?? "d",
+    ],
+    laneColors: [
+      localStorage.getItem("opt_laneColor_0") ?? "#FF1493",
+      localStorage.getItem("opt_laneColor_1") ?? "#00E5FF",
+      localStorage.getItem("opt_laneColor_2") ?? "#39FF14",
+    ],
+    noteTheme: localStorage.getItem("opt_noteTheme") ?? "classic",
+    cardSkin: localStorage.getItem("opt_cardSkin") ?? "original",
+    cardBack: localStorage.getItem("opt_cardBack") ?? "classic",
+    gameBackground: localStorage.getItem("opt_gameBackground") ?? "cover_blur",
+    backgroundBlur: parseFloat(localStorage.getItem("opt_backgroundBlur") ?? "18") || 18,
+    hudMisses: localStorage.getItem("opt_hudMisses") !== "false",
+    comboDisplay: localStorage.getItem("opt_comboDisplay") !== "false",
+    judgmentText: localStorage.getItem("opt_judgmentText") !== "false",
+    bgMusic: localStorage.getItem("opt_bgMusic") === "true",
+    haptics: localStorage.getItem("opt_haptics") !== "false",
+    missSystem: localStorage.getItem("opt_missSystem") !== "false",
+  },
+  progression: {
+    tutorialCompleted: localStorage.getItem("pim_tutorial_completed") === "true",
+    seenWelcomeModal: localStorage.getItem("opt_seen_welcome_modal") === "true" || localStorage.getItem("rc2_seen_key") === "1",
+    noteGenerationSource: (localStorage.getItem("opt_noteGenerationSource") as any) || "auto",
+  },
+  unlockedCheats: {
+    noclip: localStorage.getItem("opt_unlocked_noclip") === "true",
+    iddqd: localStorage.getItem("opt_unlocked_iddqd") === "true",
+  },
+
   // Initial Sync State
   highScores: {},
   medals: {},
@@ -189,15 +258,24 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       // Initialize global admin configuration settings from the database
       await initAdminConfig();
 
+      let profileRes: any;
+      try {
+        profileRes = await supabase.from('profiles').select('tokens, daily_standard_purchased, daily_premium_purchased, last_purchase_day, has_onboarded, streak_count, total_pulls, pulls_since_rare_plus, unlocked_skins, display_name, avatar_url, settings, progression, unlocked_cheats').eq('id', userId).single();
+        if (profileRes.error && profileRes.error.message.includes('column')) {
+          throw new Error('Fallback');
+        }
+      } catch {
+        console.warn("[Sync] New profile columns not found, falling back to legacy profile columns");
+        profileRes = await supabase.from('profiles').select('tokens, daily_standard_purchased, daily_premium_purchased, last_purchase_day, has_onboarded, streak_count, total_pulls, pulls_since_rare_plus, unlocked_skins, display_name, avatar_url').eq('id', userId).single();
+      }
+
       const [
-        profileRes, 
         vaultRes, 
         supplyRes,
         gameplayRes,
         fragmentsRes,
         milestonesRes
       ] = await Promise.all([
-        supabase.from('profiles').select('tokens, daily_standard_purchased, daily_premium_purchased, last_purchase_day, has_onboarded, streak_count, total_pulls, pulls_since_rare_plus, unlocked_skins, display_name, avatar_url').eq('id', userId).single(),
         supabase.from('vault_collections').select('*').eq('owner_id', userId),
         supabase.from('global_supply').select('*'),
         supabase.from('gameplay_records').select('*').eq('user_id', userId),
@@ -216,6 +294,69 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       if (profile) {
         currentStreak = profile.streak_count || 0;
         currentPulls = profile.total_pulls || 0;
+
+        // Merge Settings
+        const localSettings = get().settings;
+        const dbSettings = (profile as any).settings || {};
+        const mergedSettings = { ...localSettings, ...dbSettings };
+
+        // Merge Progression
+        const localProgression = get().progression;
+        const dbProgression = (profile as any).progression || {};
+        const mergedProgression = { ...localProgression, ...dbProgression };
+
+        // Merge Cheats
+        const localCheats = get().unlockedCheats;
+        const dbCheats = (profile as any).unlocked_cheats || {};
+        const mergedCheats = { ...localCheats, ...dbCheats };
+
+        // Check if database needs an initial push from local cache
+        const hasDbSettings = (profile as any).settings && Object.keys((profile as any).settings).length > 0;
+        const hasDbProgression = (profile as any).progression && Object.keys((profile as any).progression).length > 0;
+        const hasDbCheats = (profile as any).unlocked_cheats && Object.keys((profile as any).unlocked_cheats).length > 0;
+
+        const needsSettingsSync = !hasDbSettings && Object.keys(localSettings).length > 0;
+        const needsProgressionSync = !hasDbProgression && Object.keys(localProgression).length > 0;
+        const needsCheatsSync = !hasDbCheats && Object.keys(localCheats).length > 0;
+
+        if ((needsSettingsSync || needsProgressionSync || needsCheatsSync) && !profileRes.error) {
+          const updates: any = {};
+          if (needsSettingsSync) updates.settings = mergedSettings;
+          if (needsProgressionSync) updates.progression = mergedProgression;
+          if (needsCheatsSync) updates.unlocked_cheats = mergedCheats;
+
+          supabase.from('profiles').update(updates).eq('id', userId).then(({ error }) => {
+            if (error) console.error("[Sync] Error backing up local settings/progression to DB:", error.message);
+          });
+        }
+
+        // Cache back to localStorage
+        localStorage.setItem("opt_audioOffset", String(mergedSettings.audioOffset));
+        localStorage.setItem("opt_laneKey_0", mergedSettings.laneKeys[0]);
+        localStorage.setItem("opt_laneKey_1", mergedSettings.laneKeys[1]);
+        localStorage.setItem("opt_laneKey_2", mergedSettings.laneKeys[2]);
+        localStorage.setItem("opt_laneColor_0", mergedSettings.laneColors[0]);
+        localStorage.setItem("opt_laneColor_1", mergedSettings.laneColors[1]);
+        localStorage.setItem("opt_laneColor_2", mergedSettings.laneColors[2]);
+        localStorage.setItem("opt_noteTheme", mergedSettings.noteTheme);
+        localStorage.setItem("opt_cardSkin", mergedSettings.cardSkin);
+        localStorage.setItem("opt_cardBack", mergedSettings.cardBack);
+        localStorage.setItem("opt_gameBackground", mergedSettings.gameBackground);
+        localStorage.setItem("opt_backgroundBlur", String(mergedSettings.backgroundBlur));
+        localStorage.setItem("opt_hudMisses", String(mergedSettings.hudMisses));
+        localStorage.setItem("opt_comboDisplay", String(mergedSettings.comboDisplay));
+        localStorage.setItem("opt_judgmentText", String(mergedSettings.judgmentText));
+        localStorage.setItem("opt_bgMusic", String(mergedSettings.bgMusic));
+        localStorage.setItem("opt_haptics", String(mergedSettings.haptics));
+        localStorage.setItem("opt_missSystem", String(mergedSettings.missSystem));
+
+        localStorage.setItem("pim_tutorial_completed", String(mergedProgression.tutorialCompleted));
+        localStorage.setItem("rc2_seen_key", mergedProgression.seenWelcomeModal ? "1" : "0");
+        localStorage.setItem("opt_noteGenerationSource", mergedProgression.noteGenerationSource);
+
+        localStorage.setItem("opt_unlocked_noclip", String(mergedCheats.noclip));
+        localStorage.setItem("opt_unlocked_iddqd", String(mergedCheats.iddqd));
+
         set({ 
           tokenBalance: profile.tokens,
           hasOnboarded: profile.has_onboarded ?? false,
@@ -225,6 +366,9 @@ export const useVaultStore = create<VaultState>((set, get) => ({
           unlockedSkins: profile.unlocked_skins || [],
           displayName: profile.display_name || null,
           avatarUrl: profile.avatar_url || null,
+          settings: mergedSettings,
+          progression: mergedProgression,
+          unlockedCheats: mergedCheats,
         });
         if (profile.last_purchase_day === today) {
           set({ dailyLimits: { standard: profile.daily_standard_purchased || 0, premium: profile.daily_premium_purchased || 0 } });
@@ -468,6 +612,81 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       }
     } catch (err) {
       console.warn('[completeOnboarding] Error during Supabase update:', err);
+    }
+  },
+
+  updateSettings: async (newSettings) => {
+    const session = await supabase.auth.getSession();
+    const userId = session.data.session?.user.id;
+    const currentSettings = get().settings;
+    const merged = { ...currentSettings, ...newSettings };
+
+    set({ settings: merged });
+
+    // Update LocalStorage cache
+    if (newSettings.audioOffset !== undefined) localStorage.setItem("opt_audioOffset", String(merged.audioOffset));
+    if (newSettings.laneKeys !== undefined) {
+      localStorage.setItem("opt_laneKey_0", merged.laneKeys[0]);
+      localStorage.setItem("opt_laneKey_1", merged.laneKeys[1]);
+      localStorage.setItem("opt_laneKey_2", merged.laneKeys[2]);
+    }
+    if (newSettings.laneColors !== undefined) {
+      localStorage.setItem("opt_laneColor_0", merged.laneColors[0]);
+      localStorage.setItem("opt_laneColor_1", merged.laneColors[1]);
+      localStorage.setItem("opt_laneColor_2", merged.laneColors[2]);
+    }
+    if (newSettings.noteTheme !== undefined) localStorage.setItem("opt_noteTheme", merged.noteTheme);
+    if (newSettings.cardSkin !== undefined) localStorage.setItem("opt_cardSkin", merged.cardSkin);
+    if (newSettings.cardBack !== undefined) localStorage.setItem("opt_cardBack", merged.cardBack);
+    if (newSettings.gameBackground !== undefined) localStorage.setItem("opt_gameBackground", merged.gameBackground);
+    if (newSettings.backgroundBlur !== undefined) localStorage.setItem("opt_backgroundBlur", String(merged.backgroundBlur));
+    if (newSettings.hudMisses !== undefined) localStorage.setItem("opt_hudMisses", String(merged.hudMisses));
+    if (newSettings.comboDisplay !== undefined) localStorage.setItem("opt_comboDisplay", String(merged.comboDisplay));
+    if (newSettings.judgmentText !== undefined) localStorage.setItem("opt_judgmentText", String(merged.judgmentText));
+    if (newSettings.bgMusic !== undefined) localStorage.setItem("opt_bgMusic", String(merged.bgMusic));
+    if (newSettings.haptics !== undefined) localStorage.setItem("opt_haptics", String(merged.haptics));
+    if (newSettings.missSystem !== undefined) localStorage.setItem("opt_missSystem", String(merged.missSystem));
+
+    if (userId) {
+      const { error } = await supabase.from('profiles').update({ settings: merged }).eq('id', userId);
+      if (error) console.error("[Sync] Error updating settings in Supabase:", error.message);
+    }
+  },
+
+  updateProgression: async (newProgression) => {
+    const session = await supabase.auth.getSession();
+    const userId = session.data.session?.user.id;
+    const currentProgression = get().progression;
+    const merged = { ...currentProgression, ...newProgression };
+
+    set({ progression: merged });
+
+    // Update LocalStorage cache
+    if (newProgression.tutorialCompleted !== undefined) localStorage.setItem("pim_tutorial_completed", String(merged.tutorialCompleted));
+    if (newProgression.seenWelcomeModal !== undefined) localStorage.setItem("rc2_seen_key", merged.seenWelcomeModal ? "1" : "0");
+    if (newProgression.noteGenerationSource !== undefined) localStorage.setItem("opt_noteGenerationSource", merged.noteGenerationSource);
+
+    if (userId) {
+      const { error } = await supabase.from('profiles').update({ progression: merged }).eq('id', userId);
+      if (error) console.error("[Sync] Error updating progression in Supabase:", error.message);
+    }
+  },
+
+  updateCheats: async (newCheats) => {
+    const session = await supabase.auth.getSession();
+    const userId = session.data.session?.user.id;
+    const currentCheats = get().unlockedCheats;
+    const merged = { ...currentCheats, ...newCheats };
+
+    set({ unlockedCheats: merged });
+
+    // Update LocalStorage cache
+    if (newCheats.noclip !== undefined) localStorage.setItem("opt_unlocked_noclip", String(merged.noclip));
+    if (newCheats.iddqd !== undefined) localStorage.setItem("opt_unlocked_iddqd", String(merged.iddqd));
+
+    if (userId) {
+      const { error } = await supabase.from('profiles').update({ unlocked_cheats: merged }).eq('id', userId);
+      if (error) console.error("[Sync] Error updating cheats in Supabase:", error.message);
     }
   },
 

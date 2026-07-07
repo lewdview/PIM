@@ -10,6 +10,7 @@ import { RARITY_CONFIG, getSupplyCap, getMintableCap, type Rarity } from '../uti
 import RarityBadge from './RarityBadge';
 import AudioPreview from './AudioPreview';
 import { getDayFromDate } from '../utils/dayCalc';
+import PrizeProgressMenu from './PrizeProgressMenu';
 
 const NFT_MINT_COSTS: Record<Rarity, number> = {
   common: 0,
@@ -298,6 +299,11 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
                         </div>
                       ))}
                     </div>
+                  </div>
+
+                  {/* Song Vault Prizes Status */}
+                  <div className="mb-6">
+                    <PrizeProgressMenu songId={`card-${card.card.day}`} />
                   </div>
 
                   {/* Archivist Provenance Log */}

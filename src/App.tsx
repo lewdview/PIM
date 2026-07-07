@@ -276,10 +276,15 @@ export default function App() {
     }
   }, [location]);
 
+  // Close the options modal when navigating to a new route
+  useEffect(() => {
+    setOptionsModalOpen(false);
+  }, [location, setOptionsModalOpen]);
+
   // Automatically redirect guests who haven't completed the tutorial to /tutorial
   useEffect(() => {
     if (location === '/') {
-      const isTutorialCompleted = localStorage.getItem('pim_tutorial_completed') === 'true';
+      const isTutorialCompleted = localStorage.getItem('pim_tutorial_completed') === 'true' || useVaultStore.getState().progression.tutorialCompleted;
       const hasCollection = collection.length > 0;
       if (!isTutorialCompleted && !hasCollection) {
         setLocation('/tutorial');

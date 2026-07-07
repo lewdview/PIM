@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Music, Lock, CheckCircle, Filter, Play, Pause, Search, Trophy } from 'lucide-react';
+import { Music, Lock, CheckCircle, Filter, Play, Pause, Search } from 'lucide-react';
+import PrizeRibbonSvg from '../components/ui/PrizeRibbonSvg';
 import { useLocation } from 'wouter';
 import { fetchAllCards, type VaultCard } from '../services/vaultService';
 import { useVaultStore } from '../store/useVaultStore';
@@ -564,8 +565,6 @@ export default function CodexPage() {
                     : isBeyondOwned
                       ? `0 0 18px rgba(180,77,255,0.25), inset 0 0 12px rgba(180,77,255,0.08)`
                       : isOwned ? `0 4px 12px rgba(0,0,0,0.3)` : 'none',
-                  opacity: isOwned ? 1 : 0.4,
-                  filter: isOwned ? 'none' : 'grayscale(0.7) brightness(0.7)',
                   transition: 'all 0.25s ease',
                 }}
               >
@@ -578,6 +577,9 @@ export default function CodexPage() {
                     width: '100%',
                     height: '100%',
                     objectFit: 'cover',
+                    opacity: isOwned ? 1 : 0.4,
+                    filter: isOwned ? 'none' : 'grayscale(0.7) brightness(0.7)',
+                    transition: 'all 0.25s ease',
                   }}
                 />
 
@@ -607,21 +609,25 @@ export default function CodexPage() {
                 </div>
 
                 {/* Ownership / lock badge */}
-                <div style={{
-                  position: 'absolute',
-                  top: '6px',
-                  right: '6px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                }}>
+                <div 
+                  className="transition-all duration-200 group-hover:scale-125 group-hover:brightness-125"
+                  style={{
+                    position: 'absolute',
+                    top: '6px',
+                    right: '6px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    zIndex: 40,
+                  }}
+                >
                   {hasClaimedAll && (
-                    <Trophy size={13} style={{ color: '#ffd700', filter: 'drop-shadow(0 0 4px rgba(255,215,0,0.6))' }} title="All Prizes Claimed" />
+                    <PrizeRibbonSvg size={14} isClaimed={true} style={{ filter: 'drop-shadow(0 0 4px rgba(255,215,0,0.6))' }} />
                   )}
                   {isOwned ? (
                     <CheckCircle size={14} style={{ color: rc.color, filter: `drop-shadow(0 0 4px ${rc.color}80)` }} />
                   ) : (
-                    <Lock size={12} style={{ color: 'rgba(255,255,255,0.2)' }} />
+                    <Lock size={12} style={{ color: 'rgba(255,255,255,0.4)' }} />
                   )}
                 </div>
 
@@ -659,6 +665,8 @@ export default function CodexPage() {
                   left: 0,
                   right: 0,
                   padding: '8px',
+                  opacity: isOwned ? 1 : 0.6,
+                  transition: 'all 0.25s ease',
                 }}>
                   <div style={{
                     fontFamily: '"Impact", "Arial Black", sans-serif',

@@ -7,6 +7,7 @@ import { audioManager } from "@/game/audio";
 import { getActiveTheme } from "@/lib/options";
 import { useVaultStore } from "../store/useVaultStore";
 import { getCurrentDay } from "../utils/dayCalc";
+import PrizeProgressMenu from "../components/PrizeProgressMenu";
 
 const MEDAL_COLOR: Record<string, string> = {
   PLATINUM: '#39FF14', GOLD: '#E5B800', SILVER: '#A0AABB', BRONZE: '#C97A3A', NONE: '#444', '': '#1a1a1a',
@@ -472,6 +473,11 @@ export default function SongDetail() {
             )}
           </div>
 
+          {/* Song Vault Prizes Status */}
+          <div className="mb-2">
+            <PrizeProgressMenu songId={song.id} />
+          </div>
+
           {/* Functional Card Modifier Toggle */}
           {unlocked && hasCard && modifierType !== 'none' && (
             <div className="border border-[#39FF14]/30 bg-black/40 p-3 flex items-center justify-between mb-2">
@@ -775,6 +781,11 @@ export default function SongDetail() {
             ))}
           </div>
         )}
+
+        {/* Song Vault Prizes Status */}
+        <div className="mb-2">
+          <PrizeProgressMenu songId={song.id} />
+        </div>
 
         {/* Functional Card Modifier Toggle */}
         {unlocked && hasCard && modifierType !== 'none' && (

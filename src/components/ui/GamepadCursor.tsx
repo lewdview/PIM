@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { audioManager } from "@/game/audio";
+import { useVaultStore } from "../../store/useVaultStore";
 
 export default function GamepadCursor() {
   const [location] = useLocation();
@@ -130,6 +131,15 @@ export default function GamepadCursor() {
       if (!gp) {
         animationFrameId.current = requestAnimationFrame(poll);
         return;
+      }
+
+      // Check for Start button (index 9) - Global Toggle (available even if cursor is inactive)
+      const startPressed = gp.buttons[9]?.pressed || false;
+      const startWasPressed = prevButtons.current[9] || false;
+      if (startPressed && !startWasPressed && !isPlaying) {
+        audioManager.playSfx("tap_nav", 0.3);
+        const store = useVaultStore.getState();
+        store.setOptionsModalOpen(!store.optionsModalOpen);
       }
 
       // Check for stick movement past a threshold to activate gamepad cursor mode
@@ -359,7 +369,12 @@ export default function GamepadCursor() {
         // Update position states
         setPosition({ x: posRef.current.x, y: posRef.current.y });
 
-        // Save button states
+        // Save button states within active handler
+        // (will be saved globally below as well)
+      }
+
+      // Always save button states at the very end of poll
+      if (gp) {
         prevButtons.current = gp.buttons.map((b) => b.pressed);
       }
 

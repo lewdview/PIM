@@ -490,7 +490,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
   const colorRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
 
   // Sync state with useVaultStore
-  const { tokenBalance, unlockedSkins, unlockSkin, echoPrestigeScore } = useVaultStore();
+  const { tokenBalance, unlockedSkins, unlockSkin, echoPrestigeScore, updateSettings, updateProgression, updateCheats } = useVaultStore();
 
   const [activeCardSkin, setActiveCardSkin] = useState('original');
   const [activeCardBack, setActiveCardBack] = useState('classic');
@@ -575,6 +575,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
     const v = !opts[k];
     localStorage.setItem(`opt_${k}`, String(v));
     setOpts(o => ({ ...o, [k]: v }));
+    updateSettings({ [k]: v });
     if (k === "useLocalFiles") clearCatalogCache();
     if (k === "bgMusic") window.dispatchEvent(new Event("bgmusic_toggle"));
     logAnalyticsEvent('setting_change', { key: k, value: v });
@@ -625,6 +626,10 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
       localStorage.setItem(`opt_laneColor_${idx}`, c);
     });
     setOpts(o => ({ ...o, noteTheme: themeId, laneColors: colors as [string, string, string] }));
+    updateSettings({
+      noteTheme: themeId,
+      laneColors: colors as [string, string, string],
+    });
     logAnalyticsEvent('setting_change', { key: 'noteTheme', value: themeId });
     audioManager.playSfx('tap_nav', 0.1);
   };
@@ -636,6 +641,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
     nextKeys[remappingLane] = k;
     localStorage.setItem(`opt_laneKey_${remappingLane}`, k);
     setOpts(o => ({ ...o, laneKeys: nextKeys }));
+    updateSettings({ laneKeys: nextKeys });
     setRemappingLane(null);
     logAnalyticsEvent('setting_change', { key: `laneKey_${remappingLane}`, value: k });
     audioManager.playSfx('menu_confirm', 0.15);
@@ -647,6 +653,10 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
     localStorage.setItem(`opt_laneColor_${lane}`, color);
     localStorage.setItem("opt_noteTheme", "custom");
     setOpts(o => ({ ...o, laneColors: newColors, noteTheme: "custom" }));
+    updateSettings({
+      laneColors: newColors,
+      noteTheme: "custom",
+    });
     logAnalyticsEvent('setting_change', { key: `laneColor_${lane}`, value: color });
     audioManager.playSfx('tap_nav', 0.05);
   };
@@ -660,6 +670,23 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
       if (resetTimer.current) clearTimeout(resetTimer.current);
       resetOpts();
       setOpts(loadOpts());
+      updateSettings({
+        audioOffset: 0,
+        laneKeys: ["a", "s", "d"],
+        laneColors: ["#FF1493", "#00E5FF", "#39FF14"],
+        noteTheme: "classic",
+        cardSkin: "original",
+        cardBack: "classic",
+        gameBackground: "cover_blur",
+        backgroundBlur: 18,
+        hudMisses: true,
+        comboDisplay: true,
+        judgmentText: true,
+        bgMusic: false,
+        haptics: true,
+        missSystem: true,
+      });
+      updateProgression({ noteGenerationSource: "auto" });
       setResetState("idle");
       logAnalyticsEvent('setting_reset');
       audioManager.playSfx('menu_confirm', 0.2);
@@ -670,6 +697,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
   const handleSelectFrontSkin = (skinId: string) => {
     localStorage.setItem('opt_cardSkin', skinId);
     setActiveCardSkin(skinId);
+    updateSettings({ cardSkin: skinId });
     window.dispatchEvent(new Event('card_skins_changed'));
     audioManager.playSfx('menu_confirm', 0.15);
   };
@@ -686,6 +714,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
   const handleSelectBackSkin = (skinId: string) => {
     localStorage.setItem('opt_cardBack', skinId);
     setActiveCardBack(skinId);
+    updateSettings({ cardBack: skinId });
     window.dispatchEvent(new Event('card_skins_changed'));
     audioManager.playSfx('menu_confirm', 0.15);
   };
@@ -740,7 +769,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
         >
           <div className="flex items-center gap-2.5">
             <Sliders size={18} className={isAvant ? "text-[#39FF14]" : "text-[#FF1493]"} />
-            <h1 className="font-mono text-[10px] md:text-xs font-black tracking-[0.2em] md:tracking-[0.3em] uppercase text-white truncate max-w-[150px] sm:max-w-none">
+            <h1 className="text-sm md:text-base brutalist-title italic tracking-wide" style={{ '--neon-accent': isAvant ? '#39FF14' : '#FF1493' } as any}>
               SYSTEM CONFIG
             </h1>
           </div>
@@ -835,7 +864,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
             {activeTab === 'gameplay' && (
               <div className="space-y-6 animate-fade-in">
                 <div>
-                  <h2 className="font-mono text-xs font-bold text-white uppercase tracking-widest mb-1">Gameplay Core Controls</h2>
+                  <h2 className="text-base md:text-lg brutalist-title italic mb-1" style={{ '--neon-accent': isAvant ? '#39FF14' : '#FF1493' } as any}>Gameplay Core Controls</h2>
                   <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Configure visual feedback, scoring mechanisms, and sound overlays</p>
                 </div>
 
@@ -935,6 +964,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                           onClick={() => {
                             localStorage.setItem("opt_noteGenerationSource", mode);
                             setOpts(o => ({ ...o, noteGenerationSource: mode }));
+                            updateProgression({ noteGenerationSource: mode });
                             clearCatalogCache();
                             logAnalyticsEvent('setting_change', { key: 'noteGenerationSource', value: mode });
                             audioManager.playSfx('tap_nav', 0.1);
@@ -975,7 +1005,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
             {activeTab === 'controls' && (
               <div className="space-y-6 animate-fade-in">
                 <div>
-                  <h2 className="font-mono text-xs font-bold text-white uppercase tracking-widest mb-1">Key remap & audio sync</h2>
+                  <h2 className="text-base md:text-lg brutalist-title italic mb-1" style={{ '--neon-accent': isAvant ? '#39FF14' : '#FF1493' } as any}>Key remap & audio sync</h2>
                   <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Configure physical inputs for note lanes and calibrate latency sync</p>
                 </div>
 
@@ -1060,6 +1090,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                     onChange={v => {
                       localStorage.setItem("opt_audioOffset", String(v));
                       setOpts(o => ({ ...o, audioOffset: v }));
+                      updateSettings({ audioOffset: v });
                     }}
                     isAvant={isAvant}
                   />
@@ -1098,7 +1129,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
             {activeTab === 'themes' && (
               <div className="space-y-6 animate-fade-in">
                 <div>
-                  <h2 className="font-mono text-xs font-bold text-white uppercase tracking-widest mb-1">Note Themes & Lane Colors</h2>
+                  <h2 className="text-base md:text-lg brutalist-title italic mb-1" style={{ '--neon-accent': isAvant ? '#39FF14' : '#FF1493' } as any}>Note Themes & Lane Colors</h2>
                   <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Customize note palettes and individual colors for the three lanes</p>
                 </div>
 
@@ -1193,7 +1224,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
             {activeTab === 'backgrounds' && (
               <div className="space-y-6 animate-fade-in">
                 <div>
-                  <h2 className="font-mono text-xs font-bold text-white uppercase tracking-widest mb-1">Global Menu Background & Blur</h2>
+                  <h2 className="text-base md:text-lg brutalist-title italic mb-1" style={{ '--neon-accent': isAvant ? '#39FF14' : '#FF1493' } as any}>Global Menu Background & Blur</h2>
                   <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Customize backgrounds rendering across dashboard and archive pages</p>
                 </div>
 
@@ -1205,6 +1236,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                     onChange={(v) => {
                       localStorage.setItem("opt_backgroundBlur", String(v));
                       setOpts(o => ({ ...o, backgroundBlur: v }));
+                      updateSettings({ backgroundBlur: v });
                     }}
                     isAvant={isAvant}
                   />
@@ -1222,6 +1254,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                         onClick={() => {
                           localStorage.setItem("opt_gameBackground", bg.id);
                           setOpts(o => ({ ...o, gameBackground: bg.id }));
+                          updateSettings({ gameBackground: bg.id });
                           window.dispatchEvent(new Event("bgmusic_toggle"));
                           audioManager.playSfx('menu_confirm', 0.1);
                         }}
@@ -1254,7 +1287,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
             {activeTab === 'fronts' && (
               <div className="space-y-4 animate-fade-in">
                 <div>
-                  <h2 className="font-mono text-xs font-bold text-white uppercase tracking-widest mb-1">Card Front Skins Catalog</h2>
+                  <h2 className="text-base md:text-lg brutalist-title italic mb-1" style={{ '--neon-accent': isAvant ? '#39FF14' : '#FF1493' } as any}>Card Front Skins Catalog</h2>
                   <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Unlock and select custom card borders for cards in your collection</p>
                 </div>
 
@@ -1348,7 +1381,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
             {activeTab === 'backs' && (
               <div className="space-y-5 animate-fade-in">
                 <div>
-                  <h2 className="font-mono text-xs font-bold text-white uppercase tracking-widest mb-1">Card Back Skins Catalog</h2>
+                  <h2 className="text-base md:text-lg brutalist-title italic mb-1" style={{ '--neon-accent': isAvant ? '#39FF14' : '#FF1493' } as any}>Card Back Skins Catalog</h2>
                   <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Select standard visual backings or unlock special card backings</p>
                 </div>
 

@@ -25,8 +25,14 @@ const links = [
 
 // ── The new logotype ──────────────────────────────────────────────────────────
 function VaultLogo() {
+  const setOptionsModalOpen = useVaultStore((s) => s.setOptionsModalOpen);
   return (
-    <Link to="/vault" className="flex items-center gap-2.5 no-underline group shrink-0" aria-label="th3vault home">
+    <Link 
+      to="/" 
+      className="flex items-center gap-2.5 no-underline group shrink-0" 
+      aria-label="th3vault home"
+      onClick={() => setOptionsModalOpen(false)}
+    >
       {/* Icon mark */}
       <div style={{ position: 'relative', flexShrink: 0 }}>
         <div
@@ -184,7 +190,7 @@ export default function Navbar() {
     <>
       {/* ══ TOP BAR ══════════════════════════════════════════════════════════ */}
       <nav
-        className="sticky top-0 z-50 px-4 md:px-8"
+        className="sticky top-0 z-[101] px-4 md:px-8"
         style={{
           background: 'rgba(8, 6, 4, 0.45)',
           backdropFilter: 'blur(20px)',
@@ -214,6 +220,8 @@ export default function Navbar() {
                     if (to === '/options') {
                       e.preventDefault();
                       setOptionsModalOpen(true);
+                    } else {
+                      setOptionsModalOpen(false);
                     }
                   }}
                   className="sticker-gun-tag sticker-slits transition-all hover:scale-105 active:scale-95 no-underline flex flex-row items-center gap-1.5"
@@ -509,6 +517,8 @@ export default function Navbar() {
                         if (to === '/options') {
                           e.preventDefault();
                           setOptionsModalOpen(true);
+                        } else {
+                          setOptionsModalOpen(false);
                         }
                       }}
                       className="flex items-center gap-3 px-4 py-3 no-underline transition-all"
@@ -688,13 +698,16 @@ export default function Navbar() {
         }}
       >
         <div className="flex items-stretch h-[62px]">
-          {links.filter(l => l.to !== '/vault/codex' && l.to !== '/vault/leaderboard' && l.to !== '/pitch-deck').map(({ to, label, icon: Icon }) => {
+          {links.filter(l => l.to !== '/vault/collection' && l.to !== '/vault/leaderboard' && l.to !== '/pitch-deck').map(({ to, label, icon: Icon }) => {
             const active = location === to;
             return (
               <Link
                 key={to}
                 to={to}
-                onClick={() => haptics.lightTap()}
+                onClick={() => {
+                  haptics.lightTap();
+                  setOptionsModalOpen(false);
+                }}
                 className="flex-1 flex flex-col items-center justify-center gap-1 no-underline transition-all active:scale-95"
                 style={{
                   color: active ? '#ff3800' : 'rgba(255,255,255,0.3)',

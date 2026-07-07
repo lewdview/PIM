@@ -52,7 +52,7 @@ export default function Tutorial() {
     load();
 
     // Check if the tutorial was already completed (replay mode)
-    const completed = localStorage.getItem("pim_tutorial_completed") === "true";
+    const completed = localStorage.getItem("pim_tutorial_completed") === "true" || useVaultStore.getState().progression.tutorialCompleted;
     setIsReplay(completed);
 
     // Parse URL query parameters to restore tutorial phase and score
@@ -137,6 +137,7 @@ export default function Tutorial() {
   // Complete onboarding
   const handleCompleteTutorial = () => {
     localStorage.setItem("pim_tutorial_completed", "true");
+    useVaultStore.getState().updateProgression({ tutorialCompleted: true });
     audioManager.playSfx("tap_nav", 0.15);
     setLocation("/arcade");
   };
@@ -480,6 +481,7 @@ export default function Tutorial() {
                 <button
                   onClick={() => {
                     localStorage.setItem("pim_tutorial_completed", "true");
+                    useVaultStore.getState().updateProgression({ tutorialCompleted: true });
                     audioManager.playSfx("tap_nav", 0.15);
                     setLocation("/vault");
                     useAuthStore.getState().setShowAuthModal(true);

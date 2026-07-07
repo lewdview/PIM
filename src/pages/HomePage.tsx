@@ -259,7 +259,7 @@ export default function HomePage() {
         localStorage.setItem("pim_tutorial_redirect_song_id", owned.cardId);
         setHasClaimed(true);
         audioManager.playSfx('open_chest', 0.9);
-        const completed = localStorage.getItem("pim_tutorial_completed") === "true";
+        const completed = localStorage.getItem("pim_tutorial_completed") === "true" || useVaultStore.getState().progression.tutorialCompleted;
         const hasClaimedBefore = completed || (collection && collection.length > 0);
 
         startReveal([owned], {

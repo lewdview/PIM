@@ -732,7 +732,7 @@ export default function Game() {
   
   const isTutorialRef = useRef(new URLSearchParams(window.location.search).get("tutorial") === "true");
   const isTutorial = isTutorialRef.current;
-  const isTutorialCompleted = localStorage.getItem("pim_tutorial_completed") === "true";
+  const isTutorialCompleted = localStorage.getItem("pim_tutorial_completed") === "true" || useVaultStore.getState().progression.tutorialCompleted;
   const activeTutorial = isTutorial && !isTutorialCompleted;
   const [isTutorialHelpOpen, setIsTutorialHelpOpen] = useState(false);
   const isTutorialHelpOpenRef = useRef(false);

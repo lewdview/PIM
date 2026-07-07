@@ -1,3 +1,5 @@
+import { useVaultStore } from '../store/useVaultStore';
+
 export type GameOpts = {
   missSystem: boolean;
   hudMisses: boolean;
@@ -58,40 +60,47 @@ export const DEFAULT_OPTS: GameOpts = {
 };
 
 export function loadOpts(): GameOpts {
+  const store = useVaultStore.getState();
+  const dbSettings = store.settings;
+  const dbProgression = store.progression;
+  const dbCheats = store.unlockedCheats;
+
   const bool = (key: string, def: boolean) =>
     localStorage.getItem(key) === null ? def : localStorage.getItem(key) !== "false";
 
-  const isNoclipUnlocked = localStorage.getItem("opt_unlocked_noclip") === "true";
-  const isIddqdUnlocked = localStorage.getItem("opt_unlocked_iddqd") === "true";
+  const isNoclipUnlocked = dbCheats?.noclip ?? (localStorage.getItem("opt_unlocked_noclip") === "true");
+  const isIddqdUnlocked = dbCheats?.iddqd ?? (localStorage.getItem("opt_unlocked_iddqd") === "true");
 
   return {
-    missSystem:   isNoclipUnlocked ? bool("opt_missSystem", true) : true,
-    hudMisses:    bool("opt_hudMisses", true),
-    comboDisplay: bool("opt_comboDisplay", true),
-    judgmentText: bool("opt_judgmentText", true),
-    audioOffset:  parseFloat(localStorage.getItem("opt_audioOffset") ?? "0") || 0,
+    missSystem: isNoclipUnlocked 
+      ? (dbSettings?.missSystem ?? bool("opt_missSystem", true)) 
+      : true,
+    hudMisses: dbSettings?.hudMisses ?? bool("opt_hudMisses", true),
+    comboDisplay: dbSettings?.comboDisplay ?? bool("opt_comboDisplay", true),
+    judgmentText: dbSettings?.judgmentText ?? bool("opt_judgmentText", true),
+    audioOffset: dbSettings?.audioOffset ?? (parseFloat(localStorage.getItem("opt_audioOffset") ?? "0") || 0),
     laneKeys: [
-      localStorage.getItem("opt_laneKey_0") ?? DEFAULT_OPTS.laneKeys[0],
-      localStorage.getItem("opt_laneKey_1") ?? DEFAULT_OPTS.laneKeys[1],
-      localStorage.getItem("opt_laneKey_2") ?? DEFAULT_OPTS.laneKeys[2],
+      dbSettings?.laneKeys?.[0] ?? (localStorage.getItem("opt_laneKey_0") ?? DEFAULT_OPTS.laneKeys[0]),
+      dbSettings?.laneKeys?.[1] ?? (localStorage.getItem("opt_laneKey_1") ?? DEFAULT_OPTS.laneKeys[1]),
+      dbSettings?.laneKeys?.[2] ?? (localStorage.getItem("opt_laneKey_2") ?? DEFAULT_OPTS.laneKeys[2]),
     ],
     laneColors: [
-      localStorage.getItem("opt_laneColor_0") ?? DEFAULT_OPTS.laneColors[0],
-      localStorage.getItem("opt_laneColor_1") ?? DEFAULT_OPTS.laneColors[1],
-      localStorage.getItem("opt_laneColor_2") ?? DEFAULT_OPTS.laneColors[2],
+      dbSettings?.laneColors?.[0] ?? (localStorage.getItem("opt_laneColor_0") ?? DEFAULT_OPTS.laneColors[0]),
+      dbSettings?.laneColors?.[1] ?? (localStorage.getItem("opt_laneColor_1") ?? DEFAULT_OPTS.laneColors[1]),
+      dbSettings?.laneColors?.[2] ?? (localStorage.getItem("opt_laneColor_2") ?? DEFAULT_OPTS.laneColors[2]),
     ],
     useLocalFiles: bool("opt_useLocalFiles", false),
     noteGenerationSource: (() => {
       if (!isIddqdUnlocked) return "auto";
-      const v = localStorage.getItem("opt_noteGenerationSource");
+      const v = dbProgression?.noteGenerationSource ?? localStorage.getItem("opt_noteGenerationSource");
       return (v === "lyrics" || v === "bpm" || v === "auto") ? v : "auto";
     })(),
-    bgMusic: bool("opt_bgMusic", false),
-    gameBackground: localStorage.getItem("opt_gameBackground") ?? "cover_blur",
-    backgroundBlur: parseFloat(localStorage.getItem("opt_backgroundBlur") ?? "18") || 18,
-    cardBack: localStorage.getItem("opt_cardBack") ?? "classic",
-    haptics: bool("opt_haptics", true),
-    noteTheme: localStorage.getItem("opt_noteTheme") ?? "classic",
+    bgMusic: dbSettings?.bgMusic ?? bool("opt_bgMusic", false),
+    gameBackground: dbSettings?.gameBackground ?? (localStorage.getItem("opt_gameBackground") ?? "cover_blur"),
+    backgroundBlur: dbSettings?.backgroundBlur ?? (parseFloat(localStorage.getItem("opt_backgroundBlur") ?? "18") || 18),
+    cardBack: dbSettings?.cardBack ?? (localStorage.getItem("opt_cardBack") ?? "classic"),
+    haptics: dbSettings?.haptics ?? bool("opt_haptics", true),
+    noteTheme: dbSettings?.noteTheme ?? (localStorage.getItem("opt_noteTheme") ?? "classic"),
   };
 }
 
