@@ -5887,44 +5887,89 @@ export default function Game() {
                   }}
                   className="relative flex flex-col items-center justify-center font-mono"
                 >
-                  {/* Glowing snaps circle */}
+                   {/* Outer Tech Hexagon Vector Ring */}
                   <motion.div
                     variants={{
-                      initial: { scale: 2.2, opacity: 0, border: "2px solid #00E5FF", boxShadow: "0 0 0px rgba(0,229,255,0)" },
+                      initial: { scale: 2.2, rotate: 0, opacity: 0 },
                       animate: { 
                         scale: 1.0, 
-                        opacity: [0, 1, 1],
-                        border: ["2px solid #00E5FF", "2px solid #FF1493", "2px solid #FF1493"],
-                        boxShadow: "0 0 30px rgba(255, 20, 147, 0.6), inset 0 0 15px rgba(255, 20, 147, 0.3)",
-                        transition: { type: "spring", stiffness: 120, damping: 14, delay: 0.3 }
+                        rotate: 180, 
+                        opacity: [0, 0.5, 0.5],
+                        transition: { type: "spring", stiffness: 90, damping: 12, delay: 0.1 }
                       },
-                      exit: { scale: 1.5, opacity: 0, transition: { duration: 0.35 } }
+                      exit: { scale: 0.4, rotate: 360, opacity: 0, transition: { duration: 0.3 } }
                     }}
                     style={{
                       position: "absolute",
-                      width: 180,
-                      height: 180,
-                      borderRadius: "50%",
+                      width: 220,
+                      height: 220,
+                      border: "1.5px solid rgba(0, 229, 255, 0.4)",
+                      borderRadius: "24px", 
+                      boxShadow: "0 0 25px rgba(0, 229, 255, 0.2)",
                     }}
                   />
 
-                  {/* Sparkle burst ring (triggers on snap) */}
+                  {/* Inner Rotating Dashed Circle Ring */}
                   <motion.div
                     variants={{
-                      initial: { scale: 0.8, opacity: 0, border: "1px solid #ffffff", boxShadow: "0 0 0px #fff" },
-                      animate: {
-                        scale: [0.8, 1.0, 1.4],
-                        opacity: [0, 0, 1, 0],
-                        border: ["1px solid #ffffff", "2px solid #00E5FF", "1px solid #FF1493"],
-                        boxShadow: ["0 0 0px #fff", "0 0 20px #00E5FF", "0 0 40px #FF1493"],
-                        transition: { duration: 0.5, delay: 0.7, times: [0, 0.2, 0.6, 1] }
-                      }
+                      initial: { scale: 0.3, rotate: 0, opacity: 0 },
+                      animate: { 
+                        scale: 1.0, 
+                        rotate: -180, 
+                        opacity: [0, 0.8, 0.8],
+                        transition: { type: "spring", stiffness: 100, damping: 10, delay: 0.2 }
+                      },
+                      exit: { scale: 1.8, rotate: -360, opacity: 0, transition: { duration: 0.3 } }
                     }}
                     style={{
                       position: "absolute",
-                      width: 180,
-                      height: 180,
+                      width: 190,
+                      height: 190,
                       borderRadius: "50%",
+                      border: "2px dashed #FF1493",
+                      boxShadow: "0 0 15px rgba(255, 20, 147, 0.4)",
+                    }}
+                  />
+
+                  {/* Core Glowing Diamond Shape */}
+                  <motion.div
+                    variants={{
+                      initial: { scale: 0, rotate: 45, opacity: 0 },
+                      animate: { 
+                        scale: 1.0, 
+                        rotate: 225, 
+                        opacity: [0, 0.15, 0.15],
+                        transition: { type: "spring", stiffness: 120, damping: 12, delay: 0.3 }
+                      },
+                      exit: { scale: 2.2, rotate: 405, opacity: 0, transition: { duration: 0.3 } }
+                    }}
+                    style={{
+                      position: "absolute",
+                      width: 140,
+                      height: 140,
+                      background: "linear-gradient(135deg, rgba(0, 229, 255, 0.2), rgba(255, 20, 147, 0.2))",
+                      border: "1px solid rgba(255, 255, 255, 0.3)",
+                      boxShadow: "0 0 25px rgba(0, 229, 255, 0.3)",
+                    }}
+                  />
+
+                  {/* Laser Scanline Sweep */}
+                  <motion.div
+                    variants={{
+                      initial: { y: -80, opacity: 0 },
+                      animate: { 
+                        y: [-80, 80, -80],
+                        opacity: [0, 0.8, 0.8, 0],
+                        transition: { repeat: Infinity, duration: 2.0, ease: "linear" }
+                      },
+                      exit: { opacity: 0 }
+                    }}
+                    style={{
+                      position: "absolute",
+                      width: 170,
+                      height: "2px",
+                      background: "linear-gradient(90deg, transparent, #00E5FF, #FF1493, #00E5FF, transparent)",
+                      boxShadow: "0 0 8px #00E5FF, 0 0 16px #FF1493",
                     }}
                   />
 
@@ -5932,12 +5977,19 @@ export default function Game() {
                   <motion.div
                     key={`top-${stageStingerPhase}-${stageStingerNumber}`}
                     variants={{
-                      initial: { x: "-100vw", opacity: 0 },
-                      animate: { x: 0, opacity: 1, transition: { type: "spring", stiffness: 100, damping: 15 } },
-                      exit: { x: "-100vw", opacity: 0, transition: { ease: "easeInOut", duration: 0.3 } }
+                      initial: { scale: 0.5, y: -40, opacity: 0 },
+                      animate: { 
+                        scale: 1, 
+                        y: -16, 
+                        opacity: 1, 
+                        transition: { type: "spring", stiffness: 150, damping: 12, delay: 0.3 } 
+                      },
+                      exit: { scale: 1.3, y: -30, opacity: 0, transition: { ease: "easeIn", duration: 0.25 } }
                     }}
-                    className="absolute text-white font-extrabold text-2xl tracking-[0.25em] z-10"
-                    style={{ textShadow: "0 0 10px rgba(255,255,255,0.6)", transform: "translateY(-16px)" }}
+                    className="absolute text-white font-black text-3xl tracking-[0.25em] z-10 brutalist-title italic"
+                    style={{ 
+                      textShadow: "0 0 15px rgba(255,255,255,0.8), 0 0 25px rgba(0,229,255,0.4)",
+                    }}
                   >
                     STAGE {stageStingerPhase === 'cleared' ? stageStingerNumber - 1 : stageStingerNumber}
                   </motion.div>
@@ -5946,14 +5998,20 @@ export default function Game() {
                   <motion.div
                     key={`bottom-${stageStingerPhase}-${stageStingerNumber}`}
                     variants={{
-                      initial: { x: "100vw", opacity: 0 },
-                      animate: { x: 0, opacity: 1, transition: { type: "spring", stiffness: 100, damping: 15 } },
-                      exit: { x: "100vw", opacity: 0, transition: { ease: "easeInOut", duration: 0.3 } }
+                      initial: { scale: 0.5, y: 40, opacity: 0 },
+                      animate: { 
+                        scale: 1, 
+                        y: 20, 
+                        opacity: 1, 
+                        transition: { type: "spring", stiffness: 150, damping: 12, delay: 0.4 } 
+                      },
+                      exit: { scale: 1.3, y: 30, opacity: 0, transition: { ease: "easeIn", duration: 0.25 } }
                     }}
-                    className="absolute text-[#00E5FF] font-bold text-xs tracking-[0.5em] z-10"
+                    className="absolute font-black text-sm tracking-[0.5em] z-10 brutalist-title italic"
                     style={{ 
-                      textShadow: "0 0 8px rgba(0,229,255,0.6)", 
-                      transform: "translateY(20px)",
+                      textShadow: stageStingerPhase === 'cleared' 
+                        ? "0 0 15px rgba(255,20,147,0.8), 0 0 25px rgba(255,20,147,0.4)"
+                        : "0 0 15px rgba(0,229,255,0.8), 0 0 25px rgba(0,229,255,0.4)",
                       color: stageStingerPhase === 'cleared' ? '#FF1493' : '#00E5FF',
                     }}
                   >
