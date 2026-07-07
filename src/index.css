@@ -148,6 +148,15 @@ body {
   color: #ffffff;
 }
 
+.brutalist-menu-title {
+  font-family: 'Impact', 'Arial Black', 'Anton', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #ffffff;
+  text-shadow: 0 0 10px var(--neon-accent, transparent), 0 2px 4px rgba(0,0,0,0.8);
+}
+
+
 .brutalist-stroke-md {
   -webkit-text-stroke: 2px #000000;
   text-shadow: 3px 5px 0 #000000, -1px -1px 0 #000;

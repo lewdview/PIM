@@ -769,7 +769,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
         >
           <div className="flex items-center gap-2.5">
             <Sliders size={18} className={isAvant ? "text-[#39FF14]" : "text-[#FF1493]"} />
-            <h1 className="text-sm md:text-base brutalist-title italic tracking-wide" style={{ '--neon-accent': isAvant ? '#39FF14' : '#FF1493' } as any}>
+            <h1 className="text-sm md:text-base brutalist-menu-title italic tracking-wide" style={{ '--neon-accent': isAvant ? '#39FF14' : '#FF1493' } as any}>
               SYSTEM CONFIG
             </h1>
           </div>
@@ -864,7 +864,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
             {activeTab === 'gameplay' && (
               <div className="space-y-6 animate-fade-in">
                 <div>
-                  <h2 className="text-base md:text-lg brutalist-title italic mb-1" style={{ '--neon-accent': isAvant ? '#39FF14' : '#FF1493' } as any}>Gameplay Core Controls</h2>
+                  <h2 className="text-base md:text-lg brutalist-menu-title italic mb-1" style={{ '--neon-accent': isAvant ? '#39FF14' : '#FF1493' } as any}>Gameplay Core Controls</h2>
                   <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Configure visual feedback, scoring mechanisms, and sound overlays</p>
                 </div>
 
@@ -1005,7 +1005,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
             {activeTab === 'controls' && (
               <div className="space-y-6 animate-fade-in">
                 <div>
-                  <h2 className="text-base md:text-lg brutalist-title italic mb-1" style={{ '--neon-accent': isAvant ? '#39FF14' : '#FF1493' } as any}>Key remap & audio sync</h2>
+                  <h2 className="text-base md:text-lg brutalist-menu-title italic mb-1" style={{ '--neon-accent': isAvant ? '#39FF14' : '#FF1493' } as any}>Key remap & audio sync</h2>
                   <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Configure physical inputs for note lanes and calibrate latency sync</p>
                 </div>
 
@@ -1129,7 +1129,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
             {activeTab === 'themes' && (
               <div className="space-y-6 animate-fade-in">
                 <div>
-                  <h2 className="text-base md:text-lg brutalist-title italic mb-1" style={{ '--neon-accent': isAvant ? '#39FF14' : '#FF1493' } as any}>Note Themes & Lane Colors</h2>
+                  <h2 className="text-base md:text-lg brutalist-menu-title italic mb-1" style={{ '--neon-accent': isAvant ? '#39FF14' : '#FF1493' } as any}>Note Themes & Lane Colors</h2>
                   <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Customize note palettes and individual colors for the three lanes</p>
                 </div>
 
@@ -1224,7 +1224,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
             {activeTab === 'backgrounds' && (
               <div className="space-y-6 animate-fade-in">
                 <div>
-                  <h2 className="text-base md:text-lg brutalist-title italic mb-1" style={{ '--neon-accent': isAvant ? '#39FF14' : '#FF1493' } as any}>Global Menu Background & Blur</h2>
+                  <h2 className="text-base md:text-lg brutalist-menu-title italic mb-1" style={{ '--neon-accent': isAvant ? '#39FF14' : '#FF1493' } as any}>Global Menu Background & Blur</h2>
                   <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Customize backgrounds rendering across dashboard and archive pages</p>
                 </div>
 
@@ -1287,7 +1287,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
             {activeTab === 'fronts' && (
               <div className="space-y-4 animate-fade-in">
                 <div>
-                  <h2 className="text-base md:text-lg brutalist-title italic mb-1" style={{ '--neon-accent': isAvant ? '#39FF14' : '#FF1493' } as any}>Card Front Skins Catalog</h2>
+                  <h2 className="text-base md:text-lg brutalist-menu-title italic mb-1" style={{ '--neon-accent': isAvant ? '#39FF14' : '#FF1493' } as any}>Card Front Skins Catalog</h2>
                   <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Unlock and select custom card borders for cards in your collection</p>
                 </div>
 
@@ -1381,7 +1381,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
             {activeTab === 'backs' && (
               <div className="space-y-5 animate-fade-in">
                 <div>
-                  <h2 className="text-base md:text-lg brutalist-title italic mb-1" style={{ '--neon-accent': isAvant ? '#39FF14' : '#FF1493' } as any}>Card Back Skins Catalog</h2>
+                  <h2 className="text-base md:text-lg brutalist-menu-title italic mb-1" style={{ '--neon-accent': isAvant ? '#39FF14' : '#FF1493' } as any}>Card Back Skins Catalog</h2>
                   <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Select standard visual backings or unlock special card backings</p>
                 </div>
 

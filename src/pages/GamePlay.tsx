@@ -5887,7 +5887,34 @@ export default function Game() {
                   }}
                   className="relative flex flex-col items-center justify-center font-mono"
                 >
-                   {/* Outer Tech Hexagon Vector Ring */}
+                  {/* Glassmorphic Cyberpunk Backing Banner */}
+                  <motion.div
+                    variants={{
+                      initial: { scaleX: 0, opacity: 0 },
+                      animate: { 
+                        scaleX: 1, 
+                        opacity: 1,
+                        transition: { type: "spring", stiffness: 120, damping: 18 }
+                      },
+                      exit: { scaleX: 0, opacity: 0, transition: { duration: 0.25, ease: "easeIn" } }
+                    }}
+                    style={{
+                      position: "absolute",
+                      width: "480px",
+                      maxWidth: "90vw",
+                      height: "190px",
+                      background: "rgba(8, 8, 8, 0.88)",
+                      backdropFilter: "blur(16px)",
+                      border: "2px solid rgba(255, 255, 255, 0.1)",
+                      borderLeft: "4px solid #00E5FF",
+                      borderRight: "4px solid #FF1493",
+                      boxShadow: "0 25px 60px rgba(0,0,0,0.85), inset 0 0 30px rgba(255,255,255,0.03)",
+                      borderRadius: "16px",
+                      zIndex: 1,
+                    }}
+                  />
+
+                  {/* Outer Tech Hexagon Vector Ring */}
                   <motion.div
                     variants={{
                       initial: { scale: 2.2, rotate: 0, opacity: 0 },
@@ -5906,6 +5933,7 @@ export default function Game() {
                       border: "1.5px solid rgba(0, 229, 255, 0.4)",
                       borderRadius: "24px", 
                       boxShadow: "0 0 25px rgba(0, 229, 255, 0.2)",
+                      zIndex: 5,
                     }}
                   />
 
@@ -5928,6 +5956,7 @@ export default function Game() {
                       borderRadius: "50%",
                       border: "2px dashed #FF1493",
                       boxShadow: "0 0 15px rgba(255, 20, 147, 0.4)",
+                      zIndex: 5,
                     }}
                   />
 
@@ -5950,6 +5979,7 @@ export default function Game() {
                       background: "linear-gradient(135deg, rgba(0, 229, 255, 0.2), rgba(255, 20, 147, 0.2))",
                       border: "1px solid rgba(255, 255, 255, 0.3)",
                       boxShadow: "0 0 25px rgba(0, 229, 255, 0.3)",
+                      zIndex: 5,
                     }}
                   />
 
@@ -5970,6 +6000,7 @@ export default function Game() {
                       height: "2px",
                       background: "linear-gradient(90deg, transparent, #00E5FF, #FF1493, #00E5FF, transparent)",
                       boxShadow: "0 0 8px #00E5FF, 0 0 16px #FF1493",
+                      zIndex: 6,
                     }}
                   />
 
@@ -5977,18 +6008,19 @@ export default function Game() {
                   <motion.div
                     key={`top-${stageStingerPhase}-${stageStingerNumber}`}
                     variants={{
-                      initial: { scale: 0.5, y: -40, opacity: 0 },
+                      initial: { scale: 0.5, y: -45, opacity: 0 },
                       animate: { 
                         scale: 1, 
-                        y: -16, 
+                        y: -22, 
                         opacity: 1, 
-                        transition: { type: "spring", stiffness: 150, damping: 12, delay: 0.3 } 
+                        transition: { type: "spring", stiffness: 150, damping: 12, delay: 0.2 } 
                       },
-                      exit: { scale: 1.3, y: -30, opacity: 0, transition: { ease: "easeIn", duration: 0.25 } }
+                      exit: { scale: 1.2, y: -30, opacity: 0, transition: { ease: "easeIn", duration: 0.2 } }
                     }}
-                    className="absolute text-white font-black text-3xl tracking-[0.25em] z-10 brutalist-title italic"
+                    className="absolute text-white font-black text-4xl md:text-5xl uppercase tracking-[0.2em] z-10"
                     style={{ 
-                      textShadow: "0 0 15px rgba(255,255,255,0.8), 0 0 25px rgba(0,229,255,0.4)",
+                      fontFamily: '"Impact", "Arial Black", sans-serif',
+                      textShadow: "0 0 20px rgba(255,255,255,0.95), 0 0 40px rgba(0,229,255,0.6)",
                     }}
                   >
                     STAGE {stageStingerPhase === 'cleared' ? stageStingerNumber - 1 : stageStingerNumber}
@@ -5998,20 +6030,21 @@ export default function Game() {
                   <motion.div
                     key={`bottom-${stageStingerPhase}-${stageStingerNumber}`}
                     variants={{
-                      initial: { scale: 0.5, y: 40, opacity: 0 },
+                      initial: { scale: 0.5, y: 35, opacity: 0 },
                       animate: { 
                         scale: 1, 
-                        y: 20, 
+                        y: 28, 
                         opacity: 1, 
-                        transition: { type: "spring", stiffness: 150, damping: 12, delay: 0.4 } 
+                        transition: { type: "spring", stiffness: 150, damping: 12, delay: 0.3 } 
                       },
-                      exit: { scale: 1.3, y: 30, opacity: 0, transition: { ease: "easeIn", duration: 0.25 } }
+                      exit: { scale: 1.2, y: 30, opacity: 0, transition: { ease: "easeIn", duration: 0.2 } }
                     }}
-                    className="absolute font-black text-sm tracking-[0.5em] z-10 brutalist-title italic"
+                    className="absolute font-black text-xl md:text-2xl uppercase tracking-[0.4em] z-10"
                     style={{ 
+                      fontFamily: '"Impact", "Arial Black", sans-serif',
                       textShadow: stageStingerPhase === 'cleared' 
-                        ? "0 0 15px rgba(255,20,147,0.8), 0 0 25px rgba(255,20,147,0.4)"
-                        : "0 0 15px rgba(0,229,255,0.8), 0 0 25px rgba(0,229,255,0.4)",
+                        ? "0 0 20px rgba(255,20,147,0.95), 0 0 40px rgba(255,20,147,0.6)"
+                        : "0 0 20px rgba(0,229,255,0.95), 0 0 40px rgba(0,229,255,0.6)",
                       color: stageStingerPhase === 'cleared' ? '#FF1493' : '#00E5FF',
                     }}
                   >
