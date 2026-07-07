@@ -5903,12 +5903,12 @@ export default function Game() {
                       width: "480px",
                       maxWidth: "90vw",
                       height: "190px",
-                      background: "rgba(8, 8, 8, 0.88)",
-                      backdropFilter: "blur(16px)",
-                      border: "2px solid rgba(255, 255, 255, 0.1)",
+                      background: "rgba(4, 4, 4, 0.96)",
+                      backdropFilter: "blur(20px)",
+                      border: "2px solid rgba(255, 255, 255, 0.15)",
                       borderLeft: "4px solid #00E5FF",
                       borderRight: "4px solid #FF1493",
-                      boxShadow: "0 25px 60px rgba(0,0,0,0.85), inset 0 0 30px rgba(255,255,255,0.03)",
+                      boxShadow: "0 30px 70px rgba(0,0,0,0.95), inset 0 0 30px rgba(255,255,255,0.05)",
                       borderRadius: "16px",
                       zIndex: 1,
                     }}
@@ -5921,7 +5921,7 @@ export default function Game() {
                       animate: { 
                         scale: 1.0, 
                         rotate: 180, 
-                        opacity: [0, 0.5, 0.5],
+                        opacity: [0, 0.95, 0.95],
                         transition: { type: "spring", stiffness: 90, damping: 12, delay: 0.1 }
                       },
                       exit: { scale: 0.4, rotate: 360, opacity: 0, transition: { duration: 0.3 } }
@@ -5930,9 +5930,9 @@ export default function Game() {
                       position: "absolute",
                       width: 220,
                       height: 220,
-                      border: "1.5px solid rgba(0, 229, 255, 0.4)",
+                      border: "1.5px solid rgba(0, 229, 255, 0.85)",
                       borderRadius: "24px", 
-                      boxShadow: "0 0 25px rgba(0, 229, 255, 0.2)",
+                      boxShadow: "0 0 30px rgba(0, 229, 255, 0.4)",
                       zIndex: 5,
                     }}
                   />
@@ -5944,7 +5944,7 @@ export default function Game() {
                       animate: { 
                         scale: 1.0, 
                         rotate: -180, 
-                        opacity: [0, 0.8, 0.8],
+                        opacity: [0, 1.0, 1.0],
                         transition: { type: "spring", stiffness: 100, damping: 10, delay: 0.2 }
                       },
                       exit: { scale: 1.8, rotate: -360, opacity: 0, transition: { duration: 0.3 } }
@@ -5955,7 +5955,7 @@ export default function Game() {
                       height: 190,
                       borderRadius: "50%",
                       border: "2px dashed #FF1493",
-                      boxShadow: "0 0 15px rgba(255, 20, 147, 0.4)",
+                      boxShadow: "0 0 20px rgba(255, 20, 147, 0.6)",
                       zIndex: 5,
                     }}
                   />
@@ -5967,7 +5967,7 @@ export default function Game() {
                       animate: { 
                         scale: 1.0, 
                         rotate: 225, 
-                        opacity: [0, 0.15, 0.15],
+                        opacity: [0, 0.45, 0.45],
                         transition: { type: "spring", stiffness: 120, damping: 12, delay: 0.3 }
                       },
                       exit: { scale: 2.2, rotate: 405, opacity: 0, transition: { duration: 0.3 } }
@@ -5976,9 +5976,9 @@ export default function Game() {
                       position: "absolute",
                       width: 140,
                       height: 140,
-                      background: "linear-gradient(135deg, rgba(0, 229, 255, 0.2), rgba(255, 20, 147, 0.2))",
-                      border: "1px solid rgba(255, 255, 255, 0.3)",
-                      boxShadow: "0 0 25px rgba(0, 229, 255, 0.3)",
+                      background: "linear-gradient(135deg, rgba(0, 229, 255, 0.35), rgba(255, 20, 147, 0.35))",
+                      border: "1.5px solid rgba(255, 255, 255, 0.45)",
+                      boxShadow: "0 0 35px rgba(0, 229, 255, 0.5)",
                       zIndex: 5,
                     }}
                   />
@@ -5989,7 +5989,7 @@ export default function Game() {
                       initial: { y: -80, opacity: 0 },
                       animate: { 
                         y: [-80, 80, -80],
-                        opacity: [0, 0.8, 0.8, 0],
+                        opacity: [0, 1.0, 1.0, 0],
                         transition: { repeat: Infinity, duration: 2.0, ease: "linear" }
                       },
                       exit: { opacity: 0 }
@@ -5999,7 +5999,7 @@ export default function Game() {
                       width: 170,
                       height: "2px",
                       background: "linear-gradient(90deg, transparent, #00E5FF, #FF1493, #00E5FF, transparent)",
-                      boxShadow: "0 0 8px #00E5FF, 0 0 16px #FF1493",
+                      boxShadow: "0 0 10px #00E5FF, 0 0 20px #FF1493",
                       zIndex: 6,
                     }}
                   />
