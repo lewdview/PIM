@@ -624,7 +624,7 @@ export default function CodexPage() {
                   }}
                 >
                   {hasClaimedAll && (
-                    <PrizeRibbonSvg size={14} isClaimed={true} style={{ filter: 'drop-shadow(0 0 4px rgba(255,215,0,0.6))' }} />
+                    <PrizeRibbonSvg size={14} isClaimed={true} tier="prophecy" style={{ filter: 'drop-shadow(0 0 4px rgba(255,115,0,0.6))' }} />
                   )}
                   {isOwned ? (
                     <CheckCircle size={14} style={{ color: rc.color, filter: `drop-shadow(0 0 4px ${rc.color}80)` }} />

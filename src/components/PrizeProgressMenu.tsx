@@ -12,11 +12,11 @@ export default function PrizeProgressMenu({ songId }: PrizeProgressMenuProps) {
   const [expanded, setExpanded] = useState(false);
 
   const REWARD_TIERS = [
-    { id: 'free', label: 'Free Play', desc: 'Preview tier unlocked' },
-    { id: 'taste', label: 'First Taste', desc: '15s fragment completed' },
-    { id: 'special_picks', label: 'Special Picks', desc: 'Special curation reward' },
-    { id: 'alpha', label: 'Alpha Stage', desc: '80% stage completion' },
-    { id: 'prophecy', label: 'Prophecy', desc: '100% fragments collected' },
+    { id: 'free', label: 'Free Pack', desc: 'Bronze Reward Tier' },
+    { id: 'taste', label: 'Taste Pack', desc: 'Silver Reward Tier' },
+    { id: 'special_picks', label: 'Special Picks Pack', desc: 'Gold Reward Tier' },
+    { id: 'alpha', label: 'Alpha Stage Pack', desc: 'Platinum Reward Tier' },
+    { id: 'prophecy', label: 'Prophecy Pack', desc: 'Emerald Reward Tier' },
   ];
 
   const claimedCount = REWARD_TIERS.filter(
@@ -33,7 +33,7 @@ export default function PrizeProgressMenu({ songId }: PrizeProgressMenuProps) {
         className="w-full px-4 py-3.5 flex items-center justify-between font-mono text-[10px] font-bold uppercase tracking-wider text-white/80 hover:bg-white/5 transition-colors"
       >
         <div className="flex items-center gap-2">
-          <PrizeRibbonSvg size={14} isClaimed={claimedCount > 0} />
+          <PrizeRibbonSvg size={14} isClaimed={claimedCount > 0} tier="special_picks" />
           <span>Vault Prizes Status ({claimedCount} / 5 Claimed)</span>
         </div>
         <span className="text-white/40">{expanded ? '▲ Hide Details' : '▼ View Remaining'}</span>
@@ -50,7 +50,7 @@ export default function PrizeProgressMenu({ songId }: PrizeProgressMenuProps) {
             return (
               <div key={tier.id} className="flex items-center justify-between text-xs font-mono">
                 <div className="flex items-center gap-3">
-                  <PrizeRibbonSvg size={16} isClaimed={isClaimed} />
+                  <PrizeRibbonSvg size={16} isClaimed={isClaimed} tier={tier.id as any} />
                   <div className="text-left">
                     <div className={isClaimed ? "text-white font-bold" : "text-white/40"}>
                       {tier.label}
