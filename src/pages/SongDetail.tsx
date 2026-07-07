@@ -212,7 +212,19 @@ export default function SongDetail() {
   const hasCard = song && Array.isArray(collection) ? collection.some(c => c && (c.cardId === song.id || c.card?.day === song.day)) : false;
   const bestScore = history.length > 0 ? Math.max(...history) : 0;
   const isCleared = bestScore > 0 || (medal && medal !== '');
-  const fragmentCount = song ? (fragments[song.id] ?? 0) : 0;
+  const getFragmentsForDay = (day: number) => {
+    const cardKey = `card-${day}`;
+    const dayKey = `day-${String(day).padStart(3, '0')}`;
+    const dayKeyRaw = `day-${day}`;
+    return (
+      fragments[cardKey] ??
+      fragments[dayKey] ??
+      fragments[dayKeyRaw] ??
+      0
+    );
+  };
+
+  const fragmentCount = song ? getFragmentsForDay(song.day) : 0;
   const isAllPrizesClaimed = song ? (claimedRewards[song.id]?.includes('prophecy') || localStorage.getItem(`reward_tier_${song.id}`) === 'prophecy') : false;
 
   let unlocked = false;

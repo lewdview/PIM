@@ -604,6 +604,8 @@ export default function CodexPage() {
                   color: isBeyondOwned ? '#d4a0ff' : 'rgba(255,255,255,0.6)',
                   letterSpacing: '0.05em',
                   border: isBeyondOwned ? '1px solid rgba(180,77,255,0.3)' : 'none',
+                  zIndex: 40,
+                  pointerEvents: 'none',
                 }}>
                   {sourceLabel ? `${sourceLabel} ` : ''}#{String(card.day).padStart(3, '0')}
                 </div>
@@ -638,6 +640,8 @@ export default function CodexPage() {
                     top: '50%',
                     left: '50%',
                     transform: 'translate(-50%, -50%)',
+                    zIndex: 40,
+                    pointerEvents: 'none',
                   }}>
                     <motion.div
                       animate={{ scale: [1, 1.2, 1] }}
@@ -667,6 +671,8 @@ export default function CodexPage() {
                   padding: '8px',
                   opacity: isOwned ? 1 : 0.6,
                   transition: 'all 0.25s ease',
+                  zIndex: 40,
+                  pointerEvents: 'none',
                 }}>
                   <div style={{
                     fontFamily: '"Impact", "Arial Black", sans-serif',
@@ -769,6 +775,8 @@ export default function CodexPage() {
                     boxShadow: isBeyondOwned
                       ? '0 0 10px rgba(180,77,255,0.5)'
                       : `0 0 6px ${rc.color}40`,
+                    zIndex: 40,
+                    pointerEvents: 'none',
                   }} />
                 )}
 
