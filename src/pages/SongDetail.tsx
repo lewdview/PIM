@@ -554,6 +554,13 @@ export default function SongDetail() {
                 <span>♪</span> PREVIEW TRACK
               </button>
             )}
+            {song.audioUrl && unlocked && (
+              <button onClick={() => { cleanupPreview(); setPreviewing(false); audioManager.playSfx('tap_nav', 0.12); setLocation(`/listen/${songId}`); }}
+                onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}
+                className="w-full py-3 text-[9px] font-bold tracking-[0.3em] border border-[#39FF14]/30 text-[#39FF14] hover:bg-[#39FF14]/10 transition-colors uppercase bg-transparent">
+                <span>🎧</span> JUST LISTEN (VISUALIZER)
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -860,6 +867,12 @@ export default function SongDetail() {
             <button onClick={togglePreview}
               className="neon-btn-outline w-full py-3 text-[10px] tracking-[0.3em] uppercase flex items-center justify-center gap-2">
               <span>♪</span> PREVIEW TRACK
+            </button>
+          )}
+          {song.audioUrl && unlocked && (
+            <button onClick={() => { cleanupPreview(); setPreviewing(false); audioManager.playSfx('tap_nav', 0.12); setLocation(`/listen/${songId}`); }}
+              className="neon-btn-outline w-full py-3 text-[10px] tracking-[0.3em] uppercase flex items-center justify-center gap-2">
+              <span>🎧</span> JUST LISTEN (VISUALIZER)
             </button>
           )}
         </div>
