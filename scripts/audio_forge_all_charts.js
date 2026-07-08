@@ -222,14 +222,30 @@ function forgeBeatmap(song, wavData) {
           swipeDirection
         });
 
-        // Inject double notes on major transient drops
-        if (difficulty >= 6 && noteType === 'tap' && energy > 0.15 && index % 8 === 0) {
-          const secondLane = (lane + 2) % 3;
-          notes.push({
-            time: parseFloat(snappedTime.toFixed(3)),
-            lane: secondLane,
-            type: 'tap'
-          });
+        // Inject double notes on major transient drops (difficulty >= 4)
+        const canSpawnDual = difficulty >= 4 && noteType !== 'hold';
+        if (canSpawnDual) {
+          const dualRoll = (snappedTime * 23 + index * 3) % 100;
+          const dualChance = difficulty >= 7 ? 25 : 12;
+          if (dualRoll < dualChance && energy > 0.12) {
+            const secondLane = (lane + 1 + (index % 2)) % 3;
+            let secondType = 'tap';
+            let secondSwipeDir = undefined;
+            
+            const typeRoll = (index * 13 + Math.floor(snappedTime)) % 100;
+            if (difficulty >= 6 && typeRoll < 30) {
+              secondType = 'swipe';
+              const dirs = ['up', 'down', 'left', 'right'];
+              secondSwipeDir = dirs[(index + 2) % dirs.length];
+            }
+            
+            notes.push({
+              time: parseFloat(snappedTime.toFixed(3)),
+              lane: secondLane,
+              type: secondType,
+              swipeDirection: secondSwipeDir
+            });
+          }
         }
         
         index++;
@@ -312,14 +328,30 @@ function generateProceduralFallback(song) {
       swipeDirection
     });
 
-    if (difficulty >= 6 && noteType === 'tap' && triggerIndex % 12 === 0) {
-      const secondLane = (lane + 2) % 3;
-      notes.push({
-        id: noteId++,
-        time: parseFloat(time.toFixed(3)),
-        lane: secondLane,
-        type: 'tap'
-      });
+    const canSpawnDual = difficulty >= 4 && noteType !== 'hold';
+    if (canSpawnDual) {
+      const dualRoll = (time * 17 + noteId * 3) % 100;
+      const dualChance = difficulty >= 7 ? 22 : 12;
+      if (dualRoll < dualChance) {
+        const secondLane = (lane + 1 + (noteId % 2)) % 3;
+        let secondType = 'tap';
+        let secondSwipeDir = undefined;
+        
+        const typeRoll = (noteId * 11 + Math.floor(time)) % 100;
+        if (difficulty >= 6 && typeRoll < 30) {
+          secondType = 'swipe';
+          const dirs = ['up', 'down', 'left', 'right'];
+          secondSwipeDir = dirs[(noteId + 2) % dirs.length];
+        }
+        
+        notes.push({
+          id: noteId++,
+          time: parseFloat(time.toFixed(3)),
+          lane: secondLane,
+          type: secondType,
+          swipeDirection: secondSwipeDir
+        });
+      }
     }
 
     if (noteType === 'hold' && holdDuration) {

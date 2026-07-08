@@ -479,15 +479,33 @@ function generateProceduralChart(song: any): Note[] {
       swipeDirection
     });
 
-    // Check for double notes (taps in two lanes simultaneously) on hard difficulties
-    if (difficulty >= 6 && noteType === 'tap' && (id % 7 === 2 || (isChorus && id % 4 === 0))) {
-      const otherLane = (nextLane + 1) % 3;
-      notes.push({
-        id: id++,
-        time: parseFloat(time.toFixed(3)),
-        lane: otherLane,
-        type: 'tap'
-      });
+    // Check for double notes (dual inputs) on medium-hard difficulties (difficulty >= 4)
+    const canSpawnDual = difficulty >= 4 && noteType !== 'hold';
+    if (canSpawnDual) {
+      const dualRoll = (time * 17 + id * 3) % 100;
+      const dualChance = difficulty >= 7 ? 22 : 12;
+      
+      if (dualRoll < dualChance) {
+        const otherLane = (nextLane + 1 + (id % 2)) % 3;
+        
+        let secondType: 'tap' | 'swipe' = 'tap';
+        let secondSwipeDir: 'up' | 'down' | 'left' | 'right' | undefined;
+        
+        const typeRoll = (id * 11 + Math.floor(time)) % 100;
+        if (difficulty >= 6 && typeRoll < 30) {
+          secondType = 'swipe';
+          const dirs: ('up' | 'down' | 'left' | 'right')[] = ['up', 'down', 'left', 'right'];
+          secondSwipeDir = dirs[(id + 2) % 4];
+        }
+        
+        notes.push({
+          id: 20000 + id++,
+          time: parseFloat(time.toFixed(3)),
+          lane: otherLane,
+          type: secondType,
+          swipeDirection: secondSwipeDir
+        });
+      }
     }
 
     // Advance time by the current beat step duration
@@ -609,14 +627,33 @@ async function generateAudioForgeChart(song: any): Promise<Note[]> {
       swipeDirection
     });
 
-    if (difficulty >= 6 && noteType === 'tap' && energy > 0.15 && index % 6 === 0) {
-      const secondLane = (lane + 2) % 3;
-      notes.push({
-        id: 10000 + index,
-        time: parseFloat(time.toFixed(3)),
-        lane: secondLane,
-        type: 'tap'
-      });
+    // Check for double notes (dual inputs) on medium-hard difficulties (difficulty >= 4)
+    const canSpawnDual = difficulty >= 4 && noteType !== 'hold';
+    if (canSpawnDual) {
+      const dualRoll = (time * 23 + index * 3) % 100;
+      const dualChance = difficulty >= 7 ? 25 : 12;
+      
+      if (dualRoll < dualChance && energy > 0.12) {
+        const otherLane = (lane + 1 + (index % 2)) % 3;
+        
+        let secondType: 'tap' | 'swipe' = 'tap';
+        let secondSwipeDir: 'up' | 'down' | 'left' | 'right' | undefined;
+        
+        const typeRoll = (index * 13 + Math.floor(time)) % 100;
+        if (difficulty >= 6 && typeRoll < 30) {
+          secondType = 'swipe';
+          const dirs: ('up' | 'down' | 'left' | 'right')[] = ['up', 'down', 'left', 'right'];
+          secondSwipeDir = dirs[(index + 2) % 4];
+        }
+        
+        notes.push({
+          id: 30000 + index,
+          time: parseFloat(time.toFixed(3)),
+          lane: otherLane,
+          type: secondType,
+          swipeDirection: secondSwipeDir
+        });
+      }
     }
   });
 
