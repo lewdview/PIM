@@ -453,21 +453,27 @@ function generateProceduralChart(song: any): Note[] {
     lastLane = nextLane;
 
     // Roll note types based on difficulty and time section
-    let noteType: 'tap' | 'hold' | 'swipe' = 'tap';
+    let noteType: 'tap' | 'hold' = 'tap';
     let holdDuration: number | undefined;
+    let targetLane: number | undefined;
     let swipeDirection: 'up' | 'down' | 'left' | 'right' | undefined;
 
     const roll = (time * 13 + id * 7) % 100;
     
-    // Tap is standard. Holds and swipes appear at medium/high difficulties
-    if (difficulty >= 3 && roll < 20) {
+    // Tap is standard. Holds/Slides appear at medium/high difficulties
+    if (difficulty >= 3 && roll < 30) {
       noteType = 'hold';
       holdDuration = beatDuration * (1.5 + (id % 3));
-    } else if (difficulty >= 5 && roll >= 85) {
-      noteType = 'swipe';
-      const dirIndex = (id + Math.floor(time)) % 4;
-      const dirs: ('up' | 'down' | 'left' | 'right')[] = ['up', 'down', 'left', 'right'];
-      swipeDirection = dirs[dirIndex];
+      
+      const slideRoll = (id * 17) % 100;
+      if (difficulty >= 5 && slideRoll < 50) {
+        // Slide note: switches lanes, no swipe
+        targetLane = (nextLane + 1 + (id % 2)) % 3;
+      } else {
+        // Hold note: same lane, ends/transitions with a swipe
+        const dirs: ('up' | 'down' | 'left' | 'right')[] = ['up', 'down', 'left', 'right'];
+        swipeDirection = dirs[id % 4];
+      }
     }
 
     notes.push({
@@ -476,6 +482,7 @@ function generateProceduralChart(song: any): Note[] {
       lane: nextLane,
       type: noteType,
       holdDuration: holdDuration ? parseFloat(holdDuration.toFixed(3)) : undefined,
+      targetLane,
       swipeDirection
     });
 
@@ -488,12 +495,14 @@ function generateProceduralChart(song: any): Note[] {
       if (dualRoll < dualChance) {
         const otherLane = (nextLane + 1 + (id % 2)) % 3;
         
-        let secondType: 'tap' | 'swipe' = 'tap';
+        let secondType: 'tap' | 'hold' = 'tap';
+        let secondHoldDuration: number | undefined;
         let secondSwipeDir: 'up' | 'down' | 'left' | 'right' | undefined;
         
         const typeRoll = (id * 11 + Math.floor(time)) % 100;
         if (difficulty >= 6 && typeRoll < 30) {
-          secondType = 'swipe';
+          secondType = 'hold';
+          secondHoldDuration = beatDuration * 1.5;
           const dirs: ('up' | 'down' | 'left' | 'right')[] = ['up', 'down', 'left', 'right'];
           secondSwipeDir = dirs[(id + 2) % 4];
         }
@@ -503,6 +512,7 @@ function generateProceduralChart(song: any): Note[] {
           time: parseFloat(time.toFixed(3)),
           lane: otherLane,
           type: secondType,
+          holdDuration: secondHoldDuration ? parseFloat(secondHoldDuration.toFixed(3)) : undefined,
           swipeDirection: secondSwipeDir
         });
       }
@@ -602,8 +612,9 @@ async function generateAudioForgeChart(song: any): Promise<Note[]> {
     secondLastLane = lastLane;
     lastLane = lane;
 
-    let noteType: 'tap' | 'hold' | 'swipe' = 'tap';
+    let noteType: 'tap' | 'hold' = 'tap';
     let holdDuration: number | undefined;
+    let targetLane: number | undefined;
     let swipeDirection: 'up' | 'down' | 'left' | 'right' | undefined;
 
     const blockIndex = Math.floor((time * sampleRate) / blockSize);
@@ -612,10 +623,16 @@ async function generateAudioForgeChart(song: any): Promise<Note[]> {
     if (difficulty >= 3 && energy > 0.12 && index % 4 === 1) {
       noteType = 'hold';
       holdDuration = beatDuration * (1.5 + (index % 2));
-    } else if (difficulty >= 5 && energy > 0.18 && index % 5 === 3) {
-      noteType = 'swipe';
-      const dirs: ('up' | 'down' | 'left' | 'right')[] = ['up', 'down', 'left', 'right'];
-      swipeDirection = dirs[(index + Math.round(time)) % dirs.length];
+      
+      const slideRoll = (index * 19) % 100;
+      if (difficulty >= 5 && slideRoll < 50) {
+        // Slide: switches lanes, no swipe
+        targetLane = (lane + 1 + (index % 2)) % 3;
+      } else {
+        // Hold: same lane, ends/transitions with swipe
+        const dirs: ('up' | 'down' | 'left' | 'right')[] = ['up', 'down', 'left', 'right'];
+        swipeDirection = dirs[(index + Math.round(time)) % dirs.length];
+      }
     }
 
     notes.push({
@@ -624,6 +641,7 @@ async function generateAudioForgeChart(song: any): Promise<Note[]> {
       lane,
       type: noteType,
       holdDuration: holdDuration ? parseFloat(holdDuration.toFixed(3)) : undefined,
+      targetLane,
       swipeDirection
     });
 
@@ -636,12 +654,14 @@ async function generateAudioForgeChart(song: any): Promise<Note[]> {
       if (dualRoll < dualChance && energy > 0.12) {
         const otherLane = (lane + 1 + (index % 2)) % 3;
         
-        let secondType: 'tap' | 'swipe' = 'tap';
+        let secondType: 'tap' | 'hold' = 'tap';
+        let secondHoldDuration: number | undefined;
         let secondSwipeDir: 'up' | 'down' | 'left' | 'right' | undefined;
         
         const typeRoll = (index * 13 + Math.floor(time)) % 100;
         if (difficulty >= 6 && typeRoll < 30) {
-          secondType = 'swipe';
+          secondType = 'hold';
+          secondHoldDuration = beatDuration * 1.5;
           const dirs: ('up' | 'down' | 'left' | 'right')[] = ['up', 'down', 'left', 'right'];
           secondSwipeDir = dirs[(index + 2) % 4];
         }
@@ -651,6 +671,7 @@ async function generateAudioForgeChart(song: any): Promise<Note[]> {
           time: parseFloat(time.toFixed(3)),
           lane: otherLane,
           type: secondType,
+          holdDuration: secondHoldDuration ? parseFloat(secondHoldDuration.toFixed(3)) : undefined,
           swipeDirection: secondSwipeDir
         });
       }

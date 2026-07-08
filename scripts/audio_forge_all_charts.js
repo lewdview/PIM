@@ -171,15 +171,11 @@ function forgeBeatmap(song, wavData) {
       // Audio peak transient matched!
       shouldSpawn = true;
       
-      // Premium note upgrades (holds & swipes) on accent peaks
-      if (difficulty >= 3 && energy > 0.12 && index % 6 === 2) {
+      // Premium note upgrades (holds) on accent peaks
+      if (difficulty >= 3 && energy > 0.12 && index % 5 === 1) {
         noteType = 'hold';
         const rawHold = beatDuration * (1.5 + (index % 2));
         holdDuration = Math.round(rawHold / beatFraction) * beatFraction;
-      } else if (difficulty >= 5 && energy > 0.16 && index % 7 === 4) {
-        noteType = 'swipe';
-        const dirs = ['up', 'down', 'left', 'right'];
-        swipeDirection = dirs[(index + Math.round(time)) % dirs.length];
       }
     } else {
       // Math filler check: if local energy is strong (>0.035) and difficulty is medium+,
@@ -204,10 +200,12 @@ function forgeBeatmap(song, wavData) {
 
         let targetLane = undefined;
         if (noteType === 'hold') {
-          if (difficulty >= 5 && index % 3 === 0) {
+          const slideRoll = (index * 19) % 100;
+          if (difficulty >= 5 && slideRoll < 50) {
+            // Slide: switches lanes, no swipe
             targetLane = (lane + 1 + (index % 2)) % 3;
-          }
-          if (difficulty >= 4 && index % 2 === 1) {
+          } else {
+            // Hold: same lane, transitions/ends with a swipe
             const dirs = ['up', 'down', 'left', 'right'];
             swipeDirection = dirs[(index + Math.round(snappedTime)) % dirs.length];
           }
@@ -230,11 +228,13 @@ function forgeBeatmap(song, wavData) {
           if (dualRoll < dualChance && energy > 0.12) {
             const secondLane = (lane + 1 + (index % 2)) % 3;
             let secondType = 'tap';
+            let secondHoldDuration = undefined;
             let secondSwipeDir = undefined;
             
             const typeRoll = (index * 13 + Math.floor(snappedTime)) % 100;
             if (difficulty >= 6 && typeRoll < 30) {
-              secondType = 'swipe';
+              secondType = 'hold';
+              secondHoldDuration = beatDuration * 1.5;
               const dirs = ['up', 'down', 'left', 'right'];
               secondSwipeDir = dirs[(index + 2) % dirs.length];
             }
@@ -243,6 +243,7 @@ function forgeBeatmap(song, wavData) {
               time: parseFloat(snappedTime.toFixed(3)),
               lane: secondLane,
               type: secondType,
+              holdDuration: secondHoldDuration ? parseFloat(secondHoldDuration.toFixed(3)) : undefined,
               swipeDirection: secondSwipeDir
             });
           }
@@ -305,17 +306,15 @@ function generateProceduralFallback(song) {
       noteType = 'hold';
       holdDuration = beatDuration * (1.5 + (triggerIndex % 2));
       
-      if (difficulty >= 5 && triggerIndex % 3 === 0) {
+      const slideRoll = (triggerIndex * 17) % 100;
+      if (difficulty >= 5 && slideRoll < 50) {
+        // Slide: switches lanes, no swipe
         targetLane = (lane + 1 + (triggerIndex % 2)) % 3;
-      }
-      if (difficulty >= 4 && triggerIndex % 2 === 1) {
+      } else {
+        // Hold: same lane, ends/transitions with a swipe
         const dirs = ['up', 'down', 'left', 'right'];
         swipeDirection = dirs[triggerIndex % dirs.length];
       }
-    } else if (difficulty >= 5 && triggerIndex % 8 === 5) {
-      noteType = 'swipe';
-      const dirs = ['up', 'down', 'left', 'right'];
-      swipeDirection = dirs[triggerIndex % dirs.length];
     }
 
     notes.push({
@@ -335,11 +334,13 @@ function generateProceduralFallback(song) {
       if (dualRoll < dualChance) {
         const secondLane = (lane + 1 + (noteId % 2)) % 3;
         let secondType = 'tap';
+        let secondHoldDuration = undefined;
         let secondSwipeDir = undefined;
         
         const typeRoll = (noteId * 11 + Math.floor(time)) % 100;
         if (difficulty >= 6 && typeRoll < 30) {
-          secondType = 'swipe';
+          secondType = 'hold';
+          secondHoldDuration = beatDuration * 1.5;
           const dirs = ['up', 'down', 'left', 'right'];
           secondSwipeDir = dirs[(noteId + 2) % dirs.length];
         }
@@ -349,6 +350,7 @@ function generateProceduralFallback(song) {
           time: parseFloat(time.toFixed(3)),
           lane: secondLane,
           type: secondType,
+          holdDuration: secondHoldDuration ? parseFloat(secondHoldDuration.toFixed(3)) : undefined,
           swipeDirection: secondSwipeDir
         });
       }
