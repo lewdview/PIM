@@ -16,6 +16,7 @@ export type GameOpts = {
   cardBack: string;
   haptics: boolean;
   noteTheme: string;
+  gameSenseEnabled: boolean;
 };
 
 export interface GameBackground {
@@ -57,6 +58,7 @@ export const DEFAULT_OPTS: GameOpts = {
   cardBack: "classic",
   haptics: true,
   noteTheme: "classic",
+  gameSenseEnabled: false,
 };
 
 export function loadOpts(): GameOpts {
@@ -101,6 +103,7 @@ export function loadOpts(): GameOpts {
     cardBack: dbSettings?.cardBack ?? (localStorage.getItem("opt_cardBack") ?? "classic"),
     haptics: dbSettings?.haptics ?? bool("opt_haptics", true),
     noteTheme: dbSettings?.noteTheme ?? (localStorage.getItem("opt_noteTheme") ?? "classic"),
+    gameSenseEnabled: bool("opt_gameSenseEnabled", false),
   };
 }
 

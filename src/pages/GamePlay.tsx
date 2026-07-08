@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, useCallback } from "react";
 import { useParams, useLocation } from "wouter";
-import { getSongById, saveHighScore, isSongTimeLocked } from "@/game/api";
+import { getSongById, saveHighScore, isSongTimeLocked, getModifierForSong } from "@/game/api";
 import { saveMedal, saveScoreHistory } from "@/game/progress";
 import type { GameSong } from "@/game/api";
 import type { Note, JudgmentDisplay, GameState } from "@/game/types";
@@ -11,6 +11,7 @@ import { haptics } from "../utils/haptics";
 import { motion, AnimatePresence } from "framer-motion";
 import { Lock } from "lucide-react";
 import { logAnalyticsEvent } from "../services/telemetryService";
+import { gameSenseService } from "@/services/gameSenseService";
 
 // ── constants ────────────────────────────────────────────────────
 const LANE_COUNT = 3;
@@ -973,6 +974,8 @@ export default function Game() {
             multiplier: pw.multiplier,
             progress: 1,
           });
+          const code = pw.type === "FEVER" ? 1 : pw.type === "SURGE" ? 2 : pw.type === "SIGNAL_LOCK" ? 3 : 0;
+          gameSenseService.sendPowerup(code);
           if (pw.type === "SIGNAL_LOCK") {
             shieldChargesRef.current = 2;
             // Distinct stinger for the defensive shield power-up
@@ -1156,6 +1159,8 @@ export default function Game() {
       gs.score += calcScore(gs.combo, j);
       gs.combo++;
       gs.maxCombo = Math.max(gs.maxCombo, gs.combo);
+      gameSenseService.sendHit();
+      gameSenseService.sendCombo(gs.combo);
       if (j === "PERFECT+") {
         gs.perfectPlus++;
         audioManager.playSfx("tap_nav", 0.15);
@@ -1208,6 +1213,7 @@ export default function Game() {
         puRef.current.active = null;
         puRef.current.endTime = 0;
         updatePuDisplayDOM(null);
+        gameSenseService.sendPowerup(0);
         puRef.current.triggered.clear();
         haptics.error();
 
@@ -1245,6 +1251,7 @@ export default function Game() {
             puRef.current.endTime = 0;
             puRef.current.active = null;
             updatePuDisplayDOM(null);
+            gameSenseService.sendPowerup(0);
           }
           audioManager.playSfx("tap_nav", 0.35);
           triggerHitFx(ns.currentLane, "SHIELDED");
@@ -1256,6 +1263,8 @@ export default function Game() {
           gs.score += calcScore(gs.combo, "GOOD");
           gs.combo++;
           gs.maxCombo = Math.max(gs.maxCombo, gs.combo);
+          gameSenseService.sendHit();
+          gameSenseService.sendCombo(gs.combo);
           gs.goods++;
           checkPowerUps(gs.combo);
           jRef.current = [
@@ -1272,10 +1281,13 @@ export default function Game() {
           const gsx = gsRef.current;
           gsx.combo = 0;
           gsx.misses++;
+          gameSenseService.sendMiss();
+          gameSenseService.sendCombo(0);
           // Deactivate power up on combo break
           puRef.current.active = null;
           puRef.current.endTime = 0;
           updatePuDisplayDOM(null);
+          gameSenseService.sendPowerup(0);
           puRef.current.triggered.clear();
           haptics.error();
 
@@ -1309,6 +1321,7 @@ export default function Game() {
         puRef.current.active = null;
         puRef.current.endTime = 0;
         updatePuDisplayDOM(null);
+        gameSenseService.sendPowerup(0);
         puRef.current.triggered.clear();
         haptics.error();
 
@@ -1323,6 +1336,9 @@ export default function Game() {
           lastMissTimeRef.current = now;
         }
         setMissCount(missCountRef.current);
+        gameSenseService.sendMiss();
+        gameSenseService.sendCombo(0);
+        gameSenseService.sendHealth(3 - missCountRef.current);
 
         muteLane(ns.note.lane);
         syncDisplay();
@@ -1338,6 +1354,8 @@ export default function Game() {
         gs.score += calcScore(gs.combo, "PERFECT+");
         gs.combo++;
         gs.maxCombo = Math.max(gs.maxCombo, gs.combo);
+        gameSenseService.sendHit();
+        gameSenseService.sendCombo(gs.combo);
         gs.perfectPlus++;
         checkPowerUps(gs.combo);
         haptics.mediumTap();
@@ -1405,6 +1423,8 @@ export default function Game() {
       gs.score += calcScore(gs.combo, j);
       gs.combo++;
       gs.maxCombo = Math.max(gs.maxCombo, gs.combo);
+      gameSenseService.sendHit();
+      gameSenseService.sendCombo(gs.combo);
       if (j === "PERFECT+") {
         gs.perfectPlus++;
         audioManager.playSfx("tap_nav", 0.15);
@@ -1633,6 +1653,8 @@ export default function Game() {
     missCountRef.current = 0;
     lastMissTimeRef.current = 0;
     setMissCount(0);
+    gameSenseService.sendHealth(3);
+    gameSenseService.sendCombo(0);
 
     // Start the rewind render loop NOW so highway plays backwards
     phaseRef.current = "rewinding";
@@ -1774,7 +1796,7 @@ export default function Game() {
       lastMilestoneRef.current = gs.combo;
       milestoneFxRef.current.push({
         combo: gs.combo,
-        startMs: Date.now(),
+        startMs: performance.now(),
         color: gs.combo >= 100 ? "#39FF14" : "#E5B800",
       });
     }
@@ -1790,6 +1812,7 @@ export default function Game() {
     } else if (pu.active && t >= pu.endTime) {
       pu.active = null;
       updatePuDisplayDOM(null);
+      gameSenseService.sendPowerup(0);
     }
 
     const puActive = !!(pu.active && t < pu.endTime);
@@ -2334,6 +2357,8 @@ export default function Game() {
           gs.score += calcScore(gs.combo, "PERFECT+");
           gs.combo++;
           gs.maxCombo = Math.max(gs.maxCombo, gs.combo);
+          gameSenseService.sendHit();
+          gameSenseService.sendCombo(gs.combo);
           gs.perfectPlus++;
           checkPowerUps(gs.combo);
           haptics.mediumTap();
@@ -2375,6 +2400,7 @@ export default function Game() {
               puRef.current.endTime = 0;
               puRef.current.active = null;
               updatePuDisplayDOM(null);
+              gameSenseService.sendPowerup(0);
             }
             audioManager.playSfx("tap_nav", 0.35);
             triggerHitFx(note.lane, "SHIELDED");
@@ -2384,6 +2410,8 @@ export default function Game() {
             gsx.score += calcScore(gsx.combo, "GOOD");
             gsx.combo++;
             gsx.maxCombo = Math.max(gsx.maxCombo, gsx.combo);
+            gameSenseService.sendHit();
+            gameSenseService.sendCombo(gsx.combo);
             gsx.goods++;
             checkPowerUps(gsx.combo);
             jRef.current = [
@@ -2403,10 +2431,13 @@ export default function Game() {
             const gsx = gsRef.current;
             gsx.combo = 0;
             gsx.misses++;
+            gameSenseService.sendMiss();
+            gameSenseService.sendCombo(0);
             // Deactivate power up on combo break
             puRef.current.active = null;
             puRef.current.endTime = 0;
             updatePuDisplayDOM(null);
+            gameSenseService.sendPowerup(0);
             puRef.current.triggered.clear();
             haptics.error();
 
@@ -2427,6 +2458,7 @@ export default function Game() {
               lastMissTimeRef.current = now;
             }
             setMissCount(missCountRef.current);
+            gameSenseService.sendHealth(3 - missCountRef.current);
             syncDisplay();
             if (activeTutorial && missCountRef.current >= 3) {
               const audio = audioRef.current;
@@ -4394,6 +4426,19 @@ export default function Game() {
           return;
         }
       songRef.current = song;
+      
+      // Initialize GameSense on song load
+      gameSenseService.init().then((status) => {
+        if (status === 'connected') {
+          const modifier = getModifierForSong(song);
+          const modifierCode = modifier === "vocal_isolation" ? 1 : modifier === "bass_realm" ? 2 : modifier === "corrupted_signal" ? 3 : 0;
+          gameSenseService.sendModifier(modifierCode);
+          gameSenseService.sendHealth(3);
+          gameSenseService.sendCombo(0);
+          gameSenseService.sendPowerup(0);
+        }
+      });
+
       // Re-generate offscreen static track cache when song loads and overrides are applied
       const canvas = canvasRef.current;
       if (canvas) {
@@ -5022,6 +5067,9 @@ export default function Game() {
     return () => {
       cancelled = true;
       phaseRef.current = "unmounted";
+      laneSilenced.current = [false, false, false];
+      // Reset GameSense state on unmount
+      gameSenseService.sendPowerup(0);
       cancelAnimationFrame(rafRef.current);
       if (resolvePendingPromiseRef.current) {
         resolvePendingPromiseRef.current();

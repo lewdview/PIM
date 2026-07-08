@@ -3,6 +3,7 @@ import { loadOpts, resetOpts, keyLabel, getActiveTheme, type GameOpts, GAME_BACK
 import { clearCatalogCache } from "../game/api";
 import { audioManager } from "../game/audio";
 import { logAnalyticsEvent } from "../services/telemetryService";
+import { gameSenseService, type GameSenseStatus } from "../services/gameSenseService";
 import { useVaultStore } from "../store/useVaultStore";
 import { X, Volume2, Key, Info, Palette, Sparkles, Sliders, Check, Lock, Flame, ShieldAlert, Monitor, Sparkle } from "lucide-react";
 import type { VaultCard } from "../services/vaultService";
@@ -486,6 +487,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
   const [activeTab, setActiveTab] = useState<'gameplay' | 'controls' | 'themes' | 'backgrounds' | 'fronts' | 'backs'>('gameplay');
   const [remappingLane, setRemappingLane] = useState<number | null>(null);
   const [resetState, setResetState] = useState<"idle" | "confirm">("idle");
+  const [gsStatus, setGsStatus] = useState<GameSenseStatus>("scanning");
   const resetTimer = useRef<NodeJS.Timeout | null>(null);
   const colorRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
 
@@ -507,6 +509,10 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
       } catch (e) {
         // ignore
       }
+
+      gameSenseService.init().then(status => {
+        setGsStatus(status);
+      });
 
       // Load current Song of the Day as visual preview card
       import("../utils/dayCalc").then(({ getCurrentDay }) => {
@@ -567,7 +573,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
   }, [remappingLane]);
 
   // Save specific settings helper
-  const toggleSetting = (k: "missSystem" | "hudMisses" | "comboDisplay" | "judgmentText" | "useLocalFiles" | "bgMusic" | "haptics") => {
+  const toggleSetting = (k: "missSystem" | "hudMisses" | "comboDisplay" | "judgmentText" | "useLocalFiles" | "bgMusic" | "haptics" | "gameSenseEnabled") => {
     if (k === "missSystem" && localStorage.getItem("opt_unlocked_noclip") !== "true") {
       audioManager.playSfx('locked_out', 0.15);
       return;
@@ -578,11 +584,19 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
     updateSettings({ [k]: v });
     if (k === "useLocalFiles") clearCatalogCache();
     if (k === "bgMusic") window.dispatchEvent(new Event("bgmusic_toggle"));
+    if (k === "gameSenseEnabled") {
+      setGsStatus("scanning");
+      setTimeout(() => {
+        gameSenseService.init().then(status => {
+          setGsStatus(status);
+        });
+      }, 50);
+    }
     logAnalyticsEvent('setting_change', { key: k, value: v });
     audioManager.playSfx('tap_nav', 0.1);
   };
 
-  const renderToggle = (k: "missSystem" | "hudMisses" | "comboDisplay" | "judgmentText" | "useLocalFiles" | "bgMusic" | "haptics") => {
+  const renderToggle = (k: "missSystem" | "hudMisses" | "comboDisplay" | "judgmentText" | "useLocalFiles" | "bgMusic" | "haptics" | "gameSenseEnabled") => {
     const isNoclipLocked = k === "missSystem" && localStorage.getItem("opt_unlocked_noclip") !== "true";
     if (isNoclipLocked) {
       return (
@@ -612,7 +626,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
           className={`w-3.5 h-3.5 rounded-full block transition-all ${
             val 
               ? 'translate-x-[22px]' 
-              : 'translate-x-0 bg-zinc-600'
+               : 'translate-x-0 bg-zinc-600'
           }`}
           style={{ background: val ? activeColor : undefined }}
         />
@@ -932,6 +946,22 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                         <span className="text-[8px] text-zinc-500 font-mono">Subtle device feedback on hitting notes</span>
                       </div>
                       {renderToggle('haptics')}
+                    </div>
+
+                    <div className="flex justify-between items-center border-t border-white/5 pt-3">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-white font-mono uppercase">SteelSeries GameSense</span>
+                        <span className="text-[8px] text-zinc-500 font-mono">
+                          Sync device LEDs (Status: <span style={{ 
+                            color: gsStatus === 'connected' ? '#39FF14' : 
+                                   gsStatus === 'scanning' ? '#E5B800' : 
+                                   gsStatus === 'disconnected' ? 'rgba(255,255,255,0.4)' : '#FF1493'
+                          }}>
+                            {gsStatus.toUpperCase()}
+                          </span>)
+                        </span>
+                      </div>
+                      {renderToggle('gameSenseEnabled')}
                     </div>
                   </div>
                 </div>
