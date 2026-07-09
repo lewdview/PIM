@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'wouter';
 import { audioManager } from '../game/audio';
-import { Play, Pause, ChevronRight, ChevronLeft, Upload, Grid, Brain, Layers, ArrowLeft } from 'lucide-react';
+import { Play, Pause, ChevronRight, ChevronLeft, Upload, Grid, Brain, Layers, ArrowLeft, Save, Camera } from 'lucide-react';
+import { useVaultStore } from '../store/useVaultStore';
 
 // Use Vite's eager glob to grab files in /public/data/slideshow/
 const imageModules = import.meta.glob('/public/data/slideshow/*.{png,jpg,jpeg,gif,webp,svg}', { eager: true });
@@ -80,6 +81,10 @@ export default function SlideshowPage() {
   const [showBrackets, setShowBrackets] = useState(false);
   const [hideSourceImage, setHideSourceImage] = useState(false);
   const [cutoutThreshold, setCutoutThreshold] = useState(38);
+  const [saveMessage, setSaveMessage] = useState('');
+
+  // Cloud store integration
+  const { settings, updateSettings } = useVaultStore();
 
   const cocoModelRef = useRef<any>(null);
 
@@ -91,6 +96,53 @@ export default function SlideshowPage() {
   // Animation System States
   const floatersRef = useRef<FloatingSubject[]>([]);
   const animationFrameRef = useRef<number | null>(null);
+
+  // Sync settings from cloud profile on mount
+  useEffect(() => {
+    if (settings) {
+      if (settings.slideshowThreshold !== undefined) setCutoutThreshold(settings.slideshowThreshold);
+      if (settings.slideshowBrackets !== undefined) setShowBrackets(settings.slideshowBrackets);
+      if (settings.slideshowIsolate !== undefined) setHideSourceImage(settings.slideshowIsolate);
+      if (settings.slideshowMode !== undefined) setExtractionMode(settings.slideshowMode);
+    }
+  }, [settings]);
+
+  const handleSaveToCloud = async () => {
+    try {
+      audioManager.playSfx('tap_nav', 0.1);
+      await updateSettings({
+        slideshowThreshold: cutoutThreshold,
+        slideshowBrackets: showBrackets,
+        slideshowIsolate: hideSourceImage,
+        slideshowMode: extractionMode
+      });
+      setSaveMessage('Slideshow configuration saved!');
+      setTimeout(() => setSaveMessage(''), 3000);
+    } catch (e) {
+      console.error('Failed to save slideshow settings:', e);
+      setSaveMessage('Failed to save configuration.');
+      setTimeout(() => setSaveMessage(''), 3000);
+    }
+  };
+
+  const handleExportScreenshot = () => {
+    try {
+      audioManager.playSfx('tap_nav', 0.1);
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const dataUrl = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.download = `pim-slideshow-export-${Date.now()}.png`;
+      link.href = dataUrl;
+      link.click();
+      setSaveMessage('Canvas image exported!');
+      setTimeout(() => setSaveMessage(''), 3000);
+    } catch (e) {
+      console.error('Failed to export canvas image:', e);
+      setSaveMessage('Export failed.');
+      setTimeout(() => setSaveMessage(''), 3000);
+    }
+  };
 
   // 1. Initial Slides Setup (local directory files)
   useEffect(() => {
@@ -679,6 +731,36 @@ export default function SlideshowPage() {
                 className="w-full accent-[#39FF14] bg-white/10 h-1 rounded-lg appearance-none cursor-pointer"
               />
             </div>
+          </div>
+        </div>
+
+        {/* Slideshow Save Actions */}
+        <div className="flex flex-col gap-3">
+          <h4 className="font-mono text-[9px] font-black text-white/40 uppercase tracking-widest border-b border-white/5 pb-1">
+            SAVE ACTIONS
+          </h4>
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={handleSaveToCloud}
+              className="w-full py-2 bg-gradient-to-r from-[#39FF14]/25 to-[#39FF14]/5 hover:from-[#39FF14]/35 hover:to-[#39FF14]/15 border border-[#39FF14]/35 hover:border-[#39FF14]/65 rounded-lg text-white font-mono text-[9px] font-bold uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-lg shadow-black/40"
+            >
+              <Save size={10} className="text-[#39FF14]" />
+              Save Config
+            </button>
+            
+            <button
+              onClick={handleExportScreenshot}
+              className="w-full py-2 bg-gradient-to-r from-[#00F0FF]/25 to-[#00F0FF]/5 hover:from-[#00F0FF]/35 hover:to-[#00F0FF]/15 border border-[#00F0FF]/35 hover:border-[#00F0FF]/65 rounded-lg text-white font-mono text-[9px] font-bold uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-lg shadow-black/40"
+            >
+              <Camera size={10} className="text-[#00F0FF]" />
+              Export Image
+            </button>
+            
+            {saveMessage && (
+              <div className="text-center font-mono text-[8px] text-[#39FF14] uppercase tracking-wider animate-pulse pt-1">
+                {saveMessage}
+              </div>
+            )}
           </div>
         </div>
 

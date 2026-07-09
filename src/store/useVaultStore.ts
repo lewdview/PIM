@@ -19,6 +19,10 @@ export interface ProfileSettings {
   bgMusic: boolean;
   haptics: boolean;
   missSystem: boolean;
+  slideshowThreshold?: number;
+  slideshowIsolate?: boolean;
+  slideshowBrackets?: boolean;
+  slideshowMode?: 'coco' | 'contour';
 }
 
 export interface ProfileProgression {
@@ -197,6 +201,10 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     bgMusic: localStorage.getItem("opt_bgMusic") === "true",
     haptics: localStorage.getItem("opt_haptics") !== "false",
     missSystem: localStorage.getItem("opt_missSystem") !== "false",
+    slideshowThreshold: parseInt(localStorage.getItem("opt_slideshowThreshold") ?? "38") || 38,
+    slideshowIsolate: localStorage.getItem("opt_slideshowIsolate") === "true",
+    slideshowBrackets: localStorage.getItem("opt_slideshowBrackets") === "true",
+    slideshowMode: (localStorage.getItem("opt_slideshowMode") as any) ?? "coco",
   },
   progression: {
     tutorialCompleted: localStorage.getItem("pim_tutorial_completed") === "true",
@@ -650,6 +658,10 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     if (newSettings.bgMusic !== undefined) localStorage.setItem("opt_bgMusic", String(merged.bgMusic));
     if (newSettings.haptics !== undefined) localStorage.setItem("opt_haptics", String(merged.haptics));
     if (newSettings.missSystem !== undefined) localStorage.setItem("opt_missSystem", String(merged.missSystem));
+    if (newSettings.slideshowThreshold !== undefined) localStorage.setItem("opt_slideshowThreshold", String(merged.slideshowThreshold));
+    if (newSettings.slideshowIsolate !== undefined) localStorage.setItem("opt_slideshowIsolate", String(merged.slideshowIsolate));
+    if (newSettings.slideshowBrackets !== undefined) localStorage.setItem("opt_slideshowBrackets", String(merged.slideshowBrackets));
+    if (newSettings.slideshowMode !== undefined) localStorage.setItem("opt_slideshowMode", String(merged.slideshowMode));
 
     if (userId) {
       const { error } = await supabase.from('profiles').update({ settings: merged }).eq('id', userId);
