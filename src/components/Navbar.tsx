@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
-import { Home, Layers, Trophy, Wallet, LogOut, Zap, Menu, X, FileText, Flame, BookOpen, Monitor, Gift, Settings } from 'lucide-react';
+import { Home, Layers, Trophy, Wallet, LogOut, Zap, Menu, X, FileText, Flame, BookOpen, Monitor, Gift, Settings, Image } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../store/useAuthStore';
 import { useVaultStore } from '../store/useVaultStore';
@@ -19,6 +19,7 @@ const links = [
   { to: '/vault/forge', label: 'Forge', icon: Flame },
   { to: '/options', label: 'Options', icon: Settings },
   { to: '/vault/leaderboard', label: 'Ranks', icon: Trophy },
+  { to: '/slideshow', label: 'Slideshow', icon: Image },
   { to: '/vault/claim', label: 'Redeem', icon: Gift },
   ...(isDev ? [{ to: '/pitch-deck', label: 'Pitch', icon: FileText }] : []),
 ];
@@ -698,7 +699,7 @@ export default function Navbar() {
         }}
       >
         <div className="flex items-stretch h-[62px]">
-          {links.filter(l => l.to !== '/vault/collection' && l.to !== '/vault/leaderboard' && l.to !== '/pitch-deck').map(({ to, label, icon: Icon }) => {
+          {links.filter(l => l.to !== '/vault/collection' && l.to !== '/vault/leaderboard' && l.to !== '/pitch-deck' && l.to !== '/slideshow').map(({ to, label, icon: Icon }) => {
             const active = location === to;
             return (
               <Link
