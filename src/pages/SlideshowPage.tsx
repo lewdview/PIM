@@ -7,21 +7,22 @@ import { Play, Pause, ChevronRight, ChevronLeft, Upload, Grid, Brain, Layers, Ar
 const imageModules = import.meta.glob('/public/data/slideshow/*.{png,jpg,jpeg,gif,webp,svg}', { eager: true });
 const staticImages = Object.keys(imageModules).map(key => key.replace('/public', ''));
 
-const removeDarkBackground = (ctx: CanvasRenderingContext2D, w: number, h: number) => {
+const removeDarkBackground = (ctx: CanvasRenderingContext2D, w: number, h: number, threshold: number) => {
   try {
     const imgData = ctx.getImageData(0, 0, w, h);
     const data = imgData.data;
+    const fadeRange = 22;
     for (let i = 0; i < data.length; i += 4) {
       const r = data[i];
       const g = data[i + 1];
       const b = data[i + 2];
       const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
-      // Filter out dark background pixels
-      if (luminance < 38) {
+      // Filter out dark background pixels based on custom threshold
+      if (luminance < threshold) {
         data[i + 3] = 0; // Transparent
-      } else if (luminance < 60) {
+      } else if (luminance < threshold + fadeRange) {
         // Linear blending at the edges for smooth anti-aliasing
-        data[i + 3] = Math.round(((luminance - 38) / 22) * 255);
+        data[i + 3] = Math.round(((luminance - threshold) / fadeRange) * 255);
       }
     }
     ctx.putImageData(imgData, 0, 0);
@@ -77,6 +78,9 @@ export default function SlideshowPage() {
   const [extractionMode, setExtractionMode] = useState<'coco' | 'contour'>('coco');
   const [showBrackets, setShowBrackets] = useState(false);
   const [hideSourceImage, setHideSourceImage] = useState(false);
+  const [cutoutThreshold, setCutoutThreshold] = useState(38);
+
+  const cocoModelRef = useRef<any>(null);
 
   // DOM Refs
   const imgRef = useRef<HTMLImageElement>(null);
@@ -170,6 +174,11 @@ export default function SlideshowPage() {
     return () => clearInterval(interval);
   }, [isPlaying, slides, currentSlideIndex]);
 
+  // Reactive Re-extraction on threshold and mode updates
+  useEffect(() => {
+    runExtraction();
+  }, [cutoutThreshold, extractionMode, currentSlideIndex]);
+
   const handleNext = () => {
     audioManager.playSfx('tap_nav', 0.1);
     setCurrentSlideIndex((prev) => (prev + 1) % slides.length);
@@ -195,7 +204,10 @@ export default function SlideshowPage() {
       if (extractionMode === 'coco' && (window as any).cocoSsd) {
         setModelStatus('Analyzing image subjects...');
         const coco = (window as any).cocoSsd;
-        const model = await coco.load();
+        if (!cocoModelRef.current) {
+          cocoModelRef.current = await coco.load();
+        }
+        const model = cocoModelRef.current;
         const predictions = await model.detect(img);
 
         if (predictions.length > 0) {
@@ -216,7 +228,7 @@ export default function SlideshowPage() {
               0, 0, bw, bh // destination coords
             );
 
-            removeDarkBackground(cropCtx, bw, bh);
+            removeDarkBackground(cropCtx, bw, bh, cutoutThreshold);
 
             extracted.push({
               id: `obj-${idx}-${Date.now()}`,
@@ -645,6 +657,24 @@ export default function SlideshowPage() {
                 Show Bounding Brackets [ ]
               </span>
             </label>
+
+            {/* Threshold Slider for tuning background transparency */}
+            <div className="flex flex-col gap-1 mt-1">
+              <div className="flex justify-between font-mono text-[8px] uppercase tracking-wider text-white/50">
+                <span>Cutout Threshold</span>
+                <span className="text-[#39FF14] font-bold">{cutoutThreshold}</span>
+              </div>
+              <input
+                type="range"
+                min="5"
+                max="110"
+                value={cutoutThreshold}
+                onChange={(e) => {
+                  setCutoutThreshold(Number(e.target.value));
+                }}
+                className="w-full accent-[#39FF14] bg-white/10 h-1 rounded-lg appearance-none cursor-pointer"
+              />
+            </div>
           </div>
         </div>
 
