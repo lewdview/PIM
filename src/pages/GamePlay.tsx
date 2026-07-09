@@ -2137,6 +2137,210 @@ export default function Game() {
       ctx.drawImage(offscreenCanvasRef.current, 0, 0, W, H);
     }
 
+    // Draw Sacred Visualizer on the track if selected in gameTrack options
+    if (optsRef.current.gameTrack === 'sacred_visualizer') {
+      const cyVis = hitY * 0.55;
+      const cxVis = W / 2;
+      const sizeVis = Math.min(W, hitY) * 0.45;
+
+      let bass = 0;
+      let mid = 0;
+      let high = 0;
+      
+      const analyser = gameplayAnalyserRef.current;
+      const data = gameplayAnalyserDataRef.current;
+      if (analyser && data) {
+        analyser.getByteFrequencyData(data);
+        let bVal = 0, mVal = 0, hVal = 0;
+        for (let i = 0; i < data.length; i++) {
+          if (i < 10) bVal += data[i];
+          else if (i < 50) mVal += data[i];
+          else hVal += data[i];
+        }
+        bass = bVal / 10;
+        mid = mVal / 40;
+        high = hVal / (data.length - 50);
+      } else {
+        const timeSec = t;
+        bass = 50 + Math.sin(timeSec * 8) * 25;
+        mid = 45 + Math.cos(timeSec * 5) * 15;
+        high = 30 + Math.sin(timeSec * 12) * 10;
+      }
+
+      const bassN = Math.min(1, bass / 255);
+      const midN = Math.min(1, mid / 255);
+      const highN = Math.min(1, high / 255);
+
+      const bassScale = 1.0 + bassN * 0.12;
+      const rotationAngle = t * 0.4 + midN * 0.3;
+      const baseHue = (t * 24) % 360;
+
+      const getColor = (offset: number, alpha: number) => {
+        return `hsla(${(baseHue + offset) % 360}, 95%, 62%, ${alpha})`;
+      };
+
+      ctx.save();
+      
+      // Clip to track boundary so it stays inside the track
+      ctx.beginPath();
+      ctx.moveTo(hwTop.left, 0);
+      ctx.quadraticCurveTo(W/2, -hitY * 0.09, hwTop.right, 0);
+      ctx.lineTo(hwBot.right, hitY);
+      ctx.lineTo(hwBot.left, hitY);
+      ctx.closePath();
+      ctx.clip();
+
+      ctx.translate(cxVis, cyVis);
+      ctx.scale(bassScale, bassScale);
+      ctx.rotate(rotationAngle);
+      ctx.shadowBlur = 8 + midN * 12;
+
+      // Opacity level: low so it acts as background under the notes
+      const opacityVal = 0.20 + highN * 0.12;
+
+      // Cycle shape based on calculatedStage
+      const visualizerShape = 
+        calculatedStage === 1 ? 'bipolar_torus' :
+        calculatedStage === 2 ? 'flower_of_life' :
+        calculatedStage === 3 ? 'lakshmi_star' :
+        calculatedStage === 4 ? 'metatrons_cube' : 'sri_yantra';
+
+      if (visualizerShape === 'flower_of_life') {
+        const radius = sizeVis * 0.22;
+        ctx.lineWidth = 1.0;
+        for (let i = 0; i < 6; i++) {
+          const angle = (i * Math.PI) / 3;
+          const ox = Math.cos(angle) * radius;
+          const oy = Math.sin(angle) * radius;
+          ctx.strokeStyle = getColor(i * 30, opacityVal);
+          ctx.shadowColor = getColor(i * 30, opacityVal);
+          ctx.beginPath();
+          ctx.arc(ox, oy, radius, 0, Math.PI * 2);
+          ctx.stroke();
+
+          const outerAngle = angle + Math.PI / 6;
+          const oox = Math.cos(outerAngle) * radius * Math.sqrt(3);
+          const ooy = Math.sin(outerAngle) * radius * Math.sqrt(3);
+          ctx.strokeStyle = getColor(i * 30 + 60, opacityVal);
+          ctx.shadowColor = getColor(i * 30 + 60, opacityVal);
+          ctx.beginPath();
+          ctx.arc(oox, ooy, radius, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.strokeStyle = getColor(0, opacityVal);
+        ctx.shadowColor = getColor(0, opacityVal);
+        ctx.beginPath();
+        ctx.arc(0, 0, radius, 0, Math.PI * 2);
+        ctx.stroke();
+
+      } else if (visualizerShape === 'sri_yantra') {
+        const scaleFact = sizeVis * 0.85;
+        ctx.lineWidth = 0.9;
+        const drawYantraTriangle = (yCenter: number, r: number, pointingUp: boolean, hueOffset: number) => {
+          ctx.strokeStyle = getColor(hueOffset, opacityVal);
+          ctx.shadowColor = getColor(hueOffset, opacityVal);
+          ctx.beginPath();
+          const yTip = pointingUp ? yCenter - r : yCenter + r;
+          const yBase = pointingUp ? yCenter + r * 0.5 : yCenter - r * 0.5;
+          const xOffset = r * Math.sqrt(3) * 0.5;
+          ctx.moveTo(0, yTip);
+          ctx.lineTo(xOffset, yBase);
+          ctx.lineTo(-xOffset, yBase);
+          ctx.closePath();
+          ctx.stroke();
+        };
+
+        drawYantraTriangle(0, scaleFact * 0.5, true, 0);
+        drawYantraTriangle(0, scaleFact * 0.5, false, 40);
+        drawYantraTriangle(-scaleFact * 0.05, scaleFact * 0.4, true, 80);
+        drawYantraTriangle(scaleFact * 0.05, scaleFact * 0.4, false, 120);
+        drawYantraTriangle(scaleFact * 0.03, scaleFact * 0.3, true, 160);
+        drawYantraTriangle(-scaleFact * 0.03, scaleFact * 0.3, false, 200);
+
+        ctx.strokeStyle = getColor(180, opacityVal);
+        ctx.shadowColor = getColor(180, opacityVal);
+        ctx.beginPath();
+        ctx.arc(0, 0, scaleFact * 0.58, 0, Math.PI * 2);
+        ctx.stroke();
+
+      } else if (visualizerShape === 'metatrons_cube') {
+        const rad = sizeVis * 0.22;
+        const nodes: {x: number, y: number, color: string}[] = [];
+        ctx.lineWidth = 0.7;
+
+        nodes.push({ x: 0, y: 0, color: getColor(0, opacityVal) });
+        for (let i = 0; i < 6; i++) {
+          const angle = (i * Math.PI) / 3;
+          nodes.push({ x: Math.cos(angle) * rad, y: Math.sin(angle) * rad, color: getColor(i * 30, opacityVal) });
+          nodes.push({ x: Math.cos(angle) * rad * 2, y: Math.sin(angle) * rad * 2, color: getColor(i * 30 + 60, opacityVal) });
+        }
+
+        for (let a = 0; a < nodes.length; a++) {
+          for (let b = a + 1; b < nodes.length; b++) {
+            ctx.strokeStyle = nodes[a].color.replace(String(opacityVal), String(opacityVal * 0.25));
+            ctx.beginPath();
+            ctx.moveTo(nodes[a].x, nodes[a].y);
+            ctx.lineTo(nodes[b].x, nodes[b].y);
+            ctx.stroke();
+          }
+        }
+
+        nodes.forEach((n) => {
+          ctx.strokeStyle = n.color;
+          ctx.shadowColor = n.color;
+          ctx.beginPath();
+          ctx.arc(n.x, n.y, rad * 0.4, 0, Math.PI * 2);
+          ctx.stroke();
+        });
+
+      } else if (visualizerShape === 'bipolar_torus') {
+        const rad = sizeVis * 0.88;
+        ctx.lineWidth = 0.9;
+        const circlesCount = 8;
+        for (let i = 1; i <= circlesCount; i++) {
+          const ratio = i / circlesCount;
+          const cyOffset = rad * (1 - ratio);
+          const currentRad = rad * ratio;
+
+          ctx.strokeStyle = getColor(i * 30, opacityVal);
+          ctx.shadowColor = getColor(i * 30, opacityVal);
+
+          ctx.beginPath();
+          ctx.arc(0, -cyOffset, currentRad, 0, Math.PI * 2);
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.arc(0, cyOffset, currentRad, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+      } else if (visualizerShape === 'lakshmi_star') {
+        const rad = sizeVis * 0.68;
+        ctx.lineWidth = 1.0;
+        const drawSquare = (angle: number, colorIdx: number) => {
+          ctx.save();
+          ctx.rotate(angle);
+          ctx.strokeStyle = getColor(colorIdx, opacityVal);
+          ctx.shadowColor = getColor(colorIdx, opacityVal);
+          ctx.beginPath();
+          ctx.rect(-rad * 0.5, -rad * 0.5, rad, rad);
+          ctx.stroke();
+          ctx.restore();
+        };
+
+        drawSquare(0, 0);
+        drawSquare(Math.PI / 4, 80);
+
+        ctx.strokeStyle = getColor(160, opacityVal);
+        ctx.shadowColor = getColor(160, opacityVal);
+        ctx.beginPath();
+        ctx.arc(0, 0, rad * 0.3, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
     // Save context for entire frame drawing (supports global translations / shake)
     ctx.save();
 

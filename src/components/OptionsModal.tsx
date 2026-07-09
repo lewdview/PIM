@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { loadOpts, resetOpts, keyLabel, getActiveTheme, type GameOpts, GAME_BACKGROUNDS } from "../lib/options";
+import { loadOpts, resetOpts, keyLabel, getActiveTheme, type GameOpts, GAME_BACKGROUNDS, GAME_TRACKS } from "../lib/options";
 import { clearCatalogCache } from "../game/api";
 import { audioManager } from "../game/audio";
 import { logAnalyticsEvent } from "../services/telemetryService";
@@ -1310,6 +1310,50 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                       </button>
                     );
                   })}
+                </div>
+
+                {/* Track Customization Grid */}
+                <div className="mt-8">
+                  <h3 className="font-mono text-[9px] font-black text-white/40 uppercase tracking-wider border-b border-white/5 pb-1 mb-3">
+                    GAMEPLAY TRACK LANE STYLE
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    {GAME_TRACKS.map(track => {
+                      const active = opts.gameTrack === track.id;
+                      const canUnlock = echoPrestigeScore >= track.unlockScore;
+                      return (
+                        <button
+                          key={track.id}
+                          disabled={!canUnlock}
+                          onClick={() => {
+                            localStorage.setItem("opt_gameTrack", track.id);
+                            setOpts(o => ({ ...o, gameTrack: track.id }));
+                            updateSettings({ gameTrack: track.id });
+                            audioManager.playSfx('menu_confirm', 0.1);
+                          }}
+                          className={`text-left border p-2.5 rounded flex flex-col justify-between min-h-[72px] transition-all relative ${
+                            !canUnlock 
+                              ? 'opacity-40 border-white/5 bg-black/10 cursor-not-allowed'
+                              : active
+                                ? isAvant ? 'border-[#39FF14] bg-[#39FF14]/5 text-white' : 'border-[#FF1493] bg-[#FF1493]/5 text-white'
+                                : 'border-white/5 bg-black/40 text-white hover:border-white/15 cursor-pointer'
+                          }`}
+                        >
+                          <div className="flex justify-between items-start gap-1">
+                            <span className="font-mono text-[10px] font-black uppercase truncate">{track.name}</span>
+                            {!canUnlock && <Lock size={10} className="text-[#ffd700] shrink-0" />}
+                          </div>
+                          
+                          <div className="flex flex-col gap-0.5 mt-2">
+                            <span className="text-[7px] text-zinc-500 font-mono leading-tight truncate">{track.desc.toUpperCase()}</span>
+                            <span className="text-[6.5px] font-black font-mono" style={{ color: canUnlock ? themeColor : '#ff9900' }}>
+                              {track.unlockText.toUpperCase()}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             )}

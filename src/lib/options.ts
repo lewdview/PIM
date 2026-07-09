@@ -12,6 +12,7 @@ export type GameOpts = {
   noteGenerationSource: 'auto' | 'lyrics' | 'bpm';
   bgMusic: boolean;
   gameBackground: string;
+  gameTrack: string;
   backgroundBlur: number;
   cardBack: string;
   haptics: boolean;
@@ -29,7 +30,6 @@ export interface GameBackground {
 
 export const GAME_BACKGROUNDS: GameBackground[] = [
   { id: 'cover_blur', name: 'Default Blur', desc: 'Ambient cover art blurring', unlockText: 'Unlocked', unlockScore: 0 },
-  { id: 'sacred_visualizer', name: 'Sacred Visualizer', desc: 'Real-time responsive sacred geometry patterns', unlockText: 'Unlocked', unlockScore: 0 },
   { id: 'neon_grid', name: 'Neon Grid', desc: 'Synthwave neon network grid', unlockText: 'Requires 1,000 Echo Score', unlockScore: 1000 },
   { id: 'cyber_streets', name: 'Matrix Cyber', desc: 'Green binary rain frequency', unlockText: 'Requires 5,000 Echo Score', unlockScore: 5000 },
   { id: 'space_nebula', name: 'Void Space', desc: 'Moving nebula & stardust', unlockText: 'Requires 10,000 Echo Score', unlockScore: 10000 },
@@ -41,6 +41,19 @@ export const GAME_BACKGROUNDS: GameBackground[] = [
   { id: 'prismatic_aurora', name: 'Chroma Aurora', desc: 'Shimmering chromatic light ribbons', unlockText: 'Requires 40,000 Echo Score', unlockScore: 40000 },
   { id: 'hyperdrive_warp', name: 'Hyperspace Warp', desc: 'Speed tunnel lines warping past', unlockText: 'Requires 50,000 Echo Score', unlockScore: 50000 },
   { id: 'gold_record', name: 'Gold Record', desc: 'Prestige gold vinyl spin & golden audio waves', unlockText: 'Requires Promo Code', unlockScore: 999999 },
+];
+
+export interface GameTrack {
+  id: string;
+  name: string;
+  desc: string;
+  unlockText: string;
+  unlockScore: number;
+}
+
+export const GAME_TRACKS: GameTrack[] = [
+  { id: 'classic', name: 'Classic Track', desc: 'Standard perspective lanes', unlockText: 'Unlocked', unlockScore: 0 },
+  { id: 'sacred_visualizer', name: 'Sacred Visualizer', desc: 'Direct note-lane visualizer overlay', unlockText: 'Unlocked', unlockScore: 0 },
 ];
 
 export const DEFAULT_OPTS: GameOpts = {
@@ -55,6 +68,7 @@ export const DEFAULT_OPTS: GameOpts = {
   noteGenerationSource: "auto",
   bgMusic: false,
   gameBackground: "cover_blur",
+  gameTrack: "classic",
   backgroundBlur: 18,
   cardBack: "classic",
   haptics: true,
@@ -100,6 +114,7 @@ export function loadOpts(): GameOpts {
     })(),
     bgMusic: dbSettings?.bgMusic ?? bool("opt_bgMusic", false),
     gameBackground: dbSettings?.gameBackground ?? (localStorage.getItem("opt_gameBackground") ?? "cover_blur"),
+    gameTrack: dbSettings?.gameTrack ?? (localStorage.getItem("opt_gameTrack") ?? "classic"),
     backgroundBlur: dbSettings?.backgroundBlur ?? (parseFloat(localStorage.getItem("opt_backgroundBlur") ?? "18") || 18),
     cardBack: dbSettings?.cardBack ?? (localStorage.getItem("opt_cardBack") ?? "classic"),
     haptics: dbSettings?.haptics ?? bool("opt_haptics", true),

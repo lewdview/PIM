@@ -11,6 +11,7 @@ export interface ProfileSettings {
   cardSkin: string;
   cardBack: string;
   gameBackground: string;
+  gameTrack?: string;
   backgroundBlur: number;
   hudMisses: boolean;
   comboDisplay: boolean;
@@ -188,6 +189,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     cardSkin: localStorage.getItem("opt_cardSkin") ?? "original",
     cardBack: localStorage.getItem("opt_cardBack") ?? "classic",
     gameBackground: localStorage.getItem("opt_gameBackground") ?? "cover_blur",
+    gameTrack: localStorage.getItem("opt_gameTrack") ?? "classic",
     backgroundBlur: parseFloat(localStorage.getItem("opt_backgroundBlur") ?? "18") || 18,
     hudMisses: localStorage.getItem("opt_hudMisses") !== "false",
     comboDisplay: localStorage.getItem("opt_comboDisplay") !== "false",
@@ -342,6 +344,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         localStorage.setItem("opt_cardSkin", mergedSettings.cardSkin);
         localStorage.setItem("opt_cardBack", mergedSettings.cardBack);
         localStorage.setItem("opt_gameBackground", mergedSettings.gameBackground);
+        if (mergedSettings.gameTrack) localStorage.setItem("opt_gameTrack", mergedSettings.gameTrack);
         localStorage.setItem("opt_backgroundBlur", String(mergedSettings.backgroundBlur));
         localStorage.setItem("opt_hudMisses", String(mergedSettings.hudMisses));
         localStorage.setItem("opt_comboDisplay", String(mergedSettings.comboDisplay));
@@ -639,6 +642,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     if (newSettings.cardSkin !== undefined) localStorage.setItem("opt_cardSkin", merged.cardSkin);
     if (newSettings.cardBack !== undefined) localStorage.setItem("opt_cardBack", merged.cardBack);
     if (newSettings.gameBackground !== undefined) localStorage.setItem("opt_gameBackground", merged.gameBackground);
+    if (newSettings.gameTrack !== undefined && merged.gameTrack) localStorage.setItem("opt_gameTrack", merged.gameTrack);
     if (newSettings.backgroundBlur !== undefined) localStorage.setItem("opt_backgroundBlur", String(merged.backgroundBlur));
     if (newSettings.hudMisses !== undefined) localStorage.setItem("opt_hudMisses", String(merged.hudMisses));
     if (newSettings.comboDisplay !== undefined) localStorage.setItem("opt_comboDisplay", String(merged.comboDisplay));
