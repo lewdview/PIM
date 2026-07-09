@@ -262,7 +262,7 @@ function SvgBlurSlider({ value, onChange, isAvant }: { value: number; onChange: 
               width="2"
               height="6"
               fill={value >= (x / 100) * 40 ? strokeColor : "rgba(255,255,255,0.18)"}
-              transform="translateX(-1px)"
+              transform="translate(-1, 0)"
             />
           ))}
         </svg>
@@ -383,7 +383,7 @@ function SvgLatencySlider({ value, onChange, isAvant }: { value: number; onChang
               width="2"
               height="6"
               fill={((value + 150) / 300) * 100 >= x ? strokeColor : "rgba(255,255,255,0.18)"}
-              transform="translateX(-1px)"
+              transform="translate(-1, 0)"
             />
           ))}
         </svg>

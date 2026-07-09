@@ -2139,6 +2139,8 @@ export default function Game() {
 
     // Draw Sacred Visualizer on the track if selected in gameTrack options
     if (optsRef.current.gameTrack === 'sacred_visualizer') {
+      const hwTop = hwAtProgress(0, W);
+      const hwBot = hwAtProgress(1, W);
       const cyVis = hitY * 0.55;
       const cxVis = W / 2;
       const sizeVis = Math.min(W, hitY) * 0.45;
