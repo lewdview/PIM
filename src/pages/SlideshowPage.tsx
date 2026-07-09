@@ -432,13 +432,14 @@ export default function SlideshowPage() {
         ctx.shadowBlur = isHovered ? 25 : 12;
         ctx.shadowColor = floater.glowColor;
 
+        const pad = 10;
+        const fw = floater.width;
+        const fh = floater.height;
+
         // Render neon bracket boundary box around extracted floaters only if enabled or hovered
         if (showBrackets || isHovered) {
           ctx.strokeStyle = floater.glowColor;
           ctx.lineWidth = isHovered ? 2 : 1;
-          const pad = 10;
-          const fw = floater.width;
-          const fh = floater.height;
 
           ctx.beginPath();
           // Top Left corner
