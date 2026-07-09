@@ -371,19 +371,31 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
                       Share Card
                     </button>
                     {isFullSong && (
-                      <button
-                        onClick={() => {
-                          stop();
-                          setLocation(`/play/card-${card.card.day}`);
-                        }}
-                        className="flex items-center gap-2 px-5 py-3 bg-[rgba(0,240,255,0.1)] border border-neon-cyan text-neon-cyan rounded-xl text-[11px] font-mono font-bold uppercase tracking-widest transition-all hover:bg-[rgba(0,240,255,0.2)] hover:scale-[1.02] active:scale-95 shadow-[0_0_15px_rgba(0,240,255,0.15)]"
-                        style={{
-                          borderColor: 'var(--color-neon-cyan, #00f0ff)',
-                          color: 'var(--color-neon-cyan, #00f0ff)',
-                        }}
-                      >
-                        PLAY PIM
-                      </button>
+                      <>
+                        <button
+                          onClick={() => {
+                            stop();
+                            setLocation(`/play/card-${card.card.day}`);
+                          }}
+                          className="flex items-center gap-2 px-5 py-3 bg-[rgba(0,240,255,0.1)] border border-neon-cyan text-neon-cyan rounded-xl text-[11px] font-mono font-bold uppercase tracking-widest transition-all hover:bg-[rgba(0,240,255,0.2)] hover:scale-[1.02] active:scale-95 shadow-[0_0_15px_rgba(0,240,255,0.15)]"
+                          style={{
+                            borderColor: 'var(--color-neon-cyan, #00f0ff)',
+                            color: 'var(--color-neon-cyan, #00f0ff)',
+                          }}
+                        >
+                          PLAY PIM
+                        </button>
+                        <button
+                          onClick={() => {
+                            stop();
+                            sessionStorage.setItem(`game_origin_card-${card.card.day}`, 'vault/collection');
+                            setLocation(`/listen/card-${card.card.day}`);
+                          }}
+                          className="flex items-center gap-2 px-5 py-3 bg-[rgba(57,255,20,0.1)] border border-[#39FF14] text-[#39FF14] rounded-xl text-[11px] font-mono font-bold uppercase tracking-widest transition-all hover:bg-[rgba(57,255,20,0.2)] hover:scale-[1.02] active:scale-95 shadow-[0_0_15px_rgba(57,255,20,0.15)]"
+                        >
+                          🎧 JUST LISTEN
+                        </button>
+                      </>
                     )}
                     {card.blockchainStatus === 'minted' ? (
                       <a

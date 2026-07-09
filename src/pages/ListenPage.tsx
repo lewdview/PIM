@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useRoute, useLocation } from 'wouter';
-import { getSongById, type GameSong } from '../game/api';
+import { getSongById, loadCatalog, type GameSong } from '../game/api';
 import { audioManager } from '../game/audio';
+import { useVaultStore } from '../store/useVaultStore';
+import { Play, Pause, SkipForward, SkipBack, X, Music } from 'lucide-react';
 
 // Types for particles in the visualizer
 interface VisualizerParticle {
@@ -23,6 +25,8 @@ export default function ListenPage() {
   const songId = params?.songId || '';
   const [location, setLocation] = useLocation();
 
+  const [playlist, setPlaylist] = useState<GameSong[]>([]);
+  const [currentTrackIndex, setCurrentTrackIndex] = useState(-1);
   const [song, setSong] = useState<GameSong | null>(null);
   const [loading, setLoading] = useState(true);
   const [playing, setPlaying] = useState(false);
@@ -30,6 +34,7 @@ export default function ListenPage() {
   const [duration, setDuration] = useState(0);
   const [geometryType, setGeometryType] = useState<GeometryType>('flower_of_life');
   const [neonTheme, setNeonTheme] = useState<'cyan_pink' | 'emerald_orange' | 'gold_purple' | 'rainbow'>('cyan_pink');
+  const [playlistOpen, setPlaylistOpen] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -42,22 +47,62 @@ export default function ListenPage() {
   // Track page history to go back to the correct origin page
   const [backRoute, setBackRoute] = useState('/songs');
 
+  // Load store values
+  const collection = useVaultStore((s) => s.collection);
+  const fragments = useVaultStore((s) => s.fragments);
+
+  const getFragmentsForDay = (day: number) => {
+    const cardKey = `card-${day}`;
+    const dayKey = `day-${String(day).padStart(3, '0')}`;
+    const dayKeyRaw = `day-${day}`;
+    return (
+      fragments[cardKey] ??
+      fragments[dayKey] ??
+      fragments[dayKeyRaw] ??
+      0
+    );
+  };
+
+  const isSongUnlocked = (s: GameSong) => {
+    const isOwned = Array.isArray(collection) 
+      ? collection.some(c => c && (c.cardId === s.id || `card-${c.card?.day}` === s.id || c.cardId === `card-${s.day}`)) 
+      : false;
+    return isOwned || getFragmentsForDay(s.day) >= 10;
+  };
+
+  // 1. Initial playlist setup
   useEffect(() => {
     const origin = sessionStorage.getItem(`game_origin_${songId}`) || 'songs';
     setBackRoute(origin === 'songs' ? '/songs' : origin ? `/${origin}` : '/campaign');
 
-    getSongById(songId).then((s) => {
-      if (s) {
-        setSong(s);
-        setDuration(s.duration || 180);
+    const setupPlaylist = async () => {
+      const allSongs = await loadCatalog();
+      // Filter only unlocked/owned songs
+      const unlockedSongs = allSongs.filter(isSongUnlocked);
+      setPlaylist(unlockedSongs);
+
+      // Find initial song index
+      const initialIndex = unlockedSongs.findIndex(s => s.id === songId || `card-${s.day}` === songId);
+      if (initialIndex !== -1) {
+        setCurrentTrackIndex(initialIndex);
+        const targetSong = unlockedSongs[initialIndex];
+        setSong(targetSong);
+        setDuration(targetSong.duration || 180);
+      } else if (unlockedSongs.length > 0) {
+        setCurrentTrackIndex(0);
+        const targetSong = unlockedSongs[0];
+        setSong(targetSong);
+        setDuration(targetSong.duration || 180);
       }
       setLoading(false);
-    });
+    };
+
+    setupPlaylist();
 
     return () => {
       cleanupAudio();
     };
-  }, [songId]);
+  }, [songId, collection, fragments]);
 
   const cleanupAudio = () => {
     if (animationFrameRef.current) {
@@ -76,15 +121,17 @@ export default function ListenPage() {
     dataArrayRef.current = null;
   };
 
-  const initAudio = () => {
-    if (!song || audioRef.current) return;
+  const loadTrack = (track: GameSong) => {
+    cleanupAudio();
+    setSong(track);
+    setDuration(track.duration || 180);
+    setCurrentTime(0);
 
-    const audio = new Audio(song.audioUrl);
+    const audio = new Audio(track.audioUrl);
     audio.crossOrigin = 'anonymous';
     audio.volume = 0.6;
     audioRef.current = audio;
 
-    // Hook listeners
     audio.addEventListener('timeupdate', () => {
       setCurrentTime(audio.currentTime);
     });
@@ -96,8 +143,7 @@ export default function ListenPage() {
     });
 
     audio.addEventListener('ended', () => {
-      setPlaying(false);
-      setCurrentTime(0);
+      handleNextTrack();
     });
 
     try {
@@ -116,16 +162,23 @@ export default function ListenPage() {
       audioCtxRef.current = ctx;
       analyserRef.current = analyser;
       dataArrayRef.current = dataArray;
+      
+      if (playing) {
+        audio.play().catch(err => console.error('[ListenPage] Autoplay failed:', err));
+      }
     } catch (e) {
-      console.warn('[ListenPage] Web Audio API context failed (likely CORS or autoplay blocker), falling back to simulated physics:', e);
+      console.warn('[ListenPage] Web Audio Context failed, running in sandbox simulated mode:', e);
+      if (playing) {
+        audio.play().catch(err => console.error('[ListenPage] Autoplay failed:', err));
+      }
     }
   };
 
   const handleTogglePlay = () => {
     audioManager.playSfx('tap_nav', 0.2);
 
-    if (!audioRef.current) {
-      initAudio();
+    if (!audioRef.current && song) {
+      loadTrack(song);
     }
 
     if (audioRef.current) {
@@ -133,7 +186,6 @@ export default function ListenPage() {
         audioRef.current.pause();
         setPlaying(false);
       } else {
-        // Resume context on user click to pass browser constraints
         if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
           audioCtxRef.current.resume();
         }
@@ -142,7 +194,31 @@ export default function ListenPage() {
         });
         setPlaying(true);
       }
+    } else {
+      setPlaying(true);
     }
+  };
+
+  const handleNextTrack = () => {
+    if (playlist.length <= 1) return;
+    audioManager.playSfx('tap_nav', 0.15);
+    const nextIdx = (currentTrackIndex + 1) % playlist.length;
+    setCurrentTrackIndex(nextIdx);
+    loadTrack(playlist[nextIdx]);
+  };
+
+  const handlePrevTrack = () => {
+    if (playlist.length <= 1) return;
+    audioManager.playSfx('tap_nav', 0.15);
+    const prevIdx = (currentTrackIndex - 1 + playlist.length) % playlist.length;
+    setCurrentTrackIndex(prevIdx);
+    loadTrack(playlist[prevIdx]);
+  };
+
+  const handleSelectPlaylistTrack = (idx: number) => {
+    audioManager.playSfx('tap_nav', 0.15);
+    setCurrentTrackIndex(idx);
+    loadTrack(playlist[idx]);
   };
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -156,7 +232,7 @@ export default function ListenPage() {
   const handleBack = () => {
     cleanupAudio();
     audioManager.playSfx('back', 0.4);
-    setLocation(`/song/${songId}`);
+    setLocation(backRoute);
   };
 
   // --- Visualizer Drawing Loop ---
@@ -177,18 +253,15 @@ export default function ListenPage() {
     let colorShift = 0;
 
     const render = () => {
-      // Get dimensions
       const w = canvas.width;
       const h = canvas.height;
       const size = Math.min(w, h) * 0.35;
       const cx = w / 2;
       const cy = h / 2;
 
-      // Clean screen with micro-alpha decay for trails
       ctx.fillStyle = 'rgba(5, 4, 3, 0.12)';
       ctx.fillRect(0, 0, w, h);
 
-      // 1. Fetch live frequency data or compute procedural fallbacks
       let frequencies = new Uint8Array(128);
       let volume = 0;
       let bass = 0;
@@ -199,7 +272,6 @@ export default function ListenPage() {
         analyserRef.current.getByteFrequencyData(dataArrayRef.current);
         frequencies = dataArrayRef.current;
         
-        // Compute volume averages
         for (let i = 0; i < frequencies.length; i++) {
           volume += frequencies[i];
           if (i < 10) bass += frequencies[i];
@@ -211,7 +283,6 @@ export default function ListenPage() {
         mid /= 40;
         high /= (frequencies.length - 50);
       } else if (playing) {
-        // Procedural simulation if Web Audio failed but song is playing
         const t = Date.now() / 1000;
         bass = 50 + Math.sin(t * 8) * 30 + (Math.floor(t * 2) % 2 === 0 ? 40 : 0);
         mid = 40 + Math.cos(t * 5) * 20;
@@ -219,13 +290,10 @@ export default function ListenPage() {
         volume = (bass + mid + high) / 3;
       }
 
-      // Convert levels to [0..1] range
       const bassN = Math.min(1, bass / 255);
       const midN = Math.min(1, mid / 255);
       const highN = Math.min(1, high / 255);
-      const volN = Math.min(1, volume / 255);
 
-      // Color palette definitions based on neonTheme
       const getColor = (offset: number) => {
         const t = (colorShift + offset) % 360;
         if (neonTheme === 'cyan_pink') {
@@ -239,12 +307,10 @@ export default function ListenPage() {
         }
       };
 
-      // Pulsing modifiers
       const bassScale = 1.0 + bassN * 0.15;
       rotationAngle += 0.003 + midN * 0.008;
       colorShift = (colorShift + 0.4 + highN * 1.2) % 360;
 
-      // 2. Draw ambient background glows
       const glowGrad = ctx.createRadialGradient(cx, cy, 10, cx, cy, size * 2);
       glowGrad.addColorStop(0, `${getColor(0).replace('0.85', '0.04')}`);
       glowGrad.addColorStop(0.5, `${getColor(120).replace('0.85', '0.015')}`);
@@ -252,7 +318,6 @@ export default function ListenPage() {
       ctx.fillStyle = glowGrad;
       ctx.fillRect(0, 0, w, h);
 
-      // 3. Render floating particle system
       if (playing && Math.random() < 0.1 + bassN * 0.4) {
         const angle = Math.random() * Math.PI * 2;
         const speed = 1 + midN * 4;
@@ -269,7 +334,6 @@ export default function ListenPage() {
         });
       }
 
-      // Update and draw particles
       particlesRef.current = particlesRef.current.filter(p => {
         p.life++;
         p.x += p.vx;
@@ -287,20 +351,14 @@ export default function ListenPage() {
         return p.life < p.maxLife;
       });
 
-      // 4. Draw Main Sacred Geometry Visualizer inside a frosted glass ring frame
       ctx.save();
       ctx.translate(cx, cy);
       ctx.scale(bassScale, bassScale);
       ctx.rotate(rotationAngle);
-
-      // Global shadow configuration for neon glow feel
       ctx.shadowBlur = 15 + midN * 25;
 
       if (geometryType === 'flower_of_life') {
-        // FLOWER OF LIFE
         const radius = size * 0.24;
-        
-        // Primary Center circles
         ctx.lineWidth = 1.2 + midN * 1.5;
         for (let i = 0; i < 6; i++) {
           const angle = (i * Math.PI) / 3;
@@ -313,7 +371,6 @@ export default function ListenPage() {
           ctx.arc(ox, oy, radius, 0, Math.PI * 2);
           ctx.stroke();
 
-          // Second tier outer lattice
           const outerAngle = angle + Math.PI / 6;
           const oox = Math.cos(outerAngle) * radius * Math.sqrt(3);
           const ooy = Math.sin(outerAngle) * radius * Math.sqrt(3);
@@ -324,7 +381,6 @@ export default function ListenPage() {
           ctx.stroke();
         }
 
-        // Center binding seed circle
         ctx.strokeStyle = getColor(0);
         ctx.shadowColor = getColor(0);
         ctx.beginPath();
@@ -332,8 +388,6 @@ export default function ListenPage() {
         ctx.stroke();
 
       } else if (geometryType === 'sri_yantra') {
-        // SRI YANTRA
-        // Draws interlocking triangles pointing up (downwards too)
         const scaleFact = size * 0.9;
         ctx.lineWidth = 1.0 + midN * 2.0;
 
@@ -341,11 +395,9 @@ export default function ListenPage() {
           ctx.strokeStyle = getColor(hueOffset);
           ctx.shadowColor = getColor(hueOffset);
           ctx.beginPath();
-          
           const yTip = pointingUp ? yCenter - r : yCenter + r;
           const yBase = pointingUp ? yCenter + r * 0.5 : yCenter - r * 0.5;
           const xOffset = r * Math.sqrt(3) * 0.5;
-
           ctx.moveTo(0, yTip);
           ctx.lineTo(xOffset, yBase);
           ctx.lineTo(-xOffset, yBase);
@@ -353,20 +405,15 @@ export default function ListenPage() {
           ctx.stroke();
         };
 
-        // Nested central triangles (combination of upward and downward)
         drawYantraTriangle(0, scaleFact * 0.5, true, 0);
         drawYantraTriangle(0, scaleFact * 0.5, false, 40);
-
         drawYantraTriangle(-scaleFact * 0.05, scaleFact * 0.4, true, 80);
         drawYantraTriangle(scaleFact * 0.05, scaleFact * 0.4, false, 120);
-
         drawYantraTriangle(scaleFact * 0.03, scaleFact * 0.3, true, 160);
         drawYantraTriangle(-scaleFact * 0.03, scaleFact * 0.3, false, 200);
-
         drawYantraTriangle(0, scaleFact * 0.2, true, 240);
         drawYantraTriangle(0, scaleFact * 0.2, false, 280);
 
-        // Surrounding concentric circles and lotus layers
         ctx.strokeStyle = getColor(180);
         ctx.shadowColor = getColor(180);
         ctx.beginPath();
@@ -377,7 +424,6 @@ export default function ListenPage() {
         ctx.arc(0, 0, scaleFact * 0.65, 0, Math.PI * 2);
         ctx.stroke();
 
-        // 8 petals ring
         for (let i = 0; i < 8; i++) {
           const angle = (i * Math.PI) / 4;
           const px = Math.cos(angle) * (scaleFact * 0.7);
@@ -390,24 +436,18 @@ export default function ListenPage() {
         }
 
       } else if (geometryType === 'metatrons_cube') {
-        // METATRON'S CUBE
         const rad = size * 0.25;
         const nodes: {x: number, y: number, color: string}[] = [];
         ctx.lineWidth = 0.8 + midN * 1.5;
 
-        // Center point
         nodes.push({ x: 0, y: 0, color: getColor(0) });
-
-        // Outer rings
         for (let i = 0; i < 6; i++) {
           const angle = (i * Math.PI) / 3;
-          // Inner Hexagon
           nodes.push({
             x: Math.cos(angle) * rad,
             y: Math.sin(angle) * rad,
             color: getColor(i * 30)
           });
-          // Outer Hexagon
           nodes.push({
             x: Math.cos(angle) * rad * 2,
             y: Math.sin(angle) * rad * 2,
@@ -415,7 +455,6 @@ export default function ListenPage() {
           });
         }
 
-        // Draw connecting lattice lines between all nodes
         for (let a = 0; a < nodes.length; a++) {
           for (let b = a + 1; b < nodes.length; b++) {
             ctx.strokeStyle = nodes[a].color.replace('0.85', '0.22');
@@ -427,7 +466,6 @@ export default function ListenPage() {
           }
         }
 
-        // Draw neon nodes circles
         nodes.forEach((n) => {
           ctx.strokeStyle = n.color;
           ctx.shadowColor = n.color;
@@ -437,11 +475,8 @@ export default function ListenPage() {
         });
 
       } else if (geometryType === 'bipolar_torus') {
-        // BIPOLAR TORUS / CIRCLE FIELDS
         const rad = size * 0.95;
         ctx.lineWidth = 1.0 + highN * 2.0;
-
-        // Nested circles sliding up and down from poles
         const circlesCount = 12;
         for (let i = 1; i <= circlesCount; i++) {
           const ratio = i / circlesCount;
@@ -451,19 +486,16 @@ export default function ListenPage() {
           ctx.strokeStyle = getColor(i * 25);
           ctx.shadowColor = getColor(i * 25);
 
-          // Top fields
           ctx.beginPath();
           ctx.arc(0, -cyOffset, currentRad, 0, Math.PI * 2);
           ctx.stroke();
 
-          // Bottom fields
           ctx.beginPath();
           ctx.arc(0, cyOffset, currentRad, 0, Math.PI * 2);
           ctx.stroke();
         }
 
       } else if (geometryType === 'lakshmi_star') {
-        // LAKSHMI STAR (8-POINTED STAR)
         const rad = size * 0.72;
         ctx.lineWidth = 1.2 + midN * 2.0;
 
@@ -481,7 +513,6 @@ export default function ListenPage() {
         drawSquare(0, 0);
         drawSquare(Math.PI / 4, 80);
 
-        // Core nested circular lattices
         ctx.strokeStyle = getColor(160);
         ctx.shadowColor = getColor(160);
         ctx.beginPath();
@@ -494,7 +525,6 @@ export default function ListenPage() {
         ctx.arc(0, 0, rad * 0.2, 0, Math.PI * 2);
         ctx.stroke();
 
-        // 8 satellite glowing nodes
         for (let i = 0; i < 8; i++) {
           const angle = (i * Math.PI) / 4;
           const nx = Math.cos(angle) * rad * 0.7;
@@ -507,7 +537,6 @@ export default function ListenPage() {
         }
       }
 
-      // Outer glassy frame ring representing the glass boundaries
       ctx.restore();
 
       ctx.save();
@@ -554,6 +583,8 @@ export default function ListenPage() {
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
+  const coverArtSrc = song?.coverArt || song?.coverUrl || '/data/covers/default.jpg';
+
   return (
     <div className="relative min-h-screen bg-[#050403] text-white overflow-hidden flex items-center justify-center">
       {/* Fullscreen Canvas Visualizer */}
@@ -568,29 +599,23 @@ export default function ListenPage() {
           onClick={handleBack}
           className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-full hover:bg-white/10 transition-colors uppercase font-mono text-[9px] tracking-widest text-white/70"
         >
-          <span>←</span> Back to Song Detail
+          <span>←</span> EXIT VISUALIZER
         </button>
       </div>
 
       {/* GLASSMORPHIC PANEL DASHBOARD */}
-      <div className="absolute bottom-10 left-6 right-6 md:left-auto md:right-10 md:w-[420px] z-20 backdrop-blur-[24px] bg-[#0c0c0e]/65 border border-white/15 rounded-3xl p-6 shadow-[0_12px_40px_rgba(0,0,0,0.6)] flex flex-col gap-5">
+      <div className="absolute bottom-10 left-6 right-6 md:left-auto md:right-10 md:w-[420px] z-20 backdrop-blur-[24px] bg-[#0c0c0e]/65 border border-white/15 rounded-3xl p-6 shadow-[0_12px_40px_rgba(0,0,0,0.6)] flex flex-col gap-5 transition-all duration-300">
         {/* Glowing Accent Indicator */}
-        <div className="absolute -top-1 left-8 right-8 h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent opacity-80" />
+        <div className="absolute -top-1 left-8 right-8 h-[2px] bg-gradient-to-r from-transparent via-[#39FF14] to-transparent opacity-80" />
 
-        {/* Cover Art and Info Header */}
-        <div className="flex gap-4 items-center">
+        {/* Cover Art and Info Header with Close Icon */}
+        <div className="flex gap-4 items-center relative">
           <div className="w-16 h-16 rounded-xl overflow-hidden border border-white/10 bg-white/5 flex-shrink-0">
-            {song?.coverUrl ? (
-              <img src={song.coverUrl} alt={song.title} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full bg-[#111] flex items-center justify-center text-white/30 text-xs">
-                N/A
-              </div>
-            )}
+            <img src={coverArtSrc} alt={song?.title} className="w-full h-full object-cover" />
           </div>
-          <div className="overflow-hidden flex-1">
+          <div className="overflow-hidden flex-1 pr-6">
             <div className="font-mono text-[9px] tracking-[0.2em] text-[#39FF14] uppercase font-black mb-1">
-              JUST LISTEN // AMBIENT VIEW
+              JUST LISTEN // PLAYLIST
             </div>
             <h2 className="text-base font-black truncate uppercase tracking-tight text-white mb-0.5">
               {song?.title || 'Unknown Title'}
@@ -599,6 +624,14 @@ export default function ListenPage() {
               {song?.artist || 'Unknown Artist'}
             </p>
           </div>
+          {/* Quick Exit Cross button */}
+          <button
+            onClick={handleBack}
+            className="absolute top-0 right-0 p-1.5 hover:bg-white/10 rounded-full transition-colors opacity-60 hover:opacity-100 cursor-pointer"
+            title="Exit Visualizer"
+          >
+            <X size={16} />
+          </button>
         </div>
 
         {/* Interactive Progress Slider */}
@@ -621,9 +654,41 @@ export default function ListenPage() {
           />
         </div>
 
+        {/* Playlist Controls (Skip / Play) */}
+        <div className="flex justify-between items-center px-4">
+          <button
+            onClick={handlePrevTrack}
+            disabled={playlist.length <= 1}
+            className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl transition-all border border-white/5 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+            title="Previous Track"
+          >
+            <SkipBack size={18} />
+          </button>
+          
+          <button
+            onClick={handleTogglePlay}
+            className={`flex items-center justify-center w-14 h-14 rounded-full transition-all shadow-md cursor-pointer ${
+              playing
+                ? 'bg-transparent border border-red-500/50 text-red-400 hover:bg-red-500/10'
+                : 'bg-[#39FF14] border border-[#39FF14] text-black hover:bg-[#39FF14]/90'
+            }`}
+            title={playing ? 'Pause' : 'Play'}
+          >
+            {playing ? <Pause size={20} /> : <Play size={20} className="ml-1" />}
+          </button>
+
+          <button
+            onClick={handleNextTrack}
+            disabled={playlist.length <= 1}
+            className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl transition-all border border-white/5 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+            title="Next Track"
+          >
+            <SkipForward size={18} />
+          </button>
+        </div>
+
         {/* Action Controls & Toggles */}
         <div className="grid grid-cols-2 gap-4">
-          {/* Sacred Shape Dropdown */}
           <div className="flex flex-col gap-1">
             <span className="font-mono text-[8px] tracking-wider text-white/40 uppercase">
               Geometry Shape
@@ -644,7 +709,6 @@ export default function ListenPage() {
             </select>
           </div>
 
-          {/* Neon Palette Dropdown */}
           <div className="flex flex-col gap-1">
             <span className="font-mono text-[8px] tracking-wider text-white/40 uppercase">
               Neon Palette
@@ -665,17 +729,48 @@ export default function ListenPage() {
           </div>
         </div>
 
-        {/* Master Playback Button */}
-        <button
-          onClick={handleTogglePlay}
-          className={`w-full py-3.5 rounded-2xl font-black text-xs tracking-[0.2em] uppercase transition-all shadow-md ${
-            playing
-              ? 'bg-transparent border border-red-500/50 text-red-400 hover:bg-red-500/10'
-              : 'bg-[#39FF14] border border-[#39FF14] text-black hover:bg-[#39FF14]/90 shadow-[#39FF14]/20'
-          }`}
-        >
-          {playing ? '❚❚ PAUSE PROJECTION' : '▶ INITIATE SOUNDSCAPE'}
-        </button>
+        {/* Playlist Toggle & Active Queue */}
+        <div className="flex flex-col border-t border-white/5 pt-3">
+          <button
+            onClick={() => {
+              audioManager.playSfx('tap_nav', 0.1);
+              setPlaylistOpen(!playlistOpen);
+            }}
+            className="flex items-center justify-between font-mono text-[9px] tracking-widest text-[#39FF14] uppercase hover:opacity-80 transition-opacity cursor-pointer py-1"
+          >
+            <span className="flex items-center gap-1.5">
+              <Music size={10} />
+              Playlist Queue ({playlist.length} songs)
+            </span>
+            <span>{playlistOpen ? '▼ HIDE' : '▲ SHOW'}</span>
+          </button>
+
+          {playlistOpen && (
+            <div className="max-h-[140px] overflow-y-auto mt-2 space-y-1.5 pr-1 custom-scrollbar">
+              {playlist.map((track, idx) => {
+                const isActive = idx === currentTrackIndex;
+                return (
+                  <button
+                    key={track.id}
+                    onClick={() => handleSelectPlaylistTrack(idx)}
+                    className={`w-full flex items-center justify-between p-2 rounded-lg text-left text-[10px] font-mono transition-all border ${
+                      isActive
+                        ? 'bg-[#39FF14]/10 border-[#39FF14]/30 text-[#39FF14]'
+                        : 'bg-white/5 border-transparent text-white/60 hover:bg-white/10 hover:text-white'
+                    }`}
+                  >
+                    <span className="truncate pr-4 uppercase">
+                      {idx + 1}. {track.title}
+                    </span>
+                    <span className="opacity-50 flex-shrink-0">
+                      {formatTime(track.duration || 180)}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
         {/* Instruction Footer */}
         <div className="text-center font-mono text-[8px] text-white/30 uppercase tracking-widest">
