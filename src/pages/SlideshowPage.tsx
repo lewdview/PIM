@@ -75,6 +75,8 @@ export default function SlideshowPage() {
   const [detectedObjects, setDetectedObjects] = useState<DetectedObject[]>([]);
   const [hoveredObjectId, setHoveredObjectId] = useState<string | null>(null);
   const [extractionMode, setExtractionMode] = useState<'coco' | 'contour'>('coco');
+  const [showBrackets, setShowBrackets] = useState(false);
+  const [hideSourceImage, setHideSourceImage] = useState(false);
 
   // DOM Refs
   const imgRef = useRef<HTMLImageElement>(null);
@@ -283,8 +285,8 @@ export default function SlideshowPage() {
       let minX = w, maxX = 0, minY = h, maxY = 0;
       let found = false;
 
-      for (let y = 0; y < h; y += 4) {
-        for (let x = 0; x < w; x += 4) {
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
           const i = (y * w + x) * 4;
           const r = sPixels[i];
           const g = sPixels[i + 1];
@@ -430,31 +432,33 @@ export default function SlideshowPage() {
         ctx.shadowBlur = isHovered ? 25 : 12;
         ctx.shadowColor = floater.glowColor;
 
-        // Render neon bracket boundary box around extracted floaters
-        ctx.strokeStyle = floater.glowColor;
-        ctx.lineWidth = isHovered ? 2 : 1;
-        const pad = 10;
-        const fw = floater.width;
-        const fh = floater.height;
+        // Render neon bracket boundary box around extracted floaters only if enabled or hovered
+        if (showBrackets || isHovered) {
+          ctx.strokeStyle = floater.glowColor;
+          ctx.lineWidth = isHovered ? 2 : 1;
+          const pad = 10;
+          const fw = floater.width;
+          const fh = floater.height;
 
-        ctx.beginPath();
-        // Top Left corner
-        ctx.moveTo(-fw / 2 - pad, -fh / 2 - pad + 15);
-        ctx.lineTo(-fw / 2 - pad, -fh / 2 - pad);
-        ctx.lineTo(-fw / 2 - pad + 15, -fh / 2 - pad);
-        // Top Right
-        ctx.moveTo(fw / 2 + pad - 15, -fh / 2 - pad);
-        ctx.lineTo(fw / 2 + pad, -fh / 2 - pad);
-        ctx.lineTo(fw / 2 + pad, -fh / 2 - pad + 15);
-        // Bottom Right
-        ctx.moveTo(fw / 2 + pad, fh / 2 + pad - 15);
-        ctx.lineTo(fw / 2 + pad, fh / 2 + pad);
-        ctx.lineTo(fw / 2 + pad - 15, fh / 2 + pad);
-        // Bottom Left
-        ctx.moveTo(-fw / 2 - pad + 15, fh / 2 + pad);
-        ctx.lineTo(-fw / 2 - pad, fh / 2 + pad);
-        ctx.lineTo(-fw / 2 - pad, fh / 2 + pad - 15);
-        ctx.stroke();
+          ctx.beginPath();
+          // Top Left corner
+          ctx.moveTo(-fw / 2 - pad, -fh / 2 - pad + 15);
+          ctx.lineTo(-fw / 2 - pad, -fh / 2 - pad);
+          ctx.lineTo(-fw / 2 - pad + 15, -fh / 2 - pad);
+          // Top Right
+          ctx.moveTo(fw / 2 + pad - 15, -fh / 2 - pad);
+          ctx.lineTo(fw / 2 + pad, -fh / 2 - pad);
+          ctx.lineTo(fw / 2 + pad, -fh / 2 - pad + 15);
+          // Bottom Right
+          ctx.moveTo(fw / 2 + pad, fh / 2 + pad - 15);
+          ctx.lineTo(fw / 2 + pad, fh / 2 + pad);
+          ctx.lineTo(fw / 2 + pad - 15, fh / 2 + pad);
+          // Bottom Left
+          ctx.moveTo(-fw / 2 - pad + 15, fh / 2 + pad);
+          ctx.lineTo(-fw / 2 - pad, fh / 2 + pad);
+          ctx.lineTo(-fw / 2 - pad, fh / 2 + pad - 15);
+          ctx.stroke();
+        }
 
         if (img.complete) {
           ctx.drawImage(img, -fw / 2, -fh / 2, fw, fh);
@@ -484,7 +488,7 @@ export default function SlideshowPage() {
       }
       window.removeEventListener('resize', resize);
     };
-  }, [hoveredObjectId]);
+  }, [hoveredObjectId, showBrackets]);
 
   // 6. Custom File Drops
   const handleDragOver = (e: React.DragEvent) => {
@@ -605,6 +609,44 @@ export default function SlideshowPage() {
           </div>
         </div>
 
+        {/* View Layout Controls */}
+        <div className="flex flex-col gap-3">
+          <h4 className="font-mono text-[9px] font-black text-white/40 uppercase tracking-widest border-b border-white/5 pb-1">
+            VIEW OPTIONS
+          </h4>
+          <div className="flex flex-col gap-2.5">
+            <label className="flex items-center gap-3 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={hideSourceImage}
+                onChange={(e) => {
+                  audioManager.playSfx('tap_nav', 0.1);
+                  setHideSourceImage(e.target.checked);
+                }}
+                className="w-3.5 h-3.5 rounded border border-white/20 bg-black/40 text-[#39FF14] focus:ring-0 cursor-pointer accent-[#39FF14]"
+              />
+              <span className="font-mono text-[9px] uppercase tracking-wider text-white/70">
+                Isolate Cut-outs (Pure Black)
+              </span>
+            </label>
+
+            <label className="flex items-center gap-3 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={showBrackets}
+                onChange={(e) => {
+                  audioManager.playSfx('tap_nav', 0.1);
+                  setShowBrackets(e.target.checked);
+                }}
+                className="w-3.5 h-3.5 rounded border border-white/20 bg-black/40 text-[#39FF14] focus:ring-0 cursor-pointer accent-[#39FF14]"
+              />
+              <span className="font-mono text-[9px] uppercase tracking-wider text-white/70">
+                Show Bounding Brackets [ ]
+              </span>
+            </label>
+          </div>
+        </div>
+
         {/* Playlist / Upload Files Section */}
         <div className="flex flex-col gap-3">
           <h4 className="font-mono text-[9px] font-black text-white/40 uppercase tracking-widest border-b border-white/5 pb-1">
@@ -719,10 +761,11 @@ export default function SlideshowPage() {
               alt="Slide presentation"
               onLoad={runExtraction}
               crossOrigin="anonymous"
-              className="max-w-full max-h-full object-contain transition-opacity duration-300 opacity-90"
+              className="max-w-full max-h-full object-contain transition-opacity duration-300"
               style={{
-                // Blur the background slightly to let canvas extracted floaters stand out!
-                filter: detectedObjects.length > 0 ? 'brightness(0.35) blur(1px)' : 'none'
+                opacity: hideSourceImage ? 0 : 0.9,
+                filter: detectedObjects.length > 0 ? 'brightness(0.35) blur(1px)' : 'none',
+                visibility: hideSourceImage ? 'hidden' : 'visible'
               }}
             />
           )}
