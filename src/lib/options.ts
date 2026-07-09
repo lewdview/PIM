@@ -54,6 +54,7 @@ export interface GameTrack {
 export const GAME_TRACKS: GameTrack[] = [
   { id: 'classic', name: 'Classic Track', desc: 'Standard perspective lanes', unlockText: 'Unlocked', unlockScore: 0 },
   { id: 'sacred_visualizer', name: 'Sacred Visualizer', desc: 'Direct note-lane visualizer overlay', unlockText: 'Unlocked', unlockScore: 0 },
+  { id: 'slideshow', name: 'Slideshow Cutouts', desc: 'Extracted floating slideshow subjects', unlockText: 'Unlocked', unlockScore: 0 },
 ];
 
 export const DEFAULT_OPTS: GameOpts = {

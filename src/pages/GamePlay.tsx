@@ -1024,6 +1024,7 @@ export default function Game() {
   const audioCtxRef = useRef<AudioContext | null>(null);
   const gameplayAnalyserRef = useRef<AnalyserNode | null>(null);
   const gameplayAnalyserDataRef = useRef<Uint8Array | null>(null);
+  const gameplaySlideshowFloatersRef = useRef<any[]>([]);
   const audioSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const audioFiltersRef = useRef<BiquadFilterNode[]>([]);
   const laneGainsRef = useRef<GainNode[]>([]);
@@ -1163,6 +1164,141 @@ export default function Game() {
   const [opts, setOpts] = useState<GameOpts>(loadOpts);
   const optsRef = useRef(opts);
   useEffect(() => { optsRef.current = opts; }, [opts]);
+
+  // Load and segment slideshow images for track customization
+  useEffect(() => {
+    if (opts.gameTrack !== 'slideshow') return;
+
+    let active = true;
+
+    const fetchAndSegment = async () => {
+      try {
+        let imageUrls = ['/data/slideshow/cyber_dancer.jpg', '/data/slideshow/cyber_headphones.jpg'];
+        try {
+          const res = await fetch('/api/slideshow-images');
+          if (res.ok) {
+            const files = await res.json();
+            if (files && files.length > 0) {
+              imageUrls = files;
+            }
+          }
+        } catch (e) {
+          console.warn('[GamePlay Slideshow] API offline, using fallback assets');
+        }
+
+        const floaters: any[] = [];
+        const colors = ['#00F0FF', '#39FF14', '#FF1493', '#FFD700', '#FF5500'];
+
+        for (let idx = 0; idx < imageUrls.length; idx++) {
+          const url = imageUrls[idx];
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.src = url;
+
+          await new Promise<void>((resolve) => {
+            img.onload = () => resolve();
+            img.onerror = () => resolve(); // skip on error
+          });
+
+          if (!active) return;
+          if (img.naturalWidth === 0) continue;
+
+          // Run contour scan
+          const tempCanvas = document.createElement('canvas');
+          tempCanvas.width = Math.min(img.naturalWidth, 250); // shrink for gameplay speed
+          tempCanvas.height = Math.min(img.naturalHeight, 200);
+          const tCtx = tempCanvas.getContext('2d')!;
+          tCtx.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
+
+          const w = tempCanvas.width;
+          const h = tempCanvas.height;
+          const imgData = tCtx.getImageData(0, 0, w, h);
+          const pixels = imgData.data;
+
+          const segs = [
+            { name: 'Core Shape', minL: 38, maxL: 200 },
+            { name: 'Neon Detail', minL: 200, maxL: 255 }
+          ];
+
+          segs.forEach((seg, sIdx) => {
+            const segCanvas = document.createElement('canvas');
+            segCanvas.width = w;
+            segCanvas.height = h;
+            const sCtx = segCanvas.getContext('2d')!;
+            sCtx.drawImage(img, 0, 0, w, h);
+            const sData = sCtx.getImageData(0, 0, w, h);
+            const sPixels = sData.data;
+
+            let minX = w, maxX = 0, minY = h, maxY = 0;
+            let found = false;
+
+            for (let y = 0; y < h; y++) {
+              for (let x = 0; x < w; x++) {
+                const i = (y * w + x) * 4;
+                const r = sPixels[i];
+                const g = sPixels[i + 1];
+                const b = sPixels[i + 2];
+                const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+
+                if (luminance >= seg.minL && luminance <= seg.maxL) {
+                  found = true;
+                  if (x < minX) minX = x;
+                  if (x > maxX) maxX = x;
+                  if (y < minY) minY = y;
+                  if (y > maxY) maxY = y;
+                } else {
+                  sPixels[i + 3] = 0; // set transparent
+                }
+              }
+            }
+
+            if (found && maxX - minX > 20 && maxY - minY > 20) {
+              const bw = maxX - minX;
+              const bh = maxY - minY;
+
+              const cropCanvas = document.createElement('canvas');
+              cropCanvas.width = bw;
+              cropCanvas.height = bh;
+              const cropCtx = cropCanvas.getContext('2d')!;
+
+              sCtx.putImageData(sData, 0, 0);
+              cropCtx.drawImage(segCanvas, minX, minY, bw, bh, 0, 0, bw, bh);
+
+              const angle = Math.random() * Math.PI * 2;
+              const speed = 0.3 + Math.random() * 0.5;
+
+              floaters.push({
+                canvas: cropCanvas,
+                className: seg.name,
+                x: Math.random() * 200 - 100,
+                y: Math.random() * 300 - 150,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                scale: 0.30 + Math.random() * 0.20, // smaller for track lanes
+                rotation: Math.random() * Math.PI * 2,
+                rotSpeed: (Math.random() - 0.5) * 0.012,
+                glowColor: colors[(idx * 2 + sIdx) % colors.length],
+                width: bw,
+                height: bh
+              });
+            }
+          });
+        }
+
+        if (active) {
+          gameplaySlideshowFloatersRef.current = floaters;
+        }
+      } catch (e) {
+        console.error('[GamePlay Slideshow Loader] Segmentation failed:', e);
+      }
+    };
+
+    fetchAndSegment();
+
+    return () => {
+      active = false;
+    };
+  }, [opts.gameTrack]);
   // Keep mutable refs current every render so draw/handlers always see latest values
   // without needing to be listed as useCallback dependencies.
   audioOffsetRef.current = opts.audioOffset;
@@ -2135,6 +2271,79 @@ export default function Game() {
     // Draw pre-rendered static tracks (Double-buffering optimization)
     if (offscreenCanvasRef.current) {
       ctx.drawImage(offscreenCanvasRef.current, 0, 0, W, H);
+    }
+
+    // Draw Slideshow Cutouts on the track if selected in gameTrack options
+    if (optsRef.current.gameTrack === 'slideshow' && gameplaySlideshowFloatersRef.current.length > 0) {
+      ctx.save();
+      
+      const hwTop = hwAtProgress(0, W);
+      const hwBot = hwAtProgress(1, W);
+      
+      // Clip to track boundary so it stays inside the track
+      ctx.beginPath();
+      ctx.moveTo(hwTop.left, 0);
+      ctx.quadraticCurveTo(W/2, -hitY * 0.09, hwTop.right, 0);
+      ctx.lineTo(hwBot.right, hitY);
+      ctx.lineTo(hwBot.left, hitY);
+      ctx.closePath();
+      ctx.clip();
+
+      const cxTrack = W / 2;
+      const cyTrack = hitY * 0.55;
+
+      gameplaySlideshowFloatersRef.current.forEach((floater) => {
+        // Move
+        floater.x += floater.vx;
+        floater.y += floater.vy;
+        floater.rotation += floater.rotSpeed;
+
+        // Bounce within boundaries of the track
+        const boundX = W * 0.18;
+        const boundY = hitY * 0.38;
+
+        if (Math.abs(floater.x) > boundX) {
+          floater.vx *= -1;
+          floater.x = Math.sign(floater.x) * boundX;
+        }
+        if (Math.abs(floater.y) > boundY) {
+          floater.vy *= -1;
+          floater.y = Math.sign(floater.y) * boundY;
+        }
+
+        ctx.save();
+        ctx.translate(cxTrack + floater.x, cyTrack + floater.y);
+        ctx.rotate(floater.rotation);
+        ctx.scale(floater.scale, floater.scale);
+
+        // Subtle glow to stand out under the notes
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = floater.glowColor;
+
+        // Draw image cutout
+        const fw = floater.width;
+        const fh = floater.height;
+        ctx.drawImage(floater.canvas, -fw / 2, -fh / 2, fw, fh);
+
+        // Draw glowing label border (similar to slideshow, but smaller)
+        ctx.strokeStyle = floater.glowColor;
+        ctx.lineWidth = 0.5;
+        const pad = 4;
+        ctx.beginPath();
+        // Top Left
+        ctx.moveTo(-fw / 2 - pad, -fh / 2 - pad + 6);
+        ctx.lineTo(-fw / 2 - pad, -fh / 2 - pad);
+        ctx.lineTo(-fw / 2 - pad + 6, -fh / 2 - pad);
+        // Bottom Right
+        ctx.moveTo(fw / 2 + pad, fh / 2 + pad - 6);
+        ctx.lineTo(fw / 2 + pad, fh / 2 + pad);
+        ctx.lineTo(fw / 2 + pad - 6, fh / 2 + pad);
+        ctx.stroke();
+
+        ctx.restore();
+      });
+
+      ctx.restore();
     }
 
     // Draw Sacred Visualizer on the track if selected in gameTrack options
