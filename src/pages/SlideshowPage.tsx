@@ -57,6 +57,7 @@ interface FloatingSubject {
   glowColor: string;
   width: number;
   height: number;
+  imgElement: HTMLImageElement;
 }
 
 export default function SlideshowPage() {
@@ -278,7 +279,7 @@ export default function SlideshowPage() {
     
     // We isolate 2 segments: a high-contrast core object and high-brightness details
     const segs = [
-      { name: 'Core Subject Shape', minL: 90, maxL: 200 },
+      { name: 'Core Subject Shape', minL: cutoutThreshold, maxL: 200 },
       { name: 'Neon Detail Highlight', minL: 200, maxL: 255 }
     ];
 
@@ -362,11 +363,15 @@ export default function SlideshowPage() {
       const angle = Math.random() * Math.PI * 2;
       const speed = 0.5 + Math.random() * 0.8;
       
+      const imgElement = new Image();
+      imgElement.src = obj.canvasDataUrl;
+      
       return {
         id: obj.id,
         className: obj.className,
         score: obj.score,
         dataUrl: obj.canvasDataUrl,
+        imgElement,
         x: Math.random() * 300 - 150, // relative coordinate offsets from center
         y: Math.random() * 200 - 100,
         vx: Math.cos(angle) * speed,
@@ -429,9 +434,8 @@ export default function SlideshowPage() {
           floater.y = Math.sign(floater.y) * boundY;
         }
 
-        // Draw image element
-        const img = new Image();
-        img.src = floater.dataUrl;
+        // Draw image element (read from cached imgElement to prevent recreations)
+        const img = floater.imgElement;
 
         ctx.save();
         ctx.translate(cx + floater.x, cy + floater.y);
@@ -667,7 +671,7 @@ export default function SlideshowPage() {
               <input
                 type="range"
                 min="5"
-                max="110"
+                max="220"
                 value={cutoutThreshold}
                 onChange={(e) => {
                   setCutoutThreshold(Number(e.target.value));
