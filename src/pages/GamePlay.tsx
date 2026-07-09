@@ -1175,8 +1175,10 @@ export default function Game() {
       try {
         let imageUrls = ['/data/slideshow/cyber_dancer.jpg', '/data/slideshow/cyber_headphones.jpg'];
         try {
-          const res = await fetch('/api/slideshow-images');
-          if (res.ok) {
+          const res = await fetch('http://localhost:3002/api/slideshow-images')
+            .catch(() => fetch('/api/slideshow-images'))
+            .catch(() => null);
+          if (res && res.ok) {
             const files = await res.json();
             if (files && files.length > 0) {
               imageUrls = files;
@@ -1321,6 +1323,14 @@ export default function Game() {
     window.addEventListener("cheat_code_activated", handler);
     return () => window.removeEventListener("cheat_code_activated", handler);
   }, []);
+
+  // Sync opts state with useVaultStore settings changes
+  const storeSettings = useVaultStore((state) => state.settings);
+  useEffect(() => {
+    if (storeSettings) {
+      setOpts(loadOpts());
+    }
+  }, [storeSettings]);
 
   useLayoutEffect(() => {
     if (puPanelRef.current) {

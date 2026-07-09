@@ -68,6 +68,7 @@ interface VaultState {
 
   // Loading
   isLoading: boolean;
+  hasLoadedData: boolean;
 
   // Token system
   tokenBalance: number;
@@ -164,6 +165,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   isRevealing: false,
   revealPackMeta: null,
   isLoading: false,
+  hasLoadedData: false,
   tokenBalance: 0,
   supplyMap: {},
   dailyLimits: { standard: 0, premium: 0 },
@@ -256,7 +258,11 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   loadVaultData: async () => {
     const session = await supabase.auth.getSession();
     const userId = session.data.session?.user.id;
-    if (!userId) return;
+    if (!userId) {
+      set({ hasLoadedData: false });
+      return;
+    }
+    if (get().hasLoadedData) return;
 
     set({ isLoading: true });
     try {
@@ -604,7 +610,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       });
 
     } finally {
-      set({ isLoading: false });
+      set({ isLoading: false, hasLoadedData: true });
     }
   },
 
