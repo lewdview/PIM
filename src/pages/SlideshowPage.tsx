@@ -7,6 +7,30 @@ import { Play, Pause, ChevronRight, ChevronLeft, Upload, Grid, Brain, Layers, Ar
 const imageModules = import.meta.glob('/public/data/slideshow/*.{png,jpg,jpeg,gif,webp,svg}', { eager: true });
 const staticImages = Object.keys(imageModules).map(key => key.replace('/public', ''));
 
+const removeDarkBackground = (ctx: CanvasRenderingContext2D, w: number, h: number) => {
+  try {
+    const imgData = ctx.getImageData(0, 0, w, h);
+    const data = imgData.data;
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+      // Filter out dark background pixels
+      if (luminance < 38) {
+        data[i + 3] = 0; // Transparent
+      } else if (luminance < 60) {
+        // Linear blending at the edges for smooth anti-aliasing
+        data[i + 3] = Math.round(((luminance - 38) / 22) * 255);
+      }
+    }
+    ctx.putImageData(imgData, 0, 0);
+  } catch (err) {
+    console.warn('Luminance extraction warning:', err);
+  }
+};
+
+// Types for particles in the visualizer
 interface DetectedObject {
   id: string;
   className: string;
@@ -189,6 +213,8 @@ export default function SlideshowPage() {
               bx, by, bw, bh, // source coords
               0, 0, bw, bh // destination coords
             );
+
+            removeDarkBackground(cropCtx, bw, bh);
 
             extracted.push({
               id: `obj-${idx}-${Date.now()}`,

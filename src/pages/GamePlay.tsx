@@ -5650,9 +5650,7 @@ export default function Game() {
         const bg = opts.gameBackground || 'cover_blur';
         if (bg === 'sacred_visualizer') {
           return (
-            <div className="absolute inset-0 overflow-hidden pointer-events-none bg-[#050403]">
-              <GameplayVisualizer analyserRef={gameplayAnalyserRef} dataArrayRef={gameplayAnalyserDataRef} isPlaying={phase === 'playing'} />
-            </div>
+            <div className="absolute inset-0 overflow-hidden pointer-events-none bg-[#050403]" />
           );
         }
         if (bg === 'neon_grid') {
