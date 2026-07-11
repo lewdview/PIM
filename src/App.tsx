@@ -42,6 +42,7 @@ import PitchDeck from './pages/PitchDeck';
 import ProfilePage from './pages/ProfilePage';
 import ListenPage from './pages/ListenPage';
 import SlideshowPage from './pages/SlideshowPage';
+import EarnPage from './pages/EarnPage';
 import { loadOpts } from './lib/options';
 import { CHAPTERS } from './game/campaign';
 
@@ -379,6 +380,7 @@ export default function App() {
           <Route path="/song/:songId" component={SongDetail} />
           <Route path="/listen/:songId" component={ListenPage} />
           <Route path="/slideshow" component={SlideshowPage} />
+          <Route path="/vault/earn" component={EarnPage} />
           <Route>
             <div className="flex-1 flex flex-col items-center justify-center p-8 text-center max-w-md mx-auto">
               <div className="text-[10px] tracking-[0.3em] text-white/40 mb-4 uppercase font-bold">

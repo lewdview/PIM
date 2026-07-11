@@ -576,20 +576,53 @@ export default function SlideshowPage() {
     }
   };
 
-  const handleFileImport = (files: File[]) => {
+  const handleFileImport = async (files: File[]) => {
     const imageFiles = files.filter(f => f.type.startsWith('image/'));
     if (imageFiles.length === 0) return;
 
     audioManager.playSfx('hidden_secret_found', 0.3);
 
     const nextUrls = [...slides];
-    imageFiles.forEach(file => {
-      const url = URL.createObjectURL(file);
-      nextUrls.push(url);
-    });
+    const newSlideIndex = nextUrls.length;
+
+    for (const file of imageFiles) {
+      // Local fallback blob URL
+      const localBlobUrl = URL.createObjectURL(file);
+      
+      try {
+        const base64Data = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = (e) => reject(e);
+        });
+
+        const uploadRes = await fetch('http://localhost:3002/api/upload-slideshow', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filename: file.name, base64Data })
+        }).catch(() => fetch('/api/upload-slideshow', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filename: file.name, base64Data })
+        })).catch(() => null);
+
+        if (uploadRes && uploadRes.ok) {
+          const result = await uploadRes.json();
+          if (result.success && result.url) {
+            nextUrls.push(result.url);
+            continue;
+          }
+        }
+      } catch (err) {
+        console.warn('[Slideshow Upload] Local upload failed, using memory fallback:', err);
+      }
+
+      nextUrls.push(localBlobUrl);
+    }
 
     setSlides(nextUrls);
-    setCurrentSlideIndex(nextUrls.length - imageFiles.length);
+    setCurrentSlideIndex(newSlideIndex);
   };
 
   const handleExit = () => {

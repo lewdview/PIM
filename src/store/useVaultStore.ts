@@ -113,6 +113,7 @@ interface VaultState {
   endReveal: () => void;
   setLoading: (loading: boolean) => void;
   setTokenBalance: (balance: number) => void;
+  addTokens: (amount: number) => Promise<void>;
   setEquippedCardId: (id: string | null) => void;
   loadVaultData: () => Promise<void>;
   completeOnboarding: () => Promise<void>;
@@ -869,5 +870,24 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       tokenBalance: nextTokens,
     });
     return true;
+  },
+
+  addTokens: async (amount: number) => {
+    const state = get();
+    const session = await supabase.auth.getSession();
+    const userId = session.data.session?.user.id;
+    const nextTokens = state.tokenBalance + amount;
+
+    set({ tokenBalance: nextTokens });
+
+    if (userId) {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ tokens: nextTokens })
+        .eq('id', userId);
+      if (error) {
+        console.error('[Sync] Error adding tokens to Supabase:', error.message);
+      }
+    }
   },
 }));

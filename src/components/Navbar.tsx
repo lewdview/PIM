@@ -142,25 +142,27 @@ function VaultAttribution() {
 function TokenPill({ balance, compact = false }: { balance: number; compact?: boolean }) {
   const lit = balance > 0;
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '5px',
-        padding: compact ? '5px 10px' : '6px 12px',
-        border: '2px solid #000',
-        background: lit ? '#ff9900' : '#1a1610',
-        color: lit ? '#000' : '#555',
-        boxShadow: lit ? '2px 2px 0 #000, 0 0 12px rgba(255,153,0,0.4)' : '2px 2px 0 #000',
-        transition: 'all 0.3s ease',
-        flexShrink: 0,
-      }}
-    >
-      <Zap size={11} />
-      <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '11px', fontWeight: 900 }}>
-        {balance}
-      </span>
-    </div>
+    <Link to="/vault/earn" className="no-underline hover:scale-105 active:scale-95 transition-all flex select-none cursor-pointer" title="Earn Vault Tokens">
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '5px',
+          padding: compact ? '5px 10px' : '6px 12px',
+          border: '2px solid #000',
+          background: lit ? '#ff9900' : '#1a1610',
+          color: lit ? '#000' : '#555',
+          boxShadow: lit ? '2px 2px 0 #000, 0 0 12px rgba(255,153,0,0.4)' : '2px 2px 0 #000',
+          transition: 'all 0.3s ease',
+          flexShrink: 0,
+        }}
+      >
+        <Zap size={11} />
+        <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '11px', fontWeight: 900 }}>
+          {balance}
+        </span>
+      </div>
+    </Link>
   );
 }
 
