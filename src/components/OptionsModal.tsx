@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { loadOpts, resetOpts, keyLabel, getActiveTheme, type GameOpts, GAME_BACKGROUNDS, GAME_TRACKS } from "../lib/options";
+import { useLocation } from "wouter";
 import { clearCatalogCache } from "../game/api";
 import { audioManager } from "../game/audio";
 import { logAnalyticsEvent } from "../services/telemetryService";
@@ -483,6 +484,7 @@ function BacksIcon() {
 
 // ── Main Modal Component ──
 export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
+  const [, setLocation] = useLocation();
   const [opts, setOpts] = useState<GameOpts>(loadOpts());
   const [activeTab, setActiveTab] = useState<'gameplay' | 'controls' | 'themes' | 'backgrounds' | 'fronts' | 'backs'>('gameplay');
   const [remappingLane, setRemappingLane] = useState<number | null>(null);
@@ -1350,6 +1352,20 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                               {track.unlockText.toUpperCase()}
                             </span>
                           </div>
+
+                          {track.id === 'slideshow' && (
+                            <span
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                audioManager.playSfx('menu_confirm', 0.15);
+                                onClose();
+                                setLocation('/slideshow');
+                              }}
+                              className="absolute bottom-2 right-2 text-[7.5px] font-black font-mono border border-white/20 hover:border-white/50 px-1.5 py-0.5 rounded text-white bg-black/55 hover:bg-black/90 transition-all cursor-pointer z-10"
+                            >
+                              ⚙ CONFIG
+                            </span>
+                          )}
                         </button>
                       );
                     })}

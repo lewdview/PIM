@@ -307,8 +307,8 @@ function getDifficultyLaneColor(baseColor: string, _diffLevel: number, laneIndex
 }
 
 // Perspective highway geometry
-const HW_TOP = 0.54;
-const HW_BOT = 0.97;
+const HW_TOP = 0.65;
+const HW_BOT = 0.99;
 
 const POWER_UPS = [
   {
@@ -5997,17 +5997,27 @@ export default function Game() {
             </div>
             <h2 className="font-mono font-bold text-4xl text-white mb-8 tracking-tighter">PAUSED</h2>
             
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3.5">
               <button
                 onClick={doResume}
-                className="w-full py-4 font-mono font-bold text-sm tracking-[0.3em] bg-[#F2F0E8] text-[#080808] rounded-lg hover:scale-[1.02] active:scale-95 transition-all shadow-lg"
+                className="w-full py-3.5 font-mono font-bold text-sm tracking-[0.3em] bg-[#F2F0E8] text-[#080808] rounded-lg hover:scale-[1.02] active:scale-95 transition-all shadow-lg cursor-pointer"
               >
                 RESUME TRANSMISSION
               </button>
               
               <button
+                onClick={() => {
+                  audioManager.playSfx('menu_confirm', 0.15);
+                  useVaultStore.getState().setOptionsModalOpen(true);
+                }}
+                className="w-full py-3.5 font-mono font-bold text-xs tracking-[0.2em] bg-white/5 text-white/80 border border-white/10 rounded-lg hover:bg-white/10 hover:text-white transition-all cursor-pointer"
+              >
+                ⚙ SETTINGS & OPTIONS
+              </button>
+              
+              <button
                 onClick={doAbandon}
-                className="w-full py-4 font-mono font-bold text-xs tracking-[0.2em] bg-white/5 text-white/60 border border-white/10 rounded-lg hover:bg-white/10 hover:text-white transition-all"
+                className="w-full py-3.5 font-mono font-bold text-xs tracking-[0.2em] bg-white/5 text-white/60 border border-white/10 rounded-lg hover:bg-white/10 hover:text-white transition-all cursor-pointer"
               >
                 ABORT MISSION
               </button>
@@ -6415,7 +6425,7 @@ export default function Game() {
       />
       <div
         className="relative w-full h-full flex flex-col overflow-hidden"
-        style={{ maxWidth: 500 }}
+        style={{ maxWidth: 640 }}
       >
         {/* HUD */}
         <div
@@ -6446,11 +6456,17 @@ export default function Game() {
               ✕ QUIT
             </button>
             <button
-              onClick={() => setShowOptions(o => !o)}
-              className="font-mono text-xs tracking-widest transition-colors"
-              style={{ color: showOptions ? "#E5B800" : "hsl(30 15% 28%)", letterSpacing: '0.1em' }}
+              onClick={() => {
+                audioManager.playSfx('menu_confirm', 0.15);
+                if (phase === 'playing' && !paused) {
+                  doPause();
+                }
+                useVaultStore.getState().setOptionsModalOpen(true);
+              }}
+              className="font-mono text-xs tracking-widest transition-colors cursor-pointer"
+              style={{ color: "hsl(30 15% 28%)", letterSpacing: '0.1em' }}
               onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "#E5B800")}
-              onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = showOptions ? "#E5B800" : "hsl(30 15% 28%)")}
+              onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "hsl(30 15% 28%)")}
             >
               ⚙
             </button>
