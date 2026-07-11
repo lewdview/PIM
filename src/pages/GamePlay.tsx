@@ -270,7 +270,7 @@ const LANE_COUNT = 3;
 function approachTime(diffLevel: number): number {
   return Math.max(1.35, 2.5 - (diffLevel - 1) * 0.128);
 }
-const HIT_RATIO = 0.7;
+const HIT_RATIO = 0.86;
 
 // Hit windows scale with difficulty — easier = more forgiving
 function perfectPlusWindow(diff: number): number {
@@ -3546,6 +3546,27 @@ export default function Game() {
         ctx.restore();
       }
     }
+
+    // ── Horizon Fog Overlay (Fades notes into the background at the top) ──
+    const fogGrad = ctx.createLinearGradient(0, 0, 0, hitY * 0.38);
+    fogGrad.addColorStop(0, "#08081a"); // solid dark background of track at top
+    fogGrad.addColorStop(0.5, "rgba(8, 8, 26, 0.8)");
+    fogGrad.addColorStop(1, "rgba(8, 8, 26, 0.0)");
+    ctx.fillStyle = fogGrad;
+    
+    ctx.save();
+    const hwTop_fog = hwAtProgress(0, W);
+    const hwBot_fog = hwAtProgress(1, W);
+    ctx.beginPath();
+    ctx.moveTo(hwTop_fog.left, 0);
+    ctx.quadraticCurveTo(W/2, -hitY * 0.09, hwTop_fog.right, 0);
+    ctx.lineTo(hwBot_fog.right, hitY);
+    ctx.lineTo(hwBot_fog.left, hitY);
+    ctx.closePath();
+    ctx.clip();
+    
+    ctx.fillRect(0, 0, W, hitY * 0.38);
+    ctx.restore();
 
     // ── 5b. HIT EXPLOSION EFFECTS ───────────────────────────────
     const FX_DURATION = 520;
