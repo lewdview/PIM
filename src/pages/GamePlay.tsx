@@ -309,6 +309,28 @@ function getDifficultyLaneColor(baseColor: string, _diffLevel: number, laneIndex
   return baseColor;
 }
 
+function colorWithAlpha(color: string, alpha: number): string {
+  if (color.startsWith('#')) {
+    const r = parseInt(color.slice(1, 3), 16);
+    const g = parseInt(color.slice(3, 5), 16);
+    const b = parseInt(color.slice(5, 7), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+  if (color.startsWith('hsl')) {
+    if (color.startsWith('hsla')) {
+      return color.replace(/[^,]+(?=\s*\)$)/, ` ${alpha}`);
+    }
+    return color.replace('hsl', 'hsla').replace(')', `, ${alpha})`);
+  }
+  if (color.startsWith('rgb')) {
+    if (color.startsWith('rgba')) {
+      return color.replace(/[^,]+(?=\s*\)$)/, ` ${alpha}`);
+    }
+    return color.replace('rgb', 'rgba').replace(')', `, ${alpha})`);
+  }
+  return color;
+}
+
 // Perspective highway geometry
 const HW_TOP = 0.65;
 const HW_BOT = 0.99;
@@ -2673,13 +2695,10 @@ export default function Game() {
         const { x: lx0, w: lw0 } = laneAt(i, 0.3, W);
         const { x: lx1, w: lw1 } = laneAt(i, 1, W);
         const lc = getDifficultyLaneColor(laneColorsRef.current[i], songRef.current?.difficultyLevel ?? 5, i);
-        const lcR = parseInt(lc.slice(1, 3), 16);
-        const lcG = parseInt(lc.slice(3, 5), 16);
-        const lcB = parseInt(lc.slice(5, 7), 16);
         const laneGrad = ctx.createLinearGradient(0, 0, 0, hitY);
         laneGrad.addColorStop(0, "transparent");
-        laneGrad.addColorStop(0.6, `rgba(${lcR},${lcG},${lcB},0.03)`);
-        laneGrad.addColorStop(1, `rgba(${lcR},${lcG},${lcB},0.07)`);
+        laneGrad.addColorStop(0.6, colorWithAlpha(lc, 0.03));
+        laneGrad.addColorStop(1, colorWithAlpha(lc, 0.07));
         ctx.fillStyle = laneGrad;
         ctx.beginPath();
         ctx.moveTo(lx0, hitY * 0.3);
@@ -2953,13 +2972,10 @@ export default function Game() {
       // ── Inner radial glow (Beatstar style) ──
       if (pressed || !silenced) {
         ctx.save();
-        const lcR2 = parseInt(lc.slice(1, 3), 16);
-        const lcG2 = parseInt(lc.slice(3, 5), 16);
-        const lcB2 = parseInt(lc.slice(5, 7), 16);
         const rg = ctx.createRadialGradient(bx + bw / 2, hitY, 0, bx + bw / 2, hitY, bw * 0.8);
         const rgAlpha = pressed ? 0.38 : 0.14 + pulse * 0.04;
-        rg.addColorStop(0, `rgba(${lcR2},${lcG2},${lcB2},${rgAlpha})`);
-        rg.addColorStop(1, `rgba(${lcR2},${lcG2},${lcB2},0)`);
+        rg.addColorStop(0, colorWithAlpha(lc, rgAlpha));
+        rg.addColorStop(1, colorWithAlpha(lc, 0));
         ctx.fillStyle = rg;
         ctx.globalAlpha = 1;
         ctx.beginPath();
