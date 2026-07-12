@@ -2811,7 +2811,7 @@ export default function Game() {
     // ── 3. TRACK EDGE RAILS ─────────────────────────────────────
     // Neon rails with strong glow
     const railColor = puColor ?? "rgba(255,248,235,0.55)";
-    const railGlow = puColor ? `${puColor}CC` : "rgba(255,248,235,0.25)";
+    const railGlow = puColor ? colorWithAlpha(puColor, 0.8) : "rgba(255,248,235,0.25)";
 
     // Outer glow pass (thicker, blurred)
     ctx.save();
@@ -2855,16 +2855,14 @@ export default function Game() {
     if (puActive && puColor) {
       const pulse = 0.5 + 0.5 * Math.sin(t * 7);
       const ei = Math.min(1, (pu.endTime - t) / 2) * pulse * 0.7;
-      const hex = Math.round(ei * 200)
-        .toString(16)
-        .padStart(2, "0");
+      const alphaGlow = Math.max(0, Math.min(1, ei * 0.78));
       const eg1 = ctx.createLinearGradient(0, 0, 80, 0);
-      eg1.addColorStop(0, `${puColor}${hex}`);
+      eg1.addColorStop(0, colorWithAlpha(puColor, alphaGlow));
       eg1.addColorStop(1, "transparent");
       ctx.fillStyle = eg1;
       ctx.fillRect(0, 0, 80, H);
       const eg2 = ctx.createLinearGradient(W, 0, W - 80, 0);
-      eg2.addColorStop(0, `${puColor}${hex}`);
+      eg2.addColorStop(0, colorWithAlpha(puColor, alphaGlow));
       eg2.addColorStop(1, "transparent");
       ctx.fillStyle = eg2;
       ctx.fillRect(W - 80, 0, 80, H);
