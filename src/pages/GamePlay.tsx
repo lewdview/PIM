@@ -2156,6 +2156,14 @@ export default function Game() {
     if (!canvas || (phase !== "playing" && phase !== "rewinding") || pausedRef.current || isTutorialHelpOpenRef.current) return;
     const ctx = canvas.getContext("2d");
     if (!ctx || !songRef.current) return;
+    if (optsRef.current.legacyGraphics) {
+      ctx.shadowBlur = 0;
+      Object.defineProperty(ctx, 'shadowBlur', {
+        set: () => {},
+        get: () => 0,
+        configurable: true
+      });
+    }
     const song = songRef.current;
     const isRewinding = phase === "rewinding";
     let t: number;
@@ -2315,7 +2323,7 @@ export default function Game() {
     }
 
     // Draw Slideshow Cutouts on the track if selected in gameTrack options
-    if (optsRef.current.gameTrack === 'slideshow' && slideshowSlidesRef.current.length > 0) {
+    if (optsRef.current.gameTrack === 'slideshow' && slideshowSlidesRef.current.length > 0 && !optsRef.current.legacyGraphics) {
       ctx.save();
       
       const hwTop = hwAtProgress(0, W);
@@ -2381,7 +2389,7 @@ export default function Game() {
     }
 
     // Draw Sacred Visualizer on the track if selected in gameTrack options
-    if (optsRef.current.gameTrack === 'sacred_visualizer') {
+    if (optsRef.current.gameTrack === 'sacred_visualizer' && !optsRef.current.legacyGraphics) {
       const hwTop = hwAtProgress(0, W);
       const hwBot = hwAtProgress(1, W);
       const cyVis = hitY * 0.55;

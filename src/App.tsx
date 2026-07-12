@@ -71,6 +71,7 @@ function getLocalCurrentDay(): number {
 
 function GlobalMenuBackground() {
   const [bg, setBg] = useState('cover_blur');
+  const [isLegacy, setIsLegacy] = useState(false);
   const [location] = useLocation();
   const [dailyCover, setDailyCover] = useState<string | null>(null);
   const { currentTrack } = useGlobalPlayer();
@@ -79,6 +80,7 @@ function GlobalMenuBackground() {
     try {
       const opts = loadOpts();
       setBg(opts.gameBackground || 'cover_blur');
+      setIsLegacy(opts.legacyGraphics || false);
     } catch (e) {
       // ignore
     }
@@ -102,7 +104,7 @@ function GlobalMenuBackground() {
     location === '/tutorial' ||
     location.startsWith('/results/');
 
-  if (hideBg) return null;
+  if (hideBg || isLegacy) return null;
 
   const activeCoverUrl = currentTrack?.coverUrl || dailyCover || '/data/covers/default.jpg';
   const songDay = currentTrack?.day || getLocalCurrentDay();

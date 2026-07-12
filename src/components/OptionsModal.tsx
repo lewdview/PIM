@@ -575,7 +575,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
   }, [remappingLane]);
 
   // Save specific settings helper
-  const toggleSetting = (k: "missSystem" | "hudMisses" | "comboDisplay" | "judgmentText" | "useLocalFiles" | "bgMusic" | "haptics" | "gameSenseEnabled") => {
+  const toggleSetting = (k: "missSystem" | "hudMisses" | "comboDisplay" | "judgmentText" | "useLocalFiles" | "bgMusic" | "haptics" | "gameSenseEnabled" | "legacyGraphics") => {
     if (k === "missSystem" && localStorage.getItem("opt_unlocked_noclip") !== "true") {
       audioManager.playSfx('locked_out', 0.15);
       return;
@@ -598,7 +598,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
     audioManager.playSfx('tap_nav', 0.1);
   };
 
-  const renderToggle = (k: "missSystem" | "hudMisses" | "comboDisplay" | "judgmentText" | "useLocalFiles" | "bgMusic" | "haptics" | "gameSenseEnabled") => {
+  const renderToggle = (k: "missSystem" | "hudMisses" | "comboDisplay" | "judgmentText" | "useLocalFiles" | "bgMusic" | "haptics" | "gameSenseEnabled" | "legacyGraphics") => {
     const isNoclipLocked = k === "missSystem" && localStorage.getItem("opt_unlocked_noclip") !== "true";
     if (isNoclipLocked) {
       return (
@@ -949,6 +949,14 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                         <span className="text-[8px] text-zinc-500 font-mono">Subtle device feedback on hitting notes</span>
                       </div>
                       {renderToggle('haptics')}
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-white font-mono uppercase">Legacy Graphics Mode</span>
+                        <span className="text-[8px] text-zinc-500 font-mono">Disable glow shadows and visualizers for low-end devices</span>
+                      </div>
+                      {renderToggle('legacyGraphics')}
                     </div>
 
                     <div className="flex justify-between items-center border-t border-white/5 pt-3">

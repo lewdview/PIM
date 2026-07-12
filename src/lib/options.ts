@@ -18,6 +18,7 @@ export type GameOpts = {
   haptics: boolean;
   noteTheme: string;
   gameSenseEnabled: boolean;
+  legacyGraphics: boolean;
 };
 
 export interface GameBackground {
@@ -75,6 +76,7 @@ export const DEFAULT_OPTS: GameOpts = {
   haptics: true,
   noteTheme: "artwork",
   gameSenseEnabled: false,
+  legacyGraphics: false,
 };
 
 export function loadOpts(): GameOpts {
@@ -121,6 +123,7 @@ export function loadOpts(): GameOpts {
     haptics: dbSettings?.haptics ?? bool("opt_haptics", true),
     noteTheme: dbSettings?.noteTheme ?? (localStorage.getItem("opt_noteTheme") ?? "artwork"),
     gameSenseEnabled: bool("opt_gameSenseEnabled", false),
+    legacyGraphics: dbSettings?.legacyGraphics ?? bool("opt_legacyGraphics", false),
   };
 }
 
