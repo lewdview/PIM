@@ -498,7 +498,14 @@ export default function Tutorial() {
               </h3>
 
               <div className="font-mono text-[11px] text-zinc-300 leading-relaxed border-t-2 border-black pt-4">
-                Neural link sync protocol completed. Connect your profile wallet address to preserve unlocked signal metadata and write card provenance records.
+                Neural link sync protocol completed. Connect your profile to preserve unlocked signal metadata and write card provenance records.
+              </div>
+
+              <div className="bg-[#39FF14]/10 border-2 border-black text-[#39FF14] p-3 text-left font-mono text-[10px] rounded shadow-[3px_3px_0px_#000] relative overflow-hidden">
+                <div className="font-black uppercase flex items-center gap-1 mb-1 text-white">
+                  <Zap size={11} className="text-yellow-400 fill-yellow-400" /> BONUS PACKAGE GRANTED
+                </div>
+                Connect your account via <span className="text-white font-bold">Email, GitHub, or Wallet</span> to claim a <span className="underline font-bold text-white">FREE WELCOME PACK</span> containing 2 digital cards!
               </div>
 
               <div className="space-y-3 pt-2">
