@@ -1073,6 +1073,11 @@ export default function Game() {
   const gameplayAnalyserRef = useRef<AnalyserNode | null>(null);
   const gameplayAnalyserDataRef = useRef<Uint8Array | null>(null);
   const gameplaySlideshowFloatersRef = useRef<any[]>([]);
+  const slideshowSlidesRef = useRef<any[]>([]);
+  const currentSlideIdxRef = useRef<number>(0);
+  const nextSlideIdxRef = useRef<number>(-1);
+  const slideTimeRef = useRef<number>(0);
+  const fadeAlphaRef = useRef<number>(1);
   const audioSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const audioFiltersRef = useRef<BiquadFilterNode[]>([]);
   const laneGainsRef = useRef<GainNode[]>([]);
@@ -1183,7 +1188,7 @@ export default function Game() {
           console.warn('[GamePlay Slideshow] API offline, using fallback assets');
         }
 
-        const floaters: any[] = [];
+        const slides: any[] = [];
         const colors = ['#00F0FF', '#39FF14', '#FF1493', '#FFD700', '#FF5500'];
 
         for (let idx = 0; idx < imageUrls.length; idx++) {
@@ -1200,93 +1205,47 @@ export default function Game() {
           if (!active) return;
           if (img.naturalWidth === 0) continue;
 
-          // Run contour scan
+          const w = img.naturalWidth;
+          const h = img.naturalHeight;
           const tempCanvas = document.createElement('canvas');
-          tempCanvas.width = Math.min(img.naturalWidth, 250); // shrink for gameplay speed
-          tempCanvas.height = Math.min(img.naturalHeight, 200);
+          const targetH = 450;
+          const targetW = Math.round((w / h) * targetH);
+          tempCanvas.width = targetW;
+          tempCanvas.height = targetH;
           const tCtx = tempCanvas.getContext('2d')!;
-          tCtx.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
-
-          const w = tempCanvas.width;
-          const h = tempCanvas.height;
-          const imgData = tCtx.getImageData(0, 0, w, h);
+          tCtx.drawImage(img, 0, 0, targetW, targetH);
+          const imgData = tCtx.getImageData(0, 0, targetW, targetH);
           const pixels = imgData.data;
 
-          const segs = [
-            { name: 'Core Shape', minL: 38, maxL: 200 },
-            { name: 'Neon Detail', minL: 200, maxL: 255 }
-          ];
-
-          segs.forEach((seg, sIdx) => {
-            const segCanvas = document.createElement('canvas');
-            segCanvas.width = w;
-            segCanvas.height = h;
-            const sCtx = segCanvas.getContext('2d')!;
-            sCtx.drawImage(img, 0, 0, w, h);
-            const sData = sCtx.getImageData(0, 0, w, h);
-            const sPixels = sData.data;
-
-            let minX = w, maxX = 0, minY = h, maxY = 0;
-            let found = false;
-
-            for (let y = 0; y < h; y++) {
-              for (let x = 0; x < w; x++) {
-                const i = (y * w + x) * 4;
-                const r = sPixels[i];
-                const g = sPixels[i + 1];
-                const b = sPixels[i + 2];
-                const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
-
-                if (luminance >= seg.minL && luminance <= seg.maxL) {
-                  found = true;
-                  if (x < minX) minX = x;
-                  if (x > maxX) maxX = x;
-                  if (y < minY) minY = y;
-                  if (y > maxY) maxY = y;
-                } else {
-                  sPixels[i + 3] = 0; // set transparent
-                }
-              }
+          // Extract cutout of subject (threshold out black/dark backgrounds)
+          for (let i = 0; i < pixels.length; i += 4) {
+            const r = pixels[i];
+            const g = pixels[i + 1];
+            const b = pixels[i + 2];
+            const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+            if (luminance < 32) {
+              pixels[i + 3] = 0; // transparent
             }
+          }
+          tCtx.putImageData(imgData, 0, 0);
 
-            if (found && maxX - minX > 20 && maxY - minY > 20) {
-              const bw = maxX - minX;
-              const bh = maxY - minY;
-
-              const cropCanvas = document.createElement('canvas');
-              cropCanvas.width = bw;
-              cropCanvas.height = bh;
-              const cropCtx = cropCanvas.getContext('2d')!;
-
-              sCtx.putImageData(sData, 0, 0);
-              cropCtx.drawImage(segCanvas, minX, minY, bw, bh, 0, 0, bw, bh);
-
-              const angle = Math.random() * Math.PI * 2;
-              const speed = 0.3 + Math.random() * 0.5;
-
-              floaters.push({
-                canvas: cropCanvas,
-                className: seg.name,
-                x: Math.random() * 200 - 100,
-                y: Math.random() * 300 - 150,
-                vx: Math.cos(angle) * speed,
-                vy: Math.sin(angle) * speed,
-                scale: 0.30 + Math.random() * 0.20, // smaller for track lanes
-                rotation: Math.random() * Math.PI * 2,
-                rotSpeed: (Math.random() - 0.5) * 0.012,
-                glowColor: colors[(idx * 2 + sIdx) % colors.length],
-                width: bw,
-                height: bh
-              });
-            }
+          slides.push({
+            canvas: tempCanvas,
+            width: targetW,
+            height: targetH,
+            glowColor: colors[idx % colors.length]
           });
         }
 
         if (active) {
-          gameplaySlideshowFloatersRef.current = floaters;
+          slideshowSlidesRef.current = slides;
+          currentSlideIdxRef.current = 0;
+          nextSlideIdxRef.current = -1;
+          slideTimeRef.current = 0;
+          fadeAlphaRef.current = 1;
         }
       } catch (e) {
-        console.error('[GamePlay Slideshow Loader] Segmentation failed:', e);
+        console.error('[GamePlay Slideshow Loader] Cutout generation failed:', e);
       }
     };
 
@@ -1299,7 +1258,9 @@ export default function Game() {
   // Keep mutable refs current every render so draw/handlers always see latest values
   // without needing to be listed as useCallback dependencies.
   audioOffsetRef.current = opts.audioOffset;
-  laneColorsRef.current = opts.laneColors;
+  if (opts.noteTheme !== 'artwork') {
+    laneColorsRef.current = opts.laneColors;
+  }
   laneKeysRef.current = opts.laneKeys;
   const [showOptions, setShowOptions] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -2332,7 +2293,7 @@ export default function Game() {
     }
 
     // Draw Slideshow Cutouts on the track if selected in gameTrack options
-    if (optsRef.current.gameTrack === 'slideshow' && gameplaySlideshowFloatersRef.current.length > 0) {
+    if (optsRef.current.gameTrack === 'slideshow' && slideshowSlidesRef.current.length > 0) {
       ctx.save();
       
       const hwTop = hwAtProgress(0, W);
@@ -2347,59 +2308,52 @@ export default function Game() {
       ctx.closePath();
       ctx.clip();
 
-      const cxTrack = W / 2;
-      const cyTrack = hitY * 0.55;
+      const cx = W / 2;
+      const cy = hitY * 0.5;
 
-      gameplaySlideshowFloatersRef.current.forEach((floater) => {
-        // Move
-        floater.x += floater.vx;
-        floater.y += floater.vy;
-        floater.rotation += floater.rotSpeed;
+      const SLIDE_DURATION = 7.0; // 7 seconds per slide
+      const TRANSITION_DURATION = 1.2; // 1.2 second cross-fade
 
-        // Bounce within boundaries of the track
-        const boundX = W * 0.18;
-        const boundY = hitY * 0.38;
+      const slides = slideshowSlidesRef.current;
+      const curSlideIdx = Math.floor(t / SLIDE_DURATION) % slides.length;
+      const slideTime = t % SLIDE_DURATION;
 
-        if (Math.abs(floater.x) > boundX) {
-          floater.vx *= -1;
-          floater.x = Math.sign(floater.x) * boundX;
-        }
-        if (Math.abs(floater.y) > boundY) {
-          floater.vy *= -1;
-          floater.y = Math.sign(floater.y) * boundY;
-        }
-
+      // Helper function to draw a slide with Ken Burns effect
+      const drawSlide = (slide: any, alpha: number) => {
         ctx.save();
-        ctx.translate(cxTrack + floater.x, cyTrack + floater.y);
-        ctx.rotate(floater.rotation);
-        ctx.scale(floater.scale, floater.scale);
+        ctx.globalAlpha = alpha;
+
+        const scaleX = (W * 0.6) / slide.width;
+        const scaleY = hitY / slide.height;
+        const baseScale = Math.max(scaleX, scaleY) * 1.15;
+
+        // Slow orbital pan and zoom
+        const panX = Math.sin(t * 0.35) * (slide.width * baseScale * 0.08);
+        const panY = Math.cos(t * 0.28) * (slide.height * baseScale * 0.08);
+        const zoom = baseScale * (1.0 + Math.sin(t * 0.22) * 0.05);
+
+        ctx.translate(cx + panX, cy + panY);
+        ctx.scale(zoom, zoom);
 
         // Subtle glow to stand out under the notes
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = floater.glowColor;
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = slide.glowColor;
 
-        // Draw image cutout
-        const fw = floater.width;
-        const fh = floater.height;
-        ctx.drawImage(floater.canvas, -fw / 2, -fh / 2, fw, fh);
-
-        // Draw glowing label border (similar to slideshow, but smaller)
-        ctx.strokeStyle = floater.glowColor;
-        ctx.lineWidth = 0.5;
-        const pad = 4;
-        ctx.beginPath();
-        // Top Left
-        ctx.moveTo(-fw / 2 - pad, -fh / 2 - pad + 6);
-        ctx.lineTo(-fw / 2 - pad, -fh / 2 - pad);
-        ctx.lineTo(-fw / 2 - pad + 6, -fh / 2 - pad);
-        // Bottom Right
-        ctx.moveTo(fw / 2 + pad, fh / 2 + pad - 6);
-        ctx.lineTo(fw / 2 + pad, fh / 2 + pad);
-        ctx.lineTo(fw / 2 + pad - 6, fh / 2 + pad);
-        ctx.stroke();
-
+        ctx.drawImage(slide.canvas, -slide.width / 2, -slide.height / 2, slide.width, slide.height);
         ctx.restore();
-      });
+      };
+
+      if (slideTime > SLIDE_DURATION - TRANSITION_DURATION) {
+        // We are transitioning: cross-fade current and next slide
+        const nextSlideIdx = (curSlideIdx + 1) % slides.length;
+        const fadeProgress = (slideTime - (SLIDE_DURATION - TRANSITION_DURATION)) / TRANSITION_DURATION;
+
+        drawSlide(slides[curSlideIdx], 1 - fadeProgress);
+        drawSlide(slides[nextSlideIdx], fadeProgress);
+      } else {
+        // Just draw the current slide
+        drawSlide(slides[curSlideIdx], 1.0);
+      }
 
       ctx.restore();
     }

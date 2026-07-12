@@ -73,7 +73,7 @@ export const DEFAULT_OPTS: GameOpts = {
   backgroundBlur: 10,
   cardBack: "classic",
   haptics: true,
-  noteTheme: "classic",
+  noteTheme: "artwork",
   gameSenseEnabled: false,
 };
 
@@ -119,7 +119,7 @@ export function loadOpts(): GameOpts {
     backgroundBlur: dbSettings?.backgroundBlur ?? (parseFloat(localStorage.getItem("opt_backgroundBlur") ?? "10") || 10),
     cardBack: dbSettings?.cardBack ?? (localStorage.getItem("opt_cardBack") ?? "classic"),
     haptics: dbSettings?.haptics ?? bool("opt_haptics", true),
-    noteTheme: dbSettings?.noteTheme ?? (localStorage.getItem("opt_noteTheme") ?? "classic"),
+    noteTheme: dbSettings?.noteTheme ?? (localStorage.getItem("opt_noteTheme") ?? "artwork"),
     gameSenseEnabled: bool("opt_gameSenseEnabled", false),
   };
 }
