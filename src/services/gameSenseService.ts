@@ -17,11 +17,14 @@ class GameSenseService {
       return 'disconnected';
     }
 
-    const candidates = [
+    const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    const candidates = isLocal ? [
       "/api/gamesense",
       "http://localhost:3000/api/gamesense",
       "http://localhost:8082/api/gamesense",
       "http://localhost:8080/api/gamesense"
+    ] : [
+      "/api/gamesense"
     ];
 
     for (const base of candidates) {
