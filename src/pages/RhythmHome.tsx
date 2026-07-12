@@ -578,7 +578,7 @@ export default function Home() {
         </div>
       )}
 
-      <div className="min-h-screen w-full flex flex-col items-center justify-center relative overflow-hidden"
+      <div className="min-h-[calc(100vh-3.5rem)] w-full flex flex-col items-center justify-center relative overflow-hidden"
         style={{
           background: introType === 'classic'
             ? 'radial-gradient(ellipse 80% 60% at 50% 45%, #0e1028 0%, #080808 55%, #0a0810 100%)'

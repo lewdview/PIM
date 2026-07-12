@@ -405,7 +405,7 @@ export default function HomePage() {
             style={{ background: 'radial-gradient(ellipse, #ff380040, transparent 70%)' }} />
         </div>
 
-        <div className="max-w-6xl mx-auto px-4 md:px-8 py-8 lg:py-12">
+        <div className="max-w-6xl mx-auto px-4 md:px-8 pt-3 pb-8 lg:pt-4 lg:pb-12">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-8 lg:gap-12 items-start">
 
             {/* LEFT: Hero card */}

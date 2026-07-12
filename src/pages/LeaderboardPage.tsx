@@ -201,7 +201,7 @@ export default function LeaderboardPage() {
   };
 
   return (
-    <div className="flex-1 px-4 md:px-8 py-10 max-w-4xl mx-auto w-full space-y-8 etching-bg">
+    <div className="flex-1 px-4 md:px-8 pt-4 pb-10 max-w-4xl mx-auto w-full space-y-8 etching-bg">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}

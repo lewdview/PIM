@@ -812,7 +812,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
           {/* Left Sidebar / Top Mobile Tab Selection */}
           <div className="w-full md:w-[240px] shrink-0 bg-black/35 border-b md:border-b-0 md:border-r border-white/5 flex flex-col justify-between p-2 md:p-4">
             <div 
-              className="grid grid-cols-6 md:flex md:flex-col gap-1 md:gap-1.5 w-full pb-1 md:pb-0"
+              className="flex overflow-x-auto md:flex-col gap-2 w-full pb-2 md:pb-0 scrollbar-none"
               style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}
             >
               {[

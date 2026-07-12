@@ -430,7 +430,7 @@ export default function ClaimPage() {
 
   // ── 3. Unified Claim & Redeem View ─────────────────────────────────────────
   return (
-    <div className="flex-1 px-4 py-12 max-w-xl mx-auto w-full space-y-12">
+    <div className="flex-1 px-4 pt-4 pb-12 max-w-xl mx-auto w-full space-y-12">
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}

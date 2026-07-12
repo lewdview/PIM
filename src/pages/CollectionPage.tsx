@@ -155,7 +155,7 @@ export default function CollectionPage() {
   }, [fusionLoading, removeFromCollection, loadVaultData]);
 
   return (
-    <div className="flex-1 px-4 md:px-8 py-10 max-w-7xl mx-auto w-full space-y-10 etching-bg bg-opacity-50">
+    <div className="flex-1 px-4 md:px-8 pt-4 pb-10 max-w-7xl mx-auto w-full space-y-10 etching-bg bg-opacity-50">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
