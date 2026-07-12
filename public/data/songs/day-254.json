@@ -55,7 +55,7 @@
     {
       "id": 5,
       "time": 16,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -104,7 +104,7 @@
     {
       "id": 12,
       "time": 22.6,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -132,7 +132,7 @@
     {
       "id": 16,
       "time": 26.400000000000002,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -359,6 +359,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 1.0079986572265625,
+      "swipeDirection": "left",
       "stage": 2
     },
     {
@@ -389,14 +390,15 @@
     {
       "id": 52,
       "time": 59.2,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 2
     },
     {
       "id": 53,
       "time": 59.6,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -412,14 +414,15 @@
     {
       "id": 55,
       "time": 60.6,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 2
     },
     {
       "id": 56,
       "time": 61,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -435,43 +438,49 @@
     {
       "id": 58,
       "time": 62.2,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 2
     },
     {
       "id": 59,
       "time": 62.6,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 2
     },
     {
       "id": 60,
       "time": 63,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 2
     },
     {
       "id": 61,
       "time": 63.6,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 2
     },
     {
       "id": 62,
       "time": 64,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 2
     },
     {
       "id": 63,
       "time": 64.4,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 2
     },
     {
@@ -1104,6 +1113,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.544000244140625,
+      "swipeDirection": "up",
       "stage": 3
     },
     {
@@ -1116,14 +1126,14 @@
     {
       "id": 155,
       "time": 109.2,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 3
     },
     {
       "id": 156,
       "time": 109.4,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1144,14 +1154,14 @@
     {
       "id": 159,
       "time": 110.2,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 3
     },
     {
       "id": 160,
       "time": 110.4,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1172,14 +1182,14 @@
     {
       "id": 163,
       "time": 111.4,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 3
     },
     {
       "id": 164,
       "time": 111.60000000000001,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1375,6 +1385,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 1.00799560546875,
+      "swipeDirection": "right",
       "stage": 3
     },
     {
@@ -1424,7 +1435,7 @@
     {
       "id": 195,
       "time": 126.60000000000001,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -1432,7 +1443,7 @@
     {
       "id": 196,
       "time": 126.80000000000001,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -1448,7 +1459,7 @@
     {
       "id": 198,
       "time": 127.4,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -1456,7 +1467,7 @@
     {
       "id": 199,
       "time": 127.60000000000001,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -1464,7 +1475,7 @@
     {
       "id": 200,
       "time": 127.80000000000001,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -1512,6 +1523,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.51199951171875,
+      "swipeDirection": "up",
       "stage": 3
     },
     {
@@ -1532,7 +1544,7 @@
     {
       "id": 209,
       "time": 135.6,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1564,6 +1576,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 1.552001953125,
+      "swipeDirection": "left",
       "stage": 3
     },
     {
@@ -1587,14 +1600,15 @@
     {
       "id": 216,
       "time": 141.8,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.55999755859375,
       "stage": 3
     },
     {
       "id": 217,
       "time": 142.4,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -1602,8 +1616,9 @@
     {
       "id": 218,
       "time": 143,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 4
     },
     {
@@ -1617,8 +1632,9 @@
     {
       "id": 220,
       "time": 143.8,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 4
     },
     {
@@ -1952,6 +1968,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.49600830078125,
+      "swipeDirection": "left",
       "stage": 4
     },
     {
@@ -1974,7 +1991,7 @@
     {
       "id": 270,
       "time": 169.8,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -1982,7 +1999,7 @@
     {
       "id": 271,
       "time": 170,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -1998,7 +2015,7 @@
     {
       "id": 273,
       "time": 171,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.51199951171875,
       "stage": 4
@@ -2006,7 +2023,7 @@
     {
       "id": 274,
       "time": 171.60000000000002,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -2014,7 +2031,7 @@
     {
       "id": 275,
       "time": 172.20000000000002,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.68800048828125,
       "stage": 4
@@ -2040,6 +2057,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.7679931640625001,
+      "swipeDirection": "right",
       "stage": 4
     },
     {
@@ -2120,6 +2138,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.49599609375000003,
+      "swipeDirection": "left",
       "stage": 5
     },
     {
@@ -2188,14 +2207,15 @@
     {
       "id": 298,
       "time": 190.8,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 5
     },
     {
       "id": 299,
       "time": 191.20000000000002,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -2203,8 +2223,9 @@
     {
       "id": 300,
       "time": 191.8,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.73599853515625,
       "stage": 5
     },
     {
@@ -2358,14 +2379,14 @@
     {
       "id": 322,
       "time": 204.8,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 5
     },
     {
       "id": 323,
       "time": 205.20000000000002,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 5
     },
@@ -2386,14 +2407,14 @@
     {
       "id": 326,
       "time": 206,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 5
     },
     {
       "id": 327,
       "time": 206.4,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 5
     },
@@ -2517,7 +2538,7 @@
     "Ballad",
     "Ambient"
   ],
-  "difficultyLevel": 5,
+  "difficultyLevel": 6,
   "lyrics": "Here we go again, here we go again Always thinking that you're right Every time we fight and hate, spite Even if the truth comes to light There's a chance that we might be Toxic for each other Yet we go for another, and another, and another Oh brother, I'm thinking that you might be  the one Oh brother, sister, brother, cousin, need a mind they own Cause they don't know it could come along This one eight-day song, everything I do is wrong Tell me right now, how long will this go on? By a thread I'm holding on One more slip, and I'm moving on before the storm This is the calm, not afraid to drop some bombs The things I say won't be wrong You know I'm not gonna stop, go ahead, and call the cops That's the start down the path, I don't wanna turn back      Twist and turn, never end, you hit me I hit you, tell one of us is dead That's the start down the path, I don't wanna turn back, twist and turn Never end, you hit me I hit you, tell one of us is dead Easy man as should be Stay away, don't answer changing block the number yet, here we are, face to face Looking like we wanna change, think we can, yet we won't Time is ticking, tell we're back again At each other's throat, red screaming, I'mma kill you bitch You're retort, yeah right, you ain't killing shit, worthless dead shit Then I hit you with the car, you shot me in the leg A little bit, a little more We forgive each other, end up having sex on the floor Then I take a chance, suffocate you from behind You squirm and fight, but you lose your life I try as I may to cover up, still fuck up End up locked up, 25 to life, end up prison cell My own personal hell If you feel like it's in your heart tonight Can you find the angels way back in me? Your eyes in mine Let's start down the path, I don't wanna turn back, twist and turn Never end, you hit me I hit you, tell one of us is dead Let's start down the path, I don't wanna turn back, twist and turn Never end, you hit me I hit you, tell one of us is dead Are there demons in your heart? Are there shadows in your way? Do you know who you need, my love? They can't lead you this way Can't you see the promise in your heart? Let's start down the path, I don't wanna turn back, twist and turn Never end, you hit me I hit you, tell one of us is dead Let's start down the path, I don't wanna turn back, twist and turn Never end, you hit me I hit you, tell one of us is dead Never end",
   "lyricsSegments": [
     {

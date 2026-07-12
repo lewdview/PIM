@@ -48,7 +48,7 @@
     {
       "id": 4,
       "time": 7.767857142857142,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -405,7 +405,7 @@
     {
       "id": 55,
       "time": 44.19642857142857,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -419,7 +419,7 @@
     {
       "id": 57,
       "time": 45.669642857142854,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -492,7 +492,7 @@
     {
       "id": 67,
       "time": 55.17857142857142,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -500,7 +500,7 @@
     {
       "id": 68,
       "time": 55.58035714285714,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -511,6 +511,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.6720001220703126,
+      "swipeDirection": "left",
       "stage": 2
     },
     {
@@ -547,12 +548,13 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 1.1199981689453125,
+      "swipeDirection": "left",
       "stage": 2
     },
     {
       "id": 75,
       "time": 61.20535714285714,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -580,7 +582,7 @@
     {
       "id": 79,
       "time": 62.544642857142854,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -814,6 +816,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.672003173828125,
+      "swipeDirection": "up",
       "stage": 2
     },
     {
@@ -885,7 +888,7 @@
     {
       "id": 120,
       "time": 85.17857142857143,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -915,7 +918,7 @@
     {
       "id": 124,
       "time": 89.0625,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -1022,14 +1025,14 @@
     {
       "id": 139,
       "time": 103.79464285714285,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 3
     },
     {
       "id": 140,
       "time": 104.0625,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1149,7 +1152,7 @@
     {
       "id": 156,
       "time": 111.29464285714285,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.832000732421875,
       "stage": 3
@@ -1229,7 +1232,7 @@
     {
       "id": 167,
       "time": 117.99107142857143,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1261,6 +1264,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.544000244140625,
+      "swipeDirection": "up",
       "stage": 3
     },
     {
@@ -1284,8 +1288,9 @@
     {
       "id": 174,
       "time": 125.89285714285714,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.68800048828125,
       "stage": 3
     },
     {
@@ -1640,14 +1645,14 @@
     {
       "id": 224,
       "time": 145.04464285714286,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 3
     },
     {
       "id": 225,
       "time": 145.3125,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1795,6 +1800,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.8800048828125,
+      "swipeDirection": "up",
       "stage": 3
     },
     {
@@ -1810,7 +1816,7 @@
     {
       "id": 247,
       "time": 155.49107142857142,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -1818,7 +1824,7 @@
     {
       "id": 248,
       "time": 155.89285714285714,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 1.2800048828125001,
       "stage": 3
@@ -1952,7 +1958,7 @@
     {
       "id": 266,
       "time": 166.74107142857142,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -1980,7 +1986,7 @@
     {
       "id": 270,
       "time": 168.08035714285714,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -2008,7 +2014,7 @@
     {
       "id": 274,
       "time": 169.41964285714286,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -2220,14 +2226,14 @@
     {
       "id": 303,
       "time": 186.69642857142856,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 4
     },
     {
       "id": 304,
       "time": 186.96428571428572,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -2248,14 +2254,14 @@
     {
       "id": 307,
       "time": 188.30357142857142,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 4
     },
     {
       "id": 308,
       "time": 188.70535714285714,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -2324,7 +2330,7 @@
     {
       "id": 317,
       "time": 194.46428571428572,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -2332,7 +2338,7 @@
     {
       "id": 318,
       "time": 194.73214285714286,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -2348,7 +2354,7 @@
     {
       "id": 320,
       "time": 195.53571428571428,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -2356,7 +2362,7 @@
     {
       "id": 321,
       "time": 195.9375,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -2364,7 +2370,7 @@
     {
       "id": 322,
       "time": 196.20535714285714,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -2380,7 +2386,7 @@
     {
       "id": 324,
       "time": 197.00892857142856,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -2388,7 +2394,7 @@
     {
       "id": 325,
       "time": 197.27678571428572,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -2396,7 +2402,7 @@
     {
       "id": 326,
       "time": 197.54464285714286,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -2412,7 +2418,7 @@
     {
       "id": 328,
       "time": 198.21428571428572,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -2455,7 +2461,7 @@
     {
       "id": 334,
       "time": 204.64285714285714,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 5
     },
@@ -2483,7 +2489,7 @@
     {
       "id": 338,
       "time": 205.98214285714286,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 5
     },
@@ -2511,7 +2517,7 @@
     {
       "id": 342,
       "time": 207.32142857142856,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 5
     },
@@ -2539,7 +2545,7 @@
     {
       "id": 346,
       "time": 208.66071428571428,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 5
     },
@@ -2567,7 +2573,7 @@
     {
       "id": 350,
       "time": 210,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 5
     },
@@ -2772,6 +2778,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.94400634765625,
+      "swipeDirection": "up",
       "stage": 5
     },
     {
@@ -2787,7 +2794,7 @@
     {
       "id": 379,
       "time": 232.09821428571428,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -2798,6 +2805,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.73599853515625,
+      "swipeDirection": "right",
       "stage": 5
     },
     {
@@ -2814,12 +2822,13 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.5439941406250001,
+      "swipeDirection": "right",
       "stage": 5
     },
     {
       "id": 383,
       "time": 237.72321428571428,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 5
     },
@@ -2851,6 +2860,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.78399658203125,
+      "swipeDirection": "up",
       "stage": 5
     },
     {
@@ -2908,7 +2918,7 @@
     "Pop",
     "Indie"
   ],
-  "difficultyLevel": 6,
+  "difficultyLevel": 7,
   "lyrics": "Go with the mind, go with the fine, double agent in my mind, yeah I don't know if I like you anymore, yeah I don't know if I like you or don't want you to be the thing that I adore cause you're a double agent in my mind, a double agent just defining me, a double agent just defining me, yeah, fuck what you both said, what you hate, 21 girls in one, I don't think I'm that dumb, I'm not a stupid man for what you say, all your different diseases inside your head, you run and hide and you want me to come, yeah I believe when you say I can't come to the mini, him come on, you're not a god that's standing, nah, don't fall with me, nah, you're a double agent inside my mind, motherfucker bitch, why, why'd you gotta fuck with me, why, why you gotta fuck with me, you're just a tragedy, just a little bit of communication, you get it all better, but you're just double agent shatter, what can I do to make you see my son, I guess nothing, you're just number one, you're a fucking selfish bitch, you're a fucking selfish bitch, you're a fucking selfish bitch, bitch, bitch, bitch, can I say it any louder, fuck the selfish bitch, fuck the selfish bitch, fuck the selfish bitch, yeah, woo, it feels good to say you're a double agent dying, no more controlling my way, say it's no more lying, I don't care more for you what to be, anything cause you can't do that to me, again, no way we can win, uh, not again, fuck you double agent, fuck you bitch, fuck you double agent, bitch, yeah, but even though I know inside my mind I just wanna come home and say something better to you and be like I get to see something new so I can see my son, but you make it this way, you're a double agent, I just want to hate you, I just want to say fuck you too, I just want to hate you, but I can't, fuck you, but I can't, I just want to say fuck you, I just want to say I hate you to your face, to your face, cause you're always in my mind, everywhere I look, everything I've done to the past year's hooks, now it's stuck like glue in me, and you don't want anything to do with me, so fuck you, you're a double agent, bitch, fuck you, oh, but I love you, that's the tragedy of rapping and the tragedy inside, it takes tragedy to make your eyes open wide, it takes dent and fall for you to know you're alive, fuck you for creating this, fuck you for needing this, fuck you for doing the thing you wouldn't say that you did, now you didn't blame me, fuck you bitch, you can go get killed in history, I just cannot mind, and I don't know if that's true, cause I love you, I hate you, I'll kill you, I'll owe you, I'll do anything, I can't have you not be what you are being, God's son saves you, what you are feeling, God's son saves you from me, double agent, fucker, I am alive , I am alive, I am alive, I am alive, I am alive, I am alive...",
   "lyricsSegments": [
     {

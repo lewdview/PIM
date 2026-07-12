@@ -41,7 +41,7 @@
     {
       "id": 3,
       "time": 8.229166666666668,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -248,7 +248,7 @@
     {
       "id": 32,
       "time": 36.35416666666667,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -340,8 +340,9 @@
     {
       "id": 44,
       "time": 44.47916666666667,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.9600006103515626,
       "stage": 2
     },
     {
@@ -558,12 +559,13 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 1.1200012207031251,
+      "swipeDirection": "right",
       "stage": 3
     },
     {
       "id": 75,
       "time": 68.64583333333334,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -613,6 +615,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.7520019531250001,
+      "swipeDirection": "right",
       "stage": 3
     },
     {
@@ -629,6 +632,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.736004638671875,
+      "swipeDirection": "right",
       "stage": 3
     },
     {
@@ -695,6 +699,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.5760009765625,
+      "swipeDirection": "right",
       "stage": 3
     },
     {
@@ -747,7 +752,7 @@
     {
       "id": 98,
       "time": 85.72916666666667,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -755,7 +760,7 @@
     {
       "id": 99,
       "time": 86.14583333333334,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -766,6 +771,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.751995849609375,
+      "swipeDirection": "right",
       "stage": 3
     },
     {
@@ -801,7 +807,7 @@
     {
       "id": 105,
       "time": 90.72916666666667,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -873,8 +879,9 @@
     {
       "id": 114,
       "time": 96.04166666666667,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 4
     },
     {
@@ -902,14 +909,14 @@
     {
       "id": 118,
       "time": 101.5625,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 4
     },
     {
       "id": 119,
       "time": 102.1875,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -991,7 +998,7 @@
     {
       "id": 130,
       "time": 109.58333333333334,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -999,7 +1006,7 @@
     {
       "id": 131,
       "time": 110.20833333333334,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -1137,14 +1144,15 @@
     {
       "id": 149,
       "time": 127.08333333333334,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 5
     },
     {
       "id": 150,
       "time": 127.39583333333334,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1152,8 +1160,9 @@
     {
       "id": 151,
       "time": 127.60416666666667,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 5
     },
     {
@@ -1167,14 +1176,15 @@
     {
       "id": 153,
       "time": 128.75,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 5
     },
     {
       "id": 154,
       "time": 129.16666666666669,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1182,8 +1192,9 @@
     {
       "id": 155,
       "time": 129.375,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.55999755859375,
       "stage": 5
     },
     {
@@ -1192,6 +1203,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.48000488281250003,
+      "swipeDirection": "left",
       "stage": 5
     },
     {
@@ -1223,6 +1235,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.49600830078125,
+      "swipeDirection": "left",
       "stage": 5
     },
     {
@@ -1235,7 +1248,7 @@
     {
       "id": 162,
       "time": 135.52083333333334,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 5
     },
@@ -1314,7 +1327,7 @@
     {
       "id": 172,
       "time": 142.8125,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.7040039062500001,
       "stage": 5
@@ -1403,7 +1416,7 @@
     "Alternative",
     "Indie"
   ],
-  "difficultyLevel": 5,
+  "difficultyLevel": 6,
   "lyrics": "You, oh you, yeah you And baby, just right now You got me walkin', baby got me walkin' Ooh, you got me walkin', baby got me walkin' Oh no I'm on a tightrope, wow, I can't know left, right Which way you want me to go Yeah, which way you want me, what Cause you got me walkin' in a single by night Can't walk it to the left, can't walk it to the right I don't even know where's the good spot I'm woo, woo, walkin' on a tightrope Woo, yeah, I'm walkin' on a tightrope Oh, you know what you do, yeah You know how you make me go left, make me go right I don't know which way we have to Fight again and you'll run away Lighting your light in your mind Fading light in your mind I'm on a tightrope, baby, tightrope, baby You're making me go crazy Woo, got me walkin' on a tightrope Woo, you got me walkin' on a tightrope, baby Woo, all right, which way we go Left, right, none of that's gonna be it I'm on a tightrope You got me, woo, woo, all night long, yeah You got me fucked up, yeah And I had a good night",
   "lyricsSegments": [
     {

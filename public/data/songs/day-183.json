@@ -111,7 +111,7 @@
     {
       "id": 13,
       "time": 17.692307692307693,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -318,7 +318,7 @@
     {
       "id": 41,
       "time": 46.53846153846154,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -339,7 +339,7 @@
     {
       "id": 44,
       "time": 48.07692307692308,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -384,6 +384,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 1.296002197265625,
+      "swipeDirection": "up",
       "stage": 2
     },
     {
@@ -423,7 +424,7 @@
     {
       "id": 55,
       "time": 56.53846153846154,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.8959991455078126,
       "stage": 2
@@ -487,7 +488,7 @@
     {
       "id": 64,
       "time": 64.23076923076924,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -511,6 +512,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.527996826171875,
+      "swipeDirection": "right",
       "stage": 3
     },
     {
@@ -553,6 +555,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.544000244140625,
+      "swipeDirection": "right",
       "stage": 3
     },
     {
@@ -583,6 +586,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 2,
+      "swipeDirection": "up",
       "stage": 3
     },
     {
@@ -595,7 +599,7 @@
     {
       "id": 78,
       "time": 87.11538461538461,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.832000732421875,
       "stage": 3
@@ -606,6 +610,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.68800048828125,
+      "swipeDirection": "left",
       "stage": 3
     },
     {
@@ -622,12 +627,13 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.848004150390625,
+      "swipeDirection": "left",
       "stage": 3
     },
     {
       "id": 82,
       "time": 91.34615384615385,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -693,8 +699,9 @@
     {
       "id": 91,
       "time": 99.03846153846155,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
@@ -710,6 +717,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.6239990234375,
+      "swipeDirection": "right",
       "stage": 3
     },
     {
@@ -768,7 +776,7 @@
     {
       "id": 101,
       "time": 111.53846153846155,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.9760009765625001,
       "stage": 4
@@ -779,6 +787,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.544000244140625,
+      "swipeDirection": "up",
       "stage": 4
     },
     {
@@ -817,12 +826,13 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 1.4239990234375002,
+      "swipeDirection": "left",
       "stage": 4
     },
     {
       "id": 108,
       "time": 120.96153846153847,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -959,7 +969,7 @@
     {
       "id": 126,
       "time": 136.92307692307693,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -967,7 +977,7 @@
     {
       "id": 127,
       "time": 137.1153846153846,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -986,6 +996,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.6079956054687501,
+      "swipeDirection": "up",
       "stage": 5
     },
     {
@@ -1036,7 +1047,7 @@
     {
       "id": 136,
       "time": 144.42307692307693,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 5
     },
@@ -1067,6 +1078,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.5760009765625,
+      "swipeDirection": "left",
       "stage": 5
     },
     {

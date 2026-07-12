@@ -167,7 +167,7 @@
     {
       "id": 21,
       "time": 17.9296875,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -335,14 +335,14 @@
     {
       "id": 45,
       "time": 39.140625,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 1
     },
     {
       "id": 46,
       "time": 39.609375,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -398,7 +398,7 @@
     {
       "id": 54,
       "time": 45.3515625,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -482,7 +482,7 @@
     {
       "id": 66,
       "time": 53.203125,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -532,14 +532,15 @@
     {
       "id": 73,
       "time": 59.6484375,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 2
     },
     {
       "id": 74,
       "time": 60.1171875,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.544000244140625,
       "stage": 2
@@ -578,6 +579,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.5760009765625,
+      "swipeDirection": "left",
       "stage": 2
     },
     {
@@ -675,14 +677,14 @@
     {
       "id": 93,
       "time": 69.9609375,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 2
     },
     {
       "id": 94,
       "time": 70.4296875,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -760,7 +762,7 @@
     {
       "id": 105,
       "time": 78.046875,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.8640014648437501,
       "stage": 2
@@ -819,7 +821,7 @@
     {
       "id": 113,
       "time": 83.90625,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -938,8 +940,9 @@
     {
       "id": 128,
       "time": 92.34375,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.59200439453125,
       "stage": 2
     },
     {
@@ -962,6 +965,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.6559997558593751,
+      "swipeDirection": "up",
       "stage": 2
     },
     {
@@ -991,6 +995,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.6239990234375,
+      "swipeDirection": "right",
       "stage": 2
     },
     {
@@ -1048,7 +1053,7 @@
     {
       "id": 142,
       "time": 103.125,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -1056,7 +1061,7 @@
     {
       "id": 143,
       "time": 103.4765625,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -1097,6 +1102,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.784002685546875,
+      "swipeDirection": "left",
       "stage": 3
     },
     {
@@ -1240,6 +1246,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.48000488281250003,
+      "swipeDirection": "right",
       "stage": 3
     },
     {
@@ -1255,6 +1262,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.496002197265625,
+      "swipeDirection": "left",
       "stage": 3
     },
     {
@@ -1395,6 +1403,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.5760009765625,
+      "swipeDirection": "left",
       "stage": 3
     },
     {
@@ -1407,14 +1416,14 @@
     {
       "id": 189,
       "time": 131.6015625,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 3
     },
     {
       "id": 190,
       "time": 131.953125,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1672,6 +1681,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.95999755859375,
+      "swipeDirection": "up",
       "stage": 3
     },
     {
@@ -1779,7 +1789,7 @@
     {
       "id": 238,
       "time": 153.515625,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -1787,7 +1797,7 @@
     {
       "id": 239,
       "time": 153.75,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 1.152001953125,
       "stage": 3
@@ -1798,6 +1808,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.59200439453125,
+      "swipeDirection": "up",
       "stage": 3
     },
     {
@@ -1836,12 +1847,13 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.5760009765625,
+      "swipeDirection": "right",
       "stage": 3
     },
     {
       "id": 246,
       "time": 159.0234375,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1898,8 +1910,9 @@
     {
       "id": 254,
       "time": 164.4140625,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.6239990234375,
       "stage": 3
     },
     {
@@ -2026,6 +2039,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.51199951171875,
+      "swipeDirection": "right",
       "stage": 3
     },
     {
@@ -2062,6 +2076,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.5760009765625,
+      "swipeDirection": "right",
       "stage": 3
     },
     {
@@ -2094,7 +2109,7 @@
     {
       "id": 280,
       "time": 181.0546875,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -2105,6 +2120,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.5280029296875001,
+      "swipeDirection": "left",
       "stage": 4
     },
     {
@@ -2179,12 +2195,13 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.8800048828125,
+      "swipeDirection": "right",
       "stage": 4
     },
     {
       "id": 292,
       "time": 188.203125,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -2224,6 +2241,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.59200439453125,
+      "swipeDirection": "left",
       "stage": 4
     },
     {
@@ -2274,6 +2292,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.73599853515625,
+      "swipeDirection": "right",
       "stage": 4
     },
     {
@@ -2298,6 +2317,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.5919921875,
+      "swipeDirection": "left",
       "stage": 4
     },
     {
@@ -2310,14 +2330,14 @@
     {
       "id": 308,
       "time": 199.1015625,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 4
     },
     {
       "id": 309,
       "time": 199.5703125,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -2357,6 +2377,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 1.343994140625,
+      "swipeDirection": "right",
       "stage": 4
     },
     {
@@ -2372,7 +2393,7 @@
     {
       "id": 316,
       "time": 206.015625,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.8640014648437501,
       "stage": 4
@@ -2435,12 +2456,13 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.5760009765625,
+      "swipeDirection": "right",
       "stage": 4
     },
     {
       "id": 325,
       "time": 211.875,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -2464,6 +2486,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.8640014648437501,
+      "swipeDirection": "left",
       "stage": 4
     },
     {
@@ -2497,6 +2520,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.6400024414062501,
+      "swipeDirection": "right",
       "stage": 5
     },
     {
@@ -2505,6 +2529,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.5919921875,
+      "swipeDirection": "left",
       "stage": 5
     },
     {
@@ -2556,6 +2581,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.6400024414062501,
+      "swipeDirection": "right",
       "stage": 5
     },
     {
@@ -2568,7 +2594,7 @@
     {
       "id": 342,
       "time": 226.0546875,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -2576,7 +2602,7 @@
     {
       "id": 343,
       "time": 226.5234375,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.89599609375,
       "stage": 5
@@ -2610,6 +2636,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.48000488281250003,
+      "swipeDirection": "up",
       "stage": 5
     },
     {
@@ -2663,12 +2690,13 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.59200439453125,
+      "swipeDirection": "right",
       "stage": 5
     },
     {
       "id": 355,
       "time": 233.90625,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 5
     },
@@ -2714,6 +2742,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.6559936523437501,
+      "swipeDirection": "up",
       "stage": 5
     },
     {
@@ -2805,6 +2834,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.8319946289062501,
+      "swipeDirection": "up",
       "stage": 5
     },
     {
@@ -2817,14 +2847,14 @@
     {
       "id": 375,
       "time": 245.9765625,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 5
     },
     {
       "id": 376,
       "time": 246.4453125,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 5
     },
@@ -2857,6 +2887,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.6400024414062501,
+      "swipeDirection": "right",
       "stage": 5
     },
     {
@@ -2889,7 +2920,7 @@
     {
       "id": 384,
       "time": 251.484375,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -2897,7 +2928,7 @@
     {
       "id": 385,
       "time": 251.8359375,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -2913,7 +2944,7 @@
     {
       "id": 387,
       "time": 252.65625,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.656005859375,
       "stage": 5
@@ -2938,6 +2969,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.6719970703125,
+      "swipeDirection": "right",
       "stage": 5
     },
     {
@@ -2997,7 +3029,7 @@
     {
       "id": 398,
       "time": 261.4453125,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 5
     },
@@ -3086,7 +3118,7 @@
     "Alternative",
     "Indie"
   ],
-  "difficultyLevel": 6,
+  "difficultyLevel": 7,
   "lyrics": "I've been looking for reasons to quit, yeah I've been the one pulling my head down below I've been walking through these shadows in my nights and I wanna find reasons to search for your light But I know that you're keeping this negative view of you on us And what we know and all we'll be, yeah I just know there's a brighter way We could find a way And it could be our day But you can't get past the mistakes that we each have made And I just know that we could If you just would let it go Good All these nights, all these dreams that are shattered between you and me All the times you put us right in the mud All these nights, all these dreams that are shattered between me and you All you ever did was keep me low to the ground With a frown and I know our heart can't get better But your love feels like an ocean that I'm drowning in I'm falling and I wanna run from your hate, your cruelty And I don't know if you even see the way you affect me And I've said here so much, wanting you to be better, giving you a chance Give me trust but you won't touch that cause you can't be truthful with me With your shame I just want you to know we could have been more than you Never ever thought you'd be a part of but you just couldn't let go All these nights, all these dreams that are shattered between me and you All the times you kept me away from the love that was meant for me The love that was there for me All these dreams shattered, baby All you ever did was keep us low But there's more to come from us There's more to compromise Feel the ill to be better than we can You could turn us all around If you lay down you'll hate and be true But All these nights, all these dreams that are shattered between me and you They haunt us daily and we can't get past them All of these lights of the night that are broken between me and you You keep me lower than I ever knew you could All these nights, all these dreams that are shattered between me and you You put my heart in the ground and I know you'd never look back Yeah, you took my soul and you took it all away So I'd give you everything, now I would call out low Very low Fucking bitch, I was low",
   "lyricsSegments": [
     {

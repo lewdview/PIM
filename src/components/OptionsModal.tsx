@@ -750,6 +750,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
   const themeColor = isAvant ? "#39FF14" : "#FF1493";
 
   const NOTE_THEME_PRESETS = [
+    { id: 'artwork', name: 'Song Artwork', colors: ['#999999', '#999999', '#999999'] },
     { id: 'classic', name: 'Classic Vault', colors: ['#FF1493', '#00E5FF', '#39FF14'] },
     { id: 'cyberpunk', name: 'Cyberpunk Neon', colors: ['#00F0FF', '#FFFF00', '#FF007F'] },
     { id: 'sunset', name: 'Synth Sunset', colors: ['#FF0055', '#7B2CBF', '#FF8C00'] },
@@ -1183,9 +1184,13 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                       >
                         <span className="font-black truncate w-full text-center uppercase tracking-wide mb-1.5">{t.name}</span>
                         <div className="flex gap-1">
-                          {t.colors.map((c, i) => (
-                            <div key={i} className="w-2.5 h-2.5 rounded-full border border-black/40 shadow-sm" style={{ background: c }} />
-                          ))}
+                          {t.id === 'artwork' ? (
+                            <div className="w-[36px] h-2.5 rounded-full border border-black/40 shadow-sm" style={{ background: 'linear-gradient(90deg, #ff007f, #00f0ff, #39ff14)' }} />
+                          ) : (
+                            t.colors.map((c, i) => (
+                              <div key={i} className="w-2.5 h-2.5 rounded-full border border-black/40 shadow-sm" style={{ background: c }} />
+                            ))
+                          )}
                         </div>
                       </button>
                     );

@@ -96,41 +96,21 @@ const SLIDE_MIXED_PATTERNS = [
 ];
 
 const DUAL_TAP_PATTERNS = [
-  [{ a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } }],
-  [{ a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'tap', lane: 2 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }],
+  [{ a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 1 } }],
+  [{ a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }],
   [{ a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 1 } }],
-  [{ a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }],
+  [{ a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }],
   [{ a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 2 } }],
   [{ a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 2 } }],
-  [{ a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 2 } }],
-  [{ a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }],
-  [{ a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }],
-  [{ a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 2 } }],
-  [{ a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }],
-  [{ a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }],
-  [{ a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 1 } }],
-  [{ a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } }],
-  [{ a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } }],
-  [{ a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }]
+  [{ a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 2 } }],
+  [{ a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }]
 ];
 
 const DUAL_HOLD_PATTERNS = [
-  [{ a: { type: 'hold', lane: 0 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'hold', lane: 2 }, b: { type: 'tap', lane: 0 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } }],
-  [{ a: { type: 'hold', lane: 0 }, b: { type: 'hold', lane: 2 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } }],
-  [{ a: { type: 'hold', lane: 1 }, b: { type: 'tap', lane: 0 } }, { a: { type: 'tap', lane: 2 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'hold', lane: 1 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 0 } }],
-  [{ a: { type: 'hold', lane: 0 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'hold', lane: 2 }, b: { type: 'tap', lane: 1 } }],
-  [{ a: { type: 'hold', lane: 2 }, b: { type: 'tap', lane: 0 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 0 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } }],
-  [{ a: { type: 'hold', lane: 0 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'hold', lane: 2 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'hold', lane: 0 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } }],
-  [{ a: { type: 'hold', lane: 0 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'tap', lane: 2 }, b: { type: 'hold', lane: 1 } }, { a: { type: 'hold', lane: 2 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'hold', lane: 1 } }],
-  [{ a: { type: 'hold', lane: 0 }, b: { type: 'hold', lane: 1 } }, { a: { type: 'tap', lane: 2 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'hold', lane: 1 }, b: { type: 'hold', lane: 2 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 0 } }],
-  [{ a: { type: 'hold', lane: 1 }, b: { type: 'hold', lane: 1 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'hold', lane: 1 }, b: { type: 'hold', lane: 1 } }],
-  [{ a: { type: 'hold', lane: 0 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'hold', lane: 0 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'hold', lane: 2 }, b: { type: 'tap', lane: 0 } }, { a: { type: 'hold', lane: 2 }, b: { type: 'tap', lane: 1 } }],
-  [{ a: { type: 'hold', lane: 1 }, b: { type: 'tap', lane: 0 } }, { a: { type: 'tap', lane: 2 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'hold', lane: 1 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 0 } }],
-  [{ a: { type: 'hold', lane: 0 }, b: { type: 'hold', lane: 2 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'hold', lane: 1 }, b: { type: 'hold', lane: 1 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }],
-  [{ a: { type: 'hold', lane: 0 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'hold', lane: 2 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'hold', lane: 1 }, b: { type: 'tap', lane: 1 } }],
-  [{ a: { type: 'hold', lane: 2 }, b: { type: 'tap', lane: 0 } }, { a: { type: 'hold', lane: 1 }, b: { type: 'tap', lane: 0 } }, { a: { type: 'hold', lane: 0 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'hold', lane: 1 }, b: { type: 'tap', lane: 2 } }],
-  [{ a: { type: 'hold', lane: 0 }, b: { type: 'hold', lane: 2 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'hold', lane: 0 }, b: { type: 'hold', lane: 2 } }],
-  [{ a: { type: 'hold', lane: 1 }, b: { type: 'tap', lane: 0 } }, { a: { type: 'hold', lane: 2 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'hold', lane: 0 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'hold', lane: 1 }, b: { type: 'tap', lane: 0 } }]
+  [{ a: { type: 'hold', lane: 0 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'hold', lane: 2 } }, { a: { type: 'hold', lane: 2 }, b: { type: 'tap', lane: 0 } }, { a: { type: 'hold', lane: 1 }, b: { type: 'hold', lane: 0 } }],
+  [{ a: { type: 'hold', lane: 0 }, b: { type: 'hold', lane: 2 } }, { a: { type: 'tap', lane: 1 }, b: { type: 'hold', lane: 2 } }, { a: { type: 'tap', lane: 0 }, b: { type: 'hold', lane: 2 } }, { a: { type: 'hold', lane: 1 }, b: { type: 'hold', lane: 0 } }],
+  [{ a: { type: 'hold', lane: 1 }, b: { type: 'tap', lane: 0 } }, { a: { type: 'hold', lane: 2 }, b: { type: 'hold', lane: 0 } }, { a: { type: 'hold', lane: 1 }, b: { type: 'tap', lane: 2 } }, { a: { type: 'hold', lane: 0 }, b: { type: 'hold', lane: 2 } }],
+  [{ a: { type: 'hold', lane: 0 }, b: { type: 'tap', lane: 1 } }, { a: { type: 'hold', lane: 1 }, b: { type: 'hold', lane: 2 } }, { a: { type: 'hold', lane: 0 }, b: { type: 'hold', lane: 2 } }, { a: { type: 'hold', lane: 2 }, b: { type: 'tap', lane: 1 } }]
 ];
 
 const BPM_PATTERNS = [
@@ -254,6 +234,11 @@ function generateNotesFromLyrics(words, bpm = 100) {
       if (dur > 0.6) {
         type = 'hold';
         holdDuration = Math.min(dur * 0.8, 2.0);
+        // Randomly end hold notes with a swipe up (or other directions)
+        const swipeRoll = Math.floor(snapped * 100) % 100;
+        if (swipeRoll < 50) {
+          swipeDirection = (swipeRoll % 3 === 0) ? 'up' : (swipeRoll % 3 === 1) ? 'left' : 'right';
+        }
       } else {
         type = 'tap';
       }

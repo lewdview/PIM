@@ -48,7 +48,7 @@
     {
       "id": 4,
       "time": 8.095238095238095,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -118,7 +118,7 @@
     {
       "id": 14,
       "time": 18.80952380952381,
-      "lane": 0,
+      "lane": 2,
       "type": "tap",
       "stage": 1
     },
@@ -160,7 +160,7 @@
     {
       "id": 20,
       "time": 24.76190476190476,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 1
     },
@@ -251,7 +251,7 @@
     {
       "id": 33,
       "time": 40.95238095238095,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -497,7 +497,7 @@
     {
       "id": 68,
       "time": 63.57142857142857,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -518,7 +518,7 @@
     {
       "id": 71,
       "time": 65,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -802,6 +802,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.544000244140625,
+      "swipeDirection": "right",
       "stage": 3
     },
     {
@@ -814,7 +815,7 @@
     {
       "id": 112,
       "time": 94.28571428571428,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -822,7 +823,7 @@
     {
       "id": 113,
       "time": 94.52380952380952,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -838,7 +839,7 @@
     {
       "id": 115,
       "time": 95.23809523809523,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -846,7 +847,7 @@
     {
       "id": 116,
       "time": 95.47619047619047,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -972,7 +973,7 @@
     {
       "id": 133,
       "time": 103.09523809523809,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1000,7 +1001,7 @@
     {
       "id": 137,
       "time": 104.28571428571428,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1028,7 +1029,7 @@
     {
       "id": 141,
       "time": 105.23809523809523,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1214,6 +1215,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.784002685546875,
+      "swipeDirection": "left",
       "stage": 3
     },
     {
@@ -1251,14 +1253,15 @@
     {
       "id": 171,
       "time": 117.14285714285714,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
       "id": 172,
       "time": 117.6190476190476,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -1266,8 +1269,9 @@
     {
       "id": 173,
       "time": 118.09523809523809,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
@@ -1281,14 +1285,15 @@
     {
       "id": 175,
       "time": 118.8095238095238,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
       "id": 176,
       "time": 119.04761904761904,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -1296,8 +1301,9 @@
     {
       "id": 177,
       "time": 119.52380952380952,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
@@ -1311,14 +1317,15 @@
     {
       "id": 179,
       "time": 120.23809523809523,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
       "id": 180,
       "time": 120.47619047619047,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -1326,8 +1333,9 @@
     {
       "id": 181,
       "time": 120.71428571428571,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
@@ -1597,7 +1605,7 @@
     {
       "id": 218,
       "time": 139.52380952380952,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -1605,7 +1613,7 @@
     {
       "id": 219,
       "time": 139.76190476190476,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -1621,7 +1629,7 @@
     {
       "id": 221,
       "time": 140.47619047619048,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -1629,7 +1637,7 @@
     {
       "id": 222,
       "time": 140.95238095238093,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -1637,7 +1645,7 @@
     {
       "id": 223,
       "time": 141.19047619047618,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -1653,7 +1661,7 @@
     {
       "id": 225,
       "time": 141.66666666666666,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -1661,7 +1669,7 @@
     {
       "id": 226,
       "time": 141.9047619047619,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -1669,7 +1677,7 @@
     {
       "id": 227,
       "time": 142.14285714285714,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -1685,7 +1693,7 @@
     {
       "id": 229,
       "time": 142.61904761904762,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -1693,7 +1701,7 @@
     {
       "id": 230,
       "time": 142.85714285714286,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -1801,7 +1809,7 @@
     {
       "id": 245,
       "time": 153.8095238095238,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -1829,7 +1837,7 @@
     {
       "id": 249,
       "time": 154.76190476190476,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -1857,7 +1865,7 @@
     {
       "id": 253,
       "time": 155.95238095238093,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -1885,7 +1893,7 @@
     {
       "id": 257,
       "time": 156.9047619047619,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -1913,7 +1921,7 @@
     {
       "id": 261,
       "time": 158.33333333333331,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -2046,8 +2054,9 @@
     {
       "id": 278,
       "time": 168.57142857142856,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 5
     },
     {
@@ -2107,6 +2116,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.5919921875,
+      "swipeDirection": "right",
       "stage": 5
     },
     {
@@ -2119,7 +2129,7 @@
     {
       "id": 288,
       "time": 173.33333333333331,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 5
     },
@@ -2143,6 +2153,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.49600830078125,
+      "swipeDirection": "left",
       "stage": 5
     },
     {
@@ -2233,7 +2244,7 @@
     {
       "id": 302,
       "time": 180.47619047619045,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -2241,7 +2252,7 @@
     {
       "id": 303,
       "time": 180.7142857142857,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -2257,7 +2268,7 @@
     {
       "id": 305,
       "time": 181.19047619047618,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -2265,7 +2276,7 @@
     {
       "id": 306,
       "time": 181.66666666666666,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -2273,7 +2284,7 @@
     {
       "id": 307,
       "time": 182.14285714285714,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.9280029296875001,
       "stage": 5
@@ -2303,7 +2314,7 @@
     {
       "id": 311,
       "time": 187.14285714285714,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 5
     },
@@ -2327,6 +2338,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 1.04000244140625,
+      "swipeDirection": "right",
       "stage": 5
     },
     {
@@ -2402,7 +2414,7 @@
     {
       "id": 324,
       "time": 198.57142857142856,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 5
     },

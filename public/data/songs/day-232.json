@@ -55,7 +55,7 @@
     {
       "id": 5,
       "time": 7.405063291139241,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -167,7 +167,7 @@
     {
       "id": 21,
       "time": 22.405063291139243,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -181,7 +181,7 @@
     {
       "id": 23,
       "time": 24.303797468354432,
-      "lane": 0,
+      "lane": 2,
       "type": "tap",
       "stage": 1
     },
@@ -266,7 +266,7 @@
     {
       "id": 35,
       "time": 34.74683544303798,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -287,7 +287,7 @@
     {
       "id": 38,
       "time": 36.07594936708861,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -301,7 +301,7 @@
     {
       "id": 40,
       "time": 37.40506329113924,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 2
     },
@@ -395,6 +395,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.5760009765625,
+      "swipeDirection": "up",
       "stage": 2
     },
     {
@@ -465,7 +466,7 @@
     {
       "id": 62,
       "time": 50.12658227848102,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -473,7 +474,7 @@
     {
       "id": 63,
       "time": 50.50632911392405,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -489,7 +490,7 @@
     {
       "id": 65,
       "time": 51.26582278481013,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -733,12 +734,13 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.608001708984375,
+      "swipeDirection": "left",
       "stage": 3
     },
     {
       "id": 98,
       "time": 68.9240506329114,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1055,6 +1057,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.5919982910156251,
+      "swipeDirection": "left",
       "stage": 4
     },
     {
@@ -1332,6 +1335,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.527996826171875,
+      "swipeDirection": "right",
       "stage": 5
     },
     {
@@ -1352,7 +1356,7 @@
     {
       "id": 179,
       "time": 113.73417721518989,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 5
     },
@@ -1409,14 +1413,15 @@
     {
       "id": 187,
       "time": 120.00000000000001,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 5
     },
     {
       "id": 188,
       "time": 120.18987341772153,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1424,8 +1429,9 @@
     {
       "id": 189,
       "time": 120.37974683544304,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 5
     },
     {
@@ -1507,7 +1513,7 @@
     "Ballad",
     "Ambient"
   ],
-  "difficultyLevel": 5,
+  "difficultyLevel": 6,
   "lyrics": "Never gonna be that, never gonna be the one It's what I'm feelin' tonight I'm never gonna be the one there for you Hey girl, I'm never gonna be the one there for you Now girl, I'm never gonna be the one there for you The one that takes you on a silent cruise Hey, always speaking up tonight, always speaking up I'm gonna say it every time that my mind is all right Girl, I'm never gonna be the one there for you Now hey, I'm never gonna be the one there for you Now that you know it and I hear you Now that you know, know, know me Now find another one I'm never gonna be the one there for you Oh, girl, I'm never gonna be the one there for you No, I never did it in the manual of the night And I know it's crazy to fight And then I know, I know, I know I'm never gonna be that one for you Oh, darling, I know it hurts But I know, I know, I know, I know I know I'm never gonna be the one there for you Oh hell no! I'm never gonna be the one there for you For just two months in the night Two months in the night Two months farther than I am For two months in the night I know I'm never gonna be the one there for you Know I'm never gonna be the one there for you No way you're taking it all I don't care if you call I don't wanna know you at all One there for you I'm never gonna be the one there for you",
   "lyricsSegments": [
     {

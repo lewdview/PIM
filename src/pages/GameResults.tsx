@@ -38,6 +38,85 @@ const CHAPTER_PLAT_NEEDED: Record<number, number> = {
   1:2, 2:2, 3:3, 4:3, 5:3, 6:4, 7:4, 8:5, 9:5, 10:5, 11:6, 12:7,
 };
 
+// ── arcade dot-matrix ticker component ───────────────────────────────
+function ArcadeMarquee({ color, medal }: { color: string; medal: string }) {
+  const congratulatoryMessages = [
+    "CONGRATULATIONS!",
+    "STAGE CLEARED SUCCESSFULLY",
+    "EXCELLENT RHYTHM DETECTED",
+    "VAULT RECORDS SYNCHRONIZED",
+    "PERFECT HIT RATE NOMINAL",
+    "SYSTEM RANKING OUTSTANDING",
+    "NEW DECRYPTION KEY ACQUIRED",
+    `MEDAL AUTHENTICATED: ${medal}`,
+    "THANK YOU FOR PLAYING BEATSTAR VAULT",
+  ];
+
+  const tickerText = congratulatoryMessages.join("   ★★★   ") + "   ★★★   ";
+
+  return (
+    <div 
+      className="w-full bg-black border-y py-4 overflow-hidden relative select-none"
+      style={{
+        borderColor: `${color}40`,
+        boxShadow: `0 0 15px ${color}15`,
+      }}
+    >
+      {/* LED Dot-Matrix Overlay */}
+      <div 
+        className="absolute inset-0 z-10 pointer-events-none"
+        style={{
+          backgroundImage: 'radial-gradient(circle, transparent 38%, #000000 48%)',
+          backgroundSize: '3px 3px',
+        }}
+      />
+
+      {/* Scrolling Text elements */}
+      <div className="flex w-max relative whitespace-nowrap animate-marquee">
+        <span 
+          className="font-mono text-[13px] font-black tracking-[0.25em] pr-8 inline-block"
+          style={{
+            color,
+            textShadow: `0 0 5px ${color}`,
+            transform: 'scaleY(1.75)',
+            transformOrigin: 'center',
+            animation: 'led-flicker 4s infinite ease-in-out',
+          }}
+        >
+          {tickerText}
+        </span>
+        <span 
+          className="font-mono text-[13px] font-black tracking-[0.25em] pr-8 inline-block"
+          style={{
+            color,
+            textShadow: `0 0 5px ${color}`,
+            transform: 'scaleY(1.75)',
+            transformOrigin: 'center',
+            animation: 'led-flicker 4s infinite ease-in-out',
+          }}
+        >
+          {tickerText}
+        </span>
+      </div>
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes marquee-infinite {
+          0% { transform: translateX(0%); }
+          100% { transform: translateX(-50%); }
+        }
+        @keyframes led-flicker {
+          0%, 100% { opacity: 0.95; }
+          45%, 55% { opacity: 1.0; }
+          50% { opacity: 0.91; }
+        }
+        .animate-marquee {
+          animation: marquee-infinite 22s linear infinite;
+        }
+      ` }} />
+    </div>
+  );
+}
+
 // ── circular ring component (Classic & Avant-Garde) ──────────────────
 function ScoreRing({ progress, color, size = 180, isAvant }: { progress: number; color: string; size?: number; isAvant?: boolean }) {
   const r = (size - 16) / 2;
@@ -917,6 +996,19 @@ export default function Results() {
           </div>
         )}
 
+        {/* Fullscreen Color Bloom Backdrop */}
+        <div 
+          className="absolute inset-0 z-0 pointer-events-none transition-opacity duration-1000 flex items-center justify-center"
+          style={{ opacity: phase === 'ring' ? 0.35 : 0 }}
+        >
+          <div 
+            className="w-[600px] h-[600px] rounded-full blur-[120px] animate-pulse"
+            style={{
+              background: `radial-gradient(circle, ${currentRingColor} 0%, transparent 70%)`
+            }}
+          />
+        </div>
+
         {/* Cyber Grid Backdrops */}
         <div className="absolute inset-0 pointer-events-none" style={{
           backgroundImage: `linear-gradient(rgba(57,255,20,0.012) 1px, transparent 1px), linear-gradient(90deg, rgba(57,255,20,0.012) 1px, transparent 1px)`,
@@ -927,16 +1019,28 @@ export default function Results() {
         }} />
 
         {/* Telemetry Corner Indicators */}
-        <div className="absolute top-5 left-5 pointer-events-none font-mono text-[9px] text-[#39FF14]/30" style={{ letterSpacing: '0.15em' }}>
+        <div 
+          className="absolute top-5 left-5 pointer-events-none font-mono text-[9px] text-[#39FF14]/30 transition-opacity duration-1000" 
+          style={{ letterSpacing: '0.15em', opacity: phase === 'ring' ? 0 : 0.3 }}
+        >
           DECODED // SUCCESS
         </div>
-        <div className="absolute top-5 right-5 pointer-events-none font-mono text-[9px] text-[#39FF14]/30" style={{ letterSpacing: '0.15em' }}>
+        <div 
+          className="absolute top-5 right-5 pointer-events-none font-mono text-[9px] text-[#39FF14]/30 transition-opacity duration-1000" 
+          style={{ letterSpacing: '0.15em', opacity: phase === 'ring' ? 0 : 0.3 }}
+        >
           SIGNAL_STRENGTH // {acc}%
         </div>
-        <div className="absolute bottom-5 left-5 pointer-events-none font-mono text-[9px] text-[#39FF14]/30" style={{ letterSpacing: '0.15em' }}>
+        <div 
+          className="absolute bottom-5 left-5 pointer-events-none font-mono text-[9px] text-[#39FF14]/30 transition-opacity duration-1000" 
+          style={{ letterSpacing: '0.15em', opacity: phase === 'ring' ? 0 : 0.3 }}
+        >
           SYS_SEC_VERIFICATION // STABLE
         </div>
-        <div className="absolute bottom-5 right-5 pointer-events-none font-mono text-[9px] text-[#39FF14]/30" style={{ letterSpacing: '0.15em' }}>
+        <div 
+          className="absolute bottom-5 right-5 pointer-events-none font-mono text-[9px] text-[#39FF14]/30 transition-opacity duration-1000" 
+          style={{ letterSpacing: '0.15em', opacity: phase === 'ring' ? 0 : 0.3 }}
+        >
           DAY_RELEASE // {song?.day ?? 'N/A'}
         </div>
 
@@ -947,9 +1051,51 @@ export default function Results() {
           </div>
         )}
 
+        {/* Cinematic horizontal ticker running behind the centered ring during count-up */}
+        <div 
+          className="absolute left-0 right-0 z-0 overflow-hidden pointer-events-none whitespace-nowrap select-none transition-all duration-[900ms] flex items-center"
+          style={{
+            top: '50vh',
+            transform: 'translateY(-50%)',
+            opacity: phase === 'ring' ? 0.22 : 0,
+            height: '42px',
+            background: 'rgba(0,0,0,0.5)',
+            borderTop: `1px solid ${currentRingColor}25`,
+            borderBottom: `1px solid ${currentRingColor}25`,
+          }}
+        >
+          <div className="flex w-max relative animate-[marquee-infinite_12s_linear_infinite]">
+            <span 
+              className="font-mono text-[9px] font-black tracking-[0.35em] pr-4 uppercase"
+              style={{
+                color: currentRingColor,
+                textShadow: `0 0 4px ${currentRingColor}`,
+              }}
+            >
+              [ DECODING RUN DATA ]   ★★★   [ PROCESSING TELEMETRY SECTORS ]   ★★★   [ AUTHENTICATING MEDAL TIERS ]   ★★★   [ INJECTING CORES ]   ★★★   
+            </span>
+            <span 
+              className="font-mono text-[9px] font-black tracking-[0.35em] pr-4 uppercase"
+              style={{
+                color: currentRingColor,
+                textShadow: `0 0 4px ${currentRingColor}`,
+              }}
+            >
+              [ DECODING RUN DATA ]   ★★★   [ PROCESSING TELEMETRY SECTORS ]   ★★★   [ AUTHENTICATING MEDAL TIERS ]   ★★★   [ INJECTING CORES ]   ★★★   
+            </span>
+          </div>
+        </div>
+
         <div className="relative z-10 w-full max-w-md px-5 py-6 flex flex-col items-center">
           {/* Top telemetry bar */}
-          <div className="w-full flex items-center justify-between mb-8 results-fade-in">
+          <div 
+            className="w-full flex items-center justify-between mb-8 transition-all duration-[900ms]"
+            style={{
+              opacity: phase === 'ring' ? 0 : 1,
+              transform: phase === 'ring' ? 'translateY(-15px)' : 'translateY(0)',
+              pointerEvents: phase === 'ring' ? 'none' : 'auto'
+            }}
+          >
             <span className="font-mono text-[10px] text-[#39FF14] tracking-[0.3em] font-bold">
               {fromFreePlay ? '[ TRANSMISSION_DECODED ]' : '[ CAMPAIGN_MISSION_ACQUIRED ]'}
             </span>
@@ -962,7 +1108,55 @@ export default function Results() {
           </div>
 
           {/* Hero: Concentric Ring + Cover Art with Plus indicators */}
-          <div className="relative mb-6 results-fade-in" style={{ animationDelay: '0.2s' }}>
+          <div 
+            className="relative mb-6 z-20" 
+            style={{ 
+              transition: 'all 1.0s cubic-bezier(0.16, 1, 0.3, 1)',
+              transform: phase === 'ring' ? 'translateY(calc(50vh - 180px)) scale(1.85)' : 'translateY(0) scale(1.0)',
+            }}
+          >
+            {/* Permanent keyframes for the marquee-behind animation */}
+            <style dangerouslySetInnerHTML={{ __html: `
+              @keyframes marquee-behind {
+                0% {
+                  transform: translateX(110%);
+                  opacity: 0;
+                }
+                12% {
+                  opacity: 0.85;
+                }
+                88% {
+                  opacity: 0.85;
+                }
+                100% {
+                  transform: translateX(-110%);
+                  opacity: 0;
+                }
+              }
+              .animate-marquee-behind {
+                animation: marquee-behind 4.5s linear infinite;
+              }
+            ` }} />
+
+            {/* Scrolling Medal Name behind the dial */}
+            {result.medal !== "NONE" && (
+              <div 
+                className="absolute top-[80px] left-1/2 -translate-x-1/2 w-[340px] h-12 overflow-hidden flex items-center justify-center z-[-1] pointer-events-none"
+                style={{ opacity: 0.85 }}
+              >
+                <span 
+                  key={result.medal}
+                  className="absolute font-mono text-[2.8rem] font-black uppercase tracking-[0.25em] text-transparent select-none whitespace-nowrap animate-marquee-behind"
+                  style={{
+                    WebkitTextStroke: `1px ${currentRingColor}60`,
+                    textShadow: `0 0 12px ${currentRingColor}`,
+                  }}
+                >
+                  {result.medal}
+                </span>
+              </div>
+            )}
+
             {/* Corner wireframes behind the ring */}
             <div className="absolute top-2 left-2 w-3.5 h-3.5 border-t border-l border-[#39FF14]/40" />
             <div className="absolute top-2 right-2 w-3.5 h-3.5 border-t border-r border-[#39FF14]/40" />
@@ -987,7 +1181,14 @@ export default function Results() {
           </div>
 
           {/* Score Counter Dashboard */}
-          <div className="text-center mb-5 results-fade-in w-full" style={{ animationDelay: '0.3s' }}>
+          <div 
+            className="text-center mb-5 w-full transition-all duration-[900ms]" 
+            style={{ 
+              opacity: phase === 'ring' ? 0 : 1,
+              transform: phase === 'ring' ? 'translateY(20px)' : 'translateY(0)',
+              pointerEvents: phase === 'ring' ? 'none' : 'auto'
+            }}
+          >
             <div className="font-mono text-[9px] text-[#39FF14]/50 tracking-[0.35em] mb-1">
               {fromFreePlay ? 'SIGNAL_OUTPUT_VAL' : 'CAMPAIGN_DISPATCH_VAL'}
             </div>
@@ -1004,7 +1205,14 @@ export default function Results() {
           </div>
 
           {/* Medal tiers status blocks */}
-          <div className="flex items-center gap-4 mb-6 results-fade-in" style={{ animationDelay: '0.4s' }}>
+          <div 
+            className="flex items-center gap-4 mb-6 transition-all duration-[900ms]" 
+            style={{ 
+              opacity: phase === 'ring' ? 0 : 1,
+              transform: phase === 'ring' ? 'translateY(20px)' : 'translateY(0)',
+              pointerEvents: phase === 'ring' ? 'none' : 'auto'
+            }}
+          >
             {MEDAL_THRESHOLDS.map(t => {
               const achieved = countPct >= t.acc;
               return (
@@ -1202,6 +1410,12 @@ export default function Results() {
             </div>
           )}
         </div>
+
+        {phase !== 'ring' && (
+          <div className="w-full mt-auto pb-4 results-fade-in" style={{ animationDelay: '0.6s' }}>
+            <ArcadeMarquee color={currentRingColor} medal={result.medal} />
+          </div>
+        )}
       </div>
     );
   }
@@ -1216,6 +1430,19 @@ export default function Results() {
         </div>
       )}
 
+      {/* Fullscreen Color Bloom Backdrop */}
+      <div 
+        className="absolute inset-0 z-0 pointer-events-none transition-opacity duration-1000 flex items-center justify-center"
+        style={{ opacity: phase === 'ring' ? 0.35 : 0 }}
+      >
+        <div 
+          className="w-[600px] h-[600px] rounded-full blur-[120px] animate-pulse"
+          style={{
+            background: `radial-gradient(circle, ${currentRingColor} 0%, transparent 70%)`
+          }}
+        />
+      </div>
+
       {/* Radial flash on tier transition */}
       {flashColor && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ zIndex: 30 }}>
@@ -1223,9 +1450,51 @@ export default function Results() {
         </div>
       )}
 
+      {/* Cinematic horizontal ticker running behind the centered ring during count-up */}
+      <div 
+        className="absolute left-0 right-0 z-0 overflow-hidden pointer-events-none whitespace-nowrap select-none transition-all duration-[900ms] flex items-center"
+        style={{
+          top: '50vh',
+          transform: 'translateY(-50%)',
+          opacity: phase === 'ring' ? 0.22 : 0,
+          height: '42px',
+          background: 'rgba(0,0,0,0.5)',
+          borderTop: `1px solid ${currentRingColor}25`,
+          borderBottom: `1px solid ${currentRingColor}25`,
+        }}
+      >
+        <div className="flex w-max relative animate-[marquee-infinite_12s_linear_infinite]">
+          <span 
+            className="font-mono text-[9px] font-black tracking-[0.35em] pr-4 uppercase"
+            style={{
+              color: currentRingColor,
+              textShadow: `0 0 4px ${currentRingColor}`,
+            }}
+          >
+            [ DECODING RUN DATA ]   ★★★   [ PROCESSING TELEMETRY SECTORS ]   ★★★   [ AUTHENTICATING MEDAL TIERS ]   ★★★   [ INJECTING CORES ]   ★★★   
+          </span>
+          <span 
+            className="font-mono text-[9px] font-black tracking-[0.35em] pr-4 uppercase"
+            style={{
+              color: currentRingColor,
+              textShadow: `0 0 4px ${currentRingColor}`,
+            }}
+          >
+            [ DECODING RUN DATA ]   ★★★   [ PROCESSING TELEMETRY SECTORS ]   ★★★   [ AUTHENTICATING MEDAL TIERS ]   ★★★   [ INJECTING CORES ]   ★★★   
+          </span>
+        </div>
+      </div>
+
       <div className="relative z-10 w-full max-w-md px-4 py-6 flex flex-col items-center">
         {/* ── Top label ── */}
-        <div className="w-full flex items-center gap-0 mb-6 results-fade-in">
+        <div 
+          className="w-full flex items-center gap-0 mb-6 transition-all duration-[900ms]"
+          style={{
+            opacity: phase === 'ring' ? 0 : 1,
+            transform: phase === 'ring' ? 'translateY(-15px)' : 'translateY(0)',
+            pointerEvents: phase === 'ring' ? 'none' : 'auto'
+          }}
+        >
           <div className="font-mono font-bold text-xs px-3 py-1.5 tracking-[0.4em]"
             style={{ color: '#080808', background: '#F2F0E8' }}>
             {fromFreePlay ? 'TRANSMISSION COMPLETE' : 'CAMPAIGN MISSION COMPLETED'}
@@ -1240,7 +1509,55 @@ export default function Results() {
         </div>
 
         {/* ── Hero: Cover Art + Score Ring ── */}
-        <div className="relative mb-4 results-fade-in" style={{ animationDelay: '0.2s' }}>
+        <div 
+          className="relative mb-4 z-20" 
+          style={{ 
+            transition: 'all 1.0s cubic-bezier(0.16, 1, 0.3, 1)',
+            transform: phase === 'ring' ? 'translateY(calc(50vh - 170px)) scale(1.85)' : 'translateY(0) scale(1.0)',
+          }}
+        >
+          {/* Permanent keyframes for the marquee-behind animation */}
+          <style dangerouslySetInnerHTML={{ __html: `
+            @keyframes marquee-behind {
+              0% {
+                transform: translateX(110%);
+                opacity: 0;
+              }
+              12% {
+                opacity: 0.85;
+              }
+              88% {
+                opacity: 0.85;
+              }
+              100% {
+                transform: translateX(-110%);
+                opacity: 0;
+              }
+            }
+            .animate-marquee-behind {
+              animation: marquee-behind 4.5s linear infinite;
+            }
+          ` }} />
+
+          {/* Scrolling Medal Name behind the dial */}
+          {result.medal !== "NONE" && (
+            <div 
+              className="absolute top-[76px] left-1/2 -translate-x-1/2 w-[340px] h-12 overflow-hidden flex items-center justify-center z-[-1] pointer-events-none"
+              style={{ opacity: 0.85 }}
+            >
+              <span 
+                key={result.medal}
+                className="absolute font-mono text-[2.8rem] font-black uppercase tracking-[0.25em] text-transparent select-none whitespace-nowrap animate-marquee-behind"
+                style={{
+                  WebkitTextStroke: `1px ${currentRingColor}60`,
+                  textShadow: `0 0 12px ${currentRingColor}`,
+                }}
+              >
+                {result.medal}
+              </span>
+            </div>
+          )}
+
           <ScoreRing progress={ringFill} color={currentRingColor} size={200} />
           {/* Cover art centered inside ring */}
           <div className="absolute inset-0 flex items-center justify-center">
@@ -1258,7 +1575,14 @@ export default function Results() {
         </div>
 
         {/* ── Animated Score ── */}
-        <div className="text-center mb-1 results-fade-in" style={{ animationDelay: '0.3s' }}>
+        <div 
+          className="text-center mb-1 transition-all duration-[900ms]"
+          style={{
+            opacity: phase === 'ring' ? 0 : 1,
+            transform: phase === 'ring' ? 'translateY(20px)' : 'translateY(0)',
+            pointerEvents: phase === 'ring' ? 'none' : 'auto'
+          }}
+        >
           <div className="font-mono font-bold tabular-nums" data-testid="text-final-score"
             style={{ fontSize: 'clamp(36px, 10vw, 56px)', lineHeight: 1, color: '#F2F0E8', letterSpacing: '0.03em' }}>
             {scoreVal.toLocaleString()}
@@ -1272,7 +1596,14 @@ export default function Results() {
         </div>
 
         {/* ── Medal tier ladder (always visible, lights up as ring fills) ── */}
-        <div className="flex items-center gap-3 mb-5 results-fade-in" style={{ animationDelay: '0.4s' }}>
+        <div 
+          className="flex items-center gap-3 mb-5 transition-all duration-[900ms]"
+          style={{
+            opacity: phase === 'ring' ? 0 : 1,
+            transform: phase === 'ring' ? 'translateY(20px)' : 'translateY(0)',
+            pointerEvents: phase === 'ring' ? 'none' : 'auto'
+          }}
+        >
           {MEDAL_THRESHOLDS.map(t => {
             const achieved = countPct >= t.acc;
             return (
@@ -1464,6 +1795,12 @@ export default function Results() {
           </div>
         )}
       </div>
+
+      {phase !== 'ring' && (
+        <div className="w-full mt-auto pb-4 results-fade-in" style={{ animationDelay: '0.6s' }}>
+          <ArcadeMarquee color={currentRingColor} medal={result.medal} />
+        </div>
+      )}
     </div>
   );
 }

@@ -48,7 +48,7 @@
     {
       "id": 4,
       "time": 12.313432835820896,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -69,7 +69,7 @@
     {
       "id": 7,
       "time": 17.910447761194032,
-      "lane": 2,
+      "lane": 1,
       "type": "tap",
       "stage": 1
     },
@@ -97,7 +97,7 @@
     {
       "id": 11,
       "time": 22.388059701492537,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 1
     },
@@ -174,21 +174,21 @@
     {
       "id": 22,
       "time": 33.80597014925373,
-      "lane": 2,
+      "lane": 1,
       "type": "tap",
       "stage": 1
     },
     {
       "id": 23,
       "time": 34.701492537313435,
-      "lane": 2,
+      "lane": 1,
       "type": "tap",
       "stage": 1
     },
     {
       "id": 24,
       "time": 35.59701492537314,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -317,12 +317,13 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.9600006103515626,
+      "swipeDirection": "right",
       "stage": 2
     },
     {
       "id": 43,
       "time": 50.820895522388064,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -510,7 +511,7 @@
     {
       "id": 69,
       "time": 68.50746268656717,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -545,7 +546,7 @@
     {
       "id": 74,
       "time": 74.32835820895522,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.51199951171875,
       "stage": 2
@@ -553,7 +554,7 @@
     {
       "id": 75,
       "time": 74.77611940298507,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.51199951171875,
       "stage": 2
@@ -564,6 +565,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.544000244140625,
+      "swipeDirection": "right",
       "stage": 2
     },
     {
@@ -584,7 +586,7 @@
     {
       "id": 79,
       "time": 77.46268656716418,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -746,6 +748,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.7039978027343751,
+      "swipeDirection": "left",
       "stage": 3
     },
     {
@@ -791,7 +794,7 @@
     {
       "id": 105,
       "time": 96.04477611940298,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 1.13599853515625,
       "stage": 3
@@ -828,7 +831,7 @@
     {
       "id": 110,
       "time": 103.2089552238806,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -868,14 +871,15 @@
     {
       "id": 115,
       "time": 110.82089552238806,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
       "id": 116,
       "time": 111.04477611940298,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -883,8 +887,9 @@
     {
       "id": 117,
       "time": 111.26865671641791,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
@@ -898,14 +903,15 @@
     {
       "id": 119,
       "time": 111.71641791044776,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
       "id": 120,
       "time": 112.16417910447761,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -913,8 +919,9 @@
     {
       "id": 121,
       "time": 112.38805970149254,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
@@ -928,14 +935,15 @@
     {
       "id": 123,
       "time": 112.83582089552239,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
       "id": 124,
       "time": 113.05970149253731,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -943,8 +951,9 @@
     {
       "id": 125,
       "time": 113.50746268656717,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
@@ -958,14 +967,15 @@
     {
       "id": 127,
       "time": 113.95522388059702,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
       "id": 128,
       "time": 114.17910447761194,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -973,8 +983,9 @@
     {
       "id": 129,
       "time": 114.6268656716418,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
@@ -1264,6 +1275,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.51199951171875,
+      "swipeDirection": "right",
       "stage": 4
     },
     {
@@ -1313,7 +1325,7 @@
     {
       "id": 175,
       "time": 135.22388059701493,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -1351,7 +1363,7 @@
     {
       "id": 180,
       "time": 138.5820895522388,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -1398,6 +1410,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.51199951171875,
+      "swipeDirection": "right",
       "stage": 4
     },
     {
@@ -1447,14 +1460,15 @@
     {
       "id": 193,
       "time": 144.6268656716418,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 4
     },
     {
       "id": 194,
       "time": 145.07462686567166,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -1462,8 +1476,9 @@
     {
       "id": 195,
       "time": 145.52238805970148,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 4
     },
     {
@@ -1477,14 +1492,15 @@
     {
       "id": 197,
       "time": 146.19402985074626,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 4
     },
     {
       "id": 198,
       "time": 146.6417910447761,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -1492,8 +1508,9 @@
     {
       "id": 199,
       "time": 147.08955223880596,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 4
     },
     {
@@ -1507,14 +1524,15 @@
     {
       "id": 201,
       "time": 147.76119402985074,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 4
     },
     {
       "id": 202,
       "time": 148.2089552238806,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -1522,8 +1540,9 @@
     {
       "id": 203,
       "time": 148.43283582089552,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 4
     },
     {
@@ -1537,8 +1556,9 @@
     {
       "id": 205,
       "time": 149.1044776119403,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 4
     },
     {
@@ -1561,6 +1581,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.51199951171875,
+      "swipeDirection": "right",
       "stage": 4
     },
     {
@@ -1576,6 +1597,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.51199951171875,
+      "swipeDirection": "right",
       "stage": 4
     },
     {
@@ -1733,7 +1755,7 @@
     {
       "id": 231,
       "time": 163.88059701492537,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1741,7 +1763,7 @@
     {
       "id": 232,
       "time": 164.1044776119403,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1757,7 +1779,7 @@
     {
       "id": 234,
       "time": 164.77611940298507,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1765,7 +1787,7 @@
     {
       "id": 235,
       "time": 165,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1773,7 +1795,7 @@
     {
       "id": 236,
       "time": 165.22388059701493,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1789,7 +1811,7 @@
     {
       "id": 238,
       "time": 165.8955223880597,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1797,7 +1819,7 @@
     {
       "id": 239,
       "time": 166.34328358208955,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1805,7 +1827,7 @@
     {
       "id": 240,
       "time": 166.56716417910448,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1821,7 +1843,7 @@
     {
       "id": 242,
       "time": 167.01492537313433,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1908,7 +1930,7 @@
     {
       "id": 254,
       "time": 172.8358208955224,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 5
     },
@@ -1954,6 +1976,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.68800048828125,
+      "swipeDirection": "left",
       "stage": 5
     },
     {
@@ -1977,14 +2000,15 @@
     {
       "id": 263,
       "time": 177.98507462686567,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 5
     },
     {
       "id": 264,
       "time": 178.43283582089552,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -2123,6 +2147,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.6719970703125,
+      "swipeDirection": "left",
       "stage": 5
     },
     {
@@ -2196,7 +2221,7 @@
     "Ballad",
     "Ambient"
   ],
-  "difficultyLevel": 3,
+  "difficultyLevel": 4,
   "lyrics": "It's like a clip, like a feeling I'm falling fast, for you Last, I'm falling fucking fast Falling, falling, falling fast Churches of love increase for me It's like my dopamine's on high level It's like you're in control of me With the drip when you drip, the things that you do Walking by me, all confused Look at that ass, look at everything you be like Amazing, factory in your soul No more for me man, we're just friends I'm like bitch, you know I'm coming in I'm falling in I've never been returned before So I'm gonna get this Like I got mine before before Oh, you're gonna like it too Like I got mine before before Oh, you're gonna like it too Cause I'm falling for you I'm falling for the Sexy walk, the sexy brain All the conversations, all the things All the insane that we talk I'm falling for you Can you feel me falling? Waiting time I'm just wasting time If you're not next to me Every time I roll, every time I All the things that made me me We're coming down all night Falling for, it's hitting me I swear I can feel the fall Think it's gonna be like that Hell nah, I'm in control this time And I know no wrong Now I gotta lose my mind for you But you're something like a sexy dude Hey, you're so sexy to me I like fall every time you walk in front of me From the left to the right I watch both arms go up and down A planetary rotation of the things I want Yeah, the things I need to be Yeah, the things I need to Fall in, fall in, fall in space Fall in, fall in, fall in space Fall with me, fall with me If I may, I say Yeah, I think I may be falling for you Falling for you My mind takes up thoughts And everything that we could do Late night take takes if we want it Late night date, date if you want it Late night talk, tip when I talk all night And then deep dig in the ending It's all so good for me and you I probably do I'm not too scary I'm just emotionally In touch with my senses inside, you'll like it But just remember I'm not losing myself this time But I don't think I'm gonna crash Falling for you",
   "lyricsSegments": [
     {

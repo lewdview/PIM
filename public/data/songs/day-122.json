@@ -69,7 +69,7 @@
     {
       "id": 7,
       "time": 9.320388349514563,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -279,7 +279,7 @@
     {
       "id": 37,
       "time": 32.18446601941747,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -349,7 +349,7 @@
     {
       "id": 47,
       "time": 40.77669902912621,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -363,7 +363,7 @@
     {
       "id": 49,
       "time": 42.0873786407767,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -648,8 +648,9 @@
     {
       "id": 87,
       "time": 67.42718446601941,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 2
     },
     {
@@ -658,6 +659,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.51199951171875,
+      "swipeDirection": "up",
       "stage": 2
     },
     {
@@ -838,14 +840,14 @@
     {
       "id": 114,
       "time": 79.9514563106796,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 2
     },
     {
       "id": 115,
       "time": 80.24271844660194,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -866,7 +868,7 @@
     {
       "id": 118,
       "time": 81.26213592233009,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 2
     },
@@ -971,7 +973,7 @@
     {
       "id": 132,
       "time": 88.98058252427184,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -979,7 +981,7 @@
     {
       "id": 133,
       "time": 89.27184466019416,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -995,7 +997,7 @@
     {
       "id": 135,
       "time": 90.29126213592232,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -1003,7 +1005,7 @@
     {
       "id": 136,
       "time": 90.58252427184465,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -1011,7 +1013,7 @@
     {
       "id": 137,
       "time": 90.87378640776699,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -1027,7 +1029,7 @@
     {
       "id": 139,
       "time": 91.45631067961165,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -1035,7 +1037,7 @@
     {
       "id": 140,
       "time": 91.89320388349513,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.51199951171875,
       "stage": 2
@@ -1061,6 +1063,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.544000244140625,
+      "swipeDirection": "left",
       "stage": 2
     },
     {
@@ -1249,7 +1252,7 @@
     {
       "id": 170,
       "time": 105.72815533980582,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -1277,7 +1280,7 @@
     {
       "id": 174,
       "time": 107.18446601941747,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -1305,7 +1308,7 @@
     {
       "id": 178,
       "time": 108.64077669902912,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -1333,7 +1336,7 @@
     {
       "id": 182,
       "time": 110.09708737864077,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -1361,7 +1364,7 @@
     {
       "id": 186,
       "time": 111.84466019417475,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1508,14 +1511,15 @@
     {
       "id": 206,
       "time": 123.20388349514562,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
       "id": 207,
       "time": 123.49514563106796,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -1523,8 +1527,9 @@
     {
       "id": 208,
       "time": 123.93203883495144,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
@@ -1538,14 +1543,15 @@
     {
       "id": 210,
       "time": 124.66019417475728,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
       "id": 211,
       "time": 125.09708737864077,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -1553,8 +1559,9 @@
     {
       "id": 212,
       "time": 125.53398058252426,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
@@ -1568,14 +1575,15 @@
     {
       "id": 214,
       "time": 126.26213592233009,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
       "id": 215,
       "time": 126.84466019417475,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -1583,8 +1591,9 @@
     {
       "id": 216,
       "time": 127.28155339805825,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
@@ -1598,14 +1607,15 @@
     {
       "id": 218,
       "time": 128.00970873786406,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
       "id": 219,
       "time": 128.3009708737864,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -1613,8 +1623,9 @@
     {
       "id": 220,
       "time": 128.59223300970874,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
@@ -1628,14 +1639,15 @@
     {
       "id": 222,
       "time": 129.61165048543688,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
       "id": 223,
       "time": 130.04854368932038,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -1643,8 +1655,9 @@
     {
       "id": 224,
       "time": 130.48543689320388,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
@@ -1658,8 +1671,9 @@
     {
       "id": 226,
       "time": 131.2135922330097,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
@@ -1800,6 +1814,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.49599609375000003,
+      "swipeDirection": "up",
       "stage": 3
     },
     {
@@ -1812,14 +1827,14 @@
     {
       "id": 247,
       "time": 144.17475728155338,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 3
     },
     {
       "id": 248,
       "time": 144.4660194174757,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -2358,7 +2373,7 @@
     {
       "id": 308,
       "time": 172.57281553398056,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -2366,7 +2381,7 @@
     {
       "id": 309,
       "time": 173.00970873786406,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -2494,6 +2509,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.49599609375000003,
+      "swipeDirection": "left",
       "stage": 4
     },
     {
@@ -2760,14 +2776,14 @@
     {
       "id": 361,
       "time": 201.1165048543689,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 4
     },
     {
       "id": 362,
       "time": 201.40776699029124,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -2805,6 +2821,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.55999755859375,
+      "swipeDirection": "right",
       "stage": 4
     },
     {
@@ -2837,7 +2854,7 @@
     {
       "id": 371,
       "time": 208.83495145631068,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.55999755859375,
       "stage": 4
@@ -2983,12 +3000,13 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.48000488281250003,
+      "swipeDirection": "left",
       "stage": 4
     },
     {
       "id": 392,
       "time": 217.8640776699029,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -3016,7 +3034,7 @@
     {
       "id": 396,
       "time": 219.9029126213592,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -3120,14 +3138,14 @@
     {
       "id": 410,
       "time": 231.2621359223301,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 5
     },
     {
       "id": 411,
       "time": 231.84466019417474,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 5
     },
@@ -3148,14 +3166,14 @@
     {
       "id": 414,
       "time": 232.8640776699029,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 5
     },
     {
       "id": 415,
       "time": 233.44660194174756,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 5
     },
@@ -3412,7 +3430,7 @@
     {
       "id": 449,
       "time": 249.4660194174757,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.6239990234375,
       "stage": 5
@@ -3430,6 +3448,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.5439941406250001,
+      "swipeDirection": "up",
       "stage": 5
     },
     {
@@ -3438,6 +3457,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.6400024414062501,
+      "swipeDirection": "up",
       "stage": 5
     },
     {
@@ -3551,12 +3571,13 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.6720214843750001,
+      "swipeDirection": "left",
       "stage": 5
     },
     {
       "id": 468,
       "time": 259.22330097087377,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 5
     },
@@ -3584,7 +3605,7 @@
     {
       "id": 472,
       "time": 260.8252427184466,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 5
     },
@@ -3612,7 +3633,7 @@
     {
       "id": 476,
       "time": 262.13592233009706,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 5
     },
@@ -3698,6 +3719,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.5760009765625,
+      "swipeDirection": "left",
       "stage": 5
     },
     {
@@ -3734,6 +3756,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.48000488281250003,
+      "swipeDirection": "right",
       "stage": 5
     },
     {
@@ -3827,7 +3850,7 @@
     "Alternative",
     "Indie"
   ],
-  "difficultyLevel": 5,
+  "difficultyLevel": 6,
   "lyrics": "I've been searching for me, searching for me, yeah I've been walking down the sideways of the mind inside my own disaster, yeah I don't mean to get it all over you but Sometimes I think I gotta be a little hard Sometimes I think I gotta come through a scar Sometimes I got to be more than just this chair sitting here without an opinion of me I hope you find that positive in it all, oh yeah I hope you find it in it all, baby It's light, it's right, it's right tonight Together and be more than this disaster, disaster Of things that can't be plastered, yeah I can heal, I can be better I can grow, I can evolve, I can change I can not be the brother of the idiot that I am most of the days And I can stop with the drug hoes and riches I can be different, I can be different I can stop with one step, one thing in the mirror And I say that I'm very clear Cause I know it's hard out there It's hard out there Enough that you can get a stamp from all who looks your way If you're not up in that zone And you can't do that alone And I say that I'm just talking to the wall, talking to the wall I've had practice, yeah I've left lies here And I should know the way that this all plays out But I refuse to believe that there's not hope Refuse to believe that it's all dope Refuse to believe that it's just not Refuse to believe that there ain't nowhere that we go after this dream After violence, after the things that put us where our soul wanted to be And we watch that doubt play out like an observer Observe this, observe this like you observe that The things you repeat to yourself everyday is the reason why you swerve that curve that So if you just stop, think before you speak Get a little positive inside the weak You may not be that meek, or maybe you are Cause you inherit the earth Because everybody who craves power is just gone So where you going tonight? Is there some place to make your mind right? Is this running to escape from the decisions that you won't face? Or place? Are you running to your own weight? Thinking all life was just mistakes And then you're gonna see it's gone like that And you didn't even give yourself a fucking break Yourself a fucking hit Yourself a fucking tell you that you're the fucking shit Cause you are, it's legit I'm telling you, you look in the mirror And it's the only one you ever know That you might as well be nice You might as well be cool Cause if you're not, you're just hurting yourself And everyone you come in contact with I'd like to give a shout out To the motherfucking fucking fathers That make their daughters love the way they do Because they never were taught love It's just a reciprocated package, a circle of flows And as I said before, then you should say that I know That I don't blame my parents' parents But I blame my parents' parents' parents For getting fooled by the regime By the money, by the banks For selling out our country like snakes The last mighty angel that fell before you May God wise in curves and tongues And tell you everything you dreamed of But in the end of that It'll be nothing but your own Sacrifice of the time That you could have made it on your own So don't let the serpent Sweep you away from your own Listen, it's here for you today I'm telling you one way or another This will be the end The thing that you used to either uplift or destroy Destroy, destroy So take a second and think what you're gonna do Take a second to think what you're not gonna do Just take one second before you spew All that hate, all that things Make you know you are right Before you spray that into our night Just know that we're listening All the way Not just a little bit, but all the way I'll be sorry The day that you leave before me I'll just shut it down Right now",
   "lyricsSegments": [
     {

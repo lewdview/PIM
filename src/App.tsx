@@ -1,5 +1,5 @@
 import { Route, Switch, useLocation } from 'wouter';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useAuthStore } from './store/useAuthStore';
 import { logAnalyticsEvent } from './services/telemetryService';
 import { useVaultStore } from './store/useVaultStore';
@@ -116,7 +116,7 @@ function GlobalMenuBackground() {
         <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden select-none bg-[#050402]">
           {/* Blurred Background Artwork */}
           <div 
-            className="absolute inset-0 transition-all duration-1000 ease-in-out filter blur-[100px] brightness-[0.25] scale-[1.35] opacity-80"
+            className="absolute inset-0 transition-all duration-1000 ease-in-out filter blur-[10px] brightness-[0.25] scale-[1.35] opacity-80"
             style={{
               backgroundImage: `url(${activeCoverUrl})`,
               backgroundPosition: 'center',
@@ -279,9 +279,15 @@ export default function App() {
     }
   }, [location]);
 
-  // Close the options modal when navigating to a new route
+  // Close the options modal when navigating to a new route (except if redirecting back from /options)
+  const prevLocationRef = useRef(location);
   useEffect(() => {
-    setOptionsModalOpen(false);
+    if (prevLocationRef.current === '/options') {
+      // Just redirected back from options page, keep it open!
+    } else {
+      setOptionsModalOpen(false);
+    }
+    prevLocationRef.current = location;
   }, [location, setOptionsModalOpen]);
 
   // Automatically redirect guests who haven't completed the tutorial to /tutorial

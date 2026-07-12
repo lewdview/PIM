@@ -69,7 +69,7 @@
     {
       "id": 7,
       "time": 9.705882352941178,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -139,7 +139,7 @@
     {
       "id": 17,
       "time": 18.235294117647058,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -237,7 +237,7 @@
     {
       "id": 31,
       "time": 31.323529411764707,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -277,6 +277,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.51199951171875,
+      "swipeDirection": "right",
       "stage": 2
     },
     {
@@ -290,7 +291,7 @@
     {
       "id": 38,
       "time": 38.529411764705884,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -393,14 +394,15 @@
     {
       "id": 52,
       "time": 45.88235294117647,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 2
     },
     {
       "id": 53,
       "time": 46.32352941176471,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -408,8 +410,9 @@
     {
       "id": 54,
       "time": 46.61764705882353,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 1.1040008544921875,
       "stage": 2
     },
     {
@@ -485,14 +488,14 @@
     {
       "id": 65,
       "time": 54.85294117647059,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 2
     },
     {
       "id": 66,
       "time": 55.14705882352941,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -513,7 +516,7 @@
     {
       "id": 69,
       "time": 56.1764705882353,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 2
     },
@@ -559,7 +562,7 @@
     {
       "id": 75,
       "time": 61.61764705882353,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -567,7 +570,7 @@
     {
       "id": 76,
       "time": 61.911764705882355,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5760009765625,
       "stage": 2
@@ -585,6 +588,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.68800048828125,
+      "swipeDirection": "right",
       "stage": 2
     },
     {
@@ -630,6 +634,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.78399658203125,
+      "swipeDirection": "up",
       "stage": 3
     },
     {
@@ -837,14 +842,15 @@
     {
       "id": 109,
       "time": 81.32352941176471,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
       "id": 110,
       "time": 81.61764705882354,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -852,8 +858,9 @@
     {
       "id": 111,
       "time": 81.91176470588236,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
@@ -867,14 +874,15 @@
     {
       "id": 113,
       "time": 82.79411764705883,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
       "id": 114,
       "time": 83.38235294117648,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -882,8 +890,9 @@
     {
       "id": 115,
       "time": 83.82352941176471,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
@@ -897,14 +906,15 @@
     {
       "id": 117,
       "time": 84.70588235294117,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.51199951171875,
       "stage": 3
     },
     {
       "id": 118,
       "time": 85.29411764705883,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -912,8 +922,9 @@
     {
       "id": 119,
       "time": 85.58823529411765,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
@@ -1062,14 +1073,14 @@
     {
       "id": 140,
       "time": 96.76470588235294,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 3
     },
     {
       "id": 141,
       "time": 97.3529411764706,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1090,7 +1101,7 @@
     {
       "id": 144,
       "time": 98.52941176470588,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 3
     },
@@ -1130,6 +1141,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.720001220703125,
+      "swipeDirection": "right",
       "stage": 3
     },
     {
@@ -1155,7 +1167,7 @@
     {
       "id": 152,
       "time": 103.82352941176471,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -1163,7 +1175,7 @@
     {
       "id": 153,
       "time": 104.26470588235294,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -1223,7 +1235,7 @@
     {
       "id": 161,
       "time": 112.94117647058823,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -1248,6 +1260,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.527996826171875,
+      "swipeDirection": "right",
       "stage": 4
     },
     {
@@ -1322,8 +1335,9 @@
     {
       "id": 174,
       "time": 122.3529411764706,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.7679992675781251,
       "stage": 4
     },
     {
@@ -1360,6 +1374,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 1.2320007324218751,
+      "swipeDirection": "right",
       "stage": 4
     },
     {
@@ -1470,6 +1485,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.6559936523437501,
+      "swipeDirection": "right",
       "stage": 5
     },
     {
@@ -1485,7 +1501,7 @@
     {
       "id": 196,
       "time": 137.94117647058823,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1525,7 +1541,7 @@
     {
       "id": 201,
       "time": 141.47058823529412,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 5
     },
@@ -1556,6 +1572,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.7520019531250001,
+      "swipeDirection": "right",
       "stage": 5
     },
     {
@@ -1586,8 +1603,9 @@
     {
       "id": 209,
       "time": 146.76470588235296,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.656005859375,
       "stage": 5
     },
     {
@@ -1610,6 +1628,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 1.039990234375,
+      "swipeDirection": "right",
       "stage": 5
     },
     {
@@ -1696,7 +1715,7 @@
     "Alternative",
     "Indie"
   ],
-  "difficultyLevel": 5,
+  "difficultyLevel": 6,
   "lyrics": "Yeah, through the passages of our life, through the wrongs and rights, um, through the bombs and brads, and the moms and brads, and our Jesuses, and our righteousness, where the fuck do they get us with our innocence, and our diligence, and our diligence, just makes me, oh, not even, not even enough to be packing, liking, walking, and shooting you, not even enough to want to kill, but maybe I should think about it in a different light, that with me you know the fight that gets real, I pack it in, lock it up, and break it down for judgment, never again, with you, I know, it ends, that's everything to us, it ends, yo, it ends, man, it ends, oh, yeah, the fucking darkness hits you right in the dome, yeah, the fucking darkness takes you right back to home, makes you know for what you've been and what you want, makes you know for what you're gonna go, or you're gonna go far away, and run away, and run astray from everything inside your brain, inside your dream, it's just a grave you're just digging up again, seeing skeletons over and over and over, my friend, do you enjoy when the death hits, do you enjoy when you get hits, when the misfits, when the rogues are wrong, are you dark inside, and do you want to grow, everything deserves it, don't you throw it, don't throw me away, throw me away, just throw me away, oh, bleeding from outside in my fucking brain, yeah, outside in my fucking brain, yeah, I could think about what you, think about what you, think about what you did to all of me, and all of me, know that it is for all of you, and everything, I say it again, before",
   "lyricsSegments": [
     {

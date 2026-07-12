@@ -265,7 +265,7 @@
     {
       "id": 35,
       "time": 28.375,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -286,7 +286,7 @@
     {
       "id": 38,
       "time": 30,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -370,6 +370,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.608001708984375,
+      "swipeDirection": "up",
       "stage": 2
     },
     {
@@ -382,7 +383,7 @@
     {
       "id": 51,
       "time": 45.125,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 2
     },
@@ -413,6 +414,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 1.0079986572265625,
+      "swipeDirection": "up",
       "stage": 2
     },
     {
@@ -428,7 +430,7 @@
     {
       "id": 57,
       "time": 51.625,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -453,6 +455,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.49599914550781254,
+      "swipeDirection": "left",
       "stage": 2
     },
     {
@@ -517,6 +520,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.720001220703125,
+      "swipeDirection": "up",
       "stage": 2
     },
     {
@@ -558,7 +562,7 @@
     {
       "id": 75,
       "time": 63.875,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -626,14 +630,15 @@
     {
       "id": 84,
       "time": 69.125,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 2
     },
     {
       "id": 85,
       "time": 69.625,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -641,8 +646,9 @@
     {
       "id": 86,
       "time": 70,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 2
     },
     {
@@ -656,14 +662,15 @@
     {
       "id": 88,
       "time": 70.75,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 2
     },
     {
       "id": 89,
       "time": 71.125,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -671,8 +678,9 @@
     {
       "id": 90,
       "time": 71.5,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 2
     },
     {
@@ -686,14 +694,15 @@
     {
       "id": 92,
       "time": 72.25,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 2
     },
     {
       "id": 93,
       "time": 72.625,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -701,8 +710,9 @@
     {
       "id": 94,
       "time": 73.25,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.672003173828125,
       "stage": 3
     },
     {
@@ -741,6 +751,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 1.3280029296875,
+      "swipeDirection": "up",
       "stage": 3
     },
     {
@@ -753,7 +764,7 @@
     {
       "id": 101,
       "time": 83.375,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -761,7 +772,7 @@
     {
       "id": 102,
       "time": 83.75,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -777,7 +788,7 @@
     {
       "id": 104,
       "time": 84.75,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.6239990234375,
       "stage": 3
@@ -823,7 +834,7 @@
     {
       "id": 110,
       "time": 88.5,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -989,14 +1000,15 @@
     {
       "id": 132,
       "time": 100.25,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
       "id": 133,
       "time": 100.625,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -1004,8 +1016,9 @@
     {
       "id": 134,
       "time": 101,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
@@ -1137,6 +1150,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.8640014648437501,
+      "swipeDirection": "left",
       "stage": 3
     },
     {
@@ -1149,14 +1163,14 @@
     {
       "id": 154,
       "time": 112.125,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 3
     },
     {
       "id": 155,
       "time": 112.375,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1207,12 +1221,13 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.8640014648437501,
+      "swipeDirection": "up",
       "stage": 4
     },
     {
       "id": 162,
       "time": 124.125,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -1230,6 +1245,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.73599853515625,
+      "swipeDirection": "left",
       "stage": 4
     },
     {
@@ -1260,14 +1276,15 @@
     {
       "id": 168,
       "time": 129,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 4
     },
     {
       "id": 169,
       "time": 129.375,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -1275,8 +1292,9 @@
     {
       "id": 170,
       "time": 129.875,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 4
     },
     {
@@ -1290,14 +1308,15 @@
     {
       "id": 172,
       "time": 130.5,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 4
     },
     {
       "id": 173,
       "time": 131.125,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 1.2800048828125001,
       "stage": 4
@@ -1364,6 +1383,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.5760009765625,
+      "swipeDirection": "left",
       "stage": 4
     },
     {
@@ -1418,6 +1438,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.5760009765625,
+      "swipeDirection": "up",
       "stage": 4
     },
     {
@@ -1433,6 +1454,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 1.4080078125000002,
+      "swipeDirection": "up",
       "stage": 4
     },
     {
@@ -1512,7 +1534,7 @@
     {
       "id": 201,
       "time": 151.625,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 5
     },
@@ -1559,6 +1581,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.6719970703125,
+      "swipeDirection": "left",
       "stage": 5
     },
     {
@@ -1625,7 +1648,7 @@
     {
       "id": 215,
       "time": 161.25,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.6719970703125,
       "stage": 5
@@ -1868,7 +1891,7 @@
     "Alternative",
     "Indie"
   ],
-  "difficultyLevel": 5,
+  "difficultyLevel": 6,
   "lyrics": "It's complicated, when the night hits the light It's complicated, when you get out for the night Under your own strife I know it's hard to look at yourself in the positive Because the day after day after day, you said mostly negative One day, you'll see it that way Until then, you're just complicating this whole thing Your own inner light, just dimming Can't see your own beauty I know it gets complicated I know it gets complicated To think that you're your own worst enemy To think that you're your own downfall Eventually, you'll stop it here Be thankful for it all Complicated complications of me Complicated complications of you Complicated baggage you Complicated hand of you Complicated where we coming from Man, we've been here for Yeah, almost four decades in the case And now, we cannot seem to Erase from the past the things that made us Just a shattered thing on the ground But I'm telling you, we can rise above it all Rise above it all We can rise above this Complicated complications ain't that complicated Complicated when you're kind Complicated when you're divine When you're fine like your boss Now I'm putting names out there, no deeming I'm just telling you You're bound to see it this way eventually You're bound to see it this way eventually And you'll wonder why it took so long To see the beauty in me",
   "lyricsSegments": [
     {

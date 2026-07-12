@@ -29,7 +29,7 @@ export interface GameBackground {
 }
 
 export const GAME_BACKGROUNDS: GameBackground[] = [
-  { id: 'cover_blur', name: 'Default Blur', desc: 'Ambient cover art blurring', unlockText: 'Unlocked', unlockScore: 0 },
+  { id: 'cover_blur', name: 'Song Artwork', desc: 'Ambient cover art blurring', unlockText: 'Unlocked', unlockScore: 0 },
   { id: 'neon_grid', name: 'Neon Grid', desc: 'Synthwave neon network grid', unlockText: 'Requires 1,000 Echo Score', unlockScore: 1000 },
   { id: 'cyber_streets', name: 'Matrix Cyber', desc: 'Green binary rain frequency', unlockText: 'Requires 5,000 Echo Score', unlockScore: 5000 },
   { id: 'space_nebula', name: 'Void Space', desc: 'Moving nebula & stardust', unlockText: 'Requires 10,000 Echo Score', unlockScore: 10000 },
@@ -70,7 +70,7 @@ export const DEFAULT_OPTS: GameOpts = {
   bgMusic: false,
   gameBackground: "cover_blur",
   gameTrack: "classic",
-  backgroundBlur: 18,
+  backgroundBlur: 10,
   cardBack: "classic",
   haptics: true,
   noteTheme: "classic",
@@ -116,7 +116,7 @@ export function loadOpts(): GameOpts {
     bgMusic: dbSettings?.bgMusic ?? bool("opt_bgMusic", false),
     gameBackground: dbSettings?.gameBackground ?? (localStorage.getItem("opt_gameBackground") ?? "cover_blur"),
     gameTrack: dbSettings?.gameTrack ?? (localStorage.getItem("opt_gameTrack") ?? "classic"),
-    backgroundBlur: dbSettings?.backgroundBlur ?? (parseFloat(localStorage.getItem("opt_backgroundBlur") ?? "18") || 18),
+    backgroundBlur: dbSettings?.backgroundBlur ?? (parseFloat(localStorage.getItem("opt_backgroundBlur") ?? "10") || 10),
     cardBack: dbSettings?.cardBack ?? (localStorage.getItem("opt_cardBack") ?? "classic"),
     haptics: dbSettings?.haptics ?? bool("opt_haptics", true),
     noteTheme: dbSettings?.noteTheme ?? (localStorage.getItem("opt_noteTheme") ?? "classic"),

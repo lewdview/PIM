@@ -41,7 +41,7 @@
     {
       "id": 3,
       "time": 5.955882352941177,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -244,7 +244,7 @@
     {
       "id": 32,
       "time": 39.26470588235294,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5279998779296875,
       "stage": 2
@@ -263,12 +263,13 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.4800018310546875,
+      "swipeDirection": "right",
       "stage": 2
     },
     {
       "id": 35,
       "time": 43.89705882352941,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -471,42 +472,47 @@
     {
       "id": 62,
       "time": 60.44117647058823,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 2
     },
     {
       "id": 63,
       "time": 60.88235294117647,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 2
     },
     {
       "id": 64,
       "time": 61.54411764705882,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 2
     },
     {
       "id": 65,
       "time": 62.205882352941174,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 2
     },
     {
       "id": 66,
       "time": 62.64705882352941,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 2
     },
     {
       "id": 67,
       "time": 63.088235294117645,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -522,7 +528,7 @@
     {
       "id": 69,
       "time": 63.970588235294116,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.7040008544921875,
       "stage": 2
@@ -723,6 +729,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.544000244140625,
+      "swipeDirection": "up",
       "stage": 3
     },
     {
@@ -742,14 +749,14 @@
     {
       "id": 100,
       "time": 82.5,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 3
     },
     {
       "id": 101,
       "time": 82.72058823529412,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -770,7 +777,7 @@
     {
       "id": 104,
       "time": 83.60294117647058,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 3
     },
@@ -873,6 +880,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.608001708984375,
+      "swipeDirection": "left",
       "stage": 3
     },
     {
@@ -912,7 +920,7 @@
     {
       "id": 123,
       "time": 91.32352941176471,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -1063,6 +1071,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.49599609375000003,
+      "swipeDirection": "up",
       "stage": 3
     },
     {
@@ -1323,12 +1332,13 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.55999755859375,
+      "swipeDirection": "left",
       "stage": 3
     },
     {
       "id": 181,
       "time": 109.85294117647058,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1359,6 +1369,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.6079956054687501,
+      "swipeDirection": "right",
       "stage": 3
     },
     {
@@ -1382,6 +1393,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.5760009765625,
+      "swipeDirection": "right",
       "stage": 3
     },
     {
@@ -1442,6 +1454,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.73599853515625,
+      "swipeDirection": "right",
       "stage": 3
     },
     {
@@ -1546,7 +1559,7 @@
     {
       "id": 210,
       "time": 125.95588235294117,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -1554,7 +1567,7 @@
     {
       "id": 211,
       "time": 126.3970588235294,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -1570,7 +1583,7 @@
     {
       "id": 213,
       "time": 127.27941176470588,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -1615,7 +1628,7 @@
     {
       "id": 219,
       "time": 134.55882352941177,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -1640,6 +1653,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.59200439453125,
+      "swipeDirection": "right",
       "stage": 4
     },
     {
@@ -1700,14 +1714,14 @@
     {
       "id": 230,
       "time": 141.61764705882354,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 4
     },
     {
       "id": 231,
       "time": 141.83823529411765,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -1927,6 +1941,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.51199951171875,
+      "swipeDirection": "left",
       "stage": 5
     },
     {
@@ -1947,7 +1962,7 @@
     {
       "id": 263,
       "time": 165,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 5
     },
@@ -1971,6 +1986,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.5439941406250001,
+      "swipeDirection": "right",
       "stage": 5
     },
     {
@@ -2066,7 +2082,7 @@
     {
       "id": 279,
       "time": 174.26470588235293,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 5
     },
@@ -2105,7 +2121,7 @@
     {
       "id": 284,
       "time": 180.22058823529412,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.6400024414062501,
       "stage": 5
@@ -2209,7 +2225,7 @@
     "Ballad",
     "Ambient"
   ],
-  "difficultyLevel": 5,
+  "difficultyLevel": 6,
   "lyrics": "It's always been you Don't know why we have to tell these lies I've been thinking about you always on my mind Every time I have time, sit down, unwind Tell myself the same lie It was you who left, broke the trust Now the empire we build on dust It's all used up, gonna bust up in smoke Even if our kinfolk talk shit on the low-low That we was loco Me, I'm more one of a kind Like a bomb, destroy every part of my mind On my mind You're always on my mind You're always on my mind I can still recall what life was like before the call to end it all I was ten foot, bulletproof, too big to fall Then your words cut me deep Made me this small, put everything in a stall I was shell-shocked, soul-blocked, mind-rocked Everything I did was half-cocked Thought everyone would judge me Never trust me, try to corrupt me You're always on my mind Every day I try to find what you took away I wear a face like I'm moving on That it doesn't bring me down But it's all a ruse I just refuse to believe That blues, I bet it all on you Hard to swallow when you lose the ones you couldn't live without I stop screaming, shout about the things no one knows anything about I wish that we never would've met And this is how things come about I used to think I was on your mind every time I used to think you were here next to me Like it was divine But then you took away the thing that was mine That you said was mine I'm sorry you can't see clearly That you're here next to me In the same time frame, the same time place And you're just demonically ending the human race You're never on my mind Now I never think about you You're never on my mind Fuck what you did, never think about you You're never on my mind In my words, you're tearing my disk You're lost in the dark of all that you wanted from me You're never, always, always, never, never, always clear You're never, ever, on my mind If I say the right thing Anyone's mine now Seem to take it light Seem to take a latch instead of a frame There's no fight, no war, it's just you and me You're always on my mind You're always on my mind You're never on my mind Thinkin' about what I'd give up You're always, never, never, never again On anyone's mind",
   "lyricsSegments": [
     {

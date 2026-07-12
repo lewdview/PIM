@@ -132,7 +132,7 @@
     {
       "id": 16,
       "time": 16.285714285714285,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -202,7 +202,7 @@
     {
       "id": 26,
       "time": 26.428571428571427,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 1
     },
@@ -298,7 +298,7 @@
     {
       "id": 39,
       "time": 39.857142857142854,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -315,6 +315,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.8480010986328126,
+      "swipeDirection": "up",
       "stage": 2
     },
     {
@@ -341,6 +342,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.8959991455078126,
+      "swipeDirection": "up",
       "stage": 2
     },
     {
@@ -423,7 +425,7 @@
     {
       "id": 55,
       "time": 58.285714285714285,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -431,7 +433,7 @@
     {
       "id": 56,
       "time": 58.57142857142857,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.9279998779296875,
       "stage": 2
@@ -473,12 +475,13 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.99200439453125,
+      "swipeDirection": "right",
       "stage": 3
     },
     {
       "id": 62,
       "time": 68.42857142857143,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -529,8 +532,9 @@
     {
       "id": 69,
       "time": 73.42857142857143,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
@@ -539,6 +543,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.51199951171875,
+      "swipeDirection": "right",
       "stage": 3
     },
     {
@@ -577,6 +582,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.608001708984375,
+      "swipeDirection": "up",
       "stage": 3
     },
     {
@@ -615,7 +621,7 @@
     {
       "id": 80,
       "time": 87.42857142857143,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.608001708984375,
       "stage": 3
@@ -661,7 +667,7 @@
     {
       "id": 86,
       "time": 93,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -721,6 +727,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.5919982910156251,
+      "swipeDirection": "right",
       "stage": 4
     },
     {
@@ -750,6 +757,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.55999755859375,
+      "swipeDirection": "left",
       "stage": 4
     },
     {
@@ -790,7 +798,7 @@
     {
       "id": 102,
       "time": 110.14285714285714,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -798,7 +806,7 @@
     {
       "id": 103,
       "time": 110.57142857142857,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 1.3440002441406251,
       "stage": 4
@@ -824,6 +832,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 1.3280029296875,
+      "swipeDirection": "right",
       "stage": 4
     },
     {
@@ -845,7 +854,7 @@
     {
       "id": 109,
       "time": 117.28571428571428,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -1114,7 +1123,7 @@
     "Alternative",
     "Indie"
   ],
-  "difficultyLevel": 3,
+  "difficultyLevel": 4,
   "lyrics": "I've had you a million times, baby, and still want more Your eyes penetrate me like a dream My blood wishes for dreams of you and your touch I'm overzealous in pursuit, and I know it's way too much, but I'm here Yeah, I'm here, right here, right here What do you think will get us on track? Have I done too much to ever get you back? Wash my foul ways till I'm cast away Suffocate my wants to make my feelings go straight As it goes straight as it comes Too long, so long, so long Baby, I know, baby, I wish Oh, let me try, baby, tonight's the time tonight Oh, let me in tonight, oh, let me in tonight Oh, let me in tonight, just turn around and go Go the way you just told me, go the way Go the way you just told me, go the way",
   "lyricsSegments": [
     {

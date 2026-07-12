@@ -55,7 +55,7 @@
     {
       "id": 5,
       "time": 7.307692307692308,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -104,7 +104,7 @@
     {
       "id": 12,
       "time": 14.807692307692308,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -237,7 +237,7 @@
     {
       "id": 31,
       "time": 35.38461538461539,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -251,14 +251,14 @@
     {
       "id": 33,
       "time": 36.34615384615385,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 2
     },
     {
       "id": 34,
       "time": 36.73076923076923,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -282,6 +282,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.544000244140625,
+      "swipeDirection": "right",
       "stage": 2
     },
     {
@@ -314,7 +315,7 @@
     {
       "id": 41,
       "time": 42.88461538461539,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -322,7 +323,7 @@
     {
       "id": 42,
       "time": 43.269230769230774,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -330,7 +331,7 @@
     {
       "id": 43,
       "time": 43.84615384615385,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -338,7 +339,7 @@
     {
       "id": 44,
       "time": 44.61538461538462,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -346,7 +347,7 @@
     {
       "id": 45,
       "time": 45.19230769230769,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 1.1360015869140625,
       "stage": 2
@@ -484,6 +485,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.544000244140625,
+      "swipeDirection": "left",
       "stage": 2
     },
     {
@@ -504,7 +506,7 @@
     {
       "id": 67,
       "time": 58.84615384615385,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -525,7 +527,7 @@
     {
       "id": 70,
       "time": 60.19230769230769,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -576,14 +578,15 @@
     {
       "id": 77,
       "time": 67.6923076923077,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
       "id": 78,
       "time": 67.88461538461539,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -591,8 +594,9 @@
     {
       "id": 79,
       "time": 68.46153846153847,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
@@ -606,14 +610,15 @@
     {
       "id": 81,
       "time": 69.03846153846155,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5760009765625,
       "stage": 3
     },
     {
       "id": 82,
       "time": 69.61538461538461,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -621,8 +626,9 @@
     {
       "id": 83,
       "time": 70,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
@@ -636,14 +642,15 @@
     {
       "id": 85,
       "time": 70.96153846153847,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
       "id": 86,
       "time": 71.53846153846155,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -651,8 +658,9 @@
     {
       "id": 87,
       "time": 71.73076923076924,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
@@ -666,8 +674,9 @@
     {
       "id": 89,
       "time": 72.5,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
@@ -750,6 +759,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 1.04000244140625,
+      "swipeDirection": "up",
       "stage": 3
     },
     {
@@ -762,7 +772,7 @@
     {
       "id": 102,
       "time": 82.88461538461539,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 3
     },
@@ -926,7 +936,7 @@
     {
       "id": 123,
       "time": 92.5,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -934,7 +944,7 @@
     {
       "id": 124,
       "time": 92.88461538461539,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -950,7 +960,7 @@
     {
       "id": 126,
       "time": 94.03846153846155,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -958,7 +968,7 @@
     {
       "id": 127,
       "time": 94.61538461538463,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -966,7 +976,7 @@
     {
       "id": 128,
       "time": 95.1923076923077,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -1153,7 +1163,7 @@
     {
       "id": 154,
       "time": 112.88461538461539,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -1233,14 +1243,15 @@
     {
       "id": 165,
       "time": 119.42307692307693,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 4
     },
     {
       "id": 166,
       "time": 120,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -1248,8 +1259,9 @@
     {
       "id": 167,
       "time": 120.1923076923077,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 4
     },
     {
@@ -1263,14 +1275,15 @@
     {
       "id": 169,
       "time": 120.76923076923077,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 4
     },
     {
       "id": 170,
       "time": 121.15384615384616,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -1278,8 +1291,9 @@
     {
       "id": 171,
       "time": 121.34615384615385,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 4
     },
     {
@@ -1293,14 +1307,15 @@
     {
       "id": 173,
       "time": 121.92307692307693,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 4
     },
     {
       "id": 174,
       "time": 122.30769230769232,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -1308,8 +1323,9 @@
     {
       "id": 175,
       "time": 122.6923076923077,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 4
     },
     {
@@ -1531,6 +1547,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.52799072265625,
+      "swipeDirection": "left",
       "stage": 5
     },
     {
@@ -1556,7 +1573,7 @@
     {
       "id": 208,
       "time": 140.1923076923077,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1564,7 +1581,7 @@
     {
       "id": 209,
       "time": 140.76923076923077,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1580,7 +1597,7 @@
     {
       "id": 211,
       "time": 141.92307692307693,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1588,7 +1605,7 @@
     {
       "id": 212,
       "time": 142.30769230769232,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1596,7 +1613,7 @@
     {
       "id": 213,
       "time": 142.8846153846154,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1612,7 +1629,7 @@
     {
       "id": 215,
       "time": 143.46153846153848,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1620,7 +1637,7 @@
     {
       "id": 216,
       "time": 143.84615384615387,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.8800048828125,
       "stage": 5
@@ -1667,6 +1684,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.6239990234375,
+      "swipeDirection": "left",
       "stage": 5
     }
   ],
@@ -1717,7 +1735,7 @@
     "Ballad",
     "Ambient"
   ],
-  "difficultyLevel": 4,
+  "difficultyLevel": 5,
   "lyrics": "When you feel at night, it's right When you feel the time is right, hey I'd like to welcome you home To the house of hope Night, night, coming right Each time it makes you wanna Fight yourself and fight the light And fight the things you know is right You think you're lost by the judgment of the judges And you can't see the end, nah Come on to the house Come on to the house of hope and be you Be you, I said, come on down Come on down to the house of hope and be you There's not a soul around that doesn't know that it's been hard That doesn't know you fought so hard That doesn't know it took so much to even get this far In the house of hope we know That you are much more than you show It'll be okay, here come and shut the door behind you now Watch out, the sun higher now Come on down, baby Come on down to the house of hope You don't know what you're missing out on till you find it Till you grind it Till you work hard to make yourself know it Hope is the thing you need Hope is the thing we need Yeah, it makes our dreams what they are It makes our land what they are It makes our nights what they are It's what we are inside, just hope Come on down, you know what I'm saying To the house of hope Come on down, come on down to the house of hope The pop hope Hope is everywhere if you wanna do it Teach it to your neighbor, to your sibling, to your friend Come around the bend, past the end All the things that you can't have control over Tough on you, I'm sitting here waiting on you In the house of hope And that's a nice song",
   "lyricsSegments": [
     {

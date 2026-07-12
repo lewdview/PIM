@@ -4,12 +4,14 @@ import { getTotalScore, getTotalPlatinums, getTotalCleared } from "@/game/progre
 import { loadOpts, keyLabel } from "@/lib/options";
 import { audioManager } from "@/game/audio";
 import { logAnalyticsEvent } from "@/services/telemetryService";
+import { useVaultStore } from "@/store/useVaultStore";
 
 let hasPlayedIntroThisSession = false;
 let sessionIntroType: 'classic' | 'avant-garde' | null = null;
 
 export default function Home() {
   const [, setLocation] = useLocation();
+  const setOptionsModalOpen = useVaultStore((s) => s.setOptionsModalOpen);
   const [blink, setBlink] = useState(true);
   const [stats, setStats] = useState({ score: 0, platinums: 0, cleared: 0 });
   const liveOpts = loadOpts();
@@ -750,7 +752,7 @@ export default function Home() {
               </button>
 
               <button
-                onClick={() => navigate('/options')}
+                onClick={() => { audioManager.playSfx('tap_nav', 0.1); setOptionsModalOpen(true); }}
                 className="neon-btn-outline flex-1 py-3 text-[10px] tracking-[0.3em] uppercase">
                 ⚙ CORE
               </button>
@@ -886,7 +888,13 @@ export default function Home() {
                 ].map((item) => (
                   <button
                     key={item.path}
-                    onClick={() => navigate(item.path)}
+                    onClick={() => {
+                      if (item.path === '/options') {
+                        setOptionsModalOpen(true);
+                      } else {
+                        navigate(item.path);
+                      }
+                    }}
                     onMouseEnter={() => {
                       try {
                         audioManager.playSfx('tap_nav', 0.12);

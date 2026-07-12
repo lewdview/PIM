@@ -48,7 +48,7 @@
     {
       "id": 4,
       "time": 7.361111111111112,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -230,14 +230,14 @@
     {
       "id": 30,
       "time": 32.083333333333336,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
     {
       "id": 31,
       "time": 32.63888888888889,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -253,7 +253,7 @@
     {
       "id": 33,
       "time": 37.22222222222222,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -355,8 +355,9 @@
     {
       "id": 47,
       "time": 45.97222222222222,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 2
     },
     {
@@ -387,6 +388,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 1.0240020751953125,
+      "swipeDirection": "right",
       "stage": 2
     },
     {
@@ -441,7 +443,7 @@
     {
       "id": 59,
       "time": 55.55555555555556,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -449,7 +451,7 @@
     {
       "id": 60,
       "time": 55.97222222222222,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -497,12 +499,13 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.6239990234375,
+      "swipeDirection": "left",
       "stage": 2
     },
     {
       "id": 67,
       "time": 60.97222222222222,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -592,6 +595,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.608001708984375,
+      "swipeDirection": "left",
       "stage": 3
     },
     {
@@ -670,7 +674,7 @@
     {
       "id": 88,
       "time": 86.11111111111111,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -731,12 +735,13 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.7199951171875001,
+      "swipeDirection": "left",
       "stage": 3
     },
     {
       "id": 97,
       "time": 92.08333333333334,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -764,7 +769,7 @@
     {
       "id": 101,
       "time": 93.75,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -804,14 +809,15 @@
     {
       "id": 106,
       "time": 99.72222222222223,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
       "id": 107,
       "time": 100.1388888888889,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.7039978027343751,
       "stage": 3
@@ -887,6 +893,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.624005126953125,
+      "swipeDirection": "right",
       "stage": 4
     },
     {
@@ -941,7 +948,7 @@
     {
       "id": 124,
       "time": 117.36111111111111,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.6719970703125,
       "stage": 4
@@ -1068,7 +1075,7 @@
     {
       "id": 141,
       "time": 126.3888888888889,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -1147,6 +1154,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.48000488281250003,
+      "swipeDirection": "up",
       "stage": 5
     },
     {
@@ -1186,7 +1194,7 @@
     {
       "id": 156,
       "time": 141.11111111111111,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.55999755859375,
       "stage": 5
@@ -1204,6 +1212,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 1.3920043945312501,
+      "swipeDirection": "left",
       "stage": 5
     },
     {
@@ -1267,7 +1276,7 @@
     {
       "id": 167,
       "time": 149.02777777777777,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 5
     },
@@ -1456,7 +1465,7 @@
     "Alternative",
     "Indie"
   ],
-  "difficultyLevel": 4,
+  "difficultyLevel": 5,
   "lyrics": "Grindin', grindin', baby, grindin' all the night Can you fight it or are we high? Yeah, it's the desires Are you dark? Are you light? Are you the thing in the night That makes us afraid of the love spark of differences? Are you handling this the way your apostate says? I'm high up, I'm high up Don't take me down, don't take me down I'm high up, I'm high up Tonight, don't take me down to the low Disagreement, the Elma cement Always cement in this spectacular fall Oh, hot baby, you're the dark there beside me I light up your night and all your short stories Are you higher tonight? Are you fire in my night? Heights, it's a high train High up, I'm just high up Don't bring me down Yeah, I'm high up, I can't find another When you come back down, I'm never coming down again I'm sorry you think it's the end Stop telling the darkness and stop telling the night And stop telling your night it's just fear it, fear it Oh, oh, oh, oh, oh You just hear it, you feel it Come Santa, make you remember what it's all for Oh no, he said four Watch out, the balls are coming The balls are coming",
   "lyricsSegments": [
     {

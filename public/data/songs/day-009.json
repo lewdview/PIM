@@ -370,7 +370,7 @@
     {
       "id": 50,
       "time": 59.583333333333336,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -1482,14 +1482,15 @@
     {
       "id": 198,
       "time": 167.70833333333334,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
       "id": 199,
       "time": 168.125,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -2502,7 +2503,7 @@
     {
       "id": 332,
       "time": 272.08333333333337,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5

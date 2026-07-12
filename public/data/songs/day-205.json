@@ -69,7 +69,7 @@
     {
       "id": 7,
       "time": 11.443298969072165,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -125,7 +125,7 @@
     {
       "id": 15,
       "time": 19.79381443298969,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -139,21 +139,21 @@
     {
       "id": 17,
       "time": 21.494845360824744,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
     {
       "id": 18,
       "time": 22.11340206185567,
-      "lane": 0,
+      "lane": 2,
       "type": "tap",
       "stage": 1
     },
     {
       "id": 19,
       "time": 23.195876288659793,
-      "lane": 2,
+      "lane": 1,
       "type": "tap",
       "stage": 1
     },
@@ -351,12 +351,13 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.7199981689453125,
+      "swipeDirection": "right",
       "stage": 2
     },
     {
       "id": 47,
       "time": 58.91752577319588,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -384,7 +385,7 @@
     {
       "id": 51,
       "time": 60.61855670103093,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -471,6 +472,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.6400024414062501,
+      "swipeDirection": "right",
       "stage": 2
     },
     {
@@ -501,14 +503,15 @@
     {
       "id": 67,
       "time": 70.51546391752578,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 2
     },
     {
       "id": 68,
       "time": 70.82474226804123,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -516,8 +519,9 @@
     {
       "id": 69,
       "time": 71.28865979381443,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 2
     },
     {
@@ -531,14 +535,15 @@
     {
       "id": 71,
       "time": 72.37113402061856,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 2
     },
     {
       "id": 72,
       "time": 72.68041237113403,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.51199951171875,
       "stage": 2
@@ -662,6 +667,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.5919982910156251,
+      "swipeDirection": "up",
       "stage": 2
     },
     {
@@ -696,7 +702,7 @@
     {
       "id": 94,
       "time": 86.90721649484536,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.6400024414062501,
       "stage": 2
@@ -714,6 +720,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.608001708984375,
+      "swipeDirection": "right",
       "stage": 2
     },
     {
@@ -860,6 +867,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.8640014648437501,
+      "swipeDirection": "up",
       "stage": 3
     },
     {
@@ -1525,6 +1533,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 1.44000244140625,
+      "swipeDirection": "right",
       "stage": 4
     },
     {
@@ -1540,7 +1549,7 @@
     {
       "id": 206,
       "time": 157.42268041237114,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -1548,7 +1557,7 @@
     {
       "id": 207,
       "time": 157.7319587628866,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.7520019531250001,
       "stage": 4
@@ -1729,6 +1738,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.5280029296875001,
+      "swipeDirection": "right",
       "stage": 4
     },
     {
@@ -1786,12 +1796,13 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 1.247998046875,
+      "swipeDirection": "right",
       "stage": 4
     },
     {
       "id": 241,
       "time": 173.81443298969072,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -1928,6 +1939,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.8640014648437501,
+      "swipeDirection": "right",
       "stage": 5
     },
     {
@@ -2077,6 +2089,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.51199951171875,
+      "swipeDirection": "left",
       "stage": 5
     },
     {
@@ -2159,6 +2172,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.52799072265625,
+      "swipeDirection": "up",
       "stage": 5
     },
     {
@@ -2174,6 +2188,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 1.21600341796875,
+      "swipeDirection": "left",
       "stage": 5
     },
     {
@@ -2227,7 +2242,7 @@
     {
       "id": 297,
       "time": 215.10309278350516,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -2235,7 +2250,7 @@
     {
       "id": 298,
       "time": 215.56701030927834,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -2251,7 +2266,7 @@
     {
       "id": 300,
       "time": 216.340206185567,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -2259,7 +2274,7 @@
     {
       "id": 301,
       "time": 216.95876288659795,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 1.04000244140625,
       "stage": 5
@@ -2397,7 +2412,7 @@
     "Alternative",
     "Indie"
   ],
-  "difficultyLevel": 5,
+  "difficultyLevel": 6,
   "lyrics": "The truth in your lies Where you're coming from, what you're trying to hide Where you're coming from, what you're trying to hide The truth in your lies Time to find out In your lies, truth In your lies, truth The truth in your lies, lies within you Lies, the truth of all you do The truth in your lies, lies within you We have the truth of all you do Undercutting different levels, different moments that you swore on us But you lied to get out the comatic retribution coming over you So don't bow to the pressure, the hate to feel Come and relate, empathy's the deal If you stay close to you And don't lie your truth away in the night The truth in your lies Ace of hearts The truth lies within your lies, lies within you The truth lies within your lies, lies within you The truth lies within you In the night you fight Everything you thought was positive was the best But then you come back around and don't even try to Heal the seal, the feel of your momentary come up Are you for real? Yeah Lies are the truth, the truth in your lies I'll see you on the other side Just don't bring that disguise that hides That curates your existence Try to break above that God is in your truth What lies within you? Lies within you All blue that lies within you",
   "lyricsSegments": [
     {

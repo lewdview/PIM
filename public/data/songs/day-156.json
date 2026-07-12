@@ -48,7 +48,7 @@
     {
       "id": 4,
       "time": 12.761194029850747,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -163,6 +163,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.608001708984375,
+      "swipeDirection": "left",
       "stage": 2
     },
     {
@@ -175,14 +176,14 @@
     {
       "id": 22,
       "time": 39.40298507462687,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 2
     },
     {
       "id": 23,
       "time": 39.85074626865672,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -227,7 +228,7 @@
     {
       "id": 29,
       "time": 45.67164179104478,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -235,7 +236,7 @@
     {
       "id": 30,
       "time": 46.11940298507463,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -253,6 +254,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.5279998779296875,
+      "swipeDirection": "right",
       "stage": 2
     },
     {
@@ -426,7 +428,7 @@
     {
       "id": 57,
       "time": 60.67164179104478,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -440,7 +442,7 @@
     {
       "id": 59,
       "time": 61.56716417910448,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -629,14 +631,15 @@
     {
       "id": 82,
       "time": 73.2089552238806,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
       "id": 83,
       "time": 73.65671641791045,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -644,8 +647,9 @@
     {
       "id": 84,
       "time": 74.1044776119403,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
@@ -659,14 +663,15 @@
     {
       "id": 86,
       "time": 74.55223880597015,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
       "id": 87,
       "time": 74.77611940298507,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -674,8 +679,9 @@
     {
       "id": 88,
       "time": 75.22388059701493,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
@@ -689,14 +695,15 @@
     {
       "id": 90,
       "time": 76.11940298507463,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
       "id": 91,
       "time": 76.56716417910448,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -704,8 +711,9 @@
     {
       "id": 92,
       "time": 77.01492537313433,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
@@ -719,14 +727,15 @@
     {
       "id": 94,
       "time": 77.68656716417911,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
       "id": 95,
       "time": 77.91044776119404,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -734,8 +743,9 @@
     {
       "id": 96,
       "time": 78.13432835820896,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
@@ -749,14 +759,15 @@
     {
       "id": 98,
       "time": 78.58208955223881,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
       "id": 99,
       "time": 78.80597014925374,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -764,8 +775,9 @@
     {
       "id": 100,
       "time": 79.25373134328359,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
@@ -870,6 +882,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.55999755859375,
+      "swipeDirection": "right",
       "stage": 3
     },
     {
@@ -913,6 +926,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.6239990234375,
+      "swipeDirection": "right",
       "stage": 3
     },
     {
@@ -925,7 +939,7 @@
     {
       "id": 122,
       "time": 90,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -933,7 +947,7 @@
     {
       "id": 123,
       "time": 90.22388059701493,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -949,7 +963,7 @@
     {
       "id": 125,
       "time": 90.67164179104478,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -957,7 +971,7 @@
     {
       "id": 126,
       "time": 90.8955223880597,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -965,7 +979,7 @@
     {
       "id": 127,
       "time": 91.34328358208955,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -981,7 +995,7 @@
     {
       "id": 129,
       "time": 92.23880597014926,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -989,7 +1003,7 @@
     {
       "id": 130,
       "time": 92.46268656716418,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -997,7 +1011,7 @@
     {
       "id": 131,
       "time": 92.68656716417911,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -1212,7 +1226,7 @@
     {
       "id": 161,
       "time": 107.01492537313433,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -1240,7 +1254,7 @@
     {
       "id": 165,
       "time": 108.13432835820896,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -1528,7 +1542,7 @@
     {
       "id": 203,
       "time": 128.28358208955225,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1536,7 +1550,7 @@
     {
       "id": 204,
       "time": 128.7313432835821,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1552,7 +1566,7 @@
     {
       "id": 206,
       "time": 129.6268656716418,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1560,7 +1574,7 @@
     {
       "id": 207,
       "time": 130.07462686567163,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1568,7 +1582,7 @@
     {
       "id": 208,
       "time": 130.29850746268656,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1584,7 +1598,7 @@
     {
       "id": 210,
       "time": 130.97014925373134,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1592,7 +1606,7 @@
     {
       "id": 211,
       "time": 131.19402985074626,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1600,7 +1614,7 @@
     {
       "id": 212,
       "time": 131.4179104477612,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1630,7 +1644,7 @@
     {
       "id": 216,
       "time": 134.55223880597015,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 5
     },
@@ -1658,7 +1672,7 @@
     {
       "id": 220,
       "time": 135.44776119402985,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 5
     },
@@ -1686,7 +1700,7 @@
     {
       "id": 224,
       "time": 136.7910447761194,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 5
     },
@@ -1890,7 +1904,7 @@
     {
       "id": 252,
       "time": 149.55223880597015,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 5
     },
@@ -1956,7 +1970,7 @@
     "Ballad",
     "Ambient"
   ],
-  "difficultyLevel": 4,
+  "difficultyLevel": 5,
   "lyrics": "Damn, look at that fuckin' ass What, what? Shorty not a hottie but she got a hot body I don't care where you come from I'm from that town before it's begun Mmm, yeah, motherfucker Come back into the crew when you're me Come back into ecstasy It don't matter what you think or where you wanna be What matters is being free inside your own cranium And then it dump, and then you dump And then it get old, it goes down So listen to me, don't worry about the Shorty was a hottie but she got a hot body Shorty not a hottie but she got a hot body Shorty intellectual in the game of hottie I just want you getting hottie Shorty not a hottie but she got a hot body Shorty not a hottie but she got a hot body Shorty not a hottie but she got a hot body Hot body on me You know when they come Quizzing you like from a game show Don't you even want this? Of course I wanna be on the back seat Just wanna take you from behind and rip you down Let you think, get you biting your nails Cutting you when you can't stop I made it till you can't stop Falling like a river, man, yeah, non-stop We would crack through the Colorado River Getting out swimming, getting out nasty Coming back with you from behind, see But girls, tell me, man, what today? As long as you got an apple in bed BA behind you and you know you can't behave Shorty was a hottie but she ain't got a body What, what, what you say? Yeah, shorty was a hottie but she ain't got a body Body, no, you know the one that come with that In the late game show Shorty was a hottie but she ain't got a body Shorty was a hottie but she ain't got a body What? Wait, there's no body? What? Body? No body? No body?",
   "lyricsSegments": [
     {

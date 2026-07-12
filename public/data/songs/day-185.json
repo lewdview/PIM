@@ -1368,7 +1368,7 @@
     {
       "id": 187,
       "time": 127.6875,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -2400,7 +2400,7 @@
     {
       "id": 321,
       "time": 227.4375,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 1.1199951171875,
       "stage": 5
@@ -2712,12 +2712,13 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 1.12000732421875,
+      "swipeDirection": "left",
       "stage": 5
     },
     {
       "id": 362,
       "time": 255.75,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 5
     }

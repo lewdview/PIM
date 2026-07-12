@@ -55,7 +55,7 @@
     {
       "id": 5,
       "time": 12,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -146,7 +146,7 @@
     {
       "id": 18,
       "time": 34.38461538461539,
-      "lane": 2,
+      "lane": 1,
       "type": "tap",
       "stage": 1
     },
@@ -181,7 +181,7 @@
     {
       "id": 23,
       "time": 41.07692307692308,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -216,15 +216,17 @@
     {
       "id": 28,
       "time": 47.07692307692308,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 2
     },
     {
       "id": 29,
       "time": 47.53846153846154,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 2
     },
     {
@@ -286,7 +288,7 @@
     {
       "id": 38,
       "time": 56.307692307692314,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -315,7 +317,7 @@
     {
       "id": 42,
       "time": 60,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -323,7 +325,7 @@
     {
       "id": 43,
       "time": 60.46153846153847,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -339,7 +341,7 @@
     {
       "id": 45,
       "time": 61.38461538461539,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -347,7 +349,7 @@
     {
       "id": 46,
       "time": 61.84615384615385,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -363,7 +365,7 @@
     {
       "id": 48,
       "time": 62.769230769230774,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -416,6 +418,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.608001708984375,
+      "swipeDirection": "right",
       "stage": 2
     },
     {
@@ -442,7 +445,7 @@
     {
       "id": 59,
       "time": 70.84615384615385,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -603,7 +606,7 @@
     {
       "id": 81,
       "time": 91.38461538461539,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -611,7 +614,7 @@
     {
       "id": 82,
       "time": 91.84615384615385,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.8160034179687501,
       "stage": 2
@@ -622,6 +625,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.51199951171875,
+      "swipeDirection": "right",
       "stage": 2
     },
     {
@@ -730,7 +734,7 @@
     {
       "id": 98,
       "time": 102.46153846153847,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -769,6 +773,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.48000488281250003,
+      "swipeDirection": "left",
       "stage": 3
     },
     {
@@ -795,6 +800,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.48000488281250003,
+      "swipeDirection": "right",
       "stage": 3
     },
     {
@@ -833,6 +839,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.7040039062500001,
+      "swipeDirection": "up",
       "stage": 3
     },
     {
@@ -887,7 +894,7 @@
     {
       "id": 118,
       "time": 116.76923076923077,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.68800048828125,
       "stage": 3
@@ -988,7 +995,7 @@
     {
       "id": 132,
       "time": 126,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1045,8 +1052,9 @@
     {
       "id": 140,
       "time": 131.0769230769231,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5120117187500001,
       "stage": 3
     },
     {
@@ -1082,7 +1090,7 @@
     {
       "id": 145,
       "time": 134.76923076923077,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 3
     },
@@ -1121,6 +1129,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 1.039990234375,
+      "swipeDirection": "right",
       "stage": 3
     },
     {
@@ -1146,7 +1155,7 @@
     {
       "id": 153,
       "time": 140.53846153846155,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.51199951171875,
       "stage": 3
@@ -1157,6 +1166,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.6719970703125,
+      "swipeDirection": "right",
       "stage": 3
     },
     {
@@ -1187,12 +1197,13 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.51199951171875,
+      "swipeDirection": "left",
       "stage": 3
     },
     {
       "id": 159,
       "time": 145.15384615384616,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1268,14 +1279,15 @@
     {
       "id": 169,
       "time": 151.6153846153846,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
       "id": 170,
       "time": 151.84615384615387,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -1283,14 +1295,15 @@
     {
       "id": 171,
       "time": 152.30769230769232,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.73599853515625,
       "stage": 3
     },
     {
       "id": 172,
       "time": 157.3846153846154,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 4
     },
@@ -1331,7 +1344,7 @@
     {
       "id": 177,
       "time": 161.53846153846155,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -1339,7 +1352,7 @@
     {
       "id": 178,
       "time": 162,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -1355,7 +1368,7 @@
     {
       "id": 180,
       "time": 162.92307692307693,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -1363,7 +1376,7 @@
     {
       "id": 181,
       "time": 163.3846153846154,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5760009765625,
       "stage": 4
@@ -1374,6 +1387,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.656005859375,
+      "swipeDirection": "left",
       "stage": 4
     },
     {
@@ -1416,7 +1430,7 @@
     {
       "id": 188,
       "time": 167.53846153846155,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -1556,6 +1570,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 1.0719970703125001,
+      "swipeDirection": "left",
       "stage": 4
     },
     {
@@ -1631,7 +1646,7 @@
     {
       "id": 216,
       "time": 186.23076923076925,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -1639,7 +1654,7 @@
     {
       "id": 217,
       "time": 186.46153846153848,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -1658,6 +1673,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.49599609375000003,
+      "swipeDirection": "right",
       "stage": 4
     },
     {
@@ -1717,6 +1733,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.8160034179687501,
+      "swipeDirection": "up",
       "stage": 5
     },
     {
@@ -1760,14 +1777,15 @@
     {
       "id": 232,
       "time": 198.23076923076925,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 5
     },
     {
       "id": 233,
       "time": 198.6923076923077,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1792,6 +1810,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.89599609375,
+      "swipeDirection": "up",
       "stage": 5
     },
     {
@@ -1838,6 +1857,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.51199951171875,
+      "swipeDirection": "right",
       "stage": 5
     },
     {
@@ -1870,7 +1890,7 @@
     {
       "id": 246,
       "time": 207.6923076923077,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1878,7 +1898,7 @@
     {
       "id": 247,
       "time": 208.15384615384616,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1894,7 +1914,7 @@
     {
       "id": 249,
       "time": 208.6153846153846,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1902,7 +1922,7 @@
     {
       "id": 250,
       "time": 209.0769230769231,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1910,7 +1930,7 @@
     {
       "id": 251,
       "time": 209.53846153846155,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1926,7 +1946,7 @@
     {
       "id": 253,
       "time": 210,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1934,7 +1954,7 @@
     {
       "id": 254,
       "time": 210.23076923076925,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1942,7 +1962,7 @@
     {
       "id": 255,
       "time": 210.46153846153848,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1958,7 +1978,7 @@
     {
       "id": 257,
       "time": 211.15384615384616,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1966,7 +1986,7 @@
     {
       "id": 258,
       "time": 211.3846153846154,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1974,7 +1994,7 @@
     {
       "id": 259,
       "time": 211.6153846153846,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -2007,6 +2027,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.5280029296875001,
+      "swipeDirection": "left",
       "stage": 5
     },
     {
@@ -2063,7 +2084,7 @@
     {
       "id": 271,
       "time": 216.92307692307693,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 5
     },
@@ -2216,7 +2237,7 @@
     "Ballad",
     "Ambient"
   ],
-  "difficultyLevel": 4,
+  "difficultyLevel": 5,
   "lyrics": "Have I got a little story for you, have I got a little story for you, Johnny is an American, Johnny loves life, Johnny wants a wife, Johnny needs life, Johnny needs a wife, Johnny needs a wife, Johnny will fight, Johnny loves every night, as he builds the wall of the tribe, his tears fall on infertile soil, lost in a thought, a girl, I see Johnny and demons, they are one, I see angels whose blood lust and fight for none, you don't know Johnny or his demons, you won't listen to his season, he carries them on the back of your eyes, just a sad song to be sung by those who knew your heaven is actually hell, you ask him to find your earth, he does, you ask him to love you, he does, you ask him to eat himself, he does, you lie, he does, you try, he cries, you tell him it's all his fault and that you never needed him, even when you cry it's his fault, your choice is his, your downfall, him, I see Johnny and demons, trying to find a reason to be alive, needing to be the thing he was, is this all there is, a shattered light, you told him to get, now you see, it's regret, no, you call him, yeah, I see Johnny and demons, trying to find a reason to be alive, and needed, a shattered light, you told him to get, now you see, it's regret, no, you call him, so he tries to be more, he tries more, and now you say he made you a whore, there's no mental door, there's blood all over your heart and the floor, oh, blood all over your floor, I see Johnny and demons, he's no more, he's more than being then, and you continue on, yeah, you got luck in your head, go ahead, go on, forget him, go ahead, go on, forget him, to find your dad and the plan, oh, I hope you find it, find your man, that plan and dad, go ahead, go on, forget him, he's no more, bitch, he's more than being, and we don't like you, so murk, murk, kitty cat, murk,",
   "lyricsSegments": [
     {

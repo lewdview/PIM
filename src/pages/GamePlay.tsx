@@ -12,6 +12,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Lock } from "lucide-react";
 import { logAnalyticsEvent } from "../services/telemetryService";
 import { gameSenseService } from "@/services/gameSenseService";
+import { supabase } from "@/services/supabaseClient";
+import { useAuthStore } from "@/store/useAuthStore";
+import { purchasePack, type OwnedCard } from "@/services/vaultService";
 
 
 interface GameplayVisualizerProps {
@@ -270,7 +273,7 @@ const LANE_COUNT = 3;
 function approachTime(diffLevel: number): number {
   return Math.max(1.35, 2.5 - (diffLevel - 1) * 0.128);
 }
-const HIT_RATIO = 0.86;
+const HIT_RATIO = 0.78;
 
 // Hit windows scale with difficulty — easier = more forgiving
 function perfectPlusWindow(diff: number): number {
@@ -385,31 +388,21 @@ function prerenderStaticTrack(
   ctx.closePath();
   ctx.clip();
 
-  // Track surface: deep gradient for depth
-  const trackGrad = ctx.createLinearGradient(0, 0, 0, hitY);
-  trackGrad.addColorStop(0, "#08081a");
-  trackGrad.addColorStop(0.35, "#0c0c22");
-  trackGrad.addColorStop(0.7, "#10102a");
-  trackGrad.addColorStop(1, "#141430");
-  ctx.fillStyle = trackGrad;
-  ctx.fillRect(0, 0, W, hitY);
-
-  // Per-lane colored tint (very subtle accent under each lane)
+  // Draw distinct lane background colors (uniform silver grey gradient starting black at top)
   for (let i = 0; i < LANE_COUNT; i++) {
-    const { x: lx0, w: lw0 } = laneAt(i, 0.3, W);
+    const { x: lx0, w: lw0 } = laneAt(i, 0, W);
     const { x: lx1, w: lw1 } = laneAt(i, 1, W);
-    const lc = getDifficultyLaneColor(laneColors[i], difficultyLevel, i);
-    const lcR = parseInt(lc.slice(1, 3), 16);
-    const lcG = parseInt(lc.slice(3, 5), 16);
-    const lcB = parseInt(lc.slice(5, 7), 16);
+    
     const laneGrad = ctx.createLinearGradient(0, 0, 0, hitY);
-    laneGrad.addColorStop(0, "transparent");
-    laneGrad.addColorStop(0.6, `rgba(${lcR},${lcG},${lcB},0.03)`);
-    laneGrad.addColorStop(1, `rgba(${lcR},${lcG},${lcB},0.07)`);
+    laneGrad.addColorStop(0, "#0a0a0c"); // dark silver top
+    laneGrad.addColorStop(0.35, "#18181c");
+    laneGrad.addColorStop(0.7, "#3b3b42");
+    laneGrad.addColorStop(1, "#5f5f66"); // light silver bottom
+    
     ctx.fillStyle = laneGrad;
     ctx.beginPath();
-    ctx.moveTo(lx0, hitY * 0.3);
-    ctx.lineTo(lx0 + lw0, hitY * 0.3);
+    ctx.moveTo(lx0, 0);
+    ctx.lineTo(lx0 + lw0, 0);
     ctx.lineTo(lx1 + lw1, hitY);
     ctx.lineTo(lx1, hitY);
     ctx.closePath();
@@ -506,6 +499,7 @@ interface PUState {
   label: string;
   duration: number;
   triggered: Set<number>;
+  cycle: number;
 }
 interface HitParticle {
   vx: number;
@@ -711,18 +705,20 @@ function generateProceduralChart(song: any): Note[] {
     const roll = (time * 13 + id * 7) % 100;
     
     // Tap is standard. Holds/Slides appear at medium/high difficulties
-    if (difficulty >= 3 && roll < 30) {
+    if (difficulty >= 3 && roll < 38) {
       noteType = 'hold';
       holdDuration = beatDuration * (1.5 + (id % 3));
       
       const slideRoll = (id * 17) % 100;
-      if (difficulty >= 5 && slideRoll < 50) {
-        // Slide note: switches lanes, no swipe
+      if (difficulty >= 5 && slideRoll < 45) {
+        // Slide hold: Hold to launch switch and continue holding
         targetLane = (nextLane + 1 + (id % 2)) % 3;
-      } else {
-        // Hold note: same lane, ends/transitions with a swipe
-        const dirs: ('up' | 'down' | 'left' | 'right')[] = ['up', 'down', 'left', 'right'];
-        swipeDirection = dirs[id % 4];
+      }
+      
+      const swipeRoll = (id * 23) % 100;
+      if (difficulty >= 4 && swipeRoll < 60) {
+        // Hold to swipe: ends with a swipe (prefer UP, but supports others too)
+        swipeDirection = (id % 3 === 0) ? 'up' : (id % 3 === 1) ? 'left' : 'right';
       }
     }
 
@@ -737,32 +733,57 @@ function generateProceduralChart(song: any): Note[] {
     });
 
     // Check for double notes (dual inputs) on medium-hard difficulties (difficulty >= 4)
-    const canSpawnDual = difficulty >= 4 && noteType !== 'hold';
+    // We want explicitly combinations like: Lane 0 + Lane 2 (a+d), Lane 1 + Lane 2 (s+d), Lane 0 + Lane 1 (s+a)
+    const canSpawnDual = difficulty >= 4;
     if (canSpawnDual) {
       const dualRoll = (time * 17 + id * 3) % 100;
-      const dualChance = difficulty >= 7 ? 22 : 12;
+      const dualChance = difficulty >= 7 ? 35 : 20; // Increase chance for more active double gameplay
       
       if (dualRoll < dualChance) {
-        const otherLane = (nextLane + 1 + (id % 2)) % 3;
-        
+        // Explicitly choose one of the target combinations:
+        // 0: A+D (Lanes 0 and 2)
+        // 1: S+D (Lanes 1 and 2)
+        // 2: S+A (Lanes 1 and 0)
+        const comboIdx = (id + Math.floor(time)) % 3;
+        let laneA = 0;
+        let laneB = 2;
+        if (comboIdx === 1) {
+          laneA = 1;
+          laneB = 2;
+        } else if (comboIdx === 2) {
+          laneA = 0;
+          laneB = 1;
+        }
+
+        // Adjust the primary note we already pushed to be laneA
+        const lastNote = notes[notes.length - 1];
+        if (lastNote) {
+          lastNote.lane = laneA;
+        }
+
+        // Determine type of the second simultaneous note
         let secondType: 'tap' | 'hold' = 'tap';
         let secondHoldDuration: number | undefined;
         let secondSwipeDir: 'up' | 'down' | 'left' | 'right' | undefined;
-        
+        let secondTargetLane: number | undefined;
+
         const typeRoll = (id * 11 + Math.floor(time)) % 100;
-        if (difficulty >= 6 && typeRoll < 30) {
+        if (difficulty >= 6 && typeRoll < 40) {
+          // Both holds or one hold + one tap
           secondType = 'hold';
           secondHoldDuration = beatDuration * 1.5;
-          const dirs: ('up' | 'down' | 'left' | 'right')[] = ['up', 'down', 'left', 'right'];
-          secondSwipeDir = dirs[(id + 2) % 4];
+          if (id % 2 === 0) {
+            secondSwipeDir = 'up';
+          }
         }
-        
+
         notes.push({
           id: 20000 + id++,
           time: parseFloat(time.toFixed(3)),
-          lane: otherLane,
+          lane: laneB,
           type: secondType,
           holdDuration: secondHoldDuration ? parseFloat(secondHoldDuration.toFixed(3)) : undefined,
+          targetLane: secondTargetLane,
           swipeDirection: secondSwipeDir
         });
       }
@@ -875,13 +896,15 @@ async function generateAudioForgeChart(song: any): Promise<Note[]> {
       holdDuration = beatDuration * (1.5 + (index % 2));
       
       const slideRoll = (index * 19) % 100;
-      if (difficulty >= 5 && slideRoll < 50) {
-        // Slide: switches lanes, no swipe
+      if (difficulty >= 5 && slideRoll < 45) {
+        // Slide hold: Hold to launch switch and continue holding
         targetLane = (lane + 1 + (index % 2)) % 3;
-      } else {
-        // Hold: same lane, ends/transitions with swipe
-        const dirs: ('up' | 'down' | 'left' | 'right')[] = ['up', 'down', 'left', 'right'];
-        swipeDirection = dirs[(index + Math.round(time)) % dirs.length];
+      }
+      
+      const swipeRoll = (index * 23) % 100;
+      if (difficulty >= 4 && swipeRoll < 60) {
+        // Hold to swipe: ends with a swipe (prefer UP)
+        swipeDirection = (index % 3 === 0) ? 'up' : (index % 3 === 1) ? 'left' : 'right';
       }
     }
 
@@ -896,32 +919,56 @@ async function generateAudioForgeChart(song: any): Promise<Note[]> {
     });
 
     // Check for double notes (dual inputs) on medium-hard difficulties (difficulty >= 4)
-    const canSpawnDual = difficulty >= 4 && noteType !== 'hold';
+    // We want explicitly combinations like: Lane 0 + Lane 2 (a+d), Lane 1 + Lane 2 (s+d), Lane 0 + Lane 1 (s+a)
+    const canSpawnDual = difficulty >= 4;
     if (canSpawnDual) {
       const dualRoll = (time * 23 + index * 3) % 100;
-      const dualChance = difficulty >= 7 ? 25 : 12;
+      const dualChance = difficulty >= 7 ? 35 : 20; // Increase chance for dual notes
       
       if (dualRoll < dualChance && energy > 0.12) {
-        const otherLane = (lane + 1 + (index % 2)) % 3;
-        
+        // Explicitly choose one of the target combinations:
+        // 0: A+D (Lanes 0 and 2)
+        // 1: S+D (Lanes 1 and 2)
+        // 2: S+A (Lanes 1 and 0)
+        const comboIdx = (index + Math.floor(time)) % 3;
+        let laneA = 0;
+        let laneB = 2;
+        if (comboIdx === 1) {
+          laneA = 1;
+          laneB = 2;
+        } else if (comboIdx === 2) {
+          laneA = 0;
+          laneB = 1;
+        }
+
+        // Adjust primary note
+        const lastNote = notes[notes.length - 1];
+        if (lastNote) {
+          lastNote.lane = laneA;
+        }
+
+        // Determine second type
         let secondType: 'tap' | 'hold' = 'tap';
         let secondHoldDuration: number | undefined;
         let secondSwipeDir: 'up' | 'down' | 'left' | 'right' | undefined;
+        let secondTargetLane: number | undefined;
         
         const typeRoll = (index * 13 + Math.floor(time)) % 100;
-        if (difficulty >= 6 && typeRoll < 30) {
+        if (difficulty >= 6 && typeRoll < 40) {
           secondType = 'hold';
           secondHoldDuration = beatDuration * 1.5;
-          const dirs: ('up' | 'down' | 'left' | 'right')[] = ['up', 'down', 'left', 'right'];
-          secondSwipeDir = dirs[(index + 2) % 4];
+          if (index % 2 === 0) {
+            secondSwipeDir = 'up';
+          }
         }
         
         notes.push({
           id: 30000 + index,
           time: parseFloat(time.toFixed(3)),
-          lane: otherLane,
+          lane: laneB,
           type: secondType,
           holdDuration: secondHoldDuration ? parseFloat(secondHoldDuration.toFixed(3)) : undefined,
+          targetLane: secondTargetLane,
           swipeDirection: secondSwipeDir
         });
       }
@@ -997,6 +1044,7 @@ export default function Game() {
     label: "",
     duration: 0,
     triggered: new Set(),
+    cycle: 0,
   });
   const hitFxRef = useRef<HitEffect[]>([]);
   const shieldChargesRef = useRef<number>(0);
@@ -1083,6 +1131,15 @@ export default function Game() {
     visible: false,
   });
 
+  const [activePu, setActivePu] = useState<{
+    label: string;
+    color: string;
+    multiplier: number;
+    progress: number;
+  } | null>(null);
+
+
+
   const updatePuDisplayDOM = useCallback((
     displayData: {
       label: string;
@@ -1091,74 +1148,12 @@ export default function Game() {
       progress: number;
     } | null
   ) => {
-    const panel = puPanelRef.current;
-    const textEl = puTextRef.current;
-    const barEl = puBarRef.current;
-    if (!panel) return;
-
-    const prev = prevPuStateRef.current;
-
-    if (!displayData) {
-      if (prev.visible) {
-        panel.style.display = "none";
-        prev.visible = false;
-      }
-      return;
-    }
-
-    if (!prev.visible) {
-      panel.style.display = "flex";
-      prev.visible = true;
-    }
-
-    const labelChanged = prev.label !== displayData.label || prev.multiplier !== displayData.multiplier;
-    const colorChanged = prev.color !== displayData.color;
-    const progressChanged = Math.abs(prev.progress - displayData.progress) > 0.005;
-
-    if (labelChanged || colorChanged) {
-      if (textEl) {
-        if (labelChanged) {
-          textEl.innerText = `${displayData.label} ×${displayData.multiplier}`;
-          prev.label = displayData.label;
-          prev.multiplier = displayData.multiplier;
-        }
-        if (colorChanged) {
-          textEl.style.color = displayData.color;
-          textEl.style.border = `2px solid ${displayData.color}`;
-          textEl.style.background = `${displayData.color}18`;
-          textEl.style.textShadow = `0 0 20px ${displayData.color}`;
-          textEl.style.boxShadow = `0 0 30px ${displayData.color}40`;
-        }
-      }
-    }
-
-    if (progressChanged || colorChanged) {
-      if (barEl) {
-        if (progressChanged) {
-          barEl.style.width = `${displayData.progress * 100}%`;
-          prev.progress = displayData.progress;
-        }
-        if (colorChanged) {
-          barEl.style.background = displayData.color;
-        }
-      }
-    }
-
-    if (colorChanged) {
-      prev.color = displayData.color;
-    }
+    setActivePu(displayData);
   }, []);
 
   const resetPuDisplayDOM = useCallback(() => {
-    prevPuStateRef.current = {
-      label: "",
-      color: "",
-      multiplier: 0,
-      progress: -1,
-      visible: false,
-    };
-    updatePuDisplayDOM(null);
-  }, [updatePuDisplayDOM]);
+    setActivePu(null);
+  }, []);
   const [missCount, setMissCount] = useState(0);
   const [continueCountdown, setContinueCountdown] = useState(10);
   const [opts, setOpts] = useState<GameOpts>(loadOpts);
@@ -1173,7 +1168,7 @@ export default function Game() {
 
     const fetchAndSegment = async () => {
       try {
-        let imageUrls = ['/data/slideshow/cyber_dancer.jpg', '/data/slideshow/cyber_headphones.jpg'];
+        let imageUrls = ['/data/slideshow/cyber_dancer.jpg', '/data/slideshow/cyber_headphones.jpg', '/data/slideshow/cyber_dj.jpg'];
         try {
           const res = await fetch('http://localhost:3002/api/slideshow-images')
             .catch(() => fetch('/api/slideshow-images'))
@@ -1414,12 +1409,16 @@ export default function Game() {
       for (const pw of POWER_UPS) {
         if (combo >= pw.threshold && !pu.triggered.has(pw.threshold)) {
           pu.triggered.add(pw.threshold);
-          const finalLabel = pw.type === "SIGNAL_LOCK" ? "SIGNAL LOCK (SHIELD x2)" : pw.label;
+          const finalMultiplier = pw.multiplier + (pu.cycle || 0);
+          const finalLabel = pw.type === "SIGNAL_LOCK" 
+            ? "SIGNAL LOCK (SHIELD x2)" 
+            : (pu.cycle > 0 ? `${pw.label} Lvl ${1 + pu.cycle}` : pw.label);
+
           Object.assign(pu, {
             active: pw.type,
             endTime: t + pw.duration,
             startTime: t,
-            multiplier: pw.multiplier,
+            multiplier: finalMultiplier,
             color: pw.color,
             label: finalLabel,
             duration: pw.duration,
@@ -1427,7 +1426,7 @@ export default function Game() {
           updatePuDisplayDOM({
             label: finalLabel,
             color: pw.color,
-            multiplier: pw.multiplier,
+            multiplier: finalMultiplier,
             progress: 1,
           });
           const code = pw.type === "FEVER" ? 1 : pw.type === "SURGE" ? 2 : pw.type === "SIGNAL_LOCK" ? 3 : 0;
@@ -2225,6 +2224,16 @@ export default function Game() {
       const prevStage = lastDetectedStageRef.current;
       lastDetectedStageRef.current = calculatedStage;
       setCurrentStage(calculatedStage);
+
+      // If player cleared the stage and triggered all power-ups, reset thresholds for the next level cycle
+      if (prevStage > 0 && calculatedStage > prevStage) {
+        const allPowerupsUsed = pu.triggered.has(20) && pu.triggered.has(40) && pu.triggered.has(60);
+        if (allPowerupsUsed) {
+          pu.cycle = (pu.cycle || 0) + 1;
+          pu.triggered.clear();
+          console.log(`[Powerup Sync] Stage clear detected. Incrementing powerup level cycle to ${pu.cycle}`);
+        }
+      }
       
       const sb = stageBounds.find(s => s.stage === calculatedStage);
       if (sb && prevStage > 0 && calculatedStage > prevStage) {
@@ -2281,6 +2290,45 @@ export default function Game() {
     // Draw pre-rendered static tracks (Double-buffering optimization)
     if (offscreenCanvasRef.current) {
       ctx.drawImage(offscreenCanvasRef.current, 0, 0, W, H);
+    }
+
+    // ── Lane Hit Glows Sweep ──
+    for (let i = 0; i < LANE_COUNT; i++) {
+      const hits = jRef.current.filter(x => x.lane === i && Date.now() - x.ts < 500);
+      if (hits.length > 0) {
+        const latest = hits.sort((a, b) => b.ts - a.ts)[0];
+        const age = (Date.now() - latest.ts) / 500;
+        const opacity = (1 - age) * 0.45; // decay opacity
+        
+        let color = "rgba(57, 255, 20, 0.4)"; // Perfect+ emerald green
+        if (latest.type === "PERFECT") {
+          color = "rgba(255, 215, 0, 0.4)"; // Perfect gold/yellow
+        } else if (latest.type === "GOOD") {
+          color = "rgba(0, 229, 255, 0.4)"; // Good blue
+        } else if (latest.type === "MISS") {
+          color = "rgba(255, 20, 147, 0.25)"; // Miss magenta
+        }
+
+        const { x: lx0, w: lw0 } = laneAt(i, 0, W);
+        const { x: lx1, w: lw1 } = laneAt(i, 1, W);
+
+        ctx.save();
+        const glowGrad = ctx.createLinearGradient(0, 0, 0, hitY);
+        glowGrad.addColorStop(0, "transparent");
+        glowGrad.addColorStop(0.4, color.replace("0.4", (0.12 * opacity).toString()).replace("0.25", (0.12 * opacity).toString()));
+        glowGrad.addColorStop(0.8, color.replace("0.4", (opacity).toString()).replace("0.25", (opacity).toString()));
+        glowGrad.addColorStop(1, color.replace("0.4", (opacity * 0.5).toString()).replace("0.25", (opacity * 0.5).toString()));
+
+        ctx.fillStyle = glowGrad;
+        ctx.beginPath();
+        ctx.moveTo(lx0, 0);
+        ctx.lineTo(lx0 + lw0, 0);
+        ctx.lineTo(lx1 + lw1, hitY);
+        ctx.lineTo(lx1, hitY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
     }
 
     // Draw Slideshow Cutouts on the track if selected in gameTrack options
@@ -3214,15 +3262,60 @@ export default function Game() {
       if (noteY < -80) continue;
 
       const { x: lx, w: lw } = laneAt(note.lane, prog, W);
-      let noteH = lerp(22, 54, prog); // perspective scale — bigger closer
-      let noteW = lw - 14;
-      let noteX = lx + 7;
+      let noteH = lerp(80, 140, prog); // perspective scale — bigger closer
+      let noteW = lw;
+      let noteX = lx;
       if (modifierRef.current === 'bass_realm' && note.lane === 0) {
         noteH = noteH * 1.6; // 60% thicker notes
         noteW = noteW * 1.28; // 28% wider notes
-        noteX = lx + 7 - (noteW - (lw - 14)) / 2;
+        noteX = lx - (noteW - lw) / 2;
       }
-      const r = noteH * 0.32;
+      const r = lerp(12, 24, prog);
+
+      // Draw simultaneous chord connection line if there is another note at the same time
+      const chordPartner = notesRef.current.find(other => 
+        other !== ns &&
+        Math.abs(other.note.time - note.time) < 0.001 &&
+        other.note.lane > note.lane &&
+        !ns.missed &&
+        !other.missed &&
+        !ns.hit &&
+        !other.hit
+      );
+
+      if (chordPartner) {
+        const { x: lxA, w: lwA } = laneAt(note.lane, prog, W);
+        const { x: lxB, w: lwB } = laneAt(chordPartner.note.lane, prog, W);
+        const cx1 = lxA + lwA / 2;
+        const cx2 = lxB + lwB / 2;
+        
+        const colorA = getDifficultyLaneColor(laneColorsRef.current[note.lane], songRef.current?.difficultyLevel ?? 5, note.lane);
+        const colorB = getDifficultyLaneColor(laneColorsRef.current[chordPartner.note.lane], songRef.current?.difficultyLevel ?? 5, chordPartner.note.lane);
+
+        ctx.save();
+        const connectorGrad = ctx.createLinearGradient(cx1, noteY, cx2, noteY);
+        connectorGrad.addColorStop(0, colorA);
+        connectorGrad.addColorStop(1, colorB);
+
+        // Neon outer glow line
+        ctx.shadowColor = colorA;
+        ctx.shadowBlur = 18;
+        ctx.strokeStyle = connectorGrad;
+        ctx.lineWidth = 14;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(cx1, noteY);
+        ctx.lineTo(cx2, noteY);
+        ctx.stroke();
+        
+        // Bright white core line
+        ctx.shadowColor = "transparent";
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 4.5;
+        ctx.stroke();
+        ctx.restore();
+      }
 
       const isMissedNote = ns.missed;
       const noteColor = isMissedNote ? "#FF3800" : lc;
@@ -3440,10 +3533,10 @@ export default function Game() {
             // Draw gold terminus block at top of active hold
             const tailP = lerp(headP, 1.0, ns.holdProgress);
             const { x: tx_active, w: tw_active } = laneAt(endLane, tailP, W);
-            const tailH_active = lerp(22, 54, tailP);
-            const tailW_active = tw_active - 14;
-            const tailX_active = tx_active + 7;
-            const tailR_active = tailH_active * 0.32;
+            const tailH_active = lerp(80, 140, tailP);
+            const tailW_active = tw_active;
+            const tailX_active = tx_active;
+            const tailR_active = lerp(12, 24, tailP);
             drawKey(ctx, tailX_active, top, tailW_active, tailH_active, tailR_active, noteColor, tailP, true, note.swipeDirection);
           }
         } else if (headY < noteY) {
@@ -3533,10 +3626,10 @@ export default function Game() {
           }
 
           // Draw gold terminus block at the tail of the inactive hold (at headY)
-          const tailH_inactive = lerp(22, 54, headP);
-          const tailW_inactive = hw - 14;
-          const tailX_inactive = hx + 7;
-          const tailR_inactive = tailH_inactive * 0.32;
+          const tailH_inactive = lerp(80, 140, headP);
+          const tailW_inactive = hw;
+          const tailX_inactive = hx;
+          const tailR_inactive = lerp(12, 24, headP);
           drawKey(ctx, tailX_inactive, headY, tailW_inactive, tailH_inactive, tailR_inactive, noteColor, headP, true, note.swipeDirection);
         }
         drawKey(ctx, drawX, noteY, noteW, noteH, r, noteColor, prog, false, note.type === "hold" ? undefined : note.swipeDirection);
@@ -3549,9 +3642,9 @@ export default function Game() {
 
     // ── Horizon Fog Overlay (Fades notes into the background at the top) ──
     const fogGrad = ctx.createLinearGradient(0, 0, 0, hitY * 0.38);
-    fogGrad.addColorStop(0, "#08081a"); // solid dark background of track at top
-    fogGrad.addColorStop(0.5, "rgba(8, 8, 26, 0.8)");
-    fogGrad.addColorStop(1, "rgba(8, 8, 26, 0.0)");
+    fogGrad.addColorStop(0, "#000000"); // solid dark background at the top
+    fogGrad.addColorStop(0.5, "rgba(0, 0, 0, 0.82)");
+    fogGrad.addColorStop(1, "rgba(0, 0, 0, 0.0)");
     ctx.fillStyle = fogGrad;
     
     ctx.save();
@@ -3953,68 +4046,7 @@ export default function Game() {
       ctx.fillText(ms2.name[0], mx, bY - 7);
     }
 
-    // Medal stamp animation
-    const stamp = medalStampRef.current;
-    if (stamp) {
-      const elapsed = t - stamp.startT;
-      if (elapsed > 1.6) {
-        medalStampRef.current = null;
-      } else {
-        const t01 = elapsed / 1.6;
-        let scale: number;
-        let alpha: number;
-        if (t01 < 0.18) {
-          // Smash in: huge → normal
-          const inT = t01 / 0.18;
-          scale = 2.6 - 1.6 * (1 - Math.pow(1 - inT, 2.5));
-          alpha = 1;
-        } else if (t01 < 0.72) {
-          // Hold with triple bounce
-          scale =
-            1 + 0.08 * Math.abs(Math.sin(((t01 - 0.18) / 0.54) * Math.PI * 3));
-          alpha = 1;
-        } else {
-          // Fade out
-          scale = 1;
-          alpha = 1 - (t01 - 0.72) / 0.28;
-        }
-        const mc = MEDAL_COLOR_MAP[stamp.medal] ?? "#fff";
-        const scx = W / 2;
-        const scy = H * 0.36;
-        ctx.save();
-        ctx.globalAlpha = Math.max(0, alpha);
-        ctx.translate(scx, scy);
-        ctx.scale(scale, scale);
-        // Glow halo
-        ctx.shadowColor = mc;
-        ctx.shadowBlur = 36;
-        const sw = 230;
-        const sh = 68;
-        ctx.fillStyle = "rgba(8,8,12,0.82)";
-        ctx.beginPath();
-        ctx.roundRect(-sw / 2, -sh / 2, sw, sh, 10);
-        ctx.fill();
-        ctx.shadowBlur = 0;
-        // Border
-        ctx.strokeStyle = mc;
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        ctx.roundRect(-sw / 2, -sh / 2, sw, sh, 10);
-        ctx.stroke();
-        // ★ MEDAL NAME ★
-        ctx.fillStyle = mc;
-        ctx.font = `bold 26px "Space Mono", monospace`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(`★ ${stamp.medal} ★`, 0, -8);
-        // Sub-label
-        ctx.font = `bold 10px "Space Mono", monospace`;
-        ctx.fillStyle = "rgba(255,255,255,0.65)";
-        ctx.fillText("MEDAL UNLOCKED", 0, 18);
-        ctx.restore();
-        ctx.globalAlpha = 1;
-      }
-    }
+    // Medal stamp popups removed in favor of dynamic HUD and circular dial updates
 
     if (dirty) syncDisplay();
 
@@ -5256,6 +5288,75 @@ export default function Game() {
           offCtx.drawImage(img, -24, -24, 560, 560);
           offCtx.filter = "none";
           coverBlurRef.current = off;
+
+          // Extract dynamic colors from artwork for notes if theme is artwork
+          if (opts.noteTheme === "artwork") {
+            try {
+              const extCanvas = document.createElement("canvas");
+              extCanvas.width = 3;
+              extCanvas.height = 3;
+              const extCtx = extCanvas.getContext("2d")!;
+              extCtx.drawImage(img, 0, 0, 3, 3);
+              const imgData = extCtx.getImageData(0, 0, 3, 3).data;
+              
+              const samplePixel = (pxIdx: number): string => {
+                const r = imgData[pxIdx * 4];
+                const g = imgData[pxIdx * 4 + 1];
+                const b = imgData[pxIdx * 4 + 2];
+                
+                const rNorm = r / 255;
+                const gNorm = g / 255;
+                const bNorm = b / 255;
+                const max = Math.max(rNorm, gNorm, bNorm);
+                const min = Math.min(rNorm, gNorm, bNorm);
+                let h = 0;
+                let s = 0;
+                const l = (max + min) / 2;
+                
+                if (max !== min) {
+                  const d = max - min;
+                  s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                  switch (max) {
+                    case rNorm: h = (gNorm - bNorm) / d + (gNorm < bNorm ? 6 : 0); break;
+                    case gNorm: h = (bNorm - rNorm) / d + 2; break;
+                    case bNorm: h = (rNorm - gNorm) / d + 4; break;
+                  }
+                  h /= 6;
+                }
+                
+                const finalH = Math.round(h * 360);
+                const finalS = 95; // Vibrant neon saturation
+                const finalL = 52; // Excellent screen legibility
+                return `hsl(${finalH}, ${finalS}%, ${finalL}%)`;
+              };
+              
+              const extColors: [string, string, string] = [
+                samplePixel(0), // Left pixel
+                samplePixel(4), // Center pixel
+                samplePixel(8), // Right pixel
+              ];
+              
+              laneColorsRef.current = extColors;
+              console.log("[Dynamic Colors] Extracted lane colors from cover art:", extColors);
+              
+              // Regenerate static track visual cache with new dynamic colors
+              const canvas = canvasRef.current;
+              if (canvas) {
+                const dpr = window.devicePixelRatio || 1;
+                const W = canvas.width / dpr;
+                const H = canvas.height / dpr;
+                offscreenCanvasRef.current = prerenderStaticTrack(
+                  W,
+                  H,
+                  dpr,
+                  songRef.current.difficultyLevel,
+                  laneColorsRef.current
+                );
+              }
+            } catch (err) {
+              console.error("Failed to extract dynamic colors from artwork:", err);
+            }
+          }
         };
         img.src = song.coverArt;
       }
@@ -5990,6 +6091,54 @@ export default function Game() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [doPause, doResume, doReturn]);
 
+  const { perfectPlus: pp = 0, perfects: pfp = 0, goods: gd = 0, misses: ms = 0 } = displayGs;
+  const tot = pp + pfp + gd + ms;
+  const acc = tot > 0 ? ((pp + pfp * 0.9 + gd * 0.5) / tot) * 100 : 0;
+  const curMedal =
+    acc >= 93
+      ? "PLATINUM"
+      : acc >= 80
+        ? "GOLD"
+        : acc >= 60
+          ? "SILVER"
+          : acc >= 40
+            ? "BRONZE"
+            : "NONE";
+
+  const MEDAL_STYLES: Record<string, { main: string; glow: string; text: string; bg: string }> = {
+    NONE: {
+      main: "rgba(168, 85, 247, 0.45)",
+      glow: "rgba(168, 85, 247, 0.35)",
+      text: "text-purple-400",
+      bg: "rgba(168, 85, 247, 0.08)"
+    },
+    BRONZE: {
+      main: "#CD7F32",
+      glow: "rgba(205, 127, 50, 0.75)",
+      text: "text-[rgb(205,127,50)]",
+      bg: "rgba(205, 127, 50, 0.15)"
+    },
+    SILVER: {
+      main: "#C0C0C0",
+      glow: "rgba(192, 192, 192, 0.75)",
+      text: "text-[rgb(192,192,192)]",
+      bg: "rgba(192, 192, 192, 0.15)"
+    },
+    GOLD: {
+      main: "#FFD700",
+      glow: "rgba(255, 215, 0, 0.95)",
+      text: "text-[rgb(255,215,0)] font-black",
+      bg: "rgba(255, 215, 0, 0.2)"
+    },
+    PLATINUM: {
+      main: "#E0E0FF",
+      glow: "rgba(224, 224, 255, 0.95)",
+      text: "text-[rgb(224,224,255)] font-black",
+      bg: "rgba(224, 224, 255, 0.25)"
+    }
+  };
+  const medalStyle = MEDAL_STYLES[curMedal] || MEDAL_STYLES.NONE;
+
   return (
     <div
       className="fixed inset-0 flex justify-center overflow-hidden"
@@ -6519,41 +6668,11 @@ export default function Game() {
             </button>
           </div>
 
-          {/* Center: COMBO */}
-          {opts.comboDisplay ? (
-            <div className="text-center">
-              <div className="font-mono" style={{ fontSize: 8, color: "hsl(30 15% 32%)", letterSpacing: "0.3em" }}>COMBO</div>
-              <motion.div
-                key={gs.combo}
-                className={`font-mono font-bold leading-none${gs.combo >= 20 ? ' breathe-glow' : ''}`}
-                data-testid="text-combo"
-                initial={{ scale: gs.combo > 0 ? 1.35 : 1 }}
-                animate={{ scale: 1 }}
-                transition={{ type: "spring", stiffness: 520, damping: 18, mass: 0.6 }}
-                style={{
-                  fontSize: 22,
-                  color: comboColor,
-                  textShadow: gs.combo >= 20 ? `0 0 16px ${comboColor}, 0 0 32px ${comboColor}60` : "none",
-                  '--breathe-color': `${comboColor}60`,
-                  transition: 'color 0.2s, text-shadow 0.2s',
-                  display: 'block',
-                } as React.CSSProperties}
-              >
-                {gs.combo > 0 ? gs.combo : "—"}
-              </motion.div>
-            </div>
-          ) : <div />}
+          {/* Spacer to keep dial centered */}
+          <div />
 
-          {/* Right: animated SCORE + miss pips */}
-          <div className="flex flex-col items-end gap-1">
-            <div className="font-mono" style={{ fontSize: 8, color: "hsl(30 15% 32%)", letterSpacing: "0.3em" }}>SCORE</div>
-            <div
-              className="font-mono font-bold leading-none"
-              data-testid="text-score"
-              style={{ fontSize: 26, color: "#F2EDE5", letterSpacing: "0.03em", textShadow: "0 0 14px rgba(242,237,229,0.25)" }}
-            >
-              {animatedScore.toLocaleString()}
-            </div>
+          {/* Right spacer with miss pips */}
+          <div className="flex flex-col items-end justify-center min-w-[70px]">
             {opts.hudMisses && (
               <div className="flex gap-1.5">
                 {[0, 1, 2].map((i) => (
@@ -6705,10 +6824,169 @@ export default function Game() {
           className="relative flex-1 min-h-0 overflow-hidden"
           style={{ touchAction: 'none' }}
         >
+          {/* Circular Score Dial & Combo Overlays (Beatstar Style) */}
+          {(() => {
+            // Calculate active combo multiplier matching the game settings
+            const c = gs.combo;
+            let m = 1;
+            if (c >= 100) m = 5;
+            else if (c >= 75) m = 4;
+            else if (c >= 50) m = 3;
+            else if (c >= 25) m = 2;
+            if (puRef.current.active) {
+              m = m * (puRef.current.active === "SIGNAL_LOCK" ? 4 : puRef.current.active === "SURGE" ? 3 : 2);
+            }
+
+
+            return (
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none z-20">
+                <style dangerouslySetInnerHTML={{ __html: `
+                  @keyframes marquee-behind {
+                    0% {
+                      transform: translateX(110%);
+                      opacity: 0;
+                    }
+                    12% {
+                      opacity: 0.85;
+                    }
+                    88% {
+                      opacity: 0.85;
+                    }
+                    100% {
+                      transform: translateX(-110%);
+                      opacity: 0;
+                    }
+                  }
+                  .animate-marquee-behind {
+                    animation: marquee-behind 4.5s linear infinite;
+                  }
+                `}} />
+
+                {/* Scrolling Medal Name behind the dial */}
+                {curMedal !== "NONE" && (
+                  <div className="absolute top-[40px] left-1/2 -translate-x-1/2 w-[340px] h-12 overflow-hidden flex items-center justify-center z-[-1] pointer-events-none">
+                    <span 
+                      key={curMedal}
+                      className="absolute font-mono text-[2.8rem] font-black uppercase tracking-[0.25em] text-transparent select-none whitespace-nowrap animate-marquee-behind"
+                      style={{
+                        WebkitTextStroke: `1px ${medalStyle.main}60`,
+                        textShadow: `0 0 12px ${medalStyle.glow}`,
+                      }}
+                    >
+                      {curMedal}
+                    </span>
+                  </div>
+                )}
+
+                {/* Circular Score Ring */}
+                <div className="relative w-32 h-32 md:w-36 md:h-36 lg:w-40 lg:h-40 rounded-full flex flex-col items-center justify-center" style={{
+                  background: "rgba(10, 10, 18, 0.94)",
+                  border: `2px solid ${medalStyle.main}`,
+                  boxShadow: `0 0 35px ${medalStyle.glow}, inset 0 0 15px rgba(255,255,255,0.03)`,
+                  transition: "all 0.4s ease-in-out",
+                }}>
+                  {/* SVG Stage Progress Ring */}
+                  <svg viewBox="0 0 128 128" className="absolute inset-0 w-full h-full -rotate-90">
+                    <circle
+                      cx="64"
+                      cy="64"
+                      r="56"
+                      fill="none"
+                      stroke="rgba(255, 255, 255, 0.06)"
+                      strokeWidth="4"
+                    />
+                    <circle
+                      cx="64"
+                      cy="64"
+                      r="56"
+                      fill="none"
+                      stroke={medalStyle.main}
+                      strokeWidth="4"
+                      strokeDasharray={2 * Math.PI * 56}
+                      strokeDashoffset={2 * Math.PI * 56 * (1 - (gs.progress || 0))}
+                      strokeLinecap="round"
+                      style={{ 
+                        transition: "stroke-dashoffset 0.15s linear, stroke 0.4s ease-in-out",
+                        filter: `drop-shadow(0 0 8px ${medalStyle.main})`
+                      }}
+                    />
+                    {/* Dynamic Powerup Decaying Outer Ring */}
+                    {activePu && (
+                      <circle
+                        cx="64"
+                        cy="64"
+                        r="60"
+                        fill="none"
+                        stroke={activePu.color}
+                        strokeWidth="4"
+                        strokeDasharray={2 * Math.PI * 60}
+                        strokeDashoffset={2 * Math.PI * 60 * (1 - (activePu.progress ?? 0))}
+                        strokeLinecap="round"
+                        style={{
+                          transition: "stroke-dashoffset 0.08s linear",
+                          filter: `drop-shadow(0 0 12px ${activePu.color})`
+                        }}
+                      />
+                    )}
+                  </svg>
+
+                  <span className="font-mono text-[8.5px] md:text-[9.5px] lg:text-[10.5px] tracking-[0.25em] text-zinc-400 font-black mb-1">
+                    {currentStage === 5 ? "FINAL STAGE" : `STAGE ${currentStage}`}
+                  </span>
+                  <span className="font-mono text-2xl md:text-3xl lg:text-4xl font-black text-white tracking-tight" style={{ textShadow: "0 0 12px rgba(255,255,255,0.5)" }}>
+                    {animatedScore.toLocaleString()}
+                  </span>
+                  <span className={`font-mono text-[10.5px] md:text-[11.5px] lg:text-[12.5px] font-black mt-1 tracking-widest ${medalStyle.text}`} style={{ transition: "color 0.4s ease-in-out" }}>
+                    ×{m}
+                  </span>
+                </div>
+
+                {/* Active Power-up dynamic tech pill */}
+                {activePu && (
+                  <motion.div
+                    key={activePu.label}
+                    initial={{ scale: 0.8, opacity: 0, y: -8 }}
+                    animate={{ scale: 1.0, opacity: 1, y: 0 }}
+                    className="mt-2 text-center font-mono text-[9px] md:text-[10px] lg:text-[11px] font-black px-4.5 py-0.5 rounded-full tracking-[0.18em] uppercase flex items-center justify-center gap-1.5 shadow-lg border"
+                    style={{
+                      background: "rgba(10, 10, 18, 0.96)",
+                      borderColor: `${activePu.color}45`,
+                      boxShadow: `0 0 20px ${activePu.color}35`,
+                      color: activePu.color,
+                    }}
+                  >
+                    <span className="relative flex h-1.5 w-1.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: activePu.color }} />
+                      <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ background: activePu.color }} />
+                    </span>
+                    {activePu.label}
+                  </motion.div>
+                )}
+
+                {/* Combo floating badge pill below ring */}
+                {opts.comboDisplay && gs.combo > 0 && (
+                  <motion.div
+                    key={gs.combo}
+                    initial={{ scale: 0.6, opacity: 0, y: -10 }}
+                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                    className="mt-2 font-mono text-[11px] md:text-[12.5px] lg:text-[14px] font-black px-4 py-0.5 rounded-full border border-purple-500/25 text-purple-300 tracking-wider flex items-center justify-center gap-1 shadow-lg"
+                    style={{
+                      background: "rgba(10, 10, 18, 0.94)",
+                      boxShadow: "0 4px 14px rgba(168, 85, 247, 0.28)",
+                    }}
+                  >
+                    <span className="text-zinc-500 uppercase tracking-widest text-[8px] md:text-[9px] lg:text-[10px] mr-0.5 font-bold">COMBO</span>
+                    {gs.combo}
+                  </motion.div>
+                )}
+              </div>
+            );
+          })()}
+
           {/* Stage Transition Alert Banner */}
           <AnimatePresence>
             {stageStingerNumber && (
-              <div className="absolute inset-x-0 top-[22%] flex justify-center pointer-events-none z-30 overflow-visible">
+              <div className="absolute inset-x-0 top-[32%] flex justify-center pointer-events-none z-30 overflow-visible">
                 <motion.div
                   initial="initial"
                   animate="animate"
@@ -6736,10 +7014,11 @@ export default function Game() {
                       height: "190px",
                       background: "rgba(4, 4, 4, 0.96)",
                       backdropFilter: "blur(20px)",
-                      border: "2px solid rgba(255, 255, 255, 0.15)",
-                      borderLeft: "4px solid #00E5FF",
-                      borderRight: "4px solid #FF1493",
-                      boxShadow: "0 30px 70px rgba(0,0,0,0.95), inset 0 0 30px rgba(255,255,255,0.05)",
+                      border: `2px solid ${laneColorsRef.current[1]}`, // Middle button color
+                      borderLeft: `5px solid ${laneColorsRef.current[0]}`, // Left button color
+                      borderRight: `5px solid ${laneColorsRef.current[2]}`, // Right button color
+                      borderBottom: `4px solid ${laneColorsRef.current[1]}`, // Artwork-derived color
+                      boxShadow: `0 30px 70px rgba(0,0,0,0.95), 0 0 35px ${laneColorsRef.current[1]}60`,
                       borderRadius: "16px",
                       zIndex: 1,
                     }}
@@ -6761,9 +7040,9 @@ export default function Game() {
                       position: "absolute",
                       width: 220,
                       height: 220,
-                      border: "1.5px solid rgba(0, 229, 255, 0.85)",
+                      border: `2.5px solid ${laneColorsRef.current[0]}`, // Left button color
                       borderRadius: "24px", 
-                      boxShadow: "0 0 30px rgba(0, 229, 255, 0.4)",
+                      boxShadow: `0 0 30px ${laneColorsRef.current[0]}80`,
                       zIndex: 5,
                     }}
                   />
@@ -6785,8 +7064,8 @@ export default function Game() {
                       width: 190,
                       height: 190,
                       borderRadius: "50%",
-                      border: "2px dashed #FF1493",
-                      boxShadow: "0 0 20px rgba(255, 20, 147, 0.6)",
+                      border: `2.5px dashed ${laneColorsRef.current[2]}`, // Right button color
+                      boxShadow: `0 0 25px ${laneColorsRef.current[2]}80`,
                       zIndex: 5,
                     }}
                   />
@@ -6798,7 +7077,7 @@ export default function Game() {
                       animate: { 
                         scale: 1.0, 
                         rotate: 225, 
-                        opacity: [0, 0.45, 0.45],
+                        opacity: [0, 0.55, 0.55],
                         transition: { type: "spring", stiffness: 120, damping: 12, delay: 0.3 }
                       },
                       exit: { scale: 2.2, rotate: 405, opacity: 0, transition: { duration: 0.3 } }
@@ -6807,9 +7086,9 @@ export default function Game() {
                       position: "absolute",
                       width: 140,
                       height: 140,
-                      background: "linear-gradient(135deg, rgba(0, 229, 255, 0.35), rgba(255, 20, 147, 0.35))",
-                      border: "1.5px solid rgba(255, 255, 255, 0.45)",
-                      boxShadow: "0 0 35px rgba(0, 229, 255, 0.5)",
+                      background: `linear-gradient(135deg, ${laneColorsRef.current[0]}25, ${laneColorsRef.current[2]}30)`, // Derived from artwork
+                      border: `2.5px solid ${laneColorsRef.current[1]}`, // Derived from artwork
+                      boxShadow: `0 0 45px ${laneColorsRef.current[1]}80`,
                       zIndex: 5,
                     }}
                   />
@@ -6828,9 +7107,9 @@ export default function Game() {
                     style={{
                       position: "absolute",
                       width: 170,
-                      height: "2px",
-                      background: "linear-gradient(90deg, transparent, #00E5FF, #FF1493, #00E5FF, transparent)",
-                      boxShadow: "0 0 10px #00E5FF, 0 0 20px #FF1493",
+                      height: "3px",
+                      background: `linear-gradient(90deg, transparent, ${laneColorsRef.current[0]}, ${laneColorsRef.current[1]}, ${laneColorsRef.current[2]}, transparent)`, // Tri-color button sweep
+                      boxShadow: `0 0 15px ${laneColorsRef.current[1]}`,
                       zIndex: 6,
                     }}
                   />
@@ -6921,25 +7200,7 @@ export default function Game() {
             data-testid="canvas-game"
           />
 
-          {/* Power-up banner */}
-          <div
-            ref={puPanelRef}
-            className="absolute top-4 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 pointer-events-none"
-          >
-            <div
-              ref={puTextRef}
-              className="font-mono font-bold text-base px-5 py-2 tracking-[0.3em]"
-            />
-            <div
-              className="w-36 h-1"
-              style={{ background: "rgba(255,255,255,0.08)" }}
-            >
-              <div
-                ref={puBarRef}
-                className="h-full"
-              />
-            </div>
-          </div>
+
 
           {/* Judgment text — per-lane, moved up above the hit zone */}
           {opts.judgmentText && displayJudge.map((j) => {
@@ -6961,7 +7222,7 @@ export default function Game() {
                 className="absolute font-mono font-bold pointer-events-none judgment-pop"
                 style={{
                   left: `${pct}%`,
-                  top: "55%",
+                  top: "76%",
                   transform: "translateX(-50%)",
                   color,
                   textShadow: `0 0 18px ${color}`,
@@ -6990,7 +7251,7 @@ export default function Game() {
               <div
                 className="absolute left-1/2 font-mono font-bold pointer-events-none"
                 style={{
-                  top: "12%",
+                  top: "24%",
                   transform: `translateX(-50%) scale(${1 + (1 - age) * 0.15})`,
                   color,
                   textShadow: `0 0 24px ${color}, 0 0 48px ${color}40`,
@@ -7404,6 +7665,7 @@ export default function Game() {
               </div>
             </div>
           )}
+
         </div>
       </div>
     </div>
@@ -7486,15 +7748,15 @@ function drawKey(
     ctx.shadowBlur = lerp(8, 20, prog);
     ctx.shadowOffsetY = 0;
   } else {
-    ctx.shadowColor = "rgba(0,0,0,0.65)";
-    ctx.shadowBlur = lerp(4, 14, prog);
-    ctx.shadowOffsetY = lerp(2, 5, prog);
+    ctx.shadowColor = "rgba(0,0,0,0.8)";
+    ctx.shadowBlur = lerp(4, 16, prog);
+    ctx.shadowOffsetY = lerp(2, 6, prog);
 
     const bodyGrad = ctx.createLinearGradient(0, -noteH / 2, 0, noteH / 2);
-    bodyGrad.addColorStop(0, "rgba(255, 252, 243, 0.98)");
-    bodyGrad.addColorStop(0.22, "rgba(252, 248, 238, 0.97)");
-    bodyGrad.addColorStop(0.75, "rgba(242, 236, 220, 0.97)");
-    bodyGrad.addColorStop(1, "rgba(228, 220, 204, 0.96)");
+    bodyGrad.addColorStop(0, "#1c1c1f");
+    bodyGrad.addColorStop(0.35, "#0e0e11");
+    bodyGrad.addColorStop(0.85, "#08080a");
+    bodyGrad.addColorStop(1, "#030304");
     ctx.fillStyle = bodyGrad;
   }
   ctx.fill();
@@ -7537,8 +7799,8 @@ function drawKey(
     ctx.lineWidth = 0.8;
     ctx.stroke();
   } else {
-    ctx.strokeStyle = "rgba(160, 150, 132, 0.45)";
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.35)";
+    ctx.lineWidth = 1.25;
     ctx.stroke();
   }
 
@@ -7571,11 +7833,12 @@ function drawKey(
     }
   } else {
     // ── 4. COLORED CENTER STRIPE ──
-    const stripeH = Math.max(6, noteH * 0.26);
-    ctx.shadowColor = lc;
-    ctx.shadowBlur = lerp(20, 42, prog);
-    ctx.fillStyle = lc;
-    ctx.globalAlpha = 0.9;
+    const stripeColor = lc;
+    const stripeH = Math.max(14, noteH * 0.28);
+    ctx.shadowColor = stripeColor;
+    ctx.shadowBlur = lerp(12, 28, prog);
+    ctx.fillStyle = stripeColor;
+    ctx.globalAlpha = 0.95;
 
     ctx.beginPath();
     if (swipeDirection) {
@@ -7594,6 +7857,16 @@ function drawKey(
       ctx.roundRect(-noteW / 2 + 2, -stripeH / 2, noteW - 4, stripeH, stripeH * 0.35);
     }
     ctx.fill();
+
+    // Draw white core inside the horizontal stripe (for tap notes)
+    if (!swipeDirection) {
+      ctx.fillStyle = "#ffffff";
+      ctx.globalAlpha = 0.85;
+      ctx.beginPath();
+      ctx.roundRect(-noteW / 2 + 8, -stripeH * 0.28 / 2, noteW - 16, stripeH * 0.28, stripeH * 0.1);
+      ctx.fill();
+      ctx.globalAlpha = 1.0;
+    }
 
     // ── 4b. Scrolling Neon Arrows inside Swipe Stripes ──
     if (swipeDirection) {

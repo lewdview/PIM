@@ -69,7 +69,7 @@
     {
       "id": 7,
       "time": 13.373493975903614,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -188,28 +188,28 @@
     {
       "id": 24,
       "time": 33.25301204819277,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
     {
       "id": 25,
       "time": 34.1566265060241,
-      "lane": 1,
+      "lane": 2,
       "type": "tap",
       "stage": 1
     },
     {
       "id": 26,
       "time": 34.87951807228916,
-      "lane": 2,
+      "lane": 1,
       "type": "tap",
       "stage": 1
     },
     {
       "id": 27,
       "time": 35.602409638554214,
-      "lane": 1,
+      "lane": 2,
       "type": "tap",
       "stage": 1
     },
@@ -505,28 +505,31 @@
     {
       "id": 67,
       "time": 60.72289156626506,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 2
     },
     {
       "id": 68,
       "time": 61.265060240963855,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 2
     },
     {
       "id": 69,
       "time": 61.80722891566265,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 2
     },
     {
       "id": 70,
       "time": 62.16867469879518,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -621,6 +624,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.5280029296875001,
+      "swipeDirection": "up",
       "stage": 2
     },
     {
@@ -696,7 +700,7 @@
     {
       "id": 94,
       "time": 74.81927710843374,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 2
     },
@@ -710,7 +714,7 @@
     {
       "id": 96,
       "time": 75.72289156626506,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 2
     },
@@ -769,7 +773,7 @@
     {
       "id": 104,
       "time": 80.96385542168674,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -777,7 +781,7 @@
     {
       "id": 105,
       "time": 81.50602409638554,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -837,7 +841,7 @@
     {
       "id": 113,
       "time": 89.09638554216868,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -865,7 +869,7 @@
     {
       "id": 117,
       "time": 90.72289156626506,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -993,6 +997,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.59200439453125,
+      "swipeDirection": "up",
       "stage": 3
     },
     {
@@ -1070,14 +1075,14 @@
     {
       "id": 145,
       "time": 104.63855421686748,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 3
     },
     {
       "id": 146,
       "time": 104.81927710843374,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1098,14 +1103,14 @@
     {
       "id": 149,
       "time": 105.5421686746988,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 3
     },
     {
       "id": 150,
       "time": 105.90361445783132,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1126,7 +1131,7 @@
     {
       "id": 153,
       "time": 106.62650602409639,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 3
     },
@@ -1203,7 +1208,7 @@
     {
       "id": 162,
       "time": 111.6867469879518,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.6559997558593751,
       "stage": 3
@@ -1290,7 +1295,7 @@
     {
       "id": 174,
       "time": 117.46987951807229,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1318,7 +1323,7 @@
     {
       "id": 178,
       "time": 118.73493975903614,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1761,14 +1766,15 @@
     {
       "id": 236,
       "time": 142.40963855421685,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 4
     },
     {
       "id": 237,
       "time": 142.59036144578315,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -1776,8 +1782,9 @@
     {
       "id": 238,
       "time": 142.7710843373494,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 4
     },
     {
@@ -1855,14 +1862,14 @@
     {
       "id": 249,
       "time": 151.0843373493976,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 4
     },
     {
       "id": 250,
       "time": 151.44578313253012,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -1883,7 +1890,7 @@
     {
       "id": 253,
       "time": 152.16867469879517,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 4
     },
@@ -2070,6 +2077,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 1.4239990234375002,
+      "swipeDirection": "left",
       "stage": 5
     },
     {
@@ -2085,7 +2093,7 @@
     {
       "id": 280,
       "time": 176.56626506024097,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5760009765625,
       "stage": 5
@@ -2096,6 +2104,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.68800048828125,
+      "swipeDirection": "left",
       "stage": 5
     },
     {
@@ -2325,7 +2334,7 @@
     {
       "id": 311,
       "time": 201.14457831325302,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 5
     },
@@ -2384,7 +2393,7 @@
     "Alternative",
     "Indie"
   ],
-  "difficultyLevel": 5,
+  "difficultyLevel": 6,
   "lyrics": "I ain't looking for attention Do you do things that you say that you can't mention? I ain't looking for attention Do you feel judged? Do you feel misunderstood? I ain't looking for attention I'm just a pension Why it all goes the way you want it to? But you're looking for attention for something new Well you gotta be that cold and new Who are you here for me? Hell nah Now I see him as a woman or what just at all? I'm just sitting with a bubble all tall I can't think about you for a second I don't want to regret what I mentioned Oh no, oh no I gotta shut it down and light the clothes out Even though I want you to be You're just doing too much to me instead You're just looking for attention, aren't you? You just got everything at convention, don't you? You're just so much better than me Come on, throw that nose up, say You're just looking for attention, aren't you? You're just looking for attention, aren't you? Cause of all the things you do That you don't want to mention, don't you? Don't be a Little cannibal For anything you do No, no You don't blame it on me You can blame it on me Yeah Don't be a fucking cannibal For anything you do You can blame it on me Yeah, you can blame it on me It's just attention you're seeking now Hey You're just looking for attention now You're just looking for attention now Well, you got it from the wrong direction I'm sorry, there's no more connection Open up and see that I'm taking the scene I don't care what you say Don't care what you feel Too many days waiting, I'm crying for real The fucking pain of hurt you put me through Fuck you, fuck you, fuck you, fuck you, fuck you You're just looking for attention Cause of all the things you do You can't deal with, you don't mention You're just looking for attention You're just looking for attention You're just looking for attention For the things that you do You're just looking for attention I see you I see you I see you",
   "lyricsSegments": [
     {

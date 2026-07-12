@@ -90,7 +90,7 @@
     {
       "id": 10,
       "time": 14.285714285714285,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -174,7 +174,7 @@
     {
       "id": 22,
       "time": 27.619047619047617,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -202,7 +202,7 @@
     {
       "id": 26,
       "time": 31.9047619047619,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -287,7 +287,7 @@
     {
       "id": 38,
       "time": 48.80952380952381,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -295,7 +295,7 @@
     {
       "id": 39,
       "time": 49.285714285714285,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.6839996337890626,
       "stage": 2
@@ -306,6 +306,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.6839996337890626,
+      "swipeDirection": "right",
       "stage": 2
     },
     {
@@ -326,7 +327,7 @@
     {
       "id": 43,
       "time": 52.857142857142854,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -343,6 +344,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 2,
+      "swipeDirection": "up",
       "stage": 2
     },
     {
@@ -493,6 +495,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.51199951171875,
+      "swipeDirection": "right",
       "stage": 2
     },
     {
@@ -608,12 +611,13 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.496002197265625,
+      "swipeDirection": "up",
       "stage": 3
     },
     {
       "id": 81,
       "time": 86.42857142857143,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -738,6 +742,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 1.247998046875,
+      "swipeDirection": "left",
       "stage": 3
     },
     {
@@ -762,6 +767,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 1.5040039062500001,
+      "swipeDirection": "right",
       "stage": 3
     },
     {
@@ -799,7 +805,7 @@
     {
       "id": 104,
       "time": 104.28571428571428,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 1.0464001464843704,
       "stage": 3
@@ -839,7 +845,7 @@
     {
       "id": 109,
       "time": 109.52380952380952,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -935,6 +941,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.544000244140625,
+      "swipeDirection": "right",
       "stage": 3
     },
     {
@@ -981,6 +988,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.9760009765625001,
+      "swipeDirection": "up",
       "stage": 3
     },
     {
@@ -996,7 +1004,7 @@
     {
       "id": 130,
       "time": 125.71428571428571,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.672003173828125,
       "stage": 3
@@ -1129,6 +1137,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 1.4079956054687501,
+      "swipeDirection": "right",
       "stage": 4
     },
     {
@@ -1289,7 +1298,7 @@
     {
       "id": 166,
       "time": 152.85714285714286,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.91199951171875,
       "stage": 4
@@ -1382,7 +1391,7 @@
     {
       "id": 178,
       "time": 171.42857142857142,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 5
     },
@@ -1399,6 +1408,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 1.0239990234375,
+      "swipeDirection": "up",
       "stage": 5
     },
     {
@@ -1421,7 +1431,7 @@
     {
       "id": 183,
       "time": 178.09523809523807,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.51199951171875,
       "stage": 5
@@ -1467,7 +1477,7 @@
     {
       "id": 189,
       "time": 182.14285714285714,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 5
     },
@@ -1570,7 +1580,7 @@
     "Ballad",
     "Ambient"
   ],
-  "difficultyLevel": 2,
+  "difficultyLevel": 3,
   "lyrics": "Believe it Girl\nHey, I know time it gets faster\nJust know that I believe in me\nHey, I know I'm not replacing you\nOh, I know I'm not replacing you\nAll the times we've gone\nAnd things that lost\nJust know I'm not replacing you\nNever know what you got\nNever, never know what you got\ntil its gone, Joanie Mitchell like\nYellow taxi taking it away from me\nI don't know if I can breathe\nThrough the times we've lost\nLost in light\nBut I know you are here\nOh, I know, baby\nYou can make a difference here\nInside the world where no one can\nI know I'm not replacing you\nDo you know that too\ntime fast as speed of life disaster\nTo read a book of it all\nOh, I want you to say, baby\nOh, no, yeah, I'm not\nI'm not replacing you\nNo, no, I can't\nYou see the light beyond the view\nHey, just know I'm not replacing you\nForever as you dive into the energy\nto find a place, we'll find a way\nTo be free\nI'm not replacing you, baby\nI'm not replacing you\nCause we all see that waterfall\nYeah, we all know how\nAnd where our downfall is, oh, baby",
   "lyricsSegments": [
     {

@@ -97,7 +97,7 @@
     {
       "id": 11,
       "time": 11.176470588235295,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -265,7 +265,7 @@
     {
       "id": 35,
       "time": 36.1764705882353,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -279,7 +279,7 @@
     {
       "id": 37,
       "time": 37.64705882352941,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -324,12 +324,13 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.55999755859375,
+      "swipeDirection": "right",
       "stage": 2
     },
     {
       "id": 44,
       "time": 44.26470588235294,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -357,7 +358,7 @@
     {
       "id": 48,
       "time": 46.32352941176471,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -374,6 +375,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 1.967999267578125,
+      "swipeDirection": "right",
       "stage": 2
     },
     {
@@ -397,14 +399,15 @@
     {
       "id": 53,
       "time": 52.20588235294118,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 2
     },
     {
       "id": 54,
       "time": 52.64705882352941,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -412,8 +415,9 @@
     {
       "id": 55,
       "time": 53.08823529411765,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 2
     },
     {
@@ -427,14 +431,15 @@
     {
       "id": 57,
       "time": 54.11764705882353,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 2
     },
     {
       "id": 58,
       "time": 54.70588235294118,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -442,8 +447,9 @@
     {
       "id": 59,
       "time": 55.294117647058826,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 2
     },
     {
@@ -460,6 +466,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.6559997558593751,
+      "swipeDirection": "right",
       "stage": 2
     },
     {
@@ -508,14 +515,14 @@
     {
       "id": 68,
       "time": 62.20588235294118,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 2
     },
     {
       "id": 69,
       "time": 62.5,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -614,7 +621,7 @@
     {
       "id": 83,
       "time": 73.67647058823529,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.6559997558593751,
       "stage": 2
@@ -735,7 +742,7 @@
     {
       "id": 100,
       "time": 86.02941176470588,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -763,7 +770,7 @@
     {
       "id": 104,
       "time": 87.5,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -865,6 +872,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.51199951171875,
+      "swipeDirection": "right",
       "stage": 3
     },
     {
@@ -936,14 +944,14 @@
     {
       "id": 127,
       "time": 102.05882352941177,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 3
     },
     {
       "id": 128,
       "time": 102.3529411764706,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -964,14 +972,14 @@
     {
       "id": 131,
       "time": 103.52941176470588,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 3
     },
     {
       "id": 132,
       "time": 103.97058823529412,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1032,6 +1040,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 1.151995849609375,
+      "swipeDirection": "right",
       "stage": 3
     },
     {
@@ -1047,7 +1056,7 @@
     {
       "id": 142,
       "time": 111.02941176470588,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -1055,7 +1064,7 @@
     {
       "id": 143,
       "time": 111.32352941176471,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -1071,7 +1080,7 @@
     {
       "id": 145,
       "time": 112.20588235294117,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.8640014648437501,
       "stage": 3
@@ -1173,12 +1182,13 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.8799987792968751,
+      "swipeDirection": "right",
       "stage": 3
     },
     {
       "id": 159,
       "time": 120.29411764705883,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1206,7 +1216,7 @@
     {
       "id": 163,
       "time": 121.91176470588236,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1508,7 +1518,7 @@
     {
       "id": 204,
       "time": 151.02941176470588,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.6239990234375,
       "stage": 4
@@ -1611,7 +1621,7 @@
     {
       "id": 218,
       "time": 159.85294117647058,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -1625,8 +1635,9 @@
     {
       "id": 220,
       "time": 164.41176470588235,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.91199951171875,
       "stage": 5
     },
     {
@@ -1635,6 +1646,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.7199951171875001,
+      "swipeDirection": "right",
       "stage": 5
     },
     {
@@ -1705,14 +1717,14 @@
     {
       "id": 231,
       "time": 173.23529411764707,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 5
     },
     {
       "id": 232,
       "time": 173.52941176470588,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 5
     },
@@ -2010,7 +2022,7 @@
     {
       "id": 268,
       "time": 190.44117647058823,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5760009765625,
       "stage": 5
@@ -2021,6 +2033,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.5760009765625,
+      "swipeDirection": "right",
       "stage": 5
     },
     {
@@ -2130,7 +2143,7 @@
     "Alternative",
     "Indie"
   ],
-  "difficultyLevel": 5,
+  "difficultyLevel": 6,
   "lyrics": "Glad you got your home, glad you got what you need Do you think you'll ever not feel that good? Unless you're but a starry man, I think you will Do you ever want to know what it's like to feel the opposite? All the love that you give on your day How to feel knocked down, hurt down, stepped on, unwanted If you ever want those feelings Better stay clear of any of your negative feelings Wanna point the finger when you can't see beyond your own view How it feels to be unloved Do you ever want to feel that? Are you just happy with all the things that one life can't stand? Oh, how it feels to be unloved You got no one there next to you, all your heart does ain't for you To get up and sing, to do something for yourself but anxiety rocks your mainframe If you can't go on, one more step To be unloved Do you ever want to know that? Does it sound like the worst thing that could ever happen to you? To be unloved To be here all alone As you reach your peaks in your fast life zone, I want you to understand Your life's pretty good so stop searching Your life's got things that others don't And if you can't see the bucket from the trees Baby, you should know that you can't be free Do you know what it's like to be me? Do you even want to hear, listen, or understand? What it's like to be unloved Feel unjust Have the whole world staring at you Cause they can see you're on the rush to be unloved Be just a Cryptomaniac in anxiety Do you want to feel unloved? I didn't think so So let me take a breath and have some gratitude for what you see in front of you You don't have to be the number one thing you're trying to fulfill at all To understand you've got the good stick and the amount of people that care for you Oh, it's so true",
   "lyricsSegments": [
     {

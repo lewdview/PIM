@@ -197,7 +197,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     cardBack: localStorage.getItem("opt_cardBack") ?? "classic",
     gameBackground: localStorage.getItem("opt_gameBackground") ?? "cover_blur",
     gameTrack: localStorage.getItem("opt_gameTrack") ?? "classic",
-    backgroundBlur: parseFloat(localStorage.getItem("opt_backgroundBlur") ?? "18") || 18,
+    backgroundBlur: parseFloat(localStorage.getItem("opt_backgroundBlur") ?? "10") || 10,
     hudMisses: localStorage.getItem("opt_hudMisses") !== "false",
     comboDisplay: localStorage.getItem("opt_comboDisplay") !== "false",
     judgmentText: localStorage.getItem("opt_judgmentText") !== "false",

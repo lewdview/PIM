@@ -83,7 +83,7 @@
     {
       "id": 9,
       "time": 14.0625,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -139,21 +139,21 @@
     {
       "id": 17,
       "time": 28.828125,
-      "lane": 0,
+      "lane": 2,
       "type": "tap",
       "stage": 1
     },
     {
       "id": 18,
       "time": 29.765625,
-      "lane": 2,
+      "lane": 1,
       "type": "tap",
       "stage": 1
     },
     {
       "id": 19,
       "time": 30.703125,
-      "lane": 0,
+      "lane": 2,
       "type": "tap",
       "stage": 1
     },
@@ -286,7 +286,7 @@
     {
       "id": 38,
       "time": 52.96875,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.944000244140625,
       "stage": 2
@@ -337,7 +337,7 @@
     {
       "id": 45,
       "time": 60.46875,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -358,7 +358,7 @@
     {
       "id": 48,
       "time": 62.109375,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -379,7 +379,7 @@
     {
       "id": 51,
       "time": 63.515625,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -460,7 +460,7 @@
     {
       "id": 62,
       "time": 72.421875,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -595,7 +595,7 @@
     {
       "id": 81,
       "time": 85.3125,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -654,7 +654,7 @@
     {
       "id": 89,
       "time": 90.46875,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.544000244140625,
       "stage": 2
@@ -704,7 +704,7 @@
     {
       "id": 96,
       "time": 95.625,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -746,7 +746,7 @@
     {
       "id": 102,
       "time": 97.96875,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -756,6 +756,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.544000244140625,
+      "swipeDirection": "up",
       "stage": 3
     },
     {
@@ -802,6 +803,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.544000244140625,
+      "swipeDirection": "left",
       "stage": 3
     },
     {
@@ -814,14 +816,14 @@
     {
       "id": 111,
       "time": 107.34375,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 3
     },
     {
       "id": 112,
       "time": 107.578125,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -941,7 +943,7 @@
     {
       "id": 128,
       "time": 116.015625,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -949,7 +951,7 @@
     {
       "id": 129,
       "time": 116.484375,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -965,7 +967,7 @@
     {
       "id": 131,
       "time": 116.953125,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -1038,7 +1040,7 @@
     {
       "id": 141,
       "time": 122.8125,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1085,14 +1087,15 @@
     {
       "id": 147,
       "time": 126.5625,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
       "id": 148,
       "time": 127.03125,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -1100,8 +1103,9 @@
     {
       "id": 149,
       "time": 127.265625,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
@@ -1115,14 +1119,15 @@
     {
       "id": 151,
       "time": 127.734375,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
       "id": 152,
       "time": 127.96875,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -1130,8 +1135,9 @@
     {
       "id": 153,
       "time": 128.203125,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
@@ -1145,14 +1151,15 @@
     {
       "id": 155,
       "time": 128.90625,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
       "id": 156,
       "time": 129.140625,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -1160,8 +1167,9 @@
     {
       "id": 157,
       "time": 129.375,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
@@ -1281,14 +1289,14 @@
     {
       "id": 174,
       "time": 138.984375,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 3
     },
     {
       "id": 175,
       "time": 139.21875,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1309,14 +1317,14 @@
     {
       "id": 178,
       "time": 140.15625,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 3
     },
     {
       "id": 179,
       "time": 140.625,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1337,14 +1345,14 @@
     {
       "id": 182,
       "time": 141.5625,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 3
     },
     {
       "id": 183,
       "time": 141.796875,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1365,14 +1373,14 @@
     {
       "id": 186,
       "time": 142.96875,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 3
     },
     {
       "id": 187,
       "time": 143.203125,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1393,14 +1401,14 @@
     {
       "id": 190,
       "time": 144.140625,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 3
     },
     {
       "id": 191,
       "time": 144.609375,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1421,14 +1429,14 @@
     {
       "id": 194,
       "time": 145.546875,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 3
     },
     {
       "id": 195,
       "time": 145.78125,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1449,14 +1457,14 @@
     {
       "id": 198,
       "time": 146.953125,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 3
     },
     {
       "id": 199,
       "time": 147.421875,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1477,14 +1485,14 @@
     {
       "id": 202,
       "time": 148.359375,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 3
     },
     {
       "id": 203,
       "time": 148.59375,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1505,14 +1513,14 @@
     {
       "id": 206,
       "time": 149.765625,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 3
     },
     {
       "id": 207,
       "time": 150,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1533,14 +1541,14 @@
     {
       "id": 210,
       "time": 150.9375,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 3
     },
     {
       "id": 211,
       "time": 151.171875,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1592,6 +1600,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 1.00799560546875,
+      "swipeDirection": "up",
       "stage": 3
     },
     {
@@ -2036,7 +2045,7 @@
     {
       "id": 279,
       "time": 187.96875,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -2284,14 +2293,15 @@
     {
       "id": 311,
       "time": 205.78125,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 5
     },
     {
       "id": 312,
       "time": 206.015625,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -2337,6 +2347,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.68800048828125,
+      "swipeDirection": "right",
       "stage": 5
     },
     {
@@ -2733,7 +2744,7 @@
     {
       "id": 371,
       "time": 230.625,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -2741,7 +2752,7 @@
     {
       "id": 372,
       "time": 231.09375,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -2756,21 +2767,21 @@
     },
     {
       "id": 374,
-      "time": 232.5,
+      "time": 233.4375,
       "lane": 0,
       "type": "tap",
       "stage": 5
     },
     {
       "id": 375,
-      "time": 232.96875,
+      "time": 233.90625,
       "lane": 1,
       "type": "tap",
       "stage": 5
     },
     {
       "id": 376,
-      "time": 233.4375,
+      "time": 234.375,
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.9375,
@@ -2778,14 +2789,14 @@
     },
     {
       "id": 377,
-      "time": 234.84375,
+      "time": 235.78125,
       "lane": 0,
       "type": "tap",
       "stage": 5
     },
     {
       "id": 378,
-      "time": 235.3125,
+      "time": 236.25,
       "lane": 1,
       "type": "swipe",
       "swipeDirection": "left",
@@ -2839,7 +2850,7 @@
     "Ballad",
     "Ambient"
   ],
-  "difficultyLevel": 5,
+  "difficultyLevel": 6,
   "lyrics": "How high can one man get don't let me forget you fuckers ain't shit straight suck on my dick My life is perfect at the end of yours. You should really ask yourself. Was it all worth it? I Hope it it's worth it. Yeah, my dick is hurt Lift up her skirt bust up my shirt you motherfuckers wanna try to make this shit work. I doubt it Don't make me shout it again. No, we ain't friends. Why would I pretend to men that shit? Y'all can really suck my dick that shit from the back real quick. Give a fuck about much allow us to discuss You motherfuckers discuss me that's just disgusting You'll be discussing my pinky ring blinky-dee-bling all you motherfuckers better sing Run from the border. What is your order? I don't give a fuck I'm too hot to touch you motherfuckers want to come around in Where you fucking mouth? I'll go in your house put my feet on your couch with my dick in your spouse straight and that shit out What you gonna do what you talking about? Don't make me shout I do this for clout. Well these motherfuckers think that they Hot as me Allow me to feel this beat. Don't be indiscreet be in the streets. Don't be in the street. No, you cannot see me I'm interplanetary Holy G Good God Almighty Don't make me hurt somebody Straight vacate your party. I was a party too many fucking crimes doing my time. Fuck all you lames We ain't the same It's just a game Maybe you should play a little more stupid ass You're leaving me boy making me snore close the fucking door. I'm up in the house. What the fuck you talking about? Punch you in your mouth Bitch, I'm from the South shut your trap Keep that shit back learn how to act learn how to get a new strap then go learn how to jack somebody Give me your money bitch. I fucking clear the safe. You my life is great. Your life is fake You allow me to make less mistakes When I fucking going No, they ain't knowing this is just flowing The boat I am rowing Yeah, I'm the captain making it happen Don't get to smack in your fucking lips together when you talk about action. Shut that shit up my dick I'm too funny pay me on my money. Can't you learn from me? Nothing to prove too much to lose. Fuck all you dudes kick off my shoes. Oh, yeah, I'm really broke I Am the best put that shit straight to the test no fucking stress didn't even have to guess yes I am fucking blessed I'm pulling up a drink for the devil. Yeah, I'm a rebel turn up the level Hi, I Just lost it all Swinging off the walls. Yeah, you dudes can't lick my balls. Yes. Y'all could really fuck with this So go fuck with that shut your trap for you smack learn how to act all y'all bitches getting jacked I'm taking your money Yeah, got none left. I'm taking your girl straight butt sex. Yeah, what's next?",
   "lyricsSegments": [
     {

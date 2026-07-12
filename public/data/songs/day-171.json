@@ -90,7 +90,7 @@
     {
       "id": 10,
       "time": 13.965517241379311,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -104,7 +104,7 @@
     {
       "id": 12,
       "time": 15.862068965517242,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -227,7 +227,7 @@
     {
       "id": 29,
       "time": 36.20689655172414,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -278,7 +278,7 @@
     {
       "id": 36,
       "time": 41.20689655172414,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -331,14 +331,15 @@
     {
       "id": 43,
       "time": 47.06896551724138,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 2
     },
     {
       "id": 44,
       "time": 47.41379310344828,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -346,8 +347,9 @@
     {
       "id": 45,
       "time": 47.758620689655174,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 2
     },
     {
@@ -364,6 +366,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.7839996337890626,
+      "swipeDirection": "left",
       "stage": 2
     },
     {
@@ -474,7 +477,7 @@
     {
       "id": 63,
       "time": 62.931034482758626,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5760009765625,
       "stage": 3
@@ -543,12 +546,13 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.608001708984375,
+      "swipeDirection": "up",
       "stage": 3
     },
     {
       "id": 73,
       "time": 67.93103448275862,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -585,14 +589,15 @@
     {
       "id": 78,
       "time": 74.48275862068967,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
       "id": 79,
       "time": 75,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -652,6 +657,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.89599609375,
+      "swipeDirection": "left",
       "stage": 3
     },
     {
@@ -700,14 +706,14 @@
     {
       "id": 94,
       "time": 83.62068965517241,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 3
     },
     {
       "id": 95,
       "time": 83.79310344827587,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -739,6 +745,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.6719970703125,
+      "swipeDirection": "right",
       "stage": 3
     },
     {
@@ -764,7 +771,7 @@
     {
       "id": 102,
       "time": 92.41379310344828,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.672003173828125,
       "stage": 3
@@ -797,12 +804,13 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.6079956054687501,
+      "swipeDirection": "up",
       "stage": 4
     },
     {
       "id": 107,
       "time": 98.27586206896552,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -830,7 +838,7 @@
     {
       "id": 111,
       "time": 99.48275862068967,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -1021,8 +1029,9 @@
     {
       "id": 136,
       "time": 115.3448275862069,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 5
     },
     {
@@ -1031,6 +1040,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.7679992675781251,
+      "swipeDirection": "up",
       "stage": 5
     },
     {
@@ -1068,7 +1078,7 @@
     {
       "id": 142,
       "time": 127.06896551724138,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1076,7 +1086,7 @@
     {
       "id": 143,
       "time": 127.41379310344828,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 5
@@ -1102,6 +1112,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.5760009765625,
+      "swipeDirection": "left",
       "stage": 5
     },
     {
@@ -1126,12 +1137,13 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.847998046875,
+      "swipeDirection": "right",
       "stage": 5
     },
     {
       "id": 150,
       "time": 132.24137931034483,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 5
     },
@@ -1148,6 +1160,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.48000488281250003,
+      "swipeDirection": "right",
       "stage": 5
     },
     {
@@ -1205,7 +1218,7 @@
     "Rock",
     "Metal"
   ],
-  "difficultyLevel": 3,
+  "difficultyLevel": 4,
   "lyrics": "You think you know it now, think you own it now You think you had it all up inside of your mind You just know it now, oh don't you now You're addicted, you're addicted to the addictive Of my name, makes me feel insane You're addicted to everything in my world My world and right brain, oh Hey, you think you know, don't you You think you know all about you and me Past the end of the line that we all see You think you know, yeah You're addicted to the show, yeah An addiction with the mind of me Now you can't forget this fantasy, oh I'm sorry it's so wrong That it shows us past the low line A little bit of additive, a splash of the night You're addicted Told you once Maybe a thousand times more Now you see, and now you know It'll be a half a year to grow, so You're addicted Not gonna do it again, right, right You're addicted In a night, flying away and seeing In a night, you're gonna see You're addicted Addicted To me",
   "lyricsSegments": [
     {

@@ -69,7 +69,7 @@
     {
       "id": 7,
       "time": 11.1328125,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -181,7 +181,7 @@
     {
       "id": 23,
       "time": 31.0546875,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -212,6 +212,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 1.5840026855468752,
+      "swipeDirection": "up",
       "stage": 2
     },
     {
@@ -285,6 +286,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 1.0720001220703126,
+      "swipeDirection": "left",
       "stage": 2
     },
     {
@@ -297,7 +299,7 @@
     {
       "id": 38,
       "time": 48.8671875,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 2
     },
@@ -340,7 +342,7 @@
     {
       "id": 44,
       "time": 56.6015625,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.832000732421875,
       "stage": 2
@@ -385,7 +387,7 @@
     {
       "id": 50,
       "time": 61.7578125,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -470,6 +472,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 1.13599853515625,
+      "swipeDirection": "left",
       "stage": 2
     },
     {
@@ -501,6 +504,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 1.7919982910156251,
+      "swipeDirection": "left",
       "stage": 3
     },
     {
@@ -516,7 +520,7 @@
     {
       "id": 67,
       "time": 80.0390625,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -524,7 +528,7 @@
     {
       "id": 68,
       "time": 80.625,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 1.5,
       "stage": 3
@@ -535,6 +539,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.687994384765625,
+      "swipeDirection": "right",
       "stage": 3
     },
     {
@@ -558,6 +563,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.496002197265625,
+      "swipeDirection": "left",
       "stage": 3
     },
     {
@@ -571,7 +577,7 @@
     {
       "id": 74,
       "time": 86.953125,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -660,6 +666,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.59200439453125,
+      "swipeDirection": "right",
       "stage": 3
     },
     {
@@ -773,14 +780,14 @@
     {
       "id": 101,
       "time": 105.8203125,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 3
     },
     {
       "id": 102,
       "time": 106.40625,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -834,6 +841,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.6079956054687501,
+      "swipeDirection": "up",
       "stage": 3
     },
     {
@@ -849,7 +857,7 @@
     {
       "id": 111,
       "time": 112.8515625,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -857,7 +865,7 @@
     {
       "id": 112,
       "time": 113.203125,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -873,7 +881,7 @@
     {
       "id": 114,
       "time": 114.0234375,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.55999755859375,
       "stage": 3
@@ -905,7 +913,7 @@
     {
       "id": 118,
       "time": 121.171875,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -922,6 +930,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.5760009765625,
+      "swipeDirection": "left",
       "stage": 4
     },
     {
@@ -978,6 +987,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.49599609375000003,
+      "swipeDirection": "left",
       "stage": 4
     },
     {
@@ -1016,6 +1026,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 1.152001953125,
+      "swipeDirection": "left",
       "stage": 4
     },
     {
@@ -1066,7 +1077,7 @@
     {
       "id": 139,
       "time": 142.265625,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 1.1199951171875,
       "stage": 4
@@ -1124,7 +1135,7 @@
     {
       "id": 146,
       "time": 158.203125,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 5
     },
@@ -1149,6 +1160,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.99200439453125,
+      "swipeDirection": "up",
       "stage": 5
     },
     {
@@ -1182,6 +1194,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.7040039062500001,
+      "swipeDirection": "right",
       "stage": 5
     },
     {
@@ -1412,7 +1425,7 @@
     "Alternative",
     "Indie"
   ],
-  "difficultyLevel": 5,
+  "difficultyLevel": 6,
   "lyrics": "Like a midnight halo, darkness creeps my soul, and I find myself alone Thinking about this midnight piano, and how I could use it to be more for me All I can see is this midnight piano, it's chords, melodies run through my lungs High up in this losing of beat, I've got no faith to rewind, I've only got fear Midnight piano, connect me to those who wish me a better resolve Baby, I can only sing this for a life alone Existing high above, existing higher up, is it the end or is it just the dark that we all know Inside of our hearts that scream to us from beyond the veil of hope And I just stay here, in my midnight piano, holding my melody I just stay here, in my midnight piano, wonder if the dawn will break through I hope you do, break through Midnight me, looking for light on your night Midnight me, looking for light on your night  ",
   "lyricsSegments": [
     {

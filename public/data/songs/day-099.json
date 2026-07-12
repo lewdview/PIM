@@ -62,7 +62,7 @@
     {
       "id": 6,
       "time": 9.456521739130435,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -237,8 +237,9 @@
     {
       "id": 31,
       "time": 32.119565217391305,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 2
     },
     {
@@ -268,6 +269,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.6239990234375,
+      "swipeDirection": "left",
       "stage": 2
     },
     {
@@ -283,7 +285,7 @@
     {
       "id": 37,
       "time": 41.08695652173913,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -291,7 +293,7 @@
     {
       "id": 38,
       "time": 41.57608695652174,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -302,6 +304,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.8,
+      "swipeDirection": "up",
       "stage": 2
     },
     {
@@ -363,7 +366,7 @@
     {
       "id": 48,
       "time": 47.77173913043478,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -380,6 +383,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.6399993896484375,
+      "swipeDirection": "left",
       "stage": 2
     },
     {
@@ -406,6 +410,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.8,
+      "swipeDirection": "left",
       "stage": 2
     },
     {
@@ -499,6 +504,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.6559997558593751,
+      "swipeDirection": "up",
       "stage": 2
     },
     {
@@ -511,7 +517,7 @@
     {
       "id": 68,
       "time": 62.77173913043478,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.7679992675781251,
       "stage": 2
@@ -548,7 +554,7 @@
     {
       "id": 73,
       "time": 67.98913043478261,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -633,8 +639,9 @@
     {
       "id": 84,
       "time": 73.85869565217392,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.608001708984375,
       "stage": 3
     },
     {
@@ -699,7 +706,7 @@
     {
       "id": 93,
       "time": 79.40217391304348,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 3
     },
@@ -749,7 +756,7 @@
     {
       "id": 99,
       "time": 83.47826086956522,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -757,7 +764,7 @@
     {
       "id": 100,
       "time": 83.96739130434783,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -773,7 +780,7 @@
     {
       "id": 102,
       "time": 84.45652173913044,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.560003662109375,
       "stage": 3
@@ -804,7 +811,7 @@
     {
       "id": 106,
       "time": 88.53260869565217,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -830,6 +837,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.51199951171875,
+      "swipeDirection": "left",
       "stage": 3
     },
     {
@@ -884,6 +892,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.51199951171875,
+      "swipeDirection": "left",
       "stage": 3
     },
     {
@@ -922,6 +931,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.512005615234375,
+      "swipeDirection": "right",
       "stage": 3
     },
     {
@@ -1498,7 +1508,7 @@
     {
       "id": 196,
       "time": 125.3804347826087,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -1526,7 +1536,7 @@
     {
       "id": 200,
       "time": 126.68478260869566,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -1554,7 +1564,7 @@
     {
       "id": 204,
       "time": 127.5,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 5
     },
@@ -1655,6 +1665,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.48000488281250003,
+      "swipeDirection": "left",
       "stage": 5
     },
     {
@@ -1721,7 +1732,7 @@
     {
       "id": 226,
       "time": 143.80434782608697,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.7040039062500001,
       "stage": 5
@@ -1762,12 +1773,13 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.7040039062500001,
+      "swipeDirection": "up",
       "stage": 5
     },
     {
       "id": 232,
       "time": 148.69565217391303,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 5
     },
@@ -1939,7 +1951,7 @@
     "Alternative",
     "Indie"
   ],
-  "difficultyLevel": 5,
+  "difficultyLevel": 6,
   "lyrics": "What the f- Why you just giving me problems again? God dang it. Wait, what are you doing here? Just giving me f-ing milk, is that it? F-ing b- No matter where I go No matter what I see Everything I do I run into problems Yeah You know what you Do to me All the things That you silly little Why'd you treat me One way Then another way Behind my back Why'd you do All the things You said you'd never do You said you never do Sorry, my friend died I'll be wherever you are Wherever I go Everywhere I see I see you Everywhere I be Everywhere I go Everywhere I see I see you Nowhere I go Where I run into problems Everywhere you are Everywhere you are It seems there's problems I'm a no-go Oh yeah Problems, problems, problems Problems, problems Always got your problems Always begging me to save you Always centuries of hell Always, you never went that way And it's me that's gone It's like you see a magic god up in the mind of you And I'm here to tell you That your lies weren't that good at all Cause I see right through it, see right through it You create the problems for me And I solve them to keep me busy So I never question your shit Never question where you've been Never question why you always say That you're the fucking winner I'm sorry, girl, past It ain't that good At all Cause I run and I'm everywhere I go Everywhere I see Everywhere I look You see me I'm a no-go Everywhere you are It seems there's problems Yeah, yeah I'm looking for problems I'm looking for problems",
   "lyricsSegments": [
     {

@@ -76,7 +76,7 @@
     {
       "id": 8,
       "time": 8.347826086956522,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -90,7 +90,7 @@
     {
       "id": 10,
       "time": 9.782608695652174,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -104,7 +104,7 @@
     {
       "id": 12,
       "time": 11.347826086956522,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -118,7 +118,7 @@
     {
       "id": 14,
       "time": 12.652173913043478,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -132,7 +132,7 @@
     {
       "id": 16,
       "time": 14.478260869565217,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -223,7 +223,7 @@
     {
       "id": 29,
       "time": 22.043478260869566,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -300,7 +300,7 @@
     {
       "id": 40,
       "time": 29.478260869565215,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -395,6 +395,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.6399993896484375,
+      "swipeDirection": "left",
       "stage": 2
     },
     {
@@ -407,14 +408,14 @@
     {
       "id": 55,
       "time": 43.17391304347826,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 2
     },
     {
       "id": 56,
       "time": 43.565217391304344,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -435,14 +436,14 @@
     {
       "id": 59,
       "time": 44.869565217391305,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 2
     },
     {
       "id": 60,
       "time": 45.130434782608695,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -634,6 +635,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.4800018310546875,
+      "swipeDirection": "up",
       "stage": 2
     },
     {
@@ -649,7 +651,7 @@
     {
       "id": 89,
       "time": 56.869565217391305,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 2
@@ -657,7 +659,7 @@
     {
       "id": 90,
       "time": 57.391304347826086,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5760009765625,
       "stage": 2
@@ -1061,12 +1063,13 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.78399658203125,
+      "swipeDirection": "right",
       "stage": 3
     },
     {
       "id": 147,
       "time": 86.08695652173913,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1209,6 +1212,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.527996826171875,
+      "swipeDirection": "up",
       "stage": 3
     },
     {
@@ -1307,14 +1311,15 @@
     {
       "id": 177,
       "time": 100.95652173913044,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
       "id": 178,
       "time": 101.34782608695652,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -1322,8 +1327,9 @@
     {
       "id": 179,
       "time": 101.73913043478261,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
@@ -1337,14 +1343,15 @@
     {
       "id": 181,
       "time": 102.39130434782608,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
       "id": 182,
       "time": 102.65217391304347,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -1352,8 +1359,9 @@
     {
       "id": 183,
       "time": 103.17391304347825,
-      "lane": 0,
-      "type": "tap",
+      "lane": 2,
+      "type": "hold",
+      "holdDuration": 0.73599853515625,
       "stage": 3
     },
     {
@@ -1411,14 +1419,14 @@
     {
       "id": 191,
       "time": 107.8695652173913,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 3
     },
     {
       "id": 192,
       "time": 108.13043478260869,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -1439,7 +1447,7 @@
     {
       "id": 195,
       "time": 109.17391304347825,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 3
     },
@@ -1542,6 +1550,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.51199951171875,
+      "swipeDirection": "left",
       "stage": 3
     },
     {
@@ -1598,7 +1607,7 @@
     {
       "id": 216,
       "time": 119.08695652173913,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -1606,7 +1615,7 @@
     {
       "id": 217,
       "time": 119.34782608695652,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -1660,6 +1669,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 0.496002197265625,
+      "swipeDirection": "up",
       "stage": 4
     },
     {
@@ -1724,7 +1734,7 @@
     {
       "id": 233,
       "time": 129.52173913043478,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -2693,7 +2703,7 @@
     "Alternative",
     "Indie"
   ],
-  "difficultyLevel": 6,
+  "difficultyLevel": 7,
   "lyrics": "do I hate to see you act this way yeah but if you gotta go baby I'm gonna love to watch you leave you know baby you're looking finer than I ever seen a resurrected dream so serene oh so great I just wanna make it up to you get that pussy do you know just how to make me come woo nothing has to be the same no doubt so plain let me run the games send a shockwave to my mainframe life's so plain when you were praying come on girls be my name deep in the abyss bliss my wish list fast fucking shot with your licorice kiss don't be sad I get down let me flip you all around backside frontside even on the ground are you down ecstasy down no frown climax right is for your town baby come on let's make a sound focus on everything around since it's a mask when we take the town gas leaks the juice to taste my face in your face no lace snap it up never replace all you've been tell us by the moment they were a pin Lewis in my clock feel the moment Kim I know my cock you wanted in your jeans everything about you shine and gleams puts a bling design a sling fuck that we're both just human beings wanna be a part of your existence about what the least sexual resistance it all makes so much sense perfect pussy perfect penis all that combination consists it's like this dance on me up and down you gravity on this whole castle poverty God can't you see it was so good you're supposed to be on top bottom all over me on top bottom all over me",
   "lyricsSegments": [
     {

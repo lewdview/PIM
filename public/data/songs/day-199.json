@@ -174,7 +174,7 @@
     {
       "id": 22,
       "time": 41.612903225806456,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 1
     },
@@ -224,7 +224,7 @@
     {
       "id": 29,
       "time": 48.62903225806452,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -404,7 +404,7 @@
     {
       "id": 54,
       "time": 70.40322580645162,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.7039978027343751,
       "stage": 2
@@ -415,6 +415,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.7040039062500001,
+      "swipeDirection": "up",
       "stage": 2
     },
     {
@@ -441,7 +442,7 @@
     {
       "id": 59,
       "time": 75.48387096774194,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 2
     },
@@ -510,6 +511,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.8160034179687501,
+      "swipeDirection": "right",
       "stage": 2
     },
     {
@@ -533,6 +535,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.720001220703125,
+      "swipeDirection": "up",
       "stage": 3
     },
     {
@@ -548,7 +551,7 @@
     {
       "id": 73,
       "time": 105.48387096774194,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -559,6 +562,7 @@
       "lane": 1,
       "type": "hold",
       "holdDuration": 1.44000244140625,
+      "swipeDirection": "up",
       "stage": 3
     },
     {
@@ -580,7 +584,7 @@
     {
       "id": 77,
       "time": 113.46774193548387,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -614,6 +618,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.656005859375,
+      "swipeDirection": "left",
       "stage": 3
     },
     {
@@ -637,14 +642,15 @@
     {
       "id": 84,
       "time": 118.30645161290323,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 3
     },
     {
       "id": 85,
       "time": 118.79032258064517,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -711,14 +717,14 @@
     {
       "id": 94,
       "time": 124.83870967741936,
-      "lane": 0,
+      "lane": 1,
       "type": "tap",
       "stage": 3
     },
     {
       "id": 95,
       "time": 125.08064516129032,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -795,7 +801,7 @@
     {
       "id": 105,
       "time": 131.3709677419355,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -803,7 +809,7 @@
     {
       "id": 106,
       "time": 131.61290322580646,
-      "lane": 2,
+      "lane": 1,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -819,7 +825,7 @@
     {
       "id": 108,
       "time": 132.33870967741936,
-      "lane": 1,
+      "lane": 2,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 3
@@ -827,7 +833,7 @@
     {
       "id": 109,
       "time": 132.82258064516128,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.51199951171875,
       "stage": 3
@@ -923,12 +929,13 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 0.8320068359375,
+      "swipeDirection": "right",
       "stage": 3
     },
     {
       "id": 122,
       "time": 139.35483870967744,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 3
     },
@@ -967,6 +974,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 1.08800048828125,
+      "swipeDirection": "up",
       "stage": 3
     },
     {
@@ -1027,6 +1035,7 @@
       "lane": 0,
       "type": "hold",
       "holdDuration": 1.12000732421875,
+      "swipeDirection": "up",
       "stage": 4
     },
     {
@@ -1042,7 +1051,7 @@
     {
       "id": 137,
       "time": 170.80645161290323,
-      "lane": 1,
+      "lane": 0,
       "type": "hold",
       "holdDuration": 0.5,
       "stage": 4
@@ -1067,6 +1076,7 @@
       "lane": 2,
       "type": "hold",
       "holdDuration": 0.54400634765625,
+      "swipeDirection": "left",
       "stage": 4
     },
     {
@@ -1148,7 +1158,7 @@
     {
       "id": 151,
       "time": 179.51612903225808,
-      "lane": 1,
+      "lane": 0,
       "type": "tap",
       "stage": 4
     },
@@ -1669,8 +1679,9 @@
     {
       "id": 219,
       "time": 237.09677419354838,
-      "lane": 2,
-      "type": "tap",
+      "lane": 1,
+      "type": "hold",
+      "holdDuration": 0.5,
       "stage": 5
     }
   ],
@@ -1721,7 +1732,7 @@
     "Ballad",
     "Ambient"
   ],
-  "difficultyLevel": 2,
+  "difficultyLevel": 3,
   "lyrics": "I surrender, I surrender to my lack of control, and I'm at the mercy of you. I surrender, I surrender all my control, cause I don't have anything like that except for myself. I be walking dark paths, I be walking light paths, I be walking things in judgement inside with my past in tow. I try not to make mistakes again, but sometimes you're just fucking with my head when you just take my heart out. Throw away light and ground right in front of me, and do you have a soul yet? Because I surrender to all your hate, I won't fight back. I surrender, I surrender all I need for you. I surrender all I get for you. Sometimes I look back when things weren't the way we thought they'd be. How many times did you want me to give up my rights to all the love that was supposed to be for me, baby? But now I see it's all about you and me. I surrender, I surrender, I surrender. I surrender, I surrender to you. I surrender, I surrender to no one but the unknown in my heart. I surrender to start fresh again. I hope you know that was for you. Don't be vain as I just know you. I surrender, I surrender, I surrender.",
   "lyricsSegments": [
     {
