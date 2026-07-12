@@ -110,7 +110,7 @@ export default function Tutorial() {
   const welcomePackMeta: RevealPackMeta = {
     category: "taste",
     size: "single",
-    label: "COMPATIBILITY PACK",
+    label: "WELCOME TRANSMISSION",
     icon: "⚡",
     accent: "#39FF14",
     gradient: "linear-gradient(160deg, #050d03 0%, #0d280b 45%, #020702 100%)",
@@ -292,13 +292,35 @@ export default function Tutorial() {
                 whileTap={{ scale: 0.98 }}
                 onClick={() => {
                   audioManager.playSfx("tap_nav", 0.15);
-                  setTutPhase("discovery"); // Skip Compatibility Pack and go directly to PIM explainer
+                  setTutPhase("pack");
                 }}
                 className="w-full py-4 bg-gradient-to-r from-[#39FF14] to-[#00E5FF] text-black font-black text-xs tracking-[0.2em] uppercase hover:opacity-95 transition-all rounded border-2 border-black shadow-[4px_4px_0px_#000] cursor-pointer"
               >
                 CLAIM SIGNAL & CONNECT
               </motion.button>
             </div>
+          </motion.div>
+        )}
+
+        {/* PHASE 4: CINEMATIC PACK OPENING */}
+        {tutPhase === "pack" && (
+          <motion.div
+            key="pack"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-50 bg-[#050402]"
+          >
+            {dailyCard && (
+              <PackContainer
+                meta={welcomePackMeta}
+                cards={claimedCard ? [claimedCard] : getMockOwnedCard()}
+                onComplete={() => {
+                  audioManager.playSfx("tap_nav", 0.15);
+                  setTutPhase("discovery");
+                }}
+              />
+            )}
           </motion.div>
         )}
 
