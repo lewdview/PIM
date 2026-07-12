@@ -16,6 +16,10 @@ import { supabase } from "@/services/supabaseClient";
 import { useAuthStore } from "@/store/useAuthStore";
 import { purchasePack, type OwnedCard } from "@/services/vaultService";
 
+// Use Vite's eager glob to grab files in /public/data/slideshow/
+const imageModules = import.meta.glob('/public/data/slideshow/*.{png,jpg,jpeg,gif,webp,svg}', { eager: true });
+const staticImages = Object.keys(imageModules).map(key => key.replace('/public', ''));
+
 
 interface GameplayVisualizerProps {
   analyserRef: React.MutableRefObject<AnalyserNode | null>;
@@ -1195,7 +1199,7 @@ export default function Game() {
 
     const fetchAndSegment = async () => {
       try {
-        let imageUrls = ['/data/slideshow/cyber_dancer.jpg', '/data/slideshow/cyber_headphones.jpg', '/data/slideshow/cyber_dj.jpg'];
+        let imageUrls = staticImages.length > 0 ? staticImages : ['/data/slideshow/cyber_dancer.jpg', '/data/slideshow/cyber_headphones.jpg', '/data/slideshow/cyber_dj.jpg'];
         try {
           const res = await fetch('http://localhost:3002/api/slideshow-images')
             .catch(() => fetch('/api/slideshow-images'))
