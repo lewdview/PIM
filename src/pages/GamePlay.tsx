@@ -3662,19 +3662,9 @@ export default function Game() {
           fx,
           e.cy + 40,
         );
-        flashGrad.addColorStop(0, `${e.color}00`);
-        flashGrad.addColorStop(
-          0.4,
-          `${e.color}${Math.round(flashAlpha * 255)
-            .toString(16)
-            .padStart(2, "0")}`,
-        );
-        flashGrad.addColorStop(
-          1,
-          `${e.color}${Math.round(flashAlpha * 0.5 * 255)
-            .toString(16)
-            .padStart(2, "0")}`,
-        );
+        flashGrad.addColorStop(0, colorWithAlpha(e.color, 0));
+        flashGrad.addColorStop(0.4, colorWithAlpha(e.color, flashAlpha));
+        flashGrad.addColorStop(1, colorWithAlpha(e.color, flashAlpha * 0.5));
         ctx.fillStyle = flashGrad;
         ctx.fillRect(fx + 4, e.cy - 60, fw - 8, 100);
       }
@@ -7020,7 +7010,7 @@ export default function Game() {
                       borderLeft: `5px solid ${laneColorsRef.current[0]}`, // Left button color
                       borderRight: `5px solid ${laneColorsRef.current[2]}`, // Right button color
                       borderBottom: `4px solid ${laneColorsRef.current[1]}`, // Artwork-derived color
-                      boxShadow: `0 30px 70px rgba(0,0,0,0.95), 0 0 35px ${laneColorsRef.current[1]}60`,
+                      boxShadow: `0 30px 70px rgba(0,0,0,0.95), 0 0 35px ${colorWithAlpha(laneColorsRef.current[1], 0.38)}`,
                       borderRadius: "16px",
                       zIndex: 1,
                     }}
@@ -7044,7 +7034,7 @@ export default function Game() {
                       height: 220,
                       border: `2.5px solid ${laneColorsRef.current[0]}`, // Left button color
                       borderRadius: "24px", 
-                      boxShadow: `0 0 30px ${laneColorsRef.current[0]}80`,
+                      boxShadow: `0 0 30px ${colorWithAlpha(laneColorsRef.current[0], 0.5)}`,
                       zIndex: 5,
                     }}
                   />
@@ -7067,7 +7057,7 @@ export default function Game() {
                       height: 190,
                       borderRadius: "50%",
                       border: `2.5px dashed ${laneColorsRef.current[2]}`, // Right button color
-                      boxShadow: `0 0 25px ${laneColorsRef.current[2]}80`,
+                      boxShadow: `0 0 25px ${colorWithAlpha(laneColorsRef.current[2], 0.5)}`,
                       zIndex: 5,
                     }}
                   />
@@ -7088,9 +7078,9 @@ export default function Game() {
                       position: "absolute",
                       width: 140,
                       height: 140,
-                      background: `linear-gradient(135deg, ${laneColorsRef.current[0]}25, ${laneColorsRef.current[2]}30)`, // Derived from artwork
+                      background: `linear-gradient(135deg, ${colorWithAlpha(laneColorsRef.current[0], 0.15)}, ${colorWithAlpha(laneColorsRef.current[2], 0.18)})`, // Derived from artwork
                       border: `2.5px solid ${laneColorsRef.current[1]}`, // Derived from artwork
-                      boxShadow: `0 0 45px ${laneColorsRef.current[1]}80`,
+                      boxShadow: `0 0 45px ${colorWithAlpha(laneColorsRef.current[1], 0.5)}`,
                       zIndex: 5,
                     }}
                   />
