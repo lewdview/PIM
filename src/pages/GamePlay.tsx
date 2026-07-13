@@ -3342,7 +3342,7 @@ export default function Game() {
       }
 
       if (note.type === "tap" || note.type === "swipe") {
-        drawKey(ctx, drawX, noteY, noteW, noteH, r, noteColor, prog, false, note.swipeDirection);
+        drawKey(ctx, drawX, noteY, noteW, noteH, r, noteColor, prog, false, note.swipeDirection, note.time * 3700);
       } else {
         // Hold/Slide trail — ivory ribbon with colored stripe
         const holdDur = note.holdDuration || 0.5;
@@ -3534,7 +3534,7 @@ export default function Game() {
             const tailW_active = tw_active;
             const tailX_active = tx_active;
             const tailR_active = lerp(12, 24, tailP);
-            drawKey(ctx, tailX_active, top, tailW_active, tailH_active, tailR_active, noteColor, tailP, true, note.swipeDirection);
+            drawKey(ctx, tailX_active, top, tailW_active, tailH_active, tailR_active, noteColor, tailP, true, note.swipeDirection, note.time * 3700);
           }
         } else if (headY < noteY) {
           // Inactive trail — SMOOTH CURVE if it's a slide
@@ -3627,9 +3627,9 @@ export default function Game() {
           const tailW_inactive = hw;
           const tailX_inactive = hx;
           const tailR_inactive = lerp(12, 24, headP);
-          drawKey(ctx, tailX_inactive, headY, tailW_inactive, tailH_inactive, tailR_inactive, noteColor, headP, true, note.swipeDirection);
+          drawKey(ctx, tailX_inactive, headY, tailW_inactive, tailH_inactive, tailR_inactive, noteColor, headP, true, note.swipeDirection, note.time * 3700);
         }
-        drawKey(ctx, drawX, noteY, noteW, noteH, r, noteColor, prog, false, note.type === "hold" ? undefined : note.swipeDirection);
+        drawKey(ctx, drawX, noteY, noteW, noteH, r, noteColor, prog, false, note.type === "hold" ? undefined : note.swipeDirection, note.time * 3700);
       }
 
       if (isMissedNote) {
@@ -7695,6 +7695,7 @@ function drawKey(
   prog: number,
   isHold: boolean,
   swipeDirection?: Note['swipeDirection'],
+  timeOffset: number = 0,
 ) {
   const centerX = noteX + noteW / 2;
   const centerY = noteY;
@@ -7773,8 +7774,8 @@ function drawKey(
   // ── 2b. Sweeping Glass/Gold Sheen ──
   ctx.save();
   ctx.clip();
-  const now = Date.now();
-  const sheenProgress = ((now % 2200) / 2200 + prog * 0.35) % 1.0;
+  const now = Date.now() + timeOffset;
+  const sheenProgress = (now % 2200) / 2200;
   const sheenX = -noteW + (noteW * 2) * sheenProgress;
   const sheenGrad = ctx.createLinearGradient(sheenX, -noteH / 2, sheenX + noteW * 0.38, noteH / 2);
   if (isHold) {
