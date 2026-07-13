@@ -111,6 +111,21 @@ export default function SlideshowPage() {
     };
   }, []);
 
+  // Stunner Section and Stella locks state
+  const [stunnerSectionUnlocked, setStunnerSectionUnlocked] = useState(() => localStorage.getItem('opt_unlocked_stunner_section') === 'true');
+  const [freeStellaUnlocked, setFreeStellaUnlocked] = useState(() => localStorage.getItem('opt_free_stella_unlocked') === 'true');
+  const [purchasedStunners, setPurchasedStunners] = useState<string[]>(() => JSON.parse(localStorage.getItem('opt_purchased_stunners') || '[]'));
+
+  useEffect(() => {
+    const syncLocks = () => {
+      setStunnerSectionUnlocked(localStorage.getItem('opt_unlocked_stunner_section') === 'true');
+      setFreeStellaUnlocked(localStorage.getItem('opt_free_stella_unlocked') === 'true');
+      setPurchasedStunners(JSON.parse(localStorage.getItem('opt_purchased_stunners') || '[]'));
+    };
+    window.addEventListener('cheat_code_activated', syncLocks);
+    return () => window.removeEventListener('cheat_code_activated', syncLocks);
+  }, []);
+
   // Sync settings from cloud profile on mount
   useEffect(() => {
     if (settings) {
@@ -167,17 +182,29 @@ export default function SlideshowPage() {
         if (res && res.ok) {
           const apiImages = await res.json();
           if (Array.isArray(apiImages) && apiImages.length > 0) {
-            setSlides(apiImages);
+            const filtered = apiImages.filter((url: string) => {
+              const isStella = /stella/i.test(url);
+              if (!isStella) return true;
+              if (freeStellaUnlocked) return true;
+              return purchasedStunners.some(pUrl => url.includes(pUrl) || pUrl.includes(url));
+            });
+            setSlides(filtered);
             return;
           }
         }
       } catch (e) {
         console.warn('[Slideshow] API directory check failed, falling back to Vite glob:', e);
       }
-      setSlides(staticImages.length > 0 ? staticImages : ['/data/slideshow/cyber_dancer.jpg', '/data/slideshow/cyber_headphones.jpg']);
+      const filteredDefaults = (staticImages.length > 0 ? staticImages : ['/data/slideshow/cyber_dancer.jpg', '/data/slideshow/cyber_headphones.jpg']).filter((url: string) => {
+        const isStella = /stella/i.test(url);
+        if (!isStella) return true;
+        if (freeStellaUnlocked) return true;
+        return purchasedStunners.some(pUrl => url.includes(pUrl) || pUrl.includes(url));
+      });
+      setSlides(filteredDefaults);
     };
     fetchDirImages();
-  }, []);
+  }, [freeStellaUnlocked, purchasedStunners]);
 
   // 2. Dynamic TensorFlow.js Script Loader
   useEffect(() => {
@@ -810,6 +837,94 @@ export default function SlideshowPage() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Stunner of the Month Section */}
+        <div className="bg-gradient-to-r from-red-950/20 to-red-900/5 border border-red-500/20 p-4 rounded-xl space-y-3 relative overflow-hidden">
+          <div className="flex items-center justify-between">
+            <span className="font-mono text-[9px] font-black text-red-400 uppercase tracking-widest flex items-center gap-1.5">
+              <span>🔞</span> STUNNER OF THE MONTH
+            </span>
+            {stunnerSectionUnlocked && (
+              <span className="text-[7px] font-mono font-bold bg-red-500/20 border border-red-500/30 text-red-400 px-1 py-0.5 rounded">
+                DECRYPTED
+              </span>
+            )}
+          </div>
+
+          {!stunnerSectionUnlocked ? (
+            <p className="text-[8px] font-mono text-zinc-500 leading-normal uppercase">
+              Exclusive adult gallery. Redeem decrypt code <span className="text-[#39FF14] font-bold">"stunnerofthemonthunlock"</span> in the Redeem Center to unlock section.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-[7.5px] font-mono text-zinc-400 uppercase tracking-wider">
+                Unlock individual premium poses of Stella Luxx (or use code <span className="text-[#39FF14] font-bold">"freebstella"</span>):
+              </p>
+              
+              <div className="grid grid-cols-1 gap-1.5 max-h-[160px] overflow-y-auto custom-scrollbar pr-1">
+                {[
+                  { id: 'pose1', name: 'Stella Luxx - Pose A', cost: 50, url: '/data/slideshow/stella-luxx-anything-but-clothes-badoinkvr-1.jpg' },
+                  { id: 'pose2', name: 'Stella Luxx - Pose B', cost: 50, url: '/data/slideshow/stella-luxx-anything-but-clothes-badoinkvr-3.jpg' },
+                  { id: 'pose3', name: 'Stella Luxx - Cyber Neon', cost: 50, url: '/data/slideshow/Stella Luxx2.webp' },
+                  { id: 'pose4', name: 'Stella Luxx - Sunset Vibe', cost: 50, url: '/data/slideshow/Stella Luxx8.webp' },
+                  { id: 'pose5', name: 'Stella Luxx - Session 1', cost: 50, url: '/data/slideshow/stella-luxx-hustler-1.jpg' },
+                  { id: 'pose6', name: 'Stella Luxx - Session 2', cost: 50, url: '/data/slideshow/stella-luxx-hustler-3.jpg' },
+                  { id: 'pose7', name: 'Stella Luxx - Exclusive', cost: 50, url: '/data/slideshow/stella-luxx-nubile-films-006.jpg' },
+                  { id: 'pose8', name: 'Stella Luxx - Cover Shoot', cost: 50, url: '/data/slideshow/stella-luxx-penthouse-sex-01.jpg' },
+                ].map((item) => {
+                  const unlocked = freeStellaUnlocked || purchasedStunners.some(pUrl => item.url.includes(pUrl) || pUrl.includes(item.url));
+                  return (
+                    <div 
+                      key={item.id}
+                      className={`flex items-center justify-between p-1.5 rounded-lg border text-[9.5px] font-mono ${
+                        unlocked 
+                          ? 'border-zinc-800 bg-zinc-950/40 text-white/80' 
+                          : 'border-red-950/40 bg-black/40 text-white/50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        <div className="w-6 h-6 rounded border border-white/5 bg-white/5 overflow-hidden flex-shrink-0 relative">
+                          <img 
+                            src={item.url} 
+                            alt="" 
+                            className={`w-full h-full object-cover ${unlocked ? '' : 'blur-sm scale-110'}`} 
+                          />
+                        </div>
+                        <span className="truncate uppercase font-medium">{item.name}</span>
+                      </div>
+
+                      {unlocked ? (
+                        <span className="text-[7.5px] font-mono font-bold text-[#39FF14] uppercase border border-[#39FF14]/20 px-1 py-0.5 rounded">
+                          Active
+                        </span>
+                      ) : (
+                        <button
+                          onClick={async () => {
+                            const balance = useVaultStore.getState().tokenBalance;
+                            if (balance < item.cost) {
+                              audioManager.playSfx('locked_out', 0.25);
+                              alert("INSUFFICIENT TOKEN BALANCE!");
+                              return;
+                            }
+                            // Deduct and unlock
+                            await useVaultStore.getState().setTokenBalance(balance - item.cost);
+                            const updated = [...purchasedStunners, item.url];
+                            localStorage.setItem('opt_purchased_stunners', JSON.stringify(updated));
+                            setPurchasedStunners(updated);
+                            audioManager.playSfx('menu_confirm', 0.2);
+                          }}
+                          className="px-1.5 py-0.5 bg-red-950/40 hover:bg-red-800/60 border border-red-800/40 rounded text-[7.5px] font-mono font-bold text-red-300 hover:text-white uppercase transition-colors cursor-pointer"
+                        >
+                          Unlock {item.cost} V⚡
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Playlist / Upload Files Section */}

@@ -1200,6 +1200,18 @@ export default function Game() {
     const fetchAndSegment = async () => {
       try {
         let imageUrls = staticImages.length > 0 ? staticImages : ['/data/slideshow/cyber_dancer.jpg', '/data/slideshow/cyber_headphones.jpg', '/data/slideshow/cyber_dj.jpg'];
+        
+        const freeStella = localStorage.getItem('opt_free_stella_unlocked') === 'true';
+        const purchasedString = localStorage.getItem('opt_purchased_stunners') || '[]';
+        const purchasedList: string[] = JSON.parse(purchasedString);
+
+        imageUrls = imageUrls.filter((url: string) => {
+          const isStella = /stella/i.test(url);
+          if (!isStella) return true;
+          if (freeStella) return true;
+          return purchasedList.some((pUrl: string) => url.includes(pUrl) || pUrl.includes(url));
+        });
+
         try {
           const res = await fetch('http://localhost:3002/api/slideshow-images')
             .catch(() => fetch('/api/slideshow-images'))
@@ -1207,7 +1219,12 @@ export default function Game() {
           if (res && res.ok) {
             const files = await res.json();
             if (files && files.length > 0) {
-              imageUrls = files;
+              imageUrls = files.filter((url: string) => {
+                const isStella = /stella/i.test(url);
+                if (!isStella) return true;
+                if (freeStella) return true;
+                return purchasedList.some((pUrl: string) => url.includes(pUrl) || pUrl.includes(url));
+              });
             }
           }
         } catch (e) {

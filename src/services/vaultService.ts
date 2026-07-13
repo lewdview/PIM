@@ -668,6 +668,15 @@ export async function redeemBonusCode(code: string): Promise<{ success: boolean;
     };
   }
 
+  if (cleanCode === 'stunnerofthemonthunlock' || cleanCode === 'freebstella') {
+    return {
+      success: true,
+      rewardType: 'age_gate_required',
+      rewardValue: cleanCode,
+      result: { success: true }
+    };
+  }
+
   try {
     const { data, error } = await supabase.functions.invoke('vault-engine', {
       body: { action: 'redeemBonusCode', payload: { code } }

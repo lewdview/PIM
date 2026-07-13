@@ -126,6 +126,7 @@ export default function LandingPage() {
   const [bonusCode, setBonusCode] = useState('');
   const [codeState, setCodeState] = useState<'idle' | 'redeeming' | 'success' | 'error'>('idle');
   const [codeError, setCodeError] = useState('');
+  const [ageGateCode, setAgeGateCode] = useState<string | null>(null);
   const [rewardClaimed, setRewardClaimed] = useState<{
     type: string;
     value: string;
@@ -240,6 +241,11 @@ export default function LandingPage() {
       useLoadingToast.getState().hide();
 
       if (res.success && res.rewardType && res.rewardValue) {
+        if (res.rewardType === 'age_gate_required') {
+          setAgeGateCode(res.rewardValue);
+          setBonusCode('');
+          return;
+        }
         // --- 1. Handle Cinematic Card/Pack Reveals ---
         if (res.rewardType === 'pack' && res.result?.cards) {
           const pool = await fetchAllCards();
@@ -1116,6 +1122,20 @@ export default function LandingPage() {
                           </div>
                         </div>
                       )}
+
+                      {/* Age Verification display */}
+                      {rewardClaimed.type === 'age_verification' && (
+                        <div className="py-2 flex flex-col items-center">
+                          <span className="text-[32px] animate-pulse">🔞</span>
+                          <div className="text-xl font-bold font-mono text-white mt-2 uppercase tracking-wider">
+                            {rewardClaimed.value}
+                          </div>
+                          <div className="text-[9px] font-mono text-red-500 tracking-wider mt-1 uppercase">DECRYPTION COMPLETE</div>
+                          <div className="text-[10px] font-mono text-zinc-400 mt-2 max-w-[240px] leading-relaxed uppercase">
+                            {rewardClaimed.details?.skinUnlocked}
+                          </div>
+                        </div>
+                      )}
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -1490,6 +1510,79 @@ export default function LandingPage() {
           </p>
         </div>
       </footer>
+
+      {/* 18+ Age Gate Verification Modal */}
+      <AnimatePresence>
+        {ageGateCode && (
+          <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 z-[9999]">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="w-full max-w-md bg-[#0c0a09] border-2 border-red-600 p-6 rounded-2xl flex flex-col gap-5 shadow-2xl relative"
+            >
+              <div className="absolute top-0 left-0 right-0 h-1 bg-red-600" />
+              
+              <div className="flex items-center gap-2 text-red-500 font-mono text-[9px] font-black uppercase tracking-widest">
+                <span className="bg-red-950/40 border border-red-800/40 px-1.5 py-0.5 rounded text-[12px]">🔞</span>
+                AGE VERIFICATION REQUIRED
+              </div>
+
+              <div className="space-y-1.5">
+                <h2 className="text-base font-black font-mono tracking-wide uppercase text-white">
+                  Access Gated Content?
+                </h2>
+                <p className="text-[10px] text-zinc-400 font-mono leading-relaxed uppercase">
+                  The decryption key <span className="text-[#39FF14] font-bold">"{ageGateCode}"</span> contains adult-themed mature material (Stella Luxx Stunner Gallery).
+                  You must be 18 years or older to proceed and view this content.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 mt-1">
+                <button
+                  onClick={() => {
+                    localStorage.setItem('opt_18_confirmed', 'true');
+                    let successMsg = "";
+                    if (ageGateCode === 'stunnerofthemonthunlock') {
+                      localStorage.setItem('opt_unlocked_stunner_section', 'true');
+                      successMsg = "Stunner of the Month Section Unlocked!";
+                    } else if (ageGateCode === 'freebstella') {
+                      localStorage.setItem('opt_free_stella_unlocked', 'true');
+                      localStorage.setItem('opt_unlocked_stunner_section', 'true');
+                      successMsg = "Stella Luxx Fully Unlocked in Slideshows!";
+                    }
+                    
+                    audioManager.playSfx('song_completion', 0.85);
+                    setRewardClaimed({
+                      type: 'age_verification',
+                      value: ageGateCode,
+                      details: { skinUnlocked: successMsg }
+                    });
+                    setCodeState('success');
+                    setAgeGateCode(null);
+                    window.dispatchEvent(new Event('cheat_code_activated'));
+                  }}
+                  className="py-2.5 bg-red-600 hover:bg-red-500 border border-red-500 rounded-lg text-white font-mono text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer text-center"
+                >
+                  Yes, I am 18+
+                </button>
+                
+                <button
+                  onClick={() => {
+                    audioManager.playSfx('error', 0.6);
+                    setCodeError('Decryption aborted: Age verification failed.');
+                    setCodeState('error');
+                    setAgeGateCode(null);
+                  }}
+                  className="py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-white/10 rounded-lg text-white/60 hover:text-white font-mono text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer text-center"
+                >
+                  Cancel & Exit
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
