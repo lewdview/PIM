@@ -356,7 +356,7 @@ export default function App() {
       <GamepadCursor />
       {!hideNavbar && <Navbar />}
 
-      <main className="flex-1 flex flex-col relative z-10">
+      <main className="flex-1 flex flex-col relative">
         <Switch>
           <Route path="/" component={LandingPage} />
           <Route path="/arcade" component={RhythmHome} />
