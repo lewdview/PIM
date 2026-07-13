@@ -139,6 +139,28 @@ const refineAndBlendEdges = (canvas: HTMLCanvasElement, threshold: number) => {
       }
     }
 
+    // 4. Speckle noise removal pass (Pass 4)
+    // If an alpha pixel is > 0 but has fewer than 2 active neighbors in a 5x5 area, it's noise
+    for (let y = 2; y < h - 2; y++) {
+      for (let x = 2; x < w - 2; x++) {
+        const idx = y * w + x;
+        if (blurredAlpha[idx] > 0) {
+          let neighborCount = 0;
+          for (let ky = -2; ky <= 2; ky++) {
+            for (let kx = -2; kx <= 2; kx++) {
+              if (ky === 0 && kx === 0) continue;
+              if (blurredAlpha[(y + ky) * w + (x + kx)] > 0) {
+                neighborCount++;
+              }
+            }
+          }
+          if (neighborCount < 2) {
+            blurredAlpha[idx] = 0; // Suppress noise
+          }
+        }
+      }
+    }
+
     // Write final alphas back
     for (let i = 0; i < mask.length; i++) {
       data[i * 4 + 3] = blurredAlpha[i];

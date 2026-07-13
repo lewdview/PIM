@@ -20,6 +20,163 @@ import { purchasePack, type OwnedCard } from "@/services/vaultService";
 const imageModules = import.meta.glob('/public/data/slideshow/**/*.{png,jpg,jpeg,gif,webp,svg}', { eager: true });
 const staticImages = Object.keys(imageModules).map(key => key.replace('/public', ''));
 
+const refineAndBlendEdges = (canvas: HTMLCanvasElement, threshold: number) => {
+  try {
+    const ctx = canvas.getContext('2d')!;
+    const w = canvas.width;
+    const h = canvas.height;
+    if (w === 0 || h === 0) return;
+
+    const imgData = ctx.getImageData(0, 0, w, h);
+    const data = imgData.data;
+
+    // 1. Initial segmentation (Pass 1) & Spill suppression (green edge filtering)
+    const mask = new Uint8Array(w * h);
+
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      
+      const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+      const idx = i / 4;
+
+      // Detect green screen/fringe pixels
+      const isGreen = g > r * 1.15 && g > b * 1.15;
+
+      if (isGreen) {
+        // Spill suppression: blend green with red and blue
+        data[i + 1] = Math.round((r + b) / 2);
+        // Suppress alpha slightly for smoother blending of green outlines
+        data[i + 3] = Math.round(data[i + 3] * 0.3);
+      }
+
+      if (luminance >= threshold && !isGreen) {
+        mask[idx] = 1; // Keep
+      } else {
+        data[i + 3] = 0; // Make transparent
+        mask[idx] = 0;
+      }
+    }
+
+    // 2. Hole Filling pass (Pass 2)
+    const refinedMask = new Uint8Array(w * h);
+    refinedMask.set(mask);
+
+    for (let y = 1; y < h - 1; y++) {
+      for (let x = 1; x < w - 1; x++) {
+        const idx = y * w + x;
+        if (mask[idx] === 0) {
+          const up = mask[(y - 1) * w + x];
+          const down = mask[(y + 1) * w + x];
+          const left = mask[y * w + (x - 1)];
+          const right = mask[y * w + (x + 1)];
+          const diag1 = mask[(y - 1) * w + (x - 1)];
+          const diag2 = mask[(y - 1) * w + (x + 1)];
+          const diag3 = mask[(y + 1) * w + (x - 1)];
+          const diag4 = mask[(y + 1) * w + (x + 1)];
+
+          const sum = up + down + left + right + diag1 + diag2 + diag3 + diag4;
+          if (sum >= 5) {
+            refinedMask[idx] = 1;
+            const pixelIdx = idx * 4;
+            data[pixelIdx + 3] = 255;
+          }
+        }
+      }
+    }
+
+    // Write mask back to image data
+    for (let i = 0; i < mask.length; i++) {
+      if (refinedMask[i] === 0) {
+        data[i * 4 + 3] = 0;
+      }
+    }
+
+    // 3. Alpha channel blend blur (Pass 3)
+    const blurredAlpha = new Uint8ClampedArray(w * h);
+    const r = 2; // radius for alpha blur (feathering)
+
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const idx = y * w + x;
+        const currentAlpha = data[idx * 4 + 3];
+
+        if (currentAlpha === 0) {
+          blurredAlpha[idx] = 0;
+          continue;
+        }
+
+        // If it's a solid core, no need to blur
+        let isEdge = false;
+        for (let ky = -1; ky <= 1; ky++) {
+          for (let kx = -1; kx <= 1; kx++) {
+            const ny = y + ky;
+            const nx = x + kx;
+            if (ny >= 0 && ny < h && nx >= 0 && nx < w) {
+              if (data[(ny * w + nx) * 4 + 3] === 0) {
+                isEdge = true;
+                break;
+              }
+            }
+          }
+          if (isEdge) break;
+        }
+
+        if (!isEdge) {
+          blurredAlpha[idx] = currentAlpha;
+          continue;
+        }
+
+        // We are on the edge, average the alpha values
+        let sum = 0;
+        let count = 0;
+        for (let ky = -r; ky <= r; ky++) {
+          for (let kx = -r; kx <= r; kx++) {
+            const ny = y + ky;
+            const nx = x + kx;
+            if (ny >= 0 && ny < h && nx >= 0 && nx < w) {
+              sum += data[(ny * w + nx) * 4 + 3];
+              count++;
+            }
+          }
+        }
+        blurredAlpha[idx] = Math.round(sum / count);
+      }
+    }
+
+    // 4. Speckle noise removal pass (Pass 4)
+    for (let y = 2; y < h - 2; y++) {
+      for (let x = 2; x < w - 2; x++) {
+        const idx = y * w + x;
+        if (blurredAlpha[idx] > 0) {
+          let neighborCount = 0;
+          for (let ky = -2; ky <= 2; ky++) {
+            for (let kx = -2; kx <= 2; kx++) {
+              if (ky === 0 && kx === 0) continue;
+              if (blurredAlpha[(y + ky) * w + (x + kx)] > 0) {
+                neighborCount++;
+              }
+            }
+          }
+          if (neighborCount < 2) {
+            blurredAlpha[idx] = 0; // Suppress noise
+          }
+        }
+      }
+    }
+
+    // Write final alphas back
+    for (let i = 0; i < mask.length; i++) {
+      data[i * 4 + 3] = blurredAlpha[i];
+    }
+
+    ctx.putImageData(imgData, 0, 0);
+  } catch (err) {
+    console.warn('Refinement and blend edge warning:', err);
+  }
+};
+
 
 interface GameplayVisualizerProps {
   analyserRef: React.MutableRefObject<AnalyserNode | null>;
@@ -1263,20 +1420,7 @@ export default function Game() {
           tempCanvas.height = targetH;
           const tCtx = tempCanvas.getContext('2d')!;
           tCtx.drawImage(img, 0, 0, targetW, targetH);
-          const imgData = tCtx.getImageData(0, 0, targetW, targetH);
-          const pixels = imgData.data;
-
-          // Extract cutout of subject (threshold out black/dark backgrounds)
-          for (let i = 0; i < pixels.length; i += 4) {
-            const r = pixels[i];
-            const g = pixels[i + 1];
-            const b = pixels[i + 2];
-            const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
-            if (luminance < 32) {
-              pixels[i + 3] = 0; // transparent
-            }
-          }
-          tCtx.putImageData(imgData, 0, 0);
+          refineAndBlendEdges(tempCanvas, 32);
 
           slides.push({
             canvas: tempCanvas,
