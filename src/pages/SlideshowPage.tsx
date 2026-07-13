@@ -5,7 +5,7 @@ import { Play, Pause, ChevronRight, ChevronLeft, Upload, Grid, Brain, Layers, Ar
 import { useVaultStore } from '../store/useVaultStore';
 
 // Use Vite's eager glob to grab files in /public/data/slideshow/
-const imageModules = import.meta.glob('/public/data/slideshow/*.{png,jpg,jpeg,gif,webp,svg}', { eager: true });
+const imageModules = import.meta.glob('/public/data/slideshow/**/*.{png,jpg,jpeg,gif,webp,svg}', { eager: true });
 const staticImages = Object.keys(imageModules).map(key => key.replace('/public', ''));
 
 const removeDarkBackground = (ctx: CanvasRenderingContext2D, w: number, h: number, threshold: number) => {
@@ -864,14 +864,14 @@ export default function SlideshowPage() {
               
               <div className="grid grid-cols-1 gap-1.5 max-h-[160px] overflow-y-auto custom-scrollbar pr-1">
                 {[
-                  { id: 'pose1', name: 'Stella Luxx - Pose A', cost: 50, url: '/data/slideshow/stella-luxx-anything-but-clothes-badoinkvr-1.jpg' },
-                  { id: 'pose2', name: 'Stella Luxx - Pose B', cost: 50, url: '/data/slideshow/stella-luxx-anything-but-clothes-badoinkvr-3.jpg' },
-                  { id: 'pose3', name: 'Stella Luxx - Cyber Neon', cost: 50, url: '/data/slideshow/Stella Luxx2.webp' },
-                  { id: 'pose4', name: 'Stella Luxx - Sunset Vibe', cost: 50, url: '/data/slideshow/Stella Luxx8.webp' },
-                  { id: 'pose5', name: 'Stella Luxx - Session 1', cost: 50, url: '/data/slideshow/stella-luxx-hustler-1.jpg' },
-                  { id: 'pose6', name: 'Stella Luxx - Session 2', cost: 50, url: '/data/slideshow/stella-luxx-hustler-3.jpg' },
-                  { id: 'pose7', name: 'Stella Luxx - Exclusive', cost: 50, url: '/data/slideshow/stella-luxx-nubile-films-006.jpg' },
-                  { id: 'pose8', name: 'Stella Luxx - Cover Shoot', cost: 50, url: '/data/slideshow/stella-luxx-penthouse-sex-01.jpg' },
+                  { id: 'pose1', name: 'Stella Luxx - Pose A', cost: 50, url: '/data/slideshow/stella/stella-luxx-anything-but-clothes-badoinkvr-1.jpg' },
+                  { id: 'pose2', name: 'Stella Luxx - Pose B', cost: 50, url: '/data/slideshow/stella/stella-luxx-anything-but-clothes-badoinkvr-3.jpg' },
+                  { id: 'pose3', name: 'Stella Luxx - Cyber Neon', cost: 50, url: '/data/slideshow/stella/Stella Luxx2.webp' },
+                  { id: 'pose4', name: 'Stella Luxx - Sunset Vibe', cost: 50, url: '/data/slideshow/stella/Stella Luxx8.webp' },
+                  { id: 'pose5', name: 'Stella Luxx - Session 1', cost: 50, url: '/data/slideshow/stella/stella-luxx-hustler-1.jpg' },
+                  { id: 'pose6', name: 'Stella Luxx - Session 2', cost: 50, url: '/data/slideshow/stella/stella-luxx-hustler-3.jpg' },
+                  { id: 'pose7', name: 'Stella Luxx - Exclusive', cost: 50, url: '/data/slideshow/stella/stella-luxx-nubile-films-006.jpg' },
+                  { id: 'pose8', name: 'Stella Luxx - Cover Shoot', cost: 50, url: '/data/slideshow/stella/stella-luxx-penthouse-sex-01.jpg' },
                 ].map((item) => {
                   const unlocked = freeStellaUnlocked || purchasedStunners.some(pUrl => item.url.includes(pUrl) || pUrl.includes(item.url));
                   return (
