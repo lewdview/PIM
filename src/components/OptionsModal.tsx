@@ -771,7 +771,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
 
   return (
     <div 
-      className="fixed inset-0 z-[100] flex items-center justify-center p-0 md:p-4 bg-black/90 backdrop-blur-md animate-fade-in"
+      className="fixed inset-0 z-[150] flex items-center justify-center p-0 md:p-4 bg-black/90 backdrop-blur-md animate-fade-in"
       onClick={onClose}
     >
       <div 
