@@ -81,7 +81,7 @@ export const useGlobalPlayer = create<GlobalPlayerState>((set, get) => {
   });
 
   audio.addEventListener('error', () => {
-    console.error('Global player error');
+    console.error('Global player error:', audio.src, audio.error);
     set({ isPlaying: false });
     useLoadingToast.getState().show('Failed to stream audio file from Supabase.');
     setTimeout(() => {

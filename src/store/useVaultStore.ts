@@ -125,7 +125,7 @@ interface VaultState {
   updateCheats: (cheats: Partial<ProfileCheats>) => Promise<void>;
 
   // Database Sync Actions
-  syncHighScore: (songId: string, score: number, accuracy: number, maxCombo: number, medal: string) => Promise<void>;
+  syncHighScore: (songId: string, score: number, accuracy: number, maxCombo: number, medal: string, telemetry?: any) => Promise<void>;
   syncMedal: (songId: string, medal: string) => Promise<void>;
   syncFragments: (songId: string, count: number) => Promise<void>;
   syncMilestoneClaim: (monthNum: number, milestoneNum: number) => Promise<void>;
@@ -713,7 +713,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     }
   },
 
-  syncHighScore: async (songId, score, accuracy, maxCombo, medal) => {
+  syncHighScore: async (songId, score, accuracy, maxCombo, medal, telemetry) => {
     set((state) => {
       const current = state.highScores[songId] || 0;
       if (score > current) {
@@ -734,7 +734,8 @@ export const useVaultStore = create<VaultState>((set, get) => ({
           max_combo: maxCombo,
           medal,
           pack_rewarded: false,
-          reward_tier: 'none'
+          reward_tier: 'none',
+          telemetry: telemetry || null
         });
       } catch (err) {
         console.warn('Failed to sync high score to database:', err);

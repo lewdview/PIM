@@ -196,8 +196,8 @@ export function getHighScore(songId: string): number {
   return progGetHighScore(songId);
 }
 
-export function saveHighScore(songId: string, score: number): void {
-  progSaveHighScore(songId, score);
+export function saveHighScore(songId: string, score: number, accuracy = 0, maxCombo = 0, medal = 'NONE', telemetry?: any): void {
+  progSaveHighScore(songId, score, accuracy, maxCombo, medal, telemetry);
 }
 
 export type SongModifierType = 'vocal_isolation' | 'bass_realm' | 'corrupted_signal' | 'none';
