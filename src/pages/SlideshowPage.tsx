@@ -97,6 +97,20 @@ export default function SlideshowPage() {
   const floatersRef = useRef<FloatingSubject[]>([]);
   const animationFrameRef = useRef<number | null>(null);
 
+  // Local blob URLs tracking and cleanup
+  const localBlobUrlsRef = useRef<string[]>([]);
+  useEffect(() => {
+    return () => {
+      localBlobUrlsRef.current.forEach((url) => {
+        try {
+          URL.revokeObjectURL(url);
+        } catch {}
+      });
+      // Clear floaters references to release cached Image objects
+      floatersRef.current = [];
+    };
+  }, []);
+
   // Sync settings from cloud profile on mount
   useEffect(() => {
     if (settings) {
@@ -588,6 +602,7 @@ export default function SlideshowPage() {
     for (const file of imageFiles) {
       // Local fallback blob URL
       const localBlobUrl = URL.createObjectURL(file);
+      localBlobUrlsRef.current.push(localBlobUrl);
       
       try {
         const base64Data = await new Promise<string>((resolve, reject) => {

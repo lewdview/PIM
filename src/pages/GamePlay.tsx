@@ -5948,6 +5948,15 @@ export default function Game() {
         abandonTimeoutRef.current = null;
       }
 
+      if (stingerTimeout1Ref.current) {
+        clearTimeout(stingerTimeout1Ref.current);
+        stingerTimeout1Ref.current = null;
+      }
+      if (stingerTimeout2Ref.current) {
+        clearTimeout(stingerTimeout2Ref.current);
+        stingerTimeout2Ref.current = null;
+      }
+
       if (countdownIntervalRef.current) {
         clearInterval(countdownIntervalRef.current);
         countdownIntervalRef.current = null;
@@ -5974,6 +5983,11 @@ export default function Game() {
         });
         laneGainsRef.current = [];
       }
+      if (gameplayAnalyserRef.current) {
+        try { gameplayAnalyserRef.current.disconnect(); } catch {}
+        gameplayAnalyserRef.current = null;
+      }
+      gameplayAnalyserDataRef.current = null;
 
       if (audioCtxRef.current) {
         if (audioCtxRef.current !== audioManager.getContext()) {
@@ -5988,6 +6002,14 @@ export default function Game() {
       coverBlurRef.current = null;
       scanPatternRef.current = null;
       offscreenCanvasRef.current = null;
+      slideshowSlidesRef.current = [];
+      gameplaySlideshowFloatersRef.current = [];
+      noteTrailsRef.current = [];
+      notesRef.current = [];
+      jRef.current = [];
+      hitFxRef.current = [];
+      milestoneFxRef.current = [];
+      ambientParticlesRef.current = [];
     };
   }, [songId, setLocation, retryCount]);
 
