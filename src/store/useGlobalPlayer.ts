@@ -144,7 +144,10 @@ export const useGlobalPlayer = create<GlobalPlayerState>((set, get) => {
       const audio = getAudio();
       audio.pause();
       audio.currentTime = 0;
-      audio.src = '';
+      audio.removeAttribute('src');
+      try {
+        audio.load();
+      } catch {}
       set({
         currentTrack: null,
         isPlaying: false,
