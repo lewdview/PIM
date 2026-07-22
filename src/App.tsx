@@ -370,6 +370,7 @@ export default function App() {
           <Route path="/vault/codex" component={CodexPage} />
           <Route path="/vault/claim" component={ClaimPage} />
           <Route path="/vault/legal" component={LegalPage} />
+          <Route path="/vault/earn" component={EarnPage} />
           <Route path="/vault/:userId" component={VoyeurPage} />
           { (import.meta.env.DEV || localStorage.getItem('th3vault_dev_mode') === 'true') && (
             <>
@@ -387,7 +388,6 @@ export default function App() {
           <Route path="/song/:songId" component={SongDetail} />
           <Route path="/listen/:songId" component={ListenPage} />
           <Route path="/slideshow" component={SlideshowPage} />
-          <Route path="/vault/earn" component={EarnPage} />
           <Route>
             <div className="flex-1 flex flex-col items-center justify-center p-8 text-center max-w-md mx-auto">
               <div className="text-[10px] tracking-[0.3em] text-white/40 mb-4 uppercase font-bold">
