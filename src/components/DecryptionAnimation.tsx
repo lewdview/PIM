@@ -8,6 +8,7 @@ interface DecryptionAnimationProps {
   reward: {
     type: string;
     value: string;
+    code?: string;
     details?: {
       tokensGranted?: number;
       card?: VaultCard;
@@ -33,6 +34,11 @@ interface ShardParticle {
 
 export default function DecryptionAnimation({ reward, onClose }: DecryptionAnimationProps) {
   const [phase, setPhase] = useState<'idle' | 'shaking' | 'bursting' | 'revealed'>('idle');
+  const phaseRef = useRef(phase);
+  useEffect(() => {
+    phaseRef.current = phase;
+  }, [phase]);
+
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const particlesRef = useRef<ShardParticle[]>([]);
   const animationFrameRef = useRef<number | null>(null);
@@ -130,7 +136,7 @@ export default function DecryptionAnimation({ reward, onClose }: DecryptionAnima
       particlesRef.current = activeParticles;
 
       // Transition to revealed phase once particles settle
-      if (elapsed > 1600 && phase === 'bursting') {
+      if (elapsed > 1600 && phaseRef.current === 'bursting') {
         setPhase('revealed');
         audioManager.playSfx('song_completion', 0.85);
       }
@@ -180,95 +186,99 @@ export default function DecryptionAnimation({ reward, onClose }: DecryptionAnima
       />
 
       <AnimatePresence mode="wait">
-        {/* Closed/Shaking Bag Phase */}
-        {(phase === 'idle' || phase === 'shaking') && (
+        {/* Closed/Shaking/Opening Chest Phase */}
+        {(phase === 'idle' || phase === 'shaking' || phase === 'bursting') && (
           <motion.div
-            key="closed-bag"
+            key="closed-chest"
             exit={{ scale: 0.6, opacity: 0 }}
+            animate={
+              phase === 'shaking'
+                ? {
+                    x: [0, -8, 8, -6, 6, -3, 3, 0],
+                    y: [0, 4, -4, 3, -3, 1, -1, 0],
+                    scale: [1, 1.15, 1.25, 1.2, 1.3, 1.25, 1.35, 1.25],
+                    rotate: [0, -4, 4, -3, 3, -1, 1, 0],
+                  }
+                : phase === 'bursting'
+                ? {
+                    scale: [1.25, 1.4, 1.1],
+                    y: [0, -10, 0],
+                  }
+                : {
+                    y: [0, -6, 0],
+                    scale: [1, 1.03, 1],
+                  }
+            }
+            transition={
+              phase === 'shaking'
+                ? { duration: 0.8, ease: 'easeInOut' }
+                : phase === 'bursting'
+                ? { duration: 0.5, ease: 'easeOut' }
+                : { repeat: Infinity, duration: 3, ease: 'easeInOut' }
+            }
             className="flex flex-col items-center gap-6 z-10 cursor-pointer text-center select-none"
             onClick={handleInteract}
           >
             {/* Ambient background glow */}
             <div className="absolute w-48 h-48 rounded-full bg-radial-gradient blur-3xl opacity-20 pointer-events-none"
               style={{
-                background: 'radial-gradient(circle, var(--color-neon-gold) 0%, transparent 70%)',
+                background: 'radial-gradient(circle, #39FF14 0%, transparent 70%)',
               }}
             />
 
-            {/* Glowing Pouch Pushing / Shaking */}
-            <motion.div
-              animate={
-                phase === 'shaking'
-                  ? {
-                      x: [0, -8, 8, -6, 6, -3, 3, 0],
-                      y: [0, 4, -4, 3, -3, 1, -1, 0],
-                      scale: [1, 1.15, 1.25, 1.2, 1.3, 1.25, 1.35, 1.25],
-                      rotate: [0, -4, 4, -3, 3, -1, 1, 0],
-                    }
-                  : {
-                      y: [0, -10, 0],
-                      scale: [1, 1.04, 1],
-                    }
-              }
-              transition={
-                phase === 'shaking'
-                  ? { duration: 0.8, ease: 'easeInOut' }
-                  : { repeat: Infinity, duration: 3, ease: 'easeInOut' }
-              }
-              className="relative w-40 h-40 filter drop-shadow-[0_0_25px_rgba(255,184,0,0.35)]"
-            >
-              {/* Premium Vector SVG Cyber Pouch */}
+            {/* Glowing Chest Shaking / Opening */}
+            <div className="relative w-40 h-40 filter drop-shadow-[0_0_25px_rgba(57,255,20,0.35)]">
               <svg viewBox="0 0 120 120" className="w-full h-full">
                 <defs>
-                  <linearGradient id="bagGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#1a1200" />
-                    <stop offset="50%" stopColor="#0a0700" />
-                    <stop offset="100%" stopColor="#251a02" />
+                  <linearGradient id="chestGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#2c2d35" />
+                    <stop offset="50%" stopColor="#15161a" />
+                    <stop offset="100%" stopColor="#0c0d10" />
                   </linearGradient>
-                  <linearGradient id="neonTrim" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#ffb800" />
-                    <stop offset="50%" stopColor="#ff5500" />
-                    <stop offset="100%" stopColor="#ffb800" />
+                  <linearGradient id="cyberGlow" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#00F0FF" />
+                    <stop offset="50%" stopColor="#39FF14" />
+                    <stop offset="100%" stopColor="#00F0FF" />
+                  </linearGradient>
+                  <linearGradient id="goldAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#ffd700" />
+                    <stop offset="100%" stopColor="#b8860b" />
                   </linearGradient>
                 </defs>
 
-                {/* Draw string ties */}
-                <path d="M 50,22 Q 60,35 70,22 M 45,20 L 35,15 M 75,20 L 85,15" stroke="#ffb800" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-
-                {/* Hexagonal Bag body */}
-                <path
-                  d="M 60,18 L 92,38 L 98,82 L 60,108 L 22,82 L 28,38 Z"
-                  fill="url(#bagGrad)"
-                  stroke="url(#neonTrim)"
-                  strokeWidth="2.5"
-                  strokeLinejoin="round"
-                />
-
-                {/* Futuristic detailing panels */}
-                <path d="M 34,42 L 54,34 L 54,92 L 28,78 Z" fill="#ffffff" fillOpacity="0.03" />
-                <path d="M 86,42 L 66,34 L 66,92 L 92,78 Z" fill="#ffffff" fillOpacity="0.03" />
-
-                {/* Matrix circuit lines */}
-                <path d="M 30,55 L 42,50 L 42,75" stroke="#ffb800" strokeWidth="1.5" strokeOpacity="0.4" fill="none" />
-                <path d="M 90,55 L 78,50 L 78,75" stroke="#ffb800" strokeWidth="1.5" strokeOpacity="0.4" fill="none" />
-
-                {/* central power core padlock */}
-                <circle cx="60" cy="62" r="14" fill="#111" stroke="#ffb800" strokeWidth="2" />
+                {/* Chest Base */}
+                <rect x="20" y="55" width="80" height="45" rx="6" fill="url(#chestGrad)" stroke="url(#cyberGlow)" strokeWidth="2.5" />
                 
-                {/* Glow Core */}
-                <circle cx="60" cy="62" r="8" fill="#ffb800" className="animate-pulse" />
+                {/* Cyber line details on base */}
+                <path d="M 25,65 L 35,65" stroke="#00F0FF" strokeWidth="1.5" />
+                <path d="M 95,65 L 85,65" stroke="#00F0FF" strokeWidth="1.5" />
+                <path d="M 30,90 L 90,90" stroke="#15161a" strokeWidth="3" strokeLinecap="round" />
 
-                {/* Lock icon grid */}
-                <path d="M 56,60 L 64,60 M 60,56 L 60,68" stroke="#000" strokeWidth="2" strokeLinecap="round" />
+                {/* Glowing PIM text on front */}
+                <text x="60" y="82" textAnchor="middle" fill="#39FF14" fontSize="14" fontWeight="900" fontFamily="'Space Mono', monospace" letterSpacing="2" style={{ filter: 'drop-shadow(0px 0px 6px rgba(57,255,20,0.8))' }}>PIM</text>
+
+                {/* Animated Lid */}
+                <motion.g
+                  animate={phase === 'bursting' ? { y: -22, rotate: -35, opacity: 0 } : { y: 0, rotate: 0, opacity: 1 }}
+                  transition={{ duration: 0.5, ease: 'easeOut' }}
+                  style={{ transformOrigin: '20px 55px' }}
+                >
+                  <path d="M 18,55 L 22,32 L 98,32 L 102,55 Z" fill="url(#chestGrad)" stroke="url(#cyberGlow)" strokeWidth="2.5" strokeLinejoin="round" />
+                  <path d="M 28,38 L 92,38 L 94,48 L 26,48 Z" fill="#ffffff" fillOpacity="0.05" />
+                  <rect x="52" y="48" width="16" height="12" rx="2" fill="url(#goldAccent)" stroke="#111" strokeWidth="1" />
+                  <circle cx="60" cy="54" r="2.5" fill="#39FF14" className="animate-pulse" />
+                </motion.g>
               </svg>
-            </motion.div>
-
-            <div className="space-y-1">
-              <span className="text-[10px] font-mono font-bold tracking-widest text-[#ffb800] uppercase blink">
-                {phase === 'shaking' ? '✦ DECRYPTING TRANSMISSION ✦' : '✦ CLICK POUCH TO DECRYPT ✦'}
-              </span>
-              <p className="text-[9px] font-mono text-zinc-500 uppercase">// ENCRYPTED DATA BAG RECIEVED</p>
             </div>
+
+            {phase !== 'bursting' && (
+              <div className="space-y-1">
+                <span className="text-[10px] font-mono font-bold tracking-widest text-[#ffb800] uppercase blink">
+                  {phase === 'shaking' ? '✦ DECRYPTING TRANSMISSION ✦' : '✦ CLICK CHEST TO DECRYPT ✦'}
+                </span>
+                <p className="text-[9px] font-mono text-zinc-500 uppercase">// SECURE CRYPTO CHEST RECEIVED</p>
+              </div>
+            )}
           </motion.div>
         )}
 
@@ -299,10 +309,15 @@ export default function DecryptionAnimation({ reward, onClose }: DecryptionAnima
             />
 
             <div className="flex flex-col items-center">
-              <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-[#39FF14] tracking-widest uppercase mb-4">
+              <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-[#39FF14] tracking-widest uppercase mb-1">
                 <Sparkles size={13} className="animate-spin" />
                 <span>DECRYPT SUCCESSFUL</span>
               </div>
+              {reward.code && (
+                <div className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest mb-4">
+                  CODE: <span className="text-white font-bold">{reward.code}</span>
+                </div>
+              )}
 
               {/* Reward rendering */}
               {reward.type === 'tokens' && (
@@ -418,7 +433,7 @@ export default function DecryptionAnimation({ reward, onClose }: DecryptionAnima
                     {reward.value}
                   </div>
                   <div className="text-[10px] font-mono text-zinc-400 mt-2 max-w-[280px] leading-relaxed uppercase text-center">
-                    {reward.value === 'idnoclip' 
+                    {reward.value === 'iddqd' 
                       ? "MISS SYSTEM SAFETY BYPASSED. CONFIGURATION SETTINGS UNLOCKED." 
                       : "PROCEDURAL GENERATOR DECRYPTED. LYRIC & BPM ENGINE ENGAGED."}
                   </div>

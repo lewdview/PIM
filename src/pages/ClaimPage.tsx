@@ -305,7 +305,8 @@ export default function ClaimPage() {
           type: res.rewardType,
           value: res.rewardValue,
           details,
-          result: res.result
+          result: res.result,
+          code: bonusCode.trim().toUpperCase()
         });
         setCodeState('success');
         setBonusCode('');
