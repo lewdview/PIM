@@ -242,8 +242,8 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
                         {card.card.title}
                       </h2>
                     </div>
-                    <button aria-label="Close" onClick={onClose} className="p-2 hover:bg-white/5 rounded-full transition-colors opacity-40 hover:opacity-100">
-                      <X size={24} />
+                    <button aria-label="Close" onClick={onClose} className="w-11 h-11 flex items-center justify-center hover:bg-white/5 rounded-full transition-colors opacity-40 hover:opacity-100 active:scale-95 duration-150 cursor-pointer">
+                      <X size={20} />
                     </button>
                   </div>
 

@@ -499,21 +499,22 @@ export default function Campaign() {
                         audioManager.playSfx("tap_nav", 0.18);
                         setLocation(`/chapter/${ch.meta.month}`);
                       }}
-                      className={`w-full py-3.5 font-mono font-bold text-xs tracking-[0.25em] border transition-all uppercase flex items-center justify-center gap-2 cursor-pointer bg-black/45 hover:bg-white/5`}
+                      className={`w-full py-4 font-mono font-black text-sm tracking-[0.3em] border-2 transition-all uppercase flex items-center justify-center gap-2.5 cursor-pointer bg-black/55 hover:bg-white/10 active:scale-[0.98] duration-150`}
                       style={{
                         borderColor: unlocked ? ch.meta.dc : '#27272a',
                         color: unlocked ? ch.meta.dc : '#52525b',
-                        boxShadow: unlocked ? `0 0 12px ${ch.meta.dc}25` : 'none'
+                        boxShadow: unlocked ? `0 0 16px ${ch.meta.dc}35` : 'none',
+                        height: '56px'
                       }}
                     >
                       {unlocked ? (
                         <>
-                          <Play size={10} className="fill-current" />
+                          <Play size={12} className="fill-current" />
                           [ ENGAGE SECTOR ]
                         </>
                       ) : (
                         <>
-                          <Lock size={10} />
+                          <Lock size={12} />
                           [ CODES INSUFFICIENT ]
                         </>
                       )}

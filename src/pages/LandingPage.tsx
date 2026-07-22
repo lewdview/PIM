@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation } from 'wouter';
-import { Layers, Flame, Star, Calendar, Zap, Monitor, Clock, Play, Gift, Shield, Sparkles, AlertTriangle, Image as ImageIcon, Terminal } from 'lucide-react';
+import { Layers, Flame, Star, Calendar, Zap, Monitor, Clock, Play, Gift, Shield, Sparkles, AlertTriangle, Image as ImageIcon, Terminal, X } from 'lucide-react';
 import Card from '../components/Card';
 import PackShop from '../components/PackShop';
 import { useVaultStore } from '../store/useVaultStore';
@@ -905,7 +905,7 @@ export default function LandingPage() {
                       <button 
                         disabled={targetLoading || !targetDay || parseInt(targetDay) < 1 || parseInt(targetDay) > 365 || tokenBalance < 500}
                         onClick={() => handleTargetedPull(parseInt(targetDay))}
-                        className="w-full py-2 bg-[#ff9900] hover:bg-[#e08800] text-black font-black uppercase text-xs tracking-wider transition-all disabled:opacity-30 disabled:hover:bg-[#ff9900]"
+                        className="w-full py-3 bg-[#ff9900] hover:bg-[#e08800] text-black font-black uppercase text-xs tracking-wider transition-all disabled:opacity-30 disabled:hover:bg-[#ff9900] active:scale-[0.98] duration-150 cursor-pointer"
                         style={{ border: '2px solid #000', boxShadow: '2px 2px 0 #000' }}
                       >
                         {targetLoading ? 'PULLING...' : 'EXECUTE PULL'}
@@ -947,7 +947,7 @@ export default function LandingPage() {
                       <button 
                         disabled={upgradeLoading || !upgradeCardId || tokenBalance < 150}
                         onClick={() => handleUpgrade(upgradeCardId)}
-                        className="w-full py-2 bg-[#ff9900] hover:bg-[#e08800] text-black font-black uppercase text-xs tracking-wider transition-all disabled:opacity-30 disabled:hover:bg-[#ff9900]"
+                        className="w-full py-3 bg-[#ff9900] hover:bg-[#e08800] text-black font-black uppercase text-xs tracking-wider transition-all disabled:opacity-30 disabled:hover:bg-[#ff9900] active:scale-[0.98] duration-150 cursor-pointer"
                         style={{ border: '2px solid #000', boxShadow: '2px 2px 0 #000' }}
                       >
                         {upgradeLoading ? 'UPGRADING...' : 'UPGRADE CARD'}
@@ -986,7 +986,7 @@ export default function LandingPage() {
                                 <button
                                   disabled={fusionLoading}
                                   onClick={() => handleFusion(cards.slice(0, 3))}
-                                  className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white font-mono text-[8px] font-bold uppercase transition-all"
+                                  className="px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white font-mono text-[10px] font-bold uppercase cursor-pointer active:scale-95 transition-all duration-150"
                                 >
                                   FUSE
                                 </button>
@@ -1055,7 +1055,7 @@ export default function LandingPage() {
                     <button
                       type="submit"
                       disabled={codeState === 'redeeming' || !bonusCode.trim()}
-                      className="px-8 py-3 bg-[#ffd700] hover:bg-[#e6c300] text-black font-black uppercase text-xs tracking-wider transition-all disabled:opacity-30 disabled:hover:bg-[#ffd700]"
+                      className="px-8 py-3.5 bg-[#ffd700] hover:bg-[#e6c300] text-black font-black uppercase text-sm tracking-wider transition-all disabled:opacity-30 disabled:hover:bg-[#ffd700] active:scale-[0.98] duration-150 cursor-pointer"
                       style={{ border: '2px solid #000', boxShadow: '2px 2px 0 #000' }}
                     >
                       {codeState === 'redeeming' ? 'DECRYPTING...' : 'REDEEM CODE'}
@@ -1341,9 +1341,10 @@ export default function LandingPage() {
                   </div>
                   <button 
                     onClick={() => { audioManager.playSfx('tap_nav', 0.4); setShowTargetedPullModal(false); setTargetDay(''); }}
-                    className="text-white hover:text-[#ff9900] font-mono text-xs font-bold uppercase transition-all"
+                    className="absolute top-4 right-4 w-11 h-11 flex items-center justify-center rounded-full bg-white/5 border border-white/10 text-white/50 hover:text-white hover:bg-white/10 active:scale-95 duration-150 cursor-pointer z-50"
+                    aria-label="Close targeted pull modal"
                   >
-                    [ ESC ]
+                    <X size={20} />
                   </button>
                 </div>
 
@@ -1426,9 +1427,10 @@ export default function LandingPage() {
                   </div>
                   <button 
                     onClick={() => { audioManager.playSfx('tap_nav', 0.4); setShowUpgradeModal(false); }}
-                    className="text-white hover:text-[#00d2ff] font-mono text-xs font-bold uppercase transition-all"
+                    className="absolute top-4 right-4 w-11 h-11 flex items-center justify-center rounded-full bg-white/5 border border-white/10 text-white/50 hover:text-white hover:bg-white/10 active:scale-95 duration-150 cursor-pointer z-50"
+                    aria-label="Close upgrade modal"
                   >
-                    [ ESC ]
+                    <X size={20} />
                   </button>
                 </div>
 

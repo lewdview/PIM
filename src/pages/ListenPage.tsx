@@ -627,10 +627,10 @@ export default function ListenPage() {
           {/* Quick Exit Cross button */}
           <button
             onClick={handleBack}
-            className="absolute top-0 right-0 p-1.5 hover:bg-white/10 rounded-full transition-colors opacity-60 hover:opacity-100 cursor-pointer"
+            className="absolute top-0 right-0 w-11 h-11 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors opacity-60 hover:opacity-100 active:scale-95 duration-150 cursor-pointer z-50"
             title="Exit Visualizer"
           >
-            <X size={16} />
+            <X size={20} />
           </button>
         </div>
 

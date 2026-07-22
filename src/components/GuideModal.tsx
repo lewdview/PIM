@@ -54,10 +54,10 @@ export default function GuideModal({ isOpen, onClose }: Props) {
             </div>
             <button
               onClick={onClose}
-              className="p-1 hover:bg-white/10 rounded-full transition-colors opacity-50 hover:opacity-100"
+              className="w-11 h-11 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors opacity-50 hover:opacity-100 active:scale-95 duration-150 cursor-pointer"
               aria-label="Close guide"
             >
-              <X size={18} />
+              <X size={20} />
             </button>
           </div>
 

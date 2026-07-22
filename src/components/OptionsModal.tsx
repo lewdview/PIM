@@ -799,9 +799,9 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
 
             <button 
               onClick={onClose}
-              className="p-1 hover:bg-white/10 rounded transition-colors text-white/50 hover:text-white cursor-pointer"
+              className="w-11 h-11 flex items-center justify-center hover:bg-white/10 rounded transition-colors text-white/50 hover:text-white active:scale-95 duration-150 cursor-pointer"
             >
-              <X size={18} />
+              <X size={20} />
             </button>
           </div>
         </div>

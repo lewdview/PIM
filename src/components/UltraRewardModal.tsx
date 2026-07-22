@@ -111,7 +111,7 @@ export default function UltraRewardModal({ isOpen, onClose, isFreshFind = false 
                     onClick={onClose}
                     title="Close modal"
                     style={{
-                      width: '28px', height: '28px', borderRadius: '50%',
+                      width: '44px', height: '44px', borderRadius: '50%',
                       background: 'rgba(255,255,255,0.05)',
                       border: '1px solid rgba(255,255,255,0.1)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -121,7 +121,7 @@ export default function UltraRewardModal({ isOpen, onClose, isFreshFind = false 
                     onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.1)'; }}
                     onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.05)'; }}
                   >
-                    <X size={13} />
+                    <X size={20} />
                   </button>
                 </div>
 

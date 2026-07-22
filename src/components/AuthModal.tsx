@@ -97,10 +97,10 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
           {/* Close button */}
           <button
             onClick={onClose}
-            className="absolute top-3 right-3 p-1.5 rounded bg-white/5 border border-white/10 text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+            className="absolute top-3 right-3 w-11 h-11 flex items-center justify-center rounded bg-white/5 border border-white/10 text-white/40 hover:text-white hover:bg-white/10 transition-colors active:scale-95 duration-150 cursor-pointer z-50"
             title="Close authentication screen"
           >
-            <X size={14} />
+            <X size={20} />
           </button>
 
           {/* Header */}

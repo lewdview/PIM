@@ -78,8 +78,8 @@ export default function RC1WelcomeModal() {
               top: '12px',
               float: 'right',
               marginRight: '12px',
-              width: '28px',
-              height: '28px',
+              width: '44px',
+              height: '44px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -88,9 +88,11 @@ export default function RC1WelcomeModal() {
               color: 'rgba(255,255,255,0.4)',
               cursor: 'pointer',
               zIndex: 10,
+              borderRadius: '4px',
+              transition: 'all 0.15s ease',
             }}
           >
-            <X size={14} />
+            <X size={20} />
           </button>
 
           {/* Header */}
