@@ -17,6 +17,7 @@ const links = [
   { to: '/vault/collection', label: 'Collection', icon: Layers },
   { to: '/vault/codex', label: 'Codex', icon: BookOpen },
   { to: '/vault/forge', label: 'Forge', icon: Flame },
+  { to: '/vault/earn', label: 'Earn', icon: Zap },
   { to: '/options', label: 'Options', icon: Settings },
   { to: '/vault/leaderboard', label: 'Ranks', icon: Trophy },
   { to: '/vault/claim', label: 'Redeem', icon: Gift },
@@ -178,6 +179,7 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const { is4K, toggle: toggle4K, detectCapability } = useDisplayMode();
+  const optionsModalOpen = useVaultStore((s) => s.optionsModalOpen);
   const setOptionsModalOpen = useVaultStore((s) => s.setOptionsModalOpen);
 
   const handleConnectWallet = () => {
@@ -212,7 +214,7 @@ export default function Navbar() {
           {/* Desktop links */}
           <div className="hidden md:flex items-center gap-2">
             {links.map(({ to, label, icon: Icon }, i) => {
-              const active = location === to;
+              const active = to === '/options' ? optionsModalOpen : (location === to);
               return (
                 <Link
                   key={to}
@@ -508,7 +510,7 @@ export default function Navbar() {
 
               <div className="px-4 pt-3 pb-2 flex flex-col gap-2">
                 {links.map(({ to, label, icon: Icon }, i) => {
-                  const active = location === to;
+                  const active = to === '/options' ? optionsModalOpen : (location === to);
                   return (
                     <Link
                       key={to}
@@ -701,14 +703,19 @@ export default function Navbar() {
       >
         <div className="flex items-stretch h-[62px]">
           {links.filter(l => l.to !== '/vault/collection' && l.to !== '/vault/leaderboard' && l.to !== '/pitch-deck').map(({ to, label, icon: Icon }) => {
-            const active = location === to;
+            const active = to === '/options' ? optionsModalOpen : (location === to);
             return (
               <Link
                 key={to}
                 to={to}
-                onClick={() => {
+                onClick={(e) => {
                   haptics.lightTap();
-                  setOptionsModalOpen(false);
+                  if (to === '/options') {
+                    e.preventDefault();
+                    setOptionsModalOpen(true);
+                  } else {
+                    setOptionsModalOpen(false);
+                  }
                 }}
                 className="flex-1 flex flex-col items-center justify-center gap-1 no-underline transition-all active:scale-95"
                 style={{

@@ -351,7 +351,6 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#050402] text-white flex flex-col select-none relative">
       <GlobalMenuBackground />
-      <OptionsModal isOpen={optionsModalOpen} onClose={() => setOptionsModalOpen(false)} />
       <BackgroundMusic />
       <GamepadCursor />
       {!hideNavbar && <Navbar />}
@@ -436,6 +435,7 @@ export default function App() {
       <LoadingToast />
       <GlobalPlayerBar />
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+      <OptionsModal isOpen={optionsModalOpen} onClose={() => setOptionsModalOpen(false)} />
     </div>
   );
 }
