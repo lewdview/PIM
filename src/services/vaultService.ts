@@ -677,6 +677,58 @@ export async function redeemBonusCode(code: string): Promise<{ success: boolean;
     };
   }
 
+  if (cleanCode === 'chunkybitch') {
+    try {
+      const parent = await getCardByDay(291);
+      if (parent) {
+        const mockCardResult = {
+          id: 'mock-owned-291',
+          card_id: parent.id,
+          rarity: 'common',
+          source: 'promo_code',
+          claimed_at: new Date().toISOString(),
+          edition: 1,
+          max_supply: 1000,
+          is_echo: false
+        };
+
+        const mockCard: OwnedCard = {
+          id: 'mock-owned-291-' + Math.random().toString(36).substr(2, 9),
+          cardId: parent.id,
+          card: { ...parent, rarity: 'common' },
+          source: 'promo_code',
+          claimedAt: new Date().toISOString(),
+          edition: 1,
+          maxSupply: 1000,
+          isEcho: false,
+          blockchainStatus: 'offchain',
+          fingerprint: 'mock-fingerprint-chunkybitch'
+        };
+
+        // Try to update local collection state
+        const { useVaultStore } = await import('../store/useVaultStore');
+        const store = useVaultStore.getState();
+        if (store) {
+          const alreadyOwned = store.collection.some(c => c.card.day === 291 && c.card.rarity === 'common');
+          if (!alreadyOwned) {
+            useVaultStore.setState({
+              collection: [...store.collection, mockCard]
+            });
+          }
+        }
+
+        return {
+          success: true,
+          rewardType: 'card',
+          rewardValue: 'card-291-common',
+          result: { card: mockCardResult }
+        };
+      }
+    } catch (e) {
+      console.warn("Client fallback for chunkybitch failed:", e);
+    }
+  }
+
   try {
     const { data, error } = await supabase.functions.invoke('vault-engine', {
       body: { action: 'redeemBonusCode', payload: { code } }
