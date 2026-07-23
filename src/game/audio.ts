@@ -307,9 +307,40 @@ export class AudioManager {
     }
   }
 
+  private activeRemixTimeout: number | null = null;
+  public activeRemixEffect: string | null = null;
+
+  /**
+   * Triggers a temporary stem remix effect (e.g. isolating vocals, muting drums, boosting bass).
+   */
+  triggerRemixStemEffect(
+    effectType: 'vocals_isolate' | 'drums_mute' | 'bass_boost' | 'lead_solo' = 'vocals_isolate',
+    durationSec = 4.0
+  ): string {
+    this.playSfx('hidden_secret_found', 0.8);
+
+    if (this.activeRemixTimeout) {
+      window.clearTimeout(this.activeRemixTimeout);
+    }
+
+    this.activeRemixEffect = effectType;
+
+    this.activeRemixTimeout = window.setTimeout(() => {
+      this.activeRemixEffect = null;
+      this.activeRemixTimeout = null;
+    }, durationSec * 1000);
+
+    return effectType;
+  }
+
   // ── teardown ───────────────────────────────────────────────────
 
   stop(): void {
+    if (this.activeRemixTimeout) {
+      window.clearTimeout(this.activeRemixTimeout);
+      this.activeRemixTimeout = null;
+    }
+    this.activeRemixEffect = null;
     if (this.ctx) {
       this.ctx.close().catch(() => {});
       this.ctx = null;

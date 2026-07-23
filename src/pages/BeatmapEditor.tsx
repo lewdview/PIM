@@ -135,7 +135,7 @@ export default function BeatmapEditor() {
   const [playSpeed, setPlaySpeed] = useState<number>(1.0);
   const [quantize, setQuantize] = useState<number>(16); // 16th notes snap by default
   const [zoom, setZoom] = useState<number>(140); // translates to approach time
-  const [activeTool, setActiveTool] = useState<'select' | 'tap' | 'hold' | 'swipe' | 'slide'>('select');
+  const [activeTool, setActiveTool] = useState<'select' | 'tap' | 'hold' | 'swipe' | 'slide' | 'remix' | 'mine' | 'break' | 'burst'>('select');
   
   // Note configuration
   const [swipeDir, setSwipeDir] = useState<NonNullable<Note['swipeDirection']>>('up');
@@ -1107,8 +1107,8 @@ export default function BeatmapEditor() {
               <Layers size={14} /> Tool Palette
             </div>
             
-            <div className="editor-tool-grid">
-              {(['select', 'tap', 'hold', 'swipe', 'slide'] as const).map(tool => (
+            <div className="editor-tool-grid flex flex-wrap gap-1">
+              {(['select', 'tap', 'hold', 'swipe', 'slide', 'remix', 'mine', 'break', 'burst'] as const).map(tool => (
                 <button
                   key={tool}
                   onClick={() => setActiveTool(tool)}

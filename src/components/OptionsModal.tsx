@@ -1161,6 +1161,18 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                       <span className="text-[#FFaa00] font-bold min-w-[120px] uppercase">↝ SLIDE TRANSITIONS:</span>
                       <span>Hold starting lane, then shift to the target lane key as the path bends sideways.</span>
                     </div>
+                    <div className="flex gap-2 border-t border-white/5 pt-2">
+                      <span className="text-[#38bdf8] font-bold min-w-[120px] uppercase">⚡ REMIX RUNE:</span>
+                      <span>Hit perfectly to isolate vocals, mute drums, or boost bass stems + invert visual palette.</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="text-[#ef4444] font-bold min-w-[120px] uppercase">⚠ MINE HAZARD:</span>
+                      <span>Avoid touching or pressing keys on mine lanes to prevent data leaks and combo breaks.</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="text-[#fbbf24] font-bold min-w-[120px] uppercase">★ BREAK & BURST:</span>
+                      <span>High-energy beat drop notes awarding bonus points and particle explosion rewards.</span>
+                    </div>
                   </div>
                 </div>
 

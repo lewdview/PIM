@@ -1243,6 +1243,8 @@ export default function Game() {
   const lastTapTimeRef = useRef<number[]>([0, 0, 0]);
   const lastMilestoneRef = useRef<number>(0);
   const milestoneFxRef = useRef<MilestoneEffect[]>([]);
+  const remixFlashUntilRef = useRef<number>(0);
+  const remixEffectNameRef = useRef<string | null>(null);
 
   const continueUsedRef = useRef<number>(0); // how many continues the player has used (max 3)
   const coverImgRef = useRef<HTMLImageElement | null>(null);
@@ -1757,6 +1759,23 @@ export default function Game() {
       }
       if (!j) return;
 
+      if (ns.note.type === "mine") {
+        ns.hit = true;
+        ns.missed = true;
+        const gs = gsRef.current;
+        gs.score = Math.max(0, gs.score - 500);
+        gs.combo = 0;
+        gs.misses++;
+        audioManager.playSfx("error", 0.7);
+        haptics.heavyTap();
+        jRef.current = [
+          ...jRef.current.filter((x) => Date.now() - x.ts < 600),
+          { type: "MISS", lane, id: ++jCounter.current, ts: Date.now() },
+        ];
+        syncDisplay();
+        return;
+      }
+
       recordedTelemetryRef.current.push({
         noteId: ns.note.id,
         time: t,
@@ -1775,6 +1794,19 @@ export default function Game() {
 
       const gs = gsRef.current;
       gs.score += calcScore(gs.combo, j);
+
+      if (ns.note.type === "remix") {
+        const fxName = audioManager.triggerRemixStemEffect(ns.note.remixEffect || "vocals_isolate", 5.0);
+        remixEffectNameRef.current = fxName.toUpperCase().replace('_', ' ');
+        remixFlashUntilRef.current = Date.now() + 5000;
+        gs.score += 1000;
+      } else if (ns.note.type === "break") {
+        audioManager.playSfx("diamond", 0.8);
+        gs.score += 1200;
+      } else if (ns.note.type === "accent") {
+        gs.score += 800;
+      }
+
       gs.combo++;
       gs.maxCombo = Math.max(gs.maxCombo, gs.combo);
       gameSenseService.sendHit();
@@ -3422,13 +3454,19 @@ export default function Game() {
       if (ns.hit) continue;
       if (ns.missed) continue; // Guard: already marked missed (e.g. hold released early), don't double-count
 
+      if (note.type === "mine") {
+        const MW = missWindow(songRef.current?.difficultyLevel ?? 5);
+        if (t > note.time + MW) {
+          ns.hit = true; // Safely avoided the mine!
+        }
+        continue;
+      }
+
       // Miss detection — skip entirely during rewind (notes travel backwards; no new misses)
       if (!isRewinding && phaseRef.current === "playing") {
         const MW = missWindow(songRef.current?.difficultyLevel ?? 5);
         const isMissed =
-          (note.type === "tap" && !ns.holdActive && t > note.time + MW) ||
-          (note.type === "swipe" && t > note.time + MW) ||
-          (note.type === "hold" && !ns.holdActive && t > note.time + MW);
+          (!ns.holdActive && t > note.time + MW);
 
         if (isMissed) {
           const isSignalLock = puRef.current.active === "SIGNAL_LOCK" && t < puRef.current.endTime && shieldChargesRef.current > 0;
@@ -3723,56 +3761,6 @@ export default function Game() {
             const lcG = parseInt(noteColor.slice(3, 5), 16);
             const lcB = parseInt(noteColor.slice(5, 7), 16);
 
-            // ── ELECTRIC LIGHTNING ARCS ──
-            const waveCount = 5;
-            const trailLen = noteY - top;
-            if (trailLen > 20) {
-              ctx.save();
-              ctx.shadowColor = noteColor;
-              ctx.shadowBlur = 18;
-              for (let i = 0; i < waveCount; i++) {
-                const t_wave = (i + (t * 2.5) % 1) / waveCount;
-                const wy = lerp(top + 6, noteY - 6, t_wave);
-                const waveP = lerp(headP, Math.min(prog, 1), t_wave);
-                const waveLane = lerp(endLane, ns.visualLane, t_wave);
-                const { x: wx, w: ww } = laneAt(waveLane, waveP, W);
-                const centerX = wx + ww * 0.5;
-                const amp = ww * 0.25 * (0.5 + 0.5 * Math.sin(t * 10 + i * 2.1));
-                const flicker = 0.4 + 0.6 * Math.abs(Math.sin(t * 18 + i * 3.7));
-
-                // Main lightning arc - jagged segments
-                ctx.strokeStyle = `rgba(${lcR},${lcG},${lcB},${flicker})`;
-                ctx.lineWidth = 2.5;
-                ctx.beginPath();
-                ctx.moveTo(centerX, wy - 6);
-                
-                const segments = 4;
-                for (let j = 1; j <= segments; j++) {
-                  const segY = lerp(wy - 6, wy + 10, j / segments);
-                  const seed = t * 38 + i * 17 + j * 9;
-                  const displacement = (Math.sin(seed) * 0.5 + Math.cos(seed * 1.6) * 0.5) * amp;
-                  const segX = centerX + displacement;
-                  ctx.lineTo(segX, segY);
-                }
-                ctx.stroke();
-
-                // Bright white core
-                ctx.strokeStyle = `rgba(255,255,255,${flicker * 0.6})`;
-                ctx.lineWidth = 1.0;
-                ctx.beginPath();
-                ctx.moveTo(centerX, wy - 6);
-                for (let j = 1; j <= segments; j++) {
-                  const segY = lerp(wy - 6, wy + 10, j / segments);
-                  const seed = t * 38 + i * 17 + j * 9;
-                  const displacement = (Math.sin(seed) * 0.5 + Math.cos(seed * 1.6) * 0.5) * amp * 0.6;
-                  const segX = centerX + displacement;
-                  ctx.lineTo(segX, segY);
-                }
-                ctx.stroke();
-              }
-              ctx.restore();
-            }
-
             // Colored stripe (Curved) with glow
             ctx.fillStyle = noteColor;
             ctx.globalAlpha = 0.65;
@@ -3816,7 +3804,7 @@ export default function Game() {
             const tailW_active = tw_active;
             const tailX_active = tx_active;
             const tailR_active = lerp(12, 24, tailP);
-            drawKey(ctx, tailX_active, top, tailW_active, tailH_active, tailR_active, noteColor, tailP, true, note.swipeDirection, note.time * 3700);
+            drawKey(ctx, tailX_active, top, tailW_active, tailH_active, tailR_active, noteColor, tailP, true, note.swipeDirection, note.time * 3700, note.type);
           }
         } else if (headY < noteY) {
           // Inactive trail — SMOOTH CURVE if it's a slide
@@ -3824,20 +3812,6 @@ export default function Game() {
           const { x: tx, w: tw } = laneAt(startLane, prog, W);
 
           const midY = (headY + noteY) / 2;
-
-          // Outer glow pulse for slide notes
-          const isSlide = note.targetLane !== undefined;
-          if (isSlide) {
-            const glowPulse = 0.12 + 0.06 * Math.sin(t * 5);
-            ctx.fillStyle = `rgba(245,240,228,${glowPulse})`;
-            ctx.beginPath();
-            ctx.moveTo(hx + hw * 0.18, headY);
-            ctx.lineTo(hx + hw * 0.82, headY);
-            ctx.quadraticCurveTo(tx + tw * 0.82, midY, tx + tw * 0.82, noteY + noteH / 2);
-            ctx.lineTo(tx + tw * 0.18, noteY + noteH / 2);
-            ctx.quadraticCurveTo(tx + tw * 0.18, midY, hx + hw * 0.18, headY);
-            ctx.fill();
-          }
 
           ctx.fillStyle = "rgba(245,240,228,0.18)";
           ctx.beginPath();
@@ -3847,26 +3821,6 @@ export default function Game() {
           ctx.lineTo(tx + tw * 0.25, noteY + noteH / 2);
           ctx.quadraticCurveTo(tx + tw * 0.25, midY, hx + hw * 0.25, headY);
           ctx.fill();
-
-          // ── Scrolling Inactive Trail Gridlines ──
-          ctx.save();
-          ctx.clip();
-          const inactiveStep = 32;
-          const inactiveOffset = (Date.now() / 14) % inactiveStep;
-          ctx.strokeStyle = "rgba(255, 255, 255, 0.07)";
-          ctx.lineWidth = 1.5;
-          for (let y = headY - inactiveOffset; y < noteY + noteH; y += inactiveStep) {
-            if (y < headY) continue;
-            const p_y = (y - headY) / (noteY - headY || 1);
-            const trailP_y = lerp(headP, Math.min(prog, 1), p_y);
-            const trailLane_y = lerp(endLane, startLane, p_y);
-            const { x: wx, w: ww } = laneAt(trailLane_y, trailP_y, W);
-            ctx.beginPath();
-            ctx.moveTo(wx + ww * 0.25, y);
-            ctx.lineTo(wx + ww * 0.75, y);
-            ctx.stroke();
-          }
-          ctx.restore();
 
           // Colored center ribbon (curved)
           ctx.fillStyle = noteColor;
@@ -3884,34 +3838,14 @@ export default function Game() {
           ctx.shadowBlur = 0;
           ctx.shadowColor = "transparent";
 
-          // ── Slide direction arrow at the tail (destination indicator) ──
-          if (isSlide && note.targetLane !== undefined) {
-            const arrowDir = note.targetLane > startLane ? 1 : -1;
-            const arrowX = tx + tw * 0.5 + arrowDir * tw * 0.3;
-            const arrowY2 = noteY - 2;
-            const arrowPulse2 = 0.4 + 0.3 * Math.sin(t * 6);
-            ctx.save();
-            ctx.globalAlpha = arrowPulse2;
-            ctx.fillStyle = noteColor;
-            ctx.shadowColor = noteColor;
-            ctx.shadowBlur = 8;
-            ctx.beginPath();
-            ctx.moveTo(arrowX + arrowDir * 10, arrowY2);
-            ctx.lineTo(arrowX - arrowDir * 5, arrowY2 - 7);
-            ctx.lineTo(arrowX - arrowDir * 5, arrowY2 + 7);
-            ctx.closePath();
-            ctx.fill();
-            ctx.restore();
-          }
-
           // Draw gold terminus block at the tail of the inactive hold (at headY)
           const tailH_inactive = lerp(80, 140, headP);
           const tailW_inactive = hw;
           const tailX_inactive = hx;
           const tailR_inactive = lerp(12, 24, headP);
-          drawKey(ctx, tailX_inactive, headY, tailW_inactive, tailH_inactive, tailR_inactive, noteColor, headP, true, note.swipeDirection, note.time * 3700);
+          drawKey(ctx, tailX_inactive, headY, tailW_inactive, tailH_inactive, tailR_inactive, noteColor, headP, true, note.swipeDirection, note.time * 3700, note.type);
         }
-        drawKey(ctx, drawX, noteY, noteW, noteH, r, noteColor, prog, false, note.type === "hold" ? undefined : note.swipeDirection, note.time * 3700);
+        drawKey(ctx, drawX, noteY, noteW, noteH, r, noteColor, prog, false, note.type === "hold" ? undefined : note.swipeDirection, note.time * 3700, note.type);
       }
 
       if (isMissedNote) {
@@ -4242,7 +4176,39 @@ export default function Game() {
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
         ctx.fillText("DATA LEAK!", x_center, trapY + 8);
-      } else {
+    // ── 6.6 REMIX STEM EFFECT HUD BANNER & PALETTE FLASH ──
+    if (remixFlashUntilRef.current > Date.now()) {
+      ctx.save();
+      
+      // Ethereal cyan/magenta border glow
+      ctx.strokeStyle = `rgba(56, 189, 248, ${0.4 + 0.3 * Math.sin(t * 12)})`;
+      ctx.lineWidth = 6;
+      ctx.strokeRect(0, 0, W, H);
+
+      // HUD Top Banner
+      const bannerW = Math.min(320, W * 0.85);
+      const bannerX = (W - bannerW) / 2;
+      const bannerY = hitY * 0.18;
+      
+      ctx.fillStyle = "rgba(14, 165, 233, 0.25)";
+      ctx.shadowColor = "#38bdf8";
+      ctx.shadowBlur = 18;
+      ctx.beginPath();
+      ctx.roundRect(bannerX, bannerY, bannerW, 30, 8);
+      ctx.fill();
+
+      ctx.strokeStyle = "rgba(56, 189, 248, 0.8)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.fillStyle = "#f0abfc";
+      ctx.font = 'bold 11px monospace';
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(`⚡ STEM REMIX: ${remixEffectNameRef.current || 'VOCALS ISOLATE'} ⚡`, W / 2, bannerY + 15);
+
+      ctx.restore();
+    }
         ctx.fillStyle = "rgba(255, 56, 0, 0.35)";
         ctx.shadowBlur = 0;
         ctx.font = `900 8px "Space Mono", monospace`;
@@ -8052,6 +8018,7 @@ function drawKey(
   isHold: boolean,
   swipeDirection?: Note['swipeDirection'],
   timeOffset: number = 0,
+  noteType?: NoteType
 ) {
   const centerX = noteX + noteW / 2;
   const centerY = noteY;
@@ -8298,6 +8265,96 @@ function drawKey(
       ctx.roundRect(-noteW / 2 + 5, -coreH / 2, noteW - 10, coreH, stripeH * 0.2);
     }
     ctx.fill();
+  }
+
+  // ── 6. SPECIAL NOTE OVERLAYS (Remix, Mine, Burst, Break, Choice, Lift, Accent) ──
+  if (noteType === 'remix') {
+    ctx.save();
+    ctx.strokeStyle = '#38bdf8';
+    ctx.shadowColor = '#38bdf8';
+    ctx.shadowBlur = 18;
+    ctx.lineWidth = 2.5;
+    const angle = (Date.now() / 250) % (Math.PI * 2);
+    ctx.beginPath();
+    ctx.arc(0, 0, Math.max(noteW, noteH) * 0.58, 0, Math.PI * 2);
+    ctx.stroke();
+    for (let a = 0; a < 4; a++) {
+      const ra = angle + (a * Math.PI) / 2;
+      const rx = Math.cos(ra) * Math.max(noteW, noteH) * 0.58;
+      const ry = Math.sin(ra) * Math.max(noteW, noteH) * 0.58;
+      ctx.fillStyle = '#f0abfc';
+      ctx.shadowColor = '#f0abfc';
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(rx, ry, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  } else if (noteType === 'mine') {
+    ctx.save();
+    ctx.fillStyle = '#ef4444';
+    ctx.shadowColor = '#ef4444';
+    ctx.shadowBlur = 14;
+    ctx.beginPath();
+    ctx.arc(0, 0, 11, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('⚠', 0, 1);
+    ctx.restore();
+  } else if (noteType === 'burst') {
+    ctx.save();
+    const burstPulse = 1.0 + 0.35 * Math.sin(Date.now() / 80);
+    ctx.strokeStyle = '#f43f5e';
+    ctx.shadowColor = '#f43f5e';
+    ctx.shadowBlur = 16;
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.arc(0, 0, (noteW / 2 + 6) * burstPulse, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  } else if (noteType === 'break') {
+    ctx.save();
+    ctx.fillStyle = '#fbbf24';
+    ctx.shadowColor = '#fbbf24';
+    ctx.shadowBlur = 20;
+    ctx.font = '900 10px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('⚡BREAK', 0, 0);
+    ctx.restore();
+  } else if (noteType === 'choice') {
+    ctx.save();
+    ctx.fillStyle = '#c084fc';
+    ctx.font = 'bold 9px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('◄ CHOICE ►', 0, 0);
+    ctx.restore();
+  } else if (noteType === 'lift') {
+    ctx.save();
+    ctx.strokeStyle = '#22c55e';
+    ctx.lineWidth = 3;
+    ctx.shadowColor = '#22c55e';
+    ctx.shadowBlur = 10;
+    ctx.beginPath();
+    ctx.moveTo(-7, 3);
+    ctx.lineTo(0, -5);
+    ctx.lineTo(7, 3);
+    ctx.stroke();
+    ctx.restore();
+  } else if (noteType === 'accent') {
+    ctx.save();
+    ctx.fillStyle = '#eab308';
+    ctx.shadowColor = '#eab308';
+    ctx.shadowBlur = 18;
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('★', 0, 0);
+    ctx.restore();
   }
 
   ctx.restore();
