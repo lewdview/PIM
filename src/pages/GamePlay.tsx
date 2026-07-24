@@ -5744,14 +5744,18 @@ export default function Game() {
 
       interface ScoreEvent {
         time: number;
+        type: NoteType;
       }
       const scoreEvents: ScoreEvent[] = [];
       notesRef.current.forEach(ns => {
+        if (ns.note.type === "mine") {
+          return; // mines are not hit in a perfect run
+        }
         if (ns.note.type === "hold") {
-          scoreEvents.push({ time: ns.note.time });
-          scoreEvents.push({ time: ns.note.time + (ns.note.holdDuration || 0.5) });
+          scoreEvents.push({ time: ns.note.time, type: ns.note.type });
+          scoreEvents.push({ time: ns.note.time + (ns.note.holdDuration || 0.5), type: ns.note.type });
         } else {
-          scoreEvents.push({ time: ns.note.time });
+          scoreEvents.push({ time: ns.note.time, type: ns.note.type });
         }
       });
       scoreEvents.sort((a, b) => a.time - b.time);
@@ -5775,7 +5779,13 @@ export default function Game() {
 
         const puMul = activePu && event.time < activePu.endTime ? activePu.multiplier : 1;
         const comboMul = getComboMul(tempCombo);
-        maxScore += Math.round(500 * puMul * comboMul);
+
+        let baseNoteScore = 500;
+        if (event.type === "remix") baseNoteScore += 1000;
+        else if (event.type === "break") baseNoteScore += 1200;
+        else if (event.type === "accent") baseNoteScore += 800;
+
+        maxScore += Math.round(baseNoteScore * puMul * comboMul);
         tempCombo++;
       }
 

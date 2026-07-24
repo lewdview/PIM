@@ -11,7 +11,66 @@ const songsDir = path.join(__dirname, '../public/data/songs');
 // Dry-run mode indicator
 const dryRun = process.argv.includes('--dry-run') || process.argv.includes('-d');
 
-// Helper to check files
+/**
+ * Calculates the theoretical 100% Perfect Run Max Score for a chart
+ */
+function calculatePerfectRunMaxScore(notes, difficultyLevel = 5) {
+  const getComboMul = (c) => {
+    if (difficultyLevel <= 3) return c < 10 ? 1 : c < 25 ? 1.5 : c < 50 ? 2 : 3;
+    if (difficultyLevel <= 6) return c < 10 ? 1 : c < 25 ? 1.5 : c < 50 ? 2 : c < 75 ? 3 : 4;
+    return c < 10 ? 1 : c < 25 ? 1.5 : c < 50 ? 2 : c < 75 ? 3 : c < 100 ? 4 : 5;
+  };
+
+  const POWER_UPS = [
+    { threshold: 20, duration: 9, multiplier: 2 },
+    { threshold: 40, duration: 11, multiplier: 3 },
+    { threshold: 60, duration: 14, multiplier: 4 },
+  ];
+
+  const scoreEvents = [];
+  notes.forEach(note => {
+    if (note.type === 'mine') return; // mines are not hit in a perfect run
+    if (note.type === 'hold') {
+      scoreEvents.push({ time: note.time, type: note.type });
+      scoreEvents.push({ time: note.time + (note.holdDuration || 0.5), type: note.type });
+    } else {
+      scoreEvents.push({ time: note.time, type: note.type });
+    }
+  });
+  scoreEvents.sort((a, b) => a.time - b.time);
+
+  let maxScore = 0;
+  let tempCombo = 0;
+  const triggered = new Set();
+  let activePu = null;
+
+  for (const event of scoreEvents) {
+    for (const pw of POWER_UPS) {
+      if (tempCombo >= pw.threshold && !triggered.has(pw.threshold)) {
+        triggered.add(pw.threshold);
+        activePu = {
+          endTime: event.time + pw.duration,
+          multiplier: pw.multiplier,
+        };
+      }
+    }
+
+    const puMul = activePu && event.time < activePu.endTime ? activePu.multiplier : 1;
+    const comboMul = getComboMul(tempCombo);
+
+    let baseNoteScore = 500;
+    if (event.type === 'remix') baseNoteScore += 1000;
+    else if (event.type === 'break') baseNoteScore += 1200;
+    else if (event.type === 'accent') baseNoteScore += 800;
+
+    maxScore += Math.round(baseNoteScore * puMul * comboMul);
+    tempCombo++;
+  }
+
+  return maxScore || 1;
+}
+
+// Helper to enhance a song chart
 function enhanceSongChart(filePath) {
   const fileContent = fs.readFileSync(filePath, 'utf8');
   const song = JSON.parse(fileContent);
@@ -23,15 +82,13 @@ function enhanceSongChart(filePath) {
   const bpm = song.bpm || 120;
   const beatDuration = 60 / bpm;
   const difficulty = song.difficultyLevel || 5;
-  const duration = song.duration || 180;
 
   const originalNotesCount = song.notes.length;
   
   // 1. Quantize notes to 1/16 beat grids, clean precision, and sort by time
   let processedNotes = song.notes.map(note => {
     const timeVal = parseFloat(note.time);
-    // Snap to nearest 1/16th beat grid
-    const beatFraction = beatDuration / 4; // 1/16th beat (assuming 4/4 time signature)
+    const beatFraction = beatDuration / 4; // 1/16th beat
     const snappedTime = Math.round(timeVal / beatFraction) * beatFraction;
     
     const holdDur = note.holdDuration ? parseFloat(note.holdDuration) : undefined;
@@ -58,137 +115,109 @@ function enhanceSongChart(filePath) {
   });
   processedNotes = Array.from(uniqueNotesMap.values());
 
-  // 2. Adjust density based on difficulty level
-  if (difficulty <= 3) {
-    // Easy: Filter out notes that are too close (e.g. less than 1 beat apart)
-    const minSpacing = beatDuration * 0.95;
-    let lastTime = -999;
-    processedNotes = processedNotes.filter(note => {
-      if (note.time - lastTime < minSpacing) {
-        return false;
-      }
-      lastTime = note.time;
-      return true;
-    });
-  } else if (difficulty >= 7) {
-    // Hard: Inject extra triplets or syncopations in intense sections (verse/chorus drops)
-    const newNotes = [];
-    for (let i = 0; i < processedNotes.length; i++) {
-      const curr = processedNotes[i];
-      newNotes.push(curr);
-      
-      const next = processedNotes[i + 1];
-      if (next) {
-        const gap = next.time - curr.time;
-        // If there's a gap of exactly 2 beats or 4 beats, insert a syncopated note on the half-beat
-        if (Math.abs(gap - beatDuration * 2) < 0.05 && (i % 3 === 0)) {
-          const insertTime = curr.time + beatDuration;
-          const otherLane = (curr.lane + 1) % 3;
-          newNotes.push({
-            id: 9999 + i,
-            time: parseFloat(insertTime.toFixed(3)),
-            lane: otherLane,
-            type: 'tap'
-          });
-        }
-      }
-    }
-    processedNotes = newNotes;
-    processedNotes.sort((a, b) => a.time - b.time || a.lane - b.lane);
-  }
-
-  // 3. Smooth lane flow to prevent bad repetitions and create natural flow runs
-  let lastLane = 1;
-  let secondLastLane = 0;
-  processedNotes = processedNotes.map((note, index) => {
-    let lane = note.lane;
-    const prev = processedNotes[index - 1];
-
-    if (prev && note.time - prev.time < 0.250) {
-      // If notes are closer than 250ms, make sure they alternate lanes!
-      if (lane === lastLane) {
-        const availableLanes = [0, 1, 2].filter(l => l !== lastLane && l !== secondLastLane);
-        lane = availableLanes.length > 0 ? availableLanes[0] : (lane + 1) % 3;
-      }
-    }
-
-    secondLastLane = lastLane;
-    lastLane = lane;
-    return { ...note, lane };
-  });
-
-  // 4. Inject Premium Swipes, Dual Notes, and Hold Releases
+  // 2. Inject Note Mechanics (Remix, Mine, Break, Accent, Burst, Lift, Swipes)
   let lastSwipeTime = -999;
+  let lastRemixTime = -999;
+  let lastMineTime = -999;
+
+  const remixEffects = ['vocals_isolate', 'drums_mute', 'bass_boost', 'lead_solo'];
+  let remixIdx = 0;
+
   processedNotes = processedNotes.map((note, index) => {
     let type = note.type || 'tap';
     let swipeDirection = note.swipeDirection;
     let holdDuration = note.holdDuration;
+    let remixEffect = note.remixEffect;
 
     const timeInBeats = note.time / beatDuration;
-    const isDownbeat = Math.abs(timeInBeats - Math.round(timeInBeats)) < 0.05 && (Math.round(timeInBeats) % 4 === 0);
+    const roundBeat = Math.round(timeInBeats);
+    const isDownbeat = Math.abs(timeInBeats - roundBeat) < 0.05;
 
-    // Upgrade taps on downbeats to swipes (at least 3.0s apart)
-    if (difficulty >= 4 && type === 'tap' && isDownbeat && (note.time - lastSwipeTime > 3.0)) {
+    // Upgrade downbeat notes to REMIX Notes (every 24 to 32 beats)
+    if (isDownbeat && (roundBeat % 32 === 0 || roundBeat % 24 === 0) && (note.time - lastRemixTime > 12.0)) {
+      type = 'remix';
+      remixEffect = remixEffects[remixIdx % remixEffects.length];
+      remixIdx++;
+      lastRemixTime = note.time;
+    }
+    // Upgrade major drop downbeats to BREAK Notes (every 16 beats)
+    else if (isDownbeat && roundBeat % 16 === 0 && type === 'tap') {
+      type = 'break';
+    }
+    // Upgrade snare/punch beats to ACCENT Notes (every 8 beats)
+    else if (isDownbeat && roundBeat % 8 === 0 && type === 'tap') {
+      type = 'accent';
+    }
+    // Upgrade downbeats to SWIPES (at least 3.0s apart)
+    else if (difficulty >= 4 && type === 'tap' && isDownbeat && (note.time - lastSwipeTime > 3.0)) {
       type = 'swipe';
       const dirs = ['up', 'down', 'left', 'right'];
-      swipeDirection = dirs[(index + Math.round(timeInBeats)) % dirs.length];
+      swipeDirection = dirs[(index + roundBeat) % dirs.length];
       lastSwipeTime = note.time;
     }
-
-    // Attach release swipes to long holds
-    if (difficulty >= 5 && type === 'hold' && holdDuration && holdDuration > beatDuration * 1.5) {
-      swipeDirection = 'up';
+    // Upgrade short holds to LIFT Notes
+    else if (type === 'hold' && holdDuration && holdDuration < beatDuration * 0.8) {
+      type = 'lift';
+      holdDuration = undefined;
     }
 
     return {
       ...note,
       type,
       swipeDirection,
-      holdDuration
+      holdDuration,
+      remixEffect
     };
   });
 
-  // 5. Inject Dual Notes (Simultaneous Hits) on major drop beats for Hard Difficulties
-  if (difficulty >= 5) {
-    const dualNotes = [];
+  // 3. Inject Mine Hazard Notes on high difficulty tracks (difficulty >= 6)
+  if (difficulty >= 6) {
+    const notesWithMines = [];
     processedNotes.forEach((note, index) => {
-      dualNotes.push(note);
-      
-      const timeInBeats = note.time / beatDuration;
-      const isMajorDrop = Math.abs(timeInBeats - Math.round(timeInBeats)) < 0.05 && (Math.round(timeInBeats) % 8 === 0);
+      notesWithMines.push(note);
 
-      // Verify no simultaneous note exists at this exact time in other lanes
-      const hasSimultaneous = processedNotes.some((n, idx) => idx !== index && Math.abs(n.time - note.time) < 0.01);
-      
-      if (isMajorDrop && !hasSimultaneous && (index % 5 === 0) && note.type === 'tap') {
-        const secondLane = (note.lane + 2) % 3;
-        dualNotes.push({
-          id: 20000 + note.id,
-          time: note.time,
-          lane: secondLane,
-          type: 'tap'
-        });
+      const timeInBeats = note.time / beatDuration;
+      const isSyncopatedOffbeat = Math.abs(timeInBeats - (Math.floor(timeInBeats) + 0.5)) < 0.05;
+
+      if (isSyncopatedOffbeat && (index % 12 === 0) && (note.time - lastMineTime > 8.0)) {
+        const mineLane = (note.lane + 1) % 3;
+        // Verify no note currently exists on mineLane at this time
+        const laneOccupied = processedNotes.some(n => n.lane === mineLane && Math.abs(n.time - note.time) < 0.15);
+        if (!laneOccupied) {
+          notesWithMines.push({
+            id: 30000 + note.id,
+            time: parseFloat((note.time + beatDuration * 0.5).toFixed(3)),
+            lane: mineLane,
+            type: 'mine'
+          });
+          lastMineTime = note.time;
+        }
       }
     });
-    processedNotes = dualNotes;
+    processedNotes = notesWithMines;
     processedNotes.sort((a, b) => a.time - b.time || a.lane - b.lane);
   }
 
-  // 6. Clean up IDs so they are sequential
+  // 4. Clean up IDs so they are sequential
   processedNotes = processedNotes.map((note, idx) => ({
     ...note,
     id: idx
   }));
 
+  // 5. Recalculate theoretical Perfect Run Max Score
+  const perfectRunMaxScore = calculatePerfectRunMaxScore(processedNotes, difficulty);
+
   const updatedSong = {
     ...song,
-    notes: processedNotes
+    notes: processedNotes,
+    perfectRunMaxScore
   };
 
   return {
     song: updatedSong,
     originalCount: originalNotesCount,
-    newCount: processedNotes.length
+    newCount: processedNotes.length,
+    perfectRunMaxScore
   };
 }
 
@@ -201,6 +230,7 @@ if (dryRun) {
     console.log(`[DRY-RUN] Success!`);
     console.log(`- Original note count: ${result.originalCount}`);
     console.log(`- Enhanced note count: ${result.newCount}`);
+    console.log(`- Recalculated Perfect Run Max Score: ${result.perfectRunMaxScore.toLocaleString()} pts`);
     console.log(`- Sample Notes (First 15):`);
     console.log(JSON.stringify(result.song.notes.slice(0, 15), null, 2));
   } else {
@@ -224,7 +254,7 @@ if (dryRun) {
     }
   });
 
-  console.log(`[FINISHED] All ${files.length} song charts enhanced successfully!`);
+  console.log(`[FINISHED] All ${files.length} song charts enhanced with new note types!`);
   console.log(`- Total notes before: ${totalOriginal}`);
   console.log(`- Total notes after: ${totalNew}`);
 }
