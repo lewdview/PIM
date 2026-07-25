@@ -1803,6 +1803,13 @@ export default function Game() {
         type: ns.note.type
       });
 
+      // Dynamic Live Auto-Sync: Micro-adjust audio offset toward natural hit timing
+      if (optsRef.current.autoLatencyAdjust && Math.abs(t - ns.note.time) < 0.12) {
+        const offsetMs = (t - ns.note.time) * 1000;
+        audioOffsetRef.current += offsetMs * 0.04;
+        audioOffsetRef.current = Math.max(-200, Math.min(300, audioOffsetRef.current));
+      }
+
       if (ns.note.type === "hold") {
         ns.holdActive = true;
         ns.currentLane = lane;
@@ -2215,6 +2222,11 @@ export default function Game() {
     cancelAnimationFrame(rafRef.current);
     audioRef.current?.pause();
     audioRef.current && (audioRef.current.currentTime = 0);
+
+    if (optsRef.current.autoLatencyAdjust) {
+      const autoOffsetMs = Math.round(audioOffsetRef.current);
+      localStorage.setItem("opt_audioOffset", String(autoOffsetMs));
+    }
 
     const gs = gsRef.current;
     // Medal calculated on complete/clear, even if continues were used

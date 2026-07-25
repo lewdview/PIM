@@ -482,10 +482,231 @@ function BacksIcon() {
   );
 }
 
+// ── AutoLatencyCalibrator component ──
+function AutoLatencyCalibrator({
+  offsetMs,
+  onCalibrated,
+  isAvant
+}: {
+  offsetMs: number;
+  onCalibrated: (offsetMs: number) => void;
+  isAvant?: boolean;
+}) {
+  const [phase, setPhase] = useState<'idle' | 'countdown' | 'calibrating' | 'done'>('idle');
+  const [countdown, setCountdown] = useState(3);
+  const [currentBeatIndex, setCurrentBeatIndex] = useState(0);
+  const [taps, setTaps] = useState<{ beatIndex: number; deltaMs: number }[]>([]);
+  const [liveOffset, setLiveOffset] = useState<number | null>(null);
+
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const beatTargetTimesRef = useRef<number[]>([]);
+
+  const playClick = useCallback((freq = 1000, duration = 0.04) => {
+    try {
+      if (!audioCtxRef.current) return;
+      const ctx = audioCtxRef.current;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, ctx.currentTime);
+      gain.gain.setValueAtTime(0.4, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + duration);
+    } catch (e) {
+      // ignore
+    }
+  }, []);
+
+  const handleTap = useCallback(() => {
+    if (phase !== 'calibrating' || !audioCtxRef.current) return;
+    const now = audioCtxRef.current.currentTime;
+    const targets = beatTargetTimesRef.current;
+    
+    let closestIndex = -1;
+    let minDelta = Infinity;
+
+    for (let i = 0; i < targets.length; i++) {
+      const delta = (now - targets[i]) * 1000;
+      if (Math.abs(delta) < Math.abs(minDelta)) {
+        minDelta = delta;
+        closestIndex = i;
+      }
+    }
+
+    if (closestIndex !== -1 && Math.abs(minDelta) < 260) {
+      const roundedDelta = Math.round(minDelta);
+      setTaps(prev => {
+        if (prev.some(t => t.beatIndex === closestIndex)) return prev;
+        return [...prev, { beatIndex: closestIndex, deltaMs: roundedDelta }];
+      });
+    }
+  }, [phase]);
+
+  const startCalibration = useCallback(() => {
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
+    audioCtxRef.current = ctx;
+    
+    setPhase('countdown');
+    setCountdown(3);
+    setTaps([]);
+    setLiveOffset(null);
+    setCurrentBeatIndex(0);
+    beatTargetTimesRef.current = [];
+
+    let count = 3;
+    playClick(600, 0.06);
+    
+    const countTimer = setInterval(() => {
+      count--;
+      if (count > 0) {
+        setCountdown(count);
+        playClick(600, 0.06);
+      } else {
+        clearInterval(countTimer);
+        setPhase('calibrating');
+        playClick(1200, 0.08);
+        
+        const startTime = ctx.currentTime + 0.5;
+        const totalBeats = 8;
+        const intervalSec = 0.5;
+
+        const targets: number[] = [];
+        for (let b = 0; b < totalBeats; b++) {
+          targets.push(startTime + b * intervalSec);
+        }
+        beatTargetTimesRef.current = targets;
+
+        let bIdx = 0;
+        const beatInterval = setInterval(() => {
+          bIdx++;
+          if (bIdx < totalBeats) {
+            setCurrentBeatIndex(bIdx);
+            playClick(bIdx === totalBeats - 1 ? 1400 : 1000, 0.05);
+          } else {
+            clearInterval(beatInterval);
+            setTimeout(() => {
+              setPhase('done');
+              setTaps(recordedTaps => {
+                if (recordedTaps.length === 0) return recordedTaps;
+                const deltas = recordedTaps.map(t => t.deltaMs);
+                const avg = Math.round(deltas.reduce((a, b) => a + b, 0) / deltas.length);
+                setLiveOffset(avg);
+                onCalibrated(avg);
+                return recordedTaps;
+              });
+            }, 600);
+          }
+        }, 500);
+      }
+    }, 500);
+  }, [playClick, onCalibrated]);
+
+  useEffect(() => {
+    if (phase !== 'calibrating') return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.repeat) return;
+      handleTap();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [phase, handleTap]);
+
+  return (
+    <div className="bg-black/50 border border-white/10 rounded-lg p-4 space-y-4 text-center select-none">
+      <div className="flex items-center justify-between font-mono text-[9px] uppercase tracking-wider text-zinc-400">
+        <span>AUTO LATENCY CALIBRATOR</span>
+        <span style={{ color: isAvant ? '#39FF14' : '#FF1493', fontWeight: 'bold' }}>
+          {liveOffset !== null ? `${liveOffset > 0 ? `+${liveOffset}` : liveOffset}ms` : `${offsetMs > 0 ? `+${offsetMs}` : offsetMs}ms`}
+        </span>
+      </div>
+
+      {phase === 'idle' && (
+        <div className="space-y-3 py-2">
+          <p className="font-mono text-[10px] text-zinc-400 max-w-xs mx-auto leading-relaxed">
+            Tap along to 8 audio beats. The engine will automatically measure your hardware output latency.
+          </p>
+          <button
+            onClick={startCalibration}
+            className={`font-mono text-[11px] font-bold py-2.5 px-6 rounded border cursor-pointer uppercase tracking-widest transition-all ${
+              isAvant 
+                ? 'bg-[#39FF14] text-black border-[#39FF14] hover:scale-105 shadow-[0_0_15px_rgba(57,255,20,0.4)]'
+                : 'bg-[#FF1493] text-white border-[#FF1493] hover:scale-105 shadow-[0_0_15px_rgba(255,20,147,0.4)]'
+            }`}
+          >
+            🎯 START AUTO-CALIBRATION
+          </button>
+        </div>
+      )}
+
+      {phase === 'countdown' && (
+        <div className="py-4 space-y-2 animate-pulse">
+          <div className="font-mono font-black text-4xl text-white tracking-widest">{countdown}</div>
+          <div className="font-mono text-[9px] text-zinc-400 uppercase tracking-widest">GET READY TO TAP...</div>
+        </div>
+      )}
+
+      {phase === 'calibrating' && (
+        <div 
+          onClick={handleTap}
+          className="py-4 border border-dashed border-white/20 rounded cursor-pointer active:scale-95 transition-transform space-y-3 bg-white/5"
+        >
+          <div className="flex justify-center gap-1.5">
+            {[0, 1, 2, 3, 4, 5, 6, 7].map(idx => (
+              <div 
+                key={idx}
+                className={`w-3.5 h-3.5 rounded-full transition-all duration-150 ${
+                  idx === currentBeatIndex 
+                    ? (isAvant ? 'bg-[#39FF14] scale-125 shadow-[0_0_10px_#39FF14]' : 'bg-[#FF1493] scale-125 shadow-[0_0_10px_#FF1493]')
+                    : idx < currentBeatIndex 
+                      ? 'bg-white/40' 
+                      : 'bg-white/10'
+                }`}
+              />
+            ))}
+          </div>
+          <div className="font-mono font-black text-xs text-white uppercase tracking-widest">
+            TAP ON THE BEAT! ({taps.length} TAPS RECORDED)
+          </div>
+          {taps.length > 0 && (
+            <div className="font-mono text-[9px] text-[#39FF14] tracking-wider">
+              LAST TAP: {taps[taps.length - 1].deltaMs > 0 ? `+${taps[taps.length - 1].deltaMs}` : taps[taps.length - 1].deltaMs}ms
+            </div>
+          )}
+        </div>
+      )}
+
+      {phase === 'done' && (
+        <div className="py-2 space-y-3 animate-in fade-in duration-300">
+          <div className="font-mono font-black text-lg text-white tracking-widest uppercase">
+            ✅ CALIBRATION COMPLETE!
+          </div>
+          <div className="font-mono text-[11px] text-[#39FF14] font-bold tracking-wider">
+            CALIBRATED LATENCY: {liveOffset !== null && liveOffset > 0 ? `+${liveOffset}` : liveOffset}ms ({taps.length} VALID TAPS)
+          </div>
+          <div className="flex gap-2 justify-center pt-1">
+            <button
+              onClick={startCalibration}
+              className="font-mono text-[9px] font-bold py-1.5 px-4 bg-white/10 border border-white/20 hover:bg-white/20 text-white rounded cursor-pointer uppercase"
+            >
+              🔄 RE-TEST
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main Modal Component ──
 export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
   const [, setLocation] = useLocation();
   const [opts, setOpts] = useState<GameOpts>(loadOpts());
+  const [latencyMode, setLatencyMode] = useState<'auto' | 'manual'>('auto');
   const [activeTab, setActiveTab] = useState<'gameplay' | 'controls' | 'themes' | 'backgrounds' | 'fronts' | 'backs'>('gameplay');
   const [remappingLane, setRemappingLane] = useState<number | null>(null);
   const [resetState, setResetState] = useState<"idle" | "confirm">("idle");
@@ -1118,27 +1339,88 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
 
                 {/* Calibration Section */}
                 <div className="bg-black/40 border border-white/5 p-4 rounded-lg space-y-4">
-                  <h3 className="font-mono text-[9px] font-black text-white/40 uppercase tracking-wider border-b border-white/5 pb-1">AUDIO SYNC LATENCY OFFSET</h3>
-                  
-                  <BeatVisualizer offsetMs={opts.audioOffset} isAvant={isAvant} />
-
-                   <div className="flex items-center justify-between font-mono">
-                    <span className="text-[9px] text-zinc-500 tracking-wider">LATENCY COMPENSATION</span>
+                  <div className="flex items-center justify-between border-b border-white/5 pb-1">
+                    <h3 className="font-mono text-[9px] font-black text-white/40 uppercase tracking-wider">AUDIO SYNC LATENCY CALIBRATION</h3>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => setLatencyMode('auto')}
+                        className={`font-mono text-[8px] font-bold py-1 px-2.5 rounded border cursor-pointer uppercase ${
+                          latencyMode === 'auto'
+                            ? isAvant ? 'border-[#39FF14] bg-[#39FF14]/10 text-white' : 'border-[#FF1493] bg-[#FF1493]/10 text-white'
+                            : 'border-white/5 bg-black/40 text-white/40'
+                        }`}
+                      >
+                        ⚡ AUTO-CALIBRATE
+                      </button>
+                      <button
+                        onClick={() => setLatencyMode('manual')}
+                        className={`font-mono text-[8px] font-bold py-1 px-2.5 rounded border cursor-pointer uppercase ${
+                          latencyMode === 'manual'
+                            ? isAvant ? 'border-[#39FF14] bg-[#39FF14]/10 text-white' : 'border-[#FF1493] bg-[#FF1493]/10 text-white'
+                            : 'border-white/5 bg-black/40 text-white/40'
+                        }`}
+                      >
+                        ⚙ MANUAL SLIDER
+                      </button>
+                    </div>
                   </div>
 
-                  <SvgLatencySlider 
-                    value={opts.audioOffset}
-                    onChange={v => {
-                      localStorage.setItem("opt_audioOffset", String(v));
-                      setOpts(o => ({ ...o, audioOffset: v }));
-                      updateSettings({ audioOffset: v });
-                    }}
-                    isAvant={isAvant}
-                  />
-                  
-                  <p className="font-mono text-[7.5px] text-zinc-500 leading-normal uppercase">
-                    DRAG LEFT IF NOTES SEEM TO PASS BEFORE THE BEAT SOUNDS · DRAG RIGHT IF BEAT SOUNDS BEFORE NOTES REACH TRIGGER BAR
-                  </p>
+                  <BeatVisualizer offsetMs={opts.audioOffset} isAvant={isAvant} />
+
+                  {latencyMode === 'auto' ? (
+                    <AutoLatencyCalibrator
+                      offsetMs={opts.audioOffset}
+                      isAvant={isAvant}
+                      onCalibrated={newOffset => {
+                        localStorage.setItem("opt_audioOffset", String(newOffset));
+                        setOpts(o => ({ ...o, audioOffset: newOffset }));
+                        updateSettings({ audioOffset: newOffset });
+                      }}
+                    />
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-between font-mono">
+                        <span className="text-[9px] text-zinc-500 tracking-wider">LATENCY COMPENSATION</span>
+                      </div>
+
+                      <SvgLatencySlider 
+                        value={opts.audioOffset}
+                        onChange={v => {
+                          localStorage.setItem("opt_audioOffset", String(v));
+                          setOpts(o => ({ ...o, audioOffset: v }));
+                          updateSettings({ audioOffset: v });
+                        }}
+                        isAvant={isAvant}
+                      />
+                      
+                      <p className="font-mono text-[7.5px] text-zinc-500 leading-normal uppercase">
+                        DRAG LEFT IF NOTES SEEM TO PASS BEFORE THE BEAT SOUNDS · DRAG RIGHT IF BEAT SOUNDS BEFORE NOTES REACH TRIGGER BAR
+                      </p>
+                    </>
+                  )}
+
+                  {/* Dynamic In-Game Auto-Sync Toggle */}
+                  <div className="pt-2 border-t border-white/5 flex items-center justify-between">
+                    <div>
+                      <div className="font-mono text-[9.5px] font-bold text-white uppercase tracking-wider">DYNAMIC IN-GAME AUTO-SYNC</div>
+                      <div className="font-mono text-[8px] text-zinc-500 uppercase tracking-tight mt-0.5">Micro-adjusts audio offset automatically during gameplay based on hit rhythm</div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const next = !opts.autoLatencyAdjust;
+                        localStorage.setItem("opt_autoLatencyAdjust", String(next));
+                        setOpts(o => ({ ...o, autoLatencyAdjust: next }));
+                        updateSettings({ autoLatencyAdjust: next });
+                      }}
+                      className={`font-mono text-[9px] font-bold py-1.5 px-3 rounded border cursor-pointer uppercase ${
+                        opts.autoLatencyAdjust 
+                          ? isAvant ? 'bg-[#39FF14] text-black border-[#39FF14]' : 'bg-[#FF1493] text-white border-[#FF1493]'
+                          : 'bg-white/5 border-white/10 text-zinc-500'
+                      }`}
+                    >
+                      {opts.autoLatencyAdjust ? 'ENABLED' : 'DISABLED'}
+                    </button>
+                  </div>
                 </div>
 
                 {/* Gameplay note types guide */}

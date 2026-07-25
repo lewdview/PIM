@@ -19,6 +19,7 @@ export type GameOpts = {
   noteTheme: string;
   gameSenseEnabled: boolean;
   legacyGraphics: boolean;
+  autoLatencyAdjust: boolean;
 };
 
 export interface GameBackground {
@@ -77,6 +78,7 @@ export const DEFAULT_OPTS: GameOpts = {
   noteTheme: "artwork",
   gameSenseEnabled: false,
   legacyGraphics: false,
+  autoLatencyAdjust: true,
 };
 
 export function loadOpts(): GameOpts {
@@ -124,6 +126,7 @@ export function loadOpts(): GameOpts {
     noteTheme: dbSettings?.noteTheme ?? (localStorage.getItem("opt_noteTheme") ?? "artwork"),
     gameSenseEnabled: bool("opt_gameSenseEnabled", false),
     legacyGraphics: dbSettings?.legacyGraphics ?? bool("opt_legacyGraphics", false),
+    autoLatencyAdjust: dbSettings?.autoLatencyAdjust ?? bool("opt_autoLatencyAdjust", true),
   };
 }
 
