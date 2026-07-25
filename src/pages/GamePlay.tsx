@@ -3839,6 +3839,9 @@ export default function Game() {
               ctx.restore();
             }
             
+            // Compute effective swipe direction for terminus tail block (for swipes or slides)
+            const tailSwipeDir: Note['swipeDirection'] | undefined = note.swipeDirection || (note.targetLane !== undefined ? (note.targetLane > startLane ? 'right' : 'left') : undefined);
+
             // Draw gold terminus block at top of active hold
             const tailP = lerp(headP, 1.0, ns.holdProgress);
             const { x: tx_active, w: tw_active } = laneAt(endLane, tailP, W);
@@ -3846,7 +3849,7 @@ export default function Game() {
             const tailW_active = tw_active;
             const tailX_active = tx_active;
             const tailR_active = lerp(12, 24, tailP);
-            drawKey(ctx, tailX_active, top, tailW_active, tailH_active, tailR_active, noteColor, tailP, true, note.swipeDirection, note.time * 3700, note.type);
+            drawKey(ctx, tailX_active, top, tailW_active, tailH_active, tailR_active, noteColor, tailP, true, tailSwipeDir, note.time * 3700, note.type);
           }
         } else if (headY < noteY) {
           // Inactive trail — SMOOTH CURVE if it's a slide
@@ -3880,14 +3883,37 @@ export default function Game() {
           ctx.shadowBlur = 0;
           ctx.shadowColor = "transparent";
 
+          // Draw animated slide direction chevrons along trail if it's a slide note
+          if (note.targetLane !== undefined && Math.abs(startLane - endLane) > 0) {
+            const arrowDir = endLane > startLane ? 1 : -1;
+            const arrowX = (hx + tx) / 2 + arrowDir * 16;
+            const arrowY = midY;
+            const arrowPulse = 0.5 + 0.5 * Math.sin(t * 10);
+            ctx.save();
+            ctx.globalAlpha = 0.75 + arrowPulse * 0.25;
+            ctx.fillStyle = "#FFD700";
+            ctx.shadowColor = "#FFD700";
+            ctx.shadowBlur = 14;
+            ctx.beginPath();
+            ctx.moveTo(arrowX + arrowDir * 14, arrowY);
+            ctx.lineTo(arrowX - arrowDir * 6, arrowY - 10);
+            ctx.lineTo(arrowX - arrowDir * 6, arrowY + 10);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+          }
+
           // Draw gold terminus block at the tail of the inactive hold (at headY)
           const tailH_inactive = lerp(80, 140, headP);
           const tailW_inactive = hw;
           const tailX_inactive = hx;
           const tailR_inactive = lerp(12, 24, headP);
-          drawKey(ctx, tailX_inactive, headY, tailW_inactive, tailH_inactive, tailR_inactive, noteColor, headP, true, note.swipeDirection, note.time * 3700, note.type);
+          const tailSwipeDir: Note['swipeDirection'] | undefined = note.swipeDirection || (note.targetLane !== undefined ? (note.targetLane > startLane ? 'right' : 'left') : undefined);
+          drawKey(ctx, tailX_inactive, headY, tailW_inactive, tailH_inactive, tailR_inactive, noteColor, headP, true, tailSwipeDir, note.time * 3700, note.type);
         }
-        drawKey(ctx, drawX, noteY, noteW, noteH, r, noteColor, prog, false, note.type === "hold" ? undefined : note.swipeDirection, note.time * 3700, note.type);
+
+        const headSwipeDir: Note['swipeDirection'] | undefined = note.swipeDirection || (note.targetLane !== undefined ? (note.targetLane > startLane ? 'right' : 'left') : undefined);
+        drawKey(ctx, drawX, noteY, noteW, noteH, r, noteColor, prog, false, headSwipeDir, note.time * 3700, note.type);
       }
 
       if (isMissedNote) {
@@ -4805,13 +4831,46 @@ export default function Game() {
           slideDir = 'right';
         }
 
+        // ── Controller Active Slide Auto-Transition ──
+        const activeSlideHold = notesRef.current.find(
+          (n) => n.note.type === "hold" && n.holdActive && n.note.targetLane !== undefined && !n.hit
+        );
+        if (activeSlideHold && activeSlideHold.note.targetLane !== undefined) {
+          const targetLane = activeSlideHold.note.targetLane;
+          const currentLane = Math.round(activeSlideHold.currentLane);
+          if (currentLane !== targetLane) {
+            const stickX = (gp.axes[0] !== undefined && Math.abs(gp.axes[0]) > 0.35) ? gp.axes[0] : (gp.axes[2] !== undefined && Math.abs(gp.axes[2]) > 0.35) ? gp.axes[2] : 0;
+            const dpadLeft = gp.buttons[14]?.pressed || false;
+            const dpadRight = gp.buttons[15]?.pressed || false;
+            const isSlideRightNeeded = targetLane > currentLane;
+            const isSlideLeftNeeded = targetLane < currentLane;
+
+            const targetLaneBtnPressed =
+              (targetLane === 0 && (gp.buttons[2]?.pressed || false)) ||
+              (targetLane === 1 && (gp.buttons[3]?.pressed || false)) ||
+              (targetLane === 2 && (gp.buttons[1]?.pressed || false));
+
+            const directStickDpadMatch =
+              (isSlideRightNeeded && (stickX > 0.35 || dpadRight)) ||
+              (isSlideLeftNeeded && (stickX < -0.35 || dpadLeft));
+
+            if (targetLaneBtnPressed || directStickDpadMatch) {
+              const prevLaneIdx = Math.round(activeSlideHold.currentLane);
+              if (laneRef.current[prevLaneIdx]) {
+                laneRef.current[prevLaneIdx].pressed = false;
+              }
+              laneRef.current[targetLane].pressed = true;
+              laneRef.current[targetLane].isArrow = null;
+              moveHoldRef.current?.(activeSlideHold.currentLane, targetLane);
+            }
+          }
+        }
+
         // X, Y, B for the main buttons:
         // Button 2 is X (Left lane -> 0)
         // Button 3 is Y (Center lane -> 1)
         // Button 1 is B (Right lane -> 2)
         // Button 0 is A + D-pad Left/Right = slide trigger
-        // NOTE: A alone does NOT fire any lane — it needs an explicit D-pad direction to avoid
-        //       accidentally triggering the center (Y) lane when A is first pressed.
         const isAPressed = gp.buttons[0]?.pressed || false;
         
         const lanePressed: [boolean, boolean, boolean] = [
@@ -8181,10 +8240,10 @@ function drawKey(
     'up-right': -Math.PI / 4,
   };
 
-  const m = swipeDirection ? (isHold ? Math.max(0, Math.min(1, (prog - 0.25) / 0.6)) : 1.0) : 0;
+  const m = swipeDirection ? 1.0 : 0;
 
   if (swipeDirection) {
-    ctx.rotate(m * (rotations[swipeDirection] || 0));
+    ctx.rotate(rotations[swipeDirection] || 0);
   }
 
   // ── 1. Define Key Body Path ──
