@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { execSync } from 'child_process';
+import { stageifyNotes } from './stageify.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -520,10 +521,12 @@ if (dryRun) {
     if (!audioPath) {
       console.warn(`[FALLBACK] Audio file not found on drive for Day ${padded} ("${song.title}"). Generating procedural fallback...`);
       const fallbackNotes = generateProceduralFallback(song);
-      song.notes = fallbackNotes;
+      const stageified = stageifyNotes(fallbackNotes, song.duration || 180, song.bpm || 120, song.difficultyLevel || 5);
+      song.notes = stageified.notes;
+      song.stages = stageified.stages;
       fs.writeFileSync(jsonPath, JSON.stringify(song, null, 2), 'utf8');
       fallbackCount++;
-      totalNotesGenerated += fallbackNotes.length;
+      totalNotesGenerated += stageified.notes.length;
       continue;
     }
 
@@ -539,19 +542,23 @@ if (dryRun) {
       const wavData = readWavPcm(decodeWavPath);
       const forgedNotes = forgeBeatmap(song, wavData);
 
-      song.notes = forgedNotes;
+      const stageified = stageifyNotes(forgedNotes, song.duration || 180, song.bpm || 120, song.difficultyLevel || 5);
+      song.notes = stageified.notes;
+      song.stages = stageified.stages;
       fs.writeFileSync(jsonPath, JSON.stringify(song, null, 2), 'utf8');
       
-      console.log(`[SUCCESS] Day ${padded} ("${song.title}") forged! Source: ${path.basename(audioPath)}. Notes count: ${forgedNotes.length}`);
+      console.log(`[SUCCESS] Day ${padded} ("${song.title}") forged! Source: ${path.basename(audioPath)}. Notes count: ${stageified.notes.length}`);
       successCount++;
-      totalNotesGenerated += forgedNotes.length;
+      totalNotesGenerated += stageified.notes.length;
     } catch (err) {
       console.warn(`[FAIL] Error during Audio Forge for Day ${padded} ("${song.title}"): ${err.message}. Falling back to procedural...`);
-      const fallbackNotes = generateProceduralFallback(song);
-      song.notes = fallbackNotes;
+      const fallbackNotes2 = generateProceduralFallback(song);
+      const stageified2 = stageifyNotes(fallbackNotes2, song.duration || 180, song.bpm || 120, song.difficultyLevel || 5);
+      song.notes = stageified2.notes;
+      song.stages = stageified2.stages;
       fs.writeFileSync(jsonPath, JSON.stringify(song, null, 2), 'utf8');
       fallbackCount++;
-      totalNotesGenerated += fallbackNotes.length;
+      totalNotesGenerated += stageified2.notes.length;
     } finally {
       // Clean up temporary decoded WAV file
       if (isMp3 && fs.existsSync(decodeWavPath)) {

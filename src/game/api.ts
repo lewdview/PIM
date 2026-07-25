@@ -59,6 +59,17 @@ export function clearCatalogCache() {
   loadingPromise = null;
 }
 
+/** Estimate difficulty level from BPM and valence (matches split_songs.mjs calcDifficulty). */
+function calcDifficulty(bpm: number, valence: number, noteCount: number, duration: number): number {
+  const bpmNorm = (bpm - 80) / 100;
+  const bpmScore = Math.min(10, Math.max(1, Math.round(1 + 9 * Math.max(0, Math.min(1, bpmNorm)))));
+  const nps = noteCount / Math.max(30, duration);
+  const densityScore = Math.min(10, Math.max(1, Math.round(nps * 3.5)));
+  const valenceBoost = valence < 0.35 ? 1 : valence > 0.7 ? -1 : 0;
+  const raw = (bpmScore * 0.4 + densityScore * 0.5) + valenceBoost;
+  return Math.max(1, Math.min(10, Math.round(raw)));
+}
+
 // Helper to resolve URLs dynamically
 function resolveSongUrls(song: any, useLocal = false): GameSong {
   const dayStr = String(song.day);
@@ -133,7 +144,7 @@ export async function loadCatalog(): Promise<GameSong[]> {
             notes: [],
             key: r.key || '',
             genre: Array.isArray(r.genre) ? r.genre : [],
-            difficultyLevel: 5, // default catalog difficulty
+            difficultyLevel: calcDifficulty(r.tempo || 100, r.valence ?? 0.5, 0, Math.ceil(r.duration || 180)),
             unlock: {
               card: `card-${r.day}`,
               fragments: 10

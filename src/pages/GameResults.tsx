@@ -3,7 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import { getSongById, loadCatalog, isSongTimeLocked } from "@/game/api";
 import type { GameSong } from "@/game/api";
 import { getHighScore, getChapterPlatinums } from "@/game/progress";
-import { getActiveTheme } from "@/lib/options";
+import { getActiveTheme, loadOpts } from "@/lib/options";
 import { audioManager } from "@/game/audio";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useVaultStore } from "@/store/useVaultStore";
@@ -1500,6 +1500,16 @@ export default function Results() {
             {fromFreePlay ? 'TRANSMISSION COMPLETE' : 'CAMPAIGN MISSION COMPLETED'}
           </div>
           <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.1)' }} />
+          {(() => {
+            const rOpts = loadOpts();
+            const isPractice = rOpts.noteGenerationSource && rOpts.noteGenerationSource !== 'auto';
+            return isPractice ? (
+              <div className="font-mono font-bold text-xs px-3 py-1.5 tracking-[0.3em]"
+                style={{ color: '#080808', background: '#FF6B35' }}>
+                PRACTICE MODE
+              </div>
+            ) : null;
+          })()}
           {isNew && (phase === 'stats' || phase === 'actions') && (
             <div className="font-mono font-bold text-xs px-3 py-1.5 tracking-[0.3em] new-best-fly"
               style={{ color: '#080808', background: '#E5B800' }}>

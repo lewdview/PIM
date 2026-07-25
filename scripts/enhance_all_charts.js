@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { stageifyNotes, getStageBounds, getAllowedTypes } from './stageify.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -115,7 +116,19 @@ function enhanceSongChart(filePath) {
   });
   processedNotes = Array.from(uniqueNotesMap.values());
 
-  // 2. Inject Note Mechanics (Remix, Mine, Break, Accent, Burst, Lift, Swipes)
+  // 2. Build stage boundaries so we can gate mechanics per stage
+  const songDuration = song.duration || 180;
+  const stageBounds = getStageBounds(songDuration);
+
+  /** Look up which stage a note's time falls into */
+  function getStage(time) {
+    for (const sb of stageBounds) {
+      if (time >= sb.startTime && time < sb.endTime) return sb.stage;
+    }
+    return 5;
+  }
+
+  // 3. Inject Note Mechanics — STAGE-AWARE
   let lastSwipeTime = -999;
   let lastRemixTime = -999;
   let lastMineTime = -999;
@@ -129,40 +142,44 @@ function enhanceSongChart(filePath) {
     let holdDuration = note.holdDuration;
     let remixEffect = note.remixEffect;
 
+    const stage = note.stage || getStage(note.time);
+    const allowed = getAllowedTypes(stage);
+
     const timeInBeats = note.time / beatDuration;
     const roundBeat = Math.round(timeInBeats);
     const isDownbeat = Math.abs(timeInBeats - roundBeat) < 0.05;
 
-    // Upgrade downbeat notes to REMIX Notes (every 24 to 32 beats)
-    if (isDownbeat && (roundBeat % 32 === 0 || roundBeat % 24 === 0) && (note.time - lastRemixTime > 12.0)) {
+    // Upgrade downbeat notes to REMIX Notes (every 24 to 32 beats) — Stage 3+ only
+    if (stage >= 3 && isDownbeat && (roundBeat % 32 === 0 || roundBeat % 24 === 0) && (note.time - lastRemixTime > 12.0) && allowed.has('remix')) {
       type = 'remix';
       remixEffect = remixEffects[remixIdx % remixEffects.length];
       remixIdx++;
       lastRemixTime = note.time;
     }
-    // Upgrade major drop downbeats to BREAK Notes (every 16 beats)
-    else if (isDownbeat && roundBeat % 16 === 0 && type === 'tap') {
+    // Upgrade major drop downbeats to BREAK Notes (every 16 beats) — Stage 3+ only
+    else if (stage >= 3 && isDownbeat && roundBeat % 16 === 0 && type === 'tap' && allowed.has('break')) {
       type = 'break';
     }
-    // Upgrade snare/punch beats to ACCENT Notes (every 8 beats)
-    else if (isDownbeat && roundBeat % 8 === 0 && type === 'tap') {
+    // Upgrade snare/punch beats to ACCENT Notes (every 8 beats) — Stage 2+ only
+    else if (stage >= 2 && isDownbeat && roundBeat % 8 === 0 && type === 'tap' && allowed.has('accent')) {
       type = 'accent';
     }
-    // Upgrade downbeats to SWIPES (at least 3.0s apart)
-    else if (difficulty >= 4 && type === 'tap' && isDownbeat && (note.time - lastSwipeTime > 3.0)) {
+    // Upgrade downbeats to SWIPES (at least 3.0s apart) — Stage 3+ only
+    else if (stage >= 3 && difficulty >= 4 && type === 'tap' && isDownbeat && (note.time - lastSwipeTime > 3.0) && allowed.has('swipe')) {
       type = 'swipe';
       const dirs = ['up', 'down', 'left', 'right'];
       swipeDirection = dirs[(index + roundBeat) % dirs.length];
       lastSwipeTime = note.time;
     }
-    // Upgrade short holds to LIFT Notes
-    else if (type === 'hold' && holdDuration && holdDuration < beatDuration * 0.8) {
+    // Upgrade short holds to LIFT Notes — Stage 3+ only
+    else if (stage >= 3 && type === 'hold' && holdDuration && holdDuration < beatDuration * 0.8 && allowed.has('lift')) {
       type = 'lift';
       holdDuration = undefined;
     }
 
     return {
       ...note,
+      stage,
       type,
       swipeDirection,
       holdDuration,
@@ -170,11 +187,14 @@ function enhanceSongChart(filePath) {
     };
   });
 
-  // 3. Inject Mine Hazard Notes on high difficulty tracks (difficulty >= 6)
-  if (difficulty >= 6) {
+  // 4. Inject Mine Hazard Notes — Stage 4+ only, difficulty >= 7
+  if (difficulty >= 7) {
     const notesWithMines = [];
     processedNotes.forEach((note, index) => {
       notesWithMines.push(note);
+
+      const stage = note.stage || getStage(note.time);
+      if (stage < 4) return; // Mines only in Stage 4+
 
       const timeInBeats = note.time / beatDuration;
       const isSyncopatedOffbeat = Math.abs(timeInBeats - (Math.floor(timeInBeats) + 0.5)) < 0.05;
@@ -188,7 +208,8 @@ function enhanceSongChart(filePath) {
             id: 30000 + note.id,
             time: parseFloat((note.time + beatDuration * 0.5).toFixed(3)),
             lane: mineLane,
-            type: 'mine'
+            type: 'mine',
+            stage: stage // ← Always assign stage to mine notes
           });
           lastMineTime = note.time;
         }
@@ -198,18 +219,17 @@ function enhanceSongChart(filePath) {
     processedNotes.sort((a, b) => a.time - b.time || a.lane - b.lane);
   }
 
-  // 4. Clean up IDs so they are sequential
-  processedNotes = processedNotes.map((note, idx) => ({
-    ...note,
-    id: idx
-  }));
+  // 5. Run stageifyNotes as the FINAL pass — cleans up density, re-assigns stages, gates mechanics
+  const stageified = stageifyNotes(processedNotes, songDuration, bpm, difficulty);
+  processedNotes = stageified.notes;
 
-  // 5. Recalculate theoretical Perfect Run Max Score
+  // 6. Recalculate theoretical Perfect Run Max Score
   const perfectRunMaxScore = calculatePerfectRunMaxScore(processedNotes, difficulty);
 
   const updatedSong = {
     ...song,
     notes: processedNotes,
+    stages: stageified.stages,
     perfectRunMaxScore
   };
 

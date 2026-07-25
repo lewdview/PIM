@@ -10,6 +10,7 @@ import https from 'https';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { stageifyNotes } from './stageify.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT_DATA = path.join(__dirname, '../public/data');
@@ -400,101 +401,7 @@ function generateNotesInterwoven(words, bpm, duration) {
   return merged;
 }
 
-function stageifyNotes(notes, duration, bpm, difficultyLevel) {
-  const beatDuration = 60 / bpm;
-  const stageBounds = [
-    { stage: 1, name: "Stage 1", startTime: 0, endTime: duration * 0.20, difficulty: "Very Easy" },
-    { stage: 2, name: "Stage 2", startTime: duration * 0.20, endTime: duration * 0.40, difficulty: "Easy" },
-    { stage: 3, name: "Stage 3", startTime: duration * 0.40, endTime: duration * 0.65, difficulty: "Medium" },
-    { stage: 4, name: "Stage 4", startTime: duration * 0.65, endTime: duration * 0.80, difficulty: "Hard" },
-    { stage: 5, name: "Stage 5", startTime: duration * 0.80, endTime: duration, difficulty: "Expert" }
-  ];
-
-  const boundaries = [
-    duration * 0.20,
-    duration * 0.40,
-    duration * 0.65,
-    duration * 0.80
-  ];
-
-  const processed = [];
-
-  notes.forEach(note => {
-    const isInTransitionGap = boundaries.some(b => note.time >= b + 1.2 && note.time <= b + 4.2);
-    if (isInTransitionGap) {
-      return;
-    }
-
-    let stage = 5;
-    for (let i = 0; i < stageBounds.length; i++) {
-      if (note.time >= stageBounds[i].startTime && note.time < stageBounds[i].endTime) {
-        stage = stageBounds[i].stage;
-        break;
-      }
-    }
-
-    const clone = { ...note, stage };
-
-    if (stage === 1) {
-      clone.type = 'tap';
-      delete clone.holdDuration;
-      delete clone.targetLane;
-      delete clone.swipeDirection;
-      const lastNote = processed.filter(n => n.stage === 1).pop();
-      if (lastNote && clone.time - lastNote.time < beatDuration * 0.85) {
-        return;
-      }
-    } else if (stage === 2) {
-      if (clone.type === 'swipe') {
-        clone.type = 'tap';
-        delete clone.swipeDirection;
-      }
-      const lastNote = processed.filter(n => n.stage === 2).pop();
-      if (lastNote && clone.time - lastNote.time < beatDuration * 0.45) {
-        return;
-      }
-    } else if (stage === 3) {
-      const lastNote = processed.filter(n => n.stage === 3).pop();
-      if (lastNote && clone.time - lastNote.time < beatDuration * 0.22) {
-        return;
-      }
-    } else if (stage === 4) {
-      const lastNote = processed.filter(n => n.stage === 4).pop();
-      if (lastNote && clone.time - lastNote.time < beatDuration * 0.15) {
-        return;
-      }
-    } else if (stage === 5) {
-      const lastNote = processed.filter(n => n.stage === 5).pop();
-      if (lastNote && clone.time - lastNote.time < beatDuration * 0.08) {
-        return;
-      }
-    }
-
-    if (stage <= 3) {
-      const duplicateTime = processed.some(n => Math.abs(n.time - clone.time) < 0.02);
-      if (duplicateTime) {
-        return;
-      }
-    }
-
-    processed.push(clone);
-  });
-
-  const finalNotes = processed.map((note, index) => ({
-    ...note,
-    id: index
-  }));
-
-  const stagesWithCounts = stageBounds.map(sb => {
-    const noteCount = finalNotes.filter(n => n.stage === sb.stage).length;
-    return {
-      ...sb,
-      noteCount
-    };
-  });
-
-  return { notes: finalNotes, stages: stagesWithCounts };
-}
+// stageifyNotes is now imported from ./stageify.mjs
 
 
 function calcDifficulty(bpm, valence, noteCount, duration = 180) {

@@ -742,98 +742,116 @@ interface Stage {
   noteCount: number;
 }
 
-function stageifyNotes(notes: Note[], duration: number, bpm: number): { notes: Note[], stages: Stage[] } {
+function stageifyNotes(notes: Note[], duration: number, bpm: number, difficultyLevel = 5): { notes: Note[], stages: Stage[] } {
   const beatDuration = 60 / bpm;
+
+  // Stage boundaries: 15% / 20% / 25% / 20% / 20%
+  const STAGE_PERCENTS = [0, 0.15, 0.35, 0.60, 0.80, 1.0];
   const stageBounds = [
-    { stage: 1, name: "Stage 1", startTime: 0, endTime: duration * 0.20, difficulty: "Very Easy", noteCount: 0 },
-    { stage: 2, name: "Stage 2", startTime: duration * 0.20, endTime: duration * 0.40, difficulty: "Easy", noteCount: 0 },
-    { stage: 3, name: "Stage 3", startTime: duration * 0.40, endTime: duration * 0.65, difficulty: "Medium", noteCount: 0 },
-    { stage: 4, name: "Stage 4", startTime: duration * 0.65, endTime: duration * 0.80, difficulty: "Hard", noteCount: 0 },
-    { stage: 5, name: "Stage 5", startTime: duration * 0.80, endTime: duration, difficulty: "Expert", noteCount: 0 }
+    { stage: 1, name: "Stage 1",      startTime: duration * STAGE_PERCENTS[0], endTime: duration * STAGE_PERCENTS[1], difficulty: "EASY",   noteCount: 0 },
+    { stage: 2, name: "Stage 2",      startTime: duration * STAGE_PERCENTS[1], endTime: duration * STAGE_PERCENTS[2], difficulty: "MEDIUM", noteCount: 0 },
+    { stage: 3, name: "Stage 3",      startTime: duration * STAGE_PERCENTS[2], endTime: duration * STAGE_PERCENTS[3], difficulty: "HARD",   noteCount: 0 },
+    { stage: 4, name: "Stage 4",      startTime: duration * STAGE_PERCENTS[3], endTime: duration * STAGE_PERCENTS[4], difficulty: "BRUTAL", noteCount: 0 },
+    { stage: 5, name: "FINAL STAGE",  startTime: duration * STAGE_PERCENTS[4], endTime: duration * STAGE_PERCENTS[5], difficulty: "BRUTAL", noteCount: 0 }
   ];
 
-  const boundaries = [
-    duration * 0.20,
-    duration * 0.40,
-    duration * 0.65,
-    duration * 0.80
-  ];
+  // Transition boundaries between stages
+  const boundaries = STAGE_PERCENTS.slice(1, -1).map(p => duration * p);
+
+  // BPM-relative transition gap (4 beats)
+  const gapDuration = 4 * beatDuration;
+
+  // Mechanic allowlists per stage
+  const ALLOWED: Record<number, Set<string>> = {
+    1: new Set(['tap']),
+    2: new Set(['tap', 'hold']),
+    3: new Set(['tap', 'hold', 'swipe', 'accent']),
+    4: new Set(['tap', 'hold', 'swipe', 'accent', 'remix', 'break', 'lift', 'mine']),
+    5: new Set(['tap', 'hold', 'swipe', 'accent', 'remix', 'break', 'lift', 'mine']),
+  };
+
+  // Min spacing per stage (multiplier of beatDuration) — tightest at stage end
+  const MIN_SPACING = [0.85, 0.45, 0.22, 0.15, 0.08];
+  const DENSITY_RAMP = 1.5; // spacing is 1.5× wider at stage start
 
   const processed: Note[] = [];
+  const lastTime: Record<number, number> = { 1: -999, 2: -999, 3: -999, 4: -999, 5: -999 };
 
-  notes.forEach(note => {
-    const isInTransitionGap = boundaries.some(b => note.time >= b + 1.2 && note.time <= b + 4.2);
-    if (isInTransitionGap) {
-      return;
-    }
+  const sorted = [...notes].sort((a, b) => a.time - b.time);
 
+  for (const note of sorted) {
+    // Skip notes in BPM-relative transition gaps
+    const inGap = boundaries.some(b => note.time >= b - 0.1 && note.time <= b + gapDuration);
+    if (inGap) continue;
+
+    // Determine stage
     let stage = 5;
-    for (let i = 0; i < stageBounds.length; i++) {
-      if (note.time >= stageBounds[i].startTime && note.time < stageBounds[i].endTime) {
-        stage = stageBounds[i].stage;
+    for (const sb of stageBounds) {
+      if (note.time >= sb.startTime && note.time < sb.endTime) {
+        stage = sb.stage;
         break;
       }
     }
 
     const clone: Note = { ...note, stage };
+    const allowed = ALLOWED[stage];
 
-    if (stage === 1) {
-      clone.type = 'tap';
-      delete clone.holdDuration;
-      delete clone.targetLane;
-      delete clone.swipeDirection;
-      const lastNote = processed.filter(n => n.stage === 1).pop();
-      if (lastNote && clone.time - lastNote.time < beatDuration * 0.85) {
-        return;
-      }
-    } else if (stage === 2) {
+    // Gate mines: only Stage 4+ AND difficultyLevel >= 7
+    if (clone.type === 'mine') {
+      if (stage < 4 || difficultyLevel < 7) continue;
+    }
+    // Downgrade unsupported types
+    else if (!allowed.has(clone.type as string)) {
       if (clone.type === 'swipe') {
         clone.type = 'tap';
         delete clone.swipeDirection;
-      }
-      const lastNote = processed.filter(n => n.stage === 2).pop();
-      if (lastNote && clone.time - lastNote.time < beatDuration * 0.45) {
-        return;
-      }
-    } else if (stage === 3) {
-      const lastNote = processed.filter(n => n.stage === 3).pop();
-      if (lastNote && clone.time - lastNote.time < beatDuration * 0.22) {
-        return;
-      }
-    } else if (stage === 4) {
-      const lastNote = processed.filter(n => n.stage === 4).pop();
-      if (lastNote && clone.time - lastNote.time < beatDuration * 0.15) {
-        return;
-      }
-    } else if (stage === 5) {
-      const lastNote = processed.filter(n => n.stage === 5).pop();
-      if (lastNote && clone.time - lastNote.time < beatDuration * 0.08) {
-        return;
+      } else if (clone.type === 'hold' && !allowed.has('hold')) {
+        clone.type = 'tap';
+        delete clone.holdDuration;
+        delete clone.targetLane;
+      } else if (['remix', 'break', 'accent', 'lift'].includes(clone.type as string)) {
+        clone.type = 'tap';
       }
     }
 
+    // Stage 1: strip all advanced fields
+    if (stage === 1) {
+      delete clone.holdDuration;
+      delete clone.targetLane;
+      delete clone.swipeDirection;
+    }
+    // Stage 2: strip swipe fields
+    if (stage === 2) {
+      delete clone.swipeDirection;
+    }
+
+    // Intra-stage density ramp: wider spacing at stage start, tighter at end
+    const sb = stageBounds[stage - 1];
+    const progress = Math.max(0, Math.min(1, (note.time - sb.startTime) / Math.max(0.1, sb.endTime - sb.startTime)));
+    const baseSpacing = MIN_SPACING[stage - 1] * beatDuration;
+    const startSpacing = baseSpacing * DENSITY_RAMP;
+    const minSpacing = startSpacing + (baseSpacing - startSpacing) * progress;
+
+    if (note.time - lastTime[stage] < minSpacing) continue;
+
+    // Prevent simultaneous notes in stages 1-3
     if (stage <= 3) {
-      const duplicateTime = processed.some(n => Math.abs(n.time - clone.time) < 0.02);
-      if (duplicateTime) {
-        return;
-      }
+      if (processed.some(n => Math.abs(n.time - clone.time) < 0.02)) continue;
     }
 
     processed.push(clone);
-  });
+    lastTime[stage] = note.time;
+  }
 
   const finalNotes = processed.map((note, index) => ({
     ...note,
     id: index
   }));
 
-  const stagesWithCounts = stageBounds.map(sb => {
-    const noteCount = finalNotes.filter(n => n.stage === sb.stage).length;
-    return {
-      ...sb,
-      noteCount
-    };
-  });
+  const stagesWithCounts = stageBounds.map(sb => ({
+    ...sb,
+    noteCount: finalNotes.filter(n => n.stage === sb.stage).length,
+  }));
 
   return { notes: finalNotes, stages: stagesWithCounts };
 }
@@ -982,7 +1000,7 @@ function generateProceduralChart(song: any): Note[] {
     }
   }
 
-  const stageified = stageifyNotes(notes, duration, bpm);
+  const stageified = stageifyNotes(notes, duration, bpm, difficulty);
   song.stages = stageified.stages;
   console.log(`[Procedural Generator] Generated chart for ${song.title}: ${stageified.notes.length} notes (stages applied), difficulty ${difficulty}`);
   return stageified.notes;
@@ -1163,7 +1181,7 @@ async function generateAudioForgeChart(song: any): Promise<Note[]> {
     return generateProceduralChart(song);
   }
 
-  const stageified = stageifyNotes(notes, duration, bpm);
+  const stageified = stageifyNotes(notes, duration, bpm, song.difficultyLevel || 5);
   song.stages = stageified.stages;
   console.log(`[Audio Forge] Success! Analyzed ${duration}s audio and forged ${stageified.notes.length} notes (stages applied).`);
   return stageified.notes;
@@ -2215,14 +2233,24 @@ export default function Game() {
       if (songRef.current && !failed) {
         const totalNotes = gs.perfectPlus + gs.perfects + gs.goods + gs.misses;
         const accuracy = totalNotes > 0 ? ((gs.perfectPlus + gs.perfects) / totalNotes) * 100 : 0;
-        saveHighScore(
-          songRef.current.id,
-          gs.score,
-          parseFloat(accuracy.toFixed(2)),
-          gs.maxCombo,
-          medal,
-          { events: recordedTelemetryRef.current }
-        );
+        const rewardOpts = loadOpts();
+        const isRewardEligible = rewardOpts.noteGenerationSource === 'auto' || !rewardOpts.noteGenerationSource;
+        if (isRewardEligible) {
+          saveHighScore(
+            songRef.current.id,
+            gs.score,
+            parseFloat(accuracy.toFixed(2)),
+            gs.maxCombo,
+            medal,
+            { events: recordedTelemetryRef.current }
+          );
+        } else {
+          console.log(`[GamePlay] Score not saved — playing in ${rewardOpts.noteGenerationSource} mode (practice)`);
+          // Save locally for personal tracking only
+          try {
+            localStorage.setItem(`practice_score_${songRef.current.id}_${rewardOpts.noteGenerationSource}`, JSON.stringify({ score: gs.score, accuracy: parseFloat(accuracy.toFixed(2)), maxCombo: gs.maxCombo, medal }));
+          } catch (e) { /* ignore storage errors */ }
+        }
         saveMedal(songRef.current.id, medal);
         saveScoreHistory(songRef.current.id, gs.score);
       }
@@ -2501,11 +2529,11 @@ export default function Game() {
 
     // Stage transition tracking
     const stageBounds = [
-      { stage: 1, name: "Stage 1", pct: 0.00, difficulty: "Very Easy" },
-      { stage: 2, name: "Stage 2", pct: 0.20, difficulty: "Easy" },
-      { stage: 3, name: "Stage 3", pct: 0.40, difficulty: "Medium" },
-      { stage: 4, name: "Stage 4", pct: 0.65, difficulty: "Hard" },
-      { stage: 5, name: "Stage 5", pct: 0.80, difficulty: "Expert" }
+      { stage: 1, name: "Stage 1",      pct: 0.00, difficulty: "EASY"   },
+      { stage: 2, name: "Stage 2",      pct: 0.15, difficulty: "MEDIUM" },
+      { stage: 3, name: "Stage 3",      pct: 0.35, difficulty: "HARD"   },
+      { stage: 4, name: "Stage 4",      pct: 0.60, difficulty: "BRUTAL" },
+      { stage: 5, name: "FINAL STAGE",  pct: 0.80, difficulty: "BRUTAL" }
     ];
     let calculatedStage = 1;
     for (let i = 0; i < stageBounds.length; i++) {
@@ -5397,14 +5425,25 @@ export default function Game() {
         let song = await getSongById(songId);
         if (song) {
           song = { ...song, notes: [...(song.notes || [])] };
-          if (song.notes.length === 0 && !activeTutorial) {
-            setLoadMsg("FORGING AUDIO BEATMAP...");
-            try {
-              song.notes = await generateAudioForgeChart(song);
-            } catch (err) {
-              console.warn("[GamePlay Init] Audio Forge failed, falling back to procedural grid:", err);
-              // Fallback to math generation on fetch/CORS/decode error
-              song.notes = generateProceduralChart(song);
+          if (!activeTutorial) {
+            const gameOpts = loadOpts();
+            const genMode = gameOpts.noteGenerationSource || 'auto';
+            
+            if (song.notes.length === 0 || genMode !== 'auto') {
+              if (genMode !== 'auto') {
+                setLoadMsg(genMode === 'lyrics' ? "TRANSLATING LYRICAL DYNAMICS..." : "ALIGNING BPM BEATS...");
+                // Non-auto modes use runtime procedural generation
+                song.notes = generateProceduralChart(song);
+                console.log(`[GamePlay Init] Generated ${genMode} chart: ${song.notes.length} notes (reward play disabled)`);
+              } else {
+                setLoadMsg("FORGING AUDIO BEATMAP...");
+                try {
+                  song.notes = await generateAudioForgeChart(song);
+                } catch (err) {
+                  console.warn("[GamePlay Init] Audio Forge failed, falling back to procedural grid:", err);
+                  song.notes = generateProceduralChart(song);
+                }
+              }
             }
           }
         }
@@ -7476,7 +7515,7 @@ export default function Game() {
                       textShadow: "0 0 10px rgba(255,255,255,0.6)",
                     }}
                   >
-                    STAGE
+                    {stageStingerPhase === 'start' && stageStingerNumber === 5 ? 'FINAL' : 'STAGE'}
                   </motion.div>
 
                   {/* Giant Center Number */}
@@ -7499,7 +7538,9 @@ export default function Game() {
                       lineHeight: 1,
                     }}
                   >
-                    {stageStingerPhase === 'cleared' ? stageStingerNumber - 1 : stageStingerNumber}
+                    {stageStingerPhase === 'cleared'
+                      ? (stageStingerNumber! - 1 === 5 ? '✦' : stageStingerNumber! - 1)
+                      : (stageStingerNumber === 5 ? 'STAGE' : stageStingerNumber)}
                   </motion.div>
 
                   {/* Slide-in Bottom Status Text */}

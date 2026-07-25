@@ -49,3 +49,23 @@ export function calculateCampaignDifficulty(monthNum: number, stageIndex: number
   
   return Math.max(1, Math.min(10, Math.round(rawLevel)));
 }
+
+export type DifficultyTier = 'EASY' | 'MEDIUM' | 'HARD' | 'BRUTAL';
+
+/** Map a numeric difficulty level (1-10) to a campaign tier label. */
+export function levelToTier(level: number): DifficultyTier {
+  if (level <= 3) return 'EASY';
+  if (level <= 5) return 'MEDIUM';
+  if (level <= 7) return 'HARD';
+  return 'BRUTAL';
+}
+
+/** Map a campaign tier to its numeric level range [min, max]. */
+export function tierToLevelRange(tier: DifficultyTier): [number, number] {
+  switch (tier) {
+    case 'EASY': return [1, 3];
+    case 'MEDIUM': return [4, 5];
+    case 'HARD': return [6, 7];
+    case 'BRUTAL': return [8, 10];
+  }
+}
