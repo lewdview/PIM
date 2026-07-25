@@ -135,7 +135,7 @@ export default function BeatmapEditor() {
   const [playSpeed, setPlaySpeed] = useState<number>(1.0);
   const [quantize, setQuantize] = useState<number>(16); // 16th notes snap by default
   const [zoom, setZoom] = useState<number>(140); // translates to approach time
-  const [activeTool, setActiveTool] = useState<'select' | 'tap' | 'hold' | 'swipe' | 'slide' | 'remix' | 'mine' | 'break' | 'burst'>('select');
+  const [activeTool, setActiveTool] = useState<'select' | 'tap' | 'hold' | 'swipe' | 'slide' | 'remix' | 'mine' | 'break' | 'accent' | 'lift'>('select');
   
   // Note configuration
   const [swipeDir, setSwipeDir] = useState<NonNullable<Note['swipeDirection']>>('up');
@@ -753,22 +753,80 @@ export default function BeatmapEditor() {
         c.arc(cx, cy, 3, 0, Math.PI * 2);
         c.fill();
 
-      } else if (type === 'hold-end') {
-        // Smaller light release node
-        c.strokeStyle = '#c084fc';
-        c.lineWidth = 1.5;
-        c.fillStyle = 'rgba(168, 85, 247, 0.8)';
-        
+      } else if (type === 'remix') {
+        // Cyan/Magenta Remix Stem node
+        c.strokeStyle = '#00f5d4';
+        c.lineWidth = selected ? 3.5 : 2;
+        c.fillStyle = 'rgba(0, 245, 212, 0.25)';
         c.beginPath();
-        c.arc(cx, cy, size * 0.28, 0, Math.PI * 2);
+        c.arc(cx, cy, size * 0.42, 0, Math.PI * 2);
         c.fill();
         c.stroke();
+        c.fillStyle = '#ff007f';
+        c.font = '900 10px monospace';
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
+        c.fillText('🎛', cx, cy);
 
-        // Inner core
-        c.fillStyle = '#ffffff';
+      } else if (type === 'mine') {
+        // Hazard Danger Red node
+        c.strokeStyle = '#ef4444';
+        c.lineWidth = selected ? 3.5 : 2.5;
+        c.fillStyle = 'rgba(239, 68, 68, 0.35)';
         c.beginPath();
-        c.arc(cx, cy, 2, 0, Math.PI*2);
+        c.arc(cx, cy, size * 0.4, 0, Math.PI * 2);
         c.fill();
+        c.stroke();
+        c.fillStyle = '#ffffff';
+        c.font = '900 10px monospace';
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
+        c.fillText('⚠', cx, cy);
+
+      } else if (type === 'break') {
+        // Flame Gold Break node
+        c.strokeStyle = '#ff7b00';
+        c.lineWidth = selected ? 3.5 : 2;
+        c.fillStyle = 'rgba(255, 123, 0, 0.3)';
+        c.beginPath();
+        c.arc(cx, cy, size * 0.42, 0, Math.PI * 2);
+        c.fill();
+        c.stroke();
+        c.fillStyle = '#ffd700';
+        c.font = '900 10px monospace';
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
+        c.fillText('⚡', cx, cy);
+
+      } else if (type === 'accent') {
+        // Acid Lime Accent Starburst
+        c.strokeStyle = '#ccff00';
+        c.lineWidth = selected ? 3.5 : 2;
+        c.fillStyle = 'rgba(204, 255, 0, 0.25)';
+        c.beginPath();
+        c.arc(cx, cy, size * 0.4, 0, Math.PI * 2);
+        c.fill();
+        c.stroke();
+        c.fillStyle = '#ffffff';
+        c.font = '900 11px monospace';
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
+        c.fillText('✦', cx, cy);
+
+      } else if (type === 'lift') {
+        // Spring Green Upward Lift node
+        c.strokeStyle = '#00ff88';
+        c.lineWidth = selected ? 3.5 : 2;
+        c.fillStyle = 'rgba(0, 255, 136, 0.25)';
+        c.beginPath();
+        c.arc(cx, cy, size * 0.4, 0, Math.PI * 2);
+        c.fill();
+        c.stroke();
+        c.fillStyle = '#ffffff';
+        c.font = '900 10px monospace';
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
+        c.fillText('▲', cx, cy);
       }
 
       c.restore();
@@ -1108,7 +1166,7 @@ export default function BeatmapEditor() {
             </div>
             
             <div className="editor-tool-grid flex flex-wrap gap-1">
-              {(['select', 'tap', 'hold', 'swipe', 'slide', 'remix', 'mine', 'break', 'burst'] as const).map(tool => (
+              {(['select', 'tap', 'hold', 'swipe', 'slide', 'remix', 'mine', 'break', 'accent', 'lift'] as const).map(tool => (
                 <button
                   key={tool}
                   onClick={() => setActiveTool(tool)}
@@ -1348,6 +1406,11 @@ export default function BeatmapEditor() {
                     <option value="tap">TAP</option>
                     <option value="hold">HOLD (Slide)</option>
                     <option value="swipe">SWIPE</option>
+                    <option value="remix">REMIX (Stem Isolator)</option>
+                    <option value="mine">MINE (Hazard Avoid)</option>
+                    <option value="break">BREAK (High Drop)</option>
+                    <option value="accent">ACCENT (Beat Starburst)</option>
+                    <option value="lift">LIFT (Upward Flick)</option>
                   </select>
                 </div>
 

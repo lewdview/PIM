@@ -8201,44 +8201,48 @@ function drawKey(
     ctx.shadowBlur = lerp(8, 20, prog);
     ctx.shadowOffsetY = 0;
   } else if (noteType === 'remix') {
-    // Cyberpunk Prismatic Body
+    // Cyberpunk Prismatic Body — Electric Cyan to Deep Magenta
     ctx.shadowColor = "#00F5D4";
-    ctx.shadowBlur = lerp(12, 28, prog);
+    ctx.shadowBlur = lerp(16, 32, prog);
     ctx.shadowOffsetY = lerp(2, 6, prog);
     const remixGrad = ctx.createLinearGradient(0, -noteH / 2, 0, noteH / 2);
-    remixGrad.addColorStop(0, "#0f172a");
-    remixGrad.addColorStop(0.5, "#1e1b4b");
-    remixGrad.addColorStop(1, "#030712");
+    remixGrad.addColorStop(0, "#A5F3FC");
+    remixGrad.addColorStop(0.3, "#00F5D4");
+    remixGrad.addColorStop(0.7, "#FF007F");
+    remixGrad.addColorStop(1, "#3b0764");
     ctx.fillStyle = remixGrad;
   } else if (noteType === 'break') {
-    // High-Voltage Flame Armored Body
+    // High-Voltage Flame Armored Body — Gold to Orange
     ctx.shadowColor = "#FF7B00";
-    ctx.shadowBlur = lerp(14, 30, prog);
+    ctx.shadowBlur = lerp(18, 36, prog);
     ctx.shadowOffsetY = lerp(2, 6, prog);
     const breakGrad = ctx.createLinearGradient(0, -noteH / 2, 0, noteH / 2);
-    breakGrad.addColorStop(0, "#451a03");
-    breakGrad.addColorStop(0.5, "#78350f");
-    breakGrad.addColorStop(1, "#1c1917");
+    breakGrad.addColorStop(0, "#FFF7ED");
+    breakGrad.addColorStop(0.25, "#FFD700");
+    breakGrad.addColorStop(0.7, "#FF7B00");
+    breakGrad.addColorStop(1, "#7C2D12");
     ctx.fillStyle = breakGrad;
   } else if (noteType === 'accent') {
-    // Emerald / Acid Lime Crystalline Body
+    // Emerald / Acid Lime Crystalline Body — Bright Lime
     ctx.shadowColor = "#CCFF00";
-    ctx.shadowBlur = lerp(12, 26, prog);
+    ctx.shadowBlur = lerp(16, 32, prog);
     ctx.shadowOffsetY = lerp(2, 6, prog);
     const accentGrad = ctx.createLinearGradient(0, -noteH / 2, 0, noteH / 2);
-    accentGrad.addColorStop(0, "#022c22");
-    accentGrad.addColorStop(0.5, "#064e3b");
-    accentGrad.addColorStop(1, "#020617");
+    accentGrad.addColorStop(0, "#F7FEE7");
+    accentGrad.addColorStop(0.3, "#CCFF00");
+    accentGrad.addColorStop(0.7, "#15803D");
+    accentGrad.addColorStop(1, "#022C22");
     ctx.fillStyle = accentGrad;
   } else if (noteType === 'lift') {
-    // Spring Green Body
+    // Spring Green Body — Bright Mint
     ctx.shadowColor = "#00FF88";
-    ctx.shadowBlur = lerp(10, 24, prog);
+    ctx.shadowBlur = lerp(14, 30, prog);
     ctx.shadowOffsetY = lerp(2, 6, prog);
     const liftGrad = ctx.createLinearGradient(0, -noteH / 2, 0, noteH / 2);
-    liftGrad.addColorStop(0, "#052e16");
-    liftGrad.addColorStop(0.5, "#14532d");
-    liftGrad.addColorStop(1, "#022c22");
+    liftGrad.addColorStop(0, "#ECFDF5");
+    liftGrad.addColorStop(0.3, "#00FF88");
+    liftGrad.addColorStop(0.7, "#047857");
+    liftGrad.addColorStop(1, "#022C22");
     ctx.fillStyle = liftGrad;
   } else {
     ctx.shadowColor = "rgba(0,0,0,0.8)";
@@ -8282,14 +8286,17 @@ function drawKey(
     ctx.strokeStyle = "#D4AF37"; ctx.lineWidth = 2.0; ctx.stroke();
     ctx.strokeStyle = "rgba(255, 255, 255, 0.95)"; ctx.lineWidth = 0.8; ctx.stroke();
   } else if (noteType === 'remix') {
-    ctx.strokeStyle = "#00F5D4"; ctx.lineWidth = 2.2; ctx.stroke();
-    ctx.strokeStyle = "#FF007F"; ctx.lineWidth = 1.0; ctx.stroke();
+    ctx.strokeStyle = "#FFFFFF"; ctx.lineWidth = 3.0; ctx.stroke();
+    ctx.strokeStyle = "#00F5D4"; ctx.lineWidth = 1.5; ctx.stroke();
   } else if (noteType === 'break') {
-    ctx.strokeStyle = "#FFD700"; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.strokeStyle = "#FFFFFF"; ctx.lineWidth = 3.0; ctx.stroke();
+    ctx.strokeStyle = "#FFD700"; ctx.lineWidth = 1.5; ctx.stroke();
   } else if (noteType === 'accent') {
-    ctx.strokeStyle = "#CCFF00"; ctx.lineWidth = 2.0; ctx.stroke();
+    ctx.strokeStyle = "#FFFFFF"; ctx.lineWidth = 3.0; ctx.stroke();
+    ctx.strokeStyle = "#CCFF00"; ctx.lineWidth = 1.5; ctx.stroke();
   } else if (noteType === 'lift') {
-    ctx.strokeStyle = "#00FF88"; ctx.lineWidth = 2.0; ctx.stroke();
+    ctx.strokeStyle = "#FFFFFF"; ctx.lineWidth = 3.0; ctx.stroke();
+    ctx.strokeStyle = "#00FF88"; ctx.lineWidth = 1.5; ctx.stroke();
   } else {
     ctx.strokeStyle = "rgba(255, 255, 255, 0.35)"; ctx.lineWidth = 1.25; ctx.stroke();
   }
@@ -8435,63 +8442,51 @@ function drawKey(
     const ringRadius = Math.max(noteW, noteH) * 0.52;
     const eqAngle = (nowMs / 300) % (Math.PI * 2);
 
-    // Orbiting cyan-magenta ring
-    ctx.strokeStyle = '#00F5D4';
-    ctx.shadowColor = '#00F5D4';
-    ctx.shadowBlur = 16;
-    ctx.lineWidth = 2.0;
+    // Dark pill container for contrast
+    ctx.fillStyle = 'rgba(3, 7, 18, 0.75)';
     ctx.beginPath();
-    ctx.arc(0, 0, ringRadius, 0, Math.PI * 2);
+    ctx.roundRect(-22, -10, 44, 20, 10);
+    ctx.fill();
+    ctx.strokeStyle = '#00F5D4';
+    ctx.lineWidth = 1.5;
     ctx.stroke();
 
-    // 4 Orbiting magenta nodes
-    for (let a = 0; a < 4; a++) {
-      const ra = eqAngle + (a * Math.PI) / 2;
-      const rx = Math.cos(ra) * ringRadius;
-      const ry = Math.sin(ra) * ringRadius;
-      ctx.fillStyle = '#FF007F';
-      ctx.shadowColor = '#FF007F';
-      ctx.shadowBlur = 8;
-      ctx.beginPath();
-      ctx.arc(rx, ry, 3.2, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // Animated central EQ equalizer bars
-    ctx.fillStyle = '#00F5D4';
+    // Text emblem
+    ctx.fillStyle = '#FFFFFF';
     ctx.shadowColor = '#00F5D4';
-    ctx.shadowBlur = 6;
-    const numBars = 5;
-    const barWidth = 2.5;
-    const barGap = 2;
-    const totalW = numBars * barWidth + (numBars - 1) * barGap;
-    const startX = -totalW / 2;
-
-    for (let b = 0; b < numBars; b++) {
-      const hScale = 0.3 + 0.7 * Math.abs(Math.sin((nowMs / 120) + b * 1.2));
-      const bHeight = noteH * 0.35 * hScale;
-      const bx = startX + b * (barWidth + barGap);
-      ctx.fillRect(bx, -bHeight / 2, barWidth, bHeight);
-    }
+    ctx.shadowBlur = 10;
+    ctx.font = '900 9px "Space Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🎛 REMIX', 0, 0);
     ctx.restore();
 
   } else if (noteType === 'break') {
     // ⚡ BREAK NOTE: Heavy Voltage Lightning Emblem + Crashing Aura
     ctx.save();
     const pulse = 1.0 + 0.12 * Math.sin(nowMs / 90);
-    ctx.shadowColor = '#FF7B00';
-    ctx.shadowBlur = 22;
+    
+    // Dark pill container for high contrast
+    ctx.fillStyle = 'rgba(28, 25, 23, 0.85)';
+    ctx.beginPath();
+    ctx.roundRect(-24, -10, 48, 20, 10);
+    ctx.fill();
+    ctx.strokeStyle = '#FFD700';
+    ctx.lineWidth = 1.8;
+    ctx.stroke();
 
     // Glowing central text / badge
     ctx.fillStyle = '#FFD700';
-    ctx.font = '900 11px "Space Mono", monospace';
+    ctx.shadowColor = '#FF7B00';
+    ctx.shadowBlur = 12;
+    ctx.font = '900 10px "Space Mono", monospace';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('⚡DROP', 0, 0);
+    ctx.fillText('⚡ DROP', 0, 0);
 
     // Electric aura shockwave ring
-    ctx.strokeStyle = 'rgba(255, 123, 0, 0.7)';
-    ctx.lineWidth = 1.8;
+    ctx.strokeStyle = 'rgba(255, 215, 0, 0.8)';
+    ctx.lineWidth = 2.0;
     ctx.beginPath();
     ctx.arc(0, 0, (noteW / 2 + 4) * pulse, 0, Math.PI * 2);
     ctx.stroke();
@@ -8504,42 +8499,42 @@ function drawKey(
     ctx.shadowColor = '#CCFF00';
     ctx.shadowBlur = 20;
 
+    // Dark pill container
+    ctx.fillStyle = 'rgba(2, 44, 34, 0.85)';
+    ctx.beginPath();
+    ctx.roundRect(-22, -10, 44, 20, 10);
+    ctx.fill();
+    ctx.strokeStyle = '#CCFF00';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
     ctx.fillStyle = '#FFFFFF';
-    ctx.font = '900 14px sans-serif';
+    ctx.font = '900 11px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('✦', 0, 0);
-
-    // 4 Corner Emerald Rays
-    ctx.strokeStyle = '#00FF66';
-    ctx.lineWidth = 1.5;
-    const rayLen = (noteW * 0.35) * starPulse;
-    ctx.beginPath();
-    ctx.moveTo(-rayLen, 0); ctx.lineTo(rayLen, 0);
-    ctx.moveTo(0, -rayLen); ctx.lineTo(0, rayLen);
-    ctx.stroke();
+    ctx.fillText('✦ BEAT', 0, 0);
     ctx.restore();
 
   } else if (noteType === 'lift') {
     // ▲ LIFT NOTE: Upward Animated Chevrons Cueing Flick
     ctx.save();
-    ctx.strokeStyle = '#00FF88';
+    ctx.strokeStyle = '#FFFFFF';
     ctx.shadowColor = '#00FF88';
-    ctx.shadowBlur = 14;
-    ctx.lineWidth = 2.8;
+    ctx.shadowBlur = 16;
+    ctx.lineWidth = 3.2;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
-    const animOffset = (nowMs / 15) % 16;
+    const animOffset = (nowMs / 14) % 16;
 
     for (let i = 0; i < 2; i++) {
       const yPos = 4 - i * 10 + (8 - animOffset * 0.5);
-      const alpha = Math.max(0.2, 1.0 - i * 0.4);
+      const alpha = Math.max(0.3, 1.0 - i * 0.4);
       ctx.globalAlpha = alpha;
       ctx.beginPath();
-      ctx.moveTo(-8, yPos + 4);
-      ctx.lineTo(0, yPos - 4);
-      ctx.lineTo(8, yPos + 4);
+      ctx.moveTo(-10, yPos + 4);
+      ctx.lineTo(0, yPos - 5);
+      ctx.lineTo(10, yPos + 4);
       ctx.stroke();
     }
     ctx.restore();
