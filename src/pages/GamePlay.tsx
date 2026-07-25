@@ -6595,22 +6595,30 @@ export default function Game() {
               TRANSMISSION FAILING
             </h3>
             <div className="font-mono text-zinc-400 text-[10px] leading-relaxed mb-8 text-left space-y-3.5 max-h-[220px] overflow-y-auto pr-1">
-              <p className="text-zinc-500 uppercase tracking-widest text-[9px]">// TRAINING MODULE: NOTE TYPES //</p>
+              <p className="text-zinc-500 uppercase tracking-widest text-[9px]">// TRAINING MODULE: NOTE TYPES & CONTROLS //</p>
               <div>
                 <span className="text-[#39FF14] font-bold block mb-0.5">■ TAPS:</span>
-                Press the column exactly when the note block aligns with the bottom glowing line.
+                Press lane key (D F J), Controller (X Y B), or tap screen when note aligns with trigger line.
               </div>
               <div>
-                <span className="text-[#00E5FF] font-bold block mb-0.5">▬ HOLD RAILS:</span>
-                Hold down the key/column until the note tail fully finishes crossing the bottom line.
+                <span className="text-[#FFD700] font-bold block mb-0.5">▬ HOLD & SLIDES:</span>
+                Hold key/button until gold tail finishes. Shift lane if path bends sideways.
               </div>
               <div>
-                <span className="text-[#FF1493] font-bold block mb-0.5">➔ SWIPE RELEASES:</span>
-                Hold the rail, then at the arrow release AND swipe/flick (or press matching Arrow key).
+                <span className="text-[#FF1493] font-bold block mb-0.5">➔ SWIPES & ▲ LIFTS:</span>
+                Flick Analog Stick, press Arrow Key / D-Pad, or swipe screen in arrow/upward direction.
               </div>
               <div>
-                <span className="text-[#FFaa00] font-bold block mb-0.5">↝ SLIDE TRANSITIONS:</span>
-                Hold starting lane, then shift/press the target lane as the path bends sideways.
+                <span className="text-[#FF7B00] font-bold block mb-0.5">⚡ BREAK & ✦ ACCENT:</span>
+                High-voltage beat & snare drops awarding bonus score multipliers.
+              </div>
+              <div>
+                <span className="text-[#00F5D4] font-bold block mb-0.5">🎛 REMIX RUNES:</span>
+                Hit perfectly to isolate vocals, mute drums, or boost bass audio stems.
+              </div>
+              <div>
+                <span className="text-[#FF003C] font-bold block mb-0.5">⚠ MINE HAZARDS:</span>
+                DO NOT TOUCH MINE LANES! Avoid to prevent -500 penalty and combo breaks.
               </div>
             </div>
             <button

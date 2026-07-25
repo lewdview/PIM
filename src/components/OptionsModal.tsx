@@ -1143,35 +1143,39 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
 
                 {/* Gameplay note types guide */}
                 <div className="bg-black/40 border border-white/5 p-4 rounded-lg space-y-4">
-                  <h3 className="font-mono text-[9px] font-black text-white/40 uppercase tracking-wider border-b border-white/5 pb-1">GAMEPLAY NOTE TYPES GUIDE</h3>
+                  <h3 className="font-mono text-[9px] font-black text-white/40 uppercase tracking-wider border-b border-white/5 pb-1">GAMEPLAY NOTE TYPES & INPUT MANUAL</h3>
                   <div className="grid gap-3.5 font-mono text-[10px] text-zinc-400">
                     <div className="flex gap-2">
-                      <span className="text-[#39FF14] font-bold min-w-[120px] uppercase">■ TAPS:</span>
-                      <span>Press lane key when the note matches the bottom glow line.</span>
+                      <span className="text-[#39FF14] font-bold min-w-[130px] uppercase">■ TAPS:</span>
+                      <span>Press lane key (D F J), Controller (X Y B), or tap screen when note aligns with hit line.</span>
                     </div>
                     <div className="flex gap-2">
-                      <span className="text-[#00E5FF] font-bold min-w-[120px] uppercase">▬ HOLD RAILS:</span>
-                      <span>Hold down lane key until the tail passes the bottom line.</span>
+                      <span className="text-[#FFD700] font-bold min-w-[130px] uppercase">▬ HOLD RAILS:</span>
+                      <span>Hold lane key or button until the gold tail finishes crossing the trigger bar.</span>
                     </div>
                     <div className="flex gap-2">
-                      <span className="text-[#FF1493] font-bold min-w-[120px] uppercase">➔ SWIPE RELEASES:</span>
-                      <span>Hold the rail, then at the arrow release and flick (or press matching Arrow key).</span>
+                      <span className="text-[#FF1493] font-bold min-w-[130px] uppercase">➔ SWIPES:</span>
+                      <span>Flick Analog Stick, press Arrow Key / D-Pad, or swipe screen in arrow direction.</span>
                     </div>
                     <div className="flex gap-2">
-                      <span className="text-[#FFaa00] font-bold min-w-[120px] uppercase">↝ SLIDE TRANSITIONS:</span>
-                      <span>Hold starting lane, then shift to the target lane key as the path bends sideways.</span>
+                      <span className="text-[#00FF88] font-bold min-w-[130px] uppercase">▲ LIFT FLICKS:</span>
+                      <span>Release hold key with Arrow Up, flick Analog Stick UP, or swipe finger UPWARD.</span>
                     </div>
                     <div className="flex gap-2 border-t border-white/5 pt-2">
-                      <span className="text-[#38bdf8] font-bold min-w-[120px] uppercase">⚡ REMIX RUNE:</span>
-                      <span>Hit perfectly to isolate vocals, mute drums, or boost bass stems + invert visual palette.</span>
+                      <span className="text-[#FF7B00] font-bold min-w-[130px] uppercase">⚡ BREAK DROPS:</span>
+                      <span>High-voltage drop notes — crisp hit timing awards massive bonus score & particle explosions.</span>
                     </div>
                     <div className="flex gap-2">
-                      <span className="text-[#ef4444] font-bold min-w-[120px] uppercase">⚠ MINE HAZARD:</span>
-                      <span>Avoid touching or pressing keys on mine lanes to prevent data leaks and combo breaks.</span>
+                      <span className="text-[#CCFF00] font-bold min-w-[130px] uppercase">✦ ACCENT STARS:</span>
+                      <span>Acid-lime snare/accent notes — hit on rhythm for starburst score multipliers.</span>
                     </div>
                     <div className="flex gap-2">
-                      <span className="text-[#fbbf24] font-bold min-w-[120px] uppercase">★ BREAK & BURST:</span>
-                      <span>High-energy beat drop notes awarding bonus points and particle explosion rewards.</span>
+                      <span className="text-[#00F5D4] font-bold min-w-[130px] uppercase">🎛 REMIX STEMS:</span>
+                      <span>Holographic stem triggers — isolates vocals, muting drums or boosting bass in real-time.</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="text-[#FF003C] font-bold min-w-[130px] uppercase">⚠ MINE HAZARDS:</span>
+                      <span>DO NOT TAP OR PRESS MINE LANES! Avoid touching to prevent -500 score loss and combo breaks.</span>
                     </div>
                   </div>
                 </div>
