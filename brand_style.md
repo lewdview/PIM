@@ -1,6 +1,6 @@
-# Brand Style Guide — th3vault & Beatstar (PIM)
+# Brand Style Guide — PIM : th3v4ult - poetry in motion
 
-This document serves as the official brand style registry for **th3vault & Beatstar (PIM)**. It outlines the visual philosophy, typography, color palette, geometric motifs, and layout behaviors that define the application's premium brutalist cyberpunk aesthetic.
+This document serves as the official brand style registry for **PIM : th3v4ult - poetry in motion**. It outlines the visual philosophy, typography, color palette, geometric motifs, and layout behaviors that define the application's premium brutalist cyberpunk aesthetic.
 
 ---
 
