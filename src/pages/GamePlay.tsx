@@ -57,6 +57,21 @@ interface GameplayVisualizerProps {
   isPlaying: boolean;
 }
 
+/** Check if actual swipe direction matches required swipe direction (with 45° angle tolerance) */
+function isDirectionMatch(reqDir?: Note['swipeDirection'], actualDir?: Note['swipeDirection']): boolean {
+  if (!reqDir || !actualDir) return true;
+  if (reqDir === actualDir) return true;
+  if (reqDir === 'up') return actualDir === 'up-left' || actualDir === 'up-right';
+  if (reqDir === 'down') return actualDir === 'down-left' || actualDir === 'down-right';
+  if (reqDir === 'left') return actualDir === 'up-left' || actualDir === 'down-left';
+  if (reqDir === 'right') return actualDir === 'up-right' || actualDir === 'down-right';
+  if (actualDir === 'up') return reqDir === 'up-left' || reqDir === 'up-right';
+  if (actualDir === 'down') return reqDir === 'down-left' || reqDir === 'down-right';
+  if (actualDir === 'left') return reqDir === 'up-left' || reqDir === 'down-left';
+  if (actualDir === 'right') return reqDir === 'up-right' || reqDir === 'down-right';
+  return false;
+}
+
 const GameplayVisualizer: React.FC<GameplayVisualizerProps> = ({ analyserRef, dataArrayRef, isPlaying }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [activeShape, setActiveShape] = useState<'flower_of_life' | 'sri_yantra' | 'metatrons_cube' | 'bipolar_torus' | 'lakshmi_star'>('flower_of_life');
@@ -902,7 +917,7 @@ function generateProceduralChart(song: any): Note[] {
 
     const roll = (time * 13 + id * 7) % 100;
     
-    // Tap is standard. Holds/Slides appear at medium/high difficulties
+    // Tap is standard. Holds/Slides/Swipes appear at medium/high difficulties
     if (difficulty >= 3 && roll < 38) {
       noteType = 'hold';
       holdDuration = beatDuration * (1.5 + (id % 3));
@@ -918,6 +933,10 @@ function generateProceduralChart(song: any): Note[] {
         // Hold to swipe: ends with a swipe (prefer UP, but supports others too)
         swipeDirection = (id % 3 === 0) ? 'up' : (id % 3 === 1) ? 'left' : 'right';
       }
+    } else if (difficulty >= 4 && (id * 23) % 100 < 22) {
+      // Standalone swipe note
+      noteType = 'swipe' as any;
+      swipeDirection = (id % 3 === 0) ? 'up' : (id % 3 === 1) ? 'left' : 'right';
     }
 
     notes.push({
@@ -1104,6 +1123,9 @@ async function generateAudioForgeChart(song: any): Promise<Note[]> {
         // Hold to swipe: ends with a swipe (prefer UP)
         swipeDirection = (index % 3 === 0) ? 'up' : (index % 3 === 1) ? 'left' : 'right';
       }
+    } else if (difficulty >= 4 && (index * 23) % 100 < 22) {
+      noteType = 'swipe' as any;
+      swipeDirection = (index % 3 === 0) ? 'up' : (index % 3 === 1) ? 'left' : 'right';
     }
 
     notes.push({
@@ -1777,12 +1799,11 @@ export default function Game() {
       const dl = songRef.current?.difficultyLevel ?? 5;
       if (diff > missWindow(dl)) return;
 
-      // Swipe check
-      if (ns.note.type === "swipe") {
-        if (!direction || ns.note.swipeDirection !== direction) return;
-      } else if (direction) {
-        // If it's not a swipe note, but we got a swipe input, we still allow it as a tap
-        // unless it's specifically a hold note start.
+      // Swipe check: swipe notes or notes with required swipeDirection ignore plain tap-down inputs
+      const isSwipeNote = ns.note.type === "swipe" || (ns.note.swipeDirection !== undefined && ns.note.type !== "hold");
+      if (isSwipeNote) {
+        if (!direction) return; // Plain tap-down does not complete a swipe note
+        if (ns.note.swipeDirection && !isDirectionMatch(ns.note.swipeDirection, direction)) return;
       }
 
       const isFever = puRef.current.active === "FEVER" && t < puRef.current.endTime;
@@ -5144,14 +5165,29 @@ export default function Game() {
 
         const t = getT();
         const checkLane = start.originLane !== undefined ? start.originLane : start.lane;
-        const cand = notesRef.current.find(n =>
-          !n.hit && !n.missed && n.note.type === 'swipe' &&
-          n.note.swipeDirection === swipeDir &&
+        
+        // Find matching swipe candidate note with direction tolerance
+        let cand = notesRef.current.find(n =>
+          !n.hit && !n.missed &&
+          (n.note.type === 'swipe' || n.note.swipeDirection !== undefined) &&
+          isDirectionMatch(n.note.swipeDirection, swipeDir) &&
           n.note.lane === checkLane &&
           Math.abs(n.note.time - t) < missWindow(songRef.current?.difficultyLevel ?? 5)
         );
+
+        // Fallback: check adjacent lanes if finger drifted slightly during swipe
+        if (!cand) {
+          cand = notesRef.current.find(n =>
+            !n.hit && !n.missed &&
+            (n.note.type === 'swipe' || n.note.swipeDirection !== undefined) &&
+            isDirectionMatch(n.note.swipeDirection, swipeDir) &&
+            Math.abs(n.note.lane - checkLane) <= 1 &&
+            Math.abs(n.note.time - t) < missWindow(songRef.current?.difficultyLevel ?? 5)
+          );
+        }
+
         if (cand) {
-          hitLane(checkLane, swipeDir);
+          hitLane(cand.note.lane, swipeDir);
           start.x = touch.clientX;
           start.y = touch.clientY;
           return true;
@@ -5159,8 +5195,8 @@ export default function Game() {
 
         const activeHoldWithSwipe = notesRef.current.find(n =>
           n.holdActive && !n.hit && !n.missed &&
-          n.note.swipeDirection === swipeDir &&
-          n.currentLane === checkLane &&
+          isDirectionMatch(n.note.swipeDirection, swipeDir) &&
+          (n.currentLane === checkLane || Math.abs(n.currentLane - checkLane) <= 1) &&
           Math.abs((n.note.time + (n.note.holdDuration || 0.5)) - t) < missWindow(songRef.current?.difficultyLevel ?? 5)
         );
         if (activeHoldWithSwipe) {
@@ -5977,7 +6013,13 @@ export default function Game() {
         let note = { ...n, lane: Math.min(n.lane, LANE_COUNT - 1) };
         const diff = songRef.current?.difficultyLevel ?? 5;
 
-        // ── Mechanic gating by difficulty ──
+        // Sanitize swipeDirection: only 'swipe' notes and 'hold' notes can have a swipeDirection
+        if (note.type !== 'swipe' && note.type !== 'hold') {
+          note.swipeDirection = undefined;
+        }
+        if (note.type === 'swipe' && !note.swipeDirection) {
+          note.swipeDirection = 'up';
+        }
 
         // Swipe notes only at Normal+ (Level 4+)
         if (diff < 4 && note.type === 'swipe') {
