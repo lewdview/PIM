@@ -2891,10 +2891,10 @@ export default function Game() {
       ctx.translate(cxVis, cyVis);
       ctx.scale(bassScale, bassScale);
       ctx.rotate(rotationAngle);
-      ctx.shadowBlur = 8 + midN * 12;
+      ctx.shadowBlur = 12 + midN * 18;
 
-      // Opacity level: low so it acts as background under the notes
-      const opacityVal = 0.20 + highN * 0.12;
+      // Opacity level: vibrant spiritual geometry overlay beneath the notes
+      const opacityVal = 0.38 + highN * 0.25;
 
       // Cycle shape based on calculatedStage
       const visualizerShape = 
