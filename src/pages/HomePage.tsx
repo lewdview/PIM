@@ -109,7 +109,7 @@ export default function HomePage() {
   const [showSolitaire, setShowSolitaire] = useState(false);
   const {
     dailyCard, hasClaimed, tokenBalance, loadVaultData, setDailyCard, setHasClaimed,
-    setCollection, startReveal, addToCollection, echoPrestigeScore, collection, setOptionsModalOpen
+    setCollection, startReveal, addToCollection, removeFromCollection, echoPrestigeScore, collection, setOptionsModalOpen
   } = useVaultStore();
   const user = useAuthStore(s => s.user);
   const [isClaimingAnimation, setIsClaimingAnimation] = useState(false);

@@ -543,7 +543,11 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
     if (firstUnlockCard && firstUnlockCard.card.audioUrl) {
       const audio = new Audio(firstUnlockCard.card.audioUrl);
       audio.volume = 0.55;
-      audio.play().catch(e => console.warn("Audio snippet play failed:", e));
+      audio.play().catch(e => {
+        if (e.name !== 'AbortError') {
+          console.warn("Audio snippet play failed:", e);
+        }
+      });
       unlockAudioRef.current = audio;
     } else {
       if (unlockAudioRef.current) {
