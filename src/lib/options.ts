@@ -54,9 +54,12 @@ export interface GameTrack {
 }
 
 export const GAME_TRACKS: GameTrack[] = [
-  { id: 'classic', name: 'Classic Track', desc: 'Standard perspective lanes', unlockText: 'Unlocked', unlockScore: 0 },
-  { id: 'sacred_visualizer', name: 'Sacred Visualizer', desc: 'Direct note-lane visualizer overlay', unlockText: 'Unlocked', unlockScore: 0 },
-  { id: 'slideshow', name: 'Slideshow Cutouts', desc: 'Extracted floating slideshow subjects', unlockText: 'Unlocked', unlockScore: 0 },
+  { id: 'classic', name: 'Classic Silver', desc: 'Standard metallic silver gradient highway', unlockText: 'Unlocked', unlockScore: 0 },
+  { id: 'transparent', name: 'Ghost Glass (Transparent)', desc: 'Ultra-clean transparent glass revealing background visuals', unlockText: 'Unlocked', unlockScore: 0 },
+  { id: 'sacred_visualizer', name: 'Sacred Visualizer', desc: 'Realtime 3-band audio frequency spectrum highway', unlockText: 'Unlocked', unlockScore: 0 },
+  { id: 'slideshow', name: 'Slideshow Cutouts', desc: 'Extracted floating subject cutouts & orbital pan', unlockText: 'Unlocked', unlockScore: 0 },
+  { id: 'cyber_matrix', name: 'Cyber Matrix Wireframe', desc: 'Avant-garde green terminal grid & matrix rain code', unlockText: 'Unlocked', unlockScore: 0 },
+  { id: 'neon_hyperdrive', name: 'Hyperdrive Synthwave', desc: 'Neon magenta & cyan grid with animated pulse rails', unlockText: 'Unlocked', unlockScore: 0 },
 ];
 
 export const DEFAULT_OPTS: GameOpts = {

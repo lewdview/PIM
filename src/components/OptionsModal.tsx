@@ -29,7 +29,7 @@ const SAMPLE_PREVIEW_CARD: VaultCard = {
   tags: ["SYNTH", "NEON", "PREVIEW"],
   coverUrl: "/data/covers/day-190.jpg",
   audioUrl: "",
-  description: "A digital hologram synthesized inside the beatstar vault system to preview skins.",
+  description: "A digital hologram synthesized inside the PIM Vault system to preview skins.",
   claimedCount: 42,
   maxSupply: 100,
 };

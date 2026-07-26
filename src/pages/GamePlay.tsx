@@ -448,7 +448,8 @@ function prerenderStaticTrack(
   H: number,
   dpr: number,
   difficultyLevel: number,
-  laneColors: [string, string, string]
+  laneColors: [string, string, string],
+  gameTrack: string = 'classic'
 ): HTMLCanvasElement {
   const off = document.createElement("canvas");
   off.width = W * dpr;
@@ -474,16 +475,39 @@ function prerenderStaticTrack(
   ctx.closePath();
   ctx.clip();
 
-  // Draw distinct lane background colors (uniform silver grey gradient starting black at top)
+  // Draw distinct lane background colors based on selected gameTrack
   for (let i = 0; i < LANE_COUNT; i++) {
     const { x: lx0, w: lw0 } = laneAt(i, 0, W);
     const { x: lx1, w: lw1 } = laneAt(i, 1, W);
     
     const laneGrad = ctx.createLinearGradient(0, 0, 0, hitY);
-    laneGrad.addColorStop(0, "#0a0a0c"); // dark silver top
-    laneGrad.addColorStop(0.35, "#18181c");
-    laneGrad.addColorStop(0.7, "#3b3b42");
-    laneGrad.addColorStop(1, "#5f5f66"); // light silver bottom
+    if (gameTrack === 'transparent') {
+      // Ultra-clean Ghost Glass (Transparent floor showing background visuals)
+      laneGrad.addColorStop(0, "rgba(0, 0, 0, 0.02)");
+      laneGrad.addColorStop(0.5, "rgba(10, 10, 20, 0.05)");
+      laneGrad.addColorStop(1, "rgba(255, 255, 255, 0.08)");
+    } else if (gameTrack === 'cyber_matrix') {
+      // Cyber Matrix Wireframe (Avant-Garde Terminal Green)
+      laneGrad.addColorStop(0, "rgba(0, 12, 5, 0.5)");
+      laneGrad.addColorStop(0.5, "rgba(0, 25, 10, 0.7)");
+      laneGrad.addColorStop(1, "rgba(0, 45, 18, 0.85)");
+    } else if (gameTrack === 'neon_hyperdrive') {
+      // Hyperdrive Synthwave (Neon Purple / Hot Cyan)
+      laneGrad.addColorStop(0, "rgba(18, 2, 30, 0.55)");
+      laneGrad.addColorStop(0.5, "rgba(35, 5, 50, 0.75)");
+      laneGrad.addColorStop(1, "rgba(60, 10, 80, 0.9)");
+    } else if (gameTrack === 'sacred_visualizer' || gameTrack === 'slideshow') {
+      // Dark Overlay Glass for Visualizers
+      laneGrad.addColorStop(0, "rgba(5, 5, 12, 0.3)");
+      laneGrad.addColorStop(0.5, "rgba(12, 12, 25, 0.5)");
+      laneGrad.addColorStop(1, "rgba(20, 20, 38, 0.7)");
+    } else {
+      // Classic Silver Gradient
+      laneGrad.addColorStop(0, "#0a0a0c");
+      laneGrad.addColorStop(0.35, "#18181c");
+      laneGrad.addColorStop(0.7, "#3b3b42");
+      laneGrad.addColorStop(1, "#5f5f66");
+    }
     
     ctx.fillStyle = laneGrad;
     ctx.beginPath();
@@ -496,12 +520,26 @@ function prerenderStaticTrack(
   }
 
   // Subtle perspective horizontal grid lines
-  for (let row = 0; row <= 16; row++) {
-    const ry = (row / 16) * hitY;
+  const gridRows = (gameTrack === 'cyber_matrix' || gameTrack === 'neon_hyperdrive') ? 24 : 16;
+  for (let row = 0; row <= gridRows; row++) {
+    const ry = (row / gridRows) * hitY;
     const rp = ry / hitY;
     const { left, right } = hwAtProgress(rp, W);
-    ctx.strokeStyle = `rgba(255,248,235,${0.01 + rp * 0.025})`;
-    ctx.lineWidth = 1;
+    
+    if (gameTrack === 'cyber_matrix') {
+      ctx.strokeStyle = `rgba(57, 255, 20, ${0.05 + rp * 0.25})`;
+      ctx.lineWidth = 1;
+    } else if (gameTrack === 'neon_hyperdrive') {
+      ctx.strokeStyle = `rgba(0, 229, 255, ${0.05 + rp * 0.28})`;
+      ctx.lineWidth = 1.2;
+    } else if (gameTrack === 'transparent') {
+      ctx.strokeStyle = `rgba(255, 255, 255, ${0.01 + rp * 0.04})`;
+      ctx.lineWidth = 0.8;
+    } else {
+      ctx.strokeStyle = `rgba(255,248,235,${0.01 + rp * 0.025})`;
+      ctx.lineWidth = 1;
+    }
+
     ctx.beginPath();
     ctx.moveTo(left, ry);
     ctx.lineTo(right, ry);
@@ -512,24 +550,80 @@ function prerenderStaticTrack(
   for (let l = 1; l < LANE_COUNT; l++) {
     const topPos = laneAt(l, 0, W);
     const botPos = laneAt(l, 1, W);
-    // Dark groove
-    ctx.strokeStyle = "rgba(0,0,0,0.85)";
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(topPos.x, 0);
-    ctx.lineTo(botPos.x, hitY);
-    ctx.stroke();
-    // Subtle glow line
-    const divGrad = ctx.createLinearGradient(0, 0, 0, hitY);
-    divGrad.addColorStop(0, "rgba(255,255,255,0.0)");
-    divGrad.addColorStop(0.5, "rgba(255,255,255,0.08)");
-    divGrad.addColorStop(1, "rgba(255,255,255,0.14)");
-    ctx.strokeStyle = divGrad;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(topPos.x + 1.5, 0);
-    ctx.lineTo(botPos.x + 1.5, hitY);
-    ctx.stroke();
+
+    if (gameTrack === 'cyber_matrix') {
+      ctx.strokeStyle = "rgba(0, 30, 10, 0.9)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(topPos.x, 0);
+      ctx.lineTo(botPos.x, hitY);
+      ctx.stroke();
+
+      const divGrad = ctx.createLinearGradient(0, 0, 0, hitY);
+      divGrad.addColorStop(0, "rgba(57, 255, 20, 0.1)");
+      divGrad.addColorStop(0.5, "rgba(57, 255, 20, 0.5)");
+      divGrad.addColorStop(1, "rgba(57, 255, 20, 0.85)");
+      ctx.strokeStyle = divGrad;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(topPos.x, 0);
+      ctx.lineTo(botPos.x, hitY);
+      ctx.stroke();
+    } else if (gameTrack === 'neon_hyperdrive') {
+      ctx.strokeStyle = "rgba(20, 0, 30, 0.9)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(topPos.x, 0);
+      ctx.lineTo(botPos.x, hitY);
+      ctx.stroke();
+
+      const divGrad = ctx.createLinearGradient(0, 0, 0, hitY);
+      divGrad.addColorStop(0, "rgba(255, 20, 147, 0.1)");
+      divGrad.addColorStop(0.5, "rgba(255, 20, 147, 0.6)");
+      divGrad.addColorStop(1, "rgba(255, 20, 147, 0.9)");
+      ctx.strokeStyle = divGrad;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(topPos.x, 0);
+      ctx.lineTo(botPos.x, hitY);
+      ctx.stroke();
+    } else if (gameTrack === 'transparent') {
+      ctx.strokeStyle = "rgba(0, 0, 0, 0.4)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(topPos.x, 0);
+      ctx.lineTo(botPos.x, hitY);
+      ctx.stroke();
+
+      const divGrad = ctx.createLinearGradient(0, 0, 0, hitY);
+      divGrad.addColorStop(0, "rgba(255, 255, 255, 0.05)");
+      divGrad.addColorStop(0.7, "rgba(255, 255, 255, 0.25)");
+      divGrad.addColorStop(1, "rgba(255, 255, 255, 0.4)");
+      ctx.strokeStyle = divGrad;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(topPos.x, 0);
+      ctx.lineTo(botPos.x, hitY);
+      ctx.stroke();
+    } else {
+      ctx.strokeStyle = "rgba(0,0,0,0.85)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(topPos.x, 0);
+      ctx.lineTo(botPos.x, hitY);
+      ctx.stroke();
+
+      const divGrad = ctx.createLinearGradient(0, 0, 0, hitY);
+      divGrad.addColorStop(0, "rgba(255,255,255,0.0)");
+      divGrad.addColorStop(0.5, "rgba(255,255,255,0.08)");
+      divGrad.addColorStop(1, "rgba(255,255,255,0.14)");
+      ctx.strokeStyle = divGrad;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(topPos.x + 1.5, 0);
+      ctx.lineTo(botPos.x + 1.5, hitY);
+      ctx.stroke();
+    }
   }
 
   ctx.restore();
@@ -1376,6 +1470,26 @@ export default function Game() {
     return () => {
       active = false;
     };
+  }, [opts.gameTrack]);
+
+  // Regenerate static track offscreen cache when gameTrack style changes
+  useEffect(() => {
+    optsRef.current.gameTrack = opts.gameTrack;
+    if (canvasRef.current) {
+      const c = canvasRef.current;
+      const dpr = window.devicePixelRatio || 1;
+      const W = c.width / dpr;
+      const H = c.height / dpr;
+      const diffLevel = songRef.current?.difficultyLevel ?? 5;
+      offscreenCanvasRef.current = prerenderStaticTrack(
+        W,
+        H,
+        dpr,
+        diffLevel,
+        laneColorsRef.current,
+        opts.gameTrack
+      );
+    }
   }, [opts.gameTrack]);
   // Keep mutable refs current every render so draw/handlers always see latest values
   // without needing to be listed as useCallback dependencies.
@@ -2910,12 +3024,60 @@ export default function Game() {
       ctx.fill();
 
       // Core circle
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-      ctx.globalAlpha = a;
       ctx.fill();
     }
     ctx.restore();
+
+    // Draw Cyber Matrix or Hyperdrive Synthwave dynamic track pulse effects
+    if (optsRef.current.gameTrack === 'cyber_matrix' && !optsRef.current.legacyGraphics) {
+      ctx.save();
+      const hwTopMat = hwAtProgress(0, W);
+      const hwBotMat = hwAtProgress(1, W);
+      ctx.beginPath();
+      ctx.moveTo(hwTopMat.left, 0);
+      ctx.quadraticCurveTo(W/2, -hitY * 0.09, hwTopMat.right, 0);
+      ctx.lineTo(hwBotMat.right, hitY);
+      ctx.lineTo(hwBotMat.left, hitY);
+      ctx.closePath();
+      ctx.clip();
+
+      // Matrix Rain code drops along each lane
+      const matrixChars = "0123456789ABCDEF⚡PIMVAULT";
+      ctx.font = "bold 9px monospace";
+      ctx.fillStyle = "rgba(57, 255, 20, 0.45)";
+      for (let l = 0; l < LANE_COUNT; l++) {
+        const dropSpeed = (l + 1) * 0.18;
+        const progress = ((t * dropSpeed) % 1);
+        const { x, w } = laneAt(l, progress, W);
+        const charY = progress * hitY;
+        const char = matrixChars[Math.floor((t * 20 + l * 7) % matrixChars.length)];
+        ctx.fillText(char, x + w / 2 - 4, charY);
+      }
+      ctx.restore();
+    } else if (optsRef.current.gameTrack === 'neon_hyperdrive' && !optsRef.current.legacyGraphics) {
+      ctx.save();
+      const hwTopHyp = hwAtProgress(0, W);
+      const hwBotHyp = hwAtProgress(1, W);
+      ctx.beginPath();
+      ctx.moveTo(hwTopHyp.left, 0);
+      ctx.quadraticCurveTo(W/2, -hitY * 0.09, hwTopHyp.right, 0);
+      ctx.lineTo(hwBotHyp.right, hitY);
+      ctx.lineTo(hwBotHyp.left, hitY);
+      ctx.closePath();
+      ctx.clip();
+
+      // Hyperdrive synthwave speed pulse beams
+      const beamProgress = (t * 0.8) % 1;
+      const beamY = beamProgress * hitY;
+      const { left, right } = hwAtProgress(beamProgress, W);
+      const beamGrad = ctx.createLinearGradient(0, Math.max(0, beamY - 15), 0, Math.min(hitY, beamY + 15));
+      beamGrad.addColorStop(0, "rgba(0, 229, 255, 0.0)");
+      beamGrad.addColorStop(0.5, "rgba(0, 229, 255, 0.45)");
+      beamGrad.addColorStop(1, "rgba(255, 20, 147, 0.0)");
+      ctx.fillStyle = beamGrad;
+      ctx.fillRect(left, Math.max(0, beamY - 15), right - left, 30);
+      ctx.restore();
+    }
 
     // Glitch/Shake viewport if VOID and high combo / power-up active
     let shakeX = 0;
@@ -3251,7 +3413,7 @@ export default function Game() {
       );
       ctx.fill();
 
-      // ── Inner radial glow (Beatstar style) ──
+      // ── Inner radial glow (PIM style) ──
       if (pressed || !silenced) {
         ctx.save();
         const rg = ctx.createRadialGradient(bx + bw / 2, hitY, 0, bx + bw / 2, hitY, bw * 0.8);
@@ -4456,7 +4618,7 @@ export default function Game() {
       if (swipeDir) {
         // For keyboard swipes, we apply it to the currently pressed lane
         // or all lanes if no lane key is held? 
-        // Beatstar usually has swipes on specific lanes.
+        // PIM rhythm engine usually has swipes on specific lanes.
         // We'll look for a swipe note in any lane at this time.
         const t = getT();
         const cand = notesRef.current.find(n =>
@@ -5377,7 +5539,8 @@ export default function Game() {
           H,
           dpr,
           diffLevel,
-          laneColorsRef.current
+          laneColorsRef.current,
+          optsRef.current.gameTrack
         );
       }
     };
@@ -5579,7 +5742,8 @@ export default function Game() {
           H,
           dpr,
           songRef.current.difficultyLevel,
-          laneColorsRef.current
+          laneColorsRef.current,
+          optsRef.current.gameTrack
         );
       }
       // Apply difficulty override set by SongDetail page
@@ -5691,7 +5855,8 @@ export default function Game() {
                   H,
                   dpr,
                   songRef.current.difficultyLevel,
-                  laneColorsRef.current
+                  laneColorsRef.current,
+                  optsRef.current.gameTrack
                 );
               }
             } catch (err) {
@@ -6244,7 +6409,8 @@ export default function Game() {
               w.clientHeight,
               dpr,
               diffLevel,
-              laneColorsRef.current
+              laneColorsRef.current,
+              optsRef.current.gameTrack
             );
           }
         }
@@ -7210,7 +7376,7 @@ export default function Game() {
           className="relative flex-1 min-h-0 overflow-hidden"
           style={{ touchAction: 'none' }}
         >
-          {/* Circular Score Dial & Combo Overlays (Beatstar Style) */}
+          {/* Circular Score Dial & Combo Overlays (PIM Style) */}
           {(() => {
             // Calculate active combo multiplier matching the game settings
             const c = gs.combo;
@@ -7758,7 +7924,8 @@ export default function Game() {
                         w.clientHeight,
                         dpr,
                         diffLevel,
-                        laneColorsRef.current
+                        laneColorsRef.current,
+                        optsRef.current.gameTrack
                       );
                     }
                   }
