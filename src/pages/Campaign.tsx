@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { loadCatalog } from "@/game/api";
 import type { GameSong } from "@/game/api";
+import { getMonthNumFromDay } from "@/utils/dayCalc";
 import {
   getTotalScore, getTotalPlatinums, getTotalCleared,
   getChapterPlatinums, getChapterCleared,
