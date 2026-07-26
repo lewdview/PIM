@@ -18,11 +18,10 @@ export default function PaymentSelectModal({
   price,
   accent,
 }: PaymentSelectModalProps) {
-  if (!isOpen) return null;
-
   return (
-    <AnimatePresence>
-      <motion.div
+    <AnimatePresence font-sans>
+      {isOpen && (
+        <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -176,6 +175,7 @@ export default function PaymentSelectModal({
           </div>
         </motion.div>
       </motion.div>
+      )}
     </AnimatePresence>
   );
 }
