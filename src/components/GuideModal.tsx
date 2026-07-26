@@ -28,13 +28,7 @@ export default function GuideModal({ isOpen, onClose }: Props) {
   return (
     <AnimatePresence font-sans>
       {isOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[9999] flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md select-text"
-          onClick={onClose}
-        >
+        <>
           {/* Print-specific style sheet override */}
           <style>{`
         @media print {
@@ -490,7 +484,9 @@ export default function GuideModal({ isOpen, onClose }: Props) {
             <span className="text-[#39ff14] font-bold">CLICK PRINT BUTTON TO SAVE AS PDF</span>
           </div>
         </motion.div>
-      )}
-    </AnimatePresence>
+      </motion.div>
+    </>
+  )}
+</AnimatePresence>
   );
 }
