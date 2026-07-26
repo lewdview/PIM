@@ -2533,21 +2533,21 @@ export default function Game() {
       ctx.drawImage(offscreenCanvasRef.current, 0, 0, W, H);
     }
 
-    // ── Dynamic Lane Hit Glows Sweep (Flashes on judgment quality: Perfect+, Perfect, Good, Miss) ──
+    // ── Dynamic Lane Hit Glows Sweep (Subtle Ambient Illumination) ──
     for (let i = 0; i < LANE_COUNT; i++) {
-      const hits = jRef.current.filter(x => x.lane === i && Date.now() - x.ts < 550);
+      const hits = jRef.current.filter(x => x.lane === i && Date.now() - x.ts < 500);
       if (hits.length > 0) {
         const latest = hits.sort((a, b) => b.ts - a.ts)[0];
-        const age = (Date.now() - latest.ts) / 550;
-        const opacity = (1 - age) * 0.75; // high intensity decay opacity
+        const age = (Date.now() - latest.ts) / 500;
+        const opacity = (1 - age); // smooth decay factor (0 to 1)
         
-        let color = "rgba(57, 255, 20, 0.75)"; // Perfect+ emerald green
+        let baseColor = "#39FF14"; // Perfect+ emerald green
         if (latest.type === "PERFECT") {
-          color = "rgba(255, 215, 0, 0.75)"; // Perfect gold/yellow
+          baseColor = "#FFD700"; // Perfect gold/yellow
         } else if (latest.type === "GOOD") {
-          color = "rgba(0, 229, 255, 0.75)"; // Good blue
+          baseColor = "#00E5FF"; // Good blue
         } else if (latest.type === "MISS") {
-          color = "rgba(255, 20, 147, 0.65)"; // Miss magenta
+          baseColor = "#FF1493"; // Miss magenta
         }
 
         const { x: lx0, w: lw0 } = laneAt(i, 0, W);
@@ -2556,9 +2556,9 @@ export default function Game() {
         ctx.save();
         const glowGrad = ctx.createLinearGradient(0, 0, 0, hitY);
         glowGrad.addColorStop(0, "transparent");
-        glowGrad.addColorStop(0.4, color.replace("0.4", (0.12 * opacity).toString()).replace("0.25", (0.12 * opacity).toString()));
-        glowGrad.addColorStop(0.8, color.replace("0.4", (opacity).toString()).replace("0.25", (opacity).toString()));
-        glowGrad.addColorStop(1, color.replace("0.4", (opacity * 0.5).toString()).replace("0.25", (opacity * 0.5).toString()));
+        glowGrad.addColorStop(0.4, colorWithAlpha(baseColor, 0.03 * opacity));
+        glowGrad.addColorStop(0.85, colorWithAlpha(baseColor, 0.22 * opacity));
+        glowGrad.addColorStop(1, colorWithAlpha(baseColor, 0.12 * opacity));
 
         ctx.fillStyle = glowGrad;
         ctx.beginPath();
@@ -4656,7 +4656,10 @@ export default function Game() {
       const pausePressed = (gp.buttons[9]?.pressed) || (gp.buttons[8]?.pressed);
       if (pausePressed && !prevGamepadPausePressedRef.current) {
         if (phase === 'playing') {
-          if (paused) {
+          const isModalOpen = useVaultStore.getState().optionsModalOpen;
+          if (isModalOpen) {
+            useVaultStore.getState().setOptionsModalOpen(false);
+          } else if (paused) {
             doResumeRef.current?.();
           } else {
             doPauseRef.current?.();
@@ -6439,6 +6442,11 @@ export default function Game() {
       const p = phaseRef.current;
       if (p === 'playing') {
         if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') {
+          const isModalOpen = useVaultStore.getState().optionsModalOpen;
+          if (isModalOpen) {
+            useVaultStore.getState().setOptionsModalOpen(false);
+            return;
+          }
           if (pausedRef.current) doResume();
           else doPause();
         }
