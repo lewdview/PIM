@@ -247,7 +247,8 @@ export default function Navbar() {
               onClick={() => { setGuideOpen(true); haptics.lightTap(); }}
               className="p-2 rounded-full transition-all hover:bg-white/10 active:scale-90 ml-1"
               style={{ color: 'var(--color-text-primary)' }}
-              title="Vault Guide & Rules"
+              title="PIM Instruction Booklet & Operating Manual"
+              aria-label="PIM Instruction Booklet & Operating Manual"
             >
               <BookOpen size={16} />
             </button>
@@ -568,7 +569,7 @@ export default function Navbar() {
                     letterSpacing: '-0.5px',
                     textTransform: 'uppercase',
                   }}>
-                    Vault Guide
+                    Instruction Booklet
                   </span>
                 </button>
               </div>
