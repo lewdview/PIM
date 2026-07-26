@@ -341,8 +341,6 @@ export default function FloatingTicker() {
     return () => clearInterval(cycleInterval);
   }, []);
 
-  if (visibleItems.length === 0) return null;
-
   return (
     <div 
       className="hidden md:flex flex-col gap-2.5 fixed pointer-events-none z-[45]"

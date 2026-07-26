@@ -16,11 +16,9 @@ export default function GlobalPlayerBar() {
   const isMobile = useIsMobile();
   const { currentTrack, isPlaying, progress, currentTime, duration, toggle, stop, seek } = useGlobalPlayer();
 
-  if (!currentTrack) return null;
-
-  const rc = RARITY_CONFIG[currentTrack.rarity as keyof typeof RARITY_CONFIG];
+  const rc = currentTrack ? (RARITY_CONFIG[currentTrack.rarity as keyof typeof RARITY_CONFIG] || RARITY_CONFIG.common) : RARITY_CONFIG.common;
   const accent = rc?.color || '#ff3800';
-  const limit = currentTrack.maxDuration || 0;
+  const limit = currentTrack?.maxDuration || 0;
   const effectiveDuration = limit > 0 ? limit : duration;
   const isPreview = limit > 0;
 
@@ -43,8 +41,9 @@ export default function GlobalPlayerBar() {
   const bottomSpacing = isMobile ? (hideNavbar ? '0px' : '62px') : '0px';
 
   return (
-    <AnimatePresence>
-      <motion.div
+    <AnimatePresence font-sans>
+      {currentTrack && (
+        <motion.div
         initial={{ y: 80, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 80, opacity: 0 }}
@@ -246,6 +245,7 @@ export default function GlobalPlayerBar() {
           </button>
         </div>
       </motion.div>
+      )}
     </AnimatePresence>
   );
 }
