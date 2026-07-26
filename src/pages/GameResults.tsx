@@ -806,6 +806,7 @@ export default function Results() {
                     <div className="font-mono font-bold text-sm text-[#FF1493]">{s.value}</div>
                     <div className="font-mono text-[8px] text-zinc-500 mt-0.5">{s.label}</div>
                   </div>
+                ))}
               </div>
 
               {/* Lane Accuracy Heatmap */}
