@@ -343,26 +343,56 @@ function getDifficultyLaneColor(baseColor: string, _diffLevel: number, laneIndex
   return baseColor;
 }
 
+function hslToHex(h: number, s: number, l: number): string {
+  l /= 100;
+  const a = (s * Math.min(l, 1 - l)) / 100;
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    return Math.round(255 * color)
+      .toString(16)
+      .padStart(2, "0");
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+
 function colorWithAlpha(color: string, alpha: number): string {
-  if (color.startsWith('#')) {
-    const r = parseInt(color.slice(1, 3), 16);
-    const g = parseInt(color.slice(3, 5), 16);
-    const b = parseInt(color.slice(5, 7), 16);
-    return `rgba(${r},${g},${b},${alpha})`;
-  }
-  if (color.startsWith('hsl')) {
-    if (color.startsWith('hsla')) {
-      return color.replace(/[^,]+(?=\s*\)$)/, ` ${alpha}`);
+  if (!color || typeof color !== 'string') return `rgba(255, 255, 255, ${alpha})`;
+  const trimmed = color.trim();
+  if (trimmed.startsWith('#')) {
+    const hex = trimmed.slice(1);
+    if (hex.length === 3) {
+      const r = parseInt(hex[0] + hex[0], 16);
+      const g = parseInt(hex[1] + hex[1], 16);
+      const b = parseInt(hex[2] + hex[2], 16);
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     }
-    return color.replace('hsl', 'hsla').replace(')', `, ${alpha})`);
+    const r = parseInt(hex.slice(0, 2), 16) || 0;
+    const g = parseInt(hex.slice(2, 4), 16) || 0;
+    const b = parseInt(hex.slice(4, 6), 16) || 0;
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
   }
-  if (color.startsWith('rgb')) {
-    if (color.startsWith('rgba')) {
-      return color.replace(/[^,]+(?=\s*\)$)/, ` ${alpha}`);
+  if (trimmed.startsWith('hsl')) {
+    const match = trimmed.match(/hsl\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%\s*\)/);
+    if (match) {
+      return `hsla(${match[1]}, ${match[2]}%, ${match[3]}%, ${alpha})`;
     }
-    return color.replace('rgb', 'rgba').replace(')', `, ${alpha})`);
+    const matchHsla = trimmed.match(/hsla\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%\s*,\s*[\d.]+\s*\)/);
+    if (matchHsla) {
+      return `hsla(${matchHsla[1]}, ${matchHsla[2]}%, ${matchHsla[3]}%, ${alpha})`;
+    }
   }
-  return color;
+  if (trimmed.startsWith('rgb')) {
+    const match = trimmed.match(/rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/);
+    if (match) {
+      return `rgba(${match[1]}, ${match[2]}, ${match[3]}, ${alpha})`;
+    }
+    const matchRgba = trimmed.match(/rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*[\d.]+\s*\)/);
+    if (matchRgba) {
+      return `rgba(${matchRgba[1]}, ${matchRgba[2]}, ${matchRgba[3]}, ${alpha})`;
+    }
+  }
+  return trimmed;
 }
 
 // Perspective highway geometry
@@ -5626,7 +5656,7 @@ export default function Game() {
                 const finalH = Math.round(h * 360);
                 const finalS = 95; // Vibrant neon saturation
                 const finalL = 52; // Excellent screen legibility
-                return `hsl(${finalH}, ${finalS}%, ${finalL}%)`;
+                return hslToHex(finalH, finalS, finalL);
               };
               
               const extColors: [string, string, string] = [
