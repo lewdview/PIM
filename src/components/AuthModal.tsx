@@ -16,7 +16,6 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const [loading, setLoading] = useState(false);
   const [confirmationSent, setConfirmationSent] = useState(false);
 
-  if (!isOpen) return null;
 
   const handleWalletConnect = async () => {
     setLocalError(null);
@@ -69,8 +68,9 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   };
 
   return (
-    <AnimatePresence>
-      <motion.div
+    <AnimatePresence font-sans>
+      {isOpen && (
+        <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -328,7 +328,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
             </div>
           </div>
         </motion.div>
-      </motion.div>
+      )}
     </AnimatePresence>
   );
 }

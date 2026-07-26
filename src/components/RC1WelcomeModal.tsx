@@ -32,11 +32,10 @@ export default function RC1WelcomeModal() {
     setShowAuthModal(true);
   };
 
-  if (!visible) return null;
-
   return (
-    <AnimatePresence>
-      <motion.div
+    <AnimatePresence font-sans>
+      {visible && (
+        <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -369,10 +368,9 @@ export default function RC1WelcomeModal() {
               textTransform: 'uppercase',
             }}>
               Public beta • RC2 test build • No real-money transactions
-            </p>
           </div>
         </motion.div>
-      </motion.div>
+      )}
     </AnimatePresence>
   );
 }
