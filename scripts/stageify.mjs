@@ -34,11 +34,11 @@ const STAGE_META = [
  * These are the TIGHTEST spacing (at end of stage). At stage start, spacing is 1.5x wider.
  */
 const STAGE_MIN_SPACING = [
-  0.85,  // Stage 1: generous spacing
-  0.45,  // Stage 2: moderate
-  0.22,  // Stage 3: tight
-  0.15,  // Stage 4: dense
-  0.08,  // Stage 5: very dense
+  1.0,   // Stage 1: Very Easy — generous, comfortable entry pacing
+  0.55,  // Stage 2: Easy/Medium — smooth transition
+  0.30,  // Stage 3: Hard — balanced rhythmic pulse
+  0.18,  // Stage 4: Brutal — dense syncopated patterns
+  0.10,  // Stage 5: FINAL STAGE — expert climax
 ];
 
 /**
@@ -47,7 +47,7 @@ const STAGE_MIN_SPACING = [
  * At the END of each stage, min spacing uses the base value (tighter).
  * Linear interpolation between them based on progress through the stage.
  */
-const DENSITY_RAMP_FACTOR = 1.5;
+const DENSITY_RAMP_FACTOR = 1.4;
 
 /**
  * Transition gap duration in beats (BPM-relative).
@@ -65,8 +65,8 @@ const STAGE_ALLOWED_TYPES = {
   1: new Set(['tap']),
   2: new Set(['tap', 'hold']),
   3: new Set(['tap', 'hold', 'swipe', 'accent']),
-  4: new Set(['tap', 'hold', 'swipe', 'accent', 'remix', 'break', 'lift', 'mine']),
-  5: new Set(['tap', 'hold', 'swipe', 'accent', 'remix', 'break', 'lift', 'mine']),
+  4: new Set(['tap', 'hold', 'swipe', 'accent', 'remix', 'break', 'lift', 'mine', 'zigzag', 'burst']),
+  5: new Set(['tap', 'hold', 'swipe', 'accent', 'remix', 'break', 'lift', 'mine', 'zigzag', 'burst']),
 };
 
 /**

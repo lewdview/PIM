@@ -70,6 +70,15 @@ function calcDifficulty(bpm: number, valence: number, noteCount: number, duratio
   return Math.max(1, Math.min(10, Math.round(raw)));
 }
 
+/** Config toggle for static vs runtime stage partitioning (Item 14) */
+export const STAGEIFICATION_CONFIG = {
+  USE_RUNTIME_STAGEIFICATION: false, // Default: preserve pre-baked static JSON stage definitions
+  STAGE_DENSITY_MULTIPLIER: 1.0,
+};
+
+// Fallback synthetic audio loop for missing song files (Item 9)
+const FALLBACK_SYNTH_AUDIO = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
+
 // Helper to resolve URLs dynamically
 function resolveSongUrls(song: any, useLocal = false): GameSong {
   const dayStr = String(song.day);
@@ -94,10 +103,14 @@ function resolveSongUrls(song: any, useLocal = false): GameSong {
     if (mapped) {
       if (mapped.audio) {
         audioUrl = SUPABASE_BASE + encodeURIComponent(mapped.audio).replace(/%2F/g, '/');
+      } else {
+        audioUrl = FALLBACK_SYNTH_AUDIO;
       }
       if (mapped.cover) {
         coverArt = SUPABASE_BASE + encodeURIComponent(mapped.cover).replace(/%2F/g, '/');
       }
+    } else {
+      audioUrl = audioUrl || FALLBACK_SYNTH_AUDIO;
     }
   }
 

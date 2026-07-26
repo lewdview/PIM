@@ -112,6 +112,72 @@ export default function HomePage() {
     setCollection, startReveal, addToCollection, removeFromCollection, echoPrestigeScore, collection, setOptionsModalOpen
   } = useVaultStore();
   const user = useAuthStore(s => s.user);
+  const [selectedCardForAction, setSelectedCardForAction] = useState<OwnedCard | null>(null);
+
+  // ===== LIVING VAULT PARALLAX (Desktop Mouse + Mobile Gyroscope) =====
+  const [parallax, setParallax] = useState({ x: 0, y: 0 });
+  const [audioForgeOnline, setAudioForgeOnline] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+    if (isTouchDevice && typeof DeviceOrientationEvent !== 'undefined') {
+      // Mobile: gyroscope-based parallax via DeviceOrientationEvent
+      const handleOrientation = (e: DeviceOrientationEvent) => {
+        const gamma = e.gamma ?? 0; // Left-right tilt (-90 to 90)
+        const beta  = e.beta  ?? 0; // Front-back tilt (-180 to 180)
+        // Clamp to ±30° and normalize to -1..1
+        const nx = Math.max(-1, Math.min(1, gamma / 30));
+        const ny = Math.max(-1, Math.min(1, (beta - 45) / 30)); // 45° is natural phone holding angle
+        setParallax(prev => ({
+          x: prev.x + (nx * 8 - prev.x) * 0.12, // Smooth interpolation
+          y: prev.y + (ny * 8 - prev.y) * 0.12,
+        }));
+      };
+
+      // iOS 13+ requires explicit permission request
+      const requestPermission = async () => {
+        if (typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
+          try {
+            const perm = await (DeviceOrientationEvent as any).requestPermission();
+            if (perm === 'granted') {
+              window.addEventListener('deviceorientation', handleOrientation, { passive: true });
+            }
+          } catch { /* permission denied — silently degrade */ }
+        } else {
+          window.addEventListener('deviceorientation', handleOrientation, { passive: true });
+        }
+      };
+      requestPermission();
+      return () => window.removeEventListener('deviceorientation', handleOrientation);
+    } else {
+      // Desktop: mouse-tracking parallax
+      const handleMouseMove = (e: MouseEvent) => {
+        const cx = window.innerWidth / 2;
+        const cy = window.innerHeight / 2;
+        const dx = (e.clientX - cx) / cx;
+        const dy = (e.clientY - cy) / cy;
+        setParallax({ x: dx * 8, y: dy * 8 });
+      };
+      window.addEventListener('mousemove', handleMouseMove, { passive: true });
+      return () => window.removeEventListener('mousemove', handleMouseMove);
+    }
+  }, []);
+
+  // ===== AUDIO FORGE DAEMON HEALTH CHECK (ITEM 8) — DEV ONLY =====
+  useEffect(() => {
+    if (!import.meta.env.DEV) return; // Skip in production — localhost:8000 will never resolve
+    let active = true;
+    fetch('http://localhost:8000/health', { method: 'GET', mode: 'cors' })
+      .then(res => {
+        if (active) setAudioForgeOnline(res.ok);
+      })
+      .catch(() => {
+        if (active) setAudioForgeOnline(false); // Graceful fallback, no crash
+      });
+    return () => { active = false; };
+  }, []);
+
   const [isClaimingAnimation, setIsClaimingAnimation] = useState(false);
   const [isPurchasing, setIsPurchasing] = useState(false);
   const [checkoutInfo, setCheckoutInfo] = useState<{ category: PackCategory; size: PackSize; label: string; price: string; priceValue: number; accent: string } | null>(null);
@@ -411,14 +477,33 @@ export default function HomePage() {
 
             {/* LEFT: Hero card */}
             <div>
-              <SectionLabel label="Today's Drop" accent="var(--color-neon-gold)" />
+              <div className="flex justify-between items-center mb-1">
+                <SectionLabel label="Today's Drop" accent="var(--color-neon-gold)" />
+                {audioForgeOnline !== null && (
+                  <div className="font-mono text-[9px] px-2 py-0.5 border rounded flex items-center gap-1.5"
+                       style={{
+                         borderColor: audioForgeOnline ? '#00F5D440' : '#FF380040',
+                         color: audioForgeOnline ? '#00F5D4' : '#a1a1aa',
+                         background: audioForgeOnline ? 'rgba(0,245,212,0.05)' : 'rgba(255,56,0,0.05)'
+                       }}>
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: audioForgeOnline ? '#00F5D4' : '#71717a' }} />
+                    {audioForgeOnline ? 'AUDIO FORGE ONLINE' : 'AUDIO FORGE FALLBACK'}
+                  </div>
+                )}
+              </div>
               {dailyCard && (
-                <HeroCard
-                  card={dailyCard}
-                  hasClaimed={hasClaimed}
-                  onClaim={handleClaim}
-                  day={today}
-                />
+                <div style={{
+                  transform: `perspective(1000px) rotateY(${parallax.x}deg) rotateX(${-parallax.y}deg)`,
+                  transition: 'transform 0.15s ease-out',
+                  transformStyle: 'preserve-3d',
+                }}>
+                  <HeroCard
+                    card={dailyCard}
+                    hasClaimed={hasClaimed}
+                    onClaim={handleClaim}
+                    day={today}
+                  />
+                </div>
               )}
             </div>
 

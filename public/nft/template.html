@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PIM : TH3V4ULT — Digital Collectible NFT Visualizer</title>
+  <style>
+    :root {
+      --bg: #030303;
+      --card-border: #00F5D4;
+      --text: #FFFFFF;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Courier New', Courier, monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+    .card-wrapper {
+      position: relative;
+      width: 320px;
+      height: 480px;
+      border: 2px solid var(--card-border);
+      border-radius: 12px;
+      background: linear-gradient(135deg, #09090b, #18181b);
+      box-shadow: 0 0 30px rgba(0, 245, 212, 0.25);
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+      transform-style: preserve-3d;
+      transition: transform 0.1s ease-out;
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+    }
+    .card-title { font-size: 14px; font-weight: bold; color: var(--card-border); }
+    .card-edition { font-size: 10px; color: #a1a1aa; }
+    .canvas-container {
+      flex: 1;
+      position: relative;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #000;
+    }
+    canvas { width: 100%; height: 100%; display: block; }
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 10px;
+      font-size: 10px;
+      color: #71717a;
+    }
+    .badge {
+      background: rgba(0,245,212,0.15);
+      color: #00F5D4;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="card-wrapper" id="card">
+    <div class="card-header">
+      <span class="card-title">PIM CARD #001</span>
+      <span class="card-edition">GEN 0 ARCHIVE</span>
+    </div>
+    <div class="canvas-container">
+      <canvas id="viz"></canvas>
+    </div>
+    <div class="card-footer">
+      <span>PROOF: ON-CHAIN</span>
+      <span class="badge">MYTHIC</span>
+    </div>
+  </div>
+
+  <script>
+    const card = document.getElementById('card');
+    const canvas = document.getElementById('viz');
+    const ctx = canvas.getContext('2d');
+
+    function resize() {
+      canvas.width = canvas.clientWidth;
+      canvas.height = canvas.clientHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // Subtle 3D tilt
+    window.addEventListener('mousemove', (e) => {
+      const rect = card.getBoundingClientRect();
+      const x = (e.clientX - rect.left - rect.width / 2) / (rect.width / 2);
+      const y = (e.clientY - rect.top - rect.height / 2) / (rect.height / 2);
+      card.style.transform = `perspective(800px) rotateY(${x * 15}deg) rotateX(${-y * 15}deg)`;
+    });
+
+    // Particle visualizer loop
+    let t = 0;
+    function render() {
+      t += 0.03;
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      for (let i = 0; i < 24; i++) {
+        const angle = i * (Math.PI / 12) + t;
+        const r = 40 + Math.sin(t * 2 + i) * 15;
+        const x = cx + Math.cos(angle) * r;
+        const y = cy + Math.sin(angle) * r;
+        ctx.beginPath();
+        ctx.arc(x, y, 3, 0, Math.PI * 2);
+        ctx.fillStyle = i % 2 === 0 ? '#00F5D4' : '#FF007F';
+        ctx.shadowColor = '#00F5D4';
+        ctx.shadowBlur = 8;
+        ctx.fill();
+      }
+      requestAnimationFrame(render);
+    }
+    render();
+  </script>
+</body>
+</html>

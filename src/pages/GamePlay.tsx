@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, useCallback } from "react";
 import { useParams, useLocation } from "wouter";
-import { getSongById, saveHighScore, isSongTimeLocked, getModifierForSong } from "@/game/api";
+import { getSongById, saveHighScore, isSongTimeLocked, getModifierForSong, STAGEIFICATION_CONFIG } from "@/game/api";
 import { saveMedal, saveScoreHistory } from "@/game/progress";
 import type { GameSong } from "@/game/api";
 import type { Note, JudgmentDisplay, GameState } from "@/game/types";
@@ -1847,6 +1847,32 @@ export default function Game() {
         remixEffectNameRef.current = fxName.toUpperCase().replace('_', ' ');
         remixFlashUntilRef.current = Date.now() + 5000;
         gs.score += 1000;
+
+        // ── ACTUAL STEM GAIN MODULATION via laneGainsRef crossover bands ──
+        // Lane 0 = lowpass (bass), Lane 1 = bandpass (mids/vocals), Lane 2 = highpass (treble/leads)
+        const ctx = audioCtxRef.current;
+        if (ctx && laneGainsRef.current.length === 3) {
+          const now = ctx.currentTime;
+          const rampIn = 0.15; // smooth ramp-in seconds
+          const stemDuration = 5.0;
+          const stemGains: [number, number, number] = (() => {
+            switch (fxName) {
+              case 'vocals_isolate': return [0.08, 2.4, 0.08]; // solo mids
+              case 'bass_boost':     return [2.8, 0.2, 0.15];  // solo bass
+              case 'drums_mute':     return [0.05, 1.2, 1.2];  // cut bass (drums live in low-end)
+              case 'lead_solo':      return [0.1, 0.15, 2.6];  // solo treble
+              default:               return [1.0, 1.0, 1.0];
+            }
+          })();
+          laneGainsRef.current.forEach((g, i) => {
+            g.gain.cancelScheduledValues(now);
+            g.gain.setValueAtTime(g.gain.value, now);
+            g.gain.linearRampToValueAtTime(stemGains[i], now + rampIn);
+            // Schedule restore back to normal after duration
+            g.gain.setValueAtTime(stemGains[i], now + stemDuration - 0.3);
+            g.gain.linearRampToValueAtTime(getTargetGainForLane(i), now + stemDuration);
+          });
+        }
       } else if (ns.note.type === "break") {
         audioManager.playSfx("diamond", 0.8);
         gs.score += 1200;
@@ -2289,6 +2315,28 @@ export default function Game() {
         saveScoreHistory(songRef.current.id, gs.score);
       }
 
+      // ── Aggregate per-lane accuracy from real telemetry ──
+      const laneTelemetry: Record<number, { hits: number; perfectPlus: number; perfects: number; goods: number; misses: number }> = {};
+      for (let li = 0; li < 3; li++) {
+        laneTelemetry[li] = { hits: 0, perfectPlus: 0, perfects: 0, goods: 0, misses: 0 };
+      }
+      for (const ev of recordedTelemetryRef.current) {
+        const lt = laneTelemetry[ev.lane];
+        if (!lt) continue;
+        lt.hits++;
+        if (ev.judgment === 'PERFECT+') lt.perfectPlus++;
+        else if (ev.judgment === 'PERFECT') lt.perfects++;
+        else if (ev.judgment === 'GOOD') lt.goods++;
+        else lt.misses++;
+      }
+      // Count misses per lane from notes that were missed (not in telemetry)
+      for (const ns of notesRef.current) {
+        if (ns.missed && !ns.hit && ns.note.type !== 'mine' && ns.note.type !== 'ghost') {
+          const lt = laneTelemetry[ns.note.lane];
+          if (lt) { lt.misses++; lt.hits++; }
+        }
+      }
+
       sessionStorage.setItem(
         `result_${songId}`,
         JSON.stringify({
@@ -2302,6 +2350,7 @@ export default function Game() {
           total: gs.perfectPlus + gs.perfects + gs.goods + gs.misses,
           failed,
           continuesUsed,
+          laneTelemetry,
         }),
       );
     } catch (err) {
@@ -2323,7 +2372,7 @@ export default function Game() {
     if (phaseRef.current === "finished") return;
     audioManager.stopSfx("gameover_countdown");
     if (phaseRef.current === "continue") {
-      finishGame(true);
+      finishGame(false);
       return;
     }
     phaseRef.current = "finished";
@@ -2473,7 +2522,7 @@ export default function Game() {
       if (count <= 0) {
         clearInterval(id);
         audioManager.stopSfx("gameover_countdown");
-        finishGame(true);
+        finishGame(false);
       }
     }, 1000);
     return () => {
@@ -4354,6 +4403,25 @@ export default function Game() {
       ctx.textBaseline = "middle";
       ctx.fillText(`⚡ STEM REMIX: ${remixEffectNameRef.current || 'VOCALS ISOLATE'} ⚡`, W / 2, bannerY + 15);
 
+      // ── Canvas Palette Inversion / Color Shift Overlay ──
+      // Applies a pulsing color wash over the entire scene matching the active stem effect
+      const remixTimeLeft = remixFlashUntilRef.current - Date.now();
+      const remixFade = Math.min(1, remixTimeLeft / 1000); // fade out over last second
+      const remixPulse = 0.06 + 0.04 * Math.sin(t * 8);
+      const overlayAlpha = remixPulse * remixFade;
+
+      const effectName = audioManager.activeRemixEffect || 'vocals_isolate';
+      let overlayColor: string;
+      switch (effectName) {
+        case 'vocals_isolate': overlayColor = `rgba(56, 189, 248, ${overlayAlpha})`; break;  // Cyan wash
+        case 'bass_boost':     overlayColor = `rgba(168, 85, 247, ${overlayAlpha})`; break;  // Purple wash
+        case 'drums_mute':     overlayColor = `rgba(34, 197, 94, ${overlayAlpha})`; break;   // Green wash
+        case 'lead_solo':      overlayColor = `rgba(251, 146, 60, ${overlayAlpha})`; break;  // Orange wash
+        default:               overlayColor = `rgba(56, 189, 248, ${overlayAlpha})`;
+      }
+      ctx.fillStyle = overlayColor;
+      ctx.fillRect(0, 0, W, H);
+
       ctx.restore();
     }
         ctx.fillStyle = "rgba(255, 56, 0, 0.35)";
@@ -5380,8 +5448,39 @@ export default function Game() {
       if (ns) {
         completeHoldNote(ns);
       }
+
+      // Check candidate LIFT notes (release on beat timing)
+      const t = getT();
+      const dl = songRef.current?.difficultyLevel ?? 5;
+      const liftCandidate = notesRef.current.find(
+        (n) => n.note.type === "lift" && !n.hit && !n.missed && Math.abs(n.note.time - t) <= goodWindow(dl)
+      );
+      if (liftCandidate) {
+        liftCandidate.hit = true;
+        const diff = Math.abs(liftCandidate.note.time - t);
+        const j = diff <= perfectPlusWindow(dl) ? "PERFECT+" : diff <= perfectWindow(dl) ? "PERFECT" : "GOOD";
+        const gs = gsRef.current;
+        gs.score += calcScore(gs.combo, j);
+        gs.combo++;
+        gs.maxCombo = Math.max(gs.maxCombo, gs.combo);
+        if (j === "PERFECT+") gs.perfectPlus++;
+        else if (j === "PERFECT") gs.perfects++;
+        else gs.goods++;
+        audioManager.playSfx("tap_nav", 0.25);
+        triggerHitFx(liftCandidate.currentLane, j);
+
+        // Track lift note telemetry
+        recordedTelemetryRef.current.push({
+          noteId: liftCandidate.note.id,
+          time: t,
+          judgment: j,
+          offset: t - liftCandidate.note.time,
+          lane: liftCandidate.currentLane,
+          type: 'lift'
+        });
+      }
     },
-    [completeHoldNote],
+    [completeHoldNote, getT, triggerHitFx],
   );
 
   const onTouchEnd = useCallback(
@@ -5598,6 +5697,14 @@ export default function Game() {
                   song.notes = generateProceduralChart(song);
                 }
               }
+            }
+
+            // Runtime stageification toggle: re-partition pre-baked notes through the stage density engine
+            if (STAGEIFICATION_CONFIG.USE_RUNTIME_STAGEIFICATION && genMode === 'auto' && song.notes.length > 0) {
+              console.log(`[GamePlay Init] Runtime stageification enabled — re-partitioning ${song.notes.length} pre-baked notes`);
+              const { notes: restaged } = stageifyNotes(song.notes, song.duration, song.bpm, song.difficultyLevel || 5);
+              song.notes = restaged;
+              console.log(`[GamePlay Init] Restaged to ${song.notes.length} notes`);
             }
           }
         }
@@ -8415,6 +8522,50 @@ function drawKey(
     liftGrad.addColorStop(0.7, "#047857");
     liftGrad.addColorStop(1, "#022C22");
     ctx.fillStyle = liftGrad;
+  } else if (noteType === 'zigzag') {
+    // Snaking Neon Violet Body — Deep Purple to Bright Magenta
+    ctx.shadowColor = "#A855F7";
+    ctx.shadowBlur = lerp(16, 32, prog);
+    ctx.shadowOffsetY = lerp(2, 6, prog);
+    const zigzagGrad = ctx.createLinearGradient(-noteW / 2, 0, noteW / 2, 0);
+    zigzagGrad.addColorStop(0, "#F0ABFC");
+    zigzagGrad.addColorStop(0.3, "#C084FC");
+    zigzagGrad.addColorStop(0.7, "#A855F7");
+    zigzagGrad.addColorStop(1, "#581C87");
+    ctx.fillStyle = zigzagGrad;
+  } else if (noteType === 'burst') {
+    // Expanding Radiant Pulse Body — Vivid Crimson/Orange
+    ctx.shadowColor = "#FF5500";
+    ctx.shadowBlur = lerp(18, 36, prog);
+    ctx.shadowOffsetY = lerp(2, 6, prog);
+    const burstGrad = ctx.createRadialGradient(0, 0, 2, 0, 0, noteW / 2);
+    burstGrad.addColorStop(0, "#FFFBEB");
+    burstGrad.addColorStop(0.4, "#FF5500");
+    burstGrad.addColorStop(0.8, "#DC2626");
+    burstGrad.addColorStop(1, "#7F1D1D");
+    ctx.fillStyle = burstGrad;
+  } else if (noteType === 'ghost') {
+    // 👻 GHOST NOTE: Semi-transparent Flickering Body — DO NOT TAP
+    const ghostFlicker = 0.2 + 0.15 * Math.sin(Date.now() / 80); // Rapid shimmer
+    ctx.globalAlpha = ghostFlicker;
+    ctx.shadowColor = "rgba(148, 163, 184, 0.3)";
+    ctx.shadowBlur = lerp(6, 14, prog);
+    const ghostGrad = ctx.createLinearGradient(0, -noteH / 2, 0, noteH / 2);
+    ghostGrad.addColorStop(0, "rgba(226, 232, 240, 0.4)");
+    ghostGrad.addColorStop(0.5, "rgba(148, 163, 184, 0.3)");
+    ghostGrad.addColorStop(1, "rgba(71, 85, 105, 0.2)");
+    ctx.fillStyle = ghostGrad;
+  } else if (noteType === 'mine') {
+    // 💣 MINE NOTE: Menacing Red Danger Body
+    ctx.shadowColor = "#EF4444";
+    ctx.shadowBlur = lerp(14, 28, prog);
+    ctx.shadowOffsetY = lerp(2, 6, prog);
+    const mineGrad = ctx.createRadialGradient(0, 0, 2, 0, 0, noteW / 2);
+    mineGrad.addColorStop(0, "#FCA5A5");
+    mineGrad.addColorStop(0.3, "#EF4444");
+    mineGrad.addColorStop(0.7, "#B91C1C");
+    mineGrad.addColorStop(1, "#450A0A");
+    ctx.fillStyle = mineGrad;
   } else {
     ctx.shadowColor = "rgba(0,0,0,0.8)";
     ctx.shadowBlur = lerp(4, 16, prog);
@@ -8708,6 +8859,106 @@ function drawKey(
       ctx.lineTo(10, yPos + 4);
       ctx.stroke();
     }
+    ctx.restore();
+
+  } else if (noteType === 'zigzag') {
+    // ⚡ ZIGZAG NOTE: Animated Zigzag Wave Pattern + Label
+    ctx.save();
+    ctx.strokeStyle = '#F0ABFC';
+    ctx.shadowColor = '#A855F7';
+    ctx.shadowBlur = 14;
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    // Animated zigzag wave
+    const zigPhase = (nowMs / 200) % (Math.PI * 2);
+    const zigAmplitude = 5;
+    const zigSegments = 6;
+    const zigWidth = noteW - 16;
+    const segW = zigWidth / zigSegments;
+    ctx.beginPath();
+    for (let s = 0; s <= zigSegments; s++) {
+      const sx = -zigWidth / 2 + s * segW;
+      const sy = (s % 2 === 0 ? -1 : 1) * zigAmplitude * Math.sin(zigPhase + s * 0.5);
+      if (s === 0) ctx.moveTo(sx, sy);
+      else ctx.lineTo(sx, sy);
+    }
+    ctx.stroke();
+
+    // Label pill
+    ctx.fillStyle = 'rgba(88, 28, 135, 0.85)';
+    ctx.beginPath();
+    ctx.roundRect(-18, 6, 36, 14, 7);
+    ctx.fill();
+    ctx.fillStyle = '#F0ABFC';
+    ctx.font = '700 7px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('ZIGZAG', 0, 13);
+    ctx.restore();
+
+  } else if (noteType === 'burst') {
+    // 💥 BURST NOTE: Pulsing Concentric Expanding Rings + Label
+    ctx.save();
+    const burstPulse = 1.0 + 0.25 * Math.sin(nowMs / 80);
+    const ringRadius = Math.max(noteW, noteH) * 0.48;
+
+    // Three concentric pulsing rings
+    for (let ri = 0; ri < 3; ri++) {
+      const rScale = 0.5 + ri * 0.25;
+      const rAlpha = 0.8 - ri * 0.25;
+      ctx.strokeStyle = `rgba(255, 85, 0, ${rAlpha})`;
+      ctx.lineWidth = 2.0 - ri * 0.5;
+      ctx.shadowColor = '#FF5500';
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.arc(0, 0, ringRadius * rScale * burstPulse, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // Label pill
+    ctx.fillStyle = 'rgba(127, 29, 29, 0.85)';
+    ctx.beginPath();
+    ctx.roundRect(-18, -8, 36, 16, 8);
+    ctx.fill();
+    ctx.fillStyle = '#FFFBEB';
+    ctx.shadowColor = '#FF5500';
+    ctx.shadowBlur = 10;
+    ctx.font = '900 8px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('BURST', 0, 0);
+    ctx.restore();
+
+  } else if (noteType === 'mine') {
+    // ☠ MINE NOTE: Skull Danger Badge — DO NOT TAP
+    ctx.save();
+    const minePulse = 1.0 + 0.15 * Math.sin(nowMs / 120);
+
+    // Pulsing danger ring
+    ctx.strokeStyle = 'rgba(239, 68, 68, 0.8)';
+    ctx.lineWidth = 2.5;
+    ctx.shadowColor = '#EF4444';
+    ctx.shadowBlur = 12;
+    ctx.beginPath();
+    ctx.arc(0, 0, (noteW / 2 + 3) * minePulse, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Danger pill
+    ctx.fillStyle = 'rgba(127, 29, 29, 0.9)';
+    ctx.beginPath();
+    ctx.roundRect(-24, -9, 48, 18, 9);
+    ctx.fill();
+    ctx.strokeStyle = '#EF4444';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.fillStyle = '#FCA5A5';
+    ctx.font = '900 8px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('☠ MINE', 0, 0);
     ctx.restore();
   }
 

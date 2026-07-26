@@ -85,9 +85,39 @@ async function main() {
     }
   }
 
+  const mobileOutputDir = path.join(outputDir, 'mobile');
+  fs.mkdirSync(mobileOutputDir, { recursive: true });
+
+  const mobileContext = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    deviceScaleFactor: 2,
+    isMobile: true,
+    hasTouch: true
+  });
+  const mobilePage = await mobileContext.newPage();
+  await mobilePage.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded' });
+  await mobilePage.evaluate(() => {
+    localStorage.setItem('pim_tutorial_completed', 'true');
+    localStorage.setItem('th3vault_dev_mode', 'true');
+    localStorage.setItem('pim_has_onboarded', 'true');
+  });
+
+  for (const item of routes) {
+    console.log(`📱 Capturing MOBILE screenshot for [${item.name}] (${item.url})...`);
+    try {
+      await mobilePage.goto(`${BASE_URL}${item.url}`, { waitUntil: 'networkidle' });
+      await mobilePage.waitForTimeout(1000);
+      const filename = `${item.name}_mobile.png`;
+      await mobilePage.screenshot({ path: path.join(mobileOutputDir, filename) });
+      console.log(`  ✓ Saved Mobile: ${filename}`);
+    } catch (err) {
+      console.error(`  ❌ Failed capturing mobile ${item.name}:`, err.message);
+    }
+  }
+
   await browser.close();
   server.kill();
-  console.log('🎉 Screenshot capture complete!');
+  console.log('🎉 Desktop & Mobile screenshot capture complete!');
 }
 
 main().catch(err => {

@@ -860,7 +860,7 @@ export default function PitchDeck() {
                       <Monitor size={11} className="text-[#00f0ff]" />
                       <span className="font-bold">CLIENT REACT WEBAPP Shell</span>
                     </div>
-                    <span className="opacity-40">beatstar-vault</span>
+                    <span className="opacity-40">pim-vault</span>
                   </div>
 
                   <div className="flex justify-center py-0.5">

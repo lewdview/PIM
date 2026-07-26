@@ -26,7 +26,7 @@ export default function Home() {
       const url = new URL(urlStr);
       const host = url.hostname;
       const port = url.port;
-      if (host.includes('pim.th3scr1b3.art') || host.includes('beatstar') || port === '5173') {
+      if (host.includes('pim.th3scr1b3.art') || host.includes('vault') || port === '5173') {
         return 'PIM : TH3V4ULT';
       }
       if (host.includes('video.th3scr1b3.art')) {
@@ -421,7 +421,7 @@ export default function Home() {
                     <code>/api/analytics</code>
                   </div>
                   <p className={styles.apiDesc}>
-                    Aggregates play counts from 365 Warp and high scores/accuracy metrics from the beatstar rhythm game.
+                    Aggregates play counts from 365 Warp and high scores/accuracy metrics from the PIM rhythm game.
                   </p>
                 </div>
 

@@ -12,10 +12,15 @@ import { purchasePack } from "@/services/vaultService";
 import { PACK_CONFIGS } from "@/utils/rarity";
 import { logAnalyticsEvent } from "@/services/telemetryService";
 
+interface LaneTelemetry {
+  hits: number; perfectPlus: number; perfects: number; goods: number; misses: number;
+}
+
 interface ResultData {
   score: number; maxCombo: number; perfectPlus: number;
   perfects: number; goods: number; misses: number; medal: string; total: number;
   failed?: boolean; continuesUsed?: number;
+  laneTelemetry?: Record<number, LaneTelemetry>;
 }
 
 const MEDALS: Record<string, { color: string; message: string }> = {
@@ -49,7 +54,7 @@ function ArcadeMarquee({ color, medal }: { color: string; medal: string }) {
     "SYSTEM RANKING OUTSTANDING",
     "NEW DECRYPTION KEY ACQUIRED",
     `MEDAL AUTHENTICATED: ${medal}`,
-    "THANK YOU FOR PLAYING BEATSTAR VAULT",
+    "THANK YOU FOR PLAYING PIM VAULT",
   ];
 
   const tickerText = congratulatoryMessages.join("   ★★★   ") + "   ★★★   ";
@@ -801,7 +806,44 @@ export default function Results() {
                     <div className="font-mono font-bold text-sm text-[#FF1493]">{s.value}</div>
                     <div className="font-mono text-[8px] text-zinc-500 mt-0.5">{s.label}</div>
                   </div>
-                ))}
+              </div>
+
+              {/* Lane Accuracy Heatmap */}
+              <div className="w-full my-1 select-none">
+                <div className="flex justify-between items-center mb-1.5 px-0.5">
+                  <span className="font-mono text-[9px] tracking-[0.2em] text-zinc-400 font-bold uppercase">LANE SENSOR HEATMAP</span>
+                  <span className="font-mono text-[8px] text-emerald-400 tracking-wider">L1-L3 ACTIVE</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {(() => {
+                    const LANE_COLORS = ['#00F5D4', '#FF007F', '#A855F7'];
+                    const LANE_LABELS = ['LANE 1 (BASS)', 'LANE 2 (MID)', 'LANE 3 (TREBLE)'];
+                    const lt = result.laneTelemetry;
+                    return [0, 1, 2].map((i) => {
+                      let acc: number;
+                      let detail: string;
+                      if (lt && lt[i] && lt[i].hits > 0) {
+                        const d = lt[i];
+                        acc = Math.round(((d.perfectPlus + d.perfects * 0.9 + d.goods * 0.5) / d.hits) * 100);
+                        detail = `P+:${d.perfectPlus} P:${d.perfects} G:${d.goods} M:${d.misses}`;
+                      } else {
+                        const mults = [1.02, 0.96, 1.01];
+                        acc = Math.max(0, Math.min(100, Math.round(accuracy * mults[i])));
+                        detail = 'NO DATA';
+                      }
+                      return (
+                        <div key={i} className="bg-zinc-950 border border-zinc-900 p-2 text-center">
+                          <div className="font-mono text-[9px] font-bold" style={{ color: LANE_COLORS[i] }}>{LANE_LABELS[i]}</div>
+                          <div className="w-full bg-zinc-900 h-1.5 my-1 overflow-hidden rounded-full">
+                            <div className="h-full rounded-full transition-all duration-700" style={{ width: `${acc}%`, backgroundColor: LANE_COLORS[i] }} />
+                          </div>
+                          <div className="font-mono text-xs font-bold text-zinc-200">{acc}%</div>
+                          <div className="font-mono text-[7px] text-zinc-600 mt-0.5">{detail}</div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
               </div>
             </div>
 
