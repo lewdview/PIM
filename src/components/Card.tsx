@@ -58,6 +58,7 @@ interface CardProps {
   echoGeneration?: number;
   onBurn?: () => void;
   proof?: ProofType;
+  showBackOnly?: boolean;
 }
 
 function PimLogo({ color, cardId }: { color: string; cardId: string }) {
@@ -194,6 +195,7 @@ export default function Card({
   echoGeneration = 0,
   onBurn,
   proof,
+  showBackOnly = false,
 }: CardProps) {
   const [isFaceDown, setIsFaceDown] = useState(!isRevealed);
   const [imgError, setImgError] = useState(false);
@@ -1069,7 +1071,9 @@ export default function Card({
     </motion.div>
   );
 
-  const frontFace = activeCardSkin !== 'original' && !ultraReward
+  const frontFace = showBackOnly
+    ? renderCardBack(card, activeCardBack)
+    : activeCardSkin !== 'original' && !ultraReward
     ? (() => {
         const SkinComponent = getSkinComponent(activeCardSkin);
         return (

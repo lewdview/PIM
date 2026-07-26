@@ -309,13 +309,13 @@ export default function CollectionPage() {
               <div key={`${mainCard.cardId}-${mainCard.card.rarity}`} className="relative group">
                 {/* Visual back stacks */}
                 {count > 2 && (
-                  <div className="absolute inset-0 opacity-30 z-0 pointer-events-none" style={{ transform: 'translate(12px, 12px)' }}>
-                    <Card card={mainCard.card} interactive={false} />
+                  <div className="absolute inset-0 opacity-40 z-0 pointer-events-none" style={{ transform: 'translate(12px, 12px)' }}>
+                    <Card card={mainCard.card} interactive={false} showBackOnly />
                   </div>
                 )}
                 {count > 1 && (
-                  <div className="absolute inset-0 opacity-60 z-10 pointer-events-none" style={{ transform: 'translate(6px, 6px)' }}>
-                    <Card card={mainCard.card} interactive={false} />
+                  <div className="absolute inset-0 opacity-70 z-10 pointer-events-none" style={{ transform: 'translate(6px, 6px)' }}>
+                    <Card card={mainCard.card} interactive={false} showBackOnly />
                   </div>
                 )}
                 
