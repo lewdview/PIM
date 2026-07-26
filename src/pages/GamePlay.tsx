@@ -2207,6 +2207,11 @@ export default function Game() {
 
   const doAbandon = useCallback(() => {
     if (phaseRef.current === "finished") return;
+    audioManager.stopSfx("gameover_countdown");
+    if (phaseRef.current === "continue") {
+      finishGame(true);
+      return;
+    }
     phaseRef.current = "finished";
     cancelAnimationFrame(rafRef.current);
     audioRef.current?.pause();
@@ -2353,10 +2358,14 @@ export default function Game() {
       setContinueCountdown(count);
       if (count <= 0) {
         clearInterval(id);
-        finishGame();
+        audioManager.stopSfx("gameover_countdown");
+        finishGame(true);
       }
     }, 1000);
-    return () => clearInterval(id);
+    return () => {
+      clearInterval(id);
+      audioManager.stopSfx("gameover_countdown");
+    };
   }, [phase, finishGame]);
 
   // ═══════════════════════════════════════════════════════════════
