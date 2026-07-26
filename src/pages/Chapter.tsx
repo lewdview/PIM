@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useLocation } from "wouter";
 import { loadCatalog, isSongTimeLocked, getModifierForSong } from "@/game/api";
+import { getMonthNumFromDay } from "@/utils/dayCalc";
 import type { GameSong } from "@/game/api";
 import { getMedalForSong, getChapterPlatinums, getHighScore, getScoreHistory } from "@/game/progress";
 import { CHAPTERS, calculateCampaignDifficulty } from "@/game/campaign";
@@ -68,7 +69,12 @@ export default function Chapter() {
   useEffect(() => {
     loadCatalog().then(catalog => {
       const filtered = catalog
-        .filter(s => s.date && parseInt(s.date.split('-')[1], 10) === monthNum)
+        .filter(s => {
+          if (s.day !== undefined) return getMonthNumFromDay(s.day) === monthNum;
+          if (!s.date) return false;
+          const parts = s.date.split('-');
+          return parts.length > 1 && parseInt(parts[1], 10) === monthNum;
+        })
         .sort((a, b) => a.day - b.day);
       setSongs(filtered);
       setLoading(false);

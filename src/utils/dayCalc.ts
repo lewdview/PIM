@@ -70,3 +70,18 @@ export function getDayFromDate(dateInput: Date | string): number {
   return Math.max(1, Math.min(365, day));
 }
 
+export function getMonthNumFromDay(day: number): number {
+  if (day >= 335) return 12;
+  if (day >= 305) return 11;
+  if (day >= 274) return 10;
+  if (day >= 244) return 9;
+  if (day >= 213) return 8;
+  if (day >= 182) return 7;
+  if (day >= 152) return 6;
+  if (day >= 121) return 5;
+  if (day >= 91)  return 4;
+  if (day >= 60)  return 3;
+  if (day >= 32)  return 2;
+  return 1;
+}
+

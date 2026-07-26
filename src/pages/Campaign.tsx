@@ -129,6 +129,7 @@ export default function Campaign() {
       // 1. Calculate raw metadata stats for all chapters
       const data = CHAPTERS.map((meta, idx) => {
         const songs = catalog.filter(s => {
+          if (s.day !== undefined) return getMonthNumFromDay(s.day) === meta.month;
           if (!s.date) return false;
           const parts = s.date.split('-');
           return parts.length > 1 && parseInt(parts[1], 10) === meta.month;
