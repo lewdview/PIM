@@ -234,6 +234,76 @@ export default function Chapter() {
     return { x: xMap[localIdx], y: yMap[localIdx] };
   };
 
+  const handlePlayRef = useRef<() => void>(() => {});
+
+  // Controller / Gamepad Start button & Stick navigation for Campaign Mission selection
+  useEffect(() => {
+    let animFrame: number;
+    let prevStartPressed = false;
+    let prevAPressed = false;
+    let prevLeftPressed = false;
+    let prevRightPressed = false;
+    let prevUpPressed = false;
+    let prevDownPressed = false;
+
+    const pollGamepad = () => {
+      const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+      const gp = Array.from(gamepads).find(g => g !== null);
+      if (gp) {
+        // Start button is index 9, A/Cross button is index 0
+        const startPressed = gp.buttons[9]?.pressed || false;
+        const aPressed = gp.buttons[0]?.pressed || false;
+        const leftPressed = gp.buttons[14]?.pressed || (gp.axes[0] !== undefined && gp.axes[0] < -0.5);
+        const rightPressed = gp.buttons[15]?.pressed || (gp.axes[0] !== undefined && gp.axes[0] > 0.5);
+        const upPressed = gp.buttons[12]?.pressed || (gp.axes[1] !== undefined && gp.axes[1] < -0.5);
+        const downPressed = gp.buttons[13]?.pressed || (gp.axes[1] !== undefined && gp.axes[1] > 0.5);
+
+        if ((startPressed && !prevStartPressed) || (aPressed && !prevAPressed)) {
+          handlePlayRef.current();
+        }
+
+        if (songs.length > 0) {
+          if ((leftPressed && !prevLeftPressed) || (upPressed && !prevUpPressed)) {
+            setSelectedIdx(prev => Math.max(0, prev - 1));
+            audioManager.playSfx('tap_nav', 0.15);
+          }
+          if ((rightPressed && !prevRightPressed) || (downPressed && !prevDownPressed)) {
+            setSelectedIdx(prev => Math.min(songs.length - 1, prev + 1));
+            audioManager.playSfx('tap_nav', 0.15);
+          }
+        }
+
+        prevStartPressed = startPressed;
+        prevAPressed = aPressed;
+        prevLeftPressed = !!leftPressed;
+        prevRightPressed = !!rightPressed;
+        prevUpPressed = !!upPressed;
+        prevDownPressed = !!downPressed;
+      }
+      animFrame = requestAnimationFrame(pollGamepad);
+    };
+
+    animFrame = requestAnimationFrame(pollGamepad);
+    return () => cancelAnimationFrame(animFrame);
+  }, [songs.length]);
+
+  // Keyboard Enter/Space launch & Arrow navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === 'Enter' || e.key === ' ') {
+        handlePlayRef.current();
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        setSelectedIdx(prev => Math.max(0, prev - 1));
+        audioManager.playSfx('tap_nav', 0.15);
+      } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        setSelectedIdx(prev => Math.min(songs.length - 1, prev + 1));
+        audioManager.playSfx('tap_nav', 0.15);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [songs.length]);
 
   if (loading) {
     return (
@@ -362,80 +432,9 @@ export default function Chapter() {
       sessionStorage.removeItem(`active_modifier_type_${selectedSong.id}`);
     }
 
+    handlePlayRef.current = handlePlay;
     setLocation(`/play/${selectedSong.id}`);
   };
-
-  const handlePlayRef = useRef(handlePlay);
-  useEffect(() => { handlePlayRef.current = handlePlay; }, [handlePlay]);
-
-  // Controller / Gamepad Start button & Stick navigation for Campaign Mission selection
-  useEffect(() => {
-    let animFrame: number;
-    let prevStartPressed = false;
-    let prevAPressed = false;
-    let prevLeftPressed = false;
-    let prevRightPressed = false;
-    let prevUpPressed = false;
-    let prevDownPressed = false;
-
-    const pollGamepad = () => {
-      const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
-      const gp = Array.from(gamepads).find(g => g !== null);
-      if (gp) {
-        // Start button is index 9, A/Cross button is index 0
-        const startPressed = gp.buttons[9]?.pressed || false;
-        const aPressed = gp.buttons[0]?.pressed || false;
-        const leftPressed = gp.buttons[14]?.pressed || (gp.axes[0] !== undefined && gp.axes[0] < -0.5);
-        const rightPressed = gp.buttons[15]?.pressed || (gp.axes[0] !== undefined && gp.axes[0] > 0.5);
-        const upPressed = gp.buttons[12]?.pressed || (gp.axes[1] !== undefined && gp.axes[1] < -0.5);
-        const downPressed = gp.buttons[13]?.pressed || (gp.axes[1] !== undefined && gp.axes[1] > 0.5);
-
-        if ((startPressed && !prevStartPressed) || (aPressed && !prevAPressed)) {
-          handlePlayRef.current();
-        }
-
-        if (songs.length > 0) {
-          if ((leftPressed && !prevLeftPressed) || (upPressed && !prevUpPressed)) {
-            setSelectedIdx(prev => Math.max(0, prev - 1));
-            audioManager.playSfx('tap_nav', 0.15);
-          }
-          if ((rightPressed && !prevRightPressed) || (downPressed && !prevDownPressed)) {
-            setSelectedIdx(prev => Math.min(songs.length - 1, prev + 1));
-            audioManager.playSfx('tap_nav', 0.15);
-          }
-        }
-
-        prevStartPressed = startPressed;
-        prevAPressed = aPressed;
-        prevLeftPressed = !!leftPressed;
-        prevRightPressed = !!rightPressed;
-        prevUpPressed = !!upPressed;
-        prevDownPressed = !!downPressed;
-      }
-      animFrame = requestAnimationFrame(pollGamepad);
-    };
-
-    animFrame = requestAnimationFrame(pollGamepad);
-    return () => cancelAnimationFrame(animFrame);
-  }, [songs.length]);
-
-  // Keyboard Enter/Space launch & Arrow navigation
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      if (e.key === 'Enter' || e.key === ' ') {
-        handlePlayRef.current();
-      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-        setSelectedIdx(prev => Math.max(0, prev - 1));
-        audioManager.playSfx('tap_nav', 0.15);
-      } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-        setSelectedIdx(prev => Math.min(songs.length - 1, prev + 1));
-        audioManager.playSfx('tap_nav', 0.15);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [songs.length]);
 
   // Claim milestones rewards function
   const claimReward = async (milestoneNum: number) => {
