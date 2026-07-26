@@ -1,13 +1,27 @@
 import { useLocation } from "wouter";
-import { useState, useEffect, useMemo } from "react";
-import { loadCatalog, getHighScore, isSongTimeLocked } from "@/game/api";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { loadCatalog, isSongTimeLocked, getModifierForSong } from "@/game/api";
 import type { GameSong } from "@/game/api";
 import { audioManager } from "@/game/audio";
 import { getActiveTheme } from "@/lib/options";
 import { useVaultStore } from "../store/useVaultStore";
-import { getCurrentDay } from "../utils/dayCalc";
+import { getCurrentDay, getMonthNumFromDay } from "../utils/dayCalc";
+import { CHAPTERS, type ChapterMeta } from "@/game/campaign";
+import { getMedalForSong, getHighScore, getScoreHistory } from "@/game/progress";
+import PrizeProgressMenu from "../components/PrizeProgressMenu";
+import { Lock, Unlock, Play, Sliders, Music, Volume2, VolumeX, Activity, Award, Trophy, ChevronRight } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 const LANE_COLORS = ['#FF1493', '#39FF14', '#E5B800', '#8B48E5'];
+const MEDAL_COLOR: Record<string, string> = {
+  PLATINUM: '#39FF14', GOLD: '#E5B800', SILVER: '#A0AABB', BRONZE: '#C97A3A', NONE: '#444', '': '#1a1a1a',
+};
+const DIFF_COLORS = [
+  '#39FF14','#39FF14','#39FF14',
+  '#00E5FF','#00E5FF','#00E5FF',
+  '#E5B800','#E5B800','#E5B800',
+  '#FF1493',
+];
 
 function DiffBars({ level }: { level: number }) {
   return (
@@ -19,8 +33,8 @@ function DiffBars({ level }: { level: number }) {
           style={{
             width: 4,
             height: `${30 + i * 7}%`,
-            background: i < level ? LANE_COLORS[Math.min(i, 3)] : 'rgba(255,255,255,0.07)',
-            boxShadow: i < level ? `0 0 4px ${LANE_COLORS[Math.min(i, 3)]}40` : 'none',
+            background: i < level ? DIFF_COLORS[Math.min(i, 9)] : 'rgba(255,255,255,0.07)',
+            boxShadow: i < level ? `0 0 4px ${DIFF_COLORS[Math.min(i, 9)]}40` : 'none',
           }}
         />
       ))}
@@ -28,216 +42,31 @@ function DiffBars({ level }: { level: number }) {
   );
 }
 
-function CoverArt({ src, title, mood, unlocked = true }: { src: string | null; title: string; mood: 'light' | 'dark'; unlocked?: boolean }) {
-  const [err, setErr] = useState(false);
-  const moodColor = mood === 'light' ? '#39FF14' : '#FF1493';
-  
-  if (!src || err) {
-    return (
-      <div
-        className="flex-shrink-0 flex items-center justify-center font-mono text-[10px] font-black rounded-lg relative overflow-hidden"
-        style={{
-          width: 56, height: 56,
-          background: 'rgba(255,255,255,0.03)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          color: 'rgba(255,255,255,0.2)',
-        }}
-      >
-        <div className="absolute inset-0 opacity-10" style={{ background: moodColor }} />
-        {title.substring(0, 2).toUpperCase()}
-      </div>
-    );
-  }
+/** Mini audio waveform animation */
+function WaveformBars({ playing }: { playing: boolean }) {
   return (
-    <div className="relative group/cover flex-shrink-0">
-      <img
-        src={src}
-        alt={title}
-        onError={() => setErr(true)}
-        className="object-cover rounded-lg transition-transform duration-500 group-hover/cover:scale-105"
-        style={{ width: 56, height: 56, boxShadow: '0 4px 12px rgba(0,0,0,0.5)', filter: unlocked ? 'none' : 'grayscale(100%) brightness(0.4)' }}
-      />
-      <div className="absolute inset-0 rounded-lg opacity-0 group-hover/cover:opacity-20 transition-opacity duration-300 pointer-events-none"
-        style={{ background: `radial-gradient(circle at center, ${moodColor}, transparent)` }} />
+    <div className="flex items-end gap-px" style={{ height: 16 }}>
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div
+          key={i}
+          className="rounded-sm"
+          style={{
+            width: 3,
+            height: playing ? `${40 + Math.sin(Date.now() / 180 + i * 1.5) * 35}%` : '30%',
+            background: playing ? '#39FF14' : 'rgba(255,255,255,0.2)',
+            transition: 'height 0.15s ease, background 0.3s',
+            animation: playing ? `waveBar 0.6s ${i * 0.1}s ease-in-out infinite alternate` : 'none',
+          }}
+        />
+      ))}
     </div>
   );
 }
 
-function SongRow({ song, selected, onClick, isAvant, unlocked }: {
-  song: GameSong;
-  selected: boolean;
-  onClick: () => void;
-  isAvant?: boolean;
-  unlocked: boolean;
-}) {
-  const hs = getHighScore(song.id);
-  const moodColor = song.mood === 'light' ? '#39FF14' : '#FF1493';
-  const durMin = Math.floor(song.duration / 60);
-  const durSec = String(Math.round(song.duration % 60)).padStart(2, '0');
-
-  const claimedRewards = useVaultStore((s) => s.claimedRewards);
-  const isAllPrizesClaimed = claimedRewards[song.id]?.includes('prophecy') || localStorage.getItem(`reward_tier_${song.id}`) === 'prophecy';
-
-  if (isAvant) {
-    return (
-      <button
-        data-testid={`card-song-${song.id}`}
-        onClick={onClick}
-        onMouseEnter={() => audioManager.playSfx('tap_nav', 0.05)}
-        className={`w-full text-left flex items-center gap-4 px-4 py-3 transition-all duration-200 relative group overflow-hidden ${unlocked ? '' : 'opacity-60 hover:opacity-80'}`}
-        style={{
-          background: selected ? 'rgba(57,255,20,0.08)' : 'rgba(5,5,5,0.3)',
-          borderBottom: '1px solid rgba(57,255,20,0.12)',
-          borderLeft: `3px solid ${selected ? moodColor : 'transparent'}`,
-        }}
-      >
-        {/* Hover background slide */}
-        <div className="absolute inset-0 bg-gradient-to-r from-[rgba(57,255,20,0.02)] to-transparent translate-x-[-100%] group-hover:translate-x-0 transition-transform duration-300 pointer-events-none" />
-
-        <div className="relative group-hover:translate-x-0.5 transition-transform duration-200 flex-shrink-0">
-          {song.coverArt ? (
-            <div className="relative">
-              <img
-                src={song.coverArt}
-                alt={song.title}
-                className="object-cover transition-transform duration-300"
-                style={{ width: 48, height: 48, border: unlocked ? '1px solid rgba(57,255,20,0.15)' : '1px solid rgba(255,56,0,0.2)', filter: unlocked ? 'none' : 'grayscale(100%) brightness(0.4)' }}
-              />
-              <div className="absolute -top-1 -left-1 w-1.5 h-1.5 border-t border-l border-[#39FF14]/40" />
-              <div className="absolute -bottom-1 -right-1 w-1.5 h-1.5 border-b border-r border-[#39FF14]/40" />
-            </div>
-          ) : (
-            <div
-              className="flex-shrink-0 flex items-center justify-center font-mono text-[10px] font-bold"
-              style={{
-                width: 48, height: 48,
-                background: 'rgba(57,255,20,0.02)',
-                border: '1px solid rgba(57,255,20,0.15)',
-                color: 'rgba(255,255,255,0.3)',
-              }}
-            >
-              {song.title.substring(0, 2).toUpperCase()}
-            </div>
-          )}
-        </div>
-
-        <div className="flex-1 min-w-0 group-hover:translate-x-1 transition-transform duration-200">
-          <div className="flex items-center gap-2 mb-0.5">
-            <span className="font-mono text-[9px] font-bold" style={{ color: 'rgba(255,255,255,0.3)' }}>
-              #{String(song.day).padStart(3, '0')} //
-            </span>
-            {unlocked ? (
-              <span className="font-mono text-[8px] px-1 py-[1px] font-black uppercase tracking-wider"
-                style={{
-                  color: moodColor,
-                  border: `1px solid ${moodColor}40`,
-                  background: `${moodColor}08`,
-                }}
-              >
-                {song.mood}
-              </span>
-            ) : (
-              <span className="font-mono text-[8px] px-1 py-[1px] font-black uppercase tracking-wider text-[#FF3800] border border-[#FF3800]/40 bg-[#FF3800]/05">
-                LOCKED
-              </span>
-            )}
-          </div>
-
-          <div
-            className="font-mono font-black text-sm truncate uppercase tracking-tight flex items-center gap-1.5"
-            style={{ color: selected ? '#39FF14' : '#F2F0E8' }}
-          >
-            <span>{song.title}</span>
-            {isAllPrizesClaimed && <span title="All Prizes Claimed">🏆</span>}
-          </div>
-
-          <div className="flex items-center gap-3 mt-1 opacity-60 group-hover:opacity-100 transition-opacity">
-            <span className="font-mono text-[9px]" style={{ color: 'rgba(255,255,255,0.4)' }}>
-              {song.bpm} BPM
-            </span>
-            <span className="font-mono text-[9px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
-              {durMin}:{durSec}
-            </span>
-            <span className="font-mono text-[9px]" style={{ color: moodColor }}>
-              LVL {song.difficultyLevel}
-            </span>
-            {hs > 0 && (
-              <span className="font-mono text-[10px] font-bold ml-auto text-[#39FF14]">
-                {hs.toLocaleString()}
-              </span>
-            )}
-          </div>
-        </div>
-      </button>
-    );
-  }
-
-  return (
-    <button
-      data-testid={`card-song-${song.id}`}
-      onClick={onClick}
-      className={`w-full text-left flex items-center gap-4 px-3 py-3 transition-all duration-300 rounded-xl group ${unlocked ? '' : 'opacity-60 hover:opacity-80'}`}
-      style={{
-        background: selected ? 'rgba(255,255,255,0.05)' : 'transparent',
-        borderLeft: `4px solid ${selected ? moodColor : 'transparent'}`,
-        boxShadow: selected ? `0 10px 30px -10px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.05)` : 'none',
-        marginBottom: 4,
-      }}
-    >
-      <CoverArt src={song.coverArt} title={song.title} mood={song.mood} unlocked={unlocked} />
-
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          <span
-            className="font-mono text-[9px] font-black tracking-widest"
-            style={{ color: 'rgba(255,255,255,0.2)' }}
-          >
-            #{String(song.day).padStart(3, '0')}
-          </span>
-          {unlocked ? (
-            <span className="pill-badge font-black text-[8px] py-0.5"
-              style={{
-                color: moodColor,
-                border: `1px solid ${moodColor}30`,
-                background: `${moodColor}05`,
-                boxShadow: `0 0 10px ${moodColor}10`,
-              }}
-            >
-              {song.mood}
-            </span>
-          ) : (
-            <span className="pill-badge font-black text-[8px] py-0.5 text-[#FF3800] border border-[#FF3800]/30 bg-[#FF3800]/05">
-              LOCKED
-            </span>
-          )}
-        </div>
-
-
-        <div
-          className="font-mono font-black text-sm truncate leading-tight uppercase tracking-tight flex items-center gap-1.5"
-          style={{ color: selected ? '#fff' : 'rgba(255,255,255,0.6)' }}
-        >
-          <span>{song.title}</span>
-          {isAllPrizesClaimed && <span title="All Prizes Claimed">🏆</span>}
-        </div>
-
-        <div className="flex items-center gap-3 mt-1 opacity-40 group-hover:opacity-100 transition-opacity">
-          <span className="font-mono text-[9px] font-bold" style={{ color: 'rgba(255,255,255,0.5)' }}>
-            {song.bpm} BPM
-          </span>
-          <span className="font-mono text-[9px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
-            {durMin}:{durSec}
-          </span>
-          <DiffBars level={song.difficultyLevel} />
-          {hs > 0 && (
-            <span className="font-mono text-[10px] font-black ml-auto" style={{ color: '#39FF14', textShadow: '0 0 8px rgba(57,255,20,0.4)' }}>
-              {hs.toLocaleString()}
-            </span>
-          )}
-        </div>
-      </div>
-    </button>
-  );
+interface MonthGroupData {
+  meta: ChapterMeta;
+  songs: GameSong[];
+  clearedCount: number;
 }
 
 export default function SongSelect() {
@@ -245,10 +74,24 @@ export default function SongSelect() {
   const [songs, setSongs] = useState<GameSong[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<GameSong | null>(null);
+  const [activeMonth, setActiveMonth] = useState<number | 'all'>('all');
+  
   const [search, setSearch] = useState('');
   const [moodFilter, setMoodFilter] = useState<'all' | 'light' | 'dark'>('all');
   const [sortBy, setSortBy] = useState<'day' | 'bpm'>('day');
-  const [showCount, setShowCount] = useState(50);
+
+  // Calibration state
+  const [diffOverride, setDiffOverride] = useState<number>(5);
+  const [history, setHistory] = useState<number[]>([]);
+
+  // Audio preview state
+  const previewRef = useRef<HTMLAudioElement | null>(null);
+  const [previewing, setPreviewing] = useState(false);
+  const [previewProg, setPreviewProg] = useState(0);
+
+  // Parallax scrolling
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scrollTop, setScrollTop] = useState(0);
 
   const isAvant = getActiveTheme() === 'avant-garde';
 
@@ -256,9 +99,7 @@ export default function SongSelect() {
   const fragments = useVaultStore((s) => s.fragments);
   const loadVaultData = useVaultStore((s) => s.loadVaultData);
   const claimedRewards = useVaultStore((s) => s.claimedRewards);
-  const isAllPrizesClaimed = selected
-    ? (claimedRewards[selected.id]?.includes('prophecy') || localStorage.getItem(`reward_tier_${selected.id}`) === 'prophecy')
-    : false;
+  const equippedCardId = useVaultStore((s) => s.equippedCardId);
 
   useEffect(() => {
     if (collection.length === 0) {
@@ -272,758 +113,813 @@ export default function SongSelect() {
     loadCatalog().then((catalog) => {
       const released = catalog.filter(s => !isSongTimeLocked(s)).sort((a, b) => a.day - b.day);
       setSongs(released);
-      if (released.length > 0) setSelected(released[released.length - 1]); // default to most recent
+      if (released.length > 0) {
+        const defaultSong = released[released.length - 1];
+        setSelected(defaultSong);
+        setDiffOverride(defaultSong.difficultyLevel);
+        setHistory(getScoreHistory(defaultSong.id));
+      }
       setLoading(false);
     });
   }, []);
 
+  // Update calibration when selected song changes
+  useEffect(() => {
+    if (selected) {
+      const savedOverride = sessionStorage.getItem(`diff_override_${selected.id}`);
+      if (savedOverride) {
+        setDiffOverride(parseInt(savedOverride, 10));
+      } else {
+        setDiffOverride(selected.difficultyLevel);
+      }
+      setHistory(getScoreHistory(selected.id));
+      // Cleanup preview when changing selection
+      cleanupPreview();
+    }
+  }, [selected?.id]);
+
+  // Audio preview handlers
+  const onTimeUpdate = () => {
+    const audio = previewRef.current;
+    if (audio && audio.duration) {
+      setPreviewProg(audio.currentTime / audio.duration);
+    }
+  };
+
+  const onEnded = () => {
+    setPreviewing(false);
+    setPreviewProg(0);
+  };
+
+  const cleanupPreview = () => {
+    const audio = previewRef.current;
+    if (audio) {
+      audio.pause();
+      audio.removeEventListener('timeupdate', onTimeUpdate);
+      audio.removeEventListener('ended', onEnded);
+      audio.src = '';
+      try { audio.load(); } catch {}
+    }
+    setPreviewing(false);
+    setPreviewProg(0);
+  };
+
+  useEffect(() => {
+    return () => {
+      cleanupPreview();
+      previewRef.current = null;
+    };
+  }, []);
+
+  const togglePreview = (songToPlay?: GameSong) => {
+    const targetSong = songToPlay || selected;
+    if (!targetSong) return;
+    audioManager.playSfx('tap_nav', 0.12);
+
+    if (previewing && previewRef.current) {
+      previewRef.current.pause();
+      setPreviewing(false);
+      return;
+    }
+
+    cleanupPreview();
+
+    const audio = new Audio(targetSong.audioUrl);
+    audio.volume = 0.5;
+    audio.addEventListener('timeupdate', onTimeUpdate);
+    audio.addEventListener('ended', onEnded);
+    previewRef.current = audio;
+    if (previewRef.current.currentTime < 1) {
+      previewRef.current.currentTime = targetSong.duration * 0.15;
+    }
+    previewRef.current.play().catch(() => {});
+    setPreviewing(true);
+  };
+
   const today = getCurrentDay();
+  const getFragmentsForDay = (day: number) => {
+    const cardKey = `card-${day}`;
+    const dayKey = `day-${String(day).padStart(3, '0')}`;
+    const dayKeyRaw = `day-${day}`;
+    return fragments[cardKey] ?? fragments[dayKey] ?? fragments[dayKeyRaw] ?? 0;
+  };
+
   const isSongUnlocked = (song: GameSong) => {
     if (song.day === today) return true;
     const ownsCard = Array.isArray(collection) ? collection.some(c => c && (c.cardId === song.id || c.card?.day === song.day)) : false;
-    const fragmentCount = fragments[song.id] ?? 0;
+    const fragmentCount = getFragmentsForDay(song.day);
     return ownsCard || fragmentCount >= 10;
   };
 
   const selectedUnlocked = selected ? isSongUnlocked(selected) : false;
+  const isAllPrizesClaimed = selected
+    ? (claimedRewards[selected.id]?.includes('prophecy') || localStorage.getItem(`reward_tier_${selected.id}`) === 'prophecy')
+    : false;
 
-  const filtered = useMemo(() => {
-    let list = songs;
-    if (moodFilter !== 'all') list = list.filter((s) => s.mood === moodFilter);
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      list = list.filter((s) => s.title.toLowerCase().includes(q) || String(s.day).includes(q));
+  // Track scroll position for parallax background animation
+  useEffect(() => {
+    const handleScroll = (e: Event) => {
+      const target = e.target as HTMLDivElement;
+      setScrollTop(target.scrollTop);
+    };
+
+    const el = containerRef.current;
+    if (el) {
+      el.addEventListener('scroll', handleScroll, { passive: true });
     }
-    if (sortBy === 'bpm') list = [...list].sort((a, b) => b.bpm - a.bpm);
-    return list;
-  }, [songs, moodFilter, search, sortBy]);
 
-  const visible = filtered.slice(0, showCount);
+    return () => {
+      if (el) el.removeEventListener('scroll', handleScroll);
+    };
+  }, [loading]);
 
-  const handleRowClick = (song: GameSong) => {
-    if (isAvant) {
-      audioManager.playSfx('tap_nav', 0.12);
-      if (window.innerWidth >= 1024) {
-        setSelected(song);
-        return;
+  // Group songs into month chapters
+  const monthGroups = useMemo(() => {
+    return CHAPTERS.map((meta) => {
+      const monthSongs = songs.filter(s => {
+        if (s.day !== undefined) return getMonthNumFromDay(s.day) === meta.month;
+        if (!s.date) return false;
+        const parts = s.date.split('-');
+        return parts.length > 1 && parseInt(parts[1], 10) === meta.month;
+      });
+
+      const clearedCount = monthSongs.filter(s => getHighScore(s.id) > 0).length;
+
+      return {
+        meta,
+        songs: monthSongs,
+        clearedCount,
+      } as MonthGroupData;
+    });
+  }, [songs]);
+
+  // Filtered list based on search/mood/sort/activeMonth
+  const filteredMonthGroups = useMemo(() => {
+    return monthGroups.map(group => {
+      if (activeMonth !== 'all' && group.meta.month !== activeMonth) {
+        return { ...group, songs: [] };
       }
+
+      let list = group.songs;
+      if (moodFilter !== 'all') list = list.filter((s) => s.mood === moodFilter);
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        list = list.filter((s) => s.title.toLowerCase().includes(q) || String(s.day).includes(q) || s.artist.toLowerCase().includes(q));
+      }
+      if (sortBy === 'bpm') list = [...list].sort((a, b) => b.bpm - a.bpm);
+
+      return {
+        ...group,
+        songs: list,
+      };
+    }).filter(group => group.songs.length > 0 || (activeMonth !== 'all' && group.meta.month === activeMonth));
+  }, [monthGroups, activeMonth, moodFilter, search, sortBy]);
+
+  const handlePlaySong = (songToPlay?: GameSong) => {
+    const s = songToPlay || selected;
+    if (!s || !isSongUnlocked(s)) return;
+    cleanupPreview();
+    audioManager.playSfx('tap_nav', 0.4);
+    sessionStorage.setItem(`game_origin_${s.id}`, 'songs');
+    sessionStorage.setItem(`diff_override_${s.id}`, String(diffOverride));
+    
+    const modifierType = getModifierForSong(s);
+    const isEquipped = equippedCardId === s.id;
+    if (isEquipped && modifierType !== 'none') {
+      sessionStorage.setItem(`active_modifier_type_${s.id}`, modifierType);
+    } else {
+      sessionStorage.removeItem(`active_modifier_type_${s.id}`);
     }
-    setLocation(`/song/${song.id}?from=songs`);
+
+    setLocation(`/play/${s.id}`);
   };
 
-  if (isAvant) {
+  const activeCoverUrl = selected?.coverArt || '/data/covers/default.jpg';
+  const activeMoodColor = selected ? (selected.mood === 'light' ? '#39FF14' : '#FF1493') : '#39FF14';
+  const medal = selected ? getMedalForSong(selected.id) : '';
+  const medalColor = MEDAL_COLOR[medal] || '#444';
+  const diffColor = DIFF_COLORS[Math.min(diffOverride - 1, 9)];
+
+  if (loading) {
     return (
-      <div className="min-h-dvh w-full flex flex-col relative overflow-hidden" style={{ background: '#050505' }}>
-        {/* Kinetic scanning background */}
-        <div className="absolute inset-0 pointer-events-none z-0"
-          style={{
-            backgroundImage: "linear-gradient(rgba(57,255,20,0.015) 1px,transparent 1px),linear-gradient(90deg,rgba(57,255,20,0.015) 1px,transparent 1px)",
-            backgroundSize: "64px 64px"
-          }} />
-
-        {/* Header */}
-        <header
-          className="flex items-center justify-between px-5 py-3.5 flex-shrink-0 z-10"
-          style={{ borderBottom: '1px solid rgba(57,255,20,0.2)', background: 'rgba(5,5,5,0.85)', backdropFilter: 'blur(12px)' }}
-        >
-          <button
-            data-testid="button-back"
-            onClick={() => {
-              audioManager.playSfx("back", 0.5);
-              setLocation("/");
-            }}
-            onMouseEnter={() => audioManager.playSfx("tap_nav", 0.08)}
-            className="font-mono text-xs tracking-widest transition-all border border-[#39FF14]/30 text-[#39FF14] bg-none cursor-pointer px-4 py-1.5 hover:bg-[#39FF14]/10"
-          >
-            ← BACK
-          </button>
-          <div className="font-mono text-xs tracking-[0.2em] font-bold text-[#39FF14]">
-            {loading ? 'SYNCHRONIZING ARCHIVES...' : `${songs.length} DISPATCH SIGNALS`}
-          </div>
-          <div className="font-mono text-xs text-white/30 tracking-widest">
-            PIM // ARCHIVES
-          </div>
-        </header>
-
-        <div className="flex-1 flex overflow-visible lg:overflow-hidden z-10">
-          {/* Left: Song list */}
-          <div className="flex flex-col w-full lg:w-1/2 lg:overflow-hidden border-r border-[#39FF14]/15">
-            {/* Search + filters */}
-            <div className="flex-shrink-0 p-4 space-y-3 border-b border-[#39FF14]/15 bg-black/20">
-              <div className="relative group">
-                <input
-                  data-testid="input-search"
-                  type="text"
-                  placeholder="SEARCH SPECIFICATIONS..."
-                  value={search}
-                  onChange={(e) => { setSearch(e.target.value); setShowCount(50); }}
-                  onMouseEnter={() => audioManager.playSfx("tap_nav", 0.03)}
-                  className="w-full font-mono text-xs tracking-widest px-10 py-3 outline-none transition-all duration-300"
-                  style={{
-                    background: 'rgba(5,5,5,0.8)',
-                    border: '1px solid rgba(57,255,20,0.2)',
-                    color: '#F2EDE5',
-                  }}
-                  onFocus={(e) => { 
-                    (e.target as HTMLElement).style.borderColor = '#39FF14'; 
-                    (e.target as HTMLElement).style.boxShadow = '0 0 15px rgba(57,255,20,0.15)'; 
-                  }}
-                  onBlur={(e) => { 
-                    (e.target as HTMLElement).style.borderColor = 'rgba(57,255,20,0.2)'; 
-                    (e.target as HTMLElement).style.boxShadow = 'none'; 
-                  }}
-                />
-                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 opacity-40 text-[#39FF14]">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                </div>
-              </div>
-
-              <div className="flex gap-2 items-center">
-                {(['all', 'light', 'dark'] as const).map((m) => (
-                  <button
-                    key={m}
-                    data-testid={`filter-mood-${m}`}
-                    onClick={() => { audioManager.playSfx('tap_nav', 0.12); setMoodFilter(m); setShowCount(50); }}
-                    onMouseEnter={() => audioManager.playSfx('tap_nav', 0.05)}
-                    className="font-mono text-[9px] font-bold px-4 py-1.5 tracking-widest transition-all duration-200 uppercase"
-                    style={{
-                      background: moodFilter === m ? '#39FF14' : 'rgba(57,255,20,0.03)',
-                      color: moodFilter === m ? '#000' : 'rgba(255,255,255,0.4)',
-                      border: `1px solid ${moodFilter === m ? '#39FF14' : 'rgba(57,255,20,0.2)'}`,
-                    }}
-                  >
-                    {m}
-                  </button>
-                ))}
-                <div className="flex-1" />
-                <button
-                  data-testid="sort-bpm"
-                  onClick={() => { audioManager.playSfx('tap_nav', 0.12); setSortBy(sortBy === 'day' ? 'bpm' : 'day'); }}
-                  className="font-mono text-[9px] font-bold px-3 py-1.5 tracking-widest transition-all duration-200 uppercase"
-                  style={{
-                    background: 'transparent',
-                    color: 'rgba(255,255,255,0.5)',
-                    border: '1px solid rgba(57,255,20,0.2)',
-                  }}
-                  onMouseEnter={(e) => { 
-                    audioManager.playSfx('tap_nav', 0.05);
-                    const el = e.currentTarget as HTMLElement;
-                    el.style.borderColor = '#39FF14'; 
-                    el.style.color = '#39FF14'; 
-                  }}
-                  onMouseLeave={(e) => { 
-                    const el = e.currentTarget as HTMLElement;
-                    el.style.borderColor = 'rgba(57,255,20,0.2)'; 
-                    el.style.color = 'rgba(255,255,255,0.5)'; 
-                  }}
-                >
-                  ↕ {sortBy === 'day' ? 'CHRONO' : 'BPM'}
-                </button>
-              </div>
-              {!loading && (
-                <div className="font-mono text-[8px] font-bold tracking-[0.2em] opacity-40 uppercase text-[#39FF14]">
-                  // {filtered.length} SECTIONS RECORDED
-                </div>
-              )}
-            </div>
-
-            {/* Song list */}
-            <div className="flex-1 overflow-y-auto px-1 py-1 scroll-smooth">
-              {loading ? (
-                <div className="flex flex-col items-center justify-center h-48 gap-4">
-                  <div className="font-mono text-[9px] font-bold tracking-[0.3em] uppercase text-[#39FF14]">
-                    LOADING SIGNAL ARCHIVES...
-                  </div>
-                  <div className="flex gap-2">
-                    {[0, 1, 2, 3].map((i) => (
-                      <div
-                        key={i}
-                        className="w-1.5 h-1.5 rounded-full animate-pulse"
-                        style={{
-                          background: LANE_COLORS[i],
-                          animationDelay: `${i * 0.15}s`,
-                        }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-px">
-                  {visible.map((song) => (
-                    <SongRow
-                      key={song.id}
-                      song={song}
-                      selected={selected?.id === song.id}
-                      onClick={() => handleRowClick(song)}
-                      isAvant={isAvant}
-                      unlocked={isSongUnlocked(song)}
-                    />
-                  ))}
-                  {showCount < filtered.length && (
-                    <button
-                      data-testid="button-load-more"
-                      onClick={() => { audioManager.playSfx('tap_nav', 0.12); setShowCount((n) => n + 50); }}
-                      onMouseEnter={() => audioManager.playSfx('tap_nav', 0.05)}
-                      className="w-full py-4 font-mono text-[9px] font-bold tracking-[0.3em] transition-all uppercase border border-[#39FF14]/20 bg-[#39FF14]/5 text-[#39FF14]/60 hover:text-[#39FF14] hover:bg-[#39FF14]/10 mt-1"
-                    >
-                      LOAD MORE ({filtered.length - showCount} REMAINING)
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Right: Detail panel */}
-          <div className="hidden lg:flex lg:w-1/2 flex-col justify-between p-10 bg-black/40 border-l border-[#39FF14]/10">
-            {selected ? (
-              <div className="fade-in-up flex flex-col justify-between h-full">
-                <div>
-                  {/* Title and stats bar */}
-                  <div className="flex justify-between items-start mb-6 border-b border-[#39FF14]/10 pb-4">
-                    <div>
-                      <div className="font-mono text-[8px] tracking-[0.22em] text-[#39FF14] uppercase mb-1">
-                        SYSTEM ANALYZER // READY
-                      </div>
-                      <div className="font-mono text-[10px] text-white/30 uppercase">
-                        COORD: {selected.id.toUpperCase().substring(0, 12)}
-                      </div>
-                    </div>
-                    <div className="font-mono text-[9px] border border-[#39FF14]/30 px-2 py-0.5 text-[#39FF14]">
-                      MOOD: {selected.mood.toUpperCase()}
-                    </div>
-                  </div>
-
-                  {/* Cover art with telemetry frames */}
-                  <div className="mb-8 relative max-w-xs mx-auto">
-                    {/* Tech coordinates around cover art */}
-                    <div className="absolute -top-3 -left-3 w-6 h-6 border-t-2 border-l-2 border-[#39FF14]" />
-                    <div className="absolute -top-3 -right-3 w-6 h-6 border-t-2 border-r-2 border-[#39FF14]" />
-                    <div className="absolute -bottom-3 -left-3 w-6 h-6 border-b-2 border-l-2 border-[#39FF14]" />
-                    <div className="absolute -bottom-3 -right-3 w-6 h-6 border-b-2 border-r-2 border-[#39FF14]" />
-                    
-                    <div className="absolute -inset-1.5 border border-white/5 pointer-events-none" />
-
-                    {selected.coverArt ? (
-                      <img
-                        src={selected.coverArt}
-                        alt={selected.title}
-                        className="w-56 h-56 object-cover mx-auto"
-                        style={{ border: '1px solid rgba(57,255,20,0.15)', filter: 'grayscale(20%) brightness(0.95)' }}
-                      />
-                    ) : (
-                      <div className="w-56 h-56 flex items-center justify-center font-mono font-black text-6xl bg-white/5 text-[#39FF14]/10 border border-[#39FF14]/15">
-                        {selected.day}
-                      </div>
-                    )}
-                    <div className="absolute -top-3 -left-3 font-mono font-bold text-[8px] px-2 py-0.5"
-                      style={{ background: '#39FF14', color: '#000' }}>
-                      DAY {selected.day} //
-                    </div>
-                  </div>
-
-                  <div className="font-mono text-[9px] mb-2 tracking-[0.2em] text-center" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                    SPEC DATE: {selected.date} // KEY: {selected.key || 'N/A'}
-                  </div>
-
-                  <h2
-                    className="font-mono font-black mb-1 leading-tight uppercase tracking-tight text-center flex items-center justify-center gap-2"
-                    style={{ fontSize: '26px', color: '#F2F0E8' }}
-                  >
-                    <span>{selected.title}</span>
-                    {isAllPrizesClaimed && <span title="All Prizes Claimed">🏆</span>}
-                  </h2>
-
-                  <div className="font-mono font-bold text-xs mb-6 tracking-[0.1em] text-center" style={{ color: selected.mood === 'light' ? '#39FF14' : '#FF1493' }}>
-                    {selected.artist.toUpperCase()}
-                  </div>
-
-                  {selected.description && (
-                    <p className="text-xs leading-relaxed mb-6 font-mono border-l border-[#39FF14]/30 pl-3 py-1 max-w-sm mx-auto" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                      "{selected.description.toUpperCase()}"
-                    </p>
-                  )}
-
-                  {selected.moodTags && selected.moodTags.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 justify-center mb-6 max-w-sm mx-auto">
-                      {selected.moodTags.map((tag) => (
-                        <span key={tag} className="font-mono text-[8px] font-bold px-2 py-0.5 border border-[#39FF14]/15 text-[#39FF14]/60 bg-black/40 uppercase">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-4 gap-2 mb-6 max-w-sm mx-auto">
-                    {[
-                      { label: 'BPM', value: selected.bpm },
-                      { label: 'NODES', value: (selected.notes || []).length },
-                      {
-                        label: 'DUR',
-                        value: `${Math.floor(selected.duration / 60)}:${String(Math.round(selected.duration % 60)).padStart(2, '0')}`,
-                      },
-                      { label: 'VALENCE', value: `${Math.round(selected.valence * 100)}%` },
-                    ].map(({ label, value }) => (
-                      <div key={label} className="border border-[#39FF14]/15 bg-black/30 p-2 text-center">
-                        <div className="font-mono text-[8px] font-bold mb-0.5 tracking-wider uppercase text-white/30">{label}</div>
-                        <div className="font-mono font-black text-sm text-[#39FF14]">{value}</div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="flex items-center justify-between border-t border-[#39FF14]/15 pt-4 max-w-sm mx-auto">
-                    <div>
-                      <div className="font-mono text-[8px] font-bold mb-1 tracking-wider uppercase text-white/30">CALIBRATION LEVEL</div>
-                      <div className="flex gap-0.5">
-                        {Array.from({ length: 10 }).map((_, idx) => (
-                          <div key={idx} className="w-3.5 h-1.5" style={{
-                            background: idx < selected.difficultyLevel ? (selected.mood === 'light' ? '#39FF14' : '#FF1493') : 'rgba(255,255,255,0.05)',
-                            border: '1px solid rgba(255,255,255,0.1)'
-                          }} />
-                        ))}
-                      </div>
-                    </div>
-                    {getHighScore(selected.id) > 0 && (
-                      <div className="text-right">
-                        <div className="font-mono text-[8px] font-bold mb-0.5 tracking-wider uppercase text-white/30">MAX CLEAR</div>
-                        <div className="font-mono font-black text-base text-[#39FF14]">
-                          {getHighScore(selected.id).toLocaleString()}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-2 mt-8 max-w-sm mx-auto w-full">
-                  {!selectedUnlocked && (
-                    <div className="border border-[#FF3800]/30 bg-[#FF3800]/10 p-3 mb-2 text-center">
-                      <div className="font-mono text-[9px] font-black text-[#FF3800] tracking-wider">
-                        AWARD PLAY LOCKED // 10 FRAGMENTS REQUIRED
-                      </div>
-                      <div className="font-mono text-[7px] text-white/50 mt-1 uppercase">
-                        DECRYPT FRAGMENTS FOR THIS SONG · OR PLAY FREE FROM COLLECTION
-                      </div>
-                    </div>
-                  )}
-                  <button
-                    data-testid="button-play"
-                    disabled={!selectedUnlocked}
-                    onClick={() => {
-                      audioManager.playSfx('tap_nav', 0.15);
-                      sessionStorage.setItem(`game_origin_${selected.id}`, 'songs');
-                      sessionStorage.setItem(`diff_override_${selected.id}`, String(selected.difficultyLevel));
-                      setLocation(`/play/${selected.id}`);
-                    }}
-                    onMouseEnter={() => { if (selectedUnlocked) audioManager.playSfx('tap_nav', 0.08); }}
-                    className={`w-full py-4 text-xs tracking-[0.4em] font-black border transition-all uppercase ${
-                      selectedUnlocked
-                        ? "border-[#39FF14] bg-[#39FF14] text-black hover:bg-[#39FF14]/90"
-                        : "border-white/10 bg-white/5 text-white/20 cursor-not-allowed"
-                    }`}
-                  >
-                    ▶ INITIATE TRANSMISSION
-                  </button>
-                  <button
-                    onClick={() => {
-                      audioManager.playSfx('tap_nav', 0.12);
-                      setLocation(`/song/${selected.id}?from=songs`);
-                    }}
-                    onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}
-                    className="w-full py-3 text-[9px] font-bold tracking-[0.3em] border border-[#39FF14]/30 text-[#39FF14] hover:bg-[#39FF14]/10 transition-all uppercase bg-transparent"
-                  >
-                    ◆ ANALYSIS &amp; CALIBRATION
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full gap-3 opacity-30">
-                <div className="w-8 h-8 border border-dashed border-[#39FF14]/40 rounded-full animate-spin" />
-                <div className="font-mono text-[9px] font-bold tracking-[0.3em] uppercase text-[#39FF14]">
-                  WAITING FOR AUDIO LINK...
-                </div>
-              </div>
-            )}
-          </div>
+      <div className="min-h-screen flex items-center justify-center bg-[#050505]">
+        <div className="font-mono text-xs tracking-[0.3em] text-[#39FF14] animate-pulse uppercase">
+          SYNCHRONIZING AWARD PLAY ARCHIVES...
         </div>
-
-        {/* Mobile play button */}
-        {selected && (
-          <div
-            className="lg:hidden flex-shrink-0 p-4 border-t border-[#39FF14]/20"
-            style={{ background: 'rgba(5,5,5,0.9)', backdropFilter: 'blur(12px)' }}
-          >
-            <div className="flex gap-2">
-              <button
-                data-testid="button-play-mobile"
-                disabled={!selectedUnlocked}
-                onClick={() => {
-                  audioManager.playSfx('tap_nav', 0.15);
-                  sessionStorage.setItem(`game_origin_${selected.id}`, 'songs');
-                  sessionStorage.setItem(`diff_override_${selected.id}`, String(selected.difficultyLevel));
-                  setLocation(`/play/${selected.id}`);
-                }}
-                onMouseEnter={() => { if (selectedUnlocked) audioManager.playSfx('tap_nav', 0.08); }}
-                className={`flex-1 py-4 text-xs tracking-[0.3em] font-black border transition-all uppercase ${
-                  selectedUnlocked
-                    ? "border-[#39FF14] bg-[#39FF14] text-black hover:bg-[#39FF14]/90"
-                    : "border-white/10 bg-white/5 text-white/20 cursor-not-allowed"
-                }`}
-              >
-                {selectedUnlocked ? `▶ START: ${selected.title.substring(0, 16)}` : `LOCKED: ${selected.title.substring(0, 16)}`}
-              </button>
-              <button
-                onClick={() => {
-                  audioManager.playSfx('tap_nav', 0.12);
-                  setLocation(`/song/${selected.id}?from=songs`);
-                }}
-                onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}
-                className="py-4 px-4 text-xs tracking-widest border border-[#39FF14]/30 text-[#39FF14] bg-transparent uppercase"
-              >
-                STATS
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     );
   }
 
   return (
-    <div className="min-h-dvh w-full flex flex-col" style={{ background: 'radial-gradient(ellipse 70% 50% at 50% 10%, #0e1028 0%, #080808 50%)' }}>
-      {/* Header */}
-      <header
-        className="flex items-center justify-between px-4 py-3 flex-shrink-0"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(8,8,12,0.7)', backdropFilter: 'blur(16px)' }}
-      >
-        <button
-          data-testid="button-back"
-          onClick={() => {
-            audioManager.playSfx("back", 0.5);
-            setLocation("/");
+    <div className="min-h-dvh w-full flex flex-col relative overflow-hidden select-none bg-[#050402] text-white">
+      {/* Dynamic Parallax Blurred Background Engine */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <div
+          className="absolute inset-0 transition-all duration-1000 ease-out filter blur-[12px] brightness-[0.2] scale-[1.3]"
+          style={{
+            backgroundImage: `url(${activeCoverUrl})`,
+            backgroundPosition: 'center',
+            backgroundSize: 'cover',
           }}
-          className="neon-btn-outline text-xs px-3 py-1.5 tracking-widest"
-        >
-          ← BACK
-        </button>
-        <div className="font-mono text-xs tracking-widest" style={{ color: '#39FF14', textShadow: '0 0 8px rgba(57,255,20,0.3)' }}>
-          {loading ? 'LOADING TRANSMISSIONS...' : `${songs.length} TRANSMISSIONS`}
+        />
+        {/* Pulsing Theme Glow */}
+        <div
+          className="absolute inset-0 opacity-40 mix-blend-screen transition-all duration-1000"
+          style={{
+            background: `radial-gradient(circle at 60% 40%, ${activeMoodColor}22 0%, transparent 80%)`,
+          }}
+        />
+        {/* Sector Grid overlay */}
+        <div
+          className="absolute inset-0 opacity-[0.04]"
+          style={{
+            backgroundImage: 'linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px)',
+            backgroundSize: '64px 64px',
+          }}
+        />
+      </div>
+
+      {/* Header Bar */}
+      <header
+        className="relative z-20 flex items-center justify-between px-5 py-3.5 flex-shrink-0"
+        style={{
+          background: isAvant ? 'rgba(5,5,5,0.92)' : 'rgba(8,8,12,0.85)',
+          backdropFilter: 'blur(16px)',
+          borderBottom: isAvant ? '1px solid rgba(57,255,20,0.2)' : '1px solid rgba(255,255,255,0.08)',
+        }}
+      >
+        <div className="flex items-center gap-3">
+          <button
+            data-testid="button-back"
+            onClick={() => {
+              audioManager.playSfx("back", 0.5);
+              setLocation("/arcade");
+            }}
+            onMouseEnter={() => audioManager.playSfx("tap_nav", 0.08)}
+            className={isAvant
+              ? "font-mono text-xs px-4 py-1.5 tracking-widest border border-[#39FF14]/30 text-[#39FF14] bg-transparent hover:bg-[#39FF14]/10 transition-colors cursor-pointer"
+              : "neon-btn-outline text-xs px-4 py-1.5 tracking-widest cursor-pointer"}
+          >
+            ← ARCADE
+          </button>
+          <button
+            onClick={() => {
+              audioManager.playSfx("tap_nav", 0.12);
+              setLocation("/campaign");
+            }}
+            onMouseEnter={() => audioManager.playSfx("tap_nav", 0.08)}
+            className="hidden sm:block font-mono text-xs px-3 py-1.5 tracking-widest border border-white/10 text-white/60 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+          >
+            SECTOR MAP →
+          </button>
         </div>
-        <div className="font-mono text-xs" style={{ color: 'hsl(30 15% 35%)' }}>
-          TH3SCR1B3
+
+        <div className="font-mono text-xs tracking-[0.3em] font-bold text-center" style={{ color: isAvant ? '#39FF14' : 'rgba(255,255,255,0.8)' }}>
+          AWARD PLAY ARCHIVE // {songs.length} SIGNALS
+        </div>
+
+        <div className="font-mono text-xs text-white/40 tracking-widest hidden sm:block uppercase">
+          PIM // MONTH ARCHIVES
         </div>
       </header>
 
-      <div className="flex-1 flex overflow-visible lg:overflow-hidden">
-        {/* Left: Song list */}
-        <div className="flex flex-col w-full lg:w-1/2 lg:overflow-hidden border-r" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-          {/* Search + filters */}
-          <div className="flex-shrink-0 p-4 space-y-3 border-b" style={{ borderColor: 'rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.01)' }}>
-            <div className="relative group">
+      {/* Month Filter Selector Bar */}
+      <div
+        className="relative z-20 flex items-center gap-1.5 px-4 py-2.5 overflow-x-auto scrollbar-none border-b border-white/5 flex-shrink-0"
+        style={{ background: 'rgba(5,5,5,0.7)', backdropFilter: 'blur(10px)', scrollbarWidth: 'none' }}
+      >
+        <button
+          onClick={() => {
+            audioManager.playSfx('tap_nav', 0.1);
+            setActiveMonth('all');
+          }}
+          className="font-mono text-[9px] font-bold px-3 py-1.5 tracking-wider uppercase transition-all flex-shrink-0 cursor-pointer"
+          style={{
+            background: activeMonth === 'all' ? (isAvant ? '#39FF14' : 'linear-gradient(135deg, #FF1493, #FF8A00)') : 'rgba(255,255,255,0.03)',
+            color: activeMonth === 'all' ? '#000' : 'rgba(255,255,255,0.4)',
+            border: `1px solid ${activeMonth === 'all' ? 'transparent' : 'rgba(255,255,255,0.1)'}`,
+            boxShadow: activeMonth === 'all' ? '0 0 12px rgba(57,255,20,0.3)' : 'none',
+          }}
+        >
+          ALL MONTHS ({songs.length})
+        </button>
+
+        {CHAPTERS.map((ch) => {
+          const count = songs.filter(s => getMonthNumFromDay(s.day) === ch.month).length;
+          const isActive = activeMonth === ch.month;
+          return (
+            <button
+              key={ch.month}
+              onClick={() => {
+                audioManager.playSfx('tap_nav', 0.1);
+                setActiveMonth(ch.month);
+              }}
+              className="font-mono text-[9px] font-bold px-3 py-1.5 tracking-wider uppercase transition-all flex-shrink-0 flex items-center gap-1.5 cursor-pointer"
+              style={{
+                background: isActive ? ch.dc : 'rgba(255,255,255,0.03)',
+                color: isActive ? '#000' : 'rgba(255,255,255,0.5)',
+                border: `1px solid ${isActive ? ch.dc : 'rgba(255,255,255,0.08)'}`,
+                boxShadow: isActive ? `0 0 12px ${ch.dc}60` : 'none',
+              }}
+            >
+              <span>M{String(ch.month).padStart(2, '0')}</span>
+              <span className="opacity-60">({count})</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Main Container */}
+      <div className="relative z-10 flex-1 flex flex-col lg:flex-row overflow-hidden">
+        {/* Left Column: Month Sectors + Songs Matrix */}
+        <div className="w-full lg:w-1/2 flex flex-col border-r border-white/10 overflow-hidden">
+          {/* Controls / Filter Bar */}
+          <div className="p-4 space-y-3 border-b border-white/10 bg-black/40 flex-shrink-0">
+            <div className="relative">
               <input
                 data-testid="input-search"
                 type="text"
-                placeholder="SEARCH ARCHIVES..."
+                placeholder="SEARCH ARCHIVE DISPATCHES..."
                 value={search}
-                onChange={(e) => { setSearch(e.target.value); setShowCount(50); }}
-                className="w-full font-mono text-xs tracking-widest px-10 py-3 outline-none rounded-xl transition-all duration-300"
+                onChange={(e) => setSearch(e.target.value)}
+                onMouseEnter={() => audioManager.playSfx("tap_nav", 0.03)}
+                className="w-full font-mono text-xs tracking-widest px-10 py-2.5 outline-none transition-all"
                 style={{
-                  background: 'rgba(255,255,255,0.03)',
-                  border: '1px solid rgba(255,255,255,0.08)',
+                  background: 'rgba(5,5,5,0.8)',
+                  border: isAvant ? '1px solid rgba(57,255,20,0.3)' : '1px solid rgba(255,255,255,0.15)',
                   color: '#F2EDE5',
                 }}
-                onFocus={(e) => { 
-                  (e.target as HTMLElement).style.borderColor = 'rgba(255,20,147,0.5)'; 
-                  (e.target as HTMLElement).style.background = 'rgba(255,255,255,0.05)';
-                  (e.target as HTMLElement).style.boxShadow = '0 0 20px rgba(255,20,147,0.1)'; 
-                }}
-                onBlur={(e) => { 
-                  (e.target as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; 
-                  (e.target as HTMLElement).style.background = 'rgba(255,255,255,0.03)';
-                  (e.target as HTMLElement).style.boxShadow = 'none'; 
-                }}
               />
-              <div className="absolute left-3.5 top-1/2 -translate-y-1/2 opacity-30 group-focus-within:opacity-60 transition-opacity">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 opacity-40 text-[#39FF14]">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
               </div>
             </div>
 
-            <div className="flex gap-2 items-center">
-              {(['all', 'light', 'dark'] as const).map((m) => (
-                <button
-                  key={m}
-                  data-testid={`filter-mood-${m}`}
-                  onClick={() => { setMoodFilter(m); setShowCount(50); }}
-                  className="font-mono text-[10px] font-bold px-4 py-2 tracking-widest transition-all duration-200 rounded-full uppercase"
-                  style={{
-                    background: moodFilter === m ? 'linear-gradient(135deg, #FF1493, #FF8A00)' : 'rgba(255,255,255,0.04)',
-                    color: moodFilter === m ? '#fff' : 'rgba(255,255,255,0.4)',
-                    border: `1px solid ${moodFilter === m ? 'transparent' : 'rgba(255,255,255,0.08)'}`,
-                    boxShadow: moodFilter === m ? '0 5px 15px rgba(255,20,147,0.25)' : 'none',
-                  }}
-                >
-                  {m}
-                </button>
-              ))}
-              <div className="flex-1" />
+            <div className="flex gap-2 items-center justify-between">
+              <div className="flex gap-1.5">
+                {(['all', 'light', 'dark'] as const).map((m) => (
+                  <button
+                    key={m}
+                    data-testid={`filter-mood-${m}`}
+                    onClick={() => { audioManager.playSfx('tap_nav', 0.12); setMoodFilter(m); }}
+                    className="font-mono text-[9px] font-bold px-3 py-1 tracking-widest transition-all uppercase cursor-pointer"
+                    style={{
+                      background: moodFilter === m ? (isAvant ? '#39FF14' : '#FF1493') : 'rgba(255,255,255,0.04)',
+                      color: moodFilter === m ? '#000' : 'rgba(255,255,255,0.5)',
+                      border: `1px solid ${moodFilter === m ? 'transparent' : 'rgba(255,255,255,0.1)'}`,
+                    }}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+
               <button
                 data-testid="sort-bpm"
-                onClick={() => setSortBy(sortBy === 'day' ? 'bpm' : 'day')}
-                className="font-mono text-[10px] font-bold px-3 py-2 tracking-widest rounded-full transition-all duration-200 uppercase"
-                style={{
-                  background: 'rgba(255,255,255,0.03)',
-                  color: 'rgba(255,255,255,0.4)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.2)'; (e.currentTarget as HTMLElement).style.color = '#fff'; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.4)'; }}
+                onClick={() => { audioManager.playSfx('tap_nav', 0.12); setSortBy(sortBy === 'day' ? 'bpm' : 'day'); }}
+                className="font-mono text-[9px] font-bold px-3 py-1 tracking-widest transition-all uppercase cursor-pointer text-white/50 hover:text-white border border-white/10 hover:border-white/30"
               >
                 ↕ {sortBy === 'day' ? 'CHRONO' : 'BPM'}
               </button>
             </div>
-            {!loading && (
-              <div className="font-mono text-[9px] font-bold tracking-[0.2em] opacity-30 uppercase">
-                {filtered.length} FRAGMENTS RECOVERED
-              </div>
-            )}
           </div>
 
-          {/* Song list */}
-          <div className="flex-1 overflow-y-auto px-2 py-2 scroll-smooth">
-            {loading ? (
-              <div className="flex flex-col items-center justify-center h-48 gap-4">
-                <div className="font-mono text-[10px] font-bold tracking-[0.4em] text-glow uppercase" style={{ color: '#FF1493' }}>
-                  SYNCHRONIZING ARCHIVES...
-                </div>
-                <div className="flex gap-2">
-                  {[0, 1, 2, 3].map((i) => (
-                    <div
-                      key={i}
-                      className="w-2 h-2 rounded-full animate-pulse"
-                      style={{
-                        background: LANE_COLORS[i],
-                        animationDelay: `${i * 0.15}s`,
-                        boxShadow: `0 0 10px ${LANE_COLORS[i]}`
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-1">
-                {visible.map((song) => (
-                  <SongRow
-                    key={song.id}
-                    song={song}
-                    selected={selected?.id === song.id}
-                    onClick={() => setLocation(`/song/${song.id}?from=songs`)}
-                    unlocked={isSongUnlocked(song)}
-                  />
-                ))}
-                {showCount < filtered.length && (
-                  <button
-                    data-testid="button-load-more"
-                    onClick={() => setShowCount((n) => n + 50)}
-                    className="w-full py-5 font-mono text-[10px] font-bold tracking-[0.3em] transition-all rounded-xl mt-4 uppercase glass-panel"
+          {/* Month Sectors Scroll Viewport */}
+          <div
+            ref={containerRef}
+            className="flex-1 overflow-y-auto p-4 space-y-8 scroll-smooth scrollbar-none"
+            style={{ scrollbarWidth: 'none' }}
+          >
+            {filteredMonthGroups.map((group) => {
+              const monthTitleY = (scrollTop * 0.15) % 100;
+              const gridY = (scrollTop * 0.08) % 50;
+
+              return (
+                <div
+                  key={group.meta.month}
+                  className="relative border border-white/10 rounded-2xl p-5 overflow-hidden transition-all duration-300"
+                  style={{
+                    background: `radial-gradient(circle at 10% 20%, ${group.meta.dc}0d 0%, rgba(5,5,5,0.6) 100%)`,
+                  }}
+                >
+                  {/* Giant Parallax Month Text in Sector Background */}
+                  <div
+                    className="absolute right-2 -bottom-4 font-mono font-black select-none pointer-events-none text-[18vw] lg:text-[10vw] tracking-tighter leading-none opacity-10 transition-transform duration-300"
                     style={{
-                      color: 'rgba(255,255,255,0.4)',
+                      color: group.meta.dc,
+                      WebkitTextStroke: `1.5px ${group.meta.dc}40`,
+                      transform: `translateY(${monthTitleY}px)`,
                     }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = '#39FF14'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(57,255,20,0.3)'; }}
-                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.4)'; (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.08)'; }}
                   >
-                    LOAD MORE ({filtered.length - showCount} REMAINING)
-                  </button>
-                )}
-              </div>
-            )}
+                    M{String(group.meta.month).padStart(2, '0')}
+                  </div>
+
+                  {/* Parallax Floating Album Art Grid Overlay */}
+                  <div
+                    className="absolute inset-0 pointer-events-none opacity-[0.03] overflow-hidden flex items-center justify-center scale-110"
+                    style={{ transform: `translateY(${gridY}px)` }}
+                  >
+                    <div className="grid grid-cols-4 gap-2 w-full h-full p-4 -rotate-6">
+                      {group.songs.slice(0, 8).map((s, idx) => (
+                        s.coverArt ? (
+                          <img key={idx} src={s.coverArt} alt="" className="w-full aspect-square object-cover rounded filter grayscale" />
+                        ) : null
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Sector Header */}
+                  <div className="relative z-10 flex items-center justify-between pb-3 mb-4 border-b border-white/10">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-3 h-3 rounded-full shadow-[0_0_8px_currentColor]"
+                        style={{ background: group.meta.dc, color: group.meta.dc }}
+                      />
+                      <div>
+                        <div className="font-mono text-[9px] font-bold tracking-[0.25em] text-white/40 uppercase">
+                          CHAPTER {String(group.meta.month).padStart(2, '0')} // SECTOR
+                        </div>
+                        <h3 className="font-mono font-black text-base uppercase tracking-tight text-white flex items-center gap-2">
+                          <span>{group.meta.name}</span>
+                        </h3>
+                      </div>
+                    </div>
+                    <div className="font-mono text-right text-[10px] text-white/50">
+                      <span className="text-[#39FF14] font-bold">{group.clearedCount}</span> / {group.songs.length} CLEARED
+                    </div>
+                  </div>
+
+                  {/* Songs list in Sector */}
+                  <div className="relative z-10 space-y-2">
+                    {group.songs.length === 0 ? (
+                      <div className="font-mono text-xs text-white/30 italic py-4 text-center">
+                        NO DISPATCH SIGNALS FOUND IN THIS SECTOR
+                      </div>
+                    ) : (
+                      group.songs.map((song) => {
+                        const isSelected = selected?.id === song.id;
+                        const unlocked = isSongUnlocked(song);
+                        const hs = getHighScore(song.id);
+                        const songMedal = getMedalForSong(song.id);
+                        const moodColor = song.mood === 'light' ? '#39FF14' : '#FF1493';
+
+                        return (
+                          <div
+                            key={song.id}
+                            data-testid={`card-song-${song.id}`}
+                            onClick={() => {
+                              audioManager.playSfx('tap_nav', 0.12);
+                              setSelected(song);
+                            }}
+                            className={`w-full text-left flex items-center gap-3.5 p-3 rounded-xl transition-all duration-200 cursor-pointer relative group ${
+                              isSelected ? 'bg-white/10 border-l-4 shadow-xl' : 'bg-black/40 hover:bg-white/5 border-l-4 border-transparent'
+                            }`}
+                            style={{
+                              borderLeftColor: isSelected ? moodColor : 'transparent',
+                              boxShadow: isSelected ? `0 8px 24px -6px ${moodColor}30` : 'none',
+                            }}
+                          >
+                            {/* Song Artwork Cover */}
+                            <div className="relative flex-shrink-0">
+                              {song.coverArt ? (
+                                <img
+                                  src={song.coverArt}
+                                  alt={song.title}
+                                  className="w-12 h-12 object-cover rounded-lg transition-transform group-hover:scale-105"
+                                  style={{
+                                    border: isSelected ? `1px solid ${moodColor}` : '1px solid rgba(255,255,255,0.1)',
+                                    filter: unlocked ? 'none' : 'grayscale(100%) brightness(0.4)',
+                                  }}
+                                />
+                              ) : (
+                                <div
+                                  className="w-12 h-12 rounded-lg flex items-center justify-center font-mono font-bold text-xs bg-white/5 border border-white/10"
+                                  style={{ color: moodColor }}
+                                >
+                                  #{song.day}
+                                </div>
+                              )}
+                              {!unlocked && (
+                                <div className="absolute inset-0 bg-black/60 rounded-lg flex items-center justify-center">
+                                  <Lock size={14} className="text-[#FF3800]" />
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Song Meta Info */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-0.5">
+                                <span className="font-mono text-[9px] font-bold text-white/30">
+                                  #{String(song.day).padStart(3, '0')}
+                                </span>
+                                {unlocked ? (
+                                  <span
+                                    className="font-mono text-[8px] px-1.5 py-[1px] font-black uppercase rounded"
+                                    style={{
+                                      color: moodColor,
+                                      border: `1px solid ${moodColor}40`,
+                                      background: `${moodColor}10`,
+                                    }}
+                                  >
+                                    {song.mood}
+                                  </span>
+                                ) : (
+                                  <span className="font-mono text-[8px] px-1.5 py-[1px] font-black uppercase text-[#FF3800] border border-[#FF3800]/40 bg-[#FF3800]/10 rounded">
+                                    LOCKED
+                                  </span>
+                                )}
+                                {songMedal && songMedal !== '' && (
+                                  <span
+                                    className="font-mono text-[8px] px-1.5 py-[1px] font-black uppercase rounded ml-auto"
+                                    style={{ color: MEDAL_COLOR[songMedal], border: `1px solid ${MEDAL_COLOR[songMedal]}40` }}
+                                  >
+                                    {songMedal}
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="font-mono font-black text-sm uppercase truncate text-white tracking-tight flex items-center gap-1.5">
+                                <span>{song.title}</span>
+                                {claimedRewards[song.id]?.includes('prophecy') && <span>🏆</span>}
+                              </div>
+
+                              <div className="flex items-center gap-3 mt-1 text-[9px] font-mono text-white/40">
+                                <span>{song.artist}</span>
+                                <span>·</span>
+                                <span>{song.bpm} BPM</span>
+                                <span>·</span>
+                                <span>LVL {song.difficultyLevel}</span>
+                                {hs > 0 && (
+                                  <span className="ml-auto font-mono text-[10px] font-bold text-[#39FF14]">
+                                    {hs.toLocaleString()}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            <ChevronRight size={16} className={`transition-transform ${isSelected ? 'translate-x-1 text-[#39FF14]' : 'text-white/20'}`} />
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
-        {/* Right: Detail panel */}
-        <div className="hidden lg:flex lg:w-1/2 flex-col justify-between p-10 bg-[rgba(255,255,255,0.01)]">
+        {/* Right Column: Dynamic Integrated Calibration & Details Page */}
+        <div className="w-full lg:w-1/2 flex flex-col overflow-y-auto p-6 lg:p-10 bg-black/60 backdrop-blur-xl border-t lg:border-t-0 lg:border-l border-white/10">
           {selected ? (
-            <div className="fade-in-up">
-              <div>
-                {/* Cover art with floating effect */}
-                <div className="mb-8 relative group max-w-xs">
-                  {selected.coverArt ? (
-                    <div className="relative overflow-hidden rounded-2xl">
-                      <img
-                        src={selected.coverArt}
-                        alt={selected.title}
-                        className="w-64 h-64 object-cover transition-transform duration-700 group-hover:scale-110"
-                        style={{ boxShadow: `0 20px 40px rgba(0,0,0,0.6), 0 0 30px ${selected.mood === 'light' ? 'rgba(57,255,20,0.15)' : 'rgba(255,20,147,0.15)'}` }}
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    </div>
-                  ) : (
-                    <div
-                      className="w-64 h-64 flex items-center justify-center font-mono font-black text-6xl rounded-2xl glass-card"
-                      style={{ color: 'rgba(255,255,255,0.05)' }}
-                    >
-                      {selected.day}
-                    </div>
-                  )}
-                  <div className="absolute -top-3 -left-3 pill-badge font-black text-[11px]"
-                    style={{
-                      background: selected.mood === 'light' ? '#39FF14' : '#FF1493',
-                      color: '#000',
-                      boxShadow: `0 10px 20px -5px ${selected.mood === 'light' ? 'rgba(57,255,20,0.5)' : 'rgba(255,20,147,0.5)'}`
-                    }}
-                  >
-                    DAY {selected.day}
+            <div className="space-y-6 max-w-xl mx-auto w-full">
+              {/* Header Title Bar */}
+              <div className="flex justify-between items-start border-b border-white/10 pb-4">
+                <div>
+                  <div className="font-mono text-[9px] tracking-[0.25em] text-[#39FF14] uppercase mb-1 flex items-center gap-2">
+                    <Activity size={12} className="animate-pulse" />
+                    <span>SYSTEM ANALYZER // CALIBRATION ACTIVE</span>
+                  </div>
+                  <div className="font-mono text-xs text-white/30 uppercase">
+                    SIGNAL REF: {selected.id.toUpperCase().substring(0, 14)}
                   </div>
                 </div>
-
-                <div className="font-mono text-[10px] font-bold mb-2 tracking-[0.2em] uppercase" style={{ color: 'rgba(255,255,255,0.3)' }}>
-                  {selected.date} // {selected.key || 'UNKNOWN KEY'}
-                </div>
-
-                <h2
-                  className="font-mono font-black mb-2 leading-[1.1] text-glow uppercase flex items-center gap-2"
-                  style={{ fontSize: 'clamp(28px, 4vw, 44px)', color: '#F2F0E8', letterSpacing: '-0.02em' }}
+                <div
+                  className="font-mono text-[9px] font-bold px-3 py-1 border uppercase rounded"
+                  style={{ color: activeMoodColor, borderColor: `${activeMoodColor}40`, background: `${activeMoodColor}10` }}
                 >
-                  <span>{selected.title}</span>
-                  {isAllPrizesClaimed && <span title="All Prizes Claimed">🏆</span>}
-                </h2>
-
-                <div className="font-mono font-bold text-base mb-6 tracking-[0.1em]" style={{ color: selected.mood === 'light' ? '#39FF14' : '#FF1493' }}>
-                  {selected.artist}
-                </div>
-
-                {selected.description && (
-                  <p className="text-sm leading-relaxed mb-6 font-medium italic" style={{ color: 'rgba(255,255,255,0.4)', maxWidth: 400 }}>
-                    "{selected.description}"
-                  </p>
-                )}
-
-                {selected.moodTags && selected.moodTags.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-8">
-                    {selected.moodTags.map((tag) => (
-                      <span key={tag} className="pill-badge font-bold text-[9px]"
-                        style={{
-                          border: '1px solid rgba(255,255,255,0.08)',
-                          color: 'rgba(255,255,255,0.5)',
-                          background: 'rgba(255,255,255,0.03)',
-                        }}
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                <div className="grid grid-cols-4 gap-3 mb-8">
-                  {[
-                    { label: 'BPM', value: selected.bpm },
-                    { label: 'NODES', value: (selected.notes || []).length },
-                    {
-                      label: 'DUR',
-                      value: `${Math.floor(selected.duration / 60)}:${String(Math.round(selected.duration % 60)).padStart(2, '0')}`,
-                    },
-                    { label: 'VAL', value: `${Math.round(selected.valence * 100)}%` },
-                  ].map(({ label, value }) => (
-                    <div key={label} className="glass-panel p-3 text-center">
-                      <div className="font-mono text-[9px] font-bold mb-1 tracking-wider uppercase" style={{ color: 'rgba(255,255,255,0.3)' }}>{label}</div>
-                      <div className="font-mono font-black text-lg" style={{ color: '#F2F0E8' }}>{value}</div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="flex items-center gap-6">
-                  <div className="flex-1">
-                    <div className="font-mono text-[9px] font-bold mb-2 tracking-wider uppercase" style={{ color: 'rgba(255,255,255,0.3)' }}>THREAT LEVEL</div>
-                    <DiffBars level={selected.difficultyLevel} />
-                  </div>
-                  {getHighScore(selected.id) > 0 && (
-                    <div className="text-right">
-                      <div className="font-mono text-[9px] font-bold mb-1 tracking-wider uppercase" style={{ color: 'rgba(255,255,255,0.3)' }}>MAX SCORE</div>
-                      <div className="font-mono font-black text-xl text-glow" style={{ color: '#39FF14' }}>
-                        {getHighScore(selected.id).toLocaleString()}
-                      </div>
-                    </div>
-                  )}
+                  MOOD: {selected.mood.toUpperCase()}
                 </div>
               </div>
 
-              <div className="flex flex-col gap-3 mt-12">
-                {!selectedUnlocked && (
-                  <div className="border border-[#FF3800]/30 bg-[#FF3800]/10 p-3 mb-1 text-center rounded-xl">
-                    <div className="font-mono text-[10px] font-black text-[#FF3800] tracking-wider">
-                      AWARD PLAY LOCKED // 10 FRAGMENTS REQUIRED
+              {/* Album Art & Audio Preview Hero */}
+              <div className="flex flex-col sm:flex-row gap-6 items-center bg-white/[0.02] border border-white/10 p-5 rounded-2xl">
+                <div className="relative flex-shrink-0 group">
+                  {/* Tech frame accents */}
+                  <div className="absolute -top-2 -left-2 w-4 h-4 border-t-2 border-l-2 border-[#39FF14]" />
+                  <div className="absolute -top-2 -right-2 w-4 h-4 border-t-2 border-r-2 border-[#39FF14]" />
+                  <div className="absolute -bottom-2 -left-2 w-4 h-4 border-b-2 border-l-2 border-[#39FF14]" />
+                  <div className="absolute -bottom-2 -right-2 w-4 h-4 border-b-2 border-r-2 border-[#39FF14]" />
+
+                  {selected.coverArt ? (
+                    <img
+                      src={selected.coverArt}
+                      alt={selected.title}
+                      className="w-36 h-36 object-cover rounded-xl shadow-2xl"
+                      style={{
+                        border: '1px solid rgba(57,255,20,0.2)',
+                        filter: selectedUnlocked ? 'none' : 'grayscale(100%) brightness(0.4)',
+                      }}
+                    />
+                  ) : (
+                    <div className="w-36 h-36 rounded-xl flex items-center justify-center font-mono font-black text-3xl bg-white/5 border border-white/10 text-white/30">
+                      #{selected.day}
                     </div>
-                    <div className="font-mono text-[8px] text-white/50 mt-1 uppercase">
-                      DECRYPT FRAGMENTS FOR THIS SONG · OR PLAY FREE FROM COLLECTION
+                  )}
+
+                  {/* Audio Preview Overlay Button */}
+                  {selectedUnlocked && (
+                    <button
+                      onClick={() => togglePreview(selected)}
+                      className="absolute inset-0 rounded-xl flex items-center justify-center transition-all bg-black/40 hover:bg-black/60 text-white cursor-pointer"
+                    >
+                      <div className="w-10 h-10 rounded-full border border-white/30 bg-black/60 flex items-center justify-center shadow-lg">
+                        {previewing ? <VolumeX size={18} className="text-[#39FF14]" /> : <Volume2 size={18} className="text-white" />}
+                      </div>
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex-1 min-w-0 text-center sm:text-left">
+                  <div className="flex items-center gap-2 mb-1.5 justify-center sm:justify-start flex-wrap">
+                    <span className="font-mono text-[9px] px-2 py-0.5 border font-bold uppercase rounded text-white/40 border-white/20">
+                      DAY #{String(selected.day).padStart(3, '0')}
+                    </span>
+                    {medal && medal !== '' && (
+                      <span
+                        className="font-mono text-[9px] px-2 py-0.5 border font-bold uppercase rounded"
+                        style={{ color: medalColor, borderColor: `${medalColor}40`, background: `${medalColor}10` }}
+                      >
+                        {medal}
+                      </span>
+                    )}
+                    {isAllPrizesClaimed && (
+                      <span className="font-mono text-[9px] px-2 py-0.5 border border-yellow-400 text-yellow-400 bg-yellow-400/10 font-bold uppercase flex items-center gap-1 rounded">
+                        <Trophy size={10} /> ALL PRIZES CLAIMED
+                      </span>
+                    )}
+                  </div>
+
+                  <h2 className="font-mono font-black text-2xl uppercase leading-tight tracking-tight text-white mb-1">
+                    {selected.title}
+                  </h2>
+                  <div className="font-mono text-sm text-white/60 font-bold uppercase mb-1">
+                    {selected.artist}
+                  </div>
+                  <div className="font-mono text-[10px] text-white/30 uppercase">
+                    SPEC DATE: {selected.date} {selected.key ? `// KEY: ${selected.key}` : ''}
+                  </div>
+                </div>
+              </div>
+
+              {/* Audio Preview Waveform Bar */}
+              {previewing && selectedUnlocked && (
+                <div className="border border-[#39FF14]/30 bg-black/70 p-3.5 rounded-xl flex items-center gap-4">
+                  <WaveformBars playing={previewing} />
+                  <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                    <div
+                      className="h-full transition-all duration-150"
+                      style={{ width: `${previewProg * 100}%`, background: activeMoodColor, boxShadow: `0 0 8px ${activeMoodColor}` }}
+                    />
+                  </div>
+                  <button
+                    onClick={() => togglePreview()}
+                    className="font-mono text-xs text-white/40 hover:text-white cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+
+              {/* Calibration Coefficient Override Controller */}
+              {selectedUnlocked && (
+                <div className="border border-[#39FF14]/25 bg-black/40 p-5 rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="font-mono text-[9px] uppercase tracking-wider text-white/40 flex items-center gap-2">
+                      <Sliders size={12} className="text-[#39FF14]" />
+                      <span>// CALIBRATION COEFFICIENT OVERRIDE</span>
+                    </div>
+                    <div className="font-mono font-bold text-sm" style={{ color: diffColor }}>
+                      LVL {diffOverride}
                     </div>
                   </div>
-                )}
+
+                  <div className="flex gap-1 items-end h-4">
+                    {Array.from({ length: 10 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="flex-1 rounded-xs transition-all"
+                        style={{
+                          height: `${30 + i * 7}%`,
+                          background: i < diffOverride ? diffColor : 'rgba(255,255,255,0.05)',
+                          border: '1px solid rgba(255,255,255,0.05)',
+                          boxShadow: i < diffOverride ? `0 0 6px ${diffColor}40` : 'none',
+                        }}
+                      />
+                    ))}
+                  </div>
+
+                  <input
+                    type="range"
+                    min={1}
+                    max={10}
+                    value={diffOverride}
+                    onChange={(e) => {
+                      audioManager.playSfx('tap_nav', 0.05);
+                      setDiffOverride(parseInt(e.target.value, 10));
+                    }}
+                    className="w-full cursor-pointer accent-[#39FF14]"
+                  />
+
+                  <div className="flex justify-between font-mono text-[8px] tracking-widest text-white/40">
+                    <span className="text-[#39FF14]">MIN COEFFICIENT (LVL 1)</span>
+                    <span className="text-[#FF1493]">MAX COEFFICIENT (LVL 10)</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Telemetry Stats Grid */}
+              <div className="grid grid-cols-4 gap-2.5">
+                {[
+                  { label: 'BPM', value: selected.bpm },
+                  { label: 'NODES', value: (selected.notes || []).length },
+                  { label: 'LENGTH', value: `${Math.floor(selected.duration / 60)}:${String(Math.round(selected.duration % 60)).padStart(2, '0')}` },
+                  { label: 'CALIB', value: diffOverride },
+                ].map(({ label, value }) => (
+                  <div key={label} className="border border-white/10 bg-black/40 p-3 rounded-xl text-center">
+                    <div className="font-mono text-[8px] font-bold text-white/30 uppercase mb-1">{label}</div>
+                    <div className="font-mono font-black text-sm text-[#39FF14]">{value}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Highest Integrity Dispatch Score */}
+              {getHighScore(selected.id) > 0 && (
+                <div className="border border-[#39FF14]/20 bg-black/40 p-4 rounded-xl flex items-center justify-between">
+                  <div className="font-mono text-[9px] tracking-widest text-white/40 uppercase">
+                    // MAX DISPATCH SCORE
+                  </div>
+                  <div className="font-mono font-black text-lg text-[#39FF14]">
+                    {getHighScore(selected.id).toLocaleString()}
+                  </div>
+                </div>
+              )}
+
+              {/* Description */}
+              {selected.description && (
+                <div className="border border-white/10 bg-black/30 p-4 rounded-xl font-mono text-xs italic text-white/50 leading-relaxed">
+                  "{selected.description.toUpperCase()}"
+                </div>
+              )}
+
+              {/* Prize Progress Menu */}
+              <PrizeProgressMenu songId={selected.id} />
+
+              {/* Telemetry Log */}
+              {history.length > 0 && (
+                <div className="border border-white/10 bg-black/30 p-4 rounded-xl space-y-2">
+                  <div className="font-mono text-[8px] text-white/40 tracking-widest uppercase">
+                    // TELEMETRY HISTORY LOG ({history.length} TRANSMISSIONS)
+                  </div>
+                  <div className="flex gap-2 overflow-x-auto pb-1 font-mono text-xs">
+                    {history.slice(-6).map((sc, idx) => (
+                      <div key={idx} className="border border-white/10 bg-white/5 px-2.5 py-1 rounded text-[#39FF14] font-bold">
+                        {sc.toLocaleString()}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Transmission Trigger / Play Action */}
+              <div className="pt-2">
+                {!selectedUnlocked ? (
+                  <div className="border border-[#FF3800]/40 bg-[#FF3800]/10 p-4 rounded-xl text-center mb-3">
+                    <div className="font-mono text-xs font-black text-[#FF3800] tracking-wider uppercase">
+                      AWARD PLAY LOCKED // 10 FRAGMENTS REQUIRED
+                    </div>
+                    <div className="font-mono text-[9px] text-white/60 mt-1 uppercase">
+                      COLLECT 10 FRAGMENTS FOR THIS SONG OR EQUIP CARD FROM VAULT COLLECTION
+                    </div>
+                  </div>
+                ) : null}
+
                 <button
                   data-testid="button-play"
                   disabled={!selectedUnlocked}
-                  onClick={() => {
-                    sessionStorage.setItem(`game_origin_${selected.id}`, 'songs');
-                    sessionStorage.setItem(`diff_override_${selected.id}`, String(selected.difficultyLevel));
-                    setLocation(`/play/${selected.id}`);
-                  }}
-                  className={`w-full py-6 text-base tracking-[0.5em] font-black uppercase transition-all ${
-                    selectedUnlocked 
-                      ? "neon-btn" 
-                      : "border border-white/10 bg-white/5 text-white/20 cursor-not-allowed shadow-none"
+                  onClick={() => handlePlaySong()}
+                  onMouseEnter={() => { if (selectedUnlocked) audioManager.playSfx('tap_nav', 0.08); }}
+                  className={`w-full py-4 text-xs tracking-[0.4em] font-black uppercase rounded-xl transition-all flex items-center justify-center gap-3 cursor-pointer ${
+                    selectedUnlocked
+                      ? "border border-[#39FF14] bg-[#39FF14] text-black hover:bg-[#39FF14]/90 shadow-[0_0_20px_rgba(57,255,20,0.4)]"
+                      : "border border-white/10 bg-white/5 text-white/20 cursor-not-allowed"
                   }`}
                 >
-                  ▶ INITIATE TRANSMISSION
-                </button>
-                <button
-                  onClick={() => setLocation(`/song/${selected.id}?from=songs`)}
-                  className="neon-btn-outline w-full py-4 text-[10px] font-bold tracking-[0.3em] uppercase"
-                >
-                  ◆ ANALYSIS &amp; CALIBRATION
+                  <Play size={16} fill="currentColor" />
+                  <span>START TRANSMISSION</span>
                 </button>
               </div>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center h-full gap-4 opacity-20">
-              <div className="w-12 h-12 border-2 border-dashed border-white/20 rounded-full animate-[spin_10s_linear_infinite]" />
-              <div className="font-mono text-[10px] font-bold tracking-[0.4em] uppercase">
-                SELECT A SIGNAL TO DECODE
+            <div className="flex flex-col items-center justify-center h-full gap-4 text-center py-16 opacity-30">
+              <div className="w-12 h-12 border-2 border-dashed border-[#39FF14] rounded-full animate-spin" />
+              <div className="font-mono text-xs font-bold tracking-[0.3em] uppercase text-[#39FF14]">
+                SELECT A SIGNAL TO INITIATE CALIBRATION...
               </div>
             </div>
           )}
         </div>
       </div>
-
-      {/* Mobile play button */}
-      {selected && (
-        <div
-          className="lg:hidden flex-shrink-0 p-4 border-t"
-          style={{ borderColor: 'rgba(255,255,255,0.06)', background: 'rgba(8,8,12,0.7)', backdropFilter: 'blur(12px)' }}
-        >
-          <div className="flex gap-2">
-            <button
-              data-testid="button-play-mobile"
-              disabled={!selectedUnlocked}
-              onClick={() => {
-                sessionStorage.setItem(`game_origin_${selected.id}`, 'songs');
-                sessionStorage.setItem(`diff_override_${selected.id}`, String(selected.difficultyLevel));
-                setLocation(`/play/${selected.id}`);
-              }}
-              className={`neon-btn flex-1 py-4 text-sm tracking-[0.3em] transition-all ${
-                selectedUnlocked
-                  ? ""
-                  : "border border-white/10 bg-white/5 text-white/20 cursor-not-allowed shadow-none"
-              }`}
-            >
-              {selectedUnlocked ? `▶ START: ${selected.title.substring(0, 16)}` : `LOCKED: ${selected.title.substring(0, 16)}`}
-            </button>
-            <button
-              onClick={() => setLocation(`/song/${selected.id}?from=songs`)}
-              className="neon-btn-outline py-4 px-4 text-xs tracking-widest"
-            >
-              STATS
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
-
