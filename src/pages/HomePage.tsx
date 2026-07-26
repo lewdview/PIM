@@ -166,7 +166,7 @@ export default function HomePage() {
       console.error(err);
     } finally {
       useLoadingToast.getState().hide();
-      await loadVaultData();
+      await loadVaultData(true);
       setTargetLoading(false);
       setTargetDay('');
     }
@@ -186,7 +186,7 @@ export default function HomePage() {
       console.error(err);
     } finally {
       useLoadingToast.getState().hide();
-      await loadVaultData();
+      await loadVaultData(true);
       setUpgradeLoading(false);
       setUpgradeCardId('');
     }
@@ -199,6 +199,7 @@ export default function HomePage() {
     try {
       const card = await fuseDuplicates(cardsToFuse.map(c => c.id));
       if (card) {
+        cardsToFuse.forEach(c => removeFromCollection(c.id));
         addToCollection([card]);
         audioManager.playSfx('fusion', 0.9);
         startReveal([card], {
@@ -212,10 +213,10 @@ export default function HomePage() {
       console.error(err);
     } finally {
       useLoadingToast.getState().hide();
-      await loadVaultData();
+      await loadVaultData(true);
       setFusionLoading(false);
     }
-  }, [addToCollection, startReveal, setLocation, loadVaultData]);
+  }, [addToCollection, removeFromCollection, startReveal, setLocation, loadVaultData]);
 
   // Load daily card + sync token balance
   useEffect(() => {

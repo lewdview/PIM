@@ -115,7 +115,7 @@ interface VaultState {
   setTokenBalance: (balance: number) => void;
   addTokens: (amount: number) => Promise<void>;
   setEquippedCardId: (id: string | null) => void;
-  loadVaultData: () => Promise<void>;
+  loadVaultData: (force?: boolean) => Promise<void>;
   completeOnboarding: () => Promise<void>;
   unlockSkin: (skinId: string, cost: number) => Promise<boolean>;
   optionsModalOpen: boolean;
@@ -256,14 +256,14 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   setTokenBalance: (balance) => set({ tokenBalance: balance }),
   setEquippedCardId: (id) => set({ equippedCardId: id }),
   setOptionsModalOpen: (open) => set({ optionsModalOpen: open }),
-  loadVaultData: async () => {
+  loadVaultData: async (force = false) => {
     const session = await supabase.auth.getSession();
     const userId = session.data.session?.user.id;
     if (!userId) {
       set({ hasLoadedData: false });
       return;
     }
-    if (get().hasLoadedData) return;
+    if (get().hasLoadedData && !force) return;
 
     set({ isLoading: true });
     try {

@@ -380,7 +380,7 @@ export async function claimDailyCard(day: number): Promise<OwnedCard | null> {
     const parent = findCardWithFallback(pool, result.card.card_id, result.card.rarity);
 
     return {
-      id: crypto.randomUUID(),
+      id: result.card.id || crypto.randomUUID(),
       cardId: parent.id,
       card: { ...parent, rarity: result.card.rarity },
       source: 'daily_claim',
@@ -436,7 +436,7 @@ export async function purchasePack(category: PackCategory, size: PackSize = 'sin
     return rawCards.map((c: any) => {
       const parent = findCardWithFallback(pool, c.card_id, c.rarity);
       return {
-        id: crypto.randomUUID(),
+        id: c.id || crypto.randomUUID(),
         cardId: parent.id,
         card: { ...parent, rarity: c.rarity },
         source: c.source,
@@ -553,7 +553,7 @@ export async function buyTokenPack(): Promise<OwnedCard[] | 'insufficient'> {
     return rawCards.map((c: any) => {
       const parent = findCardWithFallback(pool, c.card_id, c.rarity);
       return {
-        id: crypto.randomUUID(),
+        id: c.id || crypto.randomUUID(),
         cardId: parent.id,
         card: { ...parent, rarity: c.rarity },
         source: c.source || 'vault_token',
@@ -595,7 +595,7 @@ export async function targetedPull(day: number): Promise<OwnedCard | null> {
     const pool = await fetchAllCards();
     const parent = findCardWithFallback(pool, data.card.card_id, data.card.rarity);
     return {
-      id: crypto.randomUUID(), cardId: parent.id,
+      id: data.card.id || crypto.randomUUID(), cardId: parent.id,
       card: { ...parent, rarity: data.card.rarity },
       source: 'targeted_pull', claimedAt: data.card.claimed_at,
       edition: data.card.edition, maxSupply: data.card.max_supply,
@@ -633,7 +633,7 @@ export async function fuseDuplicates(cardIds: string[]): Promise<OwnedCard | nul
     const pool = await fetchAllCards();
     const parent = findCardWithFallback(pool, data.fusedCard.card_id, data.fusedCard.rarity);
     return {
-      id: crypto.randomUUID(), cardId: parent.id,
+      id: data.fusedCard.id || crypto.randomUUID(), cardId: parent.id,
       card: { ...parent, rarity: data.fusedCard.rarity },
       source: 'fusion', claimedAt: data.fusedCard.claimed_at,
       edition: data.fusedCard.edition, maxSupply: data.fusedCard.max_supply,

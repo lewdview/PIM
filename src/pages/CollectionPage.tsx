@@ -120,13 +120,14 @@ export default function CollectionPage() {
     const sourceSnapshot = [...cardsToFuse];
     const result = await fuseDuplicates(cardsToFuse.map(c => c.id));
     if (result) {
+      cardsToFuse.forEach(c => removeFromCollection(c.id));
       addToCollection([result]);
       setFusionResult({ sourceCards: sourceSnapshot, resultCard: result });
     }
-    await loadVaultData();
+    await loadVaultData(true);
     setFusionLoading(false);
     useLoadingToast.getState().hide();
-  }, [fusionLoading, addToCollection, loadVaultData]);
+  }, [fusionLoading, addToCollection, removeFromCollection, loadVaultData]);
 
   // Burn handler
   const handleBurn = useCallback(async (ownedCard: OwnedCard) => {

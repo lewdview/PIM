@@ -656,7 +656,7 @@ export default function ForgePage() {
     const result = await upgradeRarity(upgradeCard.id);
     useLoadingToast.getState().hide();
     if (result.success) {
-      await loadVaultData();
+      await loadVaultData(true);
     }
     setUpgradeLoading(false);
     setUpgradeCard(null);
@@ -672,14 +672,15 @@ export default function ForgePage() {
     const card = await fuseDuplicates(cards.map(c => c.id));
     useLoadingToast.getState().hide();
     if (card) {
+      cards.forEach(c => removeFromCollection(c.id));
       addToCollection([card]);
       // Show in-place fusion animation instead of navigating to /reveal
       setFusionResult({ sourceCards: sourceSnapshot, resultCard: card });
     }
-    await loadVaultData();
+    await loadVaultData(true);
     setFusionLoading(false);
     setFusionCards([]);
-  }, [fusionCards, addToCollection, loadVaultData]);
+  }, [fusionCards, addToCollection, removeFromCollection, loadVaultData]);
 
   // Find fusable groups (3+ identical card_id + rarity)
   const fusableGroups = useMemo(() => {

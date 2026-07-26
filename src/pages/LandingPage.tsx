@@ -106,7 +106,7 @@ export default function LandingPage() {
   const [, setLocation] = useLocation();
   const {
     dailyCard, hasClaimed, tokenBalance, loadVaultData, setDailyCard, setHasClaimed,
-    setCollection, startReveal, addToCollection, collection, echoPrestigeScore
+    setCollection, startReveal, addToCollection, removeFromCollection, collection, echoPrestigeScore
   } = useVaultStore();
   const user = useAuthStore(s => s.user);
 
@@ -128,13 +128,11 @@ export default function LandingPage() {
   const [codeError, setCodeError] = useState('');
   const [ageGateCode, setAgeGateCode] = useState<string | null>(null);
   const [rewardClaimed, setRewardClaimed] = useState<{
-    type: string;
-    value: string;
-    details?: {
-      tokensGranted?: number;
-      card?: VaultCard;
-      skinUnlocked?: string;
-    };
+    rewardType?: string;
+    rewardValue?: string;
+    card?: any;
+    tokens?: number;
+    skinUnlocked?: string;
   } | null>(null);
 
   // Upgradeable cards (not legendary or mythic)
@@ -157,14 +155,14 @@ export default function LandingPage() {
 
   // Callbacks for sinks
   const handleTargetedPull = useCallback(async (dayNum: number) => {
-    if (!dayNum || dayNum < 1 || dayNum > 365 || tokenBalance < 500) return;
+    if (tokenBalance < 500) return;
     setTargetLoading(true);
-    useLoadingToast.getState().show('Targeted pull…');
+    useLoadingToast.getState().show(`Pulling Day ${dayNum}…`);
     try {
       const card = await targetedPull(dayNum);
       if (card) {
         addToCollection([card]);
-        audioManager.playSfx('open_chest', 0.9);
+        audioManager.playSfx('targeted', 0.9);
         startReveal([card], {
           category: 'targeted', label: `Targeted Pull: Day ${dayNum}`, icon: '🎯',
           accent: '#ff9900', gradient: 'linear-gradient(145deg, #1a1000, #0a0800)',
@@ -176,7 +174,7 @@ export default function LandingPage() {
       console.error(err);
     } finally {
       useLoadingToast.getState().hide();
-      await loadVaultData();
+      await loadVaultData(true);
       setTargetLoading(false);
       setTargetDay('');
     }
@@ -196,7 +194,7 @@ export default function LandingPage() {
       console.error(err);
     } finally {
       useLoadingToast.getState().hide();
-      await loadVaultData();
+      await loadVaultData(true);
       setUpgradeLoading(false);
       setUpgradeCardId('');
     }
@@ -209,6 +207,7 @@ export default function LandingPage() {
     try {
       const card = await fuseDuplicates(cardsToFuse.map(c => c.id));
       if (card) {
+        cardsToFuse.forEach(c => removeFromCollection(c.id));
         addToCollection([card]);
         audioManager.playSfx('fusion', 0.9);
         startReveal([card], {
@@ -222,10 +221,10 @@ export default function LandingPage() {
       console.error(err);
     } finally {
       useLoadingToast.getState().hide();
-      await loadVaultData();
+      await loadVaultData(true);
       setFusionLoading(false);
     }
-  }, [addToCollection, startReveal, setLocation, loadVaultData]);
+  }, [addToCollection, removeFromCollection, startReveal, setLocation, loadVaultData]);
 
   const handleBonusRedeem = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();

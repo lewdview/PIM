@@ -30,152 +30,25 @@ const refineAndBlendEdges = (canvas: HTMLCanvasElement, threshold: number) => {
     const imgData = ctx.getImageData(0, 0, w, h);
     const data = imgData.data;
 
-    // 1. Initial segmentation (Pass 1) & Spill suppression (green edge filtering)
-    const mask = new Uint8Array(w * h);
-
+    // Green screen spill suppression & soft edge blending without deleting dark subjects
     for (let i = 0; i < data.length; i += 4) {
       const r = data[i];
       const g = data[i + 1];
       const b = data[i + 2];
       
-      const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
-      const idx = i / 4;
-
-      // Detect green screen/fringe pixels
-      const isGreen = g > r * 1.15 && g > b * 1.15;
-
+      const isGreen = g > r * 1.18 && g > b * 1.18;
       if (isGreen) {
-        // Spill suppression: blend green with red and blue
         data[i + 1] = Math.round((r + b) / 2);
-        // Suppress alpha slightly for smoother blending of green outlines
-        data[i + 3] = Math.round(data[i + 3] * 0.3);
-      }
-
-      if (luminance >= threshold && !isGreen) {
-        mask[idx] = 1; // Keep
-      } else {
-        data[i + 3] = 0; // Make transparent
-        mask[idx] = 0;
+        data[i + 3] = Math.round(data[i + 3] * 0.15); // Fade green backdrop
       }
     }
-
-    // 2. Hole Filling pass (Pass 2)
-    const refinedMask = new Uint8Array(w * h);
-    refinedMask.set(mask);
-
-    for (let y = 1; y < h - 1; y++) {
-      for (let x = 1; x < w - 1; x++) {
-        const idx = y * w + x;
-        if (mask[idx] === 0) {
-          const up = mask[(y - 1) * w + x];
-          const down = mask[(y + 1) * w + x];
-          const left = mask[y * w + (x - 1)];
-          const right = mask[y * w + (x + 1)];
-          const diag1 = mask[(y - 1) * w + (x - 1)];
-          const diag2 = mask[(y - 1) * w + (x + 1)];
-          const diag3 = mask[(y + 1) * w + (x - 1)];
-          const diag4 = mask[(y + 1) * w + (x + 1)];
-
-          const sum = up + down + left + right + diag1 + diag2 + diag3 + diag4;
-          if (sum >= 5) {
-            refinedMask[idx] = 1;
-            const pixelIdx = idx * 4;
-            data[pixelIdx + 3] = 255;
-          }
-        }
-      }
-    }
-
-    // Write mask back to image data
-    for (let i = 0; i < mask.length; i++) {
-      if (refinedMask[i] === 0) {
-        data[i * 4 + 3] = 0;
-      }
-    }
-
-    // 3. Alpha channel blend blur (Pass 3)
-    const blurredAlpha = new Uint8ClampedArray(w * h);
-    const r = 2; // radius for alpha blur (feathering)
-
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const idx = y * w + x;
-        const currentAlpha = data[idx * 4 + 3];
-
-        if (currentAlpha === 0) {
-          blurredAlpha[idx] = 0;
-          continue;
-        }
-
-        // If it's a solid core, no need to blur
-        let isEdge = false;
-        for (let ky = -1; ky <= 1; ky++) {
-          for (let kx = -1; kx <= 1; kx++) {
-            const ny = y + ky;
-            const nx = x + kx;
-            if (ny >= 0 && ny < h && nx >= 0 && nx < w) {
-              if (data[(ny * w + nx) * 4 + 3] === 0) {
-                isEdge = true;
-                break;
-              }
-            }
-          }
-          if (isEdge) break;
-        }
-
-        if (!isEdge) {
-          blurredAlpha[idx] = currentAlpha;
-          continue;
-        }
-
-        // We are on the edge, average the alpha values
-        let sum = 0;
-        let count = 0;
-        for (let ky = -r; ky <= r; ky++) {
-          for (let kx = -r; kx <= r; kx++) {
-            const ny = y + ky;
-            const nx = x + kx;
-            if (ny >= 0 && ny < h && nx >= 0 && nx < w) {
-              sum += data[(ny * w + nx) * 4 + 3];
-              count++;
-            }
-          }
-        }
-        blurredAlpha[idx] = Math.round(sum / count);
-      }
-    }
-
-    // 4. Speckle noise removal pass (Pass 4)
-    for (let y = 2; y < h - 2; y++) {
-      for (let x = 2; x < w - 2; x++) {
-        const idx = y * w + x;
-        if (blurredAlpha[idx] > 0) {
-          let neighborCount = 0;
-          for (let ky = -2; ky <= 2; ky++) {
-            for (let kx = -2; kx <= 2; kx++) {
-              if (ky === 0 && kx === 0) continue;
-              if (blurredAlpha[(y + ky) * w + (x + kx)] > 0) {
-                neighborCount++;
-              }
-            }
-          }
-          if (neighborCount < 2) {
-            blurredAlpha[idx] = 0; // Suppress noise
-          }
-        }
-      }
-    }
-
-    // Write final alphas back
-    for (let i = 0; i < mask.length; i++) {
-      data[i * 4 + 3] = blurredAlpha[i];
-    }
-
     ctx.putImageData(imgData, 0, 0);
-  } catch (err) {
-    console.warn('Refinement and blend edge warning:', err);
+  } catch (e) {
+    console.warn('[Slideshow refineAndBlendEdges]', e);
   }
 };
+
+
 
 
 interface GameplayVisualizerProps {
@@ -540,6 +413,222 @@ function laneAt(lane: number, progress: number, W: number) {
   return { x: left + lane * lw, w: lw };
 }
 
+function drawGameBackground(
+  ctx: CanvasRenderingContext2D,
+  W: number,
+  H: number,
+  hitY: number,
+  bgType: string,
+  t: number
+) {
+  ctx.save();
+
+  if (bgType === 'neon_grid') {
+    // 3D Synthwave Grid with glowing horizon
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, '#05021a');
+    grad.addColorStop(0.5, '#1b003a');
+    grad.addColorStop(1, '#000000');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    const horizonY = hitY * 0.4;
+    const sunGrad = ctx.createRadialGradient(W / 2, horizonY, 10, W / 2, horizonY, W * 0.45);
+    sunGrad.addColorStop(0, 'rgba(255, 20, 147, 0.45)');
+    sunGrad.addColorStop(0.5, 'rgba(0, 229, 255, 0.25)');
+    sunGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = sunGrad;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.strokeStyle = 'rgba(0, 229, 255, 0.3)';
+    ctx.lineWidth = 1.5;
+
+    const vpX = W / 2;
+    for (let x = -W * 0.5; x <= W * 1.5; x += 60) {
+      ctx.beginPath();
+      ctx.moveTo(vpX, horizonY);
+      ctx.lineTo(x, H);
+      ctx.stroke();
+    }
+
+    const offset = (t * 60) % 35;
+    for (let y = horizonY; y <= H; y += 25) {
+      const lineY = y + offset;
+      if (lineY > H) continue;
+      const alpha = Math.min(1, (lineY - horizonY) / (H - horizonY));
+      ctx.strokeStyle = `rgba(255, 20, 147, ${alpha * 0.4})`;
+      ctx.beginPath();
+      ctx.moveTo(0, lineY);
+      ctx.lineTo(W, lineY);
+      ctx.stroke();
+    }
+
+  } else if (bgType === 'cyber_streets' || bgType === 'glitch_matrix') {
+    // Matrix Green Binary Rain & Scanlines
+    ctx.fillStyle = '#020b05';
+    ctx.fillRect(0, 0, W, H);
+
+    const cols = 28;
+    const colW = W / cols;
+    ctx.font = '12px monospace';
+
+    for (let i = 0; i < cols; i++) {
+      const speed = (i % 5 + 3) * 45;
+      const dropY = ((t * speed + i * 137) % (H + 200)) - 100;
+      const x = i * colW + 4;
+
+      for (let j = 0; j < 8; j++) {
+        const charY = dropY - j * 16;
+        if (charY > 0 && charY < H) {
+          const charAlpha = (1 - j / 8) * 0.7;
+          ctx.fillStyle = j === 0 ? '#ffffff' : `rgba(57, 255, 20, ${charAlpha})`;
+          const char = String.fromCharCode(0x30a0 + Math.floor((i + j + t * 5) % 96));
+          ctx.fillText(char, x, charY);
+        }
+      }
+    }
+
+  } else if (bgType === 'space_nebula') {
+    // Cosmic Void Nebula
+    const grad = ctx.createLinearGradient(0, 0, W, H);
+    grad.addColorStop(0, '#040209');
+    grad.addColorStop(0.5, '#120428');
+    grad.addColorStop(1, '#05020c');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    const neb1X = W * 0.3 + Math.sin(t * 0.2) * 50;
+    const neb1Y = H * 0.4 + Math.cos(t * 0.15) * 40;
+    const nebGrad = ctx.createRadialGradient(neb1X, neb1Y, 20, neb1X, neb1Y, W * 0.5);
+    nebGrad.addColorStop(0, 'rgba(147, 51, 234, 0.35)');
+    nebGrad.addColorStop(0.6, 'rgba(236, 72, 153, 0.15)');
+    nebGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = nebGrad;
+    ctx.fillRect(0, 0, W, H);
+
+  } else if (bgType === 'sunset_skyline') {
+    // Retro Synthwave Sunset
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, '#1a002c');
+    grad.addColorStop(0.4, '#6b004e');
+    grad.addColorStop(0.75, '#ff5500');
+    grad.addColorStop(1, '#0b001a');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    const sunX = W / 2;
+    const sunY = hitY * 0.45;
+    const sunR = Math.min(W, H) * 0.22;
+    const sunGrad = ctx.createLinearGradient(0, sunY - sunR, 0, sunY + sunR);
+    sunGrad.addColorStop(0, '#ffea00');
+    sunGrad.addColorStop(0.5, '#ff2a00');
+    sunGrad.addColorStop(1, '#ff0055');
+    ctx.fillStyle = sunGrad;
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, sunR, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#1a002c';
+    for (let b = 0; b < 6; b++) {
+      const bY = sunY + (b * 12) + (t * 4 % 12);
+      if (bY > sunY - sunR * 0.2 && bY < sunY + sunR) {
+        ctx.fillRect(sunX - sunR, bY, sunR * 2, 4 + b * 1.5);
+      }
+    }
+
+  } else if (bgType === 'toxic_hazard') {
+    // Acid Hex Grid
+    ctx.fillStyle = '#080d04';
+    ctx.fillRect(0, 0, W, H);
+
+    const pulse = (Math.sin(t * 2) * 0.5 + 0.5) * 0.2 + 0.12;
+    ctx.strokeStyle = `rgba(57, 255, 20, ${pulse})`;
+    ctx.lineWidth = 2;
+
+    const hexR = 35;
+    for (let y = -hexR; y < H + hexR; y += hexR * 1.5) {
+      for (let x = -hexR; x < W + hexR; x += hexR * 1.732) {
+        ctx.beginPath();
+        for (let a = 0; a < 6; a++) {
+          const angle = (a * Math.PI) / 3;
+          const hx = x + hexR * Math.cos(angle);
+          const hy = y + hexR * Math.sin(angle);
+          if (a === 0) ctx.moveTo(hx, hy);
+          else ctx.lineTo(hx, hy);
+        }
+        ctx.closePath();
+        ctx.stroke();
+      }
+    }
+
+  } else if (bgType === 'hyperdrive_warp') {
+    // Warp Tunnel Lines
+    ctx.fillStyle = '#020108';
+    ctx.fillRect(0, 0, W, H);
+
+    const cx = W / 2;
+    const cy = hitY * 0.35;
+    const starCount = 45;
+
+    for (let i = 0; i < starCount; i++) {
+      const angle = (i / starCount) * Math.PI * 2;
+      const speed = 1.2 + (i % 3) * 0.8;
+      const dist = ((t * 450 * speed + i * 80) % (W * 0.85)) + 10;
+
+      const sx1 = cx + Math.cos(angle) * (dist * 0.2);
+      const sy1 = cy + Math.sin(angle) * (dist * 0.2);
+      const sx2 = cx + Math.cos(angle) * dist;
+      const sy2 = cy + Math.sin(angle) * dist;
+
+      ctx.strokeStyle = i % 2 === 0 ? 'rgba(0, 229, 255, 0.65)' : 'rgba(255, 20, 147, 0.65)';
+      ctx.lineWidth = 1 + (dist / W) * 4.5;
+      ctx.beginPath();
+      ctx.moveTo(sx1, sy1);
+      ctx.lineTo(sx2, sy2);
+      ctx.stroke();
+    }
+
+  } else if (bgType === 'gold_record') {
+    // Gold Record Vinyl Disc
+    const grad = ctx.createLinearGradient(0, 0, W, H);
+    grad.addColorStop(0, '#141002');
+    grad.addColorStop(0.5, '#2e2406');
+    grad.addColorStop(1, '#0c0a01');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    const cx = W / 2;
+    const cy = hitY * 0.45;
+    const rMax = Math.min(W, H) * 0.35;
+    const rot = t * 0.8;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rot);
+
+    ctx.fillStyle = '#1c1705';
+    ctx.beginPath();
+    ctx.arc(0, 0, rMax, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(255, 215, 0, 0.25)';
+    for (let r = rMax * 0.3; r < rMax; r += 8) {
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = '#ffd700';
+    ctx.beginPath();
+    ctx.arc(0, 0, rMax * 0.28, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
 function prerenderStaticTrack(
   W: number,
   H: number,
@@ -571,16 +660,18 @@ function prerenderStaticTrack(
   ctx.closePath();
   ctx.clip();
 
-  // Draw distinct lane background colors (uniform silver grey gradient starting black at top)
+  // Draw distinct lane background colors tinted with player's custom laneColors
   for (let i = 0; i < LANE_COUNT; i++) {
     const { x: lx0, w: lw0 } = laneAt(i, 0, W);
     const { x: lx1, w: lw1 } = laneAt(i, 1, W);
     
+    const baseColor = laneColors[i] || (i === 0 ? "#FF1493" : i === 1 ? "#00E5FF" : "#39FF14");
+
     const laneGrad = ctx.createLinearGradient(0, 0, 0, hitY);
-    laneGrad.addColorStop(0, "#0a0a0c"); // dark silver top
-    laneGrad.addColorStop(0.35, "#18181c");
-    laneGrad.addColorStop(0.7, "#3b3b42");
-    laneGrad.addColorStop(1, "#5f5f66"); // light silver bottom
+    laneGrad.addColorStop(0, "#08080c");
+    laneGrad.addColorStop(0.35, "#14141d");
+    laneGrad.addColorStop(0.75, baseColor + "33");
+    laneGrad.addColorStop(1, baseColor + "66");
     
     ctx.fillStyle = laneGrad;
     ctx.beginPath();
@@ -590,6 +681,10 @@ function prerenderStaticTrack(
     ctx.lineTo(lx1, hitY);
     ctx.closePath();
     ctx.fill();
+
+    ctx.strokeStyle = baseColor + "44";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
   }
 
   // Subtle perspective horizontal grid lines
@@ -1382,18 +1477,24 @@ export default function Game() {
 
     const fetchAndSegment = async () => {
       try {
-        let imageUrls = staticImages.length > 0 ? staticImages : ['/data/slideshow/cyber_dancer.jpg', '/data/slideshow/cyber_headphones.jpg', '/data/slideshow/cyber_dj.jpg'];
+        let imageUrls = staticImages.length > 0 ? [...staticImages] : ['/data/slideshow/cyber_dancer.jpg', '/data/slideshow/cyber_headphones.jpg', '/data/slideshow/cyber_dj.jpg'];
         
         const freeStella = localStorage.getItem('opt_free_stella_unlocked') === 'true';
         const purchasedString = localStorage.getItem('opt_purchased_stunners') || '[]';
         const purchasedList: string[] = JSON.parse(purchasedString);
 
-        imageUrls = imageUrls.filter((url: string) => {
+        const filtered = imageUrls.filter((url: string) => {
           const isStella = /stella/i.test(url);
           if (!isStella) return true;
           if (freeStella) return true;
           return purchasedList.some((pUrl: string) => url.includes(pUrl) || pUrl.includes(url));
         });
+
+        if (filtered.length > 0) {
+          imageUrls = filtered;
+        } else {
+          imageUrls = ['/data/slideshow/cyber_dancer.jpg', '/data/slideshow/cyber_headphones.jpg', '/data/slideshow/cyber_dj.jpg'];
+        }
 
         try {
           const res = await fetch('http://localhost:3002/api/slideshow-images')
@@ -2617,8 +2718,10 @@ export default function Game() {
     const puColor = puActive ? pu.color : null;
 
     // ── 1. BACKGROUND ──────────────────────────────────────────
-    // Canvas is transparent — CSS cover art layer shows through beneath everything
     ctx.clearRect(0, 0, W, H);
+
+    // Draw active game background graphic theme (Neon Grid, Cyber Streets, Space Nebula, Sunset Skyline, Gold Record, etc.)
+    drawGameBackground(ctx, W, H, hitY, optsRef.current.gameBackground || 'cover_blur', t);
 
     // Draw pre-rendered static tracks (Double-buffering optimization)
     if (offscreenCanvasRef.current) {
