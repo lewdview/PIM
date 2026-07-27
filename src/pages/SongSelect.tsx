@@ -343,29 +343,38 @@ export default function SongSelect() {
 
   return (
     <div className="min-h-dvh w-full flex flex-col relative overflow-hidden select-none bg-[#050402] text-white">
-      {/* Dynamic Parallax Blurred Background Engine */}
-      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+      {/* Dynamic High-Res Album Artwork Background Engine with Parallax */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden bg-[#050402]">
+        {/* High-Res Album Artwork Layer */}
         <div
-          className="absolute inset-0 transition-all duration-1000 ease-out filter blur-[12px] brightness-[0.22] scale-[1.35]"
+          className="absolute inset-0 transition-all duration-700 ease-out scale-[1.05]"
           style={{
             backgroundImage: `url(${activeCoverUrl})`,
             backgroundPosition: 'center',
             backgroundSize: 'cover',
+            transform: `translateY(${scrollTop * -0.05}px) scale(1.05)`,
           }}
         />
-        {/* Pulsing Theme Glow */}
+        {/* Dark Vignette & Gradient Overlay for Crisp Text Contrast */}
         <div
-          className="absolute inset-0 opacity-45 mix-blend-screen transition-all duration-1000"
+          className="absolute inset-0 transition-all duration-700"
           style={{
-            background: `radial-gradient(circle at 65% 45%, ${activeMoodColor}22 0%, transparent 80%)`,
+            background: `radial-gradient(ellipse at 50% 50%, rgba(5,4,2,0.68) 0%, rgba(5,4,2,0.92) 85%), linear-gradient(to bottom, rgba(5,4,2,0.7) 0%, rgba(5,4,2,0.9) 100%)`,
           }}
         />
-        {/* Ambient Grid lines */}
+        {/* Dynamic Mood Color Lighting */}
         <div
-          className="absolute inset-0 opacity-[0.04]"
+          className="absolute inset-0 opacity-35 mix-blend-screen transition-all duration-1000 pointer-events-none"
           style={{
-            backgroundImage: 'linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px)',
-            backgroundSize: '64px 64px',
+            background: `radial-gradient(circle at 60% 40%, ${activeMoodColor}40 0%, transparent 75%)`,
+          }}
+        />
+        {/* Cyber Grid Overlay */}
+        <div
+          className="absolute inset-0 opacity-[0.05]"
+          style={{
+            backgroundImage: 'linear-gradient(rgba(255,255,255,0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 1px)',
+            backgroundSize: '48px 48px',
           }}
         />
       </div>
@@ -481,10 +490,10 @@ export default function SongSelect() {
           </div>
         </div>
 
-        {/* MAIN VIEW: FULL-SPACE STAGE SHOWCASE (Stage 1 up to 31) */}
+        {/* MAIN VIEW: FULL-SPACE STAGE SHOWCASE WITH ALBUM ARTWORK BACKGROUND */}
         <div
           ref={mainScrollRef}
-          className="flex-1 overflow-y-auto bg-black/40 backdrop-blur-xl flex flex-col p-4 lg:p-8 relative"
+          className="flex-1 overflow-y-auto bg-black/30 backdrop-blur-xl flex flex-col p-4 lg:p-8 relative"
         >
           {/* Parallax Background Month & Stage Text */}
           {activeMonthGroup && (
@@ -503,7 +512,7 @@ export default function SongSelect() {
           {/* TOP CONTROLS & STAGE STEPPER BAR */}
           <div className="relative z-20 space-y-4 max-w-4xl mx-auto w-full mb-6">
             {/* Sector Header & Controls */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-black/60 border border-white/10 p-4 rounded-2xl">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-black/70 border border-white/10 p-4 rounded-2xl backdrop-blur-xl">
               <div>
                 <div className="font-mono text-[9px] font-bold tracking-[0.25em] text-[#39FF14] uppercase">
                   SECTOR {String(activeMonthGroup?.meta.month).padStart(2, '0')} // STAGE SHOWCASE
@@ -529,7 +538,7 @@ export default function SongSelect() {
                   <span>← STAGE {stageIndex > 0 ? getRelativeDay(activeMonthStages[stageIndex - 1]?.day || 1) : 1}</span>
                 </button>
 
-                <div className="font-mono text-center px-4 py-2 bg-black/80 border border-[#39FF14]/30 rounded-xl">
+                <div className="font-mono text-center px-4 py-2 bg-black/90 border border-[#39FF14]/40 rounded-xl shadow-lg">
                   <div className="text-[8px] text-white/40 uppercase font-bold tracking-widest">ACTIVE STAGE</div>
                   <div className="text-base font-black text-[#39FF14]">
                     {currentStageNumber} <span className="text-xs text-white/40">/ {activeMonthStages.length}</span>
@@ -552,8 +561,8 @@ export default function SongSelect() {
             </div>
 
             {/* Quick Stage Jump Pill Strip (1..31) */}
-            <div className="flex items-center gap-1.5 overflow-x-auto p-2 bg-black/40 border border-white/5 rounded-xl scrollbar-none" style={{ scrollbarWidth: 'none' }}>
-              <span className="font-mono text-[8px] text-white/30 tracking-widest px-2 uppercase font-bold flex-shrink-0">JUMP TO STAGE:</span>
+            <div className="flex items-center gap-1.5 overflow-x-auto p-2 bg-black/60 border border-white/10 rounded-xl scrollbar-none backdrop-blur-xl" style={{ scrollbarWidth: 'none' }}>
+              <span className="font-mono text-[8px] text-white/40 tracking-widest px-2 uppercase font-bold flex-shrink-0">JUMP TO STAGE:</span>
               {activeMonthStages.map((s, idx) => {
                 const sNum = getRelativeDay(s.day);
                 const isSelected = idx === stageIndex;
@@ -581,7 +590,7 @@ export default function SongSelect() {
           </div>
 
           {/* STAGE FULL SPACE CONTENT CARD */}
-          <div className="relative z-10 max-w-4xl mx-auto w-full flex-1 space-y-6 bg-black/70 border border-white/10 p-6 lg:p-10 rounded-3xl backdrop-blur-2xl shadow-2xl">
+          <div className="relative z-10 max-w-4xl mx-auto w-full flex-1 space-y-6 bg-black/75 border border-white/15 p-6 lg:p-10 rounded-3xl backdrop-blur-2xl shadow-2xl">
             {selected ? (
               <div className="space-y-6">
                 {/* Header Title Bar */}
@@ -610,7 +619,7 @@ export default function SongSelect() {
                 </div>
 
                 {/* Hero Stage Artwork & Details */}
-                <div className="flex flex-col md:flex-row gap-8 items-center bg-white/[0.02] border border-white/10 p-6 rounded-2xl">
+                <div className="flex flex-col md:flex-row gap-8 items-center bg-white/[0.03] border border-white/10 p-6 rounded-2xl backdrop-blur-md">
                   {/* Stage Cover Art */}
                   <div className="relative flex-shrink-0 group">
                     <div className="absolute -top-2.5 -left-2.5 w-5 h-5 border-t-2 border-l-2 border-[#39FF14]" />
@@ -624,7 +633,7 @@ export default function SongSelect() {
                         alt={selected.title}
                         className="w-48 h-48 md:w-56 md:h-56 object-cover rounded-2xl shadow-2xl transition-transform duration-500 group-hover:scale-[1.02]"
                         style={{
-                          border: '1px solid rgba(57,255,20,0.2)',
+                          border: '1px solid rgba(57,255,20,0.3)',
                           filter: selectedUnlocked ? 'none' : 'grayscale(100%) brightness(0.4)',
                         }}
                       />
