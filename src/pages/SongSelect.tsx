@@ -5,7 +5,7 @@ import type { GameSong } from "@/game/api";
 import { audioManager } from "@/game/audio";
 import { getActiveTheme } from "@/lib/options";
 import { useVaultStore } from "../store/useVaultStore";
-import { getCurrentDay, getMonthNumFromDay } from "../utils/dayCalc";
+import { getCurrentDay, getMonthNumFromDay, getRelativeDay } from "../utils/dayCalc";
 import { CHAPTERS, type ChapterMeta } from "@/game/campaign";
 import { getMedalForSong, getHighScore, getScoreHistory } from "@/game/progress";
 import PrizeProgressMenu from "../components/PrizeProgressMenu";
@@ -73,9 +73,12 @@ export default function SongSelect() {
   const [, setLocation] = useLocation();
   const [songs, setSongs] = useState<GameSong[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<GameSong | null>(null);
-  const [activeMonth, setActiveMonth] = useState<number | 'all'>('all');
   
+  // Left Column: Selected Month (1-12)
+  const [selectedMonth, setSelectedMonth] = useState<number>(1);
+  // Right Column: Selected Song/Stage
+  const [selected, setSelected] = useState<GameSong | null>(null);
+
   const [search, setSearch] = useState('');
   const [moodFilter, setMoodFilter] = useState<'all' | 'light' | 'dark'>('all');
   const [sortBy, setSortBy] = useState<'day' | 'bpm'>('day');
@@ -89,8 +92,8 @@ export default function SongSelect() {
   const [previewing, setPreviewing] = useState(false);
   const [previewProg, setPreviewProg] = useState(0);
 
-  // Parallax scrolling
-  const containerRef = useRef<HTMLDivElement>(null);
+  // Parallax scrolling offset
+  const rightScrollRef = useRef<HTMLDivElement>(null);
   const [scrollTop, setScrollTop] = useState(0);
 
   const isAvant = getActiveTheme() === 'avant-garde';
@@ -114,16 +117,18 @@ export default function SongSelect() {
       const released = catalog.filter(s => !isSongTimeLocked(s)).sort((a, b) => a.day - b.day);
       setSongs(released);
       if (released.length > 0) {
-        const defaultSong = released[released.length - 1];
-        setSelected(defaultSong);
-        setDiffOverride(defaultSong.difficultyLevel);
-        setHistory(getScoreHistory(defaultSong.id));
+        const latest = released[released.length - 1];
+        const latestMonth = getMonthNumFromDay(latest.day);
+        setSelectedMonth(latestMonth);
+        setSelected(latest);
+        setDiffOverride(latest.difficultyLevel);
+        setHistory(getScoreHistory(latest.id));
       }
       setLoading(false);
     });
   }, []);
 
-  // Update calibration when selected song changes
+  // Update calibration & score history when selected song changes
   useEffect(() => {
     if (selected) {
       const savedOverride = sessionStorage.getItem(`diff_override_${selected.id}`);
@@ -133,7 +138,6 @@ export default function SongSelect() {
         setDiffOverride(selected.difficultyLevel);
       }
       setHistory(getScoreHistory(selected.id));
-      // Cleanup preview when changing selection
       cleanupPreview();
     }
   }, [selected?.id]);
@@ -216,14 +220,14 @@ export default function SongSelect() {
     ? (claimedRewards[selected.id]?.includes('prophecy') || localStorage.getItem(`reward_tier_${selected.id}`) === 'prophecy')
     : false;
 
-  // Track scroll position for parallax background animation
+  // Track scroll position for right column parallax effects
   useEffect(() => {
     const handleScroll = (e: Event) => {
       const target = e.target as HTMLDivElement;
       setScrollTop(target.scrollTop);
     };
 
-    const el = containerRef.current;
+    const el = rightScrollRef.current;
     if (el) {
       el.addEventListener('scroll', handleScroll, { passive: true });
     }
@@ -241,7 +245,7 @@ export default function SongSelect() {
         if (!s.date) return false;
         const parts = s.date.split('-');
         return parts.length > 1 && parseInt(parts[1], 10) === meta.month;
-      });
+      }).sort((a, b) => a.day - b.day);
 
       const clearedCount = monthSongs.filter(s => getHighScore(s.id) > 0).length;
 
@@ -253,27 +257,33 @@ export default function SongSelect() {
     });
   }, [songs]);
 
-  // Filtered list based on search/mood/sort/activeMonth
-  const filteredMonthGroups = useMemo(() => {
-    return monthGroups.map(group => {
-      if (activeMonth !== 'all' && group.meta.month !== activeMonth) {
-        return { ...group, songs: [] };
-      }
+  // Active Month Group Data
+  const activeMonthGroup = useMemo(() => {
+    return monthGroups.find(g => g.meta.month === selectedMonth) || monthGroups[0];
+  }, [monthGroups, selectedMonth]);
 
-      let list = group.songs;
-      if (moodFilter !== 'all') list = list.filter((s) => s.mood === moodFilter);
-      if (search.trim()) {
-        const q = search.toLowerCase();
-        list = list.filter((s) => s.title.toLowerCase().includes(q) || String(s.day).includes(q) || s.artist.toLowerCase().includes(q));
-      }
-      if (sortBy === 'bpm') list = [...list].sort((a, b) => b.bpm - a.bpm);
+  // Filtered Stages / Songs for the selected month
+  const filteredMonthSongs = useMemo(() => {
+    if (!activeMonthGroup) return [];
+    let list = activeMonthGroup.songs;
+    if (moodFilter !== 'all') list = list.filter((s) => s.mood === moodFilter);
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter((s) => s.title.toLowerCase().includes(q) || String(s.day).includes(q) || s.artist.toLowerCase().includes(q));
+    }
+    if (sortBy === 'bpm') list = [...list].sort((a, b) => b.bpm - a.bpm);
+    return list;
+  }, [activeMonthGroup, moodFilter, search, sortBy]);
 
-      return {
-        ...group,
-        songs: list,
-      };
-    }).filter(group => group.songs.length > 0 || (activeMonth !== 'all' && group.meta.month === activeMonth));
-  }, [monthGroups, activeMonth, moodFilter, search, sortBy]);
+  // Auto-select first song when month changes if current selected song is not in the month
+  const handleSelectMonth = (monthNum: number) => {
+    audioManager.playSfx('tap_nav', 0.1);
+    setSelectedMonth(monthNum);
+    const targetGroup = monthGroups.find(g => g.meta.month === monthNum);
+    if (targetGroup && targetGroup.songs.length > 0) {
+      setSelected(targetGroup.songs[0]);
+    }
+  };
 
   const handlePlaySong = (songToPlay?: GameSong) => {
     const s = songToPlay || selected;
@@ -310,12 +320,14 @@ export default function SongSelect() {
     );
   }
 
+  const parallaxTitleY = (scrollTop * 0.12) % 80;
+
   return (
     <div className="min-h-dvh w-full flex flex-col relative overflow-hidden select-none bg-[#050402] text-white">
       {/* Dynamic Parallax Blurred Background Engine */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
         <div
-          className="absolute inset-0 transition-all duration-1000 ease-out filter blur-[12px] brightness-[0.2] scale-[1.3]"
+          className="absolute inset-0 transition-all duration-1000 ease-out filter blur-[12px] brightness-[0.2] scale-[1.35]"
           style={{
             backgroundImage: `url(${activeCoverUrl})`,
             backgroundPosition: 'center',
@@ -324,12 +336,12 @@ export default function SongSelect() {
         />
         {/* Pulsing Theme Glow */}
         <div
-          className="absolute inset-0 opacity-40 mix-blend-screen transition-all duration-1000"
+          className="absolute inset-0 opacity-45 mix-blend-screen transition-all duration-1000"
           style={{
-            background: `radial-gradient(circle at 60% 40%, ${activeMoodColor}22 0%, transparent 80%)`,
+            background: `radial-gradient(circle at 65% 45%, ${activeMoodColor}22 0%, transparent 80%)`,
           }}
         />
-        {/* Sector Grid overlay */}
+        {/* Ambient Grid lines */}
         <div
           className="absolute inset-0 opacity-[0.04]"
           style={{
@@ -379,545 +391,533 @@ export default function SongSelect() {
         </div>
 
         <div className="font-mono text-xs text-white/40 tracking-widest hidden sm:block uppercase">
-          PIM // MONTH ARCHIVES
+          PIM // MONTH STAGES
         </div>
       </header>
 
-      {/* Month Filter Selector Bar */}
-      <div
-        className="relative z-20 flex items-center gap-1.5 px-4 py-2.5 overflow-x-auto scrollbar-none border-b border-white/5 flex-shrink-0"
-        style={{ background: 'rgba(5,5,5,0.7)', backdropFilter: 'blur(10px)', scrollbarWidth: 'none' }}
-      >
-        <button
-          onClick={() => {
-            audioManager.playSfx('tap_nav', 0.1);
-            setActiveMonth('all');
-          }}
-          className="font-mono text-[9px] font-bold px-3 py-1.5 tracking-wider uppercase transition-all flex-shrink-0 cursor-pointer"
-          style={{
-            background: activeMonth === 'all' ? (isAvant ? '#39FF14' : 'linear-gradient(135deg, #FF1493, #FF8A00)') : 'rgba(255,255,255,0.03)',
-            color: activeMonth === 'all' ? '#000' : 'rgba(255,255,255,0.4)',
-            border: `1px solid ${activeMonth === 'all' ? 'transparent' : 'rgba(255,255,255,0.1)'}`,
-            boxShadow: activeMonth === 'all' ? '0 0 12px rgba(57,255,20,0.3)' : 'none',
-          }}
-        >
-          ALL MONTHS ({songs.length})
-        </button>
-
-        {CHAPTERS.map((ch) => {
-          const count = songs.filter(s => getMonthNumFromDay(s.day) === ch.month).length;
-          const isActive = activeMonth === ch.month;
-          return (
-            <button
-              key={ch.month}
-              onClick={() => {
-                audioManager.playSfx('tap_nav', 0.1);
-                setActiveMonth(ch.month);
-              }}
-              className="font-mono text-[9px] font-bold px-3 py-1.5 tracking-wider uppercase transition-all flex-shrink-0 flex items-center gap-1.5 cursor-pointer"
-              style={{
-                background: isActive ? ch.dc : 'rgba(255,255,255,0.03)',
-                color: isActive ? '#000' : 'rgba(255,255,255,0.5)',
-                border: `1px solid ${isActive ? ch.dc : 'rgba(255,255,255,0.08)'}`,
-                boxShadow: isActive ? `0 0 12px ${ch.dc}60` : 'none',
-              }}
-            >
-              <span>M{String(ch.month).padStart(2, '0')}</span>
-              <span className="opacity-60">({count})</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Main Container */}
-      <div className="relative z-10 flex-1 flex flex-col lg:flex-row overflow-hidden">
-        {/* Left Column: Month Sectors + Songs Matrix */}
-        <div className="w-full lg:w-1/2 flex flex-col border-r border-white/10 overflow-hidden">
-          {/* Controls / Filter Bar */}
-          <div className="p-4 space-y-3 border-b border-white/10 bg-black/40 flex-shrink-0">
-            <div className="relative">
-              <input
-                data-testid="input-search"
-                type="text"
-                placeholder="SEARCH ARCHIVE DISPATCHES..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onMouseEnter={() => audioManager.playSfx("tap_nav", 0.03)}
-                className="w-full font-mono text-xs tracking-widest px-10 py-2.5 outline-none transition-all"
-                style={{
-                  background: 'rgba(5,5,5,0.8)',
-                  border: isAvant ? '1px solid rgba(57,255,20,0.3)' : '1px solid rgba(255,255,255,0.15)',
-                  color: '#F2EDE5',
-                }}
-              />
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 opacity-40 text-[#39FF14]">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              </div>
+      {/* Main Split Layout: Left (Month Selection) & Right (Stages 1..31 + Integrated Calibration) */}
+      <div className="relative z-10 flex-1 flex flex-col md:flex-row overflow-hidden">
+        {/* LEFT COLUMN: Month Selection List (Month 01 - 12) */}
+        <div className="w-full md:w-72 lg:w-80 flex-shrink-0 border-r border-white/10 flex flex-col bg-black/60 backdrop-blur-md overflow-hidden">
+          <div className="p-4 border-b border-white/10 flex items-center justify-between">
+            <div className="font-mono text-[10px] font-bold tracking-[0.25em] text-[#39FF14] uppercase">
+              // MONTH SELECTION
             </div>
-
-            <div className="flex gap-2 items-center justify-between">
-              <div className="flex gap-1.5">
-                {(['all', 'light', 'dark'] as const).map((m) => (
-                  <button
-                    key={m}
-                    data-testid={`filter-mood-${m}`}
-                    onClick={() => { audioManager.playSfx('tap_nav', 0.12); setMoodFilter(m); }}
-                    className="font-mono text-[9px] font-bold px-3 py-1 tracking-widest transition-all uppercase cursor-pointer"
-                    style={{
-                      background: moodFilter === m ? (isAvant ? '#39FF14' : '#FF1493') : 'rgba(255,255,255,0.04)',
-                      color: moodFilter === m ? '#000' : 'rgba(255,255,255,0.5)',
-                      border: `1px solid ${moodFilter === m ? 'transparent' : 'rgba(255,255,255,0.1)'}`,
-                    }}
-                  >
-                    {m}
-                  </button>
-                ))}
-              </div>
-
-              <button
-                data-testid="sort-bpm"
-                onClick={() => { audioManager.playSfx('tap_nav', 0.12); setSortBy(sortBy === 'day' ? 'bpm' : 'day'); }}
-                className="font-mono text-[9px] font-bold px-3 py-1 tracking-widest transition-all uppercase cursor-pointer text-white/50 hover:text-white border border-white/10 hover:border-white/30"
-              >
-                ↕ {sortBy === 'day' ? 'CHRONO' : 'BPM'}
-              </button>
+            <div className="font-mono text-[9px] text-white/40">
+              12 SECTORS
             </div>
           </div>
 
-          {/* Month Sectors Scroll Viewport */}
-          <div
-            ref={containerRef}
-            className="flex-1 overflow-y-auto p-4 space-y-8 scroll-smooth scrollbar-none"
-            style={{ scrollbarWidth: 'none' }}
-          >
-            {filteredMonthGroups.map((group) => {
-              const monthTitleY = (scrollTop * 0.15) % 100;
-              const gridY = (scrollTop * 0.08) % 50;
-
+          <div className="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-none" style={{ scrollbarWidth: 'none' }}>
+            {monthGroups.map((group) => {
+              const isActive = selectedMonth === group.meta.month;
               return (
-                <div
+                <button
                   key={group.meta.month}
-                  className="relative border border-white/10 rounded-2xl p-5 overflow-hidden transition-all duration-300"
+                  onClick={() => handleSelectMonth(group.meta.month)}
+                  onMouseEnter={() => audioManager.playSfx('tap_nav', 0.04)}
+                  className={`w-full text-left p-3.5 rounded-xl border transition-all duration-200 cursor-pointer relative group overflow-hidden ${
+                    isActive
+                      ? 'bg-white/10 border-l-4 shadow-lg'
+                      : 'bg-black/40 hover:bg-white/5 border-white/5 hover:border-white/20'
+                  }`}
                   style={{
-                    background: `radial-gradient(circle at 10% 20%, ${group.meta.dc}0d 0%, rgba(5,5,5,0.6) 100%)`,
+                    borderLeftColor: isActive ? group.meta.dc : 'transparent',
+                    boxShadow: isActive ? `0 0 16px ${group.meta.dc}30` : 'none',
                   }}
                 >
-                  {/* Giant Parallax Month Text in Sector Background */}
-                  <div
-                    className="absolute right-2 -bottom-4 font-mono font-black select-none pointer-events-none text-[18vw] lg:text-[10vw] tracking-tighter leading-none opacity-10 transition-transform duration-300"
-                    style={{
-                      color: group.meta.dc,
-                      WebkitTextStroke: `1.5px ${group.meta.dc}40`,
-                      transform: `translateY(${monthTitleY}px)`,
-                    }}
-                  >
-                    M{String(group.meta.month).padStart(2, '0')}
-                  </div>
-
-                  {/* Parallax Floating Album Art Grid Overlay */}
-                  <div
-                    className="absolute inset-0 pointer-events-none opacity-[0.03] overflow-hidden flex items-center justify-center scale-110"
-                    style={{ transform: `translateY(${gridY}px)` }}
-                  >
-                    <div className="grid grid-cols-4 gap-2 w-full h-full p-4 -rotate-6">
-                      {group.songs.slice(0, 8).map((s, idx) => (
-                        s.coverArt ? (
-                          <img key={idx} src={s.coverArt} alt="" className="w-full aspect-square object-cover rounded filter grayscale" />
-                        ) : null
-                      ))}
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="font-mono text-[9px] font-black px-1.5 py-[1px] rounded uppercase"
+                        style={{
+                          color: isActive ? '#000' : group.meta.dc,
+                          background: isActive ? group.meta.dc : `${group.meta.dc}15`,
+                          border: `1px solid ${group.meta.dc}40`,
+                        }}
+                      >
+                        M{String(group.meta.month).padStart(2, '0')}
+                      </span>
+                      <span className="font-mono text-[9px] font-bold text-white/40 uppercase">
+                        {group.meta.diff}
+                      </span>
                     </div>
+
+                    <span className="font-mono text-[9px] text-white/50">
+                      <strong className="text-[#39FF14]">{group.clearedCount}</strong>/{group.songs.length} STAGES
+                    </span>
                   </div>
 
-                  {/* Sector Header */}
-                  <div className="relative z-10 flex items-center justify-between pb-3 mb-4 border-b border-white/10">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="w-3 h-3 rounded-full shadow-[0_0_8px_currentColor]"
-                        style={{ background: group.meta.dc, color: group.meta.dc }}
-                      />
-                      <div>
-                        <div className="font-mono text-[9px] font-bold tracking-[0.25em] text-white/40 uppercase">
-                          CHAPTER {String(group.meta.month).padStart(2, '0')} // SECTOR
-                        </div>
-                        <h3 className="font-mono font-black text-base uppercase tracking-tight text-white flex items-center gap-2">
-                          <span>{group.meta.name}</span>
-                        </h3>
-                      </div>
-                    </div>
-                    <div className="font-mono text-right text-[10px] text-white/50">
-                      <span className="text-[#39FF14] font-bold">{group.clearedCount}</span> / {group.songs.length} CLEARED
-                    </div>
+                  <div className="font-mono font-black text-sm uppercase tracking-tight text-white flex items-center justify-between">
+                    <span>{group.meta.name}</span>
+                    <ChevronRight size={14} className={`transition-transform ${isActive ? 'translate-x-1 text-[#39FF14]' : 'opacity-30'}`} />
                   </div>
 
-                  {/* Songs list in Sector */}
-                  <div className="relative z-10 space-y-2">
-                    {group.songs.length === 0 ? (
-                      <div className="font-mono text-xs text-white/30 italic py-4 text-center">
-                        NO DISPATCH SIGNALS FOUND IN THIS SECTOR
-                      </div>
-                    ) : (
-                      group.songs.map((song) => {
-                        const isSelected = selected?.id === song.id;
-                        const unlocked = isSongUnlocked(song);
-                        const hs = getHighScore(song.id);
-                        const songMedal = getMedalForSong(song.id);
-                        const moodColor = song.mood === 'light' ? '#39FF14' : '#FF1493';
-
-                        return (
-                          <div
-                            key={song.id}
-                            data-testid={`card-song-${song.id}`}
-                            onClick={() => {
-                              audioManager.playSfx('tap_nav', 0.12);
-                              setSelected(song);
-                            }}
-                            className={`w-full text-left flex items-center gap-3.5 p-3 rounded-xl transition-all duration-200 cursor-pointer relative group ${
-                              isSelected ? 'bg-white/10 border-l-4 shadow-xl' : 'bg-black/40 hover:bg-white/5 border-l-4 border-transparent'
-                            }`}
-                            style={{
-                              borderLeftColor: isSelected ? moodColor : 'transparent',
-                              boxShadow: isSelected ? `0 8px 24px -6px ${moodColor}30` : 'none',
-                            }}
-                          >
-                            {/* Song Artwork Cover */}
-                            <div className="relative flex-shrink-0">
-                              {song.coverArt ? (
-                                <img
-                                  src={song.coverArt}
-                                  alt={song.title}
-                                  className="w-12 h-12 object-cover rounded-lg transition-transform group-hover:scale-105"
-                                  style={{
-                                    border: isSelected ? `1px solid ${moodColor}` : '1px solid rgba(255,255,255,0.1)',
-                                    filter: unlocked ? 'none' : 'grayscale(100%) brightness(0.4)',
-                                  }}
-                                />
-                              ) : (
-                                <div
-                                  className="w-12 h-12 rounded-lg flex items-center justify-center font-mono font-bold text-xs bg-white/5 border border-white/10"
-                                  style={{ color: moodColor }}
-                                >
-                                  #{song.day}
-                                </div>
-                              )}
-                              {!unlocked && (
-                                <div className="absolute inset-0 bg-black/60 rounded-lg flex items-center justify-center">
-                                  <Lock size={14} className="text-[#FF3800]" />
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Song Meta Info */}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-0.5">
-                                <span className="font-mono text-[9px] font-bold text-white/30">
-                                  #{String(song.day).padStart(3, '0')}
-                                </span>
-                                {unlocked ? (
-                                  <span
-                                    className="font-mono text-[8px] px-1.5 py-[1px] font-black uppercase rounded"
-                                    style={{
-                                      color: moodColor,
-                                      border: `1px solid ${moodColor}40`,
-                                      background: `${moodColor}10`,
-                                    }}
-                                  >
-                                    {song.mood}
-                                  </span>
-                                ) : (
-                                  <span className="font-mono text-[8px] px-1.5 py-[1px] font-black uppercase text-[#FF3800] border border-[#FF3800]/40 bg-[#FF3800]/10 rounded">
-                                    LOCKED
-                                  </span>
-                                )}
-                                {songMedal && songMedal !== '' && (
-                                  <span
-                                    className="font-mono text-[8px] px-1.5 py-[1px] font-black uppercase rounded ml-auto"
-                                    style={{ color: MEDAL_COLOR[songMedal], border: `1px solid ${MEDAL_COLOR[songMedal]}40` }}
-                                  >
-                                    {songMedal}
-                                  </span>
-                                )}
-                              </div>
-
-                              <div className="font-mono font-black text-sm uppercase truncate text-white tracking-tight flex items-center gap-1.5">
-                                <span>{song.title}</span>
-                                {claimedRewards[song.id]?.includes('prophecy') && <span>🏆</span>}
-                              </div>
-
-                              <div className="flex items-center gap-3 mt-1 text-[9px] font-mono text-white/40">
-                                <span>{song.artist}</span>
-                                <span>·</span>
-                                <span>{song.bpm} BPM</span>
-                                <span>·</span>
-                                <span>LVL {song.difficultyLevel}</span>
-                                {hs > 0 && (
-                                  <span className="ml-auto font-mono text-[10px] font-bold text-[#39FF14]">
-                                    {hs.toLocaleString()}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-
-                            <ChevronRight size={16} className={`transition-transform ${isSelected ? 'translate-x-1 text-[#39FF14]' : 'text-white/20'}`} />
-                          </div>
-                        );
-                      })
-                    )}
+                  <div className="font-mono text-[9px] text-white/40 uppercase mt-0.5 truncate">
+                    {group.meta.sub}
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
         </div>
 
-        {/* Right Column: Dynamic Integrated Calibration & Details Page */}
-        <div className="w-full lg:w-1/2 flex flex-col overflow-y-auto p-6 lg:p-10 bg-black/60 backdrop-blur-xl border-t lg:border-t-0 lg:border-l border-white/10">
-          {selected ? (
-            <div className="space-y-6 max-w-xl mx-auto w-full">
-              {/* Header Title Bar */}
-              <div className="flex justify-between items-start border-b border-white/10 pb-4">
-                <div>
-                  <div className="font-mono text-[9px] tracking-[0.25em] text-[#39FF14] uppercase mb-1 flex items-center gap-2">
-                    <Activity size={12} className="animate-pulse" />
-                    <span>SYSTEM ANALYZER // CALIBRATION ACTIVE</span>
-                  </div>
-                  <div className="font-mono text-xs text-white/30 uppercase">
-                    SIGNAL REF: {selected.id.toUpperCase().substring(0, 14)}
-                  </div>
-                </div>
-                <div
-                  className="font-mono text-[9px] font-bold px-3 py-1 border uppercase rounded"
-                  style={{ color: activeMoodColor, borderColor: `${activeMoodColor}40`, background: `${activeMoodColor}10` }}
-                >
-                  MOOD: {selected.mood.toUpperCase()}
-                </div>
-              </div>
-
-              {/* Album Art & Audio Preview Hero */}
-              <div className="flex flex-col sm:flex-row gap-6 items-center bg-white/[0.02] border border-white/10 p-5 rounded-2xl">
-                <div className="relative flex-shrink-0 group">
-                  {/* Tech frame accents */}
-                  <div className="absolute -top-2 -left-2 w-4 h-4 border-t-2 border-l-2 border-[#39FF14]" />
-                  <div className="absolute -top-2 -right-2 w-4 h-4 border-t-2 border-r-2 border-[#39FF14]" />
-                  <div className="absolute -bottom-2 -left-2 w-4 h-4 border-b-2 border-l-2 border-[#39FF14]" />
-                  <div className="absolute -bottom-2 -right-2 w-4 h-4 border-b-2 border-r-2 border-[#39FF14]" />
-
-                  {selected.coverArt ? (
-                    <img
-                      src={selected.coverArt}
-                      alt={selected.title}
-                      className="w-36 h-36 object-cover rounded-xl shadow-2xl"
-                      style={{
-                        border: '1px solid rgba(57,255,20,0.2)',
-                        filter: selectedUnlocked ? 'none' : 'grayscale(100%) brightness(0.4)',
-                      }}
-                    />
-                  ) : (
-                    <div className="w-36 h-36 rounded-xl flex items-center justify-center font-mono font-black text-3xl bg-white/5 border border-white/10 text-white/30">
-                      #{selected.day}
-                    </div>
-                  )}
-
-                  {/* Audio Preview Overlay Button */}
-                  {selectedUnlocked && (
-                    <button
-                      onClick={() => togglePreview(selected)}
-                      className="absolute inset-0 rounded-xl flex items-center justify-center transition-all bg-black/40 hover:bg-black/60 text-white cursor-pointer"
-                    >
-                      <div className="w-10 h-10 rounded-full border border-white/30 bg-black/60 flex items-center justify-center shadow-lg">
-                        {previewing ? <VolumeX size={18} className="text-[#39FF14]" /> : <Volume2 size={18} className="text-white" />}
-                      </div>
-                    </button>
-                  )}
-                </div>
-
-                <div className="flex-1 min-w-0 text-center sm:text-left">
-                  <div className="flex items-center gap-2 mb-1.5 justify-center sm:justify-start flex-wrap">
-                    <span className="font-mono text-[9px] px-2 py-0.5 border font-bold uppercase rounded text-white/40 border-white/20">
-                      DAY #{String(selected.day).padStart(3, '0')}
-                    </span>
-                    {medal && medal !== '' && (
-                      <span
-                        className="font-mono text-[9px] px-2 py-0.5 border font-bold uppercase rounded"
-                        style={{ color: medalColor, borderColor: `${medalColor}40`, background: `${medalColor}10` }}
-                      >
-                        {medal}
-                      </span>
-                    )}
-                    {isAllPrizesClaimed && (
-                      <span className="font-mono text-[9px] px-2 py-0.5 border border-yellow-400 text-yellow-400 bg-yellow-400/10 font-bold uppercase flex items-center gap-1 rounded">
-                        <Trophy size={10} /> ALL PRIZES CLAIMED
-                      </span>
-                    )}
-                  </div>
-
-                  <h2 className="font-mono font-black text-2xl uppercase leading-tight tracking-tight text-white mb-1">
-                    {selected.title}
-                  </h2>
-                  <div className="font-mono text-sm text-white/60 font-bold uppercase mb-1">
-                    {selected.artist}
-                  </div>
-                  <div className="font-mono text-[10px] text-white/30 uppercase">
-                    SPEC DATE: {selected.date} {selected.key ? `// KEY: ${selected.key}` : ''}
-                  </div>
-                </div>
-              </div>
-
-              {/* Audio Preview Waveform Bar */}
-              {previewing && selectedUnlocked && (
-                <div className="border border-[#39FF14]/30 bg-black/70 p-3.5 rounded-xl flex items-center gap-4">
-                  <WaveformBars playing={previewing} />
-                  <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                    <div
-                      className="h-full transition-all duration-150"
-                      style={{ width: `${previewProg * 100}%`, background: activeMoodColor, boxShadow: `0 0 8px ${activeMoodColor}` }}
-                    />
-                  </div>
-                  <button
-                    onClick={() => togglePreview()}
-                    className="font-mono text-xs text-white/40 hover:text-white cursor-pointer"
-                  >
-                    ✕
-                  </button>
-                </div>
-              )}
-
-              {/* Calibration Coefficient Override Controller */}
-              {selectedUnlocked && (
-                <div className="border border-[#39FF14]/25 bg-black/40 p-5 rounded-2xl space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="font-mono text-[9px] uppercase tracking-wider text-white/40 flex items-center gap-2">
-                      <Sliders size={12} className="text-[#39FF14]" />
-                      <span>// CALIBRATION COEFFICIENT OVERRIDE</span>
-                    </div>
-                    <div className="font-mono font-bold text-sm" style={{ color: diffColor }}>
-                      LVL {diffOverride}
-                    </div>
-                  </div>
-
-                  <div className="flex gap-1 items-end h-4">
-                    {Array.from({ length: 10 }).map((_, i) => (
-                      <div
-                        key={i}
-                        className="flex-1 rounded-xs transition-all"
-                        style={{
-                          height: `${30 + i * 7}%`,
-                          background: i < diffOverride ? diffColor : 'rgba(255,255,255,0.05)',
-                          border: '1px solid rgba(255,255,255,0.05)',
-                          boxShadow: i < diffOverride ? `0 0 6px ${diffColor}40` : 'none',
-                        }}
-                      />
-                    ))}
-                  </div>
-
-                  <input
-                    type="range"
-                    min={1}
-                    max={10}
-                    value={diffOverride}
-                    onChange={(e) => {
-                      audioManager.playSfx('tap_nav', 0.05);
-                      setDiffOverride(parseInt(e.target.value, 10));
-                    }}
-                    className="w-full cursor-pointer accent-[#39FF14]"
-                  />
-
-                  <div className="flex justify-between font-mono text-[8px] tracking-widest text-white/40">
-                    <span className="text-[#39FF14]">MIN COEFFICIENT (LVL 1)</span>
-                    <span className="text-[#FF1493]">MAX COEFFICIENT (LVL 10)</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Telemetry Stats Grid */}
-              <div className="grid grid-cols-4 gap-2.5">
-                {[
-                  { label: 'BPM', value: selected.bpm },
-                  { label: 'NODES', value: (selected.notes || []).length },
-                  { label: 'LENGTH', value: `${Math.floor(selected.duration / 60)}:${String(Math.round(selected.duration % 60)).padStart(2, '0')}` },
-                  { label: 'CALIB', value: diffOverride },
-                ].map(({ label, value }) => (
-                  <div key={label} className="border border-white/10 bg-black/40 p-3 rounded-xl text-center">
-                    <div className="font-mono text-[8px] font-bold text-white/30 uppercase mb-1">{label}</div>
-                    <div className="font-mono font-black text-sm text-[#39FF14]">{value}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Highest Integrity Dispatch Score */}
-              {getHighScore(selected.id) > 0 && (
-                <div className="border border-[#39FF14]/20 bg-black/40 p-4 rounded-xl flex items-center justify-between">
-                  <div className="font-mono text-[9px] tracking-widest text-white/40 uppercase">
-                    // MAX DISPATCH SCORE
-                  </div>
-                  <div className="font-mono font-black text-lg text-[#39FF14]">
-                    {getHighScore(selected.id).toLocaleString()}
-                  </div>
-                </div>
-              )}
-
-              {/* Description */}
-              {selected.description && (
-                <div className="border border-white/10 bg-black/30 p-4 rounded-xl font-mono text-xs italic text-white/50 leading-relaxed">
-                  "{selected.description.toUpperCase()}"
-                </div>
-              )}
-
-              {/* Prize Progress Menu */}
-              <PrizeProgressMenu songId={selected.id} />
-
-              {/* Telemetry Log */}
-              {history.length > 0 && (
-                <div className="border border-white/10 bg-black/30 p-4 rounded-xl space-y-2">
-                  <div className="font-mono text-[8px] text-white/40 tracking-widest uppercase">
-                    // TELEMETRY HISTORY LOG ({history.length} TRANSMISSIONS)
-                  </div>
-                  <div className="flex gap-2 overflow-x-auto pb-1 font-mono text-xs">
-                    {history.slice(-6).map((sc, idx) => (
-                      <div key={idx} className="border border-white/10 bg-white/5 px-2.5 py-1 rounded text-[#39FF14] font-bold">
-                        {sc.toLocaleString()}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Transmission Trigger / Play Action */}
-              <div className="pt-2">
-                {!selectedUnlocked ? (
-                  <div className="border border-[#FF3800]/40 bg-[#FF3800]/10 p-4 rounded-xl text-center mb-3">
-                    <div className="font-mono text-xs font-black text-[#FF3800] tracking-wider uppercase">
-                      AWARD PLAY LOCKED // 10 FRAGMENTS REQUIRED
-                    </div>
-                    <div className="font-mono text-[9px] text-white/60 mt-1 uppercase">
-                      COLLECT 10 FRAGMENTS FOR THIS SONG OR EQUIP CARD FROM VAULT COLLECTION
-                    </div>
-                  </div>
-                ) : null}
-
-                <button
-                  data-testid="button-play"
-                  disabled={!selectedUnlocked}
-                  onClick={() => handlePlaySong()}
-                  onMouseEnter={() => { if (selectedUnlocked) audioManager.playSfx('tap_nav', 0.08); }}
-                  className={`w-full py-4 text-xs tracking-[0.4em] font-black uppercase rounded-xl transition-all flex items-center justify-center gap-3 cursor-pointer ${
-                    selectedUnlocked
-                      ? "border border-[#39FF14] bg-[#39FF14] text-black hover:bg-[#39FF14]/90 shadow-[0_0_20px_rgba(57,255,20,0.4)]"
-                      : "border border-white/10 bg-white/5 text-white/20 cursor-not-allowed"
-                  }`}
-                >
-                  <Play size={16} fill="currentColor" />
-                  <span>START TRANSMISSION</span>
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full gap-4 text-center py-16 opacity-30">
-              <div className="w-12 h-12 border-2 border-dashed border-[#39FF14] rounded-full animate-spin" />
-              <div className="font-mono text-xs font-bold tracking-[0.3em] uppercase text-[#39FF14]">
-                SELECT A SIGNAL TO INITIATE CALIBRATION...
-              </div>
+        {/* RIGHT / MAIN COLUMN: Stages 1..31 + Integrated Calibration & Song Details */}
+        <div
+          ref={rightScrollRef}
+          className="flex-1 flex flex-col lg:flex-row overflow-y-auto bg-black/40 backdrop-blur-xl relative"
+        >
+          {/* Parallax Background Month Text */}
+          {activeMonthGroup && (
+            <div
+              className="absolute right-4 top-10 font-mono font-black select-none pointer-events-none text-[16vw] lg:text-[10vw] tracking-tighter leading-none opacity-10 transition-transform duration-300"
+              style={{
+                color: activeMonthGroup.meta.dc,
+                WebkitTextStroke: `1.5px ${activeMonthGroup.meta.dc}40`,
+                transform: `translateY(${parallaxTitleY}px)`,
+              }}
+            >
+              M{String(activeMonthGroup.meta.month).padStart(2, '0')}
             </div>
           )}
+
+          {/* Center Column: Stage List (Stage 1 up to 31) for Active Month */}
+          <div className="w-full lg:w-1/2 flex flex-col p-5 border-r border-white/10 relative z-10 space-y-4">
+            {/* Sector Header & Filters */}
+            <div className="bg-black/60 border border-white/10 p-4 rounded-2xl space-y-3">
+              <div className="flex items-center justify-between pb-2 border-b border-white/10">
+                <div>
+                  <div className="font-mono text-[9px] font-bold tracking-[0.25em] text-[#39FF14] uppercase">
+                    SECTOR {String(activeMonthGroup?.meta.month).padStart(2, '0')} // STAGES
+                  </div>
+                  <h2 className="font-mono font-black text-xl uppercase tracking-tight text-white flex items-center gap-2">
+                    <span>{activeMonthGroup?.meta.name}</span>
+                    <span className="text-xs text-white/40 font-mono font-normal">({filteredMonthSongs.length} STAGES)</span>
+                  </h2>
+                </div>
+                <div className="font-mono text-right text-[10px] text-white/50">
+                  CLEARED: <span className="text-[#39FF14] font-bold">{activeMonthGroup?.clearedCount}</span> / {activeMonthGroup?.songs.length}
+                </div>
+              </div>
+
+              {/* Search + Mood + Sort controls */}
+              <div className="space-y-2">
+                <div className="relative">
+                  <input
+                    data-testid="input-search"
+                    type="text"
+                    placeholder="SEARCH STAGES / DISPATCHES..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full font-mono text-xs tracking-widest px-9 py-2 outline-none rounded-lg bg-black/80 border border-white/15 text-white focus:border-[#39FF14] transition-colors"
+                  />
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex gap-1">
+                    {(['all', 'light', 'dark'] as const).map((m) => (
+                      <button
+                        key={m}
+                        data-testid={`filter-mood-${m}`}
+                        onClick={() => { audioManager.playSfx('tap_nav', 0.12); setMoodFilter(m); }}
+                        className="font-mono text-[8px] font-bold px-2.5 py-1 tracking-widest uppercase transition-all rounded cursor-pointer"
+                        style={{
+                          background: moodFilter === m ? (isAvant ? '#39FF14' : '#FF1493') : 'rgba(255,255,255,0.04)',
+                          color: moodFilter === m ? '#000' : 'rgba(255,255,255,0.5)',
+                          border: `1px solid ${moodFilter === m ? 'transparent' : 'rgba(255,255,255,0.1)'}`,
+                        }}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    data-testid="sort-bpm"
+                    onClick={() => { audioManager.playSfx('tap_nav', 0.12); setSortBy(sortBy === 'day' ? 'bpm' : 'day'); }}
+                    className="font-mono text-[8px] font-bold px-2.5 py-1 tracking-widest uppercase cursor-pointer text-white/50 hover:text-white border border-white/10 rounded"
+                  >
+                    ↕ {sortBy === 'day' ? 'STAGE NO' : 'BPM'}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Stage List Grid (Stage 1 up to 31) */}
+            <div className="space-y-2">
+              {filteredMonthSongs.length === 0 ? (
+                <div className="font-mono text-xs text-white/30 italic py-8 text-center bg-black/30 rounded-xl border border-white/5">
+                  NO STAGES MATCH FILTER CRITERIA IN THIS MONTH
+                </div>
+              ) : (
+                filteredMonthSongs.map((song, idx) => {
+                  const stageNum = getRelativeDay(song.day);
+                  const isSelected = selected?.id === song.id;
+                  const unlocked = isSongUnlocked(song);
+                  const hs = getHighScore(song.id);
+                  const songMedal = getMedalForSong(song.id);
+                  const moodColor = song.mood === 'light' ? '#39FF14' : '#FF1493';
+
+                  return (
+                    <div
+                      key={song.id}
+                      data-testid={`card-song-${song.id}`}
+                      onClick={() => {
+                        audioManager.playSfx('tap_nav', 0.12);
+                        setSelected(song);
+                      }}
+                      className={`w-full text-left flex items-center gap-3.5 p-3 rounded-xl transition-all duration-200 cursor-pointer relative group ${
+                        isSelected ? 'bg-white/10 border-l-4 shadow-xl' : 'bg-black/50 hover:bg-white/5 border-l-4 border-transparent'
+                      }`}
+                      style={{
+                        borderLeftColor: isSelected ? moodColor : 'transparent',
+                        boxShadow: isSelected ? `0 8px 24px -6px ${moodColor}30` : 'none',
+                      }}
+                    >
+                      {/* Stage Number Badge */}
+                      <div className="flex flex-col items-center justify-center w-12 h-12 rounded-lg bg-black/60 border border-white/10 font-mono flex-shrink-0">
+                        <span className="text-[7px] text-white/40 tracking-wider font-bold uppercase">STAGE</span>
+                        <span className="text-base font-black leading-none text-white">{stageNum}</span>
+                      </div>
+
+                      {/* Song Cover Art */}
+                      <div className="relative flex-shrink-0">
+                        {song.coverArt ? (
+                          <img
+                            src={song.coverArt}
+                            alt={song.title}
+                            className="w-12 h-12 object-cover rounded-lg transition-transform group-hover:scale-105"
+                            style={{
+                              border: isSelected ? `1px solid ${moodColor}` : '1px solid rgba(255,255,255,0.1)',
+                              filter: unlocked ? 'none' : 'grayscale(100%) brightness(0.4)',
+                            }}
+                          />
+                        ) : (
+                          <div
+                            className="w-12 h-12 rounded-lg flex items-center justify-center font-mono font-bold text-xs bg-white/5 border border-white/10"
+                            style={{ color: moodColor }}
+                          >
+                            #{song.day}
+                          </div>
+                        )}
+                        {!unlocked && (
+                          <div className="absolute inset-0 bg-black/60 rounded-lg flex items-center justify-center">
+                            <Lock size={14} className="text-[#FF3800]" />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Song Details */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                          <span className="font-mono text-[9px] font-bold text-white/40">
+                            DAY #{String(song.day).padStart(3, '0')}
+                          </span>
+                          {unlocked ? (
+                            <span
+                              className="font-mono text-[8px] px-1.5 py-[1px] font-black uppercase rounded"
+                              style={{
+                                color: moodColor,
+                                border: `1px solid ${moodColor}40`,
+                                background: `${moodColor}10`,
+                              }}
+                            >
+                              {song.mood}
+                            </span>
+                          ) : (
+                            <span className="font-mono text-[8px] px-1.5 py-[1px] font-black uppercase text-[#FF3800] border border-[#FF3800]/40 bg-[#FF3800]/10 rounded">
+                              LOCKED
+                            </span>
+                          )}
+                          {songMedal && songMedal !== '' && (
+                            <span
+                              className="font-mono text-[8px] px-1.5 py-[1px] font-black uppercase rounded ml-auto"
+                              style={{ color: MEDAL_COLOR[songMedal], border: `1px solid ${MEDAL_COLOR[songMedal]}40` }}
+                            >
+                              {songMedal}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="font-mono font-black text-sm uppercase truncate text-white tracking-tight flex items-center gap-1.5">
+                          <span>{song.title}</span>
+                          {claimedRewards[song.id]?.includes('prophecy') && <span>🏆</span>}
+                        </div>
+
+                        <div className="flex items-center gap-3 mt-0.5 text-[9px] font-mono text-white/40">
+                          <span className="truncate">{song.artist}</span>
+                          <span>·</span>
+                          <span>{song.bpm} BPM</span>
+                          <span>·</span>
+                          <span>LVL {song.difficultyLevel}</span>
+                          {hs > 0 && (
+                            <span className="ml-auto font-mono text-[10px] font-bold text-[#39FF14]">
+                              {hs.toLocaleString()}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <ChevronRight size={16} className={`transition-transform ${isSelected ? 'translate-x-1 text-[#39FF14]' : 'text-white/20'}`} />
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Rightmost Column: Integrated Calibration & Details Page for Selected Stage */}
+          <div className="w-full lg:w-1/2 p-5 lg:p-8 space-y-6 relative z-10 bg-black/60 backdrop-blur-xl">
+            {selected ? (
+              <div className="space-y-6 max-w-xl mx-auto w-full">
+                {/* Header Title Bar */}
+                <div className="flex justify-between items-start border-b border-white/10 pb-4">
+                  <div>
+                    <div className="font-mono text-[9px] tracking-[0.25em] text-[#39FF14] uppercase mb-1 flex items-center gap-2">
+                      <Activity size={12} className="animate-pulse" />
+                      <span>STAGE {getRelativeDay(selected.day)} // CALIBRATION ENGINE</span>
+                    </div>
+                    <div className="font-mono text-xs text-white/30 uppercase">
+                      SIGNAL REF: {selected.id.toUpperCase().substring(0, 14)}
+                    </div>
+                  </div>
+                  <div
+                    className="font-mono text-[9px] font-bold px-3 py-1 border uppercase rounded"
+                    style={{ color: activeMoodColor, borderColor: `${activeMoodColor}40`, background: `${activeMoodColor}10` }}
+                  >
+                    MOOD: {selected.mood.toUpperCase()}
+                  </div>
+                </div>
+
+                {/* Album Art & Audio Preview Hero */}
+                <div className="flex flex-col sm:flex-row gap-5 items-center bg-white/[0.02] border border-white/10 p-4.5 rounded-2xl">
+                  <div className="relative flex-shrink-0 group">
+                    <div className="absolute -top-2 -left-2 w-4 h-4 border-t-2 border-l-2 border-[#39FF14]" />
+                    <div className="absolute -top-2 -right-2 w-4 h-4 border-t-2 border-r-2 border-[#39FF14]" />
+                    <div className="absolute -bottom-2 -left-2 w-4 h-4 border-b-2 border-l-2 border-[#39FF14]" />
+                    <div className="absolute -bottom-2 -right-2 w-4 h-4 border-b-2 border-r-2 border-[#39FF14]" />
+
+                    {selected.coverArt ? (
+                      <img
+                        src={selected.coverArt}
+                        alt={selected.title}
+                        className="w-32 h-32 object-cover rounded-xl shadow-2xl"
+                        style={{
+                          border: '1px solid rgba(57,255,20,0.2)',
+                          filter: selectedUnlocked ? 'none' : 'grayscale(100%) brightness(0.4)',
+                        }}
+                      />
+                    ) : (
+                      <div className="w-32 h-32 rounded-xl flex items-center justify-center font-mono font-black text-2xl bg-white/5 border border-white/10 text-white/30">
+                        #{selected.day}
+                      </div>
+                    )}
+
+                    {/* Audio Preview Overlay Button */}
+                    {selectedUnlocked && (
+                      <button
+                        onClick={() => togglePreview(selected)}
+                        className="absolute inset-0 rounded-xl flex items-center justify-center transition-all bg-black/40 hover:bg-black/60 text-white cursor-pointer"
+                      >
+                        <div className="w-10 h-10 rounded-full border border-white/30 bg-black/60 flex items-center justify-center shadow-lg">
+                          {previewing ? <VolumeX size={18} className="text-[#39FF14]" /> : <Volume2 size={18} className="text-white" />}
+                        </div>
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex-1 min-w-0 text-center sm:text-left">
+                    <div className="flex items-center gap-2 mb-1.5 justify-center sm:justify-start flex-wrap">
+                      <span className="font-mono text-[9px] px-2 py-0.5 border font-bold uppercase rounded text-white/40 border-white/20">
+                        STAGE #{getRelativeDay(selected.day)} (DAY {selected.day})
+                      </span>
+                      {medal && medal !== '' && (
+                        <span
+                          className="font-mono text-[9px] px-2 py-0.5 border font-bold uppercase rounded"
+                          style={{ color: medalColor, borderColor: `${medalColor}40`, background: `${medalColor}10` }}
+                        >
+                          {medal}
+                        </span>
+                      )}
+                      {isAllPrizesClaimed && (
+                        <span className="font-mono text-[9px] px-2 py-0.5 border border-yellow-400 text-yellow-400 bg-yellow-400/10 font-bold uppercase flex items-center gap-1 rounded">
+                          <Trophy size={10} /> ALL PRIZES CLAIMED
+                        </span>
+                      )}
+                    </div>
+
+                    <h2 className="font-mono font-black text-xl uppercase leading-tight tracking-tight text-white mb-1">
+                      {selected.title}
+                    </h2>
+                    <div className="font-mono text-xs text-white/60 font-bold uppercase mb-1">
+                      {selected.artist}
+                    </div>
+                    <div className="font-mono text-[10px] text-white/30 uppercase">
+                      SPEC DATE: {selected.date} {selected.key ? `// KEY: ${selected.key}` : ''}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Audio Preview Waveform Bar */}
+                {previewing && selectedUnlocked && (
+                  <div className="border border-[#39FF14]/30 bg-black/70 p-3 rounded-xl flex items-center gap-4">
+                    <WaveformBars playing={previewing} />
+                    <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                      <div
+                        className="h-full transition-all duration-150"
+                        style={{ width: `${previewProg * 100}%`, background: activeMoodColor, boxShadow: `0 0 8px ${activeMoodColor}` }}
+                      />
+                    </div>
+                    <button
+                      onClick={() => togglePreview()}
+                      className="font-mono text-xs text-white/40 hover:text-white cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+
+                {/* Calibration Coefficient Override Controller */}
+                {selectedUnlocked && (
+                  <div className="border border-[#39FF14]/25 bg-black/40 p-4.5 rounded-2xl space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="font-mono text-[9px] uppercase tracking-wider text-white/40 flex items-center gap-2">
+                        <Sliders size={12} className="text-[#39FF14]" />
+                        <span>// CALIBRATION COEFFICIENT OVERRIDE</span>
+                      </div>
+                      <div className="font-mono font-bold text-sm" style={{ color: diffColor }}>
+                        LVL {diffOverride}
+                      </div>
+                    </div>
+
+                    <div className="flex gap-1 items-end h-4">
+                      {Array.from({ length: 10 }).map((_, i) => (
+                        <div
+                          key={i}
+                          className="flex-1 rounded-xs transition-all"
+                          style={{
+                            height: `${30 + i * 7}%`,
+                            background: i < diffOverride ? diffColor : 'rgba(255,255,255,0.05)',
+                            border: '1px solid rgba(255,255,255,0.05)',
+                            boxShadow: i < diffOverride ? `0 0 6px ${diffColor}40` : 'none',
+                          }}
+                        />
+                      ))}
+                    </div>
+
+                    <input
+                      type="range"
+                      min={1}
+                      max={10}
+                      value={diffOverride}
+                      onChange={(e) => {
+                        audioManager.playSfx('tap_nav', 0.05);
+                        setDiffOverride(parseInt(e.target.value, 10));
+                      }}
+                      className="w-full cursor-pointer accent-[#39FF14]"
+                    />
+
+                    <div className="flex justify-between font-mono text-[8px] tracking-widest text-white/40">
+                      <span className="text-[#39FF14]">MIN COEFFICIENT (LVL 1)</span>
+                      <span className="text-[#FF1493]">MAX COEFFICIENT (LVL 10)</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Telemetry Stats Grid */}
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { label: 'BPM', value: selected.bpm },
+                    { label: 'NODES', value: (selected.notes || []).length },
+                    { label: 'LENGTH', value: `${Math.floor(selected.duration / 60)}:${String(Math.round(selected.duration % 60)).padStart(2, '0')}` },
+                    { label: 'CALIB', value: diffOverride },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="border border-white/10 bg-black/40 p-2.5 rounded-xl text-center">
+                      <div className="font-mono text-[8px] font-bold text-white/30 uppercase mb-0.5">{label}</div>
+                      <div className="font-mono font-black text-sm text-[#39FF14]">{value}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Highest Integrity Dispatch Score */}
+                {getHighScore(selected.id) > 0 && (
+                  <div className="border border-[#39FF14]/20 bg-black/40 p-3.5 rounded-xl flex items-center justify-between">
+                    <div className="font-mono text-[9px] tracking-widest text-white/40 uppercase">
+                      // MAX DISPATCH SCORE
+                    </div>
+                    <div className="font-mono font-black text-base text-[#39FF14]">
+                      {getHighScore(selected.id).toLocaleString()}
+                    </div>
+                  </div>
+                )}
+
+                {/* Description */}
+                {selected.description && (
+                  <div className="border border-white/10 bg-black/30 p-3.5 rounded-xl font-mono text-xs italic text-white/50 leading-relaxed">
+                    "{selected.description.toUpperCase()}"
+                  </div>
+                )}
+
+                {/* Prize Progress Menu */}
+                <PrizeProgressMenu songId={selected.id} />
+
+                {/* Telemetry History */}
+                {history.length > 0 && (
+                  <div className="border border-white/10 bg-black/30 p-3.5 rounded-xl space-y-2">
+                    <div className="font-mono text-[8px] text-white/40 tracking-widest uppercase">
+                      // TELEMETRY HISTORY LOG ({history.length} TRANSMISSIONS)
+                    </div>
+                    <div className="flex gap-2 overflow-x-auto pb-1 font-mono text-xs">
+                      {history.slice(-6).map((sc, idx) => (
+                        <div key={idx} className="border border-white/10 bg-white/5 px-2.5 py-1 rounded text-[#39FF14] font-bold">
+                          {sc.toLocaleString()}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Transmission Trigger / Play Action */}
+                <div className="pt-2">
+                  {!selectedUnlocked ? (
+                    <div className="border border-[#FF3800]/40 bg-[#FF3800]/10 p-3.5 rounded-xl text-center mb-3">
+                      <div className="font-mono text-xs font-black text-[#FF3800] tracking-wider uppercase">
+                        AWARD PLAY LOCKED // 10 FRAGMENTS REQUIRED
+                      </div>
+                      <div className="font-mono text-[9px] text-white/60 mt-1 uppercase">
+                        COLLECT 10 FRAGMENTS FOR THIS SONG OR EQUIP CARD FROM VAULT COLLECTION
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <button
+                    data-testid="button-play"
+                    disabled={!selectedUnlocked}
+                    onClick={() => handlePlaySong()}
+                    onMouseEnter={() => { if (selectedUnlocked) audioManager.playSfx('tap_nav', 0.08); }}
+                    className={`w-full py-4 text-xs tracking-[0.4em] font-black uppercase rounded-xl transition-all flex items-center justify-center gap-3 cursor-pointer ${
+                      selectedUnlocked
+                        ? "border border-[#39FF14] bg-[#39FF14] text-black hover:bg-[#39FF14]/90 shadow-[0_0_20px_rgba(57,255,20,0.4)]"
+                        : "border border-white/10 bg-white/5 text-white/20 cursor-not-allowed"
+                    }`}
+                  >
+                    <Play size={16} fill="currentColor" />
+                    <span>START TRANSMISSION</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full gap-4 text-center py-16 opacity-30">
+                <div className="w-12 h-12 border-2 border-dashed border-[#39FF14] rounded-full animate-spin" />
+                <div className="font-mono text-xs font-bold tracking-[0.3em] uppercase text-[#39FF14]">
+                  SELECT A STAGE TO INITIATE CALIBRATION...
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
