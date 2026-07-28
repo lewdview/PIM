@@ -26,14 +26,14 @@ export const RARITY_ARTWORK_CONFIG: Record<string, RarityArtworkRule> = {
     extension: null,
   },
   rare: {
-    useAlternate: true,
-    folder: 'alternate-covers',
-    extension: '.png',
-  },
-  legendary: {
     useAlternate: false,
     folder: 'covers',
     extension: null,
+  },
+  legendary: {
+    useAlternate: true,
+    folder: 'alternate-covers',
+    extension: '.png',
   },
   mythic: {
     useAlternate: false,
