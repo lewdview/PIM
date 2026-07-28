@@ -7,6 +7,7 @@ import { useVaultStore } from '../store/useVaultStore';
 import type { OwnedCard } from '../services/vaultService';
 import { generateCardMetadata, requestNftMint } from '../services/vaultService';
 import { RARITY_CONFIG, getSupplyCap, getMintableCap, type Rarity } from '../utils/rarity';
+import { getCoverUrlForRarity } from '../utils/rarityArtwork';
 import RarityBadge from './RarityBadge';
 import AudioPreview from './AudioPreview';
 import { getDayFromDate } from '../utils/dayCalc';
@@ -159,7 +160,7 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
                     <div className="absolute -inset-4 rounded-3xl opacity-20 blur-2xl transition-all duration-700"
                       style={{ background: `radial-gradient(circle, ${rc.color}, transparent 70%)` }} />
                     <div className="relative aspect-[3/4] rounded-xl overflow-hidden shadow-2xl border border-white/10">
-                      <img src={card.card.coverUrl} alt="" className="w-full h-full object-cover" />
+                      <img src={getCoverUrlForRarity(card.card.coverUrl, card.card.rarity)} alt="" className="w-full h-full object-cover" />
                       <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 to-transparent" />
                       <div className="absolute bottom-4 left-4 right-4">
                         <RarityBadge rarity={card.card.rarity} size="lg" />
@@ -224,7 +225,7 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
                       audioUrl={card.card.audioUrl} 
                       title={card.card.title} 
                       rarity={card.card.rarity} 
-                      coverUrl={card.card.coverUrl}
+                      coverUrl={getCoverUrlForRarity(card.card.coverUrl, card.card.rarity)}
                       day={card.card.day}
                       isDailyClaim={card.source === 'daily_claim'}
                     />

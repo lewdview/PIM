@@ -4,6 +4,7 @@ import { useVaultStore, type RevealPackMeta } from '../../store/useVaultStore';
 import type { OwnedCard } from '../../services/vaultService';
 import { audioManager } from '../../game/audio';
 import { RARITY_CONFIG, type Rarity } from '../../utils/rarity';
+import { getCoverUrlForRarity } from '../../utils/rarityArtwork';
 import Card from '../Card';
 import RarityBadge from '../RarityBadge';
 import {
@@ -525,7 +526,7 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
         cardId: card.id,
         title: card.title,
         artist: (card as any).artist || 'TH3SCR1B3',
-        coverArt: card.coverUrl || null,
+        coverArt: getCoverUrlForRarity(card.coverUrl, rarity) || null,
         rarity,
         added: totalGain,
         oldTotal,
@@ -627,7 +628,8 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
     async function preloadAssets() {
       const urls = new Set<string>();
       cards.forEach(owned => {
-        if (owned.card.coverUrl) urls.add(owned.card.coverUrl);
+        const cover = getCoverUrlForRarity(owned.card.coverUrl, owned.card.rarity);
+        if (cover) urls.add(cover);
         if (owned.card.holographicUrl) urls.add(owned.card.holographicUrl);
       });
 

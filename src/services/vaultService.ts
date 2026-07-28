@@ -2,6 +2,7 @@ import { getCurrentDay } from '../utils/dayCalc';
 import {
   type Rarity, type ProofType, type UltraReward, type PackCategory, type PackSize,
 } from '../utils/rarity';
+import { getCoverUrlForRarity } from '../utils/rarityArtwork';
 import {
   getAdminConfig,
 } from '../utils/adminConfig';
@@ -31,7 +32,7 @@ export interface VaultCard {
 }
 
 // Helper to resolve supabase / local paths based on day_file_map
-function resolveUrls(r: Partial<ReleaseItem>): { audioUrl: string; coverUrl: string } {
+function resolveUrls(r: Partial<ReleaseItem>, rarity?: Rarity | string): { audioUrl: string; coverUrl: string } {
   const useLocal = (typeof localStorage !== 'undefined' && (localStorage.getItem('opt_useLocalFiles') === 'true' || localStorage.getItem('useLocalFiles') === 'true')) || 
                    (import.meta.env && import.meta.env.VITE_USE_LOCAL_FILES === 'true');
 
@@ -92,6 +93,12 @@ function resolveUrls(r: Partial<ReleaseItem>): { audioUrl: string; coverUrl: str
     }
   }
 
+  // Apply custom artwork routing by rarity (e.g. rare -> alternate-covers/*.png)
+  const effectiveRarity = rarity || (r as any).rarity;
+  if (effectiveRarity) {
+    coverUrl = getCoverUrlForRarity(coverUrl, effectiveRarity);
+  }
+
   return { audioUrl, coverUrl };
 }
 
@@ -103,7 +110,7 @@ export function getSafeFallbackCard(cardId: string, rarity: Rarity): VaultCard {
     title: `Card ${cardId}`,
     storageTitle: `card-${cardId}`,
     mood: 'dark'
-  });
+  }, rarity);
   return {
     id: cardId || 'unknown-card',
     day: dayNum || 1,
@@ -116,7 +123,7 @@ export function getSafeFallbackCard(cardId: string, rarity: Rarity): VaultCard {
     tempo: 120,
     genre: [],
     tags: [],
-    coverUrl,
+    coverUrl: getCoverUrlForRarity(coverUrl, rarity),
     audioUrl,
     description: `Fallback representation for card ${cardId}`,
     claimedCount: 0,
@@ -129,8 +136,21 @@ export function findCardWithFallback(pool: VaultCard[], cardId: string, rarity: 
     return getSafeFallbackCard(cardId, rarity);
   }
   const found = pool.find(p => p.id === cardId);
-  if (found) return found;
-  if (pool[0]) return pool[0];
+  const targetRarity = rarity || (found ? found.rarity : 'common');
+  if (found) {
+    return {
+      ...found,
+      rarity: targetRarity,
+      coverUrl: getCoverUrlForRarity(found.coverUrl, targetRarity),
+    };
+  }
+  if (pool[0]) {
+    return {
+      ...pool[0],
+      rarity: targetRarity,
+      coverUrl: getCoverUrlForRarity(pool[0].coverUrl, targetRarity),
+    };
+  }
   return getSafeFallbackCard(cardId, rarity);
 }
 
@@ -273,8 +293,8 @@ export async function fetchAllCards(): Promise<VaultCard[]> {
         storageTitle: c.storageTitle,
         mood: c.mood,
         coverArt: c.coverUrl,
-        storedAudioUrl: c.audioUrl
-      });
+        storedAudioUrl: c.audioUrl,
+      }, c.rarity);
       return {
         ...c,
         audioUrl,

@@ -12,6 +12,7 @@ import {
   redeemBonusCode, fetchAllCards, findCardWithFallback, 
   type VaultCard, type OwnedCard 
 } from '../services/vaultService';
+import { getCoverUrlForRarity } from '../utils/rarityArtwork';
 import { audioManager } from '../game/audio';
 import DecryptionAnimation from '../components/DecryptionAnimation';
 
@@ -533,7 +534,7 @@ export default function ClaimPage() {
                   <div className="py-2 flex flex-col items-center">
                     <div className="w-16 h-16 rounded overflow-hidden border border-white/20 mb-3 shadow-lg">
                       <img 
-                        src={rewardClaimed.details.card.coverUrl} 
+                        src={getCoverUrlForRarity(rewardClaimed.details.card.coverUrl, rewardClaimed.details.card.rarity)} 
                         alt="Reward card Art" 
                         className="w-full h-full object-cover" 
                       />

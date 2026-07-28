@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Zap, Sparkles, Image as ImageIcon, Terminal } from 'lucide-react';
 import { audioManager } from '../game/audio';
 import type { VaultCard } from '../services/vaultService';
+import { getCoverUrlForRarity } from '../utils/rarityArtwork';
 
 interface DecryptionAnimationProps {
   reward: {
@@ -346,7 +347,7 @@ export default function DecryptionAnimation({ reward, onClose }: DecryptionAnima
                 >
                   <div className="w-32 aspect-[3/4] rounded-lg overflow-hidden border border-white/20 mb-4 shadow-[0_10px_30px_rgba(0,0,0,0.6)]">
                     <img
-                      src={reward.details.card.coverUrl}
+                      src={getCoverUrlForRarity(reward.details.card.coverUrl, reward.details.card.rarity)}
                       alt="Reward Card"
                       className="w-full h-full object-cover"
                     />
@@ -376,7 +377,7 @@ export default function DecryptionAnimation({ reward, onClose }: DecryptionAnima
                     <div className="absolute inset-0 rounded-lg bg-black/55 border border-white/10 translate-x-1 translate-y-1 opacity-70" />
                     <div className="absolute inset-0 rounded-lg overflow-hidden border border-white/20 shadow-[0_10px_30px_rgba(0,0,0,0.6)]">
                       <img
-                        src={reward.details.card.coverUrl}
+                        src={getCoverUrlForRarity(reward.details.card.coverUrl, reward.details.card.rarity)}
                         alt="Reward Card"
                         className="w-full h-full object-cover"
                       />

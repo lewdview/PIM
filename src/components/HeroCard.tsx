@@ -4,6 +4,7 @@ import { Clock, Gift } from 'lucide-react';
 import type { VaultCard } from '../services/vaultService';
 import { getClaimedCountForDay } from '../services/vaultService';
 import { RARITY_CONFIG } from '../utils/rarity';
+import { getCoverUrlForRarity } from '../utils/rarityArtwork';
 import RarityBadge from './RarityBadge';
 import AudioPreview from './AudioPreview';
 import { formatDate, getTimeUntilNextDay } from '../utils/dayCalc';
@@ -114,7 +115,7 @@ export default function HeroCard({ card, hasClaimed, onClaim, day }: HeroCardPro
               {/* Cover art */}
               {!imgError && card.coverUrl ? (
                 <img
-                  src={card.coverUrl}
+                  src={getCoverUrlForRarity(card.coverUrl, card.rarity)}
                   alt={card.title}
                   className="absolute inset-0 w-full h-full object-cover rotate-90 scale-[1.35] brightness-125"
                   onError={() => setImgError(true)}
