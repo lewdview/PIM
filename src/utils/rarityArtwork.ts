@@ -4,7 +4,7 @@ import type { Rarity } from './rarity';
 export interface RarityArtworkRule {
   /** Whether this rarity uses alternate artwork instead of original covers */
   useAlternate: boolean;
-  /** Storage folder name relative to bucket (e.g. 'girls-cover', 'alternate-covers', or 'covers') */
+  /** Storage folder name relative to bucket (e.g. 'girls-cover', 'girl-covers', 'alternate-covers', or 'covers') */
   folder: string;
   /** File extension override (e.g. '.jpg' or '.png'). null to keep original extension */
   extension: '.png' | '.jpg' | '.jpeg' | '.webp' | null;
@@ -14,7 +14,7 @@ export interface RarityArtworkRule {
  * Registry of artwork rules per rarity level:
  * - common: Original covers ('covers')
  * - uncommon: Alternate covers ('alternate-covers/*.jpg')
- * - rare: Square covers ('girls-cover/*.jpg') with fallback sequence
+ * - rare: Square covers ('girls-cover/*.jpg' / 'girl-covers/*.jpg') with multi-tier fallback
  * - legendary: Alternate covers ('alternate-covers/*.jpg')
  */
 export const RARITY_ARTWORK_CONFIG: Record<string, RarityArtworkRule> = {
@@ -110,10 +110,11 @@ export function getCoverUrlForRarity(
 /**
  * Smart Cover Art Hook:
  * Handles automatic graceful fallback when a custom cover format is missing or 404s.
- * 1. Tries primary alternate cover (e.g. girls-cover/*.jpg or alternate-covers/*.jpg)
- * 2. Tries alternate PNG variant if JPG fails (e.g. girls-cover/*.png)
- * 3. Tries alternate-covers/*.jpg if girls-cover is missing
- * 4. Gracefully falls back to original cover (covers/*.jpg) if all alternate art is missing/404!
+ * 1. Tries primary alternate cover (e.g. girls-cover/*.jpg)
+ * 2. Tries girl-covers/*.jpg variant
+ * 3. Tries alternate PNG variant (e.g. girls-cover/*.png)
+ * 4. Tries alternate-covers/*.jpg if girls-cover is missing
+ * 5. Gracefully falls back to original cover (covers/*.jpg) if all alternate art is missing/404!
  */
 export function useSmartCoverArt(
   originalCoverUrl: string | undefined | null,
@@ -124,7 +125,14 @@ export function useSmartCoverArt(
   
   const altPng = primary.endsWith('.jpg') ? primary.replace(/\.jpg$/i, '.png') : '';
   const altJpg = primary.endsWith('.png') ? primary.replace(/\.png$/i, '.jpg') : '';
-  const altCoversJpg = primary.includes('/girls-cover/') ? primary.replace(/\/girls-cover\//g, '/alternate-covers/') : '';
+  
+  const altGirlCoversJpg = primary.includes('/girls-cover/')
+    ? primary.replace(/\/girls-cover\//g, '/girl-covers/')
+    : (primary.includes('/girl-covers/') ? primary.replace(/\/girl-covers\//g, '/girls-cover/') : '');
+
+  const altCoversJpg = primary.includes('/girls-cover/') || primary.includes('/girl-covers/')
+    ? primary.replace(/\/(girls-cover|girl-covers)\//g, '/alternate-covers/')
+    : '';
 
   const [src, setSrc] = useState(primary);
   const [failed, setFailed] = useState(false);
@@ -136,7 +144,9 @@ export function useSmartCoverArt(
   }, [original, rarity]);
 
   const handleError = () => {
-    if (src === primary && altPng && altPng !== primary && altPng !== original) {
+    if (src === primary && altGirlCoversJpg && altGirlCoversJpg !== primary && altGirlCoversJpg !== original) {
+      setSrc(altGirlCoversJpg);
+    } else if (src === primary && altPng && altPng !== primary && altPng !== original) {
       setSrc(altPng);
     } else if (src === primary && altJpg && altJpg !== primary && altJpg !== original) {
       setSrc(altJpg);
@@ -154,6 +164,6 @@ export function useSmartCoverArt(
     failed,
     handleError,
     isFallback: src === original && primary !== original,
-    isSquare: src.includes('/girls-cover/') || src.includes('/alternate-covers/'),
+    isSquare: src.includes('/girls-cover/') || src.includes('/girl-covers/') || src.includes('/alternate-covers/'),
   };
 }
