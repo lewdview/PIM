@@ -1150,6 +1150,14 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
 
                     <div className="flex justify-between items-center">
                       <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-white font-mono uppercase">Sound Effects (SFX)</span>
+                        <span className="text-[8px] text-zinc-500 font-mono">UI clicks, navigation chimes, and hit audio feedback</span>
+                      </div>
+                      {renderToggle('sfxEnabled')}
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      <div className="flex flex-col">
                         <span className="text-[10px] font-bold text-white font-mono uppercase">Ambient BGM</span>
                         <span className="text-[8px] text-zinc-500 font-mono">Casette tape radio hum loops in vault directories</span>
                       </div>

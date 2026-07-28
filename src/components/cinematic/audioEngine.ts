@@ -62,6 +62,7 @@ function noise(
   gain: number,
   filter?: { type: BiquadFilterType; freq: number },
 ): void {
+  if (typeof localStorage !== 'undefined' && localStorage.getItem("opt_sfxEnabled") === "false") return;
   const c = getCtx();
   const buf = c.createBuffer(1, c.sampleRate * duration, c.sampleRate);
   const data = buf.getChannelData(0);
@@ -69,7 +70,7 @@ function noise(
   const src = c.createBufferSource();
   src.buffer = buf;
   const g = c.createGain();
-  safeGainRamp(g, gain, 0.001, duration);
+  safeGainRamp(g, gain * 0.8, 0.001, duration);
   if (filter) {
     const f = c.createBiquadFilter();
     f.type = filter.type;
@@ -89,10 +90,19 @@ function tone(
 ): OscillatorNode {
   const c = getCtx();
   const osc = c.createOscillator();
+  if (typeof localStorage !== 'undefined' && localStorage.getItem("opt_sfxEnabled") === "false") {
+    // Return muted osc node if SFX disabled
+    const g = c.createGain();
+    g.gain.value = 0;
+    osc.connect(g).connect(getDestination());
+    osc.start();
+    osc.stop(c.currentTime + duration);
+    return osc;
+  }
   osc.type = type;
   osc.frequency.value = freq;
   const g = c.createGain();
-  safeGainRamp(g, gain, 0.001, duration);
+  safeGainRamp(g, gain * 0.8, 0.001, duration);
   osc.connect(g).connect(getDestination());
   osc.start();
   osc.stop(c.currentTime + duration);

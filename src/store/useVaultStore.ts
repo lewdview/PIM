@@ -17,6 +17,7 @@ export interface ProfileSettings {
   comboDisplay: boolean;
   judgmentText: boolean;
   bgMusic: boolean;
+  sfxEnabled: boolean;
   haptics: boolean;
   missSystem: boolean;
   slideshowThreshold?: number;
@@ -202,6 +203,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     comboDisplay: localStorage.getItem("opt_comboDisplay") !== "false",
     judgmentText: localStorage.getItem("opt_judgmentText") !== "false",
     bgMusic: localStorage.getItem("opt_bgMusic") === "true",
+    sfxEnabled: localStorage.getItem("opt_sfxEnabled") !== "false",
     haptics: localStorage.getItem("opt_haptics") !== "false",
     missSystem: localStorage.getItem("opt_missSystem") !== "false",
     slideshowThreshold: parseInt(localStorage.getItem("opt_slideshowThreshold") ?? "38") || 38,
@@ -365,6 +367,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         localStorage.setItem("opt_comboDisplay", String(mergedSettings.comboDisplay));
         localStorage.setItem("opt_judgmentText", String(mergedSettings.judgmentText));
         localStorage.setItem("opt_bgMusic", String(mergedSettings.bgMusic));
+        localStorage.setItem("opt_sfxEnabled", String(mergedSettings.sfxEnabled ?? true));
         localStorage.setItem("opt_haptics", String(mergedSettings.haptics));
         localStorage.setItem("opt_missSystem", String(mergedSettings.missSystem));
 
@@ -663,6 +666,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     if (newSettings.comboDisplay !== undefined) localStorage.setItem("opt_comboDisplay", String(merged.comboDisplay));
     if (newSettings.judgmentText !== undefined) localStorage.setItem("opt_judgmentText", String(merged.judgmentText));
     if (newSettings.bgMusic !== undefined) localStorage.setItem("opt_bgMusic", String(merged.bgMusic));
+    if (newSettings.sfxEnabled !== undefined) localStorage.setItem("opt_sfxEnabled", String(merged.sfxEnabled));
     if (newSettings.haptics !== undefined) localStorage.setItem("opt_haptics", String(merged.haptics));
     if (newSettings.missSystem !== undefined) localStorage.setItem("opt_missSystem", String(merged.missSystem));
     if (newSettings.slideshowThreshold !== undefined) localStorage.setItem("opt_slideshowThreshold", String(merged.slideshowThreshold));

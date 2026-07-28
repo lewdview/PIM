@@ -11,6 +11,7 @@ export type GameOpts = {
   useLocalFiles: boolean;
   noteGenerationSource: 'auto' | 'lyrics' | 'bpm';
   bgMusic: boolean;
+  sfxEnabled: boolean;
   gameBackground: string;
   gameTrack: string;
   backgroundBlur: number;
@@ -73,6 +74,7 @@ export const DEFAULT_OPTS: GameOpts = {
   useLocalFiles: false,
   noteGenerationSource: "auto",
   bgMusic: false,
+  sfxEnabled: true,
   gameBackground: "cover_blur",
   gameTrack: "classic",
   backgroundBlur: 10,
@@ -121,6 +123,7 @@ export function loadOpts(): GameOpts {
       return (v === "lyrics" || v === "bpm" || v === "auto") ? v : "auto";
     })(),
     bgMusic: dbSettings?.bgMusic ?? bool("opt_bgMusic", false),
+    sfxEnabled: dbSettings?.sfxEnabled ?? bool("opt_sfxEnabled", true),
     gameBackground: dbSettings?.gameBackground ?? (localStorage.getItem("opt_gameBackground") ?? "cover_blur"),
     gameTrack: dbSettings?.gameTrack ?? (localStorage.getItem("opt_gameTrack") ?? "classic"),
     backgroundBlur: dbSettings?.backgroundBlur ?? (parseFloat(localStorage.getItem("opt_backgroundBlur") ?? "10") || 10),
