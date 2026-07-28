@@ -625,6 +625,11 @@ export default function CodexPage() {
                   src={displayCoverUrl}
                   alt={card.title}
                   loading="lazy"
+                  onError={(e) => {
+                    if (e.currentTarget.src !== card.coverUrl && card.coverUrl) {
+                      e.currentTarget.src = card.coverUrl;
+                    }
+                  }}
                   style={{
                     width: '100%',
                     height: '100%',

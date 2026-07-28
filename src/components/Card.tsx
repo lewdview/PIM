@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
 import type { VaultCard } from '../services/vaultService';
 import { RARITY_CONFIG, getSupplyCap, type UltraReward, type ProofType } from '../utils/rarity';
-import { getCoverUrlForRarity } from '../utils/rarityArtwork';
+import { getCoverUrlForRarity, useSmartCoverArt } from '../utils/rarityArtwork';
 import RarityBadge from './RarityBadge';
 import AudioPreview from './AudioPreview';
 import { formatDate } from '../utils/dayCalc';
@@ -260,9 +260,9 @@ export default function Card({
   const tempo   = card.tempo   ?? 0;
   const supply  = getSupplyCap(card.rarity, card.day);
   const claimed = realClaimed ?? card.claimedCount ?? 0;
-  const coverUrl = getCoverUrlForRarity(card.coverUrl || '', card.rarity);
+  const { src: coverUrl, failed: imgFailed, handleError: handleImgError } = useSmartCoverArt(card.coverUrl || '', card.rarity);
   const audioUrl = card.audioUrl || '';
-  const hasArt   = !imgError && coverUrl;
+  const hasArt   = !imgError && !imgFailed && coverUrl;
 
   // ── Overlay state classification ──────────────────────────────────────────
   // isMintedOut  : this specific copy EXCEEDS the supply (true excess, burnable)
@@ -285,7 +285,7 @@ export default function Card({
           ...(rotated ? { transform: 'rotate(90deg) scale(1.35)', transformOrigin: 'center' } : undefined),
           ...(isEcho ? { filter: `grayscale(${Math.min(30 + echoGeneration * 15, 70)}%) contrast(1.15) brightness(0.9)` } : {}),
         }}
-        onError={() => setImgError(true)}
+        onError={handleImgError}
         loading="lazy"
       />
     ) : (
