@@ -7,6 +7,7 @@ import { fetchAllCards, type VaultCard } from '../services/vaultService';
 import { useVaultStore } from '../store/useVaultStore';
 import { useGlobalPlayer } from '../store/useGlobalPlayer';
 import { RARITY_CONFIG, type Rarity } from '../utils/rarity';
+import { getCoverUrlForRarity } from '../utils/rarityArtwork';
 import { getCurrentDay } from '../utils/dayCalc';
 
 // Duration limits for non-owned cards (preview only)
@@ -32,6 +33,13 @@ export default function CodexPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [useAltArtwork, setUseAltArtwork] = useState<boolean>(() => {
+    if (typeof localStorage !== 'undefined') {
+      const saved = localStorage.getItem('opt_useAltArtwork');
+      return saved !== null ? saved === 'true' : true;
+    }
+    return true;
+  });
 
   const collection = useVaultStore(s => s.collection);
   const claimedRewards = useVaultStore(s => s.claimedRewards);
@@ -158,6 +166,10 @@ export default function CodexPage() {
     const owned = ownedDays.get(card.day);
     const isDailyClaim = owned?.source === 'daily_claim';
     const maxDuration = isDailyClaim ? 0 : (owned ? 0 : (PREVIEW_DURATION[card.rarity] ?? 15));
+    const activeRarity = owned?.rarity || card.rarity;
+    const resolvedCoverUrl = useAltArtwork
+      ? getCoverUrlForRarity(card.coverUrl, activeRarity)
+      : card.coverUrl;
 
     if (currentTrack?.audioUrl === card.audioUrl && currentTrack?.day === card.day) {
       if (isPlaying) {
@@ -166,9 +178,9 @@ export default function CodexPage() {
         play({
           title: card.title,
           audioUrl: card.audioUrl,
-          coverUrl: card.coverUrl,
+          coverUrl: resolvedCoverUrl,
           day: card.day,
-          rarity: owned?.rarity || card.rarity,
+          rarity: activeRarity,
           isDailyClaim,
           maxDuration,
         });
@@ -177,14 +189,14 @@ export default function CodexPage() {
       play({
         title: card.title,
         audioUrl: card.audioUrl,
-        coverUrl: card.coverUrl,
+        coverUrl: resolvedCoverUrl,
         day: card.day,
-        rarity: owned?.rarity || card.rarity,
+        rarity: activeRarity,
         isDailyClaim,
         maxDuration,
       });
     }
-  }, [ownedDays, currentTrack, isPlaying, play, pause]);
+  }, [ownedDays, currentTrack, isPlaying, play, pause, useAltArtwork]);
 
   if (loading) {
     return (
@@ -424,6 +436,41 @@ export default function CodexPage() {
             <Filter size={10} /> Filters
           </button>
 
+          {/* Alternate Artwork Toggle Tap */}
+          <button
+            onClick={() => {
+              const next = !useAltArtwork;
+              setUseAltArtwork(next);
+              if (typeof localStorage !== 'undefined') {
+                localStorage.setItem('opt_useAltArtwork', String(next));
+              }
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '5px 12px',
+              background: useAltArtwork ? 'rgba(255, 215, 0, 0.12)' : 'rgba(255,255,255,0.03)',
+              border: `1px solid ${useAltArtwork ? 'rgba(255, 215, 0, 0.35)' : 'rgba(255,255,255,0.08)'}`,
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSize: '9.5px',
+              color: useAltArtwork ? '#ffd700' : 'rgba(255,255,255,0.4)',
+              cursor: 'pointer',
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+              transition: 'all 0.2s ease',
+            }}
+            title="Toggle alternate artwork by rarity"
+          >
+            <span style={{ fontSize: '11px', color: useAltArtwork ? '#ffd700' : 'inherit' }}>
+              {useAltArtwork ? '✦' : '✧'}
+            </span>
+            <span>{useAltArtwork ? 'Alt Artwork: Active' : 'Alt Artwork: Off'}</span>
+            <span style={{ opacity: 0.65, fontSize: '8.5px', textTransform: 'none', marginLeft: '2px' }}>
+              (use alternate artwork if one exists by rarity)
+            </span>
+          </button>
+
           {/* Quick filter pills */}
           {(['all', 'owned', 'missing', ...(beyondCount > 0 ? ['beyond'] : [])] as FilterMode[]).map(f => {
             const beyondActive = f === 'beyond';
@@ -536,6 +583,11 @@ export default function CodexPage() {
               : null;
             const displayRarity = owned?.rarity || card.rarity;
             const rc = RARITY_CONFIG[displayRarity as Rarity] || RARITY_CONFIG.common;
+            const displayCoverUrl = useAltArtwork
+              ? getCoverUrlForRarity(card.coverUrl, displayRarity)
+              : card.coverUrl;
+            const hasAltArtActive = useAltArtwork && displayCoverUrl !== card.coverUrl;
+
             const isCurrentlyPlaying = currentTrack?.audioUrl === card.audioUrl && currentTrack?.day === card.day && isPlaying;
             const isDailyClaim = owned?.source === 'daily_claim';
             const maxDuration = isDailyClaim ? 0 : (owned ? PREVIEW_DURATION[owned.rarity] : (PREVIEW_DURATION[card.rarity] ?? 15));
@@ -570,7 +622,7 @@ export default function CodexPage() {
               >
                 {/* Cover art */}
                 <img
-                  src={card.coverUrl}
+                  src={displayCoverUrl}
                   alt={card.title}
                   loading="lazy"
                   style={{
@@ -582,6 +634,28 @@ export default function CodexPage() {
                     transition: 'all 0.25s ease',
                   }}
                 />
+
+                {/* Alt Art Badge */}
+                {hasAltArtActive && (
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '24px',
+                    right: '6px',
+                    padding: '2px 5px',
+                    background: 'rgba(255,215,0,0.25)',
+                    border: '1px solid rgba(255,215,0,0.6)',
+                    backdropFilter: 'blur(4px)',
+                    fontFamily: '"JetBrains Mono", monospace',
+                    fontSize: '8px',
+                    fontWeight: 800,
+                    color: '#ffd700',
+                    borderRadius: '3px',
+                    zIndex: 40,
+                    pointerEvents: 'none',
+                  }}>
+                    ✨ ALT ART
+                  </div>
+                )}
 
                 {/* Gradient overlay */}
                 <div style={{
