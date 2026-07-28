@@ -21,9 +21,9 @@ export const RARITY_ARTWORK_CONFIG: Record<string, RarityArtworkRule> = {
     extension: null,
   },
   uncommon: {
-    useAlternate: false,
-    folder: 'covers',
-    extension: null,
+    useAlternate: true,
+    folder: 'alternate-covers',
+    extension: '.png',
   },
   rare: {
     useAlternate: false,
