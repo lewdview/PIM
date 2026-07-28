@@ -4,15 +4,18 @@ import type { Rarity } from './rarity';
 export interface RarityArtworkRule {
   /** Whether this rarity uses alternate artwork instead of original covers */
   useAlternate: boolean;
-  /** Storage folder name relative to bucket (e.g. 'alternate-covers' or 'covers') */
+  /** Storage folder name relative to bucket (e.g. 'girls-cover', 'alternate-covers', or 'covers') */
   folder: string;
   /** File extension override (e.g. '.jpg' or '.png'). null to keep original extension */
   extension: '.png' | '.jpg' | '.jpeg' | '.webp' | null;
 }
 
 /**
- * Registry of artwork rules per rarity level.
- * Alternate covers are now configured to use `.jpg` format.
+ * Registry of artwork rules per rarity level:
+ * - common: Original covers ('covers')
+ * - uncommon: Alternate covers ('alternate-covers/*.jpg')
+ * - rare: Square covers ('girls-cover/*.jpg') with fallback sequence
+ * - legendary: Alternate covers ('alternate-covers/*.jpg')
  */
 export const RARITY_ARTWORK_CONFIG: Record<string, RarityArtworkRule> = {
   common: {
@@ -26,9 +29,9 @@ export const RARITY_ARTWORK_CONFIG: Record<string, RarityArtworkRule> = {
     extension: '.jpg',
   },
   rare: {
-    useAlternate: false,
-    folder: 'covers',
-    extension: null,
+    useAlternate: true,
+    folder: 'girls-cover',
+    extension: '.jpg',
   },
   legendary: {
     useAlternate: true,
@@ -49,7 +52,7 @@ export const RARITY_ARTWORK_CONFIG: Record<string, RarityArtworkRule> = {
 
 /**
  * Easy configuration helper to toggle or update custom artwork for any rarity.
- * E.g. setRarityArtworkConfig('uncommon', { useAlternate: true, folder: 'alternate-covers', extension: '.jpg' })
+ * E.g. setRarityArtworkConfig('rare', { useAlternate: true, folder: 'girls-cover', extension: '.jpg' })
  */
 export function setRarityArtworkConfig(
   rarity: string | Rarity,
@@ -72,8 +75,8 @@ export function setRarityArtworkConfig(
  *
  * Examples:
  * Original: https://.../releaseready/covers/january/01%20-%20Were%20Going%20Crazy%20World.jpg
- * Uncommon/Legendary (useAlternate=true, folder='alternate-covers', extension='.jpg'):
- *   => https://.../releaseready/alternate-covers/january/01%20-%20Were%20Going%20Crazy%20World.jpg
+ * Rare (useAlternate=true, folder='girls-cover', extension='.jpg'):
+ *   => https://.../releaseready/girls-cover/january/01%20-%20Were%20Going%20Crazy%20World.jpg
  */
 export function getCoverUrlForRarity(
   originalUrlOrPath: string | undefined | null,
@@ -89,7 +92,7 @@ export function getCoverUrlForRarity(
 
   let url = originalUrlOrPath;
 
-  // Replace /covers/ folder with the target rarity folder (e.g. /alternate-covers/)
+  // Replace /covers/ folder with the target rarity folder (e.g. /girls-cover/ or /alternate-covers/)
   if (url.includes('/covers/')) {
     url = url.replace(/\/covers\//g, `/${rule.folder}/`);
   } else if (url.startsWith('covers/')) {
@@ -106,10 +109,11 @@ export function getCoverUrlForRarity(
 
 /**
  * Smart Cover Art Hook:
- * Handles automatic graceful fallback when an alternate cover format is missing or 404s.
- * 1. Tries primary alternate cover (e.g. alternate-covers/*.jpg)
- * 2. Tries alternate PNG variant if JPG fails (e.g. alternate-covers/*.png)
- * 3. Gracefully falls back to original cover (covers/*.jpg) if alternate art is missing/404!
+ * Handles automatic graceful fallback when a custom cover format is missing or 404s.
+ * 1. Tries primary alternate cover (e.g. girls-cover/*.jpg or alternate-covers/*.jpg)
+ * 2. Tries alternate PNG variant if JPG fails (e.g. girls-cover/*.png)
+ * 3. Tries alternate-covers/*.jpg if girls-cover is missing
+ * 4. Gracefully falls back to original cover (covers/*.jpg) if all alternate art is missing/404!
  */
 export function useSmartCoverArt(
   originalCoverUrl: string | undefined | null,
@@ -117,8 +121,10 @@ export function useSmartCoverArt(
 ) {
   const original = originalCoverUrl || '';
   const primary = getCoverUrlForRarity(original, rarity);
+  
   const altPng = primary.endsWith('.jpg') ? primary.replace(/\.jpg$/i, '.png') : '';
   const altJpg = primary.endsWith('.png') ? primary.replace(/\.png$/i, '.jpg') : '';
+  const altCoversJpg = primary.includes('/girls-cover/') ? primary.replace(/\/girls-cover\//g, '/alternate-covers/') : '';
 
   const [src, setSrc] = useState(primary);
   const [failed, setFailed] = useState(false);
@@ -134,6 +140,8 @@ export function useSmartCoverArt(
       setSrc(altPng);
     } else if (src === primary && altJpg && altJpg !== primary && altJpg !== original) {
       setSrc(altJpg);
+    } else if (altCoversJpg && src !== altCoversJpg && altCoversJpg !== original) {
+      setSrc(altCoversJpg);
     } else if (src !== original && original) {
       setSrc(original);
     } else {
@@ -146,5 +154,6 @@ export function useSmartCoverArt(
     failed,
     handleError,
     isFallback: src === original && primary !== original,
+    isSquare: src.includes('/girls-cover/') || src.includes('/alternate-covers/'),
   };
 }

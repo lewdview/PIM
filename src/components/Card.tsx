@@ -260,7 +260,7 @@ export default function Card({
   const tempo   = card.tempo   ?? 0;
   const supply  = getSupplyCap(card.rarity, card.day);
   const claimed = realClaimed ?? card.claimedCount ?? 0;
-  const { src: coverUrl, failed: imgFailed, handleError: handleImgError } = useSmartCoverArt(card.coverUrl || '', card.rarity);
+  const { src: coverUrl, failed: imgFailed, handleError: handleImgError, isSquare } = useSmartCoverArt(card.coverUrl || '', card.rarity);
   const audioUrl = card.audioUrl || '';
   const hasArt   = !imgError && !imgFailed && coverUrl;
 
@@ -275,14 +275,15 @@ export default function Card({
 
   const mintPct = supply > 0 ? (Math.min(claimed, supply) / supply) * 100 : 0;
 
-  const renderArt = (className = 'w-full h-full', rotated = false) =>
-    hasArt ? (
+  const renderArt = (className = 'w-full h-full', rotated = false) => {
+    const shouldRotate = rotated && !isSquare;
+    return hasArt ? (
       <img
         src={coverUrl}
         alt={title}
         className={`${className} object-cover`}
         style={{
-          ...(rotated ? { transform: 'rotate(90deg) scale(1.35)', transformOrigin: 'center' } : undefined),
+          ...(shouldRotate ? { transform: 'rotate(90deg) scale(1.35)', transformOrigin: 'center' } : undefined),
           ...(isEcho ? { filter: `grayscale(${Math.min(30 + echoGeneration * 15, 70)}%) contrast(1.15) brightness(0.9)` } : {}),
         }}
         onError={handleImgError}
@@ -295,6 +296,7 @@ export default function Card({
         <span style={{ fontFamily: '"Impact", sans-serif', fontSize: '64px', color: `${rc.color}30`, lineHeight: 1 }}>{String(day).padStart(3, '0')}</span>
       </div>
     );
+  };
 
   // ── Claim button shared ──────────────────────────────────────────────────
   const claimBtn = showClaim && onClaim && (

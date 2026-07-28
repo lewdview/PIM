@@ -23,7 +23,7 @@ export default function HeroCard({ card, hasClaimed, onClaim, day }: HeroCardPro
   const [isFaceDown, setIsFaceDown] = useState(false);
   const [imgError, setImgError] = useState(false);
   const [realClaimedCount, setRealClaimedCount] = useState<number>(0);
-  const { src: coverUrl, failed: imgFailed, handleError: handleImgError } = useSmartCoverArt(card.coverUrl, card.rarity);
+  const { src: coverUrl, failed: imgFailed, handleError: handleImgError, isSquare } = useSmartCoverArt(card.coverUrl, card.rarity);
 
   const rc = RARITY_CONFIG[card.rarity] || RARITY_CONFIG.common;
 
@@ -118,7 +118,9 @@ export default function HeroCard({ card, hasClaimed, onClaim, day }: HeroCardPro
                 <img
                   src={coverUrl}
                   alt={card.title}
-                  className="absolute inset-0 w-full h-full object-cover rotate-90 scale-[1.35] brightness-125"
+                  className={`absolute inset-0 w-full h-full object-cover ${
+                    isSquare ? 'scale-100 brightness-110' : 'rotate-90 scale-[1.35] brightness-125'
+                  }`}
                   onError={handleImgError}
                 />
               ) : (
