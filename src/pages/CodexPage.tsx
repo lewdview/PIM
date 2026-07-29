@@ -22,6 +22,8 @@ const PREVIEW_DURATION: Record<string, number> = {
 type FilterMode = 'all' | 'owned' | 'missing' | 'beyond';
 type SortMode = 'day-asc' | 'day-desc' | 'rarity';
 
+const PAGE_SIZE = 30;
+
 interface CodexGridCardItemProps {
   card: VaultCard;
   owned?: any;
