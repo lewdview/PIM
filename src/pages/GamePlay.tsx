@@ -8232,7 +8232,7 @@ export default function Game() {
                     className="font-mono font-black text-center tracking-[0.3em] uppercase text-xs md:text-sm text-cyan-400 mb-3"
                     style={{ textShadow: "0 0 16px rgba(0,229,255,0.9)" }}
                   >
-                    ✦ PREPARE FOR BATTLE ✦
+                    📡 TRANSMISSION INCOMING 📡
                   </div>
                   <div
                     className="font-mono font-black text-center tracking-tight text-3xl sm:text-5xl md:text-6xl lg:text-7xl"
