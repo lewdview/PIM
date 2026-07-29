@@ -110,11 +110,12 @@ export function getCoverUrlForRarity(
 /**
  * Smart Cover Art Hook:
  * Handles automatic graceful fallback when a custom cover format is missing or 404s.
- * 1. Tries primary alternate cover (e.g. girls-cover/*.jpg)
- * 2. Tries girl-covers/*.jpg variant
- * 3. Tries alternate PNG variant (e.g. girls-cover/*.png)
- * 4. Tries alternate-covers/*.jpg if girls-cover is missing
- * 5. Gracefully falls back to original cover (covers/*.jpg) if all alternate art is missing/404!
+ * Prioritized Candidate List:
+ * 1. Primary alternate cover (e.g. girls-cover/*.jpg or alternate-covers/*.jpg)
+ * 2. Variant folder (e.g. girl-covers/*.jpg)
+ * 3. Alternate PNG variant (e.g. girls-cover/*.png or alternate-covers/*.png)
+ * 4. Alternate covers fallback (e.g. alternate-covers/*.jpg)
+ * 5. Original cover (covers/*.jpg)
  */
 export function useSmartCoverArt(
   originalCoverUrl: string | undefined | null,
@@ -122,48 +123,67 @@ export function useSmartCoverArt(
 ) {
   const original = originalCoverUrl || '';
   const primary = getCoverUrlForRarity(original, rarity);
-  
-  const altPng = primary.endsWith('.jpg') ? primary.replace(/\.jpg$/i, '.png') : '';
-  const altJpg = primary.endsWith('.png') ? primary.replace(/\.png$/i, '.jpg') : '';
-  
-  const altGirlCoversJpg = primary.includes('/girls-cover/')
-    ? primary.replace(/\/girls-cover\//g, '/girl-covers/')
-    : (primary.includes('/girl-covers/') ? primary.replace(/\/girl-covers\//g, '/girls-cover/') : '');
 
-  const altCoversJpg = primary.includes('/girls-cover/') || primary.includes('/girl-covers/')
-    ? primary.replace(/\/(girls-cover|girl-covers)\//g, '/alternate-covers/')
-    : '';
+  // Build ordered candidate sequence
+  const candidates: string[] = [];
 
-  const [src, setSrc] = useState(primary);
+  if (primary) candidates.push(primary);
+
+  // If primary is in girls-cover or girl-covers, check folder variant
+  if (primary.includes('/girls-cover/')) {
+    candidates.push(primary.replace(/\/girls-cover\//g, '/girl-covers/'));
+  } else if (primary.includes('/girl-covers/')) {
+    candidates.push(primary.replace(/\/girl-covers\//g, '/girls-cover/'));
+  }
+
+  // PNG/JPG extension swaps
+  if (primary.endsWith('.jpg')) {
+    candidates.push(primary.replace(/\.jpg$/i, '.png'));
+  } else if (primary.endsWith('.png')) {
+    candidates.push(primary.replace(/\.png$/i, '.jpg'));
+  }
+
+  // Fallback to alternate-covers if girls-cover / girl-covers fails
+  if (primary.includes('/girls-cover/') || primary.includes('/girl-covers/')) {
+    candidates.push(primary.replace(/\/(girls-cover|girl-covers)\//g, '/alternate-covers/'));
+  }
+
+  // Fallback to original covers/*.jpg
+  if (original && !candidates.includes(original)) {
+    candidates.push(original);
+  }
+
+  // Ensure original .jpg fallback if original was .png
+  if (original.endsWith('.png')) {
+    const originalJpg = original.replace(/\.png$/i, '.jpg');
+    if (!candidates.includes(originalJpg)) candidates.push(originalJpg);
+  }
+
+  const uniqueCandidates = Array.from(new Set(candidates)).filter(Boolean);
+
+  const [index, setIndex] = useState(0);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    const target = getCoverUrlForRarity(original, rarity);
-    setSrc(target);
+    setIndex(0);
     setFailed(false);
-  }, [original, rarity]);
+  }, [originalCoverUrl, rarity]);
+
+  const currentSrc = uniqueCandidates[index] || original;
 
   const handleError = () => {
-    if (src === primary && altGirlCoversJpg && altGirlCoversJpg !== primary && altGirlCoversJpg !== original) {
-      setSrc(altGirlCoversJpg);
-    } else if (src === primary && altPng && altPng !== primary && altPng !== original) {
-      setSrc(altPng);
-    } else if (src === primary && altJpg && altJpg !== primary && altJpg !== original) {
-      setSrc(altJpg);
-    } else if (altCoversJpg && src !== altCoversJpg && altCoversJpg !== original) {
-      setSrc(altCoversJpg);
-    } else if (src !== original && original) {
-      setSrc(original);
+    if (index < uniqueCandidates.length - 1) {
+      setIndex(prev => prev + 1);
     } else {
       setFailed(true);
     }
   };
 
   return {
-    src,
+    src: currentSrc,
     failed,
     handleError,
-    isFallback: src === original && primary !== original,
-    isSquare: src.includes('/girls-cover/') || src.includes('/girl-covers/') || src.includes('/alternate-covers/'),
+    isFallback: currentSrc === original && primary !== original,
+    isSquare: currentSrc.includes('/girls-cover/') || currentSrc.includes('/girl-covers/') || currentSrc.includes('/alternate-covers/'),
   };
 }

@@ -7,7 +7,7 @@ import { fetchAllCards, type VaultCard } from '../services/vaultService';
 import { useVaultStore } from '../store/useVaultStore';
 import { useGlobalPlayer } from '../store/useGlobalPlayer';
 import { RARITY_CONFIG, type Rarity } from '../utils/rarity';
-import { getCoverUrlForRarity } from '../utils/rarityArtwork';
+import { getCoverUrlForRarity, useSmartCoverArt } from '../utils/rarityArtwork';
 import { getCurrentDay } from '../utils/dayCalc';
 
 // Duration limits for non-owned cards (preview only)
@@ -583,9 +583,10 @@ export default function CodexPage() {
               : null;
             const displayRarity = owned?.rarity || card.rarity;
             const rc = RARITY_CONFIG[displayRarity as Rarity] || RARITY_CONFIG.common;
-            const displayCoverUrl = useAltArtwork
-              ? getCoverUrlForRarity(card.coverUrl, displayRarity)
-              : card.coverUrl;
+            const { src: displayCoverUrl, handleError: handleCodexImgError } = useSmartCoverArt(
+              card.coverUrl,
+              useAltArtwork ? displayRarity : 'common'
+            );
             const hasAltArtActive = useAltArtwork && displayCoverUrl !== card.coverUrl;
 
             const isCurrentlyPlaying = currentTrack?.audioUrl === card.audioUrl && currentTrack?.day === card.day && isPlaying;
@@ -625,11 +626,7 @@ export default function CodexPage() {
                   src={displayCoverUrl}
                   alt={card.title}
                   loading="lazy"
-                  onError={(e) => {
-                    if (e.currentTarget.src !== card.coverUrl && card.coverUrl) {
-                      e.currentTarget.src = card.coverUrl;
-                    }
-                  }}
+                  onError={handleCodexImgError}
                   style={{
                     width: '100%',
                     height: '100%',

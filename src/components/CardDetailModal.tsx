@@ -7,7 +7,7 @@ import { useVaultStore } from '../store/useVaultStore';
 import type { OwnedCard } from '../services/vaultService';
 import { generateCardMetadata, requestNftMint } from '../services/vaultService';
 import { RARITY_CONFIG, getSupplyCap, getMintableCap, type Rarity } from '../utils/rarity';
-import { getCoverUrlForRarity } from '../utils/rarityArtwork';
+import { getCoverUrlForRarity, useSmartCoverArt } from '../utils/rarityArtwork';
 import RarityBadge from './RarityBadge';
 import AudioPreview from './AudioPreview';
 import { getDayFromDate } from '../utils/dayCalc';
@@ -53,6 +53,8 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
   const stop = useGlobalPlayer((s) => s.stop);
   const [isMinting, setIsMinting] = useState(false);
   const fragments = useVaultStore((s) => s.fragments);
+
+  const { src: modalCoverUrl, handleError: handleModalCoverError } = useSmartCoverArt(card?.card.coverUrl, card?.card.rarity);
 
   if (!card) return null;
 
@@ -161,15 +163,10 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
                       style={{ background: `radial-gradient(circle, ${rc.color}, transparent 70%)` }} />
                     <div className="relative aspect-[3/4] rounded-xl overflow-hidden shadow-2xl border border-white/10">
                       <img
-                        src={getCoverUrlForRarity(card.card.coverUrl, card.card.rarity)}
+                        src={modalCoverUrl}
                         alt=""
                         className="w-full h-full object-cover"
-                        onError={(e) => {
-                          const orig = card.card.coverUrl;
-                          if (e.currentTarget.src !== orig && orig) {
-                            e.currentTarget.src = orig;
-                          }
-                        }}
+                        onError={handleModalCoverError}
                       />
                       <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 to-transparent" />
                       <div className="absolute bottom-4 left-4 right-4">

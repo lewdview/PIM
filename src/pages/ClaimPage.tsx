@@ -654,7 +654,17 @@ export default function ClaimPage() {
                     return (
                       <div key={c.id} className="flex items-center gap-3 p-2 bg-black/40 border border-white/5 rounded-lg">
                         <div className="w-10 h-10 rounded overflow-hidden border border-white/10 shrink-0">
-                          <img src={c.card.coverUrl} alt="" className="w-full h-full object-cover" />
+                          <img
+                            src={getCoverUrlForRarity(c.card.coverUrl, c.card.rarity)}
+                            alt=""
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const orig = c.card.coverUrl;
+                              if (e.currentTarget.src !== orig && orig) {
+                                e.currentTarget.src = orig;
+                              }
+                            }}
+                          />
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="text-[9px] font-mono text-zinc-400">Day #{c.card.day}</div>

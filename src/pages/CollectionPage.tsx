@@ -12,6 +12,7 @@ import { type OwnedCard, fuseDuplicates, sellCard } from '../services/vaultServi
 import { useVaultStore } from '../store/useVaultStore';
 import { useLoadingToast } from '../store/useLoadingToast';
 import { RARITIES, RARITY_CONFIG, getSupplyCap, type Rarity } from '../utils/rarity';
+import { getCoverUrlForRarity } from '../utils/rarityArtwork';
 
 type SortBy = 'day' | 'rarity' | 'recent';
 type FilterRarity = Rarity | 'all';
@@ -517,10 +518,17 @@ export default function CollectionPage() {
                   className={`w-10 h-12 rounded overflow-hidden flex-shrink-0 ${RARITY_CONFIG[mainCard.card.rarity].cssClass}`}
                 >
                   <img
-                    src={mainCard.card.coverUrl}
+                    src={getCoverUrlForRarity(mainCard.card.coverUrl, mainCard.card.rarity)}
                     alt={mainCard.card.title}
                     className="w-full h-full object-cover"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    onError={(e) => {
+                      const orig = mainCard.card.coverUrl;
+                      if (e.currentTarget.src !== orig && orig) {
+                        e.currentTarget.src = orig;
+                      } else {
+                        e.currentTarget.style.display = 'none';
+                      }
+                    }}
                   />
                 </div>
                 <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setSelectedCard(mainCard)}>
