@@ -6559,30 +6559,31 @@ export default function Game() {
       setStageStingerNumber(null);
       phaseRef.current = "countdown";
       setPhase("countdown");
-      let count = 3;
+      let count = 1;
       setCountdown(count);
-      audioManager.playSfx('countdown', 0.7);
-      haptics.lightTap();
+      audioManager.playSfx('countdown', 0.85);
+      haptics.mediumTap();
       await new Promise<void>((resolve) => {
         countdownIntervalRef.current = setInterval(() => {
           count--;
           if (count > 0) {
             setCountdown(count);
-            audioManager.playSfx('countdown', 0.7);
-            haptics.lightTap();
-          }
-          else {
+            audioManager.playSfx('countdown', 0.85);
+            haptics.mediumTap();
+          } else {
             if (countdownIntervalRef.current) {
               clearInterval(countdownIntervalRef.current);
               countdownIntervalRef.current = null;
             }
             setCountdown(0);
             // "GO!" stinger
-            audioManager.playSfx('select_start_song', 0.8);
-            haptics.mediumTap();
-            resolve();
+            audioManager.playSfx('select_start_song', 0.95);
+            haptics.heavyTap();
+            setTimeout(() => {
+              resolve();
+            }, 600);
           }
-        }, 1000);
+        }, 1300);
       });
       if (cancelled) return;
 
@@ -8216,30 +8217,52 @@ export default function Game() {
             </div>
           )}
 
-          {/* Countdown */}
+          {/* Countdown: ARE YOU READY??! GO! */}
           {phase === "countdown" && (
             <div
-              className="absolute inset-0 flex items-center justify-center"
+              className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-40 overflow-hidden"
               style={{
-                background: "radial-gradient(ellipse 60% 50% at 50% 50%, rgba(14,16,40,0.85) 0%, rgba(12,12,20,0.95) 70%)",
-                backdropFilter: "blur(6px)",
+                background: "radial-gradient(ellipse 70% 60% at 50% 50%, rgba(14,16,40,0.85) 0%, rgba(8,8,18,0.95) 80%)",
+                backdropFilter: "blur(8px)",
               }}
             >
-              <div
-                className="font-mono font-bold text-center"
-                style={{
-                  fontSize: 120,
-                  lineHeight: 1,
-                  background:
-                    "linear-gradient(135deg, #FF1493, #00E5FF, #39FF14)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  filter: "drop-shadow(0 0 40px rgba(0,229,255,0.6))",
-                  animation: "slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both",
-                }}
-              >
-                {countdown > 0 ? countdown : "GO!"}
-              </div>
+              {countdown > 0 ? (
+                <div className="flex flex-col items-center justify-center px-4">
+                  <div
+                    className="font-mono font-black text-center tracking-[0.3em] uppercase text-xs md:text-sm text-cyan-400 mb-3"
+                    style={{ textShadow: "0 0 16px rgba(0,229,255,0.9)" }}
+                  >
+                    ✦ PREPARE FOR BATTLE ✦
+                  </div>
+                  <div
+                    className="font-mono font-black text-center tracking-tight text-3xl sm:text-5xl md:text-6xl lg:text-7xl"
+                    style={{
+                      lineHeight: 1.1,
+                      background: "linear-gradient(135deg, #FFFFFF 0%, #FF1493 40%, #00E5FF 70%, #39FF14 100%)",
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
+                      filter: "drop-shadow(0 0 35px rgba(255,20,147,0.85)) drop-shadow(0 0 65px rgba(0,229,255,0.65))",
+                      fontFamily: '"Impact", "Arial Black", sans-serif',
+                    }}
+                  >
+                    ARE YOU READY??!
+                  </div>
+                </div>
+              ) : (
+                <div
+                  className="font-mono font-black text-center text-7xl sm:text-8xl md:text-9xl lg:text-[140px]"
+                  style={{
+                    lineHeight: 1,
+                    background: "linear-gradient(135deg, #FFFFFF 0%, #39FF14 50%, #00E5FF 100%)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    filter: "drop-shadow(0 0 45px rgba(57,255,20,0.95)) drop-shadow(0 0 90px rgba(0,229,255,0.85))",
+                    fontFamily: '"Impact", "Arial Black", sans-serif',
+                  }}
+                >
+                  GO!
+                </div>
+              )}
             </div>
           )}
 
