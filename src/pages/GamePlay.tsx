@@ -8481,9 +8481,10 @@ function drawKey(
     'up-right': -Math.PI / 4,
   };
 
-  const m = swipeDirection ? 1.0 : 0;
+  const isHoldHead = noteType === 'hold';
+  const m = (swipeDirection && !isHold && !isHoldHead) ? 1.0 : 0;
 
-  if (swipeDirection) {
+  if (swipeDirection && m > 0) {
     ctx.rotate(rotations[swipeDirection] || 0);
   }
 
@@ -8672,24 +8673,30 @@ function drawKey(
     ctx.shadowBlur = 12;
     ctx.globalAlpha = 0.95;
     ctx.beginPath();
-    if (swipeDirection && m > 0.3) {
-      ctx.moveTo(-4 * m, -3 * m);
-      ctx.lineTo(3 * m, 0);
-      ctx.lineTo(-4 * m, 3 * m);
+    if (swipeDirection) {
+      const sw = noteW * 0.22;
+      const sh = noteH * 0.25;
+      const rot = rotations[swipeDirection] || 0;
+      ctx.save();
+      ctx.rotate(rot);
+      ctx.moveTo(sw, 0);
+      ctx.lineTo(-sw, -sh);
+      ctx.lineTo(-sw * 0.4, 0);
+      ctx.lineTo(-sw, sh);
       ctx.closePath();
+      ctx.fill();
+      ctx.restore();
     } else {
-      ctx.arc(0, 0, Math.max(0, 5 * (1 - m)), 0, Math.PI * 2);
+      ctx.arc(0, 0, 5, 0, Math.PI * 2);
+      ctx.fill();
     }
-    ctx.fill();
-    
-    if (m < 0.8) {
-      const pulseR = 8 + 3 * Math.sin(Date.now() / 120);
-      ctx.strokeStyle = `rgba(255, 255, 255, ${(0.85 - (pulseR - 8) / 6) * (1 - m)})`;
-      ctx.lineWidth = 1.8;
-      ctx.beginPath();
-      ctx.arc(0, 0, pulseR, 0, Math.PI * 2);
-      ctx.stroke();
-    }
+
+    const pulseR = 8 + 3 * Math.sin(Date.now() / 120);
+    ctx.strokeStyle = `rgba(255, 255, 255, ${0.85 - (pulseR - 8) / 6})`;
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.arc(0, 0, pulseR, 0, Math.PI * 2);
+    ctx.stroke();
   } else {
     // ── 4. COLORED CENTER STRIPE ──
     const stripeColor = noteType === 'remix' ? '#00F5D4' 
@@ -8703,70 +8710,107 @@ function drawKey(
     ctx.fillStyle = stripeColor;
     ctx.globalAlpha = 0.95;
 
-    ctx.beginPath();
-    if (swipeDirection) {
-      const sw = noteW / 2 - 4;
-      const sh = stripeH / 2;
-      const sr = 4;
-      ctx.moveTo(-sw + sr, -sh);
-      ctx.arcTo(sw * 0.2, -sh, sw, 0, sr);
-      ctx.arcTo(sw, 0, sw * 0.2, sh, sr);
-      ctx.arcTo(sw * 0.2, sh, -sw, sh, sr);
-      ctx.arcTo(-sw, sh, -sw * 0.35, 0, sr);
-      ctx.arcTo(-sw * 0.35, 0, -sw, -sh, sr);
-      ctx.arcTo(-sw, -sh, -sw + sr, -sh, sr);
-      ctx.closePath();
-    } else {
-      ctx.roundRect(-noteW / 2 + 2, -stripeH / 2, noteW - 4, stripeH, stripeH * 0.35);
-    }
-    ctx.fill();
-
-    // White core inside horizontal stripe
-    if (!swipeDirection) {
-      ctx.fillStyle = "#ffffff";
-      ctx.globalAlpha = 0.85;
-      ctx.beginPath();
-      ctx.roundRect(-noteW / 2 + 8, -stripeH * 0.28 / 2, noteW - 16, stripeH * 0.28, stripeH * 0.1);
-      ctx.fill();
-      ctx.globalAlpha = 1.0;
-    }
-
-    // Scrolling arrows for Swipes
-    if (swipeDirection) {
+    if (swipeDirection && isHoldHead) {
+      // ── CUTOUT CHEVRON ARROW LIGHT STRIPE INSIDE NORMAL BLOCK FOR HOLD SWIPE HEADS ──
       ctx.save();
+      const rot = rotations[swipeDirection] || 0;
+      ctx.rotate(rot);
+
+      const sw = noteW * 0.32;
+      const sh = stripeH * 0.65;
+      const thick = noteW * 0.12;
+
+      // Outer glowing chevron cutout stripe
       ctx.beginPath();
-      const sw = noteW / 2 - 4;
-      const sh = stripeH / 2;
-      const sr = 4;
-      ctx.moveTo(-sw + sr, -sh);
-      ctx.arcTo(sw * 0.2, -sh, sw, 0, sr);
-      ctx.arcTo(sw, 0, sw * 0.2, sh, sr);
-      ctx.arcTo(sw * 0.2, sh, -sw, sh, sr);
-      ctx.arcTo(-sw, sh, -sw * 0.35, 0, sr);
-      ctx.arcTo(-sw * 0.35, 0, -sw, -sh, sr);
-      ctx.arcTo(-sw, -sh, -sw + sr, -sh, sr);
+      ctx.moveTo(sw, 0);
+      ctx.lineTo(-sw * 0.4, -sh);
+      ctx.lineTo(-sw * 0.4 + thick, -sh);
+      ctx.lineTo(sw + thick * 0.6, 0);
+      ctx.lineTo(-sw * 0.4 + thick, sh);
+      ctx.lineTo(-sw * 0.4, sh);
       ctx.closePath();
-      ctx.clip();
+      ctx.fill();
 
-      const arrowSpacing = 24;
-      const animTime = Date.now() / 280;
-      const offset = (animTime * 16) % arrowSpacing;
+      // White inner core cutout
+      ctx.fillStyle = "#ffffff";
+      ctx.globalAlpha = 0.9;
+      ctx.beginPath();
+      ctx.moveTo(sw * 0.7, 0);
+      ctx.lineTo(-sw * 0.2, -sh * 0.6);
+      ctx.lineTo(-sw * 0.2 + thick * 0.5, -sh * 0.6);
+      ctx.lineTo(sw * 0.7 + thick * 0.3, 0);
+      ctx.lineTo(-sw * 0.2 + thick * 0.5, sh * 0.6);
+      ctx.lineTo(-sw * 0.2, sh * 0.6);
+      ctx.closePath();
+      ctx.fill();
 
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.95)";
-      ctx.lineWidth = 2.0;
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-      ctx.shadowColor = "#FFFFFF";
-      ctx.shadowBlur = 6;
-
-      for (let xOff = -sw - 20 + offset; xOff < sw + 20; xOff += arrowSpacing) {
-        ctx.beginPath();
-        ctx.moveTo(xOff - 3, -3);
-        ctx.lineTo(xOff + 1, 0);
-        ctx.lineTo(xOff - 3, 3);
-        ctx.stroke();
-      }
       ctx.restore();
+    } else {
+      ctx.beginPath();
+      if (swipeDirection) {
+        const sw = noteW / 2 - 4;
+        const sh = stripeH / 2;
+        const sr = 4;
+        ctx.moveTo(-sw + sr, -sh);
+        ctx.arcTo(sw * 0.2, -sh, sw, 0, sr);
+        ctx.arcTo(sw, 0, sw * 0.2, sh, sr);
+        ctx.arcTo(sw * 0.2, sh, -sw, sh, sr);
+        ctx.arcTo(-sw, sh, -sw * 0.35, 0, sr);
+        ctx.arcTo(-sw * 0.35, 0, -sw, -sh, sr);
+        ctx.arcTo(-sw, -sh, -sw + sr, -sh, sr);
+        ctx.closePath();
+      } else {
+        ctx.roundRect(-noteW / 2 + 2, -stripeH / 2, noteW - 4, stripeH, stripeH * 0.35);
+      }
+      ctx.fill();
+
+      // White core inside horizontal stripe
+      if (!swipeDirection) {
+        ctx.fillStyle = "#ffffff";
+        ctx.globalAlpha = 0.85;
+        ctx.beginPath();
+        ctx.roundRect(-noteW / 2 + 8, -stripeH * 0.28 / 2, noteW - 16, stripeH * 0.28, stripeH * 0.1);
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+      }
+
+      // Scrolling arrows for Swipes
+      if (swipeDirection) {
+        ctx.save();
+        ctx.beginPath();
+        const sw = noteW / 2 - 4;
+        const sh = stripeH / 2;
+        const sr = 4;
+        ctx.moveTo(-sw + sr, -sh);
+        ctx.arcTo(sw * 0.2, -sh, sw, 0, sr);
+        ctx.arcTo(sw, 0, sw * 0.2, sh, sr);
+        ctx.arcTo(sw * 0.2, sh, -sw, sh, sr);
+        ctx.arcTo(-sw, sh, -sw * 0.35, 0, sr);
+        ctx.arcTo(-sw * 0.35, 0, -sw, -sh, sr);
+        ctx.arcTo(-sw, -sh, -sw + sr, -sh, sr);
+        ctx.closePath();
+        ctx.clip();
+
+        const arrowSpacing = 24;
+        const animTime = Date.now() / 280;
+        const offset = (animTime * 16) % arrowSpacing;
+
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.95)";
+        ctx.lineWidth = 2.0;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.shadowColor = "#FFFFFF";
+        ctx.shadowBlur = 6;
+
+        for (let xOff = -sw - 20 + offset; xOff < sw + 20; xOff += arrowSpacing) {
+          ctx.beginPath();
+          ctx.moveTo(xOff - 3, -3);
+          ctx.lineTo(xOff + 1, 0);
+          ctx.lineTo(xOff - 3, 3);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
     }
 
     // Bright inner core
