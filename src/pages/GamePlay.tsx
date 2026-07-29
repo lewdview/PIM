@@ -1943,6 +1943,7 @@ export default function Game() {
 
   const completeHoldNote = useCallback(
     (ns: NoteState) => {
+      if (ns.hit) return;
       const isSurge = puRef.current.active === "SURGE" && getT() < puRef.current.endTime;
       if (isSurge || ns.autoplayedBySurge) return;
 
@@ -2242,30 +2243,44 @@ export default function Game() {
       if (!ns) return;
 
       // Move the interaction to the new lane if it's a slide note
-      if (ns.note.targetLane !== undefined) {
+      if (ns.note.targetLane !== undefined && !ns.hit) {
         const reachedTarget = toLane === ns.note.targetLane && ns.currentLane !== ns.note.targetLane;
         ns.currentLane = toLane;
 
         if (reachedTarget) {
-          audioManager.playSfx("hidden_secret_found", 0.3);
+          ns.hit = true;
+          ns.holdActive = false;
+          ns.holdProgress = 1.0;
+          audioManager.playSfx("hidden_secret_found", 0.35);
+
+          const gs = gsRef.current;
+          gs.score += calcScore(gs.combo, "PERFECT+");
+          gs.combo++;
+          gs.maxCombo = Math.max(gs.maxCombo, gs.combo);
+          gameSenseService.sendHit();
+          gameSenseService.sendCombo(gs.combo);
+          gs.perfectPlus++;
+          checkPowerUps(gs.combo);
+          haptics.mediumTap();
 
           // ── Slide success particle effect ──
           const canvas = canvasRef.current;
           if (canvas) {
-            const W = canvas.width;
-            const H = canvas.height;
+            const dpr = window.devicePixelRatio || 1;
+            const W = canvas.width / dpr;
+            const H = canvas.height / dpr;
             const hitY = H * HIT_RATIO;
             const { x: lx, w: lw } = laneAt(toLane, 1, W);
             const cx = lx + lw / 2;
             const lc = getDifficultyLaneColor(laneColorsRef.current[toLane], songRef.current?.difficultyLevel ?? 5, toLane);
             const particles: HitParticle[] = [];
-            for (let i = 0; i < 6; i++) {
+            for (let i = 0; i < 8; i++) {
               const angle = (Math.random() - 0.5) * Math.PI;
               const speed = 40 + Math.random() * 60;
               particles.push({
                 vx: Math.cos(angle) * speed,
                 vy: Math.sin(angle) * speed - 20,
-                size: 2 + Math.random() * 3,
+                size: 2.5 + Math.random() * 3.5,
               });
             }
             hitFxRef.current.push({
@@ -2274,10 +2289,16 @@ export default function Game() {
               cx,
               cy: hitY,
               color: lc,
-              kind: "GOOD", // Use GOOD kind for a subtler effect
+              kind: "PERFECT+",
               particles,
             });
           }
+
+          jRef.current = [
+            ...jRef.current.filter((x) => Date.now() - x.ts < 600),
+            { type: "PERFECT+", lane: toLane, id: ++jCounter.current, ts: Date.now() },
+          ];
+          syncDisplay();
         }
       }
     },
@@ -5271,7 +5292,20 @@ export default function Game() {
               ns.currentLane = newLane;
 
               if (reachedTarget) {
-                audioManager.playSfx("hidden_secret_found", 0.3);
+                ns.hit = true;
+                ns.holdActive = false;
+                ns.holdProgress = 1.0;
+                audioManager.playSfx("hidden_secret_found", 0.35);
+
+                const gs = gsRef.current;
+                gs.score += calcScore(gs.combo, "PERFECT+");
+                gs.combo++;
+                gs.maxCombo = Math.max(gs.maxCombo, gs.combo);
+                gameSenseService.sendHit();
+                gameSenseService.sendCombo(gs.combo);
+                gs.perfectPlus++;
+                checkPowerUps(gs.combo);
+                haptics.mediumTap();
 
                 // ── Slide success particle effect ──
                 const W = canvas.width / (window.devicePixelRatio || 1);
@@ -5281,13 +5315,13 @@ export default function Game() {
                 const cx = lx + lw / 2;
                 const lc = getDifficultyLaneColor(laneColorsRef.current[newLane], songRef.current?.difficultyLevel ?? 5, newLane);
                 const particles: HitParticle[] = [];
-                for (let i = 0; i < 6; i++) {
+                for (let i = 0; i < 8; i++) {
                   const angle = (Math.random() - 0.5) * Math.PI;
                   const speed = 40 + Math.random() * 60;
                   particles.push({
                     vx: Math.cos(angle) * speed,
                     vy: Math.sin(angle) * speed - 20,
-                    size: 2 + Math.random() * 3,
+                    size: 2.5 + Math.random() * 3.5,
                   });
                 }
                 hitFxRef.current.push({
@@ -5296,9 +5330,15 @@ export default function Game() {
                   cx,
                   cy: hitY,
                   color: lc,
-                  kind: "GOOD",
+                  kind: "PERFECT+",
                   particles,
                 });
+
+                jRef.current = [
+                  ...jRef.current.filter((x) => Date.now() - x.ts < 600),
+                  { type: "PERFECT+", lane: newLane, id: ++jCounter.current, ts: Date.now() },
+                ];
+                syncDisplay();
               }
             }
             break;
@@ -5427,25 +5467,39 @@ export default function Game() {
                 ns.currentLane = newLane;
 
                 if (reachedTarget) {
-                  audioManager.playSfx("hidden_secret_found", 0.3);
+                  ns.hit = true;
+                  ns.holdActive = false;
+                  ns.holdProgress = 1.0;
+                  audioManager.playSfx("hidden_secret_found", 0.35);
+
+                  const gs = gsRef.current;
+                  gs.score += calcScore(gs.combo, "PERFECT+");
+                  gs.combo++;
+                  gs.maxCombo = Math.max(gs.maxCombo, gs.combo);
+                  gameSenseService.sendHit();
+                  gameSenseService.sendCombo(gs.combo);
+                  gs.perfectPlus++;
+                  checkPowerUps(gs.combo);
+                  haptics.mediumTap();
 
                   // ── Slide success particle effect ──
                   const canvas = canvasRef.current;
                   if (canvas) {
-                    const W = canvas.width;
-                    const H = canvas.height;
+                    const dpr = window.devicePixelRatio || 1;
+                    const W = canvas.width / dpr;
+                    const H = canvas.height / dpr;
                     const hitY = H * HIT_RATIO;
                     const { x: lx, w: lw } = laneAt(newLane, 1, W);
                     const cx = lx + lw / 2;
                     const lc = getDifficultyLaneColor(laneColorsRef.current[newLane], songRef.current?.difficultyLevel ?? 5, newLane);
                     const particles: HitParticle[] = [];
-                    for (let i = 0; i < 6; i++) {
+                    for (let i = 0; i < 8; i++) {
                       const angle = (Math.random() - 0.5) * Math.PI;
                       const speed = 40 + Math.random() * 60;
                       particles.push({
                         vx: Math.cos(angle) * speed,
                         vy: Math.sin(angle) * speed - 20,
-                        size: 2 + Math.random() * 3,
+                        size: 2.5 + Math.random() * 3.5,
                       });
                     }
                     hitFxRef.current.push({
@@ -5454,9 +5508,15 @@ export default function Game() {
                       cx,
                       cy: hitY,
                       color: lc,
-                      kind: "GOOD",
+                      kind: "PERFECT+",
                       particles,
                     });
+
+                    jRef.current = [
+                      ...jRef.current.filter((x) => Date.now() - x.ts < 600),
+                      { type: "PERFECT+", lane: newLane, id: ++jCounter.current, ts: Date.now() },
+                    ];
+                    syncDisplay();
                   }
                 }
               }
