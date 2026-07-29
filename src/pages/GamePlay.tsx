@@ -7632,7 +7632,7 @@ export default function Game() {
                   </svg>
 
                   <span className="font-mono text-[8.5px] md:text-[9.5px] lg:text-[10.5px] tracking-[0.25em] text-zinc-400 font-black mb-1">
-                    {currentStage === 5 ? "FINAL STAGE" : `STAGE ${currentStage}`}
+                    {currentStage === 5 ? "STAGE FINAL" : `STAGE ${currentStage}`}
                   </span>
                   <span className="font-mono text-2xl md:text-3xl lg:text-4xl font-black text-white tracking-tight" style={{ textShadow: "0 0 12px rgba(255,255,255,0.5)" }}>
                     {animatedScore.toLocaleString()}
@@ -7697,7 +7697,7 @@ export default function Game() {
                   }}
                   className="relative flex flex-col items-center justify-center font-mono"
                 >
-                  {/* Glassmorphic Cyberpunk Backing Banner */}
+                  {/* Glassmorphic Cyberpunk Backing Banner with Lightened Opacity Top & Bottom Gradient */}
                   <motion.div
                     variants={{
                       initial: { scaleX: 0, opacity: 0 },
@@ -7713,13 +7713,13 @@ export default function Game() {
                       width: "480px",
                       maxWidth: "90vw",
                       height: "190px",
-                      background: "rgba(4, 4, 4, 0.96)",
-                      backdropFilter: "blur(20px)",
-                      border: `2px solid ${laneColorsRef.current[1]}`, // Middle button color
+                      background: `linear-gradient(180deg, ${colorWithAlpha(laneColorsRef.current[1], 0.15)} 0%, rgba(6, 6, 20, 0.62) 22%, rgba(6, 6, 20, 0.62) 78%, ${colorWithAlpha(laneColorsRef.current[1], 0.15)} 100%)`,
+                      backdropFilter: "blur(10px)",
+                      border: `2px solid ${colorWithAlpha(laneColorsRef.current[1], 0.7)}`, // Middle button color
                       borderLeft: `5px solid ${laneColorsRef.current[0]}`, // Left button color
                       borderRight: `5px solid ${laneColorsRef.current[2]}`, // Right button color
-                      borderBottom: `4px solid ${laneColorsRef.current[1]}`, // Artwork-derived color
-                      boxShadow: `0 30px 70px rgba(0,0,0,0.95), 0 0 35px ${colorWithAlpha(laneColorsRef.current[1], 0.38)}`,
+                      borderBottom: `4px solid ${colorWithAlpha(laneColorsRef.current[1], 0.8)}`,
+                      boxShadow: `0 20px 50px rgba(0,0,0,0.7), 0 0 35px ${colorWithAlpha(laneColorsRef.current[1], 0.35)}`,
                       borderRadius: "16px",
                       zIndex: 1,
                     }}
@@ -7732,7 +7732,7 @@ export default function Game() {
                       animate: { 
                         scale: 1.0, 
                         rotate: 180, 
-                        opacity: [0, 0.95, 0.95],
+                        opacity: [0, 0.85, 0.85],
                         transition: { type: "spring", stiffness: 90, damping: 12, delay: 0.1 }
                       },
                       exit: { scale: 0.4, rotate: 360, opacity: 0, transition: { duration: 0.3 } }
@@ -7741,9 +7741,9 @@ export default function Game() {
                       position: "absolute",
                       width: 220,
                       height: 220,
-                      border: `2.5px solid ${laneColorsRef.current[0]}`, // Left button color
+                      border: `2.5px solid ${colorWithAlpha(laneColorsRef.current[0], 0.75)}`, // Left button color
                       borderRadius: "24px", 
-                      boxShadow: `0 0 30px ${colorWithAlpha(laneColorsRef.current[0], 0.5)}`,
+                      boxShadow: `0 0 25px ${colorWithAlpha(laneColorsRef.current[0], 0.4)}`,
                       zIndex: 5,
                     }}
                   />
@@ -7755,7 +7755,7 @@ export default function Game() {
                       animate: { 
                         scale: 1.0, 
                         rotate: -180, 
-                        opacity: [0, 1.0, 1.0],
+                        opacity: [0, 0.85, 0.85],
                         transition: { type: "spring", stiffness: 100, damping: 10, delay: 0.2 }
                       },
                       exit: { scale: 1.8, rotate: -360, opacity: 0, transition: { duration: 0.3 } }
@@ -7765,8 +7765,8 @@ export default function Game() {
                       width: 190,
                       height: 190,
                       borderRadius: "50%",
-                      border: `2.5px dashed ${laneColorsRef.current[2]}`, // Right button color
-                      boxShadow: `0 0 25px ${colorWithAlpha(laneColorsRef.current[2], 0.5)}`,
+                      border: `2.5px dashed ${colorWithAlpha(laneColorsRef.current[2], 0.75)}`, // Right button color
+                      boxShadow: `0 0 20px ${colorWithAlpha(laneColorsRef.current[2], 0.4)}`,
                       zIndex: 5,
                     }}
                   />
@@ -7778,7 +7778,7 @@ export default function Game() {
                       animate: { 
                         scale: 1.0, 
                         rotate: 225, 
-                        opacity: [0, 0.55, 0.55],
+                        opacity: [0, 0.45, 0.45],
                         transition: { type: "spring", stiffness: 120, damping: 12, delay: 0.3 }
                       },
                       exit: { scale: 2.2, rotate: 405, opacity: 0, transition: { duration: 0.3 } }
@@ -7787,9 +7787,9 @@ export default function Game() {
                       position: "absolute",
                       width: 140,
                       height: 140,
-                      background: `linear-gradient(135deg, ${colorWithAlpha(laneColorsRef.current[0], 0.15)}, ${colorWithAlpha(laneColorsRef.current[2], 0.18)})`, // Derived from artwork
-                      border: `2.5px solid ${laneColorsRef.current[1]}`, // Derived from artwork
-                      boxShadow: `0 0 45px ${colorWithAlpha(laneColorsRef.current[1], 0.5)}`,
+                      background: `linear-gradient(135deg, ${colorWithAlpha(laneColorsRef.current[0], 0.12)}, ${colorWithAlpha(laneColorsRef.current[2], 0.14)})`,
+                      border: `2.5px solid ${colorWithAlpha(laneColorsRef.current[1], 0.6)}`,
+                      boxShadow: `0 0 35px ${colorWithAlpha(laneColorsRef.current[1], 0.4)}`,
                       zIndex: 5,
                     }}
                   />
@@ -7800,7 +7800,7 @@ export default function Game() {
                       initial: { y: -80, opacity: 0 },
                       animate: { 
                         y: [-80, 80, -80],
-                        opacity: [0, 1.0, 1.0, 0],
+                        opacity: [0, 0.95, 0.95, 0],
                         transition: { repeat: Infinity, duration: 2.0, ease: "linear" }
                       },
                       exit: { opacity: 0 }
@@ -7809,7 +7809,7 @@ export default function Game() {
                       position: "absolute",
                       width: 170,
                       height: "3px",
-                      background: `linear-gradient(90deg, transparent, ${laneColorsRef.current[0]}, ${laneColorsRef.current[1]}, ${laneColorsRef.current[2]}, transparent)`, // Tri-color button sweep
+                      background: `linear-gradient(90deg, transparent, ${laneColorsRef.current[0]}, ${laneColorsRef.current[1]}, ${laneColorsRef.current[2]}, transparent)`,
                       boxShadow: `0 0 15px ${laneColorsRef.current[1]}`,
                       zIndex: 6,
                     }}
@@ -7834,10 +7834,10 @@ export default function Game() {
                       textShadow: "0 0 10px rgba(255,255,255,0.6)",
                     }}
                   >
-                    {stageStingerPhase === 'start' && stageStingerNumber === 5 ? 'FINAL' : 'STAGE'}
+                    STAGE
                   </motion.div>
 
-                  {/* Giant Center Number */}
+                  {/* Giant Center Number or FINAL */}
                   <motion.div
                     key={`num-${stageStingerPhase}-${stageStingerNumber}`}
                     variants={{
@@ -7858,8 +7858,8 @@ export default function Game() {
                     }}
                   >
                     {stageStingerPhase === 'cleared'
-                      ? (stageStingerNumber! - 1 === 5 ? '✦' : stageStingerNumber! - 1)
-                      : (stageStingerNumber === 5 ? 'STAGE' : stageStingerNumber)}
+                      ? (stageStingerNumber! - 1 === 5 ? 'FINAL' : stageStingerNumber! - 1)
+                      : (stageStingerNumber === 5 ? 'FINAL' : stageStingerNumber)}
                   </motion.div>
 
                   {/* Slide-in Bottom Status Text */}
@@ -7884,7 +7884,7 @@ export default function Game() {
                       color: stageStingerPhase === 'cleared' ? '#FF1493' : '#00E5FF',
                     }}
                   >
-                    {stageStingerPhase === 'cleared' ? 'CLEARED' : 'START!'}
+                    {stageStingerPhase === 'cleared' ? 'CLEARED!' : 'GO!'}
                   </motion.div>
                 </motion.div>
               </div>
@@ -8511,15 +8511,15 @@ function drawKey(
 
   // ── 2. Render Body Fill (Customized per note type) ──
   if (isHold) {
+    const stageColor = lc || "#FFD700";
     const goldGrad = ctx.createLinearGradient(0, -noteH / 2, 0, noteH / 2);
-    goldGrad.addColorStop(0, "#FFF5C0");
+    goldGrad.addColorStop(0, "#FFF7ED");
     goldGrad.addColorStop(0.2, "#FFD700");
-    goldGrad.addColorStop(0.5, "#FFA500");
-    goldGrad.addColorStop(0.8, "#D4AF37");
-    goldGrad.addColorStop(1, "#8B6508");
+    goldGrad.addColorStop(0.6, stageColor);
+    goldGrad.addColorStop(1, "#3B0764");
     ctx.fillStyle = goldGrad;
-    ctx.shadowColor = "rgba(212,175,55,0.7)";
-    ctx.shadowBlur = lerp(8, 20, prog);
+    ctx.shadowColor = stageColor;
+    ctx.shadowBlur = lerp(8, 22, prog);
     ctx.shadowOffsetY = 0;
   } else if (noteType === 'remix') {
     // Cyberpunk Prismatic Body — Electric Cyan to Deep Magenta
