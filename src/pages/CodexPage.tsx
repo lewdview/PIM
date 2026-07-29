@@ -22,7 +22,353 @@ const PREVIEW_DURATION: Record<string, number> = {
 type FilterMode = 'all' | 'owned' | 'missing' | 'beyond';
 type SortMode = 'day-asc' | 'day-desc' | 'rarity';
 
-const PAGE_SIZE = 30;
+interface CodexGridCardItemProps {
+  card: VaultCard;
+  owned?: any;
+  isFuture: boolean;
+  today: number;
+  useAltArtwork: boolean;
+  currentTrack: any;
+  isPlaying: boolean;
+  claimedRewards: Record<string, any>;
+  handlePlay: (card: VaultCard) => void;
+  getFragmentsForDay: (day: number) => number;
+  stop: () => void;
+  setLocation: (url: string) => void;
+}
+
+function CodexGridCardItem({
+  card,
+  owned,
+  isFuture,
+  today,
+  useAltArtwork,
+  currentTrack,
+  isPlaying,
+  claimedRewards,
+  handlePlay,
+  getFragmentsForDay,
+  stop,
+  setLocation,
+}: CodexGridCardItemProps) {
+  const isOwned = !!owned;
+  const isBeyondOwned = isFuture && isOwned;
+  const sourceLabel = isBeyondOwned
+    ? (owned.source.includes('targeted') ? '🎯' : '🔮')
+    : null;
+  const displayRarity = owned?.rarity || card.rarity;
+  const rc = RARITY_CONFIG[displayRarity as Rarity] || RARITY_CONFIG.common;
+
+  const { src: displayCoverUrl, handleError: handleCodexImgError } = useSmartCoverArt(
+    card.coverUrl,
+    useAltArtwork ? displayRarity : 'common'
+  );
+  const hasAltArtActive = useAltArtwork && displayCoverUrl !== card.coverUrl;
+
+  const isCurrentlyPlaying = currentTrack?.audioUrl === card.audioUrl && currentTrack?.day === card.day && isPlaying;
+  const isDailyClaim = owned?.source === 'daily_claim';
+  const maxDuration = isDailyClaim ? 0 : (owned ? PREVIEW_DURATION[owned.rarity] : (PREVIEW_DURATION[card.rarity] ?? 15));
+  const isFullSong = maxDuration === 0;
+  const hasClaimedAll = claimedRewards[`card-${card.day}`]?.includes('prophecy') || localStorage.getItem(`reward_tier_card-${card.day}`) === 'prophecy';
+
+  return (
+    <motion.div
+      key={card.day}
+      className="group"
+      whileHover={{ scale: 1.03, y: -2 }}
+      whileTap={{ scale: 0.98 }}
+      onClick={() => handlePlay(card)}
+      style={{
+        position: 'relative',
+        aspectRatio: '3 / 4',
+        borderRadius: '6px',
+        overflow: 'hidden',
+        cursor: 'pointer',
+        border: isCurrentlyPlaying
+          ? `2px solid ${rc.color}`
+          : isBeyondOwned
+            ? `1px solid rgba(180,77,255,0.4)`
+            : `1px solid ${isOwned ? `${rc.color}30` : 'rgba(255,255,255,0.04)'}`,
+        boxShadow: isCurrentlyPlaying
+          ? `0 0 20px ${rc.color}40, inset 0 0 20px ${rc.color}10`
+          : isBeyondOwned
+            ? `0 0 18px rgba(180,77,255,0.25), inset 0 0 12px rgba(180,77,255,0.08)`
+            : isOwned ? `0 4px 12px rgba(0,0,0,0.3)` : 'none',
+        transition: 'all 0.25s ease',
+      }}
+    >
+      {/* Cover art */}
+      <img
+        src={displayCoverUrl}
+        alt={card.title}
+        loading="lazy"
+        onError={handleCodexImgError}
+        style={{
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          opacity: isOwned ? 1 : 0.4,
+          filter: isOwned ? 'none' : 'grayscale(0.7) brightness(0.7)',
+          transition: 'all 0.25s ease',
+        }}
+      />
+
+      {/* Alt Art Badge */}
+      {hasAltArtActive && (
+        <div style={{
+          position: 'absolute',
+          bottom: '24px',
+          right: '6px',
+          padding: '2px 5px',
+          background: 'rgba(255,215,0,0.25)',
+          border: '1px solid rgba(255,215,0,0.6)',
+          backdropFilter: 'blur(4px)',
+          fontFamily: '"JetBrains Mono", monospace',
+          fontSize: '8px',
+          fontWeight: 800,
+          color: '#ffd700',
+          borderRadius: '3px',
+          zIndex: 40,
+          pointerEvents: 'none',
+        }}>
+          ✨ ALT ART
+        </div>
+      )}
+
+      {/* Gradient overlay */}
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        background: 'linear-gradient(180deg, transparent 30%, rgba(0,0,0,0.85) 100%)',
+      }} />
+
+      {/* Day badge */}
+      <div style={{
+        position: 'absolute',
+        top: '6px',
+        left: '6px',
+        padding: '2px 6px',
+        background: isBeyondOwned ? 'rgba(180,77,255,0.25)' : 'rgba(0,0,0,0.7)',
+        backdropFilter: 'blur(4px)',
+        fontFamily: '"JetBrains Mono", monospace',
+        fontSize: '9px',
+        fontWeight: 700,
+        color: isBeyondOwned ? '#d4a0ff' : 'rgba(255,255,255,0.6)',
+        letterSpacing: '0.05em',
+        border: isBeyondOwned ? '1px solid rgba(180,77,255,0.3)' : 'none',
+        zIndex: 40,
+        pointerEvents: 'none',
+      }}>
+        {sourceLabel ? `${sourceLabel} ` : ''}#{String(card.day).padStart(3, '0')}
+      </div>
+
+      {/* Ownership / lock badge */}
+      <div 
+        className="transition-all duration-200 group-hover:scale-125 group-hover:brightness-125"
+        style={{
+          position: 'absolute',
+          top: '6px',
+          right: '6px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+          zIndex: 40,
+        }}
+      >
+        {hasClaimedAll && (
+          <PrizeRibbonSvg size={14} isClaimed={true} tier="prophecy" style={{ filter: 'drop-shadow(0 0 4px rgba(255,115,0,0.6))' }} />
+        )}
+        {isOwned ? (
+          <CheckCircle size={14} style={{ color: rc.color, filter: `drop-shadow(0 0 4px ${rc.color}80)` }} />
+        ) : (
+          <Lock size={12} style={{ color: 'rgba(255,255,255,0.4)' }} />
+        )}
+      </div>
+
+      {/* Playing indicator */}
+      {isCurrentlyPlaying && (
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          zIndex: 40,
+          pointerEvents: 'none',
+        }}>
+          <motion.div
+            animate={{ scale: [1, 1.2, 1] }}
+            transition={{ repeat: Infinity, duration: 1.5 }}
+            style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '50%',
+              background: `${rc.color}cc`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: `0 0 20px ${rc.color}80`,
+            }}
+          >
+            <Pause size={18} style={{ color: '#000' }} />
+          </motion.div>
+        </div>
+      )}
+
+      {/* Bottom info */}
+      <div style={{
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        padding: '8px',
+        opacity: isOwned ? 1 : 0.6,
+        transition: 'all 0.25s ease',
+        zIndex: 40,
+        pointerEvents: 'none',
+      }}>
+        <div style={{
+          fontFamily: '"Impact", "Arial Black", sans-serif',
+          fontSize: '11px',
+          textTransform: 'uppercase',
+          letterSpacing: '-0.02em',
+          color: '#fff',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          lineHeight: 1.2,
+        }}>
+          {card.title}
+        </div>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginTop: '3px',
+        }}>
+          {isOwned ? (
+            <span style={{
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSize: '8px',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              color: rc.color,
+              letterSpacing: '0.05em',
+            }}>
+              {displayRarity}
+            </span>
+          ) : (
+            <span style={{
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSize: '8px',
+              color: 'rgba(255,255,255,0.2)',
+              textTransform: 'uppercase',
+            }}>
+              Not owned
+            </span>
+          )}
+          <div style={{
+            width: '14px',
+            height: '14px',
+            borderRadius: '50%',
+            background: isCurrentlyPlaying ? rc.color : 'rgba(255,255,255,0.08)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            {isCurrentlyPlaying ? (
+              <Pause size={7} style={{ color: '#000' }} />
+            ) : (
+              <Play size={7} style={{ color: 'rgba(255,255,255,0.4)', marginLeft: '1px' }} />
+            )}
+          </div>
+        </div>
+        {/* Shard Progress Bar */}
+        {(() => {
+          const fragCount = getFragmentsForDay(card.day);
+          if (isOwned) {
+            return (
+              <div style={{ marginTop: '5px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '7px', fontFamily: '"JetBrains Mono", monospace', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  <span>Shards</span>
+                  <span style={{ color: '#39FF14', fontWeight: 'bold' }}>Unlocked</span>
+                </div>
+                <div style={{ height: '3px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden', marginTop: '2px' }}>
+                  <div style={{ height: '100%', background: '#39FF14', width: '100%', boxShadow: '0 0 6px rgba(57,255,20,0.6)' }} />
+                </div>
+              </div>
+            );
+          } else {
+            return (
+              <div style={{ marginTop: '5px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '7px', fontFamily: '"JetBrains Mono", monospace', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  <span>Shards</span>
+                  <span style={{ color: fragCount > 0 ? '#ffd700' : 'rgba(255,255,255,0.2)' }}>{fragCount} / 10</span>
+                </div>
+                <div style={{ height: '3px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden', marginTop: '2px' }}>
+                  <div style={{ height: '100%', background: '#ffd700', width: `${Math.min(10, fragCount) * 10}%`, boxShadow: fragCount > 0 ? '0 0 6px rgba(255,215,0,0.6)' : 'none' }} />
+                </div>
+              </div>
+            );
+          }
+        })()}
+      </div>
+
+      {/* Rarity accent line */}
+      {isOwned && (
+        <div style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: isBeyondOwned ? '3px' : '2px',
+          background: isBeyondOwned
+            ? 'linear-gradient(90deg, #b44dff, #7c3aed, #b44dff)'
+            : `linear-gradient(90deg, ${rc.color}, ${rc.color}60)`,
+          boxShadow: isBeyondOwned
+            ? '0 0 10px rgba(180,77,255,0.5)'
+            : `0 0 6px ${rc.color}40`,
+          zIndex: 40,
+          pointerEvents: 'none',
+        }} />
+      )}
+
+      {/* Hover Play Menu for Owned Cards */}
+      {isOwned && (
+        <div 
+          className="absolute inset-0 bg-black/85 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center gap-2 z-30 p-2.5"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handlePlay(card);
+            }}
+            className="w-full py-2 rounded bg-white text-black text-[10px] font-mono font-bold uppercase tracking-wider transition-all hover:scale-105 active:scale-95 text-center flex items-center justify-center gap-1.5"
+          >
+            {isCurrentlyPlaying ? <Pause size={10} /> : <Play size={10} />}
+            {isCurrentlyPlaying ? 'Pause' : 'Play Audio'}
+          </button>
+          {isFullSong && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                stop();
+                setLocation(`/play/card-${card.day}`);
+              }}
+              className="w-full py-2 rounded bg-[rgba(0,240,255,0.15)] border border-neon-cyan text-neon-cyan text-[10px] font-mono font-bold uppercase tracking-wider transition-all hover:bg-[rgba(0,240,255,0.25)] hover:scale-105 active:scale-95 text-center"
+              style={{
+                borderColor: 'var(--color-neon-cyan, #00f0ff)',
+                color: 'var(--color-neon-cyan, #00f0ff)',
+              }}
+            >
+              PLAY PIM
+            </button>
+          )}
+        </div>
+      )}
+    </motion.div>
+  );
+}
 
 export default function CodexPage() {
   const [, setLocation] = useLocation();
@@ -573,326 +919,23 @@ export default function CodexPage() {
           gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
           gap: '12px',
         }}>
-          {pagedCards.map(card => {
-            const owned = ownedDays.get(card.day);
-            const isOwned = !!owned;
-            const isFuture = card.day > today;
-            const isBeyondOwned = isFuture && isOwned;
-            const sourceLabel = isBeyondOwned
-              ? (owned.source.includes('targeted') ? '🎯' : '🔮')
-              : null;
-            const displayRarity = owned?.rarity || card.rarity;
-            const rc = RARITY_CONFIG[displayRarity as Rarity] || RARITY_CONFIG.common;
-            const { src: displayCoverUrl, handleError: handleCodexImgError } = useSmartCoverArt(
-              card.coverUrl,
-              useAltArtwork ? displayRarity : 'common'
-            );
-            const hasAltArtActive = useAltArtwork && displayCoverUrl !== card.coverUrl;
-
-            const isCurrentlyPlaying = currentTrack?.audioUrl === card.audioUrl && currentTrack?.day === card.day && isPlaying;
-            const isDailyClaim = owned?.source === 'daily_claim';
-            const maxDuration = isDailyClaim ? 0 : (owned ? PREVIEW_DURATION[owned.rarity] : (PREVIEW_DURATION[card.rarity] ?? 15));
-            const isFullSong = maxDuration === 0;
-            const hasClaimedAll = claimedRewards[`card-${card.day}`]?.includes('prophecy') || localStorage.getItem(`reward_tier_card-${card.day}`) === 'prophecy';
-
-            return (
-              <motion.div
-                key={card.day}
-                className="group"
-                whileHover={{ scale: 1.03, y: -2 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => handlePlay(card)}
-                style={{
-                  position: 'relative',
-                  aspectRatio: '3 / 4',
-                  borderRadius: '6px',
-                  overflow: 'hidden',
-                  cursor: 'pointer',
-                  border: isCurrentlyPlaying
-                    ? `2px solid ${rc.color}`
-                    : isBeyondOwned
-                      ? `1px solid rgba(180,77,255,0.4)`
-                      : `1px solid ${isOwned ? `${rc.color}30` : 'rgba(255,255,255,0.04)'}`,
-                  boxShadow: isCurrentlyPlaying
-                    ? `0 0 20px ${rc.color}40, inset 0 0 20px ${rc.color}10`
-                    : isBeyondOwned
-                      ? `0 0 18px rgba(180,77,255,0.25), inset 0 0 12px rgba(180,77,255,0.08)`
-                      : isOwned ? `0 4px 12px rgba(0,0,0,0.3)` : 'none',
-                  transition: 'all 0.25s ease',
-                }}
-              >
-                {/* Cover art */}
-                <img
-                  src={displayCoverUrl}
-                  alt={card.title}
-                  loading="lazy"
-                  onError={handleCodexImgError}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    opacity: isOwned ? 1 : 0.4,
-                    filter: isOwned ? 'none' : 'grayscale(0.7) brightness(0.7)',
-                    transition: 'all 0.25s ease',
-                  }}
-                />
-
-                {/* Alt Art Badge */}
-                {hasAltArtActive && (
-                  <div style={{
-                    position: 'absolute',
-                    bottom: '24px',
-                    right: '6px',
-                    padding: '2px 5px',
-                    background: 'rgba(255,215,0,0.25)',
-                    border: '1px solid rgba(255,215,0,0.6)',
-                    backdropFilter: 'blur(4px)',
-                    fontFamily: '"JetBrains Mono", monospace',
-                    fontSize: '8px',
-                    fontWeight: 800,
-                    color: '#ffd700',
-                    borderRadius: '3px',
-                    zIndex: 40,
-                    pointerEvents: 'none',
-                  }}>
-                    ✨ ALT ART
-                  </div>
-                )}
-
-                {/* Gradient overlay */}
-                <div style={{
-                  position: 'absolute',
-                  inset: 0,
-                  background: 'linear-gradient(180deg, transparent 30%, rgba(0,0,0,0.85) 100%)',
-                }} />
-
-                {/* Day badge */}
-                <div style={{
-                  position: 'absolute',
-                  top: '6px',
-                  left: '6px',
-                  padding: '2px 6px',
-                  background: isBeyondOwned ? 'rgba(180,77,255,0.25)' : 'rgba(0,0,0,0.7)',
-                  backdropFilter: 'blur(4px)',
-                  fontFamily: '"JetBrains Mono", monospace',
-                  fontSize: '9px',
-                  fontWeight: 700,
-                  color: isBeyondOwned ? '#d4a0ff' : 'rgba(255,255,255,0.6)',
-                  letterSpacing: '0.05em',
-                  border: isBeyondOwned ? '1px solid rgba(180,77,255,0.3)' : 'none',
-                  zIndex: 40,
-                  pointerEvents: 'none',
-                }}>
-                  {sourceLabel ? `${sourceLabel} ` : ''}#{String(card.day).padStart(3, '0')}
-                </div>
-
-                {/* Ownership / lock badge */}
-                <div 
-                  className="transition-all duration-200 group-hover:scale-125 group-hover:brightness-125"
-                  style={{
-                    position: 'absolute',
-                    top: '6px',
-                    right: '6px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    zIndex: 40,
-                  }}
-                >
-                  {hasClaimedAll && (
-                    <PrizeRibbonSvg size={14} isClaimed={true} tier="prophecy" style={{ filter: 'drop-shadow(0 0 4px rgba(255,115,0,0.6))' }} />
-                  )}
-                  {isOwned ? (
-                    <CheckCircle size={14} style={{ color: rc.color, filter: `drop-shadow(0 0 4px ${rc.color}80)` }} />
-                  ) : (
-                    <Lock size={12} style={{ color: 'rgba(255,255,255,0.4)' }} />
-                  )}
-                </div>
-
-                {/* Playing indicator */}
-                {isCurrentlyPlaying && (
-                  <div style={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    zIndex: 40,
-                    pointerEvents: 'none',
-                  }}>
-                    <motion.div
-                      animate={{ scale: [1, 1.2, 1] }}
-                      transition={{ repeat: Infinity, duration: 1.5 }}
-                      style={{
-                        width: '40px',
-                        height: '40px',
-                        borderRadius: '50%',
-                        background: `${rc.color}cc`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: `0 0 20px ${rc.color}80`,
-                      }}
-                    >
-                      <Pause size={18} style={{ color: '#000' }} />
-                    </motion.div>
-                  </div>
-                )}
-
-                {/* Bottom info */}
-                <div style={{
-                  position: 'absolute',
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  padding: '8px',
-                  opacity: isOwned ? 1 : 0.6,
-                  transition: 'all 0.25s ease',
-                  zIndex: 40,
-                  pointerEvents: 'none',
-                }}>
-                  <div style={{
-                    fontFamily: '"Impact", "Arial Black", sans-serif',
-                    fontSize: '11px',
-                    textTransform: 'uppercase',
-                    letterSpacing: '-0.02em',
-                    color: '#fff',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    lineHeight: 1.2,
-                  }}>
-                    {card.title}
-                  </div>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginTop: '3px',
-                  }}>
-                    {isOwned ? (
-                      <span style={{
-                        fontFamily: '"JetBrains Mono", monospace',
-                        fontSize: '8px',
-                        fontWeight: 700,
-                        textTransform: 'uppercase',
-                        color: rc.color,
-                        letterSpacing: '0.05em',
-                      }}>
-                        {displayRarity}
-                      </span>
-                    ) : (
-                      <span style={{
-                        fontFamily: '"JetBrains Mono", monospace',
-                        fontSize: '8px',
-                        color: 'rgba(255,255,255,0.2)',
-                        textTransform: 'uppercase',
-                      }}>
-                        Not owned
-                      </span>
-                    )}
-                    <div style={{
-                      width: '14px',
-                      height: '14px',
-                      borderRadius: '50%',
-                      background: isCurrentlyPlaying ? rc.color : 'rgba(255,255,255,0.08)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}>
-                      {isCurrentlyPlaying ? (
-                        <Pause size={7} style={{ color: '#000' }} />
-                      ) : (
-                        <Play size={7} style={{ color: 'rgba(255,255,255,0.4)', marginLeft: '1px' }} />
-                      )}
-                    </div>
-                  </div>
-                  {/* Shard Progress Bar */}
-                  {(() => {
-                    const fragCount = getFragmentsForDay(card.day);
-                    if (isOwned) {
-                      return (
-                        <div style={{ marginTop: '5px' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '7px', fontFamily: '"JetBrains Mono", monospace', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                            <span>Shards</span>
-                            <span style={{ color: '#39FF14', fontWeight: 'bold' }}>Unlocked</span>
-                          </div>
-                          <div style={{ height: '3px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden', marginTop: '2px' }}>
-                            <div style={{ height: '100%', background: '#39FF14', width: '100%', boxShadow: '0 0 6px rgba(57,255,20,0.6)' }} />
-                          </div>
-                        </div>
-                      );
-                    } else {
-                      return (
-                        <div style={{ marginTop: '5px' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '7px', fontFamily: '"JetBrains Mono", monospace', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                            <span>Shards</span>
-                            <span style={{ color: fragCount > 0 ? '#ffd700' : 'rgba(255,255,255,0.2)' }}>{fragCount} / 10</span>
-                          </div>
-                          <div style={{ height: '3px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden', marginTop: '2px' }}>
-                            <div style={{ height: '100%', background: '#ffd700', width: `${Math.min(10, fragCount) * 10}%`, boxShadow: fragCount > 0 ? '0 0 6px rgba(255,215,0,0.6)' : 'none' }} />
-                          </div>
-                        </div>
-                      );
-                    }
-                  })()}
-                </div>
-
-                {/* Rarity accent line */}
-                {isOwned && (
-                  <div style={{
-                    position: 'absolute',
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    height: isBeyondOwned ? '3px' : '2px',
-                    background: isBeyondOwned
-                      ? 'linear-gradient(90deg, #b44dff, #7c3aed, #b44dff)'
-                      : `linear-gradient(90deg, ${rc.color}, ${rc.color}60)`,
-                    boxShadow: isBeyondOwned
-                      ? '0 0 10px rgba(180,77,255,0.5)'
-                      : `0 0 6px ${rc.color}40`,
-                    zIndex: 40,
-                    pointerEvents: 'none',
-                  }} />
-                )}
-
-                {/* Hover Play Menu for Owned Cards */}
-                {isOwned && (
-                  <div 
-                    className="absolute inset-0 bg-black/85 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center gap-2 z-30 p-2.5"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handlePlay(card);
-                      }}
-                      className="w-full py-2 rounded bg-white text-black text-[10px] font-mono font-bold uppercase tracking-wider transition-all hover:scale-105 active:scale-95 text-center flex items-center justify-center gap-1.5"
-                    >
-                      {isCurrentlyPlaying ? <Pause size={10} /> : <Play size={10} />}
-                      {isCurrentlyPlaying ? 'Pause' : 'Play Audio'}
-                    </button>
-                    {isFullSong && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          stop();
-                          setLocation(`/play/card-${card.day}`);
-                        }}
-                        className="w-full py-2 rounded bg-[rgba(0,240,255,0.15)] border border-neon-cyan text-neon-cyan text-[10px] font-mono font-bold uppercase tracking-wider transition-all hover:bg-[rgba(0,240,255,0.25)] hover:scale-105 active:scale-95 text-center"
-                        style={{
-                          borderColor: 'var(--color-neon-cyan, #00f0ff)',
-                          color: 'var(--color-neon-cyan, #00f0ff)',
-                        }}
-                      >
-                        PLAY PIM
-                      </button>
-                    )}
-                  </div>
-                )}
-              </motion.div>
-            );
-          })}
+          {pagedCards.map(card => (
+            <CodexGridCardItem
+              key={card.day}
+              card={card}
+              owned={ownedDays.get(card.day)}
+              isFuture={card.day > today}
+              today={today}
+              useAltArtwork={useAltArtwork}
+              currentTrack={currentTrack}
+              isPlaying={isPlaying}
+              claimedRewards={claimedRewards}
+              handlePlay={handlePlay}
+              getFragmentsForDay={getFragmentsForDay}
+              stop={stop}
+              setLocation={setLocation}
+            />
+          ))}
         </div>
 
         {/* Empty state */}
