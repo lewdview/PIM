@@ -1594,8 +1594,18 @@ export default function Game() {
   // with what the player hears rather than what the audio clock reports.
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
+  const introStartTimeRef = useRef<number | null>(null);
 
-  const getT = useCallback(() => (audioRef.current?.currentTime ?? 0) - audioOffsetRef.current / 1000, []);
+  const getT = useCallback(() => {
+    if (phaseRef.current === "countdown" || phaseRef.current === "loading") {
+      if (introStartTimeRef.current === null) {
+        introStartTimeRef.current = performance.now();
+      }
+      return (performance.now() - introStartTimeRef.current) / 1000;
+    }
+    introStartTimeRef.current = null;
+    return (audioRef.current?.currentTime ?? 0) - audioOffsetRef.current / 1000;
+  }, []);
 
   const calcScore = useCallback(
     (combo: number, j: "PERFECT+" | "PERFECT" | "GOOD") => {
@@ -4687,9 +4697,12 @@ export default function Game() {
     rafRef.current = requestAnimationFrame(() => drawRef.current?.());
   }, [getT, syncDisplay, finishGame, muteLane]);
 
-  // Keep drawRef current so doReturn can schedule the loop without a circular dep
+  // Keep drawRef current and kick off render loop immediately so canvas highway rolls from frame 1
   useEffect(() => {
     drawRef.current = draw;
+    if (!rafRef.current) {
+      rafRef.current = requestAnimationFrame(() => drawRef.current?.());
+    }
   }, [draw]);
 
   // ── keyboard ──
@@ -7967,7 +7980,20 @@ export default function Game() {
             data-testid="canvas-game"
           />
 
-
+          {/* Initial Buffering indicator over live rolling canvas */}
+          {phase === "buffering" && (
+            <div
+              className="absolute inset-0 flex flex-col items-center justify-center gap-3 pointer-events-none z-30"
+              style={{ background: "rgba(8,8,18,0.4)", backdropFilter: "blur(2px)" }}
+            >
+              <div
+                className="font-mono text-xs tracking-[0.3em] font-bold"
+                style={{ color: "#39FF14", textShadow: "0 0 12px rgba(57,255,20,0.6)" }}
+              >
+                {loadMsg || "STREAMING AUDIO STEMS..."}
+              </div>
+            </div>
+          )}
 
           {/* Judgment text — per-lane, moved up above the hit zone */}
           {opts.judgmentText && displayJudge.map((j) => {
