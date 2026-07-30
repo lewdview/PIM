@@ -6558,44 +6558,8 @@ export default function Game() {
       lastDetectedStageRef.current = 1;
       setCurrentStage(1);
       setStageStingerNumber(null);
-      phaseRef.current = "countdown";
-      setPhase("countdown");
-      let count = 1;
-      setCountdown(count);
-      audioManager.playSfx('countdown', 0.85);
-      haptics.mediumTap();
-      await new Promise<void>((resolve) => {
-        countdownIntervalRef.current = setInterval(() => {
-          count--;
-          if (count > 0) {
-            setCountdown(count);
-            audioManager.playSfx('countdown', 0.85);
-            haptics.mediumTap();
-          } else {
-            if (countdownIntervalRef.current) {
-              clearInterval(countdownIntervalRef.current);
-              countdownIntervalRef.current = null;
-            }
-            setCountdown(0);
-            // "GO!" stinger
-            audioManager.playSfx('select_start_song', 0.95);
-            haptics.heavyTap();
-            setTimeout(() => {
-              resolve();
-            }, 600);
-          }
-        }, 1300);
-      });
-      if (cancelled) return;
 
-      phaseRef.current = "playing";
-      setPhase("playing");
-
-      // ── Canvas dimension safety net ────────────────────────────────────────
-      // useLayoutEffect sets canvas dims synchronously, but in rare cases the
-      // flex layout resolves after the effect fires (e.g. first cold load on
-      // mobile). Force-sync here, right before the draw loop starts, so the
-      // highway is never invisible on first launch.
+      // ── Canvas dimension safety net & initial setup ────────────────────────
       {
         const c = canvasRef.current;
         const w = canvasWrapperRef.current;
@@ -6613,7 +6577,7 @@ export default function Game() {
               ctx.resetTransform();
               ctx.scale(dpr, dpr);
             }
-            // Pre-render static track surface offscreen cache on resize
+            // Pre-render static track surface offscreen cache
             const diffLevel = songRef.current?.difficultyLevel ?? 5;
             offscreenCanvasRef.current = prerenderStaticTrack(
               w.clientWidth,
@@ -6627,7 +6591,45 @@ export default function Game() {
         }
       }
 
+      // START HIGHWAY CANVAS ROLLING IMMEDIATELY
+      phaseRef.current = "countdown";
+      setPhase("countdown");
       rafRef.current = requestAnimationFrame(() => drawRef.current?.());
+
+      // Initial Enter Game Sound FX
+      audioManager.playSfx('select_start_song', 0.85);
+
+      // ── INTRO STINGER SEQUENCE: 2: TRANSMISSION INCOMING -> 1: ARE YOU READY??! -> 0: GO! ──
+      let count = 2;
+      setCountdown(count);
+      audioManager.playSfx('countdown', 0.9);
+      haptics.mediumTap();
+
+      await new Promise<void>((resolve) => {
+        countdownIntervalRef.current = setInterval(() => {
+          count--;
+          if (count > 0) {
+            setCountdown(count);
+            audioManager.playSfx('countdown', 0.9);
+            haptics.mediumTap();
+          } else {
+            if (countdownIntervalRef.current) {
+              clearInterval(countdownIntervalRef.current);
+              countdownIntervalRef.current = null;
+            }
+            setCountdown(0); // "GO!"
+            audioManager.playSfx('select_start_song', 1.0);
+            haptics.heavyTap();
+            setTimeout(() => {
+              resolve();
+            }, 600);
+          }
+        }, 1150);
+      });
+      if (cancelled) return;
+
+      phaseRef.current = "playing";
+      setPhase("playing");
 
       await audio.play();
 
@@ -8218,24 +8220,48 @@ export default function Game() {
             </div>
           )}
 
-          {/* Countdown: ARE YOU READY??! GO! */}
+          {/* Countdown: TRANSMISSION INCOMING -> ARE YOU READY??! -> GO! */}
           {phase === "countdown" && (
             <div
               className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-40 overflow-hidden"
               style={{
-                background: "radial-gradient(ellipse 70% 60% at 50% 50%, rgba(14,16,40,0.85) 0%, rgba(8,8,18,0.95) 80%)",
-                backdropFilter: "blur(8px)",
+                background: "radial-gradient(ellipse 70% 60% at 50% 50%, rgba(14,16,40,0.55) 0%, rgba(8,8,18,0.75) 80%)",
+                backdropFilter: "blur(3px)",
               }}
             >
-              {countdown > 0 ? (
+              {countdown === 2 && (
                 <div className="flex flex-col items-center justify-center px-4">
                   <div
-                    className="font-mono font-black text-center tracking-[0.3em] uppercase text-xs md:text-sm text-cyan-400 mb-3 flex items-center justify-center gap-2"
+                    className="font-mono font-black text-center tracking-[0.35em] uppercase text-xs md:text-sm text-cyan-400 mb-3 flex items-center justify-center gap-2.5"
                     style={{ textShadow: "0 0 16px rgba(0,229,255,0.9)" }}
                   >
-                    <TransmissionIcon size={18} className="animate-pulse text-cyan-400" />
-                    <span>TRANSMISSION INCOMING</span>
-                    <TransmissionIcon size={18} className="animate-pulse text-cyan-400" />
+                    <TransmissionIcon size={20} className="animate-pulse text-cyan-400" />
+                    <span>SIGNAL DETECTED</span>
+                    <TransmissionIcon size={20} className="animate-pulse text-cyan-400" />
+                  </div>
+                  <div
+                    className="font-mono font-black text-center tracking-tight text-3xl sm:text-5xl md:text-6xl lg:text-7xl"
+                    style={{
+                      lineHeight: 1.1,
+                      background: "linear-gradient(135deg, #FFFFFF 0%, #00E5FF 50%, #39FF14 100%)",
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent",
+                      filter: "drop-shadow(0 0 35px rgba(0,229,255,0.9)) drop-shadow(0 0 65px rgba(57,255,20,0.7))",
+                      fontFamily: '"Impact", "Arial Black", sans-serif',
+                    }}
+                  >
+                    TRANSMISSION INCOMING
+                  </div>
+                </div>
+              )}
+
+              {countdown === 1 && (
+                <div className="flex flex-col items-center justify-center px-4">
+                  <div
+                    className="font-mono font-black text-center tracking-[0.35em] uppercase text-xs md:text-sm text-pink-400 mb-3"
+                    style={{ textShadow: "0 0 16px rgba(255,20,147,0.9)" }}
+                  >
+                    ✦ PREPARE FOR HIGHWAY ✦
                   </div>
                   <div
                     className="font-mono font-black text-center tracking-tight text-3xl sm:text-5xl md:text-6xl lg:text-7xl"
@@ -8251,7 +8277,9 @@ export default function Game() {
                     ARE YOU READY??!
                   </div>
                 </div>
-              ) : (
+              )}
+
+              {countdown === 0 && (
                 <div
                   className="font-mono font-black text-center text-7xl sm:text-8xl md:text-9xl lg:text-[140px]"
                   style={{
