@@ -2590,7 +2590,7 @@ export default function Game() {
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
     const phase = phaseRef.current;
-    if (!canvas || (phase !== "playing" && phase !== "rewinding") || pausedRef.current || isTutorialHelpOpenRef.current) return;
+    if (!canvas || (phase !== "playing" && phase !== "rewinding" && phase !== "countdown") || pausedRef.current || isTutorialHelpOpenRef.current) return;
     const ctx = canvas.getContext("2d");
     if (!ctx || !songRef.current) return;
     if (optsRef.current.legacyGraphics) {
@@ -4697,12 +4697,9 @@ export default function Game() {
     rafRef.current = requestAnimationFrame(() => drawRef.current?.());
   }, [getT, syncDisplay, finishGame, muteLane]);
 
-  // Keep drawRef current and kick off render loop immediately so canvas highway rolls from frame 1
+  // Keep drawRef current so the single self-sustaining render loop always calls the latest draw instance
   useEffect(() => {
     drawRef.current = draw;
-    if (!rafRef.current) {
-      rafRef.current = requestAnimationFrame(() => drawRef.current?.());
-    }
   }, [draw]);
 
   // ── keyboard ──
