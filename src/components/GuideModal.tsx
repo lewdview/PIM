@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles, Zap, BookOpen, Printer, Sliders, Play, Volume2, ShieldAlert, Award, Compass, Flame, HelpCircle } from 'lucide-react';
+import { RemixDialIcon, VTokenCrestIcon } from './icons/CustomVectorIcons';
 import { getAdminConfig, type ConditionalModifier } from '../utils/adminConfig';
 
 interface Props {
@@ -242,7 +243,8 @@ export default function GuideModal({ isOpen, onClose }: Props) {
 
                   <div>
                     <h4 className="font-['Impact'] text-base text-[#ffb800] uppercase m-0 mb-1 flex items-center gap-1.5">
-                      <span>4. Remix Notes ⚡</span>
+                      <RemixDialIcon size={16} color="#ffb800" />
+                      <span>4. Remix Notes</span>
                       <span className="text-[9px] bg-[#ffb800]/20 text-[#ffb800] px-1.5 py-0.5 rounded font-mono">PIM SIGNATURE</span>
                     </h4>
                     <p className="text-[11px] text-white/70 m-0">

@@ -7,6 +7,7 @@ import { logAnalyticsEvent } from "../services/telemetryService";
 import { gameSenseService, type GameSenseStatus } from "../services/gameSenseService";
 import { useVaultStore } from "../store/useVaultStore";
 import { X, Volume2, Key, Info, Palette, Sparkles, Sliders, Check, Lock, Flame, ShieldAlert, Monitor, Sparkle } from "lucide-react";
+import { VTokenCrestIcon, RemixDialIcon, HazardWarningIcon, StageCrestIcon } from "./icons/CustomVectorIcons";
 import type { VaultCard } from "../services/vaultService";
 import {
   CardSkinContext,
@@ -1447,24 +1448,24 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                       <span className="text-[#FF1493] font-bold min-w-[130px] uppercase">➔ SWIPES:</span>
                       <span>Flick Analog Stick, press Arrow Key / D-Pad, or swipe screen in arrow direction.</span>
                     </div>
-                    <div className="flex gap-2">
-                      <span className="text-[#00FF88] font-bold min-w-[130px] uppercase">▲ LIFT FLICKS:</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[#00FF88] font-bold min-w-[130px] uppercase flex items-center gap-1.5"><span className="text-xs">▲</span> LIFT FLICKS:</span>
                       <span>Release hold key with Arrow Up, flick Analog Stick UP, or swipe finger UPWARD.</span>
                     </div>
-                    <div className="flex gap-2 border-t border-white/5 pt-2">
-                      <span className="text-[#FF7B00] font-bold min-w-[130px] uppercase">⚡ BREAK DROPS:</span>
+                    <div className="flex items-center gap-2 border-t border-white/5 pt-2">
+                      <span className="text-[#FF7B00] font-bold min-w-[130px] uppercase flex items-center gap-1.5"><VTokenCrestIcon size={14} color="#FF7B00" /> BREAK DROPS:</span>
                       <span>High-voltage drop notes — crisp hit timing awards massive bonus score & particle explosions.</span>
                     </div>
-                    <div className="flex gap-2">
-                      <span className="text-[#CCFF00] font-bold min-w-[130px] uppercase">✦ ACCENT STARS:</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[#CCFF00] font-bold min-w-[130px] uppercase flex items-center gap-1.5"><StageCrestIcon size={14} color="#CCFF00" /> ACCENT STARS:</span>
                       <span>Acid-lime snare/accent notes — hit on rhythm for starburst score multipliers.</span>
                     </div>
-                    <div className="flex gap-2">
-                      <span className="text-[#00F5D4] font-bold min-w-[130px] uppercase">🎛 REMIX STEMS:</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[#00F5D4] font-bold min-w-[130px] uppercase flex items-center gap-1.5"><RemixDialIcon size={14} color="#00F5D4" /> REMIX STEMS:</span>
                       <span>Holographic stem triggers — isolates vocals, muting drums or boosting bass in real-time.</span>
                     </div>
-                    <div className="flex gap-2">
-                      <span className="text-[#FF003C] font-bold min-w-[130px] uppercase">⚠ MINE HAZARDS:</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[#FF003C] font-bold min-w-[130px] uppercase flex items-center gap-1.5"><HazardWarningIcon size={14} color="#FF003C" /> MINE HAZARDS:</span>
                       <span>DO NOT TAP OR PRESS MINE LANES! Avoid touching to prevent -500 score loss and combo breaks.</span>
                     </div>
                   </div>

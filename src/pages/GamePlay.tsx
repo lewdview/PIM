@@ -15,6 +15,7 @@ import { gameSenseService } from "@/services/gameSenseService";
 import { supabase } from "@/services/supabaseClient";
 import { useAuthStore } from "@/store/useAuthStore";
 import { purchasePack, type OwnedCard } from "@/services/vaultService";
+import { TransmissionIcon } from "../components/icons/CustomVectorIcons";
 
 // Use Vite's eager glob to grab files in /public/data/slideshow/
 const imageModules = import.meta.glob('/public/data/slideshow/**/*.{png,jpg,jpeg,gif,webp,svg}', { eager: true });
@@ -8229,10 +8230,12 @@ export default function Game() {
               {countdown > 0 ? (
                 <div className="flex flex-col items-center justify-center px-4">
                   <div
-                    className="font-mono font-black text-center tracking-[0.3em] uppercase text-xs md:text-sm text-cyan-400 mb-3"
+                    className="font-mono font-black text-center tracking-[0.3em] uppercase text-xs md:text-sm text-cyan-400 mb-3 flex items-center justify-center gap-2"
                     style={{ textShadow: "0 0 16px rgba(0,229,255,0.9)" }}
                   >
-                    📡 TRANSMISSION INCOMING 📡
+                    <TransmissionIcon size={18} className="animate-pulse text-cyan-400" />
+                    <span>TRANSMISSION INCOMING</span>
+                    <TransmissionIcon size={18} className="animate-pulse text-cyan-400" />
                   </div>
                   <div
                     className="font-mono font-black text-center tracking-tight text-3xl sm:text-5xl md:text-6xl lg:text-7xl"
@@ -8533,14 +8536,34 @@ function drawKey(
     ctx.stroke();
     ctx.restore();
 
-    // Center Danger Icon (Warning symbol)
+    // Center Danger Vector Emblem
+    ctx.save();
+    ctx.strokeStyle = "#FFFFFF";
     ctx.fillStyle = "#FFFFFF";
     ctx.shadowColor = "#FF003C";
-    ctx.shadowBlur = 10;
-    ctx.font = '900 13px "Space Mono", monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('⚠', 0, 0);
+    ctx.shadowBlur = 12;
+    ctx.lineWidth = 2.0;
+    ctx.lineCap = "round";
+
+    // Vector warning triangle outline
+    const tw = mSize * 0.42;
+    const th = mSize * 0.42;
+    ctx.beginPath();
+    ctx.moveTo(0, -th);
+    ctx.lineTo(tw, th);
+    ctx.lineTo(-tw, th);
+    ctx.closePath();
+    ctx.stroke();
+
+    // Vector exclamation mark inside triangle
+    ctx.beginPath();
+    ctx.moveTo(0, -th * 0.35);
+    ctx.lineTo(0, th * 0.2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(0, th * 0.55, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
 
     // Hazard text label below symbol
     ctx.fillStyle = "#FF4D6D";
