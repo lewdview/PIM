@@ -35,18 +35,20 @@ export default function Home() {
   const [introPhase, setIntroPhase] = useState<'prompt'|'booting'|'presented'|'intro'|'intro_2'|'intro3'|'climax'|'done'>('prompt');
   const [bootText, setBootText] = useState("");
   const [isIntroTransition, setIsIntroTransition] = useState(false);
-  const [currentTime, setCurrentTime] = useState("");
-
+const DigitalClock = React.memo(() => {
+  const [time, setTime] = useState("");
   useEffect(() => {
-    const updateClock = () => {
+    const update = () => {
       const now = new Date();
       const pad = (n: number) => String(n).padStart(2, '0');
-      setCurrentTime(`${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`);
+      setTime(`${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`);
     };
-    updateClock();
-    const id = setInterval(updateClock, 1000);
+    update();
+    const id = setInterval(update, 1000);
     return () => clearInterval(id);
   }, []);
+  return <span className="text-[#FF1493] font-bold">{time || "00:00:00"}</span>;
+});
 
   const startIntroSequence = useCallback(async () => {
     if (introPhase !== 'prompt') return;
@@ -991,7 +993,7 @@ export default function Home() {
                   </div>
                   <div className="flex justify-between border-b border-white/5 pb-1">
                     <span>SECTOR CLOCK</span>
-                    <span className="text-[#FF1493] font-bold">{currentTime || "00:00:00"}</span>
+                    <DigitalClock />
                   </div>
                   <div className="flex justify-between">
                     <span>INTERFACE COMPILER</span>

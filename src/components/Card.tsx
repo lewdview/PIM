@@ -28,6 +28,8 @@ function renderCardBack(card: VaultCard, backSkin: string) {
   return <BackOriginal card={card} />;
 }
 
+const CORNER_MARKS = [{t:true,l:true},{t:true,l:false},{t:false,l:true},{t:false,l:false}];
+
 function getSkinComponent(skin: string) {
   if (skin === 'glitch') return CardGlitch;
   if (skin === 'glass') return CardGlass;
@@ -614,7 +616,7 @@ export default function Card({
       </div>
 
       {/* Corner marks */}
-      {[{t:true,l:true},{t:true,l:false},{t:false,l:true},{t:false,l:false}].map(({t,l},i) => (
+      {CORNER_MARKS.map(({t,l},i) => (
         <div key={i} style={{ position: 'absolute', width: '14px', height: '14px', top: t ? '16px' : undefined, bottom: !t ? '16px' : undefined, left: l ? '16px' : undefined, right: !l ? '16px' : undefined, borderTop: t ? '1px solid rgba(255,215,0,0.3)' : 'none', borderBottom: !t ? '1px solid rgba(255,215,0,0.3)' : 'none', borderLeft: l ? '1px solid rgba(255,215,0,0.3)' : 'none', borderRight: !l ? '1px solid rgba(255,215,0,0.3)' : 'none' }} />
       ))}
     </motion.div>

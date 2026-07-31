@@ -281,8 +281,8 @@ export default function FloatingTicker() {
         }
       ];
 
-      // Mix them together (events first, then stats)
-      const fullQueue = [...parsedItems, ...analyticsItems];
+      // Mix them together (events first, then stats) and bound queue to max 30 items
+      const fullQueue = [...parsedItems, ...analyticsItems].slice(0, 30);
       eventsQueueRef.current = fullQueue;
 
       // Seed first items on initial load

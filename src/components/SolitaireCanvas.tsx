@@ -165,8 +165,15 @@ export default function SolitaireCanvas({ onClose }: SolitaireCanvasProps) {
         drawLightning(ctx, b);
       });
 
-      // Filter out static particles
-      bolts = bolts.filter((b) => Math.abs(b.vy) > 0.4 || b.y < canvas.height - b.size - 2);
+      // Filter out static particles in-place
+      let write = 0;
+      for (let i = 0; i < bolts.length; i++) {
+        const b = bolts[i];
+        if (Math.abs(b.vy) > 0.4 || b.y < canvas.height - b.size - 2) {
+          bolts[write++] = b;
+        }
+      }
+      bolts.length = write;
       if (bolts.length > 250) {
         bolts.splice(0, bolts.length - 250);
       }

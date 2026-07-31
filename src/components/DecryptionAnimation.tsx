@@ -99,42 +99,46 @@ export default function DecryptionAnimation({ reward, onClose }: DecryptionAnima
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      const activeParticles = particlesRef.current.filter((p) => p.alpha > 0);
-      
-      for (const p of activeParticles) {
-        // Apply physics
-        p.x += p.vx;
-        p.y += p.vy;
-        p.vy += 0.16; // Gravity
-        p.vx *= 0.97; // Drag
-        p.vy *= 0.97;
-        p.angle += p.spin;
-        p.alpha -= p.decay;
+      let write = 0;
+      const arr = particlesRef.current;
+      for (let i = 0; i < arr.length; i++) {
+        const p = arr[i];
+        if (p.alpha > 0) {
+          // Apply physics
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += 0.16; // Gravity
+          p.vx *= 0.97; // Drag
+          p.vy *= 0.97;
+          p.angle += p.spin;
+          p.alpha -= p.decay;
 
-        // Draw glowing crystal shard
-        ctx.save();
-        ctx.translate(p.x, p.y);
-        ctx.rotate(p.angle);
-        ctx.globalAlpha = Math.max(0, p.alpha);
-        ctx.fillStyle = p.color;
-        ctx.shadowBlur = 12;
-        ctx.shadowColor = p.color;
+          // Draw glowing crystal shard
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.rotate(p.angle);
+          ctx.globalAlpha = Math.max(0, p.alpha);
+          ctx.fillStyle = p.color;
+          ctx.shadowBlur = 12;
+          ctx.shadowColor = p.color;
 
-        ctx.beginPath();
-        for (let j = 0; j < p.points; j++) {
-          const shardAngle = (j * Math.PI * 2) / p.points;
-          const r = j % 2 === 0 ? p.size : p.size / 2; // Make it star-like/crystal-like
-          const px = Math.cos(shardAngle) * r;
-          const py = Math.sin(shardAngle) * r;
-          if (j === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
+          ctx.beginPath();
+          for (let j = 0; j < p.points; j++) {
+            const shardAngle = (j * Math.PI * 2) / p.points;
+            const r = j % 2 === 0 ? p.size : p.size / 2; // Make it star-like/crystal-like
+            const px = Math.cos(shardAngle) * r;
+            const py = Math.sin(shardAngle) * r;
+            if (j === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
+
+          arr[write++] = p;
         }
-        ctx.closePath();
-        ctx.fill();
-        ctx.restore();
       }
-
-      particlesRef.current = activeParticles;
+      arr.length = write;
 
       // Transition to revealed phase once particles settle
       if (elapsed > 1600 && phaseRef.current === 'bursting') {

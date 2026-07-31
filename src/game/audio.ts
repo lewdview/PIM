@@ -277,22 +277,24 @@ export class AudioManager {
     gain.connect(this.masterGain);
     source.start(0);
 
-    // Track active sources so we can stop them later
-    if (!this.activeSources.has(name)) {
-      this.activeSources.set(name, []);
-    }
-    const sources = this.activeSources.get(name)!;
-    sources.push(source);
-
-    source.onended = () => {
-      const active = this.activeSources.get(name);
-      if (active) {
-        const idx = active.indexOf(source);
-        if (idx !== -1) {
-          active.splice(idx, 1);
-        }
+    // Only track sounds that need to be manually stopped via stopSfx to avoid GC pressure
+    if (name === "gameover_countdown" || name === "song_completion") {
+      if (!this.activeSources.has(name)) {
+        this.activeSources.set(name, []);
       }
-    };
+      const sources = this.activeSources.get(name)!;
+      sources.push(source);
+
+      source.onended = () => {
+        const active = this.activeSources.get(name);
+        if (active) {
+          const idx = active.indexOf(source);
+          if (idx !== -1) {
+            active.splice(idx, 1);
+          }
+        }
+      };
+    }
   }
 
   /** Stop all active playing nodes of a specific SFX name. */

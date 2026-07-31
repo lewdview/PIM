@@ -123,6 +123,7 @@ function PackShell({ meta, phase }: { meta: RevealPackMeta; phase: Phase }) {
                 background: meta.gradient, transformOrigin: 'top center',
                 boxShadow: `8px 8px 0 #000`,
                 border: '2px solid rgba(255,255,255,0.06)',
+                willChange: 'transform, opacity',
               }}
             >
               <PackBagContents meta={meta} />

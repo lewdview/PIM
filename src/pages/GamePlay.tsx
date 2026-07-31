@@ -745,6 +745,11 @@ function useAnimatedCount(target: number) {
   return val;
 }
 
+const AnimatedScore = React.memo(({ score }: { score: number }) => {
+  const animatedVal = useAnimatedCount(score);
+  return <>{animatedVal.toLocaleString()}</>;
+});
+
 // ── procedural chart generator for empty beatmaps ────────────────
 interface Stage {
   stage: number;
@@ -6836,7 +6841,6 @@ export default function Game() {
           : gs.combo < 60
             ? "#FF1493"
             : "#39FF14";
-  const animatedScore = useAnimatedCount(gs.score);
 
   const doPause = useCallback(() => {
     if (phaseRef.current !== 'playing' || pausedRef.current) return;
@@ -7759,7 +7763,7 @@ export default function Game() {
                     {currentStage === 5 ? "STAGE FINAL" : `STAGE ${currentStage}`}
                   </span>
                   <span className="font-mono text-2xl md:text-3xl lg:text-4xl font-black text-white tracking-tight" style={{ textShadow: "0 0 12px rgba(255,255,255,0.5)" }}>
-                    {animatedScore.toLocaleString()}
+                    <AnimatedScore score={gs.score} />
                   </span>
                   <span className={`font-mono text-[10.5px] md:text-[11.5px] lg:text-[12.5px] font-black mt-1 tracking-widest ${medalStyle.text}`} style={{ transition: "color 0.4s ease-in-out" }}>
                     ×{m}

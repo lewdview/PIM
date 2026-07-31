@@ -251,11 +251,20 @@ export default function SongSelect() {
     ? (claimedRewards[selected.id]?.includes('prophecy') || localStorage.getItem(`reward_tier_${selected.id}`) === 'prophecy')
     : false;
 
-  // Track scroll position for main view parallax animation
+  const parallaxBgRef = useRef<HTMLDivElement>(null);
+
+  // Track scroll position for main view parallax animation (direct DOM mutation)
   useEffect(() => {
+    let rafId = 0;
     const handleScroll = (e: Event) => {
       const target = e.target as HTMLDivElement;
-      setScrollTop(target.scrollTop);
+      const st = target.scrollTop;
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        if (parallaxBgRef.current) {
+          parallaxBgRef.current.style.transform = `translateY(${st * -0.05}px) scale(1.05)`;
+        }
+      });
     };
 
     const el = mainScrollRef.current;
@@ -264,6 +273,7 @@ export default function SongSelect() {
     }
 
     return () => {
+      cancelAnimationFrame(rafId);
       if (el) el.removeEventListener('scroll', handleScroll);
     };
   }, [loading]);
@@ -347,12 +357,12 @@ export default function SongSelect() {
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden bg-[#050402]">
         {/* High-Res Album Artwork Layer */}
         <div
+          ref={parallaxBgRef}
           className="absolute inset-0 transition-all duration-700 ease-out scale-[1.05]"
           style={{
             backgroundImage: `url(${activeCoverUrl})`,
             backgroundPosition: 'center',
             backgroundSize: 'cover',
-            transform: `translateY(${scrollTop * -0.05}px) scale(1.05)`,
           }}
         />
         {/* Dark Vignette & Gradient Overlay for Crisp Text Contrast */}

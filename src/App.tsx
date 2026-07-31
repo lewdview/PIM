@@ -1,5 +1,5 @@
 import { Route, Switch, useLocation } from 'wouter';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, Suspense, lazy } from 'react';
 import { useAuthStore } from './store/useAuthStore';
 import { logAnalyticsEvent } from './services/telemetryService';
 import { useVaultStore } from './store/useVaultStore';
@@ -15,10 +15,9 @@ import GlobalPlayerBar from './components/GlobalPlayerBar';
 import OnboardingFlow from './components/OnboardingFlow';
 import AuthModal from './components/AuthModal';
 
-// Page imports
+// Core Page imports (eager)
 import RhythmHome from './pages/RhythmHome';
 import SongSelect from './pages/SongSelect';
-import GamePlay from './pages/GamePlay';
 import GameResults from './pages/GameResults';
 import HomePage from './pages/HomePage';
 import CollectionPage from './pages/CollectionPage';
@@ -29,20 +28,23 @@ import CodexPage from './pages/CodexPage';
 import ClaimPage from './pages/ClaimPage';
 import LegalPage from './pages/LegalPage';
 import VoyeurPage from './pages/VoyeurPage';
-import AdminPage from './pages/AdminPage';
-import BeatmapEditor from './pages/BeatmapEditor';
-import CardDesignShowcase from './pages/CardDesignShowcase';
 import Campaign from './pages/Campaign';
 import Chapter from './pages/Chapter';
 import Tutorial from './pages/Tutorial';
 import OptionsModal from './components/OptionsModal';
 import SongDetail from './pages/SongDetail';
 import LandingPage from './pages/LandingPage';
-import PitchDeck from './pages/PitchDeck';
 import ProfilePage from './pages/ProfilePage';
 import ListenPage from './pages/ListenPage';
-import SlideshowPage from './pages/SlideshowPage';
 import EarnPage from './pages/EarnPage';
+
+// Heavy Page imports (lazy-loaded to reduce bundle size and boot time)
+const GamePlay = lazy(() => import('./pages/GamePlay'));
+const AdminPage = lazy(() => import('./pages/AdminPage'));
+const BeatmapEditor = lazy(() => import('./pages/BeatmapEditor'));
+const CardDesignShowcase = lazy(() => import('./pages/CardDesignShowcase'));
+const PitchDeck = lazy(() => import('./pages/PitchDeck'));
+const SlideshowPage = lazy(() => import('./pages/SlideshowPage'));
 import { loadOpts } from './lib/options';
 import { CHAPTERS } from './game/campaign';
 
@@ -356,80 +358,86 @@ export default function App() {
       {!hideNavbar && <Navbar />}
 
       <main className="flex-1 flex flex-col relative">
-        <Switch>
-          <Route path="/" component={LandingPage} />
-          <Route path="/arcade" component={RhythmHome} />
-          <Route path="/songs" component={SongSelect} />
-          <Route path="/play/:songId" component={GamePlay} />
-          <Route path="/results/:songId" component={GameResults} />
-          <Route path="/vault" component={HomePage} />
-          <Route path="/vault/collection" component={CollectionPage} />
-          <Route path="/vault/reveal" component={PackRevealPage} />
-          <Route path="/vault/forge" component={ForgePage} />
-          <Route path="/vault/leaderboard" component={LeaderboardPage} />
-          <Route path="/vault/codex" component={CodexPage} />
-          <Route path="/vault/claim" component={ClaimPage} />
-          <Route path="/vault/legal" component={LegalPage} />
-          <Route path="/vault/earn" component={EarnPage} />
-          <Route path="/vault/:userId" component={VoyeurPage} />
-          { (import.meta.env.DEV || localStorage.getItem('th3vault_dev_mode') === 'true') && (
-            <>
-              <Route path="/pitch-deck" component={PitchDeck} />
-              <Route path="/admin" component={AdminPage} />
-              <Route path="/admin/editor" component={BeatmapEditor} />
-              <Route path="/admin/card-designs" component={CardDesignShowcase} />
-            </>
-          ) }
-          <Route path="/campaign" component={Campaign} />
-          <Route path="/chapter/:month" component={Chapter} />
-          <Route path="/tutorial" component={Tutorial} />
-          <Route path="/profile" component={ProfilePage} />
-          <Route path="/options" component={OptionsRouteHandler} />
-          <Route path="/song/:songId" component={SongDetail} />
-          <Route path="/listen/:songId" component={ListenPage} />
-          <Route path="/slideshow" component={SlideshowPage} />
-          <Route>
-            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center max-w-md mx-auto">
-              <div className="text-[10px] tracking-[0.3em] text-white/40 mb-4 uppercase font-bold">
-                404 // NEURAL_DESYNC
-              </div>
-              <h1 className="text-4xl font-black text-[#ff3800] tracking-tighter mb-4 uppercase">
-                NOT_FOUND
-              </h1>
-              <p className="font-mono text-xs text-white/60 mb-8 uppercase leading-relaxed">
-                The requested transmission pathway has collapsed. The sector query failed to resolve or has been quarantined by the archivist.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4 items-center justify-center mb-8">
-                <a
-                  href="/arcade"
-                  className="px-6 py-3 border-2 border-black bg-[#ff3800] text-black font-black uppercase text-xs tracking-wider shadow-[4px_4px_0_#000] hover:scale-105 active:scale-95 transition-all"
-                >
-                  Back to Arcade
-                </a>
-                <button
-                  onClick={() => { window.location.href = '/'; }}
-                  className="px-6 py-3 border-2 border-[#ff3800] bg-transparent text-[#ff3800] font-black uppercase text-xs tracking-wider shadow-[4px_4px_0_#ff3800] hover:scale-105 active:scale-95 transition-all cursor-pointer"
-                >
-                  Restart System
-                </button>
-              </div>
-              <div className="w-full pt-6 border-t border-white/10 text-left font-mono text-[9px] text-white/30 space-y-1">
-                <div className="flex justify-between">
-                  <span>DESYNC_GATEWAY:</span>
-                  <span className="text-white/60 font-bold uppercase">SFO1::CLIENT_ROUTER</span>
+        <Suspense fallback={
+          <div className="flex-1 flex items-center justify-center p-8 font-mono text-xs text-[#00E5FF] tracking-widest uppercase">
+            LOADING_MODULE...
+          </div>
+        }>
+          <Switch>
+            <Route path="/" component={LandingPage} />
+            <Route path="/arcade" component={RhythmHome} />
+            <Route path="/songs" component={SongSelect} />
+            <Route path="/play/:songId" component={GamePlay} />
+            <Route path="/results/:songId" component={GameResults} />
+            <Route path="/vault" component={HomePage} />
+            <Route path="/vault/collection" component={CollectionPage} />
+            <Route path="/vault/reveal" component={PackRevealPage} />
+            <Route path="/vault/forge" component={ForgePage} />
+            <Route path="/vault/leaderboard" component={LeaderboardPage} />
+            <Route path="/vault/codex" component={CodexPage} />
+            <Route path="/vault/claim" component={ClaimPage} />
+            <Route path="/vault/legal" component={LegalPage} />
+            <Route path="/vault/earn" component={EarnPage} />
+            <Route path="/vault/:userId" component={VoyeurPage} />
+            { (import.meta.env.DEV || localStorage.getItem('th3vault_dev_mode') === 'true') && (
+              <>
+                <Route path="/pitch-deck" component={PitchDeck} />
+                <Route path="/admin" component={AdminPage} />
+                <Route path="/admin/editor" component={BeatmapEditor} />
+                <Route path="/admin/card-designs" component={CardDesignShowcase} />
+              </>
+            ) }
+            <Route path="/campaign" component={Campaign} />
+            <Route path="/chapter/:month" component={Chapter} />
+            <Route path="/tutorial" component={Tutorial} />
+            <Route path="/profile" component={ProfilePage} />
+            <Route path="/options" component={OptionsRouteHandler} />
+            <Route path="/song/:songId" component={SongDetail} />
+            <Route path="/listen/:songId" component={ListenPage} />
+            <Route path="/slideshow" component={SlideshowPage} />
+            <Route>
+              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center max-w-md mx-auto">
+                <div className="text-[10px] tracking-[0.3em] text-white/40 mb-4 uppercase font-bold">
+                  404 // NEURAL_DESYNC
                 </div>
-                <div className="flex justify-between">
-                  <span>DIAGNOSTIC_CODE:</span>
-                  <span className="text-[#ff3800] font-bold">404_PATH_DECOMISSIONED</span>
+                <h1 className="text-4xl font-black text-[#ff3800] tracking-tighter mb-4 uppercase">
+                  NOT_FOUND
+                </h1>
+                <p className="font-mono text-xs text-white/60 mb-8 uppercase leading-relaxed">
+                  The requested transmission pathway has collapsed. The sector query failed to resolve or has been quarantined by the archivist.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 items-center justify-center mb-8">
+                  <a
+                    href="/arcade"
+                    className="px-6 py-3 border-2 border-black bg-[#ff3800] text-black font-black uppercase text-xs tracking-wider shadow-[4px_4px_0_#000] hover:scale-105 active:scale-95 transition-all"
+                  >
+                    Back to Arcade
+                  </a>
+                  <button
+                    onClick={() => { window.location.href = '/'; }}
+                    className="px-6 py-3 border-2 border-[#ff3800] bg-transparent text-[#ff3800] font-black uppercase text-xs tracking-wider shadow-[4px_4px_0_#ff3800] hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                  >
+                    Restart System
+                  </button>
                 </div>
-                <div className="flex justify-between">
-                  <span>QUERY_LOCATION:</span>
-                  <span className="text-white/60 font-bold uppercase">{location}</span>
+                <div className="w-full pt-6 border-t border-white/10 text-left font-mono text-[9px] text-white/30 space-y-1">
+                  <div className="flex justify-between">
+                    <span>DESYNC_GATEWAY:</span>
+                    <span className="text-white/60 font-bold uppercase">SFO1::CLIENT_ROUTER</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>ERROR_CODE:</span>
+                    <span className="text-[#ff3800] font-bold">404_PATH_DECOMISSIONED</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>QUERY_LOCATION:</span>
+                    <span className="text-white/60 font-bold uppercase">{location}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          </Route>
-        </Switch>
+            </Route>
+          </Switch>
+        </Suspense>
       </main>
 
       <LoadingToast />
