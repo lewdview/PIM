@@ -3599,6 +3599,9 @@ export default function Game() {
     ctx.restore();
 
     // ── 5. NOTES ────────────────────────────────────────────────
+    // Skip note rendering during intro stingers so the rolling highway remains completely clean
+    if (phaseRef.current === "countdown") return;
+
     let dirty = false;
     // Sort notes in back-to-front Z-order (farthest notes near horizon rendered FIRST, closest notes near hit line rendered LAST/ON TOP)
     const renderNotesSorted = [...notesRef.current].sort((a, b) => b.note.time - a.note.time);
