@@ -57,6 +57,18 @@ function safeGainRamp(
   gain.gain.exponentialRampToValueAtTime(safeEnd, c.currentTime + duration);
 }
 
+let sharedNoiseBuffer: AudioBuffer | null = null;
+
+function getSharedNoiseBuffer(c: AudioContext): AudioBuffer {
+  if (!sharedNoiseBuffer || sharedNoiseBuffer.sampleRate !== c.sampleRate) {
+    const bufferSize = c.sampleRate * 2; // 2 seconds of pre-generated noise
+    sharedNoiseBuffer = c.createBuffer(1, bufferSize, c.sampleRate);
+    const data = sharedNoiseBuffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+  }
+  return sharedNoiseBuffer;
+}
+
 function noise(
   duration: number,
   gain: number,
@@ -64,11 +76,10 @@ function noise(
 ): void {
   if (typeof localStorage !== 'undefined' && localStorage.getItem("opt_sfxEnabled") === "false") return;
   const c = getCtx();
-  const buf = c.createBuffer(1, c.sampleRate * duration, c.sampleRate);
-  const data = buf.getChannelData(0);
-  for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+  const buf = getSharedNoiseBuffer(c);
   const src = c.createBufferSource();
   src.buffer = buf;
+  src.loop = true;
   const g = c.createGain();
   safeGainRamp(g, gain * 0.8, 0.001, duration);
   if (filter) {
@@ -80,6 +91,7 @@ function noise(
     src.connect(g).connect(getDestination());
   }
   src.start();
+  src.stop(c.currentTime + duration);
 }
 
 function tone(

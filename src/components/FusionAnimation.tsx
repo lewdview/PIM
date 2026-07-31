@@ -111,6 +111,7 @@ export default function FusionAnimation({ sourceCards, resultCard, onClose, clos
       const orbitDuration = 1800; // ms
       const startTime = performance.now();
 
+      let lastOrbitUpdate = 0;
       const animateOrbit = (now: number) => {
         if (!mountedRef.current) return;
         const elapsed = now - startTime;
@@ -121,9 +122,11 @@ export default function FusionAnimation({ sourceCards, resultCard, onClose, clos
           ? 2 * progress * progress
           : 1 - Math.pow(-2 * progress + 2, 2) / 2;
 
-        setOrbitProgress(eased);
-        // Radius shrinks from 140 to 0
-        setOrbitRadius(140 * (1 - eased));
+        if (now - lastOrbitUpdate >= 33 || progress >= 1) {
+          lastOrbitUpdate = now;
+          setOrbitProgress(eased);
+          setOrbitRadius(140 * (1 - eased));
+        }
 
         if (progress < 1) {
           orbitRef.current = requestAnimationFrame(animateOrbit);

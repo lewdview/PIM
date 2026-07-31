@@ -131,9 +131,9 @@ export default function AudioPreview({
                 {[...Array(12)].map((_, i) => (
                   <motion.div
                     key={i}
-                    animate={{ height: [2, 6, 3, 8, 4] }}
-                    transition={{ repeat: Infinity, duration: 0.5 + Math.random(), ease: 'linear', delay: i * 0.05 }}
-                    style={{ width: '2px', background: isFullSong ? 'var(--color-neon-cyan)' : '#fff' }}
+                    animate={{ scaleY: [0.25, 1, 0.4, 1.2, 0.6] }}
+                    transition={{ repeat: Infinity, duration: 0.5 + (i % 5) * 0.1, ease: 'linear', delay: i * 0.05 }}
+                    style={{ width: '2px', height: '8px', transformOrigin: 'bottom', background: isFullSong ? 'var(--color-neon-cyan)' : '#fff' }}
                   />
                 ))}
               </div>

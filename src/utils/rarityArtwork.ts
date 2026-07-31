@@ -86,11 +86,15 @@ export function getCoverUrlForRarity(
   const key = String(rarity || 'common').toLowerCase();
   const rule = RARITY_ARTWORK_CONFIG[key] || RARITY_ARTWORK_CONFIG.common;
 
-  if (!rule.useAlternate) {
-    return originalUrlOrPath;
+  // Normalize any previous alternate folder back to /covers/ first
+  let url = originalUrlOrPath.replace(/\/(girls-cover|girl-covers|alternate-covers)\//g, '/covers/');
+  if (url.startsWith('girls-cover/') || url.startsWith('girl-covers/') || url.startsWith('alternate-covers/')) {
+    url = url.replace(/^(girls-cover|girl-covers|alternate-covers)\//, 'covers/');
   }
 
-  let url = originalUrlOrPath;
+  if (!rule.useAlternate) {
+    return url;
+  }
 
   // Replace /covers/ folder with the target rarity folder (e.g. /girls-cover/ or /alternate-covers/)
   if (url.includes('/covers/')) {
@@ -148,14 +152,15 @@ export function useSmartCoverArt(
     candidates.push(primary.replace(/\/(girls-cover|girl-covers)\//g, '/alternate-covers/'));
   }
 
-  // Fallback to original covers/*.jpg
-  if (original && !candidates.includes(original)) {
-    candidates.push(original);
+  // Fallback to original covers/*.jpg (ensuring normalization back to covers/)
+  const ogNormalized = original.replace(/\/(girls-cover|girl-covers|alternate-covers)\//g, '/covers/');
+  if (ogNormalized && !candidates.includes(ogNormalized)) {
+    candidates.push(ogNormalized);
   }
 
   // Ensure original .jpg fallback if original was .png
-  if (original.endsWith('.png')) {
-    const originalJpg = original.replace(/\.png$/i, '.jpg');
+  if (ogNormalized.endsWith('.png')) {
+    const originalJpg = ogNormalized.replace(/\.png$/i, '.jpg');
     if (!candidates.includes(originalJpg)) candidates.push(originalJpg);
   }
 

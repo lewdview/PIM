@@ -1241,6 +1241,21 @@ export default function Game() {
   });
   const jRef = useRef<JudgmentDisplay[]>([]);
   const jCounter = useRef(0);
+  const lastLaneHitRef = useRef<Record<number, { ts: number; type: string }>>({});
+
+  const addJudgment = useCallback((newJ: JudgmentDisplay) => {
+    const now = Date.now();
+    let write = 0;
+    const arr = jRef.current;
+    for (let i = 0; i < arr.length; i++) {
+      if (now - arr[i].ts < 600) {
+        arr[write++] = arr[i];
+      }
+    }
+    arr.length = write;
+    arr.push(newJ);
+    lastLaneHitRef.current[newJ.lane] = { ts: newJ.ts, type: newJ.type };
+  }, []);
   const songRef = useRef<GameSong | null>(null);
   const modifierRef = useRef<'vocal_isolation' | 'bass_realm' | 'corrupted_signal' | 'none'>('none');
   const [activeModifier, setActiveModifier] = useState<'vocal_isolation' | 'bass_realm' | 'corrupted_signal' | 'none'>('none');
@@ -1586,9 +1601,14 @@ export default function Game() {
     audioManager.loadSfx("fusion");
   }, []);
 
+  const lastSyncTimeRef = useRef(0);
   const syncDisplay = useCallback(() => {
-    setDisplayGs({ ...gsRef.current });
-    setDisplayJudge([...jRef.current]);
+    const now = performance.now();
+    if (now - lastSyncTimeRef.current >= 33) {
+      lastSyncTimeRef.current = now;
+      setDisplayGs({ ...gsRef.current });
+      setDisplayJudge([...jRef.current]);
+    }
   }, []);
   // audioOffset (ms) compensates for speaker latency: subtract it so hits land in time
   // with what the player hears rather than what the audio clock reports.
@@ -1840,10 +1860,7 @@ export default function Game() {
         gs.misses++;
         audioManager.playSfx("error", 0.7);
         haptics.heavyTap();
-        jRef.current = [
-          ...jRef.current.filter((x) => Date.now() - x.ts < 600),
-          { type: "MISS", lane, id: ++jCounter.current, ts: Date.now() },
-        ];
+        addJudgment({ type: "MISS", lane, id: ++jCounter.current, ts: Date.now() });
         syncDisplay();
         return;
       }
@@ -1926,7 +1943,7 @@ export default function Game() {
       }
       else {
         gs.goods++;
-        audioManager.playSfx("tap_nav", 0.1);
+        audioManager.playSfx("tap_nav", 0.15);
       }
       if (ns.note.type === "swipe") {
         haptics.doubleTap();
@@ -1939,17 +1956,14 @@ export default function Game() {
       }
       checkPowerUps(gs.combo);
 
-      jRef.current = [
-        ...jRef.current.filter((x) => Date.now() - x.ts < 600),
-        { type: j, lane, id: ++jCounter.current, ts: Date.now() },
-      ];
+      addJudgment({ type: j, lane, id: ++jCounter.current, ts: Date.now() });
 
       // ── Hit explosion effect ──
       triggerHitFx(lane, j, undefined, direction || ns.note.swipeDirection);
 
       syncDisplay();
     },
-    [getT, calcScore, checkPowerUps, syncDisplay, restoreLane, triggerHitFx],
+    [getT, calcScore, checkPowerUps, syncDisplay, restoreLane, triggerHitFx, addJudgment],
   );
 
   const completeHoldNote = useCallback(
@@ -1981,10 +1995,7 @@ export default function Game() {
         puRef.current.triggered.clear();
         haptics.error();
 
-        jRef.current = [
-          ...jRef.current.filter((x) => Date.now() - x.ts < 600),
-          { type: "MISS", lane: ns.note.lane, id: ++jCounter.current, ts: Date.now() },
-        ];
+        addJudgment({ type: "MISS", lane: ns.note.lane, id: ++jCounter.current, ts: Date.now() });
         const now = Date.now();
         if (now - lastMissTimeRef.current > 350) {
           missCountRef.current++;
@@ -2759,11 +2770,11 @@ export default function Game() {
     }
 
     // ── Dynamic Lane Hit Glows Sweep (Subtle Ambient Illumination) ──
+    const nowGlowMs = Date.now();
     for (let i = 0; i < LANE_COUNT; i++) {
-      const hits = jRef.current.filter(x => x.lane === i && Date.now() - x.ts < 500);
-      if (hits.length > 0) {
-        const latest = hits.sort((a, b) => b.ts - a.ts)[0];
-        const age = (Date.now() - latest.ts) / 500;
+      const latest = lastLaneHitRef.current[i];
+      if (latest && nowGlowMs - latest.ts < 500) {
+        const age = (nowGlowMs - latest.ts) / 500;
         const opacity = (1 - age); // smooth decay factor (0 to 1)
         
         let baseColor = "#39FF14"; // Perfect+ emerald green
@@ -3575,7 +3586,13 @@ export default function Game() {
 
     // ── 4b. NOTE PARTICLE TRAILS ────────────────────────────────
     const TRAIL_LIFETIME = 280; // ms
-    noteTrailsRef.current = noteTrailsRef.current.filter(p => nowMs - p.birthTime < TRAIL_LIFETIME);
+    let trailWrite = 0;
+    for (let i = 0; i < noteTrailsRef.current.length; i++) {
+      if (nowMs - noteTrailsRef.current[i].birthTime < TRAIL_LIFETIME) {
+        noteTrailsRef.current[trailWrite++] = noteTrailsRef.current[i];
+      }
+    }
+    noteTrailsRef.current.length = trailWrite;
     ctx.save();
     for (const p of noteTrailsRef.current) {
       const age = nowMs - p.birthTime;
@@ -4128,9 +4145,13 @@ export default function Game() {
 
     // ── 5b. HIT EXPLOSION EFFECTS ───────────────────────────────
     const FX_DURATION = 520;
-    hitFxRef.current = hitFxRef.current.filter(
-      (e) => nowMs - e.startMs < FX_DURATION,
-    );
+    let hitFxWrite = 0;
+    for (let i = 0; i < hitFxRef.current.length; i++) {
+      if (nowMs - hitFxRef.current[i].startMs < FX_DURATION) {
+        hitFxRef.current[hitFxWrite++] = hitFxRef.current[i];
+      }
+    }
+    hitFxRef.current.length = hitFxWrite;
     for (const e of hitFxRef.current) {
       const t01 = (nowMs - e.startMs) / FX_DURATION; // 0→1
       const dt = (nowMs - e.startMs) / 1000; // seconds
@@ -4315,9 +4336,13 @@ export default function Game() {
 
     // ── 5e. COMBO MILESTONE EFFECTS ──────────────────────────────
     const MILESTONE_DURATION = 1000;
-    milestoneFxRef.current = milestoneFxRef.current.filter(
-      (m) => nowMs - m.startMs < MILESTONE_DURATION,
-    );
+    let msWrite = 0;
+    for (let i = 0; i < milestoneFxRef.current.length; i++) {
+      if (nowMs - milestoneFxRef.current[i].startMs < MILESTONE_DURATION) {
+        milestoneFxRef.current[msWrite++] = milestoneFxRef.current[i];
+      }
+    }
+    milestoneFxRef.current.length = msWrite;
     for (const m of milestoneFxRef.current) {
       const t01 = (nowMs - m.startMs) / MILESTONE_DURATION;
       const alpha = 1 - t01;
@@ -4905,22 +4930,31 @@ export default function Game() {
 
         if (swipeDir) {
           const t = getTRef.current ? getTRef.current() : 0;
-          const cand = notesRef.current.find(n =>
-            !n.hit && !n.missed && n.note.type === 'swipe' &&
-            n.note.swipeDirection === swipeDir &&
-            Math.abs(n.note.time - t) < missWindow(songRef.current?.difficultyLevel ?? 5)
-          );
+          const mw = missWindow(songRef.current?.difficultyLevel ?? 5);
+          let cand: typeof notesRef.current[0] | undefined = undefined;
+          let activeHoldWithSwipe: typeof notesRef.current[0] | undefined = undefined;
+
+          for (let i = 0; i < notesRef.current.length; i++) {
+            const n = notesRef.current[i];
+            if (n.note.time < t - 1.0) continue;
+            if (n.note.time > t + mw + 0.5) break;
+
+            if (!cand && !n.hit && !n.missed && n.note.type === 'swipe' &&
+                n.note.swipeDirection === swipeDir && Math.abs(n.note.time - t) < mw) {
+              cand = n;
+            }
+            if (!activeHoldWithSwipe && n.holdActive && !n.hit && !n.missed &&
+                n.note.swipeDirection === swipeDir &&
+                Math.abs((n.note.time + (n.note.holdDuration || 0.5)) - t) < mw) {
+              activeHoldWithSwipe = n;
+            }
+            if (cand && activeHoldWithSwipe) break;
+          }
+
           if (cand && hitLaneRef.current) {
             hitLaneRef.current(cand.note.lane, swipeDir);
-          } else {
-            const activeHoldWithSwipe = notesRef.current.find(n =>
-              n.holdActive && !n.hit && !n.missed &&
-              n.note.swipeDirection === swipeDir &&
-              Math.abs((n.note.time + (n.note.holdDuration || 0.5)) - t) < missWindow(songRef.current?.difficultyLevel ?? 5)
-            );
-            if (activeHoldWithSwipe && hitSwipeReleaseRef.current) {
-              hitSwipeReleaseRef.current(activeHoldWithSwipe, swipeDir);
-            }
+          } else if (activeHoldWithSwipe && hitSwipeReleaseRef.current) {
+            hitSwipeReleaseRef.current(activeHoldWithSwipe, swipeDir);
           }
         }
       }

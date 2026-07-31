@@ -218,13 +218,28 @@ export default function BeatmapEditor() {
       audio.crossOrigin = "anonymous";
       audioRef.current = audio;
 
+      let rafId: number | null = null;
+      const syncTimeLoop = () => {
+        if (audioRef.current && !audioRef.current.paused) {
+          setCurrentTime(audioRef.current.currentTime);
+          rafId = requestAnimationFrame(syncTimeLoop);
+        }
+      };
+
       const handleTimeUpdate = () => {
         setCurrentTime(audio.currentTime);
       };
-      const handlePlay = () => setIsPlaying(true);
-      const handlePause = () => setIsPlaying(false);
+      const handlePlay = () => {
+        setIsPlaying(true);
+        rafId = requestAnimationFrame(syncTimeLoop);
+      };
+      const handlePause = () => {
+        setIsPlaying(false);
+        if (rafId) cancelAnimationFrame(rafId);
+      };
       const handleEnded = () => {
         setIsPlaying(false);
+        if (rafId) cancelAnimationFrame(rafId);
         log('Playback complete.');
       };
 
@@ -236,6 +251,7 @@ export default function BeatmapEditor() {
       audio.playbackRate = playSpeed;
 
       return () => {
+        if (rafId) cancelAnimationFrame(rafId);
         audio.removeEventListener('timeupdate', handleTimeUpdate);
         audio.removeEventListener('play', handlePlay);
         audio.removeEventListener('pause', handlePause);
