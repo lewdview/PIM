@@ -1,5 +1,4 @@
-import { useLocation } from "wouter";
-import { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, memo } from "react";
 import { getTotalScore, getTotalPlatinums, getTotalCleared } from "@/game/progress";
 import { loadOpts, keyLabel } from "@/lib/options";
 import { audioManager } from "@/game/audio";
@@ -35,7 +34,7 @@ export default function Home() {
   const [introPhase, setIntroPhase] = useState<'prompt'|'booting'|'presented'|'intro'|'intro_2'|'intro3'|'climax'|'done'>('prompt');
   const [bootText, setBootText] = useState("");
   const [isIntroTransition, setIsIntroTransition] = useState(false);
-const DigitalClock = React.memo(() => {
+const DigitalClock = memo(() => {
   const [time, setTime] = useState("");
   useEffect(() => {
     const update = () => {
