@@ -2599,6 +2599,10 @@ export default function Game() {
   //  DRAW LOOP
   // ═══════════════════════════════════════════════════════════════
   const draw = useCallback(() => {
+    if (phaseRef.current === "unmounted") return;
+    // Schedule next frame FIRST so early returns during load/pause never kill the active render loop
+    rafRef.current = requestAnimationFrame(() => drawRef.current?.());
+
     const canvas = canvasRef.current;
     const phase = phaseRef.current;
     if (!canvas || (phase !== "playing" && phase !== "rewinding" && phase !== "countdown") || pausedRef.current || isTutorialHelpOpenRef.current) return;
@@ -2765,6 +2769,17 @@ export default function Game() {
     ctx.clearRect(0, 0, W, H);
 
     // Draw pre-rendered static tracks (Double-buffering optimization)
+    if (!offscreenCanvasRef.current && W > 0 && H > 0) {
+      const diffLevel = songRef.current?.difficultyLevel ?? 5;
+      offscreenCanvasRef.current = prerenderStaticTrack(
+        W,
+        H,
+        dpr,
+        diffLevel,
+        laneColorsRef.current,
+        optsRef.current.gameTrack
+      );
+    }
     if (offscreenCanvasRef.current) {
       ctx.drawImage(offscreenCanvasRef.current, 0, 0, W, H);
     }
@@ -4721,8 +4736,6 @@ export default function Game() {
         return;
       }
     }
-
-    rafRef.current = requestAnimationFrame(() => drawRef.current?.());
   }, [getT, syncDisplay, finishGame, muteLane]);
 
   // Keep drawRef current so the single self-sustaining render loop always calls the latest draw instance
@@ -6624,17 +6637,17 @@ export default function Game() {
               ctx.resetTransform();
               ctx.scale(dpr, dpr);
             }
-            // Pre-render static track surface offscreen cache
-            const diffLevel = songRef.current?.difficultyLevel ?? 5;
-            offscreenCanvasRef.current = prerenderStaticTrack(
-              w.clientWidth,
-              w.clientHeight,
-              dpr,
-              diffLevel,
-              laneColorsRef.current,
-              optsRef.current.gameTrack
-            );
           }
+          // Pre-render static track surface offscreen cache
+          const diffLevel = songRef.current?.difficultyLevel ?? 5;
+          offscreenCanvasRef.current = prerenderStaticTrack(
+            w.clientWidth,
+            w.clientHeight,
+            dpr,
+            diffLevel,
+            laneColorsRef.current,
+            optsRef.current.gameTrack
+          );
         }
       }
 
