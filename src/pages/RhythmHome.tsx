@@ -1,3 +1,4 @@
+import { useLocation } from "wouter";
 import React, { useEffect, useState, useCallback, memo } from "react";
 import { getTotalScore, getTotalPlatinums, getTotalCleared } from "@/game/progress";
 import { loadOpts, keyLabel } from "@/lib/options";
