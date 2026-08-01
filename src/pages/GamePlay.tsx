@@ -646,64 +646,19 @@ function prerenderStaticTrack(
   return off;
 }
 
-export function getStageIntroTheme(stage: number, laneColors: [string, string, string]) {
+export function getSongIntroTheme(laneColors: [string, string, string]) {
   const c0 = laneColors[0] || "#FF1493";
   const c1 = laneColors[1] || "#00E5FF";
   const c2 = laneColors[2] || "#39FF14";
 
-  switch (stage) {
-    case 1:
-      return {
-        stageName: "STAGE 1",
-        subLabelColor: c1,
-        subLabelGlow: `0 0 16px ${c1}`,
-        titleGradient: `linear-gradient(135deg, #FFFFFF 0%, ${c1} 45%, ${c2} 100%)`,
-        titleFilter: `drop-shadow(0 0 35px ${c1}) drop-shadow(0 0 65px ${c2})`,
-        goGradient: `linear-gradient(135deg, #FFFFFF 0%, ${c2} 50%, ${c1} 100%)`,
-        goFilter: `drop-shadow(0 0 45px ${c2}) drop-shadow(0 0 90px ${c1})`,
-      };
-    case 2:
-      return {
-        stageName: "STAGE 2",
-        subLabelColor: "#FFD700",
-        subLabelGlow: "0 0 16px rgba(255,215,0,0.9)",
-        titleGradient: `linear-gradient(135deg, #FFFFFF 0%, #FFD700 40%, ${c0} 70%, ${c1} 100%)`,
-        titleFilter: `drop-shadow(0 0 35px #FFD700) drop-shadow(0 0 65px ${c0})`,
-        goGradient: `linear-gradient(135deg, #FFFFFF 0%, ${c0} 50%, #FFD700 100%)`,
-        goFilter: `drop-shadow(0 0 45px ${c0}) drop-shadow(0 0 90px #FFD700)`,
-      };
-    case 3:
-      return {
-        stageName: "STAGE 3",
-        subLabelColor: "#FF0055",
-        subLabelGlow: "0 0 16px rgba(255,0,85,0.9)",
-        titleGradient: `linear-gradient(135deg, #FFFFFF 0%, #FF0055 40%, #FFB800 70%, ${c2} 100%)`,
-        titleFilter: `drop-shadow(0 0 35px #FF0055) drop-shadow(0 0 65px #FFB800)`,
-        goGradient: `linear-gradient(135deg, #FFFFFF 0%, #FFB800 50%, #FF0055 100%)`,
-        goFilter: `drop-shadow(0 0 45px #FFB800) drop-shadow(0 0 90px #FF0055)`,
-      };
-    case 4:
-      return {
-        stageName: "STAGE 4",
-        subLabelColor: "#00F5D4",
-        subLabelGlow: "0 0 16px rgba(0,245,212,0.9)",
-        titleGradient: `linear-gradient(135deg, #FFFFFF 0%, #00F5D4 40%, #7B2CBF 70%, ${c1} 100%)`,
-        titleFilter: `drop-shadow(0 0 35px #00F5D4) drop-shadow(0 0 65px #7B2CBF)`,
-        goGradient: `linear-gradient(135deg, #FFFFFF 0%, #7B2CBF 50%, #00F5D4 100%)`,
-        goFilter: `drop-shadow(0 0 45px #7B2CBF) drop-shadow(0 0 90px #00F5D4)`,
-      };
-    case 5:
-    default:
-      return {
-        stageName: "FINAL STAGE",
-        subLabelColor: "#FFD700",
-        subLabelGlow: "0 0 20px rgba(255,215,0,1)",
-        titleGradient: "linear-gradient(135deg, #FFFFFF 0%, #FFD700 35%, #FF003C 70%, #39FF14 100%)",
-        titleFilter: "drop-shadow(0 0 40px #FFD700) drop-shadow(0 0 75px #FF003C)",
-        goGradient: "linear-gradient(135deg, #FFFFFF 0%, #FF003C 40%, #FFD700 70%, #39FF14 100%)",
-        goFilter: "drop-shadow(0 0 55px #FF003C) drop-shadow(0 0 100px #FFD700)",
-      };
-  }
+  return {
+    subLabelColor: c1,
+    subLabelGlow: `0 0 16px ${c1}`,
+    titleGradient: `linear-gradient(135deg, #FFFFFF 0%, ${c0} 35%, ${c1} 70%, ${c2} 100%)`,
+    titleFilter: `drop-shadow(0 0 35px ${c0}) drop-shadow(0 0 65px ${c1})`,
+    goGradient: `linear-gradient(135deg, #FFFFFF 0%, ${c2} 40%, ${c1} 70%, ${c0} 100%)`,
+    goFilter: `drop-shadow(0 0 45px ${c2}) drop-shadow(0 0 90px ${c1})`,
+  };
 }
 
 function getAccuracy(pp: number, p: number, g: number, m: number) {
@@ -8359,7 +8314,7 @@ export default function Game() {
 
           {/* Countdown: TRANSMISSION INCOMING -> ARE YOU READY??! -> GO! */}
           {phase === "countdown" && (() => {
-            const stTheme = getStageIntroTheme(currentStage, laneColorsRef.current);
+            const songTheme = getSongIntroTheme(laneColorsRef.current);
             return (
               <div
                 className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-40 overflow-hidden"
@@ -8372,20 +8327,20 @@ export default function Game() {
                   <div className="flex flex-col items-center justify-center px-4">
                     <div
                       className="font-mono font-black text-center tracking-[0.35em] uppercase text-xs md:text-sm mb-3 flex items-center justify-center gap-2.5"
-                      style={{ color: stTheme.subLabelColor, textShadow: stTheme.subLabelGlow }}
+                      style={{ color: songTheme.subLabelColor, textShadow: songTheme.subLabelGlow }}
                     >
-                      <TransmissionIcon size={20} className="animate-pulse" color={stTheme.subLabelColor} />
-                      <span>{stTheme.stageName} · SIGNAL DETECTED</span>
-                      <TransmissionIcon size={20} className="animate-pulse" color={stTheme.subLabelColor} />
+                      <TransmissionIcon size={20} className="animate-pulse" color={songTheme.subLabelColor} />
+                      <span>INCOMING SIGNAL</span>
+                      <TransmissionIcon size={20} className="animate-pulse" color={songTheme.subLabelColor} />
                     </div>
                     <div
                       className="font-mono font-black text-center tracking-tight text-3xl sm:text-5xl md:text-6xl lg:text-7xl"
                       style={{
                         lineHeight: 1.1,
-                        background: stTheme.titleGradient,
+                        background: songTheme.titleGradient,
                         WebkitBackgroundClip: "text",
                         WebkitTextFillColor: "transparent",
-                        filter: stTheme.titleFilter,
+                        filter: songTheme.titleFilter,
                         fontFamily: '"Impact", "Arial Black", sans-serif',
                       }}
                     >
@@ -8398,18 +8353,18 @@ export default function Game() {
                   <div className="flex flex-col items-center justify-center px-4">
                     <div
                       className="font-mono font-black text-center tracking-[0.35em] uppercase text-xs md:text-sm mb-3"
-                      style={{ color: stTheme.subLabelColor, textShadow: stTheme.subLabelGlow }}
+                      style={{ color: songTheme.subLabelColor, textShadow: songTheme.subLabelGlow }}
                     >
-                      ✦ {stTheme.stageName} · PREPARE FOR HIGHWAY ✦
+                      ✦ PREPARE FOR HIGHWAY ✦
                     </div>
                     <div
                       className="font-mono font-black text-center tracking-tight text-3xl sm:text-5xl md:text-6xl lg:text-7xl"
                       style={{
                         lineHeight: 1.1,
-                        background: stTheme.titleGradient,
+                        background: songTheme.titleGradient,
                         WebkitBackgroundClip: "text",
                         WebkitTextFillColor: "transparent",
-                        filter: stTheme.titleFilter,
+                        filter: songTheme.titleFilter,
                         fontFamily: '"Impact", "Arial Black", sans-serif',
                       }}
                     >
@@ -8423,10 +8378,10 @@ export default function Game() {
                     className="font-mono font-black text-center text-7xl sm:text-8xl md:text-9xl lg:text-[140px]"
                     style={{
                       lineHeight: 1,
-                      background: stTheme.goGradient,
+                      background: songTheme.goGradient,
                       WebkitBackgroundClip: "text",
                       WebkitTextFillColor: "transparent",
-                      filter: stTheme.goFilter,
+                      filter: songTheme.goFilter,
                       fontFamily: '"Impact", "Arial Black", sans-serif',
                     }}
                   >
