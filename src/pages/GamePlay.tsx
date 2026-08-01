@@ -646,6 +646,66 @@ function prerenderStaticTrack(
   return off;
 }
 
+export function getStageIntroTheme(stage: number, laneColors: [string, string, string]) {
+  const c0 = laneColors[0] || "#FF1493";
+  const c1 = laneColors[1] || "#00E5FF";
+  const c2 = laneColors[2] || "#39FF14";
+
+  switch (stage) {
+    case 1:
+      return {
+        stageName: "STAGE 1",
+        subLabelColor: c1,
+        subLabelGlow: `0 0 16px ${c1}`,
+        titleGradient: `linear-gradient(135deg, #FFFFFF 0%, ${c1} 45%, ${c2} 100%)`,
+        titleFilter: `drop-shadow(0 0 35px ${c1}) drop-shadow(0 0 65px ${c2})`,
+        goGradient: `linear-gradient(135deg, #FFFFFF 0%, ${c2} 50%, ${c1} 100%)`,
+        goFilter: `drop-shadow(0 0 45px ${c2}) drop-shadow(0 0 90px ${c1})`,
+      };
+    case 2:
+      return {
+        stageName: "STAGE 2",
+        subLabelColor: "#FFD700",
+        subLabelGlow: "0 0 16px rgba(255,215,0,0.9)",
+        titleGradient: `linear-gradient(135deg, #FFFFFF 0%, #FFD700 40%, ${c0} 70%, ${c1} 100%)`,
+        titleFilter: `drop-shadow(0 0 35px #FFD700) drop-shadow(0 0 65px ${c0})`,
+        goGradient: `linear-gradient(135deg, #FFFFFF 0%, ${c0} 50%, #FFD700 100%)`,
+        goFilter: `drop-shadow(0 0 45px ${c0}) drop-shadow(0 0 90px #FFD700)`,
+      };
+    case 3:
+      return {
+        stageName: "STAGE 3",
+        subLabelColor: "#FF0055",
+        subLabelGlow: "0 0 16px rgba(255,0,85,0.9)",
+        titleGradient: `linear-gradient(135deg, #FFFFFF 0%, #FF0055 40%, #FFB800 70%, ${c2} 100%)`,
+        titleFilter: `drop-shadow(0 0 35px #FF0055) drop-shadow(0 0 65px #FFB800)`,
+        goGradient: `linear-gradient(135deg, #FFFFFF 0%, #FFB800 50%, #FF0055 100%)`,
+        goFilter: `drop-shadow(0 0 45px #FFB800) drop-shadow(0 0 90px #FF0055)`,
+      };
+    case 4:
+      return {
+        stageName: "STAGE 4",
+        subLabelColor: "#00F5D4",
+        subLabelGlow: "0 0 16px rgba(0,245,212,0.9)",
+        titleGradient: `linear-gradient(135deg, #FFFFFF 0%, #00F5D4 40%, #7B2CBF 70%, ${c1} 100%)`,
+        titleFilter: `drop-shadow(0 0 35px #00F5D4) drop-shadow(0 0 65px #7B2CBF)`,
+        goGradient: `linear-gradient(135deg, #FFFFFF 0%, #7B2CBF 50%, #00F5D4 100%)`,
+        goFilter: `drop-shadow(0 0 45px #7B2CBF) drop-shadow(0 0 90px #00F5D4)`,
+      };
+    case 5:
+    default:
+      return {
+        stageName: "FINAL STAGE",
+        subLabelColor: "#FFD700",
+        subLabelGlow: "0 0 20px rgba(255,215,0,1)",
+        titleGradient: "linear-gradient(135deg, #FFFFFF 0%, #FFD700 35%, #FF003C 70%, #39FF14 100%)",
+        titleFilter: "drop-shadow(0 0 40px #FFD700) drop-shadow(0 0 75px #FF003C)",
+        goGradient: "linear-gradient(135deg, #FFFFFF 0%, #FF003C 40%, #FFD700 70%, #39FF14 100%)",
+        goFilter: "drop-shadow(0 0 55px #FF003C) drop-shadow(0 0 100px #FFD700)",
+      };
+  }
+}
+
 function getAccuracy(pp: number, p: number, g: number, m: number) {
   const tot = pp + p + g + m;
   return tot > 0 ? Math.round(((pp + p * 0.9 + g * 0.5) / tot) * 100) : 0;
@@ -8298,81 +8358,84 @@ export default function Game() {
           )}
 
           {/* Countdown: TRANSMISSION INCOMING -> ARE YOU READY??! -> GO! */}
-          {phase === "countdown" && (
-            <div
-              className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-40 overflow-hidden"
-              style={{
-                background: "radial-gradient(ellipse 70% 60% at 50% 50%, rgba(14,16,40,0.55) 0%, rgba(8,8,18,0.75) 80%)",
-                backdropFilter: "blur(3px)",
-              }}
-            >
-              {countdown === 2 && (
-                <div className="flex flex-col items-center justify-center px-4">
-                  <div
-                    className="font-mono font-black text-center tracking-[0.35em] uppercase text-xs md:text-sm text-cyan-400 mb-3 flex items-center justify-center gap-2.5"
-                    style={{ textShadow: "0 0 16px rgba(0,229,255,0.9)" }}
-                  >
-                    <TransmissionIcon size={20} className="animate-pulse text-cyan-400" />
-                    <span>SIGNAL DETECTED</span>
-                    <TransmissionIcon size={20} className="animate-pulse text-cyan-400" />
+          {phase === "countdown" && (() => {
+            const stTheme = getStageIntroTheme(currentStage, laneColorsRef.current);
+            return (
+              <div
+                className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-40 overflow-hidden"
+                style={{
+                  background: "radial-gradient(ellipse 70% 60% at 50% 50%, rgba(14,16,40,0.55) 0%, rgba(8,8,18,0.75) 80%)",
+                  backdropFilter: "blur(3px)",
+                }}
+              >
+                {countdown === 2 && (
+                  <div className="flex flex-col items-center justify-center px-4">
+                    <div
+                      className="font-mono font-black text-center tracking-[0.35em] uppercase text-xs md:text-sm mb-3 flex items-center justify-center gap-2.5"
+                      style={{ color: stTheme.subLabelColor, textShadow: stTheme.subLabelGlow }}
+                    >
+                      <TransmissionIcon size={20} className="animate-pulse" color={stTheme.subLabelColor} />
+                      <span>{stTheme.stageName} · SIGNAL DETECTED</span>
+                      <TransmissionIcon size={20} className="animate-pulse" color={stTheme.subLabelColor} />
+                    </div>
+                    <div
+                      className="font-mono font-black text-center tracking-tight text-3xl sm:text-5xl md:text-6xl lg:text-7xl"
+                      style={{
+                        lineHeight: 1.1,
+                        background: stTheme.titleGradient,
+                        WebkitBackgroundClip: "text",
+                        WebkitTextFillColor: "transparent",
+                        filter: stTheme.titleFilter,
+                        fontFamily: '"Impact", "Arial Black", sans-serif',
+                      }}
+                    >
+                      TRANSMISSION INCOMING
+                    </div>
                   </div>
+                )}
+
+                {countdown === 1 && (
+                  <div className="flex flex-col items-center justify-center px-4">
+                    <div
+                      className="font-mono font-black text-center tracking-[0.35em] uppercase text-xs md:text-sm mb-3"
+                      style={{ color: stTheme.subLabelColor, textShadow: stTheme.subLabelGlow }}
+                    >
+                      ✦ {stTheme.stageName} · PREPARE FOR HIGHWAY ✦
+                    </div>
+                    <div
+                      className="font-mono font-black text-center tracking-tight text-3xl sm:text-5xl md:text-6xl lg:text-7xl"
+                      style={{
+                        lineHeight: 1.1,
+                        background: stTheme.titleGradient,
+                        WebkitBackgroundClip: "text",
+                        WebkitTextFillColor: "transparent",
+                        filter: stTheme.titleFilter,
+                        fontFamily: '"Impact", "Arial Black", sans-serif',
+                      }}
+                    >
+                      ARE YOU READY??!
+                    </div>
+                  </div>
+                )}
+
+                {countdown === 0 && (
                   <div
-                    className="font-mono font-black text-center tracking-tight text-3xl sm:text-5xl md:text-6xl lg:text-7xl"
+                    className="font-mono font-black text-center text-7xl sm:text-8xl md:text-9xl lg:text-[140px]"
                     style={{
-                      lineHeight: 1.1,
-                      background: "linear-gradient(135deg, #FFFFFF 0%, #00E5FF 50%, #39FF14 100%)",
+                      lineHeight: 1,
+                      background: stTheme.goGradient,
                       WebkitBackgroundClip: "text",
                       WebkitTextFillColor: "transparent",
-                      filter: "drop-shadow(0 0 35px rgba(0,229,255,0.9)) drop-shadow(0 0 65px rgba(57,255,20,0.7))",
+                      filter: stTheme.goFilter,
                       fontFamily: '"Impact", "Arial Black", sans-serif',
                     }}
                   >
-                    TRANSMISSION INCOMING
+                    GO!
                   </div>
-                </div>
-              )}
-
-              {countdown === 1 && (
-                <div className="flex flex-col items-center justify-center px-4">
-                  <div
-                    className="font-mono font-black text-center tracking-[0.35em] uppercase text-xs md:text-sm text-pink-400 mb-3"
-                    style={{ textShadow: "0 0 16px rgba(255,20,147,0.9)" }}
-                  >
-                    ✦ PREPARE FOR HIGHWAY ✦
-                  </div>
-                  <div
-                    className="font-mono font-black text-center tracking-tight text-3xl sm:text-5xl md:text-6xl lg:text-7xl"
-                    style={{
-                      lineHeight: 1.1,
-                      background: "linear-gradient(135deg, #FFFFFF 0%, #FF1493 40%, #00E5FF 70%, #39FF14 100%)",
-                      WebkitBackgroundClip: "text",
-                      WebkitTextFillColor: "transparent",
-                      filter: "drop-shadow(0 0 35px rgba(255,20,147,0.85)) drop-shadow(0 0 65px rgba(0,229,255,0.65))",
-                      fontFamily: '"Impact", "Arial Black", sans-serif',
-                    }}
-                  >
-                    ARE YOU READY??!
-                  </div>
-                </div>
-              )}
-
-              {countdown === 0 && (
-                <div
-                  className="font-mono font-black text-center text-7xl sm:text-8xl md:text-9xl lg:text-[140px]"
-                  style={{
-                    lineHeight: 1,
-                    background: "linear-gradient(135deg, #FFFFFF 0%, #39FF14 50%, #00E5FF 100%)",
-                    WebkitBackgroundClip: "text",
-                    WebkitTextFillColor: "transparent",
-                    filter: "drop-shadow(0 0 45px rgba(57,255,20,0.95)) drop-shadow(0 0 90px rgba(0,229,255,0.85))",
-                    fontFamily: '"Impact", "Arial Black", sans-serif',
-                  }}
-                >
-                  GO!
-                </div>
-              )}
-            </div>
-          )}
+                )}
+              </div>
+            );
+          })()}
 
           {/* Continue overlay */}
           {phase === "continue" && (
