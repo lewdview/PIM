@@ -79,6 +79,16 @@ export const STAGEIFICATION_CONFIG = {
 // Fallback synthetic audio loop for missing song files (Item 9)
 const FALLBACK_SYNTH_AUDIO = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
 
+function sanitizeMediaUrl(url: string): string {
+  if (!url || url.startsWith('data:')) return url;
+  try {
+    const decoded = decodeURI(url);
+    return encodeURI(decoded);
+  } catch {
+    return url;
+  }
+}
+
 // Helper to resolve URLs dynamically
 function resolveSongUrls(song: any, useLocal = false): GameSong {
   const dayStr = String(song.day);
@@ -116,8 +126,8 @@ function resolveSongUrls(song: any, useLocal = false): GameSong {
 
   return {
     ...song,
-    audioUrl,
-    coverArt
+    audioUrl: sanitizeMediaUrl(audioUrl),
+    coverArt: sanitizeMediaUrl(coverArt)
   };
 }
 
