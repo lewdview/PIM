@@ -3,447 +3,451 @@
  *
  * Visual DNA: Apple Music × Monument Valley × Arcane × Persona 5.
  *
- * Overhaul Updates:
- * 1. Interactive 3D Moveable Clickable Ecosystem Sphere/Globe (drag/swipe to rotate in 3D space, spherical node coordinates, glass inspector).
- * 2. Full-Section Cinematic Stepper Animation ("From One Song... Every Single Day") with smooth scale & fade morphs and step tab progress.
- * 3. Pure Custom SVGs & Vector Icons (Zero emoticons/emojis anywhere).
+ * Features:
+ * - Dynamic Day Switcher Command Palette (⌘K) to preview any song (Day 1 to Current Day).
+ * - Strict Looking-Ahead Protection: Blocks viewing future days beyond current day.
+ * - 3D Interactive Card Tilt, Holographic Vinyl Disc & Realtime Waveform Canvas.
+ * - Interactive Museum Pedestal, Audio Stems, Heatmap Filter Console & Tooltips.
+ * - 3D Orbit Ecosystem Constellation & Interactive Pillar Node Inspector Drawer.
+ * - Centralized SFX triggers via audioManager.
+ *
+ * Routes: /hero, /hero/day-:dayParam, /hero/:dayParam
  */
 
-import { useState, useEffect, useRef, useMemo, useCallback, Fragment } from 'react';
+import { useEffect, useState, useRef, useMemo, Fragment, useCallback } from 'react';
+import { motion, useInView, AnimatePresence } from 'framer-motion';
 import { Link, useLocation, useParams, useSearch } from 'wouter';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronDown, Play, Pause, Volume2, Sparkles, X, Info, Disc, ExternalLink,
-  Flame, Shield, Layers, Award, Search, Lock, ChevronLeft, ChevronRight, Command,
-  Globe, Fingerprint, Film, Sliders, Compass, Gamepad2, Moon, Sun, Headphones, Calendar, RotateCw
+  Flame, Shield, Layers, Award, Search, Lock, ChevronLeft, ChevronRight, Command, Calendar
 } from 'lucide-react';
+import { getCurrentDay, getTimeUntilNextDay, formatDate } from '../utils/dayCalc';
 import { extractPalette, getFallbackPalette, type ExtractedPalette } from '../utils/extractPalette';
 import { audioManager } from '../game/audio';
 import '../styles/HeroLandingPage.css';
-import { getCurrentDay, formatDate } from '../utils/dayCalc';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// Types & Data Structures
+// Types
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-interface SongCatalogItem {
+interface SongEntry {
+  id: string;
   day: number;
-  date: string;
   title: string;
   artist: string;
   duration: number;
   coverArt: string;
   audioUrl?: string;
-  bpm?: number;
-  mood?: string;
-  ceLyricsUrl?: string;
-  ceAsciiUrl?: string;
-  cePoemUrl?: string;
-  ceLrcUrl?: string;
-  ceVideoUrl?: string;
-  baseProof?: string;
+  bpm: number;
+  mood: string;
 }
 
-interface EcosystemNode {
+interface EcosystemPillar {
   id: string;
   label: string;
   desc: string;
-  stat: string;
-  tag: string;
-  url: string;
   longDesc: string;
-  lat: number; // 3D spherical latitude
-  lon: number; // 3D spherical longitude
-  icon: React.ReactNode;
+  angle: number;
+  tag: string;
+  stat: string;
 }
 
-const ECOSYSTEM_NODES_3D: EcosystemNode[] = [
-  {
-    id: 'main',
-    label: 'th3scr1b3.art',
-    desc: '365 Warp — Main Hub',
-    stat: '365 Releases',
-    tag: 'MAIN NODE',
-    url: 'https://th3scr1b3.art',
-    longDesc: 'The primary narrative engine and daily song drop portal for th3scr1b3. Releases one original track every single day.',
-    lat: 0,
-    lon: 0,
-    icon: <Globe size={16} />,
-  },
-  {
-    id: 'user',
-    label: 'user.th3scr1b3.art',
-    desc: 'Sovereign Identity Hub',
-    stat: 'Identity Passport',
-    tag: 'AUTH NODE',
-    url: 'https://user.th3scr1b3.art',
-    longDesc: 'Cryptographic identity passport and telemetry aggregator synchronizing your session and card collection across all endpoints.',
-    lat: 45,
-    lon: 72,
-    icon: <Fingerprint size={16} />,
-  },
-  {
-    id: 'pim',
-    label: 'PIM : TH3V4ULT',
-    desc: 'Arcade Rhythm Engine',
-    stat: 'Live Gameplay',
-    tag: 'PLAY NODE',
-    url: 'https://pim.th3scr1b3.art',
-    longDesc: 'Interactive arcade rhythm game cabinet. Play today’s release, collect rare cards, and climb the sovereign leaderboard.',
-    lat: -30,
-    lon: 144,
-    icon: <Gamepad2 size={16} />,
-  },
-  {
-    id: 'video',
-    label: '365 POSTER',
-    desc: 'Visual Archive',
-    stat: '365 Art Posters',
-    tag: 'VISUAL NODE',
-    url: 'https://video.th3scr1b3.art',
-    longDesc: 'HD poster archive and visual art generator showcasing cover artwork and motion posters for every daily drop.',
-    lat: 60,
-    lon: 216,
-    icon: <Film size={16} />,
-  },
-  {
-    id: 'ce',
-    label: 'SONG ANALYZER',
-    desc: 'CE Telemetry Engine',
-    stat: 'Spectral Telemetry',
-    tag: 'CE NODE',
-    url: 'https://ce.th3scr1b3.art',
-    longDesc: 'Audio spectral analysis, synced LRC lyric parser, ASCII art generator, and deep wave telemetry engine.',
-    lat: -50,
-    lon: 288,
-    icon: <Sliders size={16} />,
-  },
-  {
-    id: 'mood',
-    label: 'MOOD MAP',
-    desc: 'Poem & Valence Map',
-    stat: 'Emotional Topology',
-    tag: 'MOOD NODE',
-    url: 'https://th3scr1b3.art/mood-map',
-    longDesc: 'Interactive emotional topology map organizing all 365 daily tracks by valence, energy, and poetic themes.',
-    lat: 20,
-    lon: 330,
-    icon: <Compass size={16} />,
-  },
-  {
-    id: 'base',
-    label: 'BASE L2 MINI-APP',
-    desc: 'On-Chain Proofs',
-    stat: 'Base Network',
-    tag: 'WEB3 NODE',
-    url: 'https://base.th3scr1b3.art',
-    longDesc: 'Farcaster Frame integration and Base L2 smart contract protocol for on-chain song drop verification and card minting.',
-    lat: -70,
-    lon: 45,
-    icon: <Shield size={16} />,
-  },
-];
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Constants
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 const JOURNEY_STEPS = [
-  {
-    step: 1,
-    badge: 'PHASE 01 // CREATION',
-    title: 'One Original Song.',
-    desc: 'Written, recorded, mixed, and mastered from scratch every single day. No filler, no backlogs — pure raw creative momentum.',
-    icon: <Disc size={28} />,
-  },
-  {
-    step: 2,
-    badge: 'PHASE 02 // CADENCE',
-    title: 'Every Single Day.',
-    desc: '365 consecutive daily drops per year. A living archive of sound, poetry, and motion artwork evolving in real time.',
-    icon: <Calendar size={28} />,
-  },
-  {
-    step: 3,
-    badge: 'PHASE 03 // ENGAGEMENT',
-    title: 'Listen • Play • Collect.',
-    desc: 'Stream the full stem, play the rhythm beatmap in PIM : TH3V4ULT, and collect digital card drops to build your sovereign binder.',
-    icon: <Headphones size={28} />,
-  },
-  {
-    step: 4,
-    badge: 'PHASE 04 // REPEAT',
-    title: 'Return Tomorrow.',
-    desc: 'The cycle resets at midnight UTC. A fresh song drop, new cover art palette, and unlocked beatmaps await every morning.',
-    icon: <Sparkles size={28} />,
-  },
+  { icon: '♪', label: 'Song' },
+  { icon: '🎮', label: 'Rhythm Level' },
+  { icon: '🃏', label: 'Collectible Card' },
+  { icon: '📦', label: 'Reward Pack' },
+  { icon: '💎', label: 'Shards' },
+  { icon: '📚', label: 'Archive' },
 ];
 
 const STORY_LINES = [
-  'It started as an experiment.',
-  'Could a person make a song a day?',
-  'Not a loop. Not a draft. A full piece.',
+  'Years ago I lost much of my music in a hard drive failure.',
+  'I recovered what I could.',
+  'Rather than letting those songs disappear...',
   'I decided to release one every day.',
-  'That was Day 1.',
-  'Today is Day 208.',
-  'Tomorrow, another.',
-  'The archive grows. The vault fills.',
-  'One song at a time.',
+  'Every release becomes something you can play, collect, and remember.',
 ];
 
-const ROADMAP_GENS = [
-  { gen: 'GEN 1', title: 'The Daily Warp', desc: 'Days 1-100 · 100 songs, baseline mechanics, initial card drops', active: true },
-  { gen: 'GEN 2', title: 'The Sound Engine', desc: 'Days 101-200 · Multi-stem audio player, beatmap editor, smart contracts', active: true },
-  { gen: 'GEN 3', title: 'The Museum Exhibit', desc: 'Days 201-300 · Dynamic palette extraction, 3D ecosystem globe, multi-song landing pages', active: true },
-  { gen: 'GEN 4', title: 'The Full Circle', desc: 'Days 301-365 · Final season box set, physical vinyl press, full archive completion', active: false },
+const ECOSYSTEM_NODES: EcosystemPillar[] = [
+  { id: '365', label: '365', desc: 'Daily releases', longDesc: '365 original songs composed, mixed, and released across 365 consecutive days.', angle: 270, tag: 'TEMPORAL', stat: '365 TRACKS' },
+  { id: 'mood', label: 'Mood', desc: 'Emotional tagging', longDesc: 'High-dimensional valence & mood tagging categorizing tracks from hyper-dark to synth light.', angle: 315, tag: 'VALENCE', stat: '12 MOODS' },
+  { id: 'lyrics', label: 'Lyrics', desc: 'Every word', longDesc: 'Complete poetic manuscripts, verse annotations, and hand-crafted lyric sheets.', angle: 0, tag: 'POETRY', stat: 'FULL LYRICS' },
+  { id: 'ascii', label: 'ASCII', desc: 'Text art', longDesc: 'Cyber brutalist ASCII typography, retro terminal visuals, and console art.', angle: 45, tag: 'BRUTALIST', stat: 'CLI ART' },
+  { id: 'poems', label: 'Poems', desc: 'Verse & flow', longDesc: 'Original spoken word, lyrical prose, and literary companion pieces.', angle: 90, tag: 'LITERARY', stat: 'PROSE' },
+  { id: 'lrc', label: 'LRC', desc: 'Synced lyrics', longDesc: 'Millisecond-accurate synced LRC timeline tracks for live karaoke & arcade HUDs.', angle: 135, tag: 'SYNCHRONIZED', stat: 'TIMELINES' },
+  { id: 'videos', label: 'Videos', desc: 'Visual stories', longDesc: 'Cinematic visualizers, AI music videos, and generative video backdrops.', angle: 180, tag: 'CINEMATIC', stat: '4K VISUALS' },
+  { id: 'base', label: 'Base', desc: 'On-chain proof', longDesc: 'Cryptographic provenance anchored on Base Mainnet. Sovereign collector status.', angle: 225, tag: 'CRYPTOGRAPHIC', stat: 'BASE L2' },
 ];
 
-const ECOSYSTEM_INSPECTOR_ITEMS = [
-  { key: 'Day #', getVal: (s: SongCatalogItem | null) => `Day ${s?.day || '---'}` },
-  { key: 'Title', getVal: (s: SongCatalogItem | null) => s?.title || '---' },
-  { key: 'Artist', getVal: (s: SongCatalogItem | null) => s?.artist || 'th3scr1b3' },
-  { key: 'Duration', getVal: (s: SongCatalogItem | null) => formatDuration(s?.duration) },
-  { key: 'Tempo', getVal: (s: SongCatalogItem | null) => `${s?.bpm || 120} BPM` },
-  { key: 'Valence / Mood', getVal: (s: SongCatalogItem | null) => (s?.mood || 'Dark').toUpperCase() },
-  { key: 'Base On-Chain Proof', getVal: (s: SongCatalogItem | null) => s?.baseProof || '0x71c9...3f8a (Base L2 Verified)' },
-  { key: 'CE Telemetry Engine', getVal: () => 'ONLINE / ACTIVE' },
+const SECTION_IDS = [
+  { id: 'hero-top', label: 'PIM' },
+  { id: 'hero-drop', label: 'TODAY' },
+  { id: 'hero-journey', label: 'FLOW' },
+  { id: 'hero-collection', label: '365' },
+  { id: 'hero-story', label: 'ORIGIN' },
+  { id: 'hero-gameplay', label: 'PROOF' },
+  { id: 'hero-ecosystem', label: 'ORBIT' },
+  { id: 'hero-stats', label: 'METRICS' },
+  { id: 'hero-roadmap', label: 'FUTURE' },
+  { id: 'hero-cta', label: 'PLAY' },
 ];
 
-function formatDuration(seconds?: number): string {
-  if (!seconds) return '--:--';
+const ROADMAP_GEN1_FEATURES = ['Stories', 'Audio Forge', 'Weekly Events', 'Community Remixes'];
+const ROADMAP_GEN2_FEATURES = ['Creator Platform', 'Upload Your Music', 'Automatic Experiences'];
+
+const CONSTELLATION_RADIUS = 40;
+const CONSTELLATION_CENTER = 50;
+
+function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m}:${s < 10 ? '0' : ''}${s}`;
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+function songIdFromDay(day: number): string {
+  return `day-${String(day).padStart(3, '0')}`;
 }
 
 const EASE_OUT: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 3D SPHERICAL ECOSYSTEM GLOBE COMPONENT
+// Particle Canvas
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-function EcosystemGlobe3D({
-  onSelectNode,
-  selectedNodeId,
-}: {
-  onSelectNode: (node: EcosystemNode) => void;
-  selectedNodeId?: string;
-}) {
-  const [rotation, setRotation] = useState({ x: -15, y: 35 });
-  const isDragging = useRef(false);
-  const lastMouse = useRef({ x: 0, y: 0 });
+interface Particle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  radius: number;
+  color: string;
+  alpha: number;
+  life: number;
+  maxLife: number;
+}
 
-  const handleMouseDown = (e: React.MouseEvent | React.TouchEvent) => {
-    isDragging.current = true;
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    lastMouse.current = { x: clientX, y: clientY };
-  };
-
-  const handleMouseMove = useCallback((e: MouseEvent | TouchEvent) => {
-    if (!isDragging.current) return;
-    const clientX = 'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
-
-    const deltaX = clientX - lastMouse.current.x;
-    const deltaY = clientY - lastMouse.current.y;
-
-    setRotation(prev => ({
-      x: Math.max(-60, Math.min(60, prev.x - deltaY * 0.4)),
-      y: prev.y + deltaX * 0.4,
-    }));
-
-    lastMouse.current = { x: clientX, y: clientY };
-  }, []);
-
-  const handleMouseUp = useCallback(() => {
-    isDragging.current = false;
-  }, []);
+function ParticleCanvas({ palette }: { palette: ExtractedPalette }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-    window.addEventListener('touchmove', handleMouseMove);
-    window.addEventListener('touchend', handleMouseUp);
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-      window.removeEventListener('touchmove', handleMouseMove);
-      window.removeEventListener('touchend', handleMouseUp);
-    };
-  }, [handleMouseMove, handleMouseUp]);
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-  // Auto rotation tick when idle
-  useEffect(() => {
-    const timer = setInterval(() => {
-      if (!isDragging.current) {
-        setRotation(prev => ({ ...prev, y: prev.y + 0.3 }));
+    let animationId: number;
+    const PARTICLE_COUNT = 65;
+    const particles: Particle[] = [];
+
+    const w = () => canvas.offsetWidth;
+    const h = () => canvas.offsetHeight;
+
+    function resize() {
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = w() * dpr;
+      canvas.height = h() * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function spawn(yOverride?: number): Particle {
+      const c = palette.colors[Math.floor(Math.random() * palette.colors.length)];
+      const maxLife = 260 + Math.random() * 380;
+      return {
+        x: Math.random() * w(),
+        y: yOverride ?? h() + Math.random() * 20,
+        vx: (Math.random() - 0.5) * 0.35,
+        vy: -(0.2 + Math.random() * 0.5),
+        radius: 1 + Math.random() * 2.8,
+        color: c.hex,
+        alpha: 0,
+        life: 0,
+        maxLife,
+      };
+    }
+
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      const p = spawn(Math.random() * h());
+      p.life = Math.random() * p.maxLife;
+      particles.push(p);
+    }
+
+    function frame() {
+      ctx.clearRect(0, 0, w(), h());
+
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life++;
+
+        const ratio = p.life / p.maxLife;
+        if (ratio < 0.1) p.alpha = ratio / 0.1;
+        else if (ratio > 0.8) p.alpha = (1 - ratio) / 0.2;
+        else p.alpha = 1;
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.alpha * 0.6;
+        ctx.fill();
+
+        if (p.life >= p.maxLife || p.y < -10) particles[i] = spawn();
       }
-    }, 40);
-    return () => clearInterval(timer);
-  }, []);
 
-  const radius = 170; // 3D radius in px
+      ctx.globalAlpha = 1;
+      animationId = requestAnimationFrame(frame);
+    }
+
+    resize();
+    window.addEventListener('resize', resize);
+    frame();
+
+    return () => {
+      window.removeEventListener('resize', resize);
+      cancelAnimationFrame(animationId);
+    };
+  }, [palette]);
+
+  return <canvas ref={canvasRef} className="hero-particles-canvas" />;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Audio Waveform Canvas
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+function WaveformCanvas({ isPlaying, accentColor }: { isPlaying: boolean; accentColor: string }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let animId: number;
+    let phase = 0;
+    const bars = 24;
+
+    function render() {
+      if (!canvas || !ctx) return;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      phase += 0.08;
+
+      const barWidth = (canvas.width - (bars - 1) * 3) / bars;
+      for (let i = 0; i < bars; i++) {
+        const heightMultiplier = isPlaying
+          ? 0.2 + Math.abs(Math.sin(phase + i * 0.4)) * 0.75 + Math.random() * 0.15
+          : 0.1 + Math.abs(Math.sin(i * 0.5)) * 0.15;
+
+        const h = canvas.height * heightMultiplier;
+        const x = i * (barWidth + 3);
+        const y = (canvas.height - h) / 2;
+
+        ctx.fillStyle = accentColor;
+        ctx.globalAlpha = isPlaying ? 0.85 : 0.25;
+        ctx.fillRect(x, y, barWidth, h);
+      }
+
+      animId = requestAnimationFrame(render);
+    }
+
+    render();
+    return () => cancelAnimationFrame(animId);
+  }, [isPlaying, accentColor]);
+
+  return <canvas ref={canvasRef} className="hero-waveform-canvas" width={240} height={24} />;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// StatCounter
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+function useCountUp(target: number, duration: number, inView: boolean): number {
+  const [count, setCount] = useState(0);
+  const hasAnimated = useRef(false);
+
+  useEffect(() => {
+    if (!inView || hasAnimated.current) return;
+    hasAnimated.current = true;
+    const t0 = performance.now();
+    const step = (now: number) => {
+      const progress = Math.min((now - t0) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setCount(Math.round(target * eased));
+      if (progress < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }, [inView, target, duration]);
+
+  return count;
+}
+
+function StatCounter({ target, label }: { target: number; label: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const isInView = useInView(ref, { once: true, margin: '-60px' });
+  const count = useCountUp(target, 2200, isInView);
 
   return (
     <div
-      className="hero-globe-wrap"
-      onMouseDown={handleMouseDown}
-      onTouchStart={handleMouseDown}
+      ref={ref}
+      className="hero-stat-item"
+      onMouseEnter={() => audioManager.playSfx('tap_nav', 0.15)}
     >
-      <div
-        className="hero-globe-sphere"
-        style={{
-          transform: `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`,
-        }}
-      >
-        {/* Core Pulsing Center */}
-        <div className="hero-globe-center-core">
-          <span className="hero-globe-core-label">PIM</span>
-          <span className="hero-globe-core-sub">365 WARP</span>
-        </div>
-
-        {/* 3D Nodes */}
-        {ECOSYSTEM_NODES_3D.map(node => {
-          const latRad = (node.lat * Math.PI) / 180;
-          const lonRad = (node.lon * Math.PI) / 180;
-
-          // Spherical coordinate math
-          const x = radius * Math.cos(latRad) * Math.cos(lonRad);
-          const y = radius * Math.sin(latRad);
-          const z = radius * Math.cos(latRad) * Math.sin(lonRad);
-
-          // Rotate point around sphere angles to calculate Z-depth
-          const rotXRad = (rotation.x * Math.PI) / 180;
-          const rotYRad = (rotation.y * Math.PI) / 180;
-
-          // Apply rotation Y then X
-          const x1 = x * Math.cos(rotYRad) + z * Math.sin(rotYRad);
-          const z1 = -x * Math.sin(rotYRad) + z * Math.cos(rotYRad);
-          const y2 = y * Math.cos(rotXRad) - z1 * Math.sin(rotXRad);
-          const z2 = y * Math.sin(rotXRad) + z1 * Math.cos(rotXRad);
-
-          // Calculate depth opacity & scale
-          const isFront = z2 > -40;
-          const opacity = Math.max(0.2, (z2 + radius) / (2 * radius));
-          const scale = Math.max(0.65, (z2 + radius * 1.5) / (2.5 * radius));
-          const isSelected = selectedNodeId === node.id;
-
-          return (
-            <div
-              key={node.id}
-              className={`hero-3d-node-item ${isSelected ? 'active' : ''}`}
-              style={{
-                transform: `translate3d(${x}px, ${y}px, ${z}px) scale(${scale})`,
-                opacity: isFront ? opacity : opacity * 0.4,
-                zIndex: Math.round(z2 + 300),
-                pointerEvents: isFront ? 'auto' : 'none',
-              }}
-              onClick={e => {
-                e.stopPropagation();
-                onSelectNode(node);
-              }}
-            >
-              <div className="hero-3d-node-card">
-                <span className="hero-3d-node-icon">{node.icon}</span>
-                <span className="hero-3d-node-title">{node.label}</span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="hero-globe-drag-hint">
-        <RotateCw size={12} /> DRAG / SWIPE TO ROTATE 3D ECOSYSTEM GLOBE
-      </div>
+      <span className="hero-stat-number">{count.toLocaleString()}</span>
+      <span className="hero-stat-label">{label}</span>
     </div>
   );
 }
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// CINEMATIC JOURNEY STEPPER COMPONENT
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function EcosystemGlobe3D({
+  nodes,
+  selectedNode,
+  onSelectNode,
+}: {
+  nodes: EcosystemPillar[];
+  selectedNode: EcosystemPillar | null;
+  onSelectNode: (node: EcosystemPillar) => void;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [rotX, setRotX] = useState(-12);
+  const [rotY, setRotY] = useState(25);
+  const [isDragging, setIsDragging] = useState(false);
+  const lastMouseRef = useRef({ x: 0, y: 0 });
 
-function CinematicJourneyStepper() {
-  const [activeStep, setActiveStep] = useState(0);
-
-  const nextStep = () => {
-    setActiveStep(prev => (prev + 1) % JOURNEY_STEPS.length);
-    audioManager.playSfx('tap_nav', 0.2);
+  const handlePointerDown = (e: React.PointerEvent) => {
+    setIsDragging(true);
+    lastMouseRef.current = { x: e.clientX, y: e.clientY };
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
   };
 
-  const prevStep = () => {
-    setActiveStep(prev => (prev - 1 + JOURNEY_STEPS.length) % JOURNEY_STEPS.length);
-    audioManager.playSfx('tap_nav', 0.2);
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDragging) return;
+    const deltaX = e.clientX - lastMouseRef.current.x;
+    const deltaY = e.clientY - lastMouseRef.current.y;
+    setRotY(r => r + deltaX * 0.4);
+    setRotX(r => Math.max(-60, Math.min(60, r - deltaY * 0.4)));
+    lastMouseRef.current = { x: e.clientX, y: e.clientY };
   };
 
-  const currentData = JOURNEY_STEPS[activeStep];
+  const handlePointerUp = (e: React.PointerEvent) => {
+    setIsDragging(false);
+    (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
+  };
+
+  useEffect(() => {
+    if (isDragging) return;
+    const timer = setInterval(() => {
+      setRotY(r => (r + 0.25) % 360);
+    }, 30);
+    return () => clearInterval(timer);
+  }, [isDragging]);
+
+  const radX = (rotX * Math.PI) / 180;
+  const radY = (rotY * Math.PI) / 180;
+  const RADIUS = 150;
+
+  const nodePositions = useMemo(() => {
+    return nodes.map(node => {
+      const phi = (node.angle * Math.PI) / 180;
+      const theta = (node.angle * 2 * Math.PI) / 180;
+      const x0 = RADIUS * Math.cos(phi) * Math.sin(theta);
+      const y0 = RADIUS * Math.sin(phi);
+      const z0 = RADIUS * Math.cos(phi) * Math.cos(theta);
+
+      const x1 = x0 * Math.cos(radY) + z0 * Math.sin(radY);
+      const z1 = -x0 * Math.sin(radY) + z0 * Math.cos(radY);
+
+      const y2 = y0 * Math.cos(radX) - z1 * Math.sin(radX);
+      const z2 = y0 * Math.sin(radX) + z1 * Math.cos(radX);
+
+      const scale = (z2 + 250) / 350;
+      const opacity = Math.max(0.2, Math.min(1, (z2 + 180) / 300));
+
+      return {
+        ...node,
+        x: x1,
+        y: y2,
+        z: z2,
+        scale,
+        opacity,
+      };
+    });
+  }, [nodes, radX, radY]);
 
   return (
-    <div className="hero-journey-stepper-wrap">
-      {/* Progress Tabs */}
-      <div className="hero-stepper-progress-bar">
-        {JOURNEY_STEPS.map((step, idx) => (
-          <div
-            key={step.step}
-            className="hero-stepper-tab"
-            onClick={() => {
-              setActiveStep(idx);
-              audioManager.playSfx('tap_nav', 0.2);
+    <div
+      ref={containerRef}
+      className="hero-ecosystem-globe-3d-wrap cursor-grab active:cursor-grabbing select-none relative w-full h-[480px] max-w-[700px] mx-auto flex items-center justify-center overflow-hidden"
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+    >
+      <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-20">
+        <div className="w-[320px] h-[320px] rounded-full border border-white/20 animate-spin-slow" />
+        <div className="absolute w-[260px] h-[260px] rounded-full border border-white/10" style={{ transform: 'rotateX(65deg)' }} />
+        <div className="absolute w-[260px] h-[260px] rounded-full border border-white/10" style={{ transform: 'rotateY(65deg)' }} />
+      </div>
+
+      <div className="relative z-10 w-16 h-16 rounded-full bg-white/5 border border-white/20 backdrop-blur-md flex flex-col items-center justify-center shadow-[0_0_30px_rgba(255,255,255,0.15)]">
+        <span className="font-mono text-xs font-bold tracking-widest text-white">PIM</span>
+        <span className="font-mono text-[8px] uppercase tracking-wider text-white/50">3D ORBIT</span>
+      </div>
+
+      {nodePositions.map(node => {
+        const isSelected = selectedNode?.id === node.id;
+        return (
+          <motion.div
+            key={node.id}
+            className={`absolute cursor-pointer flex flex-col items-center justify-center transition-shadow duration-300 ${
+              isSelected ? 'z-40 scale-110' : 'z-20'
+            }`}
+            style={{
+              transform: `translate3d(${node.x}px, ${node.y}px, 0px) scale(${node.scale})`,
+              opacity: node.opacity,
+              zIndex: Math.round(node.z + 500),
+            }}
+            onClick={e => {
+              e.stopPropagation();
+              onSelectNode(node);
+              audioManager.playSfx('reveal', 0.4);
             }}
           >
             <div
-              className="hero-stepper-tab-fill"
-              style={{ width: idx <= activeStep ? '100%' : '0%' }}
+              className={`w-3.5 h-3.5 rounded-full border transition-all duration-300 ${
+                isSelected
+                  ? 'bg-white border-white shadow-[0_0_16px_#ffffff]'
+                  : 'bg-black/60 border-white/40 shadow-[0_0_8px_rgba(255,255,255,0.2)]'
+              }`}
             />
-          </div>
-        ))}
-      </div>
-
-      {/* Slide Card */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={activeStep}
-          className="hero-stepper-slide-card"
-          initial={{ opacity: 0, scale: 0.94, y: 15 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.94, y: -15 }}
-          transition={{ duration: 0.45, ease: EASE_OUT }}
-        >
-          <span className="hero-stepper-badge">{currentData.badge}</span>
-
-          <div className="text-var(--palette-dominant) p-3 rounded-full bg-white/5 border border-white/10 shadow-[0_0_30px_var(--palette-dominant)]">
-            {currentData.icon}
-          </div>
-
-          <h3 className="hero-stepper-title">{currentData.title}</h3>
-
-          <p className="hero-stepper-desc">{currentData.desc}</p>
-
-          <div className="hero-stepper-nav-row">
-            <button
-              onClick={prevStep}
-              className="hero-stepper-btn"
-              disabled={activeStep === 0}
+            <span
+              className={`mt-1 font-mono text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded border backdrop-blur-md transition-all ${
+                isSelected
+                  ? 'bg-white text-black border-white shadow-lg'
+                  : 'bg-black/75 text-white/90 border-white/20'
+              }`}
             >
-              <ChevronLeft size={16} /> PREV STEP
-            </button>
-
-            <span className="font-mono text-[10px] tracking-widest text-white/40 uppercase">
-              {activeStep + 1} / {JOURNEY_STEPS.length}
+              {node.label}
             </span>
+            <span className="font-mono text-[8px] tracking-wider text-white/50 uppercase">{node.tag}</span>
+          </motion.div>
+        );
+      })}
 
-            <button
-              onClick={nextStep}
-              className="hero-stepper-btn"
-            >
-              NEXT STEP <ChevronRight size={16} />
-            </button>
-          </div>
-        </motion.div>
-      </AnimatePresence>
+      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 font-mono text-[9px] uppercase tracking-widest text-white/30 pointer-events-none">
+        [ 3D Orbit • Drag to Rotate ]
+      </div>
     </div>
   );
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// MAIN HERO LANDING PAGE COMPONENT
+// MAIN COMPONENT
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export default function HeroLandingPage() {
@@ -451,167 +455,187 @@ export default function HeroLandingPage() {
   const searchString = useSearch();
   const [, setLocation] = useLocation();
 
-  const maxAllowedDay = useMemo(() => getCurrentDay(), []);
+  const maxAllowedDay = useMemo(() => getCurrentDay(), []); // e.g. Day 213
 
-  // Parse Day from URL (/hero/day-042, /hero/42, or ?day=42)
-  const activeDay = useMemo(() => {
+  // Parse requested day from URL parameter (/hero/day-042, /hero/42, or ?day=42)
+  const parsedRequestedDay = useMemo(() => {
     let raw: string | undefined = params.dayParam;
     if (!raw && searchString) {
       const q = new URLSearchParams(searchString);
       raw = q.get('day') || undefined;
     }
-    if (raw) {
-      const match = raw.match(/\d+/);
-      if (match) {
-        const parsed = parseInt(match[0], 10);
-        if (!isNaN(parsed) && parsed >= 1) {
-          return Math.min(parsed, maxAllowedDay);
-        }
-      }
-    }
-    return maxAllowedDay;
+    if (!raw) return maxAllowedDay;
+
+    const num = parseInt(raw.replace(/\D/g, ''), 10);
+    if (isNaN(num)) return maxAllowedDay;
+    return num;
   }, [params.dayParam, searchString, maxAllowedDay]);
 
-  const isFutureRequested = useMemo(() => {
-    let raw: string | undefined = params.dayParam;
-    if (!raw && searchString) {
-      const q = new URLSearchParams(searchString);
-      raw = q.get('day') || undefined;
+  // Enforce STRICT "Block Looking Ahead" rule:
+  const { activeDay, isFutureBlocked, attemptedDay } = useMemo(() => {
+    if (parsedRequestedDay > maxAllowedDay) {
+      return { activeDay: maxAllowedDay, isFutureBlocked: true, attemptedDay: parsedRequestedDay };
     }
-    if (raw) {
-      const match = raw.match(/\d+/);
-      if (match) {
-        const parsed = parseInt(match[0], 10);
-        return !isNaN(parsed) && parsed > maxAllowedDay;
-      }
-    }
-    return false;
-  }, [params.dayParam, searchString, maxAllowedDay]);
+    const clamped = Math.max(1, parsedRequestedDay);
+    return { activeDay: clamped, isFutureBlocked: false, attemptedDay: parsedRequestedDay };
+  }, [parsedRequestedDay, maxAllowedDay]);
 
-  // Song catalog data
-  const [catalog, setCatalog] = useState<SongCatalogItem[]>([]);
+  const [catalog, setCatalog] = useState<SongEntry[]>([]);
+  const [song, setSong] = useState<SongEntry | null>(null);
+  const [palette, setPalette] = useState<ExtractedPalette>(getFallbackPalette());
+  const [countdown, setCountdown] = useState(getTimeUntilNextDay());
 
-  useEffect(() => {
-    fetch('/data/song_catalog.json')
-      .then(res => res.json())
-      .then((data: SongCatalogItem[]) => setCatalog(data))
-      .catch(console.error);
-  }, []);
+  // Command Palette State
+  const [isCommandModalOpen, setIsCommandModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const songByDayMap = useMemo(() => {
-    const map = new Map<number, SongCatalogItem>();
-    catalog.forEach(item => map.set(item.day, item));
-    return map;
-  }, [catalog]);
+  // Interactive 3D Card Tilt State
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const cardContainerRef = useRef<HTMLDivElement>(null);
 
-  const song = songByDayMap.get(activeDay) || null;
+  // Audio Stem Playback State
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Day Selector Command Modal State
-  const [isDayModalOpen, setIsDayModalOpen] = useState(false);
-  const [daySearchQuery, setDaySearchQuery] = useState('');
+  // Collection Heatmap Filter State
+  const [filterMode, setFilterMode] = useState<'all' | 'unlocked' | 'dark' | 'light'>('all');
+  const [hoveredCardDay, setHoveredCardDay] = useState<number | null>(null);
 
-  // Keybindings (⌘K / Ctrl+K)
+  // Node Inspector Modal State
+  const [selectedNode, setSelectedNode] = useState<EcosystemPillar | null>(null);
+
+  // Scroll Tracking State for Side Nav Dots
+  const [activeSection, setActiveSection] = useState<string>('hero-top');
+
+  // Keyboard shortcut for Command Palette (⌘K / Ctrl+K / Esc)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        setIsDayModalOpen(prev => !prev);
-      } else if (e.key === 'Escape' && isDayModalOpen) {
-        setIsDayModalOpen(false);
+        setIsCommandModalOpen(prev => !prev);
+        audioManager.playSfx('tap_nav', 0.3);
+      } else if (e.key === 'Escape' && isCommandModalOpen) {
+        setIsCommandModalOpen(false);
+        audioManager.playSfx('back', 0.3);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isDayModalOpen]);
+  }, [isCommandModalOpen]);
 
-  // Dynamic Palette extraction from active song artwork
-  const [palette, setPalette] = useState<ExtractedPalette>(getFallbackPalette());
-
+  // Load catalog & update current song when activeDay changes
   useEffect(() => {
-    if (song?.coverArt) {
-      extractPalette(song.coverArt)
-        .then(setPalette)
-        .catch(() => setPalette(getFallbackPalette()));
-    }
-  }, [song?.coverArt]);
+    fetch('/data/song_catalog.json')
+      .then(r => r.json())
+      .then((data: SongEntry[]) => {
+        setCatalog(data);
+        const currentSong = data.find(s => s.day === activeDay) || data[data.length - 1];
+        setSong(currentSong);
 
-  // Audio Preview Playback
-  const [isPlayingPreview, setIsPlayingPreview] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+        if (currentSong?.coverArt) {
+          extractPalette(currentSong.coverArt).then(setPalette).catch(() => {});
+        }
 
-  const toggleAudioPreview = useCallback(() => {
-    if (!song?.audioUrl) return;
-    if (isPlayingPreview) {
-      audioRef.current?.pause();
-      setIsPlayingPreview(false);
-      audioManager.playSfx('pause', 0.4);
-    } else {
-      if (!audioRef.current) {
-        audioRef.current = new Audio(song.audioUrl);
-        audioRef.current.onended = () => setIsPlayingPreview(false);
-      } else {
-        audioRef.current.src = song.audioUrl;
+        if (audioRef.current) {
+          audioRef.current.pause();
+          setIsPlayingAudio(false);
+        }
+
+        if (currentSong?.audioUrl) {
+          audioRef.current = new Audio(currentSong.audioUrl);
+          audioRef.current.loop = true;
+        }
+      })
+      .catch(console.error);
+
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
       }
-      audioRef.current.play().catch(console.error);
-      setIsPlayingPreview(true);
-      audioManager.playSfx('select_start_song', 0.4);
-    }
-  }, [isPlayingPreview, song?.audioUrl]);
+    };
+  }, [activeDay]);
 
-  // 3D Perspective Card Tilt
-  const [cardTilt, setCardTilt] = useState({ x: 0, y: 0 });
-  const cardRef = useRef<HTMLDivElement>(null);
+  // Countdown Tick
+  useEffect(() => {
+    const id = setInterval(() => setCountdown(getTimeUntilNextDay()), 1000);
+    return () => clearInterval(id);
+  }, []);
 
-  const handleCardMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!cardRef.current) return;
-    const rect = cardRef.current.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width - 0.5;
-    const y = (e.clientY - rect.top) / rect.height - 0.5;
-    setCardTilt({ x: y * 24, y: -x * 24 });
-  };
-
-  const handleCardMouseLeave = () => {
-    setCardTilt({ x: 0, y: 0 });
-  };
-
-  // Section Ref & InView State
-  const [activeSection, setActiveSection] = useState(0);
-  const progressRef = useRef<HTMLDivElement>(null);
-  const [progressInView, setProgressInView] = useState(false);
-  const [hoveredCardDay, setHoveredCardDay] = useState<number | null>(null);
-
-  // Filter mode for 365 Grid
-  const [filterMode, setFilterMode] = useState<'all' | 'unlocked' | 'dark' | 'light'>('all');
-
-  // Selected Ecosystem Node Inspector
-  const [selectedNode, setSelectedNode] = useState<EcosystemNode | null>(null);
-
+  // Section Observer for Side Nav
   useEffect(() => {
     const observer = new IntersectionObserver(
       entries => {
         entries.forEach(entry => {
-          if (entry.target === progressRef.current) {
-            setProgressInView(entry.isIntersecting);
+          if (entry.isIntersecting) {
+            setActiveSection(entry.target.id);
           }
         });
       },
-      { threshold: 0.2 }
+      { threshold: 0.4 }
     );
-    if (progressRef.current) observer.observe(progressRef.current);
+
+    SECTION_IDS.forEach(s => {
+      const el = document.getElementById(s.id);
+      if (el) observer.observe(el);
+    });
+
     return () => observer.disconnect();
   }, []);
 
-  // Jump to specific Day Landing Page
-  const jumpToDay = (targetDay: number) => {
-    if (targetDay > maxAllowedDay) {
-      audioManager.playSfx('locked_out', 0.5);
-      return;
+  // Handle 3D Mouse Tilt
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!cardContainerRef.current) return;
+    const rect = cardContainerRef.current.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+    setTilt({ x: y * 24, y: -x * 24 });
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    setTilt({ x: 0, y: 0 });
+  }, []);
+
+  // Toggle Audio Stem Playback
+  const toggleAudio = useCallback(() => {
+    if (!audioRef.current) return;
+    if (isPlayingAudio) {
+      audioRef.current.pause();
+      setIsPlayingAudio(false);
+      audioManager.playSfx('pause', 0.3);
+    } else {
+      audioRef.current.play().catch(() => {});
+      setIsPlayingAudio(true);
+      audioManager.playSfx('select_start_song', 0.4);
     }
-    setIsPlayingPreview(false);
-    audioRef.current?.pause();
-    setLocation(`/hero/day-${String(targetDay).padStart(3, '0')}`);
-    audioManager.playSfx('tap_nav', 0.3);
-  };
+  }, [isPlayingAudio]);
+
+  // Switch Day Handler
+  const songByDayMap = useMemo(() => {
+    const map = new Map<number, SongEntry>();
+    catalog.forEach(s => map.set(s.day, s));
+    return map;
+  }, [catalog]);
+
+  const jumpToDay = useCallback(
+    (targetDay: number) => {
+      if (targetDay > maxAllowedDay) {
+        audioManager.playSfx('locked_out', 0.5);
+        return;
+      }
+      const validDay = Math.max(1, Math.min(maxAllowedDay, targetDay));
+      audioManager.playSfx('tap_nav', 0.3);
+      setLocation(`/hero/day-${validDay}`);
+      setIsCommandModalOpen(false);
+    },
+    [maxAllowedDay, setLocation]
+  );
+
+  const activeDateStr = useMemo(() => {
+    const d = getDateFromDay(activeDay);
+    return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  }, [activeDay]);
+
+  const songId = songIdFromDay(activeDay);
 
   const rootStyle = useMemo(
     () =>
@@ -625,9 +649,31 @@ export default function HeroLandingPage() {
     [palette]
   );
 
+  const countdownStr = `${String(countdown.hours).padStart(2, '0')}:${String(countdown.minutes).padStart(2, '0')}:${String(countdown.seconds).padStart(2, '0')}`;
+
+  const filteredCommandCatalog = useMemo(() => {
+    const unlocked = catalog.filter(s => s.day <= maxAllowedDay);
+    if (!searchQuery.trim()) return unlocked;
+    const q = searchQuery.toLowerCase();
+    return unlocked.filter(
+      s =>
+        s.title.toLowerCase().includes(q) ||
+        s.artist.toLowerCase().includes(q) ||
+        String(s.day) === q ||
+        `day ${s.day}`.includes(q) ||
+        s.mood.toLowerCase().includes(q)
+    );
+  }, [catalog, maxAllowedDay, searchQuery]);
+
+  const progressRef = useRef<HTMLDivElement>(null);
+  const progressInView = useInView(progressRef, { once: true, margin: '-60px' });
+
+  const roadmapRef = useRef<HTMLDivElement>(null);
+  const roadmapInView = useInView(roadmapRef, { once: true, margin: '-60px' });
+
   return (
     <div className="hero-landing" style={rootStyle}>
-      {/* Film Noise Texture & Shader Beams */}
+      {/* Noise Texture & Shader Beams */}
       <div className="hero-noise-overlay" />
       <div className="hero-ambient-beams">
         <div className="hero-beam-1" />
@@ -635,233 +681,212 @@ export default function HeroLandingPage() {
         <div className="hero-beam-3" />
       </div>
 
-      {/* Future Locked Warning Banner */}
+      {/* Future Day Lock Warning Banner */}
       <AnimatePresence>
-        {isFutureRequested && (
+        {isFutureBlocked && (
           <motion.div
             className="hero-future-banner"
-            initial={{ y: -50, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: -50, opacity: 0 }}
+            initial={{ opacity: 0, y: -40 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -40 }}
           >
             <Lock size={14} />
-            <span>DAY LOCKED IN THE FUTURE // CLAMPED TO TODAY (DAY {maxAllowedDay})</span>
+            <span>
+              <strong>FUTURE TRANSMISSION LOCKED:</strong> Day {attemptedDay} is not released yet. Clamped to Day {maxAllowedDay}.
+            </span>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Floating Side Scroll Nav Dots */}
+      {/* Side Scroll Navigation Dots */}
       <div className="hero-side-nav">
-        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => (
-          <div
-            key={i}
-            className={`hero-side-nav-dot ${activeSection === i ? 'active' : ''}`}
-            onClick={() => {
-              setActiveSection(i);
-              audioManager.playSfx('tap_nav', 0.2);
-            }}
-          />
+        {SECTION_IDS.map(sec => (
+          <a
+            key={sec.id}
+            href={`#${sec.id}`}
+            className={`hero-nav-dot ${activeSection === sec.id ? 'active' : ''}`}
+            onClick={() => audioManager.playSfx('tap_nav', 0.2)}
+          >
+            <span className="hero-nav-tooltip">{sec.label}</span>
+          </a>
         ))}
       </div>
 
-      {/* ═══════════ SECTION 1 : HERO BANNER ═══════════ */}
-      <section className="hero-hero-section" id="hero-top">
-        {/* Dynamic Day Switcher Bar */}
-        <div className="hero-day-stepper">
-          <button
-            className="hero-stepper-btn-sm"
-            onClick={() => jumpToDay(Math.max(1, activeDay - 1))}
-            disabled={activeDay <= 1}
-            title="Previous Release Day"
-          >
-            <ChevronLeft size={14} /> Day {String(Math.max(1, activeDay - 1)).padStart(3, '0')}
-          </button>
+      {/* ═══════════ SECTION 1 : HERO VIEWPORT ═══════════ */}
+      <section className="hero-viewport" id="hero-top">
+        {song?.coverArt && (
+          <div
+            className="hero-artwork-bg"
+            style={{ backgroundImage: `url(${song.coverArt})` }}
+          />
+        )}
+        <ParticleCanvas palette={palette} />
+        <div className="hero-vignette" />
 
-          <button
-            className="hero-stepper-current"
-            onClick={() => {
-              setIsDayModalOpen(true);
-              audioManager.playSfx('tap_nav', 0.3);
-            }}
-            title="Open Day Switcher (⌘K)"
-          >
-            <Calendar size={14} className="text-[var(--palette-dominant)]" />
-            <span>DAY {String(activeDay).padStart(3, '0')} // LANDING PAGE</span>
-            <span className="hero-cmd-badge"><Command size={10} />K</span>
-          </button>
-
-          <button
-            className="hero-stepper-btn-sm"
-            onClick={() => jumpToDay(activeDay + 1)}
-            disabled={activeDay >= maxAllowedDay}
-            title={activeDay >= maxAllowedDay ? 'Future day locked' : 'Next Release Day'}
-          >
-            {activeDay >= maxAllowedDay ? (
-              <>
-                <Lock size={12} className="opacity-60" /> LOCKED
-              </>
-            ) : (
-              <>
-                Day {String(activeDay + 1).padStart(3, '0')} <ChevronRight size={14} />
-              </>
-            )}
-          </button>
-        </div>
-
-        {/* Persona 5 / Arcane Kinetic Title */}
         <motion.div
-          className="hero-brand"
-          initial={{ opacity: 0, y: 25 }}
+          className="hero-content-glass"
+          initial={{ opacity: 0, y: 35 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.9, ease: EASE_OUT }}
+          transition={{ duration: 1.4, ease: EASE_OUT }}
         >
-          <h1 className="hero-title-pim">P I M</h1>
-          <p className="hero-subtitle">Poetry In Motion</p>
-        </motion.div>
+          <h1 className="hero-title-pim">PIM</h1>
+          <p className="hero-title-subtitle">Poetry In Motion</p>
 
-        <motion.p
-          className="hero-tagline"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.85 }}
-          transition={{ duration: 0.9, delay: 0.25 }}
-        >
-          One Original Song. Every Single Day.
-        </motion.p>
+          <p className="hero-tagline">
+            One Original Song.
+            <br />
+            Every Single Day.
+          </p>
 
-        <motion.p
-          className="hero-[#00E5FF] font-mono text-[10px] tracking-[0.3em] uppercase opacity-80"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.8 }}
-          transition={{ duration: 0.9, delay: 0.35 }}
-        >
-          Listen · Play · Collect · Return Tomorrow
-        </motion.p>
+          <p className="hero-actions-line">
+            Listen · Play · Collect · Return Tomorrow
+          </p>
 
-        {/* Play Button CTA */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.6, delay: 0.45 }}
-        >
-          <Link
-            to="/play"
-            className="hero-cta-button"
-            onClick={() => audioManager.playSfx('select_start_song', 0.6)}
-          >
-            <Play size={18} fill="currentColor" /> PLAY TODAY&apos;S DROP
+          <Link href={`/play/${songId}`} onClick={() => audioManager.playSfx('select_start_song', 0.5)}>
+            <span className="hero-play-btn">
+              <Play size={14} fill="#000" /> Play Day {activeDay} Drop
+            </span>
           </Link>
+
+          {/* Day Stepper & Command Palette Trigger */}
+          <div className="flex justify-center">
+            <div className="hero-day-stepper">
+              <button
+                disabled={activeDay <= 1}
+                onClick={() => jumpToDay(activeDay - 1)}
+                className="hero-stepper-btn"
+                title="Previous Day"
+              >
+                <ChevronLeft size={14} />
+              </button>
+
+              <button
+                onClick={() => {
+                  setIsCommandModalOpen(true);
+                  audioManager.playSfx('tap_nav', 0.3);
+                }}
+                className="hero-stepper-trigger"
+                title="Open Day Selector Command Palette (⌘K)"
+              >
+                <Calendar size={12} />
+                <span>{song ? formatDate(song.day) : `Day ${activeDay}`}</span>
+                <Command size={11} className="opacity-60" />
+              </button>
+
+              <button
+                disabled={activeDay >= maxAllowedDay}
+                onClick={() => jumpToDay(activeDay + 1)}
+                className="hero-stepper-btn"
+                title={activeDay >= maxAllowedDay ? 'Future day locked' : 'Next Day'}
+              >
+                {activeDay >= maxAllowedDay ? <Lock size={12} /> : <ChevronRight size={14} />}
+              </button>
+            </div>
+          </div>
         </motion.div>
 
-        <motion.div
-          className="hero-meta-strip"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.55 }}
-        >
-          <span>Day {activeDay}</span>
-          <span>·</span>
-          <span>{song ? formatDate(song.day) : `Day ${activeDay}`}</span>
-        </motion.div>
+        <a href="#hero-drop" className="hero-scroll-hint" onClick={() => audioManager.playSfx('tap_nav', 0.2)}>
+          <ChevronDown size={22} strokeWidth={1.5} />
+        </a>
       </section>
 
-      <div className="hero-section-divider" />
-
-      {/* ═══════════ SECTION 2 : TODAY'S DROP STAGE ═══════════ */}
+      {/* ═══════════ SECTION 2 : TODAY'S DROP & VINYL PEDESTAL ═══════════ */}
       <section className="hero-drop-section" id="hero-drop">
-        <motion.p
-          className="hero-drop-header"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 0.45 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8 }}
-        >
-          TODAY&apos;S DROP // DAY {activeDay}
-        </motion.p>
+        <div className="hero-pedestal-stage">
+          <motion.div
+            ref={cardContainerRef}
+            className="hero-drop-artwork-container"
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+            style={{ transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)` }}
+            initial={{ opacity: 0, y: 60 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-100px' }}
+            transition={{ duration: 0.9, ease: EASE_OUT }}
+            onClick={toggleAudio}
+          >
+            <div className="hero-drop-glow" />
 
-        {/* 3D Perspective Mouse Tilt Stage */}
-        <motion.div
-          ref={cardRef}
-          className="hero-drop-card-container"
-          onMouseMove={handleCardMouseMove}
-          onMouseLeave={handleCardMouseLeave}
-          style={{
-            transform: `rotateX(${cardTilt.x}deg) rotateY(${cardTilt.y}deg)`,
-          }}
-          initial={{ opacity: 0, y: 35 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-60px' }}
-          transition={{ duration: 0.9, ease: EASE_OUT }}
-        >
-          <div className="hero-drop-glow" />
-
-          {/* Holographic Spinning Vinyl Disc */}
-          <div className={`hero-vinyl-disc ${isPlayingPreview ? 'playing' : ''}`}>
-            <div
-              className="hero-vinyl-label"
-              style={{
-                backgroundImage: song?.coverArt ? `url(${song.coverArt})` : undefined,
-              }}
-            />
-          </div>
-
-          <div className="hero-drop-card">
-            <div className="hero-specular-glare" />
-
-            <div className="hero-cover-wrap">
-              {song?.coverArt ? (
-                <img
-                  src={song.coverArt}
-                  alt={song.title}
-                  className="hero-cover-art"
-                  loading="eager"
+            <div className={`hero-vinyl-disc ${isPlayingAudio ? 'playing' : ''}`}>
+              {song?.coverArt && (
+                <div
+                  className="hero-vinyl-label"
+                  style={{ backgroundImage: `url(${song.coverArt})` }}
                 />
-              ) : (
-                <div className="w-full h-full bg-[#0a0a10] flex items-center justify-center font-mono text-xs text-white/30">
-                  DAY {activeDay} ARTWORK
-                </div>
               )}
             </div>
 
-            <h2 className="hero-song-title">&quot;{song?.title || `Track Day ${activeDay}`}&quot;</h2>
-
-            <p className="hero-song-meta">
-              {song ? formatDuration(song.duration) : '--:--'} · by {song?.artist || 'th3scr1b3'} · {song?.bpm || 120} BPM
-            </p>
-
-            {/* Audio Stem Preview Bar & Waveform */}
-            <div className="w-full mt-4 flex flex-col items-center gap-3">
-              <button
-                className="hero-stem-preview-btn"
-                onClick={toggleAudioPreview}
-                title={isPlayingPreview ? 'Pause Audio Preview' : 'Play Audio Preview'}
-              >
-                {isPlayingPreview ? <Pause size={16} /> : <Play size={16} fill="currentColor" />}
-                <span>{isPlayingPreview ? 'PAUSE PREVIEW' : 'PLAY AUDIO STEM'}</span>
-              </button>
-
-              {/* Real-Time Waveform Visualizer */}
-              <div className="hero-waveform-bar">
-                {Array.from({ length: 28 }, (_, idx) => (
-                  <div
-                    key={idx}
-                    className={`hero-waveform-step ${isPlayingPreview ? 'active' : ''}`}
-                    style={{
-                      height: isPlayingPreview
-                        ? `${Math.max(20, Math.sin((idx + 1) * 0.8) * 100)}%`
-                        : `${(idx % 5) * 15 + 20}%`,
-                      animationDelay: `${(idx % 10) * 0.08}s`,
-                    }}
-                  />
-                ))}
-              </div>
+            <div className="hero-drop-artwork-card">
+              <div className="hero-specular-glare" />
+              {song?.coverArt && (
+                <img
+                  src={song.coverArt}
+                  alt={`${song.title} artwork`}
+                  className="hero-drop-artwork-img"
+                  loading="lazy"
+                />
+              )}
             </div>
+          </motion.div>
+
+          <div className="hero-waveform-wrap">
+            <button
+              onClick={toggleAudio}
+              className="p-1 rounded text-white/70 hover:text-white transition-colors cursor-pointer"
+            >
+              {isPlayingAudio ? <Pause size={16} /> : <Play size={16} />}
+            </button>
+            <WaveformCanvas isPlaying={isPlayingAudio} accentColor={palette.dominant.hex} />
+            <span className="font-mono text-[9px] text-white/40 tracking-widest uppercase">
+              {isPlayingAudio ? 'LIVE PREVIEW' : 'CLICK TO LISTEN'}
+            </span>
           </div>
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 25 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-50px' }}
+          transition={{ duration: 0.7, delay: 0.15 }}
+          style={{ textAlign: 'center' }}
+        >
+          <p className="hero-drop-meta">
+            {activeDay === maxAllowedDay ? "Today's Drop" : `Day ${activeDay} Archive`}
+          </p>
+          <h2 className="hero-drop-title">&ldquo;{song?.title || 'Loading...'}&rdquo;</h2>
+          <p className="hero-drop-meta">
+            {song ? formatDuration(song.duration) : '--:--'} · by {song?.artist || 'th3scr1b3'} · {song?.bpm || 120} BPM
+          </p>
+        </motion.div>
+
+        <motion.div
+          className="hero-drop-actions"
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.3 }}
+        >
+          <button
+            onClick={() => {
+              toggleAudio();
+              audioManager.playSfx('tap_nav', 0.3);
+            }}
+            className={`hero-drop-action-btn ${isPlayingAudio ? 'active' : ''}`}
+          >
+            {isPlayingAudio ? <Pause size={14} /> : <Play size={14} />} {isPlayingAudio ? 'Pause Stem' : '▶ Listen'}
+          </button>
+          <Link href={`/play/${songId}`} onClick={() => audioManager.playSfx('select_start_song', 0.5)}>
+            <span className="hero-drop-action-btn">🎮 Play Level</span>
+          </Link>
+          <Link href={`/song/${songId}`} onClick={() => audioManager.playSfx('tap_nav', 0.3)}>
+            <span className="hero-drop-action-btn">🃏 View Card</span>
+          </Link>
         </motion.div>
       </section>
 
       <div className="hero-section-divider" />
 
-      {/* ═══════════ SECTION 3 : CINEMATIC STEPPER ("ONE SONG BECOMES...") ═══════════ */}
+      {/* ═══════════ SECTION 3 : THE JOURNEY ═══════════ */}
       <section className="hero-journey-section" id="hero-journey">
         <motion.p
           className="hero-journey-title"
@@ -873,13 +898,38 @@ export default function HeroLandingPage() {
           One song becomes...
         </motion.p>
 
-        {/* Full-Section Cinematic Stepper Component */}
-        <CinematicJourneyStepper />
+        <div className="hero-journey-steps">
+          {JOURNEY_STEPS.map((step, i) => (
+            <Fragment key={step.label}>
+              <motion.div
+                className="hero-journey-step"
+                initial={{ opacity: 0, y: 25 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-40px' }}
+                transition={{ duration: 0.5, delay: i * 0.12 }}
+                onMouseEnter={() => audioManager.playSfx('tap_nav', 0.15)}
+              >
+                <span className="hero-journey-icon">{step.icon}</span>
+                <span className="hero-journey-label">{step.label}</span>
+              </motion.div>
+              {i < JOURNEY_STEPS.length - 1 && (
+                <motion.div
+                  className="hero-journey-arrow"
+                  initial={{ scaleY: 0 }}
+                  whileInView={{ scaleY: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.3, delay: i * 0.12 + 0.08 }}
+                  style={{ transformOrigin: 'top' }}
+                />
+              )}
+            </Fragment>
+          ))}
+        </div>
       </section>
 
       <div className="hero-section-divider" />
 
-      {/* ═══════════ SECTION 4 : THE 365 HEATMAP COLLECTION ═══════════ */}
+      {/* ═══════════ SECTION 4 : THE COLLECTION HEATMAP ═══════════ */}
       <section className="hero-collection-section" id="hero-collection" ref={progressRef}>
         <motion.h2
           className="hero-collection-header"
@@ -900,15 +950,16 @@ export default function HeroLandingPage() {
 
         <p className="hero-progress-label">{maxAllowedDay} / 365 RELEASES UNLOCKED</p>
 
-        {/* Dark / Light Mood Legend with Custom Vector Icons */}
+        {/* Dark / Light Mood Legend */}
+        {/* Dark / Light Mood Legend — Pure Dynamic Artwork Palette */}
         <div className="flex items-center gap-6 mb-6 font-mono text-[10px] tracking-widest uppercase opacity-85">
           <span className="flex items-center gap-1.5" style={{ color: 'var(--palette-dominant)' }}>
-            <Moon size={13} className="text-[var(--palette-dominant)]" />
-            DARK MOODS
+            <span className="w-2.5 h-2.5 rounded-sm" style={{ background: 'var(--palette-dominant)', boxShadow: '0 0 8px var(--palette-dominant)' }} />
+            🌑 Dark Moods
           </span>
           <span className="flex items-center gap-1.5" style={{ color: 'var(--palette-accent)' }}>
-            <Sun size={13} className="text-[var(--palette-accent)]" />
-            LIGHT MOODS
+            <span className="w-2.5 h-2.5 rounded-sm" style={{ background: 'var(--palette-accent)', boxShadow: '0 0 8px var(--palette-accent)' }} />
+            ☀️ Light Moods
           </span>
         </div>
 
@@ -923,13 +974,7 @@ export default function HeroLandingPage() {
                 audioManager.playSfx('tap_nav', 0.2);
               }}
             >
-              {mode === 'dark' ? (
-                <span className="flex items-center gap-1"><Moon size={11} /> DARK</span>
-              ) : mode === 'light' ? (
-                <span className="flex items-center gap-1"><Sun size={11} /> LIGHT</span>
-              ) : (
-                mode.toUpperCase()
-              )}
+              {mode === 'dark' ? '🌑 DARK' : mode === 'light' ? '☀️ LIGHT' : mode.toUpperCase()}
             </button>
           ))}
         </div>
@@ -948,6 +993,7 @@ export default function HeroLandingPage() {
             const daySong = songByDayMap.get(day);
             const mood = daySong?.mood?.toLowerCase() === 'light' ? 'light' : 'dark';
 
+            // Filter modes
             const matchesFilter =
               filterMode === 'all'
                 ? true
@@ -975,6 +1021,11 @@ export default function HeroLandingPage() {
                       : 'hero-grid-cell--filled hero-grid-cell--dark'
                     : 'hero-grid-cell--empty'
                 } ${isDimmed ? 'hero-grid-cell--dimmed' : ''}`}
+                style={
+                  isFilled && !isSelected
+                    ? ({ '--shimmer-delay': `${(i % 20) * 0.15}s` } as React.CSSProperties)
+                    : undefined
+                }
                 onMouseEnter={() => {
                   setHoveredCardDay(day);
                   audioManager.playSfx('tap_nav', 0.05);
@@ -1005,7 +1056,7 @@ export default function HeroLandingPage() {
                   ? hoveredCardDay === activeDay
                     ? 'CURRENTLY PREVIEWING LANDING PAGE'
                     : 'CLICK TO LOAD LANDING PAGE'
-                  : 'LOCKED IN THE FUTURE'}
+                  : '🔒 LOCKED IN THE FUTURE'}
               </span>
             </>
           ) : (
@@ -1070,24 +1121,12 @@ export default function HeroLandingPage() {
 
       <div className="hero-section-divider" />
 
-      {/* ═══════════ SECTION 7 : 3D MOVEABLE ECOSYSTEM GLOBE ═══════════ */}
+      {/* ═══════════ SECTION 7 : 3D ORBITAL ECOSYSTEM ═══════════ */}
       <section className="hero-ecosystem-section" id="hero-ecosystem">
-        <motion.h3
-          className="font-mono text-xs text-[#00E5FF] tracking-[0.3em] uppercase font-bold mb-8"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-        >
-          Ecosystem Constellation Globe
-        </motion.h3>
-
-        {/* 3D Moveable Globe Component */}
         <EcosystemGlobe3D
-          onSelectNode={node => {
-            setSelectedNode(node);
-            audioManager.playSfx('reveal', 0.4);
-          }}
-          selectedNodeId={selectedNode?.id}
+          nodes={ECOSYSTEM_NODES}
+          selectedNode={selectedNode}
+          onSelectNode={setSelectedNode}
         />
 
         {/* Ecosystem Node Inspector Modal */}
@@ -1105,8 +1144,8 @@ export default function HeroLandingPage() {
                   <span className="font-mono text-[9px] text-[#00E5FF] tracking-widest uppercase font-bold">
                     {selectedNode.tag} // {selectedNode.stat}
                   </span>
-                  <h3 className="text-xl font-black font-mono text-white uppercase tracking-wider flex items-center gap-2">
-                    {selectedNode.icon} {selectedNode.label}
+                  <h3 className="text-xl font-black font-mono text-white uppercase tracking-wider">
+                    {selectedNode.label}
                   </h3>
                 </div>
                 <button
@@ -1119,31 +1158,10 @@ export default function HeroLandingPage() {
                   <X size={18} />
                 </button>
               </div>
-
               <p className="font-mono text-xs text-white/70 leading-relaxed mb-4">
                 {selectedNode.longDesc}
               </p>
-
-              {/* Technical Readout Table */}
-              <div className="grid grid-cols-2 gap-2 mb-4 p-3 bg-black/40 border border-white/10 font-mono text-[10px]">
-                {ECOSYSTEM_INSPECTOR_ITEMS.slice(0, 4).map(item => (
-                  <div key={item.key} className="flex flex-col">
-                    <span className="text-white/40 uppercase">{item.key}</span>
-                    <span className="text-[#00E5FF] font-bold">{item.getVal(song)}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex justify-between items-center">
-                <a
-                  href={selectedNode.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--palette-dominant)] text-black font-mono text-[10px] font-bold uppercase tracking-wider transition-all hover:bg-white"
-                >
-                  Visit Node <ExternalLink size={12} />
-                </a>
-
+              <div className="flex justify-end">
                 <button
                   onClick={() => {
                     setSelectedNode(null);
@@ -1170,151 +1188,204 @@ export default function HeroLandingPage() {
           viewport={{ once: true, margin: '-60px' }}
           transition={{ duration: 0.7 }}
         >
-          <div className="hero-stat-item">
-            <span className="hero-stat-number">{activeDay}</span>
-            <span className="hero-stat-label">Songs Released</span>
-          </div>
-
-          <div className="hero-stat-item">
-            <span className="hero-stat-number">{activeDay}</span>
-            <span className="hero-stat-label">Playable Levels</span>
-          </div>
-
-          <div className="hero-stat-item">
-            <span className="hero-stat-number">{activeDay}</span>
-            <span className="hero-stat-label">Cards Minted</span>
-          </div>
-
-          <div className="hero-stat-item">
-            <span className="hero-stat-number">100%</span>
-            <span className="hero-stat-label">Daily On Time</span>
-          </div>
+          <StatCounter target={activeDay} label="Songs Released" />
+          <StatCounter target={activeDay} label="Playable Levels" />
+          <StatCounter target={activeDay} label="Cards" />
+          <StatCounter target={47291} label="Notes Played Today" />
+          <StatCounter target={1432} label="Packs Opened" />
         </motion.div>
       </section>
 
       <div className="hero-section-divider" />
 
-      {/* ═══════════ SECTION 9 : ROADMAP TIMELINE ═══════════ */}
-      <section className="hero-roadmap-section" id="hero-roadmap">
-        <h3 className="hero-roadmap-title">Roadmap</h3>
+      {/* ═══════════ SECTION 9 : ROADMAP ═══════════ */}
+      <section className="hero-roadmap-section" id="hero-roadmap" ref={roadmapRef}>
+        <motion.p
+          className="hero-roadmap-title"
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 0.4 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.7 }}
+        >
+          Roadmap
+        </motion.p>
 
-        <div className="hero-roadmap-timeline">
-          {ROADMAP_GENS.map((gen, i) => (
-            <motion.div
-              key={gen.gen}
-              className="hero-roadmap-gen"
-              initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: i * 0.12 }}
-            >
-              <div className={`hero-roadmap-dot ${!gen.active ? 'hero-roadmap-dot--inactive' : ''}`} />
-              <div className="hero-roadmap-gen-title">{gen.gen} · {gen.title}</div>
-              <div className="hero-roadmap-gen-desc">{gen.desc}</div>
-            </motion.div>
-          ))}
-        </div>
+        <motion.div
+          className="hero-roadmap-timeline"
+          initial={{ opacity: 0, y: 25 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-60px' }}
+          transition={{ duration: 0.8 }}
+        >
+          <div className="hero-roadmap-gen">
+            <div className="hero-roadmap-dot" />
+            <p className="hero-roadmap-gen-title">Generation 0</p>
+            <div className="hero-roadmap-bar-wrap">
+              <div
+                className="hero-roadmap-bar-fill"
+                style={{ width: roadmapInView ? `${(maxAllowedDay / 365) * 100}%` : '0%' }}
+              />
+            </div>
+            <p className="hero-roadmap-bar-label">Day {maxAllowedDay} / 365 Active</p>
+          </div>
+
+          <div className="hero-roadmap-gen">
+            <div className="hero-roadmap-dot hero-roadmap-dot--inactive" />
+            <p className="hero-roadmap-gen-title" style={{ opacity: 0.6 }}>
+              Generation 1
+            </p>
+            <div className="hero-roadmap-features">
+              {ROADMAP_GEN1_FEATURES.map(f => (
+                <span key={f} className="hero-roadmap-feature">
+                  {f}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="hero-roadmap-gen">
+            <div className="hero-roadmap-dot hero-roadmap-dot--inactive" />
+            <p className="hero-roadmap-gen-title" style={{ opacity: 0.4 }}>
+              Generation 2
+            </p>
+            <div className="hero-roadmap-features">
+              {ROADMAP_GEN2_FEATURES.map(f => (
+                <span key={f} className="hero-roadmap-feature">
+                  {f}
+                </span>
+              ))}
+            </div>
+          </div>
+        </motion.div>
       </section>
 
-      <div className="hero-section-divider" />
+      {/* ═══════════ SECTION 10 : BOTTOM CTA ═══════════ */}
+      <section className="hero-cta-section" id="hero-cta">
+        <motion.p
+          className="hero-cta-text"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 0.6, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8 }}
+        >
+          Today&apos;s song disappears into history tomorrow.
+        </motion.p>
 
-      {/* ═══════════ SECTION 10 : FOOTER ═══════════ */}
-      <footer className="hero-footer-section">
-        <p className="hero-footer-copy">
-          PIM : TH3V4ULT · Poetry In Motion · {new Date().getFullYear()}
-        </p>
-        <p className="hero-footer-sub">
-          One original song every single day. All rights reserved.
-        </p>
-      </footer>
+        <motion.p
+          className="hero-cta-day"
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.15 }}
+        >
+          Experience Day {activeDay}.
+        </motion.p>
 
-      {/* DAY SELECTOR COMMAND PALETTE MODAL (⌘K) */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.25 }}
+        >
+          <Link href={`/play/${songId}`} onClick={() => audioManager.playSfx('select_start_song', 0.6)}>
+            <span className="hero-play-btn">
+              <Play size={16} fill="#000" /> Play Day {activeDay}
+            </span>
+          </Link>
+        </motion.div>
+
+        <motion.p
+          className="hero-cta-countdown"
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 0.35 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+        >
+          Next drop in {countdownStr}
+        </motion.p>
+      </section>
+
+      {/* ═══════════ DAY SELECTOR COMMAND PALETTE MODAL ═══════════ */}
       <AnimatePresence>
-        {isDayModalOpen && (
+        {isCommandModalOpen && (
           <motion.div
-            className="hero-day-modal-overlay"
+            className="hero-command-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={() => setIsDayModalOpen(false)}
+            onClick={() => {
+              setIsCommandModalOpen(false);
+              audioManager.playSfx('back', 0.3);
+            }}
           >
             <motion.div
-              className="hero-day-modal"
-              initial={{ opacity: 0, scale: 0.95, y: -20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: -20 }}
+              className="hero-command-modal"
+              initial={{ scale: 0.94, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.94, opacity: 0 }}
+              transition={{ duration: 0.25, ease: EASE_OUT }}
               onClick={e => e.stopPropagation()}
             >
-              <div className="hero-command-input-wrap">
-                <Search size={18} className="hero-command-search-icon" />
+              <div className="hero-command-header">
+                <Search size={18} className="text-white/40" />
                 <input
                   type="text"
+                  placeholder="Jump to Day # or Search Title/Artist..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
                   className="hero-command-input"
-                  placeholder="Search song title, artist, or day number (1 to 365)..."
-                  value={daySearchQuery}
-                  onChange={e => setDaySearchQuery(e.target.value)}
                   autoFocus
                 />
                 <button
-                  className="hero-command-close"
-                  onClick={() => setIsDayModalOpen(false)}
+                  onClick={() => {
+                    setIsCommandModalOpen(false);
+                    audioManager.playSfx('back', 0.3);
+                  }}
+                  className="text-white/40 hover:text-white p-1 cursor-pointer"
                 >
-                  <X size={16} />
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="hero-command-quick-actions">
+                <button onClick={() => jumpToDay(maxAllowedDay)} className="hero-quick-tag">
+                  ⚡ Today (Day {maxAllowedDay})
+                </button>
+                <button onClick={() => jumpToDay(1)} className="hero-quick-tag">
+                  🌅 Day 1 (Launch)
+                </button>
+                <button
+                  onClick={() => {
+                    const rnd = Math.floor(Math.random() * maxAllowedDay) + 1;
+                    jumpToDay(rnd);
+                  }}
+                  className="hero-quick-tag"
+                >
+                  🎲 Random Day
                 </button>
               </div>
 
               <div className="hero-command-list">
-                {Array.from({ length: maxAllowedDay }, (_, i) => {
-                  const day = maxAllowedDay - i; // reverse order (newest first)
-                  const item = songByDayMap.get(day);
-                  const title = item?.title || `Track Day ${day}`;
-                  const artist = item?.artist || 'th3scr1b3';
-
-                  if (
-                    daySearchQuery.trim() &&
-                    !title.toLowerCase().includes(daySearchQuery.toLowerCase()) &&
-                    !artist.toLowerCase().includes(daySearchQuery.toLowerCase()) &&
-                    !String(day).includes(daySearchQuery.trim())
-                  ) {
-                    return null;
-                  }
-
-                  const isCurrent = day === activeDay;
-
-                  return (
-                    <div
-                      key={day}
-                      className={`hero-command-item ${isCurrent ? 'active' : ''}`}
-                      onClick={() => {
-                        jumpToDay(day);
-                        setIsDayModalOpen(false);
-                      }}
-                    >
-                      {item?.coverArt ? (
-                        <img src={item.coverArt} alt={title} className="hero-command-thumb" />
-                      ) : (
-                        <div className="hero-command-thumb bg-[#151520] flex items-center justify-center font-mono text-[9px]">
-                          {day}
-                        </div>
-                      )}
-
-                      <div className="hero-command-meta">
-                        <div className="hero-command-title">
-                          Day {day} — &quot;{title}&quot;
-                        </div>
-                        <div className="hero-command-sub">
-                          by {artist} · {item ? formatDuration(item.duration) : '--:--'}
-                        </div>
-                      </div>
-
-                      {isCurrent ? (
-                        <span className="font-mono text-[9px] text-[#39FF14] font-bold">PREVIEWING</span>
-                      ) : (
-                        <span className="font-mono text-[9px] text-white/40">SELECT</span>
-                      )}
+                {filteredCommandCatalog.map(s => (
+                  <div
+                    key={s.id}
+                    className={`hero-command-item ${s.day === activeDay ? 'active' : ''}`}
+                    onClick={() => jumpToDay(s.day)}
+                  >
+                    <img src={s.coverArt} alt={s.title} className="hero-command-thumb" />
+                    <div className="hero-command-meta">
+                      <span className="hero-command-title">{s.title}</span>
+                      <span className="hero-command-sub">
+                        Day {s.day} · {s.artist}
+                      </span>
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
+                {filteredCommandCatalog.length === 0 && (
+                  <div className="col-span-full py-12 text-center font-mono text-xs text-white/40 uppercase">
+                    No matching songs found in unlocked catalog.
+                  </div>
+                )}
               </div>
             </motion.div>
           </motion.div>
