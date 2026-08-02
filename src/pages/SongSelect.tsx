@@ -9,7 +9,7 @@ import { getCurrentDay, getMonthNumFromDay, getRelativeDay } from "../utils/dayC
 import { CHAPTERS, type ChapterMeta } from "@/game/campaign";
 import { getMedalForSong, getHighScore, getScoreHistory } from "@/game/progress";
 import PrizeProgressMenu from "../components/PrizeProgressMenu";
-import { Lock, Unlock, Play, Sliders, Music, Volume2, VolumeX, Activity, Award, Trophy, ChevronLeft, ChevronRight } from "lucide-react";
+import { Lock, Unlock, Play, Sliders, Music, Volume2, VolumeX, Activity, Award, Trophy, ChevronLeft, ChevronRight, Film } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const LANE_COLORS = ['#FF1493', '#39FF14', '#E5B800', '#8B48E5'];
@@ -830,20 +830,41 @@ export default function SongSelect() {
                     </div>
                   ) : null}
 
-                  <button
-                    data-testid="button-play"
-                    disabled={!selectedUnlocked}
-                    onClick={() => handlePlaySong()}
-                    onMouseEnter={() => { if (selectedUnlocked) audioManager.playSfx('tap_nav', 0.08); }}
-                    className={`w-full py-5 text-sm tracking-[0.5em] font-black uppercase rounded-2xl transition-all flex items-center justify-center gap-3 cursor-pointer ${
-                      selectedUnlocked
-                        ? "border border-[#39FF14] bg-[#39FF14] text-black hover:bg-[#39FF14]/90 shadow-[0_0_24px_rgba(57,255,20,0.5)] hover:scale-[1.01]"
-                        : "border border-white/10 bg-white/5 text-white/20 cursor-not-allowed"
-                    }`}
-                  >
-                    <Play size={18} fill="currentColor" />
-                    <span>START TRANSMISSION</span>
-                  </button>
+                  <div className="flex gap-3">
+                    <button
+                      data-testid="button-play"
+                      disabled={!selectedUnlocked}
+                      onClick={() => handlePlaySong()}
+                      onMouseEnter={() => { if (selectedUnlocked) audioManager.playSfx('tap_nav', 0.08); }}
+                      className={`flex-1 py-5 text-sm tracking-[0.5em] font-black uppercase rounded-2xl transition-all flex items-center justify-center gap-3 cursor-pointer ${
+                        selectedUnlocked
+                          ? "border border-[#39FF14] bg-[#39FF14] text-black hover:bg-[#39FF14]/90 shadow-[0_0_24px_rgba(57,255,20,0.5)] hover:scale-[1.01]"
+                          : "border border-white/10 bg-white/5 text-white/20 cursor-not-allowed"
+                      }`}
+                    >
+                      <Play size={18} fill="currentColor" />
+                      <span>START TRANSMISSION</span>
+                    </button>
+
+                    <button
+                      disabled={!selectedUnlocked}
+                      onClick={() => {
+                        if (!selected) return;
+                        sessionStorage.setItem(`export_video_${selected.id}`, 'true');
+                        handlePlaySong();
+                      }}
+                      onMouseEnter={() => { if (selectedUnlocked) audioManager.playSfx('tap_nav', 0.08); }}
+                      title="Export frame-perfect 100% PERFECT+ run video"
+                      className={`px-6 py-5 text-xs tracking-[0.25em] font-mono font-bold uppercase rounded-2xl transition-all flex items-center justify-center gap-2.5 cursor-pointer border ${
+                        selectedUnlocked
+                          ? "border-[#FF1493] bg-[#FF1493]/15 text-[#FF1493] hover:bg-[#FF1493] hover:text-black shadow-[0_0_20px_rgba(255,20,147,0.3)] hover:scale-[1.01]"
+                          : "border-white/10 bg-white/5 text-white/20 cursor-not-allowed"
+                      }`}
+                    >
+                      <Film size={18} />
+                      <span className="hidden sm:inline">EXPORT PERFECT VIDEO</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : (

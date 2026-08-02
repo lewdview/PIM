@@ -742,11 +742,16 @@ export default function HeroLandingPage() {
             Listen · Play · Collect · Return Tomorrow
           </p>
 
-          <Link href={`/play/${songId}`} onClick={() => audioManager.playSfx('select_start_song', 0.5)}>
-            <span className="hero-play-btn">
-              <Play size={14} fill="#000" /> Play Day {activeDay} Drop
-            </span>
-          </Link>
+          <div className="flex flex-col items-center gap-2 mb-4">
+            <Link href={`/play/${songId}`} onClick={() => audioManager.playSfx('select_start_song', 0.5)}>
+              <span className="hero-play-btn">
+                <Play size={14} fill="#000" /> PLAY DAY {activeDay} DROP
+              </span>
+            </Link>
+            <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-white/40 border-t border-b border-white/10 py-1 px-6 mt-1">
+              ─────────────── No account required ───────────────
+            </div>
+          </div>
 
           {/* Day Stepper & Command Palette Trigger */}
           <div className="flex justify-center">

@@ -3,19 +3,20 @@ import { useParams, useLocation } from "wouter";
 import { getSongById, saveHighScore, isSongTimeLocked, getModifierForSong, STAGEIFICATION_CONFIG } from "@/game/api";
 import { saveMedal, saveScoreHistory } from "@/game/progress";
 import type { GameSong } from "@/game/api";
-import type { Note, JudgmentDisplay, GameState } from "@/game/types";
+import type { Note, JudgmentDisplay, GameState, NoteType } from "@/game/types";
 import { loadOpts, keyLabel, type GameOpts } from "@/lib/options";
 import { audioManager } from "@/game/audio";
 import { useVaultStore } from "@/store/useVaultStore";
 import { haptics } from "../utils/haptics";
 import { motion, AnimatePresence } from "framer-motion";
-import { Lock } from "lucide-react";
+import { Lock, Film } from "lucide-react";
 import { logAnalyticsEvent } from "../services/telemetryService";
 import { gameSenseService } from "@/services/gameSenseService";
 import { supabase } from "@/services/supabaseClient";
 import { useAuthStore } from "@/store/useAuthStore";
 import { purchasePack, type OwnedCard } from "@/services/vaultService";
 import { TransmissionIcon } from "../components/icons/CustomVectorIcons";
+import VideoExportModal from "@/components/ui/VideoExportModal";
 
 // Use Vite's eager glob to grab files in /public/data/slideshow/
 const imageModules = import.meta.glob('/public/data/slideshow/**/*.{png,jpg,jpeg,gif,webp,svg}', { eager: true });
@@ -1343,6 +1344,7 @@ export default function Game() {
   const slideTimeRef = useRef<number>(0);
   const fadeAlphaRef = useRef<number>(1);
   const audioSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const masterGainRef = useRef<GainNode | null>(null);
   const audioFiltersRef = useRef<BiquadFilterNode[]>([]);
   const laneGainsRef = useRef<GainNode[]>([]);
   const laneSilenced = useRef<boolean[]>([false, false, false]);
@@ -1373,6 +1375,23 @@ export default function Game() {
   const [displayJudge, setDisplayJudge] = useState<JudgmentDisplay[]>([]);
   const [bufferPct, setBufferPct] = useState(0);
   const [loadMsg, setLoadMsg] = useState("FETCHING TRANSMISSION...");
+
+  // ── Frame-Perfect Video Recorder State ──
+  const isExportVideoRef = useRef<boolean>(
+    new URLSearchParams(window.location.search).get("export") === "video" ||
+    sessionStorage.getItem(`export_video_${songId}`) === "true"
+  );
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isRecordingVideo, setIsRecordingVideo] = useState(false);
+  const [recordingProgress, setRecordingProgress] = useState(0);
+  const [frameCount, setFrameCount] = useState(0);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
+  const [videoMimeType, setVideoMimeType] = useState<string>("video/mp4");
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
+  const frameCounterRef = useRef<number>(0);
+
   const [currentStage, setCurrentStage] = useState(1);
   const [stageStingerNumber, setStageStingerNumber] = useState<number | null>(null);
   const [stageStingerPhase, setStageStingerPhase] = useState<'cleared' | 'start'>('cleared');
@@ -2355,6 +2374,12 @@ export default function Game() {
     audioRef.current?.pause();
     audioRef.current && (audioRef.current.currentTime = 0);
 
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      try {
+        mediaRecorderRef.current.stop();
+      } catch {}
+    }
+
     if (optsRef.current.autoLatencyAdjust) {
       const autoOffsetMs = Math.round(audioOffsetRef.current);
       localStorage.setItem("opt_audioOffset", String(autoOffsetMs));
@@ -2441,15 +2466,17 @@ export default function Game() {
       console.error("Failed to save game results:", err);
     }
 
-    // Shorter delay for a snappier transition to results
-    finishGameTimeoutRef.current = setTimeout(() => {
-      if (phaseRef.current === "unmounted") return;
-      if (isTutorial) {
-        setLocation(`/tutorial?phase=results&score=${gs.score}`);
-      } else {
-        setLocation(`/results/${songId}`);
-      }
-    }, 300);
+    // Only navigate to results if not exporting video (or user closes export modal)
+    if (!isExportVideoRef.current) {
+      finishGameTimeoutRef.current = setTimeout(() => {
+        if (phaseRef.current === "unmounted") return;
+        if (isTutorial) {
+          setLocation(`/tutorial?phase=results&score=${gs.score}`);
+        } else {
+          setLocation(`/results/${songId}`);
+        }
+      }, 300);
+    }
   }, [songId, setLocation, isTutorial]);
 
   const doAbandon = useCallback(() => {
@@ -2668,6 +2695,22 @@ export default function Game() {
     const gs = gsRef.current;
     const pu = puRef.current;
     gs.progress = Math.min(1, t / song.duration);
+
+    // Frame-Perfect Perfect Solver Bot execution & Frame Counter
+    if (isExportVideoRef.current && phaseRef.current === "playing") {
+      frameCounterRef.current++;
+      setFrameCount(frameCounterRef.current);
+      if (songRef.current && songRef.current.duration > 0) {
+        setRecordingProgress(Math.min(100, (t / songRef.current.duration) * 100));
+      }
+      notesRef.current.forEach((ns) => {
+        if (!ns.hit && !ns.missed) {
+          if (t >= ns.note.time) {
+            hitLane(ns.note.lane, ns.note.swipeDirection);
+          }
+        }
+      });
+    }
 
     // Update ghost competitor keys and timeline events
     if (ghostTelemetryRef.current) {
@@ -6578,6 +6621,7 @@ export default function Game() {
 
         // Master Limiter setup to prevent digital clipping (scratchy playback)
         const masterGainNode = actx.createGain();
+        masterGainRef.current = masterGainNode;
         masterGainNode.gain.setValueAtTime(0.85, actx.currentTime);
 
         const compressor = actx.createDynamicsCompressor();
@@ -6710,6 +6754,62 @@ export default function Game() {
 
       phaseRef.current = "playing";
       setPhase("playing");
+
+      if (isExportVideoRef.current && canvasRef.current) {
+        try {
+          setIsRecordingVideo(true);
+          setIsExportModalOpen(true);
+          recordedChunksRef.current = [];
+          
+          const canvasStream = canvasRef.current.captureStream(60);
+          let combinedStream = canvasStream;
+          
+          if (audioCtxRef.current && audioCtxRef.current.destination) {
+            const dest = audioCtxRef.current.createMediaStreamDestination();
+            let connected = false;
+            if (masterGainRef.current) {
+              try { masterGainRef.current.connect(dest); connected = true; } catch {}
+            }
+            if (!connected && audioSourceRef.current) {
+              try { audioSourceRef.current.connect(dest); connected = true; } catch {}
+            }
+            const audioTracks = dest.stream.getAudioTracks();
+            if (audioTracks.length > 0) {
+              combinedStream = new MediaStream([
+                ...canvasStream.getVideoTracks(),
+                audioTracks[0]
+              ]);
+            }
+          }
+
+          let mimeType = 'video/mp4;codecs=avc1,aac';
+          if (!MediaRecorder.isTypeSupported(mimeType)) {
+            mimeType = 'video/webm;codecs=vp9,opus';
+          }
+          if (!MediaRecorder.isTypeSupported(mimeType)) {
+            mimeType = 'video/webm';
+          }
+          setVideoMimeType(mimeType);
+
+          const recorder = new MediaRecorder(combinedStream, { mimeType });
+          recorder.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) {
+              recordedChunksRef.current.push(e.data);
+            }
+          };
+          recorder.onstop = () => {
+            const blob = new Blob(recordedChunksRef.current, { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            setVideoBlob(blob);
+            setVideoUrl(url);
+            setIsRecordingVideo(false);
+          };
+          recorder.start(100);
+          mediaRecorderRef.current = recorder;
+        } catch (recErr) {
+          console.error('[Video Export] Failed to start MediaRecorder:', recErr);
+        }
+      }
 
       await audio.play();
 
@@ -8578,6 +8678,28 @@ export default function Game() {
               </div>
             </div>
           )}
+
+          {/* Frame-Perfect 100% PERFECT+ Video Export Modal */}
+          <VideoExportModal
+            isOpen={isExportModalOpen}
+            isRecording={isRecordingVideo}
+            progressPct={recordingProgress}
+            frameCount={frameCount}
+            videoUrl={videoUrl}
+            videoBlob={videoBlob}
+            mimeType={videoMimeType}
+            songTitle={song?.title || "Transmission"}
+            songArtist={song?.artist || "PIM Artist"}
+            onClose={() => {
+              setIsExportModalOpen(false);
+              sessionStorage.removeItem(`export_video_${songId}`);
+              if (isTutorial) {
+                setLocation(`/tutorial?phase=results&score=${gs.score}`);
+              } else {
+                setLocation(`/results/${songId}`);
+              }
+            }}
+          />
 
         </div>
       </div>

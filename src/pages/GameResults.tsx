@@ -11,6 +11,7 @@ import { supabase } from "@/services/supabaseClient";
 import { purchasePack } from "@/services/vaultService";
 import { PACK_CONFIGS } from "@/utils/rarity";
 import { logAnalyticsEvent } from "@/services/telemetryService";
+import OnboardingFlowModal from "@/components/OnboardingFlowModal";
 
 interface LaneTelemetry {
   hits: number; perfectPlus: number; perfects: number; goods: number; misses: number;
@@ -330,6 +331,7 @@ export default function Results() {
   const loadVaultData = useVaultStore(s => s.loadVaultData);
   const [claimStatus, setClaimStatus] = useState<'idle' | 'checking' | 'ready' | 'claiming' | 'claimed' | 'failed'>('idle');
   const [alreadyClaimedTiers, setAlreadyClaimedTiers] = useState<Set<string>>(new Set());
+  const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -1431,6 +1433,29 @@ export default function Results() {
                   ← {fromFreePlay ? '[ RETURN TO AWARD PLAY ]' : '[ CONTINUE TO LEVEL PATH ]'}
                 </button>
               )}
+              {(!user || user.is_anonymous) && (
+                <div className="w-full my-3 p-4 rounded-lg border border-[#FF1493]/40 bg-black/80 backdrop-blur-md text-center space-y-2.5">
+                  <div className="font-mono text-[9px] tracking-[0.3em] uppercase text-[#FF1493] font-bold">
+                    // TODAY&apos;S DROP COMPLETE //
+                  </div>
+                  <h3 className="font-mono text-base font-bold text-white uppercase tracking-wider">
+                    SAVE YOUR PROGRESS
+                  </h3>
+                  <p className="font-sans text-[11px] text-white/70">
+                    Create your free PIM account to keep today&apos;s achievement, collection and daily streak.
+                  </p>
+                  <button
+                    onClick={() => setIsOnboardingModalOpen(true)}
+                    className="w-full py-3 px-4 font-mono text-xs font-bold uppercase tracking-widest bg-white text-black hover:bg-white/90 transition-all rounded shadow-lg flex items-center justify-center gap-2"
+                  >
+                    <span>✨</span> SAVE YOUR RUN
+                  </button>
+                  <div className="font-mono text-[9px] text-white/40 pt-1">
+                    DAY {song?.day || 208} COMPLETE · 207 previous drops waiting in archive
+                  </div>
+                </div>
+              )}
+
               <div className="flex gap-2">
                 <button data-testid="button-retry" onClick={() => {
                   audioManager.playSfx('tap_nav', 0.15);
@@ -1459,6 +1484,18 @@ export default function Results() {
             <ArcadeMarquee color={currentRingColor} medal={result.medal} />
           </div>
         )}
+
+        <OnboardingFlowModal
+          isOpen={isOnboardingModalOpen}
+          onClose={() => setIsOnboardingModalOpen(false)}
+          gameStats={{
+            accuracy: acc,
+            notesHit: result.total,
+            maxCombo: result.maxCombo,
+            songTitle: song?.title,
+            dayNumber: song?.day,
+          }}
+        />
       </div>
     );
   }
