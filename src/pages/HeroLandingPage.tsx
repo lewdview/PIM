@@ -20,7 +20,7 @@ import {
 import { extractPalette, getFallbackPalette, type ExtractedPalette } from '../utils/extractPalette';
 import { audioManager } from '../game/audio';
 import '../styles/HeroLandingPage.css';
-import { getCurrentDay, getDateFromDay } from '../utils/dayCalc';
+import { getCurrentDay, formatDate } from '../utils/dayCalc';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Types & Data Structures
@@ -760,7 +760,7 @@ export default function HeroLandingPage() {
         >
           <span>Day {activeDay}</span>
           <span>·</span>
-          <span>{song ? getDateFromDay(song.day) : `Day ${activeDay}`}</span>
+          <span>{song ? formatDate(song.day) : `Day ${activeDay}`}</span>
         </motion.div>
       </section>
 

@@ -24,7 +24,7 @@ import {
 import { useAuthStore } from '../store/useAuthStore';
 import { useVaultStore } from '../store/useVaultStore';
 import { supabase } from '../services/supabaseClient';
-import { getCurrentDay, getDateFromDay } from '../utils/dayCalc';
+import { getCurrentDay, formatDate } from '../utils/dayCalc';
 import { extractPalette, getFallbackPalette, type ExtractedPalette } from '../utils/extractPalette';
 import { audioManager } from '../game/audio';
 import '../styles/ProfilePage.css';
