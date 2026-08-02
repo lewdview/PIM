@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, Gift, Check, Shield, Layers, ArrowRight, Wallet, Lock, X } from 'lucide-react';
+import { Sparkles, Gift, Check, Shield, Layers, ArrowRight, Wallet, Lock, X, Globe, Fingerprint } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { useVaultStore } from '../store/useVaultStore';
 import { audioManager } from '../game/audio';
@@ -31,7 +31,7 @@ export default function OnboardingFlowModal({ isOpen, onClose, gameStats }: Onbo
   const dayNum = gameStats?.dayNumber || 208;
   const accuracy = gameStats?.accuracy || 96;
 
-  // Handle Account Creation / Save Run
+  // Handle Account Creation & user.th3scr1b3.art Identity Passport Registration
   const handleSaveRun = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
@@ -43,6 +43,7 @@ export default function OnboardingFlowModal({ isOpen, onClose, gameStats }: Onbo
     setLoading(true);
     try {
       audioManager.playSfx('reward_claim', 0.5);
+      // Route magic link auth & sync profile passport on user.th3scr1b3.art
       const res = await signInWithMagicLink(email.trim());
       if (res?.error) {
         setErrorMsg(res.error);
@@ -117,17 +118,31 @@ export default function OnboardingFlowModal({ isOpen, onClose, gameStats }: Onbo
           transition={{ type: 'spring', stiffness: 320, damping: 28 }}
           className="relative w-full max-w-md overflow-hidden rounded-xl border border-white/15 bg-neutral-950/90 shadow-[0_0_80px_rgba(255,20,147,0.2)] p-6 text-white"
         >
+          {/* Animated top shimmer accent line */}
+          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#FF1493] via-[#00E5FF] to-transparent animate-pulse" />
+
+          {/* Cyberpunk corner bracket accents */}
+          <div className="absolute top-0 left-0 w-2.5 h-2.5 border-t border-l border-[#FF1493]/60" />
+          <div className="absolute top-0 right-0 w-2.5 h-2.5 border-t border-r border-[#FF1493]/60" />
+          <div className="absolute bottom-0 left-0 w-2.5 h-2.5 border-b border-l border-[#FF1493]/60" />
+          <div className="absolute bottom-0 right-0 w-2.5 h-2.5 border-b border-r border-[#FF1493]/60" />
+
           {/* Close / Skip button */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 text-white/40 hover:text-white transition-colors"
+            className="absolute top-4 right-4 text-white/40 hover:text-white transition-colors z-20"
           >
             <X size={18} />
           </button>
 
           {/* STEP 1: SAVE YOUR RUN */}
           {step === 'SAVE_RUN' && (
-            <div className="flex flex-col items-center text-center space-y-5">
+            <div className="flex flex-col items-center text-center space-y-4">
+              <div className="font-mono text-[9px] uppercase tracking-[0.25em] text-[#00E5FF] border border-[#00E5FF]/30 bg-[#00E5FF]/5 px-3 py-1 rounded inline-flex items-center gap-1.5">
+                <Globe size={11} />
+                <span>USER.TH3SCR1B3.ART // IDENTITY PASSPORT HUB</span>
+              </div>
+
               <div className="font-mono text-[10px] tracking-[0.3em] uppercase text-[#FF1493] font-bold">
                 // COMPLETED DAY {dayNum} //
               </div>
