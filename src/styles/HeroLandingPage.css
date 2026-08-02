@@ -1,0 +1,1465 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   HeroLandingPage.css — Award-Winning Museum Exhibit Experience
+   
+   Visual DNA: Apple Music × Monument Valley × Arcane × Persona 5
+   
+   5-Pass Visual Upgrade System:
+   - Pass 1: Ambient Shader Light Beams, Noise Grain & Kinetic Typography
+   - Pass 2: 3D Perspective Artwork Tilt, Holographic Vinyl Disc & Realtime Waveform
+   - Pass 3: Museum Pedestal Gallery, Heatmap Filters & Interactive Card Tooltips
+   - Pass 4: 3D Orbital Constellation, Particle Line Rays & Node Detail Drawer
+   - Pass 5: Tactile Micro-Interactions, Cyber Coordinates & Sound Trigger States
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── ROOT & VARIABLES ─────────────────────────────────────────────────── */
+
+.hero-landing {
+  background: #030303;
+  color: #fff;
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  overflow-x: hidden;
+  position: relative;
+  --palette-dominant: #ff3800;
+  --palette-secondary: #a855f7;
+  --palette-accent: #00e5ff;
+  --palette-muted: #666;
+  --palette-dark: #0c0c14;
+}
+
+/* ── NOISE OVERLAY & AMBIENT SHADER BEAMS (PASS 1) ────────────────────── */
+
+.hero-noise-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 99;
+  opacity: 0.035;
+  background: radial-gradient(circle, transparent 20%, #000 90%),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
+}
+
+.hero-ambient-beams {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.hero-beam-1 {
+  position: absolute;
+  top: -20%;
+  left: 20%;
+  width: 60vw;
+  height: 60vw;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--palette-dominant) 25%, transparent) 0%, transparent 70%);
+  filter: blur(120px);
+  animation: beam-float-1 22s ease-in-out infinite alternate;
+}
+
+.hero-beam-2 {
+  position: absolute;
+  bottom: 10%;
+  right: -10%;
+  width: 50vw;
+  height: 50vw;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--palette-secondary) 20%, transparent) 0%, transparent 70%);
+  filter: blur(140px);
+  animation: beam-float-2 28s ease-in-out infinite alternate;
+}
+
+.hero-beam-3 {
+  position: absolute;
+  top: 40%;
+  left: -15%;
+  width: 45vw;
+  height: 45vw;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--palette-accent) 15%, transparent) 0%, transparent 70%);
+  filter: blur(130px);
+  animation: beam-float-3 25s ease-in-out infinite alternate;
+}
+
+@keyframes beam-float-1 {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(8%, 12%) scale(1.2); }
+}
+
+@keyframes beam-float-2 {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(-12%, -8%) scale(1.15); }
+}
+
+@keyframes beam-float-3 {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(15%, -10%) scale(1.25); }
+}
+
+/* ── SIDE SCROLL NAVIGATION DOTS (PASS 5) ────────────────────────────── */
+
+.hero-side-nav {
+  position: fixed;
+  right: 1.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.hero-nav-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.35s ease;
+  position: relative;
+}
+
+.hero-nav-dot:hover,
+.hero-nav-dot.active {
+  background: var(--palette-dominant);
+  box-shadow: 0 0 12px var(--palette-dominant);
+  transform: scale(1.4);
+}
+
+.hero-nav-dot .hero-nav-tooltip {
+  position: absolute;
+  right: 1.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--palette-dominant);
+  background: rgba(8, 8, 12, 0.9);
+  padding: 0.25rem 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.hero-nav-dot:hover .hero-nav-tooltip {
+  opacity: 1;
+}
+
+/* ── SECTION 1 : HERO VIEWPORT (PASS 1 & 2) ───────────────────────────── */
+
+.hero-viewport {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.hero-artwork-bg {
+  position: absolute;
+  inset: -5%;
+  background-size: cover;
+  background-position: center;
+  animation: hero-ken-burns 30s ease-in-out infinite alternate;
+  filter: brightness(0.22) saturate(1.5) contrast(1.1);
+  will-change: transform;
+}
+
+@keyframes hero-ken-burns {
+  0% { transform: scale(1) translate(0, 0); }
+  100% { transform: scale(1.12) translate(-1.5%, -1.5%); }
+}
+
+.hero-particles-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.hero-vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 85% 85% at 50% 45%,
+    transparent 0%,
+    rgba(3, 3, 3, 0.5) 55%,
+    rgba(3, 3, 3, 0.98) 100%
+  );
+  z-index: 3;
+}
+
+.hero-content-glass {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  padding: 4rem 3rem;
+  max-width: 720px;
+  background: rgba(8, 8, 14, 0.45);
+  backdrop-filter: blur(50px) saturate(1.8);
+  -webkit-backdrop-filter: blur(50px) saturate(1.8);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.8),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+}
+
+/* Persona 5 / Arcane dual-layer kinetic typography */
+.hero-title-pim {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 900;
+  font-size: clamp(3.5rem, 11vw, 8.5rem);
+  letter-spacing: 0.5em;
+  text-transform: uppercase;
+  line-height: 0.95;
+  margin-bottom: 0.25rem;
+  background: linear-gradient(135deg, #ffffff 30%, var(--palette-dominant) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 40px color-mix(in srgb, var(--palette-dominant) 60%, transparent));
+}
+
+.hero-title-subtitle {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 200;
+  font-size: clamp(0.9rem, 2.5vw, 1.5rem);
+  letter-spacing: 0.45em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 2.5rem;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+.hero-tagline {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 300;
+  font-size: clamp(0.85rem, 2vw, 1.15rem);
+  line-height: 2.2;
+  color: rgba(255, 255, 255, 0.55);
+  margin-bottom: 0.75rem;
+}
+
+.hero-actions-line {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: var(--palette-accent);
+  opacity: 0.6;
+  margin-bottom: 2.5rem;
+}
+
+.hero-play-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1.15rem 3.5rem;
+  font-family: 'Roboto Mono', monospace;
+  font-weight: 800;
+  font-size: 0.8rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: #000;
+  background: var(--palette-dominant);
+  border: 2px solid #000;
+  clip-path: polygon(14px 0%, 100% 0%, calc(100% - 14px) 100%, 0% 100%);
+  cursor: pointer;
+  transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: hero-btn-pulse 3s ease-in-out infinite;
+  text-decoration: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-play-btn:hover {
+  transform: scale(1.06) translateY(-2px);
+  box-shadow: 0 0 50px var(--palette-dominant),
+    0 0 100px color-mix(in srgb, var(--palette-dominant) 40%, transparent);
+  background: #ffffff;
+  color: #000;
+}
+
+@keyframes hero-btn-pulse {
+  0%, 100% {
+    box-shadow: 0 0 20px color-mix(in srgb, var(--palette-dominant) 30%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 50px var(--palette-dominant),
+      0 0 90px color-mix(in srgb, var(--palette-dominant) 25%, transparent);
+  }
+}
+
+.hero-day-badge {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  opacity: 0.4;
+  margin-top: 2.5rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.hero-scroll-hint {
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  opacity: 0.3;
+  animation: hero-scroll-bounce 2.5s ease-in-out infinite;
+  cursor: pointer;
+  transition: opacity 0.3s ease;
+}
+
+.hero-scroll-hint:hover {
+  opacity: 0.9;
+  color: var(--palette-dominant);
+}
+
+@keyframes hero-scroll-bounce {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50% { transform: translateX(-50%) translateY(10px); }
+}
+
+/* ── SECTION 2 : TODAY'S DROP & HOLOGRAPHIC VINYL PEDESTAL (PASS 2 & 3) ── */
+
+.hero-drop-section {
+  position: relative;
+  padding: 10rem 1.5rem 8rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3rem;
+  background: #030303;
+  perspective: 1200px;
+}
+
+/* Museum Pedestal Frame */
+.hero-pedestal-stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-drop-artwork-container {
+  position: relative;
+  width: min(440px, 78vw);
+  aspect-ratio: 1;
+  transform-style: preserve-3d;
+  transition: transform 0.25s ease-out;
+  cursor: pointer;
+}
+
+/* Floating Vinyl Record popping out 50% on hover/play */
+.hero-vinyl-disc {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: radial-gradient(circle, #080808 20%, #151515 22%, #0a0a0a 24%, #181818 45%, #0d0d0d 47%, #1a1a1a 70%, #000000 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8),
+    inset 0 0 20px rgba(255, 255, 255, 0.05);
+  transform: translateX(0) scale(0.96);
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-drop-artwork-container:hover .hero-vinyl-disc,
+.hero-vinyl-disc.playing {
+  transform: translateX(45%) scale(0.98);
+}
+
+.hero-vinyl-disc.playing {
+  animation: vinyl-spin 8s linear infinite;
+}
+
+@keyframes vinyl-spin {
+  from { transform: translateX(45%) scale(0.98) rotate(0deg); }
+  to { transform: translateX(45%) scale(0.98) rotate(360deg); }
+}
+
+.hero-vinyl-label {
+  width: 32%;
+  height: 32%;
+  border-radius: 50%;
+  background-size: cover;
+  background-position: center;
+  border: 2px solid rgba(0, 0, 0, 0.8);
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.8);
+}
+
+/* Front Cover Artwork Card */
+.hero-drop-artwork-card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.85),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
+  background: #09080c;
+  overflow: hidden;
+  transition: box-shadow 0.4s ease;
+}
+
+.hero-drop-artwork-card:hover {
+  box-shadow: 0 35px 100px color-mix(in srgb, var(--palette-dominant) 35%, rgba(0, 0, 0, 0.9));
+}
+
+.hero-drop-artwork-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Specular reflection sheen */
+.hero-specular-glare {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.25) 0%,
+    transparent 45%,
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: 3;
+}
+
+.hero-drop-glow {
+  position: absolute;
+  inset: -60px;
+  background: radial-gradient(circle, var(--palette-dominant) 0%, transparent 70%);
+  opacity: 0.15;
+  z-index: -1;
+  filter: blur(80px);
+  animation: hero-glow-breathe 6s ease-in-out infinite;
+}
+
+@keyframes hero-glow-breathe {
+  0%, 100% { opacity: 0.1; transform: scale(1); }
+  50% { opacity: 0.25; transform: scale(1.08); }
+}
+
+/* Real-Time Audio Visualizer Bar */
+.hero-waveform-wrap {
+  width: min(440px, 78vw);
+  height: 38px;
+  background: rgba(12, 12, 20, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  display: flex;
+  align-items: center;
+  padding: 0 1rem;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.hero-waveform-canvas {
+  flex: 1;
+  height: 24px;
+}
+
+.hero-drop-title {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
+  font-size: clamp(1.8rem, 4.5vw, 3rem);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: center;
+  background: linear-gradient(180deg, #ffffff 40%, rgba(255, 255, 255, 0.7) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 20px rgba(0, 0, 0, 0.5));
+}
+
+.hero-drop-meta {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+  text-align: center;
+}
+
+.hero-drop-actions {
+  display: flex;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.hero-drop-action-btn {
+  padding: 0.85rem 2.25rem;
+  font-family: 'Roboto Mono', monospace;
+  font-weight: 700;
+  font-size: 0.7rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  background: rgba(15, 15, 22, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  backdrop-filter: blur(20px);
+}
+
+.hero-drop-action-btn:hover,
+.hero-drop-action-btn.active {
+  border-color: var(--palette-dominant);
+  color: #ffffff;
+  background: color-mix(in srgb, var(--palette-dominant) 20%, rgba(15, 15, 22, 0.9));
+  box-shadow: 0 0 30px color-mix(in srgb, var(--palette-dominant) 30%, transparent);
+  transform: translateY(-2px);
+}
+
+/* ── SECTION 3 : JOURNEY (PASS 1 & 5) ─────────────────────────────────── */
+
+.hero-journey-section {
+  padding: 10rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #030303;
+  position: relative;
+}
+
+.hero-journey-title {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 300;
+  font-size: clamp(1rem, 2.2vw, 1.35rem);
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  opacity: 0.45;
+  margin-bottom: 4.5rem;
+  color: var(--palette-accent);
+}
+
+.hero-journey-steps {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  max-width: 320px;
+  width: 100%;
+}
+
+.hero-journey-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 1rem 0;
+  width: 100%;
+  background: rgba(12, 12, 20, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  transition: all 0.35s ease;
+}
+
+.hero-journey-step:hover {
+  border-color: var(--palette-dominant);
+  background: rgba(255, 255, 255, 0.04);
+  transform: scale(1.04);
+}
+
+.hero-journey-icon {
+  font-size: 2.2rem;
+  line-height: 1;
+  filter: drop-shadow(0 0 10px var(--palette-dominant));
+}
+
+.hero-journey-label {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  font-size: 0.8rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.hero-journey-arrow {
+  width: 2px;
+  height: 42px;
+  background: linear-gradient(to bottom, var(--palette-dominant), var(--palette-secondary));
+  box-shadow: 0 0 8px var(--palette-dominant);
+}
+
+/* ── SECTION 4 : COLLECTION HEATMAP & FILTER CONSOLE (PASS 3) ──────────── */
+
+.hero-collection-section {
+  padding: 8rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #030303;
+  position: relative;
+}
+
+.hero-collection-header {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 900;
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  background: linear-gradient(180deg, #ffffff 40%, var(--palette-dominant) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.hero-progress-bar-wrap {
+  width: min(640px, 90vw);
+  height: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  margin-bottom: 0.85rem;
+  position: relative;
+}
+
+.hero-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--palette-dominant), var(--palette-secondary), var(--palette-accent));
+  box-shadow: 0 0 20px var(--palette-dominant);
+  transition: width 1.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.hero-progress-label {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 2.5rem;
+}
+
+/* Heatmap Grid Filters */
+.hero-collection-filters {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.hero-filter-chip {
+  padding: 0.4rem 1.1rem;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  background: rgba(20, 20, 30, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.hero-filter-chip:hover,
+.hero-filter-chip.active {
+  border-color: var(--palette-dominant);
+  color: #fff;
+  background: color-mix(in srgb, var(--palette-dominant) 20%, transparent);
+}
+
+.hero-card-grid {
+  display: grid;
+  grid-template-columns: repeat(19, 1fr);
+  gap: 4px;
+  width: min(640px, 90vw);
+  position: relative;
+}
+
+.hero-grid-cell {
+  aspect-ratio: 1;
+  border-radius: 1px;
+  transition: all 0.3s ease;
+  position: relative;
+  cursor: pointer;
+}
+
+.hero-grid-cell--filled {
+  opacity: 0.7;
+  animation: hero-cell-shimmer 4s ease-in-out infinite;
+  animation-delay: var(--shimmer-delay, 0s);
+}
+
+/* Dark Mood Cells — Extracted Dominant Color Glow */
+.hero-grid-cell--dark {
+  background: color-mix(in srgb, var(--palette-dominant) 45%, transparent);
+  border: 1px solid color-mix(in srgb, var(--palette-dominant) 60%, transparent);
+  box-shadow: inset 0 0 6px color-mix(in srgb, var(--palette-dominant) 30%, transparent);
+}
+
+.hero-grid-cell--dark:hover {
+  opacity: 1 !important;
+  transform: scale(1.65);
+  z-index: 10;
+  border-color: var(--palette-dominant);
+  box-shadow: 0 0 20px var(--palette-dominant), 0 0 40px color-mix(in srgb, var(--palette-dominant) 50%, transparent);
+  background: var(--palette-dominant);
+}
+
+/* Light Mood Cells — Extracted Accent Color Glow */
+.hero-grid-cell--light {
+  background: color-mix(in srgb, var(--palette-accent) 55%, transparent);
+  border: 1px solid color-mix(in srgb, var(--palette-accent) 60%, transparent);
+  box-shadow: inset 0 0 6px color-mix(in srgb, var(--palette-accent) 30%, transparent);
+}
+
+.hero-grid-cell--light:hover {
+  opacity: 1 !important;
+  transform: scale(1.65);
+  z-index: 10;
+  border-color: var(--palette-accent);
+  box-shadow: 0 0 20px var(--palette-accent), 0 0 40px color-mix(in srgb, var(--palette-accent) 50%, transparent);
+  background: var(--palette-accent);
+}
+
+/* Dimmed non-matching filter cells */
+.hero-grid-cell--dimmed {
+  opacity: 0.12 !important;
+  filter: grayscale(0.8);
+  transform: scale(0.9);
+}
+
+.hero-grid-cell--empty {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.hero-grid-cell--empty:hover {
+  background: rgba(255, 255, 255, 0.18);
+  transform: scale(1.4);
+  z-index: 10;
+}
+
+.hero-grid-cell--today {
+  background: #ffffff !important;
+  opacity: 1 !important;
+  box-shadow: 0 0 15px #ffffff, 0 0 35px var(--palette-dominant);
+  animation: today-pulse 2s ease-in-out infinite alternate;
+  z-index: 5;
+}
+
+@keyframes today-pulse {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.25); }
+}
+
+@keyframes hero-cell-shimmer {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.8; }
+}
+
+/* ── SECTION 5 : STORY (PASS 1 & 5) ───────────────────────────────────── */
+
+.hero-story-section {
+  padding: 10rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 80vh;
+  background: #030303;
+  position: relative;
+}
+
+.hero-story-line {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 300;
+  font-size: clamp(1.1rem, 2.8vw, 1.6rem);
+  text-align: center;
+  max-width: 620px;
+  line-height: 2;
+  color: rgba(255, 255, 255, 0.85);
+  margin-bottom: 1.5rem;
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+}
+
+.hero-story-highlight {
+  color: var(--palette-dominant);
+  font-weight: 600;
+}
+
+/* ── SECTION 6 : GAMEPLAY PROOF (PASS 2 & 5) ──────────────────────────── */
+
+.hero-gameplay-section {
+  padding: 8rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #030303;
+}
+
+.hero-gameplay-wrap {
+  position: relative;
+  width: min(380px, 80vw);
+  aspect-ratio: 9 / 16;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #0a0a0e;
+  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.9),
+    0 0 40px color-mix(in srgb, var(--palette-dominant) 15%, transparent);
+}
+
+.hero-gameplay-media {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hero-gameplay-ken-burns {
+  animation: hero-gameplay-zoom 20s ease-in-out infinite alternate;
+}
+
+@keyframes hero-gameplay-zoom {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.12); }
+}
+
+.hero-gameplay-label {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+  margin-top: 2rem;
+}
+
+/* ── SECTION 7 : 3D ORBITAL ECOSYSTEM & DRAWER INSPECTOR (PASS 4) ──────── */
+
+.hero-ecosystem-section {
+  padding: 10rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 90vh;
+  justify-content: center;
+  background: #030303;
+  position: relative;
+}
+
+.hero-constellation {
+  width: min(580px, 88vw);
+  height: min(580px, 88vw);
+  position: relative;
+}
+
+.hero-constellation-node {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  transition: all 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  transform: translate(-50%, -50%);
+  z-index: 5;
+}
+
+.hero-constellation-node:hover,
+.hero-constellation-node.active {
+  transform: translate(-50%, -50%) scale(1.25);
+  z-index: 10;
+}
+
+.hero-constellation-circle {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--palette-dominant);
+  box-shadow: 0 0 15px var(--palette-dominant);
+  transition: all 0.4s ease;
+}
+
+.hero-constellation-node:hover .hero-constellation-circle,
+.hero-constellation-node.active .hero-constellation-circle {
+  width: 20px;
+  height: 20px;
+  box-shadow: 0 0 40px var(--palette-dominant), 0 0 80px var(--palette-dominant);
+  background: #ffffff;
+}
+
+.hero-constellation-label {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+  white-space: nowrap;
+  transition: all 0.35s ease;
+}
+
+.hero-constellation-node:hover .hero-constellation-label,
+.hero-constellation-node.active .hero-constellation-label {
+  color: #ffffff;
+  text-shadow: 0 0 10px var(--palette-dominant);
+}
+
+.hero-constellation-desc {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  white-space: nowrap;
+  color: var(--palette-accent);
+}
+
+.hero-constellation-node:hover .hero-constellation-desc {
+  opacity: 0.9;
+}
+
+.hero-constellation-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Outfit', sans-serif;
+  font-weight: 900;
+  font-size: 1.4rem;
+  letter-spacing: 0.5em;
+  text-transform: uppercase;
+  text-shadow: 0 0 50px var(--palette-dominant);
+  pointer-events: none;
+  color: #ffffff;
+}
+
+.hero-constellation-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.hero-constellation-line {
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 1.5;
+}
+
+/* Node Drawer Inspector Modal */
+.hero-node-drawer {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(520px, 92vw);
+  background: rgba(12, 12, 20, 0.92);
+  border: 1px solid var(--palette-dominant);
+  backdrop-filter: blur(40px);
+  padding: 1.75rem 2rem;
+  z-index: 100;
+  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.9), 0 0 30px color-mix(in srgb, var(--palette-dominant) 30%, transparent);
+}
+
+/* ── SECTION 8 : LIVE STATISTICS (PASS 5) ─────────────────────────────── */
+
+.hero-stats-section {
+  padding: 8rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #030303;
+}
+
+.hero-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 3.5rem;
+  max-width: 850px;
+  width: 100%;
+}
+
+.hero-stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 1.5rem 1rem;
+  background: rgba(15, 15, 24, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(15px);
+  transition: all 0.35s ease;
+}
+
+.hero-stat-item:hover {
+  border-color: var(--palette-dominant);
+  transform: translateY(-4px);
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--palette-dominant) 15%, transparent);
+}
+
+.hero-stat-number {
+  font-family: 'Roboto Mono', monospace;
+  font-weight: 800;
+  font-size: clamp(2rem, 5vw, 3.2rem);
+  letter-spacing: -0.02em;
+  color: var(--palette-dominant);
+  line-height: 1;
+  text-shadow: 0 0 30px color-mix(in srgb, var(--palette-dominant) 40%, transparent);
+}
+
+.hero-stat-label {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 500;
+  font-size: 0.65rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* ── SECTION 9 : ROADMAP TIMELINE (PASS 1 & 5) ────────────────────────── */
+
+.hero-roadmap-section {
+  padding: 8rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #030303;
+}
+
+.hero-roadmap-title {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 300;
+  font-size: clamp(0.9rem, 2vw, 1.1rem);
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+  margin-bottom: 4rem;
+}
+
+.hero-roadmap-timeline {
+  display: flex;
+  flex-direction: column;
+  max-width: 520px;
+  width: 100%;
+  position: relative;
+  padding-left: 3rem;
+}
+
+.hero-roadmap-timeline::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(to bottom, var(--palette-dominant), rgba(255, 255, 255, 0.05));
+}
+
+.hero-roadmap-gen {
+  position: relative;
+  padding: 1.5rem 0 2.5rem;
+}
+
+.hero-roadmap-dot {
+  position: absolute;
+  left: -3rem;
+  top: 1.75rem;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--palette-dominant);
+  box-shadow: 0 0 20px var(--palette-dominant);
+}
+
+.hero-roadmap-dot--inactive {
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: none;
+}
+
+.hero-roadmap-gen-title {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
+  font-size: 0.95rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  margin-bottom: 0.85rem;
+  color: #fff;
+}
+
+.hero-roadmap-bar-wrap {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  margin-bottom: 0.65rem;
+  overflow: hidden;
+}
+
+.hero-roadmap-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--palette-dominant), var(--palette-secondary));
+  transition: width 1.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.hero-roadmap-bar-label {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.hero-roadmap-features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 0.85rem;
+}
+
+.hero-roadmap-feature {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 0.4rem 0.85rem;
+  background: rgba(18, 18, 28, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* ── SECTION 10 : BOTTOM CTA (PASS 5) ─────────────────────────────────── */
+
+.hero-cta-section {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 5rem 1.5rem;
+  background: #030303;
+  text-align: center;
+  position: relative;
+}
+
+.hero-cta-text {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 300;
+  font-size: clamp(1.1rem, 2.8vw, 1.45rem);
+  color: rgba(255, 255, 255, 0.6);
+  max-width: 520px;
+  line-height: 2;
+  margin-bottom: 0.75rem;
+}
+
+.hero-cta-day {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
+  font-size: clamp(1.4rem, 3.5vw, 2.2rem);
+  letter-spacing: 0.12em;
+  margin-bottom: 3rem;
+  color: var(--palette-dominant);
+  text-shadow: 0 0 30px color-mix(in srgb, var(--palette-dominant) 50%, transparent);
+}
+
+.hero-cta-countdown {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.35);
+  margin-top: 2.5rem;
+}
+
+/* ── SHARED DIVIDER ───────────────────────────────────────────────────── */
+
+.hero-section-divider {
+  width: 60px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--palette-dominant), transparent);
+  margin: 0 auto;
+  opacity: 0.4;
+}
+
+/* ── RESPONSIVE OVERRIDES ─────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .hero-content-glass {
+    padding: 2.5rem 1.5rem;
+    margin: 0 1rem;
+  }
+
+  .hero-card-grid {
+    grid-template-columns: repeat(13, 1fr);
+  }
+
+  .hero-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+  }
+
+  .hero-drop-actions {
+    flex-direction: column;
+    width: 100%;
+    max-width: 320px;
+  }
+
+  .hero-drop-action-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .hero-side-nav {
+    display: none;
+  }
+}
+
+/* ── DAY SELECTOR COMMAND PALETTE & FUTURE LOCK BANNER ─────────────────── */
+
+.hero-future-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 120;
+  background: rgba(220, 38, 38, 0.95);
+  color: #ffffff;
+  padding: 0.6rem 1rem;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  box-shadow: 0 4px 20px rgba(220, 38, 38, 0.4);
+  backdrop-filter: blur(10px);
+}
+
+.hero-day-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(12, 12, 20, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(20px);
+  padding: 0.35rem 0.65rem;
+  border-radius: 4px;
+  margin-top: 1.5rem;
+}
+
+.hero-stepper-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.3rem 0.6rem;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.hero-stepper-btn:hover:not(:disabled) {
+  color: #fff;
+  border-color: var(--palette-dominant);
+  background: color-mix(in srgb, var(--palette-dominant) 20%, transparent);
+}
+
+.hero-stepper-btn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.hero-stepper-trigger {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--palette-dominant);
+  font-weight: 700;
+  padding: 0.3rem 0.85rem;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.hero-stepper-trigger:hover {
+  text-shadow: 0 0 10px var(--palette-dominant);
+  transform: scale(1.05);
+}
+
+/* Command Palette Overlay */
+.hero-command-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(3, 3, 5, 0.85);
+  backdrop-filter: blur(30px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.hero-command-modal {
+  width: min(680px, 94vw);
+  max-height: 82vh;
+  background: rgba(10, 10, 16, 0.95);
+  border: 1px solid var(--palette-dominant);
+  box-shadow: 0 25px 100px rgba(0, 0, 0, 0.95), 0 0 40px color-mix(in srgb, var(--palette-dominant) 30%, transparent);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+.hero-command-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: rgba(15, 15, 24, 0.6);
+}
+
+.hero-command-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.85rem;
+  letter-spacing: 0.15em;
+  color: #fff;
+  text-transform: uppercase;
+}
+
+.hero-command-input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.hero-command-quick-actions {
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(8, 8, 12, 0.4);
+  flex-wrap: wrap;
+}
+
+.hero-quick-tag {
+  padding: 0.25rem 0.75rem;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.hero-quick-tag:hover {
+  border-color: var(--palette-dominant);
+  color: #fff;
+  background: color-mix(in srgb, var(--palette-dominant) 15%, transparent);
+}
+
+.hero-command-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.75rem;
+}
+
+.hero-command-item {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.75rem;
+  background: rgba(18, 18, 28, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  text-decoration: none;
+}
+
+.hero-command-item:hover,
+.hero-command-item.active {
+  border-color: var(--palette-dominant);
+  background: color-mix(in srgb, var(--palette-dominant) 15%, rgba(18, 18, 28, 0.9));
+  transform: translateY(-2px);
+}
+
+.hero-command-thumb {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.hero-command-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.hero-command-title {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: #fff;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hero-command-sub {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.15em;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+}
+
+.hero-command-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.hero-command-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.hero-command-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+}

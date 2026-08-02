@@ -45,6 +45,7 @@ const BeatmapEditor = lazy(() => import('./pages/BeatmapEditor'));
 const CardDesignShowcase = lazy(() => import('./pages/CardDesignShowcase'));
 const PitchDeck = lazy(() => import('./pages/PitchDeck'));
 const SlideshowPage = lazy(() => import('./pages/SlideshowPage'));
+const HeroLandingPage = lazy(() => import('./pages/HeroLandingPage'));
 import { loadOpts } from './lib/options';
 import { CHAPTERS } from './game/campaign';
 
@@ -348,7 +349,8 @@ export default function App() {
     location.startsWith('/results/') ||
     location === '/options' ||
     location === '/admin/editor' ||
-    location === '/admin/card-designs';
+    location === '/admin/card-designs' ||
+    location.startsWith('/hero');
 
   return (
     <div className="min-h-screen bg-[#050402] text-white flex flex-col select-none relative">
@@ -365,6 +367,9 @@ export default function App() {
         }>
           <Switch>
             <Route path="/" component={LandingPage} />
+            <Route path="/hero" component={HeroLandingPage} />
+            <Route path="/hero/day-:dayParam" component={HeroLandingPage} />
+            <Route path="/hero/:dayParam" component={HeroLandingPage} />
             <Route path="/arcade" component={RhythmHome} />
             <Route path="/songs" component={SongSelect} />
             <Route path="/play/:songId" component={GamePlay} />
@@ -391,6 +396,8 @@ export default function App() {
             <Route path="/chapter/:month" component={Chapter} />
             <Route path="/tutorial" component={Tutorial} />
             <Route path="/profile" component={ProfilePage} />
+            <Route path="/user" component={ProfilePage} />
+            <Route path="/user.th3scr1b3.art" component={ProfilePage} />
             <Route path="/options" component={OptionsRouteHandler} />
             <Route path="/song/:songId" component={SongDetail} />
             <Route path="/listen/:songId" component={ListenPage} />

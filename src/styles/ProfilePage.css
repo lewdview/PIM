@@ -1,0 +1,301 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   ProfilePage.css — Award-Winning Identity Hub (user.th3scr1b3.art)
+   
+   Visual DNA: Apple Music × Monument Valley × Arcane × Persona 5
+   Matches the Hero Landing Page exhibit aesthetic with dynamic shader beams,
+   noise overlay, 3D card tilt, collector stats, and ecosystem constellation.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.profile-page {
+  background: #030303;
+  color: #fff;
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  min-height: 100vh;
+  min-height: 100dvh;
+  position: relative;
+  overflow-x: hidden;
+  padding-bottom: 6rem;
+  --palette-dominant: #ff3800;
+  --palette-secondary: #a855f7;
+  --palette-accent: #00e5ff;
+  --palette-muted: #666;
+  --palette-dark: #0c0c14;
+}
+
+/* ── CONTAINER ───────────────────────────────────────────────────────── */
+
+.profile-container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 6rem 1.5rem 3rem;
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 3.5rem;
+}
+
+/* ── HERO IDENTITY PEDESTAL ───────────────────────────────────────────── */
+
+.profile-hero-pedestal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 2rem;
+  perspective: 1200px;
+  position: relative;
+}
+
+.profile-card-3d-wrap {
+  position: relative;
+  width: min(380px, 82vw);
+  aspect-ratio: 1;
+  transform-style: preserve-3d;
+  transition: transform 0.25s ease-out;
+  cursor: pointer;
+}
+
+.profile-card-3d-card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  background: rgba(10, 10, 16, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(40px);
+  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.9), 0 0 50px color-mix(in srgb, var(--palette-dominant) 25%, transparent);
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  overflow: hidden;
+}
+
+.profile-avatar-frame {
+  position: relative;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  padding: 3px;
+  background: linear-gradient(135deg, var(--palette-dominant), var(--palette-secondary), var(--palette-accent));
+  box-shadow: 0 0 25px var(--palette-dominant);
+}
+
+.profile-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #0d0d14;
+}
+
+.profile-identity-title {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 900;
+  font-size: clamp(1.8rem, 4.5vw, 2.8rem);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, #ffffff 40%, var(--palette-dominant) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  line-height: 1.1;
+  margin: 0.5rem 0 0.25rem;
+}
+
+.profile-identity-sub {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: var(--palette-accent);
+  opacity: 0.8;
+}
+
+/* Provider & Wallet Badges */
+.profile-badge-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+
+.profile-badge-tag {
+  padding: 0.3rem 0.75rem;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* ── ACTION BUTTONS ───────────────────────────────────────────────────── */
+
+.profile-actions-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 100%;
+}
+
+.profile-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1rem 2.5rem;
+  font-family: 'Roboto Mono', monospace;
+  font-weight: 800;
+  font-size: 0.75rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: #000;
+  background: var(--palette-dominant);
+  border: 2px solid #000;
+  clip-path: polygon(12px 0%, 100% 0%, calc(100% - 12px) 100%, 0% 100%);
+  cursor: pointer;
+  transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+  text-decoration: none;
+}
+
+.profile-btn-primary:hover {
+  transform: scale(1.05) translateY(-2px);
+  background: #ffffff;
+  box-shadow: 0 0 40px var(--palette-dominant);
+}
+
+.profile-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  padding: 0.85rem 1.85rem;
+  font-family: 'Roboto Mono', monospace;
+  font-weight: 700;
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  background: rgba(15, 15, 24, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  transition: all 0.35s ease;
+  text-decoration: none;
+  backdrop-filter: blur(20px);
+}
+
+.profile-btn-secondary:hover {
+  border-color: var(--palette-dominant);
+  color: #ffffff;
+  background: color-mix(in srgb, var(--palette-dominant) 20%, rgba(15, 15, 24, 0.9));
+  box-shadow: 0 0 25px color-mix(in srgb, var(--palette-dominant) 25%, transparent);
+}
+
+/* ── STATS GRID ───────────────────────────────────────────────────────── */
+
+.profile-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.profile-stat-card {
+  padding: 1.5rem 1rem;
+  background: rgba(10, 10, 16, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.35s ease;
+}
+
+.profile-stat-card:hover {
+  border-color: var(--palette-dominant);
+  transform: translateY(-4px);
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--palette-dominant) 15%, transparent);
+}
+
+.profile-stat-val {
+  font-family: 'Roboto Mono', monospace;
+  font-weight: 800;
+  font-size: clamp(1.8rem, 4vw, 2.5rem);
+  color: var(--palette-dominant);
+  line-height: 1;
+}
+
+.profile-stat-lbl {
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.6rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+/* ── SECTION PANELS ───────────────────────────────────────────────────── */
+
+.profile-glass-panel {
+  background: rgba(10, 10, 16, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(40px);
+  padding: 2.25rem 2rem;
+  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.6);
+}
+
+.profile-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
+  font-size: 1.1rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #fff;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: 0.85rem;
+}
+
+.profile-panel-header svg {
+  color: var(--palette-dominant);
+}
+
+/* Ecosystem List Items */
+.profile-eco-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.profile-eco-item:last-child {
+  border-bottom: none;
+}
+
+.profile-eco-link {
+  font-family: 'Roboto Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--palette-dominant);
+  text-decoration: none;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all 0.25s ease;
+}
+
+.profile-eco-link:hover {
+  text-shadow: 0 0 10px var(--palette-dominant);
+  transform: translateX(3px);
+}
