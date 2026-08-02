@@ -1,10 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import WalletConnect from '../components/WalletConnect';
 import IdentityTerminal from '../components/IdentityTerminal';
-import { User, Shield, Key, Fingerprint, RefreshCw, ArrowLeft, Compass, ExternalLink } from 'lucide-react';
+import {
+  User, Shield, Key, Fingerprint, RefreshCw, ArrowLeft, Compass, ExternalLink,
+  Layers, Zap, Award
+} from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import styles from './page.module.css';
 
@@ -15,11 +18,27 @@ export default function Home() {
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [redirectUri, setRedirectUri] = useState<string>('');
 
+  // 3D Perspective Card Tilt
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  const cardRef = useRef<HTMLDivElement>(null);
+
   const isAnonymousUser = !!activeUser && (
     activeUser.is_anonymous || 
     activeUser.app_metadata?.provider === 'anonymous' || 
     (!activeUser.email && !activeUser.user_metadata?.wallet)
   );
+
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+    setTilt({ x: y * 22, y: -x * 22 });
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    setTilt({ x: 0, y: 0 });
+  }, []);
 
   const getAppName = (urlStr: string): string => {
     try {
@@ -79,18 +98,14 @@ export default function Home() {
       const params = new URLSearchParams(window.location.search);
       const uri = params.get('redirect_uri');
       if (uri) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
         setRedirectUri(uri);
-        // Persist so OAuth callbacks (which strip query params) can still redirect back
         sessionStorage.setItem('pim_redirect_uri', uri);
       } else {
-        // Fallback: recover from sessionStorage if OAuth stripped the param
         const saved = sessionStorage.getItem('pim_redirect_uri');
         if (saved) setRedirectUri(saved);
       }
     }
 
-    /** Resolve the effective redirect_uri from URL or sessionStorage */
     const getRedirectUri = (): string | null => {
       const params = new URLSearchParams(window.location.search);
       return params.get('redirect_uri') || sessionStorage.getItem('pim_redirect_uri');
@@ -102,11 +117,11 @@ export default function Home() {
         setActiveUser(session.user);
 
         const uri = getRedirectUri();
-        const isAnonymous = session.user.is_anonymous ||
-                             session.user.app_metadata?.provider === 'anonymous' ||
-                             (!session.user.email && !session.user.user_metadata?.wallet);
-        if (uri && !isAnonymous) {
-          console.log('[SYSTEM] Active non-anonymous session detected. Redirecting with tokens...');
+        const isAnon = session.user.is_anonymous ||
+                       session.user.app_metadata?.provider === 'anonymous' ||
+                       (!session.user.email && !session.user.user_metadata?.wallet);
+        if (uri && !isAnon) {
+          console.log('[SYSTEM] Active session detected. Redirecting with tokens...');
           sessionStorage.removeItem('pim_redirect_uri');
           const url = new URL(uri);
           url.searchParams.set('access_token', session.access_token);
@@ -115,7 +130,6 @@ export default function Home() {
           return;
         }
 
-        // Fetch display name from profiles table
         const { data: profile } = await supabase
           .from('profiles')
           .select('display_name')
@@ -135,11 +149,11 @@ export default function Home() {
         setActiveUser(session.user);
 
         const uri = getRedirectUri();
-        const isAnonymous = session.user.is_anonymous ||
-                             session.user.app_metadata?.provider === 'anonymous' ||
-                             (!session.user.email && !session.user.user_metadata?.wallet);
-        if (uri && !isAnonymous) {
-          console.log('[SYSTEM] Session state changed to non-anonymous. Redirecting with tokens...');
+        const isAnon = session.user.is_anonymous ||
+                       session.user.app_metadata?.provider === 'anonymous' ||
+                       (!session.user.email && !session.user.user_metadata?.wallet);
+        if (uri && !isAnon) {
+          console.log('[SYSTEM] Session state changed. Redirecting with tokens...');
           sessionStorage.removeItem('pim_redirect_uri');
           const url = new URL(uri);
           url.searchParams.set('access_token', session.access_token);
@@ -175,13 +189,11 @@ export default function Home() {
     setMessage(null);
 
     try {
-      // 1. Update user metadata
       const { error: metaError } = await supabase.auth.updateUser({
         data: { display_name: displayName }
       });
       if (metaError) throw metaError;
 
-      // 2. Upsert profiles table row
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert({
@@ -202,14 +214,18 @@ export default function Home() {
     }
   };
 
+  const walletAddr = activeUser?.user_metadata?.wallet || activeUser?.email;
+  const aliasDisplay = displayName || (walletAddr ? walletAddr.slice(0, 10) + '…' : 'SOVEREIGN SCRIBE');
+
   return (
     <main className={styles.mainContainer}>
+      {/* Noise Overlay */}
+      <div className={styles.noiseOverlay} />
+
       {/* Glow Effects */}
       <div className={styles.radialGlow1} />
       <div className={styles.radialGlow2} />
-      
-      {/* Scanline Grid */}
-      <div className={styles.gridOverlay} />
+      <div className={styles.radialGlow3} />
 
       <div className={styles.contentWrapper}>
         {redirectUri && (
@@ -228,9 +244,57 @@ export default function Home() {
             user.th3scr1b3.art
           </h1>
           <p className={styles.subtitle}>
-            Ecosystem Identity Hub & Telemetry Aggregator
+            Ecosystem Identity Hub & Sovereign Passport
           </p>
         </header>
+
+        {/* 3D Passport Pedestal */}
+        <section className={styles.passportPedestal}>
+          <div
+            ref={cardRef}
+            className={styles.passport3dWrapper}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+            style={{ transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)` }}
+          >
+            <div className={styles.spinningVinylDisc}>
+              <div
+                className={styles.vinylCenterArt}
+                style={{ backgroundImage: `url('/covers/october/08 - Heart N Soul Collide by Zillick feat. th3scr1b3.jpg')` }}
+              />
+            </div>
+
+            <div className={styles.passport3dCard}>
+              <div className={styles.specularGlare} />
+
+              <div className={styles.avatarNeonFrame}>
+                <div className="w-full h-full rounded-full bg-[#0d0d14] flex items-center justify-center">
+                  <User size={36} className="text-white/40" />
+                </div>
+              </div>
+
+              <div>
+                <h2 className={styles.passportAliasHeadline}>{aliasDisplay}</h2>
+                <p className={styles.passportStatusSub}>
+                  {isAnonymousUser ? 'GUEST SESSION // EPHEMERAL' : 'SOVEREIGN IDENTITY // VERIFIED'}
+                </p>
+
+                <div className={styles.passportTagsRow}>
+                  <span className={styles.passportTagChip}>
+                    {activeUser?.app_metadata?.provider || 'Web3'}
+                  </span>
+                  <span className={styles.passportTagChip}>
+                    Day 213 Active
+                  </span>
+                </div>
+              </div>
+
+              <div className="font-mono text-[9px] text-white/30 tracking-widest uppercase">
+                user.th3scr1b3.art // PASSPORT MATRIX
+              </div>
+            </div>
+          </div>
+        </section>
 
         {/* Dashboard Grid */}
         <div className={styles.dashboardGrid}>
@@ -305,7 +369,7 @@ export default function Home() {
               </p>
               
               <div className={styles.gatewayGrid}>
-                <a href={links.main} className={`${styles.gatewayCard} ${styles.gatewayCardMain}`}>
+                <a href={links.main} className={styles.gatewayCard}>
                   <h3 className={styles.gatewayCardTitle}>
                     th3scr1b3.art
                     <ExternalLink size={14} className={styles.gatewayCardTitleIcon} />
@@ -319,7 +383,7 @@ export default function Home() {
                   </span>
                 </a>
 
-                <a href={links.pim} className={`${styles.gatewayCard} ${styles.gatewayCardPim}`}>
+                <a href={links.pim} className={styles.gatewayCard}>
                   <h3 className={styles.gatewayCardTitle}>
                     PIM : TH3V4ULT
                     <ExternalLink size={14} className={styles.gatewayCardTitleIcon} />
@@ -333,7 +397,7 @@ export default function Home() {
                   </span>
                 </a>
 
-                <a href={links.base} className={`${styles.gatewayCard} ${styles.gatewayCardBase}`}>
+                <a href={links.base} className={styles.gatewayCard}>
                   <h3 className={styles.gatewayCardTitle}>
                     BASE MINI-APP
                     <ExternalLink size={14} className={styles.gatewayCardTitleIcon} />
@@ -347,7 +411,7 @@ export default function Home() {
                   </span>
                 </a>
 
-                <a href={links.video} className={`${styles.gatewayCard} ${styles.gatewayCardBase}`}>
+                <a href={links.video} className={styles.gatewayCard}>
                   <h3 className={styles.gatewayCardTitle}>
                     365 POSTER
                     <ExternalLink size={14} className={styles.gatewayCardTitleIcon} />
@@ -361,7 +425,7 @@ export default function Home() {
                   </span>
                 </a>
 
-                <a href={links.mood} className={`${styles.gatewayCard} ${styles.gatewayCardBase}`}>
+                <a href={links.mood} className={styles.gatewayCard}>
                   <h3 className={styles.gatewayCardTitle}>
                     MOOD MAP
                     <ExternalLink size={14} className={styles.gatewayCardTitleIcon} />
@@ -375,7 +439,7 @@ export default function Home() {
                   </span>
                 </a>
 
-                <a href={links.ce} className={`${styles.gatewayCard} ${styles.gatewayCardBase}`}>
+                <a href={links.ce} className={styles.gatewayCard}>
                   <h3 className={styles.gatewayCardTitle}>
                     SONG ANALYZER
                     <ExternalLink size={14} className={styles.gatewayCardTitleIcon} />
