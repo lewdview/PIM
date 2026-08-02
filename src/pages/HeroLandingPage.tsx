@@ -21,7 +21,7 @@ import {
   ChevronDown, Play, Pause, Volume2, Sparkles, X, Info, Disc, ExternalLink,
   Flame, Shield, Layers, Award, Search, Lock, ChevronLeft, ChevronRight, Command, Calendar
 } from 'lucide-react';
-import { getCurrentDay, getTimeUntilNextDay, formatDate } from '../utils/dayCalc';
+import { getCurrentDay, getTimeUntilNextDay, formatDate, getDateFromDay } from '../utils/dayCalc';
 import { extractPalette, getFallbackPalette, type ExtractedPalette } from '../utils/extractPalette';
 import { audioManager } from '../game/audio';
 import '../styles/HeroLandingPage.css';
