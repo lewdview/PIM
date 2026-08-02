@@ -130,14 +130,18 @@ export default function Home() {
           return;
         }
 
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('display_name')
-          .eq('id', session.user.id)
-          .single();
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('display_name')
+            .eq('id', session.user.id)
+            .maybeSingle();
 
-        if (profile?.display_name) {
-          setDisplayName(profile.display_name);
+          if (profile?.display_name) {
+            setDisplayName(profile.display_name);
+          }
+        } catch {
+          // Graceful fallback if profile record does not exist yet
         }
       }
     };
@@ -162,13 +166,17 @@ export default function Home() {
           return;
         }
 
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('display_name')
-          .eq('id', session.user.id)
-          .single();
-        if (profile?.display_name) {
-          setDisplayName(profile.display_name);
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('display_name')
+            .eq('id', session.user.id)
+            .maybeSingle();
+          if (profile?.display_name) {
+            setDisplayName(profile.display_name);
+          }
+        } catch {
+          // Graceful fallback
         }
       } else {
         setActiveUser(null);
@@ -260,7 +268,11 @@ export default function Home() {
             <div className={styles.spinningVinylDisc}>
               <div
                 className={styles.vinylCenterArt}
-                style={{ backgroundImage: `url('/covers/october/08 - Heart N Soul Collide by Zillick feat. th3scr1b3.jpg')` }}
+                style={{
+                  backgroundImage: `radial-gradient(circle at center, rgba(255,56,0,0.8), #0d0006), url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80')`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                }}
               />
             </div>
 
