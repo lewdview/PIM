@@ -52,7 +52,7 @@ export default function OnboardingFlowModal({ isOpen, onClose, gameStats }: Onbo
       }
     } catch (err: any) {
       setErrorMsg(err?.message || 'Failed to save run');
-    } fiwally {
+    } finally {
       setLoading(false);
     }
   };
