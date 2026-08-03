@@ -1376,10 +1376,12 @@ export default function Game() {
   const [bufferPct, setBufferPct] = useState(0);
   const [loadMsg, setLoadMsg] = useState("FETCHING TRANSMISSION...");
 
-  // ── Frame-Perfect Video Recorder State ──
+  // ── Frame-Perfect Video Recorder State (DEV SERVER ONLY) ──
   const isExportVideoRef = useRef<boolean>(
-    new URLSearchParams(window.location.search).get("export") === "video" ||
-    sessionStorage.getItem(`export_video_${songId}`) === "true"
+    Boolean(import.meta.env.DEV) && (
+      new URLSearchParams(window.location.search).get("export") === "video" ||
+      sessionStorage.getItem(`export_video_${songId}`) === "true"
+    )
   );
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isRecordingVideo, setIsRecordingVideo] = useState(false);
@@ -1865,7 +1867,7 @@ export default function Game() {
       const ns = candidates.reduce((b, c) =>
         Math.abs(c.note.time - t) < Math.abs(b.note.time - t) ? c : b,
       );
-      const diff = Math.abs(ns.note.time - t);
+      const diff = isExportVideoRef.current ? 0 : Math.abs(ns.note.time - t);
       const dl = songRef.current?.difficultyLevel ?? 5;
       if (diff > missWindow(dl)) return;
 
@@ -2246,7 +2248,7 @@ export default function Game() {
       const gs = gsRef.current;
       const t = getT();
       const dl = songRef.current?.difficultyLevel ?? 5;
-      const diff = Math.abs((ns.note.time + (ns.note.holdDuration || 0.5)) - t);
+      const diff = isExportVideoRef.current ? 0 : Math.abs((ns.note.time + (ns.note.holdDuration || 0.5)) - t);
 
       let j: "PERFECT+" | "PERFECT" | "GOOD" | null =
         diff <= perfectPlusWindow(dl)
@@ -2700,12 +2702,35 @@ export default function Game() {
     if (isExportVideoRef.current && phaseRef.current === "playing") {
       frameCounterRef.current++;
       setFrameCount(frameCounterRef.current);
-      if (songRef.current && songRef.current.duration > 0) {
-        setRecordingProgress(Math.min(100, (t / songRef.current.duration) * 100));
+      if (songRef.current && songRef.current.duration > 0 && !isNaN(songRef.current.duration)) {
+        const prog = Math.min(100, Math.max(0, (t / songRef.current.duration) * 100));
+        setRecordingProgress(isNaN(prog) ? 0 : prog);
       }
       notesRef.current.forEach((ns) => {
+        if (ns.note.type === "mine") return; // Skip hazard mines
         if (!ns.hit && !ns.missed) {
-          if (t >= ns.note.time) {
+          if (ns.note.type === "hold") {
+            if (t >= ns.note.time && !ns.holdActive) {
+              hitLane(ns.note.lane, ns.note.swipeDirection);
+            }
+            if (ns.holdActive) {
+              const holdDur = ns.note.holdDuration || 0.5;
+              ns.holdProgress = Math.min(1, Math.max(0, (t - ns.note.time) / holdDur));
+              if (ns.note.targetLane !== undefined) {
+                ns.currentLane = lerp(ns.note.lane, ns.note.targetLane, ns.holdProgress);
+              }
+              if (t >= ns.note.time + holdDur) {
+                if (ns.note.swipeDirection) {
+                  hitSwipeRelease(ns, ns.note.swipeDirection);
+                } else {
+                  if (ns.note.targetLane !== undefined) {
+                    ns.currentLane = ns.note.targetLane;
+                  }
+                  completeHoldNote(ns);
+                }
+              }
+            }
+          } else if (t >= ns.note.time) {
             hitLane(ns.note.lane, ns.note.swipeDirection);
           }
         }
@@ -8683,7 +8708,7 @@ export default function Game() {
           <VideoExportModal
             isOpen={isExportModalOpen}
             isRecording={isRecordingVideo}
-            progressPct={recordingProgress}
+            recordingProgress={recordingProgress}
             frameCount={frameCount}
             videoUrl={videoUrl}
             videoBlob={videoBlob}

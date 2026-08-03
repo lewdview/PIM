@@ -338,16 +338,10 @@ export default function App() {
   }
 
 
-  // Hide the global navigation bar in gameplay, campaign, songs, options, tutorial, results, etc. to save screen space and avoid mobile overlaps
+  // Hide the global navigation bar only in active gameplay, tutorial, editor, or hero landing pages
   const hideNavbar =
     location.startsWith('/play/') ||
     location === '/tutorial' ||
-    location === '/campaign' ||
-    location.startsWith('/chapter/') ||
-    location.startsWith('/song/') ||
-    location === '/songs' ||
-    location.startsWith('/results/') ||
-    location === '/options' ||
     location === '/admin/editor' ||
     location === '/admin/card-designs' ||
     location.startsWith('/hero');

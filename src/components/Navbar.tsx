@@ -1,6 +1,15 @@
-import { useState, useEffect } from 'react';
+// ════════════════════════════════════════════════════════════════════════════════
+// Navbar.tsx — PIM : th3v4ult Command Console Navigation System
+// Mega-menu architecture: Every section of PIM accessible in ≤ 2 clicks
+// ════════════════════════════════════════════════════════════════════════════════
+
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useLocation } from 'wouter';
-import { Home, Layers, Trophy, Wallet, LogOut, Zap, Menu, X, FileText, Flame, BookOpen, Monitor, Gift, Settings, Image } from 'lucide-react';
+import {
+  Home, Layers, Trophy, Wallet, LogOut, Zap, X, FileText,
+  Flame, BookOpen, Monitor, Gift, Settings, Image, Map, Sparkles,
+  User, ChevronDown, ChevronRight, Gamepad2, GraduationCap, LayoutGrid,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../store/useAuthStore';
 import { useVaultStore } from '../store/useVaultStore';
@@ -11,26 +20,134 @@ import FloatingTicker from './FloatingTicker';
 
 const isDev = import.meta.env.DEV || localStorage.getItem('th3vault_dev_mode') === 'true';
 
-const links = [
-  { to: '/arcade', label: 'Arcade', icon: Monitor },
-  { to: '/vault', label: 'Vault', icon: Home },
-  { to: '/vault/collection', label: 'Collection', icon: Layers },
-  { to: '/vault/codex', label: 'Codex', icon: BookOpen },
-  { to: '/vault/forge', label: 'Forge', icon: Flame },
-  { to: '/vault/earn', label: 'Earn', icon: Zap },
-  { to: '/options', label: 'Options', icon: Settings },
-  { to: '/vault/leaderboard', label: 'Ranks', icon: Trophy },
-  { to: '/vault/claim', label: 'Redeem', icon: Gift },
-  ...(isDev ? [{ to: '/pitch-deck', label: 'Pitch', icon: FileText }] : []),
+// ── Menu Section Definitions ──────────────────────────────────────────────────
+interface MenuItem {
+  to?: string;
+  action?: string;
+  label: string;
+  icon: any;
+  desc: string;
+  devOnly?: boolean;
+}
+
+interface MenuSection {
+  id: string;
+  label: string;
+  accent: string;
+  accentGlow: string;
+  icon: any;
+  items: MenuItem[];
+}
+
+const menuSections: MenuSection[] = [
+  {
+    id: 'play',
+    label: 'Play',
+    accent: '#FF1493',
+    accentGlow: 'rgba(255, 20, 147, 0.4)',
+    icon: Gamepad2,
+    items: [
+      { to: '/arcade', label: 'Arcade', icon: Monitor, desc: 'Quick-play random songs' },
+      { to: '/campaign', label: 'Campaign', icon: Map, desc: 'Story chapters & progression' },
+      { to: '/songs', label: 'Award Play', icon: Trophy, desc: 'Curated song selection' },
+      { to: '/tutorial', label: 'Tutorial', icon: GraduationCap, desc: 'Learn the controls' },
+    ],
+  },
+  {
+    id: 'vault',
+    label: 'Vault',
+    accent: '#FF5500',
+    accentGlow: 'rgba(255, 85, 0, 0.4)',
+    icon: Home,
+    items: [
+      { to: '/vault', label: 'Home', icon: Home, desc: 'Daily card & vault dashboard' },
+      { to: '/vault/collection', label: 'Collection', icon: Layers, desc: 'Your card library' },
+      { to: '/vault/reveal', label: 'Pack Reveal', icon: Sparkles, desc: 'Open earned packs' },
+      { to: '/vault/codex', label: 'Codex', icon: BookOpen, desc: 'Full 365-day archive' },
+      { to: '/hero', label: 'Hero Exhibit', icon: Image, desc: 'Museum-grade daily showcase' },
+    ],
+  },
+  {
+    id: 'forge',
+    label: 'Forge',
+    accent: '#39FF14',
+    accentGlow: 'rgba(57, 255, 20, 0.4)',
+    icon: Flame,
+    items: [
+      { to: '/vault/forge', label: 'Fusion Lab', icon: Flame, desc: 'Fuse & upgrade cards' },
+      { to: '/vault/leaderboard', label: 'Leaderboard', icon: Trophy, desc: 'Global rankings' },
+    ],
+  },
+  {
+    id: 'earn',
+    label: 'Earn',
+    accent: '#E5B800',
+    accentGlow: 'rgba(229, 184, 0, 0.4)',
+    icon: Zap,
+    items: [
+      { to: '/vault/earn', label: 'Token Shop', icon: Zap, desc: 'Earn & spend tokens' },
+      { to: '/vault/claim', label: 'Redeem', icon: Gift, desc: 'Claim prizes & rewards' },
+    ],
+  },
+  {
+    id: 'more',
+    label: 'More',
+    accent: '#A855F7',
+    accentGlow: 'rgba(168, 85, 247, 0.4)',
+    icon: LayoutGrid,
+    items: [
+      { to: '/profile', label: 'Profile', icon: User, desc: 'Scribe identity hub' },
+      { action: 'options', label: 'Options', icon: Settings, desc: 'Audio, visuals & gameplay' },
+      { action: 'guide', label: 'Guide', icon: BookOpen, desc: 'Instruction booklet' },
+      { to: '/vault/legal', label: 'Legal', icon: FileText, desc: 'Terms & policies' },
+      { to: '/admin/editor', label: 'Editor', icon: Monitor, desc: 'Beatmap editor', devOnly: true },
+      { to: '/admin/card-designs', label: 'Card Designs', icon: Image, desc: 'Design showcase', devOnly: true },
+      { to: '/pitch-deck', label: 'Pitch Deck', icon: FileText, desc: 'Investor presentation', devOnly: true },
+    ],
+  },
 ];
 
-// ── The new logotype ──────────────────────────────────────────────────────────
+// Mobile bottom bar quick-access tabs
+const mobileQuickTabs = [
+  { id: 'play', to: '/arcade', label: 'Play', icon: Gamepad2, accent: '#FF1493' },
+  { id: 'vault', to: '/vault', label: 'Vault', icon: Home, accent: '#FF5500' },
+  { id: 'earn', to: '/vault/earn', label: 'Earn', icon: Zap, accent: '#E5B800' },
+  { id: 'more', action: 'command', label: 'More', icon: LayoutGrid, accent: '#A855F7' },
+];
+
+// Determine which section a route belongs to for active highlighting
+function getActiveSection(location: string): string | null {
+  if (location === '/arcade' || location === '/campaign' || location === '/songs' ||
+      location === '/tutorial' || location.startsWith('/chapter/') ||
+      location.startsWith('/play/') || location.startsWith('/results/')) {
+    return 'play';
+  }
+  if (location === '/vault' || location === '/vault/collection' ||
+      location === '/vault/reveal' || location === '/vault/codex' ||
+      location.startsWith('/hero') || location.startsWith('/vault/') && 
+      !(['/vault/forge', '/vault/leaderboard', '/vault/earn', '/vault/claim', '/vault/legal'].includes(location))) {
+    return 'vault';
+  }
+  if (location === '/vault/forge' || location === '/vault/leaderboard') {
+    return 'forge';
+  }
+  if (location === '/vault/earn' || location === '/vault/claim') {
+    return 'earn';
+  }
+  if (location === '/profile' || location === '/user' || location === '/options' ||
+      location === '/vault/legal' || location.startsWith('/admin') || location === '/pitch-deck') {
+    return 'more';
+  }
+  return null;
+}
+
+// ── Brand Logotype ────────────────────────────────────────────────────────────
 function VaultLogo() {
   const setOptionsModalOpen = useVaultStore((s) => s.setOptionsModalOpen);
   return (
-    <Link 
-      to="/" 
-      className="flex items-center gap-2.5 no-underline group shrink-0" 
+    <Link
+      to="/"
+      className="flex items-center gap-2.5 no-underline group shrink-0"
       aria-label="th3vault home"
       onClick={() => setOptionsModalOpen(false)}
     >
@@ -84,7 +201,6 @@ function VaultLogo() {
 
       {/* Word mark */}
       <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
-        {/* Main name */}
         <span
           style={{
             fontFamily: '"Impact", "Arial Black", sans-serif',
@@ -100,10 +216,6 @@ function VaultLogo() {
         >
           PIM : th3v4ult
         </span>
-        {/* Attribution - Moved OUT of the inner Link to fix hydration warning if needed, 
-           but actually we just need to make it a non-anchor if it's inside a Link, 
-           or move the Link to only wrap the V + Name. 
-           Let's wrap only the top part. */}
       </div>
     </Link>
   );
@@ -138,7 +250,7 @@ function VaultAttribution() {
   );
 }
 
-// ── Token pill ────────────────────────────────────────────────────────────────
+// ── Token Pill ────────────────────────────────────────────────────────────────
 function TokenPill({ balance, compact = false }: { balance: number; compact?: boolean }) {
   const lit = balance > 0;
   return (
@@ -166,21 +278,28 @@ function TokenPill({ balance, compact = false }: { balance: number; compact?: bo
   );
 }
 
-// ── Main nav ──────────────────────────────────────────────────────────────────
+// ── Main Navigation Component ─────────────────────────────────────────────────
 export default function Navbar() {
   const [location] = useLocation();
   const { user, signOut, status, error: authError, setShowAuthModal } = useAuthStore();
-  const isAnonymous = user?.is_anonymous || 
-                      user?.app_metadata?.provider === 'anonymous' || 
+  const isAnonymous = user?.is_anonymous ||
+                      user?.app_metadata?.provider === 'anonymous' ||
                       (!user?.email && !user?.user_metadata?.wallet && !user?.user_metadata?.wallet_address);
   const tokenBalance = useVaultStore(s => s.tokenBalance);
   const displayName = useVaultStore(s => s.displayName);
   const avatarUrl = useVaultStore(s => s.avatarUrl);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [guideOpen, setGuideOpen] = useState(false);
   const { is4K, toggle: toggle4K, detectCapability } = useDisplayMode();
   const optionsModalOpen = useVaultStore((s) => s.optionsModalOpen);
   const setOptionsModalOpen = useVaultStore((s) => s.setOptionsModalOpen);
+
+  // Nav state
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const [commandPanelOpen, setCommandPanelOpen] = useState(false);
+  const [expandedSection, setExpandedSection] = useState<string | null>(null);
+  const [guideOpen, setGuideOpen] = useState(false);
+  const closeTimerRef = useRef<number | null>(null);
+
+  const activeSection = getActiveSection(location);
 
   const handleConnectWallet = () => {
     setShowAuthModal(true);
@@ -190,302 +309,550 @@ export default function Navbar() {
     detectCapability();
   }, [detectCapability]);
 
+  // Close all menus on navigation
+  useEffect(() => {
+    setActiveMenu(null);
+    setCommandPanelOpen(false);
+  }, [location]);
+
+  // Desktop mega-menu hover handlers
+  const handleMenuEnter = useCallback((sectionId: string) => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+    setActiveMenu(sectionId);
+  }, []);
+
+  const handleMenuLeave = useCallback(() => {
+    closeTimerRef.current = window.setTimeout(() => {
+      setActiveMenu(null);
+    }, 250);
+  }, []);
+
+  // Handle item clicks (for action items like Options, Guide)
+  const handleItemClick = useCallback((item: MenuItem) => {
+    setActiveMenu(null);
+    setCommandPanelOpen(false);
+    haptics.lightTap();
+
+    if (item.action === 'options') {
+      setOptionsModalOpen(true);
+    } else if (item.action === 'guide') {
+      setGuideOpen(true);
+    }
+  }, [setOptionsModalOpen]);
+
+  // Filter dev-only items
+  const getVisibleItems = (items: MenuItem[]) =>
+    items.filter(item => !item.devOnly || isDev);
+
   return (
     <>
       {/* ══ TOP BAR ══════════════════════════════════════════════════════════ */}
-      <nav
-        className="sticky top-0 z-[101] px-4 md:px-8"
-        style={{
-          background: 'rgba(8, 6, 4, 0.45)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          borderBottom: '1px solid rgba(255,56,0,0.12)',
-          boxShadow: '0 4px 30px rgba(0,0,0,0.4)',
-        }}
-      >
-        <div className="flex items-center justify-between h-14">
-          <div className="flex flex-col">
-            <VaultLogo />
-            <div className="hidden md:block">
-              <VaultAttribution />
-            </div>
-          </div>
-
-          {/* Desktop links */}
-          <div className="hidden md:flex items-center gap-2">
-            {links.map(({ to, label, icon: Icon }, i) => {
-              const active = to === '/options' ? optionsModalOpen : (location === to);
-              return (
-                <Link
-                  key={to}
-                  to={to}
-                  onClick={(e) => {
-                    haptics.lightTap();
-                    if (to === '/options') {
-                      e.preventDefault();
-                      setOptionsModalOpen(true);
-                    } else {
-                      setOptionsModalOpen(false);
-                    }
-                  }}
-                  className="sticker-gun-tag sticker-slits transition-all hover:scale-105 active:scale-95 no-underline flex flex-row items-center gap-1.5"
-                  style={{
-                    transform: `rotate(${(i - 1) * 1.2}deg)`,
-                    opacity: active ? 1 : 0.6,
-                    '--slit-color': active ? 'rgba(255,56,0,0.18)' : 'rgba(0,0,0,0.04)',
-                    background: active ? '#fff5f0' : '#f8f5f0',
-                    padding: '6px 14px',
-                  } as any}
-                >
-                  <Icon size={11} style={{ color: active ? '#ff3800' : '#333' }} />
-                  <span className="text-[10px] font-black uppercase tracking-tighter text-black">{label}</span>
-                </Link>
-              );
-            })}
-
-            <button
-              onClick={() => { setGuideOpen(true); haptics.lightTap(); }}
-              className="p-2 rounded-full transition-all hover:bg-white/10 active:scale-90 ml-1"
-              style={{ color: 'var(--color-text-primary)' }}
-              title="PIM Instruction Booklet & Operating Manual"
-              aria-label="PIM Instruction Booklet & Operating Manual"
-            >
-              <BookOpen size={16} />
-            </button>
-
-            {/* 4K HDR Toggle */}
-            <div
-              className="flex items-center gap-2 ml-1 px-2 py-1 rounded"
-              style={{
-                background: is4K ? 'rgba(255,215,0,0.06)' : 'transparent',
-                border: is4K ? '1px solid rgba(255,215,0,0.2)' : '1px solid transparent',
-                transition: 'all 0.3s ease',
-              }}
-            >
-              <Monitor size={12} style={{ color: is4K ? '#ffd700' : 'rgba(255,255,255,0.3)', transition: 'color 0.3s' }} />
-              <span style={{
-                fontFamily: '"JetBrains Mono", monospace',
-                fontSize: '8px',
-                fontWeight: 900,
-                letterSpacing: '0.1em',
-                color: is4K ? '#ffd700' : 'rgba(255,255,255,0.3)',
-                textTransform: 'uppercase',
-                transition: 'color 0.3s',
-                whiteSpace: 'nowrap',
-              }}>
-                {is4K ? '4K HDR' : 'HDR'}
-              </span>
-              <div
-                className={`toggle-4k${is4K ? ' active' : ''}`}
-                onClick={toggle4K}
-                role="switch"
-                aria-checked={is4K}
-                aria-label="Toggle 4K HDR mode"
-              />
+      <div onMouseLeave={handleMenuLeave}>
+        <nav
+          className="sticky top-0 z-[101] px-3 md:px-6"
+          style={{
+            background: 'rgba(8, 6, 4, 0.45)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            borderBottom: activeMenu
+              ? 'none'
+              : '1px solid rgba(255,56,0,0.12)',
+            boxShadow: '0 4px 30px rgba(0,0,0,0.4)',
+          }}
+        >
+          <div className="flex items-center justify-between h-14 gap-2">
+            {/* ── Left: Logo ── */}
+            <div className="flex flex-col shrink-0">
+              <VaultLogo />
+              <div className="hidden lg:block">
+                <VaultAttribution />
+              </div>
             </div>
 
-            <TokenPill balance={tokenBalance} />
+            {/* ── Center: Mega-Menu Tabs (Desktop) ── */}
+            <div className="hidden md:flex items-center gap-1 justify-center">
+              {menuSections.map((section) => {
+                const SectionIcon = section.icon;
+                const isActive = activeSection === section.id;
+                const isOpen = activeMenu === section.id;
 
-            { (import.meta.env.DEV || localStorage.getItem('th3vault_dev_mode') === 'true') && (
-              <>
-                <Link
-                  to="/admin/editor"
-                  className="sticker-gun-tag sticker-slits transition-all hover:scale-105 active:scale-95 no-underline flex flex-row items-center gap-1"
-                  style={{
-                    background: '#ff007f',
-                    padding: '6px 14px',
-                    boxShadow: '2px 2px 0 #000',
-                    border: '1.5px solid #000',
-                    color: '#fff',
-                    transform: 'rotate(-2deg)',
-                  } as any}
-                >
-                  <span className="text-[10px] font-black uppercase tracking-tighter text-white">Editor</span>
-                </Link>
-                <Link
-                  to="/admin/card-designs"
-                  className="sticker-gun-tag sticker-slits transition-all hover:scale-105 active:scale-95 no-underline flex flex-row items-center gap-1"
-                  style={{
-                    background: '#00f0ff',
-                    padding: '6px 14px',
-                    boxShadow: '2px 2px 0 #000',
-                    border: '1.5px solid #000',
-                    color: '#000',
-                    transform: 'rotate(1.5deg)',
-                  } as any}
-                >
-                  <span className="text-[10px] font-black uppercase tracking-tighter text-black">Card Designs</span>
-                </Link>
-              </>
-            )}
-
-            {/* Wallet Integration */}
-            {user && !isAnonymous ? (
-              <div className="flex items-center gap-2 ml-1">
-                <Link
-                  to="/profile"
-                  className="flex items-center gap-2 no-underline transition-all hover:scale-105"
-                  title="Manage Scribe Identity"
-                >
-                  {avatarUrl && (
-                    <img
-                      src={avatarUrl}
-                      alt="avatar"
+                return (
+                  <button
+                    key={section.id}
+                    onMouseEnter={() => handleMenuEnter(section.id)}
+                    onClick={() => {
+                      haptics.lightTap();
+                      setActiveMenu(activeMenu === section.id ? null : section.id);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 transition-all hover:scale-[1.03] active:scale-95 cursor-pointer select-none"
+                    style={{
+                      background: isActive
+                        ? section.accent
+                        : isOpen
+                          ? `${section.accent}18`
+                          : 'rgba(255,255,255,0.03)',
+                      color: isActive ? '#000' : isOpen ? section.accent : 'rgba(255,255,255,0.7)',
+                      border: isActive
+                        ? '1.5px solid #000'
+                        : isOpen
+                          ? `1px solid ${section.accent}40`
+                          : '1px solid rgba(255,255,255,0.06)',
+                      clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+                      boxShadow: isActive
+                        ? `2px 2px 0 #000, 0 0 14px ${section.accentGlow}`
+                        : isOpen
+                          ? `0 0 16px ${section.accentGlow.replace('0.4', '0.15')}`
+                          : 'none',
+                      fontFamily: '"JetBrains Mono", monospace',
+                      fontSize: '10px',
+                      fontWeight: 900,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.08em',
+                    }}
+                    title={section.label}
+                  >
+                    <SectionIcon size={13} />
+                    <span>{section.label}</span>
+                    <ChevronDown
+                      size={9}
                       style={{
-                        width: '24px',
-                        height: '24px',
-                        borderRadius: '50%',
-                        border: '1.5px solid #ff3800',
-                        objectFit: 'cover',
-                        background: '#111',
+                        transition: 'transform 0.2s ease',
+                        transform: isOpen ? 'rotate(180deg)' : 'none',
+                        opacity: 0.5,
                       }}
                     />
-                  )}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* ── Right: Desktop Controls ── */}
+            <div className="hidden md:flex items-center gap-2 shrink-0">
+              {/* 4K HDR Toggle */}
+              <div
+                className="flex items-center gap-1.5 px-2 py-1 rounded cursor-pointer"
+                style={{
+                  background: is4K ? 'rgba(255,215,0,0.06)' : 'transparent',
+                  border: is4K ? '1px solid rgba(255,215,0,0.2)' : '1px solid transparent',
+                  transition: 'all 0.3s ease',
+                }}
+                onClick={toggle4K}
+                title="Toggle 4K HDR mode"
+              >
+                <Monitor size={11} style={{ color: is4K ? '#ffd700' : 'rgba(255,255,255,0.3)', transition: 'color 0.3s' }} />
+                <span style={{
+                  fontFamily: '"JetBrains Mono", monospace',
+                  fontSize: '8px',
+                  fontWeight: 900,
+                  letterSpacing: '0.1em',
+                  color: is4K ? '#ffd700' : 'rgba(255,255,255,0.3)',
+                  textTransform: 'uppercase',
+                  transition: 'color 0.3s',
+                  whiteSpace: 'nowrap',
+                }}>
+                  {is4K ? '4K HDR' : 'HDR'}
+                </span>
+                <div
+                  className={`toggle-4k${is4K ? ' active' : ''}`}
+                  role="switch"
+                  aria-checked={is4K}
+                  aria-label="Toggle 4K HDR mode"
+                />
+              </div>
+
+              <TokenPill balance={tokenBalance} />
+
+              {/* Wallet / Profile */}
+              {user && !isAnonymous ? (
+                <div className="flex items-center gap-2">
+                  <Link
+                    to="/profile"
+                    className="flex items-center gap-2 no-underline transition-all hover:scale-105"
+                    title="Manage Scribe Identity"
+                  >
+                    {avatarUrl && (
+                      <img
+                        src={avatarUrl}
+                        alt="avatar"
+                        style={{
+                          width: '24px',
+                          height: '24px',
+                          borderRadius: '50%',
+                          border: '1.5px solid #ff3800',
+                          objectFit: 'cover',
+                          background: '#111',
+                        }}
+                      />
+                    )}
+                    <div
+                      className="sticker-gun-tag sticker-slits"
+                      style={{
+                        background: '#fff5f0',
+                        '--slit-color': 'rgba(255,56,0,0.1)',
+                        padding: '5px 10px',
+                        transform: 'rotate(-1deg)',
+                        cursor: 'pointer',
+                      } as any}
+                    >
+                      <span className="text-[9px] font-black tracking-tighter uppercase" style={{ color: '#1a0a00' }}>
+                        {displayName || (() => {
+                          const email = user?.email;
+                          if (email) {
+                            const cleaned = email.split('@')[0];
+                            if (cleaned.startsWith('0x') && cleaned.length === 42) {
+                              return `${cleaned.slice(0, 6)}...${cleaned.slice(-4)}`;
+                            }
+                            return cleaned;
+                          }
+                          return user?.id.slice(0, 8) || 'ANONYMOUS';
+                        })()}
+                      </span>
+                    </div>
+                  </Link>
+                  <button
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); signOut(); }}
+                    className="p-2 rounded-full transition-all hover:bg-white/10 active:scale-90"
+                    style={{ color: 'var(--color-text-muted)' }}
+                    title="Disconnect Wallet"
+                  >
+                    <LogOut size={15} />
+                  </button>
+                </div>
+              ) : user && isAnonymous ? (
+                <div className="flex items-center gap-2">
                   <div
                     className="sticker-gun-tag sticker-slits"
                     style={{
-                      background: '#fff5f0',
-                      '--slit-color': 'rgba(255,56,0,0.1)',
+                      background: '#f0f4ff',
+                      '--slit-color': 'rgba(0,100,255,0.1)',
                       padding: '5px 10px',
                       transform: 'rotate(-1deg)',
-                      cursor: 'pointer',
                     } as any}
                   >
-                     <span className="text-[9px] font-black tracking-tighter uppercase" style={{ color: '#1a0a00' }}>
-                      {displayName || (() => {
-                        const email = user?.email;
-                        if (email) {
-                          const cleaned = email.split('@')[0];
-                          if (cleaned.startsWith('0x') && cleaned.length === 42) {
-                            return `${cleaned.slice(0, 6)}...${cleaned.slice(-4)}`;
-                          }
-                          return cleaned;
-                        }
-                        return user?.id.slice(0, 8) || 'ANONYMOUS';
-                      })()}
+                    <span className="text-[9px] font-black tracking-tighter uppercase" style={{ color: '#0033aa' }}>
+                      GUEST WALLET
                     </span>
                   </div>
-                </Link>
-                <button
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); signOut(); }}
-                  className="p-2 rounded-full transition-all hover:bg-white/10 active:scale-90"
-                  style={{ color: 'var(--color-text-muted)' }}
-                  title="Disconnect Wallet"
-                >
-                  <LogOut size={15} />
-                </button>
-              </div>
-            ) : user && isAnonymous ? (
-              <div className="flex items-center gap-2 ml-1">
-                <div
-                  className="sticker-gun-tag sticker-slits"
-                  style={{
-                    background: '#f0f4ff',
-                    '--slit-color': 'rgba(0,100,255,0.1)',
-                    padding: '5px 10px',
-                    transform: 'rotate(-1deg)',
-                  } as any}
-                >
-                   <span className="text-[9px] font-black tracking-tighter uppercase" style={{ color: '#0033aa' }}>
-                     GUEST WALLET
-                  </span>
+                  <button
+                    onClick={handleConnectWallet}
+                    disabled={status === 'loading'}
+                    className="sticker-gun-tag sticker-slits font-black text-[10px] uppercase tracking-wider transition-all hover:scale-105 active:scale-95 disabled:opacity-60 disabled:cursor-wait"
+                    style={{
+                      background: authError ? '#ff3800' : 'var(--color-neon-gold)',
+                      color: '#000',
+                      '--slit-color': 'rgba(0,0,0,0.12)',
+                      padding: '6px 14px',
+                      transform: 'rotate(1deg)',
+                      boxShadow: `2px 2px 0 #000, 0 0 10px ${authError ? 'rgba(255,56,0,0.3)' : 'rgba(255,215,0,0.3)'}`,
+                      border: '1.5px solid #000',
+                    } as any}
+                  >
+                    <div className="flex items-center gap-1">
+                      {status === 'loading' ? (
+                        <div className="w-2.5 h-2.5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <Wallet size={11} />
+                      )}
+                      <span>{status === 'loading' ? 'Connecting...' : 'Connect Identity'}</span>
+                    </div>
+                  </button>
                 </div>
+              ) : (
                 <button
                   onClick={handleConnectWallet}
                   disabled={status === 'loading'}
-                  className="sticker-gun-tag sticker-slits ml-1 font-black text-[10px] uppercase tracking-wider transition-all hover:scale-105 active:scale-95 disabled:opacity-60 disabled:cursor-wait"
+                  className="sticker-gun-tag sticker-slits font-black text-[10px] uppercase tracking-wider transition-all hover:scale-105 active:scale-95 disabled:opacity-60 disabled:cursor-wait"
                   style={{
                     background: authError ? '#ff3800' : 'var(--color-neon-gold)',
                     color: '#000',
                     '--slit-color': 'rgba(0,0,0,0.12)',
-                    padding: '6px 14px',
+                    padding: '7px 16px',
                     transform: 'rotate(1deg)',
-                    boxShadow: `2px 2px 0 #000, 0 0 10px ${authError ? 'rgba(255,56,0,0.3)' : 'rgba(255,215,0,0.3)'}`,
-                    border: '1.5px solid #000',
+                    boxShadow: `3px 3px 0 #000, 0 0 14px ${authError ? 'rgba(255,56,0,0.4)' : 'rgba(255,215,0,0.4)'}`,
+                    border: '2px solid #000',
                   } as any}
                 >
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1.5">
                     {status === 'loading' ? (
-                      <div className="w-2.5 h-2.5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                      <div className="w-3 h-3 border-2 border-black border-t-transparent rounded-full animate-spin" />
                     ) : (
-                      <Wallet size={11} />
+                      <Wallet size={13} />
                     )}
-                    <span>{status === 'loading' ? 'Connecting...' : 'Connect Identity'}</span>
+                    <span>{status === 'loading' ? 'Connecting...' : authError ? 'Retry Connect' : 'Connect Identity'}</span>
                   </div>
                 </button>
-              </div>
-            ) : (
+              )}
+            </div>
+
+            {/* ── Right: Mobile Controls ── */}
+            <div className="flex md:hidden items-center gap-2">
+              <TokenPill balance={tokenBalance} compact />
               <button
-                onClick={handleConnectWallet}
-                disabled={status === 'loading'}
-                className="sticker-gun-tag sticker-slits ml-1 font-black text-[10px] uppercase tracking-wider transition-all hover:scale-105 active:scale-95 disabled:opacity-60 disabled:cursor-wait"
+                onClick={() => { setCommandPanelOpen(!commandPanelOpen); haptics.lightTap(); }}
+                className="flex items-center justify-center w-10 h-10 border-2 border-black transition-all active:scale-90"
                 style={{
-                  background: authError ? '#ff3800' : 'var(--color-neon-gold)',
-                  color: '#000',
-                  '--slit-color': 'rgba(0,0,0,0.12)',
-                  padding: '7px 16px',
-                  transform: 'rotate(1deg)',
-                  boxShadow: `3px 3px 0 #000, 0 0 14px ${authError ? 'rgba(255,56,0,0.4)' : 'rgba(255,215,0,0.4)'}`,
-                  border: '2px solid #000',
-                } as any}
+                  background: commandPanelOpen ? '#ff3800' : '#1a1610',
+                  color: '#fff',
+                  boxShadow: commandPanelOpen ? '2px 2px 0 #000, 0 0 12px rgba(255,56,0,0.5)' : '2px 2px 0 #000',
+                }}
+                aria-label="Toggle command panel"
               >
-                <div className="flex items-center gap-1.5">
-                  {status === 'loading' ? (
-                    <div className="w-3 h-3 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <Wallet size={13} />
-                  )}
-                  <span>{status === 'loading' ? 'Connecting...' : authError ? 'Retry Connect' : 'Connect Identity'}</span>
-                </div>
+                {commandPanelOpen ? <X size={18} /> : <LayoutGrid size={18} />}
               </button>
-            )}
+            </div>
           </div>
+        </nav>
 
-          {/* Mobile: token + burger */}
-          <div className="flex md:hidden items-center gap-2">
-            <TokenPill balance={tokenBalance} compact />
-            <button
-              onClick={() => { setMenuOpen(!menuOpen); haptics.lightTap(); }}
-              className="flex items-center justify-center w-10 h-10 border-2 border-black transition-all active:scale-90"
-              style={{
-                background: menuOpen ? '#ff3800' : '#1a1610',
-                color: '#fff',
-                boxShadow: menuOpen ? '2px 2px 0 #000, 0 0 12px rgba(255,56,0,0.5)' : '2px 2px 0 #000',
-              }}
-              aria-label="Toggle menu"
-            >
-              {menuOpen ? <X size={18} /> : <Menu size={18} />}
-            </button>
-          </div>
-        </div>
-      </nav>
+        {/* ══ DESKTOP MEGA-MENU FLYOUT ═══════════════════════════════════════ */}
+        <AnimatePresence>
+          {activeMenu && (() => {
+            const section = menuSections.find(s => s.id === activeMenu);
+            if (!section) return null;
+            const visibleItems = getVisibleItems(section.items);
 
-      {/* ══ MOBILE DROPDOWN ══════════════════════════════════════════════════ */}
+            return (
+              <motion.div
+                key={`mega-${section.id}`}
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.15, ease: 'easeOut' }}
+                className="hidden md:block sticky z-[100] px-6"
+                onMouseEnter={() => handleMenuEnter(section.id)}
+                style={{
+                  background: 'rgba(8, 6, 4, 0.97)',
+                  backdropFilter: 'blur(24px) saturate(1.5)',
+                  WebkitBackdropFilter: 'blur(24px) saturate(1.5)',
+                  borderTop: `3px solid ${section.accent}`,
+                  borderBottom: '1px solid rgba(255,255,255,0.06)',
+                  boxShadow: `0 20px 60px rgba(0,0,0,0.8), 0 0 40px ${section.accentGlow.replace('0.4', '0.12')}`,
+                }}
+              >
+                {/* Section header */}
+                <div className="flex items-center gap-2 pt-4 pb-2 px-2">
+                  <div
+                    style={{
+                      width: '3px',
+                      height: '16px',
+                      background: section.accent,
+                      boxShadow: `0 0 8px ${section.accentGlow}`,
+                    }}
+                  />
+                  <span
+                    style={{
+                      fontFamily: '"Impact", "Arial Black", sans-serif',
+                      fontSize: '13px',
+                      fontWeight: 900,
+                      letterSpacing: '0.15em',
+                      textTransform: 'uppercase',
+                      color: section.accent,
+                      textShadow: `0 0 20px ${section.accentGlow}`,
+                    }}
+                  >
+                    {section.label}
+                  </span>
+                  <div className="flex-1 h-px ml-2" style={{ background: `${section.accent}20` }} />
+                </div>
+
+                {/* Items grid */}
+                <div
+                  className="pb-4 px-2"
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: visibleItems.length > 3 ? 'repeat(2, 1fr)' : '1fr',
+                    gap: '2px',
+                  }}
+                >
+                  {visibleItems.map((item, i) => {
+                    const ItemIcon = item.icon;
+                    const isItemActive = item.to ? location === item.to : false;
+
+                    const content = (
+                      <motion.div
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.03, duration: 0.12 }}
+                        className="flex items-center gap-3 px-3 py-2.5 transition-all group cursor-pointer"
+                        style={{
+                          background: isItemActive ? `${section.accent}12` : 'transparent',
+                          borderLeft: isItemActive ? `3px solid ${section.accent}` : '3px solid transparent',
+                          clipPath: 'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)',
+                        }}
+                        onMouseEnter={(e) => {
+                          (e.currentTarget as HTMLElement).style.background = `${section.accent}10`;
+                          (e.currentTarget as HTMLElement).style.borderLeft = `3px solid ${section.accent}`;
+                          (e.currentTarget as HTMLElement).style.transform = 'translateX(4px)';
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isItemActive) {
+                            (e.currentTarget as HTMLElement).style.background = 'transparent';
+                            (e.currentTarget as HTMLElement).style.borderLeft = '3px solid transparent';
+                          }
+                          (e.currentTarget as HTMLElement).style.transform = 'translateX(0)';
+                        }}
+                      >
+                        <div
+                          className="flex items-center justify-center shrink-0"
+                          style={{
+                            width: '32px',
+                            height: '32px',
+                            background: `${section.accent}12`,
+                            border: `1px solid ${section.accent}30`,
+                          }}
+                        >
+                          <ItemIcon size={15} style={{ color: section.accent }} />
+                        </div>
+                        <div className="flex flex-col gap-0.5 min-w-0">
+                          <span
+                            style={{
+                              fontFamily: '"Impact", "Arial Black", sans-serif',
+                              fontSize: '14px',
+                              fontWeight: 900,
+                              letterSpacing: '-0.3px',
+                              textTransform: 'uppercase',
+                              color: isItemActive ? section.accent : '#fff',
+                            }}
+                          >
+                            {item.label}
+                          </span>
+                          <span
+                            style={{
+                              fontFamily: '"JetBrains Mono", monospace',
+                              fontSize: '9px',
+                              fontWeight: 400,
+                              color: 'rgba(255,255,255,0.35)',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.05em',
+                            }}
+                          >
+                            {item.desc}
+                          </span>
+                        </div>
+                        {isItemActive && (
+                          <span
+                            style={{
+                              fontFamily: '"JetBrains Mono", monospace',
+                              fontSize: '7px',
+                              fontWeight: 900,
+                              color: section.accent,
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.15em',
+                              marginLeft: 'auto',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            ← NOW
+                          </span>
+                        )}
+                      </motion.div>
+                    );
+
+                    if (item.to) {
+                      return (
+                        <Link
+                          key={item.label}
+                          to={item.to}
+                          className="no-underline"
+                          onClick={() => handleItemClick(item)}
+                        >
+                          {content}
+                        </Link>
+                      );
+                    }
+                    return (
+                      <div
+                        key={item.label}
+                        onClick={() => handleItemClick(item)}
+                      >
+                        {content}
+                      </div>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            );
+          })()}
+        </AnimatePresence>
+
+        {/* Invisible click-outside backdrop for desktop mega-menu */}
+        {activeMenu && (
+          <div
+            className="fixed inset-0 z-[99] hidden md:block"
+            onClick={() => setActiveMenu(null)}
+          />
+        )}
+      </div>
+
+      {/* ══ MOBILE COMMAND PANEL (Full-Screen Overlay) ══════════════════════ */}
       <AnimatePresence>
-        {menuOpen && (
+        {commandPanelOpen && (
           <>
+            {/* Backdrop */}
             <motion.div
-              key="bd"
+              key="cmd-backdrop"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40 md:hidden"
-              style={{ background: 'rgba(0,0,0,0.65)' }}
-              onClick={() => setMenuOpen(false)}
+              className="fixed inset-0 z-[55] md:hidden"
+              style={{ background: 'rgba(0,0,0,0.75)' }}
+              onClick={() => setCommandPanelOpen(false)}
             />
+
+            {/* Panel */}
             <motion.div
-              key="drawer"
-              initial={{ y: -12, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: -10, opacity: 0 }}
-              transition={{ duration: 0.16, ease: 'easeOut' }}
-              className="fixed top-14 left-0 right-0 z-50 md:hidden"
+              key="cmd-panel"
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+              className="fixed inset-y-0 right-0 z-[56] md:hidden overflow-y-auto"
               style={{
-                background: 'rgba(8,6,4,0.98)',
-                backdropFilter: 'blur(24px)',
-                borderBottom: '3px solid rgba(255,56,0,0.3)',
+                width: 'min(88vw, 380px)',
+                background: 'rgba(5, 4, 2, 0.99)',
+                backdropFilter: 'blur(30px)',
+                WebkitBackdropFilter: 'blur(30px)',
+                borderLeft: '1px solid rgba(255,56,0,0.15)',
+                boxShadow: '-10px 0 40px rgba(0,0,0,0.8)',
               }}
             >
+              {/* Header */}
+              <div
+                className="flex items-center justify-between px-4 py-3 sticky top-0 z-10"
+                style={{
+                  background: 'rgba(5,4,2,0.98)',
+                  borderBottom: '2px solid rgba(255,56,0,0.2)',
+                }}
+              >
+                <div className="flex items-center gap-2">
+                  <div style={{ width: '3px', height: '20px', background: '#ff3800', boxShadow: '0 0 10px rgba(255,56,0,0.5)' }} />
+                  <span style={{
+                    fontFamily: '"Impact", "Arial Black", sans-serif',
+                    fontSize: '18px',
+                    fontWeight: 900,
+                    letterSpacing: '0.1em',
+                    textTransform: 'uppercase',
+                    color: '#fff',
+                  }}>
+                    Command
+                  </span>
+                </div>
+                <button
+                  onClick={() => setCommandPanelOpen(false)}
+                  className="flex items-center justify-center w-9 h-9 transition-all active:scale-90"
+                  style={{
+                    background: '#ff3800',
+                    border: '2px solid #000',
+                    color: '#fff',
+                    boxShadow: '2px 2px 0 #000',
+                  }}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
               {/* th3scr1b3 credit strip */}
               <div style={{
                 background: '#ff3800',
@@ -509,84 +876,188 @@ export default function Navbar() {
                 </a>
               </div>
 
-              <div className="px-4 pt-3 pb-2 flex flex-col gap-2">
-                {links.map(({ to, label, icon: Icon }, i) => {
-                  const active = to === '/options' ? optionsModalOpen : (location === to);
+              {/* Section Accordions */}
+              <div className="px-3 pt-3 pb-2 flex flex-col gap-2">
+                {menuSections.map((section) => {
+                  const SectionIcon = section.icon;
+                  const isExpanded = expandedSection === section.id;
+                  const visibleItems = getVisibleItems(section.items);
+
                   return (
-                    <Link
-                      key={to}
-                      to={to}
-                      onClick={(e) => {
-                        setMenuOpen(false);
-                        haptics.lightTap();
-                        if (to === '/options') {
-                          e.preventDefault();
-                          setOptionsModalOpen(true);
-                        } else {
-                          setOptionsModalOpen(false);
-                        }
-                      }}
-                      className="flex items-center gap-3 px-4 py-3 no-underline transition-all"
-                      style={{
-                        background: active ? '#ff3800' : 'rgba(255,255,255,0.03)',
-                        border: active ? '2px solid #000' : '1px solid rgba(255,255,255,0.06)',
-                        color: active ? '#fff' : 'var(--color-text-primary)',
-                        boxShadow: active ? '3px 3px 0 #000' : 'none',
-                        transform: `rotate(${i % 2 === 0 ? -0.3 : 0.3}deg)`,
-                      }}
-                    >
-                      <Icon size={16} style={{ opacity: active ? 1 : 0.5, color: active ? '#fff' : 'inherit' }} />
-                      <span style={{
-                        fontFamily: '"Impact", "Arial Black", sans-serif',
-                        fontSize: '24px',
-                        fontWeight: 900,
-                        letterSpacing: '-0.5px',
-                        textTransform: 'uppercase',
-                      }}>
-                        {label}
-                      </span>
-                      {active && (
-                        <span className="ml-auto text-[8px] font-mono uppercase tracking-widest opacity-60">← now</span>
-                      )}
-                    </Link>
+                    <div key={section.id}>
+                      {/* Section Header */}
+                      <button
+                        onClick={() => {
+                          haptics.lightTap();
+                          setExpandedSection(isExpanded ? null : section.id);
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-3 transition-all active:scale-[0.98]"
+                        style={{
+                          background: isExpanded ? `${section.accent}10` : 'rgba(255,255,255,0.02)',
+                          borderLeft: `3px solid ${section.accent}`,
+                          border: isExpanded ? `1px solid ${section.accent}25` : '1px solid rgba(255,255,255,0.05)',
+                          borderLeftWidth: '3px',
+                          borderLeftColor: section.accent,
+                          clipPath: 'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)',
+                        }}
+                      >
+                        <div
+                          className="flex items-center justify-center shrink-0"
+                          style={{
+                            width: '28px',
+                            height: '28px',
+                            background: `${section.accent}15`,
+                          }}
+                        >
+                          <SectionIcon size={15} style={{ color: section.accent }} />
+                        </div>
+                        <span style={{
+                          fontFamily: '"Impact", "Arial Black", sans-serif',
+                          fontSize: '22px',
+                          fontWeight: 900,
+                          letterSpacing: '-0.5px',
+                          textTransform: 'uppercase',
+                          color: isExpanded ? section.accent : '#fff',
+                          textShadow: isExpanded ? `0 0 20px ${section.accentGlow}` : 'none',
+                        }}>
+                          {section.label}
+                        </span>
+                        {activeSection === section.id && (
+                          <span style={{
+                            fontFamily: '"JetBrains Mono", monospace',
+                            fontSize: '7px',
+                            fontWeight: 900,
+                            color: section.accent,
+                            background: `${section.accent}15`,
+                            padding: '2px 6px',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.1em',
+                          }}>
+                            ACTIVE
+                          </span>
+                        )}
+                        <ChevronRight
+                          size={14}
+                          className="ml-auto transition-transform duration-200"
+                          style={{
+                            transform: isExpanded ? 'rotate(90deg)' : 'none',
+                            color: isExpanded ? section.accent : 'rgba(255,255,255,0.3)',
+                          }}
+                        />
+                      </button>
+
+                      {/* Expanded Items */}
+                      <AnimatePresence>
+                        {isExpanded && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2, ease: 'easeOut' }}
+                            className="overflow-hidden"
+                          >
+                            <div className="pl-4 pr-2 py-1 flex flex-col gap-1">
+                              {visibleItems.map((item) => {
+                                const ItemIcon = item.icon;
+                                const isItemActive = item.to ? location === item.to : false;
+
+                                const itemContent = (
+                                  <div
+                                    className="flex items-center gap-3 px-3 py-2.5 transition-all active:scale-[0.97]"
+                                    style={{
+                                      background: isItemActive ? `${section.accent}12` : 'rgba(255,255,255,0.02)',
+                                      borderLeft: isItemActive ? `2px solid ${section.accent}` : '2px solid transparent',
+                                    }}
+                                  >
+                                    <ItemIcon
+                                      size={16}
+                                      style={{ color: isItemActive ? section.accent : 'rgba(255,255,255,0.4)', flexShrink: 0 }}
+                                    />
+                                    <div className="flex flex-col gap-0.5 min-w-0">
+                                      <span style={{
+                                        fontFamily: '"Impact", "Arial Black", sans-serif',
+                                        fontSize: '16px',
+                                        fontWeight: 900,
+                                        letterSpacing: '-0.3px',
+                                        textTransform: 'uppercase',
+                                        color: isItemActive ? section.accent : '#fff',
+                                      }}>
+                                        {item.label}
+                                      </span>
+                                      <span style={{
+                                        fontFamily: '"JetBrains Mono", monospace',
+                                        fontSize: '8px',
+                                        color: 'rgba(255,255,255,0.3)',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.05em',
+                                      }}>
+                                        {item.desc}
+                                      </span>
+                                    </div>
+                                    {isItemActive && (
+                                      <span style={{
+                                        fontFamily: '"JetBrains Mono", monospace',
+                                        fontSize: '7px',
+                                        fontWeight: 900,
+                                        color: section.accent,
+                                        marginLeft: 'auto',
+                                        whiteSpace: 'nowrap',
+                                      }}>
+                                        ← NOW
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+
+                                if (item.to) {
+                                  return (
+                                    <Link
+                                      key={item.label}
+                                      to={item.to}
+                                      className="no-underline"
+                                      onClick={() => { handleItemClick(item); }}
+                                    >
+                                      {itemContent}
+                                    </Link>
+                                  );
+                                }
+                                return (
+                                  <div
+                                    key={item.label}
+                                    className="cursor-pointer"
+                                    onClick={() => handleItemClick(item)}
+                                  >
+                                    {itemContent}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
                   );
                 })}
               </div>
 
-              <div className="mx-4 h-px" style={{ background: 'rgba(255,255,255,0.05)' }} />
+              {/* ── Command Panel Footer ── */}
+              <div className="px-3 pb-4 mt-2">
+                {/* Divider */}
+                <div className="h-px mb-3" style={{ background: 'rgba(255,255,255,0.06)' }} />
 
-              <div className="px-4 py-2">
-                <button
-                  onClick={() => { setGuideOpen(true); setMenuOpen(false); }}
-                  className="flex items-center gap-3 px-4 py-3 w-full border border-white/10 hover:bg-white/5 transition-colors"
-                  style={{ color: 'var(--color-text-primary)' }}
-                >
-                  <BookOpen size={16} style={{ opacity: 0.5 }} />
-                  <span style={{
-                    fontFamily: '"Impact", "Arial Black", sans-serif',
-                    fontSize: '20px',
-                    fontWeight: 900,
-                    letterSpacing: '-0.5px',
-                    textTransform: 'uppercase',
-                  }}>
-                    Instruction Booklet
-                  </span>
-                </button>
-              </div>
-
-              <div className="mx-4 h-px" style={{ background: 'rgba(255,255,255,0.05)' }} />
-
-              {/* 4K HDR toggle — mobile drawer */}
-              <div className="px-4 py-2">
+                {/* 4K HDR toggle row */}
                 <div
-                  className="flex items-center justify-between px-4 py-3 border border-white/10"
-                  style={{ background: is4K ? 'rgba(255,215,0,0.06)' : 'transparent' }}
+                  className="flex items-center justify-between px-4 py-3 mb-2"
+                  style={{
+                    background: is4K ? 'rgba(255,215,0,0.06)' : 'rgba(255,255,255,0.02)',
+                    border: is4K ? '1px solid rgba(255,215,0,0.2)' : '1px solid rgba(255,255,255,0.05)',
+                  }}
                 >
                   <div className="flex items-center gap-3">
                     <Monitor size={16} style={{ color: is4K ? '#ffd700' : 'rgba(255,255,255,0.4)' }} />
                     <span style={{
                       fontFamily: '"Impact", "Arial Black", sans-serif',
-                      fontSize: '20px',
+                      fontSize: '18px',
                       fontWeight: 900,
                       letterSpacing: '-0.5px',
                       textTransform: 'uppercase',
@@ -619,16 +1090,13 @@ export default function Navbar() {
                     style={{ transform: 'scale(1.3)' }}
                   />
                 </div>
-              </div>
 
-              <div className="mx-4 h-px" style={{ background: 'rgba(255,255,255,0.05)' }} />
-
-              <div className="px-4 py-3">
+                {/* Wallet / Identity */}
                 {user && !isAnonymous ? (
-                  <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center justify-between w-full px-2">
                     <Link
                       to="/profile"
-                      onClick={() => setMenuOpen(false)}
+                      onClick={() => setCommandPanelOpen(false)}
                       style={{
                         fontFamily: '"JetBrains Mono", monospace',
                         fontSize: '10px',
@@ -646,7 +1114,7 @@ export default function Navbar() {
                       })()} →
                     </Link>
                     <button
-                      onClick={() => { signOut(); setMenuOpen(false); }}
+                      onClick={() => { signOut(); setCommandPanelOpen(false); }}
                       className="flex items-center gap-2 px-3 py-2 border border-white/10 hover:bg-white/5 transition-colors"
                       style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '10px', textTransform: 'uppercase', color: 'var(--color-text-muted)' }}
                     >
@@ -670,7 +1138,7 @@ export default function Navbar() {
                       </div>
                     )}
                     <button
-                      onClick={() => { handleConnectWallet(); setMenuOpen(false); }}
+                      onClick={() => { handleConnectWallet(); setCommandPanelOpen(false); }}
                       disabled={status === 'loading'}
                       className="w-full flex items-center justify-center gap-2 py-3 border-2 border-black font-black uppercase tracking-wider transition-all active:scale-95"
                       style={{
@@ -703,26 +1171,60 @@ export default function Navbar() {
         }}
       >
         <div className="flex items-stretch h-[62px]">
-          {links.filter(l => l.to !== '/vault/collection' && l.to !== '/vault/leaderboard' && l.to !== '/pitch-deck').map(({ to, label, icon: Icon }) => {
-            const active = to === '/options' ? optionsModalOpen : (location === to);
+          {mobileQuickTabs.map(({ id, to, action, label, icon: Icon, accent }) => {
+            const isTabActive = id === 'more'
+              ? commandPanelOpen
+              : activeSection === id;
+
+            const handleTap = () => {
+              haptics.lightTap();
+              if (action === 'command') {
+                setCommandPanelOpen(!commandPanelOpen);
+              }
+              // Navigation handled by Link for tabs with `to`
+            };
+
+            if (action === 'command') {
+              return (
+                <button
+                  key={id}
+                  onClick={handleTap}
+                  className="flex-1 flex flex-col items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer"
+                  style={{
+                    color: isTabActive ? accent : 'rgba(255,255,255,0.3)',
+                    borderTop: isTabActive ? `2px solid ${accent}` : '2px solid transparent',
+                    background: isTabActive ? `${accent}08` : 'transparent',
+                    marginTop: '-2px',
+                    border: 'none',
+                    borderTopWidth: '2px',
+                    borderTopStyle: 'solid',
+                    borderTopColor: isTabActive ? accent : 'transparent',
+                  }}
+                >
+                  <Icon size={20} />
+                  <span style={{
+                    fontFamily: '"JetBrains Mono", monospace',
+                    fontSize: '8px',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                  }}>
+                    {label}
+                  </span>
+                </button>
+              );
+            }
+
             return (
               <Link
-                key={to}
-                to={to}
-                onClick={(e) => {
-                  haptics.lightTap();
-                  if (to === '/options') {
-                    e.preventDefault();
-                    setOptionsModalOpen(true);
-                  } else {
-                    setOptionsModalOpen(false);
-                  }
-                }}
+                key={id}
+                to={to!}
+                onClick={handleTap}
                 className="flex-1 flex flex-col items-center justify-center gap-1 no-underline transition-all active:scale-95"
                 style={{
-                  color: active ? '#ff3800' : 'rgba(255,255,255,0.3)',
-                  borderTop: active ? '2px solid #ff3800' : '2px solid transparent',
-                  background: active ? 'rgba(255,56,0,0.06)' : 'transparent',
+                  color: isTabActive ? accent : 'rgba(255,255,255,0.3)',
+                  borderTop: isTabActive ? `2px solid ${accent}` : '2px solid transparent',
+                  background: isTabActive ? `${accent}08` : 'transparent',
                   marginTop: '-2px',
                 }}
               >
@@ -739,32 +1241,6 @@ export default function Navbar() {
               </Link>
             );
           })}
-
-          {/* Legal — compact muted fourth tab */}
-          <Link
-            to="/vault/legal"
-            onClick={() => haptics.lightTap()}
-            className="flex flex-col items-center justify-center gap-1 no-underline transition-all active:scale-95"
-            style={{
-              width: '52px',
-              flexShrink: 0,
-              color: location === '/vault/legal' ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.18)',
-              borderTop: location === '/vault/legal' ? '2px solid rgba(255,255,255,0.3)' : '2px solid transparent',
-              background: 'transparent',
-              marginTop: '-2px',
-            }}
-          >
-            <FileText size={14} />
-            <span style={{
-              fontFamily: '"JetBrains Mono", monospace',
-              fontSize: '7px',
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-            }}>
-              Legal
-            </span>
-          </Link>
         </div>
       </nav>
 

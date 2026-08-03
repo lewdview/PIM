@@ -846,24 +846,26 @@ export default function SongSelect() {
                       <span>START TRANSMISSION</span>
                     </button>
 
-                    <button
-                      disabled={!selectedUnlocked}
-                      onClick={() => {
-                        if (!selected) return;
-                        sessionStorage.setItem(`export_video_${selected.id}`, 'true');
-                        handlePlaySong();
-                      }}
-                      onMouseEnter={() => { if (selectedUnlocked) audioManager.playSfx('tap_nav', 0.08); }}
-                      title="Export frame-perfect 100% PERFECT+ run video"
-                      className={`px-6 py-5 text-xs tracking-[0.25em] font-mono font-bold uppercase rounded-2xl transition-all flex items-center justify-center gap-2.5 cursor-pointer border ${
-                        selectedUnlocked
-                          ? "border-[#FF1493] bg-[#FF1493]/15 text-[#FF1493] hover:bg-[#FF1493] hover:text-black shadow-[0_0_20px_rgba(255,20,147,0.3)] hover:scale-[1.01]"
-                          : "border-white/10 bg-white/5 text-white/20 cursor-not-allowed"
-                      }`}
-                    >
-                      <Film size={18} />
-                      <span className="hidden sm:inline">EXPORT PERFECT VIDEO</span>
-                    </button>
+                    {import.meta.env.DEV && (
+                      <button
+                        disabled={!selectedUnlocked}
+                        onClick={() => {
+                          if (!selected) return;
+                          sessionStorage.setItem(`export_video_${selected.id}`, 'true');
+                          handlePlaySong();
+                        }}
+                        onMouseEnter={() => { if (selectedUnlocked) audioManager.playSfx('tap_nav', 0.08); }}
+                        title="Export frame-perfect 100% PERFECT+ run video (DEV SERVER ONLY)"
+                        className={`px-6 py-5 text-xs tracking-[0.25em] font-mono font-bold uppercase rounded-2xl transition-all flex items-center justify-center gap-2.5 cursor-pointer border ${
+                          selectedUnlocked
+                            ? "border-[#FF1493] bg-[#FF1493]/15 text-[#FF1493] hover:bg-[#FF1493] hover:text-black shadow-[0_0_20px_rgba(255,20,147,0.3)] hover:scale-[1.01]"
+                            : "border-white/10 bg-white/5 text-white/20 cursor-not-allowed"
+                        }`}
+                      >
+                        <Film size={18} />
+                        <span className="hidden sm:inline">EXPORT PERFECT VIDEO</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

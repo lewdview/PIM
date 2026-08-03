@@ -123,6 +123,46 @@ function ArcadeMarquee({ color, medal }: { color: string; medal: string }) {
   );
 }
 
+// ── persistent return navigation grid component ─────────────────────
+function QuickReturnGrid({ onNavigate }: { onNavigate: (path: string) => void }) {
+  const options = [
+    { label: 'Collection', path: '/vault/collection', icon: '🃏', color: '#ff3800' },
+    { label: 'Vault', path: '/vault', icon: '🏛️', color: '#ffb800' },
+    { label: 'Shop', path: '/vault/earn', icon: '⚡', color: '#39FF14' },
+    { label: 'Arcade', path: '/arcade', icon: '🎮', color: '#00E5FF' },
+    { label: 'Award Play', path: '/songs', icon: '🎵', color: '#FF007F' },
+    { label: 'Campaign', path: '/campaign', icon: '🏆', color: '#9D8DF1' },
+  ];
+
+  return (
+    <div className="w-full my-3 p-3 bg-black/70 border border-white/15 rounded-xl flex flex-col gap-2 shadow-[0_4px_20px_rgba(0,0,0,0.5)] select-none">
+      <div className="font-mono text-[9px] uppercase tracking-[0.25em] text-zinc-400 font-bold text-center">
+        // RETURN TO HUBS //
+      </div>
+      <div className="grid grid-cols-3 gap-1.5">
+        {options.map((opt) => (
+          <button
+            key={opt.path}
+            onClick={() => {
+              audioManager.playSfx('tap_nav', 0.15);
+              onNavigate(opt.path);
+            }}
+            className="flex flex-col items-center justify-center py-2 px-1 bg-zinc-900/90 border border-white/10 rounded hover:border-white/40 hover:bg-zinc-800 transition-all active:scale-95 group cursor-pointer"
+          >
+            <span className="text-sm group-hover:scale-110 transition-transform">{opt.icon}</span>
+            <span
+              className="font-mono text-[9px] font-bold uppercase tracking-tight mt-0.5"
+              style={{ color: opt.color }}
+            >
+              {opt.label}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── circular ring component (Classic & Avant-Garde) ──────────────────
 function ScoreRing({ progress, color, size = 180, isAvant }: { progress: number; color: string; size?: number; isAvant?: boolean }) {
   const r = (size - 16) / 2;
@@ -868,6 +908,7 @@ export default function Results() {
                 onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}>
                 ← {fromFreePlayFail ? 'BACK TO AWARD PLAY' : 'BACK TO LEVEL PATH'}
               </button>
+              <QuickReturnGrid onNavigate={setLocation} />
             </div>
           </div>
           <style>{`
@@ -980,6 +1021,7 @@ export default function Results() {
               onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.35)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}>
               ← {fromFreePlayFail ? 'BACK TO AWARD PLAY' : 'BACK TO LEVEL PATH'}
             </button>
+            <QuickReturnGrid onNavigate={setLocation} />
           </div>
         </div>
       </div>
@@ -1475,6 +1517,8 @@ export default function Results() {
                   {fromFreePlay ? '⌂ AWARD PLAY' : '◈ CAMPAIGN_INDEX'}
                 </button>
               </div>
+
+              <QuickReturnGrid onNavigate={setLocation} />
             </div>
           )}
         </div>
@@ -1882,6 +1926,8 @@ export default function Results() {
                 {fromFreePlay ? '⌂ AWARD PLAY' : '◈ CAMPAIGN INDEX'}
               </button>
             </div>
+
+            <QuickReturnGrid onNavigate={setLocation} />
           </div>
         )}
       </div>
