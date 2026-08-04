@@ -17,6 +17,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { purchasePack, type OwnedCard } from "@/services/vaultService";
 import { TransmissionIcon } from "../components/icons/CustomVectorIcons";
 import VideoExportModal from "@/components/ui/VideoExportModal";
+import { getRelativeDay } from "../utils/dayCalc";
 
 // Use Vite's eager glob to grab files in /public/data/slideshow/
 const imageModules = import.meta.glob('/public/data/slideshow/**/*.{png,jpg,jpeg,gif,webp,svg}', { eager: true });
@@ -2856,6 +2857,21 @@ export default function Game() {
     // Canvas is transparent — CSS background system shows through beneath the silver track
     ctx.clearRect(0, 0, W, H);
 
+    if (isExportVideoRef.current) {
+      if (coverImgRef.current && coverImgRef.current.complete && coverImgRef.current.naturalWidth > 0) {
+        ctx.drawImage(coverImgRef.current, 0, 0, W, H);
+      } else {
+        ctx.fillStyle = "#050402";
+        ctx.fillRect(0, 0, W, H);
+      }
+      const bgGrad = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.25, W / 2, H / 2, Math.max(W, H) * 0.85);
+      bgGrad.addColorStop(0, "rgba(5, 4, 2, 0.65)");
+      bgGrad.addColorStop(0.8, "rgba(5, 4, 2, 0.92)");
+      bgGrad.addColorStop(1, "rgba(5, 4, 2, 0.98)");
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, W, H);
+    }
+
     // Draw pre-rendered static tracks (Double-buffering optimization)
     if (!offscreenCanvasRef.current && W > 0 && H > 0) {
       const diffLevel = songRef.current?.difficultyLevel ?? 5;
@@ -4799,6 +4815,49 @@ export default function Game() {
         }
         ctx.restore();
       }
+    }
+
+    // ── 8. VIDEO EXPORT HUD OVERLAY (Renders HUD directly on canvas) ──
+    if (isExportVideoRef.current) {
+      ctx.save();
+
+      // Top HUD Bar background gradient
+      const headGrad = ctx.createLinearGradient(0, 0, 0, 70);
+      headGrad.addColorStop(0, "rgba(5, 5, 10, 0.92)");
+      headGrad.addColorStop(0.7, "rgba(5, 5, 10, 0.65)");
+      headGrad.addColorStop(1, "rgba(5, 5, 10, 0)");
+      ctx.fillStyle = headGrad;
+      ctx.fillRect(0, 0, W, 70);
+
+      // Stage & Song title (Top Left)
+      ctx.fillStyle = "#39FF14";
+      ctx.font = "900 11px monospace";
+      ctx.textAlign = "left";
+      ctx.shadowColor = "#39FF14";
+      const stageNum = song && song.day !== undefined ? getRelativeDay(song.day) : 1;
+      ctx.fillText(`PIM MUSEUM ARCHIVE // STAGE #${stageNum}`, 18, 24);
+
+      ctx.fillStyle = "#FFFFFF";
+      ctx.font = "900 16px monospace";
+      ctx.shadowColor = "rgba(0,0,0,0.8)";
+      ctx.shadowBlur = 4;
+      ctx.fillText((song.title || "TRANSMISSION").toUpperCase(), 18, 44);
+
+      // Score & Perfect+ Combo (Top Right)
+      ctx.textAlign = "right";
+      ctx.fillStyle = "#39FF14";
+      ctx.font = "900 18px monospace";
+      ctx.shadowColor = "#39FF14";
+      ctx.shadowBlur = 12;
+      ctx.fillText(`${gs.score.toLocaleString()} PTS`, W - 18, 26);
+
+      ctx.fillStyle = "#FF1493";
+      ctx.font = "900 11px monospace";
+      ctx.shadowColor = "#FF1493";
+      ctx.shadowBlur = 8;
+      ctx.fillText(`100% PERFECT+ // COMBO x${gs.combo}`, W - 18, 44);
+
+      ctx.restore();
     }
 
     // ── end check — ONLY during playing phase ──

@@ -4,7 +4,7 @@ import { useVaultStore, type RevealPackMeta } from '../../store/useVaultStore';
 import type { OwnedCard } from '../../services/vaultService';
 import { audioManager } from '../../game/audio';
 import { RARITY_CONFIG, type Rarity } from '../../utils/rarity';
-import { getCoverUrlForRarity } from '../../utils/rarityArtwork';
+import { getCoverUrlForRarity, useSmartCoverArt, resolveSmartCoverUrl } from '../../utils/rarityArtwork';
 import Card from '../Card';
 import RarityBadge from '../RarityBadge';
 import {
@@ -493,6 +493,33 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
     newTotal: number;
     unlocked: boolean;
   }
+
+  function FragmentRewardImgItem({ coverUrl, rarity, title }: { coverUrl: string | null; rarity: Rarity; title: string }) {
+    const { src, handleError } = useSmartCoverArt(coverUrl, rarity);
+    const rarityColor = RARITY_CONFIG[rarity]?.color || '#fff';
+
+    return src ? (
+      <img
+        src={src}
+        alt={title}
+        onError={handleError}
+        className="w-14 h-14 object-cover border-2 border-black flex-shrink-0"
+        style={{ boxShadow: '2px 2px 0 #000' }}
+      />
+    ) : (
+      <div
+        className="w-14 h-14 border-2 border-black flex-shrink-0 flex items-center justify-center font-black"
+        style={{
+          background: rarityColor,
+          color: '#000',
+          boxShadow: '2px 2px 0 #000',
+          fontFamily: 'Impact, sans-serif'
+        }}
+      >
+        {rarity.substring(0, 2).toUpperCase()}
+      </div>
+    );
+  }
   const [fragmentRewards, setFragmentRewards] = useState<FragmentReward[]>([]);
 
   const handleStartDecrypter = useCallback(() => {
@@ -527,7 +554,7 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
         cardId: card.id,
         title: card.title,
         artist: (card as any).artist || 'TH3SCR1B3',
-        coverArt: getCoverUrlForRarity(card.coverUrl, rarity) || null,
+        coverArt: card.coverUrl || null,
         rarity,
         added: totalGain,
         oldTotal,
@@ -628,11 +655,15 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
 
     async function preloadAssets() {
       const urls = new Set<string>();
-      cards.forEach(owned => {
-        const cover = getCoverUrlForRarity(owned.card.coverUrl, owned.card.rarity);
-        if (cover) urls.add(cover);
-        if (owned.card.holographicUrl) urls.add(owned.card.holographicUrl);
-      });
+
+      // Pre-resolve smart cover URLs for all cards in parallel before reveal phase
+      await Promise.all(
+        cards.map(async (owned) => {
+          const workingCover = await resolveSmartCoverUrl(owned.card.coverUrl, owned.card.rarity);
+          if (workingCover) urls.add(workingCover);
+          if (owned.card.holographicUrl) urls.add(owned.card.holographicUrl);
+        })
+      );
 
       const preloadPromise = Promise.all(
         Array.from(urls).map(url => new Promise((resolve) => {
@@ -1840,26 +1871,11 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
                           border: `1.5px solid ${rarityColor}35`,
                         }}
                       >
-                        {rew.coverArt ? (
-                          <img
-                            src={rew.coverArt}
-                            alt={rew.title}
-                            className="w-14 h-14 object-cover border-2 border-black flex-shrink-0"
-                            style={{ boxShadow: '2px 2px 0 #000' }}
-                          />
-                        ) : (
-                          <div
-                            className="w-14 h-14 border-2 border-black flex-shrink-0 flex items-center justify-center font-black"
-                            style={{
-                              background: rarityColor,
-                              color: '#000',
-                              boxShadow: '2px 2px 0 #000',
-                              fontFamily: 'Impact, sans-serif'
-                            }}
-                          >
-                            {rew.rarity.substring(0, 2).toUpperCase()}
-                          </div>
-                        )}
+                        <FragmentRewardImgItem
+                          coverUrl={rew.coverArt}
+                          rarity={rew.rarity}
+                          title={rew.title}
+                        />
 
                         {/* Song Details & Progress */}
                         <div className="flex-1 min-w-0 space-y-2">

@@ -168,14 +168,18 @@ export default function HomePage() {
   useEffect(() => {
     if (!import.meta.env.DEV) return; // Skip in production — localhost:8000 will never resolve
     let active = true;
-    fetch('http://localhost:8000/health', { method: 'GET', mode: 'cors' })
+    const controller = new AbortController();
+    fetch('http://localhost:8000/health', { method: 'GET', mode: 'cors', signal: controller.signal })
       .then(res => {
         if (active) setAudioForgeOnline(res.ok);
       })
       .catch(() => {
         if (active) setAudioForgeOnline(false); // Graceful fallback, no crash
       });
-    return () => { active = false; };
+    return () => {
+      active = false;
+      controller.abort();
+    };
   }, []);
 
   const [isClaimingAnimation, setIsClaimingAnimation] = useState(false);

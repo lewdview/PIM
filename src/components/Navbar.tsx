@@ -1192,10 +1192,8 @@ export default function Navbar() {
                   className="flex-1 flex flex-col items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer"
                   style={{
                     color: isTabActive ? accent : 'rgba(255,255,255,0.3)',
-                    borderTop: isTabActive ? `2px solid ${accent}` : '2px solid transparent',
                     background: isTabActive ? `${accent}08` : 'transparent',
                     marginTop: '-2px',
-                    border: 'none',
                     borderTopWidth: '2px',
                     borderTopStyle: 'solid',
                     borderTopColor: isTabActive ? accent : 'transparent',
@@ -1223,7 +1221,9 @@ export default function Navbar() {
                 className="flex-1 flex flex-col items-center justify-center gap-1 no-underline transition-all active:scale-95"
                 style={{
                   color: isTabActive ? accent : 'rgba(255,255,255,0.3)',
-                  borderTop: isTabActive ? `2px solid ${accent}` : '2px solid transparent',
+                  borderTopWidth: '2px',
+                  borderTopStyle: 'solid',
+                  borderTopColor: isTabActive ? accent : 'transparent',
                   background: isTabActive ? `${accent}08` : 'transparent',
                   marginTop: '-2px',
                 }}

@@ -134,7 +134,7 @@ export interface UltraReward {
   description: string;
 }
 
-import packData from '../../public/data/packs.json';
+import packData from '../data/packs.json';
 
 // ===== ROLL RATES & CONFIGS GENERATED FROM JSON =====
 export const ROLL_RATES: Record<string, number[]> = {};

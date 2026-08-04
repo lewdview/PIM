@@ -34,6 +34,7 @@ import Tutorial from './pages/Tutorial';
 import OptionsModal from './components/OptionsModal';
 import SongDetail from './pages/SongDetail';
 import LandingPage from './pages/LandingPage';
+import NextGenLandingPage from './pages/NextGenLandingPage';
 import ProfilePage from './pages/ProfilePage';
 import ListenPage from './pages/ListenPage';
 import EarnPage from './pages/EarnPage';
@@ -361,6 +362,7 @@ export default function App() {
         }>
           <Switch>
             <Route path="/" component={LandingPage} />
+            <Route path="/next-vault" component={NextGenLandingPage} />
             <Route path="/hero" component={HeroLandingPage} />
             <Route path="/hero/day-:dayParam" component={HeroLandingPage} />
             <Route path="/hero/:dayParam" component={HeroLandingPage} />

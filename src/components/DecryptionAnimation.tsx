@@ -3,7 +3,19 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Zap, Sparkles, Image as ImageIcon, Terminal } from 'lucide-react';
 import { audioManager } from '../game/audio';
 import type { VaultCard } from '../services/vaultService';
-import { getCoverUrlForRarity } from '../utils/rarityArtwork';
+import { getCoverUrlForRarity, useSmartCoverArt, resolveSmartCoverUrl } from '../utils/rarityArtwork';
+
+function RewardCardCoverImg({ coverUrl, rarity, className }: { coverUrl?: string; rarity?: string; className?: string }) {
+  const { src, handleError } = useSmartCoverArt(coverUrl, rarity);
+  return (
+    <img
+      src={src}
+      alt="Reward Card"
+      onError={handleError}
+      className={className}
+    />
+  );
+}
 
 interface DecryptionAnimationProps {
   reward: {
@@ -39,6 +51,13 @@ export default function DecryptionAnimation({ reward, onClose }: DecryptionAnima
   useEffect(() => {
     phaseRef.current = phase;
   }, [phase]);
+
+  // Pre-resolve & preload reward card artwork before reveal
+  useEffect(() => {
+    if (reward.details?.card) {
+      resolveSmartCoverUrl(reward.details.card.coverUrl, reward.details.card.rarity);
+    }
+  }, [reward]);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const particlesRef = useRef<ShardParticle[]>([]);
@@ -350,9 +369,9 @@ export default function DecryptionAnimation({ reward, onClose }: DecryptionAnima
                   className="py-2 flex flex-col items-center"
                 >
                   <div className="w-32 aspect-[3/4] rounded-lg overflow-hidden border border-white/20 mb-4 shadow-[0_10px_30px_rgba(0,0,0,0.6)]">
-                    <img
-                      src={getCoverUrlForRarity(reward.details.card.coverUrl, reward.details.card.rarity)}
-                      alt="Reward Card"
+                    <RewardCardCoverImg
+                      coverUrl={reward.details.card.coverUrl}
+                      rarity={reward.details.card.rarity}
                       className="w-full h-full object-cover"
                     />
                   </div>
@@ -380,9 +399,9 @@ export default function DecryptionAnimation({ reward, onClose }: DecryptionAnima
                     <div className="absolute inset-0 rounded-lg bg-black/50 border border-white/10 translate-x-2 translate-y-2 opacity-40" />
                     <div className="absolute inset-0 rounded-lg bg-black/55 border border-white/10 translate-x-1 translate-y-1 opacity-70" />
                     <div className="absolute inset-0 rounded-lg overflow-hidden border border-white/20 shadow-[0_10px_30px_rgba(0,0,0,0.6)]">
-                      <img
-                        src={getCoverUrlForRarity(reward.details.card.coverUrl, reward.details.card.rarity)}
-                        alt="Reward Card"
+                      <RewardCardCoverImg
+                        coverUrl={reward.details.card.coverUrl}
+                        rarity={reward.details.card.rarity}
                         className="w-full h-full object-cover"
                       />
                     </div>

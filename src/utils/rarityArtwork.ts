@@ -111,36 +111,32 @@ export function getCoverUrlForRarity(
   return url;
 }
 
+const IMAGE_EXISTENCE_CACHE = new Map<string, boolean>();
+const RESOLVED_COVER_CACHE = new Map<string, string>();
+
 /**
- * Smart Cover Art Hook:
- * Handles automatic graceful fallback when a custom cover format is missing or 404s.
- * Prioritized Candidate List:
- * 1. Primary alternate cover (e.g. girls-cover/*.jpg or alternate-covers/*.jpg)
- * 2. Variant folder (e.g. girl-covers/*.jpg)
- * 3. Alternate PNG variant (e.g. girls-cover/*.png or alternate-covers/*.png)
- * 4. Alternate covers fallback (e.g. alternate-covers/*.jpg)
- * 5. Original cover (covers/*.jpg)
+ * Returns ordered candidate sequence of URLs to try for a card cover.
  */
-export function useSmartCoverArt(
+export function getSmartCoverCandidates(
   originalCoverUrl: string | undefined | null,
   rarity?: string | Rarity
-) {
+): string[] {
   const original = originalCoverUrl || '';
-  const primary = getCoverUrlForRarity(original, rarity);
+  if (!original) return [];
 
-  // Build ordered candidate sequence
+  const primary = getCoverUrlForRarity(original, rarity);
   const candidates: string[] = [];
 
   if (primary) candidates.push(primary);
 
-  // If primary is in girls-cover or girl-covers, check folder variant
+  // Folder variants (girls-cover <-> girl-covers)
   if (primary.includes('/girls-cover/')) {
     candidates.push(primary.replace(/\/girls-cover\//g, '/girl-covers/'));
   } else if (primary.includes('/girl-covers/')) {
     candidates.push(primary.replace(/\/girl-covers\//g, '/girls-cover/'));
   }
 
-  // PNG/JPG extension swaps
+  // Extension swaps (.jpg <-> .png)
   if (primary.endsWith('.jpg')) {
     candidates.push(primary.replace(/\.jpg$/i, '.png'));
   } else if (primary.endsWith('.png')) {
@@ -158,27 +154,111 @@ export function useSmartCoverArt(
     candidates.push(ogNormalized);
   }
 
-  // Ensure original .jpg fallback if original was .png
   if (ogNormalized.endsWith('.png')) {
     const originalJpg = ogNormalized.replace(/\.png$/i, '.jpg');
     if (!candidates.includes(originalJpg)) candidates.push(originalJpg);
   }
 
-  const uniqueCandidates = Array.from(new Set(candidates)).filter(Boolean);
+  return Array.from(new Set(candidates)).filter(Boolean);
+}
 
-  const [index, setIndex] = useState(0);
+/**
+ * Tests if an image URL exists and loads cleanly. Caches test results in memory.
+ */
+export function checkImageExists(url: string): Promise<boolean> {
+  if (IMAGE_EXISTENCE_CACHE.has(url)) {
+    return Promise.resolve(IMAGE_EXISTENCE_CACHE.get(url)!);
+  }
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      IMAGE_EXISTENCE_CACHE.set(url, true);
+      resolve(true);
+    };
+    img.onerror = () => {
+      IMAGE_EXISTENCE_CACHE.set(url, false);
+      resolve(false);
+    };
+    img.src = url;
+  });
+}
+
+/**
+ * Asynchronously resolves and preloads the best working cover image URL before reveal.
+ */
+export async function resolveSmartCoverUrl(
+  originalCoverUrl: string | undefined | null,
+  rarity?: string | Rarity
+): Promise<string> {
+  const original = originalCoverUrl || '';
+  if (!original) return '';
+
+  const cacheKey = `${original}_${rarity || 'common'}`;
+  if (RESOLVED_COVER_CACHE.has(cacheKey)) {
+    return RESOLVED_COVER_CACHE.get(cacheKey)!;
+  }
+
+  const candidates = getSmartCoverCandidates(original, rarity);
+
+  for (const candidate of candidates) {
+    const exists = await checkImageExists(candidate);
+    if (exists) {
+      RESOLVED_COVER_CACHE.set(cacheKey, candidate);
+      return candidate;
+    }
+  }
+
+  RESOLVED_COVER_CACHE.set(cacheKey, original);
+  return original;
+}
+
+/**
+ * Smart Cover Art Hook:
+ * Handles automatic graceful fallback when a custom cover format is missing or 404s.
+ * Uses in-memory image pre-resolution cache so covers never flicker or glitch during reveals.
+ */
+export function useSmartCoverArt(
+  originalCoverUrl: string | undefined | null,
+  rarity?: string | Rarity
+) {
+  const original = originalCoverUrl || '';
+  const cacheKey = `${original}_${rarity || 'common'}`;
+  const cachedUrl = RESOLVED_COVER_CACHE.get(cacheKey);
+
+  const candidates = getSmartCoverCandidates(original, rarity);
+  const primary = getCoverUrlForRarity(original, rarity);
+
+  const [currentSrc, setCurrentSrc] = useState<string>(cachedUrl || candidates[0] || original);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    setIndex(0);
-    setFailed(false);
+    let active = true;
+
+    if (RESOLVED_COVER_CACHE.has(cacheKey)) {
+      setCurrentSrc(RESOLVED_COVER_CACHE.get(cacheKey)!);
+      setFailed(false);
+      return;
+    }
+
+    resolveSmartCoverUrl(original, rarity).then((resolved) => {
+      if (active) {
+        setCurrentSrc(resolved);
+        setFailed(false);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
   }, [originalCoverUrl, rarity]);
 
-  const currentSrc = uniqueCandidates[index] || original;
-
   const handleError = () => {
-    if (index < uniqueCandidates.length - 1) {
-      setIndex(prev => prev + 1);
+    const currentIndex = candidates.indexOf(currentSrc);
+    if (currentIndex >= 0 && currentIndex < candidates.length - 1) {
+      const next = candidates[currentIndex + 1];
+      setCurrentSrc(next);
+      RESOLVED_COVER_CACHE.set(cacheKey, next);
     } else {
       setFailed(true);
     }

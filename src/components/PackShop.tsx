@@ -108,8 +108,8 @@ function RipTab({ onRip, accent, disabled, labelOverride }: { onRip: () => void;
 }
 
 // ===== FOIL PACK BAG =====
-function PackBag({ category, isActive, onRip, isRipping, isFreeClaimed }: {
-  category: PackCategory; isActive: boolean; isRipping: boolean; isFreeClaimed?: boolean;
+export function PackBag({ category, isActive = true, onRip, isRipping = false, isFreeClaimed, showRipTab = true, forcedSize }: {
+  category: PackCategory; isActive?: boolean; isRipping?: boolean; isFreeClaimed?: boolean; showRipTab?: boolean; forcedSize?: PackSize;
   onRip: (cat: PackCategory, size: PackSize) => void;
 }) {
   const [tierIdx, setTierIdx] = useState(0);
@@ -118,7 +118,8 @@ function PackBag({ category, isActive, onRip, isRipping, isFreeClaimed }: {
 
   const cfg = PACK_CONFIGS[category];
   const accent = cfg.accent;
-  const tier = cfg.tiers[tierIdx];
+  const activeTierIndex = forcedSize ? Math.max(0, cfg.tiers.findIndex(t => t.size === forcedSize)) : tierIdx;
+  const tier = cfg.tiers[activeTierIndex] || cfg.tiers[0];
   const isSpecial = category === 'prophecy' || category === 'alpha';
   const isFreeDisabled = category === 'free' && isFreeClaimed;
 
@@ -415,8 +416,8 @@ function PackBag({ category, isActive, onRip, isRipping, isFreeClaimed }: {
             {/* Cards count placeholder area, now handled by sticker in top-left */}
           </div>
 
-          {/* Top Tier Circles */}
-          {cfg.tiers.length > 1 && (
+          {/* Top Tier Circles (Hidden when rendered inside Vending Machine) */}
+          {showRipTab && cfg.tiers.length > 1 && (
             <div className="flex items-center justify-center gap-3 w-full mt-2">
               {cfg.tiers.map((t, i) => (
                 <button 
@@ -584,20 +585,22 @@ function PackBag({ category, isActive, onRip, isRipping, isFreeClaimed }: {
         </AnimatePresence>
       </div>
 
-      <div 
-        className="w-full mt-3 px-1 transition-opacity duration-300"
-        style={{ 
-          opacity: isActive ? 1 : 0.4, 
-          pointerEvents: isActive ? 'auto' : 'none' 
-        }}
-      >
-        <RipTab 
-          onRip={() => onRip(category, tier.size)} 
-          accent={(isFreeDisabled || isOverLimit) ? '#555' : accent} 
-          disabled={disabledAction} 
-          labelOverride={dynamicLabelOverride}
-        />
-      </div>
+      {showRipTab && (
+        <div 
+          className="w-full mt-3 px-1 transition-opacity duration-300"
+          style={{ 
+            opacity: isActive ? 1 : 0.4, 
+            pointerEvents: isActive ? 'auto' : 'none' 
+          }}
+        >
+          <RipTab 
+            onRip={() => onRip(category, tier.size)} 
+            accent={(isFreeDisabled || isOverLimit) ? '#555' : accent} 
+            disabled={disabledAction} 
+            labelOverride={dynamicLabelOverride}
+          />
+        </div>
+      )}
     </div>
   );
 }
