@@ -1454,6 +1454,10 @@ export default function Game() {
   // ── POV Perspective Engine State ──
   const [activePovMode, setActivePovMode] = useState<'classic' | 'cyber_tunnel' | 'dynamic_stage'>(opts.povMode || 'classic');
   const activePovModeRef = useRef(activePovMode);
+  const [isPovLocked, setIsPovLocked] = useState<boolean>(() => {
+    return typeof localStorage !== 'undefined' && localStorage.getItem('opt_povLocked') === 'true';
+  });
+  const isPovLockedRef = useRef(isPovLocked);
   const [povToast, setPovToast] = useState<{ mode: string; time: number } | null>(null);
 
   useEffect(() => {
@@ -1461,11 +1465,29 @@ export default function Game() {
   }, [activePovMode]);
 
   useEffect(() => {
+    isPovLockedRef.current = isPovLocked;
+  }, [isPovLocked]);
+
+  useEffect(() => {
     if (opts.povMode) {
       setActivePovMode(opts.povMode);
       activePovModeRef.current = opts.povMode;
     }
   }, [opts.povMode]);
+
+  const togglePovLock = useCallback(() => {
+    const nextLocked = !isPovLockedRef.current;
+    setIsPovLocked(nextLocked);
+    isPovLockedRef.current = nextLocked;
+    try {
+      localStorage.setItem('opt_povLocked', String(nextLocked));
+    } catch {}
+    audioManager.playSfx('tap_nav', 0.15);
+    setPovToast({
+      mode: nextLocked ? 'PERSPECTIVE LOCKED 🔒' : 'PERSPECTIVE UNLOCKED 🔓',
+      time: Date.now(),
+    });
+  }, []);
 
   const povTransitionRef = useRef<{
     startTime: number;
@@ -2851,8 +2873,8 @@ export default function Game() {
         lastDetectedStageRef.current = calculatedStage;
         setCurrentStage(calculatedStage);
 
-        // Stage-Integrated Dynamic POV Camera Auto-Switching
-        if (optsRef.current.stagePovSwitch !== false && phaseRef.current === "playing" && prevStage > 0 && calculatedStage > prevStage) {
+        // Stage-Integrated Dynamic POV Camera Auto-Switching (Skipped if POV Lock is active)
+        if (!isPovLockedRef.current && optsRef.current.stagePovSwitch !== false && phaseRef.current === "playing" && prevStage > 0 && calculatedStage > prevStage) {
           let targetPov: 'classic' | 'cyber_tunnel' | 'dynamic_stage' = 'classic';
           if (calculatedStage === 3) targetPov = 'cyber_tunnel';
           else if (calculatedStage === 4) targetPov = 'dynamic_stage';
@@ -7494,21 +7516,38 @@ export default function Game() {
         )}
       </AnimatePresence>
 
-      {/* ── POV SWITCH BUTTON (Bottom Right next to Pause) ── */}
+      {/* ── POV SWITCH & LOCK BUTTONS (Bottom Right next to Pause) ── */}
       {phase === "playing" && !paused && (
-        <button
-          onClick={cyclePovMode}
-          className="absolute bottom-6 right-20 z-50 px-3.5 h-12 flex items-center gap-2 rounded-full glass-panel border-2 border-white/20 hover:scale-105 active:scale-95 transition-all cursor-pointer group text-white font-mono text-xs shadow-lg bg-black/60 backdrop-blur-md"
-          title="Toggle POV Perspective Camera Mode (Hotkey: V)"
-        >
-          <span className="text-base">
-            {activePovMode === 'cyber_tunnel' ? '🌀' : activePovMode === 'dynamic_stage' ? '🎥' : '📐'}
-          </span>
-          <span className="font-black text-[10px] uppercase tracking-wider hidden sm:inline-block">
-            {activePovMode === 'cyber_tunnel' ? '3D TUNNEL' : activePovMode === 'dynamic_stage' ? 'DYNAMIC STAGE' : '2.5D CLASSIC'}
-          </span>
-          <span className="text-[8px] font-black text-white/80 bg-white/10 px-1.5 py-0.5 rounded font-mono border border-white/10">V</span>
-        </button>
+        <div className="absolute bottom-6 right-20 z-50 flex items-center gap-1.5">
+          <button
+            onClick={togglePovLock}
+            className={`h-12 px-3 flex items-center gap-1.5 rounded-full border-2 transition-all cursor-pointer shadow-lg backdrop-blur-md font-mono text-xs ${
+              isPovLocked
+                ? 'bg-[#FF3800]/25 border-[#FF3800] text-[#FF3800] shadow-[0_0_16px_rgba(255,56,0,0.4)] scale-105'
+                : 'bg-black/60 border-white/20 text-white/60 hover:text-white hover:border-white/40'
+            }`}
+            title={isPovLocked ? "POV Perspective Locked (Auto-Stage Camera Shifts Disabled)" : "Lock Current POV Perspective Camera"}
+          >
+            <span className="text-sm">{isPovLocked ? '🔒' : '🔓'}</span>
+            <span className="font-black text-[9px] uppercase tracking-wider hidden md:inline-block">
+              {isPovLocked ? 'LOCKED' : 'LOCK'}
+            </span>
+          </button>
+
+          <button
+            onClick={cyclePovMode}
+            className="px-3.5 h-12 flex items-center gap-2 rounded-full glass-panel border-2 border-white/20 hover:scale-105 active:scale-95 transition-all cursor-pointer group text-white font-mono text-xs shadow-lg bg-black/60 backdrop-blur-md"
+            title="Toggle POV Perspective Camera Mode (Hotkey: V)"
+          >
+            <span className="text-base">
+              {activePovMode === 'cyber_tunnel' ? '🌀' : activePovMode === 'dynamic_stage' ? '🎥' : '📐'}
+            </span>
+            <span className="font-black text-[10px] uppercase tracking-wider hidden sm:inline-block">
+              {activePovMode === 'cyber_tunnel' ? '3D TUNNEL' : activePovMode === 'dynamic_stage' ? 'DYNAMIC STAGE' : '2.5D CLASSIC'}
+            </span>
+            <span className="text-[8px] font-black text-white/80 bg-white/10 px-1.5 py-0.5 rounded font-mono border border-white/10">V</span>
+          </button>
+        </div>
       )}
 
       {/* ── PAUSE BUTTON (Bottom Right) ── */}

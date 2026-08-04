@@ -124,23 +124,82 @@ function ArcadeMarquee({ color, medal }: { color: string; medal: string }) {
   );
 }
 
+// ── custom vector SVG icons for after gameplay hub choices ─────────
+function HubSvgIcon({ type, color }: { type: string; color: string }) {
+  const size = 22;
+  switch (type) {
+    case 'collection':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="group-hover:scale-110 transition-transform drop-shadow-[0_0_6px_rgba(255,56,0,0.4)]">
+          <rect x="2" y="7" width="11" height="14" rx="2" stroke={color} strokeWidth="1.5" strokeOpacity="0.4" fill={`${color}10`} />
+          <rect x="6.5" y="5" width="11" height="14" rx="2" stroke={color} strokeWidth="1.5" strokeOpacity="0.75" fill={`${color}20`} />
+          <rect x="11" y="3" width="11" height="14" rx="2" stroke={color} strokeWidth="1.8" fill={`${color}40`} />
+          <path d="M16.5 7.5L18.5 9.5L16.5 11.5L14.5 9.5L16.5 7.5Z" fill="#FFF" />
+        </svg>
+      );
+    case 'vault':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="group-hover:scale-110 transition-transform drop-shadow-[0_0_6px_rgba(255,184,0,0.4)]">
+          <circle cx="12" cy="12" r="9" stroke={color} strokeWidth="1.8" fill={`${color}18`} />
+          <circle cx="12" cy="12" r="5" stroke={color} strokeWidth="1.5" strokeDasharray="3 3" />
+          <circle cx="12" cy="12" r="2" fill="#FFF" />
+          <path d="M12 3V6M12 18V21M3 12H6M18 12H21" stroke={color} strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      );
+    case 'shop':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="group-hover:scale-110 transition-transform drop-shadow-[0_0_6px_rgba(57,255,20,0.4)]">
+          <path d="M13 2L4 14H11L10 22L20 10H13L14 2Z" fill={color} stroke="#FFF" strokeWidth="1" />
+        </svg>
+      );
+    case 'arcade':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="group-hover:scale-110 transition-transform drop-shadow-[0_0_6px_rgba(0,229,255,0.4)]">
+          <path d="M2 19L8 9H16L22 19H2Z" stroke={color} strokeWidth="1.6" fill={`${color}20`} />
+          <path d="M12 9V19M6 14H18" stroke={color} strokeWidth="1.2" strokeDasharray="2 2" />
+          <circle cx="12" cy="5.5" r="2.5" stroke={color} strokeWidth="1.5" fill={`${color}40`} />
+        </svg>
+      );
+    case 'songs':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="group-hover:scale-110 transition-transform drop-shadow-[0_0_6px_rgba(255,0,127,0.4)]">
+          <circle cx="12" cy="12" r="9" stroke={color} strokeWidth="1.8" fill={`${color}18`} />
+          <circle cx="12" cy="12" r="3.5" stroke={color} strokeWidth="1.5" />
+          <circle cx="12" cy="12" r="1.2" fill="#FFF" />
+          <path d="M12 3C15.5 3 18.5 6 18.5 9.5" stroke={color} strokeWidth="1.2" strokeLinecap="round" />
+          <path d="M12 21C8.5 21 5.5 18 5.5 14.5" stroke={color} strokeWidth="1.2" strokeLinecap="round" />
+        </svg>
+      );
+    case 'campaign':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="group-hover:scale-110 transition-transform drop-shadow-[0_0_6px_rgba(157,141,241,0.4)]">
+          <path d="M6 3H18V9.5C18 12.8 15.3 15.5 12 15.5C8.7 15.5 6 12.8 6 9.5V3Z" stroke={color} strokeWidth="1.8" fill={`${color}22`} />
+          <path d="M12 15.5V19.5M8 20.5H16" stroke={color} strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M12 5.5L13.1 7.7L15.5 8.1L13.8 9.8L14.2 12.2L12 11.1L9.8 12.2L10.2 9.8L8.5 8.1L10.9 7.7L12 5.5Z" fill="#FFF" />
+        </svg>
+      );
+    default:
+      return null;
+  }
+}
+
 // ── persistent return navigation grid component ─────────────────────
 function QuickReturnGrid({ onNavigate }: { onNavigate: (path: string) => void }) {
   const options = [
-    { label: 'Collection', path: '/vault/collection', icon: '🃏', color: '#ff3800' },
-    { label: 'Vault', path: '/vault', icon: '🏛️', color: '#ffb800' },
-    { label: 'Shop', path: '/vault/earn', icon: '⚡', color: '#39FF14' },
-    { label: 'Arcade', path: '/arcade', icon: '🎮', color: '#00E5FF' },
-    { label: 'Award Play', path: '/songs', icon: '🎵', color: '#FF007F' },
-    { label: 'Campaign', path: '/campaign', icon: '🏆', color: '#9D8DF1' },
+    { label: 'Collection', path: '/vault/collection', iconType: 'collection', color: '#ff3800' },
+    { label: 'Vault', path: '/vault', iconType: 'vault', color: '#ffb800' },
+    { label: 'Shop', path: '/vault/earn', iconType: 'shop', color: '#39FF14' },
+    { label: 'Arcade', path: '/arcade', iconType: 'arcade', color: '#00E5FF' },
+    { label: 'Award Play', path: '/songs', iconType: 'songs', color: '#FF007F' },
+    { label: 'Campaign', path: '/campaign', iconType: 'campaign', color: '#9D8DF1' },
   ];
 
   return (
-    <div className="w-full my-3 p-3 bg-black/70 border border-white/15 rounded-xl flex flex-col gap-2 shadow-[0_4px_20px_rgba(0,0,0,0.5)] select-none">
+    <div className="w-full my-3 p-3 bg-black/75 border border-white/15 rounded-xl flex flex-col gap-2 shadow-[0_4px_24px_rgba(0,0,0,0.6)] select-none backdrop-blur-md">
       <div className="font-mono text-[9px] uppercase tracking-[0.25em] text-zinc-400 font-bold text-center">
         // RETURN TO HUBS //
       </div>
-      <div className="grid grid-cols-3 gap-1.5">
+      <div className="grid grid-cols-3 gap-2">
         {options.map((opt) => (
           <button
             key={opt.path}
@@ -148,11 +207,11 @@ function QuickReturnGrid({ onNavigate }: { onNavigate: (path: string) => void })
               audioManager.playSfx('tap_nav', 0.15);
               onNavigate(opt.path);
             }}
-            className="flex flex-col items-center justify-center py-2 px-1 bg-zinc-900/90 border border-white/10 rounded hover:border-white/40 hover:bg-zinc-800 transition-all active:scale-95 group cursor-pointer"
+            className="flex flex-col items-center justify-center py-2.5 px-1 bg-zinc-900/90 border border-white/10 rounded-lg hover:border-white/40 hover:bg-zinc-800/90 transition-all active:scale-95 group cursor-pointer shadow-sm hover:shadow-[0_0_12px_rgba(255,255,255,0.08)]"
           >
-            <span className="text-sm group-hover:scale-110 transition-transform">{opt.icon}</span>
+            <HubSvgIcon type={opt.iconType} color={opt.color} />
             <span
-              className="font-mono text-[9px] font-bold uppercase tracking-tight mt-0.5"
+              className="font-mono text-[9px] font-bold uppercase tracking-tight mt-1"
               style={{ color: opt.color }}
             >
               {opt.label}
