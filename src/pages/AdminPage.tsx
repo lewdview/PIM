@@ -38,16 +38,24 @@ const PACK_LABELS: Record<string, string> = {
 };
 
 // ===== ADMIN GATE =====
-const ADMIN_PASSPHRASE = 'th3scr1b3';
+// We use a SHA-256 hash of the passphrase so it's not exposed in the frontend bundle.
+const ADMIN_PASSPHRASE_HASH = 'd58f380b169d36c2fe217dadc3caa620193197132b55ba52b0947882b78c4983';
 const ADMIN_AUTH_KEY = 'th3vault_admin_auth';
 
 function AdminGate({ onAuthenticate }: { onAuthenticate: () => void }) {
   const [input, setInput] = useState('');
   const [error, setError] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (input.toLowerCase() === ADMIN_PASSPHRASE) {
+
+    // Convert input to a Uint8Array, hash it, and convert back to hex to compare
+    const msgUint8 = new TextEncoder().encode(input);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+    if (hashHex === ADMIN_PASSPHRASE_HASH) {
       sessionStorage.setItem(ADMIN_AUTH_KEY, 'true');
       onAuthenticate();
     } else {
