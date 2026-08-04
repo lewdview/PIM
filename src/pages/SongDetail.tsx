@@ -8,6 +8,7 @@ import { getActiveTheme } from "@/lib/options";
 import { useVaultStore } from "../store/useVaultStore";
 import { getCurrentDay } from "../utils/dayCalc";
 import PrizeProgressMenu from "../components/PrizeProgressMenu";
+import { Film } from "lucide-react";
 
 const MEDAL_COLOR: Record<string, string> = {
   PLATINUM: '#39FF14', GOLD: '#E5B800', SILVER: '#A0AABB', BRONZE: '#C97A3A', NONE: '#444', '': '#1a1a1a',
@@ -853,15 +854,37 @@ export default function SongDetail() {
             </div>
           )}
 
-          <button onClick={handlePlay}
-            disabled={!unlocked}
-            className={`w-full py-5 text-sm tracking-[0.4em] uppercase rounded-xl transition-all ${
-              unlocked 
-                ? "neon-btn" 
-                : "border border-white/10 bg-white/5 text-white/20 cursor-not-allowed shadow-none"
-            }`}>
-            ▶ START TRANSMISSION{isFromFreePlay ? ` · LVL ${diffOverride}` : ''}
-          </button>
+          <div className="flex gap-2">
+            <button onClick={handlePlay}
+              disabled={!unlocked}
+              className={`flex-1 py-5 text-sm tracking-[0.4em] uppercase rounded-xl transition-all ${
+                unlocked 
+                  ? "neon-btn" 
+                  : "border border-white/10 bg-white/5 text-white/20 cursor-not-allowed shadow-none"
+              }`}>
+              ▶ START TRANSMISSION{isFromFreePlay ? ` · LVL ${diffOverride}` : ''}
+            </button>
+
+            {import.meta.env.DEV && (
+              <button
+                disabled={!unlocked}
+                onClick={() => {
+                  if (!song) return;
+                  sessionStorage.setItem(`export_video_${song.id}`, 'true');
+                  handlePlay();
+                }}
+                title="Export frame-perfect 100% PERFECT+ run video (DEV ONLY)"
+                className={`px-5 py-5 text-xs font-mono font-bold uppercase rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer border ${
+                  unlocked
+                    ? 'border-[#FF1493] bg-[#FF1493]/15 text-[#FF1493] hover:bg-[#FF1493] hover:text-black shadow-[0_0_16px_rgba(255,20,147,0.3)]'
+                    : 'border-white/10 bg-white/5 text-white/20 cursor-not-allowed'
+                }`}
+              >
+                <Film size={18} />
+                <span className="hidden sm:inline">EXPORT VIDEO</span>
+              </button>
+            )}
+          </div>
           {/* Preview button */}
           {song.audioUrl && !previewing && unlocked && (
             <button onClick={togglePreview}

@@ -12,6 +12,7 @@ import { purchasePack } from "@/services/vaultService";
 import { PACK_CONFIGS } from "@/utils/rarity";
 import { logAnalyticsEvent } from "@/services/telemetryService";
 import OnboardingFlowModal from "@/components/OnboardingFlowModal";
+import { Film } from "lucide-react";
 
 interface LaneTelemetry {
   hits: number; perfectPlus: number; perfects: number; goods: number; misses: number;
@@ -1917,6 +1918,19 @@ export default function Results() {
                 onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; }}>
                 ↺ RETRY
               </button>
+              {import.meta.env.DEV && (
+                <button
+                  onClick={() => {
+                    sessionStorage.setItem(`export_video_${songId}`, 'true');
+                    setLocation(`/play/${songId}`);
+                  }}
+                  title="Export frame-perfect 100% PERFECT+ run video (DEV ONLY)"
+                  className="px-4 py-3 font-mono font-bold text-xs tracking-[0.2em] uppercase border border-[#FF1493] bg-[#FF1493]/15 text-[#FF1493] hover:bg-[#FF1493] hover:text-black rounded transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-[0_0_12px_rgba(255,20,147,0.3)]"
+                >
+                  <Film size={14} />
+                  <span>EXPORT VIDEO</span>
+                </button>
+              )}
               <button data-testid="button-select-song"
                 onClick={() => setLocation(fromFreePlay ? '/songs' : '/campaign')}
                 className="flex-1 py-3 font-mono font-bold text-sm tracking-[0.25em] transition-all"

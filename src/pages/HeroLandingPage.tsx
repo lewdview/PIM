@@ -18,12 +18,13 @@ import { useEffect, useState, useRef, useMemo, Fragment, useCallback } from 'rea
 import { motion, useInView, AnimatePresence } from 'framer-motion';
 import { Link, useLocation, useParams, useSearch } from 'wouter';
 import {
-  ChevronDown, Play, Pause, Volume2, Sparkles, X, Info, Disc, ExternalLink,
+  ChevronDown, Play, Pause, Volume2, Sparkles, X, Info, Disc, ExternalLink, Film,
   Flame, Shield, Layers, Award, Search, Lock, ChevronLeft, ChevronRight, Command, Calendar
 } from 'lucide-react';
 import { getCurrentDay, getTimeUntilNextDay, formatDate, getDateFromDay } from '../utils/dayCalc';
 import { extractPalette, getFallbackPalette, type ExtractedPalette } from '../utils/extractPalette';
 import { audioManager } from '../game/audio';
+import { supabase } from '@/services/supabaseClient';
 import '../styles/HeroLandingPage.css';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -484,6 +485,7 @@ export default function HeroLandingPage() {
   const [song, setSong] = useState<SongEntry | null>(null);
   const [palette, setPalette] = useState<ExtractedPalette>(getFallbackPalette());
   const [countdown, setCountdown] = useState(getTimeUntilNextDay());
+  const [museumVideoUrl, setMuseumVideoUrl] = useState<string | null>(null);
 
   // Command Palette State
   const [isCommandModalOpen, setIsCommandModalOpen] = useState(false);
@@ -522,6 +524,36 @@ export default function HeroLandingPage() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isCommandModalOpen]);
+
+  // Load published museum frame-perfect video replay if available
+  useEffect(() => {
+    if (!song) return;
+    const cleanTitle = song.title.toLowerCase().replace(/[^a-z0-9]/g, '_');
+
+    const cachedUrl =
+      localStorage.getItem(`museum_video_${cleanTitle}`) ||
+      localStorage.getItem(`museum_video_day_${song.day}`) ||
+      localStorage.getItem(`museum_video_song_${song.id}`);
+
+    if (cachedUrl) {
+      setMuseumVideoUrl(cachedUrl);
+    } else {
+      supabase
+        .from('museum_videos')
+        .select('video_url')
+        .eq('song_title', song.title)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.video_url) {
+            setMuseumVideoUrl(data.video_url);
+            localStorage.setItem(`museum_video_${cleanTitle}`, data.video_url);
+          } else {
+            setMuseumVideoUrl(null);
+          }
+        })
+        .catch(() => setMuseumVideoUrl(null));
+    }
+  }, [song]);
 
   // Load catalog & update current song when activeDay changes
   useEffect(() => {
@@ -748,6 +780,20 @@ export default function HeroLandingPage() {
                 <Play size={14} fill="#000" /> PLAY DAY {activeDay} DROP
               </span>
             </Link>
+            {import.meta.env.DEV && (
+              <button
+                onClick={() => {
+                  sessionStorage.setItem(`export_video_${songId}`, 'true');
+                  audioManager.playSfx('select_start_song', 0.5);
+                  setLocation(`/play/${songId}`);
+                }}
+                title="Export frame-perfect 100% PERFECT+ run video (DEV ONLY)"
+                className="mt-1 px-4 py-2 bg-[#FF1493]/15 border border-[#FF1493] text-[#FF1493] rounded-full text-[10px] font-mono font-bold uppercase tracking-widest transition-all hover:bg-[#FF1493] hover:text-black shadow-[0_0_12px_rgba(255,20,147,0.25)] flex items-center gap-1.5 cursor-pointer"
+              >
+                <Film size={12} />
+                <span>EXPORT PERFECT VIDEO</span>
+              </button>
+            )}
             <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-white/40 border-t border-b border-white/10 py-1 px-6 mt-1">
               ─────────────── No account required ───────────────
             </div>
@@ -1097,30 +1143,53 @@ export default function HeroLandingPage() {
       <div className="hero-section-divider" />
 
       {/* ═══════════ SECTION 6 : GAMEPLAY PROOF ═══════════ */}
-      <section className="hero-gameplay-section" id="hero-gameplay">
+      <section className="hero-gameplay-section relative" id="hero-gameplay">
         <motion.div
-          className="hero-gameplay-wrap"
+          className="hero-gameplay-wrap relative overflow-hidden rounded-3xl border border-white/15 bg-black shadow-2xl group"
           initial={{ opacity: 0, scale: 0.95 }}
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true, margin: '-80px' }}
           transition={{ duration: 0.8, ease: EASE_OUT }}
         >
-          <img
-            src="/screenshots/06_rhythm_gameplay.png"
-            alt="PIM rhythm gameplay — perfect run"
-            className="hero-gameplay-media hero-gameplay-ken-burns"
-            loading="lazy"
-          />
+          {museumVideoUrl ? (
+            <div className="relative w-full aspect-video flex items-center justify-center">
+              <video
+                src={museumVideoUrl}
+                autoPlay
+                loop
+                muted
+                controls
+                playsInline
+                className="w-full h-full object-cover rounded-3xl"
+              />
+              <div className="absolute top-4 left-4 z-20 px-3 py-1 rounded-lg bg-black/80 border border-[#39FF14]/60 text-[#39FF14] font-mono text-[10px] font-black tracking-widest flex items-center gap-2 uppercase shadow-[0_0_15px_rgba(57,255,20,0.4)] pointer-events-none">
+                <span className="w-2 h-2 rounded-full bg-[#39FF14] animate-ping" />
+                <span>FRAME-PERFECT 100% PERFECT+ REPLAY // DAY {activeDay}</span>
+              </div>
+            </div>
+          ) : (
+            <img
+              src="/screenshots/06_rhythm_gameplay.png"
+              alt="PIM rhythm gameplay — perfect run"
+              className="hero-gameplay-media hero-gameplay-ken-burns"
+              loading="lazy"
+            />
+          )}
         </motion.div>
 
         <motion.p
-          className="hero-gameplay-label"
+          className="hero-gameplay-label flex items-center justify-center gap-2"
           initial={{ opacity: 0 }}
-          whileInView={{ opacity: 0.4 }}
+          whileInView={{ opacity: 0.6 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5, delay: 0.2 }}
         >
-          Perfect Run · Day {activeDay}
+          <span>Perfect Run · Day {activeDay} ({song?.title || 'Transmission'})</span>
+          {museumVideoUrl && (
+            <span className="text-[#39FF14] font-mono text-[9px] font-black uppercase tracking-wider">
+              [LIVE VIDEO EXPORT]
+            </span>
+          )}
         </motion.p>
       </section>
 

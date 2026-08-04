@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ExternalLink, Download, ShieldCheck, Share2, Info, Flame } from 'lucide-react';
+import { X, ExternalLink, Download, ShieldCheck, Share2, Info, Flame, Film } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { useGlobalPlayer } from '../store/useGlobalPlayer';
 import { useVaultStore } from '../store/useVaultStore';
@@ -393,6 +393,20 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
                         >
                           PLAY PIM
                         </button>
+                        {import.meta.env.DEV && (
+                          <button
+                            onClick={() => {
+                              stop();
+                              sessionStorage.setItem(`export_video_card-${card.card.day}`, 'true');
+                              setLocation(`/play/card-${card.card.day}`);
+                            }}
+                            title="Export frame-perfect 100% PERFECT+ run video (DEV ONLY)"
+                            className="flex items-center gap-2 px-4 py-3 bg-[#FF1493]/15 border border-[#FF1493] text-[#FF1493] rounded-xl text-[11px] font-mono font-bold uppercase tracking-widest transition-all hover:bg-[#FF1493] hover:text-black hover:scale-[1.02] active:scale-95 shadow-[0_0_15px_rgba(255,20,147,0.2)] cursor-pointer"
+                          >
+                            <Film size={14} />
+                            <span>EXPORT VIDEO</span>
+                          </button>
+                        )}
                         <button
                           onClick={() => {
                             stop();

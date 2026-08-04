@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { Download, Film, X, RefreshCw, Upload, CheckCircle2, AlertCircle, Cloud, Copy, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Download, Film, X, RefreshCw, Upload, CheckCircle2, AlertCircle, Cloud, Copy, Check, ExternalLink } from 'lucide-react';
+import { useLocation } from 'wouter';
 import { supabase } from '@/services/supabaseClient';
 
 interface VideoExportModalProps {
@@ -29,10 +30,20 @@ export default function VideoExportModal({
   onClose,
   onReplay,
 }: VideoExportModalProps) {
+  const [, setLocation] = useLocation();
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'uploaded' | 'error'>('idle');
   const [publicUrl, setPublicUrl] = useState<string | null>(null);
   const [uploadErr, setUploadErr] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  const cleanTitle = songTitle.toLowerCase().replace(/[^a-z0-9]/g, '_');
+
+  // Auto-cache generated blob URL in localStorage so museum pages populate immediately
+  useEffect(() => {
+    if (videoUrl) {
+      localStorage.setItem(`museum_video_${cleanTitle}`, videoUrl);
+    }
+  }, [videoUrl, cleanTitle]);
 
   if (!isOpen) return null;
 
@@ -281,6 +292,22 @@ export default function VideoExportModal({
                 </button>
               )}
             </div>
+
+            {/* Direct Museum Landing Page Auto-Population Action */}
+            <button
+              onClick={() => {
+                onClose();
+                setLocation(`/hero#hero-gameplay`);
+                setTimeout(() => {
+                  const el = document.getElementById('hero-gameplay');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }, 250);
+              }}
+              className="w-full py-3.5 px-4 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 font-mono font-bold text-xs tracking-[0.2em] uppercase hover:bg-emerald-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-[0_0_15px_rgba(52,211,153,0.15)]"
+            >
+              <ExternalLink size={16} />
+              <span>LOAD & VIEW ON MUSEUM EXHIBIT PAGE</span>
+            </button>
           </div>
         )}
       </div>

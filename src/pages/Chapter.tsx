@@ -10,7 +10,7 @@ import { audioManager } from "@/game/audio";
 import { useVaultStore } from "@/store/useVaultStore";
 import { purchasePack } from "@/services/vaultService";
 import { PACK_CONFIGS } from "@/utils/rarity";
-import { Lock, Play } from "lucide-react";
+import { Lock, Play, Film } from "lucide-react";
 
 
 const MEDAL_COLOR: Record<string, string> = {
@@ -1092,6 +1092,26 @@ export default function Chapter() {
                             {isUnlockReqLocked ? '🔒 DECODE REQUIRED' : isCleared ? 'REPLAY TRANSMISSION' : '▶ START TRANSMISSION'}
                           </button>
                           
+                          {import.meta.env.DEV && (
+                            <button
+                              disabled={isPlayLocked}
+                              onClick={() => {
+                                if (!selectedSong) return;
+                                sessionStorage.setItem(`export_video_${selectedSong.id}`, 'true');
+                                handlePlay();
+                              }}
+                              title="Export frame-perfect 100% PERFECT+ run video (DEV ONLY)"
+                              className={`px-4 py-3 text-xs font-mono border rounded uppercase transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                                !isPlayLocked
+                                  ? 'border-[#FF1493] bg-[#FF1493]/15 text-[#FF1493] hover:bg-[#FF1493] hover:text-black shadow-[0_0_12px_rgba(255,20,147,0.3)]'
+                                  : 'border-white/10 bg-white/5 text-white/20 cursor-not-allowed'
+                              }`}
+                            >
+                              <Film size={14} />
+                              <span className="hidden sm:inline">EXPORT VIDEO</span>
+                            </button>
+                          )}
+
                           {isUnlocked(songs.indexOf(selectedSong)) && (
                             <button onClick={() => setLocation(`/song/${selectedSong.id}?from=chapter/${monthNum}`)}
                               className="py-3 px-4 text-xs font-mono border border-white/10 hover:border-white/30 text-white/60 hover:text-white rounded cursor-pointer bg-transparent">
