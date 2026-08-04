@@ -3768,15 +3768,17 @@ export default function Game() {
       ctx.fillRect(W - 80, 0, 80, H);
     }
 
-    // ── 4.5. HIT ZONE BUTTONS (behind notes, semi-transparent) ──
-    // Original height (space below hit line), centered so baseline bisects each button.
-    const btnH = H - hitY;
-    const btnY = hitY - btnH / 2; // baseline runs through the exact center
-    // Clip to track width so buttons never overflow the highway edges
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(hwBot.left, 0, hwBot.right - hwBot.left, H);
-    ctx.clip();
+    // ── 4.5. HIT ZONE BUTTONS (for 2.5D Classic POV mode) ──
+    const show3DCircularTargets = isCyberTunnelPov || (isDynamicStagePov && calculatedStage >= 3);
+    if (!show3DCircularTargets) {
+      // Original height (space below hit line), centered so baseline bisects each button.
+      const btnH = H - hitY;
+      const btnY = hitY - btnH / 2; // baseline runs through the exact center
+      // Clip to track width so buttons never overflow the highway edges
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(hwBot.left, 0, hwBot.right - hwBot.left, H);
+      ctx.clip();
     for (let i = 0; i < LANE_COUNT; i++) {
       const { x, w } = laneAt(i, 1, W);
       const pressed = laneRef.current[i].pressed;
@@ -3949,6 +3951,7 @@ export default function Game() {
       }
     }
     ctx.restore(); // end button clip
+    }
 
     // ── 4b. NOTE PARTICLE TRAILS ────────────────────────────────
     const TRAIL_LIFETIME = 280; // ms
