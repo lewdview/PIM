@@ -53,6 +53,10 @@ All notable advancements, architectural updates, features, and resolved trials &
 5. **Audio Forge Daemon Probe Spam** (`HomePage.tsx`):
    - *Fix*: Defaulted `setAudioForgeOnline(false)` in dev environment to prevent unnecessary console error logs when Audio Forge daemon is offline.
 
+6. **Large File Audio Streaming Control Flow** (`GamePlay.tsx`):
+   - *Issue*: `throw new Error("Large file — use streaming")` inside `try` block caused `console.warn` stack trace logging for files > 10MB.
+   - *Fix*: Refactored large file detection to bypass `Blob` fetching cleanly without throwing synthetic errors or spamming warnings.
+
 ---
 
 ### 📦 File Modification Summary

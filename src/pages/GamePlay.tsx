@@ -6742,48 +6742,47 @@ export default function Game() {
 
         if (headBytes > LARGE_FILE_THRESHOLD) {
           // Large file — skip blob approach; stream directly via audio.src instead
-          console.log(`[GamePlay Init] Large file detected (${Math.round(headBytes / 1024 / 1024)}MB) — skipping blob fetch, using streaming src`);
+          console.log(`[GamePlay Init] Large file detected (${Math.round(headBytes / 1024 / 1024)}MB) — using direct audio streaming`);
           setBufferPct(100);
-          throw new Error("Large file — use streaming");
-        }
-
-        const response = await fetch(song.audioUrl);
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        const contentLength = response.headers.get("content-length");
-        const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
-
-        if (response.body && totalBytes > 0) {
-          const reader = response.body.getReader();
-          const chunks: Uint8Array[] = [];
-          let loadedBytes = 0;
-
-          while (true) {
-            if (cancelled) {
-              reader.cancel();
-              return;
-            }
-            const { done, value } = await reader.read();
-            if (done) break;
-            if (value) {
-              chunks.push(value);
-              loadedBytes += value.length;
-              setBufferPct(
-                Math.min(99, Math.round((loadedBytes / totalBytes) * 100))
-              );
-            }
-          }
-          blob = new Blob(chunks, { type: response.headers.get("content-type") || "audio/mpeg" });
         } else {
-          blob = await response.blob();
-        }
+          const response = await fetch(song.audioUrl);
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+          const contentLength = response.headers.get("content-length");
+          const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
 
-        if (cancelled) return;
-        objectUrl = URL.createObjectURL(blob);
-        audioObjectUrlRef.current = objectUrl;
-        fetchSuccess = true;
-        setBufferPct(100);
+          if (response.body && totalBytes > 0) {
+            const reader = response.body.getReader();
+            const chunks: Uint8Array[] = [];
+            let loadedBytes = 0;
+
+            while (true) {
+              if (cancelled) {
+                reader.cancel();
+                return;
+              }
+              const { done, value } = await reader.read();
+              if (done) break;
+              if (value) {
+                chunks.push(value);
+                loadedBytes += value.length;
+                setBufferPct(
+                  Math.min(99, Math.round((loadedBytes / totalBytes) * 100))
+                );
+              }
+            }
+            blob = new Blob(chunks, { type: response.headers.get("content-type") || "audio/mpeg" });
+          } else {
+            blob = await response.blob();
+          }
+
+          if (cancelled) return;
+          objectUrl = URL.createObjectURL(blob);
+          audioObjectUrlRef.current = objectUrl;
+          fetchSuccess = true;
+          setBufferPct(100);
+        }
       } catch (err) {
         console.warn("[GamePlay Init] Stream-based fetch failed, falling back to standard audio loading:", err);
       }
