@@ -28,7 +28,9 @@ All notable advancements, architectural updates, features, and resolved trials &
 
 #### 4. Mobile Layout & Bottom Navigation Optimization
 - **Removed 130px Top Padding Block**: Removed `<div className="h-[130px] md:hidden" />` in `Navbar.tsx` that was creating a massive blank gap at the top of pages on mobile devices.
-- **Bottom Navigation Clearance**: Added `pb-36 md:pb-8` and `pb-[env(safe-area-inset-bottom)]` across `SongSelect`, `HomePage`, `CollectionPage`, `ForgePage`, `LeaderboardPage`, `EarnPage`, and `ClaimPage`. Key navigation items, stage selection pills, and CTAs now scroll completely clear of the mobile bottom tab bar (`62px`) + `GlobalPlayerBar` (`56px`).
+#### 5. Perspective Lock & Custom Post-Gameplay Hub Choice SVGs
+- **HUD Perspective Lock Toggle (`🔒 / 🔓`)**: Integrated a POV lock button right beside the HUD POV switch pill in `GamePlay.tsx`. Toggling lock prevents automatic stage-based camera transitions from overriding the player's chosen perspective. Persisted in `localStorage` (`opt_povLocked`).
+- **Custom Post-Gameplay Vector SVGs (`GameResults.tsx`)**: Replaced generic emoji icons in `QuickReturnGrid` with PIM-themed custom vector SVGs for Collection, Vault, Shop, Arcade, Award Play, and Campaign hub cards.
 
 ---
 
