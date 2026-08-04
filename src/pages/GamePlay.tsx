@@ -3498,12 +3498,12 @@ export default function Game() {
         // Track floor drop shadow under target
         ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
         ctx.beginPath();
-        ctx.ellipse(laneCenterX, hitY * 0.96 + 4, targetRadiusX * 1.05, targetRadiusY * 1.05, 0, 0, Math.PI * 2);
+        ctx.ellipse(laneCenterX, hitY + 4, targetRadiusX * 1.05, targetRadiusY * 1.05, 0, 0, Math.PI * 2);
         ctx.fill();
 
         // Outer glowing neon strike ring
         ctx.beginPath();
-        ctx.ellipse(laneCenterX, hitY * 0.96, targetRadiusX, targetRadiusY, 0, 0, Math.PI * 2);
+        ctx.ellipse(laneCenterX, hitY, targetRadiusX, targetRadiusY, 0, 0, Math.PI * 2);
         ctx.strokeStyle = isPressed ? '#FFFFFF' : colorWithAlpha(laneColor, 0.95);
         ctx.lineWidth = isPressed ? 5.5 : 3.2;
         ctx.shadowColor = laneColor;
@@ -3512,14 +3512,14 @@ export default function Game() {
 
         // Inner target circle
         ctx.beginPath();
-        ctx.ellipse(laneCenterX, hitY * 0.96, targetRadiusX * 0.55, targetRadiusY * 0.55, 0, 0, Math.PI * 2);
+        ctx.ellipse(laneCenterX, hitY, targetRadiusX * 0.55, targetRadiusY * 0.55, 0, 0, Math.PI * 2);
         ctx.strokeStyle = isPressed ? '#FFFFFF' : colorWithAlpha(laneColor, 0.7);
         ctx.lineWidth = 2.0;
         ctx.stroke();
 
         // Center crosshair / pulse dot
         ctx.beginPath();
-        ctx.arc(laneCenterX, hitY * 0.96, isPressed ? 8 : 4.5, 0, Math.PI * 2);
+        ctx.arc(laneCenterX, hitY, isPressed ? 8 : 4.5, 0, Math.PI * 2);
         ctx.fillStyle = isPressed ? '#FFFFFF' : laneColor;
         ctx.shadowBlur = isPressed ? 20 : 8;
         ctx.fill();
