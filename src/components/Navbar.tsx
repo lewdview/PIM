@@ -1162,7 +1162,7 @@ export default function Navbar() {
 
       {/* ══ MOBILE BOTTOM TAB BAR ════════════════════════════════════════════ */}
       <nav
-        className="fixed bottom-0 left-0 right-0 z-40 md:hidden"
+        className="fixed bottom-0 left-0 right-0 z-40 md:hidden pb-[env(safe-area-inset-bottom,0px)]"
         style={{
           background: 'rgba(8,6,4,0.97)',
           backdropFilter: 'blur(24px)',
@@ -1243,9 +1243,6 @@ export default function Navbar() {
           })}
         </div>
       </nav>
-
-      {/* Spacer for bottom tab bar + player on mobile */}
-      <div className="h-[130px] md:hidden" />
 
       <GuideModal isOpen={guideOpen} onClose={() => setGuideOpen(false)} />
       <FloatingTicker />

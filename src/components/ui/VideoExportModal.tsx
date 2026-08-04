@@ -50,7 +50,6 @@ export default function VideoExportModal({
   const fileSizeMb = videoBlob ? (videoBlob.size / (1024 * 1024)).toFixed(2) : '0.00';
   const isMp4 = mimeType.includes('mp4');
   const extension = isMp4 ? 'mp4' : 'webm';
-  const cleanTitle = songTitle.toLowerCase().replace(/[^a-z0-9]/g, '_');
   const fileName = `${cleanTitle}_perfect_run.${extension}`;
 
   const handleDownload = () => {

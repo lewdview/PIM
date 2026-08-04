@@ -450,13 +450,13 @@ function lerp(a: number, b: number, t: number) {
   return a + (b - a) * Math.max(0, Math.min(1, t));
 }
 
-function hwAtProgress(p: number, W: number) {
-  const w = W * lerp(HW_TOP, HW_BOT, p);
+function hwAtProgress(p: number, W: number, topRatio: number = HW_TOP, botRatio: number = HW_BOT) {
+  const w = W * lerp(topRatio, botRatio, p);
   const l = (W - w) / 2;
   return { left: l, right: l + w, width: w };
 }
-function laneAt(lane: number, progress: number, W: number) {
-  const { left, width } = hwAtProgress(progress, W);
+function laneAt(lane: number, progress: number, W: number, topRatio: number = HW_TOP, botRatio: number = HW_BOT) {
+  const { left, width } = hwAtProgress(progress, W, topRatio, botRatio);
   const lw = width / LANE_COUNT;
   return { x: left + lane * lw, w: lw };
 }
@@ -1450,6 +1450,62 @@ export default function Game() {
   const [opts, setOpts] = useState<GameOpts>(loadOpts);
   const optsRef = useRef(opts);
   useEffect(() => { optsRef.current = opts; }, [opts]);
+
+  // ── POV Perspective Engine State ──
+  const [activePovMode, setActivePovMode] = useState<'classic' | 'cyber_tunnel' | 'dynamic_stage'>(opts.povMode || 'classic');
+  const activePovModeRef = useRef(activePovMode);
+  const [povToast, setPovToast] = useState<{ mode: string; time: number } | null>(null);
+
+  useEffect(() => {
+    activePovModeRef.current = activePovMode;
+  }, [activePovMode]);
+
+  useEffect(() => {
+    if (opts.povMode) {
+      setActivePovMode(opts.povMode);
+      activePovModeRef.current = opts.povMode;
+    }
+  }, [opts.povMode]);
+
+  const povTransitionRef = useRef<{
+    startTime: number;
+    duration: number;
+    fromMode: 'classic' | 'cyber_tunnel' | 'dynamic_stage';
+    toMode: 'classic' | 'cyber_tunnel' | 'dynamic_stage';
+    warpAlpha: number;
+  }>({
+    startTime: 0,
+    duration: 600,
+    fromMode: opts.povMode || 'classic',
+    toMode: opts.povMode || 'classic',
+    warpAlpha: 0,
+  });
+
+  const cyclePovMode = useCallback(() => {
+    const modes: ('classic' | 'cyber_tunnel' | 'dynamic_stage')[] = ['classic', 'cyber_tunnel', 'dynamic_stage'];
+    const currentIdx = modes.indexOf(activePovModeRef.current);
+    const nextMode = modes[(currentIdx + 1) % modes.length];
+    
+    povTransitionRef.current = {
+      startTime: Date.now(),
+      duration: 600,
+      fromMode: activePovModeRef.current,
+      toMode: nextMode,
+      warpAlpha: 1.0,
+    };
+    
+    setActivePovMode(nextMode);
+    activePovModeRef.current = nextMode;
+    offscreenCanvasRef.current = null; // Reset offscreen canvas cache to regenerate track geometry
+    audioManager.playSfx('menu_confirm', 0.18);
+
+    const labels = {
+      classic: '2.5D CLASSIC HIGHWAY',
+      cyber_tunnel: '3D CYBER TUNNEL VORTEX',
+      dynamic_stage: 'DYNAMIC STAGE CAM',
+    };
+    setPovToast({ mode: labels[nextMode], time: Date.now() });
+  }, []);
 
   // Load and segment slideshow images for track customization
   useEffect(() => {
@@ -2790,10 +2846,31 @@ export default function Game() {
         calculatedStage = stageBounds[i].stage;
       }
     }
-    if (calculatedStage !== lastDetectedStageRef.current) {
-      const prevStage = lastDetectedStageRef.current;
-      lastDetectedStageRef.current = calculatedStage;
-      setCurrentStage(calculatedStage);
+      if (calculatedStage !== lastDetectedStageRef.current) {
+        const prevStage = lastDetectedStageRef.current;
+        lastDetectedStageRef.current = calculatedStage;
+        setCurrentStage(calculatedStage);
+
+        // Stage-Integrated Dynamic POV Camera Auto-Switching
+        if (optsRef.current.stagePovSwitch !== false && phaseRef.current === "playing" && prevStage > 0 && calculatedStage > prevStage) {
+          let targetPov: 'classic' | 'cyber_tunnel' | 'dynamic_stage' = 'classic';
+          if (calculatedStage === 3) targetPov = 'cyber_tunnel';
+          else if (calculatedStage === 4) targetPov = 'dynamic_stage';
+          else if (calculatedStage === 5) targetPov = 'cyber_tunnel';
+          else targetPov = 'classic';
+
+          if (targetPov !== activePovModeRef.current) {
+            povTransitionRef.current = {
+              startTime: Date.now(),
+              duration: 700,
+              fromMode: activePovModeRef.current,
+              toMode: targetPov,
+              warpAlpha: 1.0,
+            };
+            setActivePovMode(targetPov);
+            activePovModeRef.current = targetPov;
+          }
+        }
 
       // If player cleared the stage and triggered all power-ups, reset thresholds for the next level cycle
       if (prevStage > 0 && calculatedStage > prevStage) {
@@ -3309,6 +3386,176 @@ export default function Game() {
       ctx.fillStyle = beamGrad;
       ctx.fillRect(left, Math.max(0, beamY - 15), right - left, 30);
       ctx.restore();
+    }
+
+    // ── 3D CYBER TUNNEL ENVIRONMENT & CIRCULAR STRIKE ZONES ──
+    const curPovMode = activePovModeRef.current;
+    const isCyberTunnelPov = curPovMode === 'cyber_tunnel';
+    const isDynamicStagePov = curPovMode === 'dynamic_stage';
+
+    if (isCyberTunnelPov || (isDynamicStagePov && calculatedStage >= 3)) {
+      ctx.save();
+      const cx = W / 2;
+      const vanishingY = hitY * 0.28; // 3D Tunnel vanishing horizon point
+      const bpmVal = songRef.current?.bpm || 120;
+      
+      // Stage Warp Speed & Tunnel Opacity Rules:
+      // - Stage 4: Tunnel environment completely disappears (dark hyperspace void plunge!)
+      // - Stage 5: Tunnel returns TWICE AS FAST (swirlSpeed * 2.0) with hyperdrive pulse!
+      let tunnelOpacity = 1.0;
+      let swirlSpeedMult = 1.0;
+      
+      if (calculatedStage === 4) {
+        tunnelOpacity = 0.0; // Disappear completely in Stage 4
+      } else if (calculatedStage === 5) {
+        tunnelOpacity = 1.0; // Return for Stage 5
+        swirlSpeedMult = 2.4; // TWICE AS FAST!
+      } else if (calculatedStage === 3) {
+        swirlSpeedMult = 1.3;
+      }
+
+      const beatPulseVal = Math.pow(Math.sin(((t * (bpmVal / 60) * swirlSpeedMult) % 1) * Math.PI), 3);
+      const swirlAngle = t * 0.9 * swirlSpeedMult; // Continuous rotational vortex swirl
+
+      if (tunnelOpacity > 0) {
+        ctx.globalAlpha = tunnelOpacity;
+
+        // 1. Swirling Radial Cyber Tunnel Backdrop Gradient
+        const tunnelBg = ctx.createRadialGradient(cx, vanishingY, 5, cx, vanishingY, W * 0.78);
+        tunnelBg.addColorStop(0, "rgba(5, 5, 25, 0.96)");
+        tunnelBg.addColorStop(0.35, "rgba(14, 6, 38, 0.94)");
+        tunnelBg.addColorStop(0.75, "rgba(25, 4, 32, 0.98)");
+        tunnelBg.addColorStop(1, "#060410");
+        ctx.fillStyle = tunnelBg;
+        ctx.fillRect(0, 0, W, H);
+
+        // 2. Full 360° 3D Cylindrical Tunnel Depth Rings with Swirl Rotation
+        const depthDepths = [0.06, 0.18, 0.35, 0.55, 0.75, 0.95];
+        depthDepths.forEach((p, idx) => {
+          const ringY = lerp(vanishingY, H * 0.52, p);
+          const ringRadiusX = lerp(W * 0.10, W * 0.64, p);
+          const ringRadiusY = lerp(H * 0.07, H * 0.46, p);
+          const ringAlpha = lerp(0.22, 0.8, p) * (0.85 + beatPulseVal * 0.3);
+
+          const isCyan = idx % 2 === 0;
+          const mainColor = isCyan ? 'rgba(0, 229, 255,' : 'rgba(255, 20, 147,';
+          const ringSwirl = swirlAngle + p * 1.5;
+
+          ctx.save();
+          ctx.translate(cx, ringY);
+          ctx.rotate(ringSwirl * 0.12);
+
+          // Full 360 degree 3D Tunnel Cylinder Ring with Neon Glow
+          ctx.strokeStyle = `${mainColor}${ringAlpha})`;
+          ctx.lineWidth = lerp(1.8, 5.2, p);
+          ctx.shadowColor = isCyan ? '#00E5FF' : '#FF1493';
+          ctx.shadowBlur = lerp(6, 18, p);
+
+          ctx.beginPath();
+          ctx.ellipse(0, 0, ringRadiusX, ringRadiusY, 0, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // 3D Rotational Perspective Tunnel Wall Ribs (12 swirling rays)
+          if (idx < depthDepths.length - 1) {
+            const nextP = depthDepths[idx + 1];
+            const nextY = lerp(vanishingY, H * 0.52, nextP);
+            const nextRx = lerp(W * 0.10, W * 0.64, nextP);
+            const nextRy = lerp(H * 0.07, H * 0.46, nextP);
+
+            ctx.strokeStyle = `rgba(255, 255, 255, ${ringAlpha * 0.32})`;
+            ctx.lineWidth = 1.2;
+            const raysCount = 12;
+            for (let a = 0; a < raysCount; a++) {
+              const angle = (a / raysCount) * Math.PI * 2;
+              const x1 = Math.cos(angle) * ringRadiusX;
+              const y1 = Math.sin(angle) * ringRadiusY;
+              const nextAngle = angle + 0.12; // Swirl curve offset
+              const x2 = Math.cos(nextAngle) * nextRx;
+              const y2 = (nextY - ringY) + Math.sin(nextAngle) * nextRy;
+              ctx.beginPath();
+              ctx.moveTo(x1, y1);
+              ctx.lineTo(x2, y2);
+              ctx.stroke();
+            }
+          }
+          ctx.restore();
+        });
+      }
+
+      // ── 3. 3D Circular Judgment Target Strike Zones (Deep Drop Shadows & Neon Rim Glow) ──
+      const hwBot = hwAtProgress(1, W);
+      const laneW = hwBot.width / LANE_COUNT;
+      for (let lane = 0; lane < LANE_COUNT; lane++) {
+        const laneCenterX = hwBot.left + lane * laneW + laneW / 2;
+        const targetRadiusX = laneW * 0.43;
+        const targetRadiusY = targetRadiusX * 0.46;
+
+        const isPressed = laneRef.current[lane]?.pressed;
+        const laneColor = laneColorsRef.current[lane] || '#00E5FF';
+
+        ctx.save();
+
+        // Track floor drop shadow under target
+        ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
+        ctx.beginPath();
+        ctx.ellipse(laneCenterX, hitY * 0.96 + 4, targetRadiusX * 1.05, targetRadiusY * 1.05, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Outer glowing neon strike ring
+        ctx.beginPath();
+        ctx.ellipse(laneCenterX, hitY * 0.96, targetRadiusX, targetRadiusY, 0, 0, Math.PI * 2);
+        ctx.strokeStyle = isPressed ? '#FFFFFF' : colorWithAlpha(laneColor, 0.95);
+        ctx.lineWidth = isPressed ? 5.5 : 3.2;
+        ctx.shadowColor = laneColor;
+        ctx.shadowBlur = isPressed ? 32 : 16;
+        ctx.stroke();
+
+        // Inner target circle
+        ctx.beginPath();
+        ctx.ellipse(laneCenterX, hitY * 0.96, targetRadiusX * 0.55, targetRadiusY * 0.55, 0, 0, Math.PI * 2);
+        ctx.strokeStyle = isPressed ? '#FFFFFF' : colorWithAlpha(laneColor, 0.7);
+        ctx.lineWidth = 2.0;
+        ctx.stroke();
+
+        // Center crosshair / pulse dot
+        ctx.beginPath();
+        ctx.arc(laneCenterX, hitY * 0.96, isPressed ? 8 : 4.5, 0, Math.PI * 2);
+        ctx.fillStyle = isPressed ? '#FFFFFF' : laneColor;
+        ctx.shadowBlur = isPressed ? 20 : 8;
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      ctx.restore();
+    }
+
+    // ── POV Warp Speed Transition Overlay ──
+    if (povTransitionRef.current.warpAlpha > 0) {
+      const elapsed = Date.now() - povTransitionRef.current.startTime;
+      const p = Math.min(1, elapsed / povTransitionRef.current.duration);
+      povTransitionRef.current.warpAlpha = 1.0 - p;
+
+      if (p < 1.0) {
+        ctx.save();
+        const flashAlpha = Math.sin(p * Math.PI) * 0.35;
+        ctx.fillStyle = `rgba(0, 229, 255, ${flashAlpha})`;
+        ctx.fillRect(0, 0, W, H);
+
+        const numStreaks = 20;
+        ctx.strokeStyle = `rgba(255, 255, 255, ${flashAlpha * 0.8})`;
+        ctx.lineWidth = 2;
+        for (let s = 0; s < numStreaks; s++) {
+          const angle = (s / numStreaks) * Math.PI * 2;
+          const r1 = lerp(10, 80, p);
+          const r2 = lerp(100, W * 0.7, p);
+          ctx.beginPath();
+          ctx.moveTo(W / 2 + Math.cos(angle) * r1, hitY * 0.6 + Math.sin(angle) * r1);
+          ctx.lineTo(W / 2 + Math.cos(angle) * r2, hitY * 0.6 + Math.sin(angle) * r2);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
     }
 
     // Glitch/Shake viewport if VOID and high combo / power-up active
@@ -3940,7 +4187,11 @@ export default function Game() {
       }
       if (noteY < -80) continue;
 
-      const { x: lx, w: lw } = laneAt(note.lane, prog, W);
+      const isCyberTunnel = activePovModeRef.current === 'cyber_tunnel';
+      const povTop = isCyberTunnel ? 0.18 : HW_TOP;
+      const povBot = isCyberTunnel ? 0.86 : HW_BOT;
+
+      const { x: lx, w: lw } = laneAt(note.lane, prog, W, povTop, povBot);
       let noteH = lerp(80, 140, prog); // perspective scale — bigger closer
       let noteW = lw;
       let noteX = lx;
@@ -3963,8 +4214,8 @@ export default function Game() {
       );
 
       if (chordPartner) {
-        const { x: lxA, w: lwA } = laneAt(note.lane, prog, W);
-        const { x: lxB, w: lwB } = laneAt(chordPartner.note.lane, prog, W);
+        const { x: lxA, w: lwA } = laneAt(note.lane, prog, W, povTop, povBot);
+        const { x: lxB, w: lwB } = laneAt(chordPartner.note.lane, prog, W, povTop, povBot);
         const cx1 = lxA + lwA / 2;
         const cx2 = lxB + lwB / 2;
         
@@ -4039,7 +4290,7 @@ export default function Game() {
           const top = lerp(headY, hitY, ns.holdProgress);
 
           // Active hold dial and sparks visual exposition at the hit zone!
-          const { x: ax_hold, w: aw_hold } = laneAt(ns.visualLane, 1, W);
+          const { x: ax_hold, w: aw_hold } = laneAt(ns.visualLane, 1, W, povTop, povBot);
           const holdX = ax_hold + aw_hold * 0.5;
           ctx.save();
           ctx.shadowColor = noteColor;
@@ -4084,8 +4335,8 @@ export default function Game() {
 
           if (noteY > top) {
             // Determine lanes for the active trail segment
-            const { x: hx, w: hw } = laneAt(endLane, headP, W);
-            const { x: ax, w: aw } = laneAt(ns.visualLane, Math.min(prog, 1), W);
+            const { x: hx, w: hw } = laneAt(endLane, headP, W, povTop, povBot);
+            const { x: ax, w: aw } = laneAt(ns.visualLane, Math.min(prog, 1), W, povTop, povBot);
             const midY = (top + noteY) / 2;
 
             // Trail body (Curved to player's current lane)
@@ -4110,7 +4361,7 @@ export default function Game() {
               const p_y = (y - top) / (noteY - top || 1);
               const trailP_y = lerp(headP, Math.min(prog, 1), p_y);
               const trailLane_y = lerp(endLane, ns.visualLane, p_y);
-              const { x: wx, w: ww } = laneAt(trailLane_y, trailP_y, W);
+              const { x: wx, w: ww } = laneAt(trailLane_y, trailP_y, W, povTop, povBot);
               ctx.beginPath();
               ctx.moveTo(wx + ww * 0.25, y);
               ctx.lineTo(wx + ww * 0.75, y);
@@ -4135,6 +4386,21 @@ export default function Game() {
             ctx.lineTo(ax + aw * 0.38, noteY + noteH / 2);
             ctx.quadraticCurveTo(ax + aw * 0.38, midY, hx + hw * 0.38, top);
             ctx.fill();
+
+            // Outer 3D Neon Laser Edges in Cyber Tunnel Mode
+            if (isCyberTunnel) {
+              ctx.strokeStyle = noteColor;
+              ctx.lineWidth = 3;
+              ctx.shadowColor = noteColor;
+              ctx.shadowBlur = 16;
+              ctx.beginPath();
+              ctx.moveTo(hx + hw * 0.25, top);
+              ctx.quadraticCurveTo(ax + aw * 0.25, midY, ax + aw * 0.25, noteY + noteH / 2);
+              ctx.moveTo(hx + hw * 0.75, top);
+              ctx.quadraticCurveTo(ax + aw * 0.75, midY, ax + aw * 0.75, noteY + noteH / 2);
+              ctx.stroke();
+            }
+
             ctx.globalAlpha = 1;
             ctx.shadowBlur = 0;
             ctx.shadowColor = "transparent";
@@ -4164,7 +4430,7 @@ export default function Game() {
 
             // Draw gold terminus block at top of active hold
             const tailP = lerp(headP, 1.0, ns.holdProgress);
-            const { x: tx_active, w: tw_active } = laneAt(endLane, tailP, W);
+            const { x: tx_active, w: tw_active } = laneAt(endLane, tailP, W, povTop, povBot);
             const tailH_active = lerp(80, 140, tailP);
             const tailW_active = tw_active;
             const tailX_active = tx_active;
@@ -4173,8 +4439,8 @@ export default function Game() {
           }
         } else if (headY < noteY) {
           // Inactive trail — SMOOTH CURVE if it's a slide
-          const { x: hx, w: hw } = laneAt(endLane, headP, W);
-          const { x: tx, w: tw } = laneAt(startLane, prog, W);
+          const { x: hx, w: hw } = laneAt(endLane, headP, W, povTop, povBot);
+          const { x: tx, w: tw } = laneAt(startLane, prog, W, povTop, povBot);
 
           const midY = (headY + noteY) / 2;
 
@@ -4199,6 +4465,21 @@ export default function Game() {
           ctx.lineTo(tx + tw * 0.38, noteY + noteH / 2);
           ctx.quadraticCurveTo(tx + tw * 0.38, midY, hx + hw * 0.38, headY);
           ctx.fill();
+
+          // Outer 3D Neon Laser Edges in Cyber Tunnel Mode
+          if (isCyberTunnel) {
+            ctx.strokeStyle = noteColor;
+            ctx.lineWidth = 2.5;
+            ctx.shadowColor = noteColor;
+            ctx.shadowBlur = 14;
+            ctx.beginPath();
+            ctx.moveTo(hx + hw * 0.25, headY);
+            ctx.quadraticCurveTo(tx + tw * 0.25, midY, tx + tw * 0.25, noteY + noteH / 2);
+            ctx.moveTo(hx + hw * 0.75, headY);
+            ctx.quadraticCurveTo(tx + tw * 0.75, midY, tx + tw * 0.75, noteY + noteH / 2);
+            ctx.stroke();
+          }
+
           ctx.globalAlpha = 1;
           ctx.shadowBlur = 0;
           ctx.shadowColor = "transparent";
@@ -6511,23 +6792,36 @@ export default function Game() {
 
       if (fetchSuccess) {
         audio = new Audio();
-        audio.crossOrigin = "anonymous";
+        // NOTE: Blob URLs (blob:http://...) are same-origin by definition.
+        // Setting crossOrigin = "anonymous" on a blob: URL causes HTMLMediaElement to fail with CORS security error.
         audio.preload = "auto";
         audioRef.current = audio;
         audio.src = objectUrl;
         audio.load();
 
-        await new Promise<void>((resolve, reject) => {
+        let blobLoadFailed = false;
+
+        await new Promise<void>((resolve) => {
           resolvePendingPromiseRef.current = resolve;
           if (audio!.readyState >= 3) {
             resolve();
             return;
           }
           onCanPlay = () => resolve();
-          onError = () => reject(new Error("Audio element failed to load Blob URL"));
+          onError = () => {
+            console.warn("[GamePlay Init] Audio element failed to load Blob URL, falling back to standard audio streaming...");
+            blobLoadFailed = true;
+            resolve();
+          };
           audio!.addEventListener("canplay", onCanPlay, { once: true });
           audio!.addEventListener("error", onError, { once: true });
-          loadTimeoutRef.current = setTimeout(resolve, 5000); // 5s timeout fallback
+          loadTimeoutRef.current = setTimeout(() => {
+            if (audio!.readyState < 3) {
+              console.warn("[GamePlay Init] Blob URL load timed out, falling back to standard audio streaming...");
+              blobLoadFailed = true;
+            }
+            resolve();
+          }, 5000); // 5s timeout fallback
         });
         resolvePendingPromiseRef.current = null;
 
@@ -6537,7 +6831,19 @@ export default function Game() {
           clearTimeout(loadTimeoutRef.current);
           loadTimeoutRef.current = null;
         }
-      } else {
+
+        if (blobLoadFailed) {
+          if (audioObjectUrlRef.current) {
+            try {
+              URL.revokeObjectURL(audioObjectUrlRef.current);
+            } catch {}
+            audioObjectUrlRef.current = null;
+          }
+          fetchSuccess = false;
+        }
+      }
+
+      if (!fetchSuccess && !cancelled) {
         // ── Fallback 1: Standard Audio load with CORS ──
         console.log("[GamePlay Init] Fallback: Standard Audio load with CORS");
         let loadFailed = false;
@@ -6675,7 +6981,8 @@ export default function Game() {
       // ── Web Audio frequency-band routing (Init during fresh user gesture) ──
       // Lane 0 (A) → bass  · Lane 1 (S) → mids  · Lane 2 (D) → treble
       try {
-        if (!audio.crossOrigin) {
+        const isBlobUrl = audio.src.startsWith("blob:");
+        if (!isBlobUrl && !audio.crossOrigin) {
           throw new Error("No-CORS audio fallback");
         }
         let actx = audioManager.getContext();
@@ -7087,11 +7394,15 @@ export default function Game() {
     return () => window.removeEventListener('blur', onBlur);
   }, [doPause, resetAllLanes]);
 
-  // Handle manual keyboard pause (Escape) and Continue (Enter)
+  // Handle manual keyboard pause (Escape), POV switcher (V), and Continue (Enter)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       const p = phaseRef.current;
       if (p === 'playing') {
+        if (e.key === 'v' || e.key === 'V') {
+          cyclePovMode();
+          return;
+        }
         if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') {
           const isModalOpen = useVaultStore.getState().optionsModalOpen;
           if (isModalOpen) {
@@ -7109,7 +7420,7 @@ export default function Game() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [doPause, doResume, doReturn]);
+  }, [doPause, doResume, doReturn, cyclePovMode]);
 
   const { perfectPlus: pp = 0, perfects: pfp = 0, goods: gd = 0, misses: ms = 0 } = displayGs;
   const tot = pp + pfp + gd + ms;
@@ -7164,6 +7475,40 @@ export default function Game() {
       className="fixed inset-0 flex justify-center overflow-hidden"
       style={{ background: "#0c0c14" }}
     >
+      {/* ── POV TOAST NOTIFICATION OVERLAY ── */}
+      <AnimatePresence>
+        {povToast && Date.now() - povToast.time < 1800 && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -15, scale: 0.95 }}
+            className="absolute top-20 left-1/2 -translate-x-1/2 z-50 px-5 py-2 rounded-full border border-[#00E5FF]/40 bg-black/80 backdrop-blur-xl shadow-[0_0_24px_rgba(0,229,255,0.4)] flex items-center gap-3 pointer-events-none"
+          >
+            <div className="w-2 h-2 rounded-full bg-[#00E5FF] animate-ping" />
+            <span className="font-mono text-xs font-black tracking-widest text-white uppercase">
+              CAMERA PERSPECTIVE: <span className="text-[#00E5FF]">{povToast.mode}</span>
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── POV SWITCH BUTTON (Bottom Right next to Pause) ── */}
+      {phase === "playing" && !paused && (
+        <button
+          onClick={cyclePovMode}
+          className="absolute bottom-6 right-20 z-50 px-3.5 h-12 flex items-center gap-2 rounded-full glass-panel border-2 border-white/20 hover:scale-105 active:scale-95 transition-all cursor-pointer group text-white font-mono text-xs shadow-lg bg-black/60 backdrop-blur-md"
+          title="Toggle POV Perspective Camera Mode (Hotkey: V)"
+        >
+          <span className="text-base">
+            {activePovMode === 'cyber_tunnel' ? '🌀' : activePovMode === 'dynamic_stage' ? '🎥' : '📐'}
+          </span>
+          <span className="font-black text-[10px] uppercase tracking-wider hidden sm:inline-block">
+            {activePovMode === 'cyber_tunnel' ? '3D TUNNEL' : activePovMode === 'dynamic_stage' ? 'DYNAMIC STAGE' : '2.5D CLASSIC'}
+          </span>
+          <span className="text-[8px] font-black text-white/80 bg-white/10 px-1.5 py-0.5 rounded font-mono border border-white/10">V</span>
+        </button>
+      )}
+
       {/* ── PAUSE BUTTON (Bottom Right) ── */}
       {phase === "playing" && !paused && (
         <button
@@ -7867,7 +8212,13 @@ export default function Game() {
 
 
             return (
-              <div className="absolute top-4 left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none z-20">
+              <div
+                className="absolute top-4 left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none z-20"
+                style={{
+                  opacity: activePovMode === 'cyber_tunnel' ? 0.18 : 1,
+                  transition: 'opacity 0.5s ease-in-out',
+                }}
+              >
                 <style dangerouslySetInnerHTML={{ __html: `
                   @keyframes marquee-behind {
                     0% {

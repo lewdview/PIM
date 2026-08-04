@@ -1691,6 +1691,75 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                     })}
                   </div>
                 </div>
+
+                {/* POV Perspective Camera Modes */}
+                <div className="mt-8">
+                  <h3 className="font-mono text-[9px] font-black text-white/40 uppercase tracking-wider border-b border-white/5 pb-1 mb-3 flex items-center justify-between">
+                    <span>CAMERA POV PERSPECTIVE ENGINE</span>
+                    <span className="text-[7.5px] text-zinc-500">HOTKEY: V / P IN GAME</span>
+                  </h3>
+                  
+                  <div className="grid grid-cols-3 gap-2 mb-3">
+                    {[
+                      { id: 'classic', name: '2.5D Classic', desc: 'Standard Beatstar highway perspective', icon: '📐' },
+                      { id: 'cyber_tunnel', name: '3D Cyber Tunnel', desc: 'First-person tunnel view with concentric depth rings', icon: '🌀' },
+                      { id: 'dynamic_stage', name: 'Dynamic Stage', desc: 'Beatsync camera sway, pitch & stage shifts', icon: '🎥' }
+                    ].map(pov => {
+                      const active = (opts.povMode || 'classic') === pov.id;
+                      return (
+                        <button
+                          key={pov.id}
+                          onClick={() => {
+                            localStorage.setItem("opt_povMode", pov.id);
+                            setOpts(o => ({ ...o, povMode: pov.id as any }));
+                            updateSettings({ povMode: pov.id as any });
+                            audioManager.playSfx('menu_confirm', 0.1);
+                          }}
+                          className={`text-left border p-2.5 rounded flex flex-col justify-between min-h-[76px] transition-all cursor-pointer relative ${
+                            active
+                              ? isAvant ? 'border-[#39FF14] bg-[#39FF14]/10 text-white' : 'border-[#FF1493] bg-[#FF1493]/10 text-white'
+                              : 'border-white/5 bg-black/40 text-white hover:border-white/15'
+                          }`}
+                        >
+                          <div className="flex justify-between items-center gap-1">
+                            <span className="font-mono text-[10px] font-black uppercase truncate">{pov.name}</span>
+                            <span className="text-xs">{pov.icon}</span>
+                          </div>
+                          <span className="text-[7px] text-zinc-500 font-mono leading-tight mt-1">{pov.desc.toUpperCase()}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Stage POV Auto-Switch Toggle */}
+                  <div className="p-3 border border-white/5 rounded bg-black/30 flex items-center justify-between gap-3">
+                    <div>
+                      <div className="font-mono text-[10px] font-black uppercase text-white flex items-center gap-1.5">
+                        <span>STAGE POV DYNAMIC TRANSITIONS</span>
+                        <span className="text-[7px] px-1 py-0.2 bg-purple-500/20 text-purple-300 border border-purple-500/30 rounded">AUTO-WARP</span>
+                      </div>
+                      <div className="text-[7.5px] font-mono text-zinc-500 uppercase mt-0.5">
+                        Seamlessly transition POV into 3D Cyber Tunnel & Dynamic Camera as stage difficulty escalates
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const nextVal = !(opts.stagePovSwitch !== false);
+                        localStorage.setItem("opt_stagePovSwitch", String(nextVal));
+                        setOpts(o => ({ ...o, stagePovSwitch: nextVal }));
+                        updateSettings({ stagePovSwitch: nextVal });
+                        audioManager.playSfx('menu_confirm', 0.1);
+                      }}
+                      className={`relative w-10 h-5 rounded-full transition-colors cursor-pointer shrink-0 ${
+                        opts.stagePovSwitch !== false ? (isAvant ? 'bg-[#39FF14]' : 'bg-[#FF1493]') : 'bg-zinc-800'
+                      }`}
+                    >
+                      <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
+                        opts.stagePovSwitch !== false ? 'translate-x-5' : 'translate-x-0'
+                      }`} />
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 

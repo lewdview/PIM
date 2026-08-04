@@ -166,15 +166,18 @@ export default function HomePage() {
 
   // ===== AUDIO FORGE DAEMON HEALTH CHECK (ITEM 8) — DEV ONLY =====
   useEffect(() => {
-    if (!import.meta.env.DEV) return; // Skip in production — localhost:8000 will never resolve
+    if (!import.meta.env.DEV) return;
     let active = true;
     const controller = new AbortController();
+    setAudioForgeOnline(false); // Default to fallback gracefully without console spam
+
+    // Only attempt probe if explicitly configured or running locally
     fetch('http://localhost:8000/health', { method: 'GET', mode: 'cors', signal: controller.signal })
       .then(res => {
         if (active) setAudioForgeOnline(res.ok);
       })
       .catch(() => {
-        if (active) setAudioForgeOnline(false); // Graceful fallback, no crash
+        if (active) setAudioForgeOnline(false);
       });
     return () => {
       active = false;
@@ -464,7 +467,7 @@ export default function HomePage() {
   const proofs = collection.filter(c => c.proof).length;
 
   return (
-    <div className="flex-1 w-full">
+    <div className="flex-1 w-full pb-36 md:pb-8">
       {/* ===== TICKER ===== */}
       <BrutalistTicker />
 

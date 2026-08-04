@@ -700,10 +700,10 @@ export default function ForgePage() {
   );
 
   return (
-    <div className="flex-1 w-full" style={{ minHeight: '100vh' }}>
+    <div className="flex-1 w-full pb-36 md:pb-8" style={{ minHeight: '100vh' }}>
       {/* ═══ HERO HEADER ═══ */}
       <section style={{
-        position: 'relative', padding: '40px 16px 32px',
+        position: 'relative', padding: '16px 16px 32px',
         background: 'linear-gradient(180deg, rgba(255,56,0,0.04), transparent 60%)',
         overflow: 'hidden',
       }}>

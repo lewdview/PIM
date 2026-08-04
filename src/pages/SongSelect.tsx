@@ -503,7 +503,7 @@ export default function SongSelect() {
         {/* MAIN VIEW: FULL-SPACE STAGE SHOWCASE WITH ALBUM ARTWORK BACKGROUND */}
         <div
           ref={mainScrollRef}
-          className="flex-1 overflow-y-auto bg-black/30 backdrop-blur-xl flex flex-col p-4 lg:p-8 relative"
+          className="flex-1 overflow-y-auto bg-black/30 backdrop-blur-xl flex flex-col p-4 lg:p-8 pb-36 md:pb-8 relative"
         >
           {/* Parallax Background Month & Stage Text */}
           {activeMonthGroup && (

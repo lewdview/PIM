@@ -21,6 +21,8 @@ export type GameOpts = {
   gameSenseEnabled: boolean;
   legacyGraphics: boolean;
   autoLatencyAdjust: boolean;
+  povMode: 'classic' | 'cyber_tunnel' | 'dynamic_stage';
+  stagePovSwitch: boolean;
 };
 
 export interface GameBackground {
@@ -84,6 +86,8 @@ export const DEFAULT_OPTS: GameOpts = {
   gameSenseEnabled: false,
   legacyGraphics: false,
   autoLatencyAdjust: true,
+  povMode: 'classic',
+  stagePovSwitch: true,
 };
 
 export function loadOpts(): GameOpts {
@@ -133,6 +137,8 @@ export function loadOpts(): GameOpts {
     gameSenseEnabled: bool("opt_gameSenseEnabled", false),
     legacyGraphics: dbSettings?.legacyGraphics ?? bool("opt_legacyGraphics", false),
     autoLatencyAdjust: dbSettings?.autoLatencyAdjust ?? bool("opt_autoLatencyAdjust", true),
+    povMode: dbSettings?.povMode ?? ((localStorage.getItem("opt_povMode") as any) ?? "classic"),
+    stagePovSwitch: dbSettings?.stagePovSwitch ?? bool("opt_stagePovSwitch", true),
   };
 }
 

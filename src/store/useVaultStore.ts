@@ -24,6 +24,8 @@ export interface ProfileSettings {
   slideshowIsolate?: boolean;
   slideshowBrackets?: boolean;
   slideshowMode?: 'coco' | 'contour';
+  povMode?: 'classic' | 'cyber_tunnel' | 'dynamic_stage';
+  stagePovSwitch?: boolean;
 }
 
 export interface ProfileProgression {
@@ -210,6 +212,8 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     slideshowIsolate: localStorage.getItem("opt_slideshowIsolate") === "true",
     slideshowBrackets: localStorage.getItem("opt_slideshowBrackets") === "true",
     slideshowMode: (localStorage.getItem("opt_slideshowMode") as any) ?? "coco",
+    povMode: (localStorage.getItem("opt_povMode") as any) ?? "classic",
+    stagePovSwitch: localStorage.getItem("opt_stagePovSwitch") !== "false",
   },
   progression: {
     tutorialCompleted: localStorage.getItem("pim_tutorial_completed") === "true",
@@ -673,6 +677,8 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     if (newSettings.slideshowIsolate !== undefined) localStorage.setItem("opt_slideshowIsolate", String(merged.slideshowIsolate));
     if (newSettings.slideshowBrackets !== undefined) localStorage.setItem("opt_slideshowBrackets", String(merged.slideshowBrackets));
     if (newSettings.slideshowMode !== undefined) localStorage.setItem("opt_slideshowMode", String(merged.slideshowMode));
+    if (newSettings.povMode !== undefined) localStorage.setItem("opt_povMode", String(merged.povMode));
+    if (newSettings.stagePovSwitch !== undefined) localStorage.setItem("opt_stagePovSwitch", String(merged.stagePovSwitch));
 
     if (userId) {
       const { error } = await supabase.from('profiles').update({ settings: merged }).eq('id', userId);
