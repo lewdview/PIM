@@ -427,6 +427,130 @@ function SvgLatencySlider({ value, onChange, isAvant }: { value: number; onChang
   );
 }
 
+// ── SvgVolumeSlider component ──
+function SvgVolumeSlider({ 
+  label, 
+  value, 
+  onChange, 
+  isAvant 
+}: { 
+  label: string; 
+  value: number; 
+  onChange: (v: number) => void; 
+  isAvant?: boolean; 
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleMove = useCallback((clientX: number) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const width = rect.width;
+    const clickX = Math.max(0, Math.min(clientX - rect.left, width));
+    const percentage = clickX / width;
+    const newValue = Math.round(percentage * 100) / 100;
+    onChange(newValue);
+  }, [onChange]);
+
+  useEffect(() => {
+    if (!isDragging) return;
+    const onMouseMove = (e: MouseEvent) => handleMove(e.clientX);
+    const onMouseUp = () => setIsDragging(false);
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches[0]) handleMove(e.touches[0].clientX);
+    };
+    const onTouchEnd = () => setIsDragging(false);
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    window.addEventListener("touchmove", onTouchMove);
+    window.addEventListener("touchend", onTouchEnd);
+
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("touchend", onTouchEnd);
+    };
+  }, [isDragging, handleMove]);
+
+  const pct = Math.round(value * 100);
+  const strokeColor = isAvant ? "#39FF14" : "#FF1493";
+
+  return (
+    <div className="flex flex-col gap-1.5 mt-2 select-none">
+      <div className="flex justify-between font-mono text-[9px] text-zinc-400 uppercase tracking-wider px-1">
+        <span>{label}</span>
+        <span style={{ color: strokeColor, fontWeight: "bold" }}>{pct}%</span>
+      </div>
+
+      <div 
+        ref={containerRef}
+        className="relative h-5 flex items-center cursor-pointer"
+        onMouseDown={(e) => {
+          setIsDragging(true);
+          handleMove(e.clientX);
+        }}
+        onTouchStart={(e) => {
+          if (e.touches[0]) {
+            setIsDragging(true);
+            handleMove(e.touches[0].clientX);
+          }
+        }}
+      >
+        <svg className="w-full h-3 overflow-visible" xmlns="http://www.w3.org/2000/svg">
+          <line 
+            x1="0" y1="6" x2="100%" y2="6" 
+            stroke="rgba(255,255,255,0.08)" strokeWidth="4" 
+            strokeDasharray="4 2" 
+          />
+          <line 
+            x1="0" y1="6" x2={`${pct}%`} y2="6" 
+            stroke={strokeColor} strokeWidth="4" 
+            style={{ filter: `drop-shadow(0 0 4px ${strokeColor})` }}
+          />
+          {[0, 25, 50, 75, 100].map((x) => (
+            <rect
+              key={x}
+              x={`${x}%`}
+              y="3"
+              width="2"
+              height="6"
+              fill={pct >= x ? strokeColor : "rgba(255,255,255,0.18)"}
+              transform="translate(-1, 0)"
+            />
+          ))}
+        </svg>
+
+        <div 
+          style={{
+            position: "absolute",
+            left: `${pct}%`,
+            transform: "translate(-50%, -50%)",
+            top: "50%",
+            width: 16,
+            height: 16,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            pointerEvents: "none"
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 16 16" overflow="visible">
+            <polygon 
+              points="8,1 15,8 8,15 1,8" 
+              fill={strokeColor} 
+              stroke="#ffffff" 
+              strokeWidth="1.5"
+              style={{ filter: `drop-shadow(0 0 6px ${strokeColor})` }}
+            />
+          </svg>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Custom SVG Icons for Options Categories ──
 function GameplayIcon() {
   return (
@@ -921,6 +1045,9 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
         comboDisplay: true,
         judgmentText: true,
         bgMusic: false,
+        sfxEnabled: true,
+        sfxVolume: 0.8,
+        musicVolume: 0.5,
         haptics: true,
         missSystem: true,
       });
@@ -1149,20 +1276,50 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                   <div className="bg-black/40 border border-white/5 p-4 rounded-lg space-y-4">
                     <h3 className="font-mono text-[9px] font-black text-white/40 uppercase tracking-wider border-b border-white/5 pb-1">BGM & LOCAL SYSTEM</h3>
 
-                    <div className="flex justify-between items-center">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-white font-mono uppercase">Sound Effects (SFX)</span>
-                        <span className="text-[8px] text-zinc-500 font-mono">UI clicks, navigation chimes, and hit audio feedback</span>
+                    <div className="space-y-2 border-b border-white/5 pb-3">
+                      <div className="flex justify-between items-center">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-bold text-white font-mono uppercase">Sound Effects (SFX)</span>
+                          <span className="text-[8px] text-zinc-500 font-mono">UI clicks, navigation chimes, and hit audio feedback</span>
+                        </div>
+                        {renderToggle('sfxEnabled')}
                       </div>
-                      {renderToggle('sfxEnabled')}
+                      {opts.sfxEnabled && (
+                        <SvgVolumeSlider
+                          label="SFX VOLUME"
+                          value={opts.sfxVolume}
+                          onChange={(v) => {
+                            localStorage.setItem("opt_sfxVolume", String(v));
+                            setOpts(o => ({ ...o, sfxVolume: v }));
+                            updateSettings({ sfxVolume: v });
+                            audioManager.playSfx('tap_nav', 0.1);
+                          }}
+                          isAvant={isAvant}
+                        />
+                      )}
                     </div>
 
-                    <div className="flex justify-between items-center">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-white font-mono uppercase">Ambient BGM</span>
-                        <span className="text-[8px] text-zinc-500 font-mono">Casette tape radio hum loops in vault directories</span>
+                    <div className="space-y-2 border-b border-white/5 pb-3">
+                      <div className="flex justify-between items-center">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-bold text-white font-mono uppercase">Ambient BGM</span>
+                          <span className="text-[8px] text-zinc-500 font-mono">Casette tape radio hum loops in vault directories</span>
+                        </div>
+                        {renderToggle('bgMusic')}
                       </div>
-                      {renderToggle('bgMusic')}
+                      {opts.bgMusic && (
+                        <SvgVolumeSlider
+                          label="MUSIC VOLUME"
+                          value={opts.musicVolume}
+                          onChange={(v) => {
+                            localStorage.setItem("opt_musicVolume", String(v));
+                            setOpts(o => ({ ...o, musicVolume: v }));
+                            updateSettings({ musicVolume: v });
+                            window.dispatchEvent(new Event("bgmusic_volume_change"));
+                          }}
+                          isAvant={isAvant}
+                        />
+                      )}
                     </div>
 
                     <div className="flex justify-between items-center">

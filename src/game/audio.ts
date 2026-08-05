@@ -270,8 +270,9 @@ export class AudioManager {
     source.buffer = buffer;
     const gain = this.ctx.createGain();
 
-    // Lower sound FX volume by 20% (80% baseline)
-    const sfxVolume = volume * 0.8;
+    // Lower sound FX volume by 20% (80% baseline) * sfxVolume setting
+    const sfxVolSetting = typeof localStorage !== 'undefined' ? (parseFloat(localStorage.getItem("opt_sfxVolume") ?? "0.8") ?? 0.8) : 0.8;
+    const sfxVolume = volume * 0.8 * sfxVolSetting;
     gain.gain.value = Math.max(0, Math.min(1, sfxVolume));
     source.connect(gain);
     gain.connect(this.masterGain);

@@ -26,8 +26,18 @@ export default function BackgroundMusic() {
   
   useEffect(() => {
     const onToggle = () => setBgMusicEnabled(loadOpts().bgMusic);
+    const onVolChange = () => {
+      const opts = loadOpts();
+      if (audioRef.current && opts.bgMusic) {
+        audioRef.current.volume = (opts.musicVolume ?? 0.5) * 0.4;
+      }
+    };
     window.addEventListener("bgmusic_toggle", onToggle);
-    return () => window.removeEventListener("bgmusic_toggle", onToggle);
+    window.addEventListener("bgmusic_volume_change", onVolChange);
+    return () => {
+      window.removeEventListener("bgmusic_toggle", onToggle);
+      window.removeEventListener("bgmusic_volume_change", onVolChange);
+    };
   }, []);
   
   useEffect(() => {
@@ -70,7 +80,7 @@ export default function BackgroundMusic() {
     setStarted((prev) => {
       if (prev) return prev;
       
-      const { bgMusic } = loadOpts();
+      const { bgMusic, musicVolume } = loadOpts();
       const audio = audioRef.current;
       if (audio && bgMusic) {
         audio.preload = "auto";
@@ -107,6 +117,7 @@ export default function BackgroundMusic() {
       audio.volume = 0;
       clearInterval(fadeIntervalRef.current);
     } else {
+      const targetVol = (loadOpts().musicVolume ?? 0.5) * 0.4;
       // Resume → fade in
       if (audio.paused) {
         audio.volume = 0;
@@ -116,10 +127,10 @@ export default function BackgroundMusic() {
         }
       }
       fadeIntervalRef.current = setInterval(() => {
-        if (audio.volume < 0.35) {
-          audio.volume = Math.min(0.4, audio.volume + 0.03);
+        if (audio.volume < targetVol) {
+          audio.volume = Math.min(targetVol, audio.volume + 0.03);
         } else {
-          audio.volume = 0.4;
+          audio.volume = targetVol;
           clearInterval(fadeIntervalRef.current);
         }
       }, 40);

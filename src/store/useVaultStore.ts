@@ -18,6 +18,8 @@ export interface ProfileSettings {
   judgmentText: boolean;
   bgMusic: boolean;
   sfxEnabled: boolean;
+  sfxVolume?: number;
+  musicVolume?: number;
   haptics: boolean;
   missSystem: boolean;
   slideshowThreshold?: number;
@@ -206,6 +208,8 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     judgmentText: localStorage.getItem("opt_judgmentText") !== "false",
     bgMusic: localStorage.getItem("opt_bgMusic") === "true",
     sfxEnabled: localStorage.getItem("opt_sfxEnabled") !== "false",
+    sfxVolume: parseFloat(localStorage.getItem("opt_sfxVolume") ?? "0.8") ?? 0.8,
+    musicVolume: parseFloat(localStorage.getItem("opt_musicVolume") ?? "0.5") ?? 0.5,
     haptics: localStorage.getItem("opt_haptics") !== "false",
     missSystem: localStorage.getItem("opt_missSystem") !== "false",
     slideshowThreshold: parseInt(localStorage.getItem("opt_slideshowThreshold") ?? "38") || 38,
@@ -671,6 +675,8 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     if (newSettings.judgmentText !== undefined) localStorage.setItem("opt_judgmentText", String(merged.judgmentText));
     if (newSettings.bgMusic !== undefined) localStorage.setItem("opt_bgMusic", String(merged.bgMusic));
     if (newSettings.sfxEnabled !== undefined) localStorage.setItem("opt_sfxEnabled", String(merged.sfxEnabled));
+    if (newSettings.sfxVolume !== undefined) localStorage.setItem("opt_sfxVolume", String(merged.sfxVolume));
+    if (newSettings.musicVolume !== undefined) localStorage.setItem("opt_musicVolume", String(merged.musicVolume));
     if (newSettings.haptics !== undefined) localStorage.setItem("opt_haptics", String(merged.haptics));
     if (newSettings.missSystem !== undefined) localStorage.setItem("opt_missSystem", String(merged.missSystem));
     if (newSettings.slideshowThreshold !== undefined) localStorage.setItem("opt_slideshowThreshold", String(merged.slideshowThreshold));
