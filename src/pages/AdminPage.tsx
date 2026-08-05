@@ -38,17 +38,28 @@ const PACK_LABELS: Record<string, string> = {
 };
 
 // ===== ADMIN GATE =====
-const ADMIN_PASSPHRASE = 'th3scr1b3';
+// Sentinel: Prevent exposing plaintext passphrases in the public bundle.
+// Using SHA-256 client-side hashing for validation.
+const ADMIN_PASSPHRASE_HASH = 'd58f380b169d36c2fe217dadc3caa620193197132b55ba52b0947882b78c4983';
 const ADMIN_AUTH_KEY = 'th3vault_admin_auth';
 
 function AdminGate({ onAuthenticate }: { onAuthenticate: () => void }) {
   const [input, setInput] = useState('');
   const [error, setError] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (input.toLowerCase() === ADMIN_PASSPHRASE) {
+
+    // Hash input
+    const encoder = new TextEncoder();
+    const data = encoder.encode(input.toLowerCase());
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+    if (hashHex === ADMIN_PASSPHRASE_HASH) {
       sessionStorage.setItem(ADMIN_AUTH_KEY, 'true');
+      sessionStorage.setItem('ADMIN_AUTH_TOKEN', input.toLowerCase());
       onAuthenticate();
     } else {
       setError(true);
@@ -1929,7 +1940,8 @@ export default function AdminPage() {
               try {
                 const { supabase } = await import('../services/supabaseClient');
                 const { data, error } = await supabase.functions.invoke('vault-engine', {
-                  body: { action: 'updateAdminConfig', payload: { config, passphrase: 'th3scr1b3' } }
+                  // Sentinel: Use stored passphrase token instead of hardcoding
+                  body: { action: 'updateAdminConfig', payload: { config, passphrase: sessionStorage.getItem('ADMIN_AUTH_TOKEN') || '' } }
                 });
                 if (error || !data?.success) {
                   console.error('Push to server failed:', error?.message || data?.error);
