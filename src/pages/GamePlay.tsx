@@ -891,6 +891,117 @@ function stageifyNotes(notes: Note[], duration: number, bpm: number, difficultyL
   return { notes: finalNotes, stages: stagesWithCounts };
 }
 
+type PatternType = 'stair_up' | 'stair_down' | 'trill_outer' | 'trill_left' | 'trill_right' | 'wave' | 'jack' | 'dual_outer' | 'dual_left' | 'dual_right' | 'single_tap' | 'hold_rail' | 'slide_hold';
+
+interface PatternStep {
+  lanes: number[];
+  type?: NoteType;
+  holdDuration?: number;
+  targetLane?: number;
+  swipeDirection?: 'up' | 'down' | 'left' | 'right';
+  stepBeatOffset: number;
+}
+
+function getPatternSequence(
+  pattern: PatternType, 
+  bpm: number, 
+  difficulty: number, 
+  lastLane: number
+): PatternStep[] {
+  const beatDur = 60 / bpm;
+  switch (pattern) {
+    case 'stair_up':
+      return [
+        { lanes: [0], stepBeatOffset: 0 },
+        { lanes: [1], stepBeatOffset: 1 },
+        { lanes: [2], stepBeatOffset: 2 }
+      ];
+    case 'stair_down':
+      return [
+        { lanes: [2], stepBeatOffset: 0 },
+        { lanes: [1], stepBeatOffset: 1 },
+        { lanes: [0], stepBeatOffset: 2 }
+      ];
+    case 'trill_outer':
+      return [
+        { lanes: [0], stepBeatOffset: 0 },
+        { lanes: [2], stepBeatOffset: 0.75 },
+        { lanes: [0], stepBeatOffset: 1.5 },
+        { lanes: [2], stepBeatOffset: 2.25 }
+      ];
+    case 'trill_left':
+      return [
+        { lanes: [0], stepBeatOffset: 0 },
+        { lanes: [1], stepBeatOffset: 0.75 },
+        { lanes: [0], stepBeatOffset: 1.5 },
+        { lanes: [1], stepBeatOffset: 2.25 }
+      ];
+    case 'trill_right':
+      return [
+        { lanes: [1], stepBeatOffset: 0 },
+        { lanes: [2], stepBeatOffset: 0.75 },
+        { lanes: [1], stepBeatOffset: 1.5 },
+        { lanes: [2], stepBeatOffset: 2.25 }
+      ];
+    case 'wave':
+      return [
+        { lanes: [0], stepBeatOffset: 0 },
+        { lanes: [1], stepBeatOffset: 1 },
+        { lanes: [2], stepBeatOffset: 2 },
+        { lanes: [1], stepBeatOffset: 3 },
+        { lanes: [0], stepBeatOffset: 4 }
+      ];
+    case 'jack': {
+      const jackLane = Math.max(0, Math.min(2, lastLane));
+      return [
+        { lanes: [jackLane], stepBeatOffset: 0 },
+        { lanes: [jackLane], stepBeatOffset: 1 },
+        { lanes: [jackLane], stepBeatOffset: 2 }
+      ];
+    }
+    case 'dual_outer':
+      return [
+        { lanes: [0, 2], type: difficulty >= 7 ? 'break' : 'tap', stepBeatOffset: 0 }
+      ];
+    case 'dual_left':
+      return [
+        { lanes: [0, 1], type: 'tap', stepBeatOffset: 0 }
+      ];
+    case 'dual_right':
+      return [
+        { lanes: [1, 2], type: 'tap', stepBeatOffset: 0 }
+      ];
+    case 'slide_hold': {
+      const fromLane = lastLane === 0 ? 0 : lastLane === 2 ? 2 : 0;
+      const toLane = fromLane === 0 ? 2 : 0;
+      return [
+        { 
+          lanes: [fromLane], 
+          type: 'hold', 
+          holdDuration: beatDur * 2.5, 
+          targetLane: toLane,
+          swipeDirection: 'up',
+          stepBeatOffset: 0 
+        }
+      ];
+    }
+    case 'hold_rail':
+      return [
+        { 
+          lanes: [lastLane], 
+          type: 'hold', 
+          holdDuration: beatDur * 2, 
+          swipeDirection: difficulty >= 4 ? 'up' : undefined,
+          stepBeatOffset: 0 
+        }
+      ];
+    default:
+      return [
+        { lanes: [lastLane], stepBeatOffset: 0 }
+      ];
+  }
+}
+
 function generateProceduralChart(song: any): Note[] {
   const bpm = song.bpm || 120;
   const beatDuration = 60 / bpm;
@@ -902,141 +1013,96 @@ function generateProceduralChart(song: any): Note[] {
   let id = 0;
   let lastLane = 1;
 
-  // Density factor based on difficulty level (1 to 10)
-  let stepMultiplier = 4; // default to every 4 beats
-  if (difficulty >= 10) stepMultiplier = 0.5; // Every half-beat (extremely dense!)
-  else if (difficulty >= 8) stepMultiplier = 1;  // Every beat
-  else if (difficulty >= 5) stepMultiplier = 2;  // Every 2 beats
-  else if (difficulty >= 3) stepMultiplier = 3;  // Every 3 beats
-  
-  // Section ranges
-  const introEnd = 15;
-  const bridgeStart = duration * 0.65;
-  const bridgeEnd = duration * 0.8;
+  // Determine effective chart end time (leave 3.5s buffer before audio ends)
+  const maxChartTime = Math.max(10, duration - 3.5);
 
-  while (time < duration - 4) {
-    // Determine dynamic step multiplier based on song section
-    let currentMultiplier = stepMultiplier;
-    let isChorus = time > 30 && time < bridgeStart && (Math.floor(time / 20) % 2 === 0);
+  let patternQueue: { lane: number; type: NoteType; holdDuration?: number; targetLane?: number; swipeDirection?: 'up'|'down'|'left'|'right'; timeOffset: number }[] = [];
 
-    if (time < introEnd) {
-      currentMultiplier = Math.max(4, stepMultiplier * 2); // Slow start
-    } else if (time >= bridgeStart && time < bridgeEnd) {
-      currentMultiplier = Math.max(4, stepMultiplier * 1.5); // Breather bridge
-    } else if (isChorus) {
-      currentMultiplier = Math.max(0.5, stepMultiplier * 0.5); // Intense chorus drops
-    }
-
-    // Determine target lanes to alternate cleanly and avoid bad patterns
-    let lanesToPick = [0, 1, 2].filter(l => l !== lastLane);
-    let nextLane = lanesToPick[Math.floor((time * 7 + id) % lanesToPick.length)];
-    lastLane = nextLane;
-
-    // Roll note types based on difficulty and time section
-    let noteType: 'tap' | 'hold' = 'tap';
-    let holdDuration: number | undefined;
-    let targetLane: number | undefined;
-    let swipeDirection: 'up' | 'down' | 'left' | 'right' | undefined;
-
-    const roll = (time * 13 + id * 7) % 100;
+  while (time < maxChartTime) {
+    const progress = time / duration;
     
-    // Tap is standard. Holds/Slides/Swipes appear at medium/high difficulties
-    if (difficulty >= 3 && roll < 38) {
-      noteType = 'hold';
-      holdDuration = beatDuration * (1.5 + (id % 3));
-      
-      const slideRoll = (id * 17) % 100;
-      if (difficulty >= 5 && slideRoll < 45) {
-        // Slide hold: Hold to launch switch and continue holding
-        targetLane = (nextLane + 1 + (id % 2)) % 3;
+    // Dynamic difficulty & section parameters
+    const isIntro = progress < 0.15;
+    const isBridge = progress >= 0.65 && progress < 0.80;
+    const isChorus = (progress >= 0.40 && progress < 0.65) || progress >= 0.85;
+
+    let stepMultiplier = 2; // Default: every 2 beats
+    if (difficulty >= 9) stepMultiplier = 0.5; // Half beats
+    else if (difficulty >= 7) stepMultiplier = 1;  // Every beat
+    else if (difficulty >= 4) stepMultiplier = 1.5;
+    else stepMultiplier = 3; // Easy
+
+    if (isIntro) stepMultiplier *= 1.5;
+    else if (isBridge) stepMultiplier *= 1.25;
+    else if (isChorus) stepMultiplier *= 0.75;
+
+    stepMultiplier = Math.max(0.5, stepMultiplier);
+
+    // Populate pattern queue if empty
+    if (patternQueue.length === 0) {
+      const roll = Math.floor((time * 17 + id * 11) % 100);
+      let selectedPattern: PatternType = 'single_tap';
+
+      if (isIntro) {
+        if (roll < 30) selectedPattern = 'stair_up';
+        else if (roll < 60) selectedPattern = 'stair_down';
+        else if (roll < 80) selectedPattern = 'hold_rail';
+        else selectedPattern = 'single_tap';
+      } else if (isChorus) {
+        if (difficulty >= 5 && roll < 20) selectedPattern = 'trill_outer';
+        else if (difficulty >= 4 && roll < 35) selectedPattern = 'stair_up';
+        else if (difficulty >= 4 && roll < 50) selectedPattern = 'stair_down';
+        else if (difficulty >= 5 && roll < 65) selectedPattern = 'wave';
+        else if (difficulty >= 4 && roll < 80) selectedPattern = 'dual_outer';
+        else if (difficulty >= 6 && roll < 90) selectedPattern = 'slide_hold';
+        else selectedPattern = 'trill_left';
+      } else if (isBridge) {
+        if (roll < 40) selectedPattern = 'wave';
+        else if (roll < 70) selectedPattern = 'hold_rail';
+        else selectedPattern = 'stair_down';
+      } else { // Verse / Normal
+        if (roll < 25) selectedPattern = 'stair_up';
+        else if (roll < 50) selectedPattern = 'stair_down';
+        else if (difficulty >= 4 && roll < 70) selectedPattern = 'jack';
+        else if (difficulty >= 5 && roll < 85) selectedPattern = 'trill_right';
+        else selectedPattern = 'hold_rail';
       }
-      
-      const swipeRoll = (id * 23) % 100;
-      if (difficulty >= 4 && swipeRoll < 60) {
-        // Hold to swipe: ends with a swipe (prefer UP, but supports others too)
-        swipeDirection = (id % 3 === 0) ? 'up' : (id % 3 === 1) ? 'left' : 'right';
+
+      const steps = getPatternSequence(selectedPattern, bpm, difficulty, lastLane);
+      for (const s of steps) {
+        for (const l of s.lanes) {
+          patternQueue.push({
+            lane: l,
+            type: (s.type as NoteType) || 'tap',
+            holdDuration: s.holdDuration,
+            targetLane: s.targetLane,
+            swipeDirection: s.swipeDirection,
+            timeOffset: s.stepBeatOffset * beatDuration
+          });
+        }
       }
-    } else if (difficulty >= 4 && (id * 23) % 100 < 22) {
-      // Standalone swipe note
-      noteType = 'swipe' as any;
-      swipeDirection = (id % 3 === 0) ? 'up' : (id % 3 === 1) ? 'left' : 'right';
     }
 
-    notes.push({
-      id: id++,
-      time: parseFloat(time.toFixed(3)),
-      lane: nextLane,
-      type: noteType,
-      holdDuration: holdDuration ? parseFloat(holdDuration.toFixed(3)) : undefined,
-      targetLane,
-      swipeDirection
-    });
+    // Dequeue note(s) at current step time
+    if (patternQueue.length > 0) {
+      const nextStep = patternQueue.shift()!;
+      const noteTime = parseFloat((time + nextStep.timeOffset).toFixed(3));
 
-    // Check for double notes (dual inputs) on medium-hard difficulties (difficulty >= 4)
-    // We want explicitly combinations like: Lane 0 + Lane 2 (a+d), Lane 1 + Lane 2 (s+d), Lane 0 + Lane 1 (s+a)
-    const canSpawnDual = difficulty >= 4;
-    if (canSpawnDual) {
-      const dualRoll = (time * 17 + id * 3) % 100;
-      const dualChance = difficulty >= 7 ? 35 : 20; // Increase chance for more active double gameplay
-      
-      if (dualRoll < dualChance) {
-        // Explicitly choose one of the target combinations:
-        // 0: A+D (Lanes 0 and 2)
-        // 1: S+D (Lanes 1 and 2)
-        // 2: S+A (Lanes 1 and 0)
-        const comboIdx = (id + Math.floor(time)) % 3;
-        let laneA = 0;
-        let laneB = 2;
-        if (comboIdx === 1) {
-          laneA = 1;
-          laneB = 2;
-        } else if (comboIdx === 2) {
-          laneA = 0;
-          laneB = 1;
-        }
-
-        // Adjust the primary note we already pushed to be laneA
-        const lastNote = notes[notes.length - 1];
-        if (lastNote) {
-          lastNote.lane = laneA;
-        }
-
-        // Determine type of the second simultaneous note
-        let secondType: 'tap' | 'hold' = 'tap';
-        let secondHoldDuration: number | undefined;
-        let secondSwipeDir: 'up' | 'down' | 'left' | 'right' | undefined;
-        let secondTargetLane: number | undefined;
-
-        const typeRoll = (id * 11 + Math.floor(time)) % 100;
-        if (difficulty >= 6 && typeRoll < 40) {
-          // Both holds or one hold + one tap
-          secondType = 'hold';
-          secondHoldDuration = beatDuration * 1.5;
-          if (id % 2 === 0) {
-            secondSwipeDir = 'up';
-          }
-        }
-
+      if (noteTime < maxChartTime) {
         notes.push({
-          id: 20000 + id++,
-          time: parseFloat(time.toFixed(3)),
-          lane: laneB,
-          type: secondType,
-          holdDuration: secondHoldDuration ? parseFloat(secondHoldDuration.toFixed(3)) : undefined,
-          targetLane: secondTargetLane,
-          swipeDirection: secondSwipeDir
+          id: id++,
+          time: noteTime,
+          lane: nextStep.lane,
+          type: nextStep.type,
+          holdDuration: nextStep.holdDuration ? parseFloat(nextStep.holdDuration.toFixed(3)) : undefined,
+          targetLane: nextStep.targetLane,
+          swipeDirection: nextStep.swipeDirection
         });
+        lastLane = nextStep.lane;
       }
     }
 
-    // Advance time by the current beat step duration
-    const stepTime = beatDuration * currentMultiplier;
-    
-    if (noteType === 'hold' && holdDuration) {
-      time += holdDuration + beatDuration * 1.5;
-    } else {
-      time += stepTime;
-    }
+    time += stepMultiplier * beatDuration;
   }
 
   const stageified = stageifyNotes(notes, duration, bpm, difficulty);
@@ -1079,7 +1145,6 @@ async function generateAudioForgeChart(song: any): Promise<Note[]> {
   const blockSize = 512;
   const movingAvgWindow = 43;
   const blockEnergies: number[] = [];
-  const noteTimes: number[] = [];
 
   for (let i = 0; i < totalSamples; i += blockSize) {
     let sum = 0;
@@ -1091,9 +1156,19 @@ async function generateAudioForgeChart(song: any): Promise<Note[]> {
     blockEnergies.push(rms);
   }
 
+  // Detect active sound energy fade-out boundary to clip trailing silence
+  let lastActiveBlock = blockEnergies.length - 1;
+  while (lastActiveBlock > movingAvgWindow && blockEnergies[lastActiveBlock] < 0.008) {
+    lastActiveBlock--;
+  }
+  const activeEnergyEndTime = (lastActiveBlock * blockSize) / sampleRate;
+  const effectiveAudioDuration = Math.max(10, Math.min(duration, activeEnergyEndTime > 10 ? activeEnergyEndTime : duration));
+  console.log(`[Audio Forge] Track duration: ${duration}s, active sound energy until ${activeEnergyEndTime.toFixed(1)}s (effective: ${effectiveAudioDuration.toFixed(1)}s)`);
+
   const thresholdRatio = 1.35 - (difficulty * 0.035);
   const minCooldown = Math.max(0.12, 0.45 - (difficulty * 0.035));
   let lastNoteTime = 0;
+  const noteTimes: number[] = [];
 
   for (let b = movingAvgWindow; b < blockEnergies.length; b++) {
     const instantEnergy = blockEnergies[b];
@@ -1106,7 +1181,7 @@ async function generateAudioForgeChart(song: any): Promise<Note[]> {
     const blockTime = (b * blockSize) / sampleRate;
 
     if (instantEnergy > localAvgEnergy * thresholdRatio && instantEnergy > 0.015) {
-      if (blockTime - lastNoteTime >= minCooldown && blockTime >= 3.0 && blockTime < duration - 4) {
+      if (blockTime - lastNoteTime >= minCooldown && blockTime >= 3.0 && blockTime < effectiveAudioDuration - 3.5) {
         noteTimes.push(blockTime);
         lastNoteTime = blockTime;
       }
@@ -1137,13 +1212,11 @@ async function generateAudioForgeChart(song: any): Promise<Note[]> {
       
       const slideRoll = (index * 19) % 100;
       if (difficulty >= 5 && slideRoll < 45) {
-        // Slide hold: Hold to launch switch and continue holding
         targetLane = (lane + 1 + (index % 2)) % 3;
       }
       
       const swipeRoll = (index * 23) % 100;
       if (difficulty >= 4 && swipeRoll < 60) {
-        // Hold to swipe: ends with a swipe (prefer UP)
         swipeDirection = (index % 3 === 0) ? 'up' : (index % 3 === 1) ? 'left' : 'right';
       }
     } else if (difficulty >= 4 && (index * 23) % 100 < 22) {
@@ -1161,18 +1234,12 @@ async function generateAudioForgeChart(song: any): Promise<Note[]> {
       swipeDirection
     });
 
-    // Check for double notes (dual inputs) on medium-hard difficulties (difficulty >= 4)
-    // We want explicitly combinations like: Lane 0 + Lane 2 (a+d), Lane 1 + Lane 2 (s+d), Lane 0 + Lane 1 (s+a)
     const canSpawnDual = difficulty >= 4;
     if (canSpawnDual) {
       const dualRoll = (time * 23 + index * 3) % 100;
-      const dualChance = difficulty >= 7 ? 35 : 20; // Increase chance for dual notes
+      const dualChance = difficulty >= 7 ? 35 : 20;
       
       if (dualRoll < dualChance && energy > 0.12) {
-        // Explicitly choose one of the target combinations:
-        // 0: A+D (Lanes 0 and 2)
-        // 1: S+D (Lanes 1 and 2)
-        // 2: S+A (Lanes 1 and 0)
         const comboIdx = (index + Math.floor(time)) % 3;
         let laneA = 0;
         let laneB = 2;
@@ -1184,13 +1251,11 @@ async function generateAudioForgeChart(song: any): Promise<Note[]> {
           laneB = 1;
         }
 
-        // Adjust primary note
         const lastNote = notes[notes.length - 1];
         if (lastNote) {
           lastNote.lane = laneA;
         }
 
-        // Determine second type
         let secondType: 'tap' | 'hold' = 'tap';
         let secondHoldDuration: number | undefined;
         let secondSwipeDir: 'up' | 'down' | 'left' | 'right' | undefined;
@@ -1223,9 +1288,9 @@ async function generateAudioForgeChart(song: any): Promise<Note[]> {
     return generateProceduralChart(song);
   }
 
-  const stageified = stageifyNotes(notes, duration, bpm, song.difficultyLevel || 5);
+  const stageified = stageifyNotes(notes, effectiveAudioDuration, bpm, song.difficultyLevel || 5);
   song.stages = stageified.stages;
-  console.log(`[Audio Forge] Success! Analyzed ${duration}s audio and forged ${stageified.notes.length} notes (stages applied).`);
+  console.log(`[Audio Forge] Success! Analyzed ${effectiveAudioDuration.toFixed(1)}s audio and forged ${stageified.notes.length} notes (stages applied).`);
   return stageified.notes;
 }
 
@@ -7001,6 +7066,40 @@ export default function Game() {
       }
 
       if (cancelled) return;
+
+      // Sync real audio element duration with song.duration and re-stageify notes
+      if (audio && audio.duration && !isNaN(audio.duration) && isFinite(audio.duration) && audio.duration > 5) {
+        const roundedAudioDuration = parseFloat(audio.duration.toFixed(1));
+        if (songRef.current && Math.abs(songRef.current.duration - roundedAudioDuration) > 1.5) {
+          console.log(`[Audio Duration Sync] Syncing song.duration from ${songRef.current.duration}s to real audio duration ${roundedAudioDuration}s`);
+          songRef.current.duration = roundedAudioDuration;
+
+          // Filter out notes exceeding real audio duration - 1.0s
+          const filteredNotes = (songRef.current.notes || []).filter(n => n.time <= roundedAudioDuration - 1.0);
+
+          // Re-stageify notes using exact real audio duration
+          const { notes: restaged, stages } = stageifyNotes(
+            filteredNotes,
+            roundedAudioDuration,
+            songRef.current.bpm || 120,
+            songRef.current.difficultyLevel || 5
+          );
+          songRef.current.notes = restaged;
+          songRef.current.stages = stages;
+
+          // Refresh active notesRef
+          notesRef.current = restaged.map(n => ({
+            note: { ...n, lane: Math.min(n.lane, LANE_COUNT - 1) },
+            hit: false,
+            missed: false,
+            holdActive: false,
+            holdProgress: 0,
+            currentLane: n.lane,
+            originLane: n.lane,
+            visualLane: n.lane,
+          }));
+        }
+      }
 
       // ── Web Audio frequency-band routing (Init during fresh user gesture) ──
       // Lane 0 (A) → bass  · Lane 1 (S) → mids  · Lane 2 (D) → treble
