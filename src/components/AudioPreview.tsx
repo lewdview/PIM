@@ -48,13 +48,20 @@ export default function AudioPreview({
   const isFullSong = maxDuration === 0;
   const isMythic = rarity === 'mythic';
 
-  // Global player integration
-  const { currentTrack, isPlaying: globalPlaying, progress, currentTime, duration, toggle: globalToggle } = useGlobalPlayer();
+  // Global player integration - optimized to prevent N re-renders on timeupdate
+  const globalToggle = useGlobalPlayer(s => s.toggle);
   const globalPlay = useGlobalPlayer(s => s.play);
 
   // Check if THIS track is the one currently playing
-  const isThisTrack = currentTrack?.audioUrl === audioUrl && currentTrack?.day === day;
-  const isPlaying = isThisTrack && globalPlaying;
+  const isThisTrack = useGlobalPlayer(s => s.currentTrack?.audioUrl === audioUrl && s.currentTrack?.day === day);
+  const isPlaying = useGlobalPlayer(s => (s.currentTrack?.audioUrl === audioUrl && s.currentTrack?.day === day) && s.isPlaying);
+
+  // Only subscribe to rapidly changing state (progress, time) if THIS track is playing
+  // Note: we can't conditionally call hooks, but by using selector logic we avoid re-rendering
+  // when progress/currentTime updates for other tracks.
+  const progress = useGlobalPlayer(s => (s.currentTrack?.audioUrl === audioUrl && s.currentTrack?.day === day) ? s.progress : 0);
+  const currentTime = useGlobalPlayer(s => (s.currentTrack?.audioUrl === audioUrl && s.currentTrack?.day === day) ? s.currentTime : 0);
+  const duration = useGlobalPlayer(s => (s.currentTrack?.audioUrl === audioUrl && s.currentTrack?.day === day) ? s.duration : 0);
 
   const toggle = useCallback(() => {
     if (isThisTrack) {
