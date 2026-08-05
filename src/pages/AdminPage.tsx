@@ -38,17 +38,26 @@ const PACK_LABELS: Record<string, string> = {
 };
 
 // ===== ADMIN GATE =====
-const ADMIN_PASSPHRASE = 'th3scr1b3';
+const ADMIN_PASSPHRASE_HASH = 'd58f380b169d36c2fe217dadc3caa620193197132b55ba52b0947882b78c4983'; // SHA-256 of passphrase
 const ADMIN_AUTH_KEY = 'th3vault_admin_auth';
+
+async function hashInput(input: string): Promise<string> {
+  const msgBuffer = new TextEncoder().encode(input.toLowerCase());
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
 function AdminGate({ onAuthenticate }: { onAuthenticate: () => void }) {
   const [input, setInput] = useState('');
   const [error, setError] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (input.toLowerCase() === ADMIN_PASSPHRASE) {
-      sessionStorage.setItem(ADMIN_AUTH_KEY, 'true');
+    const hashed = await hashInput(input);
+    if (hashed === ADMIN_PASSPHRASE_HASH) {
+      // Store the plain text passphrase in session storage for backend requests
+      sessionStorage.setItem(ADMIN_AUTH_KEY, input.toLowerCase());
       onAuthenticate();
     } else {
       setError(true);
@@ -363,9 +372,10 @@ function ModifierCard({
 
 // ===== MAIN ADMIN PAGE =====
 export default function AdminPage() {
-  const [authenticated, setAuthenticated] = useState(() =>
-    sessionStorage.getItem(ADMIN_AUTH_KEY) === 'true'
-  );
+  const [authenticated, setAuthenticated] = useState(() => {
+    const val = sessionStorage.getItem(ADMIN_AUTH_KEY);
+    return !!val && val !== 'false';
+  });
   const [config, setConfig] = useState<AdminConfig>(() => getAdminConfig());
   const [activePackTab, setActivePackTab] = useState(PACK_KEYS[0]);
   const [simResults, setSimResults] = useState<Record<Rarity, number> | null>(null);
@@ -1928,8 +1938,9 @@ export default function AdminPage() {
               setPushStatus('pushing');
               try {
                 const { supabase } = await import('../services/supabaseClient');
+                const passphrase = sessionStorage.getItem(ADMIN_AUTH_KEY) || '';
                 const { data, error } = await supabase.functions.invoke('vault-engine', {
-                  body: { action: 'updateAdminConfig', payload: { config, passphrase: 'th3scr1b3' } }
+                  body: { action: 'updateAdminConfig', payload: { config, passphrase } }
                 });
                 if (error || !data?.success) {
                   console.error('Push to server failed:', error?.message || data?.error);
