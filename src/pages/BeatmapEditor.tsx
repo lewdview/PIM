@@ -9,16 +9,26 @@ import type { Note } from '../game/types';
 import '../styles/BeatmapEditorStyles.css';
 
 // ===== ADMIN GATE PASSPHRASE CONFIG =====
-const ADMIN_PASSPHRASE = 'th3scr1b3';
+// SECURITY: Removed hardcoded plaintext passphrase.
+// Using SHA-256 hash for client-side comparison instead.
+const ADMIN_PASSPHRASE_HASH = 'd58f380b169d36c2fe217dadc3caa620193197132b55ba52b0947882b78c4983';
 const ADMIN_AUTH_KEY = 'th3vault_admin_auth';
+
+async function hashString(message: string): Promise<string> {
+  const msgBuffer = new TextEncoder().encode(message);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
 function AdminGate({ onAuthenticate }: { onAuthenticate: () => void }) {
   const [input, setInput] = useState('');
   const [error, setError] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (input.toLowerCase() === ADMIN_PASSPHRASE) {
+    const hash = await hashString(input.toLowerCase());
+    if (hash === ADMIN_PASSPHRASE_HASH) {
       sessionStorage.setItem(ADMIN_AUTH_KEY, 'true');
       onAuthenticate();
     } else {
