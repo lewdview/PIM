@@ -2360,21 +2360,22 @@ function Art365ShowcaseView() {
   });
 
   const [exported, setExported] = useState(false);
+  const [promptFormat, setPromptFormat] = useState<'square' | 'vinyl'>('square');
 
   const handleCopyPrompt = (day: number) => {
-    const prompt = generateArtPromptForDay(day);
+    const prompt = promptFormat === 'vinyl' ? generateGirlVinylPromptForDay(day) : generateArtPromptForDay(day);
     navigator.clipboard.writeText(prompt);
     setCopiedDay(day);
     setTimeout(() => setCopiedDay(null), 2000);
   };
 
   const handleExportAll = () => {
-    const fullMarkdown = generateAll365Prompts();
+    const fullMarkdown = generateAll365Prompts(undefined, promptFormat);
     const blob = new Blob([fullMarkdown], { type: 'text/markdown' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = '365_Days_Light_and_Dark_1of1_Prompts.md';
+    a.download = promptFormat === 'vinyl' ? '365_Days_Light_and_Dark_Girl_Vinyl_Prompts.md' : '365_Days_Light_and_Dark_1of1_Prompts.md';
     a.click();
     URL.revokeObjectURL(url);
     setExported(true);
@@ -2390,6 +2391,29 @@ function Art365ShowcaseView() {
             365 Art Types & Outfit Specs Matrix
           </span>
           <div className="flex items-center gap-3">
+            <div className="flex items-center bg-black/60 border border-white/15 rounded p-0.5 text-xs font-mono">
+              <button
+                onClick={() => setPromptFormat('square')}
+                className={`px-2.5 py-1 rounded transition-all ${
+                  promptFormat === 'square'
+                    ? 'bg-[#00f0ff] text-black font-bold'
+                    : 'text-white/60 hover:text-white'
+                }`}
+              >
+                1:1 Square
+              </button>
+              <button
+                onClick={() => setPromptFormat('vinyl')}
+                className={`px-2.5 py-1 rounded transition-all ${
+                  promptFormat === 'vinyl'
+                    ? 'bg-[#ff007f] text-white font-bold'
+                    : 'text-white/60 hover:text-white'
+                }`}
+              >
+                16:9 Vinyl LP (Girl Covers)
+              </button>
+            </div>
+
             <button
               onClick={handleExportAll}
               className="px-3 py-1.5 rounded text-xs font-mono font-bold uppercase transition-all bg-[#00f0ff]/20 text-[#00f0ff] border border-[#00f0ff]/60 hover:bg-[#00f0ff]/30 flex items-center gap-1.5"
@@ -2548,20 +2572,26 @@ function Art365ShowcaseView() {
 
               {/* AI Prompt Snippet & Copy Action */}
               <div className="pt-2 border-t border-white/5 space-y-2">
-                <div className="text-[9px] font-mono text-white/40 uppercase tracking-wider">AI Generation Prompt:</div>
-                <div className="bg-black/60 border border-white/10 p-2.5 rounded font-mono text-[9.5px] text-white/70 leading-relaxed select-all">
-                  {art.promptSnippet}
+                <div className="text-[9px] font-mono text-white/40 uppercase tracking-wider">
+                  AI Generation Prompt ({promptFormat === 'vinyl' ? '16:9 Letterbox Vinyl LP Girl Cover' : '1:1 Square Album Cover'}):
+                </div>
+                <div className="bg-black/60 border border-white/10 p-2.5 rounded font-mono text-[9.5px] text-white/70 leading-relaxed select-all max-h-32 overflow-y-auto">
+                  {promptFormat === 'vinyl'
+                    ? generateGirlVinylPromptForDay(art.day)
+                    : generateArtPromptForDay(art.day)}
                 </div>
                 <button
                   onClick={() => handleCopyPrompt(art.day)}
                   className={`w-full py-1.5 rounded text-[10px] font-mono font-bold uppercase transition-all flex items-center justify-center gap-1.5 ${
                     isCopied
                       ? 'bg-[#39ff14]/20 text-[#39ff14] border border-[#39ff14]/60'
-                      : 'bg-white/5 text-white/80 hover:bg-white/15 border border-white/10'
+                      : promptFormat === 'vinyl'
+                      ? 'bg-[#ff007f]/20 text-[#ff007f] hover:bg-[#ff007f]/30 border border-[#ff007f]/50'
+                      : 'bg-[#00f0ff]/20 text-[#00f0ff] hover:bg-[#00f0ff]/30 border border-[#00f0ff]/50'
                   }`}
                 >
                   {isCopied ? <Check size={12} /> : <Copy size={12} />}
-                  {isCopied ? 'Prompt Copied to Clipboard' : 'Copy AI Art Prompt'}
+                  {isCopied ? 'Prompt Copied to Clipboard' : `Copy ${promptFormat === 'vinyl' ? 'Girl Vinyl' : 'Square'} Art Prompt`}
                 </button>
               </div>
             </div>

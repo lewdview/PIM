@@ -451,9 +451,49 @@ Aesthetic & Colors: ${art.description}, deep shadows, and a striking ${art.color
 }
 
 /**
+ * Generate a complete 16:9 Letterbox Vinyl LP Girl Cover Prompt (matching 1of1_artwork_prompts_letterbox_vinyl format).
+ */
+export function generateGirlVinylPromptForDay(
+  day: number,
+  options?: PromptOptions | string
+): string {
+  const art = getArtTypeForDay(day);
+  let songTitle: string | undefined;
+  let artistName = "th3scr1b3";
+  let lyrics: string | undefined;
+  let outfitChoice: string | undefined;
+  let girlArchetype = DEFAULT_GIRL_DESCRIPTIONS;
+
+  if (typeof options === 'object' && options !== null) {
+    songTitle = options.songTitle;
+    artistName = options.artistName || artistName;
+    lyrics = options.lyrics;
+    outfitChoice = options.outfitChoice;
+    if (options.girlArchetype) girlArchetype = options.girlArchetype;
+  } else if (typeof options === 'string') {
+    songTitle = options;
+  }
+
+  const trackName = songTitle || `Track Day ${day}`;
+  const lyricText = lyrics || art.description;
+  const outfitSpec = outfitChoice ? `${art.outfitDescription}, ${outfitChoice}` : art.outfitDescription;
+
+  return `Widescreen 16:9 letterbox artwork presentation for "365 Days of Light & Dark".
+Centered in the frame is a physical vinyl record jacket showcasing ${art.artType} art.
+Top Title Typography: Prominently featured across the top of the record jacket is the track title "${trackName}" rendered as masterwork ${art.graffitiStyle.name} graffiti — ${art.graffitiStyle.description}, surrounded by artistic characters, stars, clouds, and spray-paint drips.
+Bottom Banner Text: Running along the bottom of the record jacket inside a decorative ${art.artType} scroll banner is hand-lettered text reading: "Day ${day} of ${artistName}'s 365 days of light and dark".
+Slipping out from inside the record jacket is a sleek vinyl LP disc on central display.
+Lyrics driving the mood and story:
+"${lyricText}"
+The album cover artwork itself features ${girlArchetype} in ${outfitSpec} dynamically and seductively posed in ${art.artType} style, visually acting out, embodying, and portraying the core underlying conflict and emotional struggle of the lyrics above.
+The surrounding background is a seamless, full-color wide-angle continuation and extension of the cover artwork itself — organically expanding the surreal ${art.artType} world, vibrant blacklight illumination, and psychedelic scenery beyond the borders of the central record jacket across the entire 16:9 widescreen frame.
+The composition utilizes a striking ${art.colorCombo.name} color palette. Masterpiece, 8K, ultra-detailed, high contrast, surreal, evocative. --ar 16:9`;
+}
+
+/**
  * Generates all 365 prompts in a single formatted markdown collection string.
  */
-export function generateAll365Prompts(options?: PromptOptions): string {
+export function generateAll365Prompts(options?: PromptOptions, mode: 'square' | 'vinyl' = 'square'): string {
   const lines: string[] = [];
   lines.push('# 365 Days of Light and Dark - Master Artwork Prompt Collection\n');
   
@@ -465,7 +505,7 @@ export function generateAll365Prompts(options?: PromptOptions): string {
     lines.push(`- **Outfit Style**: ${OUTFIT_STYLES[art.outfitStyle].label} (${art.outfitDescription})`);
     lines.push(`- **Colors**: ${art.colorCombo.name}`);
     lines.push('```text');
-    lines.push(generateArtPromptForDay(day, options));
+    lines.push(mode === 'vinyl' ? generateGirlVinylPromptForDay(day, options) : generateArtPromptForDay(day, options));
     lines.push('```\n');
   }
 
