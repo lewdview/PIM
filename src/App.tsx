@@ -78,7 +78,8 @@ function GlobalMenuBackground() {
   const [isLegacy, setIsLegacy] = useState(false);
   const [location] = useLocation();
   const [dailyCover, setDailyCover] = useState<string | null>(null);
-  const { currentTrack } = useGlobalPlayer();
+  // ⚡ Bolt: Granular selector to prevent re-rendering entire app on time updates
+  const currentTrack = useGlobalPlayer(s => s.currentTrack);
 
   useEffect(() => {
     try {
