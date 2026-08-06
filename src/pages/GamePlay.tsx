@@ -1382,6 +1382,7 @@ export default function Game() {
   }
   const lastTapTimeRef = useRef<number[]>([0, 0, 0]);
   const lastMilestoneRef = useRef<number>(0);
+  const tunnelComboFlashRef = useRef<{ lastCombo: number; flashStartMs: number }>({ lastCombo: 0, flashStartMs: 0 });
   const milestoneFxRef = useRef<MilestoneEffect[]>([]);
   const remixFlashUntilRef = useRef<number>(0);
   const remixEffectNameRef = useRef<string | null>(null);
@@ -1392,6 +1393,7 @@ export default function Game() {
   const scanPatternRef = useRef<CanvasPattern | null>(null);
   const lastMedalRef = useRef<string>("NONE");
   const ambientParticlesRef = useRef<AmbientParticle[]>([]);
+  const tunnelParticlesRef = useRef<{z: number; size: number; speed: number; ang: number; rad: number}[]>([]);
   const lastFrameTimeRef = useRef<number>(performance.now());
   const medalStampRef = useRef<{ medal: string; startT: number } | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -2988,6 +2990,12 @@ export default function Game() {
       }
     }
 
+    // Track combo changes for tunnel POV flash effect
+    if (gs.combo > tunnelComboFlashRef.current.lastCombo && gs.combo > 0) {
+      tunnelComboFlashRef.current.flashStartMs = performance.now();
+    }
+    tunnelComboFlashRef.current.lastCombo = gs.combo;
+
     // Combo milestone tracking
     if (gs.combo === 0) {
       lastMilestoneRef.current = 0;
@@ -3503,6 +3511,7 @@ export default function Game() {
 
       const beatPulseVal = Math.pow(Math.sin(((t * (bpmVal / 60) * swirlSpeedMult) % 1) * Math.PI), 3);
       const swirlAngle = t * 0.9 * swirlSpeedMult; // Continuous rotational vortex swirl
+      const isOverdrive = calculatedStage === 5 && swirlSpeedMult >= 2.0;
 
       if (tunnelOpacity > 0) {
         ctx.globalAlpha = tunnelOpacity;
@@ -3516,8 +3525,28 @@ export default function Game() {
         ctx.fillStyle = tunnelBg;
         ctx.fillRect(0, 0, W, H);
 
+        // Stage 5: Speed lines radiating from vanishing point
+        if (isOverdrive) {
+          ctx.save();
+          ctx.translate(cx, vanishingY);
+          ctx.globalAlpha = 0.4 + beatPulseVal * 0.3;
+          for (let i = 0; i < 20; i++) {
+             const ang = (i / 20) * Math.PI * 2 + t * 4;
+             const len = W * 0.8;
+             ctx.beginPath();
+             ctx.moveTo(Math.cos(ang) * 50, Math.sin(ang) * 50);
+             ctx.lineTo(Math.cos(ang) * len, Math.sin(ang) * len);
+             ctx.strokeStyle = `rgba(150, 255, 150, ${Math.random() * 0.5})`;
+             ctx.lineWidth = 1.5;
+             ctx.stroke();
+          }
+          ctx.restore();
+        }
+
         // 2. Full 360° 3D Cylindrical Tunnel Depth Rings with Swirl Rotation
         const depthDepths = [0.06, 0.18, 0.35, 0.55, 0.75, 0.95];
+        ctx.globalCompositeOperation = "screen";
+        
         depthDepths.forEach((p, idx) => {
           const ringY = lerp(vanishingY, H * 0.52, p);
           const ringRadiusX = lerp(W * 0.10, W * 0.64, p);
@@ -3525,21 +3554,42 @@ export default function Game() {
           const ringAlpha = lerp(0.22, 0.8, p) * (0.85 + beatPulseVal * 0.3);
 
           const isCyan = idx % 2 === 0;
-          const mainColor = isCyan ? 'rgba(0, 229, 255,' : 'rgba(255, 20, 147,';
           const ringSwirl = swirlAngle + p * 1.5;
 
           ctx.save();
           ctx.translate(cx, ringY);
           ctx.rotate(ringSwirl * 0.12);
 
-          // Full 360 degree 3D Tunnel Cylinder Ring with Neon Glow
-          ctx.strokeStyle = `${mainColor}${ringAlpha})`;
-          ctx.lineWidth = lerp(1.8, 5.2, p);
-          ctx.shadowColor = isCyan ? '#00E5FF' : '#FF1493';
-          ctx.shadowBlur = lerp(6, 18, p);
+          const lineWidth = lerp(1.8, 5.2, p);
+          
+          // Enhanced Chromatic Rings
+          const baseR = isOverdrive ? (isCyan ? 50 : 255) : (isCyan ? 0 : 255);
+          const baseG = isOverdrive ? 255 : (isCyan ? 229 : 20);
+          const baseB = isOverdrive ? (isCyan ? 50 : 255) : (isCyan ? 255 : 147);
+          
+          const chromOffset = 2 + beatPulseVal * 3;
 
+          // Red channel offset
+          ctx.beginPath();
+          ctx.ellipse(-chromOffset, 0, ringRadiusX, ringRadiusY, 0, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(255, 0, 0, ${ringAlpha * 0.7})`;
+          ctx.lineWidth = lineWidth;
+          ctx.stroke();
+          
+          // Blue channel offset
+          ctx.beginPath();
+          ctx.ellipse(chromOffset, 0, ringRadiusX, ringRadiusY, 0, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(0, 100, 255, ${ringAlpha * 0.7})`;
+          ctx.lineWidth = lineWidth;
+          ctx.stroke();
+
+          // Main Ring
           ctx.beginPath();
           ctx.ellipse(0, 0, ringRadiusX, ringRadiusY, 0, 0, Math.PI * 2);
+          ctx.strokeStyle = `rgba(${baseR}, ${baseG}, ${baseB}, ${ringAlpha})`;
+          ctx.lineWidth = lineWidth;
+          ctx.shadowColor = `rgb(${baseR}, ${baseG}, ${baseB})`;
+          ctx.shadowBlur = lerp(6, 18, p);
           ctx.stroke();
 
           // 3D Rotational Perspective Tunnel Wall Ribs (12 swirling rays)
@@ -3556,17 +3606,67 @@ export default function Game() {
               const angle = (a / raysCount) * Math.PI * 2;
               const x1 = Math.cos(angle) * ringRadiusX;
               const y1 = Math.sin(angle) * ringRadiusY;
-              const nextAngle = angle + 0.12; // Swirl curve offset
+              const nextAngle = angle + 0.15; // Swirl curve offset
               const x2 = Math.cos(nextAngle) * nextRx;
               const y2 = (nextY - ringY) + Math.sin(nextAngle) * nextRy;
+              
+              const cpX = x1 + (x2 - x1) * 0.5 + Math.cos(angle + Math.PI/2) * (nextRx * 0.15);
+              const cpY = y1 + (y2 - y1) * 0.5 + Math.sin(angle + Math.PI/2) * (nextRy * 0.15);
+
               ctx.beginPath();
               ctx.moveTo(x1, y1);
-              ctx.lineTo(x2, y2);
+              ctx.quadraticCurveTo(cpX, cpY, x2, y2);
               ctx.stroke();
             }
           }
           ctx.restore();
         });
+        
+        ctx.globalCompositeOperation = "source-over";
+
+        // Particle Dust/Stars in the Tunnel
+        if (tunnelParticlesRef.current.length === 0) {
+          for (let i = 0; i < 30; i++) {
+            tunnelParticlesRef.current.push({
+              ang: Math.random() * Math.PI * 2,
+              rad: Math.random() * W * 0.8,
+              z: Math.random(), // 0 (near) to 1 (far)
+              speed: 0.002 + Math.random() * 0.005,
+              size: 1 + Math.random() * 2.5
+            });
+          }
+        }
+
+        const pSpeedMult = swirlSpeedMult * 1.5;
+        tunnelParticlesRef.current.forEach(p => {
+          p.z -= p.speed * pSpeedMult;
+          p.ang += 0.002 * swirlSpeedMult;
+          if (p.z <= 0) {
+            p.z = 1.0;
+            p.rad = W * 0.1 + Math.random() * W * 0.7;
+            p.ang = Math.random() * Math.PI * 2;
+          }
+          // render particle
+          const pScale = 1.0 - p.z;
+          const px = cx + Math.cos(p.ang) * p.rad * pScale;
+          const py = vanishingY + Math.sin(p.ang) * (p.rad * 0.6) * pScale;
+          
+          ctx.beginPath();
+          ctx.arc(px, py, p.size * pScale * 2, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(255, 255, 255, ${pScale * 0.8})`;
+          ctx.fill();
+        });
+
+        // Stage 5 Edge Chromatic Aberration
+        if (isOverdrive) {
+           const edgeGlow = ctx.createLinearGradient(0, 0, W, 0);
+           edgeGlow.addColorStop(0, "rgba(255, 0, 50, 0.15)");
+           edgeGlow.addColorStop(0.1, "rgba(0, 0, 0, 0)");
+           edgeGlow.addColorStop(0.9, "rgba(0, 0, 0, 0)");
+           edgeGlow.addColorStop(1, "rgba(0, 100, 255, 0.15)");
+           ctx.fillStyle = edgeGlow;
+           ctx.fillRect(0, 0, W, H);
+        }
       }
 
       // ── 3. 3D Circular Judgment Target Strike Zones (Deep Drop Shadows & Neon Rim Glow) ──
@@ -3579,18 +3679,35 @@ export default function Game() {
 
         const isPressed = laneRef.current[lane]?.pressed;
         const laneColor = laneColorsRef.current[lane] || '#00E5FF';
+        
+        // Pulse scale
+        const scalePulse = 1.0 + beatPulseVal * 0.05;
+        const rx = targetRadiusX * scalePulse;
+        const ry = targetRadiusY * scalePulse;
 
         ctx.save();
+        ctx.translate(laneCenterX, hitY);
 
         // Track floor drop shadow under target
         ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
         ctx.beginPath();
-        ctx.ellipse(laneCenterX, hitY + 4, targetRadiusX * 1.05, targetRadiusY * 1.05, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 4, rx * 1.05, ry * 1.05, 0, 0, Math.PI * 2);
         ctx.fill();
+
+        // Rotating dashed outer ring
+        ctx.save();
+        ctx.rotate(t * 2);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, rx * 1.15, ry * 1.15, 0, 0, Math.PI * 2);
+        ctx.strokeStyle = colorWithAlpha(laneColor, 0.4);
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([8, 6]);
+        ctx.stroke();
+        ctx.restore();
 
         // Outer glowing neon strike ring
         ctx.beginPath();
-        ctx.ellipse(laneCenterX, hitY, targetRadiusX, targetRadiusY, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
         ctx.strokeStyle = isPressed ? '#FFFFFF' : colorWithAlpha(laneColor, 0.95);
         ctx.lineWidth = isPressed ? 5.5 : 3.2;
         ctx.shadowColor = laneColor;
@@ -3599,21 +3716,107 @@ export default function Game() {
 
         // Inner target circle
         ctx.beginPath();
-        ctx.ellipse(laneCenterX, hitY, targetRadiusX * 0.55, targetRadiusY * 0.55, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, rx * 0.55, ry * 0.55, 0, 0, Math.PI * 2);
         ctx.strokeStyle = isPressed ? '#FFFFFF' : colorWithAlpha(laneColor, 0.7);
         ctx.lineWidth = 2.0;
         ctx.stroke();
 
         // Center crosshair / pulse dot
         ctx.beginPath();
-        ctx.arc(laneCenterX, hitY, isPressed ? 8 : 4.5, 0, Math.PI * 2);
+        ctx.arc(0, 0, isPressed ? 8 : 4.5, 0, Math.PI * 2);
         ctx.fillStyle = isPressed ? '#FFFFFF' : laneColor;
         ctx.shadowBlur = isPressed ? 20 : 8;
         ctx.fill();
 
+        // Brief radial burst effect when pressed
+        if (isPressed) {
+           ctx.beginPath();
+           ctx.ellipse(0, 0, rx * 1.3, ry * 1.3, 0, 0, Math.PI * 2);
+           ctx.strokeStyle = colorWithAlpha(laneColor, 0.6);
+           ctx.lineWidth = 2;
+           ctx.stroke();
+        }
+
         ctx.restore();
       }
 
+      ctx.restore();
+    }
+
+    // ── 3D TUNNEL MODE: MASSIVE COMBO COUNTER ──
+    if ((isCyberTunnelPov || (isDynamicStagePov && calculatedStage >= 3)) && gs.combo > 0) {
+      const comboFlashAge = nowMs - tunnelComboFlashRef.current.flashStartMs;
+      const FLASH_DURATION = 320; // ms for the flash-in
+      const FADE_DURATION = 180; // ms for settling
+      
+      // Flash scale: starts at 3x settled, eases to 1x settled over FLASH_DURATION
+      let flashScale = 1.0;
+      if (comboFlashAge < FLASH_DURATION) {
+        const t = comboFlashAge / FLASH_DURATION;
+        // Elastic ease-out: overshoots slightly then settles
+        flashScale = 1.0 + 2.0 * Math.pow(1 - t, 2.5);
+      }
+      
+      const baseSize = 110; // 5x normal 22px combo text
+      const fontSize = Math.round(baseSize * flashScale);
+      const comboY = H * 0.16;
+      
+      // Beat-reactive glow intensity
+      const bpmForPulse = songRef.current?.bpm || 120;
+      const beatPhase = ((t * (bpmForPulse / 60)) % 1);
+      const beatGlow = Math.pow(Math.sin(beatPhase * Math.PI), 3);
+      
+      // Color: cyan base, hot pink on milestones (50, 100, etc)
+      const isMilestone = gs.combo % 50 === 0 && gs.combo >= 50;
+      const isHundred = gs.combo % 100 === 0 && gs.combo >= 100;
+      const mainColor = isHundred ? '#39FF14' : isMilestone ? '#FF1493' : '#00E5FF';
+      
+      // Flash alpha pop
+      let comboAlpha = 0.92;
+      if (comboFlashAge < FLASH_DURATION) {
+        comboAlpha = 1.0;
+      }
+      
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      
+      // Deep shadow layer for depth
+      ctx.shadowColor = mainColor;
+      ctx.shadowBlur = 40 + beatGlow * 30;
+      ctx.fillStyle = `rgba(0, 0, 0, ${comboAlpha * 0.5})`;
+      ctx.font = `900 ${fontSize}px "Impact", "Arial Black", sans-serif`;
+      ctx.fillText(`x${gs.combo}`, W / 2 + 3, comboY + 3);
+      
+      // Outer neon glow text (larger blur)
+      ctx.shadowBlur = 60 + beatGlow * 40;
+      ctx.shadowColor = mainColor;
+      ctx.fillStyle = colorWithAlpha(mainColor, comboAlpha * 0.35);
+      ctx.fillText(`x${gs.combo}`, W / 2, comboY);
+      
+      // Main bright text
+      ctx.shadowBlur = 20 + beatGlow * 20;
+      ctx.fillStyle = `rgba(255, 255, 255, ${comboAlpha})`;
+      ctx.fillText(`x${gs.combo}`, W / 2, comboY);
+      
+      // Hot inner core glow on flash
+      if (comboFlashAge < FLASH_DURATION * 1.5) {
+        const coreAlpha = Math.max(0, 1.0 - comboFlashAge / (FLASH_DURATION * 1.5)) * 0.6;
+        ctx.shadowBlur = 80;
+        ctx.shadowColor = '#FFFFFF';
+        ctx.fillStyle = `rgba(255, 255, 255, ${coreAlpha})`;
+        ctx.fillText(`x${gs.combo}`, W / 2, comboY);
+      }
+      
+      // Small "COMBO" label below the number
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = mainColor;
+      ctx.font = `900 ${Math.round(fontSize * 0.18)}px "Space Mono", monospace`;
+      ctx.fillStyle = colorWithAlpha(mainColor, comboAlpha * 0.75);
+      ctx.letterSpacing = '0.35em';
+      ctx.fillText('COMBO', W / 2, comboY + fontSize * 0.42);
+      ctx.letterSpacing = '0px';
+      
       ctx.restore();
     }
 
