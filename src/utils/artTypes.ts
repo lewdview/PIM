@@ -294,6 +294,17 @@ const ART_TYPE_NAMES: string[] = [
   'Fluid Cyan Paint Pour', 'Steampunk Copper Pressure Gauge Clock', 'Futuristic Orbital Habitat', 'Vogue Clear PVC Trenchcoat',
   'Glitch Digital Matrix Glitch', 'Subterranean Sapphire Gemstone', 'Chromatic Spectrum Wave', 'Cyberpunk Neon Cybernetic Eye',
   'Botanical Sakura Petal Shower', 'Liquid Platinum Drop Stream', 'Solarized Ultraviolet Neon Wave', 'Cybernetic Chimera Wings',
+  'High-Gloss Leather Jumpsuit', 'Retrofuturism Rocket Propulsion', 'Astral Galaxy Core Void', 'Luminous Electric Eel Glow Swarm',
+  'Celestial Prism Starlight Aura', 'Neo-Gothic Blood Moon Cathedral', 'Hyper-Dimensional Tesseract Wireframe', 'Radiant Gold Filigree Brocade',
+  'Cyberpunk Cyber-Blade Duelist', 'Vaporwave Arcade Sunset Sky', 'Bioluminescent Abyss Siren', 'Solartype Vintage Cyanotype Print',
+  'Surrealist Liquid Gold Horizon', 'Minimalist Ink Splatter Zen', 'Futuristic Quantum Energy Reactor', 'High-Fashion Latex Bustier',
+  'Art Nouveau Floral Scrollwork', 'Industrial Cybernetic Exoskeleton', 'Sub-Zero Glacial Ice Cavern', 'Chiaroscuro Velvet Shadow Portrait',
+  'Kintsugi Ruby Gold Crackle', 'Steampunk Brass Clockwork Heart', 'Cyberpunk Holo-Projection Avatar', 'Vogue Clear Acrylic Corset',
+  'Retrofuturism Atomic Space Cruiser', 'Astral Constellation Zodiac Map', 'Microscopic Quantum Particle Swarm', 'Decopunk Streamline Locomotive',
+  'Bio-Mechanical Neural Cyber-Spine', 'Fluid Iridescent Paint Swirl', 'Glitch VHS Digital Artifacts', 'Dark Gothic Raven Queen',
+  'Opaline Dichroic Crystal Shard', 'Bioluminescent Deep Trench Flora', 'Cybernetic Valkyrie Shield', 'High-Gloss Wet-Look Leather',
+  'Vaporwave Japanese City Pop Night', 'Celestial Galaxy Core Portal', 'Surreal Floating Island Laputa', 'Art Deco Gilded Sunburst Tower',
+  'Minimalist Single-Line Elegance', 'Hyper-Speed Urban Light Trails', 'Masterpiece 1:1 Cyberpunk Vixen'
 ];
 
 export interface ArtTypeData {
@@ -384,23 +395,79 @@ export function getArtTypesByCategory(category: string): ArtTypeData[] {
   );
 }
 
+export interface PromptOptions {
+  songTitle?: string;
+  artistName?: string;
+  lyrics?: string;
+  outfitChoice?: string;
+  girlArchetype?: string;
+  cameraAngle?: string;
+  aspectRatio?: string;
+}
+
+const DEFAULT_GIRL_DESCRIPTIONS = "Beautiful bombshell curvaceous women with igg utts in stylized bikinis, stockings, pajamas, pig tails, lingerie, platform heels, thongs, micro-bikinis, booty shorts, nude form fitting leather, nightwear, school outfits from japan, body paint or yogawear";
+
 /**
  * Generate a complete 1:1 Special Artwork Prompt for generating cover art assets for a specific day/song.
  */
 export function generateArtPromptForDay(
   day: number,
-  songTitle?: string,
-  artistName: string = "th3scr1b3",
-  lyrics?: string
+  options?: PromptOptions | string,
+  legacyArtist: string = "th3scr1b3",
+  legacyLyrics?: string
 ): string {
   const art = getArtTypeForDay(day);
+  
+  let songTitle: string | undefined;
+  let artistName = legacyArtist;
+  let lyrics = legacyLyrics;
+  let outfitChoice: string | undefined;
+  let girlArchetype = DEFAULT_GIRL_DESCRIPTIONS;
+  let cameraAngle = "flat front-facing album cover illustration filling the square frame edge-to-edge, NO vinyl record disc, NO physical mockup, NO background margins";
+  let ar = "--ar 1:1";
+
+  if (typeof options === 'object' && options !== null) {
+    songTitle = options.songTitle;
+    artistName = options.artistName || legacyArtist;
+    lyrics = options.lyrics;
+    outfitChoice = options.outfitChoice;
+    if (options.girlArchetype) girlArchetype = options.girlArchetype;
+    if (options.cameraAngle) cameraAngle = options.cameraAngle;
+    if (options.aspectRatio) ar = options.aspectRatio;
+  } else if (typeof options === 'string') {
+    songTitle = options;
+  }
+
   const trackName = songTitle || `Track Day ${day}`;
   const lyricText = lyrics || art.description;
+  const outfitSpec = outfitChoice ? `${art.outfitDescription}, ${outfitChoice}` : art.outfitDescription;
 
-  return `Direct 1:1 Square Album Cover Art (flat front-facing album cover illustration filling the square frame edge-to-edge, NO vinyl record disc, NO physical mockup, NO background margins).
+  return `Direct 1:1 Square Album Cover Art (${cameraAngle}).
 Artistic Style: Rendered in stunning ${art.artType} style — ${art.description}.
 Top Title Typography: Prominently featured across the top of the illustration is the track title "${trackName}" rendered as masterwork ${art.graffitiStyle.name} graffiti — ${art.graffitiStyle.description}, surrounded by artistic characters, stars, clouds, and spray-paint drips.
 Bottom Banner Text: Running along the bottom of the illustration inside a decorative scroll banner is hand-lettered text reading: "Day ${day} of ${artistName}'s 365 days of light and dark".
-Central Visual Imagery: Beautiful bombshell curvaceous women with igg utts in stylized bikinis, stockings, pajamas, pig tails, lingerie, platform heels, thongs, micro-bikinis, booty shorts, nude form fitting leather, nightwear, school outfits from japan, body paint or yogawear dynamically and seductively posed in ${art.artType} style, visually acting out, embodying, and portraying the core underlying conflict and emotional struggle of the lyrics: "${lyricText}".
-Aesthetic & Colors: ${art.description}, deep shadows, and a striking ${art.colorCombo.name} color palette. Masterpiece, 8K resolution, ultra-detailed, high contrast, surreal, evocative, --ar 1:1`;
+Central Visual Imagery: ${girlArchetype} in ${outfitSpec} dynamically and seductively posed in ${art.artType} style, visually acting out, embodying, and portraying the core underlying conflict and emotional struggle of the lyrics: "${lyricText}".
+Aesthetic & Colors: ${art.description}, deep shadows, and a striking ${art.colorCombo.name} color palette. Masterpiece, 8K resolution, ultra-detailed, high contrast, surreal, evocative, ${ar}`;
+}
+
+/**
+ * Generates all 365 prompts in a single formatted markdown collection string.
+ */
+export function generateAll365Prompts(options?: PromptOptions): string {
+  const lines: string[] = [];
+  lines.push('# 365 Days of Light and Dark - Master Artwork Prompt Collection\n');
+  
+  for (let day = 1; day <= 365; day++) {
+    const art = getArtTypeForDay(day);
+    lines.push(`### Day ${day}: Track Day ${day}`);
+    lines.push(`- **Art Style**: ${art.artType}`);
+    lines.push(`- **Graffiti Style**: ${art.graffitiStyle.name}`);
+    lines.push(`- **Outfit Style**: ${OUTFIT_STYLES[art.outfitStyle].label} (${art.outfitDescription})`);
+    lines.push(`- **Colors**: ${art.colorCombo.name}`);
+    lines.push('```text');
+    lines.push(generateArtPromptForDay(day, options));
+    lines.push('```\n');
+  }
+
+  return lines.join('\n');
 }

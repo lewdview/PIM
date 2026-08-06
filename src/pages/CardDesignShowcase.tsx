@@ -1,12 +1,13 @@
 import { useState, createContext, useContext } from 'react';
 import type { VaultCard } from '../services/vaultService';
 import type { Rarity } from '../utils/rarity';
-import { Volume2, Play, ChevronLeft, Layers, Zap, Flame, RotateCcw, Search, Copy, Check, Sparkles as SparklesIcon } from 'lucide-react';
+import { Volume2, Play, ChevronLeft, Layers, Zap, Flame, RotateCcw, Search, Copy, Check, Sparkles as SparklesIcon, Download } from 'lucide-react';
 import {
   getArtTypeForDay,
   getAllArtTypes,
   OUTFIT_STYLES,
   generateArtPromptForDay,
+  generateAll365Prompts,
   type OutfitStyle,
 } from '../utils/artTypes';
 import '../styles/CardShowcaseStyles.css';
@@ -2358,11 +2359,26 @@ function Art365ShowcaseView() {
     return matchesOutfit && matchesSearch;
   });
 
+  const [exported, setExported] = useState(false);
+
   const handleCopyPrompt = (day: number) => {
     const prompt = generateArtPromptForDay(day);
     navigator.clipboard.writeText(prompt);
     setCopiedDay(day);
     setTimeout(() => setCopiedDay(null), 2000);
+  };
+
+  const handleExportAll = () => {
+    const fullMarkdown = generateAll365Prompts();
+    const blob = new Blob([fullMarkdown], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '365_Days_Light_and_Dark_1of1_Prompts.md';
+    a.click();
+    URL.revokeObjectURL(url);
+    setExported(true);
+    setTimeout(() => setExported(false), 2500);
   };
 
   return (
@@ -2373,7 +2389,16 @@ function Art365ShowcaseView() {
             <SparklesIcon className="w-5 h-5 text-[#00f0ff] animate-pulse" />
             365 Art Types & Outfit Specs Matrix
           </span>
-          <span className="text-xs text-white/50 font-normal">365 Unique Aesthetics • 16 Outfit Materials</span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleExportAll}
+              className="px-3 py-1.5 rounded text-xs font-mono font-bold uppercase transition-all bg-[#00f0ff]/20 text-[#00f0ff] border border-[#00f0ff]/60 hover:bg-[#00f0ff]/30 flex items-center gap-1.5"
+            >
+              <Download size={14} />
+              {exported ? 'Downloaded 365 Prompts!' : 'Export All 365 Prompts (.md)'}
+            </button>
+            <span className="text-xs text-white/50 font-normal hidden sm:inline">365 Unique Aesthetics • 16 Outfit Materials</span>
+          </div>
         </h2>
         <p className="text-[11px] text-white/60 mt-2 max-w-3xl font-mono uppercase tracking-wider leading-relaxed">
           Master registry mapping 365 unique art styles, curated color combinations, and signature outfit materials (Shiny Vinyl, Pastel Dream, Clear PVC, Leather, Silk, Lace, Latex, Velvet, Metallic, Chrome, Mesh, and more) for AI artwork generation across all 365 vault release days.
