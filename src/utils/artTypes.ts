@@ -440,7 +440,9 @@ export function generateArtPromptForDay(
 
   const trackName = songTitle || `Track Day ${day}`;
   const lyricText = lyrics || art.description;
-  const outfitSpec = outfitChoice ? `${art.outfitDescription}, ${outfitChoice}` : art.outfitDescription;
+  const outfitLabel = OUTFIT_STYLES[art.outfitStyle]?.label || 'Stylized';
+  const outfitDetails = outfitChoice ? `${art.outfitDescription}, custom ${outfitChoice}` : art.outfitDescription;
+  const outfitSpec = `${outfitLabel} outfits (${outfitDetails})`;
 
   return `Direct 1:1 Square Album Cover Art (${cameraAngle}).
 Artistic Style: Rendered in stunning ${art.artType} style — ${art.description}.
@@ -476,7 +478,9 @@ export function generateGirlVinylPromptForDay(
 
   const trackName = songTitle || `Track Day ${day}`;
   const lyricText = lyrics || art.description;
-  const outfitSpec = outfitChoice ? `${art.outfitDescription}, ${outfitChoice}` : art.outfitDescription;
+  const outfitLabel = OUTFIT_STYLES[art.outfitStyle]?.label || 'Stylized';
+  const outfitDetails = outfitChoice ? `${art.outfitDescription}, custom ${outfitChoice}` : art.outfitDescription;
+  const outfitSpec = `${outfitLabel} outfits (${outfitDetails})`;
 
   return `Widescreen 16:9 letterbox artwork presentation for "365 Days of Light & Dark".
 Centered in the frame is a physical vinyl record jacket showcasing ${art.artType} art.
