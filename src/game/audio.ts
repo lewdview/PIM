@@ -29,6 +29,10 @@ export type SfxName =
   | 'mine_explosion'
   | 'overdrive_activate'
   | 'remix_stem'
+  | 'powerup_t1'
+  | 'powerup_t2'
+  | 'powerup_t3'
+  | 'tunnel_transition'
   | 'continue?'
   | 'countdown'
   | 'gameover_countdown'
@@ -92,6 +96,10 @@ const SFX_FILES: Record<SfxName, string> = {
   mine_explosion:         'audio499',
   overdrive_activate:     'audio205',
   remix_stem:             'audio637',
+  powerup_t1:             'audio417',
+  powerup_t2:             'audio580',
+  powerup_t3:             'audio420',
+  tunnel_transition:      'audio207',
   'continue?':            'continue?',
   countdown:              'countdown',
   gameover_countdown:     'gameover_countdown',
@@ -147,6 +155,11 @@ const PRELOAD_LIST: SfxName[] = [
   'mine_explosion',
   'overdrive_activate',
   'remix_stem',
+  'powerup_t1',
+  'powerup_t2',
+  'powerup_t3',
+  'tunnel_transition',
+  'inbetween',
   // Results
   'reveal',
   'open_chest',

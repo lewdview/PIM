@@ -162,7 +162,20 @@ export default function DecryptionAnimation({ reward, onClose }: DecryptionAnima
       // Transition to revealed phase once particles settle
       if (elapsed > 1600 && phaseRef.current === 'bursting') {
         setPhase('revealed');
-        audioManager.playSfx('song_completion', 0.85);
+        const cardRarity = reward.details?.card?.rarity || reward.details?.card?.card?.rarity;
+        if (cardRarity === 'legendary') {
+          audioManager.playSfx('mythic_get', 1.0);
+        } else if (cardRarity === 'epic' || cardRarity === 'platinum') {
+          audioManager.playSfx('platinum_get', 0.9);
+        } else if (cardRarity === 'rare') {
+          audioManager.playSfx('gold_get', 0.85);
+        } else if (cardRarity === 'uncommon') {
+          audioManager.playSfx('silver_get', 0.8);
+        } else if (cardRarity === 'common') {
+          audioManager.playSfx('bronxe_get', 0.75);
+        } else {
+          audioManager.playSfx('song_completion', 0.85);
+        }
       }
 
       if (activeParticles.length > 0 || elapsed < 2500) {

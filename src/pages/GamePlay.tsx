@@ -1869,12 +1869,16 @@ export default function Game() {
           gameSenseService.sendPowerup(code);
           if (pw.type === "SIGNAL_LOCK") {
             shieldChargesRef.current = 2;
-            // Distinct stinger for the defensive shield power-up
-            audioManager.playSfx("hidden_secret_found", 0.9);
+            audioManager.playSfx("powerup_t1", 0.85);
             haptics.fusionSuccess();
+          } else if (pw.threshold === 40) {
+            audioManager.playSfx("powerup_t2", 0.85);
+            haptics.heavyTap();
+          } else if (pw.threshold === 60) {
+            audioManager.playSfx("powerup_t3", 0.90);
+            haptics.heavyTap();
           } else {
-            // Energetic activation for FEVER / SURGE
-            audioManager.playSfx("fusion", 0.75);
+            audioManager.playSfx("powerup_t1", 0.80);
             haptics.heavyTap();
           }
           break;
@@ -2950,6 +2954,9 @@ export default function Game() {
           else targetPov = 'classic';
 
           if (targetPov !== activePovModeRef.current) {
+            if (targetPov === '3d-cyber-tunnel') {
+              audioManager.playSfx('tunnel_transition', 0.85);
+            }
             povTransitionRef.current = {
               startTime: Date.now(),
               duration: 700,
@@ -2977,7 +2984,7 @@ export default function Game() {
         if (calculatedStage === 5) {
           audioManager.playSfx("overdrive_activate", 0.85);
         } else {
-          audioManager.playSfx("fusion", 0.7);
+          audioManager.playSfx("inbetween", 0.80);
         }
         if (stingerTimeout1Ref.current) clearTimeout(stingerTimeout1Ref.current);
         if (stingerTimeout2Ref.current) clearTimeout(stingerTimeout2Ref.current);

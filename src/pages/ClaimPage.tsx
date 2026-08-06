@@ -302,6 +302,7 @@ export default function ClaimPage() {
           details.card = parent;
         }
 
+        audioManager.playSfx("hidden_secret_found", 0.95);
         setAnimationReward({
           type: res.rewardType,
           value: res.rewardValue,
@@ -311,15 +312,14 @@ export default function ClaimPage() {
         });
         setCodeState('success');
         setBonusCode('');
-
-        // Refresh store balances in background
-        await loadVaultData();
+        window.dispatchEvent(new Event('vault:points_updated'));
       } else {
-        audioManager.playSfx('error', 0.6);
-        setCodeError(res.error || 'Invalid or expired code.');
+        audioManager.playSfx("locked_out", 0.8);
+        setCodeError(res.error || 'Failed to redeem bonus code. Please try again.');
         setCodeState('error');
       }
     } catch (err: any) {
+      audioManager.playSfx("error", 0.8);
       useLoadingToast.getState().hide();
       audioManager.playSfx('error', 0.6);
       setCodeError(err.message || 'Verification link failed.');
