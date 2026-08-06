@@ -24,6 +24,11 @@ export type SfxName =
   | 'bing_before_platinum'
   | 'queue_before_mythic'
   | 'tap_nav'
+  | 'swipe'
+  | 'tap_perfect'
+  | 'mine_explosion'
+  | 'overdrive_activate'
+  | 'remix_stem'
   | 'continue?'
   | 'countdown'
   | 'gameover_countdown'
@@ -82,6 +87,11 @@ const SFX_FILES: Record<SfxName, string> = {
   queue_before_mythic:    'que_before_mythic',
   // Navigation tap — crisp short blip, NOT the back sound
   tap_nav:                'select_high_short',
+  swipe:                  'swipe_sound',
+  tap_perfect:            'audio218',
+  mine_explosion:         'audio499',
+  overdrive_activate:     'audio205',
+  remix_stem:             'audio637',
   'continue?':            'continue?',
   countdown:              'countdown',
   gameover_countdown:     'gameover_countdown',
@@ -132,6 +142,11 @@ const PRELOAD_LIST: SfxName[] = [
   'hidden_secret_found',
   'fusion',
   'perfect',
+  'swipe',
+  'tap_perfect',
+  'mine_explosion',
+  'overdrive_activate',
+  'remix_stem',
   // Results
   'reveal',
   'open_chest',
@@ -324,7 +339,7 @@ export class AudioManager {
     effectType: 'vocals_isolate' | 'drums_mute' | 'bass_boost' | 'lead_solo' = 'vocals_isolate',
     durationSec = 4.0
   ): string {
-    this.playSfx('hidden_secret_found', 0.8);
+    this.playSfx('remix_stem', 0.85);
 
     if (this.activeRemixTimeout) {
       window.clearTimeout(this.activeRemixTimeout);

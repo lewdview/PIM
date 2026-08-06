@@ -2045,7 +2045,7 @@ export default function Game() {
         gs.score = Math.max(0, gs.score - 500);
         gs.combo = 0;
         gs.misses++;
-        audioManager.playSfx("error", 0.7);
+        audioManager.playSfx("mine_explosion", 0.85);
         haptics.heavyTap();
         addJudgment({ type: "MISS", lane, id: ++jCounter.current, ts: Date.now() });
         syncDisplay();
@@ -2122,17 +2122,18 @@ export default function Game() {
       gameSenseService.sendCombo(gs.combo);
       if (j === "PERFECT+") {
         gs.perfectPlus++;
-        audioManager.playSfx("tap_nav", 0.15);
+        audioManager.playSfx("tap_perfect", 0.35);
       }
       else if (j === "PERFECT") {
         gs.perfects++;
-        audioManager.playSfx("tap_nav", 0.12);
+        audioManager.playSfx("tap_perfect", 0.25);
       }
       else {
         gs.goods++;
         audioManager.playSfx("tap_nav", 0.15);
       }
-      if (ns.note.type === "swipe") {
+      if (ns.note.type === "swipe" || ns.note.swipeDirection) {
+        audioManager.playSfx("swipe", 0.45);
         haptics.doubleTap();
       } else {
         if (j === "PERFECT+") {
@@ -2973,7 +2974,11 @@ export default function Game() {
       
       const sb = stageBounds.find(s => s.stage === calculatedStage);
       if (sb && prevStage > 0 && calculatedStage > prevStage) {
-        audioManager.playSfx("fusion", 0.7);
+        if (calculatedStage === 5) {
+          audioManager.playSfx("overdrive_activate", 0.85);
+        } else {
+          audioManager.playSfx("fusion", 0.7);
+        }
         if (stingerTimeout1Ref.current) clearTimeout(stingerTimeout1Ref.current);
         if (stingerTimeout2Ref.current) clearTimeout(stingerTimeout2Ref.current);
         
