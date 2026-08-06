@@ -8,6 +8,7 @@ import type { OwnedCard } from '../services/vaultService';
 import { generateCardMetadata, requestNftMint } from '../services/vaultService';
 import { RARITY_CONFIG, getSupplyCap, getMintableCap, type Rarity } from '../utils/rarity';
 import { getCoverUrlForRarity, useSmartCoverArt } from '../utils/rarityArtwork';
+import { getArtTypeForDay, OUTFIT_STYLES } from '../utils/artTypes';
 import RarityBadge from './RarityBadge';
 import AudioPreview from './AudioPreview';
 import { getDayFromDate } from '../utils/dayCalc';
@@ -211,6 +212,44 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
                             {getFragmentsForDay(card.card.day)} / 10 (UNLOCKED)
                           </span>
                         </div>
+                        {(() => {
+                          const artData = getArtTypeForDay(card.card.day);
+                          const outfitMeta = OUTFIT_STYLES[artData.outfitStyle];
+                          return (
+                            <>
+                              <div className="flex justify-between items-center text-[11px] font-mono border-t border-white/5 pt-1.5 mt-1.5">
+                                <span className="opacity-40">Art Spec (#{(card.card.day % 365) || 365}):</span>
+                                <span className="font-bold text-[#00f0ff]">{artData.artType}</span>
+                              </div>
+                              <div className="flex justify-between items-center text-[11px] font-mono">
+                                <span className="opacity-40">Outfit Material:</span>
+                                <span
+                                  className="font-bold px-1.5 py-0.5 rounded text-[9px] uppercase tracking-wider"
+                                  style={{
+                                    background: `${outfitMeta.tagColor}20`,
+                                    color: outfitMeta.tagColor,
+                                    border: `1px solid ${outfitMeta.tagColor}40`,
+                                  }}
+                                >
+                                  {outfitMeta.label}
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-center text-[11px] font-mono">
+                                <span className="opacity-40">Color Combo:</span>
+                                <span className="font-bold flex items-center gap-1.5 text-white/90">
+                                  <span
+                                    className="w-2.5 h-2.5 rounded-full border border-white/20"
+                                    style={{
+                                      background: artData.colorCombo.primary,
+                                      boxShadow: `0 0 6px ${artData.colorCombo.primary}`,
+                                    }}
+                                  />
+                                  <span className="text-[10px]">{artData.colorCombo.name}</span>
+                                </span>
+                              </div>
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
 

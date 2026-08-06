@@ -1,7 +1,14 @@
 import { useState, createContext, useContext } from 'react';
 import type { VaultCard } from '../services/vaultService';
 import type { Rarity } from '../utils/rarity';
-import { Volume2, Play, ChevronLeft, Layers, Zap, Flame, RotateCcw } from 'lucide-react';
+import { Volume2, Play, ChevronLeft, Layers, Zap, Flame, RotateCcw, Search, Copy, Check, Sparkles as SparklesIcon } from 'lucide-react';
+import {
+  getArtTypeForDay,
+  getAllArtTypes,
+  OUTFIT_STYLES,
+  generateArtPromptForDay,
+  type OutfitStyle,
+} from '../utils/artTypes';
 import '../styles/CardShowcaseStyles.css';
 
 // --------------------------------------------------------------------------
@@ -2328,10 +2335,223 @@ export function CardAnime({ card, backSide }: { card: VaultCard; backSide?: Reac
 }
 
 // --------------------------------------------------------------------------
+// 365 ART TYPES & OUTFIT SPECIFICATIONS MATRIX VIEW
+// --------------------------------------------------------------------------
+function Art365ShowcaseView() {
+  const [search, setSearch] = useState('');
+  const [selectedOutfit, setSelectedOutfit] = useState<OutfitStyle | 'all'>('all');
+  const [copiedDay, setCopiedDay] = useState<number | null>(null);
+
+  const allTypes = getAllArtTypes();
+  const outfitKeys = Object.keys(OUTFIT_STYLES) as OutfitStyle[];
+
+  const filtered = allTypes.filter((art) => {
+    const matchesOutfit = selectedOutfit === 'all' || art.outfitStyle === selectedOutfit;
+    const q = search.toLowerCase().trim();
+    const matchesSearch =
+      !q ||
+      art.artType.toLowerCase().includes(q) ||
+      art.artCategory.toLowerCase().includes(q) ||
+      art.outfitDescription.toLowerCase().includes(q) ||
+      art.colorCombo.name.toLowerCase().includes(q) ||
+      String(art.day).includes(q);
+    return matchesOutfit && matchesSearch;
+  });
+
+  const handleCopyPrompt = (day: number) => {
+    const prompt = generateArtPromptForDay(day);
+    navigator.clipboard.writeText(prompt);
+    setCopiedDay(day);
+    setTimeout(() => setCopiedDay(null), 2000);
+  };
+
+  return (
+    <div className="flex flex-col gap-8">
+      <div>
+        <h2 className="section-title text-[#00f0ff] border-b border-[#00f0ff]/20 pb-2 font-mono flex flex-wrap items-center justify-between gap-2">
+          <span className="flex items-center gap-2">
+            <SparklesIcon className="w-5 h-5 text-[#00f0ff] animate-pulse" />
+            365 Art Types & Outfit Specs Matrix
+          </span>
+          <span className="text-xs text-white/50 font-normal">365 Unique Aesthetics • 16 Outfit Materials</span>
+        </h2>
+        <p className="text-[11px] text-white/60 mt-2 max-w-3xl font-mono uppercase tracking-wider leading-relaxed">
+          Master registry mapping 365 unique art styles, curated color combinations, and signature outfit materials (Shiny Vinyl, Pastel Dream, Clear PVC, Leather, Silk, Lace, Latex, Velvet, Metallic, Chrome, Mesh, and more) for AI artwork generation across all 365 vault release days.
+        </p>
+      </div>
+
+      {/* Filter & Search Bar */}
+      <div className="bg-[#0c0a07] border-2 border-white/10 rounded-lg p-5 flex flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="relative flex-1 min-w-[280px]">
+            <Search className="absolute left-3 top-2.5 w-4 h-4 text-white/30" />
+            <input
+              type="text"
+              placeholder="Search 365 art types, outfits, colors, or Day #..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 bg-black/60 border border-white/20 rounded text-xs text-white font-mono placeholder:text-white/30 focus:outline-none focus:border-[#00f0ff]"
+            />
+          </div>
+          <div className="text-xs font-mono text-white/40">
+            Showing <span className="text-[#00f0ff] font-bold">{filtered.length}</span> / 365 Art Types
+          </div>
+        </div>
+
+        {/* Outfit Material Filter Pills */}
+        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-white/5">
+          <span className="text-[10px] font-mono text-white/40 uppercase mr-1">Outfit Variable:</span>
+          <button
+            onClick={() => setSelectedOutfit('all')}
+            className={`px-2.5 py-1 rounded text-[10px] font-mono uppercase transition-all ${
+              selectedOutfit === 'all'
+                ? 'bg-[#00f0ff]/20 text-[#00f0ff] border border-[#00f0ff]/60 font-bold'
+                : 'bg-white/5 text-white/60 border border-white/10 hover:bg-white/10'
+            }`}
+          >
+            All Outfits (16)
+          </button>
+          {outfitKeys.map((key) => {
+            const meta = OUTFIT_STYLES[key];
+            const isSelected = selectedOutfit === key;
+            return (
+              <button
+                key={key}
+                onClick={() => setSelectedOutfit(key)}
+                className="px-2.5 py-1 rounded text-[10px] font-mono uppercase transition-all flex items-center gap-1.5"
+                style={{
+                  background: isSelected ? `${meta.tagColor}25` : 'rgba(255,255,255,0.03)',
+                  color: isSelected ? meta.tagColor : 'rgba(255,255,255,0.6)',
+                  border: `1px solid ${isSelected ? meta.tagColor : 'rgba(255,255,255,0.08)'}`,
+                }}
+              >
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: meta.tagColor }} />
+                {meta.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Grid of 365 Art Types */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        {filtered.map((art) => {
+          const outfitMeta = OUTFIT_STYLES[art.outfitStyle];
+          const isCopied = copiedDay === art.day;
+          return (
+            <div
+              key={art.day}
+              className="bg-[#0b0c10] border border-white/10 rounded-xl p-5 flex flex-col justify-between space-y-4 hover:border-white/30 transition-all relative overflow-hidden group"
+              style={{
+                boxShadow: `0 4px 20px rgba(0,0,0,0.4), inset 0 0 30px ${art.colorCombo.primary}05`,
+              }}
+            >
+              {/* Top Row: Day # & Category */}
+              <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-white/10 text-white border border-white/20">
+                    DAY #{String(art.day).padStart(3, '0')}
+                  </span>
+                  <span className="text-[10px] font-mono text-white/40 uppercase">{art.artCategory}</span>
+                </div>
+                <div
+                  className="w-3 h-3 rounded-full border border-white/30"
+                  style={{
+                    background: art.colorCombo.primary,
+                    boxShadow: `0 0 10px ${art.colorCombo.primary}`,
+                  }}
+                  title={art.colorCombo.name}
+                />
+              </div>
+
+              {/* Title & Description */}
+              <div className="space-y-2">
+                <h3 className="text-base font-black uppercase text-white tracking-wide group-hover:text-[#00f0ff] transition-colors">
+                  {art.artType}
+                </h3>
+                <p className="text-[11px] font-mono text-white/60 leading-relaxed">
+                  {art.description}
+                </p>
+              </div>
+
+              {/* Outfit Variable Tag */}
+              <div className="space-y-1.5 border-t border-white/5 pt-3">
+                <div className="text-[9px] font-mono text-white/40 uppercase tracking-wider">Outfit Variable:</div>
+                <div className="flex items-center gap-2">
+                  <span
+                    className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider shrink-0"
+                    style={{
+                      background: `${outfitMeta.tagColor}20`,
+                      color: outfitMeta.tagColor,
+                      border: `1px solid ${outfitMeta.tagColor}50`,
+                    }}
+                  >
+                    {outfitMeta.label}
+                  </span>
+                  <span className="text-[10px] font-mono text-white/40 truncate">
+                    {outfitMeta.description}
+                  </span>
+                </div>
+              </div>
+
+              {/* Graffiti Style Tag */}
+              <div className="space-y-1.5 border-t border-white/5 pt-2">
+                <div className="text-[9px] font-mono text-white/40 uppercase tracking-wider">Graffiti Title Style:</div>
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider shrink-0 bg-[#ff007f]/20 text-[#ff007f] border border-[#ff007f]/50">
+                    {art.graffitiStyle.name}
+                  </span>
+                  <span className="text-[10px] font-mono text-white/40 truncate">
+                    {art.graffitiStyle.description}
+                  </span>
+                </div>
+              </div>
+
+              {/* Color Combo Swatches */}
+              <div className="space-y-1.5">
+                <div className="text-[9px] font-mono text-white/40 uppercase tracking-wider">Color Palette:</div>
+                <div className="flex items-center justify-between bg-black/40 border border-white/5 p-2 rounded">
+                  <span className="text-[10px] font-mono text-white/80">{art.colorCombo.name}</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-sm border border-white/20" style={{ background: art.colorCombo.primary }} title="Primary" />
+                    <span className="w-3 h-3 rounded-sm border border-white/20" style={{ background: art.colorCombo.secondary }} title="Secondary" />
+                    <span className="w-3 h-3 rounded-sm border border-white/20" style={{ background: art.colorCombo.accent }} title="Accent" />
+                    <span className="w-3 h-3 rounded-sm border border-white/20" style={{ background: art.colorCombo.bg }} title="Background" />
+                  </div>
+                </div>
+              </div>
+
+              {/* AI Prompt Snippet & Copy Action */}
+              <div className="pt-2 border-t border-white/5 space-y-2">
+                <div className="text-[9px] font-mono text-white/40 uppercase tracking-wider">AI Generation Prompt:</div>
+                <div className="bg-black/60 border border-white/10 p-2.5 rounded font-mono text-[9.5px] text-white/70 leading-relaxed select-all">
+                  {art.promptSnippet}
+                </div>
+                <button
+                  onClick={() => handleCopyPrompt(art.day)}
+                  className={`w-full py-1.5 rounded text-[10px] font-mono font-bold uppercase transition-all flex items-center justify-center gap-1.5 ${
+                    isCopied
+                      ? 'bg-[#39ff14]/20 text-[#39ff14] border border-[#39ff14]/60'
+                      : 'bg-white/5 text-white/80 hover:bg-white/15 border border-white/10'
+                  }`}
+                >
+                  {isCopied ? <Check size={12} /> : <Copy size={12} />}
+                  {isCopied ? 'Prompt Copied to Clipboard' : 'Copy AI Art Prompt'}
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// --------------------------------------------------------------------------
 // MAIN SHOWCASE PAGE COMPONENT
 // --------------------------------------------------------------------------
 export default function CardDesignShowcase() {
-  const [activeTab, setActiveTab] = useState<'compare' | 'original' | 'glitch' | 'glass' | 'arcade' | 'mtg' | 'poker' | 'duelist' | 'monster' | 'chrome' | 'fantasy' | 'cyberpunk' | 'anime' | 'mint'>('compare');
+  const [activeTab, setActiveTab] = useState<'compare' | 'original' | 'glitch' | 'glass' | 'arcade' | 'mtg' | 'poker' | 'duelist' | 'monster' | 'chrome' | 'fantasy' | 'cyberpunk' | 'anime' | 'mint' | 'art365'>('compare');
 
   // Mint Simulator States
   const [unlockedSkins, setUnlockedSkins] = useState<string[]>(['original', 'glitch', 'glass']);
@@ -2556,6 +2776,12 @@ export default function CardDesignShowcase() {
               onClick={() => setActiveTab('mint')}
             >
               🌌 Mint Theme Selector
+            </button>
+            <button 
+              className={`btn-tab ${activeTab === 'art365' ? 'active' : ''} border-[#00f0ff] text-[#00f0ff] hover:bg-[#00f0ff]/10`}
+              onClick={() => setActiveTab('art365')}
+            >
+              ✦ 365 Art Types & Outfits
             </button>
           </div>
         </div>
@@ -3119,6 +3345,8 @@ export default function CardDesignShowcase() {
             )}
           </div>
         </div>
+      ) : activeTab === 'art365' ? (
+        <Art365ShowcaseView />
       ) : (
         <div>
           <h2 className="section-title border-b border-white/10 pb-2">
