@@ -1,20 +1,41 @@
 import type { Rarity } from './rarity';
 import cardCatalog from '../../public/data/card_catalog.json';
 
-const SONG_CATALOG_MAP: Record<number, { title: string; description: string }> = {};
+export interface SongMeta {
+  title: string;
+  description: string;
+  tags: string[];
+  storyTheme: string;
+}
+
+const SONG_CATALOG_MAP: Record<number, SongMeta> = {};
 if (Array.isArray(cardCatalog)) {
   for (const item of cardCatalog as any[]) {
     if (item && typeof item.day === 'number') {
+      const tags = Array.isArray(item.tags) ? item.tags : [];
+      const tagsStr = tags.join(', ');
+      const desc = item.description || '';
+      const theme = desc && tagsStr
+        ? `${desc} (Emotional Mood: ${tagsStr})`
+        : desc || tagsStr || `Navigating the duality of light and dark within ${item.title || 'Day ' + item.day}`;
+
       SONG_CATALOG_MAP[item.day] = {
         title: item.title || `Day ${item.day}`,
-        description: item.description || '',
+        description: desc,
+        tags,
+        storyTheme: theme,
       };
     }
   }
 }
 
-export function getSongMetaForDay(day: number): { title: string; description: string } {
-  return SONG_CATALOG_MAP[day] || { title: `Day ${day}`, description: '' };
+export function getSongMetaForDay(day: number): SongMeta {
+  return SONG_CATALOG_MAP[day] || {
+    title: `Day ${day}`,
+    description: '',
+    tags: [],
+    storyTheme: `Navigating the duality of light and dark within Day ${day}`,
+  };
 }
 
 export type OutfitStyle =
@@ -457,7 +478,7 @@ export function generateArtPromptForDay(
 
   const songMeta = getSongMetaForDay(day);
   const trackName = songTitle || songMeta.title;
-  const lyricText = lyrics || art.description;
+  const lyricText = lyrics || songMeta.storyTheme || art.description;
   const outfitLabel = OUTFIT_STYLES[art.outfitStyle]?.label || 'Stylized';
   const outfitDetails = outfitChoice ? `${art.outfitDescription}, custom ${outfitChoice}` : art.outfitDescription;
   const outfitSpec = `${outfitLabel} outfits (${outfitDetails})`;
@@ -496,7 +517,7 @@ export function generateGirlVinylPromptForDay(
 
   const songMeta = getSongMetaForDay(day);
   const trackName = songTitle || songMeta.title;
-  const lyricText = lyrics || art.description;
+  const lyricText = lyrics || songMeta.storyTheme || art.description;
   const outfitLabel = OUTFIT_STYLES[art.outfitStyle]?.label || 'Stylized';
   const outfitDetails = outfitChoice ? `${art.outfitDescription}, custom ${outfitChoice}` : art.outfitDescription;
   const outfitSpec = `${outfitLabel} outfits (${outfitDetails})`;
@@ -528,6 +549,7 @@ export function generateAll365Prompts(options?: PromptOptions, mode: 'square' | 
     lines.push(`- **Graffiti Style**: ${art.graffitiStyle.name}`);
     lines.push(`- **Outfit Style**: ${OUTFIT_STYLES[art.outfitStyle].label} (${art.outfitDescription})`);
     lines.push(`- **Colors**: ${art.colorCombo.name}`);
+    lines.push(`- **Story & Lyrics Theme**: ${songMeta.storyTheme}`);
     lines.push('```text');
     lines.push(mode === 'vinyl' ? generateGirlVinylPromptForDay(day, options) : generateArtPromptForDay(day, options));
     lines.push('```\n');
