@@ -7,6 +7,7 @@ import {
   getAllArtTypes,
   OUTFIT_STYLES,
   generateArtPromptForDay,
+  generateGirlVinylPromptForDay,
   generateAll365Prompts,
   type OutfitStyle,
 } from '../utils/artTypes';
