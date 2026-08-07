@@ -1,0 +1,3 @@
+## 2026-08-07 - Zustand Destructuring & High-Frequency Updates
+**Learning:** Using destructured subscriptions (e.g., `const { prop } = useGlobalPlayer()`) on a Zustand store that updates at a high frequency (like an audio player triggering `timeupdate` events every few ms) causes severe O(N) re-renders across the entire application, especially in list components where every item subscribes to the store.
+**Action:** Always use individual granular selectors (e.g., `useStore(s => s.prop)`). For list components with many items, use conditional granular selectors (e.g., `useStore(s => isActive ? s.progress : 0)`) so inactive components return a constant primitive and completely avoid unnecessary re-renders when the global state ticks.
