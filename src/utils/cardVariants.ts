@@ -85,43 +85,43 @@ export function get365CardVariantStyle(dayOrId: number | string): CardVariantCon
   }
 
   // Filters & overlays
-  let filterClass = 'brightness-75 contrast-125 saturate-110';
-  let overlayGradient = 'linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.7) 60%, rgba(0,0,0,0.92) 100%)';
+  let filterClass = 'brightness-85 contrast-125 saturate-110';
+  let overlayGradient = 'linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.5) 60%, rgba(0,0,0,0.85) 100%)';
   let accentColor = '#00E5FF';
   let isLight = false;
-  let dimAmount = 0.4;
+  let dimAmount = 0.3;
 
   switch (mode) {
     case 'dimmed':
-      filterClass = 'brightness-55 contrast-135 saturate-105';
-      overlayGradient = 'linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.7) 60%, rgba(0,0,0,0.92) 100%)';
+      filterClass = 'brightness-75 contrast-130 saturate-115';
+      overlayGradient = 'linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.5) 60%, rgba(0,0,0,0.85) 100%)';
       accentColor = dayNum % 2 === 0 ? '#ff3800' : '#00E5FF';
       isLight = false;
-      dimAmount = 0.55;
+      dimAmount = 0.4;
       break;
 
     case 'dark':
-      filterClass = 'brightness-40 contrast-145 saturate-90';
-      overlayGradient = 'radial-gradient(circle at 50% 35%, rgba(10,5,25,0.3), rgba(0,0,0,0.95))';
+      filterClass = 'brightness-65 contrast-135 saturate-105';
+      overlayGradient = 'radial-gradient(circle at 50% 35%, rgba(10,5,25,0.2), rgba(0,0,0,0.88))';
       accentColor = '#FF1493';
       isLight = false;
-      dimAmount = 0.70;
+      dimAmount = 0.5;
       break;
 
     case 'light':
-      filterClass = 'brightness-105 contrast-110 saturate-125';
-      overlayGradient = 'linear-gradient(180deg, rgba(255,255,255,0.15) 0%, rgba(0,0,0,0.45) 60%, rgba(0,0,0,0.88) 100%)';
+      filterClass = 'brightness-110 contrast-115 saturate-125';
+      overlayGradient = 'linear-gradient(180deg, rgba(255,255,255,0.2) 0%, rgba(0,0,0,0.35) 60%, rgba(0,0,0,0.8) 100%)';
       accentColor = '#FFB800';
       isLight = true;
-      dimAmount = 0.25;
+      dimAmount = 0.2;
       break;
 
     case 'vivid':
-      filterClass = 'brightness-90 contrast-130 saturate-160';
-      overlayGradient = 'radial-gradient(ellipse at 50% 50%, rgba(0,229,255,0.2), rgba(0,0,0,0.9))';
+      filterClass = 'brightness-95 contrast-130 saturate-160';
+      overlayGradient = 'radial-gradient(ellipse at 50% 50%, rgba(0,229,255,0.2), rgba(0,0,0,0.85))';
       accentColor = '#39FF14';
       isLight = false;
-      dimAmount = 0.35;
+      dimAmount = 0.25;
       break;
   }
 
@@ -171,4 +171,38 @@ export function getPackCoverFallback(dayOrCategory: number | string): string {
   }
 
   return 'https://pznmptudgicrmljjafex.supabase.co/storage/v1/object/public/releaseready/covers/january/01%20-%20Were%20Going%20Crazy%20World.jpg';
+}
+
+/**
+ * Resolves 3 to 4 distinct verified cover artwork URLs from day_file_map.json
+ * to create a rich multi-cover collage/fan on pack backgrounds.
+ */
+export function getPackMultiCovers(dayOrCategory: number | string, count: number = 3): string[] {
+  let seed = 1;
+  if (typeof dayOrCategory === 'number') {
+    seed = Math.max(1, Math.min(365, dayOrCategory));
+  } else {
+    let hash = 0;
+    for (let i = 0; i < String(dayOrCategory).length; i++) {
+      hash = (hash << 5) - hash + String(dayOrCategory).charCodeAt(i);
+      hash |= 0;
+    }
+    seed = (Math.abs(hash) % 365) + 1;
+  }
+
+  const result: string[] = [];
+  const totalDays = 365;
+
+  for (let i = 0; i < count; i++) {
+    const step = Math.floor(totalDays / count);
+    const day = ((seed + i * step + Math.floor(seededRandom(seed + i * 7) * 40)) % totalDays) + 1;
+    const mapped = (dayFileMap as any)[String(day)];
+    if (mapped && mapped.cover) {
+      result.push(SUPABASE_BASE + encodeURIComponent(mapped.cover).replace(/%2F/g, '/'));
+    } else {
+      result.push('https://pznmptudgicrmljjafex.supabase.co/storage/v1/object/public/releaseready/covers/january/01%20-%20Were%20Going%20Crazy%20World.jpg');
+    }
+  }
+
+  return result;
 }

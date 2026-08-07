@@ -5,7 +5,7 @@ import type { OwnedCard } from '../../services/vaultService';
 import { audioManager } from '../../game/audio';
 import { RARITY_CONFIG, type Rarity } from '../../utils/rarity';
 import { getCoverUrlForRarity, useSmartCoverArt, resolveSmartCoverUrl } from '../../utils/rarityArtwork';
-import { get365CardVariantStyle, getPackCoverFallback } from '../../utils/cardVariants';
+import { get365CardVariantStyle, getPackCoverFallback, getPackMultiCovers } from '../../utils/cardVariants';
 import Card from '../Card';
 import RarityBadge from '../RarityBadge';
 import {
@@ -241,51 +241,64 @@ function PackEmblem({ accent, size = 80 }: { accent: string; size?: number }) {
 function PackBagContents({ meta }: { meta: RevealPackMeta }) {
   const variant = get365CardVariantStyle(meta.category || meta.label);
   const activeCoverArt = meta.coverImage || getPackCoverFallback(meta.category || meta.label);
+  const multiCovers = [
+    activeCoverArt,
+    ...getPackMultiCovers(meta.category || meta.label, 3)
+  ];
 
   return (
     <>
-      {activeCoverArt && (
-        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
-          <img
-            src={activeCoverArt}
-            alt={meta.label}
-            className={`w-full h-full object-cover transition-transform duration-700 ${variant.imgScale}`}
-            style={{
-              position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
-              filter: 'brightness(0.4) contrast(1.5) grayscale(0.6)',
-              opacity: 0.35,
-              mixBlendMode: 'luminosity',
-            }}
-            onError={(e) => {
-              const target = e.currentTarget;
-              const fallback = getPackCoverFallback(meta.category || meta.label);
-              if (target.src !== fallback) {
-                target.src = fallback;
-              }
-            }}
-          />
-          {/* RICH PACK ACCENT COLOR TINT OVERLAY (Pack color on top) */}
-          <div
-            className="absolute inset-0 pointer-events-none transition-all"
-            style={{
-              position: 'absolute', inset: 0,
-              background: `linear-gradient(160deg, ${meta.accent}dd 0%, ${meta.accent}aa 45%, rgba(10,5,20,0.92) 100%)`,
-              mixBlendMode: 'hard-light',
-              opacity: 0.85,
-            }}
-          />
-          <div
-            className="absolute inset-0 pointer-events-none transition-all"
-            style={{
-              position: 'absolute', inset: 0,
-              background: meta.accent,
-              mixBlendMode: 'color',
-              opacity: 0.9,
-            }}
-          />
-          <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 40%, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.85) 85%)' }} />
-        </div>
-      )}
+      {/* MULTI-COVER COLLAGE FAN (Multiple album covers slightly visible under pack tint) */}
+      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {multiCovers.map((coverUrl, idx) => {
+          const fanStyles = [
+            { transform: 'rotate(-14deg) translate(-24%, -2%) scale(0.9)', opacity: 0.65, zIndex: 1 },
+            { transform: 'rotate(14deg) translate(24%, 3%) scale(0.9)', opacity: 0.65, zIndex: 1 },
+            { transform: 'rotate(-3deg) translate(0%, 0%) scale(1.02)', opacity: 0.85, zIndex: 2 },
+            { transform: 'rotate(6deg) translate(0%, -18%) scale(0.85)', opacity: 0.5, zIndex: 0 },
+          ][idx % 4];
+
+          return (
+            <img
+              key={idx}
+              src={coverUrl}
+              alt={`${meta.label} Cover ${idx}`}
+              className="absolute w-[72%] h-[72%] object-cover rounded-md shadow-2xl transition-transform duration-700"
+              style={{
+                position: 'absolute',
+                ...fanStyles,
+                filter: 'brightness(0.85) contrast(1.25) saturate(1.2)',
+              }}
+              onError={(e) => {
+                const target = e.currentTarget;
+                const fallback = getPackCoverFallback(meta.category || meta.label);
+                if (target.src !== fallback) {
+                  target.src = fallback;
+                }
+              }}
+            />
+          );
+        })}
+
+        {/* VIBRANT PACK ACCENT COLOR TINT & GLOW */}
+        <div
+          className="absolute inset-0 pointer-events-none transition-all z-10"
+          style={{
+            position: 'absolute', inset: 0,
+            background: `radial-gradient(ellipse at 50% 35%, ${meta.accent}66 0%, ${meta.accent}22 55%, rgba(10,5,20,0.85) 100%)`,
+          }}
+        />
+        <div
+          className="absolute inset-0 pointer-events-none transition-all z-10"
+          style={{
+            position: 'absolute', inset: 0,
+            background: meta.accent,
+            mixBlendMode: 'color',
+            opacity: 0.65,
+          }}
+        />
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 40%, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.8) 85%)', zIndex: 10 }} />
+      </div>
       <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 50% 30%, ${meta.accent}40, transparent 55%)` }} />
       <div style={{
         position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',

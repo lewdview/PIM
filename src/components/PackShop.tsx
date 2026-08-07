@@ -11,7 +11,7 @@ import { hasClaimedFreePackToday } from '../services/vaultService';
 import { getTimeUntilNextDay } from '../utils/dayCalc';
 import { useVaultStore } from '../store/useVaultStore';
 import { getAdminConfig } from '../utils/adminConfig';
-import { get365CardVariantStyle, getPackCoverFallback } from '../utils/cardVariants';
+import { get365CardVariantStyle, getPackCoverFallback, getPackMultiCovers } from '../utils/cardVariants';
 
 interface PackShopProps {
   onPurchase: (category: PackCategory, size: PackSize) => void;
@@ -186,6 +186,10 @@ export function PackBag({ category, isActive = true, onRip, isRipping = false, i
 
   const variant = get365CardVariantStyle(cfg.category);
   const activeCoverArt = tier.coverImage || getPackCoverFallback(cfg.category);
+  const multiCovers = [
+    activeCoverArt,
+    ...getPackMultiCovers(cfg.category, 3)
+  ];
 
   return (
     <div className="flex-shrink-0 flex flex-col items-center" style={{ width: `${CARD_W}px` }}>
@@ -278,50 +282,58 @@ export function PackBag({ category, isActive = true, onRip, isRipping = false, i
         opacity: isActive ? 1 : 0.4,
         transition: 'transform 0.35s cubic-bezier(.22,1,.36,1), opacity 0.35s ease, box-shadow 0.35s ease',
       }}>
-        {/* CUSTOM PACK COVER ARTWORK IMAGE (Tinted with pack accent color, artwork barely coming through) */}
-        {activeCoverArt && (
-          <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-            <img
-              src={activeCoverArt}
-              alt={cfg.label}
-              className={`w-full h-full object-cover transition-transform duration-700 ${variant.imgScale}`}
-              style={{
-                filter: 'brightness(0.4) contrast(1.5) grayscale(0.6)',
-                opacity: 0.35,
-                mixBlendMode: 'luminosity',
-              }}
-              onError={(e) => {
-                const target = e.currentTarget;
-                const fallback = getPackCoverFallback(cfg.category);
-                if (target.src !== fallback) {
-                  target.src = fallback;
-                }
-              }}
-            />
-            {/* RICH PACK ACCENT COLOR TINT OVERLAY (Pack color on top) */}
-            <div
-              className="absolute inset-0 pointer-events-none transition-all"
-              style={{
-                background: `linear-gradient(160deg, ${accent}dd 0%, ${accent}aa 45%, rgba(10,5,20,0.92) 100%)`,
-                mixBlendMode: 'hard-light',
-                opacity: 0.85,
-              }}
-            />
-            <div
-              className="absolute inset-0 pointer-events-none transition-all"
-              style={{
-                background: accent,
-                mixBlendMode: 'color',
-                opacity: 0.9,
-              }}
-            />
-            {/* Vignette Overlay */}
-            <div
-              className="absolute inset-0 pointer-events-none transition-opacity"
-              style={{ background: 'radial-gradient(ellipse at 50% 40%, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.85) 85%)' }}
-            />
-          </div>
-        )}
+        {/* MULTI-COVER COLLAGE FAN (Multiple album covers slightly visible under pack tint) */}
+        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none flex items-center justify-center">
+          {multiCovers.map((coverUrl, idx) => {
+            const fanStyles = [
+              { transform: 'rotate(-14deg) translate(-24%, -2%) scale(0.9)', opacity: 0.65, zIndex: 1 },
+              { transform: 'rotate(14deg) translate(24%, 3%) scale(0.9)', opacity: 0.65, zIndex: 1 },
+              { transform: 'rotate(-3deg) translate(0%, 0%) scale(1.02)', opacity: 0.85, zIndex: 2 },
+              { transform: 'rotate(6deg) translate(0%, -18%) scale(0.85)', opacity: 0.5, zIndex: 0 },
+            ][idx % 4];
+
+            return (
+              <img
+                key={idx}
+                src={coverUrl}
+                alt={`${cfg.label} Cover ${idx}`}
+                className="absolute w-[72%] h-[72%] object-cover rounded-md shadow-2xl transition-transform duration-700"
+                style={{
+                  ...fanStyles,
+                  filter: 'brightness(0.85) contrast(1.25) saturate(1.2)',
+                }}
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  const fallback = getPackCoverFallback(cfg.category);
+                  if (target.src !== fallback) {
+                    target.src = fallback;
+                  }
+                }}
+              />
+            );
+          })}
+
+          {/* VIBRANT PACK ACCENT COLOR TINT & GLOW (Pack color tone overlay, album covers clearly visible underneath) */}
+          <div
+            className="absolute inset-0 pointer-events-none transition-all z-10"
+            style={{
+              background: `radial-gradient(ellipse at 50% 35%, ${accent}66 0%, ${accent}22 55%, rgba(10,5,20,0.85) 100%)`,
+            }}
+          />
+          <div
+            className="absolute inset-0 pointer-events-none transition-all z-10"
+            style={{
+              background: accent,
+              mixBlendMode: 'color',
+              opacity: 0.65,
+            }}
+          />
+          {/* Frame Vignette */}
+          <div
+            className="absolute inset-0 pointer-events-none transition-opacity z-10"
+            style={{ background: 'radial-gradient(ellipse at 50% 40%, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.8) 85%)' }}
+          />
+        </div>
         {/* 3D FOIL CRIMP BORDERS (Top & Bottom Raised Edges) */}
         <div className="absolute inset-x-0 top-0 h-[16px] foil-crimp-3d-top z-20" style={{
           borderTopLeftRadius: '8px',
