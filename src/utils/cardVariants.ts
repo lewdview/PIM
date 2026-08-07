@@ -1,5 +1,7 @@
 // ── 365 DAYS OF LIGHT AND DARK — CARD COVER VARIANT UTILITIES ─────────────
 
+import dayFileMap from '../game/day_file_map.json';
+
 export type CoverVariantMode = 'dimmed' | 'dark' | 'light' | 'vivid' | 'monochrome' | 'high_contrast';
 
 export interface CardVariantConfig {
@@ -14,6 +16,8 @@ export interface CardVariantConfig {
   dimAmount: number; // 0.0 (bright) to 0.8 (deeply dimmed)
 }
 
+const SUPABASE_BASE = 'https://pznmptudgicrmljjafex.supabase.co/storage/v1/object/public/releaseready/';
+
 /**
  * Deterministic pseudo-random number generator for day seed 1..365
  */
@@ -25,7 +29,7 @@ function seededRandom(seed: number) {
 /**
  * Computes a deterministic cover variant configuration for any given day (1..365)
  * or pack ID, providing light/dark contrast variations, blown up centered scaling,
- * and dimming overlay gradients.
+ * dynamic taglines, and dimming overlay gradients.
  */
 export function get365CardVariantStyle(dayOrId: number | string): CardVariantConfig {
   let dayNum = 1;
@@ -43,7 +47,6 @@ export function get365CardVariantStyle(dayOrId: number | string): CardVariantCon
 
   const r1 = seededRandom(dayNum * 1.3);
   const r2 = seededRandom(dayNum * 3.7);
-  const r3 = seededRandom(dayNum * 7.1);
 
   // Variant Mode Distribution:
   // ~35% dimmed, ~25% dark, ~25% light, ~15% vivid
@@ -57,11 +60,29 @@ export function get365CardVariantStyle(dayOrId: number | string): CardVariantCon
   const scales = ['scale-110', 'scale-120', 'scale-130', 'scale-140'];
   const imgScale = scales[Math.floor(r2 * scales.length)] + ' object-center';
 
-  // Taglines
-  let tagline = '365 DAYS OF LIGHT AND DARK';
-  if (mode === 'light') tagline = '365 DAYS OF LIGHT';
-  else if (mode === 'dark') tagline = '365 DAYS OF DARK';
-  else if (r3 > 0.5) tagline = `DAY ${dayNum} // LIGHT & DARK`;
+  // Dynamic Category & Day Taglines
+  const CATEGORY_TAGLINES: Record<string, string> = {
+    free: 'DAILY 365 RELEASES • DAY 1 TO 365',
+    bombshell: '365 DAYS OF LIGHT & DARK • BOMBSHELL',
+    taste: '365 DAYS OF MUSIC • ALL TRACKS',
+    light: '365 DAYS OF LIGHT • SUNLIGHT MOOD',
+    dark: '365 DAYS OF DARK • NIGHTFALL MOOD',
+    miss_out: '365 UNCLAIMED DROPS • ARCHIVE RECOVERY',
+    month: '365 MONTHLY CHAPTER • FULL ALBUM PULL',
+    special_picks: '365 CURATED PICKS • RARE & MYTHIC',
+    prophecy: '365 PROPHECY • PROOF OF FIRST (1/1)',
+    alpha: '365 ALPHA • ARCHIVAL HEARD FIRST',
+    vault_token: '365 VAULT PACK • TOKEN HOLDER',
+    targeted_pull: '365 TARGETED DAY PULL • CHOOSE DAY',
+    rarity_upgrade: '365 FORGE • UPGRADE CARD',
+  };
+
+  let tagline = CATEGORY_TAGLINES[String(dayOrId)] || '365 DAYS OF LIGHT AND DARK';
+  if (typeof dayOrId === 'number') {
+    if (mode === 'light') tagline = `DAY ${dayNum} // 365 DAYS OF LIGHT`;
+    else if (mode === 'dark') tagline = `DAY ${dayNum} // 365 DAYS OF DARK`;
+    else tagline = `DAY ${dayNum} OF 365 // LIGHT AND DARK`;
+  }
 
   // Filters & overlays
   let filterClass = 'brightness-75 contrast-125 saturate-110';
@@ -118,27 +139,36 @@ export function get365CardVariantStyle(dayOrId: number | string): CardVariantCon
 }
 
 /**
- * Returns a fallback cover artwork URL if none is provided
+ * Returns a verified cover artwork URL for any day (1..365) or pack category
  */
 export function getPackCoverFallback(dayOrCategory: number | string): string {
+  let dayNum = 1;
   if (typeof dayOrCategory === 'number') {
-    const day = Math.max(1, Math.min(365, dayOrCategory));
-    return `/data/covers/day-${day}.jpg`;
+    dayNum = Math.max(1, Math.min(365, dayOrCategory));
+  } else {
+    // Map specific pack categories to representative days 1..365
+    const CATEGORY_DAY_MAP: Record<string, number> = {
+      free: 1,
+      bombshell: 50,
+      taste: 100,
+      light: 180,
+      dark: 250,
+      miss_out: 300,
+      month: 365,
+      special_picks: 77,
+      prophecy: 111,
+      alpha: 222,
+      vault_token: 333,
+      targeted_pull: 150,
+      rarity_upgrade: 200,
+    };
+    dayNum = CATEGORY_DAY_MAP[String(dayOrCategory)] || 1;
   }
-  
-  // Default pack cover graphics
-  const FALLBACKS: Record<string, string> = {
-    free: '/data/covers/day-1.jpg',
-    bombshell: '/data/covers/day-50.jpg',
-    taste: '/data/covers/day-100.jpg',
-    light: '/data/covers/day-180.jpg',
-    dark: '/data/covers/day-250.jpg',
-    miss_out: '/data/covers/day-300.jpg',
-    month: '/data/covers/day-365.jpg',
-    special_picks: '/data/covers/day-77.jpg',
-    prophecy: '/data/covers/day-111.jpg',
-    alpha: '/data/covers/day-222.jpg',
-  };
 
-  return FALLBACKS[String(dayOrCategory)] || '/data/covers/default.jpg';
+  const mapped = (dayFileMap as any)[String(dayNum)];
+  if (mapped && mapped.cover) {
+    return SUPABASE_BASE + encodeURIComponent(mapped.cover).replace(/%2F/g, '/');
+  }
+
+  return 'https://pznmptudgicrmljjafex.supabase.co/storage/v1/object/public/releaseready/covers/january/01%20-%20Were%20Going%20Crazy%20World.jpg';
 }

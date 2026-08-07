@@ -251,6 +251,13 @@ function PackBagContents({ meta }: { meta: RevealPackMeta }) {
             alt={meta.label}
             className={`w-full h-full object-cover transition-transform duration-700 ${variant.imgScale} ${variant.filterClass}`}
             style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+            onError={(e) => {
+              const target = e.currentTarget;
+              const fallback = getPackCoverFallback(meta.category || meta.label);
+              if (target.src !== fallback) {
+                target.src = fallback;
+              }
+            }}
           />
           <div style={{ position: 'absolute', inset: 0, background: variant.overlayGradient }} />
         </div>

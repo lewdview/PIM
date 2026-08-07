@@ -285,6 +285,13 @@ export function PackBag({ category, isActive = true, onRip, isRipping = false, i
               src={activeCoverArt}
               alt={cfg.label}
               className={`w-full h-full object-cover transition-transform duration-700 ${variant.imgScale} ${variant.filterClass}`}
+              onError={(e) => {
+                const target = e.currentTarget;
+                const fallback = getPackCoverFallback(cfg.category);
+                if (target.src !== fallback) {
+                  target.src = fallback;
+                }
+              }}
             />
             {/* Dimmed & Light/Dark Vignette Overlay */}
             <div
