@@ -2954,7 +2954,7 @@ export default function Game() {
           else targetPov = 'classic';
 
           if (targetPov !== activePovModeRef.current) {
-            if (targetPov === '3d-cyber-tunnel') {
+            if (targetPov === 'cyber_tunnel') {
               audioManager.playSfx('tunnel_transition', 0.85);
             }
             povTransitionRef.current = {
