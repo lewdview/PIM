@@ -140,6 +140,12 @@ export default function NextGenLandingPage() {
   }>>([]);
   const [droppingPack, setDroppingPack] = useState<{ category: PackCategory; label: string; icon: string; accent: string } | null>(null);
 
+  const VENDING_CAROUSEL_CATEGORIES: PackCategory[] = useMemo(() => [
+    'free', 'bombshell', 'taste', 'light', 'dark', 'miss_out', 'month', 'special_picks', 'prophecy', 'alpha', 'vault_token'
+  ], []);
+
+  const maxVendingPages = VENDING_CAROUSEL_CATEGORIES.length;
+
   useEffect(() => {
     hasClaimedFreePackToday().then(setIsFreePackClaimed);
   }, []);
@@ -623,11 +629,6 @@ export default function NextGenLandingPage() {
   const uniqueCards = new Set(collection.map(c => c.cardId)).size;
   const proofs = collection.filter(c => c.proof).length;
 
-  const VENDING_CAROUSEL_CATEGORIES: PackCategory[] = useMemo(() => [
-    'free', 'bombshell', 'taste', 'light', 'dark', 'miss_out', 'month', 'special_picks', 'prophecy', 'alpha', 'vault_token'
-  ], []);
-
-  const maxVendingPages = VENDING_CAROUSEL_CATEGORIES.length;
   const currentCategoryKey = VENDING_CAROUSEL_CATEGORIES[vendingPage] || 'bombshell';
   const currentCategoryConfig = PACK_CONFIGS[currentCategoryKey];
 
