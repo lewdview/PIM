@@ -282,14 +282,14 @@ export function PackBag({ category, isActive = true, onRip, isRipping = false, i
         opacity: isActive ? 1 : 0.4,
         transition: 'transform 0.35s cubic-bezier(.22,1,.36,1), opacity 0.35s ease, box-shadow 0.35s ease',
       }}>
-        {/* MULTI-COVER COLLAGE FAN (Multiple album covers slightly visible under pack tint) */}
+        {/* MULTI-COVER COLLAGE FAN (Multiple album covers subtly blended under pack tint) */}
         <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none flex items-center justify-center">
           {multiCovers.map((coverUrl, idx) => {
             const fanStyles = [
-              { transform: 'rotate(-14deg) translate(-24%, -2%) scale(0.9)', opacity: 0.65, zIndex: 1 },
-              { transform: 'rotate(14deg) translate(24%, 3%) scale(0.9)', opacity: 0.65, zIndex: 1 },
-              { transform: 'rotate(-3deg) translate(0%, 0%) scale(1.02)', opacity: 0.85, zIndex: 2 },
-              { transform: 'rotate(6deg) translate(0%, -18%) scale(0.85)', opacity: 0.5, zIndex: 0 },
+              { transform: 'rotate(-14deg) translate(-24%, -2%) scale(0.9)', opacity: 0.32, zIndex: 1 },
+              { transform: 'rotate(14deg) translate(24%, 3%) scale(0.9)', opacity: 0.32, zIndex: 1 },
+              { transform: 'rotate(-3deg) translate(0%, 0%) scale(1.02)', opacity: 0.48, zIndex: 2 },
+              { transform: 'rotate(6deg) translate(0%, -18%) scale(0.85)', opacity: 0.25, zIndex: 0 },
             ][idx % 4];
 
             return (
@@ -300,7 +300,7 @@ export function PackBag({ category, isActive = true, onRip, isRipping = false, i
                 className="absolute w-[72%] h-[72%] object-cover rounded-md shadow-2xl transition-transform duration-700"
                 style={{
                   ...fanStyles,
-                  filter: 'brightness(0.85) contrast(1.25) saturate(1.2)',
+                  filter: 'brightness(0.65) contrast(1.35) saturate(1.15) grayscale(0.15)',
                 }}
                 onError={(e) => {
                   const target = e.currentTarget;
@@ -313,11 +313,13 @@ export function PackBag({ category, isActive = true, onRip, isRipping = false, i
             );
           })}
 
-          {/* VIBRANT PACK ACCENT COLOR TINT & GLOW (Pack color tone overlay, album covers clearly visible underneath) */}
+          {/* ELEGANT PACK ACCENT COLOR BLEND & GLOW */}
           <div
             className="absolute inset-0 pointer-events-none transition-all z-10"
             style={{
-              background: `radial-gradient(ellipse at 50% 35%, ${accent}66 0%, ${accent}22 55%, rgba(10,5,20,0.85) 100%)`,
+              background: `radial-gradient(ellipse at 50% 35%, ${accent}99 0%, ${accent}44 55%, rgba(10,5,20,0.92) 100%)`,
+              mixBlendMode: 'hard-light',
+              opacity: 0.55,
             }}
           />
           <div
@@ -325,13 +327,13 @@ export function PackBag({ category, isActive = true, onRip, isRipping = false, i
             style={{
               background: accent,
               mixBlendMode: 'color',
-              opacity: 0.65,
+              opacity: 0.75,
             }}
           />
-          {/* Frame Vignette */}
+          {/* Subtle Frame Vignette */}
           <div
             className="absolute inset-0 pointer-events-none transition-opacity z-10"
-            style={{ background: 'radial-gradient(ellipse at 50% 40%, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.8) 85%)' }}
+            style={{ background: 'radial-gradient(ellipse at 50% 40%, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.85) 85%)' }}
           />
         </div>
         {/* 3D FOIL CRIMP BORDERS (Top & Bottom Raised Edges) */}
