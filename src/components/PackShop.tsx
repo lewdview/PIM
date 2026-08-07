@@ -9,6 +9,7 @@ import {
 } from '../utils/rarity';
 import { hasClaimedFreePackToday } from '../services/vaultService';
 import { getTimeUntilNextDay } from '../utils/dayCalc';
+import { useVaultStore } from '../store/useVaultStore';
 import { getAdminConfig } from '../utils/adminConfig';
 import { get365CardVariantStyle, getPackCoverFallback } from '../utils/cardVariants';
 
