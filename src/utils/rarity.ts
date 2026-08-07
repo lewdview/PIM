@@ -240,9 +240,34 @@ export function rollDailyClaimRarity(isFeaturedDay: boolean): Rarity {
   return 'common';
 }
 
+export type PackCategory = 'free' | 'bombshell' | 'taste' | 'light' | 'dark' | 'miss_out' | 'month' | 'special_picks' | 'prophecy' | 'alpha' | 'vault_token' | 'targeted_pull' | 'rarity_upgrade';
+export type PackSize = 'single' | 'double' | 'triple' | 'ten' | 'twentyfive' | 'fifty' | 'bulk';
+
+export interface PackTier {
+  size: PackSize | string;
+  cardCount: number;
+  price: string;
+  priceValue: number;
+  coverImage?: string;
+  darkCoverImage?: string;
+  lightCoverImage?: string;
+}
+
+export interface PackConfig {
+  category: PackCategory;
+  label: string;
+  description: string;
+  icon: string;
+  accent: string;
+  gradient: string;
+  rates: number[];
+  tiers: PackTier[];
+  filter?: string;
+}
+
 // Display ordering for the carousel (vault_token NOT in carousel — it has its own Token Shop section)
 export const PACK_CAROUSEL_ORDER: PackCategory[] = [
-  'free', 'taste', 'light', 'dark', 'miss_out', 'month',
+  'free', 'bombshell', 'taste', 'light', 'dark', 'miss_out', 'month',
   'special_picks', 'prophecy', 'alpha', 'vault_token', 'targeted_pull', 'rarity_upgrade',
 ];
 

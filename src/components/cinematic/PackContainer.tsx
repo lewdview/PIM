@@ -240,6 +240,13 @@ function PackEmblem({ accent, size = 80 }: { accent: string; size?: number }) {
 function PackBagContents({ meta }: { meta: RevealPackMeta }) {
   return (
     <>
+      {meta.coverImage && (
+        <img
+          src={meta.coverImage}
+          alt={meta.label}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+        />
+      )}
       <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 50% 30%, ${meta.accent}40, transparent 55%)` }} />
       <div style={{
         position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',

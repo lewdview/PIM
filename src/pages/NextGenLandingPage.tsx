@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from 'wouter';
 import {
   Layers, Flame, Star, Calendar, Zap, Play, Gift, Shield, Sparkles,
-  AlertTriangle, Lock, Award, CheckCircle2, ChevronRight, X, Clock, HelpCircle,
+  AlertTriangle, Lock, Award, CheckCircle2, ChevronLeft, ChevronRight, X, Clock, HelpCircle,
   Terminal, Image as ImageIcon, ChevronDown
 } from 'lucide-react';
 import Card from '../components/Card';
@@ -120,6 +120,7 @@ export default function NextGenLandingPage() {
 
   // Vending Machine State
   const [vendingPage, setVendingPage] = useState(0);
+  const [bombshellTheme, setBombshellTheme] = useState<'dark' | 'light'>('dark');
   const [isFreePackClaimed, setIsFreePackClaimed] = useState(false);
   const [packTierMap, setPackTierMap] = useState<Record<string, number>>({});
   const [activeInspectorCategory, setActiveInspectorCategory] = useState<PackCategory>('taste');
@@ -142,6 +143,20 @@ export default function NextGenLandingPage() {
   useEffect(() => {
     hasClaimedFreePackToday().then(setIsFreePackClaimed);
   }, []);
+
+  // ArrowLeft & ArrowRight Keyboard Controls for Vending Machine Shelves
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') return;
+      if (e.key === 'ArrowLeft') {
+        setVendingPage(prev => (prev === 0 ? maxVendingPages - 1 : prev - 1));
+      } else if (e.key === 'ArrowRight') {
+        setVendingPage(prev => (prev + 1) % maxVendingPages);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [maxVendingPages]);
 
   // Upgradeable cards (not legendary or mythic)
   const upgradeableCards = useMemo(() =>
@@ -609,14 +624,28 @@ export default function NextGenLandingPage() {
   const proofs = collection.filter(c => c.proof).length;
 
   const VENDING_CAROUSEL_CATEGORIES: PackCategory[] = useMemo(() => [
-    'free', 'taste', 'light', 'dark', 'miss_out', 'month', 'special_picks', 'prophecy', 'alpha', 'vault_token'
+    'free', 'bombshell', 'taste', 'light', 'dark', 'miss_out', 'month', 'special_picks', 'prophecy', 'alpha', 'vault_token'
   ], []);
 
   const maxVendingPages = VENDING_CAROUSEL_CATEGORIES.length;
-  const currentCategoryKey = VENDING_CAROUSEL_CATEGORIES[vendingPage] || 'taste';
+  const currentCategoryKey = VENDING_CAROUSEL_CATEGORIES[vendingPage] || 'bombshell';
   const currentCategoryConfig = PACK_CONFIGS[currentCategoryKey];
 
   const shelfLevelTiers = useMemo(() => {
+    // BOMBSHELL PACK 6-TIER SHELF
+    if (currentCategoryKey === 'bombshell') {
+      const cfg = currentCategoryConfig;
+      const baseTiers = cfg?.tiers || [];
+      return baseTiers.map(t => ({
+        category: 'bombshell' as PackCategory,
+        size: t.size as PackSize,
+        levelLabel: `${t.cardCount} ${t.cardCount === 1 ? 'CARD' : 'CARDS'}`,
+        cardCount: t.cardCount,
+        price: t.price,
+        coverImage: bombshellTheme === 'light' && (t as any).lightCoverImage ? (t as any).lightCoverImage : (t as any).coverImage,
+      }));
+    }
+
     // SPECIAL COMBINED TOKEN SECTION SHELF
     if (currentCategoryKey === 'vault_token') {
       return [
@@ -643,7 +672,7 @@ export default function NextGenLandingPage() {
         price: tier.price,
       };
     });
-  }, [currentCategoryKey, currentCategoryConfig]);
+  }, [currentCategoryKey, currentCategoryConfig, bombshellTheme]);
 
   const handleLeverPull = () => {
     setVendingPage(prev => (prev + 1) % maxVendingPages);
@@ -910,6 +939,29 @@ export default function NextGenLandingPage() {
                 {/* Internal Glass Window Glare Reflection */}
                 <div className="absolute inset-0 bg-gradient-to-tr from-white/[0.02] via-transparent to-white/[0.04] pointer-events-none" />
 
+                {/* Left & Right Tactile Front Glass Scrolling Buttons */}
+                <button
+                  onClick={() => {
+                    audioManager.playSfx('tap_nav', 0.15);
+                    setVendingPage(prev => (prev === 0 ? maxVendingPages - 1 : prev - 1));
+                  }}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 z-30 p-2.5 rounded-full bg-black/85 border-2 border-purple-500/70 text-purple-300 hover:text-white hover:border-pink-500 hover:scale-110 active:scale-95 transition-all shadow-[0_0_20px_rgba(168,85,247,0.4)] backdrop-blur-md group"
+                  title="Previous Vending Shelf (Left Arrow)"
+                >
+                  <ChevronLeft size={24} className="group-hover:-translate-x-0.5 transition-transform" />
+                </button>
+
+                <button
+                  onClick={() => {
+                    audioManager.playSfx('tap_nav', 0.15);
+                    setVendingPage(prev => (prev + 1) % maxVendingPages);
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 z-30 p-2.5 rounded-full bg-black/85 border-2 border-purple-500/70 text-purple-300 hover:text-white hover:border-pink-500 hover:scale-110 active:scale-95 transition-all shadow-[0_0_20px_rgba(168,85,247,0.4)] backdrop-blur-md group"
+                  title="Next Vending Shelf (Right Arrow)"
+                >
+                  <ChevronRight size={24} className="group-hover:translate-x-0.5 transition-transform" />
+                </button>
+
                 {/* Digital Monitor Window showing Category Shelf on display */}
                 <VendingInspectorWindowSVG 
                   categoryConfig={currentCategoryConfig} 
@@ -918,23 +970,54 @@ export default function NextGenLandingPage() {
                 />
 
                 {/* Sub-header status inside glass */}
-                <div className="flex justify-between items-center mb-4 px-3 py-1.5 rounded-xl bg-slate-950/80 border border-slate-800 text-[10px] font-mono">
-                  <span className="text-purple-400 font-bold tracking-widest uppercase">
-                    CATEGORY SHELF 0{vendingPage + 1} / 0{maxVendingPages} • {currentCategoryConfig?.label}
-                  </span>
-                  <span className="text-amber-400 font-bold tracking-wider uppercase">
-                    4 PACK TIERS ON DISPLAY • CLICK DISPENSE
-                  </span>
+                <div className="flex flex-wrap justify-between items-center mb-4 px-3 py-2 rounded-xl bg-slate-950/90 border border-slate-800 text-[10px] font-mono gap-2 relative z-20">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setVendingPage(prev => (prev === 0 ? maxVendingPages - 1 : prev - 1))}
+                      className="px-2 py-1 rounded bg-purple-950/80 border border-purple-600/60 text-purple-300 hover:bg-purple-800/80 hover:text-white transition-all flex items-center gap-1 font-bold"
+                    >
+                      <ChevronLeft size={12} /> <span>PREV</span>
+                    </button>
+                    <span className="text-purple-400 font-bold tracking-widest uppercase">
+                      SHELF 0{vendingPage + 1} / 0{maxVendingPages} • {currentCategoryConfig?.label}
+                    </span>
+                    <button
+                      onClick={() => setVendingPage(prev => (prev + 1) % maxVendingPages)}
+                      className="px-2 py-1 rounded bg-purple-950/80 border border-purple-600/60 text-purple-300 hover:bg-purple-800/80 hover:text-white transition-all flex items-center gap-1 font-bold"
+                    >
+                      <span>NEXT</span> <ChevronRight size={12} />
+                    </button>
+                  </div>
+
+                  {currentCategoryKey === 'bombshell' ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-pink-400 font-extrabold tracking-wider uppercase">ARTWORK MODE:</span>
+                      <button
+                        onClick={() => setBombshellTheme(prev => (prev === 'dark' ? 'light' : 'dark'))}
+                        className={`px-2.5 py-1 rounded-lg font-bold border transition-all ${
+                          bombshellTheme === 'dark'
+                            ? 'bg-slate-900 border-pink-500/80 text-pink-300 shadow-[0_0_10px_rgba(255,20,147,0.4)]'
+                            : 'bg-amber-950/80 border-amber-400 text-amber-300 shadow-[0_0_10px_rgba(251,191,36,0.4)]'
+                        }`}
+                      >
+                        {bombshellTheme === 'dark' ? '🌙 DARK THEME ARTWORK' : '☀️ LIGHT THEME ARTWORK'}
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="text-amber-400 font-bold tracking-wider uppercase">
+                      {shelfLevelTiers.length} PACK TIERS ON DISPLAY • CLICK DISPENSE
+                    </span>
+                  )}
                 </div>
 
                 <AnimatePresence mode="wait">
                   <motion.div 
-                    key={vendingPage}
+                    key={`${vendingPage}-${bombshellTheme}`}
                     initial={{ y: -100, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     exit={{ y: 100, opacity: 0 }}
                     transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 place-items-center w-full relative z-10"
+                    className={`grid ${shelfLevelTiers.length > 4 ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6'} place-items-center w-full relative z-10`}
                   >
                     {shelfLevelTiers.map((tierItem, idx) => {
                       const slotCode = `${String.fromCharCode(65 + vendingPage)}${idx + 1}`;
@@ -1068,6 +1151,30 @@ export default function NextGenLandingPage() {
                 
                 {/* Arcade Coin Mechanism Insert Plate SVG */}
                 <VendingCoinSlotSVG />
+
+                {/* Directional Scroll Arcade Push Buttons */}
+                <div className="flex items-center gap-2 w-full justify-between">
+                  <button
+                    onClick={() => {
+                      audioManager.playSfx('tap_nav', 0.15);
+                      setVendingPage(prev => (prev === 0 ? maxVendingPages - 1 : prev - 1));
+                    }}
+                    className="flex-1 py-2 rounded-xl bg-gradient-to-b from-purple-800 via-purple-900 to-slate-950 border border-purple-400/50 text-purple-200 hover:text-white font-mono text-[10px] font-black tracking-wider uppercase hover:brightness-125 transition-all shadow-[0_0_12px_rgba(168,85,247,0.3)] active:scale-95 flex items-center justify-center gap-1 cursor-pointer"
+                    title="Previous Shelf (Left Arrow)"
+                  >
+                    <ChevronLeft size={14} /> <span>PREV</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      audioManager.playSfx('tap_nav', 0.15);
+                      setVendingPage(prev => (prev + 1) % maxVendingPages);
+                    }}
+                    className="flex-1 py-2 rounded-xl bg-gradient-to-b from-purple-800 via-purple-900 to-slate-950 border border-purple-400/50 text-purple-200 hover:text-white font-mono text-[10px] font-black tracking-wider uppercase hover:brightness-125 transition-all shadow-[0_0_12px_rgba(168,85,247,0.3)] active:scale-95 flex items-center justify-center gap-1 cursor-pointer"
+                    title="Next Shelf (Right Arrow)"
+                  >
+                    <span>NEXT</span> <ChevronRight size={14} />
+                  </button>
+                </div>
 
                 <span className="text-[9px] font-mono font-extrabold text-slate-400 tracking-widest uppercase text-center">
                   MATRIX SHELF SELECTOR

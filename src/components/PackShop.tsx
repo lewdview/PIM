@@ -274,6 +274,14 @@ export function PackBag({ category, isActive = true, onRip, isRipping = false, i
         opacity: isActive ? 1 : 0.4,
         transition: 'transform 0.35s cubic-bezier(.22,1,.36,1), opacity 0.35s ease, box-shadow 0.35s ease',
       }}>
+        {/* CUSTOM PACK COVER ARTWORK IMAGE (if available) */}
+        {tier.coverImage && (
+          <img
+            src={tier.coverImage}
+            alt={cfg.label}
+            className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none"
+          />
+        )}
         {/* FOIL CRIMP BORDERS (Top & Bottom edges) */}
         <div className="absolute inset-x-0 top-0 h-[14px] crimp-edge z-10" style={{
           boxShadow: '0 3px 6px rgba(0,0,0,0.4)',
@@ -438,51 +446,53 @@ export function PackBag({ category, isActive = true, onRip, isRipping = false, i
             </div>
           )}
 
-          <div className="text-center space-y-2">
-            <h3 className="text-[48px] leading-[0.88] pack-label-neon uppercase font-black" style={{
-              '--neon-accent': accent,
-              color: '#ffffff',
-              fontFamily: '"Impact", "Arial Black", sans-serif',
-              letterSpacing: '-0.02em',
-              transform: 'scaleY(1.3) scaleX(0.9)',
-              transformOrigin: 'center',
-              WebkitTextStroke: '2px #000000',
-              textShadow: `
-                0 0 20px ${accent}, 
-                0 0 40px ${accent}80, 
-                3px 5px 0 #000000, 
-                4px 10px 20px rgba(0,0,0,0.95)
-              `,
-              margin: '16px 0 12px 0',
-            } as React.CSSProperties}>
-              {cfg.label}
-            </h3>
-            
-            <div className="flex justify-center">
-              <PackEmblem accent={accent} size={85} />
-            </div>
+          {!tier.coverImage && (
+            <div className="text-center space-y-2">
+              <h3 className="text-[48px] leading-[0.88] pack-label-neon uppercase font-black" style={{
+                '--neon-accent': accent,
+                color: '#ffffff',
+                fontFamily: '"Impact", "Arial Black", sans-serif',
+                letterSpacing: '-0.02em',
+                transform: 'scaleY(1.3) scaleX(0.9)',
+                transformOrigin: 'center',
+                WebkitTextStroke: '2px #000000',
+                textShadow: `
+                  0 0 20px ${accent}, 
+                  0 0 40px ${accent}80, 
+                  3px 5px 0 #000000, 
+                  4px 10px 20px rgba(0,0,0,0.95)
+                `,
+                margin: '16px 0 12px 0',
+              } as React.CSSProperties}>
+                {cfg.label}
+              </h3>
+              
+              <div className="flex justify-center">
+                <PackEmblem accent={accent} size={85} />
+              </div>
 
-            <div className="text-center mt-3">
-              <div className="inline-block">
-                <div className="sticker-gun-tag sticker-slits drop-shadow-md" style={{
-                  background: '#ffffff',
-                  border: `1.5px solid ${accent}40`,
-                  '--slit-color': `${accent}22`,
-                  padding: '4px 12px',
-                  transform: 'rotate(0.5deg)',
-                  minWidth: '170px'
-                } as any}>
-                  <span className="text-[9px] font-black tracking-tighter uppercase italic opacity-90" style={{ color: '#000' }}>
-                    365 DAYS OF LIGHT AND DARK
-                  </span>
+              <div className="text-center mt-3">
+                <div className="inline-block">
+                  <div className="sticker-gun-tag sticker-slits drop-shadow-md" style={{
+                    background: '#ffffff',
+                    border: `1.5px solid ${accent}40`,
+                    '--slit-color': `${accent}22`,
+                    padding: '4px 12px',
+                    transform: 'rotate(0.5deg)',
+                    minWidth: '170px'
+                  } as any}>
+                    <span className="text-[9px] font-black tracking-tighter uppercase italic opacity-90" style={{ color: '#000' }}>
+                      365 DAYS OF LIGHT AND DARK
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <p className="text-[10px] font-mono mt-4" style={{ color: 'var(--color-text-muted)' }}>
-              {cfg.description}
-            </p>
-          </div>
+              <p className="text-[10px] font-mono mt-4" style={{ color: 'var(--color-text-muted)' }}>
+                {cfg.description}
+              </p>
+            </div>
+          )}
 
           {isSpecial && (
             <div className="px-3 py-1.5 rounded-lg" style={{ background: `${accent}10`, border: `1px solid ${accent}25` }}>

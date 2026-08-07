@@ -13,6 +13,13 @@ type Phase = 'idle' | 'shaking' | 'ripping' | 'flashing';
 function PackBagArt({ meta }: { meta: RevealPackMeta }) {
   return (
     <div style={{ position: 'absolute', inset: 0, background: meta.gradient, overflow: 'hidden' }}>
+      {meta.coverImage && (
+        <img
+          src={meta.coverImage}
+          alt={meta.label}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+        />
+      )}
       {/* Base glow */}
       <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 50% 30%, ${meta.accent}50, transparent 60%)` }} />
       <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 50% 85%, ${meta.accent}30, transparent 50%)` }} />
