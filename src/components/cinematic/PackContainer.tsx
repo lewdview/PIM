@@ -249,8 +249,13 @@ function PackBagContents({ meta }: { meta: RevealPackMeta }) {
           <img
             src={activeCoverArt}
             alt={meta.label}
-            className={`w-full h-full object-cover transition-transform duration-700 ${variant.imgScale} ${variant.filterClass}`}
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+            className={`w-full h-full object-cover transition-transform duration-700 ${variant.imgScale}`}
+            style={{
+              position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover',
+              filter: 'brightness(0.4) contrast(1.5) grayscale(0.6)',
+              opacity: 0.35,
+              mixBlendMode: 'luminosity',
+            }}
             onError={(e) => {
               const target = e.currentTarget;
               const fallback = getPackCoverFallback(meta.category || meta.label);
@@ -259,7 +264,26 @@ function PackBagContents({ meta }: { meta: RevealPackMeta }) {
               }
             }}
           />
-          <div style={{ position: 'absolute', inset: 0, background: variant.overlayGradient }} />
+          {/* RICH PACK ACCENT COLOR TINT OVERLAY (Pack color on top) */}
+          <div
+            className="absolute inset-0 pointer-events-none transition-all"
+            style={{
+              position: 'absolute', inset: 0,
+              background: `linear-gradient(160deg, ${meta.accent}dd 0%, ${meta.accent}aa 45%, rgba(10,5,20,0.92) 100%)`,
+              mixBlendMode: 'hard-light',
+              opacity: 0.85,
+            }}
+          />
+          <div
+            className="absolute inset-0 pointer-events-none transition-all"
+            style={{
+              position: 'absolute', inset: 0,
+              background: meta.accent,
+              mixBlendMode: 'color',
+              opacity: 0.9,
+            }}
+          />
+          <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 40%, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.85) 85%)' }} />
         </div>
       )}
       <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 50% 30%, ${meta.accent}40, transparent 55%)` }} />

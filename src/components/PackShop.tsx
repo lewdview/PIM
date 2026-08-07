@@ -278,13 +278,18 @@ export function PackBag({ category, isActive = true, onRip, isRipping = false, i
         opacity: isActive ? 1 : 0.4,
         transition: 'transform 0.35s cubic-bezier(.22,1,.36,1), opacity 0.35s ease, box-shadow 0.35s ease',
       }}>
-        {/* CUSTOM PACK COVER ARTWORK IMAGE (Blown up & centered with light/dark/dimmed variants) */}
+        {/* CUSTOM PACK COVER ARTWORK IMAGE (Tinted with pack accent color, artwork barely coming through) */}
         {activeCoverArt && (
           <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
             <img
               src={activeCoverArt}
               alt={cfg.label}
-              className={`w-full h-full object-cover transition-transform duration-700 ${variant.imgScale} ${variant.filterClass}`}
+              className={`w-full h-full object-cover transition-transform duration-700 ${variant.imgScale}`}
+              style={{
+                filter: 'brightness(0.4) contrast(1.5) grayscale(0.6)',
+                opacity: 0.35,
+                mixBlendMode: 'luminosity',
+              }}
               onError={(e) => {
                 const target = e.currentTarget;
                 const fallback = getPackCoverFallback(cfg.category);
@@ -293,10 +298,27 @@ export function PackBag({ category, isActive = true, onRip, isRipping = false, i
                 }
               }}
             />
-            {/* Dimmed & Light/Dark Vignette Overlay */}
+            {/* RICH PACK ACCENT COLOR TINT OVERLAY (Pack color on top) */}
+            <div
+              className="absolute inset-0 pointer-events-none transition-all"
+              style={{
+                background: `linear-gradient(160deg, ${accent}dd 0%, ${accent}aa 45%, rgba(10,5,20,0.92) 100%)`,
+                mixBlendMode: 'hard-light',
+                opacity: 0.85,
+              }}
+            />
+            <div
+              className="absolute inset-0 pointer-events-none transition-all"
+              style={{
+                background: accent,
+                mixBlendMode: 'color',
+                opacity: 0.9,
+              }}
+            />
+            {/* Vignette Overlay */}
             <div
               className="absolute inset-0 pointer-events-none transition-opacity"
-              style={{ background: variant.overlayGradient }}
+              style={{ background: 'radial-gradient(ellipse at 50% 40%, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.85) 85%)' }}
             />
           </div>
         )}
