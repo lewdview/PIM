@@ -322,25 +322,28 @@ export function PackBag({ category, isActive = true, onRip, isRipping = false, i
             />
           </div>
         )}
-        {/* FOIL CRIMP BORDERS (Top & Bottom edges) */}
-        <div className="absolute inset-x-0 top-0 h-[14px] crimp-edge z-10" style={{
-          boxShadow: '0 3px 6px rgba(0,0,0,0.4)',
-          borderBottom: '1px solid rgba(255,255,255,0.1)',
+        {/* 3D FOIL CRIMP BORDERS (Top & Bottom Raised Edges) */}
+        <div className="absolute inset-x-0 top-0 h-[16px] foil-crimp-3d-top z-20" style={{
           borderTopLeftRadius: '8px',
           borderTopRightRadius: '8px',
         }} />
-        <div className="absolute inset-x-0 bottom-0 h-[14px] crimp-edge z-10" style={{
-          boxShadow: '0 -3px 6px rgba(0,0,0,0.4)',
-          borderTop: '1px solid rgba(255,255,255,0.1)',
+        <div className="absolute inset-x-0 bottom-0 h-[16px] foil-crimp-3d-bottom z-20" style={{
           borderBottomLeftRadius: '12px',
           borderBottomRightRadius: '12px',
         }} />
 
+        {/* 3D INNER CARD STACK BULGE (Physical Cards Inside Silhouette Contour) */}
+        <div className="foil-card-bulge" />
+
+        {/* METALLIC FOIL WRINKLES & FOLD CREASES OVERLAY */}
+        <div className="foil-wrinkles-overlay" />
+        <div className="foil-metallic-sheen" />
+
         {/* METALLIC NOISE TEXTURE */}
         <div className="absolute inset-0 pointer-events-none mix-blend-overlay" style={{
           background: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
-          opacity: 0.15,
-          zIndex: 1,
+          opacity: 0.18,
+          zIndex: 2,
         }} />
 
         {/* VERTICAL TH3SCR1B3 SIDE BANNER */}

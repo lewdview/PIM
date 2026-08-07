@@ -291,11 +291,15 @@ function PackBagContents({ meta }: { meta: RevealPackMeta }) {
         position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
       }}>
-        {/* Top Crimp Edge */}
-        <div className="absolute inset-x-0 top-0 h-[14px] crimp-edge z-10" style={{
-          boxShadow: '0 3px 6px rgba(0,0,0,0.4)',
-          borderBottom: '1px solid rgba(255,255,255,0.1)',
-        }} />
+        {/* 3D FOIL CRIMP BORDERS (Top & Bottom Raised Edges) */}
+        <div className="absolute inset-x-0 top-0 h-[16px] foil-crimp-3d-top z-20" />
+
+        {/* 3D INNER CARD STACK BULGE (Physical Cards Inside Silhouette Contour) */}
+        <div className="foil-card-bulge" />
+
+        {/* METALLIC FOIL WRINKLES & FOLD CREASES OVERLAY */}
+        <div className="foil-wrinkles-overlay" />
+        <div className="foil-metallic-sheen" />
 
         {/* VERTICAL TH3SCR1B3 SIDE BANNER */}
         <div className="absolute left-1 top-24 w-8 flex items-center justify-center pointer-events-none z-20 mix-blend-overlay">
@@ -396,11 +400,8 @@ function PackBagContents({ meta }: { meta: RevealPackMeta }) {
           </div>
         </div>
 
-        {/* Bottom Crimp Edge */}
-        <div className="absolute inset-x-0 bottom-0 h-[14px] crimp-edge z-10" style={{
-          boxShadow: '0 -3px 6px rgba(0,0,0,0.4)',
-          borderTop: '1px solid rgba(255,255,255,0.1)',
-        }} />
+        {/* Bottom 3D Crimp Edge */}
+        <div className="absolute inset-x-0 bottom-0 h-[16px] foil-crimp-3d-bottom z-20" />
       </div>
 
       <div style={{ position: 'absolute', inset: 0, border: '1.5px solid rgba(255,255,255,0.05)', borderRadius: '6px', pointerEvents: 'none' }} />
