@@ -248,14 +248,14 @@ function PackBagContents({ meta }: { meta: RevealPackMeta }) {
 
   return (
     <>
-      {/* MULTI-COVER COLLAGE FAN (Multiple album covers subtly blended under pack tint) */}
-      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      {/* MULTI-COVER COLLAGE FAN (~20% cover lines shining through underneath popping pack color) */}
+      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(6,3,14,0.96)' }}>
         {multiCovers.map((coverUrl, idx) => {
           const fanStyles = [
-            { transform: 'rotate(-14deg) translate(-24%, -2%) scale(0.9)', opacity: 0.32, zIndex: 1 },
-            { transform: 'rotate(14deg) translate(24%, 3%) scale(0.9)', opacity: 0.32, zIndex: 1 },
-            { transform: 'rotate(-3deg) translate(0%, 0%) scale(1.02)', opacity: 0.48, zIndex: 2 },
-            { transform: 'rotate(6deg) translate(0%, -18%) scale(0.85)', opacity: 0.25, zIndex: 0 },
+            { transform: 'rotate(-14deg) translate(-24%, -2%) scale(0.9)', opacity: 0.15, zIndex: 1 },
+            { transform: 'rotate(14deg) translate(24%, 3%) scale(0.9)', opacity: 0.15, zIndex: 1 },
+            { transform: 'rotate(-3deg) translate(0%, 0%) scale(1.02)', opacity: 0.22, zIndex: 2 },
+            { transform: 'rotate(6deg) translate(0%, -18%) scale(0.85)', opacity: 0.12, zIndex: 0 },
           ][idx % 4];
 
           return (
@@ -267,7 +267,8 @@ function PackBagContents({ meta }: { meta: RevealPackMeta }) {
               style={{
                 position: 'absolute',
                 ...fanStyles,
-                filter: 'brightness(0.65) contrast(1.35) saturate(1.15) grayscale(0.15)',
+                filter: 'brightness(0.45) contrast(1.65) saturate(1.2)',
+                mixBlendMode: 'luminosity',
               }}
               onError={(e) => {
                 const target = e.currentTarget;
@@ -280,14 +281,14 @@ function PackBagContents({ meta }: { meta: RevealPackMeta }) {
           );
         })}
 
-        {/* ELEGANT PACK ACCENT COLOR BLEND & GLOW */}
+        {/* VIBRANT POPPING PACK ACCENT COLOR TINT */}
         <div
           className="absolute inset-0 pointer-events-none transition-all z-10"
           style={{
             position: 'absolute', inset: 0,
-            background: `radial-gradient(ellipse at 50% 35%, ${meta.accent}99 0%, ${meta.accent}44 55%, rgba(10,5,20,0.92) 100%)`,
+            background: `linear-gradient(160deg, ${meta.accent}ee 0%, ${meta.accent}aa 45%, rgba(6,3,14,0.96) 100%)`,
             mixBlendMode: 'hard-light',
-            opacity: 0.55,
+            opacity: 0.85,
           }}
         />
         <div
@@ -296,10 +297,10 @@ function PackBagContents({ meta }: { meta: RevealPackMeta }) {
             position: 'absolute', inset: 0,
             background: meta.accent,
             mixBlendMode: 'color',
-            opacity: 0.75,
+            opacity: 0.88,
           }}
         />
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 40%, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.85) 85%)', zIndex: 10 }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 40%, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.92) 85%)', zIndex: 10 }} />
       </div>
       <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 50% 30%, ${meta.accent}40, transparent 55%)` }} />
       <div style={{
