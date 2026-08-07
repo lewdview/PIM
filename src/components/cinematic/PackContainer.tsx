@@ -5,6 +5,7 @@ import type { OwnedCard } from '../../services/vaultService';
 import { audioManager } from '../../game/audio';
 import { RARITY_CONFIG, type Rarity } from '../../utils/rarity';
 import { getCoverUrlForRarity, useSmartCoverArt, resolveSmartCoverUrl } from '../../utils/rarityArtwork';
+import { get365CardVariantStyle, getPackCoverFallback } from '../../utils/cardVariants';
 import Card from '../Card';
 import RarityBadge from '../RarityBadge';
 import {
@@ -238,14 +239,21 @@ function PackEmblem({ accent, size = 80 }: { accent: string; size?: number }) {
 }
 
 function PackBagContents({ meta }: { meta: RevealPackMeta }) {
+  const variant = get365CardVariantStyle(meta.category || meta.label);
+  const activeCoverArt = meta.coverImage || getPackCoverFallback(meta.category || meta.label);
+
   return (
     <>
-      {meta.coverImage && (
-        <img
-          src={meta.coverImage}
-          alt={meta.label}
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
-        />
+      {activeCoverArt && (
+        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
+          <img
+            src={activeCoverArt}
+            alt={meta.label}
+            className={`w-full h-full object-cover transition-transform duration-700 ${variant.imgScale} ${variant.filterClass}`}
+            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+          <div style={{ position: 'absolute', inset: 0, background: variant.overlayGradient }} />
+        </div>
       )}
       <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 50% 30%, ${meta.accent}40, transparent 55%)` }} />
       <div style={{
@@ -334,7 +342,7 @@ function PackBagContents({ meta }: { meta: RevealPackMeta }) {
                   minWidth: '150px'
                 } as any}>
                   <span className="text-[8px] font-black tracking-tighter uppercase italic opacity-90" style={{ color: '#000' }}>
-                    365 DAYS OF LIGHT AND DARK
+                    {variant.tagline}
                   </span>
                 </div>
               </div>

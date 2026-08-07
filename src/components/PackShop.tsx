@@ -9,8 +9,8 @@ import {
 } from '../utils/rarity';
 import { hasClaimedFreePackToday } from '../services/vaultService';
 import { getTimeUntilNextDay } from '../utils/dayCalc';
-import { useVaultStore } from '../store/useVaultStore';
 import { getAdminConfig } from '../utils/adminConfig';
+import { get365CardVariantStyle, getPackCoverFallback } from '../utils/cardVariants';
 
 interface PackShopProps {
   onPurchase: (category: PackCategory, size: PackSize) => void;
@@ -183,6 +183,9 @@ export function PackBag({ category, isActive = true, onRip, isRipping = false, i
 
   const repeatedText = Array(5).fill(0).map(() => `365 DAYS OF LIGHT AND DARK \u2022 ${cfg.label}`).join(' \u2022 ');
 
+  const variant = get365CardVariantStyle(cfg.category);
+  const activeCoverArt = tier.coverImage || getPackCoverFallback(cfg.category);
+
   return (
     <div className="flex-shrink-0 flex flex-col items-center" style={{ width: `${CARD_W}px` }}>
       {/* Inline styles for scrolling the brutalist text */}
@@ -274,13 +277,20 @@ export function PackBag({ category, isActive = true, onRip, isRipping = false, i
         opacity: isActive ? 1 : 0.4,
         transition: 'transform 0.35s cubic-bezier(.22,1,.36,1), opacity 0.35s ease, box-shadow 0.35s ease',
       }}>
-        {/* CUSTOM PACK COVER ARTWORK IMAGE (if available) */}
-        {tier.coverImage && (
-          <img
-            src={tier.coverImage}
-            alt={cfg.label}
-            className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none"
-          />
+        {/* CUSTOM PACK COVER ARTWORK IMAGE (Blown up & centered with light/dark/dimmed variants) */}
+        {activeCoverArt && (
+          <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+            <img
+              src={activeCoverArt}
+              alt={cfg.label}
+              className={`w-full h-full object-cover transition-transform duration-700 ${variant.imgScale} ${variant.filterClass}`}
+            />
+            {/* Dimmed & Light/Dark Vignette Overlay */}
+            <div
+              className="absolute inset-0 pointer-events-none transition-opacity"
+              style={{ background: variant.overlayGradient }}
+            />
+          </div>
         )}
         {/* FOIL CRIMP BORDERS (Top & Bottom edges) */}
         <div className="absolute inset-x-0 top-0 h-[14px] crimp-edge z-10" style={{
@@ -482,7 +492,7 @@ export function PackBag({ category, isActive = true, onRip, isRipping = false, i
                     minWidth: '170px'
                   } as any}>
                     <span className="text-[9px] font-black tracking-tighter uppercase italic opacity-90" style={{ color: '#000' }}>
-                      365 DAYS OF LIGHT AND DARK
+                      {variant.tagline}
                     </span>
                   </div>
                 </div>
