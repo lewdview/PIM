@@ -1,4 +1,21 @@
 import type { Rarity } from './rarity';
+import cardCatalog from '../../public/data/card_catalog.json';
+
+const SONG_CATALOG_MAP: Record<number, { title: string; description: string }> = {};
+if (Array.isArray(cardCatalog)) {
+  for (const item of cardCatalog as any[]) {
+    if (item && typeof item.day === 'number') {
+      SONG_CATALOG_MAP[item.day] = {
+        title: item.title || `Day ${item.day}`,
+        description: item.description || '',
+      };
+    }
+  }
+}
+
+export function getSongMetaForDay(day: number): { title: string; description: string } {
+  return SONG_CATALOG_MAP[day] || { title: `Day ${day}`, description: '' };
+}
 
 export type OutfitStyle =
   | 'shiny'
@@ -438,7 +455,8 @@ export function generateArtPromptForDay(
     songTitle = options;
   }
 
-  const trackName = songTitle || `Track Day ${day}`;
+  const songMeta = getSongMetaForDay(day);
+  const trackName = songTitle || songMeta.title;
   const lyricText = lyrics || art.description;
   const outfitLabel = OUTFIT_STYLES[art.outfitStyle]?.label || 'Stylized';
   const outfitDetails = outfitChoice ? `${art.outfitDescription}, custom ${outfitChoice}` : art.outfitDescription;
@@ -476,7 +494,8 @@ export function generateGirlVinylPromptForDay(
     songTitle = options;
   }
 
-  const trackName = songTitle || `Track Day ${day}`;
+  const songMeta = getSongMetaForDay(day);
+  const trackName = songTitle || songMeta.title;
   const lyricText = lyrics || art.description;
   const outfitLabel = OUTFIT_STYLES[art.outfitStyle]?.label || 'Stylized';
   const outfitDetails = outfitChoice ? `${art.outfitDescription}, custom ${outfitChoice}` : art.outfitDescription;
@@ -503,7 +522,8 @@ export function generateAll365Prompts(options?: PromptOptions, mode: 'square' | 
   
   for (let day = 1; day <= 365; day++) {
     const art = getArtTypeForDay(day);
-    lines.push(`### Day ${day}: Track Day ${day}`);
+    const songMeta = getSongMetaForDay(day);
+    lines.push(`### Day ${day}: ${songMeta.title}`);
     lines.push(`- **Art Style**: ${art.artType}`);
     lines.push(`- **Graffiti Style**: ${art.graffitiStyle.name}`);
     lines.push(`- **Outfit Style**: ${OUTFIT_STYLES[art.outfitStyle].label} (${art.outfitDescription})`);
