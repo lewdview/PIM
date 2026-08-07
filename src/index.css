@@ -307,47 +307,123 @@ body {
   );
 }
 
-/* ===== REALISTIC 3D FOIL WRAPPER & CRINKLED BOOSTER PACK STYLING ===== */
-.foil-crimp-3d-top {
+/* ===== HYPER-REALISTIC 3D FOIL BOOSTER PACK SYSTEM ===== */
+
+/* Serrated Jagged Crimp Teeth Top Seal */
+.foil-crimp-serrated-top {
   background: 
-    linear-gradient(180deg, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0.1) 35%, rgba(0,0,0,0.65) 100%),
+    linear-gradient(180deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.15) 35%, rgba(0,0,0,0.7) 100%),
     repeating-linear-gradient(
       90deg,
-      rgba(255, 255, 255, 0.3) 0px,
-      rgba(255, 255, 255, 0.85) 1.5px,
-      rgba(0, 0, 0, 0.65) 3px,
+      rgba(255, 255, 255, 0.4) 0px,
+      rgba(255, 255, 255, 0.9) 1.5px,
+      rgba(0, 0, 0, 0.7) 3px,
       rgba(0, 0, 0, 0.2) 5px
     );
-  box-shadow: 0 4px 10px rgba(0,0,0,0.7), inset 0 1.5px 2px rgba(255,255,255,0.9), inset 0 -2px 3px rgba(0,0,0,0.85);
+  clip-path: polygon(
+    0% 100%, 0% 30%, 2% 0%, 4% 30%, 6% 0%, 8% 30%, 10% 0%, 12% 30%, 14% 0%, 16% 30%, 18% 0%, 20% 30%,
+    22% 0%, 24% 30%, 26% 0%, 28% 30%, 30% 0%, 32% 30%, 34% 0%, 36% 30%, 38% 0%, 40% 30%,
+    42% 0%, 44% 30%, 46% 0%, 48% 30%, 50% 0%, 52% 30%, 54% 0%, 56% 30%, 58% 0%, 60% 30%,
+    62% 0%, 64% 30%, 66% 0%, 68% 30%, 70% 0%, 72% 30%, 74% 0%, 76% 30%, 78% 0%, 80% 30%,
+    82% 0%, 84% 30%, 86% 0%, 88% 30%, 90% 0%, 92% 30%, 94% 0%, 96% 30%, 98% 0%, 100% 30%, 100% 100%
+  );
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.8));
 }
 
-.foil-crimp-3d-bottom {
+/* Serrated Jagged Crimp Teeth Bottom Seal */
+.foil-crimp-serrated-bottom {
   background: 
-    linear-gradient(0deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.1) 35%, rgba(0,0,0,0.65) 100%),
+    linear-gradient(0deg, rgba(255,255,255,0.65) 0%, rgba(255,255,255,0.15) 35%, rgba(0,0,0,0.7) 100%),
     repeating-linear-gradient(
       90deg,
-      rgba(255, 255, 255, 0.3) 0px,
-      rgba(255, 255, 255, 0.85) 1.5px,
-      rgba(0, 0, 0, 0.65) 3px,
+      rgba(255, 255, 255, 0.4) 0px,
+      rgba(255, 255, 255, 0.9) 1.5px,
+      rgba(0, 0, 0, 0.7) 3px,
       rgba(0, 0, 0, 0.2) 5px
     );
-  box-shadow: 0 -4px 10px rgba(0,0,0,0.7), inset 0 -1.5px 2px rgba(255,255,255,0.9), inset 0 2px 3px rgba(0,0,0,0.85);
+  clip-path: polygon(
+    0% 0%, 0% 70%, 2% 100%, 4% 70%, 6% 100%, 8% 70%, 10% 100%, 12% 70%, 14% 100%, 16% 70%, 18% 100%, 20% 70%,
+    22% 100%, 24% 70%, 26% 100%, 28% 70%, 30% 100%, 32% 70%, 34% 100%, 36% 70%, 38% 100%, 40% 70%,
+    42% 100%, 44% 70%, 46% 100%, 48% 70%, 50% 100%, 52% 70%, 54% 100%, 56% 70%, 58% 100%, 60% 70%,
+    62% 100%, 64% 70%, 66% 100%, 68% 70%, 70% 100%, 72% 70%, 74% 100%, 76% 70%, 78% 100%, 80% 70%,
+    82% 100%, 84% 70%, 86% 100%, 88% 70%, 90% 100%, 92% 70%, 94% 100%, 96% 70%, 98% 100%, 100% 70%, 100% 0%
+  );
+  filter: drop-shadow(0 -4px 6px rgba(0,0,0,0.8));
+}
+
+/* Foil Wrapper Tear Notch (Easy-Open Notch Cutout) */
+.foil-tear-notch-left {
+  position: absolute;
+  top: 22px;
+  left: -2px;
+  width: 8px;
+  height: 12px;
+  background: #090510;
+  clip-path: polygon(0% 50%, 100% 0%, 100% 100%);
+  z-index: 25;
+  filter: drop-shadow(1px 1px 2px rgba(0,0,0,0.9));
+}
+
+.foil-tear-notch-right {
+  position: absolute;
+  top: 22px;
+  right: -2px;
+  width: 8px;
+  height: 12px;
+  background: #090510;
+  clip-path: polygon(100% 50%, 0% 0%, 0% 100%);
+  z-index: 25;
+  filter: drop-shadow(-1px 1px 2px rgba(0,0,0,0.9));
+}
+
+/* Back Fin Seal (Center Foil Seam Overlay) */
+.foil-fin-seal {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 20px;
+  width: 3px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.3) 0%, rgba(0,0,0,0.6) 100%);
+  box-shadow: 2px 0 5px rgba(0,0,0,0.7);
+  pointer-events: none;
+  z-index: 6;
+  opacity: 0.5;
+}
+
+/* Dynamic Holographic Rainbow Specular Refraction Overlay */
+.foil-holo-prism {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 7;
+  mix-blend-mode: color-dodge;
+  opacity: 0.35;
+  background: linear-gradient(
+    115deg,
+    transparent 0%,
+    rgba(255, 0, 128, 0.15) 20%,
+    rgba(0, 229, 255, 0.25) 40%,
+    rgba(255, 230, 0, 0.2) 60%,
+    rgba(57, 255, 20, 0.2) 80%,
+    transparent 100%
+  );
+  transition: opacity 0.4s ease;
 }
 
 /* Realistic 3D Card Stack Bulge (Pillow Contour Bevel Effect) */
 .foil-card-bulge {
   position: absolute;
-  inset: 8px 12px;
+  inset: 12px 14px;
   border-radius: 14px;
   pointer-events: none;
   z-index: 5;
   box-shadow: 
-    inset 0 2px 4px rgba(255, 255, 255, 0.45),      /* Top Bevel Highlight */
-    inset 0 -4px 8px rgba(0, 0, 0, 0.75),           /* Bottom Bevel Shadow */
-    inset 3px 0 6px rgba(255, 255, 255, 0.3),       /* Left Bevel Highlight */
-    inset -3px 0 6px rgba(0, 0, 0, 0.65),          /* Right Bevel Shadow */
-    0 10px 30px rgba(0, 0, 0, 0.8);                /* Outer Drop Shadow on Pack Foil */
-  border: 1px solid rgba(255, 255, 255, 0.25);
+    inset 0 3px 6px rgba(255, 255, 255, 0.55),     /* Top Bevel Highlight */
+    inset 0 -5px 10px rgba(0, 0, 0, 0.85),         /* Bottom Bevel Shadow */
+    inset 4px 0 8px rgba(255, 255, 255, 0.35),     /* Left Bevel Highlight */
+    inset -4px 0 8px rgba(0, 0, 0, 0.7),           /* Right Bevel Shadow */
+    0 12px 35px rgba(0, 0, 0, 0.85);               /* Outer Drop Shadow on Pack Foil */
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 /* Realistic Metallic Foil Crinkle Creases Overlay */
@@ -357,17 +433,14 @@ body {
   pointer-events: none;
   z-index: 4;
   mix-blend-mode: overlay;
-  opacity: 0.65;
+  opacity: 0.7;
   background-image: 
-    /* Specular crinkle crease lines with highlight edge & shadow seam */
-    linear-gradient(135deg, transparent 22%, rgba(255,255,255,0.65) 23.5%, rgba(0,0,0,0.75) 25%, transparent 27%),
-    linear-gradient(42deg, transparent 45%, rgba(255,255,255,0.6) 46.5%, rgba(0,0,0,0.7) 48%, transparent 50%),
-    linear-gradient(168deg, transparent 62%, rgba(255,255,255,0.55) 63.5%, rgba(0,0,0,0.65) 65%, transparent 67%),
-    linear-gradient(115deg, transparent 78%, rgba(255,255,255,0.65) 79.5%, rgba(0,0,0,0.75) 81%, transparent 83%),
-    /* Vertical side stress tension lines */
-    repeating-linear-gradient(180deg, transparent 0px, transparent 18px, rgba(255,255,255,0.15) 19px, rgba(0,0,0,0.25) 20px),
-    /* Foil specular glow center */
-    radial-gradient(ellipse at 40% 30%, rgba(255,255,255,0.35) 0%, transparent 65%);
+    linear-gradient(135deg, transparent 22%, rgba(255,255,255,0.7) 23.5%, rgba(0,0,0,0.8) 25%, transparent 27%),
+    linear-gradient(42deg, transparent 45%, rgba(255,255,255,0.65) 46.5%, rgba(0,0,0,0.75) 48%, transparent 50%),
+    linear-gradient(168deg, transparent 62%, rgba(255,255,255,0.6) 63.5%, rgba(0,0,0,0.7) 65%, transparent 67%),
+    linear-gradient(115deg, transparent 78%, rgba(255,255,255,0.7) 79.5%, rgba(0,0,0,0.8) 81%, transparent 83%),
+    repeating-linear-gradient(180deg, transparent 0px, transparent 18px, rgba(255,255,255,0.18) 19px, rgba(0,0,0,0.28) 20px),
+    radial-gradient(ellipse at 40% 30%, rgba(255,255,255,0.4) 0%, transparent 65%);
 }
 
 .foil-metallic-sheen {
@@ -376,16 +449,16 @@ body {
   pointer-events: none;
   z-index: 3;
   mix-blend-mode: color-dodge;
-  opacity: 0.45;
+  opacity: 0.5;
   background: linear-gradient(
     120deg,
     transparent 0%,
     transparent 28%,
-    rgba(255, 255, 255, 0.15) 40%,
-    rgba(255, 255, 255, 0.75) 48%,
-    rgba(255, 255, 255, 0.95) 50%,
-    rgba(255, 255, 255, 0.75) 52%,
-    rgba(255, 255, 255, 0.15) 60%,
+    rgba(255, 255, 255, 0.2) 40%,
+    rgba(255, 255, 255, 0.85) 48%,
+    rgba(255, 255, 255, 1.0) 50%,
+    rgba(255, 255, 255, 0.85) 52%,
+    rgba(255, 255, 255, 0.2) 60%,
     transparent 72%,
     transparent 100%
   );

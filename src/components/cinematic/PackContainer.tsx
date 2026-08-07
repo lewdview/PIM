@@ -307,8 +307,18 @@ function PackBagContents({ meta }: { meta: RevealPackMeta }) {
         position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
       }}>
-        {/* 3D FOIL CRIMP BORDERS (Top & Bottom Raised Edges) */}
-        <div className="absolute inset-x-0 top-0 h-[16px] foil-crimp-3d-top z-20" />
+        {/* REALISTIC SERRATED JAGGED CRIMP TEETH (Top Industrial Seal) */}
+        <div className="absolute inset-x-0 top-0 h-[22px] foil-crimp-serrated-top z-20" />
+
+        {/* FOIL WRAPPER TEAR NOTCHES (Easy-Open Notch Cutouts) */}
+        <div className="foil-tear-notch-left" />
+        <div className="foil-tear-notch-right" />
+
+        {/* BACK FIN SEAL (Vertical Seam Overlay) */}
+        <div className="foil-fin-seal" />
+
+        {/* DYNAMIC HOLOGRAPHIC RAINBOW SPECULAR REFRACTION */}
+        <div className="foil-holo-prism" style={{ opacity: 0.4 }} />
 
         {/* 3D INNER CARD STACK BULGE (Physical Cards Inside Silhouette Contour) */}
         <div className="foil-card-bulge" />
@@ -320,7 +330,7 @@ function PackBagContents({ meta }: { meta: RevealPackMeta }) {
         {/* REALISTIC METALLIC FOIL CRINKLE NOISE TEXTURE */}
         <div className="absolute inset-0 pointer-events-none mix-blend-overlay" style={{
           background: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='foilNoise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.035 0.08' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23foilNoise)'/%3E%3C/svg%3E")`,
-          opacity: 0.28,
+          opacity: 0.32,
           zIndex: 4,
         }} />
 
@@ -423,8 +433,8 @@ function PackBagContents({ meta }: { meta: RevealPackMeta }) {
           </div>
         </div>
 
-        {/* Bottom 3D Crimp Edge */}
-        <div className="absolute inset-x-0 bottom-0 h-[16px] foil-crimp-3d-bottom z-20" />
+        {/* REALISTIC SERRATED JAGGED CRIMP TEETH (Bottom Industrial Seal) */}
+        <div className="absolute inset-x-0 bottom-0 h-[22px] foil-crimp-serrated-bottom z-20" />
       </div>
 
       <div style={{ position: 'absolute', inset: 0, border: '1.5px solid rgba(255,255,255,0.05)', borderRadius: '6px', pointerEvents: 'none' }} />
