@@ -533,7 +533,8 @@ export default function HeroLandingPage() {
     const cachedUrl =
       localStorage.getItem(`museum_video_${cleanTitle}`) ||
       localStorage.getItem(`museum_video_day_${song.day}`) ||
-      localStorage.getItem(`museum_video_song_${song.id}`);
+      localStorage.getItem(`museum_video_song_${song.id}`) ||
+      localStorage.getItem('museum_video_latest');
 
     if (cachedUrl) {
       setMuseumVideoUrl(cachedUrl);
@@ -1145,26 +1146,32 @@ export default function HeroLandingPage() {
       {/* ═══════════ SECTION 6 : GAMEPLAY PROOF ═══════════ */}
       <section className="hero-gameplay-section relative" id="hero-gameplay">
         <motion.div
-          className="hero-gameplay-wrap relative overflow-hidden rounded-3xl border border-white/15 bg-black shadow-2xl group"
+          className={`hero-gameplay-wrap relative overflow-hidden rounded-3xl border border-white/15 bg-black shadow-2xl group ${
+            museumVideoUrl ? 'hero-gameplay-museum-mode' : ''
+          }`}
           initial={{ opacity: 0, scale: 0.95 }}
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true, margin: '-80px' }}
           transition={{ duration: 0.8, ease: EASE_OUT }}
         >
           {museumVideoUrl ? (
-            <div className="relative w-full aspect-video flex items-center justify-center">
-              <video
-                src={museumVideoUrl}
-                autoPlay
-                loop
-                muted
-                controls
-                playsInline
-                className="w-full h-full object-cover rounded-3xl"
-              />
-              <div className="absolute top-4 left-4 z-20 px-3 py-1 rounded-lg bg-black/80 border border-[#39FF14]/60 text-[#39FF14] font-mono text-[10px] font-black tracking-widest flex items-center gap-2 uppercase shadow-[0_0_15px_rgba(57,255,20,0.4)] pointer-events-none">
-                <span className="w-2 h-2 rounded-full bg-[#39FF14] animate-ping" />
-                <span>FRAME-PERFECT 100% PERFECT+ REPLAY // DAY {activeDay}</span>
+            <div className="relative w-full flex flex-col items-center justify-center bg-slate-950/90 p-3 sm:p-5 rounded-3xl">
+              <div className="relative w-full flex items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-black shadow-inner">
+                <video
+                  src={museumVideoUrl}
+                  autoPlay
+                  loop
+                  muted
+                  controls
+                  playsInline
+                  className="w-full max-h-[82vh] object-contain rounded-2xl"
+                />
+                
+                {/* Live Frame-Perfect Status Badge */}
+                <div className="absolute top-4 left-4 z-20 px-3.5 py-1.5 rounded-xl bg-black/85 border border-[#39FF14]/70 text-[#39FF14] font-mono text-[10px] font-black tracking-widest flex items-center gap-2 uppercase shadow-[0_0_20px_rgba(57,255,20,0.4)] backdrop-blur-md pointer-events-none">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#39FF14] animate-ping" />
+                  <span>FRAME-PERFECT 100% PERFECT+ EXHIBIT REPLAY // DAY {activeDay}</span>
+                </div>
               </div>
             </div>
           ) : (
@@ -1177,20 +1184,38 @@ export default function HeroLandingPage() {
           )}
         </motion.div>
 
-        <motion.p
-          className="hero-gameplay-label flex items-center justify-center gap-2"
+        <motion.div
+          className="hero-gameplay-label flex flex-col sm:flex-row items-center justify-center gap-3 mt-4"
           initial={{ opacity: 0 }}
-          whileInView={{ opacity: 0.6 }}
+          whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5, delay: 0.2 }}
         >
-          <span>Perfect Run · Day {activeDay} ({song?.title || 'Transmission'})</span>
+          <span className="text-white/60 font-mono text-xs">
+            Perfect Run · Day {activeDay} ({song?.title || 'Transmission'})
+          </span>
           {museumVideoUrl && (
-            <span className="text-[#39FF14] font-mono text-[9px] font-black uppercase tracking-wider">
-              [LIVE VIDEO EXPORT]
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-[#39FF14] font-mono text-[10px] font-black uppercase tracking-wider bg-[#39FF14]/10 border border-[#39FF14]/40 px-2.5 py-1 rounded-md">
+                [LIVE VIDEO EXPORT EXHIBIT]
+              </span>
+              <button
+                onClick={() => {
+                  localStorage.removeItem('museum_video_latest');
+                  if (song) {
+                    const cleanTitle = song.title.toLowerCase().replace(/[^a-z0-9]/g, '_');
+                    localStorage.removeItem(`museum_video_${cleanTitle}`);
+                  }
+                  setMuseumVideoUrl(null);
+                }}
+                className="text-xs text-slate-400 hover:text-red-400 font-mono uppercase tracking-wider transition-colors cursor-pointer"
+                title="Reset exhibit view to default screenshot preview"
+              >
+                [RESET EXHIBIT VIEW]
+              </button>
+            </div>
           )}
-        </motion.p>
+        </motion.div>
       </section>
 
       <div className="hero-section-divider" />

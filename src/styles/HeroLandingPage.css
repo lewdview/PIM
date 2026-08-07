@@ -826,6 +826,17 @@
   background: #0a0a0e;
   box-shadow: 0 30px 100px rgba(0, 0, 0, 0.9),
     0 0 40px color-mix(in srgb, var(--palette-dominant) 15%, transparent);
+  transition: width 0.4s ease, aspect-ratio 0.4s ease;
+}
+
+/* Expanded Museum Exhibit Mode for Published Perfect Replays */
+.hero-gameplay-wrap.hero-gameplay-museum-mode {
+  width: min(1000px, 94vw);
+  aspect-ratio: auto;
+  min-height: 480px;
+  border-color: rgba(57, 255, 20, 0.3);
+  box-shadow: 0 30px 120px rgba(0, 0, 0, 0.95),
+    0 0 60px rgba(57, 255, 20, 0.15);
 }
 
 .hero-gameplay-media {

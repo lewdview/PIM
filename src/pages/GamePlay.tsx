@@ -846,6 +846,9 @@ function stageifyNotes(notes: Note[], duration: number, bpm: number, difficultyL
         delete clone.targetLane;
       } else if (['remix', 'break', 'accent', 'lift'].includes(clone.type as string)) {
         clone.type = 'tap';
+        delete clone.swipeDirection;
+        delete clone.holdDuration;
+        delete clone.targetLane;
       }
     }
 
@@ -980,7 +983,7 @@ function getPatternSequence(
           type: 'hold', 
           holdDuration: beatDur * 2.5, 
           targetLane: toLane,
-          swipeDirection: 'up',
+          swipeDirection: toLane > fromLane ? 'right' as const : 'left' as const,
           stepBeatOffset: 0 
         }
       ];
@@ -991,7 +994,7 @@ function getPatternSequence(
           lanes: [lastLane], 
           type: 'hold', 
           holdDuration: beatDur * 2, 
-          swipeDirection: difficulty >= 4 ? 'up' : undefined,
+          swipeDirection: undefined,
           stepBeatOffset: 0 
         }
       ];
@@ -4731,7 +4734,7 @@ export default function Game() {
             }
             
             // Compute effective swipe direction for terminus tail block (for swipes or slides)
-            const tailSwipeDir: Note['swipeDirection'] | undefined = note.swipeDirection || (note.targetLane !== undefined ? (note.targetLane > startLane ? 'right' : 'left') : undefined);
+            const tailSwipeDir: Note['swipeDirection'] | undefined = (note.targetLane !== undefined ? (note.targetLane > startLane ? 'right' : 'left') : undefined) || note.swipeDirection;
 
             // Draw gold terminus block at top of active hold
             const tailP = lerp(headP, 1.0, ns.holdProgress);
@@ -4814,11 +4817,11 @@ export default function Game() {
           const tailW_inactive = hw;
           const tailX_inactive = hx;
           const tailR_inactive = lerp(12, 24, headP);
-          const tailSwipeDir: Note['swipeDirection'] | undefined = note.swipeDirection || (note.targetLane !== undefined ? (note.targetLane > startLane ? 'right' : 'left') : undefined);
+          const tailSwipeDir: Note['swipeDirection'] | undefined = (note.targetLane !== undefined ? (note.targetLane > startLane ? 'right' : 'left') : undefined) || note.swipeDirection;
           drawKey(ctx, tailX_inactive, headY, tailW_inactive, tailH_inactive, tailR_inactive, noteColor, headP, true, tailSwipeDir, note.time * 3700, note.type);
         }
 
-        const headSwipeDir: Note['swipeDirection'] | undefined = note.swipeDirection || (note.targetLane !== undefined ? (note.targetLane > startLane ? 'right' : 'left') : undefined);
+        const headSwipeDir: Note['swipeDirection'] | undefined = (note.targetLane !== undefined ? (note.targetLane > startLane ? 'right' : 'left') : undefined) || note.swipeDirection;
         drawKey(ctx, drawX, noteY, noteW, noteH, r, noteColor, prog, false, headSwipeDir, note.time * 3700, note.type);
       }
 
@@ -9531,10 +9534,12 @@ function drawKey(
     ctx.shadowColor = "#FF003C";
     ctx.shadowBlur = lerp(18, 38, prog);
 
-    // Dark danger core gradient
-    const mineGrad = ctx.createRadialGradient(0, 0, 2, 0, 0, mSize);
-    mineGrad.addColorStop(0, "#FF1A40");
-    mineGrad.addColorStop(0.4, "#800014");
+    // Dark danger core gradient — richer with more depth
+    const mineGrad = ctx.createRadialGradient(0, 0, 1, 0, 0, mSize);
+    mineGrad.addColorStop(0, "#FF4D6D");
+    mineGrad.addColorStop(0.15, "#FF1A40");
+    mineGrad.addColorStop(0.4, "#B91C1C");
+    mineGrad.addColorStop(0.65, "#800014");
     mineGrad.addColorStop(0.85, "#2B0007");
     mineGrad.addColorStop(1, "#0D0002");
     ctx.fillStyle = mineGrad;
@@ -9571,39 +9576,40 @@ function drawKey(
     ctx.stroke();
     ctx.restore();
 
-    // Center Danger Vector Emblem
+    // ☠ SKULL CENTER EMBLEM with pulsing glow
     ctx.save();
-    ctx.strokeStyle = "#FFFFFF";
-    ctx.fillStyle = "#FFFFFF";
-    ctx.shadowColor = "#FF003C";
-    ctx.shadowBlur = 12;
-    ctx.lineWidth = 2.0;
-    ctx.lineCap = "round";
-
-    // Vector warning triangle outline
-    const tw = mSize * 0.42;
-    const th = mSize * 0.42;
-    ctx.beginPath();
-    ctx.moveTo(0, -th);
-    ctx.lineTo(tw, th);
-    ctx.lineTo(-tw, th);
-    ctx.closePath();
-    ctx.stroke();
-
-    // Vector exclamation mark inside triangle
-    ctx.beginPath();
-    ctx.moveTo(0, -th * 0.35);
-    ctx.lineTo(0, th * 0.2);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(0, th * 0.55, 1.8, 0, Math.PI * 2);
-    ctx.fill();
+    const skullPulse = 1.0 + 0.12 * Math.sin(timeNow / 100);
+    ctx.shadowColor = '#FF003C';
+    ctx.shadowBlur = 14 * skullPulse;
+    ctx.fillStyle = '#FCA5A5';
+    ctx.font = `900 ${Math.round(mSize * 0.72)}px serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('☠', 0, -1);
     ctx.restore();
 
-    // Hazard text label below symbol
-    ctx.fillStyle = "#FF4D6D";
-    ctx.font = '900 7px "JetBrains Mono", monospace';
-    ctx.fillText('AVOID', 0, mSize * 0.52);
+    // Danger pill badge below skull
+    ctx.save();
+    const pillW = mSize * 1.1;
+    const pillH = mSize * 0.38;
+    ctx.fillStyle = 'rgba(127, 29, 29, 0.9)';
+    ctx.beginPath();
+    ctx.roundRect(-pillW / 2, mSize * 0.32, pillW, pillH, pillH / 2);
+    ctx.fill();
+    ctx.strokeStyle = '#EF4444';
+    ctx.lineWidth = 1.5;
+    ctx.shadowColor = '#EF4444';
+    ctx.shadowBlur = 8;
+    ctx.stroke();
+
+    ctx.fillStyle = '#FCA5A5';
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.font = `900 ${Math.round(mSize * 0.26)}px "JetBrains Mono", monospace`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('AVOID', 0, mSize * 0.32 + pillH / 2);
+    ctx.restore();
 
     ctx.restore();
     ctx.restore();
@@ -9622,8 +9628,8 @@ function drawKey(
     'up-right': -Math.PI / 4,
   };
 
-  const isHoldHead = noteType === 'hold';
-  const m = (swipeDirection && !isHold && !isHoldHead) ? 1.0 : 0;
+  const isHoldHead = noteType === 'hold' || noteType === 'hold-swipe';
+  const m = (swipeDirection && !isHold && !isHoldHead && noteType !== 'lift') ? 1.0 : 0;
 
   if (swipeDirection && m > 0) {
     ctx.rotate(rotations[swipeDirection] || 0);
@@ -9739,17 +9745,6 @@ function drawKey(
     ghostGrad.addColorStop(0.5, "rgba(148, 163, 184, 0.3)");
     ghostGrad.addColorStop(1, "rgba(71, 85, 105, 0.2)");
     ctx.fillStyle = ghostGrad;
-  } else if (noteType === 'mine') {
-    // 💣 MINE NOTE: Menacing Red Danger Body
-    ctx.shadowColor = "#EF4444";
-    ctx.shadowBlur = lerp(14, 28, prog);
-    ctx.shadowOffsetY = lerp(2, 6, prog);
-    const mineGrad = ctx.createRadialGradient(0, 0, 2, 0, 0, noteW / 2);
-    mineGrad.addColorStop(0, "#FCA5A5");
-    mineGrad.addColorStop(0.3, "#EF4444");
-    mineGrad.addColorStop(0.7, "#B91C1C");
-    mineGrad.addColorStop(1, "#450A0A");
-    ctx.fillStyle = mineGrad;
   } else {
     ctx.shadowColor = "rgba(0,0,0,0.8)";
     ctx.shadowBlur = lerp(4, 16, prog);
@@ -9838,8 +9833,8 @@ function drawKey(
     ctx.beginPath();
     ctx.arc(0, 0, pulseR, 0, Math.PI * 2);
     ctx.stroke();
-  } else {
-    // ── 4. COLORED CENTER STRIPE ──
+  } else if (noteType !== 'ghost') {
+    // ── 4. COLORED CENTER STRIPE ── (skipped for ghost notes to preserve transparency)
     const stripeColor = noteType === 'remix' ? '#00F5D4' 
                       : noteType === 'break' ? '#FF7B00' 
                       : noteType === 'accent' ? '#CCFF00' 
@@ -10064,7 +10059,7 @@ function drawKey(
     ctx.fillText('✦ BEAT', 0, 0);
     ctx.restore();
 
-  } else if (noteType === 'lift') {
+  } else if (noteType === 'lift' && (!swipeDirection || swipeDirection === 'up')) {
     // ▲ LIFT NOTE: Upward Animated Chevrons Cueing Flick
     ctx.save();
     ctx.strokeStyle = '#FFFFFF';
@@ -10084,6 +10079,29 @@ function drawKey(
       ctx.moveTo(-10, yPos + 4);
       ctx.lineTo(0, yPos - 5);
       ctx.lineTo(10, yPos + 4);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+  } else if (swipeDirection) {
+    // ➔ SLIDE / SWIPE NOTE: Directional Chevrons Matching Block (all directions including UP)
+    ctx.save();
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.shadowColor = '#00E5FF';
+    ctx.shadowBlur = 14;
+    ctx.lineWidth = 2.8;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    const animOffset = (nowMs / 14) % 16;
+    for (let i = 0; i < 2; i++) {
+      const xPos = -4 + i * 10 - (8 - animOffset * 0.5);
+      const alpha = Math.max(0.3, 1.0 - i * 0.4);
+      ctx.globalAlpha = alpha;
+      ctx.beginPath();
+      ctx.moveTo(xPos - 4, -8);
+      ctx.lineTo(xPos + 5, 0);
+      ctx.lineTo(xPos - 4, 8);
       ctx.stroke();
     }
     ctx.restore();
@@ -10156,36 +10174,6 @@ function drawKey(
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('BURST', 0, 0);
-    ctx.restore();
-
-  } else if (noteType === 'mine') {
-    // ☠ MINE NOTE: Skull Danger Badge — DO NOT TAP
-    ctx.save();
-    const minePulse = 1.0 + 0.15 * Math.sin(nowMs / 120);
-
-    // Pulsing danger ring
-    ctx.strokeStyle = 'rgba(239, 68, 68, 0.8)';
-    ctx.lineWidth = 2.5;
-    ctx.shadowColor = '#EF4444';
-    ctx.shadowBlur = 12;
-    ctx.beginPath();
-    ctx.arc(0, 0, (noteW / 2 + 3) * minePulse, 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Danger pill
-    ctx.fillStyle = 'rgba(127, 29, 29, 0.9)';
-    ctx.beginPath();
-    ctx.roundRect(-24, -9, 48, 18, 9);
-    ctx.fill();
-    ctx.strokeStyle = '#EF4444';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    ctx.fillStyle = '#FCA5A5';
-    ctx.font = '900 8px monospace';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('☠ MINE', 0, 0);
     ctx.restore();
   }
 
