@@ -30,7 +30,9 @@ All notable advancements, architectural updates, features, and resolved trials &
 - **Removed 130px Top Padding Block**: Removed `<div className="h-[130px] md:hidden" />` in `Navbar.tsx` that was creating a massive blank gap at the top of pages on mobile devices.
 #### 5. Perspective Lock & Custom Post-Gameplay Hub Choice SVGs
 - **HUD Perspective Lock Toggle (`🔒 / 🔓`)**: Integrated a POV lock button right beside the HUD POV switch pill in `GamePlay.tsx`. Toggling lock prevents automatic stage-based camera transitions from overriding the player's chosen perspective. Persisted in `localStorage` (`opt_povLocked`).
-- **Custom Post-Gameplay Vector SVGs (`GameResults.tsx`)**: Replaced generic emoji icons in `QuickReturnGrid` with PIM-themed custom vector SVGs for Collection, Vault, Shop, Arcade, Award Play, and Campaign hub cards.
+#### 6. 365-Day Card Cover Variants & Pack Image Overlay System
+- **Deterministic Cover Variant Engine (`cardVariants.ts`)**: Built a seed-based generator (`get365CardVariantStyle`) mapping each of the original 365 days of light and dark to cover variant styles (`dimmed`, `dark`, `light`, `vivid`), blown-up centered scaling (`scale-110`..`scale-140`), and custom contrast gradients.
+- **Direct Image & Emblem Overlay (`PackShop.tsx` & `PackContainer.tsx`)**: Rendered background cover artwork directly on pack/song cards with the spinning `365` emblem (`PackEmblem`), price stamp, card count tag, and side vertical banner displayed directly overlayed on top.
 
 ---
 
