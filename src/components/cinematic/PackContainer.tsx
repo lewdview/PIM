@@ -317,6 +317,13 @@ function PackBagContents({ meta }: { meta: RevealPackMeta }) {
         <div className="foil-wrinkles-overlay" />
         <div className="foil-metallic-sheen" />
 
+        {/* REALISTIC METALLIC FOIL CRINKLE NOISE TEXTURE */}
+        <div className="absolute inset-0 pointer-events-none mix-blend-overlay" style={{
+          background: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='foilNoise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.035 0.08' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23foilNoise)'/%3E%3C/svg%3E")`,
+          opacity: 0.28,
+          zIndex: 4,
+        }} />
+
         {/* VERTICAL TH3SCR1B3 SIDE BANNER */}
         <div className="absolute left-1 top-24 w-8 flex items-center justify-center pointer-events-none z-20 mix-blend-overlay">
           <div className="font-black leading-none uppercase whitespace-nowrap" style={{
