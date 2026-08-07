@@ -940,29 +940,6 @@ export default function NextGenLandingPage() {
                 {/* Internal Glass Window Glare Reflection */}
                 <div className="absolute inset-0 bg-gradient-to-tr from-white/[0.02] via-transparent to-white/[0.04] pointer-events-none" />
 
-                {/* Left & Right Tactile Front Glass Scrolling Buttons */}
-                <button
-                  onClick={() => {
-                    audioManager.playSfx('tap_nav', 0.15);
-                    setVendingPage(prev => (prev === 0 ? maxVendingPages - 1 : prev - 1));
-                  }}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 z-30 p-2.5 rounded-full bg-black/85 border-2 border-purple-500/70 text-purple-300 hover:text-white hover:border-pink-500 hover:scale-110 active:scale-95 transition-all shadow-[0_0_20px_rgba(168,85,247,0.4)] backdrop-blur-md group"
-                  title="Previous Vending Shelf (Left Arrow)"
-                >
-                  <ChevronLeft size={24} className="group-hover:-translate-x-0.5 transition-transform" />
-                </button>
-
-                <button
-                  onClick={() => {
-                    audioManager.playSfx('tap_nav', 0.15);
-                    setVendingPage(prev => (prev + 1) % maxVendingPages);
-                  }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 z-30 p-2.5 rounded-full bg-black/85 border-2 border-purple-500/70 text-purple-300 hover:text-white hover:border-pink-500 hover:scale-110 active:scale-95 transition-all shadow-[0_0_20px_rgba(168,85,247,0.4)] backdrop-blur-md group"
-                  title="Next Vending Shelf (Right Arrow)"
-                >
-                  <ChevronRight size={24} className="group-hover:translate-x-0.5 transition-transform" />
-                </button>
-
                 {/* Digital Monitor Window showing Category Shelf on display */}
                 <VendingInspectorWindowSVG 
                   categoryConfig={currentCategoryConfig} 
@@ -975,18 +952,18 @@ export default function NextGenLandingPage() {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setVendingPage(prev => (prev === 0 ? maxVendingPages - 1 : prev - 1))}
-                      className="px-2 py-1 rounded bg-purple-950/80 border border-purple-600/60 text-purple-300 hover:bg-purple-800/80 hover:text-white transition-all flex items-center gap-1 font-bold"
+                      className="px-2.5 py-1 rounded-lg bg-purple-950/80 border border-purple-600/60 text-purple-300 hover:bg-purple-800/80 hover:text-white transition-all flex items-center gap-1 font-bold active:scale-95 cursor-pointer"
                     >
-                      <ChevronLeft size={12} /> <span>PREV</span>
+                      <ChevronLeft size={12} /> <span>PREV SHELF</span>
                     </button>
                     <span className="text-purple-400 font-bold tracking-widest uppercase">
                       SHELF 0{vendingPage + 1} / 0{maxVendingPages} • {currentCategoryConfig?.label}
                     </span>
                     <button
                       onClick={() => setVendingPage(prev => (prev + 1) % maxVendingPages)}
-                      className="px-2 py-1 rounded bg-purple-950/80 border border-purple-600/60 text-purple-300 hover:bg-purple-800/80 hover:text-white transition-all flex items-center gap-1 font-bold"
+                      className="px-2.5 py-1 rounded-lg bg-purple-950/80 border border-purple-600/60 text-purple-300 hover:bg-purple-800/80 hover:text-white transition-all flex items-center gap-1 font-bold active:scale-95 cursor-pointer"
                     >
-                      <span>NEXT</span> <ChevronRight size={12} />
+                      <span>NEXT SHELF</span> <ChevronRight size={12} />
                     </button>
                   </div>
 
@@ -995,7 +972,7 @@ export default function NextGenLandingPage() {
                       <span className="text-pink-400 font-extrabold tracking-wider uppercase">ARTWORK MODE:</span>
                       <button
                         onClick={() => setBombshellTheme(prev => (prev === 'dark' ? 'light' : 'dark'))}
-                        className={`px-2.5 py-1 rounded-lg font-bold border transition-all ${
+                        className={`px-2.5 py-1 rounded-lg font-bold border transition-all cursor-pointer active:scale-95 ${
                           bombshellTheme === 'dark'
                             ? 'bg-slate-900 border-pink-500/80 text-pink-300 shadow-[0_0_10px_rgba(255,20,147,0.4)]'
                             : 'bg-amber-950/80 border-amber-400 text-amber-300 shadow-[0_0_10px_rgba(251,191,36,0.4)]'
@@ -1014,11 +991,11 @@ export default function NextGenLandingPage() {
                 <AnimatePresence mode="wait">
                   <motion.div 
                     key={`${vendingPage}-${bombshellTheme}`}
-                    initial={{ y: -100, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    exit={{ y: 100, opacity: 0 }}
-                    transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-                    className={`grid ${shelfLevelTiers.length > 4 ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6'} place-items-center w-full relative z-10`}
+                    initial={{ x: 60, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    exit={{ x: -60, opacity: 0 }}
+                    transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                    className={`grid ${shelfLevelTiers.length > 4 ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5' : 'grid-cols-2 lg:grid-cols-4 gap-6'} place-items-center w-full relative z-10`}
                   >
                     {shelfLevelTiers.map((tierItem, idx) => {
                       const slotCode = `${String.fromCharCode(65 + vendingPage)}${idx + 1}`;
