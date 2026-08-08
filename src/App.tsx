@@ -78,7 +78,8 @@ function GlobalMenuBackground() {
   const [isLegacy, setIsLegacy] = useState(false);
   const [location] = useLocation();
   const [dailyCover, setDailyCover] = useState<string | null>(null);
-  const { currentTrack } = useGlobalPlayer();
+  // ⚡ Bolt Optimization: Use granular selector to avoid global re-renders on audio time updates
+  const currentTrack = useGlobalPlayer(s => s.currentTrack);
 
   useEffect(() => {
     try {

@@ -14,7 +14,15 @@ function formatTime(seconds: number): string {
 export default function GlobalPlayerBar() {
   const [location, setLocation] = useLocation();
   const isMobile = useIsMobile();
-  const { currentTrack, isPlaying, progress, currentTime, duration, toggle, stop, seek } = useGlobalPlayer();
+  // ⚡ Bolt Optimization: Granular selectors
+  const currentTrack = useGlobalPlayer(s => s.currentTrack);
+  const isPlaying = useGlobalPlayer(s => s.isPlaying);
+  const progress = useGlobalPlayer(s => s.progress);
+  const currentTime = useGlobalPlayer(s => s.currentTime);
+  const duration = useGlobalPlayer(s => s.duration);
+  const toggle = useGlobalPlayer(s => s.toggle);
+  const stop = useGlobalPlayer(s => s.stop);
+  const seek = useGlobalPlayer(s => s.seek);
 
   const rc = currentTrack ? (RARITY_CONFIG[currentTrack.rarity as keyof typeof RARITY_CONFIG] || RARITY_CONFIG.common) : RARITY_CONFIG.common;
   const accent = rc?.color || '#ff3800';
