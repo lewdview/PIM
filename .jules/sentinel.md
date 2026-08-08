@@ -1,0 +1,4 @@
+## 2024-05-18 - [Hardcoded Admin Passphrase]
+**Vulnerability:** A plaintext administrative passphrase ('th3scr1b3') was hardcoded directly in the frontend source code and checked via simple string comparison (`input === ADMIN_PASSPHRASE`).
+**Learning:** This approach leaves the passphrase fully exposed in the compiled Vite bundle, allowing anyone to find it by inspecting the client-side JavaScript. This violates the principle of not storing sensitive secrets in source code. Attempting to store it as a temporary plaintext secret in `sessionStorage` for backend use is also an anti-pattern as it introduces XSS risks.
+**Prevention:** For client-side gating where server validation isn't strictly necessary or implemented, always hash the expected passphrase (e.g., using SHA-256) and hardcode only the *hash*. Compare the hash of the user input to the hardcoded hash.
