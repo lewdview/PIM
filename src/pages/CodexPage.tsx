@@ -392,7 +392,12 @@ export default function CodexPage() {
   const collection = useVaultStore(s => s.collection);
   const claimedRewards = useVaultStore(s => s.claimedRewards);
   const fragments = useVaultStore(s => s.fragments);
-  const { currentTrack, isPlaying, play, pause, stop } = useGlobalPlayer();
+  // ⚡ Bolt Optimization: Use granular selectors to avoid large list re-renders on every audio tick
+  const currentTrack = useGlobalPlayer(s => s.currentTrack);
+  const isPlaying = useGlobalPlayer(s => s.isPlaying);
+  const play = useGlobalPlayer(s => s.play);
+  const pause = useGlobalPlayer(s => s.pause);
+  const stop = useGlobalPlayer(s => s.stop);
 
   const today = getCurrentDay();
 
