@@ -3942,82 +3942,7 @@ export default function Game() {
       ctx.restore();
     }
 
-    // ── 3D TUNNEL MODE: MASSIVE COMBO COUNTER ──
-    if ((isCyberTunnelPov || (isDynamicStagePov && calculatedStage >= 3)) && gs.combo > 0) {
-      const comboFlashAge = nowMs - tunnelComboFlashRef.current.flashStartMs;
-      const FLASH_DURATION = 320; // ms for the flash-in
-      const FADE_DURATION = 180; // ms for settling
-      
-      // Flash scale: starts at 3x settled, eases to 1x settled over FLASH_DURATION
-      let flashScale = 1.0;
-      if (comboFlashAge < FLASH_DURATION) {
-        const t = comboFlashAge / FLASH_DURATION;
-        // Elastic ease-out: overshoots slightly then settles
-        flashScale = 1.0 + 2.0 * Math.pow(1 - t, 2.5);
-      }
-      
-      const baseSize = 110; // 5x normal 22px combo text
-      const fontSize = Math.round(baseSize * flashScale);
-      const comboY = isCyberTunnelPov ? H * 0.28 : (isDynamicStagePov && calculatedStage >= 3) ? H * 0.24 : H * 0.16;
-      
-      // Beat-reactive glow intensity
-      const bpmForPulse = songRef.current?.bpm || 120;
-      const beatPhase = ((t * (bpmForPulse / 60)) % 1);
-      const beatGlow = Math.pow(Math.sin(beatPhase * Math.PI), 3);
-      
-      // Color: cyan base, hot pink on milestones (50, 100, etc)
-      const isMilestone = gs.combo % 50 === 0 && gs.combo >= 50;
-      const isHundred = gs.combo % 100 === 0 && gs.combo >= 100;
-      const mainColor = isHundred ? '#39FF14' : isMilestone ? '#FF1493' : '#00E5FF';
-      
-      // Flash alpha pop
-      let comboAlpha = 0.92;
-      if (comboFlashAge < FLASH_DURATION) {
-        comboAlpha = 1.0;
-      }
-      
-      ctx.save();
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      
-      // Deep shadow layer for depth
-      ctx.shadowColor = mainColor;
-      ctx.shadowBlur = 40 + beatGlow * 30;
-      ctx.fillStyle = `rgba(0, 0, 0, ${comboAlpha * 0.5})`;
-      ctx.font = `900 ${fontSize}px "Impact", "Arial Black", sans-serif`;
-      ctx.fillText(`x${gs.combo}`, W / 2 + 3, comboY + 3);
-      
-      // Outer neon glow text (larger blur)
-      ctx.shadowBlur = 60 + beatGlow * 40;
-      ctx.shadowColor = mainColor;
-      ctx.fillStyle = colorWithAlpha(mainColor, comboAlpha * 0.35);
-      ctx.fillText(`x${gs.combo}`, W / 2, comboY);
-      
-      // Main bright text
-      ctx.shadowBlur = 20 + beatGlow * 20;
-      ctx.fillStyle = `rgba(255, 255, 255, ${comboAlpha})`;
-      ctx.fillText(`x${gs.combo}`, W / 2, comboY);
-      
-      // Hot inner core glow on flash
-      if (comboFlashAge < FLASH_DURATION * 1.5) {
-        const coreAlpha = Math.max(0, 1.0 - comboFlashAge / (FLASH_DURATION * 1.5)) * 0.6;
-        ctx.shadowBlur = 80;
-        ctx.shadowColor = '#FFFFFF';
-        ctx.fillStyle = `rgba(255, 255, 255, ${coreAlpha})`;
-        ctx.fillText(`x${gs.combo}`, W / 2, comboY);
-      }
-      
-      // Small "COMBO" label below the number
-      ctx.shadowBlur = 10;
-      ctx.shadowColor = mainColor;
-      ctx.font = `900 ${Math.round(fontSize * 0.18)}px "Space Mono", monospace`;
-      ctx.fillStyle = colorWithAlpha(mainColor, comboAlpha * 0.75);
-      ctx.letterSpacing = '0.35em';
-      ctx.fillText('COMBO', W / 2, comboY + fontSize * 0.42);
-      ctx.letterSpacing = '0px';
-      
-      ctx.restore();
-    }
+
 
     // ── POV Warp Speed Transition Overlay ──
     if (povTransitionRef.current.warpAlpha > 0) {
@@ -8800,67 +8725,133 @@ export default function Game() {
                   </div>
                 )}
 
-                {/* Circular Score Ring */}
-                <div className="relative w-32 h-32 md:w-36 md:h-36 lg:w-40 lg:h-40 rounded-full flex flex-col items-center justify-center" style={{
-                  background: "rgba(10, 10, 18, 0.94)",
-                  border: `2px solid ${medalStyle.main}`,
-                  boxShadow: `0 0 35px ${medalStyle.glow}, inset 0 0 15px rgba(255,255,255,0.03)`,
-                  transition: "all 0.4s ease-in-out",
-                }}>
-                  {/* SVG Stage Progress Ring */}
-                  <svg viewBox="0 0 128 128" className="absolute inset-0 w-full h-full -rotate-90">
-                    <circle
-                      cx="64"
-                      cy="64"
-                      r="56"
-                      fill="none"
-                      stroke="rgba(255, 255, 255, 0.06)"
-                      strokeWidth="4"
-                    />
-                    <circle
-                      cx="64"
-                      cy="64"
-                      r="56"
-                      fill="none"
-                      stroke={medalStyle.main}
-                      strokeWidth="4"
-                      strokeDasharray={2 * Math.PI * 56}
-                      strokeDashoffset={2 * Math.PI * 56 * (1 - (gs.progress || 0))}
-                      strokeLinecap="round"
-                      style={{ 
-                        transition: "stroke-dashoffset 0.15s linear, stroke 0.4s ease-in-out",
-                        filter: `drop-shadow(0 0 8px ${medalStyle.main})`
-                      }}
-                    />
-                    {/* Dynamic Powerup Decaying Outer Ring */}
-                    {activePu && (
+                {/* Top HUD Row: Main Circular Score Dial & Side Combo Circle HUD */}
+                <div className="flex flex-row items-center justify-center gap-3 md:gap-4 lg:gap-5 relative">
+                  {/* Circular Score Ring */}
+                  <div className="relative w-32 h-32 md:w-36 md:h-36 lg:w-40 lg:h-40 rounded-full flex flex-col items-center justify-center shrink-0" style={{
+                    background: "rgba(10, 10, 18, 0.94)",
+                    border: `2px solid ${medalStyle.main}`,
+                    boxShadow: `0 0 35px ${medalStyle.glow}, inset 0 0 15px rgba(255,255,255,0.03)`,
+                    transition: "all 0.4s ease-in-out",
+                  }}>
+                    {/* SVG Stage Progress Ring */}
+                    <svg viewBox="0 0 128 128" className="absolute inset-0 w-full h-full -rotate-90">
                       <circle
                         cx="64"
                         cy="64"
-                        r="60"
+                        r="56"
                         fill="none"
-                        stroke={activePu.color}
+                        stroke="rgba(255, 255, 255, 0.06)"
                         strokeWidth="4"
-                        strokeDasharray={2 * Math.PI * 60}
-                        strokeDashoffset={2 * Math.PI * 60 * (1 - (activePu.progress ?? 0))}
+                      />
+                      <circle
+                        cx="64"
+                        cy="64"
+                        r="56"
+                        fill="none"
+                        stroke={medalStyle.main}
+                        strokeWidth="4"
+                        strokeDasharray={2 * Math.PI * 56}
+                        strokeDashoffset={2 * Math.PI * 56 * (1 - (gs.progress || 0))}
                         strokeLinecap="round"
-                        style={{
-                          transition: "stroke-dashoffset 0.08s linear",
-                          filter: `drop-shadow(0 0 12px ${activePu.color})`
+                        style={{ 
+                          transition: "stroke-dashoffset 0.15s linear, stroke 0.4s ease-in-out",
+                          filter: `drop-shadow(0 0 8px ${medalStyle.main})`
                         }}
                       />
-                    )}
-                  </svg>
+                      {/* Dynamic Powerup Decaying Outer Ring */}
+                      {activePu && (
+                        <circle
+                          cx="64"
+                          cy="64"
+                          r="60"
+                          fill="none"
+                          stroke={activePu.color}
+                          strokeWidth="4"
+                          strokeDasharray={2 * Math.PI * 60}
+                          strokeDashoffset={2 * Math.PI * 60 * (1 - (activePu.progress ?? 0))}
+                          strokeLinecap="round"
+                          style={{
+                            transition: "stroke-dashoffset 0.08s linear",
+                            filter: `drop-shadow(0 0 12px ${activePu.color})`
+                          }}
+                        />
+                      )}
+                    </svg>
 
-                  <span className="font-mono text-[8.5px] md:text-[9.5px] lg:text-[10.5px] tracking-[0.25em] text-zinc-400 font-black mb-1">
-                    {currentStage === 5 ? "STAGE FINAL" : `STAGE ${currentStage}`}
-                  </span>
-                  <span className="font-mono text-2xl md:text-3xl lg:text-4xl font-black text-white tracking-tight" style={{ textShadow: "0 0 12px rgba(255,255,255,0.5)" }}>
-                    <AnimatedScore score={gs.score} />
-                  </span>
-                  <span className={`font-mono text-[10.5px] md:text-[11.5px] lg:text-[12.5px] font-black mt-1 tracking-widest ${medalStyle.text}`} style={{ transition: "color 0.4s ease-in-out" }}>
-                    ×{m}
-                  </span>
+                    <span className="font-mono text-[8.5px] md:text-[9.5px] lg:text-[10.5px] tracking-[0.25em] text-zinc-400 font-black mb-1">
+                      {currentStage === 5 ? "STAGE FINAL" : `STAGE ${currentStage}`}
+                    </span>
+                    <span className="font-mono text-2xl md:text-3xl lg:text-4xl font-black text-white tracking-tight" style={{ textShadow: "0 0 12px rgba(255,255,255,0.5)" }}>
+                      <AnimatedScore score={gs.score} />
+                    </span>
+                    <span className={`font-mono text-[10.5px] md:text-[11.5px] lg:text-[12.5px] font-black mt-1 tracking-widest ${medalStyle.text}`} style={{ transition: "color 0.4s ease-in-out" }}>
+                      ×{m}
+                    </span>
+                  </div>
+
+                  {/* Dedicated Side Circular Combo HUD Ring */}
+                  {opts.comboDisplay && (
+                    <motion.div
+                      key={gs.combo > 0 ? "active-combo" : "zero-combo"}
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      className="relative w-20 h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 rounded-full flex flex-col items-center justify-center shrink-0"
+                      style={{
+                        background: "rgba(10, 10, 18, 0.94)",
+                        border: `2px solid ${gs.combo >= 100 ? '#39FF14' : gs.combo >= 50 ? '#FF1493' : gs.combo > 0 ? '#00E5FF' : 'rgba(255,255,255,0.18)'}`,
+                        boxShadow: gs.combo > 0 
+                          ? `0 0 25px ${gs.combo >= 100 ? 'rgba(57, 255, 20, 0.5)' : gs.combo >= 50 ? 'rgba(255, 20, 147, 0.5)' : 'rgba(0, 229, 255, 0.4)'}, inset 0 0 10px rgba(255,255,255,0.03)`
+                          : '0 0 15px rgba(0,0,0,0.5)',
+                        transition: "all 0.3s ease-in-out",
+                      }}
+                    >
+                      {/* SVG Combo Circular Decay/Progress Ring */}
+                      <svg viewBox="0 0 96 96" className="absolute inset-0 w-full h-full -rotate-90">
+                        <circle
+                          cx="48"
+                          cy="48"
+                          r="42"
+                          fill="none"
+                          stroke="rgba(255, 255, 255, 0.08)"
+                          strokeWidth="3.5"
+                        />
+                        {gs.combo > 0 && (
+                          <circle
+                            cx="48"
+                            cy="48"
+                            r="42"
+                            fill="none"
+                            stroke={gs.combo >= 100 ? '#39FF14' : gs.combo >= 50 ? '#FF1493' : '#00E5FF'}
+                            strokeWidth="3.5"
+                            strokeDasharray={2 * Math.PI * 42}
+                            strokeDashoffset={2 * Math.PI * 42 * (1 - Math.min(1, (gs.combo % 50) / 50))}
+                            strokeLinecap="round"
+                            style={{
+                              transition: "stroke-dashoffset 0.1s linear, stroke 0.3s ease-in-out",
+                              filter: `drop-shadow(0 0 6px ${gs.combo >= 100 ? '#39FF14' : gs.combo >= 50 ? '#FF1493' : '#00E5FF'})`
+                            }}
+                          />
+                        )}
+                      </svg>
+
+                      <span className="font-mono text-[7.5px] md:text-[8.5px] lg:text-[9.5px] tracking-[0.2em] text-zinc-400 font-bold mb-0.5 uppercase">
+                        COMBO
+                      </span>
+                      <motion.span
+                        key={gs.combo}
+                        initial={{ scale: 1.35 }}
+                        animate={{ scale: 1.0 }}
+                        transition={{ type: "spring", stiffness: 450, damping: 25 }}
+                        className="font-mono text-lg md:text-xl lg:text-2xl font-black text-white tracking-tight"
+                        style={{
+                          textShadow: gs.combo > 0 ? `0 0 10px ${gs.combo >= 100 ? '#39FF14' : gs.combo >= 50 ? '#FF1493' : '#00E5FF'}` : 'none'
+                        }}
+                      >
+                        {gs.combo}
+                      </motion.span>
+                    </motion.div>
+                  )}
                 </div>
 
                 {/* Active Power-up dynamic tech pill */}
@@ -8882,23 +8873,6 @@ export default function Game() {
                       <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ background: activePu.color }} />
                     </span>
                     {activePu.label}
-                  </motion.div>
-                )}
-
-                {/* Combo floating badge pill below ring */}
-                {opts.comboDisplay && gs.combo > 0 && (
-                  <motion.div
-                    key={gs.combo}
-                    initial={{ scale: 0.6, opacity: 0, y: -10 }}
-                    animate={{ scale: 1, opacity: 1, y: 0 }}
-                    className="mt-2 font-mono text-[11px] md:text-[12.5px] lg:text-[14px] font-black px-4 py-0.5 rounded-full border border-purple-500/25 text-purple-300 tracking-wider flex items-center justify-center gap-1 shadow-lg"
-                    style={{
-                      background: "rgba(10, 10, 18, 0.94)",
-                      boxShadow: "0 4px 14px rgba(168, 85, 247, 0.28)",
-                    }}
-                  >
-                    <span className="text-zinc-500 uppercase tracking-widest text-[8px] md:text-[9px] lg:text-[10px] mr-0.5 font-bold">COMBO</span>
-                    {gs.combo}
                   </motion.div>
                 )}
               </div>
