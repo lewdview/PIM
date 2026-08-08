@@ -282,45 +282,15 @@ export function PackBag({ category, isActive = true, onRip, isRipping = false, i
         opacity: isActive ? 1 : 0.4,
         transition: 'transform 0.35s cubic-bezier(.22,1,.36,1), opacity 0.35s ease, box-shadow 0.35s ease',
       }}>
-        {/* MULTI-COVER COLLAGE FAN (~20% cover lines shining through underneath popping pack color) */}
+        {/* CLEAN 3D METALLIC FOIL PACK FIELD (Artwork temporarily removed) */}
         <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none flex items-center justify-center" style={{ background: 'rgba(6,3,14,0.96)' }}>
-          {multiCovers.map((coverUrl, idx) => {
-            const fanStyles = [
-              { transform: 'rotate(-14deg) translate(-24%, -2%) scale(0.9)', opacity: 0.15, zIndex: 1 },
-              { transform: 'rotate(14deg) translate(24%, 3%) scale(0.9)', opacity: 0.15, zIndex: 1 },
-              { transform: 'rotate(-3deg) translate(0%, 0%) scale(1.02)', opacity: 0.22, zIndex: 2 },
-              { transform: 'rotate(6deg) translate(0%, -18%) scale(0.85)', opacity: 0.12, zIndex: 0 },
-            ][idx % 4];
-
-            return (
-              <img
-                key={idx}
-                src={coverUrl}
-                alt={`${cfg.label} Cover ${idx}`}
-                className="absolute w-[72%] h-[72%] object-cover rounded-md shadow-2xl transition-transform duration-700"
-                style={{
-                  ...fanStyles,
-                  filter: 'brightness(0.45) contrast(1.65) saturate(1.2)',
-                  mixBlendMode: 'luminosity',
-                }}
-                onError={(e) => {
-                  const target = e.currentTarget;
-                  const fallback = getPackCoverFallback(cfg.category);
-                  if (target.src !== fallback) {
-                    target.src = fallback;
-                  }
-                }}
-              />
-            );
-          })}
-
-          {/* VIBRANT POPPING PACK ACCENT COLOR TINT (Rich pack color pop on top) */}
+          {/* VIBRANT POPPING PACK ACCENT COLOR TINT */}
           <div
             className="absolute inset-0 pointer-events-none transition-all z-10"
             style={{
               background: `linear-gradient(160deg, ${accent}ee 0%, ${accent}aa 45%, rgba(6,3,14,0.96) 100%)`,
               mixBlendMode: 'hard-light',
-              opacity: 0.85,
+              opacity: 0.88,
             }}
           />
           <div
@@ -328,13 +298,13 @@ export function PackBag({ category, isActive = true, onRip, isRipping = false, i
             style={{
               background: accent,
               mixBlendMode: 'color',
-              opacity: 0.88,
+              opacity: 0.85,
             }}
           />
           {/* Deep Dark Frame Vignette */}
           <div
             className="absolute inset-0 pointer-events-none transition-opacity z-10"
-            style={{ background: 'radial-gradient(ellipse at 50% 40%, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.92) 85%)' }}
+            style={{ background: 'radial-gradient(ellipse at 50% 40%, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.92) 85%)' }}
           />
         </div>
         {/* REALISTIC SERRATED JAGGED CRIMP TEETH (Top & Bottom Industrial Seals) */}
