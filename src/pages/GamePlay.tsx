@@ -2207,11 +2207,12 @@ export default function Game() {
       const dl = songRef.current?.difficultyLevel ?? 5;
       if (diff > missWindow(dl)) return;
 
-      // Swipe check: swipe notes or notes with required swipeDirection ignore plain tap-down inputs
-      const isSwipeNote = ns.note.type === "swipe" || (ns.note.swipeDirection !== undefined && ns.note.type !== "hold");
+      // Swipe check: swipe notes, lift notes, or notes with required swipeDirection ignore plain tap-down inputs
+      const reqSwipeDir = ns.note.swipeDirection || (ns.note.type === "lift" ? "up" : undefined);
+      const isSwipeNote = ns.note.type === "swipe" || ns.note.type === "lift" || (reqSwipeDir !== undefined && ns.note.type !== "hold");
       if (isSwipeNote) {
-        if (!direction) return; // Plain tap-down does not complete a swipe note
-        if (ns.note.swipeDirection && !isDirectionMatch(ns.note.swipeDirection, direction)) return;
+        if (!direction) return; // Plain tap-down does not complete a swipe/lift note
+        if (reqSwipeDir && !isDirectionMatch(reqSwipeDir, direction)) return;
       }
 
       const isFever = puRef.current.active === "FEVER" && t < puRef.current.endTime;
@@ -5703,8 +5704,9 @@ export default function Game() {
         // We'll look for a swipe note in any lane at this time.
         const t = getT();
         const cand = notesRef.current.find(n =>
-          !n.hit && !n.missed && n.note.type === 'swipe' &&
-          n.note.swipeDirection === swipeDir &&
+          !n.hit && !n.missed &&
+          (n.note.type === 'swipe' || n.note.type === 'lift' || n.note.swipeDirection !== undefined) &&
+          isDirectionMatch(n.note.swipeDirection || (n.note.type === 'lift' ? 'up' : undefined), swipeDir) &&
           Math.abs(n.note.time - t) < missWindow(songRef.current?.difficultyLevel ?? 5)
         );
         if (cand) {
@@ -6170,8 +6172,8 @@ export default function Game() {
         // Find matching swipe candidate note with direction tolerance
         let cand = notesRef.current.find(n =>
           !n.hit && !n.missed &&
-          (n.note.type === 'swipe' || n.note.swipeDirection !== undefined) &&
-          isDirectionMatch(n.note.swipeDirection, swipeDir) &&
+          (n.note.type === 'swipe' || n.note.type === 'lift' || n.note.swipeDirection !== undefined) &&
+          isDirectionMatch(n.note.swipeDirection || (n.note.type === 'lift' ? 'up' : undefined), swipeDir) &&
           n.note.lane === checkLane &&
           Math.abs(n.note.time - t) < missWindow(songRef.current?.difficultyLevel ?? 5)
         );
@@ -6180,8 +6182,8 @@ export default function Game() {
         if (!cand) {
           cand = notesRef.current.find(n =>
             !n.hit && !n.missed &&
-            (n.note.type === 'swipe' || n.note.swipeDirection !== undefined) &&
-            isDirectionMatch(n.note.swipeDirection, swipeDir) &&
+            (n.note.type === 'swipe' || n.note.type === 'lift' || n.note.swipeDirection !== undefined) &&
+            isDirectionMatch(n.note.swipeDirection || (n.note.type === 'lift' ? 'up' : undefined), swipeDir) &&
             Math.abs(n.note.lane - checkLane) <= 1 &&
             Math.abs(n.note.time - t) < missWindow(songRef.current?.difficultyLevel ?? 5)
           );
@@ -10243,6 +10245,9 @@ function drawKey(
   } else if (swipeDirection) {
     // ➔ SLIDE / SWIPE NOTE: Sleek Multi-Tier Animated Chevrons Matching Block
     ctx.save();
+    const rot = rotations[swipeDirection] || 0;
+    ctx.rotate(rot);
+
     const isHoldTail = isHold;
     const chevColor = isHoldTail ? '#FFD700' : '#00E5FF';
     ctx.strokeStyle = '#FFFFFF';
