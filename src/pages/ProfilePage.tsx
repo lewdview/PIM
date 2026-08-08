@@ -65,7 +65,7 @@ const EASE_OUT: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
 export default function ProfilePage() {
   const { user, isAnonymous, signOut } = useAuthStore();
-  const { collection, shards, packsOpened } = useVaultStore();
+  const { collection, tokenBalance, totalPulls, streakCount } = useVaultStore();
   const [, navigate] = useLocation();
 
   const currentDay = getCurrentDay();
@@ -260,18 +260,18 @@ export default function ProfilePage() {
             </div>
 
             <div className="profile-stat-card" onMouseEnter={() => audioManager.playSfx('tap_nav', 0.15)}>
-              <span className="profile-stat-val">{shards || 0}</span>
-              <span className="profile-stat-lbl">Shards Balance</span>
+              <span className="profile-stat-val">{tokenBalance || 0}</span>
+              <span className="profile-stat-lbl">V⚡ Tokens</span>
             </div>
 
             <div className="profile-stat-card" onMouseEnter={() => audioManager.playSfx('tap_nav', 0.15)}>
-              <span className="profile-stat-val">{packsOpened || 0}</span>
+              <span className="profile-stat-val">{totalPulls || 0}</span>
               <span className="profile-stat-lbl">Packs Opened</span>
             </div>
 
             <div className="profile-stat-card" onMouseEnter={() => audioManager.playSfx('tap_nav', 0.15)}>
-              <span className="profile-stat-val">{currentDay}</span>
-              <span className="profile-stat-lbl">Days Released</span>
+              <span className="profile-stat-val">{streakCount || 0}</span>
+              <span className="profile-stat-lbl">Daily Streak</span>
             </div>
           </div>
         </section>

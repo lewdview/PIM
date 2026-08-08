@@ -21,7 +21,7 @@ type FunnelStep = 'SAVE_RUN' | 'WELCOME_PACK' | 'PACK_OPENING' | 'CARD_REVEAL' |
 
 export default function OnboardingFlowModal({ isOpen, onClose, gameStats }: OnboardingFlowModalProps) {
   const { signInWithMagicLink, signInWithWallet, user, status } = useAuthStore();
-  const { addCardToCollection, shards, addShards } = useVaultStore();
+  const { addToCollection, tokenBalance, addTokens } = useVaultStore();
 
   const [step, setStep] = useState<FunnelStep>('SAVE_RUN');
   const [email, setEmail] = useState('');
@@ -63,21 +63,8 @@ export default function OnboardingFlowModal({ isOpen, onClose, gameStats }: Onbo
     audioManager.playSfx('pack_open', 0.6);
     setStep('PACK_OPENING');
     setTimeout(() => {
-      // Award Card & Shards
-      addCardToCollection({
-        id: `card-day-${dayNum}`,
-        songId: `day-${String(dayNum).padStart(3, '0')}`,
-        day: dayNum,
-        title: gameStats?.songTitle || "Today's Drop",
-        artist: 'th3scr1b3',
-        coverArt: `/assets/covers/day_${dayNum}.jpg`,
-        rarity: 'EPIC',
-        serialNumber: 1,
-        editionSize: 1000,
-        unlockedAt: new Date().toISOString(),
-        shardYield: 50,
-      });
-      addShards(50);
+      // Award Tokens
+      addTokens(50);
       setStep('CARD_REVEAL');
     }, 1800);
   };
