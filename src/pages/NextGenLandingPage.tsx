@@ -144,6 +144,20 @@ export default function NextGenLandingPage() {
     'free', 'bombshell', 'taste', 'light', 'dark', 'miss_out', 'month', 'special_picks', 'prophecy', 'alpha', 'vault_token'
   ], []);
 
+  const SHELF_SHORT_LABELS: Record<PackCategory, string> = useMemo(() => ({
+    free: 'FREE RUN',
+    bombshell: 'BOMBSHELLS',
+    taste: 'TASTE',
+    light: 'LIGHT',
+    dark: 'DARK',
+    miss_out: 'MISSED',
+    month: 'MONTHLY',
+    special_picks: 'SPECIALS',
+    prophecy: 'PROPHECY',
+    alpha: 'ALPHA',
+    vault_token: 'TOKENS',
+  }), []);
+
   const maxVendingPages = VENDING_CAROUSEL_CATEGORIES.length;
 
   useEffect(() => {
@@ -998,7 +1012,8 @@ export default function NextGenLandingPage() {
                     className={`grid ${shelfLevelTiers.length > 4 ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3.5' : 'grid-cols-2 lg:grid-cols-4 gap-6'} place-items-center w-full relative z-10`}
                   >
                     {shelfLevelTiers.map((tierItem, idx) => {
-                      const slotCode = `${String.fromCharCode(65 + vendingPage)}${idx + 1}`;
+                      const shelfShortName = SHELF_SHORT_LABELS[currentCategoryKey] || currentCategoryKey.toUpperCase();
+                      const slotCode = `${shelfShortName} #${idx + 1}`;
 
                       if (!tierItem) {
                         return (
@@ -1154,25 +1169,45 @@ export default function NextGenLandingPage() {
                   </button>
                 </div>
 
-                <span className="text-[9px] font-mono font-extrabold text-slate-400 tracking-widest uppercase text-center">
-                  MATRIX SHELF SELECTOR
+                <span className="text-[9px] font-mono font-extrabold text-purple-400 tracking-widest uppercase text-center">
+                  VENDING SHELF SELECTOR
                 </span>
                 
-                {/* Keypad Buttons */}
-                <div className="grid grid-cols-3 gap-1.5 w-full">
-                  {Array.from({ length: maxVendingPages }).map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setVendingPage(i)}
-                      className={`h-9 rounded-lg font-mono text-xs font-black transition-all ${
-                        i === vendingPage 
-                          ? 'bg-gradient-to-br from-purple-500 to-blue-600 text-white shadow-[0_0_12px_#a855f7] border border-purple-300' 
-                          : 'bg-slate-900 text-slate-400 border border-slate-800 hover:bg-slate-800'
-                      }`}
-                    >
-                      {String.fromCharCode(65 + i)}
-                    </button>
-                  ))}
+                {/* Named Vending Shelf Buttons (Taste, Bombshells, Dark, Light, etc.) */}
+                <div className="flex flex-col gap-1.5 w-full max-h-[280px] overflow-y-auto pr-1 custom-scrollbar">
+                  {VENDING_CAROUSEL_CATEGORIES.map((cat, i) => {
+                    const isSelected = i === vendingPage;
+                    const cfg = PACK_CONFIGS[cat];
+                    const accent = cfg?.accent || '#a855f7';
+                    const shelfName = SHELF_SHORT_LABELS[cat] || cfg?.label || cat.toUpperCase();
+
+                    return (
+                      <button
+                        key={cat}
+                        onClick={() => {
+                          audioManager.playSfx('tap_nav', 0.15);
+                          setVendingPage(i);
+                        }}
+                        className={`w-full py-2 px-2.5 rounded-xl font-mono text-[10px] font-black tracking-wider uppercase transition-all flex items-center justify-between border cursor-pointer ${
+                          isSelected
+                            ? 'bg-slate-900 text-white shadow-lg scale-[1.02]'
+                            : 'bg-slate-950/90 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200 hover:bg-slate-900/60'
+                        }`}
+                        style={{
+                          borderColor: isSelected ? accent : undefined,
+                          boxShadow: isSelected ? `0 0 14px ${accent}66` : undefined,
+                        }}
+                      >
+                        <span className="flex items-center gap-1.5 truncate">
+                          <span className="text-xs">{cfg?.icon || '📦'}</span>
+                          <span style={{ color: isSelected ? accent : undefined }}>{shelfName}</span>
+                        </span>
+                        {isSelected && (
+                          <span className="w-1.5 h-1.5 rounded-full animate-ping shrink-0" style={{ backgroundColor: accent }} />
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
 
                 {/* 3D Mechanical Lever Handle */}
