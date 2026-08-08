@@ -954,53 +954,41 @@ export default function NextGenLandingPage() {
                 {/* Internal Glass Window Glare Reflection */}
                 <div className="absolute inset-0 bg-gradient-to-tr from-white/[0.02] via-transparent to-white/[0.04] pointer-events-none" />
 
-                {/* Digital Monitor Window showing Category Shelf on display */}
-                <VendingInspectorWindowSVG 
+                {/* Custom SVG Correlating Color Shelf Nameplate */}
+                <VendingShelfNameplateSVG 
                   categoryConfig={currentCategoryConfig} 
                   pageIdx={vendingPage} 
-                  maxPages={maxVendingPages} 
+                  maxPages={maxVendingPages}
+                  onPrev={() => {
+                    audioManager.playSfx('tap_nav', 0.15);
+                    setVendingPage(prev => (prev === 0 ? maxVendingPages - 1 : prev - 1));
+                  }}
+                  onNext={() => {
+                    audioManager.playSfx('tap_nav', 0.15);
+                    setVendingPage(prev => (prev + 1) % maxVendingPages);
+                  }}
+                  extraControls={
+                    currentCategoryKey === 'bombshell' ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-pink-400 font-extrabold tracking-wider uppercase text-[10px] font-mono hidden sm:inline">ARTWORK MODE:</span>
+                        <button
+                          onClick={() => setBombshellTheme(prev => (prev === 'dark' ? 'light' : 'dark'))}
+                          className={`px-2.5 py-1 rounded-lg font-bold font-mono text-[10px] border transition-all cursor-pointer active:scale-95 ${
+                            bombshellTheme === 'dark'
+                              ? 'bg-slate-900 border-pink-500/80 text-pink-300 shadow-[0_0_10px_rgba(255,20,147,0.4)]'
+                              : 'bg-amber-950/80 border-amber-400 text-amber-300 shadow-[0_0_10px_rgba(251,191,36,0.4)]'
+                          }`}
+                        >
+                          {bombshellTheme === 'dark' ? '🌙 DARK THEME ARTWORK' : '☀️ LIGHT THEME ARTWORK'}
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-amber-400 font-bold font-mono text-[10px] tracking-wider uppercase bg-amber-500/10 border border-amber-500/20 px-2.5 py-1 rounded-lg">
+                        {shelfLevelTiers.length} PACK TIERS ON DISPLAY
+                      </span>
+                    )
+                  }
                 />
-
-                {/* Sub-header status inside glass */}
-                <div className="flex flex-wrap justify-between items-center mb-4 px-3 py-2 rounded-xl bg-slate-950/90 border border-slate-800 text-[10px] font-mono gap-2 relative z-20">
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setVendingPage(prev => (prev === 0 ? maxVendingPages - 1 : prev - 1))}
-                      className="px-2.5 py-1 rounded-lg bg-purple-950/80 border border-purple-600/60 text-purple-300 hover:bg-purple-800/80 hover:text-white transition-all flex items-center gap-1 font-bold active:scale-95 cursor-pointer"
-                    >
-                      <ChevronLeft size={12} /> <span>PREV SHELF</span>
-                    </button>
-                    <span className="text-purple-400 font-bold tracking-widest uppercase">
-                      SHELF 0{vendingPage + 1} / 0{maxVendingPages} • {currentCategoryConfig?.label}
-                    </span>
-                    <button
-                      onClick={() => setVendingPage(prev => (prev + 1) % maxVendingPages)}
-                      className="px-2.5 py-1 rounded-lg bg-purple-950/80 border border-purple-600/60 text-purple-300 hover:bg-purple-800/80 hover:text-white transition-all flex items-center gap-1 font-bold active:scale-95 cursor-pointer"
-                    >
-                      <span>NEXT SHELF</span> <ChevronRight size={12} />
-                    </button>
-                  </div>
-
-                  {currentCategoryKey === 'bombshell' ? (
-                    <div className="flex items-center gap-2">
-                      <span className="text-pink-400 font-extrabold tracking-wider uppercase">ARTWORK MODE:</span>
-                      <button
-                        onClick={() => setBombshellTheme(prev => (prev === 'dark' ? 'light' : 'dark'))}
-                        className={`px-2.5 py-1 rounded-lg font-bold border transition-all cursor-pointer active:scale-95 ${
-                          bombshellTheme === 'dark'
-                            ? 'bg-slate-900 border-pink-500/80 text-pink-300 shadow-[0_0_10px_rgba(255,20,147,0.4)]'
-                            : 'bg-amber-950/80 border-amber-400 text-amber-300 shadow-[0_0_10px_rgba(251,191,36,0.4)]'
-                        }`}
-                      >
-                        {bombshellTheme === 'dark' ? '🌙 DARK THEME ARTWORK' : '☀️ LIGHT THEME ARTWORK'}
-                      </button>
-                    </div>
-                  ) : (
-                    <span className="text-amber-400 font-bold tracking-wider uppercase">
-                      {shelfLevelTiers.length} PACK TIERS ON DISPLAY • CLICK DISPENSE
-                    </span>
-                  )}
-                </div>
 
                 <AnimatePresence mode="wait">
                   <motion.div 

@@ -310,43 +310,145 @@ export function OverheadClawSVG({ accent = '#3b82f6', isGrabbing = false }: { ac
   );
 }
 
-// ===== 6. DIGITAL CARD TYPE INSPECTOR DISPLAY WINDOW SVG =====
-export function VendingInspectorWindowSVG({ categoryConfig, pageIdx, maxPages }: { categoryConfig: any; pageIdx: number; maxPages: number }) {
+// ===== 6. CUSTOM SVG SHELF NAMEPLATE WITH CORRELATING COLOR PALETTE =====
+export function VendingShelfNameplateSVG({ 
+  categoryConfig, 
+  pageIdx, 
+  maxPages,
+  onPrev,
+  onNext,
+  extraControls
+}: { 
+  categoryConfig: any; 
+  pageIdx: number; 
+  maxPages: number;
+  onPrev?: () => void;
+  onNext?: () => void;
+  extraControls?: React.ReactNode;
+}) {
+  const accent = categoryConfig?.accent || '#a855f7';
+  const label = categoryConfig?.label || 'SHELF';
+  const icon = categoryConfig?.icon || '📦';
+  const desc = categoryConfig?.description || '';
+
   return (
-    <div className="w-full rounded-2xl bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border border-slate-800 p-3 shadow-inner relative overflow-hidden mb-4 select-none">
-      {/* Scanline CRT overlay */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_50%,rgba(0,0,0,0.4)_51%)] bg-[length:100%_4px] pointer-events-none opacity-40" />
+    <div className="w-full relative select-none mb-4 z-20">
+      <div 
+        className="w-full rounded-2xl bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-2 p-3.5 shadow-2xl relative overflow-hidden transition-all duration-500"
+        style={{
+          borderColor: accent,
+          boxShadow: `0 0 30px ${accent}40, inset 0 0 20px ${accent}15`,
+        }}
+      >
+        {/* Subtle SVG Grid & Correlating Glow Pattern */}
+        <svg viewBox="0 0 900 80" className="absolute inset-0 w-full h-full pointer-events-none opacity-25" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id={`npGrad-${accent.replace('#', '')}`} x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor={accent} stopOpacity="0.8" />
+              <stop offset="50%" stopColor="#ffffff" stopOpacity="0.3" />
+              <stop offset="100%" stopColor={accent} stopOpacity="0.8" />
+            </linearGradient>
+            <filter id={`npGlow-${accent.replace('#', '')}`} x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="3" result="blur" />
+              <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
+          </defs>
 
-      <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-xl shadow-[0_0_15px_rgba(168,85,247,0.4)] shrink-0">
-            {categoryConfig?.icon || '📦'}
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono font-extrabold uppercase tracking-widest text-purple-400">
-                DISPLAY WINDOW • MATRIX SHELF 0{pageIdx + 1}/0{maxPages}
-              </span>
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+          {/* Top & Bottom Industrial Metallic Bevel Lines */}
+          <line x1="10" y1="6" x2="890" y2="6" stroke={`url(#npGrad-${accent.replace('#', '')})`} strokeWidth="2" filter={`url(#npGlow-${accent.replace('#', '')})`} />
+          <line x1="10" y1="74" x2="890" y2="74" stroke={`url(#npGrad-${accent.replace('#', '')})`} strokeWidth="2" filter={`url(#npGlow-${accent.replace('#', '')})`} />
+
+          {/* Hex Pattern */}
+          <path d="M 0 20 L 900 20 M 0 40 L 900 40 M 0 60 L 900 60" stroke={accent} strokeWidth="0.5" strokeDasharray="6 6" opacity="0.3" />
+          
+          {/* Corner Rivets */}
+          <circle cx="16" cy="16" r="3.5" fill="#475569" stroke="#000" strokeWidth="1" />
+          <circle cx="884" cy="16" r="3.5" fill="#475569" stroke="#000" strokeWidth="1" />
+          <circle cx="16" cy="64" r="3.5" fill="#475569" stroke="#000" strokeWidth="1" />
+          <circle cx="884" cy="64" r="3.5" fill="#475569" stroke="#000" strokeWidth="1" />
+        </svg>
+
+        {/* Scanline CRT overlay */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_50%,rgba(0,0,0,0.4)_51%)] bg-[length:100%_4px] pointer-events-none opacity-30" />
+
+        <div className="relative z-10 flex flex-wrap justify-between items-center gap-3">
+          {/* Left: Navigation Buttons & Shelf Nameplate */}
+          <div className="flex items-center gap-3">
+            {onPrev && onNext && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={onPrev}
+                  className="px-2.5 py-1.5 rounded-lg bg-slate-900 border text-white font-mono text-[10px] font-black tracking-wider uppercase hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center gap-1 shadow-md"
+                  style={{ borderColor: `${accent}88`, color: accent }}
+                  title="Previous Shelf (Left Arrow)"
+                >
+                  ◀ <span>PREV</span>
+                </button>
+                <button
+                  onClick={onNext}
+                  className="px-2.5 py-1.5 rounded-lg bg-slate-900 border text-white font-mono text-[10px] font-black tracking-wider uppercase hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center gap-1 shadow-md"
+                  style={{ borderColor: `${accent}88`, color: accent }}
+                  title="Next Shelf (Right Arrow)"
+                >
+                  <span>NEXT</span> ▶
+                </button>
+              </div>
+            )}
+
+            {/* Main Correlating Color Badge */}
+            <div className="flex items-center gap-3">
+              <div 
+                className="w-11 h-11 rounded-xl flex items-center justify-center text-2xl shrink-0 border-2 shadow-lg transition-transform duration-300 hover:scale-110"
+                style={{
+                  backgroundColor: `${accent}22`,
+                  borderColor: accent,
+                  boxShadow: `0 0 20px ${accent}66`,
+                }}
+              >
+                {icon}
+              </div>
+
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono font-extrabold uppercase tracking-[0.2em]" style={{ color: accent }}>
+                    SHELF 0{pageIdx + 1} / 0{maxPages} • NAMEPLATE
+                  </span>
+                  <span className="w-2 h-2 rounded-full animate-ping" style={{ backgroundColor: accent }} />
+                </div>
+                
+                <h3 
+                  className="text-base sm:text-lg font-mono font-black uppercase tracking-wider flex items-center gap-2 drop-shadow-md"
+                  style={{ color: '#ffffff' }}
+                >
+                  <span style={{ color: accent }}>{label}</span>
+                  {desc && (
+                    <span className="text-xs font-normal text-slate-400 font-mono hidden md:inline">
+                      ({desc})
+                    </span>
+                  )}
+                </h3>
+              </div>
             </div>
-            <h4 className="text-xs sm:text-sm font-mono font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <span>{categoryConfig?.label || 'PACK SHELF'}</span>
-              <span className="text-[10px] text-amber-400 font-normal">({categoryConfig?.description || ''})</span>
-            </h4>
           </div>
-        </div>
 
-        {/* Status Metrics */}
-        <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono">
-          <div className="px-3 py-1 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-300 font-bold">
-            FILTER: {(categoryConfig?.filter || 'all').toUpperCase()}
-          </div>
-          <div className="px-3 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 font-bold">
-            4 PACK TIERS ON DISPLAY
+          {/* Right: Extra Controls (e.g. Artwork Theme Switcher) or Metric Pills */}
+          <div className="flex items-center gap-2">
+            {extraControls}
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+// ===== 6. DIGITAL CARD TYPE INSPECTOR DISPLAY WINDOW SVG =====
+export function VendingInspectorWindowSVG({ categoryConfig, pageIdx, maxPages }: { categoryConfig: any; pageIdx: number; maxPages: number }) {
+  return (
+    <VendingShelfNameplateSVG 
+      categoryConfig={categoryConfig}
+      pageIdx={pageIdx}
+      maxPages={maxPages}
+    />
   );
 }
 
