@@ -2132,6 +2132,9 @@ export default function Game() {
           isSwipeLine,
         });
       }
+      if (hitFxRef.current.length > 12) {
+        hitFxRef.current.shift();
+      }
       hitFxRef.current.push({
         lane,
         startMs: Date.now(),
@@ -2898,7 +2901,10 @@ export default function Game() {
     haptics.fusionProgress();
 
     // Stop any existing draw loop first
-    cancelAnimationFrame(rafRef.current);
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = 0;
+    }
 
     const audio = audioRef.current;
     const rewindTo = rewindToRef.current;
@@ -2986,13 +2992,26 @@ export default function Game() {
   //  DRAW LOOP
   // ═══════════════════════════════════════════════════════════════
   const draw = useCallback(() => {
-    if (phaseRef.current === "unmounted") return;
-    // Schedule next frame FIRST so early returns during load/pause never kill the active render loop
-    rafRef.current = requestAnimationFrame(() => drawRef.current?.());
+    if (phaseRef.current === "unmounted") {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = 0;
+      }
+      return;
+    }
 
     const canvas = canvasRef.current;
     const phase = phaseRef.current;
-    if (!canvas || (phase !== "playing" && phase !== "rewinding" && phase !== "countdown") || pausedRef.current || isTutorialHelpOpenRef.current) return;
+    if (!canvas || (phase !== "playing" && phase !== "rewinding" && phase !== "countdown") || pausedRef.current || isTutorialHelpOpenRef.current) {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = 0;
+      }
+      return;
+    }
+
+    // Schedule next frame ONLY if loop is actively running
+    rafRef.current = requestAnimationFrame(() => drawRef.current?.());
     const ctx = canvas.getContext("2d");
     if (!ctx || !songRef.current) return;
     if (optsRef.current.legacyGraphics) {
@@ -4668,9 +4687,12 @@ export default function Game() {
       const noteColor = isMissedNote ? "#FF3800" : lc;
       let drawX = noteX;
 
-      // Spawn note trail particles as the note descends
+      // Spawn note trail particles as the note descends (capped to max 35 for performance)
       if (phase === "playing" && !isMissedNote) {
-        if (Math.random() < 0.28) {
+        if (Math.random() < 0.22) {
+          if (noteTrailsRef.current.length > 35) {
+            noteTrailsRef.current.shift();
+          }
           noteTrailsRef.current.push({
             id: `${note.id}-${Math.random()}`,
             x: drawX,
@@ -7825,7 +7847,11 @@ export default function Game() {
         audioCtxRef.current.resume().catch(() => {});
       }
       audioRef.current?.play().catch(() => {});
-      // Restart the loop
+      // Restart the loop safely without duplicating RAF handles
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = 0;
+      }
       rafRef.current = requestAnimationFrame(() => drawRef.current?.());
     }
 
@@ -9800,12 +9826,12 @@ function drawKey(
     goldGrad.addColorStop(1, "#3B0764");
     ctx.fillStyle = goldGrad;
     ctx.shadowColor = stageColor;
-    ctx.shadowBlur = lerp(8, 22, prog);
+    ctx.shadowBlur = lerp(4, 12, prog);
     ctx.shadowOffsetY = 0;
   } else if (noteType === 'remix') {
     // Cyberpunk Prismatic Body — Electric Cyan to Deep Magenta
     ctx.shadowColor = "#00F5D4";
-    ctx.shadowBlur = lerp(16, 32, prog);
+    ctx.shadowBlur = lerp(6, 14, prog);
     ctx.shadowOffsetY = lerp(2, 6, prog);
     const remixGrad = ctx.createLinearGradient(0, -noteH / 2, 0, noteH / 2);
     remixGrad.addColorStop(0, "#A5F3FC");
@@ -9816,7 +9842,7 @@ function drawKey(
   } else if (noteType === 'break') {
     // High-Voltage Flame Armored Body — Gold to Orange
     ctx.shadowColor = "#FF7B00";
-    ctx.shadowBlur = lerp(18, 36, prog);
+    ctx.shadowBlur = lerp(6, 14, prog);
     ctx.shadowOffsetY = lerp(2, 6, prog);
     const breakGrad = ctx.createLinearGradient(0, -noteH / 2, 0, noteH / 2);
     breakGrad.addColorStop(0, "#FFF7ED");
@@ -9827,7 +9853,7 @@ function drawKey(
   } else if (noteType === 'accent') {
     // Emerald / Acid Lime Crystalline Body — Bright Lime
     ctx.shadowColor = "#CCFF00";
-    ctx.shadowBlur = lerp(16, 32, prog);
+    ctx.shadowBlur = lerp(6, 14, prog);
     ctx.shadowOffsetY = lerp(2, 6, prog);
     const accentGrad = ctx.createLinearGradient(0, -noteH / 2, 0, noteH / 2);
     accentGrad.addColorStop(0, "#F7FEE7");
@@ -9838,7 +9864,7 @@ function drawKey(
   } else if (noteType === 'lift') {
     // Spring Green Body — Bright Mint
     ctx.shadowColor = "#00FF88";
-    ctx.shadowBlur = lerp(14, 30, prog);
+    ctx.shadowBlur = lerp(6, 14, prog);
     ctx.shadowOffsetY = lerp(2, 6, prog);
     const liftGrad = ctx.createLinearGradient(0, -noteH / 2, 0, noteH / 2);
     liftGrad.addColorStop(0, "#ECFDF5");
@@ -9849,7 +9875,7 @@ function drawKey(
   } else if (noteType === 'zigzag') {
     // Snaking Neon Violet Body — Deep Purple to Bright Magenta
     ctx.shadowColor = "#A855F7";
-    ctx.shadowBlur = lerp(16, 32, prog);
+    ctx.shadowBlur = lerp(6, 14, prog);
     ctx.shadowOffsetY = lerp(2, 6, prog);
     const zigzagGrad = ctx.createLinearGradient(-noteW / 2, 0, noteW / 2, 0);
     zigzagGrad.addColorStop(0, "#F0ABFC");
@@ -9860,7 +9886,7 @@ function drawKey(
   } else if (noteType === 'burst') {
     // Expanding Radiant Pulse Body — Vivid Crimson/Orange
     ctx.shadowColor = "#FF5500";
-    ctx.shadowBlur = lerp(18, 36, prog);
+    ctx.shadowBlur = lerp(6, 14, prog);
     ctx.shadowOffsetY = lerp(2, 6, prog);
     const burstGrad = ctx.createRadialGradient(0, 0, 2, 0, 0, noteW / 2);
     burstGrad.addColorStop(0, "#FFFBEB");
@@ -9873,7 +9899,7 @@ function drawKey(
     const ghostFlicker = 0.2 + 0.15 * Math.sin(Date.now() / 80); // Rapid shimmer
     ctx.globalAlpha = ghostFlicker;
     ctx.shadowColor = "rgba(148, 163, 184, 0.3)";
-    ctx.shadowBlur = lerp(6, 14, prog);
+    ctx.shadowBlur = lerp(4, 8, prog);
     const ghostGrad = ctx.createLinearGradient(0, -noteH / 2, 0, noteH / 2);
     ghostGrad.addColorStop(0, "rgba(226, 232, 240, 0.4)");
     ghostGrad.addColorStop(0.5, "rgba(148, 163, 184, 0.3)");
@@ -9881,7 +9907,7 @@ function drawKey(
     ctx.fillStyle = ghostGrad;
   } else {
     ctx.shadowColor = "rgba(0,0,0,0.8)";
-    ctx.shadowBlur = lerp(4, 16, prog);
+    ctx.shadowBlur = lerp(3, 8, prog);
     ctx.shadowOffsetY = lerp(2, 6, prog);
     const bodyGrad = ctx.createLinearGradient(0, -noteH / 2, 0, noteH / 2);
     bodyGrad.addColorStop(0, "#1c1c1f");
