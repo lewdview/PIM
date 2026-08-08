@@ -413,6 +413,189 @@ function colorWithAlpha(color: string, alpha: number): string {
   return trimmed;
 }
 
+/** ── Custom Vector SVG Judgment Badges (PERFECT+, PERFECT, GOOD, MISS, SHIELDED) ── */
+const JudgmentBadge: React.FC<{ type: JudgmentDisplay['type']; scale?: number; className?: string }> = ({ type, scale = 1, className = "" }) => {
+  if (type === "PERFECT+") {
+    return (
+      <svg
+        width={145 * scale}
+        height={36 * scale}
+        viewBox="0 0 145 36"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        className={`drop-shadow-[0_0_14px_rgba(255,215,0,0.9)] ${className}`}
+      >
+        <defs>
+          <linearGradient id="pPlusGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#FFF7ED" />
+            <stop offset="30%" stopColor="#FFD700" />
+            <stop offset="70%" stopColor="#F59E0B" />
+            <stop offset="100%" stopColor="#92400E" />
+          </linearGradient>
+          <linearGradient id="pPlusGlow" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#FFD700" stopOpacity="0" />
+            <stop offset="50%" stopColor="#FFD700" stopOpacity="0.8" />
+            <stop offset="100%" stopColor="#FFD700" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+
+        {/* Outer glowing base line */}
+        <rect x="12" y="32" width="121" height="2" rx="1" fill="url(#pPlusGlow)" />
+        
+        {/* Left & Right Radiant Diamond Starbursts */}
+        <path d="M 12 18 L 14 14 L 18 12 L 14 10 L 12 6 L 10 10 L 6 12 L 10 14 Z" fill="#FFF7ED" />
+        <path d="M 133 18 L 135 14 L 139 12 L 135 10 L 133 6 L 131 10 L 127 12 L 131 14 Z" fill="#FFF7ED" />
+
+        {/* Text PERFECT+ */}
+        <text
+          x="72.5"
+          y="23"
+          textAnchor="middle"
+          fill="url(#pPlusGrad)"
+          stroke="#FFFFFF"
+          strokeWidth="0.6"
+          fontFamily="'Space Mono', 'Impact', sans-serif"
+          fontWeight="900"
+          fontSize="17"
+          letterSpacing="0.14em"
+        >
+          PERFECT+
+        </text>
+      </svg>
+    );
+  }
+
+  if (type === "PERFECT") {
+    return (
+      <svg
+        width={132 * scale}
+        height={32 * scale}
+        viewBox="0 0 132 32"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        className={`drop-shadow-[0_0_12px_rgba(57,255,20,0.85)] ${className}`}
+      >
+        <defs>
+          <linearGradient id="perfGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#F7FEE7" />
+            <stop offset="40%" stopColor="#39FF14" />
+            <stop offset="100%" stopColor="#059669" />
+          </linearGradient>
+        </defs>
+
+        {/* Sleek bracket wings */}
+        <path d="M 8 6 L 2 16 L 8 26" stroke="#39FF14" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M 124 6 L 130 16 L 124 26" stroke="#39FF14" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+
+        <text
+          x="66"
+          y="21"
+          textAnchor="middle"
+          fill="url(#perfGrad)"
+          fontFamily="'Space Mono', 'Impact', sans-serif"
+          fontWeight="900"
+          fontSize="15"
+          letterSpacing="0.16em"
+        >
+          PERFECT
+        </text>
+      </svg>
+    );
+  }
+
+  if (type === "GOOD") {
+    return (
+      <svg
+        width={105 * scale}
+        height={28 * scale}
+        viewBox="0 0 105 28"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        className={`drop-shadow-[0_0_10px_rgba(0,229,255,0.8)] ${className}`}
+      >
+        <defs>
+          <linearGradient id="goodGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#E0F2FE" />
+            <stop offset="50%" stopColor="#00E5FF" />
+            <stop offset="100%" stopColor="#0284C7" />
+          </linearGradient>
+        </defs>
+
+        {/* Top & Bottom Cyber Accent Dashed Bars */}
+        <line x1="12" y1="3" x2="93" y2="3" stroke="#00E5FF" strokeWidth="1.5" strokeDasharray="5 3" />
+        <line x1="12" y1="25" x2="93" y2="25" stroke="#00E5FF" strokeWidth="1.5" strokeDasharray="5 3" />
+
+        <text
+          x="52.5"
+          y="19"
+          textAnchor="middle"
+          fill="url(#goodGrad)"
+          fontFamily="'Space Mono', 'Impact', sans-serif"
+          fontWeight="900"
+          fontSize="14"
+          letterSpacing="0.18em"
+        >
+          GOOD
+        </text>
+      </svg>
+    );
+  }
+
+  if (type === "SHIELDED") {
+    return (
+      <svg
+        width={120 * scale}
+        height={30 * scale}
+        viewBox="0 0 120 30"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        className={`drop-shadow-[0_0_10px_rgba(0,255,221,0.8)] ${className}`}
+      >
+        <path d="M 12 6 L 18 6 L 18 16 C 18 20 12 24 12 24 C 12 24 6 20 6 16 L 6 6 Z" fill="#00FFDD" opacity="0.3" stroke="#00FFDD" strokeWidth="1.5" />
+        <text
+          x="65"
+          y="20"
+          textAnchor="middle"
+          fill="#00FFDD"
+          fontFamily="'Space Mono', sans-serif"
+          fontWeight="900"
+          fontSize="12"
+          letterSpacing="0.12em"
+        >
+          SHIELDED
+        </text>
+      </svg>
+    );
+  }
+
+  // MISS
+  return (
+    <svg
+      width={100 * scale}
+      height={28 * scale}
+      viewBox="0 0 100 28"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={`drop-shadow-[0_0_12px_rgba(255,20,147,0.9)] ${className}`}
+    >
+      <text
+        x="50"
+        y="19"
+        textAnchor="middle"
+        fill="#FF1493"
+        stroke="#FF003C"
+        strokeWidth="0.5"
+        fontFamily="'Space Mono', 'Impact', sans-serif"
+        fontWeight="900"
+        fontSize="14"
+        letterSpacing="0.2em"
+      >
+        MISS
+      </text>
+    </svg>
+  );
+};
+
 // Perspective highway geometry
 const HW_TOP = 0.65;
 const HW_BOT = 0.99;
@@ -3774,7 +3957,7 @@ export default function Game() {
       
       const baseSize = 110; // 5x normal 22px combo text
       const fontSize = Math.round(baseSize * flashScale);
-      const comboY = H * 0.16;
+      const comboY = isCyberTunnelPov ? H * 0.28 : (isDynamicStagePov && calculatedStage >= 3) ? H * 0.24 : H * 0.16;
       
       // Beat-reactive glow intensity
       const bpmForPulse = songRef.current?.bpm || 120;
@@ -8954,66 +9137,41 @@ export default function Game() {
             </div>
           )}
 
-          {/* Judgment text — per-lane, moved up above the hit zone */}
+          {/* Judgment text — per-lane custom vector SVG popups */}
           {opts.judgmentText && displayJudge.map((j) => {
             if (Date.now() - j.ts > 600) return null;
             const pct = (j.lane / LANE_COUNT + 1 / (LANE_COUNT * 2)) * 100;
-            const color =
-              j.type === "PERFECT+"
-                ? "#E5B800"
-                : j.type === "PERFECT"
-                  ? "#39FF14"
-                  : j.type === "GOOD"
-                    ? "#00E5FF"
-                    : j.type === "SHIELDED"
-                      ? "#00FFDD"
-                      : "#FF1493";
             return (
               <div
                 key={j.id}
-                className="absolute font-mono font-bold pointer-events-none judgment-pop"
+                className="absolute pointer-events-none judgment-pop"
                 style={{
                   left: `${pct}%`,
-                  top: "76%",
+                  top: "74%",
                   transform: "translateX(-50%)",
-                  color,
-                  textShadow: `0 0 18px ${color}`,
-                  letterSpacing: "0.12em",
-                  fontSize: j.type === "PERFECT+" ? 15 : 12,
                 }}
               >
-                {j.type}
+                <JudgmentBadge type={j.type} scale={j.type === "PERFECT+" ? 1.05 : 0.9} />
               </div>
             );
           })}
 
-          {/* Secondary judgment banner — top of screen, always visible above fingers */}
+          {/* Secondary judgment banner — top of screen, custom vector SVG badge */}
           {opts.judgmentText && (() => {
             const latest = displayJudge.filter(j => Date.now() - j.ts < 400).sort((a, b) => b.ts - a.ts)[0];
             if (!latest) return null;
             const age = (Date.now() - latest.ts) / 400;
-            const color =
-              latest.type === "PERFECT+" ? "#E5B800"
-                : latest.type === "PERFECT" ? "#39FF14"
-                : latest.type === "GOOD" ? "#00E5FF"
-                : latest.type === "SHIELDED" ? "#00FFDD"
-                : latest.type === "MISS" ? "#FF1493"
-                : "#444";
             return (
               <div
-                className="absolute left-1/2 font-mono font-bold pointer-events-none"
+                className="absolute left-1/2 pointer-events-none"
                 style={{
-                  top: "24%",
-                  transform: `translateX(-50%) scale(${1 + (1 - age) * 0.15})`,
-                  color,
-                  textShadow: `0 0 24px ${color}, 0 0 48px ${color}40`,
-                  letterSpacing: "0.25em",
-                  fontSize: latest.type === "PERFECT+" ? 20 : latest.type === "MISS" ? 18 : 16,
+                  top: "23%",
+                  transform: `translateX(-50%) scale(${1 + (1 - age) * 0.18})`,
                   opacity: 1 - age * 0.6,
                   transition: "opacity 0.1s",
                 }}
               >
-                {latest.type}
+                <JudgmentBadge type={latest.type} scale={latest.type === "PERFECT+" ? 1.35 : 1.15} />
               </div>
             );
           })()}
@@ -9847,39 +10005,38 @@ function drawKey(
     ctx.globalAlpha = 0.95;
 
     if (swipeDirection && isHoldHead) {
-      // ── CUTOUT CHEVRON ARROW LIGHT STRIPE INSIDE NORMAL BLOCK FOR HOLD SWIPE HEADS ──
+      // ── SLEEK AERODYNAMIC DOUBLE-CHEVRON ARROW FOR HOLD SWIPE HEADS ──
       ctx.save();
       const rot = rotations[swipeDirection] || 0;
       ctx.rotate(rot);
 
-      const sw = noteW * 0.32;
-      const sh = stripeH * 0.65;
-      const thick = noteW * 0.12;
+      const arrowScale = Math.min(noteW * 0.28, noteH * 0.35);
+      
+      // Dual nested glowing chevrons
+      for (let c = 0; c < 2; c++) {
+        const offset = (c - 0.5) * (arrowScale * 0.55);
+        const alpha = c === 0 ? 1.0 : 0.65;
+        ctx.globalAlpha = alpha;
 
-      // Outer glowing chevron cutout stripe
-      ctx.beginPath();
-      ctx.moveTo(sw, 0);
-      ctx.lineTo(-sw * 0.4, -sh);
-      ctx.lineTo(-sw * 0.4 + thick, -sh);
-      ctx.lineTo(sw + thick * 0.6, 0);
-      ctx.lineTo(-sw * 0.4 + thick, sh);
-      ctx.lineTo(-sw * 0.4, sh);
-      ctx.closePath();
-      ctx.fill();
+        // Outer glow path
+        ctx.shadowColor = lc || '#FFD700';
+        ctx.shadowBlur = lerp(10, 22, prog);
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = Math.max(2.5, arrowScale * 0.18);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
 
-      // White inner core cutout
-      ctx.fillStyle = "#ffffff";
-      ctx.globalAlpha = 0.9;
-      ctx.beginPath();
-      ctx.moveTo(sw * 0.7, 0);
-      ctx.lineTo(-sw * 0.2, -sh * 0.6);
-      ctx.lineTo(-sw * 0.2 + thick * 0.5, -sh * 0.6);
-      ctx.lineTo(sw * 0.7 + thick * 0.3, 0);
-      ctx.lineTo(-sw * 0.2 + thick * 0.5, sh * 0.6);
-      ctx.lineTo(-sw * 0.2, sh * 0.6);
-      ctx.closePath();
-      ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(offset - arrowScale * 0.5, -arrowScale * 0.6);
+        ctx.lineTo(offset + arrowScale * 0.4, 0);
+        ctx.lineTo(offset - arrowScale * 0.5, arrowScale * 0.6);
+        ctx.stroke();
 
+        // Inner neon core accent
+        ctx.strokeStyle = lc || '#FFD700';
+        ctx.lineWidth = Math.max(1.2, arrowScale * 0.08);
+        ctx.stroke();
+      }
       ctx.restore();
     } else {
       ctx.beginPath();
@@ -10084,25 +10241,39 @@ function drawKey(
     ctx.restore();
 
   } else if (swipeDirection) {
-    // ➔ SLIDE / SWIPE NOTE: Directional Chevrons Matching Block (all directions including UP)
+    // ➔ SLIDE / SWIPE NOTE: Sleek Multi-Tier Animated Chevrons Matching Block
     ctx.save();
+    const isHoldTail = isHold;
+    const chevColor = isHoldTail ? '#FFD700' : '#00E5FF';
     ctx.strokeStyle = '#FFFFFF';
-    ctx.shadowColor = '#00E5FF';
-    ctx.shadowBlur = 14;
-    ctx.lineWidth = 2.8;
+    ctx.shadowColor = chevColor;
+    ctx.shadowBlur = lerp(12, 24, prog);
+    ctx.lineWidth = 3.0;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
 
-    const animOffset = (nowMs / 14) % 16;
+    const animOffset = (nowMs / 12) % 18;
+    const arrowW = Math.min(noteW * 0.22, 14);
+    const arrowH = Math.min(noteH * 0.26, 12);
+
     for (let i = 0; i < 2; i++) {
-      const xPos = -4 + i * 10 - (8 - animOffset * 0.5);
-      const alpha = Math.max(0.3, 1.0 - i * 0.4);
+      const xPos = -arrowW * 0.6 + i * (arrowW * 1.1) - (8 - animOffset * 0.5);
+      const alpha = Math.max(0.25, 1.0 - i * 0.35);
       ctx.globalAlpha = alpha;
+
+      // Outer white glowing chevron
       ctx.beginPath();
-      ctx.moveTo(xPos - 4, -8);
-      ctx.lineTo(xPos + 5, 0);
-      ctx.lineTo(xPos - 4, 8);
+      ctx.moveTo(xPos - arrowW * 0.5, -arrowH);
+      ctx.lineTo(xPos + arrowW * 0.5, 0);
+      ctx.lineTo(xPos - arrowW * 0.5, arrowH);
       ctx.stroke();
+
+      // Inner color core accent line
+      ctx.save();
+      ctx.strokeStyle = chevColor;
+      ctx.lineWidth = 1.4;
+      ctx.stroke();
+      ctx.restore();
     }
     ctx.restore();
 
