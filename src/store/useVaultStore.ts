@@ -296,22 +296,40 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         profileRes = await supabase.from('profiles').select('tokens, daily_standard_purchased, daily_premium_purchased, last_purchase_day, has_onboarded, streak_count, total_pulls, pulls_since_rare_plus, unlocked_skins, display_name, avatar_url').eq('id', userId).single();
       }
 
+      // Helper function to fetch full collection across all pages (bypassing Supabase 1,000 row default cap)
+      const fetchAllVaultCards = async (uid: string) => {
+        let allCards: any[] = [];
+        let from = 0;
+        const pageSize = 1000;
+        while (true) {
+          const { data, error } = await supabase
+            .from('vault_collections')
+            .select('*')
+            .eq('owner_id', uid)
+            .range(from, from + pageSize - 1);
+          if (error || !data || data.length === 0) break;
+          allCards.push(...data);
+          if (data.length < pageSize) break;
+          from += pageSize;
+        }
+        return allCards;
+      };
+
       const [
-        vaultRes, 
+        vault, 
         supplyRes,
         gameplayRes,
         fragmentsRes,
         milestonesRes
       ] = await Promise.all([
-        supabase.from('vault_collections').select('*').eq('owner_id', userId),
-        supabase.from('global_supply').select('*'),
-        supabase.from('gameplay_records').select('*').eq('user_id', userId),
-        supabase.from('user_fragments').select('*').eq('user_id', userId),
-        supabase.from('campaign_milestone_claims').select('*').eq('user_id', userId),
+        fetchAllVaultCards(userId),
+        supabase.from('global_supply').select('*').range(0, 9999),
+        supabase.from('gameplay_records').select('*').eq('user_id', userId).range(0, 9999),
+        supabase.from('user_fragments').select('*').eq('user_id', userId).range(0, 9999),
+        supabase.from('campaign_milestone_claims').select('*').eq('user_id', userId).range(0, 9999),
       ]);
       
       const profile = profileRes.data;
-      const vault = vaultRes.data;
       const supplyData = supplyRes.data;
 
       let currentStreak = 0;

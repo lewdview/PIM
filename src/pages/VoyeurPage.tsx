@@ -53,8 +53,17 @@ export default function VoyeurPage() {
       await loadVaultData(); // resync store
       setHasPaid(true);
 
-      // Now fetch their full collection
-      const { data: vault } = await supabase.from('vault_collections').select('*').eq('owner_id', userId);
+      // Now fetch their full collection (bypassing 1000 limit)
+      let vault: any[] = [];
+      let from = 0;
+      const pageSize = 1000;
+      while (true) {
+        const { data } = await supabase.from('vault_collections').select('*').eq('owner_id', userId).range(from, from + pageSize - 1);
+        if (!data || data.length === 0) break;
+        vault.push(...data);
+        if (data.length < pageSize) break;
+        from += pageSize;
+      }
       const pool = await fetchAllCards();
       
       if (vault) {
