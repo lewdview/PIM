@@ -10040,17 +10040,19 @@ function drawKey(
         ctx.stroke();
       }
       ctx.restore();
-    ctx.beginPath();
-    ctx.roundRect(-noteW / 2 + 2, -stripeH / 2, noteW - 4, stripeH, stripeH * 0.35);
-    ctx.fill();
+    } else {
+      ctx.beginPath();
+      ctx.roundRect(-noteW / 2 + 2, -stripeH / 2, noteW - 4, stripeH, stripeH * 0.35);
+      ctx.fill();
 
-    // White core inside horizontal stripe
-    ctx.fillStyle = "#ffffff";
-    ctx.globalAlpha = 0.85;
-    ctx.beginPath();
-    ctx.roundRect(-noteW / 2 + 8, -stripeH * 0.28 / 2, noteW - 16, stripeH * 0.28, stripeH * 0.1);
-    ctx.fill();
-    ctx.globalAlpha = 1.0;
+      // White core inside horizontal stripe
+      ctx.fillStyle = "#ffffff";
+      ctx.globalAlpha = 0.85;
+      ctx.beginPath();
+      ctx.roundRect(-noteW / 2 + 8, -stripeH * 0.28 / 2, noteW - 16, stripeH * 0.28, stripeH * 0.1);
+      ctx.fill();
+      ctx.globalAlpha = 1.0;
+    }
   }
 
   // ── 5. SPECIAL HIGH-VISIBILITY ICON EMBLEMS & ANIMATIONS ──
