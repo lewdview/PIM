@@ -10040,100 +10040,17 @@ function drawKey(
         ctx.stroke();
       }
       ctx.restore();
-    } else {
-      ctx.beginPath();
-      if (swipeDirection) {
-        const sw = noteW / 2 - 4;
-        const sh = stripeH / 2;
-        const sr = 4;
-        ctx.moveTo(-sw + sr, -sh);
-        ctx.arcTo(sw * 0.2, -sh, sw, 0, sr);
-        ctx.arcTo(sw, 0, sw * 0.2, sh, sr);
-        ctx.arcTo(sw * 0.2, sh, -sw, sh, sr);
-        ctx.arcTo(-sw, sh, -sw * 0.35, 0, sr);
-        ctx.arcTo(-sw * 0.35, 0, -sw, -sh, sr);
-        ctx.arcTo(-sw, -sh, -sw + sr, -sh, sr);
-        ctx.closePath();
-      } else {
-        ctx.roundRect(-noteW / 2 + 2, -stripeH / 2, noteW - 4, stripeH, stripeH * 0.35);
-      }
-      ctx.fill();
-
-      // White core inside horizontal stripe
-      if (!swipeDirection) {
-        ctx.fillStyle = "#ffffff";
-        ctx.globalAlpha = 0.85;
-        ctx.beginPath();
-        ctx.roundRect(-noteW / 2 + 8, -stripeH * 0.28 / 2, noteW - 16, stripeH * 0.28, stripeH * 0.1);
-        ctx.fill();
-        ctx.globalAlpha = 1.0;
-      }
-
-      // Scrolling arrows for Swipes
-      if (swipeDirection) {
-        ctx.save();
-        ctx.beginPath();
-        const sw = noteW / 2 - 4;
-        const sh = stripeH / 2;
-        const sr = 4;
-        ctx.moveTo(-sw + sr, -sh);
-        ctx.arcTo(sw * 0.2, -sh, sw, 0, sr);
-        ctx.arcTo(sw, 0, sw * 0.2, sh, sr);
-        ctx.arcTo(sw * 0.2, sh, -sw, sh, sr);
-        ctx.arcTo(-sw, sh, -sw * 0.35, 0, sr);
-        ctx.arcTo(-sw * 0.35, 0, -sw, -sh, sr);
-        ctx.arcTo(-sw, -sh, -sw + sr, -sh, sr);
-        ctx.closePath();
-        ctx.clip();
-
-        const arrowSpacing = 24;
-        const animTime = Date.now() / 280;
-        const offset = (animTime * 16) % arrowSpacing;
-
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.95)";
-        ctx.lineWidth = 2.0;
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-        ctx.shadowColor = "#FFFFFF";
-        ctx.shadowBlur = 6;
-
-        for (let xOff = -sw - 20 + offset; xOff < sw + 20; xOff += arrowSpacing) {
-          ctx.beginPath();
-          ctx.moveTo(xOff - 3, -3);
-          ctx.lineTo(xOff + 1, 0);
-          ctx.lineTo(xOff - 3, 3);
-          ctx.stroke();
-        }
-        ctx.restore();
-      }
-    }
-
-    // Bright inner core
-    const coreH = stripeH * 0.48;
-    const coreGrad = ctx.createLinearGradient(0, -coreH / 2, 0, coreH / 2);
-    coreGrad.addColorStop(0, "rgba(255,255,255,0.5)");
-    coreGrad.addColorStop(0.4, "rgba(255,255,255,0.85)");
-    coreGrad.addColorStop(1, "rgba(255,255,255,0.2)");
-    ctx.fillStyle = coreGrad;
-    ctx.globalAlpha = 0.75;
-
     ctx.beginPath();
-    if (swipeDirection) {
-      const cw = noteW / 2 - 10;
-      const ch = coreH / 2;
-      const cr = 2;
-      ctx.moveTo(-cw + cr, -ch);
-      ctx.arcTo(cw * 0.2, -ch, cw, 0, cr);
-      ctx.arcTo(cw, 0, cw * 0.2, ch, cr);
-      ctx.arcTo(cw * 0.2, ch, -cw, ch, cr);
-      ctx.arcTo(-cw, ch, -cw * 0.35, 0, cr);
-      ctx.arcTo(-cw * 0.35, 0, -cw, -ch, cr);
-      ctx.arcTo(-cw, -ch, -cw + cr, -ch, cr);
-      ctx.closePath();
-    } else {
-      ctx.roundRect(-noteW / 2 + 5, -coreH / 2, noteW - 10, coreH, stripeH * 0.2);
-    }
+    ctx.roundRect(-noteW / 2 + 2, -stripeH / 2, noteW - 4, stripeH, stripeH * 0.35);
     ctx.fill();
+
+    // White core inside horizontal stripe
+    ctx.fillStyle = "#ffffff";
+    ctx.globalAlpha = 0.85;
+    ctx.beginPath();
+    ctx.roundRect(-noteW / 2 + 8, -stripeH * 0.28 / 2, noteW - 16, stripeH * 0.28, stripeH * 0.1);
+    ctx.fill();
+    ctx.globalAlpha = 1.0;
   }
 
   // ── 5. SPECIAL HIGH-VISIBILITY ICON EMBLEMS & ANIMATIONS ──
@@ -10249,7 +10166,7 @@ function drawKey(
     ctx.rotate(rot);
 
     const isHoldTail = isHold;
-    const chevColor = isHoldTail ? '#FFD700' : '#00E5FF';
+    const chevColor = lc || '#FFD700';
     ctx.strokeStyle = '#FFFFFF';
     ctx.shadowColor = chevColor;
     ctx.shadowBlur = lerp(12, 24, prog);
