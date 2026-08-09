@@ -392,7 +392,13 @@ export default function CodexPage() {
   const collection = useVaultStore(s => s.collection);
   const claimedRewards = useVaultStore(s => s.claimedRewards);
   const fragments = useVaultStore(s => s.fragments);
-  const { currentTrack, isPlaying, play, pause, stop } = useGlobalPlayer();
+
+  // ⚡ Bolt: Use granular selectors
+  const currentTrack = useGlobalPlayer(s => s.currentTrack);
+  const isPlaying = useGlobalPlayer(s => s.isPlaying);
+  const play = useGlobalPlayer(s => s.play);
+  const pause = useGlobalPlayer(s => s.pause);
+  const stop = useGlobalPlayer(s => s.stop);
 
   const today = getCurrentDay();
 
