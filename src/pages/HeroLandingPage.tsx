@@ -24,6 +24,7 @@ import {
 import { getCurrentDay, getTimeUntilNextDay, formatDate, getDateFromDay } from '../utils/dayCalc';
 import { extractPalette, getFallbackPalette, type ExtractedPalette } from '../utils/extractPalette';
 import { audioManager } from '../game/audio';
+import { useVaultStore } from '../store/useVaultStore';
 import { supabase } from '@/services/supabaseClient';
 import '../styles/HeroLandingPage.css';
 
@@ -481,11 +482,19 @@ export default function HeroLandingPage() {
     return { activeDay: clamped, isFutureBlocked: false, attemptedDay: parsedRequestedDay };
   }, [parsedRequestedDay, maxAllowedDay]);
 
+  const silentClaimDailyDrop = useVaultStore(state => state.silentClaimDailyDrop);
+
   const [catalog, setCatalog] = useState<SongEntry[]>([]);
   const [song, setSong] = useState<SongEntry | null>(null);
   const [palette, setPalette] = useState<ExtractedPalette>(getFallbackPalette());
   const [countdown, setCountdown] = useState(getTimeUntilNextDay());
   const [museumVideoUrl, setMuseumVideoUrl] = useState<string | null>(null);
+
+  // Silent Daily Card Claim for Guest / Unauthenticated users accessing today's release
+  useEffect(() => {
+    if (!activeDay) return;
+    silentClaimDailyDrop(activeDay).catch(() => {});
+  }, [activeDay, silentClaimDailyDrop]);
 
   // Command Palette State
   const [isCommandModalOpen, setIsCommandModalOpen] = useState(false);
@@ -776,7 +785,13 @@ export default function HeroLandingPage() {
           </p>
 
           <div className="flex flex-col items-center gap-2 mb-4">
-            <Link href={`/play/${songId}`} onClick={() => audioManager.playSfx('select_start_song', 0.5)}>
+            <Link 
+              href={`/play/${songId}`} 
+              onClick={() => {
+                audioManager.playSfx('select_start_song', 0.5);
+                silentClaimDailyDrop(activeDay);
+              }}
+            >
               <span className="hero-play-btn">
                 <Play size={14} fill="#000" /> PLAY DAY {activeDay} DROP
               </span>

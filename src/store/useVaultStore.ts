@@ -111,6 +111,7 @@ interface VaultState {
   // Actions
   setDailyCard: (card: VaultCard | null) => void;
   setHasClaimed: (claimed: boolean) => void;
+  silentClaimDailyDrop: (day: number) => Promise<OwnedCard | null>;
   setCollection: (cards: OwnedCard[]) => void;
   addToCollection: (cards: OwnedCard[]) => void;
   removeFromCollection: (ownedId: string) => void;
@@ -238,6 +239,44 @@ export const useVaultStore = create<VaultState>((set, get) => ({
 
   setDailyCard: (card) => set({ dailyCard: card }),
   setHasClaimed: (claimed) => set({ hasClaimed: claimed }),
+  silentClaimDailyDrop: async (day: number) => {
+    const session = await supabase.auth.getSession();
+    const userId = session.data.session?.user?.id;
+
+    if (userId) {
+      // Authenticated user: claim via vault-engine edge function
+      const { claimDailyCard } = await import('../services/vaultService');
+      const card = await claimDailyCard(day);
+      if (card) {
+        set((state) => {
+          const filtered = state.collection.filter(c => c && c.id !== card.id);
+          const nextCollection = [...filtered, card];
+          return {
+            collection: nextCollection,
+            hasClaimed: true,
+            echoPrestigeScore: calculateEchoPrestigeScore(nextCollection, state.streakCount, state.totalPulls),
+          };
+        });
+      }
+      return card;
+    } else {
+      // Unauthenticated / Guest user: silent claim into temp wallet
+      const { silentClaimGuestDailyCard } = await import('../services/vaultService');
+      const card = await silentClaimGuestDailyCard(day);
+      if (card) {
+        set((state) => {
+          const exists = state.collection.some(c => c && c.id === card.id);
+          const nextCollection = exists ? state.collection : [...state.collection, card];
+          return {
+            collection: nextCollection,
+            hasClaimed: true,
+            echoPrestigeScore: calculateEchoPrestigeScore(nextCollection, state.streakCount, state.totalPulls),
+          };
+        });
+      }
+      return card;
+    }
+  },
   setCollection: (cards) => set((state) => {
     const valid = cards.filter(c => c && c.card);
     return { 
@@ -615,6 +654,38 @@ export const useVaultStore = create<VaultState>((set, get) => ({
             }
           }
         }
+      }
+
+      // Migrate guest vault collection cards if any exist
+      try {
+        const guestCollectionStr = localStorage.getItem('guest_vault_collection');
+        if (guestCollectionStr) {
+          const guestCards: OwnedCard[] = JSON.parse(guestCollectionStr);
+          if (Array.isArray(guestCards) && guestCards.length > 0) {
+            console.log(`[Migrate] Migrating ${guestCards.length} temp guest cards to user account (${userId})...`);
+            for (const gc of guestCards) {
+              if (gc && gc.cardId) {
+                const { error } = await supabase.from('user_cards').insert({
+                  user_id: userId,
+                  card_id: gc.cardId,
+                  rarity: gc.card?.rarity || 'common',
+                  source: gc.source || 'daily_claim',
+                  claimed_at: gc.claimedAt || new Date().toISOString(),
+                  edition: gc.edition || 1,
+                  max_supply: gc.maxSupply || 100,
+                  proof: gc.proof || null,
+                  ultra_reward: gc.ultraReward || false,
+                  fingerprint: gc.fingerprint || null
+                });
+                if (error) console.warn('[Migrate] Failed to sync guest card:', error.message);
+              }
+            }
+            // Clear temp guest collection after migration
+            localStorage.removeItem('guest_vault_collection');
+          }
+        }
+      } catch (err) {
+        console.warn('[Migrate] Error migrating guest cards:', err);
       }
 
       // Keep localStorage in sync with merged database state

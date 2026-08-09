@@ -417,6 +417,55 @@ export async function claimDailyCard(day: number): Promise<OwnedCard | null> {
   }
 }
 
+// ===== SILENT GUEST DAILY CARD CLAIM (For Hero Funnel & Unauthenticated Users) =====
+export async function silentClaimGuestDailyCard(day: number): Promise<OwnedCard | null> {
+  try {
+    // 1. Spun up / temp guest wallet address
+    let guestAddress = localStorage.getItem('guest_wallet_address');
+    if (!guestAddress) {
+      guestAddress = '0x' + Array.from(crypto.getRandomValues(new Uint8Array(20))).map(b => b.toString(16).padStart(2, '0')).join('');
+      localStorage.setItem('guest_wallet_address', guestAddress);
+    }
+
+    const claimKey = `guest_daily_claimed_day_${day}`;
+    const localCollection: OwnedCard[] = JSON.parse(localStorage.getItem('guest_vault_collection') || '[]');
+    
+    // Check if card for this day was already claimed
+    const existing = localCollection.find(c => c.source === 'daily_claim' && (c.id.includes(`day_${day}`) || c.cardId.includes(`day_${day}`)));
+    if (existing || localStorage.getItem(claimKey) === 'true') {
+      return existing || null;
+    }
+
+    // 2. Fetch card pool metadata for Day level
+    const pool = await fetchAllCards();
+    const parent = findCardWithFallback(pool, `day_${day}`, 'common');
+
+    const guestCard: OwnedCard = {
+      id: `guest_card_day_${day}_${Date.now()}`,
+      cardId: parent.id,
+      card: { ...parent, rarity: 'common' },
+      source: 'daily_claim',
+      claimedAt: new Date().toISOString(),
+      edition: 1,
+      maxSupply: 100,
+      proof: `GUEST_PROOF_DAY_${day}_${Date.now()}`,
+      ultraReward: false,
+      blockchainStatus: 'minted_guest',
+      fingerprint: `0xGUEST_${day}_${Date.now()}`
+    };
+
+    localCollection.push(guestCard);
+    localStorage.setItem('guest_vault_collection', JSON.stringify(localCollection));
+    localStorage.setItem(claimKey, 'true');
+
+    console.log(`[Silent Claim] Successfully claimed Day ${day} card into temp guest wallet (${guestAddress}):`, parent.title);
+    return guestCard;
+  } catch (err) {
+    console.warn(`[Silent Claim] Error claiming Day ${day} guest card:`, err);
+    return null;
+  }
+}
+
 // ===== PACK PURCHASE =====
 export async function purchasePack(category: PackCategory, size: PackSize = 'single', sessionId?: string, txHash?: string, isGameplayReward?: boolean): Promise<OwnedCard[]> {
   try {
