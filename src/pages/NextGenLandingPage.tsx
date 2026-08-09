@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import Card from '../components/Card';
 import { PackBag } from '../components/PackShop';
-import { VendingMarqueeSVG, SidePanelGraphicSVG, VendingCoilSVG, RetrievalChuteDoorSVG, OverheadClawSVG, VendingInspectorWindowSVG, VendingCoinSlotSVG, VendingKeypadSVG } from '../components/VendingMachineGraphics';
+import { VendingMarqueeSVG, SidePanelGraphicSVG, VendingCoilSVG, RetrievalChuteDoorSVG, OverheadClawSVG, VendingInspectorWindowSVG, VendingShelfNameplateSVG, VendingCoinSlotSVG, VendingKeypadSVG } from '../components/VendingMachineGraphics';
 import { useVaultStore } from '../store/useVaultStore';
 import { useLoadingToast } from '../store/useLoadingToast';
 import { useAuthStore } from '../store/useAuthStore';
