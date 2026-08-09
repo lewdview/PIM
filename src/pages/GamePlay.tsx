@@ -797,8 +797,9 @@ function laneAt(
   const lw = width / LANE_COUNT;
   let baseX = left + lane * lw;
 
-  // Apply track archetype motion geometry ONLY during Stage 3, 4, or 5 (Stages 1 & 2 are strictly dynamic artwork classic)
-  if (archetype && stage >= 3) {
+  // Apply track archetype motion geometry ONLY during Stage 3 and Stage 5
+  // (Stage 4 returns to normal straight notes as a dynamic color primer bridge before Stage 5 overdrive!)
+  if (archetype && (stage === 3 || stage === 5)) {
     if (archetype === 'corkscrew_slide') {
       const mult = stage === 5 ? 2.4 : 1.0;
       const swirl = Math.sin(progress * Math.PI * 2 + t * 2.8 * mult) * (W * 0.10 * Math.sin(progress * Math.PI));
