@@ -819,6 +819,105 @@ function laneAt(
   return { x: baseX, w: lw };
 }
 
+export interface ProjectionResult {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  rot: number;
+  scale: number;
+}
+
+export function getArchetypeProjection(
+  lane: number,
+  prog: number,
+  W: number,
+  H: number,
+  archetype: TrackArchetype,
+  stage: number,
+  t: number
+): ProjectionResult {
+  const hitY = H * HIT_RATIO;
+  const isArchetypeActive = stage === 3 || stage === 5;
+
+  if (!isArchetypeActive) {
+    // Stage 1, 2, 4: Classic Vertical Highway
+    const { x, w } = laneAt(lane, prog, W, HW_TOP, HW_BOT);
+    const noteY = prog * hitY;
+    const noteH = lerp(80, 140, prog);
+    return { x, y: noteY, w, h: noteH, rot: 0, scale: lerp(0.4, 1.0, prog) };
+  }
+
+  // ↔️ 90° FULL 2D HORIZONTAL SIDE-SCROLLER PERSPECTIVE
+  if (archetype === 'horizontal_drift') {
+    const strikeX = W * 0.82;
+    const noteX = prog * strikeX;
+    const laneYMap = [H * 0.36, H * 0.52, H * 0.68];
+    const noteY = laneYMap[lane] || H * 0.52;
+    const noteW = lerp(45, 110, prog);
+    const noteH = 65;
+    return { x: noteX, y: noteY, w: noteW, h: noteH, rot: Math.PI / 2, scale: lerp(0.5, 1.0, prog) };
+  }
+
+  // 🎯 360° RADIAL CYBER ORBIT (Notes converge radially inward to circular pads)
+  if (archetype === 'radial_orbit') {
+    const cx = W / 2;
+    const cy = H * 0.44;
+    const angles = [(210 * Math.PI) / 180, (270 * Math.PI) / 180, (330 * Math.PI) / 180];
+    const angle = angles[lane] || (270 * Math.PI) / 180;
+    const rMax = Math.min(W, H) * 0.44;
+    const rHit = Math.min(W, H) * 0.16;
+    const radius = lerp(rMax, rHit, prog);
+    const x = cx + Math.cos(angle) * radius;
+    const y = cy + Math.sin(angle) * radius;
+    const noteW = lerp(40, 85, prog);
+    const noteH = lerp(35, 75, prog);
+    return { x, y, w: noteW, h: noteH, rot: angle + Math.PI / 2, scale: lerp(0.4, 1.0, prog) };
+  }
+
+  // 🌀 3D TWISTING CORKSCREW HELICAL SLIDE
+  if (archetype === 'corkscrew_slide') {
+    const mult = stage === 5 ? 2.4 : 1.0;
+    const { x: lx, w: lw } = laneAt(lane, prog, W, 0.18, 0.86);
+    const swirlX = Math.sin(prog * Math.PI * 2 + t * 2.8 * mult) * (W * 0.18 * Math.sin(prog * Math.PI));
+    const noteY = prog * hitY;
+    const noteH = lerp(80, 140, prog);
+    const rot = Math.cos(prog * Math.PI * 2 + t * 2.8 * mult) * 0.35;
+    return { x: lx + swirlX, y: noteY, w: lw, h: noteH, rot, scale: lerp(0.4, 1.0, prog) };
+  }
+
+  // 🎢 3D UNDULATING WAVE ROLLERCOASTER
+  if (archetype === 'wave_coaster') {
+    const { x: lx, w: lw } = laneAt(lane, prog, W, 0.22, 0.88);
+    const waveYOffset = Math.sin(prog * Math.PI * 2.5 + t * 3.5) * (H * 0.08);
+    const noteY = prog * hitY + waveYOffset;
+    const noteH = lerp(75, 135, prog);
+    return { x: lx, y: noteY, w: lw, h: noteH, rot: 0, scale: lerp(0.4, 1.0, prog) };
+  }
+
+  // 🔀 3-RIBBON DETACHED SPLIT HORIZON MATRIX
+  if (archetype === 'matrix_split') {
+    const spread = (lane - 1) * (W * 0.22 * Math.sin(prog * Math.PI));
+    const { x: lx, w: lw } = laneAt(lane, prog, W, 0.25, 0.90);
+    const noteY = prog * hitY;
+    const noteH = lerp(80, 140, prog);
+    return {
+      x: lx + spread,
+      y: noteY,
+      w: lw,
+      h: noteH,
+      rot: (lane - 1) * 0.25 * Math.sin(prog * Math.PI),
+      scale: lerp(0.4, 1.0, prog),
+    };
+  }
+
+  // Default Cyber Tunnel
+  const { x: lx, w: lw } = laneAt(lane, prog, W, 0.18, 0.86);
+  const noteY = prog * hitY;
+  const noteH = lerp(80, 140, prog);
+  return { x: lx, y: noteY, w: lw, h: noteH, rot: 0, scale: lerp(0.4, 1.0, prog) };
+}
+
 function prerenderStaticTrack(
   W: number,
   H: number,
@@ -4110,8 +4209,10 @@ export default function Game() {
       const hwBot = hwAtProgress(1, W);
       const laneW = hwBot.width / LANE_COUNT;
       for (let lane = 0; lane < LANE_COUNT; lane++) {
-        const laneCenterX = hwBot.left + lane * laneW + laneW / 2;
-        const targetRadiusX = laneW * 0.43;
+        const targetProj = getArchetypeProjection(lane, 1, W, H, activeArchetypeRef.current, calculatedStage, t);
+        const laneCenterX = targetProj.x + targetProj.w / 2;
+        const laneCenterY = targetProj.y;
+        const targetRadiusX = targetProj.w * 0.43;
         const targetRadiusY = targetRadiusX * 0.46;
 
         const isPressed = laneRef.current[lane]?.pressed;
@@ -4123,7 +4224,10 @@ export default function Game() {
         const ry = targetRadiusY * scalePulse;
 
         ctx.save();
-        ctx.translate(laneCenterX, hitY);
+        ctx.translate(laneCenterX, laneCenterY);
+        if (targetProj.rot !== 0) {
+          ctx.rotate(targetProj.rot);
+        }
 
         // Track floor drop shadow under target
         ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
@@ -4843,17 +4947,15 @@ export default function Game() {
       if (noteY < -80) continue;
 
       const isCyberTunnel = activePovModeRef.current === 'cyber_tunnel';
-      const povTop = isCyberTunnel ? 0.18 : HW_TOP;
-      const povBot = isCyberTunnel ? 0.86 : HW_BOT;
-
-      const { x: lx, w: lw } = laneAt(note.lane, prog, W, povTop, povBot, activeArchetypeRef.current, calculatedStage, t);
-      let noteH = lerp(80, 140, prog); // perspective scale — bigger closer
-      let noteW = lw;
-      let noteX = lx;
+      const proj = getArchetypeProjection(note.lane, prog, W, H, activeArchetypeRef.current, calculatedStage, t);
+      let noteH = proj.h;
+      let noteW = proj.w;
+      let noteX = proj.x;
+      let noteY = proj.y;
       if (modifierRef.current === 'bass_realm' && note.lane === 0) {
         noteH = noteH * 1.6; // 60% thicker notes
         noteW = noteW * 1.28; // 28% wider notes
-        noteX = lx - (noteW - lw) / 2;
+        noteX = proj.x - (noteW - proj.w) / 2;
       }
       const r = lerp(12, 24, prog);
 
@@ -4933,7 +5035,15 @@ export default function Game() {
       }
 
       if (note.type !== "hold") {
-        drawKey(ctx, drawX, noteY, noteW, noteH, r, noteColor, prog, false, note.swipeDirection, note.time * 3700, note.type);
+        if (proj.rot !== 0) {
+          ctx.save();
+          ctx.translate(drawX, noteY);
+          ctx.rotate(proj.rot);
+          drawKey(ctx, 0, 0, noteW, noteH, r, noteColor, prog, false, note.swipeDirection, note.time * 3700, note.type);
+          ctx.restore();
+        } else {
+          drawKey(ctx, drawX, noteY, noteW, noteH, r, noteColor, prog, false, note.swipeDirection, note.time * 3700, note.type);
+        }
       } else {
         // Hold/Slide trail — ivory ribbon with colored stripe
         const holdDur = note.holdDuration || 0.5;
