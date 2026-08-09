@@ -851,6 +851,7 @@ export function getArchetypeProjection(
   stage: number,
   t: number
 ): ProjectionResult {
+  const hitY = H * HIT_RATIO;
   const isExperimentalArchetype = (stage === 3 || stage === 5) && archetype !== 'cyber_tunnel';
 
   if (!isExperimentalArchetype) {
