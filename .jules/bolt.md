@@ -1,0 +1,3 @@
+## 2025-02-09 - [Prevent O(N) Renders on Zustand High-Frequency Updates]
+**Learning:** Destructuring variables directly from the result of a global Zustand store hook subscribes the component to ALL state changes in that store. For high-frequency state updates like an audio player's `currentTime` or `progress`, this causes excessive global re-renders.
+**Action:** Always use granular selectors for Zustand state. Furthermore, in lists with conditional active states, use a selector with an internal condition (e.g., `useGlobalPlayer(s => isThisTrack ? s.progress : 0)`) to force the return value to be constant for inactive tracks, completely preventing them from re-rendering on high-frequency updates.

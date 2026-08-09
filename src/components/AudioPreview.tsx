@@ -49,12 +49,19 @@ export default function AudioPreview({
   const isMythic = rarity === 'mythic';
 
   // Global player integration
-  const { currentTrack, isPlaying: globalPlaying, progress, currentTime, duration, toggle: globalToggle } = useGlobalPlayer();
+  // ⚡ Bolt: Use granular selectors to avoid O(N) re-renders for inactive components on high-frequency state updates
+  const currentTrack = useGlobalPlayer(s => s.currentTrack);
+  const globalPlaying = useGlobalPlayer(s => s.isPlaying);
+  const globalToggle = useGlobalPlayer(s => s.toggle);
   const globalPlay = useGlobalPlayer(s => s.play);
 
   // Check if THIS track is the one currently playing
   const isThisTrack = currentTrack?.audioUrl === audioUrl && currentTrack?.day === day;
   const isPlaying = isThisTrack && globalPlaying;
+
+  const progress = useGlobalPlayer(s => isThisTrack ? s.progress : 0);
+  const currentTime = useGlobalPlayer(s => isThisTrack ? s.currentTime : 0);
+  const duration = useGlobalPlayer(s => isThisTrack ? s.duration : 0);
 
   const toggle = useCallback(() => {
     if (isThisTrack) {
