@@ -23,6 +23,151 @@ import { getRelativeDay } from "../utils/dayCalc";
 const imageModules = import.meta.glob('/public/data/slideshow/**/*.{png,jpg,jpeg,gif,webp,svg}', { eager: true });
 const staticImages = Object.keys(imageModules).map(key => key.replace('/public', ''));
 
+export interface TransmissionLoadState {
+  step: number;
+  stepLabel: string;
+  detailMsg: string;
+  bytesLoaded: number;
+  bytesTotal: number;
+  speedBps: number;
+  etaSeconds: number;
+  pct: number;
+  isStreaming: boolean;
+  logs: string[];
+}
+
+export function formatLoadBytes(bytes: number): string {
+  if (!bytes || isNaN(bytes) || bytes <= 0) return "--";
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+export function formatLoadSpeed(bytesPerSec: number): string {
+  if (!bytesPerSec || isNaN(bytesPerSec) || bytesPerSec <= 0) return "-- MB/s";
+  if (bytesPerSec < 1024 * 1024) return `${(bytesPerSec / 1024).toFixed(1)} KB/s`;
+  return `${(bytesPerSec / (1024 * 1024)).toFixed(2)} MB/s`;
+}
+
+export function formatLoadEta(seconds: number): string {
+  if (seconds === undefined || seconds === null || isNaN(seconds) || !isFinite(seconds) || seconds <= 0) return "--";
+  if (seconds < 1) return "< 1s left";
+  if (seconds > 60) return `~${(seconds / 60).toFixed(1)}m left`;
+  return `~${seconds.toFixed(1)}s left`;
+}
+
+// ── 6-ARCHETYPE TRACK GEOMETRY & STAGE COLOR PRIMER ENGINE ──
+export type TrackArchetype =
+  | 'cyber_tunnel'
+  | 'corkscrew_slide'
+  | 'radial_orbit'
+  | 'horizontal_drift'
+  | 'wave_coaster'
+  | 'matrix_split';
+
+export interface ArchetypeMeta {
+  key: TrackArchetype;
+  name: string;
+  stage3Title: string;
+  stage4Title: string;
+  stage5Title: string;
+  primerColor: string;
+  stage5Color: string;
+}
+
+export const ARCHETYPE_METAS: Record<TrackArchetype, ArchetypeMeta> = {
+  cyber_tunnel: {
+    key: 'cyber_tunnel',
+    name: '3D CYBER TUNNEL',
+    stage3Title: 'STAGE 3: 3D CYBER TUNNEL',
+    stage4Title: 'STAGE 4: CYBER PRIMER VOID',
+    stage5Title: 'STAGE 5: HYPER-SPEED TUNNEL OVERDRIVE',
+    primerColor: '#00E5FF',
+    stage5Color: '#FF007F',
+  },
+  corkscrew_slide: {
+    key: 'corkscrew_slide',
+    name: 'CORKSCREW HELICAL SLIDE',
+    stage3Title: 'STAGE 3: CORKSCREW HELICAL SLIDE',
+    stage4Title: 'STAGE 4: PLASMA PRIMER VOID',
+    stage5Title: 'STAGE 5: TURBO CORKSCREW OVERDRIVE',
+    primerColor: '#FF7B00',
+    stage5Color: '#FFD700',
+  },
+  radial_orbit: {
+    key: 'radial_orbit',
+    name: '360° RADIAL CYBER ORBIT',
+    stage3Title: 'STAGE 3: 360° RADIAL ORBIT',
+    stage4Title: 'STAGE 4: STARLIGHT PRIMER VOID',
+    stage5Title: 'STAGE 5: ORBITAL SUPERNOVA ZENITH',
+    primerColor: '#00F5D4',
+    stage5Color: '#39FF14',
+  },
+  horizontal_drift: {
+    key: 'horizontal_drift',
+    name: 'HORIZONTAL SIDE-SCROLLER',
+    stage3Title: 'STAGE 3: HORIZONTAL SIDE-SCROLLER',
+    stage4Title: 'STAGE 4: NEON DRIFT PRIMER',
+    stage5Title: 'STAGE 5: HYPER-DRIVE SIDE-SCROLLER',
+    primerColor: '#FF1493',
+    stage5Color: '#00E5FF',
+  },
+  wave_coaster: {
+    key: 'wave_coaster',
+    name: 'WAVE ROLLERCOASTER',
+    stage3Title: 'STAGE 3: 3D WAVE ROLLERCOASTER',
+    stage4Title: 'STAGE 4: LAVA PRIMER VOID',
+    stage5Title: 'STAGE 5: HIGH-G ROLLERCOASTER OVERDRIVE',
+    primerColor: '#EF4444',
+    stage5Color: '#F59E0B',
+  },
+  matrix_split: {
+    key: 'matrix_split',
+    name: 'SPLIT HORIZON MATRIX',
+    stage3Title: 'STAGE 3: SPLIT HORIZON MATRIX',
+    stage4Title: 'STAGE 4: PRISMATIC MATRIX PRIMER',
+    stage5Title: 'STAGE 5: HYPER-MATRIX CROSS-OVERLOAD',
+    primerColor: '#A855F7',
+    stage5Color: '#3B82F6',
+  },
+};
+
+export function selectSongArchetype(song?: Song | null): TrackArchetype {
+  if (!song) return 'cyber_tunnel';
+
+  // 1. PRIORITY 1: Lyrics Keywords
+  if (song.lyrics && typeof song.lyrics === 'string') {
+    const text = song.lyrics.toLowerCase();
+    if (text.includes('slide') || text.includes('twist') || text.includes('turn') || text.includes('roll')) return 'corkscrew_slide';
+    if (text.includes('orbit') || text.includes('circle') || text.includes('ring') || text.includes('space') || text.includes('star')) return 'radial_orbit';
+    if (text.includes('drift') || text.includes('side') || text.includes('run') || text.includes('speed') || text.includes('drive')) return 'horizontal_drift';
+    if (text.includes('wave') || text.includes('ride') || text.includes('ocean') || text.includes('sea') || text.includes('flow')) return 'wave_coaster';
+    if (text.includes('matrix') || text.includes('split') || text.includes('break') || text.includes('code') || text.includes('grid')) return 'matrix_split';
+    if (text.includes('tunnel') || text.includes('cyber') || text.includes('light') || text.includes('night')) return 'cyber_tunnel';
+  }
+
+  // 2. PRIORITY 2: BPM Tiers
+  const bpm = song.bpm || 120;
+  if (bpm < 110) return 'radial_orbit';
+  if (bpm >= 110 && bpm < 125) return 'wave_coaster';
+  if (bpm >= 125 && bpm < 135) return 'corkscrew_slide';
+  if (bpm >= 135 && bpm < 145) return 'cyber_tunnel';
+  if (bpm >= 145 && bpm < 160) return 'horizontal_drift';
+  if (bpm >= 160) return 'matrix_split';
+
+  // 3. PRIORITY 3: Genre Fallback
+  const genre = (song.genre || '').toLowerCase();
+  if (genre.includes('rock') || genre.includes('metal') || genre.includes('punk')) return 'wave_coaster';
+  if (genre.includes('pop') || genre.includes('synth') || genre.includes('disco')) return 'horizontal_drift';
+  if (genre.includes('hip-hop') || genre.includes('rap') || genre.includes('trap')) return 'corkscrew_slide';
+  if (genre.includes('classical') || genre.includes('ambient') || genre.includes('lo-fi')) return 'radial_orbit';
+
+  // Fallback hash
+  const archetypes: TrackArchetype[] = ['cyber_tunnel', 'corkscrew_slide', 'radial_orbit', 'horizontal_drift', 'wave_coaster', 'matrix_split'];
+  const hash = (song.title || song.id || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return archetypes[hash % archetypes.length];
+}
+
+
 const refineAndBlendEdges = (canvas: HTMLCanvasElement, threshold: number) => {
   try {
     const ctx = canvas.getContext('2d')!;
@@ -638,10 +783,39 @@ function hwAtProgress(p: number, W: number, topRatio: number = HW_TOP, botRatio:
   const l = (W - w) / 2;
   return { left: l, right: l + w, width: w };
 }
-function laneAt(lane: number, progress: number, W: number, topRatio: number = HW_TOP, botRatio: number = HW_BOT) {
+function laneAt(
+  lane: number,
+  progress: number,
+  W: number,
+  topRatio: number = HW_TOP,
+  botRatio: number = HW_BOT,
+  archetype?: TrackArchetype,
+  stage: number = 1,
+  t: number = 0
+) {
   const { left, width } = hwAtProgress(progress, W, topRatio, botRatio);
   const lw = width / LANE_COUNT;
-  return { x: left + lane * lw, w: lw };
+  let baseX = left + lane * lw;
+
+  // Apply track archetype motion geometry ONLY during Stage 3, 4, or 5 (Stages 1 & 2 are strictly dynamic artwork classic)
+  if (archetype && stage >= 3) {
+    if (archetype === 'corkscrew_slide') {
+      const mult = stage === 5 ? 2.4 : 1.0;
+      const swirl = Math.sin(progress * Math.PI * 2 + t * 2.8 * mult) * (W * 0.10 * Math.sin(progress * Math.PI));
+      baseX += swirl;
+    } else if (archetype === 'matrix_split') {
+      const spread = (lane - 1) * (W * 0.15 * Math.sin(progress * Math.PI));
+      baseX += spread;
+    } else if (archetype === 'wave_coaster') {
+      const coasterW = Math.sin(progress * Math.PI * 1.5 + t * 3.0) * (W * 0.05);
+      baseX += coasterW;
+    } else if (archetype === 'horizontal_drift') {
+      const driftX = Math.sin(progress * Math.PI) * (W * 0.06 * (lane === 0 ? -1 : lane === 2 ? 1 : 0));
+      baseX += driftX;
+    }
+  }
+
+  return { x: baseX, w: lw };
 }
 
 function prerenderStaticTrack(
@@ -1629,6 +1803,19 @@ export default function Game() {
   const [displayJudge, setDisplayJudge] = useState<JudgmentDisplay[]>([]);
   const [bufferPct, setBufferPct] = useState(0);
   const [loadMsg, setLoadMsg] = useState("FETCHING TRANSMISSION...");
+  const [loadState, setLoadState] = useState<TransmissionLoadState>({
+    step: 1,
+    stepLabel: "FETCHING TRANSMISSION METADATA",
+    detailMsg: "Querying track catalog & JSON manifest...",
+    bytesLoaded: 0,
+    bytesTotal: 0,
+    speedBps: 0,
+    etaSeconds: 0,
+    pct: 8,
+    isStreaming: false,
+    logs: [" [SYS] Connecting to transmission gateway..."],
+  });
+
 
   // ── Frame-Perfect Video Recorder State (DEV SERVER ONLY) ──
   const isExportVideoRef = useRef<boolean>(
@@ -1703,6 +1890,10 @@ export default function Game() {
   const [opts, setOpts] = useState<GameOpts>(loadOpts);
   const optsRef = useRef(opts);
   useEffect(() => { optsRef.current = opts; }, [opts]);
+
+  // ── 6-Archetype Track Geometry & Stage Color Primer Engine ──
+  const activeArchetypeRef = useRef<TrackArchetype>('cyber_tunnel');
+  const [activeArchetype, setActiveArchetype] = useState<TrackArchetype>('cyber_tunnel');
 
   // ── POV Perspective Engine State ──
   const [activePovMode, setActivePovMode] = useState<'classic' | 'cyber_tunnel' | 'dynamic_stage'>(opts.povMode || 'classic');
@@ -3718,11 +3909,37 @@ export default function Game() {
       let tunnelOpacity = 1.0;
       let swirlSpeedMult = 1.0;
       
+      const archMeta = ARCHETYPE_METAS[activeArchetypeRef.current] || ARCHETYPE_METAS['cyber_tunnel'];
+
       if (calculatedStage === 4) {
-        tunnelOpacity = 0.0; // Disappear completely in Stage 4
+        tunnelOpacity = 0.0; // Stage 4: Dynamic Color Primer Void & Story Bridge
+        ctx.save();
+        const primerColor = archMeta.primerColor;
+        
+        // Deep obsidian background with pulsing primer color glow from horizon
+        const primerGrad = ctx.createRadialGradient(cx, vanishingY, 10, cx, vanishingY, W * 0.85);
+        primerGrad.addColorStop(0, colorWithAlpha(primerColor, 0.45));
+        primerGrad.addColorStop(0.4, colorWithAlpha(primerColor, 0.18));
+        primerGrad.addColorStop(0.85, "rgba(6, 4, 16, 0.95)");
+        primerGrad.addColorStop(1, "#030208");
+        ctx.fillStyle = primerGrad;
+        ctx.fillRect(0, 0, W, H);
+
+        // Story Bridge Pulsing Laser Grid Lines
+        ctx.strokeStyle = colorWithAlpha(primerColor, 0.35 + Math.pow(Math.sin(((t * (bpmVal / 60)) % 1) * Math.PI), 3) * 0.25);
+        ctx.lineWidth = 1.5;
+        const gridLines = 8;
+        for (let g = 0; g < gridLines; g++) {
+          const gY = lerp(vanishingY, H, (g / gridLines + (t * 0.4) % (1 / gridLines)));
+          ctx.beginPath();
+          ctx.moveTo(0, gY);
+          ctx.lineTo(W, gY);
+          ctx.stroke();
+        }
+        ctx.restore();
       } else if (calculatedStage === 5) {
-        tunnelOpacity = 1.0; // Return for Stage 5
-        swirlSpeedMult = 2.4; // TWICE AS FAST!
+        tunnelOpacity = 1.0; // Stage 5: Souped-Up Archetype Overdrive
+        swirlSpeedMult = 2.4; // Hyperdrive speed!
       } else if (calculatedStage === 3) {
         swirlSpeedMult = 1.3;
       }
@@ -3736,7 +3953,8 @@ export default function Game() {
 
         // 1. Swirling Radial Cyber Tunnel Backdrop Gradient
         const tunnelBg = ctx.createRadialGradient(cx, vanishingY, 5, cx, vanishingY, W * 0.78);
-        tunnelBg.addColorStop(0, "rgba(5, 5, 25, 0.96)");
+        const bgCore = isOverdrive ? colorWithAlpha(archMeta.stage5Color, 0.3) : "rgba(5, 5, 25, 0.96)";
+        tunnelBg.addColorStop(0, bgCore);
         tunnelBg.addColorStop(0.35, "rgba(14, 6, 38, 0.94)");
         tunnelBg.addColorStop(0.75, "rgba(25, 4, 32, 0.98)");
         tunnelBg.addColorStop(1, "#060410");
@@ -3754,8 +3972,8 @@ export default function Game() {
              ctx.beginPath();
              ctx.moveTo(Math.cos(ang) * 50, Math.sin(ang) * 50);
              ctx.lineTo(Math.cos(ang) * len, Math.sin(ang) * len);
-             ctx.strokeStyle = `rgba(150, 255, 150, ${Math.random() * 0.5})`;
-             ctx.lineWidth = 1.5;
+             ctx.strokeStyle = colorWithAlpha(archMeta.stage5Color, Math.random() * 0.65);
+             ctx.lineWidth = 1.8;
              ctx.stroke();
           }
           ctx.restore();
@@ -4627,7 +4845,7 @@ export default function Game() {
       const povTop = isCyberTunnel ? 0.18 : HW_TOP;
       const povBot = isCyberTunnel ? 0.86 : HW_BOT;
 
-      const { x: lx, w: lw } = laneAt(note.lane, prog, W, povTop, povBot);
+      const { x: lx, w: lw } = laneAt(note.lane, prog, W, povTop, povBot, activeArchetypeRef.current, calculatedStage, t);
       let noteH = lerp(80, 140, prog); // perspective scale — bigger closer
       let noteW = lw;
       let noteX = lx;
@@ -4650,8 +4868,8 @@ export default function Game() {
       );
 
       if (chordPartner) {
-        const { x: lxA, w: lwA } = laneAt(note.lane, prog, W, povTop, povBot);
-        const { x: lxB, w: lwB } = laneAt(chordPartner.note.lane, prog, W, povTop, povBot);
+        const { x: lxA, w: lwA } = laneAt(note.lane, prog, W, povTop, povBot, activeArchetypeRef.current, calculatedStage, t);
+        const { x: lxB, w: lwB } = laneAt(chordPartner.note.lane, prog, W, povTop, povBot, activeArchetypeRef.current, calculatedStage, t);
         const cx1 = lxA + lwA / 2;
         const cx2 = lxB + lwB / 2;
         
@@ -6700,6 +6918,18 @@ export default function Game() {
         setLoadMsg("FETCHING TRANSMISSION...");
         phaseRef.current = "loading";
         setPhase("loading");
+        setLoadState({
+          step: 1,
+          stepLabel: "INITIALIZING TRANSMISSION METADATA",
+          detailMsg: "Querying track catalog & JSON manifest...",
+          bytesLoaded: 0,
+          bytesTotal: 0,
+          speedBps: 0,
+          etaSeconds: 0,
+          pct: 12,
+          isStreaming: false,
+          logs: [`[SYS] Connecting to transmission gateway for ID: ${songId}`, `[SYS] Fetching track configuration...`],
+        });
         let song = await getSongById(songId);
         if (song) {
           song = { ...song, notes: [...(song.notes || [])] };
@@ -6708,8 +6938,17 @@ export default function Game() {
             const genMode = gameOpts.noteGenerationSource || 'auto';
             
             if (song.notes.length === 0 || genMode !== 'auto') {
+              const msg = genMode === 'lyrics' ? "TRANSLATING LYRICAL DYNAMICS..." : "ALIGNING BPM BEATS...";
+              setLoadMsg(msg);
+              setLoadState(prev => ({
+                ...prev,
+                step: 2,
+                stepLabel: "GENERATING BEATMAP & RHYTHM GRID",
+                detailMsg: msg,
+                pct: 28,
+                logs: [...prev.logs.slice(-4), `[CHART] Generating ${genMode} chart notes...`]
+              }));
               if (genMode !== 'auto') {
-                setLoadMsg(genMode === 'lyrics' ? "TRANSLATING LYRICAL DYNAMICS..." : "ALIGNING BPM BEATS...");
                 // Non-auto modes use runtime procedural generation
                 song.notes = generateProceduralChart(song);
                 console.log(`[GamePlay Init] Generated ${genMode} chart: ${song.notes.length} notes (reward play disabled)`);
@@ -6732,8 +6971,21 @@ export default function Game() {
               console.log(`[GamePlay Init] Restaged to ${song.notes.length} notes`);
             }
           }
+
+          setLoadState(prev => ({
+            ...prev,
+            step: 2,
+            stepLabel: "BEATMAP & TIMING ALIGNED",
+            detailMsg: `Mapped ${song!.notes.length} notes · ${song!.bpm} BPM`,
+            pct: 36,
+            logs: [...prev.logs.slice(-4), `[CHART] Validated ${song!.notes.length} notes across stages`]
+          }));
         }
-        console.log("[GamePlay Init] Fetched song:", song);
+
+        const selectedArchetype = selectSongArchetype(song);
+        activeArchetypeRef.current = selectedArchetype;
+        setActiveArchetype(selectedArchetype);
+        console.log(`[Track Archetype Engine] Selected archetype '${selectedArchetype}' (${ARCHETYPE_METAS[selectedArchetype].name}) for song '${song?.title}'`);
 
         // Load ghost telemetry
         ghostTelemetryRef.current = null;
@@ -7157,6 +7409,14 @@ export default function Game() {
       setLoadMsg("BUFFERING AUDIO...");
       phaseRef.current = "buffering";
       setPhase("buffering");
+      setLoadState(prev => ({
+        ...prev,
+        step: 4,
+        stepLabel: "DOWNLOADING AUDIO TRANSMISSION",
+        detailMsg: "Establishing stream connection to audio file...",
+        pct: 55,
+        logs: [...prev.logs.slice(-4), `[NET] Requesting audio stream: ${song.audioUrl}`]
+      }));
 
       if (audioObjectUrlRef.current) {
         try {
@@ -7184,18 +7444,33 @@ export default function Game() {
           // Large file — skip blob approach; stream directly via audio.src instead
           console.log(`[GamePlay Init] Large file detected (${Math.round(headBytes / 1024 / 1024)}MB) — using direct audio streaming`);
           setBufferPct(100);
+          setLoadState(prev => ({
+            ...prev,
+            step: 4,
+            stepLabel: "STREAMING DIRECT AUDIO CHUNKS",
+            detailMsg: `Large file (${(headBytes / 1048576).toFixed(1)} MB) · HTML5 streaming active`,
+            bytesLoaded: headBytes,
+            bytesTotal: headBytes,
+            pct: 95,
+            isStreaming: true,
+            logs: [...prev.logs.slice(-4), `[NET] Direct HTML5 media streaming engaged (${(headBytes / 1048576).toFixed(1)} MB)`]
+          }));
         } else {
           const response = await fetch(song.audioUrl);
           if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
           }
           const contentLength = response.headers.get("content-length");
-          const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
+          const totalBytes = contentLength ? parseInt(contentLength, 10) : (headBytes || 0);
 
           if (response.body && totalBytes > 0) {
             const reader = response.body.getReader();
             const chunks: Uint8Array[] = [];
             let loadedBytes = 0;
+            const startTime = performance.now();
+            let lastTime = startTime;
+            let lastLoaded = 0;
+            let speedBps = 0;
 
             while (true) {
               if (cancelled) {
@@ -7207,9 +7482,36 @@ export default function Game() {
               if (value) {
                 chunks.push(value);
                 loadedBytes += value.length;
-                setBufferPct(
-                  Math.min(99, Math.round((loadedBytes / totalBytes) * 100))
-                );
+                
+                const now = performance.now();
+                const dt = (now - lastTime) / 1000;
+                if (dt >= 0.15) {
+                  speedBps = (loadedBytes - lastLoaded) / dt;
+                  lastTime = now;
+                  lastLoaded = loadedBytes;
+                }
+                
+                const streamPct = Math.min(99, Math.round((loadedBytes / totalBytes) * 100));
+                const bytesLeft = Math.max(0, totalBytes - loadedBytes);
+                const etaSeconds = speedBps > 0 && bytesLeft > 0 ? bytesLeft / speedBps : 0;
+                const mappedPct = Math.min(96, Math.round(55 + (streamPct * 0.41)));
+
+                setBufferPct(streamPct);
+                setLoadState({
+                  step: 4,
+                  stepLabel: "DOWNLOADING AUDIO TRANSMISSION",
+                  detailMsg: `Receiving stream chunks (${formatLoadBytes(loadedBytes)} / ${formatLoadBytes(totalBytes)})...`,
+                  bytesLoaded,
+                  bytesTotal: totalBytes,
+                  speedBps,
+                  etaSeconds,
+                  pct: mappedPct,
+                  isStreaming: false,
+                  logs: [
+                    `[NET] ${(loadedBytes / 1048576).toFixed(2)} MB received of ${formatLoadBytes(totalBytes)} (${streamPct}%)`,
+                    `[SPEED] ${formatLoadSpeed(speedBps)} · ETA: ${formatLoadEta(etaSeconds)}`
+                  ]
+                });
               }
             }
             blob = new Blob(chunks, { type: response.headers.get("content-type") || "audio/mpeg" });
@@ -7222,10 +7524,19 @@ export default function Game() {
           audioObjectUrlRef.current = objectUrl;
           fetchSuccess = true;
           setBufferPct(100);
+          setLoadState(prev => ({
+            ...prev,
+            step: 5,
+            stepLabel: "SYNCHRONIZING AUDIO ENGINE",
+            detailMsg: "Aligning Web Audio Context & pre-rendering surface...",
+            pct: 98,
+            logs: [...prev.logs.slice(-3), `[ENGINE] Audio blob compiled & object URL generated`]
+          }));
         }
       } catch (err) {
         console.warn("[GamePlay Init] Stream-based fetch failed, falling back to standard audio loading:", err);
       }
+
 
       if (cancelled) return;
 
@@ -9105,7 +9416,15 @@ export default function Game() {
                       color: stageStingerPhase === 'cleared' ? '#FF1493' : '#00E5FF',
                     }}
                   >
-                    {stageStingerPhase === 'cleared' ? 'CLEARED!' : 'GO!'}
+                    {stageStingerPhase === 'cleared'
+                      ? 'CLEARED!'
+                      : stageStingerNumber >= 3
+                        ? (stageStingerNumber === 3
+                            ? ARCHETYPE_METAS[activeArchetype]?.stage3Title.replace('STAGE 3: ', '')
+                            : stageStingerNumber === 4
+                              ? ARCHETYPE_METAS[activeArchetype]?.stage4Title.replace('STAGE 4: ', '')
+                              : ARCHETYPE_METAS[activeArchetype]?.stage5Title.replace('STAGE 5: ', ''))
+                        : 'GO!'}
                   </motion.div>
                 </motion.div>
               </div>
@@ -9178,75 +9497,179 @@ export default function Game() {
             );
           })()}
 
-          {/* Loading overlay */}
+          {/* Comprehensive Transmission Loading HUD */}
           {(phase === "loading" || phase === "buffering") && (
             <div
-              className="absolute inset-0 flex flex-col items-center justify-center gap-5"
-              style={{ background: "rgba(12,12,20,0.92)", backdropFilter: "blur(12px)" }}
+              className="absolute inset-0 flex flex-col items-center justify-center p-4 sm:p-6 z-[90] overflow-y-auto"
+              style={{
+                background: "radial-gradient(ellipse 80% 80% at 50% 50%, rgba(14,14,26,0.96) 0%, rgba(6,6,12,0.98) 100%)",
+                backdropFilter: "blur(16px)",
+              }}
             >
-              <div
-                className="font-mono text-xs tracking-[0.3em]"
-                style={{ color: "#39FF14", textShadow: "0 0 10px rgba(57,255,20,0.3)" }}
-              >
-                {loadMsg}
+              {/* Transmission Signal Header */}
+              <div className="w-full max-w-lg flex items-center justify-between mb-4 border-b border-white/10 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="relative flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                  </span>
+                  <span className="font-mono text-[11px] font-bold tracking-[0.25em] text-emerald-400 uppercase">
+                    📡 TRANSMISSION RECEIVER ONLINE
+                  </span>
+                </div>
+                <div className="font-mono text-[10px] tracking-widest px-2.5 py-1 rounded bg-white/5 border border-white/10 text-white/70 uppercase">
+                  STEP {loadState.step} / 5
+                </div>
               </div>
+
+              {/* Song Card */}
               {song && (
-                <div className="glass-panel text-center p-6" style={{ borderRadius: 16 }}>
-                  {song.coverArt && (
+                <div className="w-full max-w-lg glass-panel p-4 mb-4 rounded-xl border border-white/10 flex items-center gap-4 bg-black/40">
+                  {song.coverArt ? (
                     <img
                       src={song.coverArt}
                       alt={song.title}
-                      className="w-24 h-24 object-cover mx-auto mb-3 opacity-70"
-                      style={{ borderRadius: 10, border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 4px 20px rgba(0,0,0,0.4)" }}
+                      className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-lg border border-white/15 shadow-lg flex-shrink-0 animate-pulse"
                     />
+                  ) : (
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg bg-zinc-800 border border-white/10 flex items-center justify-center text-white/30 flex-shrink-0">
+                      <TransmissionIcon size={28} />
+                    </div>
                   )}
-                  <div
-                    className="font-mono font-bold text-lg"
-                    style={{ color: "#F2EDE5" }}
-                  >
-                    {song.title}
-                  </div>
-                  <div
-                    className="font-mono text-xs mt-1"
-                    style={{ color: "rgba(255,255,255,0.35)" }}
-                  >
-                    DAY {song.day} · {song.bpm} BPM · {song.notes.length} NOTES
-                  </div>
-                </div>
-              )}
-              {phase === "buffering" && (
-                <div className="w-48">
-                  <div
-                    style={{ height: 4, borderRadius: 999, background: "rgba(255,255,255,0.08)", overflow: "hidden" }}
-                  >
-                    <div
-                      style={{ height: "100%", borderRadius: 999, width: `${bufferPct}%`, background: "linear-gradient(90deg, #FF1493, #FF7A33)", boxShadow: "0 0 8px rgba(255,20,147,0.3)" }}
-                    />
-                  </div>
-                  <div
-                    className="font-mono text-xs text-center mt-1"
-                    style={{ color: "rgba(255,255,255,0.3)" }}
-                  >
-                    {bufferPct}%
+                  <div className="flex-1 min-w-0">
+                    <div className="font-mono text-[10px] tracking-widest text-[#FF1493] font-bold uppercase mb-0.5">
+                      SIGNAL: TRANSMISSION #{song.day || songId}
+                    </div>
+                    <h3 className="font-mono font-black text-base sm:text-lg text-white truncate leading-tight">
+                      {song.title}
+                    </h3>
+                    <div className="font-mono text-[11px] text-white/50 mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+                      <span>{song.bpm || 120} BPM</span>
+                      <span>•</span>
+                      <span>{song.notes?.length || 0} NOTES</span>
+                      {song.difficultyLevel && (
+                        <>
+                          <span>•</span>
+                          <span className="text-amber-400 font-bold">DIFF {song.difficultyLevel}</span>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
-              <div className="flex gap-1.5">
-                {[0, 1, 2].map((i) => (
+
+              {/* Current Step Label & Main Progress Bar */}
+              <div className="w-full max-w-lg mb-4">
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="font-mono text-xs font-bold tracking-wider text-cyan-300 uppercase flex items-center gap-2">
+                    <span>✦ {loadState.stepLabel}</span>
+                  </div>
+                  <div className="font-mono text-sm font-black text-cyan-400">
+                    {loadState.pct}%
+                  </div>
+                </div>
+
+                {/* Main Dual-Layer Progress Bar */}
+                <div className="relative w-full h-3.5 bg-black/60 rounded-full overflow-hidden border border-white/15 p-0.5 shadow-inner">
                   <div
-                    key={i}
-                    className="rounded-full animate-pulse"
-                    style={{
-                      width: 6, height: 6,
-                      background: opts.laneColors[i],
-                      boxShadow: `0 0 8px ${opts.laneColors[i]}60`,
-                      animationDelay: `${i * 0.15}s`,
-                    }}
+                    className="h-full rounded-full transition-all duration-200 bg-gradient-to-r from-emerald-400 via-cyan-400 to-[#FF1493] shadow-[0_0_12px_rgba(0,240,255,0.6)]"
+                    style={{ width: `${Math.max(3, loadState.pct)}%` }}
                   />
-                ))}
+                </div>
+
+                <div className="font-mono text-[11px] text-white/60 mt-1.5 truncate">
+                  {loadState.detailMsg || loadMsg}
+                </div>
               </div>
+
+              {/* Detailed Metrics 4-Grid */}
+              <div className="w-full max-w-lg grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+                {/* Metric 1: Downloaded / Total */}
+                <div className="glass-panel p-2.5 rounded-lg border border-white/10 bg-white/[0.02]">
+                  <div className="font-mono text-[9px] text-white/40 tracking-wider uppercase mb-1">
+                    DOWNLOADED
+                  </div>
+                  <div className="font-mono text-xs font-bold text-white truncate">
+                    {formatLoadBytes(loadState.bytesLoaded)}
+                    {loadState.bytesTotal > 0 && (
+                      <span className="text-[10px] text-white/40 font-normal block truncate">
+                        / {formatLoadBytes(loadState.bytesTotal)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Metric 2: Download Left */}
+                <div className="glass-panel p-2.5 rounded-lg border border-white/10 bg-white/[0.02]">
+                  <div className="font-mono text-[9px] text-white/40 tracking-wider uppercase mb-1">
+                    DATA LEFT
+                  </div>
+                  <div className="font-mono text-xs font-bold text-amber-300 truncate">
+                    {loadState.bytesTotal > 0 && loadState.bytesLoaded > 0 ? (
+                      formatLoadBytes(Math.max(0, loadState.bytesTotal - loadState.bytesLoaded))
+                    ) : (
+                      <span className="text-white/40">--</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Metric 3: Download Speed */}
+                <div className="glass-panel p-2.5 rounded-lg border border-white/10 bg-white/[0.02]">
+                  <div className="font-mono text-[9px] text-white/40 tracking-wider uppercase mb-1">
+                    SPEED
+                  </div>
+                  <div className="font-mono text-xs font-bold text-emerald-400 truncate">
+                    {formatLoadSpeed(loadState.speedBps)}
+                  </div>
+                </div>
+
+                {/* Metric 4: EST. Time */}
+                <div className="glass-panel p-2.5 rounded-lg border border-white/10 bg-white/[0.02]">
+                  <div className="font-mono text-[9px] text-white/40 tracking-wider uppercase mb-1">
+                    EST. TIME
+                  </div>
+                  <div className="font-mono text-xs font-bold text-cyan-300 truncate">
+                    {formatLoadEta(loadState.etaSeconds)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Live Diagnostic Terminal Ticker */}
+              <div className="w-full max-w-lg glass-panel p-3 rounded-lg border border-white/10 bg-black/60 font-mono text-[10px] leading-relaxed">
+                <div className="text-white/30 uppercase tracking-widest text-[9px] mb-1 flex items-center justify-between border-b border-white/5 pb-1">
+                  <span>ENGINE DIAGNOSTIC FEED</span>
+                  <span className="text-emerald-400 font-bold">LIVE</span>
+                </div>
+                <div className="space-y-0.5 text-white/70">
+                  {loadState.logs.length > 0 ? (
+                    loadState.logs.slice(-3).map((log, idx) => (
+                      <div key={idx} className="truncate">
+                        <span className="text-cyan-400 font-bold">&gt;</span> {log}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-white/30 italic">&gt; Initializing signal telemetry...</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Connectivity Safeguard Button */}
+              {loadState.step === 4 && (
+                <div className="mt-3 w-full max-w-lg flex justify-center">
+                  <button
+                    onClick={() => {
+                      setPhase("loading");
+                      setRetryCount((prev) => prev + 1);
+                    }}
+                    className="px-3.5 py-1.5 font-mono text-[10px] tracking-widest text-white/50 hover:text-white bg-white/5 hover:bg-white/15 border border-white/10 rounded-md transition-all cursor-pointer uppercase flex items-center gap-2"
+                  >
+                    <span>↺ STUCK OR SLOW? FORCE RETRY TRANSMISSION</span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
+
 
           {/* Audio error recovery — tap to unlock audio.play() with a fresh gesture */}
           {phase === "audioError" && (
