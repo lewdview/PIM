@@ -4947,6 +4947,9 @@ export default function Game() {
       if (noteY < -80) continue;
 
       const isCyberTunnel = activePovModeRef.current === 'cyber_tunnel';
+      const povTop = isCyberTunnel ? 0.18 : HW_TOP;
+      const povBot = isCyberTunnel ? 0.86 : HW_BOT;
+
       const proj = getArchetypeProjection(note.lane, prog, W, H, activeArchetypeRef.current, calculatedStage, t);
       let noteH = proj.h;
       let noteW = proj.w;
