@@ -4021,146 +4021,304 @@ export default function Game() {
         primerGrad.addColorStop(0, colorWithAlpha(primerColor, 0.45));
         primerGrad.addColorStop(0.4, colorWithAlpha(primerColor, 0.18));
         primerGrad.addColorStop(0.85, "rgba(6, 4, 16, 0.95)");
-        primerGrad.addColorStop(1, "#030208");
-        ctx.fillStyle = primerGrad;
-        ctx.fillRect(0, 0, W, H);
-
-        // Story Bridge Pulsing Laser Grid Lines
-        ctx.strokeStyle = colorWithAlpha(primerColor, 0.35 + Math.pow(Math.sin(((t * (bpmVal / 60)) % 1) * Math.PI), 3) * 0.25);
-        ctx.lineWidth = 1.5;
-        const gridLines = 8;
-        for (let g = 0; g < gridLines; g++) {
-          const gY = lerp(vanishingY, H, (g / gridLines + (t * 0.4) % (1 / gridLines)));
-          ctx.beginPath();
-          ctx.moveTo(0, gY);
-          ctx.lineTo(W, gY);
-          ctx.stroke();
-        }
-        ctx.restore();
-      } else if (calculatedStage === 5) {
-        tunnelOpacity = 1.0; // Stage 5: Souped-Up Archetype Overdrive
-        swirlSpeedMult = 2.4; // Hyperdrive speed!
-      } else if (calculatedStage === 3) {
-        swirlSpeedMult = 1.3;
-      }
-
-      const beatPulseVal = Math.pow(Math.sin(((t * (bpmVal / 60) * swirlSpeedMult) % 1) * Math.PI), 3);
-      const swirlAngle = t * 0.9 * swirlSpeedMult; // Continuous rotational vortex swirl
-      const isOverdrive = calculatedStage === 5 && swirlSpeedMult >= 2.0;
-
-      if (tunnelOpacity > 0) {
+        pr      if (tunnelOpacity > 0) {
         ctx.globalAlpha = tunnelOpacity;
 
-        // 1. Swirling Radial Cyber Tunnel Backdrop Gradient
-        const tunnelBg = ctx.createRadialGradient(cx, vanishingY, 5, cx, vanishingY, W * 0.78);
-        const bgCore = isOverdrive ? colorWithAlpha(archMeta.stage5Color, 0.3) : "rgba(5, 5, 25, 0.96)";
-        tunnelBg.addColorStop(0, bgCore);
-        tunnelBg.addColorStop(0.35, "rgba(14, 6, 38, 0.94)");
-        tunnelBg.addColorStop(0.75, "rgba(25, 4, 32, 0.98)");
-        tunnelBg.addColorStop(1, "#060410");
-        ctx.fillStyle = tunnelBg;
-        ctx.fillRect(0, 0, W, H);
+        const currentArch = activeArchetypeRef.current;
 
-        // Stage 5: Speed lines radiating from vanishing point
-        if (isOverdrive) {
+        // ── ARCHETYPE 1: HORIZONTAL SIDE-SCROLLER (90° Canvas) ──
+        if (currentArch === 'horizontal_drift') {
+          // Deep Cyber-Skyline Gradient
+          const sideBg = ctx.createLinearGradient(0, 0, W, H);
+          sideBg.addColorStop(0, "#080414");
+          sideBg.addColorStop(0.5, "#16062b");
+          sideBg.addColorStop(1, "#04020a");
+          ctx.fillStyle = sideBg;
+          ctx.fillRect(0, 0, W, H);
+
+          // Parallax Drifting Synthwave City Buildings on Top and Bottom
           ctx.save();
-          ctx.translate(cx, vanishingY);
-          ctx.globalAlpha = 0.4 + beatPulseVal * 0.3;
-          for (let i = 0; i < 20; i++) {
-             const ang = (i / 20) * Math.PI * 2 + t * 4;
-             const len = W * 0.8;
-             ctx.beginPath();
-             ctx.moveTo(Math.cos(ang) * 50, Math.sin(ang) * 50);
-             ctx.lineTo(Math.cos(ang) * len, Math.sin(ang) * len);
-             ctx.strokeStyle = colorWithAlpha(archMeta.stage5Color, Math.random() * 0.65);
-             ctx.lineWidth = 1.8;
-             ctx.stroke();
+          ctx.fillStyle = "rgba(0, 229, 255, 0.08)";
+          const bldgWidth = 50;
+          for (let b = 0; b < W / bldgWidth + 2; b++) {
+            const bx = (b * bldgWidth - (t * 40) % bldgWidth);
+            const bH = 40 + Math.sin(b * 1.7) * 25;
+            ctx.fillRect(bx, H * 0.15, bldgWidth - 4, bH);
+            ctx.fillRect(bx, H * 0.85 - bH, bldgWidth - 4, bH);
+          }
+          ctx.restore();
+
+          // 3 Horizontal Lane Tracks (Top, Middle, Bottom)
+          const strikeX = W * 0.82;
+          const laneYMap = [H * 0.36, H * 0.52, H * 0.68];
+          ctx.lineWidth = 2.5;
+
+          laneYMap.forEach((lY, lIdx) => {
+            const laneCol = laneColorsRef.current[lIdx] || '#00E5FF';
+            // Glowing horizontal lane track ribbon
+            const laneGrad = ctx.createLinearGradient(0, lY, strikeX, lY);
+            laneGrad.addColorStop(0, "rgba(0,0,0,0.1)");
+            laneGrad.addColorStop(0.5, colorWithAlpha(laneCol, 0.35));
+            laneGrad.addColorStop(1, colorWithAlpha(laneCol, 0.75));
+            ctx.fillStyle = laneGrad;
+            ctx.fillRect(0, lY - 22, strikeX, 44);
+
+            // Guardrail laser lines
+            ctx.strokeStyle = colorWithAlpha(laneCol, 0.8);
+            ctx.beginPath();
+            ctx.moveTo(0, lY - 22);
+            ctx.lineTo(strikeX, lY - 22);
+            ctx.moveTo(0, lY + 22);
+            ctx.lineTo(strikeX, lY + 22);
+            ctx.stroke();
+          });
+
+          // Vertical Pulsing Target Laser Strike Line
+          ctx.save();
+          ctx.strokeStyle = "#FFFFFF";
+          ctx.lineWidth = 4;
+          ctx.shadowColor = "#00E5FF";
+          ctx.shadowBlur = 24;
+          ctx.beginPath();
+          ctx.moveTo(strikeX, H * 0.25);
+          ctx.lineTo(strikeX, H * 0.78);
+          ctx.stroke();
+          ctx.restore();
+
+          // Scrolling Vertical Grid Marker Bars
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+          ctx.lineWidth = 1.5;
+          const gridSpacing = 40;
+          for (let gx = -(t * 120) % gridSpacing; gx < strikeX; gx += gridSpacing) {
+            if (gx < 0) continue;
+            ctx.beginPath();
+            ctx.moveTo(gx, H * 0.28);
+            ctx.lineTo(gx, H * 0.75);
+            ctx.stroke();
+          }
+        }
+
+        // ── ARCHETYPE 2: 360° RADIAL CYBER ORBIT ──
+        else if (currentArch === 'radial_orbit') {
+          const orbitCx = W / 2;
+          const orbitCy = H * 0.44;
+
+          // Deep Cosmic Radial Vacuum Backdrop
+          const orbitBg = ctx.createRadialGradient(orbitCx, orbitCy, 10, orbitCx, orbitCy, W * 0.75);
+          orbitBg.addColorStop(0, "rgba(10, 20, 50, 0.98)");
+          orbitBg.addColorStop(0.5, "rgba(5, 10, 30, 0.95)");
+          orbitBg.addColorStop(1, "#03020a");
+          ctx.fillStyle = orbitBg;
+          ctx.fillRect(0, 0, W, H);
+
+          // 3 Concentric Glowing Orbit Rings
+          const rMax = Math.min(W, H) * 0.44;
+          const rHit = Math.min(W, H) * 0.16;
+          const ringRadii = [rHit + (rMax - rHit) * 0.33, rHit + (rMax - rHit) * 0.66, rMax];
+
+          ringRadii.forEach((r, idx) => {
+            const laneCol = laneColorsRef.current[idx] || '#00E5FF';
+            ctx.strokeStyle = colorWithAlpha(laneCol, 0.4 + beatPulseVal * 0.25);
+            ctx.lineWidth = 2.0;
+            ctx.beginPath();
+            ctx.arc(orbitCx, orbitCy, r, 0, Math.PI * 2);
+            ctx.stroke();
+          });
+
+          // 3 Radial Vector Direction Spoke Beams
+          const angles = [(210 * Math.PI) / 180, (270 * Math.PI) / 180, (330 * Math.PI) / 180];
+          angles.forEach((ang, idx) => {
+            const laneCol = laneColorsRef.current[idx] || '#00E5FF';
+            ctx.strokeStyle = colorWithAlpha(laneCol, 0.65);
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(orbitCx + Math.cos(ang) * (rHit * 0.8), orbitCy + Math.sin(ang) * (rHit * 0.8));
+            ctx.lineTo(orbitCx + Math.cos(ang) * (rMax * 1.1), orbitCy + Math.sin(ang) * (rMax * 1.1));
+            ctx.stroke();
+          });
+
+          // 360° Rotating Radar Sweep Scanner Beam
+          ctx.save();
+          ctx.translate(orbitCx, orbitCy);
+          const sweepAngle = t * 1.8;
+          const sweepGrad = ctx.createConicGradient(sweepAngle, 0, 0);
+          sweepGrad.addColorStop(0, "rgba(0, 229, 255, 0.25)");
+          sweepGrad.addColorStop(0.12, "rgba(0, 229, 255, 0.0)");
+          sweepGrad.addColorStop(1, "rgba(0, 0, 0, 0.0)");
+          ctx.fillStyle = sweepGrad;
+          ctx.beginPath();
+          ctx.arc(0, 0, rMax * 1.1, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // ── ARCHETYPE 3: 3D TWISTING CORKSCREW SLIDE ──
+        else if (currentArch === 'corkscrew_slide') {
+          const tunnelBg = ctx.createRadialGradient(cx, vanishingY, 5, cx, vanishingY, W * 0.78);
+          tunnelBg.addColorStop(0, "rgba(25, 5, 45, 0.96)");
+          tunnelBg.addColorStop(0.5, "rgba(12, 3, 28, 0.95)");
+          tunnelBg.addColorStop(1, "#040208");
+          ctx.fillStyle = tunnelBg;
+          ctx.fillRect(0, 0, W, H);
+
+          // 3D Helical Twisting Ribbon Track Rail Math
+          ctx.save();
+          const numRibs = 16;
+          for (let r = 0; r < numRibs; r++) {
+            const p = r / numRibs;
+            const nextP = (r + 1) / numRibs;
+            const mult = calculatedStage === 5 ? 2.4 : 1.0;
+
+            const swirl1 = Math.sin(p * Math.PI * 2 + t * 2.8 * mult) * (W * 0.18 * Math.sin(p * Math.PI));
+            const swirl2 = Math.sin(nextP * Math.PI * 2 + t * 2.8 * mult) * (W * 0.18 * Math.sin(nextP * Math.PI));
+
+            const y1 = p * hitY;
+            const y2 = nextP * hitY;
+
+            const { left: l1, right: r1 } = hwAtProgress(p, W);
+            const { left: l2, right: r2 } = hwAtProgress(nextP, W);
+
+            ctx.strokeStyle = colorWithAlpha(archMeta.primerColor, 0.35 + p * 0.4);
+            ctx.lineWidth = lerp(1.5, 4.0, p);
+            ctx.beginPath();
+            ctx.moveTo(l1 + swirl1, y1);
+            ctx.lineTo(l2 + swirl2, y2);
+            ctx.moveTo(r1 + swirl1, y1);
+            ctx.lineTo(r2 + swirl2, y2);
+            ctx.stroke();
           }
           ctx.restore();
         }
 
-        // 2. Full 360° 3D Cylindrical Tunnel Depth Rings with Swirl Rotation
-        const depthDepths = [0.06, 0.18, 0.35, 0.55, 0.75, 0.95];
-        ctx.globalCompositeOperation = "screen";
-        
-        depthDepths.forEach((p, idx) => {
-          const ringY = lerp(vanishingY, H * 0.52, p);
-          const ringRadiusX = lerp(W * 0.10, W * 0.64, p);
-          const ringRadiusY = lerp(H * 0.07, H * 0.46, p);
-          const ringAlpha = lerp(0.22, 0.8, p) * (0.85 + beatPulseVal * 0.3);
+        // ── ARCHETYPE 4: 3D UNDULATING WAVE ROLLERCOASTER ──
+        else if (currentArch === 'wave_coaster') {
+          const coasterBg = ctx.createLinearGradient(0, 0, 0, H);
+          coasterBg.addColorStop(0, "#050e20");
+          coasterBg.addColorStop(0.5, "#0b1d3a");
+          coasterBg.addColorStop(1, "#020610");
+          ctx.fillStyle = coasterBg;
+          ctx.fillRect(0, 0, W, H);
 
-          const isCyan = idx % 2 === 0;
-          const ringSwirl = swirlAngle + p * 1.5;
-
+          // Undulating Wave Coaster Rails
           ctx.save();
-          ctx.translate(cx, ringY);
-          ctx.rotate(ringSwirl * 0.12);
+          const waveSteps = 24;
+          ctx.strokeStyle = "rgba(57, 255, 20, 0.65)";
+          ctx.lineWidth = 3.5;
+          ctx.shadowColor = "#39FF14";
+          ctx.shadowBlur = 12;
 
-          const lineWidth = lerp(1.8, 5.2, p);
-          
-          // Enhanced Chromatic Rings
-          const baseR = isOverdrive ? (isCyan ? 50 : 255) : (isCyan ? 0 : 255);
-          const baseG = isOverdrive ? 255 : (isCyan ? 229 : 20);
-          const baseB = isOverdrive ? (isCyan ? 50 : 255) : (isCyan ? 255 : 147);
-          
-          const chromOffset = 2 + beatPulseVal * 3;
-
-          // Red channel offset
-          ctx.beginPath();
-          ctx.ellipse(-chromOffset, 0, ringRadiusX, ringRadiusY, 0, 0, Math.PI * 2);
-          ctx.strokeStyle = `rgba(255, 0, 0, ${ringAlpha * 0.7})`;
-          ctx.lineWidth = lineWidth;
-          ctx.stroke();
-          
-          // Blue channel offset
-          ctx.beginPath();
-          ctx.ellipse(chromOffset, 0, ringRadiusX, ringRadiusY, 0, 0, Math.PI * 2);
-          ctx.strokeStyle = `rgba(0, 100, 255, ${ringAlpha * 0.7})`;
-          ctx.lineWidth = lineWidth;
-          ctx.stroke();
-
-          // Main Ring
-          ctx.beginPath();
-          ctx.ellipse(0, 0, ringRadiusX, ringRadiusY, 0, 0, Math.PI * 2);
-          ctx.strokeStyle = `rgba(${baseR}, ${baseG}, ${baseB}, ${ringAlpha})`;
-          ctx.lineWidth = lineWidth;
-          ctx.shadowColor = `rgb(${baseR}, ${baseG}, ${baseB})`;
-          ctx.shadowBlur = lerp(6, 18, p);
-          ctx.stroke();
-
-          // 3D Rotational Perspective Tunnel Wall Ribs (12 swirling rays)
-          if (idx < depthDepths.length - 1) {
-            const nextP = depthDepths[idx + 1];
-            const nextY = lerp(vanishingY, H * 0.52, nextP);
-            const nextRx = lerp(W * 0.10, W * 0.64, nextP);
-            const nextRy = lerp(H * 0.07, H * 0.46, nextP);
-
-            ctx.strokeStyle = `rgba(255, 255, 255, ${ringAlpha * 0.32})`;
-            ctx.lineWidth = 1.2;
-            const raysCount = 12;
-            for (let a = 0; a < raysCount; a++) {
-              const angle = (a / raysCount) * Math.PI * 2;
-              const x1 = Math.cos(angle) * ringRadiusX;
-              const y1 = Math.sin(angle) * ringRadiusY;
-              const nextAngle = angle + 0.15; // Swirl curve offset
-              const x2 = Math.cos(nextAngle) * nextRx;
-              const y2 = (nextY - ringY) + Math.sin(nextAngle) * nextRy;
-              
-              const cpX = x1 + (x2 - x1) * 0.5 + Math.cos(angle + Math.PI/2) * (nextRx * 0.15);
-              const cpY = y1 + (y2 - y1) * 0.5 + Math.sin(angle + Math.PI/2) * (nextRy * 0.15);
-
-              ctx.beginPath();
-              ctx.moveTo(x1, y1);
-              ctx.quadraticCurveTo(cpX, cpY, x2, y2);
-              ctx.stroke();
+          for (let lane = 0; lane < LANE_COUNT; lane++) {
+            ctx.beginPath();
+            for (let step = 0; step <= waveSteps; step++) {
+              const p = step / waveSteps;
+              const { x } = laneAt(lane, p, W, 0.22, 0.88);
+              const waveYOffset = Math.sin(p * Math.PI * 2.5 + t * 3.5) * (H * 0.08);
+              const y = p * hitY + waveYOffset;
+              if (step === 0) ctx.moveTo(x, y);
+              else ctx.lineTo(x, y);
             }
+            ctx.stroke();
           }
           ctx.restore();
-        });
-        
-        ctx.globalCompositeOperation = "source-over";
+        }
 
-        // Particle Dust/Stars in the Tunnel
+        // ── ARCHETYPE 5: 3-RIBBON DETACHED SPLIT HORIZON MATRIX ──
+        else if (currentArch === 'matrix_split') {
+          const matrixBg = ctx.createRadialGradient(cx, vanishingY, 5, cx, vanishingY, W * 0.8);
+          matrixBg.addColorStop(0, "rgba(4, 25, 12, 0.98)");
+          matrixBg.addColorStop(0.6, "rgba(2, 14, 6, 0.96)");
+          matrixBg.addColorStop(1, "#010803");
+          ctx.fillStyle = matrixBg;
+          ctx.fillRect(0, 0, W, H);
+
+          // 3 Separate Floating Ribbons
+          ctx.save();
+          for (let lane = 0; lane < LANE_COUNT; lane++) {
+            const laneCol = laneColorsRef.current[lane] || '#39FF14';
+            ctx.strokeStyle = colorWithAlpha(laneCol, 0.75);
+            ctx.lineWidth = 3.0;
+            ctx.shadowColor = laneCol;
+            ctx.shadowBlur = 14;
+
+            ctx.beginPath();
+            for (let s = 0; s <= 20; s++) {
+              const p = s / 20;
+              const spread = (lane - 1) * (W * 0.22 * Math.sin(p * Math.PI));
+              const { x, w } = laneAt(lane, p, W, 0.25, 0.90);
+              const lx = x + spread;
+              const ly = p * hitY;
+              if (s === 0) ctx.moveTo(lx, ly);
+              else ctx.lineTo(lx, ly);
+            }
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+
+        // ── ARCHETYPE 6: 3D CYBER VORTEX TUNNEL (Default) ──
+        else {
+          const tunnelBg = ctx.createRadialGradient(cx, vanishingY, 5, cx, vanishingY, W * 0.78);
+          const bgCore = isOverdrive ? colorWithAlpha(archMeta.stage5Color, 0.3) : "rgba(5, 5, 25, 0.96)";
+          tunnelBg.addColorStop(0, bgCore);
+          tunnelBg.addColorStop(0.35, "rgba(14, 6, 38, 0.94)");
+          tunnelBg.addColorStop(0.75, "rgba(25, 4, 32, 0.98)");
+          tunnelBg.addColorStop(1, "#060410");
+          ctx.fillStyle = tunnelBg;
+          ctx.fillRect(0, 0, W, H);
+
+          // Speed lines radiating from vanishing point
+          if (isOverdrive) {
+            ctx.save();
+            ctx.translate(cx, vanishingY);
+            ctx.globalAlpha = 0.4 + beatPulseVal * 0.3;
+            for (let i = 0; i < 20; i++) {
+              const ang = (i / 20) * Math.PI * 2 + t * 4;
+              const len = W * 0.8;
+              ctx.beginPath();
+              ctx.moveTo(Math.cos(ang) * 50, Math.sin(ang) * 50);
+              ctx.lineTo(Math.cos(ang) * len, Math.sin(ang) * len);
+              ctx.strokeStyle = colorWithAlpha(archMeta.stage5Color, Math.random() * 0.65);
+              ctx.lineWidth = 1.8;
+              ctx.stroke();
+            }
+            ctx.restore();
+          }
+
+          // Full 360° 3D Cylindrical Tunnel Depth Rings with Swirl Rotation
+          const depthDepths = [0.06, 0.18, 0.35, 0.55, 0.75, 0.95];
+          ctx.globalCompositeOperation = "screen";
+
+          depthDepths.forEach((p, idx) => {
+            const ringY = lerp(vanishingY, H * 0.52, p);
+            const ringRadiusX = lerp(W * 0.10, W * 0.64, p);
+            const ringRadiusY = lerp(H * 0.07, H * 0.46, p);
+            const ringAlpha = lerp(0.22, 0.8, p) * (0.85 + beatPulseVal * 0.3);
+
+            const isCyan = idx % 2 === 0;
+            const ringSwirl = swirlAngle + p * 1.5;
+
+            ctx.save();
+            ctx.translate(cx, ringY);
+            ctx.rotate(ringSwirl * 0.12);
+
+            const lineWidth = lerp(1.8, 5.2, p);
+
+            // Enhanced Chromatic Rings
+            const baseR = isOverdrive ? (isCyan ? 50 : 255) : (isCyan ? 0 : 255);
+            const baseG = isOverdrive ? 255 : (isCyan ? 229 : 20);
+            const baseB = isOverdrive ? (isCyan ? 50 : 255) : (isCyan ? 255 : 147);
+
+            const chromOffset = 2 + beatPulseVal * 3;
+
+            ctx.beginPath();
+            ctx.ellipse(-chromOffset, 0, ringRadiusX, ringRadiusY, 0, 0, Math.PI * 2);
+            ctx.strokeStyle = `rgba(255, 0, 0, ${ringAlpha * 0.7})`;
+            ctx.lineWidth = lineWidth;
+            ctx.stroke();
+          });
+        }
+
+        // Particle Dust/Stars in the Tunnel/Space
         if (tunnelParticlesRef.current.length === 0) {
           for (let i = 0; i < 30; i++) {
             tunnelParticlesRef.current.push({
@@ -4182,7 +4340,6 @@ export default function Game() {
             p.rad = W * 0.1 + Math.random() * W * 0.7;
             p.ang = Math.random() * Math.PI * 2;
           }
-          // render particle
           const pScale = 1.0 - p.z;
           const px = cx + Math.cos(p.ang) * p.rad * pScale;
           const py = vanishingY + Math.sin(p.ang) * (p.rad * 0.6) * pScale;
