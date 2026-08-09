@@ -4048,6 +4048,7 @@ export default function Game() {
       const isOverdrive = calculatedStage === 5 && swirlSpeedMult >= 2.0;
 
       if (tunnelOpacity > 0) {
+        const currentArch = activeArchetypeRef.current;
 
         // ── ARCHETYPE 1: HORIZONTAL SIDE-SCROLLER (90° Canvas) ──
         if (currentArch === 'horizontal_drift') {
@@ -8290,9 +8291,17 @@ export default function Game() {
         cancelAnimationFrame(rafRef.current);
         audio.pause();
       }
-      } catch (err) {
-        console.error("[GamePlay Init Error] Caught exception in init:", err);
-        throw err;
+      } catch (err: any) {
+        if (err?.name === 'NotAllowedError') {
+          console.warn("[GamePlay Init] Autoplay blocked by browser policy. Displaying Tap to Start overlay.");
+          phaseRef.current = "audioError";
+          setPhase("audioError");
+          cancelAnimationFrame(rafRef.current);
+          if (audioRef.current) audioRef.current.pause();
+        } else {
+          console.error("[GamePlay Init Error] Caught exception in init:", err);
+          throw err;
+        }
       }
     };
 
