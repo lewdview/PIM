@@ -430,9 +430,10 @@ export async function silentClaimGuestDailyCard(day: number): Promise<OwnedCard 
     const claimKey = `guest_daily_claimed_day_${day}`;
     const localCollection: OwnedCard[] = JSON.parse(localStorage.getItem('guest_vault_collection') || '[]');
     
-    // Check if card for this day was already claimed
-    const existing = localCollection.find(c => c.source === 'daily_claim' && (c.id.includes(`day_${day}`) || c.cardId.includes(`day_${day}`)));
+    // Check if card for this day was already claimed or exists in guest collection
+    const existing = localCollection.find(c => c && (c.cardId === `day_${day}` || (c.card && c.card.day === day) || c.id.includes(`day_${day}`)));
     if (existing || localStorage.getItem(claimKey) === 'true') {
+      console.log(`[Silent Claim] Day ${day} card already owned in temp wallet (${guestAddress}). Skipping duplicate mint.`);
       return existing || null;
     }
 

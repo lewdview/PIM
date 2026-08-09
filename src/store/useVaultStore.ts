@@ -240,11 +240,29 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   setDailyCard: (card) => set({ dailyCard: card }),
   setHasClaimed: (claimed) => set({ hasClaimed: claimed }),
   silentClaimDailyDrop: async (day: number) => {
+    const currentState = get();
+
+    // 1. Strict check: If user already owns the card for this day in collection, do not re-claim
+    const alreadyOwnsCard = currentState.collection.some(c => 
+      c && (c.cardId === `day_${day}` || (c.card && c.card.day === day) || c.id.includes(`day_${day}`))
+    );
+
+    if (alreadyOwnsCard) {
+      console.log(`[Silent Claim] User already owns card for Day ${day}. Skipping duplicate claim.`);
+      return null;
+    }
+
     const session = await supabase.auth.getSession();
     const userId = session.data.session?.user?.id;
 
     if (userId) {
-      // Authenticated user: claim via vault-engine edge function
+      // Authenticated user with wallet/account:
+      // If already claimed today's daily drop, skip minting duplicate
+      if (currentState.hasClaimed) {
+        console.log(`[Silent Claim] Authenticated user already claimed today's drop. Skipping duplicate claim.`);
+        return null;
+      }
+
       const { claimDailyCard } = await import('../services/vaultService');
       const card = await claimDailyCard(day);
       if (card) {
@@ -260,7 +278,13 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       }
       return card;
     } else {
-      // Unauthenticated / Guest user: silent claim into temp wallet
+      // Unauthenticated / Guest user:
+      const claimKey = `guest_daily_claimed_day_${day}`;
+      if (localStorage.getItem(claimKey) === 'true') {
+        console.log(`[Silent Claim] Guest already claimed Day ${day} drop. Skipping duplicate claim.`);
+        return null;
+      }
+
       const { silentClaimGuestDailyCard } = await import('../services/vaultService');
       const card = await silentClaimGuestDailyCard(day);
       if (card) {
