@@ -852,7 +852,8 @@ export function getArchetypeProjection(
   if (archetype === 'horizontal_drift') {
     const strikeX = W * 0.82;
     const noteX = prog * strikeX;
-    const laneYMap = [H * 0.36, H * 0.52, H * 0.68];
+    // Button Key Alignment: Lane 0 (A Key) = Bottom, Lane 1 (S Key) = Middle, Lane 2 (D Key) = Top
+    const laneYMap = [H * 0.68, H * 0.52, H * 0.36];
     const noteY = laneYMap[lane] || H * 0.52;
     const noteW = lerp(45, 110, prog);
     const noteH = 65;
@@ -4139,72 +4140,110 @@ export default function Game() {
 
         // ── ARCHETYPE 1: HORIZONTAL SIDE-SCROLLER (90° Canvas) ──
         if (currentArch === 'horizontal_drift') {
-          // Deep Cyber-Skyline Gradient
+          // Deep Retro Synthwave Skyline Gradient
           const sideBg = ctx.createLinearGradient(0, 0, W, H);
-          sideBg.addColorStop(0, "#080414");
-          sideBg.addColorStop(0.5, "#16062b");
-          sideBg.addColorStop(1, "#04020a");
+          sideBg.addColorStop(0, "#050212");
+          sideBg.addColorStop(0.4, "#16052b");
+          sideBg.addColorStop(0.7, "#0c031c");
+          sideBg.addColorStop(1, "#030108");
           ctx.fillStyle = sideBg;
           ctx.fillRect(0, 0, W, H);
 
-          // Parallax Drifting Synthwave City Buildings on Top and Bottom
+          // Wireframe Synthwave Sun at Left Horizon (X = -20, Y = H * 0.52)
           ctx.save();
-          ctx.fillStyle = "rgba(0, 229, 255, 0.08)";
-          const bldgWidth = 50;
-          for (let b = 0; b < W / bldgWidth + 2; b++) {
-            const bx = (b * bldgWidth - (t * 40) % bldgWidth);
-            const bH = 40 + Math.sin(b * 1.7) * 25;
-            ctx.fillRect(bx, H * 0.15, bldgWidth - 4, bH);
-            ctx.fillRect(bx, H * 0.85 - bH, bldgWidth - 4, bH);
+          const sunX = -20;
+          const sunY = H * 0.52;
+          const sunR = Math.min(W, H) * 0.28;
+          const sunGrad = ctx.createLinearGradient(0, sunY - sunR, 0, sunY + sunR);
+          sunGrad.addColorStop(0, "#FFE600");
+          sunGrad.addColorStop(0.5, "#FF2A85");
+          sunGrad.addColorStop(1, "#7A00FF");
+          ctx.fillStyle = sunGrad;
+          ctx.shadowColor = "#FF2A85";
+          ctx.shadowBlur = 35;
+          ctx.beginPath();
+          ctx.arc(sunX, sunY, sunR, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Sun Horizon Scanlines
+          ctx.strokeStyle = "rgba(12, 3, 28, 0.85)";
+          ctx.lineWidth = 3;
+          for (let sY = sunY - sunR * 0.5; sY < sunY + sunR; sY += 9) {
+            ctx.beginPath();
+            ctx.moveTo(sunX - sunR, sY);
+            ctx.lineTo(sunX + sunR, sY);
+            ctx.stroke();
           }
           ctx.restore();
 
-          // 3 Horizontal Lane Tracks (Top, Middle, Bottom)
+          // 3 Horizontal Lane Highway Ribbons: Lane 2 (Top/D) -> Lane 1 (Mid/S) -> Lane 0 (Bot/A)
           const strikeX = W * 0.82;
-          const laneYMap = [H * 0.36, H * 0.52, H * 0.68];
-          ctx.lineWidth = 2.5;
+          const laneYMap = [H * 0.68, H * 0.52, H * 0.36];
 
           laneYMap.forEach((lY, lIdx) => {
             const laneCol = laneColorsRef.current[lIdx] || '#00E5FF';
-            // Glowing horizontal lane track ribbon
+            // Sleek Horizontal Lane Ribbon Body
             const laneGrad = ctx.createLinearGradient(0, lY, strikeX, lY);
-            laneGrad.addColorStop(0, "rgba(0,0,0,0.1)");
-            laneGrad.addColorStop(0.5, colorWithAlpha(laneCol, 0.35));
-            laneGrad.addColorStop(1, colorWithAlpha(laneCol, 0.75));
+            laneGrad.addColorStop(0, "rgba(5, 2, 18, 0.4)");
+            laneGrad.addColorStop(0.5, colorWithAlpha(laneCol, 0.28));
+            laneGrad.addColorStop(1, colorWithAlpha(laneCol, 0.65));
             ctx.fillStyle = laneGrad;
-            ctx.fillRect(0, lY - 22, strikeX, 44);
+            ctx.fillRect(0, lY - 25, strikeX, 50);
 
-            // Guardrail laser lines
-            ctx.strokeStyle = colorWithAlpha(laneCol, 0.8);
+            // Glowing Edge Laser Guardrails
+            ctx.strokeStyle = colorWithAlpha(laneCol, 0.85);
+            ctx.lineWidth = 2.5;
+            ctx.shadowColor = laneCol;
+            ctx.shadowBlur = 12;
             ctx.beginPath();
-            ctx.moveTo(0, lY - 22);
-            ctx.lineTo(strikeX, lY - 22);
-            ctx.moveTo(0, lY + 22);
-            ctx.lineTo(strikeX, lY + 22);
+            ctx.moveTo(0, lY - 25);
+            ctx.lineTo(strikeX, lY - 25);
+            ctx.moveTo(0, lY + 25);
+            ctx.lineTo(strikeX, lY + 25);
             ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // Animated Rightward Speed Arrow Chevrons along Lane Floor
+            ctx.fillStyle = colorWithAlpha(laneCol, 0.35);
+            const chevSpacing = 80;
+            const chevOffset = (t * 220) % chevSpacing;
+            for (let cx = chevOffset; cx < strikeX; cx += chevSpacing) {
+              ctx.beginPath();
+              ctx.moveTo(cx, lY - 12);
+              ctx.lineTo(cx + 16, lY);
+              ctx.lineTo(cx, lY + 12);
+              ctx.lineTo(cx - 8, lY);
+              ctx.closePath();
+              ctx.fill();
+            }
           });
 
-          // Vertical Pulsing Target Laser Strike Line
+          // Vertical Pulsing Target Laser Strike Bar
           ctx.save();
           ctx.strokeStyle = "#FFFFFF";
-          ctx.lineWidth = 4;
+          ctx.lineWidth = 4.5;
           ctx.shadowColor = "#00E5FF";
-          ctx.shadowBlur = 24;
+          ctx.shadowBlur = 28;
           ctx.beginPath();
-          ctx.moveTo(strikeX, H * 0.25);
-          ctx.lineTo(strikeX, H * 0.78);
+          ctx.moveTo(strikeX, H * 0.24);
+          ctx.lineTo(strikeX, H * 0.80);
+          ctx.stroke();
+
+          // Laser Strike Bar Glow Halo
+          ctx.strokeStyle = "rgba(0, 229, 255, 0.45)";
+          ctx.lineWidth = 12;
           ctx.stroke();
           ctx.restore();
 
-          // Scrolling Vertical Grid Marker Bars
+          // Vertical Grid Markers
           ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
           ctx.lineWidth = 1.5;
-          const gridSpacing = 40;
-          for (let gx = -(t * 120) % gridSpacing; gx < strikeX; gx += gridSpacing) {
+          const gridSpacing = 45;
+          for (let gx = -(t * 140) % gridSpacing; gx < strikeX; gx += gridSpacing) {
             if (gx < 0) continue;
             ctx.beginPath();
             ctx.moveTo(gx, H * 0.28);
-            ctx.lineTo(gx, H * 0.75);
+            ctx.lineTo(gx, H * 0.76);
             ctx.stroke();
           }
         }
