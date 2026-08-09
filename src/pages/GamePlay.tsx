@@ -4756,7 +4756,7 @@ export default function Game() {
       if (!isRewinding && ns.missed && prog >= maxMissProg) continue;
 
       const lc = getDifficultyLaneColor(laneColorsRef.current[note.lane], songRef.current?.difficultyLevel ?? 5, note.lane);
-      const noteY = prog * hitY;
+      let noteY = prog * hitY;
 
       if (ns.visualLane === undefined) {
         ns.visualLane = ns.currentLane;
