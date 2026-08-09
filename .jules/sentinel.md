@@ -1,0 +1,4 @@
+## 2025-02-23 - [Remove hardcoded admin passphrase]
+**Vulnerability:** A hardcoded plaintext admin passphrase (`th3scr1b3`) was found in the frontend code (`src/pages/AdminPage.tsx` and `src/pages/BeatmapEditor.tsx`).
+**Learning:** Hardcoding sensitive information like passwords or passphrases directly in the frontend code exposes them to anyone who can view the application's source bundle.
+**Prevention:** Use client-side hashing (e.g., using the Web Crypto API `crypto.subtle.digest` with SHA-256) to compare the user's input against a hardcoded hash, preventing the plaintext passphrase from being exposed in the frontend source code. Ensure that `crypto.subtle` is used in a secure context (HTTPS/localhost).
