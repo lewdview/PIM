@@ -131,7 +131,21 @@ export const ARCHETYPE_METAS: Record<TrackArchetype, ArchetypeMeta> = {
   },
 };
 
+export function isArchetypeDevModeEnabled(): boolean {
+  if (typeof window === 'undefined') return false;
+  const isDev = import.meta.env.DEV || import.meta.env.MODE === 'development';
+  const optDev = localStorage.getItem('opt_archetypeDevMode') === 'true' || localStorage.getItem('opt_devMode') === 'true';
+  const urlDev = new URLSearchParams(window.location.search).get('dev') === 'true' || new URLSearchParams(window.location.search).get('archetypes') === 'true';
+  return isDev || optDev || urlDev;
+}
+
 export function selectSongArchetype(song?: Song | null): TrackArchetype {
+  // Primary production 3D perspective mode: Cyber Tunnel
+  // The full 6-archetype engine is scoped to Dev Mode (opt_archetypeDevMode / URL ?dev=true)
+  if (!isArchetypeDevModeEnabled()) {
+    return 'cyber_tunnel';
+  }
+
   if (!song) return 'cyber_tunnel';
 
   // 1. PRIORITY 1: Lyrics Keywords
@@ -2158,6 +2172,21 @@ export default function Game() {
       dynamic_stage: 'DYNAMIC STAGE CAM',
     };
     setPovToast({ mode: labels[nextMode], time: Date.now() });
+  }, []);
+
+  const cycleArchetype = useCallback(() => {
+    const list: TrackArchetype[] = ['cyber_tunnel', 'corkscrew_slide', 'radial_orbit', 'horizontal_drift', 'wave_coaster', 'matrix_split'];
+    const currIdx = list.indexOf(activeArchetypeRef.current);
+    const nextIdx = (currIdx + 1) % list.length;
+    const nextArch = list[nextIdx];
+    activeArchetypeRef.current = nextArch;
+    setActiveArchetype(nextArch);
+    audioManager.playSfx('tap_nav', 0.15);
+    setPovToast({
+      mode: `DEV ARCHETYPE: ${ARCHETYPE_METAS[nextArch].name.toUpperCase()}`,
+      time: Date.now(),
+    });
+    console.log(`[Dev Mode] Switched track archetype geometry to '${nextArch}' (${ARCHETYPE_METAS[nextArch].name})`);
   }, []);
 
   // Load and segment slideshow images for track customization
@@ -8748,6 +8777,19 @@ export default function Game() {
             </span>
             <span className="text-[8px] font-black text-white/80 bg-white/10 px-1.5 py-0.5 rounded font-mono border border-white/10">V</span>
           </button>
+
+          {isArchetypeDevModeEnabled() && (
+            <button
+              onClick={cycleArchetype}
+              className="px-3.5 h-12 flex items-center gap-1.5 rounded-full glass-panel border-2 border-purple-500/50 hover:scale-105 active:scale-95 transition-all cursor-pointer group text-white font-mono text-xs shadow-lg bg-black/70 backdrop-blur-md"
+              title="DEV MODE: Cycle Track Geometry Archetype"
+            >
+              <span className="text-[9px] font-black bg-purple-500/40 text-purple-200 px-1.5 py-0.5 rounded border border-purple-400/50">DEV</span>
+              <span className="font-black text-[9px] uppercase tracking-wider hidden sm:inline-block text-purple-200">
+                {ARCHETYPE_METAS[activeArchetype]?.name || 'CYBER TUNNEL'}
+              </span>
+            </button>
+          )}
         </div>
       )}
 
