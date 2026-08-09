@@ -918,6 +918,92 @@ export function getArchetypeProjection(
   return { x: lx, y: noteY, w: lw, h: noteH, rot: 0, scale: lerp(0.4, 1.0, prog) };
 }
 
+export function drawArchetypeHoldTrail(
+  ctx: CanvasRenderingContext2D,
+  W: number,
+  H: number,
+  ns: any,
+  note: Note,
+  prog: number,
+  headP: number,
+  noteColor: string,
+  archetype: TrackArchetype,
+  stage: number,
+  t: number
+) {
+  const startLane = note.lane;
+  const endLane = note.targetLane !== undefined ? note.targetLane : note.lane;
+  const steps = 12;
+
+  const pStart = ns.holdActive ? lerp(headP, 1.0, ns.holdProgress) : headP;
+  const pEnd = ns.holdActive ? Math.min(prog, 1.0) : prog;
+
+  if (pEnd <= pStart) return;
+
+  const leftPoints: { x: number; y: number }[] = [];
+  const rightPoints: { x: number; y: number }[] = [];
+
+  for (let s = 0; s <= steps; s++) {
+    const sampleP = lerp(pStart, pEnd, s / steps);
+    const sampleLane = ns.holdActive ? lerp(endLane, ns.visualLane, s / steps) : lerp(endLane, startLane, s / steps);
+    const projSample = getArchetypeProjection(sampleLane, sampleP, W, H, archetype, stage, t);
+
+    const cx = projSample.x + projSample.w / 2;
+    const cy = projSample.y;
+    const halfW = projSample.w * 0.38;
+
+    if (projSample.rot !== 0) {
+      const cosR = Math.cos(projSample.rot);
+      const sinR = Math.sin(projSample.rot);
+      leftPoints.push({ x: cx - halfW * cosR, y: cy - halfW * sinR });
+      rightPoints.push({ x: cx + halfW * cosR, y: cy + halfW * sinR });
+    } else {
+      leftPoints.push({ x: cx - halfW, y: cy });
+      rightPoints.push({ x: cx + halfW, y: cy });
+    }
+  }
+
+  // Draw Ribbon Outer Glow / Body
+  ctx.save();
+  ctx.fillStyle = "rgba(245, 240, 228, 0.24)";
+  ctx.beginPath();
+  ctx.moveTo(leftPoints[0].x, leftPoints[0].y);
+  for (let i = 1; i <= steps; i++) {
+    ctx.lineTo(leftPoints[i].x, leftPoints[i].y);
+  }
+  for (let i = steps; i >= 0; i--) {
+    ctx.lineTo(rightPoints[i].x, rightPoints[i].y);
+  }
+  ctx.closePath();
+  ctx.fill();
+
+  // Draw Inner Colored Stripe with Neon Glow
+  ctx.fillStyle = noteColor;
+  ctx.globalAlpha = 0.72;
+  ctx.shadowColor = noteColor;
+  ctx.shadowBlur = 14;
+  ctx.beginPath();
+  const innerLeft = leftPoints.map((p, idx) => ({
+    x: lerp(leftPoints[idx].x, rightPoints[idx].x, 0.22),
+    y: lerp(leftPoints[idx].y, rightPoints[idx].y, 0.22),
+  }));
+  const innerRight = rightPoints.map((p, idx) => ({
+    x: lerp(leftPoints[idx].x, rightPoints[idx].x, 0.78),
+    y: lerp(leftPoints[idx].y, rightPoints[idx].y, 0.78),
+  }));
+
+  ctx.moveTo(innerLeft[0].x, innerLeft[0].y);
+  for (let i = 1; i <= steps; i++) {
+    ctx.lineTo(innerLeft[i].x, innerLeft[i].y);
+  }
+  for (let i = steps; i >= 0; i--) {
+    ctx.lineTo(innerRight[i].x, innerRight[i].y);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
 function prerenderStaticTrack(
   W: number,
   H: number,
@@ -3565,7 +3651,8 @@ export default function Game() {
         optsRef.current.gameTrack
       );
     }
-    if (offscreenCanvasRef.current) {
+    const isArchetypeMode = (calculatedStage === 3 || calculatedStage === 5) && (activePovModeRef.current === 'cyber_tunnel' || activePovModeRef.current === 'dynamic_stage');
+    if (offscreenCanvasRef.current && !isArchetypeMode) {
       ctx.drawImage(offscreenCanvasRef.current, 0, 0, W, H);
     }
 
@@ -5285,7 +5372,10 @@ export default function Game() {
           }
           ctx.restore();
 
-          if (noteY > top) {
+          const isArchetypeStage = calculatedStage === 3 || calculatedStage === 5;
+          if (isArchetypeStage) {
+            drawArchetypeHoldTrail(ctx, W, H, ns, note, prog, headP, noteColor, activeArchetypeRef.current, calculatedStage, t);
+          } else if (noteY > top) {
             // Determine lanes for the active trail segment
             const { x: hx, w: hw } = laneAt(endLane, headP, W, povTop, povBot);
             const { x: ax, w: aw } = laneAt(ns.visualLane, Math.min(prog, 1), W, povTop, povBot);
@@ -5390,9 +5480,13 @@ export default function Game() {
             drawKey(ctx, tailX_active, top, tailW_active, tailH_active, tailR_active, noteColor, tailP, true, tailSwipeDir, note.time * 3700, note.type);
           }
         } else if (headY < noteY) {
-          // Inactive trail — SMOOTH CURVE if it's a slide
-          const { x: hx, w: hw } = laneAt(endLane, headP, W, povTop, povBot);
-          const { x: tx, w: tw } = laneAt(startLane, prog, W, povTop, povBot);
+          const isArchetypeStage = calculatedStage === 3 || calculatedStage === 5;
+          if (isArchetypeStage) {
+            drawArchetypeHoldTrail(ctx, W, H, ns, note, prog, headP, noteColor, activeArchetypeRef.current, calculatedStage, t);
+          } else {
+            // Inactive trail — SMOOTH CURVE if it's a slide
+            const { x: hx, w: hw } = laneAt(endLane, headP, W, povTop, povBot);
+            const { x: tx, w: tw } = laneAt(startLane, prog, W, povTop, povBot);
 
           const midY = (headY + noteY) / 2;
 
@@ -5463,6 +5557,7 @@ export default function Game() {
           const tailR_inactive = lerp(12, 24, headP);
           const tailSwipeDir: Note['swipeDirection'] | undefined = (note.targetLane !== undefined ? (note.targetLane > startLane ? 'right' : 'left') : undefined) || note.swipeDirection;
           drawKey(ctx, tailX_inactive, headY, tailW_inactive, tailH_inactive, tailR_inactive, noteColor, headP, true, tailSwipeDir, note.time * 3700, note.type);
+          }
         }
 
         const headSwipeDir: Note['swipeDirection'] | undefined = (note.targetLane !== undefined ? (note.targetLane > startLane ? 'right' : 'left') : undefined) || note.swipeDirection;
