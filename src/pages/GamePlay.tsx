@@ -4020,11 +4020,34 @@ export default function Game() {
         const primerGrad = ctx.createRadialGradient(cx, vanishingY, 10, cx, vanishingY, W * 0.85);
         primerGrad.addColorStop(0, colorWithAlpha(primerColor, 0.45));
         primerGrad.addColorStop(0.4, colorWithAlpha(primerColor, 0.18));
-        primerGrad.addColorStop(0.85, "rgba(6, 4, 16, 0.95)");
-        pr      if (tunnelOpacity > 0) {
-        ctx.globalAlpha = tunnelOpacity;
+        primerGrad.addColorStop(1, "#030208");
+        ctx.fillStyle = primerGrad;
+        ctx.fillRect(0, 0, W, H);
 
-        const currentArch = activeArchetypeRef.current;
+        // Story Bridge Pulsing Laser Grid Lines
+        ctx.strokeStyle = colorWithAlpha(primerColor, 0.35 + Math.pow(Math.sin(((t * (bpmVal / 60)) % 1) * Math.PI), 3) * 0.25);
+        ctx.lineWidth = 1.5;
+        const gridLines = 8;
+        for (let g = 0; g < gridLines; g++) {
+          const gY = lerp(vanishingY, H, (g / gridLines + (t * 0.4) % (1 / gridLines)));
+          ctx.beginPath();
+          ctx.moveTo(0, gY);
+          ctx.lineTo(W, gY);
+          ctx.stroke();
+        }
+        ctx.restore();
+      } else if (calculatedStage === 5) {
+        tunnelOpacity = 1.0; // Stage 5: Souped-Up Archetype Overdrive
+        swirlSpeedMult = 2.4; // Hyperdrive speed!
+      } else if (calculatedStage === 3) {
+        swirlSpeedMult = 1.3;
+      }
+
+      const beatPulseVal = Math.pow(Math.sin(((t * (bpmVal / 60) * swirlSpeedMult) % 1) * Math.PI), 3);
+      const swirlAngle = t * 0.9 * swirlSpeedMult; // Continuous rotational vortex swirl
+      const isOverdrive = calculatedStage === 5 && swirlSpeedMult >= 2.0;
+
+      if (tunnelOpacity > 0) {
 
         // ── ARCHETYPE 1: HORIZONTAL SIDE-SCROLLER (90° Canvas) ──
         if (currentArch === 'horizontal_drift') {
