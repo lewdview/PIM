@@ -862,11 +862,11 @@ export function getArchetypeProjection(
   // 🎯 360° RADIAL CYBER ORBIT (Notes converge radially inward to circular pads)
   if (archetype === 'radial_orbit') {
     const cx = W / 2;
-    const cy = H * 0.44;
+    const cy = H * 0.55;
     const angles = [(210 * Math.PI) / 180, (270 * Math.PI) / 180, (330 * Math.PI) / 180];
     const angle = angles[lane] || (270 * Math.PI) / 180;
-    const rMax = Math.min(W, H) * 0.44;
-    const rHit = Math.min(W, H) * 0.16;
+    const rMax = Math.min(W, H) * 0.36;
+    const rHit = Math.min(W, H) * 0.14;
     const radius = lerp(rMax, rHit, prog);
     const x = cx + Math.cos(angle) * radius;
     const y = cy + Math.sin(angle) * radius;
@@ -4212,7 +4212,7 @@ export default function Game() {
         // ── ARCHETYPE 2: 360° RADIAL CYBER ORBIT ──
         else if (currentArch === 'radial_orbit') {
           const orbitCx = W / 2;
-          const orbitCy = H * 0.44;
+          const orbitCy = H * 0.55;
 
           // Deep Cosmic Radial Vacuum Backdrop
           const orbitBg = ctx.createRadialGradient(orbitCx, orbitCy, 10, orbitCx, orbitCy, W * 0.75);
@@ -4223,8 +4223,8 @@ export default function Game() {
           ctx.fillRect(0, 0, W, H);
 
           // 3 Concentric Glowing Orbit Rings
-          const rMax = Math.min(W, H) * 0.44;
-          const rHit = Math.min(W, H) * 0.16;
+          const rMax = Math.min(W, H) * 0.36;
+          const rHit = Math.min(W, H) * 0.14;
           const ringRadii = [rHit + (rMax - rHit) * 0.33, rHit + (rMax - rHit) * 0.66, rMax];
 
           ringRadii.forEach((r, idx) => {
