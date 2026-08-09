@@ -851,12 +851,13 @@ export function getArchetypeProjection(
   stage: number,
   t: number
 ): ProjectionResult {
-  const hitY = H * HIT_RATIO;
-  const isArchetypeActive = stage === 3 || stage === 5;
+  const isExperimentalArchetype = (stage === 3 || stage === 5) && archetype !== 'cyber_tunnel';
 
-  if (!isArchetypeActive) {
-    // Stage 1, 2, 4: Classic Vertical Highway
-    const { x, w } = laneAt(lane, prog, W, HW_TOP, HW_BOT);
+  if (!isExperimentalArchetype) {
+    // Cyber Tunnel uses 0.18 -> 0.86, Classic uses HW_TOP -> HW_BOT
+    const topRatio = archetype === 'cyber_tunnel' ? 0.18 : HW_TOP;
+    const botRatio = archetype === 'cyber_tunnel' ? 0.86 : HW_BOT;
+    const { x, w } = laneAt(lane, prog, W, topRatio, botRatio);
     const noteY = prog * hitY;
     const noteH = lerp(80, 140, prog);
     return { x, y: noteY, w, h: noteH, rot: 0, scale: lerp(0.4, 1.0, prog) };
@@ -3681,8 +3682,8 @@ export default function Game() {
         optsRef.current.gameTrack
       );
     }
-    const isArchetypeMode = (calculatedStage === 3 || calculatedStage === 5) && (activePovModeRef.current === 'cyber_tunnel' || activePovModeRef.current === 'dynamic_stage');
-    if (offscreenCanvasRef.current && !isArchetypeMode) {
+    const isExperimentalArchetype = (calculatedStage === 3 || calculatedStage === 5) && activeArchetypeRef.current !== 'cyber_tunnel';
+    if (offscreenCanvasRef.current && !isExperimentalArchetype) {
       ctx.drawImage(offscreenCanvasRef.current, 0, 0, W, H);
     }
 
