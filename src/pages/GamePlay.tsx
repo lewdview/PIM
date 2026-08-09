@@ -4951,7 +4951,7 @@ export default function Game() {
       let noteH = proj.h;
       let noteW = proj.w;
       let noteX = proj.x;
-      let noteY = proj.y;
+      noteY = proj.y;
       if (modifierRef.current === 'bass_realm' && note.lane === 0) {
         noteH = noteH * 1.6; // 60% thicker notes
         noteW = noteW * 1.28; // 28% wider notes
