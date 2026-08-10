@@ -64,14 +64,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ status: 'loading' });
     console.log('[Auth] Initializing with Redirect Token check...');
 
-    // 1. Inspect URL parameters for redirect tokens
+    // 1. Inspect URL for redirect tokens (hash fragments preferred, query params as fallback)
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
     const urlParams = new URLSearchParams(window.location.search);
-    const accessToken = urlParams.get('access_token');
-    const refreshToken = urlParams.get('refresh_token');
+    const accessToken = hashParams.get('access_token') || urlParams.get('access_token');
+    const refreshToken = hashParams.get('refresh_token') || urlParams.get('refresh_token');
     let activeSession: Session | null = null;
 
     if (accessToken && refreshToken) {
-      console.log('[Auth] Detected authorization redirect tokens in URL. Establishing session...');
+      console.log('[Auth] Detected authorization redirect tokens. Establishing session...');
       try {
         const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
           access_token: accessToken,
@@ -83,6 +84,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const cleanUrl = new URL(window.location.href);
         cleanUrl.searchParams.delete('access_token');
         cleanUrl.searchParams.delete('refresh_token');
+        cleanUrl.hash = '';
         window.history.replaceState({}, document.title, cleanUrl.toString());
 
         activeSession = sessionData.session;
@@ -489,40 +491,72 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
   signOut: async () => {
+    const userId = get().user?.id;
     await supabase.auth.signOut();
     localStorage.removeItem('th3vault_ephemeral_wallet_pkey');
+    if (userId) {
+      localStorage.removeItem(`th3vault_ephemeral_wallet_pkey_${userId}`);
+    }
     set({ user: null, session: null, error: null });
   },
   signInWithProvider: async (provider) => {
     set({ error: null, status: 'loading' });
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: provider as any,
-      options: {
-        redirectTo: window.location.origin,
-      },
-    });
+    const currentUser = get().user;
+    const isAnon = currentUser?.is_anonymous || currentUser?.app_metadata?.provider === 'anonymous';
 
-    if (error) {
-      set({ error: error.message, status: 'ready' });
-      return { error: error.message };
+    if (isAnon) {
+      // Upgrade anonymous user by linking OAuth identity (preserves user ID + all data)
+      const { error } = await supabase.auth.linkIdentity({
+        provider: provider as any,
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
+      if (error) {
+        set({ error: error.message, status: 'ready' });
+        return { error: error.message };
+      }
+    } else {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: provider as any,
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
+      if (error) {
+        set({ error: error.message, status: 'ready' });
+        return { error: error.message };
+      }
     }
 
     return { error: null };
   },
   signInWithMagicLink: async (email) => {
     set({ error: null, status: 'loading' });
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: window.location.origin,
-      },
-    });
+    const currentUser = get().user;
+    const isAnon = currentUser?.is_anonymous || currentUser?.app_metadata?.provider === 'anonymous';
 
-    if (error) {
-      set({ error: error.message, status: 'ready' });
-      return { error: error.message };
+    if (isAnon) {
+      // Upgrade anonymous user by adding email (preserves user ID + all data)
+      const { error } = await supabase.auth.updateUser({ email });
+      if (error) {
+        set({ error: error.message, status: 'ready' });
+        return { error: error.message };
+      }
+    } else {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: window.location.origin,
+        },
+      });
+      if (error) {
+        set({ error: error.message, status: 'ready' });
+        return { error: error.message };
+      }
     }
 
+    set({ status: 'ready' });
     return { error: null };
   },
   ensureProfileAndWallet: async (user: User) => {

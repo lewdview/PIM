@@ -175,14 +175,25 @@ export default function WalletConnect({ redirectUri }: WalletConnectProps) {
     setLoading(true);
     setError(null);
     try {
-      const redirectUriParam = redirectUri ? `?redirect_uri=${encodeURIComponent(redirectUri)}` : '';
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'github',
-        options: {
-          redirectTo: window.location.origin + redirectUriParam,
-        },
-      });
-      if (error) throw error;
+      if (isAnonymous) {
+        // Upgrade anonymous user by linking GitHub identity (preserves user ID + all data)
+        const { error } = await supabase.auth.linkIdentity({
+          provider: 'github',
+          options: {
+            redirectTo: window.location.origin + (redirectUri ? `?redirect_uri=${encodeURIComponent(redirectUri)}` : ''),
+          },
+        });
+        if (error) throw error;
+      } else {
+        const redirectUriParam = redirectUri ? `?redirect_uri=${encodeURIComponent(redirectUri)}` : '';
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'github',
+          options: {
+            redirectTo: window.location.origin + redirectUriParam,
+          },
+        });
+        if (error) throw error;
+      }
     } catch (err: any) {
       setError(err?.message || 'GitHub connection failed');
       setLoading(false);
@@ -199,18 +210,27 @@ export default function WalletConnect({ redirectUri }: WalletConnectProps) {
     setError(null);
     setEmailSent(null);
     try {
-      const redirectUriParam = redirectUri ? `?redirect_uri=${encodeURIComponent(redirectUri)}` : '';
-      const { error } = await supabase.auth.signInWithOtp({
-        email: magicEmail.trim(),
-        options: {
-          emailRedirectTo: window.location.origin + redirectUriParam,
-        },
-      });
-      if (error) throw error;
-      setEmailSent('Magic link sent. Check your inbox.');
+      if (isAnonymous) {
+        // Upgrade anonymous user by adding email (preserves user ID + all data)
+        const { error } = await supabase.auth.updateUser({
+          email: magicEmail.trim(),
+        });
+        if (error) throw error;
+        setEmailSent('Verification email sent. Check your inbox to confirm your identity.');
+      } else {
+        const redirectUriParam = redirectUri ? `?redirect_uri=${encodeURIComponent(redirectUri)}` : '';
+        const { error } = await supabase.auth.signInWithOtp({
+          email: magicEmail.trim(),
+          options: {
+            emailRedirectTo: window.location.origin + redirectUriParam,
+          },
+        });
+        if (error) throw error;
+        setEmailSent('Magic link sent. Check your inbox.');
+      }
       setMagicEmail('');
     } catch (err: any) {
-      setError(err?.message || 'Magic link request failed');
+      setError(err?.message || 'Email authentication failed');
     } finally {
       setLoading(false);
     }

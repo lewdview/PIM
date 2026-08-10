@@ -48,8 +48,7 @@ function AnonLoginContent() {
         
         // Append tokens to redirect URL
         const redirectUrl = new URL(redirectUri);
-        redirectUrl.searchParams.set('access_token', accessToken);
-        redirectUrl.searchParams.set('refresh_token', refreshToken);
+        redirectUrl.hash = `access_token=${encodeURIComponent(accessToken)}&refresh_token=${encodeURIComponent(refreshToken)}`;
         
         addLog('[SYSTEM] Establishing secure tunnel handshake...');
         

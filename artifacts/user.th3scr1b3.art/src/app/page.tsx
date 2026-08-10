@@ -124,8 +124,7 @@ export default function Home() {
           console.log('[SYSTEM] Active session detected. Redirecting with tokens...');
           sessionStorage.removeItem('pim_redirect_uri');
           const url = new URL(uri);
-          url.searchParams.set('access_token', session.access_token);
-          url.searchParams.set('refresh_token', session.refresh_token);
+          url.hash = `access_token=${encodeURIComponent(session.access_token)}&refresh_token=${encodeURIComponent(session.refresh_token)}`;
           window.location.href = url.toString();
           return;
         }
@@ -160,8 +159,7 @@ export default function Home() {
           console.log('[SYSTEM] Session state changed. Redirecting with tokens...');
           sessionStorage.removeItem('pim_redirect_uri');
           const url = new URL(uri);
-          url.searchParams.set('access_token', session.access_token);
-          url.searchParams.set('refresh_token', session.refresh_token);
+          url.hash = `access_token=${encodeURIComponent(session.access_token)}&refresh_token=${encodeURIComponent(session.refresh_token)}`;
           window.location.href = url.toString();
           return;
         }
