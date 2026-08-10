@@ -1027,7 +1027,8 @@ function prerenderStaticTrack(
   dpr: number,
   difficultyLevel: number,
   laneColors: [string, string, string],
-  gameTrack: string = 'classic'
+  gameTrack: string = 'classic',
+  povMode: 'classic' | 'cyber_tunnel' | 'dynamic_stage' = 'classic'
 ): HTMLCanvasElement {
   const off = document.createElement("canvas");
   off.width = W * dpr;
@@ -1038,8 +1039,10 @@ function prerenderStaticTrack(
   ctx.scale(dpr, dpr);
 
   const hitY = H * HIT_RATIO;
-  const hwTop = hwAtProgress(0, W);
-  const hwBot = hwAtProgress(1, W);
+  const topRatio = povMode === 'cyber_tunnel' ? 0.18 : HW_TOP;
+  const botRatio = povMode === 'cyber_tunnel' ? 0.86 : HW_BOT;
+  const hwTop = hwAtProgress(0, W, topRatio, botRatio);
+  const hwBot = hwAtProgress(1, W, topRatio, botRatio);
 
   const hillCx = W / 2;
   const hillCy = -hitY * 0.09;
@@ -3581,6 +3584,7 @@ export default function Game() {
             };
             setActivePovMode(targetPov);
             activePovModeRef.current = targetPov;
+            offscreenCanvasRef.current = null; // Reset offscreen track canvas to regenerate geometry for target POV!
           }
         }
 
@@ -3680,7 +3684,8 @@ export default function Game() {
         dpr,
         diffLevel,
         laneColorsRef.current,
-        optsRef.current.gameTrack
+        optsRef.current.gameTrack,
+        activePovModeRef.current
       );
     }
     const isExperimentalArchetype = (calculatedStage === 3 || calculatedStage === 5) && activeArchetypeRef.current !== 'cyber_tunnel';
@@ -7445,6 +7450,11 @@ export default function Game() {
         const selectedArchetype = selectSongArchetype(song);
         activeArchetypeRef.current = selectedArchetype;
         setActiveArchetype(selectedArchetype);
+        if (!isPovLockedRef.current) {
+          setActivePovMode('classic');
+          activePovModeRef.current = 'classic';
+          offscreenCanvasRef.current = null;
+        }
         console.log(`[Track Archetype Engine] Selected archetype '${selectedArchetype}' (${ARCHETYPE_METAS[selectedArchetype].name}) for song '${song?.title}'`);
 
         // Load ghost telemetry
