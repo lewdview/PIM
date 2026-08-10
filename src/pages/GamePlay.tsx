@@ -5455,70 +5455,45 @@ export default function Game() {
           const isArchetypeStage = calculatedStage === 3 || calculatedStage === 5;
           if (isArchetypeStage) {
             drawArchetypeHoldTrail(ctx, W, H, ns, note, prog, headP, noteColor, activeArchetypeRef.current, calculatedStage, t, activePovModeRef.current);
-          } else if (noteY > top) {
+          } else if (!ns.holdActive && headY < noteY) {
             // Determine lanes for the active trail segment
             const { x: hx, w: hw } = laneAt(endLane, headP, W, povTop, povBot);
             const { x: ax, w: aw } = laneAt(ns.visualLane, Math.min(prog, 1), W, povTop, povBot);
-            const midY = (top + noteY) / 2;
+            const midY = (headY + noteY) / 2;
 
             // Trail body (Curved to player's current lane)
             ctx.fillStyle = "rgba(245,240,228,0.22)";
             ctx.beginPath();
-            ctx.moveTo(hx + hw * 0.25, top);
-            ctx.lineTo(hx + hw * 0.75, top);
+            ctx.moveTo(hx + hw * 0.25, headY);
+            ctx.lineTo(hx + hw * 0.75, headY);
             ctx.quadraticCurveTo(ax + aw * 0.75, midY, ax + aw * 0.75, noteY + noteH / 2);
             ctx.lineTo(ax + aw * 0.25, noteY + noteH / 2);
-            ctx.quadraticCurveTo(ax + aw * 0.25, midY, hx + hw * 0.25, top);
+            ctx.quadraticCurveTo(ax + aw * 0.25, midY, hx + hw * 0.25, headY);
             ctx.fill();
 
-            // ── Scrolling Active Trail Gridlines ──
-            ctx.save();
-            ctx.clip();
-            const step = 28;
-            const offset = (Date.now() / 6) % step;
-            ctx.strokeStyle = "rgba(255, 255, 255, 0.14)";
-            ctx.lineWidth = 2.0;
-            for (let y = top - offset; y < noteY + noteH; y += step) {
-              if (y < top) continue;
-              const p_y = (y - top) / (noteY - top || 1);
-              const trailP_y = lerp(headP, Math.min(prog, 1), p_y);
-              const trailLane_y = lerp(endLane, ns.visualLane, p_y);
-              const { x: wx, w: ww } = laneAt(trailLane_y, trailP_y, W, povTop, povBot);
-              ctx.beginPath();
-              ctx.moveTo(wx + ww * 0.25, y);
-              ctx.lineTo(wx + ww * 0.75, y);
-              ctx.stroke();
-            }
-            ctx.restore();
-
-            // Parse note color to RGB for proper alpha compositing
-            const lcR = parseInt(noteColor.slice(1, 3), 16);
-            const lcG = parseInt(noteColor.slice(3, 5), 16);
-            const lcB = parseInt(noteColor.slice(5, 7), 16);
-
-            // Colored stripe (Curved) with glow
+            // Colored center ribbon (curved)
             ctx.fillStyle = noteColor;
-            ctx.globalAlpha = 0.65;
+            ctx.globalAlpha = 0.5;
             ctx.shadowColor = noteColor;
-            ctx.shadowBlur = 12;
+            ctx.shadowBlur = 8;
             ctx.beginPath();
-            ctx.moveTo(hx + hw * 0.38, top);
-            ctx.lineTo(hx + hw * 0.62, top);
+            ctx.moveTo(hx + hw * 0.38, headY);
+            ctx.lineTo(hx + hw * 0.62, headY);
             ctx.quadraticCurveTo(ax + aw * 0.62, midY, ax + aw * 0.62, noteY + noteH / 2);
             ctx.lineTo(ax + aw * 0.38, noteY + noteH / 2);
-            ctx.quadraticCurveTo(ax + aw * 0.38, midY, hx + hw * 0.38, top);
+            ctx.quadraticCurveTo(ax + aw * 0.38, midY, hx + hw * 0.38, headY);
             ctx.fill();
 
             // Outer 3D Neon Laser Edges in Cyber Tunnel Mode
             if (isCyberTunnel) {
               ctx.strokeStyle = noteColor;
-              ctx.lineWidth = 3;
+              ctx.lineWidth = 2.5;
               ctx.shadowColor = noteColor;
-              ctx.shadowBlur = 16;
+              ctx.shadowBlur = 14;
               ctx.beginPath();
-              ctx.moveTo(hx + hw * 0.25, top);
+              ctx.moveTo(hx + hw * 0.25, headY);
               ctx.quadraticCurveTo(ax + aw * 0.25, midY, ax + aw * 0.25, noteY + noteH / 2);
-              ctx.moveTo(hx + hw * 0.75, top);
+              ctx.moveTo(hx + hw * 0.75, headY);
               ctx.quadraticCurveTo(ax + aw * 0.75, midY, ax + aw * 0.75, noteY + noteH / 2);
               ctx.stroke();
             }
@@ -5526,123 +5501,38 @@ export default function Game() {
             ctx.globalAlpha = 1;
             ctx.shadowBlur = 0;
             ctx.shadowColor = "transparent";
-
-            // ── Slide direction arrow indicator at the hit line ──
-            if (note.targetLane !== undefined && Math.abs(ns.visualLane - note.targetLane) > 0.05) {
-              const arrowDir = note.targetLane > ns.visualLane ? 1 : -1;
-              const arrowX = ax + aw * 0.5 + arrowDir * aw * 0.35;
-              const arrowY = noteY;
-              const arrowPulse = 0.5 + 0.5 * Math.sin(t * 8);
-              ctx.save();
-              ctx.globalAlpha = 0.6 + arrowPulse * 0.4;
-              ctx.fillStyle = noteColor;
-              ctx.shadowColor = noteColor;
-              ctx.shadowBlur = 12;
-              ctx.beginPath();
-              ctx.moveTo(arrowX + arrowDir * 12, arrowY);
-              ctx.lineTo(arrowX - arrowDir * 4, arrowY - 8);
-              ctx.lineTo(arrowX - arrowDir * 4, arrowY + 8);
-              ctx.closePath();
-              ctx.fill();
-              ctx.restore();
-            }
-            
-            // Compute effective swipe direction for terminus tail block (for swipes or slides)
-            const tailSwipeDir: Note['swipeDirection'] | undefined = (note.targetLane !== undefined ? (note.targetLane > startLane ? 'right' : 'left') : undefined) || note.swipeDirection;
-
-            // Draw gold terminus block at top of active hold
-            const tailP = lerp(headP, 1.0, ns.holdProgress);
-            const { x: tx_active, w: tw_active } = laneAt(endLane, tailP, W, povTop, povBot);
-            const tailH_active = lerp(80, 140, tailP);
-            const tailW_active = tw_active;
-            const tailX_active = tx_active;
-            const tailR_active = lerp(12, 24, tailP);
-            drawKey(ctx, tailX_active, top, tailW_active, tailH_active, tailR_active, noteColor, tailP, true, tailSwipeDir, note.time * 3700, note.type);
-          }
-        } else if (headY < noteY) {
-          const isArchetypeStage = calculatedStage === 3 || calculatedStage === 5;
-          if (isArchetypeStage) {
-            drawArchetypeHoldTrail(ctx, W, H, ns, note, prog, headP, noteColor, activeArchetypeRef.current, calculatedStage, t, activePovModeRef.current);
-          } else {
-            // Inactive trail — SMOOTH CURVE if it's a slide
-            const { x: hx, w: hw } = laneAt(endLane, headP, W, povTop, povBot);
-            const { x: tx, w: tw } = laneAt(startLane, prog, W, povTop, povBot);
-
-          const midY = (headY + noteY) / 2;
-
-          ctx.fillStyle = "rgba(245,240,228,0.18)";
-          ctx.beginPath();
-          ctx.moveTo(hx + hw * 0.25, headY);
-          ctx.lineTo(hx + hw * 0.75, headY);
-          ctx.quadraticCurveTo(tx + tw * 0.75, midY, tx + tw * 0.75, noteY + noteH / 2);
-          ctx.lineTo(tx + tw * 0.25, noteY + noteH / 2);
-          ctx.quadraticCurveTo(tx + tw * 0.25, midY, hx + hw * 0.25, headY);
-          ctx.fill();
-
-          // Colored center ribbon (curved)
-          ctx.fillStyle = noteColor;
-          ctx.globalAlpha = 0.5;
-          ctx.shadowColor = noteColor;
-          ctx.shadowBlur = 8;
-          ctx.beginPath();
-          ctx.moveTo(hx + hw * 0.38, headY);
-          ctx.lineTo(hx + hw * 0.62, headY);
-          ctx.quadraticCurveTo(tx + tw * 0.62, midY, tx + tw * 0.62, noteY + noteH / 2);
-          ctx.lineTo(tx + tw * 0.38, noteY + noteH / 2);
-          ctx.quadraticCurveTo(tx + tw * 0.38, midY, hx + hw * 0.38, headY);
-          ctx.fill();
-
-          // Outer 3D Neon Laser Edges in Cyber Tunnel Mode
-          if (isCyberTunnel) {
-            ctx.strokeStyle = noteColor;
-            ctx.lineWidth = 2.5;
-            ctx.shadowColor = noteColor;
-            ctx.shadowBlur = 14;
-            ctx.beginPath();
-            ctx.moveTo(hx + hw * 0.25, headY);
-            ctx.quadraticCurveTo(tx + tw * 0.25, midY, tx + tw * 0.25, noteY + noteH / 2);
-            ctx.moveTo(hx + hw * 0.75, headY);
-            ctx.quadraticCurveTo(tx + tw * 0.75, midY, tx + tw * 0.75, noteY + noteH / 2);
-            ctx.stroke();
           }
 
-          ctx.globalAlpha = 1;
-          ctx.shadowBlur = 0;
-          ctx.shadowColor = "transparent";
-
-          // Draw animated slide direction chevrons along trail if it's a slide note
-          if (note.targetLane !== undefined && Math.abs(startLane - endLane) > 0) {
-            const arrowDir = endLane > startLane ? 1 : -1;
-            const arrowX = (hx + tx) / 2 + arrowDir * 16;
-            const arrowY = midY;
-            const arrowPulse = 0.5 + 0.5 * Math.sin(t * 10);
-            ctx.save();
-            ctx.globalAlpha = 0.75 + arrowPulse * 0.25;
-            ctx.fillStyle = "#FFD700";
-            ctx.shadowColor = "#FFD700";
-            ctx.shadowBlur = 14;
-            ctx.beginPath();
-            ctx.moveTo(arrowX + arrowDir * 14, arrowY);
-            ctx.lineTo(arrowX - arrowDir * 6, arrowY - 10);
-            ctx.lineTo(arrowX - arrowDir * 6, arrowY + 10);
-            ctx.closePath();
-            ctx.fill();
-            ctx.restore();
-          }
-
-          // Draw gold terminus block at the tail of the inactive hold (at headY)
-          const tailH_inactive = lerp(80, 140, headP);
-          const tailW_inactive = hw;
-          const tailX_inactive = hx;
-          const tailR_inactive = lerp(12, 24, headP);
+          // Compute effective swipe direction for terminus tail block (for swipes or slides)
           const tailSwipeDir: Note['swipeDirection'] | undefined = (note.targetLane !== undefined ? (note.targetLane > startLane ? 'right' : 'left') : undefined) || note.swipeDirection;
-          drawKey(ctx, tailX_inactive, headY, tailW_inactive, tailH_inactive, tailR_inactive, noteColor, headP, true, tailSwipeDir, note.time * 3700, note.type);
+          const headSwipeDir = tailSwipeDir;
+
+          // Draw gold terminus block at the tail of the inactive hold (at headP)
+          if (!ns.holdActive && headP > 0 && headP <= 1) {
+            const tailProj = getArchetypeProjection(endLane, headP, W, H, activeArchetypeRef.current, calculatedStage, t, activePovModeRef.current);
+            const tailR = lerp(12, 24, headP);
+            if (tailProj.rot !== 0) {
+              ctx.save();
+              ctx.translate(tailProj.x + tailProj.w / 2, tailProj.y);
+              ctx.rotate(tailProj.rot);
+              drawKey(ctx, -tailProj.w / 2, 0, tailProj.w, tailProj.h, tailR, noteColor, headP, true, tailSwipeDir, note.time * 3700, note.type);
+              ctx.restore();
+            } else {
+              drawKey(ctx, tailProj.x, tailProj.y, tailProj.w, tailProj.h, tailR, noteColor, headP, true, tailSwipeDir, note.time * 3700, note.type);
+            }
+          }
+
+          // Draw gold note box at the head of the hold note (at prog)
+          if (proj.rot !== 0) {
+            ctx.save();
+            ctx.translate(drawX + noteW / 2, noteY);
+            ctx.rotate(proj.rot);
+            drawKey(ctx, -noteW / 2, 0, noteW, noteH, r, noteColor, prog, false, headSwipeDir, note.time * 3700, note.type);
+            ctx.restore();
+          } else {
+            drawKey(ctx, drawX, noteY, noteW, noteH, r, noteColor, prog, false, headSwipeDir, note.time * 3700, note.type);
           }
         }
-
-        const headSwipeDir: Note['swipeDirection'] | undefined = (note.targetLane !== undefined ? (note.targetLane > startLane ? 'right' : 'left') : undefined) || note.swipeDirection;
-        drawKey(ctx, drawX, noteY, noteW, noteH, r, noteColor, prog, false, headSwipeDir, note.time * 3700, note.type);
-      }
 
       if (isMissedNote) {
         ctx.restore();
