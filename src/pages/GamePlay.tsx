@@ -4476,6 +4476,7 @@ export default function Game() {
 
           // Full 360° 3D Cylindrical Tunnel Depth Rings with Swirl Rotation
           const depthDepths = [0.06, 0.18, 0.35, 0.55, 0.75, 0.95];
+          ctx.save();
           ctx.globalCompositeOperation = "screen";
 
           depthDepths.forEach((p, idx) => {
@@ -4494,18 +4495,18 @@ export default function Game() {
             const lineWidth = lerp(1.8, 5.2, p);
 
             // Enhanced Chromatic Rings
-            const baseR = isOverdrive ? (isCyan ? 50 : 255) : (isCyan ? 0 : 255);
-            const baseG = isOverdrive ? 255 : (isCyan ? 229 : 20);
-            const baseB = isOverdrive ? (isCyan ? 50 : 255) : (isCyan ? 255 : 147);
-
-            const chromOffset = 2 + beatPulseVal * 3;
+            const ringColor = isOverdrive
+              ? (isCyan ? "rgba(0, 229, 255, " : "rgba(255, 0, 127, ")
+              : (isCyan ? "rgba(0, 229, 255, " : "rgba(255, 20, 147, ");
 
             ctx.beginPath();
-            ctx.ellipse(-chromOffset, 0, ringRadiusX, ringRadiusY, 0, 0, Math.PI * 2);
-            ctx.strokeStyle = `rgba(255, 0, 0, ${ringAlpha * 0.7})`;
+            ctx.ellipse(0, 0, ringRadiusX, ringRadiusY, 0, 0, Math.PI * 2);
+            ctx.strokeStyle = `${ringColor}${ringAlpha})`;
             ctx.lineWidth = lineWidth;
             ctx.stroke();
+            ctx.restore();
           });
+          ctx.restore();
         }
 
         // Particle Dust/Stars in the Tunnel/Space
