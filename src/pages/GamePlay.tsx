@@ -1,3 +1,4 @@
+// PIM : beatstar-vault gameplay engine
 import React, { useEffect, useLayoutEffect, useRef, useState, useCallback, memo } from "react";
 import { useParams, useLocation } from "wouter";
 import { getSongById, saveHighScore, isSongTimeLocked, getModifierForSong, STAGEIFICATION_CONFIG } from "@/game/api";
