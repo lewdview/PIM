@@ -849,15 +849,18 @@ export function getArchetypeProjection(
   H: number,
   archetype: TrackArchetype,
   stage: number,
-  t: number
+  t: number,
+  povMode: 'classic' | 'cyber_tunnel' | 'dynamic_stage' = 'classic'
 ): ProjectionResult {
   const hitY = H * HIT_RATIO;
   const isExperimentalArchetype = (stage === 3 || stage === 5) && archetype !== 'cyber_tunnel';
 
   if (!isExperimentalArchetype) {
-    // Cyber Tunnel uses 0.18 -> 0.86, Classic uses HW_TOP -> HW_BOT
-    const topRatio = archetype === 'cyber_tunnel' ? 0.18 : HW_TOP;
-    const botRatio = archetype === 'cyber_tunnel' ? 0.86 : HW_BOT;
+    // Only use Cyber Tunnel wide ratios (0.18 -> 0.86) when active POV is cyber_tunnel in Stage 3 or 5!
+    // In Stage 1, 2, and 4, retain standard 2.5D Classic Highway ratios (HW_TOP -> HW_BOT)
+    const isCyberTunnelPOV = povMode === 'cyber_tunnel' && (stage === 3 || stage === 5);
+    const topRatio = isCyberTunnelPOV ? 0.18 : HW_TOP;
+    const botRatio = isCyberTunnelPOV ? 0.86 : HW_BOT;
     const { x, w } = laneAt(lane, prog, W, topRatio, botRatio);
     const noteY = prog * hitY;
     const noteH = lerp(80, 140, prog);
@@ -946,7 +949,8 @@ export function drawArchetypeHoldTrail(
   noteColor: string,
   archetype: TrackArchetype,
   stage: number,
-  t: number
+  t: number,
+  povMode: 'classic' | 'cyber_tunnel' | 'dynamic_stage' = 'classic'
 ) {
   const startLane = note.lane;
   const endLane = note.targetLane !== undefined ? note.targetLane : note.lane;
@@ -963,7 +967,7 @@ export function drawArchetypeHoldTrail(
   for (let s = 0; s <= steps; s++) {
     const sampleP = lerp(pStart, pEnd, s / steps);
     const sampleLane = ns.holdActive ? lerp(endLane, ns.visualLane, s / steps) : lerp(endLane, startLane, s / steps);
-    const projSample = getArchetypeProjection(sampleLane, sampleP, W, H, archetype, stage, t);
+    const projSample = getArchetypeProjection(sampleLane, sampleP, W, H, archetype, stage, t, povMode);
 
     const cx = projSample.x + projSample.w / 2;
     const cy = projSample.y;
@@ -4552,7 +4556,7 @@ export default function Game() {
       const hwBot = hwAtProgress(1, W);
       const laneW = hwBot.width / LANE_COUNT;
       for (let lane = 0; lane < LANE_COUNT; lane++) {
-        const targetProj = getArchetypeProjection(lane, 1, W, H, activeArchetypeRef.current, calculatedStage, t);
+        const targetProj = getArchetypeProjection(lane, 1, W, H, activeArchetypeRef.current, calculatedStage, t, activePovModeRef.current);
         const laneCenterX = targetProj.x + targetProj.w / 2;
         const laneCenterY = targetProj.y;
         const targetRadiusX = targetProj.w * 0.43;
@@ -5293,7 +5297,7 @@ export default function Game() {
       const povTop = isCyberTunnel ? 0.18 : HW_TOP;
       const povBot = isCyberTunnel ? 0.86 : HW_BOT;
 
-      const proj = getArchetypeProjection(note.lane, prog, W, H, activeArchetypeRef.current, calculatedStage, t);
+      const proj = getArchetypeProjection(note.lane, prog, W, H, activeArchetypeRef.current, calculatedStage, t, activePovModeRef.current);
       let noteH = proj.h;
       let noteW = proj.w;
       let noteX = proj.x;
@@ -5449,7 +5453,7 @@ export default function Game() {
 
           const isArchetypeStage = calculatedStage === 3 || calculatedStage === 5;
           if (isArchetypeStage) {
-            drawArchetypeHoldTrail(ctx, W, H, ns, note, prog, headP, noteColor, activeArchetypeRef.current, calculatedStage, t);
+            drawArchetypeHoldTrail(ctx, W, H, ns, note, prog, headP, noteColor, activeArchetypeRef.current, calculatedStage, t, activePovModeRef.current);
           } else if (noteY > top) {
             // Determine lanes for the active trail segment
             const { x: hx, w: hw } = laneAt(endLane, headP, W, povTop, povBot);
@@ -5557,7 +5561,7 @@ export default function Game() {
         } else if (headY < noteY) {
           const isArchetypeStage = calculatedStage === 3 || calculatedStage === 5;
           if (isArchetypeStage) {
-            drawArchetypeHoldTrail(ctx, W, H, ns, note, prog, headP, noteColor, activeArchetypeRef.current, calculatedStage, t);
+            drawArchetypeHoldTrail(ctx, W, H, ns, note, prog, headP, noteColor, activeArchetypeRef.current, calculatedStage, t, activePovModeRef.current);
           } else {
             // Inactive trail — SMOOTH CURVE if it's a slide
             const { x: hx, w: hw } = laneAt(endLane, headP, W, povTop, povBot);
