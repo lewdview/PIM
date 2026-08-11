@@ -19,13 +19,13 @@ import { motion, useInView, AnimatePresence } from 'framer-motion';
 import { Link, useLocation, useParams, useSearch } from 'wouter';
 import {
   ChevronDown, Play, Pause, Volume2, Sparkles, X, Info, Disc, ExternalLink, Film,
-  Flame, Shield, Layers, Award, Search, Lock, ChevronLeft, ChevronRight, Command, Calendar
+  Flame, Shield, Layers, Award, Search, Lock, ChevronLeft, ChevronRight, Command, Calendar,
+  Gamepad2, Keyboard, MousePointer, Smartphone
 } from 'lucide-react';
 import { getCurrentDay, getTimeUntilNextDay, formatDate, getDateFromDay } from '../utils/dayCalc';
 import { extractPalette, getFallbackPalette, type ExtractedPalette } from '../utils/extractPalette';
 import { audioManager } from '../game/audio';
 import { useVaultStore } from '../store/useVaultStore';
-import PlayableInputsSection from '../components/PlayableInputsSection';
 import { supabase } from '@/services/supabaseClient';
 import '../styles/HeroLandingPage.css';
 
@@ -811,8 +811,29 @@ export default function HeroLandingPage() {
                 <span>EXPORT PERFECT VIDEO</span>
               </button>
             )}
-            <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-white/40 border-t border-b border-white/10 py-1 px-6 mt-1">
-              ─────────────── No account required ───────────────
+            {/* Playable Control Options Bar */}
+            <div className="flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md mt-2 shadow-[0_0_15px_rgba(255,255,255,0.05)]">
+              <span className="font-mono text-[9px] font-bold text-white/40 uppercase tracking-widest mr-0.5">PLAYABLE VIA</span>
+              
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400" title="Touch / Mobile Screen Haptics">
+                <Smartphone size={12} />
+                <span className="font-mono text-[9px] font-bold uppercase tracking-wider hidden sm:inline">TOUCH</span>
+              </div>
+
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-purple-500/10 border border-purple-500/30 text-purple-300" title="Gamepad / Arcade Controller">
+                <Gamepad2 size={12} />
+                <span className="font-mono text-[9px] font-bold uppercase tracking-wider hidden sm:inline">CONTROLLER</span>
+              </div>
+
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-300" title="Precision Mouse & Trackpad">
+                <MousePointer size={12} />
+                <span className="font-mono text-[9px] font-bold uppercase tracking-wider hidden sm:inline">MOUSE</span>
+              </div>
+
+              <div className="flex items-center gap-1 px-2 py-0.5 rounded bg-sky-500/10 border border-sky-500/30 text-sky-300" title="Mechanical Keyboard (D, F, J, K / 1, 2, 3)">
+                <Keyboard size={12} />
+                <span className="font-mono text-[9px] font-bold uppercase tracking-wider hidden sm:inline">KEYBOARD</span>
+              </div>
             </div>
           </div>
 
@@ -1233,11 +1254,6 @@ export default function HeroLandingPage() {
           )}
         </motion.div>
       </section>
-
-      <div className="hero-section-divider" />
-
-      {/* ═══════════ SECTION 6.5 : PLAYABLE INPUT MODES (TOUCH, CONTROLLER, MOUSE, KEYBOARD) ═══════════ */}
-      <PlayableInputsSection />
 
       <div className="hero-section-divider" />
 
