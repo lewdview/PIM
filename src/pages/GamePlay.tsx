@@ -1023,6 +1023,25 @@ export function drawArchetypeHoldTrail(
   }
   ctx.closePath();
   ctx.fill();
+
+  // Outer 3D Neon Laser Edges in Cyber Tunnel Mode
+  if (povMode === 'cyber_tunnel') {
+    ctx.strokeStyle = noteColor;
+    ctx.lineWidth = 3.0;
+    ctx.shadowColor = noteColor;
+    ctx.shadowBlur = 16;
+    ctx.beginPath();
+    ctx.moveTo(leftPoints[0].x, leftPoints[0].y);
+    for (let i = 1; i <= steps; i++) {
+      ctx.lineTo(leftPoints[i].x, leftPoints[i].y);
+    }
+    ctx.moveTo(rightPoints[0].x, rightPoints[0].y);
+    for (let i = 1; i <= steps; i++) {
+      ctx.lineTo(rightPoints[i].x, rightPoints[i].y);
+    }
+    ctx.stroke();
+  }
+
   ctx.restore();
 }
 
@@ -5454,60 +5473,30 @@ export default function Game() {
           ctx.restore();
         }
 
-        const isArchetypeStage = calculatedStage === 3 || calculatedStage === 5;
-        if (isArchetypeStage) {
-          drawArchetypeHoldTrail(ctx, W, H, ns, note, prog, headP, noteColor, activeArchetypeRef.current, calculatedStage, t, activePovModeRef.current);
-        } else if (!ns.holdActive && headY < noteY) {
-          // Determine lanes for the active trail segment
-          const { x: hx, w: hw } = laneAt(endLane, headP, W, povTop, povBot);
-          const { x: ax, w: aw } = laneAt(ns.visualLane, Math.min(prog, 1), W, povTop, povBot);
-          const midY = (headY + noteY) / 2;
+        // 1. Draw Hold Trail (Active or Inactive) across ALL POV modes & stages!
+        drawArchetypeHoldTrail(
+          ctx, W, H, ns, note, prog, headP, noteColor,
+          activeArchetypeRef.current, calculatedStage, t, activePovModeRef.current
+        );
 
-          // Trail body (Curved to player's current lane)
-          ctx.fillStyle = "rgba(245,240,228,0.22)";
-          ctx.beginPath();
-          ctx.moveTo(hx + hw * 0.25, headY);
-          ctx.lineTo(hx + hw * 0.75, headY);
-          ctx.quadraticCurveTo(ax + aw * 0.75, midY, ax + aw * 0.75, noteY + noteH / 2);
-          ctx.lineTo(ax + aw * 0.25, noteY + noteH / 2);
-          ctx.quadraticCurveTo(ax + aw * 0.25, midY, hx + hw * 0.25, headY);
-          ctx.fill();
-
-          // Colored center ribbon (curved)
-          ctx.fillStyle = noteColor;
-          ctx.globalAlpha = 0.5;
-          ctx.shadowColor = noteColor;
-          ctx.shadowBlur = 8;
-          ctx.beginPath();
-          ctx.moveTo(hx + hw * 0.38, headY);
-          ctx.lineTo(hx + hw * 0.62, headY);
-          ctx.quadraticCurveTo(ax + aw * 0.62, midY, ax + aw * 0.62, noteY + noteH / 2);
-          ctx.lineTo(ax + aw * 0.38, noteY + noteH / 2);
-          ctx.quadraticCurveTo(ax + aw * 0.38, midY, hx + hw * 0.38, headY);
-          ctx.fill();
-
-          // Outer 3D Neon Laser Edges in Cyber Tunnel Mode
-          if (isCyberTunnel) {
-            ctx.strokeStyle = noteColor;
-            ctx.lineWidth = 2.5;
-            ctx.shadowColor = noteColor;
-            ctx.shadowBlur = 14;
-            ctx.beginPath();
-            ctx.moveTo(hx + hw * 0.25, headY);
-            ctx.quadraticCurveTo(ax + aw * 0.25, midY, ax + aw * 0.25, noteY + noteH / 2);
-            ctx.moveTo(hx + hw * 0.75, headY);
-            ctx.quadraticCurveTo(ax + aw * 0.75, midY, ax + aw * 0.75, noteY + noteH / 2);
-            ctx.stroke();
-          }
-
-          ctx.globalAlpha = 1;
-          ctx.shadowBlur = 0;
-          ctx.shadowColor = "transparent";
-        }
-
-        // Compute effective swipe direction for terminus tail block (for swipes or slides)
+        // 2. Draw Top Terminus Box for Active Hold
         const tailSwipeDir: Note['swipeDirection'] | undefined = (note.targetLane !== undefined ? (note.targetLane > startLane ? 'right' : 'left') : undefined) || note.swipeDirection;
         const headSwipeDir = tailSwipeDir;
+
+        if (ns.holdActive) {
+          const tailP = lerp(headP, 1.0, ns.holdProgress);
+          const tailProj = getArchetypeProjection(endLane, tailP, W, H, activeArchetypeRef.current, calculatedStage, t, activePovModeRef.current);
+          const tailR = lerp(12, 24, tailP);
+          if (tailProj.rot !== 0) {
+            ctx.save();
+            ctx.translate(tailProj.x + tailProj.w / 2, tailProj.y);
+            ctx.rotate(tailProj.rot);
+            drawKey(ctx, -tailProj.w / 2, 0, tailProj.w, tailProj.h, tailR, noteColor, tailP, true, tailSwipeDir, note.time * 3700, note.type);
+            ctx.restore();
+          } else {
+            drawKey(ctx, tailProj.x, tailProj.y, tailProj.w, tailProj.h, tailR, noteColor, tailP, true, tailSwipeDir, note.time * 3700, note.type);
+          }
+        }
 
         // Draw gold terminus block at the tail of the inactive hold (at headP)
         if (!ns.holdActive && headP > 0 && headP <= 1) {
