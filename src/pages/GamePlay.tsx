@@ -893,22 +893,26 @@ export function getArchetypeProjection(
     return { x: noteX, y: noteY, w: noteW, h: noteH, rot: Math.PI / 2, scale: lerp(0.5, 1.0, prog) };
   }
 
-  // 🎯 360° RADIAL CYBER ORBIT (Notes travel straight from top/outer rim to target hit buttons)
+  // 🎯 360° RADIAL CYBER ORBIT (1.5x Bigger: Notes rotate 360° inward toward center hit buttons)
   if (archetype === 'radial_orbit') {
     const cx = W / 2;
     const cy = H * 0.48; // Centered vertically in playfield
     const radarRot = t * 0.65; // Continuous 360° radar rotation
     const baseAngles = [(210 * Math.PI) / 180, (270 * Math.PI) / 180, (330 * Math.PI) / 180];
-    const angle = (baseAngles[lane] || (270 * Math.PI) / 180) + radarRot;
+    const laneAngle = (baseAngles[lane] || (270 * Math.PI) / 180) + radarRot;
+    
+    // Notes rotate 360° around the center as they travel inward
+    const spiralRot = (1 - prog) * Math.PI * 2.0;
+    const angle = laneAngle + spiralRot;
 
-    const rTop = Math.min(W, H) * 0.38; // Spawns from top / outer rim
-    const rHit = Math.min(W, H) * 0.16; // Precise target hit pad
-    const radius = lerp(rTop, rHit, prog); // Travels straight along spoke vector from top down to hit pad
+    const rOuter = Math.min(W, H) * 0.55; // 1.5x Bigger outer spawn rim
+    const rHit = Math.min(W, H) * 0.26; // 1.5x Bigger target hit pad ring
+    const radius = lerp(rOuter, rHit, prog); // Travels inward toward center hit pads
     const x = cx + Math.cos(angle) * radius;
     const y = cy + Math.sin(angle) * radius;
-    const noteW = lerp(60, 38, prog);
-    const noteH = lerp(50, 32, prog);
-    return { x, y, w: noteW, h: noteH, rot: angle + Math.PI / 2, scale: lerp(1.0, 0.5, prog) };
+    const noteW = lerp(90, 58, prog); // 1.5x Bigger note dimensions
+    const noteH = lerp(75, 48, prog);
+    return { x, y, w: noteW, h: noteH, rot: angle + Math.PI / 2, scale: lerp(1.1, 0.7, prog) };
   }
 
   // 🌀 3D TWISTING CORKSCREW HELICAL SLIDE
@@ -4351,13 +4355,14 @@ export default function Game() {
           ctx.fillStyle = orbitBg;
           ctx.fillRect(0, 0, W, H);
 
-          // Concentric Glowing Orbit Rings
-          const rTop = Math.min(W, H) * 0.38; // Spawns from top / outer rim
-          const rHit = Math.min(W, H) * 0.16; // Target hit button pad
-          const ringRadii = [rHit, rHit + (rTop - rHit) * 0.5, rTop];
+          // Concentric Glowing Orbit Rings (1.5x Scale)
+          const rOuter = Math.min(W, H) * 0.55; // Outer 1.5x spawn rim
+          const rHit = Math.min(W, H) * 0.26; // Target hit button pad ring
+          const rMin = Math.min(W, H) * 0.10;
+          const ringRadii = [rMin, rHit, rHit + (rOuter - rHit) * 0.5, rOuter];
 
           ringRadii.forEach((r, idx) => {
-            const laneCol = laneColorsRef.current[idx] || '#00E5FF';
+            const laneCol = laneColorsRef.current[idx % 3] || '#00E5FF';
             ctx.strokeStyle = colorWithAlpha(laneCol, 0.4 + beatPulseVal * 0.25);
             ctx.lineWidth = 2.0;
             ctx.beginPath();
@@ -4371,46 +4376,46 @@ export default function Game() {
             const ang = baseAng + radarRot;
             const laneCol = laneColorsRef.current[idx] || '#00E5FF';
             
-            // Rotating Spoke Beam from Outer Rim down to Center Hub
+            // Rotating Spoke Beam from Center Hub outward to Outer Rim
             ctx.strokeStyle = colorWithAlpha(laneCol, 0.65);
-            ctx.lineWidth = 2.5;
+            ctx.lineWidth = 2.8;
             ctx.beginPath();
-            ctx.moveTo(orbitCx + Math.cos(ang) * (rHit * 0.5), orbitCy + Math.sin(ang) * (rHit * 0.5));
-            ctx.lineTo(orbitCx + Math.cos(ang) * (rTop * 1.1), orbitCy + Math.sin(ang) * (rTop * 1.1));
+            ctx.moveTo(orbitCx + Math.cos(ang) * (rMin * 0.6), orbitCy + Math.sin(ang) * (rMin * 0.6));
+            ctx.lineTo(orbitCx + Math.cos(ang) * (rOuter * 1.1), orbitCy + Math.sin(ang) * (rOuter * 1.1));
             ctx.stroke();
 
-            // Precise Dual-Ring Target Hit Zone at rHit
+            // Precise 1.5x Dual-Ring Target Hit Zone at rHit
             const bx = orbitCx + Math.cos(ang) * rHit;
             const by = orbitCy + Math.sin(ang) * rHit;
             
             ctx.save();
             // Outer Neon Halo Ring
             ctx.strokeStyle = laneCol;
-            ctx.lineWidth = 3.5;
+            ctx.lineWidth = 4.0;
             ctx.shadowColor = laneCol;
-            ctx.shadowBlur = 18;
+            ctx.shadowBlur = 22;
             ctx.beginPath();
-            ctx.arc(bx, by, 18, 0, Math.PI * 2);
+            ctx.arc(bx, by, 26, 0, Math.PI * 2);
             ctx.stroke();
 
             // Inner Precision Crosshair Circle
             ctx.strokeStyle = '#FFFFFF';
-            ctx.lineWidth = 1.6;
+            ctx.lineWidth = 2.0;
             ctx.beginPath();
-            ctx.arc(bx, by, 12, 0, Math.PI * 2);
+            ctx.arc(bx, by, 17, 0, Math.PI * 2);
             ctx.stroke();
 
             // Crosshair Ticks (+)
-            ctx.lineWidth = 1.2;
+            ctx.lineWidth = 1.5;
             ctx.beginPath();
-            ctx.moveTo(bx - 5, by); ctx.lineTo(bx + 5, by);
-            ctx.moveTo(bx, by - 5); ctx.lineTo(bx, by + 5);
+            ctx.moveTo(bx - 7, by); ctx.lineTo(bx + 7, by);
+            ctx.moveTo(bx, by - 7); ctx.lineTo(bx, by + 7);
             ctx.stroke();
 
             // Key Label Badge (A / S / D)
             const keyLabel = idx === 0 ? 'A' : idx === 1 ? 'S' : 'D';
             ctx.fillStyle = '#FFFFFF';
-            ctx.font = '900 10px "Space Mono", monospace';
+            ctx.font = '900 13px "Space Mono", monospace';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(keyLabel, bx, by);
