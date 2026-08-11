@@ -893,26 +893,22 @@ export function getArchetypeProjection(
     return { x: noteX, y: noteY, w: noteW, h: noteH, rot: Math.PI / 2, scale: lerp(0.5, 1.0, prog) };
   }
 
-  // 🎯 360° RADIAL CYBER ORBIT (Notes spiral 360° from top down to rotating target buttons)
+  // 🎯 360° RADIAL CYBER ORBIT (Notes travel straight from top/outer rim to target hit buttons)
   if (archetype === 'radial_orbit') {
     const cx = W / 2;
     const cy = H * 0.48; // Centered vertically in playfield
     const radarRot = t * 0.65; // Continuous 360° radar rotation
     const baseAngles = [(210 * Math.PI) / 180, (270 * Math.PI) / 180, (330 * Math.PI) / 180];
-    const laneAngle = (baseAngles[lane] || (270 * Math.PI) / 180) + radarRot;
-    
-    // 360° spiral orbit trajectory: notes rotate 360° from top-down spawn down to hit button
-    const spiralRot = (1 - prog) * Math.PI * 2;
-    const angle = laneAngle + spiralRot;
+    const angle = (baseAngles[lane] || (270 * Math.PI) / 180) + radarRot;
 
-    const rMin = Math.min(W, H) * 0.08;
-    const rHit = Math.min(W, H) * 0.35;
-    const radius = lerp(rMin, rHit, prog);
+    const rTop = Math.min(W, H) * 0.38; // Spawns from top / outer rim
+    const rHit = Math.min(W, H) * 0.16; // Precise target hit pad
+    const radius = lerp(rTop, rHit, prog); // Travels straight along spoke vector from top down to hit pad
     const x = cx + Math.cos(angle) * radius;
     const y = cy + Math.sin(angle) * radius;
-    const noteW = lerp(35, 90, prog);
-    const noteH = lerp(30, 80, prog);
-    return { x, y, w: noteW, h: noteH, rot: angle + Math.PI / 2, scale: lerp(0.4, 1.0, prog) };
+    const noteW = lerp(60, 38, prog);
+    const noteH = lerp(50, 32, prog);
+    return { x, y, w: noteW, h: noteH, rot: angle + Math.PI / 2, scale: lerp(1.0, 0.5, prog) };
   }
 
   // 🌀 3D TWISTING CORKSCREW HELICAL SLIDE
@@ -4355,10 +4351,10 @@ export default function Game() {
           ctx.fillStyle = orbitBg;
           ctx.fillRect(0, 0, W, H);
 
-          // 3 Concentric Glowing Orbit Rings
-          const rMin = Math.min(W, H) * 0.08;
-          const rHit = Math.min(W, H) * 0.35;
-          const ringRadii = [rMin + (rHit - rMin) * 0.33, rMin + (rHit - rMin) * 0.66, rHit];
+          // Concentric Glowing Orbit Rings
+          const rTop = Math.min(W, H) * 0.38; // Spawns from top / outer rim
+          const rHit = Math.min(W, H) * 0.16; // Target hit button pad
+          const ringRadii = [rHit, rHit + (rTop - rHit) * 0.5, rTop];
 
           ringRadii.forEach((r, idx) => {
             const laneCol = laneColorsRef.current[idx] || '#00E5FF';
@@ -4375,12 +4371,12 @@ export default function Game() {
             const ang = baseAng + radarRot;
             const laneCol = laneColorsRef.current[idx] || '#00E5FF';
             
-            // Rotating Spoke Beam
+            // Rotating Spoke Beam from Outer Rim down to Center Hub
             ctx.strokeStyle = colorWithAlpha(laneCol, 0.65);
             ctx.lineWidth = 2.5;
             ctx.beginPath();
-            ctx.moveTo(orbitCx + Math.cos(ang) * (rMin * 0.8), orbitCy + Math.sin(ang) * (rMin * 0.8));
-            ctx.lineTo(orbitCx + Math.cos(ang) * (rHit * 1.15), orbitCy + Math.sin(ang) * (rHit * 1.15));
+            ctx.moveTo(orbitCx + Math.cos(ang) * (rHit * 0.5), orbitCy + Math.sin(ang) * (rHit * 0.5));
+            ctx.lineTo(orbitCx + Math.cos(ang) * (rTop * 1.1), orbitCy + Math.sin(ang) * (rTop * 1.1));
             ctx.stroke();
 
             // Precise Dual-Ring Target Hit Zone at rHit
@@ -4394,27 +4390,27 @@ export default function Game() {
             ctx.shadowColor = laneCol;
             ctx.shadowBlur = 18;
             ctx.beginPath();
-            ctx.arc(bx, by, 22, 0, Math.PI * 2);
+            ctx.arc(bx, by, 18, 0, Math.PI * 2);
             ctx.stroke();
 
             // Inner Precision Crosshair Circle
             ctx.strokeStyle = '#FFFFFF';
-            ctx.lineWidth = 1.8;
+            ctx.lineWidth = 1.6;
             ctx.beginPath();
-            ctx.arc(bx, by, 14, 0, Math.PI * 2);
+            ctx.arc(bx, by, 12, 0, Math.PI * 2);
             ctx.stroke();
 
             // Crosshair Ticks (+)
             ctx.lineWidth = 1.2;
             ctx.beginPath();
-            ctx.moveTo(bx - 6, by); ctx.lineTo(bx + 6, by);
-            ctx.moveTo(bx, by - 6); ctx.lineTo(bx, by + 6);
+            ctx.moveTo(bx - 5, by); ctx.lineTo(bx + 5, by);
+            ctx.moveTo(bx, by - 5); ctx.lineTo(bx, by + 5);
             ctx.stroke();
 
             // Key Label Badge (A / S / D)
             const keyLabel = idx === 0 ? 'A' : idx === 1 ? 'S' : 'D';
             ctx.fillStyle = '#FFFFFF';
-            ctx.font = '900 11px "Space Mono", monospace';
+            ctx.font = '900 10px "Space Mono", monospace';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(keyLabel, bx, by);
