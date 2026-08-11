@@ -860,14 +860,14 @@ export function getArchetypeProjection(
     // Only use Cyber Tunnel wide ratios (0.18 -> 0.86) when active POV is cyber_tunnel in Stage 3 or 5!
     // In Stage 1, 2, and 4, retain standard 2.5D Classic Highway ratios (HW_TOP -> HW_BOT)
     const isCyberTunnelPOV = (povMode === 'cyber_tunnel' || archetype === 'cyber_tunnel');
-    const isWarpStage = stage === 3 || stage === 5;
-    const topRatio = (isCyberTunnelPOV && (stage === 3 || stage === 5)) ? 0.18 : (isCyberTunnelPOV ? 0.20 : HW_TOP);
-    const botRatio = (isCyberTunnelPOV && (stage === 3 || stage === 5)) ? 0.86 : (isCyberTunnelPOV ? 0.84 : HW_BOT);
+    const isCyberStage = isCyberTunnelPOV && (stage === 3 || stage === 5);
+    const topRatio = isCyberStage ? 0.18 : HW_TOP;
+    const botRatio = isCyberStage ? 0.86 : HW_BOT;
     const { x, w } = laneAt(lane, prog, W, topRatio, botRatio);
     const noteY = prog * hitY;
     const noteH = lerp(80, 140, prog);
 
-    if (isCyberTunnelPOV && isWarpStage) {
+    if (isCyberStage) {
       // 🌀 Cylindrical Cyber Tunnel 3D Barrel Warp & Vortex Swirl (STAGE 3 & 5 ONLY)
       const laneOffset = lane - 1; // -1 for left, 0 for center, +1 for right
       const warpFactor = Math.sin(prog * Math.PI); // Parabolic 3D curve along tunnel depth
@@ -1076,7 +1076,8 @@ function prerenderStaticTrack(
   difficultyLevel: number,
   laneColors: [string, string, string],
   gameTrack: string = 'classic',
-  povMode: 'classic' | 'cyber_tunnel' | 'dynamic_stage' = 'classic'
+  povMode: 'classic' | 'cyber_tunnel' | 'dynamic_stage' = 'classic',
+  stage: number = 1
 ): HTMLCanvasElement {
   const off = document.createElement("canvas");
   off.width = W * dpr;
@@ -1087,8 +1088,9 @@ function prerenderStaticTrack(
   ctx.scale(dpr, dpr);
 
   const hitY = H * HIT_RATIO;
-  const topRatio = povMode === 'cyber_tunnel' ? 0.18 : HW_TOP;
-  const botRatio = povMode === 'cyber_tunnel' ? 0.86 : HW_BOT;
+  const isCyberStage = povMode === 'cyber_tunnel' && (stage === 3 || stage === 5);
+  const topRatio = isCyberStage ? 0.18 : HW_TOP;
+  const botRatio = isCyberStage ? 0.86 : HW_BOT;
   const hwTop = hwAtProgress(0, W, topRatio, botRatio);
   const hwBot = hwAtProgress(1, W, topRatio, botRatio);
 
@@ -3733,7 +3735,8 @@ export default function Game() {
         diffLevel,
         laneColorsRef.current,
         optsRef.current.gameTrack,
-        activePovModeRef.current
+        activePovModeRef.current,
+        calculatedStage
       );
     }
     const isExperimentalArchetype = (calculatedStage === 3 || calculatedStage === 5) && activeArchetypeRef.current !== 'cyber_tunnel';
@@ -5338,9 +5341,9 @@ export default function Game() {
       }
       if (noteY < -80) continue;
 
-      const isCyberTunnel = activePovModeRef.current === 'cyber_tunnel';
-      const povTop = isCyberTunnel ? 0.18 : HW_TOP;
-      const povBot = isCyberTunnel ? 0.86 : HW_BOT;
+      const isCyberTunnelStage = activePovModeRef.current === 'cyber_tunnel' && (calculatedStage === 3 || calculatedStage === 5);
+      const povTop = isCyberTunnelStage ? 0.18 : HW_TOP;
+      const povBot = isCyberTunnelStage ? 0.86 : HW_BOT;
 
       const proj = getArchetypeProjection(note.lane, prog, W, H, activeArchetypeRef.current, calculatedStage, t, activePovModeRef.current);
       let noteH = proj.h;
