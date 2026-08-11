@@ -893,15 +893,21 @@ export function getArchetypeProjection(
     return { x: noteX, y: noteY, w: noteW, h: noteH, rot: Math.PI / 2, scale: lerp(0.5, 1.0, prog) };
   }
 
-  // 🎯 360° RADIAL CYBER ORBIT (Notes shoot outward from center to outer target buttons)
+  // 🎯 360° RADIAL CYBER ORBIT (Notes spiral 360° from top down to rotating target buttons)
   if (archetype === 'radial_orbit') {
     const cx = W / 2;
     const cy = H * 0.48; // Centered vertically in playfield
-    const angles = [(210 * Math.PI) / 180, (270 * Math.PI) / 180, (330 * Math.PI) / 180];
-    const angle = angles[lane] || (270 * Math.PI) / 180;
+    const radarRot = t * 0.65; // Continuous 360° radar rotation
+    const baseAngles = [(210 * Math.PI) / 180, (270 * Math.PI) / 180, (330 * Math.PI) / 180];
+    const laneAngle = (baseAngles[lane] || (270 * Math.PI) / 180) + radarRot;
+    
+    // 360° spiral orbit trajectory: notes rotate 360° from top-down spawn down to hit button
+    const spiralRot = (1 - prog) * Math.PI * 2;
+    const angle = laneAngle + spiralRot;
+
     const rMin = Math.min(W, H) * 0.08;
-    const rMax = Math.min(W, H) * 0.38;
-    const radius = lerp(rMin, rMax, prog); // Travels outward from center hub to target buttons
+    const rHit = Math.min(W, H) * 0.35;
+    const radius = lerp(rMin, rHit, prog);
     const x = cx + Math.cos(angle) * radius;
     const y = cy + Math.sin(angle) * radius;
     const noteW = lerp(35, 90, prog);
@@ -4339,6 +4345,7 @@ export default function Game() {
         else if (currentArch === 'radial_orbit') {
           const orbitCx = W / 2;
           const orbitCy = H * 0.48; // Centered vertically in playfield
+          const radarRot = t * 0.65; // Continuous 360° radar rotation
 
           // Deep Cosmic Radial Vacuum Backdrop
           const orbitBg = ctx.createRadialGradient(orbitCx, orbitCy, 10, orbitCx, orbitCy, W * 0.75);
@@ -4350,8 +4357,8 @@ export default function Game() {
 
           // 3 Concentric Glowing Orbit Rings
           const rMin = Math.min(W, H) * 0.08;
-          const rMax = Math.min(W, H) * 0.38;
-          const ringRadii = [rMin + (rMax - rMin) * 0.33, rMin + (rMax - rMin) * 0.66, rMax];
+          const rHit = Math.min(W, H) * 0.35;
+          const ringRadii = [rMin + (rHit - rMin) * 0.33, rMin + (rHit - rMin) * 0.66, rHit];
 
           ringRadii.forEach((r, idx) => {
             const laneCol = laneColorsRef.current[idx] || '#00E5FF';
@@ -4362,27 +4369,46 @@ export default function Game() {
             ctx.stroke();
           });
 
-          // 3 Radial Vector Direction Spoke Beams & Target Button Pads
-          const angles = [(210 * Math.PI) / 180, (270 * Math.PI) / 180, (330 * Math.PI) / 180];
-          angles.forEach((ang, idx) => {
+          // 3 Rotating Radial Spoke Beams & Precision Target Hit Zones
+          const baseAngles = [(210 * Math.PI) / 180, (270 * Math.PI) / 180, (330 * Math.PI) / 180];
+          baseAngles.forEach((baseAng, idx) => {
+            const ang = baseAng + radarRot;
             const laneCol = laneColorsRef.current[idx] || '#00E5FF';
+            
+            // Rotating Spoke Beam
             ctx.strokeStyle = colorWithAlpha(laneCol, 0.65);
             ctx.lineWidth = 2.5;
             ctx.beginPath();
             ctx.moveTo(orbitCx + Math.cos(ang) * (rMin * 0.8), orbitCy + Math.sin(ang) * (rMin * 0.8));
-            ctx.lineTo(orbitCx + Math.cos(ang) * (rMax * 1.1), orbitCy + Math.sin(ang) * (rMax * 1.1));
+            ctx.lineTo(orbitCx + Math.cos(ang) * (rHit * 1.15), orbitCy + Math.sin(ang) * (rHit * 1.15));
             ctx.stroke();
 
-            // Target Key Strike Ring at Outer Orbit Endpoint
-            const bx = orbitCx + Math.cos(ang) * rMax;
-            const by = orbitCy + Math.sin(ang) * rMax;
+            // Precise Dual-Ring Target Hit Zone at rHit
+            const bx = orbitCx + Math.cos(ang) * rHit;
+            const by = orbitCy + Math.sin(ang) * rHit;
+            
             ctx.save();
+            // Outer Neon Halo Ring
             ctx.strokeStyle = laneCol;
-            ctx.lineWidth = 3.0;
+            ctx.lineWidth = 3.5;
             ctx.shadowColor = laneCol;
-            ctx.shadowBlur = 16;
+            ctx.shadowBlur = 18;
             ctx.beginPath();
-            ctx.arc(bx, by, 20, 0, Math.PI * 2);
+            ctx.arc(bx, by, 22, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Inner Precision Crosshair Circle
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 1.8;
+            ctx.beginPath();
+            ctx.arc(bx, by, 14, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Crosshair Ticks (+)
+            ctx.lineWidth = 1.2;
+            ctx.beginPath();
+            ctx.moveTo(bx - 6, by); ctx.lineTo(bx + 6, by);
+            ctx.moveTo(bx, by - 6); ctx.lineTo(bx, by + 6);
             ctx.stroke();
 
             // Key Label Badge (A / S / D)
@@ -4398,14 +4424,14 @@ export default function Game() {
           // 360° Rotating Radar Sweep Scanner Beam
           ctx.save();
           ctx.translate(orbitCx, orbitCy);
-          const sweepAngle = t * 1.8;
+          const sweepAngle = t * 1.8 + radarRot;
           const sweepGrad = ctx.createConicGradient(sweepAngle, 0, 0);
           sweepGrad.addColorStop(0, "rgba(0, 229, 255, 0.25)");
           sweepGrad.addColorStop(0.12, "rgba(0, 229, 255, 0.0)");
           sweepGrad.addColorStop(1, "rgba(0, 0, 0, 0.0)");
           ctx.fillStyle = sweepGrad;
           ctx.beginPath();
-          ctx.arc(0, 0, rMax * 1.1, 0, Math.PI * 2);
+          ctx.arc(0, 0, rHit * 1.15, 0, Math.PI * 2);
           ctx.fill();
           ctx.restore();
         }
@@ -5747,8 +5773,20 @@ export default function Game() {
       if (tapAge < 250) {
         const rt = tapAge / 250;
         const { x: lx, w: lw } = laneAt(i, 1, W);
-        const cx = lx + lw / 2;
-        const ringR = rt * lw * 0.85;
+        const isRadial = activeArchetypeRef.current === 'radial_orbit' && (calculatedStage === 3 || calculatedStage === 5);
+        let cx = 0;
+        let cy = hitY;
+        let ringR = rt * lw * 0.85;
+
+        if (isRadial) {
+          const hitProj = getArchetypeProjection(i, 1.0, W, H, activeArchetypeRef.current, calculatedStage, t, activePovModeRef.current);
+          cx = hitProj.x;
+          cy = hitProj.y;
+          ringR = rt * 45;
+        } else {
+          cx = lx + lw / 2;
+        }
+
         const ringAlpha = Math.pow(1 - rt, 1.4) * 0.65;
         const lc = getDifficultyLaneColor(laneColorsRef.current[i], songRef.current?.difficultyLevel ?? 5, i);
 
@@ -5758,7 +5796,7 @@ export default function Game() {
         ctx.shadowColor = lc;
         ctx.shadowBlur = 15 * (1 - rt);
         ctx.beginPath();
-        ctx.arc(cx, hitY, ringR, 0, Math.PI * 2);
+        ctx.arc(cx, cy, ringR, 0, Math.PI * 2);
         ctx.stroke();
         ctx.restore();
       }
