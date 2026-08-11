@@ -893,19 +893,19 @@ export function getArchetypeProjection(
     return { x: noteX, y: noteY, w: noteW, h: noteH, rot: Math.PI / 2, scale: lerp(0.5, 1.0, prog) };
   }
 
-  // 🎯 360° RADIAL CYBER ORBIT (Notes converge radially inward to circular pads)
+  // 🎯 360° RADIAL CYBER ORBIT (Notes shoot outward from center to outer target buttons)
   if (archetype === 'radial_orbit') {
     const cx = W / 2;
-    const cy = H * 0.55;
+    const cy = H * 0.48; // Centered vertically in playfield
     const angles = [(210 * Math.PI) / 180, (270 * Math.PI) / 180, (330 * Math.PI) / 180];
     const angle = angles[lane] || (270 * Math.PI) / 180;
-    const rMax = Math.min(W, H) * 0.36;
-    const rHit = Math.min(W, H) * 0.14;
-    const radius = lerp(rMax, rHit, prog);
+    const rMin = Math.min(W, H) * 0.08;
+    const rMax = Math.min(W, H) * 0.38;
+    const radius = lerp(rMin, rMax, prog); // Travels outward from center hub to target buttons
     const x = cx + Math.cos(angle) * radius;
     const y = cy + Math.sin(angle) * radius;
-    const noteW = lerp(40, 85, prog);
-    const noteH = lerp(35, 75, prog);
+    const noteW = lerp(35, 90, prog);
+    const noteH = lerp(30, 80, prog);
     return { x, y, w: noteW, h: noteH, rot: angle + Math.PI / 2, scale: lerp(0.4, 1.0, prog) };
   }
 
@@ -4338,7 +4338,7 @@ export default function Game() {
         // ── ARCHETYPE 2: 360° RADIAL CYBER ORBIT ──
         else if (currentArch === 'radial_orbit') {
           const orbitCx = W / 2;
-          const orbitCy = H * 0.55;
+          const orbitCy = H * 0.48; // Centered vertically in playfield
 
           // Deep Cosmic Radial Vacuum Backdrop
           const orbitBg = ctx.createRadialGradient(orbitCx, orbitCy, 10, orbitCx, orbitCy, W * 0.75);
@@ -4349,9 +4349,9 @@ export default function Game() {
           ctx.fillRect(0, 0, W, H);
 
           // 3 Concentric Glowing Orbit Rings
-          const rMax = Math.min(W, H) * 0.36;
-          const rHit = Math.min(W, H) * 0.14;
-          const ringRadii = [rHit + (rMax - rHit) * 0.33, rHit + (rMax - rHit) * 0.66, rMax];
+          const rMin = Math.min(W, H) * 0.08;
+          const rMax = Math.min(W, H) * 0.38;
+          const ringRadii = [rMin + (rMax - rMin) * 0.33, rMin + (rMax - rMin) * 0.66, rMax];
 
           ringRadii.forEach((r, idx) => {
             const laneCol = laneColorsRef.current[idx] || '#00E5FF';
@@ -4362,16 +4362,37 @@ export default function Game() {
             ctx.stroke();
           });
 
-          // 3 Radial Vector Direction Spoke Beams
+          // 3 Radial Vector Direction Spoke Beams & Target Button Pads
           const angles = [(210 * Math.PI) / 180, (270 * Math.PI) / 180, (330 * Math.PI) / 180];
           angles.forEach((ang, idx) => {
             const laneCol = laneColorsRef.current[idx] || '#00E5FF';
             ctx.strokeStyle = colorWithAlpha(laneCol, 0.65);
             ctx.lineWidth = 2.5;
             ctx.beginPath();
-            ctx.moveTo(orbitCx + Math.cos(ang) * (rHit * 0.8), orbitCy + Math.sin(ang) * (rHit * 0.8));
+            ctx.moveTo(orbitCx + Math.cos(ang) * (rMin * 0.8), orbitCy + Math.sin(ang) * (rMin * 0.8));
             ctx.lineTo(orbitCx + Math.cos(ang) * (rMax * 1.1), orbitCy + Math.sin(ang) * (rMax * 1.1));
             ctx.stroke();
+
+            // Target Key Strike Ring at Outer Orbit Endpoint
+            const bx = orbitCx + Math.cos(ang) * rMax;
+            const by = orbitCy + Math.sin(ang) * rMax;
+            ctx.save();
+            ctx.strokeStyle = laneCol;
+            ctx.lineWidth = 3.0;
+            ctx.shadowColor = laneCol;
+            ctx.shadowBlur = 16;
+            ctx.beginPath();
+            ctx.arc(bx, by, 20, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Key Label Badge (A / S / D)
+            const keyLabel = idx === 0 ? 'A' : idx === 1 ? 'S' : 'D';
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '900 11px "Space Mono", monospace';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(keyLabel, bx, by);
+            ctx.restore();
           });
 
           // 360° Rotating Radar Sweep Scanner Beam
