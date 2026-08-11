@@ -893,21 +893,17 @@ export function getArchetypeProjection(
     return { x: noteX, y: noteY, w: noteW, h: noteH, rot: Math.PI / 2, scale: lerp(0.5, 1.0, prog) };
   }
 
-  // 🎯 360° RADIAL CYBER ORBIT (1.5x Bigger: Notes rotate 360° inward toward center hit buttons)
+  // 🎯 360° RADIAL CYBER ORBIT (1.5x Bigger: Notes travel straight along spoke vectors to target hit circles)
   if (archetype === 'radial_orbit') {
     const cx = W / 2;
     const cy = H * 0.48; // Centered vertically in playfield
     const radarRot = t * 0.65; // Continuous 360° radar rotation
     const baseAngles = [(210 * Math.PI) / 180, (270 * Math.PI) / 180, (330 * Math.PI) / 180];
-    const laneAngle = (baseAngles[lane] || (270 * Math.PI) / 180) + radarRot;
-    
-    // Notes rotate 360° around the center as they travel inward
-    const spiralRot = (1 - prog) * Math.PI * 2.0;
-    const angle = laneAngle + spiralRot;
+    const angle = (baseAngles[lane] || (270 * Math.PI) / 180) + radarRot;
 
     const rOuter = Math.min(W, H) * 0.55; // 1.5x Bigger outer spawn rim
     const rHit = Math.min(W, H) * 0.26; // 1.5x Bigger target hit pad ring
-    const radius = lerp(rOuter, rHit, prog); // Travels inward toward center hit pads
+    const radius = lerp(rOuter, rHit, prog); // Travels straight along spoke vector to target hit circle
     const x = cx + Math.cos(angle) * radius;
     const y = cy + Math.sin(angle) * radius;
     const noteW = lerp(90, 58, prog); // 1.5x Bigger note dimensions
