@@ -5452,88 +5452,89 @@ export default function Game() {
             ctx.fill();
           }
           ctx.restore();
+        }
 
-          const isArchetypeStage = calculatedStage === 3 || calculatedStage === 5;
-          if (isArchetypeStage) {
-            drawArchetypeHoldTrail(ctx, W, H, ns, note, prog, headP, noteColor, activeArchetypeRef.current, calculatedStage, t, activePovModeRef.current);
-          } else if (!ns.holdActive && headY < noteY) {
-            // Determine lanes for the active trail segment
-            const { x: hx, w: hw } = laneAt(endLane, headP, W, povTop, povBot);
-            const { x: ax, w: aw } = laneAt(ns.visualLane, Math.min(prog, 1), W, povTop, povBot);
-            const midY = (headY + noteY) / 2;
+        const isArchetypeStage = calculatedStage === 3 || calculatedStage === 5;
+        if (isArchetypeStage) {
+          drawArchetypeHoldTrail(ctx, W, H, ns, note, prog, headP, noteColor, activeArchetypeRef.current, calculatedStage, t, activePovModeRef.current);
+        } else if (!ns.holdActive && headY < noteY) {
+          // Determine lanes for the active trail segment
+          const { x: hx, w: hw } = laneAt(endLane, headP, W, povTop, povBot);
+          const { x: ax, w: aw } = laneAt(ns.visualLane, Math.min(prog, 1), W, povTop, povBot);
+          const midY = (headY + noteY) / 2;
 
-            // Trail body (Curved to player's current lane)
-            ctx.fillStyle = "rgba(245,240,228,0.22)";
+          // Trail body (Curved to player's current lane)
+          ctx.fillStyle = "rgba(245,240,228,0.22)";
+          ctx.beginPath();
+          ctx.moveTo(hx + hw * 0.25, headY);
+          ctx.lineTo(hx + hw * 0.75, headY);
+          ctx.quadraticCurveTo(ax + aw * 0.75, midY, ax + aw * 0.75, noteY + noteH / 2);
+          ctx.lineTo(ax + aw * 0.25, noteY + noteH / 2);
+          ctx.quadraticCurveTo(ax + aw * 0.25, midY, hx + hw * 0.25, headY);
+          ctx.fill();
+
+          // Colored center ribbon (curved)
+          ctx.fillStyle = noteColor;
+          ctx.globalAlpha = 0.5;
+          ctx.shadowColor = noteColor;
+          ctx.shadowBlur = 8;
+          ctx.beginPath();
+          ctx.moveTo(hx + hw * 0.38, headY);
+          ctx.lineTo(hx + hw * 0.62, headY);
+          ctx.quadraticCurveTo(ax + aw * 0.62, midY, ax + aw * 0.62, noteY + noteH / 2);
+          ctx.lineTo(ax + aw * 0.38, noteY + noteH / 2);
+          ctx.quadraticCurveTo(ax + aw * 0.38, midY, hx + hw * 0.38, headY);
+          ctx.fill();
+
+          // Outer 3D Neon Laser Edges in Cyber Tunnel Mode
+          if (isCyberTunnel) {
+            ctx.strokeStyle = noteColor;
+            ctx.lineWidth = 2.5;
+            ctx.shadowColor = noteColor;
+            ctx.shadowBlur = 14;
             ctx.beginPath();
             ctx.moveTo(hx + hw * 0.25, headY);
-            ctx.lineTo(hx + hw * 0.75, headY);
+            ctx.quadraticCurveTo(ax + aw * 0.25, midY, ax + aw * 0.25, noteY + noteH / 2);
+            ctx.moveTo(hx + hw * 0.75, headY);
             ctx.quadraticCurveTo(ax + aw * 0.75, midY, ax + aw * 0.75, noteY + noteH / 2);
-            ctx.lineTo(ax + aw * 0.25, noteY + noteH / 2);
-            ctx.quadraticCurveTo(ax + aw * 0.25, midY, hx + hw * 0.25, headY);
-            ctx.fill();
-
-            // Colored center ribbon (curved)
-            ctx.fillStyle = noteColor;
-            ctx.globalAlpha = 0.5;
-            ctx.shadowColor = noteColor;
-            ctx.shadowBlur = 8;
-            ctx.beginPath();
-            ctx.moveTo(hx + hw * 0.38, headY);
-            ctx.lineTo(hx + hw * 0.62, headY);
-            ctx.quadraticCurveTo(ax + aw * 0.62, midY, ax + aw * 0.62, noteY + noteH / 2);
-            ctx.lineTo(ax + aw * 0.38, noteY + noteH / 2);
-            ctx.quadraticCurveTo(ax + aw * 0.38, midY, hx + hw * 0.38, headY);
-            ctx.fill();
-
-            // Outer 3D Neon Laser Edges in Cyber Tunnel Mode
-            if (isCyberTunnel) {
-              ctx.strokeStyle = noteColor;
-              ctx.lineWidth = 2.5;
-              ctx.shadowColor = noteColor;
-              ctx.shadowBlur = 14;
-              ctx.beginPath();
-              ctx.moveTo(hx + hw * 0.25, headY);
-              ctx.quadraticCurveTo(ax + aw * 0.25, midY, ax + aw * 0.25, noteY + noteH / 2);
-              ctx.moveTo(hx + hw * 0.75, headY);
-              ctx.quadraticCurveTo(ax + aw * 0.75, midY, ax + aw * 0.75, noteY + noteH / 2);
-              ctx.stroke();
-            }
-
-            ctx.globalAlpha = 1;
-            ctx.shadowBlur = 0;
-            ctx.shadowColor = "transparent";
+            ctx.stroke();
           }
 
-          // Compute effective swipe direction for terminus tail block (for swipes or slides)
-          const tailSwipeDir: Note['swipeDirection'] | undefined = (note.targetLane !== undefined ? (note.targetLane > startLane ? 'right' : 'left') : undefined) || note.swipeDirection;
-          const headSwipeDir = tailSwipeDir;
+          ctx.globalAlpha = 1;
+          ctx.shadowBlur = 0;
+          ctx.shadowColor = "transparent";
+        }
 
-          // Draw gold terminus block at the tail of the inactive hold (at headP)
-          if (!ns.holdActive && headP > 0 && headP <= 1) {
-            const tailProj = getArchetypeProjection(endLane, headP, W, H, activeArchetypeRef.current, calculatedStage, t, activePovModeRef.current);
-            const tailR = lerp(12, 24, headP);
-            if (tailProj.rot !== 0) {
-              ctx.save();
-              ctx.translate(tailProj.x + tailProj.w / 2, tailProj.y);
-              ctx.rotate(tailProj.rot);
-              drawKey(ctx, -tailProj.w / 2, 0, tailProj.w, tailProj.h, tailR, noteColor, headP, true, tailSwipeDir, note.time * 3700, note.type);
-              ctx.restore();
-            } else {
-              drawKey(ctx, tailProj.x, tailProj.y, tailProj.w, tailProj.h, tailR, noteColor, headP, true, tailSwipeDir, note.time * 3700, note.type);
-            }
-          }
+        // Compute effective swipe direction for terminus tail block (for swipes or slides)
+        const tailSwipeDir: Note['swipeDirection'] | undefined = (note.targetLane !== undefined ? (note.targetLane > startLane ? 'right' : 'left') : undefined) || note.swipeDirection;
+        const headSwipeDir = tailSwipeDir;
 
-          // Draw gold note box at the head of the hold note (at prog)
-          if (proj.rot !== 0) {
+        // Draw gold terminus block at the tail of the inactive hold (at headP)
+        if (!ns.holdActive && headP > 0 && headP <= 1) {
+          const tailProj = getArchetypeProjection(endLane, headP, W, H, activeArchetypeRef.current, calculatedStage, t, activePovModeRef.current);
+          const tailR = lerp(12, 24, headP);
+          if (tailProj.rot !== 0) {
             ctx.save();
-            ctx.translate(drawX + noteW / 2, noteY);
-            ctx.rotate(proj.rot);
-            drawKey(ctx, -noteW / 2, 0, noteW, noteH, r, noteColor, prog, false, headSwipeDir, note.time * 3700, note.type);
+            ctx.translate(tailProj.x + tailProj.w / 2, tailProj.y);
+            ctx.rotate(tailProj.rot);
+            drawKey(ctx, -tailProj.w / 2, 0, tailProj.w, tailProj.h, tailR, noteColor, headP, true, tailSwipeDir, note.time * 3700, note.type);
             ctx.restore();
           } else {
-            drawKey(ctx, drawX, noteY, noteW, noteH, r, noteColor, prog, false, headSwipeDir, note.time * 3700, note.type);
+            drawKey(ctx, tailProj.x, tailProj.y, tailProj.w, tailProj.h, tailR, noteColor, headP, true, tailSwipeDir, note.time * 3700, note.type);
           }
         }
+
+        // Draw gold note box at the head of the hold note (at prog)
+        if (proj.rot !== 0) {
+          ctx.save();
+          ctx.translate(drawX + noteW / 2, noteY);
+          ctx.rotate(proj.rot);
+          drawKey(ctx, -noteW / 2, 0, noteW, noteH, r, noteColor, prog, false, headSwipeDir, note.time * 3700, note.type);
+          ctx.restore();
+        } else {
+          drawKey(ctx, drawX, noteY, noteW, noteH, r, noteColor, prog, false, headSwipeDir, note.time * 3700, note.type);
+        }
+      }
 
       if (isMissedNote) {
         ctx.restore();
