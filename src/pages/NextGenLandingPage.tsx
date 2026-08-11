@@ -9,6 +9,7 @@ import {
 import Card from '../components/Card';
 import { PackBag } from '../components/PackShop';
 import { VendingMarqueeSVG, SidePanelGraphicSVG, VendingCoilSVG, RetrievalChuteDoorSVG, OverheadClawSVG, VendingInspectorWindowSVG, VendingShelfNameplateSVG, VendingCoinSlotSVG, VendingKeypadSVG } from '../components/VendingMachineGraphics';
+import PlayableInputsSection from '../components/PlayableInputsSection';
 import { useVaultStore } from '../store/useVaultStore';
 import { useLoadingToast } from '../store/useLoadingToast';
 import { useAuthStore } from '../store/useAuthStore';
@@ -1320,6 +1321,9 @@ export default function NextGenLandingPage() {
           </div>
         </div>
       </section>
+
+      {/* ===== PLAYABLE INPUT CONTROLS SECTION ===== */}
+      <PlayableInputsSection />
 
       {/* ===== TOKEN SINKS CONSOLE ===== */}
       {user && (

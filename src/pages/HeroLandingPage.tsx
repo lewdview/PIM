@@ -25,6 +25,7 @@ import { getCurrentDay, getTimeUntilNextDay, formatDate, getDateFromDay } from '
 import { extractPalette, getFallbackPalette, type ExtractedPalette } from '../utils/extractPalette';
 import { audioManager } from '../game/audio';
 import { useVaultStore } from '../store/useVaultStore';
+import PlayableInputsSection from '../components/PlayableInputsSection';
 import { supabase } from '@/services/supabaseClient';
 import '../styles/HeroLandingPage.css';
 
@@ -1232,6 +1233,11 @@ export default function HeroLandingPage() {
           )}
         </motion.div>
       </section>
+
+      <div className="hero-section-divider" />
+
+      {/* ═══════════ SECTION 6.5 : PLAYABLE INPUT MODES (TOUCH, CONTROLLER, MOUSE, KEYBOARD) ═══════════ */}
+      <PlayableInputsSection />
 
       <div className="hero-section-divider" />
 
