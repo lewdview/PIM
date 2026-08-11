@@ -859,12 +859,23 @@ export function getArchetypeProjection(
   if (!isExperimentalArchetype) {
     // Only use Cyber Tunnel wide ratios (0.18 -> 0.86) when active POV is cyber_tunnel in Stage 3 or 5!
     // In Stage 1, 2, and 4, retain standard 2.5D Classic Highway ratios (HW_TOP -> HW_BOT)
-    const isCyberTunnelPOV = povMode === 'cyber_tunnel' && (stage === 3 || stage === 5);
-    const topRatio = isCyberTunnelPOV ? 0.18 : HW_TOP;
-    const botRatio = isCyberTunnelPOV ? 0.86 : HW_BOT;
+    const isCyberTunnelPOV = (povMode === 'cyber_tunnel' || archetype === 'cyber_tunnel');
+    const topRatio = (isCyberTunnelPOV && (stage === 3 || stage === 5)) ? 0.18 : (isCyberTunnelPOV ? 0.20 : HW_TOP);
+    const botRatio = (isCyberTunnelPOV && (stage === 3 || stage === 5)) ? 0.86 : (isCyberTunnelPOV ? 0.84 : HW_BOT);
     const { x, w } = laneAt(lane, prog, W, topRatio, botRatio);
     const noteY = prog * hitY;
     const noteH = lerp(80, 140, prog);
+
+    if (isCyberTunnelPOV) {
+      // 🌀 Cylindrical Cyber Tunnel 3D Barrel Warp & Vortex Swirl
+      const laneOffset = lane - 1; // -1 for left, 0 for center, +1 for right
+      const warpFactor = Math.sin(prog * Math.PI); // Parabolic 3D curve along tunnel depth
+      const barrelWarp = laneOffset * (W * 0.045) * warpFactor;
+      const vortexSway = Math.sin(t * 1.8 + prog * 3.0) * (W * 0.016) * warpFactor;
+      const rot = (laneOffset * 0.12 + Math.cos(t * 1.8 + prog * 3.0) * 0.04) * warpFactor;
+      return { x: x + barrelWarp + vortexSway, y: noteY, w, h: noteH, rot, scale: lerp(0.4, 1.0, prog) };
+    }
+
     return { x, y: noteY, w, h: noteH, rot: 0, scale: lerp(0.4, 1.0, prog) };
   }
 
@@ -936,7 +947,12 @@ export function getArchetypeProjection(
   const { x: lx, w: lw } = laneAt(lane, prog, W, 0.18, 0.86);
   const noteY = prog * hitY;
   const noteH = lerp(80, 140, prog);
-  return { x: lx, y: noteY, w: lw, h: noteH, rot: 0, scale: lerp(0.4, 1.0, prog) };
+  const laneOffset = lane - 1;
+  const warpFactor = Math.sin(prog * Math.PI);
+  const barrelWarp = laneOffset * (W * 0.045) * warpFactor;
+  const vortexSway = Math.sin(t * 1.8 + prog * 3.0) * (W * 0.016) * warpFactor;
+  const rot = (laneOffset * 0.12 + Math.cos(t * 1.8 + prog * 3.0) * 0.04) * warpFactor;
+  return { x: lx + barrelWarp + vortexSway, y: noteY, w: lw, h: noteH, rot, scale: lerp(0.4, 1.0, prog) };
 }
 
 export function drawArchetypeHoldTrail(
