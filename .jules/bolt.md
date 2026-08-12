@@ -1,0 +1,3 @@
+## 2024-05-24 - High-Frequency Zustand Subscriptions in Lists
+**Learning:** Destructuring state from Zustand stores with high-frequency updates (like audio playback time) causes massive O(N) re-renders in list components (e.g., AudioPreview) because every item re-renders on every update, even if only one item is active.
+**Action:** Use conditional granular selectors (`useStore(s => isActive ? s.progress : 0)`) in list components. This returns constant values for inactive items, safely preventing re-renders without violating React hook rules. Also use granular selectors for top-level components to avoid re-rendering on unrelated state changes.
