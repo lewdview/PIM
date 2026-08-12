@@ -183,7 +183,21 @@ export default function WalletConnect({ redirectUri }: WalletConnectProps) {
             redirectTo: window.location.origin + (redirectUri ? `?redirect_uri=${encodeURIComponent(redirectUri)}` : ''),
           },
         });
-        if (error) throw error;
+        if (error) {
+          const msg = error.message.toLowerCase();
+          if (msg.includes('already') || msg.includes('linked') || msg.includes('exists')) {
+            const redirectUriParam = redirectUri ? `?redirect_uri=${encodeURIComponent(redirectUri)}` : '';
+            const { error: oauthError } = await supabase.auth.signInWithOAuth({
+              provider: 'github',
+              options: {
+                redirectTo: window.location.origin + redirectUriParam,
+              },
+            });
+            if (oauthError) throw oauthError;
+          } else {
+            throw error;
+          }
+        }
       } else {
         const redirectUriParam = redirectUri ? `?redirect_uri=${encodeURIComponent(redirectUri)}` : '';
         const { error } = await supabase.auth.signInWithOAuth({
@@ -215,8 +229,24 @@ export default function WalletConnect({ redirectUri }: WalletConnectProps) {
         const { error } = await supabase.auth.updateUser({
           email: magicEmail.trim(),
         });
-        if (error) throw error;
-        setEmailSent('Verification email sent. Check your inbox to confirm your identity.');
+        if (error) {
+          const msg = error.message.toLowerCase();
+          if (msg.includes('already') || msg.includes('registered') || msg.includes('exists')) {
+            const redirectUriParam = redirectUri ? `?redirect_uri=${encodeURIComponent(redirectUri)}` : '';
+            const { error: otpError } = await supabase.auth.signInWithOtp({
+              email: magicEmail.trim(),
+              options: {
+                emailRedirectTo: window.location.origin + redirectUriParam,
+              },
+            });
+            if (otpError) throw otpError;
+            setEmailSent('Account already registered. Magic link sent to your email!');
+          } else {
+            throw error;
+          }
+        } else {
+          setEmailSent('Verification email sent. Check your inbox to confirm your identity.');
+        }
       } else {
         const redirectUriParam = redirectUri ? `?redirect_uri=${encodeURIComponent(redirectUri)}` : '';
         const { error } = await supabase.auth.signInWithOtp({

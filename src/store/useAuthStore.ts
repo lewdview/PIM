@@ -513,6 +513,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         },
       });
       if (error) {
+        const msg = error.message.toLowerCase();
+        // If social account is already linked to an existing account, fallback to standard OAuth login
+        if (msg.includes('already') || msg.includes('linked') || msg.includes('exists')) {
+          console.log('[Auth] Provider account already registered. Falling back to OAuth sign-in...');
+          const { error: oauthError } = await supabase.auth.signInWithOAuth({
+            provider: provider as any,
+            options: {
+              redirectTo: window.location.origin,
+            },
+          });
+          if (oauthError) {
+            set({ error: oauthError.message, status: 'ready' });
+            return { error: oauthError.message };
+          }
+          return { error: null };
+        }
         set({ error: error.message, status: 'ready' });
         return { error: error.message };
       }
@@ -540,6 +556,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Upgrade anonymous user by adding email (preserves user ID + all data)
       const { error } = await supabase.auth.updateUser({ email });
       if (error) {
+        const msg = error.message.toLowerCase();
+        // If email already belongs to an existing account, fallback to Magic Link OTP sign-in
+        if (msg.includes('already') || msg.includes('registered') || msg.includes('exists')) {
+          console.log('[Auth] Email already registered to existing account. Falling back to OTP sign-in...');
+          const { error: otpError } = await supabase.auth.signInWithOtp({
+            email,
+            options: {
+              emailRedirectTo: window.location.origin,
+            },
+          });
+          if (otpError) {
+            set({ error: otpError.message, status: 'ready' });
+            return { error: otpError.message };
+          }
+          set({ status: 'ready' });
+          return { error: null };
+        }
         set({ error: error.message, status: 'ready' });
         return { error: error.message };
       }
