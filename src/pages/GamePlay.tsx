@@ -884,8 +884,10 @@ export function getArchetypeProjection(
 
   // ↔️ 90° FULL 2D HORIZONTAL SIDE-SCROLLER PERSPECTIVE
   if (archetype === 'horizontal_drift') {
-    const strikeX = W * 0.82;
-    const noteX = prog * strikeX;
+    const maxW = Math.min(W, 860);
+    const leftX = (W - maxW) / 2;
+    const strikeX = leftX + maxW * 0.85;
+    const noteX = leftX + prog * (strikeX - leftX);
     // Button Key Alignment: Lane 0 (A Key) = Bottom, Lane 1 (S Key) = Middle, Lane 2 (D Key) = Top
     const laneYMap = [H * 0.68, H * 0.52, H * 0.36];
     const noteY = laneYMap[lane] || H * 0.52;
@@ -4194,13 +4196,17 @@ export default function Game() {
         ctx.save();
         const primerColor = archMeta.primerColor;
         
-        // Deep obsidian background with pulsing primer color glow from horizon
-        const primerGrad = ctx.createRadialGradient(cx, vanishingY, 10, cx, vanishingY, W * 0.85);
-        primerGrad.addColorStop(0, colorWithAlpha(primerColor, 0.45));
+        // Soft glowing primer haze centered around the track (transparent towards outer screen edges)
+        const trackHazeR = Math.min(W, 820) * 0.55;
+        const primerGrad = ctx.createRadialGradient(cx, hitY * 0.5, 10, cx, hitY * 0.5, trackHazeR);
+        primerGrad.addColorStop(0, colorWithAlpha(primerColor, 0.42));
         primerGrad.addColorStop(0.4, colorWithAlpha(primerColor, 0.18));
-        primerGrad.addColorStop(1, "#030208");
+        primerGrad.addColorStop(0.75, colorWithAlpha(primerColor, 0.04));
+        primerGrad.addColorStop(1, "rgba(0, 0, 0, 0.0)");
         ctx.fillStyle = primerGrad;
-        ctx.fillRect(0, 0, W, H);
+        ctx.beginPath();
+        ctx.arc(cx, hitY * 0.5, trackHazeR, 0, Math.PI * 2);
+        ctx.fill();
 
         // Story Bridge Pulsing Laser Grid Lines
         ctx.strokeStyle = colorWithAlpha(primerColor, 0.35 + Math.pow(Math.sin(((t * (bpmVal / 60)) % 1) * Math.PI), 3) * 0.25);
@@ -4208,9 +4214,11 @@ export default function Game() {
         const gridLines = 8;
         for (let g = 0; g < gridLines; g++) {
           const gY = lerp(vanishingY, H, (g / gridLines + (t * 0.4) % (1 / gridLines)));
+          const { left, right } = hwAtProgress(g / gridLines, W);
+          const margin = (right - left) * 0.65;
           ctx.beginPath();
-          ctx.moveTo(0, gY);
-          ctx.lineTo(W, gY);
+          ctx.moveTo(Math.max(0, left - margin), gY);
+          ctx.lineTo(Math.min(W, right + margin), gY);
           ctx.stroke();
         }
         ctx.restore();
@@ -4230,14 +4238,17 @@ export default function Game() {
 
         // ── ARCHETYPE 1: HORIZONTAL SIDE-SCROLLER (90° Canvas) ──
         if (currentArch === 'horizontal_drift') {
-          // Deep Retro Synthwave Skyline Gradient
-          const sideBg = ctx.createLinearGradient(0, 0, W, H);
-          sideBg.addColorStop(0, "#050212");
-          sideBg.addColorStop(0.4, "#16052b");
-          sideBg.addColorStop(0.7, "#0c031c");
-          sideBg.addColorStop(1, "#030108");
+          // Deep Retro Synthwave Skyline Gradient (Feathered to transparent outer edges)
+          const sideMaxW = Math.min(W, 860);
+          const sideBg = ctx.createRadialGradient(W / 2, H / 2, 20, W / 2, H / 2, sideMaxW * 0.60);
+          sideBg.addColorStop(0, "rgba(22, 5, 43, 0.85)");
+          sideBg.addColorStop(0.5, "rgba(12, 3, 28, 0.55)");
+          sideBg.addColorStop(0.85, "rgba(5, 2, 14, 0.20)");
+          sideBg.addColorStop(1, "rgba(0, 0, 0, 0.0)");
           ctx.fillStyle = sideBg;
-          ctx.fillRect(0, 0, W, H);
+          ctx.beginPath();
+          ctx.arc(W / 2, H / 2, sideMaxW * 0.60, 0, Math.PI * 2);
+          ctx.fill();
 
           // Wireframe Synthwave Sun at Left Horizon (X = -20, Y = H * 0.52)
           ctx.save();
@@ -4344,13 +4355,17 @@ export default function Game() {
           const orbitCy = H * 0.48; // Centered vertically in playfield
           const radarRot = t * 0.65; // Continuous 360° radar rotation
 
-          // Deep Cosmic Radial Vacuum Backdrop
-          const orbitBg = ctx.createRadialGradient(orbitCx, orbitCy, 10, orbitCx, orbitCy, W * 0.75);
-          orbitBg.addColorStop(0, "rgba(10, 20, 50, 0.98)");
-          orbitBg.addColorStop(0.5, "rgba(5, 10, 30, 0.95)");
-          orbitBg.addColorStop(1, "#03020a");
+          // Deep Cosmic Radial Vacuum Backdrop (Feathered to transparent outer edges)
+          const orbitR = Math.min(W, H) * 0.65;
+          const orbitBg = ctx.createRadialGradient(orbitCx, orbitCy, 10, orbitCx, orbitCy, orbitR);
+          orbitBg.addColorStop(0, "rgba(10, 20, 50, 0.88)");
+          orbitBg.addColorStop(0.5, "rgba(5, 10, 30, 0.65)");
+          orbitBg.addColorStop(0.85, "rgba(3, 2, 10, 0.25)");
+          orbitBg.addColorStop(1, "rgba(0, 0, 0, 0.0)");
           ctx.fillStyle = orbitBg;
-          ctx.fillRect(0, 0, W, H);
+          ctx.beginPath();
+          ctx.arc(orbitCx, orbitCy, orbitR, 0, Math.PI * 2);
+          ctx.fill();
 
           // Concentric Glowing Orbit Rings (1.5x Scale)
           const rOuter = Math.min(W, H) * 0.55; // Outer 1.5x spawn rim
@@ -4539,17 +4554,21 @@ export default function Game() {
 
         // ── ARCHETYPE 6: 3D CYBER VORTEX TUNNEL (Default) ──
         else {
-          const tunnelBg = ctx.createRadialGradient(cx, vanishingY, 5, cx, vanishingY, W * 0.78);
-          const bgCore = isOverdrive ? colorWithAlpha(archMeta.stage5Color, 0.3) : "rgba(5, 5, 25, 0.96)";
+          const tunnelW = Math.min(W, 840);
+          const outerRadius = tunnelW * 0.65;
+          const tunnelBg = ctx.createRadialGradient(cx, vanishingY, 10, cx, vanishingY, outerRadius);
+          const bgCore = isOverdrive ? colorWithAlpha(archMeta.stage5Color, 0.35) : "rgba(8, 6, 24, 0.88)";
           tunnelBg.addColorStop(0, bgCore);
-          tunnelBg.addColorStop(0.35, "rgba(14, 6, 38, 0.94)");
-          tunnelBg.addColorStop(0.75, "rgba(25, 4, 32, 0.98)");
-          tunnelBg.addColorStop(1, "#060410");
+          tunnelBg.addColorStop(0.35, "rgba(12, 6, 32, 0.68)");
+          tunnelBg.addColorStop(0.75, "rgba(14, 4, 28, 0.30)");
+          tunnelBg.addColorStop(1, "rgba(0, 0, 0, 0.0)"); // Soft transparent edge fade!
+          
           ctx.fillStyle = tunnelBg;
-          ctx.fillRect(0, 0, W, H);
+          ctx.beginPath();
+          ctx.arc(cx, vanishingY, outerRadius, 0, Math.PI * 2);
+          ctx.fill();
 
           // Full 360° 3D Cylindrical Tunnel Depth Rings with Swirl Rotation
-          const tunnelW = Math.min(W, 840);
           if (isOverdrive) {
             ctx.save();
             ctx.translate(cx, vanishingY);
