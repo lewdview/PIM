@@ -10925,9 +10925,8 @@ function drawKey(
       ctx.restore();
     } else if (swipeDirection && noteType === 'swipe') {
       // ── NEON CHEVRON LINE SHOWING SWIPE DIRECTION ──
+      // (Note body is already rotated by rotations[swipeDirection] above, so no extra rotation needed)
       ctx.save();
-      const rot = rotations[swipeDirection] || 0;
-      ctx.rotate(rot);
 
       const chevW = Math.min(noteW * 0.13, 10);
       const chevH = Math.min(noteH * 0.32, 13);
