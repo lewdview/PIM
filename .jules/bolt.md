@@ -1,0 +1,4 @@
+
+## 2026-08-13 - Zustand Store Performance Optimizations
+**Learning:** Destructured Zustand subscriptions (e.g., `const { state } = useStore() `) without explicit selectors subscribe components to the entire store state. For high-frequency updating states (like an audio player time loop updating every tick), this causes severe performance bottlenecks like O(N) re-renders in list items (AudioPreview) and massive unneeded re-renders in root/page components (App, CodexPage).
+**Action:** ALWAYS use explicit, granular selectors when subscribing to Zustand stores (e.g., `const state = useStore(s => s.state)`). For conditional logic in lists, return a constant fallback value when conditions aren't met (e.g., `s => s.isActive ? s.progress : 0`) to completely halt re-renders for inactive items while adhering to hook rules.
