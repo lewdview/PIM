@@ -4548,14 +4548,15 @@ export default function Game() {
           ctx.fillStyle = tunnelBg;
           ctx.fillRect(0, 0, W, H);
 
-          // Speed lines radiating from vanishing point
+          // Full 360° 3D Cylindrical Tunnel Depth Rings with Swirl Rotation
+          const tunnelW = Math.min(W, 840);
           if (isOverdrive) {
             ctx.save();
             ctx.translate(cx, vanishingY);
             ctx.globalAlpha = 0.4 + beatPulseVal * 0.3;
             for (let i = 0; i < 20; i++) {
               const ang = (i / 20) * Math.PI * 2 + t * 4;
-              const len = W * 0.8;
+              const len = tunnelW * 0.75;
               ctx.beginPath();
               ctx.moveTo(Math.cos(ang) * 50, Math.sin(ang) * 50);
               ctx.lineTo(Math.cos(ang) * len, Math.sin(ang) * len);
@@ -4573,8 +4574,8 @@ export default function Game() {
 
           depthDepths.forEach((p, idx) => {
             const ringY = lerp(vanishingY, H * 0.52, p);
-            const ringRadiusX = lerp(W * 0.10, W * 0.64, p);
-            const ringRadiusY = lerp(H * 0.07, H * 0.46, p);
+            const ringRadiusX = lerp(tunnelW * 0.10, tunnelW * 0.58, p);
+            const ringRadiusY = lerp(H * 0.07, H * 0.42, p);
             const ringAlpha = lerp(0.22, 0.8, p) * (0.85 + beatPulseVal * 0.3);
 
             const isCyan = idx % 2 === 0;
@@ -4602,11 +4603,12 @@ export default function Game() {
         }
 
         // Particle Dust/Stars in the Tunnel/Space
+        const tunnelW = Math.min(W, 840);
         if (tunnelParticlesRef.current.length === 0) {
           for (let i = 0; i < 30; i++) {
             tunnelParticlesRef.current.push({
               ang: Math.random() * Math.PI * 2,
-              rad: Math.random() * W * 0.8,
+              rad: Math.random() * tunnelW * 0.75,
               z: Math.random(), // 0 (near) to 1 (far)
               speed: 0.002 + Math.random() * 0.005,
               size: 1 + Math.random() * 2.5
@@ -4620,7 +4622,7 @@ export default function Game() {
           p.ang += 0.002 * swirlSpeedMult;
           if (p.z <= 0) {
             p.z = 1.0;
-            p.rad = W * 0.1 + Math.random() * W * 0.7;
+            p.rad = tunnelW * 0.1 + Math.random() * tunnelW * 0.65;
             p.ang = Math.random() * Math.PI * 2;
           }
           const pScale = 1.0 - p.z;
@@ -9918,17 +9920,22 @@ export default function Game() {
             </div>
           )}
 
-          {/* Judgment text — per-lane custom vector SVG popups */}
+          {/* Judgment text — per-lane custom vector SVG popups anchored at judgment target strike zones */}
           {opts.judgmentText && displayJudge.map((j) => {
             if (Date.now() - j.ts > 600) return null;
-            const pct = (j.lane / LANE_COUNT + 1 / (LANE_COUNT * 2)) * 100;
+            const canvasW = canvasRef.current?.width ? canvasRef.current.width / (window.devicePixelRatio || 1) : 0;
+            if (!canvasW) return null;
+            const hwBot = hwAtProgress(1, canvasW);
+            const laneW = hwBot.width / LANE_COUNT;
+            const targetX = hwBot.left + (j.lane + 0.5) * laneW;
+            const targetPct = (targetX / canvasW) * 100;
             return (
               <div
                 key={j.id}
                 className="absolute pointer-events-none judgment-pop"
                 style={{
-                  left: `${pct}%`,
-                  top: "74%",
+                  left: `${targetPct}%`,
+                  top: "73%",
                   transform: "translateX(-50%)",
                 }}
               >
