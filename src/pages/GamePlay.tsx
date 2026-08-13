@@ -10923,6 +10923,44 @@ function drawKey(
         ctx.stroke();
       }
       ctx.restore();
+    } else if (swipeDirection && noteType === 'swipe') {
+      // ── NEON CHEVRON LINE SHOWING SWIPE DIRECTION ──
+      ctx.save();
+      const rot = rotations[swipeDirection] || 0;
+      ctx.rotate(rot);
+
+      const chevW = Math.min(noteW * 0.13, 10);
+      const chevH = Math.min(noteH * 0.32, 13);
+      const chevCount = 4;
+      const totalSpan = noteW * 0.65;
+      const spacing = totalSpan / (chevCount - 1);
+      const startX = -totalSpan / 2;
+
+      for (let i = 0; i < chevCount; i++) {
+        const cx = startX + i * spacing;
+        const alpha = 0.4 + (i / (chevCount - 1)) * 0.6; // fades in toward tip
+        ctx.globalAlpha = alpha;
+
+        // Neon glow > chevron
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.shadowColor = stripeColor;
+        ctx.shadowBlur = lerp(8, 18, prog);
+        ctx.lineWidth = Math.max(2.2, chevW * 0.22);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(cx - chevW * 0.5, -chevH * 0.5);
+        ctx.lineTo(cx + chevW * 0.5, 0);
+        ctx.lineTo(cx - chevW * 0.5, chevH * 0.5);
+        ctx.stroke();
+
+        // Inner color core
+        ctx.strokeStyle = stripeColor;
+        ctx.lineWidth = Math.max(1.0, chevW * 0.1);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1.0;
+      ctx.restore();
     } else {
       ctx.beginPath();
       ctx.roundRect(-noteW / 2 + 2, -stripeH / 2, noteW - 4, stripeH, stripeH * 0.35);
@@ -11041,46 +11079,6 @@ function drawKey(
       ctx.lineTo(0, yPos - 5);
       ctx.lineTo(10, yPos + 4);
       ctx.stroke();
-    }
-    ctx.restore();
-
-  } else if (swipeDirection) {
-    // ➔ SLIDE / SWIPE NOTE: Sleek Multi-Tier Animated Chevrons Matching Block
-    ctx.save();
-    const rot = rotations[swipeDirection] || 0;
-    ctx.rotate(rot);
-
-    const isHoldTail = isHold;
-    const chevColor = lc || '#FFD700';
-    ctx.strokeStyle = '#FFFFFF';
-    ctx.shadowColor = chevColor;
-    ctx.shadowBlur = lerp(12, 24, prog);
-    ctx.lineWidth = 3.0;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-
-    const animOffset = (nowMs / 12) % 18;
-    const arrowW = Math.min(noteW * 0.22, 14);
-    const arrowH = Math.min(noteH * 0.26, 12);
-
-    for (let i = 0; i < 2; i++) {
-      const xPos = -arrowW * 0.6 + i * (arrowW * 1.1) - (8 - animOffset * 0.5);
-      const alpha = Math.max(0.25, 1.0 - i * 0.35);
-      ctx.globalAlpha = alpha;
-
-      // Outer white glowing chevron
-      ctx.beginPath();
-      ctx.moveTo(xPos - arrowW * 0.5, -arrowH);
-      ctx.lineTo(xPos + arrowW * 0.5, 0);
-      ctx.lineTo(xPos - arrowW * 0.5, arrowH);
-      ctx.stroke();
-
-      // Inner color core accent line
-      ctx.save();
-      ctx.strokeStyle = chevColor;
-      ctx.lineWidth = 1.4;
-      ctx.stroke();
-      ctx.restore();
     }
     ctx.restore();
 
