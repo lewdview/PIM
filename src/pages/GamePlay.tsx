@@ -794,7 +794,8 @@ function lerp(a: number, b: number, t: number) {
 }
 
 function hwAtProgress(p: number, W: number, topRatio: number = HW_TOP, botRatio: number = HW_BOT) {
-  const w = W * lerp(topRatio, botRatio, p);
+  const maxHighwayWidth = Math.min(W, 580 + (W > 680 ? Math.min(140, (W - 680) * 0.18) : 0));
+  const w = maxHighwayWidth * lerp(topRatio, botRatio, p);
   const l = (W - w) / 2;
   return { left: l, right: l + w, width: w };
 }
@@ -9233,11 +9234,10 @@ export default function Game() {
       />
       <div
         className="relative w-full h-full flex flex-col overflow-hidden"
-        style={{ maxWidth: 640 }}
       >
         {/* HUD */}
         <div
-          className="flex items-center justify-between px-4 py-2.5 flex-shrink-0"
+          className="flex items-center justify-between px-4 py-2.5 flex-shrink-0 max-w-4xl w-full mx-auto"
           style={{
             borderBottom: "1px solid rgba(255,255,255,0.06)",
             background: "rgba(12,12,20,0.55)",
@@ -9433,7 +9433,7 @@ export default function Game() {
 
         {/* Progress bar — rounded pill with glow */}
         <div
-          className="flex-shrink-0 mx-2 my-1.5 relative"
+          className="flex-shrink-0 mx-auto my-1.5 relative max-w-4xl w-[calc(100%-16px)]"
           style={{ height: 6, borderRadius: 999, background: "rgba(255,255,255,0.06)" }}
         >
           <div
