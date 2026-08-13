@@ -844,6 +844,68 @@ export interface ProjectionResult {
   scale: number;
 }
 
+export function drawMovingGasAura(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  baseRadius: number,
+  baseColor: string,
+  t: number,
+  intensity: number = 1.0
+) {
+  ctx.save();
+
+  // ── 1. Undulating Multi-Frequency Radial Noise Gas Field ──
+  const gasR = baseRadius * (1.0 + 0.04 * Math.sin(t * 1.5));
+  const gasGrad = ctx.createRadialGradient(cx, cy, 10, cx, cy, gasR);
+  gasGrad.addColorStop(0, colorWithAlpha(baseColor, 0.88 * intensity));
+  gasGrad.addColorStop(0.35, colorWithAlpha(baseColor, 0.62 * intensity));
+  gasGrad.addColorStop(0.70, colorWithAlpha(baseColor, 0.28 * intensity));
+  gasGrad.addColorStop(1.0, "rgba(0, 0, 0, 0.0)");
+
+  ctx.fillStyle = gasGrad;
+  ctx.beginPath();
+  const numPoints = 28;
+  for (let i = 0; i <= numPoints; i++) {
+    const ang = (i / numPoints) * Math.PI * 2;
+    // Multi-frequency organic trigonometric noise harmonics
+    const noise = 1.0
+      + 0.08 * Math.sin(ang * 3 + t * 1.6)
+      + 0.06 * Math.cos(ang * 5 - t * 2.2)
+      + 0.04 * Math.sin(ang * 8 + t * 3.4);
+    const r = gasR * noise;
+    const gx = cx + Math.cos(ang) * r;
+    const gy = cy + Math.sin(ang) * r;
+    if (i === 0) ctx.moveTo(gx, gy);
+    else ctx.lineTo(gx, gy);
+  }
+  ctx.closePath();
+  ctx.fill();
+
+  // ── 2. Dynamic Swirling Dark Smoke Tendrils & Gas Wisps ──
+  const tendrilCount = 6;
+  for (let i = 0; i < tendrilCount; i++) {
+    const dir = i % 2 === 0 ? 1 : -1;
+    const tendrilAng = (i / tendrilCount) * Math.PI * 2 + t * 0.7 * dir;
+    const distP = 0.55 + 0.30 * Math.sin(t * 1.2 + i * 1.5);
+    const tx = cx + Math.cos(tendrilAng) * (baseRadius * distP);
+    const ty = cy + Math.sin(tendrilAng) * (baseRadius * distP * 0.75);
+    const tw = baseRadius * (0.28 + 0.12 * Math.sin(t * 1.8 + i));
+
+    const wispGrad = ctx.createRadialGradient(tx, ty, 2, tx, ty, tw);
+    wispGrad.addColorStop(0, colorWithAlpha(baseColor, 0.35 * intensity));
+    wispGrad.addColorStop(0.55, colorWithAlpha(baseColor, 0.14 * intensity));
+    wispGrad.addColorStop(1, "rgba(0, 0, 0, 0.0)");
+
+    ctx.fillStyle = wispGrad;
+    ctx.beginPath();
+    ctx.arc(tx, ty, tw, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
 export function getCorkscrewSpiralPos(
   lane: number,
   prog: number,
@@ -4234,17 +4296,9 @@ export default function Game() {
         ctx.save();
         const primerColor = archMeta.primerColor;
         
-        // Soft glowing primer haze centered around the track (transparent towards outer screen edges)
+        // Moving gas-like primer haze centered around the Stage 4 track
         const trackHazeR = Math.min(W, 820) * 0.55;
-        const primerGrad = ctx.createRadialGradient(cx, hitY * 0.5, 10, cx, hitY * 0.5, trackHazeR);
-        primerGrad.addColorStop(0, colorWithAlpha(primerColor, 0.42));
-        primerGrad.addColorStop(0.4, colorWithAlpha(primerColor, 0.18));
-        primerGrad.addColorStop(0.75, colorWithAlpha(primerColor, 0.04));
-        primerGrad.addColorStop(1, "rgba(0, 0, 0, 0.0)");
-        ctx.fillStyle = primerGrad;
-        ctx.beginPath();
-        ctx.arc(cx, hitY * 0.5, trackHazeR, 0, Math.PI * 2);
-        ctx.fill();
+        drawMovingGasAura(ctx, cx, hitY * 0.5, trackHazeR, primerColor, t, 0.85);
 
         // Story Bridge Pulsing Laser Grid Lines
         ctx.strokeStyle = colorWithAlpha(primerColor, 0.35 + Math.pow(Math.sin(((t * (bpmVal / 60)) % 1) * Math.PI), 3) * 0.25);
@@ -4276,17 +4330,9 @@ export default function Game() {
 
         // ── ARCHETYPE 1: HORIZONTAL SIDE-SCROLLER (90° Canvas) ──
         if (currentArch === 'horizontal_drift') {
-          // Deep Retro Synthwave Skyline Gradient (Feathered to transparent outer edges)
+          // Dynamic Moving Gas Nebula Backdrop around Side-Scroller Track
           const sideMaxW = Math.min(W, 860);
-          const sideBg = ctx.createRadialGradient(W / 2, H / 2, 20, W / 2, H / 2, sideMaxW * 0.60);
-          sideBg.addColorStop(0, "rgba(22, 5, 43, 0.85)");
-          sideBg.addColorStop(0.5, "rgba(12, 3, 28, 0.55)");
-          sideBg.addColorStop(0.85, "rgba(5, 2, 14, 0.20)");
-          sideBg.addColorStop(1, "rgba(0, 0, 0, 0.0)");
-          ctx.fillStyle = sideBg;
-          ctx.beginPath();
-          ctx.arc(W / 2, H / 2, sideMaxW * 0.60, 0, Math.PI * 2);
-          ctx.fill();
+          drawMovingGasAura(ctx, W / 2, H / 2, sideMaxW * 0.60, "#16052b", t, 0.95);
 
           // Wireframe Synthwave Sun at Left Horizon (X = -20, Y = H * 0.52)
           ctx.save();
@@ -4393,17 +4439,9 @@ export default function Game() {
           const orbitCy = H * 0.48; // Centered vertically in playfield
           const radarRot = t * 0.65; // Continuous 360° radar rotation
 
-          // Deep Cosmic Radial Vacuum Backdrop (Feathered to transparent outer edges)
+          // Dynamic Moving Cosmic Gas Backdrop around Radial Orbit
           const orbitR = Math.min(W, H) * 0.65;
-          const orbitBg = ctx.createRadialGradient(orbitCx, orbitCy, 10, orbitCx, orbitCy, orbitR);
-          orbitBg.addColorStop(0, "rgba(10, 20, 50, 0.88)");
-          orbitBg.addColorStop(0.5, "rgba(5, 10, 30, 0.65)");
-          orbitBg.addColorStop(0.85, "rgba(3, 2, 10, 0.25)");
-          orbitBg.addColorStop(1, "rgba(0, 0, 0, 0.0)");
-          ctx.fillStyle = orbitBg;
-          ctx.beginPath();
-          ctx.arc(orbitCx, orbitCy, orbitR, 0, Math.PI * 2);
-          ctx.fill();
+          drawMovingGasAura(ctx, orbitCx, orbitCy, orbitR, "#0a1432", t, 0.95);
 
           // Concentric Glowing Orbit Rings (1.5x Scale)
           const rOuter = Math.min(W, H) * 0.55; // Outer 1.5x spawn rim
@@ -4494,16 +4532,8 @@ export default function Game() {
           const vanishingY = hitY * 0.20;
           const baseH = hitY - vanishingY;
 
-          // Deep Feathered Plasma Nebula Backdrop (fades out to transparent on screen edges)
-          const corkBg = ctx.createRadialGradient(cx, vanishingY + baseH * 0.45, 10, cx, vanishingY + baseH * 0.45, outerRadius);
-          corkBg.addColorStop(0, "rgba(28, 8, 48, 0.88)");
-          corkBg.addColorStop(0.4, "rgba(18, 5, 36, 0.60)");
-          corkBg.addColorStop(0.8, "rgba(10, 2, 22, 0.22)");
-          corkBg.addColorStop(1, "rgba(0, 0, 0, 0.0)");
-          ctx.fillStyle = corkBg;
-          ctx.beginPath();
-          ctx.arc(cx, vanishingY + baseH * 0.45, outerRadius, 0, Math.PI * 2);
-          ctx.fill();
+          // Dynamic Moving Gas Nebula Backdrop around 3D Corkscrew Tube
+          drawMovingGasAura(ctx, cx, vanishingY + baseH * 0.45, outerRadius, "#1c0830", t, 1.0);
 
           ctx.save();
           const mult = calculatedStage === 5 ? 1.8 : 1.0;
@@ -4580,12 +4610,8 @@ export default function Game() {
 
         // ── ARCHETYPE 4: 3D UNDULATING WAVE ROLLERCOASTER ──
         else if (currentArch === 'wave_coaster') {
-          const coasterBg = ctx.createLinearGradient(0, 0, 0, H);
-          coasterBg.addColorStop(0, "#050e20");
-          coasterBg.addColorStop(0.5, "#0b1d3a");
-          coasterBg.addColorStop(1, "#020610");
-          ctx.fillStyle = coasterBg;
-          ctx.fillRect(0, 0, W, H);
+          const coasterW = Math.min(W, 840);
+          drawMovingGasAura(ctx, cx, hitY * 0.5, coasterW * 0.55, "#0b1d3a", t, 0.90);
 
           // Undulating Wave Coaster Rails
           ctx.save();
@@ -4612,12 +4638,8 @@ export default function Game() {
 
         // ── ARCHETYPE 5: 3-RIBBON DETACHED SPLIT HORIZON MATRIX ──
         else if (currentArch === 'matrix_split') {
-          const matrixBg = ctx.createRadialGradient(cx, vanishingY, 5, cx, vanishingY, W * 0.8);
-          matrixBg.addColorStop(0, "rgba(4, 25, 12, 0.98)");
-          matrixBg.addColorStop(0.6, "rgba(2, 14, 6, 0.96)");
-          matrixBg.addColorStop(1, "#010803");
-          ctx.fillStyle = matrixBg;
-          ctx.fillRect(0, 0, W, H);
+          const matrixW = Math.min(W, 840);
+          drawMovingGasAura(ctx, cx, vanishingY + (hitY - vanishingY) * 0.5, matrixW * 0.60, "#04190c", t, 0.95);
 
           // 3 Separate Floating Ribbons
           ctx.save();
@@ -4647,17 +4669,10 @@ export default function Game() {
         else {
           const tunnelW = Math.min(W, 840);
           const outerRadius = tunnelW * 0.65;
-          const tunnelBg = ctx.createRadialGradient(cx, vanishingY, 10, cx, vanishingY, outerRadius);
-          const bgCore = isOverdrive ? colorWithAlpha(archMeta.stage5Color, 0.35) : "rgba(8, 6, 24, 0.88)";
-          tunnelBg.addColorStop(0, bgCore);
-          tunnelBg.addColorStop(0.35, "rgba(12, 6, 32, 0.68)");
-          tunnelBg.addColorStop(0.75, "rgba(14, 4, 28, 0.30)");
-          tunnelBg.addColorStop(1, "rgba(0, 0, 0, 0.0)"); // Soft transparent edge fade!
+          const tunnelColor = isOverdrive ? archMeta.stage5Color : "#0d0822";
           
-          ctx.fillStyle = tunnelBg;
-          ctx.beginPath();
-          ctx.arc(cx, vanishingY, outerRadius, 0, Math.PI * 2);
-          ctx.fill();
+          // Dynamic Undulating Gas Backdrop around 3D Cyber Tunnel
+          drawMovingGasAura(ctx, cx, vanishingY, outerRadius, tunnelColor, t, isOverdrive ? 1.2 : 0.95);
 
           // Full 360° 3D Cylindrical Tunnel Depth Rings with Swirl Rotation
           if (isOverdrive) {
