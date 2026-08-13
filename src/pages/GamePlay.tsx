@@ -10997,15 +10997,22 @@ function drawKey(
       ctx.globalAlpha = 1.0;
       ctx.restore();
     } else {
+      // ── BOLD WHITE CENTER LINE WITH OUTER COLOR GLOW FOR NORMAL NOTES ──
+      // 1. Outer Colored Glow Stripe Bar
+      ctx.shadowColor = stripeColor;
+      ctx.shadowBlur = lerp(16, 32, prog);
+      ctx.fillStyle = stripeColor;
       ctx.beginPath();
-      ctx.roundRect(-noteW / 2 + 2, -stripeH / 2, noteW - 4, stripeH, stripeH * 0.35);
+      ctx.roundRect(-noteW / 2 + 2, -stripeH / 2, noteW - 4, stripeH, stripeH * 0.4);
       ctx.fill();
 
-      // White core inside horizontal stripe
-      ctx.fillStyle = "#ffffff";
-      ctx.globalAlpha = 0.85;
+      // 2. Crisp White Center Line Track matching swipe notes
+      ctx.fillStyle = '#FFFFFF';
+      ctx.shadowColor = '#FFFFFF';
+      ctx.shadowBlur = 8;
+      ctx.globalAlpha = 0.95;
       ctx.beginPath();
-      ctx.roundRect(-noteW / 2 + 8, -stripeH * 0.28 / 2, noteW - 16, stripeH * 0.28, stripeH * 0.1);
+      ctx.roundRect(-noteW / 2 + 8, -stripeH * 0.42 / 2, noteW - 16, stripeH * 0.42, stripeH * 0.21);
       ctx.fill();
       ctx.globalAlpha = 1.0;
     }
