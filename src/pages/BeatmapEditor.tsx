@@ -9,21 +9,43 @@ import type { Note } from '../game/types';
 import '../styles/BeatmapEditorStyles.css';
 
 // ===== ADMIN GATE PASSPHRASE CONFIG =====
-const ADMIN_PASSPHRASE = 'th3scr1b3';
+// SECURITY: Using a hashed passphrase to prevent hardcoded plaintext secrets
+const ADMIN_PASSPHRASE_HASH = 'd58f380b169d36c2fe217dadc3caa620193197132b55ba52b0947882b78c4983';
 const ADMIN_AUTH_KEY = 'th3vault_admin_auth';
 
 function AdminGate({ onAuthenticate }: { onAuthenticate: () => void }) {
   const [input, setInput] = useState('');
   const [error, setError] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (input.toLowerCase() === ADMIN_PASSPHRASE) {
-      sessionStorage.setItem(ADMIN_AUTH_KEY, 'true');
-      onAuthenticate();
-    } else {
+    setIsLoading(true);
+
+    try {
+      if (typeof crypto === 'undefined' || !crypto.subtle) {
+        throw new Error('Crypto API not available');
+      }
+
+      const encoder = new TextEncoder();
+      const data = encoder.encode(input.toLowerCase());
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+      if (hashHex === ADMIN_PASSPHRASE_HASH) {
+        sessionStorage.setItem(ADMIN_AUTH_KEY, 'true');
+        onAuthenticate();
+      } else {
+        setError(true);
+        setTimeout(() => setError(false), 800);
+      }
+    } catch (err) {
+      console.error(err);
       setError(true);
       setTimeout(() => setError(false), 800);
+    } finally {
+      setIsLoading(false);
     }
   };
 
