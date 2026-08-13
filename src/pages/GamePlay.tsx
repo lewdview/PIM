@@ -993,7 +993,8 @@ export function getArchetypeProjection(
   povMode: 'classic' | 'cyber_tunnel' | 'dynamic_stage' = 'classic'
 ): ProjectionResult {
   const hitY = H * HIT_RATIO;
-  const isExperimentalArchetype = (stage === 3 || stage === 5) && archetype !== 'cyber_tunnel';
+  const isExperimentalPOV = povMode === 'cyber_tunnel' || povMode === 'dynamic_stage';
+  const isExperimentalArchetype = archetype !== 'cyber_tunnel' && (isExperimentalPOV || stage === 3 || stage === 5);
 
   if (!isExperimentalArchetype) {
     // Only use Cyber Tunnel wide ratios (0.18 -> 0.86) when active POV is cyber_tunnel in Stage 3 or 5!
@@ -1018,6 +1019,38 @@ export function getArchetypeProjection(
     }
 
     return { x, y: noteY, w, h: noteH, rot: 0, scale: lerp(0.4, 1.0, prog) };
+  }
+
+  // ↔️ 90° FULL 2D HORIZONTAL SIDE-SCROLLER PERSPECTIVE
+  if (archetype === 'horizontal_drift') {
+    const maxW = Math.min(W, 860);
+    const leftX = (W - maxW) / 2;
+    const strikeX = leftX + maxW * 0.85;
+    const noteX = leftX + prog * (strikeX - leftX);
+    // Button Key Alignment: Lane 0 (A Key) = Bottom, Lane 1 (S Key) = Middle, Lane 2 (D Key) = Top
+    const laneYMap = [H * 0.68, H * 0.52, H * 0.36];
+    const noteY = laneYMap[lane] || H * 0.52;
+    const noteW = lerp(45, 110, prog);
+    const noteH = 65;
+    return { x: noteX, y: noteY, w: noteW, h: noteH, rot: Math.PI / 2, scale: lerp(0.5, 1.0, prog) };
+  }
+
+  // 🎯 360° RADIAL CYBER ORBIT (Notes travel straight along spoke vectors to target hit circles)
+  if (archetype === 'radial_orbit') {
+    const cx = W / 2;
+    const cy = H * 0.48; // Centered vertically in playfield
+    const radarRot = t * 0.65; // Continuous 360° radar rotation
+    const baseAngles = [(210 * Math.PI) / 180, (270 * Math.PI) / 180, (330 * Math.PI) / 180];
+    const angle = (baseAngles[lane] || (270 * Math.PI) / 180) + radarRot;
+
+    const rOuter = Math.min(W, H) * 0.55; // Outer spawn rim
+    const rHit = Math.min(W, H) * 0.26; // Target hit pad ring
+    const radius = lerp(rOuter, rHit, prog); // Travels straight along spoke vector to target hit circle
+    const x = cx + Math.cos(angle) * radius;
+    const y = cy + Math.sin(angle) * radius;
+    const noteW = lerp(90, 58, prog);
+    const noteH = lerp(75, 48, prog);
+    return { x: x - noteW / 2, y, w: noteW, h: noteH, rot: angle + Math.PI / 2, scale: lerp(1.1, 0.7, prog) };
   }
 
   // 🌀 3D TWISTING CORKSCREW HELICAL SLIDE (Remade Dual-Loop Tubular Helix)
@@ -5729,26 +5762,28 @@ export default function Game() {
       }
     }
 
-    // ── Horizon Fog Overlay (Fades notes into the background at the top) ──
-    const fogGrad = ctx.createLinearGradient(0, 0, 0, hitY * 0.38);
-    fogGrad.addColorStop(0, "#000000"); // solid dark background at the top
-    fogGrad.addColorStop(0.5, "rgba(0, 0, 0, 0.82)");
-    fogGrad.addColorStop(1, "rgba(0, 0, 0, 0.0)");
-    ctx.fillStyle = fogGrad;
-    
-    ctx.save();
-    const hwTop_fog = hwAtProgress(0, W);
-    const hwBot_fog = hwAtProgress(1, W);
-    ctx.beginPath();
-    ctx.moveTo(hwTop_fog.left, 0);
-    ctx.quadraticCurveTo(W/2, -hitY * 0.09, hwTop_fog.right, 0);
-    ctx.lineTo(hwBot_fog.right, hitY);
-    ctx.lineTo(hwBot_fog.left, hitY);
-    ctx.closePath();
-    ctx.clip();
-    
-    ctx.fillRect(0, 0, W, hitY * 0.38);
-    ctx.restore();
+    // ── Horizon Fog Overlay (Fades notes into the background at the top in Classic mode only) ──
+    if (activePovModeRef.current === 'classic' && activeArchetypeRef.current !== 'radial_orbit' && activeArchetypeRef.current !== 'horizontal_drift') {
+      const fogGrad = ctx.createLinearGradient(0, 0, 0, hitY * 0.38);
+      fogGrad.addColorStop(0, "rgba(0, 0, 0, 0.65)"); // semi-transparent fog
+      fogGrad.addColorStop(0.5, "rgba(0, 0, 0, 0.35)");
+      fogGrad.addColorStop(1, "rgba(0, 0, 0, 0.0)");
+      ctx.fillStyle = fogGrad;
+      
+      ctx.save();
+      const hwTop_fog = hwAtProgress(0, W);
+      const hwBot_fog = hwAtProgress(1, W);
+      ctx.beginPath();
+      ctx.moveTo(hwTop_fog.left, 0);
+      ctx.quadraticCurveTo(W/2, -hitY * 0.09, hwTop_fog.right, 0);
+      ctx.lineTo(hwBot_fog.right, hitY);
+      ctx.lineTo(hwBot_fog.left, hitY);
+      ctx.closePath();
+      ctx.clip();
+      
+      ctx.fillRect(0, 0, W, hitY * 0.38);
+      ctx.restore();
+    }
 
     // ── 5b. HIT EXPLOSION EFFECTS ───────────────────────────────
     const FX_DURATION = 520;
