@@ -5767,20 +5767,27 @@ export default function Game() {
       }
     }
 
-    // ── Horizon Fog Overlay (Fades notes into the background at the top in Classic mode only) ──
-    if (activePovModeRef.current === 'classic' && activeArchetypeRef.current !== 'radial_orbit' && activeArchetypeRef.current !== 'horizontal_drift') {
+    // ── Horizon Fog Overlay (Fades notes into the background at the vanishing horizon across all stages) ──
+    if (activeArchetypeRef.current !== 'radial_orbit' && activeArchetypeRef.current !== 'horizontal_drift') {
+      const archMeta = ARCHETYPE_METAS[activeArchetypeRef.current] || ARCHETYPE_METAS['cyber_tunnel'];
+      const fogColor = calculatedStage === 4 ? archMeta.primerColor : (calculatedStage === 5 ? archMeta.stage5Color : "#000000");
+      
       const fogGrad = ctx.createLinearGradient(0, 0, 0, hitY * 0.38);
-      fogGrad.addColorStop(0, "rgba(0, 0, 0, 0.65)"); // semi-transparent fog
-      fogGrad.addColorStop(0.5, "rgba(0, 0, 0, 0.35)");
+      fogGrad.addColorStop(0, colorWithAlpha(fogColor, 0.65));
+      fogGrad.addColorStop(0.5, colorWithAlpha(fogColor, 0.30));
       fogGrad.addColorStop(1, "rgba(0, 0, 0, 0.0)");
       ctx.fillStyle = fogGrad;
       
       ctx.save();
-      const hwTop_fog = hwAtProgress(0, W);
-      const hwBot_fog = hwAtProgress(1, W);
+      const isCyberPOV_fog = (isCyberTunnelPov || activeArchetypeRef.current === 'cyber_tunnel') && (calculatedStage === 3 || calculatedStage === 5);
+      const topR_fog = isCyberPOV_fog ? 0.18 : HW_TOP;
+      const botR_fog = isCyberPOV_fog ? 0.86 : HW_BOT;
+      
+      const hwTop_fog = hwAtProgress(0, W, topR_fog, botR_fog);
+      const hwBot_fog = hwAtProgress(1, W, topR_fog, botR_fog);
       ctx.beginPath();
       ctx.moveTo(hwTop_fog.left, 0);
-      ctx.quadraticCurveTo(W/2, -hitY * 0.09, hwTop_fog.right, 0);
+      ctx.quadraticCurveTo(W / 2, -hitY * 0.09, hwTop_fog.right, 0);
       ctx.lineTo(hwBot_fog.right, hitY);
       ctx.lineTo(hwBot_fog.left, hitY);
       ctx.closePath();
