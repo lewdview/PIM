@@ -11056,40 +11056,64 @@ function drawKey(
       }
       ctx.restore();
     } else if (swipeDirection && noteType === 'swipe') {
-      // ── WHITE CENTER LINE WITH OUTER COLOR GLOW & INNER ANIMATED CHEVRONS ──
+      // ── WHITE CENTER LINE TAPERED AT FRONT TO FORM ARROW POINT ──
       ctx.save();
 
-      // 1. Outer Colored Glow Stripe Bar
+      const swH = stripeH * 0.95;
+      const halfH = swH / 2;
+      const leftX = -noteW / 2 + 5;
+      const rightX = noteW / 2 - 5;
+      const taperLen = swH * 1.1;
+
+      // 1. Outer Colored Glow Arrow Stripe Bar
       ctx.shadowColor = stripeColor;
       ctx.shadowBlur = lerp(16, 32, prog);
       ctx.fillStyle = stripeColor;
       ctx.beginPath();
-      ctx.roundRect(-noteW / 2 + 2, -stripeH / 2, noteW - 4, stripeH, stripeH * 0.4);
+      ctx.moveTo(leftX + 4, -halfH);
+      ctx.lineTo(rightX - taperLen, -halfH);
+      ctx.lineTo(rightX, 0); // Front Arrow Point
+      ctx.lineTo(rightX - taperLen, halfH);
+      ctx.lineTo(leftX + 4, halfH);
+      ctx.lineTo(leftX + halfH * 0.6, 0); // Rear Aerodynamic Notch
+      ctx.closePath();
       ctx.fill();
 
-      // 2. Crisp White Center Line Track
+      // 2. Crisp White Center Line Track Tapered at Front to Form Arrow Point
+      const whiteH = stripeH * 0.48;
+      const wHalfH = whiteH / 2;
+      const wLeftX = leftX + 4;
+      const wRightX = rightX - 3;
+      const wTaperLen = whiteH * 1.15;
+
       ctx.fillStyle = '#FFFFFF';
       ctx.shadowColor = '#FFFFFF';
       ctx.shadowBlur = 8;
       ctx.globalAlpha = 0.95;
       ctx.beginPath();
-      ctx.roundRect(-noteW / 2 + 8, -stripeH * 0.42 / 2, noteW - 16, stripeH * 0.42, stripeH * 0.21);
+      ctx.moveTo(wLeftX + 3, -wHalfH);
+      ctx.lineTo(wRightX - wTaperLen, -wHalfH);
+      ctx.lineTo(wRightX, 0); // Front White Arrow Point!
+      ctx.lineTo(wRightX - wTaperLen, wHalfH);
+      ctx.lineTo(wLeftX + 3, wHalfH);
+      ctx.lineTo(wLeftX + wHalfH * 0.6, 0); // Rear White Notch
+      ctx.closePath();
       ctx.fill();
 
-      // 3. Animated Marching Chevrons Inside the White Center Line
+      // 3. Animated Marching Chevrons Inside the White Arrow Track
       const animT = (Date.now() + timeOffset) / 1000;
-      const chevCount = 5;
-      const chevW = Math.min(noteW * 0.14, 11);
-      const chevH = Math.min(stripeH * 0.65, 12);
-      const totalSpan = noteW * 0.72;
+      const chevCount = 4;
+      const chevW = Math.min(noteW * 0.13, 10);
+      const chevH = Math.min(whiteH * 0.85, 11);
+      const totalSpan = (wRightX - wTaperLen * 0.5) - wLeftX;
       const spacing = totalSpan / chevCount;
       const scrollOffset = (animT * 2.8) % 1.0;
 
       for (let i = 0; i < chevCount; i++) {
-        const rawX = -totalSpan / 2 + (i + scrollOffset) * spacing;
-        if (rawX > totalSpan / 2) continue;
+        const rawX = wLeftX + (i + scrollOffset) * spacing;
+        if (rawX > wRightX - 3) continue;
 
-        const normPos = (rawX + totalSpan / 2) / totalSpan;
+        const normPos = (rawX - wLeftX) / totalSpan;
         const baseAlpha = 0.35 + normPos * 0.65;
         const pulse = 0.85 + 0.15 * Math.sin(animT * 6.0 + i * 1.2);
         const alpha = baseAlpha * pulse;
