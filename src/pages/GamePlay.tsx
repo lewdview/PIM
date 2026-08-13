@@ -993,8 +993,12 @@ export function getArchetypeProjection(
   povMode: 'classic' | 'cyber_tunnel' | 'dynamic_stage' = 'classic'
 ): ProjectionResult {
   const hitY = H * HIT_RATIO;
-  const isExperimentalPOV = povMode === 'cyber_tunnel' || povMode === 'dynamic_stage';
-  const isExperimentalArchetype = archetype !== 'cyber_tunnel' && (isExperimentalPOV || stage === 3 || stage === 5);
+  
+  // Experimental 3D perspectives (e.g. Corkscrew, Radial Orbit, Side-Scroller, Wave Coaster, Matrix Split)
+  // ONLY active during Stage 3 and Stage 5!
+  // Stage 1, 2, and 4 ALWAYS revert to standard 2.5D Classic Highway perspective!
+  const isExperimentalStage = stage === 3 || stage === 5;
+  const isExperimentalArchetype = isExperimentalStage && archetype !== 'cyber_tunnel';
 
   if (!isExperimentalArchetype) {
     // Only use Cyber Tunnel wide ratios (0.18 -> 0.86) when active POV is cyber_tunnel in Stage 3 or 5!
