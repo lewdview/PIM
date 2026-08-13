@@ -844,6 +844,82 @@ export interface ProjectionResult {
   scale: number;
 }
 
+export function getCorkscrewSpiralPos(
+  lane: number,
+  prog: number,
+  W: number,
+  H: number,
+  t: number,
+  stage: number
+): ProjectionResult {
+  const hitY = H * HIT_RATIO;
+  const vanishingY = hitY * 0.20;
+  const cx = W / 2;
+  const corkW = Math.min(W, 840);
+  const laneOffset = lane - 1; // -1 for left, 0 for center, 1 for right
+  const mult = stage === 5 ? 1.8 : 1.0;
+  const baseH = hitY - vanishingY;
+
+  if (prog < 0.20) {
+    // ── Phase 1: Entry Plunge ($p: 0 \rightarrow 0.20$) ──
+    const u = prog / 0.20;
+    const startX = cx + laneOffset * (corkW * 0.12);
+    const startY = vanishingY;
+
+    const entryAngle = t * 1.8 * mult;
+    const entryRadiusX = corkW * 0.10;
+    const entryRadiusY = H * 0.04;
+    const entryX = cx + Math.cos(entryAngle) * entryRadiusX + laneOffset * 20;
+    const entryY = vanishingY + baseH * 0.18 + Math.sin(entryAngle) * entryRadiusY;
+
+    const noteX = lerp(startX, entryX, u);
+    const noteY = lerp(startY, entryY, u);
+    const noteW = lerp(42, 68, u);
+    const noteH = lerp(36, 58, u);
+    return { x: noteX - noteW / 2, y: noteY, w: noteW, h: noteH, rot: laneOffset * 0.08, scale: lerp(0.3, 0.55, u) };
+  } else if (prog < 0.80) {
+    // ── Phase 2: Dual 360° Corkscrew Spiral Loops ($p: 0.20 \rightarrow 0.80$) ──
+    // Notes spin 2 COMPLETE LOOPS (720° / 4*PI) down the 3D helical tube!
+    const u = (prog - 0.20) / 0.60;
+    const loopAngle = u * Math.PI * 4 + t * 1.8 * mult; // 2 full 360° loops!
+
+    const helixRadiusX = lerp(corkW * 0.10, corkW * 0.34, u);
+    const helixRadiusY = lerp(H * 0.04, H * 0.15, u);
+    const centerY = lerp(vanishingY + baseH * 0.18, vanishingY + baseH * 0.78, u);
+
+    const spiralX = cx + Math.cos(loopAngle) * helixRadiusX + laneOffset * 24 * Math.cos(loopAngle);
+    const spiralY = centerY + Math.sin(loopAngle) * helixRadiusY;
+
+    const zDepth = Math.sin(loopAngle); // -1 (back of loop) to +1 (front of loop)
+    const rot = Math.cos(loopAngle) * 0.45;
+    const depthScale = lerp(0.55, 0.95, u) * (0.85 + zDepth * 0.15);
+    const noteW = lerp(68, 120, u) * (0.85 + zDepth * 0.15);
+    const noteH = lerp(58, 100, u) * (0.85 + zDepth * 0.15);
+
+    return { x: spiralX - noteW / 2, y: spiralY, w: noteW, h: noteH, rot, scale: depthScale };
+  } else {
+    // ── Phase 3: Exit Ejection & Target Lane Arrival ($p: 0.80 \rightarrow 1.0$) ──
+    // Notes get spit out of the bottom nozzle and launch cleanly to judgment strike targets!
+    const u = (prog - 0.80) / 0.20;
+    const exitAngle = Math.PI * 4 + t * 1.8 * mult;
+    const exitRadiusX = corkW * 0.34;
+    const exitRadiusY = H * 0.15;
+    const exitX = cx + Math.cos(exitAngle) * exitRadiusX + laneOffset * 24;
+    const exitY = vanishingY + baseH * 0.78 + Math.sin(exitAngle) * exitRadiusY;
+
+    const { x: targetX, w: targetW } = laneAt(lane, 1, W);
+    const targetCenterX = targetX + targetW / 2;
+    const targetCenterY = hitY;
+
+    const noteX = lerp(exitX, targetCenterX, u);
+    const noteY = lerp(exitY, targetCenterY, u);
+    const noteW = lerp(120, targetW, u);
+    const noteH = lerp(100, 140, u);
+
+    return { x: noteX - noteW / 2, y: noteY, w: noteW, h: noteH, rot: lerp(0.2, 0, u), scale: lerp(0.95, 1.0, u) };
+  }
+}
+
 export function getArchetypeProjection(
   lane: number,
   prog: number,
@@ -882,47 +958,9 @@ export function getArchetypeProjection(
     return { x, y: noteY, w, h: noteH, rot: 0, scale: lerp(0.4, 1.0, prog) };
   }
 
-  // ↔️ 90° FULL 2D HORIZONTAL SIDE-SCROLLER PERSPECTIVE
-  if (archetype === 'horizontal_drift') {
-    const maxW = Math.min(W, 860);
-    const leftX = (W - maxW) / 2;
-    const strikeX = leftX + maxW * 0.85;
-    const noteX = leftX + prog * (strikeX - leftX);
-    // Button Key Alignment: Lane 0 (A Key) = Bottom, Lane 1 (S Key) = Middle, Lane 2 (D Key) = Top
-    const laneYMap = [H * 0.68, H * 0.52, H * 0.36];
-    const noteY = laneYMap[lane] || H * 0.52;
-    const noteW = lerp(45, 110, prog);
-    const noteH = 65;
-    return { x: noteX, y: noteY, w: noteW, h: noteH, rot: Math.PI / 2, scale: lerp(0.5, 1.0, prog) };
-  }
-
-  // 🎯 360° RADIAL CYBER ORBIT (1.5x Bigger: Notes travel straight along spoke vectors to target hit circles)
-  if (archetype === 'radial_orbit') {
-    const cx = W / 2;
-    const cy = H * 0.48; // Centered vertically in playfield
-    const radarRot = t * 0.65; // Continuous 360° radar rotation
-    const baseAngles = [(210 * Math.PI) / 180, (270 * Math.PI) / 180, (330 * Math.PI) / 180];
-    const angle = (baseAngles[lane] || (270 * Math.PI) / 180) + radarRot;
-
-    const rOuter = Math.min(W, H) * 0.55; // 1.5x Bigger outer spawn rim
-    const rHit = Math.min(W, H) * 0.26; // 1.5x Bigger target hit pad ring
-    const radius = lerp(rOuter, rHit, prog); // Travels straight along spoke vector to target hit circle
-    const x = cx + Math.cos(angle) * radius;
-    const y = cy + Math.sin(angle) * radius;
-    const noteW = lerp(90, 58, prog); // 1.5x Bigger note dimensions
-    const noteH = lerp(75, 48, prog);
-    return { x, y, w: noteW, h: noteH, rot: angle + Math.PI / 2, scale: lerp(1.1, 0.7, prog) };
-  }
-
-  // 🌀 3D TWISTING CORKSCREW HELICAL SLIDE
+  // 🌀 3D TWISTING CORKSCREW HELICAL SLIDE (Remade Dual-Loop Tubular Helix)
   if (archetype === 'corkscrew_slide') {
-    const mult = stage === 5 ? 2.4 : 1.0;
-    const { x: lx, w: lw } = laneAt(lane, prog, W, 0.18, 0.86);
-    const swirlX = Math.sin(prog * Math.PI * 2 + t * 2.8 * mult) * (W * 0.18 * Math.sin(prog * Math.PI));
-    const noteY = prog * hitY;
-    const noteH = lerp(80, 140, prog);
-    const rot = Math.cos(prog * Math.PI * 2 + t * 2.8 * mult) * 0.35;
-    return { x: lx + swirlX, y: noteY, w: lw, h: noteH, rot, scale: lerp(0.4, 1.0, prog) };
+    return getCorkscrewSpiralPos(lane, prog, W, H, t, stage);
   }
 
   // 🎢 3D UNDULATING WAVE ROLLERCOASTER
@@ -4449,41 +4487,94 @@ export default function Game() {
           ctx.restore();
         }
 
-        // ── ARCHETYPE 3: 3D TWISTING CORKSCREW SLIDE ──
+        // ── ARCHETYPE 3: 3D TWISTING CORKSCREW SLIDE (Remade Dual-Loop Tubular Helix) ──
         else if (currentArch === 'corkscrew_slide') {
-          const tunnelBg = ctx.createRadialGradient(cx, vanishingY, 5, cx, vanishingY, W * 0.78);
-          tunnelBg.addColorStop(0, "rgba(25, 5, 45, 0.96)");
-          tunnelBg.addColorStop(0.5, "rgba(12, 3, 28, 0.95)");
-          tunnelBg.addColorStop(1, "#040208");
-          ctx.fillStyle = tunnelBg;
-          ctx.fillRect(0, 0, W, H);
+          const corkW = Math.min(W, 840);
+          const outerRadius = corkW * 0.65;
+          const vanishingY = hitY * 0.20;
+          const baseH = hitY - vanishingY;
 
-          // 3D Helical Twisting Ribbon Track Rail Math
+          // Deep Feathered Plasma Nebula Backdrop (fades out to transparent on screen edges)
+          const corkBg = ctx.createRadialGradient(cx, vanishingY + baseH * 0.45, 10, cx, vanishingY + baseH * 0.45, outerRadius);
+          corkBg.addColorStop(0, "rgba(28, 8, 48, 0.88)");
+          corkBg.addColorStop(0.4, "rgba(18, 5, 36, 0.60)");
+          corkBg.addColorStop(0.8, "rgba(10, 2, 22, 0.22)");
+          corkBg.addColorStop(1, "rgba(0, 0, 0, 0.0)");
+          ctx.fillStyle = corkBg;
+          ctx.beginPath();
+          ctx.arc(cx, vanishingY + baseH * 0.45, outerRadius, 0, Math.PI * 2);
+          ctx.fill();
+
           ctx.save();
-          const numRibs = 16;
-          for (let r = 0; r < numRibs; r++) {
-            const p = r / numRibs;
-            const nextP = (r + 1) / numRibs;
-            const mult = calculatedStage === 5 ? 2.4 : 1.0;
+          const mult = calculatedStage === 5 ? 1.8 : 1.0;
 
-            const swirl1 = Math.sin(p * Math.PI * 2 + t * 2.8 * mult) * (W * 0.18 * Math.sin(p * Math.PI));
-            const swirl2 = Math.sin(nextP * Math.PI * 2 + t * 2.8 * mult) * (W * 0.18 * Math.sin(nextP * Math.PI));
+          // 1. Glowing Entry Mouth Ring (Top entrance at p = 0.20)
+          const entryAngle = t * 1.8 * mult;
+          const entryRadiusX = corkW * 0.10;
+          const entryRadiusY = H * 0.04;
+          const entryY = vanishingY + baseH * 0.18;
 
-            const y1 = p * hitY;
-            const y2 = nextP * hitY;
+          ctx.strokeStyle = "rgba(255, 123, 0, 0.85)";
+          ctx.lineWidth = 3.5;
+          ctx.shadowColor = "#FF7B00";
+          ctx.shadowBlur = 16;
+          ctx.beginPath();
+          ctx.ellipse(cx, entryY, entryRadiusX, entryRadiusY, 0, 0, Math.PI * 2);
+          ctx.stroke();
 
-            const { left: l1, right: r1 } = hwAtProgress(p, W);
-            const { left: l2, right: r2 } = hwAtProgress(nextP, W);
+          // 2. Dual 360° Tubular Corkscrew Guide Rails (720° Spiral Path)
+          const helixSteps = 60;
+          for (let rail = 0; rail < 3; rail++) {
+            const laneOff = (rail - 1) * 22;
+            const railColor = laneColorsRef.current[rail] || '#FF7B00';
 
-            ctx.strokeStyle = colorWithAlpha(archMeta.primerColor, 0.35 + p * 0.4);
-            ctx.lineWidth = lerp(1.5, 4.0, p);
             ctx.beginPath();
-            ctx.moveTo(l1 + swirl1, y1);
-            ctx.lineTo(l2 + swirl2, y2);
-            ctx.moveTo(r1 + swirl1, y1);
-            ctx.lineTo(r2 + swirl2, y2);
+            for (let step = 0; step <= helixSteps; step++) {
+              const u = step / helixSteps;
+              const loopAngle = u * Math.PI * 4 + t * 1.8 * mult; // 2 full loops!
+              const helixRadiusX = lerp(corkW * 0.10, corkW * 0.34, u);
+              const helixRadiusY = lerp(H * 0.04, H * 0.15, u);
+              const centerY = lerp(entryY, vanishingY + baseH * 0.78, u);
+
+              const rx = cx + Math.cos(loopAngle) * helixRadiusX + laneOff * Math.cos(loopAngle);
+              const ry = centerY + Math.sin(loopAngle) * helixRadiusY;
+
+              if (step === 0) ctx.moveTo(rx, ry);
+              else ctx.lineTo(rx, ry);
+            }
+
+            ctx.strokeStyle = colorWithAlpha(railColor, 0.75);
+            ctx.lineWidth = 2.5;
+            ctx.shadowColor = railColor;
+            ctx.shadowBlur = 12;
             ctx.stroke();
           }
+
+          // 3. Glowing Exit Ejection Nozzle (Bottom exit at p = 0.80)
+          const exitAngle = Math.PI * 4 + t * 1.8 * mult;
+          const exitRadiusX = corkW * 0.34;
+          const exitRadiusY = H * 0.15;
+          const exitY = vanishingY + baseH * 0.78;
+
+          ctx.strokeStyle = "rgba(255, 215, 0, 0.90)";
+          ctx.lineWidth = 4.0;
+          ctx.shadowColor = "#FFD700";
+          ctx.shadowBlur = 20;
+          ctx.beginPath();
+          ctx.ellipse(cx, exitY, exitRadiusX, exitRadiusY, 0, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // Ejection pulse particles popping out of the nozzle
+          ctx.fillStyle = "#FFD700";
+          for (let p = 0; p < 4; p++) {
+            const pAngle = exitAngle + (p / 4) * Math.PI * 2;
+            const px = cx + Math.cos(pAngle) * exitRadiusX;
+            const py = exitY + Math.sin(pAngle) * exitRadiusY;
+            ctx.beginPath();
+            ctx.arc(px, py, 3.5, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
           ctx.restore();
         }
 
