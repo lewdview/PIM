@@ -5125,6 +5125,7 @@ export default function Game() {
     }
 
     // ── 4.5. HIT ZONE BUTTONS (for 2.5D Classic POV mode) ──
+    const isCyberPOV = (isCyberTunnelPov || activeArchetypeRef.current === 'cyber_tunnel') && (calculatedStage === 3 || calculatedStage === 5);
     const show3DCircularTargets = isCyberTunnelPov || (isDynamicStagePov && calculatedStage >= 3);
     if (!show3DCircularTargets) {
       // Original height (space below hit line), centered so baseline bisects each button.
