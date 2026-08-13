@@ -4300,17 +4300,17 @@ export default function Game() {
         const trackHazeR = Math.min(W, 820) * 0.55;
         drawMovingGasAura(ctx, cx, hitY * 0.5, trackHazeR, primerColor, t, 0.85);
 
-        // Story Bridge Pulsing Laser Grid Lines
+        // Story Bridge Pulsing Laser Grid Lines (clipped to track bounds and side drop shadows)
         ctx.strokeStyle = colorWithAlpha(primerColor, 0.35 + Math.pow(Math.sin(((t * (bpmVal / 60)) % 1) * Math.PI), 3) * 0.25);
         ctx.lineWidth = 1.5;
         const gridLines = 8;
         for (let g = 0; g < gridLines; g++) {
           const gY = lerp(vanishingY, H, (g / gridLines + (t * 0.4) % (1 / gridLines)));
           const { left, right } = hwAtProgress(g / gridLines, W);
-          const margin = (right - left) * 0.65;
+          const shadowMargin = Math.min(18, (right - left) * 0.06);
           ctx.beginPath();
-          ctx.moveTo(Math.max(0, left - margin), gY);
-          ctx.lineTo(Math.min(W, right + margin), gY);
+          ctx.moveTo(left - shadowMargin, gY);
+          ctx.lineTo(right + shadowMargin, gY);
           ctx.stroke();
         }
         ctx.restore();
@@ -5097,13 +5097,13 @@ export default function Game() {
       // Original height (space below hit line), centered so baseline bisects each button.
       const btnH = H - hitY;
       const btnY = hitY - btnH / 2; // baseline runs through the exact center
-      // Clip to track width so buttons never overflow the highway edges
+      // Clip to active track width so buttons never overflow the highway edges
       ctx.save();
       ctx.beginPath();
       ctx.rect(hwBot.left, 0, hwBot.right - hwBot.left, H);
       ctx.clip();
     for (let i = 0; i < LANE_COUNT; i++) {
-      const { x, w } = laneAt(i, 1, W);
+      const { x, w } = laneAt(i, 1, W, isCyberPOV ? 0.18 : HW_TOP, isCyberPOV ? 0.86 : HW_BOT);
       const pressed = laneRef.current[i].pressed;
       const lc = getDifficultyLaneColor(laneColorsRef.current[i], songRef.current?.difficultyLevel ?? 5, i);
       const silenced = laneSilenced.current[i];
@@ -11056,35 +11056,38 @@ function drawKey(
       }
       ctx.restore();
     } else if (swipeDirection && noteType === 'swipe') {
-      // ── WHITE CENTER LINE TAPERED AT FRONT TO FORM ARROW POINT ──
+      // ── WHITE CENTER LINE WITH ROUNDED ARROW TIP & FOLD-CONSTRAINED BOUNDS ──
       ctx.save();
 
-      const swH = stripeH * 0.95;
+      // Constrain stripe height so it stays strictly within key body fold boundaries
+      const swH = Math.min(stripeH * 0.85, noteH * 0.26);
       const halfH = swH / 2;
-      const leftX = -noteW / 2 + 5;
-      const rightX = noteW / 2 - 5;
-      const taperLen = swH * 1.1;
+      const leftX = -noteW / 2 + 6;
+      const rightX = noteW / 2 - 8;
+      const taperLen = swH * 1.0;
+      const tipRadius = Math.max(3.5, swH * 0.28);
 
-      // 1. Outer Colored Glow Arrow Stripe Bar
+      // 1. Outer Colored Glow Arrow Stripe Bar (Smooth Rounded Arrow Tip)
       ctx.shadowColor = stripeColor;
       ctx.shadowBlur = lerp(16, 32, prog);
       ctx.fillStyle = stripeColor;
       ctx.beginPath();
       ctx.moveTo(leftX + 4, -halfH);
       ctx.lineTo(rightX - taperLen, -halfH);
-      ctx.lineTo(rightX, 0); // Front Arrow Point
+      ctx.arcTo(rightX, 0, rightX - taperLen, halfH, tipRadius); // Smooth Rounded Arrow Tip
       ctx.lineTo(rightX - taperLen, halfH);
       ctx.lineTo(leftX + 4, halfH);
       ctx.lineTo(leftX + halfH * 0.6, 0); // Rear Aerodynamic Notch
       ctx.closePath();
       ctx.fill();
 
-      // 2. Crisp White Center Line Track Tapered at Front to Form Arrow Point
-      const whiteH = stripeH * 0.48;
+      // 2. Crisp White Center Line Track (Smooth Rounded White Arrow Tip)
+      const whiteH = swH * 0.46;
       const wHalfH = whiteH / 2;
       const wLeftX = leftX + 4;
       const wRightX = rightX - 3;
-      const wTaperLen = whiteH * 1.15;
+      const wTaperLen = whiteH * 1.0;
+      const wTipRadius = Math.max(2.0, whiteH * 0.25);
 
       ctx.fillStyle = '#FFFFFF';
       ctx.shadowColor = '#FFFFFF';
@@ -11093,7 +11096,7 @@ function drawKey(
       ctx.beginPath();
       ctx.moveTo(wLeftX + 3, -wHalfH);
       ctx.lineTo(wRightX - wTaperLen, -wHalfH);
-      ctx.lineTo(wRightX, 0); // Front White Arrow Point!
+      ctx.arcTo(wRightX, 0, wRightX - wTaperLen, wHalfH, wTipRadius); // Smooth Rounded White Arrow Tip
       ctx.lineTo(wRightX - wTaperLen, wHalfH);
       ctx.lineTo(wLeftX + 3, wHalfH);
       ctx.lineTo(wLeftX + wHalfH * 0.6, 0); // Rear White Notch
