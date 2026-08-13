@@ -10924,38 +10924,62 @@ function drawKey(
       }
       ctx.restore();
     } else if (swipeDirection && noteType === 'swipe') {
-      // ── NEON CHEVRON LINE SHOWING SWIPE DIRECTION ──
-      // (Note body is already rotated by rotations[swipeDirection] above, so no extra rotation needed)
+      // ── HIGH-FIDELITY ANIMATED NEON CHEVRON LINE ──
+      // (Note body is already rotated by rotations[swipeDirection] above)
       ctx.save();
 
-      const chevW = Math.min(noteW * 0.13, 10);
-      const chevH = Math.min(noteH * 0.32, 13);
-      const chevCount = 4;
-      const totalSpan = noteW * 0.65;
-      const spacing = totalSpan / (chevCount - 1);
-      const startX = -totalSpan / 2;
+      const animT = (Date.now() + timeOffset) / 1000;
+      const chevCount = 5;
+      const chevW = Math.min(noteW * 0.16, 13);
+      const chevH = Math.min(noteH * 0.42, 16);
+      const totalSpan = noteW * 0.78;
+      const spacing = totalSpan / chevCount;
+      // Animated scroll offset — chevrons march forward in swipe direction
+      const scrollOffset = (animT * 2.8) % 1.0;
 
       for (let i = 0; i < chevCount; i++) {
-        const cx = startX + i * spacing;
-        const alpha = 0.4 + (i / (chevCount - 1)) * 0.6; // fades in toward tip
+        // Position with scrolling animation
+        const rawX = -totalSpan / 2 + (i + scrollOffset) * spacing;
+        if (rawX > totalSpan / 2) continue;
+
+        // Progressive alpha: faint at tail, bright at tip
+        const normPos = (rawX + totalSpan / 2) / totalSpan;
+        const baseAlpha = 0.25 + normPos * 0.75;
+        // Pulse each chevron with a staggered wave
+        const pulse = 0.85 + 0.15 * Math.sin(animT * 6.0 + i * 1.2);
+        const alpha = baseAlpha * pulse;
+
+        // Progressive size: smaller at tail, larger at tip
+        const sizeScale = 0.7 + normPos * 0.3;
+        const cw = chevW * sizeScale;
+        const ch = chevH * sizeScale;
+
         ctx.globalAlpha = alpha;
 
-        // Neon glow > chevron
-        ctx.strokeStyle = '#FFFFFF';
-        ctx.shadowColor = stripeColor;
-        ctx.shadowBlur = lerp(8, 18, prog);
-        ctx.lineWidth = Math.max(2.2, chevW * 0.22);
+        // Layer 1: Outer bloom glow (lane color, wide stroke)
+        ctx.strokeStyle = lc;
+        ctx.shadowColor = lc;
+        ctx.shadowBlur = lerp(14, 30, prog) * pulse;
+        ctx.lineWidth = Math.max(3.5, cw * 0.3);
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.beginPath();
-        ctx.moveTo(cx - chevW * 0.5, -chevH * 0.5);
-        ctx.lineTo(cx + chevW * 0.5, 0);
-        ctx.lineTo(cx - chevW * 0.5, chevH * 0.5);
+        ctx.moveTo(rawX - cw * 0.5, -ch * 0.5);
+        ctx.lineTo(rawX + cw * 0.5, 0);
+        ctx.lineTo(rawX - cw * 0.5, ch * 0.5);
         ctx.stroke();
 
-        // Inner color core
-        ctx.strokeStyle = stripeColor;
-        ctx.lineWidth = Math.max(1.0, chevW * 0.1);
+        // Layer 2: White hot core (thinner bright white)
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.shadowColor = '#FFFFFF';
+        ctx.shadowBlur = 6 * pulse;
+        ctx.lineWidth = Math.max(1.8, cw * 0.14);
+        ctx.stroke();
+
+        // Layer 3: Inner lane color accent (finest line)
+        ctx.strokeStyle = lc;
+        ctx.shadowBlur = 0;
+        ctx.lineWidth = Math.max(0.8, cw * 0.06);
         ctx.stroke();
       }
       ctx.globalAlpha = 1.0;
