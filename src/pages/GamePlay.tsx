@@ -4327,13 +4327,15 @@ export default function Game() {
       let swirlSpeedMult = 1.0;
       
       const archMeta = ARCHETYPE_METAS[activeArchetypeRef.current] || ARCHETYPE_METAS['cyber_tunnel'];
+      // Dynamically resolve Stage 4 Primer Color and Stage 5 Overdrive Color directly from album cover art!
+      const primerColor = laneColorsRef.current?.[0] || archMeta.primerColor || '#00E5FF';
+      const stage5Color = laneColorsRef.current?.[2] || laneColorsRef.current?.[1] || archMeta.stage5Color || '#FF007F';
 
       if (calculatedStage === 4) {
         tunnelOpacity = 0.0; // Stage 4: Dynamic Color Primer Void & Story Bridge
         ctx.save();
-        const primerColor = archMeta.primerColor;
         
-        // Moving gas-like primer haze centered around the Stage 4 track
+        // Moving gas-like primer haze centered around the Stage 4 track (using dynamic cover color #1)
         const trackHazeR = Math.min(W, 820) * 0.55;
         drawMovingGasAura(ctx, cx, hitY * 0.5, trackHazeR, primerColor, t, 0.85);
 
@@ -4706,9 +4708,9 @@ export default function Game() {
         else {
           const tunnelW = Math.min(W, 840);
           const outerRadius = tunnelW * 0.65;
-          const tunnelColor = isOverdrive ? archMeta.stage5Color : "#0d0822";
+          const tunnelColor = isOverdrive ? stage5Color : "#0d0822";
           
-          // Dynamic Undulating Gas Backdrop around 3D Cyber Tunnel
+          // Dynamic Undulating Gas Backdrop around 3D Cyber Tunnel (using dynamic cover color #3/#2)
           drawMovingGasAura(ctx, cx, vanishingY, outerRadius, tunnelColor, t, isOverdrive ? 1.2 : 0.95);
 
           // Full 360° 3D Cylindrical Tunnel Depth Rings with Swirl Rotation
@@ -4722,7 +4724,7 @@ export default function Game() {
               ctx.beginPath();
               ctx.moveTo(Math.cos(ang) * 50, Math.sin(ang) * 50);
               ctx.lineTo(Math.cos(ang) * len, Math.sin(ang) * len);
-              ctx.strokeStyle = colorWithAlpha(archMeta.stage5Color, Math.random() * 0.65);
+              ctx.strokeStyle = colorWithAlpha(stage5Color, Math.random() * 0.65);
               ctx.lineWidth = 1.8;
               ctx.stroke();
             }
@@ -5770,7 +5772,9 @@ export default function Game() {
     // ── Horizon Fog Overlay (Fades notes into the background at the vanishing horizon across all stages) ──
     if (activeArchetypeRef.current !== 'radial_orbit' && activeArchetypeRef.current !== 'horizontal_drift') {
       const archMeta = ARCHETYPE_METAS[activeArchetypeRef.current] || ARCHETYPE_METAS['cyber_tunnel'];
-      const fogColor = calculatedStage === 4 ? archMeta.primerColor : (calculatedStage === 5 ? archMeta.stage5Color : "#000000");
+      const primerColor_fog = laneColorsRef.current?.[0] || archMeta.primerColor || '#00E5FF';
+      const stage5Color_fog = laneColorsRef.current?.[2] || laneColorsRef.current?.[1] || archMeta.stage5Color || '#FF007F';
+      const fogColor = calculatedStage === 4 ? primerColor_fog : (calculatedStage === 5 ? stage5Color_fog : "#000000");
       
       const fogGrad = ctx.createLinearGradient(0, 0, 0, hitY * 0.38);
       fogGrad.addColorStop(0, colorWithAlpha(fogColor, 0.65));
