@@ -38,21 +38,41 @@ const PACK_LABELS: Record<string, string> = {
 };
 
 // ===== ADMIN GATE =====
-const ADMIN_PASSPHRASE = 'th3scr1b3';
+const ADMIN_PASSPHRASE_HASH = 'd58f380b169d36c2fe217dadc3caa620193197132b55ba52b0947882b78c4983';
 const ADMIN_AUTH_KEY = 'th3vault_admin_auth';
 
-function AdminGate({ onAuthenticate }: { onAuthenticate: () => void }) {
+// Add security concern comment: using SHA-256 hash instead of plaintext secret
+async function hashPassphrase(passphrase: string): Promise<string> {
+  const msgBuffer = new TextEncoder().encode(passphrase.toLowerCase());
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function AdminGate({ onAuthenticate }: { onAuthenticate: (passphrase: string) => void }) {
   const [input, setInput] = useState('');
   const [error, setError] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (input.toLowerCase() === ADMIN_PASSPHRASE) {
-      sessionStorage.setItem(ADMIN_AUTH_KEY, 'true');
-      onAuthenticate();
-    } else {
+    if (isChecking) return;
+    setIsChecking(true);
+
+    try {
+      const hash = await hashPassphrase(input);
+      if (hash === ADMIN_PASSPHRASE_HASH) {
+        sessionStorage.setItem(ADMIN_AUTH_KEY, 'true');
+        onAuthenticate(input);
+      } else {
+        setError(true);
+        setTimeout(() => setError(false), 800);
+      }
+    } catch (err) {
+      console.error("Hashing failed:", err);
       setError(true);
-      setTimeout(() => setError(false), 800);
+    } finally {
+      setIsChecking(false);
     }
   };
 
@@ -366,6 +386,8 @@ export default function AdminPage() {
   const [authenticated, setAuthenticated] = useState(() =>
     sessionStorage.getItem(ADMIN_AUTH_KEY) === 'true'
   );
+  // Plaintext passphrase held in ephemeral state (security enhancement)
+  const [passphrase, setPassphrase] = useState('');
   const [config, setConfig] = useState<AdminConfig>(() => getAdminConfig());
   const [activePackTab, setActivePackTab] = useState(PACK_KEYS[0]);
   const [simResults, setSimResults] = useState<Record<Rarity, number> | null>(null);
@@ -412,18 +434,32 @@ export default function AdminPage() {
 
   // Save config
   const handleSave = useCallback(() => {
-    saveAdminConfig(config);
+    const fallbackPassphrase = passphrase || prompt('Enter admin passphrase to execute remote action');
+    if (!fallbackPassphrase) {
+       return;
+    }
+    saveAdminConfig(config, fallbackPassphrase);
+    if (!passphrase) {
+      setPassphrase(fallbackPassphrase); // Optionally re-hydrate state
+    }
     setHasChanges(false);
     setSaveFlash(true);
     setTimeout(() => setSaveFlash(false), 1500);
-  }, [config]);
+  }, [config, passphrase]);
 
   // Reset to defaults
   const handleReset = useCallback(() => {
-    const defaults = resetAdminConfig();
+    const fallbackPassphrase = passphrase || prompt('Enter admin passphrase to execute remote action');
+    if (!fallbackPassphrase) {
+       return;
+    }
+    const defaults = resetAdminConfig(fallbackPassphrase);
     setConfig(defaults);
     setHasChanges(false);
-  }, []);
+    if (!passphrase) {
+       setPassphrase(fallbackPassphrase);
+    }
+  }, [passphrase]);
 
   // Export
   const handleExport = useCallback(() => {
@@ -439,14 +475,21 @@ export default function AdminPage() {
 
   // Import
   const handleImport = useCallback(() => {
-    const result = importAdminConfig(importJson);
+    const fallbackPassphrase = passphrase || prompt('Enter admin passphrase to execute remote action');
+    if (!fallbackPassphrase) {
+       return;
+    }
+    const result = importAdminConfig(importJson, fallbackPassphrase);
     if (result) {
       setConfig(result);
       setShowImport(false);
       setImportJson('');
       setHasChanges(false);
+      if (!passphrase) {
+        setPassphrase(fallbackPassphrase);
+      }
     }
-  }, [importJson]);
+  }, [importJson, passphrase]);
 
   // Simulation
   const handleSimulate = useCallback(() => {
@@ -574,7 +617,10 @@ export default function AdminPage() {
   if (!authenticated) {
     return (
       <div className="admin-page">
-        <AdminGate onAuthenticate={() => setAuthenticated(true)} />
+        <AdminGate onAuthenticate={(passphraseInput) => {
+          setPassphrase(passphraseInput);
+          setAuthenticated(true);
+        }} />
       </div>
     );
   }
@@ -1927,9 +1973,14 @@ export default function AdminPage() {
             onClick={async () => {
               setPushStatus('pushing');
               try {
+                const fallbackPassphrase = passphrase || prompt('Enter admin passphrase to execute remote action');
+                if (!fallbackPassphrase) {
+                  setPushStatus('idle');
+                  return;
+                }
                 const { supabase } = await import('../services/supabaseClient');
                 const { data, error } = await supabase.functions.invoke('vault-engine', {
-                  body: { action: 'updateAdminConfig', payload: { config, passphrase: 'th3scr1b3' } }
+                  body: { action: 'updateAdminConfig', payload: { config, passphrase: fallbackPassphrase } }
                 });
                 if (error || !data?.success) {
                   console.error('Push to server failed:', error?.message || data?.error);

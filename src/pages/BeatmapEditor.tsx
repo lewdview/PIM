@@ -9,21 +9,41 @@ import type { Note } from '../game/types';
 import '../styles/BeatmapEditorStyles.css';
 
 // ===== ADMIN GATE PASSPHRASE CONFIG =====
-const ADMIN_PASSPHRASE = 'th3scr1b3';
+const ADMIN_PASSPHRASE_HASH = 'd58f380b169d36c2fe217dadc3caa620193197132b55ba52b0947882b78c4983';
 const ADMIN_AUTH_KEY = 'th3vault_admin_auth';
+
+// Add security concern comment: using SHA-256 hash instead of plaintext secret
+async function hashPassphrase(passphrase: string): Promise<string> {
+  const msgBuffer = new TextEncoder().encode(passphrase.toLowerCase());
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
 function AdminGate({ onAuthenticate }: { onAuthenticate: () => void }) {
   const [input, setInput] = useState('');
   const [error, setError] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (input.toLowerCase() === ADMIN_PASSPHRASE) {
-      sessionStorage.setItem(ADMIN_AUTH_KEY, 'true');
-      onAuthenticate();
-    } else {
+    if (isChecking) return;
+    setIsChecking(true);
+
+    try {
+      const hash = await hashPassphrase(input);
+      if (hash === ADMIN_PASSPHRASE_HASH) {
+        sessionStorage.setItem(ADMIN_AUTH_KEY, 'true');
+        onAuthenticate();
+      } else {
+        setError(true);
+        setTimeout(() => setError(false), 800);
+      }
+    } catch (err) {
+      console.error("Hashing failed:", err);
       setError(true);
-      setTimeout(() => setError(false), 800);
+    } finally {
+      setIsChecking(false);
     }
   };
 

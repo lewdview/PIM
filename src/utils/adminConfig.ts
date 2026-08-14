@@ -376,7 +376,7 @@ export function getAdminConfig(): AdminConfig {
   return defaults;
 }
 
-export function saveAdminConfig(config: AdminConfig) {
+export function saveAdminConfig(config: AdminConfig, passphrase?: string) {
   config.lastModified = new Date().toISOString();
   config.version = (config.version || 0) + 1;
   configCache = config;
@@ -384,7 +384,7 @@ export function saveAdminConfig(config: AdminConfig) {
 
   // Sync to backend (fire and forget)
   supabase.functions.invoke('vault-engine', {
-    body: { action: 'updateAdminConfig', payload: { config, passphrase: 'th3scr1b3' } }
+    body: { action: 'updateAdminConfig', payload: { config, passphrase: passphrase || '' } }
   }).catch(e => console.error("Failed to sync admin config to backend", e));
 
   // Append to history (keep last 20 entries)
@@ -401,9 +401,9 @@ export function saveAdminConfig(config: AdminConfig) {
   } catch { /* ignore */ }
 }
 
-export function resetAdminConfig(): AdminConfig {
+export function resetAdminConfig(passphrase?: string): AdminConfig {
   const defaults = buildDefaultConfig();
-  saveAdminConfig(defaults);
+  saveAdminConfig(defaults, passphrase);
   return defaults;
 }
 
@@ -411,12 +411,12 @@ export function exportAdminConfig(): string {
   return JSON.stringify(getAdminConfig(), null, 2);
 }
 
-export function importAdminConfig(json: string): AdminConfig | null {
+export function importAdminConfig(json: string, passphrase?: string): AdminConfig | null {
   try {
     const parsed = JSON.parse(json) as AdminConfig;
     // Basic validation
     if (!parsed.rollRates || !parsed.modifiers) return null;
-    saveAdminConfig(parsed);
+    saveAdminConfig(parsed, passphrase);
     return parsed;
   } catch {
     return null;
