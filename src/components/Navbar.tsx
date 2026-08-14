@@ -13,10 +13,12 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../store/useAuthStore';
 import { useVaultStore } from '../store/useVaultStore';
+import { useGlobalPlayer } from '../store/useGlobalPlayer';
 import { useDisplayMode } from '../store/useDisplayMode';
 import GuideModal from './GuideModal';
 import { haptics } from '../utils/haptics';
 import FloatingTicker from './FloatingTicker';
+import { getIdenticon } from '../utils/identicon';
 
 const isDev = import.meta.env.DEV || localStorage.getItem('th3vault_dev_mode') === 'true';
 
@@ -107,12 +109,11 @@ const menuSections: MenuSection[] = [
   },
 ];
 
-// Mobile bottom bar quick-access tabs
+// Mobile bottom-left vertical quick-access tabs
 const mobileQuickTabs = [
-  { id: 'play', to: '/arcade', label: 'Play', icon: Gamepad2, accent: '#FF1493' },
-  { id: 'vault', to: '/vault', label: 'Vault', icon: Home, accent: '#FF5500' },
-  { id: 'earn', to: '/vault/earn', label: 'Earn', icon: Zap, accent: '#E5B800' },
-  { id: 'more', action: 'command', label: 'More', icon: LayoutGrid, accent: '#A855F7' },
+  { id: 'play', to: '/arcade', label: 'Arcade', icon: Gamepad2, accent: '#FF1493', glow: 'rgba(255, 20, 147, 0.4)' },
+  { id: 'vault', to: '/vault', label: 'Vault', icon: Home, accent: '#FF5500', glow: 'rgba(255, 85, 0, 0.4)' },
+  { id: 'earn', to: '/vault/earn', label: 'Earn', icon: Zap, accent: '#E5B800', glow: 'rgba(229, 184, 0, 0.4)' },
 ];
 
 // Determine which section a route belongs to for active highlighting
@@ -288,6 +289,7 @@ export default function Navbar() {
   const tokenBalance = useVaultStore(s => s.tokenBalance);
   const displayName = useVaultStore(s => s.displayName);
   const avatarUrl = useVaultStore(s => s.avatarUrl);
+  const currentTrack = useGlobalPlayer(s => s.currentTrack);
   const { is4K, toggle: toggle4K, detectCapability } = useDisplayMode();
   const optionsModalOpen = useVaultStore((s) => s.optionsModalOpen);
   const setOptionsModalOpen = useVaultStore((s) => s.setOptionsModalOpen);
@@ -473,20 +475,46 @@ export default function Navbar() {
                     className="flex items-center gap-2 no-underline transition-all hover:scale-105"
                     title="Manage Scribe Identity"
                   >
-                    {avatarUrl && (
-                      <img
-                        src={avatarUrl}
-                        alt="avatar"
-                        style={{
-                          width: '24px',
-                          height: '24px',
-                          borderRadius: '50%',
-                          border: '1.5px solid #ff3800',
-                          objectFit: 'cover',
-                          background: '#111',
-                        }}
-                      />
-                    )}
+                    {(() => {
+                      if (avatarUrl) {
+                        return (
+                          <img
+                            src={avatarUrl}
+                            alt="avatar"
+                            style={{
+                              width: '24px',
+                              height: '24px',
+                              borderRadius: '50%',
+                              border: '1.5px solid #ff3800',
+                              objectFit: 'cover',
+                              background: '#111',
+                            }}
+                          />
+                        );
+                      }
+                      const ident = getIdenticon(user?.id || '', displayName);
+                      return (
+                        <div
+                          style={{
+                            width: '24px',
+                            height: '24px',
+                            borderRadius: '50%',
+                            border: '1.5px solid #ff3800',
+                            background: ident.bgColor,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontFamily: '"JetBrains Mono", monospace',
+                            fontSize: '9px',
+                            fontWeight: 900,
+                            color: 'rgba(255,255,255,0.85)',
+                            flexShrink: 0,
+                          }}
+                        >
+                          {ident.initials}
+                        </div>
+                      );
+                    })()}
                     <div
                       className="sticker-gun-tag sticker-slits"
                       style={{
@@ -1160,88 +1188,82 @@ export default function Navbar() {
         )}
       </AnimatePresence>
 
-      {/* ══ MOBILE BOTTOM TAB BAR ════════════════════════════════════════════ */}
+      {/* ══ MOBILE BOTTOM-LEFT VERTICAL NAVIGATION DOCK ════════════════════ */}
       <nav
-        className="fixed bottom-0 left-0 right-0 z-40 md:hidden pb-[env(safe-area-inset-bottom,0px)]"
+        className="fixed z-40 md:hidden flex flex-col items-center gap-1.5 p-1.5 rounded-2xl"
         style={{
-          background: 'rgba(8,6,4,0.97)',
+          bottom: currentTrack
+            ? 'calc(76px + env(safe-area-inset-bottom, 0px))'
+            : 'max(14px, env(safe-area-inset-bottom, 14px))',
+          left: '12px',
+          background: 'rgba(8, 6, 4, 0.92)',
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
-          borderTop: '1px solid rgba(255,56,0,0.2)',
+          border: '1.5px solid rgba(255, 56, 0, 0.3)',
+          boxShadow: '3px 3px 0 #000, 0 0 24px rgba(0, 0, 0, 0.85), 0 0 14px rgba(255, 56, 0, 0.15)',
         }}
+        aria-label="Quick mobile navigation"
       >
-        <div className="flex items-stretch h-[62px]">
-          {mobileQuickTabs.map(({ id, to, action, label, icon: Icon, accent }) => {
-            const isTabActive = id === 'more'
-              ? commandPanelOpen
-              : activeSection === id;
+        {mobileQuickTabs.map(({ id, to, label, icon: Icon, accent, glow }) => {
+          const isTabActive = activeSection === id;
 
-            const handleTap = () => {
-              haptics.lightTap();
-              if (action === 'command') {
-                setCommandPanelOpen(!commandPanelOpen);
-              }
-              // Navigation handled by Link for tabs with `to`
-            };
-
-            if (action === 'command') {
-              return (
-                <button
-                  key={id}
-                  onClick={handleTap}
-                  className="flex-1 flex flex-col items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer"
-                  style={{
-                    color: isTabActive ? accent : 'rgba(255,255,255,0.3)',
-                    background: isTabActive ? `${accent}08` : 'transparent',
-                    marginTop: '-2px',
-                    borderTopWidth: '2px',
-                    borderTopStyle: 'solid',
-                    borderTopColor: isTabActive ? accent : 'transparent',
-                  }}
-                >
-                  <Icon size={20} />
-                  <span style={{
-                    fontFamily: '"JetBrains Mono", monospace',
-                    fontSize: '8px',
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.08em',
-                  }}>
-                    {label}
-                  </span>
-                </button>
-              );
-            }
-
-            return (
-              <Link
-                key={id}
-                to={to!}
-                onClick={handleTap}
-                className="flex-1 flex flex-col items-center justify-center gap-1 no-underline transition-all active:scale-95"
+          return (
+            <Link
+              key={id}
+              to={to}
+              onClick={() => haptics.lightTap()}
+              className="relative flex flex-col items-center justify-center rounded-xl no-underline transition-all duration-150 active:scale-90 select-none"
+              style={{
+                width: '42px',
+                height: '42px',
+                background: isTabActive
+                  ? `${accent}22`
+                  : 'rgba(255, 255, 255, 0.03)',
+                border: isTabActive
+                  ? `1.5px solid ${accent}`
+                  : '1px solid rgba(255, 255, 255, 0.07)',
+                color: isTabActive ? accent : 'rgba(255, 255, 255, 0.5)',
+                boxShadow: isTabActive
+                  ? `0 0 12px ${glow}, 2px 2px 0 #000`
+                  : '1px 1px 0 #000',
+              }}
+              title={label}
+              aria-label={label}
+            >
+              <Icon
+                size={17}
                 style={{
-                  color: isTabActive ? accent : 'rgba(255,255,255,0.3)',
-                  borderTopWidth: '2px',
-                  borderTopStyle: 'solid',
-                  borderTopColor: isTabActive ? accent : 'transparent',
-                  background: isTabActive ? `${accent}08` : 'transparent',
-                  marginTop: '-2px',
+                  filter: isTabActive ? `drop-shadow(0 0 6px ${accent})` : 'none',
+                }}
+              />
+              <span
+                style={{
+                  fontFamily: '"JetBrains Mono", monospace',
+                  fontSize: '7px',
+                  fontWeight: 900,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  marginTop: '1px',
+                  lineHeight: 1,
+                  color: isTabActive ? accent : 'rgba(255, 255, 255, 0.45)',
                 }}
               >
-                <Icon size={20} />
-                <span style={{
-                  fontFamily: '"JetBrains Mono", monospace',
-                  fontSize: '8px',
-                  fontWeight: 700,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                }}>
-                  {label}
-                </span>
-              </Link>
-            );
-          })}
-        </div>
+                {label}
+              </span>
+              {isTabActive && (
+                <span
+                  className="absolute -left-[2.5px] top-1/2 -translate-y-1/2 rounded-full"
+                  style={{
+                    width: '3px',
+                    height: '14px',
+                    background: accent,
+                    boxShadow: `0 0 6px ${accent}`,
+                  }}
+                />
+              )}
+            </Link>
+          );
+        })}
       </nav>
 
       <GuideModal isOpen={guideOpen} onClose={() => setGuideOpen(false)} />

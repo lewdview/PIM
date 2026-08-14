@@ -374,7 +374,7 @@ export default function Campaign() {
 
                 {/* 4. Glassmorphic Interaction Card */}
                 <div 
-                  className="relative z-10 w-full max-w-[450px] mx-4 p-8 border rounded-2xl backdrop-blur-xl bg-black/80 flex flex-col justify-between min-h-[350px] shadow-2xl transition-all duration-300 overflow-hidden"
+                  className="relative z-10 w-full max-w-[450px] mx-4 p-5 sm:p-8 border rounded-2xl backdrop-blur-xl bg-black/80 flex flex-col justify-between min-h-[350px] shadow-2xl transition-all duration-300 overflow-hidden"
                   style={{
                     borderColor: `${ch.meta.dc}44`,
                     boxShadow: `0 0 30px ${ch.meta.dc}15`
@@ -531,7 +531,7 @@ export default function Campaign() {
         </div>
 
         {/* Global collector stats floating bottom navigation line */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 bg-black/95 border border-white/5 backdrop-blur-xl py-2.5 px-6 rounded-full font-mono flex items-center gap-6 text-[8px] sm:text-[9px] tracking-widest text-zinc-400 uppercase shadow-2xl select-none whitespace-nowrap">
+        <div className="hidden sm:flex absolute bottom-6 left-1/2 -translate-x-1/2 z-20 bg-black/95 border border-white/5 backdrop-blur-xl py-2.5 px-6 rounded-full font-mono items-center gap-6 text-[8px] sm:text-[9px] tracking-widest text-zinc-400 uppercase shadow-2xl select-none whitespace-nowrap">
           <span>CLEARED: <strong className="text-white">{totals.cleared}</strong></span>
           <span className="w-1 h-1 rounded-full bg-white/25" />
           <span>PLATINUMS: <strong className="text-[#39FF14]">✦ {totals.platinums}</strong></span>

@@ -130,6 +130,9 @@ interface VaultState {
   updateProgression: (progression: Partial<ProfileProgression>) => Promise<void>;
   updateCheats: (cheats: Partial<ProfileCheats>) => Promise<void>;
 
+  // Profile Identity Actions
+  updateProfile: (displayName: string, avatarUrl?: string | null) => Promise<void>;
+
   // Database Sync Actions
   syncHighScore: (songId: string, score: number, accuracy: number, maxCombo: number, medal: string, telemetry?: any) => Promise<void>;
   syncMedal: (songId: string, medal: string) => Promise<void>;
@@ -1029,5 +1032,31 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         console.error('[Sync] Error adding tokens to Supabase:', error.message);
       }
     }
+  },
+
+  updateProfile: async (newDisplayName: string, newAvatarUrl?: string | null) => {
+    const session = await supabase.auth.getSession();
+    const userId = session.data.session?.user.id;
+    if (!userId) return;
+
+    const updates: Record<string, any> = { display_name: newDisplayName };
+    if (newAvatarUrl !== undefined) {
+      updates.avatar_url = newAvatarUrl;
+    }
+
+    const { error } = await supabase
+      .from('profiles')
+      .update(updates)
+      .eq('id', userId);
+
+    if (error) {
+      console.error('[Profile] Error updating profile:', error.message);
+      throw error;
+    }
+
+    set({
+      displayName: newDisplayName,
+      ...(newAvatarUrl !== undefined ? { avatarUrl: newAvatarUrl } : {}),
+    });
   },
 }));

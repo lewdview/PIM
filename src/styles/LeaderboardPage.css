@@ -1,0 +1,261 @@
+/* LeaderboardPage.css — Leaderboard-specific styles */
+
+/* Tab bar */
+.leaderboard-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+
+.leaderboard-tab {
+  flex: 1;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: 'Impact', 'Arial Black', sans-serif;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.35);
+  transition: color 0.2s ease;
+  position: relative;
+  text-align: center;
+}
+
+.leaderboard-tab:hover {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.leaderboard-tab.active {
+  color: #fff;
+}
+
+/* Tab subtitle */
+.leaderboard-tab-sub {
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 8px;
+  font-weight: 400;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  opacity: 0.4;
+  margin-top: 2px;
+}
+
+/* Animated underline indicator */
+.leaderboard-tab-indicator {
+  position: absolute;
+  bottom: -1px;
+  height: 3px;
+  background: #ff3800;
+  box-shadow: 0 0 12px rgba(255, 56, 0, 0.5);
+  border-radius: 2px 2px 0 0;
+}
+
+/* Countdown timer */
+.leaderboard-countdown {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+  margin-bottom: 1rem;
+}
+
+.leaderboard-countdown-value {
+  color: #ff3800;
+  font-weight: 900;
+}
+
+/* Your rank sticky card */
+.leaderboard-your-rank {
+  position: relative;
+  padding: 16px 20px;
+  margin-bottom: 1.5rem;
+  border: 2px solid #000;
+  box-shadow: 3px 3px 0 #000, 0 0 20px rgba(255, 215, 0, 0.15);
+}
+
+/* Row styles */
+.leaderboard-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  transition: all 0.15s ease;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.leaderboard-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+  transform: translateX(2px);
+  border-bottom-color: rgba(255, 56, 0, 0.15);
+}
+
+.leaderboard-row.is-you {
+  background: rgba(255, 215, 0, 0.04);
+  border-bottom-color: rgba(255, 215, 0, 0.1);
+}
+
+/* Avatar */
+.leaderboard-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+}
+
+.leaderboard-avatar.rank-1 {
+  border-color: #FFD700;
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.3);
+}
+
+.leaderboard-avatar.rank-2 {
+  border-color: #C0C0C0;
+  box-shadow: 0 0 6px rgba(192, 192, 192, 0.25);
+}
+
+.leaderboard-avatar.rank-3 {
+  border-color: #CD7F32;
+  box-shadow: 0 0 6px rgba(205, 127, 50, 0.25);
+}
+
+.leaderboard-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.leaderboard-avatar-identicon {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.85);
+  letter-spacing: 0.5px;
+}
+
+/* Rank number/icon */
+.leaderboard-rank {
+  width: 28px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+/* Name column */
+.leaderboard-name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.leaderboard-name-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.leaderboard-name-text.is-you {
+  color: var(--color-neon-yellow, #FFD700);
+  font-weight: 800;
+}
+
+.leaderboard-name-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.25);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Score column */
+.leaderboard-score {
+  text-align: right;
+  flex-shrink: 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.7);
+  min-width: 60px;
+}
+
+.leaderboard-score-label {
+  font-size: 9px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.25);
+  text-transform: uppercase;
+  margin-left: 3px;
+}
+
+/* Empty state */
+.leaderboard-empty {
+  text-align: center;
+  padding: 48px 24px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* Loading skeleton */
+.leaderboard-skeleton {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.leaderboard-skeleton-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  animation: skeleton-pulse 1.5s infinite ease-in-out;
+}
+
+.leaderboard-skeleton-bar {
+  height: 12px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.06);
+  animation: skeleton-pulse 1.5s infinite ease-in-out;
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}

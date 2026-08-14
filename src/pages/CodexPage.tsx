@@ -19,6 +19,30 @@ const PREVIEW_DURATION: Record<string, number> = {
   mythic: 0,
 };
 
+// Check if all 5 vault gift packs (Free, Taste, Special Picks, Alpha, Prophecy) have been claimed
+export function checkHasClaimedAllPrizes(
+  day: number,
+  cardId?: string,
+  claimedRewards: Record<string, any> = {}
+): boolean {
+  const cardKey = `card-${day}`;
+  const dayPadKey = `day-${String(day).padStart(3, '0')}`;
+  const dayKey = `day-${day}`;
+  const rawKey = String(day);
+  const keys = [cardKey, dayPadKey, dayKey, rawKey, ...(cardId ? [cardId] : [])];
+
+  for (const k of keys) {
+    if (claimedRewards[k]?.includes('prophecy') || (Array.isArray(claimedRewards[k]) && claimedRewards[k].length >= 5)) {
+      return true;
+    }
+    if (typeof localStorage !== 'undefined') {
+      const local = localStorage.getItem(`reward_tier_${k}`);
+      if (local === 'prophecy') return true;
+    }
+  }
+  return false;
+}
+
 type FilterMode = 'all' | 'owned' | 'missing' | 'beyond';
 type SortMode = 'day-asc' | 'day-desc' | 'rarity';
 
@@ -71,7 +95,7 @@ function CodexGridCardItem({
   const isDailyClaim = owned?.source === 'daily_claim';
   const maxDuration = isDailyClaim ? 0 : (owned ? PREVIEW_DURATION[owned.rarity] : (PREVIEW_DURATION[card.rarity] ?? 15));
   const isFullSong = maxDuration === 0;
-  const hasClaimedAll = claimedRewards[`card-${card.day}`]?.includes('prophecy') || localStorage.getItem(`reward_tier_card-${card.day}`) === 'prophecy';
+  const hasClaimedAll = checkHasClaimedAllPrizes(card.day, (card as any).id, claimedRewards);
 
   return (
     <motion.div
@@ -164,7 +188,7 @@ function CodexGridCardItem({
         {sourceLabel ? `${sourceLabel} ` : ''}#{String(card.day).padStart(3, '0')}
       </div>
 
-      {/* Ownership / lock badge */}
+      {/* Ownership / lock badge & 5/5 gifts medal */}
       <div 
         className="transition-all duration-200 group-hover:scale-125 group-hover:brightness-125"
         style={{
@@ -178,7 +202,9 @@ function CodexGridCardItem({
         }}
       >
         {hasClaimedAll && (
-          <PrizeRibbonSvg size={14} isClaimed={true} tier="prophecy" style={{ filter: 'drop-shadow(0 0 4px rgba(255,115,0,0.6))' }} />
+          <div title="5/5 Vault Gifts Obtained (Prophecy Tier)">
+            <PrizeRibbonSvg size={15} isClaimed={true} tier="prophecy" style={{ filter: 'drop-shadow(0 0 6px rgba(255,115,0,0.7))' }} />
+          </div>
         )}
         {isOwned ? (
           <CheckCircle size={14} style={{ color: rc.color, filter: `drop-shadow(0 0 4px ${rc.color}80)` }} />
@@ -284,34 +310,36 @@ function CodexGridCardItem({
             )}
           </div>
         </div>
-        {/* Shard Progress Bar */}
+        {/* Shard & Gifts Progress Bar */}
         {(() => {
           const fragCount = getFragmentsForDay(card.day);
-          if (isOwned) {
-            return (
-              <div style={{ marginTop: '5px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '7px', fontFamily: '"JetBrains Mono", monospace', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  <span>Shards</span>
-                  <span style={{ color: '#39FF14', fontWeight: 'bold' }}>Unlocked</span>
-                </div>
-                <div style={{ height: '3px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden', marginTop: '2px' }}>
-                  <div style={{ height: '100%', background: '#39FF14', width: '100%', boxShadow: '0 0 6px rgba(57,255,20,0.6)' }} />
-                </div>
-              </div>
-            );
-          } else {
-            return (
-              <div style={{ marginTop: '5px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '7px', fontFamily: '"JetBrains Mono", monospace', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  <span>Shards</span>
-                  <span style={{ color: fragCount > 0 ? '#ffd700' : 'rgba(255,255,255,0.2)' }}>{fragCount} / 10</span>
-                </div>
-                <div style={{ height: '3px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden', marginTop: '2px' }}>
-                  <div style={{ height: '100%', background: '#ffd700', width: `${Math.min(10, fragCount) * 10}%`, boxShadow: fragCount > 0 ? '0 0 6px rgba(255,215,0,0.6)' : 'none' }} />
+          return (
+            <div style={{ marginTop: '5px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '7px', fontFamily: '"JetBrains Mono", monospace', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <span>Shards</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  {hasClaimedAll && (
+                    <span title="5/5 Vault Gifts Obtained" style={{ color: '#f97316', fontWeight: 800, letterSpacing: '0.02em' }}>
+                      5/5 🎁
+                    </span>
+                  )}
+                  <span style={{ color: isOwned ? '#39FF14' : fragCount > 0 ? '#ffd700' : 'rgba(255,255,255,0.2)', fontWeight: 'bold' }}>
+                    {isOwned ? 'Unlocked' : `${fragCount} / 10`}
+                  </span>
                 </div>
               </div>
-            );
-          }
+              <div style={{ height: '3px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', overflow: 'hidden', marginTop: '2px' }}>
+                <div
+                  style={{
+                    height: '100%',
+                    background: isOwned ? '#39FF14' : '#ffd700',
+                    width: isOwned ? '100%' : `${Math.min(10, fragCount) * 10}%`,
+                    boxShadow: isOwned ? '0 0 6px rgba(57,255,20,0.6)' : fragCount > 0 ? '0 0 6px rgba(255,215,0,0.6)' : 'none',
+                  }}
+                />
+              </div>
+            </div>
+          );
         })()}
       </div>
 
@@ -503,12 +531,19 @@ export default function CodexPage() {
 
   const stats = useMemo(() => {
     const pastTotal = allCards.filter(c => c.day <= today).length;
+    let giftsAllClaimedCount = 0;
+    for (const c of allCards) {
+      if (checkHasClaimedAllPrizes(c.day, (c as any).id, claimedRewards)) {
+        giftsAllClaimedCount++;
+      }
+    }
     return {
       total: pastTotal,
       owned: ownedDays.size,
       pct: pastTotal > 0 ? Math.round((ownedDays.size / pastTotal) * 100) : 0,
+      giftsClaimed: giftsAllClaimedCount,
     };
-  }, [allCards, ownedDays, today]);
+  }, [allCards, ownedDays, today, claimedRewards]);
 
   const handlePlay = useCallback((card: VaultCard) => {
     const owned = ownedDays.get(card.day);
@@ -635,6 +670,37 @@ export default function CodexPage() {
               }}>
                 {stats.owned}<span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.3)' }}>/{stats.total}</span>
               </div>
+            </div>
+
+            {/* 5/5 Gifts Mastered Pill */}
+            <div style={{
+              padding: '8px 16px',
+              border: '2px solid #000',
+              background: '#0d0d0d',
+              boxShadow: '3px 3px 0 #000',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+            }}>
+              <div>
+                <div style={{
+                  fontFamily: '"JetBrains Mono", monospace',
+                  fontSize: '8px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.1em',
+                  color: 'rgba(255,255,255,0.3)',
+                }}>5/5 Gifts Claimed</div>
+                <div style={{
+                  fontFamily: '"Impact", "Arial Black", sans-serif',
+                  fontSize: '24px',
+                  color: '#f97316',
+                  letterSpacing: '-1px',
+                  lineHeight: 1,
+                }}>
+                  {stats.giftsClaimed}<span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.3)' }}>/{stats.total}</span>
+                </div>
+              </div>
+              <PrizeRibbonSvg size={22} isClaimed={stats.giftsClaimed > 0} tier="prophecy" style={{ filter: 'drop-shadow(0 0 6px rgba(249,115,22,0.6))' }} />
             </div>
 
             <div style={{

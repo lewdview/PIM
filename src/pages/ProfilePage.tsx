@@ -21,6 +21,7 @@ import {
   Fingerprint, RefreshCw, LogOut, Layers, ArrowUpRight,
   Shield, Zap, User, ExternalLink, Wallet, Sparkles, Award, Play, Disc, Lock
 } from 'lucide-react';
+import IdentitySetup from '../components/IdentitySetup';
 import { useAuthStore } from '../store/useAuthStore';
 import { useVaultStore } from '../store/useVaultStore';
 import { supabase } from '../services/supabaseClient';
@@ -65,7 +66,7 @@ const EASE_OUT: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
 export default function ProfilePage() {
   const { user, isAnonymous, signOut } = useAuthStore();
-  const { collection, tokenBalance, totalPulls, streakCount } = useVaultStore();
+  const { collection, tokenBalance, totalPulls, streakCount, loadVaultData } = useVaultStore();
   const [, navigate] = useLocation();
 
   const currentDay = getCurrentDay();
@@ -186,6 +187,7 @@ export default function ProfilePage() {
               <div className="hero-specular-glare" />
 
               <div className="profile-avatar-frame">
+                {/* @TODO: Wrap with a label that triggers a file input when the user already has an identity. */}
                 {avatarUrl ? (
                   <img src={avatarUrl} alt="Avatar" className="profile-avatar-img" />
                 ) : (
@@ -250,6 +252,19 @@ export default function ProfilePage() {
             )}
           </div>
         </section>
+
+        {/* ═══════════ SECTION 1.5 : CREATE YOUR PIM ID ═══════════ */}
+        {!displayName && !loadingProfile && (
+          <section className="profile-glass-panel border-l-4 border-[#ff3800] mt-6 mb-6">
+            <div className="profile-panel-header text-[#FFD700]">
+              <Sparkles size={18} /> CREATE YOUR PIM ID
+            </div>
+            <p className="font-mono text-xs text-white/50 leading-relaxed mb-4">
+              Choose a username and avatar to stand out on the leaderboard
+            </p>
+            <IdentitySetup compact onComplete={() => { if (loadVaultData) loadVaultData(true); }} />
+          </section>
+        )}
 
         {/* ═══════════ SECTION 2 : LIVE COLLECTOR STATS ═══════════ */}
         <section>

@@ -1135,13 +1135,16 @@ export default function Chapter() {
       {/* MOBILE FLOATING BOTTOM PLAY PANEL (only on viewport size < lg) */}
       {selectedSong && (
         <div
-          className="lg:hidden fixed bottom-0 left-0 right-0 z-30 p-4 border-t"
+          className="lg:hidden fixed z-30 p-3 border rounded-2xl"
           style={{
-            borderColor: isAvant ? 'rgba(57,255,20,0.2)' : 'rgba(255,255,255,0.06)',
-            background: isAvant ? 'rgba(5,5,5,0.95)' : 'rgba(8,8,12,0.9)',
-            backdropFilter: 'blur(16px)',
-            boxShadow: '0 -10px 30px rgba(0,0,0,0.5)',
-            paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom))',
+            bottom: 'max(14px, env(safe-area-inset-bottom, 14px))',
+            left: '68px',
+            right: '12px',
+            borderColor: isAvant ? 'rgba(57,255,20,0.3)' : 'rgba(255,255,255,0.12)',
+            background: isAvant ? 'rgba(5,5,5,0.94)' : 'rgba(8,8,12,0.92)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.8), 2px 2px 0 #000',
           }}
         >
           <div className="flex flex-col gap-2">

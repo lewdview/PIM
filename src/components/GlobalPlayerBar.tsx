@@ -38,8 +38,6 @@ export default function GlobalPlayerBar() {
     location.startsWith('/results/') ||
     location === '/options';
 
-  const bottomSpacing = isMobile ? (hideNavbar ? '0px' : '62px') : '0px';
-
   return (
     <AnimatePresence font-sans>
       {currentTrack && (
@@ -50,7 +48,7 @@ export default function GlobalPlayerBar() {
         transition={{ type: 'spring', stiffness: 400, damping: 35 }}
         style={{
           position: 'fixed',
-          bottom: bottomSpacing, // dynamic position based on nav bar presence
+          bottom: 0,
           left: 0,
           right: 0,
           zIndex: 45,
@@ -59,8 +57,9 @@ export default function GlobalPlayerBar() {
           WebkitBackdropFilter: 'blur(24px)',
           borderTop: `1px solid ${accent}30`,
           boxShadow: `0 -4px 20px rgba(0,0,0,0.5), 0 0 20px ${accent}15`,
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
         }}
-        className="md:bottom-0"
+        className="bottom-0"
       >
         {/* Progress bar — clickable */}
         <div
