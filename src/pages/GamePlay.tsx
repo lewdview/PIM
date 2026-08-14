@@ -4704,7 +4704,7 @@ export default function Game() {
           ctx.restore();
         }
 
-        // ── ARCHETYPE 6: 3D CYBER VORTEX TUNNEL (Default) ──
+        // ── ARCHETYPE 6: 3D CYBER VORTEX TUNNEL (Default & Stage 3/5 POV) ──
         else {
           const tunnelW = Math.min(W, 840);
           const outerRadius = tunnelW * 0.65;
@@ -4713,66 +4713,84 @@ export default function Game() {
           // Dynamic Undulating Gas Backdrop around 3D Cyber Tunnel (using dynamic cover color #3/#2)
           drawMovingGasAura(ctx, cx, vanishingY, outerRadius, tunnelColor, t, isOverdrive ? 1.2 : 0.95);
 
-          // Full 360° 3D Cylindrical Tunnel Depth Rings with Swirl Rotation
-          if (isOverdrive) {
-            ctx.save();
-            ctx.translate(cx, vanishingY);
-            ctx.globalAlpha = 0.4 + beatPulseVal * 0.3;
-            for (let i = 0; i < 20; i++) {
-              const ang = (i / 20) * Math.PI * 2 + t * 4;
-              const len = tunnelW * 0.75;
-              ctx.beginPath();
-              ctx.moveTo(Math.cos(ang) * 50, Math.sin(ang) * 50);
-              ctx.lineTo(Math.cos(ang) * len, Math.sin(ang) * len);
-              ctx.strokeStyle = colorWithAlpha(stage5Color, Math.random() * 0.65);
-              ctx.lineWidth = 1.8;
-              ctx.stroke();
-            }
-            ctx.restore();
-          }
+          // 1. Dynamic Radial Hyperspace Speed Lines radiating out toward player from vanishing center (cx, vanishingY)
+          ctx.save();
+          ctx.translate(cx, vanishingY);
+          const lineCount = isOverdrive ? 24 : 16;
+          const speedMult = isOverdrive ? 2.4 : 1.4;
+          
+          for (let i = 0; i < lineCount; i++) {
+            const baseAng = (i / lineCount) * Math.PI * 2 + swirlAngle * 0.25;
+            const lineP = ((t * 0.6 * speedMult + i / lineCount) % 1);
+            
+            // Scaled dynamically to tunnelW for desktop & widescreen displays
+            const minR = tunnelW * 0.04;
+            const maxR = tunnelW * 0.58;
+            const innerR = minR + (maxR - minR) * Math.pow(lineP, 2);
+            const outerR = Math.min(maxR, innerR + tunnelW * lerp(0.08, 0.22, lineP));
+            const lineAlpha = (1.0 - Math.pow(lineP - 0.5, 2) * 4) * (0.45 + beatPulseVal * 0.35);
+            
+            const lc = laneColorsRef.current[i % 3] || (i % 2 === 0 ? "#00E5FF" : "#FF007F");
 
-          // Full 360° 3D Cylindrical Tunnel Depth Rings with Swirl Rotation
-          const depthDepths = [0.06, 0.18, 0.35, 0.55, 0.75, 0.95];
+            ctx.beginPath();
+            ctx.moveTo(Math.cos(baseAng) * innerR, Math.sin(baseAng) * (innerR * 0.62));
+            ctx.lineTo(Math.cos(baseAng) * outerR, Math.sin(baseAng) * (outerR * 0.62));
+            ctx.strokeStyle = colorWithAlpha(lc, Math.max(0, lineAlpha));
+            ctx.lineWidth = lerp(1.2, 4.0, lineP);
+            ctx.stroke();
+          }
+          ctx.restore();
+
+          // 2. Dynamic 3D Concentric Depth Rings CONTINUOUSLY EXPANDING TOWARDS THE PLAYER
+          const ringCount = 7;
           ctx.save();
           ctx.globalCompositeOperation = "screen";
 
-          depthDepths.forEach((p, idx) => {
-            const ringY = lerp(vanishingY, H * 0.52, p);
-            const ringRadiusX = lerp(tunnelW * 0.10, tunnelW * 0.58, p);
-            const ringRadiusY = lerp(H * 0.07, H * 0.42, p);
-            const ringAlpha = lerp(0.22, 0.8, p) * (0.85 + beatPulseVal * 0.3);
+          for (let idx = 0; idx < ringCount; idx++) {
+            // Continuous forward movement towards the player in 3D depth space!
+            const p_base = idx / ringCount;
+            const ringP = ((p_base + (t * 0.35 * swirlSpeedMult)) % 1); // 0 (horizon) -> 1 (foreground)
+            
+            // 3D Perspective Scaling: accelerates exponentially as ring reaches camera foreground
+            const perspectiveP = Math.pow(ringP, 1.4);
+            const ringY = lerp(vanishingY, H * 0.58, perspectiveP);
+            
+            // Scaled dynamically to tunnelW for desktop & widescreen displays!
+            const ringRadiusX = lerp(tunnelW * 0.05, tunnelW * 0.58, perspectiveP);
+            const ringRadiusY = lerp(H * 0.03, H * 0.42, perspectiveP);
+            
+            // Fade in as ring emerges from horizon, fade out at foreground threshold
+            const fadeAlpha = ringP < 0.15 ? ringP / 0.15 : (1.0 - Math.max(0, (ringP - 0.82) / 0.18));
+            const ringAlpha = fadeAlpha * (0.35 + beatPulseVal * 0.45);
 
-            const isCyan = idx % 2 === 0;
-            const ringSwirl = swirlAngle + p * 1.5;
+            const ringColor = laneColorsRef.current[idx % 3] || (idx % 2 === 0 ? "#00E5FF" : "#FF007F");
+            const ringSwirl = swirlAngle + ringP * 2.0;
 
             ctx.save();
             ctx.translate(cx, ringY);
-            ctx.rotate(ringSwirl * 0.12);
+            ctx.rotate(ringSwirl * 0.15);
 
-            const lineWidth = lerp(1.8, 5.2, p);
-
-            // Enhanced Chromatic Rings
-            const ringColor = isOverdrive
-              ? (isCyan ? "rgba(0, 229, 255, " : "rgba(255, 0, 127, ")
-              : (isCyan ? "rgba(0, 229, 255, " : "rgba(255, 20, 147, ");
+            const lineWidth = lerp(1.5, 6.0, perspectiveP);
 
             ctx.beginPath();
             ctx.ellipse(0, 0, ringRadiusX, ringRadiusY, 0, 0, Math.PI * 2);
-            ctx.strokeStyle = `${ringColor}${ringAlpha})`;
+            ctx.strokeStyle = colorWithAlpha(ringColor, Math.max(0, ringAlpha));
             ctx.lineWidth = lineWidth;
+            ctx.shadowColor = ringColor;
+            ctx.shadowBlur = lerp(4, 18, perspectiveP);
             ctx.stroke();
             ctx.restore();
-          });
+          }
           ctx.restore();
         }
 
-        // Particle Dust/Stars in the Tunnel/Space
-        const tunnelW = Math.min(W, 840);
+        // Particle Dust/Stars in the Tunnel/Space (scaled dynamically to tunnelW for widescreen)
+        const tunnelW_p = Math.min(W, 840);
         if (tunnelParticlesRef.current.length === 0) {
           for (let i = 0; i < 30; i++) {
             tunnelParticlesRef.current.push({
               ang: Math.random() * Math.PI * 2,
-              rad: Math.random() * tunnelW * 0.75,
+              rad: 0.1 + Math.random() * 0.65, // normalized ratio
               z: Math.random(), // 0 (near) to 1 (far)
               speed: 0.002 + Math.random() * 0.005,
               size: 1 + Math.random() * 2.5
@@ -4786,12 +4804,13 @@ export default function Game() {
           p.ang += 0.002 * swirlSpeedMult;
           if (p.z <= 0) {
             p.z = 1.0;
-            p.rad = tunnelW * 0.1 + Math.random() * tunnelW * 0.65;
+            p.rad = 0.1 + Math.random() * 0.65;
             p.ang = Math.random() * Math.PI * 2;
           }
           const pScale = 1.0 - p.z;
-          const px = cx + Math.cos(p.ang) * p.rad * pScale;
-          const py = vanishingY + Math.sin(p.ang) * (p.rad * 0.6) * pScale;
+          const actualR = p.rad * tunnelW_p;
+          const px = cx + Math.cos(p.ang) * actualR * pScale;
+          const py = vanishingY + Math.sin(p.ang) * (actualR * 0.6) * pScale;
           
           ctx.beginPath();
           ctx.arc(px, py, p.size * pScale * 2, 0, Math.PI * 2);
