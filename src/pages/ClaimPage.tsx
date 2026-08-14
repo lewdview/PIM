@@ -290,17 +290,62 @@ export default function ClaimPage() {
         let details: any = {};
         if (res.rewardType === 'tokens') {
           details.tokensGranted = parseInt(res.rewardValue, 10);
+          if (details.tokensGranted > 0) {
+            await useVaultStore.getState().addTokens(details.tokensGranted);
+          }
         } else if (res.rewardType === 'background_skin') {
           details.skinUnlocked = res.rewardValue;
+          if (details.skinUnlocked) {
+            await useVaultStore.getState().unlockSkin(details.skinUnlocked, 0);
+          }
         } else if (res.rewardType === 'card' && res.result?.card) {
           const pool = await fetchAllCards();
           const parent = findCardWithFallback(pool, res.result.card.card_id, res.result.card.rarity);
           details.card = parent;
+          const mappedCard: OwnedCard = {
+            id: res.result.card.id || crypto.randomUUID(),
+            cardId: parent.id,
+            card: { ...parent, rarity: res.result.card.rarity },
+            source: res.result.card.source || 'promo_code',
+            claimedAt: res.result.card.claimed_at || new Date().toISOString(),
+            edition: res.result.card.edition || 1,
+            maxSupply: res.result.card.max_supply || 1000,
+            isEcho: !!res.result.card.is_echo,
+            echoGeneration: res.result.card.echo_generation,
+            echoSourceDay: res.result.card.echo_source_day,
+            proof: res.result.card.proof,
+            ultraReward: res.result.card.ultra_reward,
+            blockchainStatus: res.result.card.blockchain_status || 'offchain',
+            fingerprint: res.result.card.fingerprint
+          };
+          useVaultStore.getState().addToCollection([mappedCard]);
         } else if (res.rewardType === 'pack' && res.result?.cards?.[0]) {
           const pool = await fetchAllCards();
           const parent = findCardWithFallback(pool, res.result.cards[0].card_id, res.result.cards[0].rarity);
           details.card = parent;
+          const mappedCards: OwnedCard[] = res.result.cards.map((c: any) => {
+            const p = findCardWithFallback(pool, c.card_id, c.rarity);
+            return {
+              id: c.id || crypto.randomUUID(),
+              cardId: p.id,
+              card: { ...p, rarity: c.rarity },
+              source: c.source || 'promo_code',
+              claimedAt: c.claimed_at || new Date().toISOString(),
+              edition: c.edition || 1,
+              maxSupply: c.max_supply || 1000,
+              isEcho: !!c.is_echo,
+              echoGeneration: c.echo_generation,
+              echoSourceDay: c.echo_source_day,
+              proof: c.proof,
+              ultraReward: c.ultra_reward,
+              blockchainStatus: c.blockchain_status || 'offchain',
+              fingerprint: c.fingerprint
+            };
+          });
+          useVaultStore.getState().addToCollection(mappedCards);
         }
+
+        void useVaultStore.getState().loadVaultData(true);
 
         audioManager.playSfx("hidden_secret_found", 0.95);
         setAnimationReward({

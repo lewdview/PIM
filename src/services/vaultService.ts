@@ -560,20 +560,48 @@ export async function sellCard(ownedCard: OwnedCard): Promise<BurnResult> {
       }
     });
 
-    if (error || !data?.success) {
-      console.error('Burn failed:', error?.message || data?.error);
-      return { tokensEarned: 0, echoCreated: false };
+    if (!error && data?.success) {
+      const tokensEarned = data.tokensEarned || 0;
+      if (tokensEarned > 0) {
+        const { useVaultStore } = await import('../store/useVaultStore');
+        await useVaultStore.getState().addTokens(tokensEarned);
+      }
+      return {
+        tokensEarned,
+        echoCreated: data.willEcho || false,
+        echoGeneration: data.echoGen || undefined
+      };
     }
-
-    return {
-      tokensEarned: data.tokensEarned || 0,
-      echoCreated: data.willEcho || false,
-      echoGeneration: data.echoGen || undefined
-    };
   } catch (e) {
-    console.error('Burn error:', e);
-    return { tokensEarned: 0, echoCreated: false };
+    console.warn('Backend burn failed, using client burn fallback:', e);
   }
+
+  // Client Fallback for Temporary Wallets / Guest Users / Offline / Mock Cards
+  const rarity = ownedCard.card.rarity || 'common';
+  const baseBurnValues: Record<string, number> = {
+    common: 3,
+    uncommon: 10,
+    rare: 30,
+    legendary: 80,
+    mythic: 200
+  };
+  let tokensEarned = baseBurnValues[rarity] || 3;
+  if (ownedCard.isEcho) {
+    tokensEarned = Math.ceil(tokensEarned * 1.15);
+  }
+
+  try {
+    const { useVaultStore } = await import('../store/useVaultStore');
+    await useVaultStore.getState().addTokens(tokensEarned);
+    useVaultStore.getState().removeFromCollection(ownedCard.id);
+  } catch (err) {
+    console.error('Error applying client fallback burn tokens:', err);
+  }
+
+  return {
+    tokensEarned,
+    echoCreated: false
+  };
 }
 
 /** Batch burn multiple cards sequentially. Max 50 per batch. */
@@ -807,12 +835,78 @@ export async function redeemBonusCode(code: string): Promise<{ success: boolean;
       const detailedError = await extractDetailedError(error) || data?.error || 'Unknown validation failure';
       return { success: false, error: detailedError };
     }
-    return { 
-      success: true, 
-      rewardType: data.rewardType, 
-      rewardValue: data.rewardValue,
-      result: data.result
-    };
+    if (data?.success) {
+      try {
+        const { useVaultStore } = await import('../store/useVaultStore');
+        const store = useVaultStore.getState();
+
+        if (data.rewardType === 'tokens') {
+          const tokenAmt = parseInt(data.rewardValue, 10) || 0;
+          if (tokenAmt > 0) {
+            await store.addTokens(tokenAmt);
+          }
+        } else if (data.rewardType === 'background_skin') {
+          if (data.rewardValue) {
+            await store.unlockSkin(data.rewardValue, 0);
+          }
+        } else if (data.rewardType === 'card' && data.result?.card) {
+          const pool = await fetchAllCards();
+          const c = data.result.card;
+          const parent = findCardWithFallback(pool, c.card_id, c.rarity);
+          const mappedCard: OwnedCard = {
+            id: c.id || crypto.randomUUID(),
+            cardId: parent.id,
+            card: { ...parent, rarity: c.rarity },
+            source: c.source || 'promo_code',
+            claimedAt: c.claimed_at || new Date().toISOString(),
+            edition: c.edition || 1,
+            maxSupply: c.max_supply || 1000,
+            isEcho: !!c.is_echo,
+            echoGeneration: c.echo_generation,
+            echoSourceDay: c.echo_source_day,
+            proof: c.proof,
+            ultraReward: c.ultra_reward,
+            blockchainStatus: c.blockchain_status || 'offchain',
+            fingerprint: c.fingerprint
+          };
+          store.addToCollection([mappedCard]);
+        } else if (data.rewardType === 'pack' && data.result?.cards) {
+          const pool = await fetchAllCards();
+          const mappedCards: OwnedCard[] = data.result.cards.map((c: any) => {
+            const parent = findCardWithFallback(pool, c.card_id, c.rarity);
+            return {
+              id: c.id || crypto.randomUUID(),
+              cardId: parent.id,
+              card: { ...parent, rarity: c.rarity },
+              source: c.source || 'promo_code',
+              claimedAt: c.claimed_at || new Date().toISOString(),
+              edition: c.edition || 1,
+              maxSupply: c.max_supply || 1000,
+              isEcho: !!c.is_echo,
+              echoGeneration: c.echo_generation,
+              echoSourceDay: c.echo_source_day,
+              proof: c.proof,
+              ultraReward: c.ultra_reward,
+              blockchainStatus: c.blockchain_status || 'offchain',
+              fingerprint: c.fingerprint
+            };
+          });
+          if (mappedCards.length > 0) {
+            store.addToCollection(mappedCards);
+          }
+        }
+      } catch (applyErr) {
+        console.warn('Failed to immediately apply bonus code state to store:', applyErr);
+      }
+
+      return { 
+        success: true, 
+        rewardType: data.rewardType, 
+        rewardValue: data.rewardValue,
+        result: data.result
+      };
+    }
+    return { success: false, error: 'Unknown validation failure' };
   } catch (e: any) {
     return { success: false, error: e.message || 'Unknown network error' };
   }

@@ -467,8 +467,15 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         localStorage.setItem("opt_unlocked_noclip", String(mergedCheats.noclip));
         localStorage.setItem("opt_unlocked_iddqd", String(mergedCheats.iddqd));
 
+        const cachedLocalTokens = parseInt(localStorage.getItem('pim_token_balance') || '0', 10);
+        const dbTokens = typeof profile.tokens === 'number' ? profile.tokens : 0;
+        const effectiveTokens = Math.max(dbTokens, cachedLocalTokens, get().tokenBalance);
+        try {
+          localStorage.setItem('pim_token_balance', String(effectiveTokens));
+        } catch {}
+
         set({ 
-          tokenBalance: profile.tokens,
+          tokenBalance: effectiveTokens,
           hasOnboarded: profile.has_onboarded ?? false,
           streakCount: currentStreak,
           totalPulls: currentPulls,
@@ -1009,6 +1016,9 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     const nextTokens = state.tokenBalance + amount;
 
     set({ tokenBalance: nextTokens });
+    try {
+      localStorage.setItem('pim_token_balance', String(nextTokens));
+    } catch {}
 
     if (userId) {
       const { error } = await supabase
