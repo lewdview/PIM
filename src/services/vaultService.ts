@@ -422,10 +422,17 @@ export async function silentClaimGuestDailyCard(day: number): Promise<OwnedCard 
   try {
     // 1. Spun up / temp guest wallet address
     let guestAddress = localStorage.getItem('guest_wallet_address');
+    const isNewGuest = !guestAddress;
     if (!guestAddress) {
       guestAddress = '0x' + Array.from(crypto.getRandomValues(new Uint8Array(20))).map(b => b.toString(16).padStart(2, '0')).join('');
       localStorage.setItem('guest_wallet_address', guestAddress);
     }
+
+    // Always check off tutorial and onboarding for guests playing today's drop / using temp wallet
+    localStorage.setItem('pim_tutorial_completed', 'true');
+    localStorage.setItem('has_onboarded', 'true');
+    useVaultStore.getState().updateProgression({ tutorialCompleted: true }).catch(() => {});
+    useVaultStore.getState().completeOnboarding().catch(() => {});
 
     const claimKey = `guest_daily_claimed_day_${day}`;
     const localCollection: OwnedCard[] = JSON.parse(localStorage.getItem('guest_vault_collection') || '[]');

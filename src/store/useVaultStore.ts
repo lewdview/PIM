@@ -285,18 +285,27 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       const claimKey = `guest_daily_claimed_day_${day}`;
       if (localStorage.getItem(claimKey) === 'true') {
         console.log(`[Silent Claim] Guest already claimed Day ${day} drop. Skipping duplicate claim.`);
+        localStorage.setItem('pim_tutorial_completed', 'true');
+        localStorage.setItem('has_onboarded', 'true');
         return null;
       }
 
       const { silentClaimGuestDailyCard } = await import('../services/vaultService');
       const card = await silentClaimGuestDailyCard(day);
       if (card) {
+        localStorage.setItem('pim_tutorial_completed', 'true');
+        localStorage.setItem('has_onboarded', 'true');
         set((state) => {
           const exists = state.collection.some(c => c && c.id === card.id);
           const nextCollection = exists ? state.collection : [...state.collection, card];
           return {
             collection: nextCollection,
             hasClaimed: true,
+            hasOnboarded: true,
+            progression: {
+              ...state.progression,
+              tutorialCompleted: true,
+            },
             echoPrestigeScore: calculateEchoPrestigeScore(nextCollection, state.streakCount, state.totalPulls),
           };
         });

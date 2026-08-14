@@ -501,6 +501,16 @@ export default function HeroLandingPage() {
   const [isCommandModalOpen, setIsCommandModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Handle Play Today's Drop: Check off tutorial & onboarding for new/guest users
+  const handlePlayDrop = useCallback((targetDay: number) => {
+    audioManager.playSfx('select_start_song', 0.5);
+    silentClaimDailyDrop(targetDay);
+    localStorage.setItem('pim_tutorial_completed', 'true');
+    localStorage.setItem('has_onboarded', 'true');
+    useVaultStore.getState().updateProgression({ tutorialCompleted: true }).catch(() => {});
+    useVaultStore.getState().completeOnboarding().catch(() => {});
+  }, [silentClaimDailyDrop]);
+
   // Interactive 3D Card Tilt State
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const cardContainerRef = useRef<HTMLDivElement>(null);
@@ -788,10 +798,7 @@ export default function HeroLandingPage() {
           <div className="flex flex-col items-center gap-2 mb-4">
             <Link 
               href={`/play/${songId}`} 
-              onClick={() => {
-                audioManager.playSfx('select_start_song', 0.5);
-                silentClaimDailyDrop(activeDay);
-              }}
+              onClick={() => handlePlayDrop(activeDay)}
             >
               <span className="hero-play-btn">
                 <Play size={14} fill="#000" /> PLAY DAY {activeDay} DROP
@@ -964,7 +971,7 @@ export default function HeroLandingPage() {
           >
             {isPlayingAudio ? <Pause size={14} /> : <Play size={14} />} {isPlayingAudio ? 'Pause Stem' : '▶ Listen'}
           </button>
-          <Link href={`/play/${songId}`} onClick={() => audioManager.playSfx('select_start_song', 0.5)}>
+          <Link href={`/play/${songId}`} onClick={() => handlePlayDrop(activeDay)}>
             <span className="hero-drop-action-btn">🎮 Play Level</span>
           </Link>
           <Link href={`/song/${songId}`} onClick={() => audioManager.playSfx('tap_nav', 0.3)}>
@@ -1423,7 +1430,7 @@ export default function HeroLandingPage() {
           viewport={{ once: true }}
           transition={{ duration: 0.5, delay: 0.25 }}
         >
-          <Link href={`/play/${songId}`} onClick={() => audioManager.playSfx('select_start_song', 0.6)}>
+          <Link href={`/play/${songId}`} onClick={() => handlePlayDrop(activeDay)}>
             <span className="hero-play-btn">
               <Play size={16} fill="#000" /> Play Day {activeDay}
             </span>

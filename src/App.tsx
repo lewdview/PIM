@@ -300,8 +300,9 @@ export default function App() {
   useEffect(() => {
     if (location === '/') {
       const isTutorialCompleted = localStorage.getItem('pim_tutorial_completed') === 'true' || useVaultStore.getState().progression.tutorialCompleted;
+      const hasGuestWallet = !!localStorage.getItem('guest_wallet_address');
       const hasCollection = collection.length > 0;
-      if (!isTutorialCompleted && !hasCollection) {
+      if (!isTutorialCompleted && !hasCollection && !hasGuestWallet) {
         setLocation('/tutorial');
       }
     }

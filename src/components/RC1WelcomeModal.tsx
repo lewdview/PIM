@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Wallet, Package, Flame, Zap, AlertTriangle, BookOpen, Gift } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
+import { useVaultStore } from '../store/useVaultStore';
 
 const RC2_SEEN_KEY = 'th3v4ult_rc2_seen';
 
@@ -25,6 +26,10 @@ export default function RC1WelcomeModal() {
 
   const handleDismiss = () => {
     localStorage.setItem(RC2_SEEN_KEY, '1');
+    localStorage.setItem('pim_tutorial_completed', 'true');
+    localStorage.setItem('has_onboarded', 'true');
+    useVaultStore.getState().updateProgression({ tutorialCompleted: true }).catch(() => {});
+    useVaultStore.getState().completeOnboarding().catch(() => {});
     setVisible(false);
   };
 

@@ -506,10 +506,12 @@ export default function NextGenLandingPage() {
         setIsClaimingAnimation(true);
         addToCollection([owned]);
         localStorage.setItem("pim_tutorial_redirect_song_id", owned.cardId);
+        localStorage.setItem("pim_tutorial_completed", "true");
+        localStorage.setItem("has_onboarded", "true");
+        useVaultStore.getState().updateProgression({ tutorialCompleted: true }).catch(() => {});
+        useVaultStore.getState().completeOnboarding().catch(() => {});
         setHasClaimed(true);
         audioManager.playSfx('open_chest', 0.9);
-        const completed = localStorage.getItem("pim_tutorial_completed") === "true" || useVaultStore.getState().progression.tutorialCompleted;
-        const hasClaimedBefore = completed || (collection && collection.length > 0);
 
         startReveal([owned], {
           category: 'daily_claim',
@@ -520,7 +522,7 @@ export default function NextGenLandingPage() {
           price: 'FREE',
           cardCount: 1,
           revealType: 'cinematic',
-          redirectPath: hasClaimedBefore ? `/play/${owned.cardId}` : `/tutorial?songId=${owned.cardId}`,
+          redirectPath: `/play/${owned.cardId}`,
         });
         setTimeout(() => {
           setIsClaimingAnimation(false);
@@ -537,6 +539,10 @@ export default function NextGenLandingPage() {
   }, [today, hasClaimed, setHasClaimed, addToCollection, startReveal, setLocation, user]);
 
   const handlePlayNow = useCallback(() => {
+    localStorage.setItem("pim_tutorial_completed", "true");
+    localStorage.setItem("has_onboarded", "true");
+    useVaultStore.getState().updateProgression({ tutorialCompleted: true }).catch(() => {});
+    useVaultStore.getState().completeOnboarding().catch(() => {});
     if (songId) {
       setLocation(`/play/${songId}`);
     } else {
