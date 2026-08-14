@@ -1,0 +1,3 @@
+## 2023-10-27 - [Zustand Global Subscription Bottlenecks]
+**Learning:** Destructuring state from global Zustand stores (like `const { prop1, prop2 } = useStore()`) within components that are mounted multiple times (e.g., list items) or that receive high-frequency updates (e.g., audio playback ticks) causes massive O(N) re-renders, significantly degrading frontend performance.
+**Action:** Always use conditional granular selectors (e.g., `useStore(s => isActive ? s.progress : 0)`) for rapidly changing state, especially in lists. This approach isolates re-renders to the currently active item without violating React hook rules.
