@@ -79,14 +79,37 @@ export const STAGEIFICATION_CONFIG = {
 // Fallback synthetic audio loop for missing song files (Item 9)
 const FALLBACK_SYNTH_AUDIO = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=';
 
-function sanitizeMediaUrl(url: string): string {
-  if (!url || url.startsWith('data:')) return url;
+export function sanitizeMediaUrl(url: string): string {
+  if (!url || url.startsWith('data:') || url.startsWith('blob:')) return url;
   try {
-    const decoded = decodeURI(url);
-    return encodeURI(decoded);
+    const decoded = decodeURIComponent(url);
+    return encodeURI(decoded).replace(/\+/g, '%2B');
   } catch {
     return url;
   }
+}
+
+export function getCandidateAudioUrls(primaryUrl: string, day?: number): string[] {
+  if (!primaryUrl) return [];
+  const list: string[] = [sanitizeMediaUrl(primaryUrl)];
+  const dayNum = typeof day === 'number' ? day : 0;
+  
+  if (dayNum === 22 || primaryUrl.toLowerCase().includes('tightrope')) {
+    const candidates = [
+      'https://pznmptudgicrmljjafex.supabase.co/storage/v1/object/public/releaseready/audio/january/22%20-%20Tightrope%2B.wav',
+      'https://pznmptudgicrmljjafex.supabase.co/storage/v1/object/public/releaseready/audio/january/tightrope%2B_2_mastered.wav',
+      'https://pznmptudgicrmljjafex.supabase.co/storage/v1/object/public/releaseready/audio/january/22%20-%20Tightrope.wav',
+      'https://pznmptudgicrmljjafex.supabase.co/storage/v1/object/public/releaseready/audio/january/22%20-%20tightrope%2B.wav',
+      'https://pznmptudgicrmljjafex.supabase.co/storage/v1/object/public/releaseready/audio/january/22%20-%20tightrope.wav',
+    ];
+    for (const c of candidates) {
+      const sanitized = sanitizeMediaUrl(c);
+      if (!list.includes(sanitized)) {
+        list.push(sanitized);
+      }
+    }
+  }
+  return list;
 }
 
 // Helper to resolve URLs dynamically

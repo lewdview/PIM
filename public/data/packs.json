@@ -11,6 +11,23 @@
       { "size": "single", "cardCount": 1, "price": "FREE", "priceValue": 0 }
     ]
   },
+  "bombshell": {
+    "category": "bombshell",
+    "label": "BOMBSHELL PACK",
+    "description": "Exclusive 365 Days of Light & Dark artwork collector series",
+    "icon": "🔥",
+    "accent": "#FF1493",
+    "gradient": "linear-gradient(160deg, #2b0417 0%, #4f082c 40%, #1a020e 100%)",
+    "rates": [60, 25, 12, 3, 0],
+    "tiers": [
+      { "size": "single", "cardCount": 1, "price": "$0.25", "priceValue": 0.25, "coverImage": "/data/packs/bombshell_dark_1card.jpg", "lightCoverImage": "/data/packs/bombshell_light_1card.jpg" },
+      { "size": "double", "cardCount": 2, "price": "$0.50", "priceValue": 0.50, "coverImage": "/data/packs/bombshell_dark_2cards.jpg", "lightCoverImage": "/data/packs/bombshell_light_2cards.jpg" },
+      { "size": "triple", "cardCount": 5, "price": "$1.00", "priceValue": 1.00, "coverImage": "/data/packs/bombshell_dark_5cards.jpg", "lightCoverImage": "/data/packs/bombshell_light_5cards.jpg" },
+      { "size": "ten", "cardCount": 10, "price": "$2.00", "priceValue": 2.00, "coverImage": "/data/packs/bombshell_dark_10cards.jpg", "lightCoverImage": "/data/packs/bombshell_light_10cards.jpg" },
+      { "size": "twentyfive", "cardCount": 25, "price": "$5.00", "priceValue": 5.00, "coverImage": "/data/packs/bombshell_dark_25cards.jpg", "lightCoverImage": "/data/packs/bombshell_light_25cards.jpg" },
+      { "size": "fifty", "cardCount": 50, "price": "$10.00", "priceValue": 10.00, "coverImage": "/data/packs/bombshell_dark_50cards.jpg", "lightCoverImage": "/data/packs/bombshell_light_50cards.jpg" }
+    ]
+  },
   "taste": {
     "category": "taste",
     "label": "TASTE PACK",

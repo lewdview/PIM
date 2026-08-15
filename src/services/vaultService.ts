@@ -4,11 +4,15 @@ import {
 } from '../utils/rarity';
 import { getCoverUrlForRarity } from '../utils/rarityArtwork';
 import {
+  getBombshellCoverUrl, pickBombshellArtwork, isBombshellCard,
+} from '../utils/bombshellCards';
+import {
   getAdminConfig,
 } from '../utils/adminConfig';
 import { type BurnResult } from '../utils/echoSystem';
 import { supabase } from './supabaseClient';
 import dayFileMap from '../game/day_file_map.json';
+import { sanitizeMediaUrl } from '../game/api';
 
 // ===== TYPES =====
 export interface VaultCard {
@@ -29,6 +33,8 @@ export interface VaultCard {
   description: string;
   claimedCount: number;
   maxSupply: number;
+  cardSet?: 'gen-0' | 'bombshell';
+  coverArtwork?: string;
 }
 
 // Helper to resolve supabase / local paths based on day_file_map
@@ -99,7 +105,10 @@ function resolveUrls(r: Partial<ReleaseItem>, rarity?: Rarity | string): { audio
     coverUrl = getCoverUrlForRarity(coverUrl, effectiveRarity);
   }
 
-  return { audioUrl, coverUrl };
+  return { 
+    audioUrl: sanitizeMediaUrl(audioUrl), 
+    coverUrl: sanitizeMediaUrl(coverUrl) 
+  };
 }
 
 export function getSafeFallbackCard(cardId: string, rarity: Rarity): VaultCard {
@@ -131,27 +140,60 @@ export function getSafeFallbackCard(cardId: string, rarity: Rarity): VaultCard {
   };
 }
 
-export function findCardWithFallback(pool: VaultCard[], cardId: string, rarity: Rarity): VaultCard {
+export function findCardWithFallback(
+  pool: VaultCard[], 
+  cardId: string, 
+  rarity: Rarity,
+  isBombshell?: boolean,
+  coverArtwork?: string
+): VaultCard {
   if (!pool || pool.length === 0) {
     return getSafeFallbackCard(cardId, rarity);
   }
-  const found = pool.find(p => p.id === cardId);
+
+  const normalizedId = cardId.replace(/^bombshell-/, 'card-');
+  let found = pool.find(p => p.id === cardId || p.id === normalizedId);
+  if (!found) {
+    const dayMatch = cardId?.match(/(\d+)/);
+    if (dayMatch) {
+      const dNum = parseInt(dayMatch[1], 10);
+      found = pool.find(p => p.day === dNum);
+    }
+  }
+
   const targetRarity = rarity || (found ? found.rarity : 'common');
-  if (found) {
+  const baseCard = found || pool[0] || getSafeFallbackCard(cardId, rarity);
+
+  const isBombshellEffective = isBombshell || cardId.startsWith('bombshell-') || Boolean(coverArtwork);
+
+  if (isBombshellEffective) {
+    let resolvedCoverUrl = '';
+    let resolvedArtworkFile = coverArtwork || '';
+
+    if (resolvedArtworkFile) {
+      resolvedCoverUrl = getBombshellCoverUrl(baseCard.day, resolvedArtworkFile);
+    } else {
+      const picked = pickBombshellArtwork(baseCard.day, targetRarity);
+      resolvedCoverUrl = picked.coverUrl;
+      resolvedArtworkFile = picked.fileName;
+    }
+
     return {
-      ...found,
+      ...baseCard,
+      id: cardId.startsWith('bombshell-') ? cardId : `bombshell-${baseCard.day}`,
       rarity: targetRarity,
-      coverUrl: getCoverUrlForRarity(found.coverUrl, targetRarity),
+      cardSet: 'bombshell',
+      coverArtwork: resolvedArtworkFile,
+      coverUrl: resolvedCoverUrl,
     };
   }
-  if (pool[0]) {
-    return {
-      ...pool[0],
-      rarity: targetRarity,
-      coverUrl: getCoverUrlForRarity(pool[0].coverUrl, targetRarity),
-    };
-  }
-  return getSafeFallbackCard(cardId, rarity);
+
+  return {
+    ...baseCard,
+    rarity: targetRarity,
+    cardSet: 'gen-0',
+    coverUrl: getCoverUrlForRarity(baseCard.coverUrl, targetRarity),
+  };
 }
 
 
@@ -161,6 +203,8 @@ export interface OwnedCard {
   card: VaultCard;
   source: string;
   claimedAt: string;
+  cardSet?: 'gen-0' | 'bombshell';
+  coverArtwork?: string;
   /** Special proof type if this pull was a proof */
   proof?: ProofType;
   /** Ultra hidden reward — revealed only on card back flip */
@@ -189,9 +233,12 @@ export function generateCardMetadata(owned: OwnedCard) {
   // 🔮 PROPHECY SUPPORT
   const timelineStatus = currentWorldDay >= card.day ? "resolved" : "pending";
 
+  const isBombshell = isBombshellCard(owned);
+  const activeArtwork = owned.coverArtwork || card.coverArtwork || null;
+
   return {
-    name: `th3scr1b3's 365 Days of Light and Dark - PIM : th3v4ult - Day ${String(card.day).padStart(3, '0')} : ${card.title}`,
-    description: card.description || `TH3V4ULT Gen 0 Archive - Day ${card.day} of 365.`,
+    name: `th3scr1b3's 365 Days of Light and Dark - PIM : th3v4ult - Day ${String(card.day).padStart(3, '0')} : ${card.title}${isBombshell ? ' [BOMBSHELL]' : ''}`,
+    description: card.description || `TH3V4ULT ${isBombshell ? 'Bombshell Collection' : 'Gen 0 Archive'} - Day ${card.day} of 365.`,
     image: card.coverUrl,
     animation_url: card.audioUrl,
     external_url: `https://vault.th3scr1b3.art/card/${owned.id}`,
@@ -199,6 +246,8 @@ export function generateCardMetadata(owned: OwnedCard) {
       { trait_type: 'Day', value: card.day, display_type: 'number' },
       { trait_type: 'Rarity', value: card.rarity },
       { trait_type: 'Mood', value: card.mood },
+      { trait_type: 'Card Set', value: isBombshell ? 'Bombshell' : 'Gen-0' },
+      ...(activeArtwork ? [{ trait_type: 'Cover Variant', value: activeArtwork }] : []),
       { trait_type: 'Energy', value: Math.round(card.energy * 100), display_type: "boost_percentage" },
       { trait_type: 'Valence', value: Math.round(card.valence * 100), display_type: "boost_percentage" },
       { trait_type: 'Tempo', value: card.tempo, display_type: "number" },
@@ -511,13 +560,18 @@ export async function purchasePack(category: PackCategory, size: PackSize = 'sin
     const pool = await fetchAllCards();
 
     return rawCards.map((c: any) => {
-      const parent = findCardWithFallback(pool, c.card_id, c.rarity);
+      const isBombshell = c.source?.includes('bombshell') || c.card_id?.startsWith('bombshell-') || c.card_set === 'bombshell' || category === 'bombshell';
+      const coverArtwork = c.cover_artwork || c.coverArtwork || (c.proof && typeof c.proof === 'object' ? c.proof.cover_artwork : undefined) || c.fingerprint;
+      const parent = findCardWithFallback(pool, c.card_id, c.rarity, isBombshell, coverArtwork);
+
       return {
         id: c.id || crypto.randomUUID(),
         cardId: parent.id,
-        card: { ...parent, rarity: c.rarity },
-        source: c.source,
-        claimedAt: c.claimed_at,
+        card: { ...parent, rarity: c.rarity, cardSet: isBombshell ? 'bombshell' : 'gen-0' },
+        source: c.source || `pack_${category}`,
+        cardSet: isBombshell ? 'bombshell' : 'gen-0',
+        coverArtwork: parent.coverArtwork,
+        claimedAt: c.claimed_at || new Date().toISOString(),
         edition: c.edition,
         maxSupply: c.max_supply,
         isEcho: c.is_echo,

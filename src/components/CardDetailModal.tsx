@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ExternalLink, Download, ShieldCheck, Share2, Info, Flame, Film } from 'lucide-react';
+import { X, ExternalLink, Download, ShieldCheck, Share2, Info, Flame, Film, Play, Disc } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { useGlobalPlayer } from '../store/useGlobalPlayer';
 import { useVaultStore } from '../store/useVaultStore';
@@ -12,6 +12,7 @@ import { getArtTypeForDay, OUTFIT_STYLES } from '../utils/artTypes';
 import RarityBadge from './RarityBadge';
 import AudioPreview from './AudioPreview';
 import { getDayFromDate } from '../utils/dayCalc';
+import { isBombshellCard } from '../utils/bombshellCards';
 import PrizeProgressMenu from './PrizeProgressMenu';
 
 const NFT_MINT_COSTS: Record<Rarity, number> = {
@@ -206,6 +207,20 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
                             {card.blockchainStatus === 'minted' ? 'Minted (Base)' : card.blockchainStatus === 'pending' ? 'Pending' : 'Off-Chain'}
                           </span>
                         </div>
+                        <div className="flex justify-between text-[11px] font-mono">
+                          <span className="opacity-40">Card Set:</span>
+                          <span className="font-bold text-[#FF1493]">
+                            {isBombshellCard(card) ? '🔥 Bombshell Series' : 'Gen-0 Archive'}
+                          </span>
+                        </div>
+                        {(card.coverArtwork || card.card.coverArtwork) && (
+                          <div className="flex justify-between text-[11px] font-mono">
+                            <span className="opacity-40">Artwork:</span>
+                            <span className="font-bold text-[#00E5FF] truncate max-w-[150px]" title={card.coverArtwork || card.card.coverArtwork}>
+                              {card.coverArtwork || card.card.coverArtwork}
+                            </span>
+                          </div>
+                        )}
                         <div className="flex justify-between text-[11px] font-mono border-t border-white/5 pt-1.5 mt-1.5">
                           <span className="opacity-40">Decrypt Shards:</span>
                           <span className="font-bold text-[#39FF14]">
@@ -279,19 +294,33 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
                 </div>
 
                 {/* RIGHT: Stats & Playback */}
-                <div className="p-6 sm:p-10 flex flex-col h-full overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
+                <div className="p-6 sm:p-10 pb-28 lg:pb-10 flex flex-col h-full overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
                   
                   {/* Header Row */}
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1 min-w-0">
                       <div className="text-[10px] font-mono font-bold uppercase tracking-[0.4em] opacity-40">ITEM DATA // {card.card.day} OF 365</div>
-                      <h2 className="text-4xl brutalist-title italic" style={{ '--neon-accent': rc.color } as any}>
+                      <h2 className="text-3xl sm:text-4xl brutalist-title italic truncate" style={{ '--neon-accent': rc.color } as any}>
                         {card.card.title}
                       </h2>
                     </div>
-                    <button aria-label="Close" onClick={onClose} className="w-11 h-11 flex items-center justify-center hover:bg-white/5 rounded-full transition-colors opacity-40 hover:opacity-100 active:scale-95 duration-150 cursor-pointer">
-                      <X size={20} />
-                    </button>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {isFullSong && (
+                        <button
+                          onClick={() => {
+                            stop();
+                            setLocation(`/play/card-${card.card.day}`);
+                          }}
+                          className="lg:hidden flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[rgba(0,240,255,0.15)] border border-[#00f0ff] text-[#00f0ff] text-[11px] font-mono font-black uppercase tracking-wider active:scale-95 shadow-[0_0_12px_rgba(0,240,255,0.25)]"
+                        >
+                          <Play size={13} fill="#00f0ff" />
+                          <span>PLAY PIM</span>
+                        </button>
+                      )}
+                      <button aria-label="Close" onClick={onClose} className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center hover:bg-white/5 rounded-full transition-colors opacity-40 hover:opacity-100 active:scale-95 duration-150 cursor-pointer">
+                        <X size={20} />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Badges Row */}
@@ -504,6 +533,38 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
                   </div>
                 </div>
               </div>
+
+              {/* Mobile Sticky Bottom Action Dock */}
+              {isFullSong && (
+                <div className="lg:hidden sticky bottom-0 inset-x-0 p-3 bg-[#0a0a0e]/95 backdrop-blur-xl border-t border-white/15 z-40 flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      stop();
+                      setLocation(`/play/card-${card.card.day}`);
+                    }}
+                    className="flex-1 py-3.5 px-4 rounded-xl font-mono font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 text-black transition-all active:scale-[0.98] shadow-lg cursor-pointer"
+                    style={{
+                      background: 'linear-gradient(135deg, #00f0ff, #ff1493)',
+                      boxShadow: '0 0 20px rgba(0, 240, 255, 0.35)',
+                    }}
+                  >
+                    <Play size={15} fill="#000" />
+                    <span>PLAY PIM GAME</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      stop();
+                      sessionStorage.setItem(`game_origin_card-${card.card.day}`, 'vault/collection');
+                      setLocation(`/listen/card-${card.card.day}`);
+                    }}
+                    className="py-3.5 px-4 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-white font-mono text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 active:scale-[0.98] cursor-pointer"
+                    title="Listen to track"
+                  >
+                    <Disc size={15} className="text-[#39FF14]" />
+                    <span>LISTEN</span>
+                  </button>
+                </div>
+              )}
             </motion.div>
           </div>
         </>

@@ -83,6 +83,19 @@ export function getCoverUrlForRarity(
   rarity?: string | Rarity
 ): string {
   if (!originalUrlOrPath) return '';
+
+  // Preserve Bombshell and rare_covers artwork directly without mutating folder paths
+  if (
+    originalUrlOrPath.includes('/girl-covers/days/') ||
+    originalUrlOrPath.includes('/rare_covers/') ||
+    originalUrlOrPath.includes('lb%20day') ||
+    originalUrlOrPath.includes('lb day') ||
+    originalUrlOrPath.includes('day%200') ||
+    originalUrlOrPath.includes('day 0')
+  ) {
+    return originalUrlOrPath;
+  }
+
   const key = String(rarity || 'common').toLowerCase();
   const rule = RARITY_ARTWORK_CONFIG[key] || RARITY_ARTWORK_CONFIG.common;
 
@@ -123,6 +136,15 @@ export function getSmartCoverCandidates(
 ): string[] {
   const original = originalCoverUrl || '';
   if (!original) return [];
+
+  if (
+    original.includes('/girl-covers/days/') ||
+    original.includes('/rare_covers/') ||
+    original.includes('lb%20day') ||
+    original.includes('lb day')
+  ) {
+    return [original];
+  }
 
   const primary = getCoverUrlForRarity(original, rarity);
   const candidates: string[] = [];

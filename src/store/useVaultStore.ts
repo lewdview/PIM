@@ -518,11 +518,16 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         const { fetchAllCards, findCardWithFallback } = await import('../services/vaultService');
         const pool = await fetchAllCards();
         mappedCards = vault.map(c => {
-           const parent = findCardWithFallback(pool, c.card_id, c.rarity);
+           const isBombshell = c.source?.includes('bombshell') || c.card_id?.startsWith('bombshell-') || c.card_set === 'bombshell';
+           const coverArtwork = c.cover_artwork || c.coverArtwork || (c.proof && typeof c.proof === 'object' ? c.proof.cover_artwork : undefined) || c.fingerprint;
+           const parent = findCardWithFallback(pool, c.card_id, c.rarity, isBombshell, coverArtwork);
+
            return {
              id: c.id,
              cardId: parent.id,
-             card: { ...parent, rarity: c.rarity },
+             card: { ...parent, rarity: c.rarity, cardSet: isBombshell ? 'bombshell' : 'gen-0' },
+             cardSet: isBombshell ? 'bombshell' : 'gen-0',
+             coverArtwork: parent.coverArtwork,
              source: c.source,
              claimedAt: c.claimed_at,
              edition: c.edition,

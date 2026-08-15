@@ -1,28 +1,33 @@
 import { useState, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Filter, Grid3X3, List, Flame } from 'lucide-react';
+import { Filter, Grid3X3, List, Flame, Play, Info, MoreVertical, Disc } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { useGlobalPlayer } from '../store/useGlobalPlayer';
 import Card from '../components/Card';
 import RarityBadge from '../components/RarityBadge';
 import UltraRewardModal from '../components/UltraRewardModal';
 import CardDetailModal from '../components/CardDetailModal';
+import MobileCardActionSheet from '../components/MobileCardActionSheet';
 import FusionAnimation from '../components/FusionAnimation';
 import { type OwnedCard, fuseDuplicates, sellCard } from '../services/vaultService';
 import { useVaultStore } from '../store/useVaultStore';
 import { useLoadingToast } from '../store/useLoadingToast';
 import { RARITIES, RARITY_CONFIG, getSupplyCap, type Rarity } from '../utils/rarity';
 import { getCoverUrlForRarity } from '../utils/rarityArtwork';
+import { isBombshellCard } from '../utils/bombshellCards';
 
 type SortBy = 'day' | 'rarity' | 'recent';
 type FilterRarity = Rarity | 'all';
+type SetFilter = 'all' | 'gen-0' | 'bombshell';
 
 export default function CollectionPage() {
   const [sortBy, setSortBy] = useState<SortBy>('recent');
   const [filterRarity, setFilterRarity] = useState<FilterRarity>('all');
+  const [setFilter, setSetFilter] = useState<SetFilter>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'compact'>('grid');
   const [ultraModalOpen, setUltraModalOpen] = useState(false);
   const [selectedCard, setSelectedCard] = useState<OwnedCard | null>(null);
+  const [actionSheetCard, setActionSheetCard] = useState<{ group: OwnedCard[]; count: number } | null>(null);
   const [page, setPage] = useState(1);
   const CARDS_PER_PAGE = 24;
 
@@ -51,6 +56,12 @@ export default function CollectionPage() {
     // Filter out invalid items defensively
     let cards = collection.filter(c => c && c.card);
 
+    if (setFilter === 'gen-0') {
+      cards = cards.filter(c => !isBombshellCard(c));
+    } else if (setFilter === 'bombshell') {
+      cards = cards.filter(c => isBombshellCard(c));
+    }
+
     if (filterRarity !== 'all') {
       cards = cards.filter(c => c.card.rarity === filterRarity);
     }
@@ -69,17 +80,17 @@ export default function CollectionPage() {
     }
 
     return cards;
-  }, [collection, sortBy, filterRarity]);
+  }, [collection, sortBy, filterRarity, setFilter]);
 
   const groupedFiltered = useMemo(() => {
-    // Group duplicates by cardId + rarity (same logic as Forge fusableGroups)
-    // Cards of different rarities for the same day are separate entries
+    // Group duplicates by cardId + rarity + coverArtwork
     const groups: Record<string, OwnedCard[]> = {};
     const order: string[] = [];
     
     for (const c of filtered) {
       if (!c.card) continue;
-      const key = `${c.cardId}-${c.card.rarity}`;
+      const artKey = (c as any).coverArtwork || c.card.coverArtwork || '';
+      const key = `${c.cardId}-${c.card.rarity}${artKey ? `-${artKey}` : ''}`;
       if (!groups[key]) {
         groups[key] = [];
         order.push(key);
@@ -98,7 +109,7 @@ export default function CollectionPage() {
   }, [groupedFiltered, page]);
 
   // Reset page on filter/sort change
-  useMemo(() => { setPage(1); }, [sortBy, filterRarity]);
+  useMemo(() => { setPage(1); }, [sortBy, filterRarity, setFilter]);
 
   const stats = useMemo(() => {
     const validCollection = collection.filter(c => c && c.card);
@@ -210,6 +221,30 @@ export default function CollectionPage() {
           <span>{Math.round((stats.unique / 365) * 100)}% COLLECTION COMPLETION</span>
           <span>{365 - stats.unique} REMAINING</span>
         </div>
+      </div>
+
+      {/* Set Filter Switcher */}
+      <div className="flex flex-wrap gap-2">
+        {(['all', 'gen-0', 'bombshell'] as SetFilter[]).map((st) => {
+          const isActive = setFilter === st;
+          const isBomb = st === 'bombshell';
+          const label = st === 'all' ? 'All Sets' : st === 'gen-0' ? 'Gen-0 Archive' : '🔥 Bombshell Series';
+          return (
+            <button
+              key={st}
+              onClick={() => setSetFilter(st)}
+              className="px-3 py-1.5 rounded font-mono text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer"
+              style={{
+                background: isActive ? (isBomb ? '#FF1493' : '#ff3800') : 'rgba(255,255,255,0.04)',
+                color: isActive ? '#fff' : 'rgba(255,255,255,0.45)',
+                border: `1px solid ${isActive ? (isBomb ? '#FF1493' : '#ff3800') : 'rgba(255,255,255,0.08)'}`,
+                boxShadow: isActive ? `0 0 10px ${isBomb ? 'rgba(255,20,147,0.4)' : 'rgba(255,56,0,0.4)'}` : 'none',
+              }}
+            >
+              {label}
+            </button>
+          );
+        })}
       </div>
 
       {/* Rarity breakdown */}
@@ -341,94 +376,136 @@ export default function CollectionPage() {
                 )}
                 {/* Card wrapper — single click flips, double-click opens detail */}
                 <div 
-                  className="relative z-20 transition-transform duration-300 group-hover:-translate-y-2 group-hover:-translate-x-2"
+                  className="relative z-20 transition-transform duration-300 group-hover:-translate-y-2 group-hover:-translate-x-2 flex flex-col"
                   onDoubleClick={() => setSelectedCard(mainCard)}
                 >
-                  <Card 
-                    card={mainCard.card}
-                    edition={mainCard.edition}
-                    delay={i} 
-                    showAudio 
-                    isDailyOrigin={mainCard.source === 'daily_claim' || mainCard.source === 'pack_miss_out'} 
-                    ultraReward={mainCard.ultraReward} 
-                    isEcho={mainCard.isEcho}
-                    onBurn={(mainCard.edition || 0) > getSupplyCap(mainCard.card.rarity as Rarity, mainCard.card.day) ? () => handleBurn(mainCard) : undefined}
-                    proof={mainCard.proof}
-                  />
-                  
-                  {/* Edition Status badge */}
-                  {(() => {
-                    const ed = mainCard.edition || 0;
-                    const cap = getSupplyCap(mainCard.card.rarity as Rarity, mainCard.card.day);
-                    if (ed > cap) return (
-                      <div className="absolute bottom-1 right-1 z-30 pointer-events-none px-1.5 py-0.5 bg-black/80 border border-[#ff3800]/60 text-[7px] font-black uppercase tracking-tighter text-[#ff3800]">
-                        MINTED OUT
-                      </div>
-                    );
-                    if (cap === 1 && ed === 1) return (
-                      <div className="absolute bottom-1 right-1 z-30 pointer-events-none px-1.5 py-0.5 bg-black/85 border border-yellow-400/60 text-[7px] font-black uppercase tracking-tighter text-yellow-400" style={{ textShadow: '0 0 6px rgba(255,215,0,0.6)' }}>
-                        1 OF 1
-                      </div>
-                    );
-                    if (ed === cap && cap > 1) return (
-                      <div className="absolute bottom-1 right-1 z-30 pointer-events-none px-1.5 py-0.5 bg-black/80 border border-white/30 text-[7px] font-black uppercase tracking-tighter text-white/70">
-                        LAST COPY
-                      </div>
-                    );
-                    return (
-                      <div className="absolute bottom-1 right-1 z-30 pointer-events-none px-1.5 py-0.5 bg-white/10 backdrop-blur-sm border border-white/10 text-[7px] font-black uppercase tracking-tighter text-white/40">
-                        ED. {mainCard.edition || '?'}/{cap}
-                      </div>
-                    );
-                  })()}
+                  <div className="relative">
+                    <Card 
+                      card={mainCard.card}
+                      edition={mainCard.edition}
+                      delay={i} 
+                      showAudio 
+                      isDailyOrigin={mainCard.source === 'daily_claim' || mainCard.source === 'pack_miss_out'} 
+                      ultraReward={mainCard.ultraReward} 
+                      isEcho={mainCard.isEcho}
+                      onBurn={(mainCard.edition || 0) > getSupplyCap(mainCard.card.rarity as Rarity, mainCard.card.day) ? () => handleBurn(mainCard) : undefined}
+                      proof={mainCard.proof}
+                    />
+                    
+                    {/* Edition Status badge */}
+                    {(() => {
+                      const ed = mainCard.edition || 0;
+                      const cap = getSupplyCap(mainCard.card.rarity as Rarity, mainCard.card.day);
+                      if (ed > cap) return (
+                        <div className="absolute bottom-1 right-1 z-30 pointer-events-none px-1.5 py-0.5 bg-black/80 border border-[#ff3800]/60 text-[7px] font-black uppercase tracking-tighter text-[#ff3800]">
+                          MINTED OUT
+                        </div>
+                      );
+                      if (cap === 1 && ed === 1) return (
+                        <div className="absolute bottom-1 right-1 z-30 pointer-events-none px-1.5 py-0.5 bg-black/85 border border-yellow-400/60 text-[7px] font-black uppercase tracking-tighter text-yellow-400" style={{ textShadow: '0 0 6px rgba(255,215,0,0.6)' }}>
+                          1 OF 1
+                        </div>
+                      );
+                      if (ed === cap && cap > 1) return (
+                        <div className="absolute bottom-1 right-1 z-30 pointer-events-none px-1.5 py-0.5 bg-black/80 border border-white/30 text-[7px] font-black uppercase tracking-tighter text-white/70">
+                          LAST COPY
+                        </div>
+                      );
+                      return (
+                        <div className="absolute bottom-1 right-1 z-30 pointer-events-none px-1.5 py-0.5 bg-white/10 backdrop-blur-sm border border-white/10 text-[7px] font-black uppercase tracking-tighter text-white/40">
+                          ED. {mainCard.edition || '?'}/{cap}
+                        </div>
+                      );
+                    })()}
 
-                  {/* Details button — visible on hover */}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setSelectedCard(mainCard); }}
-                    className={`absolute ${isFullSong ? 'bottom-12' : 'bottom-8'} left-1/2 -translate-x-1/2 z-30 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-105 active:scale-95`}
-                    style={{
-                      padding: '5px 14px',
-                      background: 'rgba(0,0,0,0.85)',
-                      backdropFilter: 'blur(10px)',
-                      border: '1px solid rgba(255,255,255,0.2)',
-                      borderRadius: '6px',
-                      fontFamily: '"JetBrains Mono", monospace',
-                      fontSize: '8px', fontWeight: 700,
-                      letterSpacing: '0.15em', textTransform: 'uppercase' as const,
-                      color: 'rgba(255,255,255,0.8)',
-                      cursor: 'pointer',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-                    }}
-                  >
-                    DETAILS
-                  </button>
-
-                  {/* Play PIM button — visible on hover for full songs */}
-                  {isFullSong && (
+                    {/* Details button — visible on hover (desktop) */}
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        stop();
-                        setLocation(`/play/card-${mainCard.card.day}`);
-                      }}
-                      className="absolute bottom-2 left-1/2 -translate-x-1/2 z-30 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-105 active:scale-95"
+                      onClick={(e) => { e.stopPropagation(); setSelectedCard(mainCard); }}
+                      className={`hidden md:block absolute ${isFullSong ? 'bottom-12' : 'bottom-8'} left-1/2 -translate-x-1/2 z-30 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-105 active:scale-95`}
                       style={{
                         padding: '5px 14px',
-                        background: 'rgba(0,240,255,0.15)',
+                        background: 'rgba(0,0,0,0.85)',
                         backdropFilter: 'blur(10px)',
-                        border: '1px solid var(--color-neon-cyan, #00f0ff)',
+                        border: '1px solid rgba(255,255,255,0.2)',
                         borderRadius: '6px',
                         fontFamily: '"JetBrains Mono", monospace',
                         fontSize: '8px', fontWeight: 700,
                         letterSpacing: '0.15em', textTransform: 'uppercase' as const,
-                        color: 'var(--color-neon-cyan, #00f0ff)',
+                        color: 'rgba(255,255,255,0.8)',
                         cursor: 'pointer',
-                        boxShadow: '0 4px 12px rgba(0, 240, 255, 0.25)',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
                       }}
                     >
-                      PLAY PIM
+                      DETAILS
                     </button>
-                  )}
+
+                    {/* Play PIM button — visible on hover for full songs (desktop) */}
+                    {isFullSong && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          stop();
+                          setLocation(`/play/card-${mainCard.card.day}`);
+                        }}
+                        className="hidden md:block absolute bottom-2 left-1/2 -translate-x-1/2 z-30 opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-105 active:scale-95"
+                        style={{
+                          padding: '5px 14px',
+                          background: 'rgba(0,240,255,0.15)',
+                          backdropFilter: 'blur(10px)',
+                          border: '1px solid var(--color-neon-cyan, #00f0ff)',
+                          borderRadius: '6px',
+                          fontFamily: '"JetBrains Mono", monospace',
+                          fontSize: '8px', fontWeight: 700,
+                          letterSpacing: '0.15em', textTransform: 'uppercase' as const,
+                          color: 'var(--color-neon-cyan, #00f0ff)',
+                          cursor: 'pointer',
+                          boxShadow: '0 4px 12px rgba(0, 240, 255, 0.25)',
+                        }}
+                      >
+                        PLAY PIM
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Mobile Touch Action Strip (Always accessible on mobile) */}
+                  <div className="flex md:hidden items-center gap-1.5 mt-2 z-30">
+                    {isFullSong && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          stop();
+                          setLocation(`/play/card-${mainCard.card.day}`);
+                        }}
+                        className="flex-1 py-1.5 px-2 rounded-lg bg-[rgba(0,240,255,0.18)] border border-[#00f0ff] text-[#00f0ff] font-mono text-[9px] font-black uppercase tracking-wider flex items-center justify-center gap-1 active:scale-95 shadow-[0_0_10px_rgba(0,240,255,0.25)] cursor-pointer"
+                        title="Play PIM Game"
+                      >
+                        <Play size={10} fill="#00f0ff" />
+                        <span>PIM</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedCard(mainCard);
+                      }}
+                      className="flex-1 py-1.5 px-2 rounded-lg bg-white/10 border border-white/20 text-white font-mono text-[9px] font-bold uppercase tracking-wider flex items-center justify-center gap-1 active:scale-95 hover:bg-white/15 cursor-pointer"
+                      title="View Card Dossier"
+                    >
+                      <Info size={10} className="text-[#00E5FF]" />
+                      <span>INFO</span>
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActionSheetCard({ group, count });
+                      }}
+                      className="p-1.5 rounded-lg bg-white/5 border border-white/15 text-white/70 active:scale-95 flex items-center justify-center hover:bg-white/10 cursor-pointer"
+                      title="More Options"
+                      aria-label="More card options"
+                    >
+                      <MoreVertical size={13} />
+                    </button>
+                  </div>
                 </div>
                 
                 {/* Count Badge — compact corner pill */}
@@ -515,7 +592,8 @@ export default function CollectionPage() {
                 className="flex items-center gap-3 p-3 rounded-lg glass glass-hover"
               >
                 <div
-                  className={`w-10 h-12 rounded overflow-hidden flex-shrink-0 ${RARITY_CONFIG[mainCard.card.rarity].cssClass}`}
+                  className={`w-10 h-12 rounded overflow-hidden flex-shrink-0 cursor-pointer ${RARITY_CONFIG[mainCard.card.rarity].cssClass}`}
+                  onClick={() => setSelectedCard(mainCard)}
                 >
                   <img
                     src={getCoverUrlForRarity(mainCard.card.coverUrl, mainCard.card.rarity)}
@@ -545,7 +623,7 @@ export default function CollectionPage() {
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 sm:gap-4">
                   {isFullSong && (
                     <button
                       onClick={(e) => {
@@ -553,20 +631,29 @@ export default function CollectionPage() {
                         stop();
                         setLocation(`/play/card-${mainCard.card.day}`);
                       }}
-                      className="px-2.5 py-1 rounded bg-[rgba(0,240,255,0.1)] border border-neon-cyan text-neon-cyan text-[10px] font-mono font-bold uppercase tracking-wider transition-all hover:bg-[rgba(0,240,255,0.2)] active:scale-95"
-                      style={{
-                        borderColor: 'var(--color-neon-cyan, #00f0ff)',
-                        color: 'var(--color-neon-cyan, #00f0ff)',
-                      }}
+                      className="px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg bg-[rgba(0,240,255,0.15)] border border-[#00f0ff] text-[#00f0ff] text-[10px] font-mono font-black uppercase tracking-wider transition-all hover:bg-[rgba(0,240,255,0.25)] active:scale-95 flex items-center gap-1 shadow-[0_0_8px_rgba(0,240,255,0.2)] cursor-pointer"
+                      title="Play PIM Rhythm Game"
                     >
-                      Play PIM
+                      <Play size={11} fill="#00f0ff" />
+                      <span>PIM</span>
                     </button>
                   )}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedCard(mainCard);
+                    }}
+                    className="px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg bg-white/10 border border-white/15 text-white/80 hover:text-white text-[10px] font-mono font-bold uppercase tracking-wider transition-all hover:bg-white/15 active:scale-95 flex items-center gap-1 cursor-pointer"
+                    title="View Card Dossier"
+                  >
+                    <Info size={11} className="text-[#00E5FF]" />
+                    <span className="hidden sm:inline">DETAILS</span>
+                  </button>
                   <div className="flex flex-col items-end gap-1">
                     <RarityBadge rarity={mainCard.card.rarity} size="sm" />
                     {count > 1 && (
                       <span className="text-[10px] font-mono font-bold" style={{ color: 'var(--color-neon-yellow)' }}>
-                        x{count} OWNED
+                        x{count}
                       </span>
                     )}
                   </div>
@@ -641,6 +728,38 @@ export default function CollectionPage() {
         isOpen={selectedCard !== null}
         onClose={() => setSelectedCard(null)}
         onBurn={handleBurn}
+      />
+
+      {/* Mobile Card Action Drawer */}
+      <MobileCardActionSheet
+        card={actionSheetCard?.group[0] || null}
+        count={actionSheetCard?.count || 1}
+        isOpen={actionSheetCard !== null}
+        onClose={() => setActionSheetCard(null)}
+        onOpenDetails={() => {
+          if (actionSheetCard) setSelectedCard(actionSheetCard.group[0]);
+        }}
+        onPlayPim={() => {
+          if (actionSheetCard) {
+            stop();
+            setLocation(`/play/card-${actionSheetCard.group[0].card.day}`);
+          }
+        }}
+        onListen={() => {
+          if (actionSheetCard) {
+            stop();
+            sessionStorage.setItem(`game_origin_card-${actionSheetCard.group[0].card.day}`, 'vault/collection');
+            setLocation(`/listen/card-${actionSheetCard.group[0].card.day}`);
+          }
+        }}
+        canFuse={(actionSheetCard?.count || 0) >= 3 && !['legendary', 'mythic'].includes(actionSheetCard?.group[0].card.rarity || '')}
+        onFuse={() => {
+          if (actionSheetCard) handleFuse(actionSheetCard.group);
+        }}
+        canBurn={(actionSheetCard?.group[0].edition || 0) > getSupplyCap(actionSheetCard?.group[0].card.rarity as Rarity, actionSheetCard?.group[0].card.day)}
+        onBurn={() => {
+          if (actionSheetCard) handleBurn(actionSheetCard.group[0]);
+        }}
       />
 
       {/* Fusion animation overlay */}

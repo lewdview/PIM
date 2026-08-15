@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { useLoadingToast } from './useLoadingToast';
+import { getCandidateAudioUrls, sanitizeMediaUrl } from '../game/api';
 
 // ═══════════════════════════════════════════════════════════════
 // Global Audio Player — Singleton store for persistent playback
@@ -35,6 +36,8 @@ interface GlobalPlayerState {
 
 // Singleton Audio element — lives outside React lifecycle
 let _audio: HTMLAudioElement | null = null;
+let _candidateUrls: string[] = [];
+let _candidateIdx = 0;
 
 function getAudio(): HTMLAudioElement {
   if (!_audio) {
@@ -81,7 +84,16 @@ export const useGlobalPlayer = create<GlobalPlayerState>((set, get) => {
   });
 
   audio.addEventListener('error', () => {
-    console.error('Global player error:', audio.src, audio.error);
+    console.warn('Global player error:', audio.src, audio.error);
+    _candidateIdx++;
+    if (_candidateIdx < _candidateUrls.length) {
+      const nextCandidate = _candidateUrls[_candidateIdx];
+      console.log('[GlobalPlayer] Retrying next candidate audio URL:', nextCandidate);
+      audio.src = nextCandidate;
+      audio.load();
+      audio.play().catch(console.warn);
+      return;
+    }
     set({ isPlaying: false });
     useLoadingToast.getState().show('Failed to stream audio file from Supabase.');
     setTimeout(() => {
@@ -108,21 +120,34 @@ export const useGlobalPlayer = create<GlobalPlayerState>((set, get) => {
 
     play: (track: GlobalTrack) => {
       const audio = getAudio();
+      const sanitizedAudioUrl = sanitizeMediaUrl(track.audioUrl);
+      const sanitizedTrack: GlobalTrack = {
+        ...track,
+        audioUrl: sanitizedAudioUrl,
+        coverUrl: sanitizeMediaUrl(track.coverUrl),
+      };
+
       // If same track, just resume
       const current = get().currentTrack;
-      if (current && current.audioUrl === track.audioUrl && current.day === track.day) {
+      if (current && current.audioUrl === sanitizedTrack.audioUrl && current.day === sanitizedTrack.day) {
         audio.play().catch(console.error);
-        set({ isPlaying: true, currentTrack: track });
+        set({ isPlaying: true, currentTrack: sanitizedTrack });
         return;
       }
+
+      // Setup candidates for resilient playback
+      _candidateUrls = getCandidateAudioUrls(sanitizedTrack.audioUrl, sanitizedTrack.day);
+      _candidateIdx = 0;
+      const initialSrc = _candidateUrls[0] || sanitizedTrack.audioUrl;
+
       // New track
       audio.pause();
-      audio.src = track.audioUrl;
+      audio.src = initialSrc;
       audio.currentTime = 0;
       useLoadingToast.getState().show('Loading track…');
       audio.play().catch(console.error);
       set({
-        currentTrack: track,
+        currentTrack: sanitizedTrack,
         isPlaying: true,
         progress: 0,
         currentTime: 0,
