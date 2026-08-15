@@ -1,7 +1,7 @@
 // PIM : beatstar-vault gameplay engine
 import React, { useEffect, useLayoutEffect, useRef, useState, useCallback, memo } from "react";
 import { useParams, useLocation } from "wouter";
-import { getSongById, saveHighScore, isSongTimeLocked, getModifierForSong, STAGEIFICATION_CONFIG } from "@/game/api";
+import { getSongById, saveHighScore, isSongTimeLocked, getModifierForSong, STAGEIFICATION_CONFIG, getCandidateAudioUrls } from "@/game/api";
 import { saveMedal, saveScoreHistory } from "@/game/progress";
 import type { GameSong } from "@/game/api";
 import type { Note, JudgmentDisplay, GameState, NoteType } from "@/game/types";
@@ -152,32 +152,26 @@ function selectSongArchetype(song?: Song | null): TrackArchetype {
   // 1. PRIORITY 1: Lyrics Keywords
   if (song.lyrics && typeof song.lyrics === 'string') {
     const text = song.lyrics.toLowerCase();
-    if (text.includes('slide') || text.includes('twist') || text.includes('turn') || text.includes('roll')) return 'corkscrew_slide';
-    if (text.includes('orbit') || text.includes('circle') || text.includes('ring') || text.includes('space') || text.includes('star')) return 'radial_orbit';
-    if (text.includes('drift') || text.includes('side') || text.includes('run') || text.includes('speed') || text.includes('drive')) return 'horizontal_drift';
+    if (text.includes('slide') || text.includes('twist') || text.includes('turn') || text.includes('roll') || text.includes('spin') || text.includes('cork') || text.includes('screw')) return 'corkscrew_slide';
     if (text.includes('wave') || text.includes('ride') || text.includes('ocean') || text.includes('sea') || text.includes('flow')) return 'wave_coaster';
     if (text.includes('matrix') || text.includes('split') || text.includes('break') || text.includes('code') || text.includes('grid')) return 'matrix_split';
-    if (text.includes('tunnel') || text.includes('cyber') || text.includes('light') || text.includes('night')) return 'cyber_tunnel';
+    if (text.includes('tunnel') || text.includes('cyber') || text.includes('light') || text.includes('night') || text.includes('space') || text.includes('star')) return 'cyber_tunnel';
   }
 
   // 2. PRIORITY 2: BPM Tiers
   const bpm = song.bpm || 120;
-  if (bpm < 110) return 'radial_orbit';
-  if (bpm >= 110 && bpm < 125) return 'wave_coaster';
-  if (bpm >= 125 && bpm < 135) return 'corkscrew_slide';
-  if (bpm >= 135 && bpm < 145) return 'cyber_tunnel';
-  if (bpm >= 145 && bpm < 160) return 'horizontal_drift';
-  if (bpm >= 160) return 'matrix_split';
+  if (bpm < 120) return 'wave_coaster';
+  if (bpm >= 120 && bpm < 135) return 'corkscrew_slide';
+  if (bpm >= 135 && bpm < 155) return 'cyber_tunnel';
+  if (bpm >= 155) return 'matrix_split';
 
   // 3. PRIORITY 3: Genre Fallback
   const genre = (song.genre || '').toLowerCase();
   if (genre.includes('rock') || genre.includes('metal') || genre.includes('punk')) return 'wave_coaster';
-  if (genre.includes('pop') || genre.includes('synth') || genre.includes('disco')) return 'horizontal_drift';
-  if (genre.includes('hip-hop') || genre.includes('rap') || genre.includes('trap')) return 'corkscrew_slide';
-  if (genre.includes('classical') || genre.includes('ambient') || genre.includes('lo-fi')) return 'radial_orbit';
+  if (genre.includes('hip-hop') || genre.includes('rap') || genre.includes('trap') || genre.includes('pop') || genre.includes('dance') || genre.includes('electronic')) return 'corkscrew_slide';
 
-  // Fallback hash
-  const archetypes: TrackArchetype[] = ['cyber_tunnel', 'corkscrew_slide', 'radial_orbit', 'horizontal_drift', 'wave_coaster', 'matrix_split'];
+  // Fallback active 3D archetypes (shelved radial_orbit and horizontal_drift)
+  const archetypes: TrackArchetype[] = ['corkscrew_slide', 'cyber_tunnel', 'wave_coaster', 'matrix_split'];
   const hash = (song.title || song.id || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
   return archetypes[hash % archetypes.length];
 }
@@ -915,70 +909,81 @@ function getCorkscrewSpiralPos(
   stage: number
 ): ProjectionResult {
   const hitY = H * HIT_RATIO;
-  const vanishingY = hitY * 0.20;
+  const vanishingY = hitY * 0.18;
   const cx = W / 2;
   const corkW = Math.min(W, 840);
   const laneOffset = lane - 1; // -1 for left, 0 for center, 1 for right
-  const mult = stage === 5 ? 1.8 : 1.0;
+  const mult = stage === 5 ? 1.6 : 1.0;
   const baseH = hitY - vanishingY;
 
-  if (prog < 0.20) {
-    // ── Phase 1: Entry Plunge ($p: 0 \rightarrow 0.20$) ──
-    const u = prog / 0.20;
-    const startX = cx + laneOffset * (corkW * 0.12);
+  // ── Phase 1: Entry Plunge ($p: 0.00 \rightarrow 0.12$) ──
+  // Fast plunge from vanishing horizon into top of the corkscrew tube
+  if (prog < 0.12) {
+    const u = prog / 0.12;
+    const startX = cx + laneOffset * (corkW * 0.06);
     const startY = vanishingY;
 
-    const entryAngle = t * 1.8 * mult;
-    const entryRadiusX = corkW * 0.10;
-    const entryRadiusY = H * 0.04;
-    const entryX = cx + Math.cos(entryAngle) * entryRadiusX + laneOffset * 20;
-    const entryY = vanishingY + baseH * 0.18 + Math.sin(entryAngle) * entryRadiusY;
+    const entryAngle = t * 1.6 * mult;
+    const entryRadiusX = corkW * 0.05;
+    const entryRadiusY = H * 0.02;
+    const entryX = cx + Math.cos(entryAngle) * entryRadiusX + laneOffset * 14;
+    const entryY = vanishingY + baseH * 0.10 + Math.sin(entryAngle) * entryRadiusY;
 
     const noteX = lerp(startX, entryX, u);
     const noteY = lerp(startY, entryY, u);
-    const noteW = lerp(42, 68, u);
-    const noteH = lerp(36, 58, u);
-    return { x: noteX - noteW / 2, y: noteY, w: noteW, h: noteH, rot: laneOffset * 0.08, scale: lerp(0.3, 0.55, u) };
-  } else if (prog < 0.80) {
-    // ── Phase 2: Dual 360° Corkscrew Spiral Loops ($p: 0.20 \rightarrow 0.80$) ──
-    // Notes spin 2 COMPLETE LOOPS (720° / 4*PI) down the 3D helical tube!
-    const u = (prog - 0.20) / 0.60;
-    const loopAngle = u * Math.PI * 4 + t * 1.8 * mult; // 2 full 360° loops!
+    const noteW = lerp(38, 54, u);
+    const noteH = lerp(32, 46, u);
+    return { x: noteX - noteW / 2, y: noteY, w: noteW, h: noteH, rot: laneOffset * 0.05, scale: lerp(0.35, 0.52, u) };
+  } 
+  
+  // ── Phase 2: Tight Helical 3D Spiral Loops ($p: 0.12 \rightarrow 0.48$) ──
+  // Fast, tight 720° helical spin centered compactly in the upper middle tube
+  else if (prog < 0.48) {
+    const u = (prog - 0.12) / 0.36;
+    const loopAngle = u * Math.PI * 4 + t * 1.6 * mult; // 2 complete 360° loops
 
-    const helixRadiusX = lerp(corkW * 0.10, corkW * 0.34, u);
-    const helixRadiusY = lerp(H * 0.04, H * 0.15, u);
-    const centerY = lerp(vanishingY + baseH * 0.18, vanishingY + baseH * 0.78, u);
+    // Tightened horizontal radius (compact 3D tube)
+    const helixRadiusX = lerp(corkW * 0.05, corkW * 0.15, u);
+    const helixRadiusY = lerp(H * 0.02, H * 0.065, u);
+    const centerY = lerp(vanishingY + baseH * 0.10, vanishingY + baseH * 0.42, u);
 
-    const spiralX = cx + Math.cos(loopAngle) * helixRadiusX + laneOffset * 24 * Math.cos(loopAngle);
+    const spiralX = cx + Math.cos(loopAngle) * helixRadiusX + laneOffset * 16 * Math.cos(loopAngle);
     const spiralY = centerY + Math.sin(loopAngle) * helixRadiusY;
 
-    const zDepth = Math.sin(loopAngle); // -1 (back of loop) to +1 (front of loop)
-    const rot = Math.cos(loopAngle) * 0.45;
-    const depthScale = lerp(0.55, 0.95, u) * (0.85 + zDepth * 0.15);
-    const noteW = lerp(68, 120, u) * (0.85 + zDepth * 0.15);
-    const noteH = lerp(58, 100, u) * (0.85 + zDepth * 0.15);
+    const zDepth = Math.sin(loopAngle); // -1 (back) to +1 (front)
+    const rot = Math.cos(loopAngle) * 0.30;
+    const depthScale = lerp(0.52, 0.85, u) * (0.90 + zDepth * 0.10);
+    const noteW = lerp(54, 90, u) * (0.90 + zDepth * 0.10);
+    const noteH = lerp(46, 76, u) * (0.90 + zDepth * 0.10);
 
     return { x: spiralX - noteW / 2, y: spiralY, w: noteW, h: noteH, rot, scale: depthScale };
-  } else {
-    // ── Phase 3: Exit Ejection & Target Lane Arrival ($p: 0.80 \rightarrow 1.0$) ──
-    // Notes get spit out of the bottom nozzle and launch cleanly to judgment strike targets!
-    const u = (prog - 0.80) / 0.20;
-    const exitAngle = Math.PI * 4 + t * 1.8 * mult;
-    const exitRadiusX = corkW * 0.34;
-    const exitRadiusY = H * 0.15;
-    const exitX = cx + Math.cos(exitAngle) * exitRadiusX + laneOffset * 24;
-    const exitY = vanishingY + baseH * 0.78 + Math.sin(exitAngle) * exitRadiusY;
+  } 
+  
+  // ── Phase 3: Extended Readability Runway & Target Lane Ejection ($p: 0.48 \rightarrow 1.00$) ──
+  // Notes shoot out of the bottom nozzle at p = 0.48 and have 52% of the travel time (~600ms+)
+  // to smoothly lock onto their target lane column and glide straight into strike buttons!
+  else {
+    const u = (prog - 0.48) / 0.52;
+    const exitAngle = Math.PI * 4 + t * 1.6 * mult;
+    const exitRadiusX = corkW * 0.15;
+    const exitRadiusY = H * 0.065;
+    const exitX = cx + Math.cos(exitAngle) * exitRadiusX + laneOffset * 16;
+    const exitY = vanishingY + baseH * 0.42 + Math.sin(exitAngle) * exitRadiusY;
 
     const { x: targetX, w: targetW } = laneAt(lane, 1, W);
     const targetCenterX = targetX + targetW / 2;
     const targetCenterY = hitY;
 
-    const noteX = lerp(exitX, targetCenterX, u);
+    // Rapid ease-in to straight vertical lane column by u = 0.25 (p = 0.61)
+    const alignT = 1 - Math.pow(1 - u, 2.8);
+    const noteX = lerp(exitX, targetCenterX, alignT);
     const noteY = lerp(exitY, targetCenterY, u);
-    const noteW = lerp(120, targetW, u);
-    const noteH = lerp(100, 140, u);
+    const noteW = lerp(90, targetW, u);
+    const noteH = lerp(76, targetW * 0.72, u);
+    const rot = lerp(0.15, 0, alignT); // Straightens out into the hit lane
+    const scale = lerp(0.85, 1.0, u);
 
-    return { x: noteX - noteW / 2, y: noteY, w: noteW, h: noteH, rot: lerp(0.2, 0, u), scale: lerp(0.95, 1.0, u) };
+    return { x: noteX - noteW / 2, y: noteY, w: noteW, h: noteH, rot, scale };
   }
 }
 
@@ -1933,9 +1938,19 @@ async function generateAudioForgeChart(song: any): Promise<Note[]> {
 
   console.log(`[Audio Forge] Running transient onset analysis on: ${audioUrl}`);
   
-  const response = await fetch(audioUrl);
-  if (!response.ok) {
-    throw new Error(`Fetch failed with status ${response.status}`);
+  const candidates = getCandidateAudioUrls(audioUrl, song.day);
+  let response: Response | null = null;
+  for (const c of candidates) {
+    try {
+      const res = await fetch(c);
+      if (res.ok) {
+        response = res;
+        break;
+      }
+    } catch {}
+  }
+  if (!response || !response.ok) {
+    throw new Error(`Fetch failed for audio candidates`);
   }
   const arrayBuffer = await response.arrayBuffer();
 
@@ -2422,7 +2437,7 @@ export default function Game() {
   }, []);
 
   const cycleArchetype = useCallback(() => {
-    const list: TrackArchetype[] = ['cyber_tunnel', 'corkscrew_slide', 'radial_orbit', 'horizontal_drift', 'wave_coaster', 'matrix_split'];
+    const list: TrackArchetype[] = ['corkscrew_slide', 'cyber_tunnel', 'wave_coaster', 'matrix_split'];
     const currIdx = list.indexOf(activeArchetypeRef.current);
     const nextIdx = (currIdx + 1) % list.length;
     const nextArch = list[nextIdx];
@@ -4652,24 +4667,24 @@ export default function Game() {
           ctx.restore();
         }
 
-        // ── ARCHETYPE 3: 3D TWISTING CORKSCREW SLIDE (Remade Dual-Loop Tubular Helix) ──
+        // ── ARCHETYPE 3: 3D TWISTING CORKSCREW SLIDE (Tighter Helical Tube + Extended 52% Runway) ──
         else if (currentArch === 'corkscrew_slide') {
           const corkW = Math.min(W, 840);
-          const outerRadius = corkW * 0.65;
-          const vanishingY = hitY * 0.20;
+          const outerRadius = corkW * 0.55;
+          const vanishingY = hitY * 0.18;
           const baseH = hitY - vanishingY;
 
           // Dynamic Moving Gas Nebula Backdrop around 3D Corkscrew Tube
-          drawMovingGasAura(ctx, cx, vanishingY + baseH * 0.45, outerRadius, "#1c0830", t, 1.0);
+          drawMovingGasAura(ctx, cx, vanishingY + baseH * 0.35, outerRadius, "#1c0830", t, 1.0);
 
           ctx.save();
-          const mult = calculatedStage === 5 ? 1.8 : 1.0;
+          const mult = calculatedStage === 5 ? 1.6 : 1.0;
 
-          // 1. Glowing Entry Mouth Ring (Top entrance at p = 0.20)
-          const entryAngle = t * 1.8 * mult;
-          const entryRadiusX = corkW * 0.10;
-          const entryRadiusY = H * 0.04;
-          const entryY = vanishingY + baseH * 0.18;
+          // 1. Glowing Entry Mouth Ring (Top entrance at p = 0.12)
+          const entryAngle = t * 1.6 * mult;
+          const entryRadiusX = corkW * 0.05;
+          const entryRadiusY = H * 0.02;
+          const entryY = vanishingY + baseH * 0.10;
 
           ctx.strokeStyle = "rgba(255, 123, 0, 0.85)";
           ctx.lineWidth = 3.5;
@@ -4679,19 +4694,19 @@ export default function Game() {
           ctx.ellipse(cx, entryY, entryRadiusX, entryRadiusY, 0, 0, Math.PI * 2);
           ctx.stroke();
 
-          // 2. Dual 360° Tubular Corkscrew Guide Rails (720° Spiral Path)
+          // 2. Tight 3D Helical Corkscrew Guide Rails (p: 0.12 -> 0.48)
           const helixSteps = 60;
           for (let rail = 0; rail < 3; rail++) {
-            const laneOff = (rail - 1) * 22;
+            const laneOff = (rail - 1) * 16;
             const railColor = laneColorsRef.current[rail] || '#FF7B00';
 
             ctx.beginPath();
             for (let step = 0; step <= helixSteps; step++) {
               const u = step / helixSteps;
-              const loopAngle = u * Math.PI * 4 + t * 1.8 * mult; // 2 full loops!
-              const helixRadiusX = lerp(corkW * 0.10, corkW * 0.34, u);
-              const helixRadiusY = lerp(H * 0.04, H * 0.15, u);
-              const centerY = lerp(entryY, vanishingY + baseH * 0.78, u);
+              const loopAngle = u * Math.PI * 4 + t * 1.6 * mult; // 2 complete loops
+              const helixRadiusX = lerp(corkW * 0.05, corkW * 0.15, u);
+              const helixRadiusY = lerp(H * 0.02, H * 0.065, u);
+              const centerY = lerp(entryY, vanishingY + baseH * 0.42, u);
 
               const rx = cx + Math.cos(loopAngle) * helixRadiusX + laneOff * Math.cos(loopAngle);
               const ry = centerY + Math.sin(loopAngle) * helixRadiusY;
@@ -4707,11 +4722,11 @@ export default function Game() {
             ctx.stroke();
           }
 
-          // 3. Glowing Exit Ejection Nozzle (Bottom exit at p = 0.80)
-          const exitAngle = Math.PI * 4 + t * 1.8 * mult;
-          const exitRadiusX = corkW * 0.34;
-          const exitRadiusY = H * 0.15;
-          const exitY = vanishingY + baseH * 0.78;
+          // 3. Glowing Exit Ejection Nozzle (Bottom exit at p = 0.48)
+          const exitAngle = Math.PI * 4 + t * 1.6 * mult;
+          const exitRadiusX = corkW * 0.15;
+          const exitRadiusY = H * 0.065;
+          const exitY = vanishingY + baseH * 0.42;
 
           ctx.strokeStyle = "rgba(255, 215, 0, 0.90)";
           ctx.lineWidth = 4.0;
@@ -4720,6 +4735,27 @@ export default function Game() {
           ctx.beginPath();
           ctx.ellipse(cx, exitY, exitRadiusX, exitRadiusY, 0, 0, Math.PI * 2);
           ctx.stroke();
+
+          // 4. Extended Laser Runway Tracks (p: 0.48 -> 1.00) leading straight into player's hit targets!
+          for (let rail = 0; rail < 3; rail++) {
+            const railColor = laneColorsRef.current[rail] || '#FF7B00';
+            const { x: targetX, w: targetW } = laneAt(rail, 1, W);
+            const targetCenterX = targetX + targetW / 2;
+            const exitX = cx + Math.cos(exitAngle) * exitRadiusX + (rail - 1) * 16;
+
+            ctx.beginPath();
+            ctx.moveTo(exitX, exitY);
+            ctx.bezierCurveTo(
+              exitX + (targetCenterX - exitX) * 0.7, exitY + baseH * 0.20,
+              targetCenterX, hitY - baseH * 0.15,
+              targetCenterX, hitY
+            );
+            ctx.strokeStyle = colorWithAlpha(railColor, 0.35);
+            ctx.lineWidth = 2.0;
+            ctx.shadowColor = railColor;
+            ctx.shadowBlur = 8;
+            ctx.stroke();
+          }
 
           // Ejection pulse particles popping out of the nozzle
           ctx.fillStyle = "#FFD700";
@@ -8194,14 +8230,32 @@ export default function Game() {
       let objectUrl: string = "";
       let fetchSuccess = false;
 
+      const audioCandidates = getCandidateAudioUrls(song.audioUrl, song.day);
+      let targetAudioUrl = song.audioUrl;
+
       // ── Attempt 1: Fetch via stream reader for precise progress ──
       // Skip blob download for large files (>10MB) — e.g. uncompressed WAV assets.
       // For those, fall through to direct audio.src streaming which starts playback
       // as soon as enough data is buffered rather than waiting for the full download.
       try {
-        console.log("[GamePlay Init] Attempting stream-based audio fetch:", song.audioUrl);
-        const headRes = await fetch(song.audioUrl, { method: "HEAD" }).catch(() => null);
-        const headLen = headRes?.headers.get("content-length");
+        let response: Response | null = null;
+        let headRes: Response | null = null;
+
+        for (const candidate of audioCandidates) {
+          try {
+            console.log("[GamePlay Init] Attempting stream-based audio fetch:", candidate);
+            const r = await fetch(candidate);
+            if (r.ok) {
+              response = r;
+              targetAudioUrl = candidate;
+              break;
+            }
+          } catch (e) {
+            console.warn(`[GamePlay Init] Candidate fetch failed for ${candidate}:`, e);
+          }
+        }
+
+        const headLen = response?.headers.get("content-length");
         const headBytes = headLen ? parseInt(headLen, 10) : 0;
         const LARGE_FILE_THRESHOLD = 10 * 1024 * 1024; // 10 MB
 
@@ -8220,11 +8274,7 @@ export default function Game() {
             isStreaming: true,
             logs: [...prev.logs.slice(-4), `[NET] Direct HTML5 media streaming engaged (${(headBytes / 1048576).toFixed(1)} MB)`]
           }));
-        } else {
-          const response = await fetch(song.audioUrl);
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-          }
+        } else if (response && response.ok) {
           const contentLength = response.headers.get("content-length");
           const totalBytes = contentLength ? parseInt(contentLength, 10) : (headBytes || 0);
 
@@ -8384,7 +8434,7 @@ export default function Game() {
         
         const progressPoll = setInterval(updateFallbackProgress, 100);
 
-        audio.src = song.audioUrl;
+        audio.src = targetAudioUrl;
         audio.load();
 
         await new Promise<void>((resolve) => {
@@ -8446,7 +8496,7 @@ export default function Game() {
 
           const progressPoll2 = setInterval(updateFallbackProgress2, 100);
 
-          audio.src = song.audioUrl;
+          audio.src = targetAudioUrl;
           audio.load();
 
           await new Promise<void>((resolve) => {
