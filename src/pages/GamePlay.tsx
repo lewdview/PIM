@@ -1007,21 +1007,48 @@ export function getArchetypeProjection(
     const isCyberStage = isCyberTunnelPOV && (stage === 3 || stage === 5);
     const topRatio = isCyberStage ? 0.18 : HW_TOP;
     const botRatio = isCyberStage ? 0.86 : HW_BOT;
-    const { x, w } = laneAt(lane, prog, W, topRatio, botRatio);
-    const noteY = prog * hitY;
-    const noteH = lerp(80, 140, prog);
-
     if (isCyberStage) {
-      // 🌀 Cylindrical Cyber Tunnel 3D Barrel Warp & Vortex Swirl (STAGE 3 & 5 ONLY)
+      // 🌀 3D CYBER TUNNEL PROJECTION (Emerging directly from tunnel entrance at cx, vanishingY)
+      const vanishingY = hitY * 0.28; // Tunnel entrance horizon center
+      const cx = W / 2;
+      const tunnelW = Math.min(W, 840);
       const laneOffset = lane - 1; // -1 for left, 0 for center, +1 for right
-      const warpFactor = Math.sin(prog * Math.PI); // Parabolic 3D curve along tunnel depth
       const mult = stage === 5 ? 2.0 : 1.0; // Stage 5 overdrive warp intensity
-      const barrelWarp = laneOffset * (W * 0.045) * warpFactor;
-      const vortexSway = Math.sin(t * 1.8 * mult + prog * 3.0) * (W * 0.016 * mult) * warpFactor;
+
+      // 3D Perspective exponential acceleration as note travels towards camera
+      const persP = Math.pow(prog, 1.35);
+
+      // Origin at tunnel entrance mouth (tightly grouped at cx, vanishingY)
+      const entranceSpacing = tunnelW * 0.055;
+      const entranceX = cx + laneOffset * entranceSpacing;
+
+      // Target hit zone strike position at hitY
+      const { x: hitX, w: hitW } = laneAt(lane, 1, W, 0.18, 0.86);
+
+      const noteY = lerp(vanishingY, hitY, persP);
+      const noteW = lerp(tunnelW * 0.05, hitW, Math.pow(prog, 1.25));
+      const noteH = lerp(26, 140, persP);
+      const noteX = lerp(entranceX - noteW / 2, hitX, persP);
+
+      // Cylindrical Cyber Tunnel 3D Barrel Warp & Vortex Swirl
+      const warpFactor = Math.sin(prog * Math.PI); // Parabolic 3D curve along tunnel depth
+      const barrelWarp = laneOffset * (tunnelW * 0.045) * warpFactor;
+      const vortexSway = Math.sin(t * 1.8 * mult + prog * 3.0) * (tunnelW * 0.016 * mult) * warpFactor;
       const rot = (laneOffset * 0.12 + Math.cos(t * 1.8 * mult + prog * 3.0) * 0.04) * warpFactor;
-      return { x: x + barrelWarp + vortexSway, y: noteY, w, h: noteH, rot, scale: lerp(0.4, 1.0, prog) };
+
+      return {
+        x: noteX + barrelWarp + vortexSway,
+        y: noteY,
+        w: noteW,
+        h: noteH,
+        rot,
+        scale: lerp(0.25, 1.0, persP),
+      };
     }
 
+    const { x, w } = laneAt(lane, prog, W, HW_TOP, HW_BOT);
+    const noteY = prog * hitY;
+    const noteH = lerp(80, 140, prog);
     return { x, y: noteY, w, h: noteH, rot: 0, scale: lerp(0.4, 1.0, prog) };
   }
 
@@ -1088,20 +1115,41 @@ export function getArchetypeProjection(
   }
 
   // Default Cyber Tunnel
+  if (stage === 3 || stage === 5) {
+    const vanishingY = hitY * 0.28;
+    const cx = W / 2;
+    const tunnelW = Math.min(W, 840);
+    const laneOffset = lane - 1;
+    const mult = stage === 5 ? 2.0 : 1.0;
+    const persP = Math.pow(prog, 1.35);
+
+    const entranceSpacing = tunnelW * 0.055;
+    const entranceX = cx + laneOffset * entranceSpacing;
+    const { x: hitX, w: hitW } = laneAt(lane, 1, W, 0.18, 0.86);
+
+    const noteY = lerp(vanishingY, hitY, persP);
+    const noteW = lerp(tunnelW * 0.05, hitW, Math.pow(prog, 1.25));
+    const noteH = lerp(26, 140, persP);
+    const noteX = lerp(entranceX - noteW / 2, hitX, persP);
+
+    const warpFactor = Math.sin(prog * Math.PI);
+    const barrelWarp = laneOffset * (tunnelW * 0.045) * warpFactor;
+    const vortexSway = Math.sin(t * 1.8 * mult + prog * 3.0) * (tunnelW * 0.016 * mult) * warpFactor;
+    const rot = (laneOffset * 0.12 + Math.cos(t * 1.8 * mult + prog * 3.0) * 0.04) * warpFactor;
+
+    return {
+      x: noteX + barrelWarp + vortexSway,
+      y: noteY,
+      w: noteW,
+      h: noteH,
+      rot,
+      scale: lerp(0.25, 1.0, persP),
+    };
+  }
+
   const { x: lx, w: lw } = laneAt(lane, prog, W, 0.18, 0.86);
   const noteY = prog * hitY;
   const noteH = lerp(80, 140, prog);
-
-  if (stage === 3 || stage === 5) {
-    const laneOffset = lane - 1;
-    const warpFactor = Math.sin(prog * Math.PI);
-    const mult = stage === 5 ? 2.0 : 1.0;
-    const barrelWarp = laneOffset * (W * 0.045) * warpFactor;
-    const vortexSway = Math.sin(t * 1.8 * mult + prog * 3.0) * (W * 0.016 * mult) * warpFactor;
-    const rot = (laneOffset * 0.12 + Math.cos(t * 1.8 * mult + prog * 3.0) * 0.04) * warpFactor;
-    return { x: lx + barrelWarp + vortexSway, y: noteY, w: lw, h: noteH, rot, scale: lerp(0.4, 1.0, prog) };
-  }
-
   return { x: lx, y: noteY, w: lw, h: noteH, rot: 0, scale: lerp(0.4, 1.0, prog) };
 }
 
@@ -5600,16 +5648,18 @@ export default function Game() {
       );
 
       if (chordPartner) {
-        const { x: lxA, w: lwA } = laneAt(note.lane, prog, W, povTop, povBot, activeArchetypeRef.current, calculatedStage, t);
-        const { x: lxB, w: lwB } = laneAt(chordPartner.note.lane, prog, W, povTop, povBot, activeArchetypeRef.current, calculatedStage, t);
-        const cx1 = lxA + lwA / 2;
-        const cx2 = lxB + lwB / 2;
+        const projA = getArchetypeProjection(note.lane, prog, W, H, activeArchetypeRef.current, calculatedStage, t, activePovModeRef.current);
+        const projB = getArchetypeProjection(chordPartner.note.lane, prog, W, H, activeArchetypeRef.current, calculatedStage, t, activePovModeRef.current);
+        const cx1 = projA.x + projA.w / 2;
+        const cy1 = projA.y;
+        const cx2 = projB.x + projB.w / 2;
+        const cy2 = projB.y;
         
         const colorA = getDifficultyLaneColor(laneColorsRef.current[note.lane], songRef.current?.difficultyLevel ?? 5, note.lane);
         const colorB = getDifficultyLaneColor(laneColorsRef.current[chordPartner.note.lane], songRef.current?.difficultyLevel ?? 5, chordPartner.note.lane);
 
         ctx.save();
-        const connectorGrad = ctx.createLinearGradient(cx1, noteY, cx2, noteY);
+        const connectorGrad = ctx.createLinearGradient(cx1, cy1, cx2, cy2);
         connectorGrad.addColorStop(0, colorA);
         connectorGrad.addColorStop(1, colorB);
 
@@ -5617,18 +5667,18 @@ export default function Game() {
         ctx.shadowColor = colorA;
         ctx.shadowBlur = 18;
         ctx.strokeStyle = connectorGrad;
-        ctx.lineWidth = 14;
+        ctx.lineWidth = lerp(4, 14, prog);
         ctx.lineCap = "round";
         ctx.beginPath();
-        ctx.moveTo(cx1, noteY);
-        ctx.lineTo(cx2, noteY);
+        ctx.moveTo(cx1, cy1);
+        ctx.lineTo(cx2, cy2);
         ctx.stroke();
         
         // Bright white core line
         ctx.shadowColor = "transparent";
         ctx.shadowBlur = 0;
         ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = 4.5;
+        ctx.lineWidth = lerp(1.5, 4.5, prog);
         ctx.stroke();
         ctx.restore();
       }
@@ -5653,6 +5703,12 @@ export default function Game() {
             birthTime: Date.now(),
           });
         }
+      }
+
+      const spawnFade = isCyberTunnelStage ? Math.min(1.0, Math.max(0, prog / 0.09)) : 1.0;
+      ctx.save();
+      if (spawnFade < 1.0) {
+        ctx.globalAlpha = (ctx.globalAlpha || 1.0) * spawnFade;
       }
 
       if (isMissedNote) {
@@ -5786,6 +5842,7 @@ export default function Game() {
       if (isMissedNote) {
         ctx.restore();
       }
+      ctx.restore();
     }
 
     // ── Horizon Fog Overlay (Fades notes into the background at the vanishing horizon across all stages) ──
