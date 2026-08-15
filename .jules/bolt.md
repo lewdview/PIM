@@ -1,0 +1,3 @@
+## 2024-05-18 - Zustand Granular Selectors and Component Variables
+**Learning:** When using conditional granular selectors to optimize Zustand subscriptions (e.g., in lists), the condition can safely use component-level variables (`isThisTrack`) inside the selector because Zustand automatically re-subscribes when the component renders. It prevents massive O(N) re-renders across list items for high-frequency updates (like audio progress) by making inactive items subscribe to a constant.
+**Action:** Always favor granular selectors over destructured object returns (`const { prop } = useStore()`). For list components receiving high-frequency updates, wrap the selector return in a conditional based on an active state.
