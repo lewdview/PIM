@@ -19,6 +19,7 @@ import { purchasePack, type OwnedCard } from "@/services/vaultService";
 import { TransmissionIcon } from "../components/icons/CustomVectorIcons";
 import VideoExportModal from "@/components/ui/VideoExportModal";
 import { getRelativeDay } from "../utils/dayCalc";
+import { getSmartCoverCandidates, isBombshellCoverPath } from "@/utils/rarityArtwork";
 
 // Use Vite's eager glob to grab files in /public/data/slideshow/
 const imageModules = import.meta.glob('/public/data/slideshow/**/*.{png,jpg,jpeg,gif,webp,svg}', { eager: true });
@@ -7854,6 +7855,12 @@ export default function Game() {
         });
         let song = await getSongById(songId);
         if (song) {
+          const sessionCover = typeof sessionStorage !== 'undefined'
+            ? (sessionStorage.getItem(`active_cover_url_${songId}`) || sessionStorage.getItem('active_game_cover'))
+            : null;
+          if (sessionCover) {
+            song.coverArt = sessionCover;
+          }
           song = { ...song, notes: [...(song.notes || [])] };
           if (!activeTutorial) {
             const gameOpts = loadOpts();
@@ -8086,96 +8093,109 @@ export default function Game() {
         });
       }
       ambientParticlesRef.current = ambientParts;
-      // Pre-load + pre-blur cover art for background effect
+      // Pre-load + pre-blur cover art for background effect with smart candidate fallback
       coverImgRef.current = null;
       coverBlurRef.current = null;
       scanPatternRef.current = null;
       if (song.coverArt) {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.onload = () => {
-          if (cancelled) return;
-          coverImgRef.current = img;
-          const off = document.createElement("canvas");
-          off.width = 512;
-          off.height = 512;
-          const offCtx = off.getContext("2d")!;
-          offCtx.filter = "blur(10px) brightness(0.52) saturate(1.5)";
-          offCtx.drawImage(img, -24, -24, 560, 560);
-          offCtx.filter = "none";
-          coverBlurRef.current = off;
+        const candidates = getSmartCoverCandidates(song.coverArt);
+        const toTry = candidates.length > 0 ? candidates : [song.coverArt];
+        let cIdx = 0;
 
-          // Extract dynamic colors from artwork for notes if theme is artwork
-          if (opts.noteTheme === "artwork") {
-            try {
-              const extCanvas = document.createElement("canvas");
-              extCanvas.width = 3;
-              extCanvas.height = 3;
-              const extCtx = extCanvas.getContext("2d")!;
-              extCtx.drawImage(img, 0, 0, 3, 3);
-              const imgData = extCtx.getImageData(0, 0, 3, 3).data;
-              
-              const samplePixel = (pxIdx: number): string => {
-                const r = imgData[pxIdx * 4];
-                const g = imgData[pxIdx * 4 + 1];
-                const b = imgData[pxIdx * 4 + 2];
+        const loadNextCandidate = () => {
+          if (cancelled || cIdx >= toTry.length) return;
+          const currentCandidateUrl = toTry[cIdx];
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.onload = () => {
+            if (cancelled) return;
+            coverImgRef.current = img;
+            if (song) song.coverArt = currentCandidateUrl;
+            const off = document.createElement("canvas");
+            off.width = 512;
+            off.height = 512;
+            const offCtx = off.getContext("2d")!;
+            offCtx.filter = "blur(10px) brightness(0.52) saturate(1.5)";
+            offCtx.drawImage(img, -24, -24, 560, 560);
+            offCtx.filter = "none";
+            coverBlurRef.current = off;
+
+            // Extract dynamic colors from artwork for notes if theme is artwork
+            if (opts.noteTheme === "artwork") {
+              try {
+                const extCanvas = document.createElement("canvas");
+                extCanvas.width = 3;
+                extCanvas.height = 3;
+                const extCtx = extCanvas.getContext("2d")!;
+                extCtx.drawImage(img, 0, 0, 3, 3);
+                const imgData = extCtx.getImageData(0, 0, 3, 3).data;
                 
-                const rNorm = r / 255;
-                const gNorm = g / 255;
-                const bNorm = b / 255;
-                const max = Math.max(rNorm, gNorm, bNorm);
-                const min = Math.min(rNorm, gNorm, bNorm);
-                let h = 0;
-                let s = 0;
-                const l = (max + min) / 2;
-                
-                if (max !== min) {
-                  const d = max - min;
-                  s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-                  switch (max) {
-                    case rNorm: h = (gNorm - bNorm) / d + (gNorm < bNorm ? 6 : 0); break;
-                    case gNorm: h = (bNorm - rNorm) / d + 2; break;
-                    case bNorm: h = (rNorm - gNorm) / d + 4; break;
+                const samplePixel = (pxIdx: number): string => {
+                  const r = imgData[pxIdx * 4];
+                  const g = imgData[pxIdx * 4 + 1];
+                  const b = imgData[pxIdx * 4 + 2];
+                  
+                  const rNorm = r / 255;
+                  const gNorm = g / 255;
+                  const bNorm = b / 255;
+                  const max = Math.max(rNorm, gNorm, bNorm);
+                  const min = Math.min(rNorm, gNorm, bNorm);
+                  let h = 0;
+                  let s = 0;
+                  const l = (max + min) / 2;
+                  
+                  if (max !== min) {
+                    const d = max - min;
+                    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                    switch (max) {
+                      case rNorm: h = (gNorm - bNorm) / d + (gNorm < bNorm ? 6 : 0); break;
+                      case gNorm: h = (bNorm - rNorm) / d + 2; break;
+                      case bNorm: h = (rNorm - gNorm) / d + 4; break;
+                    }
+                    h /= 6;
                   }
-                  h /= 6;
-                }
+                  
+                  const finalH = Math.round(h * 360);
+                  const finalS = 95;
+                  const finalL = 52;
+                  return hslToHex(finalH, finalS, finalL);
+                };
                 
-                const finalH = Math.round(h * 360);
-                const finalS = 95; // Vibrant neon saturation
-                const finalL = 52; // Excellent screen legibility
-                return hslToHex(finalH, finalS, finalL);
-              };
-              
-              const extColors: [string, string, string] = [
-                samplePixel(0), // Left pixel
-                samplePixel(4), // Center pixel
-                samplePixel(8), // Right pixel
-              ];
-              
-              laneColorsRef.current = extColors;
-              console.log("[Dynamic Colors] Extracted lane colors from cover art:", extColors);
-              
-              // Regenerate static track visual cache with new dynamic colors
-              const canvas = canvasRef.current;
-              if (canvas) {
-                const dpr = window.devicePixelRatio || 1;
-                const W = canvas.width / dpr;
-                const H = canvas.height / dpr;
-                offscreenCanvasRef.current = prerenderStaticTrack(
-                  W,
-                  H,
-                  dpr,
-                  songRef.current.difficultyLevel,
-                  laneColorsRef.current,
-                  optsRef.current.gameTrack
-                );
+                const extColors: [string, string, string] = [
+                  samplePixel(0),
+                  samplePixel(4),
+                  samplePixel(8),
+                ];
+                
+                laneColorsRef.current = extColors;
+                
+                const canvas = canvasRef.current;
+                if (canvas) {
+                  const dpr = window.devicePixelRatio || 1;
+                  const W = canvas.width / dpr;
+                  const H = canvas.height / dpr;
+                  offscreenCanvasRef.current = prerenderStaticTrack(
+                    W,
+                    H,
+                    dpr,
+                    songRef.current.difficultyLevel,
+                    laneColorsRef.current,
+                    optsRef.current.gameTrack
+                  );
+                }
+              } catch (err) {
+                console.error("Failed to extract dynamic colors from artwork:", err);
               }
-            } catch (err) {
-              console.error("Failed to extract dynamic colors from artwork:", err);
             }
-          }
+          };
+          img.onerror = () => {
+            cIdx++;
+            loadNextCandidate();
+          };
+          img.src = currentCandidateUrl;
         };
-        img.src = song.coverArt;
+
+        loadNextCandidate();
       }
       notesRef.current = song.notes.map((n, idx) => {
         let note = { ...n, lane: Math.min(n.lane, LANE_COUNT - 1) };

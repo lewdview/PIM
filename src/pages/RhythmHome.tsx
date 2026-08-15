@@ -5,6 +5,10 @@ import { loadOpts, keyLabel } from "@/lib/options";
 import { audioManager } from "@/game/audio";
 import { logAnalyticsEvent } from "@/services/telemetryService";
 import { useVaultStore } from "@/store/useVaultStore";
+import { useGlobalPlayer } from "@/store/useGlobalPlayer";
+import { getCurrentDay } from "@/utils/dayCalc";
+import { getCardByDay } from "@/services/vaultService";
+import { getSmartCoverCandidates } from "@/utils/rarityArtwork";
 
 let hasPlayedIntroThisSession = false;
 let sessionIntroType: 'classic' | 'avant-garde' | null = null;
@@ -14,6 +18,58 @@ export default function Home() {
   const setOptionsModalOpen = useVaultStore((s) => s.setOptionsModalOpen);
   const [blink, setBlink] = useState(true);
   const [stats, setStats] = useState({ score: 0, platinums: 0, cleared: 0 });
+  const { currentTrack } = useGlobalPlayer();
+  const [bgArtwork, setBgArtwork] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const today = getCurrentDay();
+    const sessionCover = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('active_game_cover') : null;
+    
+    if (sessionCover) {
+      setBgArtwork(sessionCover);
+      return;
+    }
+
+    if (currentTrack?.coverUrl) {
+      setBgArtwork(currentTrack.coverUrl);
+      return;
+    }
+
+    getCardByDay(today).then(card => {
+      if (cancelled || !card) return;
+      const cover = card.coverUrl || (card as any).coverArt;
+      if (cover) {
+        const candidates = getSmartCoverCandidates(cover, card.rarity);
+        if (candidates.length > 0) {
+          let idx = 0;
+          const tryNext = () => {
+            if (idx >= candidates.length) {
+              setBgArtwork(cover);
+              return;
+            }
+            const img = new Image();
+            img.onload = () => {
+              if (!cancelled) setBgArtwork(candidates[idx]);
+            };
+            img.onerror = () => {
+              idx++;
+              tryNext();
+            };
+            img.src = candidates[idx];
+          };
+          tryNext();
+        } else {
+          setBgArtwork(cover);
+        }
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentTrack]);
+
   const liveOpts = loadOpts();
   const LANE_COLORS = liveOpts.laneColors;
   const LANE_KEYS   = liveOpts.laneKeys.map(k => keyLabel(k));
@@ -586,6 +642,33 @@ const DigitalClock = memo(() => {
             ? 'radial-gradient(ellipse 80% 60% at 50% 45%, #0e1028 0%, #080808 55%, #0a0810 100%)'
             : '#050505'
         }}>
+
+      {/* PIM Dynamic Artwork Atmospheric Background */}
+      {bgArtwork && (
+        <div className="absolute inset-0 pointer-events-none overflow-hidden select-none z-0">
+          <div 
+            className="absolute inset-0 transition-all duration-1000 ease-in-out filter blur-[14px] brightness-[0.24] scale-[1.25] opacity-75"
+            style={{
+              backgroundImage: `url(${bgArtwork})`,
+              backgroundPosition: 'center',
+              backgroundSize: 'cover'
+            }}
+          />
+          <div 
+            className="absolute inset-0 opacity-40 mix-blend-screen animate-pulse duration-[8000ms]"
+            style={{
+              background: `radial-gradient(circle at 50% 45%, #FF149320 0%, transparent 75%)`
+            }}
+          />
+          <div 
+            className="absolute inset-0 opacity-[0.06]"
+            style={{
+              backgroundImage: 'linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px)',
+              backgroundSize: '48px 48px'
+            }}
+          />
+        </div>
+      )}
 
       {introType === 'classic' ? (
         <>

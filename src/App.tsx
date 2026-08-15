@@ -90,17 +90,47 @@ function GlobalMenuBackground() {
     }
   }, [location]);
 
-  // Load fallback daily card cover art in background
+  // Load fallback daily card cover art in background with smart fallback
   useEffect(() => {
+    let cancelled = false;
     import('./utils/dayCalc').then(({ getCurrentDay }) => {
       import('./services/vaultService').then(({ getCardByDay }) => {
         getCardByDay(getCurrentDay()).then(card => {
-          if (card && card.coverArt) {
-            setDailyCover(card.coverArt);
+          if (cancelled || !card) return;
+          const cover = card.coverUrl || (card as any).coverArt;
+          if (cover) {
+            import('./utils/rarityArtwork').then(({ getSmartCoverCandidates }) => {
+              const candidates = getSmartCoverCandidates(cover, card.rarity);
+              if (candidates.length > 0) {
+                // Test first candidate or fallback sequentially
+                let idx = 0;
+                const tryNext = () => {
+                  if (idx >= candidates.length) {
+                    setDailyCover(cover);
+                    return;
+                  }
+                  const img = new Image();
+                  img.onload = () => {
+                    if (!cancelled) setDailyCover(candidates[idx]);
+                  };
+                  img.onerror = () => {
+                    idx++;
+                    tryNext();
+                  };
+                  img.src = candidates[idx];
+                };
+                tryNext();
+              } else {
+                setDailyCover(cover);
+              }
+            });
           }
         });
       });
     });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const hideBg =
@@ -110,7 +140,8 @@ function GlobalMenuBackground() {
 
   if (hideBg || isLegacy) return null;
 
-  const activeCoverUrl = currentTrack?.coverUrl || dailyCover || '/data/covers/default.jpg';
+  const sessionCover = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('active_game_cover') : null;
+  const activeCoverUrl = currentTrack?.coverUrl || sessionCover || dailyCover || '/data/covers/default.jpg';
   const songDay = currentTrack?.day || getLocalCurrentDay();
   const monthNum = getMonthNumFromDay(songDay);
   const activeChapter = CHAPTERS.find(c => c.month === monthNum);
@@ -367,6 +398,8 @@ export default function App() {
             <Route path="/hero" component={HeroLandingPage} />
             <Route path="/hero/day-:dayParam" component={HeroLandingPage} />
             <Route path="/hero/:dayParam" component={HeroLandingPage} />
+            <Route path="/pim" component={RhythmHome} />
+            <Route path="/play" component={RhythmHome} />
             <Route path="/arcade" component={RhythmHome} />
             <Route path="/songs" component={SongSelect} />
             <Route path="/play/:songId" component={GamePlay} />

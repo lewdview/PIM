@@ -444,6 +444,9 @@ export default function CollectionPage() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
+                          const cover = mainCard.card.coverUrl;
+                          sessionStorage.setItem(`active_cover_url_card-${mainCard.card.day}`, cover);
+                          sessionStorage.setItem('active_game_cover', cover);
                           stop();
                           setLocation(`/play/card-${mainCard.card.day}`);
                         }}
@@ -473,6 +476,9 @@ export default function CollectionPage() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
+                          const cover = mainCard.card.coverUrl;
+                          sessionStorage.setItem(`active_cover_url_card-${mainCard.card.day}`, cover);
+                          sessionStorage.setItem('active_game_cover', cover);
                           stop();
                           setLocation(`/play/card-${mainCard.card.day}`);
                         }}
@@ -628,6 +634,9 @@ export default function CollectionPage() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
+                        const cover = mainCard.card.coverUrl;
+                        sessionStorage.setItem(`active_cover_url_card-${mainCard.card.day}`, cover);
+                        sessionStorage.setItem('active_game_cover', cover);
                         stop();
                         setLocation(`/play/card-${mainCard.card.day}`);
                       }}
@@ -741,6 +750,9 @@ export default function CollectionPage() {
         }}
         onPlayPim={() => {
           if (actionSheetCard) {
+            const cover = actionSheetCard.group[0].card.coverUrl;
+            sessionStorage.setItem(`active_cover_url_card-${actionSheetCard.group[0].card.day}`, cover);
+            sessionStorage.setItem('active_game_cover', cover);
             stop();
             setLocation(`/play/card-${actionSheetCard.group[0].card.day}`);
           }

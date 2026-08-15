@@ -49,10 +49,10 @@ const menuSections: MenuSection[] = [
     accentGlow: 'rgba(255, 20, 147, 0.4)',
     icon: Gamepad2,
     items: [
-      { to: '/arcade', label: 'Arcade', icon: Monitor, desc: 'Quick-play random songs' },
-      { to: '/campaign', label: 'Campaign', icon: Map, desc: 'Story chapters & progression' },
-      { to: '/songs', label: 'Award Play', icon: Trophy, desc: 'Curated song selection' },
-      { to: '/tutorial', label: 'Tutorial', icon: GraduationCap, desc: 'Learn the controls' },
+      { to: '/arcade', label: 'PIM Arcade', icon: Monitor, desc: 'Quick-play rhythm engine' },
+      { to: '/campaign', label: 'PIM Campaign', icon: Map, desc: 'Story chapters & 365 roadmaps' },
+      { to: '/songs', label: 'PIM Award Play', icon: Trophy, desc: 'Curated song selection' },
+      { to: '/tutorial', label: 'PIM Tutorial', icon: GraduationCap, desc: 'Master the 3-lane controls' },
     ],
   },
   {
@@ -111,14 +111,14 @@ const menuSections: MenuSection[] = [
 
 // Mobile bottom-left vertical quick-access tabs
 const mobileQuickTabs = [
-  { id: 'play', to: '/arcade', label: 'Arcade', icon: Gamepad2, accent: '#FF1493', glow: 'rgba(255, 20, 147, 0.4)' },
+  { id: 'play', to: '/arcade', label: 'PIM', icon: Gamepad2, accent: '#FF1493', glow: 'rgba(255, 20, 147, 0.4)' },
   { id: 'vault', to: '/vault', label: 'Vault', icon: Home, accent: '#FF5500', glow: 'rgba(255, 85, 0, 0.4)' },
   { id: 'earn', to: '/vault/earn', label: 'Earn', icon: Zap, accent: '#E5B800', glow: 'rgba(229, 184, 0, 0.4)' },
 ];
 
 // Determine which section a route belongs to for active highlighting
 function getActiveSection(location: string): string | null {
-  if (location === '/arcade' || location === '/campaign' || location === '/songs' ||
+  if (location === '/arcade' || location === '/pim' || location === '/play' || location === '/campaign' || location === '/songs' ||
       location === '/tutorial' || location.startsWith('/chapter/') ||
       location.startsWith('/play/') || location.startsWith('/results/')) {
     return 'play';
@@ -433,6 +433,17 @@ export default function Navbar() {
 
             {/* ── Right: Desktop Controls ── */}
             <div className="hidden md:flex items-center gap-2 shrink-0">
+              {/* PIM Direct Access Button */}
+              <Link
+                to="/arcade"
+                className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded bg-gradient-to-r from-[#FF1493]/25 via-[#FF5500]/20 to-[#00E5FF]/25 hover:from-[#FF1493]/40 hover:to-[#00E5FF]/40 border border-[#FF1493]/60 text-white font-mono text-[10px] font-black uppercase tracking-wider shadow-[0_0_15px_rgba(255,20,147,0.3)] transition-all hover:scale-105 active:scale-95 cursor-pointer no-underline mr-1"
+                title="Launch PIM (Poetry in Motion) Rhythm Arcade"
+                onClick={() => haptics.lightTap()}
+              >
+                <Gamepad2 size={13} className="text-[#FF1493] animate-pulse" />
+                <span>PLAY PIM</span>
+              </Link>
+
               {/* 4K HDR Toggle */}
               <div
                 className="flex items-center gap-1.5 px-2 py-1 rounded cursor-pointer"

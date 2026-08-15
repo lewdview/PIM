@@ -397,10 +397,13 @@ function CodexGridCardItem({
             <button
               onClick={(e) => {
                 e.stopPropagation();
+                const cover = card.coverUrl;
+                sessionStorage.setItem(`active_cover_url_card-${card.day}`, cover);
+                sessionStorage.setItem('active_game_cover', cover);
                 stop();
                 setLocation(`/play/card-${card.day}`);
               }}
-              className="w-full py-2 rounded bg-[rgba(0,240,255,0.15)] border border-neon-cyan text-neon-cyan text-[10px] font-mono font-bold uppercase tracking-wider transition-all hover:bg-[rgba(0,240,255,0.25)] hover:scale-105 active:scale-95 text-center"
+              className="w-full py-2 rounded bg-[rgba(0,240,255,0.15)] border border-neon-cyan text-neon-cyan text-[10px] font-mono font-bold uppercase tracking-wider transition-all hover:bg-[rgba(0,240,255,0.25)] hover:scale-105 active:scale-95 text-center flex items-center justify-center gap-1"
               style={{
                 borderColor: 'var(--color-neon-cyan, #00f0ff)',
                 color: 'var(--color-neon-cyan, #00f0ff)',
@@ -713,13 +716,26 @@ function BombshellGridCardItem({
         <button
           onClick={(e) => {
             e.stopPropagation();
+            sessionStorage.setItem(`active_cover_url_card-${card.day}`, coverUrl);
+            sessionStorage.setItem('active_game_cover', coverUrl);
+            stop();
+            setLocation(`/play/card-${card.day}`);
+          }}
+          className="w-full py-1.5 rounded bg-[rgba(255,20,147,0.25)] border border-[#FF1493] text-[#ff85c0] text-[9.5px] font-mono font-bold uppercase tracking-wider transition-all hover:bg-[rgba(255,20,147,0.4)] hover:scale-105 active:scale-95 text-center flex items-center justify-center gap-1 shadow-[0_0_10px_rgba(255,20,147,0.3)] cursor-pointer"
+        >
+          PLAY PIM
+        </button>
+
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
             handlePlay({
               ...card,
               coverUrl,
               cardSet: 'bombshell',
             });
           }}
-          className="w-full py-1.5 rounded bg-white/10 border border-white/20 text-white text-[9.5px] font-mono font-bold uppercase tracking-wider transition-all hover:bg-white/20 hover:scale-105 active:scale-95 text-center flex items-center justify-center gap-1"
+          className="w-full py-1.5 rounded bg-white/10 border border-white/20 text-white text-[9.5px] font-mono font-bold uppercase tracking-wider transition-all hover:bg-white/20 hover:scale-105 active:scale-95 text-center flex items-center justify-center gap-1 cursor-pointer"
         >
           {isCurrentlyPlaying ? <Pause size={9} /> : <Play size={9} />}
           {isCurrentlyPlaying ? 'Pause Audio' : 'Play Audio'}
