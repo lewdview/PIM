@@ -19,6 +19,7 @@ import {
   targetedPull, upgradeRarity, fuseDuplicates,
   redeemBonusCode, fetchAllCards, findCardWithFallback,
   hasClaimedFreePackToday,
+  createStripeCheckoutSession,
   type OwnedCard
 } from '../services/vaultService';
 import { audioManager } from '../game/audio';
@@ -26,6 +27,7 @@ import { getCurrentDay, getTimeUntilNextDay } from '../utils/dayCalc';
 import { type PackCategory, type PackSize, PACK_CONFIGS, PACK_CAROUSEL_ORDER, ROLL_RATES, PROOF_RATES } from '../utils/rarity';
 import { loadCatalog } from '../game/api';
 import { payWithCrypto } from '../services/coinbaseService';
+import PaymentSelectModal from '../components/PaymentSelectModal';
 
 // ===== MODERN FLOATING ANNOUNCEMENT BAR =====
 const TICKER_TEXT = '⚡ PIM : TH3V4ULT • DAILY MUSIC DROPS • COLLECT & EARN TOKENS • VERIFIABLE AUDIO PROOFS';
@@ -140,6 +142,7 @@ export default function NextGenLandingPage() {
     };
   }>>([]);
   const [droppingPack, setDroppingPack] = useState<{ category: PackCategory; label: string; icon: string; accent: string } | null>(null);
+  const [checkoutInfo, setCheckoutInfo] = useState<{ category: PackCategory; size: PackSize; label: string; price: string; priceValue: number; accent: string } | null>(null);
 
   const VENDING_CAROUSEL_CATEGORIES: PackCategory[] = useMemo(() => [
     'free', 'bombshell', 'taste', 'light', 'dark', 'miss_out', 'month', 'special_picks', 'prophecy', 'alpha', 'vault_token'
@@ -594,27 +597,17 @@ export default function NextGenLandingPage() {
     const cfg = PACK_CONFIGS[category];
     const tier = cfg?.tiers.find(t => t.size === size) ?? cfg?.tiers[0];
 
+    // Intercept for USD packs (Display Stripe Card vs Crypto choice modal)
     if (tier && tier.priceValue > 0 && category !== 'vault_token' && tier.price !== 'FREE' && !sessionId) {
-      try {
-        useLoadingToast.getState().show('Waiting for wallet confirmation…');
-        const txHash = await payWithCrypto(tier.priceValue);
-        
-        if (txHash) {
-          useLoadingToast.getState().show('Verifying transaction…');
-          const cards = await purchasePack(category, size, undefined, txHash);
-          if (cards.length > 0) {
-            addToCollection(cards);
-            await loadVaultData();
-            triggerVendDrop(category, size, cards, cfg, tier);
-          }
-          return;
-        }
-      } catch (err: any) {
-        console.error('Crypto payment failed:', err);
-        useLoadingToast.getState().hide();
-        alert(err.message || 'Payment failed');
-        return;
-      }
+      setCheckoutInfo({
+        category,
+        size,
+        label: cfg.label,
+        price: tier.price,
+        priceValue: tier.priceValue,
+        accent: cfg.accent,
+      });
+      return;
     }
 
     try {
@@ -631,6 +624,53 @@ export default function NextGenLandingPage() {
       useLoadingToast.getState().hide();
     }
   }, [triggerVendDrop, addToCollection, loadVaultData]);
+
+  const handlePaymentSelect = useCallback(async (method: 'crypto' | 'stripe') => {
+    if (!checkoutInfo) return;
+    const { category, size, priceValue, label, price, accent } = checkoutInfo;
+    setCheckoutInfo(null);
+
+    const cfg = PACK_CONFIGS[category];
+    const tier = cfg?.tiers.find(t => t.size === size) ?? cfg?.tiers[0];
+
+    if (method === 'crypto') {
+      try {
+        useLoadingToast.getState().show('Waiting for wallet confirmation…');
+        const txHash = await payWithCrypto(priceValue);
+        
+        if (txHash) {
+          useLoadingToast.getState().show('Verifying transaction…');
+          const cards = await purchasePack(category, size, undefined, txHash);
+          if (cards.length > 0) {
+            addToCollection(cards);
+            await loadVaultData();
+            triggerVendDrop(category, size, cards, cfg, tier);
+          }
+        }
+      } catch (err: any) {
+        console.error('Crypto payment failed:', err);
+        useLoadingToast.getState().hide();
+        alert(err.message || 'Payment failed');
+      }
+    } else {
+      // Live Stripe Checkout session redirect
+      try {
+        useLoadingToast.getState().show('Connecting to Stripe checkout…');
+        const res = await createStripeCheckoutSession(category, size);
+        useLoadingToast.getState().hide();
+
+        if (res.success && res.checkoutUrl) {
+          window.location.href = res.checkoutUrl;
+        } else {
+          alert(`Checkout Error: ${res.error || 'Could not initialize Stripe Checkout'}`);
+        }
+      } catch (err: any) {
+        console.error('Stripe redirect failed:', err);
+        useLoadingToast.getState().hide();
+        alert(err.message || 'Failed to connect to Stripe checkout');
+      }
+    }
+  }, [checkoutInfo, triggerVendDrop, addToCollection, loadVaultData]);
 
   const handleOpenAllVendedPacks = useCallback(() => {
     if (vendedStack.length === 0) return;
@@ -1654,6 +1694,17 @@ export default function NextGenLandingPage() {
             <h2 className="text-4xl font-extrabold text-white tracking-tight">Drop Claimed!</h2>
           </div>
         </div>
+      )}
+
+      {checkoutInfo && (
+        <PaymentSelectModal
+          isOpen={!!checkoutInfo}
+          onClose={() => setCheckoutInfo(null)}
+          onSelect={handlePaymentSelect}
+          packLabel={checkoutInfo.label}
+          price={checkoutInfo.price}
+          accent={checkoutInfo.accent}
+        />
       )}
 
     </div>
