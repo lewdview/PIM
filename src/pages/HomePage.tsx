@@ -12,6 +12,7 @@ import {
   getCardByDay, hasClaimedToday, claimDailyCard,
   purchasePack, getCompletedMonths, getMonthName,
   targetedPull, upgradeRarity, fuseDuplicates,
+  createStripeCheckoutSession, verifyStripeSession,
   type OwnedCard,
 } from '../services/vaultService';
 import { audioManager } from '../game/audio';
@@ -455,12 +456,22 @@ export default function HomePage() {
         alert(err.message || 'Payment failed');
       }
     } else {
-      // Stripe payment simulation redirect
-      useLoadingToast.getState().show('Connecting to Stripe checkout...');
-      setTimeout(() => {
-        const mockSessionId = 'cs_live_mock_' + Math.random().toString(36).substr(2, 9);
-        window.location.href = `/?session_id=${mockSessionId}&category=${category}&size=${size}`;
-      }, 1200);
+      // Live Stripe Checkout session redirect
+      try {
+        useLoadingToast.getState().show('Connecting to Stripe checkout…');
+        const res = await createStripeCheckoutSession(category, size);
+        useLoadingToast.getState().hide();
+
+        if (res.success && res.checkoutUrl) {
+          window.location.href = res.checkoutUrl;
+        } else {
+          alert(`Checkout Error: ${res.error || 'Could not initialize Stripe Checkout'}`);
+        }
+      } catch (err: any) {
+        console.error('Stripe redirect failed:', err);
+        useLoadingToast.getState().hide();
+        alert(err.message || 'Failed to connect to Stripe checkout');
+      }
     }
   }, [checkoutInfo, startReveal, setLocation, addToCollection, loadVaultData]);
 

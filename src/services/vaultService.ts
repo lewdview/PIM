@@ -535,6 +535,94 @@ export async function purchasePack(category: PackCategory, size: PackSize = 'sin
   }
 }
 
+// ===== STRIPE CHECKOUT =====
+
+export async function createStripeCheckoutSession(
+  category: PackCategory,
+  size: PackSize = 'single'
+): Promise<{ success: boolean; checkoutUrl?: string; sessionId?: string; error?: string }> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('Authentication required: Please connect or sign in first');
+
+    const { data: result, error } = await supabase.functions.invoke('vault-engine', {
+      body: {
+        action: 'createStripeCheckoutSession',
+        payload: {
+          category,
+          size,
+          origin: window.location.origin,
+        },
+      },
+    });
+
+    if (error || !result?.success) {
+      const errMsg = (await extractDetailedError(error)) || result?.error || 'Failed to create Stripe Checkout session';
+      console.error('Stripe Checkout Error:', errMsg);
+      return { success: false, error: errMsg };
+    }
+
+    return {
+      success: true,
+      checkoutUrl: result.checkoutUrl,
+      sessionId: result.sessionId,
+    };
+  } catch (err: any) {
+    console.error('Stripe checkout error:', err);
+    return { success: false, error: err.message || 'Payment initiation failed' };
+  }
+}
+
+export async function verifyStripeSession(
+  sessionId: string,
+  category?: PackCategory,
+  size?: PackSize
+): Promise<OwnedCard[]> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('Not authenticated');
+
+    const { data: result, error } = await supabase.functions.invoke('vault-engine', {
+      body: {
+        action: 'verifyStripeSession',
+        payload: { sessionId, category, size },
+      },
+    });
+
+    if (error || !result?.success) {
+      const errMsg = (await extractDetailedError(error)) || result?.error || 'Failed to verify payment';
+      console.error('Stripe Verification Error:', errMsg);
+      return [];
+    }
+
+    const rawCards = result.cards || [];
+    const pool = await fetchAllCards();
+
+    return rawCards.map((c: any) => {
+      const parent = findCardWithFallback(pool, c.card_id, c.rarity);
+      return {
+        id: c.id || crypto.randomUUID(),
+        cardId: parent.id,
+        card: { ...parent, rarity: c.rarity },
+        source: c.source,
+        claimedAt: c.claimed_at,
+        edition: c.edition,
+        maxSupply: c.max_supply,
+        isEcho: c.is_echo,
+        echoGeneration: c.echo_generation,
+        echoSourceDay: c.echo_source_day,
+        proof: c.proof,
+        ultraReward: c.ultra_reward,
+        blockchainStatus: c.blockchain_status,
+        fingerprint: c.fingerprint,
+      };
+    });
+  } catch (err) {
+    console.error('Stripe session verification error:', err);
+    return [];
+  }
+}
+
 async function extractDetailedError(error: any) {
   if (!error) return null;
   if (typeof error === 'object' && 'context' in error) {

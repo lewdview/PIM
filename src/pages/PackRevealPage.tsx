@@ -10,9 +10,11 @@ import UltraRewardModal from '../components/UltraRewardModal';
 import PackRipAnimation from '../components/PackRipAnimation';
 import PackContainer from '../components/cinematic/PackContainer';
 
-import { purchasePack, sellCard, getTokenPackCost, type OwnedCard } from '../services/vaultService';
+import { purchasePack, sellCard, getTokenPackCost, verifyStripeSession, type OwnedCard } from '../services/vaultService';
+import { PACK_CONFIGS, type PackCategory, type PackSize } from '../utils/rarity';
 import { audioManager } from '../game/audio';
 import { haptics } from '../utils/haptics';
+import { useLoadingToast } from '../store/useLoadingToast';
 
 export default function PackRevealPage() {
   const [, setLocation] = useLocation();
@@ -27,12 +29,53 @@ export default function PackRevealPage() {
     () => !revealPackMeta || (revealPackMeta.revealType !== 'tap' && revealPackMeta.revealType !== 'cinematic')
   );
 
+  // Check for Stripe Session ID on mount if revealCards is empty
   useEffect(() => {
     if (revealCards.length === 0) {
+      const params = new URLSearchParams(window.location.search);
+      const sessionId = params.get('session_id');
+      const category = (params.get('category') || 'taste') as PackCategory;
+      const size = (params.get('size') || 'single') as PackSize;
+
+      if (sessionId) {
+        window.history.replaceState({}, '', '/vault/reveal');
+        useLoadingToast.getState().show('Verifying Stripe payment…');
+        verifyStripeSession(sessionId, category, size)
+          .then(async (cards) => {
+            useLoadingToast.getState().hide();
+            if (cards && cards.length > 0) {
+              addToCollection(cards);
+              await loadVaultData();
+              const cfg = PACK_CONFIGS[category];
+              const tier = cfg?.tiers.find(t => t.size === size) ?? cfg?.tiers[0];
+              startReveal(cards, cfg && tier ? {
+                category,
+                size,
+                label: cfg.label,
+                icon: cfg.icon,
+                accent: cfg.accent,
+                gradient: cfg.gradient,
+                price: tier.price,
+                cardCount: tier.cardCount,
+                revealType: 'cinematic',
+              } : undefined);
+            } else {
+              alert('Could not verify cards for this Stripe session.');
+              setLocation('/vault');
+            }
+          })
+          .catch((err) => {
+            console.error('Stripe verification failed:', err);
+            useLoadingToast.getState().hide();
+            setLocation('/vault');
+          });
+        return;
+      }
+
       setLocation('/vault');
       return;
     }
-  }, [revealCards, setLocation]);
+  }, [revealCards, setLocation, addToCollection, loadVaultData, startReveal]);
 
   useEffect(() => {
     if (ripDone && revealPackMeta?.revealType !== 'cinematic' && revealedIndex >= 0 && revealedIndex < revealCards.length - 1) {
