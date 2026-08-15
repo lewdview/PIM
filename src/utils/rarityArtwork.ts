@@ -70,13 +70,34 @@ export function setRarityArtworkConfig(
   };
 }
 
+import { getBombshellCoverCandidates } from './bombshellCards';
+
+/**
+ * Check if a path or URL belongs to the Bombshell cover dataset (organized by day #, NOT month).
+ */
+export function isBombshellCoverPath(urlOrPath: string | undefined | null): boolean {
+  if (!urlOrPath) return false;
+  const decoded = decodeURIComponent(urlOrPath);
+  return (
+    decoded.includes('/girl-covers/days/') ||
+    decoded.includes('/rare_covers/') ||
+    decoded.includes('girl-covers/days') ||
+    decoded.includes('rare_covers/day') ||
+    decoded.includes('lb day') ||
+    /(\/|\\|^|\b)(lb\s+)?day\s+\d+/i.test(decoded)
+  );
+}
+
 /**
  * Resolves the artwork URL/path for a given card based on its original cover URL and rarity level.
  *
- * Examples:
- * Original: https://.../releaseready/covers/january/01%20-%20Were%20Going%20Crazy%20World.jpg
- * Rare (useAlternate=true, folder='girls-cover', extension='.jpg'):
- *   => https://.../releaseready/girls-cover/january/01%20-%20Were%20Going%20Crazy%20World.jpg
+ * For Gen-0:
+ *   Original: https://.../releaseready/covers/january/01%20-%20Were%20Going%20Crazy%20World.jpg
+ *   Rare => https://.../releaseready/girls-cover/january/01%20-%20Were%20Going%20Crazy%20World.jpg
+ *
+ * For Bombshells:
+ *   Day folder paths (e.g. releaseready/girl-covers/days/day 1/day 001 - 01.jpg or rare_covers/day 1/...)
+ *   have NO month structure and are preserved as-is.
  */
 export function getCoverUrlForRarity(
   originalUrlOrPath: string | undefined | null,
@@ -84,15 +105,8 @@ export function getCoverUrlForRarity(
 ): string {
   if (!originalUrlOrPath) return '';
 
-  // Preserve Bombshell and rare_covers artwork directly without mutating folder paths
-  if (
-    originalUrlOrPath.includes('/girl-covers/days/') ||
-    originalUrlOrPath.includes('/rare_covers/') ||
-    originalUrlOrPath.includes('lb%20day') ||
-    originalUrlOrPath.includes('lb day') ||
-    originalUrlOrPath.includes('day%200') ||
-    originalUrlOrPath.includes('day 0')
-  ) {
+  // Preserve Bombshell artwork directly without mutating folder paths into Gen-0 month folders
+  if (isBombshellCoverPath(originalUrlOrPath)) {
     return originalUrlOrPath;
   }
 
@@ -137,12 +151,15 @@ export function getSmartCoverCandidates(
   const original = originalCoverUrl || '';
   if (!original) return [];
 
-  if (
-    original.includes('/girl-covers/days/') ||
-    original.includes('/rare_covers/') ||
-    original.includes('lb%20day') ||
-    original.includes('lb day')
-  ) {
+  // Bombshell Cover handling: Strictly preserve day-based structure, NEVER fall back to month folders!
+  if (isBombshellCoverPath(original)) {
+    const decoded = decodeURIComponent(original);
+    const dayMatch = decoded.match(/day\s*(\d+)[\/\\]([^?#]+)/i);
+    if (dayMatch) {
+      const dayNum = parseInt(dayMatch[1], 10);
+      const fileName = dayMatch[2];
+      return getBombshellCoverCandidates(dayNum, fileName);
+    }
     return [original];
   }
 

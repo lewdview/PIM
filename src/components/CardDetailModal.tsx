@@ -228,6 +228,39 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
                           </span>
                         </div>
                         {(() => {
+                          const isBombshell = isBombshellCard(card);
+                          if (isBombshell) {
+                            const artworkName = card.coverArtwork || card.card.coverArtwork || '';
+                            const isLB = artworkName.startsWith('lb') || card.card.coverUrl.includes('lb%20') || card.card.coverUrl.includes('lb ');
+                            return (
+                              <>
+                                <div className="flex justify-between items-center text-[11px] font-mono border-t border-white/5 pt-1.5 mt-1.5">
+                                  <span className="opacity-40">Deck Series:</span>
+                                  <span className="font-bold text-[#ff1493]">🔥 Bombshell Series</span>
+                                </div>
+                                <div className="flex justify-between items-center text-[11px] font-mono">
+                                  <span className="opacity-40">Cover Variant:</span>
+                                  <span
+                                    className="font-bold px-1.5 py-0.5 rounded text-[9px] uppercase tracking-wider"
+                                    style={{
+                                      background: isLB ? 'rgba(255, 184, 0, 0.2)' : 'rgba(255, 20, 147, 0.2)',
+                                      color: isLB ? '#ffb800' : '#ff1493',
+                                      border: isLB ? '1px solid rgba(255, 184, 0, 0.4)' : '1px solid rgba(255, 20, 147, 0.4)',
+                                    }}
+                                  >
+                                    {isLB ? 'Light / Bust (LB)' : 'Normal / Full Cover'}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between items-center text-[11px] font-mono">
+                                  <span className="opacity-40">Vault Directory:</span>
+                                  <span className="font-bold text-white/90 font-mono text-[10px]">
+                                    day {card.card.day} (Day Registry)
+                                  </span>
+                                </div>
+                              </>
+                            );
+                          }
+
                           const artData = getArtTypeForDay(card.card.day);
                           const outfitMeta = OUTFIT_STYLES[artData.outfitStyle];
                           return (
@@ -286,7 +319,7 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
                       audioUrl={card.card.audioUrl} 
                       title={card.card.title} 
                       rarity={card.card.rarity} 
-                      coverUrl={getCoverUrlForRarity(card.card.coverUrl, card.card.rarity)}
+                      coverUrl={isBombshellCard(card) ? card.card.coverUrl : getCoverUrlForRarity(card.card.coverUrl, card.card.rarity)}
                       day={card.card.day}
                       isDailyClaim={card.source === 'daily_claim'}
                     />

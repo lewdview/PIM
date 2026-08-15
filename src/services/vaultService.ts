@@ -143,12 +143,12 @@ export function getSafeFallbackCard(cardId: string, rarity: Rarity): VaultCard {
 export function findCardWithFallback(
   pool: VaultCard[], 
   cardId: string, 
-  rarity: Rarity,
+  rarity?: Rarity | string,
   isBombshell?: boolean,
   coverArtwork?: string
 ): VaultCard {
   if (!pool || pool.length === 0) {
-    return getSafeFallbackCard(cardId, rarity);
+    return getSafeFallbackCard(cardId, (rarity as Rarity) || 'common');
   }
 
   const normalizedId = cardId.replace(/^bombshell-/, 'card-');
@@ -161,10 +161,13 @@ export function findCardWithFallback(
     }
   }
 
-  const targetRarity = rarity || (found ? found.rarity : 'common');
-  const baseCard = found || pool[0] || getSafeFallbackCard(cardId, rarity);
+  const targetRarity = ((rarity as Rarity) || (found ? found.rarity : 'common')) as Rarity;
+  const baseCard = found || pool[0] || getSafeFallbackCard(cardId, targetRarity);
 
-  const isBombshellEffective = isBombshell || cardId.startsWith('bombshell-') || Boolean(coverArtwork);
+  const isBombshellEffective = isBombshell || 
+    cardId.startsWith('bombshell-') || 
+    Boolean(coverArtwork && (coverArtwork.startsWith('lb day') || coverArtwork.startsWith('day '))) ||
+    Boolean(coverArtwork);
 
   if (isBombshellEffective) {
     let resolvedCoverUrl = '';
@@ -653,12 +656,16 @@ export async function verifyStripeSession(
     const pool = await fetchAllCards();
 
     return rawCards.map((c: any) => {
-      const parent = findCardWithFallback(pool, c.card_id, c.rarity);
+      const isBombshell = c.source?.includes('bombshell') || c.card_id?.startsWith('bombshell-') || c.card_set === 'bombshell' || (c.proof && typeof c.proof === 'object' && c.proof.set === 'bombshell');
+      const coverArtwork = c.cover_artwork || c.coverArtwork || (c.proof && typeof c.proof === 'object' ? c.proof.cover_artwork : undefined) || c.fingerprint;
+      const parent = findCardWithFallback(pool, c.card_id, c.rarity, isBombshell, coverArtwork);
       return {
         id: c.id || crypto.randomUUID(),
         cardId: parent.id,
-        card: { ...parent, rarity: c.rarity },
+        card: { ...parent, rarity: c.rarity, cardSet: isBombshell ? 'bombshell' : 'gen-0' },
         source: c.source,
+        cardSet: isBombshell ? 'bombshell' : 'gen-0',
+        coverArtwork: parent.coverArtwork,
         claimedAt: c.claimed_at,
         edition: c.edition,
         maxSupply: c.max_supply,
@@ -798,12 +805,16 @@ export async function buyTokenPack(): Promise<OwnedCard[] | 'insufficient'> {
     const pool = await fetchAllCards();
 
     return rawCards.map((c: any) => {
-      const parent = findCardWithFallback(pool, c.card_id, c.rarity);
+      const isBombshell = c.source?.includes('bombshell') || c.card_id?.startsWith('bombshell-') || c.card_set === 'bombshell' || (c.proof && typeof c.proof === 'object' && c.proof.set === 'bombshell');
+      const coverArtwork = c.cover_artwork || c.coverArtwork || (c.proof && typeof c.proof === 'object' ? c.proof.cover_artwork : undefined) || c.fingerprint;
+      const parent = findCardWithFallback(pool, c.card_id, c.rarity, isBombshell, coverArtwork);
       return {
         id: c.id || crypto.randomUUID(),
         cardId: parent.id,
-        card: { ...parent, rarity: c.rarity },
+        card: { ...parent, rarity: c.rarity, cardSet: isBombshell ? 'bombshell' : 'gen-0' },
         source: c.source || 'vault_token',
+        cardSet: isBombshell ? 'bombshell' : 'gen-0',
+        coverArtwork: parent.coverArtwork,
         claimedAt: c.claimed_at || new Date().toISOString(),
         edition: c.edition || 1,
         maxSupply: c.max_supply || 100,
@@ -1001,11 +1012,15 @@ export async function redeemBonusCode(code: string): Promise<{ success: boolean;
         } else if (data.rewardType === 'card' && data.result?.card) {
           const pool = await fetchAllCards();
           const c = data.result.card;
-          const parent = findCardWithFallback(pool, c.card_id, c.rarity);
+          const isBombshell = c.source?.includes('bombshell') || c.card_id?.startsWith('bombshell-') || c.card_set === 'bombshell' || (c.proof && typeof c.proof === 'object' && c.proof.set === 'bombshell');
+          const coverArtwork = c.cover_artwork || c.coverArtwork || (c.proof && typeof c.proof === 'object' ? c.proof.cover_artwork : undefined) || c.fingerprint;
+          const parent = findCardWithFallback(pool, c.card_id, c.rarity, isBombshell, coverArtwork);
           const mappedCard: OwnedCard = {
             id: c.id || crypto.randomUUID(),
             cardId: parent.id,
-            card: { ...parent, rarity: c.rarity },
+            card: { ...parent, rarity: c.rarity, cardSet: isBombshell ? 'bombshell' : 'gen-0' },
+            cardSet: isBombshell ? 'bombshell' : 'gen-0',
+            coverArtwork: parent.coverArtwork,
             source: c.source || 'promo_code',
             claimedAt: c.claimed_at || new Date().toISOString(),
             edition: c.edition || 1,
@@ -1022,11 +1037,15 @@ export async function redeemBonusCode(code: string): Promise<{ success: boolean;
         } else if (data.rewardType === 'pack' && data.result?.cards) {
           const pool = await fetchAllCards();
           const mappedCards: OwnedCard[] = data.result.cards.map((c: any) => {
-            const parent = findCardWithFallback(pool, c.card_id, c.rarity);
+            const isBombshell = c.source?.includes('bombshell') || c.card_id?.startsWith('bombshell-') || c.card_set === 'bombshell' || (c.proof && typeof c.proof === 'object' && c.proof.set === 'bombshell');
+            const coverArtwork = c.cover_artwork || c.coverArtwork || (c.proof && typeof c.proof === 'object' ? c.proof.cover_artwork : undefined) || c.fingerprint;
+            const parent = findCardWithFallback(pool, c.card_id, c.rarity, isBombshell, coverArtwork);
             return {
               id: c.id || crypto.randomUUID(),
               cardId: parent.id,
-              card: { ...parent, rarity: c.rarity },
+              card: { ...parent, rarity: c.rarity, cardSet: isBombshell ? 'bombshell' : 'gen-0' },
+              cardSet: isBombshell ? 'bombshell' : 'gen-0',
+              coverArtwork: parent.coverArtwork,
               source: c.source || 'promo_code',
               claimedAt: c.claimed_at || new Date().toISOString(),
               edition: c.edition || 1,

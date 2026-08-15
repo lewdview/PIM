@@ -1168,13 +1168,14 @@ export default function CodexPage() {
   }, [allCards, ownedDays, today, claimedRewards]);
 
   const handlePlay = useCallback((card: VaultCard) => {
+    const isBombshell = isBombshellCard(card);
     const owned = ownedDays.get(card.day);
     const isDailyClaim = owned?.source === 'daily_claim';
     const maxDuration = isDailyClaim ? 0 : (owned ? 0 : (PREVIEW_DURATION[card.rarity] ?? 15));
     const activeRarity = owned?.rarity || card.rarity;
-    const resolvedCoverUrl = useAltArtwork
-      ? getCoverUrlForRarity(card.coverUrl, activeRarity)
-      : card.coverUrl;
+    const resolvedCoverUrl = isBombshell
+      ? card.coverUrl
+      : (useAltArtwork ? getCoverUrlForRarity(card.coverUrl, activeRarity) : card.coverUrl);
 
     if (currentTrack?.audioUrl === card.audioUrl && currentTrack?.day === card.day) {
       if (isPlaying) {

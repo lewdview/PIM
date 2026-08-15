@@ -31,6 +31,34 @@ export function getBombshellCoverUrl(day: number, fileName: string): string {
 }
 
 /**
+ * Returns ordered candidate URLs to try for a Bombshell cover.
+ * Completely independent of month folders (Supabase <-> Local <-> Sibling covers).
+ */
+export function getBombshellCoverCandidates(day: number, fileName: string): string[] {
+  const primary = getBombshellCoverUrl(day, fileName);
+  const supabaseUrl = `${SUPABASE_BASE}girl-covers/days/day%20${day}/${encodeURIComponent(fileName)}`;
+  const localUrl = `${LOCAL_BASE}day ${day}/${fileName}`;
+
+  const candidates: string[] = [primary];
+  if (primary !== supabaseUrl) candidates.push(supabaseUrl);
+  if (primary !== localUrl) candidates.push(localUrl);
+
+  // Sibling cover fallback for this day if specific file is missing
+  const dayCovers = getBombshellDayCovers(day);
+  const allDayFiles = [...dayCovers.lbFiles, ...dayCovers.normalFiles];
+  for (const f of allDayFiles) {
+    if (f !== fileName) {
+      const sibUrl = getBombshellCoverUrl(day, f);
+      if (!candidates.includes(sibUrl)) {
+        candidates.push(sibUrl);
+      }
+    }
+  }
+
+  return Array.from(new Set(candidates)).filter(Boolean);
+}
+
+/**
  * Get available cover list for a specific day.
  */
 export function getBombshellDayCovers(day: number): BombshellDayCovers {
