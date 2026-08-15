@@ -1015,8 +1015,9 @@ export function getArchetypeProjection(
       const laneOffset = lane - 1; // -1 for left, 0 for center, +1 for right
       const mult = stage === 5 ? 2.0 : 1.0; // Stage 5 overdrive warp intensity
 
-      // 3D Perspective exponential acceleration as note travels towards camera
-      const persP = Math.pow(prog, 1.35);
+      // Safe non-negative progress for fractional exponent calculation
+      const safeP = Math.max(0, prog);
+      const persP = Math.pow(safeP, 1.35);
 
       // Origin at tunnel entrance mouth (tightly grouped at cx, vanishingY)
       const entranceSpacing = tunnelW * 0.055;
@@ -1026,15 +1027,15 @@ export function getArchetypeProjection(
       const { x: hitX, w: hitW } = laneAt(lane, 1, W, 0.18, 0.86);
 
       const noteY = lerp(vanishingY, hitY, persP);
-      const noteW = lerp(tunnelW * 0.05, hitW, Math.pow(prog, 1.25));
+      const noteW = lerp(tunnelW * 0.05, hitW, Math.pow(safeP, 1.25));
       const noteH = lerp(26, 140, persP);
       const noteX = lerp(entranceX - noteW / 2, hitX, persP);
 
       // Cylindrical Cyber Tunnel 3D Barrel Warp & Vortex Swirl
-      const warpFactor = Math.sin(prog * Math.PI); // Parabolic 3D curve along tunnel depth
+      const warpFactor = Math.sin(safeP * Math.PI); // Parabolic 3D curve along tunnel depth
       const barrelWarp = laneOffset * (tunnelW * 0.045) * warpFactor;
-      const vortexSway = Math.sin(t * 1.8 * mult + prog * 3.0) * (tunnelW * 0.016 * mult) * warpFactor;
-      const rot = (laneOffset * 0.12 + Math.cos(t * 1.8 * mult + prog * 3.0) * 0.04) * warpFactor;
+      const vortexSway = Math.sin(t * 1.8 * mult + safeP * 3.0) * (tunnelW * 0.016 * mult) * warpFactor;
+      const rot = (laneOffset * 0.12 + Math.cos(t * 1.8 * mult + safeP * 3.0) * 0.04) * warpFactor;
 
       return {
         x: noteX + barrelWarp + vortexSway,
@@ -1121,21 +1122,22 @@ export function getArchetypeProjection(
     const tunnelW = Math.min(W, 840);
     const laneOffset = lane - 1;
     const mult = stage === 5 ? 2.0 : 1.0;
-    const persP = Math.pow(prog, 1.35);
+    const safeP = Math.max(0, prog);
+    const persP = Math.pow(safeP, 1.35);
 
     const entranceSpacing = tunnelW * 0.055;
     const entranceX = cx + laneOffset * entranceSpacing;
     const { x: hitX, w: hitW } = laneAt(lane, 1, W, 0.18, 0.86);
 
     const noteY = lerp(vanishingY, hitY, persP);
-    const noteW = lerp(tunnelW * 0.05, hitW, Math.pow(prog, 1.25));
+    const noteW = lerp(tunnelW * 0.05, hitW, Math.pow(safeP, 1.25));
     const noteH = lerp(26, 140, persP);
     const noteX = lerp(entranceX - noteW / 2, hitX, persP);
 
-    const warpFactor = Math.sin(prog * Math.PI);
+    const warpFactor = Math.sin(safeP * Math.PI);
     const barrelWarp = laneOffset * (tunnelW * 0.045) * warpFactor;
-    const vortexSway = Math.sin(t * 1.8 * mult + prog * 3.0) * (tunnelW * 0.016 * mult) * warpFactor;
-    const rot = (laneOffset * 0.12 + Math.cos(t * 1.8 * mult + prog * 3.0) * 0.04) * warpFactor;
+    const vortexSway = Math.sin(t * 1.8 * mult + safeP * 3.0) * (tunnelW * 0.016 * mult) * warpFactor;
+    const rot = (laneOffset * 0.12 + Math.cos(t * 1.8 * mult + safeP * 3.0) * 0.04) * warpFactor;
 
     return {
       x: noteX + barrelWarp + vortexSway,
@@ -5665,32 +5667,34 @@ export default function Game() {
         const cx2 = projB.x + projB.w / 2;
         const cy2 = projB.y;
         
-        const colorA = getDifficultyLaneColor(laneColorsRef.current[note.lane], songRef.current?.difficultyLevel ?? 5, note.lane);
-        const colorB = getDifficultyLaneColor(laneColorsRef.current[chordPartner.note.lane], songRef.current?.difficultyLevel ?? 5, chordPartner.note.lane);
+        if (Number.isFinite(cx1) && Number.isFinite(cy1) && Number.isFinite(cx2) && Number.isFinite(cy2)) {
+          const colorA = getDifficultyLaneColor(laneColorsRef.current[note.lane], songRef.current?.difficultyLevel ?? 5, note.lane);
+          const colorB = getDifficultyLaneColor(laneColorsRef.current[chordPartner.note.lane], songRef.current?.difficultyLevel ?? 5, chordPartner.note.lane);
 
-        ctx.save();
-        const connectorGrad = ctx.createLinearGradient(cx1, cy1, cx2, cy2);
-        connectorGrad.addColorStop(0, colorA);
-        connectorGrad.addColorStop(1, colorB);
+          ctx.save();
+          const connectorGrad = ctx.createLinearGradient(cx1, cy1, cx2, cy2);
+          connectorGrad.addColorStop(0, colorA);
+          connectorGrad.addColorStop(1, colorB);
 
-        // Neon outer glow line
-        ctx.shadowColor = colorA;
-        ctx.shadowBlur = 18;
-        ctx.strokeStyle = connectorGrad;
-        ctx.lineWidth = lerp(4, 14, prog);
-        ctx.lineCap = "round";
-        ctx.beginPath();
-        ctx.moveTo(cx1, cy1);
-        ctx.lineTo(cx2, cy2);
-        ctx.stroke();
-        
-        // Bright white core line
-        ctx.shadowColor = "transparent";
-        ctx.shadowBlur = 0;
-        ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = lerp(1.5, 4.5, prog);
-        ctx.stroke();
-        ctx.restore();
+          // Neon outer glow line
+          ctx.shadowColor = colorA;
+          ctx.shadowBlur = 18;
+          ctx.strokeStyle = connectorGrad;
+          ctx.lineWidth = lerp(4, 14, Math.max(0, Math.min(1, prog)));
+          ctx.lineCap = "round";
+          ctx.beginPath();
+          ctx.moveTo(cx1, cy1);
+          ctx.lineTo(cx2, cy2);
+          ctx.stroke();
+          
+          // Bright white core line
+          ctx.shadowColor = "transparent";
+          ctx.shadowBlur = 0;
+          ctx.strokeStyle = "#ffffff";
+          ctx.lineWidth = lerp(1.5, 4.5, Math.max(0, Math.min(1, prog)));
+          ctx.stroke();
+          ctx.restore();
+        }
       }
 
       const isMissedNote = ns.missed;
@@ -10817,11 +10821,11 @@ export default function Game() {
 // ═══════════════════════════════════════════════════════════════
 function drawKey(
   ctx: CanvasRenderingContext2D,
-  noteX: number,
-  noteY: number,
-  noteW: number,
-  noteH: number,
-  r: number,
+  rawNoteX: number,
+  rawNoteY: number,
+  rawNoteW: number,
+  rawNoteH: number,
+  rawR: number,
   lc: string,
   prog: number,
   isHold: boolean,
@@ -10829,6 +10833,12 @@ function drawKey(
   timeOffset: number = 0,
   noteType?: NoteType
 ) {
+  const noteW = Number.isFinite(rawNoteW) && rawNoteW > 0 ? rawNoteW : 60;
+  const noteH = Number.isFinite(rawNoteH) && rawNoteH > 0 ? rawNoteH : 40;
+  const noteX = Number.isFinite(rawNoteX) ? rawNoteX : 0;
+  const noteY = Number.isFinite(rawNoteY) ? rawNoteY : 0;
+  const r = Number.isFinite(rawR) ? rawR : 12;
+
   const centerX = noteX + noteW / 2;
   const centerY = noteY;
 
