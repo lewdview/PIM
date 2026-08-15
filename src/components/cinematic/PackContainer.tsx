@@ -11,7 +11,8 @@ import RarityBadge from '../RarityBadge';
 import {
   playAmbient, playCrinkle, playTension, playTear,
   playSnap, playShimmer, playTick, playNearMiss, playRareHit,
-  playUnlockChime, disposeAudioContext,
+  playUnlockChime, playBombshellHeartbeat, playBombshellSwell,
+  playBombshellShimmer, disposeAudioContext,
 } from './audioEngine';
 
 // ── Types ────────────────────────────────────────────────────────────
@@ -206,32 +207,32 @@ function PackShell({ meta, phase }: { meta: RevealPackMeta; phase: Phase }) {
 }
 
 // ===== PACK EMBLEM (Custom Icon) =====
-function PackEmblem({ accent, size = 80 }: { accent: string; size?: number }) {
+function PackEmblem({ accent, size = 80, isBombshell = false }: { accent: string; size?: number; isBombshell?: boolean }) {
   return (
-    <div className="relative flex justify-center items-center my-2 rounded-full mx-auto" style={{ width: size, height: size, boxShadow: `0 0 30px ${accent}20` }}>
+    <div className="relative flex justify-center items-center my-2 rounded-full mx-auto" style={{ width: size, height: size, boxShadow: `0 0 30px ${accent}30` }}>
       <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" style={{ animation: 'spin-slow 16s linear infinite', transformOrigin: 'center', willChange: 'transform' }}>
         <path id="circlePath" d="M 50, 50 m -35, 0 a 35,35 0 1,1 70,0 a 35,35 0 1,1 -70,0" fill="transparent" />
-        <text fill={accent} fontWeight="bold" style={{ textTransform: 'uppercase', fontSize: '8.5px', textShadow: `0 0 10px ${accent}60`, letterSpacing: '1px' }}>
+        <text fill={accent} fontWeight="bold" style={{ textTransform: 'uppercase', fontSize: isBombshell ? '7.5px' : '8.5px', textShadow: `0 0 10px ${accent}80`, letterSpacing: '1px' }}>
           <textPath href="#circlePath" startOffset="0%">
-            TH3SCR1B3 •  GEN 0  •
+            {isBombshell ? '💖 BOMBSHELL • UNCENSORED •' : 'TH3SCR1B3 • GEN 0 •'}
           </textPath>
           <textPath href="#circlePath" startOffset="50%">
-            TH3SCR1B3 •  GEN 0  •
+            {isBombshell ? '💖 BOMBSHELL • UNCENSORED •' : 'TH3SCR1B3 • GEN 0 •'}
           </textPath>
         </text>
-        <circle cx="50" cy="50" r="23" fill="none" stroke={accent} strokeWidth="1" strokeDasharray="3 3" opacity="0.6" />
+        <circle cx="50" cy="50" r="23" fill="none" stroke={accent} strokeWidth="1" strokeDasharray="3 3" opacity="0.7" />
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">
         <span className="font-black" style={{ 
-          fontSize: size * 0.45, 
-          color: '#fff', 
+          fontSize: size * 0.42, 
+          color: isBombshell ? '#fff' : '#fff', 
           fontFamily: '"Impact", "Arial Black", sans-serif',
           letterSpacing: '-1.5px',
           transform: 'scaleY(1.2) scaleX(0.9)',
           WebkitTextStroke: '1px #000',
-          textShadow: `0 0 10px ${accent}, 2px 2px 0 #000`,
+          textShadow: `0 0 12px ${accent}, 2px 2px 0 #000`,
         }}>
-          365
+          {isBombshell ? '365' : '365'}
         </span>
       </div>
     </div>
@@ -239,57 +240,56 @@ function PackEmblem({ accent, size = 80 }: { accent: string; size?: number }) {
 }
 
 function PackBagContents({ meta }: { meta: RevealPackMeta }) {
+  const isBombshell = meta.category === 'bombshell' || meta.label?.toLowerCase().includes('bombshell');
   const variant = get365CardVariantStyle(meta.category || meta.label);
   const activeCoverArt = meta.coverImage || getPackCoverFallback(meta.category || meta.label);
-  const multiCovers = [
-    activeCoverArt,
-    ...getPackMultiCovers(meta.category || meta.label, 3)
-  ];
 
   return (
     <>
-      {/* CLEAN 3D METALLIC FOIL PACK FIELD (Artwork temporarily removed) */}
-      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(6,3,14,0.96)' }}>
+      {/* CLEAN 3D METALLIC FOIL PACK FIELD */}
+      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isBombshell ? '#12000b' : 'rgba(6,3,14,0.96)' }}>
         {/* VIBRANT POPPING PACK ACCENT COLOR TINT */}
         <div
           className="absolute inset-0 pointer-events-none transition-all z-10"
           style={{
             position: 'absolute', inset: 0,
-            background: `linear-gradient(160deg, ${meta.accent}ee 0%, ${meta.accent}aa 45%, rgba(6,3,14,0.96) 100%)`,
+            background: isBombshell 
+              ? 'linear-gradient(150deg, #ff007f 0%, #a00055 35%, #300018 70%, #0d0006 100%)'
+              : `linear-gradient(160deg, ${meta.accent}ee 0%, ${meta.accent}aa 45%, rgba(6,3,14,0.96) 100%)`,
             mixBlendMode: 'hard-light',
-            opacity: 0.88,
+            opacity: 0.92,
           }}
         />
         <div
           className="absolute inset-0 pointer-events-none transition-all z-10"
           style={{
             position: 'absolute', inset: 0,
-            background: meta.accent,
+            background: isBombshell ? '#FF1493' : meta.accent,
             mixBlendMode: 'color',
             opacity: 0.85,
           }}
         />
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 40%, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.92) 85%)', zIndex: 10 }} />
       </div>
-      <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 50% 30%, ${meta.accent}40, transparent 55%)` }} />
+      <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 50% 30%, ${meta.accent}50, transparent 60%)` }} />
       <div style={{
         position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
       }}>
         {/* REALISTIC SERRATED JAGGED CRIMP TEETH (Top Industrial Seal) */}
-        <div className="absolute inset-x-0 top-0 h-[22px] foil-crimp-serrated-top z-20" />
+        <div className="absolute inset-x-0 top-0 h-[22px] foil-crimp-serrated-top z-20" style={isBombshell ? { filter: 'drop-shadow(0 2px 8px #ff1493)' } : undefined} />
 
         {/* FOIL WRAPPER TEAR NOTCHES (Easy-Open Notch Cutouts) */}
-        <div className="foil-tear-notch-left" />
-        <div className="foil-tear-notch-right" />
+        <div className="foil-tear-notch-left" style={isBombshell ? { background: '#ff1493' } : undefined} />
+        <div className="foil-tear-notch-right" style={isBombshell ? { background: '#ff1493' } : undefined} />
 
         {/* BACK FIN SEAL (Vertical Seam Overlay) */}
         <div className="foil-fin-seal" />
 
         {/* DYNAMIC HOLOGRAPHIC RAINBOW SPECULAR REFRACTION */}
-        <div className="foil-holo-prism" style={{ opacity: 0.4 }} />
+        <div className="foil-holo-prism" style={{ opacity: isBombshell ? 0.6 : 0.4 }} />
 
-        {/* 3D INNER CARD STACK BULGE (Physical Cards Inside Silhouette Contour) */}
+        {/* 3D INNER CARD STACK BULGE */}
         <div className="foil-card-bulge" />
 
         {/* METALLIC FOIL WRINKLES & FOLD CREASES OVERLAY */}
@@ -307,14 +307,14 @@ function PackBagContents({ meta }: { meta: RevealPackMeta }) {
         <div className="absolute left-1 top-24 w-8 flex items-center justify-center pointer-events-none z-20 mix-blend-overlay">
           <div className="font-black leading-none uppercase whitespace-nowrap" style={{
             transform: 'rotate(-90deg) scaleY(1.3) scaleX(0.9)',
-            color: 'rgba(255,255,255,0.6)',
+            color: 'rgba(255,255,255,0.7)',
             fontFamily: '"Impact", "Arial Black", sans-serif',
             fontSize: '16px',
             letterSpacing: '-0.5px',
             WebkitTextStroke: `1px ${meta.accent}`,
-            textShadow: `0 0 10px ${meta.accent}60`,
+            textShadow: `0 0 10px ${meta.accent}80`,
           }}>
-            TH3SCR1B3
+            {isBombshell ? 'BOMBSHELL' : 'TH3SCR1B3'}
           </div>
         </div>
 
@@ -323,16 +323,16 @@ function PackBagContents({ meta }: { meta: RevealPackMeta }) {
           <div className="sticker-gun-tag sticker-slits drop-shadow-lg" style={{ 
             transform: 'rotate(-90deg) translateX(-50%)',
             transformOrigin: 'left center',
-            background: `linear-gradient(${meta.accent}99, ${meta.accent}99), #ffffff`,
+            background: isBombshell ? '#ffffff' : `linear-gradient(${meta.accent}99, ${meta.accent}99), #ffffff`,
             '--slit-color': `${meta.accent}30`,
             padding: '4px 10px',
             alignItems: 'center'
           } as any}>
             <span className="text-[6px] font-black tracking-tighter opacity-70 mb-0.5 leading-none" style={{ fontFamily: 'Impact, sans-serif' }}>
-              TH3SCR1B3 VAULT
+              {isBombshell ? 'BOMBSHELL VAULT' : 'TH3SCR1B3 VAULT'}
             </span>
             <div className="flex items-baseline leading-none py-0.5">
-              <span className="text-[15px] font-black mr-0.5" style={{ transform: 'scaleY(1.3)', letterSpacing: '-0.8px' }}>
+              <span className="text-[15px] font-black mr-0.5" style={{ transform: 'scaleY(1.3)', letterSpacing: '-0.8px', color: isBombshell ? '#FF1493' : '#000' }}>
                 {meta.price}
               </span>
             </div>
@@ -366,7 +366,7 @@ function PackBagContents({ meta }: { meta: RevealPackMeta }) {
               {meta.label}
             </h3>
             
-            <PackEmblem accent={meta.accent} size={60} />
+            <PackEmblem accent={meta.accent} size={60} isBombshell={isBombshell} />
             
             <div className="text-center mt-2 w-full">
               <div className="inline-block">
@@ -378,8 +378,8 @@ function PackBagContents({ meta }: { meta: RevealPackMeta }) {
                   transform: 'rotate(0.5deg)',
                   minWidth: '150px'
                 } as any}>
-                  <span className="text-[8px] font-black tracking-tighter uppercase italic opacity-90" style={{ color: '#000' }}>
-                    {variant.tagline}
+                  <span className="text-[8px] font-black tracking-tighter uppercase italic opacity-90" style={{ color: isBombshell ? '#FF1493' : '#000' }}>
+                    {isBombshell ? 'EXCLUSIVE BOMBSHELL ARCHIVE' : variant.tagline}
                   </span>
                 </div>
               </div>
@@ -467,6 +467,7 @@ const shimmerKeyframes = `
 // ── Main Component ───────────────────────────────────────────────────
 
 export default function PackContainer({ meta, cards, accumulatedCards = cards, onComplete, onBuyAnother, isRepurchasing }: Props) {
+  const isBombshell = meta.category === 'bombshell' || meta.label?.toLowerCase().includes('bombshell') || cards.some(c => c.card?.cardSet === 'bombshell' || c.card?.coverUrl?.includes('girl-covers') || c.card?.coverUrl?.includes('rare_covers'));
   const [phase, setPhase] = useState<Phase>('preloading');
   const [flipIndex, setFlipIndex] = useState(-1); // current card being flipped
   const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
@@ -708,9 +709,13 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
       // Pre-resolve smart cover URLs for all cards in parallel before reveal phase
       await Promise.all(
         cards.map(async (owned) => {
-          const workingCover = await resolveSmartCoverUrl(owned.card.coverUrl, owned.card.rarity);
-          if (workingCover) urls.add(workingCover);
-          if (owned.card.holographicUrl) urls.add(owned.card.holographicUrl);
+          try {
+            const workingCover = await resolveSmartCoverUrl(owned.card.coverUrl, owned.card.rarity);
+            if (workingCover) urls.add(workingCover);
+            if (owned.card.holographicUrl) urls.add(owned.card.holographicUrl);
+          } catch {
+            // non-fatal
+          }
         })
       );
 
@@ -723,8 +728,8 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
         }))
       );
 
-      // Failsafe timeout
-      const timeoutPromise = new Promise(resolve => setTimeout(resolve, 4000));
+      // Failsafe timeout — 1200ms max ensures immediate interaction
+      const timeoutPromise = new Promise(resolve => setTimeout(resolve, 1200));
       
       await Promise.race([preloadPromise, timeoutPromise]);
       if (!isCancelled) setPhase('idle');
@@ -732,6 +737,18 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
 
     preloadAssets();
     return () => { isCancelled = true; };
+  }, [cards]);
+
+  // Fast Reveal Handler for Multi-Card Packs
+  const handleFastReveal = useCallback(() => {
+    abortRef.current = true;
+    setFlippedCards(new Set(cards.map((_, i) => i)));
+    setPhase('layout');
+    setRareRevealing(false);
+    setNearMissFlash(false);
+    setUltraTriggered(false);
+    sequenceRunning.current = false;
+    audioManager.playSfx('open_chest', 0.8);
   }, [cards]);
 
   // ── Timeline Controller (Post-Snap Reveal) ─────────────────────────
@@ -754,21 +771,35 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
 
     // Phase 3 & 4: TEAR START & SNAP
     setPhase('tearing');
-    playTear();
+    if (isBombshell) {
+      playTear();
+      playBombshellSwell();
+    } else {
+      playTear();
+    }
     if (await abortableWait(400)) return;
 
     setPhase('snap');
-    playSnap();
+    if (isBombshell) {
+      playSnap();
+      playBombshellShimmer();
+    } else {
+      playSnap();
+    }
     if (await abortableWait(300)) return;
 
-    // Phase 5: REVEAL PAUSE — anticipation builder (longer for drama)
+    // Phase 5: REVEAL PAUSE — anticipation builder
     setPhase('pause');
-    playShimmer();
-    if (await abortableWait(1200)) return;
+    if (isBombshell) {
+      playBombshellShimmer();
+    } else {
+      playShimmer();
+    }
+    if (await abortableWait(1000)) return;
 
     // Phase 6: CARD STACK RISE
     setPhase('rise');
-    if (await abortableWait(1000)) return;
+    if (await abortableWait(800)) return;
 
     // Phase 7: FLIP SEQUENCE
     setPhase('flipping');
@@ -781,28 +812,33 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
       const card = cards[i];
       const rarity = card.card.rarity as Rarity;
 
-      if (isRareOrHigher(rarity)) {
+      if (isRareOrHigher(rarity) || isBombshell) {
         // Near-miss system (60% fake higher tier)
-        if (shouldFakeNearMiss() && i > 0) {
+        if (shouldFakeNearMiss() && i > 0 && !isBombshell) {
           setNearMissFlash(true);
           playNearMiss();
           if (await abortableWait(250)) return;
           setNearMissFlash(false);
         }
 
-        // Rare reveal sequence (slower build up)
+        // Rare / Bombshell reveal sequence
         setRareRevealing(true);
 
         // Phase A: Silence — let the tension breathe
-        if (await abortableWait(400)) return;
+        if (await abortableWait(350)) return;
 
         // Phase B: Energy Build
-        if (await abortableWait(600)) return;
+        if (await abortableWait(450)) return;
 
         // Phase C: Slow flip — hold the moment
         setFlippedCards(prev => new Set(prev).add(i));
-        playRareHit();
-        if (await abortableWait(800)) return;
+        if (isBombshell) {
+          playBombshellShimmer();
+          playRareHit();
+        } else {
+          playRareHit();
+        }
+        if (await abortableWait(650)) return;
 
         // Ultra trigger check (0.3%)
         if (isUltraTrigger()) {
@@ -812,17 +848,17 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
         }
 
         setRareRevealing(false);
-        if (await abortableWait(700)) return; // Linger on the card
+        if (await abortableWait(500)) return; // Linger on the card
       } else if (rarity === 'uncommon') {
         // Uncommon — let it sit a beat
         setFlippedCards(prev => new Set(prev).add(i));
         playTick();
-        if (await abortableWait(600)) return;
+        if (await abortableWait(500)) return;
       } else {
         // Common — still give it a moment
         setFlippedCards(prev => new Set(prev).add(i));
         playTick();
-        if (await abortableWait(500)) return;
+        if (await abortableWait(450)) return;
       }
 
       // First-time card unlock overlay step (paused until resolved)
@@ -843,22 +879,27 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
     setPhase('layout');
     sequenceRunning.current = false;
     // We now pause here for the user to examine the cards and click continue.
-  }, [cards]);
+  }, [cards, isBombshell]);
 
   // ── Mobile tap-to-rip (fallback for when drag is difficult) ─────────
   const handlePackTap = useCallback(() => {
     if (phase !== 'idle') return;
     setPhase('grip');
-    playCrinkle();
+    if (isBombshell) {
+      playCrinkle();
+      playBombshellHeartbeat();
+    } else {
+      playCrinkle();
+    }
     // Auto-advance through tension to rip after a brief grip
     setTimeout(() => {
       setPhase('tension');
       playTension();
       setTimeout(() => {
         triggerRevealSequence();
-      }, 400);
-    }, 350);
-  }, [phase, triggerRevealSequence]);
+      }, 350);
+    }, 300);
+  }, [phase, isBombshell, triggerRevealSequence]);
 
   // ── Hover/Inspect/Lock Logic ─────────────────────────────────────────
 
@@ -1065,14 +1106,58 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
 
       {/* Ambient glow */}
       <motion.div
-        animate={{ opacity: [0.2, 0.4, 0.2], scale: [1, 1.1, 1] }}
+        animate={{ opacity: [0.2, 0.45, 0.2], scale: [1, 1.12, 1] }}
         transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut' }}
         style={{
           position: 'absolute', width: 'min(600px, 150vw)', height: 'min(600px, 150vw)', borderRadius: '50%',
-          background: `radial-gradient(ellipse, ${meta.accent}25, transparent 70%)`,
+          background: isBombshell 
+            ? 'radial-gradient(ellipse, rgba(255,20,147,0.35), rgba(139,0,139,0.15), transparent 70%)'
+            : `radial-gradient(ellipse, ${meta.accent}25, transparent 70%)`,
           filter: 'blur(80px)', pointerEvents: 'none',
         }}
       />
+
+      {/* ── BOMBSHELL AMBIENT GLAMOUR PARTICLES ── */}
+      {isBombshell && (
+        <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 15, overflow: 'hidden' }}>
+          {Array.from({ length: 22 }).map((_, i) => (
+            <motion.div
+              key={`petal-${i}`}
+              initial={{
+                x: `${(i * 17) % 100}vw`,
+                y: '-20px',
+                opacity: 0,
+                rotate: 0,
+                scale: 0.6 + ((i % 5) * 0.15),
+              }}
+              animate={{
+                y: '110vh',
+                x: `${((i * 17) % 100) + Math.sin(i) * 15}vw`,
+                opacity: [0, 0.7, 0.7, 0],
+                rotate: [0, 180, 360],
+              }}
+              transition={{
+                duration: 5.5 + (i % 6) * 1.5,
+                repeat: Infinity,
+                delay: (i * 0.3) % 4,
+                ease: 'linear',
+              }}
+              style={{
+                position: 'absolute',
+                width: i % 2 === 0 ? '7px' : '4px',
+                height: i % 2 === 0 ? '11px' : '4px',
+                borderRadius: i % 2 === 0 ? '50% 0 50% 50%' : '50%',
+                background: i % 3 === 0 
+                  ? 'radial-gradient(circle, #ff69b4, #ff1493)' 
+                  : i % 3 === 1 
+                  ? 'radial-gradient(circle, #ffffff, #ff69b4)' 
+                  : 'radial-gradient(circle, #ff1493, #79003e)',
+                filter: `blur(${i % 2 === 0 ? 0.5 : 1}px) drop-shadow(0 0 6px #ff1493)`,
+              }}
+            />
+          ))}
+        </div>
+      )}
 
       {/* ── PACK SHELL ──────────────────────────────────────────── */}
       <AnimatePresence>
@@ -1442,22 +1527,55 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
         )}
       </AnimatePresence>
 
-      {/* Flip counter */}
+      {/* Flip counter + Fast Reveal Button */}
       <AnimatePresence>
-        {phase === 'flipping' && flipIndex >= 0 && (
+        {phase === 'flipping' && (
           <motion.div
-            key={`flip-counter-${flipIndex}`}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            key="flipping-hud"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
             style={{
-              position: 'fixed', bottom: '60px',
-              fontFamily: '"JetBrains Mono", monospace', fontSize: '10px',
-              fontWeight: 700, letterSpacing: '0.3em', textTransform: 'uppercase',
-              color: 'rgba(255,255,255,0.35)',
+              position: 'fixed', bottom: '40px',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px',
+              zIndex: 350,
             }}
           >
-            CARD {flipIndex + 1} / {cards.length}
+            {flipIndex >= 0 && (
+              <div
+                style={{
+                  fontFamily: '"JetBrains Mono", monospace', fontSize: '11px',
+                  fontWeight: 800, letterSpacing: '0.3em', textTransform: 'uppercase',
+                  color: isBombshell ? '#FF1493' : 'rgba(255,255,255,0.45)',
+                  textShadow: isBombshell ? '0 0 10px #FF1493' : 'none',
+                }}
+              >
+                CARD {flipIndex + 1} / {cards.length}
+              </div>
+            )}
+            {cards.length > 1 && (
+              <motion.button
+                onClick={handleFastReveal}
+                whileHover={{ scale: 1.06 }}
+                whileTap={{ scale: 0.94 }}
+                style={{
+                  padding: '8px 18px',
+                  background: 'rgba(5,4,2,0.85)',
+                  border: `1.5px solid ${isBombshell ? '#FF1493' : 'rgba(255,255,255,0.3)'}`,
+                  borderRadius: '20px',
+                  color: '#fff',
+                  fontFamily: '"JetBrains Mono", monospace',
+                  fontSize: '10px',
+                  fontWeight: 900,
+                  letterSpacing: '0.15em',
+                  cursor: 'pointer',
+                  backdropFilter: 'blur(10px)',
+                  boxShadow: isBombshell ? '0 0 18px rgba(255,20,147,0.4)' : '0 4px 14px rgba(0,0,0,0.5)',
+                }}
+              >
+                [ ⚡ FLIP ALL ]
+              </motion.button>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

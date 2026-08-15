@@ -235,6 +235,42 @@ export function playUnlockChime(): void {
   }, 80);
 }
 
+export function playBombshellHeartbeat(): void {
+  try {
+    const c = getCtx();
+    tone(42, 0.22, 0.2, 'sine');
+    setTimeout(() => {
+      try { tone(36, 0.28, 0.24, 'sine'); } catch { /* noop */ }
+    }, 140);
+  } catch { /* AudioContext suppressed */ }
+}
+
+export function playBombshellSwell(): void {
+  try {
+    const c = getCtx();
+    // Warm deep sub
+    tone(55, 0.8, 0.2, 'sine');
+    // Ascending neon chime harmony
+    const notes = [440, 554.37, 659.25, 880, 1108.73]; // A Major 7th / 9th glamour chord
+    notes.forEach((freq, idx) => {
+      setTimeout(() => {
+        try {
+          tone(freq, 0.5, 0.04, 'sine');
+        } catch { /* noop */ }
+      }, idx * 60);
+    });
+  } catch { /* AudioContext suppressed */ }
+}
+
+export function playBombshellShimmer(): void {
+  try {
+    tone(3135.96, 0.9, 0.02, 'sine'); // G7
+    tone(3729.31, 0.8, 0.015, 'sine'); // A#7
+    tone(4186.01, 1.0, 0.02, 'sine'); // C8
+    noise(0.12, 0.08, { type: 'highpass', freq: 7000 });
+  } catch { /* AudioContext suppressed */ }
+}
+
 export function disposeAudioContext(): void {
   if (ctx) {
     try { ctx.close(); } catch { /* noop */ }
@@ -243,3 +279,4 @@ export function disposeAudioContext(): void {
     compressor = null;
   }
 }
+

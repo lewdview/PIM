@@ -274,8 +274,36 @@ export default function Card({
   const isExcessEdition = edition !== undefined ? edition > supply : claimed > supply;
   const isOnlyOne       = supply === 1 && (edition === 1 || (edition === undefined && claimed <= 1));
   const isLastCopy      = !isExcessEdition && !isOnlyOne && edition !== undefined && edition === supply && supply > 1;
+  const isBombshell     = card.cardSet === 'bombshell' || (card.id && card.id.includes('bombshell')) || (coverUrl && (coverUrl.includes('girl-covers') || coverUrl.includes('rare_covers')));
 
   const mintPct = supply > 0 ? (Math.min(claimed, supply) / supply) * 100 : 0;
+
+  const bombshellBadge = isBombshell && (
+    <div style={{
+      position: 'absolute', top: '8px', left: '50%', transform: 'translateX(-50%)',
+      zIndex: 35, pointerEvents: 'none',
+      background: 'linear-gradient(135deg, rgba(255,20,147,0.92), rgba(139,0,139,0.92))',
+      border: '1.5px solid #ff69b4',
+      borderRadius: '20px',
+      padding: '2px 8px',
+      boxShadow: '0 0 14px rgba(255,20,147,0.7), inset 0 0 6px rgba(255,255,255,0.4)',
+      display: 'flex', alignItems: 'center', gap: '3px',
+      whiteSpace: 'nowrap',
+    }}>
+      <span style={{ fontSize: '8px' }}>💖</span>
+      <span style={{
+        fontFamily: '"Impact", "Arial Black", sans-serif',
+        fontSize: '8px',
+        fontWeight: 900,
+        color: '#ffffff',
+        letterSpacing: '0.1em',
+        textTransform: 'uppercase',
+        textShadow: '0 1px 2px rgba(0,0,0,0.8)',
+      }}>
+        BOMBSHELL
+      </span>
+    </div>
+  );
 
   const renderArt = (className = 'w-full h-full', rotated = false) => {
     const shouldRotate = rotated && !isSquare;
@@ -886,6 +914,7 @@ export default function Card({
         </div>
         <RarityBadge rarity={card.rarity} size="sm" />
       </div>
+      {bombshellBadge}
 
       {/* Art — 46% keeps info breathing room */}
       <div style={{ position: 'relative', height: '46%', flexShrink: 0, borderBottom: `1px solid ${rc.color}20`, overflow: 'hidden' }}>
@@ -920,6 +949,7 @@ export default function Card({
     <motion.div style={{ ...sharedFrontStyle, background: '#0c0a07', border: `2px solid ${rc.color}60` }}>
       {/* Gloss sheen */}
       <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(115deg, transparent 25%, rgba(255,255,255,0.07) 40%, rgba(255,255,255,0.13) 50%, transparent 58%)', pointerEvents: 'none', zIndex: 10 }} />
+      {bombshellBadge}
 
       {/* Art — larger crop */}
       <div style={{ position: 'relative', height: '62%', overflow: 'hidden', borderBottom: `1.5px solid ${rc.color}40` }}>
@@ -969,6 +999,7 @@ export default function Card({
       <div style={{ position: 'absolute', top: '10px', left: '10px', transform: 'scale(0.9)', transformOrigin: 'top left' }}>
         <DayNumberBadge day={day} color={rc.color} />
       </div>
+      {bombshellBadge}
       <div style={{ position: 'absolute', top: '10px', right: '10px' }}><RarityBadge rarity={card.rarity} size="sm" /></div>
 
       {/* Glass info drawer */}
@@ -1006,6 +1037,7 @@ export default function Card({
         <div style={{ padding: '3px 9px', background: `${rc.color}30`, border: `1px solid ${rc.color}70`, borderRadius: '3px' }}>
           <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', fontWeight: 700, color: rc.color, letterSpacing: '0.1em', textTransform: 'uppercase' }}>★ LEGENDARY</span>
         </div>
+        {bombshellBadge}
         <div style={{ transform: 'scale(0.85)', transformOrigin: 'right center' }}>
           <DayNumberBadge day={day} color={rc.color} />
         </div>
@@ -1050,6 +1082,7 @@ export default function Card({
         <div style={{ transform: 'scale(0.85)', transformOrigin: 'left center' }}>
           <DayNumberBadge day={day} color={rc.color} />
         </div>
+        {bombshellBadge}
         <div style={{ padding: '3px 9px', background: `${rc.color}22`, border: `1px solid ${rc.color}`, borderRadius: '3px', boxShadow: `0 0 14px ${rc.color}55` }}>
           <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', fontWeight: 900, letterSpacing: '0.15em', color: rc.color, textShadow: `0 0 8px ${rc.color}`, textTransform: 'uppercase' }}>✦ MYTHIC</span>
         </div>

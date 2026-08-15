@@ -57,23 +57,33 @@ export default function PackRevealPage() {
             if (cards && cards.length > 0) {
               addToCollection(cards);
               await loadVaultData();
-              const cfg = PACK_CONFIGS[category];
-              const tier = cfg?.tiers.find(t => t.size === size) ?? cfg?.tiers[0];
+              const cfg = PACK_CONFIGS[category] || {
+                category: category || 'bombshell',
+                label: category === 'bombshell' ? 'BOMBSHELL PACK' : 'VAULT PACK',
+                description: 'Exclusive artwork cards',
+                icon: category === 'bombshell' ? '💖' : '⚡',
+                accent: category === 'bombshell' ? '#FF1493' : '#00E5FF',
+                gradient: category === 'bombshell' 
+                  ? 'linear-gradient(160deg, #300a1e 0%, #501234 40%, #200816 100%)'
+                  : 'linear-gradient(160deg, #0a1020 0%, #152540 40%, #081018 100%)',
+                tiers: [{ size: size || 'single', cardCount: cards.length, price: '$0.25' }]
+              };
+              const tier = cfg?.tiers?.find(t => t.size === size) ?? cfg?.tiers?.[0] ?? { cardCount: cards.length, price: '$0.25' };
               setRipDone(false);
               setRevealedIndex(0);
               setShowSummary(false);
               setAccumulatedCards(cards);
-              startReveal(cards, cfg && tier ? {
-                category,
-                size,
-                label: cfg.label,
-                icon: cfg.icon,
-                accent: cfg.accent,
-                gradient: cfg.gradient,
-                price: tier.price,
-                cardCount: tier.cardCount,
+              startReveal(cards, {
+                category: (cfg.category || category) as PackCategory,
+                size: (tier.size || size) as PackSize,
+                label: cfg.label || 'BOMBSHELL PACK',
+                icon: cfg.icon || '💖',
+                accent: cfg.accent || '#FF1493',
+                gradient: cfg.gradient || 'linear-gradient(160deg, #300a1e 0%, #501234 40%, #200816 100%)',
+                price: tier.price || '$0.25',
+                cardCount: cards.length,
                 revealType: 'cinematic',
-              } : undefined);
+              });
             } else {
               alert('Could not verify cards for this Stripe session.');
               setLocation('/vault');

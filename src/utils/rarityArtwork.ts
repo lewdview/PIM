@@ -204,20 +204,40 @@ export function getSmartCoverCandidates(
 /**
  * Tests if an image URL exists and loads cleanly. Caches test results in memory.
  */
-export function checkImageExists(url: string): Promise<boolean> {
+export function checkImageExists(url: string, timeoutMs: number = 1200): Promise<boolean> {
   if (IMAGE_EXISTENCE_CACHE.has(url)) {
     return Promise.resolve(IMAGE_EXISTENCE_CACHE.get(url)!);
   }
 
   return new Promise((resolve) => {
+    let settled = false;
     const img = new Image();
+
+    const timer = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        img.onload = null;
+        img.onerror = null;
+        IMAGE_EXISTENCE_CACHE.set(url, false);
+        resolve(false);
+      }
+    }, timeoutMs);
+
     img.onload = () => {
-      IMAGE_EXISTENCE_CACHE.set(url, true);
-      resolve(true);
+      if (!settled) {
+        settled = true;
+        clearTimeout(timer);
+        IMAGE_EXISTENCE_CACHE.set(url, true);
+        resolve(true);
+      }
     };
     img.onerror = () => {
-      IMAGE_EXISTENCE_CACHE.set(url, false);
-      resolve(false);
+      if (!settled) {
+        settled = true;
+        clearTimeout(timer);
+        IMAGE_EXISTENCE_CACHE.set(url, false);
+        resolve(false);
+      }
     };
     img.src = url;
   });
