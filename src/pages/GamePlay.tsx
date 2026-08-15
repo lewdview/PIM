@@ -4789,8 +4789,8 @@ export default function Game() {
           }
           ctx.restore();
 
-          // 2. Dynamic 3D Concentric Depth Rings CONTINUOUSLY EXPANDING TOWARDS THE PLAYER
-          const ringCount = 7;
+          // 2. Dynamic 3D Concentric Depth Rings CONTINUOUSLY EXPANDING & WEAVING WITH THE NOTES
+          const ringCount = 8;
           ctx.save();
           ctx.globalCompositeOperation = "screen";
 
@@ -4801,22 +4801,32 @@ export default function Game() {
             
             // 3D Perspective Scaling: accelerates exponentially as ring reaches camera foreground
             const perspectiveP = Math.pow(ringP, 1.4);
-            const ringY = lerp(vanishingY, H * 0.58, perspectiveP);
+            const baseRingY = lerp(vanishingY, H * 0.58, perspectiveP);
             
+            // ── Harmonic Tunnel Weave & Sway (Flows in lockstep with the notes!) ──
+            const ringWarp = Math.sin(ringP * Math.PI); // Parabolic amplitude (0 at entrance, peaks mid-tunnel)
+            const multVal = isOverdrive ? 2.0 : 1.0;
+            const ringSwayX = Math.sin(t * 1.8 * multVal + ringP * 3.0) * (tunnelW * 0.028) * ringWarp;
+            const ringUndulateY = Math.cos(t * 2.0 + ringP * 2.5) * (H * 0.016) * ringWarp;
+            const ringTilt = (Math.cos(t * 1.8 + ringP * 3.0) * 0.12 + Math.sin(t * 0.9 * swirlSpeedMult + ringP * 4.0) * 0.08) * ringWarp;
+            
+            // Organic breathing resonance pulse
+            const ringResonance = 1.0 + 0.06 * Math.sin(t * 4.0 + ringP * Math.PI * 2) * ringWarp;
+
             // Scaled dynamically to tunnelW for desktop & widescreen displays!
-            const ringRadiusX = lerp(tunnelW * 0.05, tunnelW * 0.58, perspectiveP);
-            const ringRadiusY = lerp(H * 0.03, H * 0.42, perspectiveP);
+            const ringRadiusX = lerp(tunnelW * 0.05, tunnelW * 0.58, perspectiveP) * ringResonance;
+            const ringRadiusY = lerp(H * 0.03, H * 0.42, perspectiveP) * ringResonance;
             
             // Fade in as ring emerges from horizon, fade out at foreground threshold
             const fadeAlpha = ringP < 0.15 ? ringP / 0.15 : (1.0 - Math.max(0, (ringP - 0.82) / 0.18));
-            const ringAlpha = fadeAlpha * (0.35 + beatPulseVal * 0.45);
+            const ringAlpha = fadeAlpha * (0.38 + beatPulseVal * 0.42);
 
             const ringColor = laneColorsRef.current[idx % 3] || (idx % 2 === 0 ? "#00E5FF" : "#FF007F");
             const ringSwirl = swirlAngle + ringP * 2.0;
 
             ctx.save();
-            ctx.translate(cx, ringY);
-            ctx.rotate(ringSwirl * 0.15);
+            ctx.translate(cx + ringSwayX, baseRingY + ringUndulateY);
+            ctx.rotate(ringSwirl * 0.15 + ringTilt);
 
             const lineWidth = lerp(1.5, 6.0, perspectiveP);
 
@@ -4825,7 +4835,7 @@ export default function Game() {
             ctx.strokeStyle = colorWithAlpha(ringColor, Math.max(0, ringAlpha));
             ctx.lineWidth = lineWidth;
             ctx.shadowColor = ringColor;
-            ctx.shadowBlur = lerp(4, 18, perspectiveP);
+            ctx.shadowBlur = lerp(4, 20, perspectiveP);
             ctx.stroke();
             ctx.restore();
           }
