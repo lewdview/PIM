@@ -2643,6 +2643,11 @@ export default function Game() {
   const pausedRef = useRef(false);
   const introStartTimeRef = useRef<number | null>(null);
 
+  // ── High-Precision Interpolated Audio Clock (Eliminates HTML5 Audio Buffer Jitter) ──
+  const lastAudioCurrentTimeRef = useRef<number>(0);
+  const lastAudioWallTimeRef = useRef<number>(0);
+  const isAudioClockCalibratedRef = useRef<boolean>(false);
+
   const getT = useCallback(() => {
     if (phaseRef.current === "countdown" || phaseRef.current === "loading") {
       if (introStartTimeRef.current === null) {
@@ -2651,7 +2656,33 @@ export default function Game() {
       return (performance.now() - introStartTimeRef.current) / 1000;
     }
     introStartTimeRef.current = null;
-    return (audioRef.current?.currentTime ?? 0) - audioOffsetRef.current / 1000;
+
+    const audio = audioRef.current;
+    if (!audio) return 0;
+
+    const rawT = audio.currentTime;
+    const nowWall = performance.now();
+
+    if (audio.paused || !isAudioClockCalibratedRef.current) {
+      lastAudioCurrentTimeRef.current = rawT;
+      lastAudioWallTimeRef.current = nowWall;
+      isAudioClockCalibratedRef.current = !audio.paused;
+      return rawT - audioOffsetRef.current / 1000;
+    }
+
+    // Check if audio element advanced its native buffer clock
+    if (rawT !== lastAudioCurrentTimeRef.current) {
+      lastAudioCurrentTimeRef.current = rawT;
+      lastAudioWallTimeRef.current = nowWall;
+      return rawT - audioOffsetRef.current / 1000;
+    }
+
+    // Interpolate high-precision fractional seconds between native audio buffer updates
+    const elapsedSinceBuffer = (nowWall - lastAudioWallTimeRef.current) / 1000;
+    // Bound interpolation to max 0.08s to prevent runaway if audio stalls
+    const interpolatedT = lastAudioCurrentTimeRef.current + Math.min(0.08, Math.max(0, elapsedSinceBuffer));
+
+    return interpolatedT - audioOffsetRef.current / 1000;
   }, []);
 
   const calcScore = useCallback(
@@ -3609,6 +3640,13 @@ export default function Game() {
         ghostIndexRef.current = newIdx;
         ghostJudgmentsRef.current = [];
       }
+
+      // Re-calibrate timebases and smoothed audio clock on resume from continue
+      const nowWall = performance.now();
+      lastFrameTimeRef.current = nowWall;
+      lastAudioCurrentTimeRef.current = rewindTo;
+      lastAudioWallTimeRef.current = nowWall;
+      isAudioClockCalibratedRef.current = false;
 
       if (audio) {
         audio.currentTime = rewindTo;
@@ -5426,14 +5464,30 @@ export default function Game() {
     }
     ctx.restore();
 
-    // ── 5. NOTES ────────────────────────────────────────────────
+    // ── 5. HIGH-PERFORMANCE NOTES RENDERING (Active Visible Slice) ──
     // Skip note rendering during intro stingers so the rolling highway remains completely clean
     if (phaseRef.current === "countdown") return;
 
     let dirty = false;
-    // Sort notes in back-to-front Z-order (farthest notes near horizon rendered FIRST, closest notes near hit line rendered LAST/ON TOP)
-    const renderNotesSorted = [...notesRef.current].sort((a, b) => b.note.time - a.note.time);
-    for (const ns of renderNotesSorted) {
+    const allNotes = notesRef.current;
+    const minActiveTime = t - Math.max(1.2, AT * 0.8);
+    const maxActiveTime = t + AT + 0.3;
+    const activeVisibleNotes: NoteState[] = [];
+
+    // Collect ONLY the active visible notes on screen (typically 3-15 notes max)
+    for (let i = 0; i < allNotes.length; i++) {
+      const ns = allNotes[i];
+      if (ns.hit) continue;
+      const nTime = ns.note.time;
+      const holdDur = ns.note.holdDuration || 0.5;
+      if (nTime + holdDur < minActiveTime) continue; // Note is in the past
+      if (nTime - AT > maxActiveTime) break; // Subsequent notes are far in the future
+      activeVisibleNotes.push(ns);
+    }
+
+    // Render back-to-front Z-order (farthest notes at horizon first, closest notes near hit line last)
+    for (let idx = activeVisibleNotes.length - 1; idx >= 0; idx--) {
+      const ns = activeVisibleNotes[idx];
       if (ns.hit) continue;
       const { note } = ns;
       const spawnT = note.time - AT;
@@ -5648,8 +5702,8 @@ export default function Game() {
       }
       const r = lerp(12, 24, prog);
 
-      // Draw simultaneous chord connection line if there is another note at the same time
-      const chordPartner = notesRef.current.find(other => 
+      // Fast O(1) simultaneous chord connection line lookup within activeVisibleNotes
+      const chordPartner = activeVisibleNotes.find(other => 
         other !== ns &&
         Math.abs(other.note.time - note.time) < 0.001 &&
         other.note.lane > note.lane &&
@@ -6569,20 +6623,20 @@ export default function Game() {
       else if (key === "6") swipeDir = 'right';
 
       if (swipeDir) {
-        // For keyboard swipes, we apply it to the currently pressed lane
-        // or all lanes if no lane key is held? 
-        // PIM rhythm engine usually has swipes on specific lanes.
-        // We'll look for a swipe note in any lane at this time.
-        const t = getT();
-        const cand = notesRef.current.find(n =>
-          !n.hit && !n.missed &&
-          (n.note.type === 'swipe' || n.note.type === 'lift' || n.note.swipeDirection !== undefined) &&
-          isDirectionMatch(n.note.swipeDirection || (n.note.type === 'lift' ? 'up' : undefined), swipeDir) &&
-          Math.abs(n.note.time - t) < missWindow(songRef.current?.difficultyLevel ?? 5)
-        );
-        if (cand) {
-          hitLane(cand.note.lane, swipeDir);
-          return;
+        const t = getTRef.current ? getTRef.current() : 0;
+        for (let l = 0; l < LANE_COUNT; l++) {
+          const swipeCandidate = notesRef.current.find(
+            (ns) =>
+              ns.note.lane === l &&
+              !ns.hit &&
+              !ns.missed &&
+              (ns.note.type === "swipe" || ns.note.type === "lift" || ns.note.swipeDirection) &&
+              Math.abs(ns.note.time - t) < missWindow(songRef.current?.difficultyLevel ?? 5)
+          );
+          if (swipeCandidate) {
+            hitLaneRef.current?.(l, swipeDir);
+            return;
+          }
         }
 
         const activeHoldWithSwipe = notesRef.current.find(n =>
@@ -6591,7 +6645,7 @@ export default function Game() {
           Math.abs((n.note.time + (n.note.holdDuration || 0.5)) - t) < missWindow(songRef.current?.difficultyLevel ?? 5)
         );
         if (activeHoldWithSwipe) {
-          hitSwipeRelease(activeHoldWithSwipe, swipeDir);
+          hitSwipeReleaseRef.current?.(activeHoldWithSwipe, swipeDir);
           return;
         }
 
@@ -6618,7 +6672,7 @@ export default function Game() {
                 laneRef.current[i].pressed = false;
                 laneRef.current[nextLane].pressed = true;
                 laneRef.current[nextLane].isArrow = key;
-                moveHold(i, nextLane);
+                moveHoldRef.current?.(i, nextLane);
               }
             }
           }
@@ -6646,14 +6700,14 @@ export default function Game() {
         laneRef.current[lane].pressed = true;
         lastTapTimeRef.current[lane] = Date.now();
         laneRef.current[lane].isArrow = null;
-        moveHold(activeHold.currentLane, lane);
+        moveHoldRef.current?.(activeHold.currentLane, lane);
         return;
       }
 
       laneRef.current[lane].pressed = true;
       lastTapTimeRef.current[lane] = Date.now();
       laneRef.current[lane].isArrow = null;
-      hitLane(lane);
+      hitLaneRef.current?.(lane);
     };
     const onUp = (e: KeyboardEvent) => {
       keysDownRef.current.delete(e.key);
@@ -6662,7 +6716,7 @@ export default function Game() {
           if (laneRef.current[i].isArrow === e.key) {
             laneRef.current[i].pressed = false;
             laneRef.current[i].isArrow = null;
-            releaseLane(i);
+            releaseLaneRef.current?.(i);
           }
         }
         return;
@@ -6671,7 +6725,7 @@ export default function Game() {
       const lane = laneKeysRef.current.indexOf(e.key === " " ? " " : e.key.toLowerCase());
       if (lane < 0) return;
       laneRef.current[lane].pressed = false;
-      releaseLane(lane);
+      releaseLaneRef.current?.(lane);
     };
     window.addEventListener("keydown", onDown);
     window.addEventListener("keyup", onUp);
@@ -6679,7 +6733,7 @@ export default function Game() {
       window.removeEventListener("keydown", onDown);
       window.removeEventListener("keyup", onUp);
     };
-  }, [hitLane, releaseLane, moveHold, getT, hitSwipeRelease]);
+  }, []);
 
   // ── Gamepad API Controller Support ──
   const prevGamepadLanePressedRef = useRef<[boolean, boolean, boolean]>([false, false, false]);
@@ -8821,7 +8875,7 @@ export default function Game() {
       }
       laneSilenced.current = [false, false, false];
 
-      // Clean up canvas and image caches to release memory
+      // Clean up canvas, particles, telemetry and image caches to release memory
       coverImgRef.current = null;
       coverBlurRef.current = null;
       scanPatternRef.current = null;
@@ -8834,6 +8888,13 @@ export default function Game() {
       hitFxRef.current = [];
       milestoneFxRef.current = [];
       ambientParticlesRef.current = [];
+      tunnelParticlesRef.current = [];
+      recordedTelemetryRef.current = [];
+      ghostTelemetryRef.current = null;
+      ghostJudgmentsRef.current = [];
+      keysDownRef.current.clear();
+      touchStartPos.current = {};
+      isAudioClockCalibratedRef.current = false;
     };
   }, [songId, setLocation, retryCount]);
 
@@ -8872,6 +8933,13 @@ export default function Game() {
     pausedRef.current = false;
     setPaused(false);
     audioManager.playSfx('pause_2', 0.6);
+
+    const nowWall = performance.now();
+    lastFrameTimeRef.current = nowWall;
+    lastAudioCurrentTimeRef.current = audioRef.current?.currentTime ?? 0;
+    lastAudioWallTimeRef.current = nowWall;
+    isAudioClockCalibratedRef.current = false;
+
     if (phaseRef.current === 'playing') {
       if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
         audioCtxRef.current.resume().catch(() => {});
