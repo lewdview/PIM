@@ -13,7 +13,7 @@ interface LeaderboardRowProps {
   isYou: boolean;
   topRarity?: string;
   onClick?: () => void;
-  subtitle?: string;
+  subtitle?: React.ReactNode;
   userId: string;
   scoreLabel?: string;
   animationDelay?: number;

@@ -26,7 +26,10 @@ import { getCurrentDay, getTimeUntilNextDay, formatDate, getDateFromDay } from '
 import { extractPalette, getFallbackPalette, type ExtractedPalette } from '../utils/extractPalette';
 import { audioManager } from '../game/audio';
 import { useVaultStore } from '../store/useVaultStore';
+import { getClaimedCountForDay } from '../services/vaultService';
 import { supabase } from '@/services/supabaseClient';
+import DailyClaimTransitionModal from '../components/DailyClaimTransitionModal';
+import TodayCardDetailModal from '../components/TodayCardDetailModal';
 import '../styles/HeroLandingPage.css';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -95,7 +98,6 @@ const SECTION_IDS = [
   { id: 'hero-story', label: 'ORIGIN' },
   { id: 'hero-gameplay', label: 'PROOF' },
   { id: 'hero-ecosystem', label: 'ORBIT' },
-  { id: 'hero-stats', label: 'METRICS' },
   { id: 'hero-roadmap', label: 'FUTURE' },
   { id: 'hero-cta', label: 'PLAY' },
 ];
@@ -264,47 +266,6 @@ function WaveformCanvas({ isPlaying, accentColor }: { isPlaying: boolean; accent
   }, [isPlaying, accentColor]);
 
   return <canvas ref={canvasRef} className="hero-waveform-canvas" width={240} height={24} />;
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// StatCounter
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-function useCountUp(target: number, duration: number, inView: boolean): number {
-  const [count, setCount] = useState(0);
-  const hasAnimated = useRef(false);
-
-  useEffect(() => {
-    if (!inView || hasAnimated.current) return;
-    hasAnimated.current = true;
-    const t0 = performance.now();
-    const step = (now: number) => {
-      const progress = Math.min((now - t0) / duration, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setCount(Math.round(target * eased));
-      if (progress < 1) requestAnimationFrame(step);
-    };
-    requestAnimationFrame(step);
-  }, [inView, target, duration]);
-
-  return count;
-}
-
-function StatCounter({ target, label }: { target: number; label: string }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, margin: '-60px' });
-  const count = useCountUp(target, 2200, isInView);
-
-  return (
-    <div
-      ref={ref}
-      className="hero-stat-item"
-      onMouseEnter={() => audioManager.playSfx('tap_nav', 0.15)}
-    >
-      <span className="hero-stat-number">{count.toLocaleString()}</span>
-      <span className="hero-stat-label">{label}</span>
-    </div>
-  );
 }
 
 function EcosystemGlobe3D({
@@ -501,7 +462,19 @@ export default function HeroLandingPage() {
   const [isCommandModalOpen, setIsCommandModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Handle Play Today's Drop: Check off tutorial & onboarding for new/guest users
+  // Daily Drop Claim & Detail Modals State
+  const [isClaimTransitionOpen, setIsClaimTransitionOpen] = useState(false);
+  const [isCardDetailModalOpen, setIsCardDetailModalOpen] = useState(false);
+  const [claimedCount, setClaimedCount] = useState<number>(0);
+
+  // Fetch claimed count for today's card
+  useEffect(() => {
+    getClaimedCountForDay(activeDay).then((count) => {
+      setClaimedCount(count || 0);
+    });
+  }, [activeDay]);
+
+  // Handle Play Today's Drop: Check off tutorial & onboarding, show claim transition screen
   const handlePlayDrop = useCallback((targetDay: number) => {
     audioManager.playSfx('select_start_song', 0.5);
     silentClaimDailyDrop(targetDay);
@@ -509,7 +482,18 @@ export default function HeroLandingPage() {
     localStorage.setItem('has_onboarded', 'true');
     useVaultStore.getState().updateProgression({ tutorialCompleted: true }).catch(() => {});
     useVaultStore.getState().completeOnboarding().catch(() => {});
+    setIsClaimTransitionOpen(true);
   }, [silentClaimDailyDrop]);
+
+  // Start game from transition screen
+  const handleStartGame = useCallback(() => {
+    setIsClaimTransitionOpen(false);
+    if (song?.id) {
+      setLocation(`/play/${song.id}`);
+    } else {
+      setLocation(`/play/card-${activeDay}`);
+    }
+  }, [setLocation, song, activeDay]);
 
   // Interactive 3D Card Tilt State
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
@@ -796,14 +780,14 @@ export default function HeroLandingPage() {
           </p>
 
           <div className="flex flex-col items-center gap-2 mb-4">
-            <Link 
-              href={`/play/${songId}`} 
+            <button 
               onClick={() => handlePlayDrop(activeDay)}
+              className="cursor-pointer border-0 bg-transparent p-0"
             >
               <span className="hero-play-btn">
                 <Play size={14} fill="#000" /> PLAY DAY {activeDay} DROP
               </span>
-            </Link>
+            </button>
             {import.meta.env.DEV && (
               <button
                 onClick={() => {
@@ -971,12 +955,21 @@ export default function HeroLandingPage() {
           >
             {isPlayingAudio ? <Pause size={14} /> : <Play size={14} />} {isPlayingAudio ? 'Pause Stem' : '▶ Listen'}
           </button>
-          <Link href={`/play/${songId}`} onClick={() => handlePlayDrop(activeDay)}>
-            <span className="hero-drop-action-btn">🎮 Play Level</span>
-          </Link>
-          <Link href={`/song/${songId}`} onClick={() => audioManager.playSfx('tap_nav', 0.3)}>
-            <span className="hero-drop-action-btn">🃏 View Card</span>
-          </Link>
+          <button 
+            onClick={() => handlePlayDrop(activeDay)}
+            className="hero-drop-action-btn cursor-pointer"
+          >
+            🎮 Play Level
+          </button>
+          <button 
+            onClick={() => {
+              audioManager.playSfx('tap_nav', 0.3);
+              setIsCardDetailModalOpen(true);
+            }}
+            className="hero-drop-action-btn cursor-pointer"
+          >
+            🃏 View Card
+          </button>
         </motion.div>
       </section>
 
@@ -1322,25 +1315,6 @@ export default function HeroLandingPage() {
 
       <div className="hero-section-divider" />
 
-      {/* ═══════════ SECTION 8 : LIVE STATISTICS ═══════════ */}
-      <section className="hero-stats-section" id="hero-stats">
-        <motion.div
-          className="hero-stats-grid"
-          initial={{ opacity: 0, y: 25 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-60px' }}
-          transition={{ duration: 0.7 }}
-        >
-          <StatCounter target={activeDay} label="Songs Released" />
-          <StatCounter target={activeDay} label="Playable Levels" />
-          <StatCounter target={activeDay} label="Cards" />
-          <StatCounter target={47291} label="Notes Played Today" />
-          <StatCounter target={1432} label="Packs Opened" />
-        </motion.div>
-      </section>
-
-      <div className="hero-section-divider" />
-
       {/* ═══════════ SECTION 9 : ROADMAP ═══════════ */}
       <section className="hero-roadmap-section" id="hero-roadmap" ref={roadmapRef}>
         <motion.p
@@ -1430,11 +1404,14 @@ export default function HeroLandingPage() {
           viewport={{ once: true }}
           transition={{ duration: 0.5, delay: 0.25 }}
         >
-          <Link href={`/play/${songId}`} onClick={() => handlePlayDrop(activeDay)}>
+          <button 
+            onClick={() => handlePlayDrop(activeDay)}
+            className="cursor-pointer border-0 bg-transparent p-0"
+          >
             <span className="hero-play-btn">
               <Play size={16} fill="#000" /> Play Day {activeDay}
             </span>
-          </Link>
+          </button>
         </motion.div>
 
         <motion.p
@@ -1534,6 +1511,31 @@ export default function HeroLandingPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ═══════════ DAILY DROP CLAIM TRANSITION MODAL ═══════════ */}
+      <DailyClaimTransitionModal
+        isOpen={isClaimTransitionOpen}
+        onClose={() => setIsClaimTransitionOpen(false)}
+        day={activeDay}
+        songTitle={song?.title}
+        artist={song?.artist}
+        bpm={song?.bpm}
+        coverArt={song?.coverArt}
+        claimNumber={Math.min(100, Math.max(1, claimedCount + 1))}
+        onStartGame={handleStartGame}
+      />
+
+      {/* ═══════════ TODAY'S CARD DETAIL & VARIANTS MODAL ═══════════ */}
+      <TodayCardDetailModal
+        isOpen={isCardDetailModalOpen}
+        onClose={() => setIsCardDetailModalOpen(false)}
+        day={activeDay}
+        song={song}
+        onPlay={() => {
+          setIsCardDetailModalOpen(false);
+          handlePlayDrop(activeDay);
+        }}
+      />
     </div>
   );
 }

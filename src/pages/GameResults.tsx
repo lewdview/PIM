@@ -12,6 +12,7 @@ import { purchasePack } from "@/services/vaultService";
 import { PACK_CONFIGS } from "@/utils/rarity";
 import { logAnalyticsEvent } from "@/services/telemetryService";
 import OnboardingFlowModal from "@/components/OnboardingFlowModal";
+import SongLeaderboard from "@/components/SongLeaderboard";
 import { Film } from "lucide-react";
 
 interface LaneTelemetry {
@@ -1558,6 +1559,20 @@ export default function Results() {
                 </div>
               )}
 
+              {/* Live Song Leaderboard */}
+              {songId && result && (
+                <div className="w-full my-2">
+                  <SongLeaderboard
+                    songId={songId}
+                    currentScore={result.score}
+                    currentAccuracy={acc}
+                    currentMaxCombo={result.maxCombo}
+                    currentMedal={result.medal}
+                    defaultLimit={5}
+                  />
+                </div>
+              )}
+
               <div className="flex gap-2">
                 <button data-testid="button-retry" onClick={() => {
                   audioManager.playSfx('tap_nav', 0.15);
@@ -1969,6 +1984,21 @@ export default function Results() {
                 ← {fromFreePlay ? 'BACK TO AWARD PLAY' : 'CONTINUE TO LEVEL PATH'}
               </button>
             )}
+
+            {/* Live Song Leaderboard */}
+            {songId && result && (
+              <div className="w-full my-3">
+                <SongLeaderboard
+                  songId={songId}
+                  currentScore={result.score}
+                  currentAccuracy={acc}
+                  currentMaxCombo={result.maxCombo}
+                  currentMedal={result.medal}
+                  defaultLimit={5}
+                />
+              </div>
+            )}
+
             <div className="flex gap-2">
               <button data-testid="button-retry" onClick={() => setLocation(`/play/${songId}`)}
                 className="flex-1 py-3 font-mono font-bold text-sm tracking-[0.25em] transition-all"
