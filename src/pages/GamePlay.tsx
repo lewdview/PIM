@@ -37,19 +37,19 @@ export interface TransmissionLoadState {
   logs: string[];
 }
 
-export function formatLoadBytes(bytes: number): string {
+function formatLoadBytes(bytes: number): string {
   if (!bytes || isNaN(bytes) || bytes <= 0) return "--";
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
-export function formatLoadSpeed(bytesPerSec: number): string {
+function formatLoadSpeed(bytesPerSec: number): string {
   if (!bytesPerSec || isNaN(bytesPerSec) || bytesPerSec <= 0) return "-- MB/s";
   if (bytesPerSec < 1024 * 1024) return `${(bytesPerSec / 1024).toFixed(1)} KB/s`;
   return `${(bytesPerSec / (1024 * 1024)).toFixed(2)} MB/s`;
 }
 
-export function formatLoadEta(seconds: number): string {
+function formatLoadEta(seconds: number): string {
   if (seconds === undefined || seconds === null || isNaN(seconds) || !isFinite(seconds) || seconds <= 0) return "--";
   if (seconds < 1) return "< 1s left";
   if (seconds > 60) return `~${(seconds / 60).toFixed(1)}m left`;
@@ -75,7 +75,7 @@ export interface ArchetypeMeta {
   stage5Color: string;
 }
 
-export const ARCHETYPE_METAS: Record<TrackArchetype, ArchetypeMeta> = {
+const ARCHETYPE_METAS: Record<TrackArchetype, ArchetypeMeta> = {
   cyber_tunnel: {
     key: 'cyber_tunnel',
     name: '3D CYBER TUNNEL',
@@ -132,7 +132,7 @@ export const ARCHETYPE_METAS: Record<TrackArchetype, ArchetypeMeta> = {
   },
 };
 
-export function isArchetypeDevModeEnabled(): boolean {
+function isArchetypeDevModeEnabled(): boolean {
   if (typeof window === 'undefined') return false;
   const isDev = import.meta.env.DEV || import.meta.env.MODE === 'development';
   const optDev = localStorage.getItem('opt_archetypeDevMode') === 'true' || localStorage.getItem('opt_devMode') === 'true';
@@ -140,7 +140,7 @@ export function isArchetypeDevModeEnabled(): boolean {
   return isDev || optDev || urlDev;
 }
 
-export function selectSongArchetype(song?: Song | null): TrackArchetype {
+function selectSongArchetype(song?: Song | null): TrackArchetype {
   // Primary production 3D perspective mode: Cyber Tunnel
   // The full 6-archetype engine is scoped to Dev Mode (opt_archetypeDevMode / URL ?dev=true)
   if (!isArchetypeDevModeEnabled()) {
@@ -844,7 +844,7 @@ export interface ProjectionResult {
   scale: number;
 }
 
-export function drawMovingGasAura(
+function drawMovingGasAura(
   ctx: CanvasRenderingContext2D,
   cx: number,
   cy: number,
@@ -906,7 +906,7 @@ export function drawMovingGasAura(
   ctx.restore();
 }
 
-export function getCorkscrewSpiralPos(
+function getCorkscrewSpiralPos(
   lane: number,
   prog: number,
   W: number,
@@ -982,7 +982,7 @@ export function getCorkscrewSpiralPos(
   }
 }
 
-export function getArchetypeProjection(
+function getArchetypeProjection(
   lane: number,
   prog: number,
   W: number,
@@ -1155,7 +1155,7 @@ export function getArchetypeProjection(
   return { x: lx, y: noteY, w: lw, h: noteH, rot: 0, scale: lerp(0.4, 1.0, prog) };
 }
 
-export function drawArchetypeHoldTrail(
+function drawArchetypeHoldTrail(
   ctx: CanvasRenderingContext2D,
   W: number,
   H: number,
@@ -1453,7 +1453,7 @@ function prerenderStaticTrack(
   return off;
 }
 
-export function getSongIntroTheme(laneColors: [string, string, string]) {
+function getSongIntroTheme(laneColors: [string, string, string]) {
   const c0 = laneColors[0] || "#FF1493";
   const c1 = laneColors[1] || "#00E5FF";
   const c2 = laneColors[2] || "#39FF14";
