@@ -1201,9 +1201,9 @@ function drawArchetypeHoldTrail(
     }
   }
 
-  // Draw Ribbon Outer Glow / Body
+  // Draw Ribbon Outer Glow / Body (Translucent so oncoming notes remain clearly visible)
   ctx.save();
-  ctx.fillStyle = "rgba(245, 240, 228, 0.24)";
+  ctx.fillStyle = "rgba(245, 240, 228, 0.16)";
   ctx.beginPath();
   ctx.moveTo(leftPoints[0].x, leftPoints[0].y);
   for (let i = 1; i <= steps; i++) {
@@ -1215,11 +1215,11 @@ function drawArchetypeHoldTrail(
   ctx.closePath();
   ctx.fill();
 
-  // Draw Inner Colored Stripe with Neon Glow
+  // Draw Inner Colored Stripe with Neon Glow (Translucent for see-through readability)
   ctx.fillStyle = noteColor;
-  ctx.globalAlpha = 0.72;
+  ctx.globalAlpha = 0.50;
   ctx.shadowColor = noteColor;
-  ctx.shadowBlur = 14;
+  ctx.shadowBlur = 12;
   ctx.beginPath();
   const innerLeft = leftPoints.map((p, idx) => ({
     x: lerp(leftPoints[idx].x, rightPoints[idx].x, 0.22),
@@ -5841,15 +5841,18 @@ export default function Game() {
           }
         }
 
-        // Draw gold note box at the head of the hold note (at prog)
-        if (proj.rot !== 0) {
-          ctx.save();
-          ctx.translate(drawX + noteW / 2, noteY);
-          ctx.rotate(proj.rot);
-          drawKey(ctx, -noteW / 2, 0, noteW, noteH, r, noteColor, prog, false, headSwipeDir, note.time * 3700, note.type);
-          ctx.restore();
-        } else {
-          drawKey(ctx, drawX, noteY, noteW, noteH, r, noteColor, prog, false, headSwipeDir, note.time * 3700, note.type);
+        // Draw gold note box at the head of the hold note ONLY when NOT actively held
+        // (Once the hold is active, the head is already struck, so we don't draw the big head box to avoid blocking the incoming tail release/swipe)
+        if (!ns.holdActive) {
+          if (proj.rot !== 0) {
+            ctx.save();
+            ctx.translate(drawX + noteW / 2, noteY);
+            ctx.rotate(proj.rot);
+            drawKey(ctx, -noteW / 2, 0, noteW, noteH, r, noteColor, prog, false, headSwipeDir, note.time * 3700, note.type);
+            ctx.restore();
+          } else {
+            drawKey(ctx, drawX, noteY, noteW, noteH, r, noteColor, prog, false, headSwipeDir, note.time * 3700, note.type);
+          }
         }
       }
 
