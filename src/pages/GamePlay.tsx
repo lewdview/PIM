@@ -808,21 +808,10 @@ function laneAt(
   let baseX = left + lane * lw;
 
   // Apply track archetype motion geometry ONLY during Stage 3 and Stage 5
-  // (Stage 4 returns to normal straight notes as a dynamic color primer bridge before Stage 5 overdrive!)
   if (archetype && (stage === 3 || stage === 5)) {
-    if (archetype === 'corkscrew_slide') {
-      const mult = stage === 5 ? 2.4 : 1.0;
-      const swirl = Math.sin(progress * Math.PI * 2 + t * 2.8 * mult) * (W * 0.10 * Math.sin(progress * Math.PI));
-      baseX += swirl;
-    } else if (archetype === 'matrix_split') {
+    if (archetype === 'matrix_split') {
       const spread = (lane - 1) * (W * 0.15 * Math.sin(progress * Math.PI));
       baseX += spread;
-    } else if (archetype === 'wave_coaster') {
-      const coasterW = Math.sin(progress * Math.PI * 1.5 + t * 3.0) * (W * 0.05);
-      baseX += coasterW;
-    } else if (archetype === 'horizontal_drift') {
-      const driftX = Math.sin(progress * Math.PI) * (W * 0.06 * (lane === 0 ? -1 : lane === 2 ? 1 : 0));
-      baseX += driftX;
     }
   }
 
@@ -987,6 +976,63 @@ function getCorkscrewSpiralPos(
   }
 }
 
+// 🎢 3D UNDULATING WAVE ROLLERCOASTER (Crest airtime, high-G dip, banking roll, and 0-bob hit runway)
+function getWaveCoasterPos(
+  lane: number,
+  prog: number,
+  W: number,
+  H: number,
+  t: number,
+  stage: number
+): ProjectionResult {
+  const hitY = H * HIT_RATIO;
+  const vanishingY = hitY * 0.22;
+  const cx = W / 2;
+  const coasterW = Math.min(W, 840);
+  const laneOffset = lane - 1; // -1 for left, 0 for center, 1 for right
+  const mult = stage === 5 ? 1.6 : 1.0;
+  const safeP = Math.max(0, prog);
+
+  // 1. Perspective gravity plunge
+  const persP = Math.pow(safeP, 1.25);
+
+  // 2. Wave damping factor: wave amplitude is high in upper/mid track, but damps smoothly to 0 at strike line
+  // This guarantees 100% stable, jitter-free note arrival at the judgment strike line!
+  const dampFactor = Math.pow(Math.max(0, 1 - safeP), 1.6);
+
+  // 3. Coaster Vertical Wave (Crest & G-Force Dip)
+  const waveFreq = 2.2;
+  const waveSpeed = 2.4 * mult;
+  const wavePhase = safeP * Math.PI * waveFreq + t * waveSpeed;
+  const waveY = Math.sin(wavePhase) * (H * 0.085) * dampFactor;
+
+  // 4. Banking Lateral Sway & Turn
+  const swayX = Math.cos(wavePhase * 0.8) * (coasterW * 0.075) * dampFactor;
+
+  // 5. 3D Banking Rotation (Roll tilt into coaster corners)
+  const rot = (-Math.cos(wavePhase) * 0.22 + laneOffset * 0.05) * dampFactor;
+
+  // 6. Lane layout with perspective expansion
+  const { x: laneHitX, w: laneHitW } = laneAt(lane, 1, W, 0.20, 0.88);
+  const startSpacing = coasterW * 0.08;
+  const startX = cx + laneOffset * startSpacing;
+
+  const noteX = lerp(startX, laneHitX, persP) + swayX;
+  const noteY = lerp(vanishingY, hitY, persP) + waveY;
+  const noteW = lerp(coasterW * 0.07, laneHitW, persP);
+  const noteH = lerp(32, laneHitW * 0.72, persP);
+  const scale = lerp(0.35, 1.0, persP) * (1.0 + Math.sin(wavePhase) * 0.08 * dampFactor);
+
+  return {
+    x: noteX,
+    y: noteY,
+    w: noteW,
+    h: noteH,
+    rot,
+    scale,
+  };
+}
+
 function getArchetypeProjection(
   lane: number,
   prog: number,
@@ -1095,13 +1141,9 @@ function getArchetypeProjection(
     return getCorkscrewSpiralPos(lane, prog, W, H, t, stage);
   }
 
-  // 🎢 3D UNDULATING WAVE ROLLERCOASTER
+  // 🎢 3D UNDULATING WAVE ROLLERCOASTER (Crest airtime, high-G dip, banking roll, and 0-bob hit runway)
   if (archetype === 'wave_coaster') {
-    const { x: lx, w: lw } = laneAt(lane, prog, W, 0.22, 0.88);
-    const waveYOffset = Math.sin(prog * Math.PI * 2.5 + t * 3.5) * (H * 0.08);
-    const noteY = prog * hitY + waveYOffset;
-    const noteH = lerp(75, 135, prog);
-    return { x: lx, y: noteY, w: lw, h: noteH, rot: 0, scale: lerp(0.4, 1.0, prog) };
+    return getWaveCoasterPos(lane, prog, W, H, t, stage);
   }
 
   // 🔀 3-RIBBON DETACHED SPLIT HORIZON MATRIX
@@ -4771,31 +4813,115 @@ export default function Game() {
           ctx.restore();
         }
 
-        // ── ARCHETYPE 4: 3D UNDULATING WAVE ROLLERCOASTER ──
+        // ── ARCHETYPE 4: 3D UNDULATING WAVE ROLLERCOASTER (Tubular Coaster Rails + Cross-Ties) ──
         else if (currentArch === 'wave_coaster') {
           const coasterW = Math.min(W, 840);
-          drawMovingGasAura(ctx, cx, hitY * 0.5, coasterW * 0.55, "#0b1d3a", t, 0.90);
+          const mult = calculatedStage === 5 ? 1.6 : 1.0;
+          const coasterTheme = calculatedStage === 5 ? "#FF0055" : "#00F5D4";
 
-          // Undulating Wave Coaster Rails
+          // Dynamic Moving Gas Aura around Coaster Highway
+          drawMovingGasAura(ctx, cx, hitY * 0.45, coasterW * 0.55, "#061324", t, 1.0);
+
           ctx.save();
-          const waveSteps = 24;
-          ctx.strokeStyle = "rgba(57, 255, 20, 0.65)";
-          ctx.lineWidth = 3.5;
-          ctx.shadowColor = "#39FF14";
-          ctx.shadowBlur = 12;
+          const waveSteps = 36;
+          const tieSteps = 16;
 
+          // 1. Vertical Coaster Pylons / Trestle Supports dropping into the abyss
+          for (let step = 2; step < tieSteps; step += 3) {
+            const p = step / tieSteps;
+            const centerProj = getWaveCoasterPos(1, p, W, H, t, calculatedStage);
+            const pylonX = centerProj.x + centerProj.w / 2;
+            const pylonY = centerProj.y;
+
+            if (pylonY < hitY - 40) {
+              const pylonGrad = ctx.createLinearGradient(pylonX, pylonY, pylonX, H);
+              pylonGrad.addColorStop(0, colorWithAlpha(coasterTheme, 0.45));
+              pylonGrad.addColorStop(0.7, colorWithAlpha(coasterTheme, 0.10));
+              pylonGrad.addColorStop(1, "transparent");
+
+              ctx.strokeStyle = pylonGrad;
+              ctx.lineWidth = 2.0;
+              ctx.beginPath();
+              ctx.moveTo(pylonX, pylonY);
+              ctx.lineTo(pylonX, H * 0.95);
+              ctx.stroke();
+            }
+          }
+
+          // 2. Coaster Sleeper Cross-Ties (connecting lane rails horizontally)
+          for (let step = 1; step <= tieSteps; step++) {
+            const p = step / tieSteps;
+            const leftProj = getWaveCoasterPos(0, p, W, H, t, calculatedStage);
+            const rightProj = getWaveCoasterPos(2, p, W, H, t, calculatedStage);
+
+            const x1 = leftProj.x;
+            const y1 = leftProj.y + leftProj.h * 0.5;
+            const x2 = rightProj.x + rightProj.w;
+            const y2 = rightProj.y + rightProj.h * 0.5;
+
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.strokeStyle = colorWithAlpha(coasterTheme, lerp(0.20, 0.65, p));
+            ctx.lineWidth = lerp(2.0, 4.5, p);
+            ctx.shadowColor = coasterTheme;
+            ctx.shadowBlur = lerp(4, 12, p);
+            ctx.stroke();
+          }
+
+          // 3. Dual Tubular Steel Coaster Rails for all 3 lanes
           for (let lane = 0; lane < LANE_COUNT; lane++) {
+            const railColor = laneColorsRef.current[lane] || coasterTheme;
+
+            // Left rail of lane
             ctx.beginPath();
             for (let step = 0; step <= waveSteps; step++) {
               const p = step / waveSteps;
-              const { x } = laneAt(lane, p, W, 0.22, 0.88);
-              const waveYOffset = Math.sin(p * Math.PI * 2.5 + t * 3.5) * (H * 0.08);
-              const y = p * hitY + waveYOffset;
-              if (step === 0) ctx.moveTo(x, y);
-              else ctx.lineTo(x, y);
+              const proj = getWaveCoasterPos(lane, p, W, H, t, calculatedStage);
+              const rx = proj.x;
+              const ry = proj.y + proj.h * 0.5;
+              if (step === 0) ctx.moveTo(rx, ry);
+              else ctx.lineTo(rx, ry);
             }
+            ctx.strokeStyle = colorWithAlpha(railColor, 0.85);
+            ctx.lineWidth = 2.5;
+            ctx.shadowColor = railColor;
+            ctx.shadowBlur = 10;
+            ctx.stroke();
+
+            // Right rail of lane
+            ctx.beginPath();
+            for (let step = 0; step <= waveSteps; step++) {
+              const p = step / waveSteps;
+              const proj = getWaveCoasterPos(lane, p, W, H, t, calculatedStage);
+              const rx = proj.x + proj.w;
+              const ry = proj.y + proj.h * 0.5;
+              if (step === 0) ctx.moveTo(rx, ry);
+              else ctx.lineTo(rx, ry);
+            }
+            ctx.strokeStyle = colorWithAlpha(railColor, 0.85);
+            ctx.lineWidth = 2.5;
+            ctx.shadowColor = railColor;
+            ctx.shadowBlur = 10;
             ctx.stroke();
           }
+
+          // 4. High-Speed Air Plunge Particles along coaster tracks
+          ctx.fillStyle = coasterTheme;
+          for (let sp = 0; sp < 6; sp++) {
+            const p = ((t * 1.8 * mult + sp / 6) % 1);
+            const lanePick = sp % 3;
+            const proj = getWaveCoasterPos(lanePick, p, W, H, t, calculatedStage);
+            const sparkX = proj.x + proj.w * 0.5;
+            const sparkY = proj.y + proj.h * 0.5;
+
+            ctx.beginPath();
+            ctx.arc(sparkX, sparkY, lerp(1.5, 4.0, p), 0, Math.PI * 2);
+            ctx.shadowColor = coasterTheme;
+            ctx.shadowBlur = 8;
+            ctx.fill();
+          }
+
           ctx.restore();
         }
 
