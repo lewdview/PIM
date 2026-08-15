@@ -1,0 +1,4 @@
+## 2025-02-19 - Hardcoded Admin Passphrase Vulnerability
+**Vulnerability:** The admin passphrase was hardcoded in plaintext in the client bundle and used for local authentication gating.
+**Learning:** Client-side authentication needs to be handled cautiously. Hardcoding secrets directly in the bundle exposes them to any user who inspects the source code. Storing plaintext passwords in `sessionStorage` or leaving them around also increases risk. A fallback like `prompt()` can be used to re-acquire ephemeral plaintext secrets on page reloads if they are absolutely needed for backend syncing without being stored persistently.
+**Prevention:** Use one-way hashing (like SHA-256 via `crypto.subtle`) for client-side comparison, and keep plaintext secrets ephemeral (e.g., in React state) if they are needed for server-side verification, providing user prompts as fallbacks upon refresh.
