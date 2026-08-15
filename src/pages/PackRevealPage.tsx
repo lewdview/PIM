@@ -29,6 +29,17 @@ export default function PackRevealPage() {
     () => !revealPackMeta || (revealPackMeta.revealType !== 'tap' && revealPackMeta.revealType !== 'cinematic')
   );
 
+  // Sync ripDone and accumulatedCards whenever a new reveal is initiated
+  useEffect(() => {
+    if (revealPackMeta) {
+      setRipDone(revealPackMeta.revealType !== 'tap' && revealPackMeta.revealType !== 'cinematic');
+    }
+  }, [revealPackMeta]);
+
+  useEffect(() => {
+    setAccumulatedCards(revealCards);
+  }, [revealCards]);
+
   // Check for Stripe Session ID on mount if revealCards is empty
   useEffect(() => {
     if (revealCards.length === 0) {
@@ -48,6 +59,10 @@ export default function PackRevealPage() {
               await loadVaultData();
               const cfg = PACK_CONFIGS[category];
               const tier = cfg?.tiers.find(t => t.size === size) ?? cfg?.tiers[0];
+              setRipDone(false);
+              setRevealedIndex(0);
+              setShowSummary(false);
+              setAccumulatedCards(cards);
               startReveal(cards, cfg && tier ? {
                 category,
                 size,
