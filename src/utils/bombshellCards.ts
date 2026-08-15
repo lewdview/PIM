@@ -206,3 +206,71 @@ export function getBombshellCollectionStats(collection: OwnedCard[]): {
     percentComplete,
   };
 }
+
+/**
+ * Resolves the High-Resolution PNG URL from the 'hi res' folder inside the day directory.
+ */
+export function getBombshellHiResPngUrl(day: number, fileName: string): string {
+  const pngFileName = fileName.replace(/\.jpe?g$/i, '.png');
+  const useLocal = (typeof localStorage !== 'undefined' && 
+    (localStorage.getItem('opt_useLocalFiles') === 'true' || localStorage.getItem('useLocalFiles') === 'true')) || 
+    (import.meta.env && import.meta.env.VITE_USE_LOCAL_FILES === 'true');
+
+  if (useLocal) {
+    return `${LOCAL_BASE}day ${day}/hi res/${pngFileName}`;
+  }
+
+  return `${SUPABASE_BASE}girl-covers/days/day%20${day}/hi%20res/${encodeURIComponent(pngFileName)}`;
+}
+
+/**
+ * Returns candidate URLs for high-resolution PNG downloads (Local <-> Supabase <-> JPG Fallback).
+ */
+export function getBombshellHiResCandidates(day: number, fileName: string): string[] {
+  const pngFileName = fileName.replace(/\.jpe?g$/i, '.png');
+  const primary = getBombshellHiResPngUrl(day, fileName);
+  const supabaseUrl = `${SUPABASE_BASE}girl-covers/days/day%20${day}/hi%20res/${encodeURIComponent(pngFileName)}`;
+  const localUrl = `${LOCAL_BASE}day ${day}/hi res/${pngFileName}`;
+  const jpgUrl = getBombshellCoverUrl(day, fileName);
+
+  const list = [primary];
+  if (primary !== supabaseUrl) list.push(supabaseUrl);
+  if (primary !== localUrl) list.push(localUrl);
+  list.push(jpgUrl);
+
+  return Array.from(new Set(list));
+}
+
+/**
+ * Direct High-Resolution Master PNG Downloader.
+ * Fetches original binary asset and triggers a native client download.
+ */
+export async function downloadBombshellHiResArtwork(day: number, fileName: string): Promise<boolean> {
+  const pngFileName = fileName.replace(/\.jpe?g$/i, '.png');
+  const candidates = getBombshellHiResCandidates(day, fileName);
+
+  for (const url of candidates) {
+    try {
+      const resp = await fetch(url);
+      if (!resp.ok) continue;
+      const blob = await resp.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = `Day_${String(day).padStart(3, '0')}_${pngFileName.replace(/\s+/g, '_')}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1500);
+      return true;
+    } catch (e) {
+      console.warn(`Could not fetch hi-res from candidate: ${url}`, e);
+    }
+  }
+
+  // Fallback: window.open direct URL in a new window/tab
+  const fallbackUrl = getBombshellHiResPngUrl(day, fileName);
+  window.open(fallbackUrl, '_blank');
+  return true;
+}
+

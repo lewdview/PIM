@@ -12,7 +12,7 @@ import { getArtTypeForDay, OUTFIT_STYLES } from '../utils/artTypes';
 import RarityBadge from './RarityBadge';
 import AudioPreview from './AudioPreview';
 import { getDayFromDate } from '../utils/dayCalc';
-import { isBombshellCard } from '../utils/bombshellCards';
+import { isBombshellCard, downloadBombshellHiResArtwork } from '../utils/bombshellCards';
 import PrizeProgressMenu from './PrizeProgressMenu';
 
 const NFT_MINT_COSTS: Record<Rarity, number> = {
@@ -256,6 +256,18 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
                                   <span className="font-bold text-white/90 font-mono text-[10px]">
                                     day {card.card.day} (Day Registry)
                                   </span>
+                                </div>
+                                <div className="pt-2 border-t border-white/5 mt-1.5 flex gap-2">
+                                  <button
+                                    onClick={async () => {
+                                      if (artworkName) {
+                                        await downloadBombshellHiResArtwork(card.card.day, artworkName);
+                                      }
+                                    }}
+                                    className="w-full py-1.5 px-2.5 rounded bg-gradient-to-r from-[#FF1493]/20 to-[#ff4081]/20 hover:from-[#FF1493]/40 hover:to-[#ff4081]/40 border border-[#FF1493]/40 text-[#ff85c0] font-mono text-[9px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                                  >
+                                    <Download size={11} /> Download Hi-Res Master PNG
+                                  </button>
                                 </div>
                               </>
                             );
