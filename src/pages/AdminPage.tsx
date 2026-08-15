@@ -38,19 +38,59 @@ const PACK_LABELS: Record<string, string> = {
 };
 
 // ===== ADMIN GATE =====
-const ADMIN_PASSPHRASE = 'th3scr1b3';
+const ADMIN_PASSPHRASE_HASH = 'd58f380b169d36c2fe217dadc3caa620193197132b55ba52b0947882b78c4983';
 const ADMIN_AUTH_KEY = 'th3vault_admin_auth';
 
-function AdminGate({ onAuthenticate }: { onAuthenticate: () => void }) {
+function AdminGate({ onAuthenticate }: { onAuthenticate: (passphrase?: string) => void }) {
   const [input, setInput] = useState('');
   const [error, setError] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (input.toLowerCase() === ADMIN_PASSPHRASE) {
-      sessionStorage.setItem(ADMIN_AUTH_KEY, 'true');
-      onAuthenticate();
-    } else {
+
+    try {
+      // Fallback for non-secure contexts (e.g., local development)
+      if (!window.isSecureContext || !crypto.subtle) {
+        // In local development or HTTP, use the input from the form to check against the edge function
+        if (input) {
+          try {
+            const { supabase } = await import('../services/supabaseClient');
+            const { data } = await supabase.functions.invoke('vault-engine', {
+              body: { action: 'validateAdminAuth', payload: { passphrase: input.toLowerCase() } }
+            });
+            if (data?.success) {
+              sessionStorage.setItem(ADMIN_AUTH_KEY, 'true');
+              sessionStorage.setItem('th3vault_admin_pass', input.toLowerCase());
+              onAuthenticate(input.toLowerCase());
+              return;
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        }
+
+        setError(true);
+        setTimeout(() => setError(false), 800);
+        return;
+      }
+
+      const encoder = new TextEncoder();
+      const data = encoder.encode(input.toLowerCase());
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+      if (hashHex === ADMIN_PASSPHRASE_HASH) {
+        sessionStorage.setItem(ADMIN_AUTH_KEY, 'true');
+        // Set an additional item we can read from utility functions like saveAdminConfig without prompting
+        sessionStorage.setItem('th3vault_admin_pass', input.toLowerCase());
+        onAuthenticate(input.toLowerCase());
+      } else {
+        setError(true);
+        setTimeout(() => setError(false), 800);
+      }
+    } catch (err) {
+      console.error("Hashing failed:", err);
       setError(true);
       setTimeout(() => setError(false), 800);
     }
@@ -366,6 +406,7 @@ export default function AdminPage() {
   const [authenticated, setAuthenticated] = useState(() =>
     sessionStorage.getItem(ADMIN_AUTH_KEY) === 'true'
   );
+  const [adminPass, setAdminPass] = useState(() => sessionStorage.getItem('th3vault_admin_pass') || '');
   const [config, setConfig] = useState<AdminConfig>(() => getAdminConfig());
   const [activePackTab, setActivePackTab] = useState(PACK_KEYS[0]);
   const [simResults, setSimResults] = useState<Record<Rarity, number> | null>(null);
@@ -574,7 +615,10 @@ export default function AdminPage() {
   if (!authenticated) {
     return (
       <div className="admin-page">
-        <AdminGate onAuthenticate={() => setAuthenticated(true)} />
+        <AdminGate onAuthenticate={(pass) => {
+          if (pass) setAdminPass(pass);
+          setAuthenticated(true);
+        }} />
       </div>
     );
   }
@@ -1928,8 +1972,10 @@ export default function AdminPage() {
               setPushStatus('pushing');
               try {
                 const { supabase } = await import('../services/supabaseClient');
+                // Use the adminPass state we acquired via prompt fallback for backend auth,
+                // otherwise backend API will fail without it. Still better than hardcoding it entirely.
                 const { data, error } = await supabase.functions.invoke('vault-engine', {
-                  body: { action: 'updateAdminConfig', payload: { config, passphrase: 'th3scr1b3' } }
+                  body: { action: 'updateAdminConfig', payload: { config, passphrase: adminPass || prompt("Backend requires admin passphrase to push config:") } }
                 });
                 if (error || !data?.success) {
                   console.error('Push to server failed:', error?.message || data?.error);
