@@ -9899,97 +9899,153 @@ export default function Game() {
       <div
         className="relative w-full h-full flex flex-col overflow-hidden"
       >
-        {/* HUD */}
+        {/* ── UNIFIED CYBER HUD & CENTERED STAGE TIMELINE ── */}
         <div
-          className="flex items-center justify-between px-4 py-2.5 flex-shrink-0 max-w-4xl w-full mx-auto"
+          className="flex flex-col flex-shrink-0 w-full z-30"
           style={{
             borderBottom: "1px solid rgba(255,255,255,0.06)",
-            background: "rgba(12,12,20,0.55)",
+            background: "rgba(12,12,20,0.70)",
             backdropFilter: "blur(20px) saturate(1.4)",
             WebkitBackdropFilter: "blur(20px) saturate(1.4)",
-            borderRadius: "0 0 14px 14px",
             boxShadow: "0 4px 28px rgba(0,0,0,0.5), inset 0 -1px 0 rgba(255,255,255,0.05)",
           }}
         >
-          {/* Left: QUIT + OPTIONS */}
-          <div className="flex items-center gap-3">
-            <button
-              data-testid="button-quit"
-              onClick={() => {
-                audioRef.current?.pause();
-                const origin = sessionStorage.getItem(`game_origin_${songId}`) ?? '';
-                setLocation(origin === 'songs' ? '/songs' : origin ? `/${origin}` : '/campaign');
-              }}
-              className="font-mono text-xs tracking-widest transition-colors"
-              style={{ color: "hsl(30 15% 30%)" }}
-              onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "#FF1493")}
-              onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "hsl(30 15% 30%)")}
-            >
-              ✕ QUIT
-            </button>
-            <button
-              onClick={() => {
-                audioManager.playSfx('menu_confirm', 0.15);
-                if (phase === 'playing' && !paused) {
-                  doPause();
-                }
-                useVaultStore.getState().setOptionsModalOpen(true);
-              }}
-              className="font-mono text-xs tracking-widest transition-colors cursor-pointer"
-              style={{ color: "hsl(30 15% 28%)", letterSpacing: '0.1em' }}
-              onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "#E5B800")}
-              onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "hsl(30 15% 28%)")}
-            >
-              ⚙
-            </button>
-            <button
-              onClick={toggleFullscreen}
-              title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
-              style={{ color: isFullscreen ? "#39FF14" : "hsl(30 15% 28%)", lineHeight: 1, padding: "2px 3px", transition: "color 0.15s" }}
-              onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "#39FF14")}
-              onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = isFullscreen ? "#39FF14" : "hsl(30 15% 28%)")}
-            >
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
-                {isFullscreen ? (
-                  <>
-                    <path d="M4 0H0v4h1.5V1.5H4V0z" opacity=".35" />
-                    <path d="M8 0h4v4h-1.5V1.5H8V0z" opacity=".35" />
-                    <path d="M0 8h1.5v2.5H4V12H0V8z" opacity=".35" />
-                    <path d="M12 8h-1.5v2.5H8V12h4V8z" opacity=".35" />
-                    <rect x="3.5" y="3.5" width="5" height="5" rx="0.5" />
-                  </>
-                ) : (
-                  <>
-                    <path d="M0 0h4v1.5H1.5V4H0V0z" />
-                    <path d="M12 0H8v1.5h2.5V4H12V0z" />
-                    <path d="M0 12h4v-1.5H1.5V8H0v4z" />
-                    <path d="M12 12H8v-1.5h2.5V8H12v4z" />
-                  </>
-                )}
-              </svg>
-            </button>
+          {/* Top Row: Navigation (Left), Symmetrical Stage Tracker (Center), Miss Pips (Right) */}
+          <div className="flex items-center justify-between px-4 py-2 w-full max-w-5xl mx-auto">
+            {/* Left: QUIT + OPTIONS + Fullscreen */}
+            <div className="flex items-center gap-3 min-w-[130px]">
+              <button
+                data-testid="button-quit"
+                onClick={() => {
+                  audioRef.current?.pause();
+                  const origin = sessionStorage.getItem(`game_origin_${songId}`) ?? '';
+                  setLocation(origin === 'songs' ? '/songs' : origin ? `/${origin}` : '/campaign');
+                }}
+                className="font-mono text-xs tracking-widest transition-colors cursor-pointer"
+                style={{ color: "hsl(30 15% 30%)" }}
+                onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "#FF1493")}
+                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "hsl(30 15% 30%)")}
+              >
+                ✕ QUIT
+              </button>
+              <button
+                onClick={() => {
+                  audioManager.playSfx('menu_confirm', 0.15);
+                  if (phase === 'playing' && !paused) {
+                    doPause();
+                  }
+                  useVaultStore.getState().setOptionsModalOpen(true);
+                }}
+                className="font-mono text-xs tracking-widest transition-colors cursor-pointer"
+                style={{ color: "hsl(30 15% 28%)", letterSpacing: '0.1em' }}
+                onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "#E5B800")}
+                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "hsl(30 15% 28%)")}
+              >
+                ⚙
+              </button>
+              <button
+                onClick={toggleFullscreen}
+                title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+                style={{ color: isFullscreen ? "#39FF14" : "hsl(30 15% 28%)", lineHeight: 1, padding: "2px 3px", transition: "color 0.15s" }}
+                onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "#39FF14")}
+                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = isFullscreen ? "#39FF14" : "hsl(30 15% 28%)")}
+              >
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                  {isFullscreen ? (
+                    <>
+                      <path d="M4 0H0v4h1.5V1.5H4V0z" opacity=".35" />
+                      <path d="M8 0h4v4h-1.5V1.5H8V0z" opacity=".35" />
+                      <path d="M0 8h1.5v2.5H4V12H0V8z" opacity=".35" />
+                      <path d="M12 8h-1.5v2.5H8V12h4V8z" opacity=".35" />
+                      <rect x="3.5" y="3.5" width="5" height="5" rx="0.5" />
+                    </>
+                  ) : (
+                    <>
+                      <path d="M0 0h4v1.5H1.5V4H0V0z" />
+                      <path d="M12 0H8v1.5h2.5V4H12V0z" />
+                      <path d="M0 12h4v-1.5H1.5V8H0v4z" />
+                      <path d="M12 12H8v-1.5h2.5V8H12v4z" />
+                    </>
+                  )}
+                </svg>
+              </button>
+            </div>
+
+            {/* Center: Stage Pill + Completion % + Time Elapsed / Total */}
+            <div className="flex items-center gap-2.5 font-mono text-[9px] font-black uppercase tracking-wider text-white/70 select-none">
+              <span 
+                className="px-2 py-0.5 rounded text-[8px] font-black tracking-widest transition-all duration-300 shadow-sm"
+                style={{
+                  backgroundColor: currentStage === 5 ? 'rgba(255,0,85,0.25)' : currentStage === 4 ? 'rgba(255,20,147,0.25)' : currentStage === 3 ? 'rgba(255,215,0,0.25)' : currentStage === 2 ? 'rgba(57,255,20,0.2)' : 'rgba(0,229,255,0.2)',
+                  color: currentStage === 5 ? '#FF3800' : currentStage === 4 ? '#FF1493' : currentStage === 3 ? '#FFD700' : currentStage === 2 ? '#39FF14' : '#00E5FF',
+                  border: `1px solid ${currentStage === 5 ? '#FF3800' : currentStage === 4 ? '#FF1493' : currentStage === 3 ? '#FFD700' : currentStage === 2 ? '#39FF14' : '#00E5FF'}60`,
+                  boxShadow: `0 0 10px ${currentStage === 5 ? '#FF3800' : currentStage === 4 ? '#FF1493' : currentStage === 3 ? '#FFD700' : currentStage === 2 ? '#39FF14' : '#00E5FF'}30`,
+                }}
+              >
+                {currentStage === 5 ? '⚡ FINAL' : currentStage === 4 ? 'STAGE 4' : currentStage === 3 ? 'STAGE 3' : currentStage === 2 ? 'STAGE 2' : 'STAGE 1'}
+              </span>
+              <span className="text-white/80 font-bold tracking-widest text-[9px]">
+                {Math.round((gs.progress || 0) * 100)}%
+              </span>
+              <span className="text-white/30">•</span>
+              <span className="text-white/50 text-[8.5px] font-mono">
+                {formatTimeSec(getT())} / {formatTimeSec(songRef.current?.duration || 0)}
+              </span>
+            </div>
+
+            {/* Right: Miss Pips */}
+            <div className="flex flex-col items-end justify-center min-w-[130px]">
+              {opts.hudMisses && (
+                <div className="flex gap-1.5">
+                  {[0, 1, 2].map((i) => (
+                    <div
+                      key={i}
+                      style={{
+                        width: 7, height: 7,
+                        background: i < missCount ? "#FF1493" : "rgba(255,255,255,0.1)",
+                        boxShadow: i < missCount ? "0 0 6px rgba(255,20,147,0.9)" : "none",
+                        transition: "background 0.15s, box-shadow 0.15s",
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Spacer to keep dial centered */}
-          <div />
+          {/* Bottom Sub-Row: Centered Continuous Progress Track Directly Over Highway */}
+          <div className="w-full max-w-[580px] mx-auto px-4 pb-2">
+            <div className="relative w-full h-[5px] rounded-full overflow-hidden p-[1px] bg-black/60 border border-white/15 backdrop-blur-sm shadow-[inset_0_1px_3px_rgba(0,0,0,0.8)]">
+              <div
+                className="h-full rounded-full transition-all duration-150 ease-out"
+                style={{
+                  width: `${Math.min(100, Math.max(0, (gs.progress || 0) * 100))}%`,
+                  background: currentStage === 5
+                    ? "linear-gradient(90deg, #FF1493, #FFD700, #FF0055)"
+                    : currentStage === 4
+                      ? "linear-gradient(90deg, #00E5FF, #FFD700, #FF1493)"
+                      : currentStage === 3
+                        ? "linear-gradient(90deg, #00E5FF, #39FF14, #FFD700)"
+                        : currentStage === 2
+                          ? "linear-gradient(90deg, #00E5FF, #39FF14)"
+                          : "#00E5FF",
+                  boxShadow: (gs.progress || 0) > 0
+                    ? currentStage === 5
+                      ? "0 0 10px rgba(255,0,85,0.7), 0 0 20px rgba(255,215,0,0.4)"
+                      : "0 0 8px rgba(0,229,255,0.6), 0 0 16px rgba(57,255,20,0.3)"
+                    : "none",
+                }}
+              />
 
-          {/* Right spacer with miss pips */}
-          <div className="flex flex-col items-end justify-center min-w-[70px]">
-            {opts.hudMisses && (
-              <div className="flex gap-1.5">
-                {[0, 1, 2].map((i) => (
-                  <div
-                    key={i}
-                    style={{
-                      width: 7, height: 7,
-                      background: i < missCount ? "#FF1493" : "rgba(255,255,255,0.1)",
-                      boxShadow: i < missCount ? "0 0 6px rgba(255,20,147,0.9)" : "none",
-                      transition: "background 0.15s, box-shadow 0.15s",
-                    }}
-                  />
-                ))}
-              </div>
-            )}
+              {/* Stage Boundary Markers (Stage 1->2: 15%, Stage 2->3: 35%, Stage 3->4: 60%, Stage 4->5: 80%) */}
+              {[0.15, 0.35, 0.60, 0.80].map((pct, idx) => (
+                <div
+                  key={idx}
+                  className="absolute top-0 bottom-0 w-[1.5px] bg-white/40 shadow-[0_0_3px_rgba(255,255,255,0.7)] pointer-events-none"
+                  style={{ left: `${pct * 100}%`, transform: "translateX(-50%)" }}
+                />
+              ))}
+            </div>
           </div>
         </div>
 
@@ -10094,72 +10150,6 @@ export default function Game() {
             </div>
           </div>
         )}
-
-        {/* ── REVAMPED & CENTERED STAGE PROGRESS BAR HUD ── */}
-        <div className="flex-shrink-0 mx-auto my-1 relative max-w-[580px] w-[calc(100%-32px)] px-2">
-          {/* Symmetrical 3-Column Header */}
-          <div className="flex items-center justify-between mb-1.5 text-[8.5px] font-mono font-black uppercase tracking-wider text-white/50 select-none">
-            {/* Left: Active Stage Badge */}
-            <div className="flex items-center gap-1.5 flex-1 justify-start">
-              <span 
-                className="px-2 py-0.5 rounded text-[8px] font-black tracking-widest transition-all duration-300 shadow-sm"
-                style={{
-                  backgroundColor: currentStage === 5 ? 'rgba(255,0,85,0.25)' : currentStage === 4 ? 'rgba(255,20,147,0.25)' : currentStage === 3 ? 'rgba(255,215,0,0.25)' : currentStage === 2 ? 'rgba(57,255,20,0.2)' : 'rgba(0,229,255,0.2)',
-                  color: currentStage === 5 ? '#FF3800' : currentStage === 4 ? '#FF1493' : currentStage === 3 ? '#FFD700' : currentStage === 2 ? '#39FF14' : '#00E5FF',
-                  border: `1px solid ${currentStage === 5 ? '#FF3800' : currentStage === 4 ? '#FF1493' : currentStage === 3 ? '#FFD700' : currentStage === 2 ? '#39FF14' : '#00E5FF'}60`,
-                  boxShadow: `0 0 10px ${currentStage === 5 ? '#FF3800' : currentStage === 4 ? '#FF1493' : currentStage === 3 ? '#FFD700' : currentStage === 2 ? '#39FF14' : '#00E5FF'}30`,
-                }}
-              >
-                {currentStage === 5 ? '⚡ FINAL' : currentStage === 4 ? 'STAGE 4' : currentStage === 3 ? 'STAGE 3' : currentStage === 2 ? 'STAGE 2' : 'STAGE 1'}
-              </span>
-            </div>
-
-            {/* Center: Stage Progress % */}
-            <div className="flex-1 text-center font-mono font-black text-[9px] text-white/70 tracking-widest">
-              {Math.round((gs.progress || 0) * 100)}%
-            </div>
-
-            {/* Right: Audio Time Elapsed / Total */}
-            <div className="flex items-center gap-1 flex-1 justify-end font-mono text-[8px] text-white/60">
-              <span>{formatTimeSec(getT())}</span>
-              <span className="text-white/30">/</span>
-              <span>{formatTimeSec(songRef.current?.duration || 0)}</span>
-            </div>
-          </div>
-
-          {/* Continuous Glowing Progress Track with Exact Stage Boundary Ticks */}
-          <div className="relative w-full h-[6px] rounded-full overflow-hidden p-[1px] bg-black/60 border border-white/15 backdrop-blur-sm shadow-[inset_0_1px_3px_rgba(0,0,0,0.8)]">
-            <div
-              className="h-full rounded-full transition-all duration-150 ease-out"
-              style={{
-                width: `${Math.min(100, Math.max(0, (gs.progress || 0) * 100))}%`,
-                background: currentStage === 5
-                  ? "linear-gradient(90deg, #FF1493, #FFD700, #FF0055)"
-                  : currentStage === 4
-                    ? "linear-gradient(90deg, #00E5FF, #FFD700, #FF1493)"
-                    : currentStage === 3
-                      ? "linear-gradient(90deg, #00E5FF, #39FF14, #FFD700)"
-                      : currentStage === 2
-                        ? "linear-gradient(90deg, #00E5FF, #39FF14)"
-                        : "#00E5FF",
-                boxShadow: (gs.progress || 0) > 0
-                  ? currentStage === 5
-                    ? "0 0 10px rgba(255,0,85,0.7), 0 0 20px rgba(255,215,0,0.4)"
-                    : "0 0 8px rgba(0,229,255,0.6), 0 0 16px rgba(57,255,20,0.3)"
-                  : "none",
-              }}
-            />
-
-            {/* Stage Boundary Markers (Stage 1->2: 15%, Stage 2->3: 35%, Stage 3->4: 60%, Stage 4->5: 80%) */}
-            {[0.15, 0.35, 0.60, 0.80].map((pct, idx) => (
-              <div
-                key={idx}
-                className="absolute top-0 bottom-0 w-[1.5px] bg-white/40 shadow-[0_0_3px_rgba(255,255,255,0.7)] pointer-events-none"
-                style={{ left: `${pct * 100}%`, transform: "translateX(-50%)" }}
-              />
-            ))}
-          </div>
-        </div>
 
         {/* Canvas */}
         <div 
