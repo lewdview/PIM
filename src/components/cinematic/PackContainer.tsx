@@ -6,6 +6,7 @@ import { audioManager } from '../../game/audio';
 import { RARITY_CONFIG, type Rarity } from '../../utils/rarity';
 import { getCoverUrlForRarity, useSmartCoverArt, resolveSmartCoverUrl } from '../../utils/rarityArtwork';
 import { get365CardVariantStyle, getPackCoverFallback, getPackMultiCovers } from '../../utils/cardVariants';
+import { getFeaturedBombshellFoilCover } from '../../utils/bombshellCards';
 import Card from '../Card';
 import RarityBadge from '../RarityBadge';
 import {
@@ -80,7 +81,7 @@ function GrainOverlay() {
 
 // ── Pack Shell (the bag visual) ──────────────────────────────────────
 
-function PackShell({ meta, phase }: { meta: RevealPackMeta; phase: Phase }) {
+function PackShell({ meta, phase, sampleCard }: { meta: RevealPackMeta; phase: Phase; sampleCard?: OwnedCard['card'] }) {
   const isTorn = ['snap', 'pause', 'rise', 'flipping', 'layout', 'inspect'].includes(phase);
   const isTearing = phase === 'tearing';
   const isBombshell = meta.category === 'bombshell' || meta.label?.toLowerCase().includes('bombshell');
@@ -101,7 +102,7 @@ function PackShell({ meta, phase }: { meta: RevealPackMeta; phase: Phase }) {
               border: '1.5px solid rgba(255,255,255,0.12)',
             }}
           >
-            <PackBagContents meta={meta} />
+            <PackBagContents meta={meta} sampleCard={sampleCard} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -129,7 +130,7 @@ function PackShell({ meta, phase }: { meta: RevealPackMeta; phase: Phase }) {
                 willChange: 'transform, opacity',
               }}
             >
-              <PackBagContents meta={meta} />
+              <PackBagContents meta={meta} sampleCard={sampleCard} />
               {/* Glow leak at seam */}
               <motion.div
                 initial={{ opacity: 0 }}
@@ -185,7 +186,7 @@ function PackShell({ meta, phase }: { meta: RevealPackMeta; phase: Phase }) {
                 border: '1.5px solid rgba(255,255,255,0.12)',
               }}
             >
-              <PackBagContents meta={meta} />
+              <PackBagContents meta={meta} sampleCard={sampleCard} />
             </motion.div>
             <motion.div
               key="bottom-half"
@@ -200,7 +201,7 @@ function PackShell({ meta, phase }: { meta: RevealPackMeta; phase: Phase }) {
                 border: '1.5px solid rgba(255,255,255,0.12)',
               }}
             >
-              <PackBagContents meta={meta} />
+              <PackBagContents meta={meta} sampleCard={sampleCard} />
             </motion.div>
           </>
         )}
@@ -243,25 +244,75 @@ function PackEmblem({ accent, size = 80, isBombshell = false }: { accent: string
   );
 }
 
-function PackBagContents({ meta }: { meta: RevealPackMeta }) {
+function PackBagContents({ meta, sampleCard }: { meta: RevealPackMeta; sampleCard?: OwnedCard['card'] }) {
   const isBombshell = meta.category === 'bombshell' || meta.label?.toLowerCase().includes('bombshell');
   const variant = get365CardVariantStyle(meta.category || meta.label);
 
+  const foilCoverUrl = isBombshell 
+    ? (sampleCard?.coverUrl || meta.coverImage || getFeaturedBombshellFoilCover(sampleCard?.day || 1))
+    : meta.coverImage;
+
   return (
     <>
-      {/* 1. CLEAN 3D METALLIC FOIL PACK BASE */}
+      {/* 1. CLEAN 3D METALLIC FOIL PACK BASE WITH EMBEDDED CLOSE-UP ARTWORK */}
       <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isBombshell ? '#16000d' : '#08060f', zIndex: 0 }}>
+        {/* EMBEDDED CLOSE-UP COVER ARTWORK IN FOIL */}
+        {foilCoverUrl && (
+          <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 1 }}>
+            <motion.img
+              src={foilCoverUrl}
+              alt="Foil Artwork"
+              className="w-full h-full object-cover"
+              animate={isBombshell ? { scale: [1.48, 1.55, 1.48], rotate: [-0.6, 0.6, -0.6] } : {}}
+              transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
+              style={{
+                objectPosition: 'center 25%',
+                filter: isBombshell 
+                  ? 'contrast(1.25) brightness(0.92) saturate(1.3)' 
+                  : 'contrast(1.15) brightness(0.75) saturate(1.2)',
+                mixBlendMode: isBombshell ? 'luminosity' : 'normal',
+                opacity: isBombshell ? 0.88 : 0.4,
+              }}
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).src = getFeaturedBombshellFoilCover(1);
+              }}
+            />
+            {/* Holographic foil iridescent duotone color overlay */}
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background: isBombshell 
+                  ? 'linear-gradient(145deg, rgba(255, 0, 128, 0.75) 0%, rgba(138, 0, 80, 0.45) 45%, rgba(20, 0, 12, 0.88) 100%)'
+                  : 'linear-gradient(160deg, rgba(0, 229, 255, 0.35) 0%, rgba(10, 16, 32, 0.75) 100%)',
+                mixBlendMode: 'color',
+                opacity: 0.9,
+              }}
+            />
+            {/* Metallic specular sheen overlay */}
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background: isBombshell 
+                  ? 'radial-gradient(ellipse at 50% 30%, rgba(255, 105, 180, 0.5) 0%, transparent 65%)'
+                  : 'radial-gradient(ellipse at 50% 30%, rgba(255, 255, 255, 0.25) 0%, transparent 65%)',
+                mixBlendMode: 'screen',
+                opacity: 0.7,
+              }}
+            />
+          </div>
+        )}
+
         {/* VIBRANT POPPING PACK ACCENT COLOR TINT */}
         <div
           className="absolute inset-0 pointer-events-none transition-all"
           style={{
             position: 'absolute', inset: 0,
             background: isBombshell 
-              ? 'linear-gradient(150deg, #ff007f 0%, #b80060 35%, #4a0025 70%, #15000a 100%)'
+              ? 'linear-gradient(150deg, rgba(255,0,127,0.55) 0%, rgba(184,0,96,0.35) 35%, rgba(74,0,37,0.6) 70%, rgba(21,0,10,0.88) 100%)'
               : `linear-gradient(160deg, ${meta.accent}ee 0%, ${meta.accent}aa 45%, rgba(6,3,14,0.96) 100%)`,
             mixBlendMode: 'hard-light',
-            opacity: 0.95,
-            zIndex: 1,
+            opacity: isBombshell ? 0.75 : 0.95,
+            zIndex: 2,
           }}
         />
         <div
@@ -271,13 +322,13 @@ function PackBagContents({ meta }: { meta: RevealPackMeta }) {
             background: isBombshell ? '#FF1493' : meta.accent,
             mixBlendMode: 'color',
             opacity: 0.85,
-            zIndex: 2,
+            zIndex: 3,
           }}
         />
         {/* Soft radial specular highlight */}
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 25%, rgba(255,255,255,0.2) 0%, transparent 60%)', zIndex: 3 }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 25%, rgba(255,255,255,0.2) 0%, transparent 60%)', zIndex: 4 }} />
         {/* Dark frame vignette */}
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.75) 90%)', zIndex: 3 }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.7) 90%)', zIndex: 4 }} />
       </div>
 
       {/* 2. REALISTIC SERRATED JAGGED CRIMP TEETH */}
@@ -1245,7 +1296,7 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
               perspective: '800px',
             }}
           >
-            <PackShell meta={meta} phase={phase} />
+            <PackShell meta={meta} phase={phase} sampleCard={cards?.[0]?.card} />
           </motion.div>
         )}
       </AnimatePresence>
