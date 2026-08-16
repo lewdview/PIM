@@ -10115,7 +10115,7 @@ export default function Game() {
             </div>
             <div className="flex items-center gap-2">
               <span className="text-[8px] font-mono text-white/60">
-                {formatTimeSec(getT())} / {formatTimeSec(song.duration)}
+                {formatTimeSec(getT())} / {formatTimeSec(songRef.current?.duration || 0)}
               </span>
             </div>
           </div>
