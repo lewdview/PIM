@@ -83,6 +83,7 @@ function GrainOverlay() {
 function PackShell({ meta, phase }: { meta: RevealPackMeta; phase: Phase }) {
   const isTorn = ['snap', 'pause', 'rise', 'flipping', 'layout', 'inspect'].includes(phase);
   const isTearing = phase === 'tearing';
+  const isBombshell = meta.category === 'bombshell' || meta.label?.toLowerCase().includes('bombshell');
 
   return (
     <>
@@ -94,10 +95,10 @@ function PackShell({ meta, phase }: { meta: RevealPackMeta; phase: Phase }) {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.12 }}
             style={{
-              position: 'absolute', inset: 0, borderRadius: '6px', overflow: 'hidden',
-              background: meta.gradient,
-              boxShadow: `8px 8px 0 #000, 0 0 40px ${meta.accent}15`,
-              border: '2px solid rgba(255,255,255,0.06)',
+              position: 'absolute', inset: 0, borderRadius: '8px', overflow: 'hidden',
+              background: isBombshell ? '#16000d' : (meta.gradient || '#0a0814'),
+              boxShadow: `0 15px 40px rgba(0,0,0,0.8), 0 0 35px ${meta.accent}35`,
+              border: '1.5px solid rgba(255,255,255,0.12)',
             }}
           >
             <PackBagContents meta={meta} />
@@ -121,10 +122,10 @@ function PackShell({ meta, phase }: { meta: RevealPackMeta; phase: Phase }) {
               animate={{ scaleY: 1.08 }}
               transition={{ duration: 0.3 }}
               style={{
-                position: 'absolute', inset: 0, borderRadius: '6px', overflow: 'hidden',
-                background: meta.gradient, transformOrigin: 'top center',
+                position: 'absolute', inset: 0, borderRadius: '8px', overflow: 'hidden',
+                background: isBombshell ? '#16000d' : (meta.gradient || '#0a0814'), transformOrigin: 'top center',
                 boxShadow: `8px 8px 0 #000`,
-                border: '2px solid rgba(255,255,255,0.06)',
+                border: '1.5px solid rgba(255,255,255,0.12)',
                 willChange: 'transform, opacity',
               }}
             >
@@ -132,12 +133,13 @@ function PackShell({ meta, phase }: { meta: RevealPackMeta; phase: Phase }) {
               {/* Glow leak at seam */}
               <motion.div
                 initial={{ opacity: 0 }}
-                animate={{ opacity: [0, 0.6, 0.3, 0.8] }}
+                animate={{ opacity: [0, 0.8, 0.4, 0.9] }}
                 transition={{ duration: 0.4 }}
                 style={{
-                  position: 'absolute', left: 0, right: 0, top: '46%', height: '8%',
-                  background: `linear-gradient(180deg, transparent, ${meta.accent}80, transparent)`,
-                  filter: 'blur(4px)',
+                  position: 'absolute', left: 0, right: 0, top: '46%', height: '10%',
+                  background: `linear-gradient(180deg, transparent, ${meta.accent}99, transparent)`,
+                  filter: 'blur(6px)',
+                  zIndex: 40,
                 }}
               />
             </motion.div>
@@ -147,7 +149,7 @@ function PackShell({ meta, phase }: { meta: RevealPackMeta; phase: Phase }) {
                 key={i}
                 initial={{ opacity: 0, y: 0 }}
                 animate={{
-                  opacity: [0, 0.7, 0],
+                  opacity: [0, 0.8, 0],
                   y: [(Math.random() - 0.5) * 4, (Math.random() - 0.5) * 8],
                   x: [(Math.random() - 0.5) * 3, (Math.random() - 0.5) * 6],
                 }}
@@ -158,6 +160,7 @@ function PackShell({ meta, phase }: { meta: RevealPackMeta; phase: Phase }) {
                   width: '2px', height: '6px',
                   background: meta.accent, borderRadius: '1px',
                   filter: `blur(${Math.random()}px)`,
+                  zIndex: 45,
                 }}
               />
             ))}
@@ -177,9 +180,9 @@ function PackShell({ meta, phase }: { meta: RevealPackMeta; phase: Phase }) {
               style={{
                 position: 'absolute', inset: 0,
                 clipPath: 'polygon(0 0, 100% 0, 98% 48%, 2% 50%)',
-                borderRadius: '6px', overflow: 'hidden',
-                background: meta.gradient, transformOrigin: 'top center',
-                border: '2px solid rgba(255,255,255,0.06)',
+                borderRadius: '8px', overflow: 'hidden',
+                background: isBombshell ? '#16000d' : (meta.gradient || '#0a0814'), transformOrigin: 'top center',
+                border: '1.5px solid rgba(255,255,255,0.12)',
               }}
             >
               <PackBagContents meta={meta} />
@@ -192,9 +195,9 @@ function PackShell({ meta, phase }: { meta: RevealPackMeta; phase: Phase }) {
               style={{
                 position: 'absolute', inset: 0,
                 clipPath: 'polygon(2% 50%, 98% 48%, 100% 100%, 0 100%)',
-                borderRadius: '6px', overflow: 'hidden',
-                background: meta.gradient,
-                border: '2px solid rgba(255,255,255,0.06)',
+                borderRadius: '8px', overflow: 'hidden',
+                background: isBombshell ? '#16000d' : (meta.gradient || '#0a0814'),
+                border: '1.5px solid rgba(255,255,255,0.12)',
               }}
             >
               <PackBagContents meta={meta} />
@@ -209,10 +212,10 @@ function PackShell({ meta, phase }: { meta: RevealPackMeta; phase: Phase }) {
 // ===== PACK EMBLEM (Custom Icon) =====
 function PackEmblem({ accent, size = 80, isBombshell = false }: { accent: string; size?: number; isBombshell?: boolean }) {
   return (
-    <div className="relative flex justify-center items-center my-2 rounded-full mx-auto" style={{ width: size, height: size, boxShadow: `0 0 30px ${accent}30` }}>
+    <div className="relative flex justify-center items-center my-1 rounded-full mx-auto" style={{ width: size, height: size, boxShadow: `0 0 25px ${accent}40`, zIndex: 25 }}>
       <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" style={{ animation: 'spin-slow 16s linear infinite', transformOrigin: 'center', willChange: 'transform' }}>
         <path id="circlePath" d="M 50, 50 m -35, 0 a 35,35 0 1,1 70,0 a 35,35 0 1,1 -70,0" fill="transparent" />
-        <text fill={accent} fontWeight="bold" style={{ textTransform: 'uppercase', fontSize: isBombshell ? '7.5px' : '8.5px', textShadow: `0 0 10px ${accent}80`, letterSpacing: '1px' }}>
+        <text fill={accent} fontWeight="900" style={{ textTransform: 'uppercase', fontSize: isBombshell ? '7.5px' : '8.5px', textShadow: `0 0 10px ${accent}`, letterSpacing: '1px' }}>
           <textPath href="#circlePath" startOffset="0%">
             {isBombshell ? '💖 BOMBSHELL • UNCENSORED •' : 'TH3SCR1B3 • GEN 0 •'}
           </textPath>
@@ -220,19 +223,20 @@ function PackEmblem({ accent, size = 80, isBombshell = false }: { accent: string
             {isBombshell ? '💖 BOMBSHELL • UNCENSORED •' : 'TH3SCR1B3 • GEN 0 •'}
           </textPath>
         </text>
-        <circle cx="50" cy="50" r="23" fill="none" stroke={accent} strokeWidth="1" strokeDasharray="3 3" opacity="0.7" />
+        <circle cx="50" cy="50" r="23" fill="none" stroke={accent} strokeWidth="1.5" strokeDasharray="3 3" opacity="0.8" />
       </svg>
       <div className="absolute inset-0 flex items-center justify-center">
         <span className="font-black" style={{ 
-          fontSize: size * 0.42, 
-          color: isBombshell ? '#fff' : '#fff', 
+          fontSize: size * 0.44, 
+          color: '#ffffff',
+          WebkitTextFillColor: '#ffffff',
           fontFamily: '"Impact", "Arial Black", sans-serif',
           letterSpacing: '-1.5px',
           transform: 'scaleY(1.2) scaleX(0.9)',
-          WebkitTextStroke: '1px #000',
-          textShadow: `0 0 12px ${accent}, 2px 2px 0 #000`,
+          WebkitTextStroke: '1px #000000',
+          textShadow: `0 0 15px ${accent}, 2px 2px 0 #000000`,
         }}>
-          {isBombshell ? '365' : '365'}
+          365
         </span>
       </div>
     </div>
@@ -242,171 +246,188 @@ function PackEmblem({ accent, size = 80, isBombshell = false }: { accent: string
 function PackBagContents({ meta }: { meta: RevealPackMeta }) {
   const isBombshell = meta.category === 'bombshell' || meta.label?.toLowerCase().includes('bombshell');
   const variant = get365CardVariantStyle(meta.category || meta.label);
-  const activeCoverArt = meta.coverImage || getPackCoverFallback(meta.category || meta.label);
 
   return (
     <>
-      {/* CLEAN 3D METALLIC FOIL PACK FIELD */}
-      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isBombshell ? '#12000b' : 'rgba(6,3,14,0.96)' }}>
+      {/* 1. CLEAN 3D METALLIC FOIL PACK BASE */}
+      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isBombshell ? '#16000d' : '#08060f', zIndex: 0 }}>
         {/* VIBRANT POPPING PACK ACCENT COLOR TINT */}
         <div
-          className="absolute inset-0 pointer-events-none transition-all z-10"
+          className="absolute inset-0 pointer-events-none transition-all"
           style={{
             position: 'absolute', inset: 0,
             background: isBombshell 
-              ? 'linear-gradient(150deg, #ff007f 0%, #a00055 35%, #300018 70%, #0d0006 100%)'
+              ? 'linear-gradient(150deg, #ff007f 0%, #b80060 35%, #4a0025 70%, #15000a 100%)'
               : `linear-gradient(160deg, ${meta.accent}ee 0%, ${meta.accent}aa 45%, rgba(6,3,14,0.96) 100%)`,
             mixBlendMode: 'hard-light',
-            opacity: 0.92,
+            opacity: 0.95,
+            zIndex: 1,
           }}
         />
         <div
-          className="absolute inset-0 pointer-events-none transition-all z-10"
+          className="absolute inset-0 pointer-events-none transition-all"
           style={{
             position: 'absolute', inset: 0,
             background: isBombshell ? '#FF1493' : meta.accent,
             mixBlendMode: 'color',
             opacity: 0.85,
+            zIndex: 2,
           }}
         />
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 40%, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.92) 85%)', zIndex: 10 }} />
+        {/* Soft radial specular highlight */}
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 25%, rgba(255,255,255,0.2) 0%, transparent 60%)', zIndex: 3 }} />
+        {/* Dark frame vignette */}
+        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.75) 90%)', zIndex: 3 }} />
       </div>
-      <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 50% 30%, ${meta.accent}50, transparent 60%)` }} />
-      <div style={{
-        position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center',
-      }}>
-        {/* REALISTIC SERRATED JAGGED CRIMP TEETH (Top Industrial Seal) */}
-        <div className="absolute inset-x-0 top-0 h-[22px] foil-crimp-serrated-top z-20" style={isBombshell ? { filter: 'drop-shadow(0 2px 8px #ff1493)' } : undefined} />
 
-        {/* FOIL WRAPPER TEAR NOTCHES (Easy-Open Notch Cutouts) */}
-        <div className="foil-tear-notch-left" style={isBombshell ? { background: '#ff1493' } : undefined} />
-        <div className="foil-tear-notch-right" style={isBombshell ? { background: '#ff1493' } : undefined} />
+      {/* 2. REALISTIC SERRATED JAGGED CRIMP TEETH */}
+      <div className="absolute inset-x-0 top-0 h-[22px] foil-crimp-serrated-top" style={{ zIndex: 25, ...(isBombshell ? { filter: 'drop-shadow(0 2px 8px #ff1493)' } : {}) }} />
+      <div className="absolute inset-x-0 bottom-0 h-[22px] foil-crimp-serrated-bottom" style={{ zIndex: 25 }} />
 
-        {/* BACK FIN SEAL (Vertical Seam Overlay) */}
-        <div className="foil-fin-seal" />
+      {/* 3. FOIL WRAPPER TEAR NOTCHES */}
+      <div className="foil-tear-notch-left" style={{ zIndex: 35, ...(isBombshell ? { background: '#ff1493' } : {}) }} />
+      <div className="foil-tear-notch-right" style={{ zIndex: 35, ...(isBombshell ? { background: '#ff1493' } : {}) }} />
 
-        {/* DYNAMIC HOLOGRAPHIC RAINBOW SPECULAR REFRACTION */}
-        <div className="foil-holo-prism" style={{ opacity: isBombshell ? 0.6 : 0.4 }} />
+      {/* 4. BACK FIN SEAL */}
+      <div className="foil-fin-seal" style={{ zIndex: 6 }} />
 
-        {/* 3D INNER CARD STACK BULGE */}
-        <div className="foil-card-bulge" />
+      {/* 5. DYNAMIC HOLOGRAPHIC RAINBOW SPECULAR REFRACTION */}
+      <div className="foil-holo-prism" style={{ opacity: isBombshell ? 0.45 : 0.35, zIndex: 8 }} />
 
-        {/* METALLIC FOIL WRINKLES & FOLD CREASES OVERLAY */}
-        <div className="foil-wrinkles-overlay" />
-        <div className="foil-metallic-sheen" />
+      {/* 6. 3D INNER CARD STACK BULGE */}
+      <div className="foil-card-bulge" style={{ zIndex: 6 }} />
 
-        {/* REALISTIC METALLIC FOIL CRINKLE NOISE TEXTURE */}
-        <div className="absolute inset-0 pointer-events-none mix-blend-overlay" style={{
-          background: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='foilNoise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.035 0.08' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23foilNoise)'/%3E%3C/svg%3E")`,
-          opacity: 0.32,
-          zIndex: 4,
+      {/* 7. METALLIC FOIL WRINKLES & FOLD CREASES */}
+      <div className="foil-wrinkles-overlay" style={{ zIndex: 7, opacity: 0.5 }} />
+      <div className="foil-metallic-sheen" style={{ zIndex: 5 }} />
+
+      {/* 8. REALISTIC METALLIC FOIL CRINKLE NOISE TEXTURE */}
+      <div className="absolute inset-0 pointer-events-none mix-blend-overlay" style={{
+        background: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='foilNoise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.035 0.08' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23foilNoise)'/%3E%3C/svg%3E")`,
+        opacity: 0.25,
+        zIndex: 9,
+      }} />
+
+      {/* 9. VERTICAL TH3SCR1B3 / BOMBSHELL SIDE BANNER */}
+      <div className="absolute left-1 top-24 w-8 flex items-center justify-center pointer-events-none" style={{ zIndex: 22 }}>
+        <div className="font-black leading-none uppercase whitespace-nowrap" style={{
+          transform: 'rotate(-90deg) scaleY(1.3) scaleX(0.9)',
+          color: 'rgba(255,255,255,0.8)',
+          WebkitTextFillColor: 'rgba(255,255,255,0.8)',
+          fontFamily: '"Impact", "Arial Black", sans-serif',
+          fontSize: '16px',
+          letterSpacing: '-0.5px',
+          WebkitTextStroke: `1px ${isBombshell ? '#FF1493' : meta.accent}`,
+          textShadow: `0 0 12px ${isBombshell ? '#FF1493' : meta.accent}99`,
+        }}>
+          {isBombshell ? 'BOMBSHELL' : 'TH3SCR1B3'}
+        </div>
+      </div>
+
+      {/* 10. Middle-Left: Price Sticker */}
+      <div className="absolute left-0 top-20 pointer-events-none" style={{ zIndex: 30 }}>
+        <div className="sticker-gun-tag sticker-slits drop-shadow-lg" style={{ 
+          transform: 'rotate(-90deg) translateX(-50%)',
+          transformOrigin: 'left center',
+          background: '#ffffff',
+          '--slit-color': `${isBombshell ? '#FF1493' : meta.accent}30`,
+          padding: '4px 10px',
+          alignItems: 'center'
+        } as any}>
+          <span className="text-[6px] font-black tracking-tighter opacity-70 mb-0.5 leading-none" style={{ fontFamily: 'Impact, sans-serif', color: '#000', WebkitTextFillColor: '#000' }}>
+            {isBombshell ? 'BOMBSHELL VAULT' : 'TH3SCR1B3 VAULT'}
+          </span>
+          <div className="flex items-baseline leading-none py-0.5">
+            <span className="text-[15px] font-black mr-0.5" style={{ transform: 'scaleY(1.3)', letterSpacing: '-0.8px', color: isBombshell ? '#FF1493' : '#000', WebkitTextFillColor: isBombshell ? '#FF1493' : '#000' }}>
+              {meta.price || '$0.25'}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* 11. CENTER BAG GRAPHICS */}
+      <div 
+        className="absolute inset-0 flex flex-col items-center justify-between pt-6 pb-8 px-4 pointer-events-none"
+        style={{ zIndex: 20 }}
+      >
+        {/* Top dashed tear guide */}
+        <div className="w-full h-4 mt-2" style={{
+          background: 'linear-gradient(180deg, rgba(255,255,255,0.15), transparent)',
+          borderBottom: `2px dashed ${isBombshell ? 'rgba(255,20,147,0.7)' : 'rgba(255,255,255,0.35)'}`,
         }} />
 
-        {/* VERTICAL TH3SCR1B3 SIDE BANNER */}
-        <div className="absolute left-1 top-24 w-8 flex items-center justify-center pointer-events-none z-20 mix-blend-overlay">
-          <div className="font-black leading-none uppercase whitespace-nowrap" style={{
-            transform: 'rotate(-90deg) scaleY(1.3) scaleX(0.9)',
-            color: 'rgba(255,255,255,0.7)',
-            fontFamily: '"Impact", "Arial Black", sans-serif',
-            fontSize: '16px',
-            letterSpacing: '-0.5px',
-            WebkitTextStroke: `1px ${meta.accent}`,
-            textShadow: `0 0 10px ${meta.accent}80`,
-          }}>
-            {isBombshell ? 'BOMBSHELL' : 'TH3SCR1B3'}
-          </div>
-        </div>
-
-        {/* Middle-Left: Price Sticker */}
-        <div className="absolute left-0 top-20 z-30 pointer-events-none">
-          <div className="sticker-gun-tag sticker-slits drop-shadow-lg" style={{ 
-            transform: 'rotate(-90deg) translateX(-50%)',
-            transformOrigin: 'left center',
-            background: isBombshell ? '#ffffff' : `linear-gradient(${meta.accent}99, ${meta.accent}99), #ffffff`,
-            '--slit-color': `${meta.accent}30`,
-            padding: '4px 10px',
-            alignItems: 'center'
-          } as any}>
-            <span className="text-[6px] font-black tracking-tighter opacity-70 mb-0.5 leading-none" style={{ fontFamily: 'Impact, sans-serif' }}>
-              {isBombshell ? 'BOMBSHELL VAULT' : 'TH3SCR1B3 VAULT'}
-            </span>
-            <div className="flex items-baseline leading-none py-0.5">
-              <span className="text-[15px] font-black mr-0.5" style={{ transform: 'scaleY(1.3)', letterSpacing: '-0.8px', color: isBombshell ? '#FF1493' : '#000' }}>
-                {meta.price}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* CENTER BAG GRAPHICS */}
-        <div className="absolute top-8 left-0 right-0 flex flex-col items-center w-full">
-            {/* Sealed top dashed line */}
-            <div className="w-full h-5" style={{
-              background: 'linear-gradient(180deg, rgba(255,255,255,0.06), transparent)',
-              borderBottom: '2px dashed rgba(255,255,255,0.08)',
-            }} />
-          
-            <h3 className="text-[32px] leading-[0.9] pack-label-neon uppercase font-black text-center" style={{
-              '--neon-accent': meta.accent,
+        {/* Center Title, Emblem, and Tagline */}
+        <div className="flex flex-col items-center justify-center my-auto w-full">
+          <h3 
+            className="text-[32px] leading-[0.88] uppercase font-black text-center" 
+            style={{
               color: '#ffffff',
+              WebkitTextFillColor: '#ffffff',
               fontFamily: '"Impact", "Arial Black", sans-serif',
-              letterSpacing: '0.02em',
+              letterSpacing: '-0.5px',
               transform: 'scaleY(1.22) scaleX(0.95)',
               transformOrigin: 'center',
-              WebkitTextStroke: '1.2px #000000',
+              WebkitTextStroke: '1.5px #000000',
               textShadow: `
-                0 0 10px ${meta.accent}, 
-                0 0 20px ${meta.accent}, 
-                1px 2px 0 #000000, 
-                2px 4px 10px rgba(0,0,0,0.8)
+                0 0 15px ${isBombshell ? '#FF1493' : meta.accent}, 
+                0 0 30px ${isBombshell ? '#FF1493' : meta.accent}99, 
+                2px 3px 0 #000000, 
+                3px 6px 12px rgba(0,0,0,0.95)
               `,
-              margin: '12px 0 8px 0',
-            } as React.CSSProperties}>
-              {meta.label}
-            </h3>
-            
-            <PackEmblem accent={meta.accent} size={60} isBombshell={isBombshell} />
-            
-            <div className="text-center mt-2 w-full">
-              <div className="inline-block">
-                <div className="sticker-gun-tag sticker-slits drop-shadow-md" style={{
-                  background: '#ffffff',
-                  border: `1px solid ${meta.accent}30`,
-                  '--slit-color': `${meta.accent}20`,
-                  padding: '3px 10px',
-                  transform: 'rotate(0.5deg)',
-                  minWidth: '150px'
-                } as any}>
-                  <span className="text-[8px] font-black tracking-tighter uppercase italic opacity-90" style={{ color: isBombshell ? '#FF1493' : '#000' }}>
-                    {isBombshell ? 'EXCLUSIVE BOMBSHELL ARCHIVE' : variant.tagline}
-                  </span>
-                </div>
+              margin: '8px 0 6px 0',
+            }}
+          >
+            {meta.label || (isBombshell ? 'BOMBSHELL PACK' : 'VAULT PACK')}
+          </h3>
+          
+          <PackEmblem accent={isBombshell ? '#FF1493' : meta.accent} size={62} isBombshell={isBombshell} />
+          
+          <div className="text-center mt-2 w-full">
+            <div className="inline-block">
+              <div className="sticker-gun-tag sticker-slits drop-shadow-md" style={{
+                background: '#ffffff',
+                border: `1.5px solid ${isBombshell ? '#FF1493' : meta.accent}40`,
+                '--slit-color': `${isBombshell ? '#FF1493' : meta.accent}20`,
+                padding: '3px 10px',
+                transform: 'rotate(0.5deg)',
+                minWidth: '150px'
+              } as any}>
+                <span 
+                  className="text-[8px] font-black tracking-tighter uppercase italic opacity-95" 
+                  style={{ 
+                    color: isBombshell ? '#FF1493' : '#000000',
+                    WebkitTextFillColor: isBombshell ? '#FF1493' : '#000000',
+                    fontFamily: '"JetBrains Mono", monospace'
+                  }}
+                >
+                  {isBombshell ? '★ STRICTLY UNCENSORED ARCHIVE ★' : variant.tagline}
+                </span>
               </div>
             </div>
-        </div>
-
-        {/* Bottom Center: Card Count Sticker */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 pointer-events-none">
-          <div className="sticker-gun-tag sticker-slits drop-shadow-sm" style={{ 
-            background: '#ffffff',
-            '--slit-color': 'rgba(0,0,0,0.1)',
-            transform: 'rotate(2deg)',
-            padding: '2px 10px',
-            alignItems: 'center'
-          } as any}>
-            <span className="text-[7px] font-black tracking-tighter uppercase mb-0.5 opacity-60">CARDS</span>
-            <span className="text-[14px] font-black leading-none" style={{ transform: 'scaleY(1.2)' }}>
-              {meta.cardCount || 1}
-            </span>
           </div>
         </div>
 
-        {/* REALISTIC SERRATED JAGGED CRIMP TEETH (Bottom Industrial Seal) */}
-        <div className="absolute inset-x-0 bottom-0 h-[22px] foil-crimp-serrated-bottom z-20" />
+        {/* Bottom spacing helper */}
+        <div className="h-4" />
       </div>
 
-      <div style={{ position: 'absolute', inset: 0, border: '1.5px solid rgba(255,255,255,0.05)', borderRadius: '6px', pointerEvents: 'none' }} />
+      {/* 12. Bottom Center: Card Count Sticker */}
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 pointer-events-none" style={{ zIndex: 30 }}>
+        <div className="sticker-gun-tag sticker-slits drop-shadow-sm" style={{ 
+          background: '#ffffff',
+          '--slit-color': 'rgba(0,0,0,0.1)',
+          transform: 'rotate(2deg)',
+          padding: '2px 10px',
+          alignItems: 'center'
+        } as any}>
+          <span className="text-[7px] font-black tracking-tighter uppercase mb-0.5 opacity-70" style={{ color: '#000', WebkitTextFillColor: '#000' }}>CARDS</span>
+          <span className="text-[14px] font-black leading-none" style={{ transform: 'scaleY(1.2)', color: '#000', WebkitTextFillColor: '#000' }}>
+            {meta.cardCount || 1}
+          </span>
+        </div>
+      </div>
+
+      <div style={{ position: 'absolute', inset: 0, border: '1.5px solid rgba(255,255,255,0.08)', borderRadius: '8px', pointerEvents: 'none', zIndex: 30 }} />
     </>
   );
 }
