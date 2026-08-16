@@ -22,10 +22,10 @@ import { getRelativeDay } from "../utils/dayCalc";
 import { getSmartCoverCandidates, isBombshellCoverPath } from "@/utils/rarityArtwork";
 
 // Use Vite's eager glob to grab files in /public/data/slideshow/
-const imageModules = import.meta.glob<string>('/public/data/slideshow/**/*.{png,jpg,jpeg,gif,webp,svg}', { query: '?url', import: 'default', eager: true });
+const imageModules = import.meta.glob<string>('../../public/data/slideshow/**/*.{png,jpg,jpeg,gif,webp,svg}', { query: '?url', import: 'default', eager: true });
 const staticImages: string[] = Object.values(imageModules).length > 0
   ? (Object.values(imageModules) as string[])
-  : Object.keys(imageModules).map(key => key.replace('/public', ''));
+  : Object.keys(imageModules).map(key => key.replace(/.*\/public/, ''));
 
 export interface TransmissionLoadState {
   step: number;
