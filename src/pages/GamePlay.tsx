@@ -5,7 +5,7 @@ import { getSongById, saveHighScore, isSongTimeLocked, getModifierForSong, STAGE
 import { saveMedal, saveScoreHistory } from "@/game/progress";
 import type { GameSong } from "@/game/api";
 import type { Note, JudgmentDisplay, GameState, NoteType } from "@/game/types";
-import { loadOpts, keyLabel, type GameOpts } from "@/lib/options";
+import { loadOpts, keyLabel, getEffectiveDpr, type GameOpts, type RenderResolution, type GfxLevel, type FpsTarget, type ParticleDensity } from "@/lib/options";
 import { audioManager } from "@/game/audio";
 import { useVaultStore } from "@/store/useVaultStore";
 import { haptics } from "../utils/haptics";
@@ -233,6 +233,11 @@ function isDirectionMatch(reqDir?: Note['swipeDirection'], actualDir?: Note['swi
 const GameplayVisualizer: React.FC<GameplayVisualizerProps> = ({ analyserRef, dataArrayRef, isPlaying }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [activeShape, setActiveShape] = useState<'flower_of_life' | 'sri_yantra' | 'metatrons_cube' | 'bipolar_torus' | 'lakshmi_star'>('flower_of_life');
+  const activeShapeRef = useRef(activeShape);
+
+  useEffect(() => {
+    activeShapeRef.current = activeShape;
+  }, [activeShape]);
 
   useEffect(() => {
     if (!isPlaying) return;
@@ -242,7 +247,9 @@ const GameplayVisualizer: React.FC<GameplayVisualizerProps> = ({ analyserRef, da
     const interval = setInterval(() => {
       setActiveShape(current => {
         const idx = shapes.indexOf(current);
-        return shapes[(idx + 1) % shapes.length];
+        const next = shapes[(idx + 1) % shapes.length];
+        activeShapeRef.current = next;
+        return next;
       });
     }, 15000);
     return () => clearInterval(interval);
@@ -257,21 +264,29 @@ const GameplayVisualizer: React.FC<GameplayVisualizerProps> = ({ analyserRef, da
     let rotationAngle = 0;
 
     const resize = () => {
-      canvas.width = canvas.parentElement?.clientWidth || window.innerWidth;
-      canvas.height = canvas.parentElement?.clientHeight || window.innerHeight;
+      if (!canvas || !canvas.parentElement) return;
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      const w = canvas.parentElement.clientWidth || window.innerWidth;
+      const h = canvas.parentElement.clientHeight || window.innerHeight;
+      canvas.width = Math.floor(w * dpr);
+      canvas.height = Math.floor(h * dpr);
+      canvas.style.width = `${w}px`;
+      canvas.style.height = `${h}px`;
+      ctx.resetTransform();
+      ctx.scale(dpr, dpr);
     };
     resize();
     window.addEventListener('resize', resize);
 
     const render = () => {
-      const w = canvas.width;
-      const h = canvas.height;
-      const cx = w / 2;
-      const cy = h / 2;
-      const size = Math.min(w, h) * 0.35;
+      const parentW = canvas.parentElement?.clientWidth || window.innerWidth;
+      const parentH = canvas.parentElement?.clientHeight || window.innerHeight;
+      const cx = parentW / 2;
+      const cy = parentH / 2;
+      const size = Math.min(parentW, parentH) * 0.35;
 
       ctx.fillStyle = 'rgba(5, 4, 3, 0.15)';
-      ctx.fillRect(0, 0, w, h);
+      ctx.fillRect(0, 0, parentW, parentH);
 
       let bass = 0;
       let mid = 0;
@@ -325,7 +340,8 @@ const GameplayVisualizer: React.FC<GameplayVisualizerProps> = ({ analyserRef, da
 
       const opacityVal = 0.16 + highN * 0.10;
 
-      if (activeShape === 'flower_of_life') {
+      const curShape = activeShapeRef.current;
+      if (curShape === 'flower_of_life') {
         const radius = size * 0.22;
         ctx.lineWidth = 1.0;
         for (let i = 0; i < 6; i++) {
@@ -353,7 +369,7 @@ const GameplayVisualizer: React.FC<GameplayVisualizerProps> = ({ analyserRef, da
         ctx.arc(0, 0, radius, 0, Math.PI * 2);
         ctx.stroke();
 
-      } else if (activeShape === 'sri_yantra') {
+      } else if (curShape === 'sri_yantra') {
         const scaleFact = size * 0.85;
         ctx.lineWidth = 0.9;
         const drawYantraTriangle = (yCenter: number, r: number, pointingUp: boolean, hueOffset: number) => {
@@ -383,7 +399,7 @@ const GameplayVisualizer: React.FC<GameplayVisualizerProps> = ({ analyserRef, da
         ctx.arc(0, 0, scaleFact * 0.58, 0, Math.PI * 2);
         ctx.stroke();
 
-      } else if (activeShape === 'metatrons_cube') {
+      } else if (curShape === 'metatrons_cube') {
         const rad = size * 0.22;
         const nodes: {x: number, y: number, color: string}[] = [];
         ctx.lineWidth = 0.7;
@@ -413,7 +429,7 @@ const GameplayVisualizer: React.FC<GameplayVisualizerProps> = ({ analyserRef, da
           ctx.stroke();
         });
 
-      } else if (activeShape === 'bipolar_torus') {
+      } else if (curShape === 'bipolar_torus') {
         const rad = size * 0.88;
         ctx.lineWidth = 0.9;
         const circlesCount = 8;
@@ -434,7 +450,7 @@ const GameplayVisualizer: React.FC<GameplayVisualizerProps> = ({ analyserRef, da
           ctx.stroke();
         }
 
-      } else if (activeShape === 'lakshmi_star') {
+      } else if (curShape === 'lakshmi_star') {
         const rad = size * 0.68;
         ctx.lineWidth = 1.0;
         const drawSquare = (angle: number, colorIdx: number) => {
@@ -467,8 +483,12 @@ const GameplayVisualizer: React.FC<GameplayVisualizerProps> = ({ analyserRef, da
     return () => {
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener('resize', resize);
+      if (canvas) {
+        canvas.width = 0;
+        canvas.height = 0;
+      }
     };
-  }, [activeShape, isPlaying]);
+  }, [isPlaying]);
 
   return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full block" />;
 };
@@ -2279,6 +2299,8 @@ export default function Game() {
   const fadeAlphaRef = useRef<number>(1);
   const audioSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const masterGainRef = useRef<GainNode | null>(null);
+  const masterCompressorRef = useRef<DynamicsCompressorNode | null>(null);
+  const lastRenderWallTimeRef = useRef<number>(0);
   const audioFiltersRef = useRef<BiquadFilterNode[]>([]);
   const laneGainsRef = useRef<GainNode[]>([]);
   const laneSilenced = useRef<boolean[]>([false, false, false]);
@@ -2468,7 +2490,11 @@ export default function Game() {
     
     setActivePovMode(nextMode);
     activePovModeRef.current = nextMode;
-    offscreenCanvasRef.current = null; // Reset offscreen canvas cache to regenerate track geometry
+    if (offscreenCanvasRef.current) {
+      offscreenCanvasRef.current.width = 0;
+      offscreenCanvasRef.current.height = 0;
+      offscreenCanvasRef.current = null; // Reset offscreen canvas cache to regenerate track geometry
+    }
     audioManager.playSfx('menu_confirm', 0.18);
 
     const labels = {
@@ -2595,14 +2621,31 @@ export default function Game() {
     };
   }, [opts.gameTrack]);
 
-  // Regenerate static track offscreen cache when gameTrack style changes
+  // Regenerate static track offscreen cache and re-scale canvas when options change
   useEffect(() => {
-    optsRef.current.gameTrack = opts.gameTrack;
-    if (canvasRef.current) {
-      const c = canvasRef.current;
-      const dpr = window.devicePixelRatio || 1;
-      const W = c.width / dpr;
-      const H = c.height / dpr;
+    optsRef.current = opts;
+    if (opts.noteTheme !== 'artwork') {
+      laneColorsRef.current = opts.laneColors;
+    }
+    const canvas = canvasRef.current;
+    const wrapper = canvasWrapperRef.current;
+    if (canvas && wrapper && wrapper.clientWidth > 0 && wrapper.clientHeight > 0) {
+      const W = wrapper.clientWidth;
+      const H = wrapper.clientHeight;
+      const dpr = getEffectiveDpr(opts.renderResolution);
+      const canvasWidth = Math.max(320, Math.floor(W * dpr));
+      const canvasHeight = Math.max(240, Math.floor(H * dpr));
+      if (canvas.width !== canvasWidth || canvas.height !== canvasHeight) {
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
+        canvas.style.width = `${W}px`;
+        canvas.style.height = `${H}px`;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.resetTransform();
+          ctx.scale(dpr, dpr);
+        }
+      }
       const diffLevel = songRef.current?.difficultyLevel ?? 5;
       offscreenCanvasRef.current = prerenderStaticTrack(
         W,
@@ -2610,10 +2653,11 @@ export default function Game() {
         dpr,
         diffLevel,
         laneColorsRef.current,
-        opts.gameTrack
+        opts.gameTrack,
+        activePovModeRef.current
       );
     }
-  }, [opts.gameTrack]);
+  }, [opts]);
   // Keep mutable refs current every render so draw/handlers always see latest values
   // without needing to be listed as useCallback dependencies.
   audioOffsetRef.current = opts.audioOffset;
@@ -2821,7 +2865,7 @@ export default function Game() {
     (lane: number, kind: "PERFECT+" | "PERFECT" | "GOOD" | "SHIELDED", customY?: number, swipeDir?: Note['swipeDirection']) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
-      const dpr = window.devicePixelRatio || 1;
+      const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
       const W = canvas.width / dpr;
       const H = canvas.height / dpr;
       const hitY = H * HIT_RATIO;
@@ -2832,7 +2876,7 @@ export default function Game() {
           ? "#00FFDD"
           : getDifficultyLaneColor(laneColorsRef.current[Math.max(0, Math.min(2, Math.round(lane)))] || "#00E5FF", songRef.current?.difficultyLevel ?? 5, Math.max(0, Math.min(2, Math.round(lane))));
 
-      const count =
+      const rawCount =
         kind === "SHIELDED"
           ? 20
           : kind === "PERFECT+"
@@ -2840,6 +2884,16 @@ export default function Game() {
             : kind === "PERFECT"
               ? 13
               : 9;
+
+      let particleDensity = optsRef.current?.particleDensity || 'full';
+      if (optsRef.current?.gfxLevel === 'low') particleDensity = 'minimal';
+      else if (optsRef.current?.gfxLevel === 'medium') particleDensity = 'half';
+
+      const count = particleDensity === 'minimal'
+        ? Math.min(3, Math.ceil(rawCount * 0.25))
+        : particleDensity === 'half'
+          ? Math.ceil(rawCount * 0.5)
+          : rawCount;
 
       let swipeAngle: number | null = null;
       if (swipeDir) {
@@ -3286,7 +3340,7 @@ export default function Game() {
         audioManager.playSfx("tap_nav", 0.15);
 
         // Calculate visual tail Y position (top) at release time to center the explosion
-        const dpr = window.devicePixelRatio || 1;
+        const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
         const H = (canvasRef.current?.height ?? 600) / dpr;
         const hitY = H * HIT_RATIO;
         const AT = approachTime(songRef.current?.difficultyLevel ?? 5);
@@ -3363,7 +3417,7 @@ export default function Game() {
       checkPowerUps(gs.combo);
       haptics.doubleTap();
 
-      const dpr = window.devicePixelRatio || 1;
+      const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
       const H = (canvasRef.current?.height ?? 600) / dpr;
       const hitY = H * HIT_RATIO;
       triggerHitFx(ns.currentLane, j, hitY, swipeDir);
@@ -3413,7 +3467,7 @@ export default function Game() {
           // ── Slide success particle effect ──
           const canvas = canvasRef.current;
           if (canvas) {
-            const dpr = window.devicePixelRatio || 1;
+            const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
             const W = canvas.width / dpr;
             const H = canvas.height / dpr;
             const hitY = H * HIT_RATIO;
@@ -3429,6 +3483,9 @@ export default function Game() {
                 vy: Math.sin(angle) * speed - 20,
                 size: 2.5 + Math.random() * 3.5,
               });
+            }
+            if (hitFxRef.current.length > 12) {
+              hitFxRef.current.shift();
             }
             hitFxRef.current.push({
               lane: toLane,
@@ -3762,9 +3819,26 @@ export default function Game() {
 
     // Schedule next frame ONLY if loop is actively running
     rafRef.current = requestAnimationFrame(() => drawRef.current?.());
+
+    // Framerate target throttle
+    const nowWall = performance.now();
+    const fpsTarget = optsRef.current?.fpsTarget || 'auto';
+    let targetDelta = 0;
+    if (fpsTarget === '30') targetDelta = 32.5; // ~30 FPS
+    else if (fpsTarget === '60') targetDelta = 15.5; // ~60 FPS
+    else if (fpsTarget === '120') targetDelta = 7.5; // ~120 FPS
+
+    if (targetDelta > 0 && nowWall - lastRenderWallTimeRef.current < targetDelta) {
+      return; // Throttle to target FPS
+    }
+    lastRenderWallTimeRef.current = nowWall;
+
     const ctx = canvas.getContext("2d");
     if (!ctx || !songRef.current) return;
-    if (optsRef.current.legacyGraphics) {
+    
+    // GFX level & bloom glow shadow blur optimization
+    const disableShadows = optsRef.current.legacyGraphics || !optsRef.current.bloomGlow || optsRef.current.gfxLevel === 'low';
+    if (disableShadows) {
       ctx.shadowBlur = 0;
       Object.defineProperty(ctx, 'shadowBlur', {
         set: () => {},
@@ -3792,7 +3866,7 @@ export default function Game() {
         audio.playbackRate = 1.0;
       }
     }
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
     const W = canvas.width / dpr;
     const H = canvas.height / dpr;
     const pulse = 0.5 + 0.5 * Math.sin(t * 10); // 1.6Hz pulse for polish
@@ -3922,7 +3996,11 @@ export default function Game() {
             };
             setActivePovMode(targetPov);
             activePovModeRef.current = targetPov;
-            offscreenCanvasRef.current = null; // Reset offscreen track canvas to regenerate geometry for target POV!
+            if (offscreenCanvasRef.current) {
+              offscreenCanvasRef.current.width = 0;
+              offscreenCanvasRef.current.height = 0;
+              offscreenCanvasRef.current = null; // Reset offscreen track canvas to regenerate geometry for target POV!
+            }
           }
         }
 
@@ -4376,33 +4454,40 @@ export default function Game() {
     const speedFactor = diffLevel <= 3 ? 0.6 : diffLevel <= 6 ? 1.0 : 1.5;
     const particleColor = diffLevel <= 3 ? "#00FFDD" : diffLevel <= 6 ? "#39FF14" : "#FF1493";
 
-    ctx.save();
-    for (const p of ambientParticlesRef.current) {
-      // update positions
-      p.x += p.vx * frameDt * speedFactor;
-      p.y += p.vy * frameDt * speedFactor;
+    const allowAmbient = optsRef.current.bgAnimation && optsRef.current.gfxLevel !== 'low' && optsRef.current.particleDensity !== 'minimal' && !optsRef.current.legacyGraphics;
+    if (allowAmbient) {
+      ctx.save();
+      for (const p of ambientParticlesRef.current) {
+        // update positions
+        p.x += p.vx * frameDt * speedFactor;
+        p.y += p.vy * frameDt * speedFactor;
 
-      // wrap boundaries
-      if (p.y < 0) {
-        p.y = H;
-        p.x = Math.random() * W;
+        // wrap boundaries
+        if (p.y < 0) {
+          p.y = H;
+          p.x = Math.random() * W;
+        }
+        if (p.x < 0 || p.x > W) {
+          p.x = Math.random() * W;
+        }
+
+        const a = p.alpha * (0.3 + 0.7 * Math.sin(t * 3 + p.x));
+        // Outer glow circle
+        ctx.fillStyle = particleColor;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * 2.0, 0, Math.PI * 2);
+        ctx.globalAlpha = a * 0.28;
+        ctx.fill();
+
+        // Core circle
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size * 0.9, 0, Math.PI * 2);
+        ctx.fillStyle = isVoid ? "#ffffff" : particleColor;
+        ctx.globalAlpha = a;
+        ctx.fill();
       }
-      if (p.x < 0 || p.x > W) {
-        p.x = Math.random() * W;
-      }
-
-      const a = p.alpha * (0.3 + 0.7 * Math.sin(t * 3 + p.x));
-      // Outer glow circle
-      ctx.fillStyle = particleColor;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size * 2.0, 0, Math.PI * 2);
-      ctx.globalAlpha = a * 0.28;
-      ctx.fill();
-
-      // Core circle
-      ctx.fill();
+      ctx.restore();
     }
-    ctx.restore();
 
     // Draw Cyber Matrix or Hyperdrive Synthwave dynamic track pulse effects
     if (optsRef.current.gameTrack === 'cyber_matrix' && !optsRef.current.legacyGraphics) {
@@ -5918,10 +6003,15 @@ export default function Game() {
       const noteColor = isMissedNote ? "#FF3800" : lc;
       let drawX = noteX;
 
-      // Spawn note trail particles as the note descends (capped to max 35 for performance)
-      if (phase === "playing" && !isMissedNote) {
-        if (Math.random() < 0.22) {
-          if (noteTrailsRef.current.length > 35) {
+      // Spawn note trail particles as the note descends (scaled and capped for performance)
+      const particleDensity = optsRef.current?.particleDensity || 'full';
+      const gfxLevel = optsRef.current?.gfxLevel || 'high';
+      const allowTrails = particleDensity !== 'minimal' && gfxLevel !== 'low' && !optsRef.current.legacyGraphics;
+      if (phase === "playing" && !isMissedNote && allowTrails) {
+        const spawnChance = particleDensity === 'half' || gfxLevel === 'medium' ? 0.10 : 0.22;
+        const maxTrails = particleDensity === 'half' || gfxLevel === 'medium' ? 15 : 35;
+        if (Math.random() < spawnChance) {
+          if (noteTrailsRef.current.length > maxTrails) {
             noteTrailsRef.current.shift();
           }
           noteTrailsRef.current.push({
@@ -7378,8 +7468,9 @@ export default function Game() {
                 haptics.mediumTap();
 
                 // ── Slide success particle effect ──
-                const W = canvas.width / (window.devicePixelRatio || 1);
-                const H = canvas.height / (window.devicePixelRatio || 1);
+                const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
+                const W = canvas.width / dpr;
+                const H = canvas.height / dpr;
                 const hitY = H * HIT_RATIO;
                 const { x: lx, w: lw } = laneAt(newLane, 1, W);
                 const cx = lx + lw / 2;
@@ -7393,6 +7484,9 @@ export default function Game() {
                     vy: Math.sin(angle) * speed - 20,
                     size: 2.5 + Math.random() * 3.5,
                   });
+                }
+                if (hitFxRef.current.length > 12) {
+                  hitFxRef.current.shift();
                 }
                 hitFxRef.current.push({
                   lane: newLane,
@@ -7555,7 +7649,7 @@ export default function Game() {
                   // ── Slide success particle effect ──
                   const canvas = canvasRef.current;
                   if (canvas) {
-                    const dpr = window.devicePixelRatio || 1;
+                    const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
                     const W = canvas.width / dpr;
                     const H = canvas.height / dpr;
                     const hitY = H * HIT_RATIO;
@@ -7571,6 +7665,9 @@ export default function Game() {
                         vy: Math.sin(angle) * speed - 20,
                         size: 2.5 + Math.random() * 3.5,
                       });
+                    }
+                    if (hitFxRef.current.length > 12) {
+                      hitFxRef.current.shift();
                     }
                     hitFxRef.current.push({
                       lane: newLane,
@@ -7781,9 +7878,9 @@ export default function Game() {
     const sync = () => {
       const W = wrapper.clientWidth;
       const H = wrapper.clientHeight;
-      const dpr = window.devicePixelRatio || 1;
-      const canvasWidth = Math.floor(W * dpr);
-      const canvasHeight = Math.floor(H * dpr);
+      const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
+      const canvasWidth = Math.max(320, Math.floor(W * dpr));
+      const canvasHeight = Math.max(240, Math.floor(H * dpr));
       // Only reassign when dimensions actually changed — setting canvas.width/height
       // always clears the canvas and resets the 2D context, causing visible flicker.
       if (W > 0 && H > 0 && (canvas.width !== canvasWidth || canvas.height !== canvasHeight)) {
@@ -7805,7 +7902,8 @@ export default function Game() {
           dpr,
           diffLevel,
           laneColorsRef.current,
-          optsRef.current.gameTrack
+          optsRef.current.gameTrack,
+          activePovModeRef.current
         );
       }
     };
@@ -7917,7 +8015,11 @@ export default function Game() {
         if (!isPovLockedRef.current) {
           setActivePovMode('classic');
           activePovModeRef.current = 'classic';
-          offscreenCanvasRef.current = null;
+          if (offscreenCanvasRef.current) {
+            offscreenCanvasRef.current.width = 0;
+            offscreenCanvasRef.current.height = 0;
+            offscreenCanvasRef.current = null;
+          }
         }
         console.log(`[Track Archetype Engine] Selected archetype '${selectedArchetype}' (${ARCHETYPE_METAS[selectedArchetype].name}) for song '${song?.title}'`);
 
@@ -8052,7 +8154,7 @@ export default function Game() {
       // Re-generate offscreen static track cache when song loads and overrides are applied
       const canvas = canvasRef.current;
       if (canvas) {
-        const dpr = window.devicePixelRatio || 1;
+        const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
         const W = canvas.width / dpr;
         const H = canvas.height / dpr;
         offscreenCanvasRef.current = prerenderStaticTrack(
@@ -8171,7 +8273,7 @@ export default function Game() {
                 
                 const canvas = canvasRef.current;
                 if (canvas) {
-                  const dpr = window.devicePixelRatio || 1;
+                  const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
                   const W = canvas.width / dpr;
                   const H = canvas.height / dpr;
                   offscreenCanvasRef.current = prerenderStaticTrack(
@@ -8761,6 +8863,7 @@ export default function Game() {
         masterGainNode.gain.setValueAtTime(0.85, actx.currentTime);
 
         const compressor = actx.createDynamicsCompressor();
+        masterCompressorRef.current = compressor;
         compressor.threshold.setValueAtTime(-1.0, actx.currentTime);
         compressor.knee.setValueAtTime(30, actx.currentTime);
         compressor.ratio.setValueAtTime(12, actx.currentTime);
@@ -8824,9 +8927,9 @@ export default function Game() {
         const c = canvasRef.current;
         const w = canvasWrapperRef.current;
         if (c && w && w.clientWidth > 0 && w.clientHeight > 0) {
-          const dpr = window.devicePixelRatio || 1;
-          const targetWidth = Math.floor(w.clientWidth * dpr);
-          const targetHeight = Math.floor(w.clientHeight * dpr);
+          const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
+          const targetWidth = Math.max(320, Math.floor(w.clientWidth * dpr));
+          const targetHeight = Math.max(240, Math.floor(w.clientHeight * dpr));
           if (c.width !== targetWidth || c.height !== targetHeight) {
             c.width = targetWidth;
             c.height = targetHeight;
@@ -9057,6 +9160,14 @@ export default function Game() {
         });
         laneGainsRef.current = [];
       }
+      if (masterGainRef.current) {
+        try { masterGainRef.current.disconnect(); } catch {}
+        masterGainRef.current = null;
+      }
+      if (masterCompressorRef.current) {
+        try { masterCompressorRef.current.disconnect(); } catch {}
+        masterCompressorRef.current = null;
+      }
       if (gameplayAnalyserRef.current) {
         try { gameplayAnalyserRef.current.disconnect(); } catch {}
         gameplayAnalyserRef.current = null;
@@ -9071,12 +9182,28 @@ export default function Game() {
       }
       laneSilenced.current = [false, false, false];
 
-      // Clean up canvas, particles, telemetry and image caches to release memory
+      // Clean up canvas bitmaps, particles, telemetry and image caches to release GPU/system memory
       coverImgRef.current = null;
-      coverBlurRef.current = null;
+      if (coverBlurRef.current) {
+        coverBlurRef.current.width = 0;
+        coverBlurRef.current.height = 0;
+        coverBlurRef.current = null;
+      }
       scanPatternRef.current = null;
-      offscreenCanvasRef.current = null;
-      slideshowSlidesRef.current = [];
+      if (offscreenCanvasRef.current) {
+        offscreenCanvasRef.current.width = 0;
+        offscreenCanvasRef.current.height = 0;
+        offscreenCanvasRef.current = null;
+      }
+      if (slideshowSlidesRef.current) {
+        slideshowSlidesRef.current.forEach(s => {
+          if (s && s.canvas) {
+            s.canvas.width = 0;
+            s.canvas.height = 0;
+          }
+        });
+        slideshowSlidesRef.current = [];
+      }
       gameplaySlideshowFloatersRef.current = [];
       noteTrailsRef.current = [];
       notesRef.current = [];
@@ -10456,7 +10583,8 @@ export default function Game() {
           {/* Judgment text — per-lane custom vector SVG popups anchored at judgment target strike zones */}
           {opts.judgmentText && displayJudge.map((j) => {
             if (Date.now() - j.ts > 600) return null;
-            const canvasW = canvasRef.current?.width ? canvasRef.current.width / (window.devicePixelRatio || 1) : 0;
+            const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
+            const canvasW = canvasRef.current?.width ? canvasRef.current.width / dpr : 0;
             if (!canvasW) return null;
             const hwBot = hwAtProgress(1, canvasW);
             const laneW = hwBot.width / LANE_COUNT;
@@ -10685,9 +10813,9 @@ export default function Game() {
                   const c = canvasRef.current;
                   const w = canvasWrapperRef.current;
                   if (c && w && w.clientWidth > 0 && w.clientHeight > 0) {
-                    const dpr = window.devicePixelRatio || 1;
-                    const targetWidth = Math.floor(w.clientWidth * dpr);
-                    const targetHeight = Math.floor(w.clientHeight * dpr);
+                    const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
+                    const targetWidth = Math.max(320, Math.floor(w.clientWidth * dpr));
+                    const targetHeight = Math.max(240, Math.floor(w.clientHeight * dpr));
                     if (c.width !== targetWidth || c.height !== targetHeight) {
                       c.width = targetWidth;
                       c.height = targetHeight;

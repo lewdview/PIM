@@ -12,6 +12,7 @@ import { getTimeUntilNextDay } from '../utils/dayCalc';
 import { useVaultStore } from '../store/useVaultStore';
 import { getAdminConfig } from '../utils/adminConfig';
 import { get365CardVariantStyle, getPackCoverFallback, getPackMultiCovers } from '../utils/cardVariants';
+import { getFeaturedBombshellFoilCover } from '../utils/bombshellCards';
 
 interface PackShopProps {
   onPurchase: (category: PackCategory, size: PackSize) => void;
@@ -282,31 +283,91 @@ export function PackBag({ category, isActive = true, onRip, isRipping = false, i
         opacity: isActive ? 1 : 0.4,
         transition: 'transform 0.35s cubic-bezier(.22,1,.36,1), opacity 0.35s ease, box-shadow 0.35s ease',
       }}>
-        {/* CLEAN 3D METALLIC FOIL PACK FIELD (Artwork temporarily removed) */}
-        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none flex items-center justify-center" style={{ background: 'rgba(6,3,14,0.96)' }}>
-          {/* VIBRANT POPPING PACK ACCENT COLOR TINT */}
-          <div
-            className="absolute inset-0 pointer-events-none transition-all z-10"
-            style={{
-              background: `linear-gradient(160deg, ${accent}ee 0%, ${accent}aa 45%, rgba(6,3,14,0.96) 100%)`,
-              mixBlendMode: 'hard-light',
-              opacity: 0.88,
-            }}
-          />
-          <div
-            className="absolute inset-0 pointer-events-none transition-all z-10"
-            style={{
-              background: accent,
-              mixBlendMode: 'color',
-              opacity: 0.85,
-            }}
-          />
-          {/* Deep Dark Frame Vignette */}
-          <div
-            className="absolute inset-0 pointer-events-none transition-opacity z-10"
-            style={{ background: 'radial-gradient(ellipse at 50% 40%, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.92) 85%)' }}
-          />
-        </div>
+        {/* CLEAN 3D METALLIC FOIL PACK FIELD WITH EMBEDDED ARTWORK */}
+        {(() => {
+          const isBombshell = cfg.category === 'bombshell' || cfg.label?.toLowerCase().includes('bombshell');
+          const foilCoverUrl = isBombshell 
+            ? (tier.coverImage || cfg.coverImage || getFeaturedBombshellFoilCover(1))
+            : (tier.coverImage || cfg.coverImage);
+
+          return (
+            <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none flex items-center justify-center" style={{ background: isBombshell ? '#16000d' : 'rgba(6,3,14,0.96)' }}>
+              {/* EMBEDDED CLOSE-UP COVER ARTWORK IN FOIL */}
+              {foilCoverUrl && (
+                <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 1 }}>
+                  <img
+                    src={foilCoverUrl}
+                    alt="Foil Artwork"
+                    className="w-full h-full object-cover"
+                    style={{
+                      transform: isBombshell ? 'scale(1.5) translateY(-4%)' : 'scale(1.15)',
+                      objectPosition: 'center 25%',
+                      filter: isBombshell 
+                        ? 'contrast(1.25) brightness(0.92) saturate(1.3)' 
+                        : 'contrast(1.15) brightness(0.7) saturate(1.2)',
+                      mixBlendMode: isBombshell ? 'luminosity' : 'normal',
+                      opacity: isBombshell ? (isActive ? 0.88 : 0.6) : (isActive ? 0.45 : 0.25),
+                    }}
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = getFeaturedBombshellFoilCover(1);
+                    }}
+                  />
+                  {/* Holographic foil iridescent duotone color overlay */}
+                  <div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{
+                      background: isBombshell 
+                        ? 'linear-gradient(145deg, rgba(255, 0, 128, 0.75) 0%, rgba(138, 0, 80, 0.45) 45%, rgba(20, 0, 12, 0.88) 100%)'
+                        : 'linear-gradient(160deg, rgba(0, 229, 255, 0.35) 0%, rgba(10, 16, 32, 0.75) 100%)',
+                      mixBlendMode: 'color',
+                      opacity: 0.9,
+                    }}
+                  />
+                  {/* Metallic specular sheen overlay */}
+                  <div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{
+                      background: isBombshell 
+                        ? 'radial-gradient(ellipse at 50% 30%, rgba(255, 105, 180, 0.5) 0%, transparent 65%)'
+                        : 'radial-gradient(ellipse at 50% 30%, rgba(255, 255, 255, 0.25) 0%, transparent 65%)',
+                      mixBlendMode: 'screen',
+                      opacity: 0.7,
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* VIBRANT POPPING PACK ACCENT COLOR TINT */}
+              <div
+                className="absolute inset-0 pointer-events-none transition-all"
+                style={{
+                  position: 'absolute', inset: 0,
+                  background: isBombshell 
+                    ? 'linear-gradient(150deg, rgba(255,0,127,0.5) 0%, rgba(184,0,96,0.3) 35%, rgba(74,0,37,0.55) 70%, rgba(21,0,10,0.85) 100%)'
+                    : `linear-gradient(160deg, ${accent}ee 0%, ${accent}aa 45%, rgba(6,3,14,0.96) 100%)`,
+                  mixBlendMode: 'hard-light',
+                  opacity: isBombshell ? 0.75 : 0.88,
+                  zIndex: 2,
+                }}
+              />
+              <div
+                className="absolute inset-0 pointer-events-none transition-all"
+                style={{
+                  position: 'absolute', inset: 0,
+                  background: isBombshell ? '#FF1493' : accent,
+                  mixBlendMode: 'color',
+                  opacity: 0.85,
+                  zIndex: 3,
+                }}
+              />
+              {/* Deep Dark Frame Vignette */}
+              <div
+                className="absolute inset-0 pointer-events-none transition-opacity"
+                style={{ background: 'radial-gradient(ellipse at 50% 40%, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.75) 85%)', zIndex: 4 }}
+              />
+            </div>
+          );
+        })()}
         {/* REALISTIC SERRATED JAGGED CRIMP TEETH (Top & Bottom Industrial Seals) */}
         <div className="absolute inset-x-0 top-0 h-[22px] foil-crimp-serrated-top z-20" />
         <div className="absolute inset-x-0 bottom-0 h-[22px] foil-crimp-serrated-bottom z-20" />

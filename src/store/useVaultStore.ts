@@ -28,6 +28,13 @@ export interface ProfileSettings {
   slideshowMode?: 'coco' | 'contour';
   povMode?: 'classic' | 'cyber_tunnel' | 'dynamic_stage';
   stagePovSwitch?: boolean;
+  renderResolution?: 'native' | 'high' | 'medium' | 'low';
+  gfxLevel?: 'ultra' | 'high' | 'medium' | 'low';
+  fpsTarget?: 'auto' | '60' | '120' | '30';
+  particleDensity?: 'full' | 'half' | 'minimal';
+  bloomGlow?: boolean;
+  bgAnimation?: boolean;
+  legacyGraphics?: boolean;
 }
 
 export interface ProfileProgression {
@@ -222,6 +229,13 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     slideshowMode: (localStorage.getItem("opt_slideshowMode") as any) ?? "coco",
     povMode: (localStorage.getItem("opt_povMode") as any) ?? "classic",
     stagePovSwitch: localStorage.getItem("opt_stagePovSwitch") !== "false",
+    renderResolution: ((localStorage.getItem("opt_renderResolution") as any) || 'high'),
+    gfxLevel: ((localStorage.getItem("opt_gfxLevel") as any) || 'high'),
+    fpsTarget: ((localStorage.getItem("opt_fpsTarget") as any) || 'auto'),
+    particleDensity: ((localStorage.getItem("opt_particleDensity") as any) || 'full'),
+    bloomGlow: localStorage.getItem("opt_bloomGlow") !== "false",
+    bgAnimation: localStorage.getItem("opt_bgAnimation") !== "false",
+    legacyGraphics: localStorage.getItem("opt_legacyGraphics") === "true",
   },
   progression: {
     tutorialCompleted: localStorage.getItem("pim_tutorial_completed") === "true",
@@ -471,6 +485,13 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         localStorage.setItem("opt_sfxEnabled", String(mergedSettings.sfxEnabled ?? true));
         localStorage.setItem("opt_haptics", String(mergedSettings.haptics));
         localStorage.setItem("opt_missSystem", String(mergedSettings.missSystem));
+        if (mergedSettings.renderResolution) localStorage.setItem("opt_renderResolution", mergedSettings.renderResolution);
+        if (mergedSettings.gfxLevel) localStorage.setItem("opt_gfxLevel", mergedSettings.gfxLevel);
+        if (mergedSettings.fpsTarget) localStorage.setItem("opt_fpsTarget", mergedSettings.fpsTarget);
+        if (mergedSettings.particleDensity) localStorage.setItem("opt_particleDensity", mergedSettings.particleDensity);
+        if (mergedSettings.bloomGlow !== undefined) localStorage.setItem("opt_bloomGlow", String(mergedSettings.bloomGlow));
+        if (mergedSettings.bgAnimation !== undefined) localStorage.setItem("opt_bgAnimation", String(mergedSettings.bgAnimation));
+        if (mergedSettings.legacyGraphics !== undefined) localStorage.setItem("opt_legacyGraphics", String(mergedSettings.legacyGraphics));
 
         localStorage.setItem("pim_tutorial_completed", String(mergedProgression.tutorialCompleted));
         localStorage.setItem("rc2_seen_key", mergedProgression.seenWelcomeModal ? "1" : "0");
@@ -822,6 +843,13 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     if (newSettings.slideshowMode !== undefined) localStorage.setItem("opt_slideshowMode", String(merged.slideshowMode));
     if (newSettings.povMode !== undefined) localStorage.setItem("opt_povMode", String(merged.povMode));
     if (newSettings.stagePovSwitch !== undefined) localStorage.setItem("opt_stagePovSwitch", String(merged.stagePovSwitch));
+    if (newSettings.renderResolution !== undefined) localStorage.setItem("opt_renderResolution", String(merged.renderResolution));
+    if (newSettings.gfxLevel !== undefined) localStorage.setItem("opt_gfxLevel", String(merged.gfxLevel));
+    if (newSettings.fpsTarget !== undefined) localStorage.setItem("opt_fpsTarget", String(merged.fpsTarget));
+    if (newSettings.particleDensity !== undefined) localStorage.setItem("opt_particleDensity", String(merged.particleDensity));
+    if (newSettings.bloomGlow !== undefined) localStorage.setItem("opt_bloomGlow", String(merged.bloomGlow));
+    if (newSettings.bgAnimation !== undefined) localStorage.setItem("opt_bgAnimation", String(merged.bgAnimation));
+    if (newSettings.legacyGraphics !== undefined) localStorage.setItem("opt_legacyGraphics", String(merged.legacyGraphics));
 
     if (userId) {
       const { error } = await supabase.from('profiles').update({ settings: merged }).eq('id', userId);

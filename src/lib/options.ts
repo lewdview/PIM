@@ -1,5 +1,10 @@
 import { useVaultStore } from '../store/useVaultStore';
 
+export type RenderResolution = 'native' | 'high' | 'medium' | 'low';
+export type GfxLevel = 'ultra' | 'high' | 'medium' | 'low';
+export type FpsTarget = 'auto' | '60' | '120' | '30';
+export type ParticleDensity = 'full' | 'half' | 'minimal';
+
 export type GameOpts = {
   missSystem: boolean;
   hudMisses: boolean;
@@ -25,6 +30,12 @@ export type GameOpts = {
   autoLatencyAdjust: boolean;
   povMode: 'classic' | 'cyber_tunnel' | 'dynamic_stage';
   stagePovSwitch: boolean;
+  renderResolution: RenderResolution;
+  gfxLevel: GfxLevel;
+  fpsTarget: FpsTarget;
+  particleDensity: ParticleDensity;
+  bloomGlow: boolean;
+  bgAnimation: boolean;
 };
 
 export interface GameBackground {
@@ -92,7 +103,30 @@ export const DEFAULT_OPTS: GameOpts = {
   autoLatencyAdjust: true,
   povMode: 'classic',
   stagePovSwitch: true,
+  renderResolution: 'high',
+  gfxLevel: 'high',
+  fpsTarget: 'auto',
+  particleDensity: 'full',
+  bloomGlow: true,
+  bgAnimation: true,
 };
+
+export function getEffectiveDpr(res: RenderResolution = 'high'): number {
+  if (typeof window === 'undefined') return 1;
+  const nativeDpr = window.devicePixelRatio || 1;
+  switch (res) {
+    case 'native': // Ultra Native DPR (e.g. 2x - 3x Retina, capped at 2.5)
+      return Math.min(Math.max(1, nativeDpr), 2.5);
+    case 'high': // High 1080p target (Clamped DPR max 1.5)
+      return Math.min(Math.max(1, nativeDpr), 1.5);
+    case 'medium': // Balanced 720p target (Fixed 1.0x)
+      return 1.0;
+    case 'low': // Performance 540p / low battery target (0.67x)
+      return 0.67;
+    default:
+      return Math.min(Math.max(1, nativeDpr), 1.5);
+  }
+}
 
 export function loadOpts(): GameOpts {
   const store = useVaultStore.getState();
@@ -105,6 +139,18 @@ export function loadOpts(): GameOpts {
 
   const isNoclipUnlocked = dbCheats?.noclip ?? (localStorage.getItem("opt_unlocked_noclip") === "true");
   const isIddqdUnlocked = dbCheats?.iddqd ?? (localStorage.getItem("opt_unlocked_iddqd") === "true");
+
+  const rawRes = (dbSettings?.renderResolution ?? localStorage.getItem("opt_renderResolution")) as RenderResolution;
+  const validRes: RenderResolution = (rawRes === 'native' || rawRes === 'high' || rawRes === 'medium' || rawRes === 'low') ? rawRes : 'high';
+
+  const rawGfx = (dbSettings?.gfxLevel ?? localStorage.getItem("opt_gfxLevel")) as GfxLevel;
+  const validGfx: GfxLevel = (rawGfx === 'ultra' || rawGfx === 'high' || rawGfx === 'medium' || rawGfx === 'low') ? rawGfx : 'high';
+
+  const rawFps = (dbSettings?.fpsTarget ?? localStorage.getItem("opt_fpsTarget")) as FpsTarget;
+  const validFps: FpsTarget = (rawFps === 'auto' || rawFps === '60' || rawFps === '120' || rawFps === '30') ? rawFps : 'auto';
+
+  const rawParticles = (dbSettings?.particleDensity ?? localStorage.getItem("opt_particleDensity")) as ParticleDensity;
+  const validParticles: ParticleDensity = (rawParticles === 'full' || rawParticles === 'half' || rawParticles === 'minimal') ? rawParticles : 'full';
 
   return {
     missSystem: isNoclipUnlocked 
@@ -145,6 +191,12 @@ export function loadOpts(): GameOpts {
     autoLatencyAdjust: dbSettings?.autoLatencyAdjust ?? bool("opt_autoLatencyAdjust", true),
     povMode: dbSettings?.povMode ?? ((localStorage.getItem("opt_povMode") as any) ?? "classic"),
     stagePovSwitch: dbSettings?.stagePovSwitch ?? bool("opt_stagePovSwitch", true),
+    renderResolution: validRes,
+    gfxLevel: validGfx,
+    fpsTarget: validFps,
+    particleDensity: validParticles,
+    bloomGlow: dbSettings?.bloomGlow ?? bool("opt_bloomGlow", true),
+    bgAnimation: dbSettings?.bgAnimation ?? bool("opt_bgAnimation", true),
   };
 }
 

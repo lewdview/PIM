@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { loadOpts, resetOpts, keyLabel, getActiveTheme, type GameOpts, GAME_BACKGROUNDS, GAME_TRACKS } from "../lib/options";
+import { loadOpts, resetOpts, keyLabel, getActiveTheme, getEffectiveDpr, type GameOpts, type RenderResolution, type GfxLevel, type FpsTarget, type ParticleDensity, GAME_BACKGROUNDS, GAME_TRACKS } from "../lib/options";
 import { useLocation } from "wouter";
 import { clearCatalogCache } from "../game/api";
 import { audioManager } from "../game/audio";
 import { logAnalyticsEvent } from "../services/telemetryService";
 import { gameSenseService, type GameSenseStatus } from "../services/gameSenseService";
 import { useVaultStore } from "../store/useVaultStore";
-import { X, Volume2, Key, Info, Palette, Sparkles, Sliders, Check, Lock, Flame, ShieldAlert, Monitor, Sparkle } from "lucide-react";
+import { X, Volume2, Key, Info, Palette, Sparkles, Sliders, Check, Lock, Flame, ShieldAlert, Monitor, Sparkle, Zap, Cpu, Gauge, Layers } from "lucide-react";
 import { VTokenCrestIcon, RemixDialIcon, HazardWarningIcon, StageCrestIcon } from "./icons/CustomVectorIcons";
 import type { VaultCard } from "../services/vaultService";
 import {
@@ -625,6 +625,37 @@ function AutoLatencyCalibrator({
 
   const audioCtxRef = useRef<AudioContext | null>(null);
   const beatTargetTimesRef = useRef<number[]>([]);
+  const countTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const beatIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const doneTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const clearAllTimers = useCallback(() => {
+    if (countTimerRef.current) {
+      clearInterval(countTimerRef.current);
+      countTimerRef.current = null;
+    }
+    if (beatIntervalRef.current) {
+      clearInterval(beatIntervalRef.current);
+      beatIntervalRef.current = null;
+    }
+    if (doneTimeoutRef.current) {
+      clearTimeout(doneTimeoutRef.current);
+      doneTimeoutRef.current = null;
+    }
+  }, []);
+
+  // Ensure AudioContext and timers are strictly disposed on unmount to prevent leaks
+  useEffect(() => {
+    return () => {
+      clearAllTimers();
+      if (audioCtxRef.current) {
+        try {
+          audioCtxRef.current.close();
+        } catch {}
+        audioCtxRef.current = null;
+      }
+    };
+  }, [clearAllTimers]);
 
   const playClick = useCallback((freq = 1000, duration = 0.04) => {
     try {
@@ -671,6 +702,11 @@ function AutoLatencyCalibrator({
   }, [phase]);
 
   const startCalibration = useCallback(() => {
+    clearAllTimers();
+    if (audioCtxRef.current) {
+      try { audioCtxRef.current.close(); } catch {}
+      audioCtxRef.current = null;
+    }
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
     if (!AudioContextClass) return;
     const ctx = new AudioContextClass();
@@ -686,13 +722,16 @@ function AutoLatencyCalibrator({
     let count = 3;
     playClick(600, 0.06);
     
-    const countTimer = setInterval(() => {
+    countTimerRef.current = setInterval(() => {
       count--;
       if (count > 0) {
         setCountdown(count);
         playClick(600, 0.06);
       } else {
-        clearInterval(countTimer);
+        if (countTimerRef.current) {
+          clearInterval(countTimerRef.current);
+          countTimerRef.current = null;
+        }
         setPhase('calibrating');
         playClick(1200, 0.08);
         
@@ -707,14 +746,17 @@ function AutoLatencyCalibrator({
         beatTargetTimesRef.current = targets;
 
         let bIdx = 0;
-        const beatInterval = setInterval(() => {
+        beatIntervalRef.current = setInterval(() => {
           bIdx++;
           if (bIdx < totalBeats) {
             setCurrentBeatIndex(bIdx);
             playClick(bIdx === totalBeats - 1 ? 1400 : 1000, 0.05);
           } else {
-            clearInterval(beatInterval);
-            setTimeout(() => {
+            if (beatIntervalRef.current) {
+              clearInterval(beatIntervalRef.current);
+              beatIntervalRef.current = null;
+            }
+            doneTimeoutRef.current = setTimeout(() => {
               setPhase('done');
               setTaps(recordedTaps => {
                 if (recordedTaps.length === 0) return recordedTaps;
@@ -729,7 +771,7 @@ function AutoLatencyCalibrator({
         }, 500);
       }
     }, 500);
-  }, [playClick, onCalibrated]);
+  }, [playClick, onCalibrated, clearAllTimers]);
 
   useEffect(() => {
     if (phase !== 'calibrating') return;
@@ -921,7 +963,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
   }, [remappingLane]);
 
   // Save specific settings helper
-  const toggleSetting = (k: "missSystem" | "hudMisses" | "comboDisplay" | "judgmentText" | "useLocalFiles" | "bgMusic" | "haptics" | "gameSenseEnabled" | "legacyGraphics") => {
+  const toggleSetting = (k: "missSystem" | "hudMisses" | "comboDisplay" | "judgmentText" | "useLocalFiles" | "bgMusic" | "haptics" | "gameSenseEnabled" | "legacyGraphics" | "bloomGlow" | "bgAnimation") => {
     if (k === "missSystem" && localStorage.getItem("opt_unlocked_noclip") !== "true") {
       audioManager.playSfx('locked_out', 0.15);
       return;
@@ -944,7 +986,95 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
     audioManager.playSfx('tap_nav', 0.1);
   };
 
-  const renderToggle = (k: "missSystem" | "hudMisses" | "comboDisplay" | "judgmentText" | "useLocalFiles" | "bgMusic" | "haptics" | "gameSenseEnabled" | "legacyGraphics") => {
+  const setResolutionOption = (res: RenderResolution) => {
+    localStorage.setItem("opt_renderResolution", res);
+    setOpts(o => ({ ...o, renderResolution: res }));
+    updateSettings({ renderResolution: res });
+    logAnalyticsEvent('setting_change', { key: 'renderResolution', value: res });
+    audioManager.playSfx('tap_nav', 0.12);
+  };
+
+  const setGfxLevelOption = (level: GfxLevel) => {
+    localStorage.setItem("opt_gfxLevel", level);
+    // Automatically configure sensible preset defaults when changing overall GFX quality
+    let res: RenderResolution = opts.renderResolution;
+    let particles: ParticleDensity = opts.particleDensity;
+    let bloom = opts.bloomGlow;
+    let bgAnim = opts.bgAnimation;
+    let legacy = false;
+
+    if (level === 'ultra') {
+      res = 'native';
+      particles = 'full';
+      bloom = true;
+      bgAnim = true;
+      legacy = false;
+    } else if (level === 'high') {
+      res = 'high';
+      particles = 'full';
+      bloom = true;
+      bgAnim = true;
+      legacy = false;
+    } else if (level === 'medium') {
+      res = 'medium';
+      particles = 'half';
+      bloom = true;
+      bgAnim = true;
+      legacy = false;
+    } else if (level === 'low') {
+      res = 'low';
+      particles = 'minimal';
+      bloom = false;
+      bgAnim = false;
+      legacy = true;
+    }
+
+    localStorage.setItem("opt_renderResolution", res);
+    localStorage.setItem("opt_particleDensity", particles);
+    localStorage.setItem("opt_bloomGlow", String(bloom));
+    localStorage.setItem("opt_bgAnimation", String(bgAnim));
+    localStorage.setItem("opt_legacyGraphics", String(legacy));
+
+    setOpts(o => ({
+      ...o,
+      gfxLevel: level,
+      renderResolution: res,
+      particleDensity: particles,
+      bloomGlow: bloom,
+      bgAnimation: bgAnim,
+      legacyGraphics: legacy,
+    }));
+
+    updateSettings({
+      gfxLevel: level,
+      renderResolution: res,
+      particleDensity: particles,
+      bloomGlow: bloom,
+      bgAnimation: bgAnim,
+      legacyGraphics: legacy,
+    });
+
+    logAnalyticsEvent('setting_change', { key: 'gfxLevel', value: level });
+    audioManager.playSfx('tap_nav', 0.15);
+  };
+
+  const setFpsTargetOption = (fps: FpsTarget) => {
+    localStorage.setItem("opt_fpsTarget", fps);
+    setOpts(o => ({ ...o, fpsTarget: fps }));
+    updateSettings({ fpsTarget: fps });
+    logAnalyticsEvent('setting_change', { key: 'fpsTarget', value: fps });
+    audioManager.playSfx('tap_nav', 0.1);
+  };
+
+  const setParticleDensityOption = (density: ParticleDensity) => {
+    localStorage.setItem("opt_particleDensity", density);
+    setOpts(o => ({ ...o, particleDensity: density }));
+    updateSettings({ particleDensity: density });
+    logAnalyticsEvent('setting_change', { key: 'particleDensity', value: density });
+    audioManager.playSfx('tap_nav', 0.1);
+  };
+
+  const renderToggle = (k: "missSystem" | "hudMisses" | "comboDisplay" | "judgmentText" | "useLocalFiles" | "bgMusic" | "haptics" | "gameSenseEnabled" | "legacyGraphics" | "bloomGlow" | "bgAnimation") => {
     const isNoclipLocked = k === "missSystem" && localStorage.getItem("opt_unlocked_noclip") !== "true";
     if (isNoclipLocked) {
       return (
@@ -1338,14 +1468,6 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                       {renderToggle('haptics')}
                     </div>
 
-                    <div className="flex justify-between items-center">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-white font-mono uppercase">Legacy Graphics Mode</span>
-                        <span className="text-[8px] text-zinc-500 font-mono">Disable glow shadows and visualizers for low-end devices</span>
-                      </div>
-                      {renderToggle('legacyGraphics')}
-                    </div>
-
                     <div className="flex justify-between items-center border-t border-white/5 pt-3">
                       <div className="flex flex-col">
                         <span className="text-[10px] font-bold text-white font-mono uppercase">SteelSeries GameSense</span>
@@ -1360,6 +1482,185 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                         </span>
                       </div>
                       {renderToggle('gameSenseEnabled')}
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── GRAPHICS, RESOLUTION & PERFORMANCE ENGINE ── */}
+                <div className="bg-black/40 border border-white/5 p-4 rounded-lg space-y-4">
+                  <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                    <div className="flex items-center gap-2">
+                      <Monitor size={14} style={{ color: isAvant ? '#39FF14' : '#FF1493' }} />
+                      <h3 className="font-mono text-[9px] font-black text-white uppercase tracking-wider">
+                        GRAPHICS & RENDER RESOLUTION ENGINE
+                      </h3>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-[7.5px] px-2 py-0.5 rounded border border-white/10 bg-white/5 text-zinc-300">
+                        DPR: {getEffectiveDpr(opts.renderResolution).toFixed(2)}x
+                      </span>
+                      <span className="font-mono text-[7.5px] px-2 py-0.5 rounded border border-white/10 bg-white/5 uppercase" style={{ color: isAvant ? '#39FF14' : '#FF1493' }}>
+                        GFX: {opts.gfxLevel.toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* GFX Preset Cards */}
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center">
+                      <span className="font-mono text-[8.5px] font-bold text-white/70 uppercase">Master Quality Preset</span>
+                      <span className="font-mono text-[7.5px] text-zinc-500">Auto-tunes resolution, bloom & particles</span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {[
+                        { id: 'ultra', label: 'ULTRA', desc: 'Native Retina · Max FX', icon: Sparkles },
+                        { id: 'high', label: 'HIGH', desc: '1080p · Standard Glow', icon: Zap },
+                        { id: 'medium', label: 'BALANCED', desc: '720p · 50% Particles', icon: Layers },
+                        { id: 'low', label: 'PERF / POTATO', desc: '540p · Max Framerate', icon: Cpu },
+                      ].map((preset) => {
+                        const active = opts.gfxLevel === preset.id;
+                        const IconComponent = preset.icon;
+                        return (
+                          <button
+                            key={preset.id}
+                            onClick={() => setGfxLevelOption(preset.id as GfxLevel)}
+                            className={`p-2.5 rounded border text-left flex flex-col justify-between transition-all cursor-pointer ${
+                              active
+                                ? isAvant
+                                  ? 'border-[#39FF14] bg-[#39FF14]/15 shadow-[0_0_12px_rgba(57,255,20,0.2)]'
+                                  : 'border-[#FF1493] bg-[#FF1493]/15 shadow-[0_0_12px_rgba(255,20,147,0.2)]'
+                                : 'border-white/5 bg-black/40 hover:border-white/20 text-white/50 hover:text-white'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between w-full mb-1">
+                              <span className={`font-mono text-[9px] font-black tracking-wider uppercase ${active ? 'text-white' : 'text-zinc-400'}`}>
+                                {preset.label}
+                              </span>
+                              <IconComponent size={10} className={active ? (isAvant ? 'text-[#39FF14]' : 'text-[#FF1493]') : 'text-zinc-500'} />
+                            </div>
+                            <span className="font-mono text-[7px] text-zinc-400 leading-tight">
+                              {preset.desc}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Render Resolution Scale */}
+                  <div className="space-y-1.5 pt-1 border-t border-white/5">
+                    <div className="flex justify-between items-center">
+                      <span className="font-mono text-[8.5px] font-bold text-white/70 uppercase">Render Resolution (Canvas DPI Scale)</span>
+                      <span className="font-mono text-[7.5px] text-zinc-500">Internal pixel rendering grid scale</span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {[
+                        { id: 'native', label: 'NATIVE ULTRA', sub: 'Retina (DPR Max)' },
+                        { id: 'high', label: '1080P HIGH', sub: '1.50x Scale' },
+                        { id: 'medium', label: '720P BALANCED', sub: '1.00x Scale' },
+                        { id: 'low', label: '540P SAVER', sub: '0.67x Scale' },
+                      ].map((res) => {
+                        const active = opts.renderResolution === res.id;
+                        return (
+                          <button
+                            key={res.id}
+                            onClick={() => setResolutionOption(res.id as RenderResolution)}
+                            className={`py-2 px-2.5 rounded border text-center transition-all cursor-pointer flex flex-col items-center justify-center ${
+                              active
+                                ? isAvant
+                                  ? 'border-[#39FF14] bg-[#39FF14]/15 text-white shadow-[0_0_10px_rgba(57,255,20,0.2)]'
+                                  : 'border-[#FF1493] bg-[#FF1493]/15 text-white shadow-[0_0_10px_rgba(255,20,147,0.2)]'
+                                : 'border-white/5 bg-black/40 text-white/50 hover:border-white/20 hover:text-white'
+                            }`}
+                          >
+                            <span className="font-mono text-[8.5px] font-black uppercase tracking-wider">{res.label}</span>
+                            <span className="font-mono text-[7px] text-zinc-400">{res.sub}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Framerate Target */}
+                  <div className="space-y-1.5 pt-1 border-t border-white/5">
+                    <div className="flex justify-between items-center">
+                      <span className="font-mono text-[8.5px] font-bold text-white/70 uppercase">Framerate Target (FPS Cap)</span>
+                      <span className="font-mono text-[7.5px] text-zinc-500">Engine animation frame limiter</span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {[
+                        { id: 'auto', label: 'AUTO NATIVE', sub: 'Display Refresh' },
+                        { id: '120', label: '120 FPS', sub: 'High Refresh' },
+                        { id: '60', label: '60 FPS', sub: 'Standard Locked' },
+                        { id: '30', label: '30 FPS', sub: 'Battery Saver' },
+                      ].map((fps) => {
+                        const active = opts.fpsTarget === fps.id;
+                        return (
+                          <button
+                            key={fps.id}
+                            onClick={() => setFpsTargetOption(fps.id as FpsTarget)}
+                            className={`py-2 px-2 rounded border text-center transition-all cursor-pointer flex flex-col items-center justify-center ${
+                              active
+                                ? isAvant
+                                  ? 'border-[#39FF14] bg-[#39FF14]/15 text-white shadow-[0_0_8px_rgba(57,255,20,0.2)]'
+                                  : 'border-[#FF1493] bg-[#FF1493]/15 text-white shadow-[0_0_8px_rgba(255,20,147,0.2)]'
+                                : 'border-white/5 bg-black/40 text-white/50 hover:border-white/20 hover:text-white'
+                            }`}
+                          >
+                            <span className="font-mono text-[8.5px] font-black uppercase tracking-wider">{fps.label}</span>
+                            <span className="font-mono text-[7px] text-zinc-400">{fps.sub}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Granular Visual Toggles */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t border-white/5">
+                    <div className="flex justify-between items-center">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-white font-mono uppercase">Neon Bloom & Glow</span>
+                        <span className="text-[8px] text-zinc-500 font-mono">Dynamic multi-pass canvas shadow blur</span>
+                      </div>
+                      {renderToggle('bloomGlow')}
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-white font-mono uppercase">Background Animations</span>
+                        <span className="text-[8px] text-zinc-500 font-mono">Audio-reactive shaders & starfield motion</span>
+                      </div>
+                      {renderToggle('bgAnimation')}
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-white font-mono uppercase">Particle Burst Density</span>
+                        <span className="text-[8px] text-zinc-500 font-mono">Note hit sparks and speed trail counts</span>
+                      </div>
+                      <div className="flex gap-1">
+                        {(['full', 'half', 'minimal'] as const).map((d) => (
+                          <button
+                            key={d}
+                            onClick={() => setParticleDensityOption(d)}
+                            className={`px-2 py-0.5 rounded font-mono text-[7.5px] uppercase font-bold border transition-all cursor-pointer ${
+                              opts.particleDensity === d
+                                ? isAvant ? 'border-[#39FF14] bg-[#39FF14]/20 text-white' : 'border-[#FF1493] bg-[#FF1493]/20 text-white'
+                                : 'border-white/10 bg-black/40 text-zinc-500 hover:text-white'
+                            }`}
+                          >
+                            {d === 'full' ? '100%' : d === 'half' ? '50%' : '25%'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-white font-mono uppercase">Legacy Graphics Mode</span>
+                        <span className="text-[8px] text-zinc-500 font-mono">Ultra-flat canvas rendering for legacy devices</span>
+                      </div>
+                      {renderToggle('legacyGraphics')}
                     </div>
                   </div>
                 </div>

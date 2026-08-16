@@ -75,6 +75,21 @@ export function getBombshellDayCovers(day: number): BombshellDayCovers {
 }
 
 /**
+ * Returns a featured close-up bombshell cover URL for pack backgrounds and foil artwork embedding.
+ */
+export function getFeaturedBombshellFoilCover(day?: number): string {
+  const targetDay = day || 1;
+  const entry = getBombshellDayCovers(targetDay);
+  if (entry.normalFiles && entry.normalFiles.length > 0) {
+    return getBombshellCoverUrl(targetDay, entry.normalFiles[0]);
+  }
+  if (entry.lbFiles && entry.lbFiles.length > 0) {
+    return getBombshellCoverUrl(targetDay, entry.lbFiles[0]);
+  }
+  return getBombshellCoverUrl(1, 'day 001 - 01.jpg');
+}
+
+/**
  * Deterministically or randomly select an artwork for a Bombshell card pull:
  * - Common & Uncommon get LB cards (`lbFiles`)
  * - Rare, Legendary & Mythic get Normal cards (`normalFiles`)
