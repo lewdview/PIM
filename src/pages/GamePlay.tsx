@@ -10095,13 +10095,14 @@ export default function Game() {
           </div>
         )}
 
-        {/* ── REVAMPED MULTI-SEGMENT STAGE PROGRESS BAR HUD ── */}
-        <div className="flex-shrink-0 mx-auto my-1 relative max-w-4xl w-[calc(100%-16px)] px-1">
-          {/* Top Stage Badges & Time Tracker */}
-          <div className="flex items-center justify-between mb-1 text-[8.5px] font-mono font-black uppercase tracking-wider text-white/50 select-none">
-            <div className="flex items-center gap-1.5">
+        {/* ── REVAMPED & CENTERED STAGE PROGRESS BAR HUD ── */}
+        <div className="flex-shrink-0 mx-auto my-1 relative max-w-[580px] w-[calc(100%-32px)] px-2">
+          {/* Symmetrical 3-Column Header */}
+          <div className="flex items-center justify-between mb-1.5 text-[8.5px] font-mono font-black uppercase tracking-wider text-white/50 select-none">
+            {/* Left: Active Stage Badge */}
+            <div className="flex items-center gap-1.5 flex-1 justify-start">
               <span 
-                className="px-1.5 py-0.5 rounded text-[8px] font-black transition-all duration-300"
+                className="px-2 py-0.5 rounded text-[8px] font-black tracking-widest transition-all duration-300 shadow-sm"
                 style={{
                   backgroundColor: currentStage === 5 ? 'rgba(255,0,85,0.25)' : currentStage === 4 ? 'rgba(255,20,147,0.25)' : currentStage === 3 ? 'rgba(255,215,0,0.25)' : currentStage === 2 ? 'rgba(57,255,20,0.2)' : 'rgba(0,229,255,0.2)',
                   color: currentStage === 5 ? '#FF3800' : currentStage === 4 ? '#FF1493' : currentStage === 3 ? '#FFD700' : currentStage === 2 ? '#39FF14' : '#00E5FF',
@@ -10109,61 +10110,54 @@ export default function Game() {
                   boxShadow: `0 0 10px ${currentStage === 5 ? '#FF3800' : currentStage === 4 ? '#FF1493' : currentStage === 3 ? '#FFD700' : currentStage === 2 ? '#39FF14' : '#00E5FF'}30`,
                 }}
               >
-                {currentStage === 5 ? '⚡ FINAL OVERDRIVE' : currentStage === 4 ? 'STAGE 4 • BRUTAL' : currentStage === 3 ? 'STAGE 3 • 3D SHIFT' : currentStage === 2 ? 'STAGE 2 • MEDIUM' : 'STAGE 1 • RECON'}
-              </span>
-              <span className="text-[7.5px] text-white/30 hidden sm:inline-block">
-                {currentStage === 5 ? 'MAX SCORE MULTIPLIER' : `${Math.round((gs.progress || 0) * 100)}% COMPLETE`}
+                {currentStage === 5 ? '⚡ FINAL' : currentStage === 4 ? 'STAGE 4' : currentStage === 3 ? 'STAGE 3' : currentStage === 2 ? 'STAGE 2' : 'STAGE 1'}
               </span>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[8px] font-mono text-white/60">
-                {formatTimeSec(getT())} / {formatTimeSec(songRef.current?.duration || 0)}
-              </span>
+
+            {/* Center: Stage Progress % */}
+            <div className="flex-1 text-center font-mono font-black text-[9px] text-white/70 tracking-widest">
+              {Math.round((gs.progress || 0) * 100)}%
+            </div>
+
+            {/* Right: Audio Time Elapsed / Total */}
+            <div className="flex items-center gap-1 flex-1 justify-end font-mono text-[8px] text-white/60">
+              <span>{formatTimeSec(getT())}</span>
+              <span className="text-white/30">/</span>
+              <span>{formatTimeSec(songRef.current?.duration || 0)}</span>
             </div>
           </div>
 
-          {/* 5-Segment Dynamic Stage Progress Track */}
-          <div className="flex items-center gap-1 w-full h-[6px] rounded-full overflow-hidden p-[1px] bg-black/40 border border-white/10 backdrop-blur-sm">
-            {[
-              { stage: 1, name: 'S1', start: 0.00, end: 0.15, color: '#00E5FF' },
-              { stage: 2, name: 'S2', start: 0.15, end: 0.35, color: '#39FF14' },
-              { stage: 3, name: 'S3', start: 0.35, end: 0.60, color: '#FFD700' },
-              { stage: 4, name: 'S4', start: 0.60, end: 0.80, color: '#FF1493' },
-              { stage: 5, name: 'FINAL', start: 0.80, end: 1.00, color: '#FF0055' },
-            ].map((seg) => {
-              const segLen = seg.end - seg.start;
-              const curProg = gs.progress || 0;
-              let fillPct = 0;
-              if (curProg >= seg.end) fillPct = 100;
-              else if (curProg > seg.start) fillPct = ((curProg - seg.start) / segLen) * 100;
+          {/* Continuous Glowing Progress Track with Exact Stage Boundary Ticks */}
+          <div className="relative w-full h-[6px] rounded-full overflow-hidden p-[1px] bg-black/60 border border-white/15 backdrop-blur-sm shadow-[inset_0_1px_3px_rgba(0,0,0,0.8)]">
+            <div
+              className="h-full rounded-full transition-all duration-150 ease-out"
+              style={{
+                width: `${Math.min(100, Math.max(0, (gs.progress || 0) * 100))}%`,
+                background: currentStage === 5
+                  ? "linear-gradient(90deg, #FF1493, #FFD700, #FF0055)"
+                  : currentStage === 4
+                    ? "linear-gradient(90deg, #00E5FF, #FFD700, #FF1493)"
+                    : currentStage === 3
+                      ? "linear-gradient(90deg, #00E5FF, #39FF14, #FFD700)"
+                      : currentStage === 2
+                        ? "linear-gradient(90deg, #00E5FF, #39FF14)"
+                        : "#00E5FF",
+                boxShadow: (gs.progress || 0) > 0
+                  ? currentStage === 5
+                    ? "0 0 10px rgba(255,0,85,0.7), 0 0 20px rgba(255,215,0,0.4)"
+                    : "0 0 8px rgba(0,229,255,0.6), 0 0 16px rgba(57,255,20,0.3)"
+                  : "none",
+              }}
+            />
 
-              const isCurrent = currentStage === seg.stage;
-              const isPast = curProg >= seg.end;
-
-              return (
-                <div
-                  key={seg.stage}
-                  className="relative h-full rounded-full overflow-hidden transition-all duration-300"
-                  style={{
-                    flex: segLen * 100,
-                    background: isCurrent ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.04)',
-                    boxShadow: isCurrent ? `0 0 6px ${seg.color}30` : undefined,
-                  }}
-                  title={`Stage ${seg.stage}: ${Math.round(seg.start * 100)}% - ${Math.round(seg.end * 100)}%`}
-                >
-                  <div
-                    className="h-full rounded-full transition-all duration-150 ease-out"
-                    style={{
-                      width: `${fillPct}%`,
-                      background: isPast
-                        ? seg.color
-                        : `linear-gradient(90deg, ${seg.color}80, ${seg.color})`,
-                      boxShadow: fillPct > 0 ? `0 0 8px ${seg.color}80` : 'none',
-                    }}
-                  />
-                </div>
-              );
-            })}
+            {/* Stage Boundary Markers (Stage 1->2: 15%, Stage 2->3: 35%, Stage 3->4: 60%, Stage 4->5: 80%) */}
+            {[0.15, 0.35, 0.60, 0.80].map((pct, idx) => (
+              <div
+                key={idx}
+                className="absolute top-0 bottom-0 w-[1.5px] bg-white/40 shadow-[0_0_3px_rgba(255,255,255,0.7)] pointer-events-none"
+                style={{ left: `${pct * 100}%`, transform: "translateX(-50%)" }}
+              />
+            ))}
           </div>
         </div>
 
