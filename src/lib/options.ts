@@ -28,7 +28,7 @@ export type GameOpts = {
   gameSenseEnabled: boolean;
   legacyGraphics: boolean;
   autoLatencyAdjust: boolean;
-  povMode: 'classic' | 'cyber_tunnel' | 'dynamic_stage';
+  povMode: 'classic' | 'cyber_tunnel' | 'corkscrew' | 'rollercoaster' | 'matrix_split' | 'dynamic_stage';
   stagePovSwitch: boolean;
   renderResolution: RenderResolution;
   gfxLevel: GfxLevel;

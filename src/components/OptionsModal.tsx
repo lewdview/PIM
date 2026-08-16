@@ -2157,10 +2157,13 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                     <span className="text-[7.5px] text-zinc-500">HOTKEY: V / P IN GAME</span>
                   </h3>
                   
-                  <div className="grid grid-cols-3 gap-2 mb-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
                     {[
                       { id: 'classic', name: '2.5D Classic', desc: 'Standard Beatstar highway perspective', icon: '📐' },
-                      { id: 'cyber_tunnel', name: '3D Cyber Tunnel', desc: 'First-person tunnel view with concentric depth rings', icon: '🌀' },
+                      { id: 'cyber_tunnel', name: '3D Cyber Tunnel', desc: 'First-person tunnel vortex with concentric rings', icon: '🌀' },
+                      { id: 'corkscrew', name: '3D Corkscrew', desc: 'Helical spiral loop slide with 52% precision runway', icon: '🌪️' },
+                      { id: 'rollercoaster', name: 'Wave Coaster', desc: 'Undulating 3D wave coaster with gravity plunge', icon: '🎢' },
+                      { id: 'matrix_split', name: 'Split Matrix', desc: 'Detached 3-ribbon split horizon highway matrix', icon: '🔀' },
                       { id: 'dynamic_stage', name: 'Dynamic Stage', desc: 'Beatsync camera sway, pitch & stage shifts', icon: '🎥' }
                     ].map(pov => {
                       const active = (opts.povMode || 'classic') === pov.id;

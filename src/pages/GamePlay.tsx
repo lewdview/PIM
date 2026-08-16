@@ -5,7 +5,7 @@ import { getSongById, saveHighScore, isSongTimeLocked, getModifierForSong, STAGE
 import { saveMedal, saveScoreHistory } from "@/game/progress";
 import type { GameSong } from "@/game/api";
 import type { Note, JudgmentDisplay, GameState, NoteType } from "@/game/types";
-import { loadOpts, keyLabel, getEffectiveDpr, type GameOpts, type RenderResolution, type GfxLevel, type FpsTarget, type ParticleDensity } from "@/lib/options";
+import { loadOpts, keyLabel, getEffectiveDpr, type GameOpts, type PovMode, type RenderResolution, type GfxLevel, type FpsTarget, type ParticleDensity } from "@/lib/options";
 import { audioManager } from "@/game/audio";
 import { useVaultStore } from "@/store/useVaultStore";
 import { haptics } from "../utils/haptics";
@@ -839,6 +839,30 @@ function laneAt(
   return { x: baseX, w: lw };
 }
 
+// Helper to determine exact lane column from screen clientX coordinates,
+// perfectly aligned with the visual judgment target strike zones at p = 1.0!
+function getLaneFromCoords(clientX: number, rect: DOMRect, W: number): number {
+  if (rect.width <= 0) return 1;
+  const clickX = ((clientX - rect.left) / rect.width) * W;
+
+  // Sample exact highway lane boundaries at bottom judgment strike zone (p = 1.0)
+  const l0 = laneAt(0, 1, W);
+  const l1 = laneAt(1, 1, W);
+  const split01 = l0.x + l0.w;
+  const split12 = l1.x + l1.w;
+
+  if (clickX < split01) return 0;
+  if (clickX < split12) return 1;
+  return 2;
+}
+
+function formatTimeSec(seconds: number): string {
+  if (isNaN(seconds) || seconds < 0) return "0:00";
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
 export interface ProjectionResult {
   x: number;
   y: number;
@@ -1062,113 +1086,18 @@ function getArchetypeProjection(
   archetype: TrackArchetype,
   stage: number,
   t: number,
-  povMode: 'classic' | 'cyber_tunnel' | 'dynamic_stage' = 'classic'
+  povMode: PovMode = 'classic'
 ): ProjectionResult {
   const hitY = H * HIT_RATIO;
-  
-  // Experimental 3D perspectives (e.g. Corkscrew, Radial Orbit, Side-Scroller, Wave Coaster, Matrix Split)
-  // ONLY active during Stage 3 and Stage 5!
-  // Stage 1, 2, and 4 ALWAYS revert to standard 2.5D Classic Highway perspective!
-  const isExperimentalStage = stage === 3 || stage === 5;
-  const isExperimentalArchetype = isExperimentalStage && archetype !== 'cyber_tunnel';
 
-  if (!isExperimentalArchetype) {
-    // Only use Cyber Tunnel wide ratios (0.18 -> 0.86) when active POV is cyber_tunnel in Stage 3 or 5!
-    // In Stage 1, 2, and 4, retain standard 2.5D Classic Highway ratios (HW_TOP -> HW_BOT)
-    const isCyberTunnelPOV = (povMode === 'cyber_tunnel' || archetype === 'cyber_tunnel');
-    const isCyberStage = isCyberTunnelPOV && (stage === 3 || stage === 5);
-    const topRatio = isCyberStage ? 0.18 : HW_TOP;
-    const botRatio = isCyberStage ? 0.86 : HW_BOT;
-    if (isCyberStage) {
-      // 🌀 3D CYBER TUNNEL PROJECTION (Emerging directly from tunnel entrance at cx, vanishingY)
-      const vanishingY = hitY * 0.28; // Tunnel entrance horizon center
-      const cx = W / 2;
-      const tunnelW = Math.min(W, 840);
-      const laneOffset = lane - 1; // -1 for left, 0 for center, +1 for right
-      const mult = stage === 5 ? 2.0 : 1.0; // Stage 5 overdrive warp intensity
-
-      // Safe non-negative progress for fractional exponent calculation
-      const safeP = Math.max(0, prog);
-      const persP = Math.pow(safeP, 1.35);
-
-      // Origin at tunnel entrance mouth (tightly grouped at cx, vanishingY)
-      const entranceSpacing = tunnelW * 0.055;
-      const entranceX = cx + laneOffset * entranceSpacing;
-
-      // Target hit zone strike position at hitY
-      const { x: hitX, w: hitW } = laneAt(lane, 1, W, 0.18, 0.86);
-
-      const noteY = lerp(vanishingY, hitY, persP);
-      const noteW = lerp(tunnelW * 0.05, hitW, Math.pow(safeP, 1.25));
-      const noteH = lerp(26, 140, persP);
-      const noteX = lerp(entranceX - noteW / 2, hitX, persP);
-
-      // Cylindrical Cyber Tunnel 3D Barrel Warp & Vortex Swirl
-      const warpFactor = Math.sin(safeP * Math.PI); // Parabolic 3D curve along tunnel depth
-      const barrelWarp = laneOffset * (tunnelW * 0.045) * warpFactor;
-      const vortexSway = Math.sin(t * 1.8 * mult + safeP * 3.0) * (tunnelW * 0.016 * mult) * warpFactor;
-      const rot = (laneOffset * 0.12 + Math.cos(t * 1.8 * mult + safeP * 3.0) * 0.04) * warpFactor;
-
-      return {
-        x: noteX + barrelWarp + vortexSway,
-        y: noteY,
-        w: noteW,
-        h: noteH,
-        rot,
-        scale: lerp(0.25, 1.0, persP),
-      };
-    }
-
-    const { x, w } = laneAt(lane, prog, W, HW_TOP, HW_BOT);
-    const noteY = prog * hitY;
-    const noteH = lerp(80, 140, prog);
-    return { x, y: noteY, w, h: noteH, rot: 0, scale: lerp(0.4, 1.0, prog) };
-  }
-
-  // ↔️ 90° FULL 2D HORIZONTAL SIDE-SCROLLER PERSPECTIVE
-  if (archetype === 'horizontal_drift') {
-    const maxW = Math.min(W, 860);
-    const leftX = (W - maxW) / 2;
-    const strikeX = leftX + maxW * 0.85;
-    const noteX = leftX + prog * (strikeX - leftX);
-    // Button Key Alignment: Lane 0 (A Key) = Bottom, Lane 1 (S Key) = Middle, Lane 2 (D Key) = Top
-    const laneYMap = [H * 0.68, H * 0.52, H * 0.36];
-    const noteY = laneYMap[lane] || H * 0.52;
-    const noteW = lerp(45, 110, prog);
-    const noteH = 65;
-    return { x: noteX, y: noteY, w: noteW, h: noteH, rot: Math.PI / 2, scale: lerp(0.5, 1.0, prog) };
-  }
-
-  // 🎯 360° RADIAL CYBER ORBIT (Notes travel straight along spoke vectors to target hit circles)
-  if (archetype === 'radial_orbit') {
-    const cx = W / 2;
-    const cy = H * 0.48; // Centered vertically in playfield
-    const radarRot = t * 0.65; // Continuous 360° radar rotation
-    const baseAngles = [(210 * Math.PI) / 180, (270 * Math.PI) / 180, (330 * Math.PI) / 180];
-    const angle = (baseAngles[lane] || (270 * Math.PI) / 180) + radarRot;
-
-    const rOuter = Math.min(W, H) * 0.55; // Outer spawn rim
-    const rHit = Math.min(W, H) * 0.26; // Target hit pad ring
-    const radius = lerp(rOuter, rHit, prog); // Travels straight along spoke vector to target hit circle
-    const x = cx + Math.cos(angle) * radius;
-    const y = cy + Math.sin(angle) * radius;
-    const noteW = lerp(90, 58, prog);
-    const noteH = lerp(75, 48, prog);
-    return { x: x - noteW / 2, y, w: noteW, h: noteH, rot: angle + Math.PI / 2, scale: lerp(1.1, 0.7, prog) };
-  }
-
-  // 🌀 3D TWISTING CORKSCREW HELICAL SLIDE (Remade Dual-Loop Tubular Helix)
-  if (archetype === 'corkscrew_slide') {
+  // 1. Direct persistent POV Mode Overrides:
+  if (povMode === 'corkscrew') {
     return getCorkscrewSpiralPos(lane, prog, W, H, t, stage);
   }
-
-  // 🎢 3D UNDULATING WAVE ROLLERCOASTER (Crest airtime, high-G dip, banking roll, and 0-bob hit runway)
-  if (archetype === 'wave_coaster') {
+  if (povMode === 'rollercoaster') {
     return getWaveCoasterPos(lane, prog, W, H, t, stage);
   }
-
-  // 🔀 3-RIBBON DETACHED SPLIT HORIZON MATRIX
-  if (archetype === 'matrix_split') {
+  if (povMode === 'matrix_split') {
     const spread = (lane - 1) * (W * 0.22 * Math.sin(prog * Math.PI));
     const { x: lx, w: lw } = laneAt(lane, prog, W, 0.25, 0.90);
     const noteY = prog * hitY;
@@ -1182,9 +1111,7 @@ function getArchetypeProjection(
       scale: lerp(0.4, 1.0, prog),
     };
   }
-
-  // Default Cyber Tunnel
-  if (stage === 3 || stage === 5) {
+  if (povMode === 'cyber_tunnel') {
     const vanishingY = hitY * 0.28;
     const cx = W / 2;
     const tunnelW = Math.min(W, 840);
@@ -1216,11 +1143,74 @@ function getArchetypeProjection(
       scale: lerp(0.25, 1.0, persP),
     };
   }
+  if (povMode === 'classic') {
+    const { x, w } = laneAt(lane, prog, W, HW_TOP, HW_BOT);
+    const noteY = prog * hitY;
+    const noteH = lerp(80, 140, prog);
+    return { x, y: noteY, w, h: noteH, rot: 0, scale: lerp(0.4, 1.0, prog) };
+  }
 
-  const { x: lx, w: lw } = laneAt(lane, prog, W, 0.18, 0.86);
+  // 2. Dynamic Stage Cam Mode (transitions based on stage progression):
+  if (povMode === 'dynamic_stage') {
+    if (stage === 3 || stage === 5) {
+      if (archetype === 'corkscrew_slide') {
+        return getCorkscrewSpiralPos(lane, prog, W, H, t, stage);
+      }
+      if (archetype === 'wave_coaster') {
+        return getWaveCoasterPos(lane, prog, W, H, t, stage);
+      }
+      if (archetype === 'matrix_split') {
+        const spread = (lane - 1) * (W * 0.22 * Math.sin(prog * Math.PI));
+        const { x: lx, w: lw } = laneAt(lane, prog, W, 0.25, 0.90);
+        const noteY = prog * hitY;
+        const noteH = lerp(80, 140, prog);
+        return {
+          x: lx + spread,
+          y: noteY,
+          w: lw,
+          h: noteH,
+          rot: (lane - 1) * 0.25 * Math.sin(prog * Math.PI),
+          scale: lerp(0.4, 1.0, prog),
+        };
+      }
+      // Default dynamic 3D Cyber Tunnel
+      const vanishingY = hitY * 0.28;
+      const cx = W / 2;
+      const tunnelW = Math.min(W, 840);
+      const laneOffset = lane - 1;
+      const mult = stage === 5 ? 2.0 : 1.0;
+      const safeP = Math.max(0, prog);
+      const persP = Math.pow(safeP, 1.35);
+      const entranceSpacing = tunnelW * 0.055;
+      const entranceX = cx + laneOffset * entranceSpacing;
+      const { x: hitX, w: hitW } = laneAt(lane, 1, W, 0.18, 0.86);
+
+      const noteY = lerp(vanishingY, hitY, persP);
+      const noteW = lerp(tunnelW * 0.05, hitW, Math.pow(safeP, 1.25));
+      const noteH = lerp(26, 140, persP);
+      const noteX = lerp(entranceX - noteW / 2, hitX, persP);
+
+      const warpFactor = Math.sin(safeP * Math.PI);
+      const barrelWarp = laneOffset * (tunnelW * 0.045) * warpFactor;
+      const vortexSway = Math.sin(t * 1.8 * mult + safeP * 3.0) * (tunnelW * 0.016 * mult) * warpFactor;
+      const rot = (laneOffset * 0.12 + Math.cos(t * 1.8 * mult + safeP * 3.0) * 0.04) * warpFactor;
+
+      return {
+        x: noteX + barrelWarp + vortexSway,
+        y: noteY,
+        w: noteW,
+        h: noteH,
+        rot,
+        scale: lerp(0.25, 1.0, persP),
+      };
+    }
+  }
+
+  // Fallback: 2.5D Classic Highway
+  const { x, w } = laneAt(lane, prog, W, HW_TOP, HW_BOT);
   const noteY = prog * hitY;
   const noteH = lerp(80, 140, prog);
-  return { x: lx, y: noteY, w: lw, h: noteH, rot: 0, scale: lerp(0.4, 1.0, prog) };
+  return { x, y: noteY, w, h: noteH, rot: 0, scale: lerp(0.4, 1.0, prog) };
 }
 
 function drawArchetypeHoldTrail(
@@ -1235,7 +1225,7 @@ function drawArchetypeHoldTrail(
   archetype: TrackArchetype,
   stage: number,
   t: number,
-  povMode: 'classic' | 'cyber_tunnel' | 'dynamic_stage' = 'classic'
+  povMode: PovMode = 'classic'
 ) {
   const startLane = note.lane;
   const endLane = note.targetLane !== undefined ? note.targetLane : note.lane;
@@ -1308,8 +1298,8 @@ function drawArchetypeHoldTrail(
   ctx.closePath();
   ctx.fill();
 
-  // Outer 3D Neon Laser Edges in Cyber Tunnel Mode
-  if (povMode === 'cyber_tunnel') {
+  // Outer 3D Neon Laser Edges in 3D POV Modes
+  if (povMode === 'cyber_tunnel' || povMode === 'corkscrew' || povMode === 'rollercoaster') {
     ctx.strokeStyle = noteColor;
     ctx.lineWidth = 3.0;
     ctx.shadowColor = noteColor;
@@ -1336,7 +1326,7 @@ function prerenderStaticTrack(
   difficultyLevel: number,
   laneColors: [string, string, string],
   gameTrack: string = 'classic',
-  povMode: 'classic' | 'cyber_tunnel' | 'dynamic_stage' = 'classic',
+  povMode: PovMode = 'classic',
   stage: number = 1
 ): HTMLCanvasElement {
   const off = document.createElement("canvas");
@@ -2424,7 +2414,7 @@ export default function Game() {
   const [activeArchetype, setActiveArchetype] = useState<TrackArchetype>('cyber_tunnel');
 
   // ── POV Perspective Engine State ──
-  const [activePovMode, setActivePovMode] = useState<'classic' | 'cyber_tunnel' | 'dynamic_stage'>(opts.povMode || 'classic');
+  const [activePovMode, setActivePovMode] = useState<PovMode>(opts.povMode || 'classic');
   const activePovModeRef = useRef(activePovMode);
   const [isPovLocked, setIsPovLocked] = useState<boolean>(() => {
     return typeof localStorage !== 'undefined' && localStorage.getItem('opt_povLocked') === 'true';
@@ -2464,8 +2454,8 @@ export default function Game() {
   const povTransitionRef = useRef<{
     startTime: number;
     duration: number;
-    fromMode: 'classic' | 'cyber_tunnel' | 'dynamic_stage';
-    toMode: 'classic' | 'cyber_tunnel' | 'dynamic_stage';
+    fromMode: PovMode;
+    toMode: PovMode;
     warpAlpha: number;
   }>({
     startTime: 0,
@@ -2476,7 +2466,7 @@ export default function Game() {
   });
 
   const cyclePovMode = useCallback(() => {
-    const modes: ('classic' | 'cyber_tunnel' | 'dynamic_stage')[] = ['classic', 'cyber_tunnel', 'dynamic_stage'];
+    const modes: PovMode[] = ['classic', 'cyber_tunnel', 'corkscrew', 'rollercoaster', 'matrix_split', 'dynamic_stage'];
     const currentIdx = modes.indexOf(activePovModeRef.current);
     const nextMode = modes[(currentIdx + 1) % modes.length];
     
@@ -2497,9 +2487,12 @@ export default function Game() {
     }
     audioManager.playSfx('menu_confirm', 0.18);
 
-    const labels = {
+    const labels: Record<PovMode, string> = {
       classic: '2.5D CLASSIC HIGHWAY',
       cyber_tunnel: '3D CYBER TUNNEL VORTEX',
+      corkscrew: '3D CORKSCREW HELICAL SLIDE',
+      rollercoaster: '3D WAVE ROLLERCOASTER',
+      matrix_split: 'SPLIT HORIZON MATRIX',
       dynamic_stage: 'DYNAMIC STAGE CAM',
     };
     setPovToast({ mode: labels[nextMode], time: Date.now() });
@@ -3977,10 +3970,10 @@ export default function Game() {
 
         // Stage-Integrated Dynamic POV Camera Auto-Switching (Skipped if POV Lock is active)
         if (!isPovLockedRef.current && optsRef.current.stagePovSwitch !== false && phaseRef.current === "playing" && prevStage > 0 && calculatedStage > prevStage) {
-          let targetPov: 'classic' | 'cyber_tunnel' | 'dynamic_stage' = 'classic';
-          if (calculatedStage === 3) targetPov = 'cyber_tunnel';
+          let targetPov: PovMode = 'classic';
+          if (calculatedStage === 3) targetPov = 'dynamic_stage';
           else if (calculatedStage === 4) targetPov = 'dynamic_stage';
-          else if (calculatedStage === 5) targetPov = 'cyber_tunnel';
+          else if (calculatedStage === 5) targetPov = 'dynamic_stage';
           else targetPov = 'classic';
 
           if (targetPov !== activePovModeRef.current) {
@@ -4540,29 +4533,40 @@ export default function Game() {
       ctx.restore();
     }
 
-    // ── 3D CYBER TUNNEL ENVIRONMENT & CIRCULAR STRIKE ZONES ──
+    // ── 3D POV PERSPECTIVE ENVIRONMENT & AMBIENT VISUALIZERS ──
     const curPovMode = activePovModeRef.current;
     const isCyberTunnelPov = curPovMode === 'cyber_tunnel';
+    const isCorkscrewPov = curPovMode === 'corkscrew';
+    const isRollercoasterPov = curPovMode === 'rollercoaster';
+    const isMatrixSplitPov = curPovMode === 'matrix_split';
     const isDynamicStagePov = curPovMode === 'dynamic_stage';
+    const is3DEnvironment = curPovMode !== 'classic' && (curPovMode !== 'dynamic_stage' || calculatedStage >= 3);
 
-    if (isCyberTunnelPov || (isDynamicStagePov && calculatedStage >= 3)) {
+    if (is3DEnvironment) {
       ctx.save();
       const cx = W / 2;
-      const vanishingY = hitY * 0.28; // 3D Tunnel vanishing horizon point
+      const vanishingY = hitY * 0.28; // 3D Horizon Vanishing Point
       const bpmVal = songRef.current?.bpm || 120;
       
-      // Stage Warp Speed & Tunnel Opacity Rules:
-      // - Stage 4: Tunnel environment completely disappears (dark hyperspace void plunge!)
-      // - Stage 5: Tunnel returns TWICE AS FAST (swirlSpeed * 2.0) with hyperdrive pulse!
       let tunnelOpacity = 1.0;
       let swirlSpeedMult = 1.0;
+
+      const currentArch: TrackArchetype = isCorkscrewPov
+        ? 'corkscrew_slide'
+        : isRollercoasterPov
+          ? 'wave_coaster'
+          : isMatrixSplitPov
+            ? 'matrix_split'
+            : isCyberTunnelPov
+              ? 'cyber_tunnel'
+              : activeArchetypeRef.current;
       
-      const archMeta = ARCHETYPE_METAS[activeArchetypeRef.current] || ARCHETYPE_METAS['cyber_tunnel'];
+      const archMeta = ARCHETYPE_METAS[currentArch] || ARCHETYPE_METAS['cyber_tunnel'];
       // Dynamically resolve Stage 4 Primer Color and Stage 5 Overdrive Color directly from album cover art!
       const primerColor = laneColorsRef.current?.[0] || archMeta.primerColor || '#00E5FF';
       const stage5Color = laneColorsRef.current?.[2] || laneColorsRef.current?.[1] || archMeta.stage5Color || '#FF007F';
 
-      if (calculatedStage === 4) {
+      if (isDynamicStagePov && calculatedStage === 4) {
         tunnelOpacity = 0.0; // Stage 4: Dynamic Color Primer Void & Story Bridge
         ctx.save();
         
@@ -7404,10 +7408,9 @@ export default function Game() {
       } catch {}
 
       const rect = canvas.getBoundingClientRect();
-      const rawLane = Math.floor(
-        ((e.clientX - rect.left) / rect.width) * LANE_COUNT,
-      );
-      const lane = Math.max(0, Math.min(LANE_COUNT - 1, rawLane));
+      const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
+      const W = canvas.width / dpr;
+      const lane = getLaneFromCoords(e.clientX, rect, W);
       laneRef.current[lane].pressed = true;
       lastTapTimeRef.current[lane] = Date.now();
       laneRef.current[lane].touchId = e.pointerId;
@@ -7424,10 +7427,9 @@ export default function Game() {
       if (!canvas) return;
 
       const rect = canvas.getBoundingClientRect();
-      const rawLane = Math.floor(
-        ((e.clientX - rect.left) / rect.width) * LANE_COUNT,
-      );
-      const newLane = Math.max(0, Math.min(LANE_COUNT - 1, rawLane));
+      const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
+      const W = canvas.width / dpr;
+      const newLane = getLaneFromCoords(e.clientX, rect, W);
 
       const start = touchStartPos.current[e.pointerId];
       if (start) {
@@ -7577,12 +7579,11 @@ export default function Game() {
       const canvas = canvasRef.current;
       if (!canvas) return;
       const rect = canvas.getBoundingClientRect();
+      const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
+      const W = canvas.width / dpr;
       for (let i = 0; i < e.changedTouches.length; i++) {
         const touch = e.changedTouches[i];
-        const rawLane = Math.floor(
-          ((touch.clientX - rect.left) / rect.width) * LANE_COUNT,
-        );
-        const lane = Math.max(0, Math.min(LANE_COUNT - 1, rawLane));
+        const lane = getLaneFromCoords(touch.clientX, rect, W);
         laneRef.current[lane].pressed = true;
         lastTapTimeRef.current[lane] = Date.now();
         laneRef.current[lane].touchId = touch.identifier;
@@ -7600,12 +7601,11 @@ export default function Game() {
       const canvas = canvasRef.current;
       if (!canvas) return;
       const rect = canvas.getBoundingClientRect();
+      const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
+      const W = canvas.width / dpr;
       for (let i = 0; i < e.changedTouches.length; i++) {
         const touch = e.changedTouches[i];
-        const rawLane = Math.floor(
-          ((touch.clientX - rect.left) / rect.width) * LANE_COUNT,
-        );
-        const newLane = Math.max(0, Math.min(LANE_COUNT - 1, rawLane));
+        const newLane = getLaneFromCoords(touch.clientX, rect, W);
 
         // Swipe detection while moving
         const start = touchStartPos.current[touch.identifier];
@@ -9414,10 +9414,10 @@ export default function Game() {
             title="Toggle POV Perspective Camera Mode (Hotkey: V)"
           >
             <span className="text-base">
-              {activePovMode === 'cyber_tunnel' ? '🌀' : activePovMode === 'dynamic_stage' ? '🎥' : '📐'}
+              {activePovMode === 'cyber_tunnel' ? '🌀' : activePovMode === 'corkscrew' ? '🌪️' : activePovMode === 'rollercoaster' ? '🎢' : activePovMode === 'matrix_split' ? '🔀' : activePovMode === 'dynamic_stage' ? '🎥' : '📐'}
             </span>
             <span className="font-black text-[10px] uppercase tracking-wider hidden sm:inline-block">
-              {activePovMode === 'cyber_tunnel' ? '3D TUNNEL' : activePovMode === 'dynamic_stage' ? 'DYNAMIC STAGE' : '2.5D CLASSIC'}
+              {activePovMode === 'cyber_tunnel' ? '3D TUNNEL' : activePovMode === 'corkscrew' ? 'CORKSCREW' : activePovMode === 'rollercoaster' ? 'WAVE COASTER' : activePovMode === 'matrix_split' ? 'SPLIT MATRIX' : activePovMode === 'dynamic_stage' ? 'DYNAMIC STAGE' : '2.5D CLASSIC'}
             </span>
             <span className="text-[8px] font-black text-white/80 bg-white/10 px-1.5 py-0.5 rounded font-mono border border-white/10">V</span>
           </button>
@@ -10093,29 +10093,76 @@ export default function Game() {
           </div>
         )}
 
-        {/* Progress bar — rounded pill with glow */}
-        <div
-          className="flex-shrink-0 mx-auto my-1.5 relative max-w-4xl w-[calc(100%-16px)]"
-          style={{ height: 6, borderRadius: 999, background: "rgba(255,255,255,0.06)" }}
-        >
-          <div
-            style={{
-              height: "100%",
-              borderRadius: 999,
-              width: `${(gs.progress || 0) * 100}%`,
-              background: "linear-gradient(90deg, #FF1493, #00E5FF, #39FF14)",
-              boxShadow: "0 0 8px rgba(255,20,147,0.3), 0 0 16px rgba(57,255,20,0.15)",
-              transition: "width 0.2s linear",
-            }}
-          />
-          {/* Stage dividers */}
-          {[20, 40, 65, 80].map((pct, idx) => (
-            <div
-              key={idx}
-              className="absolute top-0 w-[2px] h-full bg-white opacity-40 transition-opacity"
-              style={{ left: `${pct}%`, transform: "translateX(-50%)" }}
-            />
-          ))}
+        {/* ── REVAMPED MULTI-SEGMENT STAGE PROGRESS BAR HUD ── */}
+        <div className="flex-shrink-0 mx-auto my-1 relative max-w-4xl w-[calc(100%-16px)] px-1">
+          {/* Top Stage Badges & Time Tracker */}
+          <div className="flex items-center justify-between mb-1 text-[8.5px] font-mono font-black uppercase tracking-wider text-white/50 select-none">
+            <div className="flex items-center gap-1.5">
+              <span 
+                className="px-1.5 py-0.5 rounded text-[8px] font-black transition-all duration-300"
+                style={{
+                  backgroundColor: currentStage === 5 ? 'rgba(255,0,85,0.25)' : currentStage === 4 ? 'rgba(255,20,147,0.25)' : currentStage === 3 ? 'rgba(255,215,0,0.25)' : currentStage === 2 ? 'rgba(57,255,20,0.2)' : 'rgba(0,229,255,0.2)',
+                  color: currentStage === 5 ? '#FF3800' : currentStage === 4 ? '#FF1493' : currentStage === 3 ? '#FFD700' : currentStage === 2 ? '#39FF14' : '#00E5FF',
+                  border: `1px solid ${currentStage === 5 ? '#FF3800' : currentStage === 4 ? '#FF1493' : currentStage === 3 ? '#FFD700' : currentStage === 2 ? '#39FF14' : '#00E5FF'}60`,
+                  boxShadow: `0 0 10px ${currentStage === 5 ? '#FF3800' : currentStage === 4 ? '#FF1493' : currentStage === 3 ? '#FFD700' : currentStage === 2 ? '#39FF14' : '#00E5FF'}30`,
+                }}
+              >
+                {currentStage === 5 ? '⚡ FINAL OVERDRIVE' : currentStage === 4 ? 'STAGE 4 • BRUTAL' : currentStage === 3 ? 'STAGE 3 • 3D SHIFT' : currentStage === 2 ? 'STAGE 2 • MEDIUM' : 'STAGE 1 • RECON'}
+              </span>
+              <span className="text-[7.5px] text-white/30 hidden sm:inline-block">
+                {currentStage === 5 ? 'MAX SCORE MULTIPLIER' : `${Math.round((gs.progress || 0) * 100)}% COMPLETE`}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[8px] font-mono text-white/60">
+                {formatTimeSec(getT())} / {formatTimeSec(song.duration)}
+              </span>
+            </div>
+          </div>
+
+          {/* 5-Segment Dynamic Stage Progress Track */}
+          <div className="flex items-center gap-1 w-full h-[6px] rounded-full overflow-hidden p-[1px] bg-black/40 border border-white/10 backdrop-blur-sm">
+            {[
+              { stage: 1, name: 'S1', start: 0.00, end: 0.15, color: '#00E5FF' },
+              { stage: 2, name: 'S2', start: 0.15, end: 0.35, color: '#39FF14' },
+              { stage: 3, name: 'S3', start: 0.35, end: 0.60, color: '#FFD700' },
+              { stage: 4, name: 'S4', start: 0.60, end: 0.80, color: '#FF1493' },
+              { stage: 5, name: 'FINAL', start: 0.80, end: 1.00, color: '#FF0055' },
+            ].map((seg) => {
+              const segLen = seg.end - seg.start;
+              const curProg = gs.progress || 0;
+              let fillPct = 0;
+              if (curProg >= seg.end) fillPct = 100;
+              else if (curProg > seg.start) fillPct = ((curProg - seg.start) / segLen) * 100;
+
+              const isCurrent = currentStage === seg.stage;
+              const isPast = curProg >= seg.end;
+
+              return (
+                <div
+                  key={seg.stage}
+                  className="relative h-full rounded-full overflow-hidden transition-all duration-300"
+                  style={{
+                    flex: segLen * 100,
+                    background: isCurrent ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.04)',
+                    boxShadow: isCurrent ? `0 0 6px ${seg.color}30` : undefined,
+                  }}
+                  title={`Stage ${seg.stage}: ${Math.round(seg.start * 100)}% - ${Math.round(seg.end * 100)}%`}
+                >
+                  <div
+                    className="h-full rounded-full transition-all duration-150 ease-out"
+                    style={{
+                      width: `${fillPct}%`,
+                      background: isPast
+                        ? seg.color
+                        : `linear-gradient(90deg, ${seg.color}80, ${seg.color})`,
+                      boxShadow: fillPct > 0 ? `0 0 8px ${seg.color}80` : 'none',
+                    }}
+                  />
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* Canvas */}
