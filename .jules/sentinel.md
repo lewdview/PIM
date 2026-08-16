@@ -1,0 +1,4 @@
+## 2026-08-16 - Hardcoded Passphrase in Frontend Bundle
+**Vulnerability:** A hardcoded admin passphrase ('th3scr1b3') was present in the frontend bundle (AdminPage.tsx and adminConfig.ts) and used for client-side authentication and backend API invocations.
+**Learning:** Hardcoded secrets in client-side code are fully exposed to anyone inspecting the source code. Using them to gate access is insecure as it trivially allows bypassing the frontend gate and calling backend endpoints with the exposed credentials.
+**Prevention:** Never hardcode passwords or API keys in frontend code. Use secure hashing mechanisms (like Web Crypto API with SHA-256) for client-side checks to obfuscate the original password, and utilize secure storage (like sessionStorage) for temporary credential caching when needed for backend calls, falling back to secure prompts.
