@@ -1,5 +1,5 @@
 import type { Rarity } from './rarity';
-import cardCatalog from '../../public/data/card_catalog.json';
+import cardCatalog from '../data/card_catalog.json';
 
 export interface SongMeta {
   title: string;
