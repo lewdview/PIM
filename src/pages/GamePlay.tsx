@@ -9896,7 +9896,7 @@ export default function Game() {
         }}
       />
       <div
-        className="relative w-full h-full flex flex-col items-center overflow-hidden"
+        className="relative w-full h-full flex flex-col overflow-hidden"
       >
         {/* ── UNIFIED CYBER HUD & CENTERED STAGE TIMELINE ── */}
         <div
@@ -10156,7 +10156,7 @@ export default function Game() {
         {/* Canvas */}
         <div 
           ref={canvasWrapperRef} 
-          className="relative flex-1 min-h-0 overflow-hidden"
+          className="relative w-full flex-1 min-h-0 overflow-hidden"
           style={{ touchAction: 'none' }}
         >
           {/* Circular Score Dial & Combo Overlays (PIM Style) */}
