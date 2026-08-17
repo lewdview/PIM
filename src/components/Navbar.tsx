@@ -304,13 +304,10 @@ export default function Navbar() {
             boxShadow: '0 4px 30px rgba(0,0,0,0.4)',
           }}
         >
-          <div className="flex items-center justify-between h-14 gap-2">
+          <div className="flex items-center justify-between h-15 md:h-16 gap-3 py-1">
             {/* ── Left: Logo ── */}
-            <div className="flex flex-col shrink-0">
+            <div className="flex items-center shrink-0">
               <VaultLogo />
-              <div className="hidden lg:block">
-                <VaultAttribution />
-              </div>
             </div>
 
             {/* ── Center: Mega-Menu Tabs (Desktop) ── */}
