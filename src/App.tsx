@@ -39,14 +39,45 @@ import ProfilePage from './pages/ProfilePage';
 import ListenPage from './pages/ListenPage';
 import EarnPage from './pages/EarnPage';
 
-// Heavy Page imports (lazy-loaded to reduce bundle size and boot time)
-const GamePlay = lazy(() => import('./pages/GamePlay'));
-const AdminPage = lazy(() => import('./pages/AdminPage'));
-const BeatmapEditor = lazy(() => import('./pages/BeatmapEditor'));
-const CardDesignShowcase = lazy(() => import('./pages/CardDesignShowcase'));
-const PitchDeck = lazy(() => import('./pages/PitchDeck'));
-const SlideshowPage = lazy(() => import('./pages/SlideshowPage'));
-const HeroLandingPage = lazy(() => import('./pages/HeroLandingPage'));
+// Helper to auto-retry and cache-bust lazy route chunk imports on version deployment updates
+function lazyWithRetry<T extends React.ComponentType<any>>(
+  factory: () => Promise<{ default: T }>
+): React.LazyExoticComponent<T> {
+  return lazy(async () => {
+    try {
+      return await factory();
+    } catch (error: any) {
+      const msg = error?.message || String(error);
+      const isMimeOrChunkError =
+        msg.includes('text/html') ||
+        msg.includes('MIME type') ||
+        msg.includes('Failed to fetch dynamically imported module') ||
+        msg.includes('error loading dynamically imported module') ||
+        msg.includes('Importing a module script failed');
+
+      if (isMimeOrChunkError) {
+        const lastReload = sessionStorage.getItem('chunk_retry_timestamp');
+        const now = Date.now();
+        if (!lastReload || now - parseInt(lastReload, 10) > 8000) {
+          sessionStorage.setItem('chunk_retry_timestamp', now.toString());
+          console.warn('[Chunk Loader] Stale chunk detected, refreshing page to load updated assets...', error);
+          window.location.reload();
+          return new Promise<{ default: T }>(() => {});
+        }
+      }
+      throw error;
+    }
+  });
+}
+
+// Heavy Page imports (lazy-loaded with auto-recovery to reduce bundle size and boot time)
+const GamePlay = lazyWithRetry(() => import('./pages/GamePlay'));
+const AdminPage = lazyWithRetry(() => import('./pages/AdminPage'));
+const BeatmapEditor = lazyWithRetry(() => import('./pages/BeatmapEditor'));
+const CardDesignShowcase = lazyWithRetry(() => import('./pages/CardDesignShowcase'));
+const PitchDeck = lazyWithRetry(() => import('./pages/PitchDeck'));
+const SlideshowPage = lazyWithRetry(() => import('./pages/SlideshowPage'));
+const HeroLandingPage = lazyWithRetry(() => import('./pages/HeroLandingPage'));
 import { loadOpts } from './lib/options';
 import { CHAPTERS } from './game/campaign';
 
