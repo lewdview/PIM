@@ -563,7 +563,7 @@ export async function purchasePack(category: PackCategory, size: PackSize = 'sin
     const pool = await fetchAllCards();
 
     return rawCards.map((c: any) => {
-      const isBombshell = c.source?.includes('bombshell') || c.card_id?.startsWith('bombshell-') || c.card_set === 'bombshell' || category === 'bombshell';
+      const isBombshell = isBombshellCard(c) || (typeof category === 'string' && category.toLowerCase().includes('bombshell'));
       const coverArtwork = c.cover_artwork || c.coverArtwork || (c.proof && typeof c.proof === 'object' ? c.proof.cover_artwork : undefined) || c.fingerprint;
       const parent = findCardWithFallback(pool, c.card_id, c.rarity, isBombshell, coverArtwork);
 
@@ -656,7 +656,7 @@ export async function verifyStripeSession(
     const pool = await fetchAllCards();
 
     return rawCards.map((c: any) => {
-      const isBombshell = c.source?.includes('bombshell') || c.card_id?.startsWith('bombshell-') || c.card_set === 'bombshell' || (c.proof && typeof c.proof === 'object' && c.proof.set === 'bombshell');
+      const isBombshell = isBombshellCard(c);
       const coverArtwork = c.cover_artwork || c.coverArtwork || (c.proof && typeof c.proof === 'object' ? c.proof.cover_artwork : undefined) || c.fingerprint;
       const parent = findCardWithFallback(pool, c.card_id, c.rarity, isBombshell, coverArtwork);
       return {
@@ -805,7 +805,7 @@ export async function buyTokenPack(): Promise<OwnedCard[] | 'insufficient'> {
     const pool = await fetchAllCards();
 
     return rawCards.map((c: any) => {
-      const isBombshell = c.source?.includes('bombshell') || c.card_id?.startsWith('bombshell-') || c.card_set === 'bombshell' || (c.proof && typeof c.proof === 'object' && c.proof.set === 'bombshell');
+      const isBombshell = isBombshellCard(c);
       const coverArtwork = c.cover_artwork || c.coverArtwork || (c.proof && typeof c.proof === 'object' ? c.proof.cover_artwork : undefined) || c.fingerprint;
       const parent = findCardWithFallback(pool, c.card_id, c.rarity, isBombshell, coverArtwork);
       return {
@@ -960,7 +960,7 @@ export async function redeemBonusCode(code: string): Promise<{ success: boolean;
         } else if (data.rewardType === 'card' && data.result?.card) {
           const pool = await fetchAllCards();
           const c = data.result.card;
-          const isBombshell = c.source?.includes('bombshell') || c.card_id?.startsWith('bombshell-') || c.card_set === 'bombshell' || (c.proof && typeof c.proof === 'object' && c.proof.set === 'bombshell');
+          const isBombshell = isBombshellCard(c);
           const coverArtwork = c.cover_artwork || c.coverArtwork || (c.proof && typeof c.proof === 'object' ? c.proof.cover_artwork : undefined) || c.fingerprint;
           const parent = findCardWithFallback(pool, c.card_id, c.rarity, isBombshell, coverArtwork);
           const mappedCard: OwnedCard = {
@@ -985,7 +985,7 @@ export async function redeemBonusCode(code: string): Promise<{ success: boolean;
         } else if (data.rewardType === 'pack' && data.result?.cards) {
           const pool = await fetchAllCards();
           const mappedCards: OwnedCard[] = data.result.cards.map((c: any) => {
-            const isBombshell = c.source?.includes('bombshell') || c.card_id?.startsWith('bombshell-') || c.card_set === 'bombshell' || (c.proof && typeof c.proof === 'object' && c.proof.set === 'bombshell');
+            const isBombshell = isBombshellCard(c);
             const coverArtwork = c.cover_artwork || c.coverArtwork || (c.proof && typeof c.proof === 'object' ? c.proof.cover_artwork : undefined) || c.fingerprint;
             const parent = findCardWithFallback(pool, c.card_id, c.rarity, isBombshell, coverArtwork);
             return {

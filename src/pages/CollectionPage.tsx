@@ -113,15 +113,37 @@ export default function CollectionPage() {
 
   const stats = useMemo(() => {
     const validCollection = collection.filter(c => c && c.card);
-    const unique = new Set(validCollection.map(c => c.cardId)).size;
+    const gen0Cards = validCollection.filter(c => !isBombshellCard(c));
+    const gen0Unique = new Set(gen0Cards.map(c => c.card.day)).size;
+    
+    const bombshellCards = validCollection.filter(c => isBombshellCard(c));
+    const bombshellUniqueDays = new Set(bombshellCards.map(c => c.card.day)).size;
+    const bombshellUniqueCovers = new Set(bombshellCards.map(c => (c as any).coverArtwork || c.card.coverArtwork || c.card.coverUrl || c.cardId)).size;
+
+    const unique = setFilter === 'gen-0' 
+      ? gen0Unique 
+      : setFilter === 'bombshell' 
+        ? bombshellUniqueCovers 
+        : gen0Unique;
+
     const byRarity: Record<string, number> = {};
     let score = 0;
     for (const c of validCollection) {
       byRarity[c.card.rarity] = (byRarity[c.card.rarity] || 0) + 1;
       score += RARITY_CONFIG[c.card.rarity]?.points || 1;
     }
-    return { total: validCollection.length, unique, byRarity, score };
-  }, [collection]);
+    return { 
+      total: validCollection.length, 
+      unique, 
+      gen0Unique, 
+      gen0CardsCount: gen0Cards.length,
+      bombshellUniqueDays,
+      bombshellUniqueCovers,
+      bombshellCardsCount: bombshellCards.length,
+      byRarity, 
+      score 
+    };
+  }, [collection, setFilter]);
 
   // Fuse handler
   const handleFuse = useCallback(async (group: OwnedCard[]) => {
@@ -182,7 +204,9 @@ export default function CollectionPage() {
           <div className="flex items-center gap-4">
             <div className="sticker-gun-tag sticker-slits" style={{ background: '#fdfdfd', '--slit-color': 'rgba(0,0,0,0.1)', transform: 'rotate(-1deg)', padding: '4px 10px' } as any}>
               <span className="text-[11px] font-black tracking-tighter uppercase">
-                {stats.unique} / 365 UNIQUE
+                {setFilter === 'bombshell' 
+                  ? `${stats.bombshellUniqueCovers} COVERS (${stats.bombshellUniqueDays}/365 DAYS)` 
+                  : `${stats.gen0Unique} / 365 GEN-0 UNIQUE`}
               </span>
             </div>
             <div className="sticker-gun-tag sticker-slits" style={{ background: 'var(--color-neon-gold)', '--slit-color': 'rgba(0,0,0,0.2)', transform: 'rotate(2deg)', padding: '4px 10px' } as any}>
@@ -206,20 +230,37 @@ export default function CollectionPage() {
         <div className="h-4 rounded-sm overflow-hidden bg-black/60 border border-white/10 relative">
           <motion.div
             initial={{ width: 0 }}
-            animate={{ width: `${(stats.unique / 365) * 100}%` }}
+            animate={{ 
+              width: setFilter === 'bombshell'
+                ? `${Math.min(100, (stats.bombshellUniqueDays / 365) * 100)}%`
+                : `${(stats.gen0Unique / 365) * 100}%` 
+            }}
             transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
             className="h-full relative overflow-hidden"
             style={{
-              background: 'linear-gradient(90deg, var(--color-neon-cyan), var(--color-neon-purple), var(--color-neon-gold))',
-              boxShadow: '0 0 15px rgba(0, 240, 255, 0.4)',
+              background: setFilter === 'bombshell'
+                ? 'linear-gradient(90deg, #FF1493, #ff85c0, #00E5FF)'
+                : 'linear-gradient(90deg, var(--color-neon-cyan), var(--color-neon-purple), var(--color-neon-gold))',
+              boxShadow: setFilter === 'bombshell'
+                ? '0 0 15px rgba(255, 20, 147, 0.4)'
+                : '0 0 15px rgba(0, 240, 255, 0.4)',
             }}
           >
              <div className="absolute inset-0 scanlines opacity-30" />
           </motion.div>
         </div>
         <div className="flex justify-between text-[9px] font-black uppercase tracking-[0.2em] opacity-40">
-          <span>{Math.round((stats.unique / 365) * 100)}% COLLECTION COMPLETION</span>
-          <span>{365 - stats.unique} REMAINING</span>
+          {setFilter === 'bombshell' ? (
+            <>
+              <span>{Math.round((stats.bombshellUniqueDays / 365) * 100)}% BOMBSHELL DAYS UNLOCKED ({stats.bombshellUniqueCovers} TOTAL COVERS)</span>
+              <span>{365 - stats.bombshellUniqueDays} DAYS REMAINING</span>
+            </>
+          ) : (
+            <>
+              <span>{Math.round((stats.gen0Unique / 365) * 100)}% GEN-0 COLLECTION COMPLETION</span>
+              <span>{365 - stats.gen0Unique} REMAINING</span>
+            </>
+          )}
         </div>
       </div>
 

@@ -190,11 +190,47 @@ export function getActiveBombshellCover(
  */
 export function isBombshellCard(cardOrOwned: any): boolean {
   if (!cardOrOwned) return false;
-  if (cardOrOwned.cardSet === 'bombshell' || cardOrOwned.card?.cardSet === 'bombshell') return true;
-  if (cardOrOwned.source?.includes('bombshell') || cardOrOwned.cardId?.startsWith('bombshell-')) return true;
-  if (cardOrOwned.coverArtwork?.startsWith('lb day') || cardOrOwned.coverArtwork?.startsWith('day ')) return true;
-  if (typeof cardOrOwned.coverUrl === 'string' && (cardOrOwned.coverUrl.includes('/girl-covers/days/') || cardOrOwned.coverUrl.includes('/rare_covers/'))) return true;
-  if (typeof cardOrOwned.card?.coverUrl === 'string' && (cardOrOwned.card.coverUrl.includes('/girl-covers/days/') || cardOrOwned.card.coverUrl.includes('/rare_covers/'))) return true;
+
+  // Explicit cardSet property
+  const setStr = cardOrOwned.cardSet || cardOrOwned.card_set || cardOrOwned.card?.cardSet || cardOrOwned.card?.card_set;
+  if (typeof setStr === 'string' && setStr.toLowerCase() === 'bombshell') return true;
+
+  // Card ID prefix (e.g. "bombshell-1", "bombshell-day-1")
+  const cardId = cardOrOwned.cardId || cardOrOwned.card_id || cardOrOwned.card?.id || cardOrOwned.id;
+  if (typeof cardId === 'string' && cardId.toLowerCase().startsWith('bombshell')) return true;
+
+  // Pack / Pull source (e.g. "Bombshell Pack", "The Bombshell Archive", "pack_bombshell")
+  const source = cardOrOwned.source || cardOrOwned.card?.source;
+  if (typeof source === 'string' && source.toLowerCase().includes('bombshell')) return true;
+
+  // Proof metadata
+  if (cardOrOwned.proof && typeof cardOrOwned.proof === 'object') {
+    if (cardOrOwned.proof.set === 'bombshell' || cardOrOwned.proof.type === 'bombshell') return true;
+  }
+
+  // Cover Artwork filename check (e.g. "lb day 001 - 01.jpg", "day 001 - 01.jpg")
+  const coverArtwork = cardOrOwned.coverArtwork || cardOrOwned.cover_artwork || cardOrOwned.card?.coverArtwork;
+  if (typeof coverArtwork === 'string' && coverArtwork.trim().length > 0) {
+    const lower = coverArtwork.toLowerCase();
+    if (lower.startsWith('lb day') || lower.startsWith('day ') || lower.includes('day_') || /^(lb\s*)?day\s*\d+/i.test(lower)) {
+      return true;
+    }
+  }
+
+  // Cover URL path inspection (e.g. /girl-covers/days/day 1/...)
+  const coverUrl = cardOrOwned.coverUrl || cardOrOwned.cover_url || cardOrOwned.card?.coverUrl || cardOrOwned.card?.cover_url;
+  if (typeof coverUrl === 'string') {
+    const lowerUrl = coverUrl.toLowerCase();
+    if (
+      lowerUrl.includes('/girl-covers/') || 
+      lowerUrl.includes('/rare_covers/') || 
+      lowerUrl.includes('rare_covers') || 
+      lowerUrl.includes('girl-covers')
+    ) {
+      return true;
+    }
+  }
+
   return false;
 }
 

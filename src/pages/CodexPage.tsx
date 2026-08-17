@@ -1451,7 +1451,8 @@ export default function CodexPage() {
   const ownedFutureDays = useMemo(() => {
     const s = new Set<number>();
     for (const c of collection) {
-      if (c.card.day > today) s.add(c.card.day);
+      if (isBombshellCard(c)) continue;
+      if (c && c.card && c.card.day > today) s.add(c.card.day);
     }
     return s;
   }, [collection, today]);
