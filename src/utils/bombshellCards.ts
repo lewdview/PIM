@@ -91,36 +91,22 @@ export function getFeaturedBombshellFoilCover(day?: number): string {
 
 /**
  * Deterministically or randomly select an artwork for a Bombshell card pull:
- * - Common & Uncommon get LB cards (`lbFiles`)
- * - Rare, Legendary & Mythic get Normal cards (`normalFiles`)
+ * Both Letterbox (LB) and Normal (Full Frame) covers can be pulled on ANY card rarity tier.
  * Falls back gracefully if a category is empty for that day.
  */
 export function pickBombshellArtwork(
   day: number,
-  rarity: Rarity,
+  rarity?: Rarity,
   preferredIndex?: number
 ): { fileName: string; coverUrl: string; isLB: boolean } {
   const dayCovers = getBombshellDayCovers(day);
-  const isLBTier = rarity === 'common' || rarity === 'uncommon';
+  const allFiles = [...dayCovers.lbFiles, ...dayCovers.normalFiles];
 
-  let candidatePool = isLBTier ? dayCovers.lbFiles : dayCovers.normalFiles;
-  let isLB = isLBTier;
-
-  // Fallbacks if candidate pool is empty for that day
-  if (!candidatePool || candidatePool.length === 0) {
-    if (isLBTier && dayCovers.normalFiles.length > 0) {
-      candidatePool = dayCovers.normalFiles;
-      isLB = false;
-    } else if (!isLBTier && dayCovers.lbFiles.length > 0) {
-      candidatePool = dayCovers.lbFiles;
-      isLB = true;
-    }
-  }
-
-  // If still empty (should not happen with full map), fallback to formatted standard name
-  if (!candidatePool || candidatePool.length === 0) {
+  // If no files found in map, fallback to formatted standard name
+  if (allFiles.length === 0) {
     const padDay = String(day).padStart(3, '0');
-    const fallbackName = isLBTier ? `lb day ${padDay} - 01.jpg` : `day ${padDay} - 01.jpg`;
+    const isLB = Math.random() > 0.5;
+    const fallbackName = isLB ? `lb day ${padDay} - 01.jpg` : `day ${padDay} - 01.jpg`;
     return {
       fileName: fallbackName,
       coverUrl: getBombshellCoverUrl(day, fallbackName),
@@ -129,14 +115,72 @@ export function pickBombshellArtwork(
   }
 
   const selectedIdx = preferredIndex !== undefined && preferredIndex >= 0
-    ? preferredIndex % candidatePool.length
-    : Math.floor(Math.random() * candidatePool.length);
+    ? preferredIndex % allFiles.length
+    : Math.floor(Math.random() * allFiles.length);
 
-  const selectedFile = candidatePool[selectedIdx];
+  const selectedFile = allFiles[selectedIdx];
+  const isLB = selectedFile.toLowerCase().startsWith('lb');
 
   return {
     fileName: selectedFile,
     coverUrl: getBombshellCoverUrl(day, selectedFile),
+    isLB,
+  };
+}
+
+/**
+ * Get user-selected active custom cover preference for a specific day.
+ */
+export function getCustomBombshellCover(day: number): string | null {
+  if (typeof localStorage === 'undefined') return null;
+  try {
+    return localStorage.getItem(`preferred_bombshell_cover_${day}`);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Set user-selected active custom cover preference for a specific day.
+ */
+export function setCustomBombshellCover(day: number, fileName: string): void {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem(`preferred_bombshell_cover_${day}`, fileName);
+    window.dispatchEvent(new CustomEvent('bombshell_cover_changed', { detail: { day, fileName } }));
+  } catch {}
+}
+
+/**
+ * Resolves the active display cover for a day (honoring user preference, owned cards, or day default).
+ */
+export function getActiveBombshellCover(
+  day: number,
+  unlockedCovers?: Set<string>,
+  latestCard?: OwnedCard
+): { fileName: string; coverUrl: string; isLB: boolean } {
+  const dayCovers = getBombshellDayCovers(day);
+  const customPref = getCustomBombshellCover(day);
+
+  let fileName = '';
+  if (customPref && (unlockedCovers?.has(customPref) || dayCovers.totalCovers > 0)) {
+    fileName = customPref;
+  } else if (latestCard?.coverArtwork) {
+    fileName = latestCard.coverArtwork;
+  } else if (unlockedCovers && unlockedCovers.size > 0) {
+    fileName = Array.from(unlockedCovers)[0];
+  } else if (dayCovers.normalFiles.length > 0) {
+    fileName = dayCovers.normalFiles[0];
+  } else if (dayCovers.lbFiles.length > 0) {
+    fileName = dayCovers.lbFiles[0];
+  } else {
+    fileName = `day ${String(day).padStart(3, '0')} - 01.jpg`;
+  }
+
+  const isLB = fileName.toLowerCase().startsWith('lb');
+  return {
+    fileName,
+    coverUrl: getBombshellCoverUrl(day, fileName),
     isLB,
   };
 }

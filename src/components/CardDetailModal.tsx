@@ -248,7 +248,7 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
                                       border: isLB ? '1px solid rgba(255, 184, 0, 0.4)' : '1px solid rgba(255, 20, 147, 0.4)',
                                     }}
                                   >
-                                    {isLB ? 'Light / Bust (LB)' : 'Normal / Full Cover'}
+                                    {isLB ? 'Letterbox (LB)' : 'Full Frame / Standard'}
                                   </span>
                                 </div>
                                 <div className="flex justify-between items-center text-[11px] font-mono">

@@ -132,6 +132,7 @@ interface VaultState {
   setTokenBalance: (balance: number) => void;
   addTokens: (amount: number) => Promise<void>;
   setEquippedCardId: (id: string | null) => void;
+  setPreferredCardCover: (day: number, coverArtwork: string) => void;
   loadVaultData: (force?: boolean) => Promise<void>;
   completeOnboarding: () => Promise<void>;
   unlockSkin: (skinId: string, cost: number) => Promise<boolean>;
@@ -369,6 +370,31 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   setLoading: (loading) => set({ isLoading: loading }),
   setTokenBalance: (balance) => set({ tokenBalance: balance }),
   setEquippedCardId: (id) => set({ equippedCardId: id }),
+  setPreferredCardCover: (day, coverArtwork) => {
+    try {
+      localStorage.setItem(`preferred_bombshell_cover_${day}`, coverArtwork);
+      window.dispatchEvent(new CustomEvent('bombshell_cover_changed', { detail: { day, coverArtwork } }));
+    } catch {}
+
+    set((state) => {
+      const nextCollection = state.collection.map((c) => {
+        if (c && c.card && c.card.day === day && (c.cardSet === 'bombshell' || c.card.cardSet === 'bombshell')) {
+          const coverUrl = `https://pznmptudgicrmljjafex.supabase.co/storage/v1/object/public/releaseready/girl-covers/days/day%20${day}/${encodeURIComponent(coverArtwork)}`;
+          return {
+            ...c,
+            coverArtwork,
+            card: {
+              ...c.card,
+              coverArtwork,
+              coverUrl,
+            },
+          };
+        }
+        return c;
+      });
+      return { collection: nextCollection };
+    });
+  },
   setOptionsModalOpen: (open) => set({ optionsModalOpen: open }),
   loadVaultData: async (force = false) => {
     const session = await supabase.auth.getSession();
