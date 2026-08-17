@@ -145,12 +145,6 @@ function isArchetypeDevModeEnabled(): boolean {
 }
 
 function selectSongArchetype(song?: Song | null): TrackArchetype {
-  // Primary production 3D perspective mode: Cyber Tunnel
-  // The full 6-archetype engine is scoped to Dev Mode (opt_archetypeDevMode / URL ?dev=true)
-  if (!isArchetypeDevModeEnabled()) {
-    return 'cyber_tunnel';
-  }
-
   if (!song) return 'cyber_tunnel';
 
   // 1. PRIORITY 1: Lyrics Keywords
