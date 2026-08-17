@@ -244,7 +244,137 @@ function PackEmblem({ accent, size = 80, isBombshell = false }: { accent: string
   );
 }
 
+function CyberPackBagContents({ meta, sampleCard }: { meta: RevealPackMeta; sampleCard?: OwnedCard['card'] }) {
+  const isBombshell = meta.category === 'bombshell' || meta.label?.toLowerCase().includes('bombshell');
+  const variant = get365CardVariantStyle(meta.category || meta.label);
+
+  const foilCoverUrl = isBombshell 
+    ? (sampleCard?.coverUrl || meta.coverImage || getFeaturedBombshellFoilCover(sampleCard?.day || 1))
+    : meta.coverImage;
+
+  return (
+    <>
+      {/* Precision Cartridge Shell Frame */}
+      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(175deg, #07070d 0%, #0d0e17 40%, #05060a 100%)', zIndex: 0 }}>
+        {/* Carbon Weave Texture Layer */}
+        <div className="cyber-carbon-weave absolute inset-0 opacity-40 pointer-events-none" />
+
+        {/* Embedded Artwork Underplate */}
+        {foilCoverUrl && (
+          <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-40">
+            <motion.img
+              src={foilCoverUrl}
+              alt="Foil Artwork"
+              className="w-full h-full object-cover"
+              animate={isBombshell ? { scale: [1.35, 1.42, 1.35] } : {}}
+              transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+              style={{
+                objectPosition: 'center 25%',
+                filter: isBombshell ? 'contrast(1.3) saturate(1.4)' : 'contrast(1.2) brightness(0.85)',
+                mixBlendMode: 'luminosity',
+              }}
+              onError={(e) => {
+                (e.currentTarget as HTMLImageElement).src = getFeaturedBombshellFoilCover(1);
+              }}
+            />
+            <div 
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background: `linear-gradient(180deg, rgba(5,6,10,0.3) 0%, rgba(5,6,10,0.85) 70%, #05060a 100%)`,
+                mixBlendMode: 'multiply',
+              }}
+            />
+          </div>
+        )}
+
+        {/* Dynamic Glow */}
+        <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 50% 30%, ${meta.accent}30, transparent 65%)`, zIndex: 2 }} />
+      </div>
+
+      {/* Top and Bottom Gold Multi-Pin Bus Terminals */}
+      <div className="cyber-bus-pins-top absolute inset-x-0 top-0 h-[18px]" style={{ zIndex: 25 }} />
+      <div className="cyber-bus-pins-bottom absolute inset-x-0 bottom-0 h-[18px]" style={{ zIndex: 25 }} />
+
+      {/* Dual Neon Light Conduits */}
+      <div className="cyber-light-conduit-left" style={{ zIndex: 22, '--conduit-accent': meta.accent } as any} />
+      <div className="cyber-light-conduit-right" style={{ zIndex: 22, '--conduit-accent': meta.accent } as any} />
+
+      {/* Live 3-Band Audio Equalizer */}
+      <div className="absolute left-3 bottom-20 flex items-end gap-1 h-7 pointer-events-none opacity-85" style={{ zIndex: 22 }}>
+        <div className="w-1 rounded-sm cyber-bar-bass" style={{ background: '#FF1493' }} />
+        <div className="w-1 rounded-sm cyber-bar-mids" style={{ background: '#00E5FF' }} />
+        <div className="w-1 rounded-sm cyber-bar-treble" style={{ background: '#39FF14' }} />
+      </div>
+
+      {/* TOP-LEFT: Laser Security Price Seal */}
+      <div className="absolute left-3 top-7 pointer-events-none" style={{ zIndex: 30 }}>
+        <div className="cyber-laser-stamp" style={{ '--stamp-accent': meta.accent, '--stamp-accent-glow': `${meta.accent}40`, padding: '3px 8px' } as any}>
+          <span className="text-[5px] font-mono uppercase opacity-70 tracking-wider">PRICE</span>
+          <span className="text-[16px] font-black leading-none" style={{ fontFamily: 'Impact, sans-serif', color: '#fff', textShadow: `0 0 8px ${meta.accent}` }}>
+            {meta.price || '$0.25'}
+          </span>
+        </div>
+      </div>
+
+      {/* BOTTOM-RIGHT: Capacity Stamp */}
+      <div className="absolute right-3 bottom-7 pointer-events-none" style={{ zIndex: 30 }}>
+        <div className="cyber-laser-stamp" style={{ '--stamp-accent': meta.accent, '--stamp-accent-glow': `${meta.accent}40`, padding: '2px 7px' } as any}>
+          <span className="text-[5px] font-mono uppercase opacity-70">CAPACITY</span>
+          <span className="text-[13px] font-black leading-none" style={{ fontFamily: 'Impact, sans-serif', color: '#fff' }}>
+            {meta.cardCount || 1}×
+          </span>
+        </div>
+      </div>
+
+      {/* CENTER GRAPHICS */}
+      <div className="absolute inset-0 flex flex-col items-center justify-between pt-6 pb-6 px-4 pointer-events-none" style={{ zIndex: 20 }}>
+        {/* Top dashed laser seam */}
+        <div className="w-full h-3 mt-1" style={{
+          borderBottom: `1.5px dashed ${meta.accent}60`,
+        }} />
+
+        {/* Center Title, Hex Core & Tagline */}
+        <div className="flex flex-col items-center justify-center my-auto w-full">
+          <h3 
+            className="text-[28px] leading-[0.9] uppercase font-black text-center" 
+            style={{
+              color: '#ffffff',
+              fontFamily: '"Impact", "Arial Black", sans-serif',
+              letterSpacing: '0.02em',
+              textShadow: `0 0 16px ${meta.accent}, 2px 2px 0 #000`,
+              margin: '4px 0 6px 0',
+            }}
+          >
+            {meta.label || 'CYBER CORE'}
+          </h3>
+          
+          <PackEmblem accent={meta.accent} size={62} isBombshell={isBombshell} />
+          
+          <div className="text-center mt-2 w-full">
+            <div className="inline-block">
+              <div className="px-3 py-1 rounded bg-black/80 border border-white/15" style={{ boxShadow: `0 0 10px ${meta.accent}30` }}>
+                <span className="text-[7.5px] font-mono font-bold tracking-wider uppercase text-slate-300">
+                  {isBombshell ? '★ STRICTLY UNCENSORED ARCHIVE ★' : variant.tagline}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="h-2" />
+      </div>
+
+      <div style={{ position: 'absolute', inset: 0, border: `1.5px solid ${meta.accent}40`, borderRadius: '8px', pointerEvents: 'none', zIndex: 30 }} />
+    </>
+  );
+}
+
 function PackBagContents({ meta, sampleCard }: { meta: RevealPackMeta; sampleCard?: OwnedCard['card'] }) {
+  const packDesignStyle = useVaultStore((s) => s.packDesignStyle);
+  if (packDesignStyle === 'cyber_cartridge') {
+    return <CyberPackBagContents meta={meta} sampleCard={sampleCard} />;
+  }
+
   const isBombshell = meta.category === 'bombshell' || meta.label?.toLowerCase().includes('bombshell');
   const variant = get365CardVariantStyle(meta.category || meta.label);
 

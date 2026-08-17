@@ -9,6 +9,7 @@ import { useGlobalPlayer } from "@/store/useGlobalPlayer";
 import { getCurrentDay } from "@/utils/dayCalc";
 import { getCardByDay } from "@/services/vaultService";
 import { getSmartCoverCandidates } from "@/utils/rarityArtwork";
+import MainBrandLogo from "@/components/MainBrandLogo";
 
 let hasPlayedIntroThisSession = false;
 let sessionIntroType: 'classic' | 'avant-garde' | null = null;
@@ -743,11 +744,7 @@ const DigitalClock = memo(() => {
         <div className="relative z-10 flex flex-col items-center w-full max-w-lg px-6 slide-up">
           {/* Hero Logo */}
           <div className="relative w-full flex items-center justify-center my-4">
-            <img
-              src="/pim-logo.png"
-              alt="PIM th3v4ult"
-              className="max-h-[170px] sm:max-h-[210px] w-auto object-contain filter drop-shadow-[0_0_35px_rgba(255,56,0,0.35)] hover:scale-105 transition-transform duration-300"
-            />
+            <MainBrandLogo size="lg" priority={true} />
           </div>
 
           {/* Sub label */}
@@ -905,11 +902,7 @@ const DigitalClock = memo(() => {
                 
                 {/* Official PIM th3v4ult Artwork Logo */}
                 <div className="relative w-full text-center py-2 flex items-center justify-center min-h-[140px]">
-                  <img
-                    src="/pim-logo.png"
-                    alt="PIM th3v4ult"
-                    className="relative z-10 max-h-[160px] sm:max-h-[190px] w-auto object-contain filter drop-shadow-[0_0_30px_rgba(0,229,255,0.35)]"
-                  />
+                  <MainBrandLogo size="md" />
                 </div>
 
                 {/* Subtitle & Tagline details */}

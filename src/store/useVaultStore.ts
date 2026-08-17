@@ -35,6 +35,7 @@ export interface ProfileSettings {
   bloomGlow?: boolean;
   bgAnimation?: boolean;
   legacyGraphics?: boolean;
+  packDesignStyle?: 'classic_foil' | 'cyber_cartridge';
 }
 
 export interface ProfileProgression {
@@ -110,6 +111,9 @@ interface VaultState {
   fragments: Record<string, number>;
   milestoneClaims: Record<string, boolean>;
   claimedRewards: Record<string, string[]>;
+
+  packDesignStyle: 'classic_foil' | 'cyber_cartridge';
+  setPackDesignStyle: (style: 'classic_foil' | 'cyber_cartridge') => void;
 
   settings: ProfileSettings;
   progression: ProfileProgression;
@@ -196,6 +200,16 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   avatarUrl: null,
   optionsModalOpen: false,
 
+  packDesignStyle: ((localStorage.getItem('pim_pack_design_style') as any) || 'cyber_cartridge'),
+  setPackDesignStyle: (style) => {
+    localStorage.setItem('pim_pack_design_style', style);
+    localStorage.setItem('opt_packDesignStyle', style);
+    set((state) => ({ 
+      packDesignStyle: style,
+      settings: { ...state.settings, packDesignStyle: style }
+    }));
+  },
+
   settings: {
     audioOffset: parseFloat(localStorage.getItem("opt_audioOffset") ?? "0") || 0,
     laneKeys: [
@@ -236,6 +250,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     bloomGlow: localStorage.getItem("opt_bloomGlow") !== "false",
     bgAnimation: localStorage.getItem("opt_bgAnimation") !== "false",
     legacyGraphics: localStorage.getItem("opt_legacyGraphics") === "true",
+    packDesignStyle: ((localStorage.getItem("opt_packDesignStyle") as any) || (localStorage.getItem("pim_pack_design_style") as any) || 'cyber_cartridge'),
   },
   progression: {
     tutorialCompleted: localStorage.getItem("pim_tutorial_completed") === "true",

@@ -21,6 +21,7 @@ import {
 import { RARITY_CONFIG, type Rarity } from '../utils/rarity';
 import Card from '../components/Card';
 import FusionAnimation from '../components/FusionAnimation';
+import TitleSpacer from '../components/TitleSpacer';
 
 // ═══════════════════════════════════════════════════════════════
 // HELPER: Condition progress for each modifier
@@ -166,16 +167,7 @@ function InfoTooltip({ text }: { text: string }) {
 // ═══════════════════════════════════════════════════════════════
 
 function SectionLabel({ label, accent = '#ff3800' }: { label: string; accent?: string }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-      <div style={{ width: '6px', height: '32px', background: accent, boxShadow: `0 0 8px ${accent}88` }} />
-      <span style={{
-        fontFamily: '"JetBrains Mono", monospace', fontSize: '9px',
-        letterSpacing: '0.4em', textTransform: 'uppercase', opacity: 0.6,
-      }}>{label}</span>
-      <div style={{ flex: 1, height: '1px', background: `linear-gradient(90deg, ${accent}30, transparent)` }} />
-    </div>
-  );
+  return <TitleSpacer label={label} accent={accent} />;
 }
 
 // ═══════════════════════════════════════════════════════════════

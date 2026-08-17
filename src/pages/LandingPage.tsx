@@ -21,6 +21,8 @@ import { type PackCategory, type PackSize, RARITY_CONFIG, PACK_CONFIGS, type Rar
 import { loadCatalog } from '../game/api';
 import { payWithCrypto } from '../services/coinbaseService';
 import PaymentSelectModal from '../components/PaymentSelectModal';
+import MainBrandLogo from '../components/MainBrandLogo';
+import TitleSpacer from '../components/TitleSpacer';
 
 // ===== BRUTALIST TICKER =====
 const TICKER_TEXT = 'PIM : TH3V4ULT — 365 DAYS OF RETENTION — COLLECT. SELL. EARN. — DAILY LEVEL UNLOCKS — V⚡ TOKENS — MYTHIC ROLLS — LIVE PLAY — ';
@@ -43,11 +45,9 @@ function BrutalistTicker() {
               fontFamily: '"Impact", "Arial Black", sans-serif',
               fontSize: '14px',
               fontWeight: 900,
-              color: '#000',
-              letterSpacing: '0.05em',
+              letterSpacing: '0.08em',
               textTransform: 'uppercase',
-              transform: 'scaleY(1.15)',
-              transformOrigin: 'center',
+              color: '#000',
             }}
           >
             {TICKER_TEXT}
@@ -60,13 +60,7 @@ function BrutalistTicker() {
 
 // ===== SECTION LABEL =====
 function SectionLabel({ label, accent = '#ff3800' }: { label: string; accent?: string }) {
-  return (
-    <div className="flex items-center gap-3 mb-4">
-      <div className="w-1.5 h-8" style={{ background: accent, boxShadow: `0 0 8px ${accent}88` }} />
-      <span className="text-[9px] font-mono tracking-[0.4em] uppercase opacity-60">{label}</span>
-      <div className="flex-1 h-px" style={{ background: `linear-gradient(90deg, ${accent}30, transparent)` }} />
-    </div>
-  );
+  return <TitleSpacer label={label} accent={accent} />;
 }
 
 // ===== STAT STICKER =====
@@ -643,20 +637,9 @@ export default function LandingPage() {
           initial={{ opacity: 0, scale: 0.92, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
-          className="relative flex flex-col items-center justify-center my-2 select-none group"
+          className="relative flex flex-col items-center justify-center my-4 select-none w-full"
         >
-          {/* Ambient backlight glow */}
-          <div
-            className="absolute inset-0 max-w-[440px] max-h-[440px] m-auto rounded-full blur-[80px] opacity-35 group-hover:opacity-60 transition-opacity duration-700 pointer-events-none"
-            style={{ background: 'radial-gradient(circle, #ff1493 0%, #00e5ff 60%, transparent 80%)' }}
-          />
-          <img
-            src="/pim-logo.png"
-            alt="PIM th3v4ult"
-            className="relative z-10 w-full max-w-[340px] sm:max-w-[420px] md:max-w-[480px] h-auto object-contain filter drop-shadow-[0_12px_28px_rgba(0,0,0,0.85)] transition-transform duration-500 hover:scale-[1.03]"
-            loading="eager"
-            fetchPriority="high"
-          />
+          <MainBrandLogo size="hero" priority={true} interactive={true} />
           <h1 className="sr-only">PIM : th3v4ult</h1>
         </motion.div>
 

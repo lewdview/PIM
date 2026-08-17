@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { RevealPackMeta } from '../store/useVaultStore';
+import { useVaultStore, type RevealPackMeta } from '../store/useVaultStore';
 
 interface Props {
   meta: RevealPackMeta;
@@ -9,8 +9,77 @@ interface Props {
 
 type Phase = 'idle' | 'shaking' | 'ripping' | 'flashing';
 
-/** Renders the pack bag artwork — reused for both halves of the rip */
-function PackBagArt({ meta }: { meta: RevealPackMeta }) {
+/** Renders the cyber cartridge artwork */
+function CyberPackBagArt({ meta }: { meta: RevealPackMeta }) {
+  return (
+    <div className="cyber-cartridge-frame" style={{ position: 'absolute', inset: 0, background: 'linear-gradient(175deg, #07070d 0%, #0d0e17 40%, #05060a 100%)', overflow: 'hidden', border: `1.5px solid ${meta.accent}50` }}>
+      <div className="cyber-carbon-weave absolute inset-0 opacity-40 pointer-events-none" />
+      {meta.coverImage && (
+        <img
+          src={meta.coverImage}
+          alt={meta.label}
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.35, mixBlendMode: 'luminosity' }}
+        />
+      )}
+      <div className="cyber-bus-pins-top absolute inset-x-0 top-0 h-[14px] z-10" />
+      <div className="cyber-bus-pins-bottom absolute inset-x-0 bottom-0 h-[14px] z-10" />
+      <div className="cyber-light-conduit-left" style={{ '--conduit-accent': meta.accent } as any} />
+      <div className="cyber-light-conduit-right" style={{ '--conduit-accent': meta.accent } as any} />
+
+      {/* Center Hex Core */}
+      <div style={{
+        position: 'absolute', inset: '28px 0 36px',
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', gap: '8px',
+      }}>
+        <div style={{ fontSize: '42px', lineHeight: 1, filter: `drop-shadow(0 0 16px ${meta.accent}90)` }}>
+          {meta.icon}
+        </div>
+        <div style={{
+          fontFamily: '"Impact", "Arial Black", sans-serif',
+          fontSize: '18px', fontWeight: 900,
+          textTransform: 'uppercase', letterSpacing: '0.05em',
+          color: '#fff',
+          textShadow: `0 0 20px ${meta.accent}, 2px 2px 0 rgba(0,0,0,0.9)`,
+          textAlign: 'center', padding: '0 12px',
+        }}>
+          {meta.label}
+        </div>
+        <div style={{
+          fontFamily: '"JetBrains Mono", monospace',
+          fontSize: '7px', fontWeight: 700,
+          letterSpacing: '0.25em',
+          color: meta.accent,
+          background: 'rgba(0,0,0,0.7)',
+          padding: '2px 8px',
+          borderRadius: '3px',
+          border: `1px solid ${meta.accent}40`,
+        }}>
+          DATA CORE // ENCRYPTED
+        </div>
+      </div>
+
+      {/* Laser Stamp Price - Top Left */}
+      <div className="cyber-laser-stamp" style={{ position: 'absolute', top: '22px', left: '10px', '--stamp-accent': meta.accent, '--stamp-accent-glow': `${meta.accent}40` } as any}>
+        <div style={{ fontSize: '5px', opacity: 0.6, textTransform: 'uppercase' }}>PRICE</div>
+        <div style={{ fontSize: '15px', fontWeight: 900, lineHeight: 1 }}>
+          {meta.price === 'FREE' ? 'FREE' : meta.price}
+        </div>
+      </div>
+
+      {/* Laser Capacity Stamp - Bottom Right */}
+      <div className="cyber-laser-stamp" style={{ position: 'absolute', bottom: '22px', right: '10px', '--stamp-accent': meta.accent, '--stamp-accent-glow': `${meta.accent}40` } as any}>
+        <div style={{ fontSize: '5px', opacity: 0.6, textTransform: 'uppercase' }}>CAPACITY</div>
+        <div style={{ fontSize: '14px', fontWeight: 900, lineHeight: 1 }}>
+          {meta.cardCount}×
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Renders the classic foil pack bag artwork */
+function ClassicFoilPackBagArt({ meta }: { meta: RevealPackMeta }) {
   return (
     <div style={{ position: 'absolute', inset: 0, background: meta.gradient, overflow: 'hidden' }}>
       {meta.coverImage && (
@@ -158,6 +227,9 @@ const shakeTransition = { duration: 0.55, ease: [0.36, 0.07, 0.19, 0.97] as cons
 
 export default function PackRipAnimation({ meta, onComplete }: Props) {
   const [phase, setPhase] = useState<Phase>('idle');
+  const packDesignStyle = useVaultStore((s) => s.packDesignStyle);
+  const isCyber = packDesignStyle === 'cyber_cartridge';
+  const PackArt = isCyber ? CyberPackBagArt : ClassicFoilPackBagArt;
 
   const handleTap = useCallback(() => {
     if (phase !== 'idle') return;
@@ -238,7 +310,7 @@ export default function PackRipAnimation({ meta, onComplete }: Props) {
                 border: '2px solid rgba(255,255,255,0.07)',
               }}
             >
-              <PackBagArt meta={meta} />
+              <PackArt meta={meta} />
             </motion.div>
           )}
         </AnimatePresence>
@@ -261,7 +333,7 @@ export default function PackRipAnimation({ meta, onComplete }: Props) {
                   border: '2px solid rgba(255,255,255,0.07)',
                 }}
               >
-                <PackBagArt meta={meta} />
+                <PackArt meta={meta} />
               </motion.div>
 
               {/* Bottom half */}
@@ -278,7 +350,7 @@ export default function PackRipAnimation({ meta, onComplete }: Props) {
                   border: '2px solid rgba(255,255,255,0.07)',
                 }}
               >
-                <PackBagArt meta={meta} />
+                <PackArt meta={meta} />
               </motion.div>
             </>
           )}
@@ -306,7 +378,7 @@ export default function PackRipAnimation({ meta, onComplete }: Props) {
                 color: meta.accent,
               }}
             >
-              TAP TO RIP OPEN
+              {isCyber ? 'TAP TO BREACH MATRIX' : 'TAP TO RIP OPEN'}
             </motion.p>
             <p style={{
               fontFamily: '"JetBrains Mono", monospace',

@@ -116,29 +116,12 @@ const mobileQuickTabs = [
   { id: 'earn', to: '/vault/earn', label: 'Earn', icon: Zap, accent: '#E5B800', glow: 'rgba(229, 184, 0, 0.4)' },
 ];
 
-// Determine which section a route belongs to for active highlighting
-function getActiveSection(location: string): string | null {
-  if (location === '/arcade' || location === '/pim' || location === '/play' || location === '/campaign' || location === '/songs' ||
-      location === '/tutorial' || location.startsWith('/chapter/') ||
-      location.startsWith('/play/') || location.startsWith('/results/')) {
-    return 'play';
-  }
-  if (location === '/vault' || location === '/vault/collection' ||
-      location === '/vault/reveal' || location === '/vault/codex' ||
-      location.startsWith('/hero') || location.startsWith('/vault/') && 
-      !(['/vault/forge', '/vault/leaderboard', '/vault/earn', '/vault/claim', '/vault/legal'].includes(location))) {
-    return 'vault';
-  }
-  if (location === '/vault/forge' || location === '/vault/leaderboard') {
-    return 'forge';
-  }
-  if (location === '/vault/earn' || location === '/vault/claim') {
-    return 'earn';
-  }
-  if (location === '/profile' || location === '/user' || location === '/options' ||
-      location === '/vault/legal' || location.startsWith('/admin') || location === '/pitch-deck') {
-    return 'more';
-  }
+// Active section detector from current URL
+function getActiveSection(path: string): string | null {
+  if (['/arcade', '/pim', '/play', '/campaign', '/songs', '/tutorial', '/chapter', '/slideshow', '/voyeur'].some(p => path === p || path.startsWith(p + '/') || path.startsWith(p + '-'))) return 'play';
+  if (['/vault', '/collection', '/forge', '/shop', '/vault/earn', '/codex'].some(p => path === p || path.startsWith(p + '/'))) return 'vault';
+  if (['/leaderboard', '/profile', '/deck', '/options', '/guide'].some(p => path.startsWith(p))) return 'terminal';
+  if (['/editor', '/admin'].some(p => path.startsWith(p))) return 'creator';
   return null;
 }
 
@@ -152,14 +135,8 @@ function VaultLogo() {
       aria-label="th3vault home"
       onClick={() => setOptionsModalOpen(false)}
     >
-      {/* Icon mark */}
-      <div style={{ position: 'relative', flexShrink: 0 }}>
-        <img
-          src="/pim-logo.png"
-          alt="PIM"
-          className="w-9 h-9 object-contain drop-shadow-[0_0_10px_rgba(255,20,147,0.4)] group-hover:scale-105 transition-transform"
-        />
-      </div>
+      {/* Dynamic Cycling Icon mark */}
+      <MainBrandLogo size="nav" interactive={true} priority={true} />
 
       {/* Word mark */}
       <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>

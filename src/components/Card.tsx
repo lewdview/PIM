@@ -64,34 +64,16 @@ interface CardProps {
   showBackOnly?: boolean;
 }
 
-function PimLogo({ color, cardId }: { color: string; cardId: string }) {
+function PimLogo({ color, cardId }: { color?: string; cardId?: string }) {
   return (
-    <svg width="68" height="68" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id={`pimGrad-${cardId}`} x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="100%" stopColor={color} />
-        </linearGradient>
-      </defs>
-      <text
-        x="60"
-        y="68"
-        textAnchor="middle"
-        dominantBaseline="middle"
-        fill={`url(#pimGrad-${cardId})`}
-        fontFamily="'Impact', 'Arial Black', 'Helvetica Neue', sans-serif"
-        fontSize="85"
-        fontWeight="900"
-        letterSpacing="-4"
-        stroke="#000000"
-        strokeWidth="7"
-        strokeLinejoin="miter"
-        paintOrder="stroke fill"
-        style={{ filter: `drop-shadow(0 0 8px ${color}80)` }}
-      >
-        PIM
-      </text>
-    </svg>
+    <div className="relative w-full h-full flex items-center justify-center p-1 select-none">
+      <img
+        src="/data/logos/logo_6_crown_cardback.png"
+        alt="PIM Crown Insignia"
+        className="w-full h-full object-contain filter drop-shadow-[0_0_12px_rgba(255,215,0,0.6)]"
+        loading="lazy"
+      />
+    </div>
   );
 }
 
@@ -814,20 +796,20 @@ export default function Card({
             {/* Centre emblem */}
             <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '14px' }}>
 
-              {/* PimLogo in circular frame */}
+              {/* PimLogo in circular/squircle frame */}
               <div style={{ position: 'relative' }}>
                 <div style={{
-                  width: '68px', height: '68px', borderRadius: isScribe ? '14px' : '50%',
+                  width: '84px', height: '74px', borderRadius: isScribe ? '14px' : '12px',
                   background: emblemBg,
                   border: emblemBorder,
-                  boxShadow: isGold ? `0 0 25px rgba(255,215,0,0.15)` : isCarbon ? `0 0 25px rgba(0,255,255,0.15)` : isMatrix ? `0 0 25px rgba(57,255,20,0.15)` : `0 0 30px ${rc.color}10, inset 0 0 16px ${rc.color}05`,
+                  boxShadow: isGold ? `0 0 25px rgba(255,215,0,0.2)` : isCarbon ? `0 0 25px rgba(0,255,255,0.2)` : isMatrix ? `0 0 25px rgba(57,255,20,0.2)` : `0 0 30px ${rc.color}15, inset 0 0 16px ${rc.color}08`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   overflow: 'hidden',
                 }}>
                   <PimLogo color={logoColor} cardId={card.id} />
                 </div>
                 {['rare','legendary','mythic'].includes(card.rarity) && (
-                  <div style={{ position: 'absolute', inset: '-10px', borderRadius: '50%', background: `radial-gradient(circle, ${rc.color}12, transparent 70%)`, animation: 'pulse-glow 2.5s ease-in-out infinite' }} />
+                  <div style={{ position: 'absolute', inset: '-10px', borderRadius: '16px', background: `radial-gradient(circle, ${rc.color}12, transparent 70%)`, animation: 'pulse-glow 2.5s ease-in-out infinite' }} />
                 )}
               </div>
 

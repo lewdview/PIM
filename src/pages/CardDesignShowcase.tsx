@@ -129,34 +129,16 @@ const RARITY_COLORS: Record<Rarity, string> = {
 // --------------------------------------------------------------------------
 // PRODUCTION-MATCHING STANDARD VAULT CARD BACK COMPONENT
 // --------------------------------------------------------------------------
-function PimLogo({ color, cardId }: { color: string; cardId: string }) {
+function PimLogo({ color, cardId }: { color?: string; cardId?: string }) {
   return (
-    <svg width="64" height="64" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id={`pimGrad-${cardId}`} x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="100%" stopColor={color} />
-        </linearGradient>
-      </defs>
-      <text
-        x="60"
-        y="68"
-        textAnchor="middle"
-        dominantBaseline="middle"
-        fill={`url(#pimGrad-${cardId})`}
-        fontFamily="'Impact', 'Arial Black', 'Helvetica Neue', sans-serif"
-        fontSize="85"
-        fontWeight="900"
-        letterSpacing="-4"
-        stroke="#000000"
-        strokeWidth="7"
-        strokeLinejoin="miter"
-        paintOrder="stroke fill"
-        style={{ filter: `drop-shadow(0 0 8px ${color}80)` }}
-      >
-        PIM
-      </text>
-    </svg>
+    <div className="relative w-full h-full flex items-center justify-center p-1 select-none">
+      <img
+        src="/data/logos/logo_6_crown_cardback.png"
+        alt="PIM Crown Insignia"
+        className="w-full h-full object-contain filter drop-shadow-[0_0_12px_rgba(255,215,0,0.6)]"
+        loading="lazy"
+      />
+    </div>
   );
 }
 
@@ -344,19 +326,19 @@ function StandardVaultCardBack({ card }: { card: VaultCard }) {
             {/* V mark frame */}
             <div className="relative">
               <div 
-                className="w-16 h-16 rounded-full border flex items-center justify-center overflow-hidden"
+                className="w-20 h-16 rounded-xl border flex items-center justify-center overflow-hidden"
                 style={{
                   background: emblemBg,
                   border: emblemBorder,
                   boxShadow: isCarbon 
-                    ? '0 0 16px rgba(0,255,255,0.1)'
+                    ? '0 0 20px rgba(0,255,255,0.2)'
                     : isGold
-                      ? '0 0 16px rgba(255,215,0,0.1)'
+                      ? '0 0 20px rgba(255,215,0,0.2)'
                       : isMatrix
-                        ? '0 0 16px rgba(57,255,20,0.1)'
+                        ? '0 0 20px rgba(57,255,20,0.2)'
                         : isScribe
-                          ? '0 0 16px rgba(255,20,147,0.1)'
-                          : `0 0 30px ${rcColor}10, inset 0 0 16px ${rcColor}05`,
+                          ? '0 0 20px rgba(255,20,147,0.2)'
+                          : `0 0 30px ${rcColor}15, inset 0 0 16px ${rcColor}08`,
                 }}
               >
                 <PimLogo color={logoColor} cardId={card.id} />

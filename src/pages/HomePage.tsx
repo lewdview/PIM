@@ -21,6 +21,7 @@ import { type PackCategory, type PackSize, RARITY_CONFIG, PACK_CONFIGS, type Rar
 import { useLocation } from 'wouter';
 import PaymentSelectModal from '../components/PaymentSelectModal';
 import { payWithCrypto } from '../services/coinbaseService';
+import TitleSpacer from '../components/TitleSpacer';
 
 // ===== BRUTALIST TICKER =====
 const TICKER_TEXT = 'PIM : TH3V4ULT — 365 DAYS OF DARK AND LIGHT — GEN 0 ARCHIVE — COLLECT. SELL. EARN. — DAILY DROPS — V⚡ TOKEN ECONOMY — RARITY PULLS — MYTHIC POSSIBLE — CLAIM NOW — ';
@@ -43,11 +44,9 @@ function BrutalistTicker() {
               fontFamily: '"Impact", "Arial Black", sans-serif',
               fontSize: '14px',
               fontWeight: 900,
-              color: '#000',
-              letterSpacing: '0.05em',
+              letterSpacing: '0.08em',
               textTransform: 'uppercase',
-              transform: 'scaleY(1.15)',
-              transformOrigin: 'center',
+              color: '#000',
             }}
           >
             {TICKER_TEXT}
@@ -60,13 +59,7 @@ function BrutalistTicker() {
 
 // ===== SECTION LABEL =====
 function SectionLabel({ label, accent = '#ff3800' }: { label: string; accent?: string }) {
-  return (
-    <div className="flex items-center gap-3 mb-4">
-      <div className="w-1.5 h-8" style={{ background: accent, boxShadow: `0 0 8px ${accent}88` }} />
-      <span className="text-[9px] font-mono tracking-[0.4em] uppercase opacity-60">{label}</span>
-      <div className="flex-1 h-px" style={{ background: `linear-gradient(90deg, ${accent}30, transparent)` }} />
-    </div>
-  );
+  return <TitleSpacer label={label} accent={accent} />;
 }
 
 // ===== STAT STICKER =====

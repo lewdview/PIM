@@ -13,6 +13,7 @@ import { useVaultStore } from '../store/useVaultStore';
 import { getAdminConfig } from '../utils/adminConfig';
 import { get365CardVariantStyle, getPackCoverFallback, getPackMultiCovers } from '../utils/cardVariants';
 import { getFeaturedBombshellFoilCover } from '../utils/bombshellCards';
+import CyberPackBag from './CyberPackBag';
 
 interface PackShopProps {
   onPurchase: (category: PackCategory, size: PackSize) => void;
@@ -109,11 +110,29 @@ function RipTab({ onRip, accent, disabled, labelOverride }: { onRip: () => void;
   );
 }
 
-// ===== FOIL PACK BAG =====
-export function PackBag({ category, isActive = true, onRip, isRipping = false, isFreeClaimed, showRipTab = true, forcedSize }: {
+// ===== PACK BAG WRAPPER (SUPPORTS CLASSIC FOIL & CYBER CARTRIDGE) =====
+export function PackBag({ category, isActive = true, onRip, isRipping = false, isFreeClaimed, showRipTab = true, forcedSize, styleOverride }: {
   category: PackCategory; isActive?: boolean; isRipping?: boolean; isFreeClaimed?: boolean; showRipTab?: boolean; forcedSize?: PackSize;
+  styleOverride?: 'classic_foil' | 'cyber_cartridge';
   onRip: (cat: PackCategory, size: PackSize) => void;
 }) {
+  const packDesignStyle = useVaultStore((s) => s.packDesignStyle);
+  const activeStyle = styleOverride || packDesignStyle || 'cyber_cartridge';
+
+  if (activeStyle === 'cyber_cartridge') {
+    return (
+      <CyberPackBag
+        category={category}
+        isActive={isActive}
+        onRip={onRip}
+        isRipping={isRipping}
+        isFreeClaimed={isFreeClaimed}
+        showRipTab={showRipTab}
+        forcedSize={forcedSize}
+      />
+    );
+  }
+
   const [tierIdx, setTierIdx] = useState(0);
   const [showInfo, setShowInfo] = useState(false);
   const [rippedCount, setRippedCount] = useState<number>(0);
@@ -713,6 +732,7 @@ export function PackBag({ category, isActive = true, onRip, isRipping = false, i
 export default function PackShop({ onPurchase }: PackShopProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [freeClaimed, setFreeClaimed] = useState(false);
+  const { packDesignStyle, setPackDesignStyle } = useVaultStore();
   const x = useMotionValue(0);
   const total = PACK_CAROUSEL_ORDER.length;
 
@@ -751,6 +771,38 @@ export default function PackShop({ onPurchase }: PackShopProps) {
 
   return (
     <section className="space-y-3 py-2">
+      {/* Pack Design Chassis Switcher */}
+      <div className="flex items-center justify-between px-4 max-w-2xl mx-auto mb-1">
+        <div className="flex items-center gap-1.5 opacity-60">
+          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+          <span className="text-[9px] font-mono font-bold tracking-[0.2em] uppercase text-slate-300">
+            PACK CHASSIS:
+          </span>
+        </div>
+        <div className="inline-flex p-1 rounded-lg bg-black/70 border border-white/15 backdrop-blur-md shadow-lg">
+          <button
+            onClick={() => setPackDesignStyle('classic_foil')}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded text-[10px] font-mono font-bold uppercase transition-all ${
+              packDesignStyle === 'classic_foil'
+                ? 'bg-amber-400 text-black shadow-[0_0_12px_rgba(251,191,36,0.5)] scale-[1.02]'
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <span>🏷️</span> CLASSIC FOIL
+          </button>
+          <button
+            onClick={() => setPackDesignStyle('cyber_cartridge')}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded text-[10px] font-mono font-bold uppercase transition-all ${
+              packDesignStyle === 'cyber_cartridge'
+                ? 'bg-cyan-400 text-black shadow-[0_0_12px_rgba(0,229,255,0.5)] scale-[1.02]'
+                : 'text-slate-400 hover:text-white hover:bg-white/5'
+            }`}
+          >
+            <span>⚡</span> CYBER MATRIX
+          </button>
+        </div>
+      </div>
+
       {/* Category tabs */}
       <div className="px-4 overflow-x-auto pb-4" style={{ scrollbarWidth: 'none' }}>
         <div className="flex gap-2 w-max mx-auto">

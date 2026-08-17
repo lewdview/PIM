@@ -882,7 +882,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
   const colorRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
 
   // Sync state with useVaultStore
-  const { tokenBalance, unlockedSkins, unlockSkin, echoPrestigeScore, updateSettings, updateProgression, updateCheats } = useVaultStore();
+  const { tokenBalance, unlockedSkins, unlockSkin, echoPrestigeScore, updateSettings, updateProgression, updateCheats, packDesignStyle, setPackDesignStyle } = useVaultStore();
 
   const [activeCardSkin, setActiveCardSkin] = useState('original');
   const [activeCardBack, setActiveCardBack] = useState('classic');
@@ -2457,6 +2457,78 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                             </div>
                           );
                         })}
+                      </div>
+                    </div>
+
+                    {/* Section 3: Pack Chassis Architecture */}
+                    <div className="space-y-3 pt-2">
+                      <h3 className="font-mono text-[9px] font-black text-white/40 uppercase tracking-wider border-b border-white/5 pb-1">PACK CHASSIS ARCHITECTURE</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        {/* Classic Foil */}
+                        <div 
+                          className={`border rounded p-3 flex flex-col justify-between min-h-[90px] transition-all cursor-pointer ${
+                            packDesignStyle === 'classic_foil'
+                              ? 'border-amber-400 bg-amber-400/10 shadow-[0_0_12px_rgba(251,191,36,0.2)]'
+                              : 'border-white/5 bg-black/40 hover:border-white/15'
+                          }`}
+                          onClick={() => setPackDesignStyle('classic_foil')}
+                        >
+                          <div className="flex justify-between items-start gap-2">
+                            <div className="flex flex-col">
+                              <span className="text-[10px] font-black font-mono text-white uppercase flex items-center gap-1.5">
+                                🏷️ Classic Foil Pouch
+                                {packDesignStyle === 'classic_foil' && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />}
+                              </span>
+                              <span className="text-[7.5px] text-zinc-400 font-mono mt-1 leading-snug uppercase">
+                                Traditional 3D metallic crimped foil sleeve with vinyl stickers & marquee text
+                              </span>
+                            </div>
+                          </div>
+                          <div className="mt-3 flex items-center justify-between border-t border-white/5 pt-2">
+                            {packDesignStyle === 'classic_foil' ? (
+                              <span className="text-[7.5px] text-amber-400 font-mono font-black uppercase tracking-wider flex items-center gap-1">
+                                <Check size={10} /> ACTIVE CHASSIS
+                              </span>
+                            ) : (
+                              <span className="text-[7.5px] text-zinc-500 font-mono font-black uppercase tracking-wider">
+                                SELECT CHASSIS
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Cyber Matrix Cartridge */}
+                        <div 
+                          className={`border rounded p-3 flex flex-col justify-between min-h-[90px] transition-all cursor-pointer ${
+                            packDesignStyle === 'cyber_cartridge'
+                              ? 'border-cyan-400 bg-cyan-400/10 shadow-[0_0_12px_rgba(0,229,255,0.2)]'
+                              : 'border-white/5 bg-black/40 hover:border-white/15'
+                          }`}
+                          onClick={() => setPackDesignStyle('cyber_cartridge')}
+                        >
+                          <div className="flex justify-between items-start gap-2">
+                            <div className="flex flex-col">
+                              <span className="text-[10px] font-black font-mono text-white uppercase flex items-center gap-1.5">
+                                ⚡ Cyber Matrix Core
+                                {packDesignStyle === 'cyber_cartridge' && <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />}
+                              </span>
+                              <span className="text-[7.5px] text-zinc-400 font-mono mt-1 leading-snug uppercase">
+                                High-tech chamfered solid-state data capsule with 3-band audio spectrum & laser breach
+                              </span>
+                            </div>
+                          </div>
+                          <div className="mt-3 flex items-center justify-between border-t border-white/5 pt-2">
+                            {packDesignStyle === 'cyber_cartridge' ? (
+                              <span className="text-[7.5px] text-cyan-400 font-mono font-black uppercase tracking-wider flex items-center gap-1">
+                                <Check size={10} /> ACTIVE CHASSIS
+                              </span>
+                            ) : (
+                              <span className="text-[7.5px] text-zinc-500 font-mono font-black uppercase tracking-wider">
+                                SELECT CHASSIS
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>

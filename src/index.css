@@ -464,6 +464,172 @@ body {
   );
 }
 
+/* =========================================================================
+   CYBER-MATRIX QUANTUM CARTRIDGE (APEX DATA CORE) — PACK DESIGN SYSTEM V2
+   ========================================================================= */
+
+/* 1. Precision Chamfered Cartridge Silhouette */
+.cyber-cartridge-frame {
+  clip-path: polygon(
+    14px 0, 
+    calc(100% - 14px) 0, 
+    100% 14px, 
+    100% calc(100% - 14px), 
+    calc(100% - 14px) 100%, 
+    14px 100%, 
+    0 calc(100% - 14px), 
+    0 14px
+  );
+  position: relative;
+}
+
+/* 2. Precision Gold Multi-Pin Bus Terminal Connectors (Top & Bottom) */
+.cyber-bus-pins-top {
+  background: repeating-linear-gradient(
+    90deg,
+    #050508 0px,
+    #050508 4px,
+    #cca300 4.5px,
+    #ffe066 6.5px,
+    #cca300 8.5px,
+    #050508 9px
+  );
+  box-shadow: inset 0 -2px 4px rgba(0,0,0,0.9), 0 2px 8px rgba(204,163,0,0.3);
+  border-bottom: 1px solid rgba(255,224,102,0.4);
+}
+
+.cyber-bus-pins-bottom {
+  background: repeating-linear-gradient(
+    90deg,
+    #050508 0px,
+    #050508 4px,
+    #cca300 4.5px,
+    #ffe066 6.5px,
+    #cca300 8.5px,
+    #050508 9px
+  );
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.9), 0 -2px 8px rgba(204,163,0,0.3);
+  border-top: 1px solid rgba(255,224,102,0.4);
+}
+
+/* 3. Carbon-Weave Matte Composite Texture */
+.cyber-carbon-weave {
+  background-image: 
+    linear-gradient(45deg, rgba(255,255,255,0.03) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(255,255,255,0.03) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(255,255,255,0.03) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(255,255,255,0.03) 75%);
+  background-size: 8px 8px;
+  background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
+}
+
+/* 4. Active Dual-Channel Light Conduits */
+@keyframes cyber-conduit-pulse {
+  0%, 100% { opacity: 0.65; filter: drop-shadow(0 0 4px var(--conduit-accent, #00E5FF)); }
+  50% { opacity: 1; filter: drop-shadow(0 0 12px var(--conduit-accent, #00E5FF)) drop-shadow(0 0 20px var(--conduit-accent, #00E5FF)); }
+}
+
+.cyber-light-conduit-left {
+  position: absolute;
+  top: 24px;
+  bottom: 24px;
+  left: 3px;
+  width: 2.5px;
+  background: var(--conduit-accent, #00E5FF);
+  border-radius: 1px;
+  animation: cyber-conduit-pulse 2.4s ease-in-out infinite;
+}
+
+.cyber-light-conduit-right {
+  position: absolute;
+  top: 24px;
+  bottom: 24px;
+  right: 3px;
+  width: 2.5px;
+  background: var(--conduit-accent, #00E5FF);
+  border-radius: 1px;
+  animation: cyber-conduit-pulse 2.4s ease-in-out infinite 1.2s;
+}
+
+/* 5. Holographic Laser Security Chip Stamp */
+.cyber-laser-stamp {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #090b10 0%, #151a24 100%);
+  color: #ffffff;
+  border: 1.5px solid var(--stamp-accent, #00E5FF);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-family: "JetBrains Mono", monospace;
+  box-shadow: 0 0 14px var(--stamp-accent-glow, rgba(0,229,255,0.3)), inset 0 0 8px rgba(0,0,0,0.8);
+  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+}
+
+.cyber-laser-stamp::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+  transform: translateX(-100%);
+  animation: cyber-stamp-sweep 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes cyber-stamp-sweep {
+  0% { transform: translateX(-100%); }
+  40%, 100% { transform: translateX(100%); }
+}
+
+/* 6. Live 3-Band Audio Spectrum Equalizer Bars */
+@keyframes cyber-eq-1 {
+  0%, 100% { height: 6px; }
+  25% { height: 22px; }
+  50% { height: 12px; }
+  75% { height: 28px; }
+}
+
+@keyframes cyber-eq-2 {
+  0%, 100% { height: 18px; }
+  25% { height: 8px; }
+  50% { height: 26px; }
+  75% { height: 14px; }
+}
+
+@keyframes cyber-eq-3 {
+  0%, 100% { height: 10px; }
+  25% { height: 24px; }
+  50% { height: 16px; }
+  75% { height: 8px; }
+}
+
+.cyber-bar-bass { animation: cyber-eq-1 0.75s ease-in-out infinite; }
+.cyber-bar-mids { animation: cyber-eq-2 0.6s ease-in-out infinite; }
+.cyber-bar-treble { animation: cyber-eq-3 0.85s ease-in-out infinite; }
+
+/* 7. Quantum Hexagonal Core Aperture */
+@keyframes cyber-hex-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes cyber-hex-reverse {
+  0% { transform: rotate(360deg); }
+  100% { transform: rotate(0deg); }
+}
+
+.cyber-hex-ring {
+  animation: cyber-hex-spin 18s linear infinite;
+  transform-origin: center;
+}
+
+.cyber-hex-ring-reverse {
+  animation: cyber-hex-reverse 12s linear infinite;
+  transform-origin: center;
+}
+
 /* ===== GLASS SURFACES ===== */
 .glass {
   background: var(--color-surface-1);
