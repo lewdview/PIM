@@ -9896,11 +9896,11 @@ export default function Game() {
         }}
       />
       <div
-        className="relative w-full h-full flex flex-col overflow-hidden"
+        className="relative w-full h-full flex flex-col items-center overflow-hidden"
       >
         {/* ── UNIFIED CYBER HUD & CENTERED STAGE TIMELINE ── */}
         <div
-          className="flex flex-col flex-shrink-0 w-full z-30"
+          className="flex flex-col items-center flex-shrink-0 w-full z-30"
           style={{
             borderBottom: "1px solid rgba(255,255,255,0.06)",
             background: "rgba(12,12,20,0.70)",
@@ -9909,10 +9909,10 @@ export default function Game() {
             boxShadow: "0 4px 28px rgba(0,0,0,0.5), inset 0 -1px 0 rgba(255,255,255,0.05)",
           }}
         >
-          {/* Top Row: Navigation (Left), Symmetrical Stage Tracker (Center), Miss Pips (Right) */}
-          <div className="flex items-center justify-between px-4 py-2 w-full max-w-5xl mx-auto">
-            {/* Left: QUIT + OPTIONS + Fullscreen */}
-            <div className="flex items-center gap-3 min-w-[130px]">
+          {/* Top Row: Symmetrical 3-Column Grid (Left: Controls, Center: Stage Tracker, Right: Miss Pips) */}
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center px-4 py-2 w-full max-w-5xl mx-auto self-center">
+            {/* Left Column: QUIT + OPTIONS + Fullscreen */}
+            <div className="flex items-center gap-3 justify-start">
               <button
                 data-testid="button-quit"
                 onClick={() => {
@@ -9970,8 +9970,8 @@ export default function Game() {
               </button>
             </div>
 
-            {/* Center: Stage Pill + Completion % + Time Elapsed / Total */}
-            <div className="flex items-center gap-2.5 font-mono text-[9px] font-black uppercase tracking-wider text-white/70 select-none">
+            {/* Center Column: Stage Pill + Completion % + Time Elapsed / Total (Guaranteed Math Center) */}
+            <div className="flex items-center justify-center gap-2.5 font-mono text-[9px] font-black uppercase tracking-wider text-white/70 select-none">
               <span 
                 className="px-2 py-0.5 rounded text-[8px] font-black tracking-widest transition-all duration-300 shadow-sm"
                 style={{
@@ -9992,8 +9992,8 @@ export default function Game() {
               </span>
             </div>
 
-            {/* Right: Miss Pips */}
-            <div className="flex flex-col items-end justify-center min-w-[130px]">
+            {/* Right Column: Miss Pips */}
+            <div className="flex items-center justify-end">
               {opts.hudMisses && (
                 <div className="flex gap-1.5">
                   {[0, 1, 2].map((i) => (
@@ -10013,7 +10013,10 @@ export default function Game() {
           </div>
 
           {/* Bottom Sub-Row: Centered Continuous Progress Track Directly Over Highway */}
-          <div className="w-full max-w-[580px] mx-auto px-4 pb-2">
+          <div 
+            className="w-full max-w-[580px] self-center mx-auto px-4 pb-2"
+            style={{ marginLeft: "auto", marginRight: "auto", alignSelf: "center" }}
+          >
             <div className="relative w-full h-[5px] rounded-full overflow-hidden p-[1px] bg-black/60 border border-white/15 backdrop-blur-sm shadow-[inset_0_1px_3px_rgba(0,0,0,0.8)]">
               <div
                 className="h-full rounded-full transition-all duration-150 ease-out"
