@@ -19,6 +19,7 @@ import GuideModal from './GuideModal';
 import { haptics } from '../utils/haptics';
 import FloatingTicker from './FloatingTicker';
 import { getIdenticon } from '../utils/identicon';
+import MainBrandLogo from './MainBrandLogo';
 
 const isDev = import.meta.env.DEV || localStorage.getItem('th3vault_dev_mode') === 'true';
 
