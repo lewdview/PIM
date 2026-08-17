@@ -334,15 +334,21 @@ function CyberPackBagContents({ meta, sampleCard }: { meta: RevealPackMeta; samp
         }} />
 
         {/* Center Title, Hex Core & Tagline */}
-        <div className="flex flex-col items-center justify-center my-auto w-full">
+        <div className="flex flex-col items-center justify-center my-auto w-full px-2">
           <h3 
-            className="text-[28px] leading-[0.9] uppercase font-black text-center" 
+            className={`leading-[0.92] uppercase font-black text-center max-w-[230px] ${
+              (meta.label || '').length > 18
+                ? 'text-[18px] sm:text-[20px]'
+                : (meta.label || '').length > 12
+                  ? 'text-[21px] sm:text-[23px]'
+                  : 'text-[25px] sm:text-[28px]'
+            }`} 
             style={{
               color: '#ffffff',
               fontFamily: '"Impact", "Arial Black", sans-serif',
               letterSpacing: '0.02em',
               textShadow: `0 0 16px ${meta.accent}, 2px 2px 0 #000`,
-              margin: '4px 0 6px 0',
+              margin: '3px 0 5px 0',
             }}
           >
             {meta.label || 'CYBER CORE'}
@@ -538,15 +544,21 @@ function PackBagContents({ meta, sampleCard }: { meta: RevealPackMeta; sampleCar
         }} />
 
         {/* Center Title, Emblem, and Tagline */}
-        <div className="flex flex-col items-center justify-center my-auto w-full">
+        <div className="flex flex-col items-center justify-center my-auto w-full px-2">
           <h3 
-            className="text-[32px] leading-[0.88] uppercase font-black text-center" 
+            className={`leading-[0.92] uppercase font-black text-center max-w-[240px] ${
+              (meta.label || '').length > 18
+                ? 'text-[19px] sm:text-[21px]'
+                : (meta.label || '').length > 12
+                  ? 'text-[23px] sm:text-[25px]'
+                  : 'text-[27px] sm:text-[30px]'
+            }`} 
             style={{
               color: '#ffffff',
               WebkitTextFillColor: '#ffffff',
               fontFamily: '"Impact", "Arial Black", sans-serif',
-              letterSpacing: '-0.5px',
-              transform: 'scaleY(1.22) scaleX(0.95)',
+              letterSpacing: '-0.3px',
+              transform: 'scaleY(1.06)',
               transformOrigin: 'center',
               WebkitTextStroke: '1.5px #000000',
               textShadow: `
@@ -555,7 +567,7 @@ function PackBagContents({ meta, sampleCard }: { meta: RevealPackMeta; sampleCar
                 2px 3px 0 #000000, 
                 3px 6px 12px rgba(0,0,0,0.95)
               `,
-              margin: '8px 0 6px 0',
+              margin: '4px 0 6px 0',
             }}
           >
             {meta.label || (isBombshell ? 'BOMBSHELL PACK' : 'VAULT PACK')}

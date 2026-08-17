@@ -531,84 +531,70 @@ export function PackBag({ category, isActive = true, onRip, isRipping = false, i
 
 
 
-        <div className="relative flex flex-col items-center justify-between h-full pt-[22px] pb-[52px] px-5 z-10">
-          <div className="flex items-center justify-end w-full h-8 px-1 opacity-0">
-            {/* Cards count placeholder area, now handled by sticker in top-left */}
-          </div>
+        <div className="relative flex flex-col items-center justify-between h-full pt-[20px] pb-[32px] px-5 z-10">
+          <div className="h-6" />
 
-          {/* Top Tier Circles (Hidden when rendered inside Vending Machine) */}
-          {showRipTab && cfg.tiers.length > 1 && (
-            <div className="flex items-center justify-center gap-3 w-full mt-2">
-              {cfg.tiers.map((t, i) => (
-                <button 
-                  key={t.size} 
-                  onClick={() => setTierIdx(i)}
-                  className="w-10 h-10 rounded-full flex items-center justify-center font-black font-mono transition-all hover:scale-110 active:scale-95"
-                  style={{
-                    background: i === tierIdx ? `${accent}cc` : 'rgba(0,0,0,0.6)',
-                    color: i === tierIdx ? '#000' : 'var(--color-text-primary)',
-                    border: `2px solid ${i === tierIdx ? accent : 'rgba(255,255,255,0.2)'}`,
-                    boxShadow: i === tierIdx ? `0 0 15px ${accent}60` : '0 4px 10px rgba(0,0,0,0.3)',
-                    backdropFilter: 'blur(4px)',
-                  }}
-                >
-                  {t.cardCount}×
-                </button>
-              ))}
-            </div>
-          )}
-
-          {!tier.coverImage && (
-            <div className="text-center space-y-2">
-              <h3 className="text-[48px] leading-[0.88] pack-label-neon uppercase font-black" style={{
+          {/* Central Title, Emblem & Tagline */}
+          <div className="text-center space-y-1.5 my-auto flex flex-col items-center w-full">
+            <h3 
+              className={`leading-[0.92] pack-label-neon uppercase font-black text-center max-w-[240px] ${
+                cfg.label.length > 18 
+                  ? 'text-[20px] sm:text-[22px]' 
+                  : cfg.label.length > 12 
+                    ? 'text-[24px] sm:text-[28px]' 
+                    : 'text-[30px] sm:text-[34px]'
+              }`} 
+              style={{
                 '--neon-accent': accent,
                 color: '#ffffff',
                 fontFamily: '"Impact", "Arial Black", sans-serif',
-                letterSpacing: '-0.02em',
-                transform: 'scaleY(1.3) scaleX(0.9)',
+                letterSpacing: '-0.01em',
+                transform: 'scaleY(1.06)',
                 transformOrigin: 'center',
-                WebkitTextStroke: '2px #000000',
+                WebkitTextStroke: '1.5px #000000',
                 textShadow: `
-                  0 0 20px ${accent}, 
-                  0 0 40px ${accent}80, 
-                  3px 5px 0 #000000, 
-                  4px 10px 20px rgba(0,0,0,0.95)
+                  0 0 18px ${accent}, 
+                  0 0 36px ${accent}80, 
+                  2px 3px 0 #000000, 
+                  3px 6px 16px rgba(0,0,0,0.95)
                 `,
-                margin: '16px 0 12px 0',
-              } as React.CSSProperties}>
-                {cfg.label}
-              </h3>
-              
-              <div className="flex justify-center">
-                <PackEmblem accent={accent} size={85} />
-              </div>
+                margin: '4px 0 6px 0',
+              } as React.CSSProperties}
+            >
+              {cfg.label}
+            </h3>
+            
+            <div className="flex justify-center">
+              <PackEmblem accent={accent} size={74} />
+            </div>
 
-              <div className="text-center mt-3">
-                <div className="inline-block">
-                  <div className="sticker-gun-tag sticker-slits drop-shadow-md" style={{
-                    background: '#ffffff',
-                    border: `1.5px solid ${accent}40`,
-                    '--slit-color': `${accent}22`,
-                    padding: '4px 12px',
-                    transform: 'rotate(0.5deg)',
-                    minWidth: '170px'
-                  } as any}>
-                    <span className="text-[9px] font-black tracking-tighter uppercase italic opacity-90" style={{ color: '#000' }}>
-                      {variant.tagline}
-                    </span>
-                  </div>
+            <div className="text-center mt-2">
+              <div className="inline-block">
+                <div className="sticker-gun-tag sticker-slits drop-shadow-md" style={{
+                  background: '#ffffff',
+                  border: `1.5px solid ${accent}40`,
+                  '--slit-color': `${accent}22`,
+                  padding: '3px 10px',
+                  transform: 'rotate(0.5deg)',
+                  minWidth: '150px'
+                } as any}>
+                  <span className="text-[8.5px] font-black tracking-tighter uppercase italic opacity-90" style={{ color: '#000' }}>
+                    {variant.tagline}
+                  </span>
                 </div>
               </div>
+            </div>
 
-              <p className="text-[10px] font-mono mt-4" style={{ color: 'var(--color-text-muted)' }}>
+            {cfg.description && (
+              <p className="text-[9.5px] font-mono mt-2 line-clamp-1" style={{ color: 'var(--color-text-muted)' }}>
                 {cfg.description}
               </p>
-            </div>
-          )}
+            )}
+          </div>
 
           {isSpecial && (
-            <div className="px-3 py-1.5 rounded-lg" style={{ background: `${accent}10`, border: `1px solid ${accent}25` }}>
-              <span className="text-[9px] font-mono font-bold" style={{ color: accent }}>
+            <div className="px-3 py-1 rounded-lg my-1" style={{ background: `${accent}15`, border: `1px solid ${accent}30` }}>
+              <span className="text-[8.5px] font-mono font-bold" style={{ color: accent }}>
                 {category === 'prophecy' ? '🔮 3% PROOF OF FIRST (1/1)' : '🎲 8% FIRST HEARD PROOF'}
               </span>
             </div>
@@ -617,13 +603,13 @@ export function PackBag({ category, isActive = true, onRip, isRipping = false, i
           <div className="flex items-center gap-1.5 mt-1">
             <div className="flex -space-x-1.5">
               {[0,1,2].map(i => (
-                <div key={i} className="w-4 h-4 rounded-full" style={{
+                <div key={i} className="w-3.5 h-3.5 rounded-full" style={{
                   background: `linear-gradient(135deg, ${accent}40, ${accent}20)`,
                   border: '1px solid rgba(0,0,0,0.3)',
                 }} />
               ))}
             </div>
-            <span className="text-[9px] font-mono" style={{ color: 'var(--color-text-muted)' }}>
+            <span className="text-[8.5px] font-mono" style={{ color: 'var(--color-text-muted)' }}>
               <Users size={9} className="inline mr-0.5" />
               {rippedCount.toLocaleString()} ripped
             </span>
@@ -656,8 +642,8 @@ export function PackBag({ category, isActive = true, onRip, isRipping = false, i
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 z-20 flex flex-col items-center justify-center p-6 backdrop-blur-md"
-              style={{ background: 'rgba(0,0,0,0.85)' }}
+              className="absolute inset-0 z-40 flex flex-col items-center justify-center p-6 backdrop-blur-md"
+              style={{ background: 'rgba(0,0,0,0.88)' }}
             >
               <h4 className="text-xl font-bold pack-label-neon mb-4 uppercase text-center" style={{ '--neon-accent': accent } as any}>
                 Drop Rates
@@ -707,9 +693,52 @@ export function PackBag({ category, isActive = true, onRip, isRipping = false, i
         </AnimatePresence>
       </div>
 
+      {/* Multi-Tier Quantity Selector (e.g. 1x, 5x, 15x) */}
+      {showRipTab && cfg.tiers.length > 1 && (
+        <div 
+          className="flex items-center justify-center gap-1.5 w-full mt-2.5 px-1 z-30 transition-opacity duration-300"
+          style={{ 
+            opacity: isActive ? 1 : 0.4, 
+            pointerEvents: isActive ? 'auto' : 'none' 
+          }}
+        >
+          <span className="text-[9px] font-mono font-bold text-white/50 tracking-wider mr-0.5">
+            QTY:
+          </span>
+          {cfg.tiers.map((t, i) => {
+            const isSelected = i === (forcedSize ? Math.max(0, cfg.tiers.findIndex(x => x.size === forcedSize)) : tierIdx);
+            return (
+              <button
+                key={t.size || i}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setTierIdx(i);
+                }}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-mono font-black transition-all cursor-pointer select-none ${
+                  isSelected 
+                    ? 'scale-105 shadow-lg' 
+                    : 'opacity-70 hover:opacity-100 hover:scale-102'
+                }`}
+                style={{
+                  background: isSelected ? accent : 'rgba(20,22,30,0.85)',
+                  color: isSelected ? '#000000' : '#ffffff',
+                  border: `1.5px solid ${isSelected ? accent : 'rgba(255,255,255,0.15)'}`,
+                  boxShadow: isSelected ? `0 0 14px ${accent}60, 2px 2px 0 #000` : 'none',
+                }}
+              >
+                <span>{t.cardCount}×</span>
+                <span className="text-[9px] font-bold" style={{ color: isSelected ? 'rgba(0,0,0,0.75)' : 'rgba(255,255,255,0.55)' }}>
+                  {t.price}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {showRipTab && (
         <div 
-          className="w-full mt-3 px-1 transition-opacity duration-300"
+          className="w-full mt-2 px-1 transition-opacity duration-300"
           style={{ 
             opacity: isActive ? 1 : 0.4, 
             pointerEvents: isActive ? 'auto' : 'none' 

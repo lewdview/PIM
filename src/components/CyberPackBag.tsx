@@ -390,37 +390,25 @@ export default function CyberPackBag({
         </div>
 
         {/* CENTER CONTENT */}
-        <div className="relative flex flex-col items-center justify-between h-full pt-20 pb-7 px-4 z-10">
-          {/* Pack Tier Multi-Selector */}
-          {showRipTab && cfg.tiers.length > 1 && (
-            <div className="flex items-center justify-center gap-2 w-full mb-1">
-              {cfg.tiers.map((t, i) => (
-                <button 
-                  key={t.size} 
-                  onClick={() => setTierIdx(i)}
-                  className="px-2.5 py-1 rounded text-[10px] font-mono font-bold transition-all hover:scale-105 active:scale-95"
-                  style={{
-                    background: i === activeTierIndex ? accent : 'rgba(0,0,0,0.6)',
-                    color: i === activeTierIndex ? '#000' : '#fff',
-                    border: `1px solid ${i === activeTierIndex ? accent : 'rgba(255,255,255,0.15)'}`,
-                    boxShadow: i === activeTierIndex ? `0 0 12px ${accent}` : 'none',
-                  }}
-                >
-                  {t.cardCount}×
-                </button>
-              ))}
-            </div>
-          )}
+        <div className="relative flex flex-col items-center justify-between h-full pt-16 pb-6 px-4 z-10">
+          <div className="h-2" />
 
           {/* Central Title & Aperture */}
-          <div className="text-center w-full my-auto flex flex-col items-center">
+          <div className="text-center w-full my-auto flex flex-col items-center px-1">
             <h3 
-              className="text-[26px] leading-tight uppercase font-black tracking-wider" 
+              className={`leading-[0.92] uppercase font-black tracking-wide text-center max-w-[230px] ${
+                cfg.label.length > 18 
+                  ? 'text-[18px] sm:text-[20px]' 
+                  : cfg.label.length > 12 
+                    ? 'text-[22px] sm:text-[24px]' 
+                    : 'text-[26px] sm:text-[29px]'
+              }`}
               style={{
                 color: '#ffffff',
                 fontFamily: '"Impact", "Arial Black", sans-serif',
                 letterSpacing: '0.02em',
-                textShadow: `0 0 18px ${accent}, 2px 2px 0 #000`,
+                textShadow: `0 0 16px ${accent}, 2px 2px 0 #000`,
+                margin: '4px 0 8px 0',
               }}
             >
               {cfg.label}
@@ -430,7 +418,7 @@ export default function CyberPackBag({
             <CyberApertureEmblem accent={accent} size={82} isBombshell={isBombshell} />
 
             {/* Tagline Badge */}
-            <div className="mt-1 px-3 py-1 rounded bg-black/70 border border-white/10 flex items-center gap-1.5">
+            <div className="mt-2 px-3 py-1 rounded bg-black/70 border border-white/10 flex items-center gap-1.5">
               <Cpu size={10} style={{ color: accent }} />
               <span className="text-[8px] font-mono font-bold uppercase tracking-wider text-slate-300">
                 {isBombshell ? 'UNCENSORED DATA ARCHIVE' : variant.tagline}
@@ -501,10 +489,53 @@ export default function CyberPackBag({
         </AnimatePresence>
       </div>
 
+      {/* Multi-Tier Quantity Selector (e.g. 1x, 5x, 15x) */}
+      {showRipTab && cfg.tiers.length > 1 && (
+        <div 
+          className="flex items-center justify-center gap-1.5 w-full mt-2.5 px-1 z-30 transition-opacity duration-300"
+          style={{ 
+            opacity: isActive ? 1 : 0.4, 
+            pointerEvents: isActive ? 'auto' : 'none' 
+          }}
+        >
+          <span className="text-[9px] font-mono font-bold text-white/50 tracking-wider mr-0.5">
+            QTY:
+          </span>
+          {cfg.tiers.map((t, i) => {
+            const isSelected = i === activeTierIndex;
+            return (
+              <button
+                key={t.size || i}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setTierIdx(i);
+                }}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-mono font-black transition-all cursor-pointer select-none ${
+                  isSelected 
+                    ? 'scale-105 shadow-lg' 
+                    : 'opacity-70 hover:opacity-100 hover:scale-102'
+                }`}
+                style={{
+                  background: isSelected ? accent : 'rgba(12,14,24,0.9)',
+                  color: isSelected ? '#000000' : '#ffffff',
+                  border: `1.5px solid ${isSelected ? accent : 'rgba(255,255,255,0.15)'}`,
+                  boxShadow: isSelected ? `0 0 14px ${accent}60, 2px 2px 0 #000` : 'none',
+                }}
+              >
+                <span>{t.cardCount}×</span>
+                <span className="text-[9px] font-bold" style={{ color: isSelected ? 'rgba(0,0,0,0.75)' : 'rgba(255,255,255,0.55)' }}>
+                  {t.price}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Rip / Breach Actuator */}
       {showRipTab && (
         <div 
-          className="w-full mt-3 px-1 transition-opacity duration-300"
+          className="w-full mt-2 px-1 transition-opacity duration-300"
           style={{ 
             opacity: isActive ? 1 : 0.4, 
             pointerEvents: isActive ? 'auto' : 'none' 
