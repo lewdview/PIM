@@ -741,20 +741,13 @@ const DigitalClock = memo(() => {
 
       {introType === 'classic' && !showIntro && (
         <div className="relative z-10 flex flex-col items-center w-full max-w-lg px-6 slide-up">
-          {/* Hero number */}
-          <div className="relative w-full text-center" style={{ marginBottom: -10 }}>
-            <div className="font-mono font-black leading-none select-none text-glow"
-              style={{
-                fontSize: 'clamp(120px, 25vw, 200px)',
-                background: 'linear-gradient(180deg, #FFFFFF 0%, #C8B88A 50%, #8A7A5A 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                letterSpacing: '-0.05em',
-                lineHeight: 0.8,
-                filter: 'drop-shadow(0 0 50px rgba(255,255,255,0.2))',
-              }}>
-              PIM
-            </div>
+          {/* Hero Logo */}
+          <div className="relative w-full flex items-center justify-center my-4">
+            <img
+              src="/pim-logo.png"
+              alt="PIM th3v4ult"
+              className="max-h-[170px] sm:max-h-[210px] w-auto object-contain filter drop-shadow-[0_0_35px_rgba(255,56,0,0.35)] hover:scale-105 transition-transform duration-300"
+            />
           </div>
 
           {/* Sub label */}
@@ -910,45 +903,13 @@ const DigitalClock = memo(() => {
                 <div className="absolute bottom-2 left-2 text-[8px] text-white/30 font-bold">+ BL</div>
                 <div className="absolute bottom-2 right-2 text-[8px] text-white/30 font-bold">BR +</div>
                 
-                {/* Multi-layered Glitch Title Logo */}
-                <div className="relative w-full text-center py-4 flex items-center justify-center min-h-[140px]">
-                  {/* Neon Cyan Layer */}
-                  <div className="absolute font-mono font-black select-none pim-layer-cyan text-glow"
-                    style={{
-                      fontSize: 'clamp(90px, 15vw, 140px)',
-                      color: '#00E5FF',
-                      letterSpacing: '0.15em',
-                      lineHeight: 0.8,
-                      opacity: 0.8,
-                      transform: 'translate(-2px, 1px)'
-                    }}>
-                    PIM
-                  </div>
-                  
-                  {/* Neon Magenta Layer */}
-                  <div className="absolute font-mono font-black select-none pim-layer-magenta text-glow"
-                    style={{
-                      fontSize: 'clamp(90px, 15vw, 140px)',
-                      color: '#FF1493',
-                      letterSpacing: '0.15em',
-                      lineHeight: 0.8,
-                      opacity: 0.8,
-                      transform: 'translate(2px, -1px)'
-                    }}>
-                    PIM
-                  </div>
-
-                  {/* Crisp White Foreground Layer */}
-                  <div className="absolute font-mono font-black select-none text-glow z-10"
-                    style={{
-                      fontSize: 'clamp(90px, 15vw, 140px)',
-                      color: '#ffffff',
-                      letterSpacing: '0.15em',
-                      lineHeight: 0.8,
-                      textShadow: '0 0 15px rgba(255,255,255,0.8)'
-                    }}>
-                    PIM
-                  </div>
+                {/* Official PIM th3v4ult Artwork Logo */}
+                <div className="relative w-full text-center py-2 flex items-center justify-center min-h-[140px]">
+                  <img
+                    src="/pim-logo.png"
+                    alt="PIM th3v4ult"
+                    className="relative z-10 max-h-[160px] sm:max-h-[190px] w-auto object-contain filter drop-shadow-[0_0_30px_rgba(0,229,255,0.35)]"
+                  />
                 </div>
 
                 {/* Subtitle & Tagline details */}

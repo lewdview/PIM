@@ -154,50 +154,11 @@ function VaultLogo() {
     >
       {/* Icon mark */}
       <div style={{ position: 'relative', flexShrink: 0 }}>
-        <div
-          style={{
-            width: '38px',
-            height: '38px',
-            background: '#ff3800',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transform: 'rotate(-4deg)',
-            boxShadow: '3px 3px 0 #000, 0 0 18px rgba(255,56,0,0.5)',
-            border: '2px solid #000',
-          }}
-        >
-          <svg width="34" height="34" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <text
-              x="50"
-              y="55"
-              textAnchor="middle"
-              dominantBaseline="middle"
-              fill="#ffffff"
-              fontFamily="'Impact', 'Arial Black', 'Helvetica Neue', sans-serif"
-              fontSize="68"
-              fontWeight="900"
-              letterSpacing="-3.5"
-              stroke="#000000"
-              strokeWidth="8"
-              strokeLinejoin="miter"
-              paintOrder="stroke fill"
-            >
-              PIM
-            </text>
-          </svg>
-        </div>
-        {/* small accent tick */}
-        <div style={{
-          position: 'absolute',
-          bottom: '-3px',
-          right: '-3px',
-          width: '10px',
-          height: '10px',
-          background: '#ffb800',
-          border: '1.5px solid #000',
-          transform: 'rotate(12deg)',
-        }} />
+        <img
+          src="/pim-logo.png"
+          alt="PIM"
+          className="w-9 h-9 object-contain drop-shadow-[0_0_10px_rgba(255,20,147,0.4)] group-hover:scale-105 transition-transform"
+        />
       </div>
 
       {/* Word mark */}

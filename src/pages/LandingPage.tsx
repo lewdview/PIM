@@ -639,15 +639,26 @@ export default function LandingPage() {
           </span>
         </motion.div>
 
-        <motion.h1
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="text-[44px] sm:text-6xl md:text-8xl brutalist-xl mb-4"
-          style={{ '--neon-accent': '#ff3800', textTransform: 'none' } as any}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.92, y: 10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
+          className="relative flex flex-col items-center justify-center my-2 select-none group"
         >
-          PIM : th3v4ult
-        </motion.h1>
+          {/* Ambient backlight glow */}
+          <div
+            className="absolute inset-0 max-w-[440px] max-h-[440px] m-auto rounded-full blur-[80px] opacity-35 group-hover:opacity-60 transition-opacity duration-700 pointer-events-none"
+            style={{ background: 'radial-gradient(circle, #ff1493 0%, #00e5ff 60%, transparent 80%)' }}
+          />
+          <img
+            src="/pim-logo.png"
+            alt="PIM th3v4ult"
+            className="relative z-10 w-full max-w-[340px] sm:max-w-[420px] md:max-w-[480px] h-auto object-contain filter drop-shadow-[0_12px_28px_rgba(0,0,0,0.85)] transition-transform duration-500 hover:scale-[1.03]"
+            loading="eager"
+            fetchPriority="high"
+          />
+          <h1 className="sr-only">PIM : th3v4ult</h1>
+        </motion.div>
 
         <motion.p
           initial={{ opacity: 0 }}
