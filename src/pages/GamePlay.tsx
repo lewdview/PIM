@@ -8,6 +8,7 @@ import type { Note, JudgmentDisplay, GameState, NoteType } from "@/game/types";
 import { loadOpts, keyLabel, getEffectiveDpr, type GameOpts, type PovMode, type RenderResolution, type GfxLevel, type FpsTarget, type ParticleDensity } from "@/lib/options";
 import { audioManager } from "@/game/audio";
 import { useVaultStore } from "@/store/useVaultStore";
+import { useGlobalPlayer } from "@/store/useGlobalPlayer";
 import { haptics } from "../utils/haptics";
 import { motion, AnimatePresence } from "framer-motion";
 import { Lock, Film } from "lucide-react";
@@ -881,7 +882,8 @@ function drawMovingGasAura(
   baseRadius: number,
   baseColor: string,
   t: number,
-  intensity: number = 1.0
+  intensity: number = 1.0,
+  skipTendrils: boolean = false
 ) {
   ctx.save();
 
@@ -895,7 +897,7 @@ function drawMovingGasAura(
 
   ctx.fillStyle = gasGrad;
   ctx.beginPath();
-  const numPoints = 28;
+  const numPoints = skipTendrils ? 16 : 28;
   for (let i = 0; i <= numPoints; i++) {
     const ang = (i / numPoints) * Math.PI * 2;
     // Multi-frequency organic trigonometric noise harmonics
@@ -913,24 +915,26 @@ function drawMovingGasAura(
   ctx.fill();
 
   // ── 2. Dynamic Swirling Dark Smoke Tendrils & Gas Wisps ──
-  const tendrilCount = 6;
-  for (let i = 0; i < tendrilCount; i++) {
-    const dir = i % 2 === 0 ? 1 : -1;
-    const tendrilAng = (i / tendrilCount) * Math.PI * 2 + t * 0.7 * dir;
-    const distP = 0.55 + 0.30 * Math.sin(t * 1.2 + i * 1.5);
-    const tx = cx + Math.cos(tendrilAng) * (baseRadius * distP);
-    const ty = cy + Math.sin(tendrilAng) * (baseRadius * distP * 0.75);
-    const tw = baseRadius * (0.28 + 0.12 * Math.sin(t * 1.8 + i));
+  if (!skipTendrils) {
+    const tendrilCount = 4;
+    for (let i = 0; i < tendrilCount; i++) {
+      const dir = i % 2 === 0 ? 1 : -1;
+      const tendrilAng = (i / tendrilCount) * Math.PI * 2 + t * 0.7 * dir;
+      const distP = 0.55 + 0.30 * Math.sin(t * 1.2 + i * 1.5);
+      const tx = cx + Math.cos(tendrilAng) * (baseRadius * distP);
+      const ty = cy + Math.sin(tendrilAng) * (baseRadius * distP * 0.75);
+      const tw = baseRadius * (0.28 + 0.12 * Math.sin(t * 1.8 + i));
 
-    const wispGrad = ctx.createRadialGradient(tx, ty, 2, tx, ty, tw);
-    wispGrad.addColorStop(0, colorWithAlpha(baseColor, 0.35 * intensity));
-    wispGrad.addColorStop(0.55, colorWithAlpha(baseColor, 0.14 * intensity));
-    wispGrad.addColorStop(1, "rgba(0, 0, 0, 0.0)");
+      const wispGrad = ctx.createRadialGradient(tx, ty, 2, tx, ty, tw);
+      wispGrad.addColorStop(0, colorWithAlpha(baseColor, 0.35 * intensity));
+      wispGrad.addColorStop(0.55, colorWithAlpha(baseColor, 0.14 * intensity));
+      wispGrad.addColorStop(1, "rgba(0, 0, 0, 0.0)");
 
-    ctx.fillStyle = wispGrad;
-    ctx.beginPath();
-    ctx.arc(tx, ty, tw, 0, Math.PI * 2);
-    ctx.fill();
+      ctx.fillStyle = wispGrad;
+      ctx.beginPath();
+      ctx.arc(tx, ty, tw, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
   ctx.restore();
@@ -1280,22 +1284,12 @@ function drawArchetypeHoldTrail(
   ctx.globalAlpha = 0.50;
   ctx.shadowColor = noteColor;
   ctx.shadowBlur = 12;
-  ctx.beginPath();
-  const innerLeft = leftPoints.map((p, idx) => ({
-    x: lerp(leftPoints[idx].x, rightPoints[idx].x, 0.22),
-    y: lerp(leftPoints[idx].y, rightPoints[idx].y, 0.22),
-  }));
-  const innerRight = rightPoints.map((p, idx) => ({
-    x: lerp(leftPoints[idx].x, rightPoints[idx].x, 0.78),
-    y: lerp(leftPoints[idx].y, rightPoints[idx].y, 0.78),
-  }));
-
-  ctx.moveTo(innerLeft[0].x, innerLeft[0].y);
+  ctx.moveTo(lerp(leftPoints[0].x, rightPoints[0].x, 0.22), lerp(leftPoints[0].y, rightPoints[0].y, 0.22));
   for (let i = 1; i <= steps; i++) {
-    ctx.lineTo(innerLeft[i].x, innerLeft[i].y);
+    ctx.lineTo(lerp(leftPoints[i].x, rightPoints[i].x, 0.22), lerp(leftPoints[i].y, rightPoints[i].y, 0.22));
   }
   for (let i = steps; i >= 0; i--) {
-    ctx.lineTo(innerRight[i].x, innerRight[i].y);
+    ctx.lineTo(lerp(leftPoints[i].x, rightPoints[i].x, 0.78), lerp(leftPoints[i].y, rightPoints[i].y, 0.78));
   }
   ctx.closePath();
   ctx.fill();
@@ -2364,9 +2358,12 @@ export default function Game() {
   const puPanelRef = useRef<HTMLDivElement | null>(null);
   const puTextRef = useRef<HTMLDivElement | null>(null);
   const puBarRef = useRef<HTMLDivElement | null>(null);
-  const gamepadRafRef = useRef<number | null>(null);
   const resolvePendingPromiseRef = useRef<(() => void) | null>(null);
   const usePointerEventsRef = useRef(false);
+  const activeVisibleNotesRef = useRef<NoteState[]>([]);
+  const progressPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const countdownTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pollGamepadRef = useRef<((t: number) => void) | null>(null);
 
   const prevPuStateRef = useRef<{
     label: string;
@@ -3224,10 +3221,7 @@ export default function Game() {
           gameSenseService.sendCombo(gs.combo);
           gs.goods++;
           checkPowerUps(gs.combo);
-          jRef.current = [
-            ...jRef.current.filter((x) => Date.now() - x.ts < 600),
-            { type: "SHIELDED", lane: ns.currentLane, id: ++jCounter.current, ts: Date.now() },
-          ];
+          addJudgment({ type: "SHIELDED", lane: ns.currentLane, id: ++jCounter.current, ts: Date.now() });
           syncDisplay();
           return;
         } else {
@@ -3256,10 +3250,7 @@ export default function Game() {
           puRef.current.triggered.clear();
           haptics.error();
 
-          jRef.current = [
-            ...jRef.current.filter((x) => Date.now() - x.ts < 600),
-            { type: "MISS", lane: ns.note.lane, id: ++jCounter.current, ts: Date.now() },
-          ];
+          addJudgment({ type: "MISS", lane: ns.note.lane, id: ++jCounter.current, ts: Date.now() });
 
           const now = Date.now();
           if (now - lastMissTimeRef.current > 350) {
@@ -3298,10 +3289,7 @@ export default function Game() {
         puRef.current.triggered.clear();
         haptics.error();
 
-        jRef.current = [
-          ...jRef.current.filter((x) => Date.now() - x.ts < 600),
-          { type: "MISS", lane: ns.note.lane, id: ++jCounter.current, ts: Date.now() },
-        ];
+        addJudgment({ type: "MISS", lane: ns.note.lane, id: ++jCounter.current, ts: Date.now() });
 
         const now = Date.now();
         if (now - lastMissTimeRef.current > 350) {
@@ -3348,14 +3336,11 @@ export default function Game() {
 
         triggerHitFx(ns.currentLane, "PERFECT+", top);
 
-        jRef.current = [
-          ...jRef.current.filter((x) => Date.now() - x.ts < 600),
-          { type: "PERFECT+", lane: ns.currentLane, id: ++jCounter.current, ts: Date.now() },
-        ];
+        addJudgment({ type: "PERFECT+", lane: ns.currentLane, id: ++jCounter.current, ts: Date.now() });
       }
       syncDisplay();
     },
-    [getT, calcScore, checkPowerUps, syncDisplay, muteLane, triggerHitFx],
+    [getT, calcScore, checkPowerUps, syncDisplay, muteLane, triggerHitFx, addJudgment],
   );
 
   const releaseLane = useCallback(
@@ -3365,7 +3350,7 @@ export default function Game() {
         (n) =>
           n.note.type === "hold" &&
           n.holdActive &&
-          n.currentLane === lane &&
+          Math.round(n.currentLane) === lane &&
           !n.hit,
       );
       if (!ns) return;
@@ -3376,37 +3361,66 @@ export default function Game() {
 
   const hitSwipeRelease = useCallback(
     (ns: NoteState, swipeDir: Note['swipeDirection']) => {
+      if (phaseRef.current !== "playing" || ns.hit || !ns.holdActive) return;
+
+      const t = getT();
+      const holdDur = ns.note.holdDuration || 0.5;
+      const releaseTargetTime = ns.note.time + holdDur;
+      const diff = Math.abs(releaseTargetTime - t);
+      const diffLevel = songRef.current?.difficultyLevel ?? 5;
+
+      const ppW = perfectPlusWindow(diffLevel);
+      const pW = perfectWindow(diffLevel);
+      const gW = goodWindow(diffLevel);
+      const mW = missWindow(diffLevel);
+
+      let j: JudgmentDisplay["type"];
+      if (diff <= ppW) j = "PERFECT+";
+      else if (diff <= pW) j = "PERFECT";
+      else if (diff <= gW) j = "GOOD";
+      else if (diff <= mW) j = "GOOD";
+      else j = "MISS";
+
       ns.hit = true;
       ns.holdActive = false;
+
+      recordedTelemetryRef.current.push({
+        noteId: ns.note.id,
+        time: t,
+        judgment: j,
+        offset: t - releaseTargetTime,
+        lane: ns.currentLane,
+        type: "swipe_release"
+      });
+
       const gs = gsRef.current;
-      const t = getT();
-      const dl = songRef.current?.difficultyLevel ?? 5;
-      const diff = isExportVideoRef.current ? 0 : Math.abs((ns.note.time + (ns.note.holdDuration || 0.5)) - t);
-
-      let j: "PERFECT+" | "PERFECT" | "GOOD" | null =
-        diff <= perfectPlusWindow(dl)
-          ? "PERFECT+"
-          : diff <= perfectWindow(dl)
-            ? "PERFECT"
-            : diff <= goodWindow(dl)
-              ? "GOOD"
-              : null;
-      if (!j) j = "GOOD"; // Fallback to GOOD inside miss window bounds
-
       gs.score += calcScore(gs.combo, j);
-      gs.combo++;
-      gs.maxCombo = Math.max(gs.maxCombo, gs.combo);
-      gameSenseService.sendHit();
-      gameSenseService.sendCombo(gs.combo);
-      if (j === "PERFECT+") {
-        gs.perfectPlus++;
-        audioManager.playSfx("tap_nav", 0.15);
-      } else if (j === "PERFECT") {
-        gs.perfects++;
-        audioManager.playSfx("tap_nav", 0.12);
+
+      if (j === "MISS") {
+        gs.combo = 0;
+        gs.misses++;
+        puRef.current.active = null;
+        puRef.current.endTime = 0;
+        updatePuDisplayDOM(null);
+        gameSenseService.sendPowerup(0);
+        puRef.current.triggered.clear();
+        haptics.error();
+        muteLane(ns.note.lane);
       } else {
-        gs.goods++;
-        audioManager.playSfx("tap_nav", 0.1);
+        gs.combo++;
+        gs.maxCombo = Math.max(gs.maxCombo, gs.combo);
+        gameSenseService.sendHit();
+        gameSenseService.sendCombo(gs.combo);
+        if (j === "PERFECT+") {
+          gs.perfectPlus++;
+          audioManager.playSfx("swipe", 0.7);
+        } else if (j === "PERFECT") {
+          gs.perfects++;
+          audioManager.playSfx("swipe", 0.65);
+        } else {
+          gs.goods++;
+          audioManager.playSfx("swipe", 0.5);
+        }
       }
 
       checkPowerUps(gs.combo);
@@ -3417,13 +3431,10 @@ export default function Game() {
       const hitY = H * HIT_RATIO;
       triggerHitFx(ns.currentLane, j, hitY, swipeDir);
 
-      jRef.current = [
-        ...jRef.current.filter((x) => Date.now() - x.ts < 600),
-        { type: j, lane: ns.currentLane, id: ++jCounter.current, ts: Date.now() },
-      ];
+      addJudgment({ type: j, lane: ns.currentLane, id: ++jCounter.current, ts: Date.now() });
       syncDisplay();
     },
-    [getT, calcScore, checkPowerUps, syncDisplay, triggerHitFx],
+    [getT, calcScore, checkPowerUps, syncDisplay, triggerHitFx, muteLane, addJudgment],
   );
 
   const moveHold = useCallback(
@@ -3493,15 +3504,12 @@ export default function Game() {
             });
           }
 
-          jRef.current = [
-            ...jRef.current.filter((x) => Date.now() - x.ts < 600),
-            { type: "PERFECT+", lane: toLane, id: ++jCounter.current, ts: Date.now() },
-          ];
+          addJudgment({ type: "PERFECT+", lane: toLane, id: ++jCounter.current, ts: Date.now() });
           syncDisplay();
         }
       }
     },
-    [],
+    [addJudgment, calcScore, checkPowerUps, syncDisplay],
   );
 
   const finishGame = useCallback((failed = false) => {
@@ -3832,14 +3840,10 @@ export default function Game() {
     if (!ctx || !songRef.current) return;
     
     // GFX level & bloom glow shadow blur optimization
-    const disableShadows = optsRef.current.legacyGraphics || !optsRef.current.bloomGlow || optsRef.current.gfxLevel === 'low';
-    if (disableShadows) {
+    const allowShadows = !optsRef.current.legacyGraphics && optsRef.current.bloomGlow && optsRef.current.gfxLevel !== 'low';
+    if (!allowShadows) {
       ctx.shadowBlur = 0;
-      Object.defineProperty(ctx, 'shadowBlur', {
-        set: () => {},
-        get: () => 0,
-        configurable: true
-      });
+      ctx.shadowColor = 'transparent';
     }
     const song = songRef.current;
     const isRewinding = phase === "rewinding";
@@ -3853,6 +3857,12 @@ export default function Game() {
     } else {
       t = getT();
     }
+
+    // Poll gamepad input synchronized on exact frame audio clock
+    if (gamepadConnectedRef.current) {
+      pollGamepadRef.current?.(t);
+    }
+
     const audio = audioRef.current;
     if (audio && !pausedRef.current && phaseRef.current === "playing") {
       if (modifierRef.current === 'corrupted_signal') {
@@ -5726,7 +5736,8 @@ export default function Game() {
     const allNotes = notesRef.current;
     const minActiveTime = t - Math.max(1.2, AT * 0.8);
     const maxActiveTime = t + AT + 0.3;
-    const activeVisibleNotes: NoteState[] = [];
+    const activeVisibleNotes = activeVisibleNotesRef.current;
+    activeVisibleNotes.length = 0;
 
     // Collect ONLY the active visible notes on screen (typically 3-15 notes max)
     for (let i = 0; i < allNotes.length; i++) {
@@ -5805,10 +5816,7 @@ export default function Game() {
           audioManager.playSfx("tap_nav", 0.15);
           triggerHitFx(ns.currentLane, "PERFECT+", hitY, note.swipeDirection);
 
-          jRef.current = [
-            ...jRef.current.filter((x) => Date.now() - x.ts < 600),
-            { type: "PERFECT+", lane: ns.currentLane, id: ++jCounter.current, ts: Date.now() },
-          ];
+          addJudgment({ type: "PERFECT+", lane: ns.currentLane, id: ++jCounter.current, ts: Date.now() });
           dirty = true;
         }
       }
@@ -5860,15 +5868,12 @@ export default function Game() {
             gameSenseService.sendCombo(gsx.combo);
             gsx.goods++;
             checkPowerUps(gsx.combo);
-            jRef.current = [
-              ...jRef.current.filter((x) => Date.now() - x.ts < 600),
-              {
-                type: "SHIELDED",
-                lane: note.lane,
-                id: ++jCounter.current,
-                ts: Date.now(),
-              },
-            ];
+            addJudgment({
+              type: "SHIELDED",
+              lane: note.lane,
+              id: ++jCounter.current,
+              ts: Date.now(),
+            });
             recordedTelemetryRef.current.push({
               noteId: note.id,
               time: t,
@@ -5903,15 +5908,12 @@ export default function Game() {
             puRef.current.triggered.clear();
             haptics.error();
 
-            jRef.current = [
-              ...jRef.current.filter((x) => Date.now() - x.ts < 600),
-              {
-                type: "MISS",
-                lane: note.lane,
-                id: ++jCounter.current,
-                ts: Date.now(),
-              },
-            ];
+            addJudgment({
+              type: "MISS",
+              lane: note.lane,
+              id: ++jCounter.current,
+              ts: Date.now(),
+            });
             muteLane(note.lane);
             dirty = true;
             const now = Date.now();
@@ -7023,275 +7025,253 @@ export default function Game() {
     hitSwipeReleaseRef.current = hitSwipeRelease;
   }); // No dependency array so it runs on every render
 
-  useEffect(() => {
-    let active = true;
+  // Helper for analog stick flick detection
+  const detectFlick = useCallback((x: number, y: number, neutralRef: React.MutableRefObject<boolean>, t: number) => {
+    const magnitude = Math.hypot(x, y);
+    if (magnitude < 0.25) {
+      neutralRef.current = true;
+    } else if (magnitude > 0.75 && neutralRef.current) {
+      neutralRef.current = false;
+      // Flick detected! Find direction.
+      const angle = Math.atan2(y, x);
+      const deg = (angle * (180 / Math.PI) + 360) % 360;
+      let swipeDir: Note['swipeDirection'] | undefined;
+      if (deg >= 337.5 || deg < 22.5) swipeDir = 'right';
+      else if (deg >= 22.5 && deg < 67.5) swipeDir = 'down-right';
+      else if (deg >= 67.5 && deg < 112.5) swipeDir = 'down';
+      else if (deg >= 112.5 && deg < 157.5) swipeDir = 'down-left';
+      else if (deg >= 157.5 && deg < 202.5) swipeDir = 'left';
+      else if (deg >= 202.5 && deg < 247.5) swipeDir = 'up-left';
+      else if (deg >= 247.5 && deg < 292.5) swipeDir = 'up';
+      else swipeDir = 'up-right';
 
-    // Helper for analog stick flick detection
-    const detectFlick = (x: number, y: number, neutralRef: React.MutableRefObject<boolean>) => {
-      const magnitude = Math.hypot(x, y);
-      if (magnitude < 0.25) {
-        neutralRef.current = true;
-      } else if (magnitude > 0.75 && neutralRef.current) {
-        neutralRef.current = false;
-        // Flick detected! Find direction.
-        const angle = Math.atan2(y, x);
-        const deg = (angle * (180 / Math.PI) + 360) % 360;
-        let swipeDir: Note['swipeDirection'] | undefined;
-        if (deg >= 337.5 || deg < 22.5) swipeDir = 'right';
-        else if (deg >= 22.5 && deg < 67.5) swipeDir = 'down-right';
-        else if (deg >= 67.5 && deg < 112.5) swipeDir = 'down';
-        else if (deg >= 112.5 && deg < 157.5) swipeDir = 'down-left';
-        else if (deg >= 157.5 && deg < 202.5) swipeDir = 'left';
-        else if (deg >= 202.5 && deg < 247.5) swipeDir = 'up-left';
-        else if (deg >= 247.5 && deg < 292.5) swipeDir = 'up';
-        else swipeDir = 'up-right';
+      if (swipeDir) {
+        const mw = missWindow(songRef.current?.difficultyLevel ?? 5);
+        let cand: typeof notesRef.current[0] | undefined = undefined;
+        let activeHoldWithSwipe: typeof notesRef.current[0] | undefined = undefined;
 
-        if (swipeDir) {
-          const t = getTRef.current ? getTRef.current() : 0;
+        for (let i = 0; i < notesRef.current.length; i++) {
+          const n = notesRef.current[i];
+          if (n.note.time < t - 1.0) continue;
+          if (n.note.time > t + mw + 0.5) break;
+
+          if (!cand && !n.hit && !n.missed && n.note.type === 'swipe' &&
+              n.note.swipeDirection === swipeDir && Math.abs(n.note.time - t) < mw) {
+            cand = n;
+          }
+          if (!activeHoldWithSwipe && n.holdActive && !n.hit && !n.missed &&
+              n.note.swipeDirection === swipeDir &&
+              Math.abs((n.note.time + (n.note.holdDuration || 0.5)) - t) < mw) {
+            activeHoldWithSwipe = n;
+          }
+          if (cand && activeHoldWithSwipe) break;
+        }
+
+        if (cand && hitLaneRef.current) {
+          hitLaneRef.current(cand.note.lane, swipeDir);
+        } else if (activeHoldWithSwipe && hitSwipeReleaseRef.current) {
+          hitSwipeReleaseRef.current(activeHoldWithSwipe, swipeDir);
+        }
+      }
+    }
+  }, []);
+
+  const pollGamepadState = useCallback((t: number) => {
+    const gamepads = typeof navigator !== 'undefined' && navigator.getGamepads ? navigator.getGamepads() : [];
+    const gp = Array.from(gamepads).find(g => g !== null);
+    if (!gp) {
+      gamepadConnectedRef.current = false;
+      return;
+    }
+    gamepadConnectedRef.current = true;
+
+    const phase = phaseRef.current;
+    const paused = pausedRef.current;
+
+    // ── 1. Pause / Menu Buttons ──
+    // Start button is Button 9, Select is Button 8
+    const pausePressed = (gp.buttons[9]?.pressed) || (gp.buttons[8]?.pressed);
+    if (pausePressed && !prevGamepadPausePressedRef.current) {
+      if (phase === 'playing') {
+        const isModalOpen = useVaultStore.getState().optionsModalOpen;
+        if (isModalOpen) {
+          useVaultStore.getState().setOptionsModalOpen(false);
+        } else if (paused) {
+          doResumeRef.current?.();
+        } else {
+          doPauseRef.current?.();
+        }
+      }
+    }
+    prevGamepadPausePressedRef.current = pausePressed;
+
+    // Only handle game inputs if we are playing and not paused/rewinding
+    if (phase === 'playing' && !paused) {
+      // ── 2. Swipe Flick detection on analog sticks ──
+      if (gp.axes[0] !== undefined && gp.axes[1] !== undefined) {
+        detectFlick(gp.axes[0], gp.axes[1], gamepadLeftStickNeutralRef, t);
+      }
+      if (gp.axes[2] !== undefined && gp.axes[3] !== undefined) {
+        detectFlick(gp.axes[2], gp.axes[3], gamepadRightStickNeutralRef, t);
+      }
+
+      // ── 2b. D-pad swipe detection (rising-edge, supports diagonals) ──
+      const dUp    = gp.buttons[12]?.pressed || false;
+      const dDown  = gp.buttons[13]?.pressed || false;
+      const dLeft  = gp.buttons[14]?.pressed || false;
+      const dRight = gp.buttons[15]?.pressed || false;
+      const [prevDUp, prevDDown, prevDLeft, prevDRight] = prevDpadRef.current;
+      const dpadChanged = dUp !== prevDUp || dDown !== prevDDown || dLeft !== prevDLeft || dRight !== prevDRight;
+      if (dpadChanged && (dUp || dDown || dLeft || dRight)) {
+        let dpadSwipe: Note['swipeDirection'] | undefined;
+        if (dUp   && dLeft)  dpadSwipe = 'up-left';
+        else if (dUp   && dRight) dpadSwipe = 'up-right';
+        else if (dDown && dLeft)  dpadSwipe = 'down-left';
+        else if (dDown && dRight) dpadSwipe = 'down-right';
+        else if (dUp)    dpadSwipe = 'up';
+        else if (dDown)  dpadSwipe = 'down';
+        else if (dLeft)  dpadSwipe = 'left';
+        else if (dRight) dpadSwipe = 'right';
+        if (dpadSwipe) {
           const mw = missWindow(songRef.current?.difficultyLevel ?? 5);
-          let cand: typeof notesRef.current[0] | undefined = undefined;
-          let activeHoldWithSwipe: typeof notesRef.current[0] | undefined = undefined;
-
-          for (let i = 0; i < notesRef.current.length; i++) {
-            const n = notesRef.current[i];
-            if (n.note.time < t - 1.0) continue;
-            if (n.note.time > t + mw + 0.5) break;
-
-            if (!cand && !n.hit && !n.missed && n.note.type === 'swipe' &&
-                n.note.swipeDirection === swipeDir && Math.abs(n.note.time - t) < mw) {
-              cand = n;
-            }
-            if (!activeHoldWithSwipe && n.holdActive && !n.hit && !n.missed &&
-                n.note.swipeDirection === swipeDir &&
-                Math.abs((n.note.time + (n.note.holdDuration || 0.5)) - t) < mw) {
-              activeHoldWithSwipe = n;
-            }
-            if (cand && activeHoldWithSwipe) break;
-          }
-
+          const cand = notesRef.current.find(n =>
+            !n.hit && !n.missed && n.note.type === 'swipe' &&
+            n.note.swipeDirection === dpadSwipe &&
+            Math.abs(n.note.time - t) < mw
+          );
           if (cand && hitLaneRef.current) {
-            hitLaneRef.current(cand.note.lane, swipeDir);
-          } else if (activeHoldWithSwipe && hitSwipeReleaseRef.current) {
-            hitSwipeReleaseRef.current(activeHoldWithSwipe, swipeDir);
-          }
-        }
-      }
-    };
-
-    const pollGamepad = () => {
-      if (!active) return;
-      if (!getTRef.current) {
-        gamepadRafRef.current = requestAnimationFrame(pollGamepad);
-        return;
-      }
-
-      const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
-      // Find the first active gamepad
-      const gp = gamepads.find(g => g !== null);
-      if (!gp) {
-        gamepadConnectedRef.current = false;
-        gamepadRafRef.current = requestAnimationFrame(pollGamepad);
-        return;
-      }
-      gamepadConnectedRef.current = true;
-
-      const phase = phaseRef.current;
-      const paused = pausedRef.current;
-
-      // ── 1. Pause / Menu Buttons ──
-      // Start button is Button 9, Select is Button 8
-      const pausePressed = (gp.buttons[9]?.pressed) || (gp.buttons[8]?.pressed);
-      if (pausePressed && !prevGamepadPausePressedRef.current) {
-        if (phase === 'playing') {
-          const isModalOpen = useVaultStore.getState().optionsModalOpen;
-          if (isModalOpen) {
-            useVaultStore.getState().setOptionsModalOpen(false);
-          } else if (paused) {
-            doResumeRef.current?.();
+            hitLaneRef.current(cand.note.lane, dpadSwipe);
           } else {
-            doPauseRef.current?.();
-          }
-        }
-      }
-      prevGamepadPausePressedRef.current = pausePressed;
-
-      // Only handle game inputs if we are playing and not paused/rewinding
-      if (phase === 'playing' && !paused) {
-        // ── 2. Swipe Flick detection on analog sticks ──
-        // Left stick axes: 0 (X), 1 (Y)
-        if (gp.axes[0] !== undefined && gp.axes[1] !== undefined) {
-          detectFlick(gp.axes[0], gp.axes[1], gamepadLeftStickNeutralRef);
-        }
-        // Right stick axes: 2 (X), 3 (Y)
-        if (gp.axes[2] !== undefined && gp.axes[3] !== undefined) {
-          detectFlick(gp.axes[2], gp.axes[3], gamepadRightStickNeutralRef);
-        }
-
-        // ── 2b. D-pad swipe detection (rising-edge, supports diagonals) ──
-        // Buttons: Up=12, Down=13, Left=14, Right=15
-        const dUp    = gp.buttons[12]?.pressed || false;
-        const dDown  = gp.buttons[13]?.pressed || false;
-        const dLeft  = gp.buttons[14]?.pressed || false;
-        const dRight = gp.buttons[15]?.pressed || false;
-        const [prevDUp, prevDDown, prevDLeft, prevDRight] = prevDpadRef.current;
-        const dpadChanged = dUp !== prevDUp || dDown !== prevDDown || dLeft !== prevDLeft || dRight !== prevDRight;
-        if (dpadChanged && (dUp || dDown || dLeft || dRight)) {
-          // Map cardinal/diagonal combos to swipe directions
-          let dpadSwipe: Note['swipeDirection'] | undefined;
-          if (dUp   && dLeft)  dpadSwipe = 'up-left';
-          else if (dUp   && dRight) dpadSwipe = 'up-right';
-          else if (dDown && dLeft)  dpadSwipe = 'down-left';
-          else if (dDown && dRight) dpadSwipe = 'down-right';
-          else if (dUp)    dpadSwipe = 'up';
-          else if (dDown)  dpadSwipe = 'down';
-          else if (dLeft)  dpadSwipe = 'left';
-          else if (dRight) dpadSwipe = 'right';
-          if (dpadSwipe) {
-            const t = getTRef.current ? getTRef.current() : 0;
-            const cand = notesRef.current.find(n =>
-              !n.hit && !n.missed && n.note.type === 'swipe' &&
+            const activeHoldWithSwipe = notesRef.current.find(n =>
+              n.holdActive && !n.hit && !n.missed &&
               n.note.swipeDirection === dpadSwipe &&
-              Math.abs(n.note.time - t) < missWindow(songRef.current?.difficultyLevel ?? 5)
+              Math.abs((n.note.time + (n.note.holdDuration || 0.5)) - t) < mw
             );
-            if (cand && hitLaneRef.current) {
-              hitLaneRef.current(cand.note.lane, dpadSwipe);
-            } else {
-              const activeHoldWithSwipe = notesRef.current.find(n =>
-                n.holdActive && !n.hit && !n.missed &&
-                n.note.swipeDirection === dpadSwipe &&
-                Math.abs((n.note.time + (n.note.holdDuration || 0.5)) - t) < missWindow(songRef.current?.difficultyLevel ?? 5)
-              );
-              if (activeHoldWithSwipe && hitSwipeReleaseRef.current) {
-                hitSwipeReleaseRef.current(activeHoldWithSwipe, dpadSwipe);
-              }
+            if (activeHoldWithSwipe && hitSwipeReleaseRef.current) {
+              hitSwipeReleaseRef.current(activeHoldWithSwipe, dpadSwipe);
             }
           }
         }
-        prevDpadRef.current = [dUp, dDown, dLeft, dRight];
+      }
+      prevDpadRef.current = [dUp, dDown, dLeft, dRight];
 
-        // ── 3. Direction and Face Buttons mapping ──
-        // Determine current slide direction:
-        // Left: D-pad Left (Button 14) or Left stick X < -0.5 or Right stick X < -0.5
-        // Right: D-pad Right (Button 15) or Left stick X > 0.5 or Right stick X > 0.5
-        let slideDir: 'left' | 'center' | 'right' = 'center';
-        const stickXThreshold = 0.5;
-        if (
-          gp.buttons[14]?.pressed ||
-          (gp.axes[0] !== undefined && gp.axes[0] < -stickXThreshold) ||
-          (gp.axes[2] !== undefined && gp.axes[2] < -stickXThreshold)
-        ) {
-          slideDir = 'left';
-        } else if (
-          gp.buttons[15]?.pressed ||
-          (gp.axes[0] !== undefined && gp.axes[0] > stickXThreshold) ||
-          (gp.axes[2] !== undefined && gp.axes[2] > stickXThreshold)
-        ) {
-          slideDir = 'right';
-        }
-
-        // ── Controller Active Slide Auto-Transition ──
-        const activeSlideHold = notesRef.current.find(
-          (n) => n.note.type === "hold" && n.holdActive && n.note.targetLane !== undefined && !n.hit
-        );
-        if (activeSlideHold && activeSlideHold.note.targetLane !== undefined) {
-          const targetLane = activeSlideHold.note.targetLane;
-          const currentLane = Math.round(activeSlideHold.currentLane);
-          if (currentLane !== targetLane) {
-            const stickX = (gp.axes[0] !== undefined && Math.abs(gp.axes[0]) > 0.35) ? gp.axes[0] : (gp.axes[2] !== undefined && Math.abs(gp.axes[2]) > 0.35) ? gp.axes[2] : 0;
-            const dpadLeft = gp.buttons[14]?.pressed || false;
-            const dpadRight = gp.buttons[15]?.pressed || false;
-            const isSlideRightNeeded = targetLane > currentLane;
-            const isSlideLeftNeeded = targetLane < currentLane;
-
-            const targetLaneBtnPressed =
-              (targetLane === 0 && (gp.buttons[2]?.pressed || false)) ||
-              (targetLane === 1 && (gp.buttons[3]?.pressed || false)) ||
-              (targetLane === 2 && (gp.buttons[1]?.pressed || false));
-
-            const directStickDpadMatch =
-              (isSlideRightNeeded && (stickX > 0.35 || dpadRight)) ||
-              (isSlideLeftNeeded && (stickX < -0.35 || dpadLeft));
-
-            if (targetLaneBtnPressed || directStickDpadMatch) {
-              const prevLaneIdx = Math.round(activeSlideHold.currentLane);
-              if (laneRef.current[prevLaneIdx]) {
-                laneRef.current[prevLaneIdx].pressed = false;
-              }
-              laneRef.current[targetLane].pressed = true;
-              laneRef.current[targetLane].isArrow = null;
-              moveHoldRef.current?.(activeSlideHold.currentLane, targetLane);
-            }
-          }
-        }
-
-        // X, Y, B for the main buttons:
-        // Button 2 is X (Left lane -> 0)
-        // Button 3 is Y (Center lane -> 1)
-        // Button 1 is B (Right lane -> 2)
-        // Button 0 is A + D-pad Left/Right = slide trigger
-        const isAPressed = gp.buttons[0]?.pressed || false;
-        
-        const lanePressed: [boolean, boolean, boolean] = [
-          (gp.buttons[2]?.pressed || false) || (isAPressed && slideDir === 'left'),
-          (gp.buttons[3]?.pressed || false) || (isAPressed && slideDir === 'center'),
-          (gp.buttons[1]?.pressed || false) || (isAPressed && slideDir === 'right')
-        ];
-
-        // Process presses and releases
-        for (let i = 0; i < 3; i++) {
-          const wasPressed = prevGamepadLanePressedRef.current[i];
-          const isPressed = lanePressed[i];
-          if (isPressed && !wasPressed) {
-            // Lane press transition
-            const activeHold = notesRef.current.find(
-              (n) =>
-                n.note.type === "hold" &&
-                n.holdActive &&
-                n.note.targetLane === i &&
-                n.currentLane !== i &&
-                !n.hit
-            );
-            if (activeHold) {
-              const prevLaneIdx = Math.round(activeHold.currentLane);
-              if (laneRef.current[prevLaneIdx]) {
-                laneRef.current[prevLaneIdx].pressed = false;
-              }
-              laneRef.current[i].pressed = true;
-              laneRef.current[i].isArrow = null;
-              moveHoldRef.current?.(activeHold.currentLane, i);
-            } else {
-              laneRef.current[i].pressed = true;
-              laneRef.current[i].isArrow = null;
-              hitLaneRef.current?.(i);
-            }
-          } else if (!isPressed && wasPressed) {
-            // Lane release transition
-            laneRef.current[i].pressed = false;
-            releaseLaneRef.current?.(i);
-          }
-        }
-        prevGamepadLanePressedRef.current = lanePressed;
-      } else {
-        // If not playing or paused, make sure we clear pressed states to prevent sticking keys
-        for (let i = 0; i < 3; i++) {
-          if (prevGamepadLanePressedRef.current[i]) {
-            laneRef.current[i].pressed = false;
-            releaseLaneRef.current?.(i);
-          }
-        }
-        prevGamepadLanePressedRef.current = [false, false, false];
+      // ── 3. Direction and Face Buttons mapping ──
+      let slideDir: 'left' | 'center' | 'right' = 'center';
+      const stickXThreshold = 0.5;
+      if (
+        gp.buttons[14]?.pressed ||
+        (gp.axes[0] !== undefined && gp.axes[0] < -stickXThreshold) ||
+        (gp.axes[2] !== undefined && gp.axes[2] < -stickXThreshold)
+      ) {
+        slideDir = 'left';
+      } else if (
+        gp.buttons[15]?.pressed ||
+        (gp.axes[0] !== undefined && gp.axes[0] > stickXThreshold) ||
+        (gp.axes[2] !== undefined && gp.axes[2] > stickXThreshold)
+      ) {
+        slideDir = 'right';
       }
 
-      gamepadRafRef.current = requestAnimationFrame(pollGamepad);
-    };
+      // ── Controller Active Slide Auto-Transition ──
+      const activeSlideHold = notesRef.current.find(
+        (n) => n.note.type === "hold" && n.holdActive && n.note.targetLane !== undefined && !n.hit
+      );
+      if (activeSlideHold && activeSlideHold.note.targetLane !== undefined) {
+        const targetLane = activeSlideHold.note.targetLane;
+        const currentLane = Math.round(activeSlideHold.currentLane);
+        if (currentLane !== targetLane) {
+          const stickX = (gp.axes[0] !== undefined && Math.abs(gp.axes[0]) > 0.35) ? gp.axes[0] : (gp.axes[2] !== undefined && Math.abs(gp.axes[2]) > 0.35) ? gp.axes[2] : 0;
+          const dpadLeft = gp.buttons[14]?.pressed || false;
+          const dpadRight = gp.buttons[15]?.pressed || false;
+          const isSlideRightNeeded = targetLane > currentLane;
+          const isSlideLeftNeeded = targetLane < currentLane;
 
-    gamepadRafRef.current = requestAnimationFrame(pollGamepad);
+          const targetLaneBtnPressed =
+            (targetLane === 0 && (gp.buttons[2]?.pressed || false)) ||
+            (targetLane === 1 && (gp.buttons[3]?.pressed || false)) ||
+            (targetLane === 2 && (gp.buttons[1]?.pressed || false));
 
+          const directStickDpadMatch =
+            (isSlideRightNeeded && (stickX > 0.35 || dpadRight)) ||
+            (isSlideLeftNeeded && (stickX < -0.35 || dpadLeft));
+
+          if (targetLaneBtnPressed || directStickDpadMatch) {
+            const prevLaneIdx = Math.round(activeSlideHold.currentLane);
+            if (laneRef.current[prevLaneIdx]) {
+              laneRef.current[prevLaneIdx].pressed = false;
+            }
+            laneRef.current[targetLane].pressed = true;
+            laneRef.current[targetLane].isArrow = null;
+            moveHoldRef.current?.(activeSlideHold.currentLane, targetLane);
+          }
+        }
+      }
+
+      const isAPressed = gp.buttons[0]?.pressed || false;
+      
+      const lanePressed: [boolean, boolean, boolean] = [
+        (gp.buttons[2]?.pressed || false) || (isAPressed && slideDir === 'left'),
+        (gp.buttons[3]?.pressed || false) || (isAPressed && slideDir === 'center'),
+        (gp.buttons[1]?.pressed || false) || (isAPressed && slideDir === 'right')
+      ];
+
+      // Process presses and releases
+      for (let i = 0; i < 3; i++) {
+        const wasPressed = prevGamepadLanePressedRef.current[i];
+        const isPressed = lanePressed[i];
+        if (isPressed && !wasPressed) {
+          const activeHold = notesRef.current.find(
+            (n) =>
+              n.note.type === "hold" &&
+              n.holdActive &&
+              n.note.targetLane === i &&
+              n.currentLane !== i &&
+              !n.hit
+          );
+          if (activeHold) {
+            const prevLaneIdx = Math.round(activeHold.currentLane);
+            if (laneRef.current[prevLaneIdx]) {
+              laneRef.current[prevLaneIdx].pressed = false;
+            }
+            laneRef.current[i].pressed = true;
+            laneRef.current[i].isArrow = null;
+            moveHoldRef.current?.(activeHold.currentLane, i);
+          } else {
+            laneRef.current[i].pressed = true;
+            laneRef.current[i].isArrow = null;
+            hitLaneRef.current?.(i);
+          }
+        } else if (!isPressed && wasPressed) {
+          laneRef.current[i].pressed = false;
+          releaseLaneRef.current?.(i);
+        }
+      }
+      prevGamepadLanePressedRef.current = lanePressed;
+    } else {
+      for (let i = 0; i < 3; i++) {
+        if (prevGamepadLanePressedRef.current[i]) {
+          laneRef.current[i].pressed = false;
+          releaseLaneRef.current?.(i);
+        }
+      }
+      prevGamepadLanePressedRef.current = [false, false, false];
+    }
+  }, [detectFlick]);
+
+  useEffect(() => {
+    pollGamepadRef.current = pollGamepadState;
+  }, [pollGamepadState]);
+
+  useEffect(() => {
+    const onGpConnect = () => { gamepadConnectedRef.current = true; };
+    const onGpDisconnect = () => { gamepadConnectedRef.current = false; };
+    window.addEventListener("gamepadconnected", onGpConnect);
+    window.addEventListener("gamepaddisconnected", onGpDisconnect);
+    const gamepads = typeof navigator !== 'undefined' && navigator.getGamepads ? navigator.getGamepads() : [];
+    gamepadConnectedRef.current = Array.from(gamepads).some(g => g !== null);
     return () => {
-      active = false;
-      if (gamepadRafRef.current) {
-        cancelAnimationFrame(gamepadRafRef.current);
-      }
+      window.removeEventListener("gamepadconnected", onGpConnect);
+      window.removeEventListener("gamepaddisconnected", onGpDisconnect);
     };
   }, []);
   // NOTE: Keep touch, swipe, and hold note mechanics in sync with artifacts/rhythm-game/src/pages/Game.tsx
@@ -7502,10 +7482,7 @@ export default function Game() {
                   particles,
                 });
 
-                jRef.current = [
-                  ...jRef.current.filter((x) => Date.now() - x.ts < 600),
-                  { type: "PERFECT+", lane: newLane, id: ++jCounter.current, ts: Date.now() },
-                ];
+                addJudgment({ type: "PERFECT+", lane: newLane, id: ++jCounter.current, ts: Date.now() });
                 syncDisplay();
               }
             }
@@ -7514,7 +7491,7 @@ export default function Game() {
         }
       }
     },
-    [checkSwipeGesture],
+    [checkSwipeGesture, addJudgment, syncDisplay],
   );
 
   const releasePointerById = useCallback(
@@ -7681,10 +7658,7 @@ export default function Game() {
                       particles,
                     });
 
-                    jRef.current = [
-                      ...jRef.current.filter((x) => Date.now() - x.ts < 600),
-                      { type: "PERFECT+", lane: newLane, id: ++jCounter.current, ts: Date.now() },
-                    ];
+                    addJudgment({ type: "PERFECT+", lane: newLane, id: ++jCounter.current, ts: Date.now() });
                     syncDisplay();
                   }
                 }
@@ -7695,7 +7669,7 @@ export default function Game() {
         }
       }
     },
-    [checkSwipeGesture],
+    [checkSwipeGesture, addJudgment, syncDisplay],
   );
 
   const releaseTouchById = useCallback(
@@ -7938,6 +7912,7 @@ export default function Game() {
       setStageStingerNumber(null);
       try {
         console.log("[GamePlay Init] Fetching song for ID:", songId);
+        useGlobalPlayer.getState().stop();
         setLoadMsg("FETCHING TRANSMISSION...");
         phaseRef.current = "loading";
         setPhase("loading");
@@ -8682,7 +8657,7 @@ export default function Game() {
         audio.addEventListener("loadedmetadata", updateFallbackProgress);
         audio.addEventListener("canplay", updateFallbackProgress);
         
-        const progressPoll = setInterval(updateFallbackProgress, 100);
+        progressPollRef.current = setInterval(updateFallbackProgress, 100);
 
         audio.src = targetAudioUrl;
         audio.load();
@@ -8709,7 +8684,10 @@ export default function Game() {
         });
         resolvePendingPromiseRef.current = null;
 
-        clearInterval(progressPoll);
+        if (progressPollRef.current) {
+          clearInterval(progressPollRef.current);
+          progressPollRef.current = null;
+        }
         if (onCanPlay) audio!.removeEventListener("canplay", onCanPlay);
         if (onError) audio!.removeEventListener("error", onError);
         audio.removeEventListener("progress", onProgress);
@@ -8744,7 +8722,7 @@ export default function Game() {
           audio.addEventListener("loadedmetadata", updateFallbackProgress2);
           audio.addEventListener("canplay", updateFallbackProgress2);
 
-          const progressPoll2 = setInterval(updateFallbackProgress2, 100);
+          progressPollRef.current = setInterval(updateFallbackProgress2, 100);
 
           audio.src = targetAudioUrl;
           audio.load();
@@ -8771,7 +8749,10 @@ export default function Game() {
           });
           resolvePendingPromiseRef.current = null;
 
-          clearInterval(progressPoll2);
+          if (progressPollRef.current) {
+            clearInterval(progressPollRef.current);
+            progressPollRef.current = null;
+          }
           if (onCanPlay) audio!.removeEventListener("canplay", onCanPlay);
           if (onError) audio!.removeEventListener("error", onError);
           audio.removeEventListener("progress", onProgress);
@@ -8971,6 +8952,7 @@ export default function Game() {
       haptics.mediumTap();
 
       await new Promise<void>((resolve) => {
+        resolvePendingPromiseRef.current = resolve;
         countdownIntervalRef.current = setInterval(() => {
           count--;
           if (count > 0) {
@@ -8985,12 +8967,14 @@ export default function Game() {
             setCountdown(0); // "GO!"
             audioManager.playSfx('select_start_song', 1.0);
             haptics.heavyTap();
-            setTimeout(() => {
+            countdownTimeoutRef.current = setTimeout(() => {
+              countdownTimeoutRef.current = null;
               resolve();
             }, 600);
           }
         }, 1150);
       });
+      resolvePendingPromiseRef.current = null;
       if (cancelled) return;
 
       phaseRef.current = "playing";
@@ -9140,9 +9124,24 @@ export default function Game() {
         clearInterval(countdownIntervalRef.current);
         countdownIntervalRef.current = null;
       }
+      if (countdownTimeoutRef.current) {
+        clearTimeout(countdownTimeoutRef.current);
+        countdownTimeoutRef.current = null;
+      }
+      if (progressPollRef.current) {
+        clearInterval(progressPollRef.current);
+        progressPollRef.current = null;
+      }
       if (loadTimeoutRef.current) {
         clearTimeout(loadTimeoutRef.current);
         loadTimeoutRef.current = null;
+      }
+
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        try {
+          mediaRecorderRef.current.stop();
+        } catch {}
+        mediaRecorderRef.current = null;
       }
 
       // Disconnect Web Audio nodes to prevent memory retention
