@@ -68,9 +68,9 @@ function PimLogo({ color, cardId }: { color?: string; cardId?: string }) {
   return (
     <div className="relative w-full h-full flex items-center justify-center p-1 select-none">
       <img
-        src="/data/logos/logo_6_crown_cardback.png"
-        alt="PIM Crown Insignia"
-        className="w-full h-full object-contain filter drop-shadow-[0_0_12px_rgba(255,215,0,0.6)]"
+        src="/data/logos/card_back_logo.png"
+        alt="PIM Card Back Crest"
+        className="w-full h-full object-contain filter drop-shadow-[0_0_12px_rgba(255,215,0,0.65)]"
         loading="lazy"
       />
     </div>

@@ -36,7 +36,7 @@ export function TitleSpacer({
         {/* Main Title Spacer Logo Banner */}
         <div className="relative z-10 flex flex-col items-center gap-2 max-w-full px-4">
           <img
-            src="/data/logos/logo_5_title_spacer.png"
+            src="/data/logos/top_left_site.png"
             alt="PIM th3v4ult Poetry in Motion"
             className="w-full max-w-[380px] sm:max-w-[480px] md:max-w-[560px] h-auto object-contain filter drop-shadow-[0_8px_16px_rgba(0,0,0,0.85)] hover:scale-[1.02] transition-transform duration-300"
             loading="lazy"
@@ -92,7 +92,7 @@ export function TitleSpacer({
       {showLogo && (
         <div className="relative shrink-0 max-w-[130px] sm:max-w-[170px] hidden xs:block">
           <img
-            src="/data/logos/logo_5_title_spacer.png"
+            src="/data/logos/top_left_site.png"
             alt="PIM th3v4ult"
             className="w-full h-auto max-h-6 object-contain opacity-80 hover:opacity-100 transition-opacity"
             loading="lazy"

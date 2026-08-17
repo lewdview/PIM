@@ -132,31 +132,15 @@ function VaultLogo() {
   return (
     <Link
       to="/"
-      className="flex items-center gap-2.5 no-underline group shrink-0"
-      aria-label="th3vault home"
+      className="flex items-center no-underline group shrink-0"
+      aria-label="PIM : th3v4ult home"
       onClick={() => setOptionsModalOpen(false)}
     >
-      {/* Dynamic Cycling Icon mark */}
-      <MainBrandLogo size="nav" interactive={true} priority={true} />
-
-      {/* Word mark */}
-      <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
-        <span
-          style={{
-            fontFamily: '"Impact", "Arial Black", sans-serif',
-            fontSize: '15px',
-            fontWeight: 900,
-            letterSpacing: '-0.5px',
-            color: '#fff',
-            textShadow: '0 0 16px rgba(255,56,0,0.5), 2px 2px 0 rgba(0,0,0,0.9)',
-            transform: 'scaleY(1.15)',
-            transformOrigin: 'left center',
-            display: 'block',
-          }}
-        >
-          PIM : th3v4ult
-        </span>
-      </div>
+      <img
+        src="/data/logos/top_left_site.png"
+        alt="PIM : th3v4ult"
+        className="h-10 sm:h-11 md:h-12 w-auto max-w-[200px] sm:max-w-[240px] object-contain transition-transform duration-200 group-hover:scale-[1.03] group-active:scale-95 filter drop-shadow-[0_2px_12px_rgba(255,184,0,0.35)]"
+      />
     </Link>
   );
 }

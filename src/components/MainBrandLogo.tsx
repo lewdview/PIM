@@ -12,40 +12,32 @@ export interface LogoMeta {
 
 export const MAIN_LOGOS: LogoMeta[] = [
   {
-    id: 'sakura_pagoda',
-    name: 'Sakura Pagoda & Crimson Sun',
-    src: '/data/logos/logo_1_sakura.png',
-    accent: '#ff3366',
-    glow: 'rgba(255, 51, 102, 0.6)',
+    id: 'logo_1',
+    name: 'PIM Master Brand Mark I',
+    src: '/data/logos/logo_1.png',
+    accent: '#ff5500',
+    glow: 'rgba(255, 85, 0, 0.65)',
     kanji: '詩の動き',
   },
   {
-    id: 'red_beast',
-    name: 'Red Wolf Fury',
-    src: '/data/logos/logo_2_red_beast.png',
-    accent: '#ff1438',
-    glow: 'rgba(255, 20, 56, 0.6)',
+    id: 'logo_2',
+    name: 'PIM Master Brand Mark II',
+    src: '/data/logos/logo_2.png',
+    accent: '#ff2244',
+    glow: 'rgba(255, 34, 68, 0.65)',
     kanji: '詩の動き',
   },
   {
-    id: 'ninja_katana',
-    name: 'Katana Ninja Sunset',
-    src: '/data/logos/logo_3_ninja_katana.png',
-    accent: '#ff6600',
-    glow: 'rgba(255, 102, 0, 0.6)',
-    kanji: '詩の動き',
-  },
-  {
-    id: 'sea_dragon',
-    name: 'Azure Sea Dragon Crest',
-    src: '/data/logos/logo_4_sea_dragon.png',
-    accent: '#00e5ff',
-    glow: 'rgba(0, 229, 255, 0.6)',
+    id: 'logo_3',
+    name: 'PIM Master Brand Mark III',
+    src: '/data/logos/logo_3.png',
+    accent: '#ffb800',
+    glow: 'rgba(255, 184, 0, 0.65)',
     kanji: '詩の動き',
   },
 ];
 
-// Pick one of the 4 logos on load and keep it consistent across session
+// Pick one of the 3 main logos on load and keep it consistent across session
 function getLoadedLogoIndex(): number {
   if (typeof window !== 'undefined' && window.sessionStorage) {
     try {
@@ -116,7 +108,7 @@ export default function MainBrandLogo({
   priority = false,
   onLogoChange,
 }: MainBrandLogoProps) {
-  // Load one of the 4 on session start — no auto-timer switching while loaded
+  // Load one of the 3 on session start
   const [currentIndex, setCurrentIndex] = useState(getLoadedLogoIndex);
   const activeLogo = MAIN_LOGOS[currentIndex] || MAIN_LOGOS[0];
   const sizeCfg = SIZE_CONFIGS[size] || SIZE_CONFIGS.md;
