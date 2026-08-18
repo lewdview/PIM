@@ -376,6 +376,7 @@ export default function AdminPage() {
   const [importJson, setImportJson] = useState('');
   const [showImport, setShowImport] = useState(false);
   const [saveFlash, setSaveFlash] = useState(false);
+  const [pushStatus, setPushStatus] = useState<'idle' | 'pushing' | 'success' | 'error'>('idle');
   const [activeSection, setActiveSection] = useState<'rates' | 'modifiers' | 'economy' | 'echo' | 'simulation' | 'config' | 'analytics' | 'gen0_reset' | 'broadcast' | 'stripe'>('rates');
 
   // Stripe Ledger State
@@ -3408,8 +3409,9 @@ export default function AdminPage() {
               setPushStatus('pushing');
               try {
                 const { supabase } = await import('../services/supabaseClient');
+                const passphrase = sessionStorage.getItem('th3vault_admin_pass') || prompt('Enter admin passphrase to push config:') || '';
                 const { data, error } = await supabase.functions.invoke('vault-engine', {
-                  body: { action: 'updateAdminConfig', payload: { config, passphrase: 'th3scr1b3' } }
+                  body: { action: 'updateAdminConfig', payload: { config, passphrase } }
                 });
                 if (error || !data?.success) {
                   console.error('Push to server failed:', error?.message || data?.error);
