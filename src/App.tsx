@@ -364,6 +364,7 @@ export default function App() {
   const setOptionsModalOpen = useVaultStore((s) => s.setOptionsModalOpen);
 
   const collection = useVaultStore((s) => s.collection);
+  const progression = useVaultStore((s) => s.progression);
 
   const subscribeNotifications = useNotificationStore((s) => s.subscribeRealtime);
 
@@ -396,6 +397,29 @@ export default function App() {
     }
     prevLocationRef.current = location;
   }, [location, setOptionsModalOpen]);
+
+  // Force first-time players who haven't completed the tutorial to /tutorial
+  // (Exempting /hero, /admin, /pitch-deck, /legal, /options)
+  useEffect(() => {
+    if (authStatus === 'idle' || authStatus === 'loading') return;
+
+    const isTutorialCompleted = 
+      progression.tutorialCompleted || 
+      localStorage.getItem('pim_tutorial_completed') === 'true';
+
+    const isExemptRoute = 
+      location === '/tutorial' ||
+      location.startsWith('/hero') ||
+      location.startsWith('/admin') ||
+      location === '/pitch-deck' ||
+      location === '/options' ||
+      location === '/vault/legal' ||
+      location === '/legal';
+
+    if (!isTutorialCompleted && !isExemptRoute) {
+      setLocation('/tutorial');
+    }
+  }, [location, progression.tutorialCompleted, authStatus, setLocation]);
 
   // Stop global preview player on gameplay routes to prevent dual-audio
   useEffect(() => {
