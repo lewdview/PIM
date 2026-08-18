@@ -888,7 +888,7 @@ export default function ForgePage() {
             onClick={() => setSinksOpen(!sinksOpen)}
             style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
           >
-            <SectionLabel label="Token Sinks" accent="#ff9900" />
+            <SectionLabel label="Vault Shop" accent="#ff9900" />
             {sinksOpen ? <ChevronUp size={14} style={{ opacity: 0.4, marginBottom: '16px' }} /> : <ChevronDown size={14} style={{ opacity: 0.4, marginBottom: '16px' }} />}
           </div>
           <AnimatePresence>

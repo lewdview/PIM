@@ -905,7 +905,7 @@ export default function LandingPage() {
                       color: 'var(--color-neon-gold)',
                       textShadow: '0 0 10px rgba(255,153,0,0.3)'
                     }}>
-                      V⚡ Token Sinks Console
+                      V⚡ Shop Console
                     </h2>
                     <p className="text-[9px] font-mono uppercase tracking-[0.2em] opacity-45 mt-1">
                       Targeted pulls · Instant upgrades · Duplicate fusion
@@ -1262,7 +1262,7 @@ export default function LandingPage() {
                     {getMonthName(month)}
                   </div>
                   <div className="text-[8px] font-black opacity-45 mt-1 uppercase tracking-widest" style={{ color: '#000' }}>
-                    FREE // MONTHLY
+                    $0.50 // QUICK BUY
                   </div>
                 </div>
               </motion.button>

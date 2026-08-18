@@ -976,7 +976,7 @@ export default function NextGenLandingPage() {
               >
                 <Calendar size={20} className="text-blue-400 mb-2" />
                 <span className="text-lg font-bold text-white uppercase">{getMonthName(month)}</span>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Claim Pack</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">$0.50 Quick Buy</span>
               </motion.button>
             ))}
           </div>
@@ -1388,7 +1388,7 @@ export default function NextGenLandingPage() {
             
             <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4 relative z-10">
               <div>
-                <h2 className="text-3xl font-extrabold text-white tracking-tight mb-1">Token Sinks Console</h2>
+                <h2 className="text-3xl font-extrabold text-white tracking-tight mb-1">Vault Shop Console</h2>
                 <p className="text-sm text-slate-400">Targeted pulls, quick upgrades, and duplicate fusion</p>
               </div>
               <div className="px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 font-extrabold text-sm self-start md:self-auto">
@@ -1626,7 +1626,7 @@ export default function NextGenLandingPage() {
             <div>
               <SectionLabel label="Authentication Protocol" accent="#fbbf24" />
               <h2 className="text-2xl font-bold text-white tracking-tight mb-2">Connect Wallet</h2>
-              <p className="text-sm text-slate-400">Unlock your personal token sinks console, daily drops, and promo codes.</p>
+              <p className="text-sm text-slate-400">Unlock your personal shop console, daily drops, and promo codes.</p>
             </div>
             <button 
               onClick={() => useAuthStore.getState().setConnectModalOpen(true)}

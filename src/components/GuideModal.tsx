@@ -344,7 +344,7 @@ export default function GuideModal({ isOpen, onClose }: Props) {
               <div className="space-y-4">
                 <div className="p-4 rounded-xl bg-white/[0.02] border border-white/10 space-y-3">
                   <h3 className="font-['Impact'] text-lg text-[#ffb800] uppercase tracking-wide m-0">
-                    The Forge & Token Sinks
+                    The Forge & Vault Shop
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px]">
                     <div className="p-3 rounded-lg bg-black/40 border border-white/10">
