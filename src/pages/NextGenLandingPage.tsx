@@ -28,6 +28,7 @@ import { type PackCategory, type PackSize, PACK_CONFIGS, PACK_CAROUSEL_ORDER, RO
 import { loadCatalog } from '../game/api';
 import { payWithCrypto } from '../services/coinbaseService';
 import PaymentSelectModal from '../components/PaymentSelectModal';
+import TokenBundleShelf from '../components/TokenBundleShelf';
 
 // ===== MODERN FLOATING ANNOUNCEMENT BAR =====
 const TICKER_TEXT = '⚡ PIM : TH3V4ULT • DAILY MUSIC DROPS • COLLECT & EARN TOKENS • VERIFIABLE AUDIO PROOFS';
@@ -1523,6 +1524,11 @@ export default function NextGenLandingPage() {
                 </div>
                 <div className="text-center py-2 text-xs font-bold text-slate-500 uppercase tracking-widest">Cost: Free</div>
               </div>
+            </div>
+
+            {/* V⚡ TOKEN BUNDLES SHELF */}
+            <div className="mt-10 pt-10 border-t border-white/10 relative z-10">
+              <TokenBundleShelf onPurchased={loadVaultData} />
             </div>
           </div>
         </section>

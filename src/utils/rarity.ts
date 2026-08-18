@@ -240,14 +240,20 @@ export function rollDailyClaimRarity(isFeaturedDay: boolean): Rarity {
   return 'common';
 }
 
-export type PackCategory = 'free' | 'bombshell' | 'taste' | 'light' | 'dark' | 'miss_out' | 'month' | 'special_picks' | 'prophecy' | 'alpha' | 'vault_token' | 'targeted_pull' | 'rarity_upgrade';
-export type PackSize = 'single' | 'double' | 'triple' | 'ten' | 'twentyfive' | 'fifty' | 'bulk';
+export type PackCategory = 'free' | 'bombshell' | 'taste' | 'light' | 'dark' | 'miss_out' | 'month' | 'special_picks' | 'prophecy' | 'alpha' | 'vault_token' | 'targeted_pull' | 'rarity_upgrade' | 'token_bundle';
+export type PackSize = 'single' | 'double' | 'triple' | 'ten' | 'twentyfive' | 'fifty' | 'bulk' | 'pouch' | 'crate' | 'stash' | 'hoard';
 
 export interface PackTier {
   size: PackSize | string;
   cardCount: number;
   price: string;
   priceValue: number;
+  label?: string;
+  tokenAmount?: number;
+  bonus?: number;
+  popular?: boolean;
+  bestValue?: boolean;
+  packsUnlocked?: number;
   coverImage?: string;
   darkCoverImage?: string;
   lightCoverImage?: string;

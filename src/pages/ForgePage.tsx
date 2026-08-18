@@ -22,6 +22,7 @@ import { RARITY_CONFIG, type Rarity } from '../utils/rarity';
 import Card from '../components/Card';
 import FusionAnimation from '../components/FusionAnimation';
 import TitleSpacer from '../components/TitleSpacer';
+import TokenBundleShelf from '../components/TokenBundleShelf';
 
 // ═══════════════════════════════════════════════════════════════
 // HELPER: Condition progress for each modifier
@@ -1123,6 +1124,14 @@ export default function ForgePage() {
                       })}
                     </div>
                   )}
+                </div>
+
+                {/* ── V⚡ TOKEN BUNDLES ── */}
+                <div style={{
+                  padding: '16px', border: '1px solid rgba(255,184,0,0.2)',
+                  background: 'rgba(255,184,0,0.02)',
+                }}>
+                  <TokenBundleShelf onPurchased={loadVaultData} />
                 </div>
               </motion.div>
             )}

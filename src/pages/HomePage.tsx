@@ -22,6 +22,7 @@ import { useLocation } from 'wouter';
 import PaymentSelectModal from '../components/PaymentSelectModal';
 import { payWithCrypto } from '../services/coinbaseService';
 import TitleSpacer from '../components/TitleSpacer';
+import TokenBundleShelf from '../components/TokenBundleShelf';
 
 // ===== BRUTALIST TICKER =====
 const TICKER_TEXT = 'PIM : TH3V4ULT — 365 DAYS OF DARK AND LIGHT — GEN 0 ARCHIVE — COLLECT. SELL. EARN. — DAILY DROPS — V⚡ TOKEN ECONOMY — RARITY PULLS — MYTHIC POSSIBLE — CLAIM NOW — ';
@@ -832,6 +833,11 @@ export default function HomePage() {
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* V⚡ TOKEN BUNDLES SHELF */}
+            <div className="mt-8 pt-8 border-t border-white/10">
+              <TokenBundleShelf onPurchased={loadVaultData} />
             </div>
           </div>
         </div>

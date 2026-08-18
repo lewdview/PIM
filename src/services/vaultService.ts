@@ -630,11 +630,19 @@ export async function createStripeCheckoutSession(
   }
 }
 
-export async function verifyStripeSession(
+export interface StripeVerificationOutcome {
+  success: boolean;
+  isTokenBundle?: boolean;
+  tokenAmount?: number;
+  newBalance?: number;
+  cards: OwnedCard[];
+}
+
+export async function verifyStripeSessionDetailed(
   sessionId: string,
   category?: PackCategory,
   size?: PackSize
-): Promise<OwnedCard[]> {
+): Promise<StripeVerificationOutcome> {
   try {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) throw new Error('Not authenticated');
@@ -649,13 +657,23 @@ export async function verifyStripeSession(
     if (error || !result?.success) {
       const errMsg = (await extractDetailedError(error)) || result?.error || 'Failed to verify payment';
       console.error('Stripe Verification Error:', errMsg);
-      return [];
+      return { success: false, cards: [] };
+    }
+
+    if (result.isTokenBundle) {
+      return {
+        success: true,
+        isTokenBundle: true,
+        tokenAmount: result.tokenAmount,
+        newBalance: result.newBalance,
+        cards: [],
+      };
     }
 
     const rawCards = result.cards || [];
     const pool = await fetchAllCards();
 
-    return rawCards.map((c: any) => {
+    const cards = rawCards.map((c: any) => {
       const isBombshell = isBombshellCard(c);
       const coverArtwork = c.cover_artwork || c.coverArtwork || (c.proof && typeof c.proof === 'object' ? c.proof.cover_artwork : undefined) || c.fingerprint;
       const parent = findCardWithFallback(pool, c.card_id, c.rarity, isBombshell, coverArtwork);
@@ -678,10 +696,24 @@ export async function verifyStripeSession(
         fingerprint: c.fingerprint,
       };
     });
+
+    return {
+      success: true,
+      cards,
+    };
   } catch (err) {
     console.error('Stripe session verification error:', err);
-    return [];
+    return { success: false, cards: [] };
   }
+}
+
+export async function verifyStripeSession(
+  sessionId: string,
+  category?: PackCategory,
+  size?: PackSize
+): Promise<OwnedCard[]> {
+  const res = await verifyStripeSessionDetailed(sessionId, category, size);
+  return res.cards;
 }
 
 async function extractDetailedError(error: any) {
@@ -835,6 +867,35 @@ export async function buyTokenPack(): Promise<OwnedCard[] | 'insufficient'> {
 
 export function getTokenPackCost(): number {
   return getAdminConfig().tokenPackCost ?? 275;
+}
+
+/** Purchase a V⚡ Token Bundle via Coinbase Smart Wallet / Base crypto */
+export async function buyTokenBundleWithCrypto(
+  size: PackSize,
+  tokenAmount: number,
+  txHash: string
+): Promise<{ success: boolean; tokenAmount: number }> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error('Not authenticated');
+
+    const { data, error } = await supabase.functions.invoke('vault-engine', {
+      body: {
+        action: 'creditCryptoTokenBundle',
+        payload: { size, tokenAmount, txHash },
+      },
+    });
+
+    if (error || !data?.success) {
+      const errMsg = (await extractDetailedError(error)) || data?.error || 'Failed to credit token bundle';
+      throw new Error(errMsg);
+    }
+
+    return { success: true, tokenAmount: data.tokenAmount || tokenAmount };
+  } catch (err: any) {
+    console.error('buyTokenBundleWithCrypto error:', err);
+    throw err;
+  }
 }
 
 // ===== V2 TOKEN SINKS =====

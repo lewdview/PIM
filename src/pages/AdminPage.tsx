@@ -3261,6 +3261,38 @@ export default function AdminPage() {
               >
                 <ExternalLink size={10} /> Prophecy Pull ($5.00)
               </button>
+              <button
+                type="button"
+                className="config-btn"
+                onClick={() => handleTestCheckout('token_bundle', 'pouch')}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', borderColor: '#ffb800', color: '#ffb800' }}
+              >
+                <ExternalLink size={10} /> Sparks Pouch ($0.99)
+              </button>
+              <button
+                type="button"
+                className="config-btn"
+                onClick={() => handleTestCheckout('token_bundle', 'crate')}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', borderColor: '#3b82f6', color: '#60a5fa' }}
+              >
+                <ExternalLink size={10} /> Cipher Crate ($4.99)
+              </button>
+              <button
+                type="button"
+                className="config-btn"
+                onClick={() => handleTestCheckout('token_bundle', 'stash')}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', borderColor: '#ffd700', color: '#fde047' }}
+              >
+                <ExternalLink size={10} /> Vault Stash ($9.99)
+              </button>
+              <button
+                type="button"
+                className="config-btn"
+                onClick={() => handleTestCheckout('token_bundle', 'hoard')}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', borderColor: '#a855f7', color: '#d8b4fe' }}
+              >
+                <ExternalLink size={10} /> Archon Hoard ($24.99)
+              </button>
             </div>
           </div>
 

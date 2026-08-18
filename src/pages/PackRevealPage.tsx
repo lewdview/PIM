@@ -10,7 +10,7 @@ import UltraRewardModal from '../components/UltraRewardModal';
 import PackRipAnimation from '../components/PackRipAnimation';
 import PackContainer from '../components/cinematic/PackContainer';
 
-import { purchasePack, sellCard, getTokenPackCost, verifyStripeSession, type OwnedCard } from '../services/vaultService';
+import { purchasePack, sellCard, getTokenPackCost, verifyStripeSessionDetailed, type OwnedCard } from '../services/vaultService';
 import { PACK_CONFIGS, type PackCategory, type PackSize } from '../utils/rarity';
 import { audioManager } from '../game/audio';
 import { haptics } from '../utils/haptics';
@@ -24,6 +24,7 @@ export default function PackRevealPage() {
   const [revealedIndex, setRevealedIndex] = useState(0);
   const [showSummary, setShowSummary] = useState(false);
   const [ultraModalOpen, setUltraModalOpen] = useState(false);
+  const [tokenReward, setTokenReward] = useState<{ tokenAmount: number; newBalance?: number } | null>(null);
   // 'tap' → PackRipAnimation, 'cinematic' → PackContainer, 'slide' → skip straight to cards
   const [ripDone, setRipDone] = useState(
     () => !revealPackMeta || (revealPackMeta.revealType !== 'tap' && revealPackMeta.revealType !== 'cinematic')
@@ -51,9 +52,17 @@ export default function PackRevealPage() {
       if (sessionId) {
         window.history.replaceState({}, '', '/vault/reveal');
         useLoadingToast.getState().show('Verifying Stripe payment…');
-        verifyStripeSession(sessionId, category, size)
-          .then(async (cards) => {
+        verifyStripeSessionDetailed(sessionId, category, size)
+          .then(async (result) => {
             useLoadingToast.getState().hide();
+            if (result.isTokenBundle) {
+              await loadVaultData();
+              setTokenReward({ tokenAmount: result.tokenAmount || 0, newBalance: result.newBalance });
+              try { audioManager.play('sfx_perfect'); } catch {}
+              return;
+            }
+
+            const cards = result.cards || [];
             if (cards && cards.length > 0) {
               addToCollection(cards);
               await loadVaultData();
@@ -196,6 +205,72 @@ export default function PackRevealPage() {
       }
     }
   };
+
+  if (tokenReward) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center px-4 py-8 min-h-[80vh]">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          className="max-w-md w-full p-8 rounded-2xl text-center space-y-6"
+          style={{
+            background: 'linear-gradient(180deg, rgba(255,184,0,0.12) 0%, rgba(10,10,10,0.95) 100%)',
+            border: '2px solid rgba(255,184,0,0.4)',
+            boxShadow: '0 0 50px rgba(255,184,0,0.15), 6px 6px 0 #000',
+          }}
+        >
+          <div className="w-20 h-20 mx-auto rounded-2xl bg-amber-500/20 border-2 border-amber-500/50 flex items-center justify-center text-4xl shadow-lg animate-pulse">
+            ⚡
+          </div>
+
+          <div className="space-y-2">
+            <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400 font-bold px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/30">
+              Payment Cleared • Vault Wallet Credited
+            </span>
+            <h2 className="text-3xl font-black uppercase tracking-tight text-white">
+              +{tokenReward.tokenAmount} V⚡ SPARKS
+            </h2>
+            <p className="text-xs font-mono text-zinc-400 leading-relaxed">
+              Your sparks have been delivered to your vault wallet. Use them to rip Vault Packs (3% Mythic drop chance), execute Targeted Pulls, or boost cards in the Forge!
+            </p>
+          </div>
+
+          <div className="p-4 rounded-xl bg-black/60 border border-amber-500/20 text-left space-y-2 text-xs font-mono">
+            <div className="flex justify-between">
+              <span className="text-zinc-500">Vault Packs Unlocked</span>
+              <span className="text-amber-400 font-bold">~{Math.floor(tokenReward.tokenAmount / 275)} Packs ({Math.floor(tokenReward.tokenAmount / 275) * 3} Cards)</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-zinc-500">Current Balance</span>
+              <span className="text-white font-bold">{tokenBalance} V⚡</span>
+            </div>
+          </div>
+
+          <div className="space-y-3 pt-2">
+            <button
+              onClick={() => {
+                setTokenReward(null);
+                setLocation('/vault');
+              }}
+              className="w-full py-4 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black font-black uppercase text-xs tracking-wider transition-all active:scale-[0.98] cursor-pointer"
+              style={{ border: '2px solid #000', boxShadow: '3px 3px 0 #000' }}
+            >
+              ✦ RIP VAULT PACKS NOW (3% MYTHIC)
+            </button>
+            <button
+              onClick={() => {
+                setTokenReward(null);
+                setLocation('/vault');
+              }}
+              className="w-full py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 font-mono uppercase text-[10px] tracking-wider transition-all"
+            >
+              Return to Vault Dashboard
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   if (revealCards.length === 0) return null;
 

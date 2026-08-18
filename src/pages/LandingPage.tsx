@@ -23,6 +23,7 @@ import { payWithCrypto } from '../services/coinbaseService';
 import PaymentSelectModal from '../components/PaymentSelectModal';
 import MainBrandLogo from '../components/MainBrandLogo';
 import TitleSpacer from '../components/TitleSpacer';
+import TokenBundleShelf from '../components/TokenBundleShelf';
 
 // ===== BRUTALIST TICKER =====
 const TICKER_TEXT = 'PIM : TH3V4ULT — 365 DAYS OF RETENTION — COLLECT. SELL. EARN. — DAILY LEVEL UNLOCKS — V⚡ TOKENS — MYTHIC ROLLS — LIVE PLAY — ';
@@ -1092,6 +1093,11 @@ export default function LandingPage() {
                       </div>
                     </div>
                   </div>
+                </div>
+
+                {/* V⚡ TOKEN BUNDLES SHELF */}
+                <div className="mt-8 pt-8 border-t border-white/10">
+                  <TokenBundleShelf onPurchased={loadVaultData} />
                 </div>
               </div>
             </div>

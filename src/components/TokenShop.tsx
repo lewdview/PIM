@@ -8,6 +8,7 @@ import { RARITY_CONFIG } from '../utils/rarity';
 import { canProduceEcho } from '../utils/echoSystem';
 
 import type { OwnedCard } from '../services/vaultService';
+import TokenBundleShelf from './TokenBundleShelf';
 
 interface TokenShopProps {
   onPackOpened: (cards: OwnedCard[]) => void;
@@ -340,6 +341,11 @@ export default function TokenShop({ onPackOpened }: TokenShopProps) {
             </motion.button>
           </div>
         </div>
+      </div>
+
+      {/* V⚡ TOKEN BUNDLES CLEARANCE SHELF */}
+      <div className="mt-8 pt-8 border-t border-white/10">
+        <TokenBundleShelf onPurchased={loadVaultData} />
       </div>
 
       {/* Confirm sell modal */}
