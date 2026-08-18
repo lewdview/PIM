@@ -397,18 +397,6 @@ export default function App() {
     prevLocationRef.current = location;
   }, [location, setOptionsModalOpen]);
 
-  // Automatically redirect guests who haven't completed the tutorial to /tutorial
-  useEffect(() => {
-    if (location === '/') {
-      const isTutorialCompleted = localStorage.getItem('pim_tutorial_completed') === 'true' || useVaultStore.getState().progression.tutorialCompleted;
-      const hasGuestWallet = !!localStorage.getItem('guest_wallet_address');
-      const hasCollection = collection.length > 0;
-      if (!isTutorialCompleted && !hasCollection && !hasGuestWallet) {
-        setLocation('/tutorial');
-      }
-    }
-  }, [location, setLocation, collection]);
-
   // Stop global preview player on gameplay routes to prevent dual-audio
   useEffect(() => {
     if (location.startsWith('/play/') || location === '/tutorial') {

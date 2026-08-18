@@ -478,7 +478,15 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         // Merge Progression
         const localProgression = get().progression;
         const dbProgression = (profile as any).progression || {};
-        const mergedProgression = { ...localProgression, ...dbProgression };
+        const isTutorialLocallyDone = localStorage.getItem('pim_tutorial_completed') === 'true';
+        const isWelcomeLocallyDone = localStorage.getItem('rc2_seen_key') === '1';
+
+        const mergedProgression = {
+          ...localProgression,
+          ...dbProgression,
+          tutorialCompleted: Boolean(localProgression.tutorialCompleted || dbProgression.tutorialCompleted || isTutorialLocallyDone),
+          seenWelcomeModal: Boolean(localProgression.seenWelcomeModal || dbProgression.seenWelcomeModal || isWelcomeLocallyDone),
+        };
 
         // Merge Cheats
         const localCheats = get().unlockedCheats;
@@ -491,7 +499,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         const hasDbCheats = (profile as any).unlocked_cheats && Object.keys((profile as any).unlocked_cheats).length > 0;
 
         const needsSettingsSync = !hasDbSettings && Object.keys(localSettings).length > 0;
-        const needsProgressionSync = !hasDbProgression && Object.keys(localProgression).length > 0;
+        const needsProgressionSync = (!hasDbProgression && Object.keys(localProgression).length > 0) || (mergedProgression.tutorialCompleted && !dbProgression.tutorialCompleted);
         const needsCheatsSync = !hasDbCheats && Object.keys(localCheats).length > 0;
 
         if ((needsSettingsSync || needsProgressionSync || needsCheatsSync) && !profileRes.error) {

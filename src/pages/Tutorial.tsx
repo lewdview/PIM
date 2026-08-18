@@ -206,14 +206,24 @@ export default function Tutorial() {
               </div>
 
               {dailySong ? (
-                <motion.button
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={startGameplay}
-                  className="w-full py-4.5 bg-gradient-to-r from-[#FF1493] to-[#ff3800] text-black font-black text-xs tracking-[0.25em] uppercase hover:opacity-95 transition-all rounded border-2 border-black shadow-[4px_4px_0px_#000] cursor-pointer"
-                >
-                  PROVE COMPATIBILITY
-                </motion.button>
+                <>
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={startGameplay}
+                    className="w-full py-4.5 bg-gradient-to-r from-[#FF1493] to-[#ff3800] text-black font-black text-xs tracking-[0.25em] uppercase hover:opacity-95 transition-all rounded border-2 border-black shadow-[4px_4px_0px_#000] cursor-pointer"
+                  >
+                    PROVE COMPATIBILITY
+                  </motion.button>
+
+                  <button
+                    type="button"
+                    onClick={handleCompleteTutorial}
+                    className="mt-3 w-full py-2.5 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white font-mono text-[10px] tracking-widest uppercase transition-all rounded border border-white/10 cursor-pointer"
+                  >
+                    SKIP TUTORIAL ➔ ENTER VAULT
+                  </button>
+                </>
               ) : (
                 <div className="font-mono text-[10px] text-zinc-500 animate-pulse py-2">
                   DECRYPTION IN PROGRESS...
