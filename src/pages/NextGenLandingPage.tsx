@@ -1397,7 +1397,7 @@ export default function NextGenLandingPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 relative z-10">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 relative z-10">
               {/* VAULT PACK (3-CARD ARCHIVE • 3% MYTHIC CHANCE) */}
               <div className="flex flex-col p-6 rounded-2xl bg-gradient-to-b from-amber-500/10 via-slate-900/80 to-slate-950 border border-amber-500/30 hover:border-amber-400/60 transition-all relative overflow-hidden">
                 <div className="absolute top-3 right-3">
@@ -1410,16 +1410,16 @@ export default function NextGenLandingPage() {
                   <h3 className="font-bold text-lg text-amber-400">Vault Pack</h3>
                 </div>
                 <p className="text-xs text-slate-300 mb-4 flex-1">
-                  Premium 3-card archive pack. The only place to pull Mythic cards outside the daily drop!
+                  Premium 3-card archive pack with a 3% Mythic card drop chance!
                 </p>
                 <div className="p-3 rounded-xl bg-black/40 border border-amber-500/20 mb-4 text-xs font-mono">
                   <div className="flex justify-between mb-1">
                     <span className="text-slate-400">Mythic</span>
-                    <span className="text-amber-400 font-bold">3.0% (Highest)</span>
+                    <span className="text-amber-400 font-bold">3.0%</span>
                   </div>
                   <div className="flex justify-between mb-1">
-                    <span className="text-slate-400">Legendary</span>
-                    <span className="text-purple-400 font-bold">14.0%</span>
+                    <span className="text-slate-400">Pool</span>
+                    <span className="text-purple-400 font-bold">365 Days</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400">Cards</span>
@@ -1429,7 +1429,44 @@ export default function NextGenLandingPage() {
                 <button 
                   disabled={isPurchasing || tokenBalance < 275}
                   onClick={() => handlePurchasePack('vault_token', 'single')}
-                  className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-extrabold text-xs tracking-wider uppercase transition-all disabled:opacity-50"
+                  className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-extrabold text-xs tracking-wider uppercase transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  {isPurchasing ? 'Opening...' : 'Rip Pack (275 V⚡)'}
+                </button>
+              </div>
+
+              {/* BOMBSHELL 3-PACK (3-CARD ARTWORK SERIES • 3% MYTHIC CHANCE) */}
+              <div className="flex flex-col p-6 rounded-2xl bg-gradient-to-b from-pink-500/10 via-slate-900/80 to-slate-950 border border-pink-500/30 hover:border-pink-400/60 transition-all relative overflow-hidden">
+                <div className="absolute top-3 right-3">
+                  <span className="text-[9px] font-mono font-extrabold uppercase px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/40">
+                    ✦ 3% Mythic
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-pink-500/20 flex items-center justify-center text-xl">💖</div>
+                  <h3 className="font-bold text-lg text-pink-400">Bombshell 3-Pack</h3>
+                </div>
+                <p className="text-xs text-slate-300 mb-4 flex-1">
+                  Collector series 3-card artwork pack with a 3% Mythic drop chance!
+                </p>
+                <div className="p-3 rounded-xl bg-black/40 border border-pink-500/20 mb-4 text-xs font-mono">
+                  <div className="flex justify-between mb-1">
+                    <span className="text-slate-400">Mythic</span>
+                    <span className="text-pink-400 font-bold">3.0%</span>
+                  </div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-slate-400">Pool</span>
+                    <span className="text-pink-300 font-bold">Bombshell Art</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Cards</span>
+                    <span className="text-white font-bold">3 Cards</span>
+                  </div>
+                </div>
+                <button 
+                  disabled={isPurchasing || tokenBalance < 275}
+                  onClick={() => handlePurchasePack('bombshell_token', 'single')}
+                  className="w-full py-3.5 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-400 hover:to-rose-400 text-white font-extrabold text-xs tracking-wider uppercase transition-all disabled:opacity-50 cursor-pointer"
                 >
                   {isPurchasing ? 'Opening...' : 'Rip Pack (275 V⚡)'}
                 </button>

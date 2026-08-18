@@ -919,7 +919,7 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                   {/* VAULT PACK (3-CARD ARCHIVE • 3% MYTHIC CHANCE) */}
                   <div className="border border-black p-4 flex flex-col justify-between relative overflow-hidden" style={{ background: 'linear-gradient(180deg, rgba(255,215,0,0.06) 0%, rgba(255,153,0,0.02) 100%)', border: '2px solid rgba(255,215,0,0.3)' }}>
                     <div className="absolute top-2 right-2">
@@ -933,16 +933,16 @@ export default function LandingPage() {
                         <h3 className="font-bold text-sm uppercase tracking-wider text-amber-400">Vault Pack</h3>
                       </div>
                       <p className="text-[10px] font-mono opacity-60 mb-4 leading-normal">
-                        Premium 3-card archive pack. The only pack with a 3% Mythic card drop chance!
+                        Premium 3-card archive pack. 3% Mythic card drop chance!
                       </p>
                       <div className="p-2.5 rounded bg-black/50 border border-amber-500/20 mb-4">
                         <div className="flex justify-between text-[9px] font-mono mb-1">
                           <span className="text-white/60">Mythic Chance</span>
-                          <span className="text-amber-400 font-bold">3.0% (Highest)</span>
+                          <span className="text-amber-400 font-bold">3.0%</span>
                         </div>
                         <div className="flex justify-between text-[9px] font-mono mb-1">
-                          <span className="text-white/60">Legendary</span>
-                          <span className="text-purple-400 font-bold">14.0%</span>
+                          <span className="text-white/60">Pool</span>
+                          <span className="text-purple-400 font-bold">All 365 Days</span>
                         </div>
                         <div className="flex justify-between text-[9px] font-mono">
                           <span className="text-white/60">Pack Size</span>
@@ -960,6 +960,50 @@ export default function LandingPage() {
                         style={{ border: '2px solid #000', boxShadow: '2px 2px 0 #000' }}
                       >
                         {isPurchasing ? 'OPENING...' : 'RIP VAULT PACK'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* BOMBSHELL 3-PACK (3-CARD ARTWORK SERIES • 3% MYTHIC CHANCE) */}
+                  <div className="border border-black p-4 flex flex-col justify-between relative overflow-hidden" style={{ background: 'linear-gradient(180deg, rgba(255,20,147,0.08) 0%, rgba(50,10,30,0.4) 100%)', border: '2px solid rgba(255,20,147,0.35)' }}>
+                    <div className="absolute top-2 right-2">
+                      <span className="text-[8px] font-mono font-black uppercase px-1.5 py-0.5 rounded bg-pink-500/20 text-pink-300 border border-pink-500/40">
+                        ✦ 3% MYTHIC
+                      </span>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xl">💖</span>
+                        <h3 className="font-bold text-sm uppercase tracking-wider text-pink-400">Bombshell 3-Pack</h3>
+                      </div>
+                      <p className="text-[10px] font-mono opacity-60 mb-4 leading-normal">
+                        Collector series 3-card artwork pack. 3% Mythic drop chance!
+                      </p>
+                      <div className="p-2.5 rounded bg-black/50 border border-pink-500/20 mb-4">
+                        <div className="flex justify-between text-[9px] font-mono mb-1">
+                          <span className="text-white/60">Mythic Chance</span>
+                          <span className="text-pink-400 font-bold">3.0%</span>
+                        </div>
+                        <div className="flex justify-between text-[9px] font-mono mb-1">
+                          <span className="text-white/60">Pool</span>
+                          <span className="text-pink-300 font-bold">Bombshell Art</span>
+                        </div>
+                        <div className="flex justify-between text-[9px] font-mono">
+                          <span className="text-white/60">Pack Size</span>
+                          <span className="text-white font-bold">3 Cards</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="text-[9px] font-mono uppercase tracking-widest opacity-40 mb-2">Cost: 275 V⚡</div>
+                      <button 
+                        disabled={isPurchasing || tokenBalance < 275}
+                        onClick={() => handlePurchasePack('bombshell_token', 'single')}
+                        className="w-full py-3 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-400 hover:to-rose-400 text-white font-black uppercase text-xs tracking-wider transition-all disabled:opacity-30 active:scale-[0.98] cursor-pointer"
+                        style={{ border: '2px solid #000', boxShadow: '2px 2px 0 #000' }}
+                      >
+                        {isPurchasing ? 'OPENING...' : 'RIP BOMBSHELL'}
                       </button>
                     </div>
                   </div>

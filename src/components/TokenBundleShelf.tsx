@@ -227,9 +227,9 @@ export default function TokenBundleShelf({ onPurchased, className = '' }: TokenB
                 <div className="p-3 rounded-xl bg-black/50 border border-white/5 space-y-1.5 my-4 text-[10px] font-mono">
                   <div className="flex justify-between items-center text-zinc-300">
                     <span className="flex items-center gap-1 text-amber-300 font-bold">
-                      <Sparkles size={11} /> Vault Packs:
+                      <Sparkles size={11} /> Vault / Bombshell:
                     </span>
-                    <span className="text-white font-bold">{tier.packsUnlocked} Packs ({tier.cardsUnlocked} Cards)</span>
+                    <span className="text-white font-bold">{tier.packsUnlocked}× 3-Pks ({tier.cardsUnlocked} Cards)</span>
                   </div>
                   <div className="flex justify-between items-center text-zinc-400 text-[9px]">
                     <span>✦ Mythic Rolls:</span>

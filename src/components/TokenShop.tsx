@@ -23,7 +23,7 @@ export default function TokenShop({ onPackOpened }: TokenShopProps) {
   const [buyFlash, setBuyFlash] = useState(false);
   const [buyError, setBuyError] = useState(false);
   const [confirmSell, setConfirmSell] = useState<OwnedCard | null>(null);
-
+  const [selectedPackType, setSelectedPackType] = useState<'vault_token' | 'bombshell_token'>('vault_token');
 
   const packCost = getTokenPackCost();
   const canAfford = tokenBalance >= packCost;
@@ -49,26 +49,29 @@ export default function TokenShop({ onPackOpened }: TokenShopProps) {
       return;
     }
     setBuyFlash(true);
-    const result = await buyTokenPack();
+    const result = await buyTokenPack(selectedPackType);
     await loadVaultData(); // Refresh balance from backend
     setBuyFlash(false);
     if (result === 'insufficient' || result.length === 0) return;
     addToCollection(result);
     audioManager.playSfx('open_chest', 0.9);
+    const isBombshell = selectedPackType === 'bombshell_token';
     startReveal(result, {
-      category: 'vault_token',
+      category: selectedPackType,
       size: 'single',
-      label: 'Vault Pack',
-      icon: '⚡',
-      accent: '#ff9900',
-      gradient: 'linear-gradient(135deg, #1a0f00, #2a1a00, #1a0f00)',
+      label: isBombshell ? 'Bombshell 3-Pack' : 'Vault Pack',
+      icon: isBombshell ? '💖' : '⚡',
+      accent: isBombshell ? '#ff1493' : '#ff9900',
+      gradient: isBombshell 
+        ? 'linear-gradient(160deg, #300a1e 0%, #501234 40%, #200816 100%)'
+        : 'linear-gradient(135deg, #1a0f00, #2a1a00, #1a0f00)',
       price: `${packCost} V⚡`,
       cardCount: result.length,
       revealType: 'cinematic',
       showRipAnother: true,
     });
     onPackOpened(result);
-  }, [canAfford, addToCollection, startReveal, onPackOpened, setTokenBalance]);
+  }, [canAfford, selectedPackType, addToCollection, startReveal, onPackOpened, setTokenBalance, packCost, loadVaultData]);
 
   // Sort collection: most valuable first
   const sortedCollection = [...collection].sort((a, b) => {
@@ -240,21 +243,54 @@ export default function TokenShop({ onPackOpened }: TokenShopProps) {
           className="relative border-2 border-black flex flex-col"
           style={{
             background: canAfford
-              ? 'linear-gradient(135deg, #1a0f00 0%, #2a1a00 60%, #1a1000 100%)'
+              ? selectedPackType === 'bombshell_token'
+                ? 'linear-gradient(135deg, #200514 0%, #3d0a27 60%, #15030d 100%)'
+                : 'linear-gradient(135deg, #1a0f00 0%, #2a1a00 60%, #1a1000 100%)'
               : '#0a0a0a',
-            boxShadow: canAfford ? '6px 6px 0 #000, 0 0 40px #ff990022' : '6px 6px 0 #000',
+            boxShadow: canAfford
+              ? selectedPackType === 'bombshell_token'
+                ? '6px 6px 0 #000, 0 0 40px #ff149322'
+                : '6px 6px 0 #000, 0 0 40px #ff990022'
+              : '6px 6px 0 #000',
             transition: 'all 0.3s ease',
           }}
         >
+          {/* Pack selector tabs */}
+          <div className="grid grid-cols-2 p-1.5 bg-black/60 border-b-2 border-black gap-1">
+            <button
+              onClick={() => setSelectedPackType('vault_token')}
+              className={`py-2 px-3 flex items-center justify-center gap-1.5 font-mono text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                selectedPackType === 'vault_token'
+                  ? 'bg-[#ff9900] text-black shadow-[2px_2px_0_#000]'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <span>⚡</span> Vault Pack
+            </button>
+            <button
+              onClick={() => setSelectedPackType('bombshell_token')}
+              className={`py-2 px-3 flex items-center justify-center gap-1.5 font-mono text-[11px] font-black uppercase tracking-wider transition-all cursor-pointer ${
+                selectedPackType === 'bombshell_token'
+                  ? 'bg-[#ff1493] text-white shadow-[2px_2px_0_#000]'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <span>💖</span> Bombshell 3-Pk
+            </button>
+          </div>
+
           {/* Label tab */}
-          <div className="px-5 pt-5 pb-3 border-b-2 border-black flex items-center gap-3">
-            <ShoppingBag size={16} style={{ color: '#ff9900' }} />
-            <span className="font-black uppercase" style={{ fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '20px' }}>
-              Vault Pack
+          <div className="px-5 pt-4 pb-3 border-b-2 border-black flex items-center gap-3">
+            <ShoppingBag size={16} style={{ color: selectedPackType === 'bombshell_token' ? '#ff1493' : '#ff9900' }} />
+            <span className="font-black uppercase" style={{ fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '20px', color: selectedPackType === 'bombshell_token' ? '#ff69b4' : '#fff' }}>
+              {selectedPackType === 'bombshell_token' ? 'Bombshell 3-Pack' : 'Vault Pack'}
             </span>
             <div
               className="ml-auto text-[9px] font-mono px-2 py-0.5 border font-black uppercase tracking-wider"
-              style={{ borderColor: '#ff9900', color: '#ff9900' }}
+              style={{
+                borderColor: selectedPackType === 'bombshell_token' ? '#ff1493' : '#ff9900',
+                color: selectedPackType === 'bombshell_token' ? '#ff1493' : '#ff9900',
+              }}
             >
               TOKEN ONLY
             </div>
@@ -266,25 +302,38 @@ export default function TokenShop({ onPackOpened }: TokenShopProps) {
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-mono uppercase opacity-50">Cost</span>
               <div className="flex items-center gap-1">
-                <Zap size={14} style={{ color: '#ff9900' }} />
-                <span className="font-black text-2xl" style={{ fontFamily: '"Impact", "Arial Black", sans-serif', color: '#ff9900' }}>
+                <Zap size={14} style={{ color: selectedPackType === 'bombshell_token' ? '#ff1493' : '#ff9900' }} />
+                <span className="font-black text-2xl" style={{ fontFamily: '"Impact", "Arial Black", sans-serif', color: selectedPackType === 'bombshell_token' ? '#ff1493' : '#ff9900' }}>
                   {packCost}
                 </span>
                 <span className="text-[11px] font-mono opacity-60">V⚡</span>
               </div>
             </div>
 
-            {/* Cards */}
+            {/* Cards & Pool */}
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-mono uppercase opacity-50">Cards</span>
-              <span className="font-black text-xl" style={{ fontFamily: '"Impact", "Arial Black", sans-serif' }}>3</span>
+              <span className="text-[10px] font-mono uppercase opacity-50">Cards / Pool</span>
+              <span className="font-mono text-xs font-bold text-white">
+                3 Cards • <span style={{ color: selectedPackType === 'bombshell_token' ? '#ff69b4' : '#ff9900' }}>{selectedPackType === 'bombshell_token' ? 'Bombshell Art' : 'All 365 Days'}</span>
+              </span>
             </div>
 
             {/* Drop rate highlight */}
-            <div className="border border-white/10 p-3" style={{ background: 'rgba(255,153,0,0.04)' }}>
-              <div className="flex items-center gap-1 mb-2">
-                <TrendingUp size={10} style={{ color: '#ff9900' }} />
-                <span className="text-[8px] font-mono uppercase tracking-wider" style={{ color: '#ff9900' }}>Premium Odds</span>
+            <div
+              className="border border-white/10 p-3"
+              style={{
+                background: selectedPackType === 'bombshell_token' ? 'rgba(255,20,147,0.06)' : 'rgba(255,153,0,0.04)',
+                borderColor: selectedPackType === 'bombshell_token' ? 'rgba(255,20,147,0.2)' : 'rgba(255,153,0,0.2)',
+              }}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-1">
+                  <TrendingUp size={10} style={{ color: selectedPackType === 'bombshell_token' ? '#ff1493' : '#ff9900' }} />
+                  <span className="text-[8px] font-mono uppercase tracking-wider" style={{ color: selectedPackType === 'bombshell_token' ? '#ff1493' : '#ff9900' }}>
+                    Premium Odds (3% Mythic)
+                  </span>
+                </div>
+                <span className="text-[8px] font-mono font-bold text-amber-300">✦ 3.0% MYTHIC</span>
               </div>
               <div className="grid grid-cols-5 gap-1">
                 {(['mythic', 'legendary', 'rare', 'uncommon', 'common'] as const).map((r, i) => {
@@ -309,7 +358,7 @@ export default function TokenShop({ onPackOpened }: TokenShopProps) {
               <div className="h-2 bg-black border border-white/10">
                 <motion.div
                   className="h-full"
-                  style={{ background: '#ff9900' }}
+                  style={{ background: selectedPackType === 'bombshell_token' ? '#ff1493' : '#ff9900' }}
                   animate={{ width: `${progress}%` }}
                   transition={{ duration: 0.4 }}
                 />
@@ -325,10 +374,14 @@ export default function TokenShop({ onPackOpened }: TokenShopProps) {
               onClick={handleBuyTokenPack}
               animate={buyError ? { x: [-6, 6, -4, 4, 0] } : buyFlash ? { scale: [1, 1.05, 1] } : {}}
               transition={{ duration: 0.3 }}
-              className="w-full py-4 flex items-center justify-center gap-2 border-2 border-black font-black uppercase transition-all"
+              className="w-full py-4 flex items-center justify-center gap-2 border-2 border-black font-black uppercase transition-all cursor-pointer"
               style={{
-                background: canAfford ? '#ff9900' : '#1a1a1a',
-                color: canAfford ? '#000' : '#333',
+                background: canAfford
+                  ? selectedPackType === 'bombshell_token'
+                    ? 'linear-gradient(to right, #ff1493, #ec4899)'
+                    : '#ff9900'
+                  : '#1a1a1a',
+                color: canAfford ? (selectedPackType === 'bombshell_token' ? '#fff' : '#000') : '#333',
                 boxShadow: canAfford ? '4px 4px 0 #000' : '4px 4px 0 #000',
                 fontFamily: '"Impact", "Arial Black", sans-serif',
                 fontSize: '20px',
@@ -337,7 +390,13 @@ export default function TokenShop({ onPackOpened }: TokenShopProps) {
               }}
             >
               <Zap size={20} />
-              {buyFlash ? 'OPENING...' : canAfford ? 'RIP VAULT PACK' : 'NOT ENOUGH V⚡'}
+              {buyFlash
+                ? 'OPENING...'
+                : canAfford
+                  ? selectedPackType === 'bombshell_token'
+                    ? 'RIP BOMBSHELL 3-PK'
+                    : 'RIP VAULT PACK'
+                  : 'NOT ENOUGH V⚡'}
             </motion.button>
           </div>
         </div>

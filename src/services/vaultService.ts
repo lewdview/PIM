@@ -815,11 +815,11 @@ export async function sellCards(
   return { results, totalTokens, totalEchoes, failed };
 }
 
-/** Buy a Vault Pack using tokens (cost from admin config) */
-export async function buyTokenPack(): Promise<OwnedCard[] | 'insufficient'> {
+/** Buy a Vault Pack (or Bombshell Pack) using tokens (cost from admin config) */
+export async function buyTokenPack(packType: 'vault_token' | 'bombshell_token' = 'vault_token'): Promise<OwnedCard[] | 'insufficient'> {
   try {
     const { data, error } = await supabase.functions.invoke('vault-engine', {
-      body: { action: 'purchasePack', payload: { packType: 'vault_token' } }
+      body: { action: 'purchasePack', payload: { packType } }
     });
 
     if (error || !data?.success) {
@@ -827,7 +827,7 @@ export async function buyTokenPack(): Promise<OwnedCard[] | 'insufficient'> {
       if (detailedError === 'Insufficient V⚡' || detailedError?.includes?.('Insufficient')) return 'insufficient';
 
       console.error('================================================');
-      console.error('🔥 VAULT TOKEN PACK ERROR 🔥');
+      console.error(`🔥 TOKEN PACK ERROR [${packType}] 🔥`);
       console.error(detailedError || 'Unknown error');
       console.error('================================================');
       return [];
@@ -837,14 +837,14 @@ export async function buyTokenPack(): Promise<OwnedCard[] | 'insufficient'> {
     const pool = await fetchAllCards();
 
     return rawCards.map((c: any) => {
-      const isBombshell = isBombshellCard(c);
+      const isBombshell = isBombshellCard(c) || packType === 'bombshell_token';
       const coverArtwork = c.cover_artwork || c.coverArtwork || (c.proof && typeof c.proof === 'object' ? c.proof.cover_artwork : undefined) || c.fingerprint;
       const parent = findCardWithFallback(pool, c.card_id, c.rarity, isBombshell, coverArtwork);
       return {
         id: c.id || crypto.randomUUID(),
         cardId: parent.id,
         card: { ...parent, rarity: c.rarity, cardSet: isBombshell ? 'bombshell' : 'gen-0' },
-        source: c.source || 'vault_token',
+        source: c.source || packType,
         cardSet: isBombshell ? 'bombshell' : 'gen-0',
         coverArtwork: parent.coverArtwork,
         claimedAt: c.claimed_at || new Date().toISOString(),
@@ -863,6 +863,11 @@ export async function buyTokenPack(): Promise<OwnedCard[] | 'insufficient'> {
     console.error('Purchase error:', e);
     return [];
   }
+}
+
+/** Buy a 3-Card Bombshell Pack using tokens (275 V⚡ • 3% Mythic chance) */
+export async function buyBombshellTokenPack(): Promise<OwnedCard[] | 'insufficient'> {
+  return buyTokenPack('bombshell_token');
 }
 
 export function getTokenPackCost(): number {
