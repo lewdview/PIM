@@ -17,8 +17,8 @@ import { ROLL_RATES } from '../utils/rarity';
 import { getEchoPoolStats, flushEchoPool } from '../utils/echoSystem';
 import '../styles/AdminStyles.css';
 import { supabase } from '../services/supabaseClient';
-import { fetchAllCards, type VaultCard } from '../services/vaultService';
-import { Users, BarChart3, RefreshCw, Filter, Calendar, Zap, Flame, ShieldCheck, Database, Trash2, Copy, Check, AlertTriangle, Sparkles, Layers, Megaphone, Radio, Send, Bell, Eye, EyeOff } from 'lucide-react';
+import { fetchAllCards, createStripeCheckoutSession, type VaultCard } from '../services/vaultService';
+import { Users, BarChart3, RefreshCw, Filter, Calendar, Zap, Flame, ShieldCheck, Database, Trash2, Copy, Check, AlertTriangle, Sparkles, Layers, Megaphone, Radio, Send, Bell, Eye, EyeOff, CreditCard, DollarSign, ExternalLink } from 'lucide-react';
 import { GEN0_RESET_SQL, purgeClientGen0State, getClientGen0Health } from '../utils/gen0Reset';
 import type { AnnouncementCategory, AnnouncementPriority, SystemAnnouncement } from '../store/useNotificationStore';
 
@@ -376,8 +376,13 @@ export default function AdminPage() {
   const [importJson, setImportJson] = useState('');
   const [showImport, setShowImport] = useState(false);
   const [saveFlash, setSaveFlash] = useState(false);
-  const [pushStatus, setPushStatus] = useState<'idle' | 'pushing' | 'success' | 'error'>('idle');
-  const [activeSection, setActiveSection] = useState<'rates' | 'modifiers' | 'economy' | 'echo' | 'simulation' | 'config' | 'analytics' | 'gen0_reset' | 'broadcast'>('rates');
+  const [activeSection, setActiveSection] = useState<'rates' | 'modifiers' | 'economy' | 'echo' | 'simulation' | 'config' | 'analytics' | 'gen0_reset' | 'broadcast' | 'stripe'>('rates');
+
+  // Stripe Ledger State
+  const [stripeOrders, setStripeOrders] = useState<any[]>([]);
+  const [loadingStripeOrders, setLoadingStripeOrders] = useState(false);
+  const [stripeVerifyingSession, setStripeVerifyingSession] = useState<string | null>(null);
+  const [stripeFeedback, setStripeFeedback] = useState<{ success: boolean; message: string } | null>(null);
 
   // Broadcast Station State
   const [broadcastTitle, setBroadcastTitle] = useState('⚡ DAILY DROP TRANSMISSION');
@@ -632,6 +637,85 @@ export default function AdminPage() {
     }
   }, [activeSection, loadBroadcastList]);
 
+  // Stripe Orders Handlers
+  const loadStripeOrders = useCallback(async () => {
+    setLoadingStripeOrders(true);
+    try {
+      const { data, error } = await supabase
+        .from('stripe_orders')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      setStripeOrders(data || []);
+    } catch (err: any) {
+      console.error('Failed to load stripe orders:', err);
+    } finally {
+      setLoadingStripeOrders(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeSection === 'stripe') {
+      loadStripeOrders();
+    }
+  }, [activeSection, loadStripeOrders]);
+
+  const stripeStats = useMemo(() => {
+    const totalVolumeCents = stripeOrders
+      .filter(o => o.status === 'completed')
+      .reduce((sum, o) => sum + (o.amount_cents || 0), 0);
+    const completedCount = stripeOrders.filter(o => o.status === 'completed').length;
+    const pendingCount = stripeOrders.filter(o => o.status === 'pending').length;
+    const cardsMintedCount = stripeOrders.reduce((sum, o) => {
+      if (Array.isArray(o.cards_minted)) return sum + o.cards_minted.length;
+      return sum;
+    }, 0);
+    return {
+      totalVolumeUsd: (totalVolumeCents / 100).toFixed(2),
+      completedCount,
+      pendingCount,
+      cardsMintedCount,
+      totalOrders: stripeOrders.length,
+    };
+  }, [stripeOrders]);
+
+  const handleVerifyStripeSession = async (sessionId: string) => {
+    setStripeVerifyingSession(sessionId);
+    setStripeFeedback(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('vault-engine', {
+        body: {
+          action: 'verifyStripeSession',
+          payload: { sessionId },
+        },
+      });
+      if (error || !data?.success) {
+        throw new Error(error?.message || data?.error || 'Verification failed');
+      }
+      setStripeFeedback({ success: true, message: `Session verified & cards minted!` });
+      await loadStripeOrders();
+    } catch (err: any) {
+      setStripeFeedback({ success: false, message: err.message || 'Verification error' });
+    } finally {
+      setStripeVerifyingSession(null);
+      setTimeout(() => setStripeFeedback(null), 4000);
+    }
+  };
+
+  const handleTestCheckout = async (category: string, size: string) => {
+    try {
+      const res = await createStripeCheckoutSession(category as any, size as any);
+      if (res.success && res.checkoutUrl) {
+        window.open(res.checkoutUrl, '_blank');
+      } else {
+        alert(res.error || 'Failed to initialize Stripe checkout');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to start Stripe checkout');
+    }
+  };
+
   const handleSendBroadcast = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!broadcastTitle.trim() || !broadcastMessage.trim()) return;
@@ -813,6 +897,7 @@ export default function AdminPage() {
           { key: 'simulation', label: '🎲 SIMULATION', color: '#4d8fff' },
           { key: 'config', label: '⚙️ CONFIG', color: '#c44dff' },
           { key: 'analytics', label: '📈 ANALYTICS & USERS', color: '#00ffff' },
+          { key: 'stripe', label: '💳 STRIPE LEDGER', color: '#635bff' },
           { key: 'gen0_reset', label: '🚀 GEN 0 RESET', color: '#ff1493' },
           { key: 'broadcast', label: '📢 BROADCAST STATION', color: '#00e5ff' },
         ] as const).map(tab => (
@@ -3008,6 +3093,286 @@ export default function AdminPage() {
                 </tbody>
               </table>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ===== SECTION: STRIPE LIVE LEDGER ===== */}
+      {activeSection === 'stripe' && (
+        <div className="admin-panel" style={{ '--panel-accent': '#635bff' } as React.CSSProperties}>
+          <div className="admin-panel-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <CreditCard size={20} color="#635bff" />
+              <h2>Stripe Live Ledger & Fiat Revenue</h2>
+            </div>
+            <div style={{
+              marginLeft: 'auto',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+            }}>
+              <span style={{
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '9px',
+                color: '#39FF14',
+                background: 'rgba(57, 255, 20, 0.1)',
+                border: '1px solid rgba(57, 255, 20, 0.3)',
+                padding: '2px 8px',
+                borderRadius: '2px',
+                fontWeight: 700,
+              }}>
+                ● LIVE STRIPE READY
+              </span>
+              <button
+                type="button"
+                className="config-btn"
+                onClick={loadStripeOrders}
+                disabled={loadingStripeOrders}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '9px', padding: '4px 10px' }}
+              >
+                <RefreshCw size={11} className={loadingStripeOrders ? 'animate-spin' : ''} />
+                {loadingStripeOrders ? 'Refreshing...' : 'Refresh Orders'}
+              </button>
+            </div>
+          </div>
+
+          {/* Revenue KPI Cards */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+            gap: '12px',
+            marginBottom: '24px',
+          }}>
+            <div style={{ background: '#0a0814', border: '1px solid rgba(99, 91, 255, 0.3)', padding: '16px', borderRadius: '2px' }}>
+              <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '9px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}>
+                GROSS FIAT REVENUE
+              </div>
+              <div style={{ fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '26px', color: '#635bff' }}>
+                ${stripeStats.totalVolumeUsd} <span style={{ fontSize: '14px', fontFamily: '"JetBrains Mono", monospace' }}>USD</span>
+              </div>
+              <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>
+                Total settled Stripe volume
+              </div>
+            </div>
+
+            <div style={{ background: '#0a0814', border: '1px solid rgba(57, 255, 20, 0.2)', padding: '16px', borderRadius: '2px' }}>
+              <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '9px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}>
+                COMPLETED ORDERS
+              </div>
+              <div style={{ fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '26px', color: '#39FF14' }}>
+                {stripeStats.completedCount}
+              </div>
+              <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>
+                {stripeStats.pendingCount} pending / in-flight
+              </div>
+            </div>
+
+            <div style={{ background: '#0a0814', border: '1px solid rgba(255, 20, 147, 0.2)', padding: '16px', borderRadius: '2px' }}>
+              <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '9px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}>
+                CARDS MINTED VIA STRIPE
+              </div>
+              <div style={{ fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '26px', color: '#ff1493' }}>
+                {stripeStats.cardsMintedCount}
+              </div>
+              <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>
+                Digital collectibles delivered
+              </div>
+            </div>
+
+            <div style={{ background: '#0a0814', border: '1px solid rgba(0, 229, 255, 0.2)', padding: '16px', borderRadius: '2px' }}>
+              <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '9px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)', marginBottom: '4px' }}>
+                STRIPE API KEYS
+              </div>
+              <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '11px', color: '#00e5ff', marginTop: '6px' }}>
+                ✓ STRIPE_SECRET_KEY
+              </div>
+              <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '11px', color: '#00e5ff', marginTop: '2px' }}>
+                ✓ STRIPE_PUBLISHABLE_KEY
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Live Checkout Test Runner */}
+          <div style={{
+            background: 'rgba(99, 91, 255, 0.05)',
+            border: '1px solid rgba(99, 91, 255, 0.25)',
+            padding: '16px 20px',
+            marginBottom: '24px',
+            borderRadius: '2px',
+          }}>
+            <div style={{
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSize: '10px',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              color: '#635bff',
+              marginBottom: '6px',
+            }}>
+              🚀 LIVE STRIPE CHECKOUT TEST RUNNER
+            </div>
+            <p style={{
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSize: '10px',
+              color: 'rgba(255,255,255,0.6)',
+              marginBottom: '12px',
+            }}>
+              Launch live Stripe hosted checkouts directly from the admin dashboard to verify payment routing, webhook receipts, and instant card minting.
+            </p>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className="config-btn"
+                onClick={() => handleTestCheckout('taste', 'single')}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <ExternalLink size={10} /> Taste Pack ($0.25)
+              </button>
+              <button
+                type="button"
+                className="config-btn"
+                onClick={() => handleTestCheckout('taste', 'triple')}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <ExternalLink size={10} /> Taste Triple ($1.00)
+              </button>
+              <button
+                type="button"
+                className="config-btn"
+                onClick={() => handleTestCheckout('bombshell', 'single')}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <ExternalLink size={10} /> Bombshell ($0.25)
+              </button>
+              <button
+                type="button"
+                className="config-btn"
+                onClick={() => handleTestCheckout('bombshell', 'ten')}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <ExternalLink size={10} /> Bombshell 10-Pack ($2.00)
+              </button>
+              <button
+                type="button"
+                className="config-btn"
+                onClick={() => handleTestCheckout('alpha', 'single')}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <ExternalLink size={10} /> Alpha Roll ($1.00)
+              </button>
+              <button
+                type="button"
+                className="config-btn"
+                onClick={() => handleTestCheckout('prophecy', 'single')}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <ExternalLink size={10} /> Prophecy Pull ($5.00)
+              </button>
+            </div>
+          </div>
+
+          {stripeFeedback && (
+            <div style={{
+              padding: '10px 14px',
+              marginBottom: '16px',
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSize: '11px',
+              borderRadius: '2px',
+              background: stripeFeedback.success ? 'rgba(57, 255, 20, 0.1)' : 'rgba(255, 56, 0, 0.1)',
+              border: `1px solid ${stripeFeedback.success ? 'rgba(57, 255, 20, 0.4)' : 'rgba(255, 56, 0, 0.4)'}`,
+              color: stripeFeedback.success ? '#39FF14' : '#ff3800',
+            }}>
+              {stripeFeedback.success ? '✓' : '⚠️'} {stripeFeedback.message}
+            </div>
+          )}
+
+          {/* Orders Table */}
+          <div style={{ overflowX: 'auto' }}>
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Created At</th>
+                  <th>Session ID</th>
+                  <th>User ID</th>
+                  <th>Pack Tier</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                  <th>Cards Minted</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stripeOrders.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} style={{ textAlign: 'center', padding: '32px', color: 'rgba(255,255,255,0.4)', fontFamily: '"JetBrains Mono", monospace' }}>
+                      {loadingStripeOrders ? 'Loading Stripe orders from Supabase...' : 'No Stripe orders found in database yet. Launch a test checkout above!'}
+                    </td>
+                  </tr>
+                ) : (
+                  stripeOrders.map((order) => (
+                    <tr key={order.id || order.stripe_session_id}>
+                      <td style={{ fontSize: '9px', whiteSpace: 'nowrap', opacity: 0.7 }}>
+                        {new Date(order.created_at).toLocaleDateString()} {new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </td>
+                      <td style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '9px', color: '#635bff' }}>
+                        {order.stripe_session_id?.slice(0, 16)}...
+                      </td>
+                      <td style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '9px', opacity: 0.6 }}>
+                        {order.user_id ? `${order.user_id.slice(0, 8)}...` : 'Guest'}
+                      </td>
+                      <td>
+                        <span style={{
+                          fontFamily: '"JetBrains Mono", monospace',
+                          fontSize: '9px',
+                          fontWeight: 700,
+                          textTransform: 'uppercase',
+                          color: '#fff',
+                        }}>
+                          {order.pack_category} / {order.pack_size}
+                        </span>
+                      </td>
+                      <td style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '11px', fontWeight: 800, color: '#39FF14' }}>
+                        ${((order.amount_cents || 0) / 100).toFixed(2)}
+                      </td>
+                      <td>
+                        <span style={{
+                          fontFamily: '"JetBrains Mono", monospace',
+                          fontSize: '8px',
+                          fontWeight: 800,
+                          textTransform: 'uppercase',
+                          padding: '2px 6px',
+                          borderRadius: '2px',
+                          background: order.status === 'completed' ? 'rgba(57, 255, 20, 0.15)' : 'rgba(255, 184, 0, 0.15)',
+                          color: order.status === 'completed' ? '#39FF14' : '#ffb800',
+                          border: `1px solid ${order.status === 'completed' ? 'rgba(57, 255, 20, 0.4)' : 'rgba(255, 184, 0, 0.4)'}`,
+                        }}>
+                          {order.status}
+                        </span>
+                      </td>
+                      <td style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '10px' }}>
+                        {Array.isArray(order.cards_minted) ? (
+                          <span style={{ color: '#ff1493', fontWeight: 700 }}>
+                            {order.cards_minted.length} cards
+                          </span>
+                        ) : '—'}
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          className="config-btn"
+                          onClick={() => handleVerifyStripeSession(order.stripe_session_id)}
+                          disabled={stripeVerifyingSession === order.stripe_session_id}
+                          style={{ padding: '3px 8px', fontSize: '9px' }}
+                          title="Re-verify Stripe payment and force mint"
+                        >
+                          {stripeVerifyingSession === order.stripe_session_id ? 'Verifying...' : 'Re-verify'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
