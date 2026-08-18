@@ -1637,6 +1637,7 @@ export default function LandingPage() {
           onSelect={handlePaymentSelect}
           packLabel={checkoutInfo.label}
           price={checkoutInfo.price}
+          priceValue={checkoutInfo.priceValue}
           accent={checkoutInfo.accent}
         />
       )}

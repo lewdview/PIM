@@ -3224,10 +3224,10 @@ export default function AdminPage() {
               <button
                 type="button"
                 className="config-btn"
-                onClick={() => handleTestCheckout('taste', 'single')}
+                onClick={() => handleTestCheckout('month', 'single')}
                 style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
               >
-                <ExternalLink size={10} /> Taste Pack ($0.25)
+                <ExternalLink size={10} /> Month Quick Buy ($0.50)
               </button>
               <button
                 type="button"
@@ -3236,14 +3236,6 @@ export default function AdminPage() {
                 style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
               >
                 <ExternalLink size={10} /> Taste Triple ($1.00)
-              </button>
-              <button
-                type="button"
-                className="config-btn"
-                onClick={() => handleTestCheckout('bombshell', 'single')}
-                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-              >
-                <ExternalLink size={10} /> Bombshell ($0.25)
               </button>
               <button
                 type="button"

@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Zap, CreditCard, ShieldAlert } from 'lucide-react';
+import { X, Zap, CreditCard, ShieldAlert, AlertCircle } from 'lucide-react';
 
 interface PaymentSelectModalProps {
   isOpen: boolean;
@@ -7,6 +7,7 @@ interface PaymentSelectModalProps {
   onSelect: (method: 'crypto' | 'stripe') => void;
   packLabel: string;
   price: string;
+  priceValue?: number;
   accent: string;
 }
 
@@ -16,10 +17,18 @@ export default function PaymentSelectModal({
   onSelect,
   packLabel,
   price,
+  priceValue,
   accent,
 }: PaymentSelectModalProps) {
+  const numericPrice = priceValue !== undefined
+    ? priceValue
+    : parseFloat(price.replace(/[^0-9.]/g, '') || '0');
+
+  // Stripe requires minimum $0.50 USD for checkout charges
+  const isCardDisabled = numericPrice > 0 && numericPrice < 0.50;
+
   return (
-    <AnimatePresence font-sans>
+    <AnimatePresence>
       {isOpen && (
         <motion.div
         initial={{ opacity: 0 }}
@@ -122,7 +131,7 @@ export default function PaymentSelectModal({
                     Pay with Crypto
                   </h4>
                   <p className="font-mono text-[9px] text-white/40 mt-0.5">
-                    Pay on Base via Coinbase Smart Wallet
+                    Pay on Base via Coinbase Smart Wallet (Any amount)
                   </p>
                 </div>
               </div>
@@ -132,38 +141,74 @@ export default function PaymentSelectModal({
             </button>
 
             {/* Pay with Stripe Card Option */}
-            <button
-              onClick={() => onSelect('stripe')}
-              className="w-full p-4 border-2 border-black flex items-center justify-between text-left transition-all hover:scale-[1.01] hover:bg-white/3 active:scale-98 group cursor-pointer"
-              style={{
-                background: 'rgba(255,255,255,0.02)',
-                border: '1.5px solid rgba(255,255,255,0.08)',
-                boxShadow: '3px 3px 0 #000',
-              }}
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-cyan-600/10 border border-cyan-500/20 text-cyan-400">
-                  <CreditCard size={18} />
+            <div className="flex flex-col gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  if (!isCardDisabled) onSelect('stripe');
+                }}
+                disabled={isCardDisabled}
+                className={`w-full p-4 border-2 border-black flex items-center justify-between text-left transition-all ${
+                  isCardDisabled
+                    ? 'opacity-40 cursor-not-allowed border-dashed bg-white/[0.01]'
+                    : 'hover:scale-[1.01] hover:bg-white/3 active:scale-98 group cursor-pointer'
+                }`}
+                style={{
+                  background: isCardDisabled ? 'rgba(255,255,255,0.01)' : 'rgba(255,255,255,0.02)',
+                  border: isCardDisabled ? '1.5px dashed rgba(255,255,255,0.15)' : '1.5px solid rgba(255,255,255,0.08)',
+                  boxShadow: '3px 3px 0 #000',
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 flex items-center justify-center rounded-xl ${
+                    isCardDisabled ? 'bg-white/5 text-white/30 border border-white/10' : 'bg-cyan-600/10 border border-cyan-500/20 text-cyan-400'
+                  }`}>
+                    <CreditCard size={18} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 style={{
+                        fontFamily: '"Impact", "Arial Black", sans-serif',
+                        fontSize: '15px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.02em',
+                        color: isCardDisabled ? 'rgba(255,255,255,0.5)' : '#fff',
+                      }}>
+                        Pay with Card
+                      </h4>
+                      {isCardDisabled && (
+                        <span className="font-mono text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-400">
+                          Disabled
+                        </span>
+                      )}
+                    </div>
+                    <p className="font-mono text-[9px] text-white/40 mt-0.5">
+                      Stripe credit/debit card secure checkout
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h4 style={{
-                    fontFamily: '"Impact", "Arial Black", sans-serif',
-                    fontSize: '15px',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.02em',
-                    color: '#fff',
-                  }}>
-                    Pay with Card
-                  </h4>
-                  <p className="font-mono text-[9px] text-white/40 mt-0.5">
-                    Stripe credit/debit card secure checkout
-                  </p>
+
+                {!isCardDisabled ? (
+                  <span className="text-[10px] font-mono text-cyan-400 font-bold opacity-0 group-hover:opacity-100 transition-opacity">
+                    PROCEED →
+                  </span>
+                ) : (
+                  <span className="text-[9px] font-mono text-amber-400/80 font-bold">
+                    MIN $0.50
+                  </span>
+                )}
+              </button>
+
+              {/* Note for disabled card transaction */}
+              {isCardDisabled && (
+                <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-amber-500/10 border border-amber-500/20 text-amber-300 font-mono text-[8.5px] leading-tight">
+                  <AlertCircle size={11} className="flex-shrink-0 text-amber-400" />
+                  <span>
+                    Card transactions must be $0.50 minimum. Use Crypto above or select a multi-card pack.
+                  </span>
                 </div>
-              </div>
-              <span className="text-[10px] font-mono text-cyan-400 font-bold opacity-0 group-hover:opacity-100 transition-opacity">
-                PROCEED →
-              </span>
-            </button>
+              )}
+            </div>
 
             {/* Security banner */}
             <div className="pt-4 border-t border-white/5 flex gap-2.5 items-start font-mono text-[8px] text-white/35 leading-normal">
