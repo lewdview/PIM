@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, memo } from 'react';
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
 import type { VaultCard } from '../services/vaultService';
 import { RARITY_CONFIG, getSupplyCap, type UltraReward, type ProofType } from '../utils/rarity';
@@ -164,7 +164,7 @@ function ProofSeal({ type }: { type: ProofType }) {
   );
 }
 
-export default function Card({
+export default memo(function Card({
   card,
   edition,
   showAudio = false,
@@ -1219,4 +1219,4 @@ export default function Card({
       )}
     </motion.div>
   );
-}
+});

@@ -19,7 +19,7 @@ export default function Home() {
   const setOptionsModalOpen = useVaultStore((s) => s.setOptionsModalOpen);
   const [blink, setBlink] = useState(true);
   const [stats, setStats] = useState({ score: 0, platinums: 0, cleared: 0 });
-  const { currentTrack } = useGlobalPlayer();
+  const currentTrack = useGlobalPlayer((s) => s.currentTrack);
   const [bgArtwork, setBgArtwork] = useState<string | null>(null);
 
   useEffect(() => {

@@ -86,7 +86,10 @@ export default function TodayCardDetailModal({
   const [selectedRarity, setSelectedRarity] = useState<Rarity>('common');
   const [copied, setCopied] = useState(false);
 
-  const { currentTrack, isPlaying: isGlobalPlaying, play: playGlobalTrack, pause: pauseGlobal } = useGlobalPlayer();
+  const currentTrack = useGlobalPlayer((s) => s.currentTrack);
+  const isGlobalPlaying = useGlobalPlayer((s) => s.isPlaying);
+  const playGlobalTrack = useGlobalPlayer((s) => s.play);
+  const pauseGlobal = useGlobalPlayer((s) => s.pause);
   const isPlayingAudio = Boolean(
     isGlobalPlaying && 
     currentTrack && 

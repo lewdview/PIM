@@ -113,7 +113,7 @@ function GlobalMenuBackground() {
   const [isLegacy, setIsLegacy] = useState(false);
   const [location] = useLocation();
   const [dailyCover, setDailyCover] = useState<string | null>(null);
-  const { currentTrack } = useGlobalPlayer();
+  const currentTrack = useGlobalPlayer(s => s.currentTrack);
 
   useEffect(() => {
     try {

@@ -509,8 +509,10 @@ export default function HeroLandingPage() {
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const cardContainerRef = useRef<HTMLDivElement>(null);
 
-  // Audio Stem Playback via Global Player
-  const { currentTrack, isPlaying: isGlobalPlaying, play: playGlobalTrack, pause: pauseGlobal } = useGlobalPlayer();
+  const currentTrack = useGlobalPlayer((s) => s.currentTrack);
+  const isGlobalPlaying = useGlobalPlayer((s) => s.isPlaying);
+  const playGlobalTrack = useGlobalPlayer((s) => s.play);
+  const pauseGlobal = useGlobalPlayer((s) => s.pause);
   const isPlayingAudio = Boolean(
     isGlobalPlaying &&
     currentTrack &&
