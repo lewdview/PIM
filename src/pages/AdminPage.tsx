@@ -18,7 +18,9 @@ import { getEchoPoolStats, flushEchoPool } from '../utils/echoSystem';
 import '../styles/AdminStyles.css';
 import { supabase } from '../services/supabaseClient';
 import { fetchAllCards, type VaultCard } from '../services/vaultService';
-import { Users, BarChart3, RefreshCw, Filter, Calendar, Zap, Flame } from 'lucide-react';
+import { Users, BarChart3, RefreshCw, Filter, Calendar, Zap, Flame, ShieldCheck, Database, Trash2, Copy, Check, AlertTriangle, Sparkles, Layers, Megaphone, Radio, Send, Bell, Eye, EyeOff } from 'lucide-react';
+import { GEN0_RESET_SQL, purgeClientGen0State, getClientGen0Health } from '../utils/gen0Reset';
+import type { AnnouncementCategory, AnnouncementPriority, SystemAnnouncement } from '../store/useNotificationStore';
 
 // ===== RARITY DISPLAY HELPERS =====
 const RARITIES: Rarity[] = ['common', 'uncommon', 'rare', 'legendary', 'mythic'];
@@ -375,7 +377,44 @@ export default function AdminPage() {
   const [showImport, setShowImport] = useState(false);
   const [saveFlash, setSaveFlash] = useState(false);
   const [pushStatus, setPushStatus] = useState<'idle' | 'pushing' | 'success' | 'error'>('idle');
-  const [activeSection, setActiveSection] = useState<'rates' | 'modifiers' | 'economy' | 'echo' | 'simulation' | 'config' | 'analytics'>('rates');
+  const [activeSection, setActiveSection] = useState<'rates' | 'modifiers' | 'economy' | 'echo' | 'simulation' | 'config' | 'analytics' | 'gen0_reset' | 'broadcast'>('rates');
+
+  // Broadcast Station State
+  const [broadcastTitle, setBroadcastTitle] = useState('⚡ DAILY DROP TRANSMISSION');
+  const [broadcastMessage, setBroadcastMessage] = useState('A new rhythm challenge has been unlocked in the vault. Complete with high accuracy to earn card drops.');
+  const [broadcastCategory, setBroadcastCategory] = useState<AnnouncementCategory>('drop');
+  const [broadcastPriority, setBroadcastPriority] = useState<AnnouncementPriority>('high');
+  const [broadcastActionUrl, setBroadcastActionUrl] = useState('/daily');
+  const [broadcastActionLabel, setBroadcastActionLabel] = useState('PLAY TODAY DROP');
+  const [broadcastRewardType, setBroadcastRewardType] = useState<'tokens' | 'card' | 'none'>('none');
+  const [broadcastRewardAmount, setBroadcastRewardAmount] = useState(0);
+  const [broadcastExpiresHours, setBroadcastExpiresHours] = useState<number | null>(48);
+  const [broadcastSending, setBroadcastSending] = useState(false);
+  const [broadcastFeedback, setBroadcastFeedback] = useState<{ success: boolean; message: string } | null>(null);
+  const [broadcastList, setBroadcastList] = useState<SystemAnnouncement[]>([]);
+  const [loadingBroadcastList, setLoadingBroadcastList] = useState(false);
+
+  // Gen 0 Reset State
+  const [gen0Stats, setGen0Stats] = useState<{
+    profilesCount: number;
+    vaultCardsCount: number;
+    gameplayRecordsCount: number;
+    globalSupplyCount: number;
+    releasesCount: number;
+    echoPoolCount: number;
+    loading: boolean;
+  }>({
+    profilesCount: 0,
+    vaultCardsCount: 0,
+    gameplayRecordsCount: 0,
+    globalSupplyCount: 0,
+    releasesCount: 0,
+    echoPoolCount: 0,
+    loading: false,
+  });
+  const [clientHealth, setClientHealth] = useState<{ isClean: boolean; testKeys: string[] }>(getClientGen0Health());
+  const [copiedGen0Sql, setCopiedGen0Sql] = useState(false);
+  const [clientPurgeFeedback, setClientPurgeFeedback] = useState<string | null>(null);
 
   // Analytics States
   const [catalog, setCatalog] = useState<VaultCard[]>([]);
@@ -528,6 +567,150 @@ export default function AdminPage() {
     }
   }, [activeSection, loadAnalyticsData]);
 
+  const loadGen0Stats = useCallback(async () => {
+    setGen0Stats(prev => ({ ...prev, loading: true }));
+    try {
+      const [
+        { count: profilesCount },
+        { count: vaultCardsCount },
+        { count: gameplayRecordsCount },
+        { count: globalSupplyCount },
+        { count: releasesCount },
+        { count: echoPoolCount },
+      ] = await Promise.all([
+        supabase.from('profiles').select('*', { count: 'exact', head: true }),
+        supabase.from('vault_collections').select('*', { count: 'exact', head: true }),
+        supabase.from('gameplay_records').select('*', { count: 'exact', head: true }),
+        supabase.from('global_supply').select('*', { count: 'exact', head: true }),
+        supabase.from('releases').select('*', { count: 'exact', head: true }),
+        supabase.from('echo_pool').select('*', { count: 'exact', head: true }),
+      ]);
+
+      setGen0Stats({
+        profilesCount: profilesCount || 0,
+        vaultCardsCount: vaultCardsCount || 0,
+        gameplayRecordsCount: gameplayRecordsCount || 0,
+        globalSupplyCount: globalSupplyCount || 0,
+        releasesCount: releasesCount || 0,
+        echoPoolCount: echoPoolCount || 0,
+        loading: false,
+      });
+    } catch (err) {
+      console.error('Failed to load Gen 0 boundary stats:', err);
+      setGen0Stats(prev => ({ ...prev, loading: false }));
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeSection === 'gen0_reset') {
+      loadGen0Stats();
+      setClientHealth(getClientGen0Health());
+    }
+  }, [activeSection, loadGen0Stats]);
+
+  // Broadcast Station Handlers
+  const loadBroadcastList = useCallback(async () => {
+    setLoadingBroadcastList(true);
+    try {
+      const { data, error } = await supabase
+        .from('system_announcements')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setBroadcastList(data || []);
+    } catch (err: any) {
+      console.error('Failed to load broadcasts:', err);
+    } finally {
+      setLoadingBroadcastList(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeSection === 'broadcast') {
+      loadBroadcastList();
+    }
+  }, [activeSection, loadBroadcastList]);
+
+  const handleSendBroadcast = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!broadcastTitle.trim() || !broadcastMessage.trim()) return;
+
+    setBroadcastSending(true);
+    setBroadcastFeedback(null);
+
+    try {
+      let expiresAt: string | null = null;
+      if (broadcastExpiresHours && broadcastExpiresHours > 0) {
+        const exp = new Date(Date.now() + broadcastExpiresHours * 3600 * 1000);
+        expiresAt = exp.toISOString();
+      }
+
+      const { data, error } = await supabase
+        .from('system_announcements')
+        .insert({
+          title: broadcastTitle.trim(),
+          message: broadcastMessage.trim(),
+          category: broadcastCategory,
+          priority: broadcastPriority,
+          action_url: broadcastActionUrl.trim() || null,
+          action_label: broadcastActionLabel.trim() || null,
+          reward_type: broadcastRewardType,
+          reward_amount: broadcastRewardAmount,
+          is_active: true,
+          expires_at: expiresAt,
+        })
+        .select('*')
+        .single();
+
+      if (error) throw error;
+
+      setBroadcastFeedback({
+        success: true,
+        message: `Transmission "${broadcastTitle}" broadcasted live to all users!`,
+      });
+      loadBroadcastList();
+      setTimeout(() => setBroadcastFeedback(null), 4000);
+    } catch (err: any) {
+      console.error('Error broadcasting message:', err);
+      setBroadcastFeedback({
+        success: false,
+        message: err.message || 'Failed to dispatch broadcast transmission.',
+      });
+    } finally {
+      setBroadcastSending(false);
+    }
+  };
+
+  const handleToggleBroadcastActive = async (id: string, currentActive: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('system_announcements')
+        .update({ is_active: !currentActive })
+        .eq('id', id);
+
+      if (error) throw error;
+      setBroadcastList(prev => prev.map(b => b.id === id ? { ...b, is_active: !currentActive } : b));
+    } catch (err: any) {
+      console.error('Error toggling broadcast:', err);
+    }
+  };
+
+  const handleDeleteBroadcast = async (id: string) => {
+    if (!window.confirm('Delete this broadcast transmission permanently?')) return;
+    try {
+      const { error } = await supabase
+        .from('system_announcements')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      setBroadcastList(prev => prev.filter(b => b.id !== id));
+    } catch (err: any) {
+      console.error('Error deleting broadcast:', err);
+    }
+  };
+
   useEffect(() => {
     let filtered = telemetryLogs;
     if (selectedUser !== 'all') {
@@ -630,6 +813,8 @@ export default function AdminPage() {
           { key: 'simulation', label: '🎲 SIMULATION', color: '#4d8fff' },
           { key: 'config', label: '⚙️ CONFIG', color: '#c44dff' },
           { key: 'analytics', label: '📈 ANALYTICS & USERS', color: '#00ffff' },
+          { key: 'gen0_reset', label: '🚀 GEN 0 RESET', color: '#ff1493' },
+          { key: 'broadcast', label: '📢 BROADCAST STATION', color: '#00e5ff' },
         ] as const).map(tab => (
           <button
             key={tab.key}
@@ -1893,6 +2078,936 @@ export default function AdminPage() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== SECTION: PUBLIC GEN 0 RESET BOUNDARY ===== */}
+      {activeSection === 'gen0_reset' && (
+        <div className="admin-panel" style={{ '--panel-accent': '#ff1493' } as React.CSSProperties}>
+          <div className="admin-panel-header">
+            <div>
+              <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <ShieldCheck size={20} color="#ff1493" />
+                Public Gen 0 Reset Boundary & Launch Diagnostics
+              </h2>
+              <p style={{
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '11px',
+                color: 'var(--color-text-muted)',
+                marginTop: '4px',
+              }}>
+                PIM : th3v4ult — Sovereign clean boundary between immutable game assets and zeroed player state.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                loadGen0Stats();
+                setClientHealth(getClientGen0Health());
+              }}
+              className="config-btn"
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <RefreshCw size={12} className={gen0Stats.loading ? 'spin' : ''} />
+              Refresh Boundary State
+            </button>
+          </div>
+
+          {/* Core Boundary Architecture Overview */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+            gap: '16px',
+            marginBottom: '24px',
+          }}>
+            {/* KEEP BOX */}
+            <div style={{
+              background: 'rgba(0, 212, 170, 0.04)',
+              border: '1px solid rgba(0, 212, 170, 0.25)',
+              padding: '20px',
+              borderRadius: '2px',
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                color: '#00d4aa',
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '13px',
+                fontWeight: 700,
+                letterSpacing: '0.05em',
+                marginBottom: '12px',
+              }}>
+                <Sparkles size={16} />
+                KEEP — IMMUTABLE CONTENT & RULES
+              </div>
+              <ul style={{
+                listSetStyle: 'none',
+                padding: 0,
+                margin: 0,
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '11px',
+                lineHeight: '1.8',
+                color: 'rgba(255,255,255,0.85)',
+              }}>
+                <li>✓ <strong>Music Catalog:</strong> 365 songs, stems, audio offsets, BPM cues</li>
+                <li>✓ <strong>Card Catalog:</strong> 365 card definitions, rarity tiers, lore</li>
+                <li>✓ <strong>Pack Definitions:</strong> Taste, Daily, Light/Dark, drop rate tables</li>
+                <li>✓ <strong>Rhythm Engine:</strong> 5-Stage Canvas, POV modes, Web Audio DSP</li>
+                <li>✓ <strong>Identity Architecture:</strong> Magic Link, GitHub, Smart Wallet, Merge</li>
+                <li>✓ <strong>Stripe Billing:</strong> Fiat checkout webhooks & SKUs preserved</li>
+                <li>✓ <strong>Smart Contracts:</strong> Dormant in repo (Off-chain Gen 0 launch)</li>
+              </ul>
+            </div>
+
+            {/* RESET BOX */}
+            <div style={{
+              background: 'rgba(255, 56, 0, 0.04)',
+              border: '1px solid rgba(255, 56, 0, 0.25)',
+              padding: '20px',
+              borderRadius: '2px',
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                color: '#ff3800',
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '13px',
+                fontWeight: 700,
+                letterSpacing: '0.05em',
+                marginBottom: '12px',
+              }}>
+                <Trash2 size={16} />
+                RESET — ZERO FOR PUBLIC GEN 0
+              </div>
+              <ul style={{
+                listSetStyle: 'none',
+                padding: 0,
+                margin: 0,
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '11px',
+                lineHeight: '1.8',
+                color: 'rgba(255,255,255,0.85)',
+              }}>
+                <li>⚡ <strong>Player Balances:</strong> Tokens ($V⚡), Shards & Fragments → 0</li>
+                <li>⚡ <strong>Card Ownership:</strong> Truncate vault_collections (Nobody owns yet)</li>
+                <li>⚡ <strong>Global Editions:</strong> Reset global_supply → First drop = Edition #1</li>
+                <li>⚡ <strong>Gameplay Records:</strong> Scores, accuracy & medals wiped (No QA runs)</li>
+                <li>⚡ <strong>Leaderboards:</strong> Completely blank baseline for Reddit user #1</li>
+                <li>⚡ <strong>Daily Streaks:</strong> Login streaks, claim days & pity reset to Day 1</li>
+                <li>⚡ <strong>Developer Accounts:</strong> Tagged [ALPHA] / Archived from rankings</li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Database Live Telemetry Cards */}
+          <div className="admin-grid" style={{ marginBottom: '24px' }}>
+            <div className="stat-card" style={{ borderColor: 'rgba(255, 20, 147, 0.3)' }}>
+              <div className="stat-card-title">LIVE PROFILES IN DB</div>
+              <div className="stat-card-value" style={{ color: '#ff1493' }}>
+                {gen0Stats.loading ? '...' : gen0Stats.profilesCount}
+              </div>
+              <div className="stat-card-sub">Auth & Guest Profiles</div>
+            </div>
+
+            <div className="stat-card" style={{ borderColor: gen0Stats.vaultCardsCount > 0 ? 'rgba(255, 56, 0, 0.4)' : 'rgba(0, 212, 170, 0.3)' }}>
+              <div className="stat-card-title">OWNED CARD INSTANCES</div>
+              <div className="stat-card-value" style={{ color: gen0Stats.vaultCardsCount > 0 ? '#ff3800' : '#00d4aa' }}>
+                {gen0Stats.loading ? '...' : gen0Stats.vaultCardsCount}
+              </div>
+              <div className="stat-card-sub">
+                {gen0Stats.vaultCardsCount === 0 ? '✓ PRISTINE (0 Cards Owned)' : '⚠ CONTAINS TEST CARDS'}
+              </div>
+            </div>
+
+            <div className="stat-card" style={{ borderColor: gen0Stats.gameplayRecordsCount > 0 ? 'rgba(255, 56, 0, 0.4)' : 'rgba(0, 212, 170, 0.3)' }}>
+              <div className="stat-card-title">GAMEPLAY RECORDS</div>
+              <div className="stat-card-value" style={{ color: gen0Stats.gameplayRecordsCount > 0 ? '#ff3800' : '#00d4aa' }}>
+                {gen0Stats.loading ? '...' : gen0Stats.gameplayRecordsCount}
+              </div>
+              <div className="stat-card-sub">
+                {gen0Stats.gameplayRecordsCount === 0 ? '✓ PRISTINE (0 Scores)' : '⚠ CONTAINS QA RUNS'}
+              </div>
+            </div>
+
+            <div className="stat-card" style={{ borderColor: 'rgba(0, 212, 170, 0.3)' }}>
+              <div className="stat-card-title">PRESERVED RELEASES</div>
+              <div className="stat-card-value" style={{ color: '#00d4aa' }}>
+                {gen0Stats.loading ? '...' : (gen0Stats.releasesCount || 365)}
+              </div>
+              <div className="stat-card-sub">Full Music Catalog</div>
+            </div>
+          </div>
+
+          {/* Client LocalStorage Health & Purge Action */}
+          <div style={{
+            background: 'var(--color-surface)',
+            border: '1px solid var(--color-border)',
+            padding: '20px',
+            borderRadius: '2px',
+            marginBottom: '24px',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Layers size={16} color="#00d4aa" />
+                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '12px', fontWeight: 700 }}>
+                  CLIENT LOCALSTORAGE DIAGNOSTICS (THIS BROWSER)
+                </span>
+              </div>
+              <span style={{
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '11px',
+                color: clientHealth.isClean ? '#00d4aa' : '#ff3800',
+                background: clientHealth.isClean ? 'rgba(0, 212, 170, 0.1)' : 'rgba(255, 56, 0, 0.1)',
+                padding: '4px 8px',
+                border: `1px solid ${clientHealth.isClean ? '#00d4aa' : '#ff3800'}`,
+              }}>
+                {clientHealth.isClean ? '✓ CLEAN STATE' : `⚠ ${clientHealth.testKeys.length} TEST KEYS DETECTED`}
+              </span>
+            </div>
+
+            <p style={{
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSize: '11px',
+              color: 'var(--color-text-muted)',
+              marginBottom: '16px',
+            }}>
+              Purges local test wallets, guest collection caches, tutorial flags, and synthetic high scores while strictly preserving audio offset, custom key bindings, volume, and graphics settings.
+            </p>
+
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <button
+                className="config-btn primary"
+                onClick={() => {
+                  const res = purgeClientGen0State();
+                  setClientPurgeFeedback(`Purged ${res.cleanedKeys} test keys. Preserved ${res.preservedKeys} user preferences.`);
+                  setClientHealth(getClientGen0Health());
+                  setTimeout(() => setClientPurgeFeedback(null), 4000);
+                }}
+                style={{
+                  background: '#ff1493',
+                  borderColor: '#ff1493',
+                  color: '#fff',
+                }}
+              >
+                <Trash2 size={12} style={{ display: 'inline', marginRight: '6px' }} />
+                Purge Client Test State
+              </button>
+
+              {clientPurgeFeedback && (
+                <span style={{
+                  fontFamily: '"JetBrains Mono", monospace',
+                  fontSize: '11px',
+                  color: '#00d4aa',
+                }}>
+                  ✓ {clientPurgeFeedback}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Database Reset SQL Script Generator & Copy */}
+          <div style={{
+            background: 'var(--color-surface)',
+            border: '1px solid var(--color-border)',
+            padding: '20px',
+            borderRadius: '2px',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Database size={16} color="#c44dff" />
+                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '12px', fontWeight: 700 }}>
+                  PRODUCTION DATABASE RESET SCRIPT (gen0_economy_reset.sql)
+                </span>
+              </div>
+              <button
+                className="config-btn"
+                onClick={() => {
+                  navigator.clipboard.writeText(GEN0_RESET_SQL);
+                  setCopiedGen0Sql(true);
+                  setTimeout(() => setCopiedGen0Sql(false), 2500);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  color: copiedGen0Sql ? '#00d4aa' : '#c44dff',
+                  borderColor: copiedGen0Sql ? '#00d4aa' : '#c44dff',
+                }}
+              >
+                {copiedGen0Sql ? <Check size={12} /> : <Copy size={12} />}
+                {copiedGen0Sql ? 'COPIED TO CLIPBOARD' : 'COPY SQL SCRIPT'}
+              </button>
+            </div>
+
+            <p style={{
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSize: '11px',
+              color: 'var(--color-text-muted)',
+              marginBottom: '12px',
+            }}>
+              Execute this script in the Supabase SQL Editor to wipe test ownership and QA runs while preserving the music catalog, card metadata, and pack configurations.
+            </p>
+
+            <pre style={{
+              background: '#08080c',
+              border: '1px solid rgba(255,255,255,0.08)',
+              padding: '16px',
+              fontSize: '10px',
+              fontFamily: '"JetBrains Mono", monospace',
+              color: '#00d4aa',
+              maxHeight: '260px',
+              overflowY: 'auto',
+              whiteSpace: 'pre-wrap',
+            }}>
+              {GEN0_RESET_SQL}
+            </pre>
+          </div>
+        </div>
+      )}
+
+      {/* ===== SECTION: BROADCAST STATION ===== */}
+      {activeSection === 'broadcast' && (
+        <div className="admin-panel" style={{ '--panel-accent': '#00e5ff' } as React.CSSProperties}>
+          <div className="admin-panel-header">
+            <div>
+              <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Megaphone size={20} color="#00e5ff" />
+                Global Broadcast Station // System Transmissions
+              </h2>
+              <p style={{
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '11px',
+                color: 'var(--color-text-muted)',
+                marginTop: '4px',
+              }}>
+                Push instant announcements, daily drop notices, live alerts, and reward transmissions to all players.
+              </p>
+            </div>
+            <button
+              onClick={loadBroadcastList}
+              className="config-btn"
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <RefreshCw size={12} className={loadingBroadcastList ? 'spin' : ''} />
+              Refresh Transmissions
+            </button>
+          </div>
+
+          {/* Quick Presets */}
+          <div style={{ marginBottom: '20px' }}>
+            <div style={{
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSize: '10px',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+              color: 'rgba(255,255,255,0.6)',
+              marginBottom: '8px',
+            }}>
+              QUICK TRANSMISSION PRESETS
+            </div>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                className="config-btn"
+                onClick={() => {
+                  setBroadcastTitle('⚡ DAY DROP IS LIVE');
+                  setBroadcastMessage('A new rhythm track has dropped in the vault. Achieve Gold or Platinum accuracy to unlock collectible card drops.');
+                  setBroadcastCategory('drop');
+                  setBroadcastPriority('high');
+                  setBroadcastActionUrl('/daily');
+                  setBroadcastActionLabel('PLAY DAILY DROP');
+                  setBroadcastExpiresHours(24);
+                }}
+              >
+                🔥 Daily Drop Live
+              </button>
+
+              <button
+                type="button"
+                className="config-btn"
+                onClick={() => {
+                  setBroadcastTitle('🔥 DOUBLE SHARDS WEEKEND');
+                  setBroadcastMessage('Double fragment and shard drop rates are now active across all stage difficulties. Forge duplicate cards in the Codex.');
+                  setBroadcastCategory('event');
+                  setBroadcastPriority('high');
+                  setBroadcastActionUrl('/arcade');
+                  setBroadcastActionLabel('PLAY NOW');
+                  setBroadcastExpiresHours(48);
+                }}
+              >
+                ⚡ Double Shards
+              </button>
+
+              <button
+                type="button"
+                className="config-btn"
+                onClick={() => {
+                  setBroadcastTitle('⚠️ SCHEDULED SYSTEM UPDATE');
+                  setBroadcastMessage('PIM vault servers are undergoing routine performance optimization. High scores and collections remain 100% safe.');
+                  setBroadcastCategory('maintenance');
+                  setBroadcastPriority('urgent');
+                  setBroadcastActionUrl('');
+                  setBroadcastActionLabel('');
+                  setBroadcastExpiresHours(4);
+                }}
+              >
+                ⚠️ Maintenance Alert
+              </button>
+
+              <button
+                type="button"
+                className="config-btn"
+                onClick={() => {
+                  setBroadcastTitle('🎁 PUBLIC GEN 0 STARTER REWARD');
+                  setBroadcastMessage('Welcome to Public Gen 0! Claim your promotional welcome bonus to start ripping packs in the shop.');
+                  setBroadcastCategory('reward');
+                  setBroadcastPriority('normal');
+                  setBroadcastActionUrl('/vault/claim');
+                  setBroadcastActionLabel('CLAIM REWARD');
+                  setBroadcastExpiresHours(168);
+                }}
+              >
+                🎁 Welcome Reward
+              </button>
+            </div>
+          </div>
+
+          {/* Composer & Live Preview Grid */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+            gap: '24px',
+            marginBottom: '28px',
+          }}>
+            {/* COMPOSER FORM */}
+            <form onSubmit={handleSendBroadcast} style={{
+              background: 'rgba(255, 255, 255, 0.02)',
+              border: '1px solid rgba(0, 229, 255, 0.25)',
+              padding: '20px',
+              borderRadius: '2px',
+            }}>
+              <div style={{
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '12px',
+                fontWeight: 700,
+                color: '#00e5ff',
+                marginBottom: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}>
+                <Radio size={14} />
+                COMPOSE TRANSMISSION
+              </div>
+
+              {/* Title */}
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{
+                  display: 'block',
+                  fontFamily: '"JetBrains Mono", monospace',
+                  fontSize: '9px',
+                  textTransform: 'uppercase',
+                  color: 'rgba(255,255,255,0.6)',
+                  marginBottom: '4px',
+                }}>
+                  Transmission Title *
+                </label>
+                <input
+                  type="text"
+                  value={broadcastTitle}
+                  onChange={(e) => setBroadcastTitle(e.target.value)}
+                  required
+                  placeholder="e.g. ⚡ DAY 223 DROP IS LIVE"
+                  style={{
+                    width: '100%',
+                    background: '#08080c',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    padding: '8px 12px',
+                    color: '#fff',
+                    fontFamily: '"JetBrains Mono", monospace',
+                    fontSize: '11px',
+                    borderRadius: '2px',
+                  }}
+                />
+              </div>
+
+              {/* Category & Priority Row */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                <div>
+                  <label style={{
+                    display: 'block',
+                    fontFamily: '"JetBrains Mono", monospace',
+                    fontSize: '9px',
+                    textTransform: 'uppercase',
+                    color: 'rgba(255,255,255,0.6)',
+                    marginBottom: '4px',
+                  }}>
+                    Category
+                  </label>
+                  <select
+                    value={broadcastCategory}
+                    onChange={(e) => setBroadcastCategory(e.target.value as AnnouncementCategory)}
+                    style={{
+                      width: '100%',
+                      background: '#08080c',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      padding: '8px 10px',
+                      color: '#00e5ff',
+                      fontFamily: '"JetBrains Mono", monospace',
+                      fontSize: '11px',
+                      borderRadius: '2px',
+                    }}
+                  >
+                    <option value="drop">🔥 Daily Drop</option>
+                    <option value="event">⚡ Live Event</option>
+                    <option value="reward">🎁 Reward Drop</option>
+                    <option value="maintenance">⚠️ Maintenance</option>
+                    <option value="update">✨ System Update</option>
+                    <option value="general">📢 General Announcement</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{
+                    display: 'block',
+                    fontFamily: '"JetBrains Mono", monospace',
+                    fontSize: '9px',
+                    textTransform: 'uppercase',
+                    color: 'rgba(255,255,255,0.6)',
+                    marginBottom: '4px',
+                  }}>
+                    Priority
+                  </label>
+                  <select
+                    value={broadcastPriority}
+                    onChange={(e) => setBroadcastPriority(e.target.value as AnnouncementPriority)}
+                    style={{
+                      width: '100%',
+                      background: '#08080c',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      padding: '8px 10px',
+                      color: broadcastPriority === 'urgent' ? '#ff3800' : broadcastPriority === 'high' ? '#ffb800' : '#00e5ff',
+                      fontFamily: '"JetBrains Mono", monospace',
+                      fontSize: '11px',
+                      borderRadius: '2px',
+                    }}
+                  >
+                    <option value="normal">Standard (Normal)</option>
+                    <option value="high">Priority (Glow Ribbon)</option>
+                    <option value="urgent">Urgent (Top Alert Banner)</option>
+                    <option value="low">Info / Low</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Message */}
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{
+                  display: 'block',
+                  fontFamily: '"JetBrains Mono", monospace',
+                  fontSize: '9px',
+                  textTransform: 'uppercase',
+                  color: 'rgba(255,255,255,0.6)',
+                  marginBottom: '4px',
+                }}>
+                  Message Content *
+                </label>
+                <textarea
+                  value={broadcastMessage}
+                  onChange={(e) => setBroadcastMessage(e.target.value)}
+                  rows={4}
+                  required
+                  placeholder="Enter message details for all players..."
+                  style={{
+                    width: '100%',
+                    background: '#08080c',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    padding: '8px 12px',
+                    color: '#fff',
+                    fontFamily: '"JetBrains Mono", monospace',
+                    fontSize: '11px',
+                    lineHeight: '1.5',
+                    borderRadius: '2px',
+                    resize: 'vertical',
+                  }}
+                />
+              </div>
+
+              {/* Action Link & Action Label Row */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                <div>
+                  <label style={{
+                    display: 'block',
+                    fontFamily: '"JetBrains Mono", monospace',
+                    fontSize: '9px',
+                    textTransform: 'uppercase',
+                    color: 'rgba(255,255,255,0.6)',
+                    marginBottom: '4px',
+                  }}>
+                    Deep Link URL (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={broadcastActionUrl}
+                    onChange={(e) => setBroadcastActionUrl(e.target.value)}
+                    placeholder="e.g. /daily or /vault/claim"
+                    style={{
+                      width: '100%',
+                      background: '#08080c',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      padding: '8px 12px',
+                      color: '#fff',
+                      fontFamily: '"JetBrains Mono", monospace',
+                      fontSize: '11px',
+                      borderRadius: '2px',
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{
+                    display: 'block',
+                    fontFamily: '"JetBrains Mono", monospace',
+                    fontSize: '9px',
+                    textTransform: 'uppercase',
+                    color: 'rgba(255,255,255,0.6)',
+                    marginBottom: '4px',
+                  }}>
+                    Button Label
+                  </label>
+                  <input
+                    type="text"
+                    value={broadcastActionLabel}
+                    onChange={(e) => setBroadcastActionLabel(e.target.value)}
+                    placeholder="e.g. PLAY NOW"
+                    style={{
+                      width: '100%',
+                      background: '#08080c',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      padding: '8px 12px',
+                      color: '#fff',
+                      fontFamily: '"JetBrains Mono", monospace',
+                      fontSize: '11px',
+                      borderRadius: '2px',
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Expiry Hours */}
+              <div style={{ marginBottom: '18px' }}>
+                <label style={{
+                  display: 'block',
+                  fontFamily: '"JetBrains Mono", monospace',
+                  fontSize: '9px',
+                  textTransform: 'uppercase',
+                  color: 'rgba(255,255,255,0.6)',
+                  marginBottom: '4px',
+                }}>
+                  Auto-Expiry (Hours from now)
+                </label>
+                <select
+                  value={broadcastExpiresHours ?? 0}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    setBroadcastExpiresHours(v === 0 ? null : v);
+                  }}
+                  style={{
+                    width: '100%',
+                    background: '#08080c',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    padding: '8px 10px',
+                    color: '#fff',
+                    fontFamily: '"JetBrains Mono", monospace',
+                    fontSize: '11px',
+                    borderRadius: '2px',
+                  }}
+                >
+                  <option value={4}>4 Hours (Flash Alert)</option>
+                  <option value={24}>24 Hours (Daily Drop)</option>
+                  <option value={48}>48 Hours (Weekend Event)</option>
+                  <option value={168}>7 Days (Weekly Notice)</option>
+                  <option value={0}>Never (Permanent until dismissed)</option>
+                </select>
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={broadcastSending}
+                className="config-btn primary"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  fontSize: '11px',
+                  fontWeight: 800,
+                  letterSpacing: '0.12em',
+                  background: '#00e5ff',
+                  borderColor: '#00e5ff',
+                  color: '#000',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                }}
+              >
+                <Send size={14} />
+                {broadcastSending ? 'TRANSMITTING...' : 'BROADCAST TRANSMISSION TO ALL USERS'}
+              </button>
+
+              {broadcastFeedback && (
+                <div style={{
+                  marginTop: '12px',
+                  padding: '10px 12px',
+                  background: broadcastFeedback.success ? 'rgba(0, 212, 170, 0.15)' : 'rgba(255, 56, 0, 0.15)',
+                  border: `1px solid ${broadcastFeedback.success ? '#00d4aa' : '#ff3800'}`,
+                  color: broadcastFeedback.success ? '#00d4aa' : '#ff3800',
+                  fontFamily: '"JetBrains Mono", monospace',
+                  fontSize: '11px',
+                  borderRadius: '2px',
+                }}>
+                  {broadcastFeedback.success ? '✓' : '✗'} {broadcastFeedback.message}
+                </div>
+              )}
+            </form>
+
+            {/* LIVE PREVIEW CARD */}
+            <div style={{
+              background: 'rgba(0, 0, 0, 0.4)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              padding: '20px',
+              borderRadius: '2px',
+              display: 'flex',
+              flexDirection: 'column',
+            }}>
+              <div style={{
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '11px',
+                fontWeight: 700,
+                color: 'rgba(255,255,255,0.6)',
+                marginBottom: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}>
+                <Eye size={13} />
+                LIVE TRANSMISSION PREVIEW (INBOX RENDER)
+              </div>
+
+              <div style={{
+                background: 'rgba(255, 20, 147, 0.04)',
+                border: '1px solid rgba(255, 20, 147, 0.35)',
+                borderLeft: '4px solid #00e5ff',
+                padding: '16px 18px',
+                borderRadius: '2px',
+                marginTop: 'auto',
+                marginBottom: 'auto',
+              }}>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '8px',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{
+                      fontFamily: '"JetBrains Mono", monospace',
+                      fontSize: '9px',
+                      fontWeight: 700,
+                      color: '#00e5ff',
+                      background: 'rgba(0, 229, 255, 0.15)',
+                      padding: '2px 6px',
+                      borderRadius: '2px',
+                      border: '1px solid rgba(0, 229, 255, 0.35)',
+                    }}>
+                      {broadcastCategory.toUpperCase()}
+                    </span>
+                    <span style={{
+                      fontFamily: '"JetBrains Mono", monospace',
+                      fontSize: '9px',
+                      fontWeight: 800,
+                      color: broadcastPriority === 'urgent' ? '#ff3800' : broadcastPriority === 'high' ? '#ffb800' : '#00e5ff',
+                      background: 'rgba(255, 255, 255, 0.06)',
+                      padding: '2px 6px',
+                      borderRadius: '2px',
+                    }}>
+                      {broadcastPriority.toUpperCase()}
+                    </span>
+                    <span style={{
+                      width: '6px',
+                      height: '6px',
+                      borderRadius: '50%',
+                      background: '#ff1493',
+                      boxShadow: '0 0 6px #ff1493',
+                      display: 'inline-block',
+                    }} />
+                  </div>
+                  <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '9px', color: 'rgba(255,255,255,0.4)' }}>
+                    Just Now
+                  </span>
+                </div>
+
+                <h3 style={{
+                  fontFamily: '"Outfit", sans-serif',
+                  fontSize: '15px',
+                  fontWeight: 800,
+                  color: '#fff',
+                  margin: '0 0 6px 0',
+                }}>
+                  {broadcastTitle || 'Transmission Title'}
+                </h3>
+
+                <p style={{
+                  fontFamily: '"JetBrains Mono", monospace',
+                  fontSize: '11px',
+                  lineHeight: '1.6',
+                  color: 'rgba(255, 255, 255, 0.85)',
+                  margin: '0 0 14px 0',
+                  whiteSpace: 'pre-line',
+                }}>
+                  {broadcastMessage || 'Transmission message content...'}
+                </p>
+
+                {broadcastActionUrl && (
+                  <div style={{
+                    borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+                    paddingTop: '10px',
+                    display: 'flex',
+                    justifyContent: 'flex-start',
+                  }}>
+                    <span style={{
+                      background: '#ff1493',
+                      color: '#000',
+                      fontFamily: '"JetBrains Mono", monospace',
+                      fontSize: '10px',
+                      fontWeight: 800,
+                      padding: '6px 14px',
+                      clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+                    }}>
+                      {broadcastActionLabel || 'OPEN'} ↗
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* ACTIVE BROADCASTS TABLE */}
+          <div>
+            <div style={{
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSize: '12px',
+              fontWeight: 700,
+              color: '#00e5ff',
+              marginBottom: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}>
+              <span>TRANSMISSION DISPATCH LOG ({broadcastList.length})</span>
+            </div>
+
+            {loadingBroadcastList ? (
+              <div style={{ padding: '24px', textAlign: 'center', fontFamily: '"JetBrains Mono", monospace', fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>
+                Loading transmissions...
+              </div>
+            ) : broadcastList.length === 0 ? (
+              <div style={{ padding: '24px', textAlign: 'center', fontFamily: '"JetBrains Mono", monospace', fontSize: '11px', color: 'rgba(255,255,255,0.4)', background: '#08080c', border: '1px solid rgba(255,255,255,0.06)' }}>
+                No broadcast transmissions currently dispatched.
+              </div>
+            ) : (
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>STATUS</th>
+                    <th>PRIORITY / CATEGORY</th>
+                    <th>TITLE & MESSAGE</th>
+                    <th>ACTION LINK</th>
+                    <th>DISPATCHED</th>
+                    <th>EXPIRES</th>
+                    <th>ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {broadcastList.map((b) => (
+                    <tr key={b.id}>
+                      <td>
+                        <span style={{
+                          fontSize: '9px',
+                          padding: '2px 6px',
+                          fontWeight: 700,
+                          borderRadius: '2px',
+                          background: b.is_active ? 'rgba(0, 212, 170, 0.15)' : 'rgba(255, 56, 0, 0.15)',
+                          color: b.is_active ? '#00d4aa' : '#ff3800',
+                          border: `1px solid ${b.is_active ? '#00d4aa' : '#ff3800'}`,
+                        }}>
+                          {b.is_active ? 'ACTIVE' : 'INACTIVE'}
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <span style={{ fontSize: '9px', color: '#00e5ff', fontWeight: 700 }}>
+                            {b.category.toUpperCase()}
+                          </span>
+                          <span style={{ fontSize: '8px', color: b.priority === 'urgent' ? '#ff3800' : 'rgba(255,255,255,0.5)' }}>
+                            {b.priority.toUpperCase()}
+                          </span>
+                        </div>
+                      </td>
+                      <td style={{ maxWidth: '280px' }}>
+                        <div style={{ fontWeight: 700, color: '#fff', fontSize: '11px', marginBottom: '2px' }}>
+                          {b.title}
+                        </div>
+                        <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.6)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {b.message}
+                        </div>
+                      </td>
+                      <td>
+                        {b.action_url ? (
+                          <span style={{ fontSize: '9px', color: '#ff1493', fontFamily: '"JetBrains Mono", monospace' }}>
+                            {b.action_url}
+                          </span>
+                        ) : (
+                          <span style={{ opacity: 0.3, fontSize: '9px' }}>—</span>
+                        )}
+                      </td>
+                      <td style={{ fontSize: '9px', whiteSpace: 'nowrap', opacity: 0.7 }}>
+                        {new Date(b.created_at).toLocaleDateString()} {new Date(b.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </td>
+                      <td style={{ fontSize: '9px', whiteSpace: 'nowrap', opacity: 0.7 }}>
+                        {b.expires_at ? new Date(b.expires_at).toLocaleDateString() : 'Never'}
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleBroadcastActive(b.id, b.is_active)}
+                            className="config-btn"
+                            style={{ padding: '4px 8px', fontSize: '9px' }}
+                            title={b.is_active ? 'Deactivate Broadcast' : 'Activate Broadcast'}
+                          >
+                            {b.is_active ? <EyeOff size={10} /> : <Eye size={10} />}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteBroadcast(b.id)}
+                            className="config-btn"
+                            style={{ padding: '4px 8px', fontSize: '9px', color: '#ff3800', borderColor: 'rgba(255,56,0,0.3)' }}
+                            title="Delete Broadcast"
+                          >
+                            <Trash2 size={10} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       )}

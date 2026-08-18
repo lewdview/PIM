@@ -25,6 +25,8 @@ import {
 import { getCurrentDay, getTimeUntilNextDay, formatDate, getDateFromDay } from '../utils/dayCalc';
 import { extractPalette, getFallbackPalette, type ExtractedPalette } from '../utils/extractPalette';
 import { audioManager } from '../game/audio';
+import { useGlobalPlayer } from '../store/useGlobalPlayer';
+import { loadCatalog, type GameSong } from '../game/api';
 import { useVaultStore } from '../store/useVaultStore';
 import { getClaimedCountForDay } from '../services/vaultService';
 import { supabase } from '@/services/supabaseClient';
@@ -499,9 +501,13 @@ export default function HeroLandingPage() {
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const cardContainerRef = useRef<HTMLDivElement>(null);
 
-  // Audio Stem Playback State
-  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  // Audio Stem Playback via Global Player
+  const { currentTrack, isPlaying: isGlobalPlaying, play: playGlobalTrack, pause: pauseGlobal } = useGlobalPlayer();
+  const isPlayingAudio = Boolean(
+    isGlobalPlaying &&
+    currentTrack &&
+    (currentTrack.day === activeDay || (song?.audioUrl && currentTrack.audioUrl.includes(song.audioUrl.split('/').pop() || 'xyz_never')))
+  );
 
   // Collection Heatmap Filter State
   const [filterMode, setFilterMode] = useState<'all' | 'unlocked' | 'dark' | 'light'>('all');
@@ -562,33 +568,41 @@ export default function HeroLandingPage() {
 
   // Load catalog & update current song when activeDay changes
   useEffect(() => {
-    fetch('/data/song_catalog.json')
-      .then(r => r.json())
-      .then((data: SongEntry[]) => {
-        setCatalog(data);
+    let isCancelled = false;
+    loadCatalog()
+      .then((data: GameSong[]) => {
+        if (isCancelled) return;
+        setCatalog(data as unknown as SongEntry[]);
         const currentSong = data.find(s => s.day === activeDay) || data[data.length - 1];
-        setSong(currentSong);
+        setSong(currentSong as unknown as SongEntry);
 
         if (currentSong?.coverArt) {
-          extractPalette(currentSong.coverArt).then(setPalette).catch(() => {});
-        }
-
-        if (audioRef.current) {
-          audioRef.current.pause();
-          setIsPlayingAudio(false);
-        }
-
-        if (currentSong?.audioUrl) {
-          audioRef.current = new Audio(currentSong.audioUrl);
-          audioRef.current.loop = true;
+          extractPalette(currentSong.coverArt).then(p => {
+            if (!isCancelled) setPalette(p);
+          }).catch(() => {});
         }
       })
-      .catch(console.error);
+      .catch((err) => {
+        console.error('Failed to load catalog via loadCatalog, falling back to fetch:', err);
+        fetch('/data/song_catalog.json')
+          .then(r => r.json())
+          .then((data: SongEntry[]) => {
+            if (isCancelled) return;
+            setCatalog(data);
+            const currentSong = data.find(s => s.day === activeDay) || data[data.length - 1];
+            setSong(currentSong);
+
+            if (currentSong?.coverArt) {
+              extractPalette(currentSong.coverArt).then(p => {
+                if (!isCancelled) setPalette(p);
+              }).catch(() => {});
+            }
+          })
+          .catch(console.error);
+      });
 
     return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-      }
+      isCancelled = true;
     };
   }, [activeDay]);
 
@@ -634,17 +648,24 @@ export default function HeroLandingPage() {
 
   // Toggle Audio Stem Playback
   const toggleAudio = useCallback(() => {
-    if (!audioRef.current) return;
+    if (!song?.audioUrl) return;
     if (isPlayingAudio) {
-      audioRef.current.pause();
-      setIsPlayingAudio(false);
+      pauseGlobal();
       audioManager.playSfx('pause', 0.3);
     } else {
-      audioRef.current.play().catch(() => {});
-      setIsPlayingAudio(true);
       audioManager.playSfx('select_start_song', 0.4);
+      playGlobalTrack({
+        title: song.title,
+        artist: song.artist || 'th3scr1b3',
+        audioUrl: song.audioUrl,
+        coverUrl: song.coverArt || '',
+        day: song.day || activeDay,
+        rarity: 'common',
+        isDailyClaim: true,
+        maxDuration: 0,
+      });
     }
-  }, [isPlayingAudio]);
+  }, [song, activeDay, isPlayingAudio, pauseGlobal, playGlobalTrack]);
 
   // Switch Day Handler
   const songByDayMap = useMemo(() => {

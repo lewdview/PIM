@@ -9,6 +9,7 @@ import { getCoverUrlForRarity, useSmartCoverArt } from '../utils/rarityArtwork';
 import { getArtTypeForDay, OUTFIT_STYLES } from '../utils/artTypes';
 import RarityBadge from './RarityBadge';
 import { audioManager } from '../game/audio';
+import { useGlobalPlayer } from '../store/useGlobalPlayer';
 
 interface TodayCardDetailModalProps {
   isOpen: boolean;
@@ -40,38 +41,38 @@ const VARIANTS: {
 }[] = [
   {
     rarity: 'common',
-    label: 'Standard Core',
-    desc: 'Official daily drop album art with standard audio stem.',
-    badge: 'BASE CORE',
-    perk: 'Standard Edition • 100 Supply',
+    label: 'Standard Edition',
+    desc: 'Base studio master, daily drop mint.',
+    badge: 'STAGE PASS',
+    perk: 'Base Song Score + 1x Multiplier',
   },
   {
     rarity: 'uncommon',
-    label: 'Alternate Edition',
-    desc: 'High-contrast alternate concept cover with extended audio preview.',
-    badge: 'ALT COVER',
-    perk: 'Alternate Visuals • +25% Score Mult',
+    label: 'Enhanced Stem',
+    desc: 'Expanded harmonic mix & dynamic EQ tier.',
+    badge: 'SYNTH ACCENT',
+    perk: '1.25x Overdrive Point Boost',
   },
   {
     rarity: 'rare',
-    label: 'Holographic Rare',
-    desc: 'Cyberpunk anime foil finish featuring exclusive girl-cover artwork.',
-    badge: 'HOLO FOIL',
-    perk: 'Exclusive Art • +50% Score Mult',
+    label: 'Prism Holographic',
+    desc: 'Foil iridescent finish with extended stems.',
+    badge: 'PRISM FOIL',
+    perk: '1.5x Multiplier + Shiny Visual FX',
   },
   {
     rarity: 'legendary',
-    label: 'Gold Master',
-    desc: 'Pure golden gilding, high-valence master stem, and maximum prestige.',
+    label: 'Gold Inscription',
+    desc: 'Gold leaf inlay, uncompressed master studio stem.',
     badge: 'GOLD FOIL',
-    perk: 'Gilded Frame • +100% Score Mult',
+    perk: '2.0x Multiplier + Golden Sparkle Aura',
   },
   {
     rarity: 'mythic',
-    label: 'Chromatic 1/1',
-    desc: 'Iridescent chromatic shimmer. Ultra-rare historical vault imprint.',
-    badge: 'CHROMATIC',
-    perk: '1/1 Aura • Maximum Multiplier',
+    label: 'Genesis 1-of-1 Arcane',
+    desc: 'Cosmic particle emission & full multi-track DAW stem package.',
+    badge: '1 OF 1 GENESIS',
+    perk: '3.0x Ultra Multiplier + Cosmic Stems Access',
   },
 ];
 
@@ -83,8 +84,14 @@ export default function TodayCardDetailModal({
   onPlay,
 }: TodayCardDetailModalProps) {
   const [selectedRarity, setSelectedRarity] = useState<Rarity>('common');
-  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  const { currentTrack, isPlaying: isGlobalPlaying, play: playGlobalTrack, pause: pauseGlobal } = useGlobalPlayer();
+  const isPlayingAudio = Boolean(
+    isGlobalPlaying && 
+    currentTrack && 
+    (currentTrack.day === day || (song?.audioUrl && currentTrack.audioUrl.includes(song.audioUrl.split('/').pop() || 'xyz_never')))
+  );
 
   // Compute cover URL for the selected variant
   const rawCoverUrl = useMemo(() => {
@@ -103,12 +110,20 @@ export default function TodayCardDetailModal({
   const togglePreviewAudio = () => {
     if (!song.audioUrl) return;
     if (isPlayingAudio) {
-      audioManager.stopBgm();
-      setIsPlayingAudio(false);
+      pauseGlobal();
+      audioManager.playSfx('pause', 0.3);
     } else {
       audioManager.playSfx('tap_nav', 0.4);
-      audioManager.playBgm(song.audioUrl, 0.6);
-      setIsPlayingAudio(true);
+      playGlobalTrack({
+        title: song.title,
+        artist: song.artist || 'th3scr1b3',
+        audioUrl: song.audioUrl,
+        coverUrl: modalCoverUrl || song.coverArt || '',
+        day: day,
+        rarity: selectedRarity,
+        isDailyClaim: true,
+        maxDuration: 0,
+      });
     }
   };
 
@@ -128,7 +143,7 @@ export default function TodayCardDetailModal({
           exit={{ opacity: 0 }}
           className="fixed inset-0 bg-black/90 backdrop-blur-xl"
           onClick={() => {
-            if (isPlayingAudio) audioManager.stopBgm();
+            if (isPlayingAudio) pauseGlobal();
             onClose();
           }}
         />
@@ -166,7 +181,7 @@ export default function TodayCardDetailModal({
               </button>
               <button
                 onClick={() => {
-                  if (isPlayingAudio) audioManager.stopBgm();
+                  if (isPlayingAudio) pauseGlobal();
                   onClose();
                 }}
                 aria-label="Close modal"
@@ -362,7 +377,7 @@ export default function TodayCardDetailModal({
               <div className="pt-4 border-t border-white/10 flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={() => {
-                    if (isPlayingAudio) audioManager.stopBgm();
+                    if (isPlayingAudio) pauseGlobal();
                     onClose();
                     onPlay();
                   }}

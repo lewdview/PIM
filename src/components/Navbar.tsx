@@ -8,13 +8,14 @@ import { Link, useLocation } from 'wouter';
 import {
   Home, Layers, Trophy, Wallet, LogOut, Zap, X, FileText,
   Flame, BookOpen, Monitor, Gift, Settings, Image, Map, Sparkles,
-  User, ChevronDown, ChevronRight, Gamepad2, GraduationCap, LayoutGrid,
+  User, ChevronDown, ChevronRight, Gamepad2, GraduationCap, LayoutGrid, Bell,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../store/useAuthStore';
 import { useVaultStore } from '../store/useVaultStore';
 import { useGlobalPlayer } from '../store/useGlobalPlayer';
 import { useDisplayMode } from '../store/useDisplayMode';
+import { useNotificationStore } from '../store/useNotificationStore';
 import GuideModal from './GuideModal';
 import { haptics } from '../utils/haptics';
 import FloatingTicker from './FloatingTicker';
@@ -99,6 +100,7 @@ const menuSections: MenuSection[] = [
     accentGlow: 'rgba(168, 85, 247, 0.4)',
     icon: LayoutGrid,
     items: [
+      { action: 'notifications', label: 'Transmissions', icon: Bell, desc: 'Broadcasts & alerts' },
       { to: '/profile', label: 'Profile', icon: User, desc: 'Scribe identity hub' },
       { action: 'options', label: 'Options', icon: Settings, desc: 'Audio, visuals & gameplay' },
       { action: 'guide', label: 'Guide', icon: BookOpen, desc: 'Instruction booklet' },
@@ -265,6 +267,8 @@ export default function Navbar() {
       setOptionsModalOpen(true);
     } else if (item.action === 'guide') {
       setGuideOpen(true);
+    } else if (item.action === 'notifications') {
+      useNotificationStore.getState().setIsOpen(true);
     }
   }, [setOptionsModalOpen]);
 
@@ -395,6 +399,26 @@ export default function Navbar() {
                   aria-label="Toggle 4K HDR mode"
                 />
               </div>
+
+              {/* Notification Bell */}
+              <button
+                onClick={() => {
+                  useNotificationStore.getState().setIsOpen(true);
+                  haptics.lightTap();
+                }}
+                className="relative flex items-center justify-center w-8 h-8 border border-white/10 hover:border-pink-500/50 bg-black/40 hover:bg-pink-500/10 transition-all rounded-[2px] cursor-pointer"
+                title="System Transmissions & Broadcasts"
+                aria-label="System Transmissions"
+              >
+                <Bell size={15} className={useNotificationStore.getState().unreadCount > 0 ? "text-[#ff1493] animate-pulse" : "text-white/60 hover:text-white"} />
+                {useNotificationStore.getState().unreadCount > 0 && (
+                  <span
+                    className="absolute -top-1 -right-1 min-w-[15px] h-3.5 px-1 flex items-center justify-center bg-[#ff1493] text-black font-mono font-black text-[8px] rounded-full shadow-[0_0_8px_#ff1493]"
+                  >
+                    {useNotificationStore.getState().unreadCount > 9 ? '9+' : useNotificationStore.getState().unreadCount}
+                  </span>
+                )}
+              </button>
 
               <TokenPill balance={tokenBalance} />
 
@@ -547,7 +571,24 @@ export default function Navbar() {
             </div>
 
             {/* ── Right: Mobile Controls ── */}
-            <div className="flex md:hidden items-center gap-2">
+            <div className="flex md:hidden items-center gap-1.5">
+              <button
+                onClick={() => {
+                  useNotificationStore.getState().setIsOpen(true);
+                  haptics.lightTap();
+                }}
+                className="relative flex items-center justify-center w-9 h-9 border border-white/15 bg-black/50 text-white/80 active:scale-95 transition-all rounded-[2px]"
+                aria-label="Open Transmissions"
+              >
+                <Bell size={15} className={useNotificationStore.getState().unreadCount > 0 ? "text-[#ff1493]" : "text-white/70"} />
+                {useNotificationStore.getState().unreadCount > 0 && (
+                  <span
+                    className="absolute -top-1 -right-1 min-w-[14px] h-3.5 px-0.5 flex items-center justify-center bg-[#ff1493] text-black font-mono font-black text-[8px] rounded-full"
+                  >
+                    {useNotificationStore.getState().unreadCount > 9 ? '9+' : useNotificationStore.getState().unreadCount}
+                  </span>
+                )}
+              </button>
               <TokenPill balance={tokenBalance} compact />
               <button
                 onClick={() => { setCommandPanelOpen(!commandPanelOpen); haptics.lightTap(); }}

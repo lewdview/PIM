@@ -3887,31 +3887,72 @@ export default function Game() {
         setRecordingProgress(isNaN(prog) ? 0 : prog);
       }
       notesRef.current.forEach((ns) => {
-        if (ns.note.type === "mine") return; // Skip hazard mines
+        if (ns.note.type === "mine" || ns.note.type === "ghost") return; // Skip hazard mines / ghost obstacles
         if (!ns.hit && !ns.missed) {
-          if (ns.note.type === "hold") {
+          const isHoldNote =
+            ns.note.type === "hold" ||
+            ns.note.type === "hold-swipe" ||
+            ns.note.type === "slide" ||
+            ns.note.type === "zigzag" ||
+            (typeof ns.note.holdDuration === "number" && ns.note.holdDuration > 0);
+
+          if (isHoldNote) {
             if (t >= ns.note.time && !ns.holdActive) {
               hitLane(ns.note.lane, ns.note.swipeDirection);
+              if (laneRef.current[ns.note.lane]) {
+                laneRef.current[ns.note.lane].pressed = true;
+              }
             }
             if (ns.holdActive) {
               const holdDur = ns.note.holdDuration || 0.5;
               ns.holdProgress = Math.min(1, Math.max(0, (t - ns.note.time) / holdDur));
               if (ns.note.targetLane !== undefined) {
-                ns.currentLane = lerp(ns.note.lane, ns.note.targetLane, ns.holdProgress);
+                const newLane = lerp(ns.note.lane, ns.note.targetLane, ns.holdProgress);
+                const prevL = Math.round(ns.currentLane);
+                const nextL = Math.round(newLane);
+                if (prevL !== nextL) {
+                  if (laneRef.current[prevL]) laneRef.current[prevL].pressed = false;
+                  if (laneRef.current[nextL]) laneRef.current[nextL].pressed = true;
+                }
+                ns.currentLane = newLane;
               }
               if (t >= ns.note.time + holdDur) {
-                if (ns.note.swipeDirection) {
-                  hitSwipeRelease(ns, ns.note.swipeDirection);
+                const releaseSwipe = ns.note.swipeDirection || (ns.note.type === "hold-swipe" ? "up" : undefined);
+                if (releaseSwipe) {
+                  hitSwipeRelease(ns, releaseSwipe);
                 } else {
                   if (ns.note.targetLane !== undefined) {
                     ns.currentLane = ns.note.targetLane;
                   }
                   completeHoldNote(ns);
                 }
+                const endL = Math.round(ns.currentLane);
+                if (laneRef.current[endL]) {
+                  laneRef.current[endL].pressed = false;
+                }
               }
             }
           } else if (t >= ns.note.time) {
-            hitLane(ns.note.lane, ns.note.swipeDirection);
+            // Determine required direction for swipe or green lift notes
+            const reqDir =
+              ns.note.swipeDirection ||
+              (ns.note.type === "lift" ? "up" : ns.note.type === "swipe" ? "up" : undefined);
+
+            hitLane(ns.note.lane, reqDir);
+
+            if (laneRef.current[ns.note.lane]) {
+              laneRef.current[ns.note.lane].pressed = true;
+              setTimeout(() => {
+                if (
+                  laneRef.current[ns.note.lane] &&
+                  !notesRef.current.some(
+                    (n) => n.holdActive && Math.round(n.currentLane) === ns.note.lane
+                  )
+                ) {
+                  laneRef.current[ns.note.lane].pressed = false;
+                }
+              }, 80);
+            }
           }
         }
       });

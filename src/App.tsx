@@ -38,6 +38,9 @@ import NextGenLandingPage from './pages/NextGenLandingPage';
 import ProfilePage from './pages/ProfilePage';
 import ListenPage from './pages/ListenPage';
 import EarnPage from './pages/EarnPage';
+import { NotificationModal } from './components/NotificationModal';
+import { SystemAlertBanner } from './components/SystemAlertBanner';
+import { useNotificationStore } from './store/useNotificationStore';
 
 // Helper to auto-retry and cache-bust lazy route chunk imports on version deployment updates
 function lazyWithRetry<T extends React.ComponentType<any>>(
@@ -335,9 +338,18 @@ export default function App() {
 
   const collection = useVaultStore((s) => s.collection);
 
+  const subscribeNotifications = useNotificationStore((s) => s.subscribeRealtime);
+
   useEffect(() => {
     initializeAuth();
   }, [initializeAuth]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeNotifications(user?.id);
+    return () => {
+      unsubscribe();
+    };
+  }, [subscribeNotifications, user?.id]);
 
   // Track page views on route transitions
   useEffect(() => {
@@ -415,7 +427,9 @@ export default function App() {
       <GlobalMenuBackground />
       <BackgroundMusic />
       <GamepadCursor />
+      {/* Global Navigation Header with integrated notification telemetry */}
       {!hideNavbar && <Navbar />}
+      <SystemAlertBanner />
 
       <main className="flex-1 flex flex-col relative">
         <Suspense fallback={
@@ -512,6 +526,7 @@ export default function App() {
       <GlobalPlayerBar />
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
       <OptionsModal isOpen={optionsModalOpen} onClose={() => setOptionsModalOpen(false)} />
+      <NotificationModal />
     </div>
   );
 }
