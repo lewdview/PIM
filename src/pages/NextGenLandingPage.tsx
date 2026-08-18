@@ -1396,7 +1396,44 @@ export default function NextGenLandingPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 relative z-10">
+              {/* VAULT PACK (3-CARD ARCHIVE • 3% MYTHIC CHANCE) */}
+              <div className="flex flex-col p-6 rounded-2xl bg-gradient-to-b from-amber-500/10 via-slate-900/80 to-slate-950 border border-amber-500/30 hover:border-amber-400/60 transition-all relative overflow-hidden">
+                <div className="absolute top-3 right-3">
+                  <span className="text-[9px] font-mono font-extrabold uppercase px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                    ✦ 3% Mythic
+                  </span>
+                </div>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center text-xl">⚡</div>
+                  <h3 className="font-bold text-lg text-amber-400">Vault Pack</h3>
+                </div>
+                <p className="text-xs text-slate-300 mb-4 flex-1">
+                  Premium 3-card archive pack. The only place to pull Mythic cards outside the daily drop!
+                </p>
+                <div className="p-3 rounded-xl bg-black/40 border border-amber-500/20 mb-4 text-xs font-mono">
+                  <div className="flex justify-between mb-1">
+                    <span className="text-slate-400">Mythic</span>
+                    <span className="text-amber-400 font-bold">3.0% (Highest)</span>
+                  </div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-slate-400">Legendary</span>
+                    <span className="text-purple-400 font-bold">14.0%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Cards</span>
+                    <span className="text-white font-bold">3 Cards</span>
+                  </div>
+                </div>
+                <button 
+                  disabled={isPurchasing || tokenBalance < 275}
+                  onClick={() => handlePurchasePack('vault_token', 'single')}
+                  className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-extrabold text-xs tracking-wider uppercase transition-all disabled:opacity-50"
+                >
+                  {isPurchasing ? 'Opening...' : 'Rip Pack (275 V⚡)'}
+                </button>
+              </div>
+
               {/* TARGETED PULL */}
               <div className="flex flex-col p-6 rounded-2xl bg-slate-900/60 border border-white/5 hover:border-blue-500/40 transition-all">
                 <div className="flex items-center gap-3 mb-4">
