@@ -468,7 +468,7 @@ export default function App() {
       <GamepadCursor />
       {/* Global Navigation Header with integrated notification telemetry */}
       {!hideNavbar && <Navbar />}
-      <SystemAlertBanner />
+      {!hideNavbar && <SystemAlertBanner />}
 
       <main className="flex-1 flex flex-col relative">
         <Suspense fallback={

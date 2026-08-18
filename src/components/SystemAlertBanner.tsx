@@ -7,9 +7,14 @@ import { AlertCircle, X, ChevronRight, Zap } from 'lucide-react';
 export const SystemAlertBanner: React.FC = () => {
   const { activeBanner, dismissBanner, markAsRead } = useNotificationStore();
   const user = useAuthStore((s) => s.user);
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
 
-  if (!activeBanner) return null;
+  if (
+    !activeBanner ||
+    location.startsWith('/hero') ||
+    location.startsWith('/play/') ||
+    location === '/tutorial'
+  ) return null;
 
   const isUrgent = activeBanner.priority === 'urgent';
   const borderColor = isUrgent ? '#ff3800' : '#ff1493';
