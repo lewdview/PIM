@@ -41,6 +41,7 @@ import EarnPage from './pages/EarnPage';
 import { NotificationModal } from './components/NotificationModal';
 import { SystemAlertBanner } from './components/SystemAlertBanner';
 import { useNotificationStore } from './store/useNotificationStore';
+import { getCurrentDay } from './utils/dayCalc';
 
 // Helper to auto-retry and cache-bust lazy route chunk imports on version deployment updates
 function lazyWithRetry<T extends React.ComponentType<any>>(
@@ -323,6 +324,32 @@ function OptionsRouteHandler() {
   return null;
 }
 
+// Automatic Daily Drop stage launcher
+function DailyDropRoute() {
+  const [, setLocation] = useLocation();
+  useEffect(() => {
+    const today = getCurrentDay();
+    setLocation(`/play/day-${today}`);
+  }, [setLocation]);
+
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+      <div className="text-[12px] font-mono text-[#ff1493] uppercase font-bold tracking-widest animate-pulse">
+        CALIBRATING STAGE TO TODAY'S DROP...
+      </div>
+    </div>
+  );
+}
+
+function TransmissionsRoute() {
+  const [, setLocation] = useLocation();
+  useEffect(() => {
+    useNotificationStore.getState().setIsOpen(true);
+    setLocation('/arcade');
+  }, [setLocation]);
+  return null;
+}
+
 export default function App() {
   const [location, setLocation] = useLocation();
   const initializeAuth = useAuthStore((s) => s.initialize);
@@ -446,18 +473,33 @@ export default function App() {
             <Route path="/pim" component={RhythmHome} />
             <Route path="/play" component={RhythmHome} />
             <Route path="/arcade" component={RhythmHome} />
+            <Route path="/daily" component={DailyDropRoute} />
+            <Route path="/drop" component={DailyDropRoute} />
+            <Route path="/today" component={DailyDropRoute} />
+            <Route path="/daily-drop" component={DailyDropRoute} />
+            <Route path="/transmissions" component={TransmissionsRoute} />
             <Route path="/songs" component={SongSelect} />
             <Route path="/play/:songId" component={GamePlay} />
             <Route path="/results/:songId" component={GameResults} />
             <Route path="/vault" component={HomePage} />
             <Route path="/vault/collection" component={CollectionPage} />
+            <Route path="/collection" component={CollectionPage} />
             <Route path="/vault/reveal" component={PackRevealPage} />
+            <Route path="/reveal" component={PackRevealPage} />
             <Route path="/vault/forge" component={ForgePage} />
+            <Route path="/forge" component={ForgePage} />
             <Route path="/vault/leaderboard" component={LeaderboardPage} />
+            <Route path="/leaderboard" component={LeaderboardPage} />
             <Route path="/vault/codex" component={CodexPage} />
+            <Route path="/codex" component={CodexPage} />
             <Route path="/vault/claim" component={ClaimPage} />
+            <Route path="/claim" component={ClaimPage} />
             <Route path="/vault/legal" component={LegalPage} />
+            <Route path="/legal" component={LegalPage} />
             <Route path="/vault/earn" component={EarnPage} />
+            <Route path="/earn" component={EarnPage} />
+            <Route path="/shop" component={EarnPage} />
+            <Route path="/store" component={EarnPage} />
             <Route path="/vault/:userId" component={VoyeurPage} />
             { (import.meta.env.DEV || localStorage.getItem('th3vault_dev_mode') === 'true') && (
               <>
