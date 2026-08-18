@@ -8,6 +8,7 @@ import { getCandidateAudioUrls, sanitizeMediaUrl } from '../game/api';
 // ═══════════════════════════════════════════════════════════════
 
 export interface GlobalTrack {
+  id?: string;
   title: string;
   artist?: string;
   audioUrl: string;
@@ -19,19 +20,33 @@ export interface GlobalTrack {
   maxDuration?: number;
 }
 
+export type PlayerLoopMode = 'all' | 'one' | 'off';
+
 interface GlobalPlayerState {
   currentTrack: GlobalTrack | null;
+  playlist: GlobalTrack[];
+  playlistIndex: number;
   isPlaying: boolean;
   progress: number;     // 0–1
   currentTime: number;  // seconds
   duration: number;     // seconds
+  loopMode: PlayerLoopMode;
+  shuffle: boolean;
+  volume: number;
+
   // Actions
-  play: (track: GlobalTrack) => void;
+  play: (track: GlobalTrack, newPlaylist?: GlobalTrack[]) => void;
+  setPlaylist: (tracks: GlobalTrack[], startIndex?: number, autoPlay?: boolean) => void;
   pause: () => void;
   resume: () => void;
   stop: () => void;
+  nextTrack: () => void;
+  previousTrack: () => void;
   seek: (pct: number) => void;
   toggle: () => void;
+  setLoopMode: (mode: PlayerLoopMode) => void;
+  toggleShuffle: () => void;
+  setVolume: (vol: number) => void;
 }
 
 // Singleton Audio element — lives outside React lifecycle
@@ -43,12 +58,12 @@ function getAudio(): HTMLAudioElement {
   if (!_audio) {
     _audio = new Audio();
     _audio.preload = 'metadata';
+    _audio.volume = 0.8;
   }
   return _audio;
 }
 
 export const useGlobalPlayer = create<GlobalPlayerState>((set, get) => {
-  // Wire up event listeners once
   const audio = getAudio();
 
   audio.addEventListener('timeupdate', () => {
@@ -65,6 +80,10 @@ export const useGlobalPlayer = create<GlobalPlayerState>((set, get) => {
       audio.pause();
       audio.currentTime = 0;
       set({ isPlaying: false, progress: 0, currentTime: 0 });
+      // If playlist has items, advance to next
+      if (state.playlist.length > 1) {
+        state.nextTrack();
+      }
       return;
     }
 
@@ -75,8 +94,21 @@ export const useGlobalPlayer = create<GlobalPlayerState>((set, get) => {
     });
   });
 
+  // Track completion -> automatic seamless playlist advancement
   audio.addEventListener('ended', () => {
-    set({ isPlaying: false, progress: 0, currentTime: 0 });
+    const state = get();
+    if (state.loopMode === 'one') {
+      audio.currentTime = 0;
+      audio.play().catch(console.error);
+      set({ isPlaying: true, progress: 0, currentTime: 0 });
+      return;
+    }
+
+    if (state.playlist.length > 0) {
+      state.nextTrack();
+    } else {
+      set({ isPlaying: false, progress: 0, currentTime: 0 });
+    }
   });
 
   audio.addEventListener('loadedmetadata', () => {
@@ -94,6 +126,15 @@ export const useGlobalPlayer = create<GlobalPlayerState>((set, get) => {
       audio.play().catch(console.warn);
       return;
     }
+    
+    // If current track failed completely, try advancing to next track if available
+    const state = get();
+    if (state.playlist.length > 1) {
+      console.log('[GlobalPlayer] Skipping failed track to next in playlist');
+      state.nextTrack();
+      return;
+    }
+
     set({ isPlaying: false });
     useLoadingToast.getState().show('Failed to stream audio file from Supabase.');
     setTimeout(() => {
@@ -113,12 +154,17 @@ export const useGlobalPlayer = create<GlobalPlayerState>((set, get) => {
 
   return {
     currentTrack: null,
+    playlist: [],
+    playlistIndex: -1,
     isPlaying: false,
     progress: 0,
     currentTime: 0,
     duration: 0,
+    loopMode: 'all',
+    shuffle: false,
+    volume: 0.8,
 
-    play: (track: GlobalTrack) => {
+    play: (track: GlobalTrack, newPlaylist?: GlobalTrack[]) => {
       const audio = getAudio();
       const sanitizedAudioUrl = sanitizeMediaUrl(track.audioUrl);
       const sanitizedTrack: GlobalTrack = {
@@ -127,11 +173,26 @@ export const useGlobalPlayer = create<GlobalPlayerState>((set, get) => {
         coverUrl: sanitizeMediaUrl(track.coverUrl),
       };
 
+      const playlistToUse = newPlaylist || get().playlist;
+      let targetIndex = playlistToUse.findIndex(
+        (t) => t.day === sanitizedTrack.day || t.audioUrl === sanitizedTrack.audioUrl
+      );
+
+      if (targetIndex === -1 && playlistToUse.length === 0) {
+        playlistToUse.push(sanitizedTrack);
+        targetIndex = 0;
+      }
+
       // If same track, just resume
       const current = get().currentTrack;
       if (current && current.audioUrl === sanitizedTrack.audioUrl && current.day === sanitizedTrack.day) {
         audio.play().catch(console.error);
-        set({ isPlaying: true, currentTrack: sanitizedTrack });
+        set({
+          isPlaying: true,
+          currentTrack: sanitizedTrack,
+          playlist: playlistToUse,
+          playlistIndex: targetIndex !== -1 ? targetIndex : 0,
+        });
         return;
       }
 
@@ -146,13 +207,25 @@ export const useGlobalPlayer = create<GlobalPlayerState>((set, get) => {
       audio.currentTime = 0;
       useLoadingToast.getState().show('Loading track…');
       audio.play().catch(console.error);
+
       set({
         currentTrack: sanitizedTrack,
+        playlist: playlistToUse,
+        playlistIndex: targetIndex !== -1 ? targetIndex : 0,
         isPlaying: true,
         progress: 0,
         currentTime: 0,
         duration: 0,
       });
+    },
+
+    setPlaylist: (tracks: GlobalTrack[], startIndex = 0, autoPlay = true) => {
+      if (!tracks || tracks.length === 0) return;
+      const validIndex = Math.max(0, Math.min(tracks.length - 1, startIndex));
+      set({ playlist: tracks, playlistIndex: validIndex });
+      if (autoPlay) {
+        get().play(tracks[validIndex], tracks);
+      }
     },
 
     pause: () => {
@@ -182,6 +255,63 @@ export const useGlobalPlayer = create<GlobalPlayerState>((set, get) => {
       });
     },
 
+    nextTrack: () => {
+      const { playlist, playlistIndex, shuffle, loopMode } = get();
+      if (playlist.length === 0) return;
+
+      if (playlist.length === 1) {
+        if (loopMode !== 'off') {
+          get().play(playlist[0]);
+        }
+        return;
+      }
+
+      let nextIndex = playlistIndex + 1;
+      if (shuffle) {
+        let randIdx = Math.floor(Math.random() * playlist.length);
+        if (randIdx === playlistIndex && playlist.length > 1) {
+          randIdx = (randIdx + 1) % playlist.length;
+        }
+        nextIndex = randIdx;
+      } else if (nextIndex >= playlist.length) {
+        if (loopMode === 'off') {
+          get().stop();
+          return;
+        }
+        nextIndex = 0;
+      }
+
+      const nextTrack = playlist[nextIndex];
+      if (nextTrack) {
+        get().play(nextTrack, playlist);
+      }
+    },
+
+    previousTrack: () => {
+      const { playlist, playlistIndex, shuffle } = get();
+      const audio = getAudio();
+      
+      // If played more than 3 seconds, replay current song first
+      if (audio.currentTime > 3) {
+        audio.currentTime = 0;
+        return;
+      }
+
+      if (playlist.length === 0) return;
+
+      let prevIndex = playlistIndex - 1;
+      if (shuffle) {
+        prevIndex = Math.floor(Math.random() * playlist.length);
+      } else if (prevIndex < 0) {
+        prevIndex = playlist.length - 1;
+      }
+
+      const prevTrack = playlist[prevIndex];
+      if (prevTrack) {
+        get().play(prevTrack, playlist);
+      }
+    },
+
     seek: (pct: number) => {
       const audio = getAudio();
       const track = get().currentTrack;
@@ -204,6 +334,20 @@ export const useGlobalPlayer = create<GlobalPlayerState>((set, get) => {
       } else if (state.currentTrack) {
         state.resume();
       }
+    },
+
+    setLoopMode: (mode: PlayerLoopMode) => {
+      set({ loopMode: mode });
+    },
+
+    toggleShuffle: () => {
+      set((s) => ({ shuffle: !s.shuffle }));
+    },
+
+    setVolume: (vol: number) => {
+      const clamped = Math.max(0, Math.min(1, vol));
+      getAudio().volume = clamped;
+      set({ volume: clamped });
     },
   };
 });

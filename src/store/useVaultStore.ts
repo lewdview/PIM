@@ -36,17 +36,25 @@ export interface ProfileSettings {
   bgAnimation?: boolean;
   legacyGraphics?: boolean;
   packDesignStyle?: 'classic_foil' | 'cyber_cartridge';
+  visualizerShape?: 'flower_of_life' | 'sri_yantra' | 'metatrons_cube' | 'bipolar_torus' | 'lakshmi_star';
+  visualizerTheme?: 'cyan_pink' | 'emerald_orange' | 'gold_purple' | 'rainbow';
+  visualizerPlaylistMode?: 'all_catalog' | 'unlocked_only';
+  visualizerRepeatMode?: 'all' | 'one' | 'shuffle';
 }
 
 export interface ProfileProgression {
   tutorialCompleted: boolean;
   seenWelcomeModal: boolean;
   noteGenerationSource: 'auto' | 'lyrics' | 'bpm';
+  rewardTiers?: Record<string, string>;
 }
 
 export interface ProfileCheats {
   noclip: boolean;
   iddqd: boolean;
+  stunnerSection?: boolean;
+  freeStella?: boolean;
+  purchasedStunners?: string[];
 }
 
 export interface RevealPackMeta {
@@ -252,15 +260,29 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     bgAnimation: localStorage.getItem("opt_bgAnimation") !== "false",
     legacyGraphics: localStorage.getItem("opt_legacyGraphics") === "true",
     packDesignStyle: ((localStorage.getItem("opt_packDesignStyle") as any) || (localStorage.getItem("pim_pack_design_style") as any) || 'cyber_cartridge'),
+    visualizerShape: ((localStorage.getItem("opt_visualizerShape") as any) || 'flower_of_life'),
+    visualizerTheme: ((localStorage.getItem("opt_visualizerTheme") as any) || 'cyan_pink'),
+    visualizerPlaylistMode: ((localStorage.getItem("opt_visualizerPlaylistMode") as any) || 'all_catalog'),
+    visualizerRepeatMode: ((localStorage.getItem("opt_visualizerRepeatMode") as any) || 'all'),
   },
   progression: {
     tutorialCompleted: localStorage.getItem("pim_tutorial_completed") === "true",
     seenWelcomeModal: localStorage.getItem("opt_seen_welcome_modal") === "true" || localStorage.getItem("rc2_seen_key") === "1",
     noteGenerationSource: (localStorage.getItem("opt_noteGenerationSource") as any) || "auto",
+    rewardTiers: {},
   },
   unlockedCheats: {
     noclip: localStorage.getItem("opt_unlocked_noclip") === "true",
     iddqd: localStorage.getItem("opt_unlocked_iddqd") === "true",
+    stunnerSection: localStorage.getItem("opt_unlocked_stunner_section") === "true",
+    freeStella: localStorage.getItem("opt_free_stella_unlocked") === "true",
+    purchasedStunners: (() => {
+      try {
+        return JSON.parse(localStorage.getItem("opt_purchased_stunners") || "[]");
+      } catch {
+        return [];
+      }
+    })(),
   },
 
   // Initial Sync State
@@ -900,6 +922,10 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     if (newSettings.bloomGlow !== undefined) localStorage.setItem("opt_bloomGlow", String(merged.bloomGlow));
     if (newSettings.bgAnimation !== undefined) localStorage.setItem("opt_bgAnimation", String(merged.bgAnimation));
     if (newSettings.legacyGraphics !== undefined) localStorage.setItem("opt_legacyGraphics", String(merged.legacyGraphics));
+    if (newSettings.visualizerShape !== undefined) localStorage.setItem("opt_visualizerShape", String(merged.visualizerShape));
+    if (newSettings.visualizerTheme !== undefined) localStorage.setItem("opt_visualizerTheme", String(merged.visualizerTheme));
+    if (newSettings.visualizerPlaylistMode !== undefined) localStorage.setItem("opt_visualizerPlaylistMode", String(merged.visualizerPlaylistMode));
+    if (newSettings.visualizerRepeatMode !== undefined) localStorage.setItem("opt_visualizerRepeatMode", String(merged.visualizerRepeatMode));
 
     if (userId) {
       const { error } = await supabase.from('profiles').update({ settings: merged }).eq('id', userId);
@@ -909,7 +935,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
 
   updateProgression: async (newProgression) => {
     const session = await supabase.auth.getSession();
-    const userId = session.data.session?.user.id;
+    const userId = session.data.session?.user?.id;
     const currentProgression = get().progression;
     const merged = { ...currentProgression, ...newProgression };
 
@@ -928,7 +954,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
 
   updateCheats: async (newCheats) => {
     const session = await supabase.auth.getSession();
-    const userId = session.data.session?.user.id;
+    const userId = session.data.session?.user?.id;
     const currentCheats = get().unlockedCheats;
     const merged = { ...currentCheats, ...newCheats };
 
@@ -937,6 +963,9 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     // Update LocalStorage cache
     if (newCheats.noclip !== undefined) localStorage.setItem("opt_unlocked_noclip", String(merged.noclip));
     if (newCheats.iddqd !== undefined) localStorage.setItem("opt_unlocked_iddqd", String(merged.iddqd));
+    if (newCheats.stunnerSection !== undefined) localStorage.setItem("opt_unlocked_stunner_section", String(merged.stunnerSection));
+    if (newCheats.freeStella !== undefined) localStorage.setItem("opt_free_stella_unlocked", String(merged.freeStella));
+    if (newCheats.purchasedStunners !== undefined) localStorage.setItem("opt_purchased_stunners", JSON.stringify(merged.purchasedStunners));
 
     if (userId) {
       const { error } = await supabase.from('profiles').update({ unlocked_cheats: merged }).eq('id', userId);

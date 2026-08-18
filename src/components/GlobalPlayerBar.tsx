@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Pause, X, Volume2 } from 'lucide-react';
+import { Play, Pause, X, Volume2, SkipBack, SkipForward, Shuffle, Repeat, Repeat1, Sparkles } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { useGlobalPlayer } from '../store/useGlobalPlayer';
 import { RARITY_CONFIG } from '../utils/rarity';
@@ -14,7 +14,23 @@ function formatTime(seconds: number): string {
 export default function GlobalPlayerBar() {
   const [location, setLocation] = useLocation();
   const isMobile = useIsMobile();
-  const { currentTrack, isPlaying, progress, currentTime, duration, toggle, stop, seek } = useGlobalPlayer();
+  const {
+    currentTrack,
+    playlist,
+    isPlaying,
+    progress,
+    currentTime,
+    duration,
+    loopMode,
+    shuffle,
+    toggle,
+    stop,
+    seek,
+    nextTrack,
+    previousTrack,
+    toggleShuffle,
+    setLoopMode,
+  } = useGlobalPlayer();
 
   const rc = currentTrack ? (RARITY_CONFIG[currentTrack.rarity as keyof typeof RARITY_CONFIG] || RARITY_CONFIG.common) : RARITY_CONFIG.common;
   const accent = rc?.color || '#ff3800';
@@ -28,18 +44,14 @@ export default function GlobalPlayerBar() {
     seek(pct);
   };
 
-  const hideNavbar =
-    location.startsWith('/play/') ||
-    location === '/tutorial' ||
-    location === '/campaign' ||
-    location.startsWith('/chapter/') ||
-    location.startsWith('/song/') ||
-    location === '/songs' ||
-    location.startsWith('/results/') ||
-    location === '/options';
+  const cycleLoopMode = () => {
+    if (loopMode === 'all') setLoopMode('one');
+    else if (loopMode === 'one') setLoopMode('off');
+    else setLoopMode('all');
+  };
 
   return (
-    <AnimatePresence font-sans>
+    <AnimatePresence>
       {currentTrack && (
         <motion.div
         initial={{ y: 80, opacity: 0 }}
@@ -167,30 +179,140 @@ export default function GlobalPlayerBar() {
             </div>
           </div>
 
-          {/* Play/Pause */}
-          <button
-            onClick={toggle}
-            style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: accent,
-              border: '2px solid #000',
-              color: '#000',
-              cursor: 'pointer',
-              flexShrink: 0,
-              boxShadow: `2px 2px 0 #000, 0 0 ${isPlaying ? '18px' : '10px'} ${accent}${isPlaying ? '70' : '40'}`,
-              transition: 'box-shadow 0.3s ease',
-            }}
-          >
-            {isPlaying ? <Pause size={16} /> : <Play size={16} style={{ marginLeft: '2px' }} />}
-          </button>
+          {/* Transport Controls */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {/* Shuffle */}
+            {!isMobile && (
+              <button
+                type="button"
+                onClick={toggleShuffle}
+                title={shuffle ? 'Shuffle ON' : 'Shuffle OFF'}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: shuffle ? accent : 'rgba(255,255,255,0.4)',
+                  padding: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                <Shuffle size={14} />
+              </button>
+            )}
+
+            {/* Prev Track */}
+            <button
+              type="button"
+              onClick={previousTrack}
+              title="Previous Track"
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#fff',
+                padding: '6px',
+                display: 'flex',
+                alignItems: 'center',
+              }}
+            >
+              <SkipBack size={15} />
+            </button>
+
+            {/* Play/Pause */}
+            <button
+              onClick={toggle}
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: accent,
+                border: '2px solid #000',
+                color: '#000',
+                cursor: 'pointer',
+                flexShrink: 0,
+                boxShadow: `2px 2px 0 #000, 0 0 ${isPlaying ? '18px' : '10px'} ${accent}${isPlaying ? '70' : '40'}`,
+                transition: 'box-shadow 0.3s ease',
+              }}
+            >
+              {isPlaying ? <Pause size={16} /> : <Play size={16} style={{ marginLeft: '2px' }} />}
+            </button>
+
+            {/* Next Track */}
+            <button
+              type="button"
+              onClick={nextTrack}
+              title="Next Track"
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#fff',
+                padding: '6px',
+                display: 'flex',
+                alignItems: 'center',
+              }}
+            >
+              <SkipForward size={15} />
+            </button>
+
+            {/* Repeat Mode */}
+            {!isMobile && (
+              <button
+                type="button"
+                onClick={cycleLoopMode}
+                title={`Loop: ${loopMode.toUpperCase()}`}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: loopMode !== 'off' ? accent : 'rgba(255,255,255,0.4)',
+                  padding: '6px',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                {loopMode === 'one' ? <Repeat1 size={14} /> : <Repeat size={14} />}
+              </button>
+            )}
+          </div>
+
+          {/* Visualizer Deep Link */}
+          {!isMobile && (
+            <button
+              onClick={() => {
+                setLocation(`/listen/card-${currentTrack.day}`);
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '0 10px',
+                height: '32px',
+                borderRadius: '4px',
+                background: 'rgba(255, 20, 147, 0.1)',
+                border: '1px solid rgba(255, 20, 147, 0.4)',
+                color: '#ff1493',
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '10px',
+                fontWeight: 700,
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
+                cursor: 'pointer',
+                flexShrink: 0,
+              }}
+              className="hover:bg-[rgba(255,20,147,0.2)]"
+            >
+              <Sparkles size={11} />
+              <span>Visualizer</span>
+            </button>
+          )}
 
           {/* Play PIM */}
-          {!isPreview && (
+          {!isPreview && !isMobile && (
             <button
               onClick={() => {
                 stop();
@@ -201,13 +323,13 @@ export default function GlobalPlayerBar() {
                 alignItems: 'center',
                 gap: '6px',
                 padding: '0 12px',
-                height: '36px',
+                height: '32px',
                 borderRadius: '4px',
                 background: 'rgba(0, 240, 255, 0.1)',
                 border: '1px solid var(--color-neon-cyan, #00f0ff)',
                 color: 'var(--color-neon-cyan, #00f0ff)',
                 fontFamily: '"JetBrains Mono", monospace',
-                fontSize: '11px',
+                fontSize: '10px',
                 fontWeight: 700,
                 letterSpacing: '0.05em',
                 textTransform: 'uppercase',

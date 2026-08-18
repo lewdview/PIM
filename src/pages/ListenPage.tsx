@@ -1,9 +1,9 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useRoute, useLocation } from 'wouter';
-import { getSongById, loadCatalog, type GameSong } from '../game/api';
+import { loadCatalog, getCandidateAudioUrls, sanitizeMediaUrl, type GameSong } from '../game/api';
 import { audioManager } from '../game/audio';
 import { useVaultStore } from '../store/useVaultStore';
-import { Play, Pause, SkipForward, SkipBack, X, Music } from 'lucide-react';
+import { Play, Pause, SkipForward, SkipBack, X, Music, Shuffle, Repeat, Repeat1, Volume2, Sparkles, Layers } from 'lucide-react';
 
 // Types for particles in the visualizer
 interface VisualizerParticle {
@@ -19,12 +19,18 @@ interface VisualizerParticle {
 }
 
 type GeometryType = 'flower_of_life' | 'sri_yantra' | 'metatrons_cube' | 'bipolar_torus' | 'lakshmi_star';
+type NeonTheme = 'cyan_pink' | 'emerald_orange' | 'gold_purple' | 'rainbow';
+type RepeatMode = 'all' | 'one' | 'off';
+type PlaylistMode = 'all_catalog' | 'unlocked_only';
 
 export default function ListenPage() {
   const [, params] = useRoute('/listen/:songId');
   const songId = params?.songId || '';
   const [location, setLocation] = useLocation();
 
+  const { settings, updateSettings, collection, fragments } = useVaultStore();
+
+  const [allCatalogSongs, setAllCatalogSongs] = useState<GameSong[]>([]);
   const [playlist, setPlaylist] = useState<GameSong[]>([]);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(-1);
   const [song, setSong] = useState<GameSong | null>(null);
@@ -32,9 +38,15 @@ export default function ListenPage() {
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [geometryType, setGeometryType] = useState<GeometryType>('flower_of_life');
-  const [neonTheme, setNeonTheme] = useState<'cyan_pink' | 'emerald_orange' | 'gold_purple' | 'rainbow'>('cyan_pink');
   const [playlistOpen, setPlaylistOpen] = useState(false);
+  const [shuffle, setShuffle] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Preferences synced with Supabase
+  const geometryType: GeometryType = (settings.visualizerShape as GeometryType) || 'flower_of_life';
+  const neonTheme: NeonTheme = (settings.visualizerTheme as NeonTheme) || 'cyan_pink';
+  const repeatMode: RepeatMode = (settings.visualizerRepeatMode as RepeatMode) || 'all';
+  const playlistMode: PlaylistMode = (settings.visualizerPlaylistMode as PlaylistMode) || 'all_catalog';
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -44,14 +56,25 @@ export default function ListenPage() {
   const animationFrameRef = useRef<number | null>(null);
   const particlesRef = useRef<VisualizerParticle[]>([]);
 
+  // State Refs to ensure event listeners always access fresh values
+  const playlistRef = useRef<GameSong[]>([]);
+  const trackIndexRef = useRef<number>(-1);
+  const repeatModeRef = useRef<RepeatMode>(repeatMode);
+  const shuffleRef = useRef<boolean>(shuffle);
+  const playingRef = useRef<boolean>(playing);
+  const candidateUrlsRef = useRef<string[]>([]);
+  const candidateIdxRef = useRef<number>(0);
+
+  playlistRef.current = playlist;
+  trackIndexRef.current = currentTrackIndex;
+  repeatModeRef.current = repeatMode;
+  shuffleRef.current = shuffle;
+  playingRef.current = playing;
+
   // Track page history to go back to the correct origin page
   const [backRoute, setBackRoute] = useState('/songs');
 
-  // Load store values
-  const collection = useVaultStore((s) => s.collection);
-  const fragments = useVaultStore((s) => s.fragments);
-
-  const getFragmentsForDay = (day: number) => {
+  const getFragmentsForDay = useCallback((day: number) => {
     const cardKey = `card-${day}`;
     const dayKey = `day-${String(day).padStart(3, '0')}`;
     const dayKeyRaw = `day-${day}`;
@@ -61,48 +84,14 @@ export default function ListenPage() {
       fragments[dayKeyRaw] ??
       0
     );
-  };
+  }, [fragments]);
 
-  const isSongUnlocked = (s: GameSong) => {
+  const isSongUnlocked = useCallback((s: GameSong) => {
     const isOwned = Array.isArray(collection) 
       ? collection.some(c => c && (c.cardId === s.id || `card-${c.card?.day}` === s.id || c.cardId === `card-${s.day}`)) 
       : false;
     return isOwned || getFragmentsForDay(s.day) >= 10;
-  };
-
-  // 1. Initial playlist setup
-  useEffect(() => {
-    const origin = sessionStorage.getItem(`game_origin_${songId}`) || 'songs';
-    setBackRoute(origin === 'songs' ? '/songs' : origin ? `/${origin}` : '/campaign');
-
-    const setupPlaylist = async () => {
-      const allSongs = await loadCatalog();
-      // Filter only unlocked/owned songs
-      const unlockedSongs = allSongs.filter(isSongUnlocked);
-      setPlaylist(unlockedSongs);
-
-      // Find initial song index
-      const initialIndex = unlockedSongs.findIndex(s => s.id === songId || `card-${s.day}` === songId);
-      if (initialIndex !== -1) {
-        setCurrentTrackIndex(initialIndex);
-        const targetSong = unlockedSongs[initialIndex];
-        setSong(targetSong);
-        setDuration(targetSong.duration || 180);
-      } else if (unlockedSongs.length > 0) {
-        setCurrentTrackIndex(0);
-        const targetSong = unlockedSongs[0];
-        setSong(targetSong);
-        setDuration(targetSong.duration || 180);
-      }
-      setLoading(false);
-    };
-
-    setupPlaylist();
-
-    return () => {
-      cleanupAudio();
-    };
-  }, [songId, collection, fragments]);
+  }, [collection, getFragmentsForDay]);
 
   const cleanupAudio = () => {
     if (animationFrameRef.current) {
@@ -121,15 +110,34 @@ export default function ListenPage() {
     dataArrayRef.current = null;
   };
 
-  const loadTrack = (track: GameSong) => {
-    cleanupAudio();
-    setSong(track);
-    setDuration(track.duration || 180);
+  const playTrackAtIndex = useCallback((idx: number, autoStart = true) => {
+    const currentList = playlistRef.current;
+    if (!currentList || currentList.length === 0) return;
+    const targetIdx = Math.max(0, Math.min(currentList.length - 1, idx));
+    const targetSong = currentList[targetIdx];
+    if (!targetSong) return;
+
+    trackIndexRef.current = targetIdx;
+    setCurrentTrackIndex(targetIdx);
+    setSong(targetSong);
+    setDuration(targetSong.duration || 180);
     setCurrentTime(0);
 
-    const audio = new Audio(track.audioUrl);
+    // Update URL quietly without triggering full page unmount
+    if (targetSong.id && window.location.pathname !== `/listen/${targetSong.id}`) {
+      window.history.replaceState(null, '', `/listen/${targetSong.id}`);
+    }
+
+    cleanupAudio();
+
+    const candidates = getCandidateAudioUrls(targetSong.audioUrl, targetSong.day);
+    candidateUrlsRef.current = candidates;
+    candidateIdxRef.current = 0;
+    const initialSrc = candidates[0] || sanitizeMediaUrl(targetSong.audioUrl);
+
+    const audio = new Audio(initialSrc);
     audio.crossOrigin = 'anonymous';
-    audio.volume = 0.6;
+    audio.volume = settings.musicVolume ?? 0.8;
     audioRef.current = audio;
 
     audio.addEventListener('timeupdate', () => {
@@ -142,10 +150,71 @@ export default function ListenPage() {
       }
     });
 
+    // Seamless auto-advance on track completion
     audio.addEventListener('ended', () => {
-      handleNextTrack();
+      if (repeatModeRef.current === 'one') {
+        audio.currentTime = 0;
+        audio.play().catch(console.error);
+        setPlaying(true);
+        return;
+      }
+
+      const activeList = playlistRef.current;
+      if (activeList.length <= 1) {
+        if (repeatModeRef.current !== 'off') {
+          audio.currentTime = 0;
+          audio.play().catch(console.error);
+          setPlaying(true);
+        } else {
+          setPlaying(false);
+        }
+        return;
+      }
+
+      let nextIdx = trackIndexRef.current + 1;
+      if (shuffleRef.current) {
+        let randIdx = Math.floor(Math.random() * activeList.length);
+        if (randIdx === trackIndexRef.current && activeList.length > 1) {
+          randIdx = (randIdx + 1) % activeList.length;
+        }
+        nextIdx = randIdx;
+      } else if (nextIdx >= activeList.length) {
+        if (repeatModeRef.current === 'off') {
+          setPlaying(false);
+          return;
+        }
+        nextIdx = 0;
+      }
+
+      playTrackAtIndex(nextIdx, true);
     });
 
+    audio.addEventListener('error', () => {
+      console.warn('[ListenPage] Audio stream error on:', audio.src);
+      candidateIdxRef.current++;
+      if (candidateIdxRef.current < candidateUrlsRef.current.length) {
+        const nextUrl = candidateUrlsRef.current[candidateIdxRef.current];
+        console.log('[ListenPage] Retrying next candidate URL:', nextUrl);
+        audio.src = nextUrl;
+        audio.load();
+        if (playingRef.current) {
+          audio.play().catch(console.warn);
+        }
+        return;
+      }
+
+      // If all candidates fail, skip to next track
+      console.warn('[ListenPage] All candidates failed. Auto-skipping to next song in playlist.');
+      const activeList = playlistRef.current;
+      if (activeList.length > 1) {
+        const nextIdx = (trackIndexRef.current + 1) % activeList.length;
+        playTrackAtIndex(nextIdx, true);
+      } else {
+        setPlaying(false);
+      }
+    });
+
+    // Attach Web Audio Analyser
     try {
       const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
       const ctx = new AudioCtx();
@@ -163,22 +232,64 @@ export default function ListenPage() {
       analyserRef.current = analyser;
       dataArrayRef.current = dataArray;
       
-      if (playing) {
-        audio.play().catch(err => console.error('[ListenPage] Autoplay failed:', err));
+      if (autoStart) {
+        setPlaying(true);
+        audio.play().catch(err => console.error('[ListenPage] Autoplay play error:', err));
       }
     } catch (e) {
-      console.warn('[ListenPage] Web Audio Context failed, running in sandbox simulated mode:', e);
-      if (playing) {
-        audio.play().catch(err => console.error('[ListenPage] Autoplay failed:', err));
+      console.warn('[ListenPage] Web Audio Context note:', e);
+      if (autoStart) {
+        setPlaying(true);
+        audio.play().catch(err => console.error('[ListenPage] Autoplay play error:', err));
       }
     }
-  };
+  }, [settings.musicVolume]);
+
+  // 1. Initial playlist setup & sync
+  useEffect(() => {
+    const origin = sessionStorage.getItem(`game_origin_${songId}`) || 'songs';
+    setBackRoute(origin === 'songs' ? '/songs' : origin ? `/${origin}` : '/campaign');
+
+    const setupPlaylist = async () => {
+      const allSongs = await loadCatalog();
+      setAllCatalogSongs(allSongs);
+
+      let activeSongs: GameSong[] = allSongs;
+      if (playlistMode === 'unlocked_only') {
+        const unlocked = allSongs.filter(isSongUnlocked);
+        if (unlocked.length > 0) {
+          activeSongs = unlocked;
+        }
+      }
+
+      setPlaylist(activeSongs);
+      playlistRef.current = activeSongs;
+
+      // Find initial song index
+      let initialIndex = activeSongs.findIndex(s => s.id === songId || `card-${s.day}` === songId || `day-${s.day}` === songId);
+      if (initialIndex === -1 && allSongs.length > 0) {
+        initialIndex = 0;
+      }
+
+      if (initialIndex !== -1 && activeSongs[initialIndex]) {
+        playTrackAtIndex(initialIndex, false);
+      }
+      setLoading(false);
+    };
+
+    setupPlaylist();
+
+    return () => {
+      cleanupAudio();
+    };
+  }, [songId, playlistMode, isSongUnlocked, playTrackAtIndex]);
 
   const handleTogglePlay = () => {
     audioManager.playSfx('tap_nav', 0.2);
 
     if (!audioRef.current && song) {
-      loadTrack(song);
+      playTrackAtIndex(currentTrackIndex !== -1 ? currentTrackIndex : 0, true);
+      return;
     }
 
     if (audioRef.current) {
@@ -200,25 +311,48 @@ export default function ListenPage() {
   };
 
   const handleNextTrack = () => {
-    if (playlist.length <= 1) return;
+    const currentList = playlistRef.current;
+    if (currentList.length === 0) return;
     audioManager.playSfx('tap_nav', 0.15);
-    const nextIdx = (currentTrackIndex + 1) % playlist.length;
-    setCurrentTrackIndex(nextIdx);
-    loadTrack(playlist[nextIdx]);
+
+    let nextIdx = trackIndexRef.current + 1;
+    if (shuffleRef.current) {
+      let randIdx = Math.floor(Math.random() * currentList.length);
+      if (randIdx === trackIndexRef.current && currentList.length > 1) {
+        randIdx = (randIdx + 1) % currentList.length;
+      }
+      nextIdx = randIdx;
+    } else if (nextIdx >= currentList.length) {
+      nextIdx = 0;
+    }
+
+    playTrackAtIndex(nextIdx, true);
   };
 
   const handlePrevTrack = () => {
-    if (playlist.length <= 1) return;
+    const currentList = playlistRef.current;
+    if (currentList.length === 0) return;
     audioManager.playSfx('tap_nav', 0.15);
-    const prevIdx = (currentTrackIndex - 1 + playlist.length) % playlist.length;
-    setCurrentTrackIndex(prevIdx);
-    loadTrack(playlist[prevIdx]);
+
+    // If played for more than 3 seconds, restart current track first
+    if (audioRef.current && audioRef.current.currentTime > 3) {
+      audioRef.current.currentTime = 0;
+      return;
+    }
+
+    let prevIdx = trackIndexRef.current - 1;
+    if (shuffleRef.current) {
+      prevIdx = Math.floor(Math.random() * currentList.length);
+    } else if (prevIdx < 0) {
+      prevIdx = currentList.length - 1;
+    }
+
+    playTrackAtIndex(prevIdx, true);
   };
 
   const handleSelectPlaylistTrack = (idx: number) => {
     audioManager.playSfx('tap_nav', 0.15);
-    setCurrentTrackIndex(idx);
-    loadTrack(playlist[idx]);
+    playTrackAtIndex(idx, true);
   };
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -233,6 +367,40 @@ export default function ListenPage() {
     cleanupAudio();
     audioManager.playSfx('back', 0.4);
     setLocation(backRoute);
+  };
+
+  const cycleRepeatMode = () => {
+    audioManager.playSfx('tap_nav', 0.1);
+    let next: RepeatMode = 'all';
+    if (repeatMode === 'all') next = 'one';
+    else if (repeatMode === 'one') next = 'off';
+    else next = 'all';
+    updateSettings({ visualizerRepeatMode: next });
+  };
+
+  const togglePlaylistMode = (mode: PlaylistMode) => {
+    audioManager.playSfx('tap_nav', 0.15);
+    let nextSongs = allCatalogSongs;
+    if (mode === 'unlocked_only') {
+      const unlocked = allCatalogSongs.filter(isSongUnlocked);
+      if (unlocked.length > 0) {
+        nextSongs = unlocked;
+      }
+    }
+    setPlaylist(nextSongs);
+    playlistRef.current = nextSongs;
+    updateSettings({ visualizerPlaylistMode: mode });
+
+    // Ensure active song is kept in new playlist
+    if (song) {
+      const newIdx = nextSongs.findIndex(s => s.id === song.id || s.day === song.day);
+      if (newIdx !== -1) {
+        setCurrentTrackIndex(newIdx);
+        trackIndexRef.current = newIdx;
+      } else if (nextSongs.length > 0) {
+        playTrackAtIndex(0, playing);
+      }
+    }
   };
 
   // --- Visualizer Drawing Loop ---
@@ -585,6 +753,16 @@ export default function ListenPage() {
 
   const coverArtSrc = song?.coverArt || song?.coverUrl || '/data/covers/default.jpg';
 
+  const filteredPlaylist = playlist.filter(track => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      track.title.toLowerCase().includes(q) ||
+      (track.artist && track.artist.toLowerCase().includes(q)) ||
+      String(track.day).includes(q)
+    );
+  });
+
   return (
     <div className="relative min-h-screen bg-[#050403] text-white overflow-hidden flex items-center justify-center">
       {/* Fullscreen Canvas Visualizer */}
@@ -594,28 +772,57 @@ export default function ListenPage() {
       <div className="absolute inset-0 z-10 pointer-events-none bg-scanlines opacity-[0.03]" />
 
       {/* Floating Header back button */}
-      <div className="absolute top-6 left-6 z-20">
+      <div className="absolute top-6 left-6 z-20 flex items-center gap-3">
         <button
           onClick={handleBack}
-          className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-full hover:bg-white/10 transition-colors uppercase font-mono text-[9px] tracking-widest text-white/70"
+          className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-full hover:bg-white/10 transition-colors uppercase font-mono text-[9px] tracking-widest text-white/70 cursor-pointer"
         >
           <span>←</span> EXIT VISUALIZER
         </button>
+
+        {/* Playlist Mode Switcher */}
+        <div className="hidden sm:flex items-center bg-black/40 border border-white/10 rounded-full p-0.5">
+          <button
+            onClick={() => togglePlaylistMode('all_catalog')}
+            className={`px-3 py-1 rounded-full font-mono text-[8px] uppercase tracking-wider transition-colors cursor-pointer ${
+              playlistMode === 'all_catalog'
+                ? 'bg-[#39FF14] text-black font-extrabold'
+                : 'text-white/50 hover:text-white'
+            }`}
+          >
+            365 Vault Catalog
+          </button>
+          <button
+            onClick={() => togglePlaylistMode('unlocked_only')}
+            className={`px-3 py-1 rounded-full font-mono text-[8px] uppercase tracking-wider transition-colors cursor-pointer ${
+              playlistMode === 'unlocked_only'
+                ? 'bg-[#39FF14] text-black font-extrabold'
+                : 'text-white/50 hover:text-white'
+            }`}
+          >
+            My Unlocked Cards
+          </button>
+        </div>
       </div>
 
       {/* GLASSMORPHIC PANEL DASHBOARD */}
-      <div className="absolute bottom-10 left-6 right-6 md:left-auto md:right-10 md:w-[420px] z-20 backdrop-blur-[24px] bg-[#0c0c0e]/65 border border-white/15 rounded-3xl p-6 shadow-[0_12px_40px_rgba(0,0,0,0.6)] flex flex-col gap-5 transition-all duration-300">
+      <div className="absolute bottom-6 left-4 right-4 md:left-auto md:right-10 md:w-[440px] z-20 backdrop-blur-[24px] bg-[#0c0c0e]/75 border border-white/15 rounded-3xl p-5 md:p-6 shadow-[0_12px_40px_rgba(0,0,0,0.6)] flex flex-col gap-4 transition-all duration-300">
         {/* Glowing Accent Indicator */}
         <div className="absolute -top-1 left-8 right-8 h-[2px] bg-gradient-to-r from-transparent via-[#39FF14] to-transparent opacity-80" />
 
         {/* Cover Art and Info Header with Close Icon */}
         <div className="flex gap-4 items-center relative">
-          <div className="w-16 h-16 rounded-xl overflow-hidden border border-white/10 bg-white/5 flex-shrink-0">
+          <div className="w-14 h-14 md:w-16 md:h-16 rounded-xl overflow-hidden border border-white/10 bg-white/5 flex-shrink-0">
             <img src={coverArtSrc} alt={song?.title} className="w-full h-full object-cover" />
           </div>
           <div className="overflow-hidden flex-1 pr-6">
-            <div className="font-mono text-[9px] tracking-[0.2em] text-[#39FF14] uppercase font-black mb-1">
-              JUST LISTEN // PLAYLIST
+            <div className="flex items-center gap-2 mb-1">
+              <span className="font-mono text-[9px] tracking-[0.2em] text-[#39FF14] uppercase font-black">
+                DAY {song?.day ?? '—'}
+              </span>
+              <span className="font-mono text-[8px] px-1.5 py-0.5 bg-white/10 rounded text-white/60 uppercase">
+                {song?.mood || 'SYNTH'}
+              </span>
             </div>
             <h2 className="text-base font-black truncate uppercase tracking-tight text-white mb-0.5">
               {song?.title || 'Unknown Title'}
@@ -627,15 +834,15 @@ export default function ListenPage() {
           {/* Quick Exit Cross button */}
           <button
             onClick={handleBack}
-            className="absolute top-0 right-0 w-11 h-11 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors opacity-60 hover:opacity-100 active:scale-95 duration-150 cursor-pointer z-50"
+            className="absolute top-0 right-0 w-8 h-8 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors opacity-60 hover:opacity-100 active:scale-95 duration-150 cursor-pointer z-50"
             title="Exit Visualizer"
           >
-            <X size={20} />
+            <X size={16} />
           </button>
         </div>
 
         {/* Interactive Progress Slider */}
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1">
           <div className="flex justify-between font-mono text-[9px] text-white/40">
             <span>{formatTime(currentTime)}</span>
             <span>{formatTime(duration)}</span>
@@ -654,12 +861,27 @@ export default function ListenPage() {
           />
         </div>
 
-        {/* Playlist Controls (Skip / Play) */}
-        <div className="flex justify-between items-center px-4">
+        {/* Playlist Controls (Shuffle / Prev / Play / Next / Repeat) */}
+        <div className="flex justify-between items-center px-2">
+          <button
+            onClick={() => {
+              audioManager.playSfx('tap_nav', 0.1);
+              setShuffle(!shuffle);
+            }}
+            className={`p-2.5 rounded-xl transition-all border ${
+              shuffle
+                ? 'bg-[#39FF14]/15 border-[#39FF14] text-[#39FF14]'
+                : 'bg-white/5 hover:bg-white/10 border-white/5 text-white/50'
+            } cursor-pointer`}
+            title={shuffle ? 'Shuffle: ON' : 'Shuffle: OFF'}
+          >
+            <Shuffle size={16} />
+          </button>
+
           <button
             onClick={handlePrevTrack}
             disabled={playlist.length <= 1}
-            className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl transition-all border border-white/5 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+            className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/5 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer text-white"
             title="Previous Track"
           >
             <SkipBack size={18} />
@@ -667,28 +889,40 @@ export default function ListenPage() {
           
           <button
             onClick={handleTogglePlay}
-            className={`flex items-center justify-center w-14 h-14 rounded-full transition-all shadow-md cursor-pointer ${
+            className={`flex items-center justify-center w-12 h-12 rounded-full transition-all shadow-md cursor-pointer ${
               playing
                 ? 'bg-transparent border border-red-500/50 text-red-400 hover:bg-red-500/10'
                 : 'bg-[#39FF14] border border-[#39FF14] text-black hover:bg-[#39FF14]/90'
             }`}
             title={playing ? 'Pause' : 'Play'}
           >
-            {playing ? <Pause size={20} /> : <Play size={20} className="ml-1" />}
+            {playing ? <Pause size={18} /> : <Play size={18} className="ml-0.5" />}
           </button>
 
           <button
             onClick={handleNextTrack}
             disabled={playlist.length <= 1}
-            className="p-3 bg-white/5 hover:bg-white/10 rounded-2xl transition-all border border-white/5 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+            className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/5 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer text-white"
             title="Next Track"
           >
             <SkipForward size={18} />
           </button>
+
+          <button
+            onClick={cycleRepeatMode}
+            className={`p-2.5 rounded-xl transition-all border ${
+              repeatMode !== 'off'
+                ? 'bg-[#39FF14]/15 border-[#39FF14] text-[#39FF14]'
+                : 'bg-white/5 hover:bg-white/10 border-white/5 text-white/50'
+            } cursor-pointer`}
+            title={`Loop: ${repeatMode.toUpperCase()}`}
+          >
+            {repeatMode === 'one' ? <Repeat1 size={16} /> : <Repeat size={16} />}
+          </button>
         </div>
 
-        {/* Action Controls & Toggles */}
-        <div className="grid grid-cols-2 gap-4">
+        {/* Geometry & Color Theme Controls */}
+        <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1">
             <span className="font-mono text-[8px] tracking-wider text-white/40 uppercase">
               Geometry Shape
@@ -697,9 +931,9 @@ export default function ListenPage() {
               value={geometryType}
               onChange={(e) => {
                 audioManager.playSfx('tap_nav', 0.1);
-                setGeometryType(e.target.value as GeometryType);
+                updateSettings({ visualizerShape: e.target.value as GeometryType });
               }}
-              className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-[10px] font-mono font-bold tracking-wider text-white focus:outline-none focus:border-[#39FF14]/50 cursor-pointer"
+              className="bg-white/5 border border-white/10 rounded-xl px-2.5 py-1.5 text-[10px] font-mono font-bold tracking-wider text-white focus:outline-none focus:border-[#39FF14]/50 cursor-pointer"
             >
               <option value="flower_of_life" className="bg-[#121214]">Flower of Life</option>
               <option value="sri_yantra" className="bg-[#121214]">Sri Yantra</option>
@@ -717,9 +951,9 @@ export default function ListenPage() {
               value={neonTheme}
               onChange={(e) => {
                 audioManager.playSfx('tap_nav', 0.1);
-                setNeonTheme(e.target.value as any);
+                updateSettings({ visualizerTheme: e.target.value as NeonTheme });
               }}
-              className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-[10px] font-mono font-bold tracking-wider text-white focus:outline-none focus:border-[#39FF14]/50 cursor-pointer"
+              className="bg-white/5 border border-white/10 rounded-xl px-2.5 py-1.5 text-[10px] font-mono font-bold tracking-wider text-white focus:outline-none focus:border-[#39FF14]/50 cursor-pointer"
             >
               <option value="cyan_pink" className="bg-[#121214]">Cyber Cyan</option>
               <option value="emerald_orange" className="bg-[#121214]">Toxic Emerald</option>
@@ -730,7 +964,7 @@ export default function ListenPage() {
         </div>
 
         {/* Playlist Toggle & Active Queue */}
-        <div className="flex flex-col border-t border-white/5 pt-3">
+        <div className="flex flex-col border-t border-white/5 pt-2.5">
           <button
             onClick={() => {
               audioManager.playSfx('tap_nav', 0.1);
@@ -740,41 +974,53 @@ export default function ListenPage() {
           >
             <span className="flex items-center gap-1.5">
               <Music size={10} />
-              Playlist Queue ({playlist.length} songs)
+              Queue ({playlist.length} songs)
             </span>
             <span>{playlistOpen ? '▼ HIDE' : '▲ SHOW'}</span>
           </button>
 
           {playlistOpen && (
-            <div className="max-h-[140px] overflow-y-auto mt-2 space-y-1.5 pr-1 custom-scrollbar">
-              {playlist.map((track, idx) => {
-                const isActive = idx === currentTrackIndex;
-                return (
-                  <button
-                    key={track.id}
-                    onClick={() => handleSelectPlaylistTrack(idx)}
-                    className={`w-full flex items-center justify-between p-2 rounded-lg text-left text-[10px] font-mono transition-all border ${
-                      isActive
-                        ? 'bg-[#39FF14]/10 border-[#39FF14]/30 text-[#39FF14]'
-                        : 'bg-white/5 border-transparent text-white/60 hover:bg-white/10 hover:text-white'
-                    }`}
-                  >
-                    <span className="truncate pr-4 uppercase">
-                      {idx + 1}. {track.title}
-                    </span>
-                    <span className="opacity-50 flex-shrink-0">
-                      {formatTime(track.duration || 180)}
-                    </span>
-                  </button>
-                );
-              })}
+            <div className="mt-2 space-y-2">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search tracks or day number..."
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-2.5 py-1 text-[10px] font-mono text-white placeholder-white/30 focus:outline-none focus:border-[#39FF14]/40"
+              />
+
+              <div className="max-h-[140px] overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+                {filteredPlaylist.map((track) => {
+                  const realIndex = playlist.findIndex(p => p.id === track.id);
+                  const isActive = realIndex === currentTrackIndex;
+                  return (
+                    <button
+                      key={track.id}
+                      onClick={() => handleSelectPlaylistTrack(realIndex)}
+                      className={`w-full flex items-center justify-between p-2 rounded-lg text-left text-[10px] font-mono transition-all border cursor-pointer ${
+                        isActive
+                          ? 'bg-[#39FF14]/15 border-[#39FF14]/40 text-[#39FF14] font-bold'
+                          : 'bg-white/5 border-transparent text-white/70 hover:bg-white/10 hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 truncate pr-2">
+                        <span className="opacity-40 text-[8px]">D{track.day}</span>
+                        <span className="truncate uppercase">{track.title}</span>
+                      </div>
+                      <span className="opacity-50 flex-shrink-0 text-[9px]">
+                        {formatTime(track.duration || 180)}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
 
         {/* Instruction Footer */}
         <div className="text-center font-mono text-[8px] text-white/30 uppercase tracking-widest">
-          {playing ? 'Vibrating on live sound frequencies' : 'Connect soundscape to activate vector peaks'}
+          {playing ? 'Realtime 3-Band Frequency Vector Field' : 'Press Play to activate sacred harmonic projection'}
         </div>
       </div>
     </div>

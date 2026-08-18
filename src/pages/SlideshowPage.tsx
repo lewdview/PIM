@@ -253,20 +253,12 @@ export default function SlideshowPage() {
     };
   }, []);
 
-  // Stunner Section and Stella locks state
-  const [stunnerSectionUnlocked, setStunnerSectionUnlocked] = useState(() => localStorage.getItem('opt_unlocked_stunner_section') === 'true');
-  const [freeStellaUnlocked, setFreeStellaUnlocked] = useState(() => localStorage.getItem('opt_free_stella_unlocked') === 'true');
-  const [purchasedStunners, setPurchasedStunners] = useState<string[]>(() => JSON.parse(localStorage.getItem('opt_purchased_stunners') || '[]'));
-
-  useEffect(() => {
-    const syncLocks = () => {
-      setStunnerSectionUnlocked(localStorage.getItem('opt_unlocked_stunner_section') === 'true');
-      setFreeStellaUnlocked(localStorage.getItem('opt_free_stella_unlocked') === 'true');
-      setPurchasedStunners(JSON.parse(localStorage.getItem('opt_purchased_stunners') || '[]'));
-    };
-    window.addEventListener('cheat_code_activated', syncLocks);
-    return () => window.removeEventListener('cheat_code_activated', syncLocks);
-  }, []);
+  // Stunner Section and Stella locks state (synced with Supabase & useVaultStore)
+  const unlockedCheats = useVaultStore((s) => s.unlockedCheats);
+  const updateCheats = useVaultStore((s) => s.updateCheats);
+  const stunnerSectionUnlocked = Boolean(unlockedCheats?.stunnerSection);
+  const freeStellaUnlocked = Boolean(unlockedCheats?.freeStella);
+  const purchasedStunners = unlockedCheats?.purchasedStunners || [];
 
   // Sync settings from cloud profile on mount
   useEffect(() => {
@@ -1051,11 +1043,10 @@ export default function SlideshowPage() {
                               alert("INSUFFICIENT TOKEN BALANCE!");
                               return;
                             }
-                            // Deduct and unlock
+                            // Deduct and unlock via Supabase profile cheats
                             await useVaultStore.getState().setTokenBalance(balance - item.cost);
                             const updated = [...purchasedStunners, item.url];
-                            localStorage.setItem('opt_purchased_stunners', JSON.stringify(updated));
-                            setPurchasedStunners(updated);
+                            await updateCheats({ purchasedStunners: updated });
                             audioManager.playSfx('menu_confirm', 0.2);
                           }}
                           className="px-1.5 py-0.5 bg-red-950/40 hover:bg-red-800/60 border border-red-800/40 rounded text-[7.5px] font-mono font-bold text-red-300 hover:text-white uppercase transition-colors cursor-pointer"

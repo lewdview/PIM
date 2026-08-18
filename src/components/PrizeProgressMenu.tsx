@@ -8,6 +8,8 @@ interface PrizeProgressMenuProps {
 
 export default function PrizeProgressMenu({ songId }: PrizeProgressMenuProps) {
   const claimedRewards = useVaultStore((s) => s.claimedRewards);
+  const progression = useVaultStore((s) => s.progression);
+  const rewardTiers = progression?.rewardTiers || {};
   const songClaimed = claimedRewards[songId] || [];
   const [expanded, setExpanded] = useState(false);
 
@@ -19,12 +21,18 @@ export default function PrizeProgressMenu({ songId }: PrizeProgressMenuProps) {
     { id: 'prophecy', label: 'Prophecy Pack', desc: 'Emerald Reward Tier' },
   ];
 
-  const claimedCount = REWARD_TIERS.filter(
-    (t) =>
-      songClaimed.includes(t.id) ||
-      localStorage.getItem(`reward_tier_${songId}`) === t.id ||
-      (t.id === 'prophecy' && localStorage.getItem(`reward_tier_${songId}`) === 'prophecy')
-  ).length;
+  const checkIsClaimed = (tierId: string) => {
+    return (
+      songClaimed.includes(tierId) ||
+      rewardTiers[songId] === tierId ||
+      rewardTiers[tierId] === tierId ||
+      localStorage.getItem(`reward_tier_${tierId}`) === tierId ||
+      localStorage.getItem(`reward_tier_${songId}`) === tierId ||
+      (tierId === 'prophecy' && (rewardTiers[songId] === 'prophecy' || localStorage.getItem(`reward_tier_${songId}`) === 'prophecy'))
+    );
+  };
+
+  const claimedCount = REWARD_TIERS.filter((t) => checkIsClaimed(t.id)).length;
 
   return (
     <div className="border border-white/10 bg-white/[0.02] rounded-xl overflow-hidden">
@@ -42,11 +50,7 @@ export default function PrizeProgressMenu({ songId }: PrizeProgressMenuProps) {
       {expanded && (
         <div className="p-4 border-t border-white/5 bg-black/20 space-y-3">
           {REWARD_TIERS.map((tier) => {
-            const isClaimed =
-              songClaimed.includes(tier.id) ||
-              localStorage.getItem(`reward_tier_${tier.id}`) === tier.id ||
-              localStorage.getItem(`reward_tier_${songId}`) === tier.id ||
-              (tier.id === 'prophecy' && localStorage.getItem(`reward_tier_${songId}`) === 'prophecy');
+            const isClaimed = checkIsClaimed(tier.id);
             return (
               <div key={tier.id} className="flex items-center justify-between text-xs font-mono">
                 <div className="flex items-center gap-3">
