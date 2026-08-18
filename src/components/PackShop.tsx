@@ -110,29 +110,26 @@ function RipTab({ onRip, accent, disabled, labelOverride }: { onRip: () => void;
   );
 }
 
-// ===== PACK BAG WRAPPER (SUPPORTS CLASSIC FOIL & CYBER CARTRIDGE) =====
-export function PackBag({ category, isActive = true, onRip, isRipping = false, isFreeClaimed, showRipTab = true, forcedSize, styleOverride }: {
-  category: PackCategory; isActive?: boolean; isRipping?: boolean; isFreeClaimed?: boolean; showRipTab?: boolean; forcedSize?: PackSize;
+export interface PackBagProps {
+  category: PackCategory;
+  isActive?: boolean;
+  isRipping?: boolean;
+  isFreeClaimed?: boolean;
+  showRipTab?: boolean;
+  forcedSize?: PackSize;
   styleOverride?: 'classic_foil' | 'cyber_cartridge';
   onRip: (cat: PackCategory, size: PackSize) => void;
-}) {
-  const packDesignStyle = useVaultStore((s) => s.packDesignStyle);
-  const activeStyle = styleOverride || packDesignStyle || 'cyber_cartridge';
+}
 
-  if (activeStyle === 'cyber_cartridge') {
-    return (
-      <CyberPackBag
-        category={category}
-        isActive={isActive}
-        onRip={onRip}
-        isRipping={isRipping}
-        isFreeClaimed={isFreeClaimed}
-        showRipTab={showRipTab}
-        forcedSize={forcedSize}
-      />
-    );
-  }
-
+export function ClassicFoilPackBag({
+  category,
+  isActive = true,
+  onRip,
+  isRipping = false,
+  isFreeClaimed,
+  showRipTab = true,
+  forcedSize,
+}: Omit<PackBagProps, 'styleOverride'>) {
   const [tierIdx, setTierIdx] = useState(0);
   const [showInfo, setShowInfo] = useState(false);
   const [rippedCount, setRippedCount] = useState<number>(0);
@@ -754,6 +751,28 @@ export function PackBag({ category, isActive = true, onRip, isRipping = false, i
       )}
     </div>
   );
+}
+
+// ===== PACK BAG WRAPPER (SUPPORTS CLASSIC FOIL & CYBER CARTRIDGE) =====
+export function PackBag(props: PackBagProps) {
+  const packDesignStyle = useVaultStore((s) => s.packDesignStyle);
+  const activeStyle = props.styleOverride || packDesignStyle || 'cyber_cartridge';
+
+  if (activeStyle === 'cyber_cartridge') {
+    return (
+      <CyberPackBag
+        category={props.category}
+        isActive={props.isActive}
+        onRip={props.onRip}
+        isRipping={props.isRipping}
+        isFreeClaimed={props.isFreeClaimed}
+        showRipTab={props.showRipTab}
+        forcedSize={props.forcedSize}
+      />
+    );
+  }
+
+  return <ClassicFoilPackBag {...props} />;
 }
 
 // ===== DRAGGABLE CAROUSEL =====
