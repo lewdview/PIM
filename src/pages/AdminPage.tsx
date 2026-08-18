@@ -40,19 +40,33 @@ const PACK_LABELS: Record<string, string> = {
 };
 
 // ===== ADMIN GATE =====
-const ADMIN_PASSPHRASE = 'th3scr1b3';
+const ADMIN_HASH = 'd58f380b169d36c2fe217dadc3caa620193197132b55ba52b0947882b78c4983';
 const ADMIN_AUTH_KEY = 'th3vault_admin_auth';
 
 function AdminGate({ onAuthenticate }: { onAuthenticate: () => void }) {
   const [input, setInput] = useState('');
   const [error, setError] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Security Note: Hardcoding the hash avoids exposing the plaintext password in the bundle.
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (input.toLowerCase() === ADMIN_PASSPHRASE) {
-      sessionStorage.setItem(ADMIN_AUTH_KEY, 'true');
-      onAuthenticate();
-    } else {
+    try {
+      const msgUint8 = new TextEncoder().encode(input.toLowerCase());
+      const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+      if (hashHex === ADMIN_HASH) {
+        sessionStorage.setItem(ADMIN_AUTH_KEY, 'true');
+        // Cache plaintext passphrase required for backend API invocations (like config push)
+        sessionStorage.setItem('th3vault_admin_pass', input.toLowerCase());
+        onAuthenticate();
+      } else {
+        setError(true);
+        setTimeout(() => setError(false), 800);
+      }
+    } catch (err) {
+      console.error('Hashing error', err);
       setError(true);
       setTimeout(() => setError(false), 800);
     }

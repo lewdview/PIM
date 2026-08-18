@@ -1,0 +1,7 @@
+## 2024-05-24 - Client-Side Authentication Hash
+
+**Vulnerability:** The admin page (`AdminPage.tsx`) was secured by comparing user input against a hardcoded plaintext passphrase (`ADMIN_PASSPHRASE`). This exposed the admin passphrase directly in the compiled frontend bundle, allowing anyone inspecting the source to find it.
+
+**Learning:** When client-side gating is necessary and environment variables are statically injected into the bundle (like with Vite's `import.meta.env.VITE_*`), storing plaintext secrets in source code is highly insecure. However, because backend edge functions require the plaintext passphrase for validation, the frontend must temporarily capture and cache the user's input (e.g., in `sessionStorage`) upon a successful login, rather than permanently storing the secret. The Web Crypto API (`crypto.subtle`) provides an asynchronous mechanism to perform hashing, but it requires a secure context (HTTPS/localhost).
+
+**Prevention:** Never hardcode plaintext passphrases or secrets in the client bundle. Instead, hardcode a cryptographic hash (e.g., SHA-256) of the secret. When users authenticate, hash their input using `crypto.subtle.digest` and compare it to the hardcoded hash. If the plaintext is needed for subsequent backend API calls, cache it ephemerally (e.g., React state or `sessionStorage`) only after successful authentication.
