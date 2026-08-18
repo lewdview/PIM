@@ -66,6 +66,10 @@ function getAudio(): HTMLAudioElement {
 export const useGlobalPlayer = create<GlobalPlayerState>((set, get) => {
   const audio = getAudio();
 
+  // PERF: Throttle timeupdate store writes to ~2Hz to avoid forcing React
+  // re-renders on subscribed components during active gameplay.
+  // The raw audio.currentTime can still be read directly for precision needs.
+  let _lastTimeUpdate = 0;
   audio.addEventListener('timeupdate', () => {
     const state = get();
     const track = state.currentTrack;
@@ -86,6 +90,11 @@ export const useGlobalPlayer = create<GlobalPlayerState>((set, get) => {
       }
       return;
     }
+
+    // Throttle routine progress updates to max 2Hz
+    const now = performance.now();
+    if (now - _lastTimeUpdate < 500) return;
+    _lastTimeUpdate = now;
 
     set({
       currentTime: audio.currentTime,

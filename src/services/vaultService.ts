@@ -551,11 +551,7 @@ export async function purchasePack(category: PackCategory, size: PackSize = 'sin
       }
 
       const errMsg = detailedError || result?.error || 'Unknown Crash';
-      console.error('================================================');
-      console.error('🔥 SUPABASE EDGE FUNCTION ERROR 🔥');
-      console.error(errMsg);
-      console.error('================================================');
-      alert(`Backend Error: ${errMsg}`);
+      console.warn('[purchasePack] Edge Function returned error:', errMsg);
       return [];
     }
 

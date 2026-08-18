@@ -89,6 +89,9 @@ export const LeaderboardRow: React.FC<LeaderboardRowProps> = ({
   );
 
   if (!onClick && !isYou) {
+    if (userId.startsWith('rival_') || userId.startsWith('guest_') || userId.startsWith('local_')) {
+      return <div className="cursor-default">{content}</div>;
+    }
     return <Link href={`/vault/${userId}`}>{content}</Link>;
   }
 

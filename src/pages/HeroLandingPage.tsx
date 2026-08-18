@@ -32,6 +32,7 @@ import { getClaimedCountForDay } from '../services/vaultService';
 import { supabase } from '@/services/supabaseClient';
 import DailyClaimTransitionModal from '../components/DailyClaimTransitionModal';
 import TodayCardDetailModal from '../components/TodayCardDetailModal';
+import MainBrandLogo from '../components/MainBrandLogo';
 import '../styles/HeroLandingPage.css';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -780,6 +781,47 @@ export default function HeroLandingPage() {
         ))}
       </div>
 
+      {/* Top Floating Museum Navigation Bar */}
+      <header className="hero-museum-topbar">
+        <div className="hero-museum-topbar-left">
+          <Link href="/arcade" className="flex items-center gap-2 group transition-transform hover:scale-105">
+            <MainBrandLogo size="nav" interactive={false} showGlow={false} />
+          </Link>
+        </div>
+
+        <div className="hero-museum-topbar-center">
+          <button
+            onClick={() => {
+              setIsCommandModalOpen(true);
+              audioManager.playSfx('tap_nav', 0.3);
+            }}
+            className="hero-museum-search-pill"
+            title="Open Day Selector Command Palette (⌘K)"
+          >
+            <Command size={12} className="text-[#00E5FF]" />
+            <span className="font-mono text-[10px] uppercase font-bold text-white/80">DAY {activeDay} OF {maxAllowedDay}</span>
+            <span className="hero-kbd-badge hidden sm:inline">⌘K</span>
+          </button>
+        </div>
+
+        <div className="hero-museum-topbar-right">
+          <Link
+            href="/arcade"
+            className="hero-topbar-link"
+            onClick={() => audioManager.playSfx('tap_nav', 0.2)}
+          >
+            🎮 <span className="hidden sm:inline">ARCADE</span>
+          </Link>
+          <Link
+            href="/vault/collection"
+            className="hero-topbar-link"
+            onClick={() => audioManager.playSfx('tap_nav', 0.2)}
+          >
+            🃏 <span className="hidden sm:inline">VAULT</span>
+          </Link>
+        </div>
+      </header>
+
       {/* ═══════════ SECTION 1 : HERO VIEWPORT ═══════════ */}
       <section className="hero-viewport" id="hero-top">
         {song?.coverArt && (
@@ -797,8 +839,11 @@ export default function HeroLandingPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1.4, ease: EASE_OUT }}
         >
-          <h1 className="hero-title-pim">PIM</h1>
-          <p className="hero-title-subtitle">Poetry In Motion</p>
+          {/* Main Brand Logo — dynamically chooses 1 of 3 session logos, click to switch */}
+          <div className="flex flex-col items-center justify-center my-2 sm:my-4">
+            <MainBrandLogo size="hero" priority={true} interactive={true} />
+            <h1 className="sr-only">PIM : Poetry In Motion</h1>
+          </div>
 
           <p className="hero-tagline">
             One Original Song.

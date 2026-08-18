@@ -39,6 +39,85 @@ const MEDAL_COLORS: Record<string, string> = {
   NONE: '#666666',
 };
 
+interface CyberRivalTemplate {
+  handle: string;
+  skillPct: number;
+  accMin: number;
+  accMax: number;
+  comboPct: number;
+}
+
+const ARCADE_RIVALS: CyberRivalTemplate[] = [
+  { handle: 'STELLA_ECHO', skillPct: 0.996, accMin: 99.4, accMax: 100.0, comboPct: 1.0 },
+  { handle: 'NEO_VIPER', skillPct: 0.982, accMin: 98.7, accMax: 99.3, comboPct: 0.98 },
+  { handle: 'NEON_VALKYRIE', skillPct: 0.975, accMin: 98.3, accMax: 99.0, comboPct: 0.96 },
+  { handle: 'KITSUNE_99', skillPct: 0.965, accMin: 98.0, accMax: 98.6, comboPct: 0.95 },
+  { handle: 'CHRONO_JACK', skillPct: 0.948, accMin: 97.2, accMax: 97.9, comboPct: 0.91 },
+  { handle: 'CYBER_PULSE', skillPct: 0.932, accMin: 96.4, accMax: 97.1, comboPct: 0.87 },
+  { handle: 'QUANTUM_DRIFT', skillPct: 0.920, accMin: 95.8, accMax: 96.7, comboPct: 0.85 },
+  { handle: 'VOID_RUNNER', skillPct: 0.915, accMin: 95.5, accMax: 96.3, comboPct: 0.84 },
+  { handle: 'AURA_STRIKER', skillPct: 0.898, accMin: 94.6, accMax: 95.4, comboPct: 0.80 },
+  { handle: 'SUB_BASS_909', skillPct: 0.880, accMin: 93.8, accMax: 94.5, comboPct: 0.76 },
+  { handle: 'ZERO_BYTE', skillPct: 0.862, accMin: 92.8, accMax: 93.7, comboPct: 0.72 },
+  { handle: 'HYPER_GLITCH', skillPct: 0.840, accMin: 91.5, accMax: 92.7, comboPct: 0.68 },
+];
+
+function stringHash(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+function generateDeterministicRivals(
+  songId: string,
+  referenceScore?: number,
+  targetCount: number = 6
+): SongLeaderEntry[] {
+  const hash = stringHash(songId);
+  const dayMatch = songId.match(/\d+/);
+  const dayNum = dayMatch ? parseInt(dayMatch[0], 10) : 1;
+
+  // Base score target calibrated to the track and reference scores
+  const baseTarget = Math.max(
+    145000 + ((hash + dayNum * 31) % 65000),
+    typeof referenceScore === 'number' && referenceScore > 0 ? referenceScore * 0.99 : 0
+  );
+
+  const startIdx = hash % ARCADE_RIVALS.length;
+  const rivals: SongLeaderEntry[] = [];
+
+  for (let i = 0; i < targetCount; i++) {
+    const rival = ARCADE_RIVALS[(startIdx + i) % ARCADE_RIVALS.length];
+    const subHash = (hash * 37 + i * 19) % 1000;
+
+    const scoreMultiplier = rival.skillPct * (0.985 + (subHash % 30) / 1000);
+    const score = Math.round(baseTarget * scoreMultiplier);
+
+    const accVariance = ((subHash % 100) / 100) * (rival.accMax - rival.accMin);
+    const accuracy = Number((rival.accMin + accVariance).toFixed(1));
+
+    const maxCombo = Math.round((baseTarget / 580) * rival.comboPct);
+    const medal = accuracy >= 99.0 ? 'PLATINUM' : accuracy >= 96.0 ? 'GOLD' : accuracy >= 92.0 ? 'SILVER' : 'BRONZE';
+
+    rivals.push({
+      userId: `rival_${rival.handle.toLowerCase()}_${dayNum}_${i}`,
+      rank: 0,
+      displayName: rival.handle,
+      avatarUrl: null,
+      score,
+      accuracy,
+      maxCombo,
+      medal,
+      isYou: false,
+    });
+  }
+
+  return rivals;
+}
+
 export default function SongLeaderboard({
   songId,
   currentScore,
@@ -55,12 +134,13 @@ export default function SongLeaderboard({
   const authUser = useAuthStore(s => s.user);
   const storeDisplayName = useVaultStore(s => s.displayName);
   const storeAvatarUrl = useVaultStore(s => s.avatarUrl);
+  const highScores = useVaultStore(s => s.highScores);
 
   const fetchSongLeaderboard = async (showLoading = false) => {
     try {
       if (showLoading) setLoading(true);
 
-      // Fetch all records for this specific song
+      // 1. Fetch real gameplay records for this specific song from Supabase
       const { data: records, error: recordsErr } = await supabase
         .from('gameplay_records')
         .select('user_id, score, accuracy, max_combo, medal, timestamp')
@@ -96,16 +176,24 @@ export default function SongLeaderboard({
         }
       }
 
-      // If current user has a live run score from the game session, ensure it is represented
-      if (authUser && typeof currentScore === 'number' && currentScore > 0) {
-        const existing = bestByUser[authUser.id];
-        if (!existing || currentScore > existing.score) {
-          bestByUser[authUser.id] = {
-            userId: authUser.id,
-            score: currentScore,
-            accuracy: currentAccuracy ?? 0,
-            maxCombo: currentMaxCombo ?? 0,
-            medal: currentMedal ?? 'NONE',
+      // 2. Ensure current player's local or live score is represented
+      const localHighScore = highScores[songId] || parseInt(typeof localStorage !== 'undefined' ? (localStorage.getItem(`hs_${songId}`) || '0') : '0', 10);
+      const effectiveScore = typeof currentScore === 'number' && currentScore > 0 ? currentScore : localHighScore;
+      const effectiveAcc = typeof currentAccuracy === 'number' ? currentAccuracy : 0;
+      const effectiveCombo = typeof currentMaxCombo === 'number' ? currentMaxCombo : 0;
+      const effectiveMedal = currentMedal || 'NONE';
+
+      const playerKey = authUser ? authUser.id : 'local_player_guest';
+
+      if (effectiveScore > 0) {
+        const existing = bestByUser[playerKey];
+        if (!existing || effectiveScore > existing.score) {
+          bestByUser[playerKey] = {
+            userId: playerKey,
+            score: effectiveScore,
+            accuracy: effectiveAcc,
+            maxCombo: effectiveCombo,
+            medal: effectiveMedal,
             timestamp: new Date().toISOString(),
           };
         }
@@ -114,11 +202,14 @@ export default function SongLeaderboard({
       const userIds = Object.keys(bestByUser);
       let profilesMap: Record<string, { displayName: string; avatarUrl: string | null }> = {};
 
-      if (userIds.length > 0) {
+      // Filter out local guest player ID before querying Supabase profiles
+      const realUserIds = userIds.filter(id => id !== 'local_player_guest');
+
+      if (realUserIds.length > 0) {
         const { data: profs } = await supabase
           .from('profiles')
           .select('id, wallet_address, display_name, avatar_url')
-          .in('id', userIds);
+          .in('id', realUserIds);
 
         for (const p of profs || []) {
           let name = p.display_name || '';
@@ -136,19 +227,24 @@ export default function SongLeaderboard({
         }
       }
 
-      // Fallback for current logged-in user if profile query didn't return them yet
+      // Fallback for current user profile
       if (authUser && !profilesMap[authUser.id]) {
         profilesMap[authUser.id] = {
           displayName: storeDisplayName || authUser.email?.split('@')[0] || `ANON_${authUser.id.slice(0, 6)}`,
           avatarUrl: storeAvatarUrl || (authUser.user_metadata?.avatar_url as string) || null,
         };
+      } else if (!authUser && bestByUser['local_player_guest']) {
+        profilesMap['local_player_guest'] = {
+          displayName: storeDisplayName || 'PILOT (GUEST)',
+          avatarUrl: storeAvatarUrl || null,
+        };
       }
 
-      // Build sorted leaderboard list
-      const mapped: SongLeaderEntry[] = userIds.map(uid => {
+      // 3. Build list of human entries
+      const humanEntries: SongLeaderEntry[] = userIds.map(uid => {
         const stats = bestByUser[uid];
         const prof = profilesMap[uid] || { displayName: `ANON_${uid.slice(0, 6)}`, avatarUrl: null };
-        const isYou = authUser ? authUser.id === uid : false;
+        const isYou = authUser ? authUser.id === uid : uid === 'local_player_guest';
 
         return {
           userId: uid,
@@ -163,13 +259,20 @@ export default function SongLeaderboard({
         };
       });
 
-      // Sort descending by score
-      mapped.sort((a, b) => b.score - a.score);
-      mapped.forEach((entry, idx) => {
+      // 4. Populate with deterministic cyber rivals if total records are below minimum arcade threshold
+      const maxScore = humanEntries.reduce((max, e) => Math.max(max, e.score), 0);
+      const neededRivals = Math.max(0, 8 - humanEntries.length);
+      const rivals = neededRivals > 0 ? generateDeterministicRivals(songId, maxScore, neededRivals) : [];
+
+      const combined: SongLeaderEntry[] = [...humanEntries, ...rivals];
+
+      // 5. Sort descending by score and assign final ranks
+      combined.sort((a, b) => b.score - a.score);
+      combined.forEach((entry, idx) => {
         entry.rank = idx + 1;
       });
 
-      setEntries(mapped);
+      setEntries(combined);
     } catch (err) {
       console.warn('Error loading song leaderboard:', err);
     } finally {

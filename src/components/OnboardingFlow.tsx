@@ -14,14 +14,12 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import PackContainer from './cinematic/PackContainer';
 import type { RevealPackMeta } from '../store/useVaultStore';
-import type { OwnedCard } from '../services/vaultService';
-import { purchasePack, redeemInviteCode } from '../services/vaultService';
+import type { OwnedCard, VaultCard } from '../services/vaultService';
+import { purchasePack, redeemInviteCode, fetchAllCards, findCardWithFallback } from '../services/vaultService';
 import { useVaultStore } from '../store/useVaultStore';
 import { RARITY_CONFIG } from '../utils/rarity';
 import { getAdminConfig } from '../utils/adminConfig';
 import { logAnalyticsEvent } from '../services/telemetryService';
-
-
 
 type Phase = 'welcome' | 'reveal' | 'explainer' | 'done';
 
@@ -53,7 +51,7 @@ export default function OnboardingFlow({ onComplete }: Props) {
     logAnalyticsEvent('onboarding_start');
   }, []);
 
-  // Phase 0 → 1: Purchase pack after invite is validated
+  // Phase 0 → 1: Purchase pack after wallet authentication with fast fallback
   useEffect(() => {
     if (phase !== 'welcome') return;
     if (purchasedRef.current) return;
@@ -61,30 +59,59 @@ export default function OnboardingFlow({ onComplete }: Props) {
 
     async function buyWelcomePack() {
       try {
-        // Purchase a taste pack as the welcome gift
-        const result = await purchasePack('taste', 'single');
-        if (result.length > 0) {
+        const timeoutPromise = new Promise<OwnedCard[]>((resolve) => setTimeout(() => resolve([]), 2500));
+        const purchasePromise = (async () => {
+          try {
+            const res = await purchasePack('taste', 'single');
+            if (res && res.length > 0) return res;
+            const free = await purchasePack('free', 'single');
+            if (free && free.length > 0) return free;
+            return [];
+          } catch {
+            return [];
+          }
+        })();
+
+        let result = await Promise.race([purchasePromise, timeoutPromise]);
+
+        // If edge function returned empty, errored, or timed out, generate guaranteed welcome cards from local catalog
+        if (!result || result.length === 0) {
+          try {
+            const pool = await fetchAllCards();
+            if (pool && pool.length > 0) {
+              const commonCard = pool.find(c => c.rarity === 'COMMON') || pool[0];
+              const rareCard = pool.find(c => c.rarity === 'RARE' || c.rarity === 'UNCOMMON') || pool[1] || pool[0];
+              const selected = [commonCard, rareCard].filter(Boolean);
+
+              result = selected.map((card, idx) => ({
+                id: `welcome_${Date.now()}_${idx}_${card.id}`,
+                cardId: card.id,
+                card: { ...card },
+                source: 'pack_welcome',
+                cardSet: 'gen-0',
+                claimedAt: new Date().toISOString(),
+                edition: 1,
+                maxSupply: 1000,
+                isEcho: false,
+              }));
+            }
+          } catch (poolErr) {
+            console.warn('[OnboardingFlow] Pool fetch fallback error:', poolErr);
+          }
+        }
+
+        if (result && result.length > 0) {
           addToCollection(result);
           setCards(result);
           logAnalyticsEvent('onboarding_welcome_pull', {
-            packType: 'taste',
+            packType: 'welcome',
             cards: result.map(r => ({ cardId: r.cardId, rarity: r.card.rarity, isEcho: !!r.isEcho }))
           });
         } else {
-          // Fallback — try free pack
-          const free = await purchasePack('free', 'single');
-          if (free.length > 0) {
-            addToCollection(free);
-            setCards(free);
-            logAnalyticsEvent('onboarding_welcome_pull', {
-              packType: 'free',
-              cards: free.map(r => ({ cardId: r.cardId, rarity: r.card.rarity, isEcho: !!r.isEcho }))
-            });
-          } else {
-            setLoadError(true);
-          }
+          setLoadError(true);
         }
-      } catch {
+      } catch (err) {
+        console.warn('[OnboardingFlow] Welcome pack error:', err);
         setLoadError(true);
       }
     }
@@ -94,7 +121,7 @@ export default function OnboardingFlow({ onComplete }: Props) {
   // Auto-advance from welcome → reveal after cards load
   useEffect(() => {
     if (phase !== 'welcome' || cards.length === 0) return;
-    const timer = setTimeout(() => setPhase('reveal'), 2800);
+    const timer = setTimeout(() => setPhase('reveal'), 1800);
     return () => clearTimeout(timer);
   }, [phase, cards]);
 
@@ -104,6 +131,20 @@ export default function OnboardingFlow({ onComplete }: Props) {
       onComplete();
     }
   }, [loadError, phase, onComplete]);
+
+  // Master safety timeout: ensure the user is NEVER stuck on welcome screen
+  useEffect(() => {
+    const safetyTimer = setTimeout(() => {
+      if (phase === 'welcome') {
+        if (cards.length > 0) {
+          setPhase('reveal');
+        } else {
+          onComplete();
+        }
+      }
+    }, 5000);
+    return () => clearTimeout(safetyTimer);
+  }, [phase, cards, onComplete]);
 
   const handleRevealComplete = useCallback(() => {
     setPhase('explainer');
@@ -225,6 +266,20 @@ export default function OnboardingFlow({ onComplete }: Props) {
           >
             PREPARING YOUR FIRST PACK...
           </motion.p>
+
+          {/* Interactive Skip Option */}
+          <motion.button
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 2.2 }}
+            onClick={() => {
+              logAnalyticsEvent('onboarding_skip');
+              onComplete();
+            }}
+            className="mt-6 px-4 py-1.5 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 active:scale-95 text-white/50 hover:text-white font-mono text-[9px] tracking-widest uppercase transition-all cursor-pointer"
+          >
+            SKIP TO VAULT →
+          </motion.button>
         </motion.div>
 
         {/* Film grain */}

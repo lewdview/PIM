@@ -368,9 +368,128 @@ export class AudioManager {
     return effectType;
   }
 
+  private activeHoldTones: Map<string | number, {
+    osc: OscillatorNode;
+    gain: GainNode;
+    filter: BiquadFilterNode;
+    baseFreq: number;
+  }> = new Map();
+
+  // ── Healing Solfeggio & 432 Hz Harmonic Low-Octave Frequencies ──
+  // Lane 0: 108.0 Hz (Sacred 108 / 432 Hz Sub-Octave A2 / Earth Grounding)
+  // Lane 1: 132.0 Hz (528 Hz Solfeggio "Miracle / DNA Repair" Sub-Octave C3)
+  // Lane 2: 162.0 Hz (Harmonic Golden Fifth of 108 Hz in 432 Hz tuning / E3)
+  public static readonly HEALING_LANE_FREQUENCIES: number[] = [108.0, 132.0, 162.0];
+
+  /** Start a warm, therapeutic healing frequency tone in the lower octave for an active hold note */
+  startHoldTone(noteId: string | number, laneOrFreq: number = 0, volume = 0.12): void {
+    if (!this.ctx || !this.masterGain) return;
+    if (typeof localStorage !== 'undefined' && localStorage.getItem("opt_sfxEnabled") === "false") return;
+    if (this.activeHoldTones.has(noteId)) return;
+
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
+    }
+
+    try {
+      // Resolve to lower-octave healing frequency (108Hz, 132Hz, 162Hz)
+      let baseFreq: number;
+      if (laneOrFreq >= 0 && laneOrFreq < AudioManager.HEALING_LANE_FREQUENCIES.length) {
+        baseFreq = AudioManager.HEALING_LANE_FREQUENCIES[laneOrFreq];
+      } else if (laneOrFreq >= 50 && laneOrFreq <= 300) {
+        // If an absolute frequency was passed, normalize to warm lower octave (54 - 174 Hz)
+        baseFreq = laneOrFreq > 180 ? laneOrFreq / 2 : laneOrFreq;
+      } else {
+        baseFreq = 108.0;
+      }
+
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      const filter = this.ctx.createBiquadFilter();
+
+      // Pure therapeutic sine wave for soothing warmth without ear-piercing harmonics
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(baseFreq, this.ctx.currentTime);
+
+      // Warm analog lowpass filter (gentle Butterworth damping, no sharp resonance peaks)
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(320, this.ctx.currentTime);
+      filter.Q.setValueAtTime(0.707, this.ctx.currentTime);
+
+      const sfxVolSetting = typeof localStorage !== 'undefined' ? (parseFloat(localStorage.getItem("opt_sfxVolume") ?? "0.8") ?? 0.8) : 0.8;
+      const targetVol = volume * 0.75 * sfxVolSetting;
+
+      // Soft non-jarring attack envelope
+      const now = this.ctx.currentTime;
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.linearRampToValueAtTime(Math.max(0.0001, Math.min(0.4, targetVol)), now + 0.06);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.masterGain);
+
+      osc.start(now);
+
+      this.activeHoldTones.set(noteId, { osc, gain, filter, baseFreq });
+    } catch (e) {
+      console.warn("Failed to start hold tone:", e);
+    }
+  }
+
+  /** Update subtle harmonic bloom of active healing tone as hold progresses (0 -> 1) */
+  updateHoldTone(noteId: string | number, progress: number): void {
+    if (!this.ctx) return;
+    const tone = this.activeHoldTones.get(noteId);
+    if (!tone) return;
+
+    try {
+      const clampedProg = Math.max(0, Math.min(1, progress));
+      // Keep fundamental frequency steady on healing root; gently open filter for warm harmonic bloom
+      tone.osc.frequency.value = tone.baseFreq;
+      tone.filter.frequency.value = 320 + clampedProg * 160;
+    } catch {}
+  }
+
+  /** Stop active hold tone with a soft, clean decay */
+  stopHoldTone(noteId: string | number): void {
+    if (!this.ctx) return;
+    const tone = this.activeHoldTones.get(noteId);
+    if (!tone) return;
+
+    this.activeHoldTones.delete(noteId);
+
+    try {
+      const now = this.ctx.currentTime;
+      const stopTime = now + 0.06;
+      // Soft exponential release to prevent clicks
+      tone.gain.gain.setTargetAtTime(0.0001, now, 0.02);
+      tone.osc.stop(stopTime);
+      // Clean up Web Audio nodes after stop
+      tone.osc.onended = () => {
+        try {
+          tone.osc.disconnect();
+          tone.filter.disconnect();
+          tone.gain.disconnect();
+        } catch {}
+      };
+    } catch {
+      try { tone.osc.stop(); } catch {}
+    }
+  }
+
+  /** Stop all active hold tones immediately */
+  stopAllHoldTones(): void {
+    if (!this.ctx) return;
+    for (const [id] of this.activeHoldTones) {
+      this.stopHoldTone(id);
+    }
+    this.activeHoldTones.clear();
+  }
+
   // ── teardown ───────────────────────────────────────────────────
 
   stop(): void {
+    this.stopAllHoldTones();
     if (this.activeRemixTimeout) {
       window.clearTimeout(this.activeRemixTimeout);
       this.activeRemixTimeout = null;

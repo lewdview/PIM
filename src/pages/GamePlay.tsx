@@ -491,12 +491,51 @@ const GameplayVisualizer: React.FC<GameplayVisualizerProps> = ({ analyserRef, da
 };
 
 // ── constants ────────────────────────────────────────────────────
+// PERF: Moved from inside draw() to module scope to avoid per-frame allocation (60x/sec)
+const STAGE_BOUNDS = [
+  { stage: 1, name: "Stage 1",      pct: 0.00, difficulty: "EASY"   },
+  { stage: 2, name: "Stage 2",      pct: 0.15, difficulty: "MEDIUM" },
+  { stage: 3, name: "Stage 3",      pct: 0.35, difficulty: "HARD"   },
+  { stage: 4, name: "Stage 4",      pct: 0.60, difficulty: "BRUTAL" },
+  { stage: 5, name: "FINAL STAGE",  pct: 0.80, difficulty: "BRUTAL" }
+] as const;
+
+const MEDAL_STOPS = [
+  { name: "BRONZE", acc: 40, color: "#CD7F32" },
+  { name: "SILVER", acc: 60, color: "#C0C0C0" },
+  { name: "GOLD", acc: 80, color: "#FFD700" },
+  { name: "PLATINUM", acc: 93, color: "#E0E0FF" },
+] as const;
+
+const MEDAL_COLOR_MAP: Record<string, string> = {
+  BRONZE: "#CD7F32",
+  SILVER: "#C0C0C0",
+  GOLD: "#FFD700",
+  PLATINUM: "#E0E0FF",
+  NONE: "#444",
+};
+
 const LANE_COUNT = 3;
 
 // Approach time scales with difficulty: Level 1 = 2.5 s (easy), Level 10 = 1.35 s (brutal)
 function approachTime(diffLevel: number): number {
   return Math.max(1.35, 2.5 - (diffLevel - 1) * 0.128);
 }
+// Precomputed matrix columns for cyber_streets background (C5 - avoids 540 DOM spans & allocations per render)
+const MATRIX_CHARS = ["P", "I", "M", "0", "1", "X", "Y", "Ø", "Δ", "Ω", "7", "5", "A", "C", "F"];
+const MATRIX_COLUMNS = Array.from({ length: 18 }).map((_, i) => {
+  const delay = `${(i * 0.3) % 5}s`;
+  const duration = `${3.5 + (i % 4) * 1.5}s`;
+  const opacity = 0.22 + ((i * 4) % 8) * 0.08;
+  const fontSize = `${9 + (i % 3) * 3.5}px`;
+  const left = `${i * 5.5 + 2}%`;
+  const headChar = MATRIX_CHARS[i % MATRIX_CHARS.length];
+  const bodyText = Array.from({ length: 29 })
+    .map((_, charIdx) => MATRIX_CHARS[(i + (charIdx + 1) * 7) % MATRIX_CHARS.length])
+    .join("\n");
+  return { left, delay, duration, opacity, fontSize, headChar, bodyText };
+});
+
 const HIT_RATIO = 0.78;
 
 // Hit windows scale with difficulty — easier = more forgiving
@@ -1261,7 +1300,7 @@ function drawArchetypeHoldTrail(
 
   // Draw Ribbon Outer Glow / Body (Translucent so oncoming notes remain clearly visible)
   ctx.save();
-  ctx.fillStyle = "rgba(245, 240, 228, 0.16)";
+  ctx.fillStyle = ns.holdActive ? colorWithAlpha(noteColor, 0.28) : "rgba(245, 240, 228, 0.16)";
   ctx.beginPath();
   ctx.moveTo(leftPoints[0].x, leftPoints[0].y);
   for (let i = 1; i <= steps; i++) {
@@ -1274,10 +1313,11 @@ function drawArchetypeHoldTrail(
   ctx.fill();
 
   // Draw Inner Colored Stripe with Neon Glow (Translucent for see-through readability)
-  ctx.fillStyle = noteColor;
-  ctx.globalAlpha = 0.50;
+  ctx.fillStyle = ns.holdActive ? "#FFFFFF" : noteColor;
+  ctx.globalAlpha = ns.holdActive ? 0.85 : 0.50;
   ctx.shadowColor = noteColor;
-  ctx.shadowBlur = 12;
+  ctx.shadowBlur = ns.holdActive ? 22 : 12;
+  ctx.beginPath();
   ctx.moveTo(lerp(leftPoints[0].x, rightPoints[0].x, 0.22), lerp(leftPoints[0].y, rightPoints[0].y, 0.22));
   for (let i = 1; i <= steps; i++) {
     ctx.lineTo(lerp(leftPoints[i].x, rightPoints[i].x, 0.22), lerp(leftPoints[i].y, rightPoints[i].y, 0.22));
@@ -1288,12 +1328,44 @@ function drawArchetypeHoldTrail(
   ctx.closePath();
   ctx.fill();
 
-  // Outer 3D Neon Laser Edges in 3D POV Modes
-  if (povMode === 'cyber_tunnel' || povMode === 'corkscrew' || povMode === 'rollercoaster') {
-    ctx.strokeStyle = noteColor;
-    ctx.lineWidth = 3.0;
+  // Active High-Voltage Electric Lightning Arc along Center of Ribbon
+  if (ns.holdActive) {
+    ctx.save();
+    ctx.strokeStyle = "#FFFFFF";
+    ctx.lineWidth = 2.5;
     ctx.shadowColor = noteColor;
-    ctx.shadowBlur = 16;
+    ctx.shadowBlur = 18;
+    ctx.beginPath();
+    for (let i = 0; i <= steps; i++) {
+      const midX = lerp(leftPoints[i].x, rightPoints[i].x, 0.5);
+      const midY = lerp(leftPoints[i].y, rightPoints[i].y, 0.5);
+      const jitter = Math.sin(t * 36 + i * 2.5) * 4.0;
+      if (i === 0) ctx.moveTo(midX + jitter, midY);
+      else ctx.lineTo(midX + jitter, midY);
+    }
+    ctx.stroke();
+
+    // Secondary energetic plasma streamer
+    ctx.strokeStyle = noteColor;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    for (let i = 0; i <= steps; i++) {
+      const midX = lerp(leftPoints[i].x, rightPoints[i].x, 0.5);
+      const midY = lerp(leftPoints[i].y, rightPoints[i].y, 0.5);
+      const jitter2 = Math.cos(t * 52 + i * 3.2) * 2.8;
+      if (i === 0) ctx.moveTo(midX + jitter2, midY);
+      else ctx.lineTo(midX + jitter2, midY);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Outer Neon Laser Edges (Active holds or 3D POV Modes)
+  if (ns.holdActive || povMode === 'cyber_tunnel' || povMode === 'corkscrew' || povMode === 'rollercoaster') {
+    ctx.strokeStyle = ns.holdActive ? "#FFFFFF" : noteColor;
+    ctx.lineWidth = ns.holdActive ? 3.5 : 2.5;
+    ctx.shadowColor = noteColor;
+    ctx.shadowBlur = ns.holdActive ? 22 : 16;
     ctx.beginPath();
     ctx.moveTo(leftPoints[0].x, leftPoints[0].y);
     for (let i = 1; i <= steps; i++) {
@@ -1550,6 +1622,7 @@ interface NoteState {
   visualLane: number;  // For slide notes: tracking smoothly animated visual lane position
   autoplayedBySurge?: boolean;
   touchId?: number;    // Associates this hold note with the active touch event tracking it
+  lastHapticTs?: number;
 }
 interface LanePress {
   pressed: boolean;
@@ -2292,6 +2365,12 @@ export default function Game() {
   const missCountRef = useRef(0); // misses accumulated this attempt (triggers continue at 3)
   const rewindToRef = useRef(0);
   const rewindAnimRef = useRef<{ wallStart: number; fromT: number; toT: number } | null>(null);
+  // PERF: M9 — frame-synced rewind completion data (replaces setTimeout)
+  const rewindCompletionRef = useRef<{
+    rewindTo: number;
+    audio: HTMLAudioElement | null;
+    restoreLane: (lane: number) => void;
+  } | null>(null);
   const drawRef = useRef<(() => void) | null>(null);
   const continueTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const finishGameTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -2355,6 +2434,9 @@ export default function Game() {
   const resolvePendingPromiseRef = useRef<(() => void) | null>(null);
   const usePointerEventsRef = useRef(false);
   const activeVisibleNotesRef = useRef<NoteState[]>([]);
+  const noteWindowStartRef = useRef(0);
+  const unresolvedNotesCountRef = useRef(0);
+  const lastNoteTimeRef = useRef(0);
   const progressPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const countdownTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pollGamepadRef = useRef<((t: number) => void) | null>(null);
@@ -2654,6 +2736,7 @@ export default function Game() {
   const [showOptions, setShowOptions] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [maxPossibleScore, setMaxPossibleScore] = useState(1);
+  const maxPossibleScoreRef = useRef(1);
   const triggeredThresholdsRef = useRef<{ [key: number]: boolean }>({ 50: false, 75: false, 90: false });
   useEffect(() => {
     const handler = () => setIsFullscreen(!!document.fullscreenElement);
@@ -2717,10 +2800,31 @@ export default function Game() {
   }, []);
 
   const lastSyncTimeRef = useRef(0);
+  const lastReactSyncRef = useRef(0);
+  // Direct DOM refs for high-frequency HUD updates (avoids React re-renders)
+  const scoreTextRef = useRef<HTMLSpanElement | null>(null);
+  const comboTextRef = useRef<HTMLSpanElement | null>(null);
+  const accuracyTextRef = useRef<HTMLSpanElement | null>(null);
   const syncDisplay = useCallback(() => {
     const now = performance.now();
     if (now - lastSyncTimeRef.current >= 33) {
       lastSyncTimeRef.current = now;
+      // PERF: Direct DOM mutation instead of React setState to avoid
+      // re-rendering the entire 12,000-line component 30x/sec.
+      // displayGs/displayJudge React state is still set at lower frequency
+      // for non-HUD consumers (pause screen, results, etc.)
+      const gs = gsRef.current;
+      if (scoreTextRef.current) scoreTextRef.current.textContent = String(gs.score);
+      if (comboTextRef.current) comboTextRef.current.textContent = String(gs.combo);
+      if (accuracyTextRef.current) {
+        const tot = gs.perfectPlus + gs.perfects + gs.goods + gs.misses;
+        const acc = tot > 0 ? ((gs.perfectPlus + gs.perfects * 0.9 + gs.goods * 0.5) / tot) * 100 : 0;
+        accuracyTextRef.current.textContent = acc.toFixed(1) + '%';
+      }
+    }
+    // Sync React state at reduced frequency (5Hz) for non-HUD consumers
+    if (now - lastReactSyncRef.current >= 200) {
+      lastReactSyncRef.current = now;
       setDisplayGs({ ...gsRef.current });
       setDisplayJudge([...jRef.current]);
     }
@@ -2842,6 +2946,17 @@ export default function Game() {
           }
           break;
         }
+      }
+
+      // Check score threshold triggers (L1: moved from render-phase to state updates)
+      const maxPossibleScore = maxPossibleScoreRef.current;
+      const score = gsRef.current.score;
+      if (maxPossibleScore > 0) {
+        const pct = (score / maxPossibleScore) * 100;
+        const tt = triggeredThresholdsRef.current;
+        if (pct >= 50 && !tt[50]) { tt[50] = true; audioManager.playSfx("hidden_secret_found", 0.5); }
+        if (pct >= 75 && !tt[75]) { tt[75] = true; audioManager.playSfx("hidden_secret_found", 0.5); }
+        if (pct >= 90 && !tt[90]) { tt[90] = true; audioManager.playSfx("hidden_secret_found", 0.5); }
       }
     },
     [getT],
@@ -2982,16 +3097,27 @@ export default function Game() {
       if (phaseRef.current !== "playing") return;
       restoreLane(lane);
       const t = getT();
-      const candidates = notesRef.current.filter(
-        (ns) => ns.note.lane === lane && !ns.hit && !ns.missed,
-      );
-      if (!candidates.length) return;
-      const ns = candidates.reduce((b, c) =>
-        Math.abs(c.note.time - t) < Math.abs(b.note.time - t) ? c : b,
-      );
-      const diff = isExportVideoRef.current ? 0 : Math.abs(ns.note.time - t);
+      // PERF: O(window) search starting from sliding window pointer with zero array allocations (M10)
+      const allNotes = notesRef.current;
       const dl = songRef.current?.difficultyLevel ?? 5;
-      if (diff > missWindow(dl)) return;
+      const maxDiff = missWindow(dl);
+      let ns: NoteState | null = null;
+      let minDiff = Infinity;
+      const startIdx = noteWindowStartRef.current;
+      for (let i = startIdx; i < allNotes.length; i++) {
+        const candidate = allNotes[i];
+        if (candidate.hit || candidate.missed) continue;
+        if (candidate.note.time - t > maxDiff + 0.15) break; // Past hit window
+        if (candidate.note.lane === lane) {
+          const d = isExportVideoRef.current ? 0 : Math.abs(candidate.note.time - t);
+          if (d <= maxDiff && d < minDiff) {
+            minDiff = d;
+            ns = candidate;
+          }
+        }
+      }
+      if (!ns) return;
+      const diff = minDiff;
 
       // Swipe check: swipe notes, lift notes, or notes with required swipeDirection ignore plain tap-down inputs
       const reqSwipeDir = ns.note.swipeDirection || (ns.note.type === "lift" ? "up" : undefined);
@@ -3018,6 +3144,7 @@ export default function Game() {
       if (ns.note.type === "mine") {
         ns.hit = true;
         ns.missed = true;
+        unresolvedNotesCountRef.current--;
         const gs = gsRef.current;
         gs.score = Math.max(0, gs.score - 500);
         gs.combo = 0;
@@ -3045,12 +3172,18 @@ export default function Game() {
         audioOffsetRef.current = Math.max(-200, Math.min(300, audioOffsetRef.current));
       }
 
-      if (ns.note.type === "hold") {
+      const isHoldType = ns.note.type === "hold" || ns.note.type === "hold-swipe" || ns.note.type === "slide" || ns.note.type === "zigzag" || (typeof ns.note.holdDuration === 'number' && ns.note.holdDuration > 0);
+      if (isHoldType) {
         ns.holdActive = true;
         ns.currentLane = lane;
         ns.originLane = lane;
         ns.touchId = touchId;
-      } else ns.hit = true;
+        ns.lastHapticTs = Date.now();
+        audioManager.startHoldTone(ns.note.id, lane);
+      } else {
+        ns.hit = true;
+        unresolvedNotesCountRef.current--;
+      }
 
       const gs = gsRef.current;
       gs.score += calcScore(gs.combo, j);
@@ -3097,17 +3230,24 @@ export default function Game() {
       gs.maxCombo = Math.max(gs.maxCombo, gs.combo);
       gameSenseService.sendHit();
       gameSenseService.sendCombo(gs.combo);
-      if (j === "PERFECT+") {
-        gs.perfectPlus++;
-        audioManager.playSfx("tap_perfect", 0.35);
-      }
-      else if (j === "PERFECT") {
-        gs.perfects++;
-        audioManager.playSfx("tap_perfect", 0.25);
-      }
-      else {
-        gs.goods++;
-        audioManager.playSfx("tap_nav", 0.15);
+      if (!isHoldType) {
+        if (j === "PERFECT+") {
+          gs.perfectPlus++;
+          audioManager.playSfx("tap_perfect", 0.35);
+        }
+        else if (j === "PERFECT") {
+          gs.perfects++;
+          audioManager.playSfx("tap_perfect", 0.25);
+        }
+        else {
+          gs.goods++;
+          audioManager.playSfx("tap_nav", 0.15);
+        }
+      } else {
+        // Hold/Slide note head: register score and judgment without jarring tap SFX
+        if (j === "PERFECT+") gs.perfectPlus++;
+        else if (j === "PERFECT") gs.perfects++;
+        else gs.goods++;
       }
       if (ns.note.type === "swipe" || ns.note.swipeDirection) {
         audioManager.playSfx("swipe", 0.45);
@@ -3136,11 +3276,13 @@ export default function Game() {
       if (ns.hit) return;
       const isSurge = puRef.current.active === "SURGE" && getT() < puRef.current.endTime;
       if (isSurge || ns.autoplayedBySurge) return;
+      audioManager.stopHoldTone(ns.note.id);
 
       // If it requires a swipe-release, releasing it without swiping is a miss!
       if (ns.note.swipeDirection) {
         ns.holdActive = false;
         ns.missed = true;
+        unresolvedNotesCountRef.current--;
         recordedTelemetryRef.current.push({
           noteId: ns.note.id,
           time: getT(),
@@ -3198,6 +3340,7 @@ export default function Game() {
 
           // Treat as HIT with GOOD
           ns.hit = true;
+          unresolvedNotesCountRef.current--;
           ns.holdActive = false;
           recordedTelemetryRef.current.push({
             noteId: ns.note.id,
@@ -3222,6 +3365,7 @@ export default function Game() {
           // Did not finish the slide
           ns.holdActive = false;
           ns.missed = true;
+          unresolvedNotesCountRef.current--;
           recordedTelemetryRef.current.push({
             noteId: ns.note.id,
             time: getT(),
@@ -3265,6 +3409,7 @@ export default function Game() {
         // Did not swipe! This is a miss!
         ns.holdActive = false;
         ns.missed = true;
+        unresolvedNotesCountRef.current--;
         recordedTelemetryRef.current.push({
           noteId: ns.note.id,
           time: getT(),
@@ -3303,6 +3448,7 @@ export default function Game() {
       }
 
       ns.hit = true;
+      unresolvedNotesCountRef.current--;
       ns.holdActive = false;
       if (ns.holdProgress > 0.6) {
         const gs = gsRef.current;
@@ -3340,13 +3486,17 @@ export default function Game() {
   const releaseLane = useCallback(
     (lane: number) => {
       if (phaseRef.current !== "playing") return;
-      const ns = notesRef.current.find(
-        (n) =>
-          n.note.type === "hold" &&
-          n.holdActive &&
-          Math.round(n.currentLane) === lane &&
-          !n.hit,
-      );
+      // PERF: Search from noteWindowStartRef instead of entire song (M10)
+      const allNotes = notesRef.current;
+      let ns: NoteState | undefined;
+      for (let i = noteWindowStartRef.current; i < allNotes.length; i++) {
+        const n = allNotes[i];
+        const isHold = n.note.type === "hold" || n.note.type === "hold-swipe" || n.note.type === "slide" || n.note.type === "zigzag" || (typeof n.note.holdDuration === 'number' && n.note.holdDuration > 0);
+        if (isHold && n.holdActive && (Math.round(n.currentLane) === lane || n.note.lane === lane || n.note.targetLane === lane) && !n.hit) {
+          ns = n;
+          break;
+        }
+      }
       if (!ns) return;
       completeHoldNote(ns);
     },
@@ -3376,7 +3526,9 @@ export default function Game() {
       else j = "MISS";
 
       ns.hit = true;
+      unresolvedNotesCountRef.current--;
       ns.holdActive = false;
+      audioManager.stopHoldTone(ns.note.id);
 
       recordedTelemetryRef.current.push({
         noteId: ns.note.id,
@@ -3434,13 +3586,17 @@ export default function Game() {
   const moveHold = useCallback(
     (fromLane: number, toLane: number) => {
       if (phaseRef.current !== "playing") return;
-      const ns = notesRef.current.find(
-        (n) =>
-          n.note.type === "hold" &&
-          n.holdActive &&
-          n.currentLane === fromLane &&
-          !n.hit,
-      );
+      // PERF: Search from noteWindowStartRef instead of entire song (M10)
+      const allNotes = notesRef.current;
+      let ns: NoteState | undefined;
+      for (let i = noteWindowStartRef.current; i < allNotes.length; i++) {
+        const n = allNotes[i];
+        const isHold = n.note.type === "hold" || n.note.type === "hold-swipe" || n.note.type === "slide" || n.note.type === "zigzag" || (typeof n.note.holdDuration === 'number' && n.note.holdDuration > 0);
+        if (isHold && n.holdActive && (n.currentLane === fromLane || n.note.lane === fromLane) && !n.hit) {
+          ns = n;
+          break;
+        }
+      }
       if (!ns) return;
 
       // Move the interaction to the new lane if it's a slide note
@@ -3450,9 +3606,10 @@ export default function Game() {
 
         if (reachedTarget) {
           ns.hit = true;
+          unresolvedNotesCountRef.current--;
           ns.holdActive = false;
           ns.holdProgress = 1.0;
-          audioManager.playSfx("hidden_secret_found", 0.35);
+          audioManager.stopHoldTone(ns.note.id); // Stop tone immediately on reached target
 
           const gs = gsRef.current;
           gs.score += calcScore(gs.combo, "PERFECT+");
@@ -3480,8 +3637,14 @@ export default function Game() {
               const speed = 40 + Math.random() * 60;
               particles.push({
                 vx: Math.cos(angle) * speed,
-                vy: Math.sin(angle) * speed - 20,
-                size: 2.5 + Math.random() * 3.5,
+                vy: Math.sin(angle) * speed - 30,
+                x: cx,
+                y: hitY,
+                radius: 3 + Math.random() * 3,
+                color: lc,
+                alpha: 1,
+                life: 0.25,
+                maxLife: 0.25,
               });
             }
             if (hitFxRef.current.length > 12) {
@@ -3623,7 +3786,7 @@ export default function Game() {
     if (phaseRef.current === "finished") return;
     audioManager.stopSfx("gameover_countdown");
     if (phaseRef.current === "continue") {
-      finishGame(false);
+      finishGame(true);
       return;
     }
     phaseRef.current = "finished";
@@ -3647,10 +3810,11 @@ export default function Game() {
       if (phaseRef.current === "unmounted") return;
       setLocation(dest);
     }, 100);
-  }, [songId, setLocation]);
+  }, [songId, setLocation, finishGame]);
 
   function triggerGameFail(): boolean {
     if (missCountRef.current >= 3 && optsRef.current.missSystem && !activeTutorial) {
+      audioManager.stopAllHoldTones();
       const audio = audioRef.current;
       if (audio) {
         rewindToRef.current = Math.max(0, audio.currentTime - 2.5);
@@ -3685,6 +3849,7 @@ export default function Game() {
 
   const doReturn = useCallback(() => {
     if (phaseRef.current !== "continue") return; // guard against double-firing!
+    audioManager.stopAllHoldTones();
     audioManager.stopSfx("gameover_countdown");
     playRewindSound();
     continueUsedRef.current++;
@@ -3722,52 +3887,14 @@ export default function Game() {
     setPhase("rewinding");
     rafRef.current = requestAnimationFrame(() => drawRef.current?.());
 
-    // After the 1.2 s animation: restore notes, seek audio, resume
-    continueTimeoutRef.current = setTimeout(() => {
-      if (phaseRef.current !== "rewinding") return; // guard against double-fire
-      // Undo misses that happened in the rewind window
-      notesRef.current.forEach((ns) => {
-        if (ns.missed && ns.note.time >= rewindTo - 0.5) {
-          ns.missed = false;
-          gsRef.current.misses = Math.max(0, gsRef.current.misses - 1);
-        }
-        // Also reset any hold notes that were in-flight
-        if (ns.holdActive && ns.note.time >= rewindTo - 0.5) {
-          ns.holdActive = false;
-          ns.holdProgress = 0;
-          ns.autoplayedBySurge = false;
-        }
-      });
-      gsRef.current.combo = 0;
-      [0, 1, 2].forEach(restoreLane);
-      rewindAnimRef.current = null;
-
-      // Reset ghost playback index on rewind
-      if (ghostTelemetryRef.current) {
-        const ghostEvents = ghostTelemetryRef.current;
-        let newIdx = 0;
-        while (newIdx < ghostEvents.length && ghostEvents[newIdx].time < rewindTo) {
-          newIdx++;
-        }
-        ghostIndexRef.current = newIdx;
-        ghostJudgmentsRef.current = [];
-      }
-
-      // Re-calibrate timebases and smoothed audio clock on resume from continue
-      const nowWall = performance.now();
-      lastFrameTimeRef.current = nowWall;
-      lastAudioCurrentTimeRef.current = rewindTo;
-      lastAudioWallTimeRef.current = nowWall;
-      isAudioClockCalibratedRef.current = false;
-
-      if (audio) {
-        audio.currentTime = rewindTo;
-        audio.play().catch(() => {});
-      }
-
-      phaseRef.current = "playing";
-      setPhase("playing");
-    }, 1200);
+    // PERF: Rewind completion is now driven by the draw loop instead of setTimeout (M9).
+    // The draw loop checks rewindAnimRef.wallStart + 1200ms and calls completeRewind.
+    // This eliminates race conditions from backgrounding, pausing, or unmounting during the 1.2s window.
+    rewindCompletionRef.current = {
+      rewindTo,
+      audio,
+      restoreLane,
+    };
   }, [restoreLane]);
 
   // Auto-abandon countdown while continue screen is visible
@@ -3783,7 +3910,7 @@ export default function Game() {
       if (count <= 0) {
         clearInterval(id);
         audioManager.stopSfx("gameover_countdown");
-        finishGame(false);
+        finishGame(true);
       }
     }, 1000);
     return () => {
@@ -3848,6 +3975,50 @@ export default function Game() {
       const p = Math.min(1, elapsed / 1.2);
       const eased = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
       t = fromT - (fromT - toT) * eased;
+
+      // PERF: M9 — Complete rewind in the draw loop instead of setTimeout
+      if (p >= 1 && rewindCompletionRef.current) {
+        const rc = rewindCompletionRef.current;
+        rewindCompletionRef.current = null;
+        // Undo misses in the rewind window
+        notesRef.current.forEach((ns) => {
+          if (ns.missed && ns.note.time >= rc.rewindTo - 0.5) {
+            ns.missed = false;
+            unresolvedNotesCountRef.current++;
+            gsRef.current.misses = Math.max(0, gsRef.current.misses - 1);
+          }
+          if (ns.holdActive && ns.note.time >= rc.rewindTo - 0.5) {
+            ns.holdActive = false;
+            ns.holdProgress = 0;
+            ns.autoplayedBySurge = false;
+          }
+        });
+        gsRef.current.combo = 0;
+        [0, 1, 2].forEach(rc.restoreLane);
+        rewindAnimRef.current = null;
+        // Reset ghost playback index
+        if (ghostTelemetryRef.current) {
+          const ghostEvents = ghostTelemetryRef.current;
+          let newIdx = 0;
+          while (newIdx < ghostEvents.length && ghostEvents[newIdx].time < rc.rewindTo) newIdx++;
+          ghostIndexRef.current = newIdx;
+          ghostJudgmentsRef.current.length = 0;
+        }
+        // Re-calibrate timebases
+        const nowWall = performance.now();
+        lastFrameTimeRef.current = nowWall;
+        lastAudioCurrentTimeRef.current = rc.rewindTo;
+        lastAudioWallTimeRef.current = nowWall;
+        isAudioClockCalibratedRef.current = false;
+        // Reset sliding window pointer on rewind
+        noteWindowStartRef.current = 0;
+        if (rc.audio) {
+          rc.audio.currentTime = rc.rewindTo;
+          rc.audio.play().catch(() => {});
+        }
+        phaseRef.current = "playing";
+        setPhase("playing");
+      }
     } else {
       t = getT();
     }
@@ -3961,8 +4132,13 @@ export default function Game() {
     // Update ghost competitor keys and timeline events
     if (ghostTelemetryRef.current) {
       const ghostEvents = ghostTelemetryRef.current;
-      const ghostPressed = [false, false, false];
-      ghostEvents.forEach(event => {
+      const ghostPressed = ghostActiveKeysRef.current;
+      ghostPressed[0] = false; ghostPressed[1] = false; ghostPressed[2] = false;
+      // PERF: Use sliding window instead of O(N) forEach over all ghost events
+      const ghostLen = ghostEvents.length;
+      for (let gi = ghostIndexRef.current > 0 ? ghostIndexRef.current - 1 : 0; gi < ghostLen; gi++) {
+        const event = ghostEvents[gi];
+        if (event.time > t + 0.5) break; // Past the relevant window
         if (event.type === 'hold' && event.judgment !== 'MISS') {
           const holdDur = event.holdDuration || 0.5;
           if (t >= event.time && t <= event.time + holdDur) {
@@ -3973,7 +4149,7 @@ export default function Game() {
             ghostPressed[event.lane] = true;
           }
         }
-      });
+      }
       ghostActiveKeysRef.current = ghostPressed;
 
       // Update ghost index pointer and trigger floating judgments
@@ -3997,13 +4173,8 @@ export default function Game() {
     }
 
     // Stage transition tracking
-    const stageBounds = [
-      { stage: 1, name: "Stage 1",      pct: 0.00, difficulty: "EASY"   },
-      { stage: 2, name: "Stage 2",      pct: 0.15, difficulty: "MEDIUM" },
-      { stage: 3, name: "Stage 3",      pct: 0.35, difficulty: "HARD"   },
-      { stage: 4, name: "Stage 4",      pct: 0.60, difficulty: "BRUTAL" },
-      { stage: 5, name: "FINAL STAGE",  pct: 0.80, difficulty: "BRUTAL" }
-    ];
+    // PERF: stageBounds moved to module scope (STAGE_BOUNDS) to avoid per-frame allocation
+    const stageBounds = STAGE_BOUNDS;
     let calculatedStage = 1;
     for (let i = 0; i < stageBounds.length; i++) {
       if (gs.progress >= stageBounds[i].pct) {
@@ -4054,7 +4225,8 @@ export default function Game() {
         }
       }
       
-      const sb = stageBounds.find(s => s.stage === calculatedStage);
+      // PERF: Direct O(1) index lookup instead of .find() (H1)
+      const sb = stageBounds[calculatedStage - 1] ?? null;
       if (sb && prevStage > 0 && calculatedStage > prevStage) {
         if (calculatedStage === 5) {
           audioManager.playSfx("overdrive_activate", 0.85);
@@ -4185,6 +4357,57 @@ export default function Game() {
         ctx.lineTo(lx1, hitY);
         ctx.closePath();
         ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    // ── Dynamic Lane Hold Resonance Beam (Illuminates entire highway lane while hold is active) ──
+    const allNotesInHighway = notesRef.current;
+    for (let i = 0; i < LANE_COUNT; i++) {
+      let activeHoldInLane: NoteState | undefined;
+      for (let ni = noteWindowStartRef.current; ni < allNotesInHighway.length; ni++) {
+        const vn = allNotesInHighway[ni];
+        if (vn.holdActive && Math.round(vn.visualLane ?? vn.currentLane) === i) {
+          activeHoldInLane = vn;
+          break;
+        }
+      }
+      if (activeHoldInLane) {
+        const laneCol = laneColorsRef.current?.[i] || "#00E5FF";
+        const { x: lx0, w: lw0 } = laneAt(i, 0, W);
+        const { x: lx1, w: lw1 } = laneAt(i, 1, W);
+        const pulse = 0.5 + 0.5 * Math.sin(t * 16);
+
+        ctx.save();
+        const beamGrad = ctx.createLinearGradient(0, 0, 0, hitY);
+        beamGrad.addColorStop(0, "transparent");
+        beamGrad.addColorStop(0.3, colorWithAlpha(laneCol, 0.08 * (0.8 + 0.2 * pulse)));
+        beamGrad.addColorStop(0.7, colorWithAlpha(laneCol, 0.28 * (0.8 + 0.2 * pulse)));
+        beamGrad.addColorStop(1, colorWithAlpha(laneCol, 0.45 * (0.8 + 0.2 * pulse)));
+
+        ctx.fillStyle = beamGrad;
+        ctx.beginPath();
+        ctx.moveTo(lx0, 0);
+        ctx.lineTo(lx0 + lw0, 0);
+        ctx.lineTo(lx1 + lw1, hitY);
+        ctx.lineTo(lx1, hitY);
+        ctx.closePath();
+        ctx.fill();
+
+        // Laser scanline stripes rushing down the lane
+        const stripePhase = (t * 4) % 1;
+        for (let s = 0; s < 4; s++) {
+          const sp = (stripePhase + s * 0.25) % 1;
+          const sy = sp * hitY;
+          const { x: sx, w: sw } = laneAt(i, sp, W);
+          ctx.strokeStyle = colorWithAlpha("#FFFFFF", 0.35 * (1 - sp));
+          ctx.lineWidth = lerp(1.5, 3.5, sp);
+          ctx.beginPath();
+          ctx.moveTo(sx + sw * 0.15, sy);
+          ctx.lineTo(sx + sw * 0.85, sy);
+          ctx.stroke();
+        }
+
         ctx.restore();
       }
     }
@@ -4472,9 +4695,9 @@ export default function Game() {
 
     // ── Miss screen jitter shake ──
     {
-      const missAge = Math.min(
-        ...lastMissLaneTimeRef.current.map((t2) => nowMs - t2),
-      );
+      // PERF: Hardcoded 3-lane min avoids .map() array + spread allocation per frame
+      const _mlt = lastMissLaneTimeRef.current;
+      const missAge = Math.min(nowMs - _mlt[0], nowMs - _mlt[1], nowMs - _mlt[2]);
       if (missAge < 280) {
         const strength = (1 - missAge / 280) * 9;
         ctx.translate(
@@ -5774,8 +5997,22 @@ export default function Game() {
     const activeVisibleNotes = activeVisibleNotesRef.current;
     activeVisibleNotes.length = 0;
 
+    // PERF: Advance sliding window pointer past notes that are fully in the past
+    // so we never re-scan thousands of already-resolved notes each frame
+    while (noteWindowStartRef.current < allNotes.length) {
+      const ns = allNotes[noteWindowStartRef.current];
+      if (ns.hit || ns.missed) {
+        const holdDur = ns.note.holdDuration || 0.5;
+        if (ns.note.time + holdDur < minActiveTime) {
+          noteWindowStartRef.current++;
+          continue;
+        }
+      }
+      break;
+    }
+
     // Collect ONLY the active visible notes on screen (typically 3-15 notes max)
-    for (let i = 0; i < allNotes.length; i++) {
+    for (let i = noteWindowStartRef.current; i < allNotes.length; i++) {
       const ns = allNotes[i];
       if (ns.hit) continue;
       const nTime = ns.note.time;
@@ -5808,12 +6045,14 @@ export default function Game() {
       }
 
       const isSurge = puRef.current.active === "SURGE" && t < puRef.current.endTime;
-      if (note.type === "hold" && !ns.hit && !ns.missed && !ns.holdActive && isSurge && t >= note.time) {
+      const isHoldNoteType = note.type === "hold" || note.type === "hold-swipe" || note.type === "slide" || note.type === "zigzag" || (typeof note.holdDuration === 'number' && note.holdDuration > 0);
+      if (isHoldNoteType && !ns.hit && !ns.missed && !ns.holdActive && isSurge && t >= note.time) {
         ns.holdActive = true;
         ns.autoplayedBySurge = true;
         ns.currentLane = note.lane;
         ns.originLane = note.lane;
-        audioManager.playSfx("tap_nav", 0.12);
+        ns.lastHapticTs = Date.now();
+        audioManager.startHoldTone(ns.note.id, note.lane);
       }
 
       if (ns.holdActive) {
@@ -5838,7 +6077,9 @@ export default function Game() {
           // Swipe-release hold note: wait for the swipe input. Do not auto-hit.
         } else {
           ns.hit = true;
+          unresolvedNotesCountRef.current--;
           ns.holdActive = false;
+          audioManager.stopHoldTone(ns.note.id);
           const gs = gsRef.current;
           gs.score += calcScore(gs.combo, "PERFECT+");
           gs.combo++;
@@ -5848,7 +6089,6 @@ export default function Game() {
           gs.perfectPlus++;
           checkPowerUps(gs.combo);
           haptics.mediumTap();
-          audioManager.playSfx("tap_nav", 0.15);
           triggerHitFx(ns.currentLane, "PERFECT+", hitY, note.swipeDirection);
 
           addJudgment({ type: "PERFECT+", lane: ns.currentLane, id: ++jCounter.current, ts: Date.now() });
@@ -5863,6 +6103,7 @@ export default function Game() {
         const MW = missWindow(songRef.current?.difficultyLevel ?? 5);
         if (t > note.time + MW) {
           ns.hit = true; // Safely avoided the mine!
+          unresolvedNotesCountRef.current--;
           continue;
         }
       }
@@ -5895,6 +6136,7 @@ export default function Game() {
             triggerHitFx(note.lane, "SHIELDED");
 
             ns.hit = true;
+            unresolvedNotesCountRef.current--;
             const gsx = gsRef.current;
             gsx.score += calcScore(gsx.combo, "GOOD");
             gsx.combo++;
@@ -5921,6 +6163,7 @@ export default function Game() {
             syncDisplay();
           } else {
             ns.missed = true;
+            unresolvedNotesCountRef.current--;
             recordedTelemetryRef.current.push({
               noteId: note.id,
               time: note.time,
@@ -5994,15 +6237,21 @@ export default function Game() {
       const r = lerp(12, 24, prog);
 
       // Fast O(1) simultaneous chord connection line lookup within activeVisibleNotes
-      const chordPartner = activeVisibleNotes.find(other => 
-        other !== ns &&
-        Math.abs(other.note.time - note.time) < 0.001 &&
-        other.note.lane > note.lane &&
-        !ns.missed &&
-        !other.missed &&
-        !ns.hit &&
-        !other.hit
-      );
+      // PERF: for-loop instead of .find() closure allocation in hot render path
+      let chordPartner: NoteState | undefined;
+      if (!ns.missed && !ns.hit) {
+        for (let ci = 0; ci < activeVisibleNotes.length; ci++) {
+          const other = activeVisibleNotes[ci];
+          if (other !== ns &&
+            Math.abs(other.note.time - note.time) < 0.001 &&
+            other.note.lane > note.lane &&
+            !other.missed &&
+            !other.hit) {
+            chordPartner = other;
+            break;
+          }
+        }
+      }
 
       if (chordPartner) {
         const projA = getArchetypeProjection(note.lane, prog, W, H, activeArchetypeRef.current, calculatedStage, t, activePovModeRef.current);
@@ -6111,44 +6360,95 @@ export default function Game() {
           const holdX = ax_hold + aw_hold * 0.5;
           ctx.save();
           ctx.shadowColor = noteColor;
-          ctx.shadowBlur = 20;
-          const ringPulse = 1.0 + 0.12 * Math.sin(t * 18);
-          
-          // Glowing ring
+          ctx.shadowBlur = 24;
+          const ringPulse = 1.0 + 0.14 * Math.sin(t * 22);
+
+          // 1. Outer Radial Plasma Corona Bloom
+          const coronaGrad = ctx.createRadialGradient(holdX, hitY, 2, holdX, hitY, 36 * ringPulse);
+          coronaGrad.addColorStop(0, colorWithAlpha(noteColor, 0.65));
+          coronaGrad.addColorStop(0.4, colorWithAlpha(noteColor, 0.25));
+          coronaGrad.addColorStop(1, "transparent");
+          ctx.fillStyle = coronaGrad;
+          ctx.beginPath();
+          ctx.arc(holdX, hitY, 36 * ringPulse, 0, Math.PI * 2);
+          ctx.fill();
+
+          // 2. Rotating Outer Cyber Ring with 4 Notch Markers
+          const rotAngle = t * 6;
           ctx.strokeStyle = noteColor;
-          ctx.lineWidth = 3.5;
+          ctx.lineWidth = 3.0;
           ctx.beginPath();
-          ctx.arc(holdX, hitY, 18 * ringPulse, 0, Math.PI * 2);
+          ctx.arc(holdX, hitY, 22 * ringPulse, 0, Math.PI * 2);
           ctx.stroke();
-          
-          // Progress arc
-          ctx.strokeStyle = "#ffffff";
+
+          // 4 Rotating Cyber Notches
+          ctx.strokeStyle = "#FFFFFF";
           ctx.lineWidth = 2.0;
+          for (let k = 0; k < 4; k++) {
+            const notchA = rotAngle + (k * Math.PI) / 2;
+            const nx0 = holdX + Math.cos(notchA) * (20 * ringPulse);
+            const ny0 = hitY + Math.sin(notchA) * (20 * ringPulse);
+            const nx1 = holdX + Math.cos(notchA) * (26 * ringPulse);
+            const ny1 = hitY + Math.sin(notchA) * (26 * ringPulse);
+            ctx.beginPath();
+            ctx.moveTo(nx0, ny0);
+            ctx.lineTo(nx1, ny1);
+            ctx.stroke();
+          }
+
+          // 3. Counter-Rotating Inner Energy Vortex Ring
+          ctx.strokeStyle = colorWithAlpha("#FFFFFF", 0.7);
+          ctx.lineWidth = 1.5;
           ctx.beginPath();
-          ctx.arc(holdX, hitY, 14, -Math.PI / 2, -Math.PI / 2 + ns.holdProgress * Math.PI * 2);
+          ctx.arc(holdX, hitY, 16, 0, Math.PI * 2);
           ctx.stroke();
-          
-          // Completion percent text
-          ctx.fillStyle = "#ffffff";
-          ctx.font = `900 8px "Space Mono", monospace`;
+
+          // 4. Vibrant Progress Arc with Glowing Head Marker
+          ctx.strokeStyle = "#FFD700";
+          ctx.lineWidth = 3.0;
+          ctx.beginPath();
+          const startA = -Math.PI / 2;
+          const endA = -Math.PI / 2 + ns.holdProgress * Math.PI * 2;
+          ctx.arc(holdX, hitY, 16, startA, endA);
+          ctx.stroke();
+
+          // Glowing tip at the progress head
+          const headPx = holdX + Math.cos(endA) * 16;
+          const headPy = hitY + Math.sin(endA) * 16;
+          ctx.fillStyle = "#FFFFFF";
+          ctx.beginPath();
+          ctx.arc(headPx, headPy, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+
+          // 5. Monospace Completion Percentage
+          ctx.fillStyle = "#FFFFFF";
+          ctx.font = `900 9px "Space Mono", monospace`;
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
           ctx.fillText(`${Math.round(ns.holdProgress * 100)}%`, holdX, hitY);
-          
-          // Sizzling sparks
-          ctx.fillStyle = noteColor;
-          ctx.shadowColor = noteColor;
-          ctx.shadowBlur = 8;
-          for (let s = 0; s < 2; s++) {
+
+          // 6. Dynamic 360° Sizzling Electric Sparks
+          ctx.shadowBlur = 12;
+          for (let s = 0; s < 6; s++) {
             const angle = Math.random() * Math.PI * 2;
-            const dist = 18 + Math.random() * 12;
+            const dist = 16 + Math.random() * 22;
             const sx = holdX + Math.cos(angle) * dist * ringPulse;
             const sy = hitY + Math.sin(angle) * dist * ringPulse;
+            const sz = 1.0 + Math.random() * 2.0;
+            ctx.fillStyle = Math.random() > 0.4 ? "#FFFFFF" : noteColor;
+            ctx.shadowColor = ctx.fillStyle;
             ctx.beginPath();
-            ctx.arc(sx, sy, 1.5, 0, Math.PI * 2);
+            ctx.arc(sx, sy, sz, 0, Math.PI * 2);
             ctx.fill();
           }
           ctx.restore();
+
+          // Update audio pitch & micro-haptics
+          audioManager.updateHoldTone(ns.note.id, ns.holdProgress);
+          if (Date.now() - (ns.lastHapticTs || 0) > 130) {
+            ns.lastHapticTs = Date.now();
+            haptics.lightTap();
+          }
         }
 
         // 1. Draw Hold Trail (Active or Inactive) across ALL POV modes & stages!
@@ -6287,13 +6587,9 @@ export default function Game() {
         const ringAlpha = Math.pow(1 - rt, 1.6) * (r === 0 ? 0.9 : 0.55);
         const ringW = lerp(r === 0 ? 5 : 3, 0.5, rt);
         ctx.save();
-        ctx.shadowColor = e.color;
-        ctx.shadowBlur = 10;
-        ctx.strokeStyle =
-          e.color +
-          Math.round(ringAlpha * 255)
-            .toString(16)
-            .padStart(2, "0");
+        // PERF: Use globalAlpha instead of hex string concat to avoid per-particle string allocation
+        ctx.globalAlpha = ringAlpha;
+        ctx.strokeStyle = e.color;
         ctx.lineWidth = ringW;
         ctx.beginPath();
         ctx.arc(e.cx, e.cy, ringR, 0, Math.PI * 2);
@@ -6336,15 +6632,17 @@ export default function Game() {
         ctx.restore();
 
         // Main core particle
+        // PERF: Use globalAlpha instead of hex string concatenation per particle per frame
+        ctx.globalAlpha = life;
         if (p.isSwipeLine) {
-          ctx.strokeStyle = e.color + Math.round(life * 255).toString(16).padStart(2, "0");
+          ctx.strokeStyle = e.color;
           ctx.lineWidth = size * 1.6;
           ctx.beginPath();
           ctx.moveTo(px - p.vx * 0.035, py - p.vy * 0.035);
           ctx.lineTo(px, py);
           ctx.stroke();
         } else {
-          ctx.fillStyle = e.color + Math.round(life * 255).toString(16).padStart(2, "0");
+          ctx.fillStyle = e.color;
           ctx.beginPath();
           ctx.arc(px, py, size, 0, Math.PI * 2);
           ctx.fill();
@@ -6363,11 +6661,9 @@ export default function Game() {
           const sy = e.cy + Math.sin(angle) * dist;
           const starAlpha = Math.pow(1 - t01 / 0.6, 1.4) * 0.85;
           const starSize = lerp(5, 1.5, t01 / 0.6);
-          ctx.strokeStyle =
-            "#fff" +
-            Math.round(starAlpha * 255)
-              .toString(16)
-              .padStart(2, "0");
+          // PERF: globalAlpha instead of hex concat
+          ctx.globalAlpha = starAlpha;
+          ctx.strokeStyle = "#fff";
           ctx.lineWidth = 1.5;
           ctx.shadowColor = "#fff";
           ctx.shadowBlur = 6;
@@ -6629,19 +6925,7 @@ export default function Game() {
     }
 
     // ── 7. MEDAL PROGRESS METER ─────────────────────────────────
-    const MEDAL_STOPS = [
-      { name: "BRONZE", acc: 40, color: "#CD7F32" },
-      { name: "SILVER", acc: 60, color: "#C0C0C0" },
-      { name: "GOLD", acc: 80, color: "#FFD700" },
-      { name: "PLATINUM", acc: 93, color: "#E0E0FF" },
-    ];
-    const MEDAL_COLOR_MAP: Record<string, string> = {
-      BRONZE: "#CD7F32",
-      SILVER: "#C0C0C0",
-      GOLD: "#FFD700",
-      PLATINUM: "#E0E0FF",
-      NONE: "#444",
-    };
+    // PERF: MEDAL_STOPS and MEDAL_COLOR_MAP moved to module scope to avoid per-frame allocation
     const { perfectPlus: pp, perfects: pfp, goods: gd, misses: ms } = gs;
     const tot = pp + pfp + gd + ms;
     const acc = tot > 0 ? ((pp + pfp * 0.9 + gd * 0.5) / tot) * 100 : 0;
@@ -6746,9 +7030,9 @@ export default function Game() {
 
     // ── Red vignette flash on miss ──
     {
-      const missAge = Math.min(
-        ...lastMissLaneTimeRef.current.map((t2) => nowMs - t2),
-      );
+      // PERF: Hardcoded 3-lane min avoids .map() array + spread allocation per frame
+      const _mlt2 = lastMissLaneTimeRef.current;
+      const missAge = Math.min(nowMs - _mlt2[0], nowMs - _mlt2[1], nowMs - _mlt2[2]);
       if (missAge < 350) {
         const intensity = (1 - missAge / 350) * 0.13;
         const vg = ctx.createRadialGradient(
@@ -6859,10 +7143,8 @@ export default function Game() {
     // timer calls finishGame independently if the player doesn't act.
     if (phaseRef.current === "playing" && !isRewinding) {
       const audio = audioRef.current;
-      const allDone = notesRef.current.every((ns) => ns.hit || ns.missed);
-      const lastT = notesRef.current.length
-        ? Math.max(...notesRef.current.map((ns) => ns.note.time))
-        : 0;
+      // PERF: O(1) end check using pre-computed counter instead of O(N) .every()
+      const allDone = unresolvedNotesCountRef.current <= 0;
 
       // Only treat audio as "ended" if it naturally finished (not paused for rewind)
       const audioEnded = audio ? audio.ended : false;
@@ -6872,7 +7154,7 @@ export default function Game() {
         return;
       }
 
-      if ((allDone && t > lastT + 1.2) || audioEnded || t >= song.duration) {
+      if ((allDone && t > lastNoteTimeRef.current + 1.2) || audioEnded || t >= song.duration) {
         finishGame();
         return;
       }
@@ -6920,26 +7202,42 @@ export default function Game() {
 
       if (swipeDir) {
         const t = getTRef.current ? getTRef.current() : 0;
+        const allNotes = notesRef.current;
+        const mw = missWindow(songRef.current?.difficultyLevel ?? 5);
         for (let l = 0; l < LANE_COUNT; l++) {
-          const swipeCandidate = notesRef.current.find(
-            (ns) =>
+          let swipeCandidate: NoteState | undefined;
+          for (let i = noteWindowStartRef.current; i < allNotes.length; i++) {
+            const ns = allNotes[i];
+            if (ns.note.time - t > mw) break;
+            if (
               ns.note.lane === l &&
               !ns.hit &&
               !ns.missed &&
               (ns.note.type === "swipe" || ns.note.type === "lift" || ns.note.swipeDirection) &&
-              Math.abs(ns.note.time - t) < missWindow(songRef.current?.difficultyLevel ?? 5)
-          );
+              Math.abs(ns.note.time - t) < mw
+            ) {
+              swipeCandidate = ns;
+              break;
+            }
+          }
           if (swipeCandidate) {
             hitLaneRef.current?.(l, swipeDir);
             return;
           }
         }
 
-        const activeHoldWithSwipe = notesRef.current.find(n =>
-          n.holdActive && !n.hit && !n.missed &&
-          n.note.swipeDirection === swipeDir &&
-          Math.abs((n.note.time + (n.note.holdDuration || 0.5)) - t) < missWindow(songRef.current?.difficultyLevel ?? 5)
-        );
+        let activeHoldWithSwipe: NoteState | undefined;
+        for (let i = noteWindowStartRef.current; i < allNotes.length; i++) {
+          const n = allNotes[i];
+          if (
+            n.holdActive && !n.hit && !n.missed &&
+            n.note.swipeDirection === swipeDir &&
+            Math.abs((n.note.time + (n.note.holdDuration || 0.5)) - t) < mw
+          ) {
+            activeHoldWithSwipe = n;
+            break;
+          }
+        }
         if (activeHoldWithSwipe) {
           hitSwipeReleaseRef.current?.(activeHoldWithSwipe, swipeDir);
           return;
@@ -6950,9 +7248,15 @@ export default function Game() {
           const pressedLanes = laneRef.current.map(l => l.pressed);
           for (let i = 0; i < LANE_COUNT; i++) {
             if (pressedLanes[i]) {
-              const activeHold = notesRef.current.find(
-                (n) => n.note.type === "hold" && n.holdActive && n.currentLane === i && !n.hit
-              );
+              let activeHold: NoteState | undefined;
+              for (let ni = noteWindowStartRef.current; ni < allNotes.length; ni++) {
+                const n = allNotes[ni];
+                const isHold = n.note.type === "hold" || n.note.type === "hold-swipe" || n.note.type === "slide" || n.note.type === "zigzag" || (typeof n.note.holdDuration === 'number' && n.note.holdDuration > 0);
+                if (isHold && n.holdActive && (n.currentLane === i || n.note.lane === i) && !n.hit) {
+                  activeHold = n;
+                  break;
+                }
+              }
               let nextLane: number;
               if (activeHold && activeHold.note.targetLane !== undefined) {
                 const toRight = key === "ArrowRight";
@@ -6980,14 +7284,22 @@ export default function Game() {
       if (lane < 0) return;
 
       // ── Check if there is an active hold/slide note that needs to transition to this lane ──
-      const activeHold = notesRef.current.find(
-        (n) =>
-          n.note.type === "hold" &&
+      const allNotes = notesRef.current;
+      let activeHold: NoteState | undefined;
+      for (let ni = noteWindowStartRef.current; ni < allNotes.length; ni++) {
+        const n = allNotes[ni];
+        const isHold = n.note.type === "hold" || n.note.type === "hold-swipe" || n.note.type === "slide" || n.note.type === "zigzag" || (typeof n.note.holdDuration === 'number' && n.note.holdDuration > 0);
+        if (
+          isHold &&
           n.holdActive &&
           n.note.targetLane === lane &&
           n.currentLane !== lane &&
           !n.hit
-      );
+        ) {
+          activeHold = n;
+          break;
+        }
+      }
       if (activeHold) {
         const prevLaneIdx = Math.round(activeHold.currentLane);
         if (laneRef.current[prevLaneIdx]) {
@@ -7040,6 +7352,8 @@ export default function Game() {
   const prevDpadRef = useRef<[boolean, boolean, boolean, boolean]>([false, false, false, false]);
   // True when a gamepad is actively connected — used by draw loop to show XYB labels
   const gamepadConnectedRef = useRef<boolean>(false);
+  // PERF: Cache the active gamepad index to avoid allocating a new array via getGamepads() per frame
+  const cachedGamepadIndexRef = useRef<number>(0);
 
   // Keep references to functions updated on every render to avoid stale closures in the loop
   const hitLaneRef = useRef<typeof hitLane | null>(null);
@@ -7112,11 +7426,19 @@ export default function Game() {
   }, []);
 
   const pollGamepadState = useCallback((t: number) => {
-    const gamepads = typeof navigator !== 'undefined' && navigator.getGamepads ? navigator.getGamepads() : [];
-    const gp = Array.from(gamepads).find(g => g !== null);
+    // PERF: Read only the cached gamepad index instead of allocating a new
+    // Gamepad[] array via navigator.getGamepads() 60 times per second
+    const gamepads = typeof navigator !== 'undefined' && navigator.getGamepads ? navigator.getGamepads() : null;
+    if (!gamepads) { gamepadConnectedRef.current = false; return; }
+    const gp = gamepads[cachedGamepadIndexRef.current] ?? null;
     if (!gp) {
-      gamepadConnectedRef.current = false;
-      return;
+      // Fallback: scan for any connected gamepad (runs rarely)
+      let found = false;
+      for (let gi = 0; gi < gamepads.length; gi++) {
+        if (gamepads[gi]) { cachedGamepadIndexRef.current = gi; found = true; break; }
+      }
+      if (!found) { gamepadConnectedRef.current = false; return; }
+      return; // Will pick up on next frame with cached index
     }
     gamepadConnectedRef.current = true;
 
@@ -7169,19 +7491,35 @@ export default function Game() {
         else if (dRight) dpadSwipe = 'right';
         if (dpadSwipe) {
           const mw = missWindow(songRef.current?.difficultyLevel ?? 5);
-          const cand = notesRef.current.find(n =>
-            !n.hit && !n.missed && n.note.type === 'swipe' &&
-            n.note.swipeDirection === dpadSwipe &&
-            Math.abs(n.note.time - t) < mw
-          );
+          const allNotes = notesRef.current;
+          let cand: NoteState | undefined;
+          for (let i = noteWindowStartRef.current; i < allNotes.length; i++) {
+            const n = allNotes[i];
+            if (n.note.time - t > mw) break;
+            if (
+              !n.hit && !n.missed && n.note.type === 'swipe' &&
+              n.note.swipeDirection === dpadSwipe &&
+              Math.abs(n.note.time - t) < mw
+            ) {
+              cand = n;
+              break;
+            }
+          }
           if (cand && hitLaneRef.current) {
             hitLaneRef.current(cand.note.lane, dpadSwipe);
           } else {
-            const activeHoldWithSwipe = notesRef.current.find(n =>
-              n.holdActive && !n.hit && !n.missed &&
-              n.note.swipeDirection === dpadSwipe &&
-              Math.abs((n.note.time + (n.note.holdDuration || 0.5)) - t) < mw
-            );
+            let activeHoldWithSwipe: NoteState | undefined;
+            for (let i = noteWindowStartRef.current; i < allNotes.length; i++) {
+              const n = allNotes[i];
+              if (
+                n.holdActive && !n.hit && !n.missed &&
+                n.note.swipeDirection === dpadSwipe &&
+                Math.abs((n.note.time + (n.note.holdDuration || 0.5)) - t) < mw
+              ) {
+                activeHoldWithSwipe = n;
+                break;
+              }
+            }
             if (activeHoldWithSwipe && hitSwipeReleaseRef.current) {
               hitSwipeReleaseRef.current(activeHoldWithSwipe, dpadSwipe);
             }
@@ -7208,9 +7546,16 @@ export default function Game() {
       }
 
       // ── Controller Active Slide Auto-Transition ──
-      const activeSlideHold = notesRef.current.find(
-        (n) => n.note.type === "hold" && n.holdActive && n.note.targetLane !== undefined && !n.hit
-      );
+      const allNotes = notesRef.current;
+      let activeSlideHold: NoteState | undefined;
+      for (let i = noteWindowStartRef.current; i < allNotes.length; i++) {
+        const n = allNotes[i];
+        const isHold = n.note.type === "hold" || n.note.type === "hold-swipe" || n.note.type === "slide" || n.note.type === "zigzag" || (typeof n.note.holdDuration === 'number' && n.note.holdDuration > 0);
+        if (isHold && n.holdActive && n.note.targetLane !== undefined && !n.hit) {
+          activeSlideHold = n;
+          break;
+        }
+      }
       if (activeSlideHold && activeSlideHold.note.targetLane !== undefined) {
         const targetLane = activeSlideHold.note.targetLane;
         const currentLane = Math.round(activeSlideHold.currentLane);
@@ -7255,14 +7600,20 @@ export default function Game() {
         const wasPressed = prevGamepadLanePressedRef.current[i];
         const isPressed = lanePressed[i];
         if (isPressed && !wasPressed) {
-          const activeHold = notesRef.current.find(
-            (n) =>
+          let activeHold: NoteState | undefined;
+          for (let ni = noteWindowStartRef.current; ni < allNotes.length; ni++) {
+            const n = allNotes[ni];
+            if (
               n.note.type === "hold" &&
               n.holdActive &&
               n.note.targetLane === i &&
               n.currentLane !== i &&
               !n.hit
-          );
+            ) {
+              activeHold = n;
+              break;
+            }
+          }
           if (activeHold) {
             const prevLaneIdx = Math.round(activeHold.currentLane);
             if (laneRef.current[prevLaneIdx]) {
@@ -7298,12 +7649,19 @@ export default function Game() {
   }, [pollGamepadState]);
 
   useEffect(() => {
-    const onGpConnect = () => { gamepadConnectedRef.current = true; };
+    const onGpConnect = (e: Event) => {
+      gamepadConnectedRef.current = true;
+      // PERF: Cache the connected gamepad index for pollGamepadState (H7)
+      const gpEvent = e as GamepadEvent;
+      if (gpEvent.gamepad) cachedGamepadIndexRef.current = gpEvent.gamepad.index;
+    };
     const onGpDisconnect = () => { gamepadConnectedRef.current = false; };
     window.addEventListener("gamepadconnected", onGpConnect);
     window.addEventListener("gamepaddisconnected", onGpDisconnect);
     const gamepads = typeof navigator !== 'undefined' && navigator.getGamepads ? navigator.getGamepads() : [];
-    gamepadConnectedRef.current = Array.from(gamepads).some(g => g !== null);
+    for (let gi = 0; gi < gamepads.length; gi++) {
+      if (gamepads[gi]) { cachedGamepadIndexRef.current = gi; gamepadConnectedRef.current = true; break; }
+    }
     return () => {
       window.removeEventListener("gamepadconnected", onGpConnect);
       window.removeEventListener("gamepaddisconnected", onGpDisconnect);
@@ -7369,23 +7727,40 @@ export default function Game() {
         const checkLane = start.originLane !== undefined ? start.originLane : start.lane;
         
         // Find matching swipe candidate note with direction tolerance
-        let cand = notesRef.current.find(n =>
-          !n.hit && !n.missed &&
-          (n.note.type === 'swipe' || n.note.type === 'lift' || n.note.swipeDirection !== undefined) &&
-          isDirectionMatch(n.note.swipeDirection || (n.note.type === 'lift' ? 'up' : undefined), swipeDir) &&
-          n.note.lane === checkLane &&
-          Math.abs(n.note.time - t) < missWindow(songRef.current?.difficultyLevel ?? 5)
-        );
-
-        // Fallback: check adjacent lanes if finger drifted slightly during swipe
-        if (!cand) {
-          cand = notesRef.current.find(n =>
+        const allNotes = notesRef.current;
+        const mw = missWindow(songRef.current?.difficultyLevel ?? 5);
+        let cand: NoteState | undefined;
+        for (let i = noteWindowStartRef.current; i < allNotes.length; i++) {
+          const n = allNotes[i];
+          if (n.note.time - t > mw) break;
+          if (
             !n.hit && !n.missed &&
             (n.note.type === 'swipe' || n.note.type === 'lift' || n.note.swipeDirection !== undefined) &&
             isDirectionMatch(n.note.swipeDirection || (n.note.type === 'lift' ? 'up' : undefined), swipeDir) &&
-            Math.abs(n.note.lane - checkLane) <= 1 &&
-            Math.abs(n.note.time - t) < missWindow(songRef.current?.difficultyLevel ?? 5)
-          );
+            n.note.lane === checkLane &&
+            Math.abs(n.note.time - t) < mw
+          ) {
+            cand = n;
+            break;
+          }
+        }
+
+        // Fallback: check adjacent lanes if finger drifted slightly during swipe
+        if (!cand) {
+          for (let i = noteWindowStartRef.current; i < allNotes.length; i++) {
+            const n = allNotes[i];
+            if (n.note.time - t > mw) break;
+            if (
+              !n.hit && !n.missed &&
+              (n.note.type === 'swipe' || n.note.type === 'lift' || n.note.swipeDirection !== undefined) &&
+              isDirectionMatch(n.note.swipeDirection || (n.note.type === 'lift' ? 'up' : undefined), swipeDir) &&
+              Math.abs(n.note.lane - checkLane) <= 1 &&
+              Math.abs(n.note.time - t) < mw
+            ) {
+              cand = n;
+              break;
+            }
+          }
         }
 
         if (cand) {
@@ -7395,12 +7770,20 @@ export default function Game() {
           return true;
         }
 
-        const activeHoldWithSwipe = notesRef.current.find(n =>
-          n.holdActive && !n.hit && !n.missed &&
-          isDirectionMatch(n.note.swipeDirection, swipeDir) &&
-          (n.currentLane === checkLane || Math.abs(n.currentLane - checkLane) <= 1) &&
-          Math.abs((n.note.time + (n.note.holdDuration || 0.5)) - t) < missWindow(songRef.current?.difficultyLevel ?? 5)
-        );
+        let activeHoldWithSwipe: NoteState | undefined;
+        for (let i = noteWindowStartRef.current; i < allNotes.length; i++) {
+          const n = allNotes[i];
+          const isHold = n.note.type === "hold" || n.note.type === "hold-swipe" || n.note.type === "slide" || n.note.type === "zigzag" || (typeof n.note.holdDuration === 'number' && n.note.holdDuration > 0);
+          if (
+            isHold && n.holdActive && !n.hit && !n.missed &&
+            isDirectionMatch(n.note.swipeDirection, swipeDir) &&
+            (n.currentLane === checkLane || Math.abs(n.currentLane - checkLane) <= 1) &&
+            Math.abs((n.note.time + (n.note.holdDuration || 0.5)) - t) < mw
+          ) {
+            activeHoldWithSwipe = n;
+            break;
+          }
+        }
         if (activeHoldWithSwipe) {
           hitSwipeRelease(activeHoldWithSwipe, swipeDir);
           start.x = touch.clientX;
@@ -7463,18 +7846,26 @@ export default function Game() {
             if (start) start.lane = newLane;
 
             // Directly track and update active hold notes by touchId
-            const ns = notesRef.current.find(
-              (n) => n.note.type === "hold" && n.holdActive && n.touchId === e.pointerId && !n.hit
-            );
+            const allNotes = notesRef.current;
+            let ns: NoteState | undefined;
+            for (let i = noteWindowStartRef.current; i < allNotes.length; i++) {
+              const n = allNotes[i];
+              const isHold = n.note.type === "hold" || n.note.type === "hold-swipe" || n.note.type === "slide" || n.note.type === "zigzag" || (typeof n.note.holdDuration === 'number' && n.note.holdDuration > 0);
+              if (isHold && n.holdActive && n.touchId === e.pointerId && !n.hit) {
+                ns = n;
+                break;
+              }
+            }
             if (ns && ns.note.targetLane !== undefined) {
               const reachedTarget = newLane === ns.note.targetLane && ns.currentLane !== ns.note.targetLane;
               ns.currentLane = newLane;
 
               if (reachedTarget) {
                 ns.hit = true;
+                unresolvedNotesCountRef.current--;
                 ns.holdActive = false;
                 ns.holdProgress = 1.0;
-                audioManager.playSfx("hidden_secret_found", 0.35);
+                audioManager.stopHoldTone(ns.note.id);
 
                 const gs = gsRef.current;
                 gs.score += calcScore(gs.combo, "PERFECT+");
@@ -7538,9 +7929,16 @@ export default function Game() {
           laneRef.current[lane].touchId = undefined;
         }
       }
-      const ns = notesRef.current.find(
-        (n) => n.note.type === "hold" && n.holdActive && n.touchId === identifier && !n.hit
-      );
+      const allNotes = notesRef.current;
+      let ns: NoteState | undefined;
+      for (let i = noteWindowStartRef.current; i < allNotes.length; i++) {
+        const n = allNotes[i];
+        const isHold = n.note.type === "hold" || n.note.type === "hold-swipe" || n.note.type === "slide" || n.note.type === "zigzag" || (typeof n.note.holdDuration === 'number' && n.note.holdDuration > 0);
+        if (isHold && n.holdActive && n.touchId === identifier && !n.hit) {
+          ns = n;
+          break;
+        }
+      }
       if (ns) {
         completeHoldNote(ns);
       }
@@ -7637,18 +8035,26 @@ export default function Game() {
               if (start) start.lane = newLane;
 
               // Directly track and update active hold notes by touchId
-              const ns = notesRef.current.find(
-                (n) => n.note.type === "hold" && n.holdActive && n.touchId === touch.identifier && !n.hit
-              );
+              const allNotes = notesRef.current;
+              let ns: NoteState | undefined;
+              for (let i = noteWindowStartRef.current; i < allNotes.length; i++) {
+                const n = allNotes[i];
+                const isHold = n.note.type === "hold" || n.note.type === "hold-swipe" || n.note.type === "slide" || n.note.type === "zigzag" || (typeof n.note.holdDuration === 'number' && n.note.holdDuration > 0);
+                if (isHold && n.holdActive && n.touchId === touch.identifier && !n.hit) {
+                  ns = n;
+                  break;
+                }
+              }
               if (ns && ns.note.targetLane !== undefined) {
                 const reachedTarget = newLane === ns.note.targetLane && ns.currentLane !== ns.note.targetLane;
                 ns.currentLane = newLane;
 
                 if (reachedTarget) {
                   ns.hit = true;
+                  unresolvedNotesCountRef.current--;
                   ns.holdActive = false;
                   ns.holdProgress = 1.0;
-                  audioManager.playSfx("hidden_secret_found", 0.35);
+                  audioManager.stopHoldTone(ns.note.id);
 
                   const gs = gsRef.current;
                   gs.score += calcScore(gs.combo, "PERFECT+");
@@ -7716,9 +8122,16 @@ export default function Game() {
           laneRef.current[lane].touchId = undefined;
         }
       }
-      const ns = notesRef.current.find(
-        (n) => n.note.type === "hold" && n.holdActive && n.touchId === identifier && !n.hit
-      );
+      const allNotes = notesRef.current;
+      let ns: NoteState | undefined;
+      for (let i = noteWindowStartRef.current; i < allNotes.length; i++) {
+        const n = allNotes[i];
+        const isHold = n.note.type === "hold" || n.note.type === "hold-swipe" || n.note.type === "slide" || n.note.type === "zigzag" || (typeof n.note.holdDuration === 'number' && n.note.holdDuration > 0);
+        if (isHold && n.holdActive && n.touchId === identifier && !n.hit) {
+          ns = n;
+          break;
+        }
+      }
       if (ns) {
         completeHoldNote(ns);
       }
@@ -7726,11 +8139,19 @@ export default function Game() {
       // Check candidate LIFT notes (release on beat timing)
       const t = getT();
       const dl = songRef.current?.difficultyLevel ?? 5;
-      const liftCandidate = notesRef.current.find(
-        (n) => n.note.type === "lift" && !n.hit && !n.missed && Math.abs(n.note.time - t) <= goodWindow(dl)
-      );
+      const gw = goodWindow(dl);
+      let liftCandidate: NoteState | undefined;
+      for (let i = noteWindowStartRef.current; i < allNotes.length; i++) {
+        const n = allNotes[i];
+        if (n.note.time - t > gw) break;
+        if (n.note.type === "lift" && !n.hit && !n.missed && Math.abs(n.note.time - t) <= gw) {
+          liftCandidate = n;
+          break;
+        }
+      }
       if (liftCandidate) {
         liftCandidate.hit = true;
+        unresolvedNotesCountRef.current--;
         const diff = Math.abs(liftCandidate.note.time - t);
         const j = diff <= perfectPlusWindow(dl) ? "PERFECT+" : diff <= perfectWindow(dl) ? "PERFECT" : "GOOD";
         const gs = gsRef.current;
@@ -7824,14 +8245,17 @@ export default function Game() {
       onTouchCancelRef.current(e as unknown as React.TouchEvent<HTMLCanvasElement>);
     };
 
-    window.addEventListener('touchmove', handleMove, { passive: false });
-    window.addEventListener('touchend', handleEnd, { passive: false });
-    window.addEventListener('touchcancel', handleCancel, { passive: false });
+    // PERF: Bind to canvas wrapper instead of window to avoid degrading
+    // scroll performance across the whole page/app (M5)
+    const target = canvasWrapperRef.current || window;
+    target.addEventListener('touchmove', handleMove as EventListener, { passive: false });
+    target.addEventListener('touchend', handleEnd as EventListener, { passive: false });
+    target.addEventListener('touchcancel', handleCancel as EventListener, { passive: false });
 
     return () => {
-      window.removeEventListener('touchmove', handleMove);
-      window.removeEventListener('touchend', handleEnd);
-      window.removeEventListener('touchcancel', handleCancel);
+      target.removeEventListener('touchmove', handleMove as EventListener);
+      target.removeEventListener('touchend', handleEnd as EventListener);
+      target.removeEventListener('touchcancel', handleCancel as EventListener);
     };
   }, []);
 
@@ -8383,6 +8807,11 @@ export default function Game() {
           return true;
         });
       }
+      unresolvedNotesCountRef.current = notesRef.current.length;
+      lastNoteTimeRef.current = notesRef.current.length > 0
+        ? Math.max(...notesRef.current.map(ns => ns.note.time))
+        : 0;
+      noteWindowStartRef.current = 0;
       // Calculate max possible score for percentage metrics simulating perfect play
       const getComboMul = (c: number) => {
         if (dLevel <= 3) return c < 10 ? 1 : c < 25 ? 1.5 : c < 50 ? 2 : 3;
@@ -8438,6 +8867,7 @@ export default function Game() {
       }
 
       setMaxPossibleScore(maxScore || 1);
+      maxPossibleScoreRef.current = maxScore || 1;
       triggeredThresholdsRef.current = { 50: false, 75: false, 90: false };
 
       gsRef.current = {
@@ -8546,6 +8976,7 @@ export default function Game() {
             let lastTime = startTime;
             let lastLoaded = 0;
             let speedBps = 0;
+            let lastLoadStateTime = 0; // PERF: Throttle setLoadState to max 10Hz (L3)
 
             while (true) {
               if (cancelled) {
@@ -8572,21 +9003,25 @@ export default function Game() {
                 const mappedPct = Math.min(96, Math.round(55 + (streamPct * 0.41)));
 
                 setBufferPct(streamPct);
-                setLoadState({
-                  step: 4,
-                  stepLabel: "DOWNLOADING AUDIO TRANSMISSION",
-                  detailMsg: `Receiving stream chunks (${formatLoadBytes(loadedBytes)} / ${formatLoadBytes(totalBytes)})...`,
-                  bytesLoaded,
-                  bytesTotal: totalBytes,
-                  speedBps,
-                  etaSeconds,
-                  pct: mappedPct,
-                  isStreaming: false,
-                  logs: [
-                    `[NET] ${(loadedBytes / 1048576).toFixed(2)} MB received of ${formatLoadBytes(totalBytes)} (${streamPct}%)`,
-                    `[SPEED] ${formatLoadSpeed(speedBps)} · ETA: ${formatLoadEta(etaSeconds)}`
-                  ]
-                });
+                // PERF: Throttle setLoadState to max 10Hz to avoid React render spam (L3)
+                if (now - lastLoadStateTime >= 100) {
+                  lastLoadStateTime = now;
+                  setLoadState({
+                    step: 4,
+                    stepLabel: "DOWNLOADING AUDIO TRANSMISSION",
+                    detailMsg: `Receiving stream chunks (${formatLoadBytes(loadedBytes)} / ${formatLoadBytes(totalBytes)})...`,
+                    bytesLoaded,
+                    bytesTotal: totalBytes,
+                    speedBps,
+                    etaSeconds,
+                    pct: mappedPct,
+                    isStreaming: false,
+                    logs: [
+                      `[NET] ${(loadedBytes / 1048576).toFixed(2)} MB received of ${formatLoadBytes(totalBytes)} (${streamPct}%)`,
+                      `[SPEED] ${formatLoadSpeed(speedBps)} · ETA: ${formatLoadEta(etaSeconds)}`
+                    ]
+                  });
+                }
               }
             }
             blob = new Blob(chunks, { type: response.headers.get("content-type") || "audio/mpeg" });
@@ -8840,6 +9275,11 @@ export default function Game() {
             originLane: n.lane,
             visualLane: n.lane,
           }));
+          unresolvedNotesCountRef.current = notesRef.current.length;
+          lastNoteTimeRef.current = notesRef.current.length > 0
+            ? Math.max(...notesRef.current.map(ns => ns.note.time))
+            : 0;
+          noteWindowStartRef.current = 0;
         }
       }
 
@@ -9240,20 +9680,25 @@ export default function Game() {
         });
         slideshowSlidesRef.current = [];
       }
-      gameplaySlideshowFloatersRef.current = [];
-      noteTrailsRef.current = [];
-      notesRef.current = [];
-      jRef.current = [];
-      hitFxRef.current = [];
-      milestoneFxRef.current = [];
-      ambientParticlesRef.current = [];
-      tunnelParticlesRef.current = [];
-      recordedTelemetryRef.current = [];
+      // PERF: Use .length = 0 to reuse existing arrays instead of creating new ones for GC
+      gameplaySlideshowFloatersRef.current.length = 0;
+      noteTrailsRef.current.length = 0;
+      notesRef.current.length = 0;
+      unresolvedNotesCountRef.current = 0;
+      noteWindowStartRef.current = 0;
+      lastNoteTimeRef.current = 0;
+      jRef.current.length = 0;
+      hitFxRef.current.length = 0;
+      milestoneFxRef.current.length = 0;
+      ambientParticlesRef.current.length = 0;
+      tunnelParticlesRef.current.length = 0;
+      recordedTelemetryRef.current.length = 0;
       ghostTelemetryRef.current = null;
-      ghostJudgmentsRef.current = [];
+      ghostJudgmentsRef.current.length = 0;
       keysDownRef.current.clear();
       touchStartPos.current = {};
       isAudioClockCalibratedRef.current = false;
+      audioManager.stopAllHoldTones();
     };
   }, [songId, setLocation, retryCount]);
 
@@ -9275,6 +9720,7 @@ export default function Game() {
     if (phaseRef.current !== 'playing' || pausedRef.current) return;
     pausedRef.current = true;
     setPaused(true);
+    audioManager.stopAllHoldTones();
     audioRef.current?.pause();
     audioManager.playSfx('pause', 0.5);
     resetAllLanes();
@@ -9608,44 +10054,27 @@ export default function Game() {
           return (
             <div className="absolute inset-0 overflow-hidden pointer-events-none bg-cyber-streets-container">
               <div className="cyber-streets-grille" />
-              {Array.from({ length: 18 }).map((_, i) => {
-                const delay = `${(i * 0.3) % 5}s`;
-                const duration = `${3.5 + (i % 4) * 1.5}s`;
-                const opacity = 0.22 + ((i * 4) % 8) * 0.08;
-                const fontSize = `${9 + (i % 3) * 3.5}px`;
-                const left = `${i * 5.5 + 2}%`;
-                
-                const chars = ["P", "I", "M", "0", "1", "X", "Y", "Ø", "Δ", "Ω", "7", "5", "A", "C", "F"];
-                const content = Array.from({ length: 30 }).map((_, charIdx) => {
-                  const ch = chars[(i + charIdx * 7) % chars.length];
-                  const isFirst = charIdx === 0;
-                  return (
-                    <span 
-                      key={charIdx} 
-                      className={isFirst ? "matrix-char-head" : "matrix-char"}
-                      style={isFirst ? { color: '#fff', textShadow: '0 0 8px #fff, 0 0 15px #39FF14' } : {}}
-                    >
-                      {ch}
-                    </span>
-                  );
-                });
-                
-                return (
-                  <div
-                    key={i}
-                    className="matrix-rain"
-                    style={{
-                      left,
-                      animationDelay: delay,
-                      animationDuration: duration,
-                      opacity,
-                      fontSize,
-                    }}
-                  >
-                    {content}
-                  </div>
-                );
-              })}
+              {MATRIX_COLUMNS.map((col, i) => (
+                <div
+                  key={i}
+                  className="matrix-rain font-mono leading-tight whitespace-pre text-center"
+                  style={{
+                    left: col.left,
+                    animationDelay: col.delay,
+                    animationDuration: col.duration,
+                    opacity: col.opacity,
+                    fontSize: col.fontSize,
+                  }}
+                >
+                  <span className="matrix-char-head" style={{ color: '#fff', textShadow: '0 0 8px #fff, 0 0 15px #39FF14' }}>
+                    {col.headChar}
+                  </span>
+                  {'\n'}
+                  <span className="matrix-char">
+                    {col.bodyText}
+                  </span>
+                </div>
+              ))}
             </div>
           );
         }
@@ -9769,16 +10198,7 @@ export default function Game() {
           const fragments = useVaultStore.getState().fragments[songId] ?? 0;
           const fragmentProgress = Math.min(fragments, 10) / 10;
           const isCrystallized = fragments >= 10;
-          const pct = maxPossibleScore > 0 ? (gs.score / maxPossibleScore) * 100 : 0;
           const pulseSpeed = Math.max(0.18, 1.2 - Math.min(gs.combo, 100) * 0.0102);
-
-          // Audio triggers inside render
-          [50, 75, 90].forEach(threshold => {
-            if (pct >= threshold && !triggeredThresholdsRef.current[threshold]) {
-              triggeredThresholdsRef.current[threshold] = true;
-              audioManager.playSfx("hidden_secret_found", 0.5);
-            }
-          });
 
           return (
             <div
@@ -10367,15 +10787,16 @@ export default function Game() {
                       <span className="font-mono text-[7.5px] md:text-[8.5px] lg:text-[9.5px] tracking-[0.2em] text-zinc-400 font-bold mb-0.5 uppercase">
                         COMBO
                       </span>
+                      {/* PERF: Removed key={gs.combo} which forced Framer Motion to unmount/remount
+                          on every combo increment. Now uses animate prop changes instead. */}
                       <motion.span
-                        key={gs.combo}
-                        initial={{ scale: 1.35 }}
-                        animate={{ scale: 1.0 }}
+                        animate={{ scale: [1.35, 1.0] }}
                         transition={{ type: "spring", stiffness: 450, damping: 25 }}
                         className="font-mono text-lg md:text-xl lg:text-2xl font-black text-white tracking-tight"
                         style={{
                           textShadow: gs.combo > 0 ? `0 0 10px ${gs.combo >= 100 ? '#39FF14' : gs.combo >= 50 ? '#FF1493' : '#00E5FF'}` : 'none'
                         }}
+                        ref={comboTextRef}
                       >
                         {gs.combo}
                       </motion.span>

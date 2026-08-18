@@ -14,12 +14,14 @@ import { loadOpts } from "../../lib/options";
  *    playback then. This also triggers SFX preloading.
  *  - Fades out smoothly when entering /play/* routes; fades back in on exit.
  *  - Also pauses on /results/* to let the results ambient play unobstructed.
+ *  - Volume fading uses requestAnimationFrame (not setInterval) to avoid
+ *    competing with the game's rAF loop and causing main thread thrashing.
  */
 export default function BackgroundMusic() {
   const [location] = useLocation();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [started, setStarted] = useState(false);
-  const fadeIntervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+  const fadeRafRef = useRef<number | undefined>(undefined);
 
   const [introDone, setIntroDone] = useState(() => !!sessionStorage.getItem("intro_seen"));
   const [bgMusicEnabled, setBgMusicEnabled] = useState(() => loadOpts().bgMusic);
@@ -104,18 +106,21 @@ export default function BackgroundMusic() {
     };
   }, [startOnInteraction]);
 
-  // Fade in/out based on route
+  // Fade in/out based on route — uses rAF instead of setInterval to avoid
+  // competing with the game's requestAnimationFrame loop
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !started) return;
 
-    clearInterval(fadeIntervalRef.current);
+    if (fadeRafRef.current !== undefined) {
+      cancelAnimationFrame(fadeRafRef.current);
+      fadeRafRef.current = undefined;
+    }
 
     if (isSilentRoute || !bgMusicEnabled) {
       // Immediate stop on silent routes or when bgMusic is disabled
       audio.pause();
       audio.volume = 0;
-      clearInterval(fadeIntervalRef.current);
     } else {
       const targetVol = (loadOpts().musicVolume ?? 0.5) * 0.4;
       // Resume → fade in
@@ -126,17 +131,30 @@ export default function BackgroundMusic() {
           p.catch(() => {});
         }
       }
-      fadeIntervalRef.current = setInterval(() => {
+      // rAF-based fade: ~0.75 volume/sec at 60fps (0.03 per 40ms ≈ 0.0125 per 16.67ms)
+      let lastTime = 0;
+      const fadeStep = (timestamp: number) => {
+        if (!lastTime) lastTime = timestamp;
+        const dt = (timestamp - lastTime) / 1000; // seconds elapsed
+        lastTime = timestamp;
+        const step = dt * 0.75; // 0.75 volume units per second
         if (audio.volume < targetVol) {
-          audio.volume = Math.min(targetVol, audio.volume + 0.03);
+          audio.volume = Math.min(targetVol, audio.volume + step);
+          fadeRafRef.current = requestAnimationFrame(fadeStep);
         } else {
           audio.volume = targetVol;
-          clearInterval(fadeIntervalRef.current);
+          fadeRafRef.current = undefined;
         }
-      }, 40);
+      };
+      fadeRafRef.current = requestAnimationFrame(fadeStep);
     }
 
-    return () => clearInterval(fadeIntervalRef.current);
+    return () => {
+      if (fadeRafRef.current !== undefined) {
+        cancelAnimationFrame(fadeRafRef.current);
+        fadeRafRef.current = undefined;
+      }
+    };
   }, [isSilentRoute, started, bgMusicEnabled]);
 
   return null;
