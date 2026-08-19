@@ -198,11 +198,14 @@ export default function ProfilePage() {
               </div>
 
               <div>
+                <span className="font-mono text-[9px] text-[#00E5FF] uppercase font-bold tracking-[0.25em] block mb-1">
+                  YOUR 365 // PERSONAL IDENTITY
+                </span>
                 <h1 className="profile-identity-title">
                   {loadingProfile ? '…' : identityDisplay}
                 </h1>
                 <p className="profile-identity-sub">
-                  {isAnonymous ? 'GUEST SESSION // EPHEMERAL' : 'SOVEREIGN IDENTITY // VERIFIED'}
+                  {isAnonymous ? 'GUEST SESSION // EPHEMERAL PASS' : 'SOVEREIGN IDENTITY // VERIFIED'}
                 </p>
 
                 <div className="profile-badge-row">
@@ -213,29 +216,37 @@ export default function ProfilePage() {
               </div>
 
               <div className="font-mono text-[9px] text-white/30 tracking-widest uppercase">
-                user.th3scr1b3.art // PASSPORT
+                YOUR 365 // SOVEREIGN PASSPORT
               </div>
             </div>
           </motion.div>
 
           {/* Action Row */}
           <div className="profile-actions-row">
-            <a
-              href={syncHref}
+            <Link
+              to="/vault/collection"
               className="profile-btn-primary"
-              onClick={() => audioManager.playSfx('select_start_song', 0.5)}
-              title="Sync identity across all th3scr1b3 subdomains"
+              onClick={() => audioManager.playSfx('select_start_song', 0.4)}
             >
-              <RefreshCw size={16} /> Sync Identity <ExternalLink size={14} style={{ opacity: 0.7 }} />
-            </a>
+              <Layers size={16} /> My Vault Collection
+            </Link>
 
             <Link
-              to="/vault"
+              to="/campaign"
               className="profile-btn-secondary"
               onClick={() => audioManager.playSfx('tap_nav', 0.3)}
             >
-              <Layers size={14} /> My Vault Collection
+              <Award size={14} /> My 365 Journey
             </Link>
+
+            <a
+              href={syncHref}
+              className="profile-btn-secondary"
+              onClick={() => audioManager.playSfx('tap_nav', 0.3)}
+              title="Sync identity across all th3scr1b3 subdomains"
+            >
+              <RefreshCw size={14} /> Sync Identity <ExternalLink size={12} style={{ opacity: 0.7 }} />
+            </a>
 
             {user && (
               <button
@@ -254,13 +265,13 @@ export default function ProfilePage() {
         </section>
 
         {/* ═══════════ SECTION 1.5 : CREATE YOUR PIM ID ═══════════ */}
-        {!displayName && !loadingProfile && (
-          <section className="profile-glass-panel border-l-4 border-[#ff3800] mt-6 mb-6">
-            <div className="profile-panel-header text-[#FFD700]">
-              <Sparkles size={18} /> CREATE YOUR PIM ID
+        {isAnonymous && (
+          <section className="profile-glass-panel border-l-4 border-[#E5B800] mt-6 mb-6">
+            <div className="profile-panel-header text-[#E5B800]">
+              <Sparkles size={18} /> PRESERVE YOUR 365 PROGRESS
             </div>
-            <p className="font-mono text-xs text-white/50 leading-relaxed mb-4">
-              Choose a username and avatar to stand out on the leaderboard
+            <p className="font-mono text-xs text-white/70 leading-relaxed mb-4">
+              You are currently playing as a Guest. Connect an Email or Web3 Smart Wallet to bind your earned daily cards, medals, and streaks permanently to your sovereign profile.
             </p>
             <IdentitySetup compact onComplete={() => { if (loadVaultData) loadVaultData(true); }} />
           </section>

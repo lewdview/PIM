@@ -38,6 +38,11 @@ import NextGenLandingPage from './pages/NextGenLandingPage';
 import ProfilePage from './pages/ProfilePage';
 import ListenPage from './pages/ListenPage';
 import EarnPage from './pages/EarnPage';
+import UniverseHome from './pages/UniverseHome';
+import Archive365Page from './pages/Archive365Page';
+import DayArtifactPage from './pages/DayArtifactPage';
+import WarpZonePage from './pages/WarpZonePage';
+import AboutPage from './pages/AboutPage';
 import { NotificationModal } from './components/NotificationModal';
 import { SystemAlertBanner } from './components/SystemAlertBanner';
 import { useNotificationStore } from './store/useNotificationStore';
@@ -341,6 +346,24 @@ function DailyDropRoute() {
   );
 }
 
+// Give Me A Sign Random Discovery Route
+function SignDiscoveryRoute() {
+  const [, setLocation] = useLocation();
+  useEffect(() => {
+    const today = getCurrentDay();
+    const randomDay = Math.floor(Math.random() * today) + 1;
+    setLocation(`/day/${randomDay}`);
+  }, [setLocation]);
+
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+      <div className="text-[12px] font-mono text-purple-400 uppercase font-bold tracking-widest animate-pulse">
+        CALIBRATING MYSTERY TRANSMISSION // GIVING YOU A SIGN...
+      </div>
+    </div>
+  );
+}
+
 function TransmissionsRoute() {
   const [, setLocation] = useLocation();
   useEffect(() => {
@@ -398,29 +421,6 @@ export default function App() {
     prevLocationRef.current = location;
   }, [location, setOptionsModalOpen]);
 
-  // Force first-time players who haven't completed the tutorial to /tutorial
-  // (Exempting /hero, /admin, /pitch-deck, /legal, /options)
-  useEffect(() => {
-    if (authStatus === 'idle' || authStatus === 'loading') return;
-
-    const isTutorialCompleted = 
-      progression.tutorialCompleted || 
-      localStorage.getItem('pim_tutorial_completed') === 'true';
-
-    const isExemptRoute = 
-      location === '/tutorial' ||
-      location.startsWith('/hero') ||
-      location.startsWith('/admin') ||
-      location === '/pitch-deck' ||
-      location === '/options' ||
-      location === '/vault/legal' ||
-      location === '/legal';
-
-    if (!isTutorialCompleted && !isExemptRoute) {
-      setLocation('/tutorial');
-    }
-  }, [location, progression.tutorialCompleted, authStatus, setLocation]);
-
   // Stop global preview player on gameplay routes to prevent dual-audio
   useEffect(() => {
     if (location.startsWith('/play/') || location === '/tutorial') {
@@ -477,11 +477,20 @@ export default function App() {
           </div>
         }>
           <Switch>
-            <Route path="/" component={LandingPage} />
-            <Route path="/next-vault" component={NextGenLandingPage} />
-            <Route path="/hero" component={HeroLandingPage} />
-            <Route path="/hero/day-:dayParam" component={HeroLandingPage} />
-            <Route path="/hero/:dayParam" component={HeroLandingPage} />
+            {/* 1. Primary Public World Routes */}
+            <Route path="/" component={UniverseHome} />
+            <Route path="/365" component={Archive365Page} />
+            <Route path="/day/:day" component={DayArtifactPage} />
+            <Route path="/day-:day" component={DayArtifactPage} />
+            <Route path="/sign" component={SignDiscoveryRoute} />
+            <Route path="/random" component={SignDiscoveryRoute} />
+            <Route path="/warp" component={WarpZonePage} />
+            <Route path="/warp/:sub" component={WarpZonePage} />
+            <Route path="/about" component={AboutPage} />
+            <Route path="/manifesto" component={AboutPage} />
+            <Route path="/hub" component={ProfilePage} />
+
+            {/* 2. PIM Rhythm Experience Routes */}
             <Route path="/pim" component={RhythmHome} />
             <Route path="/play" component={RhythmHome} />
             <Route path="/arcade" component={RhythmHome} />
@@ -489,10 +498,14 @@ export default function App() {
             <Route path="/drop" component={DailyDropRoute} />
             <Route path="/today" component={DailyDropRoute} />
             <Route path="/daily-drop" component={DailyDropRoute} />
-            <Route path="/transmissions" component={TransmissionsRoute} />
             <Route path="/songs" component={SongSelect} />
             <Route path="/play/:songId" component={GamePlay} />
             <Route path="/results/:songId" component={GameResults} />
+            <Route path="/campaign" component={Campaign} />
+            <Route path="/chapter/:month" component={Chapter} />
+            <Route path="/tutorial" component={Tutorial} />
+
+            {/* 3. TH3VAULT & Collectible Routes */}
             <Route path="/vault" component={HomePage} />
             <Route path="/vault/collection" component={CollectionPage} />
             <Route path="/collection" component={CollectionPage} />
@@ -502,8 +515,8 @@ export default function App() {
             <Route path="/forge" component={ForgePage} />
             <Route path="/vault/leaderboard" component={LeaderboardPage} />
             <Route path="/leaderboard" component={LeaderboardPage} />
-            <Route path="/vault/codex" component={CodexPage} />
-            <Route path="/codex" component={CodexPage} />
+            <Route path="/vault/codex" component={Archive365Page} />
+            <Route path="/codex" component={Archive365Page} />
             <Route path="/vault/claim" component={ClaimPage} />
             <Route path="/claim" component={ClaimPage} />
             <Route path="/vault/legal" component={LegalPage} />
@@ -513,6 +526,22 @@ export default function App() {
             <Route path="/shop" component={EarnPage} />
             <Route path="/store" component={EarnPage} />
             <Route path="/vault/:userId" component={VoyeurPage} />
+
+            {/* 4. Identity & Exhibits */}
+            <Route path="/profile" component={ProfilePage} />
+            <Route path="/user" component={ProfilePage} />
+            <Route path="/user.th3scr1b3.art" component={ProfilePage} />
+            <Route path="/transmissions" component={TransmissionsRoute} />
+            <Route path="/options" component={OptionsRouteHandler} />
+            <Route path="/song/:songId" component={SongDetail} />
+            <Route path="/listen/:songId" component={ListenPage} />
+            <Route path="/slideshow" component={SlideshowPage} />
+            <Route path="/hero" component={HeroLandingPage} />
+            <Route path="/hero/day-:dayParam" component={HeroLandingPage} />
+            <Route path="/hero/:dayParam" component={HeroLandingPage} />
+            <Route path="/next-vault" component={NextGenLandingPage} />
+
+            {/* 5. Developer & Admin (Dev mode) */}
             { (import.meta.env.DEV || localStorage.getItem('th3vault_dev_mode') === 'true') && (
               <>
                 <Route path="/pitch-deck" component={PitchDeck} />
@@ -521,16 +550,8 @@ export default function App() {
                 <Route path="/admin/card-designs" component={CardDesignShowcase} />
               </>
             ) }
-            <Route path="/campaign" component={Campaign} />
-            <Route path="/chapter/:month" component={Chapter} />
-            <Route path="/tutorial" component={Tutorial} />
-            <Route path="/profile" component={ProfilePage} />
-            <Route path="/user" component={ProfilePage} />
-            <Route path="/user.th3scr1b3.art" component={ProfilePage} />
-            <Route path="/options" component={OptionsRouteHandler} />
-            <Route path="/song/:songId" component={SongDetail} />
-            <Route path="/listen/:songId" component={ListenPage} />
-            <Route path="/slideshow" component={SlideshowPage} />
+
+            {/* 404 Handler */}
             <Route>
               <div className="flex-1 flex flex-col items-center justify-center p-8 text-center max-w-md mx-auto">
                 <div className="text-[10px] tracking-[0.3em] text-white/40 mb-4 uppercase font-bold">
