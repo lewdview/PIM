@@ -100,7 +100,7 @@ export default function DayArtifactPage() {
         audioUrl: song.audioUrl,
         coverUrl: song.coverArt || card?.coverUrl || '',
         day: song.day || dayNum,
-        rarity: ownedCard?.rarity || card?.rarity || 'common',
+        rarity: ownedCard?.card?.rarity || (ownedCard as any)?.rarity || card?.rarity || 'common',
         isDailyClaim: true,
         maxDuration: 0,
       });
@@ -372,7 +372,9 @@ export default function DayArtifactPage() {
                       {ownedCard ? (
                         <>
                           <CheckCircle size={13} className="text-[#39FF14]" />
-                          <span className="text-[#39FF14]">OWNED IN VAULT ({ownedCard.rarity.toUpperCase()})</span>
+                          <span className="text-[#39FF14]">
+                            OWNED IN VAULT ({((ownedCard.card?.rarity || (ownedCard as any)?.rarity || 'common') as string).toUpperCase()})
+                          </span>
                         </>
                       ) : (
                         <span>UNCLAIMED • PLAY PIM TO UNLOCK</span>

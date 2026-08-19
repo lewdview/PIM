@@ -362,7 +362,7 @@ export default function Archive365Page() {
                               audioUrl: song.audioUrl,
                               coverUrl: song.coverArt || '',
                               day: song.day,
-                              rarity: ownedCard?.rarity || 'common',
+                              rarity: ownedCard?.card?.rarity || (ownedCard as any)?.rarity || 'common',
                               isDailyClaim: true,
                               maxDuration: 0,
                             });
