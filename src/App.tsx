@@ -477,20 +477,12 @@ export default function App() {
           </div>
         }>
           <Switch>
-            {/* 1. Primary Public World Routes */}
-            <Route path="/" component={UniverseHome} />
-            <Route path="/365" component={Archive365Page} />
-            <Route path="/day/:day" component={DayArtifactPage} />
-            <Route path="/day-:day" component={DayArtifactPage} />
-            <Route path="/sign" component={SignDiscoveryRoute} />
-            <Route path="/random" component={SignDiscoveryRoute} />
-            <Route path="/warp" component={WarpZonePage} />
-            <Route path="/warp/:sub" component={WarpZonePage} />
-            <Route path="/about" component={AboutPage} />
-            <Route path="/manifesto" component={AboutPage} />
-            <Route path="/hub" component={ProfilePage} />
-
-            {/* 2. PIM Rhythm Experience Routes */}
+            {/* 1. Primary Public Landing & PIM Rhythm Routes */}
+            <Route path="/" component={LandingPage} />
+            <Route path="/next-vault" component={NextGenLandingPage} />
+            <Route path="/hero" component={HeroLandingPage} />
+            <Route path="/hero/day-:dayParam" component={HeroLandingPage} />
+            <Route path="/hero/:dayParam" component={HeroLandingPage} />
             <Route path="/pim" component={RhythmHome} />
             <Route path="/play" component={RhythmHome} />
             <Route path="/arcade" component={RhythmHome} />
@@ -498,6 +490,7 @@ export default function App() {
             <Route path="/drop" component={DailyDropRoute} />
             <Route path="/today" component={DailyDropRoute} />
             <Route path="/daily-drop" component={DailyDropRoute} />
+            <Route path="/transmissions" component={TransmissionsRoute} />
             <Route path="/songs" component={SongSelect} />
             <Route path="/play/:songId" component={GamePlay} />
             <Route path="/results/:songId" component={GameResults} />
@@ -505,7 +498,7 @@ export default function App() {
             <Route path="/chapter/:month" component={Chapter} />
             <Route path="/tutorial" component={Tutorial} />
 
-            {/* 3. TH3VAULT & Collectible Routes */}
+            {/* 2. TH3VAULT & Collectible Routes */}
             <Route path="/vault" component={HomePage} />
             <Route path="/vault/collection" component={CollectionPage} />
             <Route path="/collection" component={CollectionPage} />
@@ -515,8 +508,8 @@ export default function App() {
             <Route path="/forge" component={ForgePage} />
             <Route path="/vault/leaderboard" component={LeaderboardPage} />
             <Route path="/leaderboard" component={LeaderboardPage} />
-            <Route path="/vault/codex" component={Archive365Page} />
-            <Route path="/codex" component={Archive365Page} />
+            <Route path="/vault/codex" component={CodexPage} />
+            <Route path="/codex" component={CodexPage} />
             <Route path="/vault/claim" component={ClaimPage} />
             <Route path="/claim" component={ClaimPage} />
             <Route path="/vault/legal" component={LegalPage} />
@@ -527,19 +520,25 @@ export default function App() {
             <Route path="/store" component={EarnPage} />
             <Route path="/vault/:userId" component={VoyeurPage} />
 
-            {/* 4. Identity & Exhibits */}
+            {/* 3. Identity, Audio & Universal 365 Sub-Routes */}
             <Route path="/profile" component={ProfilePage} />
             <Route path="/user" component={ProfilePage} />
             <Route path="/user.th3scr1b3.art" component={ProfilePage} />
-            <Route path="/transmissions" component={TransmissionsRoute} />
             <Route path="/options" component={OptionsRouteHandler} />
             <Route path="/song/:songId" component={SongDetail} />
             <Route path="/listen/:songId" component={ListenPage} />
             <Route path="/slideshow" component={SlideshowPage} />
-            <Route path="/hero" component={HeroLandingPage} />
-            <Route path="/hero/day-:dayParam" component={HeroLandingPage} />
-            <Route path="/hero/:dayParam" component={HeroLandingPage} />
-            <Route path="/next-vault" component={NextGenLandingPage} />
+            <Route path="/universe" component={UniverseHome} />
+            <Route path="/365" component={Archive365Page} />
+            <Route path="/day/:day" component={DayArtifactPage} />
+            <Route path="/day-:day" component={DayArtifactPage} />
+            <Route path="/sign" component={SignDiscoveryRoute} />
+            <Route path="/random" component={SignDiscoveryRoute} />
+            <Route path="/warp" component={WarpZonePage} />
+            <Route path="/warp/:sub" component={WarpZonePage} />
+            <Route path="/about" component={AboutPage} />
+            <Route path="/manifesto" component={AboutPage} />
+            <Route path="/hub" component={ProfilePage} />
 
             {/* 5. Developer & Admin (Dev mode) */}
             { (import.meta.env.DEV || localStorage.getItem('th3vault_dev_mode') === 'true') && (

@@ -45,53 +45,16 @@ interface MenuSection {
 
 const menuSections: MenuSection[] = [
   {
-    id: 'today',
-    label: 'Today',
-    accent: '#E5B800',
-    accentGlow: 'rgba(229, 184, 0, 0.4)',
-    icon: Sparkles,
-    items: [
-      { to: '/', label: "Today's Release", icon: Sparkles, desc: "Entrance & today's creative drop" },
-      { to: '/sign', label: 'Give Me A Sign', icon: Zap, desc: 'Mysteriously discover a random day' },
-      { to: '/slideshow', label: 'Slide Exhibit', icon: Image, desc: 'Continuous artwork slideshow' },
-    ],
-  },
-  {
-    id: '365',
-    label: '365',
-    accent: '#00E5FF',
-    accentGlow: 'rgba(0, 229, 255, 0.4)',
-    icon: BookOpen,
-    items: [
-      { to: '/365', label: '365 Archive', icon: BookOpen, desc: 'Chronological timeline of all 365 days' },
-      { to: '/campaign', label: 'Constellation Map', icon: Map, desc: '12-month campaign roadmaps' },
-      { to: '/hero', label: 'Museum Exhibit', icon: Image, desc: 'Curated 3D pedestal exhibit' },
-    ],
-  },
-  {
-    id: 'warp',
-    label: 'Warp',
-    accent: '#A855F7',
-    accentGlow: 'rgba(168, 85, 247, 0.4)',
-    icon: LayoutGrid,
-    items: [
-      { to: '/warp', label: 'The Warp Zone', icon: LayoutGrid, desc: 'Strange places in the 365 universe' },
-      { to: '/warp', label: 'Mood Map', icon: Map, desc: 'Valence vs energy emotional matrix' },
-      { to: '/warp', label: 'ASCII Engine', icon: Monitor, desc: 'Algorithmic cyber terminal text art' },
-      { to: '/listen/day-001', label: 'Geometry Visualizer', icon: Sparkles, desc: 'Sacred geometry audio visualizer' },
-    ],
-  },
-  {
     id: 'play',
-    label: 'PIM',
+    label: 'Play',
     accent: '#FF1493',
     accentGlow: 'rgba(255, 20, 147, 0.4)',
     icon: Gamepad2,
     items: [
       { to: '/arcade', label: 'PIM Arcade', icon: Monitor, desc: 'Quick-play rhythm engine' },
-      { to: '/songs', label: 'Award Play', icon: Trophy, desc: 'Curated song selection' },
-      { to: '/campaign', label: 'Campaign Chapters', icon: Map, desc: 'Stage roadmaps & rewards' },
-      { to: '/tutorial', label: 'Tutorial', icon: GraduationCap, desc: 'Master the 3-lane controls' },
+      { to: '/campaign', label: 'PIM Campaign', icon: Map, desc: 'Story chapters & 365 roadmaps' },
+      { to: '/songs', label: 'PIM Award Play', icon: Trophy, desc: 'Curated song selection' },
+      { to: '/tutorial', label: 'PIM Tutorial', icon: GraduationCap, desc: 'Master the 3-lane controls' },
     ],
   },
   {
@@ -101,49 +64,67 @@ const menuSections: MenuSection[] = [
     accentGlow: 'rgba(255, 85, 0, 0.4)',
     icon: Home,
     items: [
-      { to: '/vault', label: 'Vault Overview', icon: Home, desc: 'Your collection & vault dashboard' },
-      { to: '/vault/collection', label: 'Card Collection', icon: Layers, desc: 'Browse unlocked cards & proofs' },
-      { to: '/vault/reveal', label: 'Pack Reveal', icon: Sparkles, desc: 'Open earned reward packs' },
-      { to: '/vault/forge', label: 'Fusion & Forge', icon: Flame, desc: 'Burn, upgrade & fuse cards' },
-      { to: '/vault/earn', label: 'Token Shop', icon: Zap, desc: 'Acquire tokens & supporter packs' },
-      { to: '/vault/leaderboard', label: 'Leaderboards', icon: Trophy, desc: 'Global rankings & scores' },
+      { to: '/vault', label: 'Home', icon: Home, desc: 'Daily card & vault dashboard' },
+      { to: '/vault/collection', label: 'Collection', icon: Layers, desc: 'Your card library' },
+      { to: '/vault/reveal', label: 'Pack Reveal', icon: Sparkles, desc: 'Open earned packs' },
+      { to: '/vault/codex', label: 'Codex', icon: BookOpen, desc: 'Full 365-day archive' },
+      { to: '/hero', label: 'Hero Exhibit', icon: Image, desc: 'Museum-grade daily showcase' },
     ],
   },
   {
-    id: 'about',
-    label: 'About',
+    id: 'forge',
+    label: 'Forge',
     accent: '#39FF14',
     accentGlow: 'rgba(57, 255, 20, 0.4)',
-    icon: FileText,
+    icon: Flame,
     items: [
-      { to: '/about', label: 'Project Manifesto', icon: FileText, desc: 'Origins, recovery & 365 ethos' },
-      { to: '/profile', label: 'YOUR 365 (Hub)', icon: User, desc: 'Personal identity & progress' },
-      { action: 'options', label: 'Options', icon: Settings, desc: 'Audio, visuals & keybinds' },
+      { to: '/vault/forge', label: 'Fusion Lab', icon: Flame, desc: 'Fuse & upgrade cards' },
+      { to: '/vault/leaderboard', label: 'Leaderboard', icon: Trophy, desc: 'Global rankings' },
+    ],
+  },
+  {
+    id: 'earn',
+    label: 'Earn',
+    accent: '#E5B800',
+    accentGlow: 'rgba(229, 184, 0, 0.4)',
+    icon: Zap,
+    items: [
+      { to: '/vault/earn', label: 'Token Shop', icon: Zap, desc: 'Earn & spend tokens' },
+      { to: '/vault/claim', label: 'Redeem', icon: Gift, desc: 'Claim prizes & rewards' },
+    ],
+  },
+  {
+    id: 'more',
+    label: 'More',
+    accent: '#A855F7',
+    accentGlow: 'rgba(168, 85, 247, 0.4)',
+    icon: LayoutGrid,
+    items: [
+      { action: 'notifications', label: 'Transmissions', icon: Bell, desc: 'Broadcasts & alerts' },
+      { to: '/profile', label: 'Profile', icon: User, desc: 'Scribe identity hub' },
+      { action: 'options', label: 'Options', icon: Settings, desc: 'Audio, visuals & gameplay' },
       { action: 'guide', label: 'Guide', icon: BookOpen, desc: 'Instruction booklet' },
-      { to: '/vault/legal', label: 'Legal Terms', icon: FileText, desc: 'Policies & disclosures' },
-      { to: '/admin/editor', label: 'Beatmap Editor', icon: Monitor, desc: 'Editor console', devOnly: true },
-      { to: '/admin/card-designs', label: 'Card Designs', icon: Image, desc: 'Showcase', devOnly: true },
+      { to: '/vault/legal', label: 'Legal', icon: FileText, desc: 'Terms & policies' },
+      { to: '/admin/editor', label: 'Editor', icon: Monitor, desc: 'Beatmap editor', devOnly: true },
+      { to: '/admin/card-designs', label: 'Card Designs', icon: Image, desc: 'Design showcase', devOnly: true },
+      { to: '/pitch-deck', label: 'Pitch Deck', icon: FileText, desc: 'Investor presentation', devOnly: true },
     ],
   },
 ];
 
 // Mobile bottom-left vertical quick-access tabs
 const mobileQuickTabs = [
-  { id: 'today', to: '/', label: 'Today', icon: Sparkles, accent: '#E5B800', glow: 'rgba(229, 184, 0, 0.4)' },
-  { id: '365', to: '/365', label: '365', icon: BookOpen, accent: '#00E5FF', glow: 'rgba(0, 229, 255, 0.4)' },
-  { id: 'warp', to: '/warp', label: 'Warp', icon: LayoutGrid, accent: '#A855F7', glow: 'rgba(168, 85, 247, 0.4)' },
-  { id: 'play', to: '/arcade', label: 'PIM', icon: Gamepad2, accent: '#FF1493', glow: 'rgba(255, 20, 147, 0.4)' },
+  { id: 'play', to: '/arcade', label: 'Play', icon: Gamepad2, accent: '#FF1493', glow: 'rgba(255, 20, 147, 0.4)' },
   { id: 'vault', to: '/vault', label: 'Vault', icon: Home, accent: '#FF5500', glow: 'rgba(255, 85, 0, 0.4)' },
+  { id: 'earn', to: '/vault/earn', label: 'Earn', icon: Zap, accent: '#E5B800', glow: 'rgba(229, 184, 0, 0.4)' },
 ];
 
 // Active section detector from current URL
 function getActiveSection(path: string): string | null {
-  if (path === '/' || path.startsWith('/day/') || path.startsWith('/hero')) return 'today';
-  if (path === '/365' || path.startsWith('/chapter')) return '365';
-  if (path.startsWith('/warp')) return 'warp';
-  if (['/arcade', '/pim', '/play', '/campaign', '/songs', '/tutorial'].some(p => path === p || path.startsWith(p + '/') || path.startsWith(p + '-'))) return 'play';
-  if (['/vault', '/collection', '/forge', '/shop', '/vault/earn', '/codex', '/leaderboard'].some(p => path === p || path.startsWith(p + '/'))) return 'vault';
-  if (['/about', '/manifesto', '/profile', '/user', '/hub', '/options', '/guide'].some(p => path.startsWith(p))) return 'about';
+  if (['/arcade', '/pim', '/play', '/campaign', '/songs', '/tutorial', '/chapter', '/slideshow', '/voyeur'].some(p => path === p || path.startsWith(p + '/') || path.startsWith(p + '-'))) return 'play';
+  if (['/vault', '/collection', '/forge', '/shop', '/vault/earn', '/codex'].some(p => path === p || path.startsWith(p + '/'))) return 'vault';
+  if (['/leaderboard', '/profile', '/deck', '/options', '/guide'].some(p => path.startsWith(p))) return 'terminal';
+  if (['/editor', '/admin'].some(p => path.startsWith(p))) return 'creator';
   return null;
 }
 
