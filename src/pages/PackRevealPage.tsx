@@ -167,7 +167,7 @@ export default function PackRevealPage() {
     const { category, size } = revealPackMeta;
 
     // Client-side balance guard for token packs
-    if (category === 'vault_token' && tokenBalance < getTokenPackCost()) {
+    if ((category === 'vault_token' || category === 'bombshell_token') && tokenBalance < getTokenPackCost()) {
       alert(`Not enough V⚡ tokens. You need ${getTokenPackCost()} V⚡ but only have ${tokenBalance}.`);
       return;
     }

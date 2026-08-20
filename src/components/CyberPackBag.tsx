@@ -219,12 +219,12 @@ export default function CyberPackBag({
   const tokenPackCost = adminCfg.tokenPackCost ?? 275;
   
   let requiredTokens = 0;
-  if (category === 'vault_token') requiredTokens = tokenPackCost;
+  if (category === 'vault_token' || category === 'bombshell_token') requiredTokens = tokenPackCost;
   else if (category === 'targeted_pull') requiredTokens = 500;
   else if (category === 'rarity_upgrade') requiredTokens = 150;
 
   const hasEnoughTokens = tokenBalance >= requiredTokens;
-  const isTokenBased = category === 'vault_token' || category === 'targeted_pull' || category === 'rarity_upgrade';
+  const isTokenBased = category === 'vault_token' || category === 'bombshell_token' || category === 'targeted_pull' || category === 'rarity_upgrade';
 
   const disabledAction = isRipping || !isActive || isFreeDisabled || isOverLimit || (isTokenBased && !hasEnoughTokens);
 

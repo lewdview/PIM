@@ -578,11 +578,11 @@ export default function ForgePage() {
     setTimeout(() => setBatchResult(null), 5000);
   }, [confirmBatch, removeFromCollection, loadVaultData]);
 
-  const handleBuyTokenPack = useCallback(async () => {
+  const handleBuyTokenPack = useCallback(async (packType: 'vault_token' | 'bombshell_token' = 'vault_token') => {
     if (!canAfford) return;
     try {
       useLoadingToast.getState().show('Purchasing pack…');
-      const cards = await buyTokenPack();
+      const cards = await buyTokenPack(packType);
       useLoadingToast.getState().hide();
       if (cards === 'insufficient') {
         alert('Insufficient V⚡ tokens for this pack.');
@@ -597,13 +597,16 @@ export default function ForgePage() {
       addToCollection(cards);
       await loadVaultData();
       audioManager.playSfx('open_chest', 0.9);
+      const isBombshell = packType === 'bombshell_token';
       startReveal(cards, {
-        category: 'vault_token',
+        category: packType,
         size: 'single',
-        label: 'Vault Pack',
-        icon: '⚡',
-        accent: '#ff9900',
-        gradient: 'linear-gradient(145deg, #1a1000, #0a0800)',
+        label: isBombshell ? 'Bombshell 3-Pack' : 'Vault Pack',
+        icon: isBombshell ? '💖' : '⚡',
+        accent: isBombshell ? '#ff1493' : '#ff9900',
+        gradient: isBombshell
+          ? 'linear-gradient(160deg, #300a1e 0%, #501234 40%, #200816 100%)'
+          : 'linear-gradient(145deg, #1a1000, #0a0800)',
         price: `${packCost} V⚡`,
         cardCount: cards.length,
         revealType: 'cinematic',
@@ -772,18 +775,18 @@ export default function ForgePage() {
               <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '10px', opacity: 0.3, marginLeft: '4px' }}>V⚡</span>
             </div>
 
-            {/* Buy pack button */}
+            {/* Buy Vault Pack button */}
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={handleBuyTokenPack}
+              onClick={() => handleBuyTokenPack('vault_token')}
               disabled={!canAfford}
               style={{
-                padding: '12px 24px',
+                padding: '12px 20px',
                 background: canAfford ? 'linear-gradient(135deg, #ff9900, #ffb800)' : 'rgba(255,255,255,0.04)',
                 color: canAfford ? '#000' : 'rgba(255,255,255,0.2)',
                 border: '2px solid #000',
-                fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '18px',
+                fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '16px',
                 textTransform: 'uppercase', letterSpacing: '0.02em',
                 cursor: canAfford ? 'pointer' : 'not-allowed',
                 boxShadow: canAfford ? '4px 4px 0 #000, 0 0 20px rgba(255,153,0,0.3)' : '2px 2px 0 #000',
@@ -791,8 +794,31 @@ export default function ForgePage() {
                 transition: 'all 0.2s',
               }}
             >
-              <Zap size={16} />
-              Buy Vault Pack ({packCost} V⚡)
+              <Zap size={15} />
+              Vault Pack ({packCost} V⚡)
+            </motion.button>
+
+            {/* Buy Bombshell 3-Pack button */}
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => handleBuyTokenPack('bombshell_token')}
+              disabled={!canAfford}
+              style={{
+                padding: '12px 20px',
+                background: canAfford ? 'linear-gradient(135deg, #ff1493, #ff69b4)' : 'rgba(255,255,255,0.04)',
+                color: canAfford ? '#fff' : 'rgba(255,255,255,0.2)',
+                border: '2px solid #000',
+                fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '16px',
+                textTransform: 'uppercase', letterSpacing: '0.02em',
+                cursor: canAfford ? 'pointer' : 'not-allowed',
+                boxShadow: canAfford ? '4px 4px 0 #000, 0 0 20px rgba(255,20,147,0.3)' : '2px 2px 0 #000',
+                display: 'flex', alignItems: 'center', gap: '8px',
+                transition: 'all 0.2s',
+              }}
+            >
+              <span>💖</span>
+              Bombshell 3-Pk ({packCost} V⚡)
             </motion.button>
           </motion.div>
         </div>
