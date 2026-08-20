@@ -53,6 +53,7 @@ const menuSections: MenuSection[] = [
     items: [
       { to: '/arcade', label: 'PIM Arcade', icon: Monitor, desc: 'Quick-play rhythm engine' },
       { to: '/campaign', label: 'PIM Campaign', icon: Map, desc: 'Story chapters & 365 roadmaps' },
+      { to: '/365', label: '365 Timeline', icon: BookOpen, desc: 'Daily release archive' },
       { to: '/songs', label: 'PIM Award Play', icon: Trophy, desc: 'Curated song selection' },
       { to: '/tutorial', label: 'PIM Tutorial', icon: GraduationCap, desc: 'Master the 3-lane controls' },
     ],
@@ -65,9 +66,10 @@ const menuSections: MenuSection[] = [
     icon: Home,
     items: [
       { to: '/vault', label: 'Home', icon: Home, desc: 'Daily card & vault dashboard' },
+      { to: '/365', label: '365 Archive', icon: BookOpen, desc: 'Full 365-day music & art timeline' },
       { to: '/vault/collection', label: 'Collection', icon: Layers, desc: 'Your card library' },
       { to: '/vault/reveal', label: 'Pack Reveal', icon: Sparkles, desc: 'Open earned packs' },
-      { to: '/vault/codex', label: 'Codex', icon: BookOpen, desc: 'Full 365-day archive' },
+      { to: '/vault/codex', label: 'Codex', icon: BookOpen, desc: 'Card catalog & set tracker' },
       { to: '/hero', label: 'Hero Exhibit', icon: Image, desc: 'Museum-grade daily showcase' },
     ],
   },
@@ -100,6 +102,7 @@ const menuSections: MenuSection[] = [
     accentGlow: 'rgba(168, 85, 247, 0.4)',
     icon: LayoutGrid,
     items: [
+      { to: '/365', label: '365 Archive', icon: BookOpen, desc: 'Chronological timeline of all 365 days' },
       { action: 'notifications', label: 'Transmissions', icon: Bell, desc: 'Broadcasts & alerts' },
       { to: '/profile', label: 'Profile', icon: User, desc: 'Scribe identity hub' },
       { action: 'options', label: 'Options', icon: Settings, desc: 'Audio, visuals & gameplay' },
@@ -122,7 +125,7 @@ const mobileQuickTabs = [
 // Active section detector from current URL
 function getActiveSection(path: string): string | null {
   if (['/arcade', '/pim', '/play', '/campaign', '/songs', '/tutorial', '/chapter', '/slideshow', '/voyeur'].some(p => path === p || path.startsWith(p + '/') || path.startsWith(p + '-'))) return 'play';
-  if (['/vault', '/collection', '/forge', '/shop', '/vault/earn', '/codex'].some(p => path === p || path.startsWith(p + '/'))) return 'vault';
+  if (['/vault', '/collection', '/forge', '/shop', '/vault/earn', '/codex', '/365', '/day'].some(p => path === p || path.startsWith(p + '/'))) return 'vault';
   if (['/leaderboard', '/profile', '/deck', '/options', '/guide'].some(p => path.startsWith(p))) return 'terminal';
   if (['/editor', '/admin'].some(p => path.startsWith(p))) return 'creator';
   return null;

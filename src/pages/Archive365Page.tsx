@@ -302,32 +302,44 @@ export default function Archive365Page() {
               return (
                 <div
                   key={song.id || song.day}
-                  className={`group relative bg-[#0d0b07] border rounded-xl overflow-hidden flex flex-col transition-all duration-200 hover:-translate-y-1 ${
+                  className={`group relative border rounded-xl overflow-hidden flex flex-col transition-all duration-200 ${
                     isToday
-                      ? 'border-[#E5B800] shadow-[0_0_20px_rgba(229,184,0,0.3)] ring-1 ring-[#E5B800]'
+                      ? 'bg-[#0d0b07] border-[#E5B800] shadow-[0_0_20px_rgba(229,184,0,0.3)] ring-1 ring-[#E5B800] hover:-translate-y-1'
                       : isOwned
-                      ? 'border-white/30 hover:border-white/60'
+                      ? 'bg-[#0d0b07] border-white/30 hover:border-white/60 hover:-translate-y-1'
                       : isFuture
-                      ? 'border-white/5 opacity-50'
-                      : 'border-white/10 hover:border-white/30'
+                      ? 'bg-[#020202] border-white/5 opacity-40 select-none cursor-not-allowed'
+                      : 'bg-[#0d0b07] border-white/10 hover:border-white/30 hover:-translate-y-1'
                   }`}
                 >
                   {/* Card Artwork Image / Lock State */}
-                  <div className="relative aspect-square overflow-hidden bg-black">
-                    <img
-                      src={song.coverArt || '/data/covers/default.jpg'}
-                      alt={song.title}
-                      loading="lazy"
-                      className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${
-                        isFuture ? 'filter grayscale brightness-50' : ''
-                      }`}
-                    />
-
-                    {/* Gradient bottom scrim */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
+                  <div className="relative aspect-square overflow-hidden bg-[#030303]">
+                    {isFuture ? (
+                      /* Completely Pitch-Black Encrypted Container (Zero Artwork Loaded) */
+                      <div className="w-full h-full flex flex-col items-center justify-center bg-[#050505] relative overflow-hidden">
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.03)_0%,transparent_70%)] pointer-events-none" />
+                        <div className="w-10 h-10 rounded-full border border-white/10 bg-black flex items-center justify-center mb-1.5 shadow-inner">
+                          <Lock size={15} className="text-white/30" />
+                        </div>
+                        <span className="font-mono text-[8px] text-white/25 uppercase font-black tracking-[0.25em]">
+                          CLASSIFIED
+                        </span>
+                      </div>
+                    ) : (
+                      <>
+                        <img
+                          src={song.coverArt || '/data/covers/default.jpg'}
+                          alt={song.title}
+                          loading="lazy"
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                        {/* Gradient bottom scrim */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
+                      </>
+                    )}
 
                     {/* Day Pill */}
-                    <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/80 backdrop-blur-md rounded font-mono text-[9px] font-black text-white uppercase tracking-wider border border-white/15">
+                    <div className="absolute top-2 left-2 px-2 py-0.5 bg-black/80 backdrop-blur-md rounded font-mono text-[9px] font-black text-white/70 uppercase tracking-wider border border-white/10">
                       #{String(song.day).padStart(3, '0')}
                     </div>
 
@@ -340,9 +352,6 @@ export default function Archive365Page() {
                       )}
                       {isOwned && (
                         <CheckCircle size={14} className="text-[#39FF14] drop-shadow-[0_0_6px_#39FF14]" />
-                      )}
-                      {isFuture && (
-                        <Lock size={13} className="text-white/40" />
                       )}
                     </div>
 
@@ -387,39 +396,49 @@ export default function Archive365Page() {
                       <div className="flex items-center justify-between gap-1 mb-1">
                         <span
                           className="font-mono text-[8px] font-black uppercase tracking-widest"
-                          style={{ color: moodColor }}
+                          style={{ color: isFuture ? 'rgba(255,255,255,0.2)' : moodColor }}
                         >
-                          {song.mood.toUpperCase()}
+                          {isFuture ? 'ENCRYPTED' : song.mood.toUpperCase()}
                         </span>
-                        <span className="font-mono text-[8px] text-white/40 uppercase">
-                          {dateStr}
+                        <span className="font-mono text-[8px] text-white/30 uppercase">
+                          {isFuture ? 'DATE UNKNOWN' : dateStr}
                         </span>
                       </div>
 
-                      <h4 className="font-mono text-xs font-bold text-white uppercase truncate" title={song.title}>
-                        {song.title}
+                      <h4
+                        className={`font-mono text-xs font-bold uppercase truncate ${
+                          isFuture ? 'text-white/20 italic' : 'text-white'
+                        }`}
+                        title={isFuture ? 'Transmission Classified' : song.title}
+                      >
+                        {isFuture ? `TRANSMISSION #${String(song.day).padStart(3, '0')}` : song.title}
                       </h4>
                     </div>
 
                     {/* Action Pathways */}
                     <div className="mt-3 pt-2 border-t border-white/10 flex items-center justify-between font-mono text-[9px] font-bold">
-                      <Link
-                        to={`/day/${song.day}`}
-                        className="text-white/70 hover:text-white uppercase transition-colors no-underline flex items-center gap-0.5"
-                      >
-                        <span>Artifact</span>
-                        <ArrowUpRight size={10} />
-                      </Link>
-
-                      {!isFuture ? (
-                        <Link
-                          to={`/play/${song.id}`}
-                          className="text-[#FF1493] hover:text-pink-300 uppercase transition-colors no-underline"
-                        >
-                          Play PIM ⚡
-                        </Link>
+                      {isFuture ? (
+                        <span className="text-white/20 uppercase flex items-center gap-1">
+                          <Lock size={10} />
+                          <span>LOCKED</span>
+                        </span>
                       ) : (
-                        <span className="text-white/30 uppercase">Locked</span>
+                        <>
+                          <Link
+                            to={`/day/${song.day}`}
+                            className="text-white/70 hover:text-white uppercase transition-colors no-underline flex items-center gap-0.5"
+                          >
+                            <span>Artifact</span>
+                            <ArrowUpRight size={10} />
+                          </Link>
+
+                          <Link
+                            to={`/play/${song.id}`}
+                            className="text-[#FF1493] hover:text-pink-300 uppercase transition-colors no-underline"
+                          >
+                            Play PIM ⚡
+                          </Link>
+                        </>
                       )}
                     </div>
                   </div>
