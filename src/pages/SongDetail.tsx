@@ -8,6 +8,7 @@ import { getActiveTheme } from "@/lib/options";
 import { useVaultStore } from "../store/useVaultStore";
 import { getCurrentDay } from "../utils/dayCalc";
 import PrizeProgressMenu from "../components/PrizeProgressMenu";
+import SongLeaderboard from "../components/SongLeaderboard";
 import { Film } from "lucide-react";
 
 const MEDAL_COLOR: Record<string, string> = {
@@ -525,6 +526,17 @@ export default function SongDetail() {
             </div>
           )}
 
+          {/* Global Song Leaderboard */}
+          <div className="mb-2">
+            <SongLeaderboard
+              songId={song.id}
+              currentScore={hs}
+              currentMedal={medal}
+              defaultLimit={5}
+              title="GLOBAL TRANSMISSION RANKINGS"
+            />
+          </div>
+
           {/* Play button */}
           <div className="pb-8 flex flex-col gap-2">
             {!unlocked && (
@@ -840,6 +852,17 @@ export default function SongDetail() {
             </button>
           </div>
         )}
+
+        {/* Global Song Leaderboard */}
+        <div className="mb-2">
+          <SongLeaderboard
+            songId={song.id}
+            currentScore={hs}
+            currentMedal={medal}
+            defaultLimit={5}
+            title="GLOBAL TRANSMISSION RANKINGS"
+          />
+        </div>
 
         {/* Play button */}
         <div className="pb-4 flex flex-col gap-2">

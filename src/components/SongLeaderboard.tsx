@@ -118,6 +118,25 @@ function generateDeterministicRivals(
   return rivals;
 }
 
+export function getSongAliases(songId: string): string[] {
+  const aliases = new Set<string>();
+  if (songId) aliases.add(songId);
+
+  const dayMatch = songId ? songId.match(/\d+/) : null;
+  if (dayMatch) {
+    const dayNum = parseInt(dayMatch[0], 10);
+    aliases.add(`day-${dayNum}`);
+    aliases.add(`day-${String(dayNum).padStart(2, '0')}`);
+    aliases.add(`day-${String(dayNum).padStart(3, '0')}`);
+    aliases.add(`card-${dayNum}`);
+    aliases.add(`card-${String(dayNum).padStart(3, '0')}`);
+    aliases.add(`song-day-${dayNum}`);
+    aliases.add(`song-day-${String(dayNum).padStart(3, '0')}`);
+    aliases.add(String(dayNum));
+  }
+  return Array.from(aliases);
+}
+
 export default function SongLeaderboard({
   songId,
   currentScore,
@@ -140,11 +159,13 @@ export default function SongLeaderboard({
     try {
       if (showLoading) setLoading(true);
 
-      // 1. Fetch real gameplay records for this specific song from Supabase
+      const aliasIds = getSongAliases(songId);
+
+      // 1. Fetch real gameplay records for this specific song across all aliases from Supabase
       const { data: records, error: recordsErr } = await supabase
         .from('gameplay_records')
         .select('user_id, score, accuracy, max_combo, medal, timestamp')
-        .eq('song_id', songId)
+        .in('song_id', aliasIds)
         .order('score', { ascending: false });
 
       if (recordsErr) {
@@ -176,8 +197,17 @@ export default function SongLeaderboard({
         }
       }
 
-      // 2. Ensure current player's local or live score is represented
-      const localHighScore = highScores[songId] || parseInt(typeof localStorage !== 'undefined' ? (localStorage.getItem(`hs_${songId}`) || '0') : '0', 10);
+      // 2. Ensure current player's local or live score is represented across any alias
+      let localHighScore = 0;
+      for (const aid of aliasIds) {
+        const hsFromStore = highScores[aid];
+        if (typeof hsFromStore === 'number' && hsFromStore > localHighScore) localHighScore = hsFromStore;
+        if (typeof localStorage !== 'undefined') {
+          const hsFromStorage = parseInt(localStorage.getItem(`hs_${aid}`) || '0', 10);
+          if (hsFromStorage > localHighScore) localHighScore = hsFromStorage;
+        }
+      }
+
       const effectiveScore = typeof currentScore === 'number' && currentScore > 0 ? currentScore : localHighScore;
       const effectiveAcc = typeof currentAccuracy === 'number' ? currentAccuracy : 0;
       const effectiveCombo = typeof currentMaxCombo === 'number' ? currentMaxCombo : 0;
@@ -283,14 +313,17 @@ export default function SongLeaderboard({
   useEffect(() => {
     fetchSongLeaderboard(true);
 
-    // Realtime listener for live score submissions
+    // Realtime listener for live score submissions across any alias of this song
+    const aliasIds = getSongAliases(songId);
     const channel = supabase
       .channel(`song-leaderboard-${songId}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'gameplay_records', filter: `song_id=eq.${songId}` },
-        () => {
-          fetchSongLeaderboard(false);
+        { event: '*', schema: 'public', table: 'gameplay_records' },
+        (payload: any) => {
+          if (payload?.new && aliasIds.includes(payload.new.song_id)) {
+            fetchSongLeaderboard(false);
+          }
         }
       )
       .subscribe();

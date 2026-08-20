@@ -26,6 +26,7 @@ import { audioManager } from '../game/audio';
 import { getCardByDay, type VaultCard } from '../services/vaultService';
 import Card from '../components/Card';
 import { RARITY_CONFIG } from '../utils/rarity';
+import SongLeaderboard from '../components/SongLeaderboard';
 
 export default function DayArtifactPage() {
   const params = useParams<{ day?: string }>();
@@ -45,7 +46,7 @@ export default function DayArtifactPage() {
   const [song, setSong] = useState<GameSong | null>(null);
   const [card, setCard] = useState<VaultCard | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'context' | 'lyrics' | 'ascii' | 'card'>('context');
+  const [activeTab, setActiveTab] = useState<'context' | 'lyrics' | 'ascii' | 'card' | 'leaderboard'>('context');
   const [copied, setCopied] = useState(false);
 
   // Global Player
@@ -432,7 +433,7 @@ export default function DayArtifactPage() {
               </div>
 
               {/* Sub-Navigation Tabs */}
-              <div className="flex items-center gap-2 border-b border-white/15 pb-2 mb-6 font-mono text-xs font-bold uppercase tracking-wider">
+              <div className="flex items-center gap-2 border-b border-white/15 pb-2 mb-6 font-mono text-xs font-bold uppercase tracking-wider flex-wrap">
                 <button
                   onClick={() => setActiveTab('context')}
                   className={`px-4 py-2 rounded transition-all cursor-pointer ${
@@ -452,6 +453,16 @@ export default function DayArtifactPage() {
                   }`}
                 >
                   LYRICS / WORDS
+                </button>
+                <button
+                  onClick={() => setActiveTab('leaderboard')}
+                  className={`px-4 py-2 rounded transition-all cursor-pointer ${
+                    activeTab === 'leaderboard'
+                      ? 'bg-white text-black font-black'
+                      : 'text-white/60 hover:text-white bg-white/5'
+                  }`}
+                >
+                  LEADERBOARD
                 </button>
                 <button
                   onClick={() => setActiveTab('ascii')}
@@ -512,6 +523,17 @@ export default function DayArtifactPage() {
                       LYRIC TRANSCRIPTIONS ARE BEING SYNCHRONIZED FROM MASTER MANUSCRIPT.
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Tab: Global Leaderboard */}
+              {activeTab === 'leaderboard' && (
+                <div className="p-2 sm:p-4 bg-[#0a0805] border border-white/10 rounded-xl">
+                  <SongLeaderboard
+                    songId={song.id || `day-${dayNum}`}
+                    defaultLimit={10}
+                    title={`DAY ${dayNum} GLOBAL TRANSMISSION RANKINGS`}
+                  />
                 </div>
               )}
 
