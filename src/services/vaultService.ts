@@ -555,6 +555,14 @@ export async function purchasePack(category: PackCategory, size: PackSize = 'sin
       return [];
     }
 
+    if (typeof result?.remainingTokens === 'number') {
+      try {
+        localStorage.setItem('pim_token_balance', String(result.remainingTokens));
+        const { useVaultStore } = await import('../store/useVaultStore');
+        useVaultStore.setState({ tokenBalance: result.remainingTokens });
+      } catch {}
+    }
+
     const rawCards = result.cards || [];
     const pool = await fetchAllCards();
 
@@ -828,6 +836,14 @@ export async function buyTokenPack(packType: 'vault_token' | 'bombshell_token' =
       console.error(detailedError || 'Unknown error');
       console.error('================================================');
       return [];
+    }
+
+    if (typeof data?.remainingTokens === 'number') {
+      try {
+        localStorage.setItem('pim_token_balance', String(data.remainingTokens));
+        const { useVaultStore } = await import('../store/useVaultStore');
+        useVaultStore.setState({ tokenBalance: data.remainingTokens });
+      } catch {}
     }
 
     const rawCards = data.cards || [];

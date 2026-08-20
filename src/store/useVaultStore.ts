@@ -571,9 +571,8 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         localStorage.setItem("opt_unlocked_noclip", String(mergedCheats.noclip));
         localStorage.setItem("opt_unlocked_iddqd", String(mergedCheats.iddqd));
 
-        const cachedLocalTokens = parseInt(localStorage.getItem('pim_token_balance') || '0', 10);
         const dbTokens = typeof profile.tokens === 'number' ? profile.tokens : 0;
-        const effectiveTokens = Math.max(dbTokens, cachedLocalTokens, get().tokenBalance);
+        const effectiveTokens = dbTokens;
         try {
           localStorage.setItem('pim_token_balance', String(effectiveTokens));
         } catch {}

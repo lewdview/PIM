@@ -177,6 +177,7 @@ export default function PackRevealPage() {
     if (cards.length > 0) {
       audioManager.playSfx('open_chest', 0.9);
       addToCollection(cards);
+      await loadVaultData();
       setRevealedIndex(0);
       setShowSummary(false);
       setAccumulatedCards((prev) => [...prev, ...cards]);
