@@ -4317,7 +4317,8 @@ export default function Game() {
         calculatedStage
       );
     }
-    const isExperimentalArchetype = (calculatedStage === 3 || calculatedStage === 5) && activeArchetypeRef.current !== 'cyber_tunnel';
+    const is3DPOVActive = activePovModeRef.current !== 'classic' && (activePovModeRef.current !== 'dynamic_stage' || calculatedStage >= 3);
+    const isExperimentalArchetype = is3DPOVActive || ((calculatedStage === 3 || calculatedStage === 5) && activeArchetypeRef.current !== 'cyber_tunnel');
     if (offscreenCanvasRef.current && !isExperimentalArchetype) {
       ctx.drawImage(offscreenCanvasRef.current, 0, 0, W, H);
     }
@@ -4870,8 +4871,6 @@ export default function Game() {
       const isOverdrive = calculatedStage === 5 && swirlSpeedMult >= 2.0;
 
       if (tunnelOpacity > 0) {
-        const currentArch = activeArchetypeRef.current;
-
         // ── ARCHETYPE 1: HORIZONTAL SIDE-SCROLLER (90° Canvas) ──
         if (currentArch === 'horizontal_drift') {
           // Dynamic Moving Gas Nebula Backdrop around Side-Scroller Track
@@ -5771,7 +5770,7 @@ export default function Game() {
 
     // ── 4.5. HIT ZONE BUTTONS (for 2.5D Classic POV mode) ──
     const isCyberPOV = (isCyberTunnelPov || activeArchetypeRef.current === 'cyber_tunnel') && (calculatedStage === 3 || calculatedStage === 5);
-    const show3DCircularTargets = isCyberTunnelPov || (isDynamicStagePov && calculatedStage >= 3);
+    const show3DCircularTargets = isCyberTunnelPov || isCorkscrewPov || isRollercoasterPov || isMatrixSplitPov || (isDynamicStagePov && calculatedStage >= 3);
     if (!show3DCircularTargets) {
       // Original height (space below hit line), centered so baseline bisects each button.
       const btnH = H - hitY;
