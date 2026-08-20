@@ -361,7 +361,7 @@ export default function PackRevealPage() {
             transition={{ delay: 0.3 }}
           >
             <RarityBadge rarity={revealCards[revealedIndex]?.card.rarity || 'common'} size="lg" />
-            {revealCards[revealedIndex]?.proof && (
+            {(revealCards[revealedIndex]?.proof === 'proof_of_first' || revealCards[revealedIndex]?.proof === 'proof_of_listen') && (
               <motion.div
                 initial={{ opacity: 0, scale: 0 }}
                 animate={{ opacity: 1, scale: 1 }}

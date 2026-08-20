@@ -123,8 +123,9 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
   else if (rarity === 'legendary') basePoints = 350;
   else if (rarity === 'mythic') basePoints = 800;
 
+  const hasRealProof = card.proof === 'proof_of_first' || card.proof === 'proof_of_listen';
   const discovererPoints = card.edition === 1 ? 500 : 0;
-  const proofPoints = (card.proof && card.proof !== 'none' as any) ? 200 : 0;
+  const proofPoints = hasRealProof ? 200 : 0;
   const echoPoints = card.isEcho ? 400 : 0;
   const totalCardPrestige = basePoints + discovererPoints + proofPoints + echoPoints;
 
@@ -313,7 +314,7 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
                       </div>
                     </div>
 
-                    {card.proof && (
+                    {hasRealProof && (
                       <div className="p-4 rounded-xl border-2 border-[#fff]/10 relative overflow-hidden" style={{ background: card.proof === 'proof_of_first' ? 'rgba(167,139,250,0.1)' : 'rgba(239,68,68,0.1)', borderColor: card.proof === 'proof_of_first' ? 'rgba(167,139,250,0.3)' : 'rgba(239,68,68,0.3)' }}>
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-sm">{card.proof === 'proof_of_first' ? '🔮' : '🎲'}</span>

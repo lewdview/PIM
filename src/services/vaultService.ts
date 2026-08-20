@@ -560,8 +560,9 @@ export async function purchasePack(category: PackCategory, size: PackSize = 'sin
 
     return rawCards.map((c: any) => {
       const isBombshell = isBombshellCard(c) || (typeof category === 'string' && category.toLowerCase().includes('bombshell'));
-      const coverArtwork = c.cover_artwork || c.coverArtwork || (c.proof && typeof c.proof === 'object' ? c.proof.cover_artwork : undefined) || c.fingerprint;
+      const coverArtwork = c.cover_artwork || c.coverArtwork || c.fingerprint || (c.proof && typeof c.proof === 'object' ? c.proof.cover_artwork : undefined);
       const parent = findCardWithFallback(pool, c.card_id, c.rarity, isBombshell, coverArtwork);
+      const sanitizedProof = (typeof c.proof === 'string' && (c.proof === 'proof_of_first' || c.proof === 'proof_of_listen')) ? c.proof : null;
 
       return {
         id: c.id || crypto.randomUUID(),
@@ -576,7 +577,7 @@ export async function purchasePack(category: PackCategory, size: PackSize = 'sin
         isEcho: c.is_echo,
         echoGeneration: c.echo_generation,
         echoSourceDay: c.echo_source_day,
-        proof: c.proof,
+        proof: sanitizedProof,
         ultraReward: c.ultra_reward,
         blockchainStatus: c.blockchain_status,
         fingerprint: c.fingerprint
@@ -834,8 +835,9 @@ export async function buyTokenPack(packType: 'vault_token' | 'bombshell_token' =
 
     return rawCards.map((c: any) => {
       const isBombshell = isBombshellCard(c) || packType === 'bombshell_token';
-      const coverArtwork = c.cover_artwork || c.coverArtwork || (c.proof && typeof c.proof === 'object' ? c.proof.cover_artwork : undefined) || c.fingerprint;
+      const coverArtwork = c.cover_artwork || c.coverArtwork || c.fingerprint || (c.proof && typeof c.proof === 'object' ? c.proof.cover_artwork : undefined);
       const parent = findCardWithFallback(pool, c.card_id, c.rarity, isBombshell, coverArtwork);
+      const sanitizedProof = (typeof c.proof === 'string' && (c.proof === 'proof_of_first' || c.proof === 'proof_of_listen')) ? c.proof : null;
       return {
         id: c.id || crypto.randomUUID(),
         cardId: parent.id,
@@ -849,7 +851,7 @@ export async function buyTokenPack(packType: 'vault_token' | 'bombshell_token' =
         isEcho: c.is_echo,
         echoGeneration: c.echo_generation,
         echoSourceDay: c.echo_source_day,
-        proof: c.proof,
+        proof: sanitizedProof,
         ultraReward: c.ultra_reward,
         blockchainStatus: c.blockchain_status,
         fingerprint: c.fingerprint

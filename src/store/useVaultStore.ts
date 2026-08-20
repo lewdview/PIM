@@ -612,8 +612,9 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         const pool = await fetchAllCards();
         mappedCards = vault.map(c => {
            const isBombshell = isBombshellCard(c);
-           const coverArtwork = c.cover_artwork || c.coverArtwork || (c.proof && typeof c.proof === 'object' ? c.proof.cover_artwork : undefined) || c.fingerprint;
+           const coverArtwork = c.cover_artwork || c.coverArtwork || c.fingerprint || (c.proof && typeof c.proof === 'object' ? c.proof.cover_artwork : undefined);
            const parent = findCardWithFallback(pool, c.card_id, c.rarity, isBombshell, coverArtwork);
+           const sanitizedProof = (typeof c.proof === 'string' && (c.proof === 'proof_of_first' || c.proof === 'proof_of_listen')) ? c.proof : null;
 
            return {
              id: c.id,
@@ -628,7 +629,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
              isEcho: c.is_echo,
              echoGeneration: c.echo_generation,
              echoSourceDay: c.echo_source_day,
-             proof: c.proof,
+             proof: sanitizedProof,
              ultraReward: c.ultra_reward,
              blockchainStatus: c.blockchain_status,
              fingerprint: c.fingerprint

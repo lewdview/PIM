@@ -126,7 +126,7 @@ function StatBox({ label, value, color }: { label: string; value: string | numbe
 }
 
 function ProofSeal({ type }: { type: ProofType }) {
-  if (!type) return null;
+  if (!type || (type !== 'proof_of_first' && type !== 'proof_of_listen')) return null;
   const isFirst = type === 'proof_of_first';
   const color = isFirst ? '#a78bfa' : '#ef4444';
   const icon = isFirst ? '🔮' : '🎲';
