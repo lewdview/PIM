@@ -816,8 +816,10 @@ export function isWidescreenDisplay(W: number, H: number = 0): boolean {
   return W >= 768;
 }
 
-export function getHitRatio(W: number, H: number = 0): number {
-  return isWidescreenDisplay(W, H) ? 0.85 : 0.78;
+export function getHitRatio(W: number = 0, H: number = 0): number {
+  void W;
+  void H;
+  return HIT_RATIO; // 0.78 — Original hit bar position
 }
 
 export function getHighwayMaxWidth(W: number, H: number = 0): number {
@@ -1243,12 +1245,20 @@ function getArchetypeProjection(
     };
   }
   if (povMode === 'classic') {
-    const topRatio = isWide ? 0.44 : HW_TOP;
-    const botRatio = isWide ? 0.98 : HW_BOT;
+    const topRatio = getHighwayTopRatio(W, H, false);
+    const botRatio = getHighwayBotRatio(W, H, false);
     const { x, w } = laneAt(lane, prog, W, topRatio, botRatio, undefined, stage, t, H);
+    const c0 = laneAt(lane, 0, W, topRatio, botRatio, undefined, stage, t, H);
+    const c1 = laneAt(lane, 1, W, topRatio, botRatio, undefined, stage, t, H);
+    const dx = (c1.x + c1.w / 2) - (c0.x + c0.w / 2);
+    const rot = Math.atan2(dx, hitY);
+
+    const noteMargin = isWide ? 6 : 8;
+    const noteW = Math.max(24, w - noteMargin);
+    const noteX = x + (w - noteW) / 2;
     const noteY = prog * hitY;
-    const noteH = isWide ? lerp(50, 95, prog) : lerp(80, 140, prog);
-    return { x, y: noteY, w, h: noteH, rot: 0, scale: lerp(0.4, 1.0, prog) };
+    const noteH = isWide ? lerp(45, 88, prog) : lerp(75, 135, prog);
+    return { x: noteX, y: noteY, w: noteW, h: noteH, rot, scale: lerp(0.4, 1.0, prog) };
   }
 
   // 2. Dynamic Stage Cam Mode (transitions based on stage progression):
@@ -1267,7 +1277,7 @@ function getArchetypeProjection(
         const spread = (lane - 1) * (maxHW * (isWide ? 0.35 : 0.22) * Math.sin(prog * Math.PI));
         const { x: lx, w: lw } = laneAt(lane, prog, W, topRatio, botRatio, undefined, stage, t, H);
         const noteY = prog * hitY;
-        const noteH = isWide ? lerp(50, 95, prog) : lerp(80, 140, prog);
+        const noteH = isWide ? lerp(45, 88, prog) : lerp(75, 135, prog);
         return {
           x: lx + spread,
           y: noteY,
@@ -1313,12 +1323,20 @@ function getArchetypeProjection(
   }
 
   // Fallback: 2.5D Classic Highway
-  const topRatio = isWide ? 0.44 : HW_TOP;
-  const botRatio = isWide ? 0.98 : HW_BOT;
+  const topRatio = getHighwayTopRatio(W, H, false);
+  const botRatio = getHighwayBotRatio(W, H, false);
   const { x, w } = laneAt(lane, prog, W, topRatio, botRatio, undefined, stage, t, H);
+  const c0 = laneAt(lane, 0, W, topRatio, botRatio, undefined, stage, t, H);
+  const c1 = laneAt(lane, 1, W, topRatio, botRatio, undefined, stage, t, H);
+  const dx = (c1.x + c1.w / 2) - (c0.x + c0.w / 2);
+  const rot = Math.atan2(dx, hitY);
+
+  const noteMargin = isWide ? 6 : 8;
+  const noteW = Math.max(24, w - noteMargin);
+  const noteX = x + (w - noteW) / 2;
   const noteY = prog * hitY;
-  const noteH = isWide ? lerp(50, 95, prog) : lerp(80, 140, prog);
-  return { x, y: noteY, w, h: noteH, rot: 0, scale: lerp(0.4, 1.0, prog) };
+  const noteH = isWide ? lerp(45, 88, prog) : lerp(75, 135, prog);
+  return { x: noteX, y: noteY, w: noteW, h: noteH, rot, scale: lerp(0.4, 1.0, prog) };
 }
 
 function drawArchetypeHoldTrail(
@@ -5895,12 +5913,12 @@ export default function Game() {
     // Left rail
     ctx.beginPath();
     ctx.moveTo(hwTop.left, 0);
-    ctx.quadraticCurveTo(hwTop.left - hillBow, bowY, hwBot.left, hitY);
+    ctx.lineTo(hwBot.left, hitY);
     ctx.stroke();
     // Right rail
     ctx.beginPath();
     ctx.moveTo(hwTop.right, 0);
-    ctx.quadraticCurveTo(hwTop.right + hillBow, bowY, hwBot.right, hitY);
+    ctx.lineTo(hwBot.right, hitY);
     ctx.stroke();
     ctx.restore();
 
@@ -5913,11 +5931,11 @@ export default function Game() {
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(hwTop.left, 0);
-    ctx.quadraticCurveTo(hwTop.left - hillBow, bowY, hwBot.left, hitY);
+    ctx.lineTo(hwBot.left, hitY);
     ctx.stroke();
     ctx.beginPath();
     ctx.moveTo(hwTop.right, 0);
-    ctx.quadraticCurveTo(hwTop.right + hillBow, bowY, hwBot.right, hitY);
+    ctx.lineTo(hwBot.right, hitY);
     ctx.stroke();
 
     // ── 4. POWER-UP SCREEN EDGE GLOW ───────────────────────────
@@ -5957,6 +5975,28 @@ export default function Game() {
       const bx = x + 4;
       const bw = w - 8;
       const bTop = btnY + (pressed ? 2 : 0);
+
+      // Subtle upward track surface glow for pressed lane
+      if (pressed && !show3DCircularTargets) {
+        const topProg = 0.40;
+        const topY = topProg * hitY;
+        const pTop = laneAt(i, topProg, W, povTop, povBot, undefined, calculatedStage, t, H);
+        const pBot = laneAt(i, 1.0, W, povTop, povBot, undefined, calculatedStage, t, H);
+        const pressGrad = ctx.createLinearGradient(0, topY, 0, hitY);
+        pressGrad.addColorStop(0, "rgba(255, 255, 255, 0.0)");
+        pressGrad.addColorStop(0.5, colorWithAlpha(lc, 0.08));
+        pressGrad.addColorStop(1, colorWithAlpha(lc, 0.24));
+        ctx.save();
+        ctx.fillStyle = pressGrad;
+        ctx.beginPath();
+        ctx.moveTo(pTop.x + 2, topY);
+        ctx.lineTo(pTop.x + pTop.w - 2, topY);
+        ctx.lineTo(pBot.x + pBot.w - 3, hitY);
+        ctx.lineTo(pBot.x + 3, hitY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
 
       // Calculate themed difficulty hue
       const diffLvl = songRef.current?.difficultyLevel ?? 5;
@@ -6498,15 +6538,7 @@ export default function Game() {
       }
 
       if (note.type !== "hold") {
-        if (proj.rot !== 0) {
-          ctx.save();
-          ctx.translate(drawX, noteY);
-          ctx.rotate(proj.rot);
-          drawKey(ctx, 0, 0, noteW, noteH, r, noteColor, prog, false, note.swipeDirection, note.time * 3700, note.type);
-          ctx.restore();
-        } else {
-          drawKey(ctx, drawX, noteY, noteW, noteH, r, noteColor, prog, false, note.swipeDirection, note.time * 3700, note.type);
-        }
+        drawKey(ctx, drawX, noteY, noteW, noteH, r, noteColor, prog, false, note.swipeDirection, note.time * 3700, note.type, proj.rot);
       } else {
         // Hold/Slide trail — ivory ribbon with colored stripe
         const holdDur = note.holdDuration || 0.5;
@@ -6630,44 +6662,19 @@ export default function Game() {
           const tailP = lerp(headP, 1.0, ns.holdProgress);
           const tailProj = getArchetypeProjection(endLane, tailP, W, H, activeArchetypeRef.current, calculatedStage, t, activePovModeRef.current);
           const tailR = lerp(12, 24, tailP);
-          if (tailProj.rot !== 0) {
-            ctx.save();
-            ctx.translate(tailProj.x + tailProj.w / 2, tailProj.y);
-            ctx.rotate(tailProj.rot);
-            drawKey(ctx, -tailProj.w / 2, 0, tailProj.w, tailProj.h, tailR, noteColor, tailP, true, tailSwipeDir, note.time * 3700, note.type);
-            ctx.restore();
-          } else {
-            drawKey(ctx, tailProj.x, tailProj.y, tailProj.w, tailProj.h, tailR, noteColor, tailP, true, tailSwipeDir, note.time * 3700, note.type);
-          }
+          drawKey(ctx, tailProj.x, tailProj.y, tailProj.w, tailProj.h, tailR, noteColor, tailP, true, tailSwipeDir, note.time * 3700, note.type, tailProj.rot);
         }
 
         // Draw gold terminus block at the tail of the inactive hold (at headP)
         if (!ns.holdActive && headP > 0 && headP <= 1) {
           const tailProj = getArchetypeProjection(endLane, headP, W, H, activeArchetypeRef.current, calculatedStage, t, activePovModeRef.current);
           const tailR = lerp(12, 24, headP);
-          if (tailProj.rot !== 0) {
-            ctx.save();
-            ctx.translate(tailProj.x + tailProj.w / 2, tailProj.y);
-            ctx.rotate(tailProj.rot);
-            drawKey(ctx, -tailProj.w / 2, 0, tailProj.w, tailProj.h, tailR, noteColor, headP, true, tailSwipeDir, note.time * 3700, note.type);
-            ctx.restore();
-          } else {
-            drawKey(ctx, tailProj.x, tailProj.y, tailProj.w, tailProj.h, tailR, noteColor, headP, true, tailSwipeDir, note.time * 3700, note.type);
-          }
+          drawKey(ctx, tailProj.x, tailProj.y, tailProj.w, tailProj.h, tailR, noteColor, headP, true, tailSwipeDir, note.time * 3700, note.type, tailProj.rot);
         }
 
         // Draw gold note box at the head of the hold note ONLY when NOT actively held
-        // (Once the hold is active, the head is already struck, so we don't draw the big head box to avoid blocking the incoming tail release/swipe)
         if (!ns.holdActive) {
-          if (proj.rot !== 0) {
-            ctx.save();
-            ctx.translate(drawX + noteW / 2, noteY);
-            ctx.rotate(proj.rot);
-            drawKey(ctx, -noteW / 2, 0, noteW, noteH, r, noteColor, prog, false, headSwipeDir, note.time * 3700, note.type);
-            ctx.restore();
-          } else {
-            drawKey(ctx, drawX, noteY, noteW, noteH, r, noteColor, prog, false, headSwipeDir, note.time * 3700, note.type);
-          }
+          drawKey(ctx, drawX, noteY, noteW, noteH, r, noteColor, prog, false, headSwipeDir, note.time * 3700, note.type, proj.rot);
         }
       }
 
@@ -6723,22 +6730,42 @@ export default function Game() {
       const dt = (nowMs - e.startMs) / 1000; // seconds
       const easeOut = 1 - t01;
 
-      // ─ Lane flash: bright overlay on the key area fading fast ─
-      if (t01 < 0.18) {
-        const flashAlpha =
-          (1 - t01 / 0.18) * (e.kind === "PERFECT+" ? 0.55 : 0.35);
-        const { x: fx, w: fw } = laneAt(e.lane, 1, W, povTop, povBot, undefined, calculatedStage, t, H);
-        const flashGrad = ctx.createLinearGradient(
-          fx,
-          e.cy - 60,
-          fx,
-          e.cy + 40,
-        );
-        flashGrad.addColorStop(0, colorWithAlpha(e.color, 0));
-        flashGrad.addColorStop(0.4, colorWithAlpha(e.color, flashAlpha));
-        flashGrad.addColorStop(1, colorWithAlpha(e.color, flashAlpha * 0.5));
-        ctx.fillStyle = flashGrad;
-        ctx.fillRect(fx + 4, e.cy - 60, fw - 8, 100);
+      // ─ Subtle perspective lane highway highlight on note hit ─
+      if (t01 < 0.65) {
+        const laneHighlightAlpha = Math.pow(1 - t01 / 0.65, 1.8) * (e.kind === "PERFECT+" ? 0.36 : 0.24);
+        const topProg = 0.22;
+        const topY = topProg * hitY;
+        const pTop = laneAt(e.lane, topProg, W, povTop, povBot, undefined, calculatedStage, t, H);
+        const pBot = laneAt(e.lane, 1.0, W, povTop, povBot, undefined, calculatedStage, t, H);
+
+        ctx.save();
+        const beamGrad = ctx.createLinearGradient(0, topY, 0, hitY);
+        beamGrad.addColorStop(0, "rgba(255, 255, 255, 0.0)");
+        beamGrad.addColorStop(0.35, colorWithAlpha(e.color, laneHighlightAlpha * 0.3));
+        beamGrad.addColorStop(0.75, colorWithAlpha(e.color, laneHighlightAlpha * 0.75));
+        beamGrad.addColorStop(1, colorWithAlpha(e.color, laneHighlightAlpha));
+
+        ctx.fillStyle = beamGrad;
+        ctx.beginPath();
+        ctx.moveTo(pTop.x + 2, topY);
+        ctx.lineTo(pTop.x + pTop.w - 2, topY);
+        ctx.lineTo(pBot.x + pBot.w - 3, hitY);
+        ctx.lineTo(pBot.x + 3, hitY);
+        ctx.closePath();
+        ctx.fill();
+
+        // Subtle side rail laser line accents along the lane dividers
+        const railAlpha = Math.pow(1 - t01 / 0.65, 1.5) * 0.55;
+        ctx.strokeStyle = colorWithAlpha(e.color, railAlpha);
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(pTop.x + 2, topY);
+        ctx.lineTo(pBot.x + 3, hitY);
+        ctx.moveTo(pTop.x + pTop.w - 2, topY);
+        ctx.lineTo(pBot.x + pBot.w - 3, hitY);
+        ctx.stroke();
+
+        ctx.restore();
       }
 
       // ─ Expanding rings ─
@@ -11868,7 +11895,8 @@ function drawKey(
   isHold: boolean,
   swipeDirection?: Note['swipeDirection'],
   timeOffset: number = 0,
-  noteType?: NoteType
+  noteType?: NoteType,
+  rot: number = 0
 ) {
   const noteW = Number.isFinite(rawNoteW) && rawNoteW > 0 ? rawNoteW : 60;
   const noteH = Number.isFinite(rawNoteH) && rawNoteH > 0 ? rawNoteH : 40;
@@ -11881,6 +11909,9 @@ function drawKey(
 
   ctx.save();
   ctx.translate(centerX, centerY);
+  if (Number.isFinite(rot) && rot !== 0) {
+    ctx.rotate(rot);
+  }
 
   // ── 0. SPECIAL CUSTOM GEOMETRY FOR MINE HAZARD NOTES ──
   if (noteType === 'mine') {
