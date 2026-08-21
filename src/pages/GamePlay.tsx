@@ -4480,6 +4480,10 @@ export default function Game() {
       ctx.drawImage(offscreenCanvasRef.current, 0, 0, W, H);
     }
 
+    const isCyberTunnelStage = activePovModeRef.current === 'cyber_tunnel' && (calculatedStage === 3 || calculatedStage === 5);
+    const povTop = isCyberTunnelStage ? 0.18 : HW_TOP;
+    const povBot = isCyberTunnelStage ? 0.86 : HW_BOT;
+
     // ── Dynamic Lane Hit Glows Sweep (Subtle Ambient Illumination) ──
     const nowGlowMs = Date.now();
     for (let i = 0; i < LANE_COUNT; i++) {
@@ -6384,9 +6388,6 @@ export default function Game() {
       }
       if (noteY < -80) continue;
 
-      const isCyberTunnelStage = activePovModeRef.current === 'cyber_tunnel' && (calculatedStage === 3 || calculatedStage === 5);
-      const povTop = isCyberTunnelStage ? 0.18 : HW_TOP;
-      const povBot = isCyberTunnelStage ? 0.86 : HW_BOT;
 
       const proj = getArchetypeProjection(note.lane, prog, W, H, activeArchetypeRef.current, calculatedStage, t, activePovModeRef.current);
       let noteH = proj.h;
