@@ -66,11 +66,12 @@ const menuSections: MenuSection[] = [
     icon: Home,
     items: [
       { to: '/vault', label: 'Home', icon: Home, desc: 'Daily card & vault dashboard' },
+      { to: '/next-vault', label: 'Next-Gen Vault', icon: Sparkles, desc: 'Robotic claw & token machine' },
+      { to: '/hero', label: 'Hero Exhibit', icon: Image, desc: 'Museum-grade daily showcase' },
       { to: '/365', label: '365 Archive', icon: BookOpen, desc: 'Full 365-day music & art timeline' },
       { to: '/vault/collection', label: 'Collection', icon: Layers, desc: 'Your card library' },
       { to: '/vault/reveal', label: 'Pack Reveal', icon: Sparkles, desc: 'Open earned packs' },
       { to: '/vault/codex', label: 'Codex', icon: BookOpen, desc: 'Card catalog & set tracker' },
-      { to: '/hero', label: 'Hero Exhibit', icon: Image, desc: 'Museum-grade daily showcase' },
     ],
   },
   {
