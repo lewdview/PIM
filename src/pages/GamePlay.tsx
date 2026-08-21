@@ -1022,85 +1022,60 @@ function getCorkscrewSpiralPos(
 ): ProjectionResult {
   const hitRatio = getHitRatio(W, H);
   const hitY = H * hitRatio;
-  const vanishingY = hitY * 0.18;
+  const vanishingY = hitY * 0.16;
   const cx = W / 2;
   const isWide = isWidescreenDisplay(W, H);
   const corkW = isWide
-    ? Math.min(500, Math.min(W * 0.42, H * 0.62))
-    : Math.min(W, 840);
+    ? Math.min(460, Math.max(350, W * 0.38))
+    : Math.min(W, 520);
   const laneOffset = lane - 1; // -1 for left, 0 for center, 1 for right
-  const mult = stage === 5 ? 1.6 : 1.0;
-  const baseH = hitY - vanishingY;
+  const p = Math.max(0, Math.min(1.05, prog));
 
-  // ── Phase 1: Entry Plunge ($p: 0.00 \rightarrow 0.12$) ──
-  // Fast plunge from vanishing horizon into top of the corkscrew tube
-  if (prog < 0.12) {
-    const u = prog / 0.12;
-    const startX = cx + laneOffset * (corkW * 0.06);
-    const startY = vanishingY;
+  // 1. Helical spiral geometry (1.5 turns / 540 degrees) along progress p
+  const spiralTurns = 1.5;
+  const spiralP = Math.min(1, p / 0.72); // 0 to 1 over first 72%
+  // Starts at -PI/2 (top center), spins 1.5 turns, lands facing down
+  const spiralAngle = -Math.PI / 2 + spiralP * Math.PI * 2 * spiralTurns;
 
-    const entryAngle = t * 1.6 * mult;
-    const entryRadiusX = corkW * 0.05;
-    const entryRadiusY = H * 0.02;
-    const entryX = cx + Math.cos(entryAngle) * entryRadiusX + laneOffset * 14;
-    const entryY = vanishingY + baseH * 0.10 + Math.sin(entryAngle) * entryRadiusY;
+  // Perspective expansion of the spiral radius
+  const radiusX = corkW * (0.07 + 0.30 * Math.pow(spiralP, 1.15));
+  const radiusY = (hitY - vanishingY) * (0.03 + 0.11 * Math.pow(spiralP, 1.15));
 
-    const noteX = lerp(startX, entryX, u);
-    const noteY = lerp(startY, entryY, u);
-    const noteW = lerp(isWide ? 28 : 38, isWide ? 42 : 54, u);
-    const noteH = lerp(isWide ? 24 : 32, isWide ? 36 : 46, u);
-    return { x: noteX - noteW / 2, y: noteY, w: noteW, h: noteH, rot: laneOffset * 0.05, scale: lerp(0.35, 0.52, u) };
-  } 
-  
-  // ── Phase 2: Tight Helical 3D Spiral Loops ($p: 0.12 \rightarrow 0.48$) ──
-  // Fast, tight 720° helical spin centered compactly in the upper middle tube
-  else if (prog < 0.48) {
-    const u = (prog - 0.12) / 0.36;
-    const loopAngle = u * Math.PI * 4 + t * 1.6 * mult; // 2 complete 360° loops
+  // Lane offset perpendicular to the spiral path
+  const normalAngle = spiralAngle + Math.PI / 2;
+  const laneDist = (corkW / LANE_COUNT) * (0.42 + 0.58 * p);
 
-    // Tightened horizontal radius (compact 3D tube)
-    const helixRadiusX = lerp(corkW * 0.05, corkW * 0.15, u);
-    const helixRadiusY = lerp(H * 0.02, H * 0.065, u);
-    const centerY = lerp(vanishingY + baseH * 0.10, vanishingY + baseH * 0.42, u);
+  const helixX = cx + Math.cos(spiralAngle) * radiusX + Math.cos(normalAngle) * (laneOffset * laneDist);
+  const helixY = vanishingY + (hitY - vanishingY) * Math.pow(spiralP, 1.12) + Math.sin(spiralAngle) * radiusY;
 
-    const spiralX = cx + Math.cos(loopAngle) * helixRadiusX + laneOffset * 16 * Math.cos(loopAngle);
-    const spiralY = centerY + Math.sin(loopAngle) * helixRadiusY;
+  // 2. Straight target lane coordinates at the strike zone
+  const topRatio = getHighwayTopRatio(W, H, false);
+  const botRatio = getHighwayBotRatio(W, H, false);
+  const { x: straightX, w: straightW } = laneAt(lane, p, W, topRatio, botRatio, undefined, 1, 0, H);
+  const straightCenterX = straightX + straightW / 2;
+  const straightCenterY = p * hitY;
 
-    const zDepth = Math.sin(loopAngle); // -1 (back) to +1 (front)
-    const rot = Math.cos(loopAngle) * 0.30;
-    const depthScale = lerp(0.52, 0.85, u) * (0.90 + zDepth * 0.10);
-    const noteW = lerp(isWide ? 42 : 54, isWide ? 68 : 90, u) * (0.90 + zDepth * 0.10);
-    const noteH = lerp(isWide ? 36 : 46, isWide ? 56 : 76, u) * (0.90 + zDepth * 0.10);
+  // 3. Smooth transition onto the landing runway (p: 0.65 -> 1.0)
+  const runwayT = Math.max(0, Math.min(1, (p - 0.65) / 0.35));
+  const smoothRunway = runwayT * runwayT * (3 - 2 * runwayT); // cubic smoothstep
 
-    return { x: spiralX - noteW / 2, y: spiralY, w: noteW, h: noteH, rot, scale: depthScale };
-  } 
-  
-  // ── Phase 3: Extended Readability Runway & Target Lane Ejection ($p: 0.48 \rightarrow 1.00$) ──
-  // Notes shoot out of the bottom nozzle at p = 0.48 and have 52% of the travel time (~600ms+)
-  // to smoothly lock onto their target lane column and glide straight into strike buttons!
-  else {
-    const u = (prog - 0.48) / 0.52;
-    const exitAngle = Math.PI * 4 + t * 1.6 * mult;
-    const exitRadiusX = corkW * 0.15;
-    const exitRadiusY = H * 0.065;
-    const exitX = cx + Math.cos(exitAngle) * exitRadiusX + laneOffset * 16;
-    const exitY = vanishingY + baseH * 0.42 + Math.sin(exitAngle) * exitRadiusY;
+  const finalCenterX = lerp(helixX, straightCenterX, smoothRunway);
+  const finalCenterY = lerp(helixY, straightCenterY, smoothRunway);
 
-    const { x: targetX, w: targetW } = laneAt(lane, 1, W, undefined, undefined, undefined, stage, t, H);
-    const targetCenterX = targetX + targetW / 2;
-    const targetCenterY = hitY;
+  // Note dimensions (bold, chunkier keys)
+  const noteW = lerp(corkW * 0.14, straightW - 4, p);
+  const noteH = lerp(36, 82, p);
+  const rot = Math.cos(spiralAngle) * 0.36 * (1 - smoothRunway);
+  const scale = lerp(0.40, 1.0, Math.pow(p, 1.05));
 
-    // Rapid ease-in to straight vertical lane column by u = 0.25 (p = 0.61)
-    const alignT = 1 - Math.pow(1 - u, 2.8);
-    const noteX = lerp(exitX, targetCenterX, alignT);
-    const noteY = lerp(exitY, targetCenterY, u);
-    const noteW = lerp(isWide ? 68 : 90, targetW, u);
-    const noteH = lerp(isWide ? 56 : 76, targetW * 0.72, u);
-    const rot = lerp(0.15, 0, alignT); // Straightens out into the hit lane
-    const scale = lerp(0.85, 1.0, u);
-
-    return { x: noteX - noteW / 2, y: noteY, w: noteW, h: noteH, rot, scale };
-  }
+  return {
+    x: finalCenterX - noteW / 2,
+    y: finalCenterY,
+    w: noteW,
+    h: noteH,
+    rot,
+    scale,
+  };
 }
 
 // 🎢 3D UNDULATING WAVE ROLLERCOASTER (Crest airtime, high-G dip, banking roll, and 0-bob hit runway)
@@ -1240,12 +1215,12 @@ function getArchetypeProjection(
     const topRatio = getHighwayTopRatio(W, H, false);
     const botRatio = getHighwayBotRatio(W, H, false);
     const { x, w } = laneAt(lane, prog, W, topRatio, botRatio, undefined, stage, t, H);
-    const noteMargin = 8;
-    const noteW = Math.max(20, w - noteMargin);
+    const noteMargin = 2;
+    const noteW = Math.max(28, w - noteMargin);
     const noteX = x + (w - noteW) / 2;
     const noteY = prog * hitY;
-    const noteH = lerp(32, 60, prog);
-    return { x: noteX, y: noteY, w: noteW, h: noteH, rot: 0, scale: lerp(0.4, 1.0, prog) };
+    const noteH = lerp(48, 86, prog);
+    return { x: noteX, y: noteY, w: noteW, h: noteH, rot: 0, scale: lerp(0.48, 1.0, prog) };
   }
 
   // 2. Dynamic Stage Cam Mode (transitions based on stage progression):
@@ -1313,12 +1288,12 @@ function getArchetypeProjection(
   const topRatio = getHighwayTopRatio(W, H, false);
   const botRatio = getHighwayBotRatio(W, H, false);
   const { x, w } = laneAt(lane, prog, W, topRatio, botRatio, undefined, stage, t, H);
-  const noteMargin = 8;
-  const noteW = Math.max(20, w - noteMargin);
+  const noteMargin = 2;
+  const noteW = Math.max(28, w - noteMargin);
   const noteX = x + (w - noteW) / 2;
   const noteY = prog * hitY;
-  const noteH = lerp(32, 60, prog);
-  return { x: noteX, y: noteY, w: noteW, h: noteH, rot: 0, scale: lerp(0.4, 1.0, prog) };
+  const noteH = lerp(48, 86, prog);
+  return { x: noteX, y: noteY, w: noteW, h: noteH, rot: 0, scale: lerp(0.48, 1.0, prog) };
 }
 
 function drawArchetypeHoldTrail(
@@ -5229,107 +5204,75 @@ export default function Game() {
           ctx.restore();
         }
 
-        // ── ARCHETYPE 3: 3D TWISTING CORKSCREW SLIDE (Tighter Helical Tube + Extended 52% Runway) ──
+        // ── ARCHETYPE 3: 3D TWISTING CORKSCREW SLIDE (Seamless Helical Track & Unified Spine) ──
         else if (currentArch === 'corkscrew_slide') {
           const isWide = isWidescreenDisplay(W, H);
-          const corkW = isWide ? Math.min(500, Math.min(W * 0.42, H * 0.62)) : Math.min(W, 840);
+          const corkW = isWide ? Math.min(460, Math.max(350, W * 0.38)) : Math.min(W, 520);
           const outerRadius = corkW * 0.55;
-          const vanishingY = hitY * 0.18;
+          const vanishingY = hitY * 0.16;
           const baseH = hitY - vanishingY;
 
           // Dynamic Moving Gas Nebula Backdrop around 3D Corkscrew Tube
           drawMovingGasAura(ctx, cx, vanishingY + baseH * 0.35, outerRadius, "#1c0830", t, 1.0);
 
           ctx.save();
-          const mult = calculatedStage === 5 ? 1.6 : 1.0;
 
-          // 1. Glowing Entry Mouth Ring (Top entrance at p = 0.12)
-          const entryAngle = t * 1.6 * mult;
-          const entryRadiusX = corkW * 0.05;
-          const entryRadiusY = H * 0.02;
-          const entryY = vanishingY + baseH * 0.10;
+          // 1. Cross-ties (Rungs) & Semi-transparent Floor connecting the 3 lanes
+          const steps = 28;
+          for (let s = 0; s < steps; s++) {
+            const p = (s / (steps - 1));
+            const p0 = getCorkscrewSpiralPos(0, p, W, H, t, calculatedStage);
+            const p1 = getCorkscrewSpiralPos(1, p, W, H, t, calculatedStage);
+            const p2 = getCorkscrewSpiralPos(2, p, W, H, t, calculatedStage);
 
-          ctx.strokeStyle = "rgba(255, 123, 0, 0.85)";
-          ctx.lineWidth = 3.5;
-          ctx.shadowColor = "#FF7B00";
-          ctx.shadowBlur = 16;
-          ctx.beginPath();
-          ctx.ellipse(cx + Math.cos(entryAngle) * entryRadiusX, entryY + Math.sin(entryAngle) * entryRadiusY, entryRadiusX * 1.4, entryRadiusY * 1.4, entryAngle, 0, Math.PI * 2);
-          ctx.stroke();
+            const x0 = p0.x + p0.w / 2;
+            const y0 = p0.y;
+            const x2 = p2.x + p2.w / 2;
+            const y2 = p2.y;
 
-          // 2. Continuous 3D Wireframe Helical Tunnel Ribs along Spiral Path ($p: 0.12 \rightarrow 0.48$)
-          const ringSteps = 14;
-          for (let r = 0; r < ringSteps; r++) {
-            const u = r / (ringSteps - 1);
-            const p = 0.12 + u * 0.36;
-            const loopAngle = u * Math.PI * 4 + t * 1.6 * mult;
-
-            const helixRadiusX = lerp(corkW * 0.05, corkW * 0.15, u);
-            const helixRadiusY = lerp(H * 0.02, H * 0.065, u);
-            const centerY = lerp(vanishingY + baseH * 0.10, vanishingY + baseH * 0.42, u);
-            const ribCx = cx + Math.cos(loopAngle) * helixRadiusX;
-            const ribCy = centerY + Math.sin(loopAngle) * helixRadiusY;
-
-            const ringColor = laneColorsRef.current[r % 3] || "#FF007F";
-            const zDepth = Math.sin(loopAngle); // -1 (back) to +1 (front)
-            const ringAlpha = (0.25 + 0.35 * Math.max(0, zDepth)) * (0.6 + 0.4 * beatPulseVal);
-
-            ctx.strokeStyle = colorWithAlpha(ringColor, ringAlpha);
-            ctx.lineWidth = lerp(1.5, 3.5, u);
-            ctx.shadowColor = ringColor;
-            ctx.shadowBlur = lerp(4, 12, u);
-
+            // Draw translucent floor slat
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+            ctx.lineWidth = lerp(1.5, 4.0, p);
             ctx.beginPath();
-            const ribW = lerp(32, 64, u);
-            const ribH = lerp(18, 38, u);
-            ctx.ellipse(ribCx, ribCy, ribW, ribH, loopAngle * 0.5, 0, Math.PI * 2);
+            ctx.moveTo(x0, y0);
+            ctx.lineTo(x2, y2);
             ctx.stroke();
+
+            // Periodic neon helical depth rings around center spine
+            if (s % 4 === 0) {
+              const ringR = lerp(16, 52, p);
+              ctx.strokeStyle = colorWithAlpha(laneColorsRef.current[1] || "#00E5FF", lerp(0.15, 0.45, p));
+              ctx.lineWidth = 1.5;
+              ctx.beginPath();
+              ctx.ellipse(p1.x + p1.w / 2, p1.y, ringR, ringR * 0.35, p1.rot || 0, 0, Math.PI * 2);
+              ctx.stroke();
+            }
           }
 
-          // 3. 3-Lane Glowing Guide Rails shooting out of nozzle ($p: 0.48 \rightarrow 1.00$)
-          const exitAngle = Math.PI * 4 + t * 1.6 * mult;
-          const exitRadiusX = corkW * 0.15;
-          const exitRadiusY = H * 0.065;
-          const exitY = vanishingY + baseH * 0.42 + Math.sin(exitAngle) * exitRadiusY;
-
-          // Nozzle glow ring at p = 0.48
-          ctx.strokeStyle = "#FFD700";
-          ctx.lineWidth = 4.0;
-          ctx.shadowColor = "#FFD700";
-          ctx.shadowBlur = 20;
-          ctx.beginPath();
-          ctx.ellipse(cx + Math.cos(exitAngle) * exitRadiusX, exitY, exitRadiusX * 1.2, exitRadiusY * 1.2, exitAngle, 0, Math.PI * 2);
-          ctx.stroke();
-
-          for (let rail = 0; rail < LANE_COUNT; rail++) {
-            const railColor = laneColorsRef.current[rail] || "#00E5FF";
-            const { x: targetX, w: targetW } = laneAt(rail, 1, W, undefined, undefined, undefined, calculatedStage, t, H);
-            const targetCenterX = targetX + targetW / 2;
-            const exitX = cx + Math.cos(exitAngle) * exitRadiusX + (rail - 1) * 16;
-
-            ctx.beginPath();
-            ctx.moveTo(exitX, exitY);
-            ctx.bezierCurveTo(
-              exitX + (targetCenterX - exitX) * 0.7, exitY + baseH * 0.20,
-              targetCenterX, hitY - baseH * 0.15,
-              targetCenterX, hitY
-            );
-            ctx.strokeStyle = colorWithAlpha(railColor, 0.35);
-            ctx.lineWidth = 2.0;
+          // 2. 3 Continuous Glowing Helical Neon Rails
+          for (let lane = 0; lane < LANE_COUNT; lane++) {
+            const railColor = laneColorsRef.current[lane] || (lane === 0 ? "#FF1493" : lane === 1 ? "#00E5FF" : "#39FF14");
+            ctx.strokeStyle = railColor;
+            ctx.lineWidth = 2.8;
             ctx.shadowColor = railColor;
-            ctx.shadowBlur = 8;
-            ctx.stroke();
-          }
+            ctx.shadowBlur = 10;
 
-          // Ejection pulse particles popping out of the nozzle
-          ctx.fillStyle = "#FFD700";
-          for (let p = 0; p < 4; p++) {
-            const pAngle = exitAngle + (p / 4) * Math.PI * 2;
-            const px = cx + Math.cos(pAngle) * exitRadiusX;
-            const py = exitY + Math.sin(pAngle) * exitRadiusY;
             ctx.beginPath();
-            ctx.arc(px, py, 3.5, 0, Math.PI * 2);
-            ctx.fill();
+            for (let s = 0; s < steps; s++) {
+              const p = (s / (steps - 1));
+              const proj = getCorkscrewSpiralPos(lane, p, W, H, t, calculatedStage);
+              const rx = proj.x + proj.w / 2;
+              const ry = proj.y;
+              if (s === 0) ctx.moveTo(rx, ry);
+              else ctx.lineTo(rx, ry);
+            }
+            ctx.stroke();
+
+            // Inner white core rail
+            ctx.strokeStyle = "#FFFFFF";
+            ctx.lineWidth = 1.0;
+            ctx.shadowBlur = 0;
+            ctx.stroke();
           }
 
           ctx.restore();
@@ -5954,8 +5897,8 @@ export default function Game() {
       const pressed = laneRef.current[i].pressed;
       const lc = getDifficultyLaneColor(laneColorsRef.current[i], songRef.current?.difficultyLevel ?? 5, i);
       const silenced = laneSilenced.current[i];
-      const bx = x + 4;
-      const bw = w - 8;
+      const bx = x + 2;
+      const bw = w - 4;
       const bTop = btnY + (pressed ? 2 : 0);
 
       // Calculate themed difficulty hue
