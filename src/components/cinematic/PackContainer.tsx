@@ -79,137 +79,6 @@ function GrainOverlay() {
   );
 }
 
-// ── Pack Shell (the bag visual) ──────────────────────────────────────
-
-function PackShell({ meta, phase, sampleCard }: { meta: RevealPackMeta; phase: Phase; sampleCard?: OwnedCard['card'] }) {
-  const isTorn = ['snap', 'pause', 'rise', 'flipping', 'layout', 'inspect'].includes(phase);
-  const isTearing = phase === 'tearing';
-  const isBombshell = meta.category === 'bombshell' || meta.label?.toLowerCase().includes('bombshell');
-
-  return (
-    <>
-      {/* Intact pack — visible during idle/grip/tension */}
-      <AnimatePresence>
-        {!isTorn && !isTearing && (
-          <motion.div
-            key="intact"
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.12 }}
-            style={{
-              position: 'absolute', inset: 0, borderRadius: '8px', overflow: 'hidden',
-              background: isBombshell ? '#16000d' : (meta.gradient || '#0a0814'),
-              boxShadow: `0 15px 40px rgba(0,0,0,0.8), 0 0 35px ${meta.accent}35`,
-              border: '1.5px solid rgba(255,255,255,0.12)',
-            }}
-          >
-            <PackBagContents meta={meta} sampleCard={sampleCard} />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Tearing mask — visible during tear phase */}
-      <AnimatePresence>
-        {isTearing && (
-          <motion.div
-            key="tearing"
-            initial={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.08 }}
-            style={{ position: 'absolute', inset: 0 }}
-          >
-            {/* Top seam stretching */}
-            <motion.div
-              initial={{ scaleY: 1 }}
-              animate={{ scaleY: 1.08 }}
-              transition={{ duration: 0.3 }}
-              style={{
-                position: 'absolute', inset: 0, borderRadius: '8px', overflow: 'hidden',
-                background: isBombshell ? '#16000d' : (meta.gradient || '#0a0814'), transformOrigin: 'top center',
-                boxShadow: `8px 8px 0 #000`,
-                border: '1.5px solid rgba(255,255,255,0.12)',
-                willChange: 'transform, opacity',
-              }}
-            >
-              <PackBagContents meta={meta} sampleCard={sampleCard} />
-              {/* Glow leak at seam */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: [0, 0.8, 0.4, 0.9] }}
-                transition={{ duration: 0.4 }}
-                style={{
-                  position: 'absolute', left: 0, right: 0, top: '46%', height: '10%',
-                  background: `linear-gradient(180deg, transparent, ${meta.accent}99, transparent)`,
-                  filter: 'blur(6px)',
-                  zIndex: 40,
-                }}
-              />
-            </motion.div>
-            {/* Jitter edge fibers */}
-            {Array.from({ length: 12 }).map((_, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 0 }}
-                animate={{
-                  opacity: [0, 0.8, 0],
-                  y: [(Math.random() - 0.5) * 4, (Math.random() - 0.5) * 8],
-                  x: [(Math.random() - 0.5) * 3, (Math.random() - 0.5) * 6],
-                }}
-                transition={{ duration: 0.3, delay: i * 0.02 }}
-                style={{
-                  position: 'absolute',
-                  left: `${8 + i * 7}%`, top: '48%',
-                  width: '2px', height: '6px',
-                  background: meta.accent, borderRadius: '1px',
-                  filter: `blur(${Math.random()}px)`,
-                  zIndex: 45,
-                }}
-              />
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Torn halves — visible after snap */}
-      <AnimatePresence>
-        {isTorn && (
-          <>
-            <motion.div
-              key="top-half"
-              initial={{ rotateX: 0, y: 0, opacity: 1 }}
-              animate={{ rotateX: -45, y: -60, opacity: 0.3 }}
-              transition={{ duration: 0.12, ease: [0.4, 0, 0.2, 1] }}
-              style={{
-                position: 'absolute', inset: 0,
-                clipPath: 'polygon(0 0, 100% 0, 98% 48%, 2% 50%)',
-                borderRadius: '8px', overflow: 'hidden',
-                background: isBombshell ? '#16000d' : (meta.gradient || '#0a0814'), transformOrigin: 'top center',
-                border: '1.5px solid rgba(255,255,255,0.12)',
-              }}
-            >
-              <PackBagContents meta={meta} sampleCard={sampleCard} />
-            </motion.div>
-            <motion.div
-              key="bottom-half"
-              initial={{ y: 0, opacity: 1 }}
-              animate={{ y: 12, opacity: 0.4 }}
-              transition={{ duration: 0.12, ease: [0.4, 0, 0.2, 1] }}
-              style={{
-                position: 'absolute', inset: 0,
-                clipPath: 'polygon(2% 50%, 98% 48%, 100% 100%, 0 100%)',
-                borderRadius: '8px', overflow: 'hidden',
-                background: isBombshell ? '#16000d' : (meta.gradient || '#0a0814'),
-                border: '1.5px solid rgba(255,255,255,0.12)',
-              }}
-            >
-              <PackBagContents meta={meta} sampleCard={sampleCard} />
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-    </>
-  );
-}
-
 // ===== PACK EMBLEM (Custom Icon) =====
 function PackEmblem({ accent, size = 80, isBombshell = false }: { accent: string; size?: number; isBombshell?: boolean }) {
   return (
@@ -380,6 +249,8 @@ function CyberPackBagContents({ meta, sampleCard }: { meta: RevealPackMeta; samp
           <div className="h-2" />
         </div>
       )}
+
+      <div style={{ position: 'absolute', inset: 0, border: `1.5px solid ${meta.accent}40`, borderRadius: '8px', pointerEvents: 'none', zIndex: 30 }} />
     </>
   );
 }
@@ -445,28 +316,77 @@ function ClassicFoilPackBagContents({ meta, sampleCard }: { meta: RevealPackMeta
         )}
 
         {/* VIBRANT POPPING PACK ACCENT COLOR TINT */}
+        {!isBombshell && (
+          <>
+            <div
+              className="absolute inset-0 pointer-events-none transition-all"
+              style={{
+                position: 'absolute', inset: 0,
+                background: `linear-gradient(160deg, ${meta.accent}ee 0%, ${meta.accent}aa 45%, rgba(6,3,14,0.96) 100%)`,
+                mixBlendMode: 'hard-light',
+                opacity: 0.95,
+                zIndex: 2,
+              }}
+            />
+            <div
+              className="absolute inset-0 pointer-events-none transition-all"
+              style={{
+                position: 'absolute', inset: 0,
+                background: meta.accent,
+                mixBlendMode: 'color',
+                opacity: 0.85,
+                zIndex: 3,
+              }}
+            />
+            <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 25%, rgba(255,255,255,0.2) 0%, transparent 60%)', zIndex: 4 }} />
+          </>
+        )}
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.7) 90%)', zIndex: 4 }} />
       </div>
 
       {/* 2. REALISTIC SERRATED JAGGED CRIMP TEETH */}
-      <div className="absolute inset-x-0 top-0 h-[22px] foil-crimp-serrated-top" style={{ zIndex: 25, ...(isBombshell ? { filter: 'drop-shadow(0 2px 8px #ff1493)' } : {}) }} />
-      <div className="absolute inset-x-0 bottom-0 h-[22px] foil-crimp-serrated-bottom" style={{ zIndex: 25 }} />
+      <div className="absolute top-0 inset-x-0 h-[10px] pointer-events-none z-20 overflow-hidden">
+        <div className="w-full h-full foil-crimped-edge-top opacity-90" />
+      </div>
+      <div className="absolute bottom-0 inset-x-0 h-[10px] pointer-events-none z-20 overflow-hidden">
+        <div className="w-full h-full foil-crimped-edge-bottom opacity-90" />
+      </div>
 
-      {/* 3. FOIL WRAPPER TEAR NOTCHES */}
-      <div className="foil-tear-notch-left" style={{ zIndex: 35, ...(isBombshell ? { background: '#ff1493' } : {}) }} />
-      <div className="foil-tear-notch-right" style={{ zIndex: 35, ...(isBombshell ? { background: '#ff1493' } : {}) }} />
+      {/* 3. HORIZONTAL CRIMP TEXTURE BANDS */}
+      <div className="absolute top-0 inset-x-0 h-[16px] pointer-events-none z-10 opacity-70" style={{
+        background: 'repeating-linear-gradient(90deg, rgba(255,255,255,0.18) 0px, rgba(255,255,255,0.18) 1.5px, transparent 1.5px, transparent 3.5px)',
+        borderBottom: '1px solid rgba(255,255,255,0.25)',
+      }} />
+      <div className="absolute bottom-0 inset-x-0 h-[16px] pointer-events-none z-10 opacity-70" style={{
+        background: 'repeating-linear-gradient(90deg, rgba(255,255,255,0.18) 0px, rgba(255,255,255,0.18) 1.5px, transparent 1.5px, transparent 3.5px)',
+        borderTop: '1px solid rgba(255,255,255,0.25)',
+      }} />
 
-      {/* 4. BACK FIN SEAL */}
-      <div className="foil-fin-seal" style={{ zIndex: 6 }} />
+      {/* 4. VERTICAL FOIL PILLOW CRUSH SHADOWS */}
+      <div className="absolute inset-y-0 left-0 w-8 pointer-events-none z-10" style={{
+        background: 'linear-gradient(90deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.15) 50%, transparent 100%)',
+      }} />
+      <div className="absolute inset-y-0 right-0 w-8 pointer-events-none z-10" style={{
+        background: 'linear-gradient(270deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.15) 50%, transparent 100%)',
+      }} />
 
-      {/* 5. DYNAMIC HOLOGRAPHIC RAINBOW SPECULAR REFRACTION */}
-      <div className="foil-holo-prism" style={{ opacity: isBombshell ? 0.45 : 0.35, zIndex: 8 }} />
+      {/* 5. CENTER VERTICAL SPECULAR SPINE */}
+      <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-16 pointer-events-none z-10" style={{
+        background: 'radial-gradient(ellipse at 50% 50%, rgba(255,255,255,0.18) 0%, transparent 80%)',
+        mixBlendMode: 'screen',
+      }} />
 
-      {/* 6. 3D INNER CARD STACK BULGE */}
-      <div className="foil-card-bulge" style={{ zIndex: 6 }} />
+      {/* 6. CORNER LIGHT FLARES */}
+      <div className="absolute top-2 left-2 w-12 h-12 pointer-events-none z-10 rounded-full" style={{
+        background: 'radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%)',
+        mixBlendMode: 'screen',
+      }} />
+      <div className="absolute bottom-4 right-2 w-16 h-16 pointer-events-none z-10 rounded-full" style={{
+        background: `radial-gradient(circle, ${isBombshell ? '#FF1493' : meta.accent}40 0%, transparent 70%)`,
+        mixBlendMode: 'screen',
+      }} />
 
-      {/* 7. METALLIC FOIL WRINKLES & FOLD CREASES */}
-      <div className="foil-wrinkles-overlay" style={{ zIndex: 7, opacity: 0.5 }} />
+      {/* 7. LIVE METALLIC SHEEN SWEEP ANIMATION */}
       <div className="foil-metallic-sheen" style={{ zIndex: 5 }} />
 
       {/* 8. REALISTIC METALLIC FOIL CRINKLE NOISE TEXTURE */}
@@ -607,6 +527,145 @@ function ClassicFoilPackBagContents({ meta, sampleCard }: { meta: RevealPackMeta
       )}
 
       <div style={{ position: 'absolute', inset: 0, border: '1.5px solid rgba(255,255,255,0.08)', borderRadius: '8px', pointerEvents: 'none', zIndex: 30 }} />
+    </>
+  );
+}
+
+function PackBagContents({ meta, sampleCard }: { meta: RevealPackMeta; sampleCard?: OwnedCard['card'] }) {
+  const packDesignStyle = useVaultStore((s) => s.packDesignStyle);
+  if (packDesignStyle === 'cyber_cartridge') {
+    return <CyberPackBagContents meta={meta} sampleCard={sampleCard} />;
+  }
+  return <ClassicFoilPackBagContents meta={meta} sampleCard={sampleCard} />;
+}
+
+// ── Pack Shell (the bag visual) ──────────────────────────────────────
+
+function PackShell({ meta, phase, sampleCard }: { meta: RevealPackMeta; phase: Phase; sampleCard?: OwnedCard['card'] }) {
+  const isTorn = ['snap', 'pause', 'rise', 'flipping', 'layout', 'inspect'].includes(phase);
+  const isTearing = phase === 'tearing';
+  const isBombshell = meta.category === 'bombshell' || meta.category === 'bombshell_token' || meta.label?.toLowerCase().includes('bombshell');
+
+  return (
+    <>
+      {/* Intact pack — visible during idle/grip/tension */}
+      <AnimatePresence>
+        {!isTorn && !isTearing && (
+          <motion.div
+            key="intact"
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.12 }}
+            style={{
+              position: 'absolute', inset: 0, borderRadius: '8px', overflow: 'hidden',
+              background: isBombshell ? '#000000' : (meta.gradient || '#0a0814'),
+              boxShadow: `0 15px 40px rgba(0,0,0,0.8), 0 0 35px ${meta.accent}35`,
+              border: '1.5px solid rgba(255,255,255,0.12)',
+            }}
+          >
+            <PackBagContents meta={meta} sampleCard={sampleCard} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Tearing mask — visible during tear phase */}
+      <AnimatePresence>
+        {isTearing && (
+          <motion.div
+            key="tearing"
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.08 }}
+            style={{ position: 'absolute', inset: 0 }}
+          >
+            {/* Top seam stretching */}
+            <motion.div
+              initial={{ scaleY: 1 }}
+              animate={{ scaleY: 1.08 }}
+              transition={{ duration: 0.3 }}
+              style={{
+                position: 'absolute', inset: 0, borderRadius: '8px', overflow: 'hidden',
+                background: isBombshell ? '#000000' : (meta.gradient || '#0a0814'), transformOrigin: 'top center',
+                boxShadow: `8px 8px 0 #000`,
+                border: '1.5px solid rgba(255,255,255,0.12)',
+                willChange: 'transform, opacity',
+              }}
+            >
+              <PackBagContents meta={meta} sampleCard={sampleCard} />
+              {/* Glow leak at seam */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: [0, 0.8, 0.4, 0.9] }}
+                transition={{ duration: 0.4 }}
+                style={{
+                  position: 'absolute', left: 0, right: 0, top: '46%', height: '10%',
+                  background: `linear-gradient(180deg, transparent, ${meta.accent}99, transparent)`,
+                  filter: 'blur(6px)',
+                  zIndex: 40,
+                }}
+              />
+            </motion.div>
+            {/* Jitter edge fibers */}
+            {Array.from({ length: 12 }).map((_, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 0 }}
+                animate={{
+                  opacity: [0, 0.8, 0],
+                  y: [(Math.random() - 0.5) * 4, (Math.random() - 0.5) * 8],
+                  x: [(Math.random() - 0.5) * 3, (Math.random() - 0.5) * 6],
+                }}
+                transition={{ duration: 0.3, delay: i * 0.02 }}
+                style={{
+                  position: 'absolute',
+                  left: `${8 + i * 7}%`, top: '48%',
+                  width: '2px', height: '6px',
+                  background: meta.accent, borderRadius: '1px',
+                  filter: `blur(${Math.random()}px)`,
+                  zIndex: 45,
+                }}
+              />
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Torn halves — visible after snap */}
+      <AnimatePresence>
+        {isTorn && (
+          <>
+            <motion.div
+              key="top-half"
+              initial={{ rotateX: 0, y: 0, opacity: 1 }}
+              animate={{ rotateX: -45, y: -60, opacity: 0.3 }}
+              transition={{ duration: 0.12, ease: [0.4, 0, 0.2, 1] }}
+              style={{
+                position: 'absolute', inset: 0,
+                clipPath: 'polygon(0 0, 100% 0, 98% 48%, 2% 50%)',
+                borderRadius: '8px', overflow: 'hidden',
+                background: isBombshell ? '#000000' : (meta.gradient || '#0a0814'), transformOrigin: 'top center',
+                border: '1.5px solid rgba(255,255,255,0.12)',
+              }}
+            >
+              <PackBagContents meta={meta} sampleCard={sampleCard} />
+            </motion.div>
+            <motion.div
+              key="bottom-half"
+              initial={{ y: 0, opacity: 1 }}
+              animate={{ y: 12, opacity: 0.4 }}
+              transition={{ duration: 0.12, ease: [0.4, 0, 0.2, 1] }}
+              style={{
+                position: 'absolute', inset: 0,
+                clipPath: 'polygon(2% 50%, 98% 48%, 100% 100%, 0 100%)',
+                borderRadius: '8px', overflow: 'hidden',
+                background: isBombshell ? '#000000' : (meta.gradient || '#0a0814'),
+                border: '1.5px solid rgba(255,255,255,0.12)',
+              }}
+            >
+              <PackBagContents meta={meta} sampleCard={sampleCard} />
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </>
   );
 }
