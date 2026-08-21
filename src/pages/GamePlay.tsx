@@ -1062,11 +1062,11 @@ function getCorkscrewSpiralPos(
   const finalCenterX = lerp(helixX, straightCenterX, smoothRunway);
   const finalCenterY = lerp(helixY, straightCenterY, smoothRunway);
 
-  // Note dimensions (bold, chunkier keys)
-  const noteW = lerp(corkW * 0.14, straightW - 4, p);
-  const noteH = lerp(36, 82, p);
+  // Note dimensions (matching full corkscrew scale)
+  const noteW = lerp(isWide ? 54 : 64, straightW - 2, p);
+  const noteH = lerp(isWide ? 56 : 76, (straightW - 2) * 0.72, p);
   const rot = Math.cos(spiralAngle) * 0.36 * (1 - smoothRunway);
-  const scale = lerp(0.40, 1.0, Math.pow(p, 1.05));
+  const scale = lerp(0.55, 1.0, Math.pow(p, 1.05));
 
   return {
     x: finalCenterX - noteW / 2,
@@ -1219,8 +1219,8 @@ function getArchetypeProjection(
     const noteW = Math.max(28, w - noteMargin);
     const noteX = x + (w - noteW) / 2;
     const noteY = prog * hitY;
-    const noteH = lerp(48, 86, prog);
-    return { x: noteX, y: noteY, w: noteW, h: noteH, rot: 0, scale: lerp(0.48, 1.0, prog) };
+    const noteH = lerp(isWide ? 56 : 76, noteW * 0.72, prog);
+    return { x: noteX, y: noteY, w: noteW, h: noteH, rot: 0, scale: lerp(0.55, 1.0, prog) };
   }
 
   // 2. Dynamic Stage Cam Mode (transitions based on stage progression):
@@ -1292,8 +1292,8 @@ function getArchetypeProjection(
   const noteW = Math.max(28, w - noteMargin);
   const noteX = x + (w - noteW) / 2;
   const noteY = prog * hitY;
-  const noteH = lerp(48, 86, prog);
-  return { x: noteX, y: noteY, w: noteW, h: noteH, rot: 0, scale: lerp(0.48, 1.0, prog) };
+  const noteH = lerp(isWide ? 56 : 76, noteW * 0.72, prog);
+  return { x: noteX, y: noteY, w: noteW, h: noteH, rot: 0, scale: lerp(0.55, 1.0, prog) };
 }
 
 function drawArchetypeHoldTrail(
