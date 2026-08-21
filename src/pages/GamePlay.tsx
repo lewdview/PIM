@@ -881,11 +881,8 @@ function hwAtProgress(
   botRatio?: number,
   H: number = 0
 ) {
-  const isWide = isWidescreenDisplay(W, H);
-  const defaultTop = isWide ? 0.44 : HW_TOP;
-  const defaultBot = isWide ? 0.98 : HW_BOT;
-  const actualTop = topRatio !== undefined ? topRatio : defaultTop;
-  const actualBot = botRatio !== undefined ? botRatio : defaultBot;
+  const actualTop = topRatio !== undefined ? topRatio : getHighwayTopRatio(W, H, false);
+  const actualBot = botRatio !== undefined ? botRatio : getHighwayBotRatio(W, H, false);
 
   const maxHighwayWidth = getHighwayMaxWidth(W, H);
   const w = maxHighwayWidth * lerp(actualTop, actualBot, p);
@@ -1243,12 +1240,15 @@ function getArchetypeProjection(
     };
   }
   if (povMode === 'classic') {
-    const topRatio = isWide ? 0.44 : HW_TOP;
-    const botRatio = isWide ? 0.98 : HW_BOT;
+    const topRatio = getHighwayTopRatio(W, H, false);
+    const botRatio = getHighwayBotRatio(W, H, false);
     const { x, w } = laneAt(lane, prog, W, topRatio, botRatio, undefined, stage, t, H);
+    const noteMargin = 8;
+    const noteW = Math.max(20, w - noteMargin);
+    const noteX = x + (w - noteW) / 2;
     const noteY = prog * hitY;
     const noteH = isWide ? lerp(50, 95, prog) : lerp(80, 140, prog);
-    return { x, y: noteY, w, h: noteH, rot: 0, scale: lerp(0.4, 1.0, prog) };
+    return { x: noteX, y: noteY, w: noteW, h: noteH, rot: 0, scale: lerp(0.4, 1.0, prog) };
   }
 
   // 2. Dynamic Stage Cam Mode (transitions based on stage progression):
@@ -1313,12 +1313,15 @@ function getArchetypeProjection(
   }
 
   // Fallback: 2.5D Classic Highway
-  const topRatio = isWide ? 0.44 : HW_TOP;
-  const botRatio = isWide ? 0.98 : HW_BOT;
+  const topRatio = getHighwayTopRatio(W, H, false);
+  const botRatio = getHighwayBotRatio(W, H, false);
   const { x, w } = laneAt(lane, prog, W, topRatio, botRatio, undefined, stage, t, H);
+  const noteMargin = 8;
+  const noteW = Math.max(20, w - noteMargin);
+  const noteX = x + (w - noteW) / 2;
   const noteY = prog * hitY;
   const noteH = isWide ? lerp(50, 95, prog) : lerp(80, 140, prog);
-  return { x, y: noteY, w, h: noteH, rot: 0, scale: lerp(0.4, 1.0, prog) };
+  return { x: noteX, y: noteY, w: noteW, h: noteH, rot: 0, scale: lerp(0.4, 1.0, prog) };
 }
 
 function drawArchetypeHoldTrail(
@@ -4481,8 +4484,8 @@ export default function Game() {
     }
 
     const isCyberTunnelStage = activePovModeRef.current === 'cyber_tunnel' && (calculatedStage === 3 || calculatedStage === 5);
-    const povTop = isCyberTunnelStage ? 0.18 : HW_TOP;
-    const povBot = isCyberTunnelStage ? 0.86 : HW_BOT;
+    const povTop = getHighwayTopRatio(W, H, isCyberTunnelStage);
+    const povBot = getHighwayBotRatio(W, H, isCyberTunnelStage);
 
     // ── Dynamic Lane Hit Glows Sweep (Subtle Ambient Illumination) ──
     const nowGlowMs = Date.now();
@@ -4501,8 +4504,8 @@ export default function Game() {
           baseColor = "#FF1493"; // Miss magenta
         }
 
-        const { x: lx0, w: lw0 } = laneAt(i, 0, W);
-        const { x: lx1, w: lw1 } = laneAt(i, 1, W);
+        const { x: lx0, w: lw0 } = laneAt(i, 0, W, povTop, povBot, undefined, calculatedStage, t, H);
+        const { x: lx1, w: lw1 } = laneAt(i, 1, W, povTop, povBot, undefined, calculatedStage, t, H);
 
         ctx.save();
         const glowGrad = ctx.createLinearGradient(0, 0, 0, hitY);
