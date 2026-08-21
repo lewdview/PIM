@@ -12,7 +12,7 @@ export interface BombshellDayCovers {
 
 export const BOMBSHELL_COVERS_MAP: Record<string, BombshellDayCovers> = bombshellCoversMapRaw as Record<string, BombshellDayCovers>;
 
-const SUPABASE_BASE = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/releaseready/`;
+const SUPABASE_BASE = `${import.meta.env.VITE_SUPABASE_URL || 'https://pznmptudgicrmljjafex.supabase.co'}/storage/v1/object/public/releaseready/`;
 const LOCAL_BASE = '/@fs/Volumes/extremeUno/th3scr1b3-365-warp/365-releases/rare_covers/';
 
 /**
