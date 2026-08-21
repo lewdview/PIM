@@ -303,14 +303,18 @@ export default function BeatmapEditor() {
     return a + (b - a) * Math.max(0, Math.min(1, t));
   };
 
-  const hwAtProgress = useCallback((p: number, W: number) => {
-    const w = W * lerp(HW_TOP, HW_BOT, p);
+  const hwAtProgress = useCallback((p: number, W: number, topRatio?: number, botRatio?: number) => {
+    const isWide = W >= 768;
+    const actualTop = topRatio !== undefined ? topRatio : (isWide ? 0.44 : HW_TOP);
+    const actualBot = botRatio !== undefined ? botRatio : (isWide ? 0.98 : HW_BOT);
+    const maxHW = isWide ? Math.min(420, Math.max(340, W * 0.35)) : Math.min(W, 580);
+    const w = maxHW * lerp(actualTop, actualBot, p);
     const l = (W - w) / 2;
     return { left: l, right: l + w, width: w };
   }, []);
 
-  const laneAt = useCallback((lane: number, progress: number, W: number) => {
-    const { left, width } = hwAtProgress(progress, W);
+  const laneAt = useCallback((lane: number, progress: number, W: number, topRatio?: number, botRatio?: number) => {
+    const { left, width } = hwAtProgress(progress, W, topRatio, botRatio);
     const lw = width / LANE_COUNT;
     return { x: left + lane * lw, w: lw };
   }, [hwAtProgress]);

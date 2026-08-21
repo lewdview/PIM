@@ -16,7 +16,7 @@ export interface CardVariantConfig {
   dimAmount: number; // 0.0 (bright) to 0.8 (deeply dimmed)
 }
 
-const SUPABASE_BASE = 'https://pznmptudgicrmljjafex.supabase.co/storage/v1/object/public/releaseready/';
+const SUPABASE_BASE = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/releaseready/`;
 
 /**
  * Deterministic pseudo-random number generator for day seed 1..365
@@ -170,7 +170,7 @@ export function getPackCoverFallback(dayOrCategory: number | string): string {
     return SUPABASE_BASE + encodeURIComponent(mapped.cover).replace(/%2F/g, '/');
   }
 
-  return 'https://pznmptudgicrmljjafex.supabase.co/storage/v1/object/public/releaseready/covers/january/01%20-%20Were%20Going%20Crazy%20World.jpg';
+  return SUPABASE_BASE + 'covers/january/01%20-%20Were%20Going%20Crazy%20World.jpg';
 }
 
 /**
@@ -200,7 +200,7 @@ export function getPackMultiCovers(dayOrCategory: number | string, count: number
     if (mapped && mapped.cover) {
       result.push(SUPABASE_BASE + encodeURIComponent(mapped.cover).replace(/%2F/g, '/'));
     } else {
-      result.push('https://pznmptudgicrmljjafex.supabase.co/storage/v1/object/public/releaseready/covers/january/01%20-%20Were%20Going%20Crazy%20World.jpg');
+      result.push(SUPABASE_BASE + 'covers/january/01%20-%20Were%20Going%20Crazy%20World.jpg');
     }
   }
 

@@ -95,12 +95,13 @@ export function getCandidateAudioUrls(primaryUrl: string, day?: number): string[
   const dayNum = typeof day === 'number' ? day : 0;
   
   if (dayNum === 22 || primaryUrl.toLowerCase().includes('tightrope')) {
+    const base = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/releaseready`;
     const candidates = [
-      'https://pznmptudgicrmljjafex.supabase.co/storage/v1/object/public/releaseready/audio/january/22%20-%20Tightrope%2B.wav',
-      'https://pznmptudgicrmljjafex.supabase.co/storage/v1/object/public/releaseready/audio/january/tightrope%2B_2_mastered.wav',
-      'https://pznmptudgicrmljjafex.supabase.co/storage/v1/object/public/releaseready/audio/january/22%20-%20Tightrope.wav',
-      'https://pznmptudgicrmljjafex.supabase.co/storage/v1/object/public/releaseready/audio/january/22%20-%20tightrope%2B.wav',
-      'https://pznmptudgicrmljjafex.supabase.co/storage/v1/object/public/releaseready/audio/january/22%20-%20tightrope.wav',
+      `${base}/audio/january/22%20-%20Tightrope%2B.wav`,
+      `${base}/audio/january/tightrope%2B_2_mastered.wav`,
+      `${base}/audio/january/22%20-%20Tightrope.wav`,
+      `${base}/audio/january/22%20-%20tightrope%2B.wav`,
+      `${base}/audio/january/22%20-%20tightrope.wav`,
     ];
     for (const c of candidates) {
       const sanitized = sanitizeMediaUrl(c);
@@ -120,7 +121,7 @@ function resolveSongUrls(song: any, useLocal = false): GameSong {
   let audioUrl = song.audioUrl;
   let coverArt = song.coverArt;
 
-  const SUPABASE_BASE = 'https://pznmptudgicrmljjafex.supabase.co/storage/v1/object/public/releaseready/';
+  const SUPABASE_BASE = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/releaseready/`;
   const LOCAL_BASE = '/@fs/Volumes/extremeUno/th3scr1b3-365-warp/365-releases/';
 
   if (useLocal) {

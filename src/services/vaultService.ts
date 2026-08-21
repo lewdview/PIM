@@ -52,7 +52,7 @@ function resolveUrls(r: Partial<ReleaseItem>, rarity?: Rarity | string): { audio
     coverUrl = coverUrl.replace(/\.png$/i, '.jpg');
   }
 
-  const SUPABASE_BASE = 'https://pznmptudgicrmljjafex.supabase.co/storage/v1/object/public/releaseready/';
+  const SUPABASE_BASE = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/releaseready/`;
   const LOCAL_BASE = '/@fs/Volumes/extremeUno/th3scr1b3-365-warp/365-releases/';
 
   if (useLocal) {

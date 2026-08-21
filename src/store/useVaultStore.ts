@@ -401,7 +401,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     set((state) => {
       const nextCollection = state.collection.map((c) => {
         if (c && c.card && c.card.day === day && (c.cardSet === 'bombshell' || c.card.cardSet === 'bombshell')) {
-          const coverUrl = `https://pznmptudgicrmljjafex.supabase.co/storage/v1/object/public/releaseready/girl-covers/days/day%20${day}/${encodeURIComponent(coverArtwork)}`;
+          const coverUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/releaseready/girl-covers/days/day%20${day}/${encodeURIComponent(coverArtwork)}`;
           return {
             ...c,
             coverArtwork,

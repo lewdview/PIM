@@ -16,6 +16,8 @@ import '../styles/CardShowcaseStyles.css';
 // --------------------------------------------------------------------------
 // MOCK DATA GENERATION
 // --------------------------------------------------------------------------
+const STORAGE_BASE = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/releaseready/`;
+
 const mockCards: VaultCard[] = [
   {
     id: 'mock-common',
@@ -29,7 +31,7 @@ const mockCards: VaultCard[] = [
     tempo: 108,
     genre: ["Alternative", "Indie"],
     tags: ["reflective", "hopeful"],
-    coverUrl: "https://pznmptudgicrmljjafex.supabase.co/storage/v1/object/public/releaseready/covers/january/03%20-%20You%20Like%20Steve%20Earle.jpg",
+    coverUrl: `${STORAGE_BASE}covers/january/03%20-%20You%20Like%20Steve%20Earle.jpg`,
     audioUrl: "",
     description: "Exploring relationship dynamics and search for clarity.",
     claimedCount: 242,
@@ -47,7 +49,7 @@ const mockCards: VaultCard[] = [
     tempo: 161,
     genre: ["Alternative", "Indie"],
     tags: ["chaotic", "hazy"],
-    coverUrl: "https://pznmptudgicrmljjafex.supabase.co/storage/v1/object/public/releaseready/covers/january/01%20-%20Were%20Going%20Crazy%20World.jpg",
+    coverUrl: `${STORAGE_BASE}covers/january/01%20-%20Were%20Going%20Crazy%20World.jpg`,
     audioUrl: "",
     description: "Exploring mental health and self-discovery.",
     claimedCount: 145,
@@ -65,7 +67,7 @@ const mockCards: VaultCard[] = [
     tempo: 99,
     genre: ["Alternative", "Indie"],
     tags: ["reflective", "introspective"],
-    coverUrl: "https://pznmptudgicrmljjafex.supabase.co/storage/v1/object/public/releaseready/covers/january/13%20-%20Dashboard%20of%20Life.jpg",
+    coverUrl: `${STORAGE_BASE}covers/january/13%20-%20Dashboard%20of%20Life.jpg`,
     audioUrl: "",
     description: "Exploring personal growth and self-reflection.",
     claimedCount: 22,
@@ -83,7 +85,7 @@ const mockCards: VaultCard[] = [
     tempo: 128,
     genre: ["Outrun", "Synthwave"],
     tags: ["cyberpunk", "intense"],
-    coverUrl: "https://pznmptudgicrmljjafex.supabase.co/storage/v1/object/public/releaseready/covers/january/14%20-%20Undercoa%204.jpg",
+    coverUrl: `${STORAGE_BASE}covers/january/14%20-%20Undercoa%204.jpg`,
     audioUrl: "",
     description: "A legendary descent into the digital grid.",
     claimedCount: 3,
@@ -101,7 +103,7 @@ const mockCards: VaultCard[] = [
     tempo: 174,
     genre: ["Cyberpunk", "Industrial"],
     tags: ["god-mode", "glitch"],
-    coverUrl: "https://pznmptudgicrmljjafex.supabase.co/storage/v1/object/public/releaseready/covers/january/02%20-%20Shhh%20Bitch.jpg",
+    coverUrl: `${STORAGE_BASE}covers/january/02%20-%20Shhh%20Bitch.jpg`,
     audioUrl: "",
     description: "The ultimate track that bridges mortality and the net.",
     claimedCount: 1,
