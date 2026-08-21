@@ -50,14 +50,6 @@ function providerLabel(p: string | undefined): string {
   return p.charAt(0).toUpperCase() + p.slice(1);
 }
 
-const ECOSYSTEM_NODES = [
-  { label: 'th3scr1b3.art', desc: '365 Warp — Main Hub', url: 'https://th3scr1b3.art' },
-  { label: 'user.th3scr1b3.art', desc: 'Identity Hub & Sovereign Passport', url: 'https://user.th3scr1b3.art' },
-  { label: 'video.th3scr1b3.art', desc: '365 Poster — Visual Archive', url: 'https://video.th3scr1b3.art' },
-  { label: 'Mood Map', desc: 'Interactive mood map on th3scr1b3.art', url: 'https://th3scr1b3.art/mood-map' },
-  { label: 'ce.th3scr1b3.art', desc: 'Song Analyzer — CE Engine', url: 'https://ce.th3scr1b3.art' },
-];
-
 const EASE_OUT: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -109,9 +101,6 @@ export default function ProfilePage() {
         setLoadingProfile(false);
       });
   }, [user]);
-
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://pim.th3scr1b3.art';
-  const syncHref = `https://user.th3scr1b3.art?redirect_uri=${encodeURIComponent(`${origin}/profile`)}`;
 
   const provider = user?.app_metadata?.provider as string | undefined;
   const walletAddr = user?.user_metadata?.wallet as string | undefined;
@@ -239,14 +228,16 @@ export default function ProfilePage() {
               <Award size={14} /> My 365 Journey
             </Link>
 
-            <a
-              href={syncHref}
+            <button
+              onClick={() => {
+                audioManager.playSfx('tap_nav', 0.3);
+                if (loadVaultData) loadVaultData(true);
+              }}
               className="profile-btn-secondary"
-              onClick={() => audioManager.playSfx('tap_nav', 0.3)}
-              title="Sync identity across all th3scr1b3 subdomains"
+              title="Refresh Vault Data"
             >
-              <RefreshCw size={14} /> Sync Identity <ExternalLink size={12} style={{ opacity: 0.7 }} />
-            </a>
+              <RefreshCw size={14} /> Refresh
+            </button>
 
             {user && (
               <button
@@ -339,37 +330,6 @@ export default function ProfilePage() {
               <span className="text-white/40 uppercase tracking-wider">Session ID</span>
               <span className="text-white/40 font-mono text-[10px]">{user?.id || 'ANONYMOUS'}</span>
             </div>
-          </div>
-        </section>
-
-        {/* ═══════════ SECTION 4 : ECOSYSTEM ORBIT ═══════════ */}
-        <section className="profile-glass-panel">
-          <div className="profile-panel-header">
-            <Zap size={18} /> Ecosystem Nodes
-          </div>
-
-          <p className="font-mono text-xs text-white/50 leading-relaxed mb-4">
-            Your identity is synchronized across all th3scr1b3 subdomains — your session and progress travel with you everywhere.
-          </p>
-
-          <div className="flex flex-col">
-            {ECOSYSTEM_NODES.map(({ label, desc, url }) => (
-              <div key={url} className="profile-eco-item">
-                <div>
-                  <div className="font-mono text-xs text-white font-bold uppercase tracking-wider mb-0.5">
-                    {label}
-                  </div>
-                  <div className="font-mono text-[10px] text-white/40">{desc}</div>
-                </div>
-                <a
-                  href={url}
-                  className="profile-eco-link"
-                  onClick={() => audioManager.playSfx('tap_nav', 0.2)}
-                >
-                  Visit <ArrowUpRight size={12} />
-                </a>
-              </div>
-            ))}
           </div>
         </section>
 
