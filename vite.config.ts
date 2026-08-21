@@ -6,6 +6,7 @@ import path from "path";
 const port = Number(process.env.PORT || 5173);
 
 export default defineConfig({
+  envPrefix: ['VITE_', 'SUPABASE_', 'NEXT_PUBLIC_'],
   plugins: [
     react(),
     tailwindcss(),
