@@ -141,11 +141,20 @@ export function ClassicFoilPackBag({
   const isSpecial = category === 'prophecy' || category === 'alpha';
   const isFreeDisabled = category === 'free' && isFreeClaimed;
 
+  const [bombshellSide, setBombshellSide] = useState<'top' | 'bot'>(() => Math.random() < 0.5 ? 'top' : 'bot');
+
+  useEffect(() => {
+    if (category === 'bombshell' || category === 'bombshell_token') {
+      setBombshellSide(Math.random() < 0.5 ? 'top' : 'bot');
+    }
+  }, [category, activeTierIndex]);
+
   useEffect(() => {
     import('../services/vaultService').then(({ getPackRipCount }) => {
       getPackRipCount(category).then(setRippedCount);
     });
   }, [category]);
+
   const limits = useVaultStore((s) => s.dailyLimits);
   let isOverLimit = false;
   let limitLabel = '';
@@ -202,11 +211,14 @@ export function ClassicFoilPackBag({
   const repeatedText = Array(5).fill(0).map(() => `365 DAYS OF LIGHT AND DARK \u2022 ${cfg.label}`).join(' \u2022 ');
 
   const variant = get365CardVariantStyle(cfg.category);
-  const activeCoverArt = tier.coverImage || getPackCoverFallback(cfg.category);
-  const multiCovers = [
-    activeCoverArt,
-    ...getPackMultiCovers(cfg.category, 3)
-  ];
+  const isBombshell = cfg.category === 'bombshell' || cfg.category === 'bombshell_token' || cfg.label?.toLowerCase().includes('bombshell');
+  const countNum = tier.cardCount >= 50 ? 50 : tier.cardCount >= 25 ? 25 : tier.cardCount >= 10 ? 10 : tier.cardCount >= 5 ? 5 : tier.cardCount >= 2 ? 2 : 1;
+  const plural = countNum === 1 ? 'card' : 'cards';
+  const foilCoverUrl = isBombshell 
+    ? (bombshellSide === 'bot' 
+        ? (tier.lightCoverImage || `/data/packs/bombshell_bot_${countNum}${plural}.jpg`) 
+        : (tier.coverImage || `/data/packs/bombshell_top_${countNum}${plural}.jpg`))
+    : (tier.coverImage || cfg.coverImage || getPackCoverFallback(cfg.category));
 
   return (
     <div className="flex-shrink-0 flex flex-col items-center" style={{ width: `${CARD_W}px` }}>
@@ -231,15 +243,11 @@ export function ClassicFoilPackBag({
         @keyframes spin-slow {
           100% { transform: rotate(360deg); }
         }
-        @keyframes spin-slow {
-          100% { transform: rotate(360deg); }
-        }
         .sale-burst {
           clip-path: polygon(
             50% 0%, 63% 4%, 74% 1%, 82% 10%, 93% 8%, 97% 20%, 100% 31%, 97% 42%, 100% 53%, 97% 64%, 100% 75%, 93% 84%, 97% 95%, 86% 97%, 75% 100%, 64% 97%, 53% 100%, 42% 97%, 31% 100%, 22% 93%, 11% 97%, 5% 86%, 0% 75%, 3% 64%, 0% 53%, 3% 42%, 0% 31%, 7% 22%, 3% 11%, 14% 5%, 25% 0%, 36% 3%
           );
         }
-        /* Inline price-sticker-gun only used in RipOverlay */
         .price-sticker-gun {
           position: relative;
           color: #000000;
@@ -252,7 +260,6 @@ export function ClassicFoilPackBag({
           justify-content: center;
           font-family: "Courier New", Courier, monospace;
           border-radius: 1px;
-          /* Scalloped edges effect using mask */
           mask-image: radial-gradient(circle at 50% -2px, transparent 4px, black 5px), 
                       radial-gradient(circle at 50% calc(100% + 2px), transparent 4px, black 5px);
           mask-size: 10px 100%;
@@ -265,7 +272,6 @@ export function ClassicFoilPackBag({
           background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, var(--slit-color, rgba(0,0,0,0.1)) 10.5px, transparent 11px);
           pointer-events: none;
         }
-        /* Bold price stamp for pack bags */
         .pack-price-stamp {
           position: relative;
           display: inline-flex;
@@ -292,23 +298,39 @@ export function ClassicFoilPackBag({
       <div className="relative w-full overflow-hidden" style={{
         aspectRatio: '3 / 4.5',
         borderRadius: '8px 8px 12px 12px',
-        WebkitMaskImage: '-webkit-radial-gradient(white, black)', // Forces Chrome/Safari to respect border-radius clipping
-        background: cfg.gradient,
+        WebkitMaskImage: '-webkit-radial-gradient(white, black)',
+        background: isBombshell ? '#000000' : cfg.gradient,
         boxShadow: isActive ? `0 20px 60px rgba(0,0,0,0.6), 0 0 30px ${accent}40, inset 0 0 25px rgba(255,255,255,0.3)` : '0 10px 30px rgba(0,0,0,0.3)',
         transform: isActive ? 'scale(1)' : 'scale(0.85)',
         opacity: isActive ? 1 : 0.4,
         transition: 'transform 0.35s cubic-bezier(.22,1,.36,1), opacity 0.35s ease, box-shadow 0.35s ease',
       }}>
-        {/* CLEAN 3D METALLIC FOIL PACK FIELD WITH EMBEDDED ARTWORK */}
         {(() => {
-          const isBombshell = cfg.category === 'bombshell' || cfg.label?.toLowerCase().includes('bombshell');
-          const foilCoverUrl = isBombshell 
-            ? (tier.coverImage || cfg.coverImage || getFeaturedBombshellFoilCover(1))
-            : (tier.coverImage || cfg.coverImage);
+          if (isBombshell) {
+            return (
+              <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none flex items-center justify-center bg-black">
+                <img
+                  src={foilCoverUrl}
+                  alt={`Bombshell Pack ${tier.cardCount} Cards`}
+                  className="w-full h-full object-fill pointer-events-none select-none transition-opacity duration-200"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src = `/data/packs/bombshell_top_${countNum}${plural}.jpg`;
+                  }}
+                />
+                <div
+                  className="absolute inset-0 pointer-events-none"
+                  style={{
+                    background: 'radial-gradient(ellipse at 50% 25%, rgba(255, 255, 255, 0.3) 0%, transparent 60%)',
+                    mixBlendMode: 'screen',
+                    opacity: 0.6,
+                  }}
+                />
+              </div>
+            );
+          }
 
           return (
-            <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none flex items-center justify-center" style={{ background: isBombshell ? '#16000d' : 'rgba(6,3,14,0.96)' }}>
-              {/* EMBEDDED CLOSE-UP COVER ARTWORK IN FOIL */}
+            <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none flex items-center justify-center" style={{ background: 'rgba(6,3,14,0.96)' }}>
               {foilCoverUrl && (
                 <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 1 }}>
                   <img
@@ -316,36 +338,25 @@ export function ClassicFoilPackBag({
                     alt="Foil Artwork"
                     className="w-full h-full object-cover"
                     style={{
-                      transform: isBombshell ? 'scale(1.5) translateY(-4%)' : 'scale(1.15)',
+                      transform: 'scale(1.15)',
                       objectPosition: 'center 25%',
-                      filter: isBombshell 
-                        ? 'contrast(1.25) brightness(0.92) saturate(1.3)' 
-                        : 'contrast(1.15) brightness(0.7) saturate(1.2)',
-                      mixBlendMode: isBombshell ? 'luminosity' : 'normal',
-                      opacity: isBombshell ? (isActive ? 0.88 : 0.6) : (isActive ? 0.45 : 0.25),
-                    }}
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).src = getFeaturedBombshellFoilCover(1);
+                      filter: 'contrast(1.15) brightness(0.7) saturate(1.2)',
+                      mixBlendMode: 'normal',
+                      opacity: isActive ? 0.45 : 0.25,
                     }}
                   />
-                  {/* Holographic foil iridescent duotone color overlay */}
                   <div
                     className="absolute inset-0 pointer-events-none"
                     style={{
-                      background: isBombshell 
-                        ? 'linear-gradient(145deg, rgba(255, 0, 128, 0.75) 0%, rgba(138, 0, 80, 0.45) 45%, rgba(20, 0, 12, 0.88) 100%)'
-                        : 'linear-gradient(160deg, rgba(0, 229, 255, 0.35) 0%, rgba(10, 16, 32, 0.75) 100%)',
+                      background: 'linear-gradient(160deg, rgba(0, 229, 255, 0.35) 0%, rgba(10, 16, 32, 0.75) 100%)',
                       mixBlendMode: 'color',
                       opacity: 0.9,
                     }}
                   />
-                  {/* Metallic specular sheen overlay */}
                   <div
                     className="absolute inset-0 pointer-events-none"
                     style={{
-                      background: isBombshell 
-                        ? 'radial-gradient(ellipse at 50% 30%, rgba(255, 105, 180, 0.5) 0%, transparent 65%)'
-                        : 'radial-gradient(ellipse at 50% 30%, rgba(255, 255, 255, 0.25) 0%, transparent 65%)',
+                      background: 'radial-gradient(ellipse at 50% 30%, rgba(255, 255, 255, 0.25) 0%, transparent 65%)',
                       mixBlendMode: 'screen',
                       opacity: 0.7,
                     }}
@@ -353,16 +364,13 @@ export function ClassicFoilPackBag({
                 </div>
               )}
 
-              {/* VIBRANT POPPING PACK ACCENT COLOR TINT */}
               <div
                 className="absolute inset-0 pointer-events-none transition-all"
                 style={{
                   position: 'absolute', inset: 0,
-                  background: isBombshell 
-                    ? 'linear-gradient(150deg, rgba(255,0,127,0.5) 0%, rgba(184,0,96,0.3) 35%, rgba(74,0,37,0.55) 70%, rgba(21,0,10,0.85) 100%)'
-                    : `linear-gradient(160deg, ${accent}ee 0%, ${accent}aa 45%, rgba(6,3,14,0.96) 100%)`,
+                  background: `linear-gradient(160deg, ${accent}ee 0%, ${accent}aa 45%, rgba(6,3,14,0.96) 100%)`,
                   mixBlendMode: 'hard-light',
-                  opacity: isBombshell ? 0.75 : 0.88,
+                  opacity: 0.88,
                   zIndex: 2,
                 }}
               />
@@ -370,248 +378,211 @@ export function ClassicFoilPackBag({
                 className="absolute inset-0 pointer-events-none transition-all"
                 style={{
                   position: 'absolute', inset: 0,
-                  background: isBombshell ? '#FF1493' : accent,
+                  background: accent,
                   mixBlendMode: 'color',
                   opacity: 0.85,
                   zIndex: 3,
                 }}
               />
-              {/* Deep Dark Frame Vignette */}
-              <div
-                className="absolute inset-0 pointer-events-none transition-opacity"
-                style={{ background: 'radial-gradient(ellipse at 50% 40%, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.75) 85%)', zIndex: 4 }}
-              />
             </div>
           );
         })()}
-        {/* REALISTIC SERRATED JAGGED CRIMP TEETH (Top & Bottom Industrial Seals) */}
+        
         <div className="absolute inset-x-0 top-0 h-[22px] foil-crimp-serrated-top z-20" />
         <div className="absolute inset-x-0 bottom-0 h-[22px] foil-crimp-serrated-bottom z-20" />
-
-        {/* FOIL WRAPPER TEAR NOTCHES (Easy-Open Notch Cutouts) */}
         <div className="foil-tear-notch-left" />
         <div className="foil-tear-notch-right" />
-
-        {/* BACK FIN SEAL (Vertical Seam Overlay) */}
         <div className="foil-fin-seal" />
-
-        {/* DYNAMIC HOLOGRAPHIC RAINBOW SPECULAR REFRACTION */}
         <div className="foil-holo-prism" style={{ opacity: isActive ? 0.45 : 0.2 }} />
-
-        {/* 3D INNER CARD STACK BULGE (Physical Cards Inside Silhouette Contour) */}
         <div className="foil-card-bulge" />
-
-        {/* METALLIC FOIL WRINKLES & FOLD CREASES OVERLAY */}
         <div className="foil-wrinkles-overlay" />
         <div className="foil-metallic-sheen" />
-
-        {/* REALISTIC METALLIC FOIL CRINKLE NOISE TEXTURE */}
         <div className="absolute inset-0 pointer-events-none mix-blend-overlay" style={{
           background: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='foilNoise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.035 0.08' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23foilNoise)'/%3E%3C/svg%3E")`,
           opacity: 0.32,
           zIndex: 4,
         }} />
 
-        {/* VERTICAL TH3SCR1B3 SIDE BANNER */}
-        <div className="absolute left-0 bottom-12 w-8 flex items-center justify-center pointer-events-none z-20 mix-blend-overlay">
-          <div className="font-black leading-none uppercase whitespace-nowrap" style={{
-            transform: 'rotate(-90deg) scaleY(1.3) scaleX(0.9)',
-            color: 'rgba(255,255,255,0.6)',
-            fontFamily: '"Impact", "Arial Black", sans-serif',
-            fontSize: '18px',
-            letterSpacing: '-1.5px',
-            WebkitTextStroke: `1px ${accent}`,
-            textShadow: `0 0 12px ${accent}70`,
-          }}>
-            TH3SCR1B3
-          </div>
-        </div>
-
-        {/* TOP-LEFT: Bold Price Stamp */}
-        <div className="absolute left-3 top-3 z-30 pointer-events-none">
-          {/* Price Stamp */}
-          <div
-            className="pack-price-stamp"
-            style={{
-              '--stamp-stripe': `${accent}15`,
-              transform: 'rotate(-2.5deg)',
-            } as any}
-          >
-            <span style={{ fontSize: '7px', fontFamily: '"JetBrains Mono", monospace', fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase', opacity: 0.5, lineHeight: 1, marginBottom: 2 }}>
-              PRICE
-            </span>
-            <span style={{ fontSize: '28px', lineHeight: 1, letterSpacing: '-1.5px', fontFamily: '"Impact", "Arial Black", sans-serif', transform: 'scaleY(1.18)', transformOrigin: 'center', display: 'block', fontWeight: 900 }}>
-              {tier.price === 'FREE' ? 'FREE' : tier.price}
-            </span>
-            <span style={{ fontSize: '7px', fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.08em', opacity: 0.4, marginTop: 1, textTransform: 'uppercase' }}>
-              {tier.price === 'FREE' ? 'no cost' : 'per pack'}
-            </span>
-          </div>
-
-        </div>
-
-        {/* BOTTOM-RIGHT: Card Count Stamp */}
-        <div className="absolute right-3 bottom-16 z-30 pointer-events-none">
-          <div
-            className="pack-price-stamp"
-            style={{
-              '--stamp-stripe': `${accent}15`,
-              transform: 'rotate(1.5deg)',
-              padding: '3px 10px',
-              minWidth: '60px',
-              boxShadow: '3px 3px 0 #000',
-            } as any}
-          >
-            <span style={{ fontSize: '6px', fontFamily: '"JetBrains Mono", monospace', fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase', opacity: 0.5, lineHeight: 1, marginBottom: 1 }}>
-              CONTENTS
-            </span>
-            <span style={{ fontSize: '18px', lineHeight: 1, letterSpacing: '-1px', fontFamily: '"Impact", "Arial Black", sans-serif', transform: 'scaleY(1.18)', transformOrigin: 'center', display: 'block', fontWeight: 900 }}>
-              {tier.cardCount}{tier.cardCount === 1 ? '' : '×'}
-            </span>
-            <span style={{ fontSize: '6px', fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.08em', opacity: 0.4, marginTop: 1, textTransform: 'uppercase' }}>
-              {tier.cardCount === 1 ? 'pack' : 'cards'}
-            </span>
-          </div>
-        </div>
-
-        {/* Hardware-accelerated base glow */}
-        <div className="absolute inset-0 opacity-60 mix-blend-screen pointer-events-none" style={{
-          background: `radial-gradient(ellipse at 50% 15%, ${accent}40, transparent 50%), radial-gradient(ellipse at 50% 85%, ${accent}30, transparent 50%)`,
-          zIndex: 0,
-        }} />
-
-        {/* BRUTALIST SCROLLING TEXT - Staggered Breathing Container */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none mix-blend-overlay" style={{ zIndex: 1 }}>
-          
-          {/* Horizontal scroll 1 (Top) */}
-          <div className="absolute top-10 left-0 right-0 whitespace-nowrap" style={{ 
-            width: '200%', display: 'flex',
-            animation: isActive ? 'breathe-opacity 6s ease-in-out infinite' : 'none',
-            opacity: 0.2, // fallback
-          }}>
-            <div className="pack-marquee-text" style={{ animation: isActive ? 'scroll-left 40s linear infinite' : 'none', fontSize: '6rem', lineHeight: 1, '--neon-accent': '#ffffff' } as any}>
-              {repeatedText}
-            </div>
-          </div>
-
-          {/* Horizontal scroll 2 (Bottom, Reverse) */}
-          <div className="absolute bottom-10 right-0 whitespace-nowrap flex justify-end" style={{ 
-            width: '200%',
-            animation: isActive ? 'breathe-opacity 6s ease-in-out infinite' : 'none',
-            animationDelay: isActive ? '-2s' : '0s',
-            opacity: 0.2, // fallback
-          }}>
-            <div className="pack-marquee-text" style={{ animation: isActive ? 'scroll-left 30s linear infinite reverse' : 'none', fontSize: '4.5rem', lineHeight: 1, '--neon-accent': '#ffffff' } as any}>
-              {repeatedText}
-            </div>
-          </div>
-
-          {/* Vertical scroll (Centered) */}
-          <div className="absolute inset-0 flex justify-center pointer-events-none mix-blend-overlay" style={{
-            animation: isActive ? 'breathe-opacity-subtle 6s ease-in-out infinite' : 'none',
-            animationDelay: isActive ? '-4s' : '0s',
-            opacity: 0.1, // fallback
-          }}>
-            <div style={{ height: '200%', display: 'flex', flexDirection: 'column' }}>
-              <div className="pack-marquee-text" style={{ 
-                writingMode: 'vertical-rl', 
-                animation: isActive ? 'scroll-up 24s linear infinite' : 'none', 
-                fontSize: '5rem', 
-                lineHeight: 1, 
-                '--neon-accent': '#ffffff' 
-              } as any}>
-                {repeatedText}
+        {!isBombshell && (
+          <>
+            <div className="absolute left-0 bottom-12 w-8 flex items-center justify-center pointer-events-none z-20 mix-blend-overlay">
+              <div className="font-black leading-none uppercase whitespace-nowrap" style={{
+                transform: 'rotate(-90deg) scaleY(1.3) scaleX(0.9)',
+                color: 'rgba(255,255,255,0.6)',
+                fontFamily: '"Impact", "Arial Black", sans-serif',
+                fontSize: '18px',
+                letterSpacing: '-1.5px',
+                WebkitTextStroke: `1px ${accent}`,
+                textShadow: `0 0 12px ${accent}70`,
+              }}>
+                TH3SCR1B3
               </div>
             </div>
-          </div>
-        </div>
 
-
-
-        <div className="relative flex flex-col items-center justify-between h-full pt-[20px] pb-[32px] px-5 z-10">
-          <div className="h-6" />
-
-          {/* Central Title, Emblem & Tagline */}
-          <div className="text-center space-y-1.5 my-auto flex flex-col items-center w-full">
-            <h3 
-              className={`leading-[0.92] pack-label-neon uppercase font-black text-center max-w-[240px] ${
-                cfg.label.length > 18 
-                  ? 'text-[20px] sm:text-[22px]' 
-                  : cfg.label.length > 12 
-                    ? 'text-[24px] sm:text-[28px]' 
-                    : 'text-[30px] sm:text-[34px]'
-              }`} 
-              style={{
-                '--neon-accent': accent,
-                color: '#ffffff',
-                fontFamily: '"Impact", "Arial Black", sans-serif',
-                letterSpacing: '-0.01em',
-                transform: 'scaleY(1.06)',
-                transformOrigin: 'center',
-                WebkitTextStroke: '1.5px #000000',
-                textShadow: `
-                  0 0 18px ${accent}, 
-                  0 0 36px ${accent}80, 
-                  2px 3px 0 #000000, 
-                  3px 6px 16px rgba(0,0,0,0.95)
-                `,
-                margin: '4px 0 6px 0',
-              } as React.CSSProperties}
-            >
-              {cfg.label}
-            </h3>
-            
-            <div className="flex justify-center">
-              <PackEmblem accent={accent} size={74} />
+            <div className="absolute left-3 top-3 z-30 pointer-events-none">
+              <div
+                className="pack-price-stamp"
+                style={{
+                  '--stamp-stripe': `${accent}15`,
+                  transform: 'rotate(-2.5deg)',
+                } as any}
+              >
+                <span style={{ fontSize: '7px', fontFamily: '"JetBrains Mono", monospace', fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase', opacity: 0.5, lineHeight: 1, marginBottom: 2 }}>
+                  PRICE
+                </span>
+                <span style={{ fontSize: '28px', lineHeight: 1, letterSpacing: '-1.5px', fontFamily: '"Impact", "Arial Black", sans-serif', transform: 'scaleY(1.18)', transformOrigin: 'center', display: 'block', fontWeight: 900 }}>
+                  {tier.price === 'FREE' ? 'FREE' : tier.price}
+                </span>
+                <span style={{ fontSize: '7px', fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.08em', opacity: 0.4, marginTop: 1, textTransform: 'uppercase' }}>
+                  {tier.price === 'FREE' ? 'no cost' : 'per pack'}
+                </span>
+              </div>
             </div>
 
-            <div className="text-center mt-2">
-              <div className="inline-block">
-                <div className="sticker-gun-tag sticker-slits drop-shadow-md" style={{
-                  background: '#ffffff',
-                  border: `1.5px solid ${accent}40`,
-                  '--slit-color': `${accent}22`,
+            <div className="absolute right-3 bottom-16 z-30 pointer-events-none">
+              <div
+                className="pack-price-stamp"
+                style={{
+                  '--stamp-stripe': `${accent}15`,
+                  transform: 'rotate(1.5deg)',
                   padding: '3px 10px',
-                  transform: 'rotate(0.5deg)',
-                  minWidth: '150px'
-                } as any}>
-                  <span className="text-[8.5px] font-black tracking-tighter uppercase italic opacity-90" style={{ color: '#000' }}>
-                    {variant.tagline}
-                  </span>
+                  minWidth: '60px',
+                  boxShadow: '3px 3px 0 #000',
+                } as any}
+              >
+                <span style={{ fontSize: '6px', fontFamily: '"JetBrains Mono", monospace', fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase', opacity: 0.5, lineHeight: 1, marginBottom: 1 }}>
+                  CONTENTS
+                </span>
+                <span style={{ fontSize: '18px', lineHeight: 1, letterSpacing: '-1px', fontFamily: '"Impact", "Arial Black", sans-serif', transform: 'scaleY(1.18)', transformOrigin: 'center', display: 'block', fontWeight: 900 }}>
+                  {tier.cardCount}{tier.cardCount === 1 ? '' : '×'}
+                </span>
+                <span style={{ fontSize: '6px', fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.08em', opacity: 0.4, marginTop: 1, textTransform: 'uppercase' }}>
+                  {tier.cardCount === 1 ? 'pack' : 'cards'}
+                </span>
+              </div>
+            </div>
+
+            <div className="absolute inset-0 opacity-60 mix-blend-screen pointer-events-none" style={{
+              background: `radial-gradient(ellipse at 50% 15%, ${accent}40, transparent 50%), radial-gradient(ellipse at 50% 85%, ${accent}30, transparent 50%)`,
+              zIndex: 0,
+            }} />
+
+            <div className="absolute inset-0 overflow-hidden pointer-events-none mix-blend-overlay" style={{ zIndex: 1 }}>
+              <div className="absolute top-10 left-0 right-0 whitespace-nowrap" style={{ 
+                width: '200%', display: 'flex',
+                animation: isActive ? 'breathe-opacity 6s ease-in-out infinite' : 'none',
+                opacity: 0.2,
+              }}>
+                <div className="pack-marquee-text" style={{ animation: isActive ? 'scroll-left 40s linear infinite' : 'none', fontSize: '6rem', lineHeight: 1, '--neon-accent': '#ffffff' } as any}>
+                  {repeatedText}
+                </div>
+              </div>
+              <div className="absolute bottom-10 right-0 whitespace-nowrap flex justify-end" style={{ 
+                width: '200%',
+                animation: isActive ? 'breathe-opacity 6s ease-in-out infinite' : 'none',
+                animationDelay: isActive ? '-2s' : '0s',
+                opacity: 0.2,
+              }}>
+                <div className="pack-marquee-text" style={{ animation: isActive ? 'scroll-left 30s linear infinite reverse' : 'none', fontSize: '4.5rem', lineHeight: 1, '--neon-accent': '#ffffff' } as any}>
+                  {repeatedText}
+                </div>
+              </div>
+              <div className="absolute inset-0 flex justify-center pointer-events-none mix-blend-overlay" style={{
+                animation: isActive ? 'breathe-opacity-subtle 6s ease-in-out infinite' : 'none',
+                animationDelay: isActive ? '-4s' : '0s',
+                opacity: 0.1,
+              }}>
+                <div style={{ height: '200%', display: 'flex', flexDirection: 'column' }}>
+                  <div className="pack-marquee-text" style={{ 
+                    writingMode: 'vertical-rl', 
+                    animation: isActive ? 'scroll-up 24s linear infinite' : 'none', 
+                    fontSize: '5rem', 
+                    lineHeight: 1, 
+                    '--neon-accent': '#ffffff' 
+                  } as any}>
+                    {repeatedText}
+                  </div>
                 </div>
               </div>
             </div>
 
-            {cfg.description && (
-              <p className="text-[9.5px] font-mono mt-2 line-clamp-1" style={{ color: 'var(--color-text-muted)' }}>
-                {cfg.description}
-              </p>
-            )}
-          </div>
+            <div className="relative flex flex-col items-center justify-between h-full pt-[20px] pb-[32px] px-5 z-10">
+              <div className="h-6" />
 
-          {isSpecial && (
-            <div className="px-3 py-1 rounded-lg my-1" style={{ background: `${accent}15`, border: `1px solid ${accent}30` }}>
-              <span className="text-[8.5px] font-mono font-bold" style={{ color: accent }}>
-                {category === 'prophecy' ? '🔮 3% PROOF OF FIRST (1/1)' : '🎲 8% FIRST HEARD PROOF'}
-              </span>
-            </div>
-          )}
+              <div className="text-center space-y-1.5 my-auto flex flex-col items-center w-full">
+                <h3 
+                  className={`leading-[0.92] pack-label-neon uppercase font-black text-center max-w-[240px] ${
+                    cfg.label.length > 18 
+                      ? 'text-[20px] sm:text-[22px]' 
+                      : cfg.label.length > 12 
+                        ? 'text-[24px] sm:text-[28px]' 
+                        : 'text-[30px] sm:text-[34px]'
+                  }`} 
+                  style={{
+                    '--neon-accent': accent,
+                    color: '#ffffff',
+                    fontFamily: '"Impact", "Arial Black", sans-serif',
+                    letterSpacing: '-0.01em',
+                    transform: 'scaleY(1.06)',
+                    transformOrigin: 'center',
+                    WebkitTextStroke: '1.5px #000000',
+                    textShadow: `
+                      0 0 18px ${accent}, 
+                      0 0 36px ${accent}80, 
+                      2px 3px 0 #000000, 
+                      3px 6px 16px rgba(0,0,0,0.95)
+                    `,
+                    margin: '4px 0 6px 0',
+                  } as React.CSSProperties}
+                >
+                  {cfg.label}
+                </h3>
+                
+                <div className="flex justify-center">
+                  <PackEmblem accent={accent} size={74} />
+                </div>
 
-          <div className="flex items-center gap-1.5 mt-1">
-            <div className="flex -space-x-1.5">
-              {[0,1,2].map(i => (
-                <div key={i} className="w-3.5 h-3.5 rounded-full" style={{
-                  background: `linear-gradient(135deg, ${accent}40, ${accent}20)`,
-                  border: '1px solid rgba(0,0,0,0.3)',
-                }} />
-              ))}
+                <div className="text-center mt-2">
+                  <div className="inline-block">
+                    <div className="sticker-gun-tag sticker-slits drop-shadow-md" style={{
+                      background: '#ffffff',
+                      border: `1.5px solid ${accent}40`,
+                      '--slit-color': `${accent}22`,
+                      padding: '3px 10px',
+                      transform: 'rotate(0.5deg)',
+                      minWidth: '150px'
+                    } as any}>
+                      <span className="text-[8.5px] font-black tracking-tighter uppercase italic opacity-90" style={{ color: '#000' }}>
+                        {variant.tagline}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {cfg.description && (
+                  <p className="text-[9.5px] font-mono mt-2 line-clamp-1" style={{ color: 'var(--color-text-muted)' }}>
+                    {cfg.description}
+                  </p>
+                )}
+              </div>
+
+              {isSpecial && (
+                <div className="px-3 py-1 rounded-lg my-1" style={{ background: `${accent}15`, border: `1px solid ${accent}30` }}>
+                  <span className="text-[8.5px] font-mono font-bold" style={{ color: accent }}>
+                    {category === 'prophecy' ? '🔮 3% PROOF OF FIRST (1/1)' : '🎲 8% FIRST HEARD PROOF'}
+                  </span>
+                </div>
+              )}
+
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className="text-[8.5px] font-mono" style={{ color: 'var(--color-text-muted)' }}>
+                  <Users size={9} className="inline mr-0.5" />
+                  {rippedCount.toLocaleString()} ripped
+                </span>
+              </div>
             </div>
-            <span className="text-[8.5px] font-mono" style={{ color: 'var(--color-text-muted)' }}>
-              <Users size={9} className="inline mr-0.5" />
-              {rippedCount.toLocaleString()} ripped
-            </span>
-          </div>
-        </div>
+          </>
+        )}
 
         <div className="absolute inset-y-0 left-0 w-3" style={{ background: 'linear-gradient(90deg, rgba(255,255,255,0.03), transparent)' }} />
         <div className="absolute inset-y-0 right-0 w-3" style={{ background: 'linear-gradient(270deg, rgba(255,255,255,0.03), transparent)' }} />

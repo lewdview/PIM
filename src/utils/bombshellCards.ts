@@ -75,18 +75,32 @@ export function getBombshellDayCovers(day: number): BombshellDayCovers {
 }
 
 /**
+ * Returns both candidate cover images for a bombshell pack size (top and bottom variants).
+ * Supported counts: 1, 2, 5, 10, 25, 50
+ */
+export function getBombshellPackCovers(cardCount: number = 1): { top: string; bot: string } {
+  const normalizedCount = cardCount >= 50 ? 50 : cardCount >= 25 ? 25 : cardCount >= 10 ? 10 : cardCount >= 5 ? 5 : cardCount >= 2 ? 2 : 1;
+  const plural = normalizedCount === 1 ? 'card' : 'cards';
+  return {
+    top: `/data/packs/bombshell_top_${normalizedCount}${plural}.jpg`,
+    bot: `/data/packs/bombshell_bot_${normalizedCount}${plural}.jpg`,
+  };
+}
+
+/**
+ * Returns a random top or bottom cover variant matching the card count for Bombshell pack rendering.
+ * Supported counts: 1, 2, 5, 10, 25, 50
+ */
+export function getRandomBombshellPackCover(cardCount: number = 1): string {
+  const { top, bot } = getBombshellPackCovers(cardCount);
+  return Math.random() < 0.5 ? top : bot;
+}
+
+/**
  * Returns a featured close-up bombshell cover URL for pack backgrounds and foil artwork embedding.
  */
-export function getFeaturedBombshellFoilCover(day?: number): string {
-  const targetDay = day || 1;
-  const entry = getBombshellDayCovers(targetDay);
-  if (entry.normalFiles && entry.normalFiles.length > 0) {
-    return getBombshellCoverUrl(targetDay, entry.normalFiles[0]);
-  }
-  if (entry.lbFiles && entry.lbFiles.length > 0) {
-    return getBombshellCoverUrl(targetDay, entry.lbFiles[0]);
-  }
-  return getBombshellCoverUrl(1, 'day 001 - 01.jpg');
+export function getFeaturedBombshellFoilCover(day?: number, cardCount: number = 1): string {
+  return getRandomBombshellPackCover(cardCount);
 }
 
 /**

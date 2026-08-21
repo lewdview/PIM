@@ -187,6 +187,14 @@ export default function CyberPackBag({
   const isSpecial = category === 'prophecy' || category === 'alpha';
   const isFreeDisabled = category === 'free' && isFreeClaimed;
 
+  const [bombshellSide, setBombshellSide] = useState<'top' | 'bot'>(() => Math.random() < 0.5 ? 'top' : 'bot');
+
+  useEffect(() => {
+    if (category === 'bombshell' || category === 'bombshell_token') {
+      setBombshellSide(Math.random() < 0.5 ? 'top' : 'bot');
+    }
+  }, [category, activeTierIndex]);
+
   useEffect(() => {
     import('../services/vaultService').then(({ getPackRipCount }) => {
       getPackRipCount(category).then(setRippedCount);
@@ -246,9 +254,13 @@ export default function CyberPackBag({
   else if (isOverLimit) dynamicLabelOverride = limitLabel;
   else if (isTokenBased && !hasEnoughTokens) dynamicLabelOverride = `NEED ${requiredTokens} V⚡`;
 
-  const isBombshell = cfg.category === 'bombshell' || cfg.label?.toLowerCase().includes('bombshell');
+  const isBombshell = cfg.category === 'bombshell' || cfg.category === 'bombshell_token' || cfg.label?.toLowerCase().includes('bombshell');
+  const countNum = tier.cardCount >= 50 ? 50 : tier.cardCount >= 25 ? 25 : tier.cardCount >= 10 ? 10 : tier.cardCount >= 5 ? 5 : tier.cardCount >= 2 ? 2 : 1;
+  const plural = countNum === 1 ? 'card' : 'cards';
   const foilCoverUrl = isBombshell 
-    ? (tier.coverImage || cfg.coverImage || getFeaturedBombshellFoilCover(1))
+    ? (bombshellSide === 'bot' 
+        ? (tier.lightCoverImage || `/data/packs/bombshell_bot_${countNum}${plural}.jpg`) 
+        : (tier.coverImage || `/data/packs/bombshell_top_${countNum}${plural}.jpg`))
     : (tier.coverImage || cfg.coverImage || getPackCoverFallback(cfg.category));
 
   const variant = get365CardVariantStyle(cfg.category);
@@ -260,7 +272,7 @@ export default function CyberPackBag({
         className="cyber-cartridge-frame relative w-full overflow-hidden" 
         style={{
           aspectRatio: '3 / 4.5',
-          background: 'linear-gradient(175deg, #07070d 0%, #0d0e17 40%, #05060a 100%)',
+          background: isBombshell ? '#000000' : 'linear-gradient(175deg, #07070d 0%, #0d0e17 40%, #05060a 100%)',
           boxShadow: isActive 
             ? `0 24px 70px rgba(0,0,0,0.85), 0 0 35px ${accent}40, inset 0 0 30px rgba(0,0,0,0.9)` 
             : '0 10px 30px rgba(0,0,0,0.4)',
@@ -278,27 +290,29 @@ export default function CyberPackBag({
 
         {/* Embedded Artwork Underplate */}
         {foilCoverUrl && (
-          <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 opacity-45">
+          <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
             <img
               src={foilCoverUrl}
               alt="Cartridge Core Art"
-              className="w-full h-full object-cover"
+              className="w-full h-full object-fill pointer-events-none select-none transition-opacity duration-200"
               style={{
-                transform: 'scale(1.2)',
-                filter: isBombshell ? 'contrast(1.3) saturate(1.4)' : 'contrast(1.2) brightness(0.85)',
-                mixBlendMode: 'luminosity',
+                filter: isBombshell ? 'contrast(1.05) saturate(1.1)' : 'contrast(1.2) brightness(0.85)',
+                mixBlendMode: isBombshell ? 'normal' : 'luminosity',
+                opacity: isBombshell ? 1 : 0.45,
               }}
               onError={(e) => {
-                (e.currentTarget as HTMLImageElement).src = getFeaturedBombshellFoilCover(1);
+                (e.currentTarget as HTMLImageElement).src = `/data/packs/bombshell_top_${countNum}${plural}.jpg`;
               }}
             />
-            <div 
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                background: `linear-gradient(180deg, rgba(5,6,10,0.3) 0%, rgba(5,6,10,0.85) 70%, #05060a 100%)`,
-                mixBlendMode: 'multiply',
-              }}
-            />
+            {!isBombshell && (
+              <div 
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  background: `linear-gradient(180deg, rgba(5,6,10,0.3) 0%, rgba(5,6,10,0.85) 70%, #05060a 100%)`,
+                  mixBlendMode: 'multiply',
+                }}
+              />
+            )}
           </div>
         )}
 
@@ -330,24 +344,26 @@ export default function CyberPackBag({
         </div>
 
         {/* TOP-LEFT: Laser Security Price Seal */}
-        <div className="absolute left-4 top-11 z-30 pointer-events-none">
-          <div className="cyber-laser-stamp">
-            <div className="flex items-center gap-1 opacity-70 mb-0.5">
-              <ShieldCheck size={8} style={{ color: accent }} />
-              <span className="text-[6px] tracking-wider uppercase font-bold">PRICE</span>
+        {!isBombshell && (
+          <div className="absolute left-4 top-11 z-30 pointer-events-none">
+            <div className="cyber-laser-stamp">
+              <div className="flex items-center gap-1 opacity-70 mb-0.5">
+                <ShieldCheck size={8} style={{ color: accent }} />
+                <span className="text-[6px] tracking-wider uppercase font-bold">PRICE</span>
+              </div>
+              <span 
+                className="text-[20px] font-black leading-none"
+                style={{
+                  fontFamily: '"Impact", "Arial Black", sans-serif',
+                  color: '#fff',
+                  textShadow: `0 0 10px ${accent}`,
+                }}
+              >
+                {tier.price === 'FREE' ? 'FREE' : tier.price}
+              </span>
             </div>
-            <span 
-              className="text-[20px] font-black leading-none"
-              style={{
-                fontFamily: '"Impact", "Arial Black", sans-serif',
-                color: '#fff',
-                textShadow: `0 0 10px ${accent}`,
-              }}
-            >
-              {tier.price === 'FREE' ? 'FREE' : tier.price}
-            </span>
           </div>
-        </div>
+        )}
 
         {/* TOP-RIGHT: Info / Drop Rates Toggle */}
         <div className="absolute right-4 top-11 z-30">
@@ -366,65 +382,71 @@ export default function CyberPackBag({
         </div>
 
         {/* Live 3-Band Audio Equalizer (Left Flank) */}
-        <div className="absolute left-4 bottom-24 flex items-end gap-1 h-8 z-20 pointer-events-none opacity-80">
-          <div className="w-1 rounded-sm cyber-bar-bass" style={{ background: '#FF1493' }} />
-          <div className="w-1 rounded-sm cyber-bar-mids" style={{ background: '#00E5FF' }} />
-          <div className="w-1 rounded-sm cyber-bar-treble" style={{ background: '#39FF14' }} />
-          <span className="text-[6px] font-mono text-white/40 rotate-90 origin-bottom-left translate-y-3">STEMS</span>
-        </div>
+        {!isBombshell && (
+          <div className="absolute left-4 bottom-24 flex items-end gap-1 h-8 z-20 pointer-events-none opacity-80">
+            <div className="w-1 rounded-sm cyber-bar-bass" style={{ background: '#FF1493' }} />
+            <div className="w-1 rounded-sm cyber-bar-mids" style={{ background: '#00E5FF' }} />
+            <div className="w-1 rounded-sm cyber-bar-treble" style={{ background: '#39FF14' }} />
+            <span className="text-[6px] font-mono text-white/40 rotate-90 origin-bottom-left translate-y-3">STEMS</span>
+          </div>
+        )}
 
         {/* BOTTOM-RIGHT: Cartridge Capacity Stamp */}
-        <div className="absolute right-4 bottom-20 z-30 pointer-events-none">
-          <div className="cyber-laser-stamp" style={{ padding: '3px 8px' }}>
-            <span className="text-[5px] tracking-wider uppercase opacity-60">CAPACITY</span>
-            <span 
-              className="text-[16px] font-black leading-none"
-              style={{
-                fontFamily: '"Impact", "Arial Black", sans-serif',
-                color: '#fff',
-              }}
-            >
-              {tier.cardCount}×
-            </span>
+        {!isBombshell && (
+          <div className="absolute right-4 bottom-20 z-30 pointer-events-none">
+            <div className="cyber-laser-stamp" style={{ padding: '3px 8px' }}>
+              <span className="text-[5px] tracking-wider uppercase opacity-60">CAPACITY</span>
+              <span 
+                className="text-[16px] font-black leading-none"
+                style={{
+                  fontFamily: '"Impact", "Arial Black", sans-serif',
+                  color: '#fff',
+                }}
+              >
+                {tier.cardCount}×
+              </span>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* CENTER CONTENT */}
         <div className="relative flex flex-col items-center justify-between h-full pt-16 pb-6 px-4 z-10">
           <div className="h-2" />
 
           {/* Central Title & Aperture */}
-          <div className="text-center w-full my-auto flex flex-col items-center px-1">
-            <h3 
-              className={`leading-[0.92] uppercase font-black tracking-wide text-center max-w-[230px] ${
-                cfg.label.length > 18 
-                  ? 'text-[18px] sm:text-[20px]' 
-                  : cfg.label.length > 12 
-                    ? 'text-[22px] sm:text-[24px]' 
-                    : 'text-[26px] sm:text-[29px]'
-              }`}
-              style={{
-                color: '#ffffff',
-                fontFamily: '"Impact", "Arial Black", sans-serif',
-                letterSpacing: '0.02em',
-                textShadow: `0 0 16px ${accent}, 2px 2px 0 #000`,
-                margin: '4px 0 8px 0',
-              }}
-            >
-              {cfg.label}
-            </h3>
+          {!isBombshell && (
+            <div className="text-center w-full my-auto flex flex-col items-center px-1">
+              <h3 
+                className={`leading-[0.92] uppercase font-black tracking-wide text-center max-w-[230px] ${
+                  cfg.label.length > 18 
+                    ? 'text-[18px] sm:text-[20px]' 
+                    : cfg.label.length > 12 
+                      ? 'text-[22px] sm:text-[24px]' 
+                      : 'text-[26px] sm:text-[29px]'
+                }`}
+                style={{
+                  color: '#ffffff',
+                  fontFamily: '"Impact", "Arial Black", sans-serif',
+                  letterSpacing: '0.02em',
+                  textShadow: `0 0 16px ${accent}, 2px 2px 0 #000`,
+                  margin: '4px 0 8px 0',
+                }}
+              >
+                {cfg.label}
+              </h3>
 
-            {/* Rotating Core Aperture */}
-            <CyberApertureEmblem accent={accent} size={82} isBombshell={isBombshell} />
+              {/* Rotating Core Aperture */}
+              <CyberApertureEmblem accent={accent} size={82} isBombshell={isBombshell} />
 
-            {/* Tagline Badge */}
-            <div className="mt-2 px-3 py-1 rounded bg-black/70 border border-white/10 flex items-center gap-1.5">
-              <Cpu size={10} style={{ color: accent }} />
-              <span className="text-[8px] font-mono font-bold uppercase tracking-wider text-slate-300">
-                {isBombshell ? 'UNCENSORED DATA ARCHIVE' : variant.tagline}
-              </span>
+              {/* Tagline Badge */}
+              <div className="mt-2 px-3 py-1 rounded bg-black/70 border border-white/10 flex items-center gap-1.5">
+                <Cpu size={10} style={{ color: accent }} />
+                <span className="text-[8px] font-mono font-bold uppercase tracking-wider text-slate-300">
+                  {isBombshell ? 'UNCENSORED DATA ARCHIVE' : variant.tagline}
+                </span>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Special Proof Guarantee Indicator */}
           {isSpecial && (
