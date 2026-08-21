@@ -10,7 +10,7 @@ import {
   getAdminConfig,
 } from '../utils/adminConfig';
 import { type BurnResult } from '../utils/echoSystem';
-import { supabase } from './supabaseClient';
+import { supabase, STORAGE_BASE } from './supabaseClient';
 import dayFileMap from '../game/day_file_map.json';
 import { sanitizeMediaUrl } from '../game/api';
 
@@ -52,7 +52,7 @@ function resolveUrls(r: Partial<ReleaseItem>, rarity?: Rarity | string): { audio
     coverUrl = coverUrl.replace(/\.png$/i, '.jpg');
   }
 
-  const SUPABASE_BASE = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/releaseready/`;
+  const SUPABASE_BASE = STORAGE_BASE;
   const LOCAL_BASE = '/@fs/Volumes/extremeUno/th3scr1b3-365-warp/365-releases/';
 
   if (useLocal) {

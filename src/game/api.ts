@@ -1,5 +1,6 @@
 import type { Note } from './types';
 import { supabase } from '../lib/supabase';
+import { STORAGE_BASE } from '../services/supabaseClient';
 import { getCurrentDay } from '../utils/dayCalc';
 import dayFileMap from './day_file_map.json';
 import { getHighScore as progGetHighScore, saveHighScore as progSaveHighScore } from './progress';
@@ -121,7 +122,7 @@ function resolveSongUrls(song: any, useLocal = false): GameSong {
   let audioUrl = song.audioUrl;
   let coverArt = song.coverArt;
 
-  const SUPABASE_BASE = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/releaseready/`;
+  const SUPABASE_BASE = STORAGE_BASE;
   const LOCAL_BASE = '/@fs/Volumes/extremeUno/th3scr1b3-365-warp/365-releases/';
 
   if (useLocal) {

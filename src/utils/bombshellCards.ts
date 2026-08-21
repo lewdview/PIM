@@ -2,6 +2,8 @@ import type { Rarity } from './rarity';
 import type { OwnedCard, VaultCard } from '../services/vaultService';
 import bombshellCoversMapRaw from '../game/bombshell_covers_map.json';
 
+import { STORAGE_BASE } from '../services/supabaseClient';
+
 export interface BombshellDayCovers {
   day: number;
   dir: string;
@@ -12,7 +14,7 @@ export interface BombshellDayCovers {
 
 export const BOMBSHELL_COVERS_MAP: Record<string, BombshellDayCovers> = bombshellCoversMapRaw as Record<string, BombshellDayCovers>;
 
-const SUPABASE_BASE = `${import.meta.env.VITE_SUPABASE_URL || import.meta.env.SUPABASE_URL || 'https://pznmptudgicrmljjafex.supabase.co'}/storage/v1/object/public/releaseready/`;
+const SUPABASE_BASE = STORAGE_BASE;
 const LOCAL_BASE = '/@fs/Volumes/extremeUno/th3scr1b3-365-warp/365-releases/rare_covers/';
 
 /**
