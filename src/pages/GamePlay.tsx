@@ -817,27 +817,24 @@ export function isWidescreenDisplay(W: number, H: number = 0): boolean {
 }
 
 export function getHitRatio(W: number, H: number = 0): number {
-  return isWidescreenDisplay(W, H) ? 0.85 : 0.78;
+  return 0.78;
 }
 
 export function getHighwayMaxWidth(W: number, H: number = 0): number {
   if (isWidescreenDisplay(W, H)) {
-    // Smaller width-wise on widescreen / desktop (360px - 410px max base width)
-    const hLimit = H > 0 ? H * 0.52 : 400;
-    return Math.max(340, Math.min(410, Math.min(W * 0.34, hLimit)));
+    // Restrained width on desktop so track stays focused and centered
+    return Math.min(460, Math.max(350, W * 0.38));
   }
-  return Math.min(W, 580);
+  return Math.min(W, 520);
 }
 
 export function getHighwayTopRatio(W: number, H: number = 0, isCyberPOV: boolean = false): number {
   if (isCyberPOV) return 0.18;
-  if (isWidescreenDisplay(W, H)) return 0.44; // Sleeker taper on desktop for long deep perspective
-  return HW_TOP; // 0.65 on mobile
+  return HW_TOP; // 0.65 standard compact perspective
 }
 
 export function getHighwayBotRatio(W: number, H: number = 0, isCyberPOV: boolean = false): number {
   if (isCyberPOV) return 0.86;
-  if (isWidescreenDisplay(W, H)) return 0.98;
   return HW_BOT; // 0.99
 }
 
@@ -1247,7 +1244,7 @@ function getArchetypeProjection(
     const noteW = Math.max(20, w - noteMargin);
     const noteX = x + (w - noteW) / 2;
     const noteY = prog * hitY;
-    const noteH = isWide ? lerp(50, 95, prog) : lerp(80, 140, prog);
+    const noteH = lerp(32, 60, prog);
     return { x: noteX, y: noteY, w: noteW, h: noteH, rot: 0, scale: lerp(0.4, 1.0, prog) };
   }
 
@@ -1320,7 +1317,7 @@ function getArchetypeProjection(
   const noteW = Math.max(20, w - noteMargin);
   const noteX = x + (w - noteW) / 2;
   const noteY = prog * hitY;
-  const noteH = isWide ? lerp(50, 95, prog) : lerp(80, 140, prog);
+  const noteH = lerp(32, 60, prog);
   return { x: noteX, y: noteY, w: noteW, h: noteH, rot: 0, scale: lerp(0.4, 1.0, prog) };
 }
 
@@ -11222,53 +11219,35 @@ export default function Game() {
             </div>
           )}
 
-          {/* Judgment text — per-lane custom vector SVG popups anchored at judgment target strike zones */}
+          {/* Judgment text — per-lane custom vector SVG popups popping right above the hit line */}
           {opts.judgmentText && displayJudge.map((j) => {
             if (Date.now() - j.ts > 600) return null;
             const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
             const canvasW = canvasRef.current?.width ? canvasRef.current.width / dpr : 0;
             const canvasH = canvasRef.current?.height ? canvasRef.current.height / dpr : 0;
             if (!canvasW) return null;
-            const hwBot = hwAtProgress(1, canvasW, undefined, undefined, canvasH);
-            const laneW = hwBot.width / LANE_COUNT;
-            const targetX = hwBot.left + (j.lane + 0.5) * laneW;
+            const topRatio = getHighwayTopRatio(canvasW, canvasH, false);
+            const botRatio = getHighwayBotRatio(canvasW, canvasH, false);
+            const { x, w } = laneAt(j.lane, 1.0, canvasW, topRatio, botRatio, undefined, 1, 0, canvasH);
+            const targetX = x + w / 2;
             const targetPct = (targetX / canvasW) * 100;
             const hitRatio = getHitRatio(canvasW, canvasH);
-            const targetTopPct = (hitRatio * 100) - 5;
+            const age01 = (Date.now() - j.ts) / 600;
+            const targetTopPct = (hitRatio * 100) - 8 - (age01 * 4);
             return (
               <div
                 key={j.id}
-                className="absolute pointer-events-none judgment-pop"
+                className="absolute pointer-events-none judgment-pop z-30"
                 style={{
                   left: `${targetPct}%`,
                   top: `${targetTopPct}%`,
-                  transform: "translateX(-50%)",
+                  transform: "translate(-50%, -50%)",
                 }}
               >
-                <JudgmentBadge type={j.type} scale={j.type === "PERFECT+" ? 1.05 : 0.9} />
+                <JudgmentBadge type={j.type} scale={j.type === "PERFECT+" ? 1.15 : 0.95} />
               </div>
             );
           })}
-
-          {/* Secondary judgment banner — top of screen, custom vector SVG badge */}
-          {opts.judgmentText && (() => {
-            const latest = displayJudge.filter(j => Date.now() - j.ts < 400).sort((a, b) => b.ts - a.ts)[0];
-            if (!latest) return null;
-            const age = (Date.now() - latest.ts) / 400;
-            return (
-              <div
-                className="absolute left-1/2 pointer-events-none"
-                style={{
-                  top: "23%",
-                  transform: `translateX(-50%) scale(${1 + (1 - age) * 0.18})`,
-                  opacity: 1 - age * 0.6,
-                  transition: "opacity 0.1s",
-                }}
-              >
-                <JudgmentBadge type={latest.type} scale={latest.type === "PERFECT+" ? 1.35 : 1.15} />
-              </div>
-            );
-          })()}
 
           {/* Comprehensive Transmission Loading HUD */}
           {(phase === "loading" || phase === "buffering") && (
