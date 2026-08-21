@@ -22,6 +22,8 @@ import { Users, BarChart3, RefreshCw, Filter, Calendar, Zap, Flame, ShieldCheck,
 import { GEN0_RESET_SQL, purgeClientGen0State, getClientGen0Health } from '../utils/gen0Reset';
 import type { AnnouncementCategory, AnnouncementPriority, SystemAnnouncement } from '../store/useNotificationStore';
 
+import { hashString } from '../utils/crypto';
+
 // ===== RARITY DISPLAY HELPERS =====
 const RARITIES: Rarity[] = ['common', 'uncommon', 'rare', 'legendary', 'mythic'];
 const RARITY_COLORS: Record<Rarity, string> = {
@@ -40,21 +42,28 @@ const PACK_LABELS: Record<string, string> = {
 };
 
 // ===== ADMIN GATE =====
-const ADMIN_PASSPHRASE = 'th3scr1b3';
+const ADMIN_PASSPHRASE_HASH = 'd58f380b169d36c2fe217dadc3caa620193197132b55ba52b0947882b78c4983';
 const ADMIN_AUTH_KEY = 'th3vault_admin_auth';
 
 function AdminGate({ onAuthenticate }: { onAuthenticate: () => void }) {
   const [input, setInput] = useState('');
   const [error, setError] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (input.toLowerCase() === ADMIN_PASSPHRASE) {
-      sessionStorage.setItem(ADMIN_AUTH_KEY, 'true');
-      onAuthenticate();
-    } else {
+    try {
+      const hash = await hashString(input.toLowerCase());
+      if (hash === ADMIN_PASSPHRASE_HASH) {
+        sessionStorage.setItem(ADMIN_AUTH_KEY, 'true');
+        sessionStorage.setItem('th3vault_admin_pass', input.toLowerCase());
+        onAuthenticate();
+      } else {
+        setError(true);
+        setTimeout(() => setError(false), 800);
+      }
+    } catch (err) {
+      console.error('Auth error', err);
       setError(true);
-      setTimeout(() => setError(false), 800);
     }
   };
 
