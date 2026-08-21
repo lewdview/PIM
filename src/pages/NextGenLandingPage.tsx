@@ -100,6 +100,7 @@ export default function NextGenLandingPage() {
   const user = useAuthStore(s => s.user);
 
   const [isClaimingAnimation, setIsClaimingAnimation] = useState(false);
+  const [isPurchasing, setIsPurchasing] = useState(false);
 
   // Token sinks states
   const [targetDay, setTargetDay] = useState('');
@@ -611,6 +612,7 @@ export default function NextGenLandingPage() {
       return;
     }
 
+    setIsPurchasing(true);
     try {
       useLoadingToast.getState().show('Vending pack from machine…');
       const cards = await purchasePack(category, size, sessionId);
@@ -623,6 +625,8 @@ export default function NextGenLandingPage() {
     } catch (err) {
       console.error('Pack purchase failed:', err);
       useLoadingToast.getState().hide();
+    } finally {
+      setIsPurchasing(false);
     }
   }, [triggerVendDrop, addToCollection, loadVaultData]);
 
