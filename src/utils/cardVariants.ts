@@ -1,6 +1,7 @@
 // ── 365 DAYS OF LIGHT AND DARK — CARD COVER VARIANT UTILITIES ─────────────
 
 import dayFileMap from '../game/day_file_map.json';
+import { STORAGE_BASE } from '../services/supabaseClient';
 
 export type CoverVariantMode = 'dimmed' | 'dark' | 'light' | 'vivid' | 'monochrome' | 'high_contrast';
 
@@ -16,7 +17,7 @@ export interface CardVariantConfig {
   dimAmount: number; // 0.0 (bright) to 0.8 (deeply dimmed)
 }
 
-const SUPABASE_BASE = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/releaseready/`;
+const SUPABASE_BASE = STORAGE_BASE;
 
 /**
  * Deterministic pseudo-random number generator for day seed 1..365
