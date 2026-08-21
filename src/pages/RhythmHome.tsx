@@ -1093,13 +1093,12 @@ const DigitalClock = memo(() => {
       {/* Footer */}
       <div className={`absolute bottom-0 left-0 right-0 flex items-center justify-center py-3 transition-all duration-1000 ${!showIntro ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-        <a href="https://th3scr1b3.art" target="_blank" rel="noopener noreferrer"
-          className="font-mono text-xs tracking-widest transition-colors duration-200"
-          style={{ color: 'rgba(255,255,255,0.15)' }}
-          onMouseEnter={e => ((e.currentTarget as HTMLElement).style.color = '#39FF14')}
-          onMouseLeave={e => ((e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.15)')}>
-          TH3SCR1B3.ART
-        </a>
+        <span
+          className="font-mono text-xs tracking-widest"
+          style={{ color: 'rgba(255,255,255,0.2)' }}
+        >
+          BEATSTAR VAULT // POETRY IN MOTION
+        </span>
       </div>
     </div>
     </>

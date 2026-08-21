@@ -523,7 +523,6 @@ export default function App() {
             {/* 3. Identity, Audio & Universal 365 Sub-Routes */}
             <Route path="/profile" component={ProfilePage} />
             <Route path="/user" component={ProfilePage} />
-            <Route path="/user.th3scr1b3.art" component={ProfilePage} />
             <Route path="/options" component={OptionsRouteHandler} />
             <Route path="/song/:songId" component={SongDetail} />
             <Route path="/listen/:songId" component={ListenPage} />

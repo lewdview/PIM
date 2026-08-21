@@ -156,25 +156,16 @@ function VaultAttribution() {
       style={{
         fontFamily: '"JetBrains Mono", monospace',
         fontSize: '8px',
-        fontWeight: 400,
+        fontWeight: 700,
         textTransform: 'uppercase',
         letterSpacing: '0.25em',
-        color: '#ff3800',
-        opacity: 0.75,
+        color: '#ffb800',
+        opacity: 0.85,
         marginTop: '2px',
         display: 'block',
       }}
     >
-      BY{' '}
-      <a
-        href="https://th3scr1b3.art"
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={e => e.stopPropagation()}
-        style={{ color: '#ffb800', textDecoration: 'none', fontWeight: 700 }}
-      >
-        TH3SCR1B3
-      </a>
+      BEATSTAR VAULT
     </span>
   );
 }
@@ -856,7 +847,7 @@ export default function Navbar() {
                 </button>
               </div>
 
-              {/* th3scr1b3 credit strip */}
+              {/* Beatstar Vault status strip */}
               <div style={{
                 background: '#ff3800',
                 padding: '4px 16px',
@@ -867,16 +858,7 @@ export default function Navbar() {
                 color: '#fff',
                 textTransform: 'uppercase',
               }}>
-                An archive by{' '}
-                <a
-                  href="https://th3scr1b3.art"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ color: '#ffb800', textDecoration: 'none' }}
-                  onClick={e => e.stopPropagation()}
-                >
-                  th3scr1b3.art
-                </a>
+                BEATSTAR VAULT // COLLECTIBLE CARD SYSTEM
               </div>
 
               {/* Section Accordions */}
