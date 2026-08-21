@@ -6,7 +6,7 @@ import { audioManager } from '../../game/audio';
 import { RARITY_CONFIG, type Rarity } from '../../utils/rarity';
 import { getCoverUrlForRarity, useSmartCoverArt, resolveSmartCoverUrl } from '../../utils/rarityArtwork';
 import { get365CardVariantStyle, getPackCoverFallback, getPackMultiCovers } from '../../utils/cardVariants';
-import { getFeaturedBombshellFoilCover } from '../../utils/bombshellCards';
+import { getFeaturedBombshellFoilCover, getRandomBombshellPackCover } from '../../utils/bombshellCards';
 import Card from '../Card';
 import RarityBadge from '../RarityBadge';
 import {
