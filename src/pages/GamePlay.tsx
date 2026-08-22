@@ -868,6 +868,59 @@ function getJudgmentBadgeSvgHtml(type: JudgmentDisplay['type'], scale = 1, idSuf
   </svg>`;
 }
 
+function getJudgmentStreamItemHtml(type: JudgmentDisplay['type'], lane: number): string {
+  let color = '#39FF14';
+  let icon = '★';
+  let text = type;
+  let bgGrad = 'linear-gradient(90deg, rgba(57,255,20,0.22), rgba(8,10,16,0.92))';
+  let border = '1px solid rgba(57,255,20,0.5)';
+  let shadow = '0 0 8px rgba(57,255,20,0.3)';
+
+  if (type === 'PERFECT+') {
+    color = '#FFD700';
+    icon = '✦';
+    text = 'PERFECT+';
+    bgGrad = 'linear-gradient(90deg, rgba(255,215,0,0.28), rgba(8,10,16,0.92))';
+    border = '1px solid rgba(255,215,0,0.6)';
+    shadow = '0 0 10px rgba(255,215,0,0.4)';
+  } else if (type === 'PERFECT') {
+    color = '#39FF14';
+    icon = '★';
+    text = 'PERFECT';
+    bgGrad = 'linear-gradient(90deg, rgba(57,255,20,0.22), rgba(8,10,16,0.92))';
+    border = '1px solid rgba(57,255,20,0.5)';
+    shadow = '0 0 8px rgba(57,255,20,0.3)';
+  } else if (type === 'GOOD') {
+    color = '#00E5FF';
+    icon = '◆';
+    text = 'GOOD';
+    bgGrad = 'linear-gradient(90deg, rgba(0,229,255,0.22), rgba(8,10,16,0.92))';
+    border = '1px solid rgba(0,229,255,0.5)';
+    shadow = '0 0 8px rgba(0,229,255,0.3)';
+  } else if (type === 'SHIELDED') {
+    color = '#E879F9';
+    icon = '🛡';
+    text = 'SHIELD';
+    bgGrad = 'linear-gradient(90deg, rgba(232,121,249,0.22), rgba(8,10,16,0.92))';
+    border = '1px solid rgba(232,121,249,0.5)';
+    shadow = '0 0 8px rgba(232,121,249,0.3)';
+  } else if (type === 'MISS') {
+    color = '#FF0055';
+    icon = '✖';
+    text = 'MISS';
+    bgGrad = 'linear-gradient(90deg, rgba(255,0,85,0.28), rgba(8,10,16,0.92))';
+    border = '1px solid rgba(255,0,85,0.6)';
+    shadow = '0 0 10px rgba(255,0,85,0.4)';
+  }
+
+  const laneLabel = lane === 0 ? 'L' : lane === 1 ? 'M' : 'R';
+
+  return `<div class="flex items-center gap-1.5 px-2 py-0.5 rounded backdrop-blur-md" style="background:${bgGrad};border:${border};box-shadow:${shadow};min-width:84px;">
+    <span class="font-mono text-[9px] font-black tracking-wider" style="color:${color};text-shadow:0 0 6px ${color};">${icon} ${text}</span>
+    <span class="ml-auto font-mono text-[8px] font-bold text-white/60 bg-white/10 px-1 rounded-sm">${laneLabel}</span>
+  </div>`;
+}
+
 // Perspective highway geometry
 const HW_TOP = 0.65;
 const HW_BOT = 0.99;
@@ -2334,7 +2387,7 @@ export default function Game() {
   const jCounter = useRef(0);
   const lastLaneHitRef = useRef<Record<number, { ts: number; type: string }>>({});
   const judgmentOverlayRef = useRef<HTMLDivElement | null>(null);
-  const judgmentBannerRef = useRef<HTMLDivElement | null>(null);
+  const judgmentStreamRef = useRef<HTMLDivElement | null>(null);
 
   const addJudgment = useCallback((newJ: JudgmentDisplay) => {
     const now = Date.now();
@@ -2376,19 +2429,21 @@ export default function Game() {
         }
       }
 
-      if (judgmentBannerRef.current) {
-        const bannerEl = document.createElement('div');
-        bannerEl.className = 'absolute left-1/2 pointer-events-none judgment-banner-pop';
-        bannerEl.style.top = '22%';
-        bannerEl.innerHTML = getJudgmentBadgeSvgHtml(newJ.type, newJ.type === 'PERFECT+' ? 1.35 : 1.15, `banner_${newJ.id}`);
-        judgmentBannerRef.current.innerHTML = '';
-        judgmentBannerRef.current.appendChild(bannerEl);
-        bannerEl.addEventListener('animationend', () => {
-          if (bannerEl.parentNode) bannerEl.remove();
-        }, { once: true });
-        setTimeout(() => {
-          if (bannerEl.parentNode) bannerEl.remove();
-        }, 520);
+      // Right-side vertical judgment stream feed (Last 20 judgments, bottom-to-top)
+      if (judgmentStreamRef.current) {
+        const streamContainer = judgmentStreamRef.current;
+        const itemEl = document.createElement('div');
+        itemEl.className = 'judgment-stream-item shrink-0';
+        itemEl.innerHTML = getJudgmentStreamItemHtml(newJ.type, newJ.lane);
+
+        streamContainer.appendChild(itemEl);
+
+        // Keep strictly up to 20 items in the vertical stream
+        while (streamContainer.children.length > 20) {
+          if (streamContainer.firstChild) {
+            streamContainer.removeChild(streamContainer.firstChild);
+          }
+        }
       }
     }
   }, []);
@@ -11585,9 +11640,24 @@ export default function Game() {
             <div ref={judgmentOverlayRef} className="absolute inset-0 pointer-events-none overflow-hidden z-40" />
           )}
 
-          {/* Floating Center Judgment Banner (Direct DOM) */}
+          {/* Right-Side Vertical Judgment Stream (Last 20 Judgments, Bottom-to-Top) */}
           {opts.judgmentText && (
-            <div ref={judgmentBannerRef} className="absolute inset-0 pointer-events-none overflow-hidden z-40" />
+            <div
+              className="absolute right-2 sm:right-3.5 bottom-20 sm:bottom-24 z-35 flex flex-col justify-end items-end gap-1 pointer-events-none select-none overflow-hidden max-h-[260px] sm:max-h-[340px]"
+              style={{
+                maskImage: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 60%, rgba(0,0,0,0) 100%)',
+                WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 60%, rgba(0,0,0,0) 100%)',
+              }}
+            >
+              <div className="flex items-center gap-1 mb-0.5 px-1 opacity-40 font-mono text-[7px] tracking-[0.18em] uppercase text-white/70">
+                <span>◈</span>
+                <span>LOG // LAST 20</span>
+              </div>
+              <div
+                ref={judgmentStreamRef}
+                className="flex flex-col justify-end items-end gap-1 w-full"
+              />
+            </div>
           )}
 
           {/* Comprehensive Transmission Loading HUD */}

@@ -2223,37 +2223,21 @@ body.gamepad-cursor-active * {
   -webkit-backface-visibility: hidden;
 }
 
-@keyframes judgmentBannerFloatSmooth {
+@keyframes judgmentStreamSlideIn {
   0% {
     opacity: 0;
-    transform: translate3d(-50%, 0, 0) scale3d(0.7, 0.7, 1);
-  }
-  15% {
-    opacity: 1;
-    transform: translate3d(-50%, -8px, 0) scale3d(1.18, 1.18, 1);
-  }
-  35% {
-    opacity: 1;
-    transform: translate3d(-50%, -16px, 0) scale3d(1.0, 1.0, 1);
-  }
-  70% {
-    opacity: 0.85;
-    transform: translate3d(-50%, -28px, 0) scale3d(0.96, 0.96, 1);
+    transform: translate3d(24px, 4px, 0) scale3d(0.85, 0.85, 1);
   }
   100% {
-    opacity: 0;
-    transform: translate3d(-50%, -40px, 0) scale3d(0.92, 0.92, 1);
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale3d(1, 1, 1);
   }
 }
 
-.judgment-banner-pop {
-  animation: judgmentBannerFloatSmooth 0.48s cubic-bezier(0.12, 0.9, 0.25, 1) forwards;
+.judgment-stream-item {
+  animation: judgmentStreamSlideIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   will-change: transform, opacity;
   pointer-events: none;
-  transform-origin: center center;
-  contain: layout paint style;
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
 }
 
 
