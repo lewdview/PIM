@@ -807,6 +807,67 @@ const JudgmentBadge: React.FC<{ type: JudgmentDisplay['type']; scale?: number; c
   );
 };
 
+function getJudgmentBadgeSvgHtml(type: JudgmentDisplay['type'], scale = 1, idSuffix: number | string = ''): string {
+  if (type === "PERFECT+") {
+    return `<svg width="${145 * scale}" height="${36 * scale}" viewBox="0 0 145 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 14px rgba(255,215,0,0.9));">
+      <defs>
+        <linearGradient id="pPlusGrad_${idSuffix}" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#FFF7ED" />
+          <stop offset="30%" stop-color="#FFD700" />
+          <stop offset="70%" stop-color="#F59E0B" />
+          <stop offset="100%" stop-color="#92400E" />
+        </linearGradient>
+        <linearGradient id="pPlusGlow_${idSuffix}" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#FFD700" stop-opacity="0" />
+          <stop offset="50%" stop-color="#FFD700" stop-opacity="0.8" />
+          <stop offset="100%" stop-color="#FFD700" stop-opacity="0" />
+        </linearGradient>
+      </defs>
+      <rect x="12" y="32" width="121" height="2" rx="1" fill="url(#pPlusGlow_${idSuffix})" />
+      <path d="M 12 18 L 14 14 L 18 12 L 14 10 L 12 6 L 10 10 L 6 12 L 10 14 Z" fill="#FFF7ED" />
+      <path d="M 133 18 L 135 14 L 139 12 L 135 10 L 133 6 L 131 10 L 127 12 L 131 14 Z" fill="#FFF7ED" />
+      <text x="72.5" y="23" text-anchor="middle" fill="url(#pPlusGrad_${idSuffix})" stroke="#FFFFFF" stroke-width="0.6" font-family="'Space Mono', 'Impact', sans-serif" font-weight="900" font-size="17" letter-spacing="0.14em">PERFECT+</text>
+    </svg>`;
+  }
+  if (type === "PERFECT") {
+    return `<svg width="${132 * scale}" height="${32 * scale}" viewBox="0 0 132 32" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 12px rgba(57,255,20,0.85));">
+      <defs>
+        <linearGradient id="perfGrad_${idSuffix}" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#F7FEE7" />
+          <stop offset="40%" stop-color="#39FF14" />
+          <stop offset="100%" stop-color="#059669" />
+        </linearGradient>
+      </defs>
+      <path d="M 8 6 L 2 16 L 8 26" stroke="#39FF14" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="M 124 6 L 130 16 L 124 26" stroke="#39FF14" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+      <text x="66" y="21" text-anchor="middle" fill="url(#perfGrad_${idSuffix})" font-family="'Space Mono', 'Impact', sans-serif" font-weight="900" font-size="15" letter-spacing="0.16em">PERFECT</text>
+    </svg>`;
+  }
+  if (type === "GOOD") {
+    return `<svg width="${105 * scale}" height="${28 * scale}" viewBox="0 0 105 28" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 10px rgba(0,229,255,0.8));">
+      <defs>
+        <linearGradient id="goodGrad_${idSuffix}" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#E0F2FE" />
+          <stop offset="50%" stop-color="#00E5FF" />
+          <stop offset="100%" stop-color="#0284C7" />
+        </linearGradient>
+      </defs>
+      <line x1="12" y1="3" x2="93" y2="3" stroke="#00E5FF" stroke-width="1.5" stroke-dasharray="5 3" />
+      <line x1="12" y1="25" x2="93" y2="25" stroke="#00E5FF" stroke-width="1.5" stroke-dasharray="5 3" />
+      <text x="52.5" y="19" text-anchor="middle" fill="url(#goodGrad_${idSuffix})" font-family="'Space Mono', 'Impact', sans-serif" font-weight="900" font-size="14" letter-spacing="0.18em">GOOD</text>
+    </svg>`;
+  }
+  if (type === "SHIELDED") {
+    return `<svg width="${120 * scale}" height="${30 * scale}" viewBox="0 0 120 30" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 10px rgba(0,255,221,0.8));">
+      <path d="M 12 6 L 18 6 L 18 16 C 18 20 12 24 12 24 C 12 24 6 20 6 16 L 6 6 Z" fill="#00FFDD" opacity="0.3" stroke="#00FFDD" stroke-width="1.5" />
+      <text x="65" y="20" text-anchor="middle" fill="#00FFDD" font-family="'Space Mono', sans-serif" font-weight="900" font-size="12" letter-spacing="0.12em">SHIELDED</text>
+    </svg>`;
+  }
+  return `<svg width="${100 * scale}" height="${28 * scale}" viewBox="0 0 100 28" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 12px rgba(255,20,147,0.9));">
+    <text x="50" y="19" text-anchor="middle" fill="#FF1493" stroke="#FF003C" stroke-width="0.5" font-family="'Space Mono', 'Impact', sans-serif" font-weight="900" font-size="14" letter-spacing="0.2em">MISS</text>
+  </svg>`;
+}
+
 // Perspective highway geometry
 const HW_TOP = 0.65;
 const HW_BOT = 0.99;
@@ -2272,20 +2333,64 @@ export default function Game() {
   const jRef = useRef<JudgmentDisplay[]>([]);
   const jCounter = useRef(0);
   const lastLaneHitRef = useRef<Record<number, { ts: number; type: string }>>({});
+  const judgmentOverlayRef = useRef<HTMLDivElement | null>(null);
+  const judgmentBannerRef = useRef<HTMLDivElement | null>(null);
 
   const addJudgment = useCallback((newJ: JudgmentDisplay) => {
     const now = Date.now();
     let write = 0;
     const arr = jRef.current;
     for (let i = 0; i < arr.length; i++) {
-      if (now - arr[i].ts < 900) {
+      if (now - arr[i].ts < 950) {
         arr[write++] = arr[i];
       }
     }
     arr.length = write;
     arr.push(newJ);
     lastLaneHitRef.current[newJ.lane] = { ts: newJ.ts, type: newJ.type };
-    setDisplayJudge([...arr]);
+
+    // Zero-overhead direct DOM injection for 120Hz buttery smooth compositor animation
+    if (optsRef.current?.judgmentText) {
+      if (judgmentOverlayRef.current) {
+        const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
+        const canvasW = canvasRef.current?.width ? canvasRef.current.width / dpr : 0;
+        if (canvasW > 0) {
+          const hwBot = hwAtProgress(1, canvasW);
+          const laneW = hwBot.width / LANE_COUNT;
+          const targetX = hwBot.left + (newJ.lane + 0.5) * laneW;
+          const targetPct = (targetX / canvasW) * 100;
+
+          const popEl = document.createElement('div');
+          popEl.className = 'absolute pointer-events-none judgment-pop';
+          popEl.style.left = `${targetPct}%`;
+          popEl.style.top = '70%';
+          popEl.innerHTML = getJudgmentBadgeSvgHtml(newJ.type, newJ.type === 'PERFECT+' ? 1.08 : 0.95, newJ.id);
+          
+          judgmentOverlayRef.current.appendChild(popEl);
+          popEl.addEventListener('animationend', () => {
+            if (popEl.parentNode) popEl.remove();
+          }, { once: true });
+          setTimeout(() => {
+            if (popEl.parentNode) popEl.remove();
+          }, 1100);
+        }
+      }
+
+      if (judgmentBannerRef.current) {
+        const bannerEl = document.createElement('div');
+        bannerEl.className = 'absolute left-1/2 pointer-events-none judgment-banner-pop';
+        bannerEl.style.top = '22%';
+        bannerEl.innerHTML = getJudgmentBadgeSvgHtml(newJ.type, newJ.type === 'PERFECT+' ? 1.35 : 1.15, `banner_${newJ.id}`);
+        judgmentBannerRef.current.innerHTML = '';
+        judgmentBannerRef.current.appendChild(bannerEl);
+        bannerEl.addEventListener('animationend', () => {
+          if (bannerEl.parentNode) bannerEl.remove();
+        }, { once: true });
+        setTimeout(() => {
+          if (bannerEl.parentNode) bannerEl.remove();
+        }, 1000);
+      }
+    }
   }, []);
   const songRef = useRef<GameSong | null>(null);
   const modifierRef = useRef<'vocal_isolation' | 'bass_realm' | 'corrupted_signal' | 'none'>('none');
@@ -2392,7 +2497,6 @@ export default function Game() {
   const [phase, setPhase] = useState<typeof phaseRef.current>("loading");
   const [countdown, setCountdown] = useState(3);
   const [displayGs, setDisplayGs] = useState<GameState>(gsRef.current);
-  const [displayJudge, setDisplayJudge] = useState<JudgmentDisplay[]>([]);
   const [bufferPct, setBufferPct] = useState(0);
   const [loadMsg, setLoadMsg] = useState("FETCHING TRANSMISSION...");
   const [loadState, setLoadState] = useState<TransmissionLoadState>({
@@ -2926,16 +3030,15 @@ export default function Game() {
     if (now - lastReactSyncRef.current >= 200) {
       lastReactSyncRef.current = now;
       setDisplayGs({ ...gsRef.current });
-      // Prune expired judgments older than 900ms
+      // Prune expired judgments older than 950ms
       let write = 0;
       const arr = jRef.current;
       for (let i = 0; i < arr.length; i++) {
-        if (now - arr[i].ts < 900) {
+        if (now - arr[i].ts < 950) {
           arr[write++] = arr[i];
         }
       }
       arr.length = write;
-      setDisplayJudge([...arr]);
     }
   }, []);
   // audioOffset (ms) compensates for speaker latency: subtract it so hits land in time
@@ -11425,46 +11528,15 @@ export default function Game() {
             </div>
           )}
 
-          {/* Judgment text — per-lane custom vector SVG popups anchored at judgment target strike zones */}
-          {opts.judgmentText && displayJudge.map((j) => {
-            if (Date.now() - j.ts > 850) return null;
-            const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
-            const canvasW = canvasRef.current?.width ? canvasRef.current.width / dpr : 0;
-            if (!canvasW) return null;
-            const hwBot = hwAtProgress(1, canvasW);
-            const laneW = hwBot.width / LANE_COUNT;
-            const targetX = hwBot.left + (j.lane + 0.5) * laneW;
-            const targetPct = (targetX / canvasW) * 100;
-            return (
-              <div
-                key={j.id}
-                className="absolute pointer-events-none judgment-pop"
-                style={{
-                  left: `${targetPct}%`,
-                  top: "70%",
-                }}
-              >
-                <JudgmentBadge type={j.type} scale={j.type === "PERFECT+" ? 1.05 : 0.9} />
-              </div>
-            );
-          })}
+          {/* Floating Judgment Text Overlay Layer (Zero-React Re-render Direct DOM) */}
+          {opts.judgmentText && (
+            <div ref={judgmentOverlayRef} className="absolute inset-0 pointer-events-none overflow-hidden z-40" />
+          )}
 
-          {/* Secondary judgment banner — top of screen, custom vector SVG badge */}
-          {opts.judgmentText && (() => {
-            const latest = displayJudge.filter(j => Date.now() - j.ts < 750).sort((a, b) => b.ts - a.ts)[0];
-            if (!latest) return null;
-            return (
-              <div
-                key={`banner_${latest.id}`}
-                className="absolute left-1/2 pointer-events-none judgment-banner-pop"
-                style={{
-                  top: "23%",
-                }}
-              >
-                <JudgmentBadge type={latest.type} scale={latest.type === "PERFECT+" ? 1.35 : 1.15} />
-              </div>
-            );
-          })()}
+          {/* Floating Center Judgment Banner (Direct DOM) */}
+          {opts.judgmentText && (
+            <div ref={judgmentBannerRef} className="absolute inset-0 pointer-events-none overflow-hidden z-40" />
+          )}
 
           {/* Comprehensive Transmission Loading HUD */}
           {(phase === "loading" || phase === "buffering") && (
