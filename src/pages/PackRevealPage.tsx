@@ -173,8 +173,9 @@ export default function PackRevealPage() {
     const { category, size } = revealPackMeta;
 
     // Client-side balance guard for token packs
-    if ((category === 'vault_token' || category === 'bombshell_token') && tokenBalance < getTokenPackCost()) {
-      alert(`Not enough V⚡ tokens. You need ${getTokenPackCost()} V⚡ but only have ${tokenBalance}.`);
+    const reqCost = category === 'bombshell_token' ? 100 : getTokenPackCost();
+    if ((category === 'vault_token' || category === 'bombshell_token') && tokenBalance < reqCost) {
+      alert(`Not enough V⚡ tokens. You need ${reqCost} V⚡ but only have ${tokenBalance}.`);
       return;
     }
 
@@ -187,7 +188,7 @@ export default function PackRevealPage() {
         : await purchasePack(category as any, size as any);
 
       if (cards === 'insufficient') {
-        alert(`Not enough V⚡ tokens. You need ${getTokenPackCost()} V⚡ but only have ${tokenBalance}.`);
+        alert(`Not enough V⚡ tokens. You need ${reqCost} V⚡ but only have ${tokenBalance}.`);
         setIsRepurchasing(false);
         isRepurchaseRef.current = false;
         return;

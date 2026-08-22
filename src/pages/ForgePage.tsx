@@ -580,7 +580,12 @@ export default function ForgePage() {
   }, [confirmBatch, removeFromCollection, loadVaultData]);
 
   const handleBuyTokenPack = useCallback(async (packType: 'vault_token' | 'bombshell_token' = 'vault_token') => {
-    if (!canAfford) return;
+    const isBombshell = packType === 'bombshell_token';
+    const cost = isBombshell ? 100 : packCost;
+    if (tokenBalance < cost) {
+      alert(`Insufficient V⚡ tokens. You need ${cost} V⚡.`);
+      return;
+    }
     try {
       useLoadingToast.getState().show('Purchasing pack…');
       const cards = await buyTokenPack(packType);
@@ -598,18 +603,17 @@ export default function ForgePage() {
       addToCollection(cards);
       await loadVaultData();
       audioManager.playSfx('open_chest', 0.9);
-      const isBombshell = packType === 'bombshell_token';
-      const chosenCover = isBombshell ? getRandomBombshellPackCover() : undefined;
+      const chosenCover = isBombshell ? getRandomBombshellPackCover(1) : undefined;
       startReveal(cards, {
         category: packType,
         size: 'single',
-        label: isBombshell ? 'Bombshell 3-Pack' : 'Vault Pack',
+        label: isBombshell ? 'Bombshell Pull' : 'Vault Pack',
         icon: isBombshell ? '💖' : '⚡',
         accent: isBombshell ? '#ff1493' : '#ff9900',
         gradient: isBombshell
           ? 'linear-gradient(160deg, #300a1e 0%, #501234 40%, #200816 100%)'
           : 'linear-gradient(145deg, #1a1000, #0a0800)',
-        price: `${packCost} V⚡`,
+        price: `${cost} V⚡`,
         cardCount: cards.length,
         coverImage: chosenCover,
         revealType: 'cinematic',
@@ -622,7 +626,7 @@ export default function ForgePage() {
       alert('Pack purchase failed — please try again.');
       await loadVaultData();
     }
-  }, [canAfford, addToCollection, loadVaultData, startReveal, setLocation, packCost]);
+  }, [tokenBalance, addToCollection, loadVaultData, startReveal, setLocation, packCost]);
 
   // ── TARGETED PULL ──────────────────────────────────────────────
   const handleTargetedPull = useCallback(async () => {
@@ -801,27 +805,27 @@ export default function ForgePage() {
               Vault Pack ({packCost} V⚡)
             </motion.button>
 
-            {/* Buy Bombshell 3-Pack button */}
+            {/* Buy Bombshell Pull button */}
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => handleBuyTokenPack('bombshell_token')}
-              disabled={!canAfford}
+              disabled={tokenBalance < 100}
               style={{
                 padding: '12px 20px',
-                background: canAfford ? 'linear-gradient(135deg, #ff1493, #ff69b4)' : 'rgba(255,255,255,0.04)',
-                color: canAfford ? '#fff' : 'rgba(255,255,255,0.2)',
+                background: tokenBalance >= 100 ? 'linear-gradient(135deg, #ff1493, #ff69b4)' : 'rgba(255,255,255,0.04)',
+                color: tokenBalance >= 100 ? '#fff' : 'rgba(255,255,255,0.2)',
                 border: '2px solid #000',
                 fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '16px',
                 textTransform: 'uppercase', letterSpacing: '0.02em',
-                cursor: canAfford ? 'pointer' : 'not-allowed',
-                boxShadow: canAfford ? '4px 4px 0 #000, 0 0 20px rgba(255,20,147,0.3)' : '2px 2px 0 #000',
+                cursor: tokenBalance >= 100 ? 'pointer' : 'not-allowed',
+                boxShadow: tokenBalance >= 100 ? '4px 4px 0 #000, 0 0 20px rgba(255,20,147,0.3)' : '2px 2px 0 #000',
                 display: 'flex', alignItems: 'center', gap: '8px',
                 transition: 'all 0.2s',
               }}
             >
               <span>💖</span>
-              Bombshell 3-Pk ({packCost} V⚡)
+              Bombshell Pull (100 V⚡)
             </motion.button>
           </motion.div>
         </div>

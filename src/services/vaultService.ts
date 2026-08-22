@@ -880,9 +880,13 @@ export async function buyTokenPack(packType: 'vault_token' | 'bombshell_token' =
   }
 }
 
-/** Buy a 3-Card Bombshell Pack using tokens (275 V⚡ • 3% Mythic chance) */
+/** Buy a 1-Card Bombshell Pull using tokens (100 V⚡) */
 export async function buyBombshellTokenPack(): Promise<OwnedCard[] | 'insufficient'> {
   return buyTokenPack('bombshell_token');
+}
+
+export function getBombshellTokenPackCost(): number {
+  return 100;
 }
 
 export function getTokenPackCost(): number {

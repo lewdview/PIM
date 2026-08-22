@@ -162,7 +162,7 @@ export default function NextGenLandingPage() {
     prophecy: 'PROPHECY',
     alpha: 'ALPHA',
     vault_token: 'TOKENS',
-    bombshell_token: 'BOMBSHELL 3-PACK',
+    bombshell_token: 'BOMBSHELL PULL',
     targeted_pull: 'TARGETED',
     rarity_upgrade: 'UPGRADE',
     token_bundle: 'TOKENS',
@@ -1459,10 +1459,10 @@ export default function NextGenLandingPage() {
                 </div>
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 rounded-xl bg-pink-500/20 flex items-center justify-center text-xl">💖</div>
-                  <h3 className="font-bold text-lg text-pink-400">Bombshell 3-Pack</h3>
+                  <h3 className="font-bold text-lg text-pink-400">Bombshell Pull</h3>
                 </div>
                 <p className="text-xs text-slate-300 mb-4 flex-1">
-                  Collector series 3-card artwork pack with a 3% Mythic drop chance!
+                  Collector series 1-card artwork pull. 100 V⚡ single rip!
                 </p>
                 <div className="p-3 rounded-xl bg-black/40 border border-pink-500/20 mb-4 text-xs font-mono">
                   <div className="flex justify-between mb-1">
@@ -1475,15 +1475,15 @@ export default function NextGenLandingPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-400">Cards</span>
-                    <span className="text-white font-bold">3 Cards</span>
+                    <span className="text-white font-bold">1 Card</span>
                   </div>
                 </div>
                 <button 
-                  disabled={isPurchasing || tokenBalance < 275}
+                  disabled={isPurchasing || tokenBalance < 100}
                   onClick={() => handlePurchasePack('bombshell_token', 'single')}
                   className="w-full py-3.5 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-400 hover:to-rose-400 text-white font-extrabold text-xs tracking-wider uppercase transition-all disabled:opacity-50 cursor-pointer"
                 >
-                  {isPurchasing ? 'Opening...' : 'Rip Pack (275 V⚡)'}
+                  {isPurchasing ? 'Opening...' : 'Rip Pull (100 V⚡)'}
                 </button>
               </div>
 

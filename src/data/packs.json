@@ -153,14 +153,14 @@
   },
   "bombshell_token": {
     "category": "bombshell_token",
-    "label": "BOMBSHELL 3-PACK",
-    "description": "Exclusive Bombshell collector series • 3 Cards • 3% Mythic drop rate",
+    "label": "BOMBSHELL PULL",
+    "description": "Exclusive Bombshell collector series • 1 Card • 100 V⚡ single rip",
     "icon": "💖",
     "accent": "#ff1493",
     "gradient": "linear-gradient(160deg, #300a1e 0%, #501234 40%, #200816 100%)",
-    "rates": [30, 28, 25, 14, 3],
+    "rates": [60, 25, 12, 3, 0],
     "tiers": [
-      { "size": "single", "cardCount": 3, "price": "275 V⚡", "priceValue": 0 }
+      { "size": "single", "cardCount": 1, "price": "100 V⚡", "priceValue": 0, "coverImage": "/data/packs/bombshell_top_1card.jpg", "lightCoverImage": "/data/packs/bombshell_bot_1card.jpg" }
     ]
   },
   "targeted_pull": {

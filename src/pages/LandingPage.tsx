@@ -994,15 +994,15 @@ export default function LandingPage() {
                     <div>
                       <div className="flex items-center gap-2 mb-2">
                         <span className="text-xl">💖</span>
-                        <h3 className="font-bold text-sm uppercase tracking-wider text-pink-400">Bombshell 3-Pack</h3>
+                        <h3 className="font-bold text-sm uppercase tracking-wider text-pink-400">Bombshell Pull</h3>
                       </div>
                       <p className="text-[10px] font-mono opacity-60 mb-4 leading-normal">
-                        Collector series 3-card artwork pack. 3% Mythic drop chance!
+                        Collector series 1-card artwork pull. 100 V⚡ single rip!
                       </p>
                       <div className="p-2.5 rounded bg-black/50 border border-pink-500/20 mb-4">
                         <div className="flex justify-between text-[9px] font-mono mb-1">
-                          <span className="text-white/60">Mythic Chance</span>
-                          <span className="text-pink-400 font-bold">3.0%</span>
+                          <span className="text-white/60">Odds</span>
+                          <span className="text-pink-400 font-bold">3.0% Mythic</span>
                         </div>
                         <div className="flex justify-between text-[9px] font-mono mb-1">
                           <span className="text-white/60">Pool</span>
@@ -1010,15 +1010,15 @@ export default function LandingPage() {
                         </div>
                         <div className="flex justify-between text-[9px] font-mono">
                           <span className="text-white/60">Pack Size</span>
-                          <span className="text-white font-bold">3 Cards</span>
+                          <span className="text-white font-bold">1 Card</span>
                         </div>
                       </div>
                     </div>
 
                     <div>
-                      <div className="text-[9px] font-mono uppercase tracking-widest opacity-40 mb-2">Cost: 275 V⚡</div>
+                      <div className="text-[9px] font-mono uppercase tracking-widest opacity-40 mb-2">Cost: 100 V⚡</div>
                       <button 
-                        disabled={isPurchasing || tokenBalance < 275}
+                        disabled={isPurchasing || tokenBalance < 100}
                         onClick={() => handlePurchasePack('bombshell_token', 'single')}
                         className="w-full py-3 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-400 hover:to-rose-400 text-white font-black uppercase text-xs tracking-wider transition-all disabled:opacity-30 active:scale-[0.98] cursor-pointer"
                         style={{ border: '2px solid #000', boxShadow: '2px 2px 0 #000' }}

@@ -26,8 +26,10 @@ export default function TokenShop({ onPackOpened }: TokenShopProps) {
   const [confirmSell, setConfirmSell] = useState<OwnedCard | null>(null);
   const [selectedPackType, setSelectedPackType] = useState<'vault_token' | 'bombshell_token'>('vault_token');
 
+  const isBombshell = selectedPackType === 'bombshell_token';
   const packCost = getTokenPackCost();
-  const canAfford = tokenBalance >= packCost;
+  const currentCost = isBombshell ? 100 : packCost;
+  const canAfford = tokenBalance >= currentCost;
 
   const handleSell = useCallback((card: OwnedCard) => {
     setConfirmSell(card);
@@ -56,25 +58,24 @@ export default function TokenShop({ onPackOpened }: TokenShopProps) {
     if (result === 'insufficient' || result.length === 0) return;
     addToCollection(result);
     audioManager.playSfx('open_chest', 0.9);
-    const isBombshell = selectedPackType === 'bombshell_token';
-    const chosenCover = isBombshell ? getRandomBombshellPackCover() : undefined;
+    const chosenCover = isBombshell ? getRandomBombshellPackCover(1) : undefined;
     startReveal(result, {
       category: selectedPackType,
       size: 'single',
-      label: isBombshell ? 'Bombshell 3-Pack' : 'Vault Pack',
+      label: isBombshell ? 'Bombshell Pull' : 'Vault Pack',
       icon: isBombshell ? '💖' : '⚡',
       accent: isBombshell ? '#ff1493' : '#ff9900',
       gradient: isBombshell 
         ? 'linear-gradient(160deg, #300a1e 0%, #501234 40%, #200816 100%)'
         : 'linear-gradient(135deg, #1a0f00, #2a1a00, #1a0f00)',
-      price: `${packCost} V⚡`,
+      price: `${currentCost} V⚡`,
       cardCount: result.length,
       coverImage: chosenCover,
       revealType: 'cinematic',
       showRipAnother: true,
     });
     onPackOpened(result);
-  }, [canAfford, selectedPackType, addToCollection, startReveal, onPackOpened, setTokenBalance, packCost, loadVaultData]);
+  }, [canAfford, selectedPackType, isBombshell, currentCost, addToCollection, startReveal, onPackOpened, loadVaultData]);
 
   // Sort collection: most valuable first
   const sortedCollection = [...collection].sort((a, b) => {
@@ -278,7 +279,7 @@ export default function TokenShop({ onPackOpened }: TokenShopProps) {
                   : 'text-zinc-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              <span>💖</span> Bombshell 3-Pk
+              <span>💖</span> Bombshell Pull
             </button>
           </div>
 
@@ -286,7 +287,7 @@ export default function TokenShop({ onPackOpened }: TokenShopProps) {
           <div className="px-5 pt-4 pb-3 border-b-2 border-black flex items-center gap-3">
             <ShoppingBag size={16} style={{ color: selectedPackType === 'bombshell_token' ? '#ff1493' : '#ff9900' }} />
             <span className="font-black uppercase" style={{ fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '20px', color: selectedPackType === 'bombshell_token' ? '#ff69b4' : '#fff' }}>
-              {selectedPackType === 'bombshell_token' ? 'Bombshell 3-Pack' : 'Vault Pack'}
+              {selectedPackType === 'bombshell_token' ? 'Bombshell Pull' : 'Vault Pack'}
             </span>
             <div
               className="ml-auto text-[9px] font-mono px-2 py-0.5 border font-black uppercase tracking-wider"
@@ -307,7 +308,7 @@ export default function TokenShop({ onPackOpened }: TokenShopProps) {
               <div className="flex items-center gap-1">
                 <Zap size={14} style={{ color: selectedPackType === 'bombshell_token' ? '#ff1493' : '#ff9900' }} />
                 <span className="font-black text-2xl" style={{ fontFamily: '"Impact", "Arial Black", sans-serif', color: selectedPackType === 'bombshell_token' ? '#ff1493' : '#ff9900' }}>
-                  {packCost}
+                  {currentCost}
                 </span>
                 <span className="text-[11px] font-mono opacity-60">V⚡</span>
               </div>
@@ -317,7 +318,7 @@ export default function TokenShop({ onPackOpened }: TokenShopProps) {
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-mono uppercase opacity-50">Cards / Pool</span>
               <span className="font-mono text-xs font-bold text-white">
-                3 Cards • <span style={{ color: selectedPackType === 'bombshell_token' ? '#ff69b4' : '#ff9900' }}>{selectedPackType === 'bombshell_token' ? 'Bombshell Art' : 'All 365 Days'}</span>
+                {selectedPackType === 'bombshell_token' ? '1 Card' : '3 Cards'} • <span style={{ color: selectedPackType === 'bombshell_token' ? '#ff69b4' : '#ff9900' }}>{selectedPackType === 'bombshell_token' ? 'Bombshell Art' : 'All 365 Days'}</span>
               </span>
             </div>
 

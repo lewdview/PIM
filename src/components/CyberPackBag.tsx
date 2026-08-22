@@ -227,7 +227,8 @@ export default function CyberPackBag({
   const tokenPackCost = adminCfg.tokenPackCost ?? 275;
   
   let requiredTokens = 0;
-  if (category === 'vault_token' || category === 'bombshell_token') requiredTokens = tokenPackCost;
+  if (category === 'vault_token') requiredTokens = tokenPackCost;
+  else if (category === 'bombshell_token') requiredTokens = 100;
   else if (category === 'targeted_pull') requiredTokens = 500;
   else if (category === 'rarity_upgrade') requiredTokens = 150;
 
@@ -258,11 +259,9 @@ export default function CyberPackBag({
   const countNum = tier.cardCount >= 50 ? 50 : tier.cardCount >= 25 ? 25 : tier.cardCount >= 10 ? 10 : tier.cardCount >= 5 ? 5 : tier.cardCount >= 2 ? 2 : 1;
   const plural = countNum === 1 ? 'card' : 'cards';
   const foilCoverUrl = isBombshell 
-    ? (cfg.category === 'bombshell_token' || tier.cardCount === 3
-        ? (tier.coverImage || getRandomBombshellPackCover())
-        : (bombshellSide === 'bot' 
-            ? (tier.lightCoverImage || `/data/packs/bombshell_bot_${countNum}${plural}.jpg`) 
-            : (tier.coverImage || `/data/packs/bombshell_top_${countNum}${plural}.jpg`)))
+    ? (tier.coverImage || (bombshellSide === 'bot' 
+        ? (tier.lightCoverImage || `/data/packs/bombshell_bot_${countNum}${plural}.jpg`) 
+        : (tier.coverImage || `/data/packs/bombshell_top_${countNum}${plural}.jpg`)))
     : (tier.coverImage || cfg.coverImage || getPackCoverFallback(cfg.category));
 
   const variant = get365CardVariantStyle(cfg.category);
