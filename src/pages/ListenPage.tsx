@@ -25,7 +25,7 @@ type PlaylistMode = 'all_catalog' | 'unlocked_only';
 
 export default function ListenPage() {
   const [, params] = useRoute('/listen/:songId');
-  const songId = params?.songId || '';
+  const songId = (params as any)?.songId || '';
   const [location, setLocation] = useLocation();
 
   const { settings, updateSettings, collection, fragments } = useVaultStore();
@@ -751,7 +751,7 @@ export default function ListenPage() {
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
-  const coverArtSrc = song?.coverArt || song?.coverUrl || '/data/covers/default.jpg';
+  const coverArtSrc = song?.coverArt || '/data/covers/default.jpg';
 
   const filteredPlaylist = playlist.filter(track => {
     if (!searchQuery.trim()) return true;

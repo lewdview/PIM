@@ -34,6 +34,7 @@ export interface Note {
   choicePath?: 'left' | 'right';
   zigzagAmplitude?: number;
   repeaterCount?: number;
+  stage?: number;
 }
 
 export interface Song {

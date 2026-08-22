@@ -143,7 +143,7 @@ export default function NextGenLandingPage() {
       cardCount: number;
     };
   }>>([]);
-  const [droppingPack, setDroppingPack] = useState<{ category: PackCategory; label: string; icon: string; accent: string } | null>(null);
+  const [droppingPack, setDroppingPack] = useState<{ category: PackCategory; size?: PackSize; label: string; icon: string; accent: string } | null>(null);
   const [checkoutInfo, setCheckoutInfo] = useState<{ category: PackCategory; size: PackSize; label: string; price: string; priceValue: number; accent: string } | null>(null);
 
   const VENDING_CAROUSEL_CATEGORIES: PackCategory[] = useMemo(() => [
@@ -162,6 +162,10 @@ export default function NextGenLandingPage() {
     prophecy: 'PROPHECY',
     alpha: 'ALPHA',
     vault_token: 'TOKENS',
+    bombshell_token: 'BOMBSHELL 3-PACK',
+    targeted_pull: 'TARGETED',
+    rarity_upgrade: 'UPGRADE',
+    token_bundle: 'TOKENS',
   }), []);
 
   const maxVendingPages = VENDING_CAROUSEL_CATEGORIES.length;
@@ -931,7 +935,7 @@ export default function NextGenLandingPage() {
                 </div>
 
                 <button 
-                  onClick={() => handlePurchasePack('vault_token', 'starter')}
+                  onClick={() => handlePurchasePack('vault_token', 'pouch')}
                   className="px-4 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 font-bold text-xs tracking-wider transition-all"
                 >
                   + Get V⚡
@@ -1713,7 +1717,7 @@ export default function NextGenLandingPage() {
               <p className="text-sm text-slate-400">Unlock your personal shop console, daily drops, and promo codes.</p>
             </div>
             <button 
-              onClick={() => useAuthStore.getState().setConnectModalOpen(true)}
+              onClick={() => useAuthStore.getState().setShowAuthModal(true)}
               className="mt-6 w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-amber-500 text-white font-extrabold text-xs uppercase tracking-wider shadow-lg"
             >
               Connect Wallet Now

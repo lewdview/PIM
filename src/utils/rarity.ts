@@ -150,6 +150,7 @@ for (const key of Object.keys(packData)) {
     icon: cfg.icon,
     accent: cfg.accent,
     gradient: cfg.gradient,
+    rates: cfg.rates || [100, 0, 0, 0],
     tiers: cfg.tiers,
     filter: cfg.filter
   };

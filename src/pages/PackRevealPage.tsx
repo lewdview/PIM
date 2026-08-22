@@ -59,7 +59,7 @@ export default function PackRevealPage() {
             if (result.isTokenBundle) {
               await loadVaultData();
               setTokenReward({ tokenAmount: result.tokenAmount || 0, newBalance: result.newBalance });
-              try { audioManager.play('sfx_perfect'); } catch {}
+              try { audioManager.playSfx('tap_perfect'); } catch {}
               return;
             }
 
@@ -78,7 +78,7 @@ export default function PackRevealPage() {
                   : 'linear-gradient(160deg, #0a1020 0%, #152540 40%, #081018 100%)',
                 tiers: [{ size: size || 'single', cardCount: cards.length, price: '$0.25' }]
               };
-              const tier = cfg?.tiers?.find(t => t.size === size) ?? cfg?.tiers?.[0] ?? { cardCount: cards.length, price: '$0.25' };
+              const tier = cfg?.tiers?.find(t => t.size === size) ?? cfg?.tiers?.[0] ?? { size: (size || 'single') as PackSize, cardCount: cards.length, price: '$0.25' };
               setRipDone(false);
               setRevealedIndex(0);
               setShowSummary(false);
@@ -366,7 +366,7 @@ export default function PackRevealPage() {
             transition={{ delay: 0.3 }}
           >
             <RarityBadge rarity={revealCards[revealedIndex]?.card.rarity || 'common'} size="lg" />
-            {(revealCards[revealedIndex]?.proof === 'proof_of_first' || revealCards[revealedIndex]?.proof === 'proof_of_listen') && (
+            {(revealCards[revealedIndex]?.proof === 'proof_of_first' || revealCards[revealedIndex]?.proof === 'heard_first') && (
               <motion.div
                 initial={{ opacity: 0, scale: 0 }}
                 animate={{ opacity: 1, scale: 1 }}

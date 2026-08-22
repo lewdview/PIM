@@ -394,7 +394,7 @@ function StandardVaultCardBack({ card }: { card: VaultCard }) {
 // --------------------------------------------------------------------------
 // 3D FLIP CONTAINER WRAPPER
 // --------------------------------------------------------------------------
-export const CardSkinContext = createContext<{ staticFace?: 'front' | 'back' }>({});
+export const CardSkinContext = createContext<{ staticFace?: 'front' | 'back'; backSkin?: string }>({});
 
 interface CardWrapperProps {
   rarity: Rarity;

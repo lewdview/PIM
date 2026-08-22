@@ -144,6 +144,7 @@ export default function ClaimPage() {
     value: string;
     details?: any;
     result?: any;
+    code?: string;
   } | null>(null);
 
   const [, setLocation] = useLocation();
@@ -450,7 +451,7 @@ export default function ClaimPage() {
             style={{
               width: '80px', height: '80px', borderRadius: '50%',
               background: 'linear-gradient(145deg, #ffd700, #ff9900)',
-              display: 'flex', alignItems: 'center', justify: 'center',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
               boxShadow: '0 0 30px rgba(255,180,0,0.4), 0 0 0 6px rgba(255,215,0,0.06)',
             }}
           >

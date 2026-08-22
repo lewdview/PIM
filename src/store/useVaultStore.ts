@@ -39,7 +39,7 @@ export interface ProfileSettings {
   visualizerShape?: 'flower_of_life' | 'sri_yantra' | 'metatrons_cube' | 'bipolar_torus' | 'lakshmi_star';
   visualizerTheme?: 'cyan_pink' | 'emerald_orange' | 'gold_purple' | 'rainbow';
   visualizerPlaylistMode?: 'all_catalog' | 'unlocked_only';
-  visualizerRepeatMode?: 'all' | 'one' | 'shuffle';
+  visualizerRepeatMode?: 'all' | 'one' | 'shuffle' | 'off';
 }
 
 export interface ProfileProgression {
@@ -67,6 +67,7 @@ export interface RevealPackMeta {
   price: string;
   cardCount: number;
   revealType: 'tap' | 'slide' | 'cinematic';
+  coverImage?: string;
   redirectPath?: string;
   showRipAnother?: boolean;
 }

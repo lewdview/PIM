@@ -61,7 +61,11 @@ export type SfxName =
   | 'by_th3scr1b3'
   | 'inbetween'
   | 'crowd'
-  | 'month_3';
+  | 'month_3'
+  | 'menu_confirm'
+  | 'targeted'
+  | 'upgrade'
+  | 'miss';
 
 const REWIND_TRACKS = [
   'rewind1', 'rewind2', 'rewind3', 'rewind4',
@@ -129,6 +133,10 @@ const SFX_FILES: Record<SfxName, string> = {
   inbetween:              'inbetween',
   crowd:                  'crowd',
   month_3:                'month_3',
+  menu_confirm:           'select_high_short',
+  targeted:               'select_high_short',
+  upgrade:                'fusion',
+  miss:                   'not_enough',
 };
 
 // ── Preload list ───────────────────────────────────────────────────────────

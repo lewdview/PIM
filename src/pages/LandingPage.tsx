@@ -126,11 +126,14 @@ export default function LandingPage() {
   const [codeError, setCodeError] = useState('');
   const [ageGateCode, setAgeGateCode] = useState<string | null>(null);
   const [rewardClaimed, setRewardClaimed] = useState<{
+    type?: string;
     rewardType?: string;
+    value?: string;
     rewardValue?: string;
     card?: any;
     tokens?: number;
     skinUnlocked?: string;
+    details?: any;
   } | null>(null);
 
   // Upgradeable cards (not legendary or mythic)

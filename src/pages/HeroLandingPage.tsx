@@ -560,11 +560,13 @@ export default function HeroLandingPage() {
     if (cachedUrl) {
       setMuseumVideoUrl(cachedUrl);
     } else {
-      supabase
-        .from('museum_videos')
-        .select('video_url')
-        .eq('song_title', song.title)
-        .maybeSingle()
+      Promise.resolve(
+        supabase
+          .from('museum_videos')
+          .select('video_url')
+          .eq('song_title', song.title)
+          .maybeSingle()
+      )
         .then(({ data }) => {
           if (data?.video_url) {
             setMuseumVideoUrl(data.video_url);

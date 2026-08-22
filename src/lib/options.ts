@@ -4,6 +4,7 @@ export type RenderResolution = 'native' | 'high' | 'medium' | 'low';
 export type GfxLevel = 'ultra' | 'high' | 'medium' | 'low';
 export type FpsTarget = 'auto' | '60' | '120' | '30';
 export type ParticleDensity = 'full' | 'half' | 'minimal';
+export type PovMode = 'classic' | 'cyber_tunnel' | 'corkscrew' | 'rollercoaster' | 'matrix_split' | 'dynamic_stage';
 
 export type GameOpts = {
   missSystem: boolean;

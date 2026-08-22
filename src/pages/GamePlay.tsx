@@ -144,7 +144,7 @@ function isArchetypeDevModeEnabled(): boolean {
   return isDev || optDev || urlDev;
 }
 
-function selectSongArchetype(song?: Song | null): TrackArchetype {
+function selectSongArchetype(song?: GameSong | null): TrackArchetype {
   if (!song) return 'cyber_tunnel';
 
   // 1. PRIORITY 1: Lyrics Keywords
@@ -327,7 +327,7 @@ const GameplayVisualizer: React.FC<GameplayVisualizerProps> = ({ analyserRef, da
       glowGrad.addColorStop(0.6, getColor(120, 0.015));
       glowGrad.addColorStop(1, 'transparent');
       ctx.fillStyle = glowGrad;
-      ctx.fillRect(0, 0, w, h);
+      ctx.fillRect(0, 0, parentW, parentH);
 
       ctx.save();
       ctx.translate(cx, cy);
@@ -1645,6 +1645,10 @@ interface HitParticle {
   vy: number;
   size: number;
   isSwipeLine?: boolean;
+  x?: number;
+  y?: number;
+  color?: string;
+  alpha?: number;
 }
 interface HitEffect {
   lane: number;
@@ -1652,7 +1656,7 @@ interface HitEffect {
   cx: number;
   cy: number;
   color: string;
-  kind: "PERFECT+" | "PERFECT" | "GOOD" | "SHIELDED";
+  kind: "PERFECT+" | "PERFECT" | "GOOD" | "SHIELDED" | "MISS";
   particles: HitParticle[];
 }
 interface AmbientParticle {
@@ -2849,10 +2853,10 @@ export default function Game() {
 
   // Sync opts state with useVaultStore settings and options modal state changes
   const storeSettings = useVaultStore((state) => state.settings);
-  const isOptionsModalOpen = useVaultStore((state) => state.isOptionsModalOpen);
+  const optionsModalOpen = useVaultStore((state) => state.optionsModalOpen);
   useEffect(() => {
     setOpts(loadOpts());
-  }, [storeSettings, isOptionsModalOpen]);
+  }, [storeSettings, optionsModalOpen]);
 
   useLayoutEffect(() => {
     if (puPanelRef.current) {
@@ -3058,9 +3062,9 @@ export default function Game() {
   );
 
   const triggerHitFx = useCallback(
-    (lane: number, kind: "PERFECT+" | "PERFECT" | "GOOD" | "SHIELDED", customY?: number, swipeDir?: Note['swipeDirection']) => {
+    (lane: number, kind: "PERFECT+" | "PERFECT" | "GOOD" | "SHIELDED" | "MISS", customY?: number, swipeDir?: Note['swipeDirection']) => {
       const canvas = canvasRef.current;
-      if (!canvas) return;
+      if (!canvas || kind === "MISS") return;
       const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
       const W = canvas.width / dpr;
       const H = canvas.height / dpr;
@@ -9157,6 +9161,7 @@ export default function Game() {
         label: "",
         duration: 0,
         triggered: new Set(),
+        cycle: 0,
       };
       shieldChargesRef.current = 0;
       lastMissTimeRef.current = 0;
@@ -9281,7 +9286,7 @@ export default function Game() {
                     step: 4,
                     stepLabel: "DOWNLOADING AUDIO TRANSMISSION",
                     detailMsg: `Receiving stream chunks (${formatLoadBytes(loadedBytes)} / ${formatLoadBytes(totalBytes)})...`,
-                    bytesLoaded,
+                    bytesLoaded: loadedBytes,
                     bytesTotal: totalBytes,
                     speedBps,
                     etaSeconds,
@@ -10473,6 +10478,7 @@ export default function Game() {
           const fragmentProgress = Math.min(fragments, 10) / 10;
           const isCrystallized = fragments >= 10;
           const pulseSpeed = Math.max(0.18, 1.2 - Math.min(gs.combo, 100) * 0.0102);
+          const pct = (gs.progress || 0) * 100;
 
           return (
             <div
@@ -12022,7 +12028,7 @@ export default function Game() {
             videoBlob={videoBlob}
             mimeType={videoMimeType}
             songTitle={song?.title || "Transmission"}
-            songArtist={song?.artist || "PIM Artist"}
+            artistName={song?.artist || "PIM Artist"}
             onClose={() => {
               setIsExportModalOpen(false);
               sessionStorage.removeItem(`export_video_${songId}`);

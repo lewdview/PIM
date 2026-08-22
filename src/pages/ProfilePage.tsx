@@ -57,7 +57,8 @@ const EASE_OUT: [number, number, number, number] = [0.22, 1, 0.36, 1];
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export default function ProfilePage() {
-  const { user, isAnonymous, signOut } = useAuthStore();
+  const { user, signOut } = useAuthStore();
+  const isAnonymous = user?.is_anonymous ?? false;
   const { collection, tokenBalance, totalPulls, streakCount, loadVaultData } = useVaultStore();
   const [, navigate] = useLocation();
 

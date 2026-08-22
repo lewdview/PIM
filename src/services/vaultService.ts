@@ -13,6 +13,7 @@ import { type BurnResult } from '../utils/echoSystem';
 import { supabase, STORAGE_BASE } from './supabaseClient';
 import dayFileMap from '../game/day_file_map.json';
 import { sanitizeMediaUrl } from '../game/api';
+import { useVaultStore } from '../store/useVaultStore';
 
 // ===== TYPES =====
 export interface VaultCard {
@@ -508,9 +509,9 @@ export async function silentClaimGuestDailyCard(day: number): Promise<OwnedCard 
       claimedAt: new Date().toISOString(),
       edition: 1,
       maxSupply: 100,
-      proof: `GUEST_PROOF_DAY_${day}_${Date.now()}`,
-      ultraReward: false,
-      blockchainStatus: 'minted_guest',
+      proof: null,
+      ultraReward: null,
+      blockchainStatus: 'off-chain',
       fingerprint: `0xGUEST_${day}_${Date.now()}`
     };
 
@@ -1121,7 +1122,7 @@ export async function redeemBonusCode(code: string): Promise<{ success: boolean;
             edition: 1,
             maxSupply: p.maxSupply || 100,
             isEcho: false,
-            blockchainStatus: 'offchain',
+            blockchainStatus: 'off-chain',
             coverArtwork: p.coverUrl,
           };
           const { useVaultStore } = await import('../store/useVaultStore');

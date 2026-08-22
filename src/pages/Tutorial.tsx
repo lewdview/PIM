@@ -125,11 +125,12 @@ export default function Tutorial() {
     return [{
       id: `welcome-${dailyCard.id}`,
       cardId: dailyCard.id,
-      userId: "guest",
-      mintedAt: new Date().toISOString(),
+      claimedAt: new Date().toISOString(),
       source: "daily_claim",
+      edition: 1,
+      maxSupply: 100,
       isEcho: false,
-      echoGeneration: 0,
+      blockchainStatus: "off-chain",
       card: dailyCard,
     }];
   };

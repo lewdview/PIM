@@ -38,7 +38,7 @@ export default function RC1WelcomeModal() {
   };
 
   return (
-    <AnimatePresence font-sans>
+    <AnimatePresence>
       {visible && (
         <motion.div
         initial={{ opacity: 0 }}
@@ -373,7 +373,9 @@ export default function RC1WelcomeModal() {
               textTransform: 'uppercase',
             }}>
               Public beta • RC2 test build • No real-money transactions
+            </p>
           </div>
+        </motion.div>
         </motion.div>
       )}
     </AnimatePresence>

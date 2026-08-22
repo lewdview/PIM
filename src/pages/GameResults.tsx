@@ -8,7 +8,7 @@ import { audioManager } from "@/game/audio";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useVaultStore } from "@/store/useVaultStore";
 import { supabase } from "@/services/supabaseClient";
-import { purchasePack } from "@/services/vaultService";
+import { purchasePack, type OwnedCard } from "@/services/vaultService";
 import { PACK_CONFIGS } from "@/utils/rarity";
 import { logAnalyticsEvent } from "@/services/telemetryService";
 import OnboardingFlowModal from "@/components/OnboardingFlowModal";

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useVaultStore, type RevealPackMeta } from '../../store/useVaultStore';
 import type { OwnedCard } from '../../services/vaultService';
