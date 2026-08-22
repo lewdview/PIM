@@ -389,6 +389,7 @@ export class AudioManager {
   // Lane 1: 132.0 Hz (528 Hz Solfeggio "Miracle / DNA Repair" Sub-Octave C3)
   // Lane 2: 162.0 Hz (Harmonic Golden Fifth of 108 Hz in 432 Hz tuning / E3)
   public static readonly HEALING_LANE_FREQUENCIES: number[] = [108.0, 132.0, 162.0];
+  public readonly HEALING_LANE_FREQUENCIES: number[] = [108.0, 132.0, 162.0];
 
   /** Start a warm, therapeutic healing frequency tone in the lower octave for an active hold note */
   startHoldTone(noteId: string | number, laneOrFreq: number = 0, volume = 0.12): void {
@@ -513,3 +514,5 @@ export class AudioManager {
 }
 
 export const audioManager = new AudioManager();
+export const HEALING_LANE_FREQUENCIES: number[] = [108.0, 132.0, 162.0];
+export default audioManager;

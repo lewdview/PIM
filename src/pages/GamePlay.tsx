@@ -5,8 +5,7 @@ import { getSongById, saveHighScore, isSongTimeLocked, getModifierForSong, STAGE
 import { saveMedal, saveScoreHistory } from "@/game/progress";
 import type { GameSong } from "@/game/api";
 import type { Note, JudgmentDisplay, GameState, NoteType } from "@/game/types";
-import { loadOpts, keyLabel, getEffectiveDpr, type GameOpts, type PovMode, type RenderResolution, type GfxLevel, type FpsTarget, type ParticleDensity } from "@/lib/options";
-import { audioManager } from "@/game/audio";
+import { audioManager, AudioManager, HEALING_LANE_FREQUENCIES } from "@/game/audio";
 import { useVaultStore } from "@/store/useVaultStore";
 import { useGlobalPlayer } from "@/store/useGlobalPlayer";
 import { haptics } from "../utils/haptics";
@@ -2481,7 +2480,7 @@ export default function Game() {
 
     const pct = Math.max(0, Math.min(100, val * 100));
     const isFull = val >= 1.0;
-    const freq = holdLane !== null ? (AudioManager.HEALING_LANE_FREQUENCIES?.[holdLane] ?? 132.0) : 132.0;
+    const freq = holdLane !== null ? (HEALING_LANE_FREQUENCIES[holdLane] ?? 132.0) : 132.0;
 
     if (healingGaugeFillRef.current) {
       healingGaugeFillRef.current.style.height = `${pct}%`;
@@ -7200,7 +7199,7 @@ export default function Game() {
       ctx.textAlign = "center";
       ctx.textBaseline = "bottom";
 
-      const healingFreq = AudioManager.HEALING_LANE_FREQUENCIES?.[holdLane] ?? 132.0;
+      const healingFreq = HEALING_LANE_FREQUENCIES[holdLane] ?? 132.0;
       const labelColor = isFull ? "#39FF14" : isHolding ? "#00E5FF" : "rgba(255,255,255,0.40)";
 
       ctx.fillStyle = labelColor;
