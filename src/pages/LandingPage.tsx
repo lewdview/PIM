@@ -9,12 +9,13 @@ import { useLoadingToast } from '../store/useLoadingToast';
 import { useAuthStore } from '../store/useAuthStore';
 import {
   getCardByDay, hasClaimedToday, claimDailyCard,
-  purchasePack, getCompletedMonths, getMonthName, getClaimedCountForDay,
+  purchasePack, buyTokenPack, getCompletedMonths, getMonthName, getClaimedCountForDay,
   targetedPull, upgradeRarity, fuseDuplicates,
   redeemBonusCode, fetchAllCards, findCardWithFallback,
   createStripeCheckoutSession,
   type OwnedCard, type VaultCard,
 } from '../services/vaultService';
+import { getRandomBombshellPackCover } from '../utils/bombshellCards';
 import { audioManager } from '../game/audio';
 import { getCurrentDay, getTimeUntilNextDay, formatDate } from '../utils/dayCalc';
 import { type PackCategory, type PackSize, RARITY_CONFIG, PACK_CONFIGS, type Rarity, RARITIES } from '../utils/rarity';
@@ -517,13 +518,22 @@ export default function LandingPage() {
     setIsPurchasing(true);
     try {
       useLoadingToast.getState().show('Decrypting pack data…');
-      const cards = await purchasePack(category, size, sessionId);
+      const cards = (category === 'vault_token' || category === 'bombshell_token')
+        ? await buyTokenPack(category)
+        : await purchasePack(category, size, sessionId);
       useLoadingToast.getState().hide();
+      if (cards === 'insufficient') {
+        alert('Insufficient V⚡ tokens for this pack.');
+        await loadVaultData();
+        return;
+      }
       if (cards.length > 0) {
         addToCollection(cards);
         await loadVaultData();
         audioManager.playSfx('open_chest', 0.9);
         const revealType = 'cinematic' as const;
+        const isBombshell = category === 'bombshell_token' || category === 'bombshell';
+        const chosenCover = isBombshell ? getRandomBombshellPackCover() : tier?.coverImage;
         startReveal(cards, cfg && tier ? {
           category,
           size,
@@ -532,8 +542,10 @@ export default function LandingPage() {
           accent: cfg.accent,
           gradient: cfg.gradient,
           price: tier.price,
-          cardCount: tier.cardCount,
+          cardCount: cards.length,
+          coverImage: chosenCover,
           revealType,
+          showRipAnother: true,
         } : undefined);
         setLocation('/vault/reveal');
       }

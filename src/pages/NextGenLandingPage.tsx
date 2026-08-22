@@ -15,7 +15,7 @@ import { useLoadingToast } from '../store/useLoadingToast';
 import { useAuthStore } from '../store/useAuthStore';
 import {
   getCardByDay, hasClaimedToday, claimDailyCard,
-  purchasePack, getCompletedMonths, getMonthName, getClaimedCountForDay,
+  purchasePack, buyTokenPack, getCompletedMonths, getMonthName, getClaimedCountForDay,
   targetedPull, upgradeRarity, fuseDuplicates,
   redeemBonusCode, fetchAllCards, findCardWithFallback,
   hasClaimedFreePackToday,
@@ -619,8 +619,15 @@ export default function NextGenLandingPage() {
     setIsPurchasing(true);
     try {
       useLoadingToast.getState().show('Vending pack from machine…');
-      const cards = await purchasePack(category, size, sessionId);
+      const cards = (category === 'vault_token' || category === 'bombshell_token')
+        ? await buyTokenPack(category)
+        : await purchasePack(category, size, sessionId);
       useLoadingToast.getState().hide();
+      if (cards === 'insufficient') {
+        alert('Insufficient V⚡ tokens for this pack.');
+        await loadVaultData();
+        return;
+      }
       if (cards.length > 0) {
         addToCollection(cards);
         await loadVaultData();

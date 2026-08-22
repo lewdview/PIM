@@ -2116,6 +2116,36 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
               background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, 0.15) 2px, rgba(0, 0, 0, 0.15) 4px)'
             }} />
 
+            {/* Top-right close button */}
+            <button
+              onClick={() => {
+                setShowFragmentDecrypter(false);
+                setDecrypterPhase('idle');
+              }}
+              style={{
+                position: 'absolute',
+                top: '20px',
+                right: '20px',
+                zIndex: 100,
+                background: 'rgba(0,0,0,0.6)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                color: '#fff',
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                fontFamily: 'monospace',
+                fontSize: '14px',
+                backdropFilter: 'blur(8px)',
+              }}
+              title="Close Decryptor"
+            >
+              ✕
+            </button>
+
             {/* Neon ambient glow */}
             <motion.div
               animate={{ opacity: [0.2, 0.4, 0.2], scale: [1, 1.15, 1] }}
@@ -2427,23 +2457,44 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
                   })}
                 </div>
 
-                {/* Continue CTA */}
-                <motion.button
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: fragmentRewards.length * 0.15 + 1.2 }}
-                  onClick={onComplete}
-                  className="w-full py-4 text-sm font-black italic tracking-wider uppercase border-2 border-black drop-shadow-[0_0_20px_rgba(255,215,0,0.3)] cursor-pointer"
-                  style={{
-                    background: 'linear-gradient(135deg, #ffd700, #ffaa00)',
-                    color: '#000',
-                    fontFamily: '"Impact", "Arial Black", sans-serif',
-                    transform: 'rotate(-0.5deg)',
-                    boxShadow: '4px 4px 0 #000',
-                  }}
-                >
-                  {meta.category === 'daily_claim' || meta.redirectPath === '/tutorial' || meta.redirectPath?.startsWith('/play/') ? '[ START PIM GATEWAY ]' : '[ COMPLETE SYNC ]'}
-                </motion.button>
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row gap-3 w-full">
+                  <motion.button
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: fragmentRewards.length * 0.15 + 1.1 }}
+                    onClick={() => {
+                      setShowFragmentDecrypter(false);
+                      setDecrypterPhase('idle');
+                    }}
+                    className="flex-1 py-3 text-xs font-black italic tracking-wider uppercase border-2 border-white/20 hover:border-white/40 cursor-pointer transition-all"
+                    style={{
+                      background: 'rgba(255,255,255,0.06)',
+                      color: '#fff',
+                      fontFamily: '"Impact", "Arial Black", sans-serif',
+                      boxShadow: '2px 2px 0 #000',
+                    }}
+                  >
+                    [ RETURN TO CARDS ]
+                  </motion.button>
+
+                  <motion.button
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: fragmentRewards.length * 0.15 + 1.2 }}
+                    onClick={onComplete}
+                    className="flex-1 py-3 text-sm font-black italic tracking-wider uppercase border-2 border-black drop-shadow-[0_0_20px_rgba(255,215,0,0.3)] cursor-pointer"
+                    style={{
+                      background: 'linear-gradient(135deg, #ffd700, #ffaa00)',
+                      color: '#000',
+                      fontFamily: '"Impact", "Arial Black", sans-serif',
+                      transform: 'rotate(-0.5deg)',
+                      boxShadow: '4px 4px 0 #000',
+                    }}
+                  >
+                    {meta.category === 'daily_claim' || meta.redirectPath === '/tutorial' || meta.redirectPath?.startsWith('/play/') ? '[ START PIM GATEWAY ]' : '[ COMPLETE SYNC ]'}
+                  </motion.button>
+                </div>
               </motion.div>
             )}
           </motion.div>

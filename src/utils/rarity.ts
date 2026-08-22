@@ -275,7 +275,7 @@ export interface PackConfig {
 // Display ordering for the carousel (vault_token NOT in carousel — it has its own Token Shop section)
 export const PACK_CAROUSEL_ORDER: PackCategory[] = [
   'free', 'bombshell', 'taste', 'light', 'dark', 'miss_out', 'month',
-  'special_picks', 'prophecy', 'alpha', 'vault_token', 'targeted_pull', 'rarity_upgrade',
+  'special_picks', 'prophecy', 'alpha', 'vault_token', 'bombshell_token', 'targeted_pull', 'rarity_upgrade',
 ];
 
 // Legacy compat — kept so existing code that imports PackType doesn't break

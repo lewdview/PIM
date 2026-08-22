@@ -10,11 +10,12 @@ import { useLoadingToast } from '../store/useLoadingToast';
 import { useAuthStore } from '../store/useAuthStore';
 import {
   getCardByDay, hasClaimedToday, claimDailyCard,
-  purchasePack, getCompletedMonths, getMonthName,
+  purchasePack, buyTokenPack, getCompletedMonths, getMonthName,
   targetedPull, upgradeRarity, fuseDuplicates,
   createStripeCheckoutSession, verifyStripeSession,
   type OwnedCard,
 } from '../services/vaultService';
+import { getRandomBombshellPackCover } from '../utils/bombshellCards';
 import { audioManager } from '../game/audio';
 import { getCurrentDay } from '../utils/dayCalc';
 import { type PackCategory, type PackSize, RARITY_CONFIG, PACK_CONFIGS, type Rarity, RARITIES } from '../utils/rarity';
@@ -387,13 +388,22 @@ export default function HomePage() {
     setIsPurchasing(true);
     try {
       useLoadingToast.getState().show('Opening pack…');
-      const cards = await purchasePack(category, size, sessionId);
+      const cards = (category === 'vault_token' || category === 'bombshell_token')
+        ? await buyTokenPack(category)
+        : await purchasePack(category, size, sessionId);
       useLoadingToast.getState().hide();
+      if (cards === 'insufficient') {
+        alert('Insufficient V⚡ tokens for this pack.');
+        await loadVaultData();
+        return;
+      }
       if (cards.length > 0) {
         addToCollection(cards);
         await loadVaultData();
         const revealType = 'cinematic' as const;
         audioManager.playSfx('open_chest', 0.9);
+        const isBombshell = category === 'bombshell_token' || category === 'bombshell';
+        const chosenCover = isBombshell ? getRandomBombshellPackCover() : tier?.coverImage;
         startReveal(cards, cfg && tier ? {
           category,
           size,
@@ -402,8 +412,10 @@ export default function HomePage() {
           accent: cfg.accent,
           gradient: cfg.gradient,
           price: tier.price,
-          cardCount: tier.cardCount,
+          cardCount: cards.length,
+          coverImage: chosenCover,
           revealType,
+          showRipAnother: true,
         } : undefined);
         setLocation('/vault/reveal');
       }

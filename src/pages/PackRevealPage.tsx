@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation } from 'wouter';
 import { useVaultStore } from '../store/useVaultStore';
@@ -10,7 +10,7 @@ import UltraRewardModal from '../components/UltraRewardModal';
 import PackRipAnimation from '../components/PackRipAnimation';
 import PackContainer from '../components/cinematic/PackContainer';
 
-import { purchasePack, sellCard, getTokenPackCost, verifyStripeSessionDetailed, type OwnedCard } from '../services/vaultService';
+import { purchasePack, buyTokenPack, sellCard, getTokenPackCost, verifyStripeSessionDetailed, type OwnedCard } from '../services/vaultService';
 import { PACK_CONFIGS, type PackCategory, type PackSize } from '../utils/rarity';
 import { getRandomBombshellPackCover } from '../utils/bombshellCards';
 import { audioManager } from '../game/audio';
@@ -21,6 +21,7 @@ export default function PackRevealPage() {
   const [, setLocation] = useLocation();
   const { revealCards, endReveal, revealPackMeta, startReveal, addToCollection, removeFromCollection, loadVaultData, tokenBalance } = useVaultStore();
   const [isRepurchasing, setIsRepurchasing] = useState(false);
+  const isRepurchaseRef = useRef(false);
   const [accumulatedCards, setAccumulatedCards] = useState<OwnedCard[]>(() => revealCards);
   const [revealedIndex, setRevealedIndex] = useState(0);
   const [showSummary, setShowSummary] = useState(false);
@@ -39,6 +40,10 @@ export default function PackRevealPage() {
   }, [revealPackMeta]);
 
   useEffect(() => {
+    if (isRepurchaseRef.current) {
+      isRepurchaseRef.current = false;
+      return;
+    }
     setAccumulatedCards(revealCards);
   }, [revealCards]);
 
@@ -174,22 +179,43 @@ export default function PackRevealPage() {
     }
 
     setIsRepurchasing(true);
-    const cards = await purchasePack(category as any, size as any);
-    if (cards.length > 0) {
-      audioManager.playSfx('open_chest', 0.9);
-      addToCollection(cards);
-      await loadVaultData();
-      setRevealedIndex(0);
-      setShowSummary(false);
-      setAccumulatedCards((prev) => [...prev, ...cards]);
-      const newRipDone = revealPackMeta.revealType !== 'tap' && revealPackMeta.revealType !== 'cinematic';
-      setRipDone(newRipDone);
-      const newCover = (category === 'bombshell_token' || category === 'bombshell')
-        ? getRandomBombshellPackCover()
-        : revealPackMeta.coverImage;
-      startReveal(cards, { ...revealPackMeta, coverImage: newCover });
+    isRepurchaseRef.current = true;
+
+    try {
+      const cards = (category === 'vault_token' || category === 'bombshell_token')
+        ? await buyTokenPack(category)
+        : await purchasePack(category as any, size as any);
+
+      if (cards === 'insufficient') {
+        alert(`Not enough V⚡ tokens. You need ${getTokenPackCost()} V⚡ but only have ${tokenBalance}.`);
+        setIsRepurchasing(false);
+        isRepurchaseRef.current = false;
+        return;
+      }
+
+      if (cards && cards.length > 0) {
+        audioManager.playSfx('open_chest', 0.9);
+        addToCollection(cards);
+        await loadVaultData();
+        setRevealedIndex(0);
+        setShowSummary(false);
+        setAccumulatedCards((prev) => [...prev, ...cards]);
+        const newRipDone = revealPackMeta.revealType !== 'tap' && revealPackMeta.revealType !== 'cinematic';
+        setRipDone(newRipDone);
+        const isBombshell = category === 'bombshell_token' || category === 'bombshell';
+        const newCover = isBombshell
+          ? getRandomBombshellPackCover()
+          : revealPackMeta.coverImage;
+        startReveal(cards, { ...revealPackMeta, coverImage: newCover, cardCount: cards.length });
+      } else {
+        isRepurchaseRef.current = false;
+      }
+    } catch (e) {
+      console.error('Repurchase error:', e);
+      isRepurchaseRef.current = false;
+    } finally {
+      setIsRepurchasing(false);
     }
-    setIsRepurchasing(false);
   };
 
   const handleBurn = async (owned: any) => {
