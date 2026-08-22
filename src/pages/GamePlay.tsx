@@ -11640,10 +11640,10 @@ export default function Game() {
             <div ref={judgmentOverlayRef} className="absolute inset-0 pointer-events-none overflow-hidden z-40" />
           )}
 
-          {/* Right-Side Vertical Judgment Stream (Last 20 Judgments, Bottom-to-Top) */}
+          {/* Right-Side Vertical Judgment Stream (Last 20 Judgments, Bottom-to-Top, Upper-Right Quadrant 3/4 from Bottom) */}
           {opts.judgmentText && (
             <div
-              className="absolute right-2 sm:right-3.5 bottom-20 sm:bottom-24 z-35 flex flex-col justify-end items-end gap-1 pointer-events-none select-none overflow-hidden max-h-[260px] sm:max-h-[340px]"
+              className="absolute right-2 sm:right-3.5 bottom-[52%] sm:bottom-[48%] z-35 flex flex-col justify-end items-end gap-1 pointer-events-none select-none overflow-hidden max-h-[190px] sm:max-h-[260px]"
               style={{
                 maskImage: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 60%, rgba(0,0,0,0) 100%)',
                 WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 60%, rgba(0,0,0,0) 100%)',
