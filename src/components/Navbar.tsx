@@ -880,10 +880,10 @@ export default function Navbar() {
                         className="w-full flex items-center gap-3 px-4 py-3 transition-all active:scale-[0.98]"
                         style={{
                           background: isExpanded ? `${section.accent}10` : 'rgba(255,255,255,0.02)',
+                          borderTop: isExpanded ? `1px solid ${section.accent}25` : '1px solid rgba(255,255,255,0.05)',
+                          borderRight: isExpanded ? `1px solid ${section.accent}25` : '1px solid rgba(255,255,255,0.05)',
+                          borderBottom: isExpanded ? `1px solid ${section.accent}25` : '1px solid rgba(255,255,255,0.05)',
                           borderLeft: `3px solid ${section.accent}`,
-                          border: isExpanded ? `1px solid ${section.accent}25` : '1px solid rgba(255,255,255,0.05)',
-                          borderLeftWidth: '3px',
-                          borderLeftColor: section.accent,
                           clipPath: 'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)',
                         }}
                       >

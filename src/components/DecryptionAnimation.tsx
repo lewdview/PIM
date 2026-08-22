@@ -178,7 +178,7 @@ export default function DecryptionAnimation({ reward, onClose }: DecryptionAnima
         }
       }
 
-      if (activeParticles.length > 0 || elapsed < 2500) {
+      if (arr.length > 0 || elapsed < 2500) {
         animationFrameRef.current = requestAnimationFrame(loop);
       }
     };

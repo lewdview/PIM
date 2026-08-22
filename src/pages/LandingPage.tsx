@@ -847,8 +847,13 @@ export default function LandingPage() {
 
             {/* Day counter / archive progress */}
             <div
-              className="border-l-4 pl-4 py-3 relative bg-white/[0.01] border-l-[var(--color-neon-gold)] rounded-r-lg p-4"
-              style={{ border: '1px solid rgba(255,255,255,0.03)', borderLeft: '4px solid var(--color-neon-gold)' }}
+              className="border-l-4 pl-4 py-3 relative bg-white/[0.01] rounded-r-lg p-4"
+              style={{
+                borderTop: '1px solid rgba(255,255,255,0.03)',
+                borderRight: '1px solid rgba(255,255,255,0.03)',
+                borderBottom: '1px solid rgba(255,255,255,0.03)',
+                borderLeft: '4px solid var(--color-neon-gold)'
+              }}
             >
               <div className="text-[8px] font-mono uppercase tracking-widest opacity-40 mb-1.5">Archive progress parameters</div>
               <div className="text-2xl font-black" style={{ fontFamily: '"Impact", "Arial Black", sans-serif' }}>
