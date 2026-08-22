@@ -5,6 +5,7 @@ import { getSongById, saveHighScore, isSongTimeLocked, getModifierForSong, STAGE
 import { saveMedal, saveScoreHistory } from "@/game/progress";
 import type { GameSong } from "@/game/api";
 import type { Note, JudgmentDisplay, GameState, NoteType } from "@/game/types";
+import { loadOpts, keyLabel, getEffectiveDpr, type GameOpts, type PovMode, type RenderResolution, type GfxLevel, type FpsTarget, type ParticleDensity } from "@/lib/options";
 import { audioManager, AudioManager, HEALING_LANE_FREQUENCIES } from "@/game/audio";
 import { useVaultStore } from "@/store/useVaultStore";
 import { useGlobalPlayer } from "@/store/useGlobalPlayer";
