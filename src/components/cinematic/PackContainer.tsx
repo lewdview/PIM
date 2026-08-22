@@ -120,9 +120,7 @@ function CyberPackBagContents({ meta, sampleCard }: { meta: RevealPackMeta; samp
   const countNum = (meta.cardCount && meta.cardCount >= 50) ? 50 : (meta.cardCount && meta.cardCount >= 25) ? 25 : (meta.cardCount && meta.cardCount >= 10) ? 10 : (meta.cardCount && meta.cardCount >= 5) ? 5 : (meta.cardCount && meta.cardCount >= 2) ? 2 : 1;
   const plural = countNum === 1 ? 'card' : 'cards';
 
-  const foilCoverUrl = isBombshell 
-    ? (meta.coverImage || getRandomBombshellPackCover(countNum))
-    : meta.coverImage;
+  const foilCoverUrl = meta.coverImage || (isBombshell ? getRandomBombshellPackCover(countNum) : undefined);
 
   return (
     <>
@@ -272,9 +270,7 @@ function ClassicFoilPackBagContents({ meta, sampleCard }: { meta: RevealPackMeta
   const countNum = (meta.cardCount && meta.cardCount >= 50) ? 50 : (meta.cardCount && meta.cardCount >= 25) ? 25 : (meta.cardCount && meta.cardCount >= 10) ? 10 : (meta.cardCount && meta.cardCount >= 5) ? 5 : (meta.cardCount && meta.cardCount >= 2) ? 2 : 1;
   const plural = countNum === 1 ? 'card' : 'cards';
 
-  const foilCoverUrl = isBombshell 
-    ? (meta.coverImage || getRandomBombshellPackCover(countNum))
-    : meta.coverImage;
+  const foilCoverUrl = meta.coverImage || (isBombshell ? getRandomBombshellPackCover(countNum) : undefined);
 
   return (
     <>
@@ -755,7 +751,22 @@ const shimmerKeyframes = `
 // ── Main Component ───────────────────────────────────────────────────
 
 export default function PackContainer({ meta, cards, accumulatedCards = cards, onComplete, onBuyAnother, isRepurchasing }: Props) {
-  const isBombshell = meta.category === 'bombshell' || meta.label?.toLowerCase().includes('bombshell') || cards.some(c => c.card?.cardSet === 'bombshell' || c.card?.coverUrl?.includes('girl-covers') || c.card?.coverUrl?.includes('rare_covers'));
+  const isBombshell = meta.category === 'bombshell' || meta.category === 'bombshell_token' || meta.label?.toLowerCase().includes('bombshell') || cards.some(c => c.card?.cardSet === 'bombshell' || c.card?.coverUrl?.includes('girl-covers') || c.card?.coverUrl?.includes('rare_covers'));
+
+  const stableCoverImage = useMemo(() => {
+    if (meta.coverImage) return meta.coverImage;
+    if (isBombshell) {
+      const countNum = (meta.cardCount && meta.cardCount >= 50) ? 50 : (meta.cardCount && meta.cardCount >= 25) ? 25 : (meta.cardCount && meta.cardCount >= 10) ? 10 : (meta.cardCount && meta.cardCount >= 5) ? 5 : (meta.cardCount && meta.cardCount >= 2) ? 2 : 1;
+      return getRandomBombshellPackCover(meta.category === 'bombshell_token' || countNum === 3 ? undefined : countNum);
+    }
+    return meta.coverImage;
+  }, [meta.coverImage, isBombshell, meta.cardCount, meta.category]);
+
+  const activeMeta = useMemo(() => ({
+    ...meta,
+    coverImage: stableCoverImage,
+  }), [meta, stableCoverImage]);
+
   const [phase, setPhase] = useState<Phase>('preloading');
   const [flipIndex, setFlipIndex] = useState(-1); // current card being flipped
   const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
@@ -1512,7 +1523,7 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
               perspective: '800px',
             }}
           >
-            <PackShell meta={meta} phase={phase} sampleCard={cards?.[0]?.card} />
+            <PackShell meta={activeMeta} phase={phase} sampleCard={cards?.[0]?.card} />
           </motion.div>
         )}
       </AnimatePresence>

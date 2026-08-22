@@ -12,6 +12,7 @@ import PackContainer from '../components/cinematic/PackContainer';
 
 import { purchasePack, sellCard, getTokenPackCost, verifyStripeSessionDetailed, type OwnedCard } from '../services/vaultService';
 import { PACK_CONFIGS, type PackCategory, type PackSize } from '../utils/rarity';
+import { getRandomBombshellPackCover } from '../utils/bombshellCards';
 import { audioManager } from '../game/audio';
 import { haptics } from '../utils/haptics';
 import { useLoadingToast } from '../store/useLoadingToast';
@@ -183,7 +184,10 @@ export default function PackRevealPage() {
       setAccumulatedCards((prev) => [...prev, ...cards]);
       const newRipDone = revealPackMeta.revealType !== 'tap' && revealPackMeta.revealType !== 'cinematic';
       setRipDone(newRipDone);
-      startReveal(cards, revealPackMeta);
+      const newCover = (category === 'bombshell_token' || category === 'bombshell')
+        ? getRandomBombshellPackCover()
+        : revealPackMeta.coverImage;
+      startReveal(cards, { ...revealPackMeta, coverImage: newCover });
     }
     setIsRepurchasing(false);
   };

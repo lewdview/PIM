@@ -12,7 +12,7 @@ import { getTimeUntilNextDay } from '../utils/dayCalc';
 import { useVaultStore } from '../store/useVaultStore';
 import { getAdminConfig } from '../utils/adminConfig';
 import { get365CardVariantStyle, getPackCoverFallback, getPackMultiCovers } from '../utils/cardVariants';
-import { getFeaturedBombshellFoilCover } from '../utils/bombshellCards';
+import { getFeaturedBombshellFoilCover, getRandomBombshellPackCover } from '../utils/bombshellCards';
 import CyberPackBag from './CyberPackBag';
 
 interface PackShopProps {
@@ -215,9 +215,11 @@ export function ClassicFoilPackBag({
   const countNum = tier.cardCount >= 50 ? 50 : tier.cardCount >= 25 ? 25 : tier.cardCount >= 10 ? 10 : tier.cardCount >= 5 ? 5 : tier.cardCount >= 2 ? 2 : 1;
   const plural = countNum === 1 ? 'card' : 'cards';
   const foilCoverUrl = isBombshell 
-    ? (bombshellSide === 'bot' 
-        ? (tier.lightCoverImage || `/data/packs/bombshell_bot_${countNum}${plural}.jpg`) 
-        : (tier.coverImage || `/data/packs/bombshell_top_${countNum}${plural}.jpg`))
+    ? (cfg.category === 'bombshell_token' || tier.cardCount === 3
+        ? (tier.coverImage || getRandomBombshellPackCover())
+        : (bombshellSide === 'bot' 
+            ? (tier.lightCoverImage || `/data/packs/bombshell_bot_${countNum}${plural}.jpg`) 
+            : (tier.coverImage || `/data/packs/bombshell_top_${countNum}${plural}.jpg`)))
     : (tier.coverImage || cfg.coverImage || getPackCoverFallback(cfg.category));
 
   return (

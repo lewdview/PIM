@@ -19,6 +19,7 @@ import {
   canProduceEcho,
 } from '../utils/echoSystem';
 import { RARITY_CONFIG, type Rarity } from '../utils/rarity';
+import { getRandomBombshellPackCover } from '../utils/bombshellCards';
 import Card from '../components/Card';
 import FusionAnimation from '../components/FusionAnimation';
 import TitleSpacer from '../components/TitleSpacer';
@@ -598,6 +599,7 @@ export default function ForgePage() {
       await loadVaultData();
       audioManager.playSfx('open_chest', 0.9);
       const isBombshell = packType === 'bombshell_token';
+      const chosenCover = isBombshell ? getRandomBombshellPackCover() : undefined;
       startReveal(cards, {
         category: packType,
         size: 'single',
@@ -609,6 +611,7 @@ export default function ForgePage() {
           : 'linear-gradient(145deg, #1a1000, #0a0800)',
         price: `${packCost} V⚡`,
         cardCount: cards.length,
+        coverImage: chosenCover,
         revealType: 'cinematic',
         showRipAnother: true,
       });

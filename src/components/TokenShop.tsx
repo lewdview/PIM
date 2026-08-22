@@ -6,6 +6,7 @@ import { sellCard, buyTokenPack, getTokenPackCost } from '../services/vaultServi
 import { audioManager } from '../game/audio';
 import { RARITY_CONFIG } from '../utils/rarity';
 import { canProduceEcho } from '../utils/echoSystem';
+import { getRandomBombshellPackCover } from '../utils/bombshellCards';
 
 import type { OwnedCard } from '../services/vaultService';
 import TokenBundleShelf from './TokenBundleShelf';
@@ -56,6 +57,7 @@ export default function TokenShop({ onPackOpened }: TokenShopProps) {
     addToCollection(result);
     audioManager.playSfx('open_chest', 0.9);
     const isBombshell = selectedPackType === 'bombshell_token';
+    const chosenCover = isBombshell ? getRandomBombshellPackCover() : undefined;
     startReveal(result, {
       category: selectedPackType,
       size: 'single',
@@ -67,6 +69,7 @@ export default function TokenShop({ onPackOpened }: TokenShopProps) {
         : 'linear-gradient(135deg, #1a0f00, #2a1a00, #1a0f00)',
       price: `${packCost} V⚡`,
       cardCount: result.length,
+      coverImage: chosenCover,
       revealType: 'cinematic',
       showRipAnother: true,
     });
