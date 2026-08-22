@@ -272,31 +272,44 @@ export default function CyberPackBag({
         className="cyber-cartridge-frame relative w-full overflow-hidden" 
         style={{
           aspectRatio: '3 / 4.5',
-          background: isBombshell ? '#000000' : 'linear-gradient(175deg, #07070d 0%, #0d0e17 40%, #05060a 100%)',
+          background: isBombshell ? 'linear-gradient(165deg, #13010b 0%, #2d031c 40%, #0d0108 100%)' : 'linear-gradient(175deg, #07070d 0%, #0d0e17 40%, #05060a 100%)',
           boxShadow: isActive 
-            ? `0 24px 70px rgba(0,0,0,0.85), 0 0 35px ${accent}40, inset 0 0 30px rgba(0,0,0,0.9)` 
+            ? `0 24px 70px rgba(0,0,0,0.85), 0 0 40px ${accent}60, inset 0 0 30px rgba(0,0,0,0.9)` 
             : '0 10px 30px rgba(0,0,0,0.4)',
           transform: isActive ? 'scale(1)' : 'scale(0.86)',
           opacity: isActive ? 1 : 0.4,
-          border: `1.5px solid ${accent}50`,
+          border: `1.5px solid ${accent}70`,
           transition: 'transform 0.35s cubic-bezier(.22,1,.36,1), opacity 0.35s ease, box-shadow 0.35s ease',
           '--conduit-accent': accent,
           '--stamp-accent': accent,
-          '--stamp-accent-glow': `${accent}50`,
+          '--stamp-accent-glow': `${accent}70`,
         } as any}
       >
         {/* Carbon Weave Texture Layer */}
         <div className="cyber-carbon-weave absolute inset-0 opacity-40 pointer-events-none z-0" />
 
+        {/* Panik Cyber Ambient Neon Halo for Bombshell */}
+        {isBombshell && (
+          <div 
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background: 'radial-gradient(ellipse at 50% 35%, rgba(255, 20, 147, 0.48) 0%, rgba(255, 0, 100, 0.24) 45%, transparent 75%)',
+              mixBlendMode: 'screen',
+              zIndex: 1,
+            }}
+          />
+        )}
+
         {/* Embedded Artwork Underplate */}
         {foilCoverUrl && (
-          <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+          <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 flex items-center justify-center">
             <img
               src={foilCoverUrl}
               alt="Cartridge Core Art"
-              className="w-full h-full object-fill pointer-events-none select-none transition-opacity duration-200"
+              className="w-full h-full object-cover pointer-events-none select-none transition-transform duration-300"
               style={{
-                filter: isBombshell ? 'contrast(1.05) saturate(1.1)' : 'contrast(1.2) brightness(0.85)',
+                transform: isActive ? 'scale(1.03)' : 'scale(1)',
+                filter: isBombshell ? 'contrast(1.2) saturate(1.35) brightness(1.05) drop-shadow(0 0 24px rgba(255,20,147,0.75))' : 'contrast(1.2) brightness(0.85)',
                 mixBlendMode: isBombshell ? 'normal' : 'luminosity',
                 opacity: isBombshell ? 1 : 0.45,
               }}
@@ -314,6 +327,19 @@ export default function CyberPackBag({
               />
             )}
           </div>
+        )}
+
+        {/* Animated Iridescent Panik Foil Shimmer for Bombshell */}
+        {isBombshell && (
+          <div
+            className="absolute inset-0 pointer-events-none foil-holo-prism"
+            style={{
+              background: 'linear-gradient(115deg, transparent 20%, rgba(255, 20, 147, 0.4) 40%, rgba(255, 255, 255, 0.75) 50%, rgba(0, 229, 255, 0.4) 60%, transparent 80%)',
+              mixBlendMode: 'color-dodge',
+              opacity: isActive ? 0.65 : 0.35,
+              zIndex: 3,
+            }}
+          />
         )}
 
         {/* Top Gold Multi-Pin Bus Terminals */}
@@ -339,37 +365,35 @@ export default function CyberPackBag({
             <span className="text-[7px] font-mono font-bold tracking-wider text-emerald-300">ONLINE</span>
           </div>
           <div className="text-[7px] font-mono text-white/50 tracking-widest uppercase">
-            SPEC // {category.toUpperCase().slice(0, 8)}
+            {isBombshell ? 'SPEC // PANIK-BOMB' : `SPEC // ${category.toUpperCase().slice(0, 8)}`}
           </div>
         </div>
 
         {/* TOP-LEFT: Laser Security Price Seal */}
-        {!isBombshell && (
-          <div className="absolute left-4 top-11 z-30 pointer-events-none">
-            <div className="cyber-laser-stamp">
-              <div className="flex items-center gap-1 opacity-70 mb-0.5">
-                <ShieldCheck size={8} style={{ color: accent }} />
-                <span className="text-[6px] tracking-wider uppercase font-bold">PRICE</span>
-              </div>
-              <span 
-                className="text-[20px] font-black leading-none"
-                style={{
-                  fontFamily: '"Impact", "Arial Black", sans-serif',
-                  color: '#fff',
-                  textShadow: `0 0 10px ${accent}`,
-                }}
-              >
-                {tier.price === 'FREE' ? 'FREE' : tier.price}
-              </span>
+        <div className="absolute left-4 top-11 z-30 pointer-events-none">
+          <div className="cyber-laser-stamp" style={{ borderColor: isBombshell ? '#FF1493' : undefined, boxShadow: isBombshell ? '0 0 12px rgba(255,20,147,0.5)' : undefined }}>
+            <div className="flex items-center gap-1 opacity-70 mb-0.5">
+              <ShieldCheck size={8} style={{ color: accent }} />
+              <span className="text-[6px] tracking-wider uppercase font-bold" style={{ color: isBombshell ? '#FF1493' : undefined }}>PRICE</span>
             </div>
+            <span 
+              className="text-[20px] font-black leading-none"
+              style={{
+                fontFamily: '"Impact", "Arial Black", sans-serif',
+                color: '#fff',
+                textShadow: `0 0 10px ${accent}`,
+              }}
+            >
+              {tier.price === 'FREE' ? 'FREE' : tier.price}
+            </span>
           </div>
-        )}
+        </div>
 
         {/* TOP-RIGHT: Info / Drop Rates Toggle */}
         <div className="absolute right-4 top-11 z-30">
           <button 
             onClick={() => setShowInfo(!showInfo)}
-            className="w-7 h-7 rounded flex items-center justify-center transition-all hover:scale-110 active:scale-95"
+            className="w-7 h-7 rounded flex items-center justify-center transition-all hover:scale-110 active:scale-95 cursor-pointer"
             style={{
               background: showInfo ? `${accent}` : 'rgba(10,12,20,0.85)',
               color: showInfo ? '#000' : '#fff',
@@ -381,72 +405,82 @@ export default function CyberPackBag({
           </button>
         </div>
 
-        {/* Live 3-Band Audio Equalizer (Left Flank) */}
-        {!isBombshell && (
-          <div className="absolute left-4 bottom-24 flex items-end gap-1 h-8 z-20 pointer-events-none opacity-80">
-            <div className="w-1 rounded-sm cyber-bar-bass" style={{ background: '#FF1493' }} />
-            <div className="w-1 rounded-sm cyber-bar-mids" style={{ background: '#00E5FF' }} />
-            <div className="w-1 rounded-sm cyber-bar-treble" style={{ background: '#39FF14' }} />
-            <span className="text-[6px] font-mono text-white/40 rotate-90 origin-bottom-left translate-y-3">STEMS</span>
-          </div>
-        )}
-
         {/* BOTTOM-RIGHT: Cartridge Capacity Stamp */}
-        {!isBombshell && (
-          <div className="absolute right-4 bottom-20 z-30 pointer-events-none">
-            <div className="cyber-laser-stamp" style={{ padding: '3px 8px' }}>
-              <span className="text-[5px] tracking-wider uppercase opacity-60">CAPACITY</span>
-              <span 
-                className="text-[16px] font-black leading-none"
-                style={{
-                  fontFamily: '"Impact", "Arial Black", sans-serif',
-                  color: '#fff',
-                }}
-              >
-                {tier.cardCount}×
-              </span>
-            </div>
+        <div className="absolute right-4 bottom-20 z-30 pointer-events-none">
+          <div className="cyber-laser-stamp" style={{ padding: '3px 8px', borderColor: isBombshell ? '#FF1493' : undefined, boxShadow: isBombshell ? '0 0 12px rgba(255,20,147,0.5)' : undefined }}>
+            <span className="text-[5px] tracking-wider uppercase opacity-60" style={{ color: isBombshell ? '#FF1493' : undefined }}>CAPACITY</span>
+            <span 
+              className="text-[16px] font-black leading-none"
+              style={{
+                fontFamily: '"Impact", "Arial Black", sans-serif',
+                color: '#fff',
+                textShadow: isBombshell ? `0 0 8px ${accent}` : undefined,
+              }}
+            >
+              {tier.cardCount}×
+            </span>
+          </div>
+        </div>
+
+        {/* Top/Bot Side Switcher Toggle for Bombshell */}
+        {isBombshell && (
+          <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-30 pointer-events-auto">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setBombshellSide(prev => prev === 'top' ? 'bot' : 'top');
+              }}
+              className="px-2.5 py-1 rounded-full text-[8px] font-mono font-black uppercase tracking-wider flex items-center gap-1.5 transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-lg"
+              style={{
+                background: 'rgba(0, 0, 0, 0.85)',
+                border: '1.5px solid #FF1493',
+                color: '#FF1493',
+                boxShadow: '0 0 14px rgba(255,20,147,0.6)',
+              }}
+            >
+              <span>{bombshellSide === 'top' ? '🌙 TOP (DARK)' : '☀️ BOT (LIGHT)'}</span>
+              <span className="text-[7px] opacity-70">⟲ FLIP</span>
+            </button>
           </div>
         )}
 
         {/* CENTER CONTENT */}
-        <div className="relative flex flex-col items-center justify-between h-full pt-16 pb-6 px-4 z-10">
+        <div className="relative flex flex-col items-center justify-between h-full pt-16 pb-6 px-4 z-10 pointer-events-none">
           <div className="h-2" />
 
           {/* Central Title & Aperture */}
-          {!isBombshell && (
-            <div className="text-center w-full my-auto flex flex-col items-center px-1">
-              <h3 
-                className={`leading-[0.92] uppercase font-black tracking-wide text-center max-w-[230px] ${
-                  cfg.label.length > 18 
-                    ? 'text-[18px] sm:text-[20px]' 
-                    : cfg.label.length > 12 
-                      ? 'text-[22px] sm:text-[24px]' 
-                      : 'text-[26px] sm:text-[29px]'
-                }`}
-                style={{
-                  color: '#ffffff',
-                  fontFamily: '"Impact", "Arial Black", sans-serif',
-                  letterSpacing: '0.02em',
-                  textShadow: `0 0 16px ${accent}, 2px 2px 0 #000`,
-                  margin: '4px 0 8px 0',
-                }}
-              >
-                {cfg.label}
-              </h3>
+          <div className="text-center w-full my-auto flex flex-col items-center px-1">
+            <h3 
+              className={`leading-[0.92] uppercase font-black tracking-wide text-center max-w-[230px] ${
+                cfg.label.length > 18 
+                  ? 'text-[18px] sm:text-[20px]' 
+                  : cfg.label.length > 12 
+                    ? 'text-[22px] sm:text-[24px]' 
+                    : 'text-[26px] sm:text-[29px]'
+              }`}
+              style={{
+                color: '#ffffff',
+                fontFamily: '"Impact", "Arial Black", sans-serif',
+                letterSpacing: '0.02em',
+                textShadow: `0 0 16px ${accent}, 2px 2px 0 #000`,
+                margin: '4px 0 8px 0',
+              }}
+            >
+              {cfg.label}
+            </h3>
 
-              {/* Rotating Core Aperture */}
-              <CyberApertureEmblem accent={accent} size={82} isBombshell={isBombshell} />
+            {/* Rotating Core Aperture */}
+            <CyberApertureEmblem accent={accent} size={82} isBombshell={isBombshell} />
 
-              {/* Tagline Badge */}
-              <div className="mt-2 px-3 py-1 rounded bg-black/70 border border-white/10 flex items-center gap-1.5">
-                <Cpu size={10} style={{ color: accent }} />
-                <span className="text-[8px] font-mono font-bold uppercase tracking-wider text-slate-300">
-                  {isBombshell ? 'UNCENSORED DATA ARCHIVE' : variant.tagline}
-                </span>
-              </div>
+            {/* Tagline Badge */}
+            <div className="mt-2 px-3 py-1 rounded bg-black/70 border border-white/10 flex items-center gap-1.5">
+              <Cpu size={10} style={{ color: accent }} />
+              <span className="text-[8px] font-mono font-bold uppercase tracking-wider text-slate-300">
+                {isBombshell ? '💖 UNCENSORED PANIK ARCHIVE' : variant.tagline}
+              </span>
             </div>
-          )}
+          </div>
 
           {/* Special Proof Guarantee Indicator */}
           {isSpecial && (

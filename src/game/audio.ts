@@ -306,7 +306,7 @@ export class AudioManager {
     gain.connect(this.masterGain);
     source.start(0);
 
-    // Only track sounds that need to be manually stopped via stopSfx to avoid GC pressure
+    // Track sounds that need to be manually stopped via stopSfx
     if (name === "gameover_countdown" || name === "song_completion") {
       if (!this.activeSources.has(name)) {
         this.activeSources.set(name, []);
@@ -322,6 +322,15 @@ export class AudioManager {
             active.splice(idx, 1);
           }
         }
+        // PERF: Disconnect nodes from audio graph to prevent GainNode accumulation
+        try { source.disconnect(); } catch {}
+        try { gain.disconnect(); } catch {}
+      };
+    } else {
+      // PERF: Disconnect nodes when playback ends to prevent orphaned GainNode leak
+      source.onended = () => {
+        try { source.disconnect(); } catch {}
+        try { gain.disconnect(); } catch {}
       };
     }
   }

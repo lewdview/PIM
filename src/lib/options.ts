@@ -36,6 +36,7 @@ export type GameOpts = {
   particleDensity: ParticleDensity;
   bloomGlow: boolean;
   bgAnimation: boolean;
+  healingGauge: boolean;
 };
 
 export interface GameBackground {
@@ -109,6 +110,7 @@ export const DEFAULT_OPTS: GameOpts = {
   particleDensity: 'full',
   bloomGlow: true,
   bgAnimation: true,
+  healingGauge: true,
 };
 
 export function getEffectiveDpr(res: RenderResolution = 'high'): number {
@@ -197,6 +199,7 @@ export function loadOpts(): GameOpts {
     particleDensity: validParticles,
     bloomGlow: dbSettings?.bloomGlow ?? bool("opt_bloomGlow", true),
     bgAnimation: dbSettings?.bgAnimation ?? bool("opt_bgAnimation", true),
+    healingGauge: bool("opt_healingGauge", true),
   };
 }
 
