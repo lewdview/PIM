@@ -11056,11 +11056,13 @@ export default function Game() {
           className="relative w-full flex-1 min-h-0 overflow-hidden"
           style={{ touchAction: 'none' }}
         >
-          {/* Top-Left Corner Healing Hold Gauge HUD */}
+          {/* Top-Left Corner Healing Hold Gauge HUD (Scaffolded & Hidden in favor of sleek Canvas meter) */}
           {(opts.healingGauge ?? true) && (
             <div
               className="absolute top-3 sm:top-4 left-3 sm:left-6 z-25 flex flex-col items-center pointer-events-none select-none"
+              style={{ display: 'none' }}
               data-testid="healing-hold-gauge"
+              aria-hidden="true"
             >
               {/* Header Label / Status */}
               <div className="flex flex-col items-center mb-1.5">
@@ -11111,21 +11113,22 @@ export default function Game() {
                 />
               </div>
 
-              {/* +1 Miss Restored Floating Banner */}
-              <div
-                ref={healingBannerRef}
-                style={{ display: 'none' }}
-                className="absolute left-full ml-2.5 top-8 flex-col items-start whitespace-nowrap bg-black/90 border border-[#39FF14] px-2.5 py-1 rounded shadow-[0_0_16px_rgba(57,255,20,0.6)]"
-              >
-                <span className="font-mono text-[10px] font-black text-[#39FF14] tracking-wider">
-                  +1 MISS RESTORED
-                </span>
-                <span className="font-mono text-[7.5px] font-bold text-[#00E5FF] tracking-widest">
-                  ♥ FREQUENCY HEAL
-                </span>
-              </div>
             </div>
           )}
+
+          {/* +1 Miss Restored Floating Banner (Visible when healed) */}
+          <div
+            ref={healingBannerRef}
+            style={{ display: 'none' }}
+            className="absolute left-8 top-16 sm:left-12 sm:top-20 z-30 flex-col items-start whitespace-nowrap bg-black/90 border border-[#39FF14] px-2.5 py-1 rounded shadow-[0_0_16px_rgba(57,255,20,0.6)] pointer-events-none transition-all duration-300"
+          >
+            <span className="font-mono text-[10px] font-black text-[#39FF14] tracking-wider">
+              +1 MISS RESTORED
+            </span>
+            <span className="font-mono text-[7.5px] font-bold text-[#00E5FF] tracking-widest">
+              ♥ FREQUENCY HEAL
+            </span>
+          </div>
 
           {/* Circular Score Dial & Combo Overlays (PIM Style) */}
           {(() => {
