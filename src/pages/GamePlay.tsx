@@ -2465,6 +2465,69 @@ export default function Game() {
   const healingGaugeRef = useRef<number>(0);
   const healingHealedFlashMsRef = useRef<number>(0);
   const healingActiveHoldLaneRef = useRef<number | null>(null);
+  const healingGaugeFillRef = useRef<HTMLDivElement | null>(null);
+  const healingGaugeLabelRef = useRef<HTMLSpanElement | null>(null);
+  const healingGaugeHzRef = useRef<HTMLSpanElement | null>(null);
+  const healingGaugeBoxRef = useRef<HTMLDivElement | null>(null);
+  const healingBannerRef = useRef<HTMLDivElement | null>(null);
+
+  const updateHealingGaugeDOM = useCallback((
+    val: number,
+    isHolding: boolean,
+    holdLane: number | null,
+    flashRestored: boolean
+  ) => {
+    if (!healingGaugeBoxRef.current) return;
+
+    const pct = Math.max(0, Math.min(100, val * 100));
+    const isFull = val >= 1.0;
+    const freq = holdLane !== null ? (AudioManager.HEALING_LANE_FREQUENCIES?.[holdLane] ?? 132.0) : 132.0;
+
+    if (healingGaugeFillRef.current) {
+      healingGaugeFillRef.current.style.height = `${pct}%`;
+      healingGaugeFillRef.current.style.background = isFull 
+        ? 'linear-gradient(0deg, #00E5FF 0%, #39FF14 50%, #FFD700 100%)'
+        : 'linear-gradient(0deg, #00E5FF 0%, #39FF14 100%)';
+      healingGaugeFillRef.current.style.boxShadow = isHolding || isFull
+        ? `0 0 16px ${isFull ? '#39FF14' : '#00E5FF'}`
+        : 'none';
+    }
+
+    if (healingGaugeLabelRef.current) {
+      healingGaugeLabelRef.current.textContent = isFull ? '100%' : isHolding ? 'HEALING' : 'HEAL';
+      healingGaugeLabelRef.current.style.color = isFull ? '#39FF14' : isHolding ? '#00E5FF' : 'rgba(255,255,255,0.6)';
+    }
+
+    if (healingGaugeHzRef.current) {
+      healingGaugeHzRef.current.textContent = isHolding ? `${Math.round(freq)}Hz` : `${Math.round(pct)}%`;
+      healingGaugeHzRef.current.style.color = isHolding ? '#00E5FF' : 'rgba(255,255,255,0.4)';
+    }
+
+    if (healingGaugeBoxRef.current) {
+      healingGaugeBoxRef.current.style.borderColor = isFull
+        ? '#39FF14'
+        : isHolding
+          ? 'rgba(0, 229, 255, 0.7)'
+          : 'rgba(255, 255, 255, 0.18)';
+      healingGaugeBoxRef.current.style.boxShadow = isFull
+        ? '0 0 20px rgba(57, 255, 20, 0.5), inset 0 0 10px rgba(57, 255, 20, 0.2)'
+        : isHolding
+          ? '0 0 15px rgba(0, 229, 255, 0.35), inset 0 0 8px rgba(0, 229, 255, 0.15)'
+          : '0 4px 12px rgba(0, 0, 0, 0.6)';
+    }
+
+    if (healingBannerRef.current) {
+      if (flashRestored) {
+        const healedAge = Date.now() - healingHealedFlashMsRef.current;
+        const prog = Math.min(1, healedAge / 1600);
+        healingBannerRef.current.style.display = 'flex';
+        healingBannerRef.current.style.opacity = String(Math.max(0, 1 - prog));
+        healingBannerRef.current.style.transform = `translateY(-${prog * 20}px)`;
+      } else {
+        healingBannerRef.current.style.display = 'none';
+      }
+    }
+  }, []);
 
   const updatePuDisplayDOM = useCallback((
     displayData: {
@@ -6592,6 +6655,14 @@ export default function Game() {
         // Mild decay when not actively holding so player maintains gauge across close holds
         healingGaugeRef.current = Math.max(0, healingGaugeRef.current - frameDt * 0.015);
       }
+
+      const healedAge = Date.now() - healingHealedFlashMsRef.current;
+      updateHealingGaugeDOM(
+        healingGaugeRef.current,
+        anyHoldActive,
+        healingActiveHoldLaneRef.current,
+        healedAge < 1600
+      );
     }
 
     // ── Horizon Fog Overlay (Fades notes into the background at the vanishing horizon across all stages) ──
@@ -10817,6 +10888,77 @@ export default function Game() {
           className="relative w-full flex-1 min-h-0 overflow-hidden"
           style={{ touchAction: 'none' }}
         >
+          {/* Top-Left Corner Healing Hold Gauge HUD */}
+          {(opts.healingGauge ?? true) && (
+            <div
+              className="absolute top-3 sm:top-4 left-3 sm:left-6 z-25 flex flex-col items-center pointer-events-none select-none"
+              data-testid="healing-hold-gauge"
+            >
+              {/* Header Label / Status */}
+              <div className="flex flex-col items-center mb-1.5">
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px]">💚</span>
+                  <span
+                    ref={healingGaugeLabelRef}
+                    className="font-mono text-[9px] font-black uppercase tracking-wider text-white/70"
+                    style={{ textShadow: '0 0 8px rgba(0, 229, 255, 0.4)' }}
+                  >
+                    HEAL
+                  </span>
+                </div>
+                <span
+                  ref={healingGaugeHzRef}
+                  className="font-mono text-[8px] font-bold text-white/40 tracking-tight"
+                >
+                  0%
+                </span>
+              </div>
+
+              {/* Vertical Gauge Bezel (Bottom to Top Fill) */}
+              <div
+                ref={healingGaugeBoxRef}
+                className="relative w-4 sm:w-5 h-28 sm:h-32 rounded-full overflow-hidden p-[2px] transition-all duration-200"
+                style={{
+                  background: 'rgba(8, 8, 16, 0.88)',
+                  border: '1.5px solid rgba(255, 255, 255, 0.18)',
+                  backdropFilter: 'blur(8px)',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.6), inset 0 0 6px rgba(0,0,0,0.8)',
+                }}
+              >
+                {/* Gauge Background Notch Lines */}
+                <div className="absolute inset-0 flex flex-col justify-between py-2 px-1 pointer-events-none z-10 opacity-30">
+                  <div className="w-full h-[1px] bg-white/40" />
+                  <div className="w-full h-[1px] bg-white/40" />
+                  <div className="w-full h-[1px] bg-white/40" />
+                </div>
+
+                {/* Fill Tube (Grows upwards from bottom) */}
+                <div
+                  ref={healingGaugeFillRef}
+                  className="absolute bottom-0 left-0 right-0 rounded-full transition-all duration-75"
+                  style={{
+                    height: '0%',
+                    background: 'linear-gradient(0deg, #00E5FF 0%, #39FF14 100%)',
+                  }}
+                />
+              </div>
+
+              {/* +1 Miss Restored Floating Banner */}
+              <div
+                ref={healingBannerRef}
+                style={{ display: 'none' }}
+                className="absolute left-full ml-2.5 top-8 flex-col items-start whitespace-nowrap bg-black/90 border border-[#39FF14] px-2.5 py-1 rounded shadow-[0_0_16px_rgba(57,255,20,0.6)]"
+              >
+                <span className="font-mono text-[10px] font-black text-[#39FF14] tracking-wider">
+                  +1 MISS RESTORED
+                </span>
+                <span className="font-mono text-[7.5px] font-bold text-[#00E5FF] tracking-widest">
+                  ♥ FREQUENCY HEAL
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Circular Score Dial & Combo Overlays (PIM Style) */}
           {(() => {
             // Calculate active combo multiplier matching the game settings
