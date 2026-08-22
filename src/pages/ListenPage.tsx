@@ -64,12 +64,16 @@ export default function ListenPage() {
   const playingRef = useRef<boolean>(playing);
   const candidateUrlsRef = useRef<string[]>([]);
   const candidateIdxRef = useRef<number>(0);
+  const initialLoadedRef = useRef<boolean>(false);
+  const activeSongIdRef = useRef<string>('');
+  const musicVolumeRef = useRef<number>(settings.musicVolume ?? 0.8);
 
   playlistRef.current = playlist;
   trackIndexRef.current = currentTrackIndex;
   repeatModeRef.current = repeatMode;
   shuffleRef.current = shuffle;
   playingRef.current = playing;
+  musicVolumeRef.current = settings.musicVolume ?? 0.8;
 
   // Track page history to go back to the correct origin page
   const [backRoute, setBackRoute] = useState('/songs');
@@ -118,14 +122,20 @@ export default function ListenPage() {
     if (!targetSong) return;
 
     trackIndexRef.current = targetIdx;
+    activeSongIdRef.current = targetSong.id;
     setCurrentTrackIndex(targetIdx);
     setSong(targetSong);
     setDuration(targetSong.duration || 180);
     setCurrentTime(0);
 
-    // Update URL quietly without triggering full page unmount
-    if (targetSong.id && window.location.pathname !== `/listen/${targetSong.id}`) {
-      window.history.replaceState(null, '', `/listen/${targetSong.id}`);
+    // Update URL quietly without triggering re-render cascades
+    const targetPath = `/listen/${targetSong.id}`;
+    if (targetSong.id && window.location.pathname !== targetPath) {
+      try {
+        window.history.replaceState(null, '', targetPath);
+      } catch (e) {
+        // Suppress browser rate-limit warning if rapid skipping
+      }
     }
 
     cleanupAudio();
@@ -137,7 +147,7 @@ export default function ListenPage() {
 
     const audio = new Audio(initialSrc);
     audio.crossOrigin = 'anonymous';
-    audio.volume = settings.musicVolume ?? 0.8;
+    audio.volume = musicVolumeRef.current;
     audioRef.current = audio;
 
     audio.addEventListener('timeupdate', () => {
@@ -243,15 +253,24 @@ export default function ListenPage() {
         audio.play().catch(err => console.error('[ListenPage] Autoplay play error:', err));
       }
     }
+  }, []);
+
+  // Update volume on live audio element when settings change without re-creating audio
+  useEffect(() => {
+    if (audioRef.current && typeof settings.musicVolume === 'number') {
+      audioRef.current.volume = settings.musicVolume;
+    }
   }, [settings.musicVolume]);
 
-  // 1. Initial playlist setup & sync
+  // 1. Initial playlist setup — runs strictly ONCE on mount
   useEffect(() => {
+    let isMounted = true;
     const origin = sessionStorage.getItem(`game_origin_${songId}`) || 'songs';
     setBackRoute(origin === 'songs' ? '/songs' : origin ? `/${origin}` : '/campaign');
 
     const setupPlaylist = async () => {
       const allSongs = await loadCatalog();
+      if (!isMounted) return;
       setAllCatalogSongs(allSongs);
 
       let activeSongs: GameSong[] = allSongs;
@@ -267,7 +286,7 @@ export default function ListenPage() {
 
       // Find initial song index
       let initialIndex = activeSongs.findIndex(s => s.id === songId || `card-${s.day}` === songId || `day-${s.day}` === songId);
-      if (initialIndex === -1 && allSongs.length > 0) {
+      if (initialIndex === -1 && activeSongs.length > 0) {
         initialIndex = 0;
       }
 
@@ -275,14 +294,48 @@ export default function ListenPage() {
         playTrackAtIndex(initialIndex, false);
       }
       setLoading(false);
+      initialLoadedRef.current = true;
     };
 
     setupPlaylist();
 
     return () => {
+      isMounted = false;
       cleanupAudio();
     };
-  }, [songId, playlistMode, isSongUnlocked, playTrackAtIndex]);
+  }, []);
+
+  // 2. Respond to external route songId changes (e.g. clicking links from other pages)
+  useEffect(() => {
+    if (!initialLoadedRef.current || !songId) return;
+    const currentList = playlistRef.current;
+    if (!currentList || currentList.length === 0) return;
+    
+    // Check if already active
+    const cur = currentList[trackIndexRef.current];
+    if (cur && (cur.id === songId || `card-${cur.day}` === songId || `day-${cur.day}` === songId)) {
+      return;
+    }
+
+    const targetIndex = currentList.findIndex(s => s.id === songId || `card-${s.day}` === songId || `day-${s.day}` === songId);
+    if (targetIndex !== -1 && targetIndex !== trackIndexRef.current) {
+      playTrackAtIndex(targetIndex, true);
+    }
+  }, [songId, playTrackAtIndex]);
+
+  // 3. Respond to playlist mode changes (all catalog vs unlocked only)
+  useEffect(() => {
+    if (!initialLoadedRef.current || allCatalogSongs.length === 0) return;
+    let activeSongs: GameSong[] = allCatalogSongs;
+    if (playlistMode === 'unlocked_only') {
+      const unlocked = allCatalogSongs.filter(isSongUnlocked);
+      if (unlocked.length > 0) {
+        activeSongs = unlocked;
+      }
+    }
+    setPlaylist(activeSongs);
+    playlistRef.current = activeSongs;
+  }, [playlistMode, allCatalogSongs, isSongUnlocked]);
 
   const handleTogglePlay = () => {
     audioManager.playSfx('tap_nav', 0.2);
