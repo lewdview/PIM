@@ -100,11 +100,20 @@ export default function ListenPage() {
   const cleanupAudio = () => {
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
     }
     if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.src = '';
+      const el = audioRef.current;
       audioRef.current = null;
+      el.onended = null;
+      el.onerror = null;
+      el.ontimeupdate = null;
+      el.ondurationchange = null;
+      el.pause();
+      el.removeAttribute('src');
+      try {
+        el.load();
+      } catch (e) {}
     }
     if (audioCtxRef.current) {
       audioCtxRef.current.close().catch(() => {});
@@ -150,21 +159,28 @@ export default function ListenPage() {
     audio.volume = musicVolumeRef.current;
     audioRef.current = audio;
 
-    audio.addEventListener('timeupdate', () => {
-      setCurrentTime(audio.currentTime);
-    });
+    const onTimeUpdate = () => {
+      if (audioRef.current === audio) {
+        setCurrentTime(audio.currentTime);
+      }
+    };
+    audio.addEventListener('timeupdate', onTimeUpdate);
 
-    audio.addEventListener('durationchange', () => {
-      if (audio.duration && !isNaN(audio.duration)) {
+    const onDurationChange = () => {
+      if (audioRef.current === audio && audio.duration && !isNaN(audio.duration)) {
         setDuration(audio.duration);
       }
-    });
+    };
+    audio.addEventListener('durationchange', onDurationChange);
 
     // Seamless auto-advance on track completion
-    audio.addEventListener('ended', () => {
+    const onEnded = () => {
+      if (audioRef.current !== audio) return;
       if (repeatModeRef.current === 'one') {
         audio.currentTime = 0;
-        audio.play().catch(console.error);
+        audio.play().catch((err) => {
+          if (err?.name !== 'AbortError') console.error(err);
+        });
         setPlaying(true);
         return;
       }
@@ -173,7 +189,9 @@ export default function ListenPage() {
       if (activeList.length <= 1) {
         if (repeatModeRef.current !== 'off') {
           audio.currentTime = 0;
-          audio.play().catch(console.error);
+          audio.play().catch((err) => {
+            if (err?.name !== 'AbortError') console.error(err);
+          });
           setPlaying(true);
         } else {
           setPlaying(false);
@@ -197,32 +215,45 @@ export default function ListenPage() {
       }
 
       playTrackAtIndex(nextIdx, true);
-    });
+    };
+    audio.addEventListener('ended', onEnded);
 
-    audio.addEventListener('error', () => {
-      console.warn('[ListenPage] Audio stream error on:', audio.src);
+    const onError = () => {
+      // Guard against stale audio instances or intentionally cleared sources
+      if (audioRef.current !== audio) return;
+      if (!audio.src || audio.src === window.location.href) return;
+
+      console.warn('[ListenPage] Audio stream candidate failed on:', audio.src);
       candidateIdxRef.current++;
       if (candidateIdxRef.current < candidateUrlsRef.current.length) {
         const nextUrl = candidateUrlsRef.current[candidateIdxRef.current];
-        console.log('[ListenPage] Retrying next candidate URL:', nextUrl);
-        audio.src = nextUrl;
-        audio.load();
-        if (playingRef.current) {
-          audio.play().catch(console.warn);
+        if (audioRef.current === audio) {
+          audio.src = nextUrl;
+          audio.load();
+          if (playingRef.current) {
+            audio.play().catch((err) => {
+              if (err?.name !== 'AbortError') console.warn('[ListenPage] Play retry error:', err);
+            });
+          }
         }
         return;
       }
 
-      // If all candidates fail, skip to next track
-      console.warn('[ListenPage] All candidates failed. Auto-skipping to next song in playlist.');
+      // If all candidates fail, skip to next track once
+      console.warn('[ListenPage] All candidates failed for track:', targetSong.id);
       const activeList = playlistRef.current;
-      if (activeList.length > 1) {
-        const nextIdx = (trackIndexRef.current + 1) % activeList.length;
-        playTrackAtIndex(nextIdx, true);
+      if (activeList.length > 1 && trackIndexRef.current === targetIdx) {
+        const nextIdx = (targetIdx + 1) % activeList.length;
+        if (nextIdx !== targetIdx) {
+          playTrackAtIndex(nextIdx, true);
+        } else {
+          setPlaying(false);
+        }
       } else {
         setPlaying(false);
       }
-    });
+    };
+    audio.addEventListener('error', onError);
 
     // Attach Web Audio Analyser
     try {
@@ -244,13 +275,28 @@ export default function ListenPage() {
       
       if (autoStart) {
         setPlaying(true);
-        audio.play().catch(err => console.error('[ListenPage] Autoplay play error:', err));
+        audio.play().catch((err) => {
+          if (err?.name === 'AbortError') return;
+          if (err?.name === 'NotAllowedError') {
+            console.log('[ListenPage] Autoplay waiting for user interaction');
+            setPlaying(false);
+            return;
+          }
+          console.warn('[ListenPage] Autoplay play error:', err);
+        });
       }
     } catch (e) {
       console.warn('[ListenPage] Web Audio Context note:', e);
       if (autoStart) {
         setPlaying(true);
-        audio.play().catch(err => console.error('[ListenPage] Autoplay play error:', err));
+        audio.play().catch((err) => {
+          if (err?.name === 'AbortError') return;
+          if (err?.name === 'NotAllowedError') {
+            setPlaying(false);
+            return;
+          }
+          console.warn('[ListenPage] Autoplay play error:', err);
+        });
       }
     }
   }, []);
