@@ -11,26 +11,81 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+
+// ⚡ Bolt: Extracted progress bar to isolated component to prevent GlobalPlayerBar re-renders at ~2Hz
+function ProgressBar({ accent, handleSeek }: { accent: string, handleSeek: (e: React.MouseEvent<HTMLDivElement>) => void }) {
+  const progress = useGlobalPlayer(s => s.progress);
+
+  return (
+    <div
+      onClick={handleSeek}
+      style={{
+        height: '3px',
+        background: 'rgba(255,255,255,0.06)',
+        cursor: 'pointer',
+        position: 'relative',
+      }}
+    >
+      <motion.div
+        style={{
+          height: '100%',
+          width: `${progress * 100}%`,
+          background: `linear-gradient(90deg, ${accent}, ${accent}cc)`,
+          boxShadow: `0 0 8px ${accent}60`,
+          transition: 'width 0.3s linear',
+        }}
+      />
+    </div>
+  );
+}
+
+// ⚡ Bolt: Extracted time display to isolated component to prevent GlobalPlayerBar re-renders at ~2Hz
+function TimeDisplay({ effectiveDuration, isPreview }: { effectiveDuration: number, isPreview: boolean }) {
+  const currentTime = useGlobalPlayer(s => s.currentTime);
+
+  return (
+    <>
+      <span style={{
+        fontFamily: '"JetBrains Mono", monospace',
+        fontSize: '8px',
+        color: 'rgba(255,255,255,0.3)',
+      }}>
+        {formatTime(currentTime)} / {formatTime(effectiveDuration)}
+      </span>
+      {isPreview && (
+        <span style={{
+          fontFamily: '"JetBrains Mono", monospace',
+          fontSize: '7px',
+          padding: '1px 5px',
+          background: 'rgba(255,255,255,0.06)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          color: 'rgba(255,255,255,0.3)',
+          textTransform: 'uppercase',
+        }}>
+          Preview
+        </span>
+      )}
+    </>
+  );
+}
+
 export default function GlobalPlayerBar() {
   const [location, setLocation] = useLocation();
   const isMobile = useIsMobile();
-  const {
-    currentTrack,
-    playlist,
-    isPlaying,
-    progress,
-    currentTime,
-    duration,
-    loopMode,
-    shuffle,
-    toggle,
-    stop,
-    seek,
-    nextTrack,
-    previousTrack,
-    toggleShuffle,
-    setLoopMode,
-  } = useGlobalPlayer();
+  // ⚡ Bolt: Granular selectors to prevent unnecessary re-renders of the entire bar on every timeupdate (~2Hz)
+  const currentTrack = useGlobalPlayer(s => s.currentTrack);
+  const isPlaying = useGlobalPlayer(s => s.isPlaying);
+  const duration = useGlobalPlayer(s => s.duration);
+  const loopMode = useGlobalPlayer(s => s.loopMode);
+  const shuffle = useGlobalPlayer(s => s.shuffle);
+
+  const toggle = useGlobalPlayer(s => s.toggle);
+  const stop = useGlobalPlayer(s => s.stop);
+  const seek = useGlobalPlayer(s => s.seek);
+  const nextTrack = useGlobalPlayer(s => s.nextTrack);
+  const previousTrack = useGlobalPlayer(s => s.previousTrack);
+  const toggleShuffle = useGlobalPlayer(s => s.toggleShuffle);
+  const setLoopMode = useGlobalPlayer(s => s.setLoopMode);
 
   const rc = currentTrack ? (RARITY_CONFIG[currentTrack.rarity as keyof typeof RARITY_CONFIG] || RARITY_CONFIG.common) : RARITY_CONFIG.common;
   const accent = rc?.color || '#ff3800';
@@ -74,25 +129,7 @@ export default function GlobalPlayerBar() {
         className="bottom-0"
       >
         {/* Progress bar — clickable */}
-        <div
-          onClick={handleSeek}
-          style={{
-            height: '3px',
-            background: 'rgba(255,255,255,0.06)',
-            cursor: 'pointer',
-            position: 'relative',
-          }}
-        >
-          <motion.div
-            style={{
-              height: '100%',
-              width: `${progress * 100}%`,
-              background: `linear-gradient(90deg, ${accent}, ${accent}cc)`,
-              boxShadow: `0 0 8px ${accent}60`,
-              transition: 'width 0.3s linear',
-            }}
-          />
-        </div>
+        <ProgressBar accent={accent} handleSeek={handleSeek} />
 
         <div style={{
           display: 'flex',
@@ -156,26 +193,7 @@ export default function GlobalPlayerBar() {
               }}>
                 DAY {currentTrack.day}
               </span>
-              <span style={{
-                fontFamily: '"JetBrains Mono", monospace',
-                fontSize: '8px',
-                color: 'rgba(255,255,255,0.3)',
-              }}>
-                {formatTime(currentTime)} / {formatTime(effectiveDuration)}
-              </span>
-              {isPreview && (
-                <span style={{
-                  fontFamily: '"JetBrains Mono", monospace',
-                  fontSize: '7px',
-                  padding: '1px 5px',
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  color: 'rgba(255,255,255,0.3)',
-                  textTransform: 'uppercase',
-                }}>
-                  Preview
-                </span>
-              )}
+              <TimeDisplay effectiveDuration={effectiveDuration} isPreview={isPreview} />
             </div>
           </div>
 
