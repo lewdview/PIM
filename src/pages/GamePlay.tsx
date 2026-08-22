@@ -3709,10 +3709,58 @@ export default function Game() {
           break;
         }
       }
-      if (!ns) return;
-      completeHoldNote(ns);
+      if (ns) {
+        completeHoldNote(ns);
+      }
+
+      // Check candidate LIFT notes on this lane (release on beat timing from controller, keyboard, or touch)
+      const t = getT();
+      const dl = songRef.current?.difficultyLevel ?? 5;
+      const gw = goodWindow(dl);
+      let liftCandidate: NoteState | undefined;
+      for (let i = noteWindowStartRef.current; i < allNotes.length; i++) {
+        const n = allNotes[i];
+        if (n.note.time - t > gw) break;
+        if (n.note.type === "lift" && !n.hit && !n.missed && Math.abs(n.note.time - t) <= gw && (n.note.lane === lane || Math.round(n.currentLane) === lane)) {
+          liftCandidate = n;
+          break;
+        }
+      }
+
+      if (liftCandidate) {
+        liftCandidate.hit = true;
+        unresolvedNotesCountRef.current--;
+        const diff = Math.abs(liftCandidate.note.time - t);
+        const j: "PERFECT+" | "PERFECT" | "GOOD" =
+          diff <= perfectPlusWindow(dl)
+            ? "PERFECT+"
+            : diff <= perfectWindow(dl)
+              ? "PERFECT"
+              : "GOOD";
+        const gs = gsRef.current;
+        gs.score += calcScore(gs.combo, j);
+        gs.combo++;
+        gs.maxCombo = Math.max(gs.maxCombo, gs.combo);
+        if (j === "PERFECT+") gs.perfectPlus++;
+        else if (j === "PERFECT") gs.perfects++;
+        else gs.goods++;
+
+        audioManager.playSfx("tap_nav", 0.25);
+        triggerHitFx(liftCandidate.currentLane, j);
+        addJudgment({ type: j, lane: liftCandidate.currentLane, id: ++jCounter.current, ts: Date.now() });
+        syncDisplay();
+
+        recordedTelemetryRef.current.push({
+          noteId: liftCandidate.note.id,
+          time: t,
+          judgment: j,
+          offset: t - liftCandidate.note.time,
+          lane: liftCandidate.currentLane,
+          type: "lift"
+        });
+      }
     },
-    [completeHoldNote],
+    [completeHoldNote, getT, triggerHitFx, addJudgment, syncDisplay, calcScore],
   );
 
   const hitSwipeRelease = useCallback(
@@ -7789,8 +7837,8 @@ export default function Game() {
           if (n.note.time < t - 1.0) continue;
           if (n.note.time > t + mw + 0.5) break;
 
-          if (!cand && !n.hit && !n.missed && n.note.type === 'swipe' &&
-              n.note.swipeDirection === swipeDir && Math.abs(n.note.time - t) < mw) {
+          const isLiftMatch = n.note.type === 'lift' && swipeDir === 'up';
+          if (!cand && !n.hit && !n.missed && ((n.note.type === 'swipe' && n.note.swipeDirection === swipeDir) || isLiftMatch) && Math.abs(n.note.time - t) < mw) {
             cand = n;
           }
           if (!activeHoldWithSwipe && n.holdActive && !n.hit && !n.missed &&
@@ -7881,9 +7929,10 @@ export default function Game() {
           for (let i = noteWindowStartRef.current; i < allNotes.length; i++) {
             const n = allNotes[i];
             if (n.note.time - t > mw) break;
+            const isLiftMatch = n.note.type === 'lift' && dpadSwipe === 'up';
             if (
-              !n.hit && !n.missed && n.note.type === 'swipe' &&
-              n.note.swipeDirection === dpadSwipe &&
+              !n.hit && !n.missed &&
+              ((n.note.type === 'swipe' && n.note.swipeDirection === dpadSwipe) || isLiftMatch) &&
               Math.abs(n.note.time - t) < mw
             ) {
               cand = n;
@@ -7975,9 +8024,9 @@ export default function Game() {
       const isAPressed = gp.buttons[0]?.pressed || false;
       
       const lanePressed: [boolean, boolean, boolean] = [
-        (gp.buttons[2]?.pressed || false) || (isAPressed && slideDir === 'left'),
+        (gp.buttons[2]?.pressed || false) || (gp.buttons[4]?.pressed || false) || (isAPressed && slideDir === 'left'),
         (gp.buttons[3]?.pressed || false) || (isAPressed && slideDir === 'center'),
-        (gp.buttons[1]?.pressed || false) || (isAPressed && slideDir === 'right')
+        (gp.buttons[1]?.pressed || false) || (gp.buttons[5]?.pressed || false) || (isAPressed && slideDir === 'right')
       ];
 
       // Process presses and releases
