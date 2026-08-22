@@ -2278,13 +2278,14 @@ export default function Game() {
     let write = 0;
     const arr = jRef.current;
     for (let i = 0; i < arr.length; i++) {
-      if (now - arr[i].ts < 600) {
+      if (now - arr[i].ts < 900) {
         arr[write++] = arr[i];
       }
     }
     arr.length = write;
     arr.push(newJ);
     lastLaneHitRef.current[newJ.lane] = { ts: newJ.ts, type: newJ.type };
+    setDisplayJudge([...arr]);
   }, []);
   const songRef = useRef<GameSong | null>(null);
   const modifierRef = useRef<'vocal_isolation' | 'bass_realm' | 'corrupted_signal' | 'none'>('none');
@@ -2925,7 +2926,16 @@ export default function Game() {
     if (now - lastReactSyncRef.current >= 200) {
       lastReactSyncRef.current = now;
       setDisplayGs({ ...gsRef.current });
-      setDisplayJudge([...jRef.current]);
+      // Prune expired judgments older than 900ms
+      let write = 0;
+      const arr = jRef.current;
+      for (let i = 0; i < arr.length; i++) {
+        if (now - arr[i].ts < 900) {
+          arr[write++] = arr[i];
+        }
+      }
+      arr.length = write;
+      setDisplayJudge([...arr]);
     }
   }, []);
   // audioOffset (ms) compensates for speaker latency: subtract it so hits land in time
@@ -11417,7 +11427,7 @@ export default function Game() {
 
           {/* Judgment text — per-lane custom vector SVG popups anchored at judgment target strike zones */}
           {opts.judgmentText && displayJudge.map((j) => {
-            if (Date.now() - j.ts > 600) return null;
+            if (Date.now() - j.ts > 850) return null;
             const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
             const canvasW = canvasRef.current?.width ? canvasRef.current.width / dpr : 0;
             if (!canvasW) return null;
@@ -11431,8 +11441,7 @@ export default function Game() {
                 className="absolute pointer-events-none judgment-pop"
                 style={{
                   left: `${targetPct}%`,
-                  top: "73%",
-                  transform: "translateX(-50%)",
+                  top: "70%",
                 }}
               >
                 <JudgmentBadge type={j.type} scale={j.type === "PERFECT+" ? 1.05 : 0.9} />
@@ -11442,17 +11451,14 @@ export default function Game() {
 
           {/* Secondary judgment banner — top of screen, custom vector SVG badge */}
           {opts.judgmentText && (() => {
-            const latest = displayJudge.filter(j => Date.now() - j.ts < 400).sort((a, b) => b.ts - a.ts)[0];
+            const latest = displayJudge.filter(j => Date.now() - j.ts < 750).sort((a, b) => b.ts - a.ts)[0];
             if (!latest) return null;
-            const age = (Date.now() - latest.ts) / 400;
             return (
               <div
-                className="absolute left-1/2 pointer-events-none"
+                key={`banner_${latest.id}`}
+                className="absolute left-1/2 pointer-events-none judgment-banner-pop"
                 style={{
                   top: "23%",
-                  transform: `translateX(-50%) scale(${1 + (1 - age) * 0.18})`,
-                  opacity: 1 - age * 0.6,
-                  transition: "opacity 0.1s",
                 }}
               >
                 <JudgmentBadge type={latest.type} scale={latest.type === "PERFECT+" ? 1.35 : 1.15} />
