@@ -2341,7 +2341,7 @@ export default function Game() {
     let write = 0;
     const arr = jRef.current;
     for (let i = 0; i < arr.length; i++) {
-      if (now - arr[i].ts < 950) {
+      if (now - arr[i].ts < 450) {
         arr[write++] = arr[i];
       }
     }
@@ -2372,7 +2372,7 @@ export default function Game() {
           }, { once: true });
           setTimeout(() => {
             if (popEl.parentNode) popEl.remove();
-          }, 1100);
+          }, 500);
         }
       }
 
@@ -2388,7 +2388,7 @@ export default function Game() {
         }, { once: true });
         setTimeout(() => {
           if (bannerEl.parentNode) bannerEl.remove();
-        }, 1000);
+        }, 520);
       }
     }
   }, []);
@@ -3030,11 +3030,11 @@ export default function Game() {
     if (now - lastReactSyncRef.current >= 200) {
       lastReactSyncRef.current = now;
       setDisplayGs({ ...gsRef.current });
-      // Prune expired judgments older than 950ms
+      // Prune expired judgments older than 450ms
       let write = 0;
       const arr = jRef.current;
       for (let i = 0; i < arr.length; i++) {
-        if (now - arr[i].ts < 950) {
+        if (now - arr[i].ts < 450) {
           arr[write++] = arr[i];
         }
       }
