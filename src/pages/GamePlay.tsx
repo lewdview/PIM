@@ -1022,60 +1022,83 @@ function getCorkscrewSpiralPos(
 ): ProjectionResult {
   const hitRatio = getHitRatio(W, H);
   const hitY = H * hitRatio;
-  const vanishingY = hitY * 0.16;
+  const vanishingY = hitY * 0.22;
   const cx = W / 2;
   const isWide = isWidescreenDisplay(W, H);
+  const maxHW = getHighwayMaxWidth(W, H);
   const corkW = isWide
-    ? Math.min(460, Math.max(350, W * 0.38))
-    : Math.min(W, 520);
+    ? Math.min(maxHW * 0.95, 460)
+    : Math.min(W * 0.85, 520);
   const laneOffset = lane - 1; // -1 for left, 0 for center, 1 for right
-  const p = Math.max(0, Math.min(1.05, prog));
+  const mult = stage === 5 ? 1.6 : 1.0;
+  const baseH = hitY - vanishingY;
 
-  // 1. Helical spiral geometry (1.5 turns / 540 degrees) along progress p
-  const spiralTurns = 1.5;
-  const spiralP = Math.min(1, p / 0.72); // 0 to 1 over first 72%
-  // Starts at -PI/2 (top center), spins 1.5 turns, lands facing down
-  const spiralAngle = -Math.PI / 2 + spiralP * Math.PI * 2 * spiralTurns;
+  // ── Phase 1: Entry Plunge (p: 0.00 -> 0.12) ──
+  // Fast plunge from vanishing horizon into top of the corkscrew tube
+  if (prog < 0.12) {
+    const u = prog / 0.12;
+    const startX = cx + laneOffset * (corkW * 0.06);
+    const startY = vanishingY;
 
-  // Perspective expansion of the spiral radius
-  const radiusX = corkW * (0.07 + 0.30 * Math.pow(spiralP, 1.15));
-  const radiusY = (hitY - vanishingY) * (0.03 + 0.11 * Math.pow(spiralP, 1.15));
+    const entryRadiusX = corkW * 0.05;
+    const entryRadiusY = H * 0.02;
+    const entryX = cx + entryRadiusX + laneOffset * 14;
+    const entryY = vanishingY + baseH * 0.10;
 
-  // Lane offset perpendicular to the spiral path
-  const normalAngle = spiralAngle + Math.PI / 2;
-  const laneDist = (corkW / LANE_COUNT) * (0.42 + 0.58 * p);
+    const noteX = lerp(startX, entryX, u);
+    const noteY = lerp(startY, entryY, u);
+    const noteW = lerp(isWide ? 28 : 38, isWide ? 42 : 54, u);
+    const noteH = lerp(isWide ? 24 : 32, isWide ? 36 : 46, u);
+    return { x: noteX - noteW / 2, y: noteY, w: noteW, h: noteH, rot: laneOffset * 0.05, scale: lerp(0.35, 0.52, u) };
+  } 
+  
+  // ── Phase 2: Tight Helical 3D Spiral Slide (p: 0.12 -> 0.48) ──
+  // Fast, tight 720° helical spin centered compactly in the upper middle tube
+  else if (prog < 0.48) {
+    const u = (prog - 0.12) / 0.36;
+    const loopAngle = u * Math.PI * 4; // 2 complete 360° loops anchored in place
 
-  const helixX = cx + Math.cos(spiralAngle) * radiusX + Math.cos(normalAngle) * (laneOffset * laneDist);
-  const helixY = vanishingY + (hitY - vanishingY) * Math.pow(spiralP, 1.12) + Math.sin(spiralAngle) * radiusY;
+    // Tightened horizontal radius (compact 3D tube)
+    const helixRadiusX = lerp(corkW * 0.05, corkW * 0.15, u);
+    const helixRadiusY = lerp(H * 0.02, H * 0.065, u);
+    const centerY = lerp(vanishingY + baseH * 0.10, vanishingY + baseH * 0.42, u);
 
-  // 2. Straight target lane coordinates at the strike zone
-  const topRatio = getHighwayTopRatio(W, H, false);
-  const botRatio = getHighwayBotRatio(W, H, false);
-  const { x: straightX, w: straightW } = laneAt(lane, p, W, topRatio, botRatio, undefined, 1, 0, H);
-  const straightCenterX = straightX + straightW / 2;
-  const straightCenterY = p * hitY;
+    const spiralX = cx + Math.cos(loopAngle) * helixRadiusX + laneOffset * 16 * Math.cos(loopAngle);
+    const spiralY = centerY + Math.sin(loopAngle) * helixRadiusY;
 
-  // 3. Smooth transition onto the landing runway (p: 0.65 -> 1.0)
-  const runwayT = Math.max(0, Math.min(1, (p - 0.65) / 0.35));
-  const smoothRunway = runwayT * runwayT * (3 - 2 * runwayT); // cubic smoothstep
+    const zDepth = Math.sin(loopAngle); // -1 (back) to +1 (front)
+    const rot = Math.cos(loopAngle) * 0.30;
+    const depthScale = lerp(0.52, 0.85, u) * (0.90 + zDepth * 0.10);
+    const noteW = lerp(isWide ? 42 : 54, isWide ? 68 : 90, u) * (0.90 + zDepth * 0.10);
+    const noteH = lerp(isWide ? 36 : 46, isWide ? 56 : 76, u) * (0.90 + zDepth * 0.10);
 
-  const finalCenterX = lerp(helixX, straightCenterX, smoothRunway);
-  const finalCenterY = lerp(helixY, straightCenterY, smoothRunway);
+    return { x: spiralX - noteW / 2, y: spiralY, w: noteW, h: noteH, rot, scale: depthScale };
+  } 
+  
+  // ── Phase 3: Extended Readability Runway & Target Lane Ejection / Launch (p: 0.48 -> 1.00) ──
+  // Notes shoot out of the bottom nozzle at p = 0.48 and have 52% of travel time
+  // to smoothly lock onto their target lane column and glide straight into strike buttons!
+  else {
+    const u = (prog - 0.48) / 0.52;
+    const exitRadiusX = corkW * 0.15;
+    const exitX = cx + exitRadiusX + laneOffset * 16;
+    const exitY = vanishingY + baseH * 0.42;
 
-  // Note dimensions (matching full corkscrew scale)
-  const noteW = lerp(isWide ? 54 : 64, straightW - 2, p);
-  const noteH = lerp(isWide ? 56 : 76, (straightW - 2) * 0.72, p);
-  const rot = Math.cos(spiralAngle) * 0.36 * (1 - smoothRunway);
-  const scale = lerp(0.55, 1.0, Math.pow(p, 1.05));
+    const { x: targetX, w: targetW } = laneAt(lane, 1, W, undefined, undefined, undefined, stage, t, H);
+    const targetCenterX = targetX + targetW / 2;
+    const targetCenterY = hitY;
 
-  return {
-    x: finalCenterX - noteW / 2,
-    y: finalCenterY,
-    w: noteW,
-    h: noteH,
-    rot,
-    scale,
-  };
+    // Rapid ease-in to straight vertical lane column by u = 0.25 (p = 0.61)
+    const alignT = 1 - Math.pow(1 - u, 2.8);
+    const noteX = lerp(exitX, targetCenterX, alignT);
+    const noteY = lerp(exitY, targetCenterY, u);
+    const noteW = lerp(isWide ? 54 : 64, targetW - 6, u);
+    const noteH = lerp(isWide ? 42 : 50, (targetW - 6) * 0.72, u);
+    const rot = lerp(0.15, 0, alignT); // Straightens out into the hit lane
+    const scale = lerp(0.85, 1.0, u);
+
+    return { x: noteX - noteW / 2, y: noteY, w: noteW, h: noteH, rot, scale };
+  }
 }
 
 // 🎢 3D UNDULATING WAVE ROLLERCOASTER (Crest airtime, high-G dip, banking roll, and 0-bob hit runway)
@@ -5204,75 +5227,110 @@ export default function Game() {
           ctx.restore();
         }
 
-        // ── ARCHETYPE 3: 3D TWISTING CORKSCREW SLIDE (Seamless Helical Track & Unified Spine) ──
+        // ── ARCHETYPE 3: 3D TWISTING CORKSCREW SLIDE (Tighter Helical Tube + Extended 52% Runway) ──
         else if (currentArch === 'corkscrew_slide') {
           const isWide = isWidescreenDisplay(W, H);
-          const corkW = isWide ? Math.min(460, Math.max(350, W * 0.38)) : Math.min(W, 520);
+          const maxHW = getHighwayMaxWidth(W, H);
+          const corkW = isWide ? Math.min(maxHW * 0.95, 460) : Math.min(W * 0.85, 520);
           const outerRadius = corkW * 0.55;
-          const vanishingY = hitY * 0.16;
+          const vanishingY = hitY * 0.22;
           const baseH = hitY - vanishingY;
 
           // Dynamic Moving Gas Nebula Backdrop around 3D Corkscrew Tube
           drawMovingGasAura(ctx, cx, vanishingY + baseH * 0.35, outerRadius, "#1c0830", t, 1.0);
 
           ctx.save();
+          const mult = calculatedStage === 5 ? 1.6 : 1.0;
 
-          // 1. Cross-ties (Rungs) & Semi-transparent Floor connecting the 3 lanes
-          const steps = 28;
-          for (let s = 0; s < steps; s++) {
-            const p = (s / (steps - 1));
-            const p0 = getCorkscrewSpiralPos(0, p, W, H, t, calculatedStage);
-            const p1 = getCorkscrewSpiralPos(1, p, W, H, t, calculatedStage);
-            const p2 = getCorkscrewSpiralPos(2, p, W, H, t, calculatedStage);
+          // 1. Glowing Entry Mouth Ring (Top entrance at p = 0.12 - Anchored in place)
+          const entryRadiusX = corkW * 0.05;
+          const entryRadiusY = H * 0.02;
+          const entryY = vanishingY + baseH * 0.10;
 
-            const x0 = p0.x + p0.w / 2;
-            const y0 = p0.y;
-            const x2 = p2.x + p2.w / 2;
-            const y2 = p2.y;
+          ctx.strokeStyle = "rgba(255, 123, 0, 0.85)";
+          ctx.lineWidth = 3.5;
+          ctx.shadowColor = "#FF7B00";
+          ctx.shadowBlur = 16;
+          ctx.beginPath();
+          ctx.ellipse(cx + entryRadiusX, entryY, entryRadiusX * 1.4, entryRadiusY * 1.4, 0, 0, Math.PI * 2);
+          ctx.stroke();
 
-            // Draw translucent floor slat
-            ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
-            ctx.lineWidth = lerp(1.5, 4.0, p);
+          // 2. Continuous 3D Wireframe Helical Tunnel Ribs along Spiral Path (p: 0.12 -> 0.48 - Anchored in place)
+          const ringSteps = 14;
+          for (let r = 0; r < ringSteps; r++) {
+            const u = r / (ringSteps - 1);
+            const loopAngle = u * Math.PI * 4; // Solid 720° helical slide structure
+
+            const helixRadiusX = lerp(corkW * 0.05, corkW * 0.15, u);
+            const helixRadiusY = lerp(H * 0.02, H * 0.065, u);
+            const centerY = lerp(vanishingY + baseH * 0.10, vanishingY + baseH * 0.42, u);
+            const ribCx = cx + Math.cos(loopAngle) * helixRadiusX;
+            const ribCy = centerY + Math.sin(loopAngle) * helixRadiusY;
+
+            const ringColor = laneColorsRef.current[r % 3] || "#FF007F";
+            const zDepth = Math.sin(loopAngle); // -1 (back) to +1 (front)
+            
+            // Dynamic energy wave pulsing down the fixed slide
+            const pulsePhase = ((t * 1.5 * mult - u) % 1 + 1) % 1;
+            const lightPulse = Math.pow(Math.max(0, 1 - pulsePhase * 3), 2);
+            const ringAlpha = (0.22 + 0.35 * Math.max(0, zDepth) + 0.35 * lightPulse) * (0.6 + 0.4 * beatPulseVal);
+
+            ctx.strokeStyle = colorWithAlpha(ringColor, ringAlpha);
+            ctx.lineWidth = lerp(1.5, 3.5, u);
+            ctx.shadowColor = ringColor;
+            ctx.shadowBlur = lerp(4, 12, u);
+
             ctx.beginPath();
-            ctx.moveTo(x0, y0);
-            ctx.lineTo(x2, y2);
+            const ribW = lerp(32, 64, u);
+            const ribH = lerp(18, 38, u);
+            ctx.ellipse(ribCx, ribCy, ribW, ribH, loopAngle * 0.5, 0, Math.PI * 2);
             ctx.stroke();
-
-            // Periodic neon helical depth rings around center spine
-            if (s % 4 === 0) {
-              const ringR = lerp(16, 52, p);
-              ctx.strokeStyle = colorWithAlpha(laneColorsRef.current[1] || "#00E5FF", lerp(0.15, 0.45, p));
-              ctx.lineWidth = 1.5;
-              ctx.beginPath();
-              ctx.ellipse(p1.x + p1.w / 2, p1.y, ringR, ringR * 0.35, p1.rot || 0, 0, Math.PI * 2);
-              ctx.stroke();
-            }
           }
 
-          // 2. 3 Continuous Glowing Helical Neon Rails
-          for (let lane = 0; lane < LANE_COUNT; lane++) {
-            const railColor = laneColorsRef.current[lane] || (lane === 0 ? "#FF1493" : lane === 1 ? "#00E5FF" : "#39FF14");
-            ctx.strokeStyle = railColor;
-            ctx.lineWidth = 2.8;
-            ctx.shadowColor = railColor;
-            ctx.shadowBlur = 10;
+          // 3. 3-Lane Glowing Guide Rails shooting out of stationary nozzle (p: 0.48 -> 1.00)
+          const exitRadiusX = corkW * 0.15;
+          const exitRadiusY = H * 0.065;
+          const exitY = vanishingY + baseH * 0.42;
+          const exitX = cx + exitRadiusX;
+
+          // Nozzle glow ring at p = 0.48 (Anchored in place)
+          ctx.strokeStyle = "#FFD700";
+          ctx.lineWidth = 4.0;
+          ctx.shadowColor = "#FFD700";
+          ctx.shadowBlur = 20;
+          ctx.beginPath();
+          ctx.ellipse(exitX, exitY, exitRadiusX * 1.2, exitRadiusY * 1.2, 0, 0, Math.PI * 2);
+          ctx.stroke();
+
+          for (let rail = 0; rail < LANE_COUNT; rail++) {
+            const railColor = laneColorsRef.current[rail] || "#00E5FF";
+            const { x: targetX, w: targetW } = laneAt(rail, 1, W, undefined, undefined, undefined, calculatedStage, t, H);
+            const targetCenterX = targetX + targetW / 2;
+            const railExitX = exitX + (rail - 1) * 16;
 
             ctx.beginPath();
-            for (let s = 0; s < steps; s++) {
-              const p = (s / (steps - 1));
-              const proj = getCorkscrewSpiralPos(lane, p, W, H, t, calculatedStage);
-              const rx = proj.x + proj.w / 2;
-              const ry = proj.y;
-              if (s === 0) ctx.moveTo(rx, ry);
-              else ctx.lineTo(rx, ry);
-            }
+            ctx.moveTo(railExitX, exitY);
+            ctx.bezierCurveTo(
+              railExitX + (targetCenterX - railExitX) * 0.7, exitY + baseH * 0.20,
+              targetCenterX, hitY - baseH * 0.15,
+              targetCenterX, hitY
+            );
+            ctx.strokeStyle = colorWithAlpha(railColor, 0.40);
+            ctx.lineWidth = 2.2;
+            ctx.shadowColor = railColor;
+            ctx.shadowBlur = 8;
             ctx.stroke();
+          }
 
-            // Inner white core rail
-            ctx.strokeStyle = "#FFFFFF";
-            ctx.lineWidth = 1.0;
-            ctx.shadowBlur = 0;
-            ctx.stroke();
+          // Ejection pulse particles popping out of the stationary nozzle
+          ctx.fillStyle = "#FFD700";
+          for (let p = 0; p < 4; p++) {
+            const pAngle = (t * 2.5 + (p / 4) * Math.PI * 2);
+            const px = exitX + Math.cos(pAngle) * (exitRadiusX * 0.8);
+            const py = exitY + Math.sin(pAngle) * (exitRadiusY * 0.8);
+            ctx.beginPath();
+            ctx.arc(px, py, 3.0, 0, Math.PI * 2);
+            ctx.fill();
           }
 
           ctx.restore();
@@ -5764,104 +5822,103 @@ export default function Game() {
       ctx.restore();
     }
 
-    // Draw dynamic speed lines (clipped to track guides)
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(hwTop.left, 0);
-    ctx.quadraticCurveTo(W / 2, -hitY * 0.09, hwTop.right, 0);
-    ctx.lineTo(hwBot.right, hitY);
-    ctx.lineTo(hwBot.left, hitY);
-    ctx.closePath();
-    ctx.clip();
-
-    const speedCycle = hitY * 0.18;
-    const speedOff = (t * 0.8 * hitY) % speedCycle;
-    for (let row = -1; row < 8; row++) {
-      const sy1 = speedOff + row * speedCycle;
-      const sy2 = sy1 + speedCycle * 0.35;
-      if (sy2 < 0 || sy1 > hitY) continue;
-      const sp1 = Math.max(0, Math.min(1, sy1 / hitY));
-      const sp2 = Math.max(0, Math.min(1, sy2 / hitY));
-      const { left: sl1, right: sr1 } = hwAtProgress(sp1, W, povTop, povBot, H);
-      const { left: sl2, right: sr2 } = hwAtProgress(sp2, W, povTop, povBot, H);
-      const speedAlpha = 0.012 + sp1 * 0.04;
-      ctx.fillStyle = `rgba(255,248,235,${speedAlpha})`;
+    // ── 2.5D CLASSIC SPEED LINES, HIT BEAM, & TRACK EDGE RAILS (Suppressed in 3D stages) ──
+    if (!is3DEnvironment) {
+      // Draw dynamic speed lines (clipped to track guides)
+      ctx.save();
       ctx.beginPath();
-      ctx.moveTo(sl1, sy1);
-      ctx.lineTo(sr1, sy1);
-      ctx.lineTo(sr2, sy2);
-      ctx.lineTo(sl2, sy2);
+      ctx.moveTo(hwTop.left, 0);
+      ctx.quadraticCurveTo(W / 2, -hitY * 0.09, hwTop.right, 0);
+      ctx.lineTo(hwBot.right, hitY);
+      ctx.lineTo(hwBot.left, hitY);
       ctx.closePath();
-      ctx.fill();
+      ctx.clip();
+
+      const speedCycle = hitY * 0.18;
+      const speedOff = (t * 0.8 * hitY) % speedCycle;
+      for (let row = -1; row < 8; row++) {
+        const sy1 = speedOff + row * speedCycle;
+        const sy2 = sy1 + speedCycle * 0.35;
+        if (sy2 < 0 || sy1 > hitY) continue;
+        const sp1 = Math.max(0, Math.min(1, sy1 / hitY));
+        const sp2 = Math.max(0, Math.min(1, sy2 / hitY));
+        const { left: sl1, right: sr1 } = hwAtProgress(sp1, W, povTop, povBot, H);
+        const { left: sl2, right: sr2 } = hwAtProgress(sp2, W, povTop, povBot, H);
+        const speedAlpha = 0.012 + sp1 * 0.04;
+        ctx.fillStyle = `rgba(255,248,235,${speedAlpha})`;
+        ctx.beginPath();
+        ctx.moveTo(sl1, sy1);
+        ctx.lineTo(sr1, sy1);
+        ctx.lineTo(sr2, sy2);
+        ctx.lineTo(sl2, sy2);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // ── HIT LINE BEAM ── neon horizontal bar at the hit zone
+      const beamGrad = ctx.createLinearGradient(hwBot.left, 0, hwBot.right, 0);
+      const beamColor = puColor ?? "rgba(255,248,235,0.7)";
+      const beamPulse = 0.7 + 0.3 * Math.sin(t * 6);
+      beamGrad.addColorStop(0, "transparent");
+      beamGrad.addColorStop(0.15, beamColor);
+      beamGrad.addColorStop(0.5, "rgba(255,255,255,0.9)");
+      beamGrad.addColorStop(0.85, beamColor);
+      beamGrad.addColorStop(1, "transparent");
+      ctx.globalAlpha = beamPulse * 0.45;
+      ctx.fillStyle = beamGrad;
+      ctx.fillRect(hwBot.left, hitY - 2, hwBot.right - hwBot.left, 4);
+      // Bloom glow under the beam
+      ctx.globalAlpha = beamPulse * 0.12;
+      ctx.shadowColor = puColor ?? "#fff";
+      ctx.shadowBlur = 20;
+      ctx.fillRect(hwBot.left, hitY - 1, hwBot.right - hwBot.left, 2);
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = 1;
+      ctx.shadowColor = "transparent";
+
+      // ── 3. TRACK EDGE RAILS ─────────────────────────────────────
+      const railColor = puColor ?? "rgba(255,248,235,0.55)";
+      const railGlow = puColor ? colorWithAlpha(puColor, 0.8) : "rgba(255,248,235,0.25)";
+
+      // Outer glow pass (thicker, blurred)
+      ctx.save();
+      ctx.shadowColor = puColor ?? "rgba(255,248,235,0.4)";
+      ctx.shadowBlur = 16;
+      const railGlowGrad = ctx.createLinearGradient(0, 0, 0, hitY);
+      railGlowGrad.addColorStop(0, "rgba(255,255,255,0.0)");
+      railGlowGrad.addColorStop(0.3, railGlow);
+      railGlowGrad.addColorStop(1, railColor);
+      ctx.strokeStyle = railGlowGrad;
+      ctx.lineWidth = 3;
+      // Left rail
+      ctx.beginPath();
+      ctx.moveTo(hwTop.left, 0);
+      ctx.lineTo(hwBot.left, hitY);
+      ctx.stroke();
+      // Right rail
+      ctx.beginPath();
+      ctx.moveTo(hwTop.right, 0);
+      ctx.lineTo(hwBot.right, hitY);
+      ctx.stroke();
+      ctx.restore();
+
+      // Inner bright core
+      const railCoreGrad = ctx.createLinearGradient(0, 0, 0, hitY);
+      railCoreGrad.addColorStop(0, "rgba(255,255,255,0.0)");
+      railCoreGrad.addColorStop(0.5, "rgba(255,255,255,0.3)");
+      railCoreGrad.addColorStop(1, "rgba(255,255,255,0.6)");
+      ctx.strokeStyle = railCoreGrad;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(hwTop.left, 0);
+      ctx.lineTo(hwBot.left, hitY);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(hwTop.right, 0);
+      ctx.lineTo(hwBot.right, hitY);
+      ctx.stroke();
     }
-    ctx.restore();
-
-    // ── HIT LINE BEAM ── neon horizontal bar at the hit zone
-    const beamGrad = ctx.createLinearGradient(hwBot.left, 0, hwBot.right, 0);
-    const beamColor = puColor ?? "rgba(255,248,235,0.7)";
-    const beamPulse = 0.7 + 0.3 * Math.sin(t * 6);
-    beamGrad.addColorStop(0, "transparent");
-    beamGrad.addColorStop(0.15, beamColor);
-    beamGrad.addColorStop(0.5, "rgba(255,255,255,0.9)");
-    beamGrad.addColorStop(0.85, beamColor);
-    beamGrad.addColorStop(1, "transparent");
-    ctx.globalAlpha = beamPulse * 0.45;
-    ctx.fillStyle = beamGrad;
-    ctx.fillRect(hwBot.left, hitY - 2, hwBot.right - hwBot.left, 4);
-    // Bloom glow under the beam
-    ctx.globalAlpha = beamPulse * 0.12;
-    ctx.shadowColor = puColor ?? "#fff";
-    ctx.shadowBlur = 20;
-    ctx.fillRect(hwBot.left, hitY - 1, hwBot.right - hwBot.left, 2);
-    ctx.shadowBlur = 0; // reset shadow
-    ctx.globalAlpha = 1;
-    ctx.shadowBlur = 0;
-    ctx.shadowColor = "transparent";
-
-    ctx.restore();
-
-    // ── 3. TRACK EDGE RAILS ─────────────────────────────────────
-    // Neon rails with strong glow
-    const railColor = puColor ?? "rgba(255,248,235,0.55)";
-    const railGlow = puColor ? colorWithAlpha(puColor, 0.8) : "rgba(255,248,235,0.25)";
-
-    // Outer glow pass (thicker, blurred)
-    ctx.save();
-    ctx.shadowColor = puColor ?? "rgba(255,248,235,0.4)";
-    ctx.shadowBlur = 16;
-    const railGlowGrad = ctx.createLinearGradient(0, 0, 0, hitY);
-    railGlowGrad.addColorStop(0, "rgba(255,255,255,0.0)");
-    railGlowGrad.addColorStop(0.3, railGlow);
-    railGlowGrad.addColorStop(1, railColor);
-    ctx.strokeStyle = railGlowGrad;
-    ctx.lineWidth = 3;
-    // Left rail
-    ctx.beginPath();
-    ctx.moveTo(hwTop.left, 0);
-    ctx.quadraticCurveTo(hwTop.left - hillBow, bowY, hwBot.left, hitY);
-    ctx.stroke();
-    // Right rail
-    ctx.beginPath();
-    ctx.moveTo(hwTop.right, 0);
-    ctx.quadraticCurveTo(hwTop.right + hillBow, bowY, hwBot.right, hitY);
-    ctx.stroke();
-    ctx.restore();
-
-    // Inner bright core
-    const railCoreGrad = ctx.createLinearGradient(0, 0, 0, hitY);
-    railCoreGrad.addColorStop(0, "rgba(255,255,255,0.0)");
-    railCoreGrad.addColorStop(0.5, "rgba(255,255,255,0.3)");
-    railCoreGrad.addColorStop(1, "rgba(255,255,255,0.6)");
-    ctx.strokeStyle = railCoreGrad;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(hwTop.left, 0);
-    ctx.quadraticCurveTo(hwTop.left - hillBow, bowY, hwBot.left, hitY);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(hwTop.right, 0);
-    ctx.quadraticCurveTo(hwTop.right + hillBow, bowY, hwBot.right, hitY);
-    ctx.stroke();
 
     // ── 4. POWER-UP SCREEN EDGE GLOW ───────────────────────────
     if (puActive && puColor) {
