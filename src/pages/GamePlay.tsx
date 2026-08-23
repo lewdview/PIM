@@ -2387,7 +2387,11 @@ export default function Game() {
   const jCounter = useRef(0);
   const lastLaneHitRef = useRef<Record<number, { ts: number; type: string }>>({});
   const judgmentOverlayRef = useRef<HTMLDivElement | null>(null);
+  const judgmentBannerRef = useRef<HTMLDivElement | null>(null);
   const judgmentStreamRef = useRef<HTMLDivElement | null>(null);
+  const lastInputModalityRef = useRef<'touch' | 'key' | 'gamepad'>(
+    typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0) ? 'touch' : 'key'
+  );
 
   const addJudgment = useCallback((newJ: JudgmentDisplay) => {
     const now = Date.now();
@@ -2404,28 +2408,49 @@ export default function Game() {
 
     // Zero-overhead direct DOM injection for 120Hz buttery smooth compositor animation
     if (optsRef.current?.judgmentText) {
-      if (judgmentOverlayRef.current) {
-        const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
-        const canvasW = canvasRef.current?.width ? canvasRef.current.width / dpr : 0;
-        if (canvasW > 0) {
-          const hwBot = hwAtProgress(1, canvasW);
-          const laneW = hwBot.width / LANE_COUNT;
-          const targetX = hwBot.left + (newJ.lane + 0.5) * laneW;
-          const targetPct = (targetX / canvasW) * 100;
+      const isTouch = lastInputModalityRef.current === 'touch';
 
-          const popEl = document.createElement('div');
-          popEl.className = 'absolute pointer-events-none judgment-pop';
-          popEl.style.left = `${targetPct}%`;
-          popEl.style.top = '70%';
-          popEl.innerHTML = getJudgmentBadgeSvgHtml(newJ.type, newJ.type === 'PERFECT+' ? 1.08 : 0.95, newJ.id);
-          
-          judgmentOverlayRef.current.appendChild(popEl);
-          popEl.addEventListener('animationend', () => {
-            if (popEl.parentNode) popEl.remove();
+      if (isTouch) {
+        // Touch Input Mode: Display central/upper judgment banner so fingers on lanes don't obscure it
+        if (judgmentBannerRef.current) {
+          const bannerEl = document.createElement('div');
+          bannerEl.className = 'absolute left-1/2 pointer-events-none judgment-banner-pop';
+          bannerEl.style.top = '22%';
+          bannerEl.innerHTML = getJudgmentBadgeSvgHtml(newJ.type, newJ.type === 'PERFECT+' ? 1.35 : 1.15, `banner_${newJ.id}`);
+          judgmentBannerRef.current.innerHTML = '';
+          judgmentBannerRef.current.appendChild(bannerEl);
+          bannerEl.addEventListener('animationend', () => {
+            if (bannerEl.parentNode) bannerEl.remove();
           }, { once: true });
           setTimeout(() => {
-            if (popEl.parentNode) popEl.remove();
-          }, 500);
+            if (bannerEl.parentNode) bannerEl.remove();
+          }, 520);
+        }
+      } else {
+        // Non-Touch Input Mode (Keyboard, Gamepad, Mouse): Display on-key / lane animation
+        if (judgmentOverlayRef.current) {
+          const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
+          const canvasW = canvasRef.current?.width ? canvasRef.current.width / dpr : 0;
+          if (canvasW > 0) {
+            const hwBot = hwAtProgress(1, canvasW);
+            const laneW = hwBot.width / LANE_COUNT;
+            const targetX = hwBot.left + (newJ.lane + 0.5) * laneW;
+            const targetPct = (targetX / canvasW) * 100;
+
+            const popEl = document.createElement('div');
+            popEl.className = 'absolute pointer-events-none judgment-pop';
+            popEl.style.left = `${targetPct}%`;
+            popEl.style.top = '70%';
+            popEl.innerHTML = getJudgmentBadgeSvgHtml(newJ.type, newJ.type === 'PERFECT+' ? 1.08 : 0.95, newJ.id);
+            
+            judgmentOverlayRef.current.appendChild(popEl);
+            popEl.addEventListener('animationend', () => {
+              if (popEl.parentNode) popEl.remove();
+            }, { once: true });
+            setTimeout(() => {
+              if (popEl.parentNode) popEl.remove();
+            }, 500);
+          }
         }
       }
 
@@ -3362,6 +3387,9 @@ export default function Game() {
   const hitLane = useCallback(
     (lane: number, direction?: Note['swipeDirection'], touchId?: number) => {
       if (phaseRef.current !== "playing") return;
+      if (touchId !== undefined) {
+        lastInputModalityRef.current = 'touch';
+      }
       restoreLane(lane);
       const t = getT();
       // PERF: O(window) search starting from sliding window pointer with zero array allocations (M10)
@@ -7658,6 +7686,7 @@ export default function Game() {
   const keysDownRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     const onDown = (e: KeyboardEvent) => {
+      lastInputModalityRef.current = 'key';
       if (e.repeat) return;
       const key = e.key;
       keysDownRef.current.add(key);
@@ -8289,6 +8318,11 @@ export default function Game() {
     (e: React.PointerEvent<HTMLCanvasElement>) => {
       usePointerEventsRef.current = true;
       e.preventDefault();
+      if (e.pointerType === 'touch') {
+        lastInputModalityRef.current = 'touch';
+      } else if (e.pointerType === 'mouse') {
+        lastInputModalityRef.current = 'key';
+      }
       const canvas = canvasRef.current;
       if (!canvas) return;
 
@@ -8475,6 +8509,7 @@ export default function Game() {
 
   const onTouchStart = useCallback(
     (e: React.TouchEvent<HTMLCanvasElement>) => {
+      lastInputModalityRef.current = 'touch';
       if (usePointerEventsRef.current) return;
       e.preventDefault();
       const canvas = canvasRef.current;
@@ -11635,9 +11670,14 @@ export default function Game() {
             </div>
           )}
 
-          {/* Floating Judgment Text Overlay Layer (Zero-React Re-render Direct DOM) */}
+          {/* Floating Judgment Text Overlay Layer (On-Key Animation for Non-Touch Input) */}
           {opts.judgmentText && (
             <div ref={judgmentOverlayRef} className="absolute inset-0 pointer-events-none overflow-hidden z-40" />
+          )}
+
+          {/* Floating Center Judgment Banner (Banner Animation for Touch Input) */}
+          {opts.judgmentText && (
+            <div ref={judgmentBannerRef} className="absolute inset-0 pointer-events-none overflow-hidden z-40" />
           )}
 
           {/* Right-Side Vertical Judgment Stream (Last 20 Judgments, Bottom-to-Top, Upper-Right Quadrant 3/4 from Bottom) */}
