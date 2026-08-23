@@ -11,26 +11,66 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+
+// ⚡ Bolt Optimization: Isolated component for time rendering to prevent parent re-renders
+function PlayerTime({ duration, effectiveDuration }: { duration: number; effectiveDuration: number }) {
+  const currentTime = useGlobalPlayer(s => s.currentTime);
+  return (
+    <>
+      {formatTime(currentTime)} / {formatTime(effectiveDuration)}
+    </>
+  );
+}
+
+// ⚡ Bolt Optimization: Isolated component for progress bar rendering
+function PlayerProgressBar({ accent, seek }: { accent: string; seek: (pct: number) => void }) {
+  const progress = useGlobalPlayer(s => s.progress);
+
+  const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    seek(pct);
+  };
+
+  return (
+    <div
+      onClick={handleSeek}
+      style={{
+        height: '3px',
+        background: 'rgba(255,255,255,0.06)',
+        cursor: 'pointer',
+        position: 'relative',
+      }}
+    >
+      <motion.div
+        style={{
+          height: '100%',
+          width: `${progress * 100}%`,
+          background: `linear-gradient(90deg, ${accent}, ${accent}cc)`,
+          boxShadow: `0 0 8px ${accent}60`,
+          transition: 'width 0.3s linear',
+        }}
+      />
+    </div>
+  );
+}
+
 export default function GlobalPlayerBar() {
+
   const [location, setLocation] = useLocation();
   const isMobile = useIsMobile();
-  const {
-    currentTrack,
-    playlist,
-    isPlaying,
-    progress,
-    currentTime,
-    duration,
-    loopMode,
-    shuffle,
-    toggle,
-    stop,
-    seek,
-    nextTrack,
-    previousTrack,
-    toggleShuffle,
-    setLoopMode,
-  } = useGlobalPlayer();
+  const currentTrack = useGlobalPlayer(s => s.currentTrack);
+  const isPlaying = useGlobalPlayer(s => s.isPlaying);
+  const duration = useGlobalPlayer(s => s.duration);
+  const loopMode = useGlobalPlayer(s => s.loopMode);
+  const shuffle = useGlobalPlayer(s => s.shuffle);
+  const toggle = useGlobalPlayer(s => s.toggle);
+  const stop = useGlobalPlayer(s => s.stop);
+  const seek = useGlobalPlayer(s => s.seek);
+  const nextTrack = useGlobalPlayer(s => s.nextTrack);
+  const previousTrack = useGlobalPlayer(s => s.previousTrack);
+  const toggleShuffle = useGlobalPlayer(s => s.toggleShuffle);
+  const setLoopMode = useGlobalPlayer(s => s.setLoopMode);
 
   const rc = currentTrack ? (RARITY_CONFIG[currentTrack.rarity as keyof typeof RARITY_CONFIG] || RARITY_CONFIG.common) : RARITY_CONFIG.common;
   const accent = rc?.color || '#ff3800';
@@ -38,11 +78,7 @@ export default function GlobalPlayerBar() {
   const effectiveDuration = limit > 0 ? limit : duration;
   const isPreview = limit > 0;
 
-  const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    seek(pct);
-  };
+
 
   const cycleLoopMode = () => {
     if (loopMode === 'all') setLoopMode('one');
@@ -73,26 +109,8 @@ export default function GlobalPlayerBar() {
         }}
         className="bottom-0"
       >
-        {/* Progress bar — clickable */}
-        <div
-          onClick={handleSeek}
-          style={{
-            height: '3px',
-            background: 'rgba(255,255,255,0.06)',
-            cursor: 'pointer',
-            position: 'relative',
-          }}
-        >
-          <motion.div
-            style={{
-              height: '100%',
-              width: `${progress * 100}%`,
-              background: `linear-gradient(90deg, ${accent}, ${accent}cc)`,
-              boxShadow: `0 0 8px ${accent}60`,
-              transition: 'width 0.3s linear',
-            }}
-          />
-        </div>
+        {/* Progress bar — isolated to prevent parent re-renders */}
+        <PlayerProgressBar accent={accent} seek={seek} />
 
         <div style={{
           display: 'flex',
@@ -161,7 +179,7 @@ export default function GlobalPlayerBar() {
                 fontSize: '8px',
                 color: 'rgba(255,255,255,0.3)',
               }}>
-                {formatTime(currentTime)} / {formatTime(effectiveDuration)}
+                <PlayerTime duration={duration} effectiveDuration={effectiveDuration} />
               </span>
               {isPreview && (
                 <span style={{
