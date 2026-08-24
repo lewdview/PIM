@@ -1,11 +1,9 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Crown, Medal, Radio, ChevronDown, ChevronUp, Sparkles, User } from 'lucide-react';
+import { Trophy, Radio, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
 import { useAuthStore } from '../store/useAuthStore';
 import { useVaultStore } from '../store/useVaultStore';
 import LeaderboardRow from './LeaderboardRow';
-import { getIdenticon } from '../utils/identicon';
 import '../styles/LeaderboardPage.css';
 
 interface SongLeaderEntry {
@@ -38,85 +36,6 @@ const MEDAL_COLORS: Record<string, string> = {
   BRONZE: '#C97A3A',
   NONE: '#666666',
 };
-
-interface CyberRivalTemplate {
-  handle: string;
-  skillPct: number;
-  accMin: number;
-  accMax: number;
-  comboPct: number;
-}
-
-const ARCADE_RIVALS: CyberRivalTemplate[] = [
-  { handle: 'STELLA_ECHO', skillPct: 0.996, accMin: 99.4, accMax: 100.0, comboPct: 1.0 },
-  { handle: 'NEO_VIPER', skillPct: 0.982, accMin: 98.7, accMax: 99.3, comboPct: 0.98 },
-  { handle: 'NEON_VALKYRIE', skillPct: 0.975, accMin: 98.3, accMax: 99.0, comboPct: 0.96 },
-  { handle: 'KITSUNE_99', skillPct: 0.965, accMin: 98.0, accMax: 98.6, comboPct: 0.95 },
-  { handle: 'CHRONO_JACK', skillPct: 0.948, accMin: 97.2, accMax: 97.9, comboPct: 0.91 },
-  { handle: 'CYBER_PULSE', skillPct: 0.932, accMin: 96.4, accMax: 97.1, comboPct: 0.87 },
-  { handle: 'QUANTUM_DRIFT', skillPct: 0.920, accMin: 95.8, accMax: 96.7, comboPct: 0.85 },
-  { handle: 'VOID_RUNNER', skillPct: 0.915, accMin: 95.5, accMax: 96.3, comboPct: 0.84 },
-  { handle: 'AURA_STRIKER', skillPct: 0.898, accMin: 94.6, accMax: 95.4, comboPct: 0.80 },
-  { handle: 'SUB_BASS_909', skillPct: 0.880, accMin: 93.8, accMax: 94.5, comboPct: 0.76 },
-  { handle: 'ZERO_BYTE', skillPct: 0.862, accMin: 92.8, accMax: 93.7, comboPct: 0.72 },
-  { handle: 'HYPER_GLITCH', skillPct: 0.840, accMin: 91.5, accMax: 92.7, comboPct: 0.68 },
-];
-
-function stringHash(str: string): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = (hash << 5) - hash + str.charCodeAt(i);
-    hash |= 0;
-  }
-  return Math.abs(hash);
-}
-
-function generateDeterministicRivals(
-  songId: string,
-  referenceScore?: number,
-  targetCount: number = 6
-): SongLeaderEntry[] {
-  const hash = stringHash(songId);
-  const dayMatch = songId.match(/\d+/);
-  const dayNum = dayMatch ? parseInt(dayMatch[0], 10) : 1;
-
-  // Base score target calibrated to the track and reference scores
-  const baseTarget = Math.max(
-    145000 + ((hash + dayNum * 31) % 65000),
-    typeof referenceScore === 'number' && referenceScore > 0 ? referenceScore * 0.99 : 0
-  );
-
-  const startIdx = hash % ARCADE_RIVALS.length;
-  const rivals: SongLeaderEntry[] = [];
-
-  for (let i = 0; i < targetCount; i++) {
-    const rival = ARCADE_RIVALS[(startIdx + i) % ARCADE_RIVALS.length];
-    const subHash = (hash * 37 + i * 19) % 1000;
-
-    const scoreMultiplier = rival.skillPct * (0.985 + (subHash % 30) / 1000);
-    const score = Math.round(baseTarget * scoreMultiplier);
-
-    const accVariance = ((subHash % 100) / 100) * (rival.accMax - rival.accMin);
-    const accuracy = Number((rival.accMin + accVariance).toFixed(1));
-
-    const maxCombo = Math.round((baseTarget / 580) * rival.comboPct);
-    const medal = accuracy >= 99.0 ? 'PLATINUM' : accuracy >= 96.0 ? 'GOLD' : accuracy >= 92.0 ? 'SILVER' : 'BRONZE';
-
-    rivals.push({
-      userId: `rival_${rival.handle.toLowerCase()}_${dayNum}_${i}`,
-      rank: 0,
-      displayName: rival.handle,
-      avatarUrl: null,
-      score,
-      accuracy,
-      maxCombo,
-      medal,
-      isYou: false,
-    });
-  }
-
-  return rivals;
-}
 
 export function getSongAliases(songId: string): string[] {
   const aliases = new Set<string>();
@@ -289,20 +208,13 @@ export default function SongLeaderboard({
         };
       });
 
-      // 4. Populate with deterministic cyber rivals if total records are below minimum arcade threshold
-      const maxScore = humanEntries.reduce((max, e) => Math.max(max, e.score), 0);
-      const neededRivals = Math.max(0, 8 - humanEntries.length);
-      const rivals = neededRivals > 0 ? generateDeterministicRivals(songId, maxScore, neededRivals) : [];
-
-      const combined: SongLeaderEntry[] = [...humanEntries, ...rivals];
-
-      // 5. Sort descending by score and assign final ranks
-      combined.sort((a, b) => b.score - a.score);
-      combined.forEach((entry, idx) => {
+      // 4. Sort descending by score and assign final ranks
+      humanEntries.sort((a, b) => b.score - a.score);
+      humanEntries.forEach((entry, idx) => {
         entry.rank = idx + 1;
       });
 
-      setEntries(combined);
+      setEntries(humanEntries);
     } catch (err) {
       console.warn('Error loading song leaderboard:', err);
     } finally {
