@@ -40,16 +40,29 @@ const PACK_LABELS: Record<string, string> = {
 };
 
 // ===== ADMIN GATE =====
-const ADMIN_PASSPHRASE = 'th3scr1b3';
 const ADMIN_AUTH_KEY = 'th3vault_admin_auth';
 
 function AdminGate({ onAuthenticate }: { onAuthenticate: () => void }) {
   const [input, setInput] = useState('');
   const [error, setError] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (input.toLowerCase() === ADMIN_PASSPHRASE) {
+
+    if (!window.crypto || !window.crypto.subtle) {
+      console.error("Web Crypto API not available. Secure context required.");
+      setError(true);
+      return;
+    }
+
+    const encoder = new TextEncoder();
+    const data = encoder.encode(input.toLowerCase());
+    const hashBuffer = await window.crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+    // Securely hash input and compare against expected hash instead of plaintext
+    if (hashHex === 'd58f380b169d36c2fe217dadc3caa620193197132b55ba52b0947882b78c4983') {
       sessionStorage.setItem(ADMIN_AUTH_KEY, 'true');
       onAuthenticate();
     } else {
@@ -3433,7 +3446,8 @@ export default function AdminPage() {
               setPushStatus('pushing');
               try {
                 const { supabase } = await import('../services/supabaseClient');
-                const passphrase = sessionStorage.getItem('th3vault_admin_pass') || prompt('Enter admin passphrase to push config:') || '';
+                // Do not read from insecure sessionStorage caching
+                const passphrase = prompt('Enter admin passphrase to push config:') || '';
                 const { data, error } = await supabase.functions.invoke('vault-engine', {
                   body: { action: 'updateAdminConfig', payload: { config, passphrase } }
                 });
