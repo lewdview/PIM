@@ -7639,8 +7639,11 @@ export default function Game() {
 
       // Score & Perfect+ Combo (Top Right)
       ctx.textAlign = "right";
-      ctx.fillStyle = "#39FF14";
       ctx.font = "900 18px monospace";
+      ctx.strokeStyle = "#000000";
+      ctx.lineWidth = 3;
+      ctx.strokeText(`${gs.score.toLocaleString()} PTS`, W - 18, 26);
+      ctx.fillStyle = "#39FF14";
       ctx.shadowColor = "#39FF14";
       ctx.shadowBlur = 12;
       ctx.fillText(`${gs.score.toLocaleString()} PTS`, W - 18, 26);
@@ -11336,7 +11339,14 @@ export default function Game() {
                     <span className="font-mono text-[8.5px] md:text-[9.5px] lg:text-[10.5px] tracking-[0.25em] text-zinc-400 font-black mb-1">
                       {currentStage === 5 ? "STAGE FINAL" : `STAGE ${currentStage}`}
                     </span>
-                    <span className="font-mono text-2xl md:text-3xl lg:text-4xl font-black text-white tracking-tight" style={{ textShadow: "0 0 12px rgba(255,255,255,0.5)" }}>
+                    <span
+                      className="font-mono text-2xl md:text-3xl lg:text-4xl font-black text-white tracking-tight"
+                      style={{
+                        WebkitTextStroke: "1.5px #000000",
+                        paintOrder: "stroke fill",
+                        textShadow: "-1.5px -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 1.5px 0 #000, 1.5px 1.5px 0 #000, 0 0 10px rgba(0,0,0,0.95), 0 2px 6px rgba(0,0,0,0.9)",
+                      }}
+                    >
                       <AnimatedScore score={gs.score} />
                     </span>
                     <span className={`font-mono text-[10.5px] md:text-[11.5px] lg:text-[12.5px] font-black mt-1 tracking-widest ${medalStyle.text}`} style={{ transition: "color 0.4s ease-in-out" }}>
