@@ -11293,7 +11293,7 @@ export default function Game() {
                     transition: "all 0.4s ease-in-out",
                   }}>
                     {/* SVG Stage Progress Ring */}
-                    <svg viewBox="0 0 128 128" className="absolute inset-0 w-full h-full -rotate-90">
+                    <svg viewBox="0 0 128 128" className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none z-0">
                       <circle
                         cx="64"
                         cy="64"
@@ -11336,11 +11336,11 @@ export default function Game() {
                       />
                     </svg>
 
-                    <span className="font-mono text-[8.5px] md:text-[9.5px] lg:text-[10.5px] tracking-[0.25em] text-zinc-400 font-black mb-1">
+                    <span className="relative z-10 font-mono text-[8.5px] md:text-[9.5px] lg:text-[10.5px] tracking-[0.25em] text-zinc-400 font-black mb-1">
                       {currentStage === 5 ? "STAGE FINAL" : `STAGE ${currentStage}`}
                     </span>
                     <span
-                      className="font-mono text-2xl md:text-3xl lg:text-4xl font-black text-white tracking-tight"
+                      className="relative z-20 font-mono text-2xl md:text-3xl lg:text-4xl font-black text-white tracking-tight"
                       style={{
                         WebkitTextStroke: "1.5px #000000",
                         paintOrder: "stroke fill",
@@ -11349,7 +11349,7 @@ export default function Game() {
                     >
                       <AnimatedScore score={gs.score} />
                     </span>
-                    <span className={`font-mono text-[10.5px] md:text-[11.5px] lg:text-[12.5px] font-black mt-1 tracking-widest ${medalStyle.text}`} style={{ transition: "color 0.4s ease-in-out" }}>
+                    <span className={`relative z-10 font-mono text-[10.5px] md:text-[11.5px] lg:text-[12.5px] font-black mt-1 tracking-widest ${medalStyle.text}`} style={{ transition: "color 0.4s ease-in-out" }}>
                       ×{m}
                     </span>
                   </div>
@@ -11371,7 +11371,7 @@ export default function Game() {
                       }}
                     >
                       {/* SVG Combo Circular Decay/Progress Ring */}
-                      <svg viewBox="0 0 96 96" className="absolute inset-0 w-full h-full -rotate-90">
+                      <svg viewBox="0 0 96 96" className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none z-0">
                         <circle
                           cx="48"
                           cy="48"
@@ -11399,7 +11399,7 @@ export default function Game() {
                         )}
                       </svg>
 
-                      <span className="font-mono text-[7.5px] md:text-[8.5px] lg:text-[9.5px] tracking-[0.2em] text-zinc-400 font-bold mb-0.5 uppercase">
+                      <span className="relative z-10 font-mono text-[7.5px] md:text-[8.5px] lg:text-[9.5px] tracking-[0.2em] text-zinc-400 font-bold mb-0.5 uppercase">
                         COMBO
                       </span>
                       {/* PERF: Removed key={gs.combo} which forced Framer Motion to unmount/remount
@@ -11407,7 +11407,7 @@ export default function Game() {
                       <motion.span
                         animate={{ scale: [1.35, 1.0] }}
                         transition={{ type: "spring", stiffness: 450, damping: 25 }}
-                        className="font-mono text-lg md:text-xl lg:text-2xl font-black text-white tracking-tight"
+                        className="relative z-20 font-mono text-lg md:text-xl lg:text-2xl font-black text-white tracking-tight"
                         style={{
                           textShadow: gs.combo > 0 ? `0 0 10px ${gs.combo >= 100 ? '#39FF14' : gs.combo >= 50 ? '#FF1493' : '#00E5FF'}` : 'none'
                         }}
