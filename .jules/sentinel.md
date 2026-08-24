@@ -1,0 +1,4 @@
+## 2025-02-23 - Hardcoded Admin Passphrase Removal and API Trade-offs
+**Vulnerability:** A plaintext administrative passphrase was hardcoded in several React components and automatically appended to a fire-and-forget backend API sync function (`vault-engine`).
+**Learning:** Automatically syncing client state to a backend endpoint that requires an admin password often tempts developers to hardcode the password for convenience. Client-side gating mechanisms are also frequently hardcoded in plaintext.
+**Prevention:** For client-side UI gating, always use client-side hashing (e.g., `crypto.subtle.digest`) rather than string comparison, and never cache the plaintext passphrase in `sessionStorage` or automated payloads. If a backend API requires a password and cannot be updated to use secure token-based auth, remove automated triggers and force explicit, manual user prompts for the passphrase.
