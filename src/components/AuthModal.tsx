@@ -9,7 +9,11 @@ interface AuthModalProps {
 }
 
 export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
-  const { signInWithWallet, signInWithProvider, signInWithMagicLink, status, error: storeError } = useAuthStore();
+  const signInWithWallet = useAuthStore(s => s.signInWithWallet);
+  const signInWithProvider = useAuthStore(s => s.signInWithProvider);
+  const signInWithMagicLink = useAuthStore(s => s.signInWithMagicLink);
+  const status = useAuthStore(s => s.status);
+  const storeError = useAuthStore(s => s.error);
   const [activeTab, setActiveTab] = useState<'wallet' | 'email'>('wallet');
   const [email, setEmail] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);

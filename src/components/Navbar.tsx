@@ -202,7 +202,11 @@ function TokenPill({ balance, compact = false }: { balance: number; compact?: bo
 // ── Main Navigation Component ─────────────────────────────────────────────────
 export default function Navbar() {
   const [location] = useLocation();
-  const { user, signOut, status, error: authError, setShowAuthModal } = useAuthStore();
+  const user = useAuthStore(s => s.user);
+  const signOut = useAuthStore(s => s.signOut);
+  const status = useAuthStore(s => s.status);
+  const authError = useAuthStore(s => s.error);
+  const setShowAuthModal = useAuthStore(s => s.setShowAuthModal);
   const isAnonymous = user?.is_anonymous ||
                       user?.app_metadata?.provider === 'anonymous' ||
                       (!user?.email && !user?.user_metadata?.wallet && !user?.user_metadata?.wallet_address);

@@ -226,7 +226,8 @@ export default function SlideshowPage() {
   const [saveMessage, setSaveMessage] = useState('');
 
   // Cloud store integration
-  const { settings, updateSettings } = useVaultStore();
+  const settings = useVaultStore(s => s.settings);
+  const updateSettings = useVaultStore(s => s.updateSettings);
 
   const cocoModelRef = useRef<any>(null);
 
