@@ -5,7 +5,9 @@ import { useLocation } from 'wouter';
 import { AlertCircle, X, ChevronRight, Zap } from 'lucide-react';
 
 export const SystemAlertBanner: React.FC = () => {
-  const { activeBanner, dismissBanner, markAsRead } = useNotificationStore();
+  const activeBanner = useNotificationStore(s => s.activeBanner);
+  const dismissBanner = useNotificationStore(s => s.dismissBanner);
+  const markAsRead = useNotificationStore(s => s.markAsRead);
   const user = useAuthStore((s) => s.user);
   const [location, setLocation] = useLocation();
 

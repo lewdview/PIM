@@ -882,7 +882,15 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
   const colorRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
 
   // Sync state with useVaultStore
-  const { tokenBalance, unlockedSkins, unlockSkin, echoPrestigeScore, updateSettings, updateProgression, updateCheats, packDesignStyle, setPackDesignStyle } = useVaultStore();
+  const tokenBalance = useVaultStore(s => s.tokenBalance);
+  const unlockedSkins = useVaultStore(s => s.unlockedSkins);
+  const unlockSkin = useVaultStore(s => s.unlockSkin);
+  const echoPrestigeScore = useVaultStore(s => s.echoPrestigeScore);
+  const updateSettings = useVaultStore(s => s.updateSettings);
+  const updateProgression = useVaultStore(s => s.updateProgression);
+  const updateCheats = useVaultStore(s => s.updateCheats);
+  const packDesignStyle = useVaultStore(s => s.packDesignStyle);
+  const setPackDesignStyle = useVaultStore(s => s.setPackDesignStyle);
 
   const [activeCardSkin, setActiveCardSkin] = useState('original');
   const [activeCardBack, setActiveCardBack] = useState('classic');

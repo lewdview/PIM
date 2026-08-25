@@ -78,7 +78,7 @@ const BUNDLE_TIERS: BundleTierConfig[] = [
 ];
 
 export default function TokenBundleShelf({ onPurchased, className = '' }: TokenBundleShelfProps) {
-  const { loadVaultData } = useVaultStore();
+  const loadVaultData = useVaultStore(s => s.loadVaultData);
   const [selectedBundle, setSelectedBundle] = useState<BundleTierConfig | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 

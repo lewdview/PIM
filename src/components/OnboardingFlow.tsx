@@ -44,7 +44,8 @@ export default function OnboardingFlow({ onComplete }: Props) {
   const [cards, setCards] = useState<OwnedCard[]>([]);
   const [loadError, setLoadError] = useState(false);
   const purchasedRef = useRef(false);
-  const { addToCollection, loadVaultData } = useVaultStore();
+  const addToCollection = useVaultStore(s => s.addToCollection);
+  const loadVaultData = useVaultStore(s => s.loadVaultData);
 
   // Track start of onboarding funnel
   useEffect(() => {

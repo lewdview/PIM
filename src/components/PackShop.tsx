@@ -801,7 +801,8 @@ export function PackBag(props: PackBagProps) {
 export default function PackShop({ onPurchase }: PackShopProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [freeClaimed, setFreeClaimed] = useState(false);
-  const { packDesignStyle, setPackDesignStyle } = useVaultStore();
+  const packDesignStyle = useVaultStore(s => s.packDesignStyle);
+  const setPackDesignStyle = useVaultStore(s => s.setPackDesignStyle);
   const x = useMotionValue(0);
   const total = PACK_CAROUSEL_ORDER.length;
 
