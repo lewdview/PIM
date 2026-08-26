@@ -467,7 +467,14 @@ export async function claimDailyCard(day: number): Promise<OwnedCard | null> {
     const { data: result, error } = await supabase.functions.invoke('vault-engine', {
       body: { action: 'claimDailyDrop', payload: { day } }
     });
-    if (error || !result?.success) return null;
+    if (error) {
+      console.error('[vaultService] claimDailyDrop invoke error:', error);
+      return null;
+    }
+    if (!result?.success) {
+      console.warn('[vaultService] claimDailyDrop error:', result?.error || result);
+      return null;
+    }
 
     const pool = await fetchAllCards();
     const parent = findCardWithFallback(pool, result.card.card_id, result.card.rarity);
@@ -485,7 +492,8 @@ export async function claimDailyCard(day: number): Promise<OwnedCard | null> {
       blockchainStatus: result.card.blockchain_status,
       fingerprint: result.card.fingerprint
     };
-  } catch {
+  } catch (err) {
+    console.error('[vaultService] claimDailyCard exception:', err);
     return null;
   }
 }
