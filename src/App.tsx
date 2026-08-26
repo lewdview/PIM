@@ -428,8 +428,16 @@ export default function App() {
     }
   }, [location]);
 
-  // If loading authentication state, show a clean loading screen
-  if (authStatus === 'idle' || authStatus === 'loading') {
+  // If loading authentication state, show a clean loading screen with a 2.5s timeout safeguard
+  const [authTimedOut, setAuthTimedOut] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setAuthTimedOut(true);
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (!authTimedOut && (authStatus === 'idle' || authStatus === 'loading')) {
     return (
       <div className="fixed inset-0 bg-[#050402] flex flex-col items-center justify-center">
         <div

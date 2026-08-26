@@ -56,6 +56,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ status: 'loading' });
     console.log('[Auth] Initializing with Redirect Token check...');
 
+    // Safeguard: Ensure auth initialization never hangs UI for more than 2.5 seconds
+    const safetyTimer = setTimeout(() => {
+      if (get().status === 'loading' || get().status === 'idle') {
+        console.warn('[Auth] Auth initialization timeout fallback reached. Unblocking app.');
+        set({ status: 'ready' });
+      }
+    }, 2500);
+
     // 1. Inspect URL for redirect tokens (hash fragments preferred, query params as fallback)
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
     const urlParams = new URLSearchParams(window.location.search);
