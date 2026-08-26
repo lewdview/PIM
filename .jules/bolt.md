@@ -1,0 +1,3 @@
+## 2025-02-20 - [Zustand High-Frequency Re-renders in GlobalPlayerBar]
+**Learning:** Optimizing Zustand subscriptions (e.g., \`useGlobalPlayer\`) with granular selectors is not enough if the component subscribes to frequently updating properties (like \`progress\` or \`currentTime\`). To prevent massive re-renders of complex parent components during high-frequency events (like \`timeupdate\`), extract the UI relying on those values into isolated child components that independently subscribe to the updates.
+**Action:** Always decouple fast-updating state from complex wrapper components by isolating the subscriptions inside leaf components.
