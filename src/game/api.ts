@@ -92,26 +92,51 @@ export function sanitizeMediaUrl(url: string): string {
 }
 
 export function getCandidateAudioUrls(primaryUrl: string, day?: number): string[] {
-  if (!primaryUrl) return [];
-  const list: string[] = [sanitizeMediaUrl(primaryUrl)];
+  const list: string[] = [];
   const dayNum = typeof day === 'number' ? day : 0;
-  
-  if (dayNum === 22 || primaryUrl.toLowerCase().includes('tightrope')) {
-    const base = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/releaseready`;
-    const candidates = [
-      `${base}/audio/january/22%20-%20Tightrope%2B.wav`,
-      `${base}/audio/january/tightrope%2B_2_mastered.wav`,
-      `${base}/audio/january/22%20-%20Tightrope.wav`,
-      `${base}/audio/january/22%20-%20tightrope%2B.wav`,
-      `${base}/audio/january/22%20-%20tightrope.wav`,
+  const mapped = dayNum ? (dayFileMap as any)[String(dayNum)] : null;
+
+  // 1. Prioritize fast streaming MP3 from CDN (https://th3scr1b3.art/)
+  if (mapped && mapped.audio) {
+    const mp3Path = mapped.audio.replace(/\.wav$/i, '.mp3');
+    const mp3CdnUrl = `https://th3scr1b3.art/${encodeURIComponent(mp3Path).replace(/%2F/g, '/')}`;
+    list.push(sanitizeMediaUrl(mp3CdnUrl));
+    const wavCdnUrl = `https://th3scr1b3.art/${encodeURIComponent(mapped.audio).replace(/%2F/g, '/')}`;
+    list.push(sanitizeMediaUrl(wavCdnUrl));
+  }
+
+  // 2. If primaryUrl provided, derive CDN version
+  if (primaryUrl) {
+    if (primaryUrl.includes('/audio/')) {
+      const subPath = primaryUrl.split('/audio/')[1];
+      if (subPath) {
+        const decoded = decodeURIComponent(subPath);
+        const mp3SubPath = decoded.replace(/\.wav$/i, '.mp3');
+        const cdnUrl = `https://th3scr1b3.art/audio/${encodeURIComponent(mp3SubPath).replace(/%2F/g, '/')}`;
+        const sanitizedCdn = sanitizeMediaUrl(cdnUrl);
+        if (!list.includes(sanitizedCdn)) list.push(sanitizedCdn);
+      }
+    }
+    const sanitizedPrimary = sanitizeMediaUrl(primaryUrl);
+    if (!list.includes(sanitizedPrimary)) list.push(sanitizedPrimary);
+  }
+
+  // 3. Fallback candidates for special cases (e.g. Tightrope)
+  if (dayNum === 22 || (primaryUrl && primaryUrl.toLowerCase().includes('tightrope'))) {
+    const tightropeCandidates = [
+      `https://th3scr1b3.art/audio/january/22%20-%20Tightrope%2B.mp3`,
+      `https://th3scr1b3.art/audio/january/22%20-%20Tightrope.mp3`,
+      `https://th3scr1b3.art/audio/january/tightrope%2B_2_mastered.mp3`,
+      `https://th3scr1b3.art/audio/january/22%20-%20Tightrope%2B.wav`,
     ];
-    for (const c of candidates) {
+    for (const c of tightropeCandidates) {
       const sanitized = sanitizeMediaUrl(c);
       if (!list.includes(sanitized)) {
         list.push(sanitized);
       }
     }
   }
+
   return list;
 }
 
