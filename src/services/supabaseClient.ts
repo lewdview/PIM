@@ -40,7 +40,10 @@ const getAuthOptions = () => {
       path: '/',
       sameSite: 'lax' as const,
       secure: true,
-    }
+    },
+    experimental: {
+      passkey: true,
+    },
   };
 };
 

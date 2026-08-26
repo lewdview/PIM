@@ -34,6 +34,9 @@ interface AuthState {
   signInWithEmail: (email: string, password: string) => Promise<{ error: string | null }>;
   signInWithProvider: (provider: string) => Promise<{ error: string | null }>;
   signInWithMagicLink: (email: string) => Promise<{ error: string | null }>;
+  signInWithPasskey: () => Promise<{ error: string | null }>;
+  registerPasskey: () => Promise<{ error: string | null; data?: any }>;
+  isPasskeySupported: () => boolean;
   ensureProfileAndWallet: (user: User) => Promise<void>;
 }
 
@@ -568,6 +571,63 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     set({ status: 'ready' });
     return { error: null };
+  },
+  isPasskeySupported: () => {
+    return (
+      typeof window !== 'undefined' &&
+      typeof window.PublicKeyCredential !== 'undefined' &&
+      typeof window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === 'function'
+    );
+  },
+  signInWithPasskey: async () => {
+    set({ error: null, status: 'loading' });
+    try {
+      console.log('[Auth] Initiating WebAuthn Passkey sign-in...');
+      const { data, error } = await supabase.auth.signInWithPasskey();
+      if (error) throw error;
+      if (!data?.session || !data?.user) {
+        throw new Error('Passkey verification failed: no session returned.');
+      }
+
+      set({
+        session: data.session,
+        user: data.user,
+        status: 'ready',
+        showAuthModal: false,
+      });
+
+      logAnalyticsEvent('passkey_login_success', { userId: data.user.id });
+
+      await get().ensureProfileAndWallet(data.user);
+      try {
+        await useVaultStore.getState().loadVaultData();
+      } catch (loadErr) {
+        console.warn('[Auth] loadVaultData failed:', loadErr);
+      }
+
+      return { error: null };
+    } catch (err: any) {
+      console.error('[Auth] signInWithPasskey error:', err);
+      const msg = err?.message || 'Passkey sign-in failed.';
+      set({ error: msg, status: 'ready' });
+      return { error: msg };
+    }
+  },
+  registerPasskey: async () => {
+    set({ error: null });
+    try {
+      console.log('[Auth] Initiating WebAuthn Passkey registration...');
+      const { data, error } = await supabase.auth.registerPasskey();
+      if (error) throw error;
+
+      logAnalyticsEvent('passkey_registered', { userId: get().user?.id });
+      return { error: null, data };
+    } catch (err: any) {
+      console.error('[Auth] registerPasskey error:', err);
+      const msg = err?.message || 'Passkey registration failed.';
+      set({ error: msg });
+      return { error: msg };
+    }
   },
   ensureProfileAndWallet: async (user: User) => {
     const userId = user.id;

@@ -57,7 +57,7 @@ const EASE_OUT: [number, number, number, number] = [0.22, 1, 0.36, 1];
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export default function ProfilePage() {
-  const { user, signOut } = useAuthStore();
+  const { user, signOut, registerPasskey, isPasskeySupported } = useAuthStore();
   const isAnonymous = user?.is_anonymous ?? false;
   const { collection, tokenBalance, totalPulls, streakCount, loadVaultData } = useVaultStore();
   const [, navigate] = useLocation();
@@ -67,6 +67,8 @@ export default function ProfilePage() {
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [palette, setPalette] = useState<ExtractedPalette>(getFallbackPalette());
   const [topCoverArt, setTopCoverArt] = useState<string>('/screenshots/06_rhythm_gameplay.png');
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
+  const [passkeyFeedback, setPasskeyFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // 3D Perspective Card Tilt
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
@@ -327,9 +329,61 @@ export default function ProfilePage() {
               <span className="text-white font-bold">{providerLabel(provider)}</span>
             </div>
 
-            <div className="flex justify-between items-center py-2">
+            <div className="flex justify-between items-center py-2 border-b border-white/5">
               <span className="text-white/40 uppercase tracking-wider">Session ID</span>
               <span className="text-white/40 font-mono text-[10px]">{user?.id || 'ANONYMOUS'}</span>
+            </div>
+
+            {/* Passkey Biometric Security Row */}
+            <div className="pt-2">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <span className="text-white font-bold block text-xs">Biometric Passkey</span>
+                  <span className="text-white/40 text-[10px]">
+                    {isPasskeySupported()
+                      ? 'Secure this device with Touch ID / Face ID'
+                      : 'WebAuthn not supported on this browser'}
+                  </span>
+                </div>
+
+                {user && (
+                  <button
+                    onClick={async () => {
+                      setPasskeyLoading(true);
+                      setPasskeyFeedback(null);
+                      audioManager.playSfx('tap_nav', 0.3);
+                      const res = await registerPasskey();
+                      if (res.error) {
+                        setPasskeyFeedback({ type: 'error', message: res.error });
+                      } else {
+                        audioManager.playSfx('reward_claim', 0.5);
+                        setPasskeyFeedback({
+                          type: 'success',
+                          message: 'Passkey enrolled successfully! You can now log in with 1 touch.',
+                        });
+                      }
+                      setPasskeyLoading(false);
+                    }}
+                    disabled={passkeyLoading || !isPasskeySupported()}
+                    className="px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wider bg-[#00E5FF]/10 border border-[#00E5FF]/30 text-[#00E5FF] hover:bg-[#00E5FF]/20 transition-all flex items-center gap-1.5 disabled:opacity-40 cursor-pointer"
+                  >
+                    <Fingerprint size={12} />
+                    {passkeyLoading ? 'Enrolling...' : 'Link Passkey'}
+                  </button>
+                )}
+              </div>
+
+              {passkeyFeedback && (
+                <div
+                  className={`mt-2 p-2 font-mono text-[10px] rounded border ${
+                    passkeyFeedback.type === 'success'
+                      ? 'bg-emerald-950/30 border-emerald-500/30 text-emerald-400'
+                      : 'bg-red-950/30 border-red-500/30 text-red-400'
+                  }`}
+                >
+                  {passkeyFeedback.message}
+                </div>
+              )}
             </div>
           </div>
         </section>

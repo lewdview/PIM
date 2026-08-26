@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Wallet, Mail, Lock, AlertTriangle, Key, Github } from 'lucide-react';
+import { X, Wallet, Mail, Lock, AlertTriangle, Key, Github, Fingerprint } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 
 interface AuthModalProps {
@@ -9,12 +9,29 @@ interface AuthModalProps {
 }
 
 export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
-  const { signInWithWallet, signInWithProvider, signInWithMagicLink, status, error: storeError } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<'wallet' | 'email'>('wallet');
+  const { signInWithWallet, signInWithProvider, signInWithMagicLink, signInWithPasskey, isPasskeySupported, status, error: storeError } = useAuthStore();
+  const [activeTab, setActiveTab] = useState<'passkey' | 'wallet' | 'email'>('passkey');
   const [email, setEmail] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [confirmationSent, setConfirmationSent] = useState(false);
+
+  const handlePasskeySignIn = async () => {
+    setLocalError(null);
+    setLoading(true);
+    try {
+      const res = await signInWithPasskey();
+      if (res?.error) {
+        setLocalError(res.error);
+      } else {
+        onClose();
+      }
+    } catch (err: any) {
+      setLocalError(err?.message || 'Passkey authentication failed');
+    } finally {
+      setLoading(false);
+    }
+  };
 
 
   const handleWalletConnect = async () => {
@@ -132,6 +149,18 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
           {/* Navigation tabs */}
           <div className="flex bg-white/2">
             <button
+              onClick={() => { setActiveTab('passkey'); setLocalError(null); setConfirmationSent(false); }}
+              className="flex-1 py-3 font-black text-xs uppercase tracking-wider text-center border-b-2 transition-all flex items-center justify-center gap-1.5"
+              style={{
+                borderColor: activeTab === 'passkey' ? '#ff3800' : 'transparent',
+                background: activeTab === 'passkey' ? 'rgba(255,56,0,0.03)' : 'transparent',
+                color: activeTab === 'passkey' ? '#fff' : 'rgba(255,255,255,0.4)',
+              }}
+            >
+              <Fingerprint size={13} />
+              Passkey
+            </button>
+            <button
               onClick={() => { setActiveTab('wallet'); setLocalError(null); setConfirmationSent(false); }}
               className="flex-1 py-3 font-black text-xs uppercase tracking-wider text-center border-b-2 transition-all flex items-center justify-center gap-1.5"
               style={{
@@ -159,7 +188,56 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
           {/* Content */}
           <div className="p-6">
-            {activeTab === 'wallet' ? (
+            {activeTab === 'passkey' ? (
+              <div className="space-y-5 text-center">
+                <p style={{
+                  fontFamily: '"JetBrains Mono", monospace',
+                  fontSize: '11px',
+                  color: 'rgba(255,255,255,0.5)',
+                  lineHeight: 1.6,
+                }}>
+                  Instant 1-touch sign in using Face ID, Touch ID, Windows Hello, or your hardware security key via Supabase WebAuthn.
+                </p>
+
+                <button
+                  onClick={handlePasskeySignIn}
+                  disabled={loading || status === 'loading'}
+                  className="w-full py-3.5 flex items-center justify-center gap-2 border-2 border-black font-black uppercase text-sm tracking-wider transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
+                  style={{
+                    background: '#ff3800',
+                    color: '#fff',
+                    boxShadow: '3px 3px 0 #000, 0 0 20px rgba(255,56,0,0.3)',
+                    fontFamily: '"Impact", "Arial Black", sans-serif',
+                  }}
+                >
+                  {loading || status === 'loading' ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Authenticating Biometrics...
+                    </>
+                  ) : (
+                    <>
+                      <Fingerprint size={16} />
+                      Sign In with Passkey / Face ID
+                    </>
+                  )}
+                </button>
+
+                <div className="pt-2">
+                  <span style={{
+                    fontFamily: '"JetBrains Mono", monospace',
+                    fontSize: '9px',
+                    color: '#00e5ff',
+                    background: 'rgba(0,229,255,0.06)',
+                    border: '1px solid rgba(0,229,255,0.18)',
+                    padding: '4px 8px',
+                    display: 'inline-block',
+                  }}>
+                    ✨ Fast, passwordless & phishing-resistant biometric auth
+                  </span>
+                </div>
+              </div>
+            ) : activeTab === 'wallet' ? (
               <div className="space-y-5 text-center">
                 <p style={{
                   fontFamily: '"JetBrains Mono", monospace',
