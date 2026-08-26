@@ -12,8 +12,18 @@ export interface LyricsWord {
   end: number;
 }
 
+export interface Stage {
+  stage: number;
+  name: string;
+  difficulty: string;
+  startTime: number;
+  endTime: number;
+  noteCount: number;
+}
+
 export interface GameSong {
   id: string;
+  uuid?: string;
   day: number;
   date: string;
   title: string;
@@ -27,6 +37,7 @@ export interface GameSong {
   audioUrl: string;
   coverArt: string | null;
   notes: Note[];
+  stages?: Stage[];
   key: string;
   genre: string[];
   difficultyLevel: number;
@@ -192,6 +203,16 @@ export async function loadCatalog(): Promise<GameSong[]> {
       const useLocal = (typeof localStorage !== 'undefined' && (localStorage.getItem('opt_useLocalFiles') === 'true' || localStorage.getItem('useLocalFiles') === 'true')) || 
                        (import.meta.env && import.meta.env.VITE_USE_LOCAL_FILES === 'true');
 
+      // Create static stage & metadata lookup map
+      const staticMap = new Map<number, any>();
+      if (Array.isArray(staticSongCatalog)) {
+        for (const item of staticSongCatalog) {
+          if (item && item.day) {
+            staticMap.set(item.day, item);
+          }
+        }
+      }
+
       // 1. Try Supabase first if configured and not forcing local
       if (supabase && !useLocal) {
         const { data, error } = await supabase
@@ -202,29 +223,35 @@ export async function loadCatalog(): Promise<GameSong[]> {
 
         if (!error && data && data.length > 0) {
           console.log('Fetched catalog from Supabase');
-          catalogCache = data.map((r) => resolveSongUrls({
-            id: r.id,
-            day: r.day,
-            date: r.date,
-            title: r.title || r.canonicalTitle || `Day ${r.day}`,
-            artist: 'TH3SCR1B3',
-            bpm: r.tempo || 100,
-            duration: Math.ceil(r.duration || 180),
-            mood: r.mood === 'light' ? 'light' : 'dark',
-            valence: r.valence ?? 0.5,
-            moodTags: Array.isArray(r.tags) ? r.tags.slice(0, 3) : [],
-            description: r.description || '',
-            audioUrl: r.storedAudioUrl,
-            coverArt: r.coverArt || null,
-            notes: [],
-            key: r.key || '',
-            genre: Array.isArray(r.genre) ? r.genre : [],
-            difficultyLevel: calcDifficulty(r.tempo || 100, r.valence ?? 0.5, 0, Math.ceil(r.duration || 180)),
-            unlock: {
-              card: `card-${r.day}`,
-              fragments: 10
-            }
-          }, false));
+          catalogCache = data.map((r) => {
+            const staticItem = staticMap.get(r.day);
+            const canonicalId = r.day ? `day-${String(r.day).padStart(3, '0')}` : r.id;
+            return resolveSongUrls({
+              id: canonicalId,
+              uuid: r.id,
+              day: r.day,
+              date: r.date,
+              title: r.title || r.canonicalTitle || staticItem?.title || `Day ${r.day}`,
+              artist: 'TH3SCR1B3',
+              bpm: r.tempo || staticItem?.bpm || 100,
+              duration: Math.ceil(r.duration || staticItem?.duration || 180),
+              mood: r.mood === 'light' ? 'light' : 'dark',
+              valence: r.valence ?? staticItem?.valence ?? 0.5,
+              moodTags: Array.isArray(r.tags) ? r.tags.slice(0, 3) : (staticItem?.moodTags || []),
+              description: r.description || staticItem?.description || '',
+              audioUrl: r.storedAudioUrl || staticItem?.audioUrl,
+              coverArt: r.coverArt || staticItem?.coverArt || null,
+              notes: staticItem?.notes || [],
+              stages: staticItem?.stages || [],
+              key: r.key || staticItem?.key || '',
+              genre: Array.isArray(r.genre) ? r.genre : (staticItem?.genre || []),
+              difficultyLevel: calcDifficulty(r.tempo || staticItem?.bpm || 100, r.valence ?? staticItem?.valence ?? 0.5, 0, Math.ceil(r.duration || staticItem?.duration || 180)),
+              unlock: {
+                card: `card-${r.day}`,
+                fragments: 10
+              }
+            }, false);
+          });
           return catalogCache;
         }
         if (error) console.error('Supabase fetch error:', error);
@@ -259,7 +286,7 @@ export async function loadCatalog(): Promise<GameSong[]> {
 
 export async function getSongById(id: string): Promise<GameSong | null> {
   const catalog = await loadCatalog();
-  let basicSong = catalog.find((s) => s.id === id);
+  let basicSong = catalog.find((s) => s.id === id || (s as any).uuid === id);
 
   if (!basicSong) {
     const match = id.match(/\d+/);
@@ -269,20 +296,61 @@ export async function getSongById(id: string): Promise<GameSong | null> {
     }
   }
 
+  if (!basicSong) {
+    // Check for tutorial / special IDs
+    if (['transmission-001', 'signal-rising', 'break-of-light'].includes(id)) {
+      basicSong = {
+        id,
+        day: 0,
+        date: '2026-01-01',
+        title: id === 'transmission-001' ? 'TRANSMISSION 001' : id === 'signal-rising' ? 'SIGNAL RISING' : 'BR34K OF LIGHT',
+        artist: 'TH3SCR1B3',
+        bpm: id === 'transmission-001' ? 82 : id === 'signal-rising' ? 120 : 145,
+        duration: 95,
+        mood: 'light',
+        valence: 0.5,
+        moodTags: ['ambient'],
+        description: 'Tutorial Transmission Track',
+        audioUrl: '',
+        coverArt: null,
+        notes: [],
+        key: 'C major',
+        genre: ['Electronic'],
+        difficultyLevel: id === 'transmission-001' ? 3 : id === 'signal-rising' ? 6 : 9,
+      };
+    }
+  }
+
   if (!basicSong) return null;
 
   try {
     const useLocal = (typeof localStorage !== 'undefined' && (localStorage.getItem('opt_useLocalFiles') === 'true' || localStorage.getItem('useLocalFiles') === 'true')) || 
                      (import.meta.env && import.meta.env.VITE_USE_LOCAL_FILES === 'true');
 
-    const fileId = basicSong.id.startsWith('day-') ? basicSong.id : `day-${String(basicSong.day).padStart(3, '0')}`;
-    const fetchId = basicSong.id.includes('-') && !basicSong.id.startsWith('day-') ? basicSong.id : fileId;
+    // Robust fetchId resolution for all 365 days and special tutorial tracks
+    let fetchId = '';
+    if (basicSong.day && basicSong.day >= 1 && basicSong.day <= 365) {
+      fetchId = `day-${String(basicSong.day).padStart(3, '0')}`;
+    } else if (['transmission-001', 'signal-rising', 'break-of-light'].includes(basicSong.id)) {
+      fetchId = basicSong.id;
+    } else if (basicSong.id.startsWith('day-')) {
+      fetchId = basicSong.id;
+    } else if (basicSong.day) {
+      fetchId = `day-${String(basicSong.day).padStart(3, '0')}`;
+    } else {
+      fetchId = basicSong.id;
+    }
 
     const res = await fetch(`/data/songs/${fetchId}.json`);
     if (!res.ok) throw new Error(`Failed to fetch song detail for ${fetchId}`);
     const fullDetail = await res.json();
 
-    return resolveSongUrls(fullDetail, useLocal);
+    return resolveSongUrls({
+      ...basicSong,
+      ...fullDetail,
+      stages: (fullDetail.stages && fullDetail.stages.length > 0) ? fullDetail.stages : (basicSong.stages || []),
+      notes: (fullDetail.notes && fullDetail.notes.length > 0) ? fullDetail.notes : (basicSong.notes || []),
+    }, useLocal);
   } catch (err) {
     console.error(`Failed to load full song detail for ${id}:`, err);
     return basicSong;
