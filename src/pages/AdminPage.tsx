@@ -479,7 +479,8 @@ export default function AdminPage() {
 
   // Save config
   const handleSave = useCallback(() => {
-    saveAdminConfig(config);
+    const passphrase = sessionStorage.getItem('th3vault_admin_pass') || prompt('Enter admin passphrase to save config:') || '';
+    saveAdminConfig(config, passphrase);
     setHasChanges(false);
     setSaveFlash(true);
     setTimeout(() => setSaveFlash(false), 1500);
