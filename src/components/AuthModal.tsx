@@ -9,8 +9,21 @@ interface AuthModalProps {
 }
 
 export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
-  const { signInWithWallet, signInWithProvider, signInWithMagicLink, signInWithPasskey, isPasskeySupported, status, error: storeError } = useAuthStore();
+  const { 
+    user,
+    signInWithWallet, 
+    signInWithProvider, 
+    signInWithMagicLink, 
+    signInWithPasskey, 
+    registerPasskey,
+    ensureProfileAndWallet,
+    isPasskeySupported, 
+    status, 
+    error: storeError 
+  } = useAuthStore();
   const [activeTab, setActiveTab] = useState<'passkey' | 'wallet' | 'email'>('passkey');
+  const [passkeyMode, setPasskeyMode] = useState<'signin' | 'create'>('create');
+  const [passkeySuccess, setPasskeySuccess] = useState<string | null>(null);
   const [email, setEmail] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -18,6 +31,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
   const handlePasskeySignIn = async () => {
     setLocalError(null);
+    setPasskeySuccess(null);
     setLoading(true);
     try {
       const res = await signInWithPasskey();
@@ -28,6 +42,34 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       }
     } catch (err: any) {
       setLocalError(err?.message || 'Passkey authentication failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreatePasskey = async () => {
+    setLocalError(null);
+    setPasskeySuccess(null);
+    setLoading(true);
+    try {
+      // 1. If not authenticated, ensure anonymous session first
+      if (!user) {
+        const { data: anonData, error: anonErr } = await (await import('../services/supabaseClient')).supabase.auth.signInAnonymously();
+        if (anonErr) throw anonErr;
+        if (anonData.session?.user) {
+          await ensureProfileAndWallet(anonData.session.user);
+        }
+      }
+      // 2. Register WebAuthn Passkey on this device
+      const res = await registerPasskey();
+      if (res?.error) {
+        setLocalError(res.error);
+      } else {
+        setPasskeySuccess('✨ Passkey created and linked to this device successfully! You can now log in anytime with 1 touch.');
+        (await import('../game/audio')).audioManager.playSfx('reward_claim', 0.5);
+      }
+    } catch (err: any) {
+      setLocalError(err?.message || 'Passkey registration failed. Please ensure your browser supports WebAuthn.');
     } finally {
       setLoading(false);
     }
@@ -189,39 +231,101 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
           {/* Content */}
           <div className="p-6">
             {activeTab === 'passkey' ? (
-              <div className="space-y-5 text-center">
+              <div className="space-y-4 text-center">
+                {/* Sub-mode selector */}
+                <div className="flex bg-black/40 p-1 border border-white/10 rounded-sm">
+                  <button
+                    onClick={() => { setPasskeyMode('create'); setLocalError(null); setPasskeySuccess(null); }}
+                    className="flex-1 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wider transition-all"
+                    style={{
+                      background: passkeyMode === 'create' ? '#ff3800' : 'transparent',
+                      color: passkeyMode === 'create' ? '#fff' : 'rgba(255,255,255,0.4)',
+                    }}
+                  >
+                    ✨ Create Passkey
+                  </button>
+                  <button
+                    onClick={() => { setPasskeyMode('signin'); setLocalError(null); setPasskeySuccess(null); }}
+                    className="flex-1 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wider transition-all"
+                    style={{
+                      background: passkeyMode === 'signin' ? '#ff3800' : 'transparent',
+                      color: passkeyMode === 'signin' ? '#fff' : 'rgba(255,255,255,0.4)',
+                    }}
+                  >
+                    🔑 Sign In
+                  </button>
+                </div>
+
                 <p style={{
                   fontFamily: '"JetBrains Mono", monospace',
                   fontSize: '11px',
                   color: 'rgba(255,255,255,0.5)',
                   lineHeight: 1.6,
                 }}>
-                  Instant 1-touch sign in using Face ID, Touch ID, Windows Hello, or your hardware security key via Supabase WebAuthn.
+                  {passkeyMode === 'create'
+                    ? 'Register your Face ID, Touch ID, or Windows Hello biometrics to create a passwordless passkey on this device.'
+                    : '1-touch instant biometric sign in using your registered Face ID, Touch ID, or hardware security key.'}
                 </p>
 
-                <button
-                  onClick={handlePasskeySignIn}
-                  disabled={loading || status === 'loading'}
-                  className="w-full py-3.5 flex items-center justify-center gap-2 border-2 border-black font-black uppercase text-sm tracking-wider transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50"
-                  style={{
-                    background: '#ff3800',
-                    color: '#fff',
-                    boxShadow: '3px 3px 0 #000, 0 0 20px rgba(255,56,0,0.3)',
-                    fontFamily: '"Impact", "Arial Black", sans-serif',
-                  }}
-                >
-                  {loading || status === 'loading' ? (
-                    <>
-                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Authenticating Biometrics...
-                    </>
-                  ) : (
-                    <>
-                      <Fingerprint size={16} />
-                      Sign In with Passkey / Face ID
-                    </>
-                  )}
-                </button>
+                {passkeySuccess ? (
+                  <div className="p-3 bg-emerald-950/40 border border-emerald-500/40 rounded text-emerald-400 font-mono text-xs space-y-3">
+                    <p>{passkeySuccess}</p>
+                    <button
+                      onClick={onClose}
+                      className="w-full py-2 bg-emerald-500 text-black font-black uppercase text-xs tracking-wider"
+                    >
+                      Continue to Vault
+                    </button>
+                  </div>
+                ) : passkeyMode === 'create' ? (
+                  <button
+                    onClick={handleCreatePasskey}
+                    disabled={loading || status === 'loading' || !isPasskeySupported()}
+                    className="w-full py-3.5 flex items-center justify-center gap-2 border-2 border-black font-black uppercase text-sm tracking-wider transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 cursor-pointer"
+                    style={{
+                      background: '#00E5FF',
+                      color: '#000',
+                      boxShadow: '3px 3px 0 #000, 0 0 20px rgba(0,229,255,0.3)',
+                      fontFamily: '"Impact", "Arial Black", sans-serif',
+                    }}
+                  >
+                    {loading || status === 'loading' ? (
+                      <>
+                        <div className="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                        Creating Biometric Passkey...
+                      </>
+                    ) : (
+                      <>
+                        <Fingerprint size={16} />
+                        Create Passkey / Face ID
+                      </>
+                    )}
+                  </button>
+                ) : (
+                  <button
+                    onClick={handlePasskeySignIn}
+                    disabled={loading || status === 'loading' || !isPasskeySupported()}
+                    className="w-full py-3.5 flex items-center justify-center gap-2 border-2 border-black font-black uppercase text-sm tracking-wider transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 cursor-pointer"
+                    style={{
+                      background: '#ff3800',
+                      color: '#fff',
+                      boxShadow: '3px 3px 0 #000, 0 0 20px rgba(255,56,0,0.3)',
+                      fontFamily: '"Impact", "Arial Black", sans-serif',
+                    }}
+                  >
+                    {loading || status === 'loading' ? (
+                      <>
+                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Authenticating Biometrics...
+                      </>
+                    ) : (
+                      <>
+                        <Fingerprint size={16} />
+                        Sign In with Passkey / Face ID
+                      </>
+                    )}
+                  </button>
+                )}
 
                 <div className="pt-2">
                   <span style={{

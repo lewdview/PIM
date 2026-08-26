@@ -57,7 +57,7 @@ const EASE_OUT: [number, number, number, number] = [0.22, 1, 0.36, 1];
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export default function ProfilePage() {
-  const { user, signOut, registerPasskey, isPasskeySupported } = useAuthStore();
+  const { user, signOut, registerPasskey, ensureProfileAndWallet, isPasskeySupported } = useAuthStore();
   const isAnonymous = user?.is_anonymous ?? false;
   const { collection, tokenBalance, totalPulls, streakCount, loadVaultData } = useVaultStore();
   const [, navigate] = useLocation();
@@ -346,31 +346,40 @@ export default function ProfilePage() {
                   </span>
                 </div>
 
-                {user && (
-                  <button
-                    onClick={async () => {
-                      setPasskeyLoading(true);
-                      setPasskeyFeedback(null);
-                      audioManager.playSfx('tap_nav', 0.3);
-                      const res = await registerPasskey();
-                      if (res.error) {
-                        setPasskeyFeedback({ type: 'error', message: res.error });
-                      } else {
-                        audioManager.playSfx('reward_claim', 0.5);
-                        setPasskeyFeedback({
-                          type: 'success',
-                          message: 'Passkey enrolled successfully! You can now log in with 1 touch.',
-                        });
+                <button
+                  onClick={async () => {
+                    setPasskeyLoading(true);
+                    setPasskeyFeedback(null);
+                    audioManager.playSfx('tap_nav', 0.3);
+                    if (!user) {
+                      const { data: anonData, error: anonErr } = await (await import('../services/supabaseClient')).supabase.auth.signInAnonymously();
+                      if (anonErr) {
+                        setPasskeyFeedback({ type: 'error', message: anonErr.message });
+                        setPasskeyLoading(false);
+                        return;
                       }
-                      setPasskeyLoading(false);
-                    }}
-                    disabled={passkeyLoading || !isPasskeySupported()}
-                    className="px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wider bg-[#00E5FF]/10 border border-[#00E5FF]/30 text-[#00E5FF] hover:bg-[#00E5FF]/20 transition-all flex items-center gap-1.5 disabled:opacity-40 cursor-pointer"
-                  >
-                    <Fingerprint size={12} />
-                    {passkeyLoading ? 'Enrolling...' : 'Link Passkey'}
-                  </button>
-                )}
+                      if (anonData.session?.user) {
+                        await ensureProfileAndWallet(anonData.session.user);
+                      }
+                    }
+                    const res = await registerPasskey();
+                    if (res.error) {
+                      setPasskeyFeedback({ type: 'error', message: res.error });
+                    } else {
+                      audioManager.playSfx('reward_claim', 0.5);
+                      setPasskeyFeedback({
+                        type: 'success',
+                        message: 'Passkey enrolled successfully! You can now log in with 1 touch.',
+                      });
+                    }
+                    setPasskeyLoading(false);
+                  }}
+                  disabled={passkeyLoading || !isPasskeySupported()}
+                  className="px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wider bg-[#00E5FF]/10 border border-[#00E5FF]/30 text-[#00E5FF] hover:bg-[#00E5FF]/20 transition-all flex items-center gap-1.5 disabled:opacity-40 cursor-pointer"
+                >
+                  <Fingerprint size={12} />
+                  {passkeyLoading ? 'Enrolling...' : 'Create & Link Passkey'}
+                </button>
               </div>
 
               {passkeyFeedback && (
