@@ -9,6 +9,7 @@ export const SUPABASE_URL = (
 
 export const SUPABASE_ANON_KEY = (
   import.meta.env.VITE_SUPABASE_ANON_KEY || 
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || 
   import.meta.env.SUPABASE_ANON_KEY || 
   import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 
   import.meta.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 
@@ -47,4 +48,11 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: getAuthOptions()
 });
 
-export const STORAGE_BASE = `${SUPABASE_URL}/storage/v1/object/public/releaseready/`;
+export const STORAGE_BASE = (
+  import.meta.env.VITE_STORAGE_BASE_URL ||
+  import.meta.env.VITE_R2_URL ||
+  import.meta.env.VITE_WASABI_URL ||
+  import.meta.env.VITE_MEDIA_BASE_URL ||
+  import.meta.env.STORAGE_BASE_URL ||
+  `${SUPABASE_URL}/storage/v1/object/public/releaseready/`
+).replace(/\/?$/, '/');

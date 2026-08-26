@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>PIM : th3v4ult — Official Brand Guidelines & Design System</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Outfit:wght@400;600;700;800;900&display=swap');
+
+    @page {
+      size: A4 portrait;
+      margin: 0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    body {
+      background-color: #000000;
+      color: #E4E4E7;
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 11pt;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      height: 297mm;
+      max-height: 297mm;
+      padding: 18mm 18mm;
+      position: relative;
+      background: #060404;
+      background-image: 
+        radial-gradient(circle at 100% 0%, rgba(255, 56, 0, 0.08) 0%, transparent 40%),
+        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 100% 100%, 8mm 8mm, 8mm 8mm;
+      page-break-after: always;
+      break-after: page;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* Page Header & Footer */
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 3.5mm;
+      margin-bottom: 5mm;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 7pt;
+      color: rgba(255, 255, 255, 0.4);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+
+    .page-header .brand-tag {
+      color: #FF3800;
+      font-weight: 700;
+    }
+
+    .page-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      padding-top: 3.5mm;
+      margin-top: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 7pt;
+      color: rgba(255, 255, 255, 0.3);
+      letter-spacing: 0.15em;
+    }
+
+    /* Typography & Titles */
+    h1, h2, h3, h4 {
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: -0.02em;
+    }
+
+    .section-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 7.5pt;
+      color: #FF3800;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      margin-bottom: 1.5mm;
+      display: block;
+    }
+
+    .section-title {
+      font-size: 18pt;
+      color: #FFFFFF;
+      line-height: 1.1;
+      margin-bottom: 3.5mm;
+      border-left: 3px solid #FF3800;
+      padding-left: 3mm;
+    }
+
+    .lead-p {
+      font-size: 9pt;
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 4mm;
+      line-height: 1.45;
+    }
+
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Cover Page Specifics */
+    .cover-page {
+      background: radial-gradient(circle at 75% 25%, rgba(255, 56, 0, 0.18) 0%, transparent 60%),
+                  radial-gradient(circle at 20% 80%, rgba(0, 229, 255, 0.1) 0%, transparent 50%),
+                  #030202;
+      padding: 22mm;
+      justify-content: space-between;
+    }
+
+    .cover-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      background: rgba(255, 56, 0, 0.1);
+      border: 1px solid #FF3800;
+      color: #FF3800;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 7.5pt;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    .cover-title-block {
+      margin-top: 12mm;
+      margin-bottom: 12mm;
+    }
+
+    .cover-subtitle {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10pt;
+      color: #00E5FF;
+      letter-spacing: 0.4em;
+      text-transform: uppercase;
+      margin-bottom: 4mm;
+    }
+
+    .cover-main-title {
+      font-size: 38pt;
+      line-height: 0.95;
+      font-weight: 900;
+      color: #FFFFFF;
+      text-transform: uppercase;
+      letter-spacing: -0.03em;
+      margin-bottom: 5mm;
+      text-shadow: 0 0 40px rgba(255, 56, 0, 0.3);
+    }
+
+    .cover-tagline {
+      font-size: 11pt;
+      color: rgba(255, 255, 255, 0.65);
+      font-weight: 400;
+      letter-spacing: 0.04em;
+      max-width: 140mm;
+      line-height: 1.45;
+    }
+
+    .cover-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4mm;
+      border-top: 1px solid rgba(255, 255, 255, 0.15);
+      padding-top: 6mm;
+    }
+
+    .meta-item .meta-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 6.5pt;
+      color: rgba(255, 255, 255, 0.4);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-bottom: 1mm;
+    }
+
+    .meta-item .meta-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8.5pt;
+      color: #FFFFFF;
+      font-weight: 700;
+    }
+
+    /* Component Blocks & Grids */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3.5mm;
+      margin-bottom: 3.5mm;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 3mm;
+      margin-bottom: 3.5mm;
+    }
+
+    .card-panel {
+      background: rgba(18, 18, 24, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 3.5mm;
+      position: relative;
+    }
+
+    .card-panel::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 4px;
+      background: #FF3800;
+    }
+
+    .card-panel h3 {
+      font-size: 9.5pt;
+      color: #FFFFFF;
+      margin-bottom: 1.5mm;
+      display: flex;
+      align-items: center;
+      gap: 1.5mm;
+    }
+
+    .card-panel p {
+      font-size: 7.5pt;
+      color: rgba(255, 255, 255, 0.65);
+      line-height: 1.4;
+    }
+
+    /* Color Swatches */
+    .swatch-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 3mm;
+      margin-bottom: 4mm;
+    }
+
+    .swatch-card {
+      background: #0C0C14;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      overflow: hidden;
+    }
+
+    .swatch-color {
+      height: 12mm;
+      position: relative;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.5);
+    }
+
+    .swatch-color .swatch-tag {
+      position: absolute;
+      bottom: 1.5mm;
+      right: 1.5mm;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 6pt;
+      font-weight: 700;
+      padding: 1px 4px;
+      background: rgba(0,0,0,0.7);
+      color: #fff;
+    }
+
+    .swatch-info {
+      padding: 2mm 2.5mm;
+    }
+
+    .swatch-name {
+      font-size: 8.5pt;
+      font-weight: 800;
+      color: #FFF;
+      margin-bottom: 0.5mm;
+      text-transform: uppercase;
+    }
+
+    .swatch-hex {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 7pt;
+      color: #00E5FF;
+      font-weight: 700;
+      margin-bottom: 0.5mm;
+    }
+
+    .swatch-role {
+      font-size: 6.5pt;
+      color: rgba(255, 255, 255, 0.45);
+      line-height: 1.25;
+    }
+
+    /* Tables */
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 7pt;
+      margin-bottom: 3.5mm;
+    }
+
+    table.data-table th {
+      background: rgba(255, 56, 0, 0.12);
+      border-bottom: 1px solid #FF3800;
+      color: #FFFFFF;
+      font-family: 'JetBrains Mono', monospace;
+      text-align: left;
+      padding: 2mm 2.5mm;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    table.data-table td {
+      padding: 1.8mm 2.5mm;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      color: rgba(255, 255, 255, 0.8);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    table.data-table tr:nth-child(even) td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    /* Typography Showcase */
+    .type-specimen {
+      background: #0A0A10;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 3.5mm;
+      margin-bottom: 3mm;
+    }
+
+    .type-name {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 7pt;
+      color: #FF3800;
+      letter-spacing: 0.2em;
+      margin-bottom: 1.5mm;
+    }
+
+    .type-sample-display {
+      font-family: 'Outfit', sans-serif;
+      font-size: 15pt;
+      font-weight: 900;
+      color: #FFFFFF;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      margin-bottom: 1mm;
+    }
+
+    .type-sample-mono {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9.5pt;
+      color: #00E5FF;
+      letter-spacing: 0.05em;
+    }
+
+    /* Button Mockups */
+    .sheared-btn-mock {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2mm 5mm;
+      background: #FF3800;
+      color: #FFFFFF;
+      font-family: 'Impact', 'Arial Black', sans-serif;
+      font-size: 9pt;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      border: 1.5px solid #000000;
+      box-shadow: 2px 2px 0px #000000;
+      clip-path: polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%);
+    }
+
+    .sheared-btn-cyan {
+      background: #00E5FF;
+      color: #000;
+    }
+
+    /* Callout Alert */
+    .callout {
+      border: 1px solid rgba(255, 184, 0, 0.4);
+      background: rgba(255, 184, 0, 0.05);
+      padding: 2.5mm 3.5mm;
+      margin-bottom: 3.5mm;
+      display: flex;
+      gap: 2.5mm;
+      align-items: flex-start;
+    }
+
+    .callout-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 7pt;
+      font-weight: 700;
+      color: #FFB800;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 0.5mm;
+    }
+
+    .callout-text {
+      font-size: 7pt;
+      color: rgba(255, 255, 255, 0.7);
+      line-height: 1.35;
+    }
+
+  </style>
+</head>
+<body>
+
+  <!-- ================= PAGE 1: COVER ================= -->
+  <div class="page cover-page">
+    <div class="cover-top">
+      <div class="status-badge">RC2 MASTER SPECIFICATION</div>
+      <div class="mono" style="font-size: 7pt; color: rgba(255,255,255,0.4); letter-spacing: 0.2em;">
+        CLASSIFICATION: INTERNAL // CORE
+      </div>
+    </div>
+
+    <div class="cover-title-block">
+      <div class="cover-subtitle">POETRY IN MOTION // TH3SCR1B3.ART</div>
+      <div class="cover-main-title">
+        PIM : TH3V4ULT<br>
+        BRAND STYLE GUIDE
+      </div>
+      <p class="cover-tagline">
+        Official Design System, Brand Identity, Visual Philosophy, Color Tokens, and Mechanics Specification for the Hybrid Live-Service Audio Collectibles Platform.
+      </p>
+    </div>
+
+    <div class="cover-meta-grid">
+      <div class="meta-item">
+        <div class="meta-label">TARGET ECOSYSTEM</div>
+        <div class="meta-value">BEATSTAR / TH3V4ULT</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">CORE CHAIN</div>
+        <div class="meta-value">BASE MAINNET (8453)</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">VERSION / BUILD</div>
+        <div class="meta-value">v2.1 / RC2-2026</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= PAGE 2: BRAND VISION & RETENTION ================= -->
+  <div class="page">
+    <div>
+      <div class="page-header">
+        <span>PIM : TH3V4ULT // BRAND GUIDELINES</span>
+        <span class="brand-tag">01 // CORE ARCHITECTURE</span>
+      </div>
+
+      <span class="section-num">SECTION 01</span>
+      <h2 class="section-title">VISION & THE RETENTION THESIS</h2>
+      <p class="lead-p">
+        PIM is a systems product bridging a high-precision HTML5 Canvas 3-lane rhythm game with an audio-reactive digital collectible card engine under an uncompromising technical brutalist aesthetic.
+      </p>
+
+      <div class="card-panel" style="margin-bottom: 4mm; border-color: rgba(255,56,0,0.3); background: rgba(255,56,0,0.03);">
+        <h3 style="color: #FF3800; font-size: 10pt;">THE RETENTION THESIS</h3>
+        <p style="font-family: 'JetBrains Mono', monospace; font-size: 8.5pt; color: #FFF; margin-top: 1.5mm; letter-spacing: 0.05em;">
+          MUSIC UNLOCKS GAMEPLAY &rarr; GAMEPLAY UNLOCKS OWNERSHIP &rarr; OWNERSHIP UNLOCKS STATUS
+        </p>
+      </div>
+
+      <div class="grid-3">
+        <div class="card-panel">
+          <h3 style="color: #00E5FF;">01. MUSIC</h3>
+          <p>
+            Engages players with 365 daily song drops (one for every day of the calendar year) accessed via deep links and chapter maps.
+          </p>
+        </div>
+        <div class="card-panel">
+          <h3 style="color: #39FF14;">02. GAMEPLAY</h3>
+          <p>
+            High accuracy (>70% Bronze to 100% Platinum) earns collectible card drops containing session stems, registry proofs, and card burn assets.
+          </p>
+        </div>
+        <div class="card-panel">
+          <h3 style="color: #E5B800;">03. OWNERSHIP</h3>
+          <p>
+            Players forge duplicates, elevate global prestige scores, showcase streaks, unlock 1-of-1 First Discoverer stamps, and bind to Base EVM wallets.
+          </p>
+        </div>
+      </div>
+
+      <div class="section-num" style="margin-top: 2.5mm;">THE THREE SIMULTANEOUS ECONOMIES</div>
+      <div class="grid-3">
+        <div class="card-panel">
+          <h3 style="font-size: 8.5pt;">THE SKILL ECONOMY</h3>
+          <p>Governed by millisecond timing windows, swipe precision, hold ribbon tracking, and unbroken combo multipliers up to 5x.</p>
+        </div>
+        <div class="card-panel">
+          <h3 style="font-size: 8.5pt;">THE SCARCITY ECONOMY</h3>
+          <p>Powered by global hard supply caps, rarity tiers (Common to Mythic), mintable vs. gameplay splits, and card burning sinks.</p>
+        </div>
+        <div class="card-panel">
+          <h3 style="font-size: 8.5pt;">THE SOCIAL ECONOMY</h3>
+          <p>Expressed through collection prestige points, global leaderboard telemetry, replay ghosts, and 1-of-1 First Discoverer certifications.</p>
+        </div>
+      </div>
+
+      <div class="callout">
+        <div>
+          <div class="callout-title">CORE AESTHETIC DIRECTIVE</div>
+          <div class="callout-text">
+            PIM rejects generic, soft, rounded SaaS interfaces in favor of <strong>Technical Brutalism meets High-Fidelity Cyber Neon</strong>. Think military HUDs, tactile synthesizer chassis, and glowing terminal telemetry.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-footer">
+      <span>TH3SCR1B3.ART // CONFIDENTIAL</span>
+      <span>PAGE 02</span>
+    </div>
+  </div>
+
+  <!-- ================= PAGE 3: COLOR PALETTE ================= -->
+  <div class="page">
+    <div>
+      <div class="page-header">
+        <span>PIM : TH3V4ULT // BRAND GUIDELINES</span>
+        <span class="brand-tag">02 // COLOR ARCHITECTURE</span>
+      </div>
+
+      <span class="section-num">SECTION 02</span>
+      <h2 class="section-title">COLOR PALETTE & TOKENS</h2>
+      <p class="lead-p">
+        The color system pairs deep monolithic darks with high-chroma neon accents keyed directly to gameplay tiers, lane channels, and rarity classes.
+      </p>
+
+      <div class="section-num">NEON ACCENT SYSTEM</div>
+      <div class="swatch-grid">
+        <div class="swatch-card">
+          <div class="swatch-color" style="background: #FF3800;">
+            <span class="swatch-tag">ACTION / OVERRIDE</span>
+          </div>
+          <div class="swatch-info">
+            <div class="swatch-name">Neon Orange / Core</div>
+            <div class="swatch-hex">#FF3800 / #FF5500</div>
+            <div class="swatch-role">Primary brand buttons, vault doors, critical overrides.</div>
+          </div>
+        </div>
+
+        <div class="swatch-card">
+          <div class="swatch-color" style="background: #00E5FF;">
+            <span class="swatch-tag">MIDS / UNCOMMON</span>
+          </div>
+          <div class="swatch-info">
+            <div class="swatch-name">Neon Cyan</div>
+            <div class="swatch-hex">#00E5FF</div>
+            <div class="swatch-role">Lane 1 (Mids audio), hold ribbon guides, Uncommon tier.</div>
+          </div>
+        </div>
+
+        <div class="swatch-card">
+          <div class="swatch-color" style="background: #39FF14;">
+            <span class="swatch-tag">RARE / SIGNAL LOCK</span>
+          </div>
+          <div class="swatch-info">
+            <div class="swatch-name">Neon Green</div>
+            <div class="swatch-hex">#39FF14</div>
+            <div class="swatch-role">Signal Lock combo states, active telemetry, Rare tier.</div>
+          </div>
+        </div>
+
+        <div class="swatch-card">
+          <div class="swatch-color" style="background: #E5B800;">
+            <span class="swatch-tag">FEVER / LEGENDARY</span>
+          </div>
+          <div class="swatch-info">
+            <div class="swatch-name">Power Gold</div>
+            <div class="swatch-hex">#E5B800 / #FFD700</div>
+            <div class="swatch-role">Fever mode aura, 7-day streak badges, Legendary tier.</div>
+          </div>
+        </div>
+
+        <div class="swatch-card">
+          <div class="swatch-color" style="background: #A855F7;">
+            <span class="swatch-tag">BASS / MYTHIC</span>
+          </div>
+          <div class="swatch-info">
+            <div class="swatch-name">Prismatic Purple</div>
+            <div class="swatch-hex">#A855F7</div>
+            <div class="swatch-role">Lane 0 (Bass audio), Mythic glow aura, Echo decay.</div>
+          </div>
+        </div>
+
+        <div class="swatch-card">
+          <div class="swatch-color" style="background: #FF1493;">
+            <span class="swatch-tag">SURGE / LIGHT</span>
+          </div>
+          <div class="swatch-info">
+            <div class="swatch-name">Hot Pink</div>
+            <div class="swatch-hex">#FF1493</div>
+            <div class="swatch-role">Surge 3x combo overdrive, primary play actions.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-num">BASE STRUCTURAL NEUTRALS</div>
+      <div class="grid-3">
+        <div class="swatch-card">
+          <div class="swatch-color" style="background: #000000; border: 1px solid #222;">
+            <span class="swatch-tag">BASE</span>
+          </div>
+          <div class="swatch-info">
+            <div class="swatch-name">Void Black</div>
+            <div class="swatch-hex">#000000</div>
+            <div class="swatch-role">Root background & 3D canvas viewport.</div>
+          </div>
+        </div>
+
+        <div class="swatch-card">
+          <div class="swatch-color" style="background: #0C0C14;">
+            <span class="swatch-tag">PANELS</span>
+          </div>
+          <div class="swatch-info">
+            <div class="swatch-name">Corridor Charcoal</div>
+            <div class="swatch-hex">#0C0C14 / #08080C</div>
+            <div class="swatch-role">Backdrop layout sections, modals & drawers.</div>
+          </div>
+        </div>
+
+        <div class="swatch-card">
+          <div class="swatch-color" style="background: #18181B;">
+            <span class="swatch-tag">GRIDS</span>
+          </div>
+          <div class="swatch-info">
+            <div class="swatch-name">Cyber Slate</div>
+            <div class="swatch-hex">#18181B / #27272A</div>
+            <div class="swatch-role">Grid lines, inactive slots, borders.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-footer">
+      <span>TH3SCR1B3.ART // CONFIDENTIAL</span>
+      <span>PAGE 03</span>
+    </div>
+  </div>
+
+  <!-- ================= PAGE 4: TYPOGRAPHY & UI MOTIFS ================= -->
+  <div class="page">
+    <div>
+      <div class="page-header">
+        <span>PIM : TH3V4ULT // BRAND GUIDELINES</span>
+        <span class="brand-tag">03 // TYPOGRAPHY & MOTIFS</span>
+      </div>
+
+      <span class="section-num">SECTION 03</span>
+      <h2 class="section-title">TYPOGRAPHY & GEOMETRIC MOTIFS</h2>
+      <p class="lead-p">
+        Typography establishes strict separation between high-impact aesthetic headlines and dense monospace telemetry readouts.
+      </p>
+
+      <div class="type-specimen">
+        <div class="type-name">DISPLAY & BRAND TITLES // OUTFIT (WEIGHT 800-900)</div>
+        <div class="type-sample-display">POETRY IN MOTION</div>
+        <p style="font-size: 7pt; color: rgba(255,255,255,0.5);">
+          Uppercase geometric sans-serif with wide tracking (0.2em - 0.5em). Used for logos, hero headlines, chapter banners, and rarity headers.
+        </p>
+      </div>
+
+      <div class="type-specimen">
+        <div class="type-name">METADATA & TELEMETRY // JETBRAINS MONO / ROBOTO MONO</div>
+        <div class="type-sample-mono">SCORE: 984,200 // ACC: 99.4% [PERFECT+]</div>
+        <p style="font-size: 7pt; color: rgba(255,255,255,0.5); margin-top: 1mm;">
+          Tabular figures, high readability under motion. Used for scores, timestamps, card IDs, audio Hz filters, and smart contract addresses.
+        </p>
+      </div>
+
+      <div class="section-num" style="margin-top: 3mm;">COMPONENT STYLING & GEOMETRIC UTILITIES</div>
+      
+      <div class="grid-2">
+        <div class="card-panel">
+          <h3 style="font-size: 8.5pt;">SHEARED ACTION BUTTONS</h3>
+          <p style="margin-bottom: 2.5mm;">
+            Utilizes CSS clip-path to enforce 8px polygon sheared corners.
+          </p>
+          <div style="display: flex; gap: 2.5mm; align-items: center;">
+            <div class="sheared-btn-mock">ENTER VAULT</div>
+            <div class="sheared-btn-mock sheared-btn-cyan">CONNECT</div>
+          </div>
+        </div>
+
+        <div class="card-panel">
+          <h3 style="font-size: 8.5pt;">GLASSMORPHIC SURFACES</h3>
+          <p>
+            <code class="mono" style="font-size: 6.5pt; color: #00E5FF;">backdrop-filter: blur(20px) saturate(1.4);</code><br>
+            Multi-layered depth with 1px semi-transparent borders (<code class="mono" style="font-size: 6pt;">rgba(255,255,255,0.08)</code>).
+          </p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card-panel">
+          <h3 style="font-size: 8.5pt;">CRT SCANLINES & VIGNETTES</h3>
+          <p>
+            Repeating 3px scanline gradient with <code class="mono" style="font-size: 6.5pt; color: #39FF14;">mix-blend-mode: multiply</code> to replicate arcade hardware monitors.
+          </p>
+        </div>
+
+        <div class="card-panel">
+          <h3 style="font-size: 8.5pt;">REMIX RUNE SIGNATURE ⚡</h3>
+          <p>
+            Ethereal glowing rune head. Hitting triggers stem isolation (vocals/bass), canvas palette inversion, and +1,000 bonus points.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-footer">
+      <span>TH3SCR1B3.ART // CONFIDENTIAL</span>
+      <span>PAGE 04</span>
+    </div>
+  </div>
+
+  <!-- ================= PAGE 5: ECONOMY & FORGE MATRIX ================= -->
+  <div class="page">
+    <div>
+      <div class="page-header">
+        <span>PIM : TH3V4ULT // BRAND GUIDELINES</span>
+        <span class="brand-tag">04 // ECONOMY & RARITY</span>
+      </div>
+
+      <span class="section-num">SECTION 04</span>
+      <h2 class="section-title">RARITY MATRIX & THE FORGE</h2>
+      <p class="lead-p">
+        Every collectible card is bound to strict hard supply limits, audio preview tiers, and on-chain mintable quotas on Base Mainnet.
+      </p>
+
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>RARITY TIER</th>
+            <th>COLOR ACCENT</th>
+            <th>GAMEPLAY CAP</th>
+            <th>MINTABLE CAP</th>
+            <th>BURN VALUE</th>
+            <th>AUDIO ACCESS</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong style="color: #9CA3AF;">COMMON</strong></td>
+            <td>Void Gray</td>
+            <td>2,000</td>
+            <td>0 (Off-Chain)</td>
+            <td>3 V⚡</td>
+            <td>15s Preview</td>
+          </tr>
+          <tr>
+            <td><strong style="color: #00E5FF;">UNCOMMON</strong></td>
+            <td>Neon Cyan</td>
+            <td>500</td>
+            <td>50</td>
+            <td>10 V⚡</td>
+            <td>60s Preview</td>
+          </tr>
+          <tr>
+            <td><strong style="color: #39FF14;">RARE</strong></td>
+            <td>Neon Green</td>
+            <td>100</td>
+            <td>25</td>
+            <td>30 V⚡</td>
+            <td>Full Track</td>
+          </tr>
+          <tr>
+            <td><strong style="color: #E5B800;">LEGENDARY</strong></td>
+            <td>Power Gold</td>
+            <td>10</td>
+            <td>3</td>
+            <td>80 V⚡</td>
+            <td>Full Track</td>
+          </tr>
+          <tr>
+            <td><strong style="color: #A855F7;">MYTHIC</strong></td>
+            <td>Prismatic Purple</td>
+            <td>1</td>
+            <td>1</td>
+            <td>200 V⚡</td>
+            <td>Full Track + Stems</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="section-num" style="margin-top: 2.5mm;">THE FORGE OPERATIONS</div>
+      <div class="grid-2">
+        <div class="card-panel">
+          <h3 style="color: #FF3800;">🔥 CARD BURNING</h3>
+          <p>
+            Deconstruct duplicate cards into <strong>V⚡ tokens</strong> to power targeted pulls and rarity upgrades.
+          </p>
+        </div>
+        <div class="card-panel">
+          <h3 style="color: #00E5FF;">⚡ TARGETED REQUISITION</h3>
+          <p>
+            Spend <strong>500 V⚡</strong> to guarantee pull any specific card from the 365-day release catalog.
+          </p>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="card-panel">
+          <h3 style="color: #E5B800;">⚗️ RARITY UPGRADE</h3>
+          <p>
+            Spend <strong>150 V⚡</strong> to upgrade an owned card to the next higher rarity tier.
+          </p>
+        </div>
+        <div class="card-panel">
+          <h3 style="color: #39FF14;">🧬 DUPLICATE FUSION</h3>
+          <p>
+            Combine <strong>3 identical copies</strong> (same song & rarity) to forge 1 guaranteed card of the next tier.
+          </p>
+        </div>
+      </div>
+
+      <div class="callout" style="margin-top: 1.5mm;">
+        <div>
+          <div class="callout-title">ECHO CARD GENERATIONAL DECAY</div>
+          <div class="callout-text">
+            Echo cards yield high instant prestige but experience decay across generations: Gen 0 (1.0x) &rarr; Gen 1 (0.6x) &rarr; Gen 2 (0.3x) &rarr; Gen 3+ (0.1x Entropy Death).
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page-footer">
+      <span>TH3SCR1B3.ART // CONFIDENTIAL</span>
+      <span>PAGE 05</span>
+    </div>
+  </div>
+
+  <!-- ================= PAGE 6: BRAND VOICE & SIGN-OFF ================= -->
+  <div class="page">
+    <div>
+      <div class="page-header">
+        <span>PIM : TH3V4ULT // BRAND GUIDELINES</span>
+        <span class="brand-tag">05 // VOICE & GOVERNANCE</span>
+      </div>
+
+      <span class="section-num">SECTION 05</span>
+      <h2 class="section-title">BRAND VOICE & GOVERNANCE</h2>
+      <p class="lead-p">
+        Every line of copywriting and UX text must reinforce the feeling of an elite, clandestine audio archive operative.
+      </p>
+
+      <div class="grid-2">
+        <div class="card-panel" style="border-color: rgba(57, 255, 20, 0.3);">
+          <h3 style="color: #39FF14;">APPROVED TERMINOLOGY (DO)</h3>
+          <p style="line-height: 1.55; font-size: 7pt;">
+            • <strong>Operative / Collector</strong> (Not "User" / "Customer")<br>
+            • <strong>TH3V4ULT / The Codex</strong> (Not "Library" / "Catalog")<br>
+            • <strong>Rip Packs / Daily Drop</strong> (Not "Loot Box" / "Reward")<br>
+            • <strong>Burn in The Forge</strong> (Not "Recycle" / "Sell")<br>
+            • <strong>Signal Lock / Overdrive</strong> (Not "Bonus Mode")<br>
+            • <strong>Remix Rune ⚡</strong> (Not "Power-up")
+          </p>
+        </div>
+
+        <div class="card-panel" style="border-color: rgba(255, 56, 0, 0.3);">
+          <h3 style="color: #FF3800;">PROHIBITED TROPES (DON'T)</h3>
+          <p style="line-height: 1.55; font-size: 7pt;">
+            • <strong>Soft, friendly pastel tones</strong> (Violates brutalist identity)<br>
+            • <strong>Rounded pill buttons</strong> (Always use sheared angles)<br>
+            • <strong>Corporate SaaS jargon</strong> ("Synergy", "Click here")<br>
+            • <strong>Pay-to-win mechanics</strong> (Skill drives ownership)<br>
+            • <strong>Generic Web3 crypto buzzwords</strong> ("To the moon", "HODL")<br>
+            • <strong>Unattributed audio degradation</strong> (Always reflect misses in DSP)
+          </p>
+        </div>
+      </div>
+
+      <div class="section-num" style="margin-top: 3.5mm;">SYSTEM AUTHENTICATION PROTOCOL</div>
+      <div class="card-panel" style="margin-bottom: 3.5mm;">
+        <h3 style="font-size: 9pt;">BASE MAINNET & PROGRESSIVE DECENTRALIZATION</h3>
+        <p style="font-size: 7.5pt; line-height: 1.45;">
+          • <strong>Target Chain:</strong> Base Mainnet (Chain ID <code class="mono" style="color: #00E5FF;">8453</code> / <code class="mono" style="color: #00E5FF;">0x2105</code>)<br>
+          • <strong>Smart Wallet Integration:</strong> Coinbase Smart Wallet with EIP-1271 signature validation and paymaster gas sponsorship.<br>
+          • <strong>Web2 Onboarding Fallback:</strong> Supabase Magic Link with local ephemeral client wallet generation ensures frictionless onboarding without wallet hurdles.
+        </p>
+      </div>
+
+      <div class="card-panel" style="text-align: center; padding: 5mm; background: rgba(255, 56, 0, 0.05); border-color: #FF3800;">
+        <div class="mono" style="font-size: 7pt; color: #FF3800; letter-spacing: 0.3em; margin-bottom: 1.5mm;">
+          // SPECIFICATION CERTIFIED //
+        </div>
+        <div style="font-family: 'Outfit', sans-serif; font-size: 13pt; font-weight: 900; color: #FFF; letter-spacing: 0.1em;">
+          PIM : TH3V4ULT — POETRY IN MOTION
+        </div>
+        <div class="mono" style="font-size: 7pt; color: rgba(255,255,255,0.4); margin-top: 1mm;">
+          TH3SCR1B3.ART • ALL RIGHTS RESERVED • 2026
+        </div>
+      </div>
+    </div>
+
+    <div class="page-footer">
+      <span>TH3SCR1B3.ART // CONFIDENTIAL</span>
+      <span>PAGE 06</span>
+    </div>
+  </div>
+
+</body>
+</html>

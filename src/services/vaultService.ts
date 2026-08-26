@@ -89,7 +89,8 @@ function resolveUrls(r: Partial<ReleaseItem>, rarity?: Rarity | string): { audio
     // Online mode: Correct URLs using database-storage mappings
     if (mapped) {
       if (mapped.audio) {
-        audioUrl = SUPABASE_BASE + encodeURIComponent(mapped.audio).replace(/%2F/g, '/');
+        const audioPath = mapped.audio.replace(/\.wav$/i, '.mp3');
+        audioUrl = SUPABASE_BASE + encodeURIComponent(audioPath).replace(/%2F/g, '/');
       }
       if (mapped.cover) {
         // Use verified path from day_file_map (most reliable)

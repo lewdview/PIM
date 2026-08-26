@@ -137,7 +137,8 @@ function resolveSongUrls(song: any, useLocal = false): GameSong {
   } else {
     if (mapped) {
       if (mapped.audio) {
-        audioUrl = SUPABASE_BASE + encodeURIComponent(mapped.audio).replace(/%2F/g, '/');
+        const audioPath = mapped.audio.replace(/\.wav$/i, '.mp3');
+        audioUrl = SUPABASE_BASE + encodeURIComponent(audioPath).replace(/%2F/g, '/');
       } else {
         audioUrl = FALLBACK_SYNTH_AUDIO;
       }
