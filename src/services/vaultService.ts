@@ -12,6 +12,7 @@ import {
 import { type BurnResult } from '../utils/echoSystem';
 import { supabase, STORAGE_BASE } from './supabaseClient';
 import dayFileMap from '../game/day_file_map.json';
+import staticCardCatalog from '../data/card_catalog.json';
 import { sanitizeMediaUrl } from '../game/api';
 import { useVaultStore } from '../store/useVaultStore';
 
@@ -335,9 +336,17 @@ export async function fetchAllCards(): Promise<VaultCard[]> {
   if (cardCache) return cardCache;
 
   try {
-    const res = await fetch('/data/card_catalog.json');
-    if (!res.ok) throw new Error('Failed to fetch card catalog');
-    const catalog: any[] = await res.json();
+    let catalog: any[] = [];
+    try {
+      const res = await fetch('/data/card_catalog.json');
+      if (res.ok) {
+        catalog = await res.json();
+      }
+    } catch {}
+
+    if (!catalog || !Array.isArray(catalog) || catalog.length === 0) {
+      catalog = staticCardCatalog as any[];
+    }
     
     // Resolve URLs dynamically
     const cards: VaultCard[] = catalog.map(c => {
@@ -360,7 +369,17 @@ export async function fetchAllCards(): Promise<VaultCard[]> {
     return cards;
   } catch (err) {
     console.error('[Vault] Failed to load card catalog:', err);
-    return [];
+    return (staticCardCatalog as any[]).map(c => {
+      const { audioUrl, coverUrl } = resolveUrls({
+        day: c.day,
+        title: c.title,
+        storageTitle: c.storageTitle,
+        mood: c.mood,
+        coverArt: c.coverUrl,
+        storedAudioUrl: c.audioUrl,
+      }, c.rarity);
+      return { ...c, audioUrl, coverUrl };
+    });
   }
 }
 

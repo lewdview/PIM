@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { STORAGE_BASE } from '../services/supabaseClient';
 import { getCurrentDay } from '../utils/dayCalc';
 import dayFileMap from './day_file_map.json';
+import staticSongCatalog from '../data/song_catalog.json';
 import { getHighScore as progGetHighScore, saveHighScore as progSaveHighScore } from './progress';
 
 export interface LyricsWord {
@@ -205,14 +206,25 @@ export async function loadCatalog(): Promise<GameSong[]> {
       }
 
       // 2. Load from local static catalog file
-      const r = await fetch('/data/song_catalog.json');
-      const catalog = await r.json();
+      let catalog: any[] = [];
+      try {
+        const r = await fetch('/data/song_catalog.json');
+        if (r.ok) {
+          catalog = await r.json();
+        }
+      } catch {}
+
+      if (!catalog || !Array.isArray(catalog) || catalog.length === 0) {
+        catalog = staticSongCatalog as any[];
+      }
+
       console.log(`Fetched catalog from song_catalog.json fallback (useLocal: ${useLocal})`);
       catalogCache = catalog.map((s: any) => resolveSongUrls(s, useLocal));
       return catalogCache;
     } catch (err) {
-      console.error('Failed to load catalog:', err);
-      return [];
+      console.error('Failed to load catalog, using direct static fallback:', err);
+      catalogCache = (staticSongCatalog as any[]).map((s: any) => resolveSongUrls(s, false));
+      return catalogCache;
     }
   })();
 
