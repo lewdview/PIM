@@ -384,7 +384,8 @@ export function saveAdminConfig(config: AdminConfig) {
 
   // Sync to backend (fire and forget)
   supabase.functions.invoke('vault-engine', {
-    body: { action: 'updateAdminConfig', payload: { config, passphrase: 'th3scr1b3' } }
+    // SECURITY: Use the passphrase stored during admin login instead of hardcoding it
+    body: { action: 'updateAdminConfig', payload: { config, passphrase: sessionStorage.getItem('th3vault_admin_pass') || '' } }
   }).catch(e => console.error("Failed to sync admin config to backend", e));
 
   // Append to history (keep last 20 entries)
