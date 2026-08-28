@@ -1,0 +1,3 @@
+## 2025-02-28 - Avoid Destructuring Zustand Stores for High-Frequency State Updates
+**Learning:** Destructuring a Zustand store (like \`const { progress, currentTime } = useStore()\`) causes the entire component to re-render whenever ANY value in the store updates. This is especially problematic for global audio players that dispatch \`timeupdate\` events many times per second.
+**Action:** When subscribing to high-frequency state like audio progress, always use granular selectors (e.g. \`useStore(s => s.progress)\`) AND extract the precise UI that needs the value into a memoized sub-component to prevent massive top-level re-renders.
