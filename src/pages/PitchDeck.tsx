@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Monitor, Layers, Trophy, Wallet, Zap, Clock, Play, Gift, Shield, 
   Sparkles, ChevronRight, ChevronLeft, Volume2, Key, Database, Cpu, 
-  ArrowRight, Activity, Flame, Coins, Eye, Terminal, RefreshCw, BarChart2
+  ArrowRight, Activity, Flame, Coins, Eye, Terminal, RefreshCw, BarChart2,
+  Disc, Award, Music
 } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { haptics } from '../utils/haptics';
@@ -28,12 +29,12 @@ export default function PitchDeck() {
   const nextSlide = useCallback(() => {
     haptics.lightTap();
     setCurrentSlide((prev) => (prev + 1) % totalSlides);
-  }, []);
+  }, [totalSlides]);
 
   const prevSlide = useCallback(() => {
     haptics.lightTap();
     setCurrentSlide((prev) => (prev - 1 + totalSlides) % totalSlides);
-  }, []);
+  }, [totalSlides]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -57,25 +58,25 @@ export default function PitchDeck() {
   const runAuthSimulation = async () => {
     haptics.lightTap();
     setAuthSimStep('check_network');
-    setAuthSimLogs(['[SYSTEM] Initializing wallet check...', '[SYSTEM] Fetching chain ID...']);
+    setAuthSimLogs(['[SYSTEM] Initializing wallet handshake...', '[SYSTEM] Fetching active Chain ID...']);
     
-    await new Promise((r) => setTimeout(r, 800));
-    setAuthSimLogs(prev => [...prev, '[WALLET] Connected. Address: 0x86d8b...459e', '[SYSTEM] Chain ID detected: 0x1 (Ethereum). Switch required.']);
+    await new Promise((r) => setTimeout(r, 700));
+    setAuthSimLogs(prev => [...prev, '[WALLET] Connected. Address: 0x86d8b...459e', '[SYSTEM] Chain ID detected: 0x1 (Ethereum Mainnet). Switch requested.']);
     
     await new Promise((r) => setTimeout(r, 600));
     setAuthSimStep('personal_sign');
-    setAuthSimLogs(prev => [...prev, '[SYSTEM] Switching to Base Mainnet (0x2105)...', '[WALLET] Switch complete.', '[SYSTEM] Sending signature request challenge...']);
+    setAuthSimLogs(prev => [...prev, '[SYSTEM] Switching to Base Mainnet (0x2105 / 8453)...', '[WALLET] Base network confirmed.', '[SYSTEM] Sending signature request challenge...']);
     
-    await new Promise((r) => setTimeout(r, 900));
-    setAuthSimLogs(prev => [...prev, '[WALLET] User signed message: "Sign in to th3vault on Base. Nonce: 1718293921000"', '[SYSTEM] Signature hash: 0x3d0af8c7b80...']);
+    await new Promise((r) => setTimeout(r, 800));
+    setAuthSimLogs(prev => [...prev, '[WALLET] User signed message: "Sign in to PIM on Base. Nonce: 1718293921000"', '[SYSTEM] Signature hash: 0x3d0af8c7b80...']);
     
     await new Promise((r) => setTimeout(r, 700));
     setAuthSimStep('eip1271');
-    setAuthSimLogs(prev => [...prev, '[SERVER] Invoking auth-smart-wallet Edge Function...', '[SERVER] Address is Contract: Checking EIP-1271 compatibility...', '[CONTRACT] Calling isValidSignature()...']);
+    setAuthSimLogs(prev => [...prev, '[SERVER] Invoking auth-smart-wallet Edge Function...', '[SERVER] Address is Contract: Checking EIP-1271 compatibility...', '[CONTRACT] Calling isValidSignature() on Base...']);
     
-    await new Promise((r) => setTimeout(r, 1000));
+    await new Promise((r) => setTimeout(r, 900));
     setAuthSimStep('success');
-    setAuthSimLogs(prev => [...prev, '[CONTRACT] Validation return: valid (0x1626ba7e)', '[SERVER] Creating user profile in profiles table...', '[SYSTEM] JWT Session established successfully! Access granted.']);
+    setAuthSimLogs(prev => [...prev, '[CONTRACT] Validation return: valid (0x1626ba7e)', '[SERVER] Upserting user profile into Supabase database...', '[SYSTEM] JWT Session established! Full Web3 access granted.']);
   };
 
   // Slide 6: Canvas Rhythm Engine simulation
@@ -90,7 +91,6 @@ export default function PitchDeck() {
     if (currentSlide !== 5) return;
     const interval = setInterval(() => {
       setNotes((prev) => {
-        // limit to 6 notes
         if (prev.length > 6) return prev;
         const lane = Math.floor(Math.random() * 3);
         const newNote = { id: nextNoteId.current++, lane, y: 0 };
@@ -110,7 +110,6 @@ export default function PitchDeck() {
           .map((n) => ({ ...n, y: n.y + 2.5 }))
           .filter((n) => {
             if (n.y > 100) {
-              // Note missed!
               setRhythmFeedback('MISS');
               setRhythmCombo(0);
               return false;
@@ -132,13 +131,11 @@ export default function PitchDeck() {
 
   const handleKeyPress = (lane: number) => {
     haptics.lightTap();
-    // Check if any note in the hit window (y between 78 and 92)
     setNotes((prev) => {
       let hit = false;
       const filtered = prev.filter((n) => {
         if (n.lane === lane && n.y >= 70 && n.y <= 95) {
           hit = true;
-          // Calculate rating
           const diff = Math.abs(n.y - 85);
           if (diff <= 3) {
             setRhythmFeedback('PERFECT+');
@@ -150,7 +147,7 @@ export default function PitchDeck() {
             setRhythmFeedback('GOOD');
             setRhythmCombo((c) => c + 1);
           }
-          return false; // remove note
+          return false;
         }
         return true;
       });
@@ -176,21 +173,21 @@ export default function PitchDeck() {
     setAudioSignalLevel(activeBands / 3);
   }, [bassMuted, midMuted, trebleMuted]);
 
-  // Slide 9: Onboarding Ephemeral state
+  // Slide 11: Onboarding Ephemeral state
   const [ephemeralSimStep, setEphemeralSimStep] = useState<0 | 1 | 2 | 3>(0);
   const [ephemeralKeyLogs, setEphemeralKeyLogs] = useState<string[]>([]);
   const runEphemeralSimulation = () => {
     haptics.lightTap();
     setEphemeralSimStep(1);
-    setEphemeralKeyLogs(['[WEB2] User enters email: collector@cyberpunk.io', '[SERVER] Creating standard Supabase account...']);
+    setEphemeralKeyLogs(['[WEB2] User registers with email: player@cyberpunk.io', '[SERVER] Creating user entry in Supabase Auth...']);
     setTimeout(() => {
       setEphemeralSimStep(2);
-      setEphemeralKeyLogs(prev => [...prev, '[LOCAL] Email registered successfully.', '[LOCAL] Ephemeral Keypair generated locally.', '[LOCAL] Public Address: 0x91Fda32...2e4f', '[LOCAL] Private Key saved in encrypted LocalStorage: th3vault_ephemeral_pkey_u83...']);
-    }, 1200);
+      setEphemeralKeyLogs(prev => [...prev, '[LOCAL] Auth token verified.', '[LOCAL] Ephemeral Keypair generated in browser.', '[LOCAL] Public Address: 0x91Fda32...2e4f', '[LOCAL] Private Key saved in encrypted LocalStorage: th3vault_ephemeral_pkey_u83...']);
+    }, 1100);
     setTimeout(() => {
       setEphemeralSimStep(3);
-      setEphemeralKeyLogs(prev => [...prev, '[SERVER] Writing public address to public.profiles table...', '[SYNC] Profile synced.', '[SYSTEM] Ephemeral credentials verified! User ready to claim daily card gaslessly.']);
-    }, 2400);
+      setEphemeralKeyLogs(prev => [...prev, '[SERVER] Writing public address to public.profiles table...', '[SYNC] Profile synced to Base Mainnet.', '[SYSTEM] Ephemeral credentials verified! User ready to claim daily card drops gaslessly.']);
+    }, 2200);
   };
 
   return (
@@ -198,7 +195,7 @@ export default function PitchDeck() {
       {/* SCANLINES & CYBERPUNK STATIC EFFECTS */}
       <div className="scanlines absolute inset-0 opacity-10 pointer-events-none z-10" />
 
-      {/* ambient glows */}
+      {/* AMBIENT GLOWS */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[20%] left-[10%] w-[500px] h-[500px] rounded-full blur-[160px] opacity-10"
           style={{ background: 'radial-gradient(circle, #ff3800, transparent 70%)' }} />
@@ -213,7 +210,7 @@ export default function PitchDeck() {
             <span className="font-mono font-black text-xs text-white">PIM</span>
           </div>
           <div>
-            <span className="font-mono font-black text-xs tracking-wider uppercase text-white">PIM // PITCh_DECk</span>
+            <span className="font-mono font-black text-xs tracking-wider uppercase text-white">PIM // PITCH_DECK</span>
             <span className="block text-[8px] font-mono text-[#ff3800] tracking-widest uppercase">POETRY IN MOTION ECOSYSTEM</span>
           </div>
         </div>
@@ -253,15 +250,15 @@ export default function PitchDeck() {
                     POETRY IN MOTION
                   </h1>
                   <p className="font-mono text-xs tracking-widest uppercase text-[#faf0d8]/60">
-                    A Hybrid HTML5 Canvas Rhythm Game & Digital Collectible Card Ecosystem Under a Brutalist Cyberpunk Aesthetic.
+                    A Hybrid HTML5 Canvas Rhythm Game & Digital Collectible Card Ecosystem Under a Technical Brutalist Cyberpunk Aesthetic.
                   </p>
                   <p className="text-xs text-[#faf0d8]/80 leading-relaxed max-w-md">
-                    PIM redirects gaming's retention loop by bridging skill-driven audio action with real-time asset ownership on the Base Mainnet. Live release tracks unlock interactive campaigns, structured token sinks, and community collections.
+                    PIM transforms gaming retention by bridging high-precision audio gameplay with verifiable digital asset ownership on Base. Daily song releases unlock interactive campaigns, structured token sinks, and community collections.
                   </p>
                   <div className="flex gap-4 pt-2">
                     <div className="flex flex-col border-l-2 border-[#ff3800] pl-3">
                       <span className="text-lg font-black font-mono leading-none">365</span>
-                      <span className="text-[8px] font-mono uppercase opacity-50 tracking-wider">DAILY STAGES</span>
+                      <span className="text-[8px] font-mono uppercase opacity-50 tracking-wider">DAILY TRACKS</span>
                     </div>
                     <div className="flex flex-col border-l-2 border-[#ffb800] pl-3">
                       <span className="text-lg font-black font-mono leading-none">BASE</span>
@@ -286,15 +283,15 @@ export default function PitchDeck() {
                     {[
                       {
                         title: "1. Music Unlocks Gameplay",
-                        desc: "Users navigate from TikTok, Spotify, or social channels deep-linked to a free playable arcade level for the daily catalog release."
+                        desc: "Players navigate from TikTok, Spotify, or social deep links directly to a free playable arcade level for each daily calendar release."
                       },
                       {
                         title: "2. Gameplay Unlocks Ownership",
-                        desc: "Reaching accuracy score thresholds (Bronze, Silver, Gold, Platinum) awards collectible gacha packs containing raw card stems and proof signatures."
+                        desc: "High accuracy runs (>70% Bronze, >85% Silver, >95% Gold, 100% Platinum) earn collectible Gacha packs containing card stems, audio registry proofs, and card burn assets."
                       },
                       {
                         title: "3. Ownership Unlocks Status",
-                        desc: "Players display card collections, climb leaderboards, burn items for V⚡ upgrades, and sign in on Base to solidify digital permanence."
+                        desc: "Players showcase card vaults, climb global leaderboards, burn duplicates for V⚡ upgrades, and bind collections to Base EVM wallets to permanently secure on-chain prestige."
                       }
                     ].map((step, idx) => (
                       <div 
@@ -324,7 +321,7 @@ export default function PitchDeck() {
                     THE TRI-ECONOMY
                   </h2>
                   <p className="text-xs text-[#faf0d8]/80 leading-relaxed">
-                    Ecosystem long-term viability requires interlocking incentives. PIM bridges skill, scarcity, and social mechanics into a unified loop.
+                    Ecosystem viability requires interlocking incentives. PIM bridges skill, scarcity, and social status into one seamless loop.
                   </p>
                   
                   <div className="flex gap-2 border-b border-white/10 pb-2">
@@ -353,18 +350,18 @@ export default function PitchDeck() {
                     >
                       {activeEconomy === 0 && (
                         <>
-                          <div className="text-xs font-bold text-[#c44dff] font-mono">DRIVEN BY PERFORMANCE & TIME ACCURACY</div>
+                          <div className="text-xs font-bold text-[#c44dff] font-mono">DRIVEN BY PERFORMANCE & TIMING ACCURACY</div>
                           <p className="text-[11px] text-[#faf0d8]/85 leading-relaxed">
-                            Accurate timing yields cards and packs. Audio degrades (Sonic Punishment) in real time on misses, creating deep sensory hooks that value player skill.
+                            Accurate timing earns card drops. Audio degrades (Sonic Punishment) in real time on misses, creating deep sensory feedback that rewards player mastery.
                           </p>
-                          <div className="text-[9px] font-mono text-white/50 uppercase">Key metrics: Combo Streak, Judgement window ms, Medal reward triggers</div>
+                          <div className="text-[9px] font-mono text-white/50 uppercase">Key metrics: Combo Streak, Judgment ms tolerances, Medal reward triggers</div>
                         </>
                       )}
                       {activeEconomy === 1 && (
                         <>
                           <div className="text-xs font-bold text-[#c44dff] font-mono">HARD PRINT SUPPLY LIMITS & SINK MECHANISMS</div>
                           <p className="text-[11px] text-[#faf0d8]/85 leading-relaxed">
-                            Enforces absolute scarcity limits (e.g. max 1 Mythic card printed). Users burn duplicate cards in the Forge to generate V⚡ tokens used for targeted card pulls and upgrades.
+                            Enforces hard scarcity limits (e.g. max 1 Mythic card printed). Players burn duplicate cards in the Forge to generate V⚡ tokens for targeted pulls and rarity upgrades.
                           </p>
                           <div className="text-[9px] font-mono text-white/50 uppercase">Key metrics: Card editions, Generational Echo entropy, V⚡ burn ratios</div>
                         </>
@@ -373,7 +370,7 @@ export default function PitchDeck() {
                         <>
                           <div className="text-xs font-bold text-[#c44dff] font-mono">LEADERBOARD PRESTIGE & VERIFIED PROVENANCE</div>
                           <p className="text-[11px] text-[#faf0d8]/85 leading-relaxed">
-                            Showcases early prestige. Rewards first-discoverers who earn Platinum medals. Tracks verified card histories on-chain, converting status into a social flex.
+                            Showcases prestige. Rewards first-discoverers who earn Platinum medals. Tracks verified card histories on-chain, converting status into a social flex.
                           </p>
                           <div className="text-[9px] font-mono text-white/50 uppercase">Key metrics: Leaderboard Rank, First Discoverer badges, Wallet showcases</div>
                         </>
@@ -391,7 +388,7 @@ export default function PitchDeck() {
                     CORE SYSTEM STACK
                   </h2>
                   <p className="text-xs text-[#faf0d8]/85 leading-relaxed">
-                    Designed as a modular, lightweight React monorepo using standard tools. All transaction logic is processed server-authoritatively inside sandboxed Edge Functions.
+                    A lightweight React 19 monorepo using pnpm workspaces. All economy and claim logic executes server-authoritatively inside sandboxed Deno Edge Functions.
                   </p>
                   
                   <div className="grid grid-cols-2 gap-3">
@@ -408,7 +405,7 @@ export default function PitchDeck() {
                         <Volume2 size={14} className="text-[#00f0ff]" />
                         <span className="font-mono font-bold text-[10px] uppercase">Audio/Canvas</span>
                       </div>
-                      <span className="text-[10px] text-[#faf0d8]/60 mt-1">Split-frequency crossover Web Audio nodes (low/band/highpass), Canvas Draw Loops.</span>
+                      <span className="text-[10px] text-[#faf0d8]/60 mt-1">3-band crossover Web Audio DSP (low/band/highpass), 60fps Canvas 3D Highway.</span>
                     </div>
 
                     <div className="p-3 border border-white/5 bg-[#faf0d8]/5 flex flex-col justify-between">
@@ -416,7 +413,7 @@ export default function PitchDeck() {
                         <Database size={14} className="text-[#00f0ff]" />
                         <span className="font-mono font-bold text-[10px] uppercase">Data Layer</span>
                       </div>
-                      <span className="text-[10px] text-[#faf0d8]/60 mt-1">Supabase DB (profiles, collections, game records), strict Row Level Security rules.</span>
+                      <span className="text-[10px] text-[#faf0d8]/60 mt-1">Supabase DB (profiles, collections, records, 365 seeded releases), strict RLS rules.</span>
                     </div>
 
                     <div className="p-3 border border-white/5 bg-[#faf0d8]/5 flex flex-col justify-between">
@@ -424,7 +421,7 @@ export default function PitchDeck() {
                         <Cpu size={14} className="text-[#00f0ff]" />
                         <span className="font-mono font-bold text-[10px] uppercase">Edge Compute</span>
                       </div>
-                      <span className="text-[10px] text-[#faf0d8]/60 mt-1">Deno Supabase Edge Functions (`vault-engine`, `auth-smart-wallet`).</span>
+                      <span className="text-[10px] text-[#faf0d8]/60 mt-1">Deno Supabase Edge Functions (`vault-engine`, `auth-smart-wallet`, `stripe-webhook`).</span>
                     </div>
                   </div>
                 </>
@@ -438,7 +435,7 @@ export default function PitchDeck() {
                     SMART AUTH PIPELINE
                   </h2>
                   <p className="text-xs text-[#faf0d8]/85 leading-relaxed">
-                    Uses cryptographically secure EVM signature flows. Supports standard browser extensions or Coinbase Smart Wallet accounts on the **Base Mainnet (Chain ID 8453)**.
+                    Cryptographically secure EVM signature flows. Supports standard browser extensions or Coinbase Smart Wallet accounts on the **Base Mainnet (Chain ID 8453)**.
                   </p>
                   
                   <div className="space-y-2 text-[11px]">
@@ -448,11 +445,11 @@ export default function PitchDeck() {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center font-mono text-[9px] text-white">2</span>
-                      <span className="text-[#faf0d8]/80 font-mono">Smart Wallet check triggers contract-based EIP-1271 call</span>
+                      <span className="text-[#faf0d8]/80 font-mono">Smart Wallet check triggers contract-based EIP-1271 verification</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="w-4 h-4 rounded-full bg-white/10 flex items-center justify-center font-mono text-[9px] text-white">3</span>
-                      <span className="text-[#faf0d8]/80 font-mono">Server parses valid sig & issues JWT credentials</span>
+                      <span className="text-[#faf0d8]/80 font-mono">Server validates signature & issues authenticated JWT session</span>
                     </div>
                   </div>
 
@@ -473,7 +470,7 @@ export default function PitchDeck() {
                     PERSPECTIVE RHYTHM LOOP
                   </h2>
                   <p className="text-xs text-[#faf0d8]/85 leading-relaxed">
-                    HTML5 canvas loop calculates approach times and maps 3D note coordinates down onto a perspective highway. 
+                    60fps HTML5 canvas loop calculates approach times and projects 3D note coordinates down onto a perspective highway. 
                   </p>
 
                   <div className="space-y-2">
@@ -482,21 +479,21 @@ export default function PitchDeck() {
                       <span className="text-white font-bold">Perfect+ (30ms) · Perfect (55ms) · Good (100ms)</span>
                     </div>
                     <div className="flex justify-between items-center text-xs font-mono border-b border-white/5 pb-1">
-                      <span className="opacity-50">Score multiplier:</span>
-                      <span className="text-[#ffb800] font-bold">Caps scale by track (LIGHT 3x, DARK 4x, VOID 5x)</span>
+                      <span className="opacity-50">Score Multiplier:</span>
+                      <span className="text-[#ffb800] font-bold">LIGHT (3x) · DARK (4x) · VOID (5x)</span>
                     </div>
                     <div className="flex justify-between items-center text-xs font-mono">
-                      <span className="opacity-50">Power-Ups:</span>
-                      <span className="text-[#ff007f] font-bold">FEVER (20x Combo) · SURGE (40x Auto-play hold)</span>
+                      <span className="opacity-50">Overdrive Modes:</span>
+                      <span className="text-[#ff007f] font-bold">FEVER (20x) · SURGE (40x Auto-Assist) · SIGNAL LOCK (60x)</span>
                     </div>
                   </div>
 
                   <div className="p-3 border border-white/10 bg-white/[0.01] rounded">
-                    <p className="text-[10px] font-mono text-white/40 uppercase mb-2">Keyboard test controls</p>
+                    <p className="text-[10px] font-mono text-white/40 uppercase mb-2">Interactive lane test controls</p>
                     <div className="flex gap-2">
-                      <button onClick={() => handleKeyPress(0)} className="flex-1 py-1.5 bg-white/5 hover:bg-white/15 border border-white/10 rounded font-mono text-[10px] text-white cursor-pointer">Left (A)</button>
-                      <button onClick={() => handleKeyPress(1)} className="flex-1 py-1.5 bg-white/5 hover:bg-white/15 border border-white/10 rounded font-mono text-[10px] text-white cursor-pointer">Center (S)</button>
-                      <button onClick={() => handleKeyPress(2)} className="flex-1 py-1.5 bg-white/5 hover:bg-white/15 border border-white/10 rounded font-mono text-[10px] text-white cursor-pointer">Right (D)</button>
+                      <button onClick={() => handleKeyPress(0)} className="flex-1 py-1.5 bg-white/5 hover:bg-white/15 border border-white/10 rounded font-mono text-[10px] text-white cursor-pointer">Lane 0 (A)</button>
+                      <button onClick={() => handleKeyPress(1)} className="flex-1 py-1.5 bg-white/5 hover:bg-white/15 border border-white/10 rounded font-mono text-[10px] text-white cursor-pointer">Lane 1 (S)</button>
+                      <button onClick={() => handleKeyPress(2)} className="flex-1 py-1.5 bg-white/5 hover:bg-white/15 border border-white/10 rounded font-mono text-[10px] text-white cursor-pointer">Lane 2 (D)</button>
                     </div>
                   </div>
                 </>
@@ -563,12 +560,12 @@ export default function PitchDeck() {
               {/* SLIDE 8: ECONOMY REBALANCE V2.1 */}
               {currentSlide === 7 && (
                 <>
-                  <DeckSectionLabel label="07 // Tokenomics" accent="#00f0ff" />
+                  <DeckSectionLabel label="07 // Tokenomics & Forge" accent="#00f0ff" />
                   <h2 className="text-3xl md:text-5xl font-black font-mono tracking-tighter uppercase leading-tight">
                     VELOCITY TOKENOMICS
                   </h2>
                   <p className="text-xs text-[#faf0d8]/85 leading-relaxed">
-                    Balance daily farming loops with collector supply preservation. PIM implements separate limits for Gameplay Copies vs Mintable Base tokens.
+                    Balances daily farming loops with long-term scarcity preservation. PIM implements separate limits for Gameplay Copies vs Mintable Base tokens.
                   </p>
 
                   <div className="p-3 border border-white/5 bg-[#0d0d0d] rounded">
@@ -598,34 +595,34 @@ export default function PitchDeck() {
               {/* SLIDE 9: TRACTION & PRODUCTION METRICS */}
               {currentSlide === 8 && (
                 <>
-                  <DeckSectionLabel label="08 // Performance & Traction" accent="#ff3800" />
+                  <DeckSectionLabel label="08 // Performance & Telemetry" accent="#ff3800" />
                   <h2 className="text-3xl md:text-5xl font-black font-mono tracking-tighter uppercase leading-tight">
                     LIVE SERVICE TRACTION
                   </h2>
                   <p className="text-xs text-[#faf0d8]/85 leading-relaxed">
-                    PIM operates as a live systems-driven game. The following metrics are aggregated directly from the Base-linked Supabase production database:
+                    PIM operates as a live systems-driven game. The following metrics are aggregated directly from the production Supabase database:
                   </p>
                   
                   <div className="grid grid-cols-2 gap-3 font-mono text-[11px]">
                     <div className="p-3 border border-white/5 bg-[#faf0d8]/5 flex flex-col justify-between">
-                      <span className="opacity-50 text-[8px] uppercase">Registered Users</span>
-                      <span className="text-base font-black text-[#ffb800]">146 PLAYERS</span>
+                      <span className="opacity-50 text-[8px] uppercase">Registered Profiles</span>
+                      <span className="text-base font-black text-[#ffb800]">900+ PLAYERS</span>
                     </div>
                     <div className="p-3 border border-white/5 bg-[#faf0d8]/5 flex flex-col justify-between">
-                      <span className="opacity-50 text-[8px] uppercase">Ecosystem Timeframe</span>
-                      <span className="text-base font-black text-white">53 LIVE DAYS</span>
+                      <span className="opacity-50 text-[8px] uppercase">Gameplay Records</span>
+                      <span className="text-base font-black text-white">10,764+ RUNS</span>
                     </div>
                     <div className="p-3 border border-white/5 bg-[#faf0d8]/5 flex flex-col justify-between">
-                      <span className="opacity-50 text-[8px] uppercase">Collectibles Minted</span>
-                      <span className="text-base font-black text-[#c44dff]">421 CARDS</span>
+                      <span className="opacity-50 text-[8px] uppercase">Vault Collectibles</span>
+                      <span className="text-base font-black text-[#c44dff]">630+ CARDS</span>
                     </div>
                     <div className="p-3 border border-white/5 bg-[#faf0d8]/5 flex flex-col justify-between">
-                      <span className="opacity-50 text-[8px] uppercase">Token Velocity</span>
-                      <span className="text-base font-black text-[#00f0ff]">31,077 V⚡ CIRC.</span>
+                      <span className="opacity-50 text-[8px] uppercase">365 Catalog Status</span>
+                      <span className="text-base font-black text-[#00f0ff]">365 SEEDED (CDN)</span>
                     </div>
                   </div>
                   <p className="text-[9.5px] opacity-40 leading-relaxed font-mono uppercase">
-                    Verification: 467 total gacha pulls completed, including 231 V⚡ pack purchases and 1 duplicate fusion processed.
+                    Verification: 416+ global supply counters recorded, 320k+ V⚡ tokens circulated, and 0 security regressions on Base Mainnet.
                   </p>
                 </>
               )}
@@ -638,14 +635,14 @@ export default function PitchDeck() {
                     THE FOUNDER: TH3SCR1B3
                   </h2>
                   <p className="text-xs text-[#faf0d8]/85 leading-relaxed">
-                    PIM is architected and composed by **TH3SCR1B3**, a multi-disciplinary music artist, software engineer, and digital creator.
+                    PIM is architected, composed, and engineered by **TH3SCR1B3**, a multi-disciplinary music artist, software engineer, and digital creator.
                   </p>
 
                   <div className="space-y-3 text-[11px] font-mono leading-relaxed">
                     <div className="border-l-2 border-[#ff3800] pl-3">
                       <strong className="text-white block uppercase">365 Songs in 365 Days</strong>
                       <span className="text-[#faf0d8]/60 text-[10px]">
-                        Composing, producing, and releasing a new original track every single day for an entire year, using the PIM game engine as the primary release platform.
+                        Composing, producing, and releasing a new original track every single day for an entire year, using the PIM game engine as the primary release highway.
                       </span>
                     </div>
                     
@@ -662,7 +659,7 @@ export default function PitchDeck() {
               {/* SLIDE 11: PROGRESSIVE DECENTRALIZATION & FIAT */}
               {currentSlide === 10 && (
                 <>
-                  <DeckSectionLabel label="10 // User Onboarding" accent="#ff3800" />
+                  <DeckSectionLabel label="10 // Frictionless Onboarding" accent="#ff3800" />
                   <h2 className="text-3xl md:text-5xl font-black font-mono tracking-tighter uppercase leading-tight">
                     WEB2 TO WEB3 BRIDGE
                   </h2>
@@ -677,17 +674,17 @@ export default function PitchDeck() {
                         <span>LOCAL EPHEMERAL KEYS</span>
                       </div>
                       <span className="text-[10px] text-[#faf0d8]/60 leading-relaxed">
-                        Email sign-up automatically creates a local, user-scoped EVM wallet. Keys are stored in browser localStorage. Claims run gaslessly on the backend.
+                        Email sign-up automatically creates a local, user-scoped EVM wallet. Keys are stored in browser localStorage. Claims execute gaslessly on the backend.
                       </span>
                     </div>
 
                     <div className="p-3 border border-white/5 bg-[#faf0d8]/5 flex flex-col gap-1">
                       <div className="flex items-center gap-1.5 font-bold text-white uppercase">
                         <Coins size={12} className="text-[#ff3800]" />
-                        <span>MOCK STRIPE INTERCEPT</span>
+                        <span>STRIPE FIAT ONRAMP INTERCEPT</span>
                       </div>
                       <span className="text-[10px] text-[#faf0d8]/60 leading-relaxed">
-                        Purchasing packs with credit cards intercepts web3 execution, routing users through a stripe redirect mock checkout to mint assets directly into their local profiles.
+                        Purchasing packs with credit cards routes users through Stripe mock/live checkouts to mint assets directly into their local profiles.
                       </span>
                     </div>
                   </div>
@@ -697,25 +694,25 @@ export default function PitchDeck() {
               {/* SLIDE 12: ROADMAP */}
               {currentSlide === 11 && (
                 <>
-                  <DeckSectionLabel label="11 // Future Roadmap" accent="#ffb800" />
+                  <DeckSectionLabel label="11 // Strategic Vision" accent="#ffb800" />
                   <h2 className="text-3xl md:text-5xl font-black font-mono tracking-tighter uppercase leading-tight">
                     THE ROADMAP
                   </h2>
                   <p className="text-xs text-[#faf0d8]/85 leading-relaxed">
-                    Moving from a canvas music portal to an immersive, living virtual collector ecosystem.
+                    Moving from a canvas music portal to an immersive, multi-platform collector ecosystem.
                   </p>
 
                   <div className="relative border-l border-[#ffb800]/30 pl-4 ml-1 space-y-4 font-mono text-[11px]">
                     <div className="relative">
                       <div className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-[#ffb800] border-2 border-black" />
                       <div className="font-bold text-white uppercase">PHASE 1: ONBOARDING STRATA</div>
-                      <span className="text-[9px] text-[#faf0d8]/60">Segmenting game menus to gradually ease user complexity (Casual &gt; Regular &gt; Collector &gt; Hardcore).</span>
+                      <span className="text-[9px] text-[#faf0d8]/60">Segmenting game modes to gradually onboard users (Casual &gt; Regular &gt; Collector &gt; Hardcore).</span>
                     </div>
 
                     <div className="relative">
                       <div className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-[#ffb800] border-2 border-black" />
                       <div className="font-bold text-white uppercase">PHASE 2: PROVENANCE MEMORIES</div>
-                      <span className="text-[9px] text-[#faf0d8]/60">Writing permanent discoverer and score stamps into card Metadata parameters.</span>
+                      <span className="text-[9px] text-[#faf0d8]/60">Writing permanent discoverer and score stamps into card on-chain metadata.</span>
                     </div>
 
                     <div className="relative">
@@ -726,8 +723,8 @@ export default function PitchDeck() {
 
                     <div className="relative">
                       <div className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-[#ffb800] border-2 border-black" />
-                      <div className="font-bold text-white uppercase">PHASE 4: THE LIVING VAULT</div>
-                      <span className="text-[9px] text-[#faf0d8]/60">Implementing fragmented 3D card shards on background shelves, unlocking hidden passages.</span>
+                      <div className="font-bold text-white uppercase">PHASE 4: THE LIVING VAULT & TAURI DESKTOP</div>
+                      <span className="text-[9px] text-[#faf0d8]/60">Interactive 3D card fragment synthesis, Steam Deck/Tauri native releases, and living vault galleries.</span>
                     </div>
                   </div>
                 </>
@@ -775,7 +772,7 @@ export default function PitchDeck() {
                   {[
                     { label: "STAGE 1: MUSIC DISCOVERY", color: "#ff3800", active: activeLoopStep === 0, desc: "TikTok / Spotify deep link redirects to Stage" },
                     { label: "STAGE 2: GAMEPLAY & SKILL", color: "#ffb800", active: activeLoopStep === 1, desc: "Accurate note hits trigger card pack rewards" },
-                    { label: "STAGE 3: STATUS & VAULT", color: "#c44dff", active: activeLoopStep === 2, desc: "Showcase streaking, upgrade rarity tiers" }
+                    { label: "STAGE 3: STATUS & VAULT", color: "#c44dff", active: activeLoopStep === 2, desc: "Showcase streaking, upgrade rarity tiers on Base" }
                   ].map((stage, idx) => (
                     <motion.div
                       key={idx}
@@ -860,7 +857,7 @@ export default function PitchDeck() {
                       <Monitor size={11} className="text-[#00f0ff]" />
                       <span className="font-bold">CLIENT REACT WEBAPP Shell</span>
                     </div>
-                    <span className="opacity-40">pim-vault</span>
+                    <span className="opacity-40">beatstar-vault</span>
                   </div>
 
                   <div className="flex justify-center py-0.5">
@@ -870,7 +867,7 @@ export default function PitchDeck() {
                   <div className="p-2.5 border border-[#00f0ff]/30 bg-[#00f0ff]/5 rounded flex justify-between items-center rotate-[1deg]">
                     <div className="flex items-center gap-1.5">
                       <Volume2 size={11} className="text-[#00f0ff]" />
-                      <span className="font-bold">WEB AUDIO FREQ crossover</span>
+                      <span className="font-bold">WEB AUDIO FREQ CROSSOVER</span>
                     </div>
                     <span className="opacity-40">lane_muting</span>
                   </div>
@@ -882,7 +879,7 @@ export default function PitchDeck() {
                   <div className="p-2.5 border border-[#00f0ff]/30 bg-[#00f0ff]/5 rounded flex justify-between items-center rotate-[-0.5deg]">
                     <div className="flex items-center gap-1.5">
                       <Cpu size={11} className="text-[#00f0ff]" />
-                      <span className="font-bold">SUPABASE DENO Edge server</span>
+                      <span className="font-bold">SUPABASE DENO EDGE SERVER</span>
                     </div>
                     <span className="opacity-40">vault-engine</span>
                   </div>
@@ -894,7 +891,7 @@ export default function PitchDeck() {
                   <div className="p-2.5 border border-[#00f0ff]/30 bg-[#00f0ff]/5 rounded flex justify-between items-center rotate-[0.8deg]">
                     <div className="flex items-center gap-1.5">
                       <Database size={11} className="text-[#00f0ff]" />
-                      <span className="font-bold">SUPABASE POSTGRES Database</span>
+                      <span className="font-bold">SUPABASE POSTGRES (365 Seeded)</span>
                     </div>
                     <span className="opacity-40">rls_profiles</span>
                   </div>
@@ -1019,7 +1016,6 @@ export default function PitchDeck() {
 
                   {/* Equalizer Wave bar simulator */}
                   <div className="h-20 flex items-end gap-1 px-2 border-b border-white/10 bg-[#050402] relative overflow-hidden">
-                    {/* Simulated Wave lines */}
                     {[...Array(24)].map((_, idx) => {
                       const isBass = idx < 8;
                       const isMid = idx >= 8 && idx < 16;
@@ -1067,7 +1063,7 @@ export default function PitchDeck() {
                     <thead>
                       <tr className="border-b border-white/5 opacity-50 text-[7px]">
                         <th className="p-1.5 uppercase">Rarity</th>
-                        <th className="p-1.5 uppercase">Free Gameplay Cap</th>
+                        <th className="p-1.5 uppercase">Gameplay Cap</th>
                         <th className="p-1.5 uppercase">Mintable Cap</th>
                         <th className="p-1.5 uppercase">Burn value</th>
                       </tr>
@@ -1121,9 +1117,9 @@ export default function PitchDeck() {
                       <span className="text-[#7a8090]">COMMON</span>
                       <div className="flex items-center gap-2">
                         <div className="w-24 h-1.5 bg-white/10 rounded overflow-hidden">
-                          <div className="h-full bg-[#7a8090]" style={{ width: '26%' }} />
+                          <div className="h-full bg-[#7a8090]" style={{ width: '44%' }} />
                         </div>
-                        <span className="font-bold">111</span>
+                        <span className="font-bold">280</span>
                       </div>
                     </div>
 
@@ -1131,9 +1127,9 @@ export default function PitchDeck() {
                       <span className="text-[#00d4aa]">UNCOMMON</span>
                       <div className="flex items-center gap-2">
                         <div className="w-24 h-1.5 bg-white/10 rounded overflow-hidden">
-                          <div className="h-full bg-[#00d4aa]" style={{ width: '34%' }} />
+                          <div className="h-full bg-[#00d4aa]" style={{ width: '31%' }} />
                         </div>
-                        <span className="font-bold">144</span>
+                        <span className="font-bold">195</span>
                       </div>
                     </div>
 
@@ -1141,9 +1137,9 @@ export default function PitchDeck() {
                       <span className="text-[#4d8fff]">RARE</span>
                       <div className="flex items-center gap-2">
                         <div className="w-24 h-1.5 bg-white/10 rounded overflow-hidden">
-                          <div className="h-full bg-[#4d8fff]" style={{ width: '21%' }} />
+                          <div className="h-full bg-[#4d8fff]" style={{ width: '17%' }} />
                         </div>
-                        <span className="font-bold">89</span>
+                        <span className="font-bold">105</span>
                       </div>
                     </div>
 
@@ -1151,9 +1147,9 @@ export default function PitchDeck() {
                       <span className="text-[#c44dff]">LEGENDARY</span>
                       <div className="flex items-center gap-2">
                         <div className="w-24 h-1.5 bg-white/10 rounded overflow-hidden">
-                          <div className="h-full bg-[#c44dff]" style={{ width: '17%' }} />
+                          <div className="h-full bg-[#c44dff]" style={{ width: '7%' }} />
                         </div>
-                        <span className="font-bold">71</span>
+                        <span className="font-bold">44</span>
                       </div>
                     </div>
 
@@ -1161,7 +1157,7 @@ export default function PitchDeck() {
                       <span className="text-[#ffd700]">MYTHIC</span>
                       <div className="flex items-center gap-2">
                         <div className="w-24 h-1.5 bg-white/10 rounded overflow-hidden">
-                          <div className="h-full bg-[#ffd700]" style={{ width: '2%' }} />
+                          <div className="h-full bg-[#ffd700]" style={{ width: '1%' }} />
                         </div>
                         <span className="font-bold">6</span>
                       </div>
