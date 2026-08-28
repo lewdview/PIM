@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { VaultCard, OwnedCard } from '../services/vaultService';
 import { supabase } from '../services/supabaseClient';
+import { getBombshellCoverUrl } from '../utils/bombshellCards';
 
 
 export interface ProfileSettings {
@@ -491,7 +492,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     set((state) => {
       const nextCollection = state.collection.map((c) => {
         if (c && c.card && c.card.day === day && (c.cardSet === 'bombshell' || c.card.cardSet === 'bombshell')) {
-          const coverUrl = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/releaseready/girl-covers/days/day%20${day}/${encodeURIComponent(coverArtwork)}`;
+          const coverUrl = getBombshellCoverUrl(day, coverArtwork);
           return {
             ...c,
             coverArtwork,

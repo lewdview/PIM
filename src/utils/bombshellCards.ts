@@ -29,7 +29,7 @@ export function getBombshellCoverUrl(day: number, fileName: string): string {
     return `${LOCAL_BASE}day ${day}/${fileName}`;
   }
 
-  return `${SUPABASE_BASE}girl-covers/days/day%20${day}/${encodeURIComponent(fileName)}`;
+  return `${SUPABASE_BASE}rare_covers/day%20${day}/${encodeURIComponent(fileName)}`;
 }
 
 /**
@@ -38,11 +38,13 @@ export function getBombshellCoverUrl(day: number, fileName: string): string {
  */
 export function getBombshellCoverCandidates(day: number, fileName: string): string[] {
   const primary = getBombshellCoverUrl(day, fileName);
-  const supabaseUrl = `${SUPABASE_BASE}girl-covers/days/day%20${day}/${encodeURIComponent(fileName)}`;
+  const rareUrl = `${SUPABASE_BASE}rare_covers/day%20${day}/${encodeURIComponent(fileName)}`;
+  const legacyGirlUrl = `${SUPABASE_BASE}girl-covers/days/day%20${day}/${encodeURIComponent(fileName)}`;
   const localUrl = `${LOCAL_BASE}day ${day}/${fileName}`;
 
   const candidates: string[] = [primary];
-  if (primary !== supabaseUrl) candidates.push(supabaseUrl);
+  if (primary !== rareUrl) candidates.push(rareUrl);
+  if (primary !== legacyGirlUrl) candidates.push(legacyGirlUrl);
   if (primary !== localUrl) candidates.push(localUrl);
 
   // Sibling cover fallback for this day if specific file is missing
@@ -365,7 +367,7 @@ export function getBombshellHiResPngUrl(day: number, fileName: string): string {
     return `${LOCAL_BASE}day ${day}/hi res/${pngFileName}`;
   }
 
-  return `${SUPABASE_BASE}girl-covers/days/day%20${day}/hi%20res/${encodeURIComponent(pngFileName)}`;
+  return `${SUPABASE_BASE}rare_covers/day%20${day}/hi%20res/${encodeURIComponent(pngFileName)}`;
 }
 
 /**
@@ -374,12 +376,14 @@ export function getBombshellHiResPngUrl(day: number, fileName: string): string {
 export function getBombshellHiResCandidates(day: number, fileName: string): string[] {
   const pngFileName = fileName.replace(/\.jpe?g$/i, '.png');
   const primary = getBombshellHiResPngUrl(day, fileName);
-  const supabaseUrl = `${SUPABASE_BASE}girl-covers/days/day%20${day}/hi%20res/${encodeURIComponent(pngFileName)}`;
+  const rareUrl = `${SUPABASE_BASE}rare_covers/day%20${day}/hi%20res/${encodeURIComponent(pngFileName)}`;
+  const legacyGirlUrl = `${SUPABASE_BASE}girl-covers/days/day%20${day}/hi%20res/${encodeURIComponent(pngFileName)}`;
   const localUrl = `${LOCAL_BASE}day ${day}/hi res/${pngFileName}`;
   const jpgUrl = getBombshellCoverUrl(day, fileName);
 
   const list = [primary];
-  if (primary !== supabaseUrl) list.push(supabaseUrl);
+  if (primary !== rareUrl) list.push(rareUrl);
+  if (primary !== legacyGirlUrl) list.push(legacyGirlUrl);
   if (primary !== localUrl) list.push(localUrl);
   list.push(jpgUrl);
 

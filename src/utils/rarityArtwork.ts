@@ -30,7 +30,7 @@ export const RARITY_ARTWORK_CONFIG: Record<string, RarityArtworkRule> = {
   },
   rare: {
     useAlternate: true,
-    folder: 'girl-covers',
+    folder: 'alternate-covers',
     extension: '.jpg',
   },
   legendary: {
