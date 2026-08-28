@@ -966,24 +966,30 @@ function BombshellLightboxModal({
         {/* Action Buttons */}
         <div className="flex items-center gap-2.5 w-full md:w-auto justify-center flex-wrap">
           {onSelectCover && (
-            <button
-              onClick={() => onSelectCover(currentFileName)}
-              className={`px-4 py-2.5 rounded font-mono text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
-                isActiveCover
-                  ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-500/60 shadow-[0_0_16px_rgba(16,185,129,0.35)]'
-                  : 'bg-[#FF1493]/20 hover:bg-[#FF1493]/35 text-white border border-[#FF1493]/50 active:scale-95'
-              }`}
-            >
-              {isActiveCover ? (
-                <>
-                  <CheckCircle size={13} className="text-emerald-300" /> ACTIVE CARD COVER
-                </>
-              ) : (
-                <>
-                  <Sparkles size={13} className="text-[#FF1493]" /> SET AS ACTIVE COVER
-                </>
-              )}
-            </button>
+            isUnlocked || isActiveCover ? (
+              <button
+                onClick={() => onSelectCover(currentFileName)}
+                className={`px-4 py-2.5 rounded font-mono text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
+                  isActiveCover
+                    ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-500/60 shadow-[0_0_16px_rgba(16,185,129,0.35)]'
+                    : 'bg-[#FF1493]/20 hover:bg-[#FF1493]/35 text-white border border-[#FF1493]/50 active:scale-95'
+                }`}
+              >
+                {isActiveCover ? (
+                  <>
+                    <CheckCircle size={13} className="text-emerald-300" /> ACTIVE CARD COVER
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={13} className="text-[#FF1493]" /> SET AS ACTIVE COVER
+                  </>
+                )}
+              </button>
+            ) : (
+              <div className="px-3.5 py-2 rounded bg-black/60 border border-white/10 text-white/40 font-mono text-[9px] uppercase flex items-center gap-1.5">
+                <Lock size={12} className="text-white/40" /> Locked Cover (Pull to Unlock)
+              </div>
+            )
           )}
 
           <button
@@ -1207,20 +1213,26 @@ function BombshellDayModal({
                               )}
 
                               <div className="flex items-center gap-1">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setPreferredCardCover(day, fileName);
-                                  }}
-                                  title="Set this cover as active artwork for this day's card"
-                                  className={`px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase transition-all flex items-center gap-0.5 cursor-pointer ${
-                                    isActive
-                                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-                                      : 'bg-white/10 text-white/70 hover:bg-[#00E5FF]/30 hover:text-[#00E5FF] border border-white/10'
-                                  }`}
-                                >
-                                  {isActive ? '✓ Active' : 'Use'}
-                                </button>
+                                {isUnlocked ? (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setPreferredCardCover(day, fileName);
+                                    }}
+                                    title="Set this cover as active artwork for this day's card"
+                                    className={`px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase transition-all flex items-center gap-0.5 cursor-pointer ${
+                                      isActive
+                                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                                        : 'bg-white/10 text-white/70 hover:bg-[#00E5FF]/30 hover:text-[#00E5FF] border border-white/10'
+                                    }`}
+                                  >
+                                    {isActive ? '✓ Active' : 'Use'}
+                                  </button>
+                                ) : (
+                                  <span className="text-[7px] font-mono text-white/30 flex items-center gap-0.5">
+                                    <Lock size={7} /> Locked
+                                  </span>
+                                )}
                                 {isUnlocked && (
                                   <button
                                     onClick={(e) => {
@@ -1318,20 +1330,26 @@ function BombshellDayModal({
                               )}
 
                               <div className="flex items-center gap-1">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setPreferredCardCover(day, fileName);
-                                  }}
-                                  title="Set this cover as active artwork for this day's card"
-                                  className={`px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase transition-all flex items-center gap-0.5 cursor-pointer ${
-                                    isActive
-                                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-                                      : 'bg-white/10 text-white/70 hover:bg-[#FF1493]/30 hover:text-[#FF1493] border border-white/10'
-                                  }`}
-                                >
-                                  {isActive ? '✓ Active' : 'Use'}
-                                </button>
+                                {isUnlocked ? (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setPreferredCardCover(day, fileName);
+                                    }}
+                                    title="Set this cover as active artwork for this day's card"
+                                    className={`px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase transition-all flex items-center gap-0.5 cursor-pointer ${
+                                      isActive
+                                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
+                                        : 'bg-white/10 text-white/70 hover:bg-[#FF1493]/30 hover:text-[#FF1493] border border-white/10'
+                                    }`}
+                                  >
+                                    {isActive ? '✓ Active' : 'Use'}
+                                  </button>
+                                ) : (
+                                  <span className="text-[7px] font-mono text-white/30 flex items-center gap-0.5">
+                                    <Lock size={7} /> Locked
+                                  </span>
+                                )}
                                 {isUnlocked && (
                                   <button
                                     onClick={(e) => {

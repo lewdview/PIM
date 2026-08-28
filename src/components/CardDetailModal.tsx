@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ExternalLink, Download, ShieldCheck, Share2, Info, Flame, Film, Play, Disc } from 'lucide-react';
+import { X, ExternalLink, Download, ShieldCheck, Share2, Info, Flame, Film, Play, Disc, Sparkles, Check, CheckCircle, Lock, Layers } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { useGlobalPlayer } from '../store/useGlobalPlayer';
 import { useVaultStore } from '../store/useVaultStore';
@@ -12,7 +12,14 @@ import { getArtTypeForDay, OUTFIT_STYLES } from '../utils/artTypes';
 import RarityBadge from './RarityBadge';
 import AudioPreview from './AudioPreview';
 import { getDayFromDate } from '../utils/dayCalc';
-import { isBombshellCard, downloadBombshellHiResArtwork } from '../utils/bombshellCards';
+import {
+  isBombshellCard,
+  downloadBombshellHiResArtwork,
+  getBombshellUnlockedCoversForDay,
+  getBombshellDayCovers,
+  getCustomBombshellCover,
+  getBombshellCoverUrl,
+} from '../utils/bombshellCards';
 import PrizeProgressMenu from './PrizeProgressMenu';
 
 const NFT_MINT_COSTS: Record<Rarity, number> = {
@@ -55,8 +62,43 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
   const stop = useGlobalPlayer((s) => s.stop);
   const [isMinting, setIsMinting] = useState(false);
   const fragments = useVaultStore((s) => s.fragments);
+  const collection = useVaultStore((s) => s.collection);
+  const setPreferredCardCover = useVaultStore((s) => s.setPreferredCardCover);
 
-  const { src: modalCoverUrl, handleError: handleModalCoverError } = useSmartCoverArt(card?.card.coverUrl, card?.card.rarity);
+  const day = card?.card.day || 1;
+  const dayCovers = useMemo(() => getBombshellDayCovers(day), [day]);
+  const unlockedBombshellCovers = useMemo(() => {
+    if (!card) return new Set<string>();
+    return getBombshellUnlockedCoversForDay(collection, day);
+  }, [collection, day, card]);
+
+  const customPreferred = getCustomBombshellCover(day);
+  const [activePreviewArtwork, setActivePreviewArtwork] = useState<string | null>(null);
+
+  useEffect(() => {
+    setActivePreviewArtwork(customPreferred || card?.coverArtwork || card?.card.coverArtwork || null);
+  }, [card?.id, card?.card.day, customPreferred, card?.coverArtwork]);
+
+  const activeCoverFileName = activePreviewArtwork || customPreferred || card?.coverArtwork || card?.card.coverArtwork || '';
+
+  const effectiveCoverUrl = useMemo(() => {
+    if (activeCoverFileName && (isBombshellCard(card) || unlockedBombshellCovers.size > 0)) {
+      return getBombshellCoverUrl(day, activeCoverFileName);
+    }
+    return card?.card.coverUrl;
+  }, [day, activeCoverFileName, card, unlockedBombshellCovers]);
+
+  const { src: modalCoverUrl, handleError: handleModalCoverError } = useSmartCoverArt(effectiveCoverUrl, card?.card.rarity);
+
+  const handleSelectCover = (fileName: string) => {
+    setActivePreviewArtwork(fileName);
+    setPreferredCardCover(day, fileName);
+    const resolvedUrl = getBombshellCoverUrl(day, fileName);
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.setItem(`active_cover_url_card-${day}`, resolvedUrl);
+      sessionStorage.setItem('active_game_cover', resolvedUrl);
+    }
+  };
 
   if (!card) return null;
 
@@ -400,6 +442,113 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
                        </div>
                     </div>
                   </div>
+
+                  {/* UNLOCKED COVER SELECTION SECTION */}
+                  {unlockedBombshellCovers.size > 0 && (
+                    <div className="space-y-3 mb-6 p-5 bg-white/[0.02] border border-[#FF1493]/30 rounded-2xl relative overflow-hidden shadow-[0_0_25px_rgba(255,20,147,0.08)]">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <Sparkles size={14} className="text-[#FF1493]" />
+                          <span className="text-[11px] font-mono font-black uppercase tracking-wider text-white">
+                            Preferred Card Artwork
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-mono text-[#FF1493] font-bold bg-[#FF1493]/10 px-2 py-0.5 rounded border border-[#FF1493]/30">
+                          {unlockedBombshellCovers.size} / {dayCovers.totalCovers || unlockedBombshellCovers.size} Unlocked
+                        </span>
+                      </div>
+                      <p className="text-[10px] font-mono text-white/50">
+                        Choose your active cover out of the unlocked variations for Day {day}. This cover will be equipped in your collection and in gameplay:
+                      </p>
+                      
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                        {Array.from(unlockedBombshellCovers).map((fileName, idx) => {
+                          const isSelected = activeCoverFileName === fileName;
+                          const isLB = fileName.toLowerCase().startsWith('lb');
+                          const coverUrl = getBombshellCoverUrl(day, fileName);
+                          return (
+                            <div
+                              key={fileName}
+                              onClick={() => handleSelectCover(fileName)}
+                              className={`group relative rounded-xl border p-2 flex flex-col items-center gap-2 cursor-pointer transition-all duration-200 hover:scale-[1.03] active:scale-98 ${
+                                isSelected
+                                  ? 'bg-[#FF1493]/15 border-emerald-400 ring-2 ring-emerald-400/60 shadow-[0_0_16px_rgba(16,185,129,0.35)]'
+                                  : 'bg-white/[0.03] border-white/10 hover:border-[#FF1493]/60 hover:bg-white/[0.06]'
+                              }`}
+                            >
+                              <div className="relative aspect-[3/4] w-full rounded-lg overflow-hidden border border-white/10">
+                                <img
+                                  src={coverUrl}
+                                  alt={fileName}
+                                  loading="lazy"
+                                  className="w-full h-full object-cover"
+                                />
+                                {isSelected && (
+                                  <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-emerald-500 text-black font-mono text-[8px] font-black uppercase tracking-wider flex items-center gap-0.5 shadow-[0_0_8px_rgba(16,185,129,0.8)] z-10">
+                                    <Check size={8} strokeWidth={3} /> ACTIVE
+                                  </div>
+                                )}
+                              </div>
+                              <div className="w-full text-center space-y-1.5">
+                                <div className="flex items-center justify-center gap-1">
+                                  <span
+                                    className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded uppercase"
+                                    style={{
+                                      background: isLB ? 'rgba(0, 229, 255, 0.2)' : 'rgba(255, 20, 147, 0.2)',
+                                      color: isLB ? '#00E5FF' : '#FF1493',
+                                    }}
+                                  >
+                                    {isLB ? 'Letterbox' : 'Full Frame'}
+                                  </span>
+                                  <span className="text-[9px] font-mono text-white/70 truncate max-w-[80px]" title={fileName}>
+                                    #{idx + 1}
+                                  </span>
+                                </div>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSelectCover(fileName);
+                                  }}
+                                  className={`w-full py-1 px-1.5 rounded font-mono text-[8px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                                    isSelected
+                                      ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50'
+                                      : 'bg-white/10 text-white/70 hover:bg-[#FF1493]/30 hover:text-white border border-white/10'
+                                  }`}
+                                >
+                                  {isSelected ? '✓ Preferred' : 'Set Preferred'}
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {unlockedBombshellCovers.size === 0 && dayCovers.totalCovers > 0 && (
+                    <div className="mb-6 p-4 bg-white/[0.01] border border-white/10 rounded-xl flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="text-lg">🔥</span>
+                        <div className="min-w-0">
+                          <div className="text-[10px] font-mono font-bold uppercase text-[#FF1493]">
+                            Bombshell Series Covers Available
+                          </div>
+                          <div className="text-[9px] font-mono text-white/40 truncate">
+                            0 of {dayCovers.totalCovers} alternate covers unlocked for Day {day}. Pull Bombshell Packs to unlock!
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          onClose();
+                          setLocation('/shop');
+                        }}
+                        className="shrink-0 px-3 py-1.5 rounded bg-[#FF1493]/20 hover:bg-[#FF1493]/30 border border-[#FF1493]/40 text-[#ff85c0] font-mono text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer"
+                      >
+                        Shop Packs
+                      </button>
+                    </div>
+                  )}
 
                   {/* Metadata Table */}
                   <div className="space-y-4 mb-6">
