@@ -95,7 +95,8 @@ const FALLBACK_SYNTH_AUDIO = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAAB
 export function sanitizeMediaUrl(url: string): string {
   if (!url || url.startsWith('data:') || url.startsWith('blob:')) return url;
   try {
-    const decoded = decodeURIComponent(url);
+    let rewritten = url.replace(/^(https?:\/\/)(?!files\.)th3scr1b3\.art\//i, '$1files.th3scr1b3.art/');
+    const decoded = decodeURIComponent(rewritten);
     return encodeURI(decoded).replace(/\+/g, '%2B');
   } catch {
     return url;

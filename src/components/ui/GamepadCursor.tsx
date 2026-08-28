@@ -352,6 +352,16 @@ export default function GamepadCursor() {
           }
         }
 
+        // Middle / Menu / Select / Guide buttons (index 8: Select/Share/Back, index 9: Start/Menu, index 16: Guide/Xbox/PS, index 17: Touchpad)
+        const middleBtnIndices = [8, 9, 16, 17];
+        const middlePressed = middleBtnIndices.some(idx => gp.buttons[idx]?.pressed);
+        const middleWasPressed = middleBtnIndices.some(idx => prevButtons.current[idx]);
+
+        if (middlePressed && !middleWasPressed && !isProtected) {
+          audioManager.playSfx("tap_nav", 0.35);
+          useVaultStore.getState().toggleCommandPalette();
+        }
+
         // 5. Handle scrolling (Right Stick)
         if (Math.abs(ry) > deadzone || Math.abs(rx) > deadzone) {
           const container = findScrollableContainer(el, x, y) as (Element | Window);

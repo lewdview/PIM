@@ -198,7 +198,9 @@ export function getSmartCoverCandidates(
     if (!candidates.includes(originalJpg)) candidates.push(originalJpg);
   }
 
-  return Array.from(new Set(candidates)).filter(Boolean);
+  return Array.from(new Set(candidates))
+    .filter(Boolean)
+    .map((url) => url.replace(/^(https?:\/\/)(?!files\.)th3scr1b3\.art\//i, '$1files.th3scr1b3.art/'));
 }
 
 /**

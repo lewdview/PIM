@@ -147,6 +147,9 @@ interface VaultState {
   unlockSkin: (skinId: string, cost: number) => Promise<boolean>;
   optionsModalOpen: boolean;
   setOptionsModalOpen: (open: boolean) => void;
+  commandPaletteOpen: boolean;
+  setCommandPaletteOpen: (open: boolean) => void;
+  toggleCommandPalette: () => void;
   updateSettings: (settings: Partial<ProfileSettings>) => Promise<void>;
   updateProgression: (progression: Partial<ProfileProgression>) => Promise<void>;
   updateCheats: (cheats: Partial<ProfileCheats>) => Promise<void>;
@@ -187,6 +190,89 @@ export function calculateEchoPrestigeScore(
   return score;
 }
 
+async function syncUserFragmentToDb(userId: string, songId: string, count: number) {
+  if (!userId || !songId) return;
+  try {
+    // 1. Query for existing fragment record using the actual database columns (fragment_id, amount)
+    const { data: existing, error: selectErr } = await supabase
+      .from('user_fragments')
+      .select('id, amount')
+      .eq('user_id', userId)
+      .eq('fragment_id', songId)
+      .maybeSingle();
+
+    if (selectErr) {
+      // If table or column doesn't exist, exit quietly
+      return;
+    }
+
+    if (existing?.id) {
+      // Update existing record
+      await supabase
+        .from('user_fragments')
+        .update({ amount: count, acquired_at: new Date().toISOString() })
+        .eq('id', existing.id);
+    } else {
+      // Insert new record
+      await supabase
+        .from('user_fragments')
+        .insert({
+          user_id: userId,
+          fragment_id: songId,
+          amount: count,
+          acquired_at: new Date().toISOString()
+        });
+    }
+  } catch {
+    // Suppress network noise
+  }
+}
+
+async function syncMilestoneClaimToDb(userId: string, monthNum: number, milestoneNum: number) {
+  if (!userId) return;
+  try {
+    // 1. Try schema format A: (chapter, milestone_index)
+    const { error: errA } = await supabase.from('campaign_milestone_claims').upsert({
+      user_id: userId,
+      chapter: String(monthNum),
+      milestone_index: milestoneNum,
+      claimed_at: new Date().toISOString()
+    }, { onConflict: 'user_id,chapter,milestone_index' });
+
+    if (errA) {
+      // 2. Try schema format B: (month_num, milestone_num)
+      const { error: errB } = await supabase.from('campaign_milestone_claims').upsert({
+        user_id: userId,
+        month_num: monthNum,
+        milestone_num: milestoneNum,
+        claimed_at: new Date().toISOString()
+      }, { onConflict: 'user_id,month_num,milestone_num' });
+
+      if (errB) {
+        // Fallback: check if existing row exists, else insert
+        const { data: existing } = await supabase
+          .from('campaign_milestone_claims')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('chapter', String(monthNum))
+          .eq('milestone_index', milestoneNum)
+          .maybeSingle();
+
+        if (!existing?.id) {
+          await supabase.from('campaign_milestone_claims').insert({
+            user_id: userId,
+            chapter: String(monthNum),
+            milestone_index: milestoneNum,
+            claimed_at: new Date().toISOString()
+          });
+        }
+      }
+    }
+  } catch {
+    // Suppress network noise
+  }
+}
+
 export const useVaultStore = create<VaultState>((set, get) => ({
   dailyCard: null,
   hasClaimed: false,
@@ -209,6 +295,9 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   displayName: null,
   avatarUrl: null,
   optionsModalOpen: false,
+  commandPaletteOpen: false,
+  setCommandPaletteOpen: (open) => set({ commandPaletteOpen: open }),
+  toggleCommandPalette: () => set((state) => ({ commandPaletteOpen: !state.commandPaletteOpen })),
 
   packDesignStyle: ((localStorage.getItem('pim_pack_design_style') as any) || 'cyber_cartridge'),
   setPackDesignStyle: (style) => {
@@ -684,15 +773,21 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         }
       }
 
-      if (fragmentsRes.data) {
+      if (fragmentsRes.data && Array.isArray(fragmentsRes.data)) {
         for (const row of fragmentsRes.data) {
-          dbFragments[row.song_id] = row.count;
+          const sId = row.song_id || row.fragment_id;
+          const cnt = typeof row.count === 'number' ? row.count : (typeof row.amount === 'number' ? row.amount : 0);
+          if (sId) {
+            dbFragments[sId] = cnt;
+          }
         }
       }
 
-      if (milestonesRes.data) {
+      if (milestonesRes.data && Array.isArray(milestonesRes.data)) {
         for (const row of milestonesRes.data) {
-          const claimKey = `campaign_claimed_${row.month_num}_${row.milestone_num}`;
+          const month = row.chapter !== undefined ? (parseInt(String(row.chapter).replace(/\D/g, ''), 10) || row.chapter) : (row.month_num ?? 1);
+          const mIdx = row.milestone_index !== undefined ? row.milestone_index : (row.milestone_num ?? 0);
+          const claimKey = `campaign_claimed_${month}_${mIdx}`;
           dbMilestoneClaims[claimKey] = true;
         }
       }
@@ -757,14 +852,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
           const dbCount = dbFragments[songId] || 0;
           if (localCount > dbCount) {
             finalFragments[songId] = localCount;
-            supabase.from('user_fragments').upsert({
-              user_id: userId,
-              song_id: songId,
-              count: localCount,
-              updated_at: new Date().toISOString()
-            }, { onConflict: 'user_id,song_id' }).then(({ error }) => {
-              if (error) console.warn(`[Migrate] Failed to sync fragments for ${songId}:`, error.message);
-            });
+            syncUserFragmentToDb(userId, songId, localCount);
           }
         } else if (key.startsWith('reward_tier_')) {
           const songId = key.substring(12);
@@ -790,14 +878,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
             const milestoneNum = parseInt(parts[3], 10);
             if (localStorage.getItem(key) === 'true' && !dbMilestoneClaims[key]) {
               finalMilestoneClaims[key] = true;
-              supabase.from('campaign_milestone_claims').upsert({
-                user_id: userId,
-                month_num: monthNum,
-                milestone_num: milestoneNum,
-                claimed_at: new Date().toISOString()
-              }, { onConflict: 'user_id,month_num,milestone_num' }).then(({ error }) => {
-                if (error) console.warn(`[Migrate] Failed to sync milestone claim for ${key}:`, error.message);
-              });
+              syncMilestoneClaimToDb(userId, monthNum, milestoneNum);
             }
           }
         }
@@ -1048,16 +1129,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     const session = await supabase.auth.getSession();
     const userId = session.data.session?.user.id;
     if (userId) {
-      try {
-        await supabase.from('user_fragments').upsert({
-          user_id: userId,
-          song_id: songId,
-          count,
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'user_id,song_id' });
-      } catch (err) {
-        console.warn('Failed to sync fragments to database:', err);
-      }
+      await syncUserFragmentToDb(userId, songId, count);
     }
   },
 
@@ -1070,16 +1142,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     const session = await supabase.auth.getSession();
     const userId = session.data.session?.user.id;
     if (userId) {
-      try {
-        await supabase.from('campaign_milestone_claims').upsert({
-          user_id: userId,
-          month_num: monthNum,
-          milestone_num: milestoneNum,
-          claimed_at: new Date().toISOString()
-        }, { onConflict: 'user_id,month_num,milestone_num' });
-      } catch (err) {
-        console.warn('Failed to sync milestone claim to database:', err);
-      }
+      await syncMilestoneClaimToDb(userId, monthNum, milestoneNum);
     }
   },
 

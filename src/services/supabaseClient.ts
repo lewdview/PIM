@@ -51,7 +51,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: getAuthOptions()
 });
 
-export const STORAGE_BASE = (
+const rawStorageBase = (
   import.meta.env.VITE_STORAGE_BASE_URL ||
   import.meta.env.VITE_R2_URL ||
   import.meta.env.VITE_WASABI_URL ||
@@ -59,3 +59,5 @@ export const STORAGE_BASE = (
   import.meta.env.STORAGE_BASE_URL ||
   'https://files.th3scr1b3.art/'
 ).replace(/\/?$/, '/');
+
+export const STORAGE_BASE = rawStorageBase.replace(/^(https?:\/\/)(?!files\.)th3scr1b3\.art\//i, '$1files.th3scr1b3.art/');

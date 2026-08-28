@@ -56,6 +56,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const [resendCooldown, setResendCooldown] = useState(0);
 
   // Passkey states
+  const [passkeyMode, setPasskeyMode] = useState<'signin' | 'register'>('signin');
+  const [passkeyEmail, setPasskeyEmail] = useState('');
   const [passkeySuccess, setPasskeySuccess] = useState<string | null>(null);
 
   // General UI states
@@ -69,7 +71,10 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   useEffect(() => {
     setLocalError(null);
     setPasskeySuccess(null);
-  }, [activeTab, isOpen]);
+    if (user?.email) {
+      setPasskeyEmail(user.email);
+    }
+  }, [activeTab, isOpen, user]);
 
   // Resend cooldown timer
   useEffect(() => {
@@ -122,13 +127,22 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     }
   };
 
-  const handleCreatePasskey = async () => {
+  const handleCreatePasskey = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setLocalError(null);
     setPasskeySuccess(null);
+
+    const targetEmail = (passkeyEmail || email).trim();
+    if (isGuest && (!targetEmail || !targetEmail.includes('@'))) {
+      setLocalError('Please enter a valid email address to bind your biometric passkey.');
+      audioManager.playSfx('error', 0.4);
+      return;
+    }
+
     setLoading(true);
     audioManager.playSfx('tap_nav', 0.5);
     try {
-      const res = await registerPasskey();
+      const res = await registerPasskey(targetEmail || undefined);
       if (res?.error) {
         setLocalError(res.error);
         audioManager.playSfx('error', 0.5);
@@ -428,10 +442,12 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                       {hasWebAuthn ? 'FIDO2 / WebAuthn Certified' : 'Hardware Key Ready'}
                     </div>
                     <h3 className="text-lg font-black uppercase text-white tracking-wide">
-                      Passwordless Biometric Clearance
+                      {passkeyMode === 'register' ? 'Register Device Passkey' : 'Passwordless Biometric Clearance'}
                     </h3>
                     <p className="font-mono text-[11px] text-zinc-400 max-w-sm mx-auto leading-relaxed">
-                      Instant 1-touch authentication using Face ID, Touch ID, or Windows Hello biometrics.
+                      {passkeyMode === 'register' 
+                        ? 'Bind your Face ID, Touch ID, or Windows Hello biometrics to this device for instant access.'
+                        : 'Instant 1-touch authentication using Face ID, Touch ID, or Windows Hello biometrics.'}
                     </p>
                   </div>
 
@@ -449,7 +465,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                         Enter Vault
                       </button>
                     </div>
-                  ) : (
+                  ) : passkeyMode === 'signin' ? (
                     <div className="space-y-3">
                       {/* Primary Action: Sign In */}
                       <button
@@ -475,7 +491,10 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
                       {/* Secondary Action: Register New Passkey */}
                       <button
-                        onClick={handleCreatePasskey}
+                        onClick={() => {
+                          setLocalError(null);
+                          setPasskeyMode('register');
+                        }}
                         disabled={loading || status === 'loading'}
                         className="w-full py-2.5 px-4 flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/15 text-white/80 hover:text-white font-mono text-[11px] uppercase tracking-wider transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
                       >
@@ -499,6 +518,66 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                         </div>
                       </div>
                     </div>
+                  ) : (
+                    <form onSubmit={handleCreatePasskey} className="space-y-3">
+                      {isGuest && (
+                        <div className="space-y-1">
+                          <label className="block text-[9px] font-mono uppercase text-zinc-400 tracking-wider">
+                            Email to Bind Passkey
+                          </label>
+                          <div className="relative">
+                            <Mail className="absolute left-3 top-3 text-zinc-500" size={14} />
+                            <input
+                              type="email"
+                              value={passkeyEmail}
+                              onChange={e => setPasskeyEmail(e.target.value)}
+                              placeholder="operator@th3vault.art"
+                              className="w-full pl-9 pr-4 py-2.5 bg-black/60 border border-white/15 text-white font-mono text-xs focus:outline-none focus:border-[#00E5FF] transition-colors rounded-sm"
+                              required
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {!isGuest && user?.email && (
+                        <div className="p-2.5 bg-white/[0.02] border border-white/10 rounded font-mono text-[10px] text-zinc-300">
+                          Binding passkey to: <strong className="text-white">{user.email}</strong>
+                        </div>
+                      )}
+
+                      <button
+                        type="submit"
+                        disabled={loading || status === 'loading'}
+                        className="w-full py-3 px-4 flex items-center justify-center gap-2 bg-[#00E5FF] hover:bg-[#33ebff] text-black font-black uppercase text-xs tracking-wider transition-all shadow-[0_0_20px_rgba(0,229,255,0.35)] active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+                        style={{
+                          clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)'
+                        }}
+                      >
+                        {loading || status === 'loading' ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                            <span>Registering Biometric Key...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Fingerprint size={16} />
+                            <span>Create Device Passkey</span>
+                            <ArrowRight size={14} className="ml-auto" />
+                          </>
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setLocalError(null);
+                          setPasskeyMode('signin');
+                        }}
+                        className="w-full py-2 text-center font-mono text-[10px] uppercase tracking-wider text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                      >
+                        ← Back to Passkey Sign In
+                      </button>
+                    </form>
                   )}
                 </div>
               )}

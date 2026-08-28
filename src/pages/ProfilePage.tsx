@@ -348,20 +348,13 @@ export default function ProfilePage() {
 
                 <button
                   onClick={async () => {
+                    audioManager.playSfx('tap_nav', 0.3);
+                    if (isAnonymous || !user?.email) {
+                      useAuthStore.getState().setShowAuthModal(true);
+                      return;
+                    }
                     setPasskeyLoading(true);
                     setPasskeyFeedback(null);
-                    audioManager.playSfx('tap_nav', 0.3);
-                    if (!user) {
-                      const { data: anonData, error: anonErr } = await (await import('../services/supabaseClient')).supabase.auth.signInAnonymously();
-                      if (anonErr) {
-                        setPasskeyFeedback({ type: 'error', message: anonErr.message });
-                        setPasskeyLoading(false);
-                        return;
-                      }
-                      if (anonData.session?.user) {
-                        await ensureProfileAndWallet(anonData.session.user);
-                      }
-                    }
                     const res = await registerPasskey();
                     if (res.error) {
                       setPasskeyFeedback({ type: 'error', message: res.error });

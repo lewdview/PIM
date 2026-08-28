@@ -35,7 +35,7 @@ interface AuthState {
   signInWithProvider: (provider: string) => Promise<{ error: string | null }>;
   signInWithMagicLink: (email: string) => Promise<{ error: string | null }>;
   signInWithPasskey: () => Promise<{ error: string | null }>;
-  registerPasskey: () => Promise<{ error: string | null; data?: any }>;
+  registerPasskey: (email?: string) => Promise<{ error: string | null; data?: any }>;
   isPasskeySupported: () => boolean;
   ensureProfileAndWallet: (user: User) => Promise<void>;
 }
@@ -623,30 +623,55 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return { error: msg };
     }
   },
-  registerPasskey: async () => {
+  registerPasskey: async (email?: string) => {
     set({ error: null });
     try {
       console.log('[Auth] Initiating WebAuthn Passkey registration...');
       let currentUser = get().user;
-      if (!currentUser) {
-        const { data: anonData, error: anonErr } = await supabase.auth.signInAnonymously();
-        if (anonErr) throw anonErr;
-        if (anonData.session?.user) {
-          currentUser = anonData.session.user;
-          set({ session: anonData.session, user: currentUser, status: 'ready' });
-          await get().ensureProfileAndWallet(currentUser);
+      const isAnon = !currentUser || currentUser.is_anonymous || currentUser.app_metadata?.provider === 'anonymous';
+
+      if (isAnon) {
+        if (email && email.trim().includes('@')) {
+          // Upgrade anonymous user by adding email identity first
+          const { data: updateData, error: updateErr } = await supabase.auth.updateUser({ email: email.trim() });
+          if (updateErr) {
+            const msg = updateErr.message.toLowerCase();
+            if (msg.includes('already') || msg.includes('registered') || msg.includes('exists')) {
+              throw new Error('This email is already registered. Please sign in with Passkey or Magic Link.');
+            }
+            throw updateErr;
+          }
+          if (updateData?.user) {
+            currentUser = updateData.user;
+            set({ user: currentUser });
+          }
+        } else {
+          const msg = 'Please provide an email address to bind your biometric passkey.';
+          set({ error: msg });
+          return { error: msg };
         }
       }
+
       const { data, error } = await supabase.auth.registerPasskey();
-      if (error) throw error;
+      if (error) {
+        if (error.message.toLowerCase().includes('anonymous')) {
+          const msg = 'Please enter your email to bind your biometric passkey.';
+          set({ error: msg });
+          return { error: msg };
+        }
+        throw error;
+      }
 
       logAnalyticsEvent('passkey_registered', { userId: get().user?.id });
       return { error: null, data };
     } catch (err: any) {
       console.error('[Auth] registerPasskey error:', err);
-      const msg = err?.name === 'NotAllowedError' || err?.message?.includes('NotAllowedError') || err?.message?.includes('cancelled')
-        ? 'Passkey registration prompt was dismissed.'
-        : err?.message || 'Passkey registration failed.';
+      let msg = err?.message || 'Passkey registration failed.';
+      if (err?.name === 'NotAllowedError' || msg.includes('NotAllowedError') || msg.includes('cancelled') || msg.includes('dismissed')) {
+        msg = 'Passkey registration prompt was dismissed.';
+      } else if (msg.toLowerCase().includes('anonymous')) {
+        msg = 'Please enter your email to bind your biometric passkey.';
+      }
       set({ error: msg });
       return { error: msg };
     }

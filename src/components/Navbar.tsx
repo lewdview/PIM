@@ -1,14 +1,16 @@
 // ════════════════════════════════════════════════════════════════════════════════
-// Navbar.tsx — PIM : th3v4ult Command Console Navigation System
-// Mega-menu architecture: Every section of PIM accessible in ≤ 2 clicks
+// Navbar.tsx — PIM : th3v4ult Command Console & Mega-Menu Navigation System
+// 5-Pass Visual Fidelity: 2-Column Tactical Dropdowns, Live Telemetry Spotlights,
+// Integrated ⌘K Command Matrix, Mobile Launchpad & Brutalist Cyberpunk Polish
 // ════════════════════════════════════════════════════════════════════════════════
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Link, useLocation } from 'wouter';
 import {
   Home, Layers, Trophy, Wallet, LogOut, Zap, X, FileText,
   Flame, BookOpen, Monitor, Gift, Settings, Image, Map, Sparkles,
   User, ChevronDown, ChevronRight, Gamepad2, GraduationCap, LayoutGrid, Bell,
+  Search, Radio, Shield, CheckCircle2, CornerDownLeft, Volume2, Compass
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../store/useAuthStore';
@@ -20,23 +22,33 @@ import GuideModal from './GuideModal';
 import { haptics } from '../utils/haptics';
 import FloatingTicker from './FloatingTicker';
 import { getIdenticon } from '../utils/identicon';
-import MainBrandLogo from './MainBrandLogo';
+import { audioManager } from '../game/audio';
+import {
+  PlaySpotlight,
+  VaultSpotlight,
+  ForgeSpotlight,
+  EarnSpotlight,
+  SystemSpotlight
+} from './NavbarSpotlightWidgets';
 
 const isDev = import.meta.env.DEV || localStorage.getItem('th3vault_dev_mode') === 'true';
 
 // ── Menu Section Definitions ──────────────────────────────────────────────────
-interface MenuItem {
+export interface MenuItem {
   to?: string;
   action?: string;
   label: string;
   icon: any;
   desc: string;
+  badge?: string;
+  badgeColor?: string;
   devOnly?: boolean;
 }
 
-interface MenuSection {
+export interface MenuSection {
   id: string;
   label: string;
+  tagline: string;
   accent: string;
   accentGlow: string;
   icon: any;
@@ -47,71 +59,76 @@ const menuSections: MenuSection[] = [
   {
     id: 'play',
     label: 'Play',
+    tagline: '3-LANE RHYTHM ARCADE & 365 EXPEDITIONS',
     accent: '#FF1493',
     accentGlow: 'rgba(255, 20, 147, 0.4)',
     icon: Gamepad2,
     items: [
-      { to: '/arcade', label: 'PIM Arcade', icon: Monitor, desc: 'Quick-play rhythm engine' },
-      { to: '/campaign', label: 'PIM Campaign', icon: Map, desc: 'Story chapters & 365 roadmaps' },
-      { to: '/365', label: '365 Timeline', icon: BookOpen, desc: 'Daily release archive' },
-      { to: '/songs', label: 'PIM Award Play', icon: Trophy, desc: 'Curated song selection' },
-      { to: '/tutorial', label: 'PIM Tutorial', icon: GraduationCap, desc: 'Master the 3-lane controls' },
+      { to: '/arcade', label: 'PIM Arcade', icon: Monitor, desc: 'Quick-play 3-lane DSP rhythm engine', badge: 'QUICK PLAY', badgeColor: '#FF1493' },
+      { to: '/campaign', label: 'PIM Campaign', icon: Compass, desc: 'Story chapters & 365 roadmaps', badge: '365 ROADMAP', badgeColor: '#FF1493' },
+      { to: '/365', label: '365 Timeline', icon: BookOpen, desc: 'Daily release archive & stages', badge: 'ARCHIVE', badgeColor: '#00E5FF' },
+      { to: '/songs', label: 'PIM Award Play', icon: Trophy, desc: 'Curated song selection & score tiers', badge: 'AWARDS', badgeColor: '#FFD700' },
+      { to: '/tutorial', label: 'PIM Flight Academy', icon: GraduationCap, desc: 'Master the 3-lane controls, holds & swipes', badge: 'TRAINING', badgeColor: '#39FF14' },
     ],
   },
   {
     id: 'vault',
     label: 'Vault',
+    tagline: 'COLLECTIBLE CARDS & PACK DISPENSARY',
     accent: '#FF5500',
     accentGlow: 'rgba(255, 85, 0, 0.4)',
     icon: Home,
     items: [
-      { to: '/vault', label: 'Home', icon: Home, desc: 'Daily card & vault dashboard' },
-      { to: '/next-vault', label: 'Next-Gen Vault', icon: Sparkles, desc: 'Robotic claw & token machine' },
-      { to: '/hero', label: 'Hero Exhibit', icon: Image, desc: 'Museum-grade daily showcase' },
-      { to: '/365', label: '365 Archive', icon: BookOpen, desc: 'Full 365-day music & art timeline' },
-      { to: '/vault/collection', label: 'Collection', icon: Layers, desc: 'Your card library' },
-      { to: '/vault/reveal', label: 'Pack Reveal', icon: Sparkles, desc: 'Open earned packs' },
-      { to: '/vault/codex', label: 'Codex', icon: BookOpen, desc: 'Card catalog & set tracker' },
+      { to: '/vault', label: 'Vault HQ', icon: Home, desc: 'Daily card & vault dashboard', badge: 'DAILY DROP', badgeColor: '#FF5500' },
+      { to: '/next-vault', label: 'Next-Gen Vault', icon: Sparkles, desc: 'Robotic claw & token machine', badge: 'CLAW GACHA', badgeColor: '#FF7700' },
+      { to: '/hero', label: 'Hero Exhibit', icon: Image, desc: 'Museum-grade daily masterpiece showcase', badge: 'MUSEUM', badgeColor: '#FFAA00' },
+      { to: '/365', label: '365 Archive', icon: BookOpen, desc: 'Full 365-day music & art timeline', badge: 'CHRONO', badgeColor: '#FF5500' },
+      { to: '/vault/collection', label: 'Collection Binder', icon: Layers, desc: 'Your TH3SCR1B3 cards & proofs', badge: 'INVENTORY', badgeColor: '#FF5500' },
+      { to: '/vault/reveal', label: 'Pack Reveal', icon: Sparkles, desc: 'Open earned booster packs', badge: 'UNBOX', badgeColor: '#FF1493' },
+      { to: '/vault/codex', label: 'Card Codex', icon: BookOpen, desc: 'Card catalog & set tracker', badge: 'REGISTRY', badgeColor: '#39FF14' },
     ],
   },
   {
     id: 'forge',
     label: 'Forge',
+    tagline: 'FUSION CHAMBER & GLOBAL PRESTIGE',
     accent: '#39FF14',
     accentGlow: 'rgba(57, 255, 20, 0.4)',
     icon: Flame,
     items: [
-      { to: '/vault/forge', label: 'Fusion Lab', icon: Flame, desc: 'Fuse & upgrade cards' },
-      { to: '/vault/leaderboard', label: 'Leaderboard', icon: Trophy, desc: 'Global rankings' },
+      { to: '/vault/forge', label: 'Fusion Lab', icon: Flame, desc: 'Synthesize & upgrade card rarities', badge: '2X BOOST', badgeColor: '#39FF14' },
+      { to: '/vault/leaderboard', label: 'Global Leaderboard', icon: Trophy, desc: 'Real-time accuracy & prestige rankings', badge: 'BASE EVM', badgeColor: '#0052FF' },
     ],
   },
   {
     id: 'earn',
     label: 'Earn',
+    tagline: 'TOKEN ECONOMY & DAILY CRATES',
     accent: '#E5B800',
     accentGlow: 'rgba(229, 184, 0, 0.4)',
     icon: Zap,
     items: [
-      { to: '/vault/earn', label: 'Token Shop', icon: Zap, desc: 'Earn & spend tokens' },
-      { to: '/vault/claim', label: 'Redeem', icon: Gift, desc: 'Claim prizes & rewards' },
+      { to: '/vault/earn', label: 'Token Marketplace', icon: Zap, desc: 'Acquire token bundles & cosmetics', badge: 'BUNDLES', badgeColor: '#E5B800' },
+      { to: '/vault/claim', label: 'Redeem Daily Rewards', icon: Gift, desc: 'Claim streak crates & token bonuses', badge: 'FREE CRATE', badgeColor: '#39FF14' },
     ],
   },
   {
     id: 'more',
-    label: 'More',
+    label: 'System',
+    tagline: 'TH3SCR1B3 IDENTITY & HARDWARE CONFIG',
     accent: '#A855F7',
     accentGlow: 'rgba(168, 85, 247, 0.4)',
     icon: LayoutGrid,
     items: [
-      { to: '/365', label: '365 Archive', icon: BookOpen, desc: 'Chronological timeline of all 365 days' },
-      { action: 'notifications', label: 'Transmissions', icon: Bell, desc: 'Broadcasts & alerts' },
-      { to: '/profile', label: 'Profile', icon: User, desc: 'Scribe identity hub' },
-      { action: 'options', label: 'Options', icon: Settings, desc: 'Audio, visuals & gameplay' },
-      { action: 'guide', label: 'Guide', icon: BookOpen, desc: 'Instruction booklet' },
-      { to: '/vault/legal', label: 'Legal', icon: FileText, desc: 'Terms & policies' },
-      { to: '/admin/editor', label: 'Editor', icon: Monitor, desc: 'Beatmap editor', devOnly: true },
-      { to: '/admin/card-designs', label: 'Card Designs', icon: Image, desc: 'Design showcase', devOnly: true },
-      { to: '/pitch-deck', label: 'Pitch Deck', icon: FileText, desc: 'Investor presentation', devOnly: true },
+      { to: '/365', label: '365 Archive', icon: BookOpen, desc: 'Chronological timeline of all 365 days', badge: 'TIMELINE', badgeColor: '#A855F7' },
+      { action: 'notifications', label: 'Transmissions', icon: Bell, desc: 'Broadcasts & system alerts', badge: 'ALERTS', badgeColor: '#FF1493' },
+      { to: '/profile', label: 'TH3SCR1B3 Identity', icon: User, desc: 'Manage TH3SCR1B3 ID & wallet keys', badge: 'PROFILE', badgeColor: '#A855F7' },
+      { action: 'options', label: 'Audio & Calibration', icon: Settings, desc: 'Audio latency, 3-lane DSP & skins', badge: 'DSP AUDIO', badgeColor: '#A855F7' },
+      { action: 'guide', label: 'Field Guide', icon: BookOpen, desc: 'Instruction booklet & mechanics', badge: 'MANUAL', badgeColor: '#00E5FF' },
+      { to: '/vault/legal', label: 'Protocol Legal', icon: FileText, desc: 'Terms & smart contract policies', badge: 'LEGAL', badgeColor: '#888888' },
+      { to: '/admin/editor', label: 'Beatmap Editor', icon: Monitor, desc: 'Custom note chart editor', badge: 'DEV ONLY', badgeColor: '#FF3800', devOnly: true },
+      { to: '/admin/card-designs', label: 'Card Designs', icon: Image, desc: 'Foil design showcase', badge: 'DEV ONLY', badgeColor: '#FF3800', devOnly: true },
+      { to: '/pitch-deck', label: 'Pitch Deck', icon: FileText, desc: 'Executive deck', badge: 'DEV ONLY', badgeColor: '#FF3800', devOnly: true },
     ],
   },
 ];
@@ -127,8 +144,8 @@ const mobileQuickTabs = [
 function getActiveSection(path: string): string | null {
   if (['/arcade', '/pim', '/play', '/campaign', '/songs', '/tutorial', '/chapter', '/slideshow', '/voyeur'].some(p => path === p || path.startsWith(p + '/') || path.startsWith(p + '-'))) return 'play';
   if (['/vault', '/collection', '/forge', '/shop', '/vault/earn', '/codex', '/365', '/day'].some(p => path === p || path.startsWith(p + '/'))) return 'vault';
-  if (['/leaderboard', '/profile', '/deck', '/options', '/guide'].some(p => path.startsWith(p))) return 'terminal';
-  if (['/editor', '/admin'].some(p => path.startsWith(p))) return 'creator';
+  if (['/leaderboard', '/profile', '/deck', '/options', '/guide'].some(p => path.startsWith(p))) return 'more';
+  if (['/editor', '/admin'].some(p => path.startsWith(p))) return 'more';
   return null;
 }
 
@@ -138,36 +155,16 @@ function VaultLogo() {
   return (
     <Link
       to="/"
-      className="flex items-center no-underline group shrink-0"
-      aria-label="PIM : th3v4ult home"
+      className="flex items-center gap-2.5 no-underline group shrink-0 select-none cursor-pointer"
+      aria-label="TH3SCR1B3 : PIM Vault home"
       onClick={() => setOptionsModalOpen(false)}
     >
       <img
         src="/data/logos/top_left_site.png"
-        alt="PIM : th3v4ult"
-        className="h-10 sm:h-11 md:h-12 w-auto max-w-[200px] sm:max-w-[240px] object-contain transition-transform duration-200 group-hover:scale-[1.03] group-active:scale-95 filter drop-shadow-[0_2px_12px_rgba(255,184,0,0.35)]"
+        alt="TH3SCR1B3"
+        className="h-10 sm:h-11 md:h-12 w-auto max-w-[190px] sm:max-w-[230px] object-contain transition-transform duration-200 group-hover:scale-[1.03] group-active:scale-95 filter drop-shadow-[0_2px_12px_rgba(255,184,0,0.35)]"
       />
     </Link>
-  );
-}
-
-function VaultAttribution() {
-  return (
-    <span
-      style={{
-        fontFamily: '"JetBrains Mono", monospace',
-        fontSize: '8px',
-        fontWeight: 700,
-        textTransform: 'uppercase',
-        letterSpacing: '0.25em',
-        color: '#ffb800',
-        opacity: 0.85,
-        marginTop: '2px',
-        display: 'block',
-      }}
-    >
-      BEATSTAR VAULT
-    </span>
   );
 }
 
@@ -175,22 +172,28 @@ function VaultAttribution() {
 function TokenPill({ balance, compact = false }: { balance: number; compact?: boolean }) {
   const lit = balance > 0;
   return (
-    <Link to="/vault/earn" className="no-underline hover:scale-105 active:scale-95 transition-all flex select-none cursor-pointer" title="Earn Vault Tokens">
+    <Link
+      to="/vault/earn"
+      className="no-underline hover:scale-105 active:scale-95 transition-all flex select-none cursor-pointer"
+      title="Earn Vault Tokens"
+      onClick={() => audioManager.playSfx('tap_nav', 0.2)}
+    >
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           gap: '5px',
           padding: compact ? '5px 10px' : '6px 12px',
-          border: '2px solid #000',
+          border: '1.5px solid #000',
           background: lit ? '#ff9900' : '#1a1610',
           color: lit ? '#000' : '#555',
           boxShadow: lit ? '2px 2px 0 #000, 0 0 12px rgba(255,153,0,0.4)' : '2px 2px 0 #000',
           transition: 'all 0.3s ease',
+          clipPath: 'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)',
           flexShrink: 0,
         }}
       >
-        <Zap size={11} />
+        <Zap size={11} className={lit ? "animate-pulse" : ""} />
         <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '11px', fontWeight: 900 }}>
           {balance}
         </span>
@@ -211,13 +214,14 @@ export default function Navbar() {
   const avatarUrl = useVaultStore(s => s.avatarUrl);
   const currentTrack = useGlobalPlayer(s => s.currentTrack);
   const { is4K, toggle: toggle4K, detectCapability } = useDisplayMode();
-  const optionsModalOpen = useVaultStore((s) => s.optionsModalOpen);
   const setOptionsModalOpen = useVaultStore((s) => s.setOptionsModalOpen);
+  const setCommandPaletteOpen = useVaultStore((s) => s.setCommandPaletteOpen);
 
   // Nav state
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [commandPanelOpen, setCommandPanelOpen] = useState(false);
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
+  const [mobileFilterQuery, setMobileFilterQuery] = useState('');
   const [guideOpen, setGuideOpen] = useState(false);
   const closeTimerRef = useRef<number | null>(null);
 
@@ -237,7 +241,7 @@ export default function Navbar() {
     setCommandPanelOpen(false);
   }, [location]);
 
-  // Desktop mega-menu hover handlers
+  // Desktop mega-menu hover handlers with safe exit hysteresis timer
   const handleMenuEnter = useCallback((sectionId: string) => {
     if (closeTimerRef.current) {
       clearTimeout(closeTimerRef.current);
@@ -249,14 +253,15 @@ export default function Navbar() {
   const handleMenuLeave = useCallback(() => {
     closeTimerRef.current = window.setTimeout(() => {
       setActiveMenu(null);
-    }, 250);
+    }, 180);
   }, []);
 
-  // Handle item clicks (for action items like Options, Guide)
+  // Handle item clicks (for action items like Options, Guide, Transmissions)
   const handleItemClick = useCallback((item: MenuItem) => {
     setActiveMenu(null);
     setCommandPanelOpen(false);
     haptics.lightTap();
+    audioManager.playSfx('tap_nav', 0.35);
 
     if (item.action === 'options') {
       setOptionsModalOpen(true);
@@ -271,30 +276,49 @@ export default function Navbar() {
   const getVisibleItems = (items: MenuItem[]) =>
     items.filter(item => !item.devOnly || isDev);
 
+  // Render appropriate spotlight widget for each section
+  const renderSpotlightWidget = (sectionId: string) => {
+    const handleClose = () => setActiveMenu(null);
+    switch (sectionId) {
+      case 'play':
+        return <PlaySpotlight onClose={handleClose} />;
+      case 'vault':
+        return <VaultSpotlight onClose={handleClose} />;
+      case 'forge':
+        return <ForgeSpotlight onClose={handleClose} />;
+      case 'earn':
+        return <EarnSpotlight onClose={handleClose} />;
+      case 'more':
+        return <SystemSpotlight onClose={handleClose} />;
+      default:
+        return null;
+    }
+  };
+
   return (
     <>
       {/* ══ TOP BAR ══════════════════════════════════════════════════════════ */}
-      <div onMouseLeave={handleMenuLeave}>
+      <div onMouseLeave={handleMenuLeave} className="relative z-[101]">
         <nav
-          className="sticky top-0 z-[101] px-3 md:px-6"
+          className="sticky top-0 px-3 md:px-6"
           style={{
-            background: 'rgba(8, 6, 4, 0.45)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
+            background: 'rgba(8, 6, 4, 0.65)',
+            backdropFilter: 'blur(24px) saturate(1.4)',
+            WebkitBackdropFilter: 'blur(24px) saturate(1.4)',
             borderBottom: activeMenu
-              ? 'none'
-              : '1px solid rgba(255,56,0,0.12)',
-            boxShadow: '0 4px 30px rgba(0,0,0,0.4)',
+              ? '1px solid rgba(255,255,255,0.08)'
+              : '1px solid rgba(255,56,0,0.18)',
+            boxShadow: '0 4px 30px rgba(0,0,0,0.5)',
           }}
         >
           <div className="flex items-center justify-between h-15 md:h-16 gap-3 py-1">
-            {/* ── Left: Logo ── */}
-            <div className="flex items-center shrink-0">
+            {/* ── Left: Logo & Attributions ── */}
+            <div className="flex items-center gap-3 shrink-0">
               <VaultLogo />
             </div>
 
             {/* ── Center: Mega-Menu Tabs (Desktop) ── */}
-            <div className="hidden md:flex items-center gap-1 justify-center">
+            <div className="hidden md:flex items-center gap-1.5 justify-center">
               {menuSections.map((section) => {
                 const SectionIcon = section.icon;
                 const isActive = activeSection === section.id;
@@ -303,32 +327,36 @@ export default function Navbar() {
                 return (
                   <button
                     key={section.id}
-                    onMouseEnter={() => handleMenuEnter(section.id)}
+                    onMouseEnter={() => {
+                      handleMenuEnter(section.id);
+                      audioManager.playSfx('tap_nav', 0.1);
+                    }}
                     onClick={() => {
                       haptics.lightTap();
+                      audioManager.playSfx('tap_nav', 0.25);
                       setActiveMenu(activeMenu === section.id ? null : section.id);
                     }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 transition-all hover:scale-[1.03] active:scale-95 cursor-pointer select-none"
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 transition-all hover:scale-[1.03] active:scale-95 cursor-pointer select-none"
                     style={{
                       background: isActive
                         ? section.accent
                         : isOpen
-                          ? `${section.accent}18`
+                          ? `${section.accent}20`
                           : 'rgba(255,255,255,0.03)',
-                      color: isActive ? '#000' : isOpen ? section.accent : 'rgba(255,255,255,0.7)',
+                      color: isActive ? '#000' : isOpen ? section.accent : 'rgba(255,255,255,0.75)',
                       border: isActive
                         ? '1.5px solid #000'
                         : isOpen
-                          ? `1px solid ${section.accent}40`
-                          : '1px solid rgba(255,255,255,0.06)',
+                          ? `1px solid ${section.accent}50`
+                          : '1px solid rgba(255,255,255,0.07)',
                       clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
                       boxShadow: isActive
                         ? `2px 2px 0 #000, 0 0 14px ${section.accentGlow}`
                         : isOpen
-                          ? `0 0 16px ${section.accentGlow.replace('0.4', '0.15')}`
+                          ? `0 0 16px ${section.accentGlow.replace('0.4', '0.2')}`
                           : 'none',
                       fontFamily: '"JetBrains Mono", monospace',
-                      fontSize: '10px',
+                      fontSize: '11px',
                       fontWeight: 900,
                       textTransform: 'uppercase',
                       letterSpacing: '0.08em',
@@ -338,11 +366,11 @@ export default function Navbar() {
                     <SectionIcon size={13} />
                     <span>{section.label}</span>
                     <ChevronDown
-                      size={9}
+                      size={10}
                       style={{
                         transition: 'transform 0.2s ease',
                         transform: isOpen ? 'rotate(180deg)' : 'none',
-                        opacity: 0.5,
+                        opacity: 0.6,
                       }}
                     />
                   </button>
@@ -352,7 +380,26 @@ export default function Navbar() {
 
             {/* ── Right: Desktop Controls ── */}
             <div className="hidden md:flex items-center gap-2 shrink-0">
-              {/* PIM Direct Access Button */}
+              {/* ⌘K Command Palette Quick Jump Trigger */}
+              <button
+                onClick={() => {
+                  setCommandPaletteOpen(true);
+                  haptics.lightTap();
+                  audioManager.playSfx('tap_nav', 0.2);
+                }}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-white/5 hover:bg-[#ff3800]/20 border border-white/10 hover:border-[#ff3800]/50 text-white/70 hover:text-white transition-all cursor-pointer select-none group"
+                title="Open TH3SCR1B3 Command Matrix (Cmd+K or /)"
+              >
+                <Search size={12} className="text-[#ff5500] group-hover:scale-110 transition-transform" />
+                <span className="font-mono text-[10px] font-bold tracking-wider uppercase text-white/60 group-hover:text-white">
+                  SEARCH
+                </span>
+                <kbd className="font-mono text-[8px] bg-black/60 px-1 py-0.5 rounded border border-white/15 text-[#ffaa00]">
+                  ⌘K
+                </kbd>
+              </button>
+
+              {/* Direct Play Arcade CTA */}
               <Link
                 to="/arcade"
                 className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded bg-gradient-to-r from-[#FF1493]/25 via-[#FF5500]/20 to-[#00E5FF]/25 hover:from-[#FF1493]/40 hover:to-[#00E5FF]/40 border border-[#FF1493]/60 text-white font-mono text-[10px] font-black uppercase tracking-wider shadow-[0_0_15px_rgba(255,20,147,0.3)] transition-all hover:scale-105 active:scale-95 cursor-pointer no-underline mr-1"
@@ -400,6 +447,7 @@ export default function Navbar() {
                 onClick={() => {
                   useNotificationStore.getState().setIsOpen(true);
                   haptics.lightTap();
+                  audioManager.playSfx('tap_nav', 0.2);
                 }}
                 className="relative flex items-center justify-center w-8 h-8 border border-white/10 hover:border-pink-500/50 bg-black/40 hover:bg-pink-500/10 transition-all rounded-[2px] cursor-pointer"
                 title="System Transmissions & Broadcasts"
@@ -417,13 +465,13 @@ export default function Navbar() {
 
               <TokenPill balance={tokenBalance} />
 
-              {/* Wallet / Profile */}
+              {/* Wallet / TH3SCR1B3 Identity */}
               {user && !isAnonymous ? (
                 <div className="flex items-center gap-2">
                   <Link
                     to="/profile"
                     className="flex items-center gap-2 no-underline transition-all hover:scale-105"
-                    title="Manage Scribe Identity"
+                    title="Manage TH3SCR1B3 Identity"
                   >
                     {(() => {
                       if (avatarUrl) {
@@ -485,14 +533,14 @@ export default function Navbar() {
                             }
                             return cleaned;
                           }
-                          return user?.id.slice(0, 8) || 'ANONYMOUS';
+                          return user?.id.slice(0, 8) || 'TH3SCR1B3';
                         })()}
                       </span>
                     </div>
                   </Link>
                   <button
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); signOut(); }}
-                    className="p-2 rounded-full transition-all hover:bg-white/10 active:scale-90"
+                    className="p-2 rounded-full transition-all hover:bg-white/10 active:scale-90 cursor-pointer"
                     style={{ color: 'var(--color-text-muted)' }}
                     title="Disconnect Wallet"
                   >
@@ -517,7 +565,7 @@ export default function Navbar() {
                   <button
                     onClick={handleConnectWallet}
                     disabled={status === 'loading'}
-                    className="sticker-gun-tag sticker-slits font-black text-[10px] uppercase tracking-wider transition-all hover:scale-105 active:scale-95 disabled:opacity-60 disabled:cursor-wait"
+                    className="sticker-gun-tag sticker-slits font-black text-[10px] uppercase tracking-wider transition-all hover:scale-105 active:scale-95 disabled:opacity-60 disabled:cursor-wait cursor-pointer"
                     style={{
                       background: authError ? '#ff3800' : 'var(--color-neon-gold)',
                       color: '#000',
@@ -542,7 +590,7 @@ export default function Navbar() {
                 <button
                   onClick={handleConnectWallet}
                   disabled={status === 'loading'}
-                  className="sticker-gun-tag sticker-slits font-black text-[10px] uppercase tracking-wider transition-all hover:scale-105 active:scale-95 disabled:opacity-60 disabled:cursor-wait"
+                  className="sticker-gun-tag sticker-slits font-black text-[10px] uppercase tracking-wider transition-all hover:scale-105 active:scale-95 disabled:opacity-60 disabled:cursor-wait cursor-pointer"
                   style={{
                     background: authError ? '#ff3800' : 'var(--color-neon-gold)',
                     color: '#000',
@@ -567,6 +615,18 @@ export default function Navbar() {
 
             {/* ── Right: Mobile Controls ── */}
             <div className="flex md:hidden items-center gap-1.5">
+              {/* Mobile ⌘K Search Icon */}
+              <button
+                onClick={() => {
+                  setCommandPaletteOpen(true);
+                  haptics.lightTap();
+                }}
+                className="flex items-center justify-center w-9 h-9 border border-white/15 bg-black/50 text-[#ff5500] active:scale-95 transition-all rounded-[2px]"
+                aria-label="Open Command Search"
+              >
+                <Search size={15} />
+              </button>
+
               <button
                 onClick={() => {
                   useNotificationStore.getState().setIsOpen(true);
@@ -584,10 +644,16 @@ export default function Navbar() {
                   </span>
                 )}
               </button>
+
               <TokenPill balance={tokenBalance} compact />
+
               <button
-                onClick={() => { setCommandPanelOpen(!commandPanelOpen); haptics.lightTap(); }}
-                className="flex items-center justify-center w-10 h-10 border-2 border-black transition-all active:scale-90"
+                onClick={() => {
+                  setCommandPanelOpen(!commandPanelOpen);
+                  haptics.lightTap();
+                  audioManager.playSfx('tap_nav', 0.2);
+                }}
+                className="flex items-center justify-center w-10 h-10 border-2 border-black transition-all active:scale-90 cursor-pointer"
                 style={{
                   background: commandPanelOpen ? '#ff3800' : '#1a1610',
                   color: '#fff',
@@ -601,7 +667,7 @@ export default function Navbar() {
           </div>
         </nav>
 
-        {/* ══ DESKTOP MEGA-MENU FLYOUT ═══════════════════════════════════════ */}
+        {/* ══ DESKTOP 2-COLUMN MEGA-MENU FLYOUT ═══════════════════════════════ */}
         <AnimatePresence>
           {activeMenu && (() => {
             const section = menuSections.find(s => s.id === activeMenu);
@@ -611,161 +677,187 @@ export default function Navbar() {
             return (
               <motion.div
                 key={`mega-${section.id}`}
-                initial={{ opacity: 0, y: -6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={{ duration: 0.15, ease: 'easeOut' }}
-                className="hidden md:block sticky z-[100] px-6"
+                initial={{ opacity: 0, y: -8, scale: 0.99 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -6, scale: 0.99 }}
+                transition={{ duration: 0.16, ease: 'easeOut' }}
+                className="hidden md:block absolute left-0 right-0 top-full z-[100] px-6 lg:px-12 py-5"
                 onMouseEnter={() => handleMenuEnter(section.id)}
                 style={{
-                  background: 'rgba(8, 6, 4, 0.97)',
-                  backdropFilter: 'blur(24px) saturate(1.5)',
-                  WebkitBackdropFilter: 'blur(24px) saturate(1.5)',
+                  background: 'rgba(8, 6, 4, 0.98)',
+                  backdropFilter: 'blur(30px) saturate(1.5)',
+                  WebkitBackdropFilter: 'blur(30px) saturate(1.5)',
                   borderTop: `3px solid ${section.accent}`,
-                  borderBottom: '1px solid rgba(255,255,255,0.06)',
-                  boxShadow: `0 20px 60px rgba(0,0,0,0.8), 0 0 40px ${section.accentGlow.replace('0.4', '0.12')}`,
+                  borderBottom: '1px solid rgba(255,255,255,0.08)',
+                  boxShadow: `0 30px 80px rgba(0,0,0,0.9), 0 0 50px ${section.accentGlow.replace('0.4', '0.15')}`,
                 }}
               >
-                {/* Section header */}
-                <div className="flex items-center gap-2 pt-4 pb-2 px-2">
-                  <div
-                    style={{
-                      width: '3px',
-                      height: '16px',
-                      background: section.accent,
-                      boxShadow: `0 0 8px ${section.accentGlow}`,
-                    }}
-                  />
-                  <span
-                    style={{
-                      fontFamily: '"Impact", "Arial Black", sans-serif',
-                      fontSize: '13px',
-                      fontWeight: 900,
-                      letterSpacing: '0.15em',
-                      textTransform: 'uppercase',
-                      color: section.accent,
-                      textShadow: `0 0 20px ${section.accentGlow}`,
-                    }}
-                  >
-                    {section.label}
-                  </span>
-                  <div className="flex-1 h-px ml-2" style={{ background: `${section.accent}20` }} />
+                {/* Mega-Menu Top Header Strip */}
+                <div className="flex items-center justify-between pb-3 mb-4 border-b border-white/10">
+                  <div className="flex items-center gap-3">
+                    <div
+                      style={{
+                        width: '4px',
+                        height: '18px',
+                        background: section.accent,
+                        boxShadow: `0 0 10px ${section.accentGlow}`,
+                      }}
+                    />
+                    <span
+                      style={{
+                        fontFamily: '"Impact", "Arial Black", sans-serif',
+                        fontSize: '15px',
+                        fontWeight: 900,
+                        letterSpacing: '0.12em',
+                        textTransform: 'uppercase',
+                        color: section.accent,
+                        textShadow: `0 0 20px ${section.accentGlow}`,
+                      }}
+                    >
+                      {section.label} // {section.tagline}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-3 font-mono text-[9px] text-white/40 uppercase">
+                    <span>HOTKEY: <kbd className="px-1 py-0.5 bg-white/10 rounded text-white/70">ESC</kbd> CLOSE</span>
+                  </div>
                 </div>
 
-                {/* Items grid */}
-                <div
-                  className="pb-4 px-2"
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: visibleItems.length > 3 ? 'repeat(2, 1fr)' : '1fr',
-                    gap: '2px',
-                  }}
-                >
-                  {visibleItems.map((item, i) => {
-                    const ItemIcon = item.icon;
-                    const isItemActive = item.to ? location === item.to : false;
+                {/* 2-Column Content Layout: Left Grid (58%) + Right Live Spotlight (42%) */}
+                <div className="grid grid-cols-12 gap-6 items-stretch">
+                  {/* Left Column: Action Items Grid */}
+                  <div
+                    className="col-span-7 grid gap-2 content-start"
+                    style={{
+                      gridTemplateColumns: visibleItems.length > 4 ? 'repeat(2, 1fr)' : '1fr',
+                    }}
+                  >
+                    {visibleItems.map((item, i) => {
+                      const ItemIcon = item.icon;
+                      const isItemActive = item.to ? location === item.to : false;
 
-                    const content = (
-                      <motion.div
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: i * 0.03, duration: 0.12 }}
-                        className="flex items-center gap-3 px-3 py-2.5 transition-all group cursor-pointer"
-                        style={{
-                          background: isItemActive ? `${section.accent}12` : 'transparent',
-                          borderLeft: isItemActive ? `3px solid ${section.accent}` : '3px solid transparent',
-                          clipPath: 'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)',
-                        }}
-                        onMouseEnter={(e) => {
-                          (e.currentTarget as HTMLElement).style.background = `${section.accent}10`;
-                          (e.currentTarget as HTMLElement).style.borderLeft = `3px solid ${section.accent}`;
-                          (e.currentTarget as HTMLElement).style.transform = 'translateX(4px)';
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!isItemActive) {
-                            (e.currentTarget as HTMLElement).style.background = 'transparent';
-                            (e.currentTarget as HTMLElement).style.borderLeft = '3px solid transparent';
-                          }
-                          (e.currentTarget as HTMLElement).style.transform = 'translateX(0)';
-                        }}
-                      >
-                        <div
-                          className="flex items-center justify-center shrink-0"
+                      const itemContent = (
+                        <motion.div
+                          initial={{ opacity: 0, x: -8 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: i * 0.02, duration: 0.12 }}
+                          className="flex items-start gap-3 p-3 transition-all group cursor-pointer border rounded"
                           style={{
-                            width: '32px',
-                            height: '32px',
-                            background: `${section.accent}12`,
-                            border: `1px solid ${section.accent}30`,
+                            background: isItemActive ? `${section.accent}16` : 'rgba(255,255,255,0.02)',
+                            borderColor: isItemActive ? `${section.accent}50` : 'rgba(255,255,255,0.06)',
+                            clipPath: 'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)',
+                          }}
+                          onMouseEnter={(e) => {
+                            audioManager.playSfx('tap_nav', 0.08);
+                            (e.currentTarget as HTMLElement).style.background = `${section.accent}12`;
+                            (e.currentTarget as HTMLElement).style.borderColor = `${section.accent}60`;
+                            (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)';
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isItemActive) {
+                              (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.02)';
+                              (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.06)';
+                            }
+                            (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
                           }}
                         >
-                          <ItemIcon size={15} style={{ color: section.accent }} />
-                        </div>
-                        <div className="flex flex-col gap-0.5 min-w-0">
-                          <span
+                          <div
+                            className="flex items-center justify-center shrink-0 w-8 h-8 rounded border"
                             style={{
-                              fontFamily: '"Impact", "Arial Black", sans-serif',
-                              fontSize: '14px',
-                              fontWeight: 900,
-                              letterSpacing: '-0.3px',
-                              textTransform: 'uppercase',
-                              color: isItemActive ? section.accent : '#fff',
+                              background: isItemActive ? `${section.accent}25` : 'rgba(255,255,255,0.04)',
+                              borderColor: isItemActive ? `${section.accent}80` : `${section.accent}30`,
                             }}
                           >
-                            {item.label}
-                          </span>
-                          <span
-                            style={{
-                              fontFamily: '"JetBrains Mono", monospace',
-                              fontSize: '9px',
-                              fontWeight: 400,
-                              color: 'rgba(255,255,255,0.35)',
-                              textTransform: 'uppercase',
-                              letterSpacing: '0.05em',
-                            }}
-                          >
-                            {item.desc}
-                          </span>
-                        </div>
-                        {isItemActive && (
-                          <span
-                            style={{
-                              fontFamily: '"JetBrains Mono", monospace',
-                              fontSize: '7px',
-                              fontWeight: 900,
-                              color: section.accent,
-                              textTransform: 'uppercase',
-                              letterSpacing: '0.15em',
-                              marginLeft: 'auto',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            ← NOW
-                          </span>
-                        )}
-                      </motion.div>
-                    );
+                            <ItemIcon size={16} style={{ color: section.accent }} />
+                          </div>
 
-                    if (item.to) {
+                          <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span
+                                style={{
+                                  fontFamily: '"Impact", "Arial Black", sans-serif',
+                                  fontSize: '15px',
+                                  fontWeight: 900,
+                                  letterSpacing: '-0.2px',
+                                  textTransform: 'uppercase',
+                                  color: isItemActive ? section.accent : '#fff',
+                                }}
+                              >
+                                {item.label}
+                              </span>
+                              {item.badge && (
+                                <span
+                                  className="font-mono text-[7px] font-black uppercase px-1.5 py-0.5 rounded"
+                                  style={{
+                                    background: `${item.badgeColor || section.accent}22`,
+                                    color: item.badgeColor || section.accent,
+                                    border: `1px solid ${item.badgeColor || section.accent}40`,
+                                  }}
+                                >
+                                  {item.badge}
+                                </span>
+                              )}
+                            </div>
+                            <span
+                              style={{
+                                fontFamily: '"JetBrains Mono", monospace',
+                                fontSize: '9px',
+                                color: 'rgba(255,255,255,0.4)',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.04em',
+                                lineHeight: '1.3',
+                              }}
+                            >
+                              {item.desc}
+                            </span>
+                          </div>
+
+                          {isItemActive && (
+                            <span
+                              style={{
+                                fontFamily: '"JetBrains Mono", monospace',
+                                fontSize: '8px',
+                                fontWeight: 900,
+                                color: section.accent,
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.1em',
+                                marginLeft: 'auto',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              ← ACTIVE
+                            </span>
+                          )}
+                        </motion.div>
+                      );
+
+                      if (item.to) {
+                        return (
+                          <Link
+                            key={item.label}
+                            to={item.to}
+                            className="no-underline"
+                            onClick={() => handleItemClick(item)}
+                          >
+                            {itemContent}
+                          </Link>
+                        );
+                      }
                       return (
-                        <Link
+                        <div
                           key={item.label}
-                          to={item.to}
-                          className="no-underline"
                           onClick={() => handleItemClick(item)}
                         >
-                          {content}
-                        </Link>
+                          {itemContent}
+                        </div>
                       );
-                    }
-                    return (
-                      <div
-                        key={item.label}
-                        onClick={() => handleItemClick(item)}
-                      >
-                        {content}
-                      </div>
-                    );
-                  })}
+                    })}
+                  </div>
+
+                  {/* Right Column: Live Telemetry Spotlight Widget */}
+                  <div className="col-span-5 h-full">
+                    {renderSpotlightWidget(section.id)}
+                  </div>
                 </div>
               </motion.div>
             );
@@ -781,7 +873,7 @@ export default function Navbar() {
         )}
       </div>
 
-      {/* ══ MOBILE COMMAND PANEL (Full-Screen Overlay) ══════════════════════ */}
+      {/* ══ MOBILE COMMAND PANEL (Full-Screen Tactical Overlay) ══════════════ */}
       <AnimatePresence>
         {commandPanelOpen && (
           <>
@@ -791,55 +883,54 @@ export default function Navbar() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[55] md:hidden"
-              style={{ background: 'rgba(0,0,0,0.75)' }}
+              className="fixed inset-0 z-[150] md:hidden bg-black/80 backdrop-blur-md"
               onClick={() => setCommandPanelOpen(false)}
             />
 
-            {/* Panel */}
+            {/* Panel Drawer */}
             <motion.div
               key="cmd-panel"
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 28, stiffness: 280 }}
-              className="fixed inset-y-0 right-0 z-[56] md:hidden overflow-y-auto"
+              className="fixed inset-y-0 right-0 z-[151] md:hidden overflow-y-auto flex flex-col"
               style={{
-                width: 'min(88vw, 380px)',
+                width: 'min(90vw, 400px)',
                 background: 'rgba(5, 4, 2, 0.99)',
                 backdropFilter: 'blur(30px)',
                 WebkitBackdropFilter: 'blur(30px)',
-                borderLeft: '1px solid rgba(255,56,0,0.15)',
-                boxShadow: '-10px 0 40px rgba(0,0,0,0.8)',
+                borderLeft: '1.5px solid rgba(255,56,0,0.3)',
+                boxShadow: '-10px 0 50px rgba(0,0,0,0.9)',
               }}
             >
               {/* Header */}
               <div
-                className="flex items-center justify-between px-4 py-3 sticky top-0 z-10"
+                className="flex items-center justify-between px-4 py-3.5 sticky top-0 z-10"
                 style={{
                   background: 'rgba(5,4,2,0.98)',
-                  borderBottom: '2px solid rgba(255,56,0,0.2)',
+                  borderBottom: '2px solid rgba(255,56,0,0.3)',
                 }}
               >
                 <div className="flex items-center gap-2">
-                  <div style={{ width: '3px', height: '20px', background: '#ff3800', boxShadow: '0 0 10px rgba(255,56,0,0.5)' }} />
+                  <div style={{ width: '4px', height: '20px', background: '#ff3800', boxShadow: '0 0 10px rgba(255,56,0,0.6)' }} />
                   <span style={{
                     fontFamily: '"Impact", "Arial Black", sans-serif',
-                    fontSize: '18px',
+                    fontSize: '19px',
                     fontWeight: 900,
-                    letterSpacing: '0.1em',
+                    letterSpacing: '0.08em',
                     textTransform: 'uppercase',
                     color: '#fff',
                   }}>
-                    Command
+                    TH3SCR1B3 COMMAND
                   </span>
                 </div>
                 <button
                   onClick={() => setCommandPanelOpen(false)}
-                  className="flex items-center justify-center w-9 h-9 transition-all active:scale-90"
+                  className="flex items-center justify-center w-9 h-9 transition-all active:scale-90 cursor-pointer"
                   style={{
                     background: '#ff3800',
-                    border: '2px solid #000',
+                    border: '1.5px solid #000',
                     color: '#fff',
                     boxShadow: '2px 2px 0 #000',
                   }}
@@ -848,63 +939,113 @@ export default function Navbar() {
                 </button>
               </div>
 
-              {/* Beatstar Vault status strip */}
+              {/* Status Banner */}
               <div style={{
                 background: '#ff3800',
                 padding: '4px 16px',
                 fontFamily: '"JetBrains Mono", monospace',
                 fontSize: '9px',
-                fontWeight: 700,
-                letterSpacing: '0.3em',
-                color: '#fff',
+                fontWeight: 800,
+                letterSpacing: '0.25em',
+                color: '#000',
                 textTransform: 'uppercase',
               }}>
-                BEATSTAR VAULT // COLLECTIBLE CARD SYSTEM
+                BASE EVM // 3-LANE RHYTHM PROTOCOL
+              </div>
+
+              {/* Top Search Bar */}
+              <div className="px-3 pt-3">
+                <div className="flex items-center gap-2 px-3 py-2 bg-black/60 border border-white/15 rounded">
+                  <Search size={14} className="text-[#ff5500]" />
+                  <input
+                    type="text"
+                    value={mobileFilterQuery}
+                    onChange={(e) => setMobileFilterQuery(e.target.value)}
+                    placeholder="Filter sections & shortcuts..."
+                    className="w-full bg-transparent text-white font-mono text-xs outline-none placeholder:text-white/30"
+                  />
+                  {mobileFilterQuery && (
+                    <button onClick={() => setMobileFilterQuery('')} className="text-white/40 hover:text-white">
+                      <X size={12} />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* 4-Tile Tactical Launchpad */}
+              <div className="px-3 pt-3 grid grid-cols-4 gap-1.5">
+                {[
+                  { label: 'ARCADE', icon: Gamepad2, to: '/arcade', color: '#FF1493' },
+                  { label: 'VAULT', icon: Home, to: '/vault', color: '#FF5500' },
+                  { label: 'FORGE', icon: Flame, to: '/vault/forge', color: '#39FF14' },
+                  { label: 'EARN', icon: Zap, to: '/vault/earn', color: '#E5B800' },
+                ].map((tile) => {
+                  const TileIcon = tile.icon;
+                  return (
+                    <Link
+                      key={tile.label}
+                      to={tile.to}
+                      onClick={() => {
+                        haptics.lightTap();
+                        setCommandPanelOpen(false);
+                      }}
+                      className="flex flex-col items-center justify-center p-2 rounded bg-white/5 hover:bg-white/10 border border-white/10 active:scale-95 transition-all no-underline text-center"
+                      style={{
+                        clipPath: 'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)',
+                      }}
+                    >
+                      <TileIcon size={16} style={{ color: tile.color }} />
+                      <span className="font-mono text-[8px] font-black text-white mt-1 uppercase">
+                        {tile.label}
+                      </span>
+                    </Link>
+                  );
+                })}
               </div>
 
               {/* Section Accordions */}
-              <div className="px-3 pt-3 pb-2 flex flex-col gap-2">
+              <div className="px-3 pt-3 pb-2 flex-1 flex flex-col gap-2">
                 {menuSections.map((section) => {
                   const SectionIcon = section.icon;
-                  const isExpanded = expandedSection === section.id;
-                  const visibleItems = getVisibleItems(section.items);
+                  const visibleItems = getVisibleItems(section.items).filter(item => {
+                    if (!mobileFilterQuery.trim()) return true;
+                    const q = mobileFilterQuery.toLowerCase();
+                    return item.label.toLowerCase().includes(q) || item.desc.toLowerCase().includes(q);
+                  });
+
+                  if (visibleItems.length === 0 && mobileFilterQuery) return null;
+
+                  const isExpanded = expandedSection === section.id || Boolean(mobileFilterQuery);
 
                   return (
-                    <div key={section.id}>
+                    <div key={section.id} className="rounded overflow-hidden border border-white/5">
                       {/* Section Header */}
                       <button
                         onClick={() => {
                           haptics.lightTap();
                           setExpandedSection(isExpanded ? null : section.id);
                         }}
-                        className="w-full flex items-center gap-3 px-4 py-3 transition-all active:scale-[0.98]"
+                        className="w-full flex items-center gap-3 px-3.5 py-2.5 transition-all active:scale-[0.98] cursor-pointer"
                         style={{
-                          background: isExpanded ? `${section.accent}10` : 'rgba(255,255,255,0.02)',
-                          borderTop: isExpanded ? `1px solid ${section.accent}25` : '1px solid rgba(255,255,255,0.05)',
-                          borderRight: isExpanded ? `1px solid ${section.accent}25` : '1px solid rgba(255,255,255,0.05)',
-                          borderBottom: isExpanded ? `1px solid ${section.accent}25` : '1px solid rgba(255,255,255,0.05)',
+                          background: isExpanded ? `${section.accent}12` : 'rgba(255,255,255,0.02)',
                           borderLeft: `3px solid ${section.accent}`,
-                          clipPath: 'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)',
                         }}
                       >
                         <div
-                          className="flex items-center justify-center shrink-0"
+                          className="flex items-center justify-center shrink-0 w-7 h-7 rounded"
                           style={{
-                            width: '28px',
-                            height: '28px',
                             background: `${section.accent}15`,
                           }}
                         >
-                          <SectionIcon size={15} style={{ color: section.accent }} />
+                          <SectionIcon size={14} style={{ color: section.accent }} />
                         </div>
                         <span style={{
                           fontFamily: '"Impact", "Arial Black", sans-serif',
-                          fontSize: '22px',
+                          fontSize: '18px',
                           fontWeight: 900,
-                          letterSpacing: '-0.5px',
+                          letterSpacing: '-0.3px',
                           textTransform: 'uppercase',
                           color: isExpanded ? section.accent : '#fff',
-                          textShadow: isExpanded ? `0 0 20px ${section.accentGlow}` : 'none',
                         }}>
                           {section.label}
                         </span>
@@ -939,43 +1080,56 @@ export default function Navbar() {
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: 'auto', opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.2, ease: 'easeOut' }}
-                            className="overflow-hidden"
+                            transition={{ duration: 0.18, ease: 'easeOut' }}
+                            className="overflow-hidden bg-black/40"
                           >
-                            <div className="pl-4 pr-2 py-1 flex flex-col gap-1">
+                            <div className="pl-3 pr-2 py-1.5 flex flex-col gap-1">
                               {visibleItems.map((item) => {
                                 const ItemIcon = item.icon;
                                 const isItemActive = item.to ? location === item.to : false;
 
                                 const itemContent = (
                                   <div
-                                    className="flex items-center gap-3 px-3 py-2.5 transition-all active:scale-[0.97]"
+                                    className="flex items-center gap-3 px-3 py-2 transition-all active:scale-[0.97]"
                                     style={{
-                                      background: isItemActive ? `${section.accent}12` : 'rgba(255,255,255,0.02)',
+                                      background: isItemActive ? `${section.accent}15` : 'rgba(255,255,255,0.02)',
                                       borderLeft: isItemActive ? `2px solid ${section.accent}` : '2px solid transparent',
                                     }}
                                   >
                                     <ItemIcon
-                                      size={16}
+                                      size={15}
                                       style={{ color: isItemActive ? section.accent : 'rgba(255,255,255,0.4)', flexShrink: 0 }}
                                     />
-                                    <div className="flex flex-col gap-0.5 min-w-0">
-                                      <span style={{
-                                        fontFamily: '"Impact", "Arial Black", sans-serif',
-                                        fontSize: '16px',
-                                        fontWeight: 900,
-                                        letterSpacing: '-0.3px',
-                                        textTransform: 'uppercase',
-                                        color: isItemActive ? section.accent : '#fff',
-                                      }}>
-                                        {item.label}
-                                      </span>
+                                    <div className="flex flex-col gap-0.5 min-w-0 flex-1">
+                                      <div className="flex items-center gap-2">
+                                        <span style={{
+                                          fontFamily: '"Impact", "Arial Black", sans-serif',
+                                          fontSize: '14px',
+                                          fontWeight: 900,
+                                          letterSpacing: '-0.2px',
+                                          textTransform: 'uppercase',
+                                          color: isItemActive ? section.accent : '#fff',
+                                        }}>
+                                          {item.label}
+                                        </span>
+                                        {item.badge && (
+                                          <span
+                                            className="font-mono text-[7px] font-black uppercase px-1 py-0.2 rounded"
+                                            style={{
+                                              background: `${item.badgeColor || section.accent}20`,
+                                              color: item.badgeColor || section.accent,
+                                            }}
+                                          >
+                                            {item.badge}
+                                          </span>
+                                        )}
+                                      </div>
                                       <span style={{
                                         fontFamily: '"JetBrains Mono", monospace',
                                         fontSize: '8px',
-                                        color: 'rgba(255,255,255,0.3)',
+                                        color: 'rgba(255,255,255,0.35)',
                                         textTransform: 'uppercase',
-                                        letterSpacing: '0.05em',
+                                        letterSpacing: '0.04em',
                                       }}>
                                         {item.desc}
                                       </span>
@@ -1027,45 +1181,29 @@ export default function Navbar() {
               </div>
 
               {/* ── Command Panel Footer ── */}
-              <div className="px-3 pb-4 mt-2">
-                {/* Divider */}
+              <div className="px-3 pb-4 mt-auto">
                 <div className="h-px mb-3" style={{ background: 'rgba(255,255,255,0.06)' }} />
 
                 {/* 4K HDR toggle row */}
                 <div
-                  className="flex items-center justify-between px-4 py-3 mb-2"
+                  className="flex items-center justify-between px-3.5 py-2.5 mb-2 rounded"
                   style={{
                     background: is4K ? 'rgba(255,215,0,0.06)' : 'rgba(255,255,255,0.02)',
                     border: is4K ? '1px solid rgba(255,215,0,0.2)' : '1px solid rgba(255,255,255,0.05)',
                   }}
                 >
                   <div className="flex items-center gap-3">
-                    <Monitor size={16} style={{ color: is4K ? '#ffd700' : 'rgba(255,255,255,0.4)' }} />
+                    <Monitor size={15} style={{ color: is4K ? '#ffd700' : 'rgba(255,255,255,0.4)' }} />
                     <span style={{
                       fontFamily: '"Impact", "Arial Black", sans-serif',
-                      fontSize: '18px',
+                      fontSize: '16px',
                       fontWeight: 900,
-                      letterSpacing: '-0.5px',
+                      letterSpacing: '-0.3px',
                       textTransform: 'uppercase',
                       color: is4K ? '#ffd700' : 'var(--color-text-primary)',
                     }}>
-                      4K HDR
+                      4K HDR SHADERS
                     </span>
-                    {is4K && (
-                      <span style={{
-                        fontFamily: '"JetBrains Mono", monospace',
-                        fontSize: '7px',
-                        fontWeight: 900,
-                        letterSpacing: '0.15em',
-                        color: '#ffd700',
-                        background: 'rgba(255,215,0,0.15)',
-                        padding: '2px 6px',
-                        borderRadius: '2px',
-                        textTransform: 'uppercase',
-                      }}>
-                        ACTIVE
-                      </span>
-                    )}
                   </div>
                   <div
                     className={`toggle-4k${is4K ? ' active' : ''}`}
@@ -1073,13 +1211,13 @@ export default function Navbar() {
                     role="switch"
                     aria-checked={is4K}
                     aria-label="Toggle 4K HDR mode"
-                    style={{ transform: 'scale(1.3)' }}
+                    style={{ transform: 'scale(1.2)' }}
                   />
                 </div>
 
-                {/* Wallet / Identity */}
+                {/* Wallet / TH3SCR1B3 Identity */}
                 {user && !isAnonymous ? (
-                  <div className="flex items-center justify-between w-full px-2">
+                  <div className="flex items-center justify-between w-full px-2 py-1">
                     <Link
                       to="/profile"
                       onClick={() => setCommandPanelOpen(false)}
@@ -1092,7 +1230,7 @@ export default function Navbar() {
                         fontWeight: 900,
                         letterSpacing: '0.05em',
                       }}
-                      title="Manage Scribe Identity"
+                      title="Manage TH3SCR1B3 Identity"
                     >
                       {displayName || (() => {
                         const val = user.email || user.id;
@@ -1101,42 +1239,29 @@ export default function Navbar() {
                     </Link>
                     <button
                       onClick={() => { signOut(); setCommandPanelOpen(false); }}
-                      className="flex items-center gap-2 px-3 py-2 border border-white/10 hover:bg-white/5 transition-colors"
-                      style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '10px', textTransform: 'uppercase', color: 'var(--color-text-muted)' }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 border border-white/10 hover:bg-white/5 transition-colors cursor-pointer"
+                      style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '9px', textTransform: 'uppercase', color: 'var(--color-text-muted)' }}
                     >
-                      <LogOut size={12} />
+                      <LogOut size={11} />
                       Sign out
                     </button>
                   </div>
                 ) : (
-                  <div className="flex flex-col gap-2.5">
-                    {user && isAnonymous && (
-                      <div className="flex items-center justify-between px-1">
-                        <span style={{
-                          fontFamily: '"JetBrains Mono", monospace',
-                          fontSize: '10px',
-                          fontWeight: 900,
-                          color: '#5b8cff',
-                          textTransform: 'uppercase',
-                        }}>
-                          ✦ Guest Wallet active
-                        </span>
-                      </div>
-                    )}
+                  <div className="flex flex-col gap-2">
                     <button
                       onClick={() => { handleConnectWallet(); setCommandPanelOpen(false); }}
                       disabled={status === 'loading'}
-                      className="w-full flex items-center justify-center gap-2 py-3 border-2 border-black font-black uppercase tracking-wider transition-all active:scale-95"
+                      className="w-full flex items-center justify-center gap-2 py-3 border-2 border-black font-black uppercase tracking-wider transition-all active:scale-95 cursor-pointer"
                       style={{
                         background: '#ff3800',
                         color: '#fff',
                         boxShadow: '4px 4px 0 #000, 0 0 20px rgba(255,56,0,0.4)',
                         fontFamily: '"Impact", "Arial Black", sans-serif',
-                        fontSize: '20px',
+                        fontSize: '18px',
                       }}
                     >
-                      <Wallet size={18} />
-                      {status === 'loading' ? 'Connecting...' : 'Connect Wallet'}
+                      <Wallet size={16} />
+                      {status === 'loading' ? 'Connecting...' : 'Connect Identity'}
                     </button>
                   </div>
                 )}
@@ -1169,8 +1294,11 @@ export default function Navbar() {
             <Link
               key={id}
               to={to}
-              onClick={() => haptics.lightTap()}
-              className="relative flex flex-col items-center justify-center rounded-xl no-underline transition-all duration-150 active:scale-90 select-none"
+              onClick={() => {
+                haptics.lightTap();
+                audioManager.playSfx('tap_nav', 0.2);
+              }}
+              className="relative flex flex-col items-center justify-center rounded-xl no-underline transition-all duration-150 active:scale-90 select-none cursor-pointer"
               style={{
                 width: '42px',
                 height: '42px',

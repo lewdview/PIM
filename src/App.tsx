@@ -14,6 +14,7 @@ import LoadingToast from './components/LoadingToast';
 import GlobalPlayerBar from './components/GlobalPlayerBar';
 import OnboardingFlow from './components/OnboardingFlow';
 import AuthModal from './components/AuthModal';
+import CommandPaletteModal from './components/CommandPaletteModal';
 
 // Core Page imports (eager)
 import RhythmHome from './pages/RhythmHome';
@@ -608,6 +609,7 @@ export default function App() {
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
       <OptionsModal isOpen={optionsModalOpen} onClose={() => setOptionsModalOpen(false)} />
       <NotificationModal />
+      <CommandPaletteModal />
     </div>
   );
 }

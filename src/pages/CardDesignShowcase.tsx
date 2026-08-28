@@ -11,12 +11,12 @@ import {
   generateAll365Prompts,
   type OutfitStyle,
 } from '../utils/artTypes';
+import { STORAGE_BASE } from '../services/supabaseClient';
 import '../styles/CardShowcaseStyles.css';
 
 // --------------------------------------------------------------------------
 // MOCK DATA GENERATION
 // --------------------------------------------------------------------------
-const STORAGE_BASE = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/releaseready/`;
 
 const mockCards: VaultCard[] = [
   {
