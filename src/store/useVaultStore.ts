@@ -708,6 +708,11 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         const key = localStorage.key(i);
         if (!key) continue;
 
+        const sanitizeMedal = (m: string) => {
+          const up = (m || '').toUpperCase().trim();
+          return ['BRONZE', 'SILVER', 'GOLD', 'PLATINUM'].includes(up) ? up : 'NONE';
+        };
+
         if (key.startsWith('hs_')) {
           const songId = key.substring(3);
           const localScore = parseInt(localStorage.getItem(key) || '0', 10);
@@ -720,7 +725,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
               score: localScore,
               accuracy: 0,
               max_combo: 0,
-              medal: finalMedals[songId] || 'NONE',
+              medal: sanitizeMedal(finalMedals[songId] || 'NONE'),
               pack_rewarded: false,
               reward_tier: 'none'
             }).then(({ error }) => {
@@ -739,7 +744,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
               score: finalHighScores[songId] || 0,
               accuracy: 0,
               max_combo: 0,
-              medal: localMedal,
+              medal: sanitizeMedal(localMedal),
               pack_rewarded: false,
               reward_tier: 'none'
             }).then(({ error }) => {

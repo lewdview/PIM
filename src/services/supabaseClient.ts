@@ -57,5 +57,5 @@ export const STORAGE_BASE = (
   import.meta.env.VITE_WASABI_URL ||
   import.meta.env.VITE_MEDIA_BASE_URL ||
   import.meta.env.STORAGE_BASE_URL ||
-  'https://th3scr1b3.art/'
+  'https://files.th3scr1b3.art/'
 ).replace(/\/?$/, '/');

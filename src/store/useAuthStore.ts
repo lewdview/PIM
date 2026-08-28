@@ -616,7 +616,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return { error: null };
     } catch (err: any) {
       console.error('[Auth] signInWithPasskey error:', err);
-      const msg = err?.message || 'Passkey sign-in failed.';
+      const msg = err?.name === 'NotAllowedError' || err?.message?.includes('NotAllowedError') || err?.message?.includes('cancelled')
+        ? 'Passkey authentication was dismissed or timed out.'
+        : err?.message || 'Passkey sign-in failed.';
       set({ error: msg, status: 'ready' });
       return { error: msg };
     }
@@ -625,6 +627,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ error: null });
     try {
       console.log('[Auth] Initiating WebAuthn Passkey registration...');
+      let currentUser = get().user;
+      if (!currentUser) {
+        const { data: anonData, error: anonErr } = await supabase.auth.signInAnonymously();
+        if (anonErr) throw anonErr;
+        if (anonData.session?.user) {
+          currentUser = anonData.session.user;
+          set({ session: anonData.session, user: currentUser, status: 'ready' });
+          await get().ensureProfileAndWallet(currentUser);
+        }
+      }
       const { data, error } = await supabase.auth.registerPasskey();
       if (error) throw error;
 
@@ -632,7 +644,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return { error: null, data };
     } catch (err: any) {
       console.error('[Auth] registerPasskey error:', err);
-      const msg = err?.message || 'Passkey registration failed.';
+      const msg = err?.name === 'NotAllowedError' || err?.message?.includes('NotAllowedError') || err?.message?.includes('cancelled')
+        ? 'Passkey registration prompt was dismissed.'
+        : err?.message || 'Passkey registration failed.';
       set({ error: msg });
       return { error: msg };
     }

@@ -829,7 +829,7 @@ export default memo(function Card({
 
               {/* Mythic CTA */}
               {card.rarity === 'mythic' && interactive && (
-                <a href={`https://th3scr1b3.art/stems/${day}`} target="_blank" rel="noreferrer"
+                <a href={`https://files.th3scr1b3.art/stems/${day}`} target="_blank" rel="noreferrer"
                   onClick={e => e.stopPropagation()}
                   style={{
                     padding: '7px 18px', borderRadius: '6px',

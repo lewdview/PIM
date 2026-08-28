@@ -299,13 +299,15 @@ function EchoStatusPanel() {
   useEffect(() => {
     async function fetchGlobalEchoPool() {
       const { supabase } = await import('../services/supabaseClient');
-      const { data } = await supabase.from('echo_pool').select('echo_rarity, generation');
+      const { data } = await supabase.from('echo_pool').select('*');
       if (data) {
         const byRarity: Record<string, number> = {};
         const byGeneration: Record<number, number> = {};
         for (const echo of data) {
-          byRarity[echo.echo_rarity] = (byRarity[echo.echo_rarity] || 0) + 1;
-          byGeneration[echo.generation] = (byGeneration[echo.generation] || 0) + 1;
+          const r = String(echo.rarity || echo.echo_rarity || 'common').toLowerCase();
+          const g = Number(echo.echo_generation ?? echo.generation ?? 0);
+          byRarity[r] = (byRarity[r] || 0) + 1;
+          byGeneration[g] = (byGeneration[g] || 0) + 1;
         }
         setStats({ total: data.length, byRarity, byGeneration });
       }
