@@ -79,9 +79,10 @@ export default function VoyeurPage() {
         });
         setTargetCollection(built);
       }
-    } catch {
-      // Just let them in for now if the function errors in proto mode
-      setHasPaid(true); 
+    } catch (err) {
+      // Fail closed: do NOT grant access on error
+      console.error('[Voyeur] Payment verification failed:', err);
+      setHasPaid(false); 
     } finally {
       setIsProcessing(false);
     }

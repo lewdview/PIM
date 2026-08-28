@@ -319,6 +319,7 @@ interface ContentOverride {
 
 // ===== CARD CACHE =====
 let cardCache: VaultCard[] | null = null;
+let cardFetchPromise: Promise<VaultCard[]> | null = null;
 
 // Deterministic seeded RNG for consistent card traits
 function seededRandom(seed: number): () => number {
@@ -331,56 +332,66 @@ function seededRandom(seed: number): () => number {
 
 /**
  * Fetch all cards from release data (live th3scr1b3.art → local fallback → generated)
+ * De-duplicates concurrent calls via Promise caching (M2 audit fix).
  */
 export async function fetchAllCards(): Promise<VaultCard[]> {
   if (cardCache) return cardCache;
+  if (cardFetchPromise) return cardFetchPromise;
 
-  try {
-    let catalog: any[] = [];
+  cardFetchPromise = (async () => {
     try {
-      const res = await fetch('/data/card_catalog.json');
-      if (res.ok) {
-        catalog = await res.json();
-      }
-    } catch {}
+      let catalog: any[] = [];
+      try {
+        const res = await fetch('/data/card_catalog.json');
+        if (res.ok) {
+          catalog = await res.json();
+        }
+      } catch {}
 
-    if (!catalog || !Array.isArray(catalog) || catalog.length === 0) {
-      catalog = staticCardCatalog as any[];
+      if (!catalog || !Array.isArray(catalog) || catalog.length === 0) {
+        catalog = staticCardCatalog as any[];
+      }
+      
+      // Resolve URLs dynamically
+      const cards: VaultCard[] = catalog.map(c => {
+        const { audioUrl, coverUrl } = resolveUrls({
+          day: c.day,
+          title: c.title,
+          storageTitle: c.storageTitle,
+          mood: c.mood,
+          coverArt: c.coverUrl,
+          storedAudioUrl: c.audioUrl,
+        }, c.rarity);
+        return {
+          ...c,
+          audioUrl,
+          coverUrl
+        };
+      });
+      
+      cardCache = cards;
+      return cards;
+    } catch (err) {
+      console.error('[Vault] Failed to load card catalog:', err);
+      const fallbackCards = (staticCardCatalog as any[]).map(c => {
+        const { audioUrl, coverUrl } = resolveUrls({
+          day: c.day,
+          title: c.title,
+          storageTitle: c.storageTitle,
+          mood: c.mood,
+          coverArt: c.coverUrl,
+          storedAudioUrl: c.audioUrl,
+        }, c.rarity);
+        return { ...c, audioUrl, coverUrl };
+      });
+      cardCache = fallbackCards;
+      return fallbackCards;
+    } finally {
+      cardFetchPromise = null;
     }
-    
-    // Resolve URLs dynamically
-    const cards: VaultCard[] = catalog.map(c => {
-      const { audioUrl, coverUrl } = resolveUrls({
-        day: c.day,
-        title: c.title,
-        storageTitle: c.storageTitle,
-        mood: c.mood,
-        coverArt: c.coverUrl,
-        storedAudioUrl: c.audioUrl,
-      }, c.rarity);
-      return {
-        ...c,
-        audioUrl,
-        coverUrl
-      };
-    });
-    
-    cardCache = cards;
-    return cards;
-  } catch (err) {
-    console.error('[Vault] Failed to load card catalog:', err);
-    return (staticCardCatalog as any[]).map(c => {
-      const { audioUrl, coverUrl } = resolveUrls({
-        day: c.day,
-        title: c.title,
-        storageTitle: c.storageTitle,
-        mood: c.mood,
-        coverArt: c.coverUrl,
-        storedAudioUrl: c.audioUrl,
-      }, c.rarity);
-      return { ...c, audioUrl, coverUrl };
-    });
-  }
+  })();
+
+  return cardFetchPromise;
 }
 
 // ===== CARD QUERIES =====

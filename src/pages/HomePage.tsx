@@ -147,16 +147,25 @@ export default function HomePage() {
       requestPermission();
       return () => window.removeEventListener('deviceorientation', handleOrientation);
     } else {
-      // Desktop: mouse-tracking parallax
+      // Desktop: mouse-tracking parallax with rAF throttling (M9)
+      let rafId: number | null = null;
       const handleMouseMove = (e: MouseEvent) => {
+        if (rafId !== null) return;
         const cx = window.innerWidth / 2;
         const cy = window.innerHeight / 2;
         const dx = (e.clientX - cx) / cx;
         const dy = (e.clientY - cy) / cy;
-        setParallax({ x: dx * 8, y: dy * 8 });
+
+        rafId = requestAnimationFrame(() => {
+          setParallax({ x: dx * 8, y: dy * 8 });
+          rafId = null;
+        });
       };
       window.addEventListener('mousemove', handleMouseMove, { passive: true });
-      return () => window.removeEventListener('mousemove', handleMouseMove);
+      return () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+        if (rafId !== null) cancelAnimationFrame(rafId);
+      };
     }
   }, []);
 

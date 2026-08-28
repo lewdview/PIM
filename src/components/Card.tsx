@@ -233,6 +233,11 @@ export default memo(function Card({
     setIsFaceDown(!isFaceDown);
   }, [interactive, isFaceDown, rotateY]);
 
+  const { src: coverUrl, failed: imgFailed, handleError: handleImgError, isSquare } = useSmartCoverArt(
+    card?.coverUrl || '',
+    card?.rarity || 'common'
+  );
+
   if (!card || !card.rarity) return null;
 
   const rc = RARITY_CONFIG[card.rarity] || RARITY_CONFIG.common;
@@ -244,7 +249,6 @@ export default memo(function Card({
   const tempo   = card.tempo   ?? 0;
   const supply  = getSupplyCap(card.rarity, card.day);
   const claimed = realClaimed ?? card.claimedCount ?? 0;
-  const { src: coverUrl, failed: imgFailed, handleError: handleImgError, isSquare } = useSmartCoverArt(card.coverUrl || '', card.rarity);
   const audioUrl = card.audioUrl || '';
   const hasArt   = !imgError && !imgFailed && coverUrl;
 

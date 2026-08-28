@@ -4018,7 +4018,9 @@ export default function Game() {
     setPhase("finished");
     cancelAnimationFrame(rafRef.current);
     audioRef.current?.pause();
-    audioRef.current && (audioRef.current.currentTime = 0);
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0;
+    }
 
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       try {
@@ -4136,7 +4138,9 @@ export default function Game() {
     cancelAnimationFrame(rafRef.current);
     audioRef.current?.pause();
     const elapsedTime = audioRef.current?.currentTime || 0;
-    audioRef.current && (audioRef.current.currentTime = 0);
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0;
+    }
 
     // Log game abandon event
     const gs = gsRef.current;

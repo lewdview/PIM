@@ -70,6 +70,8 @@ export interface JudgmentDisplay {
   ts: number;
 }
 
+export type MultiplierState = 'NORMAL' | 'FEVER' | 'SURGE' | 'SIGNAL_LOCK';
+
 export interface GameState {
   score: number;
   combo: number;
@@ -79,4 +81,9 @@ export interface GameState {
   goods: number;
   misses: number;
   progress: number;
+  multiplierState?: MultiplierState;
+  activeMultiplier?: number;
+  feverActive?: boolean;
+  surgeActive?: boolean;
+  signalLockActive?: boolean;
 }

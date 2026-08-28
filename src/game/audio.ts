@@ -397,7 +397,123 @@ export class AudioManager {
   // Lane 1: 132.0 Hz (528 Hz Solfeggio "Miracle / DNA Repair" Sub-Octave C3)
   // Lane 2: 162.0 Hz (Harmonic Golden Fifth of 108 Hz in 432 Hz tuning / E3)
   public static readonly HEALING_LANE_FREQUENCIES: number[] = [108.0, 132.0, 162.0];
-  public readonly HEALING_LANE_FREQUENCIES: number[] = [108.0, 132.0, 162.0];
+
+  // ── 3-Band Crossover Subsystem (PIM Spec) ────────────────────────
+  // Lane 0 (Bass): Lowpass 300Hz, Q: 0.8
+  // Lane 1 (Mids): Bandpass 1200Hz, Q: 0.7
+  // Lane 2 (Treble): Highpass 3200Hz, Q: 0.8
+  public static readonly CROSSOVER_BAND_DEFS: { type: BiquadFilterType; freq: number; Q: number }[] = [
+    { type: 'lowpass', freq: 300, Q: 0.8 },
+    { type: 'bandpass', freq: 1200, Q: 0.7 },
+    { type: 'highpass', freq: 3200, Q: 0.8 },
+  ];
+
+  private crossoverFilters: BiquadFilterNode[] = [];
+  private crossoverGains: GainNode[] = [];
+  private crossoverSilenced: boolean[] = [false, false, false];
+  private crossoverRestoreTimers: (number | null)[] = [null, null, null];
+
+  /**
+   * Set up the 3-band crossover filter graph from an audio source node.
+   * Routes Source -> [LP 300Hz, BP 1200Hz, HP 3200Hz] -> [Lane 0 Gain, Lane 1 Gain, Lane 2 Gain] -> Destination.
+   */
+  create3BandCrossover(
+    source: AudioNode,
+    destination?: AudioNode
+  ): { filters: BiquadFilterNode[]; gains: GainNode[]; cleanup: () => void } {
+    if (!this.ctx) throw new Error('AudioContext not initialized');
+    const dest = destination || this.masterGain || this.ctx.destination;
+
+    this.cleanup3BandCrossover();
+
+    const filters: BiquadFilterNode[] = [];
+    const gains: GainNode[] = [];
+
+    AudioManager.CROSSOVER_BAND_DEFS.forEach(({ type, freq, Q }) => {
+      const filter = this.ctx!.createBiquadFilter();
+      filter.type = type;
+      filter.frequency.value = freq;
+      filter.Q.value = Q;
+      filters.push(filter);
+
+      const gain = this.ctx!.createGain();
+      gain.gain.value = 1.0;
+      gains.push(gain);
+
+      source.connect(filter);
+      filter.connect(gain);
+      gain.connect(dest);
+    });
+
+    this.crossoverFilters = filters;
+    this.crossoverGains = gains;
+    this.crossoverSilenced = [false, false, false];
+
+    return {
+      filters,
+      gains,
+      cleanup: () => this.cleanup3BandCrossover(),
+    };
+  }
+
+  /** Mute a crossover lane on miss: drops gain to 0.04 over 0.12s with 3.5s auto-recovery ramp */
+  muteCrossoverLane(lane: number, targetGain = 1.0): void {
+    if (!this.ctx || !this.crossoverGains[lane] || this.crossoverSilenced[lane]) return;
+    const gainNode = this.crossoverGains[lane];
+    this.crossoverSilenced[lane] = true;
+
+    gainNode.gain.cancelScheduledValues(this.ctx.currentTime);
+    gainNode.gain.setValueAtTime(gainNode.gain.value, this.ctx.currentTime);
+    gainNode.gain.linearRampToValueAtTime(0.04, this.ctx.currentTime + 0.12);
+
+    if (this.crossoverRestoreTimers[lane] !== null) {
+      window.clearTimeout(this.crossoverRestoreTimers[lane]!);
+    }
+
+    this.crossoverRestoreTimers[lane] = window.setTimeout(() => {
+      this.crossoverSilenced[lane] = false;
+      this.crossoverRestoreTimers[lane] = null;
+      if (!this.ctx || !this.crossoverGains[lane]) return;
+      const g = this.crossoverGains[lane];
+      g.gain.cancelScheduledValues(this.ctx.currentTime);
+      g.gain.setValueAtTime(g.gain.value, this.ctx.currentTime);
+      g.gain.linearRampToValueAtTime(targetGain, this.ctx.currentTime + 0.4);
+    }, 3500);
+  }
+
+  /** Active restore of a crossover lane on hit: ramps gain to target over 0.25s */
+  restoreCrossoverLane(lane: number, targetGain = 1.0): void {
+    if (!this.crossoverSilenced[lane] || !this.ctx || !this.crossoverGains[lane]) return;
+    this.crossoverSilenced[lane] = false;
+
+    if (this.crossoverRestoreTimers[lane] !== null) {
+      window.clearTimeout(this.crossoverRestoreTimers[lane]!);
+      this.crossoverRestoreTimers[lane] = null;
+    }
+
+    const gainNode = this.crossoverGains[lane];
+    gainNode.gain.cancelScheduledValues(this.ctx.currentTime);
+    gainNode.gain.setValueAtTime(gainNode.gain.value, this.ctx.currentTime);
+    gainNode.gain.linearRampToValueAtTime(targetGain, this.ctx.currentTime + 0.25);
+  }
+
+  /** Clean up crossover nodes and cancel timers */
+  cleanup3BandCrossover(): void {
+    this.crossoverRestoreTimers.forEach((timer) => {
+      if (timer !== null) window.clearTimeout(timer);
+    });
+    this.crossoverRestoreTimers = [null, null, null];
+    this.crossoverSilenced = [false, false, false];
+
+    this.crossoverGains.forEach((g) => {
+      try { g.disconnect(); } catch {}
+    });
+    this.crossoverFilters.forEach((f) => {
+      try { f.disconnect(); } catch {}
+    });
+    this.crossoverGains = [];
+    this.crossoverFilters = [];
+  }
 
   /** Start a warm, therapeutic healing frequency tone in the lower octave for an active hold note */
   startHoldTone(noteId: string | number, laneOrFreq: number = 0, volume = 0.12): void {
@@ -508,6 +624,7 @@ export class AudioManager {
 
   stop(): void {
     this.stopAllHoldTones();
+    this.cleanup3BandCrossover();
     if (this.activeRemixTimeout) {
       window.clearTimeout(this.activeRemixTimeout);
       this.activeRemixTimeout = null;

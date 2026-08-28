@@ -6,7 +6,7 @@ import path from "path";
 const port = Number(process.env.PORT || 5173);
 
 export default defineConfig({
-  envPrefix: ['VITE_', 'SUPABASE_', 'NEXT_PUBLIC_'],
+  envPrefix: ['VITE_', 'NEXT_PUBLIC_'],
   plugins: [
     react(),
     tailwindcss(),
@@ -22,6 +22,16 @@ export default defineConfig({
     outDir: path.resolve(import.meta.dirname, "dist"),
     emptyOutDir: true,
     sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor_react: ['react', 'react-dom', 'wouter', 'zustand'],
+          vendor_web3: ['ethers', '@coinbase/wallet-sdk'],
+          vendor_supabase: ['@supabase/supabase-js'],
+          vendor_ui: ['framer-motion', 'lucide-react', 'clsx', 'tailwind-merge'],
+        },
+      },
+    },
   },
   server: {
     port,
@@ -29,12 +39,8 @@ export default defineConfig({
     host: "0.0.0.0",
     allowedHosts: true,
     fs: {
-      strict: false,
-      allow: [
-        "..",
-        "/Volumes/extremeUno/th3scr1b3-365-warp/365-releases",
-        "/Volumes/extremeDos/temp music"
-      ],
+      strict: true,
+      allow: [".."],
     },
     headers: {
       "Cross-Origin-Opener-Policy": "same-origin-allow-popups",

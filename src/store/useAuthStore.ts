@@ -244,21 +244,28 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const address = accounts[0];
       if (!address) throw new Error('No account found');
 
-      // 2. Prepare Message
-      const message = `Sign in to th3vault on Base. Nonce: ${Date.now()}`;
+      // 2. Request server-generated nonce for replay protection (C2 audit fix)
+      const { data: nonce, error: nonceErr } = await supabase.rpc('generate_auth_nonce', {
+        p_wallet_address: address,
+      });
+      if (nonceErr || !nonce) throw new Error('Failed to generate auth nonce: ' + (nonceErr?.message || 'empty response'));
+
+      // 3. Prepare Message with nonce and timestamp
+      const timestamp = new Date().toISOString();
+      const message = `Sign in to PIM : th3v4ult\nNonce: ${nonce}\nTimestamp: ${timestamp}`;
       const hexMsg = '0x' + Array.from(new TextEncoder().encode(message))
         .map(b => b.toString(16).padStart(2, '0'))
         .join('');
 
-      // 3. Sign Message
+      // 4. Sign Message
       const signature = await wallet.request({
         method: 'personal_sign',
         params: [hexMsg, address],
       });
 
-      // 4. Verify via Edge Function
+      // 5. Verify via Edge Function (pass nonce for server-side validation)
       const { data, error } = await supabase.functions.invoke('auth-smart-wallet', {
-        body: { address, message, signature }
+        body: { address, message, signature, nonce }
       });
 
       if (error || !data?.success) {
@@ -308,13 +315,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       
       const wallet = new Wallet(pkey);
       const address = wallet.address;
-      const message = `Sign in to th3vault on Base. Nonce: ${Date.now()}`;
+
+      // Request server-generated nonce for replay protection (C2 audit fix)
+      const { data: nonce, error: nonceErr } = await supabase.rpc('generate_auth_nonce', {
+        p_wallet_address: address,
+      });
+      if (nonceErr || !nonce) throw new Error('Failed to generate auth nonce: ' + (nonceErr?.message || 'empty response'));
+
+      const timestamp = new Date().toISOString();
+      const message = `Sign in to PIM : th3v4ult\nNonce: ${nonce}\nTimestamp: ${timestamp}`;
       
       console.log('[Auth] Signing with Ephemeral Wallet:', address);
       const signature = await wallet.signMessage(message);
       
       const { data, error } = await supabase.functions.invoke('auth-smart-wallet', {
-        body: { address, message, signature }
+        body: { address, message, signature, nonce }
       });
       
       if (error || !data?.success) {
@@ -445,21 +460,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         if (pkey) {
           localStorage.setItem('th3vault_ephemeral_wallet_pkey', pkey);
         } else {
-          const wallet = Wallet.createRandom();
-          pkey = wallet.privateKey;
-          linkedAddress = wallet.address;
-
-          localStorage.setItem(`th3vault_ephemeral_wallet_pkey_${userId}`, pkey);
-          localStorage.setItem('th3vault_ephemeral_wallet_pkey', pkey);
-
-          await supabase
-            .from('profiles')
-            .upsert({ id: userId, wallet_address: linkedAddress });
-
-          await supabase.auth.updateUser({
-            data: { wallet_address: linkedAddress }
-          });
-          console.log('[Auth] New device detected. Regenerated ephemeral wallet:', linkedAddress);
+          // SECURITY: Existing wallet detected but local private key is missing (new device).
+          // Do NOT overwrite the wallet_address — this would orphan any on-chain assets.
+          // Keep the DB wallet address and warn the user to import their key.
+          console.warn('[Auth] New device detected. Existing wallet preserved:', linkedAddress, '— user must import their private key to sign transactions on this device.');
+          // Still set linkedAddress from DB so the app can display it
         }
       }
 

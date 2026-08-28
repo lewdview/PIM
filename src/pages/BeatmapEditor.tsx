@@ -148,6 +148,8 @@ export default function BeatmapEditor() {
 
   // Editor states
   const [notes, setNotes] = useState<Note[]>([]);
+  const sortedNotes = useMemo(() => [...notes].sort((a, b) => a.time - b.time), [notes]);
+  const selectedNoteIdRef = useRef<number | null>(null);
   const [selectedNoteId, setSelectedNoteId] = useState<number | null>(null);
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
@@ -615,10 +617,29 @@ export default function BeatmapEditor() {
         ctx.fillText(labels[i], x + w / 2, hitY + btnH / 2 + 2);
       }
 
-      // Draw notes flowing down highway
-      notes.forEach(note => {
+      // Draw notes flowing down highway (H12: Binary search time-sliced rendering)
+      const minNoteTime = currentTime - AT * 0.4 - 4.0;
+      const maxNoteTime = currentTime + AT * 1.35;
+      
+      let low = 0;
+      let high = sortedNotes.length - 1;
+      let startIdx = 0;
+      while (low <= high) {
+        const mid = (low + high) >> 1;
+        if (sortedNotes[mid].time >= minNoteTime) {
+          startIdx = mid;
+          high = mid - 1;
+        } else {
+          low = mid + 1;
+        }
+      }
+
+      for (let ni = startIdx; ni < sortedNotes.length; ni++) {
+        const note = sortedNotes[ni];
+        if (note.time > maxNoteTime) break; // Finished visible range
+
         const pNote = 1.0 - (note.time - currentTime) / AT;
-        if (pNote < -0.3 || pNote > 1.4) return; // culling
+        if (pNote < -0.3 || pNote > 1.4) continue; // fine culling
 
         const isSelected = selectedNoteId === note.id;
 
@@ -676,7 +697,7 @@ export default function BeatmapEditor() {
 
           drawNoteMarker(ctx, cx, cy, w * 0.7, note.type, isSelected, note.swipeDirection);
         }
-      });
+      }
 
       // Draw drag/drop placement preview if hovering
       if (activeTool !== 'select' && hoverPosition) {

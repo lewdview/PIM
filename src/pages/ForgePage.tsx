@@ -74,7 +74,7 @@ function getModifierProgress(mod: ConditionalModifier, ctx: ModifierContext): Mo
       accentColor = '#ffd700';
       progressLabel = ctx.isFirstPack ? 'Active — first pack!' : 'Already used';
       break;
-    case 'time_of_day':
+    case 'time_of_day': {
       current = 0;
       target = 1;
       icon = Clock;
@@ -93,6 +93,7 @@ function getModifierProgress(mod: ConditionalModifier, ctx: ModifierContext): Mo
         progressLabel = inWindow ? `Active now (${c.timeStart}–${c.timeEnd})` : `Available ${c.timeStart}–${c.timeEnd}`;
       }
       break;
+    }
     case 'milestone':
       current = ctx.collectionSize;
       icon = Award;

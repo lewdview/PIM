@@ -224,8 +224,8 @@ async function syncUserFragmentToDb(userId: string, songId: string, count: numbe
           acquired_at: new Date().toISOString()
         });
     }
-  } catch {
-    // Suppress network noise
+  } catch (err) {
+    console.warn('[VaultSync] Fragment DB sync failed (non-fatal):', err);
   }
 }
 
@@ -269,8 +269,8 @@ async function syncMilestoneClaimToDb(userId: string, monthNum: number, mileston
         }
       }
     }
-  } catch {
-    // Suppress network noise
+  } catch (err) {
+    console.warn('[VaultSync] Milestone claim DB sync failed (non-fatal):', err);
   }
 }
 
