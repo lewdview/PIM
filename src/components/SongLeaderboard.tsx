@@ -71,6 +71,7 @@ export default function SongLeaderboard({
   const [expanded, setExpanded] = useState(false);
   const authUser = useAuthStore(s => s.user);
   const storeDisplayName = useVaultStore(s => s.displayName);
+  const storeUsername = useVaultStore(s => s.username);
   const storeAvatarUrl = useVaultStore(s => s.avatarUrl);
   const highScores = useVaultStore(s => s.highScores);
 
@@ -149,7 +150,7 @@ export default function SongLeaderboard({
       }
 
       const userIds = Object.keys(bestByUser);
-      let profilesMap: Record<string, { displayName: string; avatarUrl: string | null }> = {};
+      let profilesMap: Record<string, { displayName: string; avatarUrl: string | null; hasHandle: boolean }> = {};
 
       // Filter out local guest player ID before querying Supabase profiles
       const realUserIds = userIds.filter(id => id !== 'local_player_guest');
@@ -157,56 +158,86 @@ export default function SongLeaderboard({
       if (realUserIds.length > 0) {
         const { data: profs } = await supabase
           .from('profiles')
-          .select('id, wallet_address, display_name, avatar_url')
+          .select('id, wallet_address, display_name, username, avatar_url')
           .in('id', realUserIds);
 
         for (const p of profs || []) {
-          let name = p.display_name || '';
-          if (!name) {
-            if (p.wallet_address) {
-              name = `${p.wallet_address.slice(0, 6)}...${p.wallet_address.slice(-4)}`;
-            } else {
-              name = `ANON_${p.id.slice(0, 6)}`;
-            }
+          let name = '';
+          let hasHandle = false;
+          if (p.username) {
+            name = `@${p.username}`;
+            hasHandle = true;
+          } else if (p.display_name) {
+            name = p.display_name;
+            hasHandle = true;
+          } else if (p.wallet_address) {
+            name = `${p.wallet_address.slice(0, 6)}...${p.wallet_address.slice(-4)}`;
           }
-          profilesMap[p.id] = {
-            displayName: name,
-            avatarUrl: p.avatar_url || null,
-          };
+
+          if (name) {
+            profilesMap[p.id] = {
+              displayName: name,
+              avatarUrl: p.avatar_url || null,
+              hasHandle,
+            };
+          }
         }
       }
 
+      const isAnon = !authUser || authUser.is_anonymous || authUser.app_metadata?.provider === 'anonymous';
+
       // Fallback for current user profile
-      if (authUser && !profilesMap[authUser.id]) {
+      if (authUser && !isAnon && storeUsername) {
         profilesMap[authUser.id] = {
-          displayName: storeDisplayName || authUser.email?.split('@')[0] || `ANON_${authUser.id.slice(0, 6)}`,
+          displayName: `@${storeUsername}`,
           avatarUrl: storeAvatarUrl || (authUser.user_metadata?.avatar_url as string) || null,
+          hasHandle: true,
+        };
+      } else if (authUser && !isAnon && storeDisplayName) {
+        profilesMap[authUser.id] = {
+          displayName: storeDisplayName,
+          avatarUrl: storeAvatarUrl || (authUser.user_metadata?.avatar_url as string) || null,
+          hasHandle: true,
+        };
+      } else if (authUser && !profilesMap[authUser.id]) {
+        profilesMap[authUser.id] = {
+          displayName: isAnon ? 'PILOT (LOCAL RUN)' : (storeUsername ? `@${storeUsername}` : (storeDisplayName || `PILOT_${authUser.id.slice(0, 6)}`)),
+          avatarUrl: storeAvatarUrl || (authUser.user_metadata?.avatar_url as string) || null,
+          hasHandle: Boolean(!isAnon && (storeUsername || storeDisplayName)),
         };
       } else if (!authUser && bestByUser['local_player_guest']) {
         profilesMap['local_player_guest'] = {
-          displayName: storeDisplayName || 'PILOT (GUEST)',
+          displayName: 'PILOT (GUEST RUN)',
           avatarUrl: storeAvatarUrl || null,
+          hasHandle: false,
         };
       }
 
-      // 3. Build list of human entries
-      const humanEntries: SongLeaderEntry[] = userIds.map(uid => {
-        const stats = bestByUser[uid];
-        const prof = profilesMap[uid] || { displayName: `ANON_${uid.slice(0, 6)}`, avatarUrl: null };
-        const isYou = authUser ? authUser.id === uid : uid === 'local_player_guest';
+      // 3. Build list of human entries (filter out nameless/unclaimed orphan accounts from other users)
+      const humanEntries: SongLeaderEntry[] = userIds
+        .filter(uid => {
+          const isYou = authUser ? authUser.id === uid : uid === 'local_player_guest';
+          if (isYou) return true;
+          const prof = profilesMap[uid];
+          return Boolean(prof && prof.hasHandle);
+        })
+        .map(uid => {
+          const stats = bestByUser[uid];
+          const prof = profilesMap[uid] || { displayName: `PILOT (LOCAL)`, avatarUrl: null, hasHandle: false };
+          const isYou = authUser ? authUser.id === uid : uid === 'local_player_guest';
 
-        return {
-          userId: uid,
-          rank: 0,
-          displayName: prof.displayName.toUpperCase(),
-          avatarUrl: prof.avatarUrl,
-          score: stats.score,
-          accuracy: stats.accuracy,
-          maxCombo: stats.maxCombo,
-          medal: stats.medal,
-          isYou,
-        };
-      });
+          return {
+            userId: uid,
+            rank: 0,
+            displayName: prof.displayName.toUpperCase(),
+            avatarUrl: prof.avatarUrl,
+            score: stats.score,
+            accuracy: stats.accuracy,
+            maxCombo: stats.maxCombo,
+            medal: stats.medal,
+            isYou,
+          };
+        });
 
       // 4. Sort descending by score and assign final ranks
       humanEntries.sort((a, b) => b.score - a.score);
@@ -305,6 +336,30 @@ export default function SongLeaderboard({
             </span>
             <span className="font-mono text-[9px] text-white/40 ml-1">pts</span>
           </div>
+        </div>
+      )}
+
+      {/* Connect / Username Claim Prompt Banner if player is unauthenticated or has no handle */}
+      {yourEntry && (!authUser || authUser.is_anonymous || !storeUsername) && (
+        <div className="px-4 py-2 bg-[#FFD700]/10 border-b border-[#FFD700]/30 flex items-center justify-between font-mono text-[9px]">
+          <span className="text-[#FFD700] font-bold flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#FFD700] animate-ping" />
+            {!authUser || authUser.is_anonymous 
+              ? "CONNECT ACCOUNT TO BROADCAST THIS SCORE" 
+              : "CLAIM @USERNAME TO BROADCAST THIS SCORE"}
+          </span>
+          <button
+            onClick={() => {
+              if (!authUser || authUser.is_anonymous) {
+                useAuthStore.getState().setShowAuthModal(true);
+              } else {
+                useAuthStore.getState().setShowIdentityModal(true);
+              }
+            }}
+            className="px-2.5 py-1 bg-[#FFD700] text-black font-black uppercase tracking-wider rounded-sm hover:bg-white transition-colors cursor-pointer"
+          >
+            {!authUser || authUser.is_anonymous ? "CONNECT" : "CLAIM @HANDLE"}
+          </button>
         </div>
       )}
 

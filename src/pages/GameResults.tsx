@@ -428,8 +428,12 @@ export default function Results() {
   const ringProgress = Math.min(accuracy / 100, 1);
 
   const user = useAuthStore(s => s.user);
+  const setShowAuthModal = useAuthStore(s => s.setShowAuthModal);
+  const setShowIdentityModal = useAuthStore(s => s.setShowIdentityModal);
   const collection = useVaultStore(s => s.collection);
   const loadVaultData = useVaultStore(s => s.loadVaultData);
+  const username = useVaultStore(s => s.username);
+  const syncHighScore = useVaultStore(s => s.syncHighScore);
   const [claimStatus, setClaimStatus] = useState<'idle' | 'checking' | 'ready' | 'claiming' | 'claimed' | 'failed'>('idle');
   const [alreadyClaimedTiers, setAlreadyClaimedTiers] = useState<Set<string>>(new Set());
   const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
@@ -439,6 +443,19 @@ export default function Results() {
       loadVaultData().catch(err => console.warn("Failed to load vault data inside GameResults", err));
     }
   }, [user, loadVaultData]);
+
+  // Sync high score to leaderboard when user is authenticated with a picked username
+  useEffect(() => {
+    if (result && songId && user && !user.is_anonymous && username) {
+      syncHighScore(
+        songId,
+        result.score,
+        parseFloat(accuracy.toFixed(2)),
+        result.maxCombo,
+        result.medal
+      );
+    }
+  }, [user, username, result, songId, accuracy, syncHighScore]);
 
   // Accuracy → Pack tier mapping (per Growth Funnel spec)
   type ClaimableTier = 'free' | 'taste' | 'special_picks' | 'alpha' | 'prophecy';
@@ -1536,26 +1553,52 @@ export default function Results() {
                   ← {fromFreePlay ? '[ RETURN TO AWARD PLAY ]' : '[ CONTINUE TO LEVEL PATH ]'}
                 </button>
               )}
-              {(!user || user.is_anonymous) && (
-                <div className="w-full my-3 p-4 rounded-lg border border-[#FF1493]/40 bg-black/80 backdrop-blur-md text-center space-y-2.5">
+              {(!user || user.is_anonymous) ? (
+                <div className="w-full my-3 p-4 rounded-lg border border-[#FF1493]/40 bg-black/80 backdrop-blur-md text-center space-y-2.5 shadow-[0_0_30px_rgba(255,20,147,0.15)]">
                   <div className="font-mono text-[9px] tracking-[0.3em] uppercase text-[#FF1493] font-bold">
-                    // TODAY&apos;S DROP COMPLETE //
+                    // BROADCAST RESTRICTED //
                   </div>
                   <h3 className="font-mono text-base font-bold text-white uppercase tracking-wider">
-                    SAVE YOUR PROGRESS
+                    CONNECT TO SAVE & TRANSMIT SCORE
                   </h3>
                   <p className="font-sans text-[11px] text-white/70">
-                    Create your free PIM account to keep today&apos;s achievement, collection and daily streak.
+                    Connect your sovereign identity to lock in this run and broadcast your score to global transmission rankings.
                   </p>
                   <button
-                    onClick={() => setIsOnboardingModalOpen(true)}
-                    className="w-full py-3 px-4 font-mono text-xs font-bold uppercase tracking-widest bg-white text-black hover:bg-white/90 transition-all rounded shadow-lg flex items-center justify-center gap-2"
+                    onClick={() => setShowAuthModal(true)}
+                    className="w-full py-3 px-4 font-mono text-xs font-black uppercase tracking-widest bg-[#FF1493] text-white hover:bg-[#ff33a8] transition-all rounded shadow-[0_0_20px_rgba(255,20,147,0.35)] flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    <span>✨</span> SAVE YOUR RUN
+                    <span>⚡</span> CONNECT SOVEREIGN ACCOUNT
                   </button>
                   <div className="font-mono text-[9px] text-white/40 pt-1">
-                    DAY {song?.day || 208} COMPLETE · 207 previous drops waiting in archive
+                    DAY {song?.day || 208} COMPLETE · High score preserved locally
                   </div>
+                </div>
+              ) : !username ? (
+                <div className="w-full my-3 p-4 rounded-lg border border-[#FFD700]/40 bg-black/80 backdrop-blur-md text-center space-y-2.5 shadow-[0_0_30px_rgba(255,215,0,0.15)]">
+                  <div className="font-mono text-[9px] tracking-[0.3em] uppercase text-[#FFD700] font-bold">
+                    // PILOT IDENTITY REQUIRED //
+                  </div>
+                  <h3 className="font-mono text-base font-bold text-white uppercase tracking-wider">
+                    CLAIM @USERNAME TO BROADCAST SCORE
+                  </h3>
+                  <p className="font-sans text-[11px] text-white/70">
+                    Your account is connected, but you must register an official pilot @username and avatar to appear on competitive leaderboards.
+                  </p>
+                  <button
+                    onClick={() => setShowIdentityModal(true)}
+                    className="w-full py-3 px-4 font-mono text-xs font-black uppercase tracking-widest bg-[#FFD700] text-black hover:bg-[#ffe234] transition-all rounded shadow-[0_0_20px_rgba(255,215,0,0.35)] flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <span>👤</span> CLAIM @USERNAME & AVATAR
+                  </button>
+                </div>
+              ) : (
+                <div className="w-full my-2 px-4 py-2 rounded border border-[#39FF14]/30 bg-[#39FF14]/[0.04] flex items-center justify-between font-mono text-[10px]">
+                  <div className="flex items-center gap-2 text-[#39FF14]">
+                    <span className="w-2 h-2 rounded-full bg-[#39FF14] animate-pulse" />
+                    <span>BROADCASTING AS <strong>@{username.toUpperCase()}</strong></span>
+                  </div>
+                  <span className="text-white/40 uppercase tracking-widest">VERIFIED SIGNAL</span>
                 </div>
               )}
 

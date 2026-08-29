@@ -41,10 +41,11 @@ export default function IdentitySetup({ onComplete, compact }: IdentitySetupProp
     setIsChecking(true);
     const timeoutId = setTimeout(async () => {
       try {
+        const clean = username.trim();
         const { data } = await supabase
           .from('profiles')
           .select('id')
-          .ilike('display_name', username)
+          .ilike('username', clean)
           .maybeSingle();
 
         if (!data) {
@@ -109,6 +110,7 @@ export default function IdentitySetup({ onComplete, compact }: IdentitySetupProp
     setIsSaving(true);
 
     try {
+      const cleanUsername = username.trim();
       let finalAvatarUrl = user.user_metadata?.avatar_url;
 
       if (avatarFile) {
@@ -131,20 +133,25 @@ export default function IdentitySetup({ onComplete, compact }: IdentitySetupProp
       await supabase
         .from('profiles')
         .update({
-          display_name: username,
+          username: cleanUsername,
+          display_name: cleanUsername,
           avatar_url: finalAvatarUrl,
         })
         .eq('id', user.id);
 
       await supabase.auth.updateUser({
         data: {
-          display_name: username,
+          username: cleanUsername,
+          display_name: cleanUsername,
           avatar_url: finalAvatarUrl,
         }
       });
 
       // Update local store via reload vault data
-      const { loadVaultData } = useVaultStore.getState();
+      const { loadVaultData, updateProfile } = useVaultStore.getState();
+      if (updateProfile) {
+        await updateProfile(cleanUsername, finalAvatarUrl, cleanUsername).catch(() => {});
+      }
       if (loadVaultData) {
         await loadVaultData(true);
       }

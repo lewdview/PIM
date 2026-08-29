@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Trophy, Star } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
+import { useVaultStore } from '../store/useVaultStore';
 import { RARITY_CONFIG } from '../utils/rarity';
 import { supabase } from '../services/supabaseClient';
 import { Link, useLocation } from 'wouter';
@@ -27,6 +28,11 @@ export default function LeaderboardPage() {
   const [loading, setLoading] = useState(true);
   const [countdown, setCountdown] = useState<string>('00:00:00');
   const [, navigate] = useLocation();
+
+  const authUser = useAuthStore(s => s.user);
+  const currentUsername = useVaultStore(s => s.username);
+  const setShowAuthModal = useAuthStore(s => s.setShowAuthModal);
+  const setShowIdentityModal = useAuthStore(s => s.setShowIdentityModal);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -63,7 +69,9 @@ export default function LeaderboardPage() {
       try {
         if (showLoading) setLoading(true);
 
-        const authUser = useAuthStore.getState().user;
+        const currentAuthUser = useAuthStore.getState().user;
+        const isAnon = !currentAuthUser || currentAuthUser.is_anonymous || currentAuthUser.app_metadata?.provider === 'anonymous';
+        const storeHandle = useVaultStore.getState().username;
 
         if (activeTab === 'today') {
           // PERFORMANCE: Today
@@ -96,7 +104,7 @@ export default function LeaderboardPage() {
           if (userIds.length > 0) {
             const { data: profs, error: profsError } = await supabase
               .from('profiles')
-              .select('id, wallet_address, display_name, avatar_url')
+              .select('id, wallet_address, display_name, username, avatar_url')
               .in('id', userIds);
             
             if (!profsError && profs) {
@@ -104,33 +112,44 @@ export default function LeaderboardPage() {
             }
           }
 
-          let mappedEntries: LeaderEntry[] = userIds.map(uid => {
-            const prof = profilesMap[uid] || { id: uid };
-            let name = 'ANONYMOUS';
-            if (prof.display_name) {
-              name = prof.display_name;
-            } else if (prof.wallet_address) {
-              const wa = prof.wallet_address;
-              name = `${wa.slice(0, 6)}...${wa.slice(-4)}`;
-            } else {
-              name = `ANON_${uid.slice(0, 6)}`;
-            }
+          let mappedEntries: LeaderEntry[] = userIds
+            .filter(uid => {
+              const isYou = currentAuthUser ? currentAuthUser.id === uid : false;
+              if (isYou) return true;
+              const prof = profilesMap[uid];
+              return Boolean(prof && (prof.username || prof.display_name));
+            })
+            .map(uid => {
+              const prof = profilesMap[uid] || { id: uid };
+              const isYou = currentAuthUser ? currentAuthUser.id === uid : false;
 
-            const isYou = authUser ? authUser.id === uid : false;
-            
-            return {
-              id: uid,
-              rank: 0,
-              name: name.toUpperCase(),
-              avatarUrl: prof.avatar_url,
-              uniqueCards: 0,
-              totalCards: 0,
-              rarityScore: statsByUser[uid].totalScore,
-              topRarity: 'common',
-              isYou,
-              playsToday: statsByUser[uid].plays
-            };
-          });
+              let name = '';
+              if (isYou && !isAnon && storeHandle) {
+                name = `@${storeHandle}`;
+              } else if (prof.username) {
+                name = `@${prof.username}`;
+              } else if (prof.display_name) {
+                name = prof.display_name;
+              } else if (prof.wallet_address) {
+                const wa = prof.wallet_address;
+                name = `${wa.slice(0, 6)}...${wa.slice(-4)}`;
+              } else {
+                name = isYou ? 'PILOT (LOCAL RUN)' : 'PILOT (UNVERIFIED)';
+              }
+              
+              return {
+                id: uid,
+                rank: 0,
+                name: name.toUpperCase(),
+                avatarUrl: prof.avatar_url,
+                uniqueCards: 0,
+                totalCards: 0,
+                rarityScore: statsByUser[uid].totalScore,
+                topRarity: 'common',
+                isYou,
+                playsToday: statsByUser[uid].plays
+              };
+            });
 
           mappedEntries.sort((a, b) => b.rarityScore - a.rarityScore);
           mappedEntries.forEach((entry, idx) => {
@@ -149,7 +168,7 @@ export default function LeaderboardPage() {
           while (pHasMore) {
             const { data, error } = await supabase
               .from('profiles')
-              .select('id, wallet_address, display_name, avatar_url, streak_count, total_pulls')
+              .select('id, wallet_address, display_name, username, avatar_url, streak_count, total_pulls')
               .range(pPage * P_PAGE_SIZE, (pPage + 1) * P_PAGE_SIZE - 1);
             
             if (error) throw error;
@@ -197,62 +216,71 @@ export default function LeaderboardPage() {
             collectionsByOwner[col.owner_id].push(col);
           }
 
-          const mappedEntries: LeaderEntry[] = (profiles || []).map((prof) => {
-            const userCols = collectionsByOwner[prof.id] || [];
-            const uniqueCards = new Set(userCols.map(c => c.card_id)).size;
-            const totalCards = userCols.length;
+          const mappedEntries: LeaderEntry[] = (profiles || [])
+            .filter(prof => {
+              const isYou = currentAuthUser ? currentAuthUser.id === prof.id : false;
+              if (isYou) return true;
+              return Boolean(prof.username || prof.display_name);
+            })
+            .map((prof) => {
+              const userCols = collectionsByOwner[prof.id] || [];
+              const uniqueCards = new Set(userCols.map(c => c.card_id)).size;
+              const totalCards = userCols.length;
 
-            let score = 0;
-            score += (prof.streak_count || 0) * 120;
-            score += (prof.total_pulls || 0) * 15;
+              let score = 0;
+              score += (prof.streak_count || 0) * 120;
+              score += (prof.total_pulls || 0) * 15;
 
-            const RARITY_ORDER = ['common', 'uncommon', 'rare', 'legendary', 'mythic'];
-            let maxRarityIdx = 0;
+              const RARITY_ORDER = ['common', 'uncommon', 'rare', 'legendary', 'mythic'];
+              let maxRarityIdx = 0;
 
-            for (const c of userCols) {
-              const rarity = c.rarity || 'common';
-              if (rarity === 'common') score += 10;
-              else if (rarity === 'uncommon') score += 25;
-              else if (rarity === 'rare') score += 60;
-              else if (rarity === 'legendary') score += 350;
-              else if (rarity === 'mythic') score += 800;
+              for (const c of userCols) {
+                const rarity = c.rarity || 'common';
+                if (rarity === 'common') score += 10;
+                else if (rarity === 'uncommon') score += 25;
+                else if (rarity === 'rare') score += 60;
+                else if (rarity === 'legendary') score += 350;
+                else if (rarity === 'mythic') score += 800;
 
-              if (c.edition === 1) score += 500;
-              if (c.proof && c.proof !== 'none') score += 200;
-              if (c.is_echo) score += 400;
+                if (c.edition === 1) score += 500;
+                if (c.proof && c.proof !== 'none') score += 200;
+                if (c.is_echo) score += 400;
 
-              const rarityIdx = RARITY_ORDER.indexOf(rarity);
-              if (rarityIdx > maxRarityIdx) {
-                maxRarityIdx = rarityIdx;
+                const rarityIdx = RARITY_ORDER.indexOf(rarity);
+                if (rarityIdx > maxRarityIdx) {
+                  maxRarityIdx = rarityIdx;
+                }
               }
-            }
 
-            const topRarity = RARITY_ORDER[maxRarityIdx];
+              const topRarity = RARITY_ORDER[maxRarityIdx];
+              const isYou = currentAuthUser ? currentAuthUser.id === prof.id : false;
 
-            let name = 'ANONYMOUS';
-            if (prof.display_name) {
-              name = prof.display_name;
-            } else if (prof.wallet_address) {
-              const wa = prof.wallet_address;
-              name = `${wa.slice(0, 6)}...${wa.slice(-4)}`;
-            } else {
-              name = `ANON_${prof.id.slice(0, 6)}`;
-            }
+              let name = '';
+              if (isYou && !isAnon && storeHandle) {
+                name = `@${storeHandle}`;
+              } else if (prof.username) {
+                name = `@${prof.username}`;
+              } else if (prof.display_name) {
+                name = prof.display_name;
+              } else if (prof.wallet_address) {
+                const wa = prof.wallet_address;
+                name = `${wa.slice(0, 6)}...${wa.slice(-4)}`;
+              } else {
+                name = isYou ? 'PILOT (LOCAL RUN)' : 'PILOT (UNVERIFIED)';
+              }
 
-            const isYou = authUser ? authUser.id === prof.id : false;
-
-            return {
-              id: prof.id,
-              rank: 0,
-              name: name.toUpperCase(),
-              avatarUrl: prof.avatar_url,
-              uniqueCards,
-              totalCards,
-              rarityScore: score,
-              topRarity,
-              isYou,
-            };
-          });
+              return {
+                id: prof.id,
+                rank: 0,
+                name: name.toUpperCase(),
+                avatarUrl: prof.avatar_url,
+                uniqueCards,
+                totalCards,
+                rarityScore: score,
+                topRarity,
+                isYou,
+              };
+            });
 
           mappedEntries.sort((a, b) => b.rarityScore - a.rarityScore);
           mappedEntries.forEach((entry, idx) => {
@@ -391,6 +419,35 @@ export default function LeaderboardPage() {
           <div className="leaderboard-countdown-value font-black text-2xl text-neon-cyan drop-shadow-[0_0_10px_rgba(0,229,255,0.5)]">
             {countdown}
           </div>
+        </div>
+      )}
+
+      {/* Connect / Username Claim Prompt Card */}
+      {(!authUser || authUser.is_anonymous || !currentUsername) && (
+        <div className="p-4 bg-[#FFD700]/10 border border-[#FFD700]/30 rounded-xl flex flex-col md:flex-row items-center justify-between gap-3 text-center md:text-left mb-6">
+          <div>
+            <div className="font-mono text-[10px] font-bold uppercase tracking-widest text-[#FFD700] flex items-center justify-center md:justify-start gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#FFD700] animate-ping" />
+              LEADERBOARD TRANSMISSION CLEARANCE
+            </div>
+            <p className="font-sans text-xs text-white/70 mt-0.5">
+              {!authUser || authUser.is_anonymous
+                ? "Connect your sovereign account to claim an official @username and broadcast your scores to global rankings."
+                : "You are connected! Register a pilot @username and avatar photo to broadcast your rank."}
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              if (!authUser || authUser.is_anonymous) {
+                setShowAuthModal(true);
+              } else {
+                setShowIdentityModal(true);
+              }
+            }}
+            className="px-5 py-2.5 bg-[#FFD700] text-black font-black uppercase text-xs tracking-wider rounded shadow-[0_0_15px_rgba(255,215,0,0.3)] hover:bg-white transition-colors cursor-pointer shrink-0"
+          >
+            {!authUser || authUser.is_anonymous ? "CONNECT ACCOUNT" : "CLAIM @USERNAME"}
+          </button>
         </div>
       )}
 

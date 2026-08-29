@@ -16,6 +16,7 @@ import LoadingToast from './components/LoadingToast';
 import GlobalPlayerBar from './components/GlobalPlayerBar';
 import OnboardingFlow from './components/OnboardingFlow';
 import AuthModal from './components/AuthModal';
+import IdentityModal from './components/IdentityModal';
 import CommandPaletteModal from './components/CommandPaletteModal';
 import OptionsModal from './components/OptionsModal';
 import { NotificationModal } from './components/NotificationModal';
@@ -386,6 +387,7 @@ export default function App() {
         <LoadingToast />
         <GlobalPlayerBar />
         <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+        <IdentityModal />
         <OptionsModal isOpen={optionsModalOpen} onClose={() => setOptionsModalOpen(false)} />
         <NotificationModal />
         <CommandPaletteModal />

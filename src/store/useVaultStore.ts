@@ -113,6 +113,7 @@ interface VaultState {
   equippedCardId: string | null;
   unlockedSkins: string[];
   displayName: string | null;
+  username: string | null;
   avatarUrl: string | null;
 
   // User Progress Database Sync State
@@ -156,7 +157,7 @@ interface VaultState {
   updateCheats: (cheats: Partial<ProfileCheats>) => Promise<void>;
 
   // Profile Identity Actions
-  updateProfile: (displayName: string, avatarUrl?: string | null) => Promise<void>;
+  updateProfile: (displayName: string, avatarUrl?: string | null, username?: string | null) => Promise<void>;
 
   // Database Sync Actions
   syncHighScore: (songId: string, score: number, accuracy: number, maxCombo: number, medal: string, telemetry?: any) => Promise<void>;
@@ -232,41 +233,38 @@ async function syncUserFragmentToDb(userId: string, songId: string, count: numbe
 async function syncMilestoneClaimToDb(userId: string, monthNum: number, milestoneNum: number) {
   if (!userId) return;
   try {
-    // 1. Try schema format A: (chapter, milestone_index)
-    const { error: errA } = await supabase.from('campaign_milestone_claims').upsert({
+    const payload = {
       user_id: userId,
       chapter: String(monthNum),
       milestone_index: milestoneNum,
+      month_num: monthNum,
+      milestone_num: milestoneNum,
       claimed_at: new Date().toISOString()
-    }, { onConflict: 'user_id,chapter,milestone_index' });
+    };
 
-    if (errA) {
-      // 2. Try schema format B: (month_num, milestone_num)
-      const { error: errB } = await supabase.from('campaign_milestone_claims').upsert({
+    // Primary: Insert with all columns (synchronized across schema versions)
+    const { error } = await supabase.from('campaign_milestone_claims').insert(payload);
+    if (!error || error.code === '23505') {
+      // 23505 is PostgreSQL unique_violation: already recorded in database
+      return;
+    }
+
+    // Fallback for older database schemas that lack dual columns:
+    if (error.message?.includes('column') || error.code === 'PGRST204' || error.code === '42703') {
+      const { error: errChapter } = await supabase.from('campaign_milestone_claims').insert({
         user_id: userId,
-        month_num: monthNum,
-        milestone_num: milestoneNum,
+        chapter: String(monthNum),
+        milestone_index: milestoneNum,
         claimed_at: new Date().toISOString()
-      }, { onConflict: 'user_id,month_num,milestone_num' });
+      });
 
-      if (errB) {
-        // Fallback: check if existing row exists, else insert
-        const { data: existing } = await supabase
-          .from('campaign_milestone_claims')
-          .select('id')
-          .eq('user_id', userId)
-          .eq('chapter', String(monthNum))
-          .eq('milestone_index', milestoneNum)
-          .maybeSingle();
-
-        if (!existing?.id) {
-          await supabase.from('campaign_milestone_claims').insert({
-            user_id: userId,
-            chapter: String(monthNum),
-            milestone_index: milestoneNum,
-            claimed_at: new Date().toISOString()
-          });
-        }
+      if (errChapter && (errChapter.message?.includes('column') || errChapter.code === 'PGRST204' || errChapter.code === '42703')) {
+        await supabase.from('campaign_milestone_claims').insert({
+          user_id: userId,
+          month_num: monthNum,
+          milestone_num: milestoneNum,
+          claimed_at: new Date().toISOString()
+        });
       }
     }
   } catch (err) {
@@ -294,6 +292,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   equippedCardId: null,
   unlockedSkins: JSON.parse(localStorage.getItem('local_unlocked_skins') || '["original", "glitch", "glass"]'),
   displayName: null,
+  username: null,
   avatarUrl: null,
   optionsModalOpen: false,
   commandPaletteOpen: false,
@@ -532,13 +531,13 @@ export const useVaultStore = create<VaultState>((set, get) => ({
 
       let profileRes: any;
       try {
-        profileRes = await supabase.from('profiles').select('tokens, daily_standard_purchased, daily_premium_purchased, last_purchase_day, has_onboarded, streak_count, total_pulls, pulls_since_rare_plus, unlocked_skins, display_name, avatar_url, settings, progression, unlocked_cheats').eq('id', userId).single();
+        profileRes = await supabase.from('profiles').select('tokens, daily_standard_purchased, daily_premium_purchased, last_purchase_day, has_onboarded, streak_count, total_pulls, pulls_since_rare_plus, unlocked_skins, display_name, username, avatar_url, settings, progression, unlocked_cheats').eq('id', userId).single();
         if (profileRes.error && profileRes.error.message.includes('column')) {
           throw new Error('Fallback');
         }
       } catch {
         console.warn("[Sync] New profile columns not found, falling back to legacy profile columns");
-        profileRes = await supabase.from('profiles').select('tokens, daily_standard_purchased, daily_premium_purchased, last_purchase_day, has_onboarded, streak_count, total_pulls, pulls_since_rare_plus, unlocked_skins, display_name, avatar_url').eq('id', userId).single();
+        profileRes = await supabase.from('profiles').select('tokens, daily_standard_purchased, daily_premium_purchased, last_purchase_day, has_onboarded, streak_count, total_pulls, pulls_since_rare_plus, unlocked_skins, display_name, username, avatar_url').eq('id', userId).single();
       }
 
       // Helper function to fetch full collection across all pages (bypassing Supabase 1,000 row default cap)
@@ -678,6 +677,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
           pullsSinceRarePlus: profile.pulls_since_rare_plus || 0,
           unlockedSkins: profile.unlocked_skins || [],
           displayName: profile.display_name || null,
+          username: profile.username || null,
           avatarUrl: profile.avatar_url || null,
           settings: mergedSettings,
           progression: mergedProgression,
@@ -788,10 +788,14 @@ export const useVaultStore = create<VaultState>((set, get) => ({
 
       if (milestonesRes.data && Array.isArray(milestonesRes.data)) {
         for (const row of milestonesRes.data) {
-          const month = row.chapter !== undefined ? (parseInt(String(row.chapter).replace(/\D/g, ''), 10) || row.chapter) : (row.month_num ?? 1);
-          const mIdx = row.milestone_index !== undefined ? row.milestone_index : (row.milestone_num ?? 0);
-          const claimKey = `campaign_claimed_${month}_${mIdx}`;
-          dbMilestoneClaims[claimKey] = true;
+          const rawMonth = row.month_num ?? (row.chapter ? parseInt(String(row.chapter).replace(/\D/g, ''), 10) || row.chapter : 1);
+          const month = typeof rawMonth === 'number' ? rawMonth : (parseInt(String(rawMonth), 10) || 1);
+          const rawMIdx = row.milestone_num ?? row.milestone_index ?? 0;
+          const mIdx = typeof rawMIdx === 'number' ? rawMIdx : (parseInt(String(rawMIdx), 10) || 0);
+          if (month && mIdx) {
+            const claimKey = `campaign_claimed_${month}_${mIdx}`;
+            dbMilestoneClaims[claimKey] = true;
+          }
         }
       }
 
@@ -1073,11 +1077,15 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     });
 
     const session = await supabase.auth.getSession();
-    const userId = session.data.session?.user.id;
-    if (userId) {
+    const user = session.data.session?.user;
+    const isAnon = !user || user.is_anonymous || user.app_metadata?.provider === 'anonymous';
+    const currentUsername = get().username;
+
+    // Only record to database if user is connected (not anonymous) and has a registered username
+    if (user?.id && !isAnon && currentUsername) {
       try {
         await supabase.from('gameplay_records').insert({
-          user_id: userId,
+          user_id: user.id,
           song_id: songId,
           score,
           accuracy,
@@ -1227,7 +1235,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     }
   },
 
-  updateProfile: async (newDisplayName: string, newAvatarUrl?: string | null) => {
+  updateProfile: async (newDisplayName: string, newAvatarUrl?: string | null, newUsername?: string | null) => {
     const session = await supabase.auth.getSession();
     const userId = session.data.session?.user.id;
     if (!userId) return;
@@ -1235,6 +1243,9 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     const updates: Record<string, any> = { display_name: newDisplayName };
     if (newAvatarUrl !== undefined) {
       updates.avatar_url = newAvatarUrl;
+    }
+    if (newUsername !== undefined) {
+      updates.username = newUsername;
     }
 
     const { error } = await supabase
@@ -1250,6 +1261,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     set({
       displayName: newDisplayName,
       ...(newAvatarUrl !== undefined ? { avatarUrl: newAvatarUrl } : {}),
+      ...(newUsername !== undefined ? { username: newUsername } : {}),
     });
   },
 }));

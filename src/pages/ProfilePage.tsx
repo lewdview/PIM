@@ -59,7 +59,7 @@ const EASE_OUT: [number, number, number, number] = [0.22, 1, 0.36, 1];
 export default function ProfilePage() {
   const { user, signOut, registerPasskey, ensureProfileAndWallet, isPasskeySupported } = useAuthStore();
   const isAnonymous = user?.is_anonymous ?? false;
-  const { collection, tokenBalance, totalPulls, streakCount, loadVaultData } = useVaultStore();
+  const { collection, tokenBalance, totalPulls, streakCount, loadVaultData, username } = useVaultStore();
   const [, navigate] = useLocation();
 
   const currentDay = getCurrentDay();
@@ -259,13 +259,15 @@ export default function ProfilePage() {
         </section>
 
         {/* ═══════════ SECTION 1.5 : CREATE YOUR PIM ID ═══════════ */}
-        {isAnonymous && (
+        {(!username || isAnonymous) && (
           <section className="profile-glass-panel border-l-4 border-[#E5B800] mt-6 mb-6">
             <div className="profile-panel-header text-[#E5B800]">
-              <Sparkles size={18} /> PRESERVE YOUR 365 PROGRESS
+              <Sparkles size={18} /> {isAnonymous ? "PRESERVE YOUR 365 PROGRESS" : "LOCK IN YOUR PILOT @USERNAME"}
             </div>
             <p className="font-mono text-xs text-white/70 leading-relaxed mb-4">
-              You are currently playing as a Guest. Connect an Email or Web3 Smart Wallet to bind your earned daily cards, medals, and streaks permanently to your sovereign profile.
+              {isAnonymous
+                ? "You are currently playing as a Guest. Connect an Email or Web3 Smart Wallet to bind your earned daily cards, medals, and streaks permanently to your sovereign profile."
+                : "Choose your unique pilot @username and profile avatar to record and broadcast scores on competitive leaderboards."}
             </p>
             <IdentitySetup compact onComplete={() => { if (loadVaultData) loadVaultData(true); }} />
           </section>

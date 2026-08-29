@@ -26,6 +26,8 @@ interface AuthState {
   error: string | null;
   showAuthModal: boolean;
   setShowAuthModal: (show: boolean) => void;
+  showIdentityModal: boolean;
+  setShowIdentityModal: (show: boolean) => void;
   initialize: () => Promise<void>;
   signInWithWallet: () => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
@@ -50,6 +52,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   showAuthModal: false,
   setShowAuthModal: (show: boolean) => {
     set({ showAuthModal: show });
+  },
+  showIdentityModal: false,
+  setShowIdentityModal: (show: boolean) => {
+    set({ showIdentityModal: show });
   },
   initialize: async () => {
     if (get().status === 'loading') return;
