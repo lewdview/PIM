@@ -82,7 +82,6 @@ const menuSections: MenuSection[] = [
       { to: '/vault', label: 'Vault HQ', icon: Home, desc: 'Daily card & vault dashboard', badge: 'DAILY DROP', badgeColor: '#FF5500' },
       { to: '/next-vault', label: 'Next-Gen Vault', icon: Sparkles, desc: 'Robotic claw & token machine', badge: 'CLAW GACHA', badgeColor: '#FF7700' },
       { to: '/hero', label: 'Hero Exhibit', icon: Image, desc: 'Museum-grade daily masterpiece showcase', badge: 'MUSEUM', badgeColor: '#FFAA00' },
-      { to: '/365', label: '365 Archive', icon: BookOpen, desc: 'Full 365-day music & art timeline', badge: 'CHRONO', badgeColor: '#FF5500' },
       { to: '/vault/collection', label: 'Collection Binder', icon: Layers, desc: 'Your TH3SCR1B3 cards & proofs', badge: 'INVENTORY', badgeColor: '#FF5500' },
       { to: '/vault/reveal', label: 'Pack Reveal', icon: Sparkles, desc: 'Open earned booster packs', badge: 'UNBOX', badgeColor: '#FF1493' },
       { to: '/vault/codex', label: 'Card Codex', icon: BookOpen, desc: 'Card catalog & set tracker', badge: 'REGISTRY', badgeColor: '#39FF14' },

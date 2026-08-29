@@ -465,7 +465,9 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   }),
   addToCollection: (cards) => set((state) => {
     const valid = cards.filter(c => c && c.card);
-    const nextCollection = [...state.collection, ...valid];
+    const existingIds = new Set(state.collection.map(c => c.id));
+    const uniqueNewCards = valid.filter(c => !existingIds.has(c.id));
+    const nextCollection = [...state.collection, ...uniqueNewCards];
     return {
       collection: nextCollection,
       echoPrestigeScore: calculateEchoPrestigeScore(nextCollection, state.streakCount, state.totalPulls),

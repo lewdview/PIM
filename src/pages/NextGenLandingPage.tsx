@@ -29,6 +29,7 @@ import { loadCatalog } from '../game/api';
 import { payWithCrypto } from '../services/coinbaseService';
 import PaymentSelectModal from '../components/PaymentSelectModal';
 import TokenBundleShelf from '../components/TokenBundleShelf';
+import MainBrandLogo from '../components/MainBrandLogo';
 
 // ===== MODERN FLOATING ANNOUNCEMENT BAR =====
 const TICKER_TEXT = '⚡ PIM : TH3V4ULT • DAILY MUSIC DROPS • COLLECT & EARN TOKENS • VERIFIABLE AUDIO PROOFS';
@@ -384,14 +385,8 @@ export default function NextGenLandingPage() {
 
         if (res.rewardType === 'tokens') {
           details.tokensGranted = parseInt(res.rewardValue, 10);
-          if (details.tokensGranted > 0) {
-            await useVaultStore.getState().addTokens(details.tokensGranted);
-          }
         } else if (res.rewardType === 'background_skin') {
           details.skinUnlocked = res.rewardValue;
-          if (details.skinUnlocked) {
-            await useVaultStore.getState().unlockSkin(details.skinUnlocked, 0);
-          }
         }
 
         setRewardClaimed({
@@ -789,15 +784,9 @@ export default function NextGenLandingPage() {
               Live Vault
             </span>
           </div>
-          <motion.h1
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, ease: "easeOut" }}
-            className="text-5xl md:text-7xl font-extrabold tracking-tighter text-white leading-none"
-            style={{ fontFamily: '"Inter", sans-serif' }}
-          >
-            BEATSTAR <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-blue-200 to-amber-300">VAULT</span>
-          </motion.h1>
+          <div className="py-2">
+            <MainBrandLogo size="lg" priority={true} interactive={true} />
+          </div>
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

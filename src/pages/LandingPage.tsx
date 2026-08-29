@@ -333,14 +333,8 @@ export default function LandingPage() {
 
         if (res.rewardType === 'tokens') {
           details.tokensGranted = parseInt(res.rewardValue, 10);
-          if (details.tokensGranted > 0) {
-            await useVaultStore.getState().addTokens(details.tokensGranted);
-          }
         } else if (res.rewardType === 'background_skin') {
           details.skinUnlocked = res.rewardValue;
-          if (details.skinUnlocked) {
-            await useVaultStore.getState().unlockSkin(details.skinUnlocked, 0);
-          }
         }
 
         setRewardClaimed({

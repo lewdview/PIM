@@ -1074,12 +1074,18 @@ export async function redeemBonusCode(code: string): Promise<{ success: boolean;
 
         if (data.rewardType === 'tokens') {
           const tokenAmt = parseInt(data.rewardValue, 10) || 0;
-          if (tokenAmt > 0) {
-            await store.addTokens(tokenAmt);
-          }
+          const remainingTokens = typeof data.result?.remainingTokens === 'number'
+            ? data.result.remainingTokens
+            : (store.tokenBalance + tokenAmt);
+          useVaultStore.setState({ tokenBalance: remainingTokens });
+          try {
+            localStorage.setItem('pim_token_balance', String(remainingTokens));
+          } catch {}
         } else if (data.rewardType === 'background_skin') {
           if (data.rewardValue) {
-            await store.unlockSkin(data.rewardValue, 0);
+            useVaultStore.setState((s) => ({
+              unlockedSkins: Array.from(new Set([...s.unlockedSkins, data.rewardValue]))
+            }));
           }
         } else if (data.rewardType === 'card' && data.result?.card) {
           const pool = await fetchAllCards();
