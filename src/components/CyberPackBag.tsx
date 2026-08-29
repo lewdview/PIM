@@ -259,9 +259,7 @@ export default function CyberPackBag({
   const countNum = tier.cardCount >= 50 ? 50 : tier.cardCount >= 25 ? 25 : tier.cardCount >= 10 ? 10 : tier.cardCount >= 5 ? 5 : tier.cardCount >= 2 ? 2 : 1;
   const plural = countNum === 1 ? 'card' : 'cards';
   const foilCoverUrl = isBombshell 
-    ? (tier.coverImage || (bombshellSide === 'bot' 
-        ? (tier.lightCoverImage || `/data/packs/bombshell_bot_${countNum}${plural}.jpg`) 
-        : (tier.coverImage || `/data/packs/bombshell_top_${countNum}${plural}.jpg`)))
+    ? (tier.coverImage || '/data/packs/bs_cover.png')
     : (tier.coverImage || cfg.coverImage || getPackCoverFallback(cfg.category));
 
   const variant = get365CardVariantStyle(cfg.category);
@@ -315,7 +313,7 @@ export default function CyberPackBag({
                 opacity: isBombshell ? 1 : 0.45,
               }}
               onError={(e) => {
-                (e.currentTarget as HTMLImageElement).src = `/data/packs/bombshell_top_${countNum}${plural}.jpg`;
+                (e.currentTarget as HTMLImageElement).src = isBombshell ? '/data/packs/bs_cover.png' : `/data/packs/bombshell_top_${countNum}${plural}.jpg`;
               }}
             />
             {!isBombshell && (

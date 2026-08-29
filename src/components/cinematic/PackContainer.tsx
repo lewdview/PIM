@@ -156,7 +156,7 @@ function CyberPackBagContents({ meta, sampleCard }: { meta: RevealPackMeta; samp
                 opacity: isBombshell ? 1 : 0.45,
               }}
               onError={(e) => {
-                (e.currentTarget as HTMLImageElement).src = `/data/packs/bombshell_top_${countNum}${plural}.jpg`;
+                (e.currentTarget as HTMLImageElement).src = isBombshell ? '/data/packs/bs_cover.png' : `/data/packs/bombshell_top_${countNum}${plural}.jpg`;
               }}
             />
             {!isBombshell && (
@@ -305,7 +305,7 @@ function ClassicFoilPackBagContents({ meta, sampleCard }: { meta: RevealPackMeta
                 opacity: isBombshell ? 1 : 0.4,
               }}
               onError={(e) => {
-                (e.currentTarget as HTMLImageElement).src = `/data/packs/bombshell_top_${countNum}${plural}.jpg`;
+                (e.currentTarget as HTMLImageElement).src = isBombshell ? '/data/packs/bs_cover.png' : `/data/packs/bombshell_top_${countNum}${plural}.jpg`;
               }}
             />
             {/* Holographic foil iridescent duotone color overlay */}

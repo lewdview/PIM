@@ -78,10 +78,13 @@ export function getBombshellDayCovers(day: number): BombshellDayCovers {
   };
 }
 
+export const DEFAULT_BOMBSHELL_PACK_COVER = '/data/packs/bs_cover.png';
+
 /**
  * Master collection of all Bombshell pack designs across top, bot, light, and dark variants.
  */
 export const ALL_BOMBSHELL_PACK_COVERS = [
+  DEFAULT_BOMBSHELL_PACK_COVER,
   '/data/packs/bombshell_top_1card.jpg',
   '/data/packs/bombshell_bot_1card.jpg',
   '/data/packs/bombshell_top_2cards.jpg',
@@ -116,22 +119,16 @@ export function getBombshellPackCovers(cardCount: number = 1): { top: string; bo
   const normalizedCount = cardCount >= 50 ? 50 : cardCount >= 25 ? 25 : cardCount >= 10 ? 10 : cardCount >= 5 ? 5 : cardCount >= 2 ? 2 : 1;
   const plural = normalizedCount === 1 ? 'card' : 'cards';
   return {
-    top: `/data/packs/bombshell_top_${normalizedCount}${plural}.jpg`,
+    top: DEFAULT_BOMBSHELL_PACK_COVER,
     bot: `/data/packs/bombshell_bot_${normalizedCount}${plural}.jpg`,
   };
 }
 
 /**
- * Returns a random pack design from the Bombshell collection.
- * If a standard count (1, 2, 5, 10, 25, 50) is passed, picks between matching top/bot variants.
- * For 3-card token packs or general pulls, picks randomly from all pack designs in the collection.
+ * Returns a pack design from the Bombshell collection (defaulting to bs_cover.png).
  */
 export function getRandomBombshellPackCover(cardCount?: number): string {
-  if (cardCount && [1, 2, 5, 10, 25, 50].includes(cardCount)) {
-    const { top, bot } = getBombshellPackCovers(cardCount);
-    return Math.random() < 0.5 ? top : bot;
-  }
-  return ALL_BOMBSHELL_PACK_COVERS[Math.floor(Math.random() * ALL_BOMBSHELL_PACK_COVERS.length)];
+  return DEFAULT_BOMBSHELL_PACK_COVER;
 }
 
 /**
