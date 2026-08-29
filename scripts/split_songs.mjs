@@ -16,10 +16,20 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT_DATA = path.join(__dirname, '../public/data');
 const SONGS_DIR = path.join(ROOT_DATA, 'songs');
 const CARDS_DIR = path.join(ROOT_DATA, 'cards');
+const SRC_DATA = path.join(__dirname, '../src/data');
+
+const DAY_FILE_MAP_PATH = path.join(__dirname, '../src/game/day_file_map.json');
+let dayFileMap = {};
+if (fs.existsSync(DAY_FILE_MAP_PATH)) {
+  try {
+    dayFileMap = JSON.parse(fs.readFileSync(DAY_FILE_MAP_PATH, 'utf8'));
+  } catch (e) {}
+}
 
 // Create directories if they do not exist
 fs.mkdirSync(SONGS_DIR, { recursive: true });
 fs.mkdirSync(CARDS_DIR, { recursive: true });
+fs.mkdirSync(SRC_DATA, { recursive: true });
 
 const RELEASE_DATA_URL = 'https://th3scr1b3.art/release-data.json';
 
@@ -417,9 +427,15 @@ function calcDifficulty(bpm, valence, noteCount, duration = 180) {
 // Helper to resolve supabase urls (mirroring resolving inside buildGameSong)
 function resolveUrls(r) {
   const dayNum = r.day;
+  const mapped = dayFileMap[String(dayNum)];
   let audioUrl = r.storedAudioUrl || '';
+  if (mapped && mapped.audio) {
+    audioUrl = `https://files.th3scr1b3.art/${encodeURI(mapped.audio)}`;
+  }
   let coverArt = r.coverArt || null;
-  if (coverArt) {
+  if (mapped && mapped.cover) {
+    coverArt = `https://files.th3scr1b3.art/${encodeURI(mapped.cover)}`;
+  } else if (coverArt) {
     coverArt = coverArt.replace(/\.png$/i, '.jpg');
   }
   return { audioUrl, coverArt };
@@ -597,6 +613,20 @@ async function main() {
   // 6. Write catalog files
   fs.writeFileSync(path.join(ROOT_DATA, 'song_catalog.json'), JSON.stringify(songCatalog, null, 2));
   fs.writeFileSync(path.join(ROOT_DATA, 'card_catalog.json'), JSON.stringify(cardCatalog, null, 2));
+  fs.writeFileSync(path.join(SRC_DATA, 'song_catalog.json'), JSON.stringify(songCatalog, null, 2));
+  fs.writeFileSync(path.join(SRC_DATA, 'card_catalog.json'), JSON.stringify(cardCatalog, null, 2));
+
+  // Sync to rhythm-game if present
+  const rhythmGameSrcData = path.join(__dirname, '../../rhythm-game/src/data');
+  const rhythmGamePublicData = path.join(__dirname, '../../rhythm-game/public/data');
+  if (fs.existsSync(rhythmGameSrcData)) {
+    fs.writeFileSync(path.join(rhythmGameSrcData, 'song_catalog.json'), JSON.stringify(songCatalog, null, 2));
+    fs.writeFileSync(path.join(rhythmGameSrcData, 'card_catalog.json'), JSON.stringify(cardCatalog, null, 2));
+  }
+  if (fs.existsSync(rhythmGamePublicData)) {
+    fs.writeFileSync(path.join(rhythmGamePublicData, 'song_catalog.json'), JSON.stringify(songCatalog, null, 2));
+    fs.writeFileSync(path.join(rhythmGamePublicData, 'card_catalog.json'), JSON.stringify(cardCatalog, null, 2));
+  }
 
   // 7. Write the 3 local test songs into JSON too
   const localTestSongs = [

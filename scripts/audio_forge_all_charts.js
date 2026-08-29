@@ -376,7 +376,24 @@ function normalizeName(str) {
 function resolveAudioFile(song, mapped, dayOfMonth, month) {
   // DRIVE 1: /Volumes/extremeUno/
   
-  // Drive 1: Strategy 1 - URL relative path
+  // Priority 1: Direct path via day_file_map in audio_mp3
+  if (mapped && mapped.audio) {
+    const mp3RelPath = mapped.audio.replace(/^audio\//, 'audio_mp3/');
+    const testPath = path.join(drive1Base, mp3RelPath);
+    if (fs.existsSync(testPath)) {
+      return testPath;
+    }
+  }
+
+  // Priority 2: Direct path via day_file_map in audio
+  if (mapped && mapped.audio) {
+    const testPath = path.join(drive1Base, mapped.audio);
+    if (fs.existsSync(testPath)) {
+      return testPath;
+    }
+  }
+
+  // Priority 3: URL relative path
   if (song.audioUrl) {
     const decodedUrl = decodeURIComponent(song.audioUrl);
     const urlMarker = '/releaseready/';
@@ -390,18 +407,10 @@ function resolveAudioFile(song, mapped, dayOfMonth, month) {
     }
   }
 
-  // Drive 1: Strategy 2 - day_file_map relative path
-  if (mapped && mapped.audio) {
-    const testPath = path.join(drive1Base, mapped.audio);
-    if (fs.existsSync(testPath)) {
-      return testPath;
-    }
-  }
-
-  // Drive 1: Strategy 3 - Scan folder for files starting with padded or unpadded day number
-  const folderPath = path.join(drive1Base, 'audio', month);
-  if (fs.existsSync(folderPath)) {
-    const files = fs.readdirSync(folderPath);
+  // Priority 4: Scan folder in audio_mp3 for matching day number
+  const mp3Folder = path.join(drive1Base, 'audio_mp3', month);
+  if (fs.existsSync(mp3Folder)) {
+    const files = fs.readdirSync(mp3Folder);
     const dayPrefixes = [
       String(dayOfMonth).padStart(2, '0'),
       String(dayOfMonth)
@@ -409,16 +418,15 @@ function resolveAudioFile(song, mapped, dayOfMonth, month) {
 
     for (const prefix of dayPrefixes) {
       const matched = files.find(f => {
-        return (f.startsWith(prefix + ' ') || f.startsWith(prefix + ' -') || f.startsWith(prefix + '.')) && !f.startsWith('._');
+        return (f.startsWith(prefix + ' ') || f.startsWith(prefix + ' -') || f.startsWith(prefix + '.') || f.startsWith(prefix + '-')) && !f.startsWith('._');
       });
       if (matched) {
-        return path.join(folderPath, matched);
+        return path.join(mp3Folder, matched);
       }
     }
   }
 
   // DRIVE 2: /Volumes/extremeDos/temp music/
-
   const drive2Dirs = [drive2Base, path.join(drive2Base, 'master')];
   const searchNames = [];
   if (song.title) searchNames.push(normalizeName(song.title));
