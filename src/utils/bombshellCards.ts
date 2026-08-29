@@ -81,46 +81,18 @@ export function getBombshellDayCovers(day: number): BombshellDayCovers {
 export const DEFAULT_BOMBSHELL_PACK_COVER = '/data/packs/bs_cover.png';
 
 /**
- * Master collection of all Bombshell pack designs across top, bot, light, and dark variants.
+ * Master collection of Bombshell pack cover images.
+ * bs_cover.png is the canonical default; legacy top/bot variants kept as fallback references only.
  */
-export const ALL_BOMBSHELL_PACK_COVERS = [
-  DEFAULT_BOMBSHELL_PACK_COVER,
-  '/data/packs/bombshell_top_1card.jpg',
-  '/data/packs/bombshell_bot_1card.jpg',
-  '/data/packs/bombshell_top_2cards.jpg',
-  '/data/packs/bombshell_bot_2cards.jpg',
-  '/data/packs/bombshell_top_5cards.jpg',
-  '/data/packs/bombshell_bot_5cards.jpg',
-  '/data/packs/bombshell_top_10cards.jpg',
-  '/data/packs/bombshell_bot_10cards.jpg',
-  '/data/packs/bombshell_top_25cards.jpg',
-  '/data/packs/bombshell_bot_25cards.jpg',
-  '/data/packs/bombshell_top_50cards.jpg',
-  '/data/packs/bombshell_bot_50cards.jpg',
-  '/data/packs/bombshell_dark_1card.jpg',
-  '/data/packs/bombshell_light_1card.jpg',
-  '/data/packs/bombshell_dark_2cards.jpg',
-  '/data/packs/bombshell_light_2cards.jpg',
-  '/data/packs/bombshell_dark_5cards.jpg',
-  '/data/packs/bombshell_light_5cards.jpg',
-  '/data/packs/bombshell_dark_10cards.jpg',
-  '/data/packs/bombshell_light_10cards.jpg',
-  '/data/packs/bombshell_dark_25cards.jpg',
-  '/data/packs/bombshell_light_25cards.jpg',
-  '/data/packs/bombshell_dark_50cards.jpg',
-  '/data/packs/bombshell_light_50cards.jpg',
-];
+export const ALL_BOMBSHELL_PACK_COVERS = [DEFAULT_BOMBSHELL_PACK_COVER];
 
 /**
- * Returns both candidate cover images for a bombshell pack size (top and bottom variants).
- * Supported counts: 1, 2, 5, 10, 25, 50
+ * Returns both candidate cover images for a bombshell pack (both use bs_cover.png).
  */
 export function getBombshellPackCovers(cardCount: number = 1): { top: string; bot: string } {
-  const normalizedCount = cardCount >= 50 ? 50 : cardCount >= 25 ? 25 : cardCount >= 10 ? 10 : cardCount >= 5 ? 5 : cardCount >= 2 ? 2 : 1;
-  const plural = normalizedCount === 1 ? 'card' : 'cards';
   return {
     top: DEFAULT_BOMBSHELL_PACK_COVER,
-    bot: `/data/packs/bombshell_bot_${normalizedCount}${plural}.jpg`,
+    bot: DEFAULT_BOMBSHELL_PACK_COVER,
   };
 }
 
