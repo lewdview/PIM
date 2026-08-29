@@ -7,6 +7,8 @@ import { RARITY_CONFIG } from '../utils/rarity';
 import { getCoverUrlForRarity, useSmartCoverArt } from '../utils/rarityArtwork';
 import RarityBadge from './RarityBadge';
 import AudioPreview from './AudioPreview';
+import OneOfOneOutline from './OneOfOneOutline';
+import MythicCardEffects, { MythicGodRays, MythicPrismFoil, MythicEmberParticles } from './MythicCardEffects';
 import { formatDate, getTimeUntilNextDay } from '../utils/dayCalc';
 
 interface HeroCardProps {
@@ -113,6 +115,7 @@ export default function HeroCard({ card, hasClaimed, onClaim, day }: HeroCardPro
                 inset 0 0 30px rgba(0,0,0,0.1)
               `,
             }}>
+              {card.rarity === 'mythic' && <MythicGodRays />}
               {/* Cover art */}
               {!imgError && !imgFailed && coverUrl ? (
                 <img
@@ -132,6 +135,10 @@ export default function HeroCard({ card, hasClaimed, onClaim, day }: HeroCardPro
                   </div>
                 </div>
               )}
+
+              {card.rarity === 'mythic' && <MythicPrismFoil />}
+              {card.rarity === 'mythic' && <MythicEmberParticles count={12} />}
+              {card.rarity === 'mythic' && <OneOfOneOutline color="#ffd700" speedSec={14} />}
 
               {/* CRIMP EDGES */}
               <div className="absolute inset-x-0 top-0 h-4 crimp-edge z-50 rounded-t-2xl shadow-lg" />

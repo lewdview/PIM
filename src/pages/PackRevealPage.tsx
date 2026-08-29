@@ -369,7 +369,32 @@ export default function PackRevealPage() {
                       proof={owned.proof}
                     />
 
-                    {['legendary', 'mythic'].includes(owned.card.rarity) && (
+                    {owned.card.rarity === 'mythic' ? (
+                      <>
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.2 }}
+                          animate={{ opacity: [0, 1, 0], scale: [0.2, 2.5, 3.8] }}
+                          transition={{ duration: 1.4, ease: 'easeOut' }}
+                          className="absolute -inset-10 rounded-full pointer-events-none z-40"
+                          style={{
+                            background: 'radial-gradient(circle, #ffffff 0%, #ffd700 45%, rgba(255,0,127,0.3) 70%, transparent 90%)',
+                            animation: 'mythic-supernova-blast 1.4s cubic-bezier(0.1, 0.8, 0.3, 1) forwards',
+                          }}
+                        />
+                        <motion.div
+                          initial={{ scale: 0.6, opacity: 0, y: 20 }}
+                          animate={{ scale: 1, opacity: 1, y: 0 }}
+                          transition={{ delay: 0.3, type: 'spring' }}
+                          className="absolute -top-12 left-1/2 -translate-x-1/2 px-5 py-1.5 rounded-xl bg-black/90 border border-[#ffd700] shadow-[0_0_25px_rgba(255,215,0,0.8)] flex items-center gap-2 whitespace-nowrap z-50 pointer-events-none"
+                        >
+                          <span className="text-xs text-[#ffd700] animate-spin">✦</span>
+                          <span className="font-mono text-[11px] font-black text-[#ffd700] tracking-widest uppercase">
+                            MYTHIC 1 OF 1 DISCOVERED!
+                          </span>
+                          <span className="text-xs text-[#ffd700] animate-spin" style={{ animationDirection: 'reverse' }}>✦</span>
+                        </motion.div>
+                      </>
+                    ) : owned.card.rarity === 'legendary' ? (
                       <motion.div
                         initial={{ opacity: 0, scale: 0 }}
                         animate={{ opacity: [0, 1, 0], scale: [0.5, 2, 3] }}
@@ -379,7 +404,7 @@ export default function PackRevealPage() {
                           background: `radial-gradient(circle, ${rarityConfig.color}30, transparent 60%)`,
                         }}
                       />
-                    )}
+                    ) : null}
                   </motion.div>
                 );
               })}

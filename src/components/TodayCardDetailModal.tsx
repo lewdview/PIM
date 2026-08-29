@@ -8,6 +8,8 @@ import { RARITY_CONFIG, getSupplyCap, getMintableCap, type Rarity } from '../uti
 import { getCoverUrlForRarity, useSmartCoverArt } from '../utils/rarityArtwork';
 import { getArtTypeForDay, OUTFIT_STYLES } from '../utils/artTypes';
 import RarityBadge from './RarityBadge';
+import OneOfOneOutline from './OneOfOneOutline';
+import MythicCardEffects, { MythicGodRays, MythicPrismFoil, MythicEmberParticles } from './MythicCardEffects';
 import { audioManager } from '../game/audio';
 import { useGlobalPlayer } from '../store/useGlobalPlayer';
 
@@ -208,12 +210,16 @@ export default function TodayCardDetailModal({
                   boxShadow: `0 0 35px ${rc.color}30, 0 10px 40px rgba(0,0,0,0.8)`,
                 }}
               >
+                {selectedRarity === 'mythic' && <MythicGodRays />}
                 <img
                   src={modalCoverUrl}
                   alt={song.title}
                   onError={handleCoverError}
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 />
+                {selectedRarity === 'mythic' && <MythicPrismFoil />}
+                {selectedRarity === 'mythic' && <MythicEmberParticles count={12} />}
+                {selectedRarity === 'mythic' && <OneOfOneOutline color="#ffd700" speedSec={14} />}
 
                 {/* Ambient vignette */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-black/30 pointer-events-none" />

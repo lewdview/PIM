@@ -7,6 +7,8 @@ import RarityBadge from './RarityBadge';
 import AudioPreview from './AudioPreview';
 import { formatDate } from '../utils/dayCalc';
 import { Gift, Flame, ShieldCheck } from 'lucide-react';
+import OneOfOneOutline from './OneOfOneOutline';
+import MythicCardEffects, { MythicGodRays, MythicPrismFoil, MythicEmberParticles, MythicCrownBadge } from './MythicCardEffects';
 import {
   CardSkinContext,
   CardOriginal, CardGlitch, CardGlass, CardArcade, CardMtg, CardPoker, CardDuelist, CardMonster, CardChrome, CardFantasy, CardCyberpunk, CardAnime,
@@ -360,51 +362,21 @@ export default memo(function Card({
   );
 
 
-  // ── 1-of-1 / Only One overlay — celebratory, not a penalty ─────────────
-  const onlyOneOverlay = isOnlyOne && (
+  // ── 1-of-1 / Only One outline — scrolling perimeter marquee replacing old center stamp ──
+  const onlyOneOutline = (isOnlyOne || card.rarity === 'mythic') && (
     <motion.div
-      initial={{ opacity: 0, scale: 0.8 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ delay: 0.4, type: 'spring', stiffness: 200 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: 0.2, duration: 0.4 }}
       style={{
-        position: 'absolute', inset: 0, zIndex: 40, pointerEvents: 'none', borderRadius: '12px',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        gap: '8px',
+        position: 'absolute',
+        inset: 0,
+        zIndex: 38,
+        pointerEvents: 'none',
         visibility: frontVisibility,
       }}
     >
-      {/* Glow bloom behind the stamp */}
-      <div style={{
-        position: 'absolute', inset: 0, borderRadius: '12px',
-        background: 'radial-gradient(ellipse at center, rgba(255,215,0,0.18) 0%, transparent 70%)',
-        border: '2px solid rgba(255,215,0,0.35)',
-        pointerEvents: 'none',
-      }} />
-      <div style={{
-        padding: '5px 14px',
-        border: '2.5px solid #ffd700',
-        color: '#ffd700',
-        fontFamily: '"Impact", "Arial Black", sans-serif',
-        fontSize: '20px',
-        fontWeight: 900,
-        textTransform: 'uppercase',
-        letterSpacing: '3px',
-        transform: 'rotate(-10deg)',
-        background: 'rgba(0,0,0,0.8)',
-        boxShadow: '0 0 28px rgba(255,215,0,0.55), inset 0 0 10px rgba(255,215,0,0.08)',
-        textShadow: '0 0 14px rgba(255,215,0,0.9)',
-      }}>
-        ONLY ONE!
-      </div>
-      <span style={{
-        fontFamily: '"JetBrains Mono", monospace',
-        fontSize: '9px',
-        fontWeight: 700,
-        letterSpacing: '0.2em',
-        textTransform: 'uppercase',
-        color: 'rgba(255,215,0,0.75)',
-        textShadow: '0 0 8px rgba(255,215,0,0.5)',
-      }}>1 of 1 in existence</span>
+      <OneOfOneOutline color="#ffd700" speedSec={14} />
     </motion.div>
   );
 
@@ -1047,47 +1019,133 @@ export default memo(function Card({
     </motion.div>
   );
 
-  // ── MYTHIC: Rainbow foil, no CSS Houdini ─────────────────────────────
+  // ── MYTHIC: Cosmic Aurora, God Rays & Holographic Diffraction ─────────────
   const mythicFront = (
-    <motion.div style={{ ...sharedFrontStyle, border: `2px solid #ffd700`, boxShadow: '0 0 0 1px rgba(255,215,0,0.4), 0 0 20px rgba(255,215,0,0.3)' }}>
+    <motion.div
+      style={{
+        ...sharedFrontStyle,
+        border: `2px solid #ffd700`,
+        boxShadow: '0 0 0 1px rgba(255,215,0,0.5), 0 0 25px rgba(255,215,0,0.4)',
+      }}
+    >
+      {/* Background celestial god-rays */}
+      <MythicGodRays />
+
       {/* Art */}
-      <div style={{ position: 'absolute', inset: 0, filter: 'brightness(1.1)' }}>{renderArt('w-full h-full', true)}</div>
+      <div style={{ position: 'absolute', inset: 0, filter: 'brightness(1.1) contrast(1.05)' }}>
+        {renderArt('w-full h-full', true)}
+      </div>
       {/* Fallback bg */}
       <div style={{ position: 'absolute', inset: 0, background: '#0a0800', zIndex: -1 }} />
 
-      {/* Rainbow foil #1 */}
-      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(120deg, rgba(255,0,120,0.17) 0%, rgba(255,180,0,0.2) 25%, rgba(0,255,160,0.16) 50%, rgba(60,0,255,0.2) 75%, rgba(255,0,120,0.17) 100%)', backgroundSize: '300% 100%', animation: 'foil-sweep 3s linear infinite' }} />
-      {/* Rainbow foil #2 */}
-      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(60deg, rgba(0,200,255,0.12) 0%, rgba(255,80,0,0.16) 33%, rgba(180,0,255,0.12) 66%, rgba(0,200,255,0.12) 100%)', backgroundSize: '200% 100%', animation: 'foil-sweep 2s linear infinite reverse', opacity: 0.85 }} />
+      {/* Holographic prism foil sweeps */}
+      <MythicPrismFoil />
 
-      <div className="absolute inset-0 scanlines opacity-25 pointer-events-none" />
-      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.68) 0%, transparent 28%, transparent 46%, rgba(0,0,0,0.8) 70%, rgba(0,0,0,0.97) 100%)' }} />
+      {/* Cosmic stardust particle embers */}
+      <MythicEmberParticles count={16} />
+
+      <div className="absolute inset-0 scanlines opacity-20 pointer-events-none" />
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'linear-gradient(180deg, rgba(0,0,0,0.65) 0%, transparent 26%, transparent 46%, rgba(0,0,0,0.82) 70%, rgba(0,0,0,0.98) 100%)',
+        }}
+      />
 
       {/* Top */}
-      <div style={{ position: 'absolute', top: '10px', left: '10px', right: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div
+        style={{
+          position: 'absolute',
+          top: '10px',
+          left: '10px',
+          right: '10px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          zIndex: 20,
+        }}
+      >
         <div style={{ transform: 'scale(0.85)', transformOrigin: 'left center' }}>
           <DayNumberBadge day={day} color={rc.color} />
         </div>
         {bombshellBadge}
-        <div style={{ padding: '3px 9px', background: `${rc.color}22`, border: `1px solid ${rc.color}`, borderRadius: '3px', boxShadow: `0 0 14px ${rc.color}55` }}>
-          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', fontWeight: 900, letterSpacing: '0.15em', color: rc.color, textShadow: `0 0 8px ${rc.color}`, textTransform: 'uppercase' }}>✦ MYTHIC</span>
-        </div>
+        <MythicCrownBadge />
       </div>
 
       {/* Bottom */}
-      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '12px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
-        <h3 style={{ margin: 0, fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '18px', fontWeight: 900, textTransform: 'uppercase', color: '#fffbe8', textShadow: `0 0 18px ${rc.color}aa, 0 2px 6px rgba(0,0,0,0.9)`, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</h3>
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          padding: '12px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '5px',
+          zIndex: 20,
+        }}
+      >
+        <h3
+          style={{
+            margin: 0,
+            fontFamily: '"Impact", "Arial Black", sans-serif',
+            fontSize: '18px',
+            fontWeight: 900,
+            textTransform: 'uppercase',
+            color: '#fffbe8',
+            textShadow: `0 0 18px ${rc.color}aa, 0 2px 6px rgba(0,0,0,0.9)`,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {title}
+        </h3>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '9px', fontWeight: 700, color: rc.color }}>DAY {day}</span>
-          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', color: 'rgba(255,215,0,0.4)' }}>• 1 OF {supply}</span>
+          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '9px', fontWeight: 700, color: rc.color }}>
+            DAY {day}
+          </span>
+          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', color: 'rgba(255,215,0,0.6)', fontWeight: 700 }}>
+            • 1 OF 1 GENESIS
+          </span>
         </div>
-        <div style={{ height: '2px', background: 'rgba(255,255,255,0.1)', borderRadius: '1px', overflow: 'hidden' }}>
-          <div style={{ height: '100%', width: `${mintPct}%`, background: `linear-gradient(90deg, ${rc.color}, #ffcc00)`, boxShadow: `0 0 6px ${rc.color}` }} />
+        <div style={{ height: '2.5px', background: 'rgba(255,255,255,0.12)', borderRadius: '1px', overflow: 'hidden' }}>
+          <div
+            style={{
+              height: '100%',
+              width: `${mintPct}%`,
+              background: `linear-gradient(90deg, #ffd700, #ff007f, #00f0ff, #ffd700)`,
+              backgroundSize: '200% 100%',
+              animation: 'foil-sweep 3s linear infinite',
+              boxShadow: `0 0 8px #ffd700`,
+            }}
+          />
         </div>
         {showAudio && audioUrl && <AudioPreview audioUrl={audioUrl} title={title} rarity={card.rarity} />}
         {showClaim && onClaim && (
-          <button onClick={e => { e.stopPropagation(); onClaim(); }} style={{ width: '100%', padding: '10px', border: `1px solid ${rc.color}`, borderRadius: '6px', background: rc.color, color: '#000', fontWeight: 900, fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer', boxShadow: `0 4px 20px ${rc.color}80` }}>
-            ✦ Claim Mythic
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onClaim();
+            }}
+            style={{
+              width: '100%',
+              padding: '10px',
+              border: `1px solid ${rc.color}`,
+              borderRadius: '6px',
+              background: 'linear-gradient(135deg, #ffd700, #ffaa00)',
+              color: '#000',
+              fontWeight: 900,
+              fontSize: '11px',
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              cursor: 'pointer',
+              boxShadow: `0 4px 20px ${rc.color}80`,
+            }}
+          >
+            ✦ Claim Mythic 1/1
           </button>
         )}
         {proof && <ProofSeal type={proof} />}
@@ -1140,7 +1198,7 @@ export default memo(function Card({
         {dailyOverlay}
         {cardBack}
         {mintedOutOverlay}
-        {onlyOneOverlay}
+        {onlyOneOutline}
         {lastCopyBadge}
 
         {/* ===== ECHO GLITCH OVERLAY ===== */}

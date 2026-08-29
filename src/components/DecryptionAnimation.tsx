@@ -2,8 +2,9 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Zap, Sparkles, Image as ImageIcon, Terminal } from 'lucide-react';
 import { audioManager } from '../game/audio';
-import type { VaultCard } from '../services/vaultService';
 import { getCoverUrlForRarity, useSmartCoverArt, resolveSmartCoverUrl } from '../utils/rarityArtwork';
+import OneOfOneOutline from './OneOfOneOutline';
+import MythicCardEffects, { MythicGodRays, MythicPrismFoil, MythicEmberParticles } from './MythicCardEffects';
 
 function RewardCardCoverImg({ coverUrl, rarity, className }: { coverUrl?: string; rarity?: string; className?: string }) {
   const { src, handleError } = useSmartCoverArt(coverUrl, rarity);
@@ -379,17 +380,27 @@ export default function DecryptionAnimation({ reward, onClose }: DecryptionAnima
                   initial={{ rotate: 10, scale: 0.5 }}
                   animate={{ rotate: 0, scale: 1 }}
                   transition={{ type: 'spring', damping: 12 }}
-                  className="py-2 flex flex-col items-center"
+                  className="py-2 flex flex-col items-center relative"
                 >
-                  <div className="w-32 aspect-[3/4] rounded-lg overflow-hidden border border-white/20 mb-4 shadow-[0_10px_30px_rgba(0,0,0,0.6)]">
+                  {reward.details.card.rarity === 'mythic' && <MythicGodRays />}
+                  <div
+                    className="w-32 aspect-[3/4] rounded-lg overflow-hidden border border-white/20 mb-4 shadow-[0_10px_30px_rgba(0,0,0,0.6)] relative"
+                    style={reward.details.card.rarity === 'mythic' ? { borderColor: '#ffd700', boxShadow: '0 0 25px rgba(255,215,0,0.5)' } : undefined}
+                  >
                     <RewardCardCoverImg
                       coverUrl={reward.details.card.coverUrl}
                       rarity={reward.details.card.rarity}
                       className="w-full h-full object-cover"
                     />
+                    {reward.details.card.rarity === 'mythic' && <MythicPrismFoil />}
+                    {reward.details.card.rarity === 'mythic' && <MythicEmberParticles count={10} />}
+                    {reward.details.card.rarity === 'mythic' && <OneOfOneOutline color="#ffd700" speedSec={14} />}
                   </div>
-                  <div className="font-mono text-[9px] tracking-widest uppercase px-2 py-0.5 rounded bg-white/5 border border-white/10" style={{ color: 'var(--color-neon-cyan)' }}>
-                    {reward.details.card.rarity}
+                  <div
+                    className="font-mono text-[9px] tracking-widest uppercase px-2 py-0.5 rounded bg-white/5 border border-white/10"
+                    style={{ color: reward.details.card.rarity === 'mythic' ? '#ffd700' : 'var(--color-neon-cyan)' }}
+                  >
+                    {reward.details.card.rarity === 'mythic' ? '✦ 1 OF 1 MYTHIC ✦' : reward.details.card.rarity}
                   </div>
                   <div className="text-2xl font-black uppercase text-white mt-2 leading-none">
                     {reward.details.card.title}

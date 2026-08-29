@@ -11,6 +11,8 @@ import { getCoverUrlForRarity, useSmartCoverArt } from '../utils/rarityArtwork';
 import { getArtTypeForDay, OUTFIT_STYLES } from '../utils/artTypes';
 import RarityBadge from './RarityBadge';
 import AudioPreview from './AudioPreview';
+import OneOfOneOutline from './OneOfOneOutline';
+import MythicCardEffects, { MythicGodRays, MythicPrismFoil, MythicEmberParticles } from './MythicCardEffects';
 import { getDayFromDate } from '../utils/dayCalc';
 import {
   isBombshellCard,
@@ -204,15 +206,23 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
                 <div className="relative bg-black/40 border-b lg:border-r lg:border-b-0 border-white/5 flex flex-col items-center justify-center p-4 sm:p-8 gap-6 sm:gap-8">
                   {/* Card Display */}
                   <div className="relative w-full max-w-[280px] group">
+                    {rarity === 'mythic' && <MythicGodRays />}
                     <div className="absolute -inset-4 rounded-3xl opacity-20 blur-2xl transition-all duration-700"
                       style={{ background: `radial-gradient(circle, ${rc.color}, transparent 70%)` }} />
-                    <div className="relative aspect-[3/4] rounded-xl overflow-hidden shadow-2xl border border-white/10">
+                    <div className="relative aspect-[3/4] rounded-xl overflow-hidden shadow-2xl border border-white/10"
+                      style={rarity === 'mythic' ? { borderColor: '#ffd700', boxShadow: '0 0 25px rgba(255,215,0,0.4)' } : undefined}
+                    >
                       <img
                         src={modalCoverUrl}
                         alt=""
                         className="w-full h-full object-cover"
                         onError={handleModalCoverError}
                       />
+                      {rarity === 'mythic' && <MythicPrismFoil />}
+                      {rarity === 'mythic' && <MythicEmberParticles count={12} />}
+                      {(rarity === 'mythic' || (card.edition === 1 && getSupplyCap(card.card.rarity as Rarity, card.card.day) === 1)) && (
+                        <OneOfOneOutline color="#ffd700" speedSec={14} />
+                      )}
                       <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 to-transparent" />
                       <div className="absolute bottom-4 left-4 right-4">
                         <RarityBadge rarity={card.card.rarity} size="lg" />

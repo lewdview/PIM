@@ -771,6 +771,7 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
   const [flipIndex, setFlipIndex] = useState(-1); // current card being flipped
   const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
   const [rareRevealing, setRareRevealing] = useState(false);
+  const [mythicRevealing, setMythicRevealing] = useState(false);
   const [nearMissFlash, setNearMissFlash] = useState(false);
   const [ultraTriggered, setUltraTriggered] = useState(false);
   const [inspectIndex, setInspectIndex] = useState<number | null>(null);
@@ -1131,13 +1132,19 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
 
         // Phase C: Slow flip — hold the moment
         setFlippedCards(prev => new Set(prev).add(i));
-        if (isBombshell) {
+        if (rarity === 'mythic') {
+          setMythicRevealing(true);
+          playUnlockChime();
+          playRareHit();
+          audioManager.playSfx('hidden_secret_found', 1.0);
+        } else if (isBombshell) {
           playBombshellShimmer();
           playRareHit();
         } else {
           playRareHit();
         }
-        if (await abortableWait(650)) return;
+        if (await abortableWait(rarity === 'mythic' ? 1200 : 650)) return;
+        setMythicRevealing(false);
 
         // Ultra trigger check (0.3%)
         if (isUltraTrigger()) {
@@ -2497,6 +2504,42 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
                 </div>
               </motion.div>
             )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Mythic 1 of 1 Supernova Reveal Celebration */}
+      <AnimatePresence>
+        {mythicRevealing && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 pointer-events-none z-[160] flex flex-col items-center justify-center"
+          >
+            {/* Golden Supernova Ring Blast */}
+            <div
+              className="w-96 h-96 rounded-full"
+              style={{
+                background: 'radial-gradient(circle, #ffffff 0%, #ffd700 45%, rgba(255,0,127,0.3) 70%, transparent 90%)',
+                animation: 'mythic-supernova-blast 1.2s cubic-bezier(0.1, 0.8, 0.3, 1) forwards',
+              }}
+            />
+            <motion.div
+              initial={{ scale: 0.6, opacity: 0, y: 30 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.8, opacity: 0, y: -20 }}
+              className="absolute bottom-20 px-8 py-3 rounded-2xl bg-black/95 border-2 border-[#ffd700] shadow-[0_0_50px_rgba(255,215,0,0.9)] flex items-center gap-3"
+            >
+              <span className="text-xl text-[#ffd700] animate-spin">✦</span>
+              <span
+                className="font-mono text-sm sm:text-base font-black text-[#ffd700] tracking-widest uppercase"
+                style={{ textShadow: '0 0 16px rgba(255,215,0,0.9)' }}
+              >
+                ✦ MYTHIC 1 OF 1 DISCOVERED ✦
+              </span>
+              <span className="text-xl text-[#ffd700] animate-spin" style={{ animationDirection: 'reverse' }}>✦</span>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

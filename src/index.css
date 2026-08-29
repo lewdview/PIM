@@ -766,6 +766,35 @@ body {
   100% { background-position: 300% 50%; }
 }
 
+/* ===== MYTHIC CARD EXCLUSIVE ANIMATIONS ===== */
+@keyframes mythic-godrays-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes mythic-ray-pulse {
+  0%, 100% { opacity: 0.45; transform: scale(0.95); }
+  50% { opacity: 0.85; transform: scale(1.05); }
+}
+
+@keyframes mythic-particle-rise {
+  0% { transform: translateY(0) translateX(0) scale(0.6); opacity: 0; }
+  15% { opacity: 0.9; }
+  85% { opacity: 0.7; }
+  100% { transform: translateY(-420px) translateX(var(--drift, 12px)) scale(1.1); opacity: 0; }
+}
+
+@keyframes mythic-corona-pulse {
+  0% { box-shadow: 0 0 14px rgba(255, 215, 0, 0.45), inset 0 0 6px rgba(255, 215, 0, 0.25); }
+  100% { box-shadow: 0 0 30px rgba(255, 215, 0, 0.85), inset 0 0 14px rgba(255, 215, 0, 0.5); }
+}
+
+@keyframes mythic-supernova-blast {
+  0% { transform: scale(0.1); opacity: 1; filter: brightness(2.5); }
+  40% { opacity: 0.95; }
+  100% { transform: scale(3.2); opacity: 0; filter: brightness(1); }
+}
+
 
 /* ===== LOADING SHIMMER ===== */
 .shimmer {

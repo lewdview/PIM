@@ -12,6 +12,8 @@ import {
   type OutfitStyle,
 } from '../utils/artTypes';
 import { STORAGE_BASE } from '../services/supabaseClient';
+import OneOfOneOutline from '../components/OneOfOneOutline';
+import MythicCardEffects, { MythicGodRays, MythicEmberParticles, MythicPrismFoil, MythicCrownBadge } from '../components/MythicCardEffects';
 import '../styles/CardShowcaseStyles.css';
 
 // --------------------------------------------------------------------------
@@ -406,6 +408,7 @@ interface CardWrapperProps {
 function Card3DWrapper({ rarity, themeClass, children, backSide }: CardWrapperProps) {
   const [isFlipped, setIsFlipped] = useState(false);
   const { staticFace } = useContext(CardSkinContext);
+  const isMythic = rarity === 'mythic';
 
   if (staticFace === 'front') {
     return (
@@ -421,7 +424,10 @@ function Card3DWrapper({ rarity, themeClass, children, backSide }: CardWrapperPr
           overflow: 'hidden'
         }}
       >
+        {isMythic && <MythicGodRays />}
         {children}
+        {isMythic && <MythicEmberParticles count={12} />}
+        {isMythic && <OneOfOneOutline color="#ffd700" speedSec={14} />}
       </div>
     );
   }
@@ -446,10 +452,13 @@ function Card3DWrapper({ rarity, themeClass, children, backSide }: CardWrapperPr
   }
 
   return (
-    <div className="card-wrapper-3d" onClick={() => setIsFlipped(!isFlipped)}>
+    <div className="card-wrapper-3d relative" onClick={() => setIsFlipped(!isFlipped)}>
+      {isMythic && <MythicGodRays />}
       <div className={`card-inner-3d ${isFlipped ? 'flipped' : ''}`}>
-        <div className={`card-face-front theme-${themeClass} rarity-${rarity}`}>
+        <div className={`card-face-front theme-${themeClass} rarity-${rarity} relative`}>
           {children}
+          {isMythic && <MythicEmberParticles count={12} />}
+          {isMythic && <OneOfOneOutline color="#ffd700" speedSec={14} />}
         </div>
         <div className={`card-face-back theme-${themeClass} rarity-${rarity}`}>
           {backSide}
