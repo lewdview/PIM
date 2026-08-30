@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Pause, X, Volume2, SkipBack, SkipForward, Shuffle, Repeat, Repeat1, Sparkles } from 'lucide-react';
 import { useLocation } from 'wouter';
+import { useShallow } from 'zustand/react/shallow';
 import { useGlobalPlayer } from '../store/useGlobalPlayer';
 import { RARITY_CONFIG } from '../utils/rarity';
 import { useIsMobile } from '../hooks/use-mobile';
@@ -11,26 +12,85 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+
+function GlobalPlayerProgressBar({ accent }: { accent: string }) {
+  const progress = useGlobalPlayer(s => s.progress);
+  const seek = useGlobalPlayer(s => s.seek);
+
+  const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    seek(pct);
+  };
+
+  return (
+    <div
+      onClick={handleSeek}
+      style={{
+        height: '3px',
+        background: 'rgba(255,255,255,0.06)',
+        cursor: 'pointer',
+        position: 'relative',
+      }}
+    >
+      <motion.div
+        style={{
+          height: '100%',
+          width: `${progress * 100}%`,
+          background: `linear-gradient(90deg, ${accent}, ${accent}cc)`,
+          boxShadow: `0 0 8px ${accent}60`,
+          transition: 'width 0.3s linear',
+        }}
+      />
+    </div>
+  );
+}
+
+
+function GlobalPlayerTimeDisplay({ limit }: { limit: number }) {
+  const currentTime = useGlobalPlayer(s => s.currentTime);
+  const duration = useGlobalPlayer(s => s.duration);
+  const effectiveDuration = limit > 0 ? limit : duration;
+
+  return (
+    <span style={{
+      fontFamily: '"JetBrains Mono", monospace',
+      fontSize: '8px',
+      color: 'rgba(255,255,255,0.3)',
+    }}>
+      {formatTime(currentTime)} / {formatTime(effectiveDuration)}
+    </span>
+  );
+}
+
 export default function GlobalPlayerBar() {
   const [location, setLocation] = useLocation();
   const isMobile = useIsMobile();
+  // ⚡ Bolt: Using useShallow to prevent unnecessary re-renders while keeping clean syntax
+  // Extracted progress bar and time components to prevent high-frequency state updates from re-rendering the whole bar.
   const {
     currentTrack,
-    playlist,
     isPlaying,
-    progress,
-    currentTime,
-    duration,
     loopMode,
     shuffle,
     toggle,
     stop,
-    seek,
     nextTrack,
     previousTrack,
     toggleShuffle,
-    setLoopMode,
-  } = useGlobalPlayer();
+    setLoopMode
+  } = useGlobalPlayer(useShallow(s => ({
+    currentTrack: s.currentTrack,
+    isPlaying: s.isPlaying,
+    loopMode: s.loopMode,
+    shuffle: s.shuffle,
+    toggle: s.toggle,
+    stop: s.stop,
+    nextTrack: s.nextTrack,
+    previousTrack: s.previousTrack,
+    toggleShuffle: s.toggleShuffle,
+    setLoopMode: s.setLoopMode
+  })));
 
   const rc = currentTrack ? (RARITY_CONFIG[currentTrack.rarity as keyof typeof RARITY_CONFIG] || RARITY_CONFIG.common) : RARITY_CONFIG.common;
   const accent = rc?.color || '#ff3800';
@@ -73,26 +133,7 @@ export default function GlobalPlayerBar() {
         }}
         className="bottom-0"
       >
-        {/* Progress bar — clickable */}
-        <div
-          onClick={handleSeek}
-          style={{
-            height: '3px',
-            background: 'rgba(255,255,255,0.06)',
-            cursor: 'pointer',
-            position: 'relative',
-          }}
-        >
-          <motion.div
-            style={{
-              height: '100%',
-              width: `${progress * 100}%`,
-              background: `linear-gradient(90deg, ${accent}, ${accent}cc)`,
-              boxShadow: `0 0 8px ${accent}60`,
-              transition: 'width 0.3s linear',
-            }}
-          />
-        </div>
+        <GlobalPlayerProgressBar accent={accent} />
 
         <div style={{
           display: 'flex',
@@ -156,13 +197,7 @@ export default function GlobalPlayerBar() {
               }}>
                 DAY {currentTrack.day}
               </span>
-              <span style={{
-                fontFamily: '"JetBrains Mono", monospace',
-                fontSize: '8px',
-                color: 'rgba(255,255,255,0.3)',
-              }}>
-                {formatTime(currentTime)} / {formatTime(effectiveDuration)}
-              </span>
+              <GlobalPlayerTimeDisplay limit={limit} />
               {isPreview && (
                 <span style={{
                   fontFamily: '"JetBrains Mono", monospace',
