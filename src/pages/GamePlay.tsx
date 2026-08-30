@@ -9236,25 +9236,32 @@ export default function Game() {
         const candidates = getSmartCoverCandidates(song.coverArt);
         const toTry = candidates.length > 0 ? candidates : [song.coverArt];
         let cIdx = 0;
+        let triedWithoutCors = false;
 
         const loadNextCandidate = () => {
           if (cancelled || cIdx >= toTry.length) return;
           const currentCandidateUrl = toTry[cIdx];
           const img = new Image();
-          img.crossOrigin = "anonymous";
+          if (!triedWithoutCors) {
+            img.crossOrigin = "anonymous";
+          }
           img.onload = () => {
             if (cancelled) return;
             coverImgRef.current = img;
             if (song) song.coverArt = currentCandidateUrl;
-            const off = document.createElement("canvas");
-            off.width = 512;
-            off.height = 512;
-            const offCtx = off.getContext("2d")!;
-            offCtx.filter = "blur(10px) brightness(0.52) saturate(1.5)";
-            offCtx.drawImage(img, -24, -24, 560, 560);
-            offCtx.filter = "none";
-            disposeCanvas(coverBlurRef.current);
-            coverBlurRef.current = off;
+            try {
+              const off = document.createElement("canvas");
+              off.width = 512;
+              off.height = 512;
+              const offCtx = off.getContext("2d")!;
+              offCtx.filter = "blur(10px) brightness(0.52) saturate(1.5)";
+              offCtx.drawImage(img, -24, -24, 560, 560);
+              offCtx.filter = "none";
+              disposeCanvas(coverBlurRef.current);
+              coverBlurRef.current = off;
+            } catch (blurErr) {
+              // Canvas tainted or draw error — ignore blur offscreen
+            }
 
             // Extract dynamic colors from artwork for notes if theme is artwork
             if (opts.noteTheme === "artwork") {
@@ -9322,13 +9329,48 @@ export default function Game() {
                   );
                 }
               } catch (err) {
-                console.error("Failed to extract dynamic colors from artwork:", err);
+                // If getImageData throws SecurityError (canvas tainted due to CORS),
+                // fall back gracefully to harmonic mood palette
+                const mood = songRef.current?.mood?.toLowerCase() || '';
+                const valence = songRef.current?.valence;
+                let fallbackColors: [string, string, string] = ['#00F0FF', '#39FF14', '#FF1493'];
+                if (mood === 'dark' || (typeof valence === 'number' && valence < 0.35)) {
+                  fallbackColors = ['#9900EF', '#FF0055', '#00F0FF'];
+                } else if (mood === 'light' || (typeof valence === 'number' && valence > 0.65)) {
+                  fallbackColors = ['#00F0FF', '#39FF14', '#FFE600'];
+                } else if (mood === 'intense' || mood === 'aggressive') {
+                  fallbackColors = ['#FF1493', '#FF0033', '#FF8800'];
+                }
+                laneColorsRef.current = fallbackColors;
+
+                const canvas = canvasRef.current;
+                if (canvas) {
+                  const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
+                  const W = canvas.width / dpr;
+                  const H = canvas.height / dpr;
+                  disposeCanvas(offscreenCanvasRef.current);
+                  offscreenCanvasRef.current = prerenderStaticTrack(
+                    W,
+                    H,
+                    dpr,
+                    songRef.current.difficultyLevel,
+                    laneColorsRef.current,
+                    optsRef.current.gameTrack
+                  );
+                }
               }
             }
           };
           img.onerror = () => {
-            cIdx++;
-            loadNextCandidate();
+            if (!triedWithoutCors) {
+              // Retry the same candidate without CORS so it can still display visually
+              triedWithoutCors = true;
+              loadNextCandidate();
+            } else {
+              triedWithoutCors = false;
+              cIdx++;
+              loadNextCandidate();
+            }
           };
           img.src = currentCandidateUrl;
         };

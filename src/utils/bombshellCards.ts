@@ -37,6 +37,11 @@ export function getBombshellCoverUrl(day: number, fileName: string): string {
  * Completely independent of month folders (Supabase <-> Local <-> Sibling covers).
  */
 export function getBombshellCoverCandidates(day: number, fileName: string): string[] {
+  const useLocal = (typeof localStorage !== 'undefined' && 
+    (localStorage.getItem('opt_useLocalFiles') === 'true' || localStorage.getItem('useLocalFiles') === 'true')) || 
+    (import.meta.env && import.meta.env.VITE_USE_LOCAL_FILES === 'true');
+  const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
   const primary = getBombshellCoverUrl(day, fileName);
   const rareUrl = `${SUPABASE_BASE}rare_covers/day%20${day}/${encodeURIComponent(fileName)}`;
   const legacyGirlUrl = `${SUPABASE_BASE}girl-covers/days/day%20${day}/${encodeURIComponent(fileName)}`;
@@ -45,7 +50,7 @@ export function getBombshellCoverCandidates(day: number, fileName: string): stri
   const candidates: string[] = [primary];
   if (primary !== rareUrl) candidates.push(rareUrl);
   if (primary !== legacyGirlUrl) candidates.push(legacyGirlUrl);
-  if (primary !== localUrl) candidates.push(localUrl);
+  if ((useLocal || isLocalhost) && primary !== localUrl) candidates.push(localUrl);
 
   // Sibling cover fallback for this day if specific file is missing
   const dayCovers = getBombshellDayCovers(day);
@@ -58,6 +63,9 @@ export function getBombshellCoverCandidates(day: number, fileName: string): stri
       }
     }
   }
+
+  // Canonical fallback pack cover if all day-specific bombshell files are missing
+  candidates.push(DEFAULT_BOMBSHELL_PACK_COVER);
 
   return Array.from(new Set(candidates)).filter(Boolean);
 }
