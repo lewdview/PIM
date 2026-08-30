@@ -402,12 +402,18 @@ export default function Results() {
         if (!mounted) {
           ambientAudio.pause();
           ambientAudio.src = '';
+          ambientAudio.removeAttribute('src');
+          try { ambientAudio.load(); } catch {}
         }
       }).catch(() => {});
     }
 
     // Fade in gently
     const fadeIn = setInterval(() => {
+      if (!mounted) {
+        clearInterval(fadeIn);
+        return;
+      }
       if (ambientAudio.volume < 0.14) ambientAudio.volume += 0.02;
       else { ambientAudio.volume = 0.15; clearInterval(fadeIn); }
     }, 60);
@@ -417,6 +423,8 @@ export default function Results() {
       clearInterval(fadeIn);
       ambientAudio.pause();
       ambientAudio.src = '';
+      ambientAudio.removeAttribute('src');
+      try { ambientAudio.load(); } catch {}
     };
   }, [songId, setLocation]);
 

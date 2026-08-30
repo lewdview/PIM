@@ -123,6 +123,9 @@ export default function GamepadCursor() {
       return document.scrollingElement || document.documentElement || window;
     };
 
+    let lastProbedPos = { x: -999, y: -999 };
+    let cachedEl: Element | null = null;
+
     // Main poll loop
     const poll = () => {
       const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
@@ -160,9 +163,13 @@ export default function GamepadCursor() {
         // Center on screen when first activated
         posRef.current = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
         setPosition({ ...posRef.current });
+        lastProbedPos = { x: -999, y: -999 };
       }
 
       if (activeRef.current) {
+        const prevX = posRef.current.x;
+        const prevY = posRef.current.y;
+
         // 1. Move virtual cursor
         if (Math.abs(ax) > deadzone || Math.abs(ay) > deadzone) {
           // Non-linear acceleration for precision + speed
@@ -178,10 +185,17 @@ export default function GamepadCursor() {
           posRef.current.y = Math.max(0, Math.min(window.innerHeight, posRef.current.y));
         }
 
-        // 2. Find element under cursor
         const x = posRef.current.x;
         const y = posRef.current.y;
-        const el = document.elementFromPoint(x, y);
+        const posMoved = Math.hypot(x - prevX, y - prevY) > 0.4 || Math.hypot(x - lastProbedPos.x, y - lastProbedPos.y) > 0.8;
+
+        // 2. Find element under cursor (only when moved or unprobed to avoid forced layout thrashing)
+        let el = cachedEl;
+        if (posMoved || !cachedEl) {
+          el = document.elementFromPoint(x, y);
+          cachedEl = el;
+          lastProbedPos = { x, y };
+        }
 
         // Edge Scrolling (pushing against the scroll direction at top/bottom/left/right of screen)
         const edgeThreshold = 45;
@@ -206,6 +220,7 @@ export default function GamepadCursor() {
             left: edgeScrollX,
             behavior: "auto",
           });
+          lastProbedPos = { x: -999, y: -999 };
         }
 
         // Find closest interactive element
@@ -279,12 +294,14 @@ export default function GamepadCursor() {
             lastHoveredElRef.current = el;
           }
 
-          el.dispatchEvent(new MouseEvent("mousemove", {
-            bubbles: true,
-            cancelable: true,
-            clientX: posRef.current.x,
-            clientY: posRef.current.y,
-          }));
+          if (posMoved) {
+            el.dispatchEvent(new MouseEvent("mousemove", {
+              bubbles: true,
+              cancelable: true,
+              clientX: posRef.current.x,
+              clientY: posRef.current.y,
+            }));
+          }
         }
 
         // 4. Handle buttons

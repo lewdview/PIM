@@ -95,11 +95,17 @@ class GameSenseService {
     }, 15000);
   }
 
-  private stopHeartbeat() {
+  public stopHeartbeat() {
     if (this.heartbeatInterval) {
       clearInterval(this.heartbeatInterval);
       this.heartbeatInterval = null;
     }
+  }
+
+  public disconnect() {
+    this.stopHeartbeat();
+    this.isAvailable = false;
+    this.isRegistered = false;
   }
 
   async sendHit() {

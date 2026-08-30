@@ -355,6 +355,9 @@ export class AudioManager {
         } catch (e) {
           // ignore if already stopped or not started
         }
+        try {
+          s.disconnect();
+        } catch {}
       });
     }
   }
@@ -606,17 +609,41 @@ export class AudioManager {
           tone.gain.disconnect();
         } catch {}
       };
+      // Fallback timer to disconnect nodes if onended does not fire
+      window.setTimeout(() => {
+        try {
+          tone.osc.disconnect();
+          tone.filter.disconnect();
+          tone.gain.disconnect();
+        } catch {}
+      }, 100);
     } catch {
-      try { tone.osc.stop(); } catch {}
+      try {
+        tone.osc.stop();
+        tone.osc.disconnect();
+        tone.filter.disconnect();
+        tone.gain.disconnect();
+      } catch {}
     }
   }
 
-  /** Stop all active hold tones immediately */
+  /** Stop all active hold tones immediately with zero lingering oscillators */
   stopAllHoldTones(): void {
     if (!this.ctx) return;
-    for (const [id] of this.activeHoldTones) {
+    // Snapshot keys first to avoid Map mutation while iterating
+    const toneIds = Array.from(this.activeHoldTones.keys());
+    for (const id of toneIds) {
       this.stopHoldTone(id);
     }
+    // Safety net: ensure any lingering nodes in the map are immediately stopped & disconnected
+    this.activeHoldTones.forEach((tone) => {
+      try {
+        tone.osc.stop();
+        tone.osc.disconnect();
+        tone.filter.disconnect();
+        tone.gain.disconnect();
+      } catch {}
+    });
     this.activeHoldTones.clear();
   }
 

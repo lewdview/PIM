@@ -203,6 +203,17 @@ const refineAndBlendEdges = (canvas: HTMLCanvasElement, threshold: number) => {
   }
 };
 
+/** Explicitly zero canvas dimensions and clear context to release GPU backing textures */
+export function disposeCanvas(canvas: HTMLCanvasElement | null | undefined): void {
+  if (!canvas) return;
+  try {
+    const ctx = canvas.getContext('2d');
+    if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+    canvas.width = 0;
+    canvas.height = 0;
+  } catch {}
+}
+
 
 
 
@@ -2840,8 +2851,7 @@ export default function Game() {
     setActivePovMode(nextMode);
     activePovModeRef.current = nextMode;
     if (offscreenCanvasRef.current) {
-      offscreenCanvasRef.current.width = 0;
-      offscreenCanvasRef.current.height = 0;
+      disposeCanvas(offscreenCanvasRef.current);
       offscreenCanvasRef.current = null; // Reset offscreen canvas cache to regenerate track geometry
     }
     audioManager.playSfx('menu_confirm', 0.18);
@@ -2879,6 +2889,7 @@ export default function Game() {
     let active = true;
 
     const fetchAndSegment = async () => {
+      const createdSlides: any[] = [];
       try {
         let imageUrls = staticImages.length > 0 ? [...staticImages] : ['/data/slideshow/cyber_dancer.jpg', '/data/slideshow/cyber_headphones.jpg', '/data/slideshow/cyber_dj.jpg'];
         
@@ -2918,7 +2929,6 @@ export default function Game() {
           console.warn('[GamePlay Slideshow] API offline, using fallback assets');
         }
 
-        const slides: any[] = [];
         const colors = ['#00F0FF', '#39FF14', '#FF1493', '#FFD700', '#FF5500'];
 
         for (let idx = 0; idx < imageUrls.length; idx++) {
@@ -2932,7 +2942,10 @@ export default function Game() {
             img.onerror = () => resolve(); // skip on error
           });
 
-          if (!active) return;
+          if (!active) {
+            createdSlides.forEach(s => disposeCanvas(s?.canvas));
+            return;
+          }
           if (img.naturalWidth === 0) continue;
 
           const w = img.naturalWidth;
@@ -2946,7 +2959,7 @@ export default function Game() {
           tCtx.drawImage(img, 0, 0, targetW, targetH);
           refineAndBlendEdges(tempCanvas, 32);
 
-          slides.push({
+          createdSlides.push({
             canvas: tempCanvas,
             width: targetW,
             height: targetH,
@@ -2955,13 +2968,20 @@ export default function Game() {
         }
 
         if (active) {
-          slideshowSlidesRef.current = slides;
+          // Dispose previous slide canvases before assigning new ones
+          if (slideshowSlidesRef.current) {
+            slideshowSlidesRef.current.forEach(s => disposeCanvas(s?.canvas));
+          }
+          slideshowSlidesRef.current = createdSlides;
           currentSlideIdxRef.current = 0;
           nextSlideIdxRef.current = -1;
           slideTimeRef.current = 0;
           fadeAlphaRef.current = 1;
+        } else {
+          createdSlides.forEach(s => disposeCanvas(s?.canvas));
         }
       } catch (e) {
+        createdSlides.forEach(s => disposeCanvas(s?.canvas));
         console.error('[GamePlay Slideshow Loader] Cutout generation failed:', e);
       }
     };
@@ -2999,6 +3019,7 @@ export default function Game() {
         }
       }
       const diffLevel = songRef.current?.difficultyLevel ?? 5;
+      disposeCanvas(offscreenCanvasRef.current);
       offscreenCanvasRef.current = prerenderStaticTrack(
         W,
         H,
@@ -4557,8 +4578,7 @@ export default function Game() {
             setActivePovMode(targetPov);
             activePovModeRef.current = targetPov;
             if (offscreenCanvasRef.current) {
-              offscreenCanvasRef.current.width = 0;
-              offscreenCanvasRef.current.height = 0;
+              disposeCanvas(offscreenCanvasRef.current);
               offscreenCanvasRef.current = null; // Reset offscreen track canvas to regenerate geometry for target POV!
             }
           }
@@ -8862,6 +8882,7 @@ export default function Game() {
         
         // Pre-render static track surface offscreen cache on resize
         const diffLevel = songRef.current?.difficultyLevel ?? 5;
+        disposeCanvas(offscreenCanvasRef.current);
         offscreenCanvasRef.current = prerenderStaticTrack(
           W,
           H,
@@ -9124,6 +9145,7 @@ export default function Game() {
         const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
         const W = canvas.width / dpr;
         const H = canvas.height / dpr;
+        disposeCanvas(offscreenCanvasRef.current);
         offscreenCanvasRef.current = prerenderStaticTrack(
           W,
           H,
@@ -9164,6 +9186,7 @@ export default function Game() {
       ambientParticlesRef.current = ambientParts;
       // Pre-load + pre-blur cover art for background effect with smart candidate fallback
       coverImgRef.current = null;
+      disposeCanvas(coverBlurRef.current);
       coverBlurRef.current = null;
       scanPatternRef.current = null;
       if (song.coverArt) {
@@ -9187,6 +9210,7 @@ export default function Game() {
             offCtx.filter = "blur(10px) brightness(0.52) saturate(1.5)";
             offCtx.drawImage(img, -24, -24, 560, 560);
             offCtx.filter = "none";
+            disposeCanvas(coverBlurRef.current);
             coverBlurRef.current = off;
 
             // Extract dynamic colors from artwork for notes if theme is artwork
@@ -9237,12 +9261,14 @@ export default function Game() {
                 ];
                 
                 laneColorsRef.current = extColors;
+                disposeCanvas(extCanvas);
                 
                 const canvas = canvasRef.current;
                 if (canvas) {
                   const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
                   const W = canvas.width / dpr;
                   const H = canvas.height / dpr;
+                  disposeCanvas(offscreenCanvasRef.current);
                   offscreenCanvasRef.current = prerenderStaticTrack(
                     W,
                     H,
@@ -9936,6 +9962,7 @@ export default function Game() {
           }
           // Pre-render static track surface offscreen cache
           const diffLevel = songRef.current?.difficultyLevel ?? 5;
+          disposeCanvas(offscreenCanvasRef.current);
           offscreenCanvasRef.current = prerenderStaticTrack(
             w.clientWidth,
             w.clientHeight,
@@ -10086,6 +10113,7 @@ export default function Game() {
       laneSilenced.current = [false, false, false];
       // Reset GameSense state on unmount
       gameSenseService.sendPowerup(0);
+      gameSenseService.stopHeartbeat();
       cancelAnimationFrame(rafRef.current);
       if (resolvePendingPromiseRef.current) {
         resolvePendingPromiseRef.current();
@@ -10097,6 +10125,7 @@ export default function Game() {
         if (onCanPlay) audio.removeEventListener("canplay", onCanPlay);
         if (onError) audio.removeEventListener("error", onError);
         audio.src = "";
+        audio.removeAttribute("src");
         try { audio.load(); } catch {}
       }
       audioRef.current = null;
@@ -10107,6 +10136,11 @@ export default function Game() {
         audioObjectUrlRef.current = null;
       }
       laneRestoreTimers.current.forEach(clearTimeout);
+
+      // Clean up direct DOM judgment overlays to avoid memory retention & orphan timers
+      if (judgmentBannerRef.current) judgmentBannerRef.current.innerHTML = '';
+      if (judgmentOverlayRef.current) judgmentOverlayRef.current.innerHTML = '';
+      if (judgmentStreamRef.current) judgmentStreamRef.current.innerHTML = '';
 
       if (continueTimeoutRef.current) {
         clearTimeout(continueTimeoutRef.current);
@@ -10196,22 +10230,17 @@ export default function Game() {
       // Clean up canvas bitmaps, particles, telemetry and image caches to release GPU/system memory
       coverImgRef.current = null;
       if (coverBlurRef.current) {
-        coverBlurRef.current.width = 0;
-        coverBlurRef.current.height = 0;
+        disposeCanvas(coverBlurRef.current);
         coverBlurRef.current = null;
       }
       scanPatternRef.current = null;
       if (offscreenCanvasRef.current) {
-        offscreenCanvasRef.current.width = 0;
-        offscreenCanvasRef.current.height = 0;
+        disposeCanvas(offscreenCanvasRef.current);
         offscreenCanvasRef.current = null;
       }
       if (slideshowSlidesRef.current) {
         slideshowSlidesRef.current.forEach(s => {
-          if (s && s.canvas) {
-            s.canvas.width = 0;
-            s.canvas.height = 0;
-          }
+          disposeCanvas(s?.canvas);
         });
         slideshowSlidesRef.current = [];
       }
@@ -11917,6 +11946,7 @@ export default function Game() {
                       }
                       // Pre-render static track surface offscreen cache on resize
                       const diffLevel = songRef.current?.difficultyLevel ?? 5;
+                      disposeCanvas(offscreenCanvasRef.current);
                       offscreenCanvasRef.current = prerenderStaticTrack(
                         w.clientWidth,
                         w.clientHeight,
