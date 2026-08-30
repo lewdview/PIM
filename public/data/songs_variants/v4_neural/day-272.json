@@ -1,0 +1,4390 @@
+{
+  "id": "day-272",
+  "day": 272,
+  "date": "2026-09-29",
+  "title": "Say IT",
+  "artist": "TH3SCR1B3",
+  "bpm": 100,
+  "duration": 192,
+  "mood": "light",
+  "valence": 0.5941175151447288,
+  "moodTags": [
+    "reflective",
+    "introspective",
+    "alternative"
+  ],
+  "description": "Exploring self-discovery and communication.",
+  "audioUrl": "https://files.th3scr1b3.art/audio/september/29%20-%20Say%20It%20Up.mp3",
+  "coverArt": "https://files.th3scr1b3.art/covers/september/29%20-%20Say%20IT.jpg",
+  "notes": [
+    {
+      "time": 1.8,
+      "lane": 1,
+      "type": "tap",
+      "stage": 1,
+      "neuralAttentionWeight": 0.482,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 3,
+      "lane": 0,
+      "type": "tap",
+      "stage": 1,
+      "neuralAttentionWeight": 0.523,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "down-left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 4.2,
+      "lane": 0,
+      "type": "tap",
+      "stage": 1,
+      "neuralAttentionWeight": 0.53,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 5.1,
+      "lane": 1,
+      "type": "tap",
+      "stage": 1,
+      "neuralAttentionWeight": 0.583,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 6,
+      "lane": 2,
+      "type": "tap",
+      "stage": 1,
+      "neuralAttentionWeight": 0.81,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 6.9,
+      "lane": 1,
+      "type": "tap",
+      "stage": 1,
+      "neuralAttentionWeight": 0.991,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "down"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 8.1,
+      "lane": 0,
+      "type": "tap",
+      "stage": 1,
+      "neuralAttentionWeight": 0.825,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 9,
+      "lane": 0,
+      "type": "tap",
+      "stage": 1,
+      "neuralAttentionWeight": 0.542,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 9.9,
+      "lane": 1,
+      "type": "hold",
+      "stage": 1,
+      "holdDuration": 1.2,
+      "neuralAttentionWeight": 0.573,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 1.2
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 10.8,
+      "lane": 0,
+      "type": "tap",
+      "stage": 1,
+      "neuralAttentionWeight": 0.777,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 12.3,
+      "lane": 2,
+      "type": "tap",
+      "stage": 1,
+      "neuralAttentionWeight": 0.509,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 13.5,
+      "lane": 0,
+      "type": "hold",
+      "stage": 1,
+      "holdDuration": 1.2,
+      "neuralAttentionWeight": 0.553,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 1.2
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 14.7,
+      "lane": 1,
+      "type": "tap",
+      "stage": 1,
+      "neuralAttentionWeight": 0.467,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 15.6,
+      "lane": 2,
+      "type": "tap",
+      "stage": 1,
+      "neuralAttentionWeight": 0.783,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 17.1,
+      "lane": 1,
+      "type": "tap",
+      "stage": 1,
+      "neuralAttentionWeight": 0.969,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 19.35,
+      "lane": 0,
+      "type": "tap",
+      "stage": 1,
+      "neuralAttentionWeight": 0.926,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 20.25,
+      "lane": 2,
+      "type": "tap",
+      "stage": 1,
+      "neuralAttentionWeight": 0.841,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 21,
+      "lane": 0,
+      "type": "tap",
+      "stage": 1,
+      "neuralAttentionWeight": 0.495,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 21.75,
+      "lane": 2,
+      "type": "tap",
+      "stage": 1,
+      "neuralAttentionWeight": 0.963,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "down-left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 24,
+      "lane": 0,
+      "type": "tap",
+      "stage": 1,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 25.05,
+      "lane": 1,
+      "type": "tap",
+      "stage": 1,
+      "neuralAttentionWeight": 0.794,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 26.1,
+      "lane": 2,
+      "type": "tap",
+      "stage": 1,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 31.2,
+      "lane": 1,
+      "type": "tap",
+      "stage": 2,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 31.8,
+      "lane": 0,
+      "type": "tap",
+      "stage": 2,
+      "neuralAttentionWeight": 0.557,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 32.7,
+      "lane": 1,
+      "type": "tap",
+      "stage": 2,
+      "neuralAttentionWeight": 0.479,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "down-left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 33.3,
+      "lane": 2,
+      "type": "tap",
+      "stage": 2,
+      "neuralAttentionWeight": 0.998,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 34.2,
+      "lane": 0,
+      "type": "swipe",
+      "stage": 2,
+      "swipeDirection": "left",
+      "neuralAttentionWeight": 0.453,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 34.8,
+      "lane": 2,
+      "type": "hold",
+      "stage": 2,
+      "holdDuration": 0.6,
+      "neuralAttentionWeight": 0.776,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 0.6
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 35.4,
+      "lane": 1,
+      "type": "tap",
+      "stage": 2,
+      "neuralAttentionWeight": 0.48,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 38.85,
+      "lane": 0,
+      "type": "tap",
+      "stage": 2,
+      "neuralAttentionWeight": 0.513,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 40.05,
+      "lane": 0,
+      "type": "swipe",
+      "stage": 2,
+      "swipeDirection": "left",
+      "neuralAttentionWeight": 0.474,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 40.65,
+      "lane": 1,
+      "type": "hold",
+      "stage": 2,
+      "holdDuration": 1.2,
+      "neuralAttentionWeight": 0.999,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 1.2
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 41.25,
+      "lane": 2,
+      "type": "swipe",
+      "stage": 2,
+      "swipeDirection": "left",
+      "neuralAttentionWeight": 0.503,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 41.7,
+      "lane": 1,
+      "type": "tap",
+      "stage": 2,
+      "neuralAttentionWeight": 0.726,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 42.15,
+      "lane": 0,
+      "type": "hold",
+      "stage": 2,
+      "holdDuration": 0.6,
+      "neuralAttentionWeight": 0.816,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 0.6
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 42.6,
+      "lane": 1,
+      "type": "tap",
+      "stage": 2,
+      "neuralAttentionWeight": 0.478,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "down-right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 43.5,
+      "lane": 1,
+      "type": "tap",
+      "stage": 2,
+      "neuralAttentionWeight": 0.479,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 44.25,
+      "lane": 0,
+      "type": "tap",
+      "stage": 2,
+      "neuralAttentionWeight": 0.757,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 46.5,
+      "lane": 1,
+      "type": "tap",
+      "stage": 2,
+      "neuralAttentionWeight": 0.771,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 47.25,
+      "lane": 0,
+      "type": "tap",
+      "stage": 2,
+      "neuralAttentionWeight": 0.58,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "down"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 48.3,
+      "lane": 2,
+      "type": "tap",
+      "stage": 2,
+      "neuralAttentionWeight": 0.555,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 49.05,
+      "lane": 1,
+      "type": "tap",
+      "stage": 2,
+      "neuralAttentionWeight": 0.828,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "down-right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 50.85,
+      "lane": 0,
+      "type": "tap",
+      "stage": 2,
+      "neuralAttentionWeight": 0.531,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 54.6,
+      "lane": 0,
+      "type": "tap",
+      "stage": 2,
+      "neuralAttentionWeight": 0.566,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 55.2,
+      "lane": 2,
+      "type": "swipe",
+      "stage": 2,
+      "swipeDirection": "right",
+      "neuralAttentionWeight": 0.961,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 55.65,
+      "lane": 0,
+      "type": "swipe",
+      "stage": 2,
+      "swipeDirection": "up",
+      "neuralAttentionWeight": 0.494,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 56.4,
+      "lane": 0,
+      "type": "swipe",
+      "stage": 2,
+      "swipeDirection": "down",
+      "neuralAttentionWeight": 0.766,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 59.1,
+      "lane": 1,
+      "type": "hold",
+      "stage": 2,
+      "holdDuration": 1.2,
+      "neuralAttentionWeight": 0.463,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 1.2
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 59.7,
+      "lane": 2,
+      "type": "tap",
+      "stage": 2,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "down-right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 60.6,
+      "lane": 0,
+      "type": "tap",
+      "stage": 2,
+      "neuralAttentionWeight": 0.579,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "down-left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 61.95,
+      "lane": 0,
+      "type": "hold",
+      "stage": 2,
+      "holdDuration": 1.2,
+      "neuralAttentionWeight": 0.561,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 1.2
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 62.7,
+      "lane": 1,
+      "type": "tap",
+      "stage": 2,
+      "neuralAttentionWeight": 0.565,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 64.05,
+      "lane": 1,
+      "type": "tap",
+      "stage": 2,
+      "neuralAttentionWeight": 0.567,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "down"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 64.8,
+      "lane": 2,
+      "type": "tap",
+      "stage": 2,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 65.55,
+      "lane": 0,
+      "type": "swipe",
+      "stage": 2,
+      "swipeDirection": "left",
+      "neuralAttentionWeight": 0.485,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 66.3,
+      "lane": 0,
+      "type": "tap",
+      "stage": 2,
+      "neuralAttentionWeight": 0.495,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "down"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 66.75,
+      "lane": 1,
+      "type": "tap",
+      "stage": 2,
+      "neuralAttentionWeight": 0.5,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 69.75,
+      "lane": 0,
+      "type": "tap",
+      "stage": 3,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "down"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 70.05,
+      "lane": 0,
+      "type": "tap",
+      "stage": 3,
+      "neuralAttentionWeight": 0.697,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "down"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 70.65,
+      "lane": 2,
+      "type": "tap",
+      "stage": 3,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 71.4,
+      "lane": 0,
+      "type": "tap",
+      "stage": 3,
+      "neuralAttentionWeight": 0.679,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 71.7,
+      "lane": 1,
+      "type": "hold",
+      "stage": 3,
+      "holdDuration": 1.2,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 1.2
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 72.15,
+      "lane": 0,
+      "type": "hold",
+      "stage": 3,
+      "holdDuration": 0.9,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 0.9
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 72.9,
+      "lane": 1,
+      "type": "tap",
+      "stage": 3,
+      "neuralAttentionWeight": 0.759,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "down-left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 73.95,
+      "lane": 0,
+      "type": "tap",
+      "stage": 3,
+      "neuralAttentionWeight": 0.721,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 74.55,
+      "lane": 2,
+      "type": "tap",
+      "stage": 3,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "down-left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 75.3,
+      "lane": 0,
+      "type": "hold",
+      "stage": 3,
+      "holdDuration": 0.9,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 0.9
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 75.9,
+      "lane": 1,
+      "type": "tap",
+      "stage": 3,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 77.85,
+      "lane": 0,
+      "type": "swipe",
+      "stage": 3,
+      "swipeDirection": "up-left",
+      "neuralAttentionWeight": 0.965,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 78.3,
+      "lane": 1,
+      "type": "tap",
+      "stage": 3,
+      "neuralAttentionWeight": 0.784,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 79.35,
+      "lane": 0,
+      "type": "hold",
+      "stage": 3,
+      "holdDuration": 0.9,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 0.9
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 79.95,
+      "lane": 2,
+      "type": "swipe",
+      "stage": 3,
+      "swipeDirection": "down-right",
+      "neuralAttentionWeight": 0.711,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 80.85,
+      "lane": 1,
+      "type": "swipe",
+      "stage": 3,
+      "swipeDirection": "up-right",
+      "neuralAttentionWeight": 0.692,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 81.3,
+      "lane": 1,
+      "type": "tap",
+      "stage": 3,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 82.35,
+      "lane": 2,
+      "type": "hold",
+      "stage": 3,
+      "holdDuration": 1.2,
+      "neuralAttentionWeight": 0.651,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 1.2
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 82.95,
+      "lane": 0,
+      "type": "tap",
+      "stage": 3,
+      "neuralAttentionWeight": 0.924,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 83.85,
+      "lane": 0,
+      "type": "hold",
+      "stage": 3,
+      "holdDuration": 1.2,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 1.2
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 84.15,
+      "lane": 1,
+      "type": "hold",
+      "stage": 3,
+      "holdDuration": 0.9,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 0.9
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 84.9,
+      "lane": 0,
+      "type": "tap",
+      "stage": 3,
+      "neuralAttentionWeight": 0.993,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "down-right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 86.1,
+      "lane": 0,
+      "type": "tap",
+      "stage": 3,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "down"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 87.15,
+      "lane": 1,
+      "type": "tap",
+      "stage": 3,
+      "neuralAttentionWeight": 0.796,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "down-left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 87.45,
+      "lane": 2,
+      "type": "tap",
+      "stage": 3,
+      "neuralAttentionWeight": 0.987,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 88.05,
+      "lane": 0,
+      "type": "tap",
+      "stage": 3,
+      "neuralAttentionWeight": 0.694,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 88.5,
+      "lane": 1,
+      "type": "swipe",
+      "stage": 3,
+      "swipeDirection": "down-right",
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 90,
+      "lane": 0,
+      "type": "tap",
+      "stage": 3,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 90.45,
+      "lane": 1,
+      "type": "tap",
+      "stage": 3,
+      "neuralAttentionWeight": 0.686,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 90.9,
+      "lane": 0,
+      "type": "hold-swipe",
+      "stage": 3,
+      "holdDuration": 0.9,
+      "swipeDirection": "down-right",
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 91.8,
+      "lane": 0,
+      "type": "hold",
+      "stage": 3,
+      "holdDuration": 0.9,
+      "neuralAttentionWeight": 0.702,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 0.9
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 93.6,
+      "lane": 1,
+      "type": "swipe",
+      "stage": 3,
+      "swipeDirection": "right",
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 94.5,
+      "lane": 1,
+      "type": "tap",
+      "stage": 3,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "down"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 95.85,
+      "lane": 0,
+      "type": "tap",
+      "stage": 3,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 96.3,
+      "lane": 1,
+      "type": "tap",
+      "stage": 3,
+      "neuralAttentionWeight": 0.653,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 97.2,
+      "lane": 0,
+      "type": "tap",
+      "stage": 3,
+      "neuralAttentionWeight": 0.983,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 98.25,
+      "lane": 1,
+      "type": "hold-swipe",
+      "stage": 3,
+      "holdDuration": 0.9,
+      "swipeDirection": "down",
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 98.7,
+      "lane": 0,
+      "type": "swipe",
+      "stage": 3,
+      "swipeDirection": "down",
+      "neuralAttentionWeight": 0.67,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 99.15,
+      "lane": 2,
+      "type": "tap",
+      "stage": 3,
+      "neuralAttentionWeight": 0.732,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "down-left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 99.75,
+      "lane": 1,
+      "type": "hold-swipe",
+      "stage": 3,
+      "holdDuration": 0.9,
+      "swipeDirection": "left",
+      "neuralAttentionWeight": 0.936,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 100.05,
+      "lane": 1,
+      "type": "tap",
+      "stage": 3,
+      "neuralAttentionWeight": 0.698,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 100.35,
+      "lane": 0,
+      "type": "swipe",
+      "stage": 3,
+      "swipeDirection": "left",
+      "neuralAttentionWeight": 0.735,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 100.8,
+      "lane": 2,
+      "type": "tap",
+      "stage": 3,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 101.1,
+      "lane": 1,
+      "type": "hold",
+      "stage": 3,
+      "holdDuration": 0.9,
+      "neuralAttentionWeight": 0.652,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 0.9
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 101.55,
+      "lane": 1,
+      "type": "tap",
+      "stage": 3,
+      "neuralAttentionWeight": 0.788,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 102.15,
+      "lane": 0,
+      "type": "tap",
+      "stage": 3,
+      "neuralAttentionWeight": 0.902,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "down-left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 102.75,
+      "lane": 2,
+      "type": "tap",
+      "stage": 3,
+      "neuralAttentionWeight": 0.701,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 103.65,
+      "lane": 0,
+      "type": "hold",
+      "stage": 3,
+      "holdDuration": 1.2,
+      "neuralAttentionWeight": 0.733,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 1.2
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 104.25,
+      "lane": 2,
+      "type": "tap",
+      "stage": 3,
+      "neuralAttentionWeight": 0.962,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "down-right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 104.7,
+      "lane": 2,
+      "type": "tap",
+      "stage": 3,
+      "neuralAttentionWeight": 0.763,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 105.3,
+      "lane": 0,
+      "type": "swipe",
+      "stage": 3,
+      "swipeDirection": "up",
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 106.8,
+      "lane": 0,
+      "type": "tap",
+      "stage": 3,
+      "neuralAttentionWeight": 0.918,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 107.85,
+      "lane": 1,
+      "type": "tap",
+      "stage": 3,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "down-right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 108.3,
+      "lane": 1,
+      "type": "hold-swipe",
+      "stage": 3,
+      "holdDuration": 0.9,
+      "swipeDirection": "up",
+      "neuralAttentionWeight": 0.661,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 108.9,
+      "lane": 2,
+      "type": "swipe",
+      "stage": 3,
+      "swipeDirection": "down-left",
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 109.2,
+      "lane": 1,
+      "type": "swipe",
+      "stage": 3,
+      "swipeDirection": "down-left",
+      "neuralAttentionWeight": 0.963,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 109.8,
+      "lane": 0,
+      "type": "tap",
+      "stage": 3,
+      "neuralAttentionWeight": 0.688,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 110.85,
+      "lane": 0,
+      "type": "tap",
+      "stage": 3,
+      "neuralAttentionWeight": 0.766,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 112.2,
+      "lane": 1,
+      "type": "tap",
+      "stage": 3,
+      "neuralAttentionWeight": 0.742,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 112.5,
+      "lane": 1,
+      "type": "tap",
+      "stage": 3,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 113.25,
+      "lane": 0,
+      "type": "hold",
+      "stage": 3,
+      "holdDuration": 0.9,
+      "neuralAttentionWeight": 0.746,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 0.9
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 113.55,
+      "lane": 1,
+      "type": "tap",
+      "stage": 3,
+      "neuralAttentionWeight": 0.674,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "down-left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 114.15,
+      "lane": 0,
+      "type": "tap",
+      "stage": 3,
+      "neuralAttentionWeight": 0.916,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 114.75,
+      "lane": 2,
+      "type": "hold",
+      "stage": 3,
+      "holdDuration": 0.9,
+      "neuralAttentionWeight": 0.757,
+      "spectralOnsetBand": "low_mid",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 0.9
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 118.05,
+      "lane": 2,
+      "type": "tap",
+      "stage": 4,
+      "neuralAttentionWeight": 0.707,
+      "spectralOnsetBand": "vocal_formant",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 121.5,
+      "lane": 1,
+      "type": "tap",
+      "stage": 4,
+      "neuralAttentionWeight": 0.73,
+      "spectralOnsetBand": "vocal_formant",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "down"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 122.1,
+      "lane": 1,
+      "type": "break",
+      "stage": 4,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 122.7,
+      "lane": 0,
+      "type": "tap",
+      "stage": 4,
+      "neuralAttentionWeight": 0.737,
+      "spectralOnsetBand": "vocal_formant",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 123,
+      "lane": 2,
+      "type": "tap",
+      "stage": 4,
+      "neuralAttentionWeight": 0.736,
+      "spectralOnsetBand": "vocal_formant",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 123.75,
+      "lane": 0,
+      "type": "hold",
+      "stage": 4,
+      "holdDuration": 1.2,
+      "neuralAttentionWeight": 0.924,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 1.2
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 125.25,
+      "lane": 0,
+      "type": "tap",
+      "stage": 4,
+      "neuralAttentionWeight": 0.759,
+      "spectralOnsetBand": "vocal_formant",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "down"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 125.85,
+      "lane": 1,
+      "type": "swipe",
+      "stage": 4,
+      "swipeDirection": "right",
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 126.3,
+      "lane": 0,
+      "type": "break",
+      "stage": 4,
+      "neuralAttentionWeight": 0.711,
+      "spectralOnsetBand": "vocal_formant",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 126.6,
+      "lane": 0,
+      "type": "hold",
+      "stage": 4,
+      "holdDuration": 1.8,
+      "neuralAttentionWeight": 0.683,
+      "spectralOnsetBand": "vocal_formant",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 1.8
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 127.35,
+      "lane": 2,
+      "type": "hold",
+      "stage": 4,
+      "holdDuration": 1.2,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 1.2
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 127.65,
+      "lane": 1,
+      "type": "hold",
+      "stage": 4,
+      "holdDuration": 1.8,
+      "neuralAttentionWeight": 0.788,
+      "spectralOnsetBand": "vocal_formant",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 1.8
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 127.95,
+      "lane": 2,
+      "type": "swipe",
+      "stage": 4,
+      "swipeDirection": "up",
+      "neuralAttentionWeight": 0.738,
+      "spectralOnsetBand": "vocal_formant",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 129.75,
+      "lane": 0,
+      "type": "hold",
+      "stage": 4,
+      "holdDuration": 1.2,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 1.2
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 131.85,
+      "lane": 0,
+      "type": "swipe",
+      "stage": 4,
+      "swipeDirection": "down-left",
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 132.45,
+      "lane": 1,
+      "type": "tap",
+      "stage": 4,
+      "neuralAttentionWeight": 0.665,
+      "spectralOnsetBand": "vocal_formant",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 132.6,
+      "lane": 1,
+      "type": "tap",
+      "stage": 4,
+      "neuralAttentionWeight": 0.756,
+      "spectralOnsetBand": "vocal_formant",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "down-left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 133.2,
+      "lane": 2,
+      "type": "lift",
+      "stage": 4,
+      "swipeDirection": "up",
+      "neuralAttentionWeight": 0.991,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 133.95,
+      "lane": 0,
+      "type": "hold",
+      "stage": 4,
+      "holdDuration": 1.2,
+      "neuralAttentionWeight": 0.744,
+      "spectralOnsetBand": "vocal_formant",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 1.2
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 134.7,
+      "lane": 0,
+      "type": "swipe",
+      "stage": 4,
+      "swipeDirection": "left",
+      "neuralAttentionWeight": 0.727,
+      "spectralOnsetBand": "vocal_formant",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 135.45,
+      "lane": 1,
+      "type": "accent",
+      "stage": 4,
+      "neuralAttentionWeight": 0.954,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 136.2,
+      "lane": 2,
+      "type": "tap",
+      "stage": 4,
+      "neuralAttentionWeight": 0.732,
+      "spectralOnsetBand": "vocal_formant",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 136.5,
+      "lane": 2,
+      "type": "swipe",
+      "stage": 4,
+      "swipeDirection": "right",
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 137.55,
+      "lane": 0,
+      "type": "tap",
+      "stage": 4,
+      "neuralAttentionWeight": 0.758,
+      "spectralOnsetBand": "vocal_formant",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 137.7,
+      "lane": 1,
+      "type": "tap",
+      "stage": 4,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 138,
+      "lane": 0,
+      "type": "lift",
+      "stage": 4,
+      "swipeDirection": "up",
+      "neuralAttentionWeight": 0.984,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 138.75,
+      "lane": 1,
+      "type": "hold",
+      "stage": 4,
+      "holdDuration": 1.8,
+      "neuralAttentionWeight": 0.665,
+      "spectralOnsetBand": "vocal_formant",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 1.8
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 139.05,
+      "lane": 0,
+      "type": "swipe",
+      "stage": 4,
+      "swipeDirection": "down-left",
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 139.2,
+      "lane": 1,
+      "type": "hold",
+      "stage": 4,
+      "holdDuration": 1.8,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 1.8
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 139.5,
+      "lane": 2,
+      "type": "swipe",
+      "stage": 4,
+      "swipeDirection": "left",
+      "neuralAttentionWeight": 0.711,
+      "spectralOnsetBand": "vocal_formant",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 140.1,
+      "lane": 1,
+      "type": "break",
+      "stage": 4,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 140.7,
+      "lane": 0,
+      "type": "tap",
+      "stage": 4,
+      "neuralAttentionWeight": 0.709,
+      "spectralOnsetBand": "vocal_formant",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "down"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 141.6,
+      "lane": 2,
+      "type": "lift",
+      "stage": 4,
+      "swipeDirection": "up",
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 142.35,
+      "lane": 1,
+      "type": "swipe",
+      "stage": 4,
+      "swipeDirection": "down-left",
+      "neuralAttentionWeight": 0.718,
+      "spectralOnsetBand": "vocal_formant",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 142.65,
+      "lane": 2,
+      "type": "tap",
+      "stage": 4,
+      "neuralAttentionWeight": 0.91,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 142.95,
+      "lane": 1,
+      "type": "hold",
+      "stage": 4,
+      "holdDuration": 1.2,
+      "neuralAttentionWeight": 0.96,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 1.2
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 143.55,
+      "lane": 0,
+      "type": "break",
+      "stage": 4,
+      "neuralAttentionWeight": 0.727,
+      "spectralOnsetBand": "vocal_formant",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 143.85,
+      "lane": 1,
+      "type": "hold",
+      "stage": 4,
+      "holdDuration": 1.8,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 1.8
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 144.15,
+      "lane": 2,
+      "type": "hold",
+      "stage": 4,
+      "holdDuration": 1.2,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 1.2
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 144.45,
+      "lane": 1,
+      "type": "tap",
+      "stage": 4,
+      "neuralAttentionWeight": 0.735,
+      "spectralOnsetBand": "vocal_formant",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 145.05,
+      "lane": 0,
+      "type": "tap",
+      "stage": 4,
+      "neuralAttentionWeight": 0.9,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "down"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 145.65,
+      "lane": 1,
+      "type": "tap",
+      "stage": 4,
+      "neuralAttentionWeight": 0.739,
+      "spectralOnsetBand": "vocal_formant",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "down-right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 146.55,
+      "lane": 0,
+      "type": "tap",
+      "stage": 4,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 147.45,
+      "lane": 0,
+      "type": "tap",
+      "stage": 4,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 148.5,
+      "lane": 1,
+      "type": "tap",
+      "stage": 4,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "down"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 148.95,
+      "lane": 2,
+      "type": "swipe",
+      "stage": 4,
+      "swipeDirection": "up-left",
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 149.4,
+      "lane": 1,
+      "type": "tap",
+      "stage": 4,
+      "neuralAttentionWeight": 0.719,
+      "spectralOnsetBand": "vocal_formant",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "down-right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 150.15,
+      "lane": 0,
+      "type": "hold",
+      "stage": 4,
+      "holdDuration": 1.2,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 1.2
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 151.05,
+      "lane": 0,
+      "type": "hold",
+      "stage": 4,
+      "holdDuration": 1.8,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 1.8
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 151.5,
+      "lane": 1,
+      "type": "swipe",
+      "stage": 4,
+      "swipeDirection": "down",
+      "neuralAttentionWeight": 0.794,
+      "spectralOnsetBand": "vocal_formant",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 151.95,
+      "lane": 0,
+      "type": "tap",
+      "stage": 4,
+      "neuralAttentionWeight": 0.699,
+      "spectralOnsetBand": "vocal_formant",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 153,
+      "lane": 0,
+      "type": "break",
+      "stage": 4,
+      "neuralAttentionWeight": 0.652,
+      "spectralOnsetBand": "vocal_formant",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 153.45,
+      "lane": 1,
+      "type": "tap",
+      "stage": 4,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 156.6,
+      "lane": 1,
+      "type": "hold",
+      "stage": 5,
+      "holdDuration": 1.2,
+      "neuralAttentionWeight": 0.793,
+      "spectralOnsetBand": "high_lead",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 1.2
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 156.9,
+      "lane": 0,
+      "type": "tap",
+      "stage": 5,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 157.2,
+      "lane": 2,
+      "type": "tap",
+      "stage": 5,
+      "neuralAttentionWeight": 0.971,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 157.8,
+      "lane": 1,
+      "type": "swipe",
+      "stage": 5,
+      "swipeDirection": "up-right",
+      "neuralAttentionWeight": 0.777,
+      "spectralOnsetBand": "high_lead",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 158.4,
+      "lane": 2,
+      "type": "swipe",
+      "stage": 5,
+      "swipeDirection": "down",
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 159,
+      "lane": 0,
+      "type": "hold",
+      "stage": 5,
+      "holdDuration": 0.6,
+      "neuralAttentionWeight": 0.763,
+      "spectralOnsetBand": "high_lead",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 0.6
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 159.6,
+      "lane": 1,
+      "type": "hold",
+      "stage": 5,
+      "holdDuration": 0.6,
+      "neuralAttentionWeight": 0.963,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 0.6
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 160.2,
+      "lane": 0,
+      "type": "hold",
+      "stage": 5,
+      "holdDuration": 1.2,
+      "neuralAttentionWeight": 0.783,
+      "spectralOnsetBand": "high_lead",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 1.2
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 160.5,
+      "lane": 2,
+      "type": "hold-swipe",
+      "stage": 5,
+      "holdDuration": 0.6,
+      "swipeDirection": "up-right",
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 161.1,
+      "lane": 1,
+      "type": "tap",
+      "stage": 5,
+      "neuralAttentionWeight": 0.746,
+      "spectralOnsetBand": "high_lead",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 161.4,
+      "lane": 0,
+      "type": "hold",
+      "stage": 5,
+      "holdDuration": 0.6,
+      "neuralAttentionWeight": 0.797,
+      "spectralOnsetBand": "high_lead",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 0.6
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 162,
+      "lane": 2,
+      "type": "hold",
+      "stage": 5,
+      "holdDuration": 1.2,
+      "neuralAttentionWeight": 0.906,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 1.2
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 162.3,
+      "lane": 1,
+      "type": "swipe",
+      "stage": 5,
+      "swipeDirection": "up",
+      "neuralAttentionWeight": 0.744,
+      "spectralOnsetBand": "high_lead",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 162.6,
+      "lane": 0,
+      "type": "swipe",
+      "stage": 5,
+      "swipeDirection": "down",
+      "neuralAttentionWeight": 0.667,
+      "spectralOnsetBand": "high_lead",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 162.9,
+      "lane": 1,
+      "type": "burst",
+      "stage": 5,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 163.2,
+      "lane": 2,
+      "type": "tap",
+      "stage": 5,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 164.1,
+      "lane": 0,
+      "type": "hold",
+      "stage": 5,
+      "holdDuration": 0.6,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 0.6
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 164.4,
+      "lane": 1,
+      "type": "swipe",
+      "stage": 5,
+      "swipeDirection": "down-left",
+      "neuralAttentionWeight": 0.971,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 165,
+      "lane": 0,
+      "type": "tap",
+      "stage": 5,
+      "neuralAttentionWeight": 0.687,
+      "spectralOnsetBand": "high_lead",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 165.45,
+      "lane": 1,
+      "type": "hold",
+      "stage": 5,
+      "holdDuration": 0.6,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 0.6
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 165.9,
+      "lane": 0,
+      "type": "swipe",
+      "stage": 5,
+      "swipeDirection": "down-left",
+      "neuralAttentionWeight": 0.767,
+      "spectralOnsetBand": "high_lead",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 166.35,
+      "lane": 1,
+      "type": "tap",
+      "stage": 5,
+      "neuralAttentionWeight": 0.72,
+      "spectralOnsetBand": "high_lead",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "down-right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 166.8,
+      "lane": 0,
+      "type": "hold",
+      "stage": 5,
+      "holdDuration": 1.2,
+      "neuralAttentionWeight": 0.924,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 1.2
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 167.4,
+      "lane": 0,
+      "type": "tap",
+      "stage": 5,
+      "neuralAttentionWeight": 0.686,
+      "spectralOnsetBand": "high_lead",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 168.3,
+      "lane": 2,
+      "type": "hold",
+      "stage": 5,
+      "holdDuration": 1.2,
+      "neuralAttentionWeight": 0.773,
+      "spectralOnsetBand": "high_lead",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 1.2
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 168.6,
+      "lane": 2,
+      "type": "hold",
+      "stage": 5,
+      "holdDuration": 0.6,
+      "neuralAttentionWeight": 0.778,
+      "spectralOnsetBand": "high_lead",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 0.6
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 169.5,
+      "lane": 0,
+      "type": "swipe",
+      "stage": 5,
+      "swipeDirection": "down-left",
+      "neuralAttentionWeight": 0.651,
+      "spectralOnsetBand": "high_lead",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 169.8,
+      "lane": 1,
+      "type": "swipe",
+      "stage": 5,
+      "swipeDirection": "up-right",
+      "neuralAttentionWeight": 0.704,
+      "spectralOnsetBand": "high_lead",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 169.998,
+      "lane": 0,
+      "type": "swipe",
+      "stage": 5,
+      "swipeDirection": "up-left",
+      "neuralAttentionWeight": 0.732,
+      "spectralOnsetBand": "high_lead",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 170.196,
+      "lane": 2,
+      "type": "tap",
+      "stage": 5,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "down-right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 170.7,
+      "lane": 1,
+      "type": "burst",
+      "stage": 5,
+      "neuralAttentionWeight": 0.779,
+      "spectralOnsetBand": "high_lead",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 171.3,
+      "lane": 0,
+      "type": "swipe",
+      "stage": 5,
+      "swipeDirection": "down",
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 171.6,
+      "lane": 2,
+      "type": "tap",
+      "stage": 5,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 172.2,
+      "lane": 0,
+      "type": "tap",
+      "stage": 5,
+      "neuralAttentionWeight": 0.68,
+      "spectralOnsetBand": "high_lead",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "down"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 173.1,
+      "lane": 1,
+      "type": "accent",
+      "stage": 5,
+      "neuralAttentionWeight": 0.753,
+      "spectralOnsetBand": "high_lead",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 173.4,
+      "lane": 1,
+      "type": "hold-swipe",
+      "stage": 5,
+      "holdDuration": 0.6,
+      "swipeDirection": "down-left",
+      "neuralAttentionWeight": 0.718,
+      "spectralOnsetBand": "high_lead",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 173.7,
+      "lane": 2,
+      "type": "tap",
+      "stage": 5,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 174.6,
+      "lane": 0,
+      "type": "burst",
+      "stage": 5,
+      "neuralAttentionWeight": 0.792,
+      "spectralOnsetBand": "high_lead",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 174.9,
+      "lane": 2,
+      "type": "hold",
+      "stage": 5,
+      "holdDuration": 1.2,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 1.2
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 175.2,
+      "lane": 1,
+      "type": "swipe",
+      "stage": 5,
+      "swipeDirection": "down-right",
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 175.8,
+      "lane": 2,
+      "type": "hold-swipe",
+      "stage": 5,
+      "holdDuration": 0.6,
+      "swipeDirection": "up-left",
+      "neuralAttentionWeight": 0.703,
+      "spectralOnsetBand": "high_lead",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 176.1,
+      "lane": 0,
+      "type": "hold",
+      "stage": 5,
+      "holdDuration": 1.2,
+      "neuralAttentionWeight": 0.993,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 1.2
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 176.4,
+      "lane": 1,
+      "type": "swipe",
+      "stage": 5,
+      "swipeDirection": "left",
+      "neuralAttentionWeight": 0.982,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 177,
+      "lane": 1,
+      "type": "tap",
+      "stage": 5,
+      "neuralAttentionWeight": 0.703,
+      "spectralOnsetBand": "high_lead",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 177.6,
+      "lane": 0,
+      "type": "hold",
+      "stage": 5,
+      "holdDuration": 1.2,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 1.2
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 177.9,
+      "lane": 2,
+      "type": "swipe",
+      "stage": 5,
+      "swipeDirection": "down-right",
+      "neuralAttentionWeight": 0.732,
+      "spectralOnsetBand": "high_lead",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 178.5,
+      "lane": 1,
+      "type": "tap",
+      "stage": 5,
+      "neuralAttentionWeight": 0.941,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 178.8,
+      "lane": 0,
+      "type": "swipe",
+      "stage": 5,
+      "swipeDirection": "right",
+      "neuralAttentionWeight": 0.94,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 179.1,
+      "lane": 2,
+      "type": "hold",
+      "stage": 5,
+      "holdDuration": 1.2,
+      "neuralAttentionWeight": 0.666,
+      "spectralOnsetBand": "high_lead",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 1.2
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 179.4,
+      "lane": 1,
+      "type": "tap",
+      "stage": 5,
+      "neuralAttentionWeight": 0.708,
+      "spectralOnsetBand": "high_lead",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 180,
+      "lane": 0,
+      "type": "swipe",
+      "stage": 5,
+      "swipeDirection": "down",
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 180.6,
+      "lane": 2,
+      "type": "hold-swipe",
+      "stage": 5,
+      "holdDuration": 0.6,
+      "swipeDirection": "down-right",
+      "neuralAttentionWeight": 0.661,
+      "spectralOnsetBand": "high_lead",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 181.2,
+      "lane": 1,
+      "type": "accent",
+      "stage": 5,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 181.8,
+      "lane": 0,
+      "type": "accent",
+      "stage": 5,
+      "neuralAttentionWeight": 0.678,
+      "spectralOnsetBand": "high_lead",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 182.25,
+      "lane": 1,
+      "type": "swipe",
+      "stage": 5,
+      "swipeDirection": "down",
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 182.7,
+      "lane": 0,
+      "type": "tap",
+      "stage": 5,
+      "neuralAttentionWeight": 0.743,
+      "spectralOnsetBand": "high_lead",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "right"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 183.3,
+      "lane": 1,
+      "type": "hold",
+      "stage": 5,
+      "holdDuration": 1.2,
+      "neuralAttentionWeight": 0.975,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 1.2
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 183.6,
+      "lane": 0,
+      "type": "hold",
+      "stage": 5,
+      "holdDuration": 1.2,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 1.2
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 183.9,
+      "lane": 2,
+      "type": "swipe",
+      "stage": 5,
+      "swipeDirection": "down-left",
+      "neuralAttentionWeight": 0.721,
+      "spectralOnsetBand": "high_lead",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 184.2,
+      "lane": 0,
+      "type": "swipe",
+      "stage": 5,
+      "swipeDirection": "down-left",
+      "neuralAttentionWeight": 0.699,
+      "spectralOnsetBand": "high_lead",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 184.8,
+      "lane": 2,
+      "type": "hold-swipe",
+      "stage": 5,
+      "holdDuration": 0.6,
+      "swipeDirection": "up-right",
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 185.4,
+      "lane": 1,
+      "type": "burst",
+      "stage": 5,
+      "neuralAttentionWeight": 0.731,
+      "spectralOnsetBand": "high_lead",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 185.7,
+      "lane": 0,
+      "type": "tap",
+      "stage": 5,
+      "neuralAttentionWeight": 0.99,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "down-left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 186,
+      "lane": 2,
+      "type": "accent",
+      "stage": 5,
+      "neuralAttentionWeight": 0.965,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 186.6,
+      "lane": 1,
+      "type": "tap",
+      "stage": 5,
+      "neuralAttentionWeight": 0.67,
+      "spectralOnsetBand": "high_lead",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "down"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 187.2,
+      "lane": 2,
+      "type": "tap",
+      "stage": 5,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "sub_bass",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "swipe",
+          "swipeDirection": "up-left"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 187.8,
+      "lane": 0,
+      "type": "hold",
+      "stage": 5,
+      "holdDuration": 0.6,
+      "neuralAttentionWeight": 0.789,
+      "spectralOnsetBand": "high_lead",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "hold-swipe",
+          "swipeDirection": "up-right",
+          "holdDuration": 0.6
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    },
+    {
+      "time": 188.4,
+      "lane": 1,
+      "type": "accent",
+      "stage": 5,
+      "neuralAttentionWeight": 1,
+      "spectralOnsetBand": "transient_percussion",
+      "adaptiveAlt": {
+        "overdriveVariant": {
+          "type": "burst"
+        },
+        "recoveryVariant": {
+          "type": "tap"
+        }
+      }
+    }
+  ],
+  "stages": [
+    {
+      "stage": 1,
+      "name": "STAGE 1: NEURAL CALIBRATION",
+      "difficulty": "NORMAL",
+      "startTime": 0,
+      "endTime": 28.8,
+      "noteCount": 22
+    },
+    {
+      "stage": 2,
+      "name": "STAGE 2: HARMONIC EXPANSION",
+      "difficulty": "HARD",
+      "startTime": 28.8,
+      "endTime": 67.2,
+      "noteCount": 35
+    },
+    {
+      "stage": 3,
+      "name": "STAGE 3: 3D LATENT MATRIX",
+      "difficulty": "EXPERT",
+      "startTime": 67.2,
+      "endTime": 115.2,
+      "noteCount": 64
+    },
+    {
+      "stage": 4,
+      "name": "STAGE 4: PRIMER VOID RESONANCE",
+      "difficulty": "MASTER",
+      "startTime": 115.2,
+      "endTime": 153.6,
+      "noteCount": 53
+    },
+    {
+      "stage": 5,
+      "name": "STAGE 5: OVERDRIVE POLICY CLIMAX",
+      "difficulty": "HYPER",
+      "startTime": 153.6,
+      "endTime": 192,
+      "noteCount": 68
+    }
+  ],
+  "key": "B minor",
+  "genre": [
+    "Alternative",
+    "Indie"
+  ],
+  "difficultyLevel": 4,
+  "lyrics": "So we say what you mean, do you really mean what you say? When it means you wake up today you'll take gratitude for you Do you say what's true or is it just your view? Take a second to understand something new Take a second to see a different view of you Do you ask yourself why or say why you're feeling all you do? You could just say it, just say it, all you feel inside Yeah you could just say it, just say it, let yourself start to divide High up in the world I think I'm the perfect place where we all could just rest For one second more to ignore, and the demons are at your door So you should just say it, instead of asking someone's why Yeah you should just say it, for you, and all you wanna feel too You should just say it, say it, say it to me nicely and soft Yeah say it to me, say it to me like we were friends again Like this enemy sinking from the end www.mooji.org",
+  "lyricsSegments": [
+    {
+      "end": 27.8799991607666,
+      "text": "So we say what you mean, do you really mean what you say?",
+      "start": 19.299999237060547
+    },
+    {
+      "end": 45.7400016784668,
+      "text": "When it means you wake up today you'll take gratitude for you",
+      "start": 38.880001068115234
+    },
+    {
+      "end": 57.5,
+      "text": "Do you say what's true or is it just your view?",
+      "start": 46.7400016784668
+    },
+    {
+      "end": 68.4800033569336,
+      "text": "Take a second to understand something new Take a second to see a different view of you",
+      "start": 59.08000183105469
+    },
+    {
+      "end": 76.81999969482422,
+      "text": "Do you ask yourself why or say why you're feeling all you do?",
+      "start": 68.4800033569336
+    },
+    {
+      "end": 86.12000274658203,
+      "text": "You could just say it, just say it, all you feel inside",
+      "start": 77.91999816894531
+    },
+    {
+      "end": 97.22000122070312,
+      "text": "Yeah you could just say it, just say it, let yourself start to divide",
+      "start": 86.12000274658203
+    },
+    {
+      "end": 105.81999969482422,
+      "text": "High up in the world I think I'm the perfect place where we all could just rest",
+      "start": 97.22000122070312
+    },
+    {
+      "end": 115.58000183105469,
+      "text": "For one second more to ignore, and the demons are at your door",
+      "start": 106.73999786376953
+    },
+    {
+      "end": 124.27999877929688,
+      "text": "So you should just say it, instead of asking someone's why",
+      "start": 115.58000183105469
+    },
+    {
+      "end": 135.3000030517578,
+      "text": "Yeah you should just say it, for you, and all you wanna feel too",
+      "start": 125.27999877929688
+    },
+    {
+      "end": 141.02000427246094,
+      "text": "You should just say it, say it, say it to me nicely and soft",
+      "start": 135.4199981689453
+    },
+    {
+      "end": 148.44000244140625,
+      "text": "Yeah say it to me, say it to me like we were friends again",
+      "start": 141.5399932861328
+    },
+    {
+      "end": 153.22000122070312,
+      "text": "Like this enemy sinking from the end",
+      "start": 148.44000244140625
+    },
+    {
+      "end": 192.3800048828125,
+      "text": "www.mooji.org",
+      "start": 192.17999267578125
+    }
+  ],
+  "unlock": {
+    "card": "card-272",
+    "fragments": 10
+  },
+  "chartEdition": "v4_neural_master",
+  "neuralArchitecture": {
+    "modelType": "Transformer-LSTM Seq2Seq with Multi-Resolution Attention",
+    "reinforcementLearningPolicy": "OPARL (Online Policy Adaptation for Rhythm Levels)",
+    "attentionHeads": 8,
+    "latentDimensions": 8,
+    "latentVector": [
+      0.344,
+      0.438,
+      0.409,
+      0.56,
+      0.594,
+      0.544,
+      0.95,
+      0.35
+    ],
+    "targetFlowIndex": 0.82,
+    "rhythmRewardMatrix": {
+      "timingPrecision": 1,
+      "gestureEntropyReward": 0.85,
+      "staminaFatiguePenalty": 0.25,
+      "overdriveMultipliers": [
+        1,
+        1.5,
+        2,
+        3,
+        4
+      ]
+    }
+  },
+  "perfectRunMaxScore": 704850
+}

@@ -1729,6 +1729,52 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                   </p>
                 </div>
 
+                {/* Chart Edition Archive Selector (Neural AI / Master / Gimmicks / Minimal) */}
+                <div className="bg-black/40 border border-white/5 p-4 rounded-lg space-y-3">
+                  <div className="flex items-center justify-between border-b border-white/5 pb-1">
+                    <h3 className="font-mono text-[9px] font-black text-white/40 uppercase tracking-wider">CHART EDITION ARCHIVE</h3>
+                    <span className="font-mono text-[7px] text-[#39FF14] uppercase tracking-widest">AI / MASTER EDITIONS</span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[
+                      { id: 'v4_neural', label: 'NEURAL AI', desc: 'Transformer Seq2Seq + OPARL RL' },
+                      { id: 'v3_master', label: 'V3 MASTER', desc: '8-Way Swipes & Overdrive' },
+                      { id: 'v1_gimmicks', label: 'V1 GIMMICKS', desc: 'Mines, Stems & Drops' },
+                      { id: 'v2_minimal', label: 'V2 MINIMAL', desc: 'Casual Tap Flow' },
+                    ].map(edition => {
+                      const curVariant = (typeof localStorage !== 'undefined' && localStorage.getItem('opt_chartVariant')) || 'v3_master';
+                      const active = curVariant === edition.id;
+                      return (
+                        <button
+                          key={edition.id}
+                          onClick={() => {
+                            localStorage.setItem("opt_chartVariant", edition.id);
+                            clearCatalogCache();
+                            setOpts(o => ({ ...o }));
+                            logAnalyticsEvent('setting_change', { key: 'chartVariant', value: edition.id });
+                            audioManager.playSfx('tap_nav', 0.1);
+                          }}
+                          className={`p-2 font-mono text-left rounded border transition-all cursor-pointer flex flex-col gap-1 ${
+                            active
+                              ? isAvant ? 'border-[#39FF14] bg-[#39FF14]/15 text-white shadow-[0_0_10px_rgba(57,255,20,0.2)]' : 'border-[#FF1493] bg-[#FF1493]/15 text-white shadow-[0_0_10px_rgba(255,20,147,0.2)]'
+                              : 'border-white/5 bg-black/40 text-white/40 hover:border-white/15'
+                          }`}
+                        >
+                          <span className={`text-[8.5px] font-black tracking-wider ${active ? (isAvant ? 'text-[#39FF14]' : 'text-[#FF1493]') : 'text-white/70'}`}>
+                            {edition.label}
+                          </span>
+                          <span className="text-[6.5px] text-zinc-500 leading-tight">
+                            {edition.desc}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="font-mono text-[7.5px] text-zinc-500 leading-normal uppercase">
+                    NEURAL AI: SEQUENCE-TO-SEQUENCE TRANSFORMER ATTENTION WEIGHTING WITH OPARL REAL-TIME ADAPTATION · V3 MASTER: CANONICAL 8-WAY SWIPE & OVERDRIVE ENGINE
+                  </p>
+                </div>
+
                 {/* Reset Config (Mobile Only Block) */}
                 <div className="pt-4 flex md:hidden justify-end border-t border-white/5">
                   <button
