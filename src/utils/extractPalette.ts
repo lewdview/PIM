@@ -102,6 +102,46 @@ function kMeans(
 
 // ── Public API ─────────────────────────────────────────────────────────
 
+function hslToRgb(h: number, s: number, l: number): [number, number, number] {
+  s /= 100;
+  l /= 100;
+  const k = (n: number) => (n + h / 30) % 12;
+  const a = s * Math.min(l, 1 - l);
+  const f = (n: number) =>
+    l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  return [Math.round(255 * f(0)), Math.round(255 * f(8)), Math.round(255 * f(4))];
+}
+
+function hashString(str: string): number {
+  let hash = 5381;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) + hash) + str.charCodeAt(i);
+  }
+  return Math.abs(hash);
+}
+
+export function generateHarmonicPaletteFromUrl(url: string): ExtractedPalette {
+  const hash = hashString(url || 'default');
+  const baseHue = hash % 360;
+  const secondaryHue = (baseHue + 50 + (hash % 40)) % 360;
+  const accentHue = (baseHue + 180 + (hash % 30) - 15) % 360;
+
+  const dominant = makePaletteColor(hslToRgb(baseHue, 95, 50));
+  const secondary = makePaletteColor(hslToRgb(secondaryHue, 85, 55));
+  const accent = makePaletteColor(hslToRgb(accentHue, 100, 52));
+  const muted = makePaletteColor(hslToRgb(baseHue, 30, 42));
+  const dark = makePaletteColor(hslToRgb((baseHue + 20) % 360, 45, 10));
+
+  return {
+    dominant,
+    secondary,
+    accent,
+    muted,
+    dark,
+    colors: [dominant, secondary, accent, muted, dark]
+  };
+}
+
 /** Brand-aligned fallback palette when extraction fails or there are too few distinct pixels. */
 export function getFallbackPalette(): ExtractedPalette {
   const dominant: PaletteColor = { h: 16, s: 100, l: 50, hex: '#ff3800', rgb: [255, 56, 0] };
@@ -115,12 +155,26 @@ export function getFallbackPalette(): ExtractedPalette {
 /**
  * Extract a 5-color palette from an image URL.
  *
- * Draws the image to a tiny 64×64 offscreen canvas, samples non-trivial
- * pixels, clusters via k-means (k = 5), then sorts by vibrancy so the
- * most saturated, well-lit color lands as `dominant`.
+ * For same-origin / blob / data URLs, samples pixels via offscreen canvas k-means.
+ * For external non-CORS CDNs, seamlessly derives a deterministic 5-color harmonic palette.
  */
 export function extractPalette(imageUrl: string): Promise<ExtractedPalette> {
   return new Promise((resolve) => {
+    if (!imageUrl) {
+      resolve(getFallbackPalette());
+      return;
+    }
+
+    const isBlobOrData = imageUrl.startsWith('blob:') || imageUrl.startsWith('data:');
+    const isSameOrigin = typeof window !== 'undefined' && imageUrl.startsWith(window.location.origin);
+
+    // If external non-CORS host like files.th3scr1b3.art, avoid browser CORS network block
+    // by synthesizing harmonic palette from URL hash
+    if (!isBlobOrData && !isSameOrigin && imageUrl.includes('files.th3scr1b3.art')) {
+      resolve(generateHarmonicPaletteFromUrl(imageUrl));
+      return;
+    }
+
     const img = new Image();
     img.crossOrigin = 'anonymous';
 
@@ -131,7 +185,7 @@ export function extractPalette(imageUrl: string): Promise<ExtractedPalette> {
         canvas.width = size;
         canvas.height = size;
         const ctx = canvas.getContext('2d');
-        if (!ctx) { resolve(getFallbackPalette()); return; }
+        if (!ctx) { resolve(generateHarmonicPaletteFromUrl(imageUrl)); return; }
 
         ctx.drawImage(img, 0, 0, size, size);
         const imageData = ctx.getImageData(0, 0, size, size);
@@ -148,7 +202,7 @@ export function extractPalette(imageUrl: string): Promise<ExtractedPalette> {
           pixels.push([r, g, b]);
         }
 
-        if (pixels.length < 5) { resolve(getFallbackPalette()); return; }
+        if (pixels.length < 5) { resolve(generateHarmonicPaletteFromUrl(imageUrl)); return; }
 
         const centroids = kMeans(pixels, 5);
         const colors = centroids.map(makePaletteColor);
@@ -168,11 +222,11 @@ export function extractPalette(imageUrl: string): Promise<ExtractedPalette> {
           colors,
         });
       } catch {
-        resolve(getFallbackPalette());
+        resolve(generateHarmonicPaletteFromUrl(imageUrl));
       }
     };
 
-    img.onerror = () => resolve(getFallbackPalette());
+    img.onerror = () => resolve(generateHarmonicPaletteFromUrl(imageUrl));
     img.src = imageUrl;
   });
 }

@@ -1175,7 +1175,6 @@ export default function SlideshowPage() {
               src={slides[currentSlideIndex]}
               alt="Slide presentation"
               onLoad={runExtraction}
-              crossOrigin="anonymous"
               className="max-w-full max-h-full object-contain transition-opacity duration-300"
               style={{
                 opacity: hideSourceImage ? 0 : 0.9,

@@ -2941,7 +2941,6 @@ export default function Game() {
         for (let idx = 0; idx < imageUrls.length; idx++) {
           const url = imageUrls[idx];
           const img = new Image();
-          img.crossOrigin = 'anonymous';
           img.src = url;
 
           await new Promise<void>((resolve) => {
