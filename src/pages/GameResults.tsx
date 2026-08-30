@@ -315,9 +315,15 @@ export default function Results() {
   const medalChimed = useRef(false);
 
   // Staggered animation states
+  const [circleLoaded, setCircleLoaded] = useState(false);
   const [animAcc, setAnimAcc] = useState(0);
   const [animScore, setAnimScore] = useState(0);
   const [animDone, setAnimDone] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setCircleLoaded(true), 60);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     const originFallback = (() => {
@@ -664,7 +670,7 @@ export default function Results() {
 
     let currentCheckpointIdx = 0;
     let startAcc = 0;
-    let segmentStartTime = Date.now() + 500; // 500ms initial delay before starting
+    let segmentStartTime = Date.now() + 750; // 750ms initial delay for circle fade-in before score tally starts
     let segmentDuration = Math.max(400, checkpoints[0].acc * 20);
     let isHanging = false;
     let hangEndTime = 0;
@@ -1284,8 +1290,11 @@ export default function Results() {
           <div 
             className="relative mb-6 z-20" 
             style={{ 
-              transition: 'all 1.0s cubic-bezier(0.16, 1, 0.3, 1)',
-              transform: phase === 'ring' ? 'translateY(calc(50vh - 180px)) scale(1.85)' : 'translateY(0) scale(1.0)',
+              transition: 'opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 1.0s cubic-bezier(0.16, 1, 0.3, 1)',
+              opacity: circleLoaded ? 1 : 0,
+              transform: circleLoaded 
+                ? (phase === 'ring' ? 'translateY(calc(50vh - 180px)) scale(1.85)' : 'translateY(0) scale(1.0)') 
+                : 'translateY(calc(50vh - 180px)) scale(0.8)',
             }}
           >
             {/* Permanent keyframes for the marquee-behind animation */}
@@ -1772,8 +1781,11 @@ export default function Results() {
         <div 
           className="relative mb-4 z-20" 
           style={{ 
-            transition: 'all 1.0s cubic-bezier(0.16, 1, 0.3, 1)',
-            transform: phase === 'ring' ? 'translateY(calc(50vh - 170px)) scale(1.85)' : 'translateY(0) scale(1.0)',
+            transition: 'opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 1.0s cubic-bezier(0.16, 1, 0.3, 1)',
+            opacity: circleLoaded ? 1 : 0,
+            transform: circleLoaded 
+              ? (phase === 'ring' ? 'translateY(calc(50vh - 170px)) scale(1.85)' : 'translateY(0) scale(1.0)') 
+              : 'translateY(calc(50vh - 170px)) scale(0.8)',
           }}
         >
           {/* Permanent keyframes for the marquee-behind animation */}

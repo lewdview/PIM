@@ -140,6 +140,7 @@ export function purgeClientGen0State(): { cleanedKeys: number; preservedKeys: nu
     'th3vault_dev_mode',
     'opt_unlocked_noclip',
     'opt_unlocked_iddqd',
+    'opt_unlocked_pov',
   ];
 
   for (let i = 0; i < localStorage.length; i++) {

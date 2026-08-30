@@ -2624,7 +2624,8 @@ export default function Game() {
 
   const [currentStage, setCurrentStage] = useState(1);
   const [stageStingerNumber, setStageStingerNumber] = useState<number | null>(null);
-  const [stageStingerPhase, setStageStingerPhase] = useState<'cleared' | 'start'>('cleared');
+  const [stageStingerPhase, setStageStingerPhase] = useState<'cleared' | 'start' | 'transmission_complete'>('cleared');
+  const [isStageFadingOut, setIsStageFadingOut] = useState(false);
   const lastDetectedStageRef = useRef(1);
   const stingerTimeout1Ref = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stingerTimeout2Ref = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -2784,6 +2785,9 @@ export default function Game() {
   const [activeArchetype, setActiveArchetype] = useState<TrackArchetype>('cyber_tunnel');
 
   // ── POV Perspective Engine State ──
+  const unlockedCheats = useVaultStore((state) => state.unlockedCheats);
+  const isPovUnlocked = Boolean(unlockedCheats?.povChanger) || (typeof localStorage !== 'undefined' && localStorage.getItem("opt_unlocked_pov") === "true");
+
   const [activePovMode, setActivePovMode] = useState<PovMode>(opts.povMode || 'classic');
   const activePovModeRef = useRef(activePovMode);
   const [isPovLocked, setIsPovLocked] = useState<boolean>(() => {
@@ -2836,6 +2840,9 @@ export default function Game() {
   });
 
   const cyclePovMode = useCallback(() => {
+    const isUnlocked = Boolean(useVaultStore.getState().unlockedCheats?.povChanger) || (typeof localStorage !== 'undefined' && localStorage.getItem("opt_unlocked_pov") === "true");
+    if (!isUnlocked) return;
+
     const modes: PovMode[] = ['classic', 'cyber_tunnel', 'corkscrew', 'rollercoaster', 'matrix_split', 'dynamic_stage'];
     const currentIdx = modes.indexOf(activePovModeRef.current);
     const nextMode = modes[(currentIdx + 1) % modes.length];
@@ -4060,8 +4067,15 @@ export default function Game() {
     const medal = failed ? "NONE" : getMedal(gs.perfectPlus, gs.perfects, gs.goods, gs.misses);
 
     if (!failed) {
-      audioManager.playSfx("song_completion", 0.8);
+      audioManager.playSfx("song_completion", 0.9);
+      audioManager.playSfx("overdrive_activate", 0.7);
       haptics.fusionSuccess();
+
+      // Trigger final "TRANSMISSION COMPLETE" banner stinger
+      if (stingerTimeout1Ref.current) clearTimeout(stingerTimeout1Ref.current);
+      if (stingerTimeout2Ref.current) clearTimeout(stingerTimeout2Ref.current);
+      setStageStingerNumber(6);
+      setStageStingerPhase('transmission_complete');
     } else {
       haptics.error();
     }
@@ -4137,14 +4151,31 @@ export default function Game() {
 
     // Only navigate to results if not exporting video (or user closes export modal)
     if (!isExportVideoRef.current) {
-      finishGameTimeoutRef.current = setTimeout(() => {
-        if (phaseRef.current === "unmounted") return;
-        if (isTutorial) {
-          setLocation(`/tutorial?phase=results&score=${gs.score}`);
-        } else {
-          setLocation(`/results/${songId}`);
-        }
-      }, 300);
+      if (!failed) {
+        // Show TRANSMISSION COMPLETE stinger, fade out stage, then navigate
+        setTimeout(() => {
+          if (phaseRef.current === "unmounted") return;
+          setIsStageFadingOut(true);
+        }, 1800);
+
+        finishGameTimeoutRef.current = setTimeout(() => {
+          if (phaseRef.current === "unmounted") return;
+          if (isTutorial) {
+            setLocation(`/tutorial?phase=results&score=${gs.score}`);
+          } else {
+            setLocation(`/results/${songId}`);
+          }
+        }, 2500);
+      } else {
+        finishGameTimeoutRef.current = setTimeout(() => {
+          if (phaseRef.current === "unmounted") return;
+          if (isTutorial) {
+            setLocation(`/tutorial?phase=results&score=${gs.score}`);
+          } else {
+            setLocation(`/results/${songId}`);
+          }
+        }, 300);
+      }
     }
   }, [songId, setLocation, isTutorial]);
 
@@ -4556,16 +4587,28 @@ export default function Game() {
         lastDetectedStageRef.current = calculatedStage;
         setCurrentStage(calculatedStage);
 
-        // Stage-Integrated Dynamic POV Camera Auto-Switching (Skipped if POV Lock is active)
+        // Stage-Integrated Dynamic POV Camera Auto-Switching (Untouched & automatic for all players)
+        // Stage 1 & 2: Classic, Stage 3: Song 3D Archetype POV, Stage 4: Classic Void, Stage 5: Hyper Version of Stage 3
         if (!isPovLockedRef.current && optsRef.current.stagePovSwitch !== false && phaseRef.current === "playing" && prevStage > 0 && calculatedStage > prevStage) {
+          const archetypePov: PovMode = 
+            activeArchetypeRef.current === 'corkscrew_slide' ? 'corkscrew' :
+            activeArchetypeRef.current === 'wave_coaster' ? 'rollercoaster' :
+            activeArchetypeRef.current === 'matrix_split' ? 'matrix_split' :
+            'cyber_tunnel';
+
           let targetPov: PovMode = 'classic';
-          if (calculatedStage === 3) targetPov = 'dynamic_stage';
-          else if (calculatedStage === 4) targetPov = 'dynamic_stage';
-          else if (calculatedStage === 5) targetPov = 'dynamic_stage';
-          else targetPov = 'classic';
+          if (calculatedStage === 1 || calculatedStage === 2) {
+            targetPov = 'classic';
+          } else if (calculatedStage === 3) {
+            targetPov = archetypePov;
+          } else if (calculatedStage === 4) {
+            targetPov = 'classic';
+          } else if (calculatedStage === 5) {
+            targetPov = archetypePov;
+          }
 
           if (targetPov !== activePovModeRef.current) {
-            if (targetPov === 'cyber_tunnel') {
+            if (targetPov === 'cyber_tunnel' || (calculatedStage === 3 || calculatedStage === 5)) {
               audioManager.playSfx('tunnel_transition', 0.85);
             }
             povTransitionRef.current = {
@@ -10347,7 +10390,9 @@ export default function Game() {
       const p = phaseRef.current;
       if (p === 'playing') {
         if (e.key === 'v' || e.key === 'V') {
-          cyclePovMode();
+          if (isPovUnlocked) {
+            cyclePovMode();
+          }
           return;
         }
         if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') {
@@ -10424,7 +10469,7 @@ export default function Game() {
     >
       {/* ── POV TOAST NOTIFICATION OVERLAY ── */}
       <AnimatePresence>
-        {povToast && Date.now() - povToast.time < 1800 && (
+        {isPovUnlocked && povToast && Date.now() - povToast.time < 1800 && (
           <motion.div
             initial={{ opacity: 0, y: -20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -10440,7 +10485,7 @@ export default function Game() {
       </AnimatePresence>
 
       {/* ── POV SWITCH & LOCK BUTTONS (Bottom Right next to Pause) ── */}
-      {phase === "playing" && !paused && (
+      {isPovUnlocked && phase === "playing" && !paused && (
         <div className="absolute bottom-6 right-20 z-50 flex items-center gap-1.5">
           <button
             onClick={togglePovLock}
@@ -11621,10 +11666,10 @@ export default function Game() {
                       textShadow: "0 0 10px rgba(255,255,255,0.6)",
                     }}
                   >
-                    STAGE
+                    {stageStingerPhase === 'transmission_complete' ? 'TRANSMISSION' : 'STAGE'}
                   </motion.div>
 
-                  {/* Giant Center Number or FINAL */}
+                  {/* Giant Center Number, FINAL, or COMPLETE */}
                   <motion.div
                     key={`num-${stageStingerPhase}-${stageStingerNumber}`}
                     variants={{
@@ -11637,16 +11682,18 @@ export default function Game() {
                       },
                       exit: { scale: 1.6, opacity: 0, transition: { ease: "easeIn", duration: 0.2 } }
                     }}
-                    className="absolute text-white font-black text-7xl md:text-8xl z-10"
+                    className="absolute text-white font-black text-5xl sm:text-7xl md:text-8xl z-10 text-center px-4"
                     style={{ 
                       fontFamily: '"Impact", "Arial Black", sans-serif',
                       textShadow: "0 0 25px rgba(255,255,255,0.95), 0 0 50px rgba(0,229,255,0.6)",
                       lineHeight: 1,
                     }}
                   >
-                    {stageStingerPhase === 'cleared'
-                      ? (stageStingerNumber! - 1 === 5 ? 'FINAL' : stageStingerNumber! - 1)
-                      : (stageStingerNumber === 5 ? 'FINAL' : stageStingerNumber)}
+                    {stageStingerPhase === 'transmission_complete'
+                      ? 'COMPLETE'
+                      : stageStingerPhase === 'cleared'
+                        ? (stageStingerNumber! - 1 === 5 ? 'FINAL' : stageStingerNumber! - 1)
+                        : (stageStingerNumber === 5 ? 'FINAL' : stageStingerNumber)}
                   </motion.div>
 
                   {/* Slide-in Bottom Status Text */}
@@ -11665,21 +11712,25 @@ export default function Game() {
                     className="absolute font-black text-xs md:text-sm tracking-[0.4em] z-10"
                     style={{ 
                       fontFamily: '"JetBrains Mono", monospace',
-                      textShadow: stageStingerPhase === 'cleared' 
-                        ? "0 0 15px rgba(255,20,147,0.95), 0 0 30px rgba(255,20,147,0.5)"
-                        : "0 0 15px rgba(0,229,255,0.95), 0 0 30px rgba(0,229,255,0.5)",
-                      color: stageStingerPhase === 'cleared' ? '#FF1493' : '#00E5FF',
+                      textShadow: stageStingerPhase === 'transmission_complete'
+                        ? "0 0 20px rgba(57,255,20,0.95), 0 0 35px rgba(57,255,20,0.5)"
+                        : stageStingerPhase === 'cleared' 
+                          ? "0 0 15px rgba(255,20,147,0.95), 0 0 30px rgba(255,20,147,0.5)"
+                          : "0 0 15px rgba(0,229,255,0.95), 0 0 30px rgba(0,229,255,0.5)",
+                      color: stageStingerPhase === 'transmission_complete' ? '#39FF14' : stageStingerPhase === 'cleared' ? '#FF1493' : '#00E5FF',
                     }}
                   >
-                    {stageStingerPhase === 'cleared'
-                      ? 'CLEARED!'
-                      : stageStingerNumber >= 3
-                        ? (stageStingerNumber === 3
-                            ? ARCHETYPE_METAS[activeArchetype]?.stage3Title.replace('STAGE 3: ', '')
-                            : stageStingerNumber === 4
-                              ? ARCHETYPE_METAS[activeArchetype]?.stage4Title.replace('STAGE 4: ', '')
-                              : ARCHETYPE_METAS[activeArchetype]?.stage5Title.replace('STAGE 5: ', ''))
-                        : 'GO!'}
+                    {stageStingerPhase === 'transmission_complete'
+                      ? 'TRANSMISSION COMPLETE'
+                      : stageStingerPhase === 'cleared'
+                        ? 'CLEARED!'
+                        : stageStingerNumber >= 3
+                          ? (stageStingerNumber === 3
+                              ? ARCHETYPE_METAS[activeArchetype]?.stage3Title.replace('STAGE 3: ', '')
+                              : stageStingerNumber === 4
+                                ? ARCHETYPE_METAS[activeArchetype]?.stage4Title.replace('STAGE 4: ', '')
+                                : ARCHETYPE_METAS[activeArchetype]?.stage5Title.replace('STAGE 5: ', ''))
+                          : 'GO!'}
                   </motion.div>
                 </motion.div>
               </div>
@@ -12326,6 +12377,19 @@ export default function Game() {
 
         </div>
       </div>
+
+      {/* ── STAGE FADE-OUT TRANSITION TO RESULTS ── */}
+      <AnimatePresence>
+        {isStageFadingOut && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.65, ease: "easeInOut" }}
+            className="fixed inset-0 bg-black pointer-events-none z-[100]"
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

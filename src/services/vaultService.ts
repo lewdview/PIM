@@ -1038,6 +1038,21 @@ export async function redeemInviteCode(code: string): Promise<boolean> {
 /** Redeem a bonus/promo code */
 export async function redeemBonusCode(code: string): Promise<{ success: boolean; rewardType?: string; rewardValue?: string; result?: any; error?: string }> {
   const cleanCode = code.trim().toLowerCase();
+  if (cleanCode === 'povredeem') {
+    localStorage.setItem('opt_unlocked_pov', 'true');
+    try {
+      const { useVaultStore } = await import('../store/useVaultStore');
+      useVaultStore.getState().updateCheats({ povChanger: true });
+    } catch {}
+    window.dispatchEvent(new Event('cheat_code_activated'));
+    return {
+      success: true,
+      rewardType: 'cheat_code',
+      rewardValue: 'CAMERA POV PERSPECTIVE ENGINE UNLOCKED!',
+      result: { success: true }
+    };
+  }
+
   if (cleanCode === 'idnoclip' || cleanCode === 'iddqd') {
     const key = cleanCode === 'idnoclip' ? 'opt_unlocked_iddqd' : 'opt_unlocked_noclip';
     localStorage.setItem(key, 'true');

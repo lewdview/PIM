@@ -882,13 +882,19 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
   const colorRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
 
   // Sync state with useVaultStore
-  const { tokenBalance, unlockedSkins, unlockSkin, echoPrestigeScore, updateSettings, updateProgression, updateCheats, packDesignStyle, setPackDesignStyle } = useVaultStore();
+  const { tokenBalance, unlockedSkins, unlockSkin, echoPrestigeScore, updateSettings, updateProgression, updateCheats, packDesignStyle, setPackDesignStyle, unlockedCheats } = useVaultStore();
 
   const [activeCardSkin, setActiveCardSkin] = useState('original');
   const [activeCardBack, setActiveCardBack] = useState('classic');
   const [hoveredFrontSkin, setHoveredFrontSkin] = useState<string | null>(null);
   const [hoveredBackSkin, setHoveredBackSkin] = useState<string | null>(null);
   const [previewCard, setPreviewCard] = useState<VaultCard>(SAMPLE_PREVIEW_CARD);
+
+  const [povInputCode, setPovInputCode] = useState('');
+  const [povInputError, setPovInputError] = useState<string | null>(null);
+  const [povSuccess, setPovSuccess] = useState(false);
+
+  const isPovUnlocked = Boolean(unlockedCheats?.povChanger) || (typeof localStorage !== 'undefined' && localStorage.getItem("opt_unlocked_pov") === "true");
 
   useEffect(() => {
     if (isOpen) {
@@ -1166,10 +1172,11 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
         audioOffset: 0,
         laneKeys: ["a", "s", "d"],
         laneColors: ["#FF1493", "#00E5FF", "#39FF14"],
-        noteTheme: "classic",
+        noteTheme: "artwork",
         cardSkin: "original",
         cardBack: "classic",
         gameBackground: "cover_blur",
+        gameTrack: "transparent",
         backgroundBlur: 18,
         hudMisses: true,
         comboDisplay: true,
@@ -2161,73 +2168,145 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                 {/* POV Perspective Camera Modes */}
                 <div className="mt-8">
                   <h3 className="font-mono text-[9px] font-black text-white/40 uppercase tracking-wider border-b border-white/5 pb-1 mb-3 flex items-center justify-between">
-                    <span>CAMERA POV PERSPECTIVE ENGINE</span>
-                    <span className="text-[7.5px] text-zinc-500">HOTKEY: V / P IN GAME</span>
+                    <span className="flex items-center gap-1.5">
+                      <span>CAMERA POV PERSPECTIVE ENGINE</span>
+                      {!isPovUnlocked && (
+                        <span className="text-[7px] px-1.5 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded font-mono font-bold tracking-wider">
+                          LOCKED // CODE REQUIRED
+                        </span>
+                      )}
+                    </span>
+                    <span className="text-[7.5px] text-zinc-500">
+                      {isPovUnlocked ? 'HOTKEY: V / P IN GAME' : 'ENTER CODE TO UNLOCK'}
+                    </span>
                   </h3>
                   
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
-                    {[
-                      { id: 'classic', name: '2.5D Classic', desc: 'Standard Beatstar highway perspective', icon: '📐' },
-                      { id: 'cyber_tunnel', name: '3D Cyber Tunnel', desc: 'First-person tunnel vortex with concentric rings', icon: '🌀' },
-                      { id: 'corkscrew', name: '3D Corkscrew', desc: 'Helical spiral loop slide with 52% precision runway', icon: '🌪️' },
-                      { id: 'rollercoaster', name: 'Wave Coaster', desc: 'Undulating 3D wave coaster with gravity plunge', icon: '🎢' },
-                      { id: 'matrix_split', name: 'Split Matrix', desc: 'Detached 3-ribbon split horizon highway matrix', icon: '🔀' },
-                      { id: 'dynamic_stage', name: 'Dynamic Stage', desc: 'Beatsync camera sway, pitch & stage shifts', icon: '🎥' }
-                    ].map(pov => {
-                      const active = (opts.povMode || 'classic') === pov.id;
-                      return (
+                  {!isPovUnlocked ? (
+                    <div className="p-4 border border-amber-500/25 rounded-lg bg-amber-950/15 backdrop-blur-md flex flex-col gap-3">
+                      <div className="flex items-start gap-3">
+                        <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0 text-lg shadow-[0_0_12px_rgba(245,158,11,0.15)]">
+                          🔒
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-mono text-[11px] font-black uppercase text-white tracking-wider flex items-center gap-2">
+                            <span>CLASSIFIED PERSPECTIVE ENGINE</span>
+                            <span className="text-[7px] px-1 py-0.5 bg-zinc-800 text-zinc-400 rounded font-mono">ENCRYPTED</span>
+                          </div>
+                          <p className="text-[8px] font-mono text-zinc-400 mt-1 leading-relaxed">
+                            3D Cyber Tunnel, 3D Corkscrew, Wave Coaster, Split Matrix, and Realtime Stage POV Shifts are locked. Enter code <span className="text-[#39FF14] font-bold font-mono select-all">"POVREDEEM"</span> to decrypt the perspective engine.
+                          </p>
+                        </div>
+                      </div>
+
+                      <form
+                        onSubmit={async (e) => {
+                          e.preventDefault();
+                          const code = povInputCode.trim();
+                          if (code.toUpperCase() === 'POVREDEEM') {
+                            localStorage.setItem("opt_unlocked_pov", "true");
+                            await updateCheats({ povChanger: true });
+                            window.dispatchEvent(new Event('cheat_code_activated'));
+                            audioManager.playSfx('platinum_get', 0.8);
+                            setPovInputError(null);
+                            setPovSuccess(true);
+                            setPovInputCode('');
+                          } else {
+                            setPovInputError("INVALID ACCESS CODE — USE \"POVREDEEM\"");
+                            audioManager.playSfx('locked_out', 0.2);
+                          }
+                        }}
+                        className="flex flex-col sm:flex-row gap-2 mt-1"
+                      >
+                        <input
+                          type="text"
+                          value={povInputCode}
+                          onChange={(e) => {
+                            setPovInputCode(e.target.value);
+                            setPovInputError(null);
+                          }}
+                          placeholder="ENTER CODE (POVREDEEM)"
+                          className="flex-1 bg-black/70 border border-white/15 focus:border-[#39FF14] rounded px-3 py-2 text-xs font-mono uppercase text-white placeholder:text-zinc-600 outline-none transition-colors"
+                        />
                         <button
-                          key={pov.id}
+                          type="submit"
+                          className="px-5 py-2 bg-[#39FF14] hover:bg-[#32e012] active:scale-95 text-black font-mono font-black text-xs uppercase tracking-wider rounded transition-all cursor-pointer shadow-[0_0_14px_rgba(57,255,20,0.3)] shrink-0"
+                        >
+                          DECRYPT & UNLOCK
+                        </button>
+                      </form>
+                      {povInputError && (
+                        <span className="text-[8px] font-mono text-red-400 font-bold tracking-wider uppercase">
+                          ⚠ {povInputError}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
+                        {[
+                          { id: 'classic', name: '2.5D Classic', desc: 'Standard Beatstar highway perspective', icon: '📐' },
+                          { id: 'cyber_tunnel', name: '3D Cyber Tunnel', desc: 'First-person tunnel vortex with concentric rings', icon: '🌀' },
+                          { id: 'corkscrew', name: '3D Corkscrew', desc: 'Helical spiral loop slide with 52% precision runway', icon: '🌪️' },
+                          { id: 'rollercoaster', name: 'Wave Coaster', desc: 'Undulating 3D wave coaster with gravity plunge', icon: '🎢' },
+                          { id: 'matrix_split', name: 'Split Matrix', desc: 'Detached 3-ribbon split horizon highway matrix', icon: '🔀' },
+                          { id: 'dynamic_stage', name: 'Dynamic Stage', desc: 'Beatsync camera sway, pitch & stage shifts', icon: '🎥' }
+                        ].map(pov => {
+                          const active = (opts.povMode || 'classic') === pov.id;
+                          return (
+                            <button
+                              key={pov.id}
+                              onClick={() => {
+                                localStorage.setItem("opt_povMode", pov.id);
+                                setOpts(o => ({ ...o, povMode: pov.id as any }));
+                                updateSettings({ povMode: pov.id as any });
+                                audioManager.playSfx('menu_confirm', 0.1);
+                              }}
+                              className={`text-left border p-2.5 rounded flex flex-col justify-between min-h-[76px] transition-all cursor-pointer relative ${
+                                active
+                                  ? isAvant ? 'border-[#39FF14] bg-[#39FF14]/10 text-white' : 'border-[#FF1493] bg-[#FF1493]/10 text-white'
+                                  : 'border-white/5 bg-black/40 text-white hover:border-white/15'
+                              }`}
+                            >
+                              <div className="flex justify-between items-center gap-1">
+                                <span className="font-mono text-[10px] font-black uppercase truncate">{pov.name}</span>
+                                <span className="text-xs">{pov.icon}</span>
+                              </div>
+                              <span className="text-[7px] text-zinc-500 font-mono leading-tight mt-1">{pov.desc.toUpperCase()}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Stage POV Auto-Switch Toggle */}
+                      <div className="p-3 border border-white/5 rounded bg-black/30 flex items-center justify-between gap-3">
+                        <div>
+                          <div className="font-mono text-[10px] font-black uppercase text-white flex items-center gap-1.5">
+                            <span>STAGE POV DYNAMIC TRANSITIONS</span>
+                            <span className="text-[7px] px-1 py-0.2 bg-purple-500/20 text-purple-300 border border-purple-500/30 rounded">AUTO-WARP</span>
+                          </div>
+                          <div className="text-[7.5px] font-mono text-zinc-500 uppercase mt-0.5">
+                            Seamlessly transition POV into 3D Cyber Tunnel & Dynamic Camera as stage difficulty escalates
+                          </div>
+                        </div>
+                        <button
                           onClick={() => {
-                            localStorage.setItem("opt_povMode", pov.id);
-                            setOpts(o => ({ ...o, povMode: pov.id as any }));
-                            updateSettings({ povMode: pov.id as any });
+                            const nextVal = !(opts.stagePovSwitch !== false);
+                            localStorage.setItem("opt_stagePovSwitch", String(nextVal));
+                            setOpts(o => ({ ...o, stagePovSwitch: nextVal }));
+                            updateSettings({ stagePovSwitch: nextVal });
                             audioManager.playSfx('menu_confirm', 0.1);
                           }}
-                          className={`text-left border p-2.5 rounded flex flex-col justify-between min-h-[76px] transition-all cursor-pointer relative ${
-                            active
-                              ? isAvant ? 'border-[#39FF14] bg-[#39FF14]/10 text-white' : 'border-[#FF1493] bg-[#FF1493]/10 text-white'
-                              : 'border-white/5 bg-black/40 text-white hover:border-white/15'
+                          className={`relative w-10 h-5 rounded-full transition-colors cursor-pointer shrink-0 ${
+                            opts.stagePovSwitch !== false ? (isAvant ? 'bg-[#39FF14]' : 'bg-[#FF1493]') : 'bg-zinc-800'
                           }`}
                         >
-                          <div className="flex justify-between items-center gap-1">
-                            <span className="font-mono text-[10px] font-black uppercase truncate">{pov.name}</span>
-                            <span className="text-xs">{pov.icon}</span>
-                          </div>
-                          <span className="text-[7px] text-zinc-500 font-mono leading-tight mt-1">{pov.desc.toUpperCase()}</span>
+                          <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
+                            opts.stagePovSwitch !== false ? 'translate-x-5' : 'translate-x-0'
+                          }`} />
                         </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Stage POV Auto-Switch Toggle */}
-                  <div className="p-3 border border-white/5 rounded bg-black/30 flex items-center justify-between gap-3">
-                    <div>
-                      <div className="font-mono text-[10px] font-black uppercase text-white flex items-center gap-1.5">
-                        <span>STAGE POV DYNAMIC TRANSITIONS</span>
-                        <span className="text-[7px] px-1 py-0.2 bg-purple-500/20 text-purple-300 border border-purple-500/30 rounded">AUTO-WARP</span>
                       </div>
-                      <div className="text-[7.5px] font-mono text-zinc-500 uppercase mt-0.5">
-                        Seamlessly transition POV into 3D Cyber Tunnel & Dynamic Camera as stage difficulty escalates
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => {
-                        const nextVal = !(opts.stagePovSwitch !== false);
-                        localStorage.setItem("opt_stagePovSwitch", String(nextVal));
-                        setOpts(o => ({ ...o, stagePovSwitch: nextVal }));
-                        updateSettings({ stagePovSwitch: nextVal });
-                        audioManager.playSfx('menu_confirm', 0.1);
-                      }}
-                      className={`relative w-10 h-5 rounded-full transition-colors cursor-pointer shrink-0 ${
-                        opts.stagePovSwitch !== false ? (isAvant ? 'bg-[#39FF14]' : 'bg-[#FF1493]') : 'bg-zinc-800'
-                      }`}
-                    >
-                      <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
-                        opts.stagePovSwitch !== false ? 'translate-x-5' : 'translate-x-0'
-                      }`} />
-                    </button>
-                  </div>
+                    </>
+                  )}
                 </div>
               </div>
             )}

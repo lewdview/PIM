@@ -53,6 +53,7 @@ export interface ProfileProgression {
 export interface ProfileCheats {
   noclip: boolean;
   iddqd: boolean;
+  povChanger?: boolean;
   stunnerSection?: boolean;
   freeStella?: boolean;
   purchasedStunners?: string[];
@@ -321,11 +322,11 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       localStorage.getItem("opt_laneColor_1") ?? "#00E5FF",
       localStorage.getItem("opt_laneColor_2") ?? "#39FF14",
     ],
-    noteTheme: localStorage.getItem("opt_noteTheme") ?? "classic",
+    noteTheme: localStorage.getItem("opt_noteTheme") ?? "artwork",
     cardSkin: localStorage.getItem("opt_cardSkin") ?? "original",
     cardBack: localStorage.getItem("opt_cardBack") ?? "classic",
     gameBackground: localStorage.getItem("opt_gameBackground") ?? "cover_blur",
-    gameTrack: localStorage.getItem("opt_gameTrack") ?? "classic",
+    gameTrack: localStorage.getItem("opt_gameTrack") ?? "transparent",
     backgroundBlur: parseFloat(localStorage.getItem("opt_backgroundBlur") ?? "10") || 10,
     hudMisses: localStorage.getItem("opt_hudMisses") !== "false",
     comboDisplay: localStorage.getItem("opt_comboDisplay") !== "false",
@@ -364,6 +365,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   unlockedCheats: {
     noclip: localStorage.getItem("opt_unlocked_noclip") === "true",
     iddqd: localStorage.getItem("opt_unlocked_iddqd") === "true",
+    povChanger: localStorage.getItem("opt_unlocked_pov") === "true",
     stunnerSection: localStorage.getItem("opt_unlocked_stunner_section") === "true",
     freeStella: localStorage.getItem("opt_free_stella_unlocked") === "true",
     purchasedStunners: (() => {
@@ -662,6 +664,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
 
         localStorage.setItem("opt_unlocked_noclip", String(mergedCheats.noclip));
         localStorage.setItem("opt_unlocked_iddqd", String(mergedCheats.iddqd));
+        localStorage.setItem("opt_unlocked_pov", String(mergedCheats.povChanger ?? false));
 
         const dbTokens = typeof profile.tokens === 'number' ? profile.tokens : 0;
         const effectiveTokens = dbTokens;
@@ -1057,6 +1060,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     // Update LocalStorage cache
     if (newCheats.noclip !== undefined) localStorage.setItem("opt_unlocked_noclip", String(merged.noclip));
     if (newCheats.iddqd !== undefined) localStorage.setItem("opt_unlocked_iddqd", String(merged.iddqd));
+    if (newCheats.povChanger !== undefined) localStorage.setItem("opt_unlocked_pov", String(merged.povChanger));
     if (newCheats.stunnerSection !== undefined) localStorage.setItem("opt_unlocked_stunner_section", String(merged.stunnerSection));
     if (newCheats.freeStella !== undefined) localStorage.setItem("opt_free_stella_unlocked", String(merged.freeStella));
     if (newCheats.purchasedStunners !== undefined) localStorage.setItem("opt_purchased_stunners", JSON.stringify(merged.purchasedStunners));
