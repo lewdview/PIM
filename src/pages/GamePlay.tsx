@@ -147,31 +147,33 @@ function isArchetypeDevModeEnabled(): boolean {
 function selectSongArchetype(song?: GameSong | null): TrackArchetype {
   if (!song) return 'cyber_tunnel';
 
-  // 1. PRIORITY 1: Lyrics Keywords
-  if (song.lyrics && typeof song.lyrics === 'string') {
-    const text = song.lyrics.toLowerCase();
-    if (text.includes('slide') || text.includes('twist') || text.includes('turn') || text.includes('roll') || text.includes('spin') || text.includes('cork') || text.includes('screw')) return 'corkscrew_slide';
-    if (text.includes('wave') || text.includes('ride') || text.includes('ocean') || text.includes('sea') || text.includes('flow')) return 'wave_coaster';
-    if (text.includes('matrix') || text.includes('split') || text.includes('break') || text.includes('code') || text.includes('grid')) return 'matrix_split';
-    if (text.includes('tunnel') || text.includes('cyber') || text.includes('light') || text.includes('night') || text.includes('space') || text.includes('star')) return 'cyber_tunnel';
+  if (song.archetype && ['corkscrew_slide', 'cyber_tunnel', 'wave_coaster', 'matrix_split'].includes(song.archetype)) {
+    return song.archetype;
   }
 
-  // 2. PRIORITY 2: BPM Tiers
+  // 1. PRIORITY 1: Explicit Lyrics Theme Trigger (strict whole-word regex)
+  if (song.lyrics && typeof song.lyrics === 'string') {
+    const text = song.lyrics.toLowerCase();
+    if (/\b(matrix|split|dimension|pixel|glitch|fracture|code|hologram)\b/i.test(text)) return 'matrix_split';
+    if (/\b(tunnel|vortex|warp|hyperspace|cyber|portal|speedway)\b/i.test(text)) return 'cyber_tunnel';
+    if (/\b(coaster|ocean|gravity|surf|tide|wave|float|drift|breeze)\b/i.test(text)) return 'wave_coaster';
+    if (/\b(corkscrew|spiral|helix|whirl|twist|spinning|looping)\b/i.test(text)) return 'corkscrew_slide';
+  }
+
+  // 2. PRIORITY 2: Distinct BPM & Mood Characteristics
   const bpm = song.bpm || 120;
-  if (bpm < 120) return 'wave_coaster';
-  if (bpm >= 120 && bpm < 135) return 'corkscrew_slide';
-  if (bpm >= 135 && bpm < 155) return 'cyber_tunnel';
-  if (bpm >= 155) return 'matrix_split';
+  const tags = (song.moodTags || []).map(t => t.toLowerCase());
 
-  // 3. PRIORITY 3: Genre Fallback
-  const genre = (song.genre || '').toLowerCase();
-  if (genre.includes('rock') || genre.includes('metal') || genre.includes('punk')) return 'wave_coaster';
-  if (genre.includes('hip-hop') || genre.includes('rap') || genre.includes('trap') || genre.includes('pop') || genre.includes('dance') || genre.includes('electronic')) return 'corkscrew_slide';
+  if (tags.some(t => ['glitch', 'industrial', 'chaos', 'cyberpunk'].includes(t))) return 'matrix_split';
+  if (tags.some(t => ['synthwave', 'techno', 'trance', 'speed', 'futuristic'].includes(t)) || bpm >= 148) return 'cyber_tunnel';
+  if (tags.some(t => ['ambient', 'acoustic', 'slow', 'ballad'].includes(t)) || bpm < 88) return 'wave_coaster';
+  if (tags.some(t => ['dance', 'groove', 'funk', 'disco'].includes(t)) || (bpm >= 124 && bpm <= 136)) return 'corkscrew_slide';
 
-  // Fallback active 3D archetypes (shelved radial_orbit and horizontal_drift)
-  const archetypes: TrackArchetype[] = ['corkscrew_slide', 'cyber_tunnel', 'wave_coaster', 'matrix_split'];
-  const hash = (song.title || song.id || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  return archetypes[hash % archetypes.length];
+  // 3. PRIORITY 3: Perfectly distributed 4-way Day rotation
+  const archetypes: TrackArchetype[] = ['cyber_tunnel', 'corkscrew_slide', 'wave_coaster', 'matrix_split'];
+  const dayNum = typeof song.day === 'number' && song.day > 0 ? song.day : 
+                 parseInt((song.id || '').replace(/\D+/g, '') || '0', 10);
+  return archetypes[(dayNum || 1) % archetypes.length];
 }
 
 
