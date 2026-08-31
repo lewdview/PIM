@@ -9608,9 +9608,6 @@ export default function Game() {
           if (cancelled || cIdx >= toTry.length) return;
           const currentCandidateUrl = toTry[cIdx];
           const img = new Image();
-          if (!triedWithoutCors) {
-            img.crossOrigin = "anonymous";
-          }
           img.onload = () => {
             if (cancelled) return;
             coverImgRef.current = img;

@@ -168,15 +168,14 @@ export function extractPalette(imageUrl: string): Promise<ExtractedPalette> {
     const isBlobOrData = imageUrl.startsWith('blob:') || imageUrl.startsWith('data:');
     const isSameOrigin = typeof window !== 'undefined' && imageUrl.startsWith(window.location.origin);
 
-    // If external non-CORS host like files.th3scr1b3.art, avoid browser CORS network block
+    // If external non-same-origin host, avoid browser CORS network block
     // by synthesizing harmonic palette from URL hash
-    if (!isBlobOrData && !isSameOrigin && imageUrl.includes('files.th3scr1b3.art')) {
+    if (!isBlobOrData && !isSameOrigin) {
       resolve(generateHarmonicPaletteFromUrl(imageUrl));
       return;
     }
 
     const img = new Image();
-    img.crossOrigin = 'anonymous';
 
     img.onload = () => {
       try {
