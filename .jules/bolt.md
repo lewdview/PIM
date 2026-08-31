@@ -1,0 +1,3 @@
+## 2025-03-01 - Optimizing High-Frequency Zustand Updates
+**Learning:** Avoiding destructuring and using granular selectors is not enough if the component subscribes to frequently updating properties (like `progress` or `currentTime`). To prevent massive re-renders of complex parent components during high-frequency events (like `timeupdate`), extract the UI relying on those values into isolated child components that independently subscribe to the updates.
+**Action:** When a global audio player state is used in a layout component (like a navbar or global player bar), always extract the progress bar and time display into small child components with their own granular subscriptions.
