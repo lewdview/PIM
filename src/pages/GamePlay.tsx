@@ -1244,6 +1244,301 @@ function getWaveCoasterPos(
   };
 }
 
+// 🎹 ORTHOGRAPHIC 2D FLAT PIANO HIGHWAY
+function getFlat2DPos(lane: number, prog: number, W: number, H: number): ProjectionResult {
+  const hitY = H * HIT_RATIO;
+  const trackW = Math.min(W * 0.72, 480);
+  const laneW = trackW / 3;
+  const startX = (W - trackW) / 2;
+  const noteX = startX + lane * laneW;
+  const noteY = prog * hitY;
+  const noteH = 64;
+  return {
+    x: noteX,
+    y: noteY,
+    w: laneW,
+    h: noteH,
+    rot: 0,
+    scale: 1.0,
+  };
+}
+
+// 🎯 360° RADIAL CYBER ORBIT (Concentric Spoke Inward Plunge)
+function getRadialOrbitPos(lane: number, prog: number, W: number, H: number, t: number, stage: number): ProjectionResult {
+  const cx = W / 2;
+  const cy = H * 0.50;
+  const maxR = Math.min(W, H) * 0.44;
+  const targetR = Math.min(W, H) * 0.16;
+  const safeP = Math.max(0, prog);
+  const curR = lerp(maxR, targetR, safeP);
+
+  const rotOffset = t * 0.35 + (stage === 5 ? t * 0.6 : 0);
+  const laneAngle = ((lane * 2 * Math.PI) / 3) + rotOffset - Math.PI / 2;
+
+  const noteX = cx + Math.cos(laneAngle) * curR;
+  const noteY = cy + Math.sin(laneAngle) * curR;
+  const noteW = lerp(24, 76, safeP);
+  const noteH = lerp(18, 44, safeP);
+
+  return {
+    x: noteX - noteW / 2,
+    y: noteY - noteH / 2,
+    w: noteW,
+    h: noteH,
+    rot: laneAngle + Math.PI / 2,
+    scale: lerp(0.35, 1.0, safeP),
+  };
+}
+
+// ⏩ 90° HORIZONTAL SIDE-SCROLLER (Left to Right Highway)
+function getHorizontalDriftPos(lane: number, prog: number, W: number, H: number, t: number, stage: number): ProjectionResult {
+  const hitX = W * 0.82;
+  const startX = W * 0.08;
+  const trackH = Math.min(H * 0.55, 360);
+  const laneH = trackH / 3;
+  const startY = (H - trackH) / 2;
+  const safeP = Math.max(0, prog);
+  
+  const noteX = lerp(startX, hitX, Math.pow(safeP, 1.25));
+  const noteY = startY + (2 - lane) * laneH;
+  const noteW = lerp(32, 80, safeP);
+  const noteH = laneH * 0.85;
+
+  return {
+    x: noteX - noteW / 2,
+    y: noteY,
+    w: noteW,
+    h: noteH,
+    rot: 0,
+    scale: lerp(0.4, 1.0, safeP),
+  };
+}
+
+// 🏎️ STARFIGHTER COCKPIT HUD
+function getCockpitHudPos(lane: number, prog: number, W: number, H: number, t: number, stage: number): ProjectionResult {
+  const hitY = H * HIT_RATIO;
+  const vanishingY = hitY * 0.22;
+  const cx = W / 2;
+  const laneOffset = lane - 1;
+  const safeP = Math.max(0, prog);
+  const persP = Math.pow(safeP, 1.4);
+  const canopyCurve = Math.sin(safeP * Math.PI) * (laneOffset * W * 0.06);
+  const gForceSway = Math.sin(t * 1.5) * (W * 0.012) * safeP;
+
+  const { x: hitX, w: hitW } = laneAt(lane, 1, W, 0.14, 0.88);
+  const noteY = lerp(vanishingY, hitY, persP);
+  const noteW = lerp(W * 0.04, hitW, Math.pow(safeP, 1.3));
+  const noteH = lerp(24, 130, persP);
+  const noteX = lerp(cx + laneOffset * (W * 0.04), hitX, persP) + canopyCurve + gForceSway;
+  const rot = (laneOffset * 0.15 + Math.sin(t * 1.5) * 0.03) * Math.sin(safeP * Math.PI);
+
+  return {
+    x: noteX,
+    y: noteY,
+    w: noteW,
+    h: noteH,
+    rot,
+    scale: lerp(0.3, 1.0, persP),
+  };
+}
+
+// 🪞 PRISMATIC KALEIDOSCOPE REFRACTION
+function getHyperPrismPos(lane: number, prog: number, W: number, H: number, t: number, stage: number): ProjectionResult {
+  const hitY = H * HIT_RATIO;
+  const vanishingY = hitY * 0.30;
+  const safeP = Math.max(0, prog);
+  const persP = Math.pow(safeP, 1.3);
+  const laneOffset = lane - 1;
+  const prismAngle = (laneOffset * (Math.PI / 4)) * Math.sin(safeP * Math.PI);
+  const prismDisplacement = Math.sin(t * 2.0 + laneOffset * 1.5) * (W * 0.015) * Math.sin(safeP * Math.PI);
+
+  const { x: hitX, w: hitW } = laneAt(lane, 1, W, 0.16, 0.86);
+  const noteY = lerp(vanishingY, hitY, persP);
+  const noteW = lerp(W * 0.05, hitW, persP);
+  const noteH = lerp(28, 135, persP);
+  const noteX = lerp(W / 2 + laneOffset * (W * 0.05), hitX, persP) + prismDisplacement;
+
+  return {
+    x: noteX,
+    y: noteY,
+    w: noteW,
+    h: noteH,
+    rot: prismAngle,
+    scale: lerp(0.35, 1.0, persP),
+  };
+}
+
+// 🧬 DNA DOUBLE-HELIX QUANTUM STRAND
+function getDnaHelixPos(lane: number, prog: number, W: number, H: number, t: number, stage: number): ProjectionResult {
+  const hitY = H * HIT_RATIO;
+  const vanishingY = hitY * 0.24;
+  const safeP = Math.max(0, prog);
+  const persP = Math.pow(safeP, 1.28);
+  const cx = W / 2;
+
+  const helixCycles = 2.5;
+  const mult = stage === 5 ? 2.0 : 1.0;
+  const phaseAngle = safeP * helixCycles * 2 * Math.PI + t * 1.8 * mult;
+  const helixRadius = lerp(W * 0.08, W * 0.24, persP);
+
+  let helixOffset = 0;
+  let helixScaleMod = 1.0;
+  if (lane === 0) {
+    helixOffset = Math.sin(phaseAngle) * helixRadius;
+    helixScaleMod = 0.85 + Math.cos(phaseAngle) * 0.25;
+  } else if (lane === 2) {
+    helixOffset = -Math.sin(phaseAngle) * helixRadius;
+    helixScaleMod = 0.85 - Math.cos(phaseAngle) * 0.25;
+  } else {
+    helixOffset = Math.sin(phaseAngle * 2) * (helixRadius * 0.25);
+  }
+
+  const { x: hitX, w: hitW } = laneAt(lane, 1, W, 0.18, 0.85);
+  const noteY = lerp(vanishingY, hitY, persP);
+  const noteW = lerp(W * 0.05, hitW, persP) * helixScaleMod;
+  const noteH = lerp(26, 130, persP);
+  const noteX = lerp(cx + (lane - 1) * (W * 0.05), hitX, persP) + helixOffset;
+  const rot = Math.cos(phaseAngle) * 0.18 * (1 - safeP * 0.5);
+
+  return {
+    x: noteX,
+    y: noteY,
+    w: noteW,
+    h: noteH,
+    rot,
+    scale: lerp(0.3, 1.0, persP) * helixScaleMod,
+  };
+}
+
+// 🏙️ SKYSCRAPER FREEFALL VERTIGO (90° Downward Plunge)
+function getVertigoDropPos(lane: number, prog: number, W: number, H: number, t: number, stage: number): ProjectionResult {
+  const hitY = H * HIT_RATIO;
+  const vanishingY = hitY * 0.12;
+  const safeP = Math.max(0, prog);
+  const persP = Math.pow(safeP, 2.2);
+
+  const { x: hitX, w: hitW } = laneAt(lane, 1, W, 0.08, 0.92);
+  const noteY = lerp(vanishingY, hitY, persP);
+  const noteW = lerp(W * 0.03, hitW, Math.pow(safeP, 1.8));
+  const noteH = lerp(20, 150, Math.pow(safeP, 1.5));
+  const noteX = lerp(W / 2 + (lane - 1) * (W * 0.03), hitX, persP);
+
+  return {
+    x: noteX,
+    y: noteY,
+    w: noteW,
+    h: noteH,
+    rot: 0,
+    scale: lerp(0.2, 1.0, persP),
+  };
+}
+
+// 🪐 SINGULARITY EVENT HORIZON (Relativistic Inward Pull)
+function getSingularityVoidPos(lane: number, prog: number, W: number, H: number, t: number, stage: number): ProjectionResult {
+  const hitY = H * HIT_RATIO;
+  const vanishingY = hitY * 0.28;
+  const cx = W / 2;
+  const safeP = Math.max(0, prog);
+  const persP = Math.pow(safeP, 1.35);
+
+  const laneOffset = lane - 1;
+  const gravityLensing = laneOffset * (W * 0.14) * Math.pow(1 - safeP, 1.8);
+  const eventHorizonSwirl = Math.sin(t * 2.2 + safeP * 4.0) * (W * 0.018) * Math.sin(safeP * Math.PI);
+
+  const { x: hitX, w: hitW } = laneAt(lane, 1, W, 0.22, 0.88);
+  const noteY = lerp(vanishingY, hitY, persP);
+  const noteW = lerp(W * 0.04, hitW, persP);
+  const noteH = lerp(24, 135, persP);
+  const noteX = lerp(cx + laneOffset * (W * 0.08), hitX, persP) - gravityLensing + eventHorizonSwirl;
+  const rot = (laneOffset * 0.25 - Math.sin(t * 2.0) * 0.05) * Math.pow(1 - safeP, 1.2);
+
+  return {
+    x: noteX,
+    y: noteY,
+    w: noteW,
+    h: noteH,
+    rot,
+    scale: lerp(0.28, 1.0, persP),
+  };
+}
+
+// 🚗 ASPHALT GROUND ZERO BUMPER CAM
+function getGroundZeroPos(lane: number, prog: number, W: number, H: number, t: number, stage: number): ProjectionResult {
+  const hitY = H * HIT_RATIO;
+  const vanishingY = hitY * 0.42;
+  const safeP = Math.max(0, prog);
+  const persP = Math.pow(safeP, 1.6);
+
+  const { x: hitX, w: hitW } = laneAt(lane, 1, W, 0.26, 0.94);
+  const noteY = lerp(vanishingY, hitY, persP);
+  const noteW = lerp(W * 0.08, hitW, persP);
+  const noteH = lerp(32, 160, persP);
+  const noteX = lerp(W / 2 + (lane - 1) * (W * 0.08), hitX, persP);
+
+  return {
+    x: noteX,
+    y: noteY,
+    w: noteW,
+    h: noteH,
+    rot: (lane - 1) * 0.08 * (1 - safeP),
+    scale: lerp(0.45, 1.0, persP),
+  };
+}
+
+// 🌌 CELESTIAL STARGATE HALO
+function getOrbitalHaloPos(lane: number, prog: number, W: number, H: number, t: number, stage: number): ProjectionResult {
+  const hitY = H * HIT_RATIO;
+  const cx = W / 2;
+  const safeP = Math.max(0, prog);
+  const persP = Math.pow(safeP, 1.3);
+
+  const laneOffset = lane - 1;
+  const haloArcY = hitY * 0.20 - Math.cos((laneOffset * Math.PI) / 4) * (H * 0.08);
+  const haloArcX = cx + Math.sin((laneOffset * Math.PI) / 3) * (W * 0.28) * (1 - safeP);
+
+  const { x: hitX, w: hitW } = laneAt(lane, 1, W, 0.18, 0.88);
+  const noteY = lerp(haloArcY, hitY, persP);
+  const noteW = lerp(W * 0.06, hitW, persP);
+  const noteH = lerp(26, 135, persP);
+  const noteX = lerp(haloArcX, hitX, persP);
+
+  return {
+    x: noteX,
+    y: noteY,
+    w: noteW,
+    h: noteH,
+    rot: laneOffset * 0.18 * (1 - safeP),
+    scale: lerp(0.35, 1.0, persP),
+  };
+}
+
+// ♾️ MÖBIUS INFINITY LOOP
+function getMobiusLoopPos(lane: number, prog: number, W: number, H: number, t: number, stage: number): ProjectionResult {
+  const hitY = H * HIT_RATIO;
+  const vanishingY = hitY * 0.26;
+  const safeP = Math.max(0, prog);
+  const persP = Math.pow(safeP, 1.3);
+
+  const twistAngle = safeP * Math.PI * 2 + t * 1.5;
+  const mobiusLateral = Math.sin(twistAngle) * (W * 0.16) * Math.sin(safeP * Math.PI);
+  const mobiusRot = Math.cos(twistAngle) * 0.35 * Math.sin(safeP * Math.PI);
+
+  const { x: hitX, w: hitW } = laneAt(lane, 1, W, 0.16, 0.86);
+  const noteY = lerp(vanishingY, hitY, persP);
+  const noteW = lerp(W * 0.05, hitW, persP);
+  const noteH = lerp(28, 135, persP);
+  const noteX = lerp(W / 2 + (lane - 1) * (W * 0.05), hitX, persP) + mobiusLateral;
+
+  return {
+    x: noteX,
+    y: noteY,
+    w: noteW,
+    h: noteH,
+    rot: mobiusRot,
+    scale: lerp(0.3, 1.0, persP),
+  };
+}
+
 function getArchetypeProjection(
   lane: number,
   prog: number,
@@ -1257,6 +1552,39 @@ function getArchetypeProjection(
   const hitY = H * HIT_RATIO;
 
   // 1. Direct persistent POV Mode Overrides:
+  if (povMode === 'flat_2d') {
+    return getFlat2DPos(lane, prog, W, H);
+  }
+  if (povMode === 'circle') {
+    return getRadialOrbitPos(lane, prog, W, H, t, stage);
+  }
+  if (povMode === 'horizontal_drift') {
+    return getHorizontalDriftPos(lane, prog, W, H, t, stage);
+  }
+  if (povMode === 'cockpit_hud') {
+    return getCockpitHudPos(lane, prog, W, H, t, stage);
+  }
+  if (povMode === 'hyper_prism') {
+    return getHyperPrismPos(lane, prog, W, H, t, stage);
+  }
+  if (povMode === 'dna_helix') {
+    return getDnaHelixPos(lane, prog, W, H, t, stage);
+  }
+  if (povMode === 'vertigo_drop') {
+    return getVertigoDropPos(lane, prog, W, H, t, stage);
+  }
+  if (povMode === 'singularity_void') {
+    return getSingularityVoidPos(lane, prog, W, H, t, stage);
+  }
+  if (povMode === 'ground_zero') {
+    return getGroundZeroPos(lane, prog, W, H, t, stage);
+  }
+  if (povMode === 'orbital_halo') {
+    return getOrbitalHaloPos(lane, prog, W, H, t, stage);
+  }
+  if (povMode === 'mobius_loop') {
+    return getMobiusLoopPos(lane, prog, W, H, t, stage);
+  }
   if (povMode === 'corkscrew') {
     return getCorkscrewSpiralPos(lane, prog, W, H, t, stage);
   }
@@ -1324,6 +1652,12 @@ function getArchetypeProjection(
       }
       if (archetype === 'wave_coaster') {
         return getWaveCoasterPos(lane, prog, W, H, t, stage);
+      }
+      if (archetype === 'radial_orbit') {
+        return getRadialOrbitPos(lane, prog, W, H, t, stage);
+      }
+      if (archetype === 'horizontal_drift') {
+        return getHorizontalDriftPos(lane, prog, W, H, t, stage);
       }
       if (archetype === 'matrix_split') {
         const spread = (lane - 1) * (W * 0.22 * Math.sin(prog * Math.PI));
@@ -2841,11 +3175,49 @@ export default function Game() {
     warpAlpha: 0,
   });
 
+  const POV_CONFIGS: Record<PovMode, { icon: string; short: string; full: string }> = {
+    classic: { icon: '📐', short: '2.5D CLASSIC', full: '2.5D CLASSIC HIGHWAY' },
+    flat_2d: { icon: '🎹', short: 'ORTHO 2D', full: 'ORTHOGRAPHIC 2D HIGHWAY' },
+    circle: { icon: '🎯', short: '360° ORBIT', full: '360° RADIAL CYBER ORBIT' },
+    horizontal_drift: { icon: '⏩', short: 'SIDE DRIFT', full: 'HORIZONTAL SIDE-SCROLLER' },
+    cyber_tunnel: { icon: '🌀', short: '3D TUNNEL', full: '3D CYBER TUNNEL VORTEX' },
+    corkscrew: { icon: '🌪️', short: 'CORKSCREW', full: '3D CORKSCREW HELICAL SLIDE' },
+    rollercoaster: { icon: '🎢', short: 'WAVE COASTER', full: '3D WAVE ROLLERCOASTER' },
+    matrix_split: { icon: '🔀', short: 'SPLIT MATRIX', full: 'SPLIT HORIZON MATRIX' },
+    cockpit_hud: { icon: '🏎️', short: 'PILOT HUD', full: 'STARFIGHTER COCKPIT HUD' },
+    hyper_prism: { icon: '🪞', short: 'HYPER PRISM', full: 'PRISMATIC KALEIDOSCOPE' },
+    dna_helix: { icon: '🧬', short: 'DNA HELIX', full: 'DNA DOUBLE-HELIX STRANDS' },
+    vertigo_drop: { icon: '🏙️', short: 'VERTIGO DROP', full: 'SKYSCRAPER FREEFALL VERTIGO' },
+    singularity_void: { icon: '🪐', short: 'SINGULARITY', full: 'SINGULARITY EVENT HORIZON' },
+    ground_zero: { icon: '🚗', short: 'GROUND ZERO', full: 'ASPHALT GROUND ZERO BUMPER' },
+    orbital_halo: { icon: '🌌', short: 'STARGATE HALO', full: 'CELESTIAL STARGATE HALO' },
+    mobius_loop: { icon: '♾️', short: 'MÖBIUS LOOP', full: 'MÖBIUS INFINITY LOOP' },
+    dynamic_stage: { icon: '🎥', short: 'DYNAMIC STAGE', full: 'DYNAMIC STAGE CAM' },
+  };
+
   const cyclePovMode = useCallback(() => {
     const isUnlocked = Boolean(useVaultStore.getState().unlockedCheats?.povChanger) || (typeof localStorage !== 'undefined' && localStorage.getItem("opt_unlocked_pov") === "true");
     if (!isUnlocked) return;
 
-    const modes: PovMode[] = ['classic', 'cyber_tunnel', 'corkscrew', 'rollercoaster', 'matrix_split', 'dynamic_stage'];
+    const modes: PovMode[] = [
+      'classic',
+      'flat_2d',
+      'circle',
+      'horizontal_drift',
+      'cyber_tunnel',
+      'corkscrew',
+      'rollercoaster',
+      'matrix_split',
+      'cockpit_hud',
+      'hyper_prism',
+      'dna_helix',
+      'vertigo_drop',
+      'singularity_void',
+      'ground_zero',
+      'orbital_halo',
+      'mobius_loop',
+      'dynamic_stage'
+    ];
     const currentIdx = modes.indexOf(activePovModeRef.current);
     const nextMode = modes[(currentIdx + 1) % modes.length];
     
@@ -2865,15 +3237,8 @@ export default function Game() {
     }
     audioManager.playSfx('menu_confirm', 0.18);
 
-    const labels: Record<PovMode, string> = {
-      classic: '2.5D CLASSIC HIGHWAY',
-      cyber_tunnel: '3D CYBER TUNNEL VORTEX',
-      corkscrew: '3D CORKSCREW HELICAL SLIDE',
-      rollercoaster: '3D WAVE ROLLERCOASTER',
-      matrix_split: 'SPLIT HORIZON MATRIX',
-      dynamic_stage: 'DYNAMIC STAGE CAM',
-    };
-    setPovToast({ mode: labels[nextMode], time: Date.now() });
+    const label = POV_CONFIGS[nextMode]?.full || nextMode.toUpperCase();
+    setPovToast({ mode: label, time: Date.now() });
   }, []);
 
   const cycleArchetype = useCallback(() => {
@@ -10551,10 +10916,10 @@ export default function Game() {
             title="Toggle POV Perspective Camera Mode (Hotkey: V)"
           >
             <span className="text-base">
-              {activePovMode === 'cyber_tunnel' ? '🌀' : activePovMode === 'corkscrew' ? '🌪️' : activePovMode === 'rollercoaster' ? '🎢' : activePovMode === 'matrix_split' ? '🔀' : activePovMode === 'dynamic_stage' ? '🎥' : '📐'}
+              {POV_CONFIGS[activePovMode]?.icon || '📐'}
             </span>
             <span className="font-black text-[10px] uppercase tracking-wider hidden sm:inline-block">
-              {activePovMode === 'cyber_tunnel' ? '3D TUNNEL' : activePovMode === 'corkscrew' ? 'CORKSCREW' : activePovMode === 'rollercoaster' ? 'WAVE COASTER' : activePovMode === 'matrix_split' ? 'SPLIT MATRIX' : activePovMode === 'dynamic_stage' ? 'DYNAMIC STAGE' : '2.5D CLASSIC'}
+              {POV_CONFIGS[activePovMode]?.short || activePovMode.toUpperCase()}
             </span>
             <span className="text-[8px] font-black text-white/80 bg-white/10 px-1.5 py-0.5 rounded font-mono border border-white/10">V</span>
           </button>

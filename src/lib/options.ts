@@ -4,7 +4,24 @@ export type RenderResolution = 'native' | 'high' | 'medium' | 'low';
 export type GfxLevel = 'ultra' | 'high' | 'medium' | 'low';
 export type FpsTarget = 'auto' | '60' | '120' | '30';
 export type ParticleDensity = 'full' | 'half' | 'minimal';
-export type PovMode = 'classic' | 'cyber_tunnel' | 'corkscrew' | 'rollercoaster' | 'matrix_split' | 'dynamic_stage';
+export type PovMode =
+  | 'classic'
+  | 'flat_2d'
+  | 'circle'
+  | 'horizontal_drift'
+  | 'cyber_tunnel'
+  | 'corkscrew'
+  | 'rollercoaster'
+  | 'matrix_split'
+  | 'cockpit_hud'
+  | 'hyper_prism'
+  | 'dna_helix'
+  | 'vertigo_drop'
+  | 'singularity_void'
+  | 'ground_zero'
+  | 'orbital_halo'
+  | 'mobius_loop'
+  | 'dynamic_stage';
 
 export type GameOpts = {
   missSystem: boolean;
@@ -29,7 +46,7 @@ export type GameOpts = {
   gameSenseEnabled: boolean;
   legacyGraphics: boolean;
   autoLatencyAdjust: boolean;
-  povMode: 'classic' | 'cyber_tunnel' | 'corkscrew' | 'rollercoaster' | 'matrix_split' | 'dynamic_stage';
+  povMode: PovMode;
   stagePovSwitch: boolean;
   renderResolution: RenderResolution;
   gfxLevel: GfxLevel;

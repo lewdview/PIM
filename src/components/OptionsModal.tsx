@@ -2288,14 +2288,30 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                     </div>
                   ) : (
                     <>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3 max-h-[380px] overflow-y-auto pr-1">
                         {[
-                          { id: 'classic', name: '2.5D Classic', desc: 'Standard Beatstar highway perspective', icon: '📐' },
-                          { id: 'cyber_tunnel', name: '3D Cyber Tunnel', desc: 'First-person tunnel vortex with concentric rings', icon: '🌀' },
-                          { id: 'corkscrew', name: '3D Corkscrew', desc: 'Helical spiral loop slide with 52% precision runway', icon: '🌪️' },
-                          { id: 'rollercoaster', name: 'Wave Coaster', desc: 'Undulating 3D wave coaster with gravity plunge', icon: '🎢' },
-                          { id: 'matrix_split', name: 'Split Matrix', desc: 'Detached 3-ribbon split horizon highway matrix', icon: '🔀' },
-                          { id: 'dynamic_stage', name: 'Dynamic Stage', desc: 'Beatsync camera sway, pitch & stage shifts', icon: '🎥' }
+                          // Core & Retro Highways
+                          { id: 'classic', name: '2.5D Classic', desc: 'Standard Beatstar highway perspective', icon: '📐', tag: 'CORE' },
+                          { id: 'flat_2d', name: 'Orthographic 2D', desc: 'Equal-width top-down piano roll highway', icon: '🎹', tag: '2D' },
+                          { id: 'circle', name: '360° Radial Orbit', desc: 'Concentric radial spoke target orbit', icon: '🎯', tag: 'ARCADE' },
+                          { id: 'horizontal_drift', name: 'Side-Scroller', desc: '90° horizontal side-scrolling precision highway', icon: '⏩', tag: 'RETRO' },
+                          { id: 'dynamic_stage', name: 'Dynamic Stage', desc: 'Beatsync camera director & stage shifts', icon: '🎥', tag: 'DIRECTOR' },
+
+                          // 3D Stage Archetypes
+                          { id: 'cyber_tunnel', name: '3D Cyber Tunnel', desc: 'First-person tunnel vortex with concentric rings', icon: '🌀', tag: 'VORTEX' },
+                          { id: 'corkscrew', name: '3D Corkscrew', desc: 'Helical spiral loop slide with 52% precision runway', icon: '🌪️', tag: 'HELIX' },
+                          { id: 'rollercoaster', name: 'Wave Coaster', desc: 'Undulating 3D wave coaster with gravity plunge', icon: '🎢', tag: 'GRAVITY' },
+                          { id: 'matrix_split', name: 'Split Matrix', desc: 'Detached 3-ribbon split horizon highway matrix', icon: '🔀', tag: 'POLY' },
+
+                          // Experimental Hyperspace Perspectives
+                          { id: 'cockpit_hud', name: 'Starfighter Cockpit', desc: 'Curved canopy HUD vector highway with telemetry', icon: '🏎️', tag: 'HUD' },
+                          { id: 'hyper_prism', name: 'Prismatic Prism', desc: 'Refracted gemstone prism with faceted mirrors', icon: '🪞', tag: 'REFRACT' },
+                          { id: 'dna_helix', name: 'DNA Double-Helix', desc: 'Intertwined quantum ribbon strands with base rungs', icon: '🧬', tag: 'QUANTUM' },
+                          { id: 'vertigo_drop', name: 'Skyscraper Vertigo', desc: '90° vertical terminal velocity skyscraper plunge', icon: '🏙️', tag: 'FREEFALL' },
+                          { id: 'singularity_void', name: 'Singularity Void', desc: 'Gravitational lensing curvature & accretion disk', icon: '🪐', tag: 'BLACK HOLE' },
+                          { id: 'ground_zero', name: 'Ground Zero Bumper', desc: 'Ultra-low asphalt bumper camera with reflections', icon: '🚗', tag: 'LOW-RIDER' },
+                          { id: 'orbital_halo', name: 'Stargate Halo', desc: 'Overhead celestial halo arc descending into hit zone', icon: '🌌', tag: 'HALO' },
+                          { id: 'mobius_loop', name: 'Möbius Infinity', desc: 'Non-Euclidean topological figure-8 twist highway', icon: '♾️', tag: 'TOPOLOGY' },
                         ].map(pov => {
                           const active = (opts.povMode || 'classic') === pov.id;
                           return (
@@ -2317,7 +2333,12 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                                 <span className="font-mono text-[10px] font-black uppercase truncate">{pov.name}</span>
                                 <span className="text-xs">{pov.icon}</span>
                               </div>
-                              <span className="text-[7px] text-zinc-500 font-mono leading-tight mt-1">{pov.desc.toUpperCase()}</span>
+                              <div className="flex items-end justify-between gap-1 mt-1">
+                                <span className="text-[7px] text-zinc-500 font-mono leading-tight">{pov.desc.toUpperCase()}</span>
+                                {pov.tag && (
+                                  <span className="text-[6.5px] px-1 py-0.2 bg-white/5 text-zinc-400 font-mono rounded shrink-0">{pov.tag}</span>
+                                )}
+                              </div>
                             </button>
                           );
                         })}
