@@ -861,10 +861,10 @@ export async function sellCards(
 }
 
 /** Buy a Vault Pack (or Bombshell Pack) using tokens (cost from admin config) */
-export async function buyTokenPack(packType: 'vault_token' | 'bombshell_token' = 'vault_token'): Promise<OwnedCard[] | 'insufficient'> {
+export async function buyTokenPack(packType: 'vault_token' | 'bombshell_token' = 'vault_token', size: PackSize = 'single'): Promise<OwnedCard[] | 'insufficient'> {
   try {
     const { data, error } = await supabase.functions.invoke('vault-engine', {
-      body: { action: 'purchasePack', payload: { packType } }
+      body: { action: 'purchasePack', payload: { packType, size } }
     });
 
     if (error || !data?.success) {
@@ -919,13 +919,14 @@ export async function buyTokenPack(packType: 'vault_token' | 'bombshell_token' =
   }
 }
 
-/** Buy a 1-Card Bombshell Pull using tokens (100 V⚡) */
-export async function buyBombshellTokenPack(): Promise<OwnedCard[] | 'insufficient'> {
-  return buyTokenPack('bombshell_token');
+/** Buy Bombshell Pull using tokens (100 V⚡ per card) */
+export async function buyBombshellTokenPack(size: PackSize = 'single'): Promise<OwnedCard[] | 'insufficient'> {
+  return buyTokenPack('bombshell_token', size);
 }
 
-export function getBombshellTokenPackCost(): number {
-  return 100;
+export function getBombshellTokenPackCost(size: PackSize = 'single'): number {
+  const mult = size === 'fifty' ? 50 : size === 'twentyfive' ? 25 : size === 'ten' ? 10 : size === 'five' ? 5 : size === 'double' ? 2 : 1;
+  return 100 * mult;
 }
 
 export function getTokenPackCost(): number {

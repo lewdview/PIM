@@ -795,6 +795,7 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
   }, [collection]);
 
   const [showFragmentDecrypter, setShowFragmentDecrypter] = useState(false);
+  const [hasDecryptedFragments, setHasDecryptedFragments] = useState(false);
   const [decrypterPhase, setDecrypterPhase] = useState<'idle' | 'shaking' | 'bursting' | 'revealed'>('idle');
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const particlesRef = useRef<ShardParticle[]>([]);
@@ -873,6 +874,13 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
   const [fragmentRewards, setFragmentRewards] = useState<FragmentReward[]>([]);
 
   const handleStartDecrypter = useCallback(() => {
+    // If already decrypted for this pack opening session, jump directly to the revealed tally
+    if (hasDecryptedFragments) {
+      setShowFragmentDecrypter(true);
+      setDecrypterPhase('revealed');
+      return;
+    }
+
     const grouped: { [cardId: string]: { card: OwnedCard['card']; totalGain: number } } = {};
     
     accumulatedCards.forEach((owned) => {
@@ -897,7 +905,7 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
       const oldTotal = useVaultStore.getState().fragments[card.id] ?? 0;
       const newTotal = Math.min(10, oldTotal + totalGain);
 
-      // Sync fragment count to database and store state
+      // Sync fragment count to database and store state ONLY ONCE
       useVaultStore.getState().syncFragments(card.id, newTotal);
 
       return {
@@ -914,9 +922,10 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
     });
 
     setFragmentRewards(rewards);
+    setHasDecryptedFragments(true);
     setShowFragmentDecrypter(true);
     setDecrypterPhase('idle');
-  }, [accumulatedCards]);
+  }, [accumulatedCards, hasDecryptedFragments]);
 
   useEffect(() => {
     if (firstUnlockCard && firstUnlockCard.card.audioUrl) {
@@ -980,6 +989,7 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
     
     // Reset decrypter states
     setShowFragmentDecrypter(false);
+    setHasDecryptedFragments(false);
     setDecrypterPhase('idle');
     setFragmentRewards([]);
 
@@ -1934,7 +1944,7 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.98 }}
             >
-              [ Decrypt Fragments ]
+              {hasDecryptedFragments ? '[ VIEW FRAGMENTS ]' : '[ DECRYPT FRAGMENTS ]'}
             </motion.button>
           </motion.div>
         )}
@@ -2127,7 +2137,9 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
             <button
               onClick={() => {
                 setShowFragmentDecrypter(false);
-                setDecrypterPhase('idle');
+                if (!hasDecryptedFragments) {
+                  setDecrypterPhase('idle');
+                }
               }}
               style={{
                 position: 'absolute',
@@ -2472,7 +2484,6 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
                     transition={{ delay: fragmentRewards.length * 0.15 + 1.1 }}
                     onClick={() => {
                       setShowFragmentDecrypter(false);
-                      setDecrypterPhase('idle');
                     }}
                     className="flex-1 py-3 text-xs font-black italic tracking-wider uppercase border-2 border-white/20 hover:border-white/40 cursor-pointer transition-all"
                     style={{

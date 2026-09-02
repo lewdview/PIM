@@ -10,7 +10,7 @@ import UltraRewardModal from '../components/UltraRewardModal';
 import PackRipAnimation from '../components/PackRipAnimation';
 import PackContainer from '../components/cinematic/PackContainer';
 
-import { purchasePack, buyTokenPack, sellCard, getTokenPackCost, verifyStripeSessionDetailed, type OwnedCard } from '../services/vaultService';
+import { purchasePack, buyTokenPack, getBombshellTokenPackCost, sellCard, getTokenPackCost, verifyStripeSessionDetailed, type OwnedCard } from '../services/vaultService';
 import { PACK_CONFIGS, type PackCategory, type PackSize } from '../utils/rarity';
 import { getRandomBombshellPackCover } from '../utils/bombshellCards';
 import { audioManager } from '../game/audio';
@@ -173,7 +173,7 @@ export default function PackRevealPage() {
     const { category, size } = revealPackMeta;
 
     // Client-side balance guard for token packs
-    const reqCost = category === 'bombshell_token' ? 100 : getTokenPackCost();
+    const reqCost = category === 'bombshell_token' ? getBombshellTokenPackCost(size as any) : getTokenPackCost();
     if ((category === 'vault_token' || category === 'bombshell_token') && tokenBalance < reqCost) {
       alert(`Not enough V⚡ tokens. You need ${reqCost} V⚡ but only have ${tokenBalance}.`);
       return;
@@ -184,7 +184,7 @@ export default function PackRevealPage() {
 
     try {
       const cards = (category === 'vault_token' || category === 'bombshell_token')
-        ? await buyTokenPack(category)
+        ? await buyTokenPack(category, size as any)
         : await purchasePack(category as any, size as any);
 
       if (cards === 'insufficient') {

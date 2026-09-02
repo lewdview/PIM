@@ -228,7 +228,7 @@ export default function CyberPackBag({
   
   let requiredTokens = 0;
   if (category === 'vault_token') requiredTokens = tokenPackCost;
-  else if (category === 'bombshell_token') requiredTokens = 100;
+  else if (category === 'bombshell_token') requiredTokens = 100 * (tier.cardCount || 1);
   else if (category === 'targeted_pull') requiredTokens = 500;
   else if (category === 'rarity_upgrade') requiredTokens = 150;
 
