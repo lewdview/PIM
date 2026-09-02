@@ -19,7 +19,7 @@ function getProvider() {
 }
 
 // The address that receives the crypto payments on Base
-export const VAULT_COLLECTOR_ADDRESS = import.meta.env.VITE_VAULT_COLLECTOR_ADDRESS || '0x985606faaad78887df96002a3555ccf2c8640a08';
+export const VAULT_COLLECTOR_ADDRESS = import.meta.env.VITE_VAULT_COLLECTOR_ADDRESS || '';
 
 /**
  * Handle crypto payment via Coinbase Wallet SDK on Base Mainnet.
@@ -69,6 +69,7 @@ export async function payWithCrypto(amountUsd: number) {
 
   // 3. Formulate Base USDC (6 decimals) transfer function data
   const usdcAddress = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913';
+  if (!VAULT_COLLECTOR_ADDRESS) throw new Error('VAULT_COLLECTOR_ADDRESS is missing');
   const recipient = VAULT_COLLECTOR_ADDRESS;
   const usdcAmount = BigInt(Math.floor(amountUsd * 1000000));
 
