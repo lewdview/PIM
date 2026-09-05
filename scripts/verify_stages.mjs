@@ -8,7 +8,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const songsDir = path.join(__dirname, '../public/data/songs');
+const songsDir = process.argv[2] ? path.resolve(process.argv[2]) : path.join(__dirname, '../public/data/songs');
 
 const testFiles = ['day-001.json', 'day-050.json', 'day-100.json', 'day-200.json'];
 

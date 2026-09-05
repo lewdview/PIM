@@ -1735,8 +1735,9 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                     <h3 className="font-mono text-[9px] font-black text-white/40 uppercase tracking-wider">CHART EDITION ARCHIVE</h3>
                     <span className="font-mono text-[7px] text-[#39FF14] uppercase tracking-widest">AI / MASTER EDITIONS</span>
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
                     {[
+                      { id: 'v5_flagship', label: 'V5 FLAGSHIP', desc: 'Kinesthetics & Motifs (All Notes)' },
                       { id: 'v4_neural', label: 'NEURAL AI', desc: 'Transformer Seq2Seq + OPARL RL' },
                       { id: 'v3_master', label: 'V3 MASTER', desc: '8-Way Swipes & Overdrive' },
                       { id: 'v1_gimmicks', label: 'V1 GIMMICKS', desc: 'Mines, Stems & Drops' },
@@ -1771,7 +1772,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                     })}
                   </div>
                   <p className="font-mono text-[7.5px] text-zinc-500 leading-normal uppercase">
-                    NEURAL AI: SEQUENCE-TO-SEQUENCE TRANSFORMER ATTENTION WEIGHTING WITH OPARL REAL-TIME ADAPTATION · V3 MASTER: CANONICAL 8-WAY SWIPE & OVERDRIVE ENGINE
+                    V5 FLAGSHIP: TWO-THUMB KINESTHETICS, MOTIF MEMORY & ALL NOTE TYPES · NEURAL AI: SEQ2SEQ TRANSFORMER · V3 MASTER: 8-WAY SWIPE OVERDRIVE
                   </p>
                 </div>
 

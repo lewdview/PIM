@@ -64,9 +64,9 @@ const TRANSITION_GAP_BEATS = 4;
 const STAGE_ALLOWED_TYPES = {
   1: new Set(['tap']),
   2: new Set(['tap', 'hold']),
-  3: new Set(['tap', 'hold', 'swipe', 'accent']),
-  4: new Set(['tap', 'hold', 'swipe', 'accent', 'remix', 'break', 'lift', 'mine', 'zigzag', 'burst']),
-  5: new Set(['tap', 'hold', 'swipe', 'accent', 'remix', 'break', 'lift', 'mine', 'zigzag', 'burst']),
+  3: new Set(['tap', 'hold', 'swipe', 'accent', 'slide']),
+  4: new Set(['tap', 'hold', 'swipe', 'hold-swipe', 'slide', 'accent', 'remix', 'break', 'lift', 'mine', 'zigzag', 'burst']),
+  5: new Set(['tap', 'hold', 'swipe', 'hold-swipe', 'slide', 'accent', 'remix', 'break', 'lift', 'mine', 'zigzag', 'burst']),
 };
 
 /**
@@ -98,25 +98,34 @@ function getStageForTime(time, stageBounds) {
 
 /**
  * Check if a time falls inside a transition gap between stages.
+ * A gap of TRANSITION_GAP_BEATS occurs just after each stage boundary (except stage 5 end).
+ *
  * @param {number} time - Note time in seconds
- * @param {number[]} boundaries - Array of boundary times
- * @param {number} gapDuration - Gap duration in seconds
- * @returns {boolean}
+ * @param {object[]} stageBounds - Array of stage boundary objects
+ * @param {number} beatDuration - Duration of one beat in seconds
+ * @returns {boolean} True if note falls in a transition gap
  */
-function isInTransitionGap(time, boundaries, gapDuration) {
-  // Gap starts 0.3 beats before boundary, extends gapDuration after
-  return boundaries.some(b => time >= b - 0.1 && time <= b + gapDuration);
+function isInTransitionGap(time, stageBounds, beatDuration) {
+  const gapDuration = TRANSITION_GAP_BEATS * beatDuration;
+  // Gaps occur at the end of stages 1, 2, 3, 4 (which is the start of stages 2, 3, 4, 5)
+  for (let i = 1; i < stageBounds.length; i++) {
+    const boundaryTime = stageBounds[i].startTime;
+    if (time >= boundaryTime && time < boundaryTime + gapDuration) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /**
- * Calculate the minimum spacing for a note based on its position within its stage.
- * Spacing is wider at stage start and tighter at stage end (density ramp).
+ * Calculate the minimum note spacing at a given point within a stage.
+ * Interpolates from wide spacing at stage start to tight spacing at stage end.
  *
  * @param {number} time - Note time in seconds
  * @param {number} stage - Stage number 1-5
- * @param {object[]} stageBounds - Stage boundary objects
+ * @param {object[]} stageBounds - Array of stage boundary objects
  * @param {number} beatDuration - Duration of one beat in seconds
- * @returns {number} Minimum time gap in seconds before the next note
+ * @returns {number} Minimum spacing in seconds
  */
 function getMinSpacing(time, stage, stageBounds, beatDuration) {
   const sb = stageBounds[stage - 1];
@@ -156,15 +165,47 @@ function gateNoteType(note, stage, difficultyLevel) {
     return clone;
   }
 
-  // Downgrade unsupported types to tap
-  if (clone.type === 'swipe') {
+  // Downgrade unsupported types gracefully
+  if (clone.type === 'hold-swipe') {
+    if (allowed.has('hold')) {
+      clone.type = 'hold';
+      if (stage <= 2) delete clone.swipeDirection;
+    } else {
+      clone.type = 'tap';
+      delete clone.holdDuration;
+      delete clone.swipeDirection;
+    }
+  } else if (clone.type === 'slide') {
+    if (allowed.has('hold')) {
+      clone.type = 'hold';
+      delete clone.targetLane;
+    } else {
+      clone.type = 'tap';
+      delete clone.holdDuration;
+      delete clone.targetLane;
+    }
+  } else if (clone.type === 'zigzag') {
+    if (allowed.has('slide')) {
+      clone.type = 'slide';
+      delete clone.zigzagAmplitude;
+    } else if (allowed.has('hold')) {
+      clone.type = 'hold';
+      delete clone.targetLane;
+      delete clone.zigzagAmplitude;
+    } else {
+      clone.type = 'tap';
+      delete clone.holdDuration;
+      delete clone.targetLane;
+      delete clone.zigzagAmplitude;
+    }
+  } else if (clone.type === 'swipe') {
     clone.type = 'tap';
     delete clone.swipeDirection;
   } else if (clone.type === 'hold' && !allowed.has('hold')) {
     clone.type = 'tap';
     delete clone.holdDuration;
     delete clone.targetLane;
-  } else if (clone.type === 'remix' || clone.type === 'break' || clone.type === 'accent' || clone.type === 'lift') {
+  } else if (clone.type === 'remix' || clone.type === 'break' || clone.type === 'accent' || clone.type === 'lift' || clone.type === 'burst') {
     clone.type = 'tap';
     delete clone.remixEffect;
   }
@@ -175,11 +216,14 @@ function gateNoteType(note, stage, difficultyLevel) {
     delete clone.targetLane;
     delete clone.swipeDirection;
     delete clone.remixEffect;
+    delete clone.zigzagAmplitude;
   }
 
   // Stage 2: strip swipe-related fields (holds are ok)
   if (stage === 2) {
     delete clone.swipeDirection;
+    delete clone.targetLane;
+    delete clone.zigzagAmplitude;
   }
 
   return clone;
