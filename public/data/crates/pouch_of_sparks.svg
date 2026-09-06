@@ -1,0 +1,159 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <defs>
+    <!-- Background & Aura Glows -->
+    <radialGradient id="sparkAura" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFD700" stop-opacity="0.35" />
+      <stop offset="45%" stop-color="#FF9900" stop-opacity="0.18" />
+      <stop offset="80%" stop-color="#FF5500" stop-opacity="0.05" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="corePlasma" cx="50%" cy="45%" r="40%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="25%" stop-color="#FFF380" />
+      <stop offset="60%" stop-color="#FFB800" />
+      <stop offset="90%" stop-color="#FF5500" />
+      <stop offset="100%" stop-color="#802000" />
+    </radialGradient>
+    
+    <!-- Metallic Material Gradients -->
+    <linearGradient id="armorMetal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2D2E36" />
+      <stop offset="25%" stop-color="#1E1F24" />
+      <stop offset="50%" stop-color="#141519" />
+      <stop offset="75%" stop-color="#262730" />
+      <stop offset="100%" stop-color="#0E0F12" />
+    </linearGradient>
+    <linearGradient id="pouchFabric" x1="20%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%" stop-color="#3A3018" />
+      <stop offset="30%" stop-color="#211C0F" />
+      <stop offset="70%" stop-color="#15120A" />
+      <stop offset="100%" stop-color="#0B0905" />
+    </linearGradient>
+    <linearGradient id="goldTrim" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FF9900" />
+      <stop offset="40%" stop-color="#FFE57F" />
+      <stop offset="70%" stop-color="#FFB800" />
+      <stop offset="100%" stop-color="#D97706" />
+    </linearGradient>
+    <linearGradient id="energyBeam" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.9" />
+      <stop offset="30%" stop-color="#FFE600" stop-opacity="0.8" />
+      <stop offset="80%" stop-color="#FF9900" stop-opacity="0.3" />
+      <stop offset="100%" stop-color="#FF5500" stop-opacity="0" />
+    </linearGradient>
+
+    <!-- Filters -->
+    <filter id="neonGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="8" result="blur1" />
+      <feGaussianBlur stdDeviation="18" result="blur2" />
+      <feMerge>
+        <feMergeNode in="blur2" />
+        <feMergeNode in="blur1" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    <filter id="intenseGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="12" result="blur" />
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="2" />
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    <pattern id="carbonGrid" width="12" height="12" patternUnits="userSpaceOnUse">
+      <rect width="6" height="6" fill="#1C1810" />
+      <rect x="6" width="6" height="6" fill="#14110B" />
+      <rect y="6" width="6" height="6" fill="#14110B" />
+      <rect x="6" y="6" width="6" height="6" fill="#1C1810" />
+    </pattern>
+  </defs>
+
+  <!-- Ambient Backdrop Glow -->
+  <circle cx="250" cy="250" r="230" fill="url(#sparkAura)" />
+
+  <!-- Background Cybernetics & Target Grids -->
+  <g opacity="0.25" stroke="#FFB800" stroke-width="1" fill="none">
+    <circle cx="250" cy="250" r="190" stroke-dasharray="6 8" />
+    <circle cx="250" cy="250" r="145" stroke-dasharray="2 6" />
+    <line x1="250" y1="20" x2="250" y2="70" />
+    <line x1="250" y1="430" x2="250" y2="480" />
+    <line x1="20" y1="250" x2="70" y2="250" />
+    <line x1="430" y1="250" x2="480" y2="250" />
+  </g>
+
+  <!-- Holographic Voltage HUD Rings -->
+  <g opacity="0.4" stroke="#FFB800" stroke-width="1.5" fill="none" filter="url(#neonGlow)">
+    <path d="M 130 180 A 150 150 0 0 1 370 180" stroke-dasharray="14 10" />
+    <path d="M 110 320 A 160 160 0 0 0 390 320" stroke-dasharray="8 6" />
+  </g>
+
+  <!-- Floating Spark Nodes & Electrical Discharges -->
+  <g filter="url(#intenseGlow)">
+    <path d="M 210 130 L 225 155 L 215 160 L 235 190" stroke="#FFE57F" stroke-width="2.5" fill="none" opacity="0.85" />
+    <path d="M 290 125 L 275 150 L 285 158 L 265 195" stroke="#FFB800" stroke-width="2.5" fill="none" opacity="0.8" />
+    <path d="M 150 250 L 175 240 L 165 260 L 190 255" stroke="#FFD700" stroke-width="2" fill="none" opacity="0.7" />
+    <path d="M 350 250 L 325 242 L 335 262 L 310 255" stroke="#FF9900" stroke-width="2" fill="none" opacity="0.7" />
+  </g>
+
+  <!-- Pouch Shadow -->
+  <ellipse cx="250" cy="405" rx="140" ry="26" fill="#000000" opacity="0.65" />
+
+  <!-- POUCH MAIN BODY -->
+  <g id="PouchContainer">
+    <!-- Pouch Base Silhouettes -->
+    <path d="M 170 180 C 140 230 135 340 160 385 C 185 410 315 410 340 385 C 365 340 360 230 330 180 Z" 
+          fill="url(#pouchFabric)" stroke="#1A150D" stroke-width="4" />
+    <path d="M 170 180 C 140 230 135 340 160 385 C 185 410 315 410 340 385 C 365 340 360 230 330 180 Z" 
+          fill="url(#carbonGrid)" opacity="0.55" />
+
+    <!-- Side Cyber Conduits & Reinforced Ribs -->
+    <path d="M 165 220 C 150 260 148 320 168 360" stroke="url(#goldTrim)" stroke-width="5" stroke-linecap="round" fill="none" filter="url(#neonGlow)" />
+    <path d="M 335 220 C 350 260 352 320 332 360" stroke="url(#goldTrim)" stroke-width="5" stroke-linecap="round" fill="none" filter="url(#neonGlow)" />
+
+    <!-- Central Energy Core Window -->
+    <ellipse cx="250" cy="285" rx="52" ry="68" fill="#0E0A05" stroke="#FFB800" stroke-width="3" />
+    <ellipse cx="250" cy="285" rx="46" ry="60" fill="url(#corePlasma)" filter="url(#intenseGlow)" opacity="0.95" />
+
+    <!-- Core Lightning Symbol -->
+    <path d="M 256 240 L 234 282 L 252 284 L 242 330 L 268 280 L 250 278 Z" 
+          fill="#FFFFFF" stroke="#FFD700" stroke-width="1.5" filter="url(#intenseGlow)" />
+
+    <!-- Horizontal Compression Straps with Gold Buckles -->
+    <path d="M 152 250 Q 250 268 348 250" stroke="#121316" stroke-width="10" fill="none" />
+    <path d="M 152 250 Q 250 268 348 250" stroke="#FFB800" stroke-width="2" stroke-dasharray="4 6" fill="none" />
+
+    <path d="M 158 335 Q 250 355 342 335" stroke="#121316" stroke-width="10" fill="none" />
+    <path d="M 158 335 Q 250 355 342 335" stroke="#FFB800" stroke-width="2" stroke-dasharray="4 6" fill="none" />
+
+    <!-- POUCH NECK / CINCH COLLAR (Hardware Alloy) -->
+    <!-- Collar Base -->
+    <path d="M 195 180 L 180 145 L 320 145 L 305 180 Z" fill="url(#armorMetal)" stroke="#3A3B45" stroke-width="3" />
+    <line x1="180" y1="145" x2="320" y2="145" stroke="url(#goldTrim)" stroke-width="3" />
+
+    <!-- Industrial Cinch Clamps -->
+    <rect x="232" y="140" width="36" height="38" rx="5" fill="#15161A" stroke="url(#goldTrim)" stroke-width="2" />
+    <circle cx="250" cy="159" r="7" fill="#FFB800" filter="url(#neonGlow)" />
+
+    <!-- Upper Energy Vents / Plasma Escape -->
+    <path d="M 205 145 L 215 125 L 285 125 L 295 145 Z" fill="#0C0D10" stroke="#252630" stroke-width="2" />
+    <polygon points="230,140 250,90 270,140" fill="url(#energyBeam)" />
+
+    <!-- Floating Energy Particles -->
+    <circle cx="240" cy="115" r="3" fill="#FFFFFF" filter="url(#neonGlow)" />
+    <circle cx="265" cy="100" r="2.5" fill="#FFEA79" filter="url(#neonGlow)" />
+    <circle cx="225" cy="85" r="2" fill="#FFB800" filter="url(#neonGlow)" />
+    <circle cx="270" cy="70" r="3" fill="#FF9900" filter="url(#neonGlow)" />
+    <circle cx="250" cy="55" r="2" fill="#FFFFFF" filter="url(#neonGlow)" />
+
+    <!-- Specular Highlights on Chassis -->
+    <path d="M 180 195 C 160 235 155 300 168 340" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.3" />
+  </g>
+
+  <!-- Technical Telemetry Typography & Labels -->
+  <g font-family="'JetBrains Mono', 'Roboto Mono', monospace" font-size="10" font-weight="900" fill="#FFB800" letter-spacing="2">
+    <text x="250" y="440" text-anchor="middle" opacity="0.9">V⚡ ENERGY POUCH // 200 SPK</text>
+    <text x="250" y="458" text-anchor="middle" font-size="8" fill="#FF9900" opacity="0.6">CLASS-A CAPACITOR CELL</text>
+  </g>
+</svg>

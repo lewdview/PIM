@@ -1,0 +1,162 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <defs>
+    <!-- Background & Aura Glows -->
+    <radialGradient id="goldVaultAura" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFD700" stop-opacity="0.38" />
+      <stop offset="40%" stop-color="#FF9900" stop-opacity="0.22" />
+      <stop offset="75%" stop-color="#FF5500" stop-opacity="0.06" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="reactorCoreGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="30%" stop-color="#FFF066" />
+      <stop offset="65%" stop-color="#FFB800" />
+      <stop offset="90%" stop-color="#FF5500" />
+      <stop offset="100%" stop-color="#802000" />
+    </radialGradient>
+
+    <!-- Metal & Alloy Gradients -->
+    <linearGradient id="vaultGoldMetal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFF3A8" />
+      <stop offset="25%" stop-color="#E5B800" />
+      <stop offset="60%" stop-color="#996E00" />
+      <stop offset="85%" stop-color="#E5B800" />
+      <stop offset="100%" stop-color="#664900" />
+    </linearGradient>
+    <linearGradient id="heavyTungsten" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2D2A24" />
+      <stop offset="40%" stop-color="#1A1814" />
+      <stop offset="75%" stop-color="#12110D" />
+      <stop offset="100%" stop-color="#22201A" />
+    </linearGradient>
+    <linearGradient id="hazardPatternGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#FFB800" />
+      <stop offset="100%" stop-color="#FF9900" />
+    </linearGradient>
+
+    <!-- Filters -->
+    <filter id="goldGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="8" result="blur1" />
+      <feGaussianBlur stdDeviation="18" result="blur2" />
+      <feMerge>
+        <feMergeNode in="blur2" />
+        <feMergeNode in="blur1" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    <filter id="intenseReactorGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="14" result="blur" />
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="2.5" />
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <!-- Hazard Stripes Pattern -->
+    <pattern id="hazardStripes" width="20" height="20" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+      <rect width="10" height="20" fill="#E5B800" />
+      <rect x="10" width="10" height="20" fill="#12110D" />
+    </pattern>
+    <pattern id="carbonMesh" width="8" height="8" patternUnits="userSpaceOnUse">
+      <rect width="4" height="4" fill="#26231C" />
+      <rect x="4" width="4" height="4" fill="#181611" />
+      <rect y="4" width="4" height="4" fill="#181611" />
+      <rect x="4" y="4" width="4" height="4" fill="#26231C" />
+    </pattern>
+  </defs>
+
+  <!-- Ambient Golden Aura -->
+  <circle cx="250" cy="250" r="230" fill="url(#goldVaultAura)" />
+
+  <!-- Background Tech Radar & Vault Locking Radii -->
+  <g opacity="0.25" stroke="#FFD700" stroke-width="1" fill="none">
+    <circle cx="250" cy="250" r="210" stroke-dasharray="12 10" />
+    <circle cx="250" cy="250" r="170" stroke-dasharray="4 8" />
+    <polygon points="250,50 423,150 423,350 250,450 77,350 77,150" stroke="#FF9900" stroke-width="1" stroke-dasharray="6 12" />
+  </g>
+
+  <!-- Drop Shadow -->
+  <ellipse cx="250" cy="425" rx="165" ry="25" fill="#000000" opacity="0.75" />
+
+  <!-- VAULT STASH MAIN BODY -->
+  <g id="VaultStashChest">
+    <!-- Outer Heavy Fortified Crate Shell -->
+    <path d="M 95 150 L 405 150 L 435 185 L 435 375 L 405 405 L 95 405 L 65 375 L 65 185 Z" 
+          fill="url(#heavyTungsten)" stroke="#383324" stroke-width="4" />
+    
+    <!-- Carbon Mesh Texture on Front Face -->
+    <path d="M 95 150 L 405 150 L 435 185 L 435 375 L 405 405 L 95 405 L 65 375 L 65 185 Z" 
+          fill="url(#carbonMesh)" opacity="0.4" />
+
+    <!-- Solid Gold Perimeter Trim / Reinforcement Bevel -->
+    <path d="M 105 160 L 395 160 L 420 190 L 420 365 L 395 390 L 105 390 L 80 365 L 80 190 Z" 
+          fill="none" stroke="url(#vaultGoldMetal)" stroke-width="5" filter="url(#goldGlow)" />
+
+    <!-- Top Hazard Caution Strip -->
+    <rect x="110" y="170" width="280" height="14" fill="url(#hazardStripes)" stroke="#0E0D0A" stroke-width="1.5" />
+    <!-- Bottom Hazard Caution Strip -->
+    <rect x="110" y="370" width="280" height="14" fill="url(#hazardStripes)" stroke="#0E0D0A" stroke-width="1.5" />
+
+    <!-- Left & Right Hydraulic Piston Clamps -->
+    <rect x="75" y="225" width="24" height="85" rx="4" fill="url(#vaultGoldMetal)" stroke="#1F1B12" stroke-width="2" />
+    <circle cx="87" cy="245" r="4" fill="#FF5500" filter="url(#goldGlow)" />
+    <circle cx="87" cy="285" r="4" fill="#FF5500" filter="url(#goldGlow)" />
+
+    <rect x="401" y="225" width="24" height="85" rx="4" fill="url(#vaultGoldMetal)" stroke="#1F1B12" stroke-width="2" />
+    <circle cx="413" cy="245" r="4" fill="#FF5500" filter="url(#goldGlow)" />
+    <circle cx="413" cy="285" r="4" fill="#FF5500" filter="url(#goldGlow)" />
+
+    <!-- Inset Magnetic Vault Door Plate -->
+    <rect x="120" y="196" width="260" height="162" rx="10" fill="#0F0E0B" stroke="#2B2618" stroke-width="3" />
+
+    <!-- DUAL ROTARY MAGNETIC REACTOR CORE LOCKS -->
+    <!-- Left Reactor Lock -->
+    <g transform="translate(195, 275)">
+      <circle cx="0" cy="0" r="45" fill="#0B0905" stroke="#E5B800" stroke-width="3" />
+      <circle cx="0" cy="0" r="36" fill="url(#reactorCoreGlow)" filter="url(#intenseReactorGlow)" opacity="0.95" />
+      <!-- Turbine Spokes -->
+      <line x1="-32" y1="0" x2="32" y2="0" stroke="#121008" stroke-width="5" stroke-linecap="round" />
+      <line x1="0" y1="-32" x2="0" y2="32" stroke="#121008" stroke-width="5" stroke-linecap="round" />
+      <line x1="-22" y1="-22" x2="22" y2="22" stroke="#121008" stroke-width="5" stroke-linecap="round" />
+      <line x1="-22" y1="22" x2="22" y2="-22" stroke="#121008" stroke-width="5" stroke-linecap="round" />
+      <circle cx="0" cy="0" r="14" fill="#FFFFFF" stroke="#FFD700" stroke-width="2" filter="url(#goldGlow)" />
+    </g>
+
+    <!-- Right Reactor Lock -->
+    <g transform="translate(305, 275)">
+      <circle cx="0" cy="0" r="45" fill="#0B0905" stroke="#E5B800" stroke-width="3" />
+      <circle cx="0" cy="0" r="36" fill="url(#reactorCoreGlow)" filter="url(#intenseReactorGlow)" opacity="0.95" />
+      <!-- Turbine Spokes -->
+      <line x1="-32" y1="0" x2="32" y2="0" stroke="#121008" stroke-width="5" stroke-linecap="round" />
+      <line x1="0" y1="-32" x2="0" y2="32" stroke="#121008" stroke-width="5" stroke-linecap="round" />
+      <line x1="-22" y1="-22" x2="22" y2="22" stroke="#121008" stroke-width="5" stroke-linecap="round" />
+      <line x1="-22" y1="22" x2="22" y2="-22" stroke="#121008" stroke-width="5" stroke-linecap="round" />
+      <circle cx="0" cy="0" r="14" fill="#FFFFFF" stroke="#FFD700" stroke-width="2" filter="url(#goldGlow)" />
+    </g>
+
+    <!-- Central Energy Bridge / Conduits -->
+    <rect x="235" y="270" width="30" height="10" fill="#FFB800" filter="url(#goldGlow)" />
+    <path d="M 195 215 L 250 240 L 305 215" fill="none" stroke="#FFD700" stroke-width="3" filter="url(#goldGlow)" />
+
+    <!-- Corner Heavy Rivets -->
+    <circle cx="112" cy="208" r="4" fill="#FFD700" />
+    <circle cx="388" cy="208" r="4" fill="#FFD700" />
+    <circle cx="112" cy="346" r="4" fill="#FFD700" />
+    <circle cx="388" cy="346" r="4" fill="#FFD700" />
+
+    <!-- Status Plate Tag -->
+    <rect x="200" y="202" width="100" height="16" rx="3" fill="#17140C" stroke="#E5B800" stroke-width="1.5" />
+    <text x="250" y="214" font-family="'JetBrains Mono', 'Roboto Mono', monospace" font-size="8.5" font-weight="900" fill="#FFD700" text-anchor="middle" letter-spacing="2">
+      VAULT // STASH 09
+    </text>
+  </g>
+
+  <!-- Technical Telemetry Typography & Labels -->
+  <g font-family="'JetBrains Mono', 'Roboto Mono', monospace" font-size="10" font-weight="900" fill="#FFD700" letter-spacing="2">
+    <text x="250" y="440" text-anchor="middle" opacity="0.9">VAULT STASH // 2500 SPK</text>
+    <text x="250" y="458" text-anchor="middle" font-size="8" fill="#FF9900" opacity="0.6">CLASS-9 FORTIFIED ARSENAL</text>
+  </g>
+</svg>

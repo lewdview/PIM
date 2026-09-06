@@ -1,0 +1,172 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
+  <defs>
+    <!-- Background & Aura Glows -->
+    <radialGradient id="cyanAura" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00F0FF" stop-opacity="0.32" />
+      <stop offset="45%" stop-color="#3B82F6" stop-opacity="0.18" />
+      <stop offset="80%" stop-color="#1D4ED8" stop-opacity="0.05" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="hologramCore" cx="50%" cy="50%" r="45%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.9" />
+      <stop offset="30%" stop-color="#A5F3FC" stop-opacity="0.8" />
+      <stop offset="70%" stop-color="#00E5FF" stop-opacity="0.4" />
+      <stop offset="100%" stop-color="#0284C7" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Metallic Armor Gradients -->
+    <linearGradient id="crateSteel" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E2638" />
+      <stop offset="35%" stop-color="#111726" />
+      <stop offset="70%" stop-color="#0A0E1A" />
+      <stop offset="100%" stop-color="#151C2C" />
+    </linearGradient>
+    <linearGradient id="crateFrontPlate" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1F293D" />
+      <stop offset="50%" stop-color="#131B2A" />
+      <stop offset="100%" stop-color="#0B101A" />
+    </linearGradient>
+    <linearGradient id="neonCyan" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38BDF8" />
+      <stop offset="50%" stop-color="#00F0FF" />
+      <stop offset="100%" stop-color="#0284C7" />
+    </linearGradient>
+    <linearGradient id="cyanLaser" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="50%" stop-color="#00F0FF" />
+      <stop offset="100%" stop-color="#0284C7" />
+    </linearGradient>
+
+    <!-- Filters -->
+    <filter id="cyanGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="7" result="blur1" />
+      <feGaussianBlur stdDeviation="16" result="blur2" />
+      <feMerge>
+        <feMergeNode in="blur2" />
+        <feMergeNode in="blur1" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    <filter id="laserBeamGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="10" result="blur" />
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="2.2" />
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <!-- Patterns -->
+    <pattern id="hexTechGrid" width="20" height="34.64" patternUnits="userSpaceOnUse">
+      <path d="M 10 0 L 20 5.77 L 20 17.32 L 10 23.09 L 0 17.32 L 0 5.77 Z" fill="none" stroke="#00F0FF" stroke-width="0.75" opacity="0.15" />
+      <path d="M 10 34.64 L 20 28.87 L 20 17.32 L 10 23.09 L 0 17.32 L 0 28.87 Z" fill="none" stroke="#00F0FF" stroke-width="0.75" opacity="0.15" />
+    </pattern>
+  </defs>
+
+  <!-- Ambient Backdrop Glow -->
+  <circle cx="250" cy="250" r="230" fill="url(#cyanAura)" />
+
+  <!-- Background Cybernetics & Target Grids -->
+  <g opacity="0.3" stroke="#00F0FF" stroke-width="1" fill="none">
+    <circle cx="250" cy="250" r="200" stroke-dasharray="10 14" />
+    <circle cx="250" cy="250" r="160" stroke-dasharray="3 7" />
+    <line x1="250" y1="10" x2="250" y2="60" />
+    <line x1="250" y1="440" x2="250" y2="490" />
+    <line x1="10" y1="250" x2="60" y2="250" />
+    <line x1="440" y1="250" x2="490" y2="250" />
+  </g>
+
+  <!-- Crate Ground Shadow -->
+  <ellipse cx="250" cy="425" rx="160" ry="24" fill="#000000" opacity="0.7" />
+
+  <!-- CRATE MAIN CHASSIS -->
+  <g id="CipherCrateContainer">
+    <!-- Outer Heavy Armor Hull (Chamfered Octagonal Crate) -->
+    <polygon points="120,130 380,130 420,170 420,350 380,390 120,390 80,350 80,170" 
+             fill="url(#crateSteel)" stroke="#222C42" stroke-width="4" />
+    
+    <!-- Hex Pattern Overlay on Hull -->
+    <polygon points="120,130 380,130 420,170 420,350 380,390 120,390 80,350 80,170" 
+             fill="url(#hexTechGrid)" />
+
+    <!-- Corner Shock Dampener Brackets (Tactical Armor) -->
+    <!-- Top-Left -->
+    <polygon points="80,170 120,130 145,130 110,165 110,200 80,200" fill="#0A0E17" stroke="#38BDF8" stroke-width="2" />
+    <!-- Top-Right -->
+    <polygon points="420,170 380,130 355,130 390,165 390,200 420,200" fill="#0A0E17" stroke="#38BDF8" stroke-width="2" />
+    <!-- Bottom-Left -->
+    <polygon points="80,350 120,390 145,390 110,355 110,320 80,320" fill="#0A0E17" stroke="#38BDF8" stroke-width="2" />
+    <!-- Bottom-Right -->
+    <polygon points="420,350 380,390 355,390 390,355 390,320 420,320" fill="#0A0E17" stroke="#38BDF8" stroke-width="2" />
+
+    <!-- Bolt Rivets on Corners -->
+    <circle cx="105" cy="155" r="3" fill="#00F0FF" />
+    <circle cx="395" cy="155" r="3" fill="#00F0FF" />
+    <circle cx="105" cy="365" r="3" fill="#00F0FF" />
+    <circle cx="395" cy="365" r="3" fill="#00F0FF" />
+
+    <!-- Inner Inset Electronic Faceplate -->
+    <polygon points="135,155 365,155 395,185 395,335 365,365 135,365 105,335 105,185" 
+             fill="url(#crateFrontPlate)" stroke="#00F0FF" stroke-width="2" opacity="0.95" />
+
+    <!-- Recessed Neon Guide Rails (Sides) -->
+    <line x1="120" y1="195" x2="120" y2="325" stroke="url(#neonCyan)" stroke-width="4" stroke-linecap="round" filter="url(#cyanGlow)" />
+    <line x1="380" y1="195" x2="380" y2="325" stroke="url(#neonCyan)" stroke-width="4" stroke-linecap="round" filter="url(#cyanGlow)" />
+
+    <!-- High-Voltage Cable Conduits -->
+    <path d="M 125 155 Q 250 140 375 155" stroke="#00F0FF" stroke-width="2" stroke-dasharray="6 8" fill="none" opacity="0.6" />
+    <path d="M 125 365 Q 250 380 375 365" stroke="#00F0FF" stroke-width="2" stroke-dasharray="6 8" fill="none" opacity="0.6" />
+
+    <!-- CENTRAL HOLOGRAPHIC CIPHER LOCK -->
+    <g id="CipherLockCore">
+      <!-- Outer Hologram Halo -->
+      <circle cx="250" cy="260" r="75" fill="url(#hologramCore)" filter="url(#laserBeamGlow)" />
+
+      <!-- Cryptographic Lock Ring -->
+      <circle cx="250" cy="260" r="62" fill="#070C15" stroke="#00F0FF" stroke-width="3" />
+      <circle cx="250" cy="260" r="54" fill="none" stroke="#38BDF8" stroke-width="1.5" stroke-dasharray="10 6 4 6" filter="url(#cyanGlow)" />
+      <circle cx="250" cy="260" r="44" fill="none" stroke="#00F0FF" stroke-width="1" stroke-dasharray="3 5" />
+
+      <!-- Inner Holographic Padlock / Key Glyph -->
+      <!-- Shackle -->
+      <path d="M 235 245 L 235 228 C 235 218 265 218 265 228 L 265 245" 
+            fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" filter="url(#cyanGlow)" />
+      <!-- Lock Body -->
+      <rect x="226" y="243" width="48" height="38" rx="6" fill="#0F172A" stroke="#00F0FF" stroke-width="2.5" />
+      <circle cx="250" cy="257" r="4" fill="#00F0FF" filter="url(#cyanGlow)" />
+      <path d="M 248 259 L 246 271 L 254 271 L 252 259 Z" fill="#00F0FF" />
+
+      <!-- Decryption Status Laser Bars -->
+      <g filter="url(#cyanGlow)">
+        <line x1="200" y1="260" x2="160" y2="260" stroke="#00F0FF" stroke-width="3" stroke-linecap="round" />
+        <line x1="300" y1="260" x2="340" y2="260" stroke="#00F0FF" stroke-width="3" stroke-linecap="round" />
+      </g>
+    </g>
+
+    <!-- Top Security Bar (Level-4 Encrypted) -->
+    <rect x="180" y="170" width="140" height="18" rx="4" fill="#070C14" stroke="#00F0FF" stroke-width="1" />
+    <text x="250" y="183" font-family="'JetBrains Mono', 'Roboto Mono', monospace" font-size="9" font-weight="900" fill="#00F0FF" text-anchor="middle" letter-spacing="2">
+      SEC-4 // ENCRYPTED
+    </text>
+
+    <!-- Bottom Data Throughput Meter -->
+    <g transform="translate(170, 335)">
+      <rect x="0" y="0" width="160" height="12" rx="3" fill="#070C14" stroke="#1E293B" stroke-width="1" />
+      <rect x="2" y="2" width="120" height="8" rx="2" fill="url(#neonCyan)" filter="url(#cyanGlow)" />
+    </g>
+
+    <!-- Floating Security Nodes -->
+    <circle cx="160" cy="205" r="3" fill="#00F0FF" filter="url(#cyanGlow)" />
+    <circle cx="340" cy="205" r="3" fill="#00F0FF" filter="url(#cyanGlow)" />
+    <circle cx="160" cy="315" r="3" fill="#00F0FF" filter="url(#cyanGlow)" />
+    <circle cx="340" cy="315" r="3" fill="#00F0FF" filter="url(#cyanGlow)" />
+  </g>
+
+  <!-- Technical Telemetry Readout -->
+  <g font-family="'JetBrains Mono', 'Roboto Mono', monospace" font-size="10" font-weight="900" fill="#00F0FF" letter-spacing="2">
+    <text x="250" y="440" text-anchor="middle" opacity="0.9">CIPHER CRATE // 1150 SPK</text>
+    <text x="250" y="458" text-anchor="middle" font-size="8" fill="#38BDF8" opacity="0.6">MIL-SPEC ENCRYPTED CACHE</text>
+  </g>
+</svg>
