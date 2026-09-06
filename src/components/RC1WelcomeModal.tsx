@@ -12,7 +12,9 @@ const RC2_SEEN_KEY = 'th3v4ult_rc2_seen';
  */
 export default function RC1WelcomeModal() {
   const [visible, setVisible] = useState(false);
-  const { user, status, setShowAuthModal } = useAuthStore();
+  const user = useAuthStore(s => s.user);
+  const status = useAuthStore(s => s.status);
+  const setShowAuthModal = useAuthStore(s => s.setShowAuthModal);
   const isAnonymous = user?.is_anonymous || 
                       user?.app_metadata?.provider === 'anonymous' || 
                       (!user?.email && !user?.user_metadata?.wallet && !user?.user_metadata?.wallet_address);

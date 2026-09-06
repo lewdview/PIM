@@ -20,8 +20,13 @@ interface OnboardingFlowModalProps {
 type FunnelStep = 'SAVE_RUN' | 'WELCOME_PACK' | 'PACK_OPENING' | 'CARD_REVEAL' | 'COLLECT_ONCHAIN';
 
 export default function OnboardingFlowModal({ isOpen, onClose, gameStats }: OnboardingFlowModalProps) {
-  const { signInWithMagicLink, signInWithWallet, user, status } = useAuthStore();
-  const { addToCollection, tokenBalance, addTokens } = useVaultStore();
+  const signInWithMagicLink = useAuthStore(s => s.signInWithMagicLink);
+  const signInWithWallet = useAuthStore(s => s.signInWithWallet);
+  const user = useAuthStore(s => s.user);
+  const status = useAuthStore(s => s.status);
+  const addToCollection = useVaultStore(s => s.addToCollection);
+  const tokenBalance = useVaultStore(s => s.tokenBalance);
+  const addTokens = useVaultStore(s => s.addTokens);
 
   const [step, setStep] = useState<FunnelStep>('SAVE_RUN');
   const [email, setEmail] = useState('');

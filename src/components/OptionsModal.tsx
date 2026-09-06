@@ -884,7 +884,16 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
   const [hapticsTestActive, setHapticsTestActive] = useState(false);
 
   // Sync state with useVaultStore
-  const { tokenBalance, unlockedSkins, unlockSkin, echoPrestigeScore, updateSettings, updateProgression, updateCheats, packDesignStyle, setPackDesignStyle, unlockedCheats } = useVaultStore();
+  const tokenBalance = useVaultStore(s => s.tokenBalance);
+  const unlockedSkins = useVaultStore(s => s.unlockedSkins);
+  const unlockSkin = useVaultStore(s => s.unlockSkin);
+  const echoPrestigeScore = useVaultStore(s => s.echoPrestigeScore);
+  const updateSettings = useVaultStore(s => s.updateSettings);
+  const updateProgression = useVaultStore(s => s.updateProgression);
+  const updateCheats = useVaultStore(s => s.updateCheats);
+  const packDesignStyle = useVaultStore(s => s.packDesignStyle);
+  const setPackDesignStyle = useVaultStore(s => s.setPackDesignStyle);
+  const unlockedCheats = useVaultStore(s => s.unlockedCheats);
 
   const [activeCardSkin, setActiveCardSkin] = useState('original');
   const [activeCardBack, setActiveCardBack] = useState('classic');
