@@ -45,7 +45,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     error: storeError 
   } = useAuthStore();
 
-  const [activeTab, setActiveTab] = useState<AuthTab>('passkey');
+  const [activeTab, setActiveTab] = useState<AuthTab>('web3');
   
   // Email states
   const [emailMode, setEmailMode] = useState<EmailMode>('magic-link');
@@ -168,13 +168,12 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       if (res?.error) {
         setLocalError(res.error);
         audioManager.playSfx('error', 0.5);
-      } else {
-        onClose();
+        setLoading(false);
       }
+      // If no error, signInWithProvider initiates navigation to the provider URL
     } catch (err: any) {
       setLocalError(err?.message || 'GitHub OAuth failed.');
       audioManager.playSfx('error', 0.5);
-    } finally {
       setLoading(false);
     }
   };
@@ -366,39 +365,23 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
             {/* 4-Column Authentication Tabs */}
             <div className="grid grid-cols-4 border-b border-white/10 bg-black/40 text-center">
-              {/* Tab 1: Passkey */}
+              {/* Tab 1: Web3 */}
               <button
-                onClick={() => handleTabSwitch('passkey')}
+                onClick={() => handleTabSwitch('web3')}
                 className={`py-3 px-1 flex flex-col items-center justify-center gap-1 transition-all relative cursor-pointer ${
-                  activeTab === 'passkey' 
-                    ? 'text-[#00E5FF] bg-[#00E5FF]/[0.06]' 
+                  activeTab === 'web3' 
+                    ? 'text-[#E5B800] bg-[#E5B800]/[0.06]' 
                     : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.02]'
                 }`}
               >
-                <Fingerprint size={16} className={activeTab === 'passkey' ? 'text-[#00E5FF]' : ''} />
-                <span className="font-mono text-[10px] font-bold uppercase tracking-wider">Passkey</span>
-                {activeTab === 'passkey' && (
-                  <motion.div layoutId="authTabIndicator" className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#00E5FF] shadow-[0_0_8px_#00E5FF]" />
+                <Wallet size={16} className={activeTab === 'web3' ? 'text-[#E5B800]' : ''} />
+                <span className="font-mono text-[10px] font-bold uppercase tracking-wider">Web3</span>
+                {activeTab === 'web3' && (
+                  <motion.div layoutId="authTabIndicator" className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#E5B800] shadow-[0_0_8px_#E5B800]" />
                 )}
               </button>
 
-              {/* Tab 2: GitHub */}
-              <button
-                onClick={() => handleTabSwitch('github')}
-                className={`py-3 px-1 flex flex-col items-center justify-center gap-1 transition-all relative cursor-pointer ${
-                  activeTab === 'github' 
-                    ? 'text-[#A855F7] bg-[#A855F7]/[0.06]' 
-                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.02]'
-                }`}
-              >
-                <Github size={16} className={activeTab === 'github' ? 'text-[#A855F7]' : ''} />
-                <span className="font-mono text-[10px] font-bold uppercase tracking-wider">GitHub</span>
-                {activeTab === 'github' && (
-                  <motion.div layoutId="authTabIndicator" className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#A855F7] shadow-[0_0_8px_#A855F7]" />
-                )}
-              </button>
-
-              {/* Tab 3: Email */}
+              {/* Tab 2: Email */}
               <button
                 onClick={() => handleTabSwitch('email')}
                 className={`py-3 px-1 flex flex-col items-center justify-center gap-1 transition-all relative cursor-pointer ${
@@ -414,19 +397,35 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 )}
               </button>
 
-              {/* Tab 4: Web3 */}
+              {/* Tab 3: GitHub */}
               <button
-                onClick={() => handleTabSwitch('web3')}
+                onClick={() => handleTabSwitch('github')}
                 className={`py-3 px-1 flex flex-col items-center justify-center gap-1 transition-all relative cursor-pointer ${
-                  activeTab === 'web3' 
-                    ? 'text-[#E5B800] bg-[#E5B800]/[0.06]' 
+                  activeTab === 'github' 
+                    ? 'text-[#A855F7] bg-[#A855F7]/[0.06]' 
                     : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.02]'
                 }`}
               >
-                <Wallet size={16} className={activeTab === 'web3' ? 'text-[#E5B800]' : ''} />
-                <span className="font-mono text-[10px] font-bold uppercase tracking-wider">Web3</span>
-                {activeTab === 'web3' && (
-                  <motion.div layoutId="authTabIndicator" className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#E5B800] shadow-[0_0_8px_#E5B800]" />
+                <Github size={16} className={activeTab === 'github' ? 'text-[#A855F7]' : ''} />
+                <span className="font-mono text-[10px] font-bold uppercase tracking-wider">GitHub</span>
+                {activeTab === 'github' && (
+                  <motion.div layoutId="authTabIndicator" className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#A855F7] shadow-[0_0_8px_#A855F7]" />
+                )}
+              </button>
+
+              {/* Tab 4: Passkey */}
+              <button
+                onClick={() => handleTabSwitch('passkey')}
+                className={`py-3 px-1 flex flex-col items-center justify-center gap-1 transition-all relative cursor-pointer ${
+                  activeTab === 'passkey' 
+                    ? 'text-[#00E5FF] bg-[#00E5FF]/[0.06]' 
+                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.02]'
+                }`}
+              >
+                <Fingerprint size={16} className={activeTab === 'passkey' ? 'text-[#00E5FF]' : ''} />
+                <span className="font-mono text-[10px] font-bold uppercase tracking-wider">Passkey</span>
+                {activeTab === 'passkey' && (
+                  <motion.div layoutId="authTabIndicator" className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#00E5FF] shadow-[0_0_8px_#00E5FF]" />
                 )}
               </button>
             </div>
@@ -882,9 +881,31 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                     className="mt-4 p-3 bg-red-950/40 border border-red-500/30 text-red-300 font-mono text-[10px] leading-relaxed flex items-start gap-2 rounded-sm"
                   >
                     <AlertTriangle className="shrink-0 text-red-400 mt-0.5" size={13} />
-                    <div className="flex-1">
-                      <strong className="text-red-400 uppercase tracking-wide mr-1">SECURITY ERROR:</strong>
-                      {currentError}
+                    <div className="flex-1 space-y-1">
+                      <div>
+                        <strong className="text-red-400 uppercase tracking-wide mr-1">AUTH ALERT:</strong>
+                        {currentError}
+                      </div>
+                      {currentError.toLowerCase().includes('rate limit') && (
+                        <div className="pt-1 text-[9px] text-[#00E5FF] flex flex-wrap items-center gap-1.5 font-bold">
+                          <span>💡 Instant Alternative:</span>
+                          <button
+                            type="button"
+                            onClick={() => handleTabSwitch('web3')}
+                            className="underline hover:text-white cursor-pointer"
+                          >
+                            Web3 (Coinbase / 1-Click Wallet)
+                          </button>
+                          <span>or</span>
+                          <button
+                            type="button"
+                            onClick={() => handleTabSwitch('github')}
+                            className="underline hover:text-white cursor-pointer"
+                          >
+                            GitHub OAuth
+                          </button>
+                        </div>
+                      )}
                     </div>
                     <button
                       onClick={() => setLocalError(null)}

@@ -3943,6 +3943,8 @@ export default function Game() {
         haptics.doubleTap();
       } else {
         if (j === "PERFECT+") {
+          haptics.heavyTap();
+        } else if (j === "PERFECT") {
           haptics.mediumTap();
         } else {
           haptics.lightTap();

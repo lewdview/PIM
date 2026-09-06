@@ -70,14 +70,30 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
     }, 2500);
 
-    // 1. Inspect URL for redirect tokens (hash fragments preferred, query params as fallback)
+    // 1. Inspect URL for redirect tokens or PKCE auth codes (hash fragments preferred, query params as fallback)
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
     const urlParams = new URLSearchParams(window.location.search);
     const accessToken = hashParams.get('access_token') || urlParams.get('access_token');
     const refreshToken = hashParams.get('refresh_token') || urlParams.get('refresh_token');
+    const code = urlParams.get('code') || hashParams.get('code');
     let activeSession: Session | null = null;
 
-    if (accessToken && refreshToken) {
+    if (code) {
+      console.log('[Auth] Detected OAuth PKCE authorization code. Exchanging for session...');
+      try {
+        const { data: exchangeData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+        if (exchangeError) throw exchangeError;
+
+        // Clean code from browser history/address bar
+        const cleanUrl = new URL(window.location.href);
+        cleanUrl.searchParams.delete('code');
+        window.history.replaceState({}, document.title, cleanUrl.toString());
+
+        activeSession = exchangeData.session;
+      } catch (err) {
+        console.error('[Auth] Failed to exchange PKCE code for session:', err);
+      }
+    } else if (accessToken && refreshToken) {
       console.log('[Auth] Detected authorization redirect tokens. Establishing session...');
       try {
         const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
@@ -117,6 +133,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           localStorage.setItem('th3vault_ephemeral_wallet_pkey', userPkey);
         }
       }
+      clearTimeout(safetyTimer);
       set({
         session: activeSession,
         user: user ?? null,
@@ -286,6 +303,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       if (sessionError) throw sessionError;
 
+      // Clear ephemeral flag since user explicitly connected an external Web3 wallet
+      localStorage.removeItem('th3vault_is_ephemeral_wallet');
+
       set({ session: data.session, user: data.user, showAuthModal: false });
 
       // Log EVM Wallet connect event
@@ -348,8 +368,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
       
       if (sessionError) throw sessionError;
+
+      // Mark session explicitly as ephemeral and persist user key
+      if (data.user?.id) {
+        localStorage.setItem('th3vault_is_ephemeral_wallet', 'true');
+        localStorage.setItem(`th3vault_ephemeral_wallet_pkey_${data.user.id}`, pkey);
+        localStorage.setItem('th3vault_ephemeral_wallet_pkey', pkey);
+      }
       
-      set({ session: data.session, user: data.user, status: 'ready' });
+      set({ session: data.session, user: data.user, status: 'ready', showAuthModal: false });
 
       // Log Ephemeral Wallet create event
       logAnalyticsEvent('ephemeral_wallet_create', { address });
@@ -422,8 +449,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return { error: null };
     } catch (err: any) {
       console.error('[Auth] signUpWithEmail error:', err);
-      set({ error: err.message, status: 'ready' });
-      return { error: err.message };
+      const rawMsg = err?.message || String(err);
+      let friendlyMsg = rawMsg;
+      if (rawMsg.toLowerCase().includes('rate limit') || rawMsg.toLowerCase().includes('over_email_send_rate_limit')) {
+        friendlyMsg = 'Email hourly send limit reached. Connect via Web3 (instant) or GitHub for immediate access.';
+      }
+      set({ error: friendlyMsg, status: 'ready' });
+      return { error: friendlyMsg };
     }
   },
   signInWithEmail: async (email, password) => {
@@ -503,93 +535,134 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const currentUser = get().user;
     const isAnon = currentUser?.is_anonymous || currentUser?.app_metadata?.provider === 'anonymous';
 
-    if (isAnon) {
-      // Upgrade anonymous user by linking OAuth identity (preserves user ID + all data)
-      const { error } = await supabase.auth.linkIdentity({
-        provider: provider as any,
-        options: {
-          redirectTo: window.location.origin,
-        },
-      });
-      if (error) {
-        const msg = error.message.toLowerCase();
-        // If social account is already linked to an existing account, fallback to standard OAuth login
-        if (msg.includes('already') || msg.includes('linked') || msg.includes('exists')) {
-          console.log('[Auth] Provider account already registered. Falling back to OAuth sign-in...');
-          const { error: oauthError } = await supabase.auth.signInWithOAuth({
-            provider: provider as any,
-            options: {
-              redirectTo: window.location.origin,
-            },
-          });
-          if (oauthError) {
-            set({ error: oauthError.message, status: 'ready' });
-            return { error: oauthError.message };
+    try {
+      if (isAnon) {
+        // Upgrade anonymous user by linking OAuth identity (preserves user ID + all data)
+        const { data, error } = await supabase.auth.linkIdentity({
+          provider: provider as any,
+          options: {
+            redirectTo: window.location.origin,
+          },
+        });
+        if (error) {
+          const msg = error.message.toLowerCase();
+          // If social account is already linked to an existing account, fallback to standard OAuth login
+          if (msg.includes('already') || msg.includes('linked') || msg.includes('exists')) {
+            console.log('[Auth] Provider account already registered. Falling back to OAuth sign-in...');
+            const { data: oauthData, error: oauthError } = await supabase.auth.signInWithOAuth({
+              provider: provider as any,
+              options: {
+                redirectTo: window.location.origin,
+              },
+            });
+            if (oauthError) {
+              set({ error: oauthError.message, status: 'ready' });
+              return { error: oauthError.message };
+            }
+            if (oauthData?.url) {
+              window.location.href = oauthData.url;
+              return { error: null };
+            }
+            return { error: null };
           }
+          set({ error: error.message, status: 'ready' });
+          return { error: error.message };
+        }
+        if (data?.url) {
+          window.location.href = data.url;
           return { error: null };
         }
-        set({ error: error.message, status: 'ready' });
-        return { error: error.message };
+      } else {
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: provider as any,
+          options: {
+            redirectTo: window.location.origin,
+          },
+        });
+        if (error) {
+          set({ error: error.message, status: 'ready' });
+          return { error: error.message };
+        }
+        if (data?.url) {
+          window.location.href = data.url;
+          return { error: null };
+        }
       }
-    } else {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: provider as any,
-        options: {
-          redirectTo: window.location.origin,
-        },
-      });
-      if (error) {
-        set({ error: error.message, status: 'ready' });
-        return { error: error.message };
-      }
-    }
 
-    return { error: null };
+      return { error: null };
+    } catch (thrown: any) {
+      const msg = thrown?.message || String(thrown);
+      set({ error: msg, status: 'ready' });
+      return { error: msg };
+    }
   },
   signInWithMagicLink: async (email) => {
     set({ error: null, status: 'loading' });
     const currentUser = get().user;
     const isAnon = currentUser?.is_anonymous || currentUser?.app_metadata?.provider === 'anonymous';
 
-    if (isAnon) {
-      // Upgrade anonymous user by adding email (preserves user ID + all data)
-      const { error } = await supabase.auth.updateUser({ email });
-      if (error) {
-        const msg = error.message.toLowerCase();
-        // If email already belongs to an existing account, fallback to Magic Link OTP sign-in
-        if (msg.includes('already') || msg.includes('registered') || msg.includes('exists')) {
-          console.log('[Auth] Email already registered to existing account. Falling back to OTP sign-in...');
-          const { error: otpError } = await supabase.auth.signInWithOtp({
-            email,
-            options: {
-              emailRedirectTo: window.location.origin,
-            },
-          });
-          if (otpError) {
-            set({ error: otpError.message, status: 'ready' });
-            return { error: otpError.message };
+    try {
+      if (isAnon) {
+        // Upgrade anonymous user by adding email (preserves user ID + all data)
+        const { error } = await supabase.auth.updateUser({ email });
+        if (error) {
+          const msg = error.message.toLowerCase();
+          if (msg.includes('rate limit') || msg.includes('over_email_send_rate_limit')) {
+            const friendly = 'Email transmission limit reached for this hour. Connect via Web3 (instant) or GitHub for immediate access.';
+            set({ error: friendly, status: 'ready' });
+            return { error: friendly };
           }
-          set({ status: 'ready' });
-          return { error: null };
+          // If email already belongs to an existing account, fallback to Magic Link OTP sign-in
+          if (msg.includes('already') || msg.includes('registered') || msg.includes('exists')) {
+            console.log('[Auth] Email already registered to existing account. Falling back to OTP sign-in...');
+            const { error: otpError } = await supabase.auth.signInWithOtp({
+              email,
+              options: {
+                emailRedirectTo: window.location.origin,
+              },
+            });
+            if (otpError) {
+              const otpMsg = otpError.message.toLowerCase();
+              const friendly = otpMsg.includes('rate limit') || otpMsg.includes('over_email_send_rate_limit')
+                ? 'Email transmission limit reached for this hour. Connect via Web3 (instant) or GitHub for immediate access.'
+                : otpError.message;
+              set({ error: friendly, status: 'ready' });
+              return { error: friendly };
+            }
+            set({ status: 'ready' });
+            return { error: null };
+          }
+          set({ error: error.message, status: 'ready' });
+          return { error: error.message };
         }
-        set({ error: error.message, status: 'ready' });
-        return { error: error.message };
+      } else {
+        const { error } = await supabase.auth.signInWithOtp({
+          email,
+          options: {
+            emailRedirectTo: window.location.origin,
+          },
+        });
+        if (error) {
+          const msg = error.message.toLowerCase();
+          const friendly = msg.includes('rate limit') || msg.includes('over_email_send_rate_limit')
+            ? 'Email transmission limit reached for this hour. Connect via Web3 (instant) or GitHub for immediate access.'
+            : error.message;
+          set({ error: friendly, status: 'ready' });
+          return { error: friendly };
+        }
       }
-    } else {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: window.location.origin,
-        },
-      });
-      if (error) {
-        set({ error: error.message, status: 'ready' });
-        return { error: error.message };
-      }
-    }
 
-    set({ status: 'ready' });
-    return { error: null };
+      set({ status: 'ready' });
+      return { error: null };
+    } catch (thrown: any) {
+      const msg = thrown?.message || String(thrown);
+      let friendly = msg;
+      if (msg.toLowerCase().includes('rate limit') || msg.toLowerCase().includes('over_email_send_rate_limit')) {
+        friendly = 'Email transmission limit reached for this hour. Connect via Web3 (instant) or GitHub for immediate access.';
+      }
+      set({ error: friendly, status: 'ready' });
+      return { error: friendly };
+    }
   },
   isPasskeySupported: () => {
     return (
@@ -647,6 +720,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           const { data: updateData, error: updateErr } = await supabase.auth.updateUser({ email: email.trim() });
           if (updateErr) {
             const msg = updateErr.message.toLowerCase();
+            if (msg.includes('rate limit') || msg.includes('over_email_send_rate_limit')) {
+              throw new Error('Email transmission limit reached for this hour. Connect via Web3 (instant) or GitHub.');
+            }
             if (msg.includes('already') || msg.includes('registered') || msg.includes('exists')) {
               throw new Error('This email is already registered. Please sign in with Passkey or Magic Link.');
             }
@@ -698,18 +774,36 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     let linkedAddress = profile?.wallet_address;
     let pkey = localStorage.getItem(`th3vault_ephemeral_wallet_pkey_${userId}`);
+    const globalPkey = localStorage.getItem('th3vault_ephemeral_wallet_pkey');
 
-    // If it's a real Web3 wallet login (has is_smart_wallet or no email, or signed in via Web3)
-    const isRealWallet = user.user_metadata?.is_smart_wallet || !user.email || user.email.endsWith('@smartwallet.th3vault.art');
+    // Check if this session is an internal ephemeral wallet (either explicit flag or existing private key)
+    const isEphemeralSession = localStorage.getItem('th3vault_is_ephemeral_wallet') === 'true' ||
+      !!pkey ||
+      !!globalPkey;
 
-    if (isRealWallet) {
+    // If it's a real external Web3 wallet login (MetaMask / Coinbase Smart Wallet with NO local private key)
+    const isExternalWallet = !isEphemeralSession && (
+      user.user_metadata?.is_smart_wallet || 
+      !user.email || 
+      user.email.endsWith('@smartwallet.th3vault.art')
+    );
+
+    if (isExternalWallet) {
       localStorage.removeItem('th3vault_ephemeral_wallet_pkey');
       return;
     }
 
+    // Restore or sync ephemeral key across keys
+    if (pkey && !globalPkey) {
+      localStorage.setItem('th3vault_ephemeral_wallet_pkey', pkey);
+    } else if (!pkey && globalPkey) {
+      pkey = globalPkey;
+      localStorage.setItem(`th3vault_ephemeral_wallet_pkey_${userId}`, pkey);
+    }
+
     if (!linkedAddress) {
-      // Generate new ephemeral wallet
-      const wallet = Wallet.createRandom();
+      // Generate or reuse existing ephemeral wallet
+      const wallet = pkey ? new Wallet(pkey) : Wallet.createRandom();
       linkedAddress = wallet.address;
       pkey = wallet.privateKey;
 
@@ -723,7 +817,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await supabase.auth.updateUser({
         data: { wallet_address: linkedAddress }
       });
-      console.log('[Auth] Generated new ephemeral wallet:', linkedAddress);
+      console.log('[Auth] Ephemeral wallet bound to profile:', linkedAddress);
     } else {
       if (pkey) {
         localStorage.setItem('th3vault_ephemeral_wallet_pkey', pkey);

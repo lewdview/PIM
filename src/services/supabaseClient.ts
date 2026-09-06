@@ -28,19 +28,19 @@ const getAuthOptions = () => {
   if (typeof window === 'undefined') return {};
 
   const hostname = window.location.hostname;
-  const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+  const isTh3Scrib3Domain = hostname.endsWith('th3scr1b3.art');
 
   return {
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
     storageKey: 'th3scr1b3-auth-token',
-    cookieOptions: isLocalhost ? undefined : {
+    cookieOptions: isTh3Scrib3Domain ? {
       domain: '.th3scr1b3.art',
       path: '/',
       sameSite: 'lax' as const,
       secure: true,
-    },
+    } : undefined,
     experimental: {
       passkey: true,
     },

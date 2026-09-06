@@ -3,6 +3,7 @@ import { loadOpts, resetOpts, keyLabel, getActiveTheme, getEffectiveDpr, type Ga
 import { useLocation } from "wouter";
 import { clearCatalogCache } from "../game/api";
 import { audioManager } from "../game/audio";
+import { haptics } from "../utils/haptics";
 import { logAnalyticsEvent } from "../services/telemetryService";
 import { gameSenseService, type GameSenseStatus } from "../services/gameSenseService";
 import { useVaultStore } from "../store/useVaultStore";
@@ -880,6 +881,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
   const [gsStatus, setGsStatus] = useState<GameSenseStatus>("scanning");
   const resetTimer = useRef<NodeJS.Timeout | null>(null);
   const colorRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
+  const [hapticsTestActive, setHapticsTestActive] = useState(false);
 
   // Sync state with useVaultStore
   const { tokenBalance, unlockedSkins, unlockSkin, echoPrestigeScore, updateSettings, updateProgression, updateCheats, packDesignStyle, setPackDesignStyle, unlockedCheats } = useVaultStore();
@@ -980,6 +982,13 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
     updateSettings({ [k]: v });
     if (k === "useLocalFiles") clearCatalogCache();
     if (k === "bgMusic") window.dispatchEvent(new Event("bgmusic_toggle"));
+    if (k === "haptics") {
+      if (v) {
+        setTimeout(() => haptics.mediumTap(), 50);
+      } else {
+        haptics.cancel();
+      }
+    }
     if (k === "gameSenseEnabled") {
       setGsStatus("scanning");
       setTimeout(() => {
@@ -1477,10 +1486,35 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
 
                     <div className="flex justify-between items-center">
                       <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-white font-mono uppercase">System Haptic Vibrations</span>
-                        <span className="text-[8px] text-zinc-500 font-mono">Subtle device feedback on hitting notes</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold text-white font-mono uppercase">System Haptic Vibrations</span>
+                          <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
+                            {haptics.getCapabilities().primaryDriver}
+                          </span>
+                        </div>
+                        <span className="text-[8px] text-zinc-500 font-mono">
+                          Native tactile feedback on note judgments (iOS Taptic, Mobile Vibration, Gamepad, or Tactile Acoustic)
+                        </span>
                       </div>
-                      {renderToggle('haptics')}
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            haptics.mediumTap();
+                            setHapticsTestActive(true);
+                            setTimeout(() => setHapticsTestActive(false), 800);
+                          }}
+                          className={`text-[9px] font-mono px-2 py-1 rounded border transition-all cursor-pointer font-bold ${
+                            hapticsTestActive
+                              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.3)] scale-105'
+                              : 'bg-white/5 text-zinc-400 border-white/10 hover:border-white/30 hover:text-white hover:bg-white/10'
+                          }`}
+                          title="Test current haptic feedback engine"
+                        >
+                          {hapticsTestActive ? 'PULSED!' : 'TEST'}
+                        </button>
+                        {renderToggle('haptics')}
+                      </div>
                     </div>
 
                     <div className="flex justify-between items-center border-t border-white/5 pt-3">
