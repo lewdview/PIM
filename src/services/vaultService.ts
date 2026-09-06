@@ -964,8 +964,13 @@ export async function buyTokenBundleWithCrypto(
 
 // ===== V2 TOKEN SINKS =====
 
-/** Targeted Pull — choose a specific day, costs 500 V⚡ */
+/** Targeted Pull — choose a specific day (released only), costs 500 V⚡ */
 export async function targetedPull(day: number): Promise<OwnedCard | null> {
+  const currentWorldDay = getCurrentDay();
+  if (day > currentWorldDay) {
+    alert(`Day ${day} is locked. Targeted Pull is restricted to released calendar days (Day 1 to ${currentWorldDay}). Future tracks require a Prophecy Pull.`);
+    return null;
+  }
   try {
     const { data, error } = await supabase.functions.invoke('vault-engine', {
       body: { action: 'targetedPull', payload: { day } }

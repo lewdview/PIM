@@ -99,6 +99,7 @@ export default function NextGenLandingPage() {
     startReveal, addToCollection, removeFromCollection, collection, echoPrestigeScore
   } = useVaultStore();
   const user = useAuthStore(s => s.user);
+  const today = getCurrentDay();
 
   const [isClaimingAnimation, setIsClaimingAnimation] = useState(false);
   const [isPurchasing, setIsPurchasing] = useState(false);
@@ -209,7 +210,12 @@ export default function NextGenLandingPage() {
 
   // Callbacks for sinks
   const handleTargetedPull = useCallback(async (dayNum: number) => {
-    if (tokenBalance < 500) return;
+    if (!dayNum || dayNum < 1 || dayNum > today || tokenBalance < 500) {
+      if (dayNum > today) {
+        alert(`Day ${dayNum} is locked. Targeted Pull is restricted to released calendar days (Day 1 to ${today}). Future tracks require a Prophecy Pull.`);
+      }
+      return;
+    }
     setTargetLoading(true);
     useLoadingToast.getState().show(`Pulling Day ${dayNum}…`);
     try {
@@ -233,7 +239,7 @@ export default function NextGenLandingPage() {
       setTargetLoading(false);
       setTargetDay('');
     }
-  }, [tokenBalance, addToCollection, startReveal, setLocation, loadVaultData]);
+  }, [today, tokenBalance, addToCollection, startReveal, setLocation, loadVaultData]);
 
   const handleUpgrade = useCallback(async (cardOwnedId: string) => {
     if (!cardOwnedId || tokenBalance < 150) return;
@@ -451,7 +457,6 @@ export default function NextGenLandingPage() {
   const [isHovering, setIsHovering] = useState(false);
   const [isFaceDown, setIsFaceDown] = useState(false);
 
-  const today = getCurrentDay();
   const completedMonths = getCompletedMonths();
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -1483,21 +1488,38 @@ export default function NextGenLandingPage() {
                   <h3 className="font-bold text-lg text-white">Targeted Pull</h3>
                 </div>
                 <p className="text-xs text-slate-400 mb-6 flex-1">
-                  Choose a specific day (1-365) to pull a guaranteed card from that drop.
+                  Choose a specific released day (1–{today}) to pull a card from that drop. Future days are locked to preserve Prophecy value.
                 </p>
                 
                 <input 
-                  type="number" min="1" max="365" 
+                  type="number" min="1" max={today} 
                   value={targetDay} onChange={(e) => setTargetDay(e.target.value)}
-                  placeholder="Target Day (1-365)" 
-                  className="w-full bg-black/50 border border-white/10 rounded-xl text-white text-sm p-3.5 focus:border-blue-500 outline-none mb-4 transition-colors font-mono"
+                  placeholder={`Target Day (1–${today})`} 
+                  className={`w-full bg-black/50 border rounded-xl text-white text-sm p-3.5 outline-none mb-4 transition-colors font-mono ${
+                    parseInt(targetDay, 10) > today
+                      ? 'border-purple-500 text-purple-300 bg-purple-950/20'
+                      : 'border-white/10 focus:border-blue-500'
+                  }`}
                 />
+                {parseInt(targetDay, 10) > today && (
+                  <div className="text-[10px] font-mono text-purple-400 font-bold uppercase mb-3">
+                    ⚠️ Future day locked // Requires Prophecy Pull (SS 97%+)
+                  </div>
+                )}
                 <button 
-                  disabled={targetLoading || !targetDay || parseInt(targetDay) < 1 || parseInt(targetDay) > 365 || tokenBalance < 500}
-                  onClick={() => handleTargetedPull(parseInt(targetDay))}
-                  className="w-full py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs tracking-wider uppercase transition-all disabled:opacity-50"
+                  disabled={targetLoading || !targetDay || parseInt(targetDay, 10) < 1 || parseInt(targetDay, 10) > today || tokenBalance < 500}
+                  onClick={() => handleTargetedPull(parseInt(targetDay, 10))}
+                  className={`w-full py-3.5 rounded-xl font-extrabold text-xs tracking-wider uppercase transition-all disabled:opacity-50 ${
+                    parseInt(targetDay, 10) > today
+                      ? 'bg-purple-950/60 border border-purple-500/50 text-purple-300'
+                      : 'bg-blue-600 hover:bg-blue-500 text-white'
+                  }`}
                 >
-                  {targetLoading ? 'Pulling...' : 'Pull Card (500 V⚡)'}
+                  {targetLoading
+                    ? 'Pulling...'
+                    : parseInt(targetDay, 10) > today
+                    ? 'Prophecy Only'
+                    : 'Pull Card (500 V⚡)'}
                 </button>
               </div>
 

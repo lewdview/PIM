@@ -108,6 +108,7 @@ export default function LandingPage() {
     setCollection, startReveal, addToCollection, removeFromCollection, collection, echoPrestigeScore
   } = useVaultStore();
   const user = useAuthStore(s => s.user);
+  const today = getCurrentDay();
 
   const [isClaimingAnimation, setIsClaimingAnimation] = useState(false);
   const [isPurchasing, setIsPurchasing] = useState(false);
@@ -158,7 +159,12 @@ export default function LandingPage() {
 
   // Callbacks for sinks
   const handleTargetedPull = useCallback(async (dayNum: number) => {
-    if (tokenBalance < 500) return;
+    if (!dayNum || dayNum < 1 || dayNum > today || tokenBalance < 500) {
+      if (dayNum > today) {
+        alert(`Day ${dayNum} is locked. Targeted Pull is restricted to released calendar days (Day 1 to ${today}). Future tracks require a Prophecy Pull.`);
+      }
+      return;
+    }
     setTargetLoading(true);
     useLoadingToast.getState().show(`Pulling Day ${dayNum}…`);
     try {
@@ -181,7 +187,7 @@ export default function LandingPage() {
       setTargetLoading(false);
       setTargetDay('');
     }
-  }, [tokenBalance, addToCollection, startReveal, setLocation, loadVaultData]);
+  }, [today, tokenBalance, addToCollection, startReveal, setLocation, loadVaultData]);
 
   const handleUpgrade = useCallback(async (cardOwnedId: string) => {
     if (!cardOwnedId || tokenBalance < 150) return;
@@ -370,7 +376,6 @@ export default function LandingPage() {
   const [isHovering, setIsHovering] = useState(false);
   const [isFaceDown, setIsFaceDown] = useState(false);
 
-  const today = getCurrentDay();
   const completedMonths = getCompletedMonths();
 
   // Mouse tilt helper
@@ -1245,19 +1250,28 @@ export default function LandingPage() {
 
                 <div className="border border-zinc-800 p-4 bg-black/60 space-y-4">
                   <p className="text-[10px] font-mono text-zinc-300 leading-normal">
-                    Enter the exact day (1-365) you wish to pull from. Ripping this pack will decrypt 1 card from that day's specific pool.
+                    Enter the exact released day (1–{today}) you wish to pull from. Decrypts 1 card from that day's specific pool. Future days are locked to preserve Prophecy value.
                   </p>
                   <div className="space-y-2">
                     <label className="block text-[9px] font-mono uppercase tracking-wider text-zinc-400">Target Day Number</label>
                     <input 
                       type="number" 
                       min="1" 
-                      max="365" 
+                      max={today} 
                       value={targetDay}
                       onChange={(e) => setTargetDay(e.target.value)}
-                      placeholder="e.g. 45" 
-                      className="w-full bg-black border-2 border-zinc-800 text-white font-mono text-sm p-3 focus:border-amber-500 outline-none"
+                      placeholder={`e.g. ${Math.min(45, today)}`} 
+                      className={`w-full bg-black border-2 text-white font-mono text-sm p-3 outline-none ${
+                        parseInt(targetDay, 10) > today
+                          ? 'border-purple-500 text-purple-300'
+                          : 'border-zinc-800 focus:border-amber-500'
+                      }`}
                     />
+                    {parseInt(targetDay, 10) > today && (
+                      <p className="text-[9px] font-mono text-purple-400 font-bold uppercase">
+                        ⚠️ Future day locked // Requires Prophecy Pull (SS 97%+)
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -1274,15 +1288,23 @@ export default function LandingPage() {
                     CANCEL
                   </button>
                   <button
-                    disabled={targetLoading || !targetDay || parseInt(targetDay) < 1 || parseInt(targetDay) > 365 || tokenBalance < 500}
+                    disabled={targetLoading || !targetDay || parseInt(targetDay, 10) < 1 || parseInt(targetDay, 10) > today || tokenBalance < 500}
                     onClick={() => {
                       setShowTargetedPullModal(false);
-                      handleTargetedPull(parseInt(targetDay));
+                      handleTargetedPull(parseInt(targetDay, 10));
                     }}
-                    className="py-2.5 bg-[#ff9900] hover:bg-[#e08800] text-black font-black uppercase text-xs tracking-wider transition-all disabled:opacity-30 border border-black"
-                    style={{ boxShadow: '2px 2px 0 #000' }}
+                    className={`py-2.5 font-black uppercase text-xs tracking-wider transition-all disabled:opacity-30 border border-black ${
+                      parseInt(targetDay, 10) > today
+                        ? 'bg-purple-950/60 border-purple-500/50 text-purple-300'
+                        : 'bg-[#ff9900] hover:bg-[#e08800] text-black'
+                    }`}
+                    style={{ boxShadow: parseInt(targetDay, 10) > today ? 'none' : '2px 2px 0 #000' }}
                   >
-                    {targetLoading ? 'PULLING...' : 'DECRYPT PULL'}
+                    {targetLoading
+                      ? 'PULLING...'
+                      : parseInt(targetDay, 10) > today
+                      ? 'PROPHECY ONLY'
+                      : 'DECRYPT PULL'}
                   </button>
                 </div>
               </div>

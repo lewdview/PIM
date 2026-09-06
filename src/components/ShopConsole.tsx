@@ -7,6 +7,7 @@ import { targetedPull, upgradeRarity, fuseDuplicates } from '../services/vaultSe
 import { audioManager } from '../game/audio';
 import { useLoadingToast } from '../store/useLoadingToast';
 import { RARITY_CONFIG, type Rarity, type OwnedCard, type PackCategory, type PackSize } from '../utils/rarity';
+import { getCurrentDay } from '../utils/dayCalc';
 import TokenBundleShelf from './TokenBundleShelf';
 
 interface ShopConsoleProps {
@@ -17,6 +18,7 @@ interface ShopConsoleProps {
 export default function ShopConsole({ onPurchasePack, className = '' }: ShopConsoleProps) {
   const [, setLocation] = useLocation();
   const { collection, tokenBalance, addToCollection, removeFromCollection, loadVaultData, startReveal } = useVaultStore();
+  const currentDay = getCurrentDay();
 
   // Local state for interactive modules
   const [targetDay, setTargetDay] = useState<string>('');
@@ -45,18 +47,16 @@ export default function ShopConsole({ onPurchasePack, className = '' }: ShopCons
     return Object.entries(groups).filter(([, cards]) => cards.length >= 3);
   }, [collection]);
 
-  // Fast day shortcuts
+  // Fast day shortcuts (strictly within released days 1 to currentDay)
   const handleSetRandomDay = () => {
     audioManager.playSfx('tap_nav', 0.2);
-    const rand = Math.floor(Math.random() * 365) + 1;
+    const rand = Math.floor(Math.random() * currentDay) + 1;
     setTargetDay(String(rand));
   };
 
   const handleSetToday = () => {
     audioManager.playSfx('tap_nav', 0.2);
-    const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
-    const validDay = Math.min(Math.max(dayOfYear, 1), 365);
-    setTargetDay(String(validDay));
+    setTargetDay(String(currentDay));
   };
 
   // 1. Pack purchase wrapper
@@ -71,9 +71,14 @@ export default function ShopConsole({ onPurchasePack, className = '' }: ShopCons
     }
   };
 
-  // 2. Targeted pull handler
+  // 2. Targeted pull handler (strictly locked to released days to protect Prophecy pull exclusivity)
   const handleTargetedPull = useCallback(async (dayNum: number) => {
-    if (!dayNum || dayNum < 1 || dayNum > 365 || tokenBalance < 500) return;
+    if (!dayNum || dayNum < 1 || dayNum > currentDay || tokenBalance < 500) {
+      if (dayNum > currentDay) {
+        alert(`Day ${dayNum} is locked. Targeted Pull is restricted to released calendar days (Day 1 to ${currentDay}). Future tracks require a Prophecy Pull.`);
+      }
+      return;
+    }
     setTargetLoading(true);
     useLoadingToast.getState().show(`Targeting Day ${dayNum} pool…`);
     try {
@@ -101,7 +106,7 @@ export default function ShopConsole({ onPurchasePack, className = '' }: ShopCons
       setTargetLoading(false);
       setTargetDay('');
     }
-  }, [tokenBalance, addToCollection, startReveal, setLocation, loadVaultData]);
+  }, [currentDay, tokenBalance, addToCollection, startReveal, setLocation, loadVaultData]);
 
   // 3. Upgrade handler
   const handleUpgrade = useCallback(async (cardOwnedId: string) => {
@@ -388,7 +393,7 @@ export default function ShopConsole({ onPurchasePack, className = '' }: ShopCons
                 </div>
 
                 <p className="text-[10px] font-mono text-zinc-300 mb-2 leading-relaxed">
-                  Pinpoint a calendar day (1–365) to decrypt that exact track pool.
+                  Target any released drop (Day 1–{currentDay}). Future days are locked to preserve Prophecy value.
                 </p>
 
                 {/* Day Input & Quick Buttons */}
@@ -397,13 +402,25 @@ export default function ShopConsole({ onPurchasePack, className = '' }: ShopCons
                     <input
                       type="number"
                       min="1"
-                      max="365"
+                      max={currentDay}
                       value={targetDay}
                       onChange={(e) => setTargetDay(e.target.value)}
-                      placeholder="Day (1–365)"
-                      className="w-full bg-black/80 border border-cyan-500/30 text-white font-mono text-xs p-2 rounded-lg focus:border-cyan-400 outline-none"
+                      placeholder={`Day (1–${currentDay})`}
+                      className={`w-full bg-black/80 border text-white font-mono text-xs p-2 rounded-lg outline-none transition-colors ${
+                        parseInt(targetDay, 10) > currentDay
+                          ? 'border-purple-500/80 text-purple-300 bg-purple-950/20'
+                          : 'border-cyan-500/30 focus:border-cyan-400'
+                      }`}
                     />
                   </div>
+
+                  {/* Future Day Warning Pill */}
+                  {parseInt(targetDay, 10) > currentDay && (
+                    <div className="flex items-center gap-1 text-[8px] font-mono font-black text-purple-400 bg-purple-950/50 border border-purple-500/40 px-2 py-1 rounded">
+                      <AlertCircle size={10} className="shrink-0" />
+                      <span>FUTURE LOCKED // REQUIRES PROPHECY</span>
+                    </div>
+                  )}
 
                   <div className="flex items-center gap-1.5">
                     <button
@@ -411,7 +428,7 @@ export default function ShopConsole({ onPurchasePack, className = '' }: ShopCons
                       onClick={handleSetToday}
                       className="flex-1 py-1 px-1.5 rounded bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-[8px] font-mono font-bold text-cyan-300 flex items-center justify-center gap-1"
                     >
-                      <Calendar size={9} /> TODAY
+                      <Calendar size={9} /> TODAY (D{currentDay})
                     </button>
                     <button
                       type="button"
@@ -431,13 +448,31 @@ export default function ShopConsole({ onPurchasePack, className = '' }: ShopCons
                 </div>
 
                 <button
-                  disabled={targetLoading || !targetDay || parseInt(targetDay) < 1 || parseInt(targetDay) > 365 || tokenBalance < 500}
-                  onClick={() => handleTargetedPull(parseInt(targetDay))}
-                  className="w-full py-2.5 rounded-lg bg-cyan-400 hover:bg-cyan-300 text-black font-black uppercase text-xs tracking-wider transition-all disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] cursor-pointer shadow flex items-center justify-center gap-1.5"
-                  style={{ border: '2px solid #000000', boxShadow: '2px 2px 0 #000000' }}
+                  disabled={
+                    targetLoading ||
+                    !targetDay ||
+                    parseInt(targetDay, 10) < 1 ||
+                    parseInt(targetDay, 10) > currentDay ||
+                    tokenBalance < 500
+                  }
+                  onClick={() => handleTargetedPull(parseInt(targetDay, 10))}
+                  className={`w-full py-2.5 rounded-lg font-black uppercase text-xs tracking-wider transition-all disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] cursor-pointer shadow flex items-center justify-center gap-1.5 ${
+                    parseInt(targetDay, 10) > currentDay
+                      ? 'bg-purple-950/60 border border-purple-500/50 text-purple-300'
+                      : 'bg-cyan-400 hover:bg-cyan-300 text-black border-2 border-black'
+                  }`}
+                  style={{ boxShadow: parseInt(targetDay, 10) > currentDay ? 'none' : '2px 2px 0 #000000' }}
                 >
-                  <Target size={13} className="fill-black" />
-                  <span>{targetLoading ? 'TARGETING…' : 'EXECUTE PULL'}</span>
+                  <Target size={13} className={parseInt(targetDay, 10) > currentDay ? 'text-purple-400' : 'fill-black'} />
+                  <span>
+                    {targetLoading
+                      ? 'TARGETING…'
+                      : parseInt(targetDay, 10) > currentDay
+                      ? 'PROPHECY ONLY'
+                      : tokenBalance < 500
+                      ? 'NEED SPARKS'
+                      : 'EXECUTE PULL'}
+                  </span>
                 </button>
               </div>
             </div>

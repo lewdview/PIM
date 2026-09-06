@@ -20,6 +20,7 @@ import {
 } from '../utils/echoSystem';
 import { RARITY_CONFIG, type Rarity } from '../utils/rarity';
 import { getRandomBombshellPackCover } from '../utils/bombshellCards';
+import { getCurrentDay } from '../utils/dayCalc';
 import Card from '../components/Card';
 import FusionAnimation from '../components/FusionAnimation';
 import TitleSpacer from '../components/TitleSpacer';
@@ -431,6 +432,7 @@ function EchoStatusPanel() {
 
 export default function ForgePage() {
   const [, setLocation] = useLocation();
+  const today = getCurrentDay();
   const { collection, removeFromCollection, tokenBalance, loadVaultData, addToCollection, startReveal, streakCount, totalPulls, pullsSinceRarePlus } = useVaultStore();
   const [confirmSell, setConfirmSell] = useState<OwnedCard | null>(null);
   const [lastBurnResult, setLastBurnResult] = useState<{ tokens: number; echoCreated: boolean; echoGen?: number } | null>(null);
@@ -633,8 +635,13 @@ export default function ForgePage() {
 
   // ── TARGETED PULL ──────────────────────────────────────────────
   const handleTargetedPull = useCallback(async () => {
-    const day = parseInt(targetDay);
-    if (!day || day < 1 || day > 365 || tokenBalance < 500) return;
+    const day = parseInt(targetDay, 10);
+    if (!day || day < 1 || day > today || tokenBalance < 500) {
+      if (day > today) {
+        alert(`Day ${day} is locked. Targeted Pull is restricted to released calendar days (Day 1 to ${today}). Future tracks require a Prophecy Pull.`);
+      }
+      return;
+    }
     setTargetLoading(true);
     useLoadingToast.getState().show('Targeted pull…');
     const card = await targetedPull(day);
@@ -652,7 +659,7 @@ export default function ForgePage() {
     await loadVaultData();
     setTargetLoading(false);
     setTargetDay('');
-  }, [targetDay, tokenBalance, addToCollection, startReveal, setLocation, loadVaultData]);
+  }, [targetDay, today, tokenBalance, addToCollection, startReveal, setLocation, loadVaultData]);
 
   // ── RARITY UPGRADE ─────────────────────────────────────────────
   const handleUpgrade = useCallback(async () => {
@@ -958,36 +965,36 @@ export default function ForgePage() {
                     fontFamily: '"JetBrains Mono", monospace', fontSize: '10px',
                     color: 'rgba(255,255,255,0.4)', marginBottom: '12px', lineHeight: 1.5,
                   }}>
-                    Choose a specific day (1–365) to pull a card from. Guaranteed 1 card at standard rates.
+                    Choose a specific released day (1–{today}) to pull a card from. Future days are locked to preserve Prophecy value.
                   </p>
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                     <input
-                      type="number" min="1" max="365"
+                      type="number" min="1" max={today}
                       value={targetDay}
                       onChange={e => setTargetDay(e.target.value)}
-                      placeholder="Day #"
+                      placeholder={`1–${today}`}
                       style={{
-                        width: '80px', padding: '8px 12px',
-                        background: 'rgba(255,255,255,0.04)',
-                        border: '1px solid rgba(255,255,255,0.1)',
+                        width: '90px', padding: '8px 12px',
+                        background: parseInt(targetDay, 10) > today ? 'rgba(180,77,255,0.15)' : 'rgba(255,255,255,0.04)',
+                        border: parseInt(targetDay, 10) > today ? '1px solid rgba(180,77,255,0.5)' : '1px solid rgba(255,255,255,0.1)',
                         fontFamily: '"JetBrains Mono", monospace', fontSize: '12px',
-                        color: '#fff', textAlign: 'center', outline: 'none',
+                        color: parseInt(targetDay, 10) > today ? '#c084fc' : '#fff', textAlign: 'center', outline: 'none',
                       }}
                     />
                     <button
                       onClick={handleTargetedPull}
-                      disabled={targetLoading || !targetDay || tokenBalance < 500}
+                      disabled={targetLoading || !targetDay || parseInt(targetDay, 10) < 1 || parseInt(targetDay, 10) > today || tokenBalance < 500}
                       style={{
                         flex: 1, padding: '8px 16px',
-                        background: tokenBalance >= 500 && targetDay ? '#ff9900' : 'rgba(255,153,0,0.15)',
-                        border: '1px solid rgba(255,153,0,0.4)',
+                        background: parseInt(targetDay, 10) > today ? 'rgba(180,77,255,0.2)' : tokenBalance >= 500 && targetDay ? '#ff9900' : 'rgba(255,153,0,0.15)',
+                        border: parseInt(targetDay, 10) > today ? '1px solid rgba(180,77,255,0.4)' : '1px solid rgba(255,153,0,0.4)',
                         fontFamily: '"JetBrains Mono", monospace', fontSize: '10px',
                         fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
-                        color: tokenBalance >= 500 && targetDay ? '#000' : 'rgba(255,255,255,0.3)',
-                        cursor: tokenBalance >= 500 && targetDay ? 'pointer' : 'default',
+                        color: parseInt(targetDay, 10) > today ? '#c084fc' : tokenBalance >= 500 && targetDay ? '#000' : 'rgba(255,255,255,0.3)',
+                        cursor: parseInt(targetDay, 10) > today || tokenBalance < 500 || !targetDay ? 'default' : 'pointer',
                       }}
                     >
-                      {targetLoading ? 'PULLING...' : '🎯 PULL FROM DAY'}
+                      {targetLoading ? 'PULLING...' : parseInt(targetDay, 10) > today ? '🔮 PROPHECY ONLY' : '🎯 PULL FROM DAY'}
                     </button>
                   </div>
                 </div>
