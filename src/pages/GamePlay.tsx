@@ -4089,9 +4089,7 @@ export default function Game() {
       }
       checkPowerUps(gs.combo);
 
-      if (!isHoldType) {
-        addJudgment({ type: j, lane, id: ++jCounter.current, ts: Date.now() });
-      }
+      addJudgment({ type: j, lane, id: ++jCounter.current, ts: Date.now() });
 
       // ── Hit explosion effect ──
       triggerHitFx(lane, j, undefined, direction || ns.note.swipeDirection);
