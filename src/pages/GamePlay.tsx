@@ -2943,6 +2943,8 @@ export default function Game() {
     audio: HTMLAudioElement | null;
     restoreLane: (lane: number) => void;
   } | null>(null);
+  const rewindGraceUntilWallRef = useRef<number>(0);
+  const rewindGraceUntilSongTimeRef = useRef<number>(0);
   const drawRef = useRef<(() => void) | null>(null);
   const continueTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const finishGameTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -4006,6 +4008,15 @@ export default function Game() {
 
       // If it requires a swipe-release, releasing it without swiping is a miss!
       if (ns.note.swipeDirection) {
+        const inRewindGrace = performance.now() < rewindGraceUntilWallRef.current || (rewindGraceUntilSongTimeRef.current > 0 && getT() < rewindGraceUntilSongTimeRef.current);
+        if (inRewindGrace) {
+          ns.holdActive = false;
+          ns.hit = true;
+          unresolvedNotesCountRef.current--;
+          audioManager.stopHoldTone(ns.note.id);
+          return;
+        }
+
         ns.holdActive = false;
         ns.missed = true;
         unresolvedNotesCountRef.current--;
@@ -4615,6 +4626,9 @@ export default function Game() {
   }, [songId, setLocation, finishGame]);
 
   function triggerGameFail(): boolean {
+    const inRewindGrace = performance.now() < rewindGraceUntilWallRef.current || (rewindGraceUntilSongTimeRef.current > 0 && getT() < rewindGraceUntilSongTimeRef.current);
+    if (inRewindGrace) return false;
+
     if (missCountRef.current >= 3 && optsRef.current.missSystem && !activeTutorial) {
       audioManager.stopAllHoldTones();
       const audio = audioRef.current;
@@ -4678,6 +4692,10 @@ export default function Game() {
     if (audio) {
       audio.currentTime = rewindTo;
     }
+
+    // Arm 1-second grace window after rewind so incoming/close notes don't immediately trigger misses
+    rewindGraceUntilWallRef.current = performance.now() + 1200 + 1000;
+    rewindGraceUntilSongTimeRef.current = rewindTo + 1.0;
 
     // Reset input states immediately so rewinding highway doesn't have ghost touches/keys
     laneRef.current.forEach((l) => {
@@ -4851,6 +4869,9 @@ export default function Game() {
         isAudioClockCalibratedRef.current = false;
         // Reset sliding window pointer on rewind
         noteWindowStartRef.current = 0;
+        // Arm 1-second post-rewind grace window from the exact moment playback resumes
+        rewindGraceUntilWallRef.current = performance.now() + 1000;
+        rewindGraceUntilSongTimeRef.current = rc.rewindTo + 1.0;
         if (rc.audio) {
           rc.audio.currentTime = rc.rewindTo;
           rc.audio.play().catch(() => {});
@@ -6970,8 +6991,19 @@ export default function Game() {
       // Miss detection — skip entirely during rewind (notes travel backwards; no new misses)
       if (!isRewinding && phaseRef.current === "playing") {
         const MW = missWindow(songRef.current?.difficultyLevel ?? 5);
+        const inRewindGrace = performance.now() < rewindGraceUntilWallRef.current || (rewindGraceUntilSongTimeRef.current > 0 && t < rewindGraceUntilSongTimeRef.current);
+        const isPastStrike = t > note.time + MW;
+
+        if (inRewindGrace && isPastStrike) {
+          // 1-second post-rewind grace window: notes in the past or immediately following the rewind
+          // pass safely without counting as misses, preventing cascading failure after continue.
+          ns.hit = true;
+          unresolvedNotesCountRef.current--;
+          continue;
+        }
+
         const isMissed =
-          (!ns.holdActive && t > note.time + MW);
+          (!ns.holdActive && isPastStrike);
 
         if (isMissed) {
           const isSignalLock = puRef.current.active === "SIGNAL_LOCK" && t < puRef.current.endTime && shieldChargesRef.current > 0;
