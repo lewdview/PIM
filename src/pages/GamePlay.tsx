@@ -201,7 +201,7 @@ const refineAndBlendEdges = (canvas: HTMLCanvasElement, threshold: number) => {
     }
     ctx.putImageData(imgData, 0, 0);
   } catch (e) {
-    console.warn('[Slideshow refineAndBlendEdges]', e);
+    // Gracefully ignore SecurityError when canvas is tainted by cross-origin assets
   }
 };
 
@@ -1002,22 +1002,7 @@ function laneAt(
   return { x: baseX, w: lw };
 }
 
-// Helper to determine exact lane column from screen clientX coordinates,
-// perfectly aligned with the visual judgment target strike zones at p = 1.0!
-function getLaneFromCoords(clientX: number, rect: DOMRect, W: number): number {
-  if (rect.width <= 0) return 1;
-  const clickX = ((clientX - rect.left) / rect.width) * W;
-
-  // Sample exact highway lane boundaries at bottom judgment strike zone (p = 1.0)
-  const l0 = laneAt(0, 1, W);
-  const l1 = laneAt(1, 1, W);
-  const split01 = l0.x + l0.w;
-  const split12 = l1.x + l1.w;
-
-  if (clickX < split01) return 0;
-  if (clickX < split12) return 1;
-  return 2;
-}
+// (getLaneFromCoords moved below getArchetypeProjection for full multi-POV and 3D projection awareness)
 
 function formatTimeSec(seconds: number): string {
   if (isNaN(seconds) || seconds < 0) return "0:00";
@@ -1711,6 +1696,110 @@ function getArchetypeProjection(
   const noteY = prog * hitY;
   const noteH = lerp(80, 140, prog);
   return { x, y: noteY, w, h: noteH, rot: 0, scale: lerp(0.4, 1.0, prog) };
+}
+
+// Helper to determine exact lane column from screen (clientX, clientY) coordinates,
+// perfectly aligned with the visual judgment target strike zones across ALL POV modes!
+function getLaneFromCoords(
+  clientX: number,
+  clientY: number,
+  rect: DOMRect,
+  W: number,
+  H: number,
+  povMode: PovMode = 'classic',
+  archetype: TrackArchetype = 'classic_perspective',
+  stage: number = 1,
+  t: number = 0
+): number {
+  if (rect.width <= 0 || rect.height <= 0) return 1;
+  const clickX = ((clientX - rect.left) / rect.width) * W;
+  const clickY = ((clientY - rect.top) / rect.height) * H;
+
+  const effectivePov = (povMode === 'dynamic_stage' && (stage === 3 || stage === 5))
+    ? (archetype === 'horizontal_drift' ? 'horizontal_drift' : archetype === 'radial_orbit' ? 'circle' : povMode)
+    : povMode;
+
+  // 1. Horizontal Drift: Lanes stacked vertically as horizontal rows
+  if (effectivePov === 'horizontal_drift') {
+    const trackH = Math.min(H * 0.55, 360);
+    const laneH = trackH / 3;
+    const startY = (H - trackH) / 2;
+    if (clickY < startY + laneH) return 2;
+    if (clickY < startY + 2 * laneH) return 1;
+    return 0;
+  }
+
+  // 2. Radial Orbit (Circle): 3 radial spokes at 120° angles rotating around center
+  if (effectivePov === 'circle') {
+    const cx = W / 2;
+    const cy = H * 0.50;
+    const rotOffset = t * 0.35 + (stage === 5 ? t * 0.6 : 0);
+    const clickAngle = Math.atan2(clickY - cy, clickX - cx);
+
+    let bestLane = 1;
+    let minDiff = Infinity;
+    for (let l = 0; l < 3; l++) {
+      const laneAngle = ((l * 2 * Math.PI) / 3) + rotOffset - Math.PI / 2;
+      let diff = (clickAngle - laneAngle) % (Math.PI * 2);
+      if (diff < -Math.PI) diff += Math.PI * 2;
+      if (diff > Math.PI) diff -= Math.PI * 2;
+      const absDiff = Math.abs(diff);
+      if (absDiff < minDiff) {
+        minDiff = absDiff;
+        bestLane = l;
+      }
+    }
+    return bestLane;
+  }
+
+  // 3. Flat 2D: Track is centered with distinct boundaries
+  if (effectivePov === 'flat_2d') {
+    const trackW = Math.min(W * 0.72, 480);
+    const laneW = trackW / 3;
+    const startX = (W - trackW) / 2;
+    if (clickX < startX + laneW) return 0;
+    if (clickX < startX + 2 * laneW) return 1;
+    return 2;
+  }
+
+  // 4. 3D POV Modes: Sample target positions at p = 1.0 (judgment strike zone)
+  if (effectivePov !== 'classic') {
+    const p0 = getArchetypeProjection(0, 1.0, W, H, archetype, stage, t, povMode);
+    const p1 = getArchetypeProjection(1, 1.0, W, H, archetype, stage, t, povMode);
+    const p2 = getArchetypeProjection(2, 1.0, W, H, archetype, stage, t, povMode);
+
+    const c0x = p0.x + p0.w / 2;
+    const c1x = p1.x + p1.w / 2;
+    const c2x = p2.x + p2.w / 2;
+
+    if (c0x < c1x && c1x < c2x) {
+      const split01 = (c0x + c1x) / 2;
+      const split12 = (c1x + c2x) / 2;
+      if (clickX < split01) return 0;
+      if (clickX < split12) return 1;
+      return 2;
+    } else {
+      const c0y = p0.y + p0.h / 2;
+      const c1y = p1.y + p1.h / 2;
+      const c2y = p2.y + p2.h / 2;
+      const d0 = (clickX - c0x) ** 2 + (clickY - c0y) ** 2;
+      const d1 = (clickX - c1x) ** 2 + (clickY - c1y) ** 2;
+      const d2 = (clickX - c2x) ** 2 + (clickY - c2y) ** 2;
+      if (d0 <= d1 && d0 <= d2) return 0;
+      if (d1 <= d0 && d1 <= d2) return 1;
+      return 2;
+    }
+  }
+
+  // 5. Classic Mode: Sample exact highway lane boundaries at bottom judgment strike zone (p = 1.0)
+  const l0 = laneAt(0, 1, W);
+  const l1 = laneAt(1, 1, W);
+  const split01 = l0.x + l0.w;
+  const split12 = l1.x + l1.w;
+
+  if (clickX < split01) return 0;
+  if (clickX < split12) return 1;
+  return 2;
 }
 
 function drawArchetypeHoldTrail(
@@ -3344,13 +3433,24 @@ export default function Game() {
 
         for (let idx = 0; idx < imageUrls.length; idx++) {
           const url = imageUrls[idx];
-          const img = new Image();
+          let img = new Image();
+          img.crossOrigin = 'anonymous';
           img.src = url;
 
-          await new Promise<void>((resolve) => {
-            img.onload = () => resolve();
-            img.onerror = () => resolve(); // skip on error
+          let loadOk = await new Promise<boolean>((resolve) => {
+            img.onload = () => resolve(true);
+            img.onerror = () => resolve(false);
           });
+
+          // Fallback without crossOrigin if CORS rejected the request so it can still display
+          if (!loadOk && active) {
+            img = new Image();
+            img.src = url;
+            await new Promise<void>((resolve) => {
+              img.onload = () => resolve();
+              img.onerror = () => resolve();
+            });
+          }
 
           if (!active) {
             createdSlides.forEach(s => disposeCanvas(s?.canvas));
@@ -3989,7 +4089,9 @@ export default function Game() {
       }
       checkPowerUps(gs.combo);
 
-      addJudgment({ type: j, lane, id: ++jCounter.current, ts: Date.now() });
+      if (!isHoldType) {
+        addJudgment({ type: j, lane, id: ++jCounter.current, ts: Date.now() });
+      }
 
       // ── Hit explosion effect ──
       triggerHitFx(lane, j, undefined, direction || ns.note.swipeDirection);
@@ -4214,6 +4316,36 @@ export default function Game() {
         triggerHitFx(ns.currentLane, "PERFECT+", top);
 
         addJudgment({ type: "PERFECT+", lane: ns.currentLane, id: ++jCounter.current, ts: Date.now() });
+      } else if (ns.holdProgress >= 0.25) {
+        const gs = gsRef.current;
+        gs.score += calcScore(gs.combo, "GOOD");
+        gs.combo++;
+        gs.maxCombo = Math.max(gs.maxCombo, gs.combo);
+        gameSenseService.sendHit();
+        gameSenseService.sendCombo(gs.combo);
+        gs.goods++;
+        checkPowerUps(gs.combo);
+        haptics.lightTap();
+        audioManager.playSfx("tap_nav", 0.15);
+        addJudgment({ type: "GOOD", lane: ns.currentLane, id: ++jCounter.current, ts: Date.now() });
+      } else {
+        // Hold dropped before 25%: count as MISS
+        ns.hit = false;
+        ns.missed = true;
+        const gs = gsRef.current;
+        gs.combo = 0;
+        gs.misses++;
+        puRef.current.active = null;
+        puRef.current.endTime = 0;
+        updatePuDisplayDOM(null);
+        gameSenseService.sendPowerup(0);
+        gameSenseService.sendMiss();
+        gameSenseService.sendCombo(0);
+        puRef.current.triggered.clear();
+        haptics.error();
+        muteLane(ns.note.lane);
+        addJudgment({ type: "MISS", lane: ns.currentLane, id: ++jCounter.current, ts: Date.now() });
+        triggerGameFail();
       }
       syncDisplay();
     },
@@ -8879,14 +9011,25 @@ export default function Game() {
       const rect = canvas.getBoundingClientRect();
       const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
       const W = canvas.width / dpr;
-      const lane = getLaneFromCoords(e.clientX, rect, W);
+      const H = canvas.height / dpr;
+      const lane = getLaneFromCoords(
+        e.clientX,
+        e.clientY,
+        rect,
+        W,
+        H,
+        activePovModeRef.current,
+        activeArchetypeRef.current,
+        lastDetectedStageRef.current,
+        getT()
+      );
       laneRef.current[lane].pressed = true;
       lastTapTimeRef.current[lane] = Date.now();
       laneRef.current[lane].touchId = e.pointerId;
       touchStartPos.current[e.pointerId] = { x: e.clientX, y: e.clientY, lane, originLane: lane };
       hitLane(lane, undefined, e.pointerId);
     },
-    [hitLane],
+    [hitLane, getT],
   );
 
   const onPointerMove = useCallback(
@@ -8898,7 +9041,18 @@ export default function Game() {
       const rect = canvas.getBoundingClientRect();
       const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
       const W = canvas.width / dpr;
-      const newLane = getLaneFromCoords(e.clientX, rect, W);
+      const H = canvas.height / dpr;
+      const newLane = getLaneFromCoords(
+        e.clientX,
+        e.clientY,
+        rect,
+        W,
+        H,
+        activePovModeRef.current,
+        activeArchetypeRef.current,
+        lastDetectedStageRef.current,
+        getT()
+      );
 
       const start = touchStartPos.current[e.pointerId];
       if (start) {
@@ -9063,9 +9217,20 @@ export default function Game() {
       const rect = canvas.getBoundingClientRect();
       const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
       const W = canvas.width / dpr;
+      const H = canvas.height / dpr;
       for (let i = 0; i < e.changedTouches.length; i++) {
         const touch = e.changedTouches[i];
-        const lane = getLaneFromCoords(touch.clientX, rect, W);
+        const lane = getLaneFromCoords(
+          touch.clientX,
+          touch.clientY,
+          rect,
+          W,
+          H,
+          activePovModeRef.current,
+          activeArchetypeRef.current,
+          lastDetectedStageRef.current,
+          getT()
+        );
         laneRef.current[lane].pressed = true;
         lastTapTimeRef.current[lane] = Date.now();
         laneRef.current[lane].touchId = touch.identifier;
@@ -9073,7 +9238,7 @@ export default function Game() {
         hitLane(lane, undefined, touch.identifier);
       }
     },
-    [hitLane],
+    [hitLane, getT],
   );
 
   const onTouchMove = useCallback(
@@ -9085,9 +9250,20 @@ export default function Game() {
       const rect = canvas.getBoundingClientRect();
       const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
       const W = canvas.width / dpr;
+      const H = canvas.height / dpr;
       for (let i = 0; i < e.changedTouches.length; i++) {
         const touch = e.changedTouches[i];
-        const newLane = getLaneFromCoords(touch.clientX, rect, W);
+        const newLane = getLaneFromCoords(
+          touch.clientX,
+          touch.clientY,
+          rect,
+          W,
+          H,
+          activePovModeRef.current,
+          activeArchetypeRef.current,
+          lastDetectedStageRef.current,
+          getT()
+        );
 
         // Swipe detection while moving
         const start = touchStartPos.current[touch.identifier];
@@ -9718,6 +9894,9 @@ export default function Game() {
           if (cancelled || cIdx >= toTry.length) return;
           const currentCandidateUrl = toTry[cIdx];
           const img = new Image();
+          if (!triedWithoutCors) {
+            img.crossOrigin = "anonymous";
+          }
           img.onload = () => {
             if (cancelled) return;
             coverImgRef.current = img;
