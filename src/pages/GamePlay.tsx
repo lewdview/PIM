@@ -4674,6 +4674,11 @@ export default function Game() {
     const rewindTo = rewindToRef.current;
     const fromT = audio?.currentTime ?? (rewindTo + 2.5);
 
+    // Pre-seek audio element immediately so it is ready by the end of the 1.2s rewind animation
+    if (audio) {
+      audio.currentTime = rewindTo;
+    }
+
     // Reset input states immediately so rewinding highway doesn't have ghost touches/keys
     laneRef.current.forEach((l) => {
       l.pressed = false;
@@ -4682,28 +4687,31 @@ export default function Game() {
     });
     touchStartPos.current = {};
 
-    // Restore note states in rewind window immediately so visual reverse-scroll is clean
+    // Reset sliding window pointer on rewind so notes in the rewind window are visible and searchable
+    noteWindowStartRef.current = 0;
+
+    // Restore note states in bounded rewind window: undo misses and reset in-flight active holds
+    // CRITICAL: NEVER reset ns.hit to false! Successfully tapped notes must stay hit and not replenish!
     notesRef.current.forEach((ns) => {
       const holdDur = ns.note.holdDuration || (ns.note.type === "hold" || ns.note.type === "hold-swipe" ? 0.5 : 0);
       const holdEnd = ns.note.time + holdDur;
-      const inRewindWindow = ns.note.time >= rewindTo - 0.5 || holdEnd >= rewindTo - 0.5;
+      const inRewindWindow = (ns.note.time >= rewindTo - 0.5 && ns.note.time <= fromT + 0.5) ||
+                             (holdEnd >= rewindTo - 0.5 && ns.note.time <= fromT + 0.5);
       if (inRewindWindow) {
         if (ns.missed) {
           ns.missed = false;
           unresolvedNotesCountRef.current++;
           gsRef.current.misses = Math.max(0, gsRef.current.misses - 1);
         }
-        if (ns.hit) {
-          ns.hit = false;
-          unresolvedNotesCountRef.current++;
+        if (ns.holdActive) {
+          ns.holdActive = false;
+          ns.holdProgress = 0;
+          ns.autoplayedBySurge = false;
+          ns.currentLane = ns.note.lane;
+          ns.visualLane = ns.note.lane;
+          ns.originLane = ns.note.lane;
+          ns.touchId = undefined;
         }
-        ns.holdActive = false;
-        ns.holdProgress = 0;
-        ns.autoplayedBySurge = false;
-        ns.currentLane = ns.note.lane;
-        ns.visualLane = ns.note.lane;
-        ns.originLane = ns.note.lane;
-        ns.touchId = undefined;
       }
     });
 
@@ -4815,30 +4823,7 @@ export default function Game() {
       if (p >= 1 && rewindCompletionRef.current) {
         const rc = rewindCompletionRef.current;
         rewindCompletionRef.current = null;
-        // Undo misses, restore hit notes, and reset hold lanes in the rewind window
-        notesRef.current.forEach((ns) => {
-          const holdDur = ns.note.holdDuration || (ns.note.type === "hold" || ns.note.type === "hold-swipe" ? 0.5 : 0);
-          const holdEnd = ns.note.time + holdDur;
-          const inRewindWindow = ns.note.time >= rc.rewindTo - 0.5 || holdEnd >= rc.rewindTo - 0.5;
-          if (inRewindWindow) {
-            if (ns.missed) {
-              ns.missed = false;
-              unresolvedNotesCountRef.current++;
-              gsRef.current.misses = Math.max(0, gsRef.current.misses - 1);
-            }
-            if (ns.hit) {
-              ns.hit = false;
-              unresolvedNotesCountRef.current++;
-            }
-            ns.holdActive = false;
-            ns.holdProgress = 0;
-            ns.autoplayedBySurge = false;
-            ns.currentLane = ns.note.lane;
-            ns.visualLane = ns.note.lane;
-            ns.originLane = ns.note.lane;
-            ns.touchId = undefined;
-          }
-        });
+
         // Clear all lane pressed and touch states
         laneRef.current.forEach((l) => {
           l.pressed = false;
