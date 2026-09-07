@@ -15,12 +15,21 @@ interface ShopConsoleProps {
   className?: string;
 }
 
+const BOMBSHELL_TIER_OPTS: { size: PackSize; label: string; count: number; cost: number }[] = [
+  { size: 'single', label: '1×', count: 1, cost: 100 },
+  { size: 'five', label: '5×', count: 5, cost: 500 },
+  { size: 'ten', label: '10×', count: 10, cost: 1000 },
+  { size: 'twentyfive', label: '25×', count: 25, cost: 2500 },
+  { size: 'fifty', label: '50×', count: 50, cost: 5000 },
+];
+
 export default function ShopConsole({ onPurchasePack, className = '' }: ShopConsoleProps) {
   const [, setLocation] = useLocation();
   const { collection, tokenBalance, addToCollection, removeFromCollection, loadVaultData, startReveal } = useVaultStore();
   const currentDay = getCurrentDay();
 
   // Local state for interactive modules
+  const [bombshellSize, setBombshellSize] = useState<PackSize>('single');
   const [targetDay, setTargetDay] = useState<string>('');
   const [targetLoading, setTargetLoading] = useState(false);
 
@@ -29,6 +38,10 @@ export default function ShopConsole({ onPurchasePack, className = '' }: ShopCons
 
   const [fusionLoading, setFusionLoading] = useState(false);
   const [isPurchasing, setIsPurchasing] = useState(false);
+
+  const activeBombshellTier = useMemo(() => {
+    return BOMBSHELL_TIER_OPTS.find(t => t.size === bombshellSize) || BOMBSHELL_TIER_OPTS[0];
+  }, [bombshellSize]);
 
   // Eligible cards for Rarity Upgrade (below Legendary)
   const upgradeableCards = useMemo(() => {
@@ -330,13 +343,31 @@ export default function ShopConsole({ onPurchasePack, className = '' }: ShopCons
                   </div>
                   <div>
                     <h3 className="font-black text-sm uppercase tracking-wider text-pink-400">Bombshell Pull</h3>
-                    <span className="text-[9px] font-mono text-zinc-400">1 Card • Art Series</span>
+                    <span className="text-[9px] font-mono text-zinc-400">{activeBombshellTier.count} Card{activeBombshellTier.count > 1 ? 's' : ''} • Art Series</span>
                   </div>
                 </div>
 
-                <p className="text-[10px] font-mono text-zinc-300 mb-3.5 leading-relaxed">
-                  Collector-grade artwork single rip. High aesthetic variance.
+                <p className="text-[10px] font-mono text-zinc-300 mb-3 leading-relaxed">
+                  Collector-grade artwork rip. High aesthetic variance.
                 </p>
+
+                {/* Multi-Tier Quantity Selector */}
+                <div className="flex items-center gap-1 mb-3">
+                  {BOMBSHELL_TIER_OPTS.map(t => (
+                    <button
+                      key={t.size}
+                      type="button"
+                      onClick={() => { audioManager.playSfx('tap_nav', 0.2); setBombshellSize(t.size); }}
+                      className={`flex-1 py-1 rounded text-[9px] font-mono font-bold transition-all cursor-pointer ${
+                        bombshellSize === t.size
+                          ? 'bg-pink-500 text-black border border-pink-400 font-black shadow-[0_0_8px_rgba(255,20,147,0.5)] scale-[1.02]'
+                          : 'bg-pink-950/30 text-pink-300/70 hover:text-pink-200 border border-pink-500/20'
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
 
                 <div className="p-2.5 rounded-lg bg-black/60 border border-pink-500/20 mb-4 text-[9.5px] font-mono space-y-1">
                   <div className="flex justify-between">
@@ -349,7 +380,7 @@ export default function ShopConsole({ onPurchasePack, className = '' }: ShopCons
                   </div>
                   <div className="flex justify-between">
                     <span className="text-zinc-400">Yield:</span>
-                    <span className="text-white font-bold">1 Collectible</span>
+                    <span className="text-white font-bold">{activeBombshellTier.count} Collectible{activeBombshellTier.count > 1 ? 's' : ''}</span>
                   </div>
                 </div>
               </div>
@@ -357,17 +388,23 @@ export default function ShopConsole({ onPurchasePack, className = '' }: ShopCons
               <div>
                 <div className="flex justify-between items-center text-[9.5px] font-mono uppercase tracking-widest text-zinc-400 mb-2">
                   <span>Entry Cost</span>
-                  <span className="text-pink-400 font-bold">100 V⚡</span>
+                  <span className="text-pink-400 font-bold">{activeBombshellTier.cost} V⚡</span>
                 </div>
 
                 <button
-                  disabled={isPurchasing || tokenBalance < 100}
-                  onClick={() => handlePackRip('bombshell_token', 'single')}
+                  disabled={isPurchasing || tokenBalance < activeBombshellTier.cost}
+                  onClick={() => handlePackRip('bombshell_token', bombshellSize)}
                   className="w-full py-2.5 rounded-lg bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-400 hover:to-rose-400 text-white font-black uppercase text-xs tracking-wider transition-all disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] cursor-pointer shadow flex items-center justify-center gap-1.5"
                   style={{ border: '2px solid #000000', boxShadow: '2px 2px 0 #000000' }}
                 >
                   <Sparkles size={13} className="fill-white" />
-                  <span>{isPurchasing ? 'OPENING…' : tokenBalance < 100 ? 'NEED SPARKS' : 'RIP BOMBSHELL'}</span>
+                  <span>
+                    {isPurchasing
+                      ? 'OPENING…'
+                      : tokenBalance < activeBombshellTier.cost
+                      ? 'NEED SPARKS'
+                      : `RIP ${activeBombshellTier.label} (${activeBombshellTier.cost} V⚡)`}
+                  </span>
                 </button>
               </div>
             </div>

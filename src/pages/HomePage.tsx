@@ -388,7 +388,7 @@ export default function HomePage() {
     const tier = cfg?.tiers.find(t => t.size === size) ?? cfg?.tiers[0];
 
     // ── INTERCEPT FOR USD PACKS (REQUIRES CLEARANCE OPTION) ─────────
-    if (tier && tier.priceValue > 0 && category !== 'vault_token' && tier.price !== 'FREE' && !sessionId) {
+    if (tier && tier.priceValue > 0 && category !== 'vault_token' && category !== 'bombshell_token' && tier.price !== 'FREE' && !sessionId) {
       setCheckoutInfo({
         category,
         size,
@@ -404,7 +404,7 @@ export default function HomePage() {
     try {
       useLoadingToast.getState().show('Opening pack…');
       const cards = (category === 'vault_token' || category === 'bombshell_token')
-        ? await buyTokenPack(category)
+        ? await buyTokenPack(category, size)
         : await purchasePack(category, size, sessionId);
       useLoadingToast.getState().hide();
       if (cards === 'insufficient') {
@@ -418,7 +418,7 @@ export default function HomePage() {
         const revealType = 'cinematic' as const;
         audioManager.playSfx('open_chest', 0.9);
         const isBombshell = category === 'bombshell_token' || category === 'bombshell';
-        const chosenCover = isBombshell ? getRandomBombshellPackCover() : tier?.coverImage;
+        const chosenCover = isBombshell ? getRandomBombshellPackCover(cards.length) : tier?.coverImage;
         startReveal(cards, cfg && tier ? {
           category,
           size,

@@ -18,7 +18,7 @@ import {
 import {
   canProduceEcho,
 } from '../utils/echoSystem';
-import { RARITY_CONFIG, type Rarity } from '../utils/rarity';
+import { RARITY_CONFIG, type Rarity, type PackSize } from '../utils/rarity';
 import { getRandomBombshellPackCover } from '../utils/bombshellCards';
 import { getCurrentDay } from '../utils/dayCalc';
 import Card from '../components/Card';
@@ -584,16 +584,17 @@ export default function ForgePage() {
     setTimeout(() => setBatchResult(null), 5000);
   }, [confirmBatch, removeFromCollection, loadVaultData]);
 
-  const handleBuyTokenPack = useCallback(async (packType: 'vault_token' | 'bombshell_token' = 'vault_token') => {
+  const handleBuyTokenPack = useCallback(async (packType: 'vault_token' | 'bombshell_token' = 'vault_token', size: PackSize = 'single') => {
     const isBombshell = packType === 'bombshell_token';
-    const cost = isBombshell ? 100 : packCost;
+    const mult = size === 'fifty' ? 50 : size === 'twentyfive' ? 25 : size === 'ten' ? 10 : size === 'five' ? 5 : size === 'double' ? 2 : 1;
+    const cost = isBombshell ? (100 * mult) : packCost;
     if (tokenBalance < cost) {
       alert(`Insufficient V⚡ tokens. You need ${cost} V⚡.`);
       return;
     }
     try {
       useLoadingToast.getState().show('Purchasing pack…');
-      const cards = await buyTokenPack(packType);
+      const cards = await buyTokenPack(packType, size);
       useLoadingToast.getState().hide();
       if (cards === 'insufficient') {
         alert('Insufficient V⚡ tokens for this pack.');
@@ -608,10 +609,10 @@ export default function ForgePage() {
       addToCollection(cards);
       await loadVaultData();
       audioManager.playSfx('open_chest', 0.9);
-      const chosenCover = isBombshell ? getRandomBombshellPackCover(1) : undefined;
+      const chosenCover = isBombshell ? getRandomBombshellPackCover(cards.length) : undefined;
       startReveal(cards, {
         category: packType,
-        size: 'single',
+        size,
         label: isBombshell ? 'Bombshell Pull' : 'Vault Pack',
         icon: isBombshell ? '💖' : '⚡',
         accent: isBombshell ? '#ff1493' : '#ff9900',
@@ -631,7 +632,7 @@ export default function ForgePage() {
       alert('Pack purchase failed — please try again.');
       await loadVaultData();
     }
-  }, [tokenBalance, addToCollection, loadVaultData, startReveal, setLocation, packCost]);
+  }, [tokenBalance, packCost, addToCollection, loadVaultData, startReveal, setLocation]);
 
   // ── TARGETED PULL ──────────────────────────────────────────────
   const handleTargetedPull = useCallback(async () => {

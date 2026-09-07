@@ -604,7 +604,7 @@ export default function NextGenLandingPage() {
     const tier = cfg?.tiers.find(t => t.size === size) ?? cfg?.tiers[0];
 
     // Intercept for USD packs (Display Stripe Card vs Crypto choice modal)
-    if (tier && tier.priceValue > 0 && category !== 'vault_token' && tier.price !== 'FREE' && !sessionId) {
+    if (tier && tier.priceValue > 0 && category !== 'vault_token' && category !== 'bombshell_token' && tier.price !== 'FREE' && !sessionId) {
       setCheckoutInfo({
         category,
         size,
@@ -620,7 +620,7 @@ export default function NextGenLandingPage() {
     try {
       useLoadingToast.getState().show('Vending pack from machine…');
       const cards = (category === 'vault_token' || category === 'bombshell_token')
-        ? await buyTokenPack(category)
+        ? await buyTokenPack(category, size)
         : await purchasePack(category, size, sessionId);
       useLoadingToast.getState().hide();
       if (cards === 'insufficient') {
