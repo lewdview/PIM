@@ -1048,7 +1048,7 @@ function drawMovingGasAura(
   ctx.save();
 
   // ── 1. Undulating Multi-Frequency Radial Noise Gas Field ──
-  const gasR = baseRadius * (1.0 + 0.04 * Math.sin(t * 1.5));
+  const gasR = Math.max(12, baseRadius * (1.0 + 0.04 * Math.sin(t * 1.5)));
   const gasGrad = ctx.createRadialGradient(cx, cy, 10, cx, cy, gasR);
   gasGrad.addColorStop(0, colorWithAlpha(baseColor, 0.88 * intensity));
   gasGrad.addColorStop(0.35, colorWithAlpha(baseColor, 0.62 * intensity));
@@ -1083,7 +1083,7 @@ function drawMovingGasAura(
       const distP = 0.55 + 0.30 * Math.sin(t * 1.2 + i * 1.5);
       const tx = cx + Math.cos(tendrilAng) * (baseRadius * distP);
       const ty = cy + Math.sin(tendrilAng) * (baseRadius * distP * 0.75);
-      const tw = baseRadius * (0.28 + 0.12 * Math.sin(t * 1.8 + i));
+      const tw = Math.max(4, baseRadius * (0.28 + 0.12 * Math.sin(t * 1.8 + i)));
 
       const wispGrad = ctx.createRadialGradient(tx, ty, 2, tx, ty, tw);
       wispGrad.addColorStop(0, colorWithAlpha(baseColor, 0.35 * intensity));
@@ -1225,12 +1225,12 @@ function getWaveCoasterPos(
 
   // 6. Lane layout with perspective expansion
   const { x: laneHitX, w: laneHitW } = laneAt(lane, 1, W, 0.20, 0.88);
+  const noteW = lerp(coasterW * 0.07, laneHitW, persP);
   const startSpacing = coasterW * 0.08;
-  const startX = cx + laneOffset * startSpacing;
+  const startX = cx + laneOffset * startSpacing - (coasterW * 0.07) / 2;
 
   const noteX = lerp(startX, laneHitX, persP) + swayX;
   const noteY = lerp(vanishingY, hitY, persP) + waveY;
-  const noteW = lerp(coasterW * 0.07, laneHitW, persP);
   const noteH = lerp(32, laneHitW * 0.72, persP);
   const scale = lerp(0.35, 1.0, persP) * (1.0 + Math.sin(wavePhase) * 0.08 * dampFactor);
 
@@ -2262,6 +2262,41 @@ function stageifyNotes(notes: Note[], duration: number, bpm: number, difficultyL
     const minSpacing = startSpacing + (baseSpacing - startSpacing) * progress;
 
     if (note.time - lastTime[stage] < minSpacing) continue;
+
+    // Prevent duplicate or near-simultaneous notes in the exact same lane across ALL stages
+    const duplicateInLane = processed.some(n => n.lane === clone.lane && Math.abs(n.time - clone.time) < 0.06);
+    if (duplicateInLane) continue;
+
+    // Collision guard: prevent notes spawning on a lane occupied by an active hold or slide note
+    const collidesWithHold = processed.some(existing => {
+      const dur = existing.holdDuration || (existing.type === 'hold' || existing.type === 'hold-swipe' ? 0.5 : 0);
+      if (dur <= 0) return false;
+      const holdStart = existing.time;
+      const holdEnd = existing.time + dur;
+      const targetL = existing.targetLane !== undefined ? existing.targetLane : existing.lane;
+      if (clone.time >= holdStart - 0.05 && clone.time <= holdEnd + 0.08) {
+        if (clone.lane === existing.lane || clone.lane === targetL) {
+          return true;
+        }
+      }
+      return false;
+    });
+    if (collidesWithHold) continue;
+
+    // If clone is a hold note, ensure it does not overlap existing notes on its lane or target lane
+    const cloneDur = clone.holdDuration || (clone.type === 'hold' || clone.type === 'hold-swipe' ? 0.5 : 0);
+    if (cloneDur > 0) {
+      const cloneTargetL = clone.targetLane !== undefined ? clone.targetLane : clone.lane;
+      const conflictsWithExisting = processed.some(existing => {
+        if (existing.time >= clone.time - 0.05 && existing.time <= clone.time + cloneDur + 0.08) {
+          if (existing.lane === clone.lane || existing.lane === cloneTargetL) {
+            return true;
+          }
+        }
+        return false;
+      });
+      if (conflictsWithExisting) continue;
+    }
 
     // Prevent simultaneous notes in stages 1-3
     if (stage <= 3) {
@@ -3795,7 +3830,7 @@ export default function Game() {
       const startIdx = noteWindowStartRef.current;
       for (let i = startIdx; i < allNotes.length; i++) {
         const candidate = allNotes[i];
-        if (candidate.hit || candidate.missed) continue;
+        if (candidate.hit || candidate.missed || candidate.holdActive) continue;
         if (candidate.note.time - t > maxDiff + 0.15) break; // Past hit window
         if (candidate.note.lane === lane) {
           const d = isExportVideoRef.current ? 0 : Math.abs(candidate.note.time - t);
@@ -4639,6 +4674,39 @@ export default function Game() {
     const rewindTo = rewindToRef.current;
     const fromT = audio?.currentTime ?? (rewindTo + 2.5);
 
+    // Reset input states immediately so rewinding highway doesn't have ghost touches/keys
+    laneRef.current.forEach((l) => {
+      l.pressed = false;
+      l.touchId = undefined;
+      l.isArrow = null;
+    });
+    touchStartPos.current = {};
+
+    // Restore note states in rewind window immediately so visual reverse-scroll is clean
+    notesRef.current.forEach((ns) => {
+      const holdDur = ns.note.holdDuration || (ns.note.type === "hold" || ns.note.type === "hold-swipe" ? 0.5 : 0);
+      const holdEnd = ns.note.time + holdDur;
+      const inRewindWindow = ns.note.time >= rewindTo - 0.5 || holdEnd >= rewindTo - 0.5;
+      if (inRewindWindow) {
+        if (ns.missed) {
+          ns.missed = false;
+          unresolvedNotesCountRef.current++;
+          gsRef.current.misses = Math.max(0, gsRef.current.misses - 1);
+        }
+        if (ns.hit) {
+          ns.hit = false;
+          unresolvedNotesCountRef.current++;
+        }
+        ns.holdActive = false;
+        ns.holdProgress = 0;
+        ns.autoplayedBySurge = false;
+        ns.currentLane = ns.note.lane;
+        ns.visualLane = ns.note.lane;
+        ns.originLane = ns.note.lane;
+        ns.touchId = undefined;
+      }
+    });
+
     // Arm the backwards animation — draw loop reads this to compute fake time
     rewindAnimRef.current = { wallStart: performance.now(), fromT, toT: rewindTo };
 
@@ -4747,19 +4815,38 @@ export default function Game() {
       if (p >= 1 && rewindCompletionRef.current) {
         const rc = rewindCompletionRef.current;
         rewindCompletionRef.current = null;
-        // Undo misses in the rewind window
+        // Undo misses, restore hit notes, and reset hold lanes in the rewind window
         notesRef.current.forEach((ns) => {
-          if (ns.missed && ns.note.time >= rc.rewindTo - 0.5) {
-            ns.missed = false;
-            unresolvedNotesCountRef.current++;
-            gsRef.current.misses = Math.max(0, gsRef.current.misses - 1);
-          }
-          if (ns.holdActive && ns.note.time >= rc.rewindTo - 0.5) {
+          const holdDur = ns.note.holdDuration || (ns.note.type === "hold" || ns.note.type === "hold-swipe" ? 0.5 : 0);
+          const holdEnd = ns.note.time + holdDur;
+          const inRewindWindow = ns.note.time >= rc.rewindTo - 0.5 || holdEnd >= rc.rewindTo - 0.5;
+          if (inRewindWindow) {
+            if (ns.missed) {
+              ns.missed = false;
+              unresolvedNotesCountRef.current++;
+              gsRef.current.misses = Math.max(0, gsRef.current.misses - 1);
+            }
+            if (ns.hit) {
+              ns.hit = false;
+              unresolvedNotesCountRef.current++;
+            }
             ns.holdActive = false;
             ns.holdProgress = 0;
             ns.autoplayedBySurge = false;
+            ns.currentLane = ns.note.lane;
+            ns.visualLane = ns.note.lane;
+            ns.originLane = ns.note.lane;
+            ns.touchId = undefined;
           }
         });
+        // Clear all lane pressed and touch states
+        laneRef.current.forEach((l) => {
+          l.pressed = false;
+          l.touchId = undefined;
+          l.isArrow = null;
+        });
+        touchStartPos.current = {};
+        audioManager.stopAllHoldTones();
         gsRef.current.combo = 0;
         [0, 1, 2].forEach(rc.restoreLane);
         rewindAnimRef.current = null;
@@ -6048,17 +6135,21 @@ export default function Game() {
           // 4. High-Speed Air Plunge Particles along coaster tracks
           ctx.fillStyle = coasterTheme;
           for (let sp = 0; sp < 6; sp++) {
-            const p = ((t * 1.8 * mult + sp / 6) % 1);
+            const rawP = ((t * 1.8 * mult + sp / 6) % 1);
+            const p = ((rawP % 1) + 1) % 1; // Safe positive modulo [0, 1)
             const lanePick = sp % 3;
             const proj = getWaveCoasterPos(lanePick, p, W, H, t, calculatedStage);
             const sparkX = proj.x + proj.w * 0.5;
             const sparkY = proj.y + proj.h * 0.5;
+            const sparkR = Math.max(0.1, lerp(1.5, 4.0, p));
 
-            ctx.beginPath();
-            ctx.arc(sparkX, sparkY, lerp(1.5, 4.0, p), 0, Math.PI * 2);
-            ctx.shadowColor = coasterTheme;
-            ctx.shadowBlur = 8;
-            ctx.fill();
+            if (Number.isFinite(sparkX) && Number.isFinite(sparkY)) {
+              ctx.beginPath();
+              ctx.arc(sparkX, sparkY, sparkR, 0, Math.PI * 2);
+              ctx.shadowColor = coasterTheme;
+              ctx.shadowBlur = 8;
+              ctx.fill();
+            }
           }
 
           ctx.restore();
@@ -7118,9 +7209,9 @@ export default function Game() {
       if (note.type !== "hold") {
         if (proj.rot !== 0) {
           ctx.save();
-          ctx.translate(drawX, noteY);
+          ctx.translate(drawX + noteW / 2, noteY);
           ctx.rotate(proj.rot);
-          drawKey(ctx, 0, 0, noteW, noteH, r, noteColor, prog, false, note.swipeDirection, note.time * 3700, note.type);
+          drawKey(ctx, -noteW / 2, 0, noteW, noteH, r, noteColor, prog, false, note.swipeDirection, note.time * 3700, note.type);
           ctx.restore();
         } else {
           drawKey(ctx, drawX, noteY, noteW, noteH, r, noteColor, prog, false, note.swipeDirection, note.time * 3700, note.type);
@@ -9792,6 +9883,49 @@ export default function Game() {
           visualLane: note.lane,
         };
       }).filter((ns): ns is NonNullable<typeof ns> => ns !== null);
+
+      // Sanitize duplicate notes in the same lane & prevent notes from spawning underneath active hold notes
+      const collisionSanitizedNotes: typeof notesRef.current = [];
+      for (const ns of notesRef.current) {
+        const note = ns.note;
+        // Duplicate in same lane within 60ms
+        const isDuplicate = collisionSanitizedNotes.some(existing => existing.note.lane === note.lane && Math.abs(existing.note.time - note.time) < 0.06);
+        if (isDuplicate) continue;
+
+        // Collision with existing hold
+        const collidesWithHold = collisionSanitizedNotes.some(existing => {
+          const dur = existing.note.holdDuration || (existing.note.type === 'hold' || existing.note.type === 'hold-swipe' ? 0.5 : 0);
+          if (dur <= 0) return false;
+          const holdStart = existing.note.time;
+          const holdEnd = existing.note.time + dur;
+          const targetL = existing.note.targetLane !== undefined ? existing.note.targetLane : existing.note.lane;
+          if (note.time >= holdStart - 0.05 && note.time <= holdEnd + 0.08) {
+            if (note.lane === existing.note.lane || note.lane === targetL) {
+              return true;
+            }
+          }
+          return false;
+        });
+        if (collidesWithHold) continue;
+
+        // If new note is hold, collision with existing notes in the hold interval
+        const noteDur = note.holdDuration || (note.type === 'hold' || note.type === 'hold-swipe' ? 0.5 : 0);
+        if (noteDur > 0) {
+          const noteTargetL = note.targetLane !== undefined ? note.targetLane : note.lane;
+          const conflictsWithExisting = collisionSanitizedNotes.some(existing => {
+            if (existing.note.time >= note.time - 0.05 && existing.note.time <= note.time + noteDur + 0.08) {
+              if (existing.note.lane === note.lane || existing.note.lane === noteTargetL) {
+                return true;
+              }
+            }
+            return false;
+          });
+          if (conflictsWithExisting) continue;
+        }
+
+        collisionSanitizedNotes.push(ns);
+      }
+      notesRef.current = collisionSanitizedNotes;
 
       // ── Note thinning for easy difficulties (rhythm-aware temporal filtering) ──
       const dLevel = songRef.current?.difficultyLevel ?? 5;

@@ -284,6 +284,41 @@ export function stageifyNotes(notes, duration, bpm, difficultyLevel = 5) {
       }
     }
 
+    // Prevent duplicate or near-simultaneous notes in the exact same lane across ALL stages
+    const duplicateInLane = processed.some(n => n.lane === gated.lane && Math.abs(n.time - gated.time) < 0.06);
+    if (duplicateInLane) continue;
+
+    // Collision guard: prevent notes spawning on a lane occupied by an active hold or slide note
+    const collidesWithHold = processed.some(existing => {
+      const dur = existing.holdDuration || (existing.type === 'hold' || existing.type === 'hold-swipe' ? 0.5 : 0);
+      if (dur <= 0) return false;
+      const holdStart = existing.time;
+      const holdEnd = existing.time + dur;
+      const targetL = existing.targetLane !== undefined ? existing.targetLane : existing.lane;
+      if (gated.time >= holdStart - 0.05 && gated.time <= holdEnd + 0.08) {
+        if (gated.lane === existing.lane || gated.lane === targetL) {
+          return true;
+        }
+      }
+      return false;
+    });
+    if (collidesWithHold) continue;
+
+    // If gated is a hold note, ensure it does not overlap existing notes on its lane or target lane
+    const gatedDur = gated.holdDuration || (gated.type === 'hold' || gated.type === 'hold-swipe' ? 0.5 : 0);
+    if (gatedDur > 0) {
+      const gatedTargetL = gated.targetLane !== undefined ? gated.targetLane : gated.lane;
+      const conflictsWithExisting = processed.some(existing => {
+        if (existing.time >= gated.time - 0.05 && existing.time <= gated.time + gatedDur + 0.08) {
+          if (existing.lane === gated.lane || existing.lane === gatedTargetL) {
+            return true;
+          }
+        }
+        return false;
+      });
+      if (conflictsWithExisting) continue;
+    }
+
     processed.push(gated);
     lastNoteTimeByStage[stage] = note.time;
   }
