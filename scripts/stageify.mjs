@@ -31,15 +31,21 @@ const STAGE_META = [
 
 /**
  * Minimum note spacing per stage, expressed as a multiplier of beatDuration.
- * These are the TIGHTEST spacing (at end of stage). At stage start, spacing is 1.5x wider.
+ * Standard mode: Stage 5 is clamped to 0.15 (prevents sub-60ms tap spam at standard BPMs).
+ * Deluxe mode: Stage 5 retains 0.10 for expert climax.
  */
 const STAGE_MIN_SPACING = [
   1.0,   // Stage 1: Very Easy — generous, comfortable entry pacing
   0.55,  // Stage 2: Easy/Medium — smooth transition
   0.30,  // Stage 3: Hard — balanced rhythmic pulse
   0.18,  // Stage 4: Brutal — dense syncopated patterns
-  0.10,  // Stage 5: FINAL STAGE — expert climax
+  0.15,  // Stage 5: FINAL STAGE — standard mode clamp (0.15 vs deluxe 0.10)
 ];
+
+function getStageBaseMultiplier(stage, isDeluxe = false) {
+  if (stage === 5) return isDeluxe ? 0.10 : 0.15;
+  return STAGE_MIN_SPACING[stage - 1] ?? 0.15;
+}
 
 /**
  * Intra-stage density ramp factor.
@@ -59,7 +65,7 @@ const TRANSITION_GAP_BEATS = 4;
 /**
  * Mechanic allowlists per stage.
  * Controls which note types survive each stage after the enhance pass.
- * 'mine' has special gating: only allowed in Stage 4+ AND difficultyLevel >= 7.
+ * 'mine' has special gating: allowed in Stage 4+ (difficultyLevel >= 7 in standard, >= 5 in deluxe).
  */
 const STAGE_ALLOWED_TYPES = {
   1: new Set(['tap']),
@@ -119,23 +125,33 @@ function isInTransitionGap(time, stageBounds, beatDuration) {
 
 /**
  * Calculate the minimum note spacing at a given point within a stage.
- * Interpolates from wide spacing at stage start to tight spacing at stage end.
+ * Interpolates from wide spacing at stage start to tight spacing at stage end,
+ * clamped to tempo-independent absolute millisecond floor (110ms standard, 75ms deluxe).
  *
  * @param {number} time - Note time in seconds
  * @param {number} stage - Stage number 1-5
  * @param {object[]} stageBounds - Array of stage boundary objects
  * @param {number} beatDuration - Duration of one beat in seconds
+ * @param {boolean} [isDeluxe=false] - Deluxe difficulty mode flag
  * @returns {number} Minimum spacing in seconds
  */
-function getMinSpacing(time, stage, stageBounds, beatDuration) {
+function getMinSpacing(time, stage, stageBounds, beatDuration, isDeluxe = false) {
   const sb = stageBounds[stage - 1];
   const stageProgress = (time - sb.startTime) / Math.max(0.1, sb.endTime - sb.startTime);
   const clampedProgress = Math.max(0, Math.min(1, stageProgress));
 
-  const baseSpacing = STAGE_MIN_SPACING[stage - 1] * beatDuration;
+  const baseMultiplier = getStageBaseMultiplier(stage, isDeluxe);
+  const baseSpacing = baseMultiplier * beatDuration;
   // Lerp from wide (ramp factor × base) at start to tight (base) at end
   const startSpacing = baseSpacing * DENSITY_RAMP_FACTOR;
-  return startSpacing + (baseSpacing - startSpacing) * clampedProgress;
+  const lerpedSpacing = startSpacing + (baseSpacing - startSpacing) * clampedProgress;
+
+  // Enforce Absolute Millisecond Floor (Δt_min):
+  // const baseSpacingMs = beatDurationSec * stageMultiplier * 1000;
+  // const minSpacingMs = Math.max(baseSpacingMs, options.deluxe ? 75 : 110);
+  const baseSpacingMs = lerpedSpacing * 1000;
+  const minSpacingMs = Math.max(baseSpacingMs, isDeluxe ? 75 : 110);
+  return minSpacingMs / 1000;
 }
 
 /**
@@ -145,15 +161,17 @@ function getMinSpacing(time, stage, stageBounds, beatDuration) {
  * @param {object} note - The note object
  * @param {number} stage - Stage number 1-5
  * @param {number} difficultyLevel - Overall song difficulty 1-10
+ * @param {boolean} [isDeluxe=false] - Deluxe mode flag
  * @returns {object} Adjusted note clone
  */
-function gateNoteType(note, stage, difficultyLevel) {
+function gateNoteType(note, stage, difficultyLevel, isDeluxe = false) {
   const clone = { ...note, stage };
   const allowed = STAGE_ALLOWED_TYPES[stage];
 
-  // Special mine gating: only allowed at difficulty >= 7 in stage 4+
+  // Special mine gating: allowed in Stage 4+ (difficultyLevel >= 7 in standard, >= 5 in deluxe)
   if (clone.type === 'mine') {
-    if (stage < 4 || difficultyLevel < 7) {
+    const minDiff = isDeluxe ? 5 : 7;
+    if (stage < 4 || difficultyLevel < minDiff) {
       // Remove mine entirely (return null to signal removal)
       return null;
     }
@@ -162,6 +180,9 @@ function gateNoteType(note, stage, difficultyLevel) {
 
   // If type is already allowed, keep it
   if (allowed.has(clone.type)) {
+    if (clone.type === 'lift' || clone.type === 'hold-swipe') {
+      clone.releaseWindowBonusMs = 20;
+    }
     return clone;
   }
 
@@ -232,34 +253,34 @@ function gateNoteType(note, stage, difficultyLevel) {
 /**
  * Main stageify function.
  * Partitions notes into 5 stages with mechanic gating, density ramping,
- * and BPM-relative transition gaps.
+ * BPM-relative transition gaps, and capacitive touch ergonomic clamping.
  *
  * @param {object[]} notes - Array of note objects (must have at least `time`, `type`, `lane`)
  * @param {number} duration - Total song duration in seconds
  * @param {number} bpm - Beats per minute
- * @param {number} [difficultyLevel=5] - Overall song difficulty (1-10)
- * @returns {{ notes: object[], stages: object[] }}
+ * @param {number|object} [difficultyLevel=5] - Overall song difficulty (1-10) or options object
+ * @param {object} [options={}] - Options object ({ deluxe?: boolean })
+ * @returns {{ notes: object[], stages: object[], deluxe: boolean, timingProfile: string }}
  */
-export function stageifyNotes(notes, duration, bpm, difficultyLevel = 5) {
+export function stageifyNotes(notes, duration, bpm, difficultyLevel = 5, options = {}) {
+  if (typeof difficultyLevel === 'object' && difficultyLevel !== null) {
+    options = difficultyLevel;
+    difficultyLevel = options.difficultyLevel || 5;
+  }
+  const isDeluxe = Boolean(options.deluxe);
   const beatDuration = 60 / bpm;
   const stageBounds = buildStageBounds(duration);
-
-  // Build boundary times (transitions between stages)
-  const boundaries = STAGE_PERCENTS.slice(1, -1).map(p => duration * p);
-
-  // Gap duration is BPM-relative
-  const gapDuration = TRANSITION_GAP_BEATS * beatDuration;
 
   const processed = [];
   // Track last note time per stage for spacing checks
   const lastNoteTimeByStage = { 1: -999, 2: -999, 3: -999, 4: -999, 5: -999 };
 
-  // Sort input by time
-  const sorted = [...notes].sort((a, b) => a.time - b.time);
+  // Sort input by time, breaking ties by lane
+  const sorted = [...notes].sort((a, b) => a.time - b.time || a.lane - b.lane);
 
   for (const note of sorted) {
     // Skip notes in transition gaps
-    if (isInTransitionGap(note.time, boundaries, gapDuration)) {
+    if (isInTransitionGap(note.time, stageBounds, beatDuration)) {
       continue;
     }
 
@@ -267,13 +288,29 @@ export function stageifyNotes(notes, duration, bpm, difficultyLevel = 5) {
     const stage = getStageForTime(note.time, stageBounds);
 
     // Gate note type
-    const gated = gateNoteType(note, stage, difficultyLevel);
+    const gated = gateNoteType(note, stage, difficultyLevel, isDeluxe);
     if (!gated) continue; // note was removed (e.g. mine in wrong stage)
 
-    // Check minimum spacing (density gating)
-    const minSpacing = getMinSpacing(note.time, stage, stageBounds, beatDuration);
-    if (note.time - lastNoteTimeByStage[stage] < minSpacing) {
+    // Calculate minimum spacing with absolute millisecond floor
+    // (Math.max(baseSpacingMs, options.deluxe ? 75 : 110))
+    const minSpacing = getMinSpacing(gated.time, stage, stageBounds, beatDuration, isDeluxe);
+
+    // Intra-stage density spacing check
+    if (gated.time - lastNoteTimeByStage[stage] < minSpacing) {
       continue;
+    }
+
+    // Cross-lane absolute millisecond floor enforcement (capacitive ergonomics):
+    // No two notes on the chart (even across alternating lanes) may spawn closer
+    // than minSpacingMs unless explicitly flagged as a simultaneous chord/dual hit (Δt < 8ms).
+    if (processed.length > 0) {
+      const lastPlaced = processed[processed.length - 1];
+      const timeDelta = gated.time - lastPlaced.time;
+      const isSimultaneousChord = Math.abs(timeDelta) < 0.008;
+
+      if (!isSimultaneousChord && timeDelta < minSpacing) {
+        continue;
+      }
     }
 
     // For stages 1-3, prevent simultaneous notes (no duals)
@@ -320,7 +357,7 @@ export function stageifyNotes(notes, duration, bpm, difficultyLevel = 5) {
     }
 
     processed.push(gated);
-    lastNoteTimeByStage[stage] = note.time;
+    lastNoteTimeByStage[stage] = gated.time;
   }
 
   // Re-index IDs sequentially
@@ -335,7 +372,12 @@ export function stageifyNotes(notes, duration, bpm, difficultyLevel = 5) {
     noteCount: finalNotes.filter(n => n.stage === sb.stage).length,
   }));
 
-  return { notes: finalNotes, stages: stagesWithCounts };
+  return {
+    notes: finalNotes,
+    stages: stagesWithCounts,
+    deluxe: isDeluxe,
+    timingProfile: isDeluxe ? "elite" : "standard"
+  };
 }
 
 /**

@@ -1,11 +1,79 @@
 {
   "variant": "v5_flagship",
   "name": "Flagship Kinesthetic & Motif Master Edition",
-  "description": "Flagship procedural engine featuring two-thumb kinematic ergonomics, musical motif memory across song sections, frequency-to-lane spatialization, pre-drop tension vacuums, and full note taxonomy integration.",
-  "architecture": "Section Cadence Analyzer + Motif Memory Cache + Two-Thumb Kinematic Simulator + Stage 5 Progressive Gate",
+  "description": "Flagship procedural engine featuring two-thumb kinematic ergonomics, musical motif memory across song sections, frequency-to-lane spatialization, pre-drop tension vacuums, full note taxonomy integration, and dual Standard / Deluxe editions.",
+  "architecture": "Section Cadence Analyzer + Motif Memory Cache + Two-Thumb Kinematic Simulator + Stage 5 Progressive Gate + Touch Allocator State Machine",
   "totalSongs": 366,
-  "totalNotes": 242880,
-  "avgNotesPerSong": "663.6",
+  "editions": {
+    "standard": {
+      "totalNotes": 148650,
+      "avgNotesPerSong": "406.1",
+      "timingProfile": "standard",
+      "stage5Multiplier": 0.15,
+      "minSpacingMs": 110,
+      "supportedMechanics": [
+        "accent",
+        "break",
+        "hold",
+        "hold-swipe",
+        "lift",
+        "mine",
+        "remix",
+        "slide",
+        "swipe",
+        "tap",
+        "zigzag"
+      ],
+      "mechanicDistribution": {
+        "tap": 75395,
+        "hold": 10577,
+        "accent": 12004,
+        "swipe": 18258,
+        "slide": 10573,
+        "hold-swipe": 6818,
+        "lift": 6603,
+        "zigzag": 7943,
+        "remix": 173,
+        "break": 85,
+        "mine": 221
+      }
+    },
+    "deluxe": {
+      "totalNotes": 153166,
+      "avgNotesPerSong": "418.5",
+      "timingProfile": "elite",
+      "stage5Multiplier": 0.1,
+      "minSpacingMs": 75,
+      "supportedMechanics": [
+        "accent",
+        "break",
+        "hold",
+        "hold-swipe",
+        "lift",
+        "mine",
+        "remix",
+        "slide",
+        "swipe",
+        "tap",
+        "zigzag"
+      ],
+      "mechanicDistribution": {
+        "tap": 76900,
+        "hold": 10328,
+        "accent": 12082,
+        "slide": 10952,
+        "swipe": 18930,
+        "hold-swipe": 7111,
+        "zigzag": 8258,
+        "lift": 6687,
+        "mine": 1649,
+        "break": 95,
+        "remix": 174
+      }
+    }
+  },
+  "totalNotes": 148650,
+  "avgNotesPerSong": "406.1",
   "supportedMechanics": [
     "accent",
     "break",
@@ -20,17 +88,17 @@
     "zigzag"
   ],
   "mechanicDistribution": {
-    "tap": 103405,
-    "hold": 14376,
-    "accent": 23497,
-    "swipe": 33034,
-    "slide": 21361,
-    "hold-swipe": 15356,
-    "lift": 14699,
-    "zigzag": 16249,
-    "remix": 269,
-    "mine": 553,
-    "break": 81
+    "tap": 75395,
+    "hold": 10577,
+    "accent": 12004,
+    "swipe": 18258,
+    "slide": 10573,
+    "hold-swipe": 6818,
+    "lift": 6603,
+    "zigzag": 7943,
+    "remix": 173,
+    "break": 85,
+    "mine": 221
   },
-  "generatedAt": "2026-09-05T13:35:31.275Z"
+  "generatedAt": "2026-09-07T22:47:02.604Z"
 }

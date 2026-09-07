@@ -551,22 +551,23 @@ const MATRIX_COLUMNS = Array.from({ length: 18 }).map((_, i) => {
 
 const HIT_RATIO = 0.78;
 
-// Hit windows scale with difficulty — easier = more forgiving
-function perfectPlusWindow(diff: number): number {
-  // Level 1: 0.060s, Level 10: 0.030s
-  return Math.max(0.030, 0.060 - (diff - 1) * 0.0033);
+// Hit windows scale with difficulty — easier = more forgiving.
+// When timingProfile === 'elite' (Deluxe edition charts), windows tighten by 15% for elite precision play.
+function perfectPlusWindow(diff: number, timingProfile?: string): number {
+  const mult = timingProfile === 'elite' ? 0.85 : 1.0;
+  return Math.max(0.024, (0.060 - (diff - 1) * 0.0033) * mult);
 }
-function perfectWindow(diff: number): number {
-  // Level 1: 0.110s, Level 10: 0.055s
-  return Math.max(0.055, 0.110 - (diff - 1) * 0.0061);
+function perfectWindow(diff: number, timingProfile?: string): number {
+  const mult = timingProfile === 'elite' ? 0.85 : 1.0;
+  return Math.max(0.045, (0.110 - (diff - 1) * 0.0061) * mult);
 }
-function goodWindow(diff: number): number {
-  // Level 1: 0.190s, Level 10: 0.100s
-  return Math.max(0.100, 0.190 - (diff - 1) * 0.010);
+function goodWindow(diff: number, timingProfile?: string): number {
+  const mult = timingProfile === 'elite' ? 0.85 : 1.0;
+  return Math.max(0.080, (0.190 - (diff - 1) * 0.010) * mult);
 }
-function missWindow(diff: number): number {
-  // Level 1: 0.360s, Level 10: 0.190s
-  return Math.max(0.190, 0.360 - (diff - 1) * 0.019);
+function missWindow(diff: number, timingProfile?: string): number {
+  const mult = timingProfile === 'elite' ? 0.85 : 1.0;
+  return Math.max(0.150, (0.360 - (diff - 1) * 0.019) * mult);
 }
 
 function getDifficultyLaneColor(baseColor: string, _diffLevel: number, laneIndex?: number): string {
@@ -3954,12 +3955,13 @@ export default function Game() {
       }
 
       const isFever = puRef.current.active === "FEVER" && t < puRef.current.endTime;
+      const tp = songRef.current?.timingProfile;
       let j: "PERFECT+" | "PERFECT" | "GOOD" | null =
-        diff <= perfectPlusWindow(dl)
+        diff <= perfectPlusWindow(dl, tp)
           ? "PERFECT+"
-          : diff <= perfectWindow(dl)
+          : diff <= perfectWindow(dl, tp)
             ? "PERFECT"
-            : diff <= goodWindow(dl)
+            : diff <= goodWindow(dl, tp)
               ? "GOOD"
               : null;
       if (j === "PERFECT" && isFever) {
@@ -4370,13 +4372,15 @@ export default function Game() {
 
       // Check candidate LIFT notes on this lane (release on beat timing from controller, keyboard, or touch)
       const t = getT();
+      const tp = songRef.current?.timingProfile;
       const dl = songRef.current?.difficultyLevel ?? 5;
-      const gw = goodWindow(dl);
+      const gw = goodWindow(dl, tp);
       let liftCandidate: NoteState | undefined;
       for (let i = noteWindowStartRef.current; i < allNotes.length; i++) {
         const n = allNotes[i];
-        if (n.note.time - t > gw) break;
-        if (n.note.type === "lift" && !n.hit && !n.missed && Math.abs(n.note.time - t) <= gw && (n.note.lane === lane || Math.round(n.currentLane) === lane)) {
+        const bonusSec = (n.note.releaseWindowBonusMs || 0) / 1000;
+        if (n.note.time - t > gw + bonusSec) break;
+        if (n.note.type === "lift" && !n.hit && !n.missed && Math.abs(n.note.time - t) <= (gw + bonusSec) && (n.note.lane === lane || Math.round(n.currentLane) === lane)) {
           liftCandidate = n;
           break;
         }
@@ -4386,10 +4390,11 @@ export default function Game() {
         liftCandidate.hit = true;
         unresolvedNotesCountRef.current--;
         const diff = Math.abs(liftCandidate.note.time - t);
+        const bonusSec = (liftCandidate.note.releaseWindowBonusMs || 0) / 1000;
         const j: "PERFECT+" | "PERFECT" | "GOOD" =
-          diff <= perfectPlusWindow(dl)
+          diff <= (perfectPlusWindow(dl, tp) + bonusSec)
             ? "PERFECT+"
-            : diff <= perfectWindow(dl)
+            : diff <= (perfectWindow(dl, tp) + bonusSec)
               ? "PERFECT"
               : "GOOD";
         const gs = gsRef.current;
@@ -4427,11 +4432,13 @@ export default function Game() {
       const releaseTargetTime = ns.note.time + holdDur;
       const diff = Math.abs(releaseTargetTime - t);
       const diffLevel = songRef.current?.difficultyLevel ?? 5;
+      const tp = songRef.current?.timingProfile;
+      const bonusSec = (ns.note.releaseWindowBonusMs || 0) / 1000;
 
-      const ppW = perfectPlusWindow(diffLevel);
-      const pW = perfectWindow(diffLevel);
-      const gW = goodWindow(diffLevel);
-      const mW = missWindow(diffLevel);
+      const ppW = perfectPlusWindow(diffLevel, tp) + bonusSec;
+      const pW = perfectWindow(diffLevel, tp) + bonusSec;
+      const gW = goodWindow(diffLevel, tp) + bonusSec;
+      const mW = missWindow(diffLevel, tp) + bonusSec;
 
       let j: JudgmentDisplay["type"];
       if (diff <= ppW) j = "PERFECT+";
@@ -9382,13 +9389,15 @@ export default function Game() {
 
       // Check candidate LIFT notes (release on beat timing)
       const t = getT();
+      const tp = songRef.current?.timingProfile;
       const dl = songRef.current?.difficultyLevel ?? 5;
-      const gw = goodWindow(dl);
+      const gw = goodWindow(dl, tp);
       let liftCandidate: NoteState | undefined;
       for (let i = noteWindowStartRef.current; i < allNotes.length; i++) {
         const n = allNotes[i];
-        if (n.note.time - t > gw) break;
-        if (n.note.type === "lift" && !n.hit && !n.missed && Math.abs(n.note.time - t) <= gw) {
+        const bonusSec = (n.note.releaseWindowBonusMs || 0) / 1000;
+        if (n.note.time - t > gw + bonusSec) break;
+        if (n.note.type === "lift" && !n.hit && !n.missed && Math.abs(n.note.time - t) <= (gw + bonusSec)) {
           liftCandidate = n;
           break;
         }
@@ -9397,7 +9406,12 @@ export default function Game() {
         liftCandidate.hit = true;
         unresolvedNotesCountRef.current--;
         const diff = Math.abs(liftCandidate.note.time - t);
-        const j = diff <= perfectPlusWindow(dl) ? "PERFECT+" : diff <= perfectWindow(dl) ? "PERFECT" : "GOOD";
+        const bonusSec = (liftCandidate.note.releaseWindowBonusMs || 0) / 1000;
+        const j = diff <= (perfectPlusWindow(dl, tp) + bonusSec)
+          ? "PERFECT+"
+          : diff <= (perfectWindow(dl, tp) + bonusSec)
+            ? "PERFECT"
+            : "GOOD";
         const gs = gsRef.current;
         gs.score += calcScore(gs.combo, j);
         gs.combo++;

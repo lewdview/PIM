@@ -47,6 +47,8 @@ export interface GameSong {
   };
   lyrics?: string;
   lyricsSegments?: any[];
+  timingProfile?: 'standard' | 'elite';
+  deluxe?: boolean;
 }
 
 /** True if the song's release date is still in the future (not yet playable). */
@@ -343,27 +345,41 @@ export async function getSongById(id: string): Promise<GameSong | null> {
     }
 
     const variant = typeof localStorage !== 'undefined' ? (localStorage.getItem('opt_chartVariant') || 'v5_flagship') : 'v5_flagship';
-    let fetchUrl = `/data/songs_variants/v5_flagship/${fetchId}.json`;
+    const isDeluxeRequested = typeof localStorage !== 'undefined' && (localStorage.getItem('opt_deluxeChart') === 'true' || localStorage.getItem('opt_deluxeMode') === 'true');
+    const isExplicitDeluxe = id.endsWith('_deluxe') || fetchId.endsWith('_deluxe');
+    const shouldUseDeluxe = isExplicitDeluxe || (variant === 'v5_flagship' && isDeluxeRequested);
+
+    const cleanFetchId = fetchId.replace(/_deluxe$/, '');
+    let fetchUrl = shouldUseDeluxe
+      ? `/data/songs_variants/v5_flagship/${cleanFetchId}_deluxe.json`
+      : `/data/songs_variants/v5_flagship/${cleanFetchId}.json`;
+
     if (variant === 'v4_neural') {
-      fetchUrl = `/data/songs_variants/v4_neural/${fetchId}.json`;
+      fetchUrl = `/data/songs_variants/v4_neural/${cleanFetchId}.json`;
     } else if (variant === 'v1_gimmicks') {
-      fetchUrl = `/data/songs_variants/v1_gimmicks/${fetchId}.json`;
+      fetchUrl = `/data/songs_variants/v1_gimmicks/${cleanFetchId}.json`;
     } else if (variant === 'v2_minimal') {
-      fetchUrl = `/data/songs_variants/v2_minimal/${fetchId}.json`;
+      fetchUrl = `/data/songs_variants/v2_minimal/${cleanFetchId}.json`;
     } else if (variant === 'v3_master') {
-      fetchUrl = `/data/songs_variants/v3_master/${fetchId}.json`;
+      fetchUrl = `/data/songs_variants/v3_master/${cleanFetchId}.json`;
     } else if (variant === 'canonical' || variant === 'default') {
-      fetchUrl = `/data/songs/${fetchId}.json`;
+      fetchUrl = `/data/songs/${cleanFetchId}.json`;
     } else if (variant === 'v5_flagship') {
-      fetchUrl = `/data/songs_variants/v5_flagship/${fetchId}.json`;
+      fetchUrl = shouldUseDeluxe
+        ? `/data/songs_variants/v5_flagship/${cleanFetchId}_deluxe.json`
+        : `/data/songs_variants/v5_flagship/${cleanFetchId}.json`;
     }
 
     let res = await fetch(fetchUrl);
-    if (!res.ok && fetchUrl !== `/data/songs/${fetchId}.json`) {
-      // Fallback to default canonical chart if variant not found
-      res = await fetch(`/data/songs/${fetchId}.json`);
+    if (!res.ok && shouldUseDeluxe) {
+      // Fallback to standard v5_flagship if deluxe not found
+      res = await fetch(`/data/songs_variants/v5_flagship/${cleanFetchId}.json`);
     }
-    if (!res.ok) throw new Error(`Failed to fetch song detail for ${fetchId}`);
+    if (!res.ok && fetchUrl !== `/data/songs/${cleanFetchId}.json`) {
+      // Fallback to default canonical chart if variant not found
+      res = await fetch(`/data/songs/${cleanFetchId}.json`);
+    }
+    if (!res.ok) throw new Error(`Failed to fetch song detail for ${cleanFetchId}`);
     const fullDetail = await res.json();
 
     return resolveSongUrls({

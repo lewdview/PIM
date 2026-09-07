@@ -105,13 +105,19 @@ function createMotif(prng, barCount = 4, difficulty = 5) {
 
 /**
  * Core V5 Flagship Note Generator for a single song
+ *
+ * @param {object} song - Source song metadata
+ * @param {object} [options={}] - Generation options ({ deluxe?: boolean })
  */
-export function generateV5SongChart(song) {
+export function generateV5SongChart(song, options = {}) {
+  const isDeluxe = Boolean(options.deluxe);
   const bpm = song.bpm || 120;
   const beatDuration = 60 / bpm;
   const duration = Math.max(60, song.duration || 180);
   const difficulty = song.difficultyLevel || 5;
-  const prng = createPrng((song.day || 1) * 9973 + Math.round(bpm * 17));
+  // Use distinct seed for deluxe to give differentiated nuance while preserving motif structure
+  const seedMultiplier = isDeluxe ? 13337 : 9973;
+  const prng = createPrng((song.day || 1) * seedMultiplier + Math.round(bpm * 17));
 
   // 1. Structural Section Boundaries (Seconds)
   const sections = [
@@ -139,16 +145,83 @@ export function generateV5SongChart(song) {
     lastTime: -1,
     leftLane: 0,
     rightLane: 2,
-    anchorHoldUntil: -1,
     consecutiveSameLane: 0,
     lastLane: -1,
   };
 
+  // Active Touch Allocator State Machine (Two-Thumb Polyphony Guard)
+  // Tracks active sustains: hold, slide, zigzag, hold-swipe
+  let activeSustains = []; // { id, startTime, endTime, lane, targetLane, hand }
+  let lastDoubleSustainReleaseTime = -1;
+  let lastCenterHoldHand = null;
+  let lastCenterHoldEndTime = -1;
+
+  function getSustainDuration(n) {
+    if (typeof n.holdDuration === 'number' && n.holdDuration > 0) return n.holdDuration;
+    if (n.type === 'hold' || n.type === 'hold-swipe' || n.type === 'slide' || n.type === 'zigzag') {
+      return 0.5;
+    }
+    return 0;
+  }
+
   /**
-   * Safe note pusher with Kinesthetic Hand Simulation & Anti-Collision
+   * Safe note pusher with Active Touch Allocator State Machine & Ergonomics
    */
   function pushNote(note) {
     if (note.time < 1.0 || note.time > duration - 2.0) return;
+
+    // 1. Evict finished sustains at note.time
+    activeSustains = activeSustains.filter(s => s.endTime > note.time);
+
+    // 2. RULE B: If 2 thumb channels are occupied concurrently, no other notes can spawn
+    // until at least one sustain finishes plus a minimum release delta (>= 120ms).
+    if (activeSustains.length >= 2) {
+      return;
+    }
+    if (note.time < lastDoubleSustainReleaseTime + 0.120) {
+      return;
+    }
+
+    // 3. RULE A: If 1 thumb channel is occupied:
+    // - Simultaneous notes (dual hits) are strictly forbidden; only single-lane taps or swipes
+    //   can spawn on the remaining available lanes.
+    if (activeSustains.length === 1) {
+      const active = activeSustains[0];
+
+      // Check if another note already exists at roughly the same time (Δt < 0.008s)
+      const isSimultaneousAttempt = rawNotes.some(n => Math.abs(n.time - note.time) < 0.008);
+      if (isSimultaneousAttempt) {
+        return; // Dual hit forbidden while 1 thumb is holding
+      }
+
+      // Check if target note lane is occupied by active sustain
+      const activeLanes = [active.lane, active.targetLane].filter(l => l !== undefined);
+      if (activeLanes.includes(note.lane)) {
+        return; // Lane occupied by holding finger
+      }
+
+      // RULE C: Anchor hold on Lane 1 (Center) must prevent immediate crossover hits
+      // on opposite flanking lanes that would force thumb crossing.
+      // E.g. Left Thumb on Lane 1 blocks Lane 0; Right Thumb on Lane 1 blocks Lane 2.
+      if (active.lane === 1 || active.targetLane === 1) {
+        if (active.hand === 'left' && note.lane === 0) {
+          return; // Left thumb holding center blocks left lane (Lane 0)
+        }
+        if (active.hand === 'right' && note.lane === 2) {
+          return; // Right thumb holding center blocks right lane (Lane 2)
+        }
+      }
+    }
+
+    // Check Rule C release delta (>= 120ms) for Center Lane 1 crossover recovery
+    if (note.time < lastCenterHoldEndTime + 0.120) {
+      if (lastCenterHoldHand === 'left' && note.lane === 0) {
+        return; // Left thumb recovery window after Lane 1 hold
+      }
+      if (lastCenterHoldHand === 'right' && note.lane === 2) {
+        return; // Right thumb recovery window after Lane 1 hold
+      }
+    }
 
     // Check collision in same lane
     const collision = rawNotes.some(
@@ -156,7 +229,24 @@ export function generateV5SongChart(song) {
     );
     if (collision) return;
 
-    // Kinesthetic alternation check
+    // Kinesthetic alternation & hand determination
+    let assignedHand = 'left';
+    if (note.lane === 0) {
+      assignedHand = 'left';
+    } else if (note.lane === 2) {
+      assignedHand = 'right';
+    } else { // lane === 1 (Center)
+      if (activeSustains.length > 0) {
+        // If left hand is holding lane 0, right hand hits lane 1, and vice versa
+        const active = activeSustains[0];
+        assignedHand = active.hand === 'left' ? 'right' : 'left';
+      } else {
+        // Alternate from previous hand
+        assignedHand = handState.lastHand === 'left' ? 'right' : 'left';
+      }
+    }
+
+    // Single-thumb jackhammer fatigue check
     const timeDelta = note.time - handState.lastTime;
     if (note.lane === handState.lastLane && timeDelta < 0.22) {
       handState.consecutiveSameLane++;
@@ -164,17 +254,46 @@ export function generateV5SongChart(song) {
         // Shift lane to prevent single-thumb jackhammer fatigue
         note.lane = (note.lane + (prng() < 0.5 ? 1 : 2)) % 3;
         handState.consecutiveSameLane = 0;
+        if (note.lane === 0) assignedHand = 'left';
+        else if (note.lane === 2) assignedHand = 'right';
       }
     } else {
       handState.consecutiveSameLane = 1;
     }
 
+    handState.lastHand = assignedHand;
     handState.lastLane = note.lane;
     handState.lastTime = note.time;
+
+    // Register active sustain
+    const dur = getSustainDuration(note);
+    if (dur > 0) {
+      const sustainItem = {
+        id: noteId,
+        startTime: note.time,
+        endTime: note.time + dur,
+        lane: note.lane,
+        targetLane: note.targetLane !== undefined ? note.targetLane : note.lane,
+        hand: assignedHand
+      };
+      activeSustains.push(sustainItem);
+
+      if (activeSustains.length >= 2) {
+        lastDoubleSustainReleaseTime = Math.max(...activeSustains.map(s => s.endTime));
+      }
+      if (note.lane === 1 || note.targetLane === 1) {
+        lastCenterHoldHand = assignedHand;
+        lastCenterHoldEndTime = note.time + dur;
+      }
+    }
+
+    // Tag lift and hold-swipe objects with releaseWindowBonusMs: 20
+    const bonusMs = (note.type === 'lift' || note.type === 'hold-swipe') ? 20 : undefined;
 
     rawNotes.push({
       id: noteId++,
       ...note,
+      ...(bonusMs ? { releaseWindowBonusMs: bonusMs } : {}),
       time: parseFloat(note.time.toFixed(3)),
     });
   }
@@ -202,49 +321,67 @@ export function generateV5SongChart(song) {
     }
 
     // ──────────────────────────────────────────
-    // VERSE 1 & VERSE 2: Motif Playback with Evolution
+    // VERSE 1 & VERSE 2: Motif Playback with Lyrical Breath Windows
     // ──────────────────────────────────────────
     else if (sec.type === 'verse') {
       const isVerse2 = sec.iteration === 2;
       let measureStart = snap(sec.start, bpm, 4);
+      let barIndex = 0;
 
       while (measureStart + measureDur < sec.end) {
+        // Designate a 1-bar "breath window" every 4 bars (barIndex % 4 === 3)
+        const isBreathBar = (barIndex % 4 === 3);
+
         for (const item of verseMotif) {
           const t = snap(measureStart + item.beat * beatDuration, bpm, 16);
           if (t >= sec.end) break;
 
+          let targetLane = item.lane;
           let noteType = 'tap';
           let holdDur = undefined;
           let swipeDir = undefined;
 
-          // In Verse 2: Evolve motif (+20% syncopation, accents, hold-swipes)
-          if (isVerse2) {
-            if (item.archetype === 'downbeat' && prng() < 0.35) {
-              noteType = 'accent';
-            } else if (item.length >= 1.0 && prng() < 0.5) {
-              noteType = 'hold-swipe';
-              holdDur = parseFloat((beatDuration * 1.5).toFixed(3));
-              swipeDir = prng() < 0.5 ? 'up' : 'right';
-            } else if (prng() < 0.2) {
-              noteType = 'swipe';
-              swipeDir = prng() < 0.5 ? 'left' : 'right';
+          // In lyrical breath windows:
+          // Reduce note density on Lane 1 (Vocals) by 50% or suppress Lane 1 notes entirely,
+          // shifting light percussive accents to Lanes 0 and 2.
+          if (isBreathBar && item.lane === 1) {
+            if (prng() < 0.5) {
+              continue; // Suppress Lane 1 note entirely (vocal breath)
+            } else {
+              targetLane = prng() < 0.5 ? 0 : 2; // Shift light percussive accent to flanking lane
+              noteType = 'tap';
             }
           } else {
-            // Verse 1: straightforward taps with occasional hold
-            if (item.length >= 1.0 && prng() < 0.4) {
-              noteType = 'hold';
-              holdDur = parseFloat((beatDuration * 1.0).toFixed(3));
+            // In Verse 2: Evolve motif (+20% syncopation, accents, hold-swipes)
+            if (isVerse2) {
+              if (item.archetype === 'downbeat' && prng() < 0.35) {
+                noteType = 'accent';
+              } else if (item.length >= 1.0 && prng() < 0.5) {
+                noteType = 'hold-swipe';
+                holdDur = parseFloat((beatDuration * 1.5).toFixed(3));
+                swipeDir = prng() < 0.5 ? 'up' : 'right';
+              } else if (prng() < 0.2) {
+                noteType = 'swipe';
+                swipeDir = prng() < 0.5 ? 'left' : 'right';
+              }
+            } else {
+              // Verse 1: straightforward taps with occasional hold
+              if (item.length >= 1.0 && prng() < 0.4) {
+                noteType = 'hold';
+                holdDur = parseFloat((beatDuration * 1.0).toFixed(3));
+              }
             }
           }
 
           pushNote({
             time: t,
-            lane: item.lane,
+            lane: targetLane,
             type: noteType,
             holdDuration: holdDur,
             swipeDirection: swipeDir,
           });
         }
+        barIndex++;
         measureStart += measureDur;
       }
     }
@@ -254,7 +391,7 @@ export function generateV5SongChart(song) {
     // ──────────────────────────────────────────
     else if (sec.type === 'buildup') {
       let t = snap(sec.start, bpm, 8);
-      const silenceStart = sec.end - beatDuration * 1.5; // 1.5 beats vacuum silence before drop!
+      const silenceStart = sec.end - beatDuration * 1.5; // 1.5 beats vacuum silence before drop
 
       while (t < silenceStart) {
         // Rapid crescendo alternation
@@ -272,7 +409,6 @@ export function generateV5SongChart(song) {
         const step = progress > 0.5 ? (difficulty >= 6 ? 0.5 : 1.0) : 1.0;
         t = snap(t + step * beatDuration, bpm, 16);
       }
-      // Note: silenceStart to sec.end has ZERO notes — creating dramatic drop tension!
     }
 
     // ──────────────────────────────────────────
@@ -281,10 +417,10 @@ export function generateV5SongChart(song) {
     else if (sec.type === 'chorus') {
       const isClimax = sec.iteration === 2;
 
-      // EXPLOSIVE DROP HIT on Beat 1!
+      // EXPLOSIVE DROP HIT on Beat 1
       const dropTime = snap(sec.start, bpm, 16);
       if (isClimax) {
-        // Climax Drop: Signature REMIX Rune Note!
+        // Climax Drop: Signature REMIX Rune Note
         pushNote({
           time: dropTime,
           lane: 1,
@@ -350,7 +486,10 @@ export function generateV5SongChart(song) {
             }
 
             // High difficulty Hazard Mine placement on inactive lane
-            if (difficulty >= 7 && prng() < 0.12 && noteType === 'tap') {
+            // Deluxe Mode: 2x mine density during Stage 4 and Stage 5
+            const mineChance = isDeluxe ? 0.24 : 0.12;
+            const minMineDiff = isDeluxe ? 5 : 7;
+            if (difficulty >= minMineDiff && prng() < mineChance && noteType === 'tap') {
               const mineLane = (item.lane + 1) % 3;
               pushNote({
                 time: snap(t + beatDuration * 0.5, bpm, 16),
@@ -448,6 +587,16 @@ export function generateV5SongChart(song) {
             swipeDirection: swipeDir,
             zigzagAmplitude: zigzagAmp,
           });
+
+          // Deluxe mode extra mine placement on bridge solo
+          if (isDeluxe && prng() < 0.16 && noteType === 'tap') {
+            const mineLane = (item.lane + 1) % 3;
+            pushNote({
+              time: snap(t + beatDuration * 0.5, bpm, 16),
+              lane: mineLane,
+              type: 'mine',
+            });
+          }
         }
         measureStart += measureDur;
       }
@@ -482,8 +631,8 @@ export function generateV5SongChart(song) {
   rawNotes.sort((a, b) => a.time - b.time || a.lane - b.lane);
   rawNotes = rawNotes.map((n, i) => ({ ...n, id: i }));
 
-  // 5. Stageify Pass (Applies 5-stage gating, transitions, density ramps)
-  const { notes: stageifiedNotes, stages } = stageifyNotes(rawNotes, duration, bpm, difficulty);
+  // 5. Stageify Pass (Applies 5-stage gating, transitions, density ramps, ergonomic clamping)
+  const { notes: stageifiedNotes, stages } = stageifyNotes(rawNotes, duration, bpm, difficulty, { deluxe: isDeluxe });
 
   // Re-index final notes cleanly
   const finalNotes = stageifiedNotes.map((n, i) => ({ ...n, id: i }));
@@ -492,6 +641,8 @@ export function generateV5SongChart(song) {
     ...song,
     notes: finalNotes,
     stages,
+    deluxe: isDeluxe,
+    timingProfile: isDeluxe ? "elite" : "standard",
   };
 }
 
@@ -508,7 +659,7 @@ async function main() {
 
   console.log(`\n============================================================`);
   console.log(`  PIM : th3v4ult — V5 FLAGSHIP BEATMAP GENERATOR`);
-  console.log(`  Choreography, Motif Memory & All Note Types Engine`);
+  console.log(`  Choreography, Motif Memory & Dual Edition (Std/Deluxe)`);
   console.log(`============================================================\n`);
 
   const files = fs.readdirSync(SONGS_DIR).filter(f => f.startsWith('day-') && f.endsWith('.json'));
@@ -521,27 +672,40 @@ async function main() {
     return true;
   });
 
-  console.log(`Targeting ${targetFiles.length} song(s) for V5 generation...\n`);
+  console.log(`Targeting ${targetFiles.length} song(s) for V5 Standard + Deluxe generation...\n`);
 
-  let totalNotesCount = 0;
-  const mechanicCounts = {};
+  let totalStandardNotes = 0;
+  let totalDeluxeNotes = 0;
+  const standardMechanicCounts = {};
+  const deluxeMechanicCounts = {};
 
   for (const file of targetFiles) {
     const filePath = path.join(SONGS_DIR, file);
     const rawData = JSON.parse(fs.readFileSync(filePath, 'utf8'));
 
-    const v5Song = generateV5SongChart(rawData);
-    const outPath = path.join(V5_DIR, file);
+    // 1. Generate Standard Edition (day-{N}.json)
+    const standardSong = generateV5SongChart(rawData, { deluxe: false });
+    const standardOutPath = path.join(V5_DIR, file);
+    fs.writeFileSync(standardOutPath, JSON.stringify(standardSong, null, 2));
 
-    fs.writeFileSync(outPath, JSON.stringify(v5Song, null, 2));
-
-    totalNotesCount += v5Song.notes.length;
-    for (const n of v5Song.notes) {
-      mechanicCounts[n.type] = (mechanicCounts[n.type] || 0) + 1;
+    totalStandardNotes += standardSong.notes.length;
+    for (const n of standardSong.notes) {
+      standardMechanicCounts[n.type] = (standardMechanicCounts[n.type] || 0) + 1;
     }
 
-    if (isTest || targetFiles.length <= 10) {
-      console.log(`✅ [${file}] "${v5Song.title}" — ${v5Song.notes.length} notes (BPM: ${v5Song.bpm}, Diff: ${v5Song.difficultyLevel})`);
+    // 2. Generate Deluxe Edition (day-{N}_deluxe.json)
+    const deluxeSong = generateV5SongChart(rawData, { deluxe: true });
+    const deluxeFileName = file.replace('.json', '_deluxe.json');
+    const deluxeOutPath = path.join(V5_DIR, deluxeFileName);
+    fs.writeFileSync(deluxeOutPath, JSON.stringify(deluxeSong, null, 2));
+
+    totalDeluxeNotes += deluxeSong.notes.length;
+    for (const n of deluxeSong.notes) {
+      deluxeMechanicCounts[n.type] = (deluxeMechanicCounts[n.type] || 0) + 1;
+    }
+
+    if (isTest || targetFiles.length <= 5) {
+      console.log(`✅ [${file}] "${standardSong.title}" — Std: ${standardSong.notes.length} notes, Dlx: ${deluxeSong.notes.length} notes (BPM: ${standardSong.bpm}, Diff: ${standardSong.difficultyLevel})`);
     }
   }
 
@@ -551,37 +715,58 @@ async function main() {
     const spPath = path.join(SONGS_DIR, sp);
     if (fs.existsSync(spPath)) {
       const rawData = JSON.parse(fs.readFileSync(spPath, 'utf8'));
-      const v5Song = generateV5SongChart(rawData);
-      fs.writeFileSync(path.join(V5_DIR, sp), JSON.stringify(v5Song, null, 2));
+
+      const standardSong = generateV5SongChart(rawData, { deluxe: false });
+      fs.writeFileSync(path.join(V5_DIR, sp), JSON.stringify(standardSong, null, 2));
+
+      const deluxeSong = generateV5SongChart(rawData, { deluxe: true });
+      fs.writeFileSync(path.join(V5_DIR, sp.replace('.json', '_deluxe.json')), JSON.stringify(deluxeSong, null, 2));
     }
   }
 
-  // Generate Manifest
+  // Generate Dual-Edition Manifest
   const manifest = {
     variant: "v5_flagship",
     name: "Flagship Kinesthetic & Motif Master Edition",
-    description: "Flagship procedural engine featuring two-thumb kinematic ergonomics, musical motif memory across song sections, frequency-to-lane spatialization, pre-drop tension vacuums, and full note taxonomy integration.",
-    architecture: "Section Cadence Analyzer + Motif Memory Cache + Two-Thumb Kinematic Simulator + Stage 5 Progressive Gate",
+    description: "Flagship procedural engine featuring two-thumb kinematic ergonomics, musical motif memory across song sections, frequency-to-lane spatialization, pre-drop tension vacuums, full note taxonomy integration, and dual Standard / Deluxe editions.",
+    architecture: "Section Cadence Analyzer + Motif Memory Cache + Two-Thumb Kinematic Simulator + Stage 5 Progressive Gate + Touch Allocator State Machine",
     totalSongs: targetFiles.length,
-    totalNotes: totalNotesCount,
-    avgNotesPerSong: (totalNotesCount / Math.max(1, targetFiles.length)).toFixed(1),
-    supportedMechanics: Object.keys(mechanicCounts).sort(),
-    mechanicDistribution: mechanicCounts,
+    editions: {
+      standard: {
+        totalNotes: totalStandardNotes,
+        avgNotesPerSong: (totalStandardNotes / Math.max(1, targetFiles.length)).toFixed(1),
+        timingProfile: "standard",
+        stage5Multiplier: 0.15,
+        minSpacingMs: 110,
+        supportedMechanics: Object.keys(standardMechanicCounts).sort(),
+        mechanicDistribution: standardMechanicCounts,
+      },
+      deluxe: {
+        totalNotes: totalDeluxeNotes,
+        avgNotesPerSong: (totalDeluxeNotes / Math.max(1, targetFiles.length)).toFixed(1),
+        timingProfile: "elite",
+        stage5Multiplier: 0.10,
+        minSpacingMs: 75,
+        supportedMechanics: Object.keys(deluxeMechanicCounts).sort(),
+        mechanicDistribution: deluxeMechanicCounts,
+      }
+    },
+    // Backwards-compatible legacy keys
+    totalNotes: totalStandardNotes,
+    avgNotesPerSong: (totalStandardNotes / Math.max(1, targetFiles.length)).toFixed(1),
+    supportedMechanics: Object.keys(standardMechanicCounts).sort(),
+    mechanicDistribution: standardMechanicCounts,
     generatedAt: new Date().toISOString()
   };
 
   fs.writeFileSync(MANIFEST_PATH, JSON.stringify(manifest, null, 2));
 
   console.log(`\n============================================================`);
-  console.log(`✨ V5 FLAGSHIP GENERATION COMPLETE`);
+  console.log(`✨ V5 FLAGSHIP GENERATION COMPLETE (STANDARD & DELUXE)`);
   console.log(`📁 Target Directory: ${V5_DIR}`);
   console.log(`📊 Songs Processed:  ${targetFiles.length}`);
-  console.log(`🎵 Total Notes:      ${totalNotesCount}`);
-  console.log(`🛠️ Note Mechanics Represented:`);
-  for (const [type, count] of Object.entries(mechanicCounts)) {
-    const pct = ((count / totalNotesCount) * 100).toFixed(1);
-    console.log(`   - ${type.padEnd(12)}: ${String(count).padStart(6)} (${pct}%)`);
-  }
+  console.log(`🎵 Std Total Notes:  ${totalStandardNotes} (avg ${(totalStandardNotes / Math.max(1, targetFiles.length)).toFixed(1)})`);
+  console.log(`🔥 Dlx Total Notes:  ${totalDeluxeNotes} (avg ${(totalDeluxeNotes / Math.max(1, targetFiles.length)).toFixed(1)})`);
   console.log(`============================================================\n`);
 }
 

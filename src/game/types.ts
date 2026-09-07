@@ -35,6 +35,7 @@ export interface Note {
   zigzagAmplitude?: number;
   repeaterCount?: number;
   stage?: number;
+  releaseWindowBonusMs?: number;
 }
 
 export interface Song {
@@ -48,6 +49,8 @@ export interface Song {
   description: string;
   notes: Note[];
   moodTag: string;
+  timingProfile?: 'standard' | 'elite';
+  deluxe?: boolean;
 }
 
 export interface ScoreEntry {
