@@ -23,6 +23,8 @@ export type PovMode =
   | 'mobius_loop'
   | 'dynamic_stage';
 
+export type ChartVariant = 'v5_flagship' | 'v4_neural' | 'v3_master' | 'v1_gimmicks' | 'v2_minimal' | 'canonical';
+
 export type GameOpts = {
   missSystem: boolean;
   hudMisses: boolean;
@@ -33,6 +35,7 @@ export type GameOpts = {
   laneColors: [string, string, string];
   useLocalFiles: boolean;
   noteGenerationSource: 'auto' | 'lyrics' | 'bpm';
+  chartVariant: ChartVariant;
   bgMusic: boolean;
   sfxEnabled: boolean;
   sfxVolume: number;
@@ -107,6 +110,7 @@ export const DEFAULT_OPTS: GameOpts = {
   laneColors: ["#FF1493", "#00E5FF", "#39FF14"],
   useLocalFiles: false,
   noteGenerationSource: "auto",
+  chartVariant: "v5_flagship",
   bgMusic: false,
   sfxEnabled: true,
   sfxVolume: 0.8,
@@ -196,6 +200,7 @@ export function loadOpts(): GameOpts {
       const v = dbProgression?.noteGenerationSource ?? localStorage.getItem("opt_noteGenerationSource");
       return (v === "lyrics" || v === "bpm" || v === "auto") ? v : "auto";
     })(),
+    chartVariant: (dbSettings?.chartVariant ?? (localStorage.getItem("opt_chartVariant") as any)) || "v5_flagship",
     bgMusic: dbSettings?.bgMusic ?? bool("opt_bgMusic", false),
     sfxEnabled: dbSettings?.sfxEnabled ?? bool("opt_sfxEnabled", true),
     sfxVolume: dbSettings?.sfxVolume ?? (parseFloat(localStorage.getItem("opt_sfxVolume") ?? "0.8") ?? 0.8),

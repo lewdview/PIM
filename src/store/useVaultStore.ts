@@ -41,6 +41,7 @@ export interface ProfileSettings {
   visualizerTheme?: 'cyan_pink' | 'emerald_orange' | 'gold_purple' | 'rainbow';
   visualizerPlaylistMode?: 'all_catalog' | 'unlocked_only';
   visualizerRepeatMode?: 'all' | 'one' | 'shuffle' | 'off';
+  chartVariant?: 'v5_flagship' | 'v4_neural' | 'v3_master' | 'v1_gimmicks' | 'v2_minimal' | 'canonical';
 }
 
 export interface ProfileProgression {
@@ -355,6 +356,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     visualizerTheme: ((localStorage.getItem("opt_visualizerTheme") as any) || 'cyan_pink'),
     visualizerPlaylistMode: ((localStorage.getItem("opt_visualizerPlaylistMode") as any) || 'all_catalog'),
     visualizerRepeatMode: ((localStorage.getItem("opt_visualizerRepeatMode") as any) || 'all'),
+    chartVariant: ((localStorage.getItem("opt_chartVariant") as any) || 'v5_flagship'),
   },
   progression: {
     tutorialCompleted: localStorage.getItem("pim_tutorial_completed") === "true",
@@ -657,6 +659,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         if (mergedSettings.bloomGlow !== undefined) localStorage.setItem("opt_bloomGlow", String(mergedSettings.bloomGlow));
         if (mergedSettings.bgAnimation !== undefined) localStorage.setItem("opt_bgAnimation", String(mergedSettings.bgAnimation));
         if (mergedSettings.legacyGraphics !== undefined) localStorage.setItem("opt_legacyGraphics", String(mergedSettings.legacyGraphics));
+        if (mergedSettings.chartVariant) localStorage.setItem("opt_chartVariant", mergedSettings.chartVariant);
 
         localStorage.setItem("pim_tutorial_completed", String(mergedProgression.tutorialCompleted));
         localStorage.setItem("rc2_seen_key", mergedProgression.seenWelcomeModal ? "1" : "0");
@@ -1023,6 +1026,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     if (newSettings.visualizerTheme !== undefined) localStorage.setItem("opt_visualizerTheme", String(merged.visualizerTheme));
     if (newSettings.visualizerPlaylistMode !== undefined) localStorage.setItem("opt_visualizerPlaylistMode", String(merged.visualizerPlaylistMode));
     if (newSettings.visualizerRepeatMode !== undefined) localStorage.setItem("opt_visualizerRepeatMode", String(merged.visualizerRepeatMode));
+    if (newSettings.chartVariant !== undefined) localStorage.setItem("opt_chartVariant", String(merged.chartVariant));
 
     if (userId) {
       const { error } = await supabase.from('profiles').update({ settings: merged }).eq('id', userId);

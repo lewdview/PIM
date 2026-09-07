@@ -1196,7 +1196,9 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
         musicVolume: 0.5,
         haptics: true,
         missSystem: true,
+        chartVariant: "v5_flagship",
       });
+      clearCatalogCache();
       updateProgression({ noteGenerationSource: "auto" });
       setResetState("idle");
       logAnalyticsEvent('setting_reset');
@@ -1777,7 +1779,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                       { id: 'v1_gimmicks', label: 'V1 GIMMICKS', desc: 'Mines, Stems & Drops' },
                       { id: 'v2_minimal', label: 'V2 MINIMAL', desc: 'Casual Tap Flow' },
                     ].map(edition => {
-                      const curVariant = (typeof localStorage !== 'undefined' && localStorage.getItem('opt_chartVariant')) || 'v3_master';
+                      const curVariant = (typeof localStorage !== 'undefined' && localStorage.getItem('opt_chartVariant')) || 'v5_flagship';
                       const active = curVariant === edition.id;
                       return (
                         <button
