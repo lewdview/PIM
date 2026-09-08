@@ -1,0 +1,3 @@
+## 2024-05-18 - Zustand Granular Selectors and Re-renders
+**Learning:** Destructuring entire Zustand stores (`const { a, b } = useStore()`) causes massive re-renders when high-frequency state updates like `progress` or `currentTime` are triggered (e.g. from an audio player's timeupdate event). This happens because the component is subscribed to the *entire* state object, and *any* change triggers a render.
+**Action:** Always use granular selectors for Zustand stores, especially for high-frequency stores like `useGlobalPlayer`. For example, `const currentTrack = useGlobalPlayer(s => s.currentTrack);`. Even better, extract high-frequency rendering parts (like progress bars) into smaller, isolated sub-components so only they re-render.
