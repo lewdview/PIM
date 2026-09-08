@@ -972,9 +972,68 @@ function lerp(a: number, b: number, t: number) {
   return a + (b - a) * Math.max(0, Math.min(1, t));
 }
 
-function hwAtProgress(p: number, W: number, topRatio: number = HW_TOP, botRatio: number = HW_BOT) {
-  const maxHighwayWidth = Math.min(W, 580 + (W > 680 ? Math.min(140, (W - 680) * 0.18) : 0));
-  const w = maxHighwayWidth * lerp(topRatio, botRatio, p);
+export interface StageGeometry {
+  stageW: number;
+  botWidth: number;
+  topWidth: number;
+  laneW: number;
+  hitY: number;
+  btnH: number;
+  btnY: number;
+  targetNoteH: number;
+  isLandscape: boolean;
+  isTabletPortrait: boolean;
+}
+
+export function getStageGeometry(W: number, H: number): StageGeometry {
+  const isLandscape = W > H * 0.88;
+  const isTabletPortrait = !isLandscape && W > 640;
+
+  let stageW: number;
+  let btnH: number;
+  let hitY: number;
+
+  if (isLandscape) {
+    // Desktop / Landscape: golden ratio arcade column centered with wide wings
+    stageW = Math.min(W * 0.88, Math.max(500, Math.min(680, Math.round(H * 0.68))));
+    btnH = Math.min(135, Math.max(90, Math.round(H * 0.14)));
+    hitY = H - Math.round(btnH * 0.72);
+  } else if (isTabletPortrait) {
+    // iPad / Tablet portrait: 90% width or capped at 680px, button height capped to 185px
+    stageW = Math.min(W * 0.90, 680);
+    btnH = Math.min(185, Math.max(130, Math.round(H * 0.17)));
+    hitY = H - Math.round(btnH * 0.65);
+  } else {
+    // Phone / Mobile portrait: edge-to-edge highway (W), authentic mobile strike zone
+    stageW = W;
+    hitY = Math.round(H * HIT_RATIO);
+    btnH = H - hitY;
+  }
+
+  const botWidth = stageW * HW_BOT;
+  const topWidth = stageW * HW_TOP;
+  const laneW = botWidth / LANE_COUNT;
+  const btnY = hitY - Math.round(btnH / 2);
+  // Sleek piano-key aspect ratio: target height ~36% of lane width (clamped 26px - 48px)
+  const targetNoteH = Math.max(26, Math.min(48, Math.round(laneW * 0.36)));
+
+  return {
+    stageW,
+    botWidth,
+    topWidth,
+    laneW,
+    hitY,
+    btnH,
+    btnY,
+    targetNoteH,
+    isLandscape,
+    isTabletPortrait,
+  };
+}
+
+function hwAtProgress(p: number, W: number, topRatio: number = HW_TOP, botRatio: number = HW_BOT, H?: number) {
+  const stageW = H ? getStageGeometry(W, H).stageW : (W > 640 ? Math.min(W * 0.88, 680) : W);
+  const w = stageW * lerp(topRatio, botRatio, p);
   const l = (W - w) / 2;
   return { left: l, right: l + w, width: w };
 }
@@ -986,22 +1045,25 @@ function laneAt(
   botRatio: number = HW_BOT,
   archetype?: TrackArchetype,
   stage: number = 1,
-  t: number = 0
+  t: number = 0,
+  H?: number
 ) {
-  const { left, width } = hwAtProgress(progress, W, topRatio, botRatio);
+  const { left, width } = hwAtProgress(progress, W, topRatio, botRatio, H);
   const lw = width / LANE_COUNT;
   let baseX = left + lane * lw;
 
   // Apply track archetype motion geometry ONLY during Stage 3 and Stage 5
   if (archetype && (stage === 3 || stage === 5)) {
     if (archetype === 'matrix_split') {
-      const spread = (lane - 1) * (W * 0.15 * Math.sin(progress * Math.PI));
+      const stageW = H ? getStageGeometry(W, H).stageW : width;
+      const spread = (lane - 1) * (stageW * 0.15 * Math.sin(progress * Math.PI));
       baseX += spread;
     }
   }
 
   return { x: baseX, w: lw };
 }
+
 
 // (getLaneFromCoords moved below getArchetypeProjection for full multi-POV and 3D projection awareness)
 
@@ -1094,10 +1156,11 @@ function getCorkscrewSpiralPos(
   t: number,
   stage: number
 ): ProjectionResult {
-  const hitY = H * HIT_RATIO;
+  const geom = getStageGeometry(W, H);
+  const hitY = geom.hitY;
   const vanishingY = hitY * 0.18;
   const cx = W / 2;
-  const corkW = Math.min(W, 840);
+  const corkW = geom.stageW;
   const laneOffset = lane - 1; // -1 for left, 0 for center, 1 for right
   const mult = stage === 5 ? 1.6 : 1.0;
   const baseH = hitY - vanishingY;
@@ -1117,8 +1180,8 @@ function getCorkscrewSpiralPos(
 
     const noteX = lerp(startX, entryX, u);
     const noteY = lerp(startY, entryY, u);
-    const noteW = lerp(38, 54, u);
-    const noteH = lerp(32, 46, u);
+    const noteW = lerp(geom.targetNoteH * 0.8, geom.targetNoteH * 1.2, u);
+    const noteH = lerp(geom.targetNoteH * 0.6, geom.targetNoteH * 0.9, u);
     return { x: noteX - noteW / 2, y: noteY, w: noteW, h: noteH, rot: laneOffset * 0.05, scale: lerp(0.35, 0.52, u) };
   } 
   
@@ -1139,15 +1202,14 @@ function getCorkscrewSpiralPos(
     const zDepth = Math.sin(loopAngle); // -1 (back) to +1 (front)
     const rot = Math.cos(loopAngle) * 0.30;
     const depthScale = lerp(0.52, 0.85, u) * (0.90 + zDepth * 0.10);
-    const noteW = lerp(54, 90, u) * (0.90 + zDepth * 0.10);
-    const noteH = lerp(46, 76, u) * (0.90 + zDepth * 0.10);
+    const noteW = lerp(geom.targetNoteH * 1.1, geom.laneW * 0.85, u) * (0.90 + zDepth * 0.10);
+    const noteH = lerp(geom.targetNoteH * 0.8, geom.targetNoteH * 1.1, u) * (0.90 + zDepth * 0.10);
 
     return { x: spiralX - noteW / 2, y: spiralY, w: noteW, h: noteH, rot, scale: depthScale };
   } 
   
   // ── Phase 3: Extended Readability Runway & Target Lane Ejection ($p: 0.48 \rightarrow 1.00$) ──
-  // Notes shoot out of the bottom nozzle at p = 0.48 and have 52% of the travel time (~600ms+)
-  // to smoothly lock onto their target lane column and glide straight into strike buttons!
+  // Notes shoot out of the bottom nozzle at p = 0.48 and smoothly glide straight into strike buttons
   else {
     const u = (prog - 0.48) / 0.52;
     const exitAngle = Math.PI * 4 + t * 1.6 * mult;
@@ -1156,7 +1218,7 @@ function getCorkscrewSpiralPos(
     const exitX = cx + Math.cos(exitAngle) * exitRadiusX + laneOffset * 16;
     const exitY = vanishingY + baseH * 0.42 + Math.sin(exitAngle) * exitRadiusY;
 
-    const { x: targetX, w: targetW } = laneAt(lane, 1, W);
+    const { x: targetX, w: targetW } = laneAt(lane, 1, W, HW_TOP, HW_BOT, undefined, 1, 0, H);
     const targetCenterX = targetX + targetW / 2;
     const targetCenterY = hitY;
 
@@ -1164,8 +1226,8 @@ function getCorkscrewSpiralPos(
     const alignT = 1 - Math.pow(1 - u, 2.8);
     const noteX = lerp(exitX, targetCenterX, alignT);
     const noteY = lerp(exitY, targetCenterY, u);
-    const noteW = lerp(90, targetW, u);
-    const noteH = lerp(76, targetW * 0.72, u);
+    const noteW = lerp(geom.laneW * 0.85, targetW, u);
+    const noteH = lerp(geom.targetNoteH * 0.85, geom.targetNoteH, u);
     const rot = lerp(0.15, 0, alignT); // Straightens out into the hit lane
     const scale = lerp(0.85, 1.0, u);
 
@@ -1182,10 +1244,11 @@ function getWaveCoasterPos(
   t: number,
   stage: number
 ): ProjectionResult {
-  const hitY = H * HIT_RATIO;
+  const geom = getStageGeometry(W, H);
+  const hitY = geom.hitY;
   const vanishingY = hitY * 0.22;
   const cx = W / 2;
-  const coasterW = Math.min(W, 840);
+  const coasterW = geom.stageW;
   const laneOffset = lane - 1; // -1 for left, 0 for center, 1 for right
   const mult = stage === 5 ? 1.6 : 1.0;
   const safeP = Math.max(0, prog);
@@ -1194,7 +1257,6 @@ function getWaveCoasterPos(
   const persP = Math.pow(safeP, 1.25);
 
   // 2. Wave damping factor: wave amplitude is high in upper/mid track, but damps smoothly to 0 at strike line
-  // This guarantees 100% stable, jitter-free note arrival at the judgment strike line!
   const dampFactor = Math.pow(Math.max(0, 1 - safeP), 1.6);
 
   // 3. Coaster Vertical Wave (Crest & G-Force Dip)
@@ -1210,14 +1272,14 @@ function getWaveCoasterPos(
   const rot = (-Math.cos(wavePhase) * 0.22 + laneOffset * 0.05) * dampFactor;
 
   // 6. Lane layout with perspective expansion
-  const { x: laneHitX, w: laneHitW } = laneAt(lane, 1, W, 0.20, 0.88);
+  const { x: laneHitX, w: laneHitW } = laneAt(lane, 1, W, 0.20, 0.88, undefined, 1, 0, H);
   const noteW = lerp(coasterW * 0.07, laneHitW, persP);
   const startSpacing = coasterW * 0.08;
   const startX = cx + laneOffset * startSpacing - (coasterW * 0.07) / 2;
 
   const noteX = lerp(startX, laneHitX, persP) + swayX;
   const noteY = lerp(vanishingY, hitY, persP) + waveY;
-  const noteH = lerp(32, laneHitW * 0.72, persP);
+  const noteH = lerp(geom.targetNoteH * 0.6, geom.targetNoteH, persP);
   const scale = lerp(0.35, 1.0, persP) * (1.0 + Math.sin(wavePhase) * 0.08 * dampFactor);
 
   return {
@@ -1232,13 +1294,14 @@ function getWaveCoasterPos(
 
 // 🎹 ORTHOGRAPHIC 2D FLAT PIANO HIGHWAY
 function getFlat2DPos(lane: number, prog: number, W: number, H: number): ProjectionResult {
-  const hitY = H * HIT_RATIO;
-  const trackW = Math.min(W * 0.72, 480);
-  const laneW = trackW / 3;
+  const geom = getStageGeometry(W, H);
+  const hitY = geom.hitY;
+  const trackW = geom.botWidth;
+  const laneW = geom.laneW;
   const startX = (W - trackW) / 2;
   const noteX = startX + lane * laneW;
   const noteY = prog * hitY;
-  const noteH = 64;
+  const noteH = geom.targetNoteH;
   return {
     x: noteX,
     y: noteY,
@@ -1251,10 +1314,11 @@ function getFlat2DPos(lane: number, prog: number, W: number, H: number): Project
 
 // 🎯 360° RADIAL CYBER ORBIT (Concentric Spoke Inward Plunge)
 function getRadialOrbitPos(lane: number, prog: number, W: number, H: number, t: number, stage: number): ProjectionResult {
+  const geom = getStageGeometry(W, H);
   const cx = W / 2;
   const cy = H * 0.50;
-  const maxR = Math.min(W, H) * 0.44;
-  const targetR = Math.min(W, H) * 0.16;
+  const maxR = Math.min(geom.stageW, H) * 0.44;
+  const targetR = Math.min(geom.stageW, H) * 0.16;
   const safeP = Math.max(0, prog);
   const curR = lerp(maxR, targetR, safeP);
 
@@ -1263,8 +1327,8 @@ function getRadialOrbitPos(lane: number, prog: number, W: number, H: number, t: 
 
   const noteX = cx + Math.cos(laneAngle) * curR;
   const noteY = cy + Math.sin(laneAngle) * curR;
-  const noteW = lerp(24, 76, safeP);
-  const noteH = lerp(18, 44, safeP);
+  const noteW = lerp(geom.targetNoteH * 0.6, geom.laneW * 0.65, safeP);
+  const noteH = lerp(geom.targetNoteH * 0.45, geom.targetNoteH, safeP);
 
   return {
     x: noteX - noteW / 2,
@@ -1278,8 +1342,10 @@ function getRadialOrbitPos(lane: number, prog: number, W: number, H: number, t: 
 
 // ⏩ 90° HORIZONTAL SIDE-SCROLLER (Left to Right Highway)
 function getHorizontalDriftPos(lane: number, prog: number, W: number, H: number, t: number, stage: number): ProjectionResult {
-  const hitX = W * 0.82;
-  const startX = W * 0.08;
+  const geom = getStageGeometry(W, H);
+  const trackW = Math.min(W * 0.84, Math.max(geom.stageW, 600));
+  const startX = (W - trackW) / 2;
+  const hitX = startX + trackW * 0.88;
   const trackH = Math.min(H * 0.55, 360);
   const laneH = trackH / 3;
   const startY = (H - trackH) / 2;
@@ -1287,7 +1353,7 @@ function getHorizontalDriftPos(lane: number, prog: number, W: number, H: number,
   
   const noteX = lerp(startX, hitX, Math.pow(safeP, 1.25));
   const noteY = startY + (2 - lane) * laneH;
-  const noteW = lerp(32, 80, safeP);
+  const noteW = lerp(geom.targetNoteH * 0.7, geom.laneW * 0.5, safeP);
   const noteH = laneH * 0.85;
 
   return {
@@ -1302,20 +1368,21 @@ function getHorizontalDriftPos(lane: number, prog: number, W: number, H: number,
 
 // 🏎️ STARFIGHTER COCKPIT HUD
 function getCockpitHudPos(lane: number, prog: number, W: number, H: number, t: number, stage: number): ProjectionResult {
-  const hitY = H * HIT_RATIO;
+  const geom = getStageGeometry(W, H);
+  const hitY = geom.hitY;
   const vanishingY = hitY * 0.22;
   const cx = W / 2;
   const laneOffset = lane - 1;
   const safeP = Math.max(0, prog);
   const persP = Math.pow(safeP, 1.4);
-  const canopyCurve = Math.sin(safeP * Math.PI) * (laneOffset * W * 0.06);
-  const gForceSway = Math.sin(t * 1.5) * (W * 0.012) * safeP;
+  const canopyCurve = Math.sin(safeP * Math.PI) * (laneOffset * geom.stageW * 0.06);
+  const gForceSway = Math.sin(t * 1.5) * (geom.stageW * 0.012) * safeP;
 
-  const { x: hitX, w: hitW } = laneAt(lane, 1, W, 0.14, 0.88);
+  const { x: hitX, w: hitW } = laneAt(lane, 1, W, 0.14, 0.88, undefined, 1, 0, H);
   const noteY = lerp(vanishingY, hitY, persP);
-  const noteW = lerp(W * 0.04, hitW, Math.pow(safeP, 1.3));
-  const noteH = lerp(24, 130, persP);
-  const noteX = lerp(cx + laneOffset * (W * 0.04), hitX, persP) + canopyCurve + gForceSway;
+  const noteW = lerp(geom.stageW * 0.04, hitW, Math.pow(safeP, 1.3));
+  const noteH = lerp(geom.targetNoteH * 0.5, geom.targetNoteH, persP);
+  const noteX = lerp(cx + laneOffset * (geom.stageW * 0.04), hitX, persP) + canopyCurve + gForceSway;
   const rot = (laneOffset * 0.15 + Math.sin(t * 1.5) * 0.03) * Math.sin(safeP * Math.PI);
 
   return {
@@ -1330,19 +1397,20 @@ function getCockpitHudPos(lane: number, prog: number, W: number, H: number, t: n
 
 // 🪞 PRISMATIC KALEIDOSCOPE REFRACTION
 function getHyperPrismPos(lane: number, prog: number, W: number, H: number, t: number, stage: number): ProjectionResult {
-  const hitY = H * HIT_RATIO;
+  const geom = getStageGeometry(W, H);
+  const hitY = geom.hitY;
   const vanishingY = hitY * 0.30;
   const safeP = Math.max(0, prog);
   const persP = Math.pow(safeP, 1.3);
   const laneOffset = lane - 1;
   const prismAngle = (laneOffset * (Math.PI / 4)) * Math.sin(safeP * Math.PI);
-  const prismDisplacement = Math.sin(t * 2.0 + laneOffset * 1.5) * (W * 0.015) * Math.sin(safeP * Math.PI);
+  const prismDisplacement = Math.sin(t * 2.0 + laneOffset * 1.5) * (geom.stageW * 0.015) * Math.sin(safeP * Math.PI);
 
-  const { x: hitX, w: hitW } = laneAt(lane, 1, W, 0.16, 0.86);
+  const { x: hitX, w: hitW } = laneAt(lane, 1, W, 0.16, 0.86, undefined, 1, 0, H);
   const noteY = lerp(vanishingY, hitY, persP);
-  const noteW = lerp(W * 0.05, hitW, persP);
-  const noteH = lerp(28, 135, persP);
-  const noteX = lerp(W / 2 + laneOffset * (W * 0.05), hitX, persP) + prismDisplacement;
+  const noteW = lerp(geom.stageW * 0.05, hitW, persP);
+  const noteH = lerp(geom.targetNoteH * 0.55, geom.targetNoteH, persP);
+  const noteX = lerp(W / 2 + laneOffset * (geom.stageW * 0.05), hitX, persP) + prismDisplacement;
 
   return {
     x: noteX,
@@ -1356,7 +1424,8 @@ function getHyperPrismPos(lane: number, prog: number, W: number, H: number, t: n
 
 // 🧬 DNA DOUBLE-HELIX QUANTUM STRAND
 function getDnaHelixPos(lane: number, prog: number, W: number, H: number, t: number, stage: number): ProjectionResult {
-  const hitY = H * HIT_RATIO;
+  const geom = getStageGeometry(W, H);
+  const hitY = geom.hitY;
   const vanishingY = hitY * 0.24;
   const safeP = Math.max(0, prog);
   const persP = Math.pow(safeP, 1.28);
@@ -1365,7 +1434,7 @@ function getDnaHelixPos(lane: number, prog: number, W: number, H: number, t: num
   const helixCycles = 2.5;
   const mult = stage === 5 ? 2.0 : 1.0;
   const phaseAngle = safeP * helixCycles * 2 * Math.PI + t * 1.8 * mult;
-  const helixRadius = lerp(W * 0.08, W * 0.24, persP);
+  const helixRadius = lerp(geom.stageW * 0.08, geom.stageW * 0.24, persP);
 
   let helixOffset = 0;
   let helixScaleMod = 1.0;
@@ -1379,11 +1448,11 @@ function getDnaHelixPos(lane: number, prog: number, W: number, H: number, t: num
     helixOffset = Math.sin(phaseAngle * 2) * (helixRadius * 0.25);
   }
 
-  const { x: hitX, w: hitW } = laneAt(lane, 1, W, 0.18, 0.85);
+  const { x: hitX, w: hitW } = laneAt(lane, 1, W, 0.18, 0.85, undefined, 1, 0, H);
   const noteY = lerp(vanishingY, hitY, persP);
-  const noteW = lerp(W * 0.05, hitW, persP) * helixScaleMod;
-  const noteH = lerp(26, 130, persP);
-  const noteX = lerp(cx + (lane - 1) * (W * 0.05), hitX, persP) + helixOffset;
+  const noteW = lerp(geom.stageW * 0.05, hitW, persP) * helixScaleMod;
+  const noteH = lerp(geom.targetNoteH * 0.55, geom.targetNoteH, persP);
+  const noteX = lerp(cx + (lane - 1) * (geom.stageW * 0.05), hitX, persP) + helixOffset;
   const rot = Math.cos(phaseAngle) * 0.18 * (1 - safeP * 0.5);
 
   return {
@@ -1398,16 +1467,17 @@ function getDnaHelixPos(lane: number, prog: number, W: number, H: number, t: num
 
 // 🏙️ SKYSCRAPER FREEFALL VERTIGO (90° Downward Plunge)
 function getVertigoDropPos(lane: number, prog: number, W: number, H: number, t: number, stage: number): ProjectionResult {
-  const hitY = H * HIT_RATIO;
+  const geom = getStageGeometry(W, H);
+  const hitY = geom.hitY;
   const vanishingY = hitY * 0.12;
   const safeP = Math.max(0, prog);
   const persP = Math.pow(safeP, 2.2);
 
-  const { x: hitX, w: hitW } = laneAt(lane, 1, W, 0.08, 0.92);
+  const { x: hitX, w: hitW } = laneAt(lane, 1, W, 0.08, 0.92, undefined, 1, 0, H);
   const noteY = lerp(vanishingY, hitY, persP);
-  const noteW = lerp(W * 0.03, hitW, Math.pow(safeP, 1.8));
-  const noteH = lerp(20, 150, Math.pow(safeP, 1.5));
-  const noteX = lerp(W / 2 + (lane - 1) * (W * 0.03), hitX, persP);
+  const noteW = lerp(geom.stageW * 0.03, hitW, Math.pow(safeP, 1.8));
+  const noteH = lerp(geom.targetNoteH * 0.45, geom.targetNoteH, Math.pow(safeP, 1.5));
+  const noteX = lerp(W / 2 + (lane - 1) * (geom.stageW * 0.03), hitX, persP);
 
   return {
     x: noteX,
@@ -1421,21 +1491,22 @@ function getVertigoDropPos(lane: number, prog: number, W: number, H: number, t: 
 
 // 🪐 SINGULARITY EVENT HORIZON (Relativistic Inward Pull)
 function getSingularityVoidPos(lane: number, prog: number, W: number, H: number, t: number, stage: number): ProjectionResult {
-  const hitY = H * HIT_RATIO;
+  const geom = getStageGeometry(W, H);
+  const hitY = geom.hitY;
   const vanishingY = hitY * 0.28;
   const cx = W / 2;
   const safeP = Math.max(0, prog);
   const persP = Math.pow(safeP, 1.35);
 
   const laneOffset = lane - 1;
-  const gravityLensing = laneOffset * (W * 0.14) * Math.pow(1 - safeP, 1.8);
-  const eventHorizonSwirl = Math.sin(t * 2.2 + safeP * 4.0) * (W * 0.018) * Math.sin(safeP * Math.PI);
+  const gravityLensing = laneOffset * (geom.stageW * 0.14) * Math.pow(1 - safeP, 1.8);
+  const eventHorizonSwirl = Math.sin(t * 2.2 + safeP * 4.0) * (geom.stageW * 0.018) * Math.sin(safeP * Math.PI);
 
-  const { x: hitX, w: hitW } = laneAt(lane, 1, W, 0.22, 0.88);
+  const { x: hitX, w: hitW } = laneAt(lane, 1, W, 0.22, 0.88, undefined, 1, 0, H);
   const noteY = lerp(vanishingY, hitY, persP);
-  const noteW = lerp(W * 0.04, hitW, persP);
-  const noteH = lerp(24, 135, persP);
-  const noteX = lerp(cx + laneOffset * (W * 0.08), hitX, persP) - gravityLensing + eventHorizonSwirl;
+  const noteW = lerp(geom.stageW * 0.04, hitW, persP);
+  const noteH = lerp(geom.targetNoteH * 0.5, geom.targetNoteH, persP);
+  const noteX = lerp(cx + laneOffset * (geom.stageW * 0.08), hitX, persP) - gravityLensing + eventHorizonSwirl;
   const rot = (laneOffset * 0.25 - Math.sin(t * 2.0) * 0.05) * Math.pow(1 - safeP, 1.2);
 
   return {
@@ -1450,16 +1521,17 @@ function getSingularityVoidPos(lane: number, prog: number, W: number, H: number,
 
 // 🚗 ASPHALT GROUND ZERO BUMPER CAM
 function getGroundZeroPos(lane: number, prog: number, W: number, H: number, t: number, stage: number): ProjectionResult {
-  const hitY = H * HIT_RATIO;
+  const geom = getStageGeometry(W, H);
+  const hitY = geom.hitY;
   const vanishingY = hitY * 0.42;
   const safeP = Math.max(0, prog);
   const persP = Math.pow(safeP, 1.6);
 
-  const { x: hitX, w: hitW } = laneAt(lane, 1, W, 0.26, 0.94);
+  const { x: hitX, w: hitW } = laneAt(lane, 1, W, 0.26, 0.94, undefined, 1, 0, H);
   const noteY = lerp(vanishingY, hitY, persP);
-  const noteW = lerp(W * 0.08, hitW, persP);
-  const noteH = lerp(32, 160, persP);
-  const noteX = lerp(W / 2 + (lane - 1) * (W * 0.08), hitX, persP);
+  const noteW = lerp(geom.stageW * 0.08, hitW, persP);
+  const noteH = lerp(geom.targetNoteH * 0.6, geom.targetNoteH, persP);
+  const noteX = lerp(W / 2 + (lane - 1) * (geom.stageW * 0.08), hitX, persP);
 
   return {
     x: noteX,
@@ -1473,19 +1545,20 @@ function getGroundZeroPos(lane: number, prog: number, W: number, H: number, t: n
 
 // 🌌 CELESTIAL STARGATE HALO
 function getOrbitalHaloPos(lane: number, prog: number, W: number, H: number, t: number, stage: number): ProjectionResult {
-  const hitY = H * HIT_RATIO;
+  const geom = getStageGeometry(W, H);
+  const hitY = geom.hitY;
   const cx = W / 2;
   const safeP = Math.max(0, prog);
   const persP = Math.pow(safeP, 1.3);
 
   const laneOffset = lane - 1;
   const haloArcY = hitY * 0.20 - Math.cos((laneOffset * Math.PI) / 4) * (H * 0.08);
-  const haloArcX = cx + Math.sin((laneOffset * Math.PI) / 3) * (W * 0.28) * (1 - safeP);
+  const haloArcX = cx + Math.sin((laneOffset * Math.PI) / 3) * (geom.stageW * 0.28) * (1 - safeP);
 
-  const { x: hitX, w: hitW } = laneAt(lane, 1, W, 0.18, 0.88);
+  const { x: hitX, w: hitW } = laneAt(lane, 1, W, 0.18, 0.88, undefined, 1, 0, H);
   const noteY = lerp(haloArcY, hitY, persP);
-  const noteW = lerp(W * 0.06, hitW, persP);
-  const noteH = lerp(26, 135, persP);
+  const noteW = lerp(geom.stageW * 0.06, hitW, persP);
+  const noteH = lerp(geom.targetNoteH * 0.55, geom.targetNoteH, persP);
   const noteX = lerp(haloArcX, hitX, persP);
 
   return {
@@ -1500,20 +1573,21 @@ function getOrbitalHaloPos(lane: number, prog: number, W: number, H: number, t: 
 
 // ♾️ MÖBIUS INFINITY LOOP
 function getMobiusLoopPos(lane: number, prog: number, W: number, H: number, t: number, stage: number): ProjectionResult {
-  const hitY = H * HIT_RATIO;
+  const geom = getStageGeometry(W, H);
+  const hitY = geom.hitY;
   const vanishingY = hitY * 0.26;
   const safeP = Math.max(0, prog);
   const persP = Math.pow(safeP, 1.3);
 
   const twistAngle = safeP * Math.PI * 2 + t * 1.5;
-  const mobiusLateral = Math.sin(twistAngle) * (W * 0.16) * Math.sin(safeP * Math.PI);
+  const mobiusLateral = Math.sin(twistAngle) * (geom.stageW * 0.16) * Math.sin(safeP * Math.PI);
   const mobiusRot = Math.cos(twistAngle) * 0.35 * Math.sin(safeP * Math.PI);
 
-  const { x: hitX, w: hitW } = laneAt(lane, 1, W, 0.16, 0.86);
+  const { x: hitX, w: hitW } = laneAt(lane, 1, W, 0.16, 0.86, undefined, 1, 0, H);
   const noteY = lerp(vanishingY, hitY, persP);
-  const noteW = lerp(W * 0.05, hitW, persP);
-  const noteH = lerp(28, 135, persP);
-  const noteX = lerp(W / 2 + (lane - 1) * (W * 0.05), hitX, persP) + mobiusLateral;
+  const noteW = lerp(geom.stageW * 0.05, hitW, persP);
+  const noteH = lerp(geom.targetNoteH * 0.55, geom.targetNoteH, persP);
+  const noteX = lerp(W / 2 + (lane - 1) * (geom.stageW * 0.05), hitX, persP) + mobiusLateral;
 
   return {
     x: noteX,
@@ -1535,7 +1609,8 @@ function getArchetypeProjection(
   t: number,
   povMode: PovMode = 'classic'
 ): ProjectionResult {
-  const hitY = H * HIT_RATIO;
+  const geom = getStageGeometry(W, H);
+  const hitY = geom.hitY;
 
   // 1. Direct persistent POV Mode Overrides:
   if (povMode === 'flat_2d') {
@@ -1578,10 +1653,10 @@ function getArchetypeProjection(
     return getWaveCoasterPos(lane, prog, W, H, t, stage);
   }
   if (povMode === 'matrix_split') {
-    const spread = (lane - 1) * (W * 0.22 * Math.sin(prog * Math.PI));
-    const { x: lx, w: lw } = laneAt(lane, prog, W, 0.25, 0.90);
+    const spread = (lane - 1) * (geom.stageW * 0.22 * Math.sin(prog * Math.PI));
+    const { x: lx, w: lw } = laneAt(lane, prog, W, 0.25, 0.90, undefined, 1, 0, H);
     const noteY = prog * hitY;
-    const noteH = lerp(80, 140, prog);
+    const noteH = lerp(geom.targetNoteH * 0.6, geom.targetNoteH, prog);
     return {
       x: lx + spread,
       y: noteY,
@@ -1594,7 +1669,7 @@ function getArchetypeProjection(
   if (povMode === 'cyber_tunnel') {
     const vanishingY = hitY * 0.28;
     const cx = W / 2;
-    const tunnelW = Math.min(W, 840);
+    const tunnelW = geom.stageW;
     const laneOffset = lane - 1;
     const mult = stage === 5 ? 2.0 : 1.0;
     const safeP = Math.max(0, prog);
@@ -1602,11 +1677,11 @@ function getArchetypeProjection(
 
     const entranceSpacing = tunnelW * 0.055;
     const entranceX = cx + laneOffset * entranceSpacing;
-    const { x: hitX, w: hitW } = laneAt(lane, 1, W, 0.18, 0.86);
+    const { x: hitX, w: hitW } = laneAt(lane, 1, W, 0.18, 0.86, undefined, 1, 0, H);
 
     const noteY = lerp(vanishingY, hitY, persP);
     const noteW = lerp(tunnelW * 0.05, hitW, Math.pow(safeP, 1.25));
-    const noteH = lerp(26, 140, persP);
+    const noteH = lerp(geom.targetNoteH * 0.55, geom.targetNoteH, persP);
     const noteX = lerp(entranceX - noteW / 2, hitX, persP);
 
     const warpFactor = Math.sin(safeP * Math.PI);
@@ -1624,9 +1699,9 @@ function getArchetypeProjection(
     };
   }
   if (povMode === 'classic') {
-    const { x, w } = laneAt(lane, prog, W, HW_TOP, HW_BOT);
+    const { x, w } = laneAt(lane, prog, W, HW_TOP, HW_BOT, undefined, 1, 0, H);
     const noteY = prog * hitY;
-    const noteH = lerp(80, 140, prog);
+    const noteH = lerp(geom.targetNoteH * 0.55, geom.targetNoteH, prog);
     return { x, y: noteY, w, h: noteH, rot: 0, scale: lerp(0.4, 1.0, prog) };
   }
 
@@ -1646,10 +1721,10 @@ function getArchetypeProjection(
         return getHorizontalDriftPos(lane, prog, W, H, t, stage);
       }
       if (archetype === 'matrix_split') {
-        const spread = (lane - 1) * (W * 0.22 * Math.sin(prog * Math.PI));
-        const { x: lx, w: lw } = laneAt(lane, prog, W, 0.25, 0.90);
+        const spread = (lane - 1) * (geom.stageW * 0.22 * Math.sin(prog * Math.PI));
+        const { x: lx, w: lw } = laneAt(lane, prog, W, 0.25, 0.90, undefined, 1, 0, H);
         const noteY = prog * hitY;
-        const noteH = lerp(80, 140, prog);
+        const noteH = lerp(geom.targetNoteH * 0.6, geom.targetNoteH, prog);
         return {
           x: lx + spread,
           y: noteY,
@@ -1662,18 +1737,18 @@ function getArchetypeProjection(
       // Default dynamic 3D Cyber Tunnel
       const vanishingY = hitY * 0.28;
       const cx = W / 2;
-      const tunnelW = Math.min(W, 840);
+      const tunnelW = geom.stageW;
       const laneOffset = lane - 1;
       const mult = stage === 5 ? 2.0 : 1.0;
       const safeP = Math.max(0, prog);
       const persP = Math.pow(safeP, 1.35);
       const entranceSpacing = tunnelW * 0.055;
       const entranceX = cx + laneOffset * entranceSpacing;
-      const { x: hitX, w: hitW } = laneAt(lane, 1, W, 0.18, 0.86);
+      const { x: hitX, w: hitW } = laneAt(lane, 1, W, 0.18, 0.86, undefined, 1, 0, H);
 
       const noteY = lerp(vanishingY, hitY, persP);
       const noteW = lerp(tunnelW * 0.05, hitW, Math.pow(safeP, 1.25));
-      const noteH = lerp(26, 140, persP);
+      const noteH = lerp(geom.targetNoteH * 0.55, geom.targetNoteH, persP);
       const noteX = lerp(entranceX - noteW / 2, hitX, persP);
 
       const warpFactor = Math.sin(safeP * Math.PI);
@@ -1693,9 +1768,9 @@ function getArchetypeProjection(
   }
 
   // Fallback: 2.5D Classic Highway
-  const { x, w } = laneAt(lane, prog, W, HW_TOP, HW_BOT);
+  const { x, w } = laneAt(lane, prog, W, HW_TOP, HW_BOT, undefined, 1, 0, H);
   const noteY = prog * hitY;
-  const noteH = lerp(80, 140, prog);
+  const noteH = lerp(geom.targetNoteH * 0.55, geom.targetNoteH, prog);
   return { x, y: noteY, w, h: noteH, rot: 0, scale: lerp(0.4, 1.0, prog) };
 }
 
@@ -1715,6 +1790,7 @@ function getLaneFromCoords(
   if (rect.width <= 0 || rect.height <= 0) return 1;
   const clickX = ((clientX - rect.left) / rect.width) * W;
   const clickY = ((clientY - rect.top) / rect.height) * H;
+  const geom = getStageGeometry(W, H);
 
   const effectivePov = (povMode === 'dynamic_stage' && (stage === 3 || stage === 5))
     ? (archetype === 'horizontal_drift' ? 'horizontal_drift' : archetype === 'radial_orbit' ? 'circle' : povMode)
@@ -1755,8 +1831,8 @@ function getLaneFromCoords(
 
   // 3. Flat 2D: Track is centered with distinct boundaries
   if (effectivePov === 'flat_2d') {
-    const trackW = Math.min(W * 0.72, 480);
-    const laneW = trackW / 3;
+    const trackW = geom.botWidth;
+    const laneW = geom.laneW;
     const startX = (W - trackW) / 2;
     if (clickX < startX + laneW) return 0;
     if (clickX < startX + 2 * laneW) return 1;
@@ -1793,8 +1869,8 @@ function getLaneFromCoords(
   }
 
   // 5. Classic Mode: Sample exact highway lane boundaries at bottom judgment strike zone (p = 1.0)
-  const l0 = laneAt(0, 1, W);
-  const l1 = laneAt(1, 1, W);
+  const l0 = laneAt(0, 1, W, HW_TOP, HW_BOT, undefined, 1, 0, H);
+  const l1 = laneAt(1, 1, W, HW_TOP, HW_BOT, undefined, 1, 0, H);
   const split01 = l0.x + l0.w;
   const split12 = l1.x + l1.w;
 
@@ -1950,12 +2026,13 @@ function prerenderStaticTrack(
 
   ctx.scale(dpr, dpr);
 
-  const hitY = H * HIT_RATIO;
+  const geom = getStageGeometry(W, H);
+  const hitY = geom.hitY;
   const isCyberStage = povMode === 'cyber_tunnel' && (stage === 3 || stage === 5);
   const topRatio = isCyberStage ? 0.18 : HW_TOP;
   const botRatio = isCyberStage ? 0.86 : HW_BOT;
-  const hwTop = hwAtProgress(0, W, topRatio, botRatio);
-  const hwBot = hwAtProgress(1, W, topRatio, botRatio);
+  const hwTop = hwAtProgress(0, W, topRatio, botRatio, H);
+  const hwBot = hwAtProgress(1, W, topRatio, botRatio, H);
 
   const hillCx = W / 2;
   const hillCy = -hitY * 0.09;
@@ -1971,8 +2048,8 @@ function prerenderStaticTrack(
 
   // Draw distinct lane background colors based on selected gameTrack
   for (let i = 0; i < LANE_COUNT; i++) {
-    const { x: lx0, w: lw0 } = laneAt(i, 0, W);
-    const { x: lx1, w: lw1 } = laneAt(i, 1, W);
+    const { x: lx0, w: lw0 } = laneAt(i, 0, W, HW_TOP, HW_BOT, undefined, 1, 0, H);
+    const { x: lx1, w: lw1 } = laneAt(i, 1, W, HW_TOP, HW_BOT, undefined, 1, 0, H);
     
     const laneGrad = ctx.createLinearGradient(0, 0, 0, hitY);
     if (gameTrack === 'transparent') {
@@ -2018,7 +2095,7 @@ function prerenderStaticTrack(
   for (let row = 0; row <= gridRows; row++) {
     const ry = (row / gridRows) * hitY;
     const rp = ry / hitY;
-    const { left, right } = hwAtProgress(rp, W);
+    const { left, right } = hwAtProgress(rp, W, HW_TOP, HW_BOT, H);
     
     if (gameTrack === 'cyber_matrix') {
       ctx.strokeStyle = `rgba(57, 255, 20, ${0.05 + rp * 0.25})`;
@@ -2042,8 +2119,8 @@ function prerenderStaticTrack(
 
   // Lane groove dividers — double-line with glow
   for (let l = 1; l < LANE_COUNT; l++) {
-    const topPos = laneAt(l, 0, W);
-    const botPos = laneAt(l, 1, W);
+    const topPos = laneAt(l, 0, W, HW_TOP, HW_BOT, undefined, 1, 0, H);
+    const botPos = laneAt(l, 1, W, HW_TOP, HW_BOT, undefined, 1, 0, H);
 
     if (gameTrack === 'cyber_matrix') {
       ctx.strokeStyle = "rgba(0, 30, 10, 0.9)";
@@ -2903,16 +2980,19 @@ export default function Game() {
         if (judgmentOverlayRef.current) {
           const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
           const canvasW = canvasRef.current?.width ? canvasRef.current.width / dpr : 0;
-          if (canvasW > 0) {
-            const hwBot = hwAtProgress(1, canvasW);
+          const canvasH = canvasRef.current?.height ? canvasRef.current.height / dpr : 0;
+          if (canvasW > 0 && canvasH > 0) {
+            const geom = getStageGeometry(canvasW, canvasH);
+            const hwBot = hwAtProgress(1, canvasW, HW_TOP, HW_BOT, canvasH);
             const laneW = hwBot.width / LANE_COUNT;
             const targetX = hwBot.left + (newJ.lane + 0.5) * laneW;
             const targetPct = (targetX / canvasW) * 100;
+            const targetYPct = (geom.hitY / canvasH) * 100 - 8;
 
             const popEl = document.createElement('div');
             popEl.className = 'absolute pointer-events-none judgment-pop';
             popEl.style.left = `${targetPct}%`;
-            popEl.style.top = '70%';
+            popEl.style.top = `${targetYPct}%`;
             popEl.innerHTML = getJudgmentBadgeSvgHtml(newJ.type, newJ.type === 'PERFECT+' ? 1.08 : 0.95, newJ.id);
             
             judgmentOverlayRef.current.appendChild(popEl);
@@ -3793,8 +3873,9 @@ export default function Game() {
       const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
       const W = canvas.width / dpr;
       const H = canvas.height / dpr;
-      const hitY = H * HIT_RATIO;
-      const { x: lx, w: lw } = laneAt(lane, 1, W);
+      const geom = getStageGeometry(W, H);
+      const hitY = geom.hitY;
+      const { x: lx, w: lw } = laneAt(lane, 1, W, HW_TOP, HW_BOT, undefined, 1, 0, H);
       const cx = lx + lw / 2;
       const color =
         kind === "SHIELDED"
@@ -4303,8 +4384,9 @@ export default function Game() {
 
         // Calculate visual tail Y position (top) at release time to center the explosion
         const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
+        const W = (canvasRef.current?.width ?? 800) / dpr;
         const H = (canvasRef.current?.height ?? 600) / dpr;
-        const hitY = H * HIT_RATIO;
+        const hitY = getStageGeometry(W, H).hitY;
         const AT = approachTime(songRef.current?.difficultyLevel ?? 5);
         const spawnT = ns.note.time - AT;
         const prog = (getT() - spawnT) / AT;
@@ -4495,8 +4577,9 @@ export default function Game() {
       haptics.doubleTap();
 
       const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
+      const W = (canvasRef.current?.width ?? 800) / dpr;
       const H = (canvasRef.current?.height ?? 600) / dpr;
-      const hitY = H * HIT_RATIO;
+      const hitY = getStageGeometry(W, H).hitY;
       triggerHitFx(ns.currentLane, j, hitY, swipeDir);
 
       addJudgment({ type: j, lane: ns.currentLane, id: ++jCounter.current, ts: Date.now() });
@@ -4549,8 +4632,8 @@ export default function Game() {
             const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
             const W = canvas.width / dpr;
             const H = canvas.height / dpr;
-            const hitY = H * HIT_RATIO;
-            const { x: lx, w: lw } = laneAt(toLane, 1, W);
+            const hitY = getStageGeometry(W, H).hitY;
+            const { x: lx, w: lw } = laneAt(toLane, 1, W, HW_TOP, HW_BOT, undefined, 1, 0, H);
             const cx = lx + lw / 2;
             const lc = getDifficultyLaneColor(laneColorsRef.current[toLane], songRef.current?.difficultyLevel ?? 5, toLane);
             const particles: HitParticle[] = [];
@@ -5037,8 +5120,8 @@ export default function Game() {
     const W = canvas.width / dpr;
     const H = canvas.height / dpr;
     const pulse = 0.5 + 0.5 * Math.sin(t * 10); // 1.6Hz pulse for polish
-    const AT = approachTime(song.difficultyLevel);
-    const hitY = H * HIT_RATIO;
+    const geom = getStageGeometry(W, H);
+    const hitY = geom.hitY;
     const hillBow = W * 0.032; // how far rails bow outward at the shoulder
     const bowY = hitY * 0.28; // where the shoulder bow peaks
     const nowMs = Date.now();
@@ -6786,16 +6869,15 @@ export default function Game() {
     const isCyberPOV = (isCyberTunnelPov || activeArchetypeRef.current === 'cyber_tunnel') && (calculatedStage === 3 || calculatedStage === 5);
     const show3DCircularTargets = isCyberTunnelPov || isCorkscrewPov || isRollercoasterPov || isMatrixSplitPov || (isDynamicStagePov && calculatedStage >= 3);
     if (!show3DCircularTargets) {
-      // Original height (space below hit line), centered so baseline bisects each button.
-      const btnH = H - hitY;
-      const btnY = hitY - btnH / 2; // baseline runs through the exact center
+      const btnH = geom.btnH;
+      const btnY = geom.btnY;
       // Clip to active track width so buttons never overflow the highway edges
       ctx.save();
       ctx.beginPath();
       ctx.rect(hwBot.left, 0, hwBot.right - hwBot.left, H);
       ctx.clip();
     for (let i = 0; i < LANE_COUNT; i++) {
-      const { x, w } = laneAt(i, 1, W, isCyberPOV ? 0.18 : HW_TOP, isCyberPOV ? 0.86 : HW_BOT);
+      const { x, w } = laneAt(i, 1, W, isCyberPOV ? 0.18 : HW_TOP, isCyberPOV ? 0.86 : HW_BOT, undefined, 1, 0, H);
       const pressed = laneRef.current[i].pressed;
       const lc = getDifficultyLaneColor(laneColorsRef.current[i], songRef.current?.difficultyLevel ?? 5, i);
       const silenced = laneSilenced.current[i];
@@ -9109,8 +9191,9 @@ export default function Game() {
                 const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
                 const W = canvas.width / dpr;
                 const H = canvas.height / dpr;
-                const hitY = H * HIT_RATIO;
-                const { x: lx, w: lw } = laneAt(newLane, 1, W);
+                const geom = getStageGeometry(W, H);
+                const hitY = geom.hitY;
+                const { x: lx, w: lw } = laneAt(newLane, 1, W, HW_TOP, HW_BOT, undefined, 1, 0, H);
                 const cx = lx + lw / 2;
                 const lc = getDifficultyLaneColor(laneColorsRef.current[newLane], songRef.current?.difficultyLevel ?? 5, newLane);
                 const particles: HitParticle[] = [];
@@ -9323,8 +9406,9 @@ export default function Game() {
                     const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
                     const W = canvas.width / dpr;
                     const H = canvas.height / dpr;
-                    const hitY = H * HIT_RATIO;
-                    const { x: lx, w: lw } = laneAt(newLane, 1, W);
+                    const geom = getStageGeometry(W, H);
+                    const hitY = geom.hitY;
+                    const { x: lx, w: lw } = laneAt(newLane, 1, W, HW_TOP, HW_BOT, undefined, 1, 0, H);
                     const cx = lx + lw / 2;
                     const lc = getDifficultyLaneColor(laneColorsRef.current[newLane], songRef.current?.difficultyLevel ?? 5, newLane);
                     const particles: HitParticle[] = [];
@@ -11831,7 +11915,7 @@ export default function Game() {
 
           {/* Bottom Sub-Row: Centered Continuous Progress Track Directly Over Highway */}
           <div 
-            className="w-full max-w-[580px] self-center mx-auto px-4 pb-2"
+            className="w-full max-w-[680px] self-center mx-auto px-4 pb-2"
             style={{ marginLeft: "auto", marginRight: "auto", alignSelf: "center" }}
           >
             <div className="relative w-full h-[5px] rounded-full overflow-hidden p-[1px] bg-black/60 border border-white/15 backdrop-blur-sm shadow-[inset_0_1px_3px_rgba(0,0,0,0.8)]">
@@ -12066,7 +12150,7 @@ export default function Game() {
 
             return (
               <div
-                className="absolute top-4 left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none z-20"
+                className="gameplay-hud-container"
                 style={{
                   opacity: activePovMode === 'cyber_tunnel' ? 0.18 : 1,
                   transition: 'opacity 0.5s ease-in-out',
@@ -12094,172 +12178,176 @@ export default function Game() {
                   }
                 `}} />
 
-                {/* Scrolling Medal Name behind the dial */}
-                {curMedal !== "NONE" && (
-                  <div className="absolute top-[40px] left-1/2 -translate-x-1/2 w-[340px] h-12 overflow-hidden flex items-center justify-center z-[-1] pointer-events-none">
-                    <span 
-                      key={curMedal}
-                      className="absolute font-mono text-[2.8rem] font-black uppercase tracking-[0.25em] text-transparent select-none whitespace-nowrap animate-marquee-behind"
-                      style={{
-                        WebkitTextStroke: `1px ${medalStyle.main}60`,
-                        textShadow: `0 0 12px ${medalStyle.glow}`,
-                      }}
-                    >
-                      {curMedal}
-                    </span>
-                  </div>
-                )}
+                {/* Main responsive HUD row: centered in portrait, flanked across wings on desktop / landscape */}
+                <div className="gameplay-hud-inner">
+                  {/* Left Wing / Left HUD: Score Dial + Stage Info + Medal marquee */}
+                  <div className="gameplay-hud-left-wing relative">
+                    {/* Scrolling Medal Name behind the dial */}
+                    {curMedal !== "NONE" && (
+                      <div className="absolute top-[40px] left-1/2 -translate-x-1/2 w-[340px] h-12 overflow-hidden flex items-center justify-center z-[-1] pointer-events-none">
+                        <span 
+                          key={curMedal}
+                          className="absolute font-mono text-[2.8rem] font-black uppercase tracking-[0.25em] text-transparent select-none whitespace-nowrap animate-marquee-behind"
+                          style={{
+                            WebkitTextStroke: `1px ${medalStyle.main}60`,
+                            textShadow: `0 0 12px ${medalStyle.glow}`,
+                          }}
+                        >
+                          {curMedal}
+                        </span>
+                      </div>
+                    )}
 
-                {/* Top HUD Row: Main Circular Score Dial & Side Combo Circle HUD */}
-                <div className="flex flex-row items-center justify-center gap-3 md:gap-4 lg:gap-5 relative">
-                  {/* Circular Score Ring */}
-                  <div className="relative w-32 h-32 md:w-36 md:h-36 lg:w-40 lg:h-40 rounded-full flex flex-col items-center justify-center shrink-0" style={{
-                    background: "rgba(10, 10, 18, 0.94)",
-                    border: `2px solid ${medalStyle.main}`,
-                    boxShadow: `0 0 35px ${medalStyle.glow}, inset 0 0 15px rgba(255,255,255,0.03)`,
-                    transition: "all 0.4s ease-in-out",
-                  }}>
-                    {/* SVG Stage Progress Ring */}
-                    <svg viewBox="0 0 128 128" className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none z-0">
-                      <circle
-                        cx="64"
-                        cy="64"
-                        r="56"
-                        fill="none"
-                        stroke="rgba(255, 255, 255, 0.06)"
-                        strokeWidth="4"
-                      />
-                      <circle
-                        cx="64"
-                        cy="64"
-                        r="56"
-                        fill="none"
-                        stroke={medalStyle.main}
-                        strokeWidth="4"
-                        strokeDasharray={2 * Math.PI * 56}
-                        strokeDashoffset={2 * Math.PI * 56 * (1 - (gs.progress || 0))}
-                        strokeLinecap="round"
-                        style={{ 
-                          transition: "stroke-dashoffset 0.15s linear, stroke 0.4s ease-in-out",
-                          filter: `drop-shadow(0 0 8px ${medalStyle.main})`
-                        }}
-                      />
-                      {/* Dynamic Powerup Decaying Outer Ring (Direct DOM ref updated, zero React re-renders) */}
-                      <circle
-                        ref={puCircleRef}
-                        cx="64"
-                        cy="64"
-                        r="60"
-                        fill="none"
-                        stroke="#FF1493"
-                        strokeWidth="4"
-                        strokeDasharray={2 * Math.PI * 60}
-                        strokeDashoffset={2 * Math.PI * 60}
-                        strokeLinecap="round"
-                        style={{
-                          display: "none",
-                          transition: "stroke-dashoffset 0.08s linear",
-                        }}
-                      />
-                    </svg>
-
-                    <span className="relative z-10 font-mono text-[8.5px] md:text-[9.5px] lg:text-[10.5px] tracking-[0.25em] text-zinc-400 font-black mb-1">
-                      {currentStage === 5 ? "STAGE FINAL" : `STAGE ${currentStage}`}
-                    </span>
-                    <span
-                      className="relative z-20 font-mono text-2xl md:text-3xl lg:text-4xl font-black text-white tracking-tight"
-                      style={{
-                        WebkitTextStroke: "1.5px #000000",
-                        paintOrder: "stroke fill",
-                        textShadow: "-1.5px -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 1.5px 0 #000, 1.5px 1.5px 0 #000, 0 0 10px rgba(0,0,0,0.95), 0 2px 6px rgba(0,0,0,0.9)",
-                      }}
-                    >
-                      <AnimatedScore score={gs.score} />
-                    </span>
-                    <span className={`relative z-10 font-mono text-[10.5px] md:text-[11.5px] lg:text-[12.5px] font-black mt-1 tracking-widest ${medalStyle.text}`} style={{ transition: "color 0.4s ease-in-out" }}>
-                      ×{m}
-                    </span>
-                  </div>
-
-                  {/* Dedicated Side Circular Combo HUD Ring */}
-                  {opts.comboDisplay && (
-                    <motion.div
-                      key={gs.combo > 0 ? "active-combo" : "zero-combo"}
-                      initial={{ scale: 0.8, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      className="relative w-20 h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 rounded-full flex flex-col items-center justify-center shrink-0"
-                      style={{
-                        background: "rgba(10, 10, 18, 0.94)",
-                        border: `2px solid ${gs.combo >= 100 ? '#39FF14' : gs.combo >= 50 ? '#FF1493' : gs.combo > 0 ? '#00E5FF' : 'rgba(255,255,255,0.18)'}`,
-                        boxShadow: gs.combo > 0 
-                          ? `0 0 25px ${gs.combo >= 100 ? 'rgba(57, 255, 20, 0.5)' : gs.combo >= 50 ? 'rgba(255, 20, 147, 0.5)' : 'rgba(0, 229, 255, 0.4)'}, inset 0 0 10px rgba(255,255,255,0.03)`
-                          : '0 0 15px rgba(0,0,0,0.5)',
-                        transition: "all 0.3s ease-in-out",
-                      }}
-                    >
-                      {/* SVG Combo Circular Decay/Progress Ring */}
-                      <svg viewBox="0 0 96 96" className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none z-0">
+                    {/* Circular Score Ring */}
+                    <div className="relative w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 lg:w-40 lg:h-40 rounded-full flex flex-col items-center justify-center shrink-0" style={{
+                      background: "rgba(10, 10, 18, 0.94)",
+                      border: `2px solid ${medalStyle.main}`,
+                      boxShadow: `0 0 35px ${medalStyle.glow}, inset 0 0 15px rgba(255,255,255,0.03)`,
+                      transition: "all 0.4s ease-in-out",
+                    }}>
+                      {/* SVG Stage Progress Ring */}
+                      <svg viewBox="0 0 128 128" className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none z-0">
                         <circle
-                          cx="48"
-                          cy="48"
-                          r="42"
+                          cx="64"
+                          cy="64"
+                          r="56"
                           fill="none"
-                          stroke="rgba(255, 255, 255, 0.08)"
-                          strokeWidth="3.5"
+                          stroke="rgba(255, 255, 255, 0.06)"
+                          strokeWidth="4"
                         />
-                        {gs.combo > 0 && (
+                        <circle
+                          cx="64"
+                          cy="64"
+                          r="56"
+                          fill="none"
+                          stroke={medalStyle.main}
+                          strokeWidth="4"
+                          strokeDasharray={2 * Math.PI * 56}
+                          strokeDashoffset={2 * Math.PI * 56 * (1 - (gs.progress || 0))}
+                          strokeLinecap="round"
+                          style={{ 
+                            transition: "stroke-dashoffset 0.15s linear, stroke 0.4s ease-in-out",
+                            filter: `drop-shadow(0 0 8px ${medalStyle.main})`
+                          }}
+                        />
+                        {/* Dynamic Powerup Decaying Outer Ring (Direct DOM ref updated, zero React re-renders) */}
+                        <circle
+                          ref={puCircleRef}
+                          cx="64"
+                          cy="64"
+                          r="60"
+                          fill="none"
+                          stroke="#FF1493"
+                          strokeWidth="4"
+                          strokeDasharray={2 * Math.PI * 60}
+                          strokeDashoffset={2 * Math.PI * 60}
+                          strokeLinecap="round"
+                          style={{
+                            display: "none",
+                            transition: "stroke-dashoffset 0.08s linear",
+                          }}
+                        />
+                      </svg>
+
+                      <span className="relative z-10 font-mono text-[8px] sm:text-[8.5px] md:text-[9.5px] lg:text-[10.5px] tracking-[0.25em] text-zinc-400 font-black mb-1">
+                        {currentStage === 5 ? "STAGE FINAL" : `STAGE ${currentStage}`}
+                      </span>
+                      <span
+                        className="relative z-20 font-mono text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black text-white tracking-tight"
+                        style={{
+                          WebkitTextStroke: "1.5px #000000",
+                          paintOrder: "stroke fill",
+                          textShadow: "-1.5px -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 1.5px 0 #000, 1.5px 1.5px 0 #000, 0 0 10px rgba(0,0,0,0.95), 0 2px 6px rgba(0,0,0,0.9)",
+                        }}
+                      >
+                        <AnimatedScore score={gs.score} />
+                      </span>
+                      <span className={`relative z-10 font-mono text-[9.5px] sm:text-[10.5px] md:text-[11.5px] lg:text-[12.5px] font-black mt-1 tracking-widest ${medalStyle.text}`} style={{ transition: "color 0.4s ease-in-out" }}>
+                        ×{m}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Right Wing / Right HUD: Combo Ring + Power-Up Pill */}
+                  <div className="gameplay-hud-right-wing relative flex flex-col items-center">
+                    {/* Dedicated Side Circular Combo HUD Ring */}
+                    {opts.comboDisplay && (
+                      <motion.div
+                        key={gs.combo > 0 ? "active-combo" : "zero-combo"}
+                        initial={{ scale: 0.8, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="relative w-18 h-18 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 rounded-full flex flex-col items-center justify-center shrink-0"
+                        style={{
+                          background: "rgba(10, 10, 18, 0.94)",
+                          border: `2px solid ${gs.combo >= 100 ? '#39FF14' : gs.combo >= 50 ? '#FF1493' : gs.combo > 0 ? '#00E5FF' : 'rgba(255,255,255,0.18)'}`,
+                          boxShadow: gs.combo > 0 
+                            ? `0 0 25px ${gs.combo >= 100 ? 'rgba(57, 255, 20, 0.5)' : gs.combo >= 50 ? 'rgba(255, 20, 147, 0.5)' : 'rgba(0, 229, 255, 0.4)'}, inset 0 0 10px rgba(255,255,255,0.03)`
+                            : '0 0 15px rgba(0,0,0,0.5)',
+                          transition: "all 0.3s ease-in-out",
+                        }}
+                      >
+                        {/* SVG Combo Circular Decay/Progress Ring */}
+                        <svg viewBox="0 0 96 96" className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none z-0">
                           <circle
                             cx="48"
                             cy="48"
                             r="42"
                             fill="none"
-                            stroke={gs.combo >= 100 ? '#39FF14' : gs.combo >= 50 ? '#FF1493' : '#00E5FF'}
+                            stroke="rgba(255, 255, 255, 0.08)"
                             strokeWidth="3.5"
-                            strokeDasharray={2 * Math.PI * 42}
-                            strokeDashoffset={2 * Math.PI * 42 * (1 - Math.min(1, (gs.combo % 50) / 50))}
-                            strokeLinecap="round"
-                            style={{
-                              transition: "stroke-dashoffset 0.1s linear, stroke 0.3s ease-in-out",
-                              filter: `drop-shadow(0 0 6px ${gs.combo >= 100 ? '#39FF14' : gs.combo >= 50 ? '#FF1493' : '#00E5FF'})`
-                            }}
                           />
-                        )}
-                      </svg>
+                          {gs.combo > 0 && (
+                            <circle
+                              cx="48"
+                              cy="48"
+                              r="42"
+                              fill="none"
+                              stroke={gs.combo >= 100 ? '#39FF14' : gs.combo >= 50 ? '#FF1493' : '#00E5FF'}
+                              strokeWidth="3.5"
+                              strokeDasharray={2 * Math.PI * 42}
+                              strokeDashoffset={2 * Math.PI * 42 * (1 - Math.min(1, (gs.combo % 50) / 50))}
+                              strokeLinecap="round"
+                              style={{
+                                transition: "stroke-dashoffset 0.1s linear, stroke 0.3s ease-in-out",
+                                filter: `drop-shadow(0 0 6px ${gs.combo >= 100 ? '#39FF14' : gs.combo >= 50 ? '#FF1493' : '#00E5FF'})`
+                              }}
+                            />
+                          )}
+                        </svg>
 
-                      <span className="relative z-10 font-mono text-[7.5px] md:text-[8.5px] lg:text-[9.5px] tracking-[0.2em] text-zinc-400 font-bold mb-0.5 uppercase">
-                        COMBO
+                        <span className="relative z-10 font-mono text-[7px] sm:text-[7.5px] md:text-[8.5px] lg:text-[9.5px] tracking-[0.2em] text-zinc-400 font-bold mb-0.5 uppercase">
+                          COMBO
+                        </span>
+                        <motion.span
+                          animate={{ scale: [1.35, 1.0] }}
+                          transition={{ type: "spring", stiffness: 450, damping: 25 }}
+                          className="relative z-20 font-mono text-base sm:text-lg md:text-xl lg:text-2xl font-black text-white tracking-tight"
+                          style={{
+                            textShadow: gs.combo > 0 ? `0 0 10px ${gs.combo >= 100 ? '#39FF14' : gs.combo >= 50 ? '#FF1493' : '#00E5FF'}` : 'none'
+                          }}
+                          ref={comboTextRef}
+                        >
+                          {gs.combo}
+                        </motion.span>
+                      </motion.div>
+                    )}
+
+                    {/* Active Power-up dynamic tech pill (Direct DOM ref updated, zero React re-renders) */}
+                    <div
+                      ref={puPillRef}
+                      className="mt-2 text-center font-mono text-[8.5px] sm:text-[9px] md:text-[10px] lg:text-[11px] font-black px-3.5 sm:px-4.5 py-0.5 rounded-full tracking-[0.18em] uppercase items-center justify-center gap-1.5 shadow-lg border"
+                      style={{
+                        display: "none",
+                        background: "rgba(10, 10, 18, 0.96)",
+                      }}
+                    >
+                      <span className="relative flex h-1.5 w-1.5">
+                        <span ref={puPillPingRef} className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" />
+                        <span ref={puPillDotRef} className="relative inline-flex rounded-full h-1.5 w-1.5" />
                       </span>
-                      {/* PERF: Removed key={gs.combo} which forced Framer Motion to unmount/remount
-                          on every combo increment. Now uses animate prop changes instead. */}
-                      <motion.span
-                        animate={{ scale: [1.35, 1.0] }}
-                        transition={{ type: "spring", stiffness: 450, damping: 25 }}
-                        className="relative z-20 font-mono text-lg md:text-xl lg:text-2xl font-black text-white tracking-tight"
-                        style={{
-                          textShadow: gs.combo > 0 ? `0 0 10px ${gs.combo >= 100 ? '#39FF14' : gs.combo >= 50 ? '#FF1493' : '#00E5FF'}` : 'none'
-                        }}
-                        ref={comboTextRef}
-                      >
-                        {gs.combo}
-                      </motion.span>
-                    </motion.div>
-                  )}
-                </div>
-
-                {/* Active Power-up dynamic tech pill (Direct DOM ref updated, zero React re-renders) */}
-                <div
-                  ref={puPillRef}
-                  className="mt-2 text-center font-mono text-[9px] md:text-[10px] lg:text-[11px] font-black px-4.5 py-0.5 rounded-full tracking-[0.18em] uppercase items-center justify-center gap-1.5 shadow-lg border"
-                  style={{
-                    display: "none",
-                    background: "rgba(10, 10, 18, 0.96)",
-                  }}
-                >
-                  <span className="relative flex h-1.5 w-1.5">
-                    <span ref={puPillPingRef} className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" />
-                    <span ref={puPillDotRef} className="relative inline-flex rounded-full h-1.5 w-1.5" />
-                  </span>
-                  <span ref={puPillTextRef} />
+                      <span ref={puPillTextRef} />
+                    </div>
+                  </div>
                 </div>
               </div>
             );
