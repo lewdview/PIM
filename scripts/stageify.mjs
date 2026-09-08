@@ -31,20 +31,30 @@ const STAGE_META = [
 
 /**
  * Minimum note spacing per stage, expressed as a multiplier of beatDuration.
- * Standard mode: Stage 5 is clamped to 0.15 (prevents sub-60ms tap spam at standard BPMs).
- * Deluxe mode: Stage 5 retains 0.10 for expert climax.
+ * Standard mode: Tapered back difficulty (Stage 5 = 0.22) for comfortable, musical flow.
+ * Deluxe mode: Retains 0.10 at Stage 5 for expert climax.
  */
-const STAGE_MIN_SPACING = [
-  1.0,   // Stage 1: Very Easy — generous, comfortable entry pacing
-  0.55,  // Stage 2: Easy/Medium — smooth transition
-  0.30,  // Stage 3: Hard — balanced rhythmic pulse
-  0.18,  // Stage 4: Brutal — dense syncopated patterns
-  0.15,  // Stage 5: FINAL STAGE — standard mode clamp (0.15 vs deluxe 0.10)
+const STANDARD_STAGE_SPACING = [
+  1.10,  // Stage 1: Very Easy — generous, comfortable entry pacing
+  0.65,  // Stage 2: Easy/Medium — relaxed rhythmic stepping
+  0.42,  // Stage 3: Hard — balanced, musical groove
+  0.28,  // Stage 4: Brutal — syncopated without capacitive panic
+  0.22,  // Stage 5: FINAL STAGE — tapered back climax (0.22 vs deluxe 0.10)
 ];
 
+const DELUXE_STAGE_SPACING = [
+  0.85,  // Stage 1: Punchy entry
+  0.45,  // Stage 2: Energetic transition
+  0.25,  // Stage 3: Fast rhythmic drive
+  0.16,  // Stage 4: Dense syncopation
+  0.10,  // Stage 5: FINAL STAGE — expert climax (X.10)
+];
+
+const STAGE_MIN_SPACING = STANDARD_STAGE_SPACING;
+
 function getStageBaseMultiplier(stage, isDeluxe = false) {
-  if (stage === 5) return isDeluxe ? 0.10 : 0.15;
-  return STAGE_MIN_SPACING[stage - 1] ?? 0.15;
+  const table = isDeluxe ? DELUXE_STAGE_SPACING : STANDARD_STAGE_SPACING;
+  return table[stage - 1] ?? (isDeluxe ? 0.10 : 0.22);
 }
 
 /**
@@ -147,10 +157,10 @@ function getMinSpacing(time, stage, stageBounds, beatDuration, isDeluxe = false)
   const lerpedSpacing = startSpacing + (baseSpacing - startSpacing) * clampedProgress;
 
   // Enforce Absolute Millisecond Floor (Δt_min):
-  // const baseSpacingMs = beatDurationSec * stageMultiplier * 1000;
-  // const minSpacingMs = Math.max(baseSpacingMs, options.deluxe ? 75 : 110);
+  // Deluxe Mode: 75ms floor (fast polyphonic bursts, up to 13.3 NPS)
+  // Standard Mode: 135ms floor (tapered back for smooth 2-thumb capacitive ergonomics, max ~7.4 NPS)
   const baseSpacingMs = lerpedSpacing * 1000;
-  const minSpacingMs = Math.max(baseSpacingMs, isDeluxe ? 75 : 110);
+  const minSpacingMs = Math.max(baseSpacingMs, isDeluxe ? 75 : 135);
   return minSpacingMs / 1000;
 }
 
@@ -168,14 +178,20 @@ function gateNoteType(note, stage, difficultyLevel, isDeluxe = false) {
   const clone = { ...note, stage };
   const allowed = STAGE_ALLOWED_TYPES[stage];
 
-  // Special mine gating: allowed in Stage 4+ (difficultyLevel >= 7 in standard, >= 5 in deluxe)
+  // Special mine gating:
+  // Mines are an elite hazard mechanic exclusively for Deluxe Mode (Stage 4+)!
+  // In Standard Mode, remove mines completely to prevent accidental fail spikes.
   if (clone.type === 'mine') {
-    const minDiff = isDeluxe ? 5 : 7;
-    if (stage < 4 || difficultyLevel < minDiff) {
-      // Remove mine entirely (return null to signal removal)
+    if (!isDeluxe || stage < 4 || difficultyLevel < 5) {
       return null;
     }
     return clone;
+  }
+
+  // Downgrade erratic zigzags in Standard mode to smooth slides
+  if (clone.type === 'zigzag' && !isDeluxe) {
+    clone.type = 'slide';
+    delete clone.zigzagAmplitude;
   }
 
   // If type is already allowed, keep it
@@ -313,8 +329,9 @@ export function stageifyNotes(notes, duration, bpm, difficultyLevel = 5, options
       }
     }
 
-    // For stages 1-3, prevent simultaneous notes (no duals)
-    if (stage <= 3) {
+    // For stages 1-3 (and in Standard mode across ALL stages), prevent simultaneous notes (strictly monophonic)
+    // Only Deluxe Mode permits polyphonic dual hits in stages 4 and 5
+    if (stage <= 3 || !isDeluxe) {
       const hasDuplicate = processed.some(n => Math.abs(n.time - gated.time) < 0.02);
       if (hasDuplicate) {
         continue;

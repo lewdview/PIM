@@ -54,7 +54,7 @@ function snap(time, bpm, subdivision = 16) {
 /**
  * Generate a single rhythmic motif (sequence of relative beat offsets, lanes, and note roles)
  */
-function createMotif(prng, barCount = 4, difficulty = 5) {
+function createMotif(prng, barCount = 4, difficulty = 5, isDeluxe = false) {
   const beatsPerBar = 4;
   const totalBeats = barCount * beatsPerBar;
   const motif = [];
@@ -90,12 +90,21 @@ function createMotif(prng, barCount = 4, difficulty = 5) {
       length: prng() < 0.25 ? 1.0 : 0.5,
     });
 
-    // Step to next note: eighth (0.5), sixteenth (0.25), or quarter (1.0)
+    // Step to next note:
+    // Deluxe mode: fast 16th (0.25) bursts and dense syncopation
+    // Standard mode: tapered back to comfortable quarter (1.0) and eighth (0.5) steps
     const stepRoll = prng();
     let step = 0.5;
-    if (difficulty >= 7 && stepRoll < 0.35) step = 0.25;
-    else if (difficulty <= 4 && stepRoll < 0.4) step = 1.0;
-    else if (stepRoll < 0.2) step = 0.75;
+    if (isDeluxe) {
+      if (difficulty >= 6 && stepRoll < 0.40) step = 0.25;
+      else if (difficulty <= 4 && stepRoll < 0.30) step = 1.0;
+      else if (stepRoll < 0.20) step = 0.75;
+    } else {
+      // Standard mode: relaxed, legible pacing
+      if (stepRoll < 0.45) step = 1.0;     // 45% quarter notes
+      else if (stepRoll < 0.85) step = 0.5; // 40% eighth notes
+      else step = 0.75;                     // 15% dotted eighth
+    }
 
     currentBeat += step;
   }
@@ -119,6 +128,10 @@ export function generateV5SongChart(song, options = {}) {
   const seedMultiplier = isDeluxe ? 13337 : 9973;
   const prng = createPrng((song.day || 1) * seedMultiplier + Math.round(bpm * 17));
 
+  // Standard mode tapers back difficulty for an accessible, clear, comfortable baseline (effective difficulty 2-6)
+  // Deluxe mode unleashes the full intended difficulty up to level 10
+  const effectiveDiff = isDeluxe ? difficulty : Math.max(2, Math.min(6, Math.round(difficulty * 0.75)));
+
   // 1. Structural Section Boundaries (Seconds)
   const sections = [
     { name: 'intro',      start: 2.0,                  end: duration * 0.12, type: 'sparse' },
@@ -132,9 +145,9 @@ export function generateV5SongChart(song, options = {}) {
   ];
 
   // 2. Motif Seeds (Theme & Variation)
-  const verseMotif = createMotif(prng, 4, difficulty);
-  const chorusMotif = createMotif(prng, 4, difficulty);
-  const soloMotif = createMotif(prng, 2, Math.min(10, difficulty + 2));
+  const verseMotif = createMotif(prng, 4, effectiveDiff, isDeluxe);
+  const chorusMotif = createMotif(prng, 4, effectiveDiff, isDeluxe);
+  const soloMotif = createMotif(prng, 2, isDeluxe ? Math.min(10, difficulty + 2) : effectiveDiff, isDeluxe);
 
   let rawNotes = [];
   let noteId = 0;
@@ -405,8 +418,8 @@ export function generateV5SongChart(song, options = {}) {
           type: noteType,
         });
 
-        // Tighter spacing as we approach the drop
-        const step = progress > 0.5 ? (difficulty >= 6 ? 0.5 : 1.0) : 1.0;
+        // Tighter spacing as we approach the drop (Deluxe accelerates to 0.5, Standard maintains 1.0)
+        const step = progress > 0.5 ? (isDeluxe && difficulty >= 6 ? 0.5 : 1.0) : 1.0;
         t = snap(t + step * beatDuration, bpm, 16);
       }
     }
@@ -428,13 +441,13 @@ export function generateV5SongChart(song, options = {}) {
           remixEffect: REMIX_EFFECTS[Math.floor(prng() * REMIX_EFFECTS.length)],
         });
       } else {
-        // Chorus 1 Drop: Heavy BREAK note or Dual Hit
+        // Chorus 1 Drop: Heavy BREAK note (Dual hit only in Deluxe)
         pushNote({
           time: dropTime,
           lane: 0,
           type: 'break',
         });
-        if (difficulty >= 5) {
+        if (isDeluxe && difficulty >= 5) {
           pushNote({
             time: dropTime,
             lane: 2,
@@ -457,45 +470,72 @@ export function generateV5SongChart(song, options = {}) {
           let zigzagAmp = undefined;
 
           if (isClimax) {
-            // CLIMAX OVERDRIVE: Slides, Zigzags, Hold-Swipes, Lifts, Mines
-            const roll = prng();
-            if (roll < 0.2) {
-              // Cross-lane Slide
-              noteType = 'slide';
-              holdDur = parseFloat((beatDuration * 1.5).toFixed(3));
-              targetLane = (item.lane + 1 + (prng() < 0.5 ? 1 : 0)) % 3;
-            } else if (roll < 0.32 && difficulty >= 6) {
-              // Zigzag Slide
-              noteType = 'zigzag';
-              holdDur = parseFloat((beatDuration * 2.0).toFixed(3));
-              targetLane = (item.lane + 2) % 3;
-              zigzagAmp = 1.0;
-            } else if (roll < 0.48) {
-              // Hold-Swipe
-              noteType = 'hold-swipe';
-              holdDur = parseFloat((beatDuration * 1.0).toFixed(3));
-              swipeDir = SWIPE_DIRS[Math.floor(prng() * SWIPE_DIRS.length)];
-            } else if (roll < 0.60) {
-              // Directional Swipe (8 directions)
-              noteType = 'swipe';
-              swipeDir = item.lane === 0 ? 'left' : item.lane === 2 ? 'right' : 'up';
-            } else if (roll < 0.72) {
-              noteType = 'accent';
-            } else if (roll < 0.80) {
-              noteType = 'lift';
-            }
+            if (isDeluxe) {
+              // DELUXE CLIMAX OVERDRIVE: Slides, Zigzags, Hold-Swipes, Lifts, Mines
+              const roll = prng();
+              if (roll < 0.2) {
+                // Cross-lane Slide
+                noteType = 'slide';
+                holdDur = parseFloat((beatDuration * 1.5).toFixed(3));
+                targetLane = (item.lane + 1 + (prng() < 0.5 ? 1 : 0)) % 3;
+              } else if (roll < 0.32 && difficulty >= 6) {
+                // Zigzag Slide
+                noteType = 'zigzag';
+                holdDur = parseFloat((beatDuration * 2.0).toFixed(3));
+                targetLane = (item.lane + 2) % 3;
+                zigzagAmp = 1.0;
+              } else if (roll < 0.48) {
+                // Hold-Swipe
+                noteType = 'hold-swipe';
+                holdDur = parseFloat((beatDuration * 1.0).toFixed(3));
+                swipeDir = SWIPE_DIRS[Math.floor(prng() * SWIPE_DIRS.length)];
+              } else if (roll < 0.60) {
+                // Directional Swipe (8 directions)
+                noteType = 'swipe';
+                swipeDir = item.lane === 0 ? 'left' : item.lane === 2 ? 'right' : 'up';
+              } else if (roll < 0.72) {
+                noteType = 'accent';
+              } else if (roll < 0.80) {
+                noteType = 'lift';
+              }
 
-            // High difficulty Hazard Mine placement on inactive lane
-            // Deluxe Mode: 2x mine density during Stage 4 and Stage 5
-            const mineChance = isDeluxe ? 0.24 : 0.12;
-            const minMineDiff = isDeluxe ? 5 : 7;
-            if (difficulty >= minMineDiff && prng() < mineChance && noteType === 'tap') {
-              const mineLane = (item.lane + 1) % 3;
-              pushNote({
-                time: snap(t + beatDuration * 0.5, bpm, 16),
-                lane: mineLane,
-                type: 'mine',
-              });
+              // Deluxe Hazard Mine placement on inactive lane (Stage 4 & 5 obstacle)
+              if (difficulty >= 5 && prng() < 0.24 && noteType === 'tap') {
+                const mineLane = (item.lane + 1) % 3;
+                pushNote({
+                  time: snap(t + beatDuration * 0.5, bpm, 16),
+                  lane: mineLane,
+                  type: 'mine',
+                });
+              }
+
+              // Deluxe Anchor & Play counterpoint: Occasional dual downbeat
+              if (difficulty >= 6 && item.archetype === 'downbeat' && prng() < 0.25) {
+                const dualLane = (item.lane + 2) % 3;
+                pushNote({
+                  time: t,
+                  lane: dualLane,
+                  type: 'tap',
+                });
+              }
+            } else {
+              // STANDARD CLIMAX: Tapered back, melodic, readable (Smooth Slides, Swipes, Holds, Accents)
+              const roll = prng();
+              if (roll < 0.25) {
+                noteType = 'slide';
+                holdDur = parseFloat((beatDuration * 1.2).toFixed(3));
+                targetLane = (item.lane + 1) % 3;
+              } else if (roll < 0.50) {
+                noteType = 'swipe';
+                swipeDir = item.lane === 0 ? 'left' : item.lane === 2 ? 'right' : 'up';
+              } else if (roll < 0.75) {
+                noteType = 'hold';
+                holdDur = parseFloat((beatDuration * 1.0).toFixed(3));
+              } else if (roll < 0.88) {
+                noteType = 'accent';
+              } else {
+                noteType = 'lift';
+              }
             }
           } else {
             // Chorus 1: Medium-Hard mechanics (Swipes, Slides, Holds)
@@ -524,16 +564,6 @@ export function generateV5SongChart(song, options = {}) {
             swipeDirection: swipeDir,
             zigzagAmplitude: zigzagAmp,
           });
-
-          // Anchor & Play counterpoint: Occasional dual downbeat
-          if (difficulty >= 6 && item.archetype === 'downbeat' && prng() < 0.25) {
-            const dualLane = (item.lane + 2) % 3;
-            pushNote({
-              time: t,
-              lane: dualLane,
-              type: 'tap',
-            });
-          }
         }
         measureStart += measureDur;
       }
@@ -563,19 +593,45 @@ export function generateV5SongChart(song, options = {}) {
           let swipeDir = undefined;
           let zigzagAmp = undefined;
 
-          const roll = prng();
-          if (roll < 0.25) {
-            noteType = 'zigzag';
-            holdDur = parseFloat((beatDuration * 1.5).toFixed(3));
-            targetLane = (item.lane + 2) % 3;
-            zigzagAmp = 1.2;
-          } else if (roll < 0.45) {
-            noteType = 'lift';
-          } else if (roll < 0.65) {
-            noteType = 'swipe';
-            swipeDir = SWIPE_DIRS[Math.floor(prng() * SWIPE_DIRS.length)];
-          } else if (roll < 0.8) {
-            noteType = 'accent';
+          if (isDeluxe) {
+            const roll = prng();
+            if (roll < 0.25) {
+              noteType = 'zigzag';
+              holdDur = parseFloat((beatDuration * 1.5).toFixed(3));
+              targetLane = (item.lane + 2) % 3;
+              zigzagAmp = 1.2;
+            } else if (roll < 0.45) {
+              noteType = 'lift';
+            } else if (roll < 0.65) {
+              noteType = 'swipe';
+              swipeDir = SWIPE_DIRS[Math.floor(prng() * SWIPE_DIRS.length)];
+            } else if (roll < 0.8) {
+              noteType = 'accent';
+            }
+
+            // Deluxe mode extra mine placement on bridge solo
+            if (prng() < 0.16 && noteType === 'tap') {
+              const mineLane = (item.lane + 1) % 3;
+              pushNote({
+                time: snap(t + beatDuration * 0.5, bpm, 16),
+                lane: mineLane,
+                type: 'mine',
+              });
+            }
+          } else {
+            // Standard mode bridge: melodic holds, lifts, and accents (zero mines, zero zigzags)
+            const roll = prng();
+            if (roll < 0.35) {
+              noteType = 'hold';
+              holdDur = parseFloat((beatDuration * 1.2).toFixed(3));
+            } else if (roll < 0.60) {
+              noteType = 'lift';
+            } else if (roll < 0.80) {
+              noteType = 'swipe';
+              swipeDir = item.lane === 0 ? 'left' : 'right';
+            } else {
+              noteType = 'accent';
+            }
           }
 
           pushNote({
@@ -587,16 +643,6 @@ export function generateV5SongChart(song, options = {}) {
             swipeDirection: swipeDir,
             zigzagAmplitude: zigzagAmp,
           });
-
-          // Deluxe mode extra mine placement on bridge solo
-          if (isDeluxe && prng() < 0.16 && noteType === 'tap') {
-            const mineLane = (item.lane + 1) % 3;
-            pushNote({
-              time: snap(t + beatDuration * 0.5, bpm, 16),
-              lane: mineLane,
-              type: 'mine',
-            });
-          }
         }
         measureStart += measureDur;
       }
@@ -736,8 +782,8 @@ async function main() {
         totalNotes: totalStandardNotes,
         avgNotesPerSong: (totalStandardNotes / Math.max(1, targetFiles.length)).toFixed(1),
         timingProfile: "standard",
-        stage5Multiplier: 0.15,
-        minSpacingMs: 110,
+        stage5Multiplier: 0.22,
+        minSpacingMs: 135,
         supportedMechanics: Object.keys(standardMechanicCounts).sort(),
         mechanicDistribution: standardMechanicCounts,
       },
