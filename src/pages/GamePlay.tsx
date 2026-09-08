@@ -1014,8 +1014,8 @@ export function getStageGeometry(W: number, H: number): StageGeometry {
   const topWidth = stageW * HW_TOP;
   const laneW = botWidth / LANE_COUNT;
   const btnY = hitY - Math.round(btnH / 2);
-  // Sleek piano-key aspect ratio: target height ~36% of lane width (clamped 26px - 48px)
-  const targetNoteH = Math.max(26, Math.min(48, Math.round(laneW * 0.36)));
+  // Authentic Beatstar piano-tile aspect ratio: tall, substantial key notes (target ~88% of lane width, clamped 90px - 140px)
+  const targetNoteH = Math.max(90, Math.min(140, Math.round(laneW * 0.88)));
 
   return {
     stageW,
@@ -1180,8 +1180,8 @@ function getCorkscrewSpiralPos(
 
     const noteX = lerp(startX, entryX, u);
     const noteY = lerp(startY, entryY, u);
-    const noteW = lerp(geom.targetNoteH * 0.8, geom.targetNoteH * 1.2, u);
-    const noteH = lerp(geom.targetNoteH * 0.6, geom.targetNoteH * 0.9, u);
+    const noteW = lerp(geom.laneW * 0.30, geom.laneW * 0.48, u);
+    const noteH = lerp(geom.targetNoteH * 0.30, geom.targetNoteH * 0.45, u);
     return { x: noteX - noteW / 2, y: noteY, w: noteW, h: noteH, rot: laneOffset * 0.05, scale: lerp(0.35, 0.52, u) };
   } 
   
@@ -1202,8 +1202,8 @@ function getCorkscrewSpiralPos(
     const zDepth = Math.sin(loopAngle); // -1 (back) to +1 (front)
     const rot = Math.cos(loopAngle) * 0.30;
     const depthScale = lerp(0.52, 0.85, u) * (0.90 + zDepth * 0.10);
-    const noteW = lerp(geom.targetNoteH * 1.1, geom.laneW * 0.85, u) * (0.90 + zDepth * 0.10);
-    const noteH = lerp(geom.targetNoteH * 0.8, geom.targetNoteH * 1.1, u) * (0.90 + zDepth * 0.10);
+    const noteW = lerp(geom.laneW * 0.45, geom.laneW * 0.85, u) * (0.90 + zDepth * 0.10);
+    const noteH = lerp(geom.targetNoteH * 0.45, geom.targetNoteH * 0.75, u) * (0.90 + zDepth * 0.10);
 
     return { x: spiralX - noteW / 2, y: spiralY, w: noteW, h: noteH, rot, scale: depthScale };
   } 
@@ -1327,8 +1327,8 @@ function getRadialOrbitPos(lane: number, prog: number, W: number, H: number, t: 
 
   const noteX = cx + Math.cos(laneAngle) * curR;
   const noteY = cy + Math.sin(laneAngle) * curR;
-  const noteW = lerp(geom.targetNoteH * 0.6, geom.laneW * 0.65, safeP);
-  const noteH = lerp(geom.targetNoteH * 0.45, geom.targetNoteH, safeP);
+  const noteW = lerp(geom.laneW * 0.32, geom.laneW * 0.70, safeP);
+  const noteH = lerp(geom.targetNoteH * 0.35, geom.targetNoteH, safeP);
 
   return {
     x: noteX - noteW / 2,
@@ -1353,7 +1353,7 @@ function getHorizontalDriftPos(lane: number, prog: number, W: number, H: number,
   
   const noteX = lerp(startX, hitX, Math.pow(safeP, 1.25));
   const noteY = startY + (2 - lane) * laneH;
-  const noteW = lerp(geom.targetNoteH * 0.7, geom.laneW * 0.5, safeP);
+  const noteW = lerp(geom.laneW * 0.35, geom.laneW * 0.65, safeP);
   const noteH = laneH * 0.85;
 
   return {
@@ -1785,12 +1785,52 @@ function getLaneFromCoords(
   povMode: PovMode = 'classic',
   archetype: TrackArchetype = 'classic_perspective',
   stage: number = 1,
-  t: number = 0
+  t: number = 0,
+  activeNotes?: NoteState[]
 ): number {
   if (rect.width <= 0 || rect.height <= 0) return 1;
   const clickX = ((clientX - rect.left) / rect.width) * W;
   const clickY = ((clientY - rect.top) / rect.height) * H;
   const geom = getStageGeometry(W, H);
+
+  // 0. Direct Note Proximity Hit-Testing:
+  // If player tapped directly on or near a visible active note in the current hit window,
+  // route the tap directly to that note's lane (prevents any 3D perspective distortion)!
+  if (activeNotes && activeNotes.length > 0) {
+    let closestCandidateLane: number | null = null;
+    let minCandidateDist = Infinity;
+
+    for (let i = 0; i < activeNotes.length; i++) {
+      const ns = activeNotes[i];
+      if (ns.hit || ns.missed) continue;
+      const noteT = ns.note.time;
+      if (Math.abs(noteT - t) > 0.35) continue; // Only consider notes near the hit window
+      
+      const spawnT = noteT - 1.6;
+      const prog = (t - spawnT) / 1.6;
+      if (prog < 0.45 || prog > 1.35) continue;
+
+      const proj = getArchetypeProjection(ns.note.lane, prog, W, H, archetype, stage, t, povMode);
+      const noteCenterX = proj.x + proj.w / 2;
+      const noteCenterY = proj.y;
+      const halfW = Math.max(proj.w / 2, 32);
+      const halfH = Math.max(proj.h / 2, 28);
+
+      // Check if tap falls within generous bounding box of this note
+      const inX = clickX >= noteCenterX - halfW * 1.35 && clickX <= noteCenterX + halfW * 1.35;
+      const inY = clickY >= noteCenterY - halfH * 1.5 && clickY <= noteCenterY + halfH * 1.5;
+      if (inX && inY) {
+        const dist = Math.hypot(clickX - noteCenterX, clickY - noteCenterY);
+        if (dist < minCandidateDist) {
+          minCandidateDist = dist;
+          closestCandidateLane = ns.note.lane;
+        }
+      }
+    }
+    if (closestCandidateLane !== null) {
+      return closestCandidateLane;
+    }
+  }
 
   const effectivePov = (povMode === 'dynamic_stage' && (stage === 3 || stage === 5))
     ? (archetype === 'horizontal_drift' ? 'horizontal_drift' : archetype === 'radial_orbit' ? 'circle' : povMode)
@@ -1839,11 +1879,16 @@ function getLaneFromCoords(
     return 2;
   }
 
-  // 4. 3D POV Modes: Sample target positions at p = 1.0 (judgment strike zone)
+  // 4. 3D POV Modes: Height-aware sampling at tap's vertical progress
   if (effectivePov !== 'classic') {
-    const p0 = getArchetypeProjection(0, 1.0, W, H, archetype, stage, t, povMode);
-    const p1 = getArchetypeProjection(1, 1.0, W, H, archetype, stage, t, povMode);
-    const p2 = getArchetypeProjection(2, 1.0, W, H, archetype, stage, t, povMode);
+    const hitY = geom.hitY;
+    const vanishingY = hitY * 0.28;
+    const persTap = Math.max(0.1, Math.min(1.0, (clickY - vanishingY) / Math.max(1, hitY - vanishingY)));
+    const progTap = Math.pow(persTap, 1 / 1.35); // Invert perspective warp to sample lanes at tap height
+
+    const p0 = getArchetypeProjection(0, progTap, W, H, archetype, stage, t, povMode);
+    const p1 = getArchetypeProjection(1, progTap, W, H, archetype, stage, t, povMode);
+    const p2 = getArchetypeProjection(2, progTap, W, H, archetype, stage, t, povMode);
 
     const c0x = p0.x + p0.w / 2;
     const c1x = p1.x + p1.w / 2;
@@ -1856,12 +1901,9 @@ function getLaneFromCoords(
       if (clickX < split12) return 1;
       return 2;
     } else {
-      const c0y = p0.y + p0.h / 2;
-      const c1y = p1.y + p1.h / 2;
-      const c2y = p2.y + p2.h / 2;
-      const d0 = (clickX - c0x) ** 2 + (clickY - c0y) ** 2;
-      const d1 = (clickX - c1x) ** 2 + (clickY - c1y) ** 2;
-      const d2 = (clickX - c2x) ** 2 + (clickY - c2y) ** 2;
+      const d0 = (clickX - c0x) ** 2 + (clickY - p0.y) ** 2;
+      const d1 = (clickX - c1x) ** 2 + (clickY - p1.y) ** 2;
+      const d2 = (clickX - c2x) ** 2 + (clickY - p2.y) ** 2;
       if (d0 <= d1 && d0 <= d2) return 0;
       if (d1 <= d0 && d1 <= d2) return 1;
       return 2;
@@ -2430,8 +2472,8 @@ function stageifyNotes(notes: Note[], duration: number, bpm: number, difficultyL
 
     if (note.time - lastTime[stage] < minSpacing) continue;
 
-    // Prevent duplicate or near-simultaneous notes in the exact same lane across ALL stages
-    const duplicateInLane = processed.some(n => n.lane === clone.lane && Math.abs(n.time - clone.time) < 0.06);
+    // Prevent duplicate or overlapping hit-window notes in the exact same lane across ALL stages (180ms minimum spacing)
+    const duplicateInLane = processed.some(n => n.lane === clone.lane && Math.abs(n.time - clone.time) < 0.18);
     if (duplicateInLane) continue;
 
     // Collision guard: prevent notes spawning on a lane occupied by an active hold or slide note
@@ -3176,7 +3218,7 @@ export default function Game() {
   const puTextRef = useRef<HTMLDivElement | null>(null);
   const puBarRef = useRef<HTMLDivElement | null>(null);
   const resolvePendingPromiseRef = useRef<(() => void) | null>(null);
-  const usePointerEventsRef = useRef(false);
+  const usePointerEventsRef = useRef(typeof window !== 'undefined' && 'PointerEvent' in window);
   const activeVisibleNotesRef = useRef<NoteState[]>([]);
   const noteWindowStartRef = useRef(0);
   const unresolvedNotesCountRef = useRef(0);
@@ -4013,6 +4055,7 @@ export default function Game() {
       // PERF: O(window) search starting from sliding window pointer with zero array allocations (M10)
       const allNotes = notesRef.current;
       const dl = songRef.current?.difficultyLevel ?? 5;
+      const tp = songRef.current?.timingProfile;
       const maxDiff = missWindow(dl);
       let ns: NoteState | null = null;
       let minDiff = Infinity;
@@ -4023,9 +4066,19 @@ export default function Game() {
         if (candidate.note.time - t > maxDiff + 0.15) break; // Past hit window
         if (candidate.note.lane === lane) {
           const d = isExportVideoRef.current ? 0 : Math.abs(candidate.note.time - t);
-          if (d <= maxDiff && d < minDiff) {
-            minDiff = d;
-            ns = candidate;
+          if (d <= maxDiff) {
+            const isCleanHit = isExportVideoRef.current || d <= goodWindow(dl, tp);
+            // FIFO Priority: Earliest unhit note in this lane takes priority so earlier notes are never skipped!
+            if (isCleanHit) {
+              if (!ns || candidate.note.time < ns.note.time) {
+                minDiff = d;
+                ns = candidate;
+                break; // Found earliest hittable note in this lane
+              }
+            } else if (!ns && d < minDiff) {
+              minDiff = d;
+              ns = candidate;
+            }
           }
         }
       }
@@ -4041,7 +4094,6 @@ export default function Game() {
       }
 
       const isFever = puRef.current.active === "FEVER" && t < puRef.current.endTime;
-      const tp = songRef.current?.timingProfile;
       let j: "PERFECT+" | "PERFECT" | "GOOD" | null =
         diff <= perfectPlusWindow(dl, tp)
           ? "PERFECT+"
@@ -7217,7 +7269,8 @@ export default function Game() {
       if (!isRewinding && phaseRef.current === "playing") {
         const MW = missWindow(songRef.current?.difficultyLevel ?? 5);
         const inRewindGrace = performance.now() < rewindGraceUntilWallRef.current || (rewindGraceUntilSongTimeRef.current > 0 && t < rewindGraceUntilSongTimeRef.current);
-        const isPastStrike = t > note.time + MW;
+        // 40ms safety margin to accommodate frame rate jitter and prevent edge-tap race misses
+        const isPastStrike = t > note.time + MW + 0.040;
 
         if (inRewindGrace && isPastStrike) {
           // 1-second post-rewind grace window: notes in the past or immediately following the rewind
@@ -7227,8 +7280,9 @@ export default function Game() {
           continue;
         }
 
+        const recentTap = (Date.now() - (lastTapTimeRef.current[note.lane] || 0)) < 100;
         const isMissed =
-          (!ns.holdActive && isPastStrike);
+          (!ns.holdActive && isPastStrike && !recentTap);
 
         if (isMissed) {
           const isSignalLock = puRef.current.active === "SIGNAL_LOCK" && t < puRef.current.endTime && shieldChargesRef.current > 0;
@@ -9114,7 +9168,8 @@ export default function Game() {
         activePovModeRef.current,
         activeArchetypeRef.current,
         lastDetectedStageRef.current,
-        getT()
+        getT(),
+        notesRef.current
       );
       laneRef.current[lane].pressed = true;
       lastTapTimeRef.current[lane] = Date.now();
@@ -9144,7 +9199,8 @@ export default function Game() {
         activePovModeRef.current,
         activeArchetypeRef.current,
         lastDetectedStageRef.current,
-        getT()
+        getT(),
+        notesRef.current
       );
 
       const start = touchStartPos.current[e.pointerId];
@@ -9323,7 +9379,8 @@ export default function Game() {
           activePovModeRef.current,
           activeArchetypeRef.current,
           lastDetectedStageRef.current,
-          getT()
+          getT(),
+          notesRef.current
         );
         laneRef.current[lane].pressed = true;
         lastTapTimeRef.current[lane] = Date.now();
@@ -9356,7 +9413,8 @@ export default function Game() {
           activePovModeRef.current,
           activeArchetypeRef.current,
           lastDetectedStageRef.current,
-          getT()
+          getT(),
+          notesRef.current
         );
 
         // Swipe detection while moving
@@ -10220,8 +10278,8 @@ export default function Game() {
       const collisionSanitizedNotes: typeof notesRef.current = [];
       for (const ns of notesRef.current) {
         const note = ns.note;
-        // Duplicate in same lane within 60ms
-        const isDuplicate = collisionSanitizedNotes.some(existing => existing.note.lane === note.lane && Math.abs(existing.note.time - note.time) < 0.06);
+        // Duplicate / overlapping hit window in same lane (180ms minimum spacing)
+        const isDuplicate = collisionSanitizedNotes.some(existing => existing.note.lane === note.lane && Math.abs(existing.note.time - note.time) < 0.18);
         if (isDuplicate) continue;
 
         // Collision with existing hold
