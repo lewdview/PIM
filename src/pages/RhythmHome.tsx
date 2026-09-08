@@ -50,6 +50,7 @@ export default function Home() {
               return;
             }
             const img = new Image();
+            img.crossOrigin = "anonymous";
             img.onload = () => {
               if (!cancelled) setBgArtwork(candidates[idx]);
             };
@@ -57,7 +58,9 @@ export default function Home() {
               idx++;
               tryNext();
             };
-            img.src = candidates[idx];
+            const candUrl = candidates[idx];
+            const sep = candUrl.includes('?') ? '&' : '?';
+            img.src = `${candUrl}${sep}cors=1`;
           };
           tryNext();
         } else {

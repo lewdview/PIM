@@ -980,6 +980,7 @@ export default function HeroLandingPage() {
                 <img
                   src={song.coverArt}
                   alt={`${song.title} artwork`}
+                  crossOrigin="anonymous"
                   className="hero-drop-artwork-img"
                   loading="lazy"
                 />
@@ -1570,7 +1571,7 @@ export default function HeroLandingPage() {
                     className={`hero-command-item ${s.day === activeDay ? 'active' : ''}`}
                     onClick={() => jumpToDay(s.day)}
                   >
-                    <img src={s.coverArt} alt={s.title} className="hero-command-thumb" />
+                    <img src={s.coverArt} alt={s.title} crossOrigin="anonymous" className="hero-command-thumb" />
                     <div className="hero-command-meta">
                       <span className="hero-command-title">{s.title}</span>
                       <span className="hero-command-sub">

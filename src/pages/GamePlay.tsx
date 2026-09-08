@@ -3516,17 +3516,20 @@ export default function Game() {
           const url = imageUrls[idx];
           let img = new Image();
           img.crossOrigin = 'anonymous';
-          img.src = url;
+          const sep = url.includes('?') ? '&' : '?';
+          img.src = `${url}${sep}cors=1`;
 
           let loadOk = await new Promise<boolean>((resolve) => {
             img.onload = () => resolve(true);
             img.onerror = () => resolve(false);
           });
 
+          let isTainted = false;
           // Fallback without crossOrigin if CORS rejected the request so it can still display
           if (!loadOk && active) {
             img = new Image();
             img.src = url;
+            isTainted = true;
             await new Promise<void>((resolve) => {
               img.onload = () => resolve();
               img.onerror = () => resolve();
@@ -3548,7 +3551,9 @@ export default function Game() {
           tempCanvas.height = targetH;
           const tCtx = tempCanvas.getContext('2d')!;
           tCtx.drawImage(img, 0, 0, targetW, targetH);
-          refineAndBlendEdges(tempCanvas, 32);
+          if (!isTainted) {
+            refineAndBlendEdges(tempCanvas, 32);
+          }
 
           createdSlides.push({
             canvas: tempCanvas,
@@ -5048,6 +5053,7 @@ export default function Game() {
       ctx.shadowColor = 'transparent';
     }
     const song = songRef.current;
+    const AT = approachTime(song.difficultyLevel ?? 5);
     const isRewinding = phase === "rewinding";
     let t: number;
     if (isRewinding && rewindAnimRef.current) {
@@ -9992,6 +9998,10 @@ export default function Game() {
           const img = new Image();
           if (!triedWithoutCors) {
             img.crossOrigin = "anonymous";
+            const sep = currentCandidateUrl.includes("?") ? "&" : "?";
+            img.src = `${currentCandidateUrl}${sep}cors=1`;
+          } else {
+            img.src = currentCandidateUrl;
           }
           img.onload = () => {
             if (cancelled) return;
@@ -10013,13 +10023,14 @@ export default function Game() {
 
             // Extract dynamic colors from artwork for notes if theme is artwork
             if (opts.noteTheme === "artwork") {
-              try {
-                const extCanvas = document.createElement("canvas");
-                extCanvas.width = 3;
-                extCanvas.height = 3;
-                const extCtx = extCanvas.getContext("2d")!;
-                extCtx.drawImage(img, 0, 0, 3, 3);
-                const imgData = extCtx.getImageData(0, 0, 3, 3).data;
+              if (!triedWithoutCors) {
+                try {
+                  const extCanvas = document.createElement("canvas");
+                  extCanvas.width = 3;
+                  extCanvas.height = 3;
+                  const extCtx = extCanvas.getContext("2d")!;
+                  extCtx.drawImage(img, 0, 0, 3, 3);
+                  const imgData = extCtx.getImageData(0, 0, 3, 3).data;
                 
                 const samplePixel = (pxIdx: number): string => {
                   const r = imgData[pxIdx * 4];
@@ -10107,20 +10118,49 @@ export default function Game() {
                   );
                 }
               }
-            }
-          };
-          img.onerror = () => {
-            if (!triedWithoutCors) {
-              // Retry the same candidate without CORS so it can still display visually
-              triedWithoutCors = true;
-              loadNextCandidate();
             } else {
-              triedWithoutCors = false;
-              cIdx++;
-              loadNextCandidate();
+              // Loaded without CORS (tainted): immediately fall back to harmonic mood palette without calling getImageData
+              const mood = songRef.current?.mood?.toLowerCase() || '';
+              const valence = songRef.current?.valence;
+              let fallbackColors: [string, string, string] = ['#00F0FF', '#39FF14', '#FF1493'];
+              if (mood === 'dark' || (typeof valence === 'number' && valence < 0.35)) {
+                fallbackColors = ['#9900EF', '#FF0055', '#00F0FF'];
+              } else if (mood === 'light' || (typeof valence === 'number' && valence > 0.65)) {
+                fallbackColors = ['#00F0FF', '#39FF14', '#FFE600'];
+              } else if (mood === 'intense' || mood === 'aggressive') {
+                fallbackColors = ['#FF1493', '#FF0033', '#FF8800'];
+              }
+              laneColorsRef.current = fallbackColors;
+
+              const canvas = canvasRef.current;
+              if (canvas) {
+                const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
+                const W = canvas.width / dpr;
+                const H = canvas.height / dpr;
+                disposeCanvas(offscreenCanvasRef.current);
+                offscreenCanvasRef.current = prerenderStaticTrack(
+                  W,
+                  H,
+                  dpr,
+                  songRef.current.difficultyLevel,
+                  laneColorsRef.current,
+                  optsRef.current.gameTrack
+                );
+              }
             }
-          };
-          img.src = currentCandidateUrl;
+          }
+        };
+        img.onerror = () => {
+          if (!triedWithoutCors) {
+            // Retry the same candidate without CORS so it can still display visually
+            triedWithoutCors = true;
+            loadNextCandidate();
+          } else {
+            triedWithoutCors = false;
+            cIdx++;
+            loadNextCandidate();
+          }
+        };
         };
 
         loadNextCandidate();
