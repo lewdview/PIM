@@ -1032,7 +1032,11 @@ export function getStageGeometry(W: number, H: number): StageGeometry {
 }
 
 function hwAtProgress(p: number, W: number, topRatio: number = HW_TOP, botRatio: number = HW_BOT, H?: number) {
-  const stageW = H ? getStageGeometry(W, H).stageW : (W > 640 ? Math.min(W * 0.88, 680) : W);
+  const stageW = H
+    ? getStageGeometry(W, H).stageW
+    : (typeof window !== 'undefined' && window.innerHeight > 0
+        ? getStageGeometry(W, window.innerHeight).stageW
+        : (W > 640 ? Math.min(W * 0.88, 680) : W));
   const w = stageW * lerp(topRatio, botRatio, p);
   const l = (W - w) / 2;
   return { left: l, right: l + w, width: w };
@@ -1048,14 +1052,15 @@ function laneAt(
   t: number = 0,
   H?: number
 ) {
-  const { left, width } = hwAtProgress(progress, W, topRatio, botRatio, H);
+  const effectiveH = H ?? (typeof window !== 'undefined' && window.innerHeight > 0 ? window.innerHeight : undefined);
+  const { left, width } = hwAtProgress(progress, W, topRatio, botRatio, effectiveH);
   const lw = width / LANE_COUNT;
   let baseX = left + lane * lw;
 
   // Apply track archetype motion geometry ONLY during Stage 3 and Stage 5
   if (archetype && (stage === 3 || stage === 5)) {
     if (archetype === 'matrix_split') {
-      const stageW = H ? getStageGeometry(W, H).stageW : width;
+      const stageW = effectiveH ? getStageGeometry(W, effectiveH).stageW : width;
       const spread = (lane - 1) * (stageW * 0.15 * Math.sin(progress * Math.PI));
       baseX += spread;
     }
@@ -5180,8 +5185,6 @@ export default function Game() {
     const pulse = 0.5 + 0.5 * Math.sin(t * 10); // 1.6Hz pulse for polish
     const geom = getStageGeometry(W, H);
     const hitY = geom.hitY;
-    const hillBow = W * 0.032; // how far rails bow outward at the shoulder
-    const bowY = hitY * 0.28; // where the shoulder bow peaks
     const nowMs = Date.now();
     const gs = gsRef.current;
     const pu = puRef.current;
@@ -5491,8 +5494,8 @@ export default function Game() {
           baseColor = "#FF1493"; // Miss magenta
         }
 
-        const { x: lx0, w: lw0 } = laneAt(i, 0, W);
-        const { x: lx1, w: lw1 } = laneAt(i, 1, W);
+        const { x: lx0, w: lw0 } = laneAt(i, 0, W, HW_TOP, HW_BOT, undefined, 1, 0, H);
+        const { x: lx1, w: lw1 } = laneAt(i, 1, W, HW_TOP, HW_BOT, undefined, 1, 0, H);
 
         ctx.save();
         const glowGrad = ctx.createLinearGradient(0, 0, 0, hitY);
@@ -5526,8 +5529,8 @@ export default function Game() {
       }
       if (activeHoldInLane) {
         const laneCol = laneColorsRef.current?.[i] || "#00E5FF";
-        const { x: lx0, w: lw0 } = laneAt(i, 0, W);
-        const { x: lx1, w: lw1 } = laneAt(i, 1, W);
+        const { x: lx0, w: lw0 } = laneAt(i, 0, W, HW_TOP, HW_BOT, undefined, 1, 0, H);
+        const { x: lx1, w: lw1 } = laneAt(i, 1, W, HW_TOP, HW_BOT, undefined, 1, 0, H);
         const pulse = 0.5 + 0.5 * Math.sin(t * 16);
 
         ctx.save();
@@ -5551,7 +5554,7 @@ export default function Game() {
         for (let s = 0; s < 4; s++) {
           const sp = (stripePhase + s * 0.25) % 1;
           const sy = sp * hitY;
-          const { x: sx, w: sw } = laneAt(i, sp, W);
+          const { x: sx, w: sw } = laneAt(i, sp, W, HW_TOP, HW_BOT, undefined, 1, 0, H);
           ctx.strokeStyle = colorWithAlpha("#FFFFFF", 0.35 * (1 - sp));
           ctx.lineWidth = lerp(1.5, 3.5, sp);
           ctx.beginPath();
@@ -5568,8 +5571,8 @@ export default function Game() {
     if (optsRef.current.gameTrack === 'slideshow' && slideshowSlidesRef.current.length > 0 && !optsRef.current.legacyGraphics) {
       ctx.save();
       
-      const hwTop = hwAtProgress(0, W);
-      const hwBot = hwAtProgress(1, W);
+      const hwTop = hwAtProgress(0, W, HW_TOP, HW_BOT, H);
+      const hwBot = hwAtProgress(1, W, HW_TOP, HW_BOT, H);
       
       // Clip to track boundary so it stays inside the track
       ctx.beginPath();
@@ -5632,8 +5635,8 @@ export default function Game() {
 
     // Draw Sacred Visualizer on the track if selected in gameTrack options
     if (optsRef.current.gameTrack === 'sacred_visualizer' && !optsRef.current.legacyGraphics) {
-      const hwTop = hwAtProgress(0, W);
-      const hwBot = hwAtProgress(1, W);
+      const hwTop = hwAtProgress(0, W, HW_TOP, HW_BOT, H);
+      const hwBot = hwAtProgress(1, W, HW_TOP, HW_BOT, H);
       const cyVis = hitY * 0.55;
       const cxVis = W / 2;
       const sizeVis = Math.min(W, hitY) * 0.45;
@@ -5907,8 +5910,8 @@ export default function Game() {
     // Draw Cyber Matrix or Hyperdrive Synthwave dynamic track pulse effects
     if (optsRef.current.gameTrack === 'cyber_matrix' && !optsRef.current.legacyGraphics) {
       ctx.save();
-      const hwTopMat = hwAtProgress(0, W);
-      const hwBotMat = hwAtProgress(1, W);
+      const hwTopMat = hwAtProgress(0, W, HW_TOP, HW_BOT, H);
+      const hwBotMat = hwAtProgress(1, W, HW_TOP, HW_BOT, H);
       ctx.beginPath();
       ctx.moveTo(hwTopMat.left, 0);
       ctx.quadraticCurveTo(W/2, -hitY * 0.09, hwTopMat.right, 0);
@@ -5924,7 +5927,7 @@ export default function Game() {
       for (let l = 0; l < LANE_COUNT; l++) {
         const dropSpeed = (l + 1) * 0.18;
         const progress = ((t * dropSpeed) % 1);
-        const { x, w } = laneAt(l, progress, W);
+        const { x, w } = laneAt(l, progress, W, HW_TOP, HW_BOT, undefined, 1, 0, H);
         const charY = progress * hitY;
         const char = matrixChars[Math.floor((t * 20 + l * 7) % matrixChars.length)];
         ctx.fillText(char, x + w / 2 - 4, charY);
@@ -5932,8 +5935,8 @@ export default function Game() {
       ctx.restore();
     } else if (optsRef.current.gameTrack === 'neon_hyperdrive' && !optsRef.current.legacyGraphics) {
       ctx.save();
-      const hwTopHyp = hwAtProgress(0, W);
-      const hwBotHyp = hwAtProgress(1, W);
+      const hwTopHyp = hwAtProgress(0, W, HW_TOP, HW_BOT, H);
+      const hwBotHyp = hwAtProgress(1, W, HW_TOP, HW_BOT, H);
       ctx.beginPath();
       ctx.moveTo(hwTopHyp.left, 0);
       ctx.quadraticCurveTo(W/2, -hitY * 0.09, hwTopHyp.right, 0);
@@ -5945,7 +5948,7 @@ export default function Game() {
       // Hyperdrive synthwave speed pulse beams
       const beamProgress = (t * 0.8) % 1;
       const beamY = beamProgress * hitY;
-      const { left, right } = hwAtProgress(beamProgress, W);
+      const { left, right } = hwAtProgress(beamProgress, W, HW_TOP, HW_BOT, H);
       const beamGrad = ctx.createLinearGradient(0, Math.max(0, beamY - 15), 0, Math.min(hitY, beamY + 15));
       beamGrad.addColorStop(0, "rgba(0, 229, 255, 0.0)");
       beamGrad.addColorStop(0.5, "rgba(0, 229, 255, 0.45)");
@@ -6002,7 +6005,7 @@ export default function Game() {
         const gridLines = 8;
         for (let g = 0; g < gridLines; g++) {
           const gY = lerp(vanishingY, H, (g / gridLines + (t * 0.4) % (1 / gridLines)));
-          const { left, right } = hwAtProgress(g / gridLines, W);
+          const { left, right } = hwAtProgress(g / gridLines, W, HW_TOP, HW_BOT, H);
           const shadowMargin = Math.min(18, (right - left) * 0.06);
           ctx.beginPath();
           ctx.moveTo(left - shadowMargin, gY);
@@ -6291,7 +6294,7 @@ export default function Game() {
           // 4. Extended Laser Runway Tracks (p: 0.48 -> 1.00) leading straight into player's hit targets!
           for (let rail = 0; rail < 3; rail++) {
             const railColor = laneColorsRef.current[rail] || '#FF7B00';
-            const { x: targetX, w: targetW } = laneAt(rail, 1, W);
+            const { x: targetX, w: targetW } = laneAt(rail, 1, W, HW_TOP, HW_BOT, undefined, 1, 0, H);
             const targetCenterX = targetX + targetW / 2;
             const exitX = cx + Math.cos(exitAngle) * exitRadiusX + (rail - 1) * 16;
 
@@ -6456,8 +6459,8 @@ export default function Game() {
             ctx.beginPath();
             for (let s = 0; s <= 20; s++) {
               const p = s / 20;
-              const spread = (lane - 1) * (W * 0.22 * Math.sin(p * Math.PI));
-              const { x, w } = laneAt(lane, p, W, 0.25, 0.90);
+              const spread = (lane - 1) * (geom.stageW * 0.22 * Math.sin(p * Math.PI));
+              const { x, w } = laneAt(lane, p, W, 0.25, 0.90, undefined, 1, 0, H);
               const lx = x + spread;
               const ly = p * hitY;
               if (s === 0) ctx.moveTo(lx, ly);
@@ -6605,7 +6608,7 @@ export default function Game() {
       }
 
       // ── 3. 3D Circular Judgment Target Strike Zones (Deep Drop Shadows & Neon Rim Glow) ──
-      const hwBot = hwAtProgress(1, W);
+      const hwBot = hwAtProgress(1, W, HW_TOP, HW_BOT, H);
       const laneW = hwBot.width / LANE_COUNT;
       for (let lane = 0; lane < LANE_COUNT; lane++) {
         const targetProj = getArchetypeProjection(lane, 1, W, H, activeArchetypeRef.current, calculatedStage, t, activePovModeRef.current);
@@ -6729,8 +6732,11 @@ export default function Game() {
     // Full-screen effects (vignette, mood, scanlines) are now CSS overlays on the
     // outer wrapper — they cover the entire viewport uniformly so no column seam appears.
 
-    const hwTop = hwAtProgress(0, W);
-    const hwBot = hwAtProgress(1, W);
+    const isCyberPOV = (isCyberTunnelPov || activeArchetypeRef.current === 'cyber_tunnel') && (calculatedStage === 3 || calculatedStage === 5);
+    const trackTopRatio = isCyberPOV ? 0.18 : HW_TOP;
+    const trackBotRatio = isCyberPOV ? 0.86 : HW_BOT;
+    const hwTop = hwAtProgress(0, W, trackTopRatio, trackBotRatio, H);
+    const hwBot = hwAtProgress(1, W, trackTopRatio, trackBotRatio, H);
 
     // ── 2. LANE TRACK SURFACE ───────────────────────────────────
     if (!offscreenCanvasRef.current) {
@@ -6755,8 +6761,8 @@ export default function Game() {
       ctx.fillRect(0, 0, W, hitY);
 
       for (let i = 0; i < LANE_COUNT; i++) {
-        const { x: lx0, w: lw0 } = laneAt(i, 0.3, W);
-        const { x: lx1, w: lw1 } = laneAt(i, 1, W);
+        const { x: lx0, w: lw0 } = laneAt(i, 0.3, W, trackTopRatio, trackBotRatio, undefined, 1, 0, H);
+        const { x: lx1, w: lw1 } = laneAt(i, 1, W, trackTopRatio, trackBotRatio, undefined, 1, 0, H);
         const lc = getDifficultyLaneColor(laneColorsRef.current[i], songRef.current?.difficultyLevel ?? 5, i);
         const laneGrad = ctx.createLinearGradient(0, 0, 0, hitY);
         laneGrad.addColorStop(0, "transparent");
@@ -6775,7 +6781,7 @@ export default function Game() {
       for (let row = 0; row <= 16; row++) {
         const ry = (row / 16) * hitY;
         const rp = ry / hitY;
-        const { left, right } = hwAtProgress(rp, W);
+        const { left, right } = hwAtProgress(rp, W, trackTopRatio, trackBotRatio, H);
         ctx.strokeStyle = `rgba(255,248,235,${0.01 + rp * 0.025})`;
         ctx.lineWidth = 1;
         ctx.beginPath();
@@ -6785,8 +6791,8 @@ export default function Game() {
       }
 
       for (let l = 1; l < LANE_COUNT; l++) {
-        const topPos = laneAt(l, 0, W);
-        const botPos = laneAt(l, 1, W);
+        const topPos = laneAt(l, 0, W, trackTopRatio, trackBotRatio, undefined, 1, 0, H);
+        const botPos = laneAt(l, 1, W, trackTopRatio, trackBotRatio, undefined, 1, 0, H);
         ctx.strokeStyle = "rgba(0,0,0,0.85)";
         ctx.lineWidth = 3;
         ctx.beginPath();
@@ -6825,8 +6831,8 @@ export default function Game() {
       if (sy2 < 0 || sy1 > hitY) continue;
       const sp1 = Math.max(0, Math.min(1, sy1 / hitY));
       const sp2 = Math.max(0, Math.min(1, sy2 / hitY));
-      const { left: sl1, right: sr1 } = hwAtProgress(sp1, W);
-      const { left: sl2, right: sr2 } = hwAtProgress(sp2, W);
+      const { left: sl1, right: sr1 } = hwAtProgress(sp1, W, trackTopRatio, trackBotRatio, H);
+      const { left: sl2, right: sr2 } = hwAtProgress(sp2, W, trackTopRatio, trackBotRatio, H);
       const speedAlpha = 0.012 + sp1 * 0.04;
       ctx.fillStyle = `rgba(255,248,235,${speedAlpha})`;
       ctx.beginPath();
@@ -6864,7 +6870,7 @@ export default function Game() {
     ctx.restore();
 
     // ── 3. TRACK EDGE RAILS ─────────────────────────────────────
-    // Neon rails with strong glow
+    // Neon rails with strong glow — unified with highway boundary
     const railColor = puColor ?? "rgba(255,248,235,0.55)";
     const railGlow = puColor ? colorWithAlpha(puColor, 0.8) : "rgba(255,248,235,0.25)";
 
@@ -6881,12 +6887,12 @@ export default function Game() {
     // Left rail
     ctx.beginPath();
     ctx.moveTo(hwTop.left, 0);
-    ctx.quadraticCurveTo(hwTop.left - hillBow, bowY, hwBot.left, hitY);
+    ctx.lineTo(hwBot.left, hitY);
     ctx.stroke();
     // Right rail
     ctx.beginPath();
     ctx.moveTo(hwTop.right, 0);
-    ctx.quadraticCurveTo(hwTop.right + hillBow, bowY, hwBot.right, hitY);
+    ctx.lineTo(hwBot.right, hitY);
     ctx.stroke();
     ctx.restore();
 
@@ -6899,11 +6905,11 @@ export default function Game() {
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(hwTop.left, 0);
-    ctx.quadraticCurveTo(hwTop.left - hillBow, bowY, hwBot.left, hitY);
+    ctx.lineTo(hwBot.left, hitY);
     ctx.stroke();
     ctx.beginPath();
     ctx.moveTo(hwTop.right, 0);
-    ctx.quadraticCurveTo(hwTop.right + hillBow, bowY, hwBot.right, hitY);
+    ctx.lineTo(hwBot.right, hitY);
     ctx.stroke();
 
     // ── 4. POWER-UP SCREEN EDGE GLOW ───────────────────────────
@@ -6924,7 +6930,6 @@ export default function Game() {
     }
 
     // ── 4.5. HIT ZONE BUTTONS (for 2.5D Classic POV mode) ──
-    const isCyberPOV = (isCyberTunnelPov || activeArchetypeRef.current === 'cyber_tunnel') && (calculatedStage === 3 || calculatedStage === 5);
     const show3DCircularTargets = isCyberTunnelPov || isCorkscrewPov || isRollercoasterPov || isMatrixSplitPov || (isDynamicStagePov && calculatedStage >= 3);
     if (!show3DCircularTargets) {
       const btnH = geom.btnH;
@@ -7526,7 +7531,7 @@ export default function Game() {
           const top = lerp(headY, hitY, ns.holdProgress);
 
           // Active hold dial and sparks visual exposition at the hit zone!
-          const { x: ax_hold, w: aw_hold } = laneAt(ns.visualLane, 1, W, povTop, povBot);
+          const { x: ax_hold, w: aw_hold } = laneAt(ns.visualLane, 1, W, povTop, povBot, undefined, 1, 0, H);
           const holdX = ax_hold + aw_hold * 0.5;
           ctx.save();
           ctx.shadowColor = noteColor;
@@ -7753,8 +7758,8 @@ export default function Game() {
       const topR_fog = isCyberPOV_fog ? 0.18 : HW_TOP;
       const botR_fog = isCyberPOV_fog ? 0.86 : HW_BOT;
       
-      const hwTop_fog = hwAtProgress(0, W, topR_fog, botR_fog);
-      const hwBot_fog = hwAtProgress(1, W, topR_fog, botR_fog);
+      const hwTop_fog = hwAtProgress(0, W, topR_fog, botR_fog, H);
+      const hwBot_fog = hwAtProgress(1, W, topR_fog, botR_fog, H);
       ctx.beginPath();
       ctx.moveTo(hwTop_fog.left, 0);
       ctx.quadraticCurveTo(W / 2, -hitY * 0.09, hwTop_fog.right, 0);
@@ -7785,7 +7790,7 @@ export default function Game() {
       if (t01 < 0.18) {
         const flashAlpha =
           (1 - t01 / 0.18) * (e.kind === "PERFECT+" ? 0.55 : 0.35);
-        const { x: fx, w: fw } = laneAt(e.lane, 1, W);
+        const { x: fx, w: fw } = laneAt(e.lane, 1, W, HW_TOP, HW_BOT, undefined, 1, 0, H);
         const flashGrad = ctx.createLinearGradient(
           fx,
           e.cy - 60,
@@ -7910,7 +7915,7 @@ export default function Game() {
       const tapAge = nowMs - lastTapTimeRef.current[i];
       if (tapAge < 250) {
         const rt = tapAge / 250;
-        const { x: lx, w: lw } = laneAt(i, 1, W);
+        const { x: lx, w: lw } = laneAt(i, 1, W, HW_TOP, HW_BOT, undefined, 1, 0, H);
         const isRadial = activeArchetypeRef.current === 'radial_orbit' && (calculatedStage === 3 || calculatedStage === 5);
         let cx = 0;
         let cy = hitY;
@@ -7947,7 +7952,7 @@ export default function Game() {
         const age = Date.now() - j.ts;
         if (age > 600) return;
         const alpha = 1 - age / 600;
-        const { x: lx, w: lw } = laneAt(j.lane, 1.0, W);
+        const { x: lx, w: lw } = laneAt(j.lane, 1.0, W, HW_TOP, HW_BOT, undefined, 1, 0, H);
         const cx = lx + lw / 2;
         const y = hitY - 30 - (age / 600) * 45; // float upwards
         
@@ -8006,8 +8011,8 @@ export default function Game() {
     ctx.strokeStyle = "rgba(255,255,255,0.95)";
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.moveTo(hwBot.left - 16, hitY);
-    ctx.lineTo(hwBot.right + 16, hitY);
+    ctx.moveTo(hwBot.left, hitY);
+    ctx.lineTo(hwBot.right, hitY);
     ctx.stroke();
     ctx.shadowBlur = 0;
     ctx.shadowColor = "transparent";
@@ -8017,13 +8022,13 @@ export default function Game() {
     baseGlow.addColorStop(0, `rgba(255,255,255,${0.08 + pulse * 0.06})`);
     baseGlow.addColorStop(1, "rgba(255,255,255,0.0)");
     ctx.fillStyle = baseGlow;
-    ctx.fillRect(hwBot.left - 16, hitY, hwBot.width + 32, bloomH);
+    ctx.fillRect(hwBot.left, hitY, hwBot.width, bloomH);
 
     // ── 6.5. MISSED SIGNAL RECLAIM TRAP (VOID TRAP / DATA LEAK COLLECTOR) ──
     const trapY = H - 55;
     for (let i = 0; i < LANE_COUNT; i++) {
       // Use the lane width and x at progress 1.0 (the baseline) since perspective lanes stop there
-      const { x: lx, w: lw } = laneAt(i, 1.0, W);
+      const { x: lx, w: lw } = laneAt(i, 1.0, W, trackTopRatio, trackBotRatio, undefined, 1, 0, H);
       const x_start = lx + 8;
       const x_end = lx + lw - 8;
       const x_center = lx + lw / 2;
