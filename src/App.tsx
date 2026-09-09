@@ -23,6 +23,7 @@ import { NotificationModal } from './components/NotificationModal';
 import { SystemAlertBanner } from './components/SystemAlertBanner';
 import { useNotificationStore } from './store/useNotificationStore';
 import { getCurrentDay } from './utils/dayCalc';
+import { farcasterService } from './services/farcasterService';
 
 // Helper to auto-retry and cache-bust lazy route chunk imports on version deployment updates
 function lazyWithRetry<T extends React.ComponentType<any>>(
@@ -164,6 +165,7 @@ export default function App() {
   const subscribeNotifications = useNotificationStore((s) => s.subscribeRealtime);
 
   useEffect(() => {
+    farcasterService.init();
     initializeAuth();
   }, [initializeAuth]);
 
@@ -242,7 +244,15 @@ export default function App() {
 
   return (
     <ErrorBoundary sectionName="ROOT_APP">
-      <div className="min-h-screen bg-[#050402] text-white flex flex-col select-none relative">
+      <div
+        className="min-h-screen bg-[#050402] text-white flex flex-col select-none relative"
+        style={{
+          paddingTop: 'var(--fc-safe-area-top, 0px)',
+          paddingBottom: 'var(--fc-safe-area-bottom, 0px)',
+          paddingLeft: 'var(--fc-safe-area-left, 0px)',
+          paddingRight: 'var(--fc-safe-area-right, 0px)',
+        }}
+      >
         <GlobalMenuBackground />
         <BackgroundMusic />
         <GamepadCursor />

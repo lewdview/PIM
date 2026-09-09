@@ -13,7 +13,8 @@ import { PACK_CONFIGS } from "@/utils/rarity";
 import { logAnalyticsEvent } from "@/services/telemetryService";
 import OnboardingFlowModal from "@/components/OnboardingFlowModal";
 import SongLeaderboard from "@/components/SongLeaderboard";
-import { Film } from "lucide-react";
+import { Film, Share2 } from "lucide-react";
+import { farcasterService } from "@/services/farcasterService";
 
 interface LaneTelemetry {
   hits: number; perfectPlus: number; perfects: number; goods: number; misses: number;
@@ -451,6 +452,20 @@ export default function Results() {
   const [claimStatus, setClaimStatus] = useState<'idle' | 'checking' | 'ready' | 'claiming' | 'claimed' | 'failed'>('idle');
   const [alreadyClaimedTiers, setAlreadyClaimedTiers] = useState<Set<string>>(new Set());
   const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
+
+  const handleCastScore = async () => {
+    audioManager.playSfx('tap_nav', 0.15);
+    if (!result) return;
+    const acc = result.total > 0 ? Math.round(((result.perfectPlus + result.perfects + result.goods * 0.5) / result.total) * 100) : 0;
+    const songTitle = song?.title || `Day ${song?.day || songId}`;
+    const shareText = `⚡ Locked in ${result.medal} medal on "${songTitle}" in PIM : th3v4ult!\n\nScore: ${result.score.toLocaleString()} | Acc: ${acc}% | Max Combo: ${result.maxCombo}x\n\nCan you beat my signal? 🎛️`;
+    const embedUrl = `https://pim.th3scr1b3.art/play/${songId}`;
+    await farcasterService.composeCast({
+      text: shareText,
+      embeds: [embedUrl],
+      channelKey: 'base',
+    });
+  };
 
   useEffect(() => {
     if (user) {
@@ -1642,6 +1657,15 @@ export default function Results() {
                   onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}>
                   ↺ RETRY
                 </button>
+                <button
+                  data-testid="button-cast-score"
+                  onClick={handleCastScore}
+                  className="flex-1 py-3 font-mono font-bold text-xs tracking-[0.2em] transition-all bg-[#8A63D2]/15 border border-[#8A63D2]/50 text-[#C4A7E7] hover:bg-[#8A63D2]/30 hover:border-[#8A63D2] flex items-center justify-center gap-1.5 shadow-[0_0_12px_rgba(138,99,210,0.2)]"
+                  title="Share your score directly to Warpcast / Farcaster"
+                >
+                  <Share2 size={13} />
+                  <span>CAST SCORE</span>
+                </button>
                 <button data-testid="button-select-song"
                   onClick={() => {
                     audioManager.playSfx('tap_nav', 0.15);
@@ -2069,6 +2093,16 @@ export default function Results() {
                 onMouseEnter={e => { e.currentTarget.style.color = '#FF1493'; e.currentTarget.style.borderColor = '#FF1493'; }}
                 onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; }}>
                 ↺ RETRY
+              </button>
+              <button
+                data-testid="button-cast-score-2"
+                onClick={handleCastScore}
+                className="flex-1 py-3 font-mono font-bold text-xs tracking-[0.2em] transition-all bg-[#8A63D2]/15 border border-[#8A63D2]/50 text-[#C4A7E7] hover:bg-[#8A63D2]/30 hover:border-[#8A63D2] flex items-center justify-center gap-1.5 shadow-[0_0_12px_rgba(138,99,210,0.2)]"
+                title="Share your score directly to Warpcast / Farcaster"
+                style={{ minHeight: 48 }}
+              >
+                <Share2 size={14} />
+                <span>CAST SCORE</span>
               </button>
               {import.meta.env.DEV && (
                 <button

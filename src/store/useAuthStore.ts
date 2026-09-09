@@ -5,6 +5,7 @@ import { useVaultStore } from './useVaultStore';
 import { CoinbaseWalletSDK } from '@coinbase/wallet-sdk';
 import { Wallet } from 'ethers';
 import { logAnalyticsEvent } from '../services/telemetryService';
+import { farcasterService } from '../services/farcasterService';
 
 const BASE_CHAIN_ID_HEX = '0x2105';
 const BASE_CHAIN_CONFIG = {
@@ -199,7 +200,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ error: null });
     console.log('[Auth] signInWithWallet started');
 
-    let wallet = (window as any)?.ethereum as WalletRequest | undefined;
+    const fcProvider = await farcasterService.getEthereumProvider();
+    let wallet = (fcProvider || (window as any)?.ethereum) as WalletRequest | undefined;
 
     // If no standard wallet extension is found, fallback to Coinbase Smart Wallet (SDK v4)
     if (!wallet) {
@@ -768,9 +770,29 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // 1. Fetch profile
     const { data: profile } = await supabase
       .from('profiles')
-      .select('wallet_address')
+      .select('wallet_address, username, display_name, avatar_url')
       .eq('id', userId)
       .maybeSingle();
+
+    // 1b. Sync Farcaster profile identity if running inside Farcaster Mini App
+    const fcUser = farcasterService.getUser();
+    if (fcUser && fcUser.username) {
+      const updates: Record<string, string> = {};
+      const currentUsername = profile?.username;
+      if (!currentUsername || currentUsername.startsWith('user_') || currentUsername.startsWith('anon_')) {
+        updates.username = fcUser.username;
+      }
+      if (fcUser.displayName && !profile?.display_name) {
+        updates.display_name = fcUser.displayName;
+      }
+      if (fcUser.pfpUrl && !profile?.avatar_url) {
+        updates.avatar_url = fcUser.pfpUrl;
+      }
+      if (Object.keys(updates).length > 0) {
+        await supabase.from('profiles').update(updates).eq('id', userId);
+        console.log('[Auth] Farcaster profile identity synced:', updates);
+      }
+    }
 
     let linkedAddress = profile?.wallet_address;
     let pkey = localStorage.getItem(`th3vault_ephemeral_wallet_pkey_${userId}`);

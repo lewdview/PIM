@@ -5,7 +5,8 @@ import { useVaultStore } from '../store/useVaultStore';
 import Card from '../components/Card';
 import RarityBadge from '../components/RarityBadge';
 import { RARITY_CONFIG, getSupplyCap, type Rarity } from '../utils/rarity';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Share2 } from 'lucide-react';
+import { farcasterService } from '../services/farcasterService';
 import UltraRewardModal from '../components/UltraRewardModal';
 import PackRipAnimation from '../components/PackRipAnimation';
 import PackContainer from '../components/cinematic/PackContainer';
@@ -236,6 +237,25 @@ export default function PackRevealPage() {
         }
       }
     }
+  };
+
+  const handleCastPull = async () => {
+    audioManager.playSfx('tap_nav', 0.15);
+    haptics.lightTap();
+    const highestCard = [...revealCards].sort((a, b) => {
+      const order = ['common', 'uncommon', 'rare', 'legendary', 'mythic'];
+      return order.indexOf(b.card.rarity) - order.indexOf(a.card.rarity);
+    })[0];
+
+    const cardTitle = highestCard?.card?.title || 'Collectible Cards';
+    const rarity = (highestCard?.card?.rarity || 'rare').toUpperCase();
+    const shareText = `⚡ Just pulled [${rarity}] ${cardTitle} from a booster pack in PIM : th3v4ult!\n\nCheck out the 365 music vault & collectible cards on Base Mainnet 🃏🎛️`;
+    const embedUrl = 'https://pim.th3scr1b3.art/vault';
+    await farcasterService.composeCast({
+      text: shareText,
+      embeds: [embedUrl],
+      channelKey: 'base',
+    });
   };
 
   if (tokenReward) {
@@ -529,6 +549,19 @@ export default function PackRevealPage() {
                 </button>
               );
             })()}
+            <button
+              onClick={handleCastPull}
+              className="px-4 py-3 rounded-xl font-bold text-sm tracking-wider uppercase flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-[0.99]"
+              style={{
+                background: 'rgba(138, 99, 210, 0.15)',
+                border: '1px solid rgba(138, 99, 210, 0.5)',
+                color: '#C4A7E7',
+              }}
+              title="Cast pull to Warpcast / Farcaster"
+            >
+              <Share2 size={16} />
+              <span className="hidden sm:inline">Cast Pull</span>
+            </button>
             <button
               onClick={handleDone}
               className="flex-1 py-3 rounded-xl font-bold text-sm tracking-wider uppercase flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-[0.99]"

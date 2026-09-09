@@ -20,6 +20,7 @@ import { useDisplayMode } from '../store/useDisplayMode';
 import { useNotificationStore } from '../store/useNotificationStore';
 import GuideModal from './GuideModal';
 import { haptics } from '../utils/haptics';
+import { farcasterService } from '../services/farcasterService';
 import FloatingTicker from './FloatingTicker';
 import { getIdenticon } from '../utils/identicon';
 import { audioManager } from '../game/audio';
@@ -551,14 +552,14 @@ export default function Navbar() {
                   <div
                     className="sticker-gun-tag sticker-slits"
                     style={{
-                      background: '#f0f4ff',
-                      '--slit-color': 'rgba(0,100,255,0.1)',
+                      background: farcasterService.isFarcaster() ? '#8A63D2' : '#f0f4ff',
+                      '--slit-color': farcasterService.isFarcaster() ? 'rgba(255,255,255,0.2)' : 'rgba(0,100,255,0.1)',
                       padding: '5px 10px',
                       transform: 'rotate(-1deg)',
                     } as any}
                   >
-                    <span className="text-[9px] font-black tracking-tighter uppercase" style={{ color: '#0033aa' }}>
-                      GUEST WALLET
+                    <span className="text-[9px] font-black tracking-tighter uppercase" style={{ color: farcasterService.isFarcaster() ? '#ffffff' : '#0033aa' }}>
+                      {farcasterService.getUser()?.username ? `@${farcasterService.getUser()?.username}` : farcasterService.isFarcaster() ? 'FARCASTER MINI APP' : 'GUEST WALLET'}
                     </span>
                   </div>
                   <button

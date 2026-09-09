@@ -10,6 +10,19 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    {
+      name: "farcaster-well-known",
+      configureServer(server) {
+        server.middlewares.use((req, res, next) => {
+          if (req.url?.startsWith("/.well-known/farcaster.json")) {
+            req.url = "/farcaster.json";
+            res.setHeader("Access-Control-Allow-Origin", "*");
+            res.setHeader("Content-Type", "application/json");
+          }
+          next();
+        });
+      },
+    },
   ],
   resolve: {
     alias: {

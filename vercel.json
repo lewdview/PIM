@@ -20,6 +20,23 @@
       ]
     },
     {
+      "source": "/.well-known/farcaster.json",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
+        }
+      ]
+    },
+    {
       "source": "/(.*)",
       "headers": [
         {
@@ -31,10 +48,6 @@
           "value": "nosniff"
         },
         {
-          "key": "X-Frame-Options",
-          "value": "SAMEORIGIN"
-        },
-        {
           "key": "Referrer-Policy",
           "value": "strict-origin-when-cross-origin"
         }
@@ -42,6 +55,10 @@
     }
   ],
   "rewrites": [
+    {
+      "source": "/.well-known/farcaster.json",
+      "destination": "/farcaster.json"
+    },
     {
       "source": "/((?!assets/|data/|covers/|stems/|favicon|.*\\.(?:js|css|png|jpg|jpeg|gif|svg|ico|json|woff2?|wasm|mp3|wav|ogg)$).*)",
       "destination": "/index.html"
