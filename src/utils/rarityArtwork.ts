@@ -214,6 +214,7 @@ export function checkImageExists(url: string, timeoutMs: number = 1200): Promise
   return new Promise((resolve) => {
     let settled = false;
     const img = new Image();
+    img.crossOrigin = "anonymous";
 
     const timer = setTimeout(() => {
       if (!settled) {
@@ -241,7 +242,8 @@ export function checkImageExists(url: string, timeoutMs: number = 1200): Promise
         resolve(false);
       }
     };
-    img.src = url;
+    const sep = url.includes('?') ? '&' : '?';
+    img.src = `${url}${sep}cors=1`;
   });
 }
 

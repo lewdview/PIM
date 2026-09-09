@@ -7,3 +7,7 @@
 **Vulnerability:** A hardcoded admin passphrase was found in `src/utils/adminConfig.ts` when making a call to `vault-engine`.
 **Learning:** This existed to sync the admin config to the backend edge function, which apparently requires the plaintext passphrase to authenticate.
 **Prevention:** Hardcoded secrets should never be embedded in the client code bundle. The plaintext secret must be dynamically provided at runtime (e.g., from `sessionStorage` populated during manual admin login) to prevent it from leaking in the static client build while still satisfying the edge function's authentication requirements.
+## 2023-10-27 - Remove hardcoded Firebase API keys
+**Vulnerability:** Hardcoded API keys in `src/lib/firebase.ts` dummy strings (e.g., `AIzaSy_dummy_api_key_replace_me`).
+**Learning:** Dummy strings formatted like real API keys (starting with `AIzaSy...`) can trigger automated secret scanners (like GitGuardian or TruffleHog) and create unnecessary alert noise. Hardcoded dummy keys in environment variable fallbacks also prevent fail-fast assertions during local development when actual keys are missing.
+**Prevention:** Always replace dummy secrets in environment variable fallbacks with empty strings (`""`) to prevent false positive secret scanning alerts and enforce fail-fast behavior when required environment variables are absent.

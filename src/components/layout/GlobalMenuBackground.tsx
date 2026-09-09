@@ -68,6 +68,7 @@ export function GlobalMenuBackground() {
                 return;
               }
               const img = new Image();
+              img.crossOrigin = "anonymous";
               img.onload = () => {
                 if (!cancelled) setDailyCover(candidates[idx]);
               };
@@ -75,7 +76,9 @@ export function GlobalMenuBackground() {
                 idx++;
                 tryNext();
               };
-              img.src = candidates[idx];
+              const candUrl = candidates[idx];
+              const sep = candUrl.includes('?') ? '&' : '?';
+              img.src = `${candUrl}${sep}cors=1`;
             };
             tryNext();
           } else {

@@ -641,6 +641,7 @@ export default function SongSelect() {
                       <img
                         src={selected.coverArt}
                         alt={selected.title}
+                        crossOrigin="anonymous"
                         className="w-48 h-48 md:w-56 md:h-56 object-cover rounded-2xl shadow-2xl transition-transform duration-500 group-hover:scale-[1.02]"
                         style={{
                           border: '1px solid rgba(57,255,20,0.3)',
