@@ -376,15 +376,16 @@ export function getAdminConfig(): AdminConfig {
   return defaults;
 }
 
-export function saveAdminConfig(config: AdminConfig) {
+export function saveAdminConfig(config: AdminConfig, customPassphrase?: string) {
   config.lastModified = new Date().toISOString();
   config.version = (config.version || 0) + 1;
   configCache = config;
   localStorage.setItem(ADMIN_CONFIG_KEY, JSON.stringify(config));
 
   // Sync to backend (fire and forget)
+  const passphrase = customPassphrase || (typeof sessionStorage !== 'undefined' ? (sessionStorage.getItem('th3vault_admin_pass') || '') : '');
   supabase.functions.invoke('vault-engine', {
-    body: { action: 'updateAdminConfig', payload: { config, passphrase: 'th3scr1b3' } }
+    body: { action: 'updateAdminConfig', payload: { config, passphrase } }
   }).catch(e => console.error("Failed to sync admin config to backend", e));
 
   // Append to history (keep last 20 entries)
