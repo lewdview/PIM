@@ -17,7 +17,7 @@ import { ROLL_RATES } from '../utils/rarity';
 import { getEchoPoolStats, flushEchoPool } from '../utils/echoSystem';
 import '../styles/AdminStyles.css';
 import { supabase } from '../services/supabaseClient';
-import { fetchAllCards, createStripeCheckoutSession, type VaultCard } from '../services/vaultService';
+import { fetchAllCards, createStripeCheckoutSession, redirectToStripeCheckout, type VaultCard } from '../services/vaultService';
 import { Users, BarChart3, RefreshCw, Filter, Calendar, Zap, Flame, ShieldCheck, Database, Trash2, Copy, Check, AlertTriangle, Sparkles, Layers, Megaphone, Radio, Send, Bell, Eye, EyeOff, CreditCard, DollarSign, ExternalLink } from 'lucide-react';
 import { GEN0_RESET_SQL, purgeClientGen0State, getClientGen0Health } from '../utils/gen0Reset';
 import type { AnnouncementCategory, AnnouncementPriority, SystemAnnouncement } from '../store/useNotificationStore';
@@ -730,7 +730,7 @@ export default function AdminPage() {
     try {
       const res = await createStripeCheckoutSession(category as any, size as any);
       if (res.success && res.checkoutUrl) {
-        window.open(res.checkoutUrl, '_blank');
+        await redirectToStripeCheckout(res.checkoutUrl);
       } else {
         alert(res.error || 'Failed to initialize Stripe checkout');
       }

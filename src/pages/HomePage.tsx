@@ -12,7 +12,7 @@ import {
   getCardByDay, hasClaimedToday, claimDailyCard,
   purchasePack, buyTokenPack, getCompletedMonths, getMonthName,
   targetedPull, upgradeRarity, fuseDuplicates,
-  createStripeCheckoutSession, verifyStripeSession,
+  createStripeCheckoutSession, verifyStripeSession, redirectToStripeCheckout,
   type OwnedCard,
 } from '../services/vaultService';
 import { getRandomBombshellPackCover } from '../utils/bombshellCards';
@@ -484,7 +484,7 @@ export default function HomePage() {
         useLoadingToast.getState().hide();
 
         if (res.success && res.checkoutUrl) {
-          window.location.href = res.checkoutUrl;
+          await redirectToStripeCheckout(res.checkoutUrl);
         } else {
           alert(`Checkout Error: ${res.error || 'Could not initialize Stripe Checkout'}`);
         }

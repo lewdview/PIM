@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Zap, Sparkles, ShieldCheck, ArrowRight, Flame } from 'lucide-react';
 import { useVaultStore } from '../store/useVaultStore';
-import { createStripeCheckoutSession, buyTokenBundleWithCrypto } from '../services/vaultService';
+import { createStripeCheckoutSession, buyTokenBundleWithCrypto, redirectToStripeCheckout } from '../services/vaultService';
 import { payWithCrypto } from '../services/coinbaseService';
 import PaymentSelectModal from './PaymentSelectModal';
 import { useLoadingToast } from '../store/useLoadingToast';
@@ -162,7 +162,7 @@ export default function TokenBundleShelf({ onPurchased, className = '' }: TokenB
         useLoadingToast.getState().hide();
         setIsProcessing(false);
         if (res.success && res.checkoutUrl) {
-          window.location.href = res.checkoutUrl;
+          await redirectToStripeCheckout(res.checkoutUrl);
         } else {
           alert(res.error || 'Could not initiate Stripe checkout');
         }

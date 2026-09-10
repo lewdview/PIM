@@ -15,6 +15,7 @@ import dayFileMap from '../game/day_file_map.json';
 import staticCardCatalog from '../data/card_catalog.json';
 import { sanitizeMediaUrl } from '../game/api';
 import { useVaultStore } from '../store/useVaultStore';
+import { farcasterService } from './farcasterService';
 
 // ===== TYPES =====
 export interface VaultCard {
@@ -638,6 +639,21 @@ export async function purchasePack(category: PackCategory, size: PackSize = 'sin
 }
 
 // ===== STRIPE CHECKOUT =====
+
+/**
+ * Safely navigates to Stripe Checkout URL.
+ * Inside Farcaster / Warpcast or iframes, routes through farcasterService.openUrl (sdk.actions.openUrl)
+ * to open Stripe in an external browser sheet and bypass iframe sandbox & X-Frame-Options SAMEORIGIN blocking.
+ * In standalone browsers, navigates via standard window.location.href.
+ */
+export async function redirectToStripeCheckout(checkoutUrl: string): Promise<void> {
+  const isInsideIframe = typeof window !== 'undefined' && window.self !== window.top;
+  if (farcasterService.isFarcaster() || isInsideIframe) {
+    await farcasterService.openUrl(checkoutUrl);
+  } else {
+    window.location.href = checkoutUrl;
+  }
+}
 
 export async function createStripeCheckoutSession(
   category: PackCategory,

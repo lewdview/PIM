@@ -19,7 +19,7 @@ import {
   targetedPull, upgradeRarity, fuseDuplicates,
   redeemBonusCode, fetchAllCards, findCardWithFallback,
   hasClaimedFreePackToday,
-  createStripeCheckoutSession,
+  createStripeCheckoutSession, redirectToStripeCheckout,
   type OwnedCard
 } from '../services/vaultService';
 import { audioManager } from '../game/audio';
@@ -676,7 +676,7 @@ export default function NextGenLandingPage() {
         useLoadingToast.getState().hide();
 
         if (res.success && res.checkoutUrl) {
-          window.location.href = res.checkoutUrl;
+          await redirectToStripeCheckout(res.checkoutUrl);
         } else {
           alert(`Checkout Error: ${res.error || 'Could not initialize Stripe Checkout'}`);
         }
