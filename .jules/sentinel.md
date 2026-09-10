@@ -1,0 +1,4 @@
+## 2024-05-24 - [Hardcoded Admin Passphrase Removal]
+**Vulnerability:** A hardcoded, plaintext admin passphrase (`th3scr1b3`) was stored in the frontend codebase to validate access and to push configs to the backend.
+**Learning:** Hardcoded secrets in client bundles are highly insecure because they can be easily extracted by reverse-engineering or simply searching the built code. Also, moving secrets to ephemeral state must be carefully managed to avoid breaking sync flows (e.g., losing state on page reloads).
+**Prevention:** Always use secure hashing (like SHA-256 via Web Crypto API) to validate passphrases on the client without storing the plaintext. For backend interactions, hold the validated plaintext passphrase in ephemeral state (memory) and implement robust fallback mechanisms (e.g., prompting the user) in case of state loss, rather than depending on persistent storage or hardcoded values.
