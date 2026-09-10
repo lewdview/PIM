@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Pause, X, Volume2 } from 'lucide-react';
 import { useLocation } from 'wouter';
+import { useShallow } from 'zustand/react/shallow';
 import { useGlobalPlayer } from '../store/useGlobalPlayer';
 import { RARITY_CONFIG } from '../utils/rarity';
 import { useIsMobile } from '../hooks/use-mobile';
@@ -14,7 +15,19 @@ function formatTime(seconds: number): string {
 export default function GlobalPlayerBar() {
   const [location, setLocation] = useLocation();
   const isMobile = useIsMobile();
-  const { currentTrack, isPlaying, progress, currentTime, duration, toggle, stop, seek } = useGlobalPlayer();
+
+  const { currentTrack, isPlaying, progress, currentTime, duration, toggle, stop, seek } = useGlobalPlayer(
+    useShallow(s => ({
+      currentTrack: s.currentTrack,
+      isPlaying: s.isPlaying,
+      progress: s.progress,
+      currentTime: s.currentTime,
+      duration: s.duration,
+      toggle: s.toggle,
+      stop: s.stop,
+      seek: s.seek
+    }))
+  );
 
   const rc = currentTrack ? (RARITY_CONFIG[currentTrack.rarity as keyof typeof RARITY_CONFIG] || RARITY_CONFIG.common) : RARITY_CONFIG.common;
   const accent = rc?.color || '#ff3800';
