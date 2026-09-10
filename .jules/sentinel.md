@@ -1,0 +1,4 @@
+## 2024-08-06 - Hardcoded Admin Passphrase Vulnerability
+**Vulnerability:** A hardcoded plaintext administrator password (`th3scr1b3`) was found in `src/pages/AdminPage.tsx` and `src/pages/BeatmapEditor.tsx`.
+**Learning:** The frontend gates administrative access by validating user input against a hardcoded string directly. This string is included in the production build bundle, meaning anyone inspecting the bundle can extract the passphrase and access admin panels or backend features that depend on this password.
+**Prevention:** Avoid statically embedding sensitive credentials or secrets within the frontend source code. For purely frontend gating, use client-side cryptographic hashing (e.g., Web Crypto API with SHA-256) to compare user input against a pre-computed hash instead of plaintext, keeping in mind that backend logic must still properly authenticate and authorize any sensitive operations.
