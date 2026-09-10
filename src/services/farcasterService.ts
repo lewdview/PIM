@@ -149,6 +149,37 @@ class FarcasterService {
   }
 
   /**
+   * Executes a native Base token payment via Farcaster client actions (Warpcast send sheet)
+   */
+  public async sendToken(options: {
+    token?: string;
+    amount?: string;
+    recipientAddress?: string;
+    recipientFid?: number;
+  }): Promise<string | null> {
+    try {
+      if (sdk?.actions?.sendToken) {
+        console.log('[Farcaster] Requesting sdk.actions.sendToken:', options);
+        const result = await sdk.actions.sendToken(options);
+        if (result.success) {
+          console.log('[Farcaster] sendToken succeeded:', result.send.transaction);
+          return result.send.transaction;
+        }
+        if (result.reason === 'rejected_by_user') {
+          throw new Error('Payment cancelled by user');
+        }
+        console.warn('[Farcaster] sendToken unsuccessful:', result);
+        throw new Error(result.error?.message || 'Farcaster payment failed');
+      }
+    } catch (err: any) {
+      if (err.message === 'Payment cancelled by user') throw err;
+      console.warn('[Farcaster] sendToken failed or unsupported:', err);
+      throw err;
+    }
+    return null;
+  }
+
+  /**
    * Launches the native Farcaster cast composer prefilled with text & embeds.
    * If running in standard web browser, opens Warpcast Web composer.
    */

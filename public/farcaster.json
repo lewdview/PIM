@@ -13,6 +13,13 @@
     "buttonTitle": "Enter Vault & Play",
     "splashImageUrl": "https://pim.th3scr1b3.art/data/logos/logo_1.png",
     "splashBackgroundColor": "#050402",
-    "webhookUrl": "https://pim.th3scr1b3.art/api/farcaster-webhook"
+    "webhookUrl": "https://pim.th3scr1b3.art/api/farcaster-webhook",
+    "requiredChains": [
+      "eip155:8453"
+    ],
+    "requiredCapabilities": [
+      "actions.sendToken",
+      "wallet.getEthereumProvider"
+    ]
   }
 }

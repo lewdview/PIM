@@ -227,11 +227,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     console.log('[Auth] Wallet provider detected:', typeof wallet);
 
     // Ensure Base chain 
-    // Ensure Base chain 
     try {
       const chainId = await wallet.request({ method: 'eth_chainId' });
       console.log('[Auth] Current chain:', chainId);
-      if (typeof chainId === 'string' && chainId.toLowerCase() !== BASE_CHAIN_ID_HEX && chainId !== '8453') {
+      const isBase = typeof chainId === 'number'
+        ? chainId === 8453
+        : typeof chainId === 'string' && (chainId.toLowerCase() === BASE_CHAIN_ID_HEX || chainId === '8453' || chainId.toLowerCase() === 'eip155:8453');
+
+      if (!isBase) {
         console.log('[Auth] Switching to Base...');
         try {
           await wallet.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: BASE_CHAIN_ID_HEX }] });
@@ -240,6 +243,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           if (switchError.code === 4902) {
             console.log('[Auth] Base chain not added. Adding Base chain...');
             await wallet.request({ method: 'wallet_addEthereumChain', params: [BASE_CHAIN_CONFIG] });
+          } else if (farcasterService.isFarcaster()) {
+            console.warn('[Auth] Farcaster host bypassed wallet_switchEthereumChain RPC:', switchError);
           } else {
             throw switchError;
           }
@@ -248,17 +253,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         // Wait a short duration to let the provider update its internal state
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        // Double check chainId
-        const verifyChainId = await wallet.request({ method: 'eth_chainId' });
-        if (typeof verifyChainId === 'string' && verifyChainId.toLowerCase() !== BASE_CHAIN_ID_HEX && verifyChainId !== '8453') {
-          throw new Error('Please switch to the Base network in your wallet to proceed.');
+        // Double check chainId (only strictly enforce for external browser extensions, not embedded Farcaster)
+        if (!farcasterService.isFarcaster()) {
+          const verifyChainId = await wallet.request({ method: 'eth_chainId' });
+          const verifiedBase = typeof verifyChainId === 'number'
+            ? verifyChainId === 8453
+            : typeof verifyChainId === 'string' && (verifyChainId.toLowerCase() === BASE_CHAIN_ID_HEX || verifyChainId === '8453' || verifyChainId.toLowerCase() === 'eip155:8453');
+          if (!verifiedBase) {
+            throw new Error('Please switch to the Base network in your wallet to proceed.');
+          }
         }
       }
     } catch (chainErr: any) {
-      console.error('[Auth] Chain switch failed:', chainErr);
-      const msg = chainErr?.message || String(chainErr);
-      set({ error: `Network switch failed: ${msg}` });
-      return { error: msg };
+      if (farcasterService.isFarcaster()) {
+        console.warn('[Auth] Farcaster chain verification bypassed for auth:', chainErr);
+      } else {
+        console.error('[Auth] Chain switch failed:', chainErr);
+        const msg = chainErr?.message || String(chainErr);
+        set({ error: `Network switch failed: ${msg}` });
+        return { error: msg };
+      }
     }
 
     try {
