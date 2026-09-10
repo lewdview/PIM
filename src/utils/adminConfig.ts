@@ -382,10 +382,8 @@ export function saveAdminConfig(config: AdminConfig) {
   configCache = config;
   localStorage.setItem(ADMIN_CONFIG_KEY, JSON.stringify(config));
 
-  // Sync to backend (fire and forget)
-  supabase.functions.invoke('vault-engine', {
-    body: { action: 'updateAdminConfig', payload: { config, passphrase: 'th3scr1b3' } }
-  }).catch(e => console.error("Failed to sync admin config to backend", e));
+  // Automatic backend sync function invocation removed for security reasons.
+  // It relied on a hardcoded plaintext secret. Manual user-prompted sync via the Admin Page is preferred.
 
   // Append to history (keep last 20 entries)
   try {
