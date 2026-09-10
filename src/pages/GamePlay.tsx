@@ -2373,6 +2373,17 @@ const AnimatedScore = memo(({ score }: { score: number }) => {
 });
 
 // ── procedural chart generator for empty beatmaps ────────────────
+export function isHoldNote(note: { type?: NoteType | string; holdDuration?: number } | null | undefined): boolean {
+  if (!note) return false;
+  return (
+    note.type === "hold" ||
+    note.type === "hold-swipe" ||
+    note.type === "slide" ||
+    note.type === "zigzag" ||
+    (typeof note.holdDuration === "number" && note.holdDuration > 0)
+  );
+}
+
 interface Stage {
   stage: number;
   name: string;
@@ -2403,11 +2414,11 @@ function stageifyNotes(notes: Note[], duration: number, bpm: number, difficultyL
 
   // Mechanic allowlists per stage
   const ALLOWED: Record<number, Set<string>> = {
-    1: new Set(['tap']),
-    2: new Set(['tap', 'hold']),
-    3: new Set(['tap', 'hold', 'swipe', 'accent']),
-    4: new Set(['tap', 'hold', 'swipe', 'accent', 'remix', 'break', 'lift', 'mine']),
-    5: new Set(['tap', 'hold', 'swipe', 'accent', 'remix', 'break', 'lift', 'mine']),
+    1: new Set(['tap', 'hold', 'hold-swipe', 'slide', 'zigzag']),
+    2: new Set(['tap', 'hold', 'hold-swipe', 'slide', 'zigzag']),
+    3: new Set(['tap', 'hold', 'hold-swipe', 'slide', 'zigzag', 'swipe', 'accent']),
+    4: new Set(['tap', 'hold', 'hold-swipe', 'slide', 'zigzag', 'swipe', 'accent', 'remix', 'break', 'lift', 'mine']),
+    5: new Set(['tap', 'hold', 'hold-swipe', 'slide', 'zigzag', 'swipe', 'accent', 'remix', 'break', 'lift', 'mine']),
   };
 
   // Min spacing per stage (multiplier of beatDuration) — tightest at stage end
@@ -2445,7 +2456,7 @@ function stageifyNotes(notes: Note[], duration: number, bpm: number, difficultyL
       if (clone.type === 'swipe') {
         clone.type = 'tap';
         delete clone.swipeDirection;
-      } else if (clone.type === 'hold' && !allowed.has('hold')) {
+      } else if (isHoldNote(clone) && !allowed.has('hold')) {
         clone.type = 'tap';
         delete clone.holdDuration;
         delete clone.targetLane;
@@ -2457,9 +2468,11 @@ function stageifyNotes(notes: Note[], duration: number, bpm: number, difficultyL
       }
     }
 
-    // Stage 1: strip all advanced fields
+    // Stage 1: strip advanced swipe/lane-shift fields on hold notes, but preserve holdDuration and hold type
     if (stage === 1) {
-      delete clone.holdDuration;
+      if (!isHoldNote(clone)) {
+        delete clone.holdDuration;
+      }
       delete clone.targetLane;
       delete clone.swipeDirection;
     }
@@ -2483,7 +2496,7 @@ function stageifyNotes(notes: Note[], duration: number, bpm: number, difficultyL
 
     // Collision guard: prevent notes spawning on a lane occupied by an active hold or slide note
     const collidesWithHold = processed.some(existing => {
-      const dur = existing.holdDuration || (existing.type === 'hold' || existing.type === 'hold-swipe' ? 0.5 : 0);
+      const dur = existing.holdDuration || (isHoldNote(existing) ? 0.5 : 0);
       if (dur <= 0) return false;
       const holdStart = existing.time;
       const holdEnd = existing.time + dur;
@@ -2498,7 +2511,7 @@ function stageifyNotes(notes: Note[], duration: number, bpm: number, difficultyL
     if (collidesWithHold) continue;
 
     // If clone is a hold note, ensure it does not overlap existing notes on its lane or target lane
-    const cloneDur = clone.holdDuration || (clone.type === 'hold' || clone.type === 'hold-swipe' ? 0.5 : 0);
+    const cloneDur = clone.holdDuration || (isHoldNote(clone) ? 0.5 : 0);
     if (cloneDur > 0) {
       const cloneTargetL = clone.targetLane !== undefined ? clone.targetLane : clone.lane;
       const conflictsWithExisting = processed.some(existing => {
@@ -4092,7 +4105,7 @@ export default function Game() {
 
       // Swipe check: swipe notes, lift notes, or notes with required swipeDirection ignore plain tap-down inputs
       const reqSwipeDir = ns.note.swipeDirection || (ns.note.type === "lift" ? "up" : undefined);
-      const isSwipeNote = ns.note.type === "swipe" || ns.note.type === "lift" || (reqSwipeDir !== undefined && ns.note.type !== "hold");
+      const isSwipeNote = !isHoldNote(ns.note) && (ns.note.type === "swipe" || ns.note.type === "lift" || reqSwipeDir !== undefined);
       if (isSwipeNote) {
         if (!direction) return; // Plain tap-down does not complete a swipe/lift note
         if (reqSwipeDir && !isDirectionMatch(reqSwipeDir, direction)) return;
@@ -4143,7 +4156,7 @@ export default function Game() {
         audioOffsetRef.current = Math.max(-200, Math.min(300, audioOffsetRef.current));
       }
 
-      const isHoldType = ns.note.type === "hold" || ns.note.type === "hold-swipe" || ns.note.type === "slide" || ns.note.type === "zigzag" || (typeof ns.note.holdDuration === 'number' && ns.note.holdDuration > 0);
+      const isHoldType = isHoldNote(ns.note);
       if (isHoldType) {
         ns.holdActive = true;
         ns.currentLane = lane;
@@ -4504,7 +4517,7 @@ export default function Game() {
       let ns: NoteState | undefined;
       for (let i = noteWindowStartRef.current; i < allNotes.length; i++) {
         const n = allNotes[i];
-        const isHold = n.note.type === "hold" || n.note.type === "hold-swipe" || n.note.type === "slide" || n.note.type === "zigzag" || (typeof n.note.holdDuration === 'number' && n.note.holdDuration > 0);
+        const isHold = isHoldNote(n.note);
         if (isHold && n.holdActive && (Math.round(n.currentLane) === lane || n.note.lane === lane || n.note.targetLane === lane) && !n.hit) {
           ns = n;
           break;
@@ -4658,7 +4671,7 @@ export default function Game() {
       let ns: NoteState | undefined;
       for (let i = noteWindowStartRef.current; i < allNotes.length; i++) {
         const n = allNotes[i];
-        const isHold = n.note.type === "hold" || n.note.type === "hold-swipe" || n.note.type === "slide" || n.note.type === "zigzag" || (typeof n.note.holdDuration === 'number' && n.note.holdDuration > 0);
+        const isHold = isHoldNote(n.note);
         if (isHold && n.holdActive && (n.currentLane === fromLane || n.note.lane === fromLane) && !n.hit) {
           ns = n;
           break;
@@ -5203,14 +5216,9 @@ export default function Game() {
       notesRef.current.forEach((ns) => {
         if (ns.note.type === "mine" || ns.note.type === "ghost") return; // Skip hazard mines / ghost obstacles
         if (!ns.hit && !ns.missed) {
-          const isHoldNote =
-            ns.note.type === "hold" ||
-            ns.note.type === "hold-swipe" ||
-            ns.note.type === "slide" ||
-            ns.note.type === "zigzag" ||
-            (typeof ns.note.holdDuration === "number" && ns.note.holdDuration > 0);
+          const isHold = isHoldNote(ns.note);
 
-          if (isHoldNote) {
+          if (isHold) {
             if (t >= ns.note.time && !ns.holdActive) {
               hitLane(ns.note.lane, ns.note.swipeDirection);
               if (laneRef.current[ns.note.lane]) {
@@ -5282,7 +5290,7 @@ export default function Game() {
       for (let gi = ghostIndexRef.current > 0 ? ghostIndexRef.current - 1 : 0; gi < ghostLen; gi++) {
         const event = ghostEvents[gi];
         if (event.time > t + 0.5) break; // Past the relevant window
-        if (event.type === 'hold' && event.judgment !== 'MISS') {
+        if (isHoldNote(event) && event.judgment !== 'MISS') {
           const holdDur = event.holdDuration || 0.5;
           if (t >= event.time && t <= event.time + holdDur) {
             ghostPressed[event.lane] = true;
@@ -7205,7 +7213,7 @@ export default function Game() {
       }
 
       const isSurge = puRef.current.active === "SURGE" && t < puRef.current.endTime;
-      const isHoldNoteType = note.type === "hold" || note.type === "hold-swipe" || note.type === "slide" || note.type === "zigzag" || (typeof note.holdDuration === 'number' && note.holdDuration > 0);
+      const isHoldNoteType = isHoldNote(note);
       if (isHoldNoteType && !ns.hit && !ns.missed && !ns.holdActive && isSurge && t >= note.time) {
         ns.holdActive = true;
         ns.autoplayedBySurge = true;
@@ -7507,7 +7515,7 @@ export default function Game() {
         }
       }
 
-      if (note.type !== "hold") {
+      if (!isHoldNoteType) {
         if (proj.rot !== 0) {
           ctx.save();
           ctx.translate(drawX + noteW / 2, noteY);
@@ -8598,7 +8606,7 @@ export default function Game() {
               let activeHold: NoteState | undefined;
               for (let ni = noteWindowStartRef.current; ni < allNotes.length; ni++) {
                 const n = allNotes[ni];
-                const isHold = n.note.type === "hold" || n.note.type === "hold-swipe" || n.note.type === "slide" || n.note.type === "zigzag" || (typeof n.note.holdDuration === 'number' && n.note.holdDuration > 0);
+                const isHold = isHoldNote(n.note);
                 if (isHold && n.holdActive && (n.currentLane === i || n.note.lane === i) && !n.hit) {
                   activeHold = n;
                   break;
@@ -8635,7 +8643,7 @@ export default function Game() {
       let activeHold: NoteState | undefined;
       for (let ni = noteWindowStartRef.current; ni < allNotes.length; ni++) {
         const n = allNotes[ni];
-        const isHold = n.note.type === "hold" || n.note.type === "hold-swipe" || n.note.type === "slide" || n.note.type === "zigzag" || (typeof n.note.holdDuration === 'number' && n.note.holdDuration > 0);
+        const isHold = isHoldNote(n.note);
         if (
           isHold &&
           n.holdActive &&
@@ -8898,7 +8906,7 @@ export default function Game() {
       let activeSlideHold: NoteState | undefined;
       for (let i = noteWindowStartRef.current; i < allNotes.length; i++) {
         const n = allNotes[i];
-        const isHold = n.note.type === "hold" || n.note.type === "hold-swipe" || n.note.type === "slide" || n.note.type === "zigzag" || (typeof n.note.holdDuration === 'number' && n.note.holdDuration > 0);
+        const isHold = isHoldNote(n.note);
         if (isHold && n.holdActive && n.note.targetLane !== undefined && !n.hit) {
           activeSlideHold = n;
           break;
@@ -8952,7 +8960,7 @@ export default function Game() {
           for (let ni = noteWindowStartRef.current; ni < allNotes.length; ni++) {
             const n = allNotes[ni];
             if (
-              n.note.type === "hold" &&
+              isHoldNote(n.note) &&
               n.holdActive &&
               n.note.targetLane === i &&
               n.currentLane !== i &&
@@ -9121,7 +9129,7 @@ export default function Game() {
         let activeHoldWithSwipe: NoteState | undefined;
         for (let i = noteWindowStartRef.current; i < allNotes.length; i++) {
           const n = allNotes[i];
-          const isHold = n.note.type === "hold" || n.note.type === "hold-swipe" || n.note.type === "slide" || n.note.type === "zigzag" || (typeof n.note.holdDuration === 'number' && n.note.holdDuration > 0);
+          const isHold = isHoldNote(n.note);
           if (
             isHold && n.holdActive && !n.hit && !n.missed &&
             isDirectionMatch(n.note.swipeDirection, swipeDir) &&
@@ -9227,7 +9235,7 @@ export default function Game() {
             let ns: NoteState | undefined;
             for (let i = noteWindowStartRef.current; i < allNotes.length; i++) {
               const n = allNotes[i];
-              const isHold = n.note.type === "hold" || n.note.type === "hold-swipe" || n.note.type === "slide" || n.note.type === "zigzag" || (typeof n.note.holdDuration === 'number' && n.note.holdDuration > 0);
+              const isHold = isHoldNote(n.note);
               if (isHold && n.holdActive && n.touchId === e.pointerId && !n.hit) {
                 ns = n;
                 break;
@@ -9311,7 +9319,7 @@ export default function Game() {
       let ns: NoteState | undefined;
       for (let i = noteWindowStartRef.current; i < allNotes.length; i++) {
         const n = allNotes[i];
-        const isHold = n.note.type === "hold" || n.note.type === "hold-swipe" || n.note.type === "slide" || n.note.type === "zigzag" || (typeof n.note.holdDuration === 'number' && n.note.holdDuration > 0);
+        const isHold = isHoldNote(n.note);
         if (isHold && n.holdActive && n.touchId === identifier && !n.hit) {
           ns = n;
           break;
@@ -9442,7 +9450,7 @@ export default function Game() {
               let ns: NoteState | undefined;
               for (let i = noteWindowStartRef.current; i < allNotes.length; i++) {
                 const n = allNotes[i];
-                const isHold = n.note.type === "hold" || n.note.type === "hold-swipe" || n.note.type === "slide" || n.note.type === "zigzag" || (typeof n.note.holdDuration === 'number' && n.note.holdDuration > 0);
+                const isHold = isHoldNote(n.note);
                 if (isHold && n.holdActive && n.touchId === touch.identifier && !n.hit) {
                   ns = n;
                   break;
@@ -9530,7 +9538,7 @@ export default function Game() {
       let ns: NoteState | undefined;
       for (let i = noteWindowStartRef.current; i < allNotes.length; i++) {
         const n = allNotes[i];
-        const isHold = n.note.type === "hold" || n.note.type === "hold-swipe" || n.note.type === "slide" || n.note.type === "zigzag" || (typeof n.note.holdDuration === 'number' && n.note.holdDuration > 0);
+        const isHold = isHoldNote(n.note);
         if (isHold && n.holdActive && n.touchId === identifier && !n.hit) {
           ns = n;
           break;
@@ -10232,8 +10240,8 @@ export default function Game() {
         let note = { ...n, lane: Math.min(n.lane, LANE_COUNT - 1) };
         const diff = songRef.current?.difficultyLevel ?? 5;
 
-        // Sanitize swipeDirection: only 'swipe' notes and 'hold' notes can have a swipeDirection
-        if (note.type !== 'swipe' && note.type !== 'hold') {
+        // Sanitize swipeDirection: only 'swipe' notes and hold notes can have a swipeDirection
+        if (note.type !== 'swipe' && !isHoldNote(note)) {
           note.swipeDirection = undefined;
         }
         if (note.type === 'swipe' && !note.swipeDirection) {
@@ -10247,7 +10255,7 @@ export default function Game() {
         }
 
         // Lane-change holds (slides) only at Hard+ (Level 7+)
-        if (diff < 7 && note.type === 'hold' && note.targetLane !== undefined) {
+        if (diff < 7 && isHoldNote(note) && note.targetLane !== undefined) {
           note.targetLane = undefined;
           note.swipeDirection = undefined;
         }
@@ -10263,7 +10271,7 @@ export default function Game() {
         }
 
         // Shorten holds at easy difficulties so they're less punishing
-        if (diff <= 3 && note.type === 'hold' && note.holdDuration) {
+        if (diff <= 3 && isHoldNote(note) && note.holdDuration) {
           note.holdDuration = Math.min(note.holdDuration, 0.8);
         }
 
@@ -10289,7 +10297,7 @@ export default function Game() {
 
         // Collision with existing hold
         const collidesWithHold = collisionSanitizedNotes.some(existing => {
-          const dur = existing.note.holdDuration || (existing.note.type === 'hold' || existing.note.type === 'hold-swipe' ? 0.5 : 0);
+          const dur = existing.note.holdDuration || (isHoldNote(existing.note) ? 0.5 : 0);
           if (dur <= 0) return false;
           const holdStart = existing.note.time;
           const holdEnd = existing.note.time + dur;
@@ -10304,7 +10312,7 @@ export default function Game() {
         if (collidesWithHold) continue;
 
         // If new note is hold, collision with existing notes in the hold interval
-        const noteDur = note.holdDuration || (note.type === 'hold' || note.type === 'hold-swipe' ? 0.5 : 0);
+        const noteDur = note.holdDuration || (isHoldNote(note) ? 0.5 : 0);
         if (noteDur > 0) {
           const noteTargetL = note.targetLane !== undefined ? note.targetLane : note.lane;
           const conflictsWithExisting = collisionSanitizedNotes.some(existing => {
@@ -10364,7 +10372,7 @@ export default function Game() {
         if (ns.note.type === "mine") {
           return; // mines are not hit in a perfect run
         }
-        if (ns.note.type === "hold") {
+        if (isHoldNote(ns.note)) {
           scoreEvents.push({ time: ns.note.time, type: ns.note.type });
           scoreEvents.push({ time: ns.note.time + (ns.note.holdDuration || 0.5), type: ns.note.type });
         } else {
@@ -13468,7 +13476,7 @@ function drawKey(
     'up-right': -Math.PI / 4,
   };
 
-  const isHoldHead = noteType === 'hold' || noteType === 'hold-swipe';
+  const isHoldHead = noteType === 'hold' || noteType === 'hold-swipe' || noteType === 'slide' || noteType === 'zigzag';
   const m = (swipeDirection && !isHold && !isHoldHead && noteType !== 'lift') ? 1.0 : 0;
 
   if (swipeDirection && m > 0) {
