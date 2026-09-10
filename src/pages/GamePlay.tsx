@@ -2414,7 +2414,7 @@ function stageifyNotes(notes: Note[], duration: number, bpm: number, difficultyL
 
   // Mechanic allowlists per stage
   const ALLOWED: Record<number, Set<string>> = {
-    1: new Set(['tap', 'hold', 'hold-swipe', 'slide', 'zigzag']),
+    1: new Set(['tap']),
     2: new Set(['tap', 'hold', 'hold-swipe', 'slide', 'zigzag']),
     3: new Set(['tap', 'hold', 'hold-swipe', 'slide', 'zigzag', 'swipe', 'accent']),
     4: new Set(['tap', 'hold', 'hold-swipe', 'slide', 'zigzag', 'swipe', 'accent', 'remix', 'break', 'lift', 'mine']),
@@ -2460,6 +2460,7 @@ function stageifyNotes(notes: Note[], duration: number, bpm: number, difficultyL
         clone.type = 'tap';
         delete clone.holdDuration;
         delete clone.targetLane;
+        delete clone.swipeDirection;
       } else if (['remix', 'break', 'accent', 'lift'].includes(clone.type as string)) {
         clone.type = 'tap';
         delete clone.swipeDirection;
@@ -2468,11 +2469,10 @@ function stageifyNotes(notes: Note[], duration: number, bpm: number, difficultyL
       }
     }
 
-    // Stage 1: strip advanced swipe/lane-shift fields on hold notes, but preserve holdDuration and hold type
+    // Stage 1: strictly tap notes only (no holds, slides, or swipes; holds introduced in stage 2-5)
     if (stage === 1) {
-      if (!isHoldNote(clone)) {
-        delete clone.holdDuration;
-      }
+      clone.type = 'tap';
+      delete clone.holdDuration;
       delete clone.targetLane;
       delete clone.swipeDirection;
     }
@@ -2700,9 +2700,8 @@ function generateProceduralChart(song: any): Note[] {
       let selectedPattern: PatternType = 'single_tap';
 
       if (isIntro) {
-        if (roll < 30) selectedPattern = 'stair_up';
-        else if (roll < 60) selectedPattern = 'stair_down';
-        else if (roll < 80) selectedPattern = 'hold_rail';
+        if (roll < 45) selectedPattern = 'stair_up';
+        else if (roll < 90) selectedPattern = 'stair_down';
         else selectedPattern = 'single_tap';
       } else if (isChorus) {
         if (difficulty >= 5 && roll < 20) selectedPattern = 'trill_outer';
@@ -2871,8 +2870,9 @@ async function generateAudioForgeChart(song: any): Promise<Note[]> {
 
     const blockIndex = Math.floor((time * sampleRate) / blockSize);
     const energy = blockEnergies[blockIndex] || 0;
+    const isStage1 = time < effectiveAudioDuration * 0.15;
 
-    if (difficulty >= 3 && energy > 0.12 && index % 4 === 1) {
+    if (!isStage1 && difficulty >= 3 && energy > 0.12 && index % 4 === 1) {
       noteType = 'hold';
       holdDuration = beatDuration * (1.5 + (index % 2));
       
@@ -2928,7 +2928,7 @@ async function generateAudioForgeChart(song: any): Promise<Note[]> {
         let secondTargetLane: number | undefined;
         
         const typeRoll = (index * 13 + Math.floor(time)) % 100;
-        if (difficulty >= 6 && typeRoll < 40) {
+        if (!isStage1 && difficulty >= 6 && typeRoll < 40) {
           secondType = 'hold';
           secondHoldDuration = beatDuration * 1.5;
           if (index % 2 === 0) {
@@ -7213,7 +7213,7 @@ export default function Game() {
       }
 
       const isSurge = puRef.current.active === "SURGE" && t < puRef.current.endTime;
-      const isHoldNoteType = isHoldNote(note);
+      const isHoldNoteType = isHoldNote(note) && (note.stage ? note.stage > 1 : calculatedStage > 1);
       if (isHoldNoteType && !ns.hit && !ns.missed && !ns.holdActive && isSurge && t >= note.time) {
         ns.holdActive = true;
         ns.autoplayedBySurge = true;
@@ -10240,6 +10240,18 @@ export default function Game() {
         let note = { ...n, lane: Math.min(n.lane, LANE_COUNT - 1) };
         const diff = songRef.current?.difficultyLevel ?? 5;
 
+        // Stage 1 restriction: strictly tap notes only (holds introduced in Stages 2-5)
+        const stage1EndTime = (song.duration || 180) * 0.15;
+        const isStage1 = note.stage === 1 || note.time < stage1EndTime;
+        if (isStage1) {
+          if (isHoldNote(note) || (note.holdDuration && note.holdDuration > 0)) {
+            note.type = 'tap';
+            delete (note as any).holdDuration;
+            delete (note as any).targetLane;
+            delete (note as any).swipeDirection;
+          }
+        }
+
         // Sanitize swipeDirection: only 'swipe' notes and hold notes can have a swipeDirection
         if (note.type !== 'swipe' && !isHoldNote(note)) {
           note.swipeDirection = undefined;
@@ -10813,16 +10825,27 @@ export default function Game() {
           songRef.current.stages = stages;
 
           // Refresh active notesRef
-          notesRef.current = restaged.map(n => ({
-            note: { ...n, lane: Math.min(n.lane, LANE_COUNT - 1) },
-            hit: false,
-            missed: false,
-            holdActive: false,
-            holdProgress: 0,
-            currentLane: n.lane,
-            originLane: n.lane,
-            visualLane: n.lane,
-          }));
+          notesRef.current = restaged.map(n => {
+            const note = { ...n, lane: Math.min(n.lane, LANE_COUNT - 1) };
+            if (note.stage === 1 || note.time < roundedAudioDuration * 0.15) {
+              if (isHoldNote(note) || (note.holdDuration && note.holdDuration > 0)) {
+                note.type = 'tap';
+                delete (note as any).holdDuration;
+                delete (note as any).targetLane;
+                delete (note as any).swipeDirection;
+              }
+            }
+            return {
+              note,
+              hit: false,
+              missed: false,
+              holdActive: false,
+              holdProgress: 0,
+              currentLane: n.lane,
+              originLane: n.lane,
+              visualLane: n.lane,
+            };
+          });
           unresolvedNotesCountRef.current = notesRef.current.length;
           lastNoteTimeRef.current = notesRef.current.length > 0
             ? Math.max(...notesRef.current.map(ns => ns.note.time))
