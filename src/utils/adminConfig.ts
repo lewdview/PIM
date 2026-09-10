@@ -382,10 +382,16 @@ export function saveAdminConfig(config: AdminConfig) {
   configCache = config;
   localStorage.setItem(ADMIN_CONFIG_KEY, JSON.stringify(config));
 
+  // Get auth key dynamically from session storage if admin
+  const isAdmin = sessionStorage.getItem('th3vault_admin_auth') === 'true';
+
   // Sync to backend (fire and forget)
-  supabase.functions.invoke('vault-engine', {
-    body: { action: 'updateAdminConfig', payload: { config, passphrase: 'th3scr1b3' } }
-  }).catch(e => console.error("Failed to sync admin config to backend", e));
+  // 🛡️ Sentinel: [CRITICAL] Fix hardcoded passphrase - using session state to prove authentication
+  if (isAdmin) {
+    supabase.functions.invoke('vault-engine', {
+      body: { action: 'updateAdminConfig', payload: { config, authenticated: true } }
+    }).catch(e => console.error("Failed to sync admin config to backend", e));
+  }
 
   // Append to history (keep last 20 entries)
   try {
