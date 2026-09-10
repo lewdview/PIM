@@ -1,0 +1,4 @@
+## 2025-02-14 - Hardcoded Admin Passphrase
+**Vulnerability:** The admin configuration page (`src/pages/AdminPage.tsx`) and related `src/utils/adminConfig.ts` contain a hardcoded plaintext passphrase (`'th3scr1b3'`) used for both client-side gating and backend API invocations. The `ADMIN_PASSPHRASE` is checked directly in the client (`input.toLowerCase() === ADMIN_PASSPHRASE`), and then it passes the plaintext `'th3scr1b3'` directly into a Supabase edge function `vault-engine`.
+**Learning:** This exposes the admin credentials to anyone who inspects the frontend code or intercepts the API request.
+**Prevention:** Hardcoded credentials should never be stored in plaintext. We should use a SHA-256 hash on the client side to verify the gate, and potentially refactor the edge function to also check hashes.
