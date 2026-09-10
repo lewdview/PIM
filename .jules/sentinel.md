@@ -1,0 +1,4 @@
+## 2025-02-14 - Replace Hardcoded Secrets with Client-Side Hashes
+**Vulnerability:** A hardcoded admin passphrase ('th3scr1b3') was present in plaintext in `src/pages/AdminPage.tsx`, `src/pages/BeatmapEditor.tsx`, and `src/utils/adminConfig.ts`.
+**Learning:** Hardcoded passphrases in frontend source code are exposed in the build output, allowing unauthorized access to admin pages and backend edge functions. Also ensure to put imports at the top of the file to prevent eslint issues. Always set sessionStorage appropriately on all auth paths to prevent bad UX with continuous prompt loops when utility files need it for syncing backend state.
+**Prevention:** Use client-side hashing via the Web Crypto API to verify user inputs without storing plaintext credentials, and properly cache them in `sessionStorage` for backend calls that legitimately require them.
