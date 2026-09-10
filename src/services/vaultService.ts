@@ -573,8 +573,9 @@ export async function purchasePack(category: PackCategory, size: PackSize = 'sin
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) throw new Error('Not authenticated');
 
+    const edgePackType = (category as string) === 'bombshell_token' ? 'bombshell' : category;
     const { data: result, error } = await supabase.functions.invoke('vault-engine', {
-      body: { action: 'purchasePack', payload: { packType: category, size, sessionId, txHash, isGameplayReward } },
+      body: { action: 'purchasePack', payload: { packType: edgePackType, size, sessionId, txHash, isGameplayReward } },
     });
 
     if (error || !result?.success) {
@@ -879,8 +880,11 @@ export async function sellCards(
 /** Buy a Vault Pack (or Bombshell Pack) using tokens (cost from admin config) */
 export async function buyTokenPack(packType: 'vault_token' | 'bombshell_token' = 'vault_token', size: PackSize = 'single'): Promise<OwnedCard[] | 'insufficient'> {
   try {
+    // Map 'bombshell_token' to 'bombshell' for edge function compatibility.
+    // The deployed edge function expects 'bombshell' (without sessionId) to evaluate multi-card tier counts and token deductions (100 * count).
+    const edgePackType = packType === 'bombshell_token' ? 'bombshell' : packType;
     const { data, error } = await supabase.functions.invoke('vault-engine', {
-      body: { action: 'purchasePack', payload: { packType, size } }
+      body: { action: 'purchasePack', payload: { packType: edgePackType, size } }
     });
 
     if (error || !data?.success) {
@@ -903,10 +907,11 @@ export async function buyTokenPack(packType: 'vault_token' | 'bombshell_token' =
     }
 
     const rawCards = data.cards || [];
+    console.log(`[buyTokenPack] Received ${rawCards.length} cards for packType=${packType} (edgePackType=${edgePackType}), size=${size}`);
     const pool = await fetchAllCards();
 
     return rawCards.map((c: any) => {
-      const isBombshell = isBombshellCard(c) || packType === 'bombshell_token';
+      const isBombshell = isBombshellCard(c) || packType === 'bombshell_token' || packType === 'bombshell';
       const coverArtwork = c.cover_artwork || c.coverArtwork || c.fingerprint || (c.proof && typeof c.proof === 'object' ? c.proof.cover_artwork : undefined);
       const parent = findCardWithFallback(pool, c.card_id, c.rarity, isBombshell, coverArtwork);
       const sanitizedProof = (typeof c.proof === 'string' && (c.proof === 'proof_of_first' || c.proof === 'proof_of_listen')) ? c.proof : null;
