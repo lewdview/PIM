@@ -1,0 +1,6 @@
+## 2024-05-18 - Client-Side Hashing for Passphrases in Frontend Bundles
+**Vulnerability:** A hardcoded admin passphrase ('th3scr1b3') was present in `AdminPage.tsx` and `BeatmapEditor.tsx` in a Vite frontend application, directly exposing credentials in the client bundle.
+**Learning:** In frontend-only static applications or SPAs (like Vite), gating administrative interfaces via a hardcoded passphrase makes the passphrase publicly readable to anyone who inspects the compiled source code. If that passphrase is also used for backend authentication, this is a critical compromise.
+**Prevention:** For frontend-only gating, use client-side hashing (e.g., Web Crypto API `crypto.subtle.digest('SHA-256')`) to compare the user's input against a hardcoded hash, and temporarily store the plaintext input in `sessionStorage` strictly for securely authenticating with backend functions (e.g. Supabase), ensuring the credential itself is never bundled in the frontend source code.
+
+**Regression Learning:** When modifying sessionStorage keys for authentication (e.g., separating the auth flag from the plaintext passphrase), ensure initialization logic that explicitly expects a 'true' boolean string doesn't break upon page reloads.

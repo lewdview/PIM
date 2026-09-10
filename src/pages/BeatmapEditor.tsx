@@ -9,17 +9,28 @@ import type { Note } from '../game/types';
 import '../styles/BeatmapEditorStyles.css';
 
 // ===== ADMIN GATE PASSPHRASE CONFIG =====
-const ADMIN_PASSPHRASE = 'th3scr1b3';
+// SECURITY: Using a client-side hash comparison prevents leaking the plaintext admin passphrase
+// in the frontend bundle. The plaintext is stored temporarily in sessionStorage to pass to the backend.
+const ADMIN_PASSPHRASE_HASH = 'd58f380b169d36c2fe217dadc3caa620193197132b55ba52b0947882b78c4983';
 const ADMIN_AUTH_KEY = 'th3vault_admin_auth';
 
 function AdminGate({ onAuthenticate }: { onAuthenticate: () => void }) {
   const [input, setInput] = useState('');
   const [error, setError] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (input.toLowerCase() === ADMIN_PASSPHRASE) {
+
+    // Hash the input to compare against the hardcoded hash
+    const encoder = new TextEncoder();
+    const data = encoder.encode(input.toLowerCase());
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+    if (hashHex === ADMIN_PASSPHRASE_HASH) {
       sessionStorage.setItem(ADMIN_AUTH_KEY, 'true');
+      sessionStorage.setItem('th3vault_admin_passphrase', input.toLowerCase());
       onAuthenticate();
     } else {
       setError(true);
