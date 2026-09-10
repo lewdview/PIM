@@ -344,15 +344,13 @@ export async function getSongById(id: string): Promise<GameSong | null> {
       fetchId = basicSong.id;
     }
 
-    const variant = typeof localStorage !== 'undefined' ? (localStorage.getItem('opt_chartVariant') || 'v5_flagship') : 'v5_flagship';
+    const variant = typeof localStorage !== 'undefined' ? (localStorage.getItem('opt_chartVariant') || 'v1_gimmicks') : 'v1_gimmicks';
     const isDeluxeRequested = typeof localStorage !== 'undefined' && (localStorage.getItem('opt_deluxeChart') === 'true' || localStorage.getItem('opt_deluxeMode') === 'true');
     const isExplicitDeluxe = id.endsWith('_deluxe') || fetchId.endsWith('_deluxe');
     const shouldUseDeluxe = isExplicitDeluxe || (variant === 'v5_flagship' && isDeluxeRequested);
 
     const cleanFetchId = fetchId.replace(/_deluxe$/, '');
-    let fetchUrl = shouldUseDeluxe
-      ? `/data/songs_variants/v5_flagship/${cleanFetchId}_deluxe.json`
-      : `/data/songs_variants/v5_flagship/${cleanFetchId}.json`;
+    let fetchUrl = `/data/songs_variants/v1_gimmicks/${cleanFetchId}.json`;
 
     if (variant === 'v4_neural') {
       fetchUrl = `/data/songs_variants/v4_neural/${cleanFetchId}.json`;

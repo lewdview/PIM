@@ -110,7 +110,7 @@ export const DEFAULT_OPTS: GameOpts = {
   laneColors: ["#FF1493", "#00E5FF", "#39FF14"],
   useLocalFiles: false,
   noteGenerationSource: "auto",
-  chartVariant: "v5_flagship",
+  chartVariant: "v1_gimmicks",
   bgMusic: false,
   sfxEnabled: true,
   sfxVolume: 0.8,
@@ -200,7 +200,7 @@ export function loadOpts(): GameOpts {
       const v = dbProgression?.noteGenerationSource ?? localStorage.getItem("opt_noteGenerationSource");
       return (v === "lyrics" || v === "bpm" || v === "auto") ? v : "auto";
     })(),
-    chartVariant: (dbSettings?.chartVariant ?? (localStorage.getItem("opt_chartVariant") as any)) || "v5_flagship",
+    chartVariant: (dbSettings?.chartVariant ?? (localStorage.getItem("opt_chartVariant") as any)) || "v1_gimmicks",
     bgMusic: dbSettings?.bgMusic ?? bool("opt_bgMusic", false),
     sfxEnabled: dbSettings?.sfxEnabled ?? bool("opt_sfxEnabled", true),
     sfxVolume: dbSettings?.sfxVolume ?? (parseFloat(localStorage.getItem("opt_sfxVolume") ?? "0.8") ?? 0.8),

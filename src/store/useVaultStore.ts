@@ -356,7 +356,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     visualizerTheme: ((localStorage.getItem("opt_visualizerTheme") as any) || 'cyan_pink'),
     visualizerPlaylistMode: ((localStorage.getItem("opt_visualizerPlaylistMode") as any) || 'all_catalog'),
     visualizerRepeatMode: ((localStorage.getItem("opt_visualizerRepeatMode") as any) || 'all'),
-    chartVariant: ((localStorage.getItem("opt_chartVariant") as any) || 'v5_flagship'),
+    chartVariant: ((localStorage.getItem("opt_chartVariant") as any) || 'v1_gimmicks'),
   },
   progression: {
     tutorialCompleted: localStorage.getItem("pim_tutorial_completed") === "true",

@@ -1196,7 +1196,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
         musicVolume: 0.5,
         haptics: true,
         missSystem: true,
-        chartVariant: "v5_flagship",
+        chartVariant: "v1_gimmicks",
       });
       clearCatalogCache();
       updateProgression({ noteGenerationSource: "auto" });
@@ -1773,13 +1773,13 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
                     {[
+                      { id: 'v1_gimmicks', label: 'V1 GIMMICKS', desc: 'Mines, Stems & Drops (Default)' },
                       { id: 'v5_flagship', label: 'V5 FLAGSHIP', desc: 'Kinesthetics & Motifs (All Notes)' },
                       { id: 'v4_neural', label: 'NEURAL AI', desc: 'Transformer Seq2Seq + OPARL RL' },
                       { id: 'v3_master', label: 'V3 MASTER', desc: '8-Way Swipes & Overdrive' },
-                      { id: 'v1_gimmicks', label: 'V1 GIMMICKS', desc: 'Mines, Stems & Drops' },
                       { id: 'v2_minimal', label: 'V2 MINIMAL', desc: 'Casual Tap Flow' },
                     ].map(edition => {
-                      const curVariant = (typeof localStorage !== 'undefined' && localStorage.getItem('opt_chartVariant')) || 'v5_flagship';
+                      const curVariant = (typeof localStorage !== 'undefined' && localStorage.getItem('opt_chartVariant')) || 'v1_gimmicks';
                       const active = curVariant === edition.id;
                       return (
                         <button
@@ -1808,7 +1808,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                     })}
                   </div>
                   <p className="font-mono text-[7.5px] text-zinc-500 leading-normal uppercase">
-                    V5 FLAGSHIP: TWO-THUMB KINESTHETICS, MOTIF MEMORY & ALL NOTE TYPES · NEURAL AI: SEQ2SEQ TRANSFORMER · V3 MASTER: 8-WAY SWIPE OVERDRIVE
+                    V1 GIMMICKS: MINES, LIFTS, ACCENTS, DROPS & REMIX STEMS (DEFAULT) · V5 FLAGSHIP: TWO-THUMB KINESTHETICS & MOTIF MEMORY · NEURAL AI: SEQ2SEQ TRANSFORMER · V3 MASTER: 8-WAY SWIPE OVERDRIVE
                   </p>
                 </div>
 
