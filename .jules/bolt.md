@@ -1,3 +1,6 @@
 ## 2023-11-20 - Zustand Destructuring Re-renders
 **Learning:** Granular selectors aren't enough when subscribing to volatile properties (e.g. `progress` or `currentTime` during playback). If you extract `useGlobalPlayer` props individually, but the component still needs `progress` and `currentTime`, it'll re-render just as much anyway, and it hurts readability significantly.
 **Action:** The right approach when dealing with volatile high-frequency updates from Zustand is often to extract the sub-components reliant on those updates, avoiding re-rendering the larger complex parent component (e.g. isolating the progress bar instead of updating the whole player bar).
+## 2024-03-24 - [AudioPreview] Extracting ticking state
+**Learning:** Extracting components that read ticking or frequently-updating state out of heavy parent components (like `AudioPreview` which renders waveforms and complex UI) stops the parent from re-rendering continuously, significantly improving list rendering performance when an item is actively playing.
+**Action:** When a small part of a UI needs to update rapidly (e.g. progress bar, time ticker), isolate it into its own component so only that leaf node re-renders.

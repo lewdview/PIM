@@ -33,6 +33,41 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+// ⚡ Bolt Optimization: Extracted AudioProgressBar to prevent the large AudioPreview
+// component from re-rendering every time the progress changes (up to 60fps).
+// Expected impact: Massively reduced CPU usage and jank when lists of AudioPreviews are rendered.
+function AudioProgressBar({ isThisTrack, isFullSong }: { isThisTrack: boolean; isFullSong: boolean }) {
+  const progress = useGlobalPlayer(s => isThisTrack ? s.progress : 0);
+  const displayProgress = isThisTrack ? progress * 100 : 0;
+  return (
+    <div
+      className="h-full rounded-full transition-all duration-200"
+      style={{
+        width: `${Math.min(displayProgress, 100)}%`,
+        background: isFullSong
+          ? 'linear-gradient(90deg, var(--color-neon-cyan), var(--color-neon-purple))'
+          : 'linear-gradient(90deg, var(--color-text-muted), var(--color-text-secondary))',
+      }}
+    />
+  );
+}
+
+// ⚡ Bolt Optimization: Extracted AudioTimeDisplay to prevent the large AudioPreview
+// component from re-rendering every second as the time ticks.
+function AudioTimeDisplay({ isThisTrack, isPlaying, isFullSong, maxDuration }: { isThisTrack: boolean; isPlaying: boolean; isFullSong: boolean; maxDuration: number }) {
+  const currentTime = useGlobalPlayer(s => isThisTrack ? s.currentTime : 0);
+  const duration = useGlobalPlayer(s => isThisTrack ? s.duration : 0);
+  const displayTime = isThisTrack ? currentTime : 0;
+
+  const durationLabel = isFullSong
+    ? (isThisTrack && duration > 0 ? formatTime(duration) : 'FULL')
+    : formatTime(maxDuration);
+
+  return (
+    <>{isPlaying ? formatTime(displayTime) : durationLabel}</>
+  );
+}
+
 export default function AudioPreview({
   audioUrl,
   title,
@@ -54,9 +89,6 @@ export default function AudioPreview({
   // Check if THIS track is the one currently playing
   const isThisTrack = currentTrack?.audioUrl === audioUrl && currentTrack?.day === day;
   const globalPlaying = useGlobalPlayer(s => isThisTrack ? s.isPlaying : false);
-  const progress = useGlobalPlayer(s => isThisTrack ? s.progress : 0);
-  const currentTime = useGlobalPlayer(s => isThisTrack ? s.currentTime : 0);
-  const duration = useGlobalPlayer(s => isThisTrack ? s.duration : 0);
 
   const globalToggle = useGlobalPlayer(s => s.toggle);
   const globalPlay = useGlobalPlayer(s => s.play);
@@ -80,11 +112,6 @@ export default function AudioPreview({
     }
   }, [isThisTrack, globalToggle, globalPlay, title, audioUrl, coverUrl, day, rarity, isDailyClaim, maxDuration]);
 
-  // Display duration label
-  const durationLabel = isFullSong
-    ? (isThisTrack && duration > 0 ? formatTime(duration) : 'FULL')
-    : formatTime(maxDuration);
-
   const tierLabel = isFullSong ? null : (
     maxDuration === 15 ? '15s preview' : '1m preview'
   );
@@ -106,9 +133,6 @@ export default function AudioPreview({
       </button>
     );
   }
-
-  const displayProgress = isThisTrack ? progress * 100 : 0;
-  const displayTime = isThisTrack ? currentTime : 0;
 
   return (
     <div className="space-y-1" onClick={(e) => e.stopPropagation()}>
@@ -145,15 +169,7 @@ export default function AudioPreview({
                 ))}
               </div>
             )}
-            <div
-              className="h-full rounded-full transition-all duration-200"
-              style={{
-                width: `${Math.min(displayProgress, 100)}%`,
-                background: isFullSong
-                  ? 'linear-gradient(90deg, var(--color-neon-cyan), var(--color-neon-purple))'
-                  : 'linear-gradient(90deg, var(--color-text-muted), var(--color-text-secondary))',
-              }}
-            />
+            <AudioProgressBar isThisTrack={isThisTrack} isFullSong={isFullSong} />
           </div>
           {tierLabel && (
             <div className="text-[8px] font-mono mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
@@ -165,7 +181,7 @@ export default function AudioPreview({
         <span className="text-[10px] font-mono flex-shrink-0" style={{
           color: isFullSong ? 'var(--color-neon-cyan)' : 'var(--color-text-muted)',
         }}>
-          {isPlaying ? formatTime(displayTime) : durationLabel}
+          <AudioTimeDisplay isThisTrack={isThisTrack} isPlaying={isPlaying} isFullSong={isFullSong} maxDuration={maxDuration} />
         </span>
       </div>
 
