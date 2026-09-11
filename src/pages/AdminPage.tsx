@@ -1355,6 +1355,17 @@ export default function AdminPage() {
                     />
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '10px', opacity: 0.6 }}>Daily Token Packs</span>
+                    <input
+                      type="number"
+                      className="admin-input"
+                      value={config.dailyTokenLimit || 15}
+                      onChange={(e) => updateConfig(c => ({ ...c, dailyTokenLimit: Number(e.target.value) }))}
+                      min={1}
+                      style={{ width: '60px' }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '10px', opacity: 0.6 }}>Token Pack Cost</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <input
@@ -1362,6 +1373,20 @@ export default function AdminPage() {
                         className="admin-input"
                         value={config.tokenPackCost}
                         onChange={(e) => updateConfig(c => ({ ...c, tokenPackCost: Number(e.target.value) }))}
+                        min={1}
+                        style={{ width: '70px' }}
+                      />
+                      <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '9px', opacity: 0.4 }}>V⚡</span>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '10px', opacity: 0.6 }}>Targeted Pull Cost</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <input
+                        type="number"
+                        className="admin-input"
+                        value={config.targetedPullCost || 275}
+                        onChange={(e) => updateConfig(c => ({ ...c, targetedPullCost: Number(e.target.value) }))}
                         min={1}
                         style={{ width: '70px' }}
                       />

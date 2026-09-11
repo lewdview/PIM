@@ -572,7 +572,7 @@ export default function PitchDeck() {
                     <span className="text-[9px] font-mono uppercase text-[#00f0ff] font-bold block mb-2">V⚡ TOKEN SINKS</span>
                     <div className="grid grid-cols-3 gap-2 font-mono text-[9px] text-white">
                       <div className="p-2 border border-white/10 rounded">
-                        <span className="block font-black text-xs text-[#ffb800]">500 V⚡</span>
+                        <span className="block font-black text-xs text-[#ffb800]">275 V⚡</span>
                         <span className="opacity-50 uppercase">TARGETED PULL</span>
                       </div>
                       <div className="p-2 border border-white/10 rounded">

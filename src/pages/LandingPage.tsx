@@ -8,13 +8,14 @@ import { useVaultStore } from '../store/useVaultStore';
 import { useLoadingToast } from '../store/useLoadingToast';
 import { useAuthStore } from '../store/useAuthStore';
 import {
-  getCardByDay, hasClaimedToday, claimDailyCard,
+  getCardByDay, hasClaimedToday, claimDailyCard, silentClaimGuestDailyCard,
   purchasePack, buyTokenPack, getCompletedMonths, getMonthName, getClaimedCountForDay,
   targetedPull, upgradeRarity, fuseDuplicates,
   redeemBonusCode, fetchAllCards, findCardWithFallback,
   createStripeCheckoutSession, redirectToStripeCheckout,
   type OwnedCard, type VaultCard,
 } from '../services/vaultService';
+import { useLiveClaimCount } from '../hooks/useLiveClaimCount';
 import { getRandomBombshellPackCover } from '../utils/bombshellCards';
 import { audioManager } from '../game/audio';
 import { getCurrentDay, getTimeUntilNextDay, formatDate } from '../utils/dayCalc';
@@ -159,7 +160,7 @@ export default function LandingPage() {
 
   // Callbacks for sinks
   const handleTargetedPull = useCallback(async (dayNum: number) => {
-    if (!dayNum || dayNum < 1 || dayNum > today || tokenBalance < 500) {
+    if (!dayNum || dayNum < 1 || dayNum > today || tokenBalance < 275) {
       if (dayNum > today) {
         alert(`Day ${dayNum} is locked. Targeted Pull is restricted to released calendar days (Day 1 to ${today}). Future tracks require a Prophecy Pull.`);
       }
@@ -175,7 +176,7 @@ export default function LandingPage() {
         startReveal([card], {
           category: 'targeted', label: `Targeted Pull: Day ${dayNum}`, icon: '🎯',
           accent: '#ff9900', gradient: 'linear-gradient(145deg, #1a1000, #0a0800)',
-          price: '500 V⚡', cardCount: 1, revealType: 'cinematic',
+          price: '275 V⚡', cardCount: 1, revealType: 'cinematic',
         });
         setLocation('/vault/reveal');
       }
@@ -368,7 +369,7 @@ export default function LandingPage() {
   }, [bonusCode, addToCollection, startReveal, setLocation, loadVaultData]);
 
   const [songId, setSongId] = useState<string | null>(null);
-  const [realClaimedCount, setRealClaimedCount] = useState<number>(0);
+  const { count: realClaimedCount, optimisticIncrement: incrementClaimedCount } = useLiveClaimCount(today);
   const [countdown, setCountdown] = useState(getTimeUntilNextDay());
 
   // 3D Card Tilt State
@@ -405,9 +406,6 @@ export default function LandingPage() {
       const claimedStr = await hasClaimedToday(today);
       setHasClaimed(claimedStr);
       await loadVaultData();
-      
-      // Load claimed counts
-      getClaimedCountForDay(today).then(setRealClaimedCount);
 
       // Match song catalog
       try {
@@ -430,14 +428,16 @@ export default function LandingPage() {
   const handleClaim = useCallback(async () => {
     if (hasClaimed) return;
 
-    if (!user) {
-      alert('Authentication required: Please connect your wallet first using the "Connect Wallet" button at the top right.');
-      return;
-    }
-
     useLoadingToast.getState().show('Claiming daily drop...');
     try {
-      const owned = await claimDailyCard(today);
+      let owned: OwnedCard | null = null;
+      if (user) {
+        owned = await claimDailyCard(today);
+      } else {
+        // Guest mode claim: increments global_supply on server and assigns genuine edition
+        owned = await silentClaimGuestDailyCard(today);
+      }
+
       useLoadingToast.getState().hide();
       if (owned) {
         setIsClaimingAnimation(true);
@@ -448,6 +448,7 @@ export default function LandingPage() {
         useVaultStore.getState().updateProgression({ tutorialCompleted: true }).catch(() => {});
         useVaultStore.getState().completeOnboarding().catch(() => {});
         setHasClaimed(true);
+        incrementClaimedCount();
         audioManager.playSfx('open_chest', 0.9);
 
         startReveal([owned], {
@@ -466,14 +467,14 @@ export default function LandingPage() {
           setLocation('/vault/reveal');
         }, 800);
       } else {
-        alert('Failed to claim daily drop. This can happen if the daily drop has already been claimed or if the server rejected the request. Please try reconnecting your wallet.');
+        alert('Daily drop already claimed today or unavailable.');
       }
     } catch (err: any) {
       useLoadingToast.getState().hide();
       console.error('Claim daily card threw error:', err);
       alert(`Error claiming daily drop: ${err?.message || err}`);
     }
-  }, [today, hasClaimed, setHasClaimed, addToCollection, startReveal, setLocation, songId, user]);
+  }, [today, hasClaimed, setHasClaimed, addToCollection, startReveal, setLocation, user, incrementClaimedCount]);
 
   // Direct play launcher
   const handlePlayNow = useCallback(() => {
@@ -1276,7 +1277,7 @@ export default function LandingPage() {
                 </div>
 
                 <div className="flex items-center justify-between border-t border-zinc-800 pt-4">
-                  <span className="text-[10px] font-mono uppercase text-zinc-400">Cost: 500 V⚡</span>
+                  <span className="text-[10px] font-mono uppercase text-zinc-400">Cost: 275 V⚡</span>
                   <span className="text-[10px] font-mono uppercase text-zinc-400">Balance: {tokenBalance} V⚡</span>
                 </div>
 
@@ -1288,7 +1289,7 @@ export default function LandingPage() {
                     CANCEL
                   </button>
                   <button
-                    disabled={targetLoading || !targetDay || parseInt(targetDay, 10) < 1 || parseInt(targetDay, 10) > today || tokenBalance < 500}
+                    disabled={targetLoading || !targetDay || parseInt(targetDay, 10) < 1 || parseInt(targetDay, 10) > today || tokenBalance < 275}
                     onClick={() => {
                       setShowTargetedPullModal(false);
                       handleTargetedPull(parseInt(targetDay, 10));

@@ -29,6 +29,7 @@ import { useGlobalPlayer } from '../store/useGlobalPlayer';
 import { loadCatalog, type GameSong } from '../game/api';
 import { useVaultStore } from '../store/useVaultStore';
 import { getClaimedCountForDay } from '../services/vaultService';
+import { useLiveClaimCount } from '../hooks/useLiveClaimCount';
 import { supabase } from '@/services/supabaseClient';
 import DailyClaimTransitionModal from '../components/DailyClaimTransitionModal';
 import TodayCardDetailModal from '../components/TodayCardDetailModal';
@@ -468,14 +469,7 @@ export default function HeroLandingPage() {
   // Daily Drop Claim & Detail Modals State
   const [isClaimTransitionOpen, setIsClaimTransitionOpen] = useState(false);
   const [isCardDetailModalOpen, setIsCardDetailModalOpen] = useState(false);
-  const [claimedCount, setClaimedCount] = useState<number>(0);
-
-  // Fetch claimed count for today's card
-  useEffect(() => {
-    getClaimedCountForDay(activeDay).then((count) => {
-      setClaimedCount(count || 0);
-    });
-  }, [activeDay]);
+  const { count: claimedCount } = useLiveClaimCount(activeDay);
 
   // Visiting /hero marks tutorial and onboarding as completed
   useEffect(() => {

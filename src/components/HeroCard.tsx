@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Clock, Gift } from 'lucide-react';
 import type { VaultCard } from '../services/vaultService';
-import { getClaimedCountForDay } from '../services/vaultService';
+import { useLiveClaimCount } from '../hooks/useLiveClaimCount';
 import { RARITY_CONFIG } from '../utils/rarity';
 import { getCoverUrlForRarity, useSmartCoverArt } from '../utils/rarityArtwork';
 import RarityBadge from './RarityBadge';
@@ -24,7 +24,7 @@ export default function HeroCard({ card, hasClaimed, onClaim, day }: HeroCardPro
   const [isHovering, setIsHovering] = useState(false);
   const [isFaceDown, setIsFaceDown] = useState(false);
   const [imgError, setImgError] = useState(false);
-  const [realClaimedCount, setRealClaimedCount] = useState<number>(0);
+  const { count: realClaimedCount } = useLiveClaimCount(day);
   const { src: coverUrl, failed: imgFailed, handleError: handleImgError, isSquare } = useSmartCoverArt(card.coverUrl, card.rarity);
 
   const rc = RARITY_CONFIG[card.rarity] || RARITY_CONFIG.common;
@@ -33,10 +33,6 @@ export default function HeroCard({ card, hasClaimed, onClaim, day }: HeroCardPro
     const interval = setInterval(() => setCountdown(getTimeUntilNextDay()), 1000);
     return () => clearInterval(interval);
   }, []);
-
-  useEffect(() => {
-    getClaimedCountForDay(day).then(setRealClaimedCount);
-  }, [day, hasClaimed]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();

@@ -74,6 +74,7 @@ export interface AdminConfig {
   // Daily limits
   dailyStandardLimit: number;
   dailyPremiumLimit: number;
+  dailyTokenLimit: number;
 
   // Token pack cost
   tokenPackCost: number;
@@ -149,6 +150,7 @@ const DEFAULT_ROLL_RATES: Record<string, number[]> = {
   special_picks:  [50, 27, 16, 7],
   prophecy:       [63, 22, 10, 5],
   alpha:          [43, 30, 20, 5, 2],
+  targeted_pull:  [60, 24, 12, 3, 1],
 };
 
 const DEFAULT_PROOF_RATES: Record<string, number> = {
@@ -277,6 +279,7 @@ function buildDefaultConfig(): AdminConfig {
     ultraRewardMax: 5,
     dailyStandardLimit: 60,  // V2 RC1: elevated from 30
     dailyPremiumLimit: 5,    // V2 RC1: elevated from 2
+    dailyTokenLimit: 15,     // Velocity-limiting gate on token packs
     tokenPackCost: 275,      // V2: increased from 200
     tokenPackRates: [...DEFAULT_TOKEN_PACK_RATES],
     dailyClaimRates: {
@@ -308,7 +311,7 @@ function buildDefaultConfig(): AdminConfig {
     // V2: Pity counter
     pityCounter: { enabled: true, threshold: 25 },
     // V2: Token sinks
-    targetedPullCost: 500,
+    targetedPullCost: 275,
     rarityUpgradeCost: 150,
     pullWindowHours: 72,
     // V2: Admin multiplier controls (RC1)

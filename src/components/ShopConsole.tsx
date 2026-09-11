@@ -105,7 +105,7 @@ export default function ShopConsole({ onPurchasePack, className = '' }: ShopCons
           icon: '🎯',
           accent: '#00F0FF',
           gradient: 'linear-gradient(145deg, #021a24, #010c12)',
-          price: '500 V⚡',
+          price: '275 V⚡',
           cardCount: 1,
           revealType: 'cinematic',
         });
@@ -300,6 +300,10 @@ export default function ShopConsole({ onPurchasePack, className = '' }: ShopCons
                     <span className="text-zinc-400">Yield:</span>
                     <span className="text-white font-bold">3 Collectibles</span>
                   </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-400">Daily Limit:</span>
+                    <span className="text-amber-300 font-bold">15 Packs (00:00 UTC)</span>
+                  </div>
                 </div>
               </div>
 
@@ -409,7 +413,7 @@ export default function ShopConsole({ onPurchasePack, className = '' }: ShopCons
               </div>
             </div>
 
-            {/* MODULE 3: TARGETED PULL (500 V⚡ • DAY 1-365) */}
+            {/* MODULE 3: TARGETED PULL (275 V⚡ • DAY 1-365) */}
             <div 
               className="group p-4.5 rounded-xl border flex flex-col justify-between relative overflow-hidden transition-all duration-200"
               style={{
@@ -425,12 +429,12 @@ export default function ShopConsole({ onPurchasePack, className = '' }: ShopCons
                   </div>
                   <div>
                     <h3 className="font-black text-sm uppercase tracking-wider text-cyan-400">Targeted Pull</h3>
-                    <span className="text-[9px] font-mono text-zinc-400">Day Exact Match</span>
+                    <span className="text-[9px] font-mono text-zinc-400">Day Exact Match • 1% Mythic</span>
                   </div>
                 </div>
 
                 <p className="text-[10px] font-mono text-zinc-300 mb-2 leading-relaxed">
-                  Target any released drop (Day 1–{currentDay}). Future days are locked to preserve Prophecy value.
+                  Target any released drop (Day 1–{currentDay}) with 1% Mythic chance. Future days require Prophecy.
                 </p>
 
                 {/* Day Input & Quick Buttons */}
@@ -481,7 +485,7 @@ export default function ShopConsole({ onPurchasePack, className = '' }: ShopCons
               <div>
                 <div className="flex justify-between items-center text-[9.5px] font-mono uppercase tracking-widest text-zinc-400 mb-2">
                   <span>Targeted Cost</span>
-                  <span className="text-cyan-400 font-bold">500 V⚡</span>
+                  <span className="text-cyan-400 font-bold">275 V⚡</span>
                 </div>
 
                 <button
@@ -490,7 +494,7 @@ export default function ShopConsole({ onPurchasePack, className = '' }: ShopCons
                     !targetDay ||
                     parseInt(targetDay, 10) < 1 ||
                     parseInt(targetDay, 10) > currentDay ||
-                    tokenBalance < 500
+                    tokenBalance < 275
                   }
                   onClick={() => handleTargetedPull(parseInt(targetDay, 10))}
                   className={`w-full py-2.5 rounded-lg font-black uppercase text-xs tracking-wider transition-all disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98] cursor-pointer shadow flex items-center justify-center gap-1.5 ${
@@ -506,9 +510,9 @@ export default function ShopConsole({ onPurchasePack, className = '' }: ShopCons
                       ? 'TARGETING…'
                       : parseInt(targetDay, 10) > currentDay
                       ? 'PROPHECY ONLY'
-                      : tokenBalance < 500
+                      : tokenBalance < 275
                       ? 'NEED SPARKS'
-                      : 'EXECUTE PULL'}
+                      : 'EXECUTE PULL (275 V⚡)'}
                   </span>
                 </button>
               </div>

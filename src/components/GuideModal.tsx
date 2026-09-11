@@ -348,7 +348,7 @@ export default function GuideModal({ isOpen, onClose }: Props) {
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px]">
                     <div className="p-3 rounded-lg bg-black/40 border border-white/10">
-                      <div className="text-[#ffb800] font-bold uppercase mb-1">TARGETED PULL (500 V⚡)</div>
+                      <div className="text-[#ffb800] font-bold uppercase mb-1">TARGETED PULL (275 V⚡)</div>
                       <p className="text-white/60 m-0">Directly acquire any specific card from the 365 daily release catalog.</p>
                     </div>
 

@@ -14,7 +14,7 @@ import { useVaultStore } from '../store/useVaultStore';
 import { useLoadingToast } from '../store/useLoadingToast';
 import { useAuthStore } from '../store/useAuthStore';
 import {
-  getCardByDay, hasClaimedToday, claimDailyCard,
+  getCardByDay, hasClaimedToday, claimDailyCard, silentClaimGuestDailyCard,
   purchasePack, buyTokenPack, getCompletedMonths, getMonthName, getClaimedCountForDay,
   targetedPull, upgradeRarity, fuseDuplicates,
   redeemBonusCode, fetchAllCards, findCardWithFallback,
@@ -22,6 +22,7 @@ import {
   createStripeCheckoutSession, redirectToStripeCheckout,
   type OwnedCard
 } from '../services/vaultService';
+import { useLiveClaimCount } from '../hooks/useLiveClaimCount';
 import { audioManager } from '../game/audio';
 import { getCurrentDay, getTimeUntilNextDay } from '../utils/dayCalc';
 import { type PackCategory, type PackSize, PACK_CONFIGS, PACK_CAROUSEL_ORDER, ROLL_RATES, PROOF_RATES } from '../utils/rarity';
@@ -210,7 +211,7 @@ export default function NextGenLandingPage() {
 
   // Callbacks for sinks
   const handleTargetedPull = useCallback(async (dayNum: number) => {
-    if (!dayNum || dayNum < 1 || dayNum > today || tokenBalance < 500) {
+    if (!dayNum || dayNum < 1 || dayNum > today || tokenBalance < 275) {
       if (dayNum > today) {
         alert(`Day ${dayNum} is locked. Targeted Pull is restricted to released calendar days (Day 1 to ${today}). Future tracks require a Prophecy Pull.`);
       }
@@ -226,7 +227,7 @@ export default function NextGenLandingPage() {
         startReveal([card], {
           category: 'targeted', label: `Targeted Pull: Day ${dayNum}`, icon: '🎯',
           accent: '#3b82f6', gradient: 'linear-gradient(145deg, #0a192f, #020c1b)',
-          price: '500 V⚡', cardCount: 1, revealType: 'cinematic',
+          price: '275 V⚡', cardCount: 1, revealType: 'cinematic',
         });
         setShowTargetedPullModal(false);
         setLocation('/vault/reveal');
@@ -450,7 +451,7 @@ export default function NextGenLandingPage() {
   }, [ageGateCode]);
 
   const [songId, setSongId] = useState<string | null>(null);
-  const [realClaimedCount, setRealClaimedCount] = useState<number>(0);
+  const { count: realClaimedCount, optimisticIncrement: incrementClaimedCount } = useLiveClaimCount(today);
   const [countdown, setCountdown] = useState(getTimeUntilNextDay());
 
   const [mousePos, setMousePos] = useState({ x: 0.5, y: 0.5 });
@@ -483,7 +484,6 @@ export default function NextGenLandingPage() {
       const claimedStr = await hasClaimedToday(today);
       setHasClaimed(claimedStr);
       await loadVaultData();
-      getClaimedCountForDay(today).then(setRealClaimedCount);
 
       try {
         const catalog = await loadCatalog();
@@ -503,13 +503,17 @@ export default function NextGenLandingPage() {
 
   const handleClaim = useCallback(async () => {
     if (hasClaimed) return;
-    if (!user) {
-      alert('Authentication required: Please connect your wallet first.');
-      return;
-    }
+
     useLoadingToast.getState().show('Claiming daily drop...');
     try {
-      const owned = await claimDailyCard(today);
+      let owned: OwnedCard | null = null;
+      if (user) {
+        owned = await claimDailyCard(today);
+      } else {
+        // Guest mode claim: increments global_supply on server and assigns genuine edition
+        owned = await silentClaimGuestDailyCard(today);
+      }
+
       useLoadingToast.getState().hide();
       if (owned) {
         setIsClaimingAnimation(true);
@@ -520,6 +524,7 @@ export default function NextGenLandingPage() {
         useVaultStore.getState().updateProgression({ tutorialCompleted: true }).catch(() => {});
         useVaultStore.getState().completeOnboarding().catch(() => {});
         setHasClaimed(true);
+        incrementClaimedCount();
         audioManager.playSfx('open_chest', 0.9);
 
         startReveal([owned], {
@@ -538,14 +543,14 @@ export default function NextGenLandingPage() {
           setLocation('/vault/reveal');
         }, 800);
       } else {
-        alert('Failed to claim daily drop.');
+        alert('Daily drop already claimed today or unavailable.');
       }
     } catch (err: any) {
       useLoadingToast.getState().hide();
       console.error('Claim daily card threw error:', err);
       alert(`Error claiming daily drop: ${err?.message || err}`);
     }
-  }, [today, hasClaimed, setHasClaimed, addToCollection, startReveal, setLocation, user]);
+  }, [today, hasClaimed, setHasClaimed, addToCollection, startReveal, setLocation, user, incrementClaimedCount]);
 
   const handlePlayNow = useCallback(() => {
     localStorage.setItem("pim_tutorial_completed", "true");
@@ -734,7 +739,7 @@ export default function NextGenLandingPage() {
     if (currentCategoryKey === 'vault_token') {
       return [
         { category: 'vault_token' as PackCategory, size: 'single' as PackSize, levelLabel: 'VAULT PACK', cardCount: 3, price: '275 V⚡' },
-        { category: 'targeted_pull' as PackCategory, size: 'single' as PackSize, levelLabel: 'TARGETED PULL', cardCount: 1, price: '500 V⚡' },
+        { category: 'targeted_pull' as PackCategory, size: 'single' as PackSize, levelLabel: 'TARGETED PULL', cardCount: 1, price: '275 V⚡' },
         { category: 'rarity_upgrade' as PackCategory, size: 'single' as PackSize, levelLabel: 'RARITY UPGRADE', cardCount: 1, price: '150 V⚡' },
         { category: 'vault_token' as PackCategory, size: 'triple' as PackSize, levelLabel: 'DUPLICATE FUSION', cardCount: 1, price: '200 V⚡' },
       ];
@@ -1507,7 +1512,7 @@ export default function NextGenLandingPage() {
                   </div>
                 )}
                 <button 
-                  disabled={targetLoading || !targetDay || parseInt(targetDay, 10) < 1 || parseInt(targetDay, 10) > today || tokenBalance < 500}
+                  disabled={targetLoading || !targetDay || parseInt(targetDay, 10) < 1 || parseInt(targetDay, 10) > today || tokenBalance < 275}
                   onClick={() => handleTargetedPull(parseInt(targetDay, 10))}
                   className={`w-full py-3.5 rounded-xl font-extrabold text-xs tracking-wider uppercase transition-all disabled:opacity-50 ${
                     parseInt(targetDay, 10) > today
@@ -1519,7 +1524,7 @@ export default function NextGenLandingPage() {
                     ? 'Pulling...'
                     : parseInt(targetDay, 10) > today
                     ? 'Prophecy Only'
-                    : 'Pull Card (500 V⚡)'}
+                    : 'Pull Card (275 V⚡)'}
                 </button>
               </div>
 

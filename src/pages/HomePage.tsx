@@ -226,7 +226,7 @@ export default function HomePage() {
 
   // Callbacks for sinks
   const handleTargetedPull = useCallback(async (dayNum: number) => {
-    if (!dayNum || dayNum < 1 || dayNum > today || tokenBalance < 500) {
+    if (!dayNum || dayNum < 1 || dayNum > today || tokenBalance < 275) {
       if (dayNum > today) {
         alert(`Day ${dayNum} is locked. Targeted Pull is restricted to released calendar days (Day 1 to ${today}). Future tracks require a Prophecy Pull.`);
       }
@@ -242,7 +242,7 @@ export default function HomePage() {
         startReveal([card], {
           category: 'targeted', label: `Targeted Pull: Day ${dayNum}`, icon: '🎯',
           accent: '#ff9900', gradient: 'linear-gradient(145deg, #1a1000, #0a0800)',
-          price: '500 V⚡', cardCount: 1, revealType: 'cinematic',
+          price: '275 V⚡', cardCount: 1, revealType: 'cinematic',
         });
         setLocation('/vault/reveal');
       }
@@ -943,7 +943,7 @@ export default function HomePage() {
                 </div>
 
                 <div className="flex items-center justify-between border-t border-zinc-800 pt-4">
-                  <span className="text-[10px] font-mono uppercase text-zinc-400">Cost: 500 V⚡</span>
+                  <span className="text-[10px] font-mono uppercase text-zinc-400">Cost: 275 V⚡</span>
                   <span className="text-[10px] font-mono uppercase text-zinc-400">Balance: {tokenBalance} V⚡</span>
                 </div>
 
@@ -955,7 +955,7 @@ export default function HomePage() {
                     CANCEL
                   </button>
                   <button
-                    disabled={targetLoading || !targetDay || parseInt(targetDay, 10) < 1 || parseInt(targetDay, 10) > today || tokenBalance < 500}
+                    disabled={targetLoading || !targetDay || parseInt(targetDay, 10) < 1 || parseInt(targetDay, 10) > today || tokenBalance < 275}
                     onClick={() => {
                       setShowTargetedPullModal(false);
                       handleTargetedPull(parseInt(targetDay, 10));

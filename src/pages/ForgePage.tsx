@@ -637,7 +637,7 @@ export default function ForgePage() {
   // ── TARGETED PULL ──────────────────────────────────────────────
   const handleTargetedPull = useCallback(async () => {
     const day = parseInt(targetDay, 10);
-    if (!day || day < 1 || day > today || tokenBalance < 500) {
+    if (!day || day < 1 || day > today || tokenBalance < 275) {
       if (day > today) {
         alert(`Day ${day} is locked. Targeted Pull is restricted to released calendar days (Day 1 to ${today}). Future tracks require a Prophecy Pull.`);
       }
@@ -653,7 +653,7 @@ export default function ForgePage() {
       startReveal([card], {
         category: 'targeted', label: `Targeted Pull: Day ${day}`, icon: '🎯',
         accent: '#ff9900', gradient: 'linear-gradient(145deg, #1a1000, #0a0800)',
-        price: '500 V⚡', cardCount: 1, revealType: 'cinematic',
+        price: '275 V⚡', cardCount: 1, revealType: 'cinematic',
       });
       setLocation('/vault/reveal');
     }
@@ -960,7 +960,7 @@ export default function ForgePage() {
                       fontFamily: '"JetBrains Mono", monospace', fontSize: '9px',
                       padding: '2px 8px', background: 'rgba(255,153,0,0.15)',
                       border: '1px solid rgba(255,153,0,0.3)', color: '#ff9900',
-                    }}>500 V⚡</span>
+                    }}>275 V⚡</span>
                   </div>
                   <p style={{
                     fontFamily: '"JetBrains Mono", monospace', fontSize: '10px',
@@ -984,15 +984,15 @@ export default function ForgePage() {
                     />
                     <button
                       onClick={handleTargetedPull}
-                      disabled={targetLoading || !targetDay || parseInt(targetDay, 10) < 1 || parseInt(targetDay, 10) > today || tokenBalance < 500}
+                      disabled={targetLoading || !targetDay || parseInt(targetDay, 10) < 1 || parseInt(targetDay, 10) > today || tokenBalance < 275}
                       style={{
                         flex: 1, padding: '8px 16px',
-                        background: parseInt(targetDay, 10) > today ? 'rgba(180,77,255,0.2)' : tokenBalance >= 500 && targetDay ? '#ff9900' : 'rgba(255,153,0,0.15)',
+                        background: parseInt(targetDay, 10) > today ? 'rgba(180,77,255,0.2)' : tokenBalance >= 275 && targetDay ? '#ff9900' : 'rgba(255,153,0,0.15)',
                         border: parseInt(targetDay, 10) > today ? '1px solid rgba(180,77,255,0.4)' : '1px solid rgba(255,153,0,0.4)',
                         fontFamily: '"JetBrains Mono", monospace', fontSize: '10px',
                         fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
-                        color: parseInt(targetDay, 10) > today ? '#c084fc' : tokenBalance >= 500 && targetDay ? '#000' : 'rgba(255,255,255,0.3)',
-                        cursor: parseInt(targetDay, 10) > today || tokenBalance < 500 || !targetDay ? 'default' : 'pointer',
+                        color: parseInt(targetDay, 10) > today ? '#c084fc' : tokenBalance >= 275 && targetDay ? '#000' : 'rgba(255,255,255,0.3)',
+                        cursor: parseInt(targetDay, 10) > today || tokenBalance < 275 || !targetDay ? 'default' : 'pointer',
                       }}
                     >
                       {targetLoading ? 'PULLING...' : parseInt(targetDay, 10) > today ? '🔮 PROPHECY ONLY' : '🎯 PULL FROM DAY'}

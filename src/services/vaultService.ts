@@ -491,6 +491,9 @@ export async function claimDailyCard(day: number): Promise<OwnedCard | null> {
     const pool = await fetchAllCards();
     const parent = findCardWithFallback(pool, result.card.card_id, result.card.rarity);
 
+    // Broadcast claim live to all connected users
+    import('../hooks/useLiveClaimCount').then(m => m.broadcastClaim(day)).catch(() => {});
+
     return {
       id: result.card.id || crypto.randomUUID(),
       cardId: parent.id,
@@ -537,18 +540,35 @@ export async function silentClaimGuestDailyCard(day: number): Promise<OwnedCard 
       return existing || null;
     }
 
-    // 2. Fetch card pool metadata for Day level
+    // 2. Call vault-engine to register guest claim & increment global_supply
+    let rolledRarity = 'common';
+    let edition = 1;
+    let maxSupply = 100;
+    try {
+      const { data: result, error: rpcErr } = await supabase.functions.invoke('vault-engine', {
+        body: { action: 'claimGuestDailyDrop', payload: { day, guestAddress } }
+      });
+      if (!rpcErr && result?.success && result.card) {
+        rolledRarity = result.card.rarity || 'common';
+        edition = result.card.edition || 1;
+        maxSupply = result.card.max_supply || 100;
+      }
+    } catch (engineErr) {
+      console.warn('[Silent Claim] vault-engine claimGuestDailyDrop invocation failed, using local fallback:', engineErr);
+    }
+
+    // 3. Fetch card pool metadata for Day level
     const pool = await fetchAllCards();
-    const parent = findCardWithFallback(pool, `day_${day}`, 'common');
+    const parent = findCardWithFallback(pool, `day_${day}`, rolledRarity);
 
     const guestCard: OwnedCard = {
       id: `guest_card_day_${day}_${Date.now()}`,
       cardId: parent.id,
-      card: { ...parent, rarity: 'common' },
+      card: { ...parent, rarity: rolledRarity },
       source: 'daily_claim',
       claimedAt: new Date().toISOString(),
-      edition: 1,
-      maxSupply: 100,
+      edition: edition,
+      maxSupply: maxSupply,
       proof: null,
       ultraReward: null,
       blockchainStatus: 'off-chain',
@@ -558,6 +578,9 @@ export async function silentClaimGuestDailyCard(day: number): Promise<OwnedCard 
     localCollection.push(guestCard);
     localStorage.setItem('guest_vault_collection', JSON.stringify(localCollection));
     localStorage.setItem(claimKey, 'true');
+
+    // Broadcast claim live to all connected users
+    import('../hooks/useLiveClaimCount').then(m => m.broadcastClaim(day)).catch(() => {});
 
     console.log(`[Silent Claim] Successfully claimed Day ${day} card into temp guest wallet (${guestAddress}):`, parent.title);
     return guestCard;
@@ -985,7 +1008,7 @@ export async function buyTokenBundleWithCrypto(
 
 // ===== V2 TOKEN SINKS =====
 
-/** Targeted Pull — choose a specific day (released only), costs 500 V⚡ */
+/** Targeted Pull — choose a specific day (released only), costs 275 V⚡ */
 export async function targetedPull(day: number): Promise<OwnedCard | null> {
   const currentWorldDay = getCurrentDay();
   if (day > currentWorldDay) {
