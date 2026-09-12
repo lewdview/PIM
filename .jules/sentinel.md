@@ -12,3 +12,7 @@
 **Vulnerability:** A hardcoded plaintext admin passphrase (`th3scr1b3`) was being passed in the payload of a `supabase.functions.invoke` call in `src/utils/adminConfig.ts`.
 **Learning:** Hardcoded credentials should not be present in background sync functions or client bundles.
 **Prevention:** Always pull credentials dynamically from `sessionStorage` where the authenticated session stores it or handle authorization securely without exposing raw secrets in code.
+## 2025-05-24 - [Remove Hardcoded Supabase Credentials]
+**Vulnerability:** The Supabase URL and Anon Key were hardcoded in `src/services/supabaseClient.ts` as fallback values. This exposes real project credentials or API keys directly in the client bundle.
+**Learning:** Using real or convincingly formatted dummy secrets as fallback values in environment variables exposes credentials or causes automated secret scanner alerts (like TruffleHog). It also prevents fail-fast validation because the fallback prevents the environment variable assertion from triggering locally.
+**Prevention:** Always replace dummy or hardcoded fallback secrets with empty strings `""` to enforce fail-fast validation when `.env` is missing and avoid false-positive or true-positive secret exposures.
