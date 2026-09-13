@@ -9,7 +9,9 @@ import { getCurrentDay, getMonthNumFromDay, getRelativeDay } from "../utils/dayC
 import { CHAPTERS, type ChapterMeta } from "@/game/campaign";
 import { getMedalForSong, getHighScore, getScoreHistory } from "@/game/progress";
 import PrizeProgressMenu from "../components/PrizeProgressMenu";
-import { Lock, Unlock, Play, Sliders, Music, Volume2, VolumeX, Activity, Award, Trophy, ChevronLeft, ChevronRight, Film } from "lucide-react";
+import { getBombshellDayCovers, getBombshellCoverUrl, getCustomBombshellCover, setCustomBombshellCover } from "../utils/bombshellCards";
+import { getCoverUrlForRarity } from "../utils/rarityArtwork";
+import { Lock, Unlock, Play, Sliders, Music, Volume2, VolumeX, Activity, Award, Trophy, ChevronLeft, ChevronRight, Film, Layers } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const LANE_COLORS = ['#FF1493', '#39FF14', '#E5B800', '#8B48E5'];
@@ -313,6 +315,56 @@ export default function SongSelect() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [stageIndex, activeMonthStages.length]);
 
+  const availableVariants = useMemo(() => {
+    if (!selected) return [];
+    const list: { label: string; url: string; fileName?: string }[] = [];
+    if (selected.coverArt) {
+      list.push({ label: 'ORIGINAL', url: selected.coverArt });
+    }
+    const dayCovers = getBombshellDayCovers(selected.day);
+    const allFiles = [...(dayCovers?.lbFiles || []), ...(dayCovers?.normalFiles || [])];
+    allFiles.forEach((file, idx) => {
+      const url = getBombshellCoverUrl(selected.day, file);
+      const isLB = file.toLowerCase().startsWith('lb');
+      list.push({
+        label: isLB ? `LB #${idx + 1}` : `VAR #${idx + 1}`,
+        url,
+        fileName: file,
+      });
+    });
+    if (selected.coverArt) {
+      const altUrl = getCoverUrlForRarity(selected.coverArt, 'uncommon');
+      if (altUrl && altUrl !== selected.coverArt && !list.some(v => v.url === altUrl)) {
+        list.push({ label: 'ENHANCED', url: altUrl });
+      }
+      const girlUrl = getCoverUrlForRarity(selected.coverArt, 'rare');
+      if (girlUrl && girlUrl !== selected.coverArt && !list.some(v => v.url === girlUrl)) {
+        list.push({ label: 'PRISM', url: girlUrl });
+      }
+    }
+    return list;
+  }, [selected]);
+
+  const [selectedVariantIdx, setSelectedVariantIdx] = useState<number>(0);
+
+  useEffect(() => {
+    if (!selected || availableVariants.length === 0) {
+      setSelectedVariantIdx(0);
+      return;
+    }
+    const savedPref = getCustomBombshellCover(selected.day) || (typeof localStorage !== 'undefined' ? localStorage.getItem(`preferred_cover_${selected.id}`) : null);
+    if (savedPref) {
+      const idx = availableVariants.findIndex(v => v.fileName === savedPref || v.url === savedPref);
+      if (idx >= 0) {
+        setSelectedVariantIdx(idx);
+        return;
+      }
+    }
+    setSelectedVariantIdx(0);
+  }, [selected?.id, availableVariants]);
+
+  const activeCoverUrl = availableVariants[selectedVariantIdx]?.url || selected?.coverArt || '/data/covers/default.jpg';
+
   const handlePlaySong = (songToPlay?: GameSong) => {
     const s = songToPlay || selected;
     if (!s || !isSongUnlocked(s)) return;
@@ -320,6 +372,9 @@ export default function SongSelect() {
     audioManager.playSfx('tap_nav', 0.4);
     sessionStorage.setItem(`game_origin_${s.id}`, 'songs');
     sessionStorage.setItem(`diff_override_${s.id}`, String(diffOverride));
+    sessionStorage.setItem(`active_cover_url_${s.id}`, activeCoverUrl);
+    sessionStorage.setItem(`active_cover_url_card-${s.day}`, activeCoverUrl);
+    sessionStorage.setItem('active_game_cover', activeCoverUrl);
     
     const modifierType = getModifierForSong(s);
     const isEquipped = equippedCardId === s.id;
@@ -332,7 +387,6 @@ export default function SongSelect() {
     setLocation(`/play/${s.id}`);
   };
 
-  const activeCoverUrl = selected?.coverArt || '/data/covers/default.jpg';
   const activeMoodColor = selected ? (selected.mood === 'light' ? '#39FF14' : '#FF1493') : '#39FF14';
   const medal = selected ? getMedalForSong(selected.id) : '';
   const medalColor = MEDAL_COLOR[medal] || '#444';
@@ -639,7 +693,7 @@ export default function SongSelect() {
 
                     {selected.coverArt ? (
                       <img
-                        src={selected.coverArt}
+                        src={activeCoverUrl}
                         alt={selected.title}
                         crossOrigin="anonymous"
                         className="w-48 h-48 md:w-56 md:h-56 object-cover rounded-2xl shadow-2xl transition-transform duration-500 group-hover:scale-[1.02]"
@@ -663,6 +717,27 @@ export default function SongSelect() {
                         <div className="w-14 h-14 rounded-full border border-white/30 bg-black/70 flex items-center justify-center shadow-xl">
                           {previewing ? <VolumeX size={24} className="text-[#39FF14]" /> : <Volume2 size={24} className="text-white" />}
                         </div>
+                      </button>
+                    )}
+
+                    {/* Variant Switcher Pill */}
+                    {availableVariants.length > 1 && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const nextIdx = (selectedVariantIdx + 1) % availableVariants.length;
+                          setSelectedVariantIdx(nextIdx);
+                          const nextVar = availableVariants[nextIdx];
+                          if (nextVar?.fileName && selected) {
+                            setCustomBombshellCover(selected.day, nextVar.fileName);
+                            try { localStorage.setItem(`preferred_cover_${selected.id}`, nextVar.fileName); } catch {}
+                          }
+                        }}
+                        className="absolute bottom-2.5 left-2.5 z-20 px-2.5 py-1 rounded-md bg-black/85 hover:bg-black border border-[#39FF14]/50 text-[10px] font-mono font-bold tracking-wider text-[#39FF14] flex items-center gap-1.5 backdrop-blur-md shadow-xl transition-transform active:scale-95 cursor-pointer"
+                        title="Click to cycle cover variant"
+                      >
+                        <Layers size={11} className="text-[#39FF14]" />
+                        <span>{availableVariants[selectedVariantIdx]?.label} ({selectedVariantIdx + 1}/{availableVariants.length})</span>
                       </button>
                     )}
                   </div>

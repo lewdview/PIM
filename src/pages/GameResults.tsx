@@ -25,6 +25,8 @@ interface ResultData {
   perfects: number; goods: number; misses: number; medal: string; total: number;
   failed?: boolean; continuesUsed?: number;
   laneTelemetry?: Record<number, LaneTelemetry>;
+  coverUrl?: string;
+  coverVariant?: string;
 }
 
 const MEDALS: Record<string, { color: string; message: string }> = {
@@ -326,6 +328,11 @@ export default function Results() {
     return () => clearTimeout(timer);
   }, []);
 
+  const sessionCover = typeof sessionStorage !== 'undefined'
+    ? (sessionStorage.getItem(`active_cover_url_${songId}`) || sessionStorage.getItem('active_game_cover'))
+    : null;
+  const activeCoverUrl = result?.coverUrl || sessionCover || song?.coverArt || '/data/covers/default.jpg';
+
   useEffect(() => {
     const originFallback = (() => {
       const o = songId ? (sessionStorage.getItem(`game_origin_${songId}`) ?? '') : '';
@@ -360,6 +367,10 @@ export default function Results() {
 
     Promise.all([getSongById(songId), loadCatalog()])
       .then(([s, catalog]) => {
+        if (s) {
+          const effectiveCover = data.coverUrl || sessionCover;
+          if (effectiveCover) s.coverArt = effectiveCover;
+        }
         setSong(s);
         if (s && s.date) {
           const month = parseInt(s.date.split('-')[1], 10);
@@ -832,9 +843,9 @@ export default function Results() {
       return (
         <div className="relative w-full flex flex-col items-center" style={{ background: '#050505', minHeight: '100dvh', overflow: 'hidden' }}>
           {/* Cover Art Blur Backdrop */}
-          {song?.coverArt && (
+          {activeCoverUrl && (
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
-              <img src={song.coverArt} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(50px) brightness(0.05) saturate(0.2) hue-rotate(320deg)', transform: 'scale(1.2)' }} />
+              <img src={activeCoverUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(50px) brightness(0.05) saturate(0.2) hue-rotate(320deg)', transform: 'scale(1.2)' }} />
             </div>
           )}
 
@@ -883,8 +894,8 @@ export default function Results() {
                 <div className="absolute -bottom-2 -left-2 w-4 h-4 border-b-2 border-l-2 border-[#FF1493]" />
                 <div className="absolute -bottom-2 -right-2 w-4 h-4 border-b-2 border-r-2 border-[#FF1493]" />
 
-                {song?.coverArt ? (
-                  <img src={song.coverArt} alt={song?.title ?? ''} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'grayscale(0.9) brightness(0.4) contrast(1.2)', border: '1px solid rgba(255,20,147,0.3)' }} />
+                {activeCoverUrl ? (
+                  <img src={activeCoverUrl} alt={song?.title ?? ''} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'grayscale(0.9) brightness(0.4) contrast(1.2)', border: '1px solid rgba(255,20,147,0.3)' }} />
                 ) : (
                   <div style={{ width: '100%', height: '100%', background: 'rgba(255,20,147,0.03)', border: '1px solid rgba(255,20,147,0.2)' }} />
                 )}
@@ -1032,9 +1043,9 @@ export default function Results() {
     return (
       <div className="relative w-full flex flex-col items-center" style={{ background: '#080808', minHeight: '100dvh', overflow: 'hidden' }}>
         {/* Dark red ambient */}
-        {song?.coverArt && (
+        {activeCoverUrl && (
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            <img src={song.coverArt} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(40px) brightness(0.08) saturate(0.3) hue-rotate(320deg)', transform: 'scale(1.2)' }} />
+            <img src={activeCoverUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(40px) brightness(0.08) saturate(0.3) hue-rotate(320deg)', transform: 'scale(1.2)' }} />
           </div>
         )}
         {/* Scanlines */}
@@ -1052,8 +1063,8 @@ export default function Results() {
           {/* Corrupted icon */}
           <div className="flex flex-col items-center gap-4">
             <div style={{ position: 'relative', width: 160, height: 160 }}>
-              {song?.coverArt ? (
-                <img src={song.coverArt} alt={song?.title ?? ''} style={{ width: 160, height: 160, objectFit: 'cover', borderRadius: '50%', filter: 'grayscale(0.8) brightness(0.5)', border: '3px solid rgba(255,20,147,0.4)' }} />
+              {activeCoverUrl ? (
+                <img src={activeCoverUrl} alt={song?.title ?? ''} style={{ width: 160, height: 160, objectFit: 'cover', borderRadius: '50%', filter: 'grayscale(0.8) brightness(0.5)', border: '3px solid rgba(255,20,147,0.4)' }} />
               ) : (
                 <div style={{ width: 160, height: 160, borderRadius: '50%', background: 'rgba(255,20,147,0.05)', border: '3px solid rgba(255,20,147,0.3)' }} />
               )}
@@ -1184,9 +1195,9 @@ export default function Results() {
     return (
       <div className="relative w-full flex flex-col items-center" style={{ background: '#050505', minHeight: '100dvh', overflowX: 'hidden' }}>
         {/* Blur Cover Backdrop */}
-        {song?.coverArt && (
+        {activeCoverUrl && (
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            <img src={song.coverArt} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(50px) brightness(0.1) saturate(1.2)', transform: 'scale(1.2)' }} />
+            <img src={activeCoverUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(50px) brightness(0.1) saturate(1.2)', transform: 'scale(1.2)' }} />
           </div>
         )}
 
@@ -1364,8 +1375,8 @@ export default function Results() {
 
             {/* Cover art container */}
             <div className="absolute inset-0 flex items-center justify-center">
-              {song?.coverArt ? (
-                <img src={song.coverArt} alt={song?.title ?? ''}
+              {activeCoverUrl ? (
+                <img src={activeCoverUrl} alt={song?.title ?? ''}
                   className={`border border-[#39FF14]/30 ${scoreDone && lastTierHit ? 'cover-bounce' : ''}`}
                   style={{ width: 132, height: 132, objectFit: 'cover', borderRadius: '50%', padding: '2px', background: '#050505' }} />
               ) : (
@@ -1707,9 +1718,9 @@ export default function Results() {
   return (
     <div className="relative w-full flex flex-col items-center" style={{ background: '#080808', minHeight: '100dvh', overflow: 'hidden' }}>
       {/* Blurred cover art background */}
-      {song?.coverArt && (
+      {activeCoverUrl && (
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <img src={song.coverArt} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(40px) brightness(0.15) saturate(1.5)', transform: 'scale(1.2)' }} />
+          <img src={activeCoverUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(40px) brightness(0.15) saturate(1.5)', transform: 'scale(1.2)' }} />
         </div>
       )}
 
@@ -1857,8 +1868,8 @@ export default function Results() {
           <ScoreRing progress={ringFill} color={currentRingColor} size={200} />
           {/* Cover art centered inside ring */}
           <div className="absolute inset-0 flex items-center justify-center">
-            {song?.coverArt ? (
-              <img src={song.coverArt} alt={song?.title ?? ''}
+            {activeCoverUrl ? (
+              <img src={activeCoverUrl} alt={song?.title ?? ''}
                 className={scoreDone && lastTierHit ? 'cover-bounce' : ''}
                 style={{ width: 140, height: 140, objectFit: 'cover', borderRadius: '50%', border: `3px solid ${currentRingColor}40` }} />
             ) : (

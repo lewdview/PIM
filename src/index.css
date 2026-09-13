@@ -2347,13 +2347,13 @@ body.gamepad-cursor-active * {
     right: 0;
     width: 100%;
     transform: none;
-    padding: 0 2rem;
+    padding: 0 1.5rem;
     pointer-events: none;
   }
 
   .gameplay-hud-inner {
     width: 100%;
-    max-width: 1240px;
+    max-width: clamp(740px, calc(68vh + 320px), 940px);
     margin: 0 auto;
     justify-content: space-between;
     align-items: flex-start;
@@ -2362,12 +2362,12 @@ body.gamepad-cursor-active * {
   .gameplay-hud-left-wing {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
   }
 
   .gameplay-hud-right-wing {
     display: flex;
     flex-direction: column;
-    align-items: flex-end;
+    align-items: center;
   }
 }

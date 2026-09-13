@@ -185,6 +185,13 @@ function playAcousticTactile(intensity = 0.5): void {
     osc.connect(gain);
     gain.connect(ctx.destination);
 
+    osc.onended = () => {
+      try {
+        osc.disconnect();
+        gain.disconnect();
+      } catch {}
+    };
+
     osc.start(now);
     osc.stop(now + 0.03);
   } catch {

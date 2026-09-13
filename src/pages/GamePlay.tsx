@@ -882,56 +882,47 @@ function getJudgmentBadgeSvgHtml(type: JudgmentDisplay['type'], scale = 1, idSuf
   </svg>`;
 }
 
-function getJudgmentStreamItemHtml(type: JudgmentDisplay['type'], lane: number): string {
+function getJudgmentStreamItemHtml(type: JudgmentDisplay['type'], _lane: number): string {
   let color = '#39FF14';
-  let icon = '★';
-  let text = type;
-  let bgGrad = 'linear-gradient(90deg, rgba(57,255,20,0.22), rgba(8,10,16,0.92))';
-  let border = '1px solid rgba(57,255,20,0.5)';
-  let shadow = '0 0 8px rgba(57,255,20,0.3)';
+  let label = 'PF';
+  let bg = 'rgba(57,255,20,0.22)';
+  let border = '1px solid rgba(57,255,20,0.65)';
+  let shadow = '0 0 6px rgba(57,255,20,0.35)';
 
   if (type === 'PERFECT+') {
     color = '#FFD700';
-    icon = '✦';
-    text = 'PERFECT+';
-    bgGrad = 'linear-gradient(90deg, rgba(255,215,0,0.28), rgba(8,10,16,0.92))';
-    border = '1px solid rgba(255,215,0,0.6)';
-    shadow = '0 0 10px rgba(255,215,0,0.4)';
+    label = 'P+';
+    bg = 'rgba(255,215,0,0.26)';
+    border = '1px solid rgba(255,215,0,0.75)';
+    shadow = '0 0 8px rgba(255,215,0,0.45)';
   } else if (type === 'PERFECT') {
     color = '#39FF14';
-    icon = '★';
-    text = 'PERFECT';
-    bgGrad = 'linear-gradient(90deg, rgba(57,255,20,0.22), rgba(8,10,16,0.92))';
-    border = '1px solid rgba(57,255,20,0.5)';
-    shadow = '0 0 8px rgba(57,255,20,0.3)';
+    label = 'PF';
+    bg = 'rgba(57,255,20,0.22)';
+    border = '1px solid rgba(57,255,20,0.65)';
+    shadow = '0 0 6px rgba(57,255,20,0.35)';
   } else if (type === 'GOOD') {
     color = '#00E5FF';
-    icon = '◆';
-    text = 'GOOD';
-    bgGrad = 'linear-gradient(90deg, rgba(0,229,255,0.22), rgba(8,10,16,0.92))';
-    border = '1px solid rgba(0,229,255,0.5)';
-    shadow = '0 0 8px rgba(0,229,255,0.3)';
+    label = 'GD';
+    bg = 'rgba(0,229,255,0.22)';
+    border = '1px solid rgba(0,229,255,0.65)';
+    shadow = '0 0 6px rgba(0,229,255,0.35)';
   } else if (type === 'SHIELDED') {
     color = '#E879F9';
-    icon = '🛡';
-    text = 'SHIELD';
-    bgGrad = 'linear-gradient(90deg, rgba(232,121,249,0.22), rgba(8,10,16,0.92))';
-    border = '1px solid rgba(232,121,249,0.5)';
-    shadow = '0 0 8px rgba(232,121,249,0.3)';
+    label = 'SH';
+    bg = 'rgba(232,121,249,0.22)';
+    border = '1px solid rgba(232,121,249,0.65)';
+    shadow = '0 0 6px rgba(232,121,249,0.35)';
   } else if (type === 'MISS') {
     color = '#FF0055';
-    icon = '✖';
-    text = 'MISS';
-    bgGrad = 'linear-gradient(90deg, rgba(255,0,85,0.28), rgba(8,10,16,0.92))';
-    border = '1px solid rgba(255,0,85,0.6)';
-    shadow = '0 0 10px rgba(255,0,85,0.4)';
+    label = 'MS';
+    bg = 'rgba(255,0,85,0.26)';
+    border = '1px solid rgba(255,0,85,0.75)';
+    shadow = '0 0 8px rgba(255,0,85,0.45)';
   }
 
-  const laneLabel = lane === 0 ? 'L' : lane === 1 ? 'M' : 'R';
-
-  return `<div class="flex items-center gap-1.5 px-2 py-0.5 rounded backdrop-blur-md" style="background:${bgGrad};border:${border};box-shadow:${shadow};min-width:84px;">
-    <span class="font-mono text-[9px] font-black tracking-wider" style="color:${color};text-shadow:0 0 6px ${color};">${icon} ${text}</span>
-    <span class="ml-auto font-mono text-[8px] font-bold text-white/60 bg-white/10 px-1 rounded-sm">${laneLabel}</span>
+  return `<div class="flex items-center justify-center rounded-[3px] backdrop-blur-sm select-none" style="width:26px;height:18px;background:${bg};border:${border};box-shadow:${shadow};">
+    <span class="font-mono text-[9px] font-black tracking-tight leading-none text-center" style="color:${color};text-shadow:0 0 5px ${color};">${label}</span>
   </div>`;
 }
 
@@ -2998,7 +2989,7 @@ export default function Game() {
   const judgmentOverlayRef = useRef<HTMLDivElement | null>(null);
   const judgmentBannerRef = useRef<HTMLDivElement | null>(null);
   const judgmentStreamRef = useRef<HTMLDivElement | null>(null);
-  const lastInputModalityRef = useRef<'touch' | 'key' | 'gamepad'>(
+  const lastInputModalityRef = useRef<'touch' | 'mouse' | 'key' | 'gamepad'>(
     typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0) ? 'touch' : 'key'
   );
 
@@ -3017,52 +3008,42 @@ export default function Game() {
 
     // Zero-overhead direct DOM injection for 120Hz buttery smooth compositor animation
     if (optsRef.current?.judgmentText) {
-      const isTouch = lastInputModalityRef.current === 'touch';
+      if (judgmentOverlayRef.current) {
+        const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
+        const canvasW = canvasRef.current?.width ? canvasRef.current.width / dpr : 0;
+        const canvasH = canvasRef.current?.height ? canvasRef.current.height / dpr : 0;
+        if (canvasW > 0 && canvasH > 0) {
+          const geom = getStageGeometry(canvasW, canvasH);
+          const hwBot = hwAtProgress(1, canvasW, HW_TOP, HW_BOT, canvasH);
+          const laneW = hwBot.width / LANE_COUNT;
+          let targetX = hwBot.left + (newJ.lane + 0.5) * laneW;
 
-      if (isTouch) {
-        // Touch Input Mode: Display central/upper judgment banner so fingers on lanes don't obscure it
-        if (judgmentBannerRef.current) {
-          const bannerEl = document.createElement('div');
-          bannerEl.className = 'absolute left-1/2 pointer-events-none judgment-banner-pop';
-          bannerEl.style.top = '22%';
-          bannerEl.innerHTML = getJudgmentBadgeSvgHtml(newJ.type, newJ.type === 'PERFECT+' ? 1.35 : 1.15, `banner_${newJ.id}`);
-          judgmentBannerRef.current.innerHTML = '';
-          judgmentBannerRef.current.appendChild(bannerEl);
-          bannerEl.addEventListener('animationend', () => {
-            if (bannerEl.parentNode) bannerEl.remove();
+          // If touch is enabled or mouse click: offset to the right for middle/left, offset to the left for far right
+          const isPointer = lastInputModalityRef.current === 'touch' || lastInputModalityRef.current === 'mouse' || (typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0));
+          if (isPointer) {
+            if (newJ.lane <= 1) {
+              targetX += laneW * 0.42;
+            } else {
+              targetX -= laneW * 0.42;
+            }
+          }
+
+          const targetPct = (targetX / canvasW) * 100;
+          const targetYPct = (geom.hitY / canvasH) * 100 - 7;
+
+          const popEl = document.createElement('div');
+          popEl.className = 'absolute pointer-events-none judgment-pop';
+          popEl.style.left = `${targetPct}%`;
+          popEl.style.top = `${targetYPct}%`;
+          popEl.innerHTML = getJudgmentBadgeSvgHtml(newJ.type, newJ.type === 'PERFECT+' ? 1.08 : 0.95, newJ.id);
+          
+          judgmentOverlayRef.current.appendChild(popEl);
+          popEl.addEventListener('animationend', () => {
+            if (popEl.parentNode) popEl.remove();
           }, { once: true });
           setTimeout(() => {
-            if (bannerEl.parentNode) bannerEl.remove();
-          }, 520);
-        }
-      } else {
-        // Non-Touch Input Mode (Keyboard, Gamepad, Mouse): Display on-key / lane animation
-        if (judgmentOverlayRef.current) {
-          const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
-          const canvasW = canvasRef.current?.width ? canvasRef.current.width / dpr : 0;
-          const canvasH = canvasRef.current?.height ? canvasRef.current.height / dpr : 0;
-          if (canvasW > 0 && canvasH > 0) {
-            const geom = getStageGeometry(canvasW, canvasH);
-            const hwBot = hwAtProgress(1, canvasW, HW_TOP, HW_BOT, canvasH);
-            const laneW = hwBot.width / LANE_COUNT;
-            const targetX = hwBot.left + (newJ.lane + 0.5) * laneW;
-            const targetPct = (targetX / canvasW) * 100;
-            const targetYPct = (geom.hitY / canvasH) * 100 - 8;
-
-            const popEl = document.createElement('div');
-            popEl.className = 'absolute pointer-events-none judgment-pop';
-            popEl.style.left = `${targetPct}%`;
-            popEl.style.top = `${targetYPct}%`;
-            popEl.innerHTML = getJudgmentBadgeSvgHtml(newJ.type, newJ.type === 'PERFECT+' ? 1.08 : 0.95, newJ.id);
-            
-            judgmentOverlayRef.current.appendChild(popEl);
-            popEl.addEventListener('animationend', () => {
-              if (popEl.parentNode) popEl.remove();
-            }, { once: true });
-            setTimeout(() => {
-              if (popEl.parentNode) popEl.remove();
-            }, 500);
-          }
+            if (popEl.parentNode) popEl.remove();
+          }, 500);
         }
       }
 
@@ -3288,10 +3269,10 @@ export default function Game() {
     const freq = holdLane !== null ? (HEALING_LANE_FREQUENCIES[holdLane] ?? 132.0) : 132.0;
 
     if (healingGaugeFillRef.current) {
-      healingGaugeFillRef.current.style.height = `${pct}%`;
+      healingGaugeFillRef.current.style.width = `${pct}%`;
       healingGaugeFillRef.current.style.background = isFull 
-        ? 'linear-gradient(0deg, #00E5FF 0%, #39FF14 50%, #FFD700 100%)'
-        : 'linear-gradient(0deg, #00E5FF 0%, #39FF14 100%)';
+        ? 'linear-gradient(90deg, #00E5FF 0%, #39FF14 50%, #FFD700 100%)'
+        : 'linear-gradient(90deg, #00E5FF 0%, #39FF14 100%)';
       healingGaugeFillRef.current.style.boxShadow = isHolding || isFull
         ? `0 0 16px ${isFull ? '#39FF14' : '#00E5FF'}`
         : 'none';
@@ -3783,10 +3764,12 @@ export default function Game() {
         accuracyTextRef.current.textContent = acc.toFixed(1) + '%';
       }
     }
-    // Sync React state at reduced frequency (5Hz) for non-HUD consumers
+    // Sync React state at reduced frequency (5Hz) for non-HUD consumers ONLY when not playing
     if (now - lastReactSyncRef.current >= 200) {
       lastReactSyncRef.current = now;
-      setDisplayGs({ ...gsRef.current });
+      if (phaseRef.current !== "playing") {
+        setDisplayGs({ ...gsRef.current });
+      }
       // Prune expired judgments older than 450ms
       let write = 0;
       const arr = jRef.current;
@@ -4753,6 +4736,7 @@ export default function Game() {
     if (phaseRef.current === "finished") return;
     phaseRef.current = "finished";
     setPhase("finished");
+    setDisplayGs({ ...gsRef.current });
     cancelAnimationFrame(rafRef.current);
     audioRef.current?.pause();
     if (audioRef.current) {
@@ -4838,6 +4822,14 @@ export default function Game() {
         }
       }
 
+      const sessionCover = typeof sessionStorage !== 'undefined'
+        ? (sessionStorage.getItem(`active_cover_url_${songId}`) || sessionStorage.getItem('active_game_cover'))
+        : null;
+      const finalCover = songRef.current?.coverArt || sessionCover || (songRef.current as any)?.coverUrl;
+      if (finalCover && typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem(`active_cover_url_${songId}`, finalCover);
+      }
+
       sessionStorage.setItem(
         `result_${songId}`,
         JSON.stringify({
@@ -4852,6 +4844,7 @@ export default function Game() {
           failed,
           continuesUsed,
           laneTelemetry,
+          coverUrl: finalCover,
         }),
       );
     } catch (err) {
@@ -8264,8 +8257,8 @@ export default function Game() {
       }
     }
 
-    // ── HEALING HOLD METER (TOP-LEFT CORNER, BOTTOM-TO-TOP GAUGE) ──
-    if (optsRef.current.healingGauge ?? true) {
+    // ── HEALING HOLD METER (TOP-LEFT CORNER ON MOBILE ONLY; ON DESKTOP MOUNTED UNDER LEFT CIRCLE) ──
+    if ((optsRef.current.healingGauge ?? true) && !geom.isLandscape) {
       const gX = 22;
       const gY = Math.max(85, Math.min(130, hitY * 0.20));
       const gW = 10;
@@ -8458,19 +8451,6 @@ export default function Game() {
       ctx.fillStyle = headGrad;
       ctx.fillRect(0, 0, W, 70);
 
-      // Stage & Song title (Top Left)
-      ctx.fillStyle = "#39FF14";
-      ctx.font = "900 11px monospace";
-      ctx.textAlign = "left";
-      ctx.shadowColor = "#39FF14";
-      const stageNum = song && song.day !== undefined ? getRelativeDay(song.day) : 1;
-      ctx.fillText(`PIM MUSEUM ARCHIVE // STAGE #${stageNum}`, 18, 24);
-
-      ctx.fillStyle = "#FFFFFF";
-      ctx.font = "900 16px monospace";
-      ctx.shadowColor = "rgba(0,0,0,0.8)";
-      ctx.shadowBlur = 4;
-      ctx.fillText((song.title || "TRANSMISSION").toUpperCase(), 18, 44);
 
       // Score & Perfect+ Combo (Top Right)
       ctx.textAlign = "right";
@@ -9159,7 +9139,7 @@ export default function Game() {
       if (e.pointerType === 'touch') {
         lastInputModalityRef.current = 'touch';
       } else if (e.pointerType === 'mouse') {
-        lastInputModalityRef.current = 'key';
+        lastInputModalityRef.current = 'mouse';
       }
       const canvas = canvasRef.current;
       if (!canvas) return;
@@ -11297,6 +11277,7 @@ export default function Game() {
     if (phaseRef.current !== 'playing' || pausedRef.current) return;
     pausedRef.current = true;
     setPaused(true);
+    setDisplayGs({ ...gsRef.current });
     audioManager.stopAllHoldTones();
     audioRef.current?.pause();
     audioManager.playSfx('pause', 0.5);
@@ -12194,79 +12175,6 @@ export default function Game() {
           className="relative w-full flex-1 min-h-0 overflow-hidden"
           style={{ touchAction: 'none' }}
         >
-          {/* Top-Left Corner Healing Hold Gauge HUD (Scaffolded & Hidden in favor of sleek Canvas meter) */}
-          {(opts.healingGauge ?? true) && (
-            <div
-              className="absolute top-3 sm:top-4 left-3 sm:left-6 z-25 flex flex-col items-center pointer-events-none select-none"
-              style={{ display: 'none' }}
-              data-testid="healing-hold-gauge"
-              aria-hidden="true"
-            >
-              {/* Header Label / Status */}
-              <div className="flex flex-col items-center mb-1.5">
-                <div className="flex items-center gap-1">
-                  <span className="text-[10px]">💚</span>
-                  <span
-                    ref={healingGaugeLabelRef}
-                    className="font-mono text-[9px] font-black uppercase tracking-wider text-white/70"
-                    style={{ textShadow: '0 0 8px rgba(0, 229, 255, 0.4)' }}
-                  >
-                    HEAL
-                  </span>
-                </div>
-                <span
-                  ref={healingGaugeHzRef}
-                  className="font-mono text-[8px] font-bold text-white/40 tracking-tight"
-                >
-                  0%
-                </span>
-              </div>
-
-              {/* Vertical Gauge Bezel (Bottom to Top Fill) */}
-              <div
-                ref={healingGaugeBoxRef}
-                className="relative w-4 sm:w-5 h-28 sm:h-32 rounded-full overflow-hidden p-[2px] transition-all duration-200"
-                style={{
-                  background: 'rgba(8, 8, 16, 0.88)',
-                  border: '1.5px solid rgba(255, 255, 255, 0.18)',
-                  backdropFilter: 'blur(8px)',
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.6), inset 0 0 6px rgba(0,0,0,0.8)',
-                }}
-              >
-                {/* Gauge Background Notch Lines */}
-                <div className="absolute inset-0 flex flex-col justify-between py-2 px-1 pointer-events-none z-10 opacity-30">
-                  <div className="w-full h-[1px] bg-white/40" />
-                  <div className="w-full h-[1px] bg-white/40" />
-                  <div className="w-full h-[1px] bg-white/40" />
-                </div>
-
-                {/* Fill Tube (Grows upwards from bottom) */}
-                <div
-                  ref={healingGaugeFillRef}
-                  className="absolute bottom-0 left-0 right-0 rounded-full transition-all duration-75"
-                  style={{
-                    height: '0%',
-                    background: 'linear-gradient(0deg, #00E5FF 0%, #39FF14 100%)',
-                  }}
-                />
-              </div>
-
-            </div>
-          )}
-
-          {/* +1 Miss Restored Floating Banner (Visible when healed) */}
-          <div
-            ref={healingBannerRef}
-            style={{ display: 'none' }}
-            className="absolute left-8 top-16 sm:left-12 sm:top-20 z-30 flex-col items-start whitespace-nowrap bg-black/90 border border-[#39FF14] px-2.5 py-1 rounded shadow-[0_0_16px_rgba(57,255,20,0.6)] pointer-events-none transition-all duration-300"
-          >
-            <span className="font-mono text-[10px] font-black text-[#39FF14] tracking-wider">
-              +1 MISS RESTORED
-            </span>
-            <span className="font-mono text-[7.5px] font-bold text-[#00E5FF] tracking-widest">
-              ♥ FREQUENCY HEAL
-            </span>
-          </div>
 
           {/* Circular Score Dial & Combo Overlays (PIM Style) */}
           {(() => {
@@ -12333,7 +12241,7 @@ export default function Game() {
                     )}
 
                     {/* Circular Score Ring */}
-                    <div className="relative w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 lg:w-40 lg:h-40 rounded-full flex flex-col items-center justify-center shrink-0" style={{
+                    <div className="relative w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 lg:w-48 lg:h-48 xl:w-52 xl:h-52 rounded-full flex flex-col items-center justify-center shrink-0" style={{
                       background: "rgba(10, 10, 18, 0.94)",
                       border: `2px solid ${medalStyle.main}`,
                       boxShadow: `0 0 35px ${medalStyle.glow}, inset 0 0 15px rgba(255,255,255,0.03)`,
@@ -12383,11 +12291,11 @@ export default function Game() {
                         />
                       </svg>
 
-                      <span className="relative z-10 font-mono text-[8px] sm:text-[8.5px] md:text-[9.5px] lg:text-[10.5px] tracking-[0.25em] text-zinc-400 font-black mb-1">
+                      <span className="relative z-10 font-mono text-[8px] sm:text-[8.5px] md:text-[9.5px] lg:text-[11px] xl:text-[12px] tracking-[0.25em] text-zinc-400 font-black mb-1">
                         {currentStage === 5 ? "STAGE FINAL" : `STAGE ${currentStage}`}
                       </span>
                       <span
-                        className="relative z-20 font-mono text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black text-white tracking-tight"
+                        className="relative z-20 font-mono text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-black text-white tracking-tight"
                         style={{
                           WebkitTextStroke: "1.5px #000000",
                           paintOrder: "stroke fill",
@@ -12396,10 +12304,72 @@ export default function Game() {
                       >
                         <AnimatedScore score={gs.score} />
                       </span>
-                      <span className={`relative z-10 font-mono text-[9.5px] sm:text-[10.5px] md:text-[11.5px] lg:text-[12.5px] font-black mt-1 tracking-widest ${medalStyle.text}`} style={{ transition: "color 0.4s ease-in-out" }}>
+                      <span className={`relative z-10 font-mono text-[9.5px] sm:text-[10.5px] md:text-[11.5px] lg:text-[13px] xl:text-[14px] font-black mt-1 tracking-widest ${medalStyle.text}`} style={{ transition: "color 0.4s ease-in-out" }}>
                         ×{m}
                       </span>
                     </div>
+
+                    {/* Desktop Mode: Sleek Healing Meter mounted directly under the left circle */}
+                    {(opts.healingGauge ?? true) && (
+                      <div
+                        className="mt-3 hidden md:flex flex-col items-center pointer-events-none select-none"
+                        data-testid="healing-hold-gauge"
+                      >
+                        {/* Header Label / Status */}
+                        <div className="flex items-center justify-between w-full px-1 mb-1 font-mono text-[9px] font-black tracking-wider">
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px]">💚</span>
+                            <span
+                              ref={healingGaugeLabelRef}
+                              className="text-white/70"
+                              style={{ textShadow: '0 0 8px rgba(0, 229, 255, 0.4)' }}
+                            >
+                              HEAL
+                            </span>
+                          </div>
+                          <span
+                            ref={healingGaugeHzRef}
+                            className="text-white/40 tracking-tight font-bold"
+                          >
+                            0%
+                          </span>
+                        </div>
+
+                        {/* Horizontal Gauge Bezel Under Left Circle */}
+                        <div
+                          ref={healingGaugeBoxRef}
+                          className="relative w-36 lg:w-44 h-3.5 rounded-full overflow-hidden p-[2px] transition-all duration-200"
+                          style={{
+                            background: 'rgba(8, 8, 16, 0.88)',
+                            border: '1.5px solid rgba(255, 255, 255, 0.18)',
+                            backdropFilter: 'blur(8px)',
+                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.6), inset 0 0 6px rgba(0,0,0,0.8)',
+                          }}
+                        >
+                          {/* Fill Tube (Grows horizontally) */}
+                          <div
+                            ref={healingGaugeFillRef}
+                            className="absolute top-0 bottom-0 left-0 rounded-full transition-all duration-75"
+                            style={{
+                              width: '0%',
+                              height: '100%',
+                              background: 'linear-gradient(90deg, #00E5FF 0%, #39FF14 100%)',
+                            }}
+                          />
+                        </div>
+
+                        {/* +1 Miss Restored Floating Banner */}
+                        <div
+                          ref={healingBannerRef}
+                          style={{ display: 'none' }}
+                          className="mt-1.5 flex-col items-center whitespace-nowrap bg-black/90 border border-[#39FF14] px-2.5 py-0.5 rounded shadow-[0_0_16px_rgba(57,255,20,0.6)] pointer-events-none transition-all duration-300"
+                        >
+                          <span className="font-mono text-[9px] font-black text-[#39FF14] tracking-wider">
+                            +1 MISS RESTORED
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Right Wing / Right HUD: Combo Ring + Power-Up Pill */}
@@ -12410,7 +12380,7 @@ export default function Game() {
                         key={gs.combo > 0 ? "active-combo" : "zero-combo"}
                         initial={{ scale: 0.8, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
-                        className="relative w-18 h-18 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 rounded-full flex flex-col items-center justify-center shrink-0"
+                        className="relative w-18 h-18 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-36 lg:h-36 xl:w-40 xl:h-40 rounded-full flex flex-col items-center justify-center shrink-0"
                         style={{
                           background: "rgba(10, 10, 18, 0.94)",
                           border: `2px solid ${gs.combo >= 100 ? '#39FF14' : gs.combo >= 50 ? '#FF1493' : gs.combo > 0 ? '#00E5FF' : 'rgba(255,255,255,0.18)'}`,
@@ -12449,13 +12419,13 @@ export default function Game() {
                           )}
                         </svg>
 
-                        <span className="relative z-10 font-mono text-[7px] sm:text-[7.5px] md:text-[8.5px] lg:text-[9.5px] tracking-[0.2em] text-zinc-400 font-bold mb-0.5 uppercase">
+                        <span className="relative z-10 font-mono text-[7px] sm:text-[7.5px] md:text-[8.5px] lg:text-[10px] xl:text-[11px] tracking-[0.2em] text-zinc-400 font-bold mb-0.5 uppercase">
                           COMBO
                         </span>
                         <motion.span
                           animate={{ scale: [1.35, 1.0] }}
                           transition={{ type: "spring", stiffness: 450, damping: 25 }}
-                          className="relative z-20 font-mono text-base sm:text-lg md:text-xl lg:text-2xl font-black text-white tracking-tight"
+                          className="relative z-20 font-mono text-base sm:text-lg md:text-xl lg:text-3xl xl:text-4xl font-black text-white tracking-tight"
                           style={{
                             textShadow: gs.combo > 0 ? `0 0 10px ${gs.combo >= 100 ? '#39FF14' : gs.combo >= 50 ? '#FF1493' : '#00E5FF'}` : 'none'
                           }}

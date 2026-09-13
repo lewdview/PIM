@@ -110,6 +110,16 @@ export function getCoverUrlForRarity(
     return originalUrlOrPath;
   }
 
+  // If no rarity was explicitly specified and the path is already an alternate/variant cover, preserve it!
+  if (!rarity && (
+    originalUrlOrPath.includes('/alternate-covers/') ||
+    originalUrlOrPath.includes('/girls-cover/') ||
+    originalUrlOrPath.includes('/girl-covers/') ||
+    originalUrlOrPath.includes('/rare_covers/')
+  )) {
+    return originalUrlOrPath;
+  }
+
   const key = String(rarity || 'common').toLowerCase();
   const rule = RARITY_ARTWORK_CONFIG[key] || RARITY_ARTWORK_CONFIG.common;
 
