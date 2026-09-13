@@ -3744,7 +3744,6 @@ export default function Game() {
   const lastSyncTimeRef = useRef(0);
   const lastReactSyncRef = useRef(0);
   // Direct DOM refs for high-frequency HUD updates (avoids React re-renders)
-  const scoreTextRef = useRef<HTMLSpanElement | null>(null);
   const comboTextRef = useRef<HTMLSpanElement | null>(null);
   const accuracyTextRef = useRef<HTMLSpanElement | null>(null);
   const syncDisplay = useCallback(() => {
@@ -3756,7 +3755,6 @@ export default function Game() {
       // displayGs/displayJudge React state is still set at lower frequency
       // for non-HUD consumers (pause screen, results, etc.)
       const gs = gsRef.current;
-      if (scoreTextRef.current) scoreTextRef.current.textContent = String(gs.score);
       if (comboTextRef.current) comboTextRef.current.textContent = String(gs.combo);
       if (accuracyTextRef.current) {
         const tot = gs.perfectPlus + gs.perfects + gs.goods + gs.misses;
@@ -3764,12 +3762,10 @@ export default function Game() {
         accuracyTextRef.current.textContent = acc.toFixed(1) + '%';
       }
     }
-    // Sync React state at reduced frequency (5Hz) for non-HUD consumers ONLY when not playing
-    if (now - lastReactSyncRef.current >= 200) {
+    // Sync React state at ~10Hz (100ms) for HUD consumers (AnimatedScore, multiplier, progress ring)
+    if (now - lastReactSyncRef.current >= 100) {
       lastReactSyncRef.current = now;
-      if (phaseRef.current !== "playing") {
-        setDisplayGs({ ...gsRef.current });
-      }
+      setDisplayGs({ ...gsRef.current });
       // Prune expired judgments older than 450ms
       let write = 0;
       const arr = jRef.current;
