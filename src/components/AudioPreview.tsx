@@ -33,6 +33,51 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+function AudioPreviewProgress({ isThisTrack, isPlaying, isFullSong }: { isThisTrack: boolean, isPlaying: boolean, isFullSong: boolean }) {
+  const progress = useGlobalPlayer(s => isThisTrack ? s.progress : 0);
+  const displayProgress = isThisTrack ? progress * 100 : 0;
+
+  return (
+    <div className="h-1 rounded-full overflow-hidden relative" style={{ background: 'rgba(255,255,255,0.08)' }}>
+      {/* Waveform visualizer simulation */}
+      {isPlaying && (
+        <div className="absolute inset-0 flex items-center justify-around px-1 pointer-events-none opacity-40">
+          {[...Array(12)].map((_, i) => (
+            <motion.div
+              key={i}
+              animate={{ scaleY: [0.25, 1, 0.4, 1.2, 0.6] }}
+              transition={{ repeat: Infinity, duration: 0.5 + (i % 5) * 0.1, ease: 'linear', delay: i * 0.05 }}
+              style={{ width: '2px', height: '8px', transformOrigin: 'bottom', background: isFullSong ? 'var(--color-neon-cyan)' : '#fff' }}
+            />
+          ))}
+        </div>
+      )}
+      <div
+        className="h-full rounded-full transition-all duration-200"
+        style={{
+          width: `${Math.min(displayProgress, 100)}%`,
+          background: isFullSong
+            ? 'linear-gradient(90deg, var(--color-neon-cyan), var(--color-neon-purple))'
+            : 'linear-gradient(90deg, var(--color-text-muted), var(--color-text-secondary))',
+        }}
+      />
+    </div>
+  );
+}
+
+function AudioPreviewTime({ isThisTrack, isPlaying, isFullSong, durationLabel }: { isThisTrack: boolean, isPlaying: boolean, isFullSong: boolean, durationLabel: string }) {
+  const currentTime = useGlobalPlayer(s => isThisTrack ? s.currentTime : 0);
+  const displayTime = isThisTrack ? currentTime : 0;
+
+  return (
+    <span className="text-[10px] font-mono flex-shrink-0" style={{
+      color: isFullSong ? 'var(--color-neon-cyan)' : 'var(--color-text-muted)',
+    }}>
+      {isPlaying ? formatTime(displayTime) : durationLabel}
+    </span>
+  );
+}
+
 export default function AudioPreview({
   audioUrl,
   title,
@@ -54,8 +99,6 @@ export default function AudioPreview({
   // Check if THIS track is the one currently playing
   const isThisTrack = currentTrack?.audioUrl === audioUrl && currentTrack?.day === day;
   const globalPlaying = useGlobalPlayer(s => isThisTrack ? s.isPlaying : false);
-  const progress = useGlobalPlayer(s => isThisTrack ? s.progress : 0);
-  const currentTime = useGlobalPlayer(s => isThisTrack ? s.currentTime : 0);
   const duration = useGlobalPlayer(s => isThisTrack ? s.duration : 0);
 
   const globalToggle = useGlobalPlayer(s => s.toggle);
@@ -107,9 +150,6 @@ export default function AudioPreview({
     );
   }
 
-  const displayProgress = isThisTrack ? progress * 100 : 0;
-  const displayTime = isThisTrack ? currentTime : 0;
-
   return (
     <div className="space-y-1" onClick={(e) => e.stopPropagation()}>
       <div
@@ -131,30 +171,7 @@ export default function AudioPreview({
         </button>
 
         <div className="flex-1 min-w-0">
-          <div className="h-1 rounded-full overflow-hidden relative" style={{ background: 'rgba(255,255,255,0.08)' }}>
-            {/* Waveform visualizer simulation */}
-            {isPlaying && (
-              <div className="absolute inset-0 flex items-center justify-around px-1 pointer-events-none opacity-40">
-                {[...Array(12)].map((_, i) => (
-                  <motion.div
-                    key={i}
-                    animate={{ scaleY: [0.25, 1, 0.4, 1.2, 0.6] }}
-                    transition={{ repeat: Infinity, duration: 0.5 + (i % 5) * 0.1, ease: 'linear', delay: i * 0.05 }}
-                    style={{ width: '2px', height: '8px', transformOrigin: 'bottom', background: isFullSong ? 'var(--color-neon-cyan)' : '#fff' }}
-                  />
-                ))}
-              </div>
-            )}
-            <div
-              className="h-full rounded-full transition-all duration-200"
-              style={{
-                width: `${Math.min(displayProgress, 100)}%`,
-                background: isFullSong
-                  ? 'linear-gradient(90deg, var(--color-neon-cyan), var(--color-neon-purple))'
-                  : 'linear-gradient(90deg, var(--color-text-muted), var(--color-text-secondary))',
-              }}
-            />
-          </div>
+          <AudioPreviewProgress isThisTrack={isThisTrack} isPlaying={isPlaying} isFullSong={isFullSong} />
           {tierLabel && (
             <div className="text-[8px] font-mono mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
               {tierLabel}
@@ -162,11 +179,7 @@ export default function AudioPreview({
           )}
         </div>
 
-        <span className="text-[10px] font-mono flex-shrink-0" style={{
-          color: isFullSong ? 'var(--color-neon-cyan)' : 'var(--color-text-muted)',
-        }}>
-          {isPlaying ? formatTime(displayTime) : durationLabel}
-        </span>
+        <AudioPreviewTime isThisTrack={isThisTrack} isPlaying={isPlaying} isFullSong={isFullSong} durationLabel={durationLabel} />
       </div>
 
       {/* Mythic: stems download link */}
