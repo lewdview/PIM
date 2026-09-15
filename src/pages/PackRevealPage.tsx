@@ -5,7 +5,7 @@ import { useVaultStore } from '../store/useVaultStore';
 import Card from '../components/Card';
 import RarityBadge from '../components/RarityBadge';
 import { RARITY_CONFIG, getSupplyCap, type Rarity } from '../utils/rarity';
-import { ArrowRight, Share2 } from 'lucide-react';
+import { ArrowRight, Share2, Check, Sparkles } from 'lucide-react';
 import { farcasterService } from '../services/farcasterService';
 import UltraRewardModal from '../components/UltraRewardModal';
 import PackRipAnimation from '../components/PackRipAnimation';
@@ -28,6 +28,7 @@ export default function PackRevealPage() {
   const [showSummary, setShowSummary] = useState(false);
   const [ultraModalOpen, setUltraModalOpen] = useState(false);
   const [tokenReward, setTokenReward] = useState<{ tokenAmount: number; newBalance?: number } | null>(null);
+  const [copiedShare, setCopiedShare] = useState(false);
   // 'tap' → PackRipAnimation, 'cinematic' → PackContainer, 'slide' → skip straight to cards
   const [ripDone, setRipDone] = useState(
     () => !revealPackMeta || (revealPackMeta.revealType !== 'tap' && revealPackMeta.revealType !== 'cinematic')
@@ -242,20 +243,61 @@ export default function PackRevealPage() {
   const handleCastPull = async () => {
     audioManager.playSfx('tap_nav', 0.15);
     haptics.lightTap();
-    const highestCard = [...revealCards].sort((a, b) => {
+    const cardsToUse = (accumulatedCards && accumulatedCards.length > 0) ? accumulatedCards : revealCards;
+    const highestCard = [...cardsToUse].sort((a, b) => {
       const order = ['common', 'uncommon', 'rare', 'legendary', 'mythic'];
       return order.indexOf(b.card.rarity) - order.indexOf(a.card.rarity);
     })[0];
 
     const cardTitle = highestCard?.card?.title || 'Collectible Cards';
     const rarity = (highestCard?.card?.rarity || 'rare').toUpperCase();
-    const shareText = `⚡ Just pulled [${rarity}] ${cardTitle} from a booster pack in PIM : th3v4ult!\n\nCheck out the 365 music vault & collectible cards on Base Mainnet 🃏🎛️`;
-    const embedUrl = 'https://pim.th3scr1b3.art/vault';
+    const packLabel = revealPackMeta?.label || 'Booster Pack';
+    const shareText = `⚡ Just pulled [${rarity}] "${cardTitle}" from a ${packLabel} in PIM : th3v4ult!\n\nCheck out the 365 music vault & collectible cards on Base Mainnet 🃏🎛️`;
+    const embedUrl = typeof window !== 'undefined' ? `${window.location.origin}/vault` : 'https://pim.th3scr1b3.art/vault';
     await farcasterService.composeCast({
       text: shareText,
       embeds: [embedUrl],
       channelKey: 'base',
     });
+  };
+
+  const handleSharePull = async () => {
+    audioManager.playSfx('tap_nav', 0.15);
+    haptics.lightTap();
+    const cardsToUse = (accumulatedCards && accumulatedCards.length > 0) ? accumulatedCards : revealCards;
+    const highestCard = [...cardsToUse].sort((a, b) => {
+      const order = ['common', 'uncommon', 'rare', 'legendary', 'mythic'];
+      return order.indexOf(b.card.rarity) - order.indexOf(a.card.rarity);
+    })[0];
+
+    const cardTitle = highestCard?.card?.title || 'Collectible Cards';
+    const rarity = (highestCard?.card?.rarity || 'rare').toUpperCase();
+    const packLabel = revealPackMeta?.label || 'Booster Pack';
+    const shareText = `⚡ Just pulled [${rarity}] "${cardTitle}" from a ${packLabel} in PIM : th3v4ult!\n\nCheck out the 365 music vault & collectible cards on Base Mainnet 🃏🎛️`;
+    const embedUrl = typeof window !== 'undefined' ? `${window.location.origin}/vault` : 'https://pim.th3scr1b3.art/vault';
+
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: `PIM Vault Pull — [${rarity}] ${cardTitle}`,
+          text: shareText,
+          url: embedUrl,
+        });
+        return;
+      } catch (err: any) {
+        if (err.name === 'AbortError') return;
+      }
+    }
+
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(`${shareText}\n${embedUrl}`);
+        setCopiedShare(true);
+        setTimeout(() => setCopiedShare(false), 2500);
+      } catch (err) {
+        console.warn('Clipboard write failed', err);
+      }
+    }
   };
 
   if (tokenReward) {
@@ -337,6 +379,8 @@ export default function PackRevealPage() {
         onComplete={handleDone}
         onBuyAnother={revealPackMeta?.showRipAnother ? handleBuyAnother : undefined}
         isRepurchasing={isRepurchasing}
+        onCastPull={handleCastPull}
+        onSharePull={handleSharePull}
       />
     );
   }
@@ -551,7 +595,7 @@ export default function PackRevealPage() {
             })()}
             <button
               onClick={handleCastPull}
-              className="px-4 py-3 rounded-xl font-bold text-sm tracking-wider uppercase flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-[0.99]"
+              className="px-4 py-3 rounded-xl font-bold text-sm tracking-wider uppercase flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
               style={{
                 background: 'rgba(138, 99, 210, 0.15)',
                 border: '1px solid rgba(138, 99, 210, 0.5)',
@@ -561,6 +605,19 @@ export default function PackRevealPage() {
             >
               <Share2 size={16} />
               <span className="hidden sm:inline">Cast Pull</span>
+            </button>
+            <button
+              onClick={handleSharePull}
+              className="px-4 py-3 rounded-xl font-bold text-sm tracking-wider uppercase flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
+              style={{
+                background: copiedShare ? 'rgba(16, 185, 129, 0.2)' : 'rgba(0, 240, 255, 0.15)',
+                border: copiedShare ? '1px solid #10b981' : '1px solid rgba(0, 240, 255, 0.5)',
+                color: copiedShare ? '#10b981' : '#00f0ff',
+              }}
+              title="Share or copy pull link"
+            >
+              {copiedShare ? <Check size={16} /> : <Sparkles size={16} />}
+              <span className="hidden sm:inline">{copiedShare ? 'Copied!' : 'Share Pull'}</span>
             </button>
             <button
               onClick={handleDone}

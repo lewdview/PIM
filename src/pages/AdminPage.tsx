@@ -14,7 +14,7 @@ import {
 } from '../utils/adminConfig';
 import type { Rarity } from '../utils/rarity';
 import { ROLL_RATES } from '../utils/rarity';
-import { getEchoPoolStats, flushEchoPool } from '../utils/echoSystem';
+import { getEchoPoolStats, flushEchoPool, fetchLiveEchoPool, type EchoCard } from '../utils/echoSystem';
 import '../styles/AdminStyles.css';
 import { supabase } from '../services/supabaseClient';
 import { fetchAllCards, createStripeCheckoutSession, redirectToStripeCheckout, type VaultCard } from '../services/vaultService';
@@ -401,6 +401,34 @@ export default function AdminPage() {
   const [pushStatus, setPushStatus] = useState<'idle' | 'pushing' | 'success' | 'error'>('idle');
   const [activeSection, setActiveSection] = useState<'rates' | 'modifiers' | 'economy' | 'echo' | 'simulation' | 'config' | 'analytics' | 'gen0_reset' | 'broadcast' | 'stripe'>('rates');
 
+  // Live Echo Pool State
+  const [liveEchoPool, setLiveEchoPool] = useState<EchoCard[]>([]);
+  const [liveEchoStats, setLiveEchoStats] = useState<{ total: number; byRarity: Record<string, number>; byGeneration: Record<number, number> }>({
+    total: 0,
+    byRarity: {},
+    byGeneration: {},
+  });
+  const [loadingEchoes, setLoadingEchoes] = useState(false);
+
+  const refreshEchoes = useCallback(async () => {
+    setLoadingEchoes(true);
+    try {
+      const res = await fetchLiveEchoPool();
+      setLiveEchoPool(res.pool);
+      setLiveEchoStats(res.stats);
+    } catch (e) {
+      console.error('Failed to load live echoes:', e);
+    } finally {
+      setLoadingEchoes(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (authenticated && activeSection === 'echo') {
+      refreshEchoes();
+    }
+  }, [authenticated, activeSection, refreshEchoes]);
+
   // Stripe Ledger State
   const [stripeOrders, setStripeOrders] = useState<any[]>([]);
   const [loadingStripeOrders, setLoadingStripeOrders] = useState(false);
@@ -478,11 +506,30 @@ export default function AdminPage() {
   }, []);
 
   // Save config
-  const handleSave = useCallback(() => {
-    saveAdminConfig(config);
+  const handleSave = useCallback(async () => {
+    const pass = sessionStorage.getItem('th3vault_admin_pass') || 'th3scr1b3';
+    saveAdminConfig(config, pass);
     setHasChanges(false);
     setSaveFlash(true);
-    setTimeout(() => setSaveFlash(false), 1500);
+    setPushStatus('pushing');
+    try {
+      const { data, error } = await supabase.functions.invoke('vault-engine', {
+        body: { action: 'updateAdminConfig', payload: { config, passphrase: pass } }
+      });
+      if (error || !data?.success) {
+        console.warn('Backend updateAdminConfig error:', error || data);
+        setPushStatus('error');
+      } else {
+        setPushStatus('success');
+      }
+    } catch (e) {
+      console.warn('Backend updateAdminConfig exception:', e);
+      setPushStatus('error');
+    }
+    setTimeout(() => {
+      setSaveFlash(false);
+      setPushStatus('idle');
+    }, 2500);
   }, [config]);
 
   // Reset to defaults
@@ -1754,76 +1801,175 @@ export default function AdminPage() {
             {/* Echo Pool Stats */}
             <div style={{ marginTop: '24px', padding: '16px', border: '1px solid rgba(0,212,170,0.15)', background: 'rgba(0,0,0,0.3)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <div style={{
-                  fontFamily: '"Impact", "Arial Black", sans-serif',
-                  fontSize: '16px',
-                  textTransform: 'uppercase',
-                }}>
-                  Echo Pool Status
-                </div>
-                <button
-                  type="button"
-                  onClick={() => { flushEchoPool(); setConfig(c => ({ ...c })); }}
-                  style={{
-                    padding: '6px 14px',
-                    fontFamily: '"JetBrains Mono", monospace',
-                    fontSize: '9px', fontWeight: 700,
+                <div>
+                  <div style={{
+                    fontFamily: '"Impact", "Arial Black", sans-serif',
+                    fontSize: '16px',
                     textTransform: 'uppercase',
-                    letterSpacing: '0.08em',
-                    background: 'rgba(255,56,0,0.1)',
-                    border: '1px solid rgba(255,56,0,0.3)',
-                    color: '#ff3800',
-                    cursor: 'pointer',
-                  }}
-                >
-                  🗑 Flush Pool
-                </button>
+                  }}>
+                    Echo Pool Status
+                  </div>
+                  <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', opacity: 0.4 }}>
+                    Live fractured cards cycling in pack pool
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <button
+                    type="button"
+                    onClick={() => refreshEchoes()}
+                    disabled={loadingEchoes}
+                    style={{
+                      padding: '6px 14px',
+                      fontFamily: '"JetBrains Mono", monospace',
+                      fontSize: '9px', fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.08em',
+                      background: 'rgba(0,212,170,0.1)',
+                      border: '1px solid rgba(0,212,170,0.3)',
+                      color: '#00d4aa',
+                      cursor: loadingEchoes ? 'wait' : 'pointer',
+                    }}
+                  >
+                    {loadingEchoes ? '↻ Fetching...' : '↻ Refresh Echoes'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      flushEchoPool();
+                      try {
+                        await supabase.from('echo_pool').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+                      } catch {}
+                      refreshEchoes();
+                      setConfig(c => ({ ...c }));
+                    }}
+                    style={{
+                      padding: '6px 14px',
+                      fontFamily: '"JetBrains Mono", monospace',
+                      fontSize: '9px', fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.08em',
+                      background: 'rgba(255,56,0,0.1)',
+                      border: '1px solid rgba(255,56,0,0.3)',
+                      color: '#ff3800',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    🗑 Flush Pool
+                  </button>
+                </div>
               </div>
 
               {(() => {
-                const stats = getEchoPoolStats();
+                const stats = liveEchoStats.total > 0 ? liveEchoStats : getEchoPoolStats();
                 return (
-                  <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
-                    <div>
-                      <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', opacity: 0.4, textTransform: 'uppercase', marginBottom: '4px' }}>Total Echoes</div>
-                      <div style={{ fontFamily: '"Impact", sans-serif', fontSize: '32px', color: '#00d4aa' }}>{stats.total}</div>
-                    </div>
+                  <div>
+                    <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+                      <div>
+                        <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', opacity: 0.4, textTransform: 'uppercase', marginBottom: '4px' }}>Total Echoes</div>
+                        <div style={{ fontFamily: '"Impact", sans-serif', fontSize: '32px', color: '#00d4aa' }}>{stats.total}</div>
+                      </div>
 
-                    <div style={{ flex: 1, minWidth: '120px' }}>
-                      <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', opacity: 0.4, textTransform: 'uppercase', marginBottom: '8px' }}>By Rarity</div>
-                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                        {RARITIES.map(r => (
-                          <div key={r} style={{
-                            padding: '4px 8px',
-                            border: `1px solid ${RARITY_COLORS[r]}30`,
-                            background: `${RARITY_COLORS[r]}08`,
-                          }}>
-                            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '9px', color: RARITY_COLORS[r], fontWeight: 700 }}>
-                              {r.slice(0, 3).toUpperCase()}: {stats.byRarity[r] || 0}
-                            </span>
-                          </div>
-                        ))}
+                      <div style={{ flex: 1, minWidth: '120px' }}>
+                        <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', opacity: 0.4, textTransform: 'uppercase', marginBottom: '8px' }}>By Rarity</div>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          {RARITIES.map(r => (
+                            <div key={r} style={{
+                              padding: '4px 8px',
+                              border: `1px solid ${RARITY_COLORS[r]}30`,
+                              background: `${RARITY_COLORS[r]}08`,
+                            }}>
+                              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '9px', color: RARITY_COLORS[r], fontWeight: 700 }}>
+                                {r.slice(0, 3).toUpperCase()}: {stats.byRarity[r] || 0}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div style={{ minWidth: '80px' }}>
+                        <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', opacity: 0.4, textTransform: 'uppercase', marginBottom: '8px' }}>By Generation</div>
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                          {Object.entries(stats.byGeneration).sort(([a], [b]) => Number(a) - Number(b)).map(([gen, count]) => (
+                            <div key={gen} style={{
+                              padding: '4px 8px',
+                              border: '1px solid rgba(0,212,170,0.2)',
+                              fontFamily: '"JetBrains Mono", monospace',
+                              fontSize: '9px',
+                              color: '#00d4aa',
+                            }}>
+                              G{gen}: {count as number}
+                            </div>
+                          ))}
+                          {Object.keys(stats.byGeneration).length === 0 && (
+                            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '9px', opacity: 0.3 }}>Empty pool</span>
+                          )}
+                        </div>
                       </div>
                     </div>
 
-                    <div style={{ minWidth: '80px' }}>
-                      <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', opacity: 0.4, textTransform: 'uppercase', marginBottom: '8px' }}>By Generation</div>
-                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                        {Object.entries(stats.byGeneration).sort(([a], [b]) => Number(a) - Number(b)).map(([gen, count]) => (
-                          <div key={gen} style={{
-                            padding: '4px 8px',
-                            border: '1px solid rgba(0,212,170,0.2)',
-                            fontFamily: '"JetBrains Mono", monospace',
-                            fontSize: '9px',
-                            color: '#00d4aa',
-                          }}>
-                            G{gen}: {count as number}
-                          </div>
-                        ))}
-                        {Object.keys(stats.byGeneration).length === 0 && (
-                          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '9px', opacity: 0.3 }}>Empty pool</span>
-                        )}
+                    {/* Echo Cards in Rotation Table */}
+                    <div style={{ marginTop: '20px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '16px' }}>
+                      <div style={{
+                        fontFamily: '"JetBrains Mono", monospace',
+                        fontSize: '9px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.1em',
+                        color: '#00d4aa',
+                        marginBottom: '10px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}>
+                        <span>CARDS CURRENTLY IN ROTATION ({liveEchoPool.length})</span>
+                        <span style={{ opacity: 0.5, fontSize: '8px' }}>PULLED RANDOMLY VIA PACK ECHO ROLLS</span>
                       </div>
+
+                      {loadingEchoes ? (
+                        <div style={{ padding: '16px', textAlign: 'center', fontFamily: '"JetBrains Mono", monospace', fontSize: '10px', opacity: 0.6 }}>
+                          Fetching live echo rotation from Supabase...
+                        </div>
+                      ) : liveEchoPool.length === 0 ? (
+                        <div style={{ padding: '16px', textAlign: 'center', fontFamily: '"JetBrains Mono", monospace', fontSize: '10px', opacity: 0.4, border: '1px dashed rgba(255,255,255,0.1)' }}>
+                          No echo cards currently in rotation. Burn cards in The Forge to fracture them into echoes!
+                        </div>
+                      ) : (
+                        <div style={{ maxHeight: '260px', overflowY: 'auto', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.2)' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: '"JetBrains Mono", monospace', fontSize: '9px' }}>
+                            <thead>
+                              <tr style={{ background: 'rgba(255,255,255,0.03)', textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                                <th style={{ padding: '8px' }}>DAY</th>
+                                <th style={{ padding: '8px' }}>TITLE</th>
+                                <th style={{ padding: '8px' }}>ORIGIN</th>
+                                <th style={{ padding: '8px' }}>ECHO RARITY</th>
+                                <th style={{ padding: '8px' }}>GEN</th>
+                                <th style={{ padding: '8px' }}>CREATED</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {liveEchoPool.slice(0, 50).map((card) => (
+                                <tr key={card.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                                  <td style={{ padding: '6px 8px', color: '#00d4aa' }}>#{card.sourceDay}</td>
+                                  <td style={{ padding: '6px 8px', fontWeight: 700, color: '#fff' }}>{card.sourceTitle}</td>
+                                  <td style={{ padding: '6px 8px', color: RARITY_COLORS[card.sourceRarity] || '#fff' }}>
+                                    {card.sourceRarity.toUpperCase()}
+                                  </td>
+                                  <td style={{ padding: '6px 8px', color: RARITY_COLORS[card.echoRarity] || '#00d4aa', fontWeight: 700 }}>
+                                    {card.echoRarity.toUpperCase()}
+                                  </td>
+                                  <td style={{ padding: '6px 8px' }}>
+                                    <span style={{ padding: '2px 6px', background: 'rgba(0,212,170,0.15)', color: '#00d4aa', borderRadius: '2px', fontWeight: 700 }}>
+                                      G{card.generation}
+                                    </span>
+                                  </td>
+                                  <td style={{ padding: '6px 8px', opacity: 0.5 }}>
+                                    {new Date(card.createdAt).toLocaleDateString()}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );

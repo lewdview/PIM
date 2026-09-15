@@ -19,6 +19,7 @@
 
 import type { Rarity } from './rarity';
 import { getAdminConfig } from './adminConfig';
+import { supabase } from '../services/supabaseClient';
 
 // ===== ECHO CARD TYPE =====
 
@@ -52,8 +53,35 @@ function getEchoPoolRaw(): EchoCard[] {
   } catch { return []; }
 }
 
-function saveEchoPool(pool: EchoCard[]) {
+export function saveEchoPool(pool: EchoCard[]) {
   localStorage.setItem(ECHO_POOL_KEY, JSON.stringify(pool));
+}
+
+export function addEchoToPool(echo: any) {
+  const pool = getEchoPoolRaw();
+  const id = echo.id || `echo-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const exists = pool.some(e => e.id === id);
+  if (!exists) {
+    pool.unshift({
+      id,
+      sourceCardId: echo.source_card_id || echo.sourceCardId || `card-${echo.source_day || echo.sourceDay || 1}`,
+      sourceTitle: echo.source_title || echo.sourceTitle || 'Echo Card',
+      sourceDay: echo.source_day || echo.sourceDay || 1,
+      sourceMood: echo.source_mood || echo.sourceMood || 'dark',
+      sourceRarity: echo.source_rarity || echo.sourceRarity || 'common',
+      echoRarity: echo.echo_rarity || echo.echoRarity || 'common',
+      generation: echo.generation || echo.echo_generation || 1,
+      coverUrl: echo.cover_url || echo.coverUrl || '',
+      audioUrl: echo.audio_url || echo.audioUrl || '',
+      energy: echo.energy ?? 0.5,
+      valence: echo.valence ?? 0.5,
+      tempo: echo.tempo ?? 120,
+      genre: echo.genre || [],
+      tags: echo.tags || [],
+      createdAt: echo.created_at || echo.createdAt || new Date().toISOString()
+    });
+    saveEchoPool(pool);
+  }
 }
 
 // ===== RARITY DEGRADATION =====
@@ -237,6 +265,102 @@ export function burnCardToEcho(card: {
 }
 
 // ===== ECHO POOL QUERIES =====
+
+/**
+ * Fetch the live echo pool from Supabase vault-engine or direct echo_pool table,
+ * syncing it into local cache.
+ */
+export async function fetchLiveEchoPool(): Promise<{
+  pool: EchoCard[];
+  stats: {
+    total: number;
+    byRarity: Record<string, number>;
+    byGeneration: Record<number, number>;
+  };
+}> {
+  try {
+    const { data, error } = await supabase.functions.invoke('vault-engine', {
+      body: { action: 'getEchoPool' },
+    });
+
+    if (!error && data?.success && Array.isArray(data.echoes)) {
+      const livePool: EchoCard[] = data.echoes.map((e: any) => ({
+        id: e.id,
+        sourceCardId: e.source_card_id || e.sourceCardId || `card-${e.source_day || 1}`,
+        sourceTitle: e.source_title || e.sourceTitle || 'Echo Card',
+        sourceDay: Number(e.source_day || e.sourceDay || 1),
+        sourceMood: (e.source_mood || e.sourceMood || 'dark') as 'light' | 'dark',
+        sourceRarity: (e.source_rarity || e.sourceRarity || 'common') as Rarity,
+        echoRarity: (e.echo_rarity || e.echoRarity || 'common') as Rarity,
+        generation: Number(e.generation || e.echo_generation || 1),
+        coverUrl: e.cover_url || e.coverUrl || '',
+        audioUrl: e.audio_url || e.audioUrl || '',
+        energy: Number(e.energy ?? 0.5),
+        valence: Number(e.valence ?? 0.5),
+        tempo: Number(e.tempo ?? 120),
+        genre: e.genre || [],
+        tags: e.tags || [],
+        createdAt: e.created_at || e.createdAt || new Date().toISOString(),
+      }));
+
+      saveEchoPool(livePool);
+      return {
+        pool: livePool,
+        stats: {
+          total: livePool.length,
+          byRarity: data.byRarity || {},
+          byGeneration: data.byGeneration || {},
+        },
+      };
+    }
+  } catch (err) {
+    console.warn('[EchoSystem] Failed to invoke getEchoPool from vault-engine:', err);
+  }
+
+  // Fallback: direct Supabase query
+  try {
+    const { data: echoRows, error: directErr } = await supabase
+      .from('echo_pool')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if (!directErr && echoRows) {
+      const livePool: EchoCard[] = echoRows.map((e: any) => ({
+        id: e.id,
+        sourceCardId: e.source_card_id || e.sourceCardId || `card-${e.source_day || 1}`,
+        sourceTitle: e.source_title || e.sourceTitle || 'Echo Card',
+        sourceDay: Number(e.source_day || e.sourceDay || 1),
+        sourceMood: (e.source_mood || e.sourceMood || 'dark') as 'light' | 'dark',
+        sourceRarity: (e.source_rarity || e.sourceRarity || 'common') as Rarity,
+        echoRarity: (e.echo_rarity || e.echoRarity || 'common') as Rarity,
+        generation: Number(e.generation || e.echo_generation || 1),
+        coverUrl: e.cover_url || e.coverUrl || '',
+        audioUrl: e.audio_url || e.audioUrl || '',
+        energy: Number(e.energy ?? 0.5),
+        valence: Number(e.valence ?? 0.5),
+        tempo: Number(e.tempo ?? 120),
+        genre: e.genre || [],
+        tags: e.tags || [],
+        createdAt: e.created_at || e.createdAt || new Date().toISOString(),
+      }));
+
+      saveEchoPool(livePool);
+      return {
+        pool: livePool,
+        stats: getEchoPoolStats(),
+      };
+    }
+  } catch (err) {
+    console.warn('[EchoSystem] Direct echo_pool query fallback failed:', err);
+  }
+
+  const localPool = getEchoPoolRaw();
+  return {
+    pool: localPool,
+    stats: getEchoPoolStats(),
+  };
+}
 
 /**
  * Get the full echo pool.

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { loadOpts, resetOpts, keyLabel, getActiveTheme, getEffectiveDpr, type GameOpts, type RenderResolution, type GfxLevel, type FpsTarget, type ParticleDensity, GAME_BACKGROUNDS, GAME_TRACKS } from "../lib/options";
 import { useLocation } from "wouter";
 import { clearCatalogCache } from "../game/api";
@@ -884,7 +884,37 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
   const [hapticsTestActive, setHapticsTestActive] = useState(false);
 
   // Sync state with useVaultStore
-  const { tokenBalance, unlockedSkins, unlockSkin, echoPrestigeScore, updateSettings, updateProgression, updateCheats, packDesignStyle, setPackDesignStyle, unlockedCheats } = useVaultStore();
+  const {
+    tokenBalance,
+    unlockedSkins,
+    unlockSkin,
+    echoPrestigeScore,
+    prestigeScore,
+    totalBurns,
+    collection,
+    streakCount,
+    totalPulls,
+    updateSettings,
+    updateProgression,
+    updateCheats,
+    packDesignStyle,
+    setPackDesignStyle,
+    unlockedCheats,
+  } = useVaultStore();
+
+  const activePrestigeScore = prestigeScore ?? echoPrestigeScore ?? 0;
+  const echoCardsCount = useMemo(() => (collection || []).filter(c => c.isEcho || (c.echoGeneration && c.echoGeneration > 0)).length, [collection]);
+  const nextLockedBg = useMemo(() => GAME_BACKGROUNDS.find(bg => bg.unlockScore > activePrestigeScore && bg.unlockScore < 999999), [activePrestigeScore]);
+  const prevUnlockScore = useMemo(() => {
+    const unlockedList = GAME_BACKGROUNDS.filter(bg => bg.unlockScore <= activePrestigeScore);
+    return unlockedList.length > 0 ? unlockedList[unlockedList.length - 1].unlockScore : 0;
+  }, [activePrestigeScore]);
+  const bgProgressPct = useMemo(() => {
+    if (!nextLockedBg) return 100;
+    const range = nextLockedBg.unlockScore - prevUnlockScore;
+    if (range <= 0) return 100;
+    return Math.min(100, Math.max(0, Math.round(((activePrestigeScore - prevUnlockScore) / range) * 100)));
+  }, [activePrestigeScore, nextLockedBg, prevUnlockScore]);
 
   const [activeCardSkin, setActiveCardSkin] = useState('original');
   const [activeCardBack, setActiveCardBack] = useState('classic');
@@ -2136,6 +2166,83 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                   <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Customize backgrounds rendering across dashboard and archive pages</p>
                 </div>
 
+                {/* Vault Prestige & Cosmetic Unlocks HUD */}
+                <div className="bg-black/60 border border-white/10 rounded-xl p-4 relative overflow-hidden backdrop-blur-md shadow-2xl">
+                  <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/10">
+                    <div className="flex items-center gap-2.5">
+                      <div
+                        className="w-9 h-9 rounded-lg flex items-center justify-center font-mono font-black text-sm"
+                        style={{
+                          background: isAvant ? 'rgba(57, 255, 20, 0.15)' : 'rgba(255, 20, 147, 0.15)',
+                          color: themeColor,
+                          border: `1px solid ${themeColor}40`,
+                        }}
+                      >
+                        ⚡
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs md:text-sm font-black tracking-wider text-white">
+                            VAULT PRESTIGE
+                          </span>
+                          <span className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-white/10 text-zinc-400 uppercase tracking-widest">
+                            Cosmetic Tier
+                          </span>
+                        </div>
+                        <div className="font-mono text-lg md:text-xl font-black" style={{ color: themeColor }}>
+                          {activePrestigeScore.toLocaleString()}{' '}
+                          <span className="text-[10px] font-medium text-zinc-400 tracking-normal">PTS</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Metric Badges */}
+                    <div className="flex flex-wrap items-center gap-1.5 font-mono text-[9px]">
+                      <div className="px-2 py-1 rounded bg-black/40 border border-white/5 text-zinc-300 flex items-center gap-1">
+                        <span>🔥</span>
+                        <span>STREAK: <strong className="text-white">{streakCount || 0}d</strong></span>
+                      </div>
+                      <div className="px-2 py-1 rounded bg-black/40 border border-white/5 text-zinc-300 flex items-center gap-1">
+                        <span>📦</span>
+                        <span>PULLS: <strong className="text-white">{totalPulls || 0}</strong></span>
+                      </div>
+                      <div className="px-2 py-1 rounded bg-black/40 border border-amber-500/20 text-amber-300/90 flex items-center gap-1">
+                        <span>💥</span>
+                        <span>BURNS: <strong className="text-white">{totalBurns || 0}</strong> (+{((totalBurns || 0) * 150).toLocaleString()} pts)</span>
+                      </div>
+                      <div className="px-2 py-1 rounded bg-black/40 border border-emerald-500/20 text-emerald-300/90 flex items-center gap-1">
+                        <span>◎</span>
+                        <span>ECHO CARDS: <strong className="text-white">{echoCardsCount}</strong> (+{(echoCardsCount * 400).toLocaleString()} pts)</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Progress Bar to Next Cosmetic */}
+                  <div className="pt-3">
+                    <div className="flex justify-between items-center text-[9px] font-mono mb-1.5">
+                      <span className="text-zinc-400">
+                        {nextLockedBg ? (
+                          <>
+                            NEXT UNLOCK: <strong className="text-white">{nextLockedBg.name.toUpperCase()}</strong> ({nextLockedBg.unlockScore.toLocaleString()} PTS)
+                          </>
+                        ) : (
+                          <strong className="text-emerald-400">ALL COSMETIC BACKGROUNDS UNLOCKED</strong>
+                        )}
+                      </span>
+                      <span className="font-black" style={{ color: themeColor }}>{bgProgressPct}%</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full transition-all duration-500 rounded-full"
+                        style={{ 
+                          width: `${bgProgressPct}%`,
+                          background: isAvant ? 'linear-gradient(90deg, #39FF14, #00E5FF)' : 'linear-gradient(90deg, #FF1493, #FFD700)'
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
                 {/* SvgBlurSlider */}
                 <div className="bg-black/40 border border-white/5 p-4 rounded-lg">
                   <h3 className="font-mono text-[9px] font-black text-white/40 uppercase tracking-wider border-b border-white/5 pb-1">BACKGROUND BLUR INTENSITY</h3>
@@ -2154,7 +2261,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                   {GAME_BACKGROUNDS.map(bg => {
                     const active = opts.gameBackground === bg.id;
-                    const canUnlock = echoPrestigeScore >= bg.unlockScore;
+                    const canUnlock = activePrestigeScore >= bg.unlockScore;
                     return (
                       <button
                         key={bg.id}
@@ -2198,7 +2305,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                   <div className="grid grid-cols-2 gap-2">
                     {GAME_TRACKS.map(track => {
                       const active = opts.gameTrack === track.id;
-                      const canUnlock = echoPrestigeScore >= track.unlockScore;
+                      const canUnlock = activePrestigeScore >= track.unlockScore;
                       return (
                         <button
                           key={track.id}

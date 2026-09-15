@@ -7,6 +7,8 @@ import { RARITY_CONFIG, type Rarity } from '../../utils/rarity';
 import { getCoverUrlForRarity, useSmartCoverArt, resolveSmartCoverUrl } from '../../utils/rarityArtwork';
 import { get365CardVariantStyle, getPackCoverFallback, getPackMultiCovers } from '../../utils/cardVariants';
 import { getFeaturedBombshellFoilCover, getRandomBombshellPackCover } from '../../utils/bombshellCards';
+import { farcasterService } from '../../services/farcasterService';
+import { Share2, Check, Sparkles } from 'lucide-react';
 import Card from '../Card';
 import RarityBadge from '../RarityBadge';
 import {
@@ -52,6 +54,8 @@ interface Props {
   onComplete: () => void;
   onBuyAnother?: () => void;
   isRepurchasing?: boolean;
+  onCastPull?: () => void;
+  onSharePull?: () => void;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -750,7 +754,7 @@ const shimmerKeyframes = `
 
 // ── Main Component ───────────────────────────────────────────────────
 
-export default function PackContainer({ meta, cards, accumulatedCards = cards, onComplete, onBuyAnother, isRepurchasing }: Props) {
+export default function PackContainer({ meta, cards, accumulatedCards = cards, onComplete, onBuyAnother, isRepurchasing, onCastPull, onSharePull }: Props) {
   const isBombshell = meta.category === 'bombshell' || meta.category === 'bombshell_token' || meta.label?.toLowerCase().includes('bombshell') || cards.some(c => c.card?.cardSet === 'bombshell' || c.card?.coverUrl?.includes('girl-covers') || c.card?.coverUrl?.includes('rare_covers'));
 
   const stableCoverImage = useMemo(() => {
@@ -800,6 +804,76 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const particlesRef = useRef<ShardParticle[]>([]);
   const animationFrameRef = useRef<number | null>(null);
+
+  const [shareCopied, setShareCopied] = useState(false);
+
+  const allCardsForShare = useMemo(() => {
+    return (accumulatedCards && accumulatedCards.length > 0) ? accumulatedCards : cards;
+  }, [accumulatedCards, cards]);
+
+  const topCardForShare = useMemo(() => {
+    if (!allCardsForShare || allCardsForShare.length === 0) return null;
+    const order: Record<string, number> = { common: 0, uncommon: 1, rare: 2, legendary: 3, mythic: 4 };
+    return [...allCardsForShare].sort((a, b) => {
+      const scoreA = order[a.card?.rarity] ?? 0;
+      const scoreB = order[b.card?.rarity] ?? 0;
+      return scoreB - scoreA;
+    })[0];
+  }, [allCardsForShare]);
+
+  const handleCastPull = useCallback(async () => {
+    audioManager.playSfx('tap_nav', 0.15);
+    if (onCastPull) {
+      onCastPull();
+      return;
+    }
+    const cardTitle = topCardForShare?.card?.title || 'Rare Drop';
+    const rarity = (topCardForShare?.card?.rarity || 'rare').toUpperCase();
+    const packLabel = meta.label || 'Booster Pack';
+    const text = `⚡ Just pulled [${rarity}] "${cardTitle}" from a ${packLabel} in PIM : th3v4ult!\n\nRip packs and sync the 365 music vault on Base Mainnet 🃏🎛️`;
+    const embedUrl = typeof window !== 'undefined' ? `${window.location.origin}/vault` : 'https://pim.th3scr1b3.art/vault';
+    await farcasterService.composeCast({
+      text,
+      embeds: [embedUrl],
+      channelKey: 'base',
+    });
+  }, [topCardForShare, meta.label, onCastPull]);
+
+  const handleSharePull = useCallback(async () => {
+    audioManager.playSfx('tap_nav', 0.15);
+    if (onSharePull) {
+      onSharePull();
+      return;
+    }
+    const cardTitle = topCardForShare?.card?.title || 'Rare Drop';
+    const rarity = (topCardForShare?.card?.rarity || 'rare').toUpperCase();
+    const packLabel = meta.label || 'Booster Pack';
+    const text = `⚡ Just pulled [${rarity}] "${cardTitle}" from a ${packLabel} in PIM : th3v4ult!\n\nRip packs and sync the 365 music vault on Base Mainnet 🃏🎛️`;
+    const embedUrl = typeof window !== 'undefined' ? `${window.location.origin}/vault` : 'https://pim.th3scr1b3.art/vault';
+
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: `PIM Vault Pull — [${rarity}] ${cardTitle}`,
+          text,
+          url: embedUrl,
+        });
+        return;
+      } catch (err: any) {
+        if (err.name === 'AbortError') return;
+      }
+    }
+
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(`${text}\n${embedUrl}`);
+        setShareCopied(true);
+        setTimeout(() => setShareCopied(false), 2500);
+      } catch (err) {
+        console.warn('Clipboard write failed', err);
+      }
+    }
+  }, [topCardForShare, meta.label, onSharePull]);
 
   // Adjust canvas size when fragment decrypter is shown
   useEffect(() => {
@@ -1896,7 +1970,7 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
         )}
       </AnimatePresence>
 
-      {/* Continue Button */}
+      {/* Continue Button & Actions */}
       <AnimatePresence>
         {(phase === 'layout' || phase === 'inspect') && (
           <motion.div
@@ -1904,8 +1978,11 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.8 }}
             style={{
-              position: 'fixed', bottom: '40px',
-              display: 'flex', gap: '12px', zIndex: 300,
+              position: 'fixed', bottom: '28px',
+              left: 0, right: 0,
+              display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center',
+              gap: '10px', zIndex: 300,
+              padding: '0 16px', pointerEvents: 'auto',
             }}
           >
             {onBuyAnother && (
@@ -1913,15 +1990,16 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
                 onClick={onBuyAnother}
                 disabled={isRepurchasing}
                 style={{
-                  padding: '12px 24px', borderRadius: '8px',
+                  padding: '10px 20px', borderRadius: '8px',
                   background: `${meta.accent}18`,
                   color: '#fff',
                   fontFamily: '"JetBrains Mono", monospace', fontWeight: 900,
-                  letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: '12px',
+                  letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: '11px',
                   border: `1px solid ${meta.accent}40`,
                   cursor: isRepurchasing ? 'default' : 'pointer',
                   opacity: isRepurchasing ? 0.5 : 1,
                   backdropFilter: 'blur(10px)',
+                  boxShadow: `0 4px 16px ${meta.accent}20`,
                 }}
                 whileHover={!isRepurchasing ? { scale: 1.05 } : {}}
                 whileTap={!isRepurchasing ? { scale: 0.98 } : {}}
@@ -1929,23 +2007,101 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
                 {isRepurchasing ? 'RIPPING...' : 'RIP ANOTHER'}
               </motion.button>
             )}
+
+            {/* Cast Pull */}
+            <motion.button
+              onClick={handleCastPull}
+              style={{
+                padding: '10px 18px', borderRadius: '8px',
+                background: 'rgba(138, 99, 210, 0.18)',
+                color: '#C4A7E7',
+                fontFamily: '"JetBrains Mono", monospace', fontWeight: 900,
+                letterSpacing: '0.12em', textTransform: 'uppercase', fontSize: '11px',
+                border: '1px solid rgba(138, 99, 210, 0.5)',
+                cursor: 'pointer',
+                backdropFilter: 'blur(10px)',
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                boxShadow: '0 4px 20px rgba(138, 99, 210, 0.25)',
+              }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.98 }}
+              title="Cast pull to Warpcast / Farcaster"
+            >
+              <Share2 size={13} />
+              <span>CAST PULL</span>
+            </motion.button>
+
+            {/* Share Pull */}
+            <motion.button
+              onClick={handleSharePull}
+              style={{
+                padding: '10px 18px', borderRadius: '8px',
+                background: shareCopied ? 'rgba(16, 185, 129, 0.2)' : 'rgba(0, 240, 255, 0.15)',
+                color: shareCopied ? '#10b981' : '#00f0ff',
+                fontFamily: '"JetBrains Mono", monospace', fontWeight: 900,
+                letterSpacing: '0.12em', textTransform: 'uppercase', fontSize: '11px',
+                border: shareCopied ? '1px solid #10b981' : '1px solid rgba(0, 240, 255, 0.5)',
+                cursor: 'pointer',
+                backdropFilter: 'blur(10px)',
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                boxShadow: shareCopied ? '0 4px 20px rgba(16, 185, 129, 0.3)' : '0 4px 20px rgba(0, 240, 255, 0.2)',
+              }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.98 }}
+              title="Share or copy pull link"
+            >
+              {shareCopied ? (
+                <>
+                  <Check size={13} />
+                  <span>COPIED!</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles size={13} />
+                  <span>SHARE PULL</span>
+                </>
+              )}
+            </motion.button>
+
+            {/* Fragment Decrypter */}
             <motion.button
               onClick={handleStartDecrypter}
               style={{
-                padding: '12px 24px', borderRadius: '8px',
+                padding: '10px 22px', borderRadius: '8px',
                 background: 'linear-gradient(135deg, #00f0ff, #7000ff)',
                 color: '#fff',
                 fontFamily: '"JetBrains Mono", monospace', fontWeight: 900,
                 letterSpacing: '0.15em', textTransform: 'uppercase', fontSize: '11px',
                 border: 'none',
                 cursor: 'pointer',
-                boxShadow: '0 8px 32px rgba(0,240,255,0.25)'
+                boxShadow: '0 8px 32px rgba(0,240,255,0.25)',
               }}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.98 }}
             >
               {hasDecryptedFragments ? '[ VIEW FRAGMENTS ]' : '[ DECRYPT FRAGMENTS ]'}
             </motion.button>
+
+            {/* Complete / Return */}
+            {hasDecryptedFragments && (
+              <motion.button
+                onClick={onComplete}
+                style={{
+                  padding: '10px 20px', borderRadius: '8px',
+                  background: 'linear-gradient(135deg, #ffd700, #ffaa00)',
+                  color: '#000',
+                  fontFamily: '"JetBrains Mono", monospace', fontWeight: 900,
+                  letterSpacing: '0.12em', textTransform: 'uppercase', fontSize: '11px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 16px rgba(255,215,0,0.3)',
+                }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                [ COMPLETE ]
+              </motion.button>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -2474,6 +2630,57 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
                       </motion.div>
                     );
                   })}
+                </div>
+
+                {/* Social Share & Cast Actions */}
+                <div className="flex gap-2.5 w-full">
+                  <motion.button
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: fragmentRewards.length * 0.15 + 1.0 }}
+                    onClick={handleCastPull}
+                    className="flex-1 py-2.5 rounded-lg text-[#C4A7E7] font-mono font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-all backdrop-blur-md"
+                    style={{
+                      background: 'rgba(138, 99, 210, 0.18)',
+                      border: '1px solid rgba(138, 99, 210, 0.5)',
+                      boxShadow: '0 2px 12px rgba(138, 99, 210, 0.2)',
+                    }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    title="Cast pull to Warpcast / Farcaster"
+                  >
+                    <Share2 size={13} className="text-[#C4A7E7]" />
+                    <span>CAST PULL</span>
+                  </motion.button>
+
+                  <motion.button
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: fragmentRewards.length * 0.15 + 1.05 }}
+                    onClick={handleSharePull}
+                    className="flex-1 py-2.5 rounded-lg font-mono font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer transition-all backdrop-blur-md"
+                    style={{
+                      background: shareCopied ? 'rgba(16, 185, 129, 0.2)' : 'rgba(0, 240, 255, 0.15)',
+                      border: shareCopied ? '1px solid #10b981' : '1px solid rgba(0, 240, 255, 0.5)',
+                      color: shareCopied ? '#10b981' : '#00f0ff',
+                      boxShadow: shareCopied ? '0 2px 12px rgba(16, 185, 129, 0.3)' : '0 2px 12px rgba(0, 240, 255, 0.2)',
+                    }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    title="Share or copy pull link"
+                  >
+                    {shareCopied ? (
+                      <>
+                        <Check size={13} className="text-[#10b981]" />
+                        <span>COPIED!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={13} className="text-[#00f0ff]" />
+                        <span>SHARE PULL</span>
+                      </>
+                    )}
+                  </motion.button>
                 </div>
 
                 {/* Action Buttons */}

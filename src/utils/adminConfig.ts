@@ -325,29 +325,64 @@ function buildDefaultConfig(): AdminConfig {
 
 let configCache: AdminConfig | null = null;
 
+function mergeWithDefaults(rawConfig: any, defaults: AdminConfig): AdminConfig {
+  const merged = { ...defaults, ...rawConfig } as AdminConfig;
+  merged.rollRates = { ...defaults.rollRates, ...(rawConfig.rollRates || {}) };
+  merged.proofRates = { ...defaults.proofRates, ...(rawConfig.proofRates || {}) };
+  merged.tokenValues = { ...defaults.tokenValues, ...(rawConfig.tokenValues || {}) };
+  merged.supplyCaps = { ...defaults.supplyCaps, ...(rawConfig.supplyCaps || {}) };
+  merged.dailyClaimRates = { ...defaults.dailyClaimRates, ...(rawConfig.dailyClaimRates || {}) };
+  merged.echoSystem = { ...defaults.echoSystem, ...(rawConfig.echoSystem || {}) };
+  merged.modifiers = (rawConfig.modifiers && rawConfig.modifiers.length > 0)
+    ? rawConfig.modifiers
+    : defaults.modifiers;
+  return merged;
+}
+
 export async function initAdminConfig(): Promise<AdminConfig> {
   const defaults = buildDefaultConfig();
+
+  // 1. Try fetching via vault-engine service role (bypasses RLS for active perks)
   try {
-    const { data, error } = await supabase.from('admin_config').select('config').eq('id', 1).single();
-    if (!error && data?.config) {
-      // Deep-merge remote config with defaults so partial configs don't crash
-      const merged = { ...defaults, ...data.config } as AdminConfig;
-      // Ensure nested objects are properly merged
-      merged.rollRates = { ...defaults.rollRates, ...(data.config.rollRates || {}) };
-      merged.proofRates = { ...defaults.proofRates, ...(data.config.proofRates || {}) };
-      merged.tokenValues = { ...defaults.tokenValues, ...(data.config.tokenValues || {}) };
-      merged.supplyCaps = { ...defaults.supplyCaps, ...(data.config.supplyCaps || {}) };
-      merged.dailyClaimRates = { ...defaults.dailyClaimRates, ...(data.config.dailyClaimRates || {}) };
-      merged.echoSystem = { ...defaults.echoSystem, ...(data.config.echoSystem || {}) };
-      merged.modifiers = (data.config.modifiers && data.config.modifiers.length > 0)
-        ? data.config.modifiers
-        : defaults.modifiers;
+    const { data, error } = await supabase.functions.invoke('vault-engine', {
+      body: { action: 'getAdminConfig' },
+    });
+    if (!error && data?.success && data.config) {
+      const merged = mergeWithDefaults(data.config, defaults);
       configCache = merged;
       localStorage.setItem(ADMIN_CONFIG_KEY, JSON.stringify(merged));
+      useVaultStore.getState().setAdminConfig(merged);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('th3vault_admin_config_updated', { detail: merged }));
+      }
       return configCache;
     }
+  } catch (err) {
+    console.warn('[AdminConfig] Edge function getAdminConfig failed, trying table fallback:', err);
+  }
+
+  // 2. Direct Supabase query fallback (checks id:1 or key:'global')
+  try {
+    const { data, error } = await supabase.from('admin_config').select('*').limit(2);
+    if (!error && data && data.length > 0) {
+      const match = data.find((r: any) => r.id === 1 || r.key === 'global') || data[0];
+      const remoteConfig = match.config || match.value;
+      if (remoteConfig) {
+        const merged = mergeWithDefaults(remoteConfig, defaults);
+        configCache = merged;
+        localStorage.setItem(ADMIN_CONFIG_KEY, JSON.stringify(merged));
+        useVaultStore.getState().setAdminConfig(merged);
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('th3vault_admin_config_updated', { detail: merged }));
+        }
+        return configCache;
+      }
+    }
   } catch { /* fallback to local */ }
-  return getAdminConfig();
+
+  const localConfig = getAdminConfig();
+  useVaultStore.getState().setAdminConfig(localConfig);
+  return localConfig;
 }
 
 export function getAdminConfig(): AdminConfig {
@@ -359,17 +394,7 @@ export function getAdminConfig(): AdminConfig {
     if (raw) {
       const parsed = JSON.parse(raw) as AdminConfig;
       if (parsed.version && parsed.version >= 2) {
-        const merged = { ...defaults, ...parsed };
-        merged.rollRates = { ...defaults.rollRates, ...(parsed.rollRates || {}) };
-        merged.proofRates = { ...defaults.proofRates, ...(parsed.proofRates || {}) };
-        merged.tokenValues = { ...defaults.tokenValues, ...(parsed.tokenValues || {}) };
-        merged.supplyCaps = { ...defaults.supplyCaps, ...(parsed.supplyCaps || {}) };
-        merged.dailyClaimRates = { ...defaults.dailyClaimRates, ...(parsed.dailyClaimRates || {}) };
-        merged.echoSystem = { ...defaults.echoSystem, ...(parsed.echoSystem || {}) };
-        merged.modifiers = (parsed.modifiers && parsed.modifiers.length > 0)
-          ? parsed.modifiers
-          : defaults.modifiers;
-        configCache = merged as AdminConfig;
+        configCache = mergeWithDefaults(parsed, defaults);
         return configCache;
       }
     }
@@ -384,6 +409,10 @@ export function saveAdminConfig(config: AdminConfig, customPassphrase?: string) 
   config.version = (config.version || 0) + 1;
   configCache = config;
   localStorage.setItem(ADMIN_CONFIG_KEY, JSON.stringify(config));
+  useVaultStore.getState().setAdminConfig(config);
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('th3vault_admin_config_updated', { detail: config }));
+  }
 
   // Sync to backend (fire and forget)
   const passphrase = customPassphrase || (typeof sessionStorage !== 'undefined' ? (sessionStorage.getItem('th3vault_admin_pass') || '') : '');

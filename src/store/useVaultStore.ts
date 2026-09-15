@@ -83,8 +83,9 @@ interface VaultState {
   // Collection
   collection: OwnedCard[];
 
-  // Echo Prestige Score
-  echoPrestigeScore: number;
+  // Prestige Score (formerly Echo Prestige Score)
+  prestigeScore: number;
+  echoPrestigeScore: number; // Backward-compatible alias
 
   // Pack reveal
   revealCards: OwnedCard[];
@@ -110,6 +111,10 @@ interface VaultState {
   streakCount: number;
   totalPulls: number;
   pullsSinceRarePlus: number;
+  totalBurns: number;
+
+  // Admin Config State
+  adminConfig: any;
 
   // Modifiers
   equippedCardId: string | null;
@@ -157,6 +162,8 @@ interface VaultState {
   updateSettings: (settings: Partial<ProfileSettings>) => Promise<void>;
   updateProgression: (progression: Partial<ProfileProgression>) => Promise<void>;
   updateCheats: (cheats: Partial<ProfileCheats>) => Promise<void>;
+  incrementBurns: (count?: number, isEcho?: boolean) => void;
+  setAdminConfig: (config: any) => void;
 
   // Profile Identity Actions
   updateProfile: (displayName: string, avatarUrl?: string | null, username?: string | null) => Promise<void>;
@@ -169,14 +176,16 @@ interface VaultState {
   syncClaimedRewards: (songId: string, tiers: string[]) => void;
 }
 
-export function calculateEchoPrestigeScore(
+export function calculatePrestigeScore(
   collection: OwnedCard[],
   streakCount: number,
-  totalPulls: number
+  totalPulls: number,
+  totalBurns: number = 0
 ): number {
   let score = 0;
   score += (streakCount || 0) * 120;
   score += (totalPulls || 0) * 15;
+  score += (totalBurns || 0) * 150; // Every burned card permanently awards +150 Vault Prestige
 
   for (const c of collection) {
     if (!c || !c.card) continue;
@@ -188,11 +197,14 @@ export function calculateEchoPrestigeScore(
     else if (rarity === 'mythic') score += 800;
 
     if (c.edition === 1) score += 500;
-    if (c.proof && c.proof !== 'none' as any) score += 200;
-    if (c.isEcho) score += 400;
+    if (c.proof && (c.proof as any) !== 'none') score += 200;
+    if (c.isEcho) score += 400; // Owned Echo Cards in rotation yield +400 bonus prestige
   }
   return score;
 }
+
+// Backward-compatible alias
+export const calculateEchoPrestigeScore = calculatePrestigeScore;
 
 async function syncUserFragmentToDb(userId: string, songId: string, count: number) {
   if (!userId || !songId) return;
@@ -278,6 +290,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   dailyCard: null,
   hasClaimed: false,
   collection: [],
+  prestigeScore: 0,
   echoPrestigeScore: 0,
   revealCards: [],
   isRevealing: false,
@@ -291,6 +304,8 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   streakCount: 0,
   totalPulls: 0,
   pullsSinceRarePlus: 0,
+  totalBurns: parseInt(localStorage.getItem('th3vault_total_burns') || '0', 10) || 0,
+  adminConfig: null,
   equippedCardId: null,
   unlockedSkins: JSON.parse(localStorage.getItem('local_unlocked_skins') || '["original", "glitch", "glass"]'),
   displayName: null,
@@ -310,6 +325,19 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       settings: { ...state.settings, packDesignStyle: style }
     }));
   },
+
+  setAdminConfig: (config) => set({ adminConfig: config }),
+
+  incrementBurns: (count = 1, isEcho = false) => set((state) => {
+    const nextBurns = (state.totalBurns || 0) + count;
+    localStorage.setItem('th3vault_total_burns', String(nextBurns));
+    const nextScore = calculatePrestigeScore(state.collection, state.streakCount, state.totalPulls, nextBurns);
+    return {
+      totalBurns: nextBurns,
+      prestigeScore: nextScore,
+      echoPrestigeScore: nextScore,
+    };
+  }),
 
   settings: {
     audioOffset: parseFloat(localStorage.getItem("opt_audioOffset") ?? "0") || 0,
@@ -418,10 +446,12 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         set((state) => {
           const filtered = state.collection.filter(c => c && c.id !== card.id);
           const nextCollection = [...filtered, card];
+          const newScore = calculatePrestigeScore(nextCollection, state.streakCount, state.totalPulls, state.totalBurns);
           return {
             collection: nextCollection,
             hasClaimed: true,
-            echoPrestigeScore: calculateEchoPrestigeScore(nextCollection, state.streakCount, state.totalPulls),
+            prestigeScore: newScore,
+            echoPrestigeScore: newScore,
           };
         });
       }
@@ -444,6 +474,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         set((state) => {
           const exists = state.collection.some(c => c && c.id === card.id);
           const nextCollection = exists ? state.collection : [...state.collection, card];
+          const newScore = calculatePrestigeScore(nextCollection, state.streakCount, state.totalPulls, state.totalBurns);
           return {
             collection: nextCollection,
             hasClaimed: true,
@@ -452,7 +483,8 @@ export const useVaultStore = create<VaultState>((set, get) => ({
               ...state.progression,
               tutorialCompleted: true,
             },
-            echoPrestigeScore: calculateEchoPrestigeScore(nextCollection, state.streakCount, state.totalPulls),
+            prestigeScore: newScore,
+            echoPrestigeScore: newScore,
           };
         });
       }
@@ -461,9 +493,11 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   },
   setCollection: (cards) => set((state) => {
     const valid = cards.filter(c => c && c.card);
+    const newScore = calculatePrestigeScore(valid, state.streakCount, state.totalPulls, state.totalBurns);
     return { 
       collection: valid,
-      echoPrestigeScore: calculateEchoPrestigeScore(valid, state.streakCount, state.totalPulls)
+      prestigeScore: newScore,
+      echoPrestigeScore: newScore,
     };
   }),
   addToCollection: (cards) => set((state) => {
@@ -471,16 +505,20 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     const existingIds = new Set(state.collection.map(c => c.id));
     const uniqueNewCards = valid.filter(c => !existingIds.has(c.id));
     const nextCollection = [...state.collection, ...uniqueNewCards];
+    const newScore = calculatePrestigeScore(nextCollection, state.streakCount, state.totalPulls, state.totalBurns);
     return {
       collection: nextCollection,
-      echoPrestigeScore: calculateEchoPrestigeScore(nextCollection, state.streakCount, state.totalPulls),
+      prestigeScore: newScore,
+      echoPrestigeScore: newScore,
     };
   }),
   removeFromCollection: (ownedId) => set((state) => {
     const nextCollection = state.collection.filter(c => c && c.id !== ownedId && c.card);
+    const newScore = calculatePrestigeScore(nextCollection, state.streakCount, state.totalPulls, state.totalBurns);
     return {
       collection: nextCollection,
-      echoPrestigeScore: calculateEchoPrestigeScore(nextCollection, state.streakCount, state.totalPulls),
+      prestigeScore: newScore,
+      echoPrestigeScore: newScore,
     };
   }),
   startReveal: (cards, meta) => set({ revealCards: cards, isRevealing: true, revealPackMeta: meta ?? null }),
@@ -535,13 +573,13 @@ export const useVaultStore = create<VaultState>((set, get) => ({
 
       let profileRes: any;
       try {
-        profileRes = await supabase.from('profiles').select('tokens, daily_standard_purchased, daily_premium_purchased, last_purchase_day, has_onboarded, streak_count, total_pulls, pulls_since_rare_plus, unlocked_skins, display_name, username, avatar_url, settings, progression, unlocked_cheats').eq('id', userId).single();
+        profileRes = await supabase.from('profiles').select('tokens, daily_standard_purchased, daily_premium_purchased, last_purchase_day, has_onboarded, streak_count, total_pulls, pulls_since_rare_plus, total_burns, unlocked_skins, display_name, username, avatar_url, settings, progression, unlocked_cheats').eq('id', userId).single();
         if (profileRes.error && profileRes.error.message.includes('column')) {
           throw new Error('Fallback');
         }
       } catch {
         console.warn("[Sync] New profile columns not found, falling back to legacy profile columns");
-        profileRes = await supabase.from('profiles').select('tokens, daily_standard_purchased, daily_premium_purchased, last_purchase_day, has_onboarded, streak_count, total_pulls, pulls_since_rare_plus, unlocked_skins, display_name, username, avatar_url').eq('id', userId).single();
+        profileRes = await supabase.from('profiles').select('tokens, daily_standard_purchased, daily_premium_purchased, last_purchase_day, has_onboarded, streak_count, total_pulls, pulls_since_rare_plus, total_burns, unlocked_skins, display_name, username, avatar_url').eq('id', userId).single();
       }
 
       // Helper function to fetch full collection across all pages (bypassing Supabase 1,000 row default cap)
@@ -736,10 +774,14 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       }
 
       const validMappedCards = mappedCards.filter(c => c && c.card);
+      const currentBurns = profileRes?.data?.total_burns ?? (parseInt(localStorage.getItem('th3vault_total_burns') || '0', 10) || 0);
+      const calculatedScore = calculatePrestigeScore(validMappedCards, currentStreak, currentPulls, currentBurns);
       // Single set to update collection and computed prestige score simultaneously
       set({ 
         collection: validMappedCards,
-        echoPrestigeScore: calculateEchoPrestigeScore(validMappedCards, currentStreak, currentPulls)
+        totalBurns: currentBurns,
+        prestigeScore: calculatedScore,
+        echoPrestigeScore: calculatedScore
       });
 
       // --- USER PROGRESS MERGING & MIGRATION ---

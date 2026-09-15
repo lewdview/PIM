@@ -9,7 +9,7 @@ import {
 import {
   getAdminConfig,
 } from '../utils/adminConfig';
-import { type BurnResult } from '../utils/echoSystem';
+import { type BurnResult, addEchoToPool, burnCardToEcho } from '../utils/echoSystem';
 import { supabase, STORAGE_BASE } from './supabaseClient';
 import dayFileMap from '../game/day_file_map.json';
 import staticCardCatalog from '../data/card_catalog.json';
@@ -835,14 +835,21 @@ export async function sellCard(ownedCard: OwnedCard): Promise<BurnResult> {
 
     if (!error && data?.success) {
       const tokensEarned = data.tokensEarned || 0;
+      const { useVaultStore } = await import('../store/useVaultStore');
       if (tokensEarned > 0) {
-        const { useVaultStore } = await import('../store/useVaultStore');
         await useVaultStore.getState().addTokens(tokensEarned);
       }
+      if (data.willEcho && data.echoCard) {
+        addEchoToPool(data.echoCard);
+      }
+      useVaultStore.getState().incrementBurns(1, ownedCard.isEcho);
+      useVaultStore.getState().removeFromCollection(ownedCard.id);
+
       return {
         tokensEarned,
         echoCreated: data.willEcho || false,
-        echoGeneration: data.echoGen || undefined
+        echoGeneration: data.echoGen || undefined,
+        echoRarity: data.echoCard?.echo_rarity || undefined
       };
     }
   } catch (e) {
@@ -858,23 +865,36 @@ export async function sellCard(ownedCard: OwnedCard): Promise<BurnResult> {
     legendary: 80,
     mythic: 200
   };
-  let tokensEarned = baseBurnValues[rarity] || 3;
-  if (ownedCard.isEcho) {
-    tokensEarned = Math.ceil(tokensEarned * 1.15);
-  }
+  const baseVal = baseBurnValues[rarity] || 3;
+  const burnRes = burnCardToEcho(
+    {
+      id: ownedCard.card.id,
+      day: ownedCard.card.day,
+      title: ownedCard.card.title,
+      mood: ownedCard.card.mood,
+      rarity: ownedCard.card.rarity,
+      coverUrl: ownedCard.card.coverUrl,
+      audioUrl: ownedCard.card.audioUrl,
+      energy: ownedCard.card.energy,
+      valence: ownedCard.card.valence,
+      tempo: ownedCard.card.tempo,
+      genre: ownedCard.card.genre || [],
+      tags: ownedCard.card.tags || [],
+    },
+    baseVal,
+    ownedCard.echoGeneration || 0
+  );
 
   try {
     const { useVaultStore } = await import('../store/useVaultStore');
-    await useVaultStore.getState().addTokens(tokensEarned);
+    await useVaultStore.getState().addTokens(burnRes.tokensEarned);
+    useVaultStore.getState().incrementBurns(1, ownedCard.isEcho);
     useVaultStore.getState().removeFromCollection(ownedCard.id);
   } catch (err) {
     console.error('Error applying client fallback burn tokens:', err);
   }
 
-  return {
-    tokensEarned,
-    echoCreated: false
-  };
+  return burnRes;
 }
 
 /** Batch burn multiple cards sequentially. Max 50 per batch. */
