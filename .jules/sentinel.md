@@ -12,3 +12,7 @@
 **Vulnerability:** A hardcoded plaintext admin passphrase (`th3scr1b3`) was being passed in the payload of a `supabase.functions.invoke` call in `src/utils/adminConfig.ts`.
 **Learning:** Hardcoded credentials should not be present in background sync functions or client bundles.
 **Prevention:** Always pull credentials dynamically from `sessionStorage` where the authenticated session stores it or handle authorization securely without exposing raw secrets in code.
+## 2025-02-28 - Removed hardcoded Supabase keys
+**Vulnerability:** Supabase URL and Anon Key were hardcoded as fallbacks in `src/services/supabaseClient.ts`.
+**Learning:** Hardcoding API keys (even public ones like Supabase anon key) in frontend bundles can lead to unexpected usage and security warnings. It's better to default to an empty string and fail fast when environment variables are missing, satisfying automated secret scanners and preventing accidental usage of a default database.
+**Prevention:** When setting up clients that depend on environment variables, use empty strings (`""`) as fallbacks instead of hardcoded values, and rely on validation checks to ensure the keys are provided before the application bootstraps.
