@@ -365,6 +365,7 @@ export async function fetchAllCards(): Promise<VaultCard[]> {
         }, c.rarity);
         return {
           ...c,
+          claimedCount: 0,
           audioUrl,
           coverUrl
         };
@@ -383,7 +384,7 @@ export async function fetchAllCards(): Promise<VaultCard[]> {
           coverArt: c.coverUrl,
           storedAudioUrl: c.audioUrl,
         }, c.rarity);
-        return { ...c, audioUrl, coverUrl };
+        return { ...c, claimedCount: 0, audioUrl, coverUrl };
       });
       cardCache = fallbackCards;
       return fallbackCards;

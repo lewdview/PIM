@@ -39,17 +39,17 @@ interface CardDetailModalProps {
   onBurn?: (card: OwnedCard) => void;
 }
 
-function TraitBar({ label, value, color }: { label: string; value: number; color: string }) {
+function TraitBar({ label, value, color, displayValue }: { label: string; value: number; color: string; displayValue?: string }) {
   return (
     <div className="space-y-1.5">
       <div className="flex justify-between items-end">
         <span className="text-[10px] font-mono font-bold uppercase tracking-wider opacity-60">{label}</span>
-        <span className="text-[11px] font-mono font-black" style={{ color }}>{Math.round(value * 100)}%</span>
+        <span className="text-[11px] font-mono font-black" style={{ color }}>{displayValue ?? `${Math.round(value * 100)}%`}</span>
       </div>
       <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
         <motion.div
           initial={{ width: 0 }}
-          animate={{ width: `${value * 100}%` }}
+          animate={{ width: `${Math.max(4, Math.min(100, value * 100))}%` }}
           transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
           className="h-full rounded-full"
           style={{ background: color, boxShadow: `0 0 10px ${color}40` }}
@@ -243,8 +243,8 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
                           <span className="font-bold"># {String(card.card.day).padStart(3, '0')}</span>
                         </div>
                         <div className="flex justify-between text-[11px] font-mono">
-                          <span className="opacity-40">Playable Limit:</span>
-                          <span className="font-bold text-white/90">{card.edition || '???'} / {getSupplyCap(card.card.rarity as Rarity, card.card.day)}</span>
+                          <span className="opacity-40">Playable Edition:</span>
+                          <span className="font-bold text-white/90">{card.edition || '???'} of {getSupplyCap(card.card.rarity as Rarity, card.card.day)}</span>
                         </div>
                         <div className="flex justify-between text-[11px] font-mono">
                           <span className="opacity-40">Mintable Limit:</span>
@@ -442,7 +442,12 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8 p-6 bg-white/[0.02] border border-white/5 rounded-2xl relative overflow-hidden">
                     <TraitBar label="Energy" value={card.card.energy} color="var(--color-neon-cyan)" />
                     <TraitBar label="Valence" value={card.card.valence} color="var(--color-neon-gold)" />
-                    <TraitBar label="Tempo" value={(card.card.tempo - 70) / 110} color="var(--color-neon-purple)" />
+                    <TraitBar
+                      label="Tempo"
+                      value={Math.max(0.1, Math.min(1, ((card.card.tempo || 120) - 50) / 130))}
+                      color="var(--color-neon-purple)"
+                      displayValue={`${card.card.tempo || 120} BPM`}
+                    />
                     <div className="space-y-1.5">
                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider opacity-60">Mood</span>
                        <div className="flex items-center gap-2">

@@ -211,7 +211,7 @@ export default memo(function Card({
   const backVisibility  = useTransform(rotateY, v => (Math.abs(v % 360) >= 90 && Math.abs(v % 360) <= 270 ? 'visible' : 'hidden'));
 
   useEffect(() => {
-    if (card.claimedCount !== undefined) {
+    if (edition === undefined && card.claimedCount && card.claimedCount > 0) {
       setRealClaimed(card.claimedCount);
       return;
     }
@@ -258,7 +258,9 @@ export default memo(function Card({
   const valence = card.valence ?? 0;
   const tempo   = card.tempo   ?? 0;
   const supply  = getSupplyCap(card.rarity, card.day);
-  const claimed = card.claimedCount !== undefined ? card.claimedCount : (realClaimed ?? 0);
+  const claimed = (edition === undefined && card.claimedCount && card.claimedCount > 0)
+    ? card.claimedCount
+    : (realClaimed ?? (edition === undefined ? (card.claimedCount ?? 0) : 0));
   const audioUrl = card.audioUrl || '';
   const hasArt   = !imgError && !imgFailed && coverUrl;
 
