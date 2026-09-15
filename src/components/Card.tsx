@@ -211,10 +211,18 @@ export default memo(function Card({
   const backVisibility  = useTransform(rotateY, v => (Math.abs(v % 360) >= 90 && Math.abs(v % 360) <= 270 ? 'visible' : 'hidden'));
 
   useEffect(() => {
-    import('../services/vaultService').then(({ getClaimedCountForRarity }) => {
-      getClaimedCountForRarity(card.day || 0, card.rarity || 'common').then(setRealClaimed);
+    if (card.claimedCount !== undefined) {
+      setRealClaimed(card.claimedCount);
+      return;
+    }
+    import('../services/vaultService').then(({ getClaimedCountForRarity, getClaimedCountForDay }) => {
+      if (edition === undefined) {
+        getClaimedCountForDay(card.day || 0).then(setRealClaimed);
+      } else {
+        getClaimedCountForRarity(card.day || 0, card.rarity || 'common').then(setRealClaimed);
+      }
     });
-  }, [card.day, card.rarity]);
+  }, [card.day, card.rarity, card.claimedCount, edition]);
 
   useEffect(() => {
     // Only auto-flip to front when isRevealed prop transitions to true
@@ -250,7 +258,7 @@ export default memo(function Card({
   const valence = card.valence ?? 0;
   const tempo   = card.tempo   ?? 0;
   const supply  = getSupplyCap(card.rarity, card.day);
-  const claimed = realClaimed ?? card.claimedCount ?? 0;
+  const claimed = card.claimedCount !== undefined ? card.claimedCount : (realClaimed ?? 0);
   const audioUrl = card.audioUrl || '';
   const hasArt   = !imgError && !imgFailed && coverUrl;
 

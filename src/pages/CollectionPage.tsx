@@ -211,7 +211,7 @@ export default function CollectionPage() {
             </div>
             <div className="sticker-gun-tag sticker-slits" style={{ background: 'var(--color-neon-gold)', '--slit-color': 'rgba(0,0,0,0.2)', transform: 'rotate(2deg)', padding: '4px 10px' } as any}>
               <span className="text-[11px] font-black tracking-tighter uppercase flex items-center gap-1">
-                ⚡ {echoPrestigeScore} ECHO SCORE
+                ⚡ {echoPrestigeScore} PRESTIGE SCORE
               </span>
             </div>
             {streakCount > 0 && (

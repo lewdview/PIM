@@ -12,7 +12,7 @@ import {
 } from '../services/vaultService';
 import { audioManager } from '../game/audio';
 import {
-  getAdminConfig, buildModifierContext, isModifierActive,
+  getAdminConfig, initAdminConfig, buildModifierContext, isModifierActive,
   type ConditionalModifier, type ModifierContext,
 } from '../utils/adminConfig';
 import {
@@ -294,31 +294,27 @@ const RARITY_COLORS: Record<Rarity, string> = {
   mythic: '#ffd700',
 };
 
-function EchoStatusPanel() {
+function EchoStatusPanel({ refreshTrigger }: { refreshTrigger?: number }) {
   const [stats, setStats] = useState<{ total: number; byRarity: Record<string, number>; byGeneration: Record<number, number> }>({ total: 0, byRarity: {}, byGeneration: {} });
+  const adminConfig = useVaultStore(s => s.adminConfig);
+  const config = adminConfig || getAdminConfig();
+  const eco = config.echoSystem;
 
-  // Fetch global echo pool from Supabase on mount (and after burns)
+  // Fetch global echo pool on mount and after burns
   useEffect(() => {
-    async function fetchGlobalEchoPool() {
-      const { supabase } = await import('../services/supabaseClient');
-      const { data } = await supabase.from('echo_pool').select('*');
-      if (data) {
-        const byRarity: Record<string, number> = {};
-        const byGeneration: Record<number, number> = {};
-        for (const echo of data) {
-          const r = String(echo.rarity || echo.echo_rarity || 'common').toLowerCase();
-          const g = Number(echo.echo_generation ?? echo.generation ?? 0);
-          byRarity[r] = (byRarity[r] || 0) + 1;
-          byGeneration[g] = (byGeneration[g] || 0) + 1;
+    async function fetchPool() {
+      try {
+        const { fetchLiveEchoPool } = await import('../utils/echoSystem');
+        const res = await fetchLiveEchoPool();
+        if (res?.stats) {
+          setStats(res.stats);
         }
-        setStats({ total: data.length, byRarity, byGeneration });
+      } catch (err) {
+        console.warn('Failed to load echo pool stats in Forge:', err);
       }
     }
-    fetchGlobalEchoPool();
-  }, []);
-
-  const config = getAdminConfig();
-  const eco = config.echoSystem;
+    fetchPool();
+  }, [refreshTrigger]);
 
   return (
     <div style={{
@@ -433,12 +429,31 @@ function EchoStatusPanel() {
 export default function ForgePage() {
   const [, setLocation] = useLocation();
   const today = getCurrentDay();
-  const { collection, removeFromCollection, tokenBalance, loadVaultData, addToCollection, startReveal, streakCount, totalPulls, pullsSinceRarePlus } = useVaultStore();
+  const {
+    collection,
+    removeFromCollection,
+    tokenBalance,
+    loadVaultData,
+    addToCollection,
+    startReveal,
+    streakCount,
+    totalPulls,
+    pullsSinceRarePlus,
+    adminConfig,
+  } = useVaultStore();
+
   const [confirmSell, setConfirmSell] = useState<OwnedCard | null>(null);
   const [lastBurnResult, setLastBurnResult] = useState<{ tokens: number; echoCreated: boolean; echoGen?: number } | null>(null);
   const [modifiersOpen, setModifiersOpen] = useState(true);
   const [echoOpen, setEchoOpen] = useState(true);
   const [sinksOpen, setSinksOpen] = useState(true);
+  const [echoRefreshTrigger, setEchoRefreshTrigger] = useState(0);
+
+  // Sync latest remote admin config on mount
+  useEffect(() => {
+    initAdminConfig();
+  }, []);
+
   // Targeted Pull state
   const [targetDay, setTargetDay] = useState('');
   const [targetLoading, setTargetLoading] = useState(false);
@@ -458,7 +473,7 @@ export default function ForgePage() {
   const [batchResult, setBatchResult] = useState<{ totalTokens: number; totalEchoes: number; failed: number } | null>(null);
   const [confirmBatch, setConfirmBatch] = useState<OwnedCard[] | null>(null);
 
-  const config = getAdminConfig();
+  const config = adminConfig || getAdminConfig();
   const ctx = useMemo(() => buildModifierContext(), [streakCount, totalPulls, pullsSinceRarePlus, collection.length]);
 
   const modifierProgress = useMemo(() =>
@@ -503,6 +518,7 @@ export default function ForgePage() {
     const result = await sellCard(confirmSell);
     removeFromCollection(confirmSell.id);
     await loadVaultData();
+    setEchoRefreshTrigger(t => t + 1);
     useLoadingToast.getState().hide();
     setLastBurnResult({
       tokens: result.tokensEarned,
@@ -577,6 +593,7 @@ export default function ForgePage() {
     }
     setBurnSelected(new Set());
     await loadVaultData();
+    setEchoRefreshTrigger(t => t + 1);
     useLoadingToast.getState().hide();
 
     setBatchResult(result);
@@ -1199,7 +1216,7 @@ export default function ForgePage() {
                 exit={{ opacity: 0, height: 0 }}
                 style={{ overflow: 'hidden' }}
               >
-                <EchoStatusPanel />
+                <EchoStatusPanel refreshTrigger={echoRefreshTrigger} />
               </motion.div>
             )}
           </AnimatePresence>

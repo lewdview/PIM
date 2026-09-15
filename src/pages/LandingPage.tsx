@@ -731,7 +731,7 @@ export default function LandingPage() {
                     `,
                   }}>
                     <Card
-                      card={dailyCard}
+                      card={{ ...dailyCard, claimedCount: realClaimedCount }}
                       interactive={false}
                       showAudio
                       isDailyOrigin={false}
@@ -826,7 +826,7 @@ export default function LandingPage() {
               <div className="flex flex-wrap gap-4">
                 <StatSticker icon={Layers} label="Total Cards" value={collection.length} color="var(--color-neon-cyan)" rot={-2} />
                 <StatSticker icon={Flame} label="Unique Drops" value={`${uniqueCards}/365`} color="var(--color-rarity-uncommon)" rot={1.5} />
-                <StatSticker icon={Zap} label="Echo Score" value={echoPrestigeScore} color="var(--color-neon-gold)" rot={-1} />
+                <StatSticker icon={Zap} label="Prestige Score" value={echoPrestigeScore} color="var(--color-neon-gold)" rot={-1} />
                 {proofs > 0 && (
                   <StatSticker icon={Star} label="Proofs" value={proofs} color="var(--color-neon-purple)" rot={2.5} />
                 )}

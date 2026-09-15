@@ -164,7 +164,7 @@ export function VaultSpotlight({ onClose }: { onClose?: () => void }) {
           </div>
 
           <div className="p-2 bg-black/40 border border-white/10 rounded">
-            <span className="font-mono text-[8px] text-white/40 uppercase">ECHO PRESTIGE</span>
+            <span className="font-mono text-[8px] text-white/40 uppercase">VAULT PRESTIGE</span>
             <div className="flex items-baseline gap-1 mt-0.5">
               <span className="font-impact text-xl text-[#ffaa00]">{echoPrestigeScore}</span>
               <span className="font-mono text-[8px] text-[#ffaa00]/70">PTS</span>

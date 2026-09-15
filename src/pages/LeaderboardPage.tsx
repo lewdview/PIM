@@ -400,7 +400,7 @@ export default function LeaderboardPage() {
                   {activeTab === 'today' ? (
                     <>{yourEntry.rarityScore} SCORE TODAY</>
                   ) : (
-                    <>{yourEntry.uniqueCards} UNIQUE • {yourEntry.rarityScore} ECHO SCORE</>
+                    <>{yourEntry.uniqueCards} UNIQUE • {yourEntry.rarityScore} PRESTIGE SCORE</>
                   )}
                 </div>
               </div>

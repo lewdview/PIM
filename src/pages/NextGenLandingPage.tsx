@@ -856,7 +856,7 @@ export default function NextGenLandingPage() {
                   <div className="absolute inset-[-15px] rounded-3xl filter blur-2xl opacity-30 group-hover:opacity-60 transition-all duration-500"
                     style={{ background: `radial-gradient(circle, #fbbf24 0%, #3b82f6 50%, transparent 80%)` }} />
                   <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-[0_25px_60px_rgba(0,0,0,0.6)] border border-white/20 bg-white/5 backdrop-blur-2xl">
-                    <Card card={dailyCard} interactive={false} showAudio isDailyOrigin={false} />
+                    <Card card={{ ...dailyCard, claimedCount: realClaimedCount }} interactive={false} showAudio isDailyOrigin={false} />
                   </div>
                 </motion.div>
 
@@ -919,7 +919,7 @@ export default function NextGenLandingPage() {
               <div className="grid grid-cols-2 gap-4">
                 <StatSticker icon={Layers} label="Total Cards" value={collection.length} color="#3b82f6" />
                 <StatSticker icon={Flame} label="Unique Drops" value={`${uniqueCards}/365`} color="#10b981" />
-                <StatSticker icon={Zap} label="Echo Score" value={echoPrestigeScore} color="#fbbf24" />
+                <StatSticker icon={Zap} label="Prestige Score" value={echoPrestigeScore} color="#fbbf24" />
                 <StatSticker icon={Star} label="Audio Proofs" value={proofs} color="#a855f7" />
               </div>
             </div>
@@ -1616,7 +1616,7 @@ export default function NextGenLandingPage() {
             <div>
               <SectionLabel label="Card Incinerator" accent="#ef4444" />
               <h2 className="text-4xl font-extrabold text-white tracking-tight mb-2">The Forge</h2>
-              <p className="text-sm text-slate-400">Burn duplicate cards to extract V⚡ tokens & release echo score prestige.</p>
+              <p className="text-sm text-slate-400">Burn duplicate cards to extract V⚡ tokens & raise Vault Prestige score.</p>
             </div>
             <div className="flex items-center justify-between">
               <span className="px-5 py-2.5 rounded-full bg-white/5 border border-white/10 text-white font-bold text-xs uppercase tracking-wider">

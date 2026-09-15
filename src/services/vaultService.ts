@@ -1316,9 +1316,18 @@ export async function getClaimedCountForDay(day: number): Promise<number> {
       .select('supply')
       .like('card_id_rarity', `${day}-%`);
 
-    if (data) {
-      return data.reduce((sum: number, row: any) => sum + (row.supply || 0), 0);
+    if (data && data.length > 0) {
+      const total = data.reduce((sum: number, row: any) => sum + (row.supply || 0), 0);
+      if (total > 0) return total;
     }
+
+    // Resilient fallback: count directly from vault_collections
+    const { count } = await supabase
+      .from('vault_collections')
+      .select('*', { count: 'exact', head: true })
+      .or(`card_id.eq.card-${day},card_id.eq.${day}`);
+
+    if (count !== null && count > 0) return count;
   } catch (e) {
     console.error("Failed to fetch global supply", e);
   }
@@ -1333,7 +1342,15 @@ export async function getClaimedCountForRarity(day: number, rarity: string): Pro
       .select('supply')
       .eq('card_id_rarity', `${day}-${rarity}`)
       .maybeSingle();
-    return data?.supply || 0;
+    if (data?.supply && data.supply > 0) return data.supply;
+
+    // Resilient fallback: count directly from vault_collections
+    const { count } = await supabase
+      .from('vault_collections')
+      .select('*', { count: 'exact', head: true })
+      .or(`card_id.eq.card-${day},card_id.eq.${day}`)
+      .eq('rarity', rarity);
+    return count || 0;
   } catch (e) {
     console.error('Failed to fetch rarity supply', e);
   }
