@@ -479,10 +479,14 @@ export default function AdminPage() {
   const [filteredEvents, setFilteredEvents] = useState<any[]>([]);
   const [summaryStats, setSummaryStats] = useState({
     totalUsers: 0,
+    usersWithCards: 0,
+    usersWithoutCards: 0,
     totalCards: 0,
     totalTokens: 0,
     totalBurns: 0
   });
+  const [cardOwnerIds, setCardOwnerIds] = useState<Set<string>>(new Set());
+  const [userCardFilter, setUserCardFilter] = useState<'all' | 'with_cards' | 'no_cards'>('all');
   const [loadingAnalytics, setLoadingAnalytics] = useState(false);
   const [selectedUser, setSelectedUser] = useState<string>('all');
   const [selectedEventType, setSelectedEventType] = useState<string>('all');
@@ -587,33 +591,88 @@ export default function AdminPage() {
 
   const loadAnalyticsData = useCallback(async () => {
     setLoadingAnalytics(true);
+    const pass = sessionStorage.getItem('th3vault_admin_pass') || 'th3scr1b3';
     try {
-      // 1. Fetch users list
-      const { data: users, error: usersErr } = await supabase
+      // 1. Fetch exact aggregate stats via RPC (uncapped by PostgREST 1000-row limit)
+      let rpcSuccess = false;
+      try {
+        const { data: statsData, error: statsErr } = await supabase.rpc('get_user_card_stats');
+        if (!statsErr && statsData) {
+          setSummaryStats({
+            totalUsers: Number(statsData.total_users) || 0,
+            usersWithCards: Number(statsData.users_with_cards) || 0,
+            usersWithoutCards: Number(statsData.users_without_cards) || 0,
+            totalCards: Number(statsData.total_cards) || 0,
+            totalTokens: Number(statsData.total_tokens) || 0,
+            totalBurns: Number(statsData.total_burns) || 0,
+          });
+          rpcSuccess = true;
+        }
+      } catch (e) {
+        console.warn('Direct RPC get_user_card_stats failed, trying vault-engine:', e);
+      }
+
+      // 2. Fallback via vault-engine if direct RPC fails
+      if (!rpcSuccess) {
+        try {
+          const { data: edgeRes } = await supabase.functions.invoke('vault-engine', {
+            body: { action: 'getAnalyticsSummary', payload: { passphrase: pass } },
+          });
+          if (edgeRes?.success && edgeRes.stats) {
+            setSummaryStats({
+              totalUsers: Number(edgeRes.stats.total_users) || 0,
+              usersWithCards: Number(edgeRes.stats.users_with_cards) || 0,
+              usersWithoutCards: Number(edgeRes.stats.users_without_cards) || 0,
+              totalCards: Number(edgeRes.stats.total_cards) || 0,
+              totalTokens: Number(edgeRes.stats.total_tokens) || 0,
+              totalBurns: Number(edgeRes.stats.total_burns) || 0,
+            });
+            rpcSuccess = true;
+          }
+        } catch (e) {
+          console.warn('vault-engine getAnalyticsSummary fallback failed:', e);
+        }
+      }
+
+      // 3. Fetch set of user IDs who currently own cards (for badges and directory filtering)
+      try {
+        const { data: ownerIds, error: ownerErr } = await supabase.rpc('get_card_owner_ids');
+        if (!ownerErr && Array.isArray(ownerIds)) {
+          setCardOwnerIds(new Set(ownerIds));
+        }
+      } catch (e) {
+        console.warn('Failed to load card owner IDs:', e);
+      }
+
+      // 4. Fetch users list with exact count (uncapped total count header)
+      const { data: users, count: exactUserCount, error: usersErr } = await supabase
         .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .limit(1000);
 
       if (usersErr) throw usersErr;
       setUsersList(users || []);
 
-      // 2. Fetch total collected cards count
-      const { count: cardCount, error: cardErr } = await supabase
-        .from('vault_collections')
-        .select('*', { count: 'exact', head: true });
+      // If neither RPC nor vault-engine succeeded, fallback to basic count
+      if (!rpcSuccess) {
+        const { count: cardCount } = await supabase
+          .from('vault_collections')
+          .select('*', { count: 'exact', head: true });
 
-      // 3. Compute stats
-      const totalTokens = (users || []).reduce((sum, u) => sum + (u.tokens || 0), 0);
-      const totalBurns = (users || []).reduce((sum, u) => sum + (u.total_burns || 0), 0);
+        const totalTokens = (users || []).reduce((sum, u) => sum + (u.tokens || 0), 0);
+        const totalBurns = (users || []).reduce((sum, u) => sum + (u.total_burns || 0), 0);
 
-      setSummaryStats({
-        totalUsers: users?.length || 0,
-        totalCards: cardCount || 0,
-        totalTokens,
-        totalBurns
-      });
+        setSummaryStats(prev => ({
+          ...prev,
+          totalUsers: exactUserCount ?? (users?.length || 0),
+          totalCards: cardCount || 0,
+          totalTokens,
+          totalBurns,
+        }));
+      }
 
-      // 4. Fetch telemetry events
+      // 5. Fetch telemetry events
       const validTypes = [
         'pack_purchase', 'game_end', 'card_burn', 'daily_claim', 
         'targeted_pull', 'rarity_upgrade', 'duplicate_fusion', 
@@ -930,6 +989,14 @@ export default function AdminPage() {
     }
     setFilteredEvents(filtered);
   }, [telemetryLogs, selectedUser, selectedEventType]);
+
+  const filteredUsersList = useMemo(() => {
+    return usersList.filter(user => {
+      if (userCardFilter === 'with_cards') return cardOwnerIds.has(user.id);
+      if (userCardFilter === 'no_cards') return !cardOwnerIds.has(user.id);
+      return true;
+    });
+  }, [usersList, userCardFilter, cardOwnerIds]);
 
   const formatEventDetails = (type: string, payload: any) => {
     if (!payload) return '—';
@@ -2204,41 +2271,125 @@ export default function AdminPage() {
           </div>
 
           <div className="admin-panel-body">
-            {/* KPI Cards */}
-            <div className="admin-grid-3" style={{ gridTemplateColumns: 'repeat(4, 1fr)', marginBottom: '24px' }}>
+            {/* KPI Cards (Uncapped & Card Distribution Metrics) */}
+            <div className="admin-grid-3" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '24px' }}>
               <div className="stat-readout" style={{ '--stat-color': '#00ffff' } as React.CSSProperties}>
-                <div className="stat-value">{summaryStats.totalUsers}</div>
-                <div className="stat-label">Total Users</div>
+                <div className="stat-value">{summaryStats.totalUsers.toLocaleString()}</div>
+                <div className="stat-label">Total Users (Uncapped)</div>
+                <div style={{ fontSize: '9px', opacity: 0.5, fontFamily: 'monospace', marginTop: '4px' }}>100% Registered</div>
+              </div>
+              <div className="stat-readout" style={{ '--stat-color': '#00d4aa' } as React.CSSProperties}>
+                <div className="stat-value">{summaryStats.usersWithCards.toLocaleString()}</div>
+                <div className="stat-label">With Cards (≥ 1)</div>
+                <div style={{ fontSize: '9px', opacity: 0.8, color: '#00d4aa', fontFamily: 'monospace', marginTop: '4px' }}>
+                  {summaryStats.totalUsers > 0 ? ((summaryStats.usersWithCards / summaryStats.totalUsers) * 100).toFixed(1) : 0}% Active Decks
+                </div>
+              </div>
+              <div className="stat-readout" style={{ '--stat-color': '#ff8800' } as React.CSSProperties}>
+                <div className="stat-value">{summaryStats.usersWithoutCards.toLocaleString()}</div>
+                <div className="stat-label">No Cards (0)</div>
+                <div style={{ fontSize: '9px', opacity: 0.8, color: '#ff8800', fontFamily: 'monospace', marginTop: '4px' }}>
+                  {summaryStats.totalUsers > 0 ? ((summaryStats.usersWithoutCards / summaryStats.totalUsers) * 100).toFixed(1) : 0}% Empty Vault
+                </div>
               </div>
               <div className="stat-readout" style={{ '--stat-color': '#c44dff' } as React.CSSProperties}>
-                <div className="stat-value">{summaryStats.totalCards}</div>
+                <div className="stat-value">{summaryStats.totalCards.toLocaleString()}</div>
                 <div className="stat-label">Cards Collected</div>
+                <div style={{ fontSize: '9px', opacity: 0.5, fontFamily: 'monospace', marginTop: '4px' }}>Global Inventory</div>
               </div>
               <div className="stat-readout" style={{ '--stat-color': '#ffb800' } as React.CSSProperties}>
                 <div className="stat-value">{summaryStats.totalTokens.toLocaleString()}</div>
                 <div className="stat-label">V⚡ in Circulation</div>
+                <div style={{ fontSize: '9px', opacity: 0.5, fontFamily: 'monospace', marginTop: '4px' }}>Global Token Supply</div>
               </div>
               <div className="stat-readout" style={{ '--stat-color': '#ff3800' } as React.CSSProperties}>
-                <div className="stat-value">{summaryStats.totalBurns}</div>
+                <div className="stat-value">{summaryStats.totalBurns.toLocaleString()}</div>
                 <div className="stat-label">Total Burns</div>
+                <div style={{ fontSize: '9px', opacity: 0.5, fontFamily: 'monospace', marginTop: '4px' }}>Recycled Cards</div>
               </div>
             </div>
 
             {/* Split Grid: Users Left, Events Right */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '24px' }} className="admin-grid-layout">
+            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '24px' }} className="admin-grid-layout">
               {/* Users Directory */}
               <div style={{ border: '1px solid rgba(255,255,255,0.06)', background: 'rgba(0,0,0,0.2)', padding: '16px' }}>
                 <div style={{
-                  fontFamily: '"Impact", "Arial Black", sans-serif',
-                  fontSize: '18px',
-                  textTransform: 'uppercase',
-                  marginBottom: '16px',
                   display: 'flex',
                   alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '16px',
+                  flexWrap: 'wrap',
                   gap: '8px'
                 }}>
-                  <Users size={16} />
-                  <span>Users Directory</span>
+                  <div style={{
+                    fontFamily: '"Impact", "Arial Black", sans-serif',
+                    fontSize: '18px',
+                    textTransform: 'uppercase',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    <Users size={16} />
+                    <span>Users Directory</span>
+                    <span style={{ fontSize: '11px', fontFamily: 'monospace', opacity: 0.5, fontWeight: 'normal' }}>
+                      ({filteredUsersList.length} of {summaryStats.totalUsers})
+                    </span>
+                  </div>
+
+                  {/* Filter Pills: All / With Cards / No Cards */}
+                  <div style={{ display: 'flex', gap: '4px', background: 'rgba(255,255,255,0.04)', padding: '2px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    <button
+                      type="button"
+                      onClick={() => setUserCardFilter('all')}
+                      style={{
+                        padding: '3px 8px',
+                        fontSize: '9px',
+                        fontFamily: 'monospace',
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        background: userCardFilter === 'all' ? 'rgba(0,255,255,0.2)' : 'transparent',
+                        border: userCardFilter === 'all' ? '1px solid #00ffff' : '1px solid transparent',
+                        color: userCardFilter === 'all' ? '#00ffff' : 'rgba(255,255,255,0.6)',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      ALL ({summaryStats.totalUsers})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setUserCardFilter('with_cards')}
+                      style={{
+                        padding: '3px 8px',
+                        fontSize: '9px',
+                        fontFamily: 'monospace',
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        background: userCardFilter === 'with_cards' ? 'rgba(0,212,170,0.2)' : 'transparent',
+                        border: userCardFilter === 'with_cards' ? '1px solid #00d4aa' : '1px solid transparent',
+                        color: userCardFilter === 'with_cards' ? '#00d4aa' : 'rgba(255,255,255,0.6)',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      ≥1 CARDS ({summaryStats.usersWithCards})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setUserCardFilter('no_cards')}
+                      style={{
+                        padding: '3px 8px',
+                        fontSize: '9px',
+                        fontFamily: 'monospace',
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        background: userCardFilter === 'no_cards' ? 'rgba(255,136,0,0.2)' : 'transparent',
+                        border: userCardFilter === 'no_cards' ? '1px solid #ff8800' : '1px solid transparent',
+                        color: userCardFilter === 'no_cards' ? '#ff8800' : 'rgba(255,255,255,0.6)',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      0 CARDS ({summaryStats.usersWithoutCards})
+                    </button>
+                  </div>
                 </div>
 
                 <div style={{ maxHeight: '500px', overflowY: 'auto' }}>
@@ -2246,6 +2397,7 @@ export default function AdminPage() {
                     <thead>
                       <tr>
                         <th>Wallet / Display Name</th>
+                        <th style={{ textAlign: 'center' }}>Cards</th>
                         <th style={{ textAlign: 'right' }}>Tokens</th>
                         <th style={{ textAlign: 'right' }}>Pulls</th>
                         <th style={{ textAlign: 'right' }}>Streak</th>
@@ -2254,16 +2406,48 @@ export default function AdminPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {usersList.length === 0 ? (
+                      {filteredUsersList.length === 0 ? (
                         <tr>
-                          <td colSpan={6} style={{ textAlign: 'center', opacity: 0.4, padding: '20px' }}>No users registered</td>
+                          <td colSpan={7} style={{ textAlign: 'center', opacity: 0.4, padding: '20px' }}>
+                            {userCardFilter === 'with_cards' ? 'No users with cards found' :
+                             userCardFilter === 'no_cards' ? 'No users without cards found' :
+                             'No users registered'}
+                          </td>
                         </tr>
                       ) : (
-                        usersList.map((user) => {
+                        filteredUsersList.map((user) => {
                           const display = user.display_name || (user.wallet_address ? `${user.wallet_address.slice(0, 6)}...${user.wallet_address.slice(-4)}` : `User_${user.id.slice(0, 4)}`);
+                          const hasCards = cardOwnerIds.has(user.id);
                           return (
                             <tr key={user.id} style={{ background: selectedUser === user.id ? 'rgba(0,255,255,0.05)' : 'transparent' }}>
                               <td style={{ fontWeight: 700 }} title={user.wallet_address || user.id}>{display}</td>
+                              <td style={{ textAlign: 'center' }}>
+                                {hasCards ? (
+                                  <span style={{
+                                    fontSize: '8px',
+                                    fontFamily: 'monospace',
+                                    fontWeight: 700,
+                                    padding: '2px 5px',
+                                    background: 'rgba(0,212,170,0.15)',
+                                    color: '#00d4aa',
+                                    border: '1px solid rgba(0,212,170,0.3)',
+                                  }}>
+                                    ≥1 CARDS
+                                  </span>
+                                ) : (
+                                  <span style={{
+                                    fontSize: '8px',
+                                    fontFamily: 'monospace',
+                                    fontWeight: 700,
+                                    padding: '2px 5px',
+                                    background: 'rgba(255,136,0,0.1)',
+                                    color: '#ff8800',
+                                    border: '1px solid rgba(255,136,0,0.25)',
+                                  }}>
+                                    0 CARDS
+                                  </span>
+                                )}
+                              </td>
                               <td style={{ textAlign: 'right', color: '#ffb800', fontWeight: 'bold' }}>{user.tokens || 0}</td>
                               <td style={{ textAlign: 'right' }}>{user.total_pulls || 0}</td>
                               <td style={{ textAlign: 'right', color: '#39ff14' }}>{user.streak_count || 0}d</td>
