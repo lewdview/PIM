@@ -12,3 +12,7 @@
 **Vulnerability:** A hardcoded plaintext admin passphrase (`th3scr1b3`) was being passed in the payload of a `supabase.functions.invoke` call in `src/utils/adminConfig.ts`.
 **Learning:** Hardcoded credentials should not be present in background sync functions or client bundles.
 **Prevention:** Always pull credentials dynamically from `sessionStorage` where the authenticated session stores it or handle authorization securely without exposing raw secrets in code.
+## 2025-05-24 - [Remove Hardcoded Passphrase Fallback]
+**Vulnerability:** A hardcoded plaintext admin passphrase (`th3scr1b3`) was being used as a fallback when getting the `th3vault_admin_pass` from `sessionStorage` in `src/pages/AdminPage.tsx`. This exposed the admin passphrase in the client-side bundle.
+**Learning:** Hardcoded credentials should not be present in the client-side code, even as fallbacks for variables stored in `sessionStorage` or `localStorage`.
+**Prevention:** Always fallback to an empty string `''` or handle authorization securely without exposing raw secrets in code.
