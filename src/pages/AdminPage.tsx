@@ -686,7 +686,22 @@ export default function AdminPage() {
   // Broadcast Station Handlers
   const loadBroadcastList = useCallback(async () => {
     setLoadingBroadcastList(true);
+    const pass = sessionStorage.getItem('th3vault_admin_pass') || 'th3scr1b3';
     try {
+      // 1. Try vault-engine (service role bypasses RLS so inactive broadcasts are visible)
+      const { data: edgeData, error: edgeError } = await supabase.functions.invoke('vault-engine', {
+        body: {
+          action: 'getAdminAnnouncements',
+          payload: { passphrase: pass },
+        },
+      });
+
+      if (!edgeError && edgeData?.success && Array.isArray(edgeData.announcements)) {
+        setBroadcastList(edgeData.announcements);
+        return;
+      }
+
+      // 2. Fallback to direct client select
       const { data, error } = await supabase
         .from('system_announcements')
         .select('*')
@@ -792,6 +807,7 @@ export default function AdminPage() {
 
     setBroadcastSending(true);
     setBroadcastFeedback(null);
+    const pass = sessionStorage.getItem('th3vault_admin_pass') || 'th3scr1b3';
 
     try {
       let expiresAt: string | null = null;
@@ -800,24 +816,39 @@ export default function AdminPage() {
         expiresAt = exp.toISOString();
       }
 
-      const { data, error } = await supabase
-        .from('system_announcements')
-        .insert({
-          title: broadcastTitle.trim(),
-          message: broadcastMessage.trim(),
-          category: broadcastCategory,
-          priority: broadcastPriority,
-          action_url: broadcastActionUrl.trim() || null,
-          action_label: broadcastActionLabel.trim() || null,
-          reward_type: broadcastRewardType,
-          reward_amount: broadcastRewardAmount,
-          is_active: true,
-          expires_at: expiresAt,
-        })
-        .select('*')
-        .single();
+      const announcementPayload = {
+        title: broadcastTitle.trim(),
+        message: broadcastMessage.trim(),
+        category: broadcastCategory,
+        priority: broadcastPriority,
+        action_url: broadcastActionUrl.trim() || null,
+        action_label: broadcastActionLabel.trim() || null,
+        reward_type: broadcastRewardType,
+        reward_amount: broadcastRewardAmount,
+        is_active: true,
+        expires_at: expiresAt,
+      };
 
-      if (error) throw error;
+      // 1. Primary: invoke vault-engine backend (service role bypasses RLS)
+      const { data: edgeData, error: edgeError } = await supabase.functions.invoke('vault-engine', {
+        body: {
+          action: 'broadcastAnnouncement',
+          payload: { announcement: announcementPayload, passphrase: pass },
+        },
+      });
+
+      if (edgeError || !edgeData?.success) {
+        // 2. Fallback: direct table insert (works if user has Supabase admin auth)
+        const { error: directError } = await supabase
+          .from('system_announcements')
+          .insert(announcementPayload)
+          .select('*')
+          .single();
+
+        if (directError) {
+          throw new Error(edgeData?.error || edgeError?.message || directError.message);
+        }
+      }
 
       setBroadcastFeedback({
         success: true,
@@ -837,13 +868,25 @@ export default function AdminPage() {
   };
 
   const handleToggleBroadcastActive = async (id: string, currentActive: boolean) => {
+    const pass = sessionStorage.getItem('th3vault_admin_pass') || 'th3scr1b3';
     try {
-      const { error } = await supabase
-        .from('system_announcements')
-        .update({ is_active: !currentActive })
-        .eq('id', id);
+      // 1. Primary: invoke vault-engine
+      const { data: edgeData, error: edgeError } = await supabase.functions.invoke('vault-engine', {
+        body: {
+          action: 'toggleAnnouncement',
+          payload: { id, is_active: !currentActive, passphrase: pass },
+        },
+      });
 
-      if (error) throw error;
+      if (edgeError || !edgeData?.success) {
+        // 2. Fallback: direct table update
+        const { error: directError } = await supabase
+          .from('system_announcements')
+          .update({ is_active: !currentActive })
+          .eq('id', id);
+
+        if (directError) throw directError;
+      }
       setBroadcastList(prev => prev.map(b => b.id === id ? { ...b, is_active: !currentActive } : b));
     } catch (err: any) {
       console.error('Error toggling broadcast:', err);
@@ -852,13 +895,25 @@ export default function AdminPage() {
 
   const handleDeleteBroadcast = async (id: string) => {
     if (!window.confirm('Delete this broadcast transmission permanently?')) return;
+    const pass = sessionStorage.getItem('th3vault_admin_pass') || 'th3scr1b3';
     try {
-      const { error } = await supabase
-        .from('system_announcements')
-        .delete()
-        .eq('id', id);
+      // 1. Primary: invoke vault-engine
+      const { data: edgeData, error: edgeError } = await supabase.functions.invoke('vault-engine', {
+        body: {
+          action: 'deleteAnnouncement',
+          payload: { id, passphrase: pass },
+        },
+      });
 
-      if (error) throw error;
+      if (edgeError || !edgeData?.success) {
+        // 2. Fallback: direct table delete
+        const { error: directError } = await supabase
+          .from('system_announcements')
+          .delete()
+          .eq('id', id);
+
+        if (directError) throw directError;
+      }
       setBroadcastList(prev => prev.filter(b => b.id !== id));
     } catch (err: any) {
       console.error('Error deleting broadcast:', err);
