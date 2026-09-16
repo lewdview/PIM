@@ -341,15 +341,11 @@ export default function App() {
                 <Route path="/manifesto" component={AboutPage} />
                 <Route path="/hub" component={ProfilePage} />
 
-                {/* 5. Developer & Admin (Dev mode) */}
-                {(import.meta.env.DEV || localStorage.getItem('th3vault_dev_mode') === 'true') && (
-                  <>
-                    <Route path="/pitch-deck" component={PitchDeck} />
-                    <Route path="/admin" component={AdminPage} />
-                    <Route path="/admin/editor" component={BeatmapEditor} />
-                    <Route path="/admin/card-designs" component={CardDesignShowcase} />
-                  </>
-                )}
+                {/* 5. Developer & Admin */}
+                <Route path="/pitch-deck" component={PitchDeck} />
+                <Route path="/admin" component={AdminPage} />
+                <Route path="/admin/editor" component={BeatmapEditor} />
+                <Route path="/admin/card-designs" component={CardDesignShowcase} />
 
                 {/* 404 Handler */}
                 <Route>
