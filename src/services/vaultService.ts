@@ -14,6 +14,7 @@ import { supabase, STORAGE_BASE } from './supabaseClient';
 import dayFileMap from '../game/day_file_map.json';
 import staticCardCatalog from '../data/card_catalog.json';
 import { sanitizeMediaUrl } from '../game/api';
+import { resolveMediaUrls } from '../utils/resolveMediaUrls';
 import { useVaultStore } from '../store/useVaultStore';
 import { farcasterService } from './farcasterService';
 
@@ -40,79 +41,19 @@ export interface VaultCard {
   coverArtwork?: string;
 }
 
-// Helper to resolve supabase / local paths based on day_file_map
+// Helper to resolve supabase / local paths based on day_file_map (Task 2B: shared utility)
 function resolveUrls(r: Partial<ReleaseItem>, rarity?: Rarity | string): { audioUrl: string; coverUrl: string } {
-  const useLocal = (typeof localStorage !== 'undefined' && (localStorage.getItem('opt_useLocalFiles') === 'true' || localStorage.getItem('useLocalFiles') === 'true')) || 
-                   (import.meta.env && import.meta.env.VITE_USE_LOCAL_FILES === 'true');
-
+  const raw = r as any;
   const dayNum = typeof r.day === 'string' ? parseInt(r.day, 10) : (r.day || 1);
-  const dayStr = String(dayNum);
-  const mapped = (dayFileMap as any)[dayStr];
-
-  let audioUrl = r.storedAudioUrl || '';
-  let coverUrl = r.coverArt || '';
-  if (coverUrl) {
-    coverUrl = coverUrl.replace(/\.png$/i, '.jpg');
-  }
-
-  const SUPABASE_BASE = STORAGE_BASE;
-  const LOCAL_BASE = '/@fs/Volumes/extremeUno/th3scr1b3-365-warp/365-releases/';
-
-  if (useLocal) {
-    if (mapped && mapped.audio) {
-      audioUrl = LOCAL_BASE + mapped.audio;
-    } else {
-      const raw = r as any;
-      if (raw.manifestAudioPath) {
-        audioUrl = LOCAL_BASE + decodeURIComponent(raw.manifestAudioPath);
-      } else if (raw.fileName && raw.date) {
-        const parts = raw.date.split('-');
-        const monthNum = parseInt(parts[1], 10);
-        const months = [
-          'january', 'february', 'march', 'april', 'may', 'june',
-          'july', 'august', 'september', 'october', 'november', 'december'
-        ];
-        const monthStr = months[monthNum - 1];
-        audioUrl = LOCAL_BASE + `audio/${monthStr}/${decodeURIComponent(raw.fileName)}`;
-      }
-    }
-
-    if (mapped && mapped.cover) {
-      coverUrl = LOCAL_BASE + mapped.cover;
-    } else {
-      if (coverUrl && coverUrl.includes('/releaseready/')) {
-        const parts = coverUrl.split('/releaseready/');
-        if (parts.length > 1) {
-          coverUrl = LOCAL_BASE + decodeURIComponent(parts[1]);
-        }
-      }
-    }
-  } else {
-    // Online mode: Correct URLs using database-storage mappings
-    if (mapped) {
-      if (mapped.audio) {
-        const audioPath = mapped.audio.replace(/\.wav$/i, '.mp3');
-        audioUrl = SUPABASE_BASE + encodeURIComponent(audioPath).replace(/%2F/g, '/');
-      }
-      if (mapped.cover) {
-        // Use verified path from day_file_map (most reliable)
-        coverUrl = SUPABASE_BASE + encodeURIComponent(mapped.cover).replace(/%2F/g, '/');
-      }
-      // If mapped.cover is null, fall through and keep coverUrl from DB/static JSON
-      // (it gets .png→.jpg normalized above)
-    }
-  }
-
-  // Apply custom artwork routing by rarity (e.g. rare -> alternate-covers/*.png)
-  const effectiveRarity = rarity || (r as any).rarity;
-  if (effectiveRarity) {
-    coverUrl = getCoverUrlForRarity(coverUrl, effectiveRarity);
-  }
-
-  return { 
-    audioUrl: sanitizeMediaUrl(audioUrl), 
-    coverUrl: sanitizeMediaUrl(coverUrl) 
-  };
+  return resolveMediaUrls({
+    day: dayNum,
+    rawAudioUrl: r.storedAudioUrl || '',
+    rawCoverUrl: r.coverArt || '',
+    manifestAudioPath: raw?.manifestAudioPath,
+    fileName: raw?.fileName,
+    date: raw?.date,
+    rarity: (rarity || raw?.rarity) as string | undefined,
+  });
 }
 
 export function getSafeFallbackCard(cardId: string, rarity: Rarity): VaultCard {

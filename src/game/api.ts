@@ -5,6 +5,7 @@ import { getCurrentDay } from '../utils/dayCalc';
 import dayFileMap from './day_file_map.json';
 import staticSongCatalog from '../data/song_catalog.json';
 import { getHighScore as progGetHighScore, saveHighScore as progSaveHighScore } from './progress';
+import { resolveMediaUrls } from '../utils/resolveMediaUrls';
 
 export interface LyricsWord {
   word: string;
@@ -59,8 +60,16 @@ export function isSongTimeLocked(song: GameSong): boolean {
       return false;
     }
   } catch (e) {
-    console.error("Error evaluating dayCalc in isSongTimeLocked:", e);
+    console.warn('[isSongTimeLocked] dayCalc error, falling back to date string comparison:', e);
   }
+
+  // Task 3C: Validate ISO YYYY-MM-DD date format before lexicographic string comparison
+  const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+  if (!song.date || !ISO_DATE_RE.test(song.date)) {
+    console.warn('[isSongTimeLocked] Non-ISO date format, defaulting to unlocked:', song.date);
+    return false;
+  }
+
   const today = new Date();
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   return song.date > todayStr;
@@ -154,46 +163,20 @@ export function getCandidateAudioUrls(primaryUrl: string, day?: number): string[
   return list;
 }
 
-// Helper to resolve URLs dynamically
+// Helper to resolve URLs dynamically (Task 2B: shared utility)
 function resolveSongUrls(song: any, useLocal = false): GameSong {
-  const dayStr = String(song.day);
-  const mapped = (dayFileMap as any)[dayStr];
-
-  let audioUrl = song.audioUrl;
-  let coverArt = song.coverArt;
-
-  const SUPABASE_BASE = STORAGE_BASE;
-  const LOCAL_BASE = '/@fs/Volumes/extremeUno/th3scr1b3-365-warp/365-releases/';
-
-  if (useLocal) {
-    if (mapped && mapped.audio) {
-      audioUrl = LOCAL_BASE + mapped.audio;
-    } else if (song.manifestAudioPath) {
-      audioUrl = LOCAL_BASE + decodeURIComponent(song.manifestAudioPath);
-    }
-    if (mapped && mapped.cover) {
-      coverArt = LOCAL_BASE + mapped.cover;
-    }
-  } else {
-    if (mapped) {
-      if (mapped.audio) {
-        const audioPath = mapped.audio.replace(/\.wav$/i, '.mp3');
-        audioUrl = SUPABASE_BASE + encodeURIComponent(audioPath).replace(/%2F/g, '/');
-      } else {
-        audioUrl = FALLBACK_SYNTH_AUDIO;
-      }
-      if (mapped.cover) {
-        coverArt = SUPABASE_BASE + encodeURIComponent(mapped.cover).replace(/%2F/g, '/');
-      }
-    } else {
-      audioUrl = audioUrl || FALLBACK_SYNTH_AUDIO;
-    }
-  }
+  const { audioUrl, coverUrl } = resolveMediaUrls({
+    day: song.day,
+    rawAudioUrl: song.audioUrl,
+    rawCoverUrl: song.coverArt,
+    manifestAudioPath: song.manifestAudioPath,
+    useLocal,
+  });
 
   return {
     ...song,
-    audioUrl: sanitizeMediaUrl(audioUrl),
-    coverArt: sanitizeMediaUrl(coverArt)
+    audioUrl,
+    coverArt: coverUrl,
   };
 }
 
@@ -404,30 +387,44 @@ export type SongModifierType = 'vocal_isolation' | 'bass_realm' | 'corrupted_sig
 
 export function getModifierForSong(song: GameSong | null): SongModifierType {
   if (!song) return 'none';
-  
+
   const titleLower = song.title?.toLowerCase() || '';
-  const isCorrupted = 
-    titleLower.includes('crash') || 
-    titleLower.includes('overflow') || 
-    titleLower.includes('fault') || 
-    titleLower.includes('lock') || 
+  const tags = (song.moodTags ?? song.tags ?? []).map((t: string) => t.toLowerCase());
+  const genres = (song.genre ?? []).map((g: string) => g.toLowerCase());
+  const bpm = song.bpm ?? 0;
+
+  // 1. Explicit title cues / mood tags always win
+  if (
+    titleLower.includes('crash') ||
+    titleLower.includes('overflow') ||
+    titleLower.includes('fault') ||
     titleLower.includes('decay') ||
-    song.moodTags?.some(t => ['glitch', 'noise', 'corrupted', 'industrial'].includes(t.toLowerCase())) ||
-    song.bpm > 138;
-  if (isCorrupted) return 'corrupted_signal';
+    tags.some(t => ['glitch', 'noise', 'corrupted', 'industrial', 'distorted'].includes(t))
+  ) {
+    return 'corrupted_signal';
+  }
 
-  const isBass = 
-    song.genre?.some(g => ['electro', 'dance', 'hip-hop', 'trap', 'techno', 'dubstep', 'house'].includes(g.toLowerCase())) ||
-    song.moodTags?.some(t => ['intense', 'heavy', 'bass', 'hardcore', 'dark', 'synthwave'].includes(t.toLowerCase())) ||
-    song.bpm > 120;
-  if (isBass) return 'bass_realm';
+  if (tags.some(t => ['vocal', 'chill', 'ambient', 'acoustic', 'melodic', 'emotional', 'ballad'].includes(t))) {
+    return 'vocal_isolation';
+  }
 
-  const isVocal = 
-    song.genre?.some(g => ['pop', 'indie', 'acoustic', 'ambient', 'r&b', 'soul'].includes(g.toLowerCase())) ||
-    song.moodTags?.some(t => ['vocal', 'chill', 'ambient', 'melodic', 'emotional'].includes(t.toLowerCase())) ||
-    song.mood === 'light' ||
-    song.bpm <= 100;
-  if (isVocal) return 'vocal_isolation';
+  if (tags.some(t => ['intense', 'heavy', 'bass', 'hardcore', 'dark', 'synthwave', 'techno', 'rave'].includes(t))) {
+    return 'bass_realm';
+  }
+
+  // 2. Genre classification
+  if (genres.some(g => ['pop', 'indie', 'acoustic', 'r&b', 'soul', 'folk', 'ambient', 'classical'].includes(g))) {
+    return 'vocal_isolation';
+  }
+
+  if (genres.some(g => ['electro', 'dance', 'hip-hop', 'trap', 'techno', 'dubstep', 'house', 'edm', 'drum and bass'].includes(g))) {
+    return 'bass_realm';
+  }
+
+  // 3. BPM fallback (non-overlapping ranges)
+  if (bpm > 145) return 'corrupted_signal';
+  if (bpm >= 120) return 'bass_realm';
+  if (song.mood === 'light' || bpm <= 100) return 'vocal_isolation';
 
   return 'none';
 }

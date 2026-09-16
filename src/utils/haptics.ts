@@ -280,6 +280,50 @@ export const haptics = {
   },
 
   /**
+   * Task 4A: Lane-reactive, judgment-specific haptics
+   * Integrates directional rumble across iOS, Android, and Gamepad
+   */
+  judgment: (type: 'PERFECT+' | 'PERFECT' | 'GOOD' | 'MISS' | 'SHIELDED' | 'MINE' | 'FEVER' | 'SURGE' | 'SIGNAL_LOCK', lane: number = 1) => {
+    const laneMod = lane === 0
+      ? { weakMagnitude: 0.85, strongMagnitude: 0.5 }
+      : lane === 2
+      ? { weakMagnitude: 0.4, strongMagnitude: 0.95 }
+      : undefined;
+
+    switch (type) {
+      case 'PERFECT+':
+        haptics.vibrate([45, 25, 45], { weakMagnitude: 0.9, strongMagnitude: 1.0, ...laneMod });
+        break;
+      case 'PERFECT':
+        haptics.vibrate(40, { weakMagnitude: 0.6, strongMagnitude: 0.75, ...laneMod });
+        break;
+      case 'GOOD':
+        haptics.vibrate(30, { weakMagnitude: 0.35, strongMagnitude: 0.45, ...laneMod });
+        break;
+      case 'SHIELDED':
+        haptics.vibrate([30, 30, 30], { weakMagnitude: 0.5, strongMagnitude: 0.5 });
+        break;
+      case 'MISS':
+        haptics.vibrate([60, 40, 90], { weakMagnitude: 0.9, strongMagnitude: 0.95 });
+        break;
+      case 'MINE':
+        haptics.vibrate([80, 30, 80, 30, 120], { weakMagnitude: 1.0, strongMagnitude: 1.0 });
+        break;
+      case 'FEVER':
+        haptics.vibrate([35, 20, 35, 20, 50], { weakMagnitude: 0.7, strongMagnitude: 0.85 });
+        break;
+      case 'SURGE':
+        haptics.vibrate([50, 20, 50, 20, 80], { weakMagnitude: 0.85, strongMagnitude: 1.0 });
+        break;
+      case 'SIGNAL_LOCK':
+        haptics.vibrate([30, 15, 30, 15, 30, 15, 140], { weakMagnitude: 1.0, strongMagnitude: 1.0 });
+        break;
+      default:
+        haptics.mediumTap();
+    }
+  },
+
+  /**
    * Single short tap for standard UI interactions (button clicks, card selection, etc.)
    * Tuned to 35ms (surpasses Android 25ms hardware threshold).
    */

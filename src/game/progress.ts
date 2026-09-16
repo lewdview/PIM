@@ -39,60 +39,26 @@ export function getSongScore(songId: string): number {
 }
 
 export function getTotalScore(): number {
-  const highScores = useVaultStore.getState().highScores;
-  if (Object.keys(highScores).length > 0) {
-    return Object.values(highScores).reduce((sum, score) => sum + score, 0);
-  }
-  let total = 0;
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key?.startsWith('hs_')) total += parseInt(localStorage.getItem(key) ?? '0', 10);
-  }
-  return total;
+  const highScores = useVaultStore.getState().highScores || {};
+  return Object.values(highScores).reduce((sum, score) => sum + (score ?? 0), 0);
 }
 
 export function getTotalPlatinums(): number {
-  const medals = useVaultStore.getState().medals;
-  if (Object.keys(medals).length > 0) {
-    return Object.values(medals).filter(m => m === 'PLATINUM').length;
-  }
-  let count = 0;
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key?.startsWith('medal_') && localStorage.getItem(key) === 'PLATINUM') count++;
-  }
-  return count;
+  const medals = useVaultStore.getState().medals || {};
+  return Object.values(medals).filter(m => m === 'PLATINUM').length;
 }
 
 export function getTotalCleared(): number {
   const cleared = new Set<string>();
-  const highScores = useVaultStore.getState().highScores;
-  const medals = useVaultStore.getState().medals;
+  const highScores = useVaultStore.getState().highScores || {};
+  const medals = useVaultStore.getState().medals || {};
 
-  if (Object.keys(highScores).length > 0 || Object.keys(medals).length > 0) {
-    Object.keys(highScores).forEach(id => {
-      if (highScores[id] > 0) cleared.add(id);
-    });
-    Object.keys(medals).forEach(id => {
-      if (medals[id] && medals[id] !== '') cleared.add(id);
-    });
-    return cleared.size;
-  }
-
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key?.startsWith('medal_')) {
-      const val = localStorage.getItem(key);
-      if (val && val !== '') {
-        cleared.add(key.substring(6));
-      }
-    } else if (key?.startsWith('hs_')) {
-      const val = parseInt(localStorage.getItem(key) ?? '0', 10);
-      if (val > 0) {
-        cleared.add(key.substring(3));
-      }
-    }
-  }
+  Object.keys(highScores).forEach(id => {
+    if (highScores[id] > 0) cleared.add(id);
+  });
+  Object.keys(medals).forEach(id => {
+    if (medals[id] && medals[id] !== '') cleared.add(id);
+  });
   return cleared.size;
 }
 

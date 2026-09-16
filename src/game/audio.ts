@@ -15,7 +15,8 @@ export type SfxName =
   | 'fusion'
   | 'gold_get'
   | 'silver_get'
-  | 'bronxe_get'
+  | 'bronze_get'
+  | 'bronxe_get' // deprecated alias for bronze_get
   | 'diamond'
   | 'mythic_get'
   | 'platinum_get'
@@ -39,7 +40,8 @@ export type SfxName =
   | 'outof_continues'
   | 'perfect'
   | 'results'
-  | 'resuts2'
+  | 'results2'
+  | 'resuts2' // deprecated alias for results2
   | 'select_high_short'
   | 'select_start_song'
   | 'song_completion'
@@ -85,6 +87,7 @@ const SFX_FILES: Record<SfxName, string> = {
   fusion:                 'fusion',
   gold_get:               'gold_voice_get',
   silver_get:             'silver_get',
+  bronze_get:             'bronxe_get',
   bronxe_get:             'bronxe_get',
   diamond:                'diamond',
   mythic_get:             'mythic_get',
@@ -110,6 +113,7 @@ const SFX_FILES: Record<SfxName, string> = {
   outof_continues:        'outof_continues',
   perfect:                'perfect',
   results:                'results',
+  results2:               'resuts2',
   resuts2:                'resuts2',
   select_high_short:      'select_high_short',
   select_start_song:      'select_start_song',
@@ -175,8 +179,10 @@ const PRELOAD_LIST: SfxName[] = [
   'queue_before_mythic',
   'gold_get',
   'silver_get',
+  'bronze_get',
   'bronxe_get',
   'platinum_get',
+  'results2',
 ];
 
 export class AudioManager {
@@ -468,6 +474,9 @@ export class AudioManager {
     gainNode.gain.cancelScheduledValues(this.ctx.currentTime);
     gainNode.gain.setValueAtTime(gainNode.gain.value, this.ctx.currentTime);
     gainNode.gain.linearRampToValueAtTime(0.04, this.ctx.currentTime + 0.12);
+    // Task 3D: Sample-accurate scheduled recovery at 3.5s -> 3.9s, immune to background tab throttling
+    gainNode.gain.setValueAtTime(0.04, this.ctx.currentTime + 3.5);
+    gainNode.gain.linearRampToValueAtTime(targetGain, this.ctx.currentTime + 3.9);
 
     if (this.crossoverRestoreTimers[lane] !== null) {
       window.clearTimeout(this.crossoverRestoreTimers[lane]!);
@@ -476,12 +485,7 @@ export class AudioManager {
     this.crossoverRestoreTimers[lane] = window.setTimeout(() => {
       this.crossoverSilenced[lane] = false;
       this.crossoverRestoreTimers[lane] = null;
-      if (!this.ctx || !this.crossoverGains[lane]) return;
-      const g = this.crossoverGains[lane];
-      g.gain.cancelScheduledValues(this.ctx.currentTime);
-      g.gain.setValueAtTime(g.gain.value, this.ctx.currentTime);
-      g.gain.linearRampToValueAtTime(targetGain, this.ctx.currentTime + 0.4);
-    }, 3500);
+    }, 3900);
   }
 
   /** Active restore of a crossover lane on hit: ramps gain to target over 0.25s */
@@ -647,9 +651,12 @@ export class AudioManager {
     this.activeHoldTones.clear();
   }
 
-  // ── teardown ───────────────────────────────────────────────────
-
-  stop(): void {
+  // ── teardown & lifecycle ─────────────────────────────────────────
+  /**
+   * Suspend audio context between plays (preserves buffer cache and loaded SFX).
+   * Call on gameplay exit / unmount.
+   */
+  suspend(): void {
     this.stopAllHoldTones();
     this.cleanup3BandCrossover();
     if (this.activeRemixTimeout) {
@@ -657,11 +664,22 @@ export class AudioManager {
       this.activeRemixTimeout = null;
     }
     this.activeRemixEffect = null;
+    if (this.ctx && this.ctx.state === 'running') {
+      this.ctx.suspend().catch(() => {});
+    }
+  }
+
+  /**
+   * Full teardown on page unload.
+   */
+  stop(): void {
+    this.suspend();
     if (this.ctx) {
       this.ctx.close().catch(() => {});
       this.ctx = null;
       this.masterGain = null;
     }
+    this.preloaded = false;
   }
 }
 

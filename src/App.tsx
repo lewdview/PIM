@@ -47,8 +47,14 @@ function lazyWithRetry<T extends React.ComponentType<any>>(
         const now = Date.now();
         if (!lastReload || now - parseInt(lastReload, 10) > 8000) {
           sessionStorage.setItem('chunk_retry_timestamp', now.toString());
-          console.warn('[Chunk Loader] Stale chunk detected, refreshing page to load updated assets...', err);
-          window.location.reload();
+          console.warn('[Chunk Loader] Stale chunk detected, refreshing with cache-buster...', err);
+          try {
+            const url = new URL(window.location.href);
+            url.searchParams.set('_cb', now.toString());
+            window.location.replace(url.toString());
+          } catch {
+            window.location.reload();
+          }
           return new Promise<{ default: T }>(() => {});
         }
       }

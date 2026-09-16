@@ -173,7 +173,7 @@ export default function DecryptionAnimation({ reward, onClose }: DecryptionAnima
         } else if (cardRarity === 'uncommon') {
           audioManager.playSfx('silver_get', 0.8);
         } else if (cardRarity === 'common') {
-          audioManager.playSfx('bronxe_get', 0.75);
+          audioManager.playSfx('bronze_get', 0.75);
         } else {
           audioManager.playSfx('song_completion', 0.85);
         }

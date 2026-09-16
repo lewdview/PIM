@@ -399,7 +399,7 @@ export default function Results() {
     // Preload SFX
     audioManager.loadSfx('gold_get');
     audioManager.loadSfx('silver_get');
-    audioManager.loadSfx('bronxe_get');
+    audioManager.loadSfx('bronze_get');
     audioManager.loadSfx('platinum_get');
     audioManager.loadSfx('reveal');
     audioManager.loadSfx('open_chest');
@@ -407,7 +407,7 @@ export default function Results() {
     audioManager.loadSfx('queue_before_mythic');
 
     // Random results ambient music
-    const ambientTracks = ['results', 'resuts2'];
+    const ambientTracks = ['results', 'results2'];
     const pick = ambientTracks[Math.floor(Math.random() * ambientTracks.length)];
     const ambientAudio = new Audio(`/audio/sfx/${encodeURIComponent(pick)}.wav`);
     ambientAudio.loop = true;
@@ -814,7 +814,7 @@ export default function Results() {
             if (result.medal === 'PLATINUM') audioManager.playSfx('platinum_get', 0.8);
             else if (result.medal === 'GOLD') audioManager.playSfx('gold_get', 0.8);
             else if (result.medal === 'SILVER') audioManager.playSfx('silver_get', 0.8);
-            else if (result.medal === 'BRONZE') audioManager.playSfx('bronxe_get', 0.8);
+            else if (result.medal === 'BRONZE') audioManager.playSfx('bronze_get', 0.8);
             else audioManager.playSfx('reveal', 0.8);
           }, 300);
         }

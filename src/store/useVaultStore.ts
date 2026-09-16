@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { VaultCard, OwnedCard } from '../services/vaultService';
 import { supabase } from '../services/supabaseClient';
 import { getBombshellCoverUrl } from '../utils/bombshellCards';
+import { hydrateSettings, persistSettings } from '../utils/settingsStorage';
 
 
 export interface ProfileSettings {
@@ -339,53 +340,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     };
   }),
 
-  settings: {
-    audioOffset: parseFloat(localStorage.getItem("opt_audioOffset") ?? "0") || 0,
-    laneKeys: [
-      localStorage.getItem("opt_laneKey_0") ?? "a",
-      localStorage.getItem("opt_laneKey_1") ?? "s",
-      localStorage.getItem("opt_laneKey_2") ?? "d",
-    ],
-    laneColors: [
-      localStorage.getItem("opt_laneColor_0") ?? "#FF1493",
-      localStorage.getItem("opt_laneColor_1") ?? "#00E5FF",
-      localStorage.getItem("opt_laneColor_2") ?? "#39FF14",
-    ],
-    noteTheme: localStorage.getItem("opt_noteTheme") ?? "artwork",
-    cardSkin: localStorage.getItem("opt_cardSkin") ?? "original",
-    cardBack: localStorage.getItem("opt_cardBack") ?? "classic",
-    gameBackground: localStorage.getItem("opt_gameBackground") ?? "cover_blur",
-    gameTrack: localStorage.getItem("opt_gameTrack") ?? "transparent",
-    backgroundBlur: parseFloat(localStorage.getItem("opt_backgroundBlur") ?? "10") || 10,
-    hudMisses: localStorage.getItem("opt_hudMisses") !== "false",
-    comboDisplay: localStorage.getItem("opt_comboDisplay") !== "false",
-    judgmentText: localStorage.getItem("opt_judgmentText") !== "false",
-    bgMusic: localStorage.getItem("opt_bgMusic") === "true",
-    sfxEnabled: localStorage.getItem("opt_sfxEnabled") !== "false",
-    sfxVolume: parseFloat(localStorage.getItem("opt_sfxVolume") ?? "0.8") ?? 0.8,
-    musicVolume: parseFloat(localStorage.getItem("opt_musicVolume") ?? "0.5") ?? 0.5,
-    haptics: localStorage.getItem("opt_haptics") !== "false",
-    missSystem: localStorage.getItem("opt_missSystem") !== "false",
-    slideshowThreshold: parseInt(localStorage.getItem("opt_slideshowThreshold") ?? "38") || 38,
-    slideshowIsolate: localStorage.getItem("opt_slideshowIsolate") === "true",
-    slideshowBrackets: localStorage.getItem("opt_slideshowBrackets") === "true",
-    slideshowMode: (localStorage.getItem("opt_slideshowMode") as any) ?? "coco",
-    povMode: (localStorage.getItem("opt_povMode") as any) ?? "classic",
-    stagePovSwitch: localStorage.getItem("opt_stagePovSwitch") !== "false",
-    renderResolution: ((localStorage.getItem("opt_renderResolution") as any) || 'high'),
-    gfxLevel: ((localStorage.getItem("opt_gfxLevel") as any) || 'high'),
-    fpsTarget: ((localStorage.getItem("opt_fpsTarget") as any) || 'auto'),
-    particleDensity: ((localStorage.getItem("opt_particleDensity") as any) || 'full'),
-    bloomGlow: localStorage.getItem("opt_bloomGlow") !== "false",
-    bgAnimation: localStorage.getItem("opt_bgAnimation") !== "false",
-    legacyGraphics: localStorage.getItem("opt_legacyGraphics") === "true",
-    packDesignStyle: ((localStorage.getItem("opt_packDesignStyle") as any) || (localStorage.getItem("pim_pack_design_style") as any) || 'cyber_cartridge'),
-    visualizerShape: ((localStorage.getItem("opt_visualizerShape") as any) || 'flower_of_life'),
-    visualizerTheme: ((localStorage.getItem("opt_visualizerTheme") as any) || 'cyan_pink'),
-    visualizerPlaylistMode: ((localStorage.getItem("opt_visualizerPlaylistMode") as any) || 'all_catalog'),
-    visualizerRepeatMode: ((localStorage.getItem("opt_visualizerRepeatMode") as any) || 'all'),
-    chartVariant: ((localStorage.getItem("opt_chartVariant") as any) || 'v1_gimmicks'),
-  },
+  settings: hydrateSettings(),
   progression: {
     tutorialCompleted: localStorage.getItem("pim_tutorial_completed") === "true",
     seenWelcomeModal: localStorage.getItem("opt_seen_welcome_modal") === "true" || localStorage.getItem("rc2_seen_key") === "1",
@@ -1023,6 +978,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     const merged = { ...currentSettings, ...newSettings };
 
     set({ settings: merged });
+    persistSettings(merged);
 
     // Update LocalStorage cache
     if (newSettings.audioOffset !== undefined) localStorage.setItem("opt_audioOffset", String(merged.audioOffset));
