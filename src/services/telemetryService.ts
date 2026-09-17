@@ -1,20 +1,32 @@
-import { supabase } from './supabaseClient';
+import { telemetryQueue } from './telemetryQueue';
+
+export interface TelemetryOptions {
+  immediate?: boolean;
+}
 
 /**
  * Log an analytics/telemetry event to the remote database via the vault-engine.
- * This is robust, performance-safe, and decoupled from gameplay render loops.
+ * Events are automatically micro-batched, queued during idle frames to prevent 60fps
+ * render stutters, and persisted offline if disconnected.
  */
-export async function logAnalyticsEvent(eventType: string, payload: any = {}) {
+export async function logAnalyticsEvent(
+  eventType: string,
+  payload: any = {},
+  options?: TelemetryOptions
+) {
   try {
-    // Call vault-engine backend to write to telemetry_events securely
-    await supabase.functions.invoke('vault-engine', {
-      body: {
-        action: 'logClientTelemetry',
-        payload: { eventType, payload }
-      }
-    });
+    telemetryQueue.enqueue(eventType, payload, options);
   } catch (err) {
-    console.warn('[Analytics] Failed to log event:', eventType, err);
+    console.warn('[Analytics] Failed to enqueue event:', eventType, err);
   }
 }
+
+/**
+ * Explicitly flush any queued telemetry events immediately.
+ */
+export async function flushAnalyticsQueue() {
+  await telemetryQueue.flush();
+}
+
+export { telemetryQueue };
 

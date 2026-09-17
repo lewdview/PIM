@@ -13,6 +13,7 @@ import './styles/CardShowcaseStyles.css';
 // Layout & UI Shell components (eagerly loaded for immediate shell render)
 import Navbar from './components/Navbar';
 import LoadingToast from './components/LoadingToast';
+import { TransmissionToastContainer } from './components/TransmissionToastContainer';
 import GlobalPlayerBar from './components/GlobalPlayerBar';
 import OnboardingFlow from './components/OnboardingFlow';
 import AuthModal from './components/AuthModal';
@@ -397,6 +398,7 @@ export default function App() {
         </main>
 
         <LoadingToast />
+        <TransmissionToastContainer />
         <GlobalPlayerBar />
         <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
         <IdentityModal />
