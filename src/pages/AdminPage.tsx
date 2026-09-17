@@ -511,7 +511,7 @@ export default function AdminPage() {
 
   // Save config
   const handleSave = useCallback(async () => {
-    const pass = sessionStorage.getItem('th3vault_admin_pass') || 'th3scr1b3';
+    const pass = sessionStorage.getItem('th3vault_admin_pass') || '';
     saveAdminConfig(config, pass);
     setHasChanges(false);
     setSaveFlash(true);
@@ -591,7 +591,7 @@ export default function AdminPage() {
 
   const loadAnalyticsData = useCallback(async () => {
     setLoadingAnalytics(true);
-    const pass = sessionStorage.getItem('th3vault_admin_pass') || 'th3scr1b3';
+    const pass = sessionStorage.getItem('th3vault_admin_pass') || '';
     try {
       // 1. Fetch exact aggregate stats via RPC (uncapped by PostgREST 1000-row limit)
       let rpcSuccess = false;
@@ -745,7 +745,7 @@ export default function AdminPage() {
   // Broadcast Station Handlers
   const loadBroadcastList = useCallback(async () => {
     setLoadingBroadcastList(true);
-    const pass = sessionStorage.getItem('th3vault_admin_pass') || 'th3scr1b3';
+    const pass = sessionStorage.getItem('th3vault_admin_pass') || '';
     try {
       // 1. Try vault-engine (service role bypasses RLS so inactive broadcasts are visible)
       const { data: edgeData, error: edgeError } = await supabase.functions.invoke('vault-engine', {
@@ -866,7 +866,7 @@ export default function AdminPage() {
 
     setBroadcastSending(true);
     setBroadcastFeedback(null);
-    const pass = sessionStorage.getItem('th3vault_admin_pass') || 'th3scr1b3';
+    const pass = sessionStorage.getItem('th3vault_admin_pass') || '';
 
     try {
       let expiresAt: string | null = null;
@@ -927,7 +927,7 @@ export default function AdminPage() {
   };
 
   const handleToggleBroadcastActive = async (id: string, currentActive: boolean) => {
-    const pass = sessionStorage.getItem('th3vault_admin_pass') || 'th3scr1b3';
+    const pass = sessionStorage.getItem('th3vault_admin_pass') || '';
     try {
       // 1. Primary: invoke vault-engine
       const { data: edgeData, error: edgeError } = await supabase.functions.invoke('vault-engine', {
@@ -954,7 +954,7 @@ export default function AdminPage() {
 
   const handleDeleteBroadcast = async (id: string) => {
     if (!window.confirm('Delete this broadcast transmission permanently?')) return;
-    const pass = sessionStorage.getItem('th3vault_admin_pass') || 'th3scr1b3';
+    const pass = sessionStorage.getItem('th3vault_admin_pass') || '';
     try {
       // 1. Primary: invoke vault-engine
       const { data: edgeData, error: edgeError } = await supabase.functions.invoke('vault-engine', {
@@ -1958,7 +1958,7 @@ export default function AdminPage() {
                     type="button"
                     onClick={async () => {
                       flushEchoPool();
-                      const pass = sessionStorage.getItem('th3vault_admin_pass') || 'th3scr1b3';
+                      const pass = sessionStorage.getItem('th3vault_admin_pass') || '';
                       try {
                         await supabase.functions.invoke('vault-engine', {
                           body: { action: 'flushEchoPool', payload: { passphrase: pass } },
