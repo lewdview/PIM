@@ -61,27 +61,61 @@ export function addEchoToPool(echo: any) {
   const pool = getEchoPoolRaw();
   const id = echo.id || `echo-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const exists = pool.some(e => e.id === id);
+  const echoCardItem: EchoCard = {
+    id,
+    sourceCardId: echo.source_card_id || echo.sourceCardId || `card-${echo.source_day || echo.sourceDay || 1}`,
+    sourceTitle: echo.source_title || echo.sourceTitle || 'Echo Card',
+    sourceDay: Number(echo.source_day || echo.sourceDay || 1),
+    sourceMood: (echo.source_mood || echo.sourceMood || 'dark') as 'light' | 'dark',
+    sourceRarity: (echo.source_rarity || echo.sourceRarity || 'common') as Rarity,
+    echoRarity: (echo.echo_rarity || echo.echoRarity || echo.rarity || 'common') as Rarity,
+    generation: Number(echo.generation || echo.echo_generation || 1),
+    coverUrl: echo.cover_url || echo.coverUrl || '',
+    audioUrl: echo.audio_url || echo.audioUrl || '',
+    energy: Number(echo.energy ?? 0.5),
+    valence: Number(echo.valence ?? 0.5),
+    tempo: Number(echo.tempo ?? 120),
+    genre: echo.genre || [],
+    tags: echo.tags || [],
+    createdAt: echo.created_at || echo.createdAt || new Date().toISOString()
+  };
+
   if (!exists) {
-    pool.unshift({
-      id,
-      sourceCardId: echo.source_card_id || echo.sourceCardId || `card-${echo.source_day || echo.sourceDay || 1}`,
-      sourceTitle: echo.source_title || echo.sourceTitle || 'Echo Card',
-      sourceDay: echo.source_day || echo.sourceDay || 1,
-      sourceMood: echo.source_mood || echo.sourceMood || 'dark',
-      sourceRarity: echo.source_rarity || echo.sourceRarity || 'common',
-      echoRarity: echo.echo_rarity || echo.echoRarity || 'common',
-      generation: echo.generation || echo.echo_generation || 1,
-      coverUrl: echo.cover_url || echo.coverUrl || '',
-      audioUrl: echo.audio_url || echo.audioUrl || '',
-      energy: echo.energy ?? 0.5,
-      valence: echo.valence ?? 0.5,
-      tempo: echo.tempo ?? 120,
-      genre: echo.genre || [],
-      tags: echo.tags || [],
-      createdAt: echo.created_at || echo.createdAt || new Date().toISOString()
-    });
+    pool.unshift(echoCardItem);
     saveEchoPool(pool);
   }
+
+  // Also sync to remote Supabase echo_pool via vault-engine or direct insert in background
+  (async () => {
+    try {
+      await supabase.functions.invoke('vault-engine', {
+        body: { action: 'addEchoToPool', payload: { echoCard: echoCardItem } },
+      });
+    } catch {
+      // Best-effort fallback direct insert
+      try {
+        await supabase.from('echo_pool').insert({
+          card_id: echoCardItem.sourceCardId,
+          source_card_id: echoCardItem.sourceCardId,
+          rarity: echoCardItem.echoRarity,
+          echo_rarity: echoCardItem.echoRarity,
+          echo_generation: echoCardItem.generation,
+          generation: echoCardItem.generation,
+          source_title: echoCardItem.sourceTitle,
+          source_day: echoCardItem.sourceDay,
+          source_mood: echoCardItem.sourceMood,
+          source_rarity: echoCardItem.sourceRarity,
+          cover_url: echoCardItem.coverUrl,
+          audio_url: echoCardItem.audioUrl,
+          energy: echoCardItem.energy,
+          valence: echoCardItem.valence,
+          tempo: echoCardItem.tempo,
+        });
+      } catch (err) {
+        console.warn('[EchoSystem] Failed to push fallback echo to remote DB:', err);
+      }
+    }
+  })();
 }
 
 // ===== RARITY DEGRADATION =====
@@ -154,10 +188,17 @@ const ECHO_SPAWN_RATES: Record<number, number> = {
  * Supports admin echoSpawnMultiplier override.
  */
 export function getEchoSpawnChance(generation: number): number {
+  if (generation >= 3) return 0; // Terminal
   const config = getAdminConfig();
   const multiplier = (config as any).echoSpawnMultiplier ?? 1;
 
-  if (generation >= 3) return 0; // Terminal
+  if (config.echoSpawnRates) {
+    const customRate = (config.echoSpawnRates as any)[`gen${generation}`];
+    if (typeof customRate === 'number') {
+      return Math.min(100, customRate * multiplier);
+    }
+  }
+
   const baseRate = ECHO_SPAWN_RATES[generation] ?? 0;
   return Math.min(100, baseRate * multiplier);
 }

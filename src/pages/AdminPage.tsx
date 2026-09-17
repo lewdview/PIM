@@ -1958,9 +1958,17 @@ export default function AdminPage() {
                     type="button"
                     onClick={async () => {
                       flushEchoPool();
+                      const pass = sessionStorage.getItem('th3vault_admin_pass') || 'th3scr1b3';
                       try {
-                        await supabase.from('echo_pool').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-                      } catch {}
+                        await supabase.functions.invoke('vault-engine', {
+                          body: { action: 'flushEchoPool', payload: { passphrase: pass } },
+                        });
+                      } catch (err) {
+                        console.warn('[AdminPage] flushEchoPool via vault-engine failed, trying direct:', err);
+                        try {
+                          await supabase.from('echo_pool').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+                        } catch {}
+                      }
                       refreshEchoes();
                       setConfig(c => ({ ...c }));
                     }}
