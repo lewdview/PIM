@@ -33,7 +33,41 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+
+// Extracted to avoid re-rendering the parent AudioPreview component
+// on high-frequency progress/time updates.
+function AudioPreviewProgress({ isThisTrack, isFullSong }: { isThisTrack: boolean, isFullSong: boolean }) {
+  const progress = useGlobalPlayer(s => isThisTrack ? s.progress : 0);
+  const displayProgress = isThisTrack ? progress * 100 : 0;
+
+  return (
+    <div
+      className="h-full rounded-full transition-all duration-200"
+      style={{
+        width: `${Math.min(displayProgress, 100)}%`,
+        background: isFullSong
+          ? 'linear-gradient(90deg, var(--color-neon-cyan), var(--color-neon-purple))'
+          : 'linear-gradient(90deg, var(--color-text-muted), var(--color-text-secondary))',
+      }}
+    />
+  );
+}
+
+function AudioPreviewTimeDisplay({ isThisTrack, isPlaying, isFullSong, durationLabel }: { isThisTrack: boolean, isPlaying: boolean, isFullSong: boolean, durationLabel: string }) {
+  const currentTime = useGlobalPlayer(s => isThisTrack ? s.currentTime : 0);
+  const displayTime = isThisTrack ? currentTime : 0;
+
+  return (
+    <span className="text-[10px] font-mono flex-shrink-0" style={{
+      color: isFullSong ? 'var(--color-neon-cyan)' : 'var(--color-text-muted)',
+    }}>
+      {isPlaying ? formatTime(displayTime) : durationLabel}
+    </span>
+  );
+}
+
 export default function AudioPreview({
+
   audioUrl,
   title,
   compact = false,
@@ -54,8 +88,6 @@ export default function AudioPreview({
   // Check if THIS track is the one currently playing
   const isThisTrack = currentTrack?.audioUrl === audioUrl && currentTrack?.day === day;
   const globalPlaying = useGlobalPlayer(s => isThisTrack ? s.isPlaying : false);
-  const progress = useGlobalPlayer(s => isThisTrack ? s.progress : 0);
-  const currentTime = useGlobalPlayer(s => isThisTrack ? s.currentTime : 0);
   const duration = useGlobalPlayer(s => isThisTrack ? s.duration : 0);
 
   const globalToggle = useGlobalPlayer(s => s.toggle);
@@ -107,8 +139,6 @@ export default function AudioPreview({
     );
   }
 
-  const displayProgress = isThisTrack ? progress * 100 : 0;
-  const displayTime = isThisTrack ? currentTime : 0;
 
   return (
     <div className="space-y-1" onClick={(e) => e.stopPropagation()}>
@@ -145,15 +175,7 @@ export default function AudioPreview({
                 ))}
               </div>
             )}
-            <div
-              className="h-full rounded-full transition-all duration-200"
-              style={{
-                width: `${Math.min(displayProgress, 100)}%`,
-                background: isFullSong
-                  ? 'linear-gradient(90deg, var(--color-neon-cyan), var(--color-neon-purple))'
-                  : 'linear-gradient(90deg, var(--color-text-muted), var(--color-text-secondary))',
-              }}
-            />
+            <AudioPreviewProgress isThisTrack={isThisTrack} isFullSong={isFullSong} />
           </div>
           {tierLabel && (
             <div className="text-[8px] font-mono mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
@@ -162,11 +184,7 @@ export default function AudioPreview({
           )}
         </div>
 
-        <span className="text-[10px] font-mono flex-shrink-0" style={{
-          color: isFullSong ? 'var(--color-neon-cyan)' : 'var(--color-text-muted)',
-        }}>
-          {isPlaying ? formatTime(displayTime) : durationLabel}
-        </span>
+        <AudioPreviewTimeDisplay isThisTrack={isThisTrack} isPlaying={isPlaying} isFullSong={isFullSong} durationLabel={durationLabel} />
       </div>
 
       {/* Mythic: stems download link */}
