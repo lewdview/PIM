@@ -33,6 +33,57 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+// Extracted progress bar component to prevent the entire AudioPreview
+// from re-rendering multiple times per second during playback
+function AudioPreviewProgress({
+  audioUrl,
+  day,
+  isFullSong
+}: {
+  audioUrl: string;
+  day: number;
+  isFullSong: boolean;
+}) {
+  const progress = useGlobalPlayer(s =>
+    (s.currentTrack?.audioUrl === audioUrl && s.currentTrack?.day === day) ? s.progress : 0
+  );
+
+  return (
+    <div
+      className="h-full rounded-full transition-all duration-200"
+      style={{
+        width: `${Math.min(progress * 100, 100)}%`,
+        background: isFullSong
+          ? 'linear-gradient(90deg, var(--color-neon-cyan), var(--color-neon-purple))'
+          : 'linear-gradient(90deg, var(--color-text-muted), var(--color-text-secondary))',
+      }}
+    />
+  );
+}
+
+// Extracted time display component to prevent re-renders of the parent during playback
+function AudioPreviewTime({
+  audioUrl,
+  day,
+  durationLabel,
+  isPlaying
+}: {
+  audioUrl: string;
+  day: number;
+  durationLabel: string;
+  isPlaying: boolean;
+}) {
+  const currentTime = useGlobalPlayer(s =>
+    (s.currentTrack?.audioUrl === audioUrl && s.currentTrack?.day === day) ? s.currentTime : 0
+  );
+
+  return (
+    <>
+      {isPlaying ? formatTime(currentTime) : durationLabel}
+    </>
+  );
+}
+
 export default function AudioPreview({
   audioUrl,
   title,
@@ -53,10 +104,9 @@ export default function AudioPreview({
 
   // Check if THIS track is the one currently playing
   const isThisTrack = currentTrack?.audioUrl === audioUrl && currentTrack?.day === day;
-  const globalPlaying = useGlobalPlayer(s => isThisTrack ? s.isPlaying : false);
-  const progress = useGlobalPlayer(s => isThisTrack ? s.progress : 0);
-  const currentTime = useGlobalPlayer(s => isThisTrack ? s.currentTime : 0);
-  const duration = useGlobalPlayer(s => isThisTrack ? s.duration : 0);
+  // Evaluate the condition directly inside the selector function
+  const globalPlaying = useGlobalPlayer(s => (s.currentTrack?.audioUrl === audioUrl && s.currentTrack?.day === day) ? s.isPlaying : false);
+  const duration = useGlobalPlayer(s => (s.currentTrack?.audioUrl === audioUrl && s.currentTrack?.day === day) ? s.duration : 0);
 
   const globalToggle = useGlobalPlayer(s => s.toggle);
   const globalPlay = useGlobalPlayer(s => s.play);
@@ -107,9 +157,6 @@ export default function AudioPreview({
     );
   }
 
-  const displayProgress = isThisTrack ? progress * 100 : 0;
-  const displayTime = isThisTrack ? currentTime : 0;
-
   return (
     <div className="space-y-1" onClick={(e) => e.stopPropagation()}>
       <div
@@ -145,15 +192,7 @@ export default function AudioPreview({
                 ))}
               </div>
             )}
-            <div
-              className="h-full rounded-full transition-all duration-200"
-              style={{
-                width: `${Math.min(displayProgress, 100)}%`,
-                background: isFullSong
-                  ? 'linear-gradient(90deg, var(--color-neon-cyan), var(--color-neon-purple))'
-                  : 'linear-gradient(90deg, var(--color-text-muted), var(--color-text-secondary))',
-              }}
-            />
+            <AudioPreviewProgress audioUrl={audioUrl} day={day} isFullSong={isFullSong} />
           </div>
           {tierLabel && (
             <div className="text-[8px] font-mono mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
@@ -165,7 +204,12 @@ export default function AudioPreview({
         <span className="text-[10px] font-mono flex-shrink-0" style={{
           color: isFullSong ? 'var(--color-neon-cyan)' : 'var(--color-text-muted)',
         }}>
-          {isPlaying ? formatTime(displayTime) : durationLabel}
+          <AudioPreviewTime
+            audioUrl={audioUrl}
+            day={day}
+            durationLabel={durationLabel}
+            isPlaying={isPlaying}
+          />
         </span>
       </div>
 
