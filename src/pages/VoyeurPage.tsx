@@ -13,7 +13,8 @@ const VOYEUR_FEE = 15; // 15 V⚡ to view another player's vault
 export default function VoyeurPage() {
   const { userId } = useParams() as { userId?: string };
   const [, setLocation] = useLocation();
-  const { tokenBalance, loadVaultData } = useVaultStore();
+  const tokenBalance = useVaultStore(s => s.tokenBalance);
+  const loadVaultData = useVaultStore(s => s.loadVaultData);
   
   const [hasPaid, setHasPaid] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);

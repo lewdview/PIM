@@ -18,7 +18,13 @@ interface TokenShopProps {
 const RARITY_ORDER = ['mythic', 'legendary', 'rare', 'uncommon', 'common'] as const;
 
 export default function TokenShop({ onPackOpened }: TokenShopProps) {
-  const { collection, removeFromCollection, tokenBalance, setTokenBalance, addToCollection, startReveal, loadVaultData } = useVaultStore();
+  const collection = useVaultStore(s => s.collection);
+  const removeFromCollection = useVaultStore(s => s.removeFromCollection);
+  const tokenBalance = useVaultStore(s => s.tokenBalance);
+  const setTokenBalance = useVaultStore(s => s.setTokenBalance);
+  const addToCollection = useVaultStore(s => s.addToCollection);
+  const startReveal = useVaultStore(s => s.startReveal);
+  const loadVaultData = useVaultStore(s => s.loadVaultData);
   const [sellOpen, setSellOpen] = useState(false);
   const [lastEarned, setLastEarned] = useState<number | null>(null);
   const [buyFlash, setBuyFlash] = useState(false);

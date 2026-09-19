@@ -12,7 +12,7 @@ interface IdentitySetupProps {
 }
 
 export default function IdentitySetup({ onComplete, compact }: IdentitySetupProps) {
-  const { user } = useAuthStore();
+  const user = useAuthStore(s => s.user);
   const [username, setUsername] = useState('');
   const [isValidFormat, setIsValidFormat] = useState(true);
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
