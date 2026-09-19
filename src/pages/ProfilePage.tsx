@@ -57,9 +57,18 @@ const EASE_OUT: [number, number, number, number] = [0.22, 1, 0.36, 1];
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export default function ProfilePage() {
-  const { user, signOut, registerPasskey, ensureProfileAndWallet, isPasskeySupported } = useAuthStore();
+  const user = useAuthStore(s => s.user);
+  const signOut = useAuthStore(s => s.signOut);
+  const registerPasskey = useAuthStore(s => s.registerPasskey);
+  const ensureProfileAndWallet = useAuthStore(s => s.ensureProfileAndWallet);
+  const isPasskeySupported = useAuthStore(s => s.isPasskeySupported);
   const isAnonymous = user?.is_anonymous ?? false;
-  const { collection, tokenBalance, totalPulls, streakCount, loadVaultData, username } = useVaultStore();
+  const collection = useVaultStore(s => s.collection);
+  const tokenBalance = useVaultStore(s => s.tokenBalance);
+  const totalPulls = useVaultStore(s => s.totalPulls);
+  const streakCount = useVaultStore(s => s.streakCount);
+  const loadVaultData = useVaultStore(s => s.loadVaultData);
+  const username = useVaultStore(s => s.username);
   const [, navigate] = useLocation();
 
   const currentDay = getCurrentDay();

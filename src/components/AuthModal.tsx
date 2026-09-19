@@ -30,20 +30,18 @@ type AuthTab = 'passkey' | 'github' | 'email' | 'web3';
 type EmailMode = 'magic-link' | 'password-signin' | 'password-signup';
 
 export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
-  const { 
-    user,
-    signInWithWallet, 
-    signInWithEphemeralWallet,
-    signInWithProvider, 
-    signInWithMagicLink, 
-    signInWithEmail,
-    signUpWithEmail,
-    signInWithPasskey, 
-    registerPasskey,
-    isPasskeySupported, 
-    status, 
-    error: storeError 
-  } = useAuthStore();
+  const user = useAuthStore(s => s.user);
+  const signInWithWallet = useAuthStore(s => s.signInWithWallet);
+  const signInWithEphemeralWallet = useAuthStore(s => s.signInWithEphemeralWallet);
+  const signInWithProvider = useAuthStore(s => s.signInWithProvider);
+  const signInWithMagicLink = useAuthStore(s => s.signInWithMagicLink);
+  const signInWithEmail = useAuthStore(s => s.signInWithEmail);
+  const signUpWithEmail = useAuthStore(s => s.signUpWithEmail);
+  const signInWithPasskey = useAuthStore(s => s.signInWithPasskey);
+  const registerPasskey = useAuthStore(s => s.registerPasskey);
+  const isPasskeySupported = useAuthStore(s => s.isPasskeySupported);
+  const status = useAuthStore(s => s.status);
+  const storeError = useAuthStore(s => s.error);
 
   const [activeTab, setActiveTab] = useState<AuthTab>('web3');
   
