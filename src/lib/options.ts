@@ -163,6 +163,7 @@ export function loadOpts(): GameOpts {
 
   const isNoclipUnlocked = dbCheats?.noclip ?? (localStorage.getItem("opt_unlocked_noclip") === "true");
   const isIddqdUnlocked = dbCheats?.iddqd ?? (localStorage.getItem("opt_unlocked_iddqd") === "true");
+  const isChartEditionsUnlocked = Boolean(dbCheats?.chartEditions) || (localStorage.getItem("opt_unlocked_chart_editions") === "true");
 
   const rawRes = (dbSettings?.renderResolution ?? localStorage.getItem("opt_renderResolution")) as RenderResolution;
   const validRes: RenderResolution = (rawRes === 'native' || rawRes === 'high' || rawRes === 'medium' || rawRes === 'low') ? rawRes : 'high';
@@ -200,7 +201,11 @@ export function loadOpts(): GameOpts {
       const v = dbProgression?.noteGenerationSource ?? localStorage.getItem("opt_noteGenerationSource");
       return (v === "lyrics" || v === "bpm" || v === "auto") ? v : "auto";
     })(),
-    chartVariant: (dbSettings?.chartVariant ?? (localStorage.getItem("opt_chartVariant") as any)) || "v1_gimmicks",
+    chartVariant: (() => {
+      if (!isChartEditionsUnlocked) return "v1_gimmicks";
+      const v = (dbSettings?.chartVariant ?? (localStorage.getItem("opt_chartVariant") as any)) || "v1_gimmicks";
+      return v;
+    })(),
     bgMusic: dbSettings?.bgMusic ?? bool("opt_bgMusic", false),
     sfxEnabled: dbSettings?.sfxEnabled ?? bool("opt_sfxEnabled", true),
     sfxVolume: dbSettings?.sfxVolume ?? (parseFloat(localStorage.getItem("opt_sfxVolume") ?? "0.8") ?? 0.8),

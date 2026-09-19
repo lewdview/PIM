@@ -327,7 +327,9 @@ export async function getSongById(id: string): Promise<GameSong | null> {
       fetchId = basicSong.id;
     }
 
-    const variant = typeof localStorage !== 'undefined' ? (localStorage.getItem('opt_chartVariant') || 'v1_gimmicks') : 'v1_gimmicks';
+    const isChartEditionsUnlocked = typeof localStorage !== 'undefined' && localStorage.getItem('opt_unlocked_chart_editions') === 'true';
+    const rawVariant = typeof localStorage !== 'undefined' ? (localStorage.getItem('opt_chartVariant') || 'v1_gimmicks') : 'v1_gimmicks';
+    const variant = isChartEditionsUnlocked ? rawVariant : 'v1_gimmicks';
     const isDeluxeRequested = typeof localStorage !== 'undefined' && (localStorage.getItem('opt_deluxeChart') === 'true' || localStorage.getItem('opt_deluxeMode') === 'true');
     const isExplicitDeluxe = id.endsWith('_deluxe') || fetchId.endsWith('_deluxe');
     const shouldUseDeluxe = isExplicitDeluxe || (variant === 'v5_flagship' && isDeluxeRequested);

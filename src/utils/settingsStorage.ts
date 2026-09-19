@@ -123,12 +123,20 @@ function readLegacyOpts(): Partial<ProfileSettings> {
 export function hydrateSettings(defaults: ProfileSettings = DEFAULT_PROFILE_SETTINGS): ProfileSettings {
   if (typeof localStorage === 'undefined') return { ...defaults };
   try {
+    const isChartEditionsUnlocked = localStorage.getItem("opt_unlocked_chart_editions") === "true";
     const stored = localStorage.getItem(SETTINGS_KEY);
     if (stored) {
-      return { ...defaults, ...JSON.parse(stored) };
+      const parsed = JSON.parse(stored);
+      if (!isChartEditionsUnlocked) {
+        parsed.chartVariant = 'v1_gimmicks';
+      }
+      return { ...defaults, ...parsed };
     }
     // First run migration from legacy individual keys
     const legacy = readLegacyOpts();
+    if (!isChartEditionsUnlocked) {
+      legacy.chartVariant = 'v1_gimmicks';
+    }
     const migrated = { ...defaults, ...legacy };
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(migrated));
     return migrated;

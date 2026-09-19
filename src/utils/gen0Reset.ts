@@ -141,6 +141,7 @@ export function purgeClientGen0State(): { cleanedKeys: number; preservedKeys: nu
     'opt_unlocked_noclip',
     'opt_unlocked_iddqd',
     'opt_unlocked_pov',
+    'opt_unlocked_chart_editions',
   ];
 
   for (let i = 0; i < localStorage.length; i++) {

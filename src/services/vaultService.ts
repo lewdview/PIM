@@ -1049,7 +1049,6 @@ export async function redeemInviteCode(code: string): Promise<boolean> {
 
 /** Redeem a bonus/promo code */
 export async function redeemBonusCode(code: string): Promise<{ success: boolean; rewardType?: string; rewardValue?: string; result?: any; error?: string }> {
-  const cleanCode = code.trim().toLowerCase();
   if (cleanCode === 'povredeem') {
     localStorage.setItem('opt_unlocked_pov', 'true');
     try {
@@ -1061,6 +1060,21 @@ export async function redeemBonusCode(code: string): Promise<{ success: boolean;
       success: true,
       rewardType: 'cheat_code',
       rewardValue: 'CAMERA POV PERSPECTIVE ENGINE UNLOCKED!',
+      result: { success: true }
+    };
+  }
+
+  if (cleanCode === 'masterredeem' || cleanCode === 'chartredeem' || cleanCode === 'editionredeem') {
+    localStorage.setItem('opt_unlocked_chart_editions', 'true');
+    try {
+      const { useVaultStore } = await import('../store/useVaultStore');
+      useVaultStore.getState().updateCheats({ chartEditions: true });
+    } catch {}
+    window.dispatchEvent(new Event('cheat_code_activated'));
+    return {
+      success: true,
+      rewardType: 'cheat_code',
+      rewardValue: 'MASTER CHART EDITIONS UNLOCKED!',
       result: { success: true }
     };
   }

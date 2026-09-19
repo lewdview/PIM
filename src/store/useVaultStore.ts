@@ -59,6 +59,7 @@ export interface ProfileCheats {
   stunnerSection?: boolean;
   freeStella?: boolean;
   purchasedStunners?: string[];
+  chartEditions?: boolean;
 }
 
 export interface RevealPackMeta {
@@ -353,6 +354,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     povChanger: localStorage.getItem("opt_unlocked_pov") === "true",
     stunnerSection: localStorage.getItem("opt_unlocked_stunner_section") === "true",
     freeStella: localStorage.getItem("opt_free_stella_unlocked") === "true",
+    chartEditions: localStorage.getItem("opt_unlocked_chart_editions") === "true",
     purchasedStunners: (() => {
       try {
         return JSON.parse(localStorage.getItem("opt_purchased_stunners") || "[]");
@@ -661,6 +663,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         localStorage.setItem("opt_unlocked_noclip", String(mergedCheats.noclip));
         localStorage.setItem("opt_unlocked_iddqd", String(mergedCheats.iddqd));
         localStorage.setItem("opt_unlocked_pov", String(mergedCheats.povChanger ?? false));
+        localStorage.setItem("opt_unlocked_chart_editions", String(mergedCheats.chartEditions ?? false));
 
         const dbTokens = typeof profile.tokens === 'number' ? profile.tokens : 0;
         const effectiveTokens = dbTokens;
@@ -843,18 +846,6 @@ export const useVaultStore = create<VaultState>((set, get) => ({
           const dbMedal = dbMedals[songId] || '';
           if (MEDAL_ORDER.indexOf(localMedal as any) > MEDAL_ORDER.indexOf(dbMedal as any)) {
             finalMedals[songId] = localMedal;
-            supabase.from('gameplay_records').insert({
-              user_id: userId,
-              song_id: songId,
-              score: finalHighScores[songId] || 0,
-              accuracy: 0,
-              max_combo: 0,
-              medal: sanitizeMedal(localMedal),
-              pack_rewarded: false,
-              reward_tier: 'none'
-            }).then(({ error }) => {
-              if (error) console.warn(`[Migrate] Failed to sync medal for ${songId}:`, error.message);
-            });
           }
         } else if (key.startsWith('fragments_')) {
           const songId = key.substring(10);
@@ -1065,6 +1056,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     if (newCheats.povChanger !== undefined) localStorage.setItem("opt_unlocked_pov", String(merged.povChanger));
     if (newCheats.stunnerSection !== undefined) localStorage.setItem("opt_unlocked_stunner_section", String(merged.stunnerSection));
     if (newCheats.freeStella !== undefined) localStorage.setItem("opt_free_stella_unlocked", String(merged.freeStella));
+    if (newCheats.chartEditions !== undefined) localStorage.setItem("opt_unlocked_chart_editions", String(merged.chartEditions));
     if (newCheats.purchasedStunners !== undefined) localStorage.setItem("opt_purchased_stunners", JSON.stringify(merged.purchasedStunners));
 
     if (userId) {
@@ -1087,8 +1079,8 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     const isAnon = !user || user.is_anonymous || user.app_metadata?.provider === 'anonymous';
     const currentUsername = get().username;
 
-    // Only record to database if user is connected (not anonymous) and has a registered username
-    if (user?.id && !isAnon && currentUsername) {
+    // Only record to database if user is connected (not anonymous), has a registered username, and has a positive score
+    if (user?.id && !isAnon && currentUsername && score > 0) {
       try {
         await supabase.from('gameplay_records').insert({
           user_id: user.id,
@@ -1116,26 +1108,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       }
       return {};
     });
-
-    const session = await supabase.auth.getSession();
-    const userId = session.data.session?.user.id;
-    if (userId) {
-      try {
-        const currentScore = get().highScores[songId] || 0;
-        await supabase.from('gameplay_records').insert({
-          user_id: userId,
-          song_id: songId,
-          score: currentScore,
-          accuracy: 0,
-          max_combo: 0,
-          medal,
-          pack_rewarded: false,
-          reward_tier: 'none'
-        });
-      } catch (err) {
-        console.warn('Failed to sync medal to database:', err);
-      }
-    }
+    // Medals are saved with actual gameplay scores in syncHighScore to avoid duplicate zero-score rows
   },
 
   syncFragments: async (songId, count) => {

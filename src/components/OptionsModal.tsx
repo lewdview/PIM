@@ -926,7 +926,12 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
   const [povInputError, setPovInputError] = useState<string | null>(null);
   const [povSuccess, setPovSuccess] = useState(false);
 
+  const [masterInputCode, setMasterInputCode] = useState('');
+  const [masterInputError, setMasterInputError] = useState<string | null>(null);
+  const [masterSuccess, setMasterSuccess] = useState(false);
+
   const isPovUnlocked = Boolean(unlockedCheats?.povChanger) || (typeof localStorage !== 'undefined' && localStorage.getItem("opt_unlocked_pov") === "true");
+  const isChartEditionsUnlocked = Boolean(unlockedCheats?.chartEditions) || (typeof localStorage !== 'undefined' && localStorage.getItem("opt_unlocked_chart_editions") === "true");
 
   useEffect(() => {
     if (isOpen) {
@@ -1798,40 +1803,120 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                 {/* Chart Edition Archive Selector (Neural AI / Master / Gimmicks / Minimal) */}
                 <div className="bg-black/40 border border-white/5 p-4 rounded-lg space-y-3">
                   <div className="flex items-center justify-between border-b border-white/5 pb-1">
-                    <h3 className="font-mono text-[9px] font-black text-white/40 uppercase tracking-wider">CHART EDITION ARCHIVE</h3>
-                    <span className="font-mono text-[7px] text-[#39FF14] uppercase tracking-widest">AI / MASTER EDITIONS</span>
+                    <h3 className="font-mono text-[9px] font-black text-white/40 uppercase tracking-wider flex items-center gap-1.5">
+                      <span>CHART EDITION ARCHIVE</span>
+                      {!isChartEditionsUnlocked && (
+                        <span className="text-[7px] px-1.5 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded font-mono font-bold tracking-wider">
+                          LOCKED // CODE REQUIRED
+                        </span>
+                      )}
+                    </h3>
+                    <span className="font-mono text-[7px] text-[#39FF14] uppercase tracking-widest">
+                      {isChartEditionsUnlocked ? 'AI / MASTER EDITIONS UNLOCKED' : 'ENTER CODE TO UNLOCK'}
+                    </span>
                   </div>
+
+                  {!isChartEditionsUnlocked && (
+                    <div className="p-3 border border-amber-500/25 rounded-lg bg-amber-950/15 backdrop-blur-md flex flex-col gap-2">
+                      <div className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0 text-base shadow-[0_0_12px_rgba(245,158,11,0.15)]">
+                          🔒
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-mono text-[10px] font-black uppercase text-white tracking-wider flex items-center gap-2">
+                            <span>CLASSIFIED MASTER EDITIONS</span>
+                            <span className="text-[7px] px-1 py-0.5 bg-zinc-800 text-zinc-400 rounded font-mono">ENCRYPTED</span>
+                          </div>
+                          <p className="text-[8px] font-mono text-zinc-400 mt-0.5 leading-relaxed">
+                            V5 Flagship, Neural AI, V3 Master, and V2 Minimal are locked. Enter code <span className="text-[#39FF14] font-bold font-mono select-all">"MASTERREDEEM"</span> to decrypt the alternate master editions.
+                          </p>
+                        </div>
+                      </div>
+
+                      <form
+                        onSubmit={async (e) => {
+                          e.preventDefault();
+                          const code = masterInputCode.trim().toUpperCase();
+                          if (code === 'MASTERREDEEM' || code === 'CHARTREDEEM' || code === 'EDITIONREDEEM') {
+                            localStorage.setItem("opt_unlocked_chart_editions", "true");
+                            await updateCheats({ chartEditions: true });
+                            window.dispatchEvent(new Event('cheat_code_activated'));
+                            audioManager.playSfx('platinum_get', 0.8);
+                            setMasterInputError(null);
+                            setMasterSuccess(true);
+                            setMasterInputCode('');
+                          } else {
+                            setMasterInputError("INVALID ACCESS CODE — USE \"MASTERREDEEM\"");
+                            audioManager.playSfx('locked_out', 0.2);
+                          }
+                        }}
+                        className="flex flex-col sm:flex-row gap-2 mt-1"
+                      >
+                        <input
+                          type="text"
+                          value={masterInputCode}
+                          onChange={(e) => {
+                            setMasterInputCode(e.target.value);
+                            setMasterInputError(null);
+                          }}
+                          placeholder="ENTER CODE (MASTERREDEEM)"
+                          className="flex-1 bg-black/70 border border-white/15 focus:border-[#39FF14] rounded px-3 py-1.5 text-xs font-mono uppercase text-white placeholder:text-zinc-600 outline-none transition-colors"
+                        />
+                        <button
+                          type="submit"
+                          className="px-4 py-1.5 bg-[#39FF14] hover:bg-[#32e012] active:scale-95 text-black font-mono font-black text-xs uppercase tracking-wider rounded transition-all cursor-pointer shadow-[0_0_14px_rgba(57,255,20,0.3)] shrink-0"
+                        >
+                          DECRYPT & UNLOCK
+                        </button>
+                      </form>
+                      {masterInputError && (
+                        <span className="text-[8px] font-mono text-red-400 font-bold tracking-wider uppercase">
+                          ⚠ {masterInputError}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
                     {[
-                      { id: 'v1_gimmicks', label: 'V1 GIMMICKS', desc: 'Mines, Stems & Drops (Default)' },
-                      { id: 'v5_flagship', label: 'V5 FLAGSHIP', desc: 'Kinesthetics & Motifs (All Notes)' },
-                      { id: 'v4_neural', label: 'NEURAL AI', desc: 'Transformer Seq2Seq + OPARL RL' },
-                      { id: 'v3_master', label: 'V3 MASTER', desc: '8-Way Swipes & Overdrive' },
-                      { id: 'v2_minimal', label: 'V2 MINIMAL', desc: 'Casual Tap Flow' },
+                      { id: 'v1_gimmicks', label: 'V1 GIMMICKS', desc: 'Mines, Stems & Drops (Default)', locked: false },
+                      { id: 'v5_flagship', label: 'V5 FLAGSHIP', desc: 'Kinesthetics & Motifs (All Notes)', locked: !isChartEditionsUnlocked },
+                      { id: 'v4_neural', label: 'NEURAL AI', desc: 'Transformer Seq2Seq + OPARL RL', locked: !isChartEditionsUnlocked },
+                      { id: 'v3_master', label: 'V3 MASTER', desc: '8-Way Swipes & Overdrive', locked: !isChartEditionsUnlocked },
+                      { id: 'v2_minimal', label: 'V2 MINIMAL', desc: 'Casual Tap Flow', locked: !isChartEditionsUnlocked },
                     ].map(edition => {
                       const curVariant = (typeof localStorage !== 'undefined' && localStorage.getItem('opt_chartVariant')) || 'v1_gimmicks';
-                      const active = curVariant === edition.id;
+                      const active = curVariant === edition.id && (!edition.locked || isChartEditionsUnlocked);
                       return (
                         <button
                           key={edition.id}
+                          disabled={edition.locked}
                           onClick={() => {
+                            if (edition.locked) return;
                             localStorage.setItem("opt_chartVariant", edition.id);
                             clearCatalogCache();
-                            setOpts(o => ({ ...o }));
+                            setOpts(o => ({ ...o, chartVariant: edition.id as any }));
                             logAnalyticsEvent('setting_change', { key: 'chartVariant', value: edition.id });
                             audioManager.playSfx('tap_nav', 0.1);
                           }}
-                          className={`p-2 font-mono text-left rounded border transition-all cursor-pointer flex flex-col gap-1 ${
-                            active
-                              ? isAvant ? 'border-[#39FF14] bg-[#39FF14]/15 text-white shadow-[0_0_10px_rgba(57,255,20,0.2)]' : 'border-[#FF1493] bg-[#FF1493]/15 text-white shadow-[0_0_10px_rgba(255,20,147,0.2)]'
-                              : 'border-white/5 bg-black/40 text-white/40 hover:border-white/15'
+                          className={`p-2 font-mono text-left rounded border transition-all flex flex-col gap-1 ${
+                            edition.locked
+                              ? 'border-white/5 bg-black/20 text-white/20 opacity-60 cursor-not-allowed'
+                              : 'cursor-pointer ' + (
+                                  active
+                                    ? isAvant ? 'border-[#39FF14] bg-[#39FF14]/15 text-white shadow-[0_0_10px_rgba(57,255,20,0.2)]' : 'border-[#FF1493] bg-[#FF1493]/15 text-white shadow-[0_0_10px_rgba(255,20,147,0.2)]'
+                                    : 'border-white/5 bg-black/40 text-white/40 hover:border-white/15'
+                                )
                           }`}
                         >
-                          <span className={`text-[8.5px] font-black tracking-wider ${active ? (isAvant ? 'text-[#39FF14]' : 'text-[#FF1493]') : 'text-white/70'}`}>
-                            {edition.label}
+                          <span className={`text-[8.5px] font-black tracking-wider flex items-center justify-between ${
+                            edition.locked ? 'text-zinc-600' : (active ? (isAvant ? 'text-[#39FF14]' : 'text-[#FF1493]') : 'text-white/70')
+                          }`}>
+                            <span>{edition.label}</span>
+                            {edition.locked && <span className="text-[7px]">🔒</span>}
                           </span>
                           <span className="text-[6.5px] text-zinc-500 leading-tight">
-                            {edition.desc}
+                            {edition.locked ? 'Locked (Code Required)' : edition.desc}
                           </span>
                         </button>
                       );
