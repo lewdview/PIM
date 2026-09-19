@@ -81,11 +81,12 @@ export default function SongLeaderboard({
 
       const aliasIds = getSongAliases(songId);
 
-      // 1. Fetch real gameplay records for this specific song across all aliases from Supabase
+      // 1. Fetch real gameplay records for this specific song across all aliases from Supabase (positive scores only)
       const { data: records, error: recordsErr } = await supabase
         .from('gameplay_records')
         .select('user_id, score, accuracy, max_combo, medal, timestamp')
         .in('song_id', aliasIds)
+        .gt('score', 0)
         .order('score', { ascending: false });
 
       if (recordsErr) {
@@ -105,15 +106,26 @@ export default function SongLeaderboard({
       for (const r of records || []) {
         if (!r.user_id) continue;
         const s = r.score || 0;
+        if (s <= 0) continue;
+
+        const acc = typeof r.accuracy === 'number' ? r.accuracy : parseFloat(r.accuracy || '0');
+        const combo = r.max_combo || 0;
+
         if (!bestByUser[r.user_id] || s > bestByUser[r.user_id].score) {
           bestByUser[r.user_id] = {
             userId: r.user_id,
             score: s,
-            accuracy: typeof r.accuracy === 'number' ? r.accuracy : parseFloat(r.accuracy || '0'),
-            maxCombo: r.max_combo || 0,
+            accuracy: acc,
+            maxCombo: combo,
             medal: r.medal || 'NONE',
             timestamp: r.timestamp || '',
           };
+        } else if (s === bestByUser[r.user_id].score) {
+          // If score is identical, keep best accuracy/combo
+          if (acc > bestByUser[r.user_id].accuracy) {
+            bestByUser[r.user_id].accuracy = acc;
+            bestByUser[r.user_id].maxCombo = Math.max(bestByUser[r.user_id].maxCombo, combo);
+          }
         }
       }
 
@@ -239,11 +251,35 @@ export default function SongLeaderboard({
           };
         });
 
-      // 4. Sort descending by score and assign final ranks
-      humanEntries.sort((a, b) => b.score - a.score);
-      humanEntries.forEach((entry, idx) => {
-        entry.rank = idx + 1;
+      // 4. Sort with tie-breaking:
+      //    1. Score DESC
+      //    2. Accuracy DESC
+      //    3. Max Combo DESC
+      //    4. Timestamp ASC (earlier submission holds precedence)
+      humanEntries.sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        if (b.accuracy !== a.accuracy) return b.accuracy - a.accuracy;
+        if (b.maxCombo !== a.maxCombo) return b.maxCombo - a.maxCombo;
+        const statsA = bestByUser[a.userId];
+        const statsB = bestByUser[b.userId];
+        const timeA = statsA?.timestamp || '';
+        const timeB = statsB?.timestamp || '';
+        return timeA.localeCompare(timeB);
       });
+
+      // Standard competition ranking (tied entries share rank)
+      for (let i = 0; i < humanEntries.length; i++) {
+        if (
+          i > 0 &&
+          humanEntries[i].score === humanEntries[i - 1].score &&
+          humanEntries[i].accuracy === humanEntries[i - 1].accuracy &&
+          humanEntries[i].maxCombo === humanEntries[i - 1].maxCombo
+        ) {
+          humanEntries[i].rank = humanEntries[i - 1].rank;
+        } else {
+          humanEntries[i].rank = i + 1;
+        }
+      }
 
       setEntries(humanEntries);
     } catch (err) {

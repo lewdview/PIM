@@ -1,4 +1,4 @@
-const SUPABASE_BASE = 'https://pznmptudgicrmljjafex.supabase.co/storage/v1/object/public/releaseready/';
+const SUPABASE_BASE = 'https://files.th3scr1b3.art/';
 
 const candidates = {
   246: [

@@ -226,9 +226,11 @@ export default function WalletConnect({ redirectUri }: WalletConnectProps) {
     try {
       if (isAnonymous) {
         // Upgrade anonymous user by adding email (preserves user ID + all data)
-        const { error } = await supabase.auth.updateUser({
-          email: magicEmail.trim(),
-        });
+        const redirectUriParam = redirectUri ? `?redirect_uri=${encodeURIComponent(redirectUri)}` : '';
+        const { error } = await supabase.auth.updateUser(
+          { email: magicEmail.trim() },
+          { emailRedirectTo: window.location.origin + redirectUriParam }
+        );
         if (error) {
           const msg = error.message.toLowerCase();
           if (msg.includes('already') || msg.includes('registered') || msg.includes('exists')) {

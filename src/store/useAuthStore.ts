@@ -20,6 +20,13 @@ type WalletRequest = {
   request: (args: { method: string; params?: unknown }) => Promise<unknown>;
 };
 
+const getAuthRedirectUrl = (): string => {
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return window.location.origin;
+  }
+  return 'https://pim.th3scr1b3.art';
+};
+
 interface AuthState {
   user: User | null;
   session: Session | null;
@@ -414,10 +421,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const address = wallet.address;
       const pkey = wallet.privateKey;
 
+      const redirectUrl = getAuthRedirectUrl();
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
+          emailRedirectTo: redirectUrl,
           data: {
             wallet_address: address,
           },
@@ -551,13 +560,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const currentUser = get().user;
     const isAnon = currentUser?.is_anonymous || currentUser?.app_metadata?.provider === 'anonymous';
 
+    const redirectUrl = getAuthRedirectUrl();
+
     try {
       if (isAnon) {
         // Upgrade anonymous user by linking OAuth identity (preserves user ID + all data)
         const { data, error } = await supabase.auth.linkIdentity({
           provider: provider as any,
           options: {
-            redirectTo: window.location.origin,
+            redirectTo: redirectUrl,
           },
         });
         if (error) {
@@ -568,7 +579,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             const { data: oauthData, error: oauthError } = await supabase.auth.signInWithOAuth({
               provider: provider as any,
               options: {
-                redirectTo: window.location.origin,
+                redirectTo: redirectUrl,
               },
             });
             if (oauthError) {
@@ -592,7 +603,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const { data, error } = await supabase.auth.signInWithOAuth({
           provider: provider as any,
           options: {
-            redirectTo: window.location.origin,
+            redirectTo: redirectUrl,
           },
         });
         if (error) {
@@ -616,11 +627,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ error: null, status: 'loading' });
     const currentUser = get().user;
     const isAnon = currentUser?.is_anonymous || currentUser?.app_metadata?.provider === 'anonymous';
+    const redirectUrl = getAuthRedirectUrl();
 
     try {
       if (isAnon) {
         // Upgrade anonymous user by adding email (preserves user ID + all data)
-        const { error } = await supabase.auth.updateUser({ email });
+        const { error } = await supabase.auth.updateUser(
+          { email },
+          { emailRedirectTo: redirectUrl }
+        );
         if (error) {
           const msg = error.message.toLowerCase();
           if (msg.includes('rate limit') || msg.includes('over_email_send_rate_limit')) {
@@ -629,12 +644,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             return { error: friendly };
           }
           // If email already belongs to an existing account, fallback to Magic Link OTP sign-in
-          if (msg.includes('already') || msg.includes('registered') || msg.includes('exists')) {
+          if (msg.includes('already') || msg.includes('registered') || msg.includes('exists') || (error as any)?.code === 'email_exists') {
             console.log('[Auth] Email already registered to existing account. Falling back to OTP sign-in...');
             const { error: otpError } = await supabase.auth.signInWithOtp({
               email,
               options: {
-                emailRedirectTo: window.location.origin,
+                emailRedirectTo: redirectUrl,
               },
             });
             if (otpError) {
@@ -655,7 +670,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const { error } = await supabase.auth.signInWithOtp({
           email,
           options: {
-            emailRedirectTo: window.location.origin,
+            emailRedirectTo: redirectUrl,
           },
         });
         if (error) {
@@ -733,7 +748,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (isAnon) {
         if (email && email.trim().includes('@')) {
           // Upgrade anonymous user by adding email identity first
-          const { data: updateData, error: updateErr } = await supabase.auth.updateUser({ email: email.trim() });
+          const { data: updateData, error: updateErr } = await supabase.auth.updateUser(
+            { email: email.trim() },
+            { emailRedirectTo: getAuthRedirectUrl() }
+          );
           if (updateErr) {
             const msg = updateErr.message.toLowerCase();
             if (msg.includes('rate limit') || msg.includes('over_email_send_rate_limit')) {

@@ -22,7 +22,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MAP_PATH = path.join(__dirname, '../src/game/day_file_map.json');
-const SUPABASE_BASE = 'https://pznmptudgicrmljjafex.supabase.co/storage/v1/object/public/releaseready/';
+const SUPABASE_BASE = 'https://files.th3scr1b3.art/';
 const RELEASE_DATA_URL = 'https://th3scr1b3.art/release-data.json';
 
 const args = process.argv.slice(2);

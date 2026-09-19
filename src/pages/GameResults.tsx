@@ -615,8 +615,19 @@ export default function Results() {
         // Unconditionally cache the highest tier locally to prevent race conditions or back-button exploit
         localStorage.setItem(`reward_tier_${songId}`, currentTier);
  
-        // Save score record to Supabase
-        const inserts = tiersToClaim.map(tier => ({
+        // Save score record to Supabase (single entry for the highest tier unlocked)
+        const highestTierClaimed = tiersToClaim[tiersToClaim.length - 1] || currentTier;
+        const mappedTier = (
+          {
+            free: 'common',
+            taste: 'enhanced',
+            special_picks: 'rare',
+            alpha: 'epic',
+            prophecy: 'legendary'
+          }[highestTierClaimed] || highestTierClaimed
+        );
+
+        const { error: dbErr } = await supabase.from('gameplay_records').insert({
           user_id: user.id,
           song_id: songId,
           score: result.score,
@@ -624,18 +635,8 @@ export default function Results() {
           max_combo: result.maxCombo,
           medal: result.medal,
           pack_rewarded: true,
-          reward_tier: (
-            {
-              free: 'common',
-              taste: 'enhanced',
-              special_picks: 'rare',
-              alpha: 'epic',
-              prophecy: 'legendary'
-            }[tier] || tier
-          ),
-        }));
-
-        const { error: dbErr } = await supabase.from('gameplay_records').insert(inserts);
+          reward_tier: mappedTier,
+        });
         
         if (dbErr) {
           console.warn('Failed to insert gameplay_records to Supabase:', dbErr);

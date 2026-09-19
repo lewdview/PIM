@@ -640,8 +640,8 @@ async function main() {
       difficultyLevel: 3,
       description: 'The signal finds you in the dark. Begin here.',
       moodTag: 'Melancholic / Ambient',
-      audioUrl: 'https://pznmptudgicrmljjafex.supabase.co/storage/v1/object/public/releaseready/audio/january/were%20going%20crazy%20world.wav',
-      coverArt: 'https://pznmptudgicrmljjafex.supabase.co/storage/v1/object/public/releaseready/covers/january/01%20-%20Were%20Going%20Crazy%20World.jpg',
+      audioUrl: 'https://files.th3scr1b3.art/audio/january/were%20going%20crazy%20world.wav',
+      coverArt: 'https://files.th3scr1b3.art/covers/january/01%20-%20Were%20Going%20Crazy%20World.jpg',
       notes: []
     },
     {
@@ -654,8 +654,8 @@ async function main() {
       difficultyLevel: 6,
       description: 'The transmission intensifies. The static becomes music.',
       moodTag: 'Driving / Electronic',
-      audioUrl: 'https://pznmptudgicrmljjafex.supabase.co/storage/v1/object/public/releaseready/audio/january/were%20going%20crazy%20world.wav',
-      coverArt: 'https://pznmptudgicrmljjafex.supabase.co/storage/v1/object/public/releaseready/covers/january/01%20-%20Were%20Going%20Crazy%20World.jpg',
+      audioUrl: 'https://files.th3scr1b3.art/audio/january/were%20going%20crazy%20world.wav',
+      coverArt: 'https://files.th3scr1b3.art/covers/january/01%20-%20Were%20Going%20Crazy%20World.jpg',
       notes: []
     },
     {
@@ -668,8 +668,8 @@ async function main() {
       difficultyLevel: 9,
       description: 'Past the dark, velocity becomes transcendence.',
       moodTag: 'Intense / Euphoric',
-      audioUrl: 'https://pznmptudgicrmljjafex.supabase.co/storage/v1/object/public/releaseready/audio/january/were%20going%20crazy%20world.wav',
-      coverArt: 'https://pznmptudgicrmljjafex.supabase.co/storage/v1/object/public/releaseready/covers/january/01%20-%20Were%20Going%20Crazy%20World.jpg',
+      audioUrl: 'https://files.th3scr1b3.art/audio/january/were%20going%20crazy%20world.wav',
+      coverArt: 'https://files.th3scr1b3.art/covers/january/01%20-%20Were%20Going%20Crazy%20World.jpg',
       notes: []
     }
   ];

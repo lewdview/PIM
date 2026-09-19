@@ -80,25 +80,40 @@ export default function LeaderboardPage() {
           const tomorrowStart = new Date(todayStart);
           tomorrowStart.setUTCDate(tomorrowStart.getUTCDate() + 1);
 
-          // 1. Fetch gameplay_records for today
+          // 1. Fetch gameplay_records for today (exclude zero/corrupted scores)
           const { data: records, error: recordsError } = await supabase
             .from('gameplay_records')
-            .select('user_id, score')
+            .select('user_id, song_id, score, timestamp')
             .gte('timestamp', todayStart.toISOString())
-            .lt('timestamp', tomorrowStart.toISOString());
+            .lt('timestamp', tomorrowStart.toISOString())
+            .gt('score', 0);
 
           if (recordsError) throw recordsError;
 
-          const statsByUser: Record<string, { totalScore: number; plays: number }> = {};
+          // 2. Aggregate per-song personal bests per user (prevents multi-insert row inflation)
+          const userSongBests: Record<string, Record<string, number>> = {};
+          const userPlayCount: Record<string, number> = {};
+          const userLatestTimestamp: Record<string, string> = {};
+
           for (const r of records || []) {
-            if (!statsByUser[r.user_id]) {
-              statsByUser[r.user_id] = { totalScore: 0, plays: 0 };
+            if (!r.user_id) continue;
+            const uid = r.user_id;
+            const sid = r.song_id || 'unknown';
+            const s = r.score || 0;
+
+            if (!userSongBests[uid]) {
+              userSongBests[uid] = {};
+              userPlayCount[uid] = 0;
             }
-            statsByUser[r.user_id].totalScore += (r.score || 0);
-            statsByUser[r.user_id].plays += 1;
+            userSongBests[uid][sid] = Math.max(userSongBests[uid][sid] || 0, s);
+            userPlayCount[uid] += 1;
+
+            if (!userLatestTimestamp[uid] || (r.timestamp && r.timestamp > userLatestTimestamp[uid])) {
+              userLatestTimestamp[uid] = r.timestamp;
+            }
           }
 
-          const userIds = Object.keys(statsByUser);
+          const userIds = Object.keys(userSongBests);
           
           let profilesMap: Record<string, any> = {};
           if (userIds.length > 0) {
@@ -137,6 +152,9 @@ export default function LeaderboardPage() {
                 name = isYou ? 'PILOT (LOCAL RUN)' : 'PILOT (UNVERIFIED)';
               }
               
+              // Sum of personal best on each distinct song played today
+              const totalScore = Object.values(userSongBests[uid] || {}).reduce((sum, val) => sum + val, 0);
+
               return {
                 id: uid,
                 rank: 0,
@@ -144,22 +162,73 @@ export default function LeaderboardPage() {
                 avatarUrl: prof.avatar_url,
                 uniqueCards: 0,
                 totalCards: 0,
-                rarityScore: statsByUser[uid].totalScore,
+                rarityScore: totalScore,
                 topRarity: 'common',
                 isYou,
-                playsToday: statsByUser[uid].plays
+                playsToday: userPlayCount[uid] || 1
               };
             });
 
-          mappedEntries.sort((a, b) => b.rarityScore - a.rarityScore);
-          mappedEntries.forEach((entry, idx) => {
-            entry.rank = idx + 1;
+          // Tie-breaking: 1. Total score DESC, 2. Fewer plays to reach score (efficiency), 3. Earliest timestamp
+          mappedEntries.sort((a, b) => {
+            if (b.rarityScore !== a.rarityScore) {
+              return b.rarityScore - a.rarityScore;
+            }
+            const playsA = a.playsToday || 0;
+            const playsB = b.playsToday || 0;
+            if (playsA !== playsB) {
+              return playsA - playsB;
+            }
+            const timeA = userLatestTimestamp[a.id] || '';
+            const timeB = userLatestTimestamp[b.id] || '';
+            return timeA.localeCompare(timeB);
           });
+
+          // Standard competition ranking (tied scores share rank)
+          for (let i = 0; i < mappedEntries.length; i++) {
+            if (i > 0 && mappedEntries[i].rarityScore === mappedEntries[i - 1].rarityScore && mappedEntries[i].playsToday === mappedEntries[i - 1].playsToday) {
+              mappedEntries[i].rank = mappedEntries[i - 1].rank;
+            } else {
+              mappedEntries[i].rank = i + 1;
+            }
+          }
 
           setEntries(mappedEntries);
 
         } else {
           // PRESTIGE: All Time
+          // 1. Try server-side SECURITY DEFINER RPC to bypass client-side RLS filtering on vault_collections
+          try {
+            const { data: rpcData, error: rpcError } = await supabase
+              .rpc('get_prestige_leaderboard', { limit_count: 100 });
+
+            if (!rpcError && rpcData && rpcData.length > 0) {
+              const mappedRpcEntries: LeaderEntry[] = rpcData.map((row: any) => {
+                const isYou = currentAuthUser ? currentAuthUser.id === row.id : false;
+                let name = row.name;
+                if (isYou && !isAnon && storeHandle) {
+                  name = `@${storeHandle}`.toUpperCase();
+                }
+                return {
+                  id: row.id,
+                  rank: Number(row.rank),
+                  name,
+                  avatarUrl: row.avatar_url,
+                  uniqueCards: Number(row.unique_cards || 0),
+                  totalCards: Number(row.total_cards || 0),
+                  rarityScore: Number(row.rarity_score || 0),
+                  topRarity: row.top_rarity || 'common',
+                  isYou,
+                };
+              });
+              setEntries(mappedRpcEntries);
+              return;
+            }
+          } catch (rpcEx) {
+            console.warn("[Leaderboard] RPC get_prestige_leaderboard unavailable, falling back to client query:", rpcEx);
+          }
+
+          // Fallback: Client-side query
           let profiles: any[] = [];
           let pPage = 0;
           const P_PAGE_SIZE = 1000;
@@ -282,10 +351,21 @@ export default function LeaderboardPage() {
               };
             });
 
-          mappedEntries.sort((a, b) => b.rarityScore - a.rarityScore);
-          mappedEntries.forEach((entry, idx) => {
-            entry.rank = idx + 1;
+          // Tie-breaking: 1. Rarity score DESC, 2. Unique cards DESC, 3. Total cards DESC
+          mappedEntries.sort((a, b) => {
+            if (b.rarityScore !== a.rarityScore) return b.rarityScore - a.rarityScore;
+            if (b.uniqueCards !== a.uniqueCards) return b.uniqueCards - a.uniqueCards;
+            return b.totalCards - a.totalCards;
           });
+
+          // Standard competition ranking
+          for (let i = 0; i < mappedEntries.length; i++) {
+            if (i > 0 && mappedEntries[i].rarityScore === mappedEntries[i - 1].rarityScore && mappedEntries[i].uniqueCards === mappedEntries[i - 1].uniqueCards) {
+              mappedEntries[i].rank = mappedEntries[i - 1].rank;
+            } else {
+              mappedEntries[i].rank = i + 1;
+            }
+          }
 
           setEntries(mappedEntries);
         }
