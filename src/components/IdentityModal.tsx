@@ -12,7 +12,8 @@ interface IdentityModalProps {
 }
 
 export default function IdentityModal({ isOpen: propIsOpen, onClose: propOnClose, onComplete }: IdentityModalProps) {
-  const { showIdentityModal, setShowIdentityModal } = useAuthStore();
+  const showIdentityModal = useAuthStore(s => s.showIdentityModal);
+  const setShowIdentityModal = useAuthStore(s => s.setShowIdentityModal);
   const isOpen = propIsOpen !== undefined ? propIsOpen : showIdentityModal;
 
   const handleClose = () => {
