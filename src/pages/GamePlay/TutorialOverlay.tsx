@@ -1,12 +1,14 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { RotateCcw, Heart, Shield, Zap, Volume2, ArrowUp, ArrowRight, CheckCircle2, AlertTriangle, Play } from 'lucide-react';
 
-export type TutorialStepType = 'tap' | 'hold' | 'swipe' | 'hold-swipe';
+export type TutorialStepType = 'tap' | 'hold' | 'swipe' | 'hold-swipe' | 'slide' | 'remix' | 'lift';
 
 export interface TutorialOverlayProps {
   currentStep: TutorialStepType;
   stepIndex: number;
   totalSteps: number;
+  successCount: number;
+  requiredSuccesses: number;
   chancesLeft: number;
   maxChances: number;
   lastHitResult: 'success' | 'miss' | null;
@@ -42,12 +44,32 @@ const STEP_METADATA: Record<TutorialStepType, { title: string; subtitle: string;
     icon: '⚡',
     accent: '#FF1493',
   },
+  'slide': {
+    title: 'SLIDE NOTE',
+    subtitle: 'Hold key and follow the shifting lane ribbon across the highway',
+    icon: '⮀',
+    accent: '#A855F7',
+  },
+  'remix': {
+    title: 'STEM REMIX NOTE',
+    subtitle: 'Strike to trigger real-time DSP stem isolation (solo vocals, mute drums)',
+    icon: '⚡',
+    accent: '#00F5D4',
+  },
+  'lift': {
+    title: 'LIFT NOTE',
+    subtitle: 'Release key or flick upward cleanly on beat without tapping down',
+    icon: '▲',
+    accent: '#00FF88',
+  },
 };
 
 export default function TutorialOverlay({
   currentStep,
   stepIndex,
   totalSteps,
+  successCount,
+  requiredSuccesses,
   chancesLeft,
   maxChances,
   lastHitResult,
@@ -80,30 +102,52 @@ export default function TutorialOverlay({
                 className="font-mono text-[9px] font-black uppercase px-2 py-0.5 rounded tracking-widest text-black"
                 style={{ background: meta.accent }}
               >
-                CURRICULUM [{stepIndex + 1}/{totalSteps}]
+                [{stepIndex + 1}/{totalSteps}]
               </span>
               <span className="font-mono text-xs font-black uppercase text-white tracking-wider">
                 {meta.title}
               </span>
             </div>
 
-            {/* Chances Pips Display */}
-            <div className="flex items-center gap-1.5 font-mono text-[9px] font-bold text-zinc-400">
-              <span className="text-[8px] tracking-wider uppercase mr-0.5">CHANCES:</span>
-              {Array.from({ length: maxChances }).map((_, i) => {
-                const isActive = i < chancesLeft;
-                return (
-                  <div
-                    key={i}
-                    className="w-2.5 h-2.5 rounded-sm transition-all duration-300"
-                    style={{
-                      background: isActive ? meta.accent : '#27272a',
-                      boxShadow: isActive ? `0 0 6px ${meta.accent}80` : 'none',
-                      border: `1px solid ${isActive ? '#000' : '#3f3f46'}`,
-                    }}
-                  />
-                );
-              })}
+            {/* Hits & Chances Indicators */}
+            <div className="flex items-center gap-3">
+              {/* Hits Progress Pips */}
+              <div className="flex items-center gap-1 font-mono text-[9px] font-bold text-zinc-400">
+                <span className="text-[8px] tracking-wider uppercase text-emerald-400">HITS:</span>
+                {Array.from({ length: requiredSuccesses }).map((_, i) => {
+                  const isHit = i < successCount;
+                  return (
+                    <div
+                      key={`hit-${i}`}
+                      className="w-2.5 h-2.5 rounded-sm transition-all duration-300"
+                      style={{
+                        background: isHit ? '#39FF14' : '#27272a',
+                        boxShadow: isHit ? '0 0 6px rgba(57,255,20,0.8)' : 'none',
+                        border: `1px solid ${isHit ? '#000' : '#3f3f46'}`,
+                      }}
+                    />
+                  );
+                })}
+              </div>
+
+              {/* Chances Pips Display */}
+              <div className="flex items-center gap-1 font-mono text-[9px] font-bold text-zinc-400">
+                <span className="text-[8px] tracking-wider uppercase text-pink-400">LIVES:</span>
+                {Array.from({ length: maxChances }).map((_, i) => {
+                  const isActive = i < chancesLeft;
+                  return (
+                    <div
+                      key={`chance-${i}`}
+                      className="w-2.5 h-2.5 rounded-sm transition-all duration-300"
+                      style={{
+                        background: isActive ? meta.accent : '#27272a',
+                        boxShadow: isActive ? `0 0 6px ${meta.accent}80` : 'none',
+                        border: `1px solid ${isActive ? '#000' : '#3f3f46'}`,
+                      }}
+                    />
+                  );
+                })}
+              </div>
             </div>
           </div>
 
@@ -121,7 +165,9 @@ export default function TutorialOverlay({
                 className="mt-2 py-1 px-2 bg-[#39FF14]/20 border border-[#39FF14] text-[#39FF14] font-mono text-[9.5px] font-black tracking-widest uppercase flex items-center gap-1.5 rounded-sm"
               >
                 <CheckCircle2 size={12} />
-                PERFECT HIT! OBJECTIVE CLEARED
+                {successCount >= requiredSuccesses
+                  ? `OBJECTIVE CLEARED! (${successCount}/${requiredSuccesses} COMPLETE)`
+                  : `HIT ${successCount}/${requiredSuccesses} CONFIRMED! [${requiredSuccesses - successCount} MORE TO CLEAR]`}
               </motion.div>
             )}
             {lastHitResult === 'miss' && (

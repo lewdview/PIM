@@ -1186,16 +1186,16 @@ async function generateAudioForgeChart(song: any): Promise<Note[]> {
 
 function createTutorialNotesForStep(step: TutorialStepType, bpm: number, startT: number, startId = 0): Note[] {
   const beatDur = 60 / (bpm || 120);
-  const interval = Math.max(2.4, beatDur * 4);
+  const interval = Math.max(2.6, beatDur * 4);
   const notes: Note[] = [];
 
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 6; i++) {
     const time = startT + i * interval;
     if (step === 'tap') {
       notes.push({
         id: startId + i,
         time,
-        lane: 1,
+        lane: i % 2 === 0 ? 1 : (i % 4 === 1 ? 0 : 2),
         type: 'tap',
       });
     } else if (step === 'hold') {
@@ -1204,15 +1204,16 @@ function createTutorialNotesForStep(step: TutorialStepType, bpm: number, startT:
         time,
         lane: 1,
         type: 'hold',
-        holdDuration: Math.max(1.2, beatDur * 2.5),
+        holdDuration: Math.max(1.6, beatDur * 3),
       });
     } else if (step === 'swipe') {
+      const dirs: ('up' | 'left' | 'right')[] = ['up', 'left', 'right', 'up', 'left', 'right'];
       notes.push({
         id: startId + i,
         time,
-        lane: 2,
+        lane: 1,
         type: 'swipe',
-        swipeDirection: 'up',
+        swipeDirection: dirs[i % dirs.length],
       });
     } else if (step === 'hold-swipe') {
       notes.push({
@@ -1220,7 +1221,35 @@ function createTutorialNotesForStep(step: TutorialStepType, bpm: number, startT:
         time,
         lane: 1,
         type: 'hold-swipe',
-        holdDuration: Math.max(1.2, beatDur * 2.5),
+        holdDuration: Math.max(1.6, beatDur * 3),
+        swipeDirection: 'up',
+      });
+    } else if (step === 'slide') {
+      // Alternate lanes: 0 -> 2, 2 -> 0, 1 -> 2, etc.
+      const fromLane = i % 2 === 0 ? 0 : 2;
+      const toLane = i % 2 === 0 ? 2 : 0;
+      notes.push({
+        id: startId + i,
+        time,
+        lane: fromLane,
+        targetLane: toLane,
+        type: 'slide',
+        holdDuration: Math.max(1.8, beatDur * 3.5),
+      });
+    } else if (step === 'remix') {
+      notes.push({
+        id: startId + i,
+        time,
+        lane: 1,
+        type: 'remix',
+        remixEffect: 'vocals_isolate',
+      });
+    } else if (step === 'lift') {
+      notes.push({
+        id: startId + i,
+        time,
+        lane: 1,
+        type: 'lift',
         swipeDirection: 'up',
       });
     }
@@ -1445,9 +1474,20 @@ export default function Game() {
   const activeTutorial = isTutorial;
 
   // ── Curriculum-Driven Tutorial State ──
-  const TUTORIAL_STEPS: TutorialStepType[] = ['tap', 'hold', 'swipe', 'hold-swipe'];
+  const TUTORIAL_STEPS: TutorialStepType[] = [
+    'tap',
+    'hold',
+    'swipe',
+    'hold-swipe',
+    'slide',
+    'remix',
+    'lift',
+  ];
+  const REQUIRED_SUCCESSES_PER_STEP = 3;
   const [tutStepIndex, setTutStepIndex] = useState(0);
   const tutStepIndexRef = useRef(0);
+  const [tutSuccessCount, setTutSuccessCount] = useState(0);
+  const tutSuccessCountRef = useRef(0);
   const [tutChancesLeft, setTutChancesLeft] = useState(3);
   const tutChancesLeftRef = useRef(3);
   const [tutLastHitResult, setTutLastHitResult] = useState<'success' | 'miss' | null>(null);
@@ -3351,6 +3391,11 @@ export default function Game() {
 
   const advanceTutorialStep = useCallback(() => {
     const nextIdx = tutStepIndexRef.current + 1;
+    tutSuccessCountRef.current = 0;
+    setTutSuccessCount(0);
+    tutChancesLeftRef.current = 3;
+    setTutChancesLeft(3);
+
     if (nextIdx >= TUTORIAL_STEPS.length) {
       tutStage1ClearedRef.current = true;
       setTutStage1Cleared(true);
@@ -3363,8 +3408,6 @@ export default function Game() {
 
     tutStepIndexRef.current = nextIdx;
     setTutStepIndex(nextIdx);
-    tutChancesLeftRef.current = 3;
-    setTutChancesLeft(3);
 
     const nextStep = TUTORIAL_STEPS[nextIdx];
     if (nextStep === 'hold') {
@@ -3439,6 +3482,8 @@ export default function Game() {
     missCountRef.current = 0;
     lastMissTimeRef.current = 0;
     setMissCount(0);
+    tutChancesLeftRef.current = 3;
+    setTutChancesLeft(3);
 
     isTutorialRewindingLessonRef.current = true;
     phaseRef.current = "rewinding";
@@ -3459,10 +3504,25 @@ export default function Game() {
     const isMiss = newJ.type === 'MISS';
 
     if (isHit) {
+      const nextCount = tutSuccessCountRef.current + 1;
+      tutSuccessCountRef.current = nextCount;
+      setTutSuccessCount(nextCount);
       setTutLastHitResult('success');
       audioManager.playSfx('select_start_song', 0.45);
       setTimeout(() => setTutLastHitResult(null), 1800);
-      advanceTutorialStep();
+
+      if (nextCount >= REQUIRED_SUCCESSES_PER_STEP) {
+        advanceTutorialStep();
+      } else {
+        // Ensure continuous notes are available for remaining hits
+        const audio = audioRef.current;
+        const currentT = audio?.currentTime ?? getT();
+        const unhitNotes = notesRef.current.filter((ns) => !ns.hit && !ns.missed && ns.note.time > currentT);
+        if (unhitNotes.length < (REQUIRED_SUCCESSES_PER_STEP - nextCount)) {
+          const currentStep = TUTORIAL_STEPS[tutStepIndexRef.current];
+          scheduleNotesForStep(currentStep, currentT + 2.0);
+        }
+      }
     } else if (isMiss) {
       setTutLastHitResult('miss');
       setTimeout(() => setTutLastHitResult(null), 1800);
@@ -3472,9 +3532,18 @@ export default function Game() {
 
       if (tutChancesLeftRef.current <= 0) {
         triggerTutorialRewind();
+      } else {
+        // Ensure there are still notes coming if previous notes were consumed
+        const audio = audioRef.current;
+        const currentT = audio?.currentTime ?? getT();
+        const unhitNotes = notesRef.current.filter((ns) => !ns.hit && !ns.missed && ns.note.time > currentT);
+        if (unhitNotes.length < (REQUIRED_SUCCESSES_PER_STEP - tutSuccessCountRef.current)) {
+          const currentStep = TUTORIAL_STEPS[tutStepIndexRef.current];
+          scheduleNotesForStep(currentStep, currentT + 2.0);
+        }
       }
     }
-  }, [activeTutorial, advanceTutorialStep, triggerTutorialRewind]);
+  }, [activeTutorial, advanceTutorialStep, getT, scheduleNotesForStep, triggerTutorialRewind]);
 
   useEffect(() => {
     tutorialJudgmentHandlerRef.current = handleTutorialJudgment;
@@ -5685,8 +5754,9 @@ export default function Game() {
         ns.visualLane = ns.currentLane;
       }
 
-      const isSurge = puRef.current.active === "SURGE" && t < puRef.current.endTime;
-      const isHoldNoteType = isHoldNote(note) && (note.stage ? note.stage > 1 : calculatedStage > 1);
+      const isHoldNoteType = activeTutorial
+        ? isHoldNote(note)
+        : (isHoldNote(note) && (note.stage ? note.stage > 1 : calculatedStage > 1));
       if (isHoldNoteType && !ns.hit && !ns.missed && !ns.holdActive && isSurge && t >= note.time) {
         ns.holdActive = true;
         ns.autoplayedBySurge = true;
@@ -8682,7 +8752,7 @@ export default function Game() {
         // Stage 1 restriction: strictly tap notes only (holds introduced in Stages 2-5)
         const stage1EndTime = (song.duration || 180) * 0.15;
         const isStage1 = note.stage === 1 || note.time < stage1EndTime;
-        if (isStage1) {
+        if (isStage1 && !activeTutorial) {
           if (isHoldNote(note) || (note.holdDuration && note.holdDuration > 0)) {
             note.type = 'tap';
             delete (note as any).holdDuration;
@@ -8692,7 +8762,7 @@ export default function Game() {
         }
 
         // Sanitize swipeDirection: only 'swipe' notes and hold notes can have a swipeDirection
-        if (note.type !== 'swipe' && !isHoldNote(note)) {
+        if (note.type !== 'swipe' && !isHoldNote(note) && !activeTutorial) {
           note.swipeDirection = undefined;
         }
         if (note.type === 'swipe' && !note.swipeDirection) {
@@ -8700,13 +8770,13 @@ export default function Game() {
         }
 
         // Swipe notes only at Normal+ (Level 4+)
-        if (diff < 4 && note.type === 'swipe') {
+        if (diff < 4 && note.type === 'swipe' && !activeTutorial) {
           note.type = 'tap';
           note.swipeDirection = undefined;
         }
 
         // Lane-change holds (slides) only at Hard+ (Level 7+)
-        if (diff < 7 && isHoldNote(note) && note.targetLane !== undefined) {
+        if (diff < 7 && isHoldNote(note) && note.targetLane !== undefined && !activeTutorial) {
           note.targetLane = undefined;
           note.swipeDirection = undefined;
         }
@@ -9996,6 +10066,8 @@ export default function Game() {
           currentStep={TUTORIAL_STEPS[tutStepIndex]}
           stepIndex={tutStepIndex}
           totalSteps={TUTORIAL_STEPS.length}
+          successCount={tutSuccessCount}
+          requiredSuccesses={REQUIRED_SUCCESSES_PER_STEP}
           chancesLeft={tutChancesLeft}
           maxChances={3}
           lastHitResult={tutLastHitResult}

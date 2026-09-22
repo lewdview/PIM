@@ -29,6 +29,12 @@ import {
   Radio,
   Music,
   Disc,
+  Wallet,
+  Key,
+  Copy,
+  ExternalLink,
+  ShieldCheck,
+  CheckCircle,
 } from "lucide-react";
 import { supabase } from "../services/supabaseClient";
 import { useVaultStore } from "../store/useVaultStore";
@@ -37,7 +43,7 @@ import { farcasterService } from "../services/farcasterService";
 import { CYBER_AVATAR_PRESETS, type AvatarPreset } from "../utils/avatarPresets";
 import { getIdenticon } from "../utils/identicon";
 
-type TutorialPhase = "intro" | "results" | "pack" | "ecosystem" | "identity" | "complete";
+type TutorialPhase = "intro" | "results" | "pack" | "ecosystem" | "identity" | "connector" | "complete";
 
 export default function Tutorial() {
   const [, setLocation] = useLocation();
@@ -69,6 +75,11 @@ export default function Tutorial() {
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [isSavingIdentity, setIsSavingIdentity] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Phase 6: Wallet Connector State
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [isConnectingWallet, setIsConnectingWallet] = useState(false);
+  const [walletCopied, setWalletCopied] = useState(false);
 
   // 1. Initial Load: Daily Song, Card, Catalog & URL Params
   useEffect(() => {
@@ -260,6 +271,97 @@ export default function Tutorial() {
     audioManager.playSfx("tap_nav", 0.15);
   };
 
+  // Fetch / verify wallet status
+  const refreshWalletInfo = useCallback(async () => {
+    try {
+      const authUser = useAuthStore.getState().user;
+      let address: string | null =
+        authUser?.user_metadata?.wallet_address ||
+        authUser?.user_metadata?.wallet ||
+        null;
+
+      if (!address && authUser?.id) {
+        const { data } = await supabase
+          .from("profiles")
+          .select("wallet_address")
+          .eq("id", authUser.id)
+          .maybeSingle();
+        if (data?.wallet_address) {
+          address = data.wallet_address;
+        }
+      }
+
+      if (!address) {
+        address = localStorage.getItem("guest_wallet_address");
+      }
+
+      if (!address) {
+        const pkey = localStorage.getItem("th3vault_ephemeral_wallet_pkey");
+        if (pkey) {
+          try {
+            const { Wallet } = await import("ethers");
+            address = new Wallet(pkey).address;
+          } catch (e) {
+            // non-fatal
+          }
+        }
+      }
+
+      setWalletAddress(address || null);
+    } catch (err) {
+      console.warn("[Tutorial] Failed to refresh wallet status:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshWalletInfo();
+  }, [tutPhase, refreshWalletInfo]);
+
+  // Connect Web3 / Base Smart Wallet
+  const handleConnectWeb3Wallet = async () => {
+    setIsConnectingWallet(true);
+    audioManager.playSfx("tap_nav", 0.15);
+    try {
+      const res = await useAuthStore.getState().signInWithWallet();
+      if (res?.error) {
+        useAuthStore.getState().setShowAuthModal(true);
+      } else {
+        await refreshWalletInfo();
+        audioManager.playSfx("gold_get", 0.5);
+      }
+    } catch (err) {
+      console.error("[Tutorial] Wallet connection error:", err);
+      useAuthStore.getState().setShowAuthModal(true);
+    } finally {
+      setIsConnectingWallet(false);
+      await refreshWalletInfo();
+    }
+  };
+
+  // Generate Ephemeral Smart Wallet
+  const handleGenerateEphemeralWallet = async () => {
+    setIsConnectingWallet(true);
+    audioManager.playSfx("tap_nav", 0.15);
+    try {
+      await useAuthStore.getState().signInWithEphemeralWallet();
+      await refreshWalletInfo();
+      audioManager.playSfx("gold_get", 0.5);
+    } catch (err) {
+      console.error("[Tutorial] Ephemeral wallet generation error:", err);
+    } finally {
+      setIsConnectingWallet(false);
+      await refreshWalletInfo();
+    }
+  };
+
+  // Copy wallet address to clipboard
+  const handleCopyAddress = (addr: string) => {
+    navigator.clipboard.writeText(addr);
+    setWalletCopied(true);
+    audioManager.playSfx("tap_nav", 0.12);
+    setTimeout(() => setWalletCopied(false), 2000);
+  };
+
   // Complete Identity & Finalize Onboarding
   const handleSaveIdentityAndFinish = async () => {
     if (isSavingIdentity) return;
@@ -300,14 +402,19 @@ export default function Tutorial() {
             username: finalUsername,
             display_name: finalUsername,
             avatar_url: finalAvatar,
+            ...(walletAddress ? { wallet_address: walletAddress } : {}),
+            has_onboarded: true,
           })
           .eq("id", currentUser.id);
       }
 
       // Update local store
-      const { updateProfile } = useVaultStore.getState();
+      const { updateProfile, completeOnboarding } = useVaultStore.getState();
       if (updateProfile) {
         await updateProfile(finalUsername, finalAvatar, finalUsername).catch(() => {});
+      }
+      if (completeOnboarding) {
+        await completeOnboarding().catch(() => {});
       }
 
       // Mark tutorial completed permanently
@@ -326,6 +433,10 @@ export default function Tutorial() {
       // Fallback mark complete
       localStorage.setItem("pim_tutorial_completed", "true");
       useVaultStore.getState().updateProgression({ tutorialCompleted: true });
+      const { completeOnboarding } = useVaultStore.getState();
+      if (completeOnboarding) {
+        await completeOnboarding().catch(() => {});
+      }
       const postTutorialDest = typeof window !== 'undefined' ? sessionStorage.getItem('post_tutorial_redirect') : null;
       if (typeof window !== 'undefined') {
         sessionStorage.removeItem('post_tutorial_redirect');
@@ -591,25 +702,42 @@ export default function Tutorial() {
 
               {/* Curriculum Objectives */}
               <div className="space-y-2.5 font-mono text-[11px] text-zinc-300 leading-relaxed mb-6 border-t-2 border-black pt-4 text-left">
-                <p className="text-[#00E5FF] font-black tracking-wide">
-                  TRAINING CURRICULUM (3 CHANCES PER NOTE):
-                </p>
-                <div className="space-y-1.5 text-[10px]">
-                  <p className="flex items-center gap-2">
+                <div className="flex items-center justify-between text-[#00E5FF] font-black tracking-wide">
+                  <span>TRAINING CURRICULUM (7 NOTE TYPES):</span>
+                  <span className="text-[#39FF14] text-[9px]">3 HITS PER NOTE</span>
+                </div>
+                <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[9.5px]">
+                  <p className="flex items-center gap-1.5">
                     <span className="text-[#39FF14] font-black">■ 01:</span>
-                    <span><strong>TAP NOTES:</strong> Target line timing</span>
+                    <span><strong>TAP:</strong> Target line timing</span>
                   </p>
-                  <p className="flex items-center gap-2">
+                  <p className="flex items-center gap-1.5">
                     <span className="text-[#FFD700] font-black">▬ 02:</span>
-                    <span><strong>HOLD NOTES:</strong> Health & Healing Frequencies</span>
+                    <span><strong>HOLD:</strong> Health regeneration</span>
                   </p>
-                  <p className="flex items-center gap-2">
+                  <p className="flex items-center gap-1.5">
                     <span className="text-[#00E5FF] font-black">➔ 03:</span>
-                    <span><strong>SWIPE CHEVRONS:</strong> Directional flicks</span>
+                    <span><strong>SWIPE:</strong> Directional flicks</span>
                   </p>
-                  <p className="flex items-center gap-2">
-                    <span className="text-[#FF1493] font-black">⚡ 04:</span>
-                    <span><strong>REWIND TECHNIQUE:</strong> 3-miss automatic rollback</span>
+                  <p className="flex items-center gap-1.5">
+                    <span className="text-[#FF69B4] font-black">⚡ 04:</span>
+                    <span><strong>HOLD-SWIPE:</strong> Sustain to flick</span>
+                  </p>
+                  <p className="flex items-center gap-1.5">
+                    <span className="text-[#7B68EE] font-black">⤹ 05:</span>
+                    <span><strong>SLIDE:</strong> Cross-lane ribbons</span>
+                  </p>
+                  <p className="flex items-center gap-1.5">
+                    <span className="text-[#FF1493] font-black">✦ 06:</span>
+                    <span><strong>REMIX:</strong> Audio stem filters</span>
+                  </p>
+                  <p className="flex items-center gap-1.5">
+                    <span className="text-[#00FFFF] font-black">▲ 07:</span>
+                    <span><strong>LIFT:</strong> Precision release</span>
+                  </p>
+                  <p className="flex items-center gap-1.5">
+                    <span className="text-yellow-400 font-black">↺ 08:</span>
+                    <span><strong>REWIND:</strong> 3-miss rollback</span>
                   </p>
                 </div>
               </div>
@@ -1010,29 +1138,243 @@ export default function Tutorial() {
               </div>
             )}
 
-            {/* Lock In Identity Action */}
+            {/* Proceed to Wallet Connector Action */}
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => {
+                audioManager.playSfx("tap_nav", 0.15);
+                setTutPhase("connector");
+              }}
+              disabled={
+                !isFarcaster &&
+                (username.length < 3 ||
+                  !isValidFormat ||
+                  isAvailable === false ||
+                  !selectedAvatarUrl)
+              }
+              className="w-full py-4 bg-gradient-to-r from-[#39FF14] to-[#00E5FF] text-black font-mono font-black text-xs tracking-[0.25em] uppercase hover:opacity-95 transition-all rounded border-2 border-black shadow-[4px_4px_0px_#000] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
+            >
+              PROCEED TO WALLET CONNECTOR →
+            </motion.button>
+          </motion.div>
+        )}
+
+        {/* ── PHASE 6: WALLET CONNECTOR & FINAL ONBOARDING LOCK-IN ── */}
+        {tutPhase === "connector" && (
+          <motion.div
+            key="connector"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            className="flex-1 flex flex-col items-center justify-between py-6 px-4 overflow-y-auto relative z-10 max-w-md mx-auto w-full"
+          >
+            <div className="text-center mt-2 w-full">
+              <div className="font-mono text-[9px] text-[#00E5FF] tracking-[0.4em] mb-1 uppercase font-black">
+                // PROTOCOL FINALIZATION //
+              </div>
+              <h2 className="font-mono text-2xl font-black tracking-widest text-white uppercase">
+                WALLET CONNECTOR
+              </h2>
+              <p className="font-mono text-[10px] text-zinc-400 mt-1">
+                Link your Base EVM Smart Wallet to sign provenance for your 2-Card Welcome Pack and finalize your profile.
+              </p>
+            </div>
+
+            {/* Confirmed Pilot Card Preview */}
+            <div className="w-full border-4 border-black bg-[#151311] p-4 rounded-lg shadow-[6px_6px_0px_#000] my-3">
+              <div className="flex items-center justify-between border-b border-white/10 pb-2.5 mb-3">
+                <span className="font-mono text-[9px] text-[#39FF14] font-black tracking-widest uppercase flex items-center gap-1.5">
+                  <ShieldCheck size={12} className="text-[#39FF14]" />
+                  PILOT CREDENTIALS READY
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    audioManager.playSfx("tap_nav", 0.12);
+                    setTutPhase("identity");
+                  }}
+                  className="font-mono text-[9px] text-zinc-400 hover:text-white uppercase underline cursor-pointer"
+                >
+                  EDIT ALIAS
+                </button>
+              </div>
+
+              <div className="flex items-center gap-3.5">
+                {selectedAvatarUrl ? (
+                  <img
+                    src={selectedAvatarUrl}
+                    alt={username || "Pilot"}
+                    className="w-12 h-12 rounded-full object-cover border-2 border-[#39FF14]"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-full bg-zinc-800 border-2 border-white/20 flex items-center justify-center">
+                    <User size={20} className="text-zinc-400" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0 text-left">
+                  <div className="font-mono text-sm font-black text-white truncate uppercase">
+                    @{username || (isFarcaster && fcUser?.username) || "PILOT_01"}
+                  </div>
+                  <div className="font-mono text-[10px] text-zinc-400 truncate">
+                    {isFarcaster ? "WARPCAST MINI APP PROTOCOL" : "CADET PILOT // FLIGHT ACADEMY"}
+                  </div>
+                </div>
+                <div className="px-2 py-1 bg-[#39FF14]/15 border border-[#39FF14]/50 rounded text-[9px] font-mono text-[#39FF14] font-bold">
+                  S1 CLEAR
+                </div>
+              </div>
+            </div>
+
+            {/* Wallet Link Status & Actions */}
+            <div className="w-full border-4 border-black bg-[#151311] p-5 rounded-lg shadow-[6px_6px_0px_#000] mb-3 text-left space-y-4">
+              <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                <span className="font-mono text-[10px] text-zinc-300 font-black tracking-wider uppercase flex items-center gap-1.5">
+                  <Wallet size={13} className="text-[#00E5FF]" />
+                  BASE EVM NETWORK (CHAIN ID 8453)
+                </span>
+                {walletAddress ? (
+                  <span className="flex items-center gap-1 font-mono text-[8.5px] text-[#39FF14] font-black uppercase">
+                    <span className="w-2 h-2 rounded-full bg-[#39FF14] animate-pulse" />
+                    CONNECTED
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1 font-mono text-[8.5px] text-amber-400 font-black uppercase">
+                    <span className="w-2 h-2 rounded-full bg-amber-400" />
+                    UNLINKED
+                  </span>
+                )}
+              </div>
+
+              {walletAddress ? (
+                /* Connected State */
+                <div className="space-y-3">
+                  <div className="bg-black/60 border border-[#39FF14]/40 p-3 rounded flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-mono text-[8.5px] text-zinc-400 uppercase tracking-widest">
+                        SIGNING ADDRESS
+                      </div>
+                      <div className="font-mono text-xs text-[#00E5FF] font-black tracking-wider truncate">
+                        {walletAddress}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleCopyAddress(walletAddress)}
+                        className="px-2 py-1 bg-white/10 hover:bg-white/15 text-white rounded text-[9px] font-mono font-bold flex items-center gap-1 transition-all cursor-pointer"
+                        title="Copy Address"
+                      >
+                        {walletCopied ? (
+                          <>
+                            <Check size={11} className="text-[#39FF14]" /> COPIED
+                          </>
+                        ) : (
+                          <>
+                            <Copy size={11} /> COPY
+                          </>
+                        )}
+                      </button>
+                      <a
+                        href={`https://basescan.org/address/${walletAddress}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="p-1.5 bg-white/10 hover:bg-white/15 text-white/70 hover:text-white rounded transition-all"
+                        title="View on BaseScan"
+                      >
+                        <ExternalLink size={12} />
+                      </a>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5 font-mono text-[10px] text-zinc-300">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle size={12} className="text-[#39FF14] shrink-0" />
+                      <span>2-Card Welcome Pack provenance assigned to this address</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle size={12} className="text-[#39FF14] shrink-0" />
+                      <span>Zero-gas sponsored gameplay on Base L2</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle size={12} className="text-[#39FF14] shrink-0" />
+                      <span>Scores, medals, and $V⚡ tokens anchored to your profile</span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleConnectWeb3Wallet}
+                    disabled={isConnectingWallet}
+                    className="w-full py-2 bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white font-mono text-[9px] tracking-widest uppercase transition-all rounded border border-white/10 cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    {isConnectingWallet ? <Loader2 size={12} className="animate-spin" /> : <Wallet size={12} />}
+                    SWITCH OR RECONNECT DIFFERENT WALLET
+                  </button>
+                </div>
+              ) : (
+                /* Unlinked State: Offer Primary Web3 and Guest Ephemeral */
+                <div className="space-y-3">
+                  <p className="font-mono text-[10.5px] text-zinc-300 leading-relaxed">
+                    Connecting your Base Smart Wallet securely signs ownership of your cards and ensures your progress is never lost across browsers.
+                  </p>
+
+                  <div className="space-y-2 pt-1">
+                    {/* Primary Web3 Button */}
+                    <button
+                      type="button"
+                      onClick={handleConnectWeb3Wallet}
+                      disabled={isConnectingWallet}
+                      className="w-full py-3 bg-gradient-to-r from-[#00E5FF] to-[#39FF14] text-black font-mono font-black text-xs tracking-wider uppercase hover:opacity-95 transition-all rounded border-2 border-black shadow-[3px_3px_0px_#000] cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      {isConnectingWallet ? (
+                        <>
+                          <Loader2 size={14} className="animate-spin" /> CONNECTING BASE SMART WALLET...
+                        </>
+                      ) : (
+                        <>
+                          <Zap size={14} className="fill-black" /> CONNECT BASE SMART WALLET / WEB3
+                        </>
+                      )}
+                    </button>
+
+                    {/* Guest Ephemeral Smart Wallet Generation */}
+                    <button
+                      type="button"
+                      onClick={handleGenerateEphemeralWallet}
+                      disabled={isConnectingWallet}
+                      className="w-full py-2.5 bg-black/60 hover:bg-black/80 text-amber-300 font-mono font-bold text-[10px] tracking-wider uppercase transition-all rounded border border-amber-400/40 cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      {isConnectingWallet ? (
+                        <Loader2 size={12} className="animate-spin" />
+                      ) : (
+                        <Key size={12} className="text-amber-400" />
+                      )}
+                      GUEST PILOT // GENERATE EPHEMERAL SMART WALLET
+                    </button>
+                  </div>
+
+                  <p className="font-mono text-[9px] text-zinc-500 text-center">
+                    Instant zero-friction generation. Ephemeral keys are saved locally on this device.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Final CTA: Save Profile and Enter the Vault */}
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={handleSaveIdentityAndFinish}
-              disabled={
-                isSavingIdentity ||
-                (!isFarcaster &&
-                  (username.length < 3 ||
-                    !isValidFormat ||
-                    isAvailable === false ||
-                    !selectedAvatarUrl))
-              }
-              className="w-full py-4 bg-gradient-to-r from-[#39FF14] to-[#00E5FF] text-black font-mono font-black text-xs tracking-[0.25em] uppercase hover:opacity-95 transition-all rounded border-2 border-black shadow-[4px_4px_0px_#000] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
+              disabled={isSavingIdentity}
+              className="w-full py-4 bg-gradient-to-r from-[#39FF14] via-[#00E5FF] to-[#FF1493] text-black font-mono font-black text-xs tracking-[0.25em] uppercase hover:opacity-95 transition-all rounded border-2 border-black shadow-[4px_4px_0px_#000] cursor-pointer flex items-center justify-center gap-2"
             >
               {isSavingIdentity ? (
                 <>
-                  <Loader2 size={16} className="animate-spin" /> LOCKING IDENTITY...
+                  <Loader2 size={16} className="animate-spin" /> SAVING PROFILE & WRITING TO VAULT...
                 </>
-              ) : isFarcaster ? (
-                "CONFIRM IDENTITY & ENTER VAULT"
               ) : (
-                "LOCK IN IDENTITY & ENTER VAULT"
+                "SAVE PROFILE & ENTER THE VAULT ➔"
               )}
             </motion.button>
           </motion.div>
