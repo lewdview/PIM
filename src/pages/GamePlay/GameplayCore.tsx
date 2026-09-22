@@ -30,6 +30,7 @@ import { type ProjectionResult, getCorkscrewSpiralPos, getWaveCoasterPos, getFla
 import { refineAndBlendEdges, disposeCanvas, drawMovingGasAura } from './drawHelpers';
 import JudgmentBadge, { getJudgmentBadgeSvgHtml, getJudgmentStreamItemHtml } from './JudgmentBadge';
 import GameplayVisualizer from './GameplayVisualizer';
+import TutorialOverlay, { type TutorialStepType } from './TutorialOverlay';
 
 // Use Vite's eager glob to grab files in /public/data/slideshow/
 const imageModules = import.meta.glob<string>('../../public/data/slideshow/**/*.{png,jpg,jpeg,gif,webp,svg}', { query: '?url', import: 'default', eager: true });
@@ -1183,6 +1184,50 @@ async function generateAudioForgeChart(song: any): Promise<Note[]> {
   return stageified.notes;
 }
 
+function createTutorialNotesForStep(step: TutorialStepType, bpm: number, startT: number, startId = 0): Note[] {
+  const beatDur = 60 / (bpm || 120);
+  const interval = Math.max(2.4, beatDur * 4);
+  const notes: Note[] = [];
+
+  for (let i = 0; i < 3; i++) {
+    const time = startT + i * interval;
+    if (step === 'tap') {
+      notes.push({
+        id: startId + i,
+        time,
+        lane: 1,
+        type: 'tap',
+      });
+    } else if (step === 'hold') {
+      notes.push({
+        id: startId + i,
+        time,
+        lane: 1,
+        type: 'hold',
+        holdDuration: Math.max(1.2, beatDur * 2.5),
+      });
+    } else if (step === 'swipe') {
+      notes.push({
+        id: startId + i,
+        time,
+        lane: 2,
+        type: 'swipe',
+        swipeDirection: 'up',
+      });
+    } else if (step === 'hold-swipe') {
+      notes.push({
+        id: startId + i,
+        time,
+        lane: 1,
+        type: 'hold-swipe',
+        holdDuration: Math.max(1.2, beatDur * 2.5),
+        swipeDirection: 'up',
+      });
+    }
+  }
+  return notes;
+}
+
 // ── game options (shared with /options page via @/lib/options) ────
 
 export default function Game() {
@@ -1224,6 +1269,7 @@ export default function Game() {
   const lastInputModalityRef = useRef<'touch' | 'mouse' | 'key' | 'gamepad'>(
     typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0) ? 'touch' : 'key'
   );
+  const tutorialJudgmentHandlerRef = useRef<((newJ: JudgmentDisplay) => void) | null>(null);
 
   const addJudgment = useCallback((newJ: JudgmentDisplay) => {
     const now = Date.now();
@@ -1237,6 +1283,7 @@ export default function Game() {
     arr.length = write;
     arr.push(newJ);
     lastLaneHitRef.current[newJ.lane] = { ts: newJ.ts, type: newJ.type };
+    tutorialJudgmentHandlerRef.current?.(newJ);
 
     // Zero-overhead direct DOM injection for 120Hz buttery smooth compositor animation
     if (optsRef.current?.judgmentText) {
@@ -1395,8 +1442,21 @@ export default function Game() {
   
   const isTutorialRef = useRef(new URLSearchParams(window.location.search).get("tutorial") === "true");
   const isTutorial = isTutorialRef.current;
-  const isTutorialCompleted = localStorage.getItem("pim_tutorial_completed") === "true" || useVaultStore.getState().progression.tutorialCompleted;
-  const activeTutorial = isTutorial && !isTutorialCompleted;
+  const activeTutorial = isTutorial;
+
+  // ── Curriculum-Driven Tutorial State ──
+  const TUTORIAL_STEPS: TutorialStepType[] = ['tap', 'hold', 'swipe', 'hold-swipe'];
+  const [tutStepIndex, setTutStepIndex] = useState(0);
+  const tutStepIndexRef = useRef(0);
+  const [tutChancesLeft, setTutChancesLeft] = useState(3);
+  const tutChancesLeftRef = useRef(3);
+  const [tutLastHitResult, setTutLastHitResult] = useState<'success' | 'miss' | null>(null);
+  const [tutShowRewindModal, setTutShowRewindModal] = useState(false);
+  const [tutShowHealthModal, setTutShowHealthModal] = useState(false);
+  const [tutStage1Cleared, setTutStage1Cleared] = useState(false);
+  const tutStage1ClearedRef = useRef(false);
+  const isTutorialRewindingLessonRef = useRef(false);
+
   const [isTutorialHelpOpen, setIsTutorialHelpOpen] = useState(false);
   const isTutorialHelpOpenRef = useRef(false);
 
@@ -3268,6 +3328,182 @@ export default function Game() {
     };
   }, [restoreLane]);
 
+  // ── Tutorial Stage 1 Curriculum Handlers ──
+  const scheduleNotesForStep = useCallback((step: TutorialStepType, startT: number) => {
+    const bpm = songRef.current?.bpm || 120;
+    const newNotes = createTutorialNotesForStep(step, bpm, startT, Date.now() % 100000);
+    const pastHitNotes = notesRef.current.filter((ns) => ns.hit);
+    const newNoteStates: NoteState[] = newNotes.map((n) => ({
+      note: n,
+      hit: false,
+      missed: false,
+      holdActive: false,
+      holdProgress: 0,
+      currentLane: n.lane,
+      originLane: n.lane,
+      visualLane: n.lane,
+    }));
+    notesRef.current = [...pastHitNotes, ...newNoteStates];
+    unresolvedNotesCountRef.current = newNoteStates.length;
+    lastNoteTimeRef.current = Math.max(...notesRef.current.map((ns) => ns.note.time));
+    noteWindowStartRef.current = 0;
+  }, []);
+
+  const advanceTutorialStep = useCallback(() => {
+    const nextIdx = tutStepIndexRef.current + 1;
+    if (nextIdx >= TUTORIAL_STEPS.length) {
+      tutStage1ClearedRef.current = true;
+      setTutStage1Cleared(true);
+      audioManager.playSfx("select_start_song", 0.9);
+      setTimeout(() => {
+        finishGame(false);
+      }, 2200);
+      return;
+    }
+
+    tutStepIndexRef.current = nextIdx;
+    setTutStepIndex(nextIdx);
+    tutChancesLeftRef.current = 3;
+    setTutChancesLeft(3);
+
+    const nextStep = TUTORIAL_STEPS[nextIdx];
+    if (nextStep === 'hold') {
+      audioRef.current?.pause();
+      isTutorialHelpOpenRef.current = true;
+      setTutShowHealthModal(true);
+      return;
+    }
+
+    const currentT = audioRef.current?.currentTime ?? getT();
+    scheduleNotesForStep(nextStep, currentT + 2.2);
+  }, [finishGame, getT, scheduleNotesForStep]);
+
+  const triggerTutorialRewind = useCallback(() => {
+    audioManager.stopAllHoldTones();
+    audioManager.stopSfx("gameover_countdown");
+    playRewindSound();
+
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = 0;
+    }
+
+    const audio = audioRef.current;
+    const currentT = audio?.currentTime ?? getT();
+    const rewindTo = Math.max(0, currentT - 2.5);
+    rewindToRef.current = rewindTo;
+    const fromT = currentT;
+
+    if (audio) {
+      audio.currentTime = rewindTo;
+    }
+
+    rewindGraceUntilWallRef.current = performance.now() + 1200 + 1000;
+    rewindGraceUntilSongTimeRef.current = rewindTo + 1.0;
+
+    laneRef.current.forEach((l) => {
+      l.pressed = false;
+      l.touchId = undefined;
+      l.isArrow = null;
+    });
+    touchStartPos.current = {};
+    noteWindowStartRef.current = 0;
+
+    notesRef.current.forEach((ns) => {
+      const holdDur = ns.note.holdDuration || (ns.note.type === "hold" || ns.note.type === "hold-swipe" ? 0.5 : 0);
+      const holdEnd = ns.note.time + holdDur;
+      const inRewindWindow = (ns.note.time >= rewindTo - 0.5 && ns.note.time <= fromT + 0.5) ||
+                             (holdEnd >= rewindTo - 0.5 && ns.note.time <= fromT + 0.5);
+      if (inRewindWindow) {
+        if (ns.missed) {
+          ns.missed = false;
+          unresolvedNotesCountRef.current++;
+          gsRef.current.misses = Math.max(0, gsRef.current.misses - 1);
+        }
+        if (ns.holdActive) {
+          ns.holdActive = false;
+          ns.holdProgress = 0;
+          ns.autoplayedBySurge = false;
+          ns.currentLane = ns.note.lane;
+          ns.visualLane = ns.note.lane;
+          ns.originLane = ns.note.lane;
+          ns.touchId = undefined;
+        }
+      }
+    });
+
+    const currentStep = TUTORIAL_STEPS[tutStepIndexRef.current];
+    scheduleNotesForStep(currentStep, rewindTo + 2.0);
+
+    rewindAnimRef.current = { wallStart: performance.now(), fromT, toT: rewindTo };
+    missCountRef.current = 0;
+    lastMissTimeRef.current = 0;
+    setMissCount(0);
+
+    isTutorialRewindingLessonRef.current = true;
+    phaseRef.current = "rewinding";
+    setPhase("rewinding");
+    rafRef.current = requestAnimationFrame(() => drawRef.current?.());
+
+    rewindCompletionRef.current = {
+      rewindTo,
+      audio,
+      restoreLane,
+    };
+  }, [getT, restoreLane, scheduleNotesForStep]);
+
+  const handleTutorialJudgment = useCallback((newJ: JudgmentDisplay) => {
+    if (!activeTutorial || tutStage1ClearedRef.current) return;
+
+    const isHit = newJ.type === 'PERFECT+' || newJ.type === 'PERFECT' || newJ.type === 'GOOD';
+    const isMiss = newJ.type === 'MISS';
+
+    if (isHit) {
+      setTutLastHitResult('success');
+      audioManager.playSfx('select_start_song', 0.45);
+      setTimeout(() => setTutLastHitResult(null), 1800);
+      advanceTutorialStep();
+    } else if (isMiss) {
+      setTutLastHitResult('miss');
+      setTimeout(() => setTutLastHitResult(null), 1800);
+      const remaining = tutChancesLeftRef.current - 1;
+      tutChancesLeftRef.current = Math.max(0, remaining);
+      setTutChancesLeft(tutChancesLeftRef.current);
+
+      if (tutChancesLeftRef.current <= 0) {
+        triggerTutorialRewind();
+      }
+    }
+  }, [activeTutorial, advanceTutorialStep, triggerTutorialRewind]);
+
+  useEffect(() => {
+    tutorialJudgmentHandlerRef.current = handleTutorialJudgment;
+  }, [handleTutorialJudgment]);
+
+  const handleDismissRewindModal = useCallback(() => {
+    setTutShowRewindModal(false);
+    isTutorialHelpOpenRef.current = false;
+    tutChancesLeftRef.current = 3;
+    setTutChancesLeft(3);
+    const audio = audioRef.current;
+    if (audio) {
+      audio.play().catch(() => {});
+    }
+    rafRef.current = requestAnimationFrame(() => drawRef.current?.());
+  }, []);
+
+  const handleDismissHealthModal = useCallback(() => {
+    setTutShowHealthModal(false);
+    isTutorialHelpOpenRef.current = false;
+    const currentT = audioRef.current?.currentTime ?? getT();
+    scheduleNotesForStep('hold', currentT + 2.2);
+    const audio = audioRef.current;
+    if (audio) {
+      audio.play().catch(() => {});
+    }
+    rafRef.current = requestAnimationFrame(() => drawRef.current?.());
+  }, [getT, scheduleNotesForStep]);
+
   // Auto-abandon countdown while continue screen is visible
   useEffect(() => {
     if (phase !== "continue") return;
@@ -3396,6 +3632,17 @@ export default function Game() {
         rewindGraceUntilSongTimeRef.current = rc.rewindTo + 1.0;
         if (rc.audio) {
           rc.audio.currentTime = rc.rewindTo;
+        }
+        if (activeTutorial && isTutorialRewindingLessonRef.current) {
+          isTutorialRewindingLessonRef.current = false;
+          phaseRef.current = "playing";
+          setPhase("playing");
+          if (rc.audio) rc.audio.pause();
+          isTutorialHelpOpenRef.current = true;
+          setTutShowRewindModal(true);
+          return;
+        }
+        if (rc.audio) {
           rc.audio.play().catch(() => {});
         }
         phaseRef.current = "playing";
@@ -8161,36 +8408,15 @@ export default function Game() {
         if (activeTutorial) {
           song.difficultyLevel = 1;
           const bpm = song.bpm || 120;
-          const beatDur = 60 / bpm;
-          const generatedNotes: Note[] = [];
-          let time = 3.0;
-          let id = 0;
-          while (time < 58) {
-            const lane = id % 3;
-            let type: 'tap' | 'hold' | 'swipe' = 'tap';
-            let holdDuration: number | undefined;
-            let swipeDirection: 'up' | undefined;
-
-            if (id % 4 === 1) {
-              type = 'hold';
-              holdDuration = beatDur * 2;
-            } else if (id % 4 === 3) {
-              type = 'swipe';
-              swipeDirection = 'up';
-            }
-
-            generatedNotes.push({
-              id: id++,
-              time,
-              lane,
-              type,
-              holdDuration,
-              swipeDirection
-            });
-
-            time += beatDur * 4;
-          }
-          song.notes = generatedNotes;
+          song.notes = createTutorialNotesForStep('tap', bpm, 3.5, 0);
+          tutStepIndexRef.current = 0;
+          setTutStepIndex(0);
+          tutChancesLeftRef.current = 3;
+          setTutChancesLeft(3);
+          tutStage1ClearedRef.current = false;
+          setTutStage1Cleared(false);
+          setTutShowRewindModal(false);
+          setTutShowHealthModal(false);
         }
         
         // Reset pause state on new song load
@@ -9764,67 +9990,21 @@ export default function Game() {
         </div>
       )}
 
-      {/* ── TUTORIAL ONBOARDING MISS OVERLAY ── */}
-      {isTutorialHelpOpen && (
-        <div className="absolute inset-0 z-[101] flex items-center justify-center bg-black/95 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="glass-panel p-8 max-w-sm w-full mx-4 text-center border border-[#FF1493]/30 shadow-2xl relative">
-            {/* Cyberpunk details */}
-            <div className="absolute top-0 left-0 w-2.5 h-2.5 border-t border-l border-[#FF1493]" />
-            <div className="absolute top-0 right-0 w-2.5 h-2.5 border-t border-r border-[#FF1493]" />
-            <div className="absolute bottom-0 left-0 w-2.5 h-2.5 border-b border-l border-[#FF1493]" />
-            <div className="absolute bottom-0 right-0 w-2.5 h-2.5 border-b border-r border-[#FF1493]" />
-
-            <div className="font-mono font-bold text-[10px] tracking-[0.4em] text-[#FF1493] mb-4 uppercase">
-              // NEURAL OUT OF SYNC //
-            </div>
-            <h3 className="font-mono font-bold text-2xl text-white mb-6 uppercase tracking-wider">
-              TRANSMISSION FAILING
-            </h3>
-            <div className="font-mono text-zinc-400 text-[10px] leading-relaxed mb-8 text-left space-y-3.5 max-h-[220px] overflow-y-auto pr-1">
-              <p className="text-zinc-500 uppercase tracking-widest text-[9px]">// TRAINING MODULE: NOTE TYPES & CONTROLS //</p>
-              <div>
-                <span className="text-[#39FF14] font-bold block mb-0.5">■ TAPS:</span>
-                Press lane key (D F J), Controller (X Y B), or tap screen when note aligns with trigger line.
-              </div>
-              <div>
-                <span className="text-[#FFD700] font-bold block mb-0.5">▬ HOLD & SLIDES:</span>
-                Hold key/button until gold tail finishes. Shift lane if path bends sideways.
-              </div>
-              <div>
-                <span className="text-[#FF1493] font-bold block mb-0.5">➔ SWIPES & ▲ LIFTS:</span>
-                Flick Analog Stick, press Arrow Key / D-Pad, or swipe screen in arrow/upward direction.
-              </div>
-              <div>
-                <span className="text-[#FF7B00] font-bold block mb-0.5">⚡ BREAK & ✦ ACCENT:</span>
-                High-voltage beat & snare drops awarding bonus score multipliers.
-              </div>
-              <div>
-                <span className="text-[#00F5D4] font-bold block mb-0.5">🎛 REMIX RUNES:</span>
-                Hit perfectly to isolate vocals, mute drums, or boost bass audio stems.
-              </div>
-              <div>
-                <span className="text-[#FF003C] font-bold block mb-0.5">⚠ MINE HAZARDS:</span>
-                DO NOT TOUCH MINE LANES! Avoid to prevent -500 penalty and combo breaks.
-              </div>
-            </div>
-            <button
-              onClick={() => {
-                isTutorialHelpOpenRef.current = false;
-                setIsTutorialHelpOpen(false);
-                missCountRef.current = 0;
-                setMissCount(0);
-                const audio = audioRef.current;
-                if (audio) {
-                  audio.play().catch(() => {});
-                }
-                rafRef.current = requestAnimationFrame(() => drawRef.current?.());
-              }}
-              className="w-full py-4 font-mono font-bold text-sm tracking-[0.25em] bg-[#FF1493] text-white hover:scale-[1.02] active:scale-95 transition-all shadow-lg rounded-sm border-none cursor-pointer"
-            >
-              TAP TO RE-SYNC
-            </button>
-          </div>
-        </div>
+      {/* ── INTERACTIVE CURRICULUM TUTORIAL OVERLAY ── */}
+      {activeTutorial && (
+        <TutorialOverlay
+          currentStep={TUTORIAL_STEPS[tutStepIndex]}
+          stepIndex={tutStepIndex}
+          totalSteps={TUTORIAL_STEPS.length}
+          chancesLeft={tutChancesLeft}
+          maxChances={3}
+          lastHitResult={tutLastHitResult}
+          showRewindModal={tutShowRewindModal}
+          showHealthModal={tutShowHealthModal}
+          stage1Cleared={tutStage1Cleared}
+          onDismissRewindModal={handleDismissRewindModal}
+          onDismissHealthModal={handleDismissHealthModal}
+        />
       )}
       {/* Dynamic gameplay background system */}
       {(() => {

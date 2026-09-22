@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PIM & 365 Email Signatures — th3scr1b3</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #050402;
+      --card-bg: #0c0c14;
+      --border: #22222e;
+      --orange: #ff5500;
+      --cyan: #00e5ff;
+      --pink: #ff1493;
+      --gold: #e5b800;
+      --green: #39ff14;
+      --text: #f4f4f5;
+      --muted: #8e8e9f;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      padding: 40px 20px;
+      line-height: 1.5;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    header {
+      margin-bottom: 40px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 24px;
+    }
+    .badge {
+      display: inline-block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      color: var(--orange);
+      background: rgba(255, 85, 0, 0.1);
+      border: 1px solid rgba(255, 85, 0, 0.3);
+      padding: 4px 10px;
+      border-radius: 4px;
+      margin-bottom: 12px;
+    }
+    h1 {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+    p.lead {
+      color: var(--muted);
+      font-size: 15px;
+      max-width: 600px;
+    }
+    .sig-section {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      margin-bottom: 40px;
+    }
+    .sig-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .sig-title {
+      font-size: 18px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .actions {
+      display: flex;
+      gap: 10px;
+    }
+    button {
+      background: #181822;
+      color: #fff;
+      border: 1px solid #333344;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'Outfit', sans-serif;
+      transition: all 0.2s;
+    }
+    button:hover {
+      background: #252535;
+      border-color: #55556a;
+    }
+    button.primary {
+      background: var(--orange);
+      border-color: var(--orange);
+      color: #000;
+    }
+    button.primary:hover {
+      background: #ff6a1a;
+    }
+    .preview-box {
+      background: #08080c;
+      border: 1px dashed #2a2a3a;
+      border-radius: 8px;
+      padding: 24px;
+      overflow-x: auto;
+    }
+    .instructions {
+      margin-top: 50px;
+      background: #0d0d12;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+    }
+    .instructions h2 {
+      font-size: 20px;
+      margin-bottom: 16px;
+    }
+    .instructions ol {
+      padding-left: 20px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .instructions li {
+      margin-bottom: 10px;
+    }
+    .instructions code {
+      font-family: 'JetBrains Mono', monospace;
+      background: #181824;
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: var(--cyan);
+    }
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--green);
+      color: #000;
+      font-weight: 700;
+      padding: 12px 24px;
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      z-index: 9999;
+    }
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <div class="badge">PIM // th3v4ult // 365 Days of Light & Dark</div>
+      <h1>Email Signature Suite</h1>
+      <p class="lead">
+        Hand-crafted, battle-tested HTML email signatures featuring live PIM engine telemetry, 365 release stats, and ecosystem deep links. Compatible with Gmail, Apple Mail, Outlook, and Superhuman.
+      </p>
+    </header>
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <!-- SIGNATURE 1: FLAGSHIP CYBER-BRUTALIST                           -->
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <div class="sig-section">
+      <div class="sig-header">
+        <div class="sig-title">
+          <span>01. Flagship Cyber-Brutalist</span>
+          <span style="color: var(--orange); font-size: 12px; font-family: 'JetBrains Mono', monospace;">[RECOMMENDED]</span>
+        </div>
+        <div class="actions">
+          <button class="primary" onclick="copySignature('sig1')">Copy for Gmail / Apple Mail</button>
+          <button onclick="copyHtml('sig1-raw')">Copy Raw HTML</button>
+        </div>
+      </div>
+      <div class="preview-box">
+        <div id="sig1">
+          <!-- MASTER EMAIL SIGNATURE 1 (OUTER TABLE) -->
+          <table cellpadding="0" cellspacing="0" border="0" style="max-width: 620px; min-width: 320px; font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #08080c; border: 1px solid #1e1e2c; border-radius: 10px; overflow: hidden; padding: 0; margin: 0; color: #ffffff;">
+            <tr>
+              <td style="padding: 22px 24px; vertical-align: top;">
+                <!-- HEADER: LOGO + NAME + TITLE -->
+                <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                  <tr>
+                    <td width="64" style="vertical-align: top; padding-right: 18px;">
+                      <a href="https://pim.th3scr1b3.art" target="_blank" style="text-decoration: none; display: block;">
+                        <img src="https://pim.th3scr1b3.art/data/logos/logo_1.png" alt="PIM Logo" width="60" height="60" style="display: block; border-radius: 8px; border: 1px solid #ff5500; background-color: #050402;" />
+                      </a>
+                    </td>
+                    <td style="vertical-align: middle;">
+                      <table cellpadding="0" cellspacing="0" border="0">
+                        <tr>
+                          <td>
+                            <span style="font-size: 20px; font-weight: 800; letter-spacing: 0.04em; color: #ffffff; text-transform: uppercase;">th3scr1b3</span>
+                            <span style="font-family: 'JetBrains Mono', 'Roboto Mono', Courier, monospace; font-size: 11px; color: #ff5500; font-weight: 700; margin-left: 8px; letter-spacing: 0.15em;">詩の動き</span>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style="padding-top: 3px;">
+                            <span style="font-family: 'JetBrains Mono', 'Roboto Mono', monospace; font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em;">
+                              Sound Architect & Creative Technologist <span style="color: #ff5500;">//</span> PIM : th3v4ult
+                            </span>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- STAT TELEMETRY BAR -->
+                <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top: 16px; background-color: #0e0e17; border: 1px solid #1c1c28; border-radius: 6px;">
+                  <tr>
+                    <td style="padding: 10px 14px; font-family: 'JetBrains Mono', 'Roboto Mono', monospace; font-size: 11px; color: #e2e8f0; line-height: 1.6;">
+                      <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                        <tr>
+                          <td style="text-align: left; vertical-align: middle;">
+                            <span style="color: #ff5500; font-weight: 700;">365</span> <span style="color: #94a3b8;">TRACKS</span>
+                            <span style="color: #33334a; padding: 0 6px;">|</span>
+                            <span style="color: #00e5ff; font-weight: 700;">60 FPS</span> <span style="color: #94a3b8;">RHYTHM HIGHWAY</span>
+                            <span style="color: #33334a; padding: 0 6px;">|</span>
+                            <span style="color: #39ff14; font-weight: 700;">BASE L2</span> <span style="color: #94a3b8;">CHAIN 8453</span>
+                            <span style="color: #33334a; padding: 0 6px;">|</span>
+                            <span style="color: #e5b800; font-weight: 700;">THE FORGE</span> <span style="color: #94a3b8;">$V⚡</span>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- ESSENCE / TAGLINE -->
+                <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top: 12px;">
+                  <tr>
+                    <td style="font-size: 12px; color: #828292; line-height: 1.5; font-style: italic;">
+                      &ldquo;365 Days of Light &amp; Dark. 365 daily tracks, collectible stems, and sovereign sound artifacts.&rdquo;
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- ACTION BUTTONS -->
+                <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 16px;">
+                  <tr>
+                    <td style="padding-right: 8px;">
+                      <a href="https://pim.th3scr1b3.art" target="_blank" style="background-color: #ff5500; color: #050402; font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; text-decoration: none; padding: 7px 14px; border-radius: 4px; display: inline-block;">
+                        &#9658; ENTER VAULT &amp; PLAY
+                      </a>
+                    </td>
+                    <td style="padding-right: 8px;">
+                      <a href="https://pim.th3scr1b3.art/365" target="_blank" style="background-color: #1a1a26; color: #00e5ff; border: 1px solid #2e2e42; font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; text-decoration: none; padding: 6px 14px; border-radius: 4px; display: inline-block;">
+                        &#9776; 365 ARCHIVE
+                      </a>
+                    </td>
+                    <td>
+                      <a href="https://base.th3scr1b3.art" target="_blank" style="background-color: #1a1a26; color: #ffffff; border: 1px solid #2e2e42; font-family: 'Outfit', sans-serif; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; text-decoration: none; padding: 6px 14px; border-radius: 4px; display: inline-block;">
+                        BASE MINI-APP
+                      </a>
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- ECOSYSTEM LINKS FOOTER -->
+                <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top: 16px; padding-top: 14px; border-top: 1px solid #161622;">
+                  <tr>
+                    <td style="font-family: 'JetBrains Mono', 'Roboto Mono', monospace; font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">
+                      <a href="https://th3scr1b3.art" target="_blank" style="color: #94a3b8; text-decoration: none; font-weight: 600;">th3scr1b3.art</a>
+                      <span style="color: #33334a; padding: 0 5px;">&bull;</span>
+                      <a href="https://pim.th3scr1b3.art" target="_blank" style="color: #ff5500; text-decoration: none; font-weight: 600;">pim.th3scr1b3.art</a>
+                      <span style="color: #33334a; padding: 0 5px;">&bull;</span>
+                      <a href="https://video.th3scr1b3.art" target="_blank" style="color: #94a3b8; text-decoration: none;">visuals</a>
+                      <span style="color: #33334a; padding: 0 5px;">&bull;</span>
+                      <a href="https://ce.th3scr1b3.art" target="_blank" style="color: #94a3b8; text-decoration: none;">dsp analyzer</a>
+                      <span style="color: #33334a; padding: 0 5px;">&bull;</span>
+                      <span style="color: #e5b800;">FC: @th3scr1b3 (1864951)</span>
+                    </td>
+                  </tr>
+                </table>
+
+              </td>
+            </tr>
+          </table>
+          <!-- END MASTER EMAIL SIGNATURE 1 -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <!-- SIGNATURE 2: TERMINAL TELEMETRY (MONOSPACE / MINIMALIST)       -->
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <div class="sig-section">
+      <div class="sig-header">
+        <div class="sig-title">
+          <span>02. Cyber Terminal Telemetry</span>
+          <span style="color: var(--cyan); font-size: 12px; font-family: 'JetBrains Mono', monospace;">[CLEAN &amp; MONOCHROME-FRIENDLY]</span>
+        </div>
+        <div class="actions">
+          <button class="primary" onclick="copySignature('sig2')">Copy for Gmail / Apple Mail</button>
+          <button onclick="copyHtml('sig2-raw')">Copy Raw HTML</button>
+        </div>
+      </div>
+      <div class="preview-box">
+        <div id="sig2">
+          <!-- EMAIL SIGNATURE 2 (TERMINAL TELEMETRY) -->
+          <table cellpadding="0" cellspacing="0" border="0" style="font-family: 'JetBrains Mono', 'Roboto Mono', 'Courier New', Courier, monospace; font-size: 12px; color: #e2e8f0; line-height: 1.5; border-left: 2px solid #ff5500; padding-left: 14px; margin: 0;">
+            <tr>
+              <td>
+                <div style="font-weight: 700; font-size: 14px; color: #ffffff; letter-spacing: 0.05em;">
+                  TH3SCR1B3 <span style="font-weight: 400; color: #ff5500;">//</span> <span style="font-size: 11px; color: #94a3b8;">SOUND &bull; CODE &bull; ARTIFACTS</span>
+                </div>
+                <div style="color: #64748b; font-size: 11px; margin-top: 2px;">
+                  PIM : th3v4ult &mdash; 3-Lane Rhythm Highway &bull; Base EVM Mainnet
+                </div>
+                <div style="margin-top: 8px; font-size: 11px; color: #00e5ff; background-color: #0b0f17; border: 1px solid #1a2333; padding: 6px 10px; border-radius: 4px; display: inline-block;">
+                  <span style="color: #ff5500;">[SYS]</span> 365 TRACKS &bull; 12 VALENCE MOODS &bull; 5 RARITY TIERS &bull; 60FPS DSP
+                </div>
+                <div style="margin-top: 8px; font-size: 11px; color: #94a3b8;">
+                  &gt; <a href="https://pim.th3scr1b3.art" target="_blank" style="color: #ff5500; text-decoration: none; font-weight: 600;">Play PIM</a>
+                  &nbsp;|&nbsp;
+                  <a href="https://pim.th3scr1b3.art/365" target="_blank" style="color: #00e5ff; text-decoration: none; font-weight: 600;">365 Archive</a>
+                  &nbsp;|&nbsp;
+                  <a href="https://th3scr1b3.art" target="_blank" style="color: #ffffff; text-decoration: none;">Universe</a>
+                  &nbsp;|&nbsp;
+                  <a href="https://base.th3scr1b3.art" target="_blank" style="color: #39ff14; text-decoration: none;">Base L2</a>
+                </div>
+              </td>
+            </tr>
+          </table>
+          <!-- END EMAIL SIGNATURE 2 -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <!-- SIGNATURE 3: UNIVERSAL LIGHT/DARK ADAPTIVE COMPACT              -->
+    <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+    <div class="sig-section">
+      <div class="sig-header">
+        <div class="sig-title">
+          <span>03. Universal Adaptive Compact</span>
+          <span style="color: var(--gold); font-size: 12px; font-family: 'JetBrains Mono', monospace;">[ZERO BACKGROUND / COMPATIBLE WITH LIGHT CLIENTS]</span>
+        </div>
+        <div class="actions">
+          <button class="primary" onclick="copySignature('sig3')">Copy for Gmail / Apple Mail</button>
+          <button onclick="copyHtml('sig3-raw')">Copy Raw HTML</button>
+        </div>
+      </div>
+      <div class="preview-box" style="background: transparent;">
+        <div id="sig3">
+          <!-- EMAIL SIGNATURE 3 (UNIVERSAL ADAPTIVE COMPACT) -->
+          <table cellpadding="0" cellspacing="0" border="0" style="font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; min-width: 280px; margin: 0; padding: 0;">
+            <tr>
+              <!-- LOGO ICON -->
+              <td width="48" style="vertical-align: top; padding-right: 14px;">
+                <a href="https://pim.th3scr1b3.art" target="_blank" style="text-decoration: none; display: block;">
+                  <img src="https://pim.th3scr1b3.art/data/logos/logo_1.png" alt="PIM Mark" width="46" height="46" style="display: block; border-radius: 6px; border: 1px solid #ff5500;" />
+                </a>
+              </td>
+              <!-- DETAILS -->
+              <td style="vertical-align: top; border-left: 2px solid #ff5500; padding-left: 14px;">
+                <table cellpadding="0" cellspacing="0" border="0">
+                  <tr>
+                    <td>
+                      <div style="font-size: 16px; font-weight: 800; color: #ff5500; letter-spacing: 0.05em; text-transform: uppercase;">
+                        th3scr1b3
+                      </div>
+                      <div style="font-size: 12px; color: #64748b; margin-top: 1px;">
+                        Creator // <strong style="color: #00e5ff;">PIM : th3v4ult</strong> &bull; <strong style="color: #e5b800;">365 Days of Light &amp; Dark</strong>
+                      </div>
+                      <div style="font-family: 'JetBrains Mono', 'Roboto Mono', monospace; font-size: 10px; color: #94a3b8; margin-top: 5px; text-transform: uppercase; letter-spacing: 0.05em;">
+                        365 Daily Drops &bull; 60fps 3-Lane Rhythm Highway &bull; Base EVM L2
+                      </div>
+                      <div style="font-family: 'JetBrains Mono', 'Roboto Mono', monospace; font-size: 10px; margin-top: 6px;">
+                        <a href="https://pim.th3scr1b3.art" target="_blank" style="color: #ff5500; font-weight: bold; text-decoration: none;">[ PLAY NOW ]</a>
+                        &nbsp;&bull;&nbsp;
+                        <a href="https://pim.th3scr1b3.art/365" target="_blank" style="color: #00e5ff; text-decoration: none;">365 Archive</a>
+                        &nbsp;&bull;&nbsp;
+                        <a href="https://th3scr1b3.art" target="_blank" style="color: #94a3b8; text-decoration: none;">th3scr1b3.art</a>
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+          <!-- END EMAIL SIGNATURE 3 -->
+        </div>
+      </div>
+    </div>
+
+    <!-- INSTRUCTIONS -->
+    <div class="instructions">
+      <h2>How to install in your mail client:</h2>
+      <ol>
+        <li>
+          <strong>Gmail:</strong> Click the <strong style="color:var(--orange);">"Copy for Gmail / Apple Mail"</strong> button above &rarr; Open Gmail Settings (Gear icon &rarr; <em>See all settings</em>) &rarr; Scroll down to <em>Signature</em> &rarr; Click <em>+ Create new</em> &rarr; Click into the signature editor box &rarr; <strong>Paste (Cmd + V / Ctrl + V)</strong> &rarr; Scroll to bottom and click <em>Save Changes</em>.
+        </li>
+        <li>
+          <strong>Apple Mail (macOS):</strong> Mail &rarr; <em>Settings</em> &rarr; <em>Signatures</em> &rarr; Select your account and click <code>+</code> &rarr; Paste into the preview box &rarr; Uncheck <em>"Always match my default message font"</em> so your custom Outfit and JetBrains typography displays properly.
+        </li>
+        <li>
+          <strong>Outlook:</strong> Settings &rarr; <em>View all Outlook settings</em> &rarr; <em>Mail</em> &rarr; <em>Compose and reply</em> &rarr; Paste into signature box &rarr; <em>Save</em>.
+        </li>
+        <li>
+          <strong>Superhuman:</strong> Hit <code>Cmd + K</code> &rarr; Type <em>"Signature"</em> &rarr; Paste directly into the editor &rarr; Done!
+        </li>
+      </ol>
+    </div>
+  </div>
+
+  <div id="toast" class="toast">Copied to clipboard!</div>
+
+  <script>
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.innerText = msg || 'Copied to clipboard!';
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2400);
+    }
+
+    function copySignature(elementId) {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+
+      try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+          showToast('✓ Rich Signature copied! Ready to paste (Cmd+V)');
+        } else {
+          fallbackCopy(el.innerHTML);
+        }
+      } catch (err) {
+        fallbackCopy(el.innerHTML);
+      }
+      sel.removeAllRanges();
+    }
+
+    function copyHtml(rawId) {
+      // Find element id
+      let targetId = 'sig1';
+      if (rawId === 'sig2-raw') targetId = 'sig2';
+      if (rawId === 'sig3-raw') targetId = 'sig3';
+      const el = document.getElementById(targetId);
+      if (!el) return;
+      fallbackCopy(el.innerHTML);
+    }
+
+    function fallbackCopy(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('✓ Raw HTML copied to clipboard!');
+      }).catch(err => {
+        alert('Could not copy automatically. Please select the element and copy manually.');
+      });
+    }
+  </script>
+</body>
+</html>

@@ -341,11 +341,6 @@ export default function HomePage() {
       if (owned) {
         setIsClaimingAnimation(true);
         addToCollection([owned]);
-        localStorage.setItem("pim_tutorial_redirect_song_id", owned.cardId);
-        localStorage.setItem("pim_tutorial_completed", "true");
-        localStorage.setItem("has_onboarded", "true");
-        useVaultStore.getState().updateProgression({ tutorialCompleted: true }).catch(() => {});
-        useVaultStore.getState().completeOnboarding().catch(() => {});
         setHasClaimed(true);
         audioManager.playSfx('open_chest', 0.9);
 

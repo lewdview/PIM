@@ -110,11 +110,6 @@ export default function UniverseHome() {
   // Primary Action: Play Today's Drop
   const handlePlayDrop = useCallback(() => {
     audioManager.playSfx('select_start_song', 0.5);
-    localStorage.setItem('pim_tutorial_completed', 'true');
-    localStorage.setItem('has_onboarded', 'true');
-    useVaultStore.getState().updateProgression({ tutorialCompleted: true }).catch(() => {});
-    useVaultStore.getState().completeOnboarding().catch(() => {});
-    
     if (todaySong?.id) {
       setLocation(`/play/${todaySong.id}`);
     } else {

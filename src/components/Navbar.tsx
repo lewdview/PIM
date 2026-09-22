@@ -120,7 +120,6 @@ const menuSections: MenuSection[] = [
     accentGlow: 'rgba(168, 85, 247, 0.4)',
     icon: LayoutGrid,
     items: [
-      { to: '/365', label: '365 Archive', icon: BookOpen, desc: 'Chronological timeline of all 365 days', badge: 'TIMELINE', badgeColor: '#A855F7' },
       { action: 'notifications', label: 'Transmissions', icon: Bell, desc: 'Broadcasts & system alerts', badge: 'ALERTS', badgeColor: '#FF1493' },
       { to: '/profile', label: 'TH3SCR1B3 Identity', icon: User, desc: 'Manage TH3SCR1B3 ID & wallet keys', badge: 'PROFILE', badgeColor: '#A855F7' },
       { action: 'options', label: 'Audio & Calibration', icon: Settings, desc: 'Audio latency, 3-lane DSP & skins', badge: 'DSP AUDIO', badgeColor: '#A855F7' },

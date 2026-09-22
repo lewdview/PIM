@@ -26,10 +26,6 @@ export default function RC1WelcomeModal() {
 
   const handleDismiss = () => {
     localStorage.setItem(RC2_SEEN_KEY, '1');
-    localStorage.setItem('pim_tutorial_completed', 'true');
-    localStorage.setItem('has_onboarded', 'true');
-    useVaultStore.getState().updateProgression({ tutorialCompleted: true }).catch(() => {});
-    useVaultStore.getState().completeOnboarding().catch(() => {});
     setVisible(false);
   };
 

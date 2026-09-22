@@ -111,11 +111,6 @@ export default function DayArtifactPage() {
   // Direct Play Launch
   const handlePlayPIM = useCallback(() => {
     audioManager.playSfx('select_start_song', 0.5);
-    localStorage.setItem('pim_tutorial_completed', 'true');
-    localStorage.setItem('has_onboarded', 'true');
-    useVaultStore.getState().updateProgression({ tutorialCompleted: true }).catch(() => {});
-    useVaultStore.getState().completeOnboarding().catch(() => {});
-    
     if (song?.id) {
       setLocation(`/play/${song.id}`);
     } else {

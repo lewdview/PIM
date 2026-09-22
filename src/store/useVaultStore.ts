@@ -418,16 +418,12 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       const claimKey = `guest_daily_claimed_day_${day}`;
       if (localStorage.getItem(claimKey) === 'true') {
         console.log(`[Silent Claim] Guest already claimed Day ${day} drop. Skipping duplicate claim.`);
-        localStorage.setItem('pim_tutorial_completed', 'true');
-        localStorage.setItem('has_onboarded', 'true');
         return null;
       }
 
       const { silentClaimGuestDailyCard } = await import('../services/vaultService');
       const card = await silentClaimGuestDailyCard(day);
       if (card) {
-        localStorage.setItem('pim_tutorial_completed', 'true');
-        localStorage.setItem('has_onboarded', 'true');
         set((state) => {
           const exists = state.collection.some(c => c && c.id === card.id);
           const nextCollection = exists ? state.collection : [...state.collection, card];
@@ -435,11 +431,6 @@ export const useVaultStore = create<VaultState>((set, get) => ({
           return {
             collection: nextCollection,
             hasClaimed: true,
-            hasOnboarded: true,
-            progression: {
-              ...state.progression,
-              tutorialCompleted: true,
-            },
             prestigeScore: newScore,
             echoPrestigeScore: newScore,
           };
@@ -594,10 +585,15 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         const isTutorialLocallyDone = localStorage.getItem('pim_tutorial_completed') === 'true';
         const isWelcomeLocallyDone = localStorage.getItem('rc2_seen_key') === '1';
 
+        const dbTutDone = dbProgression.tutorialCompleted;
+        const finalTutDone = dbTutDone !== undefined 
+          ? Boolean(dbTutDone) 
+          : Boolean(localProgression.tutorialCompleted && isTutorialLocallyDone);
+
         const mergedProgression = {
           ...localProgression,
           ...dbProgression,
-          tutorialCompleted: Boolean(localProgression.tutorialCompleted || dbProgression.tutorialCompleted || isTutorialLocallyDone),
+          tutorialCompleted: finalTutDone,
           seenWelcomeModal: Boolean(localProgression.seenWelcomeModal || dbProgression.seenWelcomeModal || isWelcomeLocallyDone),
         };
 

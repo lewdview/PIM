@@ -466,11 +466,7 @@ export async function silentClaimGuestDailyCard(day: number): Promise<OwnedCard 
       localStorage.setItem('guest_wallet_address', guestAddress);
     }
 
-    // Always check off tutorial and onboarding for guests playing today's drop / using temp wallet
-    localStorage.setItem('pim_tutorial_completed', 'true');
-    localStorage.setItem('has_onboarded', 'true');
-    useVaultStore.getState().updateProgression({ tutorialCompleted: true }).catch(() => {});
-    useVaultStore.getState().completeOnboarding().catch(() => {});
+
 
     const claimKey = `guest_daily_claimed_day_${day}`;
     const localCollection: OwnedCard[] = JSON.parse(localStorage.getItem('guest_vault_collection') || '[]');

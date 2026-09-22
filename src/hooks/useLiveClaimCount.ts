@@ -32,9 +32,13 @@ function getOrCreateChannel() {
           }
         }
       )
-      .subscribe((status) => {
+      .subscribe((status, err) => {
         if (status === 'SUBSCRIBED') {
           console.log('[LiveClaim] Subscribed to global-daily-claims channel');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.warn('[LiveClaim] Realtime channel error, fallback polling is active:', err);
+        } else if (status === 'TIMED_OUT') {
+          console.warn('[LiveClaim] Realtime channel timed out, fallback polling is active');
         }
       });
   }

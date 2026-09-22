@@ -471,22 +471,10 @@ export default function HeroLandingPage() {
   const [isCardDetailModalOpen, setIsCardDetailModalOpen] = useState(false);
   const { count: claimedCount } = useLiveClaimCount(activeDay);
 
-  // Visiting /hero marks tutorial and onboarding as completed
-  useEffect(() => {
-    localStorage.setItem('pim_tutorial_completed', 'true');
-    localStorage.setItem('has_onboarded', 'true');
-    useVaultStore.getState().updateProgression({ tutorialCompleted: true }).catch(() => {});
-    useVaultStore.getState().completeOnboarding().catch(() => {});
-  }, []);
-
-  // Handle Play Today's Drop: Check off tutorial & onboarding, show claim transition screen
+  // Handle Play Today's Drop: show claim transition screen
   const handlePlayDrop = useCallback((targetDay: number) => {
     audioManager.playSfx('select_start_song', 0.5);
     silentClaimDailyDrop(targetDay);
-    localStorage.setItem('pim_tutorial_completed', 'true');
-    localStorage.setItem('has_onboarded', 'true');
-    useVaultStore.getState().updateProgression({ tutorialCompleted: true }).catch(() => {});
-    useVaultStore.getState().completeOnboarding().catch(() => {});
     setIsClaimTransitionOpen(true);
   }, [silentClaimDailyDrop]);
 

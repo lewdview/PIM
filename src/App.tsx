@@ -1,4 +1,4 @@
-import { Route, Switch, useLocation } from 'wouter';
+import { Route, Switch, useLocation, Redirect } from 'wouter';
 import { useEffect, useState, useRef, Suspense, lazy } from 'react';
 import { useAuthStore } from './store/useAuthStore';
 import { logAnalyticsEvent } from './services/telemetryService';
@@ -157,7 +157,7 @@ function TransmissionsRoute() {
 }
 
 export default function App() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const initializeAuth = useAuthStore((s) => s.initialize);
   const authStatus = useAuthStore((s) => s.status);
   const user = useAuthStore((s) => s.user);
@@ -168,6 +168,37 @@ export default function App() {
   const completeOnboarding = useVaultStore((s) => s.completeOnboarding);
   const optionsModalOpen = useVaultStore((s) => s.optionsModalOpen);
   const setOptionsModalOpen = useVaultStore((s) => s.setOptionsModalOpen);
+  const tutorialCompleted = useVaultStore((s) => s.progression.tutorialCompleted);
+
+  // Automated Tutorial Detection & State Verification
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  const tutorialQuery = searchParams?.get('tutorial');
+  const isExplicitlyFalseQuery = tutorialQuery === 'false' || tutorialQuery === '0';
+  const isCompletedLocally = typeof window !== 'undefined' ? localStorage.getItem('pim_tutorial_completed') === 'true' : false;
+  const isTutorialDone = !isExplicitlyFalseQuery && (isCompletedLocally || tutorialCompleted);
+
+  // Active tutorial routes permitted without redirect (the tutorial page or active stage 1 gameplay)
+  const isTutorialRoute =
+    location === '/tutorial' ||
+    (location.startsWith('/play/') &&
+      (typeof window !== 'undefined' &&
+        (window.location.search.includes('tutorial=true') || window.location.search.includes('tutorial=1'))));
+
+  useEffect(() => {
+    // If explicitly instructed via ?tutorial=false, clear local storage and store state
+    if (isExplicitlyFalseQuery) {
+      localStorage.setItem('pim_tutorial_completed', 'false');
+      useVaultStore.getState().updateProgression({ tutorialCompleted: false }).catch(() => {});
+    }
+
+    // Force automatic redirect to /tutorial if tutorial is not done
+    if (!isTutorialDone && !isTutorialRoute) {
+      if (typeof window !== 'undefined' && location && location !== '/tutorial' && !sessionStorage.getItem('post_tutorial_redirect')) {
+        sessionStorage.setItem('post_tutorial_redirect', location);
+      }
+      setLocation('/tutorial');
+    }
+  }, [isExplicitlyFalseQuery, isTutorialDone, isTutorialRoute, location, setLocation]);
 
   const subscribeNotifications = useNotificationStore((s) => s.subscribeRealtime);
 
@@ -230,6 +261,14 @@ export default function App() {
     );
   }
 
+  // Automated Tutorial Gate: If tutorial is not completed, immediately redirect to /tutorial
+  if (!isTutorialDone && !isTutorialRoute) {
+    if (typeof window !== 'undefined' && location && location !== '/tutorial' && !sessionStorage.getItem('post_tutorial_redirect')) {
+      sessionStorage.setItem('post_tutorial_redirect', location);
+    }
+    return <Redirect to="/tutorial" replace />;
+  }
+
   // If user is authenticated but onboarding is explicitly false, show onboarding flow (globally for real authenticated users, ignoring anonymous guests)
   const isAnonymous =
     user?.is_anonymous ||
@@ -237,7 +276,7 @@ export default function App() {
     (!user?.email && !user?.user_metadata?.wallet && !user?.user_metadata?.wallet_address);
   const isGameplayRoute =
     location.startsWith('/play/') || location.startsWith('/results/') || location === '/tutorial';
-  if (user && !isAnonymous && hasOnboarded === false && !isGameplayRoute) {
+  if (user && !isAnonymous && hasOnboarded === false && !isGameplayRoute && isTutorialDone) {
     return <OnboardingFlow onComplete={completeOnboarding} />;
   }
 

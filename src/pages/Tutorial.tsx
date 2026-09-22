@@ -1,37 +1,76 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
-import { loadOpts, keyLabel } from "../lib/options";
 import { audioManager } from "../game/audio";
 import { getCurrentDay } from "../utils/dayCalc";
 import { getCardByDay, claimDailyCard } from "../services/vaultService";
 import { loadCatalog, type GameSong } from "../game/api";
 import Card from "../components/Card";
-import RarityBadge from "../components/RarityBadge";
 import PackContainer from "../components/cinematic/PackContainer";
 import type { RevealPackMeta } from "../store/useVaultStore";
 import type { OwnedCard } from "../services/vaultService";
-import { Volume2, Award, Zap, Shield, HelpCircle, Layers, Lock } from "lucide-react";
+import {
+  Volume2,
+  Award,
+  Zap,
+  Shield,
+  Layers,
+  Lock,
+  RotateCcw,
+  Sparkles,
+  User,
+  Check,
+  X,
+  Loader2,
+  Camera,
+  ChevronRight,
+  Flame,
+  Globe,
+  Radio,
+  Music,
+  Disc,
+} from "lucide-react";
 import { supabase } from "../services/supabaseClient";
 import { useVaultStore } from "../store/useVaultStore";
 import { useAuthStore } from "../store/useAuthStore";
+import { farcasterService } from "../services/farcasterService";
+import { CYBER_AVATAR_PRESETS, type AvatarPreset } from "../utils/avatarPresets";
+import { getIdenticon } from "../utils/identicon";
 
-type TutorialPhase = "intro" | "gameplay" | "results" | "pack" | "discovery" | "aspiration" | "complete";
+type TutorialPhase = "intro" | "results" | "pack" | "ecosystem" | "identity" | "complete";
 
 export default function Tutorial() {
   const [, setLocation] = useLocation();
   const [tutPhase, setTutPhase] = useState<TutorialPhase>("intro");
   const [dailyCard, setDailyCard] = useState<any>(null);
   const [dailySong, setDailySong] = useState<GameSong | null>(null);
+  const [catalog, setCatalog] = useState<GameSong[]>([]);
   const [score, setScore] = useState(0);
 
-  // Reward and replay management states
+  // Replay check
   const [isReplay, setIsReplay] = useState(false);
-  const [claimedCard, setClaimedCard] = useState<OwnedCard | null>(null);
-  const [hasAttemptedClaim, setHasAttemptedClaim] = useState(false);
-  const [claimingStatus, setClaimingStatus] = useState<"idle" | "claiming" | "success" | "skipped" | "error">("idle");
 
-  // Load Daily song and card metadata
+  // 2-Card Welcome Pack State
+  const [welcomeCards, setWelcomeCards] = useState<OwnedCard[]>([]);
+  const [hasPreparedPack, setHasPreparedPack] = useState(false);
+
+  // Ecosystem Dossier Tab
+  const [activeDossierTab, setActiveDossierTab] = useState<number>(0);
+
+  // Pilot Identity State (Forced on Web, Auto on Farcaster)
+  const [isFarcaster, setIsFarcaster] = useState(false);
+  const [fcUser, setFcUser] = useState<any>(null);
+  const [username, setUsername] = useState("");
+  const [selectedAvatarUrl, setSelectedAvatarUrl] = useState<string | null>(null);
+  const [selectedPresetId, setSelectedPresetId] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [isValidFormat, setIsValidFormat] = useState(true);
+  const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
+  const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+  const [isSavingIdentity, setIsSavingIdentity] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 1. Initial Load: Daily Song, Card, Catalog & URL Params
   useEffect(() => {
     async function load() {
       try {
@@ -39,23 +78,39 @@ export default function Tutorial() {
         const card = await getCardByDay(today);
         setDailyCard(card);
 
-        const catalog = await loadCatalog();
-        const matched = catalog.find(s => s.day === today) || 
-                        catalog.find(s => s.id === card?.id) || 
-                        catalog.find(s => s.day === (today % (catalog.length || 1))) ||
-                        catalog[catalog.length - 1];
+        const loadedCatalog = await loadCatalog();
+        setCatalog(loadedCatalog);
+
+        const matched =
+          loadedCatalog.find((s) => s.day === today) ||
+          loadedCatalog.find((s) => s.id === card?.id) ||
+          loadedCatalog.find((s) => s.day === today % (loadedCatalog.length || 1)) ||
+          loadedCatalog[0];
         setDailySong(matched);
+
+        // Check Farcaster
+        farcasterService.init();
+        const isFc = farcasterService.isFarcaster();
+        const user = farcasterService.getUser();
+        setIsFarcaster(isFc);
+        setFcUser(user);
+        if (user?.username) {
+          setUsername(user.username);
+        }
+        if (user?.pfpUrl) {
+          setSelectedAvatarUrl(user.pfpUrl);
+        }
       } catch (err) {
-        console.error("Failed to load daily onboarding song:", err);
+        console.error("Failed to load onboarding daily metadata:", err);
       }
     }
     load();
 
-    // Check if the tutorial was already completed (replay mode)
-    const completed = localStorage.getItem("pim_tutorial_completed") === "true" || useVaultStore.getState().progression.tutorialCompleted;
+    const completed =
+      localStorage.getItem("pim_tutorial_completed") === "true" ||
+      useVaultStore.getState().progression.tutorialCompleted;
     setIsReplay(completed);
 
-    // Parse URL query parameters to restore tutorial phase and score
     const params = new URLSearchParams(window.location.search);
     const phaseParam = params.get("phase");
     const scoreParam = params.get("score");
@@ -67,174 +122,532 @@ export default function Tutorial() {
     }
   }, []);
 
-  // Attempt to claim the actual card reward if not a replay and user is authenticated
+  // 2. Prepare 2-Card Welcome Pack (Daily Song Card + Random Other Card)
   useEffect(() => {
-    if (tutPhase === "results" && !hasAttemptedClaim && !isReplay) {
-      setHasAttemptedClaim(true);
-      setClaimingStatus("claiming");
-      supabase.auth.getUser().then(async ({ data }) => {
-        if (data?.user) {
-          const today = getCurrentDay();
-          try {
-            const owned = await claimDailyCard(today);
-            if (owned) {
-              setClaimedCard(owned);
-              useVaultStore.getState().addToCollection([owned]);
-              setClaimingStatus("success");
-            } else {
-              setClaimingStatus("skipped"); // already claimed on server today
-            }
-          } catch (err) {
-            console.error("Failed to claim daily card in onboarding:", err);
-            setClaimingStatus("error");
-          }
-        } else {
-          setClaimingStatus("skipped"); // Guest user, will claim on connect
-        }
-      });
-    }
-  }, [tutPhase, hasAttemptedClaim, isReplay]);
+    if (!dailyCard || catalog.length === 0 || hasPreparedPack) return;
 
-  // Start Phase 2 Gameplay in the actual GamePlay engine
+    async function preparePack() {
+      setHasPreparedPack(true);
+      const today = getCurrentDay();
+
+      // Card 1: Guaranteed Song of the Day Card
+      const sotdOwned: OwnedCard = {
+        id: `welcome-${dailyCard.id}`,
+        cardId: dailyCard.id,
+        claimedAt: new Date().toISOString(),
+        source: "daily_claim",
+        edition: 1,
+        maxSupply: dailyCard.maxSupply || 500,
+        isEcho: false,
+        blockchainStatus: "off-chain",
+        card: dailyCard,
+      };
+
+      // Card 2: Random Other Card from the 365 Catalog
+      const candidates = catalog.filter(
+        (s) => s.id !== dailyCard.id && s.day !== today
+      );
+      const randomSong =
+        candidates[Math.floor(Math.random() * candidates.length)] || catalog[0];
+      const randomCardData = await getCardByDay(randomSong.day || 1);
+
+      const finalRandomCard = randomCardData || {
+        id: randomSong.id,
+        day: randomSong.day || 1,
+        title: randomSong.title,
+        artist: randomSong.artist,
+        rarity: "uncommon",
+        coverUrl: randomSong.coverArt,
+        audioUrl: randomSong.audioUrl,
+        mood: randomSong.mood || "dark",
+        energy: 0.7,
+        valence: 0.6,
+        tempo: randomSong.bpm || 120,
+        maxSupply: 500,
+      };
+
+      const randomOwned: OwnedCard = {
+        id: `welcome-random-${finalRandomCard.id}`,
+        cardId: finalRandomCard.id,
+        claimedAt: new Date().toISOString(),
+        source: "taste",
+        edition: 1,
+        maxSupply: finalRandomCard.maxSupply || 500,
+        isEcho: false,
+        blockchainStatus: "off-chain",
+        card: finalRandomCard,
+      };
+
+      const pack = [sotdOwned, randomOwned];
+      setWelcomeCards(pack);
+      useVaultStore.getState().addToCollection(pack);
+    }
+
+    preparePack();
+  }, [dailyCard, catalog, hasPreparedPack]);
+
+  // 3. Debounced Username Validation
+  useEffect(() => {
+    if (isFarcaster && fcUser?.username) {
+      setIsValidFormat(true);
+      setIsAvailable(true);
+      return;
+    }
+
+    if (username.length < 3) {
+      setIsValidFormat(username.length === 0);
+      setIsAvailable(null);
+      return;
+    }
+
+    const valid = /^[a-zA-Z0-9_\-.]+$/.test(username) && username.length <= 20;
+    setIsValidFormat(valid);
+    if (!valid) {
+      setIsAvailable(null);
+      return;
+    }
+
+    setIsCheckingUsername(true);
+    const timeoutId = setTimeout(async () => {
+      try {
+        const clean = username.trim();
+        const { data } = await supabase
+          .from("profiles")
+          .select("id")
+          .ilike("username", clean)
+          .maybeSingle();
+
+        setIsAvailable(!data);
+      } catch (err) {
+        setIsAvailable(true); // default allowable if offline/guest
+      } finally {
+        setIsCheckingUsername(false);
+      }
+    }, 280);
+
+    return () => clearTimeout(timeoutId);
+  }, [username, isFarcaster, fcUser]);
+
+  // Start Phase 2 Gameplay in GamePlay Engine
   const startGameplay = useCallback(() => {
     if (!dailySong) return;
-    
-    // Play transition SFX
     audioManager.playSfx("select_start_song", 0.7);
-
-    // Redirect to GamePlay engine with ?tutorial=true
     setLocation(`/play/${dailySong.id}?tutorial=true`);
   }, [dailySong, setLocation]);
 
-  // Mock pack meta for Phase 4 pack opening
+  // Avatar Image Upload Processor
+  const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) return;
+    if (file.size > 2 * 1024 * 1024) return;
+
+    setAvatarFile(file);
+    setSelectedPresetId(null);
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setSelectedAvatarUrl(event.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Avatar Preset Picker
+  const handleSelectPreset = (preset: AvatarPreset) => {
+    setSelectedPresetId(preset.id);
+    setSelectedAvatarUrl(preset.avatarUrl);
+    setAvatarFile(null);
+    audioManager.playSfx("tap_nav", 0.15);
+  };
+
+  // Complete Identity & Finalize Onboarding
+  const handleSaveIdentityAndFinish = async () => {
+    if (isSavingIdentity) return;
+    setIsSavingIdentity(true);
+
+    try {
+      let finalUsername = username.trim();
+      let finalAvatar = selectedAvatarUrl;
+
+      // If Farcaster user, use known credentials
+      if (isFarcaster && fcUser) {
+        finalUsername = fcUser.username || finalUsername || "warpcast_pilot";
+        finalAvatar = fcUser.pfpUrl || finalAvatar;
+      }
+
+      // If user provided a file upload, save as webp
+      const currentUser = useAuthStore.getState().user;
+      if (avatarFile && currentUser) {
+        try {
+          const filePath = `${currentUser.id}/${currentUser.id}.webp`;
+          const { error: uploadError } = await supabase.storage
+            .from("avatars")
+            .upload(filePath, avatarFile, { upsert: true, contentType: "image/webp" });
+          if (!uploadError) {
+            const { data } = supabase.storage.from("avatars").getPublicUrl(filePath);
+            finalAvatar = data.publicUrl;
+          }
+        } catch (e) {
+          console.warn("[Identity] Storage upload non-fatal fallback:", e);
+        }
+      }
+
+      // Update Supabase profile
+      if (currentUser) {
+        await supabase
+          .from("profiles")
+          .update({
+            username: finalUsername,
+            display_name: finalUsername,
+            avatar_url: finalAvatar,
+          })
+          .eq("id", currentUser.id);
+      }
+
+      // Update local store
+      const { updateProfile } = useVaultStore.getState();
+      if (updateProfile) {
+        await updateProfile(finalUsername, finalAvatar, finalUsername).catch(() => {});
+      }
+
+      // Mark tutorial completed permanently
+      localStorage.setItem("pim_tutorial_completed", "true");
+      useVaultStore.getState().updateProgression({ tutorialCompleted: true });
+
+      audioManager.playSfx("gold_get", 0.6);
+      const postTutorialDest = typeof window !== 'undefined' ? sessionStorage.getItem('post_tutorial_redirect') : null;
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('post_tutorial_redirect');
+      }
+      const destination = postTutorialDest && postTutorialDest !== '/tutorial' ? postTutorialDest : '/arcade';
+      setLocation(destination);
+    } catch (err) {
+      console.error("Failed to complete pilot identity setup:", err);
+      // Fallback mark complete
+      localStorage.setItem("pim_tutorial_completed", "true");
+      useVaultStore.getState().updateProgression({ tutorialCompleted: true });
+      const postTutorialDest = typeof window !== 'undefined' ? sessionStorage.getItem('post_tutorial_redirect') : null;
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('post_tutorial_redirect');
+      }
+      const destination = postTutorialDest && postTutorialDest !== '/tutorial' ? postTutorialDest : '/arcade';
+      setLocation(destination);
+    } finally {
+      setIsSavingIdentity(false);
+    }
+  };
+
+  // Welcome Pack metadata configuration (2-Card Pack)
   const welcomePackMeta: RevealPackMeta = {
     category: "taste",
-    size: "single",
-    label: "WELCOME TRANSMISSION",
+    size: "double",
+    label: "WELCOME TRANSMISSION // DUAL",
     icon: "⚡",
     accent: "#39FF14",
     gradient: "linear-gradient(160deg, #050d03 0%, #0d280b 45%, #020702 100%)",
     price: "FREE",
-    cardCount: 1,
+    cardCount: 2,
     revealType: "cinematic",
   };
 
-  // Mock owned card container for guest or replay fallbacks
-  const getMockOwnedCard = (): OwnedCard[] => {
-    if (!dailyCard) return [];
-    return [{
-      id: `welcome-${dailyCard.id}`,
-      cardId: dailyCard.id,
-      claimedAt: new Date().toISOString(),
-      source: "daily_claim",
-      edition: 1,
-      maxSupply: 100,
-      isEcho: false,
-      blockchainStatus: "off-chain",
-      card: dailyCard,
-    }];
-  };
+  // Ecosystem Dossier Tabs Definition
+  const DOSSIER_TABS = [
+    {
+      id: "collectibles",
+      badge: "COLLECTIBLES",
+      title: "SONGS AS OWNED CARDS",
+      icon: Disc,
+      accent: "#FF1493",
+      content: (
+        <div className="space-y-3 font-mono text-[11px] text-zinc-300 leading-relaxed text-left">
+          <p className="text-white font-bold">
+            In PIM, music is not just streamed — it is <span className="text-[#FF1493]">owned and mastered</span>.
+          </p>
+          <div className="space-y-2 border-t border-white/10 pt-3 text-[10.5px]">
+            <p>
+              • <strong className="text-white">Full Playback & Stems:</strong> Owning a song card unlocks the full master track and isolated stem mixing (Bass, Vocals, Drums).
+            </p>
+            <p>
+              • <strong className="text-white">Deck Building:</strong> Equipped card collections boost score multipliers and unlock custom stage visualizer skins.
+            </p>
+            <p>
+              • <strong className="text-white">Preview Limits:</strong> Unowned cards have limited preview timers; unlocking cards removes all barriers permanently.
+            </p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "award_play",
+      badge: "SKILL ECONOMY",
+      title: "AWARD PLAY & MEDALS",
+      icon: Award,
+      accent: "#39FF14",
+      content: (
+        <div className="space-y-3 font-mono text-[11px] text-zinc-300 leading-relaxed text-left">
+          <p className="text-white font-bold">
+            High accuracy unlocks tokens, medal certifications, and leaderboard prestige.
+          </p>
+          <div className="grid grid-cols-2 gap-2 border-t border-white/10 pt-3 text-[10px]">
+            <div className="p-2 border border-[#CD7F32]/40 bg-[#CD7F32]/10 rounded">
+              <span className="text-[#CD7F32] font-black block">BRONZE (&gt;70%)</span>
+              Baseline clearance
+            </div>
+            <div className="p-2 border border-[#C0C0C0]/40 bg-[#C0C0C0]/10 rounded">
+              <span className="text-[#C0C0C0] font-black block">SILVER (&gt;85%)</span>
+              Advanced timing
+            </div>
+            <div className="p-2 border border-[#FFD700]/40 bg-[#FFD700]/10 rounded">
+              <span className="text-[#FFD700] font-black block">GOLD (&gt;95%)</span>
+              Master class accuracy
+            </div>
+            <div className="p-2 border border-[#E0E0FF]/40 bg-[#E0E0FF]/10 rounded">
+              <span className="text-[#E0E0FF] font-black block">PLATINUM (100%)</span>
+              Full combo perfection
+            </div>
+          </div>
+          <p className="text-[10px] text-zinc-400 mt-2">
+            Medal milestones award <strong className="text-yellow-400">$V⚡ tokens</strong> for forging and targeted pulls.
+          </p>
+        </div>
+      ),
+    },
+    {
+      id: "campaign",
+      badge: "365 RELEASES",
+      title: "THE 365-DAY CAMPAIGN",
+      icon: Globe,
+      accent: "#00E5FF",
+      content: (
+        <div className="space-y-3 font-mono text-[11px] text-zinc-300 leading-relaxed text-left">
+          <p className="text-white font-bold">
+            A brand-new song drops every single calendar day of the year.
+          </p>
+          <div className="space-y-2 border-t border-white/10 pt-3 text-[10.5px]">
+            <p>
+              • <strong className="text-white">12 Monthly Chapters:</strong> Travel across constellation roadmap stages and unlock milestone reward chests.
+            </p>
+            <p>
+              • <strong className="text-white">Daily Drops:</strong> Every 24 hours brings a fresh daily card claim and competitive daily leaderboard stage.
+            </p>
+            <p>
+              • <strong className="text-white">Time-Locked Archival:</strong> Unclaimed drops rotate into the vault archive, accessible via the Forge.
+            </p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "rarity_odds",
+      badge: "SUPPLY CAPS",
+      title: "RARITY TIERS & GACHA ODDS",
+      icon: Sparkles,
+      accent: "#FFD700",
+      content: (
+        <div className="space-y-3 font-mono text-[11px] text-zinc-300 leading-relaxed text-left">
+          <p className="text-white font-bold">
+            Velocity-balanced hard supply caps protect rarity and value.
+          </p>
+          <div className="space-y-1.5 border-t border-white/10 pt-2.5 text-[10px]">
+            <div className="flex justify-between border-b border-white/5 pb-1">
+              <span className="text-zinc-400">COMMON</span>
+              <span className="text-white font-bold">2,000 Copies (Gameplay)</span>
+            </div>
+            <div className="flex justify-between border-b border-white/5 pb-1">
+              <span className="text-[#00E5FF]">UNCOMMON</span>
+              <span className="text-white font-bold">500 Copies (50 On-Chain)</span>
+            </div>
+            <div className="flex justify-between border-b border-white/5 pb-1">
+              <span className="text-[#39FF14]">RARE</span>
+              <span className="text-white font-bold">100 Copies (25 On-Chain)</span>
+            </div>
+            <div className="flex justify-between border-b border-white/5 pb-1">
+              <span className="text-[#FFD700]">LEGENDARY</span>
+              <span className="text-white font-bold">10 Copies (3 On-Chain)</span>
+            </div>
+            <div className="flex justify-between border-b border-white/5 pb-1">
+              <span className="text-[#A855F7]">MYTHIC</span>
+              <span className="text-white font-bold">1 of 1 (Mintable on Base EVM)</span>
+            </div>
+          </div>
+          <div className="bg-white/5 p-2 rounded text-[9.5px] text-zinc-400 mt-2 space-y-1">
+            <p>• <strong>Drought Pity:</strong> 25 pulls without Rare guarantees Rare+ on next pull.</p>
+            <p>• <strong>Midnight Drop:</strong> 12:00 AM – 2:00 AM grants 2× Legendary drop odds.</p>
+            <p>• <strong>7-Day Streak:</strong> Grants +50% boost to Rare and Legendary drop rates.</p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "forge",
+      badge: "THE FORGE",
+      title: "DECONSTRUCTION & FUSION",
+      icon: Flame,
+      accent: "#FF3800",
+      content: (
+        <div className="space-y-3 font-mono text-[11px] text-zinc-300 leading-relaxed text-left">
+          <p className="text-white font-bold">
+            The Forge is the master synthesis laboratory for card tokenomics.
+          </p>
+          <div className="space-y-2 border-t border-white/10 pt-3 text-[10.5px]">
+            <p>
+              • <strong className="text-white">Card Burning:</strong> Deconstruct unwanted or duplicate cards into <strong className="text-yellow-400">$V⚡ tokens</strong>.
+            </p>
+            <p>
+              • <strong className="text-white">Targeted Pulls (500 $V⚡):</strong> Forge any specific card from the entire 365-day catalog on demand.
+            </p>
+            <p>
+              • <strong className="text-white">Duplicate Fusion:</strong> Combine 3 identical cards of the same day and tier to forge 1 card of the next tier!
+            </p>
+          </div>
+        </div>
+      ),
+    },
+  ];
 
-  // Complete onboarding
-  const handleCompleteTutorial = () => {
-    localStorage.setItem("pim_tutorial_completed", "true");
-    useVaultStore.getState().updateProgression({ tutorialCompleted: true });
-    audioManager.playSfx("tap_nav", 0.15);
-    setLocation("/arcade");
-  };  return (
+  return (
     <div className="fixed inset-0 flex flex-col overflow-hidden bg-[#090807] text-white z-[80]">
       {/* CRT Scanline & grid screen effects */}
-      <div className="absolute inset-0 pointer-events-none z-[99]" style={{
-        backgroundImage: "linear-gradient(rgba(255,20,147,0.015) 1px, transparent 1px), linear-gradient(90deg, rgba(0,229,255,0.015) 1px, transparent 1px)",
-        backgroundSize: "40px 40px",
-      }} />
-      <div className="absolute inset-0 pointer-events-none z-[99]" style={{
-        background: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, 0.2) 2px, rgba(0, 0, 0, 0.2) 4px)"
-      }} />
+      <div
+        className="absolute inset-0 pointer-events-none z-[99]"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(255,20,147,0.015) 1px, transparent 1px), linear-gradient(90deg, rgba(0,229,255,0.015) 1px, transparent 1px)",
+          backgroundSize: "40px 40px",
+        }}
+      />
+      <div
+        className="absolute inset-0 pointer-events-none z-[99]"
+        style={{
+          background:
+            "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, 0.2) 2px, rgba(0, 0, 0, 0.2) 4px)",
+        }}
+      />
 
       {/* Decorative stomp headers */}
       <div className="absolute top-4 left-4 pointer-events-none font-mono text-[9px] text-[#00E5FF]/60 font-black tracking-widest z-10 uppercase">
         SYS_VER // PIM_VAULT_v2
       </div>
       <div className="absolute top-4 right-4 pointer-events-none font-mono text-[9px] text-[#FF1493]/60 font-black tracking-widest z-10 uppercase">
-        SECTOR // RESONANCE_SYNC
+        SECTOR // FLIGHT_ACADEMY
       </div>
 
       {isReplay && tutPhase !== "complete" && (
         <div className="absolute top-12 left-1/2 -translate-x-1/2 bg-amber-500/20 border-2 border-black text-amber-300 font-mono text-[9px] font-black px-4 py-1.5 tracking-widest uppercase rounded-sm z-20 flex items-center gap-1.5 shadow-[4px_4px_0px_#000]">
-          <Lock size={10} /> REPLAY MODE — NO REWARDS GRANTED
+          <Lock size={10} /> REPLAY MODE — TRAINING PRACTICE
         </div>
       )}
 
       <AnimatePresence mode="wait">
-        {/* PHASE 1: UNDERGROUND INTRO */}
+        {/* ── PHASE 1: INTRO BRIEFING & SONG OF THE DAY ── */}
         {tutPhase === "intro" && (
           <motion.div
             key="intro"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="flex-1 flex flex-col items-center justify-center p-6 text-center relative z-10"
+            className="flex-1 flex flex-col items-center justify-center p-6 text-center relative z-10 overflow-y-auto"
           >
-            <motion.div
-              animate={{ opacity: [0.1, 0.25, 0.1], scale: [1, 1.05, 1] }}
-              transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
-              className="absolute w-[400px] h-[400px] rounded-full bg-gradient-to-tr from-[#FF1493]/10 via-[#00E5FF]/10 to-[#39FF14]/10 blur-3xl pointer-events-none"
-            />
-
-            <div className="relative border-4 border-black bg-[#151311] p-8 max-w-sm w-full shadow-[8px_8px_0px_#000] rounded-lg">
-              {/* Corner accent bracket blocks */}
+            <div className="relative border-4 border-black bg-[#151311] p-8 max-w-md w-full shadow-[8px_8px_0px_#000] rounded-lg">
+              {/* Corner accent blocks */}
               <div className="absolute -top-3.5 -left-3.5 w-6 h-6 bg-[#FF1493] border-4 border-black" />
               <div className="absolute -top-3.5 -right-3.5 w-6 h-6 bg-[#00E5FF] border-4 border-black" />
               <div className="absolute -bottom-3.5 -left-3.5 w-6 h-6 bg-[#39FF14] border-4 border-black" />
               <div className="absolute -bottom-3.5 -right-3.5 w-6 h-6 bg-yellow-400 border-4 border-black" />
 
-              <div className="font-mono text-[9px] text-zinc-400 tracking-[0.4em] mb-3 uppercase font-black">
-                // SYSTEM DETECTED //
+              <div className="font-mono text-[9px] text-zinc-400 tracking-[0.4em] mb-2 uppercase font-black">
+                // FLIGHT ACADEMY PROTOCOL //
               </div>
-              <h1 className="font-mono text-4xl font-extrabold text-white tracking-tighter mb-6 leading-none uppercase">
-                ESTABLISH <br />
-                <span className="text-[#FF1493]">SYNC</span>
+              <h1 className="font-mono text-3xl md:text-4xl font-extrabold text-white tracking-tighter mb-4 leading-none uppercase">
+                CALIBRATE <br />
+                <span className="text-[#FF1493]">STAGE 1</span>
               </h1>
-              
-              <div className="space-y-3 font-mono text-[11px] text-zinc-300 leading-relaxed mb-8 border-t-2 border-black pt-4 text-left">
-                <p className="text-[#39FF14] font-black tracking-wide animate-pulse">⚡ LINK STABLE. READY FOR TEST RUN.</p>
-                <p className="flex justify-between border-b border-black/30 pb-1.5"><span className="text-zinc-500">RELEASE TYPE:</span> <span className="font-black text-[#00E5FF] uppercase">Digital Collectible</span></p>
-                <p className="flex justify-between border-b border-black/30 pb-1.5"><span className="text-zinc-500">DIFFICULTY:</span> <span className="font-black text-yellow-400 uppercase">Training Calibrated</span></p>
-                <p className="text-[10px] text-zinc-400 mt-2 leading-relaxed">
-                  Establish compatibility by playing the trial release. Complete the transmission to integrate your card and unlock profile multipliers.
+
+              {/* Song of the Day Spotlight Card */}
+              <div className="border-2 border-black bg-black/50 p-3 rounded mb-5 flex items-center gap-3 text-left">
+                {dailySong?.coverArt ? (
+                  <img
+                    src={dailySong.coverArt}
+                    alt={dailySong.title}
+                    className="w-14 h-14 rounded object-cover border border-white/20 shrink-0"
+                  />
+                ) : (
+                  <div className="w-14 h-14 rounded bg-[#FF1493]/20 border border-[#FF1493] flex items-center justify-center shrink-0">
+                    <Music size={24} className="text-[#FF1493]" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="font-mono text-[8px] text-[#39FF14] font-black tracking-widest uppercase">
+                    SONG OF THE DAY // DAY {getCurrentDay()}
+                  </div>
+                  <div className="font-mono text-sm font-black text-white truncate uppercase">
+                    {dailySong?.title || "TRANSMISSION ZERO"}
+                  </div>
+                  <div className="font-mono text-[10px] text-zinc-400 truncate">
+                    {dailySong?.artist || "PIM CORE"} · {dailySong?.bpm || 120} BPM
+                  </div>
+                </div>
+              </div>
+
+              {/* Curriculum Objectives */}
+              <div className="space-y-2.5 font-mono text-[11px] text-zinc-300 leading-relaxed mb-6 border-t-2 border-black pt-4 text-left">
+                <p className="text-[#00E5FF] font-black tracking-wide">
+                  TRAINING CURRICULUM (3 CHANCES PER NOTE):
                 </p>
+                <div className="space-y-1.5 text-[10px]">
+                  <p className="flex items-center gap-2">
+                    <span className="text-[#39FF14] font-black">■ 01:</span>
+                    <span><strong>TAP NOTES:</strong> Target line timing</span>
+                  </p>
+                  <p className="flex items-center gap-2">
+                    <span className="text-[#FFD700] font-black">▬ 02:</span>
+                    <span><strong>HOLD NOTES:</strong> Health & Healing Frequencies</span>
+                  </p>
+                  <p className="flex items-center gap-2">
+                    <span className="text-[#00E5FF] font-black">➔ 03:</span>
+                    <span><strong>SWIPE CHEVRONS:</strong> Directional flicks</span>
+                  </p>
+                  <p className="flex items-center gap-2">
+                    <span className="text-[#FF1493] font-black">⚡ 04:</span>
+                    <span><strong>REWIND TECHNIQUE:</strong> 3-miss automatic rollback</span>
+                  </p>
+                </div>
               </div>
 
               {dailySong ? (
                 <>
                   <motion.button
-                    whileHover={{ scale: 1.03 }}
+                    whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={startGameplay}
-                    className="w-full py-4.5 bg-gradient-to-r from-[#FF1493] to-[#ff3800] text-black font-black text-xs tracking-[0.25em] uppercase hover:opacity-95 transition-all rounded border-2 border-black shadow-[4px_4px_0px_#000] cursor-pointer"
+                    className="w-full py-4.5 bg-gradient-to-r from-[#FF1493] to-[#ff3800] text-black font-mono font-black text-xs tracking-[0.25em] uppercase hover:opacity-95 transition-all rounded border-2 border-black shadow-[4px_4px_0px_#000] cursor-pointer"
                   >
-                    PROVE COMPATIBILITY
+                    PROVE COMPATIBILITY [STAGE 1]
                   </motion.button>
 
-                  <button
-                    type="button"
-                    onClick={handleCompleteTutorial}
-                    className="mt-3 w-full py-2.5 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white font-mono text-[10px] tracking-widest uppercase transition-all rounded border border-white/10 cursor-pointer"
-                  >
-                    SKIP TUTORIAL ➔ ENTER VAULT
-                  </button>
+                  {isReplay && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        audioManager.playSfx("tap_nav", 0.15);
+                        setLocation("/arcade");
+                      }}
+                      className="mt-3 w-full py-2.5 bg-white/5 hover:bg-white/10 text-white/50 hover:text-white font-mono text-[9px] tracking-widest uppercase transition-all rounded border border-white/10 cursor-pointer"
+                    >
+                      EXIT TO ARCADE ➔
+                    </button>
+                  )}
                 </>
               ) : (
                 <div className="font-mono text-[10px] text-zinc-500 animate-pulse py-2">
-                  DECRYPTION IN PROGRESS...
+                  DECRYPTING DAILY TRACK...
                 </div>
               )}
             </div>
           </motion.div>
         )}
 
-        {/* PHASE 3: ONBOARDING RESULTS */}
+        {/* ── PHASE 2: STAGE 1 CLEARED RESULTS ── */}
         {tutPhase === "results" && (
           <motion.div
             key="results"
@@ -244,14 +657,12 @@ export default function Tutorial() {
             className="flex-1 flex flex-col items-center justify-center p-6 text-center relative z-10"
           >
             <div className="relative border-4 border-black bg-[#151311] p-8 max-w-sm w-full shadow-[8px_8px_0px_#000] rounded-lg">
-              {/* Corner accent bracket blocks */}
               <div className="absolute -top-3.5 -left-3.5 w-6 h-6 bg-[#FF1493] border-4 border-black" />
               <div className="absolute -top-3.5 -right-3.5 w-6 h-6 bg-[#00E5FF] border-4 border-black" />
               <div className="absolute -bottom-3.5 -left-3.5 w-6 h-6 bg-[#39FF14] border-4 border-black" />
               <div className="absolute -bottom-3.5 -right-3.5 w-6 h-6 bg-yellow-400 border-4 border-black" />
 
-              {/* Massive stomp-style rating badge */}
-              <motion.div 
+              <motion.div
                 initial={{ scale: 0, rotate: -30 }}
                 animate={{ scale: 1, rotate: -6 }}
                 transition={{ type: "spring", stiffness: 200, damping: 12 }}
@@ -260,60 +671,48 @@ export default function Tutorial() {
                 S+
               </motion.div>
 
-              <div className="font-mono text-[9px] text-[#FF1493] tracking-[0.4em] mb-2 uppercase font-black">
-                // DECRYPTION SYNCED //
+              <div className="font-mono text-[9px] text-[#39FF14] tracking-[0.4em] mb-2 uppercase font-black">
+                // STAGE 1 CERTIFIED //
               </div>
-              <h2 className="font-mono text-2xl font-black tracking-tighter text-white uppercase mb-6 leading-none">
-                RESONANCE ACQUIRED
+              <h2 className="font-mono text-2xl font-black tracking-tighter text-white uppercase mb-5 leading-none">
+                FLIGHT ACADEMY CLEARED
               </h2>
 
-              <div className="space-y-3.5 border-y-2 border-black py-4 mb-8 text-left font-mono text-xs">
+              <div className="space-y-3 border-y-2 border-black py-4 mb-6 text-left font-mono text-xs">
                 <div className="flex justify-between">
-                  <span className="text-zinc-500">SIGNAL STABILITY</span>
-                  <span className="text-white font-bold">100.0% [STABLE]</span>
+                  <span className="text-zinc-500">SIGNAL INTEGRITY</span>
+                  <span className="text-[#39FF14] font-bold">100.0% [STABLE]</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-zinc-500">SYNAPSE RESPONSE</span>
-                  <span className="text-[#39FF14] font-black uppercase">CONFIRMED</span>
+                  <span className="text-zinc-500">REWIND TECHNIQUE</span>
+                  <span className="text-[#FF1493] font-black uppercase">ACQUIRED</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-zinc-500">ONBOARDING SCORE</span>
+                  <span className="text-zinc-500">HEALING FREQUENCY</span>
+                  <span className="text-[#FFD700] font-black uppercase">MASTERED</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-zinc-500">STAGE 1 SCORE</span>
                   <span className="text-[#00E5FF] font-black">{score}</span>
-                </div>
-
-                {/* Progress decoding bar */}
-                <div className="mt-3">
-                  <div className="flex justify-between text-[8px] text-zinc-500 mb-1 font-black uppercase">
-                    <span>Decrypted File Status:</span>
-                    <span>100% SECURE</span>
-                  </div>
-                  <div className="h-2.5 bg-zinc-950 border-2 border-black relative overflow-hidden rounded-sm">
-                    <motion.div 
-                      initial={{ width: 0 }}
-                      animate={{ width: "100%" }}
-                      transition={{ duration: 1.2 }}
-                      className="h-full bg-[#39FF14]"
-                    />
-                  </div>
                 </div>
               </div>
 
               <motion.button
-                whileHover={{ scale: 1.03 }}
+                whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => {
                   audioManager.playSfx("tap_nav", 0.15);
                   setTutPhase("pack");
                 }}
-                className="w-full py-4 bg-gradient-to-r from-[#39FF14] to-[#00E5FF] text-black font-black text-xs tracking-[0.2em] uppercase hover:opacity-95 transition-all rounded border-2 border-black shadow-[4px_4px_0px_#000] cursor-pointer"
+                className="w-full py-4 bg-gradient-to-r from-[#39FF14] to-[#00E5FF] text-black font-mono font-black text-xs tracking-[0.2em] uppercase hover:opacity-95 transition-all rounded border-2 border-black shadow-[4px_4px_0px_#000] cursor-pointer"
               >
-                CLAIM SIGNAL & CONNECT
+                CLAIM 2-CARD WELCOME PACK
               </motion.button>
             </div>
           </motion.div>
         )}
 
-        {/* PHASE 4: CINEMATIC PACK OPENING */}
+        {/* ── PHASE 3: CINEMATIC 2-CARD PACK OPENING ── */}
         {tutPhase === "pack" && (
           <motion.div
             key="pack"
@@ -322,227 +721,320 @@ export default function Tutorial() {
             exit={{ opacity: 0 }}
             className="absolute inset-0 z-50 bg-[#050402]"
           >
-            {dailyCard && (
+            {welcomeCards.length > 0 && (
               <PackContainer
                 meta={welcomePackMeta}
-                cards={claimedCard ? [claimedCard] : getMockOwnedCard()}
+                cards={welcomeCards}
                 onComplete={() => {
                   audioManager.playSfx("tap_nav", 0.15);
-                  setTutPhase("discovery");
+                  setTutPhase("ecosystem");
                 }}
               />
             )}
           </motion.div>
         )}
 
-        {/* PHASE 5: DISCOVERY & CONCEPT EXPLAINER */}
-        {tutPhase === "discovery" && (
+        {/* ── PHASE 4: INTERACTIVE ECOSYSTEM DOSSIER ── */}
+        {tutPhase === "ecosystem" && (
           <motion.div
-            key="discovery"
+            key="ecosystem"
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
-            className="flex-1 flex flex-col items-center justify-between py-6 px-4 overflow-y-auto relative z-10"
+            className="flex-1 flex flex-col items-center justify-between py-6 px-4 overflow-y-auto relative z-10 max-w-xl mx-auto w-full"
           >
-            <div className="text-center mt-3">
+            <div className="text-center mt-2 w-full">
               <div className="font-mono text-[9px] text-[#00E5FF] tracking-[0.4em] mb-1 uppercase font-black">
-                // SYSTEM DECRYPTED //
+                // SYSTEM ARCHITECTURE //
               </div>
               <h2 className="font-mono text-2xl font-black tracking-widest text-white uppercase">
-                COLLECTIBLE SIGNALS
+                THE PIM ECOSYSTEM
               </h2>
+              <p className="font-mono text-[10.5px] text-zinc-400 mt-1">
+                Explore the five pillars of the rhythm economy before locking your pilot identity.
+              </p>
             </div>
 
-            {/* Display Unlocked Card & Details */}
-            <div className="w-full max-w-md flex flex-col md:flex-row items-center gap-6 my-4 p-5 border-4 border-black bg-[#151311] shadow-[6px_6px_0px_#000] rounded-lg">
-              <div className="w-[170px] flex-shrink-0 relative">
-                {dailyCard && <Card card={dailyCard} interactive={false} showAudio={false} />}
-                {/* Glow ring */}
-                <div className="absolute -inset-2 rounded-lg border-2 border-[#00E5FF]/20 animate-pulse pointer-events-none -z-10" />
-              </div>
-              
-              <div className="flex-1 space-y-4 text-left font-mono">
-                <div>
-                  <div className="text-[9px] text-zinc-500 font-bold uppercase">SIGNAL ID</div>
-                  <div className="text-sm font-black text-white uppercase">{dailySong?.title || "TRANSMISSION 001"}</div>
-                </div>
-                <div>
-                  <div className="text-[9px] text-zinc-500 font-bold uppercase">METADATA SPECS</div>
-                  <div className="text-xs text-zinc-300 font-bold">
-                    BPM: {dailySong?.bpm || 110} // MOOD: {dailySong?.mood || "dark"}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-[9px] text-zinc-500 font-bold uppercase">FACTION LINK</div>
-                  <div className="text-xs text-[#39FF14] font-black uppercase">PIM CORE NETWORK</div>
-                </div>
-                <div className="text-[11px] text-zinc-400 leading-relaxed border-t-2 border-black pt-3">
-                  Every release in PIM is a collectible card. Unlocking cards integrates them into your playable library, enabling custom multipliers and score achievements.
-                </div>
-              </div>
+            {/* Dossier Navigation Pills */}
+            <div className="flex flex-wrap justify-center gap-1.5 my-4 w-full">
+              {DOSSIER_TABS.map((tab, idx) => {
+                const isActive = activeDossierTab === idx;
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => {
+                      setActiveDossierTab(idx);
+                      audioManager.playSfx("tap_nav", 0.12);
+                    }}
+                    className="px-2.5 py-1.5 rounded text-[9px] font-mono font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5"
+                    style={{
+                      background: isActive ? tab.accent : "rgba(255,255,255,0.05)",
+                      color: isActive ? "#000" : "#a1a1aa",
+                      border: `1px solid ${isActive ? tab.accent : "rgba(255,255,255,0.1)"}`,
+                    }}
+                  >
+                    <Icon size={11} />
+                    {tab.badge}
+                  </button>
+                );
+              })}
             </div>
 
-            {/* Explainer ecosystem cards - Stomp style */}
-            <div className="w-full max-w-md grid grid-cols-1 gap-2.5 my-3">
-              {[
-                { title: "🎵 DIGITAL COLLECTIBLES", text: "Songs are owned cards. Accessing them builds your playable deck.", accent: "#FF1493" },
-                { title: "💎 SCARCITY & PROVENANCE", text: "Limited prints, glitched codes, visual skins, and alt-verse releases.", accent: "#00E5FF" },
-                { title: "⚡ VALUE ENGINE MULTIPLIERS", text: "Equipped collections boost score multipliers for leaderboard dominance.", accent: "#39FF14" }
-              ].map((item, idx) => (
-                <div key={idx} className="p-3 border-2 border-black bg-[#11100f] shadow-[3px_3px_0px_#000] rounded text-left flex items-start gap-3">
-                  <div className="w-2 h-full rounded" style={{ background: item.accent }} />
-                  <div>
-                    <div className="font-mono text-[10px] font-black uppercase text-white" style={{ color: item.accent }}>{item.title}</div>
-                    <div className="font-mono text-[10px] text-zinc-400 mt-1 leading-normal">{item.text}</div>
-                  </div>
-                </div>
-              ))}
+            {/* Active Dossier Tab Content */}
+            <div className="w-full border-4 border-black bg-[#151311] p-5 shadow-[6px_6px_0px_#000] rounded-lg mb-4">
+              <div className="flex items-center justify-between mb-3 border-b border-white/10 pb-2">
+                <span
+                  className="font-mono text-[9px] font-black uppercase px-2 py-0.5 rounded text-black tracking-widest"
+                  style={{ background: DOSSIER_TABS[activeDossierTab].accent }}
+                >
+                  PILLAR 0{activeDossierTab + 1}
+                </span>
+                <span className="font-mono text-xs font-black uppercase text-white tracking-wider">
+                  {DOSSIER_TABS[activeDossierTab].title}
+                </span>
+              </div>
+              {DOSSIER_TABS[activeDossierTab].content}
             </div>
 
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => {
-                audioManager.playSfx("tap_nav", 0.15);
-                setTutPhase("aspiration");
-              }}
-              className="px-10 py-4 bg-gradient-to-r from-[#FF1493] to-[#ff3800] text-black font-black text-xs tracking-[0.25em] uppercase hover:opacity-95 transition-all rounded border-2 border-black shadow-[4px_4px_0px_#000] cursor-pointer"
-            >
-              MONITOR NETWORK FEED →
-            </motion.button>
-          </motion.div>
-        )}
-
-        {/* PHASE 6: SOCIAL ASPIRATION (LEADERBOARDS) */}
-        {tutPhase === "aspiration" && (
-          <motion.div
-            key="aspiration"
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -15 }}
-            className="flex-1 flex flex-col items-center justify-between py-6 px-4 overflow-y-auto relative z-10"
-          >
-            <div className="text-center mt-3">
-              <div className="font-mono text-[9px] text-[#39FF14] tracking-[0.4em] mb-1.5 uppercase font-black">
-                // GLOBAL CODES //
-              </div>
-              <h2 className="font-mono text-2xl font-black tracking-widest text-white uppercase">
-                NETWORK STATUS
-              </h2>
-            </div>
-
-            <div className="w-full max-w-sm border-4 border-black bg-[#151311] p-6 space-y-4 rounded-lg shadow-[8px_8px_0px_#000]">
-              <div className="font-mono text-[9px] text-zinc-500 font-bold tracking-wider pb-2 border-b-2 border-black uppercase">
-                Live collector operations
-              </div>
-              
-              <div className="space-y-3 font-mono text-xs">
-                {[
-                  { rank: "1", color: "#FFD700", name: "0x71a...9bSECURED SCORE", desc: "999,500 on BR34K_OF_LIGHT [MYTHIC]" },
-                  { rank: "2", color: "#C0C0C0", name: "cyber_scribePULLED GLITCHED", desc: "TRANSMISSION 001 [ALT VERSE 3/10]" },
-                  { rank: "3", color: "#CD7F32", name: "analog_dreamerSHIFTS ALIGN", desc: "Equipped Analog theme skin on all signals" }
-                ].map((row, idx) => (
-                  <div key={idx} className="flex gap-3 items-center border-b border-black/30 pb-3">
-                    <div className="w-7 h-7 flex-shrink-0 border-2 border-black flex items-center justify-center font-black rounded-sm shadow-[2px_2px_0px_#000]" style={{ background: row.color + '20', color: row.color, borderColor: '#000' }}>
-                      {row.rank}
-                    </div>
-                    <div>
-                      <div className="text-white font-black text-[11px] uppercase tracking-tighter">{row.name}</div>
-                      <div className="text-[9px] text-zinc-400 mt-0.5">{row.desc}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="text-[10px] text-zinc-500 leading-normal border-t-2 border-black pt-3 font-mono">
-                The network preserves limited variants, glitched prints, custom remix cuts, and visual skin overhauls to represent your identity on the global stages.
-              </div>
-            </div>
-
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => {
-                audioManager.playSfx("tap_nav", 0.15);
-                setTutPhase("complete");
-              }}
-              className="px-10 py-4 bg-gradient-to-r from-[#39FF14] to-[#00E5FF] text-black font-black text-xs tracking-[0.25em] uppercase hover:opacity-95 transition-all rounded border-2 border-black shadow-[4px_4px_0px_#000] cursor-pointer"
-            >
-              COMPLETE CONNECTION →
-            </motion.button>
-          </motion.div>
-        )}
-
-        {/* PHASE 7: FACTION SELECT & REGISTRATION LOCK-IN */}
-        {tutPhase === "complete" && (
-          <motion.div
-            key="complete"
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -15 }}
-            className="flex-1 flex flex-col items-center justify-between py-6 px-4 overflow-y-auto relative z-10"
-          >
-            <div className="text-center mt-3">
-              <div className="font-mono text-[9px] text-yellow-400 tracking-[0.4em] mb-1.5 uppercase font-black">
-                // SYNC SYSTEM COMPLETE //
-              </div>
-              <h2 className="font-mono text-2xl font-black tracking-widest text-white uppercase">
-                CONNECTION SECURED
-              </h2>
-            </div>
-
-            <motion.div 
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="w-full max-w-sm border-4 border-black bg-[#151311] p-6 text-center space-y-6 rounded-lg shadow-[8px_8px_0px_#000] relative"
-            >
-              <div className="absolute inset-0 blur-2xl pointer-events-none rounded-full" style={{
-                background: `radial-gradient(circle, #39FF1415 0%, transparent 60%)`
-              }} />
-              
-              <div className="font-mono text-[9px] text-[#00E5FF] uppercase tracking-widest font-black">
-                NEURAL LINK ACTIVE
-              </div>
-              <h3 className="font-mono text-3xl font-extrabold text-white tracking-tight uppercase leading-none">
-                ARCHIVE <br />
-                <span className="text-[#39FF14]">READY</span>
-              </h3>
-
-              <div className="font-mono text-[11px] text-zinc-300 leading-relaxed border-t-2 border-black pt-4">
-                Neural link sync protocol completed. Connect your profile to preserve unlocked signal metadata and write card provenance records.
-              </div>
-
-              <div className="bg-[#39FF14]/10 border-2 border-black text-[#39FF14] p-3 text-left font-mono text-[10px] rounded shadow-[3px_3px_0px_#000] relative overflow-hidden">
-                <div className="font-black uppercase flex items-center gap-1 mb-1 text-white">
-                  <Zap size={11} className="text-yellow-400 fill-yellow-400" /> BONUS PACKAGE GRANTED
-                </div>
-                Connect your account via <span className="text-white font-bold">Email, GitHub, or Wallet</span> to claim a <span className="underline font-bold text-white">FREE WELCOME PACK</span> containing 2 digital cards!
-              </div>
-
-              <div className="space-y-3 pt-2">
+            {/* Dossier Progression Button */}
+            <div className="w-full flex gap-3">
+              {activeDossierTab < DOSSIER_TABS.length - 1 ? (
                 <button
                   onClick={() => {
-                    localStorage.setItem("pim_tutorial_completed", "true");
-                    useVaultStore.getState().updateProgression({ tutorialCompleted: true });
-                    audioManager.playSfx("tap_nav", 0.15);
-                    setLocation("/vault");
-                    useAuthStore.getState().setShowAuthModal(true);
+                    setActiveDossierTab((prev) => prev + 1);
+                    audioManager.playSfx("tap_nav", 0.12);
                   }}
-                  className="w-full py-4 bg-gradient-to-r from-yellow-400 to-amber-500 text-black font-black text-xs tracking-[0.2em] uppercase hover:scale-[1.02] transition-all rounded border-2 border-black shadow-[4px_4px_0px_#000] cursor-pointer"
+                  className="w-full py-3.5 bg-white/10 hover:bg-white/15 text-white font-mono font-black text-xs tracking-[0.2em] uppercase rounded border-2 border-black transition-all cursor-pointer flex items-center justify-center gap-2"
                 >
-                  SECURE PROFILE / CONNECT
+                  NEXT PILLAR ({activeDossierTab + 2}/5) <ChevronRight size={14} />
                 </button>
-                
-                <button
-                  onClick={handleCompleteTutorial}
-                  className="w-full py-3 bg-zinc-950/70 border-2 border-black text-zinc-400 font-mono text-[10px] font-black tracking-[0.2em] uppercase hover:text-white transition-all rounded shadow-[3px_3px_0px_#000] cursor-pointer"
-                >
-                  PROCEED AS GUEST
-                </button>
-              </div>
-            </motion.div>
+              ) : null}
 
-            <div className="h-4" />
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  audioManager.playSfx("tap_nav", 0.15);
+                  setTutPhase("identity");
+                }}
+                className={`py-3.5 bg-gradient-to-r from-[#FF1493] to-[#ff3800] text-black font-mono font-black text-xs tracking-[0.25em] uppercase hover:opacity-95 transition-all rounded border-2 border-black shadow-[4px_4px_0px_#000] cursor-pointer flex items-center justify-center gap-2 ${
+                  activeDossierTab === DOSSIER_TABS.length - 1 ? "w-full" : "px-6 shrink-0"
+                }`}
+              >
+                PROCEED TO IDENTITY →
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* ── PHASE 5: PILOT IDENTITY (FARCASTER AUTO-PULL vs FORCED WEB) ── */}
+        {tutPhase === "identity" && (
+          <motion.div
+            key="identity"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            className="flex-1 flex flex-col items-center justify-between py-6 px-4 overflow-y-auto relative z-10 max-w-md mx-auto w-full"
+          >
+            <div className="text-center mt-2 w-full">
+              <div className="font-mono text-[9px] text-[#39FF14] tracking-[0.4em] mb-1 uppercase font-black">
+                // NEURAL LINK LOCK-IN //
+              </div>
+              <h2 className="font-mono text-2xl font-black tracking-widest text-white uppercase">
+                PILOT IDENTITY
+              </h2>
+              <p className="font-mono text-[10px] text-zinc-400 mt-1">
+                {isFarcaster
+                  ? "Verified Warpcast profile detected. Confirm identity to write card provenance."
+                  : "Choose your unique pilot @username and profile avatar to record scores on leaderboards."}
+              </p>
+            </div>
+
+            {/* ── Option A: Farcaster Verified User ── */}
+            {isFarcaster && fcUser ? (
+              <div className="w-full border-4 border-black bg-[#151311] p-6 rounded-lg shadow-[8px_8px_0px_#000] space-y-4 my-4">
+                <div className="flex items-center gap-2 font-mono text-[9px] text-[#8A63D2] tracking-widest uppercase font-black">
+                  <Radio size={12} className="text-[#8A63D2] animate-pulse" />
+                  WARPCAST MINI APP PROTOCOL
+                </div>
+
+                <div className="flex items-center gap-4 border border-[#8A63D2]/40 bg-[#8A63D2]/10 p-3.5 rounded">
+                  {fcUser.pfpUrl ? (
+                    <img
+                      src={fcUser.pfpUrl}
+                      alt={fcUser.username}
+                      className="w-16 h-16 rounded-full object-cover border-2 border-[#8A63D2]"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-full bg-[#8A63D2] flex items-center justify-center font-bold text-lg">
+                      {fcUser.username?.slice(0, 2).toUpperCase() || "FC"}
+                    </div>
+                  )}
+                  <div>
+                    <div className="font-mono text-base font-black text-white uppercase">
+                      @{fcUser.username}
+                    </div>
+                    <div className="font-mono text-[10px] text-zinc-400">
+                      {fcUser.displayName || "Farcaster Pilot"} · FID {fcUser.fid}
+                    </div>
+                    <div className="mt-1 flex items-center gap-1 font-mono text-[9px] text-[#39FF14] font-bold">
+                      <Check size={11} /> IDENTITY VERIFIED
+                    </div>
+                  </div>
+                </div>
+
+                <div className="font-mono text-[10.5px] text-zinc-400 leading-relaxed border-t border-white/10 pt-3">
+                  Your Farcaster username and profile image will be bound to your card collection and global leaderboard telemetry.
+                </div>
+              </div>
+            ) : (
+              /* ── Option B: Forced Web Setup (Username + Avatar Selection) ── */
+              <div className="w-full border-4 border-black bg-[#151311] p-5 rounded-lg shadow-[8px_8px_0px_#000] space-y-4 my-3 text-left">
+                {/* 1. Username Input */}
+                <div>
+                  <label className="block font-mono text-[10px] text-zinc-400 uppercase font-black mb-1.5">
+                    1. PILOT @USERNAME (REQUIRED)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      placeholder="e.g. cyber_scribe_01"
+                      className="w-full bg-black/60 border-2 border-white/20 text-white font-mono px-3.5 py-2.5 text-xs focus:outline-none focus:border-[#FFD700] transition-colors rounded-sm"
+                      maxLength={20}
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      {username.length === 0 ? null : isCheckingUsername ? (
+                        <Loader2 size={14} className="text-white/50 animate-spin" />
+                      ) : !isValidFormat ? (
+                        <X size={14} className="text-[#ff3800]" />
+                      ) : isAvailable === true ? (
+                        <Check size={14} className="text-[#39FF14]" />
+                      ) : isAvailable === false ? (
+                        <X size={14} className="text-[#ff3800]" />
+                      ) : null}
+                    </div>
+                  </div>
+                  <div className="font-mono text-[9px] text-zinc-500 mt-1 h-3.5">
+                    {username.length > 0 && !isValidFormat && "3-20 chars, alphanumeric + _ only"}
+                    {isAvailable === false && "Username taken — choose another alias"}
+                    {isAvailable === true && "Username available!"}
+                  </div>
+                </div>
+
+                {/* 2. Avatar Selection */}
+                <div>
+                  <label className="block font-mono text-[10px] text-zinc-400 uppercase font-black mb-1.5">
+                    2. PROFILE AVATAR (CHOOSE PRESET OR UPLOAD)
+                  </label>
+
+                  {/* Selected Avatar Preview & File Input Trigger */}
+                  <div className="flex items-center gap-3.5 mb-3 p-2 bg-black/40 border border-white/10 rounded">
+                    <div
+                      className="w-14 h-14 rounded-full overflow-hidden bg-zinc-900 border-2 border-white/20 cursor-pointer relative group shrink-0"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        className="hidden"
+                        accept=".jpg,.jpeg,.png,.webp"
+                        onChange={handleAvatarFileChange}
+                      />
+                      {selectedAvatarUrl ? (
+                        <img
+                          src={selectedAvatarUrl}
+                          alt="Avatar Preview"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-zinc-600">
+                          <User size={20} />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Camera size={16} className="text-white" />
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="px-3 py-1 bg-white/10 hover:bg-white/15 text-white font-mono text-[9.5px] font-bold tracking-wider uppercase rounded border border-white/20 cursor-pointer"
+                      >
+                        UPLOAD CUSTOM PHOTO
+                      </button>
+                      <p className="font-mono text-[8.5px] text-zinc-500 mt-1">
+                        JPG, PNG, or WebP (max 2MB)
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Cyberpunk Preset Avatar Palette */}
+                  <div className="font-mono text-[8.5px] text-zinc-400 uppercase font-bold mb-1">
+                    OR SELECT A CYBER PILOT EMBLEM:
+                  </div>
+                  <div className="grid grid-cols-4 gap-2">
+                    {CYBER_AVATAR_PRESETS.map((preset) => {
+                      const isSelected = selectedPresetId === preset.id;
+                      return (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => handleSelectPreset(preset)}
+                          className="p-1 rounded-sm border transition-all cursor-pointer flex flex-col items-center gap-1"
+                          style={{
+                            background: isSelected ? `${preset.accent}25` : "rgba(0,0,0,0.4)",
+                            borderColor: isSelected ? preset.accent : "rgba(255,255,255,0.15)",
+                            boxShadow: isSelected ? `0 0 8px ${preset.accent}60` : "none",
+                          }}
+                        >
+                          <img
+                            src={preset.avatarUrl}
+                            alt={preset.name}
+                            className="w-9 h-9 rounded object-cover"
+                          />
+                          <span
+                            className="font-mono text-[7.5px] font-black truncate w-full text-center"
+                            style={{ color: isSelected ? preset.accent : "#a1a1aa" }}
+                          >
+                            {preset.callsign}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Lock In Identity Action */}
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleSaveIdentityAndFinish}
+              disabled={
+                isSavingIdentity ||
+                (!isFarcaster &&
+                  (username.length < 3 ||
+                    !isValidFormat ||
+                    isAvailable === false ||
+                    !selectedAvatarUrl))
+              }
+              className="w-full py-4 bg-gradient-to-r from-[#39FF14] to-[#00E5FF] text-black font-mono font-black text-xs tracking-[0.25em] uppercase hover:opacity-95 transition-all rounded border-2 border-black shadow-[4px_4px_0px_#000] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
+            >
+              {isSavingIdentity ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" /> LOCKING IDENTITY...
+                </>
+              ) : isFarcaster ? (
+                "CONFIRM IDENTITY & ENTER VAULT"
+              ) : (
+                "LOCK IN IDENTITY & ENTER VAULT"
+              )}
+            </motion.button>
           </motion.div>
         )}
       </AnimatePresence>
