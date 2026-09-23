@@ -43,7 +43,8 @@ const HEX_CODES = ["0xAF", "0x3C", "0xD9", "0x4E", "0xB2", "0xF5", "0x1A", "0x88
 
 export default function EarnPage() {
   const [, setLocation] = useLocation();
-  const { tokenBalance, addTokens } = useVaultStore();
+  const tokenBalance = useVaultStore((s) => s.tokenBalance);
+  const addTokens = useVaultStore((s) => s.addTokens);
 
   // Mode Selection: 'menu' | 'ad' | 'game' | 'survey'
   const [activeMode, setActiveMode] = useState<'menu' | 'ad' | 'game' | 'survey'>('menu');
