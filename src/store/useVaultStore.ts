@@ -586,9 +586,14 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         const isWelcomeLocallyDone = localStorage.getItem('rc2_seen_key') === '1';
 
         const dbTutDone = dbProgression.tutorialCompleted;
-        const finalTutDone = dbTutDone !== undefined 
-          ? Boolean(dbTutDone) 
-          : Boolean(localProgression.tutorialCompleted && isTutorialLocallyDone);
+        // Tutorial completion is monotonic: once completed on any device or
+        // session, a stale server record must never revoke it. Without this,
+        // signing in with GitHub after completing as guest clobbers the local
+        // completion and bounces the user back into the tutorial. The
+        // sync-back below heals the server copy.
+        const finalTutDone =
+          Boolean(dbTutDone) ||
+          Boolean(localProgression.tutorialCompleted && isTutorialLocallyDone);
 
         const mergedProgression = {
           ...localProgression,
