@@ -56,6 +56,11 @@ export default function Tutorial() {
   // Replay check
   const [isReplay, setIsReplay] = useState(false);
 
+  // Signed-in users replaying the tutorial skip first-run onboarding side effects:
+  // no duplicate welcome pack, no username re-pick, no profile re-save.
+  const authUser = useAuthStore((s) => s.user);
+  const skipFirstRunSteps = isReplay && !!authUser;
+
   // 2-Card Welcome Pack State
   const [welcomeCards, setWelcomeCards] = useState<OwnedCard[]>([]);
   const [hasPreparedPack, setHasPreparedPack] = useState(false);
@@ -134,8 +139,10 @@ export default function Tutorial() {
   }, []);
 
   // 2. Prepare 2-Card Welcome Pack (Daily Song Card + Random Other Card)
+  // Skipped for signed-in users replaying the tutorial (no duplicate pack).
   useEffect(() => {
     if (!dailyCard || catalog.length === 0 || hasPreparedPack) return;
+    if (skipFirstRunSteps) return;
 
     async function preparePack() {
       setHasPreparedPack(true);
@@ -195,7 +202,7 @@ export default function Tutorial() {
     }
 
     preparePack();
-  }, [dailyCard, catalog, hasPreparedPack]);
+  }, [dailyCard, catalog, hasPreparedPack, skipFirstRunSteps]);
 
   // 3. Debounced Username Validation
   useEffect(() => {
@@ -360,6 +367,18 @@ export default function Tutorial() {
     setWalletCopied(true);
     audioManager.playSfx("tap_nav", 0.12);
     setTimeout(() => setWalletCopied(false), 2000);
+  };
+
+  // Replay finish: signed-in users replaying skip the username re-pick and the
+  // profile re-save entirely — just exit the tutorial.
+  const handleFinishReplay = () => {
+    audioManager.playSfx("gold_get", 0.6);
+    const postTutorialDest = typeof window !== 'undefined' ? sessionStorage.getItem('post_tutorial_redirect') : null;
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('post_tutorial_redirect');
+    }
+    const destination = postTutorialDest && postTutorialDest !== '/tutorial' ? postTutorialDest : '/arcade';
+    setLocation(destination);
   };
 
   // Complete Identity & Finalize Onboarding
@@ -830,11 +849,11 @@ export default function Tutorial() {
                 whileTap={{ scale: 0.98 }}
                 onClick={() => {
                   audioManager.playSfx("tap_nav", 0.15);
-                  setTutPhase("pack");
+                  setTutPhase(skipFirstRunSteps ? "ecosystem" : "pack");
                 }}
                 className="w-full py-4 bg-gradient-to-r from-[#39FF14] to-[#00E5FF] text-black font-mono font-black text-xs tracking-[0.2em] uppercase hover:opacity-95 transition-all rounded border-2 border-black shadow-[4px_4px_0px_#000] cursor-pointer"
               >
-                CLAIM 2-CARD WELCOME PACK
+                {skipFirstRunSteps ? "CONTINUE" : "CLAIM 2-CARD WELCOME PACK"}
               </motion.button>
             </div>
           </motion.div>
@@ -944,13 +963,13 @@ export default function Tutorial() {
                 whileTap={{ scale: 0.98 }}
                 onClick={() => {
                   audioManager.playSfx("tap_nav", 0.15);
-                  setTutPhase("identity");
+                  setTutPhase(skipFirstRunSteps ? "connector" : "identity");
                 }}
                 className={`py-3.5 bg-gradient-to-r from-[#FF1493] to-[#ff3800] text-black font-mono font-black text-xs tracking-[0.25em] uppercase hover:opacity-95 transition-all rounded border-2 border-black shadow-[4px_4px_0px_#000] cursor-pointer flex items-center justify-center gap-2 ${
                   activeDossierTab === DOSSIER_TABS.length - 1 ? "w-full" : "px-6 shrink-0"
                 }`}
               >
-                PROCEED TO IDENTITY →
+                {skipFirstRunSteps ? "PROCEED TO WALLET →" : "PROCEED TO IDENTITY →"}
               </motion.button>
             </div>
           </motion.div>
@@ -1177,7 +1196,9 @@ export default function Tutorial() {
                 WALLET CONNECTOR
               </h2>
               <p className="font-mono text-[10px] text-zinc-400 mt-1">
-                Link your Base EVM Smart Wallet to sign provenance for your 2-Card Welcome Pack and finalize your profile.
+                {skipFirstRunSteps
+                  ? "Review or reconnect your Base EVM Smart Wallet."
+                  : "Link your Base EVM Smart Wallet to sign provenance for your 2-Card Welcome Pack and finalize your profile."}
               </p>
             </div>
 
@@ -1195,6 +1216,7 @@ export default function Tutorial() {
                     setTutPhase("identity");
                   }}
                   className="font-mono text-[9px] text-zinc-400 hover:text-white uppercase underline cursor-pointer"
+                  style={{ display: skipFirstRunSteps ? "none" : undefined }}
                 >
                   EDIT ALIAS
                 </button>
@@ -1361,11 +1383,11 @@ export default function Tutorial() {
               )}
             </div>
 
-            {/* Final CTA: Save Profile and Enter the Vault */}
+            {/* Final CTA: Save Profile and Enter the Vault (replay skips the save) */}
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              onClick={handleSaveIdentityAndFinish}
+              onClick={skipFirstRunSteps ? handleFinishReplay : handleSaveIdentityAndFinish}
               disabled={isSavingIdentity}
               className="w-full py-4 bg-gradient-to-r from-[#39FF14] via-[#00E5FF] to-[#FF1493] text-black font-mono font-black text-xs tracking-[0.25em] uppercase hover:opacity-95 transition-all rounded border-2 border-black shadow-[4px_4px_0px_#000] cursor-pointer flex items-center justify-center gap-2"
             >
@@ -1373,6 +1395,8 @@ export default function Tutorial() {
                 <>
                   <Loader2 size={16} className="animate-spin" /> SAVING PROFILE & WRITING TO VAULT...
                 </>
+              ) : skipFirstRunSteps ? (
+                "ENTER THE VAULT ➔"
               ) : (
                 "SAVE PROFILE & ENTER THE VAULT ➔"
               )}
