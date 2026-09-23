@@ -116,6 +116,33 @@ export default function Tutorial() {
         if (user?.pfpUrl) {
           setSelectedAvatarUrl(user.pfpUrl);
         }
+        // Not in Farcaster: prepopulate from the signed-in OAuth provider
+        // (e.g. GitHub user_metadata) or the existing profile, so OAuth users
+        // don't start the identity step from a blank form.
+        if (!user?.username) {
+          const vaultState = useVaultStore.getState();
+          const authMeta = useAuthStore.getState().user?.user_metadata || {};
+          const storedName = vaultState.username;
+          const oauthName =
+            authMeta.user_name ||
+            authMeta.preferred_username ||
+            authMeta.username;
+          const prefill =
+            storedName && !/^(user_|anon_)/i.test(storedName)
+              ? storedName
+              : oauthName;
+          if (prefill && /^[a-zA-Z0-9_.-]{3,20}$/.test(String(prefill))) {
+            setUsername(String(prefill));
+          }
+        }
+        if (!user?.pfpUrl) {
+          const vaultAvatar = useVaultStore.getState().avatarUrl;
+          const authMeta = useAuthStore.getState().user?.user_metadata || {};
+          const oauthAvatar = authMeta.avatar_url || authMeta.picture;
+          if (vaultAvatar || oauthAvatar) {
+            setSelectedAvatarUrl(vaultAvatar || oauthAvatar);
+          }
+        }
       } catch (err) {
         console.error("Failed to load onboarding daily metadata:", err);
       }
@@ -235,7 +262,10 @@ export default function Tutorial() {
           .ilike("username", clean)
           .maybeSingle();
 
-        setIsAvailable(!data);
+        // A username is available if nobody holds it, or if the holder is
+        // the current user (their own existing alias).
+        const currentUserId = useAuthStore.getState().user?.id;
+        setIsAvailable(!data || data.id === currentUserId);
       } catch (err) {
         setIsAvailable(true); // default allowable if offline/guest
       } finally {
