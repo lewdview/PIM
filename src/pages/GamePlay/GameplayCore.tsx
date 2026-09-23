@@ -5754,6 +5754,7 @@ export default function Game() {
         ns.visualLane = ns.currentLane;
       }
 
+      const isSurge = puRef.current.active === "SURGE" && t < puRef.current.endTime;
       const isHoldNoteType = activeTutorial
         ? isHoldNote(note)
         : (isHoldNote(note) && (note.stage ? note.stage > 1 : calculatedStage > 1));
