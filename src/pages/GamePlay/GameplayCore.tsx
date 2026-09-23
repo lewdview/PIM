@@ -7034,11 +7034,6 @@ export default function Game() {
       // Only treat audio as "ended" if it naturally finished (not paused for rewind)
       const audioEnded = audio ? audio.ended : false;
 
-      if (activeTutorial && t >= 60.0) {
-        finishGame();
-        return;
-      }
-
       if ((allDone && t > lastNoteTimeRef.current + 1.2) || audioEnded || t >= song.duration) {
         finishGame();
         return;
