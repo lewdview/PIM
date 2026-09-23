@@ -25,7 +25,12 @@ const BOMBSHELL_TIER_OPTS: { size: PackSize; label: string; count: number; cost:
 
 export default function ShopConsole({ onPurchasePack, className = '' }: ShopConsoleProps) {
   const [, setLocation] = useLocation();
-  const { collection, tokenBalance, addToCollection, removeFromCollection, loadVaultData, startReveal } = useVaultStore();
+  const collection = useVaultStore((s) => s.collection);
+  const tokenBalance = useVaultStore((s) => s.tokenBalance);
+  const addToCollection = useVaultStore((s) => s.addToCollection);
+  const removeFromCollection = useVaultStore((s) => s.removeFromCollection);
+  const loadVaultData = useVaultStore((s) => s.loadVaultData);
+  const startReveal = useVaultStore((s) => s.startReveal);
   const currentDay = getCurrentDay();
 
   // Local state for interactive modules

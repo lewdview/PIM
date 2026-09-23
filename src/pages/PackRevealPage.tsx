@@ -20,7 +20,14 @@ import { useLoadingToast } from '../store/useLoadingToast';
 
 export default function PackRevealPage() {
   const [, setLocation] = useLocation();
-  const { revealCards, endReveal, revealPackMeta, startReveal, addToCollection, removeFromCollection, loadVaultData, tokenBalance } = useVaultStore();
+  const revealCards = useVaultStore((s) => s.revealCards);
+  const endReveal = useVaultStore((s) => s.endReveal);
+  const revealPackMeta = useVaultStore((s) => s.revealPackMeta);
+  const startReveal = useVaultStore((s) => s.startReveal);
+  const addToCollection = useVaultStore((s) => s.addToCollection);
+  const removeFromCollection = useVaultStore((s) => s.removeFromCollection);
+  const loadVaultData = useVaultStore((s) => s.loadVaultData);
+  const tokenBalance = useVaultStore((s) => s.tokenBalance);
   const [isRepurchasing, setIsRepurchasing] = useState(false);
   const isRepurchaseRef = useRef(false);
   const [accumulatedCards, setAccumulatedCards] = useState<OwnedCard[]>(() => revealCards);
