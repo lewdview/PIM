@@ -491,9 +491,11 @@ export default function Results() {
 
   // Sync high score to leaderboard when user is authenticated with a picked username
   // Ensures a run token exists first (mints a fallback if the countdown-time
-  // mint failed); submit_score requires one as anti-replay proof.
-  const ensureRunToken = async (): Promise<string | null> => {
-    if (runTokenRef.current) return runTokenRef.current;
+  // mint failed); submit_score requires one as anti-replay proof. Tokens are
+  // single-use: each submission path must use its own, so the pack-claim
+  // path below passes forceFresh.
+  const ensureRunToken = async (forceFresh = false): Promise<string | null> => {
+    if (!forceFresh && runTokenRef.current) return runTokenRef.current;
     if (!songId) return null;
     try {
       const { token } = await requestRunToken(songId);
@@ -660,7 +662,9 @@ export default function Results() {
           medal: result.medal,
           packRewarded: true,
           rewardTier: mappedTier,
-          runToken: (await ensureRunToken()) ?? undefined,
+          // Fresh token: the high-score path above already consumed the
+          // countdown token, and tokens are single-use.
+          runToken: (await ensureRunToken(true)) ?? undefined,
         });
         
         if (dbErr) {
