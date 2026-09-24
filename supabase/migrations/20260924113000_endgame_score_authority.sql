@@ -468,13 +468,13 @@ BEGIN
     RAISE EXCEPTION 'Invalid medal value';
   END IF;
   IF v_medal = 'PLATINUM' AND v_accuracy < 93 THEN
-    RAISE EXCEPTION 'Plausibility violation: PLATINUM requires >= 93% accuracy';
+    RAISE EXCEPTION 'Plausibility violation: PLATINUM requires >= 93%% accuracy';
   ELSIF v_medal = 'GOLD' AND v_accuracy < 80 THEN
-    RAISE EXCEPTION 'Plausibility violation: GOLD requires >= 80% accuracy';
+    RAISE EXCEPTION 'Plausibility violation: GOLD requires >= 80%% accuracy';
   ELSIF v_medal = 'SILVER' AND v_accuracy < 60 THEN
-    RAISE EXCEPTION 'Plausibility violation: SILVER requires >= 60% accuracy';
+    RAISE EXCEPTION 'Plausibility violation: SILVER requires >= 60%% accuracy';
   ELSIF v_medal = 'BRONZE' AND v_accuracy < 40 THEN
-    RAISE EXCEPTION 'Plausibility violation: BRONZE requires >= 40% accuracy';
+    RAISE EXCEPTION 'Plausibility violation: BRONZE requires >= 40%% accuracy';
   END IF;
 
   v_tier := lower(trim(coalesce(p_reward_tier, 'none')));
