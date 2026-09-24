@@ -7,6 +7,7 @@ const port = Number(process.env.PORT || 5173);
 
 export default defineConfig({
   envPrefix: ['VITE_', 'NEXT_PUBLIC_'],
+  esbuild: { drop: ['console', 'debugger'] },
   plugins: [
     react(),
     tailwindcss(),

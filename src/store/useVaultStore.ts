@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { VaultCard, OwnedCard } from '../services/vaultService';
+import { submitGameplayRecord, type VaultCard, type OwnedCard } from '../services/vaultService';
 import { supabase } from '../services/supabaseClient';
 import { getBombshellCoverUrl } from '../utils/bombshellCards';
 import { hydrateSettings, persistSettings } from '../utils/settingsStorage';
@@ -828,17 +828,16 @@ export const useVaultStore = create<VaultState>((set, get) => ({
           const dbScore = dbHighScores[songId] || 0;
           if (localScore > dbScore) {
             finalHighScores[songId] = localScore;
-            supabase.from('gameplay_records').insert({
-              user_id: userId,
-              song_id: songId,
+            submitGameplayRecord({
+              songId,
               score: localScore,
               accuracy: 0,
-              max_combo: 0,
+              maxCombo: 0,
               medal: sanitizeMedal(finalMedals[songId] || 'NONE'),
-              pack_rewarded: false,
-              reward_tier: 'none'
+              packRewarded: false,
+              rewardTier: 'none'
             }).then(({ error }) => {
-              if (error) console.warn(`[Migrate] Failed to sync score for ${songId}:`, error.message);
+              if (error) console.warn(`[Migrate] Failed to sync score for ${songId}:`, error);
             });
           }
         } else if (key.startsWith('medal_')) {
@@ -1083,17 +1082,19 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     // Only record to database if user is connected (not anonymous), has a registered username, and has a positive score
     if (user?.id && !isAnon && currentUsername && score > 0) {
       try {
-        await supabase.from('gameplay_records').insert({
-          user_id: user.id,
-          song_id: songId,
+        const { error: submitErr } = await submitGameplayRecord({
+          songId,
           score,
           accuracy,
-          max_combo: maxCombo,
+          maxCombo,
           medal,
-          pack_rewarded: false,
-          reward_tier: 'none',
+          packRewarded: false,
+          rewardTier: 'none',
           telemetry: telemetry || null
         });
+        if (submitErr) {
+          console.warn('Failed to sync high score via vault-engine:', submitErr);
+        }
       } catch (err) {
         console.warn('Failed to sync high score to database:', err);
       }

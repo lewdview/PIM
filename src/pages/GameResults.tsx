@@ -8,7 +8,7 @@ import { audioManager } from "@/game/audio";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useVaultStore } from "@/store/useVaultStore";
 import { supabase } from "@/services/supabaseClient";
-import { purchasePack, type OwnedCard } from "@/services/vaultService";
+import { purchasePack, submitGameplayRecord, type OwnedCard } from "@/services/vaultService";
 import { PACK_CONFIGS } from "@/utils/rarity";
 import { logAnalyticsEvent } from "@/services/telemetryService";
 import OnboardingFlowModal from "@/components/OnboardingFlowModal";
@@ -627,19 +627,18 @@ export default function Results() {
           }[highestTierClaimed] || highestTierClaimed
         );
 
-        const { error: dbErr } = await supabase.from('gameplay_records').insert({
-          user_id: user.id,
-          song_id: songId,
+        const { error: dbErr } = await submitGameplayRecord({
+          songId,
           score: result.score,
           accuracy: Number(accuracy.toFixed(2)),
-          max_combo: result.maxCombo,
+          maxCombo: result.maxCombo,
           medal: result.medal,
-          pack_rewarded: true,
-          reward_tier: mappedTier,
+          packRewarded: true,
+          rewardTier: mappedTier,
         });
         
         if (dbErr) {
-          console.warn('Failed to insert gameplay_records to Supabase:', dbErr);
+          console.warn('Failed to submit gameplay_records via vault-engine:', dbErr);
         }
  
         // Add to collection in store

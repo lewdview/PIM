@@ -722,7 +722,7 @@ export default function NextGenLandingPage() {
         levelLabel: `${t.cardCount} ${t.cardCount === 1 ? 'CARD' : 'CARDS'}`,
         cardCount: t.cardCount,
         price: t.price,
-        coverImage: bombshellTheme === 'light' && (t as any).lightCoverImage ? (t as any).lightCoverImage : (t as any).coverImage,
+        coverImage: bombshellTheme === 'light' && (t as any).lightCoverImage ? (t as any).lightCoverImage : ((t as any).darkCoverImage || (t as any).coverImage),
       }));
     }
 
@@ -1147,6 +1147,8 @@ export default function NextGenLandingPage() {
                                 isFreeClaimed={isFreePackClaimed}
                                 showRipTab={false}
                                 forcedSize={tierItem.size}
+                                forcedCoverImage={tierItem.coverImage}
+                                forcedTheme={currentCategoryKey === 'bombshell' ? bombshellTheme : undefined}
                                 onRip={(c, size) => handlePurchasePack(c, tierItem.size)}
                               />
                             </motion.div>

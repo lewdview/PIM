@@ -117,6 +117,8 @@ export interface PackBagProps {
   isFreeClaimed?: boolean;
   showRipTab?: boolean;
   forcedSize?: PackSize;
+  forcedCoverImage?: string;
+  forcedTheme?: 'light' | 'dark';
   styleOverride?: 'classic_foil' | 'cyber_cartridge';
   onRip: (cat: PackCategory, size: PackSize) => void;
 }
@@ -129,6 +131,8 @@ export function ClassicFoilPackBag({
   isFreeClaimed,
   showRipTab = true,
   forcedSize,
+  forcedCoverImage,
+  forcedTheme,
 }: Omit<PackBagProps, 'styleOverride'>) {
   const [tierIdx, setTierIdx] = useState(0);
   const [showInfo, setShowInfo] = useState(false);
@@ -141,13 +145,15 @@ export function ClassicFoilPackBag({
   const isSpecial = category === 'prophecy' || category === 'alpha';
   const isFreeDisabled = category === 'free' && isFreeClaimed;
 
-  const [bombshellSide, setBombshellSide] = useState<'top' | 'bot'>(() => Math.random() < 0.5 ? 'top' : 'bot');
+  const [bombshellSide, setBombshellSide] = useState<'top' | 'bot'>(() => forcedTheme === 'light' ? 'bot' : 'top');
 
   useEffect(() => {
-    if (category === 'bombshell' || category === 'bombshell_token') {
+    if (forcedTheme) {
+      setBombshellSide(forcedTheme === 'light' ? 'bot' : 'top');
+    } else if (category === 'bombshell' || category === 'bombshell_token') {
       setBombshellSide(Math.random() < 0.5 ? 'top' : 'bot');
     }
-  }, [category, activeTierIndex]);
+  }, [category, activeTierIndex, forcedTheme]);
 
   useEffect(() => {
     import('../services/vaultService').then(({ getPackRipCount }) => {
@@ -215,9 +221,12 @@ export function ClassicFoilPackBag({
   const isBombshell = cfg.category === 'bombshell' || cfg.category === 'bombshell_token' || cfg.label?.toLowerCase().includes('bombshell');
   const countNum = tier.cardCount >= 50 ? 50 : tier.cardCount >= 25 ? 25 : tier.cardCount >= 10 ? 10 : tier.cardCount >= 5 ? 5 : tier.cardCount >= 2 ? 2 : 1;
   const plural = countNum === 1 ? 'card' : 'cards';
-  const foilCoverUrl = isBombshell 
-    ? (tier.coverImage || '/data/packs/bs_cover.png')
-    : (tier.coverImage || cfg.coverImage || getPackCoverFallback(cfg.category));
+  const activeTheme = forcedTheme || (bombshellSide === 'bot' ? 'light' : 'dark');
+  const foilCoverUrl = forcedCoverImage || (isBombshell 
+    ? (activeTheme === 'light'
+        ? (tier.lightCoverImage || tier.coverImage || `/data/packs/bombshell_light_${countNum}${plural}.jpg`)
+        : (tier.darkCoverImage || tier.coverImage || `/data/packs/bombshell_dark_${countNum}${plural}.jpg`))
+    : (tier.coverImage || cfg.coverImage || getPackCoverFallback(cfg.category)));
 
   return (
     <div className="flex-shrink-0 flex flex-col items-center" style={{ width: `${CARD_W}px` }}>
@@ -505,8 +514,8 @@ export function ClassicFoilPackBag({
             </div>
           </div>
 
-          {/* Top/Bot Side Switcher Toggle for Bombshell */}
-          {isBombshell && (
+          {/* Light / Dark Side Switcher Toggle for Bombshell */}
+          {isBombshell && !forcedTheme && (
             <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-30 pointer-events-auto">
               <button
                 type="button"
@@ -522,7 +531,7 @@ export function ClassicFoilPackBag({
                   boxShadow: '0 0 14px rgba(255,20,147,0.6)',
                 }}
               >
-                <span>{bombshellSide === 'top' ? '🌙 TOP (DARK)' : '☀️ BOT (LIGHT)'}</span>
+                <span>{bombshellSide === 'top' ? '🌙 DARK' : '☀️ LIGHT'}</span>
                 <span className="text-[7px] opacity-70">⟲ FLIP</span>
               </button>
             </div>
@@ -787,6 +796,8 @@ export function PackBag(props: PackBagProps) {
         isFreeClaimed={props.isFreeClaimed}
         showRipTab={props.showRipTab}
         forcedSize={props.forcedSize}
+        forcedCoverImage={props.forcedCoverImage}
+        forcedTheme={props.forcedTheme}
       />
     );
   }

@@ -86,36 +86,65 @@ export function getBombshellDayCovers(day: number): BombshellDayCovers {
   };
 }
 
-export const DEFAULT_BOMBSHELL_PACK_COVER = '/data/packs/bs_cover.png';
+export const DEFAULT_BOMBSHELL_PACK_COVER = '/data/packs/bombshell_dark_1card.jpg';
+
+export const BOMBSHELL_LIGHT_PACK_COVERS: Record<number, string> = {
+  1: '/data/packs/bombshell_light_1card.jpg',
+  2: '/data/packs/bombshell_light_2cards.jpg',
+  5: '/data/packs/bombshell_light_5cards.jpg',
+  10: '/data/packs/bombshell_light_10cards.jpg',
+  25: '/data/packs/bombshell_light_25cards.jpg',
+  50: '/data/packs/bombshell_light_50cards.jpg',
+};
+
+export const BOMBSHELL_DARK_PACK_COVERS: Record<number, string> = {
+  1: '/data/packs/bombshell_dark_1card.jpg',
+  2: '/data/packs/bombshell_dark_2cards.jpg',
+  5: '/data/packs/bombshell_dark_5cards.jpg',
+  10: '/data/packs/bombshell_dark_10cards.jpg',
+  25: '/data/packs/bombshell_dark_25cards.jpg',
+  50: '/data/packs/bombshell_dark_50cards.jpg',
+};
 
 /**
- * Master collection of Bombshell pack cover images.
- * bs_cover.png is the canonical default; legacy top/bot variants kept as fallback references only.
+ * Master collection of all 12 Bombshell pack cover images across Light and Dark editions.
  */
-export const ALL_BOMBSHELL_PACK_COVERS = [DEFAULT_BOMBSHELL_PACK_COVER];
+export const ALL_BOMBSHELL_PACK_COVERS = [
+  ...Object.values(BOMBSHELL_LIGHT_PACK_COVERS),
+  ...Object.values(BOMBSHELL_DARK_PACK_COVERS),
+  '/data/packs/bs_cover.png',
+];
 
 /**
- * Returns both candidate cover images for a bombshell pack (both use bs_cover.png).
+ * Returns candidate cover images for a bombshell pack (top = dark, bot = light).
  */
-export function getBombshellPackCovers(cardCount: number = 1): { top: string; bot: string } {
+export function getBombshellPackCovers(cardCount: number = 1): { top: string; bot: string; dark: string; light: string } {
+  const normalizedCount = cardCount >= 50 ? 50 : cardCount >= 25 ? 25 : cardCount >= 10 ? 10 : cardCount >= 5 ? 5 : cardCount >= 2 ? 2 : 1;
+  const dark = BOMBSHELL_DARK_PACK_COVERS[normalizedCount] || DEFAULT_BOMBSHELL_PACK_COVER;
+  const light = BOMBSHELL_LIGHT_PACK_COVERS[normalizedCount] || DEFAULT_BOMBSHELL_PACK_COVER;
   return {
-    top: DEFAULT_BOMBSHELL_PACK_COVER,
-    bot: DEFAULT_BOMBSHELL_PACK_COVER,
+    top: dark,
+    bot: light,
+    dark,
+    light,
   };
 }
 
 /**
- * Returns a pack design from the Bombshell collection (defaulting to bs_cover.png).
+ * Returns a pack design from the Bombshell collection matching the card count and optional theme.
  */
-export function getRandomBombshellPackCover(cardCount?: number): string {
-  return DEFAULT_BOMBSHELL_PACK_COVER;
+export function getRandomBombshellPackCover(cardCount: number = 1, theme?: 'light' | 'dark'): string {
+  const { dark, light } = getBombshellPackCovers(cardCount);
+  if (theme === 'light') return light;
+  if (theme === 'dark') return dark;
+  return Math.random() < 0.5 ? dark : light;
 }
 
 /**
  * Returns a featured close-up bombshell cover URL for pack backgrounds and foil artwork embedding.
  */
-export function getFeaturedBombshellFoilCover(day?: number, cardCount?: number): string {
-  return getRandomBombshellPackCover(cardCount);
+export function getFeaturedBombshellFoilCover(day?: number, cardCount: number = 1, theme?: 'light' | 'dark'): string {
+  return getRandomBombshellPackCover(cardCount, theme);
 }
 
 /**

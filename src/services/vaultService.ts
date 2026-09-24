@@ -1321,3 +1321,39 @@ export async function getPackRipCount(category: string): Promise<number> {
   }
   return 0;
 }
+
+export async function submitGameplayRecord(payload: {
+  songId: string;
+  score: number;
+  accuracy: number;
+  maxCombo: number;
+  medal: string;
+  packRewarded?: boolean;
+  rewardTier?: string;
+  telemetry?: any;
+}): Promise<{ success: boolean; record?: any; error?: string }> {
+  try {
+    const { data: result, error } = await supabase.functions.invoke('vault-engine', {
+      body: { action: 'submitGameplayScore', payload },
+    });
+
+    if (error || !result?.success) {
+      let detailedError = error?.message;
+      if (error && typeof error === 'object' && 'context' in error) {
+        try {
+          const res = (error as any).context as Response;
+          if (res && res.json) {
+            const body = await res.json();
+            if (body && body.error) detailedError = body.error;
+          }
+        } catch {}
+      }
+      return { success: false, error: detailedError || result?.error || 'Failed to submit score' };
+    }
+
+    return { success: true, record: result.record };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Network error' };
+  }
+}
+
