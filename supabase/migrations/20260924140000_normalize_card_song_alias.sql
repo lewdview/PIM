@@ -322,9 +322,44 @@ alter table public.gameplay_records_quarantine
   add column if not exists quarantined_at timestamptz not null default now();
 alter table public.gameplay_records_quarantine enable row level security;
 
--- Disable the trigger during the rewrite: a row that lands over its
--- day-cap must not abort the backfill; it is quarantined right after.
-alter table public.gameplay_records disable trigger all;
+-- Quarantine rows must survive user deletion: drop the FK constraints that
+-- LIKE ... INCLUDING ALL copied over (audit trail must not cascade).
+do $$
+declare
+  r record;
+begin
+  for r in
+    select conname from pg_constraint
+    where conrelid = 'public.gameplay_records_quarantine'::regclass
+      and contype = 'f'
+  loop
+    execute format(
+      'alter table public.gameplay_records_quarantine drop constraint %I',
+      r.conname
+    );
+  end loop;
+end
+$$;
+
+-- Disable only USER triggers during the rewrite (DISABLE TRIGGER ALL also
+-- targets Postgres's internal RI_ConstraintTriggers, which need superuser).
+-- A row that lands over its day-cap must not abort the backfill; it is
+-- quarantined right after.
+do $$
+declare
+  r record;
+begin
+  for r in
+    select tgname from pg_trigger
+    where tgrelid = 'public.gameplay_records'::regclass
+      and not tgisinternal
+  loop
+    execute format(
+      'alter table public.gameplay_records disable trigger %I', r.tgname
+    );
+  end loop;
+end
+$$;
 
 with moved as (
   update public.gameplay_records
@@ -334,7 +369,21 @@ with moved as (
 )
 select count(*) as normalized_rows from moved;
 
-alter table public.gameplay_records enable trigger all;
+do $$
+declare
+  r record;
+begin
+  for r in
+    select tgname from pg_trigger
+    where tgrelid = 'public.gameplay_records'::regclass
+      and not tgisinternal
+  loop
+    execute format(
+      'alter table public.gameplay_records enable trigger %I', r.tgname
+    );
+  end loop;
+end
+$$;
 
 -- Quarantine anything over-cap after normalization (same policy as the
 -- fabricated-submission quarantine: preserved, out of live leaderboards).
