@@ -1325,9 +1325,10 @@ export async function getPackRipCount(category: string): Promise<number> {
 export async function requestRunToken(
   songId: string
 ): Promise<{ token?: string; error?: string }> {
-  // Mints a time-bound run token proving this client started a run for
-  // this song. submit_score requires a valid token, which defeats blind
-  // replay of captured submit requests. Tokens expire after 30 minutes.
+  // Mints a time-bound, single-use run token proving this client started a
+  // run for this song. submit_score atomically consumes the token, which
+  // defeats replay of captured tokens, not just captured requests. Tokens
+  // expire after 30 minutes. Each submission needs its own token.
   try {
     const { data, error } = await supabase.rpc('request_run_token', {
       p_song_id: songId,
