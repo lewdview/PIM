@@ -13,10 +13,11 @@
 --   2. request_run_token, submit_score, and the validate_gameplay_score
 --      trigger all normalize before validation, so aliases work everywhere
 --      and tokens bind to the canonical id on both mint and redeem.
---   3. Backfill historical card-* rows to day-NNN. The trigger is disabled
---      during the rewrite so rows landing over their day-cap don't abort the
---      backfill; those are quarantined immediately after (same quarantine
---      table / policy as 20260924133500).
+--   3. Backfill historical card-* rows to day-NNN. Genuinely invalid rows
+--      (non-positive score, unknown alias, over day-cap) are quarantined
+--      first; the trigger is temporarily swapped for a backfill-permissive
+--      version (normalization + caps only -- plausibility rules are new and
+--      history predates them), then the strict validator is restored.
 --
 -- Apply via the Supabase SQL editor. Idempotent: re-running normalizes zero
 -- additional rows.
@@ -222,8 +223,134 @@ grant execute on function public.submit_score(
 ) to authenticated;
 
 
--- ── 4. Trigger: normalize NEW.song_id so direct/service_role writes ────
---    with aliases are validated against the canonical cap, not rejected.
+-- ── 4. Backfill-permissive trigger ────────────────────────────────────
+-- Temporarily replaces the strict validator during the backfill below.
+-- Historical rows predate the medal/accuracy-plausibility rules (phase 2),
+-- so the backfill must not be judged by them; normalization, positive
+-- scores, known songs, and per-song caps still hold. The strict validator
+-- is restored in step 6.
+create or replace function public.validate_gameplay_score()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $function$
+declare
+  v_cap integer;
+begin
+  NEW.song_id := public.normalize_song_id(NEW.song_id);
+
+  if NEW.score is null or NEW.score <= 0 then
+    raise exception 'gameplay_records: score must be positive (got %)', NEW.score;
+  end if;
+
+  select max_score into v_cap
+    from public.song_max_scores
+    where song_id = NEW.song_id;
+  if v_cap is null then
+    raise exception 'gameplay_records: unknown song_id %', NEW.song_id;
+  end if;
+  if NEW.score > v_cap then
+    raise exception 'gameplay_records: score % exceeds cap % for song %',
+      NEW.score, v_cap, NEW.song_id;
+  end if;
+
+  return NEW;
+end
+$function$;
+-- (Trigger bindings are unchanged: BEFORE INSERT OR UPDATE on gameplay_records.)
+
+
+-- ── 5. Backfill: rewrite historical card-* rows to day-NNN ─────────────
+-- Ensure the quarantine table exists even if 20260924133500 hasn't been
+-- applied yet.
+create table if not exists public.gameplay_records_quarantine (
+  like public.gameplay_records including all
+);
+alter table public.gameplay_records_quarantine
+  add column if not exists quarantined_at timestamptz not null default now();
+alter table public.gameplay_records_quarantine enable row level security;
+
+-- Quarantine rows must survive user deletion: drop the FK constraints that
+-- LIKE ... INCLUDING ALL copied over (audit trail must not cascade).
+do $$
+declare
+  r record;
+begin
+  for r in
+    select conname from pg_constraint
+    where conrelid = 'public.gameplay_records_quarantine'::regclass
+      and contype = 'f'
+  loop
+    execute format(
+      'alter table public.gameplay_records_quarantine drop constraint %I',
+      r.conname
+    );
+  end loop;
+end
+$$;
+
+-- 5a. Pre-quarantine card-alias rows that are invalid even under the
+-- permissive trigger: non-positive scores (abandoned runs), aliases with no
+-- known day-cap, and scores over their day-cap. Genuinely bad data, not
+-- history. (Medal/accuracy-plausibility violations are NOT quarantined: those
+-- rules are new, and history predates them.)
+create temp table bad_alias_rows as
+select gr.id
+from public.gameplay_records gr
+left join public.song_max_scores sm
+  on sm.song_id = public.normalize_song_id(gr.song_id)
+where public.normalize_song_id(gr.song_id) != gr.song_id
+  and (
+    gr.score is null or gr.score <= 0
+    or sm.song_id is null
+    or gr.score > sm.max_score
+  );
+
+insert into public.gameplay_records_quarantine
+select gr.*, now()
+from public.gameplay_records gr
+join bad_alias_rows b on b.id = gr.id
+where not exists (
+  select 1 from public.gameplay_records_quarantine q where q.id = gr.id
+);
+
+delete from public.gameplay_records gr
+using bad_alias_rows b
+where gr.id = b.id;
+
+drop table bad_alias_rows;
+
+-- 5b. Rewrite the remaining aliases. The permissive trigger (step 4)
+-- normalizes and enforces caps; every remaining row passes it.
+with moved as (
+  update public.gameplay_records
+  set song_id = public.normalize_song_id(song_id)
+  where public.normalize_song_id(song_id) != song_id
+  returning id
+)
+select count(*) as normalized_rows from moved;
+
+-- Quarantine anything over-cap after normalization (same policy as the
+-- fabricated-submission quarantine: preserved, out of live leaderboards).
+insert into public.gameplay_records_quarantine
+select gr.*, now()
+from public.gameplay_records gr
+join public.song_max_scores sm on sm.song_id = gr.song_id
+where gr.score > sm.max_score
+  and not exists (
+    select 1 from public.gameplay_records_quarantine q where q.id = gr.id
+  );
+
+delete from public.gameplay_records gr
+using public.song_max_scores sm
+where sm.song_id = gr.song_id
+  and gr.score > sm.max_score;
+
+
+-- ── 6. Restore the strict trigger ───────────────────────────────────
+-- Backfill done: reinstall the full validator (identical body to step 4
+-- of 20260924121500_endgame_phase2, plus alias normalization).
 create or replace function public.validate_gameplay_score()
 returns trigger
 language plpgsql
@@ -311,98 +438,7 @@ end
 $function$;
 -- (Trigger bindings are unchanged: BEFORE INSERT OR UPDATE on gameplay_records.)
 
-
--- ── 5. Backfill: rewrite historical card-* rows to day-NNN ─────────────
--- Ensure the quarantine table exists even if 20260924133500 hasn't been
--- applied yet.
-create table if not exists public.gameplay_records_quarantine (
-  like public.gameplay_records including all
-);
-alter table public.gameplay_records_quarantine
-  add column if not exists quarantined_at timestamptz not null default now();
-alter table public.gameplay_records_quarantine enable row level security;
-
--- Quarantine rows must survive user deletion: drop the FK constraints that
--- LIKE ... INCLUDING ALL copied over (audit trail must not cascade).
-do $$
-declare
-  r record;
-begin
-  for r in
-    select conname from pg_constraint
-    where conrelid = 'public.gameplay_records_quarantine'::regclass
-      and contype = 'f'
-  loop
-    execute format(
-      'alter table public.gameplay_records_quarantine drop constraint %I',
-      r.conname
-    );
-  end loop;
-end
-$$;
-
--- Disable only USER triggers during the rewrite (DISABLE TRIGGER ALL also
--- targets Postgres's internal RI_ConstraintTriggers, which need superuser).
--- A row that lands over its day-cap must not abort the backfill; it is
--- quarantined right after.
-do $$
-declare
-  r record;
-begin
-  for r in
-    select tgname from pg_trigger
-    where tgrelid = 'public.gameplay_records'::regclass
-      and not tgisinternal
-  loop
-    execute format(
-      'alter table public.gameplay_records disable trigger %I', r.tgname
-    );
-  end loop;
-end
-$$;
-
-with moved as (
-  update public.gameplay_records
-  set song_id = public.normalize_song_id(song_id)
-  where public.normalize_song_id(song_id) != song_id
-  returning id
-)
-select count(*) as normalized_rows from moved;
-
-do $$
-declare
-  r record;
-begin
-  for r in
-    select tgname from pg_trigger
-    where tgrelid = 'public.gameplay_records'::regclass
-      and not tgisinternal
-  loop
-    execute format(
-      'alter table public.gameplay_records enable trigger %I', r.tgname
-    );
-  end loop;
-end
-$$;
-
--- Quarantine anything over-cap after normalization (same policy as the
--- fabricated-submission quarantine: preserved, out of live leaderboards).
-insert into public.gameplay_records_quarantine
-select gr.*, now()
-from public.gameplay_records gr
-join public.song_max_scores sm on sm.song_id = gr.song_id
-where gr.score > sm.max_score
-  and not exists (
-    select 1 from public.gameplay_records_quarantine q where q.id = gr.id
-  );
-
-delete from public.gameplay_records gr
-using public.song_max_scores sm
-where sm.song_id = gr.song_id
-  and gr.score > sm.max_score;
-
-
--- ── 6. Final report ───────────────────────────────────────────────────
+-- ── 7. Final report ───────────────────────────────────────────────────
 select
   (select count(*) from public.gameplay_records
      where public.normalize_song_id(song_id) != song_id) as remaining_alias_rows,
