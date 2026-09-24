@@ -1333,22 +1333,23 @@ export async function submitGameplayRecord(payload: {
   telemetry?: any;
 }): Promise<{ success: boolean; record?: any; error?: string }> {
   try {
-    const { data: result, error } = await supabase.functions.invoke('vault-engine', {
-      body: { action: 'submitGameplayScore', payload },
+    // Server-authoritative path: the submit_score RPC binds the row to
+    // auth.uid(), enforces per-song score caps, medal/accuracy plausibility,
+    // and reward-tier normalization. Direct writes to gameplay_records are
+    // revoked, so this RPC is the only way a score reaches the leaderboard.
+    const { data: result, error } = await supabase.rpc('submit_score', {
+      p_song_id: payload.songId,
+      p_score: Math.round(payload.score),
+      p_accuracy: payload.accuracy,
+      p_max_combo: payload.maxCombo,
+      p_medal: payload.medal,
+      p_pack_rewarded: payload.packRewarded ?? false,
+      p_reward_tier: payload.rewardTier ?? 'none',
+      p_telemetry: payload.telemetry ?? null,
     });
 
     if (error || !result?.success) {
-      let detailedError = error?.message;
-      if (error && typeof error === 'object' && 'context' in error) {
-        try {
-          const res = (error as any).context as Response;
-          if (res && res.json) {
-            const body = await res.json();
-            if (body && body.error) detailedError = body.error;
-          }
-        } catch {}
-      }
-      return { success: false, error: detailedError || result?.error || 'Failed to submit score' };
+      return { success: false, error: error?.message || (result as any)?.error || 'Failed to submit score' };
     }
 
     return { success: true, record: result.record };

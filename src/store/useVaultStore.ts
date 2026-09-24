@@ -817,28 +817,16 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         const key = localStorage.key(i);
         if (!key) continue;
 
-        const sanitizeMedal = (m: string) => {
-          const up = (m || '').toUpperCase().trim();
-          return ['BRONZE', 'SILVER', 'GOLD', 'PLATINUM'].includes(up) ? up : 'NONE';
-        };
-
         if (key.startsWith('hs_')) {
           const songId = key.substring(3);
           const localScore = parseInt(localStorage.getItem(key) || '0', 10);
           const dbScore = dbHighScores[songId] || 0;
           if (localScore > dbScore) {
+            // Display-only: local high scores are never auto-submitted to the
+            // leaderboard. A score only reaches the DB through a real gameplay
+            // session calling submitGameplayRecord (the server-authoritative
+            // submit_score RPC). This closes the localStorage forgery path.
             finalHighScores[songId] = localScore;
-            submitGameplayRecord({
-              songId,
-              score: localScore,
-              accuracy: 0,
-              maxCombo: 0,
-              medal: sanitizeMedal(finalMedals[songId] || 'NONE'),
-              packRewarded: false,
-              rewardTier: 'none'
-            }).then(({ error }) => {
-              if (error) console.warn(`[Migrate] Failed to sync score for ${songId}:`, error);
-            });
           }
         } else if (key.startsWith('medal_')) {
           const songId = key.substring(6);
@@ -1093,7 +1081,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
           telemetry: telemetry || null
         });
         if (submitErr) {
-          console.warn('Failed to sync high score via vault-engine:', submitErr);
+          console.warn('Failed to sync high score via submit_score RPC:', submitErr);
         }
       } catch (err) {
         console.warn('Failed to sync high score to database:', err);
