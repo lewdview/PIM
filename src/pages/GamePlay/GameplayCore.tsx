@@ -16,7 +16,7 @@ import { logAnalyticsEvent } from "../../services/telemetryService";
 import { gameSenseService } from "@/services/gameSenseService";
 import { supabase } from "@/services/supabaseClient";
 import { useAuthStore } from "@/store/useAuthStore";
-import { purchasePack, type OwnedCard } from "@/services/vaultService";
+import { purchasePack, requestRunToken, type OwnedCard } from "@/services/vaultService";
 import { TransmissionIcon } from "../../components/icons/CustomVectorIcons";
 import VideoExportModal from "@/components/ui/VideoExportModal";
 import { getRelativeDay } from "../../utils/dayCalc";
@@ -9493,6 +9493,20 @@ export default function Game() {
       phaseRef.current = "countdown";
       setPhase("countdown");
       rafRef.current = requestAnimationFrame(() => drawRef.current?.());
+
+      // Mint a time-bound run token for this run. The score submission
+      // must present it, which defeats blind replay of captured submits.
+      // Fire-and-forget: a missing token just means the submit step may
+      // mint a fresh one as fallback (see GameResults).
+      requestRunToken(songId)
+        .then(({ token }) => {
+          if (token) {
+            try {
+              sessionStorage.setItem(`run_token_${songId}`, token);
+            } catch { /* storage unavailable */ }
+          }
+        })
+        .catch(() => { /* guests/offline: no token, no submit */ });
 
       // Initial Enter Game Sound FX
       audioManager.playSfx('select_start_song', 0.85);

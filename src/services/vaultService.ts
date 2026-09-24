@@ -1322,6 +1322,24 @@ export async function getPackRipCount(category: string): Promise<number> {
   return 0;
 }
 
+export async function requestRunToken(
+  songId: string
+): Promise<{ token?: string; error?: string }> {
+  // Mints a time-bound run token proving this client started a run for
+  // this song. submit_score requires a valid token, which defeats blind
+  // replay of captured submit requests. Tokens expire after 30 minutes.
+  try {
+    const { data, error } = await supabase.rpc('request_run_token', {
+      p_song_id: songId,
+    });
+    if (error) return { error: error.message };
+    if (!data) return { error: 'No token issued' };
+    return { token: data as string };
+  } catch (err: any) {
+    return { error: err?.message || 'Network error' };
+  }
+}
+
 export async function submitGameplayRecord(payload: {
   songId: string;
   score: number;
@@ -1331,12 +1349,15 @@ export async function submitGameplayRecord(payload: {
   packRewarded?: boolean;
   rewardTier?: string;
   telemetry?: any;
+  runToken?: string;
 }): Promise<{ success: boolean; record?: any; error?: string }> {
   try {
     // Server-authoritative path: the submit_score RPC binds the row to
-    // auth.uid(), enforces per-song score caps, medal/accuracy plausibility,
-    // and reward-tier normalization. Direct writes to gameplay_records are
-    // revoked, so this RPC is the only way a score reaches the leaderboard.
+    // auth.uid(), requires a valid run token (anti-replay), rejects
+    // unknown songs, enforces per-song score caps, medal/accuracy
+    // plausibility, and reward-tier normalization. Direct writes to
+    // gameplay_records are revoked, so this RPC is the only way a score
+    // reaches the leaderboard.
     const { data: result, error } = await supabase.rpc('submit_score', {
       p_song_id: payload.songId,
       p_score: Math.round(payload.score),
@@ -1346,6 +1367,7 @@ export async function submitGameplayRecord(payload: {
       p_pack_rewarded: payload.packRewarded ?? false,
       p_reward_tier: payload.rewardTier ?? 'none',
       p_telemetry: payload.telemetry ?? null,
+      p_run_token: payload.runToken ?? null,
     });
 
     if (error || !result?.success) {

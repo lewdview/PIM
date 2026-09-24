@@ -8,7 +8,7 @@ import { audioManager } from "@/game/audio";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useVaultStore } from "@/store/useVaultStore";
 import { supabase } from "@/services/supabaseClient";
-import { purchasePack, submitGameplayRecord, type OwnedCard } from "@/services/vaultService";
+import { purchasePack, requestRunToken, submitGameplayRecord, type OwnedCard } from "@/services/vaultService";
 import { PACK_CONFIGS } from "@/utils/rarity";
 import { logAnalyticsEvent } from "@/services/telemetryService";
 import OnboardingFlowModal from "@/components/OnboardingFlowModal";
@@ -316,6 +316,10 @@ export default function Results() {
   const [lastTierHit, setLastTierHit] = useState('');
   const [flashColor, setFlashColor] = useState<string | null>(null);
   const medalChimed = useRef(false);
+  // Run token minted when the run started (GameplayCore). Presented to
+  // submit_score as anti-replay proof. May be null for guests (no submit)
+  // or if minting failed (GameResults mints a fallback before submit).
+  const runTokenRef = useRef<string | null>(null);
 
   // Staggered animation states
   const [circleLoaded, setCircleLoaded] = useState(false);
@@ -346,6 +350,7 @@ export default function Results() {
     if (data.perfectPlus === undefined) data.perfectPlus = 0;
     setResult(data);
     setGameOrigin(sessionStorage.getItem(`game_origin_${songId}`) ?? '');
+    runTokenRef.current = sessionStorage.getItem(`run_token_${songId}`);
     const prev = getHighScore(songId);
     if (data.score >= prev) setIsNew(true);
 
@@ -485,15 +490,35 @@ export default function Results() {
   }, [user, loadVaultData]);
 
   // Sync high score to leaderboard when user is authenticated with a picked username
+  // Ensures a run token exists first (mints a fallback if the countdown-time
+  // mint failed); submit_score requires one as anti-replay proof.
+  const ensureRunToken = async (): Promise<string | null> => {
+    if (runTokenRef.current) return runTokenRef.current;
+    if (!songId) return null;
+    try {
+      const { token } = await requestRunToken(songId);
+      if (token) {
+        runTokenRef.current = token;
+        try { sessionStorage.setItem(`run_token_${songId}`, token); } catch { /* ignore */ }
+      }
+    } catch { /* guests/offline: no token, no submit */ }
+    return runTokenRef.current;
+  };
+
   useEffect(() => {
     if (result && songId && user && !user.is_anonymous && username) {
-      syncHighScore(
-        songId,
-        result.score,
-        parseFloat(accuracy.toFixed(2)),
-        result.maxCombo,
-        result.medal
-      );
+      (async () => {
+        const runToken = await ensureRunToken();
+        syncHighScore(
+          songId,
+          result.score,
+          parseFloat(accuracy.toFixed(2)),
+          result.maxCombo,
+          result.medal,
+          undefined,
+          runToken ?? undefined
+        );
+      })().catch(err => console.warn('Failed to sync high score:', err));
     }
   }, [user, username, result, songId, accuracy, syncHighScore]);
 
@@ -635,10 +660,11 @@ export default function Results() {
           medal: result.medal,
           packRewarded: true,
           rewardTier: mappedTier,
+          runToken: (await ensureRunToken()) ?? undefined,
         });
         
         if (dbErr) {
-          console.warn('Failed to submit gameplay_records via vault-engine:', dbErr);
+          console.warn('Failed to submit gameplay_records via submit_score RPC:', dbErr);
         }
  
         // Add to collection in store

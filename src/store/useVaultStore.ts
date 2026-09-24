@@ -171,7 +171,7 @@ interface VaultState {
   updateProfile: (displayName: string, avatarUrl?: string | null, username?: string | null) => Promise<void>;
 
   // Database Sync Actions
-  syncHighScore: (songId: string, score: number, accuracy: number, maxCombo: number, medal: string, telemetry?: any) => Promise<void>;
+  syncHighScore: (songId: string, score: number, accuracy: number, maxCombo: number, medal: string, telemetry?: any, runToken?: string) => Promise<void>;
   syncMedal: (songId: string, medal: string) => Promise<void>;
   syncFragments: (songId: string, count: number) => Promise<void>;
   syncMilestoneClaim: (monthNum: number, milestoneNum: number) => Promise<void>;
@@ -1053,7 +1053,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     }
   },
 
-  syncHighScore: async (songId, score, accuracy, maxCombo, medal, telemetry) => {
+  syncHighScore: async (songId, score, accuracy, maxCombo, medal, telemetry, runToken) => {
     set((state) => {
       const current = state.highScores[songId] || 0;
       if (score > current) {
@@ -1078,7 +1078,8 @@ export const useVaultStore = create<VaultState>((set, get) => ({
           medal,
           packRewarded: false,
           rewardTier: 'none',
-          telemetry: telemetry || null
+          telemetry: telemetry || null,
+          runToken: runToken ?? undefined
         });
         if (submitErr) {
           console.warn('Failed to sync high score via submit_score RPC:', submitErr);
