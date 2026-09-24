@@ -301,7 +301,7 @@ export default function CyberPackBag({
           <div 
             className="absolute inset-0 pointer-events-none"
             style={{
-              background: 'radial-gradient(ellipse at 50% 35%, rgba(255, 20, 147, 0.48) 0%, rgba(255, 0, 100, 0.24) 45%, transparent 75%)',
+              background: 'radial-gradient(circle at 50% 44%, rgba(255, 20, 147, 0.65) 0%, rgba(255, 0, 128, 0.35) 45%, rgba(255, 20, 147, 0.1) 60%, transparent 75%)',
               mixBlendMode: 'screen',
               zIndex: 1,
             }}
