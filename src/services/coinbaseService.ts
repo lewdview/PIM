@@ -76,7 +76,20 @@ export async function payWithCrypto(amountUsd: number): Promise<string> {
     throw new Error('No compatible Web3 wallet found. Please connect your wallet.');
   }
 
-  // 3. Ensure wallet is on Base Mainnet (Chain ID 8453 / 0x2105)
+  // 3. Request accounts FIRST — before any chain checks.
+  // Providers like the Coinbase Smart Wallet SDK require the eth_requestAccounts
+  // handshake before every other RPC (eth_chainId, wallet_switchEthereumChain, ...).
+  // Chain checks before the handshake throw opaque provider-internal errors.
+  let accounts: string[];
+  try {
+    accounts = (await prov.request({ method: 'eth_requestAccounts' })) as string[];
+  } catch (err: any) {
+    throw new Error(err?.code === 4001 ? 'Wallet connection rejected.' : 'Failed to connect wallet. Please try again.');
+  }
+  const from = accounts?.[0];
+  if (!from) throw new Error('No account found in connected wallet.');
+
+  // 4. Ensure wallet is on Base Mainnet (Chain ID 8453 / 0x2105)
   try {
     const currentChain = await prov.request({ method: 'eth_chainId' });
     if (!isBaseNetwork(currentChain)) {
@@ -126,11 +139,6 @@ export async function payWithCrypto(amountUsd: number): Promise<string> {
     }
     console.warn('[payWithCrypto] Farcaster chain check bypassed:', chainErr);
   }
-
-  // 4. Ensure we have the account
-  const accounts = (await prov.request({ method: 'eth_requestAccounts' })) as string[];
-  const from = accounts?.[0];
-  if (!from) throw new Error('No account found in connected wallet.');
 
   // 5. Formulate Base USDC (6 decimals) transfer function data
   const recipient = VAULT_COLLECTOR_ADDRESS;
