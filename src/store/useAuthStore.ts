@@ -16,6 +16,21 @@ const BASE_CHAIN_CONFIG = {
   blockExplorerUrls: ['https://base.blockscout.com'],
 } as const;
 
+/**
+ * Normalize errors thrown by wallet providers into actionable messages.
+ * Some providers throw malformed internal TypeErrors (e.g. "undefined is not
+ * an object (evaluating 'n.error')") that are not actionable — surface a
+ * useful message instead of the raw provider internals.
+ */
+const describeWalletError = (err: any): string => {
+  if (err?.code === 4001) return 'Request rejected in your wallet.';
+  const raw = typeof err?.message === 'string' ? err.message.trim() : '';
+  if (!raw || /undefined is not an object|evaluating '[^']*'\s*\)?$/.test(raw)) {
+    return 'The wallet returned an unexpected error. Reconnect your wallet and try again.';
+  }
+  return raw;
+};
+
 type WalletRequest = {
   request: (args: { method: string; params?: unknown }) => Promise<unknown>;
 };
@@ -233,7 +248,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     console.log('[Auth] Wallet provider detected:', typeof wallet);
 
-    // Ensure Base chain 
+    // Request accounts FIRST — before any chain checks.
+    // Providers like the Coinbase Smart Wallet SDK require the eth_requestAccounts
+    // handshake before every other RPC (eth_chainId, wallet_switchEthereumChain, ...).
+    // Running chain checks first makes such providers throw opaque internal errors
+    // (e.g. "undefined is not an object (evaluating 'n.error')") instead of
+    // prompting the user to connect.
+    let address: string;
+    try {
+      console.log('[Auth] Requesting wallet accounts...');
+      const accounts = (await wallet.request({ method: 'eth_requestAccounts' })) as string[];
+      address = accounts?.[0];
+      if (!address) throw new Error('No account returned from wallet.');
+    } catch (err: any) {
+      const msg = describeWalletError(err);
+      console.error('[Auth] eth_requestAccounts failed:', err);
+      set({ error: msg });
+      return { error: msg };
+    }
+
+    // Ensure Base chain (safe now that the provider handshake has completed)
     try {
       const chainId = await wallet.request({ method: 'eth_chainId' });
       console.log('[Auth] Current chain:', chainId);
@@ -276,19 +310,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         console.warn('[Auth] Farcaster chain verification bypassed for auth:', chainErr);
       } else {
         console.error('[Auth] Chain switch failed:', chainErr);
-        const msg = chainErr?.message || String(chainErr);
-        set({ error: `Network switch failed: ${msg}` });
+        const msg = `Network switch failed: ${describeWalletError(chainErr)}`;
+        set({ error: msg });
         return { error: msg };
       }
     }
 
     try {
       console.log('[Auth] Using Universal Smart Wallet EIP-1271 Auth Flow...');
-      
-      // 1. Get Address
-      const accounts = (await wallet.request({ method: 'eth_requestAccounts' })) as string[];
-      const address = accounts[0];
-      if (!address) throw new Error('No account found');
+
+      // 1. Address (obtained above via eth_requestAccounts)
 
       // 2. Request server-generated nonce for replay protection (C2 audit fix)
       const { data: nonce, error: nonceErr } = await supabase.rpc('generate_auth_nonce', {
