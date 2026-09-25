@@ -12,3 +12,7 @@
 **Vulnerability:** A hardcoded plaintext admin passphrase (`th3scr1b3`) was being passed in the payload of a `supabase.functions.invoke` call in `src/utils/adminConfig.ts`.
 **Learning:** Hardcoded credentials should not be present in background sync functions or client bundles.
 **Prevention:** Always pull credentials dynamically from `sessionStorage` where the authenticated session stores it or handle authorization securely without exposing raw secrets in code.
+## 2025-02-27 - Remove Hardcoded Supabase Credentials
+**Vulnerability:** Hardcoded API keys and endpoints in Supabase client initialization (e.g., `toemkhrfsbkfkutwcjkd.supabase.co` and JWT tokens) were used as fallbacks if environment variables were missing.
+**Learning:** Hardcoded default/dummy API keys in environment variable fallbacks prevent fail-fast assertions during local development when actual keys are missing, and they can trigger automated secret scanners creating unnecessary alert noise. If they happen to be valid keys, this is a critical data leak.
+**Prevention:** Always replace dummy or default API credentials in environment variable fallbacks with empty strings (`""`). This prevents false-positive secret scanning alerts and enforces fail-fast behavior when required environment variables are absent.
