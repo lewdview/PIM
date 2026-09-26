@@ -1045,6 +1045,7 @@ export async function redeemInviteCode(code: string): Promise<boolean> {
 
 /** Redeem a bonus/promo code */
 export async function redeemBonusCode(code: string): Promise<{ success: boolean; rewardType?: string; rewardValue?: string; result?: any; error?: string }> {
+  const cleanCode = code.trim().toLowerCase();
   if (cleanCode === 'povredeem') {
     localStorage.setItem('opt_unlocked_pov', 'true');
     try {
