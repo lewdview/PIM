@@ -1,5 +1,6 @@
 import { CoinbaseWalletSDK } from '@coinbase/wallet-sdk';
 import { farcasterService } from './farcasterService';
+import { BUILDER_DATA_SUFFIX } from '../utils/builderCode';
 
 let coinbaseProvider: any = null;
 
@@ -159,7 +160,8 @@ export async function payWithCrypto(amountUsd: number): Promise<string> {
         from,
         to: BASE_USDC_CONTRACT,
         value: '0x0',
-        data: txData,
+        // ERC-8021 attribution: append builder-code suffix; token contract ignores trailing calldata.
+        data: txData + BUILDER_DATA_SUFFIX.replace(/^0x/, ''),
         chainId: '0x2105',
       },
     ],
