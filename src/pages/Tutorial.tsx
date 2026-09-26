@@ -411,6 +411,31 @@ export default function Tutorial() {
     setLocation(destination);
   };
 
+  // Escape hatch: let anyone bail out of the tutorial at any phase — e.g. a
+  // signed-in user on a new device whose local completion flag didn't carry
+  // over. Marks the tutorial complete so the app gate doesn't bounce them
+  // straight back into the tutorial loop.
+  const handleSkipTutorial = useCallback(() => {
+    audioManager.playSfx("tap_nav", 0.15);
+    try {
+      localStorage.setItem("pim_tutorial_completed", "true");
+    } catch {
+      /* storage unavailable */
+    }
+    try {
+      const p = useVaultStore.getState().updateProgression({ tutorialCompleted: true });
+      if (p && typeof p.catch === "function") p.catch(() => {});
+    } catch {
+      /* store unavailable */
+    }
+    const postTutorialDest = typeof window !== 'undefined' ? sessionStorage.getItem('post_tutorial_redirect') : null;
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('post_tutorial_redirect');
+    }
+    const destination = postTutorialDest && postTutorialDest !== '/tutorial' ? postTutorialDest : '/arcade';
+    setLocation(destination);
+  }, [setLocation]);
+
   // Complete Identity & Finalize Onboarding
   const handleSaveIdentityAndFinish = async () => {
     if (isSavingIdentity) return;
@@ -696,6 +721,17 @@ export default function Tutorial() {
         <div className="absolute top-12 left-1/2 -translate-x-1/2 bg-amber-500/20 border-2 border-black text-amber-300 font-mono text-[9px] font-black px-4 py-1.5 tracking-widest uppercase rounded-sm z-20 flex items-center gap-1.5 shadow-[4px_4px_0px_#000]">
           <Lock size={10} /> REPLAY MODE — TRAINING PRACTICE
         </div>
+      )}
+
+      {/* Always-visible escape hatch: skip the tutorial from any phase */}
+      {tutPhase !== "complete" && (
+        <button
+          type="button"
+          onClick={handleSkipTutorial}
+          className="absolute top-12 right-4 z-30 px-4 py-2 bg-black/60 hover:bg-black/80 border border-white/20 hover:border-white/40 text-white/60 hover:text-white font-mono text-[10px] font-black tracking-[0.2em] uppercase rounded transition-all cursor-pointer"
+        >
+          Skip Tutorial →
+        </button>
       )}
 
       <AnimatePresence mode="wait">
