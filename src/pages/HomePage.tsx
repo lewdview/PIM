@@ -104,10 +104,19 @@ function StatSticker({ icon: Icon, label, value, color, rot }: {
 export default function HomePage() {
   const [, setLocation] = useLocation();
   const [showSolitaire, setShowSolitaire] = useState(false);
-  const {
-    dailyCard, hasClaimed, tokenBalance, loadVaultData, setDailyCard, setHasClaimed,
-    setCollection, startReveal, addToCollection, removeFromCollection, echoPrestigeScore, collection, setOptionsModalOpen
-  } = useVaultStore();
+  const dailyCard = useVaultStore(s => s.dailyCard);
+  const hasClaimed = useVaultStore(s => s.hasClaimed);
+  const tokenBalance = useVaultStore(s => s.tokenBalance);
+  const loadVaultData = useVaultStore(s => s.loadVaultData);
+  const setDailyCard = useVaultStore(s => s.setDailyCard);
+  const setHasClaimed = useVaultStore(s => s.setHasClaimed);
+  const setCollection = useVaultStore(s => s.setCollection);
+  const startReveal = useVaultStore(s => s.startReveal);
+  const addToCollection = useVaultStore(s => s.addToCollection);
+  const removeFromCollection = useVaultStore(s => s.removeFromCollection);
+  const echoPrestigeScore = useVaultStore(s => s.echoPrestigeScore);
+  const collection = useVaultStore(s => s.collection);
+  const setOptionsModalOpen = useVaultStore(s => s.setOptionsModalOpen);
   const user = useAuthStore(s => s.user);
   const [selectedCardForAction, setSelectedCardForAction] = useState<OwnedCard | null>(null);
 
