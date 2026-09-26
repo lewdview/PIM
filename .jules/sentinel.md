@@ -12,3 +12,8 @@
 **Vulnerability:** A hardcoded plaintext admin passphrase (`th3scr1b3`) was being passed in the payload of a `supabase.functions.invoke` call in `src/utils/adminConfig.ts`.
 **Learning:** Hardcoded credentials should not be present in background sync functions or client bundles.
 **Prevention:** Always pull credentials dynamically from `sessionStorage` where the authenticated session stores it or handle authorization securely without exposing raw secrets in code.
+
+## 2025-05-27 - Hardcoded Production Database Credentials
+**Vulnerability:** Hardcoded production database URLs (`toemkhrfsbkfkutwcjkd.supabase.co`) and Anon Keys were being used as fallbacks when environment variables were missing in `src/services/supabaseClient.ts` and API routes under `artifacts/user.th3scr1b3.art`.
+**Learning:** Hardcoding active Supabase endpoints and Anon Keys in client-side bundles and Next.js backend API routes exposes these keys in source control, presenting a critical data exposure risk. Furthermore, utilizing functional endpoints as environment variable fallbacks prevents the application from failing fast when deployment configurations (e.g., Vercel `.env`) are incorrect.
+**Prevention:** Always use empty strings (`""`) as fallbacks for required credentials. This strictly enforces the "fail-fast" principle, immediately halting execution or throwing errors (e.g., in `supabaseClient.ts`) when environment variables are unconfigured, thereby preventing accidental staging/production deployment misconfigurations and completely removing secrets from the source codebase.
