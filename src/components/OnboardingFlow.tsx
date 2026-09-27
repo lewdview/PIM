@@ -17,6 +17,8 @@ import type { RevealPackMeta } from '../store/useVaultStore';
 import type { OwnedCard, VaultCard } from '../services/vaultService';
 import { purchasePack, redeemInviteCode, fetchAllCards, findCardWithFallback } from '../services/vaultService';
 import { useVaultStore } from '../store/useVaultStore';
+import { useLocation } from 'wouter';
+import { useAuthStore } from '../store/useAuthStore';
 import { RARITY_CONFIG } from '../utils/rarity';
 import { getAdminConfig } from '../utils/adminConfig';
 import { logAnalyticsEvent } from '../services/telemetryService';
@@ -40,6 +42,7 @@ interface Props {
 }
 
 export default function OnboardingFlow({ onComplete }: Props) {
+  const [, setLocation] = useLocation();
   const [phase, setPhase] = useState<Phase>('welcome');
   const [cards, setCards] = useState<OwnedCard[]>([]);
   const [loadError, setLoadError] = useState(false);
@@ -267,19 +270,43 @@ export default function OnboardingFlow({ onComplete }: Props) {
             PREPARING YOUR FIRST PACK...
           </motion.p>
 
-          {/* Interactive Skip Option */}
-          <motion.button
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 2.2 }}
-            onClick={() => {
-              logAnalyticsEvent('onboarding_skip');
-              onComplete();
-            }}
-            className="mt-6 px-4 py-1.5 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 active:scale-95 text-white/50 hover:text-white font-mono text-[9px] tracking-widest uppercase transition-all cursor-pointer"
-          >
-            SKIP TO VAULT →
-          </motion.button>
+          {/* Onboarding Choices */}
+          <div className="flex flex-wrap items-center justify-center gap-2.5 mt-6">
+            <motion.button
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 2.0 }}
+              onClick={() => {
+                setLocation('/tutorial');
+              }}
+              className="px-4 py-1.5 rounded-full border border-[#00E5FF]/40 bg-[#00E5FF]/10 hover:bg-[#00E5FF]/20 active:scale-95 text-[#00E5FF] hover:text-white font-mono text-[9px] font-bold tracking-widest uppercase transition-all cursor-pointer"
+            >
+              🎓 FLIGHT ACADEMY →
+            </motion.button>
+            <motion.button
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 2.1 }}
+              onClick={() => {
+                useAuthStore.getState().setShowAuthModal(true);
+              }}
+              className="px-4 py-1.5 rounded-full border border-[#FF1493]/40 bg-[#FF1493]/10 hover:bg-[#FF1493]/20 active:scale-95 text-[#FF1493] hover:text-white font-mono text-[9px] font-bold tracking-widest uppercase transition-all cursor-pointer"
+            >
+              ⚡ SIGN IN →
+            </motion.button>
+            <motion.button
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 2.2 }}
+              onClick={() => {
+                logAnalyticsEvent('onboarding_skip');
+                onComplete();
+              }}
+              className="px-4 py-1.5 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 active:scale-95 text-white/50 hover:text-white font-mono text-[9px] tracking-widest uppercase transition-all cursor-pointer"
+            >
+              SKIP TO VAULT →
+            </motion.button>
+          </div>
         </motion.div>
 
         {/* Film grain */}

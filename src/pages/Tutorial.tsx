@@ -35,6 +35,7 @@ import {
   ExternalLink,
   ShieldCheck,
   CheckCircle,
+  GraduationCap,
 } from "lucide-react";
 import { supabase } from "../services/supabaseClient";
 import { useVaultStore } from "../store/useVaultStore";
@@ -59,6 +60,8 @@ export default function Tutorial() {
   // Signed-in users replaying the tutorial skip first-run onboarding side effects:
   // no duplicate welcome pack, no username re-pick, no profile re-save.
   const authUser = useAuthStore((s) => s.user);
+  const setShowAuthModal = useAuthStore((s) => s.setShowAuthModal);
+  const isSignedIn = !!authUser && !authUser.is_anonymous;
   const skipFirstRunSteps = isReplay && !!authUser;
 
   // 2-Card Welcome Pack State
@@ -751,12 +754,16 @@ export default function Tutorial() {
               <div className="absolute -bottom-3.5 -left-3.5 w-6 h-6 bg-[#39FF14] border-4 border-black" />
               <div className="absolute -bottom-3.5 -right-3.5 w-6 h-6 bg-yellow-400 border-4 border-black" />
 
-              <div className="font-mono text-[9px] text-zinc-400 tracking-[0.4em] mb-2 uppercase font-black">
-                // FLIGHT ACADEMY PROTOCOL //
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#39FF14] animate-pulse" />
+                <span className="font-mono text-[9px] text-zinc-400 tracking-[0.35em] uppercase font-black">
+                  ONBOARDING GATEWAY // CADET BRIEFING
+                </span>
               </div>
-              <h1 className="font-mono text-3xl md:text-4xl font-extrabold text-white tracking-tighter mb-4 leading-none uppercase">
-                CALIBRATE <br />
-                <span className="text-[#FF1493]">STAGE 1</span>
+              <h1 className="font-mono text-2xl md:text-3xl font-extrabold text-white tracking-tighter mb-4 leading-none uppercase">
+                FLIGHT ACADEMY <br />
+                <span className="text-[#00E5FF]">OR </span>
+                <span className="text-[#FF1493]">SIGN IN</span>
               </h1>
 
               {/* Song of the Day Spotlight Card */}
@@ -827,35 +834,93 @@ export default function Tutorial() {
                 </div>
               </div>
 
-              {dailySong ? (
-                <>
+              {/* PRIMARY ONBOARDING CHOICES: FLIGHT ACADEMY OR SIGN IN */}
+              <div className="space-y-3 pt-2">
+                {/* CHOICE 1: FLIGHT ACADEMY */}
+                {dailySong ? (
                   <motion.button
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={startGameplay}
-                    className="w-full py-4.5 bg-gradient-to-r from-[#FF1493] to-[#ff3800] text-black font-mono font-black text-xs tracking-[0.25em] uppercase hover:opacity-95 transition-all rounded border-2 border-black shadow-[4px_4px_0px_#000] cursor-pointer"
+                    className="w-full py-4 px-4 bg-gradient-to-r from-[#FF1493] to-[#ff3800] text-black font-mono font-black text-xs tracking-[0.2em] uppercase hover:opacity-95 transition-all rounded border-2 border-black shadow-[4px_4px_0px_#000] cursor-pointer flex items-center justify-between group"
                   >
-                    PROVE COMPATIBILITY [STAGE 1]
+                    <div className="flex items-center gap-3 text-left">
+                      <div className="w-8 h-8 rounded bg-black/20 flex items-center justify-center shrink-0">
+                        <GraduationCap size={18} className="text-black" />
+                      </div>
+                      <div>
+                        <div className="text-[12px] font-black leading-tight">
+                          ENTER FLIGHT ACADEMY
+                        </div>
+                        <div className="text-[9px] font-bold opacity-80 normal-case tracking-normal">
+                          Stage 1 Training · 3-Lane Controls · Claim Welcome Pack
+                        </div>
+                      </div>
+                    </div>
+                    <ChevronRight size={18} className="shrink-0 group-hover:translate-x-1 transition-transform" />
                   </motion.button>
+                ) : (
+                  <div className="font-mono text-[10px] text-zinc-500 animate-pulse py-2">
+                    DECRYPTING DAILY TRACK...
+                  </div>
+                )}
 
-                  {isReplay && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        audioManager.playSfx("tap_nav", 0.15);
-                        setLocation("/arcade");
-                      }}
-                      className="mt-3 w-full py-2.5 bg-white/5 hover:bg-white/10 text-white/50 hover:text-white font-mono text-[9px] tracking-widest uppercase transition-all rounded border border-white/10 cursor-pointer"
-                    >
-                      EXIT TO ARCADE ➔
-                    </button>
-                  )}
-                </>
-              ) : (
-                <div className="font-mono text-[10px] text-zinc-500 animate-pulse py-2">
-                  DECRYPTING DAILY TRACK...
-                </div>
-              )}
+                {/* CHOICE 2: SIGN IN */}
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    audioManager.playSfx("menu_confirm", 0.5);
+                    setShowAuthModal(true);
+                  }}
+                  className="w-full py-3.5 px-4 bg-[#00E5FF]/10 hover:bg-[#00E5FF]/20 text-[#00E5FF] hover:text-white font-mono font-black text-xs tracking-[0.2em] uppercase rounded border-2 border-[#00E5FF]/50 hover:border-[#00E5FF] shadow-[0_0_20px_rgba(0,229,255,0.15)] transition-all cursor-pointer flex items-center justify-between group"
+                >
+                  <div className="flex items-center gap-3 text-left">
+                    <div className="w-8 h-8 rounded bg-[#00E5FF]/20 flex items-center justify-center shrink-0">
+                      <Wallet size={18} className="text-[#00E5FF]" />
+                    </div>
+                    <div>
+                      <div className="text-[12px] font-black leading-tight">
+                        {isSignedIn ? "SOVEREIGN IDENTITY CONNECTED" : "SIGN IN / CONNECT WALLET"}
+                      </div>
+                      <div className="text-[9px] font-bold opacity-80 text-zinc-300 normal-case tracking-normal">
+                        {isSignedIn
+                          ? `Linked as ${fcUser?.username || (authUser?.user_metadata?.wallet_address ? authUser.user_metadata.wallet_address.slice(0, 8) + '...' : authUser?.email) || 'Active Pilot'} · Manage`
+                          : "Base Web3, Coinbase Smart Wallet, Passkey, or Email"}
+                      </div>
+                    </div>
+                  </div>
+                  <Key size={16} className="shrink-0 text-[#00E5FF] group-hover:rotate-12 transition-transform" />
+                </motion.button>
+
+                {/* IF SIGNED IN: PROCEED DIRECTLY TO VAULT */}
+                {isSignedIn && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      audioManager.playSfx("tap_nav", 0.15);
+                      setLocation("/vault");
+                    }}
+                    className="w-full py-2.5 bg-[#39FF14]/10 hover:bg-[#39FF14]/20 border border-[#39FF14]/40 text-[#39FF14] font-mono text-[10px] font-black tracking-widest uppercase transition-all rounded cursor-pointer"
+                  >
+                    PROCEED TO VAULT ➔
+                  </button>
+                )}
+
+                {/* IF REPLAY: EXIT TO ARCADE */}
+                {isReplay && !isSignedIn && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      audioManager.playSfx("tap_nav", 0.15);
+                      setLocation("/arcade");
+                    }}
+                    className="w-full py-2.5 bg-white/5 hover:bg-white/10 text-white/50 hover:text-white font-mono text-[9px] tracking-widest uppercase transition-all rounded border border-white/10 cursor-pointer"
+                  >
+                    EXIT TO ARCADE ➔
+                  </button>
+                )}
+              </div>
             </div>
           </motion.div>
         )}
