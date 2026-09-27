@@ -515,7 +515,7 @@ export default function LandingPage() {
         : await purchasePack(category, size, sessionId);
       useLoadingToast.getState().hide();
       if (cards === 'insufficient') {
-        alert('Insufficient V⚡ tokens for this pack.');
+        alert('Insufficient V⚡ sparks for this pack.');
         await loadVaultData();
         return;
       }
@@ -657,7 +657,7 @@ export default function LandingPage() {
           transition={{ duration: 0.6, delay: 0.2 }}
           className="font-mono text-[11px] sm:text-xs tracking-[0.3em] uppercase max-w-xl text-center text-[#faf0d8] mb-8 leading-relaxed"
         >
-          AN EXPERIMENTAL PLAYABLE MUSIC PLATFORM BY <span className="text-[#ffb800] font-black">TH3SCR1B3</span>. MUSIC UNLOCKS GAMEPLAY · GAMEPLAY UNLOCKS OWNERSHIP · OWNERSHIP UNLOCKS STATUS.
+          AN EXPERIMENTAL PLAYABLE MUSIC PLATFORM BY <span className="text-[#ffb800] font-black">TH3SCR1B3</span>. MUSIC UNLOCKS GAMEPLAY · GAMEPLAY UNLOCKS CARDS · CARDS UNLOCK STATUS.
         </motion.p>
       </section>
 
@@ -845,7 +845,7 @@ export default function LandingPage() {
                 <div className="text-xs font-mono opacity-30 ml-4 font-black">V⚡</div>
               </div>
               <p className="text-[10px] font-mono opacity-40 mt-3 uppercase tracking-wider">
-                Burn duplicates in the Forge → earn V⚡ tokens → unlock rare Vault Packs
+                Burn duplicates in the Forge → earn V⚡ sparks → unlock rare Vault Packs
               </p>
             </div>
 
@@ -1065,7 +1065,7 @@ export default function LandingPage() {
                 The Forge
               </h2>
               <p className="text-[10px] font-mono uppercase tracking-[0.25em] opacity-50 mt-1.5">
-                Burn duplicates · Extract V⚡ tokens · Release echoes · Level up card rarity
+                Burn duplicates · Extract V⚡ sparks · Release echoes · Level up card rarity
               </p>
             </div>
             <div className="flex items-center gap-4">
@@ -1144,7 +1144,7 @@ export default function LandingPage() {
             </h3>
             <p className="text-[10px] font-mono uppercase tracking-[0.25em] opacity-60 leading-relaxed max-w-sm mx-auto">
               First 100 collectors only.<br />
-              <span style={{ color: 'var(--color-neon-gold)', fontWeight: 900 }}>Gen 0 cards are never reminted.</span>
+              <span style={{ color: 'var(--color-neon-gold)', fontWeight: 900 }}>Gen 0 cards are never reissued.</span>
             </p>
           </div>
         </div>
@@ -1417,7 +1417,7 @@ export default function LandingPage() {
             <Shield size={11} /> Cryptographic Sandbox protocol v1.2.9
           </div>
           <p className="text-[9px] font-mono text-white/40 uppercase max-w-lg mx-auto leading-relaxed">
-            th3vault uses cryptographic signatures to anchor ownership coordinates. Under no circumstances should digital audio releases be copied outside authorized node paths.
+            Your vault is yours. Cards you earn stay in your collection.
           </p>
         </div>
       </footer>
