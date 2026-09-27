@@ -162,7 +162,7 @@ export default function IdentityTerminal() {
               </div>
               <div className={styles.statsGrid}>
                 <div className={styles.statItem}>
-                  <span className={styles.statLabel}>V⚡ Token Balance:</span>
+                  <span className={styles.statLabel}>V⚡ Spark Balance:</span>
                   <span className={styles.statValueTeal}>{stats.profile.tokens} V⚡</span>
                 </div>
                 <div className={styles.statItem}>
