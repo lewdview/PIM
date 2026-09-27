@@ -71,6 +71,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   useEffect(() => {
     setLocalError(null);
     setPasskeySuccess(null);
+    // Clear Zustand store error to prevent stale errors bleeding across tabs
+    useAuthStore.setState({ error: null });
     if (user?.email) {
       setPasskeyEmail(user.email);
     }
