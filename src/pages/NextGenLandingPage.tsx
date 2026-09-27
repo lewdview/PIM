@@ -620,7 +620,7 @@ export default function NextGenLandingPage() {
         : await purchasePack(category, size, sessionId);
       useLoadingToast.getState().hide();
       if (cards === 'insufficient') {
-        alert('Insufficient V⚡ tokens for this pack.');
+        alert('Insufficient V⚡ sparks for this pack.');
         await loadVaultData();
         return;
       }
@@ -794,7 +794,7 @@ export default function NextGenLandingPage() {
             transition={{ duration: 0.8, delay: 0.2 }}
             className="text-sm font-semibold tracking-wider text-slate-400 mt-3 uppercase"
           >
-            Playable music · verifiable ownership · exclusive daily drops
+            Playable music · your collection · exclusive daily drops
           </motion.p>
         </div>
 
@@ -1373,7 +1373,7 @@ export default function NextGenLandingPage() {
               Generation Zero
             </h2>
             <p className="text-amber-200/80 font-medium tracking-wide mt-2">
-              First 100 collectors only. Gen 0 cards are never reminted.
+              First 100 collectors only. Gen 0 cards are never reissued.
             </p>
           </div>
           <div className="relative z-10 flex w-20 h-20 md:w-24 md:h-24 shrink-0 items-center justify-center rounded-full bg-amber-500/10 border border-amber-500/30 shadow-[0_0_30px_rgba(251,191,36,0.3)] animate-pulse">
@@ -1609,7 +1609,7 @@ export default function NextGenLandingPage() {
             <div>
               <SectionLabel label="Card Incinerator" accent="#ef4444" />
               <h2 className="text-4xl font-extrabold text-white tracking-tight mb-2">The Forge</h2>
-              <p className="text-sm text-slate-400">Burn duplicate cards to extract V⚡ tokens & raise Vault Prestige score.</p>
+              <p className="text-sm text-slate-400">Burn duplicate cards to earn V⚡ sparks & raise your Vault Prestige score.</p>
             </div>
             <div className="flex items-center justify-between">
               <span className="px-5 py-2.5 rounded-full bg-white/5 border border-white/10 text-white font-bold text-xs uppercase tracking-wider">
@@ -1786,7 +1786,7 @@ export default function NextGenLandingPage() {
             <Shield size={14} /> PIM Vault Protocol v2.0
           </div>
           <p className="text-xs text-slate-600 uppercase tracking-wide">
-            Cryptographic audio signatures ensure verifiable ownership. Secure neural link established.
+            Signed in. Your vault is synced and your collection is yours.
           </p>
         </div>
       </footer>
