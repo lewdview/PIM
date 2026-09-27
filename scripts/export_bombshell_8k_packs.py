@@ -2,6 +2,7 @@
 """
 Master 8K Bombshell Pack Artwork Extractor & Generator
 Extracts all 12 collector pack covers (6 Light, 6 Dark) from the 8K master source,
+scales characters up to fill the whole pack (92% height with proportional framing),
 applies soft circle pink gradient backdrop, smooth bottom fade, and glossy pink specular shine.
 Exports all canonical files and legacy aliases across beatstar-vault and rhythm-game.
 """
@@ -59,21 +60,21 @@ def main():
         curr_x = backtrack[y, curr_x]
     print("Seam computed successfully.")
 
-    # 1. Generate Soft Circle Pink Gradient
+    # 1. Generate Soft Circle Pink Gradient (expanded to fill pack)
     print("Synthesizing soft circle pink gradient backdrop...")
-    cx, cy = pw // 2, int(ph * 0.44)
-    r_max = int(pw * 0.58)
+    cx, cy = pw // 2, int(ph * 0.46)
+    r_max = int(pw * 0.68)
     gy, gx = np.ogrid[:ph, :pw]
     dist = np.sqrt((gx - cx) ** 2 + (gy - cy) ** 2)
     factor = np.clip(1.0 - (dist / r_max), 0.0, 1.0)
     factor = factor * factor * (3.0 - 2.0 * factor)  # smoothstep
 
-    alpha_bg = (factor * 230).astype(np.uint8)
+    alpha_bg = (factor * 235).astype(np.uint8)
     red_bg = np.full((ph, pw), 255, dtype=np.uint8)
     green_bg = (20 + 40 * factor).astype(np.uint8)
     blue_bg = (147 + 25 * (1.0 - factor)).astype(np.uint8)
     grad_arr = np.stack([red_bg, green_bg, blue_bg, alpha_bg], axis=-1)
-    grad_img = Image.fromarray(grad_arr).filter(ImageFilter.GaussianBlur(16))
+    grad_img = Image.fromarray(grad_arr).filter(ImageFilter.GaussianBlur(18))
 
     # 2. Generate Glossy Pink Shine Overlay
     print("Synthesizing glossy pink specular shine...")
@@ -169,9 +170,9 @@ def main():
                 elif max_x == cell_w - 1 and min_x > 0.72 * cell_w:
                     cell_arr[comp_mask, 3] = 0
 
-            # Smooth bottom fade over 160px
+            # Smooth bottom fade over 260px in 8K
             ch = cell_arr.shape[0]
-            fade_len = min(160, ch)
+            fade_len = min(260, ch)
             for fy in range(ch - fade_len, ch):
                 fade_factor = (ch - 1 - fy) / float(fade_len)
                 cell_arr[fy, :, 3] = (cell_arr[fy, :, 3].astype(float) * fade_factor).astype(np.uint8)
@@ -181,8 +182,8 @@ def main():
             if bbox:
                 char_img = char_img.crop(bbox)
 
-            # Resize character to 68% canvas height (smaller proportion per user request)
-            target_h = int(ph * 0.68)
+            # Resize character to 92% canvas height so it fills the pack artwork
+            target_h = int(ph * 0.92) # 662px
             scale = target_h / float(char_img.height)
             target_w = int(char_img.width * scale)
             char_resized = char_img.resize((target_w, target_h), Image.Resampling.LANCZOS)
@@ -192,7 +193,7 @@ def main():
             pack_png.alpha_composite(grad_img)
 
             pos_x = (pw - target_w) // 2
-            pos_y = int(ph * 0.16)
+            pos_y = int(ph * 0.04) # 28px headroom
             pack_png.paste(char_resized, (pos_x, pos_y), char_resized)
             pack_png.alpha_composite(shine_img)
 
@@ -233,7 +234,7 @@ def main():
                     shutil.copyfile(scratch_png, png_dest)
 
     # Save final composite preview
-    preview_path = os.path.join(SCRATCH_DIR, "all_12_from_8k_v3_final.jpg")
+    preview_path = os.path.join(SCRATCH_DIR, "all_12_from_8k_v4_scaled_up.jpg")
     preview_canvas.save(preview_path, quality=95)
     print(f"Successfully exported all 12 covers and saved preview to {preview_path}!")
 
