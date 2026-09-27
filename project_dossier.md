@@ -22,16 +22,16 @@ The project operates under a three-tiered loop designed to maximize user engagem
 
 1. **Music Unlocks Gameplay**: Fans navigate to the application via deep links (e.g., from TikTok, Spotify, or social channels) to access a free playable arcade level for each daily song release (365 unique songs total—one for every day of the calendar year).
 2. **Gameplay Unlocks Ownership**: Achieving performance accuracy and score thresholds on a level awards collectible card packs (Gacha drops) containing card session stems, cryptographic registry proofs, and card burn assets.
-3. **Ownership Unlocks Status**: Players showcase their earned collections, maintain daily streaks, unlock first-discoverer certifications, forge cards to elevate prestige scores, and connect external Web3 wallets to permanently establish on-chain ownership on Base Mainnet.
+3. **Ownership Unlocks Status**: Players showcase their earned collections, maintain daily streaks, unlock first-discoverer certifications, forge cards to elevate prestige scores, and connect a Base wallet to sign in — your collection lives in your vault, onchain ownership is on the roadmap.
 
 ### The Three Interlocking Economies
 To sustain long-term engagement and economic balance, the application orchestrates three simultaneous value systems:
 * **The Skill Economy**: Governed by millisecond timing windows, swipe precision, hold ribbon tracking, unbroken combo multipliers (up to $5\times$), and adaptive audio degradation.
-* **The Scarcity Economy**: Powered by global hard supply caps, rarity tiers (Common $\to$ Mythic), mintable vs. gameplay copy splits, and card burning sinks.
+* **The Scarcity Economy**: Powered by global hard supply caps, rarity tiers (Common $\to$ Mythic), future-onchain vs. in-play copy splits, and card burning sinks.
 * **The Social Economy**: Expressed through collection prestige scores, global leaderboard telemetry, replay ghosts, and 1-of-1 First Discoverer gold stamps.
 
 ### Product Classification: Live-Service Systems Platform
-Moving beyond a simple rhythm prototype or static NFT gallery, the project is classified as an **Experimental Live-Service Platform**. It features server-authoritative transactions, progression currencies ($V\text{⚡}$ tokens), audio-reactive gameplay mutations (Vocal Isolation, Bass Realm, Corrupted Signal), and stateful longitudinal player telemetry.
+Moving beyond a simple rhythm prototype or static NFT gallery, the project is classified as an **Experimental Live-Service Platform**. It features server-authoritative transactions, progression currency (V⚡ sparks, in-game only), audio-reactive gameplay mutations (Vocal Isolation, Bass Realm, Corrupted Signal), and stateful longitudinal player telemetry.
 
 ---
 
@@ -68,7 +68,7 @@ graph TD
 - **Animations**: Framer Motion (used for cinematic card reveals, pack opening overlays, stickers, and page transitions)
 - **Audio & Rendering**: Web Audio API (3-way crossover split filters) + HTML5 2D Canvas 60fps rendering highway
 - **Database & Auth**: Supabase (PostgreSQL with RLS, Auth, Deno Edge Functions)
-- **Blockchain / Smart Contracts**: Base Mainnet (Chain ID `8453` / `0x2105`), Coinbase Smart Wallet (EIP-1271), Hardhat, OpenZeppelin ERC-721 (`PIM.sol`)
+- **Blockchain / Smart Contracts**: Base (wallet sign-in today; `PIM.sol` ERC-721 hardened, not yet deployed), Coinbase Smart Wallet, Hardhat, OpenZeppelin
 - **Desktop Runtime**: Tauri 2.0 (`art.th3scr1b3.pim`)
 
 ### Package Directory Breakdown
@@ -283,16 +283,16 @@ CREATE TABLE public.releases (
 ### Server-Authoritative Deno Edge Functions
 Security is enforced by processing all economy and claim transactions inside Deno Edge Functions:
 1. **`vault-engine`**:
-   - `claimDailyDrop`: Checks daily limits, increments profile claim count, rolls rarity, mints a `vault_collections` entry, and registers edition supply with upsert safety.
-   - `purchasePack`: Implements gacha algorithm, evaluates active pity/streak/midnight modifiers, rolls rates, charges $V\text{⚡}$ tokens, and inserts rolled cards.
+   - `claimDailyDrop`: Checks daily limits, increments profile claim count, rolls rarity, creates a `vault_collections` entry, and registers edition supply with upsert safety.
+   - `purchasePack`: Implements gacha algorithm, evaluates active pity/streak/midnight modifiers, rolls rates, charges V⚡ sparks, and inserts rolled cards.
    - `burnCard`: Burns/sells a card for tokens. Handles generational Echo variant creation and split payouts securely.
-   - `targetedPull`: Deducts 500 $V\text{⚡}$ tokens and awards a specific card from the released catalog (Day 1 to currentDay). Future days are strictly locked to preserve Prophecy Pull exclusivity (SS 97%+ / Prophecy cards).
-   - `rarityUpgrade`: Deducts 150 $V\text{⚡}$ tokens and upgrades a card's rarity by 1 tier.
+   - `targetedPull`: Deducts 500 V⚡ sparks and awards a specific card from the released catalog (Day 1 to currentDay). Future days are strictly locked to preserve Prophecy Pull exclusivity (SS 97%+ / Prophecy cards).
+   - `rarityUpgrade`: Deducts 150 V⚡ sparks and upgrades a card's rarity by 1 tier.
    - `duplicateFusion`: Combines 3 identical cards (same day and rarity) into 1 card of the next tier.
 2. **`auth-smart-wallet`**:
    - Verifies EVM `personal_sign` and Coinbase Smart Wallet EIP-1271 signatures on Base Mainnet to authorize account creation and issue JWT sessions.
 3. **`stripe-webhook`**:
-   - Handles fiat pack purchases with session signature verification to mint card packs directly to player accounts.
+   - Handles fiat pack purchases with session signature verification to add card packs directly to player accounts.
 
 ### Production Migrations & Data State
 The database contains full un-truncated imported production telemetry:
@@ -336,11 +336,11 @@ sequenceDiagram
 - **RPC URL**: `https://mainnet.base.org`
 - **Block Explorer**: `https://basescan.org` / `https://base.blockscout.com`
 
-### Smart Contract Specification (`PIM.sol`)
+### Smart Contract Specification (`PIM.sol`) — hardened, NOT YET DEPLOYED
 Located at `lib/contracts/contracts/PIM.sol`:
 - **Standard**: ERC-721 with OpenZeppelin `Ownable`, `ECDSA`, `MessageHashUtils`, `Base64`.
 - **Dynamic On-Chain Metadata**: Generates base64 data URIs completely on-chain inside `tokenURI(uint256 tokenId)` containing traits for Day, Rarity, Edition, Proof, Lifecycle, and Echo Generation.
-- **Backend-Authorized Minting**: Supports both direct owner/minter minting and signature-based minting (`mintCardWithSignature`) where users pay gas accompanied by a backend cryptographic authorization signature.
+- **Backend-Authorized Minting**: Supports both direct owner/minter minting and signature-based minting (`mintCardWithSignature`) where users will pay gas at launch, accompanied by a backend cryptographic authorization signature.
 
 ### Dual Identity Modes
 1. **Web3 EVM / Smart Wallet**: Connects via MetaMask, Rainbow, or Coinbase Smart Wallet (EIP-1271 signature verification).
@@ -446,18 +446,18 @@ Equipping cards from your Vault activates distinct audio and visual modifiers ba
 ## 8. Economy Rebalance v2.1, Collectibles & The Forge
 
 ### Velocity-Balanced Card Supply Matrix
-| Rarity Tier | Gameplay Copy Cap | Mintable Cap (On-Chain) | Token Burn Value | Audio Preview Limit |
+| Rarity Tier | Gameplay Copy Cap | GEN 0 CAP (future onchain) | Spark Burn Value | Audio Preview Limit |
 | :--- | :--- | :--- | :--- | :--- |
-| **Common** | 2,000 | 0 (Off-Chain) | 3 $V\text{⚡}$ | 15 seconds |
-| **Uncommon** | 500 | 50 | 10 $V\text{⚡}$ | 60 seconds |
-| **Rare** | 100 | 25 | 30 $V\text{⚡}$ | Full Track |
-| **Legendary** | 10 | 3 | 80 $V\text{⚡}$ | Full Track |
-| **Mythic** | 1 | 1 | 200 $V\text{⚡}$ | Full Track + Session Stems |
+| **Common** | 2,000 | 0 (Off-Chain) | 3 V⚡ | 15 seconds |
+| **Uncommon** | 500 | 50 | 10 V⚡ | 60 seconds |
+| **Rare** | 100 | 25 | 30 V⚡ | Full Track |
+| **Legendary** | 10 | 3 | 80 V⚡ | Full Track |
+| **Mythic** | 1 | 1 | 200 V⚡ | Full Track + Session Stems |
 
 ### The Forge Operations & Token Sinks
-* **Card Burning**: Deconstruct duplicate or unwanted cards into $V\text{⚡}$ tokens (EV: 85.20 $V\text{⚡}$ per Vault 3-pack, representing a -69% deflationary sink).
-* **Targeted Pull**: Spend **275 $V\text{⚡}$** to acquire 1 card from a specific released track (Day 1 to currentDay). Features a specialized 1-card drop table (Common: 60%, Uncommon: 24%, Rare: 12%, Epic: 3%, Mythic: 1%). Strictly locked to the chosen day (never cross-day hops). Future calendar days remain hard-locked to require Prophecy Pulls (SS 97%+).
-* **Rarity Upgrade**: Spend **150 $V\text{⚡}$** to upgrade an owned card below Legendary by 1 rarity tier.
+* **Card Burning**: Deconstruct duplicate or unwanted cards into V⚡ sparks (EV: 85.20 V⚡ per Vault 3-pack, representing a -69% deflationary sink).
+* **Targeted Pull**: Spend **275 V⚡** to acquire 1 card from a specific released track (Day 1 to currentDay). Features a specialized 1-card drop table (Common: 60%, Uncommon: 24%, Rare: 12%, Epic: 3%, Mythic: 1%). Strictly locked to the chosen day (never cross-day hops). Future calendar days remain hard-locked to require Prophecy Pulls (SS 97%+).
+* **Rarity Upgrade**: Spend **150 V⚡** to upgrade an owned card below Legendary by 1 rarity tier.
 * **Duplicate Fusion**: Combine **3 identical cards** (same day & rarity) to forge 1 card of the next tier.
 * **Echo Cards**: 15% roll rate on Gacha. Yields high prestige but undergoes generational decay: Gen 0 ($1.0\times$) $\to$ Gen 1 ($0.6\times$) $\to$ Gen 2 ($0.3\times$) $\to$ Gen 3+ ($0.1\times$ Entropy Death).
 
