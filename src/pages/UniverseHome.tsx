@@ -418,7 +418,7 @@ export default function UniverseHome() {
                 </div>
                 <h4 className="font-bold text-lg text-white mb-2 uppercase">TH3VAULT</h4>
                 <p className="font-mono text-xs text-white/60 leading-relaxed">
-                  Collect cards through daily plays, burn duplicates into V⚡ tokens, forge rarities, and bind proofs to Base EVM.
+                  Collect cards through daily plays, burn duplicates into V⚡ sparks, forge rarities, and bring your Base wallet — your vault comes with you.
                 </p>
               </div>
               <div className="flex items-center gap-1 font-mono text-[10px] text-[#E5B800] uppercase font-bold tracking-wider mt-6">

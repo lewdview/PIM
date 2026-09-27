@@ -606,7 +606,7 @@ export default function ForgePage() {
     const mult = size === 'fifty' ? 50 : size === 'twentyfive' ? 25 : size === 'ten' ? 10 : size === 'five' ? 5 : size === 'double' ? 2 : 1;
     const cost = isBombshell ? (100 * mult) : packCost;
     if (tokenBalance < cost) {
-      alert(`Insufficient V⚡ tokens. You need ${cost} V⚡.`);
+      alert(`Insufficient V⚡ sparks. You need ${cost} V⚡.`);
       return;
     }
     try {
@@ -614,7 +614,7 @@ export default function ForgePage() {
       const cards = await buyTokenPack(packType, size);
       useLoadingToast.getState().hide();
       if (cards === 'insufficient') {
-        alert('Insufficient V⚡ tokens for this pack.');
+        alert('Insufficient V⚡ sparks for this pack.');
         await loadVaultData();
         return;
       }
@@ -778,7 +778,7 @@ export default function ForgePage() {
               textTransform: 'uppercase', letterSpacing: '0.15em',
               opacity: 0.45, marginTop: '8px', maxWidth: '420px',
             }}>
-              Burn cards for V⚡ tokens · Echoes fracture back into the pool · Upgrades unlock as you progress
+              Burn cards for V⚡ sparks · Echoes fracture back into the pool · Upgrades unlock as you progress
             </p>
           </motion.div>
 
@@ -1241,7 +1241,7 @@ export default function ForgePage() {
                   fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '16px',
                   textTransform: 'uppercase',
                 }}>
-                  Burn Cards for V⚡
+                  Burn Cards for V⚡ Sparks
                 </span>
                 <InfoTooltip text="Earn base V⚡ value · 50% chance for Echo to re-enter pack pool" />
               </div>

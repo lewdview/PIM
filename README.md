@@ -2,7 +2,7 @@
 
 > **Primary Live-Service Application & Source of Truth for PIM : th3v4ult - poetry in motion**
 
-[![Base Mainnet](https://img.shields.io/badge/Network-Base%20Mainnet%20(8453)-0052FF?style=flat-square)](https://base.org)
+[![Base Mini-App](https://img.shields.io/badge/Base-Farcaster%20Mini--App-0052FF?style=flat-square)](https://base.org)
 [![React 19](https://img.shields.io/badge/React-19.1.0-61DAFB?style=flat-square)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=flat-square)](https://www.typescriptlang.org)
 [![Vite](https://img.shields.io/badge/Vite-7.x-646CFF?style=flat-square)](https://vitejs.dev)
@@ -28,9 +28,9 @@
 * **365-Day Catalog Codex**: Browse, preview, and inspect the entire 365 daily release tracks.
 * **Cinematic Pack Reveals**: Framer Motion 3D pack tear animations and holographic foil card reveals.
 * **The Card Forge (`ForgePage.tsx`)**:
-  * **Card Burning**: Recycle duplicate or unwanted cards into $V\text{⚡}$ tokens.
-  * **Targeted Pulls**: Spend 500 $V\text{⚡}$ to acquire any specific card from the 365 archive.
-  * **Rarity Upgrades**: Spend 150 $V\text{⚡}$ to upgrade an owned card to the next tier.
+  * **Card Burning**: Recycle duplicate or unwanted cards into V⚡ sparks (in-game currency).
+  * **Targeted Pulls**: Spend 500 V⚡ sparks to acquire any specific card from the 365 archive.
+  * **Rarity Upgrades**: Spend 150 V⚡ sparks to upgrade an owned card to the next tier.
   * **Duplicate Fusion**: Combine 3 identical cards (same day & rarity) to create 1 higher-tier card.
   * **Echo Cards & Generational Decay**: Generational prestige multipliers with entropy decay.
 
@@ -53,8 +53,9 @@
 * **Admin Economy Dashboard (`AdminPage.tsx`)**: Real-time live drop tuning and pity controls.
 * **Interactive Pitch Deck (`PitchDeck.tsx`)**: 12-slide interactive executive deck with live simulations for Auth, Canvas Rhythm, Web Audio Equalizer, Tokenomics, and Ephemeral Key generation.
 
-### 5. Web3 Authentication & Progressive Decentralization
-* **Target Network**: **Base Mainnet (Chain ID `8453` / Hex `0x2105`)**.
+### 5. Wallet Sign-In & Onchain Roadmap
+Today: Base wallet sign-in, guest play, everything offchain. Roadmap: `PIM.sol` (ERC-721, hardened, not yet deployed).
+* **Target Network**: **Base (Chain ID `8453`)** — wallet sign-in today; contracts not yet deployed.
 * **EVM / Coinbase Smart Wallet**: EIP-1271 signature verification via `auth-smart-wallet` Edge Function.
 * **Web2 Fallback**: Email/password authentication creates an ephemeral EVM keypair locally in encrypted LocalStorage for instant gasless onboarding.
 
