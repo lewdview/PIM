@@ -54,7 +54,7 @@ interface AuthState {
   initialize: () => Promise<void>;
   signInWithWallet: () => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
-  signInWithEphemeralWallet: () => Promise<void>;
+  signInWithEphemeralWallet: () => Promise<{ error: string | null }>;
   signUpWithEmail: (email: string, password: string) => Promise<{ error: string | null; confirmationRequired?: boolean }>;
   signInWithEmail: (email: string, password: string) => Promise<{ error: string | null }>;
   signInWithProvider: (provider: string) => Promise<{ error: string | null }>;
@@ -440,9 +440,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       } catch (loadErr) {
         console.warn('[Auth] loadVaultData failed:', loadErr);
       }
+
+      return { error: null };
     } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
       console.error('[Auth] Ephemeral Wallet authentication failed:', err);
-      set({ error: `Authentication failed: ${err instanceof Error ? err.message : String(err)}`, status: 'ready' });
+      set({ error: `Authentication failed: ${msg}`, status: 'ready' });
+      return { error: msg };
     }
   },
   signUpWithEmail: async (email, password) => {
@@ -907,22 +911,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (pkey) {
         localStorage.setItem('th3vault_ephemeral_wallet_pkey', pkey);
       } else {
-        // New device: regenerate ephemeral wallet
+        // SECURITY: New device detected — existing on-chain wallet address preserved.
+        // Do NOT overwrite wallet_address in DB, as user may have NFTs minted to it.
+        // Generate a new local ephemeral key for gasless client-side signing only.
+        // The DB wallet_address remains unchanged so on-chain assets stay linked.
         const wallet = Wallet.createRandom();
-        linkedAddress = wallet.address;
         pkey = wallet.privateKey;
 
         localStorage.setItem(`th3vault_ephemeral_wallet_pkey_${userId}`, pkey);
         localStorage.setItem('th3vault_ephemeral_wallet_pkey', pkey);
 
-        await supabase
-          .from('profiles')
-          .upsert({ id: userId, wallet_address: linkedAddress });
-
-        await supabase.auth.updateUser({
-          data: { wallet_address: linkedAddress }
-        });
-        console.log('[Auth] New device detected. Regenerated ephemeral wallet:', linkedAddress);
+        console.warn('[Auth] New device detected. Existing wallet preserved:', linkedAddress, '— local ephemeral key generated for gasless signing only.');
       }
     }
   },

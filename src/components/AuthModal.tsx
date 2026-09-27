@@ -283,9 +283,14 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     setLoading(true);
     audioManager.playSfx('menu_confirm', 0.5);
     try {
-      await signInWithEphemeralWallet();
-      audioManager.playSfx('gold_get', 0.6);
-      onClose();
+      const res = await signInWithEphemeralWallet();
+      if (res?.error) {
+        setLocalError(res.error);
+        audioManager.playSfx('error', 0.5);
+      } else {
+        audioManager.playSfx('gold_get', 0.6);
+        onClose();
+      }
     } catch (err: any) {
       setLocalError(err?.message || 'Ephemeral wallet authentication failed.');
       audioManager.playSfx('error', 0.5);
