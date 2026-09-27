@@ -96,14 +96,18 @@ export default function OnboardingFlowModal({ isOpen, onClose, gameStats }: Onbo
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[220] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl"
+        className="fixed inset-0 z-[220] flex items-center justify-center p-3 sm:p-4 bg-black/90 backdrop-blur-xl overflow-y-auto"
+        style={{
+          paddingTop: 'calc(var(--fc-safe-area-top, 0px) + env(safe-area-inset-top, 0px) + 1rem)',
+          paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 4rem)',
+        }}
       >
         <motion.div
           initial={{ scale: 0.92, y: 20 }}
           animate={{ scale: 1, y: 0 }}
           exit={{ scale: 0.92, y: 20 }}
           transition={{ type: 'spring', stiffness: 320, damping: 28 }}
-          className="relative w-full max-w-md overflow-hidden rounded-xl border border-white/15 bg-neutral-950/90 shadow-[0_0_80px_rgba(255,20,147,0.2)] p-6 text-white"
+          className="relative w-full max-w-md max-h-[85vh] overflow-y-auto rounded-xl border border-white/15 bg-neutral-950/95 shadow-[0_0_80px_rgba(255,20,147,0.2)] p-5 sm:p-6 text-white my-auto"
         >
           {/* Animated top shimmer accent line */}
           <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#FF1493] via-[#00E5FF] to-transparent animate-pulse" />
@@ -179,7 +183,10 @@ export default function OnboardingFlowModal({ isOpen, onClose, gameStats }: Onbo
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3.5 px-6 rounded font-mono text-xs font-bold uppercase tracking-widest bg-white text-black hover:bg-white/90 transition-all flex items-center justify-center gap-2 active:scale-98 shadow-[0_0_20px_rgba(255,255,255,0.3)]"
+                  style={{
+                    clipPath: 'polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%)',
+                  }}
+                  className="w-full py-3.5 px-6 font-mono text-xs font-black uppercase tracking-widest bg-white text-black hover:bg-white/90 transition-all flex items-center justify-center gap-2 active:scale-98 shadow-[0_0_20px_rgba(255,255,255,0.3)] border-2 border-black cursor-pointer"
                 >
                   <Sparkles size={14} />
                   {loading ? 'SAVING RUN...' : 'SAVE YOUR RUN'}
@@ -187,10 +194,10 @@ export default function OnboardingFlowModal({ isOpen, onClose, gameStats }: Onbo
               </form>
 
               <div className="flex flex-col gap-1.5 pt-2 text-[11px] font-mono text-white/50">
-                <button onClick={onClose} className="hover:text-white transition-colors">
+                <button onClick={onClose} className="hover:text-white transition-colors cursor-pointer">
                   Already have one? <span className="underline text-white/80">Log in</span>
                 </button>
-                <button onClick={onClose} className="hover:text-white/70 transition-colors">
+                <button onClick={onClose} className="hover:text-white/70 transition-colors cursor-pointer">
                   Maybe later
                 </button>
               </div>
@@ -220,9 +227,12 @@ export default function OnboardingFlowModal({ isOpen, onClose, gameStats }: Onbo
 
               <button
                 onClick={handleOpenPack}
-                className="w-full py-4 px-6 rounded font-mono text-xs font-bold uppercase tracking-widest bg-gradient-to-r from-[#FF1493] via-[#ff3800] to-[#E5B800] text-white hover:opacity-95 transition-all shadow-[0_0_25px_rgba(255,56,0,0.4)] active:scale-98"
+                style={{
+                  clipPath: 'polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%)',
+                }}
+                className="w-full py-4 px-6 font-mono text-xs font-black uppercase tracking-widest bg-gradient-to-r from-[#FF1493] via-[#ff3800] to-[#E5B800] text-white hover:brightness-110 transition-all shadow-[0_0_25px_rgba(255,56,0,0.5)] active:scale-98 border-2 border-black cursor-pointer"
               >
-                OPEN YOUR PACK
+                OPEN YOUR PACK ➔
               </button>
             </div>
           )}
@@ -271,7 +281,10 @@ export default function OnboardingFlowModal({ isOpen, onClose, gameStats }: Onbo
 
               <button
                 onClick={() => setStep('COLLECT_ONCHAIN')}
-                className="w-full py-3.5 px-6 rounded font-mono text-xs font-bold uppercase tracking-widest bg-white text-black hover:bg-white/90 transition-all flex items-center justify-center gap-2"
+                style={{
+                  clipPath: 'polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%)',
+                }}
+                className="w-full py-3.5 px-6 font-mono text-xs font-black uppercase tracking-widest bg-white text-black hover:bg-white/90 transition-all flex items-center justify-center gap-2 border-2 border-black cursor-pointer"
               >
                 CONTINUE <ArrowRight size={14} />
               </button>
@@ -310,10 +323,13 @@ export default function OnboardingFlowModal({ isOpen, onClose, gameStats }: Onbo
               <button
                 onClick={handleConnectWallet}
                 disabled={loading}
-                className="w-full py-3.5 px-6 rounded font-mono text-xs font-bold uppercase tracking-widest bg-gradient-to-r from-[#00E5FF] to-[#39FF14] text-black hover:opacity-95 transition-all shadow-[0_0_20px_rgba(0,229,255,0.3)] active:scale-98 flex items-center justify-center gap-2"
+                style={{
+                  clipPath: 'polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%)',
+                }}
+                className="w-full py-3.5 px-6 font-mono text-xs font-black uppercase tracking-widest bg-gradient-to-r from-[#00E5FF] to-[#39FF14] text-black hover:brightness-110 transition-all shadow-[0_0_20px_rgba(0,229,255,0.4)] active:scale-98 flex items-center justify-center gap-2 border-2 border-black cursor-pointer"
               >
                 <Shield size={14} />
-                {loading ? 'CONNECTING...' : 'COLLECT ON-CHAIN'}
+                {loading ? 'CONNECTING...' : 'COLLECT ON-CHAIN ➔'}
               </button>
 
               <button

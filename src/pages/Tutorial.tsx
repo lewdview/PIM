@@ -731,9 +731,12 @@ export default function Tutorial() {
         <button
           type="button"
           onClick={handleSkipTutorial}
-          className="absolute top-12 right-4 z-30 px-4 py-2 bg-black/60 hover:bg-black/80 border border-white/20 hover:border-white/40 text-white/60 hover:text-white font-mono text-[10px] font-black tracking-[0.2em] uppercase rounded transition-all cursor-pointer"
+          style={{
+            top: "calc(var(--fc-safe-area-top, 0px) + env(safe-area-inset-top, 0px) + 0.75rem)",
+          }}
+          className="absolute right-3 sm:right-4 z-30 px-3 py-1.5 bg-black/70 hover:bg-black/90 border border-white/20 hover:border-white/40 text-white/60 hover:text-white font-mono text-[9px] font-black tracking-[0.2em] uppercase rounded transition-all cursor-pointer shadow-[2px_2px_0px_#000]"
         >
-          Skip Tutorial →
+          Skip ➔
         </button>
       )}
 
@@ -742,122 +745,147 @@ export default function Tutorial() {
         {tutPhase === "intro" && (
           <motion.div
             key="intro"
-            initial={{ opacity: 0, scale: 0.95 }}
+            initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="flex-1 flex flex-col items-center justify-center p-6 text-center relative z-10 overflow-y-auto"
+            exit={{ opacity: 0, scale: 0.96 }}
+            className="flex-1 w-full flex flex-col items-center justify-start overflow-y-auto relative z-10 px-3 sm:px-6"
+            style={{
+              paddingTop: "calc(var(--fc-safe-area-top, 0px) + env(safe-area-inset-top, 0px) + 2rem)",
+              paddingBottom: "calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 5.5rem)",
+              WebkitOverflowScrolling: "touch",
+            }}
           >
-            <div className="relative border-4 border-black bg-[#151311] p-8 max-w-md w-full shadow-[8px_8px_0px_#000] rounded-lg">
-              {/* Corner accent blocks */}
-              <div className="absolute -top-3.5 -left-3.5 w-6 h-6 bg-[#FF1493] border-4 border-black" />
-              <div className="absolute -top-3.5 -right-3.5 w-6 h-6 bg-[#00E5FF] border-4 border-black" />
-              <div className="absolute -bottom-3.5 -left-3.5 w-6 h-6 bg-[#39FF14] border-4 border-black" />
-              <div className="absolute -bottom-3.5 -right-3.5 w-6 h-6 bg-yellow-400 border-4 border-black" />
+            <div className="relative border-2 sm:border-4 border-black bg-[#121110] p-4 sm:p-6 md:p-7 max-w-sm sm:max-w-md w-full shadow-[6px_6px_0px_#000] sm:shadow-[8px_8px_0px_#000] rounded-xl my-auto text-center overflow-visible">
+              {/* Corner accent micro-blocks */}
+              <div className="absolute -top-1.5 -left-1.5 w-3.5 h-3.5 bg-[#FF1493] border-2 border-black rounded-xs" />
+              <div className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 bg-[#00E5FF] border-2 border-black rounded-xs" />
+              <div className="absolute -bottom-1.5 -left-1.5 w-3.5 h-3.5 bg-[#39FF14] border-2 border-black rounded-xs" />
+              <div className="absolute -bottom-1.5 -right-1.5 w-3.5 h-3.5 bg-yellow-400 border-2 border-black rounded-xs" />
 
-              <div className="flex items-center justify-center gap-2 mb-2">
+              {/* Radar HUD Graphic Icon */}
+              <div className="relative w-11 h-11 mx-auto mb-2 flex items-center justify-center">
+                <div className="absolute inset-0 rounded-full border border-[#00E5FF]/40 border-dashed animate-[spin_12s_linear_infinite]" />
+                <div className="absolute inset-1 rounded-full border border-[#FF1493]/60 animate-pulse" />
+                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#FF1493] to-[#ff3800] flex items-center justify-center shadow-[0_0_15px_rgba(255,20,147,0.7)]">
+                  <GraduationCap size={13} className="text-black" />
+                </div>
+              </div>
+
+              {/* Title & Protocol Badge */}
+              <div className="flex items-center justify-center gap-1.5 mb-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#39FF14] animate-pulse" />
-                <span className="font-mono text-[9px] text-zinc-400 tracking-[0.35em] uppercase font-black">
-                  ONBOARDING GATEWAY // CADET BRIEFING
+                <span className="font-mono text-[8px] sm:text-[9px] text-zinc-400 tracking-[0.3em] uppercase font-black">
+                  ONBOARDING // CADET CLEARANCE
                 </span>
               </div>
-              <h1 className="font-mono text-2xl md:text-3xl font-extrabold text-white tracking-tighter mb-4 leading-none uppercase">
+              <h1 className="font-mono text-2xl sm:text-3xl font-extrabold text-white tracking-tighter mb-3 leading-none uppercase">
                 FLIGHT ACADEMY <br />
                 <span className="text-[#00E5FF]">OR </span>
                 <span className="text-[#FF1493]">SIGN IN</span>
               </h1>
 
-              {/* Song of the Day Spotlight Card */}
-              <div className="border-2 border-black bg-black/50 p-3 rounded mb-5 flex items-center gap-3 text-left">
-                {dailySong?.coverArt ? (
-                  <img
-                    src={dailySong.coverArt}
-                    alt={dailySong.title}
-                    className="w-14 h-14 rounded object-cover border border-white/20 shrink-0"
-                  />
-                ) : (
-                  <div className="w-14 h-14 rounded bg-[#FF1493]/20 border border-[#FF1493] flex items-center justify-center shrink-0">
-                    <Music size={24} className="text-[#FF1493]" />
+              {/* Mobile-First Song of the Day Card */}
+              <div className="border border-white/10 bg-black/60 backdrop-blur-md p-2.5 rounded-lg mb-3 flex items-center gap-3 text-left relative overflow-hidden group">
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[#39FF14] to-[#00E5FF]" />
+                <div className="relative shrink-0 w-11 h-11">
+                  {dailySong?.coverArt ? (
+                    <img
+                      src={dailySong.coverArt}
+                      alt={dailySong.title}
+                      className="w-11 h-11 rounded object-cover border border-white/20 relative z-10"
+                    />
+                  ) : (
+                    <div className="w-11 h-11 rounded bg-[#FF1493]/20 border border-[#FF1493]/40 flex items-center justify-center relative z-10">
+                      <Music size={18} className="text-[#FF1493]" />
+                    </div>
+                  )}
+                  {/* Stylized vinyl record peek */}
+                  <div className="absolute -right-1 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-[#151515] border border-white/20 flex items-center justify-center pointer-events-none">
+                    <div className="w-2.5 h-2.5 rounded-full bg-[#ff3800] border border-black" />
                   </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="font-mono text-[8px] text-[#39FF14] font-black tracking-widest uppercase">
-                    SONG OF THE DAY // DAY {getCurrentDay()}
+                </div>
+
+                <div className="flex-1 min-w-0 pl-1">
+                  <div className="flex items-center gap-1.5 font-mono text-[8px] text-[#39FF14] font-black tracking-widest uppercase">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#39FF14] animate-ping" />
+                    <span>DAY {getCurrentDay()} SOTD</span>
+                    <span className="text-zinc-600">·</span>
+                    <span className="text-zinc-400 font-normal">{dailySong?.bpm || 120} BPM</span>
                   </div>
-                  <div className="font-mono text-sm font-black text-white truncate uppercase">
+                  <div className="font-mono text-xs sm:text-sm font-black text-white truncate uppercase tracking-tight">
                     {dailySong?.title || "TRANSMISSION ZERO"}
                   </div>
-                  <div className="font-mono text-[10px] text-zinc-400 truncate">
-                    {dailySong?.artist || "PIM CORE"} · {dailySong?.bpm || 120} BPM
+                  <div className="font-mono text-[9px] text-zinc-400 truncate">
+                    {dailySong?.artist || "PIM CORE"}
                   </div>
                 </div>
               </div>
 
-              {/* Curriculum Objectives */}
-              <div className="space-y-2.5 font-mono text-[11px] text-zinc-300 leading-relaxed mb-6 border-t-2 border-black pt-4 text-left">
-                <div className="flex items-center justify-between text-[#00E5FF] font-black tracking-wide">
-                  <span>TRAINING CURRICULUM (7 NOTE TYPES):</span>
-                  <span className="text-[#39FF14] text-[9px]">3 HITS PER NOTE</span>
+              {/* 2x2 Tactical Holographic Curriculum HUD */}
+              <div className="mb-4 text-left">
+                <div className="flex items-center justify-between text-[8px] sm:text-[9px] font-mono font-black tracking-wider text-zinc-400 uppercase mb-1.5 px-0.5">
+                  <span className="text-[#00E5FF]">// CADET CURRICULUM</span>
+                  <span className="text-[#39FF14]">7 NOTE MECHANICS</span>
                 </div>
-                <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[9.5px]">
-                  <p className="flex items-center gap-1.5">
-                    <span className="text-[#39FF14] font-black">■ 01:</span>
-                    <span><strong>TAP:</strong> Target line timing</span>
-                  </p>
-                  <p className="flex items-center gap-1.5">
-                    <span className="text-[#FFD700] font-black">▬ 02:</span>
-                    <span><strong>HOLD:</strong> Health regeneration</span>
-                  </p>
-                  <p className="flex items-center gap-1.5">
-                    <span className="text-[#00E5FF] font-black">➔ 03:</span>
-                    <span><strong>SWIPE:</strong> Directional flicks</span>
-                  </p>
-                  <p className="flex items-center gap-1.5">
-                    <span className="text-[#FF69B4] font-black">⚡ 04:</span>
-                    <span><strong>HOLD-SWIPE:</strong> Sustain to flick</span>
-                  </p>
-                  <p className="flex items-center gap-1.5">
-                    <span className="text-[#7B68EE] font-black">⤹ 05:</span>
-                    <span><strong>SLIDE:</strong> Cross-lane ribbons</span>
-                  </p>
-                  <p className="flex items-center gap-1.5">
-                    <span className="text-[#FF1493] font-black">✦ 06:</span>
-                    <span><strong>REMIX:</strong> Audio stem filters</span>
-                  </p>
-                  <p className="flex items-center gap-1.5">
-                    <span className="text-[#00FFFF] font-black">▲ 07:</span>
-                    <span><strong>LIFT:</strong> Precision release</span>
-                  </p>
-                  <p className="flex items-center gap-1.5">
-                    <span className="text-yellow-400 font-black">↺ 08:</span>
-                    <span><strong>REWIND:</strong> 3-miss rollback</span>
-                  </p>
+                <div className="grid grid-cols-2 gap-1.5 font-mono text-[8.5px]">
+                  <div className="p-2 rounded bg-white/[0.03] border border-white/[0.08] flex items-center gap-2">
+                    <span className="text-[#39FF14] font-black text-xs">■</span>
+                    <div className="leading-tight">
+                      <div className="font-bold text-white uppercase text-[8.5px]">TAP & HOLD</div>
+                      <div className="text-zinc-400 text-[7.5px]">Target Timing & Life</div>
+                    </div>
+                  </div>
+                  <div className="p-2 rounded bg-white/[0.03] border border-white/[0.08] flex items-center gap-2">
+                    <span className="text-[#00E5FF] font-black text-xs">➔</span>
+                    <div className="leading-tight">
+                      <div className="font-bold text-white uppercase text-[8.5px]">SWIPES & SLIDES</div>
+                      <div className="text-zinc-400 text-[7.5px]">8-Way Flow Ribbons</div>
+                    </div>
+                  </div>
+                  <div className="p-2 rounded bg-white/[0.03] border border-white/[0.08] flex items-center gap-2">
+                    <span className="text-[#FF1493] font-black text-xs">✦</span>
+                    <div className="leading-tight">
+                      <div className="font-bold text-white uppercase text-[8.5px]">REMIX STEMS</div>
+                      <div className="text-zinc-400 text-[7.5px]">Live Audio Filters</div>
+                    </div>
+                  </div>
+                  <div className="p-2 rounded bg-white/[0.03] border border-white/[0.08] flex items-center gap-2">
+                    <span className="text-yellow-400 font-black text-xs">↺</span>
+                    <div className="leading-tight">
+                      <div className="font-bold text-white uppercase text-[8.5px]">3× REWIND</div>
+                      <div className="text-zinc-400 text-[7.5px]">Fail-Safe Rollback</div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* PRIMARY ONBOARDING CHOICES: FLIGHT ACADEMY OR SIGN IN */}
-              <div className="space-y-3 pt-2">
+              {/* PRIMARY ONBOARDING CHOICES — Elevated well above mobile bottom */}
+              <div className="space-y-2.5">
                 {/* CHOICE 1: FLIGHT ACADEMY */}
                 {dailySong ? (
                   <motion.button
-                    whileHover={{ scale: 1.02 }}
+                    whileHover={{ scale: 1.015 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={startGameplay}
-                    className="w-full py-4 px-4 bg-gradient-to-r from-[#FF1493] to-[#ff3800] text-black font-mono font-black text-xs tracking-[0.2em] uppercase hover:opacity-95 transition-all rounded border-2 border-black shadow-[4px_4px_0px_#000] cursor-pointer flex items-center justify-between group"
+                    style={{
+                      clipPath: "polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%)",
+                    }}
+                    className="w-full py-3.5 px-4 bg-gradient-to-r from-[#FF1493] via-[#ff3800] to-[#FF5500] text-black font-mono font-black text-xs tracking-[0.15em] uppercase hover:brightness-110 active:brightness-95 transition-all shadow-[0_0_25px_rgba(255,20,147,0.45),0_4px_0_#000] cursor-pointer flex items-center justify-between group"
                   >
                     <div className="flex items-center gap-3 text-left">
-                      <div className="w-8 h-8 rounded bg-black/20 flex items-center justify-center shrink-0">
-                        <GraduationCap size={18} className="text-black" />
+                      <div className="w-8 h-8 rounded bg-black/25 flex items-center justify-center shrink-0 border border-black/30">
+                        <GraduationCap size={18} className="text-black group-hover:rotate-12 transition-transform" />
                       </div>
                       <div>
-                        <div className="text-[12px] font-black leading-tight">
+                        <div className="text-[12.5px] font-black leading-tight tracking-wide text-black">
                           ENTER FLIGHT ACADEMY
                         </div>
-                        <div className="text-[9px] font-bold opacity-80 normal-case tracking-normal">
-                          Stage 1 Training · 3-Lane Controls · Claim Welcome Pack
+                        <div className="text-[8.5px] font-bold text-black/80 normal-case tracking-normal">
+                          Stage 1 Calibration · Free 2-Card Welcome Pack
                         </div>
                       </div>
                     </div>
-                    <ChevronRight size={18} className="shrink-0 group-hover:translate-x-1 transition-transform" />
+                    <ChevronRight size={18} className="shrink-0 text-black group-hover:translate-x-1 transition-transform" />
                   </motion.button>
                 ) : (
                   <div className="font-mono text-[10px] text-zinc-500 animate-pulse py-2">
@@ -865,32 +893,35 @@ export default function Tutorial() {
                   </div>
                 )}
 
-                {/* CHOICE 2: SIGN IN */}
+                {/* CHOICE 2: SIGN IN / CONNECT IDENTITY */}
                 <motion.button
-                  whileHover={{ scale: 1.02 }}
+                  whileHover={{ scale: 1.015 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => {
                     audioManager.playSfx("menu_confirm", 0.5);
                     setShowAuthModal(true);
                   }}
-                  className="w-full py-3.5 px-4 bg-[#00E5FF]/10 hover:bg-[#00E5FF]/20 text-[#00E5FF] hover:text-white font-mono font-black text-xs tracking-[0.2em] uppercase rounded border-2 border-[#00E5FF]/50 hover:border-[#00E5FF] shadow-[0_0_20px_rgba(0,229,255,0.15)] transition-all cursor-pointer flex items-center justify-between group"
+                  style={{
+                    clipPath: "polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%)",
+                  }}
+                  className="w-full py-3 px-4 bg-[#00E5FF]/10 hover:bg-[#00E5FF]/20 active:bg-[#00E5FF]/30 text-[#00E5FF] hover:text-white font-mono font-black text-xs tracking-[0.15em] uppercase border-2 border-[#00E5FF] shadow-[0_0_20px_rgba(0,229,255,0.25)] transition-all cursor-pointer flex items-center justify-between group"
                 >
                   <div className="flex items-center gap-3 text-left">
-                    <div className="w-8 h-8 rounded bg-[#00E5FF]/20 flex items-center justify-center shrink-0">
-                      <Wallet size={18} className="text-[#00E5FF]" />
+                    <div className="w-8 h-8 rounded bg-[#00E5FF]/20 flex items-center justify-center shrink-0 border border-[#00E5FF]/40">
+                      <Wallet size={16} className="text-[#00E5FF] group-hover:scale-110 transition-transform" />
                     </div>
                     <div>
-                      <div className="text-[12px] font-black leading-tight">
-                        {isSignedIn ? "SOVEREIGN IDENTITY CONNECTED" : "SIGN IN / CONNECT WALLET"}
+                      <div className="text-[12px] font-black leading-tight tracking-wide">
+                        {isSignedIn ? "SOVEREIGN IDENTITY BOUND" : "SIGN IN / CONNECT WALLET"}
                       </div>
-                      <div className="text-[9px] font-bold opacity-80 text-zinc-300 normal-case tracking-normal">
+                      <div className="text-[8.5px] font-bold opacity-80 text-zinc-300 normal-case tracking-normal">
                         {isSignedIn
-                          ? `Linked as ${fcUser?.username || (authUser?.user_metadata?.wallet_address ? authUser.user_metadata.wallet_address.slice(0, 8) + '...' : authUser?.email) || 'Active Pilot'} · Manage`
-                          : "Base Web3, Coinbase Smart Wallet, Passkey, or Email"}
+                          ? `Linked as ${fcUser?.username || (authUser?.user_metadata?.wallet_address ? authUser.user_metadata.wallet_address.slice(0, 8) + '...' : authUser?.email) || 'Active Pilot'} · Tap to manage`
+                          : "Base Web3 · Coinbase Smart Wallet · Passkey · Email"}
                       </div>
                     </div>
                   </div>
-                  <Key size={16} className="shrink-0 text-[#00E5FF] group-hover:rotate-12 transition-transform" />
+                  <Key size={15} className="shrink-0 text-[#00E5FF] group-hover:rotate-12 transition-transform" />
                 </motion.button>
 
                 {/* IF SIGNED IN: PROCEED DIRECTLY TO VAULT */}
@@ -901,9 +932,10 @@ export default function Tutorial() {
                       audioManager.playSfx("tap_nav", 0.15);
                       setLocation("/vault");
                     }}
-                    className="w-full py-2.5 bg-[#39FF14]/10 hover:bg-[#39FF14]/20 border border-[#39FF14]/40 text-[#39FF14] font-mono text-[10px] font-black tracking-widest uppercase transition-all rounded cursor-pointer"
+                    className="w-full py-2.5 bg-[#39FF14]/15 hover:bg-[#39FF14]/25 border border-[#39FF14]/50 text-[#39FF14] font-mono text-[10px] font-black tracking-widest uppercase transition-all rounded cursor-pointer flex items-center justify-center gap-1.5"
                   >
-                    PROCEED TO VAULT ➔
+                    <span>PROCEED TO VAULT</span>
+                    <ChevronRight size={14} />
                   </button>
                 )}
 
@@ -920,6 +952,18 @@ export default function Tutorial() {
                     EXIT TO ARCADE ➔
                   </button>
                 )}
+
+                {/* Subtle skip link inside card — not glued to bottom */}
+                {!isReplay && !isSignedIn && (
+                  <button
+                    type="button"
+                    onClick={handleSkipTutorial}
+                    className="w-full pt-1 pb-0.5 text-zinc-500 hover:text-zinc-300 font-mono text-[9px] font-bold tracking-[0.2em] uppercase transition-all cursor-pointer flex items-center justify-center gap-1 hover:underline decoration-[#00E5FF]/50"
+                  >
+                    <span>SKIP TO VAULT</span>
+                    <span className="text-[#00E5FF]">➔</span>
+                  </button>
+                )}
               </div>
             </div>
           </motion.div>
@@ -932,9 +976,14 @@ export default function Tutorial() {
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
-            className="flex-1 flex flex-col items-center justify-center p-6 text-center relative z-10"
+            className="flex-1 w-full flex flex-col items-center justify-start overflow-y-auto px-4 relative z-10"
+            style={{
+              paddingTop: "calc(var(--fc-safe-area-top, 0px) + env(safe-area-inset-top, 0px) + 2rem)",
+              paddingBottom: "calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 5.5rem)",
+              WebkitOverflowScrolling: "touch",
+            }}
           >
-            <div className="relative border-4 border-black bg-[#151311] p-8 max-w-sm w-full shadow-[8px_8px_0px_#000] rounded-lg">
+            <div className="relative border-4 border-black bg-[#151311] p-6 sm:p-8 max-w-sm w-full shadow-[8px_8px_0px_#000] rounded-lg my-auto text-center">
               <div className="absolute -top-3.5 -left-3.5 w-6 h-6 bg-[#FF1493] border-4 border-black" />
               <div className="absolute -top-3.5 -right-3.5 w-6 h-6 bg-[#00E5FF] border-4 border-black" />
               <div className="absolute -bottom-3.5 -left-3.5 w-6 h-6 bg-[#39FF14] border-4 border-black" />
@@ -982,9 +1031,12 @@ export default function Tutorial() {
                   audioManager.playSfx("tap_nav", 0.15);
                   setTutPhase(skipFirstRunSteps ? "ecosystem" : "pack");
                 }}
-                className="w-full py-4 bg-gradient-to-r from-[#39FF14] to-[#00E5FF] text-black font-mono font-black text-xs tracking-[0.2em] uppercase hover:opacity-95 transition-all rounded border-2 border-black shadow-[4px_4px_0px_#000] cursor-pointer"
+                style={{
+                  clipPath: "polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%)",
+                }}
+                className="w-full py-4 bg-gradient-to-r from-[#39FF14] to-[#00E5FF] text-black font-mono font-black text-xs tracking-[0.2em] uppercase hover:brightness-110 active:brightness-95 transition-all border-2 border-black shadow-[0_0_25px_rgba(57,255,20,0.4),4px_4px_0px_#000] cursor-pointer"
               >
-                {skipFirstRunSteps ? "CONTINUE" : "CLAIM 2-CARD WELCOME PACK"}
+                {skipFirstRunSteps ? "CONTINUE ➔" : "CLAIM 2-CARD WELCOME PACK ➔"}
               </motion.button>
             </div>
           </motion.div>
@@ -1019,7 +1071,12 @@ export default function Tutorial() {
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
-            className="flex-1 flex flex-col items-center justify-between py-6 px-4 overflow-y-auto relative z-10 max-w-xl mx-auto w-full"
+            className="flex-1 w-full flex flex-col items-center justify-start px-3 sm:px-4 overflow-y-auto relative z-10 max-w-xl mx-auto"
+            style={{
+              paddingTop: "calc(var(--fc-safe-area-top, 0px) + env(safe-area-inset-top, 0px) + 1.5rem)",
+              paddingBottom: "calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 5.5rem)",
+              WebkitOverflowScrolling: "touch",
+            }}
           >
             <div className="text-center mt-2 w-full">
               <div className="font-mono text-[9px] text-[#00E5FF] tracking-[0.4em] mb-1 uppercase font-black">
@@ -1076,14 +1133,17 @@ export default function Tutorial() {
             </div>
 
             {/* Dossier Progression Button */}
-            <div className="w-full flex gap-3">
+            <div className="w-full flex gap-3 pb-2">
               {activeDossierTab < DOSSIER_TABS.length - 1 ? (
                 <button
                   onClick={() => {
                     setActiveDossierTab((prev) => prev + 1);
                     audioManager.playSfx("tap_nav", 0.12);
                   }}
-                  className="w-full py-3.5 bg-white/10 hover:bg-white/15 text-white font-mono font-black text-xs tracking-[0.2em] uppercase rounded border-2 border-black transition-all cursor-pointer flex items-center justify-center gap-2"
+                  style={{
+                    clipPath: "polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%)",
+                  }}
+                  className="w-full py-3.5 bg-white/10 hover:bg-white/15 text-white font-mono font-black text-xs tracking-[0.15em] uppercase border-2 border-black transition-all cursor-pointer flex items-center justify-center gap-2"
                 >
                   NEXT PILLAR ({activeDossierTab + 2}/5) <ChevronRight size={14} />
                 </button>
@@ -1096,11 +1156,14 @@ export default function Tutorial() {
                   audioManager.playSfx("tap_nav", 0.15);
                   setTutPhase(skipFirstRunSteps ? "connector" : "identity");
                 }}
-                className={`py-3.5 bg-gradient-to-r from-[#FF1493] to-[#ff3800] text-black font-mono font-black text-xs tracking-[0.25em] uppercase hover:opacity-95 transition-all rounded border-2 border-black shadow-[4px_4px_0px_#000] cursor-pointer flex items-center justify-center gap-2 ${
+                style={{
+                  clipPath: "polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%)",
+                }}
+                className={`py-3.5 bg-gradient-to-r from-[#FF1493] via-[#ff3800] to-[#FF5500] text-black font-mono font-black text-xs tracking-[0.2em] uppercase hover:brightness-110 active:brightness-95 transition-all border-2 border-black shadow-[0_0_25px_rgba(255,20,147,0.45),4px_4px_0px_#000] cursor-pointer flex items-center justify-center gap-2 ${
                   activeDossierTab === DOSSIER_TABS.length - 1 ? "w-full" : "px-6 shrink-0"
                 }`}
               >
-                {skipFirstRunSteps ? "PROCEED TO WALLET →" : "PROCEED TO IDENTITY →"}
+                {skipFirstRunSteps ? "PROCEED TO WALLET ➔" : "PROCEED TO IDENTITY ➔"}
               </motion.button>
             </div>
           </motion.div>
@@ -1113,7 +1176,12 @@ export default function Tutorial() {
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
-            className="flex-1 flex flex-col items-center justify-between py-6 px-4 overflow-y-auto relative z-10 max-w-md mx-auto w-full"
+            className="flex-1 w-full flex flex-col items-center justify-start px-3 sm:px-4 overflow-y-auto relative z-10 max-w-md mx-auto"
+            style={{
+              paddingTop: "calc(var(--fc-safe-area-top, 0px) + env(safe-area-inset-top, 0px) + 1.5rem)",
+              paddingBottom: "calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 5.5rem)",
+              WebkitOverflowScrolling: "touch",
+            }}
           >
             <div className="text-center mt-2 w-full">
               <div className="font-mono text-[9px] text-[#39FF14] tracking-[0.4em] mb-1 uppercase font-black">
@@ -1303,9 +1371,12 @@ export default function Tutorial() {
                   isAvailable === false ||
                   !selectedAvatarUrl)
               }
-              className="w-full py-4 bg-gradient-to-r from-[#39FF14] to-[#00E5FF] text-black font-mono font-black text-xs tracking-[0.25em] uppercase hover:opacity-95 transition-all rounded border-2 border-black shadow-[4px_4px_0px_#000] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
+              style={{
+                clipPath: "polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%)",
+              }}
+              className="w-full py-4 bg-gradient-to-r from-[#39FF14] to-[#00E5FF] text-black font-mono font-black text-xs tracking-[0.25em] uppercase hover:brightness-110 active:brightness-95 transition-all border-2 border-black shadow-[0_0_25px_rgba(57,255,20,0.4),4px_4px_0px_#000] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2 mb-2"
             >
-              PROCEED TO WALLET CONNECTOR →
+              PROCEED TO WALLET CONNECTOR ➔
             </motion.button>
           </motion.div>
         )}
@@ -1317,7 +1388,12 @@ export default function Tutorial() {
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
-            className="flex-1 flex flex-col items-center justify-between py-6 px-4 overflow-y-auto relative z-10 max-w-md mx-auto w-full"
+            className="flex-1 w-full flex flex-col items-center justify-start px-3 sm:px-4 overflow-y-auto relative z-10 max-w-md mx-auto"
+            style={{
+              paddingTop: "calc(var(--fc-safe-area-top, 0px) + env(safe-area-inset-top, 0px) + 1.5rem)",
+              paddingBottom: "calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 5.5rem)",
+              WebkitOverflowScrolling: "touch",
+            }}
           >
             <div className="text-center mt-2 w-full">
               <div className="font-mono text-[9px] text-[#00E5FF] tracking-[0.4em] mb-1 uppercase font-black">
@@ -1478,7 +1554,10 @@ export default function Tutorial() {
                       type="button"
                       onClick={handleConnectWeb3Wallet}
                       disabled={isConnectingWallet}
-                      className="w-full py-3 bg-gradient-to-r from-[#00E5FF] to-[#39FF14] text-black font-mono font-black text-xs tracking-wider uppercase hover:opacity-95 transition-all rounded border-2 border-black shadow-[3px_3px_0px_#000] cursor-pointer flex items-center justify-center gap-2"
+                      style={{
+                        clipPath: "polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%)",
+                      }}
+                      className="w-full py-3 bg-gradient-to-r from-[#00E5FF] to-[#39FF14] text-black font-mono font-black text-xs tracking-wider uppercase hover:brightness-110 active:brightness-95 transition-all border-2 border-black shadow-[0_0_20px_rgba(0,229,255,0.4),3px_3px_0px_#000] cursor-pointer flex items-center justify-center gap-2"
                     >
                       {isConnectingWallet ? (
                         <>
@@ -1496,7 +1575,10 @@ export default function Tutorial() {
                       type="button"
                       onClick={handleGenerateEphemeralWallet}
                       disabled={isConnectingWallet}
-                      className="w-full py-2.5 bg-black/60 hover:bg-black/80 text-amber-300 font-mono font-bold text-[10px] tracking-wider uppercase transition-all rounded border border-amber-400/40 cursor-pointer flex items-center justify-center gap-2"
+                      style={{
+                        clipPath: "polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%)",
+                      }}
+                      className="w-full py-2.5 bg-black/60 hover:bg-black/80 text-amber-300 font-mono font-bold text-[10px] tracking-wider uppercase transition-all border border-amber-400/40 cursor-pointer flex items-center justify-center gap-2"
                     >
                       {isConnectingWallet ? (
                         <Loader2 size={12} className="animate-spin" />
@@ -1520,7 +1602,10 @@ export default function Tutorial() {
               whileTap={{ scale: 0.98 }}
               onClick={skipFirstRunSteps ? handleFinishReplay : handleSaveIdentityAndFinish}
               disabled={isSavingIdentity}
-              className="w-full py-4 bg-gradient-to-r from-[#39FF14] via-[#00E5FF] to-[#FF1493] text-black font-mono font-black text-xs tracking-[0.25em] uppercase hover:opacity-95 transition-all rounded border-2 border-black shadow-[4px_4px_0px_#000] cursor-pointer flex items-center justify-center gap-2"
+              style={{
+                clipPath: "polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%)",
+              }}
+              className="w-full py-4 bg-gradient-to-r from-[#39FF14] via-[#00E5FF] to-[#FF1493] text-black font-mono font-black text-xs tracking-[0.25em] uppercase hover:brightness-110 active:brightness-95 transition-all border-2 border-black shadow-[0_0_25px_rgba(0,229,255,0.4),4px_4px_0px_#000] cursor-pointer flex items-center justify-center gap-2 mb-2"
             >
               {isSavingIdentity ? (
                 <>

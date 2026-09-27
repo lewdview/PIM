@@ -22,6 +22,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { RARITY_CONFIG } from '../utils/rarity';
 import { getAdminConfig } from '../utils/adminConfig';
 import { logAnalyticsEvent } from '../services/telemetryService';
+import { GraduationCap, Wallet, Zap, ChevronRight, Radio, Sparkles } from 'lucide-react';
 
 type Phase = 'welcome' | 'reveal' | 'explainer' | 'done';
 
@@ -170,151 +171,244 @@ export default function OnboardingFlow({ onComplete }: Props) {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         style={{
-          position: 'fixed', inset: 0, zIndex: 9999,
-          background: '#050402',
-          display: 'flex', flexDirection: 'column',
-          alignItems: 'center', justifyContent: 'center',
-          overflow: 'hidden',
+          position: 'fixed',
+          inset: 0,
+          zIndex: 9999,
+          background: '#070605',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'flex-start',
+          overflowY: 'auto',
+          WebkitOverflowScrolling: 'touch',
+          paddingTop: 'calc(var(--fc-safe-area-top, 0px) + env(safe-area-inset-top, 0px) + 1.25rem)',
+          paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 5.5rem)',
         }}
       >
         {/* Ambient glow */}
         <motion.div
-          animate={{ opacity: [0.15, 0.3, 0.15], scale: [1, 1.15, 1] }}
-          transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
+          animate={{ opacity: [0.15, 0.35, 0.15], scale: [1, 1.15, 1] }}
+          transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut' }}
           style={{
-            position: 'absolute', width: 'min(600px, 150vw)', height: 'min(600px, 150vw)', borderRadius: '50%',
-            background: 'radial-gradient(ellipse, rgba(255,56,0,0.25), transparent 70%)',
-            filter: 'blur(80px)', pointerEvents: 'none',
+            position: 'absolute',
+            width: 'min(500px, 120vw)',
+            height: 'min(500px, 120vw)',
+            borderRadius: '50%',
+            background: 'radial-gradient(ellipse, rgba(255,85,0,0.25) 0%, rgba(255,20,147,0.12) 40%, transparent 70%)',
+            filter: 'blur(70px)',
+            pointerEvents: 'none',
           }}
         />
 
-        {/* V icon */}
-        <motion.div
-          initial={{ scale: 0, rotate: -30 }}
-          animate={{ scale: 1, rotate: -4 }}
-          transition={{ type: 'spring', stiffness: 200, damping: 18, delay: 0.2 }}
+        {/* CRT Scanline & grid screen effects */}
+        <div
+          className="absolute inset-0 pointer-events-none z-0"
           style={{
-            width: '90px', height: '90px',
-            background: '#ff3800',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: '"Impact", "Arial Black", sans-serif',
-            fontSize: '56px', fontWeight: 900, color: '#fff',
-            boxShadow: '6px 6px 0 #000, 0 0 40px rgba(255,56,0,0.6)',
-            border: '4px solid #000',
-            letterSpacing: '-3px',
-            marginBottom: '24px',
+            backgroundImage:
+              'linear-gradient(rgba(255,20,147,0.015) 1px, transparent 1px), linear-gradient(90deg, rgba(0,229,255,0.015) 1px, transparent 1px)',
+            backgroundSize: '36px 36px',
           }}
-        >
-          V
-        </motion.div>
+        />
 
-        {/* Title */}
-        <motion.h1
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5, duration: 0.6 }}
-          style={{
-            fontFamily: '"Impact", "Arial Black", sans-serif',
-            fontSize: '32px', fontWeight: 900,
-            letterSpacing: '-1px',
-            color: '#fff',
-            textShadow: '0 0 30px rgba(255,56,0,0.6), 3px 3px 0 rgba(0,0,0,0.9)',
-            transform: 'scaleY(1.2)',
-            margin: 0,
-          }}
-        >
-          PIM : th3v4ult
-        </motion.h1>
+        {/* Content Card with my-auto for natural vertical centering & mobile scrolling */}
+        <div className="w-full max-w-sm px-4 my-auto flex flex-col items-center text-center relative z-10 space-y-4">
+          
+          {/* Top HUD Stomp Line */}
+          <div className="w-full flex items-center justify-between border-b border-white/10 pb-2 font-mono text-[9px] text-zinc-400 font-black tracking-widest uppercase">
+            <span className="text-[#00E5FF] flex items-center gap-1.5">
+              <Radio size={11} className="text-[#00E5FF] animate-pulse" />
+              SYS // PIM_VAULT_v2
+            </span>
+            <span className="text-[#FF5500]">INITIAL_TRANSMISSION</span>
+          </div>
 
-        {/* Subtitle */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.5 }}
-          transition={{ delay: 0.9 }}
-          style={{
-            fontFamily: '"JetBrains Mono", monospace',
-            fontSize: '10px', fontWeight: 700,
-            letterSpacing: '0.35em', textTransform: 'uppercase',
-            color: '#ff3800', marginTop: '8px',
-          }}
-        >
-          365 DAYS OF DARK AND LIGHT
-        </motion.p>
+          {/* Central Holographic Radar HUD Graphic */}
+          <div className="relative my-1 flex items-center justify-center">
+            {/* Spinning Radar Reticle Ring */}
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ repeat: Infinity, duration: 16, ease: 'linear' }}
+              className="absolute w-32 h-32 rounded-full border border-dashed border-[#FF5500]/30 pointer-events-none"
+            />
+            {/* Pulsing inner cyan ring */}
+            <motion.div
+              animate={{ scale: [1, 1.08, 1], opacity: [0.3, 0.7, 0.3] }}
+              transition={{ repeat: Infinity, duration: 2.4, ease: 'easeInOut' }}
+              className="absolute w-28 h-28 rounded-full border border-[#00E5FF]/40 pointer-events-none"
+            />
 
-        {/* Loading indicator */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.4 }}
-          style={{ marginTop: '48px', textAlign: 'center' }}
-        >
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }}
-            style={{
-              width: '28px', height: '28px', margin: '0 auto 12px',
-              border: '2px solid rgba(255,255,255,0.08)',
-              borderTop: '2px solid #ff3800',
-              borderRadius: '50%',
-            }}
-          />
-          <motion.p
-            animate={{ opacity: [0.3, 0.8, 0.3] }}
-            transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
-            style={{
-              fontFamily: '"JetBrains Mono", monospace',
-              fontSize: '9px', letterSpacing: '0.2em',
-              color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase',
-            }}
-          >
-            PREPARING YOUR FIRST PACK...
-          </motion.p>
+            {/* Core Emblem Badge */}
+            <motion.div
+              initial={{ scale: 0, rotate: -20 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: 'spring', stiffness: 220, damping: 16, delay: 0.15 }}
+              style={{
+                width: '84px',
+                height: '84px',
+                background: 'linear-gradient(145deg, #180a04 0%, #2e1005 60%, #120401 100%)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '2px solid #FF5500',
+                boxShadow: '0 0 35px rgba(255,85,0,0.55), inset 0 0 15px rgba(255,20,147,0.3)',
+                position: 'relative',
+              }}
+            >
+              {/* Corner tech ticks */}
+              <div className="absolute top-1 left-1 w-1.5 h-1.5 border-t border-l border-[#00E5FF]" />
+              <div className="absolute top-1 right-1 w-1.5 h-1.5 border-t border-r border-[#00E5FF]" />
+              <div className="absolute bottom-1 left-1 w-1.5 h-1.5 border-b border-l border-[#00E5FF]" />
+              <div className="absolute bottom-1 right-1 w-1.5 h-1.5 border-b border-r border-[#00E5FF]" />
 
-          {/* Onboarding Choices */}
-          <div className="flex flex-wrap items-center justify-center gap-2.5 mt-6">
-            <motion.button
+              <span
+                style={{
+                  fontFamily: '"Impact", "Arial Black", sans-serif',
+                  fontSize: '44px',
+                  fontWeight: 900,
+                  color: '#fff',
+                  lineHeight: 1,
+                  textShadow: '0 0 20px rgba(255,85,0,0.8)',
+                  letterSpacing: '-2px',
+                }}
+              >
+                V
+              </span>
+              <span className="font-mono text-[7px] text-[#00E5FF] font-black tracking-widest mt-0.5 uppercase">
+                詩の動き
+              </span>
+            </motion.div>
+          </div>
+
+          {/* Title & Subtitle */}
+          <div>
+            <motion.h1
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35, duration: 0.5 }}
+              className="font-mono text-2xl font-black tracking-tight text-white uppercase m-0 leading-none drop-shadow-[0_0_20px_rgba(255,85,0,0.5)]"
+            >
+              PIM : th3v4ult
+            </motion.h1>
+
+            <motion.p
               initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 2.0 }}
+              animate={{ opacity: 0.8 }}
+              transition={{ delay: 0.5 }}
+              className="font-mono text-[9px] font-black tracking-[0.28em] text-[#FF5500] uppercase mt-2"
+            >
+              365 DAYS OF DARK AND LIGHT
+            </motion.p>
+          </div>
+
+          {/* Status pill: preparing first pack */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.7 }}
+            className="flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-full font-mono text-[8.5px] font-bold text-zinc-300 tracking-wider uppercase"
+          >
+            <span className="w-2 h-2 rounded-full bg-[#39FF14] animate-ping" />
+            <span>PREPARING WELCOME PACK // READY</span>
+          </motion.div>
+
+          {/* Onboarding Choices: PIM Technical Brutalist Action Buttons */}
+          <div className="w-full space-y-2.5 pt-2">
+            {/* Primary Action: FLIGHT ACADEMY */}
+            <motion.button
+              type="button"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.8 }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => {
                 setLocation('/tutorial');
               }}
-              className="px-4 py-1.5 rounded-full border border-[#00E5FF]/40 bg-[#00E5FF]/10 hover:bg-[#00E5FF]/20 active:scale-95 text-[#00E5FF] hover:text-white font-mono text-[9px] font-bold tracking-widest uppercase transition-all cursor-pointer"
+              style={{
+                clipPath: 'polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%)',
+              }}
+              className="w-full py-3.5 px-4 bg-gradient-to-r from-[#FF1493] via-[#ff3800] to-[#FF5500] hover:brightness-110 active:brightness-90 text-white font-mono font-black tracking-[0.15em] uppercase border-2 border-black shadow-[0_0_25px_rgba(255,20,147,0.45)] transition-all cursor-pointer flex items-center justify-between group"
             >
-              🎓 FLIGHT ACADEMY →
+              <div className="flex items-center gap-3 text-left">
+                <div className="w-8 h-8 rounded bg-black/40 flex items-center justify-center shrink-0 border border-white/20">
+                  <GraduationCap size={16} className="text-white group-hover:scale-110 transition-transform" />
+                </div>
+                <div>
+                  <div className="text-[12px] font-black leading-tight tracking-wide text-white">
+                    ENTER FLIGHT ACADEMY
+                  </div>
+                  <div className="text-[8.5px] font-bold text-white/80 normal-case tracking-normal">
+                    Pilot Training · Guaranteed 2-Card Welcome Pack
+                  </div>
+                </div>
+              </div>
+              <ChevronRight size={16} className="shrink-0 text-white group-hover:translate-x-1 transition-transform" />
             </motion.button>
+
+            {/* Secondary Action: SIGN IN / CONNECT WALLET */}
             <motion.button
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 2.1 }}
+              type="button"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.9 }}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => {
                 useAuthStore.getState().setShowAuthModal(true);
               }}
-              className="px-4 py-1.5 rounded-full border border-[#FF1493]/40 bg-[#FF1493]/10 hover:bg-[#FF1493]/20 active:scale-95 text-[#FF1493] hover:text-white font-mono text-[9px] font-bold tracking-widest uppercase transition-all cursor-pointer"
+              style={{
+                clipPath: 'polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%)',
+              }}
+              className="w-full py-3 px-4 bg-[#00E5FF]/10 hover:bg-[#00E5FF]/20 active:bg-[#00E5FF]/30 text-[#00E5FF] hover:text-white font-mono font-black text-xs tracking-[0.15em] uppercase border-2 border-[#00E5FF] shadow-[0_0_20px_rgba(0,229,255,0.25)] transition-all cursor-pointer flex items-center justify-between group"
             >
-              ⚡ SIGN IN →
+              <div className="flex items-center gap-3 text-left">
+                <div className="w-8 h-8 rounded bg-[#00E5FF]/20 flex items-center justify-center shrink-0 border border-[#00E5FF]/40">
+                  <Wallet size={15} className="text-[#00E5FF] group-hover:scale-110 transition-transform" />
+                </div>
+                <div>
+                  <div className="text-[12px] font-black leading-tight tracking-wide">
+                    SIGN IN / CONNECT WALLET
+                  </div>
+                  <div className="text-[8.5px] font-bold text-zinc-300 normal-case tracking-normal">
+                    Base Web3 · Coinbase Smart Wallet · Passkey
+                  </div>
+                </div>
+              </div>
+              <Zap size={15} className="shrink-0 text-[#00E5FF] group-hover:rotate-12 transition-transform" />
             </motion.button>
+
+            {/* Tertiary / Skip Action: inside card, safely buffered from bottom */}
             <motion.button
+              type="button"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ delay: 2.2 }}
+              transition={{ delay: 1.0 }}
               onClick={() => {
                 logAnalyticsEvent('onboarding_skip');
                 onComplete();
               }}
-              className="px-4 py-1.5 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 active:scale-95 text-white/50 hover:text-white font-mono text-[9px] tracking-widest uppercase transition-all cursor-pointer"
+              className="w-full pt-1.5 pb-0.5 text-zinc-500 hover:text-zinc-200 font-mono text-[9.5px] font-bold tracking-[0.2em] uppercase transition-all cursor-pointer flex items-center justify-center gap-1 hover:underline decoration-[#00E5FF]/50"
             >
-              SKIP TO VAULT →
+              <span>SKIP TO VAULT</span>
+              <span className="text-[#00E5FF]">➔</span>
             </motion.button>
           </div>
-        </motion.div>
+
+        </div>
 
         {/* Film grain */}
-        <div style={{
-          position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 100,
-          opacity: 0.05, mixBlendMode: 'overlay',
-          background: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
-        }} />
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+            zIndex: 100,
+            opacity: 0.05,
+            mixBlendMode: 'overlay',
+            background: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+          }}
+        />
       </motion.div>
     );
   }
@@ -400,12 +494,19 @@ function ExplainerOverlay({ cards, onDone }: { cards: OwnedCard[]; onDone: () =>
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       style={{
-        position: 'fixed', inset: 0, zIndex: 9999,
-        background: '#050402',
-        display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center',
-        padding: '24px',
-        overflow: 'hidden',
+        position: 'fixed',
+        inset: 0,
+        zIndex: 9999,
+        background: '#070605',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'flex-start',
+        padding: '16px',
+        paddingTop: 'calc(var(--fc-safe-area-top, 0px) + env(safe-area-inset-top, 0px) + 1.5rem)',
+        paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 5.5rem)',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
       }}
     >
       {/* Film grain */}
@@ -427,184 +528,195 @@ function ExplainerOverlay({ cards, onDone }: { cards: OwnedCard[]; onDone: () =>
         }}
       />
 
-      {/* Pull summary — shown on first step */}
-      <AnimatePresence mode="wait">
-        {step === 0 && (
-          <motion.div
-            key="pull-summary"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            style={{
-              display: 'flex', gap: '12px', marginBottom: '32px',
-              padding: '12px 20px',
-              background: 'rgba(255,255,255,0.03)',
-              border: '2px solid rgba(255,255,255,0.08)',
-            }}
-          >
-            {Object.entries(rarityBreakdown).map(([rarity, count]) => (
-              <div key={rarity} style={{ textAlign: 'center' }}>
-                <div style={{
-                  fontFamily: '"JetBrains Mono", monospace',
-                  fontSize: '18px', fontWeight: 900,
-                  color: RARITY_CONFIG[rarity as keyof typeof RARITY_CONFIG]?.color || '#fff',
-                }}>
-                  {count}×
+      <div className="my-auto w-full max-w-sm flex flex-col items-center text-center relative z-10">
+        {/* Pull summary — shown on first step */}
+        <AnimatePresence mode="wait">
+          {step === 0 && (
+            <motion.div
+              key="pull-summary"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              style={{
+                display: 'flex', gap: '12px', marginBottom: '24px',
+                padding: '12px 20px',
+                background: 'rgba(255,255,255,0.03)',
+                border: '2px solid rgba(255,255,255,0.08)',
+              }}
+            >
+              {Object.entries(rarityBreakdown).map(([rarity, count]) => (
+                <div key={rarity} style={{ textAlign: 'center' }}>
+                  <div style={{
+                    fontFamily: '"JetBrains Mono", monospace',
+                    fontSize: '18px', fontWeight: 900,
+                    color: RARITY_CONFIG[rarity as keyof typeof RARITY_CONFIG]?.color || '#fff',
+                  }}>
+                    {count}×
+                  </div>
+                  <div style={{
+                    fontFamily: '"JetBrains Mono", monospace',
+                    fontSize: '8px', fontWeight: 700,
+                    letterSpacing: '0.15em', textTransform: 'uppercase',
+                    color: 'rgba(255,255,255,0.4)',
+                  }}>
+                    {rarity}
+                  </div>
                 </div>
-                <div style={{
-                  fontFamily: '"JetBrains Mono", monospace',
-                  fontSize: '8px', fontWeight: 700,
-                  letterSpacing: '0.15em', textTransform: 'uppercase',
-                  color: 'rgba(255,255,255,0.4)',
-                }}>
-                  {rarity}
-                </div>
-              </div>
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Step content */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={step}
-          initial={{ opacity: 0, y: 20, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -20, scale: 0.95 }}
-          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-          style={{ width: '100%', maxWidth: '400px', textAlign: 'center', zIndex: 10 }}
-        >
-          {/* Step indicator */}
-          <div style={{
-            display: 'flex', gap: '6px', justifyContent: 'center', marginBottom: '24px',
-          }}>
-            {EXPLAINER_STEPS.map((_, i) => (
-              <div key={i} style={{
-                width: i === step ? '24px' : '6px',
-                height: '6px',
-                background: i === step ? current.accent : 'rgba(255,255,255,0.15)',
-                transition: 'all 0.3s ease',
-              }} />
-            ))}
-          </div>
-
-          {/* Title */}
-          <h2 style={{
-            fontFamily: '"Impact", "Arial Black", sans-serif',
-            fontSize: '28px', fontWeight: 900,
-            textTransform: 'uppercase', letterSpacing: '-0.5px',
-            color: '#fff', lineHeight: 1.1,
-            textShadow: `0 0 20px ${current.accent}60, 2px 2px 0 rgba(0,0,0,0.9)`,
-            margin: '0 0 16px',
-          }}>
-            {current.title}
-          </h2>
-
-          {/* Divider */}
-          <div style={{
-            width: '40px', height: '2px', margin: '0 auto 16px',
-            background: `linear-gradient(90deg, transparent, ${current.accent}, transparent)`,
-          }} />
-
-          {/* Body */}
-          <p style={{
-            fontFamily: '"JetBrains Mono", monospace',
-            fontSize: '12px', lineHeight: 1.7,
-            color: 'rgba(255,255,255,0.55)',
-            margin: '0 0 16px',
-          }}>
-            {current.body}
-          </p>
-
-          {current.showList && (
-            <div style={{
-              textAlign: 'left',
-              maxHeight: '180px',
-              overflowY: 'auto',
-              background: 'rgba(255,255,255,0.02)',
-              border: '2px solid rgba(255,255,255,0.08)',
-              padding: '12px',
-              scrollbarWidth: 'none',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '12px',
-            }}>
-              <div>
-                <span style={{ color: '#b44dff', fontFamily: '"JetBrains Mono", monospace', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Ultra Rewards</span>
-                <p style={{ margin: '4px 0 0', fontFamily: '"JetBrains Mono", monospace', fontSize: '10px', color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>
-                  0.3% chance per card to uncover a premium gold foil backing. Redeemable for physical 1-of-1s and custom prizes.
-                </p>
-              </div>
-              <div style={{ width: '100%', height: '1px', background: 'rgba(255,255,255,0.05)' }} />
-              <div>
-                <span style={{ color: '#00d4aa', fontFamily: '"JetBrains Mono", monospace', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Forge Buffs</span>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
-                  {getAdminConfig().modifiers.filter(m => m.enabled).map(mod => (
-                    <div key={mod.id}>
-                      <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '9px', fontWeight: 700, color: '#fff', textTransform: 'uppercase' }}>{mod.name}</div>
-                      <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '9px', color: 'rgba(255,255,255,0.4)' }}>{mod.description}</div>
-                    </div>
-                  ))}
-                  {getAdminConfig().modifiers.filter(m => m.enabled).length === 0 && (
-                    <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '9px', color: 'rgba(255,255,255,0.4)' }}>No active buffs right now.</div>
-                  )}
-                </div>
-              </div>
-            </div>
+              ))}
+            </motion.div>
           )}
-        </motion.div>
-      </AnimatePresence>
+        </AnimatePresence>
 
-      {/* CTA button */}
-      <motion.button
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-        onClick={isLast ? onDone : () => setStep(s => s + 1)}
-        whileHover={{ scale: 1.04 }}
-        whileTap={{ scale: 0.97 }}
-        style={{
-          marginTop: '40px', zIndex: 10,
-          padding: isLast ? '14px 36px' : '12px 28px',
-          background: isLast ? '#ff3800' : `${current.accent}18`,
-          color: '#fff',
-          fontFamily: isLast
-            ? '"Impact", "Arial Black", sans-serif'
-            : '"JetBrains Mono", monospace',
-          fontWeight: 900,
-          fontSize: isLast ? '18px' : '11px',
-          letterSpacing: isLast ? '-0.5px' : '0.15em',
-          textTransform: 'uppercase',
-          border: '2px solid #000',
-          cursor: 'pointer',
-          boxShadow: isLast
-            ? '4px 4px 0 #000, 0 0 30px rgba(255,56,0,0.4)'
-            : '2px 2px 0 #000',
-        }}
-      >
-        {isLast ? 'ENTER THE VAULT →' : 'NEXT'}
-      </motion.button>
+        {/* Step content */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={step}
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            style={{ width: '100%', textAlign: 'center' }}
+          >
+            {/* Step indicator */}
+            <div style={{
+              display: 'flex', gap: '6px', justifyContent: 'center', marginBottom: '20px',
+            }}>
+              {EXPLAINER_STEPS.map((_, i) => (
+                <div key={i} style={{
+                  width: i === step ? '24px' : '6px',
+                  height: '6px',
+                  background: i === step ? current.accent : 'rgba(255,255,255,0.15)',
+                  transition: 'all 0.3s ease',
+                }} />
+              ))}
+            </div>
 
-      {/* Skip button */}
-      {!isLast && (
+            {/* Title */}
+            <h2 style={{
+              fontFamily: '"Impact", "Arial Black", sans-serif',
+              fontSize: '26px', fontWeight: 900,
+              textTransform: 'uppercase', letterSpacing: '-0.5px',
+              color: '#fff', lineHeight: 1.1,
+              textShadow: `0 0 20px ${current.accent}60, 2px 2px 0 rgba(0,0,0,0.9)`,
+              margin: '0 0 14px',
+            }}>
+              {current.title}
+            </h2>
+
+            {/* Divider */}
+            <div style={{
+              width: '40px', height: '2px', margin: '0 auto 14px',
+              background: `linear-gradient(90deg, transparent, ${current.accent}, transparent)`,
+            }} />
+
+            {/* Body */}
+            <p style={{
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSize: '11.5px', lineHeight: 1.6,
+              color: 'rgba(255,255,255,0.65)',
+              margin: '0 0 16px',
+            }}>
+              {current.body}
+            </p>
+
+            {current.showList && (
+              <div style={{
+                textAlign: 'left',
+                maxHeight: '160px',
+                overflowY: 'auto',
+                background: 'rgba(255,255,255,0.02)',
+                border: '2px solid rgba(255,255,255,0.08)',
+                padding: '12px',
+                scrollbarWidth: 'none',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+                marginBottom: '16px',
+              }}>
+                <div>
+                  <span style={{ color: '#b44dff', fontFamily: '"JetBrains Mono", monospace', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Ultra Rewards</span>
+                  <p style={{ margin: '4px 0 0', fontFamily: '"JetBrains Mono", monospace', fontSize: '9.5px', color: 'rgba(255,255,255,0.6)', lineHeight: 1.4 }}>
+                    0.3% chance per card to uncover a premium gold foil backing. Redeemable for physical 1-of-1s and custom prizes.
+                  </p>
+                </div>
+                <div style={{ width: '100%', height: '1px', background: 'rgba(255,255,255,0.05)' }} />
+                <div>
+                  <span style={{ color: '#00d4aa', fontFamily: '"JetBrains Mono", monospace', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Forge Buffs</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
+                    {getAdminConfig().modifiers.filter(m => m.enabled).map(mod => (
+                      <div key={mod.id}>
+                        <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '9px', fontWeight: 700, color: '#fff', textTransform: 'uppercase' }}>{mod.name}</div>
+                        <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8.5px', color: 'rgba(255,255,255,0.4)' }}>{mod.description}</div>
+                      </div>
+                    ))}
+                    {getAdminConfig().modifiers.filter(m => m.enabled).length === 0 && (
+                      <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '9px', color: 'rgba(255,255,255,0.4)' }}>No active buffs right now.</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        </AnimatePresence>
+
+        {/* PIM Sheared Brutalist CTA button */}
         <motion.button
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.3 }}
-          transition={{ delay: 0.8 }}
-          onClick={onDone}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          onClick={isLast ? onDone : () => setStep(s => s + 1)}
+          whileHover={{ scale: 1.03 }}
+          whileTap={{ scale: 0.97 }}
           style={{
-            marginTop: '16px', zIndex: 10,
-            background: 'none', border: 'none',
-            fontFamily: '"JetBrains Mono", monospace',
-            fontSize: '9px', letterSpacing: '0.2em',
-            textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)',
+            marginTop: '24px',
+            clipPath: 'polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%)',
+            background: isLast
+              ? 'linear-gradient(135deg, #FF1493 0%, #FF5500 100%)'
+              : 'rgba(255,255,255,0.08)',
+            color: '#fff',
+            fontFamily: isLast
+              ? '"Impact", "Arial Black", sans-serif'
+              : '"JetBrains Mono", monospace',
+            fontWeight: 900,
+            fontSize: isLast ? '16px' : '11px',
+            letterSpacing: isLast ? '-0.5px' : '0.18em',
+            textTransform: 'uppercase',
+            border: isLast ? '2px solid #000' : `2px solid ${current.accent}`,
             cursor: 'pointer',
+            boxShadow: isLast
+              ? '0 0 25px rgba(255,85,0,0.5), 3px 3px 0 #000'
+              : `0 0 15px ${current.accent}40`,
+            width: '100%',
+            padding: '14px 20px',
           }}
         >
-          SKIP INTRO
+          {isLast ? 'ENTER THE VAULT ➔' : 'NEXT PILLAR ➔'}
         </motion.button>
-      )}
+
+        {/* Skip button inside the centered card */}
+        {!isLast && (
+          <motion.button
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.5 }}
+            transition={{ delay: 0.8 }}
+            onClick={onDone}
+            style={{
+              marginTop: '14px',
+              background: 'none',
+              border: 'none',
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSize: '9.5px',
+              letterSpacing: '0.2em',
+              textTransform: 'uppercase',
+              color: 'rgba(255,255,255,0.4)',
+              cursor: 'pointer',
+            }}
+            className="hover:text-white transition-colors"
+          >
+            SKIP INTRO ➔
+          </motion.button>
+        )}
+      </div>
     </motion.div>
   );
 }
