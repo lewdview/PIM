@@ -59,7 +59,7 @@ export default function OnboardingFlow({ onComplete }: Props) {
 
     async function buyWelcomePack() {
       try {
-        const timeoutPromise = new Promise<OwnedCard[]>((resolve) => setTimeout(() => resolve([]), 2500));
+        const timeoutPromise = new Promise<OwnedCard[]>((resolve) => setTimeout(() => resolve([]), 7000));
         const purchasePromise = (async () => {
           try {
             const res = await purchasePack('taste', 'single');
@@ -142,7 +142,7 @@ export default function OnboardingFlow({ onComplete }: Props) {
           onComplete();
         }
       }
-    }, 5000);
+    }, 10000);
     return () => clearTimeout(safetyTimer);
   }, [phase, cards, onComplete]);
 
