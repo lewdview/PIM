@@ -403,7 +403,7 @@ export default function HomePage() {
         : await purchasePack(category, size, sessionId);
       useLoadingToast.getState().hide();
       if (cards === 'insufficient') {
-        alert('Insufficient V⚡ tokens for this pack.');
+        alert('Insufficient V⚡ sparks for this pack.');
         await loadVaultData();
         return;
       }
@@ -722,7 +722,7 @@ export default function HomePage() {
                 Redeem Center
               </h2>
               <p className="text-[9px] font-mono uppercase tracking-[0.2em] opacity-45 mt-1">
-                Enter promotional codes · Unlock V⚡ tokens · Claim exclusive background skins
+                Enter promotional codes · Unlock V⚡ sparks · Claim exclusive background skins
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -803,7 +803,7 @@ export default function HomePage() {
             </h3>
             <p className="text-[10px] font-mono uppercase tracking-[0.25em] opacity-50 leading-relaxed max-w-sm mx-auto">
               First 100 collectors only.<br />
-              <span style={{ color: 'var(--color-neon-gold)', fontWeight: 900 }}>Gen 0 cards never reminted.</span>
+              <span style={{ color: 'var(--color-neon-gold)', fontWeight: 900 }}>Gen 0 cards never reissued.</span>
             </p>
           </div>
         </div>
