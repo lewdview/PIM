@@ -603,7 +603,7 @@ export default function HomePage() {
                   </div>
                   <div className="text-[10px] font-mono opacity-30 ml-2">V⚡</div>
                 </div>
-                <p className="text-[9px] font-mono opacity-35 mt-2">Sell cards → earn tokens → buy Vault Packs</p>
+                <p className="text-[9px] font-mono opacity-35 mt-2">Sell cards → earn sparks → buy Vault Packs</p>
               </div>
 
               {/* Day counter / archive info */}
