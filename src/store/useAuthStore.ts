@@ -51,6 +51,12 @@ interface AuthState {
   setShowAuthModal: (show: boolean) => void;
   showIdentityModal: boolean;
   setShowIdentityModal: (show: boolean) => void;
+  // "Logged in" confirmation pop shown once per real sign-in (never for
+  // anonymous sessions, token refreshes, or profile updates).
+  showSignedInConfirm: boolean;
+  signedInAlias: string | null;
+  setShowSignedInConfirm: (show: boolean) => void;
+  confirmSignIn: (user: User) => void;
   initialize: () => Promise<void>;
   signInWithWallet: () => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
@@ -67,6 +73,33 @@ interface AuthState {
 
 let subscribed = false;
 
+// Session-storage flag bridging OAuth / magic-link redirects: set before the
+// browser leaves for the provider, consumed in initialize() on return.
+const SIGNIN_CONFIRM_FLAG = 'th3vault_signin_confirm_pending';
+const markSignInConfirmPending = () => {
+  try { sessionStorage.setItem(SIGNIN_CONFIRM_FLAG, '1'); } catch { /* noop */ }
+};
+const takeSignInConfirmPending = (): boolean => {
+  try {
+    if (sessionStorage.getItem(SIGNIN_CONFIRM_FLAG) === '1') {
+      sessionStorage.removeItem(SIGNIN_CONFIRM_FLAG);
+      return true;
+    }
+  } catch { /* noop */ }
+  return false;
+};
+
+// Tracks the last user id that already saw the "logged in" confirmation, so the
+// pop fires exactly once per real sign-in even if Supabase emits SIGNED_IN twice
+// or a direct store set() races the event callback.
+let lastConfirmedUserId: string | null = null;
+
+const isRealUser = (u: User | null | undefined): u is User =>
+  !!u && !u.is_anonymous && u.app_metadata?.provider !== 'anonymous';
+
+const shortenAddr = (addr: string) =>
+  addr.startsWith('0x') && addr.length === 42 ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : addr;
+
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   session: null,
@@ -79,6 +112,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   showIdentityModal: false,
   setShowIdentityModal: (show: boolean) => {
     set({ showIdentityModal: show });
+  },
+  showSignedInConfirm: false,
+  signedInAlias: null,
+  setShowSignedInConfirm: (show: boolean) => {
+    set({ showSignedInConfirm: show, ...(show ? {} : { signedInAlias: null }) });
+  },
+  confirmSignIn: (user: User) => {
+    const meta = (user.user_metadata || {}) as Record<string, any>;
+    const wallet = meta.wallet_address || meta.wallet;
+    const alias =
+      meta.display_name ||
+      meta.username ||
+      (user.email ? user.email.split('@')[0] : null) ||
+      (wallet ? shortenAddr(String(wallet)) : null) ||
+      'PILOT';
+    console.log('[Auth] Sign-in confirmed for', alias, '— popping confirmation.');
+    set({ showSignedInConfirm: true, signedInAlias: String(alias) });
   },
   initialize: async () => {
     if (get().status === 'loading') return;
@@ -100,6 +150,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const refreshToken = hashParams.get('refresh_token') || urlParams.get('refresh_token');
     const code = urlParams.get('code') || hashParams.get('code');
     let activeSession: Session | null = null;
+    let fromRedirect = false;
 
     if (code) {
       console.log('[Auth] Detected OAuth PKCE authorization code. Exchanging for session...');
@@ -113,6 +164,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         window.history.replaceState({}, document.title, cleanUrl.toString());
 
         activeSession = exchangeData.session;
+        fromRedirect = true;
       } catch (err) {
         console.error('[Auth] Failed to exchange PKCE code for session:', err);
       }
@@ -133,6 +185,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         window.history.replaceState({}, document.title, cleanUrl.toString());
 
         activeSession = sessionData.session;
+        fromRedirect = true;
       } catch (err) {
         console.error('[Auth] Failed to set session from URL redirect tokens:', err);
       }
@@ -163,6 +216,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         status: 'ready',
       });
       if (user) {
+        // Returning from an OAuth / magic-link redirect that we initiated:
+        // pop the "logged in" confirmation exactly once.
+        if (fromRedirect && isRealUser(user) && takeSignInConfirmPending()) {
+          lastConfirmedUserId = user.id;
+          get().confirmSignIn(user);
+        } else if (isRealUser(user)) {
+          // Returning session, not a fresh sign-in — mark it confirmed so the
+          // SIGNED_IN event below can't pop the confirmation on page load.
+          lastConfirmedUserId = user.id;
+        }
         void get().ensureProfileAndWallet(user);
       }
     } else {
@@ -182,6 +245,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             status: 'ready',
           });
           if (anonData.session?.user) {
+            lastConfirmedUserId = anonData.session.user.id;
             void get().ensureProfileAndWallet(anonData.session.user);
           }
         } catch (err) {
@@ -197,7 +261,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (!subscribed) {
       supabase.auth.onAuthStateChange(async (event, session) => {
         console.log('[Auth] onAuthStateChange:', event, { hasSession: !!session, userId: session?.user?.id?.slice(0, 8) });
-        set({ session, user: session?.user ?? null });
+        const nextUser = session?.user ?? null;
+        set({ session, user: nextUser });
+        // Pop the "logged in" confirmation on a real sign-in only — anonymous
+        // sessions, token refreshes, and profile updates don't count, and the
+        // lastConfirmedUserId guard keeps it to exactly one pop per sign-in.
+        if (event === 'SIGNED_IN' && isRealUser(nextUser) && lastConfirmedUserId !== nextUser.id) {
+          lastConfirmedUserId = nextUser.id;
+          get().confirmSignIn(nextUser);
+        }
         if (session?.user) {
           const user = session.user;
           if (user.email) {
@@ -589,6 +661,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       localStorage.removeItem(`th3vault_ephemeral_wallet_pkey_${userId}`);
     }
     set({ user: null, session: null, error: null });
+    lastConfirmedUserId = null;
+    // Drop cached vault data so the next sign-in always loads fresh profile state.
+    useVaultStore.setState({ hasLoadedData: false, loadedUserId: null });
   },
   signInWithProvider: async (provider) => {
     set({ error: null, status: 'loading' });
@@ -622,6 +697,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               return { error: oauthError.message };
             }
             if (oauthData?.url) {
+              markSignInConfirmPending();
               window.location.href = oauthData.url;
               return { error: null };
             }
@@ -631,6 +707,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           return { error: error.message };
         }
         if (data?.url) {
+          markSignInConfirmPending();
           window.location.href = data.url;
           return { error: null };
         }
@@ -646,6 +723,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           return { error: error.message };
         }
         if (data?.url) {
+          markSignInConfirmPending();
           window.location.href = data.url;
           return { error: null };
         }
@@ -696,6 +774,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               return { error: friendly };
             }
             set({ status: 'ready' });
+            markSignInConfirmPending();
             return { error: null };
           }
           set({ error: error.message, status: 'ready' });
@@ -719,6 +798,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       set({ status: 'ready' });
+      markSignInConfirmPending();
       return { error: null };
     } catch (thrown: any) {
       const msg = thrown?.message || String(thrown);
