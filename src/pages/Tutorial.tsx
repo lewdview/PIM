@@ -191,12 +191,14 @@ export default function Tutorial() {
         card: dailyCard,
       };
 
-      // Card 2: Random Other Card from the 365 Catalog
+      // Card 2: Random Other Card from the Catalog (strictly up to current day)
       const candidates = catalog.filter(
-        (s) => s.id !== dailyCard.id && s.day !== today
+        (s) => s.id !== dailyCard.id && (s.day || 1) <= today
       );
       const randomSong =
-        candidates[Math.floor(Math.random() * candidates.length)] || catalog[0];
+        candidates.length > 0
+          ? candidates[Math.floor(Math.random() * candidates.length)]
+          : catalog.find((s) => (s.day || 1) <= today) || dailyCard;
       const randomCardData = await getCardByDay(randomSong.day || 1);
 
       const finalRandomCard = randomCardData || {

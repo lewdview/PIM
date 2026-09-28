@@ -21,6 +21,7 @@ import { useLocation } from 'wouter';
 import { useAuthStore } from '../store/useAuthStore';
 import { RARITY_CONFIG } from '../utils/rarity';
 import { getAdminConfig } from '../utils/adminConfig';
+import { getCurrentDay } from '../utils/dayCalc';
 import { logAnalyticsEvent } from '../services/telemetryService';
 import { audioManager } from '../game/audio';
 import { GraduationCap, Wallet, Zap, ChevronRight, Radio, Sparkles, ShieldCheck, ArrowRight } from 'lucide-react';
@@ -69,6 +70,7 @@ export default function OnboardingFlow({ onComplete }: Props) {
 
     async function buyWelcomePack() {
       try {
+        const today = getCurrentDay();
         const timeoutPromise = new Promise<OwnedCard[]>((resolve) => setTimeout(() => resolve([]), 7000));
         const purchasePromise = (async () => {
           try {
@@ -89,8 +91,10 @@ export default function OnboardingFlow({ onComplete }: Props) {
           try {
             const pool = await fetchAllCards();
             if (pool && pool.length > 0) {
-              const commonCard = pool.find(c => c.rarity === 'COMMON') || pool[0];
-              const rareCard = pool.find(c => c.rarity === 'RARE' || c.rarity === 'UNCOMMON') || pool[1] || pool[0];
+              const eligiblePool = pool.filter(c => (c.day || 1) <= today);
+              const poolToUse = eligiblePool.length > 0 ? eligiblePool : pool.slice(0, 1);
+              const commonCard = poolToUse.find(c => c.rarity === 'COMMON') || poolToUse[0];
+              const rareCard = poolToUse.find(c => (c.rarity === 'RARE' || c.rarity === 'UNCOMMON') && c.id !== commonCard?.id) || poolToUse[1] || poolToUse[0];
               const selected = [commonCard, rareCard].filter(Boolean);
 
               result = selected.map((card, idx) => ({
@@ -107,6 +111,28 @@ export default function OnboardingFlow({ onComplete }: Props) {
             }
           } catch (poolErr) {
             console.warn('[OnboardingFlow] Pool fetch fallback error:', poolErr);
+          }
+        }
+
+        // Guarantee all cards in result are strictly up to the current day
+        if (result && result.length > 0) {
+          const hasFutureCard = result.some(r => (r.card?.day || 1) > today);
+          if (hasFutureCard) {
+            const pool = await fetchAllCards();
+            const eligiblePool = pool.filter(c => (c.day || 1) <= today);
+            if (eligiblePool.length > 0) {
+              result = result.map((r, idx) => {
+                if ((r.card?.day || 1) > today) {
+                  const safeCard = eligiblePool[idx % eligiblePool.length] || eligiblePool[0];
+                  return {
+                    ...r,
+                    cardId: safeCard.id,
+                    card: { ...safeCard },
+                  };
+                }
+                return r;
+              });
+            }
           }
         }
 

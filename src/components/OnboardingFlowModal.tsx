@@ -4,6 +4,7 @@ import { Sparkles, Gift, Check, Shield, Layers, ArrowRight, Wallet, Lock, X, Glo
 import { useAuthStore } from '../store/useAuthStore';
 import { useVaultStore } from '../store/useVaultStore';
 import { audioManager } from '../game/audio';
+import { getCurrentDay } from '../utils/dayCalc';
 
 interface OnboardingFlowModalProps {
   isOpen: boolean;
@@ -28,7 +29,8 @@ export default function OnboardingFlowModal({ isOpen, onClose, gameStats }: Onbo
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const dayNum = gameStats?.dayNumber || 208;
+  const today = getCurrentDay();
+  const dayNum = Math.min(gameStats?.dayNumber || today, today);
   const accuracy = gameStats?.accuracy || 96;
 
   // Handle Account Creation & user.th3scr1b3.art Identity Passport Registration
@@ -194,8 +196,15 @@ export default function OnboardingFlowModal({ isOpen, onClose, gameStats }: Onbo
               </form>
 
               <div className="flex flex-col gap-1.5 pt-2 text-[11px] font-mono text-white/50">
-                <button onClick={onClose} className="hover:text-white transition-colors cursor-pointer">
-                  Already have one? <span className="underline text-white/80">Log in</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    useAuthStore.getState().setShowAuthModal(true, 'email');
+                  }}
+                  className="hover:text-white transition-colors cursor-pointer"
+                >
+                  Already have one? <span className="underline text-[#39FF14]">Log in</span>
                 </button>
                 <button onClick={onClose} className="hover:text-white/70 transition-colors cursor-pointer">
                   Maybe later

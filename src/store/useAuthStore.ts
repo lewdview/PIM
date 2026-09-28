@@ -42,21 +42,28 @@ const getAuthRedirectUrl = (): string => {
   return 'https://pim.th3scr1b3.art';
 };
 
+export type AuthModalTab = 'web3' | 'email' | 'github' | 'passkey';
+export type SignInMethod = 'email' | 'wallet' | 'passkey' | 'github';
+
 interface AuthState {
   user: User | null;
   session: Session | null;
   status: 'idle' | 'loading' | 'ready';
   error: string | null;
   showAuthModal: boolean;
-  setShowAuthModal: (show: boolean) => void;
+  authModalTab: AuthModalTab;
+  setAuthModalTab: (tab: AuthModalTab) => void;
+  setShowAuthModal: (show: boolean, tab?: AuthModalTab) => void;
   showIdentityModal: boolean;
   setShowIdentityModal: (show: boolean) => void;
   // "Logged in" confirmation pop shown once per real sign-in (never for
   // anonymous sessions, token refreshes, or profile updates).
   showSignedInConfirm: boolean;
   signedInAlias: string | null;
+  signedInMethod: SignInMethod | null;
+  signedInEmail: string | null;
   setShowSignedInConfirm: (show: boolean) => void;
-  confirmSignIn: (user: User) => void;
+  confirmSignIn: (user: User, method?: SignInMethod, aliasOverride?: string) => Promise<void>;
   initialize: () => Promise<void>;
   signInWithWallet: () => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
@@ -65,6 +72,7 @@ interface AuthState {
   signInWithEmail: (email: string, password: string) => Promise<{ error: string | null }>;
   signInWithProvider: (provider: string) => Promise<{ error: string | null }>;
   signInWithMagicLink: (email: string) => Promise<{ error: string | null }>;
+  verifyEmailOtp: (email: string, token: string) => Promise<{ error: string | null }>;
   signInWithPasskey: () => Promise<{ error: string | null }>;
   registerPasskey: (email?: string) => Promise<{ error: string | null; data?: any }>;
   isPasskeySupported: () => boolean;
@@ -113,8 +121,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   status: 'idle',
   error: null,
   showAuthModal: false,
-  setShowAuthModal: (show: boolean) => {
-    set({ showAuthModal: show });
+  authModalTab: 'web3',
+  setAuthModalTab: (tab: AuthModalTab) => {
+    set({ authModalTab: tab });
+  },
+  setShowAuthModal: (show: boolean, tab?: AuthModalTab) => {
+    set({ showAuthModal: show, ...(tab ? { authModalTab: tab } : {}) });
   },
   showIdentityModal: false,
   setShowIdentityModal: (show: boolean) => {
@@ -122,20 +134,58 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
   showSignedInConfirm: false,
   signedInAlias: null,
+  signedInMethod: null,
+  signedInEmail: null,
   setShowSignedInConfirm: (show: boolean) => {
-    set({ showSignedInConfirm: show, ...(show ? {} : { signedInAlias: null }) });
+    set({
+      showSignedInConfirm: show,
+      ...(show ? {} : { signedInAlias: null, signedInMethod: null, signedInEmail: null }),
+    });
   },
-  confirmSignIn: (user: User) => {
+  confirmSignIn: async (user: User, method?: SignInMethod, aliasOverride?: string) => {
     const meta = (user.user_metadata || {}) as Record<string, any>;
     const wallet = meta.wallet_address || meta.wallet;
-    const alias =
-      meta.display_name ||
-      meta.username ||
-      (user.email ? user.email.split('@')[0] : null) ||
-      (wallet ? shortenAddr(String(wallet)) : null) ||
-      'PILOT';
-    console.log('[Auth] Sign-in confirmed for', alias, '— popping confirmation.');
-    set({ showSignedInConfirm: true, signedInAlias: String(alias) });
+
+    let authMethod: SignInMethod = method || 'email';
+    if (!method) {
+      if (user.app_metadata?.provider === 'github') authMethod = 'github';
+      else if (user.app_metadata?.provider === 'webauthn' || meta.passkey) authMethod = 'passkey';
+      else if (wallet && !user.email) authMethod = 'wallet';
+      else if (user.email) authMethod = 'email';
+    }
+
+    let resolvedAlias = aliasOverride || useVaultStore.getState().displayName;
+    if (!resolvedAlias) {
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('display_name, username')
+          .eq('id', user.id)
+          .maybeSingle();
+        if (profile) {
+          resolvedAlias = profile.display_name || profile.username || null;
+        }
+      } catch {
+        // Non-fatal
+      }
+    }
+
+    if (!resolvedAlias) {
+      resolvedAlias =
+        meta.display_name ||
+        meta.username ||
+        (user.email ? user.email.split('@')[0] : null) ||
+        (wallet ? shortenAddr(String(wallet)) : null) ||
+        'PILOT';
+    }
+
+    console.log('[Auth] Sign-in confirmed for', resolvedAlias, 'method:', authMethod, '— popping confirmation.');
+    set({
+      showSignedInConfirm: true,
+      signedInAlias: String(resolvedAlias),
+      signedInMethod: authMethod,
+      signedInEmail: user.email || null,
+    });
   },
   initialize: async () => {
     if (get().status === 'loading') return;
@@ -223,11 +273,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         status: 'ready',
       });
       if (user) {
-        // Returning from an OAuth / magic-link redirect that we initiated:
-        // pop the "logged in" confirmation exactly once.
-        if (fromRedirect && isRealUser(user) && takeSignInConfirmPending()) {
+        // Returning from an OAuth / magic-link redirect:
+        // pop the "logged in" confirmation exactly once!
+        if (fromRedirect && isRealUser(user)) {
           lastConfirmedUserId = user.id;
-          get().confirmSignIn(user);
+          void get().confirmSignIn(user);
         } else if (isRealUser(user)) {
           // Returning session, not a fresh sign-in — mark it confirmed so the
           // SIGNED_IN event below can't pop the confirmation on page load.
@@ -274,9 +324,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         // sessions, token refreshes, and profile updates don't count, and the
         // lastConfirmedUserId guard keeps it to exactly one pop per sign-in.
         // Ephemeral-wallet creation counts: it's an explicit sign-in action.
-        if (event === 'SIGNED_IN' && nextUser && (isRealUser(nextUser) || isEphemeralSession()) && lastConfirmedUserId !== nextUser.id) {
+        if (
+          (event === 'SIGNED_IN' || event === 'USER_UPDATED') &&
+          nextUser &&
+          (isRealUser(nextUser) || isEphemeralSession()) &&
+          lastConfirmedUserId !== nextUser.id
+        ) {
           lastConfirmedUserId = nextUser.id;
-          get().confirmSignIn(nextUser);
+          void get().confirmSignIn(nextUser);
         }
         if (session?.user) {
           const user = session.user;
@@ -441,6 +496,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       localStorage.removeItem('th3vault_is_ephemeral_wallet');
 
       set({ session: data.session, user: data.user, showAuthModal: false });
+      lastConfirmedUserId = data.user.id;
+      void get().confirmSignIn(data.user, 'wallet');
 
       // Log EVM Wallet connect event
       logAnalyticsEvent('wallet_connect', { address });
@@ -512,6 +569,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       set({ session: data.session, user: data.user, status: 'ready', showAuthModal: false });
+      lastConfirmedUserId = data.user.id;
+      void get().confirmSignIn(data.user, 'wallet');
 
       // Log Ephemeral Wallet create event
       logAnalyticsEvent('ephemeral_wallet_create', { address });
@@ -587,6 +646,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return { error: null, confirmationRequired: true };
       }
 
+      if (data.user) {
+        lastConfirmedUserId = data.user.id;
+        void get().confirmSignIn(data.user, 'email');
+      }
+
       return { error: null };
     } catch (err: any) {
       console.error('[Auth] signUpWithEmail error:', err);
@@ -648,6 +712,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       set({ session: data.session, user: data.user, status: 'ready', showAuthModal: false });
+      lastConfirmedUserId = data.user.id;
+      void get().confirmSignIn(data.user, 'email');
 
       try {
         await useVaultStore.getState().loadVaultData();
@@ -820,6 +886,73 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return { error: friendly };
     }
   },
+  verifyEmailOtp: async (email: string, token: string) => {
+    set({ error: null, status: 'loading' });
+    try {
+      console.log('[Auth] Verifying email OTP code...');
+      const { data, error } = await supabase.auth.verifyOtp({
+        email: email.trim(),
+        token: token.trim(),
+        type: 'email',
+      });
+
+      if (error) throw error;
+      if (!data.user || !data.session) throw new Error('Verification failed: no session returned.');
+
+      const userId = data.user.id;
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('wallet_address')
+        .eq('id', userId)
+        .maybeSingle();
+
+      let linkedAddress = profile?.wallet_address;
+      let pkey = localStorage.getItem(`th3vault_ephemeral_wallet_pkey_${userId}`);
+
+      if (!linkedAddress) {
+        const wallet = Wallet.createRandom();
+        linkedAddress = wallet.address;
+        pkey = wallet.privateKey;
+
+        localStorage.setItem(`th3vault_ephemeral_wallet_pkey_${userId}`, pkey);
+        localStorage.setItem('th3vault_ephemeral_wallet_pkey', pkey);
+
+        await supabase
+          .from('profiles')
+          .upsert({ id: userId, wallet_address: linkedAddress });
+
+        await supabase.auth.updateUser({
+          data: { wallet_address: linkedAddress }
+        });
+      } else if (pkey) {
+        localStorage.setItem('th3vault_ephemeral_wallet_pkey', pkey);
+      }
+
+      set({ session: data.session, user: data.user, status: 'ready', showAuthModal: false });
+      lastConfirmedUserId = userId;
+      void get().confirmSignIn(data.user, 'email');
+
+      await get().ensureProfileAndWallet(data.user);
+      try {
+        await useVaultStore.getState().loadVaultData();
+      } catch (loadErr) {
+        console.warn('[Auth] loadVaultData failed:', loadErr);
+      }
+
+      return { error: null };
+    } catch (err: any) {
+      console.error('[Auth] verifyEmailOtp error:', err);
+      const rawMsg = err?.message || String(err);
+      let friendly = rawMsg;
+      if (rawMsg.toLowerCase().includes('token has expired') || rawMsg.toLowerCase().includes('expired')) {
+        friendly = 'Clearance code has expired. Request a new one.';
+      } else if (rawMsg.toLowerCase().includes('invalid')) {
+        friendly = 'Invalid 6-digit clearance code. Please re-check the code.';
+      }
+      set({ error: friendly, status: 'ready' });
+      return { error: friendly };
+    }
+  },
   isPasskeySupported: () => {
     return (
       typeof window !== 'undefined' &&
@@ -845,6 +978,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
 
       logAnalyticsEvent('passkey_login_success', { userId: data.user.id });
+      lastConfirmedUserId = data.user.id;
+      void get().confirmSignIn(data.user, 'passkey');
 
       await get().ensureProfileAndWallet(data.user);
       try {

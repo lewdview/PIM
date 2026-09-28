@@ -32,10 +32,12 @@ type EmailMode = 'magic-link' | 'password-signin' | 'password-signup';
 export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const { 
     user,
+    authModalTab,
     signInWithWallet, 
     signInWithEphemeralWallet,
     signInWithProvider, 
     signInWithMagicLink, 
+    verifyEmailOtp,
     signInWithEmail,
     signUpWithEmail,
     signInWithPasskey, 
@@ -53,7 +55,15 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [confirmationSent, setConfirmationSent] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
   const [resendCooldown, setResendCooldown] = useState(0);
+
+  // Sync active tab from store when requested
+  useEffect(() => {
+    if (authModalTab) {
+      setActiveTab(authModalTab);
+    }
+  }, [authModalTab, isOpen]);
 
   // Passkey states
   const [passkeyMode, setPasskeyMode] = useState<'signin' | 'register'>('signin');
@@ -204,6 +214,34 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       }
     } catch (err: any) {
       setLocalError(err?.message || 'Magic link request failed.');
+      audioManager.playSfx('error', 0.5);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setLocalError(null);
+    if (!otpCode || otpCode.trim().length < 6) {
+      setLocalError('Please enter the 6-digit clearance code.');
+      audioManager.playSfx('error', 0.4);
+      return;
+    }
+
+    setLoading(true);
+    audioManager.playSfx('menu_confirm', 0.5);
+    try {
+      const res = await verifyEmailOtp(email.trim(), otpCode.trim());
+      if (res?.error) {
+        setLocalError(res.error);
+        audioManager.playSfx('error', 0.5);
+      } else {
+        audioManager.playSfx('gold_get', 0.6);
+        onClose();
+      }
+    } catch (err: any) {
+      setLocalError(err?.message || 'Verification failed.');
       audioManager.playSfx('error', 0.5);
     } finally {
       setLoading(false);
@@ -672,25 +710,74 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                   </div>
 
                   {confirmationSent ? (
-                    <div className="space-y-4 text-center py-2">
+                    <div className="space-y-4 text-center py-1">
                       <div className="w-12 h-12 rounded-full bg-[#FF1493]/15 border border-[#FF1493]/40 flex items-center justify-center mx-auto text-[#FF1493] animate-pulse">
                         <Mail size={22} />
                       </div>
-                      <h3 className="font-bold text-white text-sm tracking-wider uppercase">
-                        Transmission Dispatched
-                      </h3>
-                      <p className="font-mono text-zinc-300 text-[11px] leading-relaxed">
-                        We sent a secure activation link to <span className="text-white font-bold">{email}</span>. Click the link in your inbox to complete clearance.
+                      <div>
+                        <h3 className="font-bold text-white text-sm tracking-wider uppercase font-mono">
+                          Transmission Dispatched
+                        </h3>
+                        <p className="font-mono text-zinc-300 text-[11px] leading-relaxed mt-1">
+                          Clearance dispatched to <span className="text-[#00E5FF] font-bold">{email}</span>
+                        </p>
+                      </div>
+
+                      {/* 6-Digit OTP Code Verification Form */}
+                      <form onSubmit={handleVerifyOtp} className="space-y-3 pt-1">
+                        <div className="space-y-1 text-left">
+                          <label className="block text-[9px] font-mono uppercase text-zinc-400 tracking-wider">
+                            Enter 6-Digit Clearance Code
+                          </label>
+                          <div className="relative">
+                            <Key className="absolute left-3 top-3 text-zinc-500" size={14} />
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                              maxLength={8}
+                              autoFocus
+                              value={otpCode}
+                              onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9a-zA-Z]/g, '').slice(0, 8))}
+                              placeholder="123456"
+                              className="w-full pl-9 pr-4 py-2.5 bg-black/80 border border-white/20 text-[#39FF14] font-mono text-sm tracking-[0.25em] font-black focus:outline-none focus:border-[#39FF14] transition-colors rounded-sm"
+                            />
+                          </div>
+                        </div>
+
+                        <button
+                          type="submit"
+                          disabled={loading || otpCode.trim().length < 6}
+                          className="w-full py-3 px-4 flex items-center justify-center gap-2 bg-[#39FF14] hover:bg-[#32e012] text-black font-black uppercase text-xs tracking-wider transition-all shadow-[0_0_20px_rgba(57,255,20,0.35)] active:scale-[0.98] disabled:opacity-40 cursor-pointer"
+                          style={{
+                            clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+                          }}
+                        >
+                          <Shield size={14} />
+                          {loading ? 'VERIFYING CLEARANCE...' : 'CONFIRM CLEARANCE CODE'}
+                        </button>
+                      </form>
+
+                      <div className="relative flex items-center justify-center py-1">
+                        <div className="w-full border-t border-white/10" />
+                        <span className="absolute bg-[#0a0a0a] px-2 font-mono text-[9px] uppercase tracking-widest text-zinc-500">
+                          OR USE DIRECT LINK
+                        </span>
+                      </div>
+
+                      <p className="font-mono text-zinc-400 text-[10px] leading-relaxed">
+                        You can also click the direct activation link in your inbox.
                       </p>
                       
-                      <div className="flex gap-2 pt-2">
+                      <div className="flex gap-2 pt-1">
                         <button
                           type="button"
                           onClick={() => {
                             setConfirmationSent(false);
+                            setOtpCode('');
                             setLocalError(null);
                           }}
-                          className="flex-1 py-2.5 font-mono font-bold text-[10px] tracking-widest bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all uppercase cursor-pointer"
+                          className="flex-1 py-2 font-mono font-bold text-[10px] tracking-widest bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all uppercase cursor-pointer"
                         >
                           Change Email
                         </button>
@@ -698,9 +785,9 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                           type="button"
                           disabled={resendCooldown > 0 || loading}
                           onClick={handleMagicLinkSubmit}
-                          className="flex-1 py-2.5 font-mono font-bold text-[10px] tracking-widest bg-[#FF1493]/20 border border-[#FF1493]/50 text-[#FF1493] hover:bg-[#FF1493]/30 transition-all uppercase disabled:opacity-40 cursor-pointer"
+                          className="flex-1 py-2 font-mono font-bold text-[10px] tracking-widest bg-[#FF1493]/20 border border-[#FF1493]/50 text-[#FF1493] hover:bg-[#FF1493]/30 transition-all uppercase disabled:opacity-40 cursor-pointer"
                         >
-                          {resendCooldown > 0 ? `Resend (${resendCooldown}s)` : 'Resend Link'}
+                          {resendCooldown > 0 ? `Resend (${resendCooldown}s)` : 'Resend Code'}
                         </button>
                       </div>
                     </div>
