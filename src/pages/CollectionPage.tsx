@@ -166,7 +166,7 @@ export default function CollectionPage() {
   // Burn handler
   const handleBurn = useCallback(async (ownedCard: OwnedCard) => {
     if (fusionLoading) return;
-    const confirm = window.confirm(`Burn this minted-out card for V⚡ tokens?`);
+    const confirm = window.confirm(`Burn this minted-out card for V⚡ sparks?`);
     if (!confirm) return;
 
     useLoadingToast.getState().show('Burning card…');
