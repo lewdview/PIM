@@ -252,7 +252,7 @@ function CyberPackBagContents({ meta, sampleCard }: { meta: RevealPackMeta; samp
             <div className="inline-block">
               <div className="px-3 py-1 rounded bg-black/80 border border-white/15" style={{ boxShadow: `0 0 10px ${meta.accent}30` }}>
                 <span className="text-[7px] sm:text-[7.5px] font-mono font-bold tracking-wider uppercase text-slate-300 whitespace-nowrap">
-                  {isBombshell ? '💖 BOMBSHELL ANIME INSPIRED GRAFITTI CARDS 💖' : variant.tagline}
+                  {isBombshell ? '💖 BOMBSHELL ANIME INSPIRED GRAFFITI CARDS 💖' : variant.tagline}
                 </span>
               </div>
             </div>
@@ -528,7 +528,7 @@ function ClassicFoilPackBagContents({ meta, sampleCard }: { meta: RevealPackMeta
                     fontFamily: '"JetBrains Mono", monospace'
                   }}
                 >
-                  {isBombshell ? '💖 BOMBSHELL ANIME INSPIRED GRAFITTI CARDS 💖' : variant.tagline}
+                  {isBombshell ? '💖 BOMBSHELL ANIME INSPIRED GRAFFITI CARDS 💖' : variant.tagline}
                 </span>
               </div>
             </div>
