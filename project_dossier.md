@@ -1,6 +1,6 @@
 # Project Dossier: PIM : th3v4ult - poetry in motion
 
-This dossier serves as the comprehensive, authoritative source of truth and master technical specification for **PIM : th3v4ult - poetry in motion**, a hybrid live-service ecosystem bridging a high-precision HTML5 canvas rhythm game, an audio-reactive collectible card engine, and planned decentralized ownership on Base EVM (contract written, not yet deployed) under a unified, technical brutalist cyberpunk aesthetic.
+This dossier serves as the comprehensive, authoritative source of truth and master technical specification for **PIM : th3v4ult - poetry in motion**, a hybrid live-service ecosystem bridging a high-precision HTML5 canvas rhythm game, an audio-reactive collectible card engine, and decentralized ownership on Base EVM under a unified, technical brutalist cyberpunk aesthetic.
 
 ---
 
@@ -22,16 +22,16 @@ The project operates under a three-tiered loop designed to maximize user engagem
 
 1. **Music Unlocks Gameplay**: Fans navigate to the application via deep links (e.g., from TikTok, Spotify, or social channels) to access a free playable arcade level for each daily song release (365 unique songs total—one for every day of the calendar year).
 2. **Gameplay Unlocks Ownership**: Achieving performance accuracy and score thresholds on a level awards collectible card packs (Gacha drops) containing card session stems, cryptographic registry proofs, and card burn assets.
-3. **Ownership Unlocks Status**: Players showcase their earned collections, maintain daily streaks, unlock first-discoverer certifications, forge cards to elevate prestige scores, and connect external Web3 wallets to prepare for on-chain ownership on Base Mainnet (coming soon — nothing is deployed onchain yet).
+3. **Ownership Unlocks Status**: Players showcase their earned collections, maintain daily streaks, unlock first-discoverer certifications, forge cards to elevate prestige scores, and connect a Base wallet to sign in — your collection lives in your vault, onchain ownership is on the roadmap.
 
 ### The Three Interlocking Economies
 To sustain long-term engagement and economic balance, the application orchestrates three simultaneous value systems:
 * **The Skill Economy**: Governed by millisecond timing windows, swipe precision, hold ribbon tracking, unbroken combo multipliers (up to $5\times$), and adaptive audio degradation.
-* **The Scarcity Economy**: Powered by global hard supply caps, rarity tiers (Common $\to$ Mythic), planned onchain-mintable vs. gameplay copy splits, and card burning sinks.
+* **The Scarcity Economy**: Powered by global hard supply caps, rarity tiers (Common $\to$ Mythic), future-onchain vs. in-play copy splits, and card burning sinks.
 * **The Social Economy**: Expressed through collection prestige scores, global leaderboard telemetry, replay ghosts, and 1-of-1 First Discoverer gold stamps.
 
 ### Product Classification: Live-Service Systems Platform
-Moving beyond a simple rhythm prototype or static NFT gallery, the project is classified as an **Experimental Live-Service Platform**. It features server-authoritative transactions, progression currency (V⚡ sparks), audio-reactive gameplay mutations (Vocal Isolation, Bass Realm, Corrupted Signal), and stateful longitudinal player telemetry.
+Moving beyond a simple rhythm prototype or static NFT gallery, the project is classified as an **Experimental Live-Service Platform**. It features server-authoritative transactions, progression currency (V⚡ sparks, in-game only), audio-reactive gameplay mutations (Vocal Isolation, Bass Realm, Corrupted Signal), and stateful longitudinal player telemetry.
 
 ---
 
@@ -68,7 +68,7 @@ graph TD
 - **Animations**: Framer Motion (used for cinematic card reveals, pack opening overlays, stickers, and page transitions)
 - **Audio & Rendering**: Web Audio API (3-way crossover split filters) + HTML5 2D Canvas 60fps rendering highway
 - **Database & Auth**: Supabase (PostgreSQL with RLS, Auth, Deno Edge Functions)
-- **Blockchain / Smart Contracts**: Base Mainnet (Chain ID `8453` / `0x2105`), Coinbase Smart Wallet (EIP-1271), Hardhat, OpenZeppelin ERC-721 (`PIM.sol`) — contract written and hardened; not yet deployed
+- **Blockchain / Smart Contracts**: Base (wallet sign-in today; `PIM.sol` ERC-721 hardened, not yet deployed), Coinbase Smart Wallet, Hardhat, OpenZeppelin
 - **Desktop Runtime**: Tauri 2.0 (`art.th3scr1b3.pim`)
 
 ### Package Directory Breakdown
@@ -97,7 +97,7 @@ graph TD
   * [HomePage.tsx](file:///Users/studio/BEATSTAR.th3scr1b3.art/beatstar/artifacts/beatstar-vault/src/pages/HomePage.tsx) (Main vault landing interface)
   * [PackRevealPage.tsx](file:///Users/studio/BEATSTAR.th3scr1b3.art/beatstar/artifacts/beatstar-vault/src/pages/PackRevealPage.tsx) (Cinematic cards opening animation)
   * [CodexPage.tsx](file:///Users/studio/BEATSTAR.th3scr1b3.art/beatstar/artifacts/beatstar-vault/src/pages/CodexPage.tsx) (Glossary of all 365 daily release cards)
-  * [ForgePage.tsx](file:///Users/studio/BEATSTAR.th3scr1b3.art/beatstar/artifacts/beatstar-vault/src/pages/ForgePage.tsx) (Burn cards for V⚡ sparks, upgrade rarities, and fuse duplicates)
+  * [ForgePage.tsx](file:///Users/studio/BEATSTAR.th3scr1b3.art/beatstar/artifacts/beatstar-vault/src/pages/ForgePage.tsx) (Burn cards for tokens, upgrade rarities, and fuse duplicates)
   * [CardDesignShowcase.tsx](file:///Users/studio/BEATSTAR.th3scr1b3.art/beatstar/artifacts/beatstar-vault/src/pages/CardDesignShowcase.tsx) (Visual showcase of all card design tiers and holographic foils)
 * **Campaign & Chapters**:
   * [Campaign.tsx (Vault)](file:///Users/studio/BEATSTAR.th3scr1b3.art/beatstar/artifacts/beatstar-vault/src/pages/Campaign.tsx) | [Campaign.tsx (Rhythm)](file:///Users/studio/BEATSTAR.th3scr1b3.art/beatstar/artifacts/rhythm-game/src/pages/Campaign.tsx) (Constellation Sector Map UI)
@@ -111,7 +111,7 @@ graph TD
 * **API, State & Data Layer**:
   * [api.ts (Vault)](file:///Users/studio/BEATSTAR.th3scr1b3.art/beatstar/artifacts/beatstar-vault/src/game/api.ts) | [api.ts (Rhythm)](file:///Users/studio/BEATSTAR.th3scr1b3.art/beatstar/artifacts/rhythm-game/src/game/api.ts) (Release catalog fetching, local file mappings, and time-lock safety checks)
   * [vaultService.ts](file:///Users/studio/BEATSTAR.th3scr1b3.art/beatstar/artifacts/beatstar-vault/src/services/vaultService.ts) (Card claims, burn/sell logic, upgrade logic, database mappings, and safety fallbacks)
-  * [useVaultStore.ts](file:///Users/studio/BEATSTAR.th3scr1b3.art/beatstar/artifacts/beatstar-vault/src/store/useVaultStore.ts) (Global collection, V⚡ spark balance, and reveal state)
+  * [useVaultStore.ts](file:///Users/studio/BEATSTAR.th3scr1b3.art/beatstar/artifacts/beatstar-vault/src/store/useVaultStore.ts) (Global collection, tokens balance, and reveal state)
   * [useAuthStore.ts](file:///Users/studio/BEATSTAR.th3scr1b3.art/beatstar/artifacts/beatstar-vault/src/store/useAuthStore.ts) (Web3 wallet connect and email/anonymous fallback state)
   * [progress.ts (Vault)](file:///Users/studio/BEATSTAR.th3scr1b3.art/beatstar/artifacts/beatstar-vault/src/game/progress.ts) | [progress.ts (Rhythm)](file:///Users/studio/BEATSTAR.th3scr1b3.art/beatstar/artifacts/rhythm-game/src/game/progress.ts) (Medal and high score persistence layer)
   * [desktop.ts](file:///Users/studio/BEATSTAR.th3scr1b3.art/beatstar/artifacts/beatstar-vault/src/utils/desktop.ts) (Cross-platform Tauri 2.0 runtime bridge and window controls)
@@ -197,7 +197,7 @@ erDiagram
 ### Core Supabase Tables
 
 #### A. Profiles (`public.profiles`)
-Stores account telemetry, wallet bindings, V⚡ spark balance, and streak counts.
+Stores account telemetry, wallet bindings, token balance, and streak counts.
 ```sql
 CREATE TABLE public.profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -285,14 +285,14 @@ Security is enforced by processing all economy and claim transactions inside Den
 1. **`vault-engine`**:
    - `claimDailyDrop`: Checks daily limits, increments profile claim count, rolls rarity, creates a `vault_collections` entry, and registers edition supply with upsert safety.
    - `purchasePack`: Implements gacha algorithm, evaluates active pity/streak/midnight modifiers, rolls rates, charges V⚡ sparks, and inserts rolled cards.
-   - `burnCard`: Burns/sells a card for V⚡ sparks. Handles generational Echo variant creation and split payouts securely.
+   - `burnCard`: Burns/sells a card for tokens. Handles generational Echo variant creation and split payouts securely.
    - `targetedPull`: Deducts 500 V⚡ sparks and awards a specific card from the released catalog (Day 1 to currentDay). Future days are strictly locked to preserve Prophecy Pull exclusivity (SS 97%+ / Prophecy cards).
    - `rarityUpgrade`: Deducts 150 V⚡ sparks and upgrades a card's rarity by 1 tier.
    - `duplicateFusion`: Combines 3 identical cards (same day and rarity) into 1 card of the next tier.
 2. **`auth-smart-wallet`**:
    - Verifies EVM `personal_sign` and Coinbase Smart Wallet EIP-1271 signatures on Base Mainnet to authorize account creation and issue JWT sessions.
 3. **`stripe-webhook`**:
-   - Handles fiat pack purchases with session signature verification to issue card packs directly to player accounts (off-chain).
+   - Handles fiat pack purchases with session signature verification to add card packs directly to player accounts.
 
 ### Production Migrations & Data State
 The database contains full un-truncated imported production telemetry:
@@ -331,16 +331,16 @@ sequenceDiagram
     C->>C: supabase.auth.setSession()
 ```
 
-### Core Blockchain Parameters (Designed — Not Yet Deployed)
+### Core Blockchain Parameters
 - **Target Network**: **Base Mainnet (Chain ID `8453` / Hex `0x2105`)**
 - **RPC URL**: `https://mainnet.base.org`
 - **Block Explorer**: `https://basescan.org` / `https://base.blockscout.com`
 
-### Smart Contract Specification (`PIM.sol`)
+### Smart Contract Specification (`PIM.sol`) — hardened, NOT YET DEPLOYED
 Located at `lib/contracts/contracts/PIM.sol`:
 - **Standard**: ERC-721 with OpenZeppelin `Ownable`, `ECDSA`, `MessageHashUtils`, `Base64`.
-- **Dynamic On-Chain Metadata (planned)**: Will generate base64 data URIs fully on-chain inside `tokenURI(uint256 tokenId)` containing traits for Day, Rarity, Edition, Proof, Lifecycle, and Echo Generation.
-- **Backend-Authorized Minting (planned)**: Will support both direct owner/minter minting and signature-based minting (`mintCardWithSignature`) where users pay gas accompanied by a backend cryptographic authorization signature.
+- **Dynamic On-Chain Metadata**: Generates base64 data URIs completely on-chain inside `tokenURI(uint256 tokenId)` containing traits for Day, Rarity, Edition, Proof, Lifecycle, and Echo Generation.
+- **Backend-Authorized Minting**: Supports both direct owner/minter minting and signature-based minting (`mintCardWithSignature`) where users will pay gas at launch, accompanied by a backend cryptographic authorization signature.
 
 ### Dual Identity Modes
 1. **Web3 EVM / Smart Wallet**: Connects via MetaMask, Rainbow, or Coinbase Smart Wallet (EIP-1271 signature verification).
@@ -446,23 +446,23 @@ Equipping cards from your Vault activates distinct audio and visual modifiers ba
 ## 8. Economy Rebalance v2.1, Collectibles & The Forge
 
 ### Velocity-Balanced Card Supply Matrix
-| Rarity Tier | Gameplay Copy Cap | Mintable Cap (On-Chain, Planned) | Spark Burn Value | Audio Preview Limit |
+| Rarity Tier | Gameplay Copy Cap | GEN 0 CAP (future onchain) | Spark Burn Value | Audio Preview Limit |
 | :--- | :--- | :--- | :--- | :--- |
-| **Common** | 2,000 | 0 (Off-Chain) | 3 V⚡ sparks | 15 seconds |
-| **Uncommon** | 500 | 50 | 10 V⚡ sparks | 60 seconds |
-| **Rare** | 100 | 25 | 30 V⚡ sparks | Full Track |
-| **Legendary** | 10 | 3 | 80 V⚡ sparks | Full Track |
-| **Mythic** | 1 | 1 | 200 V⚡ sparks | Full Track + Session Stems |
+| **Common** | 2,000 | 0 (Off-Chain) | 3 V⚡ | 15 seconds |
+| **Uncommon** | 500 | 50 | 10 V⚡ | 60 seconds |
+| **Rare** | 100 | 25 | 30 V⚡ | Full Track |
+| **Legendary** | 10 | 3 | 80 V⚡ | Full Track |
+| **Mythic** | 1 | 1 | 200 V⚡ | Full Track + Session Stems |
 
-### The Forge Operations & Spark Sinks
-* **Card Burning**: Deconstruct duplicate or unwanted cards into V⚡ sparks (EV: 85.20 V⚡ sparks per Vault 3-pack, representing a -69% deflationary sink).
-* **Targeted Pull**: Spend **275 V⚡ sparks** to acquire 1 card from a specific released track (Day 1 to currentDay). Features a specialized 1-card drop table (Common: 60%, Uncommon: 24%, Rare: 12%, Epic: 3%, Mythic: 1%). Strictly locked to the chosen day (never cross-day hops). Future calendar days remain hard-locked to require Prophecy Pulls (SS 97%+).
-* **Rarity Upgrade**: Spend **150 V⚡ sparks** to upgrade an owned card below Legendary by 1 rarity tier.
+### The Forge Operations & Token Sinks
+* **Card Burning**: Deconstruct duplicate or unwanted cards into V⚡ sparks (EV: 85.20 V⚡ per Vault 3-pack, representing a -69% deflationary sink).
+* **Targeted Pull**: Spend **275 V⚡** to acquire 1 card from a specific released track (Day 1 to currentDay). Features a specialized 1-card drop table (Common: 60%, Uncommon: 24%, Rare: 12%, Epic: 3%, Mythic: 1%). Strictly locked to the chosen day (never cross-day hops). Future calendar days remain hard-locked to require Prophecy Pulls (SS 97%+).
+* **Rarity Upgrade**: Spend **150 V⚡** to upgrade an owned card below Legendary by 1 rarity tier.
 * **Duplicate Fusion**: Combine **3 identical cards** (same day & rarity) to forge 1 card of the next tier.
 * **Echo Cards**: 15% roll rate on Gacha. Yields high prestige but undergoes generational decay: Gen 0 ($1.0\times$) $\to$ Gen 1 ($0.6\times$) $\to$ Gen 2 ($0.3\times$) $\to$ Gen 3+ ($0.1\times$ Entropy Death).
 
 ### Pack Supply Protection & Velocity Limits
-* **Spark Pack Daily Cap**: Hard velocity limit of **15 packs/day** for spark-purchased packs (`vault_token` and `bombshell_token`), backed by an atomic PostgreSQL ledger (`token_pack_purchases`) resetting at **00:00 UTC**. Prevents whale supply runs from draining 1-of-1 Mythic editions in a single day.
+* **Token Pack Daily Cap**: Hard velocity limit of **15 packs/day** for token-purchased packs (`vault_token` and `bombshell_token`), backed by an atomic PostgreSQL ledger (`token_pack_purchases`) resetting at **00:00 UTC**. Prevents whale supply runs from draining 1-of-1 Mythic editions in a single day.
 * **Horizontal Scarcity First**: When a random pack rolls a high-tier card (Mythic / Legendary) and the initially drawn day has hit its edition cap, the engine scans all available released calendar days to preserve the rolled rarity before degrading down to a lower tier.
 * **Pity Protection & Drop Modifiers**:
   * **Drought Pity**: 25 consecutive pulls without Rare+ guarantees Rare or higher on the next pull.
@@ -480,7 +480,7 @@ Equipping cards from your Vault activates distinct audio and visual modifiers ba
 * **Listen Jukebox (`ListenPage.tsx`)**: Full track and isolated stem player.
 * **Voyeur Telemetry (`VoyeurPage.tsx`)**: Real-time global feed of card drops, platinum runs, and leaderboard shifts.
 * **Admin Dashboard (`AdminPage.tsx`)**: Dynamic gacha drop tuning, pity controls, and economy live adjustments.
-* **Pitch Deck (`PitchDeck.tsx`)**: Interactive 12-slide executive presentation with live simulations for Auth, Canvas Rhythm, Web Audio Equalizer, Spark economy, and Ephemeral Key generation.
+* **Pitch Deck (`PitchDeck.tsx`)**: Interactive 12-slide executive presentation with live simulations for Auth, Canvas Rhythm, Web Audio Equalizer, Tokenomics, and Ephemeral Key generation.
 
 ---
 
@@ -614,6 +614,6 @@ This matrix details **EVERY SINGLE EVENT, TRIGGER, AND MECHANIC** that can occur
 | **Midnight Drop Bonus** | Open pack between 12:00 AM – 2:00 AM | 2x multiplier applied to Legendary drop chance | Golden midnight moon badge on gacha drawer |
 | **Streak Reward Multiplier** | 7+ consecutive daily login streak | +50% bonus to Rare and Legendary drop rates | Flame streak badge counter on vault dashboard |
 | **First Discoverer Award** | First player globally to Platinum a song | Awards unique 1-of-1 First Discoverer Legendary | Permanent username gold foil stamped on card face |
-| **Echo Generation Decay** | Recycle Gen 3+ Echo card | 0.1x spark burn multiplier limit reached | "ENTROPY DEATH" warning badge in Forge |
+| **Echo Generation Decay** | Recycle Gen 3+ Echo card | 0.1x token burn multiplier limit reached | "ENTROPY DEATH" warning badge in Forge |
 
 </div>
