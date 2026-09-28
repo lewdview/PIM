@@ -28,7 +28,10 @@ export default function ListenPage() {
   const songId = (params as any)?.songId || '';
   const [location, setLocation] = useLocation();
 
-  const { settings, updateSettings, collection, fragments } = useVaultStore();
+  const settings = useVaultStore(s => s.settings);
+  const updateSettings = useVaultStore(s => s.updateSettings);
+  const collection = useVaultStore(s => s.collection);
+  const fragments = useVaultStore(s => s.fragments);
 
   const [allCatalogSongs, setAllCatalogSongs] = useState<GameSong[]>([]);
   const [playlist, setPlaylist] = useState<GameSong[]>([]);

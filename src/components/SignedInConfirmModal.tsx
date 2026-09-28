@@ -10,7 +10,9 @@ import { audioManager } from '../game/audio';
  * the identity actually changed — no more "did it work? refresh to check".
  */
 export default function SignedInConfirmModal() {
-  const { showSignedInConfirm, signedInAlias, setShowSignedInConfirm } = useAuthStore();
+  const showSignedInConfirm = useAuthStore(s => s.showSignedInConfirm);
+  const signedInAlias = useAuthStore(s => s.signedInAlias);
+  const setShowSignedInConfirm = useAuthStore(s => s.setShowSignedInConfirm);
 
   const handleClose = () => {
     audioManager.playSfx('gold_get', 0.5);

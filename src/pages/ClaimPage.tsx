@@ -148,8 +148,12 @@ export default function ClaimPage() {
   } | null>(null);
 
   const [, setLocation] = useLocation();
-  const { user, setShowAuthModal } = useAuthStore();
-  const { collection, loadVaultData, startReveal, addToCollection } = useVaultStore();
+  const user = useAuthStore(s => s.user);
+  const setShowAuthModal = useAuthStore(s => s.setShowAuthModal);
+  const collection = useVaultStore(s => s.collection);
+  const loadVaultData = useVaultStore(s => s.loadVaultData);
+  const startReveal = useVaultStore(s => s.startReveal);
+  const addToCollection = useVaultStore(s => s.addToCollection);
 
   // Check for ultra rewards in the user's collection
   const ultraCards = useMemo(() => {

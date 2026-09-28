@@ -45,7 +45,7 @@ export default function CommandPaletteModal() {
   const collection = useVaultStore((s) => s.collection);
   const claimedRewards = useVaultStore((s) => s.claimedRewards);
   const { toggle: toggle4K } = useDisplayMode();
-  const { setShowAuthModal } = useAuthStore();
+  const setShowAuthModal = useAuthStore(s => s.setShowAuthModal);
   const [, setLocation] = useLocation();
 
   const [query, setQuery] = useState('');
