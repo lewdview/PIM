@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, useMotionValue, animate, AnimatePresence } from 'framer-motion';
-import { ChevronRight, Cpu, ShieldCheck, Zap, Info, X, Users } from 'lucide-react';
+import { ChevronRight, ChevronDown, Cpu, ShieldCheck, Zap, Info, X, Users } from 'lucide-react';
 import {
   PACK_CONFIGS,
   type PackCategory, type PackSize,
@@ -192,6 +192,7 @@ export default function CyberPackBag({
   const isFreeDisabled = category === 'free' && isFreeClaimed;
 
   const [bombshellSide, setBombshellSide] = useState<'top' | 'bot'>(() => forcedTheme === 'light' ? 'bot' : 'top');
+  const [hasFlippedSide, setHasFlippedSide] = useState(false); // hides the attention arrow after first manual flip
 
   useEffect(() => {
     if (forcedTheme) {
@@ -199,7 +200,7 @@ export default function CyberPackBag({
     } else if (category === 'bombshell' || category === 'bombshell_token') {
       setBombshellSide(Math.random() < 0.5 ? 'top' : 'bot');
     }
-  }, [category, activeTierIndex, forcedTheme]);
+  }, [category, forcedTheme]);
 
   useEffect(() => {
     import('../services/vaultService').then(({ getPackRipCount }) => {
@@ -432,23 +433,35 @@ export default function CyberPackBag({
 
         {/* Top/Bot Side Switcher Toggle for Bombshell */}
         {isBombshell && (
-          <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-30 pointer-events-auto">
+          <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-30 pointer-events-auto flex flex-col items-center">
+            {/* Attention arrow — points at the toggle until the user flips it once */}
+            {!hasFlippedSide && !forcedTheme && (
+              <motion.div
+                animate={{ y: [0, 6, 0] }}
+                transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
+                className="pointer-events-none -mb-0.5"
+                style={{ color: '#FF1493', filter: 'drop-shadow(0 0 6px rgba(255,20,147,0.9))' }}
+              >
+                <ChevronDown size={18} strokeWidth={3.2} />
+              </motion.div>
+            )}
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
+                setHasFlippedSide(true);
                 setBombshellSide(prev => prev === 'top' ? 'bot' : 'top');
               }}
-              className="px-2.5 py-1 rounded-full text-[8px] font-mono font-black uppercase tracking-wider flex items-center gap-1.5 transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-lg"
+              className="px-3.5 py-1.5 rounded-full text-[10px] font-mono font-black uppercase tracking-wider flex items-center gap-1.5 transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-lg"
               style={{
-                background: 'rgba(0, 0, 0, 0.85)',
-                border: '1.5px solid #FF1493',
+                background: 'rgba(0, 0, 0, 0.9)',
+                border: '2px solid #FF1493',
                 color: '#FF1493',
-                boxShadow: '0 0 14px rgba(255,20,147,0.6)',
+                boxShadow: '0 0 22px rgba(255,20,147,0.85), 0 0 48px rgba(255,20,147,0.35)',
               }}
             >
               <span>{bombshellSide === 'top' ? '🌙 TOP (DARK)' : '☀️ BOT (LIGHT)'}</span>
-              <span className="text-[7px] opacity-70">⟲ FLIP</span>
+              <span className="text-[8px] opacity-70">⟲ FLIP</span>
             </button>
           </div>
         )}
@@ -485,7 +498,7 @@ export default function CyberPackBag({
             <div className="mt-2 px-3 py-1 rounded bg-black/70 border border-white/10 flex items-center gap-1.5">
               <Cpu size={10} style={{ color: accent }} />
               <span className="text-[7.5px] font-mono font-bold uppercase tracking-wider text-slate-300">
-                {isBombshell ? '💖 BOMBSHELL ANIME INSPIRED GRAFITTI CARDS' : variant.tagline}
+                {isBombshell ? '💖 BOMBSHELL ANIME INSPIRED GRAFFITI CARDS' : variant.tagline}
               </span>
             </div>
           </div>
@@ -507,28 +520,6 @@ export default function CyberPackBag({
             </span>
           </div>
 
-          {/* Light / Dark Side Switcher Toggle for Bombshell */}
-          {isBombshell && !forcedTheme && (
-            <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-30 pointer-events-auto">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setBombshellSide(prev => prev === 'top' ? 'bot' : 'top');
-                }}
-                className="px-2.5 py-1 rounded-full text-[8px] font-mono font-black uppercase tracking-wider flex items-center gap-1.5 transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-lg"
-                style={{
-                  background: 'rgba(0, 0, 0, 0.85)',
-                  border: '1.5px solid #FF1493',
-                  color: '#FF1493',
-                  boxShadow: '0 0 14px rgba(255,20,147,0.6)',
-                }}
-              >
-                <span>{bombshellSide === 'top' ? '🌙 DARK' : '☀️ LIGHT'}</span>
-                <span className="text-[7px] opacity-70">⟲ FLIP</span>
-              </button>
-            </div>
-          )}
         </div>
 
         {/* Drop Rates & Info Overlay */}
