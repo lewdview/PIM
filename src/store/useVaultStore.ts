@@ -697,6 +697,12 @@ export const useVaultStore = create<VaultState>((set, get) => ({
           set({ dailyLimits: { standard: 0, premium: 0 } });
         }
       }
+
+      if (!profile) {
+        // No profile row yet (e.g. the anonymous bootstrap upsert is still in
+        // flight) — treat as never onboarded so first-run flows still trigger.
+        set({ hasOnboarded: false });
+      }
       
       if (supplyData) {
         const supplyMap: Record<string, number> = {};
@@ -945,7 +951,9 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       const session = await supabase.auth.getSession();
       const userId = session.data.session?.user.id;
       if (userId) {
-        const { error } = await supabase.from('profiles').update({ has_onboarded: true }).eq('id', userId);
+        // Upsert (not update): the profile row may not exist yet if the
+        // anonymous bootstrap upsert is still in flight.
+        const { error } = await supabase.from('profiles').upsert({ id: userId, has_onboarded: true });
         if (error) {
           console.warn('[completeOnboarding] Failed to update has_onboarded in DB:', error.message);
         }
