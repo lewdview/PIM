@@ -97,6 +97,10 @@ interface VaultState {
   // Loading
   isLoading: boolean;
   hasLoadedData: boolean;
+  // The user id the cached vault data belongs to. Guards against serving
+  // stale guest-session data after the user signs into a real identity
+  // (previously required a manual refresh to pick up the new profile).
+  loadedUserId: string | null;
 
   // Token system
   tokenBalance: number;
@@ -299,6 +303,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   revealPackMeta: null,
   isLoading: false,
   hasLoadedData: false,
+  loadedUserId: null,
   tokenBalance: 0,
   supplyMap: {},
   dailyLimits: { standard: 0, premium: 0 },
@@ -504,10 +509,10 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     const session = await supabase.auth.getSession();
     const userId = session.data.session?.user.id;
     if (!userId) {
-      set({ hasLoadedData: false });
+      set({ hasLoadedData: false, loadedUserId: null });
       return;
     }
-    if (get().hasLoadedData && !force) return;
+    if (get().hasLoadedData && !force && get().loadedUserId === userId) return;
 
     set({ isLoading: true });
     try {
@@ -928,7 +933,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       });
 
     } finally {
-      set({ isLoading: false, hasLoadedData: true });
+      set({ isLoading: false, hasLoadedData: true, loadedUserId: userId });
     }
   },
 
