@@ -34,7 +34,7 @@ def main():
 
     # Precompute optimal seam between col 4 (Dark 25) and col 5 (Dark 50)
     print("Computing seam for Dark 25 / Dark 50 boundary...")
-    d_crop = np.array(im.crop((6300, 2800, 6700, 4800)))
+    d_crop = np.array(im.crop((6300, 2800, 6700, 4940)))
     alpha_strip = d_crop[:, :, 3].astype(float)
     H_s, W_s = alpha_strip.shape
 
@@ -112,8 +112,8 @@ def main():
 
     # Process all 12 pack artworks
     for row_idx, mode in enumerate(['light', 'dark']):
-        y_start = 0 if mode == 'light' else 2600
-        y_end = 2400 if mode == 'light' else 4880
+        y_start = 0 if mode == 'light' else 2650
+        y_end = 2482 if mode == 'light' else 4940
         splits = r0_splits if mode == 'light' else r1_splits
 
         for col_idx, tier in enumerate(tiers):
@@ -128,7 +128,7 @@ def main():
                     full_y = y_start + cy_idx
                     if full_y < 2800:
                         sx = seam_xs[0]
-                    elif full_y < 4800:
+                    elif full_y < 4940:
                         sx = seam_xs[full_y - 2800]
                     else:
                         sx = seam_xs[-1]
@@ -144,7 +144,7 @@ def main():
                     full_y = y_start + cy_idx
                     if full_y < 2800:
                         sx = seam_xs[0]
-                    elif full_y < 4800:
+                    elif full_y < 4940:
                         sx = seam_xs[full_y - 2800]
                     else:
                         sx = seam_xs[-1]
@@ -170,9 +170,10 @@ def main():
                 elif max_x == cell_w - 1 and min_x > 0.72 * cell_w:
                     cell_arr[comp_mask, 3] = 0
 
-            # Smooth bottom fade over 260px in 8K
+            # Subtle edge antialiasing at cutline (20px in 8K, which scales to <2px on pack)
+            # This preserves 100% of the thighs/fishnets/outfit while avoiding hard pixel cut
             ch = cell_arr.shape[0]
-            fade_len = min(260, ch)
+            fade_len = min(20, ch)
             for fy in range(ch - fade_len, ch):
                 fade_factor = (ch - 1 - fy) / float(fade_len)
                 cell_arr[fy, :, 3] = (cell_arr[fy, :, 3].astype(float) * fade_factor).astype(np.uint8)
@@ -182,18 +183,20 @@ def main():
             if bbox:
                 char_img = char_img.crop(bbox)
 
-            # Resize character to 92% canvas height so it fills the pack artwork
-            target_h = int(ph * 0.92) # 662px
-            scale = target_h / float(char_img.height)
+            # Resize character to 94% canvas height so it fills the pack artwork
+            target_h = int(ph * 0.94) # 676px
+            max_w = int(pw * 0.92)   # 441px
+            scale = min(target_h / float(char_img.height), max_w / float(char_img.width))
             target_w = int(char_img.width * scale)
-            char_resized = char_img.resize((target_w, target_h), Image.Resampling.LANCZOS)
+            target_h_scaled = int(char_img.height * scale)
+            char_resized = char_img.resize((target_w, target_h_scaled), Image.Resampling.LANCZOS)
 
             # Composite PNG
             pack_png = Image.new('RGBA', (pw, ph), (0, 0, 0, 0))
             pack_png.alpha_composite(grad_img)
 
             pos_x = (pw - target_w) // 2
-            pos_y = int(ph * 0.04) # 28px headroom
+            pos_y = ph - target_h_scaled - 14 # bottom sits 14px above bottom border, leaving clean headroom at top
             pack_png.paste(char_resized, (pos_x, pos_y), char_resized)
             pack_png.alpha_composite(shine_img)
 
@@ -234,8 +237,10 @@ def main():
                     shutil.copyfile(scratch_png, png_dest)
 
     # Save final composite preview
-    preview_path = os.path.join(SCRATCH_DIR, "all_12_from_8k_v4_scaled_up.jpg")
+    preview_path = os.path.join(SCRATCH_DIR, "all_12_full_drawing_no_text.jpg")
     preview_canvas.save(preview_path, quality=95)
+    legacy_preview = os.path.join(SCRATCH_DIR, "all_12_from_8k_v4_scaled_up.jpg")
+    preview_canvas.save(legacy_preview, quality=95)
     print(f"Successfully exported all 12 covers and saved preview to {preview_path}!")
 
 if __name__ == "__main__":
