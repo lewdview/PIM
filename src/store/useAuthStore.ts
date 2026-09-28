@@ -97,6 +97,13 @@ let lastConfirmedUserId: string | null = null;
 const isRealUser = (u: User | null | undefined): u is User =>
   !!u && !u.is_anonymous && u.app_metadata?.provider !== 'anonymous';
 
+// Ephemeral-wallet sessions are guest-grade but still an explicit sign-in
+// action ("Create Encrypted Ephemeral Key"), so they get the confirmation pop.
+const isEphemeralSession = (): boolean => {
+  try { return localStorage.getItem('th3vault_is_ephemeral_wallet') === 'true'; }
+  catch { return false; }
+};
+
 const shortenAddr = (addr: string) =>
   addr.startsWith('0x') && addr.length === 42 ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : addr;
 
@@ -266,7 +273,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         // Pop the "logged in" confirmation on a real sign-in only — anonymous
         // sessions, token refreshes, and profile updates don't count, and the
         // lastConfirmedUserId guard keeps it to exactly one pop per sign-in.
-        if (event === 'SIGNED_IN' && isRealUser(nextUser) && lastConfirmedUserId !== nextUser.id) {
+        // Ephemeral-wallet creation counts: it's an explicit sign-in action.
+        if (event === 'SIGNED_IN' && nextUser && (isRealUser(nextUser) || isEphemeralSession()) && lastConfirmedUserId !== nextUser.id) {
           lastConfirmedUserId = nextUser.id;
           get().confirmSignIn(nextUser);
         }
@@ -495,13 +503,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       
       if (sessionError) throw sessionError;
 
-      // Mark session explicitly as ephemeral and persist user key
+      // Mark session explicitly as ephemeral and persist user key BEFORE the
+      // SIGNED_IN event fires, so the sign-in confirmation pop sees the flag.
       if (data.user?.id) {
         localStorage.setItem('th3vault_is_ephemeral_wallet', 'true');
         localStorage.setItem(`th3vault_ephemeral_wallet_pkey_${data.user.id}`, pkey);
         localStorage.setItem('th3vault_ephemeral_wallet_pkey', pkey);
       }
-      
+
       set({ session: data.session, user: data.user, status: 'ready', showAuthModal: false });
 
       // Log Ephemeral Wallet create event
@@ -657,6 +666,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const userId = get().user?.id;
     await supabase.auth.signOut();
     localStorage.removeItem('th3vault_ephemeral_wallet_pkey');
+    localStorage.removeItem('th3vault_is_ephemeral_wallet');
     if (userId) {
       localStorage.removeItem(`th3vault_ephemeral_wallet_pkey_${userId}`);
     }
