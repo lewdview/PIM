@@ -485,7 +485,7 @@ export default function CyberPackBag({
             <div className="mt-2 px-3 py-1 rounded bg-black/70 border border-white/10 flex items-center gap-1.5">
               <Cpu size={10} style={{ color: accent }} />
               <span className="text-[8px] font-mono font-bold uppercase tracking-wider text-slate-300">
-                {isBombshell ? '💖 UNCENSORED PANIK ARCHIVE' : variant.tagline}
+                {isBombshell ? '💖 BOMBSHELL PANIK ARCHIVE' : variant.tagline}
               </span>
             </div>
           </div>

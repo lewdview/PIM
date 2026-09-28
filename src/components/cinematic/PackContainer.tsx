@@ -91,10 +91,10 @@ function PackEmblem({ accent, size = 80, isBombshell = false }: { accent: string
         <path id="circlePath" d="M 50, 50 m -35, 0 a 35,35 0 1,1 70,0 a 35,35 0 1,1 -70,0" fill="transparent" />
         <text fill={accent} fontWeight="900" style={{ textTransform: 'uppercase', fontSize: isBombshell ? '7.5px' : '8.5px', textShadow: `0 0 10px ${accent}`, letterSpacing: '1px' }}>
           <textPath href="#circlePath" startOffset="0%">
-            {isBombshell ? '💖 BOMBSHELL • UNCENSORED •' : 'TH3SCR1B3 • GEN 0 •'}
+            {isBombshell ? '💖 BOMBSHELL • PANIK ED. •' : 'TH3SCR1B3 • GEN 0 •'}
           </textPath>
           <textPath href="#circlePath" startOffset="50%">
-            {isBombshell ? '💖 BOMBSHELL • UNCENSORED •' : 'TH3SCR1B3 • GEN 0 •'}
+            {isBombshell ? '💖 BOMBSHELL • PANIK ED. •' : 'TH3SCR1B3 • GEN 0 •'}
           </textPath>
         </text>
         <circle cx="50" cy="50" r="23" fill="none" stroke={accent} strokeWidth="1.5" strokeDasharray="3 3" opacity="0.8" />
@@ -252,7 +252,7 @@ function CyberPackBagContents({ meta, sampleCard }: { meta: RevealPackMeta; samp
             <div className="inline-block">
               <div className="px-3 py-1 rounded bg-black/80 border border-white/15" style={{ boxShadow: `0 0 10px ${meta.accent}30` }}>
                 <span className="text-[7.5px] font-mono font-bold tracking-wider uppercase text-slate-300">
-                  {isBombshell ? '💖 UNCENSORED PANIK ARCHIVE 💖' : variant.tagline}
+                  {isBombshell ? '💖 BOMBSHELL PANIK ARCHIVE 💖' : variant.tagline}
                 </span>
               </div>
             </div>
@@ -528,7 +528,7 @@ function ClassicFoilPackBagContents({ meta, sampleCard }: { meta: RevealPackMeta
                     fontFamily: '"JetBrains Mono", monospace'
                   }}
                 >
-                  {isBombshell ? '💖 UNCENSORED PANIK ARCHIVE 💖' : variant.tagline}
+                  {isBombshell ? '💖 BOMBSHELL PANIK ARCHIVE 💖' : variant.tagline}
                 </span>
               </div>
             </div>
