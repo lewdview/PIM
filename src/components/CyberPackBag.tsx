@@ -484,8 +484,8 @@ export default function CyberPackBag({
             {/* Tagline Badge */}
             <div className="mt-2 px-3 py-1 rounded bg-black/70 border border-white/10 flex items-center gap-1.5">
               <Cpu size={10} style={{ color: accent }} />
-              <span className="text-[8px] font-mono font-bold uppercase tracking-wider text-slate-300">
-                {isBombshell ? '💖 BOMBSHELL PANIK ARCHIVE' : variant.tagline}
+              <span className="text-[7.5px] font-mono font-bold uppercase tracking-wider text-slate-300">
+                {isBombshell ? '💖 BOMBSHELL ANIME INSPIRED GRAFITTI CARDS' : variant.tagline}
               </span>
             </div>
           </div>
