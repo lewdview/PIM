@@ -49,8 +49,10 @@ export default function OnboardingFlow({ onComplete }: Props) {
   const [cards, setCards] = useState<OwnedCard[]>([]);
   const [loadError, setLoadError] = useState(false);
   const purchasedRef = useRef(false);
-  const { addToCollection, loadVaultData } = useVaultStore();
-  const { user, setShowAuthModal } = useAuthStore();
+  const addToCollection = useVaultStore(s => s.addToCollection);
+  const loadVaultData = useVaultStore(s => s.loadVaultData);
+  const user = useAuthStore(s => s.user);
+  const setShowAuthModal = useAuthStore(s => s.setShowAuthModal);
   const isGuest =
     user?.is_anonymous ||
     user?.app_metadata?.provider === 'anonymous' ||

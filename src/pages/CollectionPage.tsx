@@ -35,7 +35,9 @@ export default function CollectionPage() {
   const supplyMap = useVaultStore((s) => s.supplyMap);
   const streakCount = useVaultStore((s) => s.streakCount);
   const echoPrestigeScore = useVaultStore((s) => s.echoPrestigeScore);
-  const { addToCollection, removeFromCollection, loadVaultData } = useVaultStore();
+  const addToCollection = useVaultStore(s => s.addToCollection);
+  const removeFromCollection = useVaultStore(s => s.removeFromCollection);
+  const loadVaultData = useVaultStore(s => s.loadVaultData);
 
   const [, setLocation] = useLocation();
   const stop = useGlobalPlayer((s) => s.stop);

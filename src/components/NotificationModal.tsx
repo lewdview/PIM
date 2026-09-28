@@ -34,16 +34,14 @@ const PRIORITY_BADGES: Record<string, { label: string; color: string; border: st
 };
 
 export const NotificationModal: React.FC = () => {
-  const {
-    isOpen,
-    setIsOpen,
-    announcements,
-    readIds,
-    markAsRead,
-    markAllAsRead,
-    dismissAnnouncement,
-    unreadCount,
-  } = useNotificationStore();
+  const isOpen = useNotificationStore(s => s.isOpen);
+  const setIsOpen = useNotificationStore(s => s.setIsOpen);
+  const announcements = useNotificationStore(s => s.announcements);
+  const readIds = useNotificationStore(s => s.readIds);
+  const markAsRead = useNotificationStore(s => s.markAsRead);
+  const markAllAsRead = useNotificationStore(s => s.markAllAsRead);
+  const dismissAnnouncement = useNotificationStore(s => s.dismissAnnouncement);
+  const unreadCount = useNotificationStore(s => s.unreadCount);
 
   const user = useAuthStore((s) => s.user);
   const [, setLocation] = useLocation();
