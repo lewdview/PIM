@@ -186,7 +186,7 @@ export default function PitchDeck() {
     }, 1100);
     setTimeout(() => {
       setEphemeralSimStep(3);
-      setEphemeralKeyLogs(prev => [...prev, '[SERVER] Writing public address to public.profiles table...', '[SYNC] Profile synced to Supabase (off-chain).', '[SYSTEM] Ephemeral credentials verified! User ready to claim daily card drops gaslessly.']);
+      setEphemeralKeyLogs(prev => [...prev, '[SERVER] Writing public address to public.profiles table...', '[SYNC] Profile synced to Base Mainnet.', '[SYSTEM] Ephemeral credentials verified! User ready to claim daily card drops gaslessly.']);
     }, 2200);
   };
 
@@ -252,8 +252,11 @@ export default function PitchDeck() {
                   <p className="font-mono text-xs tracking-widest uppercase text-[#faf0d8]/60">
                     A Hybrid HTML5 Canvas Rhythm Game & Digital Collectible Card Ecosystem Under a Technical Brutalist Cyberpunk Aesthetic.
                   </p>
+                  <p className="font-mono text-[10px] tracking-widest uppercase text-[#ffb800]/80">
+                    Everything below is live today and offchain — except where a slide says “roadmap.”
+                  </p>
                   <p className="text-xs text-[#faf0d8]/80 leading-relaxed max-w-md">
-                    PIM transforms gaming retention by bridging high-precision audio gameplay with planned verifiable digital asset ownership on Base (contract written, not yet deployed). Daily song releases unlock interactive campaigns, structured spark sinks, and community collections.
+                    PIM transforms gaming retention by bridging high-precision audio gameplay with a collectible card economy. Daily song releases unlock interactive campaigns, structured spark sinks, and community collections.
                   </p>
                   <div className="flex gap-4 pt-2">
                     <div className="flex flex-col border-l-2 border-[#ff3800] pl-3">
@@ -266,7 +269,7 @@ export default function PitchDeck() {
                     </div>
                     <div className="flex flex-col border-l-2 border-[#c44dff] pl-3">
                       <span className="text-lg font-black font-mono leading-none">V⚡</span>
-                      <span className="text-[8px] font-mono uppercase opacity-50 tracking-wider">SPARK ECONOMY</span>
+                      <span className="text-[8px] font-mono uppercase opacity-50 tracking-wider">TOKEN ECONOMY</span>
                     </div>
                   </div>
                 </>
@@ -291,7 +294,7 @@ export default function PitchDeck() {
                       },
                       {
                         title: "3. Ownership Unlocks Status",
-                        desc: "Players showcase card vaults, climb global leaderboards, burn duplicates for V⚡ spark upgrades, and bind collections to Base EVM wallets (on-chain prestige coming soon)."
+                        desc: "Players showcase card vaults, climb global leaderboards, burn duplicates for V⚡ upgrades, and connect a Base wallet to sign in and carry collector status anywhere."
                       }
                     ].map((step, idx) => (
                       <div 
@@ -370,7 +373,7 @@ export default function PitchDeck() {
                         <>
                           <div className="text-xs font-bold text-[#c44dff] font-mono">LEADERBOARD PRESTIGE & VERIFIED PROVENANCE</div>
                           <p className="text-[11px] text-[#faf0d8]/85 leading-relaxed">
-                            Showcases prestige. Rewards first-discoverers who earn Platinum medals. Tracks verified card histories, converting status into a social flex (on-chain tracking coming soon).
+                            Showcases prestige. Rewards first-discoverers who earn Platinum medals. Card histories live in your vault — built to go onchain when the contracts deploy.
                           </p>
                           <div className="text-[9px] font-mono text-white/50 uppercase">Key metrics: Leaderboard Rank, First Discoverer badges, Wallet showcases</div>
                         </>
@@ -565,11 +568,11 @@ export default function PitchDeck() {
                     VELOCITY TOKENOMICS
                   </h2>
                   <p className="text-xs text-[#faf0d8]/85 leading-relaxed">
-                    Balances daily farming loops with long-term scarcity preservation. PIM implements separate limits for Gameplay Copies vs planned Mintable Base tokens (minting not yet live).
+                    Balances daily farming loops with long-term scarcity preservation. PIM keeps separate caps for cards in play vs. the future onchain release.
                   </p>
 
                   <div className="p-3 border border-white/5 bg-[#0d0d0d] rounded">
-                    <span className="text-[9px] font-mono uppercase text-[#00f0ff] font-bold block mb-2">V⚡ SPARK SINKS</span>
+                    <span className="text-[9px] font-mono uppercase text-[#00f0ff] font-bold block mb-2">V⚡ TOKEN SINKS</span>
                     <div className="grid grid-cols-3 gap-2 font-mono text-[9px] text-white">
                       <div className="p-2 border border-white/10 rounded">
                         <span className="block font-black text-xs text-[#ffb800]">275 V⚡</span>
@@ -587,7 +590,7 @@ export default function PitchDeck() {
                   </div>
 
                   <p className="text-[10px] opacity-40 leading-relaxed font-mono uppercase">
-                    Echo variations split burn yields (50% sparks / 50% prestige). Recursive spark generation is balanced via a 3-gen entropy decay cap.
+                    Echo variations split burn yields (50% tokens / 50% prestige). Recursive token generation is balanced via a 3-gen entropy decay cap.
                   </p>
                 </>
               )}
@@ -622,7 +625,7 @@ export default function PitchDeck() {
                     </div>
                   </div>
                   <p className="text-[9.5px] opacity-40 leading-relaxed font-mono uppercase">
-                    Simulation: 416+ global supply counters recorded, 320k+ Vâ¡ sparks circulated. Smart contract written — not yet deployed on Base Mainnet.
+                    Verification: 416+ global supply counters recorded, 320k+ V⚡ sparks earned in-game. Contracts hardened, not yet deployed.
                   </p>
                 </>
               )}
@@ -684,7 +687,7 @@ export default function PitchDeck() {
                         <span>STRIPE FIAT ONRAMP INTERCEPT</span>
                       </div>
                       <span className="text-[10px] text-[#faf0d8]/60 leading-relaxed">
-                        Purchasing packs with credit cards routes users through Stripe mock/live checkouts to issue assets directly into their local profiles.
+                        Purchasing packs with credit cards routes users through Stripe mock/live checkouts to add cards directly to their vault profiles.
                       </span>
                     </div>
                   </div>
@@ -712,7 +715,7 @@ export default function PitchDeck() {
                     <div className="relative">
                       <div className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-[#ffb800] border-2 border-black" />
                       <div className="font-bold text-white uppercase">PHASE 2: PROVENANCE MEMORIES</div>
-                      <span className="text-[9px] text-[#faf0d8]/60">Writing permanent discoverer and score stamps into card metadata (on-chain coming soon).</span>
+                      <span className="text-[9px] text-[#faf0d8]/60">ROADMAP — permanent discoverer and score stamps written into onchain card metadata.</span>
                     </div>
 
                     <div className="relative">
@@ -1064,7 +1067,7 @@ export default function PitchDeck() {
                       <tr className="border-b border-white/5 opacity-50 text-[7px]">
                         <th className="p-1.5 uppercase">Rarity</th>
                         <th className="p-1.5 uppercase">Gameplay Cap</th>
-                        <th className="p-1.5 uppercase">Mintable Cap (Planned)</th>
+                        <th className="p-1.5 uppercase">GEN 0 CAP</th>
                         <th className="p-1.5 uppercase">Burn value</th>
                       </tr>
                     </thead>
