@@ -22,7 +22,8 @@ import { useAuthStore } from '../store/useAuthStore';
 import { RARITY_CONFIG } from '../utils/rarity';
 import { getAdminConfig } from '../utils/adminConfig';
 import { logAnalyticsEvent } from '../services/telemetryService';
-import { GraduationCap, Wallet, Zap, ChevronRight, Radio, Sparkles } from 'lucide-react';
+import { audioManager } from '../game/audio';
+import { GraduationCap, Wallet, Zap, ChevronRight, Radio, Sparkles, ShieldCheck, ArrowRight } from 'lucide-react';
 
 type Phase = 'welcome' | 'reveal' | 'explainer' | 'done';
 
@@ -49,6 +50,11 @@ export default function OnboardingFlow({ onComplete }: Props) {
   const [loadError, setLoadError] = useState(false);
   const purchasedRef = useRef(false);
   const { addToCollection, loadVaultData } = useVaultStore();
+  const { user, setShowAuthModal } = useAuthStore();
+  const isGuest =
+    user?.is_anonymous ||
+    user?.app_metadata?.provider === 'anonymous' ||
+    (!user?.email && !user?.user_metadata?.wallet && !user?.user_metadata?.wallet_address);
 
   // Track start of onboarding funnel
   useEffect(() => {
@@ -157,9 +163,25 @@ export default function OnboardingFlow({ onComplete }: Props) {
   const handleExplainerDone = useCallback(async () => {
     await logAnalyticsEvent('onboarding_complete');
     await loadVaultData(); // Sync with Supabase after welcome pull
+    // Guests land on the conversion screen (rendered by the 'done' phase) so
+    // they can bind an identity before the flow exits. Signed-in users skip it.
     setPhase('done');
+    if (!isGuest) {
+      onComplete();
+    }
+  }, [onComplete, loadVaultData, isGuest]);
+
+  // Guest conversion actions from the DONE screen.
+  const handleConnectIdentity = useCallback(() => {
+    audioManager.playSfx('tap_nav', 0.4);
+    onComplete(); // exit the flow first so it never re-triggers
+    setShowAuthModal(true);
+  }, [onComplete, setShowAuthModal]);
+
+  const handleContinueAsGuest = useCallback(() => {
+    audioManager.playSfx('tap_nav', 0.4);
     onComplete();
-  }, [onComplete, loadVaultData]);
+  }, [onComplete]);
 
 
 
@@ -431,6 +453,102 @@ export default function OnboardingFlow({ onComplete }: Props) {
   }
 
   if (phase === 'done') {
+    // Guests get a conversion screen: bind an identity to keep the cards they
+    // just pulled. Signed-in users never see this (onComplete fires instantly).
+    if (isGuest) {
+      return (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: '#070605',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px',
+            overflowY: 'auto',
+          }}
+        >
+          {/* Glow */}
+          <div style={{
+            position: 'absolute', width: 'min(420px, 150vw)', height: 'min(420px, 150vw)', borderRadius: '50%',
+            background: 'radial-gradient(ellipse, #39FF1420, transparent 70%)',
+            filter: 'blur(60px)', pointerEvents: 'none',
+          }} />
+
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: 'spring', damping: 12, stiffness: 260, delay: 0.1 }}
+            style={{
+              width: 72, height: 72, borderRadius: '50%',
+              background: 'rgba(57,255,20,0.08)',
+              border: '2px solid #39FF14',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              marginBottom: 20,
+            }}
+          >
+            <ShieldCheck size={34} color="#39FF14" />
+          </motion.div>
+
+          <p style={{
+            fontFamily: '"JetBrains Mono", monospace', fontSize: 10,
+            letterSpacing: '0.35em', color: '#39FF14', marginBottom: 8,
+          }}>
+            FIRST PULL SECURED
+          </p>
+          <h2 style={{
+            fontFamily: 'Impact, sans-serif', fontSize: 34, color: '#fff',
+            textTransform: 'uppercase', letterSpacing: '0.02em',
+            textAlign: 'center', marginBottom: 12, lineHeight: 1.1,
+          }}>
+            Your cards are<br />in the vault
+          </h2>
+          <p style={{
+            fontFamily: '"JetBrains Mono", monospace', fontSize: 12,
+            color: 'rgba(255,255,255,0.55)', textAlign: 'center',
+            maxWidth: 320, lineHeight: 1.7, marginBottom: 28,
+          }}>
+            They live in this browser for now. Connect an identity — email,
+            wallet, or GitHub — to bind your cards, streaks, and progress to
+            your sovereign profile forever.
+          </p>
+
+          <button
+            onClick={handleConnectIdentity}
+            style={{
+              width: '100%', maxWidth: 320, padding: '14px 0',
+              background: '#39FF14', color: '#000',
+              fontFamily: 'Impact, sans-serif', fontSize: 17,
+              letterSpacing: '0.08em', textTransform: 'uppercase',
+              border: '2px solid #000', boxShadow: '4px 4px 0 #000',
+              cursor: 'pointer', display: 'flex',
+              alignItems: 'center', justifyContent: 'center', gap: 8,
+              marginBottom: 16,
+            }}
+          >
+            Connect identity <ArrowRight size={18} />
+          </button>
+
+          <button
+            onClick={handleContinueAsGuest}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontFamily: '"JetBrains Mono", monospace', fontSize: 11,
+              letterSpacing: '0.2em', textTransform: 'uppercase',
+              color: 'rgba(255,255,255,0.35)',
+            }}
+          >
+            Continue as guest
+          </button>
+        </motion.div>
+      );
+    }
+
     return (
       <div className="fixed inset-0 bg-[#050402] flex flex-col items-center justify-center z-[9999]">
         <div
