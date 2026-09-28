@@ -1009,8 +1009,8 @@ export default function LandingPage() {
                           <div className="text-[9px] font-mono text-[#39FF14] tracking-wider mt-1 uppercase">ACCESS DECRYPTED</div>
                           <div className="text-[10px] font-mono text-zinc-400 mt-2 max-w-[240px] leading-relaxed uppercase">
                             {rewardClaimed.value === 'iddqd' 
-                              ? "MISS SYSTEM SAFETY BYPASSED. CONFIGURATION SETTINGS UNLOCKED." 
-                              : "PROCEDURAL GENERATOR DECRYPTED. LYRIC & BPM ENGINE ENGAGED."}
+                              ? "PROCEDURAL GENERATOR DECRYPTED. LYRIC & BPM ENGINE ENGAGED." 
+                              : "MISS SYSTEM SAFETY BYPASSED. CONFIGURATION SETTINGS UNLOCKED."}
                           </div>
                         </div>
                       )}
