@@ -1077,7 +1077,7 @@ export async function redeemBonusCode(code: string): Promise<{ success: boolean;
   }
 
   if (cleanCode === 'idnoclip' || cleanCode === 'iddqd') {
-    const key = cleanCode === 'idnoclip' ? 'opt_unlocked_iddqd' : 'opt_unlocked_noclip';
+    const key = cleanCode === 'idnoclip' ? 'opt_unlocked_noclip' : 'opt_unlocked_iddqd';
     localStorage.setItem(key, 'true');
     window.dispatchEvent(new Event('cheat_code_activated'));
     return {
