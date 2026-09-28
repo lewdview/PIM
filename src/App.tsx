@@ -270,14 +270,12 @@ export default function App() {
     return <Redirect to="/tutorial" replace />;
   }
 
-  // If user is authenticated but onboarding is explicitly false, show onboarding flow (globally for real authenticated users, ignoring anonymous guests)
-  const isAnonymous =
-    user?.is_anonymous ||
-    user?.app_metadata?.provider === 'anonymous' ||
-    (!user?.email && !user?.user_metadata?.wallet && !user?.user_metadata?.wallet_address);
+  // Onboarding fires for any authenticated session — signed-in users AND first-time
+  // guests — that hasn't completed it yet. Guests get the full walkthrough and a
+  // "connect identity to keep your cards" conversion screen at the end.
   const isGameplayRoute =
     location.startsWith('/play/') || location.startsWith('/results/') || location === '/tutorial';
-  if (user && !isAnonymous && hasOnboarded === false && !isGameplayRoute && isTutorialDone) {
+  if (user && hasOnboarded === false && !isGameplayRoute && isTutorialDone) {
     return <OnboardingFlow onComplete={completeOnboarding} />;
   }
 
