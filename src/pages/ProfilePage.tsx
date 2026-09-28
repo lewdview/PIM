@@ -19,13 +19,13 @@ import { Link, useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Fingerprint, RefreshCw, LogOut, Layers, ArrowUpRight,
-  Shield, Zap, User, ExternalLink, Wallet, Sparkles, Award, Play, Disc, Lock, KeyRound, Copy, Eye, EyeOff, AlertTriangle, Check
+  Shield, Zap, User, ExternalLink, Sparkles, Award, Play, Disc, Lock, KeyRound, Copy, Eye, EyeOff, AlertTriangle, Check
 } from 'lucide-react';
 import IdentitySetup from '../components/IdentitySetup';
 import { useAuthStore } from '../store/useAuthStore';
 import { useVaultStore } from '../store/useVaultStore';
 import { supabase } from '../services/supabaseClient';
-import { Wallet } from 'ethers';
+import { Wallet as EthersWallet } from 'ethers';
 import { getCurrentDay, formatDate } from '../utils/dayCalc';
 import { extractPalette, getFallbackPalette, type ExtractedPalette } from '../utils/extractPalette';
 import { audioManager } from '../game/audio';
@@ -88,7 +88,7 @@ export default function ProfilePage() {
         localStorage.getItem(`th3vault_ephemeral_wallet_pkey_${user.id}`) ||
         localStorage.getItem('th3vault_ephemeral_wallet_pkey');
       if (isEphemeral && pkey) {
-        const w = new Wallet(pkey);
+        const w = new EthersWallet(pkey);
         setEphemeralKeys({ address: w.address, pkey });
       } else {
         setEphemeralKeys(null);
