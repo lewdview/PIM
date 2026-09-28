@@ -1131,7 +1131,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
         <button 
           onClick={() => audioManager.playSfx('locked_out', 0.15)}
           className="w-11 h-5 rounded-full p-0.5 border border-red-500/20 bg-red-950/20 flex items-center justify-center cursor-not-allowed"
-          title="LOCKED — Enter code idnoclip in Redeem Center"
+          title="LOCKED — ???"
         >
           <Lock size={10} className="text-red-500 animate-pulse" />
         </button>
@@ -1766,7 +1766,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                               audioManager.playSfx('locked_out', 0.15);
                             }}
                             className="flex-1 py-2 font-mono text-[9px] font-black uppercase rounded border border-red-500/10 bg-red-950/5 text-red-500/30 flex items-center justify-center gap-1 cursor-not-allowed opacity-50"
-                            title="LOCKED — Enter code iddqd in Redeem Center"
+                            title="LOCKED — ???"
                           >
                             <Lock size={8} className="text-red-500" />
                             {mode === 'lyrics' ? 'LYRIC' : 'BPM'}
@@ -1828,7 +1828,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                             <span className="text-[7px] px-1 py-0.5 bg-zinc-800 text-zinc-400 rounded font-mono">ENCRYPTED</span>
                           </div>
                           <p className="text-[8px] font-mono text-zinc-400 mt-0.5 leading-relaxed">
-                            V5 Flagship, Neural AI, V3 Master, and V2 Minimal are locked. Enter code <span className="text-[#39FF14] font-bold font-mono select-all">"MASTERREDEEM"</span> to decrypt the alternate master editions.
+                            V5 Flagship, Neural AI, V3 Master, and V2 Minimal are locked. The decrypt code is out there…
                           </p>
                         </div>
                       </div>
@@ -2468,7 +2468,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                             <span className="text-[7px] px-1 py-0.5 bg-zinc-800 text-zinc-400 rounded font-mono">ENCRYPTED</span>
                           </div>
                           <p className="text-[8px] font-mono text-zinc-400 mt-1 leading-relaxed">
-                            3D Cyber Tunnel, 3D Corkscrew, Wave Coaster, Split Matrix, and Realtime Stage POV Shifts are locked. Enter code <span className="text-[#39FF14] font-bold font-mono select-all">"POVREDEEM"</span> to decrypt the perspective engine.
+                            3D Cyber Tunnel, 3D Corkscrew, Wave Coaster, Split Matrix, and Realtime Stage POV Shifts are locked. The decrypt code is out there…
                           </p>
                         </div>
                       </div>
