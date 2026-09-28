@@ -19,12 +19,13 @@ import { Link, useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Fingerprint, RefreshCw, LogOut, Layers, ArrowUpRight,
-  Shield, Zap, User, ExternalLink, Wallet, Sparkles, Award, Play, Disc, Lock
+  Shield, Zap, User, ExternalLink, Wallet, Sparkles, Award, Play, Disc, Lock, KeyRound, Copy, Eye, EyeOff, AlertTriangle, Check
 } from 'lucide-react';
 import IdentitySetup from '../components/IdentitySetup';
 import { useAuthStore } from '../store/useAuthStore';
 import { useVaultStore } from '../store/useVaultStore';
 import { supabase } from '../services/supabaseClient';
+import { Wallet } from 'ethers';
 import { getCurrentDay, formatDate } from '../utils/dayCalc';
 import { extractPalette, getFallbackPalette, type ExtractedPalette } from '../utils/extractPalette';
 import { audioManager } from '../game/audio';
@@ -69,6 +70,49 @@ export default function ProfilePage() {
   const [topCoverArt, setTopCoverArt] = useState<string>('/screenshots/06_rhythm_gameplay.png');
   const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [passkeyFeedback, setPasskeyFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Ephemeral wallet keys — shown only when this session runs on the
+  // browser-generated ephemeral wallet (th3vault_is_ephemeral_wallet).
+  const [ephemeralKeys, setEphemeralKeys] = useState<{ address: string; pkey: string } | null>(null);
+  const [showPkey, setShowPkey] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) {
+      setEphemeralKeys(null);
+      return;
+    }
+    try {
+      const isEphemeral = localStorage.getItem('th3vault_is_ephemeral_wallet') === 'true';
+      const pkey =
+        localStorage.getItem(`th3vault_ephemeral_wallet_pkey_${user.id}`) ||
+        localStorage.getItem('th3vault_ephemeral_wallet_pkey');
+      if (isEphemeral && pkey) {
+        const w = new Wallet(pkey);
+        setEphemeralKeys({ address: w.address, pkey });
+      } else {
+        setEphemeralKeys(null);
+      }
+    } catch {
+      setEphemeralKeys(null);
+    }
+    setShowPkey(false);
+  }, [user]);
+
+  const copyField = async (field: string, value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = value;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    setCopiedField(field);
+    window.setTimeout(() => setCopiedField((f) => (f === field ? null : f)), 1800);
+  };
 
   // 3D Perspective Card Tilt
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
@@ -391,6 +435,68 @@ export default function ProfilePage() {
             </div>
           </div>
         </section>
+
+        {/* ═══════════ SECTION 4 : EPHEMERAL WALLET KEYS ═══════════ */}
+        {ephemeralKeys && (
+          <section className="profile-glass-panel border-l-4 border-[#00E5FF] mt-6">
+            <div className="profile-panel-header text-[#00E5FF]">
+              <KeyRound size={18} /> Ephemeral Wallet Keys
+            </div>
+
+            <div className="flex items-start gap-2 p-3 mb-4 bg-[#ff3800]/10 border border-[#ff3800]/30 font-mono text-[10px] text-[#ff9a7a] leading-relaxed">
+              <AlertTriangle size={14} className="shrink-0 mt-[1px] text-[#ff3800]" />
+              <span>
+                This wallet was generated in this browser and lives <strong className="text-white">only here</strong>.
+                Anyone holding the private key controls the wallet and everything in it.
+                Back it up now — or lock in a permanent identity above to preserve your cards.
+              </span>
+            </div>
+
+            <div className="flex flex-col gap-3 font-mono text-xs">
+              <div className="flex justify-between items-center gap-3 py-2 border-b border-white/5">
+                <span className="text-white/40 uppercase tracking-wider shrink-0">Public Address</span>
+                <span className="flex items-center gap-2 min-w-0">
+                  <span className="text-[#00E5FF] font-bold font-mono text-[10px] break-all text-right">{ephemeralKeys.address}</span>
+                  <button
+                    onClick={() => copyField('address', ephemeralKeys.address)}
+                    className="shrink-0 p-1.5 border border-white/15 text-white/60 hover:text-white hover:border-white/40 transition-all cursor-pointer"
+                    title="Copy address"
+                  >
+                    {copiedField === 'address' ? <Check size={12} className="text-[#39FF14]" /> : <Copy size={12} />}
+                  </button>
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center gap-3 py-2">
+                <span className="text-white/40 uppercase tracking-wider shrink-0">Private Key</span>
+                <span className="flex items-center gap-2 min-w-0">
+                  <span className="text-white/80 font-mono text-[10px] break-all text-right">
+                    {showPkey ? ephemeralKeys.pkey : '•'.repeat(48)}
+                  </span>
+                  <button
+                    onClick={() => {
+                      audioManager.playSfx('tap_nav', 0.3);
+                      setShowPkey((v) => !v);
+                    }}
+                    className="shrink-0 p-1.5 border border-white/15 text-white/60 hover:text-white hover:border-white/40 transition-all cursor-pointer"
+                    title={showPkey ? 'Hide private key' : 'Reveal private key'}
+                  >
+                    {showPkey ? <EyeOff size={12} /> : <Eye size={12} />}
+                  </button>
+                  {showPkey && (
+                    <button
+                      onClick={() => copyField('pkey', ephemeralKeys.pkey)}
+                      className="shrink-0 p-1.5 border border-white/15 text-white/60 hover:text-white hover:border-white/40 transition-all cursor-pointer"
+                      title="Copy private key"
+                    >
+                      {copiedField === 'pkey' ? <Check size={12} className="text-[#39FF14]" /> : <Copy size={12} />}
+                    </button>
+                  )}
+                </span>
+              </div>
+            </div>
+          </section>
+        )}
 
       </div>
     </div>
