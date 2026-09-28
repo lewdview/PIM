@@ -84,14 +84,14 @@ const STORY_LINES = [
 ];
 
 const ECOSYSTEM_NODES: EcosystemPillar[] = [
-  { id: '365', label: '365', desc: 'Daily releases', longDesc: '365 original songs composed, mixed, and released across 365 consecutive days.', angle: 270, tag: 'TEMPORAL', stat: '365 TRACKS' },
+  { id: '365', label: '365', desc: 'Daily releases', longDesc: '365 songs released one per day \u2014 new dailies and rescued archive freestyles, each with cover art, a light/dark tag, and a reading.', angle: 270, tag: 'TEMPORAL', stat: '365 TRACKS' },
   { id: 'mood', label: 'Mood', desc: 'Emotional tagging', longDesc: 'High-dimensional valence & mood tagging categorizing tracks from hyper-dark to synth light.', angle: 315, tag: 'VALENCE', stat: '12 MOODS' },
   { id: 'lyrics', label: 'Lyrics', desc: 'Every word', longDesc: 'Complete poetic manuscripts, verse annotations, and hand-crafted lyric sheets.', angle: 0, tag: 'POETRY', stat: 'FULL LYRICS' },
   { id: 'ascii', label: 'ASCII', desc: 'Text art', longDesc: 'Cyber brutalist ASCII typography, retro terminal visuals, and console art.', angle: 45, tag: 'BRUTALIST', stat: 'CLI ART' },
   { id: 'poems', label: 'Poems', desc: 'Verse & flow', longDesc: 'Original spoken word, lyrical prose, and literary companion pieces.', angle: 90, tag: 'LITERARY', stat: 'PROSE' },
   { id: 'lrc', label: 'LRC', desc: 'Synced lyrics', longDesc: 'Millisecond-accurate synced LRC timeline tracks for live karaoke & arcade HUDs.', angle: 135, tag: 'SYNCHRONIZED', stat: 'TIMELINES' },
   { id: 'videos', label: 'Videos', desc: 'Visual stories', longDesc: 'Cinematic visualizers, AI music videos, and generative video backdrops.', angle: 180, tag: 'CINEMATIC', stat: '4K VISUALS' },
-  { id: 'base', label: 'Base', desc: 'On-chain proof (coming soon)', longDesc: 'Cryptographic provenance planned for Base Mainnet. Sovereign collector status.', angle: 225, tag: 'CRYPTOGRAPHIC', stat: 'BASE L2' },
+  { id: 'base', label: 'Base', desc: 'Wallet sign-in', longDesc: 'Sign in with a Base wallet and carry your identity with you. Your cards live in your vault \u2014 no crypto needed to play.', angle: 225, tag: 'WALLET', stat: 'BASE APP' },
 ];
 
 const SECTION_IDS = [
@@ -826,7 +826,7 @@ export default function HeroLandingPage() {
           {/* Main Brand Logo — dynamically chooses 1 of 3 session logos, click to switch */}
           <div className="flex flex-col items-center justify-center my-2 sm:my-4">
             <MainBrandLogo size="hero" priority={true} interactive={true} />
-            <h1 className="sr-only">PIM : Poetry In Motion</h1>
+            <h1 className="sr-only">PIM : th3v4ult \u2014 Poetry in Motion</h1>
           </div>
 
           <p className="hero-tagline">
