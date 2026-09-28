@@ -1700,7 +1700,7 @@ export default function NextGenLandingPage() {
                       <div>
                         <div className="text-[10px] font-bold text-purple-300 uppercase tracking-widest">ACCESS DECRYPTED</div>
                         <div className="text-lg font-bold text-purple-400">
-                          {rewardClaimed.value === 'iddqd' ? 'MISS SYSTEM SAFETY BYPASSED' : 'PROCEDURAL GENERATOR DECRYPTED'}
+                          {rewardClaimed.value === 'iddqd' ? 'PROCEDURAL GENERATOR DECRYPTED' : 'MISS SYSTEM SAFETY BYPASSED'}
                         </div>
                       </div>
                     </div>
