@@ -990,12 +990,12 @@ export default function SlideshowPage() {
 
           {!stunnerSectionUnlocked ? (
             <p className="text-[8px] font-mono text-zinc-500 leading-normal uppercase">
-              Exclusive adult gallery. Redeem decrypt code <span className="text-[#39FF14] font-bold">"stunnerofthemonthunlock"</span> in the Redeem Center to unlock section.
+              Exclusive adult gallery. A decrypt code is required to unlock this section.
             </p>
           ) : (
             <div className="space-y-2">
               <p className="text-[7.5px] font-mono text-zinc-400 uppercase tracking-wider">
-                Unlock individual premium poses of Stella Luxx (or use code <span className="text-[#39FF14] font-bold">"freebstella"</span>):
+                Unlock individual premium poses of Stella Luxx:
               </p>
               
               <div className="grid grid-cols-1 gap-1.5 max-h-[160px] overflow-y-auto custom-scrollbar pr-1">
