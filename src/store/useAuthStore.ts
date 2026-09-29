@@ -6,6 +6,7 @@ import { CoinbaseWalletSDK } from '@coinbase/wallet-sdk';
 import { Wallet } from 'ethers';
 import { logAnalyticsEvent } from '../services/telemetryService';
 import { farcasterService } from '../services/farcasterService';
+import { transmission } from './useTransmissionStore';
 
 const BASE_CHAIN_ID_HEX = '0x2105';
 const BASE_CHAIN_CONFIG = {
@@ -219,6 +220,30 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const code = urlParams.get('code') || hashParams.get('code');
     let activeSession: Session | null = null;
     let fromRedirect = false;
+
+    // 0. Surface OAuth provider failures (denied consent, misconfigured provider,
+    //    redirect-URL mismatch, …) instead of silently falling back to guest.
+    //    Supabase bounces these back as ?error=&error_description= with no code.
+    const oauthError = urlParams.get('error') || hashParams.get('error');
+    if (oauthError) {
+      const rawDesc = urlParams.get('error_description') || hashParams.get('error_description') || '';
+      let desc = rawDesc;
+      try { desc = decodeURIComponent(rawDesc.replace(/\+/g, ' ')); } catch { /* keep raw */ }
+      const friendly = `GitHub sign-in failed: ${desc || oauthError}`;
+      console.error('[Auth] OAuth redirect error:', oauthError, desc);
+      try {
+        const cleanUrl = new URL(window.location.href);
+        cleanUrl.searchParams.delete('error');
+        cleanUrl.searchParams.delete('error_description');
+        cleanUrl.searchParams.delete('error_code');
+        cleanUrl.hash = '';
+        window.history.replaceState({}, document.title, cleanUrl.toString());
+      } catch { /* noop */ }
+      set({ error: friendly });
+      try {
+        transmission.error('SIGN-IN FAILED', desc || oauthError, { duration: 9000 });
+      } catch { /* toast store not ready — console already captured it */ }
+    }
 
     if (code) {
       console.log('[Auth] Detected OAuth PKCE authorization code. Exchanging for session...');
