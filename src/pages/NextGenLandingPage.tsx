@@ -95,10 +95,17 @@ function StatSticker({ icon: Icon, label, value, color }: {
 
 export default function NextGenLandingPage() {
   const [, setLocation] = useLocation();
-  const {
-    dailyCard, hasClaimed, tokenBalance, loadVaultData, setDailyCard, setHasClaimed,
-    startReveal, addToCollection, removeFromCollection, collection, echoPrestigeScore
-  } = useVaultStore();
+  const dailyCard = useVaultStore(s => s.dailyCard);
+  const hasClaimed = useVaultStore(s => s.hasClaimed);
+  const tokenBalance = useVaultStore(s => s.tokenBalance);
+  const loadVaultData = useVaultStore(s => s.loadVaultData);
+  const setDailyCard = useVaultStore(s => s.setDailyCard);
+  const setHasClaimed = useVaultStore(s => s.setHasClaimed);
+  const startReveal = useVaultStore(s => s.startReveal);
+  const addToCollection = useVaultStore(s => s.addToCollection);
+  const removeFromCollection = useVaultStore(s => s.removeFromCollection);
+  const collection = useVaultStore(s => s.collection);
+  const echoPrestigeScore = useVaultStore(s => s.echoPrestigeScore);
   const user = useAuthStore(s => s.user);
   const today = getCurrentDay();
 

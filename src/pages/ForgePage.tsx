@@ -429,18 +429,16 @@ function EchoStatusPanel({ refreshTrigger }: { refreshTrigger?: number }) {
 export default function ForgePage() {
   const [, setLocation] = useLocation();
   const today = getCurrentDay();
-  const {
-    collection,
-    removeFromCollection,
-    tokenBalance,
-    loadVaultData,
-    addToCollection,
-    startReveal,
-    streakCount,
-    totalPulls,
-    pullsSinceRarePlus,
-    adminConfig,
-  } = useVaultStore();
+  const collection = useVaultStore(s => s.collection);
+  const removeFromCollection = useVaultStore(s => s.removeFromCollection);
+  const tokenBalance = useVaultStore(s => s.tokenBalance);
+  const loadVaultData = useVaultStore(s => s.loadVaultData);
+  const addToCollection = useVaultStore(s => s.addToCollection);
+  const startReveal = useVaultStore(s => s.startReveal);
+  const streakCount = useVaultStore(s => s.streakCount);
+  const totalPulls = useVaultStore(s => s.totalPulls);
+  const pullsSinceRarePlus = useVaultStore(s => s.pullsSinceRarePlus);
+  const adminConfig = useVaultStore(s => s.adminConfig);
 
   const [confirmSell, setConfirmSell] = useState<OwnedCard | null>(null);
   const [lastBurnResult, setLastBurnResult] = useState<{ tokens: number; echoCreated: boolean; echoGen?: number } | null>(null);
