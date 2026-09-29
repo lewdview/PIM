@@ -1,5 +1,6 @@
 import { Route, Switch, useLocation, Redirect } from 'wouter';
-import { useEffect, useState, useRef, Suspense, lazy } from 'react';
+import { useEffect, useState, useRef, useCallback, Suspense, lazy } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { useAuthStore } from './store/useAuthStore';
 import { logAnalyticsEvent } from './services/telemetryService';
 import { useVaultStore } from './store/useVaultStore';
@@ -26,6 +27,7 @@ import { SystemAlertBanner } from './components/SystemAlertBanner';
 import { useNotificationStore } from './store/useNotificationStore';
 import { getCurrentDay } from './utils/dayCalc';
 import { farcasterService } from './services/farcasterService';
+import ArcadeSplashScreen from './components/ArcadeSplashScreen';
 
 // Helper to auto-retry and cache-bust lazy route chunk imports on version deployment updates
 function lazyWithRetry<T extends React.ComponentType<any>>(
@@ -157,8 +159,23 @@ function TransmissionsRoute() {
   return null;
 }
 
+let hasEnteredSession = false;
+
 export default function App() {
   const [location, setLocation] = useLocation();
+  const [showArcadeSplash, setShowArcadeSplash] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const query = new URLSearchParams(window.location.search);
+    if (query.get('skip_splash') === 'true' || query.get('splash') === 'false') return false;
+    if (window.location.pathname.startsWith('/play/')) return false;
+    return !hasEnteredSession;
+  });
+
+  const handleStartArcade = useCallback(() => {
+    hasEnteredSession = true;
+    setShowArcadeSplash(false);
+  }, []);
+
   const initializeAuth = useAuthStore((s) => s.initialize);
   const authStatus = useAuthStore((s) => s.status);
   const user = useAuthStore((s) => s.user);
@@ -267,7 +284,14 @@ export default function App() {
     if (typeof window !== 'undefined' && location && location !== '/tutorial' && !sessionStorage.getItem('post_tutorial_redirect')) {
       sessionStorage.setItem('post_tutorial_redirect', location);
     }
-    return <Redirect to="/tutorial" replace />;
+    return (
+      <>
+        <AnimatePresence>
+          {showArcadeSplash && <ArcadeSplashScreen onStart={handleStartArcade} />}
+        </AnimatePresence>
+        <Redirect to="/tutorial" replace />
+      </>
+    );
   }
 
   // Onboarding fires for any authenticated session — signed-in users AND first-time
@@ -276,7 +300,14 @@ export default function App() {
   const isGameplayRoute =
     location.startsWith('/play/') || location.startsWith('/results/') || location === '/tutorial';
   if (user && hasOnboarded === false && !isGameplayRoute && isTutorialDone) {
-    return <OnboardingFlow onComplete={completeOnboarding} />;
+    return (
+      <>
+        <AnimatePresence>
+          {showArcadeSplash && <ArcadeSplashScreen onStart={handleStartArcade} />}
+        </AnimatePresence>
+        <OnboardingFlow onComplete={completeOnboarding} />
+      </>
+    );
   }
 
   // Hide the global navigation bar only in active gameplay, tutorial, editor, or hero landing pages
@@ -289,6 +320,9 @@ export default function App() {
 
   return (
     <ErrorBoundary sectionName="ROOT_APP">
+      <AnimatePresence>
+        {showArcadeSplash && <ArcadeSplashScreen onStart={handleStartArcade} />}
+      </AnimatePresence>
       <div
         className="min-h-screen bg-[#050402] text-white flex flex-col select-none relative"
         style={{

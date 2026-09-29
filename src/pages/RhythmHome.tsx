@@ -95,6 +95,39 @@ export default function Home() {
   const [introPhase, setIntroPhase] = useState<'prompt'|'booting'|'presented'|'intro'|'intro_2'|'intro3'|'climax'|'done'>('prompt');
   const [bootText, setBootText] = useState("");
   const [isIntroTransition, setIsIntroTransition] = useState(false);
+  const introCancelledRef = useRef(false);
+  const introTimersRef = useRef<(NodeJS.Timeout | number)[]>([]);
+
+  const handleSkipIntro = useCallback((e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    introCancelledRef.current = true;
+    introTimersRef.current.forEach((t) => clearTimeout(t));
+    introTimersRef.current = [];
+    hasPlayedIntroThisSession = true;
+    setIsIntroTransition(true);
+    setIntroPhase('done');
+    setShowIntro(false);
+    window.dispatchEvent(new Event("intro_finished"));
+    try {
+      audioManager.playSfx('tap_nav', 0.4);
+    } catch {}
+  }, []);
+
+  // Keyboard shortcut: Escape or Enter skips arcade intro
+  useEffect(() => {
+    if (!showIntro || introPhase === 'done') return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' || e.key === 'Enter') {
+        handleSkipIntro();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showIntro, introPhase, handleSkipIntro]);
+
 const DigitalClock = memo(() => {
   const [time, setTime] = useState("");
   useEffect(() => {
@@ -112,8 +145,10 @@ const DigitalClock = memo(() => {
 
   const startIntroSequence = useCallback(async () => {
     if (introPhase !== 'prompt') return;
+    introCancelledRef.current = false;
     setIntroPhase('booting');
     await audioManager.ensureReady();
+    if (introCancelledRef.current) return;
     audioManager.preloadAll();
     
     // Ensure intro sounds are cached
@@ -124,6 +159,7 @@ const DigitalClock = memo(() => {
       audioManager.loadSfx('intro3'),
       audioManager.loadSfx('fusion')
     ]);
+    if (introCancelledRef.current) return;
 
     if (introType === 'classic') {
       // Boot sequence effect
@@ -134,57 +170,70 @@ const DigitalClock = memo(() => {
         "> CALIBRATING NEURAL LINK... [OK]"
       ];
       for (let i = 0; i < lines.length; i++) {
+        if (introCancelledRef.current) return;
         setBootText(lines.slice(0, i+1).join('\n'));
         audioManager.playSfx('tap_nav', 0.2);
         await new Promise(r => setTimeout(r, 150 + Math.random() * 200));
       }
+      if (introCancelledRef.current) return;
       await new Promise(r => setTimeout(r, 300));
+      if (introCancelledRef.current) return;
 
       setIntroPhase('presented');
       audioManager.playSfx('by_th3scr1b3', 0.9);
 
-      setTimeout(() => {
+      const t1 = setTimeout(() => {
+        if (introCancelledRef.current) return;
         const intros = ['intro', 'intro_2', 'intro3'] as const;
         const pick = intros[Math.floor(Math.random() * intros.length)];
         setIntroPhase(pick);
         audioManager.playSfx(pick, 0.9);
         
-        setTimeout(() => {
+        const t2 = setTimeout(() => {
+          if (introCancelledRef.current) return;
           setIntroPhase('done');
           hasPlayedIntroThisSession = true;
           setShowIntro(false);
           window.dispatchEvent(new Event("intro_finished"));
         }, 6000); // Wait for the intro sound to finish
+        introTimersRef.current.push(t2);
       }, 2500); // Wait for "presented by th3scr1b3"
+      introTimersRef.current.push(t1);
     } else {
       // Avant-Garde Intro sequence
       // 1. Booting scan phase
       await new Promise(r => setTimeout(r, 1800));
+      if (introCancelledRef.current) return;
 
       // 2. Presented split-reveal
       setIntroPhase('presented');
       audioManager.playSfx('by_th3scr1b3', 0.9);
       await new Promise(r => setTimeout(r, 2200));
+      if (introCancelledRef.current) return;
 
       // 3. Kinetic Letters: P
       setIntroPhase('intro');
       audioManager.playSfx('intro', 0.9);
       await new Promise(r => setTimeout(r, 1400));
+      if (introCancelledRef.current) return;
 
       // 4. Kinetic Letters: I
       setIntroPhase('intro_2');
       audioManager.playSfx('intro_2', 0.9);
       await new Promise(r => setTimeout(r, 1400));
+      if (introCancelledRef.current) return;
 
       // 5. Kinetic Letters: M
       setIntroPhase('intro3');
       audioManager.playSfx('intro3', 0.9);
       await new Promise(r => setTimeout(r, 1400));
+      if (introCancelledRef.current) return;
 
       // 6. Climax: Merged PIM + 3D Grid Ticker
       setIntroPhase('climax');
       audioManager.playSfx('fusion', 0.8);
       await new Promise(r => setTimeout(r, 2600));
+      if (introCancelledRef.current) return;
 
       // 7. Done
       setIsIntroTransition(true);
@@ -443,6 +492,19 @@ const DigitalClock = memo(() => {
           style={{ background: '#080808', opacity: introPhase === 'done' ? 0 : 1 }}
           onClick={startIntroSequence}
         >
+          {/* Universal Skip Button for BOTH Classic & Avant-Garde Arcade Intros */}
+          <button
+            type="button"
+            onClick={handleSkipIntro}
+            className="absolute top-4 right-4 sm:top-6 sm:right-6 z-[250] flex items-center gap-1.5 px-3.5 py-1.5 font-mono text-[9px] sm:text-[10px] font-black uppercase tracking-[0.25em] text-white/70 hover:text-white bg-black/80 hover:bg-black border border-white/20 hover:border-[#FF1493] backdrop-blur-md rounded-sm transition-all shadow-[0_0_15px_rgba(0,0,0,0.8)] active:scale-95 cursor-pointer"
+            style={{
+              clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+            }}
+            title="Skip Intro (Escape)"
+          >
+            <span>SKIP INTRO</span>
+            <span className="text-[#39FF14]">➔</span>
+          </button>
           {introPhase === 'prompt' && introType === 'classic' && (
             <div className="font-mono text-xs tracking-[0.5em] animate-pulse" style={{ color: 'rgba(255,255,255,0.5)' }}>
               TAP TO INITIATE
