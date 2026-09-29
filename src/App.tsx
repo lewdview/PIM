@@ -272,7 +272,7 @@ export default function App() {
     return (
       <ErrorBoundary sectionName="SPLASH_GATEWAY">
         <AnimatePresence>
-          <ArcadeSplashScreen onStart={handleStartArcade} />
+          <ArcadeSplashScreen key="arcade-splash" onStart={handleStartArcade} />
         </AnimatePresence>
       </ErrorBoundary>
     );

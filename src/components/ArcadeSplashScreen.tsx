@@ -58,23 +58,42 @@ export default function ArcadeSplashScreen({ onStart }: ArcadeSplashScreenProps)
   const [isDismissing, setIsDismissing] = useState(false);
   const [isAttractMode, setIsAttractMode] = useState(false);
   const [activeSlide, setActiveSlide] = useState(0);
-  const [slideProgress, setSlideProgress] = useState(0);
 
-  const [dayNumber] = useState(() => getCurrentDay());
-  const [pickedCover] = useState(() => pickBombshellArtwork(dayNumber));
+  const [dayNumber] = useState(() => {
+    try {
+      return getCurrentDay();
+    } catch {
+      return 1;
+    }
+  });
+
+  const [pickedCover] = useState(() => {
+    try {
+      return pickBombshellArtwork(dayNumber);
+    } catch {
+      return { fileName: 'default.jpg', coverUrl: DEFAULT_BOMBSHELL_PACK_COVER, isLB: false };
+    }
+  });
+
   const [candidateUrls, setCandidateUrls] = useState<string[]>([]);
   const [coverUrl, setCoverUrl] = useState<string>('');
   const [candidateIdx, setCandidateIdx] = useState(0);
 
   const hasTriggeredRef = useRef(false);
-  const idleTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const slideProgressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const idleTimerRef = useRef<any>(null);
+  const lastActivityRef = useRef<number>(Date.now());
 
   // Initialize candidates & cover URL on mount (fresh random pull every time!)
   useEffect(() => {
-    const urls = getBombshellCoverCandidates(dayNumber, pickedCover.fileName);
-    setCandidateUrls(urls);
-    setCoverUrl(urls[0] || pickedCover.coverUrl || DEFAULT_BOMBSHELL_PACK_COVER);
+    try {
+      const fileName = pickedCover?.fileName || '';
+      const urls = getBombshellCoverCandidates(dayNumber, fileName);
+      setCandidateUrls(urls);
+      setCoverUrl(urls[0] || pickedCover?.coverUrl || DEFAULT_BOMBSHELL_PACK_COVER);
+    } catch (err) {
+      console.warn('[ArcadeSplash] Failed to load cover candidates:', err);
+      setCoverUrl(DEFAULT_BOMBSHELL_PACK_COVER);
+    }
   }, [dayNumber, pickedCover]);
 
   // Handle fallback if cover candidate fails to load
@@ -111,7 +130,11 @@ export default function ArcadeSplashScreen({ onStart }: ArcadeSplashScreenProps)
 
     // Smooth exit transition
     setTimeout(() => {
-      onStart();
+      try {
+        onStart();
+      } catch (err) {
+        console.error('[ArcadeSplash] onStart error:', err);
+      }
     }, 450);
   }, [isDismissing, onStart]);
 
@@ -126,74 +149,90 @@ export default function ArcadeSplashScreen({ onStart }: ArcadeSplashScreenProps)
 
   useEffect(() => {
     resetIdleTimer();
-    const handleActivity = () => {
-      if (!isAttractMode) {
-        resetIdleTimer();
+
+    const handleThrottledActivity = () => {
+      const now = Date.now();
+      // Throttle activity checks to at most once per 300ms to avoid re-render thrashing
+      if (now - lastActivityRef.current > 300) {
+        lastActivityRef.current = now;
+        if (!isAttractMode) {
+          resetIdleTimer();
+        }
       }
     };
-    window.addEventListener('mousemove', handleActivity);
-    window.addEventListener('scroll', handleActivity);
+
+    window.addEventListener('mousemove', handleThrottledActivity, { passive: true });
+    window.addEventListener('scroll', handleThrottledActivity, { passive: true });
+    window.addEventListener('touchstart', handleThrottledActivity, { passive: true });
+
     return () => {
       if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
-      window.removeEventListener('mousemove', handleActivity);
-      window.removeEventListener('scroll', handleActivity);
+      window.removeEventListener('mousemove', handleThrottledActivity);
+      window.removeEventListener('scroll', handleThrottledActivity);
+      window.removeEventListener('touchstart', handleThrottledActivity);
     };
   }, [isAttractMode, resetIdleTimer]);
 
-  // Slide cycle & smooth progress bar in Attract Mode
+  // Clean, zero-CPU slide cycling in Attract Mode
   useEffect(() => {
-    if (!isAttractMode) {
-      setSlideProgress(0);
-      return;
-    }
-
-    const startTime = Date.now();
-    const tickInterval = 50;
+    if (!isAttractMode) return;
 
     const interval = setInterval(() => {
-      const elapsed = Date.now() - startTime;
-      const progress = Math.min((elapsed / SLIDE_DURATION_MS) * 100, 100);
-      setSlideProgress(progress);
-
-      if (elapsed >= SLIDE_DURATION_MS) {
-        setActiveSlide((prev) => (prev + 1) % LORE_SLIDES.length);
-        setSlideProgress(0);
-      }
-    }, tickInterval);
+      setActiveSlide((prev) => (prev + 1) % LORE_SLIDES.length);
+    }, SLIDE_DURATION_MS);
 
     return () => clearInterval(interval);
-  }, [isAttractMode, activeSlide]);
+  }, [isAttractMode]);
 
   // Window keydown listener: any key triggers start
   useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      // Allow Escape or Space to engage immediately
+    const onKeyDown = () => {
       handleEngage();
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [handleEngage]);
 
-  // Gamepad button polling for "PRESS START"
+  // Safe Gamepad button polling for "PRESS START" (with indexed loop & try-catch)
   useEffect(() => {
     let animId: number;
+    let isActive = true;
+
     const pollGamepad = () => {
-      if (typeof navigator !== 'undefined' && navigator.getGamepads) {
-        const gamepads = navigator.getGamepads();
-        for (const gp of gamepads) {
-          if (gp && gp.buttons.some((b) => b.pressed)) {
-            handleEngage();
-            return;
+      if (!isActive) return;
+
+      try {
+        if (typeof navigator !== 'undefined' && typeof navigator.getGamepads === 'function') {
+          const gamepads = navigator.getGamepads();
+          if (gamepads && typeof gamepads.length === 'number') {
+            for (let i = 0; i < gamepads.length; i++) {
+              const gp = gamepads[i];
+              if (gp && gp.buttons && typeof gp.buttons.length === 'number') {
+                for (let b = 0; b < gp.buttons.length; b++) {
+                  if (gp.buttons[b]?.pressed) {
+                    handleEngage();
+                    return;
+                  }
+                }
+              }
+            }
           }
         }
+      } catch {
+        // Disallowed by permissions policy or unsupported browser context
       }
+
       animId = requestAnimationFrame(pollGamepad);
     };
+
     animId = requestAnimationFrame(pollGamepad);
-    return () => cancelAnimationFrame(animId);
+    return () => {
+      isActive = false;
+      cancelAnimationFrame(animId);
+    };
   }, [handleEngage]);
 
-  const currentSlideData = LORE_SLIDES[activeSlide];
+  const currentSlideData = LORE_SLIDES[activeSlide] ?? LORE_SLIDES[0];
 
   return (
     <motion.div
@@ -404,10 +443,6 @@ export default function ArcadeSplashScreen({ onStart }: ArcadeSplashScreenProps)
           exit={{ opacity: 0, scale: 0.92 }}
           transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
           className="w-full max-w-4xl z-20 my-auto py-2 px-2 sm:px-6 flex flex-col justify-center"
-          onClick={(e) => {
-            // Allow clicking anywhere inside the reel to engage game
-            // but keep interactive buttons responsive
-          }}
         >
           {/* Reel Nav Tabs & Slide Progress Bar */}
           <div className="w-full flex flex-col gap-2 mb-4 sm:mb-6">
@@ -422,7 +457,6 @@ export default function ArcadeSplashScreen({ onStart }: ArcadeSplashScreenProps)
                       onClick={(e) => {
                         e.stopPropagation();
                         setActiveSlide(idx);
-                        setSlideProgress(0);
                       }}
                       className={`px-2.5 sm:px-4 py-1.5 font-mono text-[10px] sm:text-xs tracking-wider uppercase rounded transition-all cursor-pointer flex items-center gap-1.5 ${
                         isActive
@@ -451,7 +485,6 @@ export default function ArcadeSplashScreen({ onStart }: ArcadeSplashScreenProps)
                   onClick={(e) => {
                     e.stopPropagation();
                     setActiveSlide((prev) => (prev - 1 + LORE_SLIDES.length) % LORE_SLIDES.length);
-                    setSlideProgress(0);
                   }}
                   className="w-7 h-7 flex items-center justify-center font-mono text-xs text-white/50 hover:text-white bg-black/50 hover:bg-black/80 border border-white/15 hover:border-white/40 rounded transition-all"
                 >
@@ -462,7 +495,6 @@ export default function ArcadeSplashScreen({ onStart }: ArcadeSplashScreenProps)
                   onClick={(e) => {
                     e.stopPropagation();
                     setActiveSlide((prev) => (prev + 1) % LORE_SLIDES.length);
-                    setSlideProgress(0);
                   }}
                   className="w-7 h-7 flex items-center justify-center font-mono text-xs text-white/50 hover:text-white bg-black/50 hover:bg-black/80 border border-white/15 hover:border-white/40 rounded transition-all"
                 >
@@ -471,14 +503,17 @@ export default function ArcadeSplashScreen({ onStart }: ArcadeSplashScreenProps)
               </div>
             </div>
 
-            {/* Slide Progress Fill Bar */}
+            {/* Hardware-Accelerated Progress Bar */}
             <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
-              <div
-                className="h-full transition-all duration-75"
+              <motion.div
+                key={`progress-${activeSlide}`}
+                initial={{ width: '0%' }}
+                animate={{ width: '100%' }}
+                transition={{ duration: SLIDE_DURATION_MS / 1000, ease: 'linear' }}
+                className="h-full"
                 style={{
-                  width: `${slideProgress}%`,
-                  backgroundColor: currentSlideData.accentColor,
-                  boxShadow: `0 0 10px ${currentSlideData.accentColor}`,
+                  backgroundColor: currentSlideData?.accentColor || '#39FF14',
+                  boxShadow: `0 0 10px ${currentSlideData?.accentColor || '#39FF14'}`,
                 }}
               />
             </div>
@@ -494,7 +529,7 @@ export default function ArcadeSplashScreen({ onStart }: ArcadeSplashScreenProps)
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.4 }}
+                  transition={{ duration: 0.35 }}
                   className="flex flex-col gap-4"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
@@ -569,7 +604,7 @@ export default function ArcadeSplashScreen({ onStart }: ArcadeSplashScreenProps)
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.4 }}
+                  transition={{ duration: 0.35 }}
                   className="flex flex-col gap-4"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
@@ -652,7 +687,7 @@ export default function ArcadeSplashScreen({ onStart }: ArcadeSplashScreenProps)
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.4 }}
+                  transition={{ duration: 0.35 }}
                   className="flex flex-col gap-4"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">

@@ -67,6 +67,8 @@ export default function Home() {
           setBgArtwork(cover);
         }
       }
+    }).catch((err) => {
+      console.warn('[RhythmHome] Failed to load card background cover:', err);
     });
 
     return () => {

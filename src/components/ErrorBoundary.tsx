@@ -51,7 +51,7 @@ export class ErrorBoundary extends Component<Props, State> {
         return this.props.fallback;
       }
 
-      const isDev = process.env.NODE_ENV !== "production";
+      const isDev = Boolean(import.meta.env?.DEV || (typeof process !== "undefined" && process.env?.NODE_ENV !== "production"));
       const section = this.props.sectionName ? `[${this.props.sectionName}]` : "SYSTEM MALFUNCTION";
 
       return (
