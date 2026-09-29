@@ -7,6 +7,11 @@ import { Wallet } from 'ethers';
 import { logAnalyticsEvent } from '../services/telemetryService';
 import { farcasterService } from '../services/farcasterService';
 import { transmission } from './useTransmissionStore';
+import {
+  stashGuestSessionForMigration,
+  maybeMigrateGuestData,
+  maybeMigratePendingGuestCards,
+} from '../services/guestMigration';
 
 const BASE_CHAIN_ID_HEX = '0x2105';
 const BASE_CHAIN_CONFIG = {
@@ -358,7 +363,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           // SIGNED_IN event below can't pop the confirmation on page load.
           lastConfirmedUserId = user.id;
         }
-        void get().ensureProfileAndWallet(user);
+        // Guest → account migration: if a guest session was stashed before this
+        // sign-in and we landed on a different, real user, merge the guest's
+        // progress in. Chained after ensureProfileAndWallet so the target
+        // profile row exists. Also retries any guest card migration parked
+        // while the engine update is deploying.
+        void get().ensureProfileAndWallet(user).then(() => {
+          void maybeMigrateGuestData();
+          void maybeMigratePendingGuestCards();
+        });
       }
     } else {
       // 3. No session found: perform direct anonymous sign-in for seamless gameplay
@@ -418,6 +431,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           }
           await get().ensureProfileAndWallet(user);
           useVaultStore.getState().loadVaultData();
+          if (isRealUser(user)) {
+            // Guest → account migration for in-page sign-ins (email/password,
+            // wallet, passkey) that create a fresh user instead of upgrading
+            // the anonymous one in place.
+            void maybeMigrateGuestData();
+          }
+          // Retry any guest card migration parked while the engine update deploys.
+          void maybeMigratePendingGuestCards();
         }
       });
       subscribed = true;
@@ -431,6 +452,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signInWithWallet: async () => {
     set({ error: null });
     console.log('[Auth] signInWithWallet started');
+    // Wallet sign-in creates a fresh user — stash the guest session first.
+    await stashGuestSessionForMigration();
 
     const fcProvider = await farcasterService.getEthereumProvider();
     let wallet = (fcProvider || (window as any)?.ethereum) as WalletRequest | undefined;
@@ -743,6 +766,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
   signUpWithEmail: async (email, password) => {
     set({ error: null, status: 'loading' });
+    // Email sign-up creates a fresh user — stash the guest session first.
+    await stashGuestSessionForMigration();
     try {
       const wallet = Wallet.createRandom();
       const address = wallet.address;
@@ -817,6 +842,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
   signInWithEmail: async (email, password) => {
     set({ error: null, status: 'loading' });
+    // Password sign-in creates a fresh session — stash the guest session first.
+    await stashGuestSessionForMigration();
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -917,6 +944,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ error: null, status: 'loading' });
     const currentUser = get().user;
     const isAnon = currentUser?.is_anonymous || currentUser?.app_metadata?.provider === 'anonymous';
+    // If the provider is already linked elsewhere (identity_already_exists), the
+    // fallback OAuth sign-in creates a fresh user — stash the guest first.
+    await stashGuestSessionForMigration();
 
     const redirectUrl = getAuthRedirectUrl();
 
@@ -988,6 +1018,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ error: null, status: 'loading' });
     const currentUser = get().user;
     const isAnon = currentUser?.is_anonymous || currentUser?.app_metadata?.provider === 'anonymous';
+    // OTP sign-in to an existing email creates a fresh user — stash the guest first.
+    await stashGuestSessionForMigration();
     const redirectUrl = getAuthRedirectUrl();
 
     try {
@@ -1060,6 +1092,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
   verifyEmailOtp: async (email: string, token: string) => {
     set({ error: null, status: 'loading' });
+    // OTP verification may land on a different user than the guest — stash first.
+    await stashGuestSessionForMigration();
     try {
       console.log('[Auth] Verifying email OTP code...');
       const { data, error } = await supabase.auth.verifyOtp({
@@ -1134,6 +1168,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
   signInWithPasskey: async () => {
     set({ error: null, status: 'loading' });
+    // Passkey sign-in may land on an existing account — stash the guest first.
+    await stashGuestSessionForMigration();
     try {
       console.log('[Auth] Initiating WebAuthn Passkey sign-in...');
       const { data, error } = await supabase.auth.signInWithPasskey();
