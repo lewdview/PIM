@@ -28,10 +28,10 @@ const LORE_SLIDES = [
   },
   {
     id: 'th3scr1b3',
-    badge: 'CREATOR ARCHIVE // THE ANONYMOUS SIGHT',
+    badge: 'CREATOR ARCHIVE // THE SCRIBE',
     tabLabel: 'TH3SCR1B3',
     title: 'TH3SCR1B3',
-    subtitle: 'CRYPTOGRAPHIC SOUND ARCHITECT & SONIC POET',
+    subtitle: '"THE SCRIBE" // MULTI-GENRE FREESTYLE SONG SPINNER',
     accentColor: '#00F0FF',
     glowColor: 'rgba(0, 240, 255, 0.4)',
   },
@@ -43,6 +43,15 @@ const LORE_SLIDES = [
     subtitle: 'POETRY IN MOTION // 3-LANE RHYTHMIC KINETICS',
     accentColor: '#39FF14',
     glowColor: 'rgba(57, 255, 20, 0.4)',
+  },
+  {
+    id: 'mission',
+    badge: 'MISSION // FUEL THE VAULT',
+    tabLabel: 'MISSION',
+    title: 'FUEL THE VAULT',
+    subtitle: 'THE ENGINE THAT FUNDS COMMUNITY WORK',
+    accentColor: '#E879F9',
+    glowColor: 'rgba(232, 121, 249, 0.4)',
   },
 ];
 
@@ -550,9 +559,9 @@ export default function ArcadeSplashScreen({ onStart }: ArcadeSplashScreenProps)
                   </div>
 
                   <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed font-sans font-light">
-                    A continuous year-long audiovisual chronicle descending through the electromagnetic spectrum. 
-                    Every single dawn decrypts a new sonic gauntlet, juxtaposing solar harmonic clarity against midnight distortion. 
-                    Every day of the year brings a curated song transmission, exclusive bombshell anime cover artwork, and competitive rhythm leaderboards.
+                    A full year of music, one transmission per dawn. Every day unlocks a new song, its level, and its collectible card —
+                    fresh cuts recorded for the 365 alongside archival freestyles from a catalog stretching back to 2005, each finally given its day.
+                    Every drop ships with exclusive bombshell anime cover art and its own competitive leaderboard.
                   </p>
 
                   {/* Year Progress Bar Visualizer */}
@@ -625,8 +634,9 @@ export default function ArcadeSplashScreen({ onStart }: ArcadeSplashScreenProps)
                   </div>
 
                   <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed font-sans font-light">
-                    The anonymous sonic architect operating at the bleeding-edge of technical breakcore, analog modular synthesis, and brutalist poetry. 
-                    From encrypted vinyl pressings to high-BPM digital transmissions, th3scr1b3 engineers hyper-kinetic rhythms engineered to test the limits of human reflexes.
+                    TH3SCR1B3 — pronounced &ldquo;the scribe.&rdquo; A multi-genre freestyle song spinner out of Tucson, Arizona.
+                    Recording since 2005 and all-in since 2018, with hundreds of songs spanning hip-hop, spoken word, and late-night
+                    experiments — plus collabs with Rittz and Xzibit. Spontaneous freestyles, one-take ad-libs, poetry set to music.
                   </p>
 
                   {/* Equalizer Visualizer & Specs */}
@@ -655,27 +665,27 @@ export default function ArcadeSplashScreen({ onStart }: ArcadeSplashScreenProps)
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-white/10 text-center font-mono">
                       <div className="p-1.5 rounded bg-white/5">
-                        <div className="text-[8px] text-white/40">VELOCITY</div>
-                        <div className="text-[10px] sm:text-xs text-[#00F0FF] font-bold">120 - 220+ BPM</div>
+                        <div className="text-[8px] text-white/40">STYLE</div>
+                        <div className="text-[10px] sm:text-xs text-[#00F0FF] font-bold">FREESTYLE SPINNER</div>
                       </div>
                       <div className="p-1.5 rounded bg-white/5">
-                        <div className="text-[8px] text-white/40">ACOUSTICS</div>
-                        <div className="text-[10px] sm:text-xs text-white font-bold">MODULAR DUALITY</div>
+                        <div className="text-[8px] text-white/40">CATALOG</div>
+                        <div className="text-[10px] sm:text-xs text-white font-bold">SINCE 2005</div>
                       </div>
                       <div className="p-1.5 rounded bg-white/5">
-                        <div className="text-[8px] text-white/40">VINYL CUTS</div>
-                        <div className="text-[10px] sm:text-xs text-white font-bold">MASTER DUBPLATES</div>
+                        <div className="text-[8px] text-white/40">COLLABS</div>
+                        <div className="text-[10px] sm:text-xs text-white font-bold">RITTZ · XZIBIT</div>
                       </div>
                       <div className="p-1.5 rounded bg-white/5">
-                        <div className="text-[8px] text-white/40">PROVENANCE</div>
-                        <div className="text-[10px] sm:text-xs text-[#39FF14] font-bold">VAULT ARCHIVED</div>
+                        <div className="text-[8px] text-white/40">BASE</div>
+                        <div className="text-[10px] sm:text-xs text-[#39FF14] font-bold">TUCSON, AZ</div>
                       </div>
                     </div>
                   </div>
 
                   {/* Scribe's Motto */}
                   <div className="p-2.5 sm:p-3 rounded bg-white/5 border border-white/10 font-mono text-[10px] sm:text-xs text-zinc-300 italic text-center">
-                    &ldquo;Poetry is rhythm slowed to the speed of consciousness. Speed is poetry pushed past the sound barrier.&rdquo;
+                    &ldquo;Process over perfection.&rdquo;
                   </div>
                 </motion.div>
               )}
@@ -708,8 +718,9 @@ export default function ArcadeSplashScreen({ onStart }: ArcadeSplashScreenProps)
                   </div>
 
                   <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed font-sans font-light">
-                    A hyper-accurate 3-lane rhythm gaming engine driven by real-time Web Audio DSP crossover filters. 
-                    Isolate Bass, Mid, and High frequency bands with sub-buffer accuracy. Collect song cards, fuse duplicates in The Forge, and ignite $V⚡ Sparks on Base EVM.
+                    A collectible rhythm-game ecosystem built on the 365. Rip a free pack every day, pull song cards across six rarities,
+                    fuse duplicates in The Forge, and climb the prestige leaderboards. V⚡ sparks are earned in-game — offchain by design —
+                    and your vault signs in with a Base wallet.
                   </p>
 
                   {/* 3-Lane Kinetic Highway Preview */}
@@ -750,6 +761,79 @@ export default function ArcadeSplashScreen({ onStart }: ArcadeSplashScreenProps)
                     <span className="px-2 py-0.5 rounded bg-amber-900/50 text-amber-400">LEGENDARY</span>
                     <span className="text-white/20">➔</span>
                     <span className="px-2 py-0.5 rounded bg-rose-900/50 text-rose-400 font-bold">MYTHIC</span>
+                  </div>
+
+                  {/* Hidden Vault Pulls */}
+                  <div className="p-2.5 rounded bg-fuchsia-500/5 border border-fuchsia-500/20 font-mono text-[10px] sm:text-xs text-zinc-300 text-center">
+                    <span className="text-fuchsia-400 font-bold">VAULT FINDS //</span> songs beyond the 365 surface as hidden
+                    chase pulls — no day number, no calendar slot.
+                  </div>
+                </motion.div>
+              )}
+
+              {/* SLIDE 3: FUEL THE VAULT (MISSION) */}
+              {activeSlide === 3 && (
+                <motion.div
+                  key="slide-mission"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.35 }}
+                  className="flex flex-col gap-4"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
+                    <div>
+                      <div className="font-mono text-[9px] sm:text-[10px] tracking-[0.3em] uppercase text-[#E879F9] font-bold">
+                        {LORE_SLIDES[3].badge}
+                      </div>
+                      <h2 className="text-xl sm:text-2xl md:text-3xl font-black font-mono text-white tracking-wider mt-0.5">
+                        {LORE_SLIDES[3].title}
+                      </h2>
+                      <div className="font-mono text-[10px] sm:text-xs text-white/50 tracking-widest uppercase">
+                        {LORE_SLIDES[3].subtitle}
+                      </div>
+                    </div>
+                    <div className="px-3 py-1.5 rounded bg-[#E879F9]/10 border border-[#E879F9]/30 font-mono text-[10px] sm:text-xs text-[#E879F9] font-bold">
+                      MILESTONE 01 // $100 PACK SALES
+                    </div>
+                  </div>
+
+                  <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed font-sans font-light">
+                    PIM is bigger than music. Pack sales fuel the real mission: onboarding less-advantaged folks into
+                    crypto and music tech — free crypto, free tablets, real tools to build with. The first milestone is
+                    $100 in pack sales, proving the engine runs. Every rip feeds the vault.
+                  </p>
+
+                  {/* Mission Pillars */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="p-3 rounded-lg bg-fuchsia-500/5 border border-fuchsia-500/20">
+                      <div className="font-mono text-[10px] sm:text-xs text-fuchsia-400 font-bold uppercase mb-1">
+                        <span>🎓 ONBOARD</span>
+                      </div>
+                      <p className="text-[11px] sm:text-xs text-zinc-400 leading-relaxed">
+                        Bring people into crypto and music technology who would never get the invite otherwise.
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-fuchsia-500/5 border border-fuchsia-500/20">
+                      <div className="font-mono text-[10px] sm:text-xs text-fuchsia-400 font-bold uppercase mb-1">
+                        <span>🎁 EQUIP</span>
+                      </div>
+                      <p className="text-[11px] sm:text-xs text-zinc-400 leading-relaxed">
+                        Free crypto and free tablets — the actual hardware and funds to start creating.
+                      </p>
+                    </div>
+                    <div className="p-3 rounded-lg bg-fuchsia-500/5 border border-fuchsia-500/20">
+                      <div className="font-mono text-[10px] sm:text-xs text-fuchsia-400 font-bold uppercase mb-1">
+                        <span>🔥 PROVE IT</span>
+                      </div>
+                      <p className="text-[11px] sm:text-xs text-zinc-400 leading-relaxed">
+                        $100 in pack sales is milestone one. The engine has to run before it can lift anyone.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 sm:p-3 rounded bg-white/5 border border-white/10 font-mono text-[10px] sm:text-xs text-zinc-300 italic text-center">
+                    &ldquo;Find shortcuts, gain knowledge — then uplift and build ideas many can use.&rdquo;
                   </div>
                 </motion.div>
               )}
