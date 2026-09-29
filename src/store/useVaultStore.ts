@@ -180,6 +180,7 @@ interface VaultState {
   syncFragments: (songId: string, count: number) => Promise<void>;
   syncMilestoneClaim: (monthNum: number, milestoneNum: number) => Promise<void>;
   syncClaimedRewards: (songId: string, tiers: string[]) => void;
+  resetToBlankSlate: () => void;
 }
 
 export function calculatePrestigeScore(
@@ -1247,4 +1248,55 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       ...(newUsername !== undefined ? { username: newUsername } : {}),
     });
   },
+
+  resetToBlankSlate: () => set({
+    dailyCard: null,
+    hasClaimed: false,
+    collection: [],
+    prestigeScore: 0,
+    echoPrestigeScore: 0,
+    revealCards: [],
+    isRevealing: false,
+    revealPackMeta: null,
+    isLoading: false,
+    hasLoadedData: false,
+    loadedUserId: null,
+    tokenBalance: 0,
+    supplyMap: {},
+    dailyLimits: { standard: 0, premium: 0 },
+    hasOnboarded: false,
+    streakCount: 0,
+    totalPulls: 0,
+    pullsSinceRarePlus: 0,
+    totalBurns: 0,
+    equippedCardId: null,
+    unlockedSkins: ["original", "glitch", "glass"],
+    displayName: null,
+    username: null,
+    avatarUrl: null,
+    optionsModalOpen: false,
+    commandPaletteOpen: false,
+    settings: hydrateSettings(),
+    progression: {
+      tutorialCompleted: false,
+      seenWelcomeModal: false,
+      noteGenerationSource: "auto",
+      rewardTiers: {},
+    },
+    unlockedCheats: {
+      noclip: false,
+      iddqd: false,
+      povChanger: false,
+      stunnerSection: false,
+      freeStella: false,
+      chartEditions: false,
+      purchasedStunners: [],
+    },
+    highScores: {},
+    medals: {},
+    fragments: {},
+    milestoneClaims: {},
+    claimedRewards: {},
+  }),
 }));
+

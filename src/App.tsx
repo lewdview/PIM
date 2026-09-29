@@ -159,22 +159,23 @@ function TransmissionsRoute() {
   return null;
 }
 
-let hasEnteredSession = false;
-
 export default function App() {
   const [location, setLocation] = useLocation();
-  const [showArcadeSplash, setShowArcadeSplash] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    const query = new URLSearchParams(window.location.search);
-    if (query.get('skip_splash') === 'true' || query.get('splash') === 'false') return false;
-    if (window.location.pathname.startsWith('/play/')) return false;
-    return !hasEnteredSession;
-  });
+  const showArcadeSplash = useAuthStore((s) => s.showArcadeSplash);
+  const setShowArcadeSplash = useAuthStore((s) => s.setShowArcadeSplash);
 
   const handleStartArcade = useCallback(() => {
-    hasEnteredSession = true;
     setShowArcadeSplash(false);
-  }, []);
+  }, [setShowArcadeSplash]);
+
+  useEffect(() => {
+    const handleSignOutReset = () => {
+      setShowArcadeSplash(true);
+      setLocation('/');
+    };
+    window.addEventListener('pim_signout_reset', handleSignOutReset);
+    return () => window.removeEventListener('pim_signout_reset', handleSignOutReset);
+  }, [setShowArcadeSplash, setLocation]);
 
   const initializeAuth = useAuthStore((s) => s.initialize);
   const authStatus = useAuthStore((s) => s.status);
@@ -209,14 +210,14 @@ export default function App() {
       useVaultStore.getState().updateProgression({ tutorialCompleted: false }).catch(() => {});
     }
 
-    // Force automatic redirect to /tutorial if tutorial is not done
-    if (!isTutorialDone && !isTutorialRoute) {
+    // Force automatic redirect to /tutorial if tutorial is not done and splash is dismissed
+    if (!showArcadeSplash && !isTutorialDone && !isTutorialRoute) {
       if (typeof window !== 'undefined' && location && location !== '/tutorial' && !sessionStorage.getItem('post_tutorial_redirect')) {
         sessionStorage.setItem('post_tutorial_redirect', location);
       }
       setLocation('/tutorial');
     }
-  }, [isExplicitlyFalseQuery, isTutorialDone, isTutorialRoute, location, setLocation]);
+  }, [showArcadeSplash, isExplicitlyFalseQuery, isTutorialDone, isTutorialRoute, location, setLocation]);
 
   const subscribeNotifications = useNotificationStore((s) => s.subscribeRealtime);
 
@@ -265,6 +266,19 @@ export default function App() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Priority 1: Arcade Splash / Attract Gateway Screen
+  // Before any onboarding, any landing page, or any route gates, show the arcade splash
+  if (showArcadeSplash) {
+    return (
+      <ErrorBoundary sectionName="SPLASH_GATEWAY">
+        <AnimatePresence>
+          <ArcadeSplashScreen onStart={handleStartArcade} />
+        </AnimatePresence>
+      </ErrorBoundary>
+    );
+  }
+
+  // Priority 2: Neural link loading check (if still loading after splash dismiss)
   if (!authTimedOut && (authStatus === 'idle' || authStatus === 'loading')) {
     return (
       <div className="fixed inset-0 bg-[#050402] flex flex-col items-center justify-center">
@@ -279,35 +293,21 @@ export default function App() {
     );
   }
 
-  // Automated Tutorial Gate: If tutorial is not completed, immediately redirect to /tutorial
+  // Priority 3: Automated Tutorial Gate: If tutorial is not completed, immediately redirect to /tutorial
   if (!isTutorialDone && !isTutorialRoute) {
     if (typeof window !== 'undefined' && location && location !== '/tutorial' && !sessionStorage.getItem('post_tutorial_redirect')) {
       sessionStorage.setItem('post_tutorial_redirect', location);
     }
-    return (
-      <>
-        <AnimatePresence>
-          {showArcadeSplash && <ArcadeSplashScreen onStart={handleStartArcade} />}
-        </AnimatePresence>
-        <Redirect to="/tutorial" replace />
-      </>
-    );
+    return <Redirect to="/tutorial" replace />;
   }
 
-  // Onboarding fires for any authenticated session — signed-in users AND first-time
+  // Priority 4: Onboarding fires for any authenticated session — signed-in users AND first-time
   // guests — that hasn't completed it yet. Guests get the full walkthrough and a
   // "connect identity to keep your cards" conversion screen at the end.
   const isGameplayRoute =
     location.startsWith('/play/') || location.startsWith('/results/') || location === '/tutorial';
   if (user && hasOnboarded === false && !isGameplayRoute && isTutorialDone) {
-    return (
-      <>
-        <AnimatePresence>
-          {showArcadeSplash && <ArcadeSplashScreen onStart={handleStartArcade} />}
-        </AnimatePresence>
-        <OnboardingFlow onComplete={completeOnboarding} />
-      </>
-    );
+    return <OnboardingFlow onComplete={completeOnboarding} />;
   }
 
   // Hide the global navigation bar only in active gameplay, tutorial, editor, or hero landing pages
@@ -320,9 +320,6 @@ export default function App() {
 
   return (
     <ErrorBoundary sectionName="ROOT_APP">
-      <AnimatePresence>
-        {showArcadeSplash && <ArcadeSplashScreen onStart={handleStartArcade} />}
-      </AnimatePresence>
       <div
         className="min-h-screen bg-[#050402] text-white flex flex-col select-none relative"
         style={{

@@ -50,6 +50,8 @@ interface AuthState {
   session: Session | null;
   status: 'idle' | 'loading' | 'ready';
   error: string | null;
+  showArcadeSplash: boolean;
+  setShowArcadeSplash: (show: boolean) => void;
   showAuthModal: boolean;
   authModalTab: AuthModalTab;
   setAuthModalTab: (tab: AuthModalTab) => void;
@@ -120,6 +122,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   session: null,
   status: 'idle',
   error: null,
+  showArcadeSplash: (() => {
+    if (typeof window === 'undefined') return false;
+    const query = new URLSearchParams(window.location.search);
+    if (query.get('skip_splash') === 'true' || query.get('splash') === 'false') return false;
+    if (window.location.pathname.startsWith('/play/')) return false;
+    return true;
+  })(),
+  setShowArcadeSplash: (show: boolean) => set({ showArcadeSplash: show }),
   showAuthModal: false,
   authModalTab: 'web3',
   setAuthModalTab: (tab: AuthModalTab) => {
@@ -729,17 +739,37 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
   signOut: async () => {
-    const userId = get().user?.id;
-    await supabase.auth.signOut();
-    localStorage.removeItem('th3vault_ephemeral_wallet_pkey');
-    localStorage.removeItem('th3vault_is_ephemeral_wallet');
-    if (userId) {
-      localStorage.removeItem(`th3vault_ephemeral_wallet_pkey_${userId}`);
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.warn('[Auth] signOut error:', err);
     }
-    set({ user: null, session: null, error: null });
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+    } catch (err) {
+      console.warn('[Auth] clear storage error:', err);
+    }
     lastConfirmedUserId = null;
-    // Drop cached vault data so the next sign-in always loads fresh profile state.
-    useVaultStore.setState({ hasLoadedData: false, loadedUserId: null });
+    try {
+      useVaultStore.getState().resetToBlankSlate?.();
+    } catch (err) {
+      console.warn('[Auth] reset error:', err);
+    }
+    set({
+      user: null,
+      session: null,
+      error: null,
+      showAuthModal: false,
+      showSignedInConfirm: false,
+      signedInAlias: null,
+      signedInMethod: null,
+      signedInEmail: null,
+      showArcadeSplash: true,
+    });
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('pim_signout_reset'));
+    }
   },
   signInWithProvider: async (provider) => {
     set({ error: null, status: 'loading' });
