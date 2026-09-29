@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, UserCheck } from 'lucide-react';
+import { X, UserCheck, KeyRound } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { audioManager } from '../game/audio';
 import IdentitySetup from './IdentitySetup';
@@ -97,6 +97,22 @@ export default function IdentityModal({ isOpen: propIsOpen, onClose: propOnClose
             {/* Setup Form Container */}
             <div className="p-2">
               <IdentitySetup compact onComplete={handleComplete} />
+            </div>
+
+            {/* Load by Saved Key Link */}
+            <div className="px-6 py-3 bg-white/[0.02] border-t border-white/5 flex items-center justify-between font-mono text-[10px] text-zinc-400">
+              <span>Have a saved wallet key?</span>
+              <button
+                type="button"
+                onClick={() => {
+                  handleClose();
+                  useAuthStore.getState().setShowAuthModal(true, 'web3');
+                }}
+                className="text-[#00E5FF] hover:underline flex items-center gap-1.5 cursor-pointer font-bold uppercase tracking-wider"
+              >
+                <KeyRound size={12} />
+                <span>Load by Key</span>
+              </button>
             </div>
           </motion.div>
         </motion.div>

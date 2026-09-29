@@ -16,7 +16,9 @@ import {
   Eye, 
   EyeOff, 
   Sparkles,
-  Layers
+  Layers,
+  KeyRound,
+  Download
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { audioManager } from '../game/audio';
@@ -35,6 +37,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     authModalTab,
     signInWithWallet, 
     signInWithEphemeralWallet,
+    signInWithPrivateKey,
     signInWithProvider, 
     signInWithMagicLink, 
     verifyEmailOtp,
@@ -48,6 +51,11 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   } = useAuthStore();
 
   const [activeTab, setActiveTab] = useState<AuthTab>('web3');
+  
+  // Private Key Import states (Load by Key)
+  const [showKeyImport, setShowKeyImport] = useState(false);
+  const [importKeyInput, setImportKeyInput] = useState('');
+  const [showImportPkey, setShowImportPkey] = useState(false);
   
   // Email states
   const [emailMode, setEmailMode] = useState<EmailMode>('magic-link');
@@ -333,6 +341,34 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       }
     } catch (err: any) {
       setLocalError(err?.message || 'Ephemeral wallet authentication failed.');
+      audioManager.playSfx('error', 0.5);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleImportKeySubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!importKeyInput.trim()) {
+      setLocalError('Please enter your private key.');
+      return;
+    }
+    setLocalError(null);
+    setLoading(true);
+    audioManager.playSfx('menu_confirm', 0.5);
+    try {
+      const res = await signInWithPrivateKey(importKeyInput.trim());
+      if (res?.error) {
+        setLocalError(res.error);
+        audioManager.playSfx('error', 0.5);
+      } else {
+        audioManager.playSfx('gold_get', 0.6);
+        setImportKeyInput('');
+        setShowKeyImport(false);
+        onClose();
+      }
+    } catch (err: any) {
+      setLocalError(err?.message || 'Failed to authenticate private key.');
       audioManager.playSfx('error', 0.5);
     } finally {
       setLoading(false);
@@ -949,6 +985,61 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                       <Layers size={14} className="text-[#E5B800]" />
                       <span>Create Encrypted Ephemeral Key</span>
                     </button>
+
+                    {/* Load by Saved Private Key */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        audioManager.playSfx('tap_nav', 0.2);
+                        setShowKeyImport(prev => !prev);
+                        setLocalError(null);
+                      }}
+                      disabled={loading || status === 'loading'}
+                      className="w-full py-2.5 px-4 flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/15 text-white/80 hover:text-white font-mono text-[11px] uppercase tracking-wider transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+                    >
+                      <KeyRound size={14} className="text-[#00E5FF]" />
+                      <span>{showKeyImport ? 'Hide Key Import' : 'Load by Saved Private Key'}</span>
+                    </button>
+
+                    {showKeyImport && (
+                      <div className="p-3 bg-black/60 border border-[#00E5FF]/30 space-y-3 rounded-sm">
+                        <div className="space-y-1">
+                          <label className="block text-[9px] font-mono uppercase text-zinc-400 tracking-wider">
+                            Sovereign Private Key (Hex)
+                          </label>
+                          <div className="relative">
+                            <Key className="absolute left-3 top-3 text-zinc-500" size={14} />
+                            <input
+                              type={showImportPkey ? 'text' : 'password'}
+                              value={importKeyInput}
+                              onChange={e => setImportKeyInput(e.target.value)}
+                              placeholder="0x... (64 hex characters)"
+                              className="w-full pl-9 pr-10 py-2 bg-black/80 border border-white/20 text-white font-mono text-xs focus:outline-none focus:border-[#00E5FF] transition-colors rounded-sm"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowImportPkey(!showImportPkey)}
+                              className="absolute right-3 top-2.5 text-zinc-500 hover:text-white transition-colors cursor-pointer"
+                            >
+                              {showImportPkey ? <EyeOff size={14} /> : <Eye size={14} />}
+                            </button>
+                          </div>
+                          <p className="font-mono text-[9px] text-zinc-400">
+                            Enter the key you backed up from your profile to restore your cards and wallet.
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={handleImportKeySubmit}
+                          disabled={loading || status === 'loading' || !importKeyInput.trim()}
+                          className="w-full py-2.5 px-4 flex items-center justify-center gap-2 bg-[#00E5FF] hover:bg-[#33ebff] text-black font-black uppercase text-xs tracking-wider transition-all shadow-[0_0_15px_rgba(0,229,255,0.3)] active:scale-[0.98] disabled:opacity-50 cursor-pointer"
+                        >
+                          <Download size={14} />
+                          <span>Restore Identity via Key</span>
+                        </button>
+                      </div>
+                    )}
 
                     {/* Network Badges */}
                     <div className="grid grid-cols-2 gap-2 pt-2 text-center font-mono text-[9px] text-zinc-400">

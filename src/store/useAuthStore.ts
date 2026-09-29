@@ -70,6 +70,7 @@ interface AuthState {
   signInWithWallet: () => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   signInWithEphemeralWallet: () => Promise<{ error: string | null }>;
+  signInWithPrivateKey: (privateKey: string) => Promise<{ error: string | null }>;
   signUpWithEmail: (email: string, password: string) => Promise<{ error: string | null; confirmationRequired?: boolean }>;
   signInWithEmail: (email: string, password: string) => Promise<{ error: string | null }>;
   signInWithProvider: (provider: string) => Promise<{ error: string | null }>;
@@ -595,6 +596,83 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error('[Auth] Ephemeral Wallet authentication failed:', err);
+      set({ error: `Authentication failed: ${msg}`, status: 'ready' });
+      return { error: msg };
+    }
+  },
+  signInWithPrivateKey: async (rawPrivateKey: string) => {
+    let pkey = rawPrivateKey.trim();
+    if (!pkey) {
+      return { error: 'Please enter a private key.' };
+    }
+    if (!pkey.startsWith('0x')) {
+      pkey = '0x' + pkey;
+    }
+
+    let wallet: Wallet;
+    try {
+      wallet = new Wallet(pkey);
+    } catch {
+      return { error: 'Invalid private key format. Must be a 32-byte hex string (64 or 66 characters).' };
+    }
+
+    const address = wallet.address;
+    set({ status: 'loading', error: null });
+
+    try {
+      // Request server-generated nonce for replay protection (C2 audit fix)
+      const { data: nonce, error: nonceErr } = await supabase.rpc('generate_auth_nonce', {
+        p_wallet_address: address,
+      });
+      if (nonceErr || !nonce) {
+        throw new Error('Failed to generate auth nonce: ' + (nonceErr?.message || 'empty response'));
+      }
+
+      const timestamp = new Date().toISOString();
+      const message = `Sign in to PIM : th3v4ult\nNonce: ${nonce}\nTimestamp: ${timestamp}`;
+
+      console.log('[Auth] Signing with imported private key:', address);
+      const signature = await wallet.signMessage(message);
+
+      const { data, error } = await supabase.functions.invoke('auth-smart-wallet', {
+        body: { address, message, signature, nonce }
+      });
+
+      if (error || !data?.success) {
+        throw new Error(data?.error || error?.message || 'Verification failed');
+      }
+
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token,
+      });
+
+      if (sessionError) throw sessionError;
+
+      // Mark session explicitly as ephemeral with this imported key
+      if (data.user?.id) {
+        localStorage.setItem('th3vault_is_ephemeral_wallet', 'true');
+        localStorage.setItem(`th3vault_ephemeral_wallet_pkey_${data.user.id}`, pkey);
+        localStorage.setItem('th3vault_ephemeral_wallet_pkey', pkey);
+      }
+
+      set({ session: data.session, user: data.user, status: 'ready', showAuthModal: false });
+      lastConfirmedUserId = data.user.id;
+      void get().confirmSignIn(data.user, 'wallet');
+
+      // Log Ephemeral Wallet import event
+      logAnalyticsEvent('wallet_import_key', { address });
+
+      try {
+        await useVaultStore.getState().loadVaultData(true);
+      } catch (loadErr) {
+        console.warn('[Auth] loadVaultData failed:', loadErr);
+      }
+
+      return { error: null };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('[Auth] Private key authentication failed:', err);
       set({ error: `Authentication failed: ${msg}`, status: 'ready' });
       return { error: msg };
     }

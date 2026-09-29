@@ -19,7 +19,7 @@ import { Link, useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Fingerprint, RefreshCw, LogOut, Layers, ArrowUpRight,
-  Shield, Zap, User, ExternalLink, Sparkles, Award, Play, Disc, Lock, KeyRound, Copy, Eye, EyeOff, AlertTriangle, Check
+  Shield, Zap, User, ExternalLink, Sparkles, Award, Play, Disc, Lock, KeyRound, Copy, Eye, EyeOff, AlertTriangle, Check, Download
 } from 'lucide-react';
 import IdentitySetup from '../components/IdentitySetup';
 import { useAuthStore } from '../store/useAuthStore';
@@ -58,7 +58,7 @@ const EASE_OUT: [number, number, number, number] = [0.22, 1, 0.36, 1];
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export default function ProfilePage() {
-  const { user, signOut, registerPasskey, ensureProfileAndWallet, isPasskeySupported } = useAuthStore();
+  const { user, signOut, registerPasskey, ensureProfileAndWallet, isPasskeySupported, signInWithPrivateKey } = useAuthStore();
   const isAnonymous = user?.is_anonymous ?? false;
   const { collection, tokenBalance, totalPulls, streakCount, loadVaultData, username } = useVaultStore();
   const [, navigate] = useLocation();
@@ -71,11 +71,39 @@ export default function ProfilePage() {
   const [passkeyLoading, setPasskeyLoading] = useState(false);
   const [passkeyFeedback, setPasskeyFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
+  // Key Import / Load by Key states
+  const [showKeyImport, setShowKeyImport] = useState(false);
+  const [importKeyInput, setImportKeyInput] = useState('');
+  const [showImportPkey, setShowImportPkey] = useState(false);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importFeedback, setImportFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
   // Ephemeral wallet keys — shown only when this session runs on the
   // browser-generated ephemeral wallet (th3vault_is_ephemeral_wallet).
   const [ephemeralKeys, setEphemeralKeys] = useState<{ address: string; pkey: string } | null>(null);
   const [showPkey, setShowPkey] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const handleImportKey = async () => {
+    if (!importKeyInput.trim()) return;
+    setImportLoading(true);
+    setImportFeedback(null);
+    try {
+      const res = await signInWithPrivateKey(importKeyInput.trim());
+      if (res.error) {
+        setImportFeedback({ type: 'error', message: res.error });
+      } else {
+        audioManager.playSfx('gold_get', 0.6);
+        setImportFeedback({ type: 'success', message: '✨ Sovereign wallet and identity restored successfully!' });
+        setImportKeyInput('');
+        setShowKeyImport(false);
+      }
+    } catch (err: any) {
+      setImportFeedback({ type: 'error', message: err?.message || 'Failed to import key' });
+    } finally {
+      setImportLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!user) {
@@ -436,67 +464,151 @@ export default function ProfilePage() {
           </div>
         </section>
 
-        {/* ═══════════ SECTION 4 : EPHEMERAL WALLET KEYS ═══════════ */}
-        {ephemeralKeys && (
-          <section className="profile-glass-panel border-l-4 border-[#00E5FF] mt-6">
-            <div className="profile-panel-header text-[#00E5FF]">
-              <KeyRound size={18} /> Ephemeral Wallet Keys
-            </div>
+        {/* ═══════════ SECTION 4 : SOVEREIGN WALLET KEYS & BACKUP ═══════════ */}
+        <section className="profile-glass-panel border-l-4 border-[#00E5FF] mt-6">
+          <div className="flex items-center justify-between profile-panel-header text-[#00E5FF]">
+            <span className="flex items-center gap-2">
+              <KeyRound size={18} /> Sovereign Wallet Keys & Backup
+            </span>
+            <button
+              onClick={() => {
+                audioManager.playSfx('tap_nav', 0.2);
+                setShowKeyImport(prev => !prev);
+                setImportFeedback(null);
+              }}
+              className="text-[10px] font-mono uppercase tracking-wider text-[#00E5FF] hover:text-white px-2.5 py-1 border border-[#00E5FF]/40 hover:border-[#00E5FF] bg-[#00E5FF]/10 transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <Download size={12} />
+              <span>{showKeyImport ? 'Cancel Import' : 'Load by Key'}</span>
+            </button>
+          </div>
 
-            <div className="flex items-start gap-2 p-3 mb-4 bg-[#ff3800]/10 border border-[#ff3800]/30 font-mono text-[10px] text-[#ff9a7a] leading-relaxed">
-              <AlertTriangle size={14} className="shrink-0 mt-[1px] text-[#ff3800]" />
-              <span>
-                This wallet was generated in this browser and lives <strong className="text-white">only here</strong>.
-                Anyone holding the private key controls the wallet and everything in it.
-                Back it up now — or lock in a permanent identity above to preserve your cards.
-              </span>
-            </div>
+          {/* Key Import Form (Load by Keys) */}
+          {showKeyImport && (
+            <div className="p-4 mb-4 bg-black/60 border border-[#00E5FF]/40 space-y-3">
+              <div className="flex items-center gap-2 text-[#00E5FF] font-mono text-[11px] font-bold uppercase tracking-wider">
+                <Download size={14} />
+                <span>Load Sovereign Identity by Saved Key</span>
+              </div>
+              <p className="font-mono text-[10px] text-zinc-400 leading-relaxed">
+                Paste your 64-character private key (with or without 0x) to restore your smart wallet, unlocked cards, tokens, and prestige score.
+              </p>
+              <div className="relative">
+                <input
+                  type={showImportPkey ? 'text' : 'password'}
+                  value={importKeyInput}
+                  onChange={e => setImportKeyInput(e.target.value)}
+                  placeholder="0x... (64 hex characters)"
+                  className="w-full pl-3 pr-10 py-2.5 bg-black/80 border border-white/20 text-white font-mono text-xs focus:outline-none focus:border-[#00E5FF] transition-colors rounded-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowImportPkey(!showImportPkey)}
+                  className="absolute right-3 top-3 text-zinc-500 hover:text-white transition-colors cursor-pointer"
+                >
+                  {showImportPkey ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
 
-            <div className="flex flex-col gap-3 font-mono text-xs">
-              <div className="flex justify-between items-center gap-3 py-2 border-b border-white/5">
-                <span className="text-white/40 uppercase tracking-wider shrink-0">Public Address</span>
-                <span className="flex items-center gap-2 min-w-0">
-                  <span className="text-[#00E5FF] font-bold font-mono text-[10px] break-all text-right">{ephemeralKeys.address}</span>
-                  <button
-                    onClick={() => copyField('address', ephemeralKeys.address)}
-                    className="shrink-0 p-1.5 border border-white/15 text-white/60 hover:text-white hover:border-white/40 transition-all cursor-pointer"
-                    title="Copy address"
-                  >
-                    {copiedField === 'address' ? <Check size={12} className="text-[#39FF14]" /> : <Copy size={12} />}
-                  </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleImportKey}
+                  disabled={importLoading || !importKeyInput.trim()}
+                  className="py-2.5 px-4 bg-[#00E5FF] hover:bg-[#33ebff] text-black font-black uppercase text-xs tracking-wider transition-all disabled:opacity-50 cursor-pointer shadow-[0_0_15px_rgba(0,229,255,0.3)] flex items-center gap-2"
+                >
+                  {importLoading ? <RefreshCw size={14} className="animate-spin" /> : <KeyRound size={14} />}
+                  <span>{importLoading ? 'Restoring Identity...' : 'Restore Identity via Key'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowKeyImport(false);
+                    setImportFeedback(null);
+                  }}
+                  className="py-2.5 px-3 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white font-mono text-xs uppercase tracking-wider transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {importFeedback && (
+            <div
+              className={`p-3 mb-4 font-mono text-[11px] leading-relaxed border ${
+                importFeedback.type === 'success'
+                  ? 'bg-[#39FF14]/10 border-[#39FF14]/30 text-[#39FF14]'
+                  : 'bg-[#ff3800]/10 border-[#ff3800]/30 text-[#ff3800]'
+              }`}
+            >
+              {importFeedback.message}
+            </div>
+          )}
+
+          {ephemeralKeys ? (
+            <>
+              <div className="flex items-start gap-2 p-3 mb-4 bg-[#ff3800]/10 border border-[#ff3800]/30 font-mono text-[10px] text-[#ff9a7a] leading-relaxed">
+                <AlertTriangle size={14} className="shrink-0 mt-[1px] text-[#ff3800]" />
+                <span>
+                  This wallet was generated in this browser and lives <strong className="text-white">only here</strong>.
+                  Anyone holding the private key controls the wallet and everything in it.
+                  Back it up now — or lock in a permanent identity above to preserve your cards.
                 </span>
               </div>
 
-              <div className="flex justify-between items-center gap-3 py-2">
-                <span className="text-white/40 uppercase tracking-wider shrink-0">Private Key</span>
-                <span className="flex items-center gap-2 min-w-0">
-                  <span className="text-white/80 font-mono text-[10px] break-all text-right">
-                    {showPkey ? ephemeralKeys.pkey : '•'.repeat(48)}
-                  </span>
-                  <button
-                    onClick={() => {
-                      audioManager.playSfx('tap_nav', 0.3);
-                      setShowPkey((v) => !v);
-                    }}
-                    className="shrink-0 p-1.5 border border-white/15 text-white/60 hover:text-white hover:border-white/40 transition-all cursor-pointer"
-                    title={showPkey ? 'Hide private key' : 'Reveal private key'}
-                  >
-                    {showPkey ? <EyeOff size={12} /> : <Eye size={12} />}
-                  </button>
-                  {showPkey && (
+              <div className="flex flex-col gap-3 font-mono text-xs">
+                <div className="flex justify-between items-center gap-3 py-2 border-b border-white/5">
+                  <span className="text-white/40 uppercase tracking-wider shrink-0">Public Address</span>
+                  <span className="flex items-center gap-2 min-w-0">
+                    <span className="text-[#00E5FF] font-bold font-mono text-[10px] break-all text-right">{ephemeralKeys.address}</span>
                     <button
-                      onClick={() => copyField('pkey', ephemeralKeys.pkey)}
+                      onClick={() => copyField('address', ephemeralKeys.address)}
                       className="shrink-0 p-1.5 border border-white/15 text-white/60 hover:text-white hover:border-white/40 transition-all cursor-pointer"
-                      title="Copy private key"
+                      title="Copy address"
                     >
-                      {copiedField === 'pkey' ? <Check size={12} className="text-[#39FF14]" /> : <Copy size={12} />}
+                      {copiedField === 'address' ? <Check size={12} className="text-[#39FF14]" /> : <Copy size={12} />}
                     </button>
-                  )}
-                </span>
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center gap-3 py-2">
+                  <span className="text-white/40 uppercase tracking-wider shrink-0">Private Key</span>
+                  <span className="flex items-center gap-2 min-w-0">
+                    <span className="text-white/80 font-mono text-[10px] break-all text-right">
+                      {showPkey ? ephemeralKeys.pkey : '•'.repeat(48)}
+                    </span>
+                    <button
+                      onClick={() => {
+                        audioManager.playSfx('tap_nav', 0.3);
+                        setShowPkey((v) => !v);
+                      }}
+                      className="shrink-0 p-1.5 border border-white/15 text-white/60 hover:text-white hover:border-white/40 transition-all cursor-pointer"
+                      title={showPkey ? 'Hide private key' : 'Reveal private key'}
+                    >
+                      {showPkey ? <EyeOff size={12} /> : <Eye size={12} />}
+                    </button>
+                    {showPkey && (
+                      <button
+                        onClick={() => copyField('pkey', ephemeralKeys.pkey)}
+                        className="shrink-0 p-1.5 border border-white/15 text-white/60 hover:text-white hover:border-white/40 transition-all cursor-pointer"
+                        title="Copy private key"
+                      >
+                        {copiedField === 'pkey' ? <Check size={12} className="text-[#39FF14]" /> : <Copy size={12} />}
+                      </button>
+                    )}
+                  </span>
+                </div>
               </div>
+            </>
+          ) : (
+            <div className="font-mono text-xs text-zinc-400 space-y-2 py-2">
+              <p className="text-[11px] leading-relaxed">
+                No local ephemeral wallet key is active in this browser. If you previously saved or exported your private key, click <strong className="text-[#00E5FF]">"Load by Key"</strong> above to restore your session.
+              </p>
             </div>
-          </section>
-        )}
+          )}
+        </section>
 
       </div>
     </div>
