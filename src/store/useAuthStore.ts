@@ -88,6 +88,9 @@ let subscribed = false;
 // Session-storage flag bridging OAuth / magic-link redirects: set before the
 // browser leaves for the provider, consumed in initialize() on return.
 const SIGNIN_CONFIRM_FLAG = 'th3vault_signin_confirm_pending';
+// Guards the identity_already_exists → direct-sign-in auto-retry to one attempt
+// per tab so a repeated provider failure can't bounce forever.
+const OAUTH_RETRY_FLAG = 'th3vault_oauth_retry_done';
 const markSignInConfirmPending = () => {
   try { sessionStorage.setItem(SIGNIN_CONFIRM_FLAG, '1'); } catch { /* noop */ }
 };
@@ -227,10 +230,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const oauthError = urlParams.get('error') || hashParams.get('error');
     if (oauthError) {
       const rawDesc = urlParams.get('error_description') || hashParams.get('error_description') || '';
+      const errorCode = urlParams.get('error_code') || hashParams.get('error_code') || '';
       let desc = rawDesc;
       try { desc = decodeURIComponent(rawDesc.replace(/\+/g, ' ')); } catch { /* keep raw */ }
-      const friendly = `GitHub sign-in failed: ${desc || oauthError}`;
-      console.error('[Auth] OAuth redirect error:', oauthError, desc);
+      console.error('[Auth] OAuth redirect error:', oauthError, errorCode, desc);
       try {
         const cleanUrl = new URL(window.location.href);
         cleanUrl.searchParams.delete('error');
@@ -239,6 +242,41 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         cleanUrl.hash = '';
         window.history.replaceState({}, document.title, cleanUrl.toString());
       } catch { /* noop */ }
+
+      // identity_already_exists: the OAuth identity belongs to a DIFFERENT PIM
+      // account, so the linkIdentity upgrade path can never succeed. Fall back
+      // to a direct sign-in into the account that owns the identity (the
+      // linkIdentity API call itself returns the authorize URL with no error —
+      // the failure only surfaces here at callback time, so the pre-redirect
+      // fallback in signInWithProvider never fires). Guarded to a single retry
+      // per tab so a repeated failure can't loop.
+      if (errorCode === 'identity_already_exists' && !sessionStorage.getItem(OAUTH_RETRY_FLAG)) {
+        console.log('[Auth] GitHub identity owned by an existing account — retrying as direct sign-in...');
+        try { sessionStorage.setItem(OAUTH_RETRY_FLAG, '1'); } catch { /* noop */ }
+        const retryRedirect = (typeof window !== 'undefined' && window.location?.origin) || 'https://pim.th3scr1b3.art';
+        try {
+          const { data: retryData, error: retryError } = await supabase.auth.signInWithOAuth({
+            provider: 'github' as any,
+            options: { redirectTo: retryRedirect },
+          });
+          if (!retryError && retryData?.url) {
+            markSignInConfirmPending();
+            try {
+              transmission.info('ACCOUNT FOUND', 'This GitHub is already linked to a PIM account — signing you into it…', { duration: 6000 });
+            } catch { /* noop */ }
+            window.location.href = retryData.url;
+            return;
+          }
+          console.error('[Auth] Direct sign-in retry failed:', retryError?.message);
+        } catch (retryErr) {
+          console.error('[Auth] Direct sign-in retry threw:', retryErr);
+        }
+        // Retry failed — clear the guard so a fresh manual attempt can try again,
+        // and fall through to the surfaced error below.
+        try { sessionStorage.removeItem(OAUTH_RETRY_FLAG); } catch { /* noop */ }
+      }
+
+      const friendly = `GitHub sign-in failed: ${desc || oauthError}`;
       set({ error: friendly });
       try {
         transmission.error('SIGN-IN FAILED', desc || oauthError, { duration: 9000 });
@@ -255,6 +293,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const cleanUrl = new URL(window.location.href);
         cleanUrl.searchParams.delete('code');
         window.history.replaceState({}, document.title, cleanUrl.toString());
+        try { sessionStorage.removeItem(OAUTH_RETRY_FLAG); } catch { /* noop */ }
 
         activeSession = exchangeData.session;
         fromRedirect = true;
