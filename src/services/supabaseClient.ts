@@ -33,7 +33,11 @@ const getAuthOptions = () => {
   return {
     persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: true,
+    // The app exchanges the OAuth PKCE code itself in useAuthStore.initialize()
+    // (with URL cleanup + error surfacing). Leaving the client's auto-detect on
+    // would race the manual exchange for the same ?code= and one side would
+    // always fail, so it stays off — single deterministic callback path.
+    detectSessionInUrl: false,
     storageKey: 'th3scr1b3-auth-token',
     cookieOptions: isTh3Scrib3Domain ? {
       domain: '.th3scr1b3.art',
