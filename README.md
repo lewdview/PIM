@@ -113,7 +113,7 @@ pnpm tauri build
 Create `.env.local` in `artifacts/beatstar-vault/`:
 
 ```env
-VITE_SUPABASE_URL=https://toemkhrfsbkfkutwcjkd.supabase.co
+VITE_SUPABASE_URL=<YOUR_SUPABASE_URL>
 VITE_SUPABASE_ANON_KEY=<YOUR_SUPABASE_ANON_KEY>
 VITE_STORAGE_BASE_URL=https://files.th3scr1b3.art
 VITE_CDN_BASE_URL=https://th3scr1b3.art
