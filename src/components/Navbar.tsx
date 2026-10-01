@@ -204,7 +204,11 @@ function TokenPill({ balance, compact = false }: { balance: number; compact?: bo
 // ── Main Navigation Component ─────────────────────────────────────────────────
 export default function Navbar() {
   const [location] = useLocation();
-  const { user, signOut, status, error: authError, setShowAuthModal } = useAuthStore();
+  const user = useAuthStore(s => s.user);
+  const signOut = useAuthStore(s => s.signOut);
+  const status = useAuthStore(s => s.status);
+  const authError = useAuthStore(s => s.error);
+  const setShowAuthModal = useAuthStore(s => s.setShowAuthModal);
   const isAnonymous = user?.is_anonymous ||
                       user?.app_metadata?.provider === 'anonymous' ||
                       (!user?.email && !user?.user_metadata?.wallet && !user?.user_metadata?.wallet_address);
@@ -212,7 +216,9 @@ export default function Navbar() {
   const displayName = useVaultStore(s => s.displayName);
   const avatarUrl = useVaultStore(s => s.avatarUrl);
   const currentTrack = useGlobalPlayer(s => s.currentTrack);
-  const { is4K, toggle: toggle4K, detectCapability } = useDisplayMode();
+  const is4K = useDisplayMode(s => s.is4K);
+  const toggle4K = useDisplayMode(s => s.toggle);
+  const detectCapability = useDisplayMode(s => s.detectCapability);
   const setOptionsModalOpen = useVaultStore((s) => s.setOptionsModalOpen);
   const setCommandPaletteOpen = useVaultStore((s) => s.setCommandPaletteOpen);
 
