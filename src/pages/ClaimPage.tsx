@@ -455,6 +455,43 @@ export default function ClaimPage() {
           <p className="text-xs font-mono text-zinc-400 uppercase tracking-widest">// DECRYPT TRANSMISSIONS & EXCLUSIVE CODES</p>
         </div>
 
+        {/* BIRTHDAY BONUS PROMO — code 10031981 → free bombshell 2x pack.
+            Explicitly named per Bryan 2026-10-01 (bonus codes are otherwise easter eggs). */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="relative overflow-hidden rounded-2xl border-2 border-[#ffd700]/50 p-5"
+          style={{
+            background: 'linear-gradient(135deg, #1a1300 0%, #0d0d0d 60%, #1a0a2e 100%)',
+            boxShadow: '4px 4px 0 #000, 0 0 32px rgba(255,215,0,0.12)',
+          }}
+        >
+          <div className="scanlines absolute inset-0 opacity-10 pointer-events-none" />
+          <div className="relative z-10 flex items-center gap-4 flex-wrap">
+            <div className="p-3 rounded-xl border border-[#ffd700]/30 bg-[#ffd700]/10 text-[#ffd700] shrink-0">
+              <Gift size={22} />
+            </div>
+            <div className="flex-1 min-w-[200px]">
+              <div className="font-mono text-[8px] font-black uppercase tracking-[0.3em] text-[#ffd700]/70">
+                Birthday bonus · th3scr1b3
+              </div>
+              <div className="font-mono text-sm font-black uppercase tracking-wider text-white mt-1">
+                Free bombshell 2x pack
+              </div>
+              <p className="font-mono text-[10px] text-zinc-400 mt-1 leading-relaxed">
+                Enter code <span className="text-[#ffd700] font-black tracking-widest">10031981</span> below to decrypt your birthday pack. One per player.
+              </p>
+            </div>
+            <div
+              className="px-4 py-2 font-mono text-sm font-black tracking-[0.2em] text-black bg-[#ffd700] rounded-lg border-2 border-black shadow-[3px_3px_0_#000] shrink-0 select-all"
+              style={{ transform: 'rotate(1.5deg)' }}
+            >
+              10031981
+            </div>
+          </div>
+        </motion.div>
+
         {/* SECTION A: BONUS CODE DECRYPTOR */}
         <div className="glass-panel p-6 border-t-2 border-white/20 shadow-xl space-y-6 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-2.5 h-2.5 border-t border-r border-[#ffd700]/30" />
