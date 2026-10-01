@@ -1,210 +1,176 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'wouter';
+import { motion, AnimatePresence } from 'framer-motion';
 import { audioManager } from '../game/audio';
 import { useVaultStore } from '../store/useVaultStore';
-import { ArrowLeft, Zap, Tv, Gamepad2, ClipboardList, CheckCircle } from 'lucide-react';
+import { useAuthStore } from '../store/useAuthStore';
+import { supabase } from '../services/supabaseClient';
+import {
+  ArrowLeft, Zap, Flame, Gift, CheckCircle, Trophy,
+  CalendarDays, KeyRound, Sparkles,
+} from 'lucide-react';
 
-// Cyberpunk Simulated Survey Data
-const SURVEY_QUESTIONS = [
-  {
-    id: 1,
-    question: "RATE YOUR CURRENT CEREBRAL NEURAL SHIELDING CONFIRMATION LEVEL",
-    options: [
-      { key: "A", text: "STANDARD MILITARY GRADE (99.8% GLITCH IMMUNITY)" },
-      { key: "B", text: "CORPORATE OVERRIDE ACTIVE (PIM CORP PROTECTED)" },
-      { key: "C", text: "NEURAL LEAK DETECTED (FRESH WASTELAND REBEL)" },
-      { key: "D", text: "UNSHIELDED (I EMBRACE THE ANTIGRAVITY GLITCH)" }
-    ]
-  },
-  {
-    id: 2,
-    question: "SELECT YOUR PRIMARY CORTICAL AUDIO SYNAPSE BROKER",
-    options: [
-      { key: "A", text: "TH3SCR1B3 NEURAL SYNTAX PROTOCOLS" },
-      { key: "B", text: "NEON SYNDICATE DECENTRALIZED WAVESTREAM" },
-      { key: "C", text: "PIM CORP SECURITY BROADCAST SECTOR" },
-      { key: "D", text: "DIRECT CABLE JACK-IN (VINTAGE LO-FI)" }
-    ]
-  },
-  {
-    id: 3,
-    question: "HAVE YOU EXPERIENCED PHANTOM BEAT ARTIFACTS TODAY?",
-    options: [
-      { key: "A", text: "YES, MY SYNAPSE IS MERGING WITH THE VAULT" },
-      { key: "B", text: "NO, CORTEX DRIVERS ARE FULLY NOMINAL" },
-      { key: "C", text: "ONLY WHEN DECRYPTING LEGENDARY AUDIO CARDS" },
-      { key: "D", text: "WARNING: ALL RESPONSES RECORDED IN MEMORY" }
-    ]
-  }
-];
+// ── Reward math (mirrors public.claim_daily_streak server-side) ──────────────
+// day 1 = 10 sparks, +2 per consecutive day, capped at 50/day.
+// Milestone bonuses: +100 at exactly 7 days, +300 at exactly 30 days.
+function baseRewardFor(streak: number): number {
+  return Math.min(10 + 2 * (streak - 1), 50);
+}
+function milestoneFor(streak: number): number {
+  if (streak === 7) return 100;
+  if (streak === 30) return 300;
+  return 0;
+}
 
-// Minigame Hex Options
-const HEX_CODES = ["0xAF", "0x3C", "0xD9", "0x4E", "0xB2", "0xF5", "0x1A", "0x88", "0xE3", "0x7F", "0xC4", "0x90", "0x5D", "0x6B", "0x72", "0x8A"];
+type StreakState = {
+  streak: number;
+  canClaim: boolean;
+  baseReward: number;
+  milestoneBonus: number;
+  reward: number;
+};
+
+function msUntilUtcMidnight(): number {
+  const now = new Date();
+  const next = new Date(Date.UTC(
+    now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0, 0,
+  ));
+  return next.getTime() - now.getTime();
+}
+
+function formatCountdown(ms: number): string {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+}
 
 export default function EarnPage() {
   const [, setLocation] = useLocation();
-  const { tokenBalance, addTokens } = useVaultStore();
+  const { tokenBalance } = useVaultStore();
+  const { user, setShowAuthModal } = useAuthStore();
 
-  // Mode Selection: 'menu' | 'ad' | 'game' | 'survey'
-  const [activeMode, setActiveMode] = useState<'menu' | 'ad' | 'game' | 'survey'>('menu');
-  const [earnFeedback, setEarnFeedback] = useState<{ amount: number; message: string } | null>(null);
+  const [streak, setStreak] = useState<StreakState | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [claiming, setClaiming] = useState(false);
+  const [rpcMissing, setRpcMissing] = useState(false);
+  const [feedback, setFeedback] = useState<{ amount: number; milestone: number; streak: number } | null>(null);
+  const [countdown, setCountdown] = useState('');
 
-  // ── 📺 AD BROADCAST STATE ──────────────────────────────────────
-  const [adProgress, setAdProgress] = useState(0);
-  const [adMessage, setAdMessage] = useState('Establishing neural link...');
-  const adIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  const startAdBroadcast = () => {
-    audioManager.playSfx('menu_confirm', 0.15);
-    setActiveMode('ad');
-    setAdProgress(0);
-    setAdMessage('CONNECTING TO CORRIDOR BROADCAST FEED...');
-
-    const slogans = [
-      'DOWNLOADING CORPORATE SPONSOR directive...',
-      'BUFFERING NEURAL AUDIO ADVERT...',
-      'SYNCING AD FEED WITH CORTICAL IMPLANT...',
-      'PIM CORP: SECURITY THROUGH ABSOLUTE SURVEILLANCE...',
-      'STABILIZING MEMORY FEED...',
-      'DECRYPTING FINAL VERIFICATION KEY...'
-    ];
-
-    let currentStep = 0;
-    adIntervalRef.current = setInterval(() => {
-      setAdProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(adIntervalRef.current!);
-          completeAdBroadcast();
-          return 100;
-        }
-        
-        // Randomly update text slogans during loading
-        if (prev % 18 === 0 && currentStep < slogans.length) {
-          setAdMessage(slogans[currentStep]);
-          currentStep++;
-        }
-        
-        return prev + 1;
+  const loadStreak = useCallback(async () => {
+    setLoading(true);
+    setRpcMissing(false);
+    try {
+      const { data, error } = await supabase.rpc('claim_daily_streak', { p_dry_run: true });
+      if (error) throw error;
+      setStreak({
+        streak: data.streak ?? 0,
+        canClaim: !!data.can_claim,
+        baseReward: data.base_reward ?? baseRewardFor(Math.max(1, data.streak ?? 1)),
+        milestoneBonus: data.milestone_bonus ?? 0,
+        reward: data.reward ?? 0,
       });
-    }, 150); // 15 seconds ad broadcast time
-  };
-
-  const completeAdBroadcast = async () => {
-    clearInterval(adIntervalRef.current!);
-    audioManager.playSfx('hidden_secret_found', 0.3);
-    await addTokens(100);
-    setEarnFeedback({ amount: 100, message: "NEURAL BROADCAST WATCHED successfully" });
-    setActiveMode('menu');
-  };
-
-  // ── 📋 SURVEY STATE ──────────────────────────────────────────
-  const [surveyIndex, setSurveyIndex] = useState(0);
-  const [selectedOption, setSelectedOption] = useState<string | null>(null);
-
-  const handleSurveyAnswer = async () => {
-    if (!selectedOption) return;
-    audioManager.playSfx('tap_nav', 0.1);
-
-    if (surveyIndex < SURVEY_QUESTIONS.length - 1) {
-      setSurveyIndex(surveyIndex + 1);
-      setSelectedOption(null);
-    } else {
-      // Completed survey
-      audioManager.playSfx('hidden_secret_found', 0.3);
-      await addTokens(150);
-      setEarnFeedback({ amount: 150, message: "DIAGNOSTIC COMPLIANCE SURVEY complete" });
-      setActiveMode('menu');
-      setSurveyIndex(0);
-      setSelectedOption(null);
-    }
-  };
-
-  // ── 🎮 GRID HACK MINIGAME STATE ────────────────────────────────
-  const [targetHex, setTargetHex] = useState('');
-  const [matrixGrid, setMatrixGrid] = useState<string[]>([]);
-  const [hackStreak, setHackStreak] = useState(0);
-  const [gameTimer, setGameTimer] = useState(100);
-  const gameIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  const startHackingMiniGame = () => {
-    audioManager.playSfx('menu_confirm', 0.15);
-    setActiveMode('game');
-    setHackStreak(0);
-    generateNextHackMatrix();
-  };
-
-  const generateNextHackMatrix = () => {
-    // Randomize 16 hex codes
-    const shuffled = [...HEX_CODES].sort(() => 0.5 - Math.random());
-    setMatrixGrid(shuffled);
-    // Pick one target
-    const target = shuffled[Math.floor(Math.random() * shuffled.length)];
-    setTargetHex(target);
-    setGameTimer(100);
-
-    // Reset game interval for timeout countdown
-    if (gameIntervalRef.current) clearInterval(gameIntervalRef.current);
-    gameIntervalRef.current = setInterval(() => {
-      setGameTimer((prev) => {
-        if (prev <= 0) {
-          clearInterval(gameIntervalRef.current!);
-          handleHackFailure('TIMEOUT');
-          return 0;
-        }
-        return prev - 2.5; // 4 seconds total response window
-      });
-    }, 100);
-  };
-
-  const handleHexTap = (hex: string) => {
-    if (hex === targetHex) {
-      audioManager.playSfx('perfect', 0.1);
-      const nextStreak = hackStreak + 1;
-      setHackStreak(nextStreak);
-
-      if (nextStreak >= 5) {
-        clearInterval(gameIntervalRef.current!);
-        completeHackGame();
+    } catch (e: any) {
+      // The migration hasn't been applied yet → the RPC doesn't exist.
+      // Show the page shell with an honest syncing state instead of crashing.
+      if (e?.code === '42883' || /claim_daily_streak/i.test(e?.message || '')) {
+        setRpcMissing(true);
       } else {
-        generateNextHackMatrix();
+        console.error('[Streak] preview failed:', e?.message);
       }
-    } else {
-      handleHackFailure('WRONG CODE');
+    } finally {
+      setLoading(false);
     }
-  };
+  }, []);
 
-  const handleHackFailure = (reason: string) => {
-    audioManager.playSfx('miss', 0.2);
-    setHackStreak(0);
-    generateNextHackMatrix();
-  };
+  useEffect(() => {
+    if (user) void loadStreak();
+    else setLoading(false);
+  }, [user, loadStreak]);
 
-  const completeHackGame = async () => {
-    if (gameIntervalRef.current) clearInterval(gameIntervalRef.current);
-    audioManager.playSfx('hidden_secret_found', 0.3);
-    await addTokens(250);
-    setEarnFeedback({ amount: 250, message: "CYBER HACK PROTOCOL success" });
-    setActiveMode('menu');
+  // Live countdown while claimed (resets at 00:00 UTC, same boundary as server).
+  useEffect(() => {
+    if (!streak || streak.canClaim) return;
+    const tick = () => setCountdown(formatCountdown(msUntilUtcMidnight()));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [streak]);
+
+  const handleClaim = async () => {
+    if (claiming || !streak?.canClaim) return;
+    setClaiming(true);
+    audioManager.playSfx('menu_confirm', 0.15);
+    try {
+      const { data, error } = await supabase.rpc('claim_daily_streak');
+      if (error) throw error;
+      if (!data?.success) {
+        if (data?.error === 'ALREADY_CLAIMED') {
+          await loadStreak();
+          return;
+        }
+        throw new Error(data?.error || 'Claim failed');
+      }
+      // Server is the source of truth for the new balance.
+      const nextTokens = typeof data.tokens === 'number' ? data.tokens : tokenBalance + data.reward;
+      useVaultStore.setState({ tokenBalance: nextTokens });
+      try { localStorage.setItem('pim_token_balance', String(nextTokens)); } catch {}
+      audioManager.playSfx('hidden_secret_found', 0.3);
+      setFeedback({ amount: data.reward, milestone: data.milestone_bonus || 0, streak: data.streak });
+      window.dispatchEvent(new Event('vault:points_updated'));
+      await loadStreak();
+    } catch (e: any) {
+      console.error('[Streak] claim failed:', e?.message);
+      audioManager.playSfx('locked_out', 0.8);
+    } finally {
+      setClaiming(false);
+    }
   };
 
   const handleBack = () => {
     audioManager.playSfx('back', 0.4);
-    if (activeMode === 'menu') {
-      setLocation('/vault');
-    } else {
-      // Clear timers
-      if (adIntervalRef.current) clearInterval(adIntervalRef.current);
-      if (gameIntervalRef.current) clearInterval(gameIntervalRef.current);
-      setActiveMode('menu');
-    }
+    setLocation('/vault');
   };
 
-  useEffect(() => {
-    return () => {
-      if (adIntervalRef.current) clearInterval(adIntervalRef.current);
-      if (gameIntervalRef.current) clearInterval(gameIntervalRef.current);
-    };
-  }, []);
+  // ── Unauthenticated wall (same rule as the Claim page) ─────────────────────
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-[#07070a] text-white flex flex-col font-sans select-none relative overflow-hidden pb-36 md:pb-12">
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none" />
+        <div className="flex-1 flex flex-col items-center justify-center px-4 py-16 relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col items-center gap-6 text-center max-w-sm bg-white/[0.03] border border-white/10 rounded-2xl p-8"
+          >
+            <div className="w-16 h-16 rounded-full bg-white/[0.03] border border-white/10 flex items-center justify-center">
+              <KeyRound size={26} className="text-[#ff3800]" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-black uppercase mb-2 text-white" style={{ fontFamily: '"Impact", "Arial Black", sans-serif' }}>
+                Identity Required
+              </h1>
+              <p className="text-xs font-mono leading-relaxed text-zinc-400">
+                Connect your Web3 Identity or guest account to start your daily spark streak.
+              </p>
+            </div>
+            <button
+              onClick={() => { audioManager.playSfx('tap_nav', 0.4); setShowAuthModal(true); }}
+              className="px-6 py-3 font-mono font-bold text-xs uppercase tracking-wider text-black bg-[#ff3800] border-2 border-black rounded shadow-[3px_3px_0_#000] hover:scale-105 active:scale-95 transition-all cursor-pointer"
+            >
+              Connect Identity
+            </button>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
+
+  const nextMilestone = streak && streak.streak < 7 ? 7 : streak && streak.streak < 30 ? 30 : null;
+  const progressToMilestone = nextMilestone
+    ? Math.min(100, Math.round(((streak?.streak || 0) / nextMilestone) * 100))
+    : 100;
 
   return (
     <div className="min-h-screen bg-[#07070a] text-white flex flex-col font-sans select-none relative overflow-hidden pb-36 md:pb-12">
@@ -218,282 +184,173 @@ export default function EarnPage() {
           className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/5 hover:border-white/20 transition-all font-mono text-[10px] font-black uppercase tracking-wider text-white/60 hover:text-white cursor-pointer"
         >
           <ArrowLeft size={12} />
-          {activeMode === 'menu' ? 'Vault' : 'Abort'}
+          Vault
         </button>
 
         <div className="text-center">
           <h1 className="font-mono text-xs font-black tracking-[0.25em] uppercase text-white/50">
-            REWARD_TERMINAL
+            Streak_Terminal
           </h1>
         </div>
 
         <div className="flex items-center gap-2 border border-white/5 bg-black/30 px-3 py-1 rounded-lg">
           <Zap size={11} className="text-[#ff9900]" />
-          <span className="font-mono text-xs font-black text-white">{tokenBalance} V⚡</span>
+          <span className="font-mono text-xs font-black text-white">{tokenBalance}</span>
+          <span className="font-mono text-[8px] uppercase tracking-widest text-white/40">sparks</span>
         </div>
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center p-6 relative z-10 max-w-lg mx-auto w-full">
-        {/* Token Earn Toast Feedback */}
-        {earnFeedback && (
-          <div className="w-full mb-6 bg-[#39FF14]/10 border border-[#39FF14]/30 rounded-2xl p-4 flex flex-col items-center justify-center text-center gap-1.5 shadow-lg shadow-[#39FF14]/5 relative overflow-hidden animate-pulse">
-            <div className="absolute -top-1 left-4 right-4 h-[1px] bg-gradient-to-r from-transparent via-[#39FF14] to-transparent" />
-            <div className="flex items-center gap-2 font-mono text-xs font-black text-[#39FF14] tracking-widest uppercase">
-              <CheckCircle size={14} />
-              {earnFeedback.message}
-            </div>
-            <span className="font-mono text-lg font-black text-white">
-              +{earnFeedback.amount} VAULT TOKENS ACQUIRED
-            </span>
-            <button
-              onClick={() => {
-                audioManager.playSfx('tap_nav', 0.1);
-                setEarnFeedback(null);
-              }}
-              className="mt-2 text-[9px] font-mono font-bold uppercase tracking-wider border border-[#39FF14]/25 hover:border-[#39FF14]/60 px-4 py-1.5 rounded-lg text-[#39FF14] bg-transparent cursor-pointer transition-all"
+        {/* Claim feedback toast */}
+        <AnimatePresence>
+          {feedback && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="w-full mb-6 bg-[#39FF14]/10 border border-[#39FF14]/30 rounded-2xl p-4 flex flex-col items-center justify-center text-center gap-1.5 shadow-lg shadow-[#39FF14]/5 relative overflow-hidden"
             >
-              Acknowledge
-            </button>
-          </div>
-        )}
-
-        {/* ── MODE 1: MAIN MENU CARD CHOICES ─────────────────────────── */}
-        {activeMode === 'menu' && (
-          <div className="w-full flex flex-col gap-4">
-            <div className="text-center mb-2">
-              <p className="font-mono text-[9px] text-white/40 uppercase tracking-widest leading-relaxed">
-                Choose a neural protocol to bypass token limits. Compliance rewards are synced instantly to your cloud wallet profile.
-              </p>
-            </div>
-
-            {/* Simulated Ad Button */}
-            <button
-              onClick={startAdBroadcast}
-              className="w-full text-left p-5 rounded-2xl border border-white/5 hover:border-[#39FF14]/35 bg-black/35 hover:bg-black/55 transition-all flex items-center justify-between group cursor-pointer"
-            >
-              <div className="flex items-start gap-4">
-                <div className="p-3.5 rounded-xl border border-white/5 bg-white/5 text-[#39FF14] group-hover:scale-105 transition-all">
-                  <Tv size={20} />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="font-mono text-xs font-black uppercase tracking-wider group-hover:text-[#39FF14] transition-all">
-                    Neural ad Broadcast
-                  </span>
-                  <p className="text-[9px] text-zinc-500 font-mono leading-tight max-w-[240px]">
-                    ESTABLISH UPLINK STREAM OF 15 SECONDS.
-                  </p>
-                </div>
+              <div className="absolute -top-1 left-4 right-4 h-[1px] bg-gradient-to-r from-transparent via-[#39FF14] to-transparent" />
+              <div className="flex items-center gap-2 font-mono text-xs font-black text-[#39FF14] tracking-widest uppercase">
+                <CheckCircle size={14} />
+                Day {feedback.streak} streak claimed
               </div>
-              <div className="flex flex-col items-end gap-1.5 shrink-0">
-                <span className="font-mono text-[10px] font-black text-[#39FF14] tracking-wider">
-                  +100 V⚡
-                </span>
-                <span className="text-[7px] text-zinc-500 font-mono uppercase">Start Feed</span>
-              </div>
-            </button>
-
-            {/* Diagnostic Survey Button */}
-            <button
-              onClick={() => {
-                audioManager.playSfx('menu_confirm', 0.15);
-                setActiveMode('survey');
-                setSurveyIndex(0);
-                setSelectedOption(null);
-              }}
-              className="w-full text-left p-5 rounded-2xl border border-white/5 hover:border-[#00F0FF]/35 bg-black/35 hover:bg-black/55 transition-all flex items-center justify-between group cursor-pointer"
-            >
-              <div className="flex items-start gap-4">
-                <div className="p-3.5 rounded-xl border border-white/5 bg-white/5 text-[#00F0FF] group-hover:scale-105 transition-all">
-                  <ClipboardList size={20} />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="font-mono text-xs font-black uppercase tracking-wider group-hover:text-[#00F0FF] transition-all">
-                    Cortex Diagnostics
-                  </span>
-                  <p className="text-[9px] text-zinc-500 font-mono leading-tight max-w-[240px]">
-                    COMPLETE COMPLIANCE SURVEY QUESTIONS.
-                  </p>
-                </div>
-              </div>
-              <div className="flex flex-col items-end gap-1.5 shrink-0">
-                <span className="font-mono text-[10px] font-black text-[#00F0FF] tracking-wider">
-                  +150 V⚡
-                </span>
-                <span className="text-[7px] text-zinc-500 font-mono uppercase">Open Diagnostic</span>
-              </div>
-            </button>
-
-            {/* Reactive Hacking game Button */}
-            <button
-              onClick={startHackingMiniGame}
-              className="w-full text-left p-5 rounded-2xl border border-white/5 hover:border-[#FF1493]/35 bg-black/35 hover:bg-black/55 transition-all flex items-center justify-between group cursor-pointer"
-            >
-              <div className="flex items-start gap-4">
-                <div className="p-3.5 rounded-xl border border-white/5 bg-white/5 text-[#FF1493] group-hover:scale-105 transition-all">
-                  <Gamepad2 size={20} />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="font-mono text-xs font-black uppercase tracking-wider group-hover:text-[#FF1493] transition-all">
-                    Grid Hack Protocol
-                  </span>
-                  <p className="text-[9px] text-zinc-500 font-mono leading-tight max-w-[240px]">
-                    INTERACTIVE MATCHING GAME. STREAK OF 5 WINS.
-                  </p>
-                </div>
-              </div>
-              <div className="flex flex-col items-end gap-1.5 shrink-0">
-                <span className="font-mono text-[10px] font-black text-[#FF1493] tracking-wider">
-                  +250 V⚡
-                </span>
-                <span className="text-[7px] text-zinc-500 font-mono uppercase">Connect Hack</span>
-              </div>
-            </button>
-          </div>
-        )}
-
-        {/* ── MODE 2: WATCH NEURAL ADVERT ───────────────────────────── */}
-        {activeMode === 'ad' && (
-          <div className="w-full bg-black/40 border border-white/5 rounded-2xl p-6 flex flex-col items-center justify-center gap-6 relative overflow-hidden min-h-[300px]">
-            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#39FF14] to-transparent" />
-            <div className="p-4 rounded-xl border border-[#39FF14]/30 bg-[#39FF14]/5 text-[#39FF14] animate-pulse">
-              <Tv size={28} />
-            </div>
-
-            <div className="w-full text-center space-y-1.5">
-              <span className="font-mono text-[8px] tracking-[0.25em] text-[#39FF14] uppercase font-black">
-                Uplink Stream Active
+              <span className="font-mono text-lg font-black text-white">
+                +{feedback.amount} SPARKS{feedback.milestone > 0 ? ` (incl. +${feedback.milestone} milestone)` : ''}
               </span>
-              <p className="font-mono text-[10px] text-white/80 uppercase max-w-[320px] mx-auto min-h-[30px] flex items-center justify-center leading-relaxed">
-                {adMessage}
+              <button
+                onClick={() => { audioManager.playSfx('tap_nav', 0.1); setFeedback(null); }}
+                className="mt-2 text-[9px] font-mono font-bold uppercase tracking-wider border border-[#39FF14]/25 hover:border-[#39FF14]/60 px-4 py-1.5 rounded-lg text-[#39FF14] bg-transparent cursor-pointer transition-all"
+              >
+                Acknowledge
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {loading ? (
+          <div className="font-mono text-[10px] uppercase tracking-widest text-white/40 animate-pulse">
+            Syncing streak…
+          </div>
+        ) : rpcMissing ? (
+          <div className="w-full bg-black/40 border border-white/10 rounded-2xl p-8 text-center space-y-3">
+            <Sparkles size={22} className="mx-auto text-[#ffd700]" />
+            <p className="font-mono text-xs font-black uppercase tracking-widest text-white/80">
+              Streak engine syncing
+            </p>
+            <p className="font-mono text-[10px] text-white/40 leading-relaxed">
+              The daily streak contract is deploying. Check back shortly — your future check-ins will count from day one.
+            </p>
+          </div>
+        ) : streak && (
+          <div className="w-full flex flex-col gap-5">
+            {/* ── Streak readout ── */}
+            <div className="bg-black/40 border border-white/10 rounded-2xl p-6 relative overflow-hidden text-center">
+              <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#ff9900] to-transparent" />
+              <div className="font-mono text-[8px] tracking-[0.3em] text-white/40 uppercase mb-3 flex items-center justify-center gap-2">
+                <CalendarDays size={12} /> Daily spark streak
+              </div>
+              <div className="flex items-center justify-center gap-3">
+                <Flame size={40} className={streak.streak > 0 ? 'text-[#ff9900]' : 'text-white/20'} />
+                <span className="font-mono text-6xl font-black text-white">{streak.streak}</span>
+              </div>
+              <p className="font-mono text-[9px] uppercase tracking-widest text-white/40 mt-2">
+                {streak.streak === 0 ? 'No streak yet — claim to start day 1' : `day${streak.streak === 1 ? '' : 's'} strong · miss a day and it resets`}
               </p>
             </div>
 
-            {/* Progress Loading Bar */}
-            <div className="w-full space-y-2">
-              <div className="w-full bg-white/5 border border-white/10 rounded-full h-3.5 p-0.5 overflow-hidden">
-                <div 
-                  className="bg-gradient-to-r from-[#39FF14]/60 to-[#39FF14] h-full rounded-full transition-all duration-150"
-                  style={{ width: `${adProgress}%` }}
-                />
+            {/* ── Today's reward ── */}
+            <div className="bg-black/40 border border-[#ffd700]/20 rounded-2xl p-6 relative overflow-hidden">
+              <div className="font-mono text-[8px] tracking-[0.3em] text-[#ffd700]/70 uppercase mb-3 text-center">
+                {streak.canClaim ? "Today's drop" : 'Claimed — next drop'}
               </div>
-              <div className="flex justify-between font-mono text-[8px] text-white/40 uppercase">
-                <span>Decrypting feed...</span>
-                <span>{adProgress}%</span>
+              <div className="text-center">
+                <span className="font-mono text-4xl font-black text-[#ffd700]">
+                  +{streak.canClaim ? streak.reward : baseRewardFor(streak.streak + 1)}
+                </span>
+                <span className="font-mono text-sm text-white/50 uppercase ml-2">sparks</span>
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── MODE 3: CORPORATE SURVEY ──────────────────────────────── */}
-        {activeMode === 'survey' && (
-          <div className="w-full bg-black/40 border border-white/5 rounded-2xl p-6 flex flex-col gap-6 relative overflow-hidden">
-            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#00F0FF] to-transparent" />
-            
-            {/* Header info */}
-            <div className="flex justify-between items-center font-mono text-[8px] tracking-wider text-[#00F0FF] uppercase font-black">
-              <span>Diagnostic survey</span>
-              <span>Question {surveyIndex + 1} of {SURVEY_QUESTIONS.length}</span>
+              {streak.canClaim && streak.milestoneBonus > 0 && (
+                <div className="mt-2 flex items-center justify-center gap-2 font-mono text-[10px] font-black uppercase tracking-wider text-[#39FF14]">
+                  <Trophy size={12} /> includes +{streak.milestoneBonus} milestone bonus
+                </div>
+              )}
+              {!streak.canClaim && (
+                <p className="mt-2 text-center font-mono text-[10px] text-white/40 uppercase tracking-widest">
+                  Resets in {countdown} UTC
+                </p>
+              )}
             </div>
 
-            {/* Question Text */}
-            <h3 className="font-mono text-[11px] font-black text-white/90 leading-normal uppercase">
-              {SURVEY_QUESTIONS[surveyIndex].question}
-            </h3>
-
-            {/* Answer Options list */}
-            <div className="flex flex-col gap-2">
-              {SURVEY_QUESTIONS[surveyIndex].options.map((opt) => {
-                const selected = selectedOption === opt.key;
-                return (
-                  <button
-                    key={opt.key}
-                    onClick={() => {
-                      audioManager.playSfx('tap_nav', 0.1);
-                      setSelectedOption(opt.key);
-                    }}
-                    className={`text-left p-3.5 rounded-xl border font-mono text-[9px] leading-relaxed transition-all cursor-pointer flex items-center gap-3 ${
-                      selected
-                        ? 'border-[#00F0FF] bg-[#00F0FF]/10 text-white'
-                        : 'border-white/5 bg-black/40 text-white/50 hover:border-white/10 hover:text-white/80'
-                    }`}
-                  >
-                    <span className={`w-5 h-5 rounded-md flex items-center justify-center font-black border text-[9.5px] ${
-                      selected
-                        ? 'border-[#00F0FF] text-[#00F0FF]'
-                        : 'border-white/10 text-white/30'
-                    }`}>
-                      {opt.key}
-                    </span>
-                    {opt.text}
-                  </button>
-                );
-              })}
+            {/* ── Milestones ── */}
+            <div className="bg-black/40 border border-white/10 rounded-2xl p-6 space-y-4">
+              <div className="font-mono text-[8px] tracking-[0.3em] text-white/40 uppercase text-center">
+                Milestones
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { day: 7, bonus: 100 },
+                  { day: 30, bonus: 300 },
+                ].map((m) => {
+                  const done = streak.streak >= m.day;
+                  const current = !done && nextMilestone === m.day;
+                  return (
+                    <div
+                      key={m.day}
+                      className={`rounded-xl border p-4 text-center transition-all ${
+                        done
+                          ? 'border-[#39FF14]/40 bg-[#39FF14]/5'
+                          : current
+                            ? 'border-[#ffd700]/40 bg-[#ffd700]/5'
+                            : 'border-white/5 bg-black/30'
+                      }`}
+                    >
+                      <div className={`font-mono text-[9px] font-black uppercase tracking-widest ${done ? 'text-[#39FF14]' : current ? 'text-[#ffd700]' : 'text-white/30'}`}>
+                        Day {m.day}
+                      </div>
+                      <div className="font-mono text-lg font-black text-white mt-1">+{m.bonus} ⚡</div>
+                      <div className="font-mono text-[7px] uppercase tracking-widest text-white/30 mt-1">
+                        {done ? 'claimed' : current ? 'next up' : 'locked'}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {nextMilestone && (
+                <div className="space-y-1.5">
+                  <div className="w-full bg-white/5 border border-white/10 rounded-full h-2 overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-[#ff9900] to-[#ffd700] h-full rounded-full transition-all"
+                      style={{ width: `${progressToMilestone}%` }}
+                    />
+                  </div>
+                  <p className="text-center font-mono text-[8px] uppercase tracking-widest text-white/40">
+                    {nextMilestone - streak.streak} day{nextMilestone - streak.streak === 1 ? '' : 's'} to the day-{nextMilestone} milestone
+                  </p>
+                </div>
+              )}
+              {!nextMilestone && streak.streak >= 30 && (
+                <p className="text-center font-mono text-[8px] uppercase tracking-widest text-[#39FF14]">
+                  All milestones crushed — streak pays {baseRewardFor(streak.streak)} sparks/day
+                </p>
+              )}
             </div>
 
-            {/* Actions button */}
+            {/* ── Claim button ── */}
             <button
-              onClick={handleSurveyAnswer}
-              disabled={!selectedOption}
-              className={`w-full py-2.5 rounded-xl font-mono text-[10px] font-black uppercase tracking-widest transition-all ${
-                selectedOption
-                  ? 'bg-gradient-to-r from-[#00F0FF]/30 to-[#00F0FF]/10 border border-[#00F0FF]/40 text-white hover:from-[#00F0FF]/40 cursor-pointer'
-                  : 'bg-white/5 border border-white/5 text-white/20 cursor-not-allowed'
+              onClick={handleClaim}
+              disabled={!streak.canClaim || claiming}
+              className={`w-full py-4 rounded-2xl font-mono text-sm font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 ${
+                streak.canClaim
+                  ? 'text-black bg-gradient-to-r from-[#ffd700] to-[#ff9900] border-2 border-black shadow-[4px_4px_0_#000] hover:scale-[1.02] active:scale-95 cursor-pointer'
+                  : 'bg-white/5 border border-white/10 text-white/25 cursor-not-allowed'
               }`}
             >
-              {surveyIndex === SURVEY_QUESTIONS.length - 1 ? "Submit Diagnostic" : "Next Question"}
+              <Gift size={16} />
+              {claiming ? 'Claiming…' : streak.canClaim ? `Claim +${streak.reward} sparks` : 'Claimed for today'}
             </button>
-          </div>
-        )}
-
-        {/* ── MODE 4: GRID HACK MINIGAME ────────────────────────────── */}
-        {activeMode === 'game' && (
-          <div className="w-full bg-black/40 border border-white/5 rounded-2xl p-6 flex flex-col gap-5 relative overflow-hidden min-h-[350px]">
-            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#FF1493] to-transparent" />
-            
-            {/* Header game Info */}
-            <div className="flex justify-between items-center font-mono text-[8px] tracking-wider text-[#FF1493] uppercase font-black">
-              <span>Hacking Node</span>
-              <span>Streak: {hackStreak} / 5</span>
-            </div>
-
-            {/* Target Display Panel */}
-            <div className="bg-black/50 border border-white/5 p-4 rounded-xl flex flex-col items-center justify-center text-center gap-1.5 relative overflow-hidden">
-              <span className="font-mono text-[8px] text-white/40 uppercase tracking-widest">
-                TARGET NODE KEY
-              </span>
-              <span className="font-mono text-2xl font-black text-[#FF1493] tracking-widest uppercase animate-pulse">
-                {targetHex}
-              </span>
-            </div>
-
-            {/* Countdown timer bar */}
-            <div className="w-full space-y-1">
-              <div className="w-full bg-white/5 rounded-full h-1.5 overflow-hidden">
-                <div 
-                  className="bg-[#FF1493] h-full rounded-full transition-all duration-100"
-                  style={{ width: `${gameTimer}%` }}
-                />
-              </div>
-            </div>
-
-            {/* 4x4 Grid Matrix */}
-            <div className="grid grid-cols-4 gap-2.5">
-              {matrixGrid.map((hex, index) => {
-                return (
-                  <button
-                    key={index}
-                    onClick={() => handleHexTap(hex)}
-                    className="aspect-square bg-black/35 hover:bg-[#FF1493]/10 border border-white/5 hover:border-[#FF1493]/30 active:scale-95 text-white font-mono text-[10px] font-black uppercase tracking-wider rounded-lg transition-all flex items-center justify-center cursor-pointer"
-                  >
-                    {hex}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Sub-label instructions */}
-            <p className="font-mono text-[7px] text-white/30 text-center uppercase tracking-wider leading-relaxed">
-              Tap the matching TARGET NODE KEY within the response window. A streak of 5 successful node cracks yields token retrieval.
+            <p className="text-center font-mono text-[8px] text-white/30 uppercase tracking-widest leading-relaxed">
+              One claim per day · UTC midnight reset · server-verified
             </p>
           </div>
         )}
