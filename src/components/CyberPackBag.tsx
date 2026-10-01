@@ -435,7 +435,7 @@ export default function CyberPackBag({
         {isBombshell && (
           <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-30 pointer-events-auto flex flex-col items-center">
             {/* Attention arrow — points at the toggle until the user flips it once */}
-            {!hasFlippedSide && !forcedTheme && (
+            {!hasFlippedSide && (
               <motion.div
                 animate={{ y: [0, 6, 0] }}
                 transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}
