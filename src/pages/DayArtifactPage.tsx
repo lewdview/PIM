@@ -21,7 +21,7 @@ import {
 import { getCurrentDay, getDateFromDay, formatDate } from '../utils/dayCalc';
 import { loadCatalog, type GameSong } from '../game/api';
 import { useGlobalPlayer } from '../store/useGlobalPlayer';
-import { useVaultStore } from '../store/useVaultStore';
+import { useVaultStore, ownsCardForDay } from '../store/useVaultStore';
 import { audioManager } from '../game/audio';
 import { getCardByDay, type VaultCard } from '../services/vaultService';
 import Card from '../components/Card';
@@ -103,10 +103,11 @@ export default function DayArtifactPage() {
         day: song.day || dayNum,
         rarity: ownedCard?.card?.rarity || (ownedCard as any)?.rarity || card?.rarity || 'common',
         isDailyClaim: true,
-        maxDuration: 0,
+        // Ownership gate: full track requires the card; unowned gets a 30s preview
+        maxDuration: ownsCardForDay(collection, song.day || dayNum) ? 0 : 30,
       });
     }
-  }, [song, card, ownedCard, isCurrentPlaying, playGlobal, pauseGlobal, dayNum]);
+  }, [song, card, ownedCard, isCurrentPlaying, playGlobal, pauseGlobal, dayNum, collection]);
 
   // Direct Play Launch
   const handlePlayPIM = useCallback(() => {
