@@ -4,7 +4,7 @@ import { Link, useLocation } from 'wouter';
 import { Layers, Flame, Star, Calendar, Zap, Monitor, Clock, Play, Gift, Shield, Sparkles, AlertTriangle, Image as ImageIcon, Terminal, X } from 'lucide-react';
 import Card from '../components/Card';
 import PackShop from '../components/PackShop';
-import { useVaultStore } from '../store/useVaultStore';
+import { useVaultStore, ownsCardForDay } from '../store/useVaultStore';
 import { useLoadingToast } from '../store/useLoadingToast';
 import { useAuthStore } from '../store/useAuthStore';
 import {
@@ -471,14 +471,21 @@ export default function LandingPage() {
     }
   }, [today, hasClaimed, setHasClaimed, addToCollection, startReveal, setLocation, user, incrementClaimedCount]);
 
-  // Direct play launcher
-  const handlePlayNow = useCallback(() => {
+  // Direct play launcher (claim-first: today's free card is claimed silently before entering play)
+  const handlePlayNow = useCallback(async () => {
     if (songId) {
+      if (!ownsCardForDay(collection, today)) {
+        try {
+          await useVaultStore.getState().silentClaimDailyDrop(today);
+        } catch (err) {
+          console.error("[LandingPage] Claim-first failed:", err);
+        }
+      }
       setLocation(`/play/${songId}`);
     } else {
       setLocation('/arcade');
     }
-  }, [songId, setLocation]);
+  }, [songId, setLocation, collection, today]);
 
   // Purchase pack handler
   const handlePurchasePack = useCallback(async (category: PackCategory, size: PackSize, sessionId?: string) => {
