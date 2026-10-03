@@ -12,7 +12,7 @@ import {
   ChevronRight, History, X, Monitor, User,
   CornerDownLeft, Compass, Lock, Unlock, Radio
 } from 'lucide-react';
-import { useVaultStore } from '../store/useVaultStore';
+import { useVaultStore, ownsCardForDay } from '../store/useVaultStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { useNotificationStore } from '../store/useNotificationStore';
 import { useDisplayMode } from '../store/useDisplayMode';
@@ -727,6 +727,11 @@ export default function CommandPaletteModal() {
                           {item.isProphecy && (
                             <span className="font-mono text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 border border-purple-500/40 flex items-center gap-0.5">
                               <Unlock size={8} /> PROPHECY UNLOCKED
+                            </span>
+                          )}
+                          {item.category === 'tracks' && typeof item.day === 'number' && !ownsCardForDay(collection, item.day) && (
+                            <span className="font-mono text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-[#FFD700]/15 text-[#FFD700] border border-[#FFD700]/40 flex items-center gap-0.5">
+                              <Lock size={8} /> CARD
                             </span>
                           )}
                         </div>

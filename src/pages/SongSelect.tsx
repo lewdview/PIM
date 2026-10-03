@@ -4,7 +4,7 @@ import { loadCatalog, isSongTimeLocked, getModifierForSong } from "@/game/api";
 import type { GameSong } from "@/game/api";
 import { audioManager } from "@/game/audio";
 import { getActiveTheme } from "@/lib/options";
-import { useVaultStore } from "../store/useVaultStore";
+import { useVaultStore, ownsCardForDay } from "../store/useVaultStore";
 import { getCurrentDay, getMonthNumFromDay, getRelativeDay } from "../utils/dayCalc";
 import { CHAPTERS, type ChapterMeta } from "@/game/campaign";
 import { getMedalForSong, getHighScore, getScoreHistory } from "@/game/progress";
@@ -82,7 +82,6 @@ export default function SongSelect() {
   const isAvant = getActiveTheme() === 'avant-garde';
 
   const collection = useVaultStore((s) => s.collection);
-  const fragments = useVaultStore((s) => s.fragments);
   const loadVaultData = useVaultStore((s) => s.loadVaultData);
   const claimedRewards = useVaultStore((s) => s.claimedRewards);
   const equippedCardId = useVaultStore((s) => s.equippedCardId);
@@ -234,18 +233,12 @@ export default function SongSelect() {
   };
 
   const today = getCurrentDay();
-  const getFragmentsForDay = (day: number) => {
-    const cardKey = `card-${day}`;
-    const dayKey = `day-${String(day).padStart(3, '0')}`;
-    const dayKeyRaw = `day-${day}`;
-    return fragments[cardKey] ?? fragments[dayKey] ?? fragments[dayKeyRaw] ?? 0;
-  };
 
+  // Playback requires card ownership. Today's track is free via the
+  // claim-first funnel (silent-claim runs in handlePlaySong before routing).
   const isSongUnlocked = (song: GameSong) => {
     if (song.day === today) return true;
-    const ownsCard = Array.isArray(collection) ? collection.some(c => c && (c.cardId === song.id || c.card?.day === song.day)) : false;
-    const fragmentCount = getFragmentsForDay(song.day);
-    return ownsCard || fragmentCount >= 10;
+    return ownsCardForDay(collection, song.day);
   };
 
   const selectedUnlocked = selected ? isSongUnlocked(selected) : false;
@@ -365,9 +358,18 @@ export default function SongSelect() {
 
   const activeCoverUrl = availableVariants[selectedVariantIdx]?.url || selected?.coverArt || '/data/covers/default.jpg';
 
-  const handlePlaySong = (songToPlay?: GameSong) => {
+  const handlePlaySong = async (songToPlay?: GameSong) => {
     const s = songToPlay || selected;
     if (!s || !isSongUnlocked(s)) return;
+    // Claim-first funnel: today's free card is claimed silently before entering play,
+    // so the destination ownership gate always sees it.
+    if (s.day === today && !ownsCardForDay(collection, s.day)) {
+      try {
+        await useVaultStore.getState().silentClaimDailyDrop(s.day);
+      } catch (err) {
+        console.error("[SongSelect] Claim-first failed:", err);
+      }
+    }
     cleanupPreview();
     audioManager.playSfx('tap_nav', 0.4);
     sessionStorage.setItem(`game_origin_${s.id}`, 'songs');
@@ -898,10 +900,10 @@ export default function SongSelect() {
                   {!selectedUnlocked ? (
                     <div className="border border-[#FF3800]/40 bg-[#FF3800]/10 p-4 rounded-xl text-center mb-4">
                       <div className="font-mono text-xs font-black text-[#FF3800] tracking-wider uppercase">
-                        AWARD PLAY LOCKED // 10 FRAGMENTS REQUIRED
+                        🔒 Play locked // card required
                       </div>
                       <div className="font-mono text-[9px] text-white/60 mt-1 uppercase">
-                        COLLECT 10 FRAGMENTS FOR THIS SONG OR EQUIP CARD FROM VAULT COLLECTION
+                        Own this card to play — find it in packs or the vault
                       </div>
                     </div>
                   ) : null}

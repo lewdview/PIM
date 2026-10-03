@@ -7,7 +7,7 @@ import { getMedalForSong, getChapterPlatinums, getHighScore, getScoreHistory } f
 import { CHAPTERS, calculateCampaignDifficulty } from "@/game/campaign";
 import { getActiveTheme } from "@/lib/options";
 import { audioManager } from "@/game/audio";
-import { useVaultStore } from "@/store/useVaultStore";
+import { useVaultStore, ownsCardForDay } from "@/store/useVaultStore";
 import { purchasePack } from "@/services/vaultService";
 import { PACK_CONFIGS } from "@/utils/rarity";
 import { Lock, Play, Film } from "lucide-react";
@@ -39,7 +39,6 @@ export default function Chapter() {
 
   // Vault integration
   const collection = useVaultStore((s) => s.collection);
-  const fragments = useVaultStore((s) => s.fragments);
   const loadVaultData = useVaultStore((s) => s.loadVaultData);
   const equippedCardId = useVaultStore((s) => s.equippedCardId);
   const setEquippedCardId = useVaultStore((s) => s.setEquippedCardId);
@@ -362,21 +361,18 @@ export default function Chapter() {
   const history = selectedSong ? getScoreHistory(selectedSong.id) : [];
   const modifierType = selectedSong ? getModifierForSong(selectedSong) : 'none';
 
-  // Card ownership
-  const ownsCard = selectedSong && Array.isArray(collection) ? collection.some(c => c && (c.cardId === selectedSong.id || c.card?.day === selectedSong.day)) : false;
+  // Card ownership (strict: replay requires owning the card)
+  const ownsCard = selectedSong ? ownsCardForDay(collection, selectedSong.day) : false;
   const isCleared = selectedSong ? hasCleared(selectedSong) : false;
   const isAllPrizesClaimed = selectedSong ? (claimedRewards[selectedSong.id]?.includes('prophecy') || localStorage.getItem(`reward_tier_${selectedSong.id}`) === 'prophecy') : false;
-
-  const fragmentCount = selectedSong ? (fragments[selectedSong.id] ?? 0) : 0;
-  const isCardUnlocked = ownsCard || fragmentCount >= 10;
 
   // Check locks
   const isTimeLocked = selectedSong ? isSongTimeLocked(selectedSong) : false;
   const isBonusLocked = selectedSong && (songs.indexOf(selectedSong) >= regularSongs.length) && !bonusUnlocked;
   const isProgLocked = selectedSong && !isUnlocked(songs.indexOf(selectedSong));
-  
-  // A song is locked if it is a replay (already cleared) AND they have less than 10 fragments AND they do NOT own the card
-  const isUnlockReqLocked = isCleared ? (!ownsCard && fragmentCount < 10) : false;
+
+  // A song is locked if it is a replay (already cleared) AND they do NOT own the card
+  const isUnlockReqLocked = isCleared ? !ownsCard : false;
   const isPlayLocked = isTimeLocked || isBonusLocked || isProgLocked || isUnlockReqLocked;
 
   const difficultyLevel = selectedSong
@@ -1054,15 +1050,11 @@ export default function Chapter() {
                               {isUnlockReqLocked && !isTimeLocked && !isBonusLocked && !isProgLocked && (
                                 <div className="p-2 border border-yellow-500/20 bg-yellow-500/5 rounded space-y-1.5">
                                   <div className="flex justify-between items-baseline">
-                                    <span className="font-mono text-[7px] text-yellow-500 font-bold uppercase tracking-wider">// SONG REPLAY REQUISITE</span>
-                                    <span className="font-mono text-[8px] text-white/90 font-black">{fragmentCount} / 10 FRAGS</span>
-                                  </div>
-                                  <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden relative border border-white/5">
-                                    <div className="h-full bg-gradient-to-r from-yellow-600 to-yellow-400 rounded-full transition-all duration-300"
-                                      style={{ width: `${Math.min(100, (fragmentCount / 10) * 100)}%` }} />
+                                    <span className="font-mono text-[7px] text-yellow-500 font-bold uppercase tracking-wider">// Song replay requisite</span>
+                                    <span className="font-mono text-[8px] text-white/90 font-black">🔒 CARD</span>
                                   </div>
                                   <div className="font-mono text-[7px] text-white/40 leading-normal uppercase">
-                                    Unlock requires 10 fragments. Decrypt in shop or claim daily drops to unlock.
+                                    Replay requires owning this card. Find it in packs or the vault.
                                   </div>
                                 </div>
                               )}
@@ -1172,7 +1164,7 @@ export default function Chapter() {
                   : isBonusLocked 
                     ? `🔒 NEED ${meta.platNeeded} PLATINUMS (HAVE ${platinums})` 
                     : isUnlockReqLocked
-                      ? `🔒 DECODE REQUIRED: ${fragmentCount}/10 FRAGMENTS`
+                      ? `🔒 CARD REQUIRED — OWN THIS CARD TO REPLAY`
                       : '🔒 TRANSMISSION LOCKED'}
               </div>
             )}

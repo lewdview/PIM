@@ -1,7 +1,8 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Pause, X, Volume2, SkipBack, SkipForward, Shuffle, Repeat, Repeat1, Sparkles } from 'lucide-react';
+import { Play, Pause, X, Volume2, SkipBack, SkipForward, Shuffle, Repeat, Repeat1, Sparkles, Lock } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { useGlobalPlayer } from '../store/useGlobalPlayer';
+import { useVaultStore, ownsCardForDay } from '../store/useVaultStore';
 import { RARITY_CONFIG } from '../utils/rarity';
 import { useIsMobile } from '../hooks/use-mobile';
 
@@ -61,6 +62,8 @@ export default function GlobalPlayerBar() {
   const [location, setLocation] = useLocation();
   const isMobile = useIsMobile();
   const currentTrack = useGlobalPlayer(s => s.currentTrack);
+  const collection = useVaultStore(s => s.collection);
+  const trackOwned = currentTrack ? ownsCardForDay(collection, currentTrack.day) : true;
   const isPlaying = useGlobalPlayer(s => s.isPlaying);
   const duration = useGlobalPlayer(s => s.duration);
   const loopMode = useGlobalPlayer(s => s.loopMode);
@@ -350,7 +353,9 @@ export default function GlobalPlayerBar() {
                 flexShrink: 0,
               }}
               className="hover:bg-[rgba(0,240,255,0.2)] hover:scale-105"
+              title={trackOwned ? "Play in PIM" : "Card required — claim or own this card to play"}
             >
+              {!trackOwned && <Lock size={11} />}
               <span>Play PIM</span>
             </button>
           )}

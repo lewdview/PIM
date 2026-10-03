@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useRoute, useLocation } from 'wouter';
 import { loadCatalog, getCandidateAudioUrls, sanitizeMediaUrl, type GameSong } from '../game/api';
 import { audioManager } from '../game/audio';
-import { useVaultStore } from '../store/useVaultStore';
+import { useVaultStore, ownsCardForDay } from '../store/useVaultStore';
 import { Play, Pause, SkipForward, SkipBack, X, Music, Shuffle, Repeat, Repeat1, Volume2, Sparkles, Layers } from 'lucide-react';
 
 // Types for particles in the visualizer
@@ -28,7 +28,7 @@ export default function ListenPage() {
   const songId = (params as any)?.songId || '';
   const [location, setLocation] = useLocation();
 
-  const { settings, updateSettings, collection, fragments } = useVaultStore();
+  const { settings, updateSettings, collection } = useVaultStore();
 
   const [allCatalogSongs, setAllCatalogSongs] = useState<GameSong[]>([]);
   const [playlist, setPlaylist] = useState<GameSong[]>([]);
@@ -78,24 +78,10 @@ export default function ListenPage() {
   // Track page history to go back to the correct origin page
   const [backRoute, setBackRoute] = useState('/songs');
 
-  const getFragmentsForDay = useCallback((day: number) => {
-    const cardKey = `card-${day}`;
-    const dayKey = `day-${String(day).padStart(3, '0')}`;
-    const dayKeyRaw = `day-${day}`;
-    return (
-      fragments[cardKey] ??
-      fragments[dayKey] ??
-      fragments[dayKeyRaw] ??
-      0
-    );
-  }, [fragments]);
-
+  // Strict card ownership (fragments no longer unlock playback — they feed Award Play)
   const isSongUnlocked = useCallback((s: GameSong) => {
-    const isOwned = Array.isArray(collection) 
-      ? collection.some(c => c && (c.cardId === s.id || `card-${c.card?.day}` === s.id || c.cardId === `card-${s.day}`)) 
-      : false;
-    return isOwned || getFragmentsForDay(s.day) >= 10;
-  }, [collection, getFragmentsForDay]);
+    return ownsCardForDay(collection, s.day);
+  }, [collection]);
 
   const cleanupAudio = () => {
     if (animationFrameRef.current) {

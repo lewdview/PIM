@@ -213,6 +213,62 @@ export function calculatePrestigeScore(
 // Backward-compatible alias
 export const calculateEchoPrestigeScore = calculatePrestigeScore;
 
+// ── Centralized card-ownership helpers ──────────────────────────────────────
+// Single source of truth for "does this collection contain a card for day N".
+// Card identity has drifted across three key schemes (card.day, `day_N`,
+// `card-N`, `day-N` incl. zero-padded variants) — match all of them here so
+// call sites never hand-roll their own variant again.
+
+const RARITY_RANK: Record<string, number> = {
+  common: 0,
+  uncommon: 1,
+  rare: 2,
+  legendary: 3,
+  mythic: 4,
+};
+
+export function cardMatchesDay(
+  c: OwnedCard | null | undefined,
+  day: number
+): boolean {
+  if (!c || !Number.isFinite(day)) return false;
+  if (c.card && c.card.day === day) return true;
+  for (const v of [c.cardId, c.id]) {
+    if (!v || typeof v !== 'string') continue;
+    if (v === `day_${day}` || v === `card-${day}` || v === `day-${day}`) return true;
+    const m = v.match(/^(?:day[_-]|card-)0*(\d+)$/);
+    if (m && parseInt(m[1], 10) === day) return true;
+  }
+  return false;
+}
+
+/** True when the collection holds at least one card for the given 365 day. */
+export function ownsCardForDay(
+  collection: OwnedCard[] | null | undefined,
+  day: number
+): boolean {
+  return Array.isArray(collection) && collection.some((c) => cardMatchesDay(c, day));
+}
+
+/** Highest-rarity owned card for the day (for variant artwork / modifiers). */
+export function getHighestOwnedCard(
+  collection: OwnedCard[] | null | undefined,
+  day: number
+): OwnedCard | null {
+  if (!Array.isArray(collection)) return null;
+  let best: OwnedCard | null = null;
+  let bestRank = -1;
+  for (const c of collection) {
+    if (!cardMatchesDay(c, day)) continue;
+    const rank = RARITY_RANK[String(c?.card?.rarity || 'common').toLowerCase()] ?? 0;
+    if (rank > bestRank) {
+      best = c;
+      bestRank = rank;
+    }
+  }
+  return best;
+}
+
 async function syncUserFragmentToDb(userId: string, songId: string, count: number) {
   if (!userId || !songId) return;
   try {
@@ -383,9 +439,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     const currentState = get();
 
     // 1. Strict check: If user already owns the card for this day in collection, do not re-claim
-    const alreadyOwnsCard = currentState.collection.some(c => 
-      c && (c.cardId === `day_${day}` || (c.card && c.card.day === day) || c.id.includes(`day_${day}`))
-    );
+    const alreadyOwnsCard = ownsCardForDay(currentState.collection, day);
 
     if (alreadyOwnsCard) {
       console.log(`[Silent Claim] User already owns card for Day ${day}. Skipping duplicate claim.`);
