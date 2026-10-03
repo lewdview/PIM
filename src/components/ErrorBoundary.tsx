@@ -51,7 +51,6 @@ export class ErrorBoundary extends Component<Props, State> {
         return this.props.fallback;
       }
 
-      const isDev = Boolean(import.meta.env?.DEV || (typeof process !== "undefined" && process.env?.NODE_ENV !== "production"));
       const section = this.props.sectionName ? `[${this.props.sectionName}]` : "SYSTEM MALFUNCTION";
 
       return (
@@ -73,14 +72,24 @@ export class ErrorBoundary extends Component<Props, State> {
               A runtime anomaly was isolated. Recovery subroutines are available below.
             </p>
 
-            {isDev && this.state.error && (
-              <div className="w-full text-left bg-black/70 border border-zinc-800 rounded p-3 mb-6 font-mono text-xs text-red-400 overflow-x-auto max-h-40">
-                <p className="font-bold text-red-300 mb-1">{this.state.error.toString()}</p>
+            {this.state.error && (
+              <div className="w-full text-left bg-black/70 border border-zinc-800 rounded p-3 mb-4 font-mono text-xs text-red-400 overflow-x-auto max-h-40">
+                <p className="font-bold text-red-300 mb-1 break-all">{this.state.error.toString()}</p>
                 {this.state.errorInfo?.componentStack && (
                   <pre className="text-[10px] text-zinc-500 whitespace-pre-wrap">
-                    {this.state.errorInfo.componentStack.slice(0, 300)}...
+                    {this.state.errorInfo.componentStack.slice(0, 500)}...
                   </pre>
                 )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const text = `${this.state.error?.toString()}\n${this.state.error?.stack || ''}\n${this.state.errorInfo?.componentStack || ''}`;
+                    navigator.clipboard?.writeText(text).catch(() => {});
+                  }}
+                  className="mt-2 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 text-zinc-200 rounded text-[10px] font-mono uppercase tracking-widest cursor-pointer"
+                >
+                  Copy error details
+                </button>
               </div>
             )}
 
