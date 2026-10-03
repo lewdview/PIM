@@ -21,6 +21,7 @@ import {
 import { getCurrentDay } from '../utils/dayCalc';
 import { loadCatalog, type GameSong } from '../game/api';
 import { useGlobalPlayer } from '../store/useGlobalPlayer';
+import { useVaultStore, ownsCardForDay } from '../store/useVaultStore';
 import { audioManager } from '../game/audio';
 
 type WarpModule = 'hub' | 'mood' | 'ascii' | 'lore';
@@ -42,6 +43,9 @@ export default function WarpZonePage() {
   const isPlaying = useGlobalPlayer(s => s.isPlaying);
   const playGlobal = useGlobalPlayer(s => s.play);
   const pauseGlobal = useGlobalPlayer(s => s.pause);
+
+  // Card ownership gates full-track playback (unowned → 30s preview)
+  const collection = useVaultStore(s => s.collection);
 
   useEffect(() => {
     let active = true;
@@ -71,7 +75,8 @@ export default function WarpZonePage() {
       day: song.day,
       rarity: 'common',
       isDailyClaim: true,
-      maxDuration: 0,
+      // Ownership gate: full track requires the card; unowned gets a 30s preview
+      maxDuration: ownsCardForDay(collection, song.day) ? 0 : 30,
     });
     audioManager.playSfx('select_start_song', 0.4);
   };
