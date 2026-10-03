@@ -31,6 +31,7 @@ import { refineAndBlendEdges, disposeCanvas, drawMovingGasAura } from './drawHel
 import JudgmentBadge, { getJudgmentBadgeSvgHtml, getJudgmentStreamItemHtml } from './JudgmentBadge';
 import GameplayVisualizer from './GameplayVisualizer';
 import TutorialOverlay, { type TutorialStepType } from './TutorialOverlay';
+import WordLyrics from "@/components/WordLyrics";
 
 // Use Vite's eager glob to grab files in /public/data/slideshow/
 const imageModules = import.meta.glob<string>('../../public/data/slideshow/**/*.{png,jpg,jpeg,gif,webp,svg}', { query: '?url', import: 'default', eager: true });
@@ -10706,6 +10707,13 @@ export default function Game() {
           className="relative w-full flex-1 min-h-0 overflow-hidden"
           style={{ touchAction: 'none' }}
         >
+
+          {/* Word-synced lyrics overlay — always on when the song has an LRC file */}
+          {song && song.day > 0 && (
+            <div className="absolute top-[5%] left-0 right-0 z-20 pointer-events-none px-4">
+              <WordLyrics day={song.day} audioRef={audioRef} />
+            </div>
+          )}
 
           {/* Circular Score Dial & Combo Overlays (PIM Style) */}
           {(() => {
