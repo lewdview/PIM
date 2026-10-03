@@ -5,7 +5,7 @@ import type { GameSong } from "@/game/api";
 import { getMedalForSong, getHighScore, getScoreHistory } from "@/game/progress";
 import { audioManager } from "@/game/audio";
 import { getActiveTheme } from "@/lib/options";
-import { useVaultStore } from "../store/useVaultStore";
+import { useVaultStore, ownsCardForDay } from "../store/useVaultStore";
 import { getCurrentDay } from "../utils/dayCalc";
 import PrizeProgressMenu from "../components/PrizeProgressMenu";
 import SongLeaderboard from "../components/SongLeaderboard";
@@ -76,7 +76,6 @@ export default function SongDetail() {
 
   // Collection checking for locking
   const collection = useVaultStore((s) => s.collection);
-  const fragments = useVaultStore((s) => s.fragments);
   const loadVaultData = useVaultStore((s) => s.loadVaultData);
   const equippedCardId = useVaultStore((s) => s.equippedCardId);
   const setEquippedCardId = useVaultStore((s) => s.setEquippedCardId);
@@ -211,31 +210,18 @@ export default function SongDetail() {
   if (!song) return null;
 
   const today = getCurrentDay();
-  const hasCard = song && Array.isArray(collection) ? collection.some(c => c && (c.cardId === song.id || c.card?.day === song.day)) : false;
+  const hasCard = song ? ownsCardForDay(collection, song.day) : false;
   const bestScore = history.length > 0 ? Math.max(...history) : 0;
   const isCleared = bestScore > 0 || (medal && medal !== '');
-  const getFragmentsForDay = (day: number) => {
-    const cardKey = `card-${day}`;
-    const dayKey = `day-${String(day).padStart(3, '0')}`;
-    const dayKeyRaw = `day-${day}`;
-    return (
-      fragments[cardKey] ??
-      fragments[dayKey] ??
-      fragments[dayKeyRaw] ??
-      0
-    );
-  };
-
-  const fragmentCount = song ? getFragmentsForDay(song.day) : 0;
   const isAllPrizesClaimed = song ? (claimedRewards[song.id]?.includes('prophecy') || localStorage.getItem(`reward_tier_${song.id}`) === 'prophecy') : false;
 
   let unlocked = false;
   if (from === 'songs') {
-    // Award Play / Archive Play: requires 10 fragments decrypted OR owning the card
-    unlocked = hasCard || fragmentCount >= 10;
+    // Award Play / Archive Play: requires owning the card
+    unlocked = hasCard;
   } else if (from.startsWith('chapter')) {
-    // Campaign Play: first play is free, replay requires 10 fragments decrypted OR owning the card
-    unlocked = !isCleared || hasCard || fragmentCount >= 10;
+    // Campaign Play: first play is free, replay requires owning the card
+    unlocked = !isCleared || hasCard;
   } else {
     // Other (Playable in PIM by owning the card, even common)
     unlocked = hasCard || song.day === today;
