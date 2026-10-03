@@ -20,7 +20,7 @@ import {
 import { getCurrentDay, getTimeUntilNextDay, formatDate, getDateFromDay } from '../utils/dayCalc';
 import { loadCatalog, type GameSong } from '../game/api';
 import { useGlobalPlayer } from '../store/useGlobalPlayer';
-import { useVaultStore } from '../store/useVaultStore';
+import { useVaultStore, ownsCardForDay } from '../store/useVaultStore';
 import { audioManager } from '../game/audio';
 import { getCardByDay, type VaultCard } from '../services/vaultService';
 import Card from '../components/Card';
@@ -45,6 +45,9 @@ export default function UniverseHome() {
   const isPlaying = useGlobalPlayer(s => s.isPlaying);
   const playGlobal = useGlobalPlayer(s => s.play);
   const pauseGlobal = useGlobalPlayer(s => s.pause);
+
+  // Card ownership gates full-track playback (unowned → 30s preview)
+  const collection = useVaultStore(s => s.collection);
 
   const isTodayPlaying = Boolean(
     isPlaying && currentTrack && currentTrack.day === today
@@ -87,12 +90,19 @@ export default function UniverseHome() {
   }, [today]);
 
   // Handle direct audio toggle
-  const handleToggleAudio = useCallback(() => {
+  const handleToggleAudio = useCallback(async () => {
     if (!todaySong) return;
     if (isTodayPlaying) {
       pauseGlobal();
       audioManager.playSfx('pause', 0.3);
     } else {
+      // Claim-first funnel: today's card is free — claim silently so full playback is owned.
+      const songDay = todaySong.day || today;
+      if (!ownsCardForDay(collection, songDay)) {
+        try { await useVaultStore.getState().silentClaimDailyDrop(songDay); } catch (err) {
+          console.error("[UniverseHome] Claim-first failed:", err);
+        }
+      }
       audioManager.playSfx('select_start_song', 0.4);
       playGlobal({
         title: todaySong.title,
@@ -105,7 +115,7 @@ export default function UniverseHome() {
         maxDuration: 0,
       });
     }
-  }, [todaySong, todayCard, isTodayPlaying, playGlobal, pauseGlobal, today]);
+  }, [todaySong, todayCard, isTodayPlaying, playGlobal, pauseGlobal, today, collection]);
 
   // Primary Action: Play Today's Drop
   const handlePlayDrop = useCallback(() => {
@@ -512,7 +522,8 @@ export default function UniverseHome() {
                         day: s.day,
                         rarity: 'common',
                         isDailyClaim: true,
-                        maxDuration: 0,
+                        // Ownership gate: full track requires the card; unowned gets a 30s preview
+                        maxDuration: ownsCardForDay(collection, s.day) ? 0 : 30,
                       });
                       audioManager.playSfx('select_start_song', 0.3);
                     }}
