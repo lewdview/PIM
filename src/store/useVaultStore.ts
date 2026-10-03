@@ -282,7 +282,7 @@ export function getShardsForDay(
   day: number
 ): number {
   if (!fragments || !Number.isFinite(day)) return 0;
-  const keys = [`card-${day}`, `day-${String(day).padStart(3, '0')}`, `day-${day}`];
+  const keys = [`card-${day}`, `day-${String(day).padStart(3, '0')}`, `day-${day}`, `bombshell-${day}`];
   let best = 0;
   for (const k of keys) {
     const v = fragments[k];
