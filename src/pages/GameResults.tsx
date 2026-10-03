@@ -6,7 +6,7 @@ import { getHighScore, getChapterPlatinums } from "@/game/progress";
 import { getActiveTheme, loadOpts } from "@/lib/options";
 import { audioManager } from "@/game/audio";
 import { useAuthStore } from "@/store/useAuthStore";
-import { useVaultStore } from "@/store/useVaultStore";
+import { useVaultStore, ownsCardForDay, isAwardPlayUnlocked, getShardsForDay } from "@/store/useVaultStore";
 import { supabase } from "@/services/supabaseClient";
 import { purchasePack, requestRunToken, submitGameplayRecord, type OwnedCard } from "@/services/vaultService";
 import { PACK_CONFIGS } from "@/utils/rarity";
@@ -462,6 +462,7 @@ export default function Results() {
   const setShowAuthModal = useAuthStore(s => s.setShowAuthModal);
   const setShowIdentityModal = useAuthStore(s => s.setShowIdentityModal);
   const collection = useVaultStore(s => s.collection);
+  const fragments = useVaultStore(s => s.fragments);
   const loadVaultData = useVaultStore(s => s.loadVaultData);
   const username = useVaultStore(s => s.username);
   const syncHighScore = useVaultStore(s => s.syncHighScore);
@@ -619,6 +620,12 @@ export default function Results() {
 
   const handleClaimReward = async () => {
     if (claimStatus !== 'ready' || !user || !result || !songId) return;
+    // Defense in depth: prizes require the card AND Award Play unlocked for this song.
+    if (!isEligibleForReward) {
+      console.warn('[GameResults] Reward claim blocked: not eligible (ownership / award-play / modifier).');
+      setClaimStatus('failed');
+      return;
+    }
     setClaimStatus('claiming');
     const isPlatinum = result.medal === 'PLATINUM' || accuracy >= 93;
  
@@ -1182,17 +1189,19 @@ export default function Results() {
   const fromFreePlay = gameOrigin === 'songs';
   const backRoute = fromFreePlay ? '/songs' : `/chapter/${chapterMonth}`;
 
-  // Card ownership check
-  const ownsCard = song && Array.isArray(collection) ? collection.some(c => c && (c.cardId === song.id || c.card?.day === song.day)) : false;
+  // Card ownership check (centralized) + Award Play unlock (10 shards for this song)
+  const ownsCard = song ? ownsCardForDay(collection, song.day) : false;
+  const awardUnlocked = song ? isAwardPlayUnlocked(fragments, song.day) : false;
+  const shardCount = song ? getShardsForDay(fragments, song.day) : 0;
 
-  // Pack reward eligibility (Owned Play + default difficulty + no modifier cards)
+  // Pack reward eligibility (Owned Play + Award Play unlocked + default difficulty + no modifier cards)
   const activeMod = sessionStorage.getItem(`active_modifier_type_${songId}`);
   const hasModifier = activeMod && activeMod !== 'none';
   const diffOverride = sessionStorage.getItem(`diff_override_${songId}`);
   const diffVal = diffOverride ? parseInt(diffOverride, 10) : NaN;
   // Difficulty modifier only disqualifies in Award Play (fromFreePlay)
   const hasDiffModified = fromFreePlay && !isNaN(diffVal) && song && diffVal !== song.difficultyLevel;
-  const isEligibleForReward = ownsCard && !hasModifier && !hasDiffModified;
+  const isEligibleForReward = ownsCard && awardUnlocked && !hasModifier && !hasDiffModified;
 
   // Pre-calculate tiers to claim
   const isPlatinum = result ? (result.medal === 'PLATINUM' || accuracy >= 93) : false;
@@ -1594,8 +1603,10 @@ export default function Results() {
                     </>
                   ) : (
                     <div className="border border-yellow-500/30 bg-yellow-500/5 p-3 text-center rounded text-[10px] font-mono text-yellow-500 uppercase tracking-wider mb-2">
-                      {!ownsCard 
-                        ? "⚠️ AWARDS DISABLED // NON-OWNED PLAY" 
+                      {!ownsCard
+                        ? "⚠️ AWARDS DISABLED // NON-OWNED PLAY"
+                        : !awardUnlocked
+                        ? `⚠️ AWARDS DISABLED // AWARD PLAY NOT UNLOCKED — ${shardCount}/10 SHARDS`
                         : "⚠️ AWARDS DISABLED // MODIFIER ACTIVE OR DIFF OVERRIDE"
                       }
                     </div>
