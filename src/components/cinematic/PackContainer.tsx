@@ -2624,7 +2624,7 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
                               textTransform: 'uppercase',
                             }}
                           >
-                            UNLOCKED
+                            UNLOCKED — AWARD PLAY
                           </motion.div>
                         )}
                       </motion.div>
