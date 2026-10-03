@@ -1,13 +1,13 @@
 // PIM : beatstar-vault gameplay engine
 import React, { useEffect, useLayoutEffect, useRef, useState, useCallback, memo } from "react";
 import { useParams, useLocation } from "wouter";
-import { getSongById, saveHighScore, isSongTimeLocked, getModifierForSong, STAGEIFICATION_CONFIG, getCandidateAudioUrls } from "@/game/api";
+import { getSongById, saveHighScore, getModifierForSong, STAGEIFICATION_CONFIG, getCandidateAudioUrls } from "@/game/api";
 import { saveMedal, saveScoreHistory } from "@/game/progress";
 import type { GameSong } from "@/game/api";
 import type { Note, JudgmentDisplay, GameState, NoteType } from "@/game/types";
 import { loadOpts, keyLabel, getEffectiveDpr, type GameOpts, type PovMode, type RenderResolution, type GfxLevel, type FpsTarget, type ParticleDensity } from "@/lib/options";
 import { audioManager, AudioManager, HEALING_LANE_FREQUENCIES } from "@/game/audio";
-import { useVaultStore } from "@/store/useVaultStore";
+import { useVaultStore, ownsCardForDay } from "@/store/useVaultStore";
 import { useGlobalPlayer } from "@/store/useGlobalPlayer";
 import { haptics } from "../../utils/haptics";
 import { motion, AnimatePresence } from "framer-motion";
@@ -19,7 +19,7 @@ import { useAuthStore } from "@/store/useAuthStore";
 import { purchasePack, requestRunToken, type OwnedCard } from "@/services/vaultService";
 import { TransmissionIcon } from "../../components/icons/CustomVectorIcons";
 import VideoExportModal from "@/components/ui/VideoExportModal";
-import { getRelativeDay } from "../../utils/dayCalc";
+import { getRelativeDay, getCurrentDay } from "../../utils/dayCalc";
 import { getSmartCoverCandidates, isBombshellCoverPath } from "@/utils/rarityArtwork";
 import { STAGE_BOUNDS, MEDAL_STOPS, MEDAL_COLOR_MAP, LANE_COUNT, HIT_RATIO, HW_TOP, HW_BOT, MATRIX_CHARS, MATRIX_COLUMNS, POWER_UPS, type PUType } from './constants';
 import { type StageGeometry, getStageGeometry, approachTime, hwAtProgress, laneAt, lerp, formatTimeSec, isDirectionMatch } from './geometry';
@@ -1386,6 +1386,7 @@ export default function Game() {
     | "rewinding"
     | "audioError"
     | "loadError"
+    | "locked"
     | "unmounted"
   >("loading");
   const puRef = useRef<PUState>({
@@ -1501,6 +1502,10 @@ export default function Game() {
   const isTutorialHelpOpenRef = useRef(false);
 
   const [retryCount, setRetryCount] = useState(0);
+  // Ownership gate: the song that failed the card-ownership check + where to send the user back
+  const [lockedSong, setLockedSong] = useState<GameSong | null>(null);
+  const [lockedOrigin, setLockedOrigin] = useState("/songs");
+  const [claimingCard, setClaimingCard] = useState(false);
   const [phase, setPhase] = useState<typeof phaseRef.current>("loading");
   const [countdown, setCountdown] = useState(3);
   const [displayGs, setDisplayGs] = useState<GameState>(gsRef.current);
@@ -3202,6 +3207,25 @@ export default function Game() {
       }
     }
   }, [songId, setLocation, isTutorial]);
+
+  // Ownership-gate claim funnel: claim today's free card, then re-run init to play.
+  const handleClaimAndPlay = useCallback(async () => {
+    if (!lockedSong || claimingCard) return;
+    setClaimingCard(true);
+    try {
+      const card = await useVaultStore.getState().silentClaimDailyDrop(lockedSong.day);
+      if (card || ownsCardForDay(useVaultStore.getState().collection, lockedSong.day)) {
+        setLockedSong(null);
+        phaseRef.current = "loading";
+        setPhase("loading");
+        setRetryCount((c) => c + 1); // re-trigger init
+      }
+    } catch (err) {
+      console.error("[GamePlay] Claim-and-play failed:", err);
+    } finally {
+      setClaimingCard(false);
+    }
+  }, [lockedSong, claimingCard]);
 
   const doAbandon = useCallback(() => {
     if (phaseRef.current === "finished") return;
@@ -8232,10 +8256,16 @@ export default function Game() {
     } else {
       document.body.classList.remove("gameplay-load-error");
     }
+    if (phase === "locked") {
+      document.body.classList.add("gameplay-locked");
+    } else {
+      document.body.classList.remove("gameplay-locked");
+    }
     return () => {
       document.body.classList.remove("gameplay-continue");
       document.body.classList.remove("gameplay-audio-error");
       document.body.classList.remove("gameplay-load-error");
+      document.body.classList.remove("gameplay-locked");
     };
   }, [phase]);
 
@@ -8489,14 +8519,20 @@ export default function Game() {
         pausedRef.current = false;
         setPaused(false);
 
-        const collection = useVaultStore.getState().collection;
-        const isOwned = Array.isArray(collection) ? collection.some(c => c && (c.cardId === songId || `card-${c.card?.day}` === songId)) : false;
-        const isLocked = !isOwned && isSongTimeLocked(song);
-        console.log("[GamePlay Init] isSongTimeLocked evaluated:", isLocked, "for song day:", song.day, "date:", song.date, "isOwned:", isOwned);
-        if (isLocked) {
-          console.warn("[GamePlay Init] Song is time-locked! Redirecting to:", originRoute);
-          setLocation(originRoute);
-          return;
+        // ── Ownership gate: gameplay requires owning the card for this song ──
+        // (Tutorial transmissions are exempt — they carry no card.)
+        if (!isTutorial && song.day > 0) {
+          const collection = useVaultStore.getState().collection;
+          const isOwned = ownsCardForDay(collection, song.day);
+          console.log("[GamePlay Init] Ownership gate:", isOwned ? "OWNED" : "LOCKED", "for song day:", song.day, "date:", song.date);
+          if (!isOwned) {
+            console.warn("[GamePlay Init] Card not owned — showing locked state for day:", song.day);
+            setLockedSong(song);
+            setLockedOrigin(originRoute);
+            phaseRef.current = "locked";
+            setPhase("locked");
+            return;
+          }
         }
       songRef.current = song;
       
@@ -11516,6 +11552,49 @@ export default function Game() {
                     className="w-full py-4 font-mono font-bold text-xs tracking-[0.2em] bg-white/5 text-white/60 border border-white/10 rounded-lg hover:bg-white/10 hover:text-white transition-all cursor-pointer"
                   >
                     ABORT MISSION
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Ownership lock — card required to play this transmission */}
+          {phase === "locked" && lockedSong && (
+            <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
+              <div className="glass-panel p-8 max-w-sm w-full mx-4 text-center border-t-2 border-[#FFD700]/40 shadow-2xl">
+                <div className="font-mono font-bold text-xs tracking-[0.4em] text-[#FFD700] mb-6 uppercase">
+                  🔒 Card required
+                </div>
+                <h2 className="font-mono font-bold text-2xl text-white mb-2 tracking-tight">
+                  {lockedSong.title}
+                </h2>
+                <p className="font-mono text-[10px] text-white/50 mb-8 leading-relaxed uppercase tracking-widest">
+                  Day {lockedSong.day} · own the card to play this transmission
+                </p>
+
+                <div className="flex flex-col gap-4">
+                  {lockedSong.day === getCurrentDay() ? (
+                    <button
+                      onClick={handleClaimAndPlay}
+                      disabled={claimingCard}
+                      className="w-full py-4 font-mono font-bold text-sm tracking-[0.3em] bg-gradient-to-r from-[#FFD700] to-[#FF7A33] text-black rounded-lg hover:scale-[1.02] active:scale-95 transition-all shadow-lg cursor-pointer disabled:opacity-50 uppercase"
+                    >
+                      {claimingCard ? "CLAIMING…" : "Claim free card & play"}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setLocation("/vault")}
+                      className="w-full py-4 font-mono font-bold text-sm tracking-[0.3em] bg-gradient-to-r from-[#FFD700] to-[#FF7A33] text-black rounded-lg hover:scale-[1.02] active:scale-95 transition-all shadow-lg cursor-pointer uppercase"
+                    >
+                      Get this card
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => setLocation(lockedOrigin)}
+                    className="w-full py-4 font-mono font-bold text-xs tracking-[0.2em] bg-white/5 text-white/60 border border-white/10 rounded-lg hover:bg-white/10 hover:text-white transition-all cursor-pointer uppercase"
+                  >
+                    Back
                   </button>
                 </div>
               </div>
