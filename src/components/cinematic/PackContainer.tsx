@@ -800,6 +800,7 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
 
   const [showFragmentDecrypter, setShowFragmentDecrypter] = useState(false);
   const [hasDecryptedFragments, setHasDecryptedFragments] = useState(false);
+  const [shardsGranted, setShardsGranted] = useState(false);
   const [decrypterPhase, setDecrypterPhase] = useState<'idle' | 'shaking' | 'bursting' | 'revealed'>('idle');
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const particlesRef = useRef<ShardParticle[]>([]);
@@ -947,16 +948,11 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
   }
   const [fragmentRewards, setFragmentRewards] = useState<FragmentReward[]>([]);
 
-  const handleStartDecrypter = useCallback(() => {
-    // If already decrypted for this pack opening session, jump directly to the revealed tally
-    if (hasDecryptedFragments) {
-      setShowFragmentDecrypter(true);
-      setDecrypterPhase('revealed');
-      return;
-    }
-
+  // Grant shards for all cards in the pack. Called automatically on pack open;
+  // the decrypter button is now just a visual reveal, not the grant trigger.
+  const grantPackShards = useCallback(() => {
     const grouped: { [cardId: string]: { card: OwnedCard['card']; totalGain: number } } = {};
-    
+
     accumulatedCards.forEach((owned) => {
       const card = owned.card;
       const rarity = card.rarity as Rarity;
@@ -964,7 +960,7 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
       if (rarity === 'uncommon') gain = 3;
       else if (rarity === 'rare') gain = 5;
       else if (rarity === 'legendary' || rarity === 'mythic') gain = 10;
-      
+
       if (!grouped[card.id]) {
         grouped[card.id] = {
           card,
@@ -979,7 +975,7 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
       const oldTotal = useVaultStore.getState().fragments[card.id] ?? 0;
       const newTotal = Math.min(10, oldTotal + totalGain);
 
-      // Sync fragment count to database and store state ONLY ONCE
+      // Sync fragment count to database and store state ONLY ONCE per pack session
       useVaultStore.getState().syncFragments(card.id, newTotal);
 
       return {
@@ -996,10 +992,32 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
     });
 
     setFragmentRewards(rewards);
+    setShardsGranted(true);
+    return rewards;
+  }, [accumulatedCards]);
+
+  // Auto-grant shards when the pack opens — no manual decrypter click required.
+  useEffect(() => {
+    if (!shardsGranted && accumulatedCards.length > 0) {
+      grantPackShards();
+    }
+  }, [shardsGranted, accumulatedCards, grantPackShards]);
+
+  const handleStartDecrypter = useCallback(() => {
+    // Shards are already granted on pack open; this just reveals the visual tally.
+    if (!shardsGranted) {
+      grantPackShards();
+    }
+    if (hasDecryptedFragments) {
+      setShowFragmentDecrypter(true);
+      setDecrypterPhase('revealed');
+      return;
+    }
+
     setHasDecryptedFragments(true);
     setShowFragmentDecrypter(true);
     setDecrypterPhase('idle');
-  }, [accumulatedCards, hasDecryptedFragments]);
+  }, [hasDecryptedFragments, shardsGranted, grantPackShards]);
 
   useEffect(() => {
     if (firstUnlockCard && firstUnlockCard.card.audioUrl) {
