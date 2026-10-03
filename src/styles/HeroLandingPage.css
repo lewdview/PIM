@@ -18,6 +18,11 @@
   color: #fff;
   font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
   overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding-bottom: calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 6.5rem);
   position: relative;
   --palette-dominant: #ff3800;
   --palette-secondary: #a855f7;
@@ -266,6 +271,7 @@
   justify-content: center;
   gap: 0.75rem;
   padding: 1.15rem 3.5rem;
+  min-height: 48px;
   font-family: 'Roboto Mono', monospace;
   font-weight: 800;
   font-size: 0.8rem;

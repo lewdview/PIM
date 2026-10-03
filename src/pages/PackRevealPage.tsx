@@ -302,15 +302,24 @@ export default function PackRevealPage() {
 
   if (tokenReward) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center px-4 py-8 min-h-[80vh]">
+      <div
+        className="flex-1 flex flex-col items-center justify-center px-4 py-8"
+        style={{
+          minHeight: '100dvh',
+          overflowY: 'auto',
+          WebkitOverflowScrolling: 'touch',
+          paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 6rem)',
+        }}
+      >
         <motion.div
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          className="max-w-md w-full p-8 rounded-2xl text-center space-y-6"
+          className="max-w-md w-full p-8 text-center space-y-6"
           style={{
             background: 'linear-gradient(180deg, rgba(255,184,0,0.12) 0%, rgba(10,10,10,0.95) 100%)',
             border: '2px solid rgba(255,184,0,0.4)',
             boxShadow: '0 0 50px rgba(255,184,0,0.15), 6px 6px 0 #000',
+            clipPath: 'polygon(12px 0%, 100% 0%, calc(100% - 12px) 100%, 0% 100%)',
           }}
         >
           <div className="w-20 h-20 mx-auto rounded-2xl bg-amber-500/20 border-2 border-amber-500/50 flex items-center justify-center text-4xl shadow-lg animate-pulse">
@@ -346,8 +355,14 @@ export default function PackRevealPage() {
                 setTokenReward(null);
                 setLocation('/vault');
               }}
-              className="w-full py-4 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black font-black uppercase text-xs tracking-wider transition-all active:scale-[0.98] cursor-pointer"
-              style={{ border: '2px solid #000', boxShadow: '3px 3px 0 #000' }}
+              className="w-full py-4 text-black font-black uppercase text-xs tracking-wider transition-all active:scale-[0.98] cursor-pointer"
+              style={{
+                minHeight: '50px',
+                background: 'linear-gradient(135deg, #ffb800, #ff9900)',
+                border: '2px solid #000',
+                boxShadow: '4px 4px 0 #000',
+                clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+              }}
             >
               ✦ RIP VAULT PACKS NOW (3% MYTHIC)
             </button>
@@ -356,7 +371,12 @@ export default function PackRevealPage() {
                 setTokenReward(null);
                 setLocation('/vault');
               }}
-              className="w-full py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-400 font-mono uppercase text-[10px] tracking-wider transition-all"
+              className="w-full py-3 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-mono uppercase text-[10px] tracking-wider transition-all cursor-pointer"
+              style={{
+                minHeight: '44px',
+                border: '1px solid rgba(255,255,255,0.15)',
+                clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+              }}
             >
               Return to Vault Dashboard
             </button>
@@ -391,7 +411,15 @@ export default function PackRevealPage() {
   }
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center px-4 py-8 min-h-[80vh]">
+    <div
+      className="flex-1 flex flex-col items-center justify-center px-4 py-8"
+      style={{
+        minHeight: '100dvh',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 6rem)',
+      }}
+    >
       {/* Card reveal */}
       {revealedIndex >= 0 && !showSummary && (
         <div className="text-center space-y-6">
@@ -559,14 +587,16 @@ export default function PackRevealPage() {
             })}
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex flex-wrap sm:flex-nowrap gap-3 w-full">
             <button
               onClick={() => { endReveal(); setLocation('/vault'); }}
-              className="px-4 py-3 rounded-xl font-bold text-sm tracking-wider uppercase flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-[0.99]"
+              className="px-4 py-3 font-bold text-sm tracking-wider uppercase flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
               style={{
+                minHeight: '48px',
                 background: 'var(--color-surface-1)',
                 border: '1px solid var(--color-border-subtle)',
                 color: 'var(--color-text-primary)',
+                clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
               }}
             >
               ←
@@ -580,11 +610,13 @@ export default function PackRevealPage() {
                   onClick={handleBuyAnother}
                   disabled={isDisabled}
                   title={cantAfford ? `Need ${getTokenPackCost()} V⚡ (you have ${tokenBalance})` : undefined}
-                  className="flex-1 py-3 rounded-xl font-bold text-sm tracking-wider uppercase flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-[0.99]"
+                  className="flex-1 py-3 font-bold text-sm tracking-wider uppercase flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-[0.99]"
                   style={{
+                    minHeight: '48px',
                     background: cantAfford ? 'var(--color-surface-1)' : 'var(--color-surface-2)',
                     border: `1px solid ${cantAfford ? 'var(--color-border-subtle)' : 'var(--color-neon-purple)'}`,
                     color: cantAfford ? 'var(--color-text-muted)' : 'var(--color-text-primary)',
+                    clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
                     opacity: isDisabled ? 0.5 : 1,
                     cursor: isDisabled ? 'not-allowed' : 'pointer',
                   }}
@@ -595,11 +627,13 @@ export default function PackRevealPage() {
             })()}
             <button
               onClick={handleCastPull}
-              className="px-4 py-3 rounded-xl font-bold text-sm tracking-wider uppercase flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
+              className="px-4 py-3 font-bold text-sm tracking-wider uppercase flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
               style={{
+                minHeight: '48px',
                 background: 'rgba(138, 99, 210, 0.15)',
                 border: '1px solid rgba(138, 99, 210, 0.5)',
                 color: '#C4A7E7',
+                clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
               }}
               title="Cast pull to Warpcast / Farcaster"
             >
@@ -608,11 +642,13 @@ export default function PackRevealPage() {
             </button>
             <button
               onClick={handleSharePull}
-              className="px-4 py-3 rounded-xl font-bold text-sm tracking-wider uppercase flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
+              className="px-4 py-3 font-bold text-sm tracking-wider uppercase flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
               style={{
+                minHeight: '48px',
                 background: copiedShare ? 'rgba(16, 185, 129, 0.2)' : 'rgba(0, 240, 255, 0.15)',
                 border: copiedShare ? '1px solid #10b981' : '1px solid rgba(0, 240, 255, 0.5)',
                 color: copiedShare ? '#10b981' : '#00f0ff',
+                clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
               }}
               title="Share or copy pull link"
             >
@@ -621,10 +657,14 @@ export default function PackRevealPage() {
             </button>
             <button
               onClick={handleDone}
-              className="flex-1 py-3 rounded-xl font-bold text-sm tracking-wider uppercase flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-[0.99]"
+              className="flex-1 py-3 font-bold text-sm tracking-wider uppercase flex items-center justify-center gap-2 transition-all hover:scale-[1.01] active:scale-[0.99] cursor-pointer"
               style={{
+                minHeight: '48px',
                 background: 'linear-gradient(135deg, var(--color-neon-yellow), var(--color-neon-cyan))',
                 color: 'var(--color-void-black)',
+                clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                border: '2px solid #000',
+                boxShadow: '3px 3px 0 #000',
               }}
             >
               {revealPackMeta?.category === 'daily_claim' || revealPackMeta?.redirectPath === '/tutorial' || revealPackMeta?.redirectPath?.startsWith('/play/') ? (

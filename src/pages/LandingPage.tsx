@@ -616,7 +616,15 @@ export default function LandingPage() {
   const proofs = collection.filter(c => c.proof).length;
 
   return (
-    <div className="flex-1 w-full relative bg-[#050402] overflow-hidden">
+    <div
+      className="flex-1 w-full relative bg-[#050402]"
+      style={{
+        minHeight: '100dvh',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 6.5rem)',
+      }}
+    >
       {/* SCANLINES & CYBERPUNK STATIC EFFECTS */}
       <div className="scanlines absolute inset-0 opacity-10 pointer-events-none z-10" />
       

@@ -759,7 +759,15 @@ export default function NextGenLandingPage() {
   };
 
   return (
-    <div className="flex-1 w-full relative bg-[#070a12] text-slate-100 overflow-hidden font-sans min-h-screen pb-24">
+    <div
+      className="flex-1 w-full relative bg-[#070a12] text-slate-100 font-sans min-h-screen"
+      style={{
+        minHeight: '100dvh',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 6.5rem)',
+      }}
+    >
       
       {/* Premium Ambient Background Spheres */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">

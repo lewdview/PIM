@@ -463,9 +463,8 @@ export default function SongSelect() {
               setLocation("/arcade");
             }}
             onMouseEnter={() => audioManager.playSfx("tap_nav", 0.08)}
-            className={isAvant
-              ? "font-mono text-xs px-4 py-1.5 tracking-widest border border-[#39FF14]/30 text-[#39FF14] bg-transparent hover:bg-[#39FF14]/10 transition-colors cursor-pointer"
-              : "neon-btn-outline text-xs px-4 py-1.5 tracking-widest cursor-pointer"}
+            className="font-mono text-xs px-4 py-2 font-black tracking-widest border border-[#39FF14]/50 text-[#39FF14] bg-[#39FF14]/10 hover:bg-[#39FF14]/20 transition-all cursor-pointer active:scale-95"
+            style={{ clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)' }}
           >
             ← ARCADE
           </button>
@@ -475,7 +474,8 @@ export default function SongSelect() {
               setLocation("/campaign");
             }}
             onMouseEnter={() => audioManager.playSfx("tap_nav", 0.08)}
-            className="hidden sm:block font-mono text-xs px-3 py-1.5 tracking-widest border border-white/10 text-white/60 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+            className="hidden sm:block font-mono text-xs px-3.5 py-2 font-bold tracking-widest border border-white/20 text-white/70 hover:text-white hover:bg-white/10 transition-all cursor-pointer active:scale-95"
+            style={{ clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)' }}
           >
             SECTOR MAP →
           </button>
@@ -560,7 +560,11 @@ export default function SongSelect() {
         {/* MAIN VIEW: FULL-SPACE STAGE SHOWCASE WITH ALBUM ARTWORK BACKGROUND */}
         <div
           ref={mainScrollRef}
-          className="flex-1 overflow-y-auto bg-black/30 backdrop-blur-xl flex flex-col p-4 lg:p-8 pb-36 md:pb-8 relative"
+          className="flex-1 overflow-y-auto bg-black/30 backdrop-blur-xl flex flex-col p-4 lg:p-8 relative"
+          style={{
+            WebkitOverflowScrolling: 'touch',
+            paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 6rem)',
+          }}
         >
           {/* Parallax Background Month & Stage Text */}
           {activeMonthGroup && (
@@ -936,11 +940,15 @@ export default function SongSelect() {
                       disabled={!selectedUnlocked}
                       onClick={() => handlePlaySong()}
                       onMouseEnter={() => { if (selectedUnlocked) audioManager.playSfx('tap_nav', 0.08); }}
-                      className={`flex-1 py-5 text-sm tracking-[0.5em] font-black uppercase rounded-2xl transition-all flex items-center justify-center gap-3 cursor-pointer ${
+                      className={`flex-1 py-5 text-sm tracking-[0.4em] font-black uppercase transition-all flex items-center justify-center gap-3 cursor-pointer active:scale-95 ${
                         selectedUnlocked
-                          ? "border border-[#39FF14] bg-[#39FF14] text-black hover:bg-[#39FF14]/90 shadow-[0_0_24px_rgba(57,255,20,0.5)] hover:scale-[1.01]"
+                          ? "border-2 border-[#39FF14] bg-[#39FF14] text-black hover:bg-[#39FF14]/90 shadow-[0_0_24px_rgba(57,255,20,0.5)] hover:scale-[1.01]"
                           : "border border-white/10 bg-white/5 text-white/20 cursor-not-allowed"
                       }`}
+                      style={{
+                        clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                        minHeight: 52,
+                      }}
                     >
                       <Play size={18} fill="currentColor" />
                       <span>START TRANSMISSION</span>
@@ -956,11 +964,15 @@ export default function SongSelect() {
                         }}
                         onMouseEnter={() => { if (selectedUnlocked) audioManager.playSfx('tap_nav', 0.08); }}
                         title="Export frame-perfect 100% PERFECT+ run video (DEV SERVER ONLY)"
-                        className={`px-6 py-5 text-xs tracking-[0.25em] font-mono font-bold uppercase rounded-2xl transition-all flex items-center justify-center gap-2.5 cursor-pointer border ${
+                        className={`px-6 py-5 text-xs tracking-[0.25em] font-mono font-bold uppercase transition-all flex items-center justify-center gap-2.5 cursor-pointer border active:scale-95 ${
                           selectedUnlocked
                             ? "border-[#FF1493] bg-[#FF1493]/15 text-[#FF1493] hover:bg-[#FF1493] hover:text-black shadow-[0_0_20px_rgba(255,20,147,0.3)] hover:scale-[1.01]"
                             : "border-white/10 bg-white/5 text-white/20 cursor-not-allowed"
                         }`}
+                        style={{
+                          clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                          minHeight: 52,
+                        }}
                       >
                         <Film size={18} />
                         <span className="hidden sm:inline">EXPORT PERFECT VIDEO</span>

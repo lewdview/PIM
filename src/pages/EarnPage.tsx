@@ -136,13 +136,23 @@ export default function EarnPage() {
   // ── Unauthenticated wall (same rule as the Claim page) ─────────────────────
   if (!user) {
     return (
-      <div className="min-h-screen bg-[#07070a] text-white flex flex-col font-sans select-none relative overflow-hidden pb-36 md:pb-12">
+      <div
+        className="min-h-screen bg-[#07070a] text-white flex flex-col font-sans select-none relative overflow-y-auto"
+        style={{
+          minHeight: '100dvh',
+          WebkitOverflowScrolling: 'touch',
+          paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 6rem)',
+        }}
+      >
         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none" />
         <div className="flex-1 flex flex-col items-center justify-center px-4 py-16 relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col items-center gap-6 text-center max-w-sm bg-white/[0.03] border border-white/10 rounded-2xl p-8"
+            className="flex flex-col items-center gap-6 text-center max-w-sm bg-white/[0.03] border border-white/10 p-8"
+            style={{
+              clipPath: 'polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%)',
+            }}
           >
             <div className="w-16 h-16 rounded-full bg-white/[0.03] border border-white/10 flex items-center justify-center">
               <KeyRound size={26} className="text-[#ff3800]" />
@@ -157,7 +167,11 @@ export default function EarnPage() {
             </div>
             <button
               onClick={() => { audioManager.playSfx('tap_nav', 0.4); setShowAuthModal(true); }}
-              className="px-6 py-3 font-mono font-bold text-xs uppercase tracking-wider text-black bg-[#ff3800] border-2 border-black rounded shadow-[3px_3px_0_#000] hover:scale-105 active:scale-95 transition-all cursor-pointer"
+              className="px-6 py-3 font-mono font-bold text-xs uppercase tracking-wider text-black bg-[#ff3800] border-2 border-black shadow-[3px_3px_0_#000] hover:scale-105 active:scale-95 transition-all cursor-pointer"
+              style={{
+                minHeight: '48px',
+                clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+              }}
             >
               Connect Identity
             </button>
@@ -173,7 +187,14 @@ export default function EarnPage() {
     : 100;
 
   return (
-    <div className="min-h-screen bg-[#07070a] text-white flex flex-col font-sans select-none relative overflow-hidden pb-36 md:pb-12">
+    <div
+      className="min-h-screen bg-[#07070a] text-white flex flex-col font-sans select-none relative overflow-y-auto"
+      style={{
+        minHeight: '100dvh',
+        WebkitOverflowScrolling: 'touch',
+        paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 6.5rem)',
+      }}
+    >
       {/* Background Grid Lines */}
       <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none" />
 
@@ -181,7 +202,11 @@ export default function EarnPage() {
       <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 bg-black/40 backdrop-blur-md relative z-10">
         <button
           onClick={handleBack}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/5 hover:border-white/20 transition-all font-mono text-[10px] font-black uppercase tracking-wider text-white/60 hover:text-white cursor-pointer"
+          className="flex items-center gap-2 px-3 py-1.5 border border-white/10 hover:border-white/20 transition-all font-mono text-[10px] font-black uppercase tracking-wider text-white/60 hover:text-white cursor-pointer"
+          style={{
+            minHeight: '38px',
+            clipPath: 'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)',
+          }}
         >
           <ArrowLeft size={12} />
           Vault
@@ -340,11 +365,15 @@ export default function EarnPage() {
             <button
               onClick={handleClaim}
               disabled={!streak.canClaim || claiming}
-              className={`w-full py-4 rounded-2xl font-mono text-sm font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 ${
+              className={`w-full py-4 font-mono text-sm font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 ${
                 streak.canClaim
                   ? 'text-black bg-gradient-to-r from-[#ffd700] to-[#ff9900] border-2 border-black shadow-[4px_4px_0_#000] hover:scale-[1.02] active:scale-95 cursor-pointer'
                   : 'bg-white/5 border border-white/10 text-white/25 cursor-not-allowed'
               }`}
+              style={{
+                minHeight: '52px',
+                clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+              }}
             >
               <Gift size={16} />
               {claiming ? 'Claiming…' : streak.canClaim ? `Claim +${streak.reward} sparks` : 'Claimed for today'}

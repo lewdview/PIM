@@ -731,7 +731,15 @@ export default function ForgePage() {
   );
 
   return (
-    <div className="flex-1 w-full pb-36 md:pb-8" style={{ minHeight: '100vh' }}>
+    <div
+      className="flex-1 w-full"
+      style={{
+        minHeight: '100dvh',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 6.5rem)',
+      }}
+    >
       {/* ═══ HERO HEADER ═══ */}
       <section style={{
         position: 'relative', padding: '16px 16px 32px',
@@ -796,6 +804,7 @@ export default function ForgePage() {
               display: 'flex', alignItems: 'center', gap: '12px',
               padding: '12px 20px', border: '2px solid #000',
               background: '#0d0d0d', boxShadow: '4px 4px 0 #000',
+              clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
             }}>
               <Zap size={22} style={{ color: '#ff9900' }} />
               <div>
@@ -817,19 +826,21 @@ export default function ForgePage() {
               onClick={() => handleBuyTokenPack('vault_token')}
               disabled={!canAfford}
               style={{
-                padding: '12px 20px',
+                padding: '12px 24px',
+                minHeight: '48px',
                 background: canAfford ? 'linear-gradient(135deg, #ff9900, #ffb800)' : 'rgba(255,255,255,0.04)',
                 color: canAfford ? '#000' : 'rgba(255,255,255,0.2)',
                 border: '2px solid #000',
                 fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '16px',
-                textTransform: 'uppercase', letterSpacing: '0.02em',
+                textTransform: 'uppercase', letterSpacing: '0.04em',
                 cursor: canAfford ? 'pointer' : 'not-allowed',
                 boxShadow: canAfford ? '4px 4px 0 #000, 0 0 20px rgba(255,153,0,0.3)' : '2px 2px 0 #000',
+                clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
                 display: 'flex', alignItems: 'center', gap: '8px',
                 transition: 'all 0.2s',
               }}
             >
-              <Zap size={15} />
+              <Zap size={16} />
               Vault Pack ({packCost} V⚡)
             </motion.button>
 
@@ -840,14 +851,16 @@ export default function ForgePage() {
               onClick={() => handleBuyTokenPack('bombshell_token')}
               disabled={tokenBalance < 100}
               style={{
-                padding: '12px 20px',
+                padding: '12px 24px',
+                minHeight: '48px',
                 background: tokenBalance >= 100 ? 'linear-gradient(135deg, #ff1493, #ff69b4)' : 'rgba(255,255,255,0.04)',
                 color: tokenBalance >= 100 ? '#fff' : 'rgba(255,255,255,0.2)',
                 border: '2px solid #000',
                 fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '16px',
-                textTransform: 'uppercase', letterSpacing: '0.02em',
+                textTransform: 'uppercase', letterSpacing: '0.04em',
                 cursor: tokenBalance >= 100 ? 'pointer' : 'not-allowed',
                 boxShadow: tokenBalance >= 100 ? '4px 4px 0 #000, 0 0 20px rgba(255,20,147,0.3)' : '2px 2px 0 #000',
+                clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
                 display: 'flex', alignItems: 'center', gap: '8px',
                 transition: 'all 0.2s',
               }}
@@ -1003,11 +1016,12 @@ export default function ForgePage() {
                       onClick={handleTargetedPull}
                       disabled={targetLoading || !targetDay || parseInt(targetDay, 10) < 1 || parseInt(targetDay, 10) > today || tokenBalance < 275}
                       style={{
-                        flex: 1, padding: '8px 16px',
+                        flex: 1, minHeight: '44px', padding: '8px 16px',
                         background: parseInt(targetDay, 10) > today ? 'rgba(180,77,255,0.2)' : tokenBalance >= 275 && targetDay ? '#ff9900' : 'rgba(255,153,0,0.15)',
                         border: parseInt(targetDay, 10) > today ? '1px solid rgba(180,77,255,0.4)' : '1px solid rgba(255,153,0,0.4)',
-                        fontFamily: '"JetBrains Mono", monospace', fontSize: '10px',
-                        fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
+                        fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '13px',
+                        letterSpacing: '0.05em', textTransform: 'uppercase',
+                        clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
                         color: parseInt(targetDay, 10) > today ? '#c084fc' : tokenBalance >= 275 && targetDay ? '#000' : 'rgba(255,255,255,0.3)',
                         cursor: parseInt(targetDay, 10) > today || tokenBalance < 275 || !targetDay ? 'default' : 'pointer',
                       }}
@@ -1053,13 +1067,14 @@ export default function ForgePage() {
                         onClick={handleUpgrade}
                         disabled={upgradeLoading || tokenBalance < 150}
                         style={{
-                          padding: '6px 16px',
+                          minHeight: '42px', padding: '6px 16px',
                           background: tokenBalance >= 150 ? '#b44dff' : 'rgba(180,77,255,0.15)',
                           border: '1px solid rgba(180,77,255,0.4)',
-                          fontFamily: '"JetBrains Mono", monospace', fontSize: '10px',
-                          fontWeight: 700, color: tokenBalance >= 150 ? '#fff' : 'rgba(255,255,255,0.3)',
+                          fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '13px',
+                          color: tokenBalance >= 150 ? '#fff' : 'rgba(255,255,255,0.3)',
                           cursor: tokenBalance >= 150 ? 'pointer' : 'default',
-                          textTransform: 'uppercase', letterSpacing: '0.1em',
+                          textTransform: 'uppercase', letterSpacing: '0.05em',
+                          clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
                         }}
                       >
                         {upgradeLoading ? 'UPGRADING...' : '⬆ UPGRADE'}
@@ -1170,12 +1185,13 @@ export default function ForgePage() {
                               }}
                               disabled={fusionLoading}
                               style={{
-                                padding: '6px 14px',
+                                minHeight: '42px', padding: '6px 16px',
                                 background: '#ff3800',
                                 border: '1px solid rgba(255,56,0,0.6)',
-                                fontFamily: '"JetBrains Mono", monospace', fontSize: '10px',
-                                fontWeight: 700, color: '#fff', cursor: 'pointer',
-                                textTransform: 'uppercase', letterSpacing: '0.1em',
+                                fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '13px',
+                                color: '#fff', cursor: 'pointer',
+                                textTransform: 'uppercase', letterSpacing: '0.05em',
+                                clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
                               }}
                             >
                               {fusionLoading ? 'FUSING...' : '🔥 FUSE'}
@@ -1310,22 +1326,23 @@ export default function ForgePage() {
                 onClick={toggleSelectAll}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '6px',
-                  padding: '5px 10px',
+                  minHeight: '38px', padding: '6px 12px',
                   background: burnFiltered.length > 0 && burnFiltered.every(c => burnSelected.has(c.id))
-                    ? 'rgba(255,153,0,0.12)' : 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  fontFamily: '"JetBrains Mono", monospace', fontSize: '9px',
-                  fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
-                  color: 'rgba(255,255,255,0.6)', cursor: 'pointer',
+                    ? 'rgba(255,153,0,0.15)' : 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '11px',
+                  letterSpacing: '0.05em', textTransform: 'uppercase',
+                  clipPath: 'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)',
+                  color: 'rgba(255,255,255,0.7)', cursor: 'pointer',
                 }}
               >
                 <div style={{
-                  width: '12px', height: '12px',
-                  border: '2px solid rgba(255,255,255,0.3)',
+                  width: '14px', height: '14px',
+                  border: '2px solid rgba(255,255,255,0.4)',
                   background: burnFiltered.length > 0 && burnFiltered.every(c => burnSelected.has(c.id))
                     ? '#ff9900' : 'transparent',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '8px', color: '#000',
+                  fontSize: '9px', color: '#000', fontWeight: 900,
                 }}>
                   {burnFiltered.length > 0 && burnFiltered.every(c => burnSelected.has(c.id)) ? '✓' : ''}
                 </div>
@@ -1338,18 +1355,19 @@ export default function ForgePage() {
                 onClick={handleBurnSelected}
                 disabled={burnSelected.size === 0}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: '4px',
-                  padding: '5px 12px',
-                  background: burnSelected.size > 0 ? 'rgba(255,153,0,0.15)' : 'rgba(255,255,255,0.02)',
-                  border: `1px solid ${burnSelected.size > 0 ? 'rgba(255,153,0,0.4)' : 'rgba(255,255,255,0.06)'}`,
-                  fontFamily: '"JetBrains Mono", monospace', fontSize: '9px',
-                  fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  minHeight: '38px', padding: '6px 14px',
+                  background: burnSelected.size > 0 ? 'rgba(255,153,0,0.2)' : 'rgba(255,255,255,0.02)',
+                  border: `1px solid ${burnSelected.size > 0 ? 'rgba(255,153,0,0.5)' : 'rgba(255,255,255,0.06)'}`,
+                  fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '12px',
+                  letterSpacing: '0.05em', textTransform: 'uppercase',
+                  clipPath: 'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)',
                   color: burnSelected.size > 0 ? '#ff9900' : 'rgba(255,255,255,0.2)',
                   cursor: burnSelected.size > 0 ? 'pointer' : 'default',
                   opacity: burnSelected.size > 0 ? 1 : 0.5,
                 }}
               >
-                <Flame size={10} />
+                <Flame size={12} />
                 Burn {burnSelected.size > 0 ? `(${burnSelected.size})` : ''}
               </button>
 
@@ -1357,18 +1375,19 @@ export default function ForgePage() {
                 onClick={handleBurnAll}
                 disabled={burnFiltered.length === 0}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: '4px',
-                  padding: '5px 12px',
-                  background: burnFiltered.length > 0 ? 'rgba(255,56,0,0.12)' : 'rgba(255,255,255,0.02)',
-                  border: `1px solid ${burnFiltered.length > 0 ? 'rgba(255,56,0,0.3)' : 'rgba(255,255,255,0.06)'}`,
-                  fontFamily: '"JetBrains Mono", monospace', fontSize: '9px',
-                  fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  minHeight: '38px', padding: '6px 14px',
+                  background: burnFiltered.length > 0 ? 'rgba(255,56,0,0.18)' : 'rgba(255,255,255,0.02)',
+                  border: `1px solid ${burnFiltered.length > 0 ? 'rgba(255,56,0,0.5)' : 'rgba(255,255,255,0.06)'}`,
+                  fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '12px',
+                  letterSpacing: '0.05em', textTransform: 'uppercase',
+                  clipPath: 'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)',
                   color: burnFiltered.length > 0 ? '#ff3800' : 'rgba(255,255,255,0.2)',
                   cursor: burnFiltered.length > 0 ? 'pointer' : 'default',
                   opacity: burnFiltered.length > 0 ? 1 : 0.5,
                 }}
               >
-                <Flame size={10} />
+                <Flame size={12} />
                 Burn All
               </button>
             </div>
@@ -1452,10 +1471,12 @@ export default function ForgePage() {
                           onClick={(e) => { e.stopPropagation(); handleSell(card); }}
                           style={{
                             display: 'flex', alignItems: 'center', gap: '4px',
-                            padding: '4px 12px', border: '1px solid rgba(255,255,255,0.1)',
+                            minHeight: '32px',
+                            padding: '4px 12px', border: '1px solid rgba(255,255,255,0.15)',
                             background: 'transparent', cursor: 'pointer',
-                            fontFamily: '"JetBrains Mono", monospace', fontSize: '9px',
-                            fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
+                            fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '11px',
+                            letterSpacing: '0.05em', textTransform: 'uppercase',
+                            clipPath: 'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)',
                             color: '#ff9900',
                             transition: 'all 0.15s',
                           }}
@@ -1613,11 +1634,12 @@ export default function ForgePage() {
                 <button
                   onClick={() => setConfirmSell(null)}
                   style={{
-                    flex: 1, padding: '12px',
-                    border: '2px solid rgba(255,255,255,0.15)', background: 'transparent',
-                    fontFamily: '"JetBrains Mono", monospace', fontSize: '10px',
-                    fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em',
-                    color: 'rgba(255,255,255,0.6)', cursor: 'pointer',
+                    flex: 1, minHeight: '48px', padding: '12px',
+                    border: '2px solid rgba(255,255,255,0.2)', background: 'transparent',
+                    fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '13px',
+                    textTransform: 'uppercase', letterSpacing: '0.05em',
+                    clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+                    color: 'rgba(255,255,255,0.7)', cursor: 'pointer',
                   }}
                 >
                   Cancel
@@ -1625,11 +1647,12 @@ export default function ForgePage() {
                 <button
                   onClick={confirmSellAction}
                   style={{
-                    flex: 1, padding: '12px',
+                    flex: 1, minHeight: '48px', padding: '12px',
                     border: '2px solid #000',
                     background: '#ff9900', color: '#000',
-                    fontFamily: '"JetBrains Mono", monospace', fontSize: '10px',
-                    fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em',
+                    fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '14px',
+                    textTransform: 'uppercase', letterSpacing: '0.05em',
+                    clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
                     cursor: 'pointer',
                     boxShadow: '3px 3px 0 #000',
                   }}
@@ -1777,11 +1800,12 @@ export default function ForgePage() {
                 <button
                   onClick={() => setConfirmBatch(null)}
                   style={{
-                    flex: 1, padding: '12px',
-                    border: '2px solid rgba(255,255,255,0.15)', background: 'transparent',
-                    fontFamily: '"JetBrains Mono", monospace', fontSize: '10px',
-                    fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em',
-                    color: 'rgba(255,255,255,0.6)', cursor: 'pointer',
+                    flex: 1, minHeight: '48px', padding: '12px',
+                    border: '2px solid rgba(255,255,255,0.2)', background: 'transparent',
+                    fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '13px',
+                    textTransform: 'uppercase', letterSpacing: '0.05em',
+                    clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+                    color: 'rgba(255,255,255,0.7)', cursor: 'pointer',
                   }}
                 >
                   Cancel
@@ -1789,11 +1813,12 @@ export default function ForgePage() {
                 <button
                   onClick={executeBatchBurn}
                   style={{
-                    flex: 1, padding: '12px',
+                    flex: 1, minHeight: '48px', padding: '12px',
                     border: '2px solid #000',
                     background: '#ff3800', color: '#fff',
                     fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '14px',
-                    textTransform: 'uppercase',
+                    textTransform: 'uppercase', letterSpacing: '0.05em',
+                    clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
                     cursor: 'pointer',
                     boxShadow: '3px 3px 0 #000',
                   }}
@@ -1889,12 +1914,16 @@ export default function ForgePage() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 30 }}
             style={{
-              position: 'fixed', bottom: '80px', left: '50%', transform: 'translateX(-50%)',
+              position: 'fixed',
+              bottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 5.5rem)',
+              left: '50%',
+              transform: 'translateX(-50%)',
               zIndex: 150,
               padding: '16px 24px',
               border: '2px solid #000',
               background: '#0d0d0d',
               boxShadow: '4px 4px 0 #000, 0 0 20px rgba(255,56,0,0.3)',
+              clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
               display: 'flex', alignItems: 'center', gap: '16px',
               maxWidth: '90vw',
             }}

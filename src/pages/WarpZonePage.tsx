@@ -123,7 +123,15 @@ export default function WarpZonePage() {
   }, [asciiInput, selectedSong, today, asciiDensity]);
 
   return (
-    <div className="flex-1 w-full min-h-screen bg-[#060408] text-white select-none relative pb-24">
+    <div
+      className="flex-1 w-full min-h-screen bg-[#060408] text-white select-none relative"
+      style={{
+        minHeight: '100dvh',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 6.5rem)',
+      }}
+    >
       {/* Ambient background glitch purple glows */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
         <div
@@ -164,33 +172,49 @@ export default function WarpZonePage() {
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => { setActiveModule('hub'); audioManager.playSfx('tap_nav', 0.2); }}
-              className={`px-4 py-2 rounded font-mono text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+              className={`px-4 py-2 font-mono text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center ${
                 activeModule === 'hub' ? 'bg-purple-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.5)]' : 'bg-white/5 hover:bg-white/10 text-white/70'
               }`}
+              style={{
+                minHeight: '40px',
+                clipPath: 'polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%)',
+              }}
             >
               ALL WARPS
             </button>
             <button
               onClick={() => { setActiveModule('mood'); audioManager.playSfx('tap_nav', 0.2); }}
-              className={`px-4 py-2 rounded font-mono text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+              className={`px-4 py-2 font-mono text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center ${
                 activeModule === 'mood' ? 'bg-purple-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.5)]' : 'bg-white/5 hover:bg-white/10 text-white/70'
               }`}
+              style={{
+                minHeight: '40px',
+                clipPath: 'polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%)',
+              }}
             >
               MOOD MAP
             </button>
             <button
               onClick={() => { setActiveModule('ascii'); audioManager.playSfx('tap_nav', 0.2); }}
-              className={`px-4 py-2 rounded font-mono text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+              className={`px-4 py-2 font-mono text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center ${
                 activeModule === 'ascii' ? 'bg-purple-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.5)]' : 'bg-white/5 hover:bg-white/10 text-white/70'
               }`}
+              style={{
+                minHeight: '40px',
+                clipPath: 'polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%)',
+              }}
             >
               ASCII ENGINE
             </button>
             <button
               onClick={() => { setActiveModule('lore'); audioManager.playSfx('tap_nav', 0.2); }}
-              className={`px-4 py-2 rounded font-mono text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+              className={`px-4 py-2 font-mono text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center ${
                 activeModule === 'lore' ? 'bg-purple-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.5)]' : 'bg-white/5 hover:bg-white/10 text-white/70'
               }`}
+              style={{
+                minHeight: '40px',
+                clipPath: 'polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%)',
+              }}
             >
               ORIGIN LORE
             </button>
@@ -458,13 +482,21 @@ export default function WarpZonePage() {
               <div className="pt-4 border-t border-white/10 flex flex-wrap gap-4">
                 <Link
                   to="/365"
-                  className="px-6 py-3 bg-purple-600 hover:bg-purple-500 text-white font-mono text-xs font-bold uppercase tracking-wider rounded no-underline"
+                  className="px-6 py-3 bg-purple-600 hover:bg-purple-500 text-white font-mono text-xs font-bold uppercase tracking-wider no-underline flex items-center justify-center"
+                  style={{
+                    minHeight: '44px',
+                    clipPath: 'polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%)',
+                  }}
                 >
                   Explore the 365 Archive →
                 </Link>
                 <Link
                   to="/about"
-                  className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white font-mono text-xs font-bold uppercase tracking-wider rounded no-underline"
+                  className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white font-mono text-xs font-bold uppercase tracking-wider no-underline flex items-center justify-center"
+                  style={{
+                    minHeight: '44px',
+                    clipPath: 'polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%)',
+                  }}
                 >
                   Read the Manifesto
                 </Link>

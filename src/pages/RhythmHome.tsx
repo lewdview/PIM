@@ -704,12 +704,19 @@ const DigitalClock = memo(() => {
         </div>
       )}
 
-      <div className="min-h-[calc(100vh-3.5rem)] w-full flex flex-col items-center justify-center relative overflow-hidden"
+      <div
+        className="min-h-[calc(100vh-3.5rem)] w-full flex flex-col items-center relative select-none"
         style={{
           background: introType === 'classic'
             ? 'radial-gradient(ellipse 80% 60% at 50% 45%, #0e1028 0%, #080808 55%, #0a0810 100%)'
-            : '#050505'
-        }}>
+            : '#050505',
+          overflowX: 'hidden',
+          overflowY: 'auto',
+          WebkitOverflowScrolling: 'touch',
+          paddingTop: '3.5rem',
+          paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 5.5rem)',
+        }}
+      >
 
       {/* PIM Dynamic Artwork Atmospheric Background */}
       {bgArtwork && (
@@ -858,44 +865,63 @@ const DigitalClock = memo(() => {
           )}
 
           {/* CTA buttons */}
-          <div className="w-full mt-2 flex flex-col gap-4">
+          <div className="w-full mt-2 flex flex-col gap-3.5">
             <button
               data-testid="button-start"
               onClick={() => navigate('/campaign')}
-              className="neon-btn w-full py-6 text-base tracking-[0.5em] font-black uppercase">
+              className="w-full py-5 text-sm sm:text-base tracking-[0.4em] font-black uppercase text-black bg-[#39FF14] hover:bg-[#39FF14]/90 hover:shadow-[0_0_25px_rgba(57,255,20,0.4)] transition-all cursor-pointer active:scale-95 flex items-center justify-center"
+              style={{
+                clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                minHeight: 52,
+              }}
+            >
               ▶ INITIATE CAMPAIGN
             </button>
 
             <button
               onClick={() => navigate('/vault')}
-              className="neon-btn w-full py-4 text-xs tracking-[0.4em] uppercase"
+              className="w-full py-4 text-xs tracking-[0.35em] font-black uppercase text-white hover:scale-[1.01] active:scale-95 transition-all cursor-pointer flex items-center justify-center"
               style={{
-                background: 'linear-gradient(90deg, #ff3800, #ffb800)',
-                color: '#fff',
-                borderColor: '#000',
-                borderWidth: '2px',
-                textShadow: '0 0 10px rgba(255,255,255,0.4)',
-                boxShadow: '0 0 15px rgba(255,56,0,0.4)',
-              }}>
+                clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                background: 'linear-gradient(90deg, #ff3800, #ff8800)',
+                boxShadow: '0 0 20px rgba(255,56,0,0.35)',
+                minHeight: 48,
+              }}
+            >
               ◈ DIGITAL VAULT
             </button>
 
             <button
               onClick={() => navigate('/songs')}
-              className="neon-btn-outline w-full py-4 text-xs tracking-[0.4em] uppercase">
+              className="w-full py-4 text-xs tracking-[0.35em] font-black uppercase text-[#00E5FF] bg-zinc-950 border border-[#00E5FF]/60 hover:bg-[#00E5FF]/15 hover:border-[#00E5FF] hover:shadow-[0_0_20px_rgba(0,229,255,0.3)] active:scale-95 transition-all cursor-pointer flex items-center justify-center"
+              style={{
+                clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                minHeight: 48,
+              }}
+            >
               ◈ ARCHIVE — ALL 365 TRACKS
             </button>
 
             <div className="flex gap-3">
               <button
                 onClick={() => navigate('/tutorial')}
-                className="neon-btn-outline flex-1 py-3 text-[10px] tracking-[0.3em] uppercase">
+                className="flex-1 py-3.5 text-xs tracking-[0.25em] font-black uppercase text-zinc-300 bg-zinc-950 border border-white/20 hover:text-white hover:border-[#FF1493] hover:shadow-[0_0_15px_rgba(255,20,147,0.3)] active:scale-95 transition-all cursor-pointer flex items-center justify-center"
+                style={{
+                  clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                  minHeight: 48,
+                }}
+              >
                 ? INTEL
               </button>
 
               <button
                 onClick={() => { audioManager.playSfx('tap_nav', 0.1); setOptionsModalOpen(true); }}
-                className="neon-btn-outline flex-1 py-3 text-[10px] tracking-[0.3em] uppercase">
+                className="flex-1 py-3.5 text-xs tracking-[0.25em] font-black uppercase text-zinc-300 bg-zinc-950 border border-white/20 hover:text-[#39FF14] hover:border-[#39FF14] hover:shadow-[0_0_15px_rgba(57,255,20,0.3)] active:scale-95 transition-all cursor-pointer flex items-center justify-center"
+                style={{
+                  clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                  minHeight: 48,
+                }}
+              >
                 ⚙ CORE
               </button>
             </div>
@@ -1158,11 +1184,11 @@ const DigitalClock = memo(() => {
       )}
 
       {/* Footer */}
-      <div className={`absolute bottom-0 left-0 right-0 flex items-center justify-center py-3 transition-all duration-1000 ${!showIntro ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-        style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+      <div className={`w-full mt-auto py-4 px-4 flex items-center justify-center transition-all duration-1000 ${!showIntro ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
         <span
-          className="font-mono text-xs tracking-widest"
-          style={{ color: 'rgba(255,255,255,0.2)' }}
+          className="font-mono text-[10px] tracking-[0.3em] uppercase font-bold text-center"
+          style={{ color: 'rgba(255,255,255,0.3)' }}
         >
           BEATSTAR VAULT // POETRY IN MOTION
         </span>

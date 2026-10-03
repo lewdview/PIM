@@ -107,7 +107,7 @@ export default function GlobalPlayerBar() {
           WebkitBackdropFilter: 'blur(24px)',
           borderTop: `1px solid ${accent}30`,
           boxShadow: `0 -4px 20px rgba(0,0,0,0.5), 0 0 20px ${accent}15`,
-          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+          paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 0.5rem)',
         }}
         className="bottom-0"
       >

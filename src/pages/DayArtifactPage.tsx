@@ -204,7 +204,15 @@ export default function DayArtifactPage() {
   }
 
   return (
-    <div className="flex-1 w-full min-h-screen bg-[#050402] text-white select-none relative pb-24">
+    <div
+      className="flex-1 w-full min-h-screen bg-[#050402] text-white select-none relative"
+      style={{
+        minHeight: '100dvh',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 6.5rem)'
+      }}
+    >
       {/* Dynamic Background Glow */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
         <div
@@ -329,8 +337,12 @@ export default function DayArtifactPage() {
                 {/* 1. PLAY IN PIM (Primary Experience Action) */}
                 <button
                   onClick={handlePlayPIM}
-                  className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded bg-gradient-to-r from-[#FF1493] via-[#FF5500] to-[#E5B800] text-black font-black uppercase tracking-wider text-base hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_0_25px_rgba(255,20,147,0.4)] cursor-pointer"
-                  style={{ fontFamily: '"Impact", "Arial Black", sans-serif' }}
+                  className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-[#FF1493] via-[#FF5500] to-[#E5B800] text-black font-black uppercase tracking-wider text-base hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_0_25px_rgba(255,20,147,0.4)] cursor-pointer"
+                  style={{
+                    fontFamily: '"Impact", "Arial Black", sans-serif',
+                    minHeight: '52px',
+                    clipPath: 'polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%)',
+                  }}
                 >
                   <Gamepad2 size={22} className="text-black" />
                   <span>PLAY IN PIM (~90s GAME)</span>
@@ -339,7 +351,11 @@ export default function DayArtifactPage() {
                 {/* 2. Audio Toggle */}
                 <button
                   onClick={handleToggleAudio}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white/10 hover:bg-white/20 border border-white/25 rounded font-mono text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white/10 hover:bg-white/20 border border-white/25 font-mono text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+                  style={{
+                    minHeight: '44px',
+                    clipPath: 'polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%)',
+                  }}
                 >
                   {isCurrentPlaying ? (
                     <>
@@ -432,41 +448,57 @@ export default function DayArtifactPage() {
               <div className="flex items-center gap-2 border-b border-white/15 pb-2 mb-6 font-mono text-xs font-bold uppercase tracking-wider flex-wrap">
                 <button
                   onClick={() => setActiveTab('context')}
-                  className={`px-4 py-2 rounded transition-all cursor-pointer ${
+                  className={`px-4 py-2 transition-all cursor-pointer flex items-center justify-center ${
                     activeTab === 'context'
                       ? 'bg-white text-black font-black'
                       : 'text-white/60 hover:text-white bg-white/5'
                   }`}
+                  style={{
+                    minHeight: '40px',
+                    clipPath: 'polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%)',
+                  }}
                 >
                   STORY & CONTEXT
                 </button>
                 <button
                   onClick={() => setActiveTab('lyrics')}
-                  className={`px-4 py-2 rounded transition-all cursor-pointer ${
+                  className={`px-4 py-2 transition-all cursor-pointer flex items-center justify-center ${
                     activeTab === 'lyrics'
                       ? 'bg-white text-black font-black'
                       : 'text-white/60 hover:text-white bg-white/5'
                   }`}
+                  style={{
+                    minHeight: '40px',
+                    clipPath: 'polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%)',
+                  }}
                 >
                   LYRICS / WORDS
                 </button>
                 <button
                   onClick={() => setActiveTab('leaderboard')}
-                  className={`px-4 py-2 rounded transition-all cursor-pointer ${
+                  className={`px-4 py-2 transition-all cursor-pointer flex items-center justify-center ${
                     activeTab === 'leaderboard'
                       ? 'bg-white text-black font-black'
                       : 'text-white/60 hover:text-white bg-white/5'
                   }`}
+                  style={{
+                    minHeight: '40px',
+                    clipPath: 'polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%)',
+                  }}
                 >
                   LEADERBOARD
                 </button>
                 <button
                   onClick={() => setActiveTab('ascii')}
-                  className={`px-4 py-2 rounded transition-all cursor-pointer ${
+                  className={`px-4 py-2 transition-all cursor-pointer flex items-center justify-center ${
                     activeTab === 'ascii'
                       ? 'bg-white text-black font-black'
                       : 'text-white/60 hover:text-white bg-white/5'
                   }`}
+                  style={{
+                    minHeight: '40px',
+                    clipPath: 'polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%)',
+                  }}
                 >
                   ASCII EXPERIMENT
                 </button>

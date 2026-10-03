@@ -401,7 +401,15 @@ export default function LeaderboardPage() {
   const yourEntry = entries.find(e => e.isYou);
 
   return (
-    <div className="flex-1 px-4 md:px-8 pt-2 pb-36 md:pb-10 max-w-4xl mx-auto w-full space-y-8 etching-bg">
+    <div
+      className="flex-1 px-4 md:px-8 pt-2 max-w-4xl mx-auto w-full space-y-8 etching-bg"
+      style={{
+        minHeight: '100dvh',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 6.5rem)'
+      }}
+    >
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
@@ -419,8 +427,9 @@ export default function LeaderboardPage() {
       {/* Tabs */}
       <div className="flex justify-center mb-6 border-b border-white/10 relative leaderboard-tabs">
         <button
-          className={`px-8 py-4 font-black uppercase text-lg tracking-wider transition-colors relative ${activeTab === 'today' ? 'text-neon-gold active' : 'text-white/40 hover:text-white/80'}`}
+          className={`px-8 py-4 font-black uppercase text-lg tracking-wider transition-colors relative cursor-pointer ${activeTab === 'today' ? 'text-neon-gold active' : 'text-white/40 hover:text-white/80'}`}
           onClick={() => setActiveTab('today')}
+          style={{ minHeight: '48px' }}
         >
           PERFORMANCE
           <div className="text-[10px] opacity-60 font-mono tracking-normal text-white">How well you play today</div>
@@ -432,8 +441,9 @@ export default function LeaderboardPage() {
           )}
         </button>
         <button
-          className={`px-8 py-4 font-black uppercase text-lg tracking-wider transition-colors relative ${activeTab === 'alltime' ? 'text-neon-gold active' : 'text-white/40 hover:text-white/80'}`}
+          className={`px-8 py-4 font-black uppercase text-lg tracking-wider transition-colors relative cursor-pointer ${activeTab === 'alltime' ? 'text-neon-gold active' : 'text-white/40 hover:text-white/80'}`}
           onClick={() => setActiveTab('alltime')}
+          style={{ minHeight: '48px' }}
         >
           PRESTIGE
           <div className="text-[10px] opacity-60 font-mono tracking-normal text-white">How deep your collection goes</div>
@@ -524,7 +534,11 @@ export default function LeaderboardPage() {
                 setShowIdentityModal(true);
               }
             }}
-            className="px-5 py-2.5 bg-[#FFD700] text-black font-black uppercase text-xs tracking-wider rounded shadow-[0_0_15px_rgba(255,215,0,0.3)] hover:bg-white transition-colors cursor-pointer shrink-0"
+            className="px-5 py-2.5 bg-[#FFD700] text-black font-black uppercase text-xs tracking-wider shadow-[0_0_15px_rgba(255,215,0,0.3)] hover:bg-white transition-colors cursor-pointer shrink-0 flex items-center justify-center"
+            style={{
+              minHeight: '44px',
+              clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+            }}
           >
             {!authUser || authUser.is_anonymous ? "CONNECT ACCOUNT" : "CLAIM @USERNAME"}
           </button>

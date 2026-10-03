@@ -357,11 +357,22 @@ export default function ClaimPage() {
   // ── 1. Unauthenticated Wall ────────────────────────────────────────────────
   if (!user) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center px-4 py-16 min-h-[70vh]">
+      <div
+        className="flex-1 flex flex-col items-center justify-center px-4 py-16"
+        style={{
+          minHeight: '100dvh',
+          overflowY: 'auto',
+          WebkitOverflowScrolling: 'touch',
+          paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 6rem)',
+        }}
+      >
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="flex flex-col items-center gap-6 text-center max-w-sm glass-panel p-8 border border-white/10"
+          style={{
+            clipPath: 'polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%)',
+          }}
         >
           <div style={{
             width: '64px', height: '64px', borderRadius: '50%',
@@ -384,7 +395,11 @@ export default function ClaimPage() {
               audioManager.playSfx('tap_nav', 0.4);
               setShowAuthModal(true);
             }}
-            className="px-6 py-3 font-mono font-bold text-xs uppercase tracking-wider text-black bg-[#ff3800] border-2 border-black rounded shadow-[3px_3px_0_#000] hover:scale-105 active:scale-95 transition-all cursor-pointer"
+            className="px-6 py-3 font-mono font-bold text-xs uppercase tracking-wider text-black bg-[#ff3800] border-2 border-black shadow-[3px_3px_0_#000] hover:scale-105 active:scale-95 transition-all cursor-pointer"
+            style={{
+              minHeight: '48px',
+              clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+            }}
           >
             Connect Identity
           </button>
@@ -396,11 +411,22 @@ export default function ClaimPage() {
   // ── 2. Claim Done State ────────────────────────────────────────────────────
   if (state === 'done') {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center px-4 py-16 min-h-[70vh]">
+      <div
+        className="flex-1 flex flex-col items-center justify-center px-4 py-16"
+        style={{
+          minHeight: '100dvh',
+          overflowY: 'auto',
+          WebkitOverflowScrolling: 'touch',
+          paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 6rem)',
+        }}
+      >
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           className="flex flex-col items-center gap-6 text-center max-w-sm glass-panel p-8 border border-[#ffd700]/30 shadow-2xl"
+          style={{
+            clipPath: 'polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%)',
+          }}
         >
           <motion.div
             animate={{ scale: [1, 1.06, 1] }}
@@ -430,7 +456,11 @@ export default function ClaimPage() {
           <Link
             to="/vault"
             onClick={() => audioManager.playSfx('tap_nav', 0.2)}
-            className="px-6 py-2.5 bg-white/5 border border-white/10 rounded font-mono font-bold text-xs uppercase tracking-wider text-white hover:bg-white/10"
+            className="px-6 py-2.5 bg-white/5 border border-white/10 font-mono font-bold text-xs uppercase tracking-wider text-white hover:bg-white/10 inline-flex items-center justify-center"
+            style={{
+              minHeight: '46px',
+              clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+            }}
           >
             Return to Vault
           </Link>
@@ -441,7 +471,15 @@ export default function ClaimPage() {
 
   // ── 3. Unified Claim & Redeem View ─────────────────────────────────────────
   return (
-    <div className="flex-1 px-4 pt-2 pb-36 md:pb-12 max-w-xl mx-auto w-full space-y-12">
+    <div
+      className="flex-1 px-4 pt-2 max-w-xl mx-auto w-full space-y-12"
+      style={{
+        minHeight: '100dvh',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 6.5rem)',
+      }}
+    >
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -515,7 +553,13 @@ export default function ClaimPage() {
               <button
                 type="submit"
                 disabled={codeState === 'redeeming' || !bonusCode.trim()}
-                className="px-6 py-3 font-mono font-bold text-xs uppercase tracking-wider text-black bg-[#ffd700] rounded hover:scale-102 active:scale-98 transition-all disabled:opacity-40"
+                className="px-6 py-3 font-mono font-bold text-xs uppercase tracking-wider text-black bg-[#ffd700] hover:scale-102 active:scale-98 transition-all disabled:opacity-40 cursor-pointer"
+                style={{
+                  minHeight: '48px',
+                  clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+                  border: '2px solid #000',
+                  boxShadow: '3px 3px 0 #000',
+                }}
               >
                 {codeState === 'redeeming' ? 'Decrypting...' : 'Redeem Code'}
               </button>
@@ -752,7 +796,13 @@ export default function ClaimPage() {
                   <button
                     type="submit"
                     disabled={!form.name || !form.email || state === 'submitting'}
-                    className="w-full py-3.5 font-mono font-bold text-xs uppercase tracking-widest text-black bg-[#ffd700] rounded hover:scale-101 active:scale-98 transition-all disabled:opacity-40"
+                    className="w-full py-3.5 font-mono font-bold text-xs uppercase tracking-widest text-black bg-[#ffd700] hover:scale-101 active:scale-98 transition-all disabled:opacity-40 cursor-pointer"
+                    style={{
+                      minHeight: '50px',
+                      clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                      border: '2px solid #000',
+                      boxShadow: '4px 4px 0 #000',
+                    }}
                   >
                     {state === 'submitting' ? 'Submitting...' : '✦ Submit Creative Claim'}
                   </button>
@@ -814,7 +864,11 @@ export default function ClaimPage() {
                     setAgeGateCode(null);
                     window.dispatchEvent(new Event('cheat_code_activated'));
                   }}
-                  className="py-2.5 bg-red-600 hover:bg-red-500 border border-red-500 rounded-lg text-white font-mono text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer text-center"
+                  className="py-2.5 bg-red-600 hover:bg-red-500 border border-red-500 text-white font-mono text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer text-center"
+                  style={{
+                    minHeight: '44px',
+                    clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+                  }}
                 >
                   Yes, I am 18+
                 </button>
@@ -826,7 +880,11 @@ export default function ClaimPage() {
                     setCodeState('error');
                     setAgeGateCode(null);
                   }}
-                  className="py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-white/10 rounded-lg text-white/60 hover:text-white font-mono text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer text-center"
+                  className="py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-white/60 hover:text-white font-mono text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer text-center"
+                  style={{
+                    minHeight: '44px',
+                    clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+                  }}
                 >
                   Cancel & Exit
                 </button>

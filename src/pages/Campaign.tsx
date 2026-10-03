@@ -238,8 +238,12 @@ export default function Campaign() {
             setLocation('/arcade');
           }}
           className={isAvant
-            ? "font-mono text-[10px] tracking-[0.25em] text-[#39FF14] border border-[#39FF14]/30 px-4 py-1.5 hover:bg-[#39FF14]/10 transition-colors cursor-pointer"
-            : "neon-btn-outline text-xs px-4 py-1.5 tracking-widest cursor-pointer"}
+            ? "font-mono text-[10px] tracking-[0.25em] text-[#39FF14] border border-[#39FF14]/30 px-4 py-2 hover:bg-[#39FF14]/10 transition-colors cursor-pointer"
+            : "neon-btn-outline text-xs px-4 py-2 tracking-widest cursor-pointer"}
+          style={{
+            minHeight: '40px',
+            clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+          }}
         >
           ← ARCADE
         </button>
@@ -252,8 +256,12 @@ export default function Campaign() {
             setLocation('/songs');
           }}
           className={isAvant
-            ? "font-mono text-[10px] tracking-[0.25em] text-[#39FF14] border border-[#39FF14]/30 px-4 py-1.5 hover:bg-[#39FF14]/10 transition-colors cursor-pointer"
-            : "neon-btn-outline text-xs px-4 py-1.5 tracking-widest cursor-pointer"}
+            ? "font-mono text-[10px] tracking-[0.25em] text-[#39FF14] border border-[#39FF14]/30 px-4 py-2 hover:bg-[#39FF14]/10 transition-colors cursor-pointer"
+            : "neon-btn-outline text-xs px-4 py-2 tracking-widest cursor-pointer"}
+          style={{
+            minHeight: '40px',
+            clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+          }}
         >
           AWARD PLAY →
         </button>
@@ -506,7 +514,8 @@ export default function Campaign() {
                         borderColor: unlocked ? ch.meta.dc : '#27272a',
                         color: unlocked ? ch.meta.dc : '#52525b',
                         boxShadow: unlocked ? `0 0 16px ${ch.meta.dc}35` : 'none',
-                        height: '56px'
+                        minHeight: '54px',
+                        clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
                       }}
                     >
                       {unlocked ? (
@@ -531,7 +540,13 @@ export default function Campaign() {
         </div>
 
         {/* Global collector stats floating bottom navigation line */}
-        <div className="hidden sm:flex absolute bottom-6 left-1/2 -translate-x-1/2 z-20 bg-black/95 border border-white/5 backdrop-blur-xl py-2.5 px-6 rounded-full font-mono items-center gap-6 text-[8px] sm:text-[9px] tracking-widest text-zinc-400 uppercase shadow-2xl select-none whitespace-nowrap">
+        <div
+          className="hidden sm:flex absolute left-1/2 -translate-x-1/2 z-20 bg-black/95 border border-white/5 backdrop-blur-xl py-2.5 px-6 font-mono items-center gap-6 text-[8px] sm:text-[9px] tracking-widest text-zinc-400 uppercase shadow-2xl select-none whitespace-nowrap"
+          style={{
+            bottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 1.5rem)',
+            clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+          }}
+        >
           <span>CLEARED: <strong className="text-white">{totals.cleared}</strong></span>
           <span className="w-1 h-1 rounded-full bg-white/25" />
           <span>PLATINUMS: <strong className="text-[#39FF14]">✦ {totals.platinums}</strong></span>

@@ -89,7 +89,10 @@ export default function MobileCardActionSheet({
                 onClose();
               }
             }}
-            className="relative z-10 w-full bg-[#0d0d12] border-t-2 border-white/15 rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.8)] pb-safe overflow-hidden flex flex-col max-h-[85vh]"
+            className="relative z-10 w-full bg-[#0d0d12] border-t-2 border-white/20 rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.9)] overflow-hidden flex flex-col max-h-[88vh]"
+            style={{
+              paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 2.5rem)',
+            }}
           >
             {/* Grab Handle */}
             <div className="flex justify-center pt-3 pb-2">
@@ -147,7 +150,7 @@ export default function MobileCardActionSheet({
               <button
                 onClick={onClose}
                 aria-label="Close"
-                className="w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 active:scale-95 flex items-center justify-center text-white/50 hover:text-white"
+                className="w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 active:scale-95 flex items-center justify-center text-white/50 hover:text-white cursor-pointer"
               >
                 <X size={18} />
               </button>
@@ -162,11 +165,13 @@ export default function MobileCardActionSheet({
                   onClose();
                   onPlayPim();
                 }}
-                className="w-full py-4 px-6 rounded-2xl font-mono font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-[0.98] shadow-lg cursor-pointer"
+                className="w-full py-4 px-6 font-mono font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-[0.98] shadow-lg cursor-pointer"
                 style={{
+                  clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
                   background: 'linear-gradient(135deg, #00f0ff, #ff1493)',
                   color: '#000',
                   boxShadow: '0 0 25px rgba(0, 240, 255, 0.4)',
+                  minHeight: 52,
                 }}
               >
                 <Play size={18} fill="#000" />
@@ -181,7 +186,11 @@ export default function MobileCardActionSheet({
                     onClose();
                     onOpenDetails();
                   }}
-                  className="py-3.5 px-4 rounded-xl bg-white/10 hover:bg-white/15 active:scale-[0.98] border border-white/15 flex items-center justify-center gap-2 text-white font-mono text-xs font-bold uppercase tracking-wider"
+                  className="py-3.5 px-4 bg-white/10 hover:bg-white/15 active:scale-[0.98] border border-white/15 flex items-center justify-center gap-2 text-white font-mono text-xs font-bold uppercase tracking-wider cursor-pointer"
+                  style={{
+                    clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+                    minHeight: 46,
+                  }}
                 >
                   <Info size={15} className="text-[#00E5FF]" />
                   <span>VIEW DOSSIER</span>
@@ -192,7 +201,11 @@ export default function MobileCardActionSheet({
                     onClose();
                     onListen();
                   }}
-                  className="py-3.5 px-4 rounded-xl bg-white/10 hover:bg-white/15 active:scale-[0.98] border border-white/15 flex items-center justify-center gap-2 text-white font-mono text-xs font-bold uppercase tracking-wider"
+                  className="py-3.5 px-4 bg-white/10 hover:bg-white/15 active:scale-[0.98] border border-white/15 flex items-center justify-center gap-2 text-white font-mono text-xs font-bold uppercase tracking-wider cursor-pointer"
+                  style={{
+                    clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+                    minHeight: 46,
+                  }}
                 >
                   <Disc size={15} className="text-[#39FF14]" />
                   <span>JUST LISTEN</span>
@@ -207,7 +220,11 @@ export default function MobileCardActionSheet({
                       onFlip();
                       onClose();
                     }}
-                    className="py-3 px-3 rounded-xl bg-white/5 hover:bg-white/10 active:scale-[0.98] border border-white/10 flex items-center justify-center gap-1.5 text-white/80 font-mono text-[11px] font-bold uppercase tracking-wider"
+                    className="py-3 px-3 bg-white/5 hover:bg-white/10 active:scale-[0.98] border border-white/10 flex items-center justify-center gap-1.5 text-white/80 font-mono text-[11px] font-bold uppercase tracking-wider cursor-pointer"
+                    style={{
+                      clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+                      minHeight: 44,
+                    }}
                   >
                     <RotateCw size={13} />
                     <span>FLIP 3D CARD</span>
@@ -216,7 +233,11 @@ export default function MobileCardActionSheet({
 
                 <button
                   onClick={handleShare}
-                  className="py-3 px-3 rounded-xl bg-white/5 hover:bg-white/10 active:scale-[0.98] border border-white/10 flex items-center justify-center gap-1.5 text-white/80 font-mono text-[11px] font-bold uppercase tracking-wider"
+                  className="py-3 px-3 bg-white/5 hover:bg-white/10 active:scale-[0.98] border border-white/10 flex items-center justify-center gap-1.5 text-white/80 font-mono text-[11px] font-bold uppercase tracking-wider cursor-pointer"
+                  style={{
+                    clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+                    minHeight: 44,
+                  }}
                 >
                   <Share2 size={13} />
                   <span>SHARE CARD</span>
@@ -230,7 +251,12 @@ export default function MobileCardActionSheet({
                     onClose();
                     onFuse();
                   }}
-                  className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#ff3800] to-[#ff6600] text-white font-mono font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(255,56,0,0.4)]"
+                  className="w-full py-3.5 px-4 text-white font-mono font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(255,56,0,0.4)] cursor-pointer active:scale-95"
+                  style={{
+                    clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                    background: 'linear-gradient(90deg, #ff3800, #ff6600)',
+                    minHeight: 48,
+                  }}
                 >
                   <Flame size={16} fill="#fff" />
                   <span>FUSE 3 COPIES → NEXT TIER</span>
@@ -243,7 +269,11 @@ export default function MobileCardActionSheet({
                     onClose();
                     onBurn();
                   }}
-                  className="w-full py-3 px-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 font-mono font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2"
+                  className="w-full py-3 px-4 bg-red-500/10 border border-red-500/30 text-red-400 font-mono font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                  style={{
+                    clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                    minHeight: 46,
+                  }}
                 >
                   <Flame size={15} />
                   <span>BURN MINTED OUT COPY</span>

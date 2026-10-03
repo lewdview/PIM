@@ -199,9 +199,11 @@ function QuickReturnGrid({ onNavigate }: { onNavigate: (path: string) => void })
   ];
 
   return (
-    <div className="w-full my-3 p-3 bg-black/75 border border-white/15 rounded-xl flex flex-col gap-2 shadow-[0_4px_24px_rgba(0,0,0,0.6)] select-none backdrop-blur-md">
-      <div className="font-mono text-[9px] uppercase tracking-[0.25em] text-zinc-400 font-bold text-center">
-        // RETURN TO HUBS //
+    <div className="w-full my-3 p-3 bg-black/85 border border-white/20 flex flex-col gap-2 shadow-[0_4px_24px_rgba(0,0,0,0.8)] select-none backdrop-blur-md"
+      style={{ clipPath: 'polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%)' }}
+    >
+      <div className="font-mono text-[9px] uppercase tracking-[0.25em] text-[#00E5FF] font-black text-center">
+        // TACTICAL HUBS //
       </div>
       <div className="grid grid-cols-3 gap-2">
         {options.map((opt) => (
@@ -211,11 +213,15 @@ function QuickReturnGrid({ onNavigate }: { onNavigate: (path: string) => void })
               audioManager.playSfx('tap_nav', 0.15);
               onNavigate(opt.path);
             }}
-            className="flex flex-col items-center justify-center py-2.5 px-1 bg-zinc-900/90 border border-white/10 rounded-lg hover:border-white/40 hover:bg-zinc-800/90 transition-all active:scale-95 group cursor-pointer shadow-sm hover:shadow-[0_0_12px_rgba(255,255,255,0.08)]"
+            className="flex flex-col items-center justify-center py-2.5 px-1 bg-zinc-950/90 border border-white/15 hover:border-white/50 hover:bg-zinc-900 transition-all active:scale-95 group cursor-pointer shadow-sm hover:shadow-[0_0_12px_rgba(255,255,255,0.12)]"
+            style={{
+              clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+              minHeight: 48,
+            }}
           >
             <HubSvgIcon type={opt.iconType} color={opt.color} />
             <span
-              className="font-mono text-[9px] font-bold uppercase tracking-tight mt-1"
+              className="font-mono text-[9px] font-black uppercase tracking-tight mt-1"
               style={{ color: opt.color }}
             >
               {opt.label}
@@ -1232,7 +1238,17 @@ export default function Results() {
   // ── CLEARED path (Avant-Garde) ───────────────────────────────
   if (isAvant) {
     return (
-      <div className="relative w-full flex flex-col items-center" style={{ background: '#050505', minHeight: '100dvh', overflowX: 'hidden' }}>
+      <div
+        className="relative w-full flex flex-col items-center select-none"
+        style={{
+          background: '#050505',
+          minHeight: '100dvh',
+          overflowX: 'hidden',
+          overflowY: 'auto',
+          WebkitOverflowScrolling: 'touch',
+          paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 5.5rem)',
+        }}
+      >
         {/* Blur Cover Backdrop */}
         {activeCoverUrl && (
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
@@ -1539,7 +1555,11 @@ export default function Results() {
                         <div className="flex flex-col gap-2.5">
                           <button
                             onClick={handleClaimReward}
-                            className="w-full py-4 font-mono font-bold text-sm tracking-[0.3em] transition-all bg-gradient-to-r from-[#ffd700] to-[#ffb800] text-black hover:shadow-[0_0_25px_rgba(255,215,0,0.45)] hover:scale-[1.01] active:scale-[0.99] animate-pulse"
+                            className="w-full py-4 font-mono font-black text-sm tracking-[0.3em] uppercase transition-all bg-gradient-to-r from-[#ffd700] to-[#ffb800] text-black hover:shadow-[0_0_25px_rgba(255,215,0,0.45)] hover:scale-[1.01] active:scale-[0.99] animate-pulse cursor-pointer"
+                            style={{
+                              clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                              minHeight: 48,
+                            }}
                             onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}
                           >
                             {tiersToClaim.length > 1
@@ -1577,7 +1597,11 @@ export default function Results() {
                       {claimStatus === 'claiming' && (
                         <button
                           disabled
-                          className="w-full py-4 font-mono font-bold text-sm tracking-[0.3em] bg-zinc-800 text-zinc-500 cursor-not-allowed flex items-center justify-center gap-2"
+                          className="w-full py-4 font-mono font-black text-sm tracking-[0.3em] uppercase bg-zinc-800 text-zinc-500 cursor-not-allowed flex items-center justify-center gap-2"
+                          style={{
+                            clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                            minHeight: 48,
+                          }}
                         >
                           <div className="w-4 h-4 border-2 border-zinc-500 border-t-transparent rounded-full animate-spin" />
                           AUTHENTICATING REWARD...
@@ -1586,7 +1610,11 @@ export default function Results() {
                       {claimStatus === 'claimed' && (
                         <button
                           disabled
-                          className="w-full py-4 font-mono font-bold text-sm tracking-[0.3em] bg-zinc-900 border border-zinc-800 text-zinc-600 cursor-not-allowed"
+                          className="w-full py-4 font-mono font-black text-sm tracking-[0.3em] uppercase bg-zinc-900 border border-zinc-800 text-zinc-600 cursor-not-allowed"
+                          style={{
+                            clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                            minHeight: 48,
+                          }}
                         >
                           ✓ REWARD CLAIMED
                         </button>
@@ -1594,7 +1622,11 @@ export default function Results() {
                       {claimStatus === 'failed' && (
                         <button
                           onClick={handleClaimReward}
-                          className="w-full py-4 font-mono font-bold text-sm tracking-[0.3em] bg-red-950 border border-red-500 text-red-500 hover:bg-red-900/20"
+                          className="w-full py-4 font-mono font-black text-sm tracking-[0.3em] uppercase bg-red-950 border border-red-500 text-red-500 hover:bg-red-900/20 cursor-pointer"
+                          style={{
+                            clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                            minHeight: 48,
+                          }}
                           onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}
                         >
                           ⚠️ CLAIM FAILED - RETRY?
@@ -1622,7 +1654,11 @@ export default function Results() {
                     audioManager.playSfx('tap_nav', 0.15);
                     setLocation(`/play/${nextSong.id}`);
                   }}
-                    className="w-full py-4 font-mono font-bold text-sm tracking-[0.3em] transition-all bg-[#39FF14] text-black hover:bg-[#39FF14]/90 hover:shadow-[0_0_20px_rgba(57,255,20,0.35)]"
+                    className="w-full py-4 font-mono font-black text-sm tracking-[0.3em] uppercase transition-all bg-[#39FF14] text-black hover:bg-[#39FF14]/90 hover:shadow-[0_0_20px_rgba(57,255,20,0.35)] cursor-pointer"
+                    style={{
+                      clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                      minHeight: 48,
+                    }}
                     onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}>
                     ▶ DEPLOY: {nextSong.title.length > 20 ? nextSong.title.slice(0, 20) + '…' : nextSong.title}
                   </button>
@@ -1632,13 +1668,19 @@ export default function Results() {
                   audioManager.playSfx('tap_nav', 0.15);
                   setLocation(backRoute);
                 }}
-                  className="w-full py-4 mb-1 font-mono font-bold text-sm tracking-[0.3em] transition-all bg-zinc-950 border border-[#39FF14] text-[#39FF14] hover:bg-[#39FF14]/10 hover:shadow-[0_0_15px_rgba(57,255,20,0.2)]"
+                  className="w-full py-4 mb-1 font-mono font-black text-sm tracking-[0.3em] uppercase transition-all bg-zinc-950 border-2 border-[#39FF14] text-[#39FF14] hover:bg-[#39FF14]/15 hover:shadow-[0_0_15px_rgba(57,255,20,0.2)] cursor-pointer"
+                  style={{
+                    clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                    minHeight: 48,
+                  }}
                   onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}>
                   ← {fromFreePlay ? '[ RETURN TO AWARD PLAY ]' : '[ CONTINUE TO LEVEL PATH ]'}
                 </button>
               )}
               {(!user || user.is_anonymous) ? (
-                <div className="w-full my-3 p-4 rounded-lg border border-[#FF1493]/40 bg-black/80 backdrop-blur-md text-center space-y-2.5 shadow-[0_0_30px_rgba(255,20,147,0.15)]">
+                <div className="w-full my-3 p-4 border border-[#FF1493]/40 bg-black/80 backdrop-blur-md text-center space-y-2.5 shadow-[0_0_30px_rgba(255,20,147,0.15)]"
+                  style={{ clipPath: 'polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%)' }}
+                >
                   <div className="font-mono text-[9px] tracking-[0.3em] uppercase text-[#FF1493] font-bold">
                     // BROADCAST RESTRICTED //
                   </div>
@@ -1650,7 +1692,11 @@ export default function Results() {
                   </p>
                   <button
                     onClick={() => setShowAuthModal(true)}
-                    className="w-full py-3 px-4 font-mono text-xs font-black uppercase tracking-widest bg-[#FF1493] text-white hover:bg-[#ff33a8] transition-all rounded shadow-[0_0_20px_rgba(255,20,147,0.35)] flex items-center justify-center gap-2 cursor-pointer"
+                    className="w-full py-3.5 px-4 font-mono text-xs font-black uppercase tracking-widest bg-[#FF1493] text-white hover:bg-[#ff33a8] transition-all shadow-[0_0_20px_rgba(255,20,147,0.35)] flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                    style={{
+                      clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                      minHeight: 48,
+                    }}
                   >
                     <span>⚡</span> CONNECT SOVEREIGN ACCOUNT
                   </button>
@@ -1659,7 +1705,9 @@ export default function Results() {
                   </div>
                 </div>
               ) : !username ? (
-                <div className="w-full my-3 p-4 rounded-lg border border-[#FFD700]/40 bg-black/80 backdrop-blur-md text-center space-y-2.5 shadow-[0_0_30px_rgba(255,215,0,0.15)]">
+                <div className="w-full my-3 p-4 border border-[#FFD700]/40 bg-black/80 backdrop-blur-md text-center space-y-2.5 shadow-[0_0_30px_rgba(255,215,0,0.15)]"
+                  style={{ clipPath: 'polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%)' }}
+                >
                   <div className="font-mono text-[9px] tracking-[0.3em] uppercase text-[#FFD700] font-bold">
                     // PILOT IDENTITY REQUIRED //
                   </div>
@@ -1671,13 +1719,19 @@ export default function Results() {
                   </p>
                   <button
                     onClick={() => setShowIdentityModal(true)}
-                    className="w-full py-3 px-4 font-mono text-xs font-black uppercase tracking-widest bg-[#FFD700] text-black hover:bg-[#ffe234] transition-all rounded shadow-[0_0_20px_rgba(255,215,0,0.35)] flex items-center justify-center gap-2 cursor-pointer"
+                    className="w-full py-3.5 px-4 font-mono text-xs font-black uppercase tracking-widest bg-[#FFD700] text-black hover:bg-[#ffe234] transition-all shadow-[0_0_20px_rgba(255,215,0,0.35)] flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                    style={{
+                      clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                      minHeight: 48,
+                    }}
                   >
                     <span>👤</span> CLAIM @USERNAME & AVATAR
                   </button>
                 </div>
               ) : (
-                <div className="w-full my-2 px-4 py-2 rounded border border-[#39FF14]/30 bg-[#39FF14]/[0.04] flex items-center justify-between font-mono text-[10px]">
+                <div className="w-full my-2 px-4 py-2 border border-[#39FF14]/30 bg-[#39FF14]/[0.04] flex items-center justify-between font-mono text-[10px]"
+                  style={{ clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)' }}
+                >
                   <div className="flex items-center gap-2 text-[#39FF14]">
                     <span className="w-2 h-2 rounded-full bg-[#39FF14] animate-pulse" />
                     <span>BROADCASTING AS <strong>@{username.toUpperCase()}</strong></span>
@@ -1705,15 +1759,23 @@ export default function Results() {
                   audioManager.playSfx('tap_nav', 0.15);
                   setLocation(`/play/${songId}`);
                 }}
-                  className="flex-1 py-3 font-mono font-bold text-xs tracking-[0.2em] transition-all bg-transparent border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-600"
+                  className="flex-1 py-3 font-mono font-black text-xs tracking-[0.2em] uppercase transition-all bg-zinc-950 border border-white/20 text-zinc-300 hover:text-white hover:border-[#FF1493] hover:shadow-[0_0_12px_rgba(255,20,147,0.3)] active:scale-95 cursor-pointer"
+                  style={{
+                    clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                    minHeight: 48,
+                  }}
                   onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}>
                   ↺ RETRY
                 </button>
                 <button
                   data-testid="button-cast-score"
                   onClick={handleCastScore}
-                  className="flex-1 py-3 font-mono font-bold text-xs tracking-[0.2em] transition-all bg-[#8A63D2]/15 border border-[#8A63D2]/50 text-[#C4A7E7] hover:bg-[#8A63D2]/30 hover:border-[#8A63D2] flex items-center justify-center gap-1.5 shadow-[0_0_12px_rgba(138,99,210,0.2)]"
+                  className="flex-1 py-3 font-mono font-black text-xs tracking-[0.2em] uppercase transition-all bg-[#8A63D2]/20 border border-[#8A63D2]/60 text-[#C4A7E7] hover:bg-[#8A63D2]/40 hover:border-[#8A63D2] flex items-center justify-center gap-1.5 shadow-[0_0_12px_rgba(138,99,210,0.25)] active:scale-95 cursor-pointer"
                   title="Share your score directly to Warpcast / Farcaster"
+                  style={{
+                    clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                    minHeight: 48,
+                  }}
                 >
                   <Share2 size={13} />
                   <span>CAST SCORE</span>
@@ -1723,9 +1785,13 @@ export default function Results() {
                     audioManager.playSfx('tap_nav', 0.15);
                     setLocation(fromFreePlay ? '/songs' : '/campaign');
                   }}
-                  className="flex-1 py-3 font-mono font-bold text-xs tracking-[0.2em] transition-all bg-transparent border border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-600"
+                  className="flex-1 py-3 font-mono font-black text-xs tracking-[0.2em] uppercase transition-all bg-zinc-950 border border-white/20 text-zinc-300 hover:text-[#39FF14] hover:border-[#39FF14] hover:shadow-[0_0_12px_rgba(57,255,20,0.3)] active:scale-95 cursor-pointer"
+                  style={{
+                    clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                    minHeight: 48,
+                  }}
                   onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}>
-                  {fromFreePlay ? '⌂ AWARD PLAY' : '◈ CAMPAIGN_INDEX'}
+                  {fromFreePlay ? '⌂ AWARD PLAY' : '◈ CAMPAIGN'}
                 </button>
               </div>
 
@@ -1757,7 +1823,17 @@ export default function Results() {
 
   // Classic design path (exact original content)
   return (
-    <div className="relative w-full flex flex-col items-center" style={{ background: '#080808', minHeight: '100dvh', overflow: 'hidden' }}>
+    <div
+      className="relative w-full flex flex-col items-center select-none"
+      style={{
+        background: '#080808',
+        minHeight: '100dvh',
+        overflowX: 'hidden',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 5.5rem)',
+      }}
+    >
       {/* Blurred cover art background */}
       {activeCoverUrl && (
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
@@ -2025,8 +2101,11 @@ export default function Results() {
                       <div className="flex flex-col gap-3">
                         <button
                           onClick={handleClaimReward}
-                          className="w-full py-4 font-mono font-bold text-sm tracking-[0.35em] transition-all bg-gradient-to-r from-[#ffd700] to-[#ffb800] text-black hover:scale-[1.01] active:scale-[0.99] animate-pulse"
-                          style={{ border: '3px solid #F2F0E8', boxShadow: `6px 6px 0 ${mc}`, minHeight: 48 }}
+                          className="w-full py-4 font-mono font-black text-sm tracking-[0.35em] uppercase transition-all bg-gradient-to-r from-[#ffd700] to-[#ffb800] text-black hover:scale-[1.01] active:scale-[0.99] animate-pulse cursor-pointer shadow-[0_0_25px_rgba(255,215,0,0.45)]"
+                          style={{
+                            clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                            minHeight: 48,
+                          }}
                           onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}
                         >
                           {tiersToClaim.length > 1
@@ -2064,8 +2143,11 @@ export default function Results() {
                     {claimStatus === 'claiming' && (
                       <button
                         disabled
-                        className="w-full py-4 font-mono font-bold text-sm tracking-[0.35em] bg-zinc-800 text-zinc-500 cursor-not-allowed flex items-center justify-center gap-2"
-                        style={{ border: '3px solid rgba(255,255,255,0.1)', minHeight: 48 }}
+                        className="w-full py-4 font-mono font-black text-sm tracking-[0.35em] uppercase bg-zinc-800 text-zinc-500 cursor-not-allowed flex items-center justify-center gap-2"
+                        style={{
+                          clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                          minHeight: 48,
+                        }}
                       >
                         <div className="w-4 h-4 border-2 border-zinc-500 border-t-transparent rounded-full animate-spin" />
                         AUTHENTICATING REWARD...
@@ -2074,8 +2156,11 @@ export default function Results() {
                     {claimStatus === 'claimed' && (
                       <button
                         disabled
-                        className="w-full py-4 font-mono font-bold text-sm tracking-[0.35em] bg-zinc-900 border border-zinc-800 text-zinc-600 cursor-not-allowed"
-                        style={{ border: '3px solid rgba(255,255,255,0.05)', minHeight: 48 }}
+                        className="w-full py-4 font-mono font-black text-sm tracking-[0.35em] uppercase bg-zinc-900 border border-zinc-800 text-zinc-600 cursor-not-allowed"
+                        style={{
+                          clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                          minHeight: 48,
+                        }}
                       >
                         ✓ REWARD CLAIMED
                       </button>
@@ -2083,8 +2168,11 @@ export default function Results() {
                     {claimStatus === 'failed' && (
                       <button
                         onClick={handleClaimReward}
-                        className="w-full py-4 font-mono font-bold text-sm tracking-[0.35em] bg-red-950 border border-red-500 text-red-500 hover:bg-red-900/20"
-                        style={{ border: '3px solid #ef4444', minHeight: 48 }}
+                        className="w-full py-4 font-mono font-black text-sm tracking-[0.35em] uppercase bg-red-950 border border-red-500 text-red-500 hover:bg-red-900/20 cursor-pointer"
+                        style={{
+                          clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                          minHeight: 48,
+                        }}
                         onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}
                       >
                         ⚠️ CLAIM FAILED - RETRY?
@@ -2107,7 +2195,11 @@ export default function Results() {
                   audioManager.playSfx('tap_nav', 0.15);
                   setLocation(`/play/${nextSong.id}`);
                 }}
-                  className="neon-btn w-full py-4 mb-1 font-mono font-bold text-sm tracking-[0.35em]"
+                  className="w-full py-4 mb-1 font-mono font-black text-sm tracking-[0.35em] uppercase transition-all bg-[#39FF14] text-black hover:bg-[#39FF14]/90 hover:shadow-[0_0_20px_rgba(57,255,20,0.35)] cursor-pointer"
+                  style={{
+                    clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                    minHeight: 48,
+                  }}
                   onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}>
                   ▶ DEPLOY: {nextSong.title.length > 20 ? nextSong.title.slice(0, 20) + '…' : nextSong.title}
                 </button>
@@ -2117,8 +2209,12 @@ export default function Results() {
                 audioManager.playSfx('tap_nav', 0.15);
                 setLocation(backRoute);
               }}
-                className="neon-btn w-full py-4 mb-1 font-mono font-bold text-sm tracking-[0.35em]"
-                style={{ background: !fromFreePlay ? `linear-gradient(90deg, ${mc}80, ${mc})` : '' }}
+                className="w-full py-4 mb-1 font-mono font-black text-sm tracking-[0.35em] uppercase transition-all bg-zinc-950 border-2 border-white/20 text-white hover:border-[#39FF14] hover:text-[#39FF14] hover:shadow-[0_0_15px_rgba(57,255,20,0.2)] cursor-pointer"
+                style={{
+                  clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                  background: !fromFreePlay ? `linear-gradient(90deg, ${mc}80, ${mc})` : undefined,
+                  minHeight: 48,
+                }}
                 onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}>
                 ← {fromFreePlay ? 'BACK TO AWARD PLAY' : 'CONTINUE TO LEVEL PATH'}
               </button>
@@ -2140,8 +2236,11 @@ export default function Results() {
 
             <div className="flex gap-2">
               <button data-testid="button-retry" onClick={() => setLocation(`/play/${songId}`)}
-                className="flex-1 py-3 font-mono font-bold text-sm tracking-[0.25em] transition-all"
-                style={{ border: '2px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.5)', background: 'transparent', minHeight: 48 }}
+                className="flex-1 py-3 font-mono font-black text-sm tracking-[0.25em] uppercase transition-all bg-zinc-950 border border-white/20 text-zinc-300 hover:text-white hover:border-[#FF1493] hover:shadow-[0_0_12px_rgba(255,20,147,0.3)] active:scale-95 cursor-pointer"
+                style={{
+                  clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                  minHeight: 48,
+                }}
                 onMouseEnter={e => { e.currentTarget.style.color = '#FF1493'; e.currentTarget.style.borderColor = '#FF1493'; }}
                 onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; }}>
                 ↺ RETRY
@@ -2149,9 +2248,12 @@ export default function Results() {
               <button
                 data-testid="button-cast-score-2"
                 onClick={handleCastScore}
-                className="flex-1 py-3 font-mono font-bold text-xs tracking-[0.2em] transition-all bg-[#8A63D2]/15 border border-[#8A63D2]/50 text-[#C4A7E7] hover:bg-[#8A63D2]/30 hover:border-[#8A63D2] flex items-center justify-center gap-1.5 shadow-[0_0_12px_rgba(138,99,210,0.2)]"
+                className="flex-1 py-3 font-mono font-black text-xs tracking-[0.2em] uppercase transition-all bg-[#8A63D2]/20 border border-[#8A63D2]/60 text-[#C4A7E7] hover:bg-[#8A63D2]/40 hover:border-[#8A63D2] flex items-center justify-center gap-1.5 shadow-[0_0_12px_rgba(138,99,210,0.25)] active:scale-95 cursor-pointer"
                 title="Share your score directly to Warpcast / Farcaster"
-                style={{ minHeight: 48 }}
+                style={{
+                  clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                  minHeight: 48,
+                }}
               >
                 <Share2 size={14} />
                 <span>CAST SCORE</span>
@@ -2163,7 +2265,11 @@ export default function Results() {
                     setLocation(`/play/${songId}`);
                   }}
                   title="Export frame-perfect 100% PERFECT+ run video (DEV ONLY)"
-                  className="px-4 py-3 font-mono font-bold text-xs tracking-[0.2em] uppercase border border-[#FF1493] bg-[#FF1493]/15 text-[#FF1493] hover:bg-[#FF1493] hover:text-black rounded transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-[0_0_12px_rgba(255,20,147,0.3)]"
+                  className="px-4 py-3 font-mono font-black text-xs tracking-[0.2em] uppercase border border-[#FF1493] bg-[#FF1493]/15 text-[#FF1493] hover:bg-[#FF1493] hover:text-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-[0_0_12px_rgba(255,20,147,0.3)] active:scale-95"
+                  style={{
+                    clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                    minHeight: 48,
+                  }}
                 >
                   <Film size={14} />
                   <span>EXPORT VIDEO</span>
@@ -2171,11 +2277,14 @@ export default function Results() {
               )}
               <button data-testid="button-select-song"
                 onClick={() => setLocation(fromFreePlay ? '/songs' : '/campaign')}
-                className="flex-1 py-3 font-mono font-bold text-sm tracking-[0.25em] transition-all"
-                style={{ border: '2px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.5)', background: 'transparent', minHeight: 48 }}
+                className="flex-1 py-3 font-mono font-black text-sm tracking-[0.25em] uppercase transition-all bg-zinc-950 border border-white/20 text-zinc-300 hover:text-[#39FF14] hover:border-[#39FF14] hover:shadow-[0_0_12px_rgba(57,255,20,0.3)] active:scale-95 cursor-pointer"
+                style={{
+                  clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                  minHeight: 48,
+                }}
                 onMouseEnter={e => { e.currentTarget.style.color = '#39FF14'; e.currentTarget.style.borderColor = '#39FF14'; }}
                 onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; }}>
-                {fromFreePlay ? '⌂ AWARD PLAY' : '◈ CAMPAIGN INDEX'}
+                {fromFreePlay ? '⌂ AWARD PLAY' : '◈ CAMPAIGN'}
               </button>
             </div>
 

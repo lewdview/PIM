@@ -153,7 +153,15 @@ export default function UniverseHome() {
   const moodAccent = todaySong?.mood === 'light' ? '#39FF14' : '#FF1493';
 
   return (
-    <div className="flex-1 w-full min-h-screen bg-[#050402] text-white select-none relative overflow-x-hidden">
+    <div
+      className="flex-1 w-full min-h-screen bg-[#050402] text-white select-none relative overflow-x-hidden"
+      style={{
+        minHeight: '100dvh',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 6rem)'
+      }}
+    >
       {/* Ambient background glow */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
         <div
@@ -291,8 +299,12 @@ export default function UniverseHome() {
               {/* 1. PLAY TODAY'S DROP (Hero Primary CTA) */}
               <button
                 onClick={handlePlayDrop}
-                className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded bg-gradient-to-r from-[#FF1493] via-[#FF5500] to-[#E5B800] text-black font-black uppercase tracking-wider text-base hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_0_30px_rgba(255,20,147,0.4)] cursor-pointer"
-                style={{ fontFamily: '"Impact", "Arial Black", sans-serif' }}
+                className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-[#FF1493] via-[#FF5500] to-[#E5B800] text-black font-black uppercase tracking-wider text-base hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_0_30px_rgba(255,20,147,0.4)] cursor-pointer"
+                style={{
+                  fontFamily: '"Impact", "Arial Black", sans-serif',
+                  minHeight: '52px',
+                  clipPath: 'polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%)',
+                }}
               >
                 <Play size={22} className="fill-black" />
                 <span>PLAY TODAY'S DROP (~90s GAME)</span>
@@ -303,6 +315,10 @@ export default function UniverseHome() {
                 <button
                   onClick={handleToggleAudio}
                   className="flex items-center justify-center gap-2 px-4 py-3 bg-black/60 hover:bg-white/10 border border-white/25 text-white font-mono text-xs font-bold uppercase tracking-wider transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                  style={{
+                    minHeight: '44px',
+                    clipPath: 'polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%)',
+                  }}
                 >
                   {isTodayPlaying ? (
                     <>
@@ -320,6 +336,10 @@ export default function UniverseHome() {
                 <Link
                   to={`/day/${today}`}
                   className="flex items-center justify-center gap-2 px-4 py-3 bg-black/60 hover:bg-white/10 border border-white/25 text-white font-mono text-xs font-bold uppercase tracking-wider transition-all hover:scale-[1.02] active:scale-[0.98] no-underline"
+                  style={{
+                    minHeight: '44px',
+                    clipPath: 'polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%)',
+                  }}
                 >
                   <Info size={16} className="text-[#E5B800]" />
                   <span>VIEW FULL ARTIFACT</span>
@@ -330,6 +350,10 @@ export default function UniverseHome() {
               <button
                 onClick={handleGiveMeASign}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-950/30 hover:bg-purple-900/40 border border-purple-500/40 text-purple-300 font-mono text-xs font-bold uppercase tracking-widest transition-all hover:scale-[1.01] active:scale-[0.98] cursor-pointer"
+                style={{
+                  minHeight: '44px',
+                  clipPath: 'polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%)',
+                }}
               >
                 <Sparkles size={14} className="text-purple-400 animate-pulse" />
                 <span>GIVE ME A SIGN (RANDOM DAY DISCOVERY)</span>
@@ -590,7 +614,11 @@ export default function UniverseHome() {
           </p>
           <Link
             to="/warp"
-            className="inline-flex items-center gap-2 px-8 py-4 bg-purple-600 hover:bg-purple-500 text-white font-mono text-xs uppercase font-black tracking-widest rounded shadow-[0_0_25px_rgba(168,85,247,0.4)] transition-all hover:scale-105 no-underline"
+            className="inline-flex items-center gap-2 px-8 py-4 bg-purple-600 hover:bg-purple-500 text-white font-mono text-xs uppercase font-black tracking-widest shadow-[0_0_25px_rgba(168,85,247,0.4)] transition-all hover:scale-105 no-underline"
+            style={{
+              minHeight: '48px',
+              clipPath: 'polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%)',
+            }}
           >
             <Sparkles size={16} />
             <span>EXPLORE WARP EXPERIENCES</span>

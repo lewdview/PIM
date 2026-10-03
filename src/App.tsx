@@ -323,10 +323,10 @@ export default function App() {
       <div
         className="min-h-screen bg-[#050402] text-white flex flex-col select-none relative"
         style={{
-          paddingTop: 'var(--fc-safe-area-top, 0px)',
-          paddingBottom: 'var(--fc-safe-area-bottom, 0px)',
-          paddingLeft: 'var(--fc-safe-area-left, 0px)',
-          paddingRight: 'var(--fc-safe-area-right, 0px)',
+          paddingTop: 'calc(var(--fc-safe-area-top, 0px) + env(safe-area-inset-top, 0px))',
+          paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px))',
+          paddingLeft: 'calc(var(--fc-safe-area-left, 0px) + env(safe-area-inset-left, 0px))',
+          paddingRight: 'calc(var(--fc-safe-area-right, 0px) + env(safe-area-inset-right, 0px))',
         }}
       >
         <GlobalMenuBackground />

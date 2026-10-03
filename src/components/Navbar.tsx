@@ -1275,8 +1275,8 @@ export default function Navbar() {
         className="fixed z-40 md:hidden flex flex-col items-center gap-1.5 p-1.5 rounded-2xl"
         style={{
           bottom: currentTrack
-            ? 'calc(76px + env(safe-area-inset-bottom, 0px))'
-            : 'max(14px, env(safe-area-inset-bottom, 14px))',
+            ? 'calc(76px + var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px))'
+            : 'calc(14px + var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px))',
           left: '12px',
           background: 'rgba(8, 6, 4, 0.92)',
           backdropFilter: 'blur(24px)',

@@ -496,7 +496,12 @@ export default function HomePage() {
   const proofs = collection.filter(c => c.proof).length;
 
   return (
-    <div className="flex-1 w-full pb-36 md:pb-8">
+    <div
+      className="flex-1 w-full"
+      style={{
+        paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 6.5rem)',
+      }}
+    >
       {/* ===== TICKER ===== */}
       <BrutalistTicker />
 

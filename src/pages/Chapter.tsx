@@ -520,13 +520,17 @@ export default function Chapter() {
           style={isAvant ? {
             color: '#39FF14',
             border: '1px solid rgba(57,255,20,0.3)',
-            padding: '4px 10px',
+            padding: '6px 14px',
+            minHeight: '38px',
+            clipPath: 'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)',
             background: 'none',
             cursor: 'pointer'
           } : {
-            color: 'rgba(255,255,255,0.35)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            padding: '4px 10px',
+            color: 'rgba(255,255,255,0.7)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            padding: '6px 14px',
+            minHeight: '38px',
+            clipPath: 'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)',
             boxShadow: '2px 2px 0 rgba(255,255,255,0.06)',
             background: 'none',
             cursor: 'pointer'
@@ -544,8 +548,8 @@ export default function Chapter() {
           onMouseLeave={e => {
             if (isAvant) return;
             const el = e.currentTarget as HTMLElement;
-            el.style.color = 'rgba(255,255,255,0.35)';
-            el.style.borderColor = 'rgba(255,255,255,0.1)';
+            el.style.color = 'rgba(255,255,255,0.7)';
+            el.style.borderColor = 'rgba(255,255,255,0.2)';
             el.style.boxShadow = '2px 2px 0 rgba(255,255,255,0.06)';
           }}>
           ← CAMPAIGN MAP
@@ -556,8 +560,8 @@ export default function Chapter() {
         </div>
         
         <div className="flex gap-2">
-          {prev && <button onClick={() => { if (isAvant) audioManager.playSfx('tap_nav', 0.12); setLocation(`/chapter/${prev.month}`); }} className="font-mono text-xs px-3 py-1 cursor-pointer" style={{ color: isAvant ? '#39FF14' : 'rgba(255,255,255,0.25)', border: isAvant ? '1px solid rgba(57,255,20,0.3)' : '1px solid rgba(255,255,255,0.08)', background: 'none' }} onMouseEnter={() => { if (isAvant) audioManager.playSfx('tap_nav', 0.08); }} >‹</button>}
-          {next && <button onClick={() => { if (isAvant) audioManager.playSfx('tap_nav', 0.12); setLocation(`/chapter/${next.month}`); }} className="font-mono text-xs px-3 py-1 cursor-pointer" style={{ color: isAvant ? '#39FF14' : 'rgba(255,255,255,0.25)', border: isAvant ? '1px solid rgba(57,255,20,0.3)' : '1px solid rgba(255,255,255,0.08)', background: 'none' }} onMouseEnter={() => { if (isAvant) audioManager.playSfx('tap_nav', 0.08); }} >›</button>}
+          {prev && <button onClick={() => { if (isAvant) audioManager.playSfx('tap_nav', 0.12); setLocation(`/chapter/${prev.month}`); }} className="font-mono text-xs px-3.5 py-1.5 cursor-pointer flex items-center justify-center" style={{ minHeight: '38px', minWidth: '38px', clipPath: 'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)', color: isAvant ? '#39FF14' : 'rgba(255,255,255,0.6)', border: isAvant ? '1px solid rgba(57,255,20,0.3)' : '1px solid rgba(255,255,255,0.15)', background: 'none' }} onMouseEnter={() => { if (isAvant) audioManager.playSfx('tap_nav', 0.08); }} >‹</button>}
+          {next && <button onClick={() => { if (isAvant) audioManager.playSfx('tap_nav', 0.12); setLocation(`/chapter/${next.month}`); }} className="font-mono text-xs px-3.5 py-1.5 cursor-pointer flex items-center justify-center" style={{ minHeight: '38px', minWidth: '38px', clipPath: 'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)', color: isAvant ? '#39FF14' : 'rgba(255,255,255,0.6)', border: isAvant ? '1px solid rgba(57,255,20,0.3)' : '1px solid rgba(255,255,255,0.15)', background: 'none' }} onMouseEnter={() => { if (isAvant) audioManager.playSfx('tap_nav', 0.08); }} >›</button>}
         </div>
       </div>
 
@@ -1074,12 +1078,16 @@ export default function Chapter() {
                         <div className="pt-6 flex gap-2">
                           <button onClick={handlePlay}
                             disabled={isPlayLocked}
-                            className={`flex-1 py-3 text-xs tracking-[0.3em] font-black border uppercase transition-all rounded cursor-pointer ${
+                            className={`flex-1 py-3 text-xs tracking-[0.3em] font-black border uppercase transition-all cursor-pointer ${
                               !isPlayLocked 
                                 ? (isAvant ? 'border-[#39FF14] bg-[#39FF14] text-black hover:bg-[#39FF14]/90' : 'border-[#fff] bg-[#fff] text-black hover:bg-white/90')
                                 : 'border-white/10 bg-white/5 text-white/20 cursor-not-allowed'
                             }`}
-                            style={!isPlayLocked ? { boxShadow: `0 4px 12px ${isAvant ? '#39FF14' : meta.dc}30` } : {}}
+                            style={{
+                              minHeight: '48px',
+                              clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+                              ...(!isPlayLocked ? { boxShadow: `0 4px 12px ${isAvant ? '#39FF14' : meta.dc}30` } : {})
+                            }}
                           >
                             {isUnlockReqLocked ? '🔒 DECODE REQUIRED' : isCleared ? 'REPLAY TRANSMISSION' : '▶ START TRANSMISSION'}
                           </button>
@@ -1093,11 +1101,15 @@ export default function Chapter() {
                                 handlePlay();
                               }}
                               title="Export frame-perfect 100% PERFECT+ run video (DEV ONLY)"
-                              className={`px-4 py-3 text-xs font-mono border rounded uppercase transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                              className={`px-4 py-3 text-xs font-mono border uppercase transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                                 !isPlayLocked
                                   ? 'border-[#FF1493] bg-[#FF1493]/15 text-[#FF1493] hover:bg-[#FF1493] hover:text-black shadow-[0_0_12px_rgba(255,20,147,0.3)]'
                                   : 'border-white/10 bg-white/5 text-white/20 cursor-not-allowed'
                               }`}
+                              style={{
+                                minHeight: '48px',
+                                clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+                              }}
                             >
                               <Film size={14} />
                               <span className="hidden sm:inline">EXPORT VIDEO</span>
@@ -1106,7 +1118,11 @@ export default function Chapter() {
 
                           {isUnlocked(songs.indexOf(selectedSong)) && (
                             <button onClick={() => setLocation(`/song/${selectedSong.id}?from=chapter/${monthNum}`)}
-                              className="py-3 px-4 text-xs font-mono border border-white/10 hover:border-white/30 text-white/60 hover:text-white rounded cursor-pointer bg-transparent">
+                              className="py-3 px-4 text-xs font-mono border border-white/10 hover:border-white/30 text-white/60 hover:text-white cursor-pointer bg-transparent"
+                              style={{
+                                minHeight: '48px',
+                                clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+                              }}>
                               CODEX
                             </button>
                           )}
@@ -1127,9 +1143,9 @@ export default function Chapter() {
       {/* MOBILE FLOATING BOTTOM PLAY PANEL (only on viewport size < lg) */}
       {selectedSong && (
         <div
-          className="lg:hidden fixed z-30 p-3 border rounded-2xl"
+          className="lg:hidden fixed z-30 p-3 border"
           style={{
-            bottom: 'max(14px, env(safe-area-inset-bottom, 14px))',
+            bottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 1.25rem)',
             left: '68px',
             right: '12px',
             borderColor: isAvant ? 'rgba(57,255,20,0.3)' : 'rgba(255,255,255,0.12)',
@@ -1137,6 +1153,7 @@ export default function Chapter() {
             backdropFilter: 'blur(20px)',
             WebkitBackdropFilter: 'blur(20px)',
             boxShadow: '0 8px 32px rgba(0,0,0,0.8), 2px 2px 0 #000',
+            clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%)',
           }}
         >
           <div className="flex flex-col gap-2">
@@ -1158,7 +1175,7 @@ export default function Chapter() {
 
             {/* Warnings inside overlay if locked */}
             {isPlayLocked && (
-              <div className="p-1.5 border border-[#FF3800]/30 bg-[#FF3800]/10 text-center rounded text-[8px] font-mono text-[#FF3800] uppercase mb-1">
+              <div className="p-1.5 border border-[#FF3800]/30 bg-[#FF3800]/10 text-center text-[8px] font-mono text-[#FF3800] uppercase mb-1">
                 {isTimeLocked 
                   ? '🔒 CHRONO TIME LOCK ACTIVE' 
                   : isBonusLocked 
@@ -1173,12 +1190,16 @@ export default function Chapter() {
               <button
                 onClick={handlePlay}
                 disabled={isPlayLocked}
-                className={`flex-1 py-3 text-xs tracking-[0.3em] font-black border uppercase transition-all rounded cursor-pointer ${
+                className={`flex-1 py-3 text-xs tracking-[0.3em] font-black border uppercase transition-all cursor-pointer ${
                   !isPlayLocked
                     ? (isAvant ? 'border-[#39FF14] bg-[#39FF14] text-black hover:bg-[#39FF14]/90' : 'border-[#fff] bg-[#fff] text-black hover:bg-white/90')
                     : 'border-white/10 bg-white/5 text-white/20 cursor-not-allowed'
                 }`}
-                style={!isPlayLocked ? { boxShadow: `0 4px 12px ${isAvant ? '#39FF14' : meta.dc}30` } : {}}
+                style={{
+                  minHeight: '48px',
+                  clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+                  ...(!isPlayLocked ? { boxShadow: `0 4px 12px ${isAvant ? '#39FF14' : meta.dc}30` } : {})
+                }}
               >
                 {isUnlockReqLocked ? '🔒 DECODE' : isCleared ? 'REPLAY' : '▶ START'}
               </button>
@@ -1186,7 +1207,11 @@ export default function Chapter() {
               {isUnlocked(songs.indexOf(selectedSong)) && (
                 <button
                   onClick={() => setLocation(`/song/${selectedSong.id}?from=chapter/${monthNum}`)}
-                  className="py-3 px-3 text-xs font-mono border border-white/10 hover:border-white/30 text-white/60 hover:text-white rounded cursor-pointer bg-transparent"
+                  className="py-3 px-4 text-xs font-mono border border-white/10 hover:border-white/30 text-white/60 hover:text-white cursor-pointer bg-transparent"
+                  style={{
+                    minHeight: '48px',
+                    clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+                  }}
                 >
                   CODEX
                 </button>

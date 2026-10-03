@@ -1944,7 +1944,9 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
             style={{
-              position: 'fixed', bottom: '40px',
+              position: 'fixed',
+              bottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 3.5rem)',
+              left: 0, right: 0,
               display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px',
               zIndex: 350,
             }}
@@ -1967,18 +1969,19 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
                 whileHover={{ scale: 1.06 }}
                 whileTap={{ scale: 0.94 }}
                 style={{
-                  padding: '8px 18px',
+                  minHeight: '44px',
+                  padding: '10px 22px',
                   background: 'rgba(5,4,2,0.85)',
                   border: `1.5px solid ${isBombshell ? '#FF1493' : 'rgba(255,255,255,0.3)'}`,
-                  borderRadius: '20px',
                   color: '#fff',
                   fontFamily: '"JetBrains Mono", monospace',
-                  fontSize: '10px',
+                  fontSize: '11px',
                   fontWeight: 900,
                   letterSpacing: '0.15em',
                   cursor: 'pointer',
                   backdropFilter: 'blur(10px)',
                   boxShadow: isBombshell ? '0 0 18px rgba(255,20,147,0.4)' : '0 4px 14px rgba(0,0,0,0.5)',
+                  clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
                 }}
               >
                 [ ⚡ FLIP ALL ]
@@ -1996,7 +1999,8 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.8 }}
             style={{
-              position: 'fixed', bottom: '28px',
+              position: 'fixed',
+              bottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 2.5rem)',
               left: 0, right: 0,
               display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center',
               gap: '10px', zIndex: 300,
@@ -2008,7 +2012,8 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
                 onClick={onBuyAnother}
                 disabled={isRepurchasing}
                 style={{
-                  padding: '10px 20px', borderRadius: '8px',
+                  minHeight: '46px',
+                  padding: '10px 20px',
                   background: `${meta.accent}18`,
                   color: '#fff',
                   fontFamily: '"JetBrains Mono", monospace', fontWeight: 900,
@@ -2018,6 +2023,7 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
                   opacity: isRepurchasing ? 0.5 : 1,
                   backdropFilter: 'blur(10px)',
                   boxShadow: `0 4px 16px ${meta.accent}20`,
+                  clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
                 }}
                 whileHover={!isRepurchasing ? { scale: 1.05 } : {}}
                 whileTap={!isRepurchasing ? { scale: 0.98 } : {}}
@@ -2030,7 +2036,8 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
             <motion.button
               onClick={handleCastPull}
               style={{
-                padding: '10px 18px', borderRadius: '8px',
+                minHeight: '46px',
+                padding: '10px 18px',
                 background: 'rgba(138, 99, 210, 0.18)',
                 color: '#C4A7E7',
                 fontFamily: '"JetBrains Mono", monospace', fontWeight: 900,
@@ -2040,6 +2047,7 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
                 backdropFilter: 'blur(10px)',
                 display: 'inline-flex', alignItems: 'center', gap: '6px',
                 boxShadow: '0 4px 20px rgba(138, 99, 210, 0.25)',
+                clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
               }}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.98 }}
@@ -2053,7 +2061,8 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
             <motion.button
               onClick={handleSharePull}
               style={{
-                padding: '10px 18px', borderRadius: '8px',
+                minHeight: '46px',
+                padding: '10px 18px',
                 background: shareCopied ? 'rgba(16, 185, 129, 0.2)' : 'rgba(0, 240, 255, 0.15)',
                 color: shareCopied ? '#10b981' : '#00f0ff',
                 fontFamily: '"JetBrains Mono", monospace', fontWeight: 900,
@@ -2063,6 +2072,7 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
                 backdropFilter: 'blur(10px)',
                 display: 'inline-flex', alignItems: 'center', gap: '6px',
                 boxShadow: shareCopied ? '0 4px 20px rgba(16, 185, 129, 0.3)' : '0 4px 20px rgba(0, 240, 255, 0.2)',
+                clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
               }}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.98 }}
@@ -2085,7 +2095,8 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
             <motion.button
               onClick={handleStartDecrypter}
               style={{
-                padding: '10px 22px', borderRadius: '8px',
+                minHeight: '46px',
+                padding: '10px 22px',
                 background: 'linear-gradient(135deg, #00f0ff, #7000ff)',
                 color: '#fff',
                 fontFamily: '"JetBrains Mono", monospace', fontWeight: 900,
@@ -2093,6 +2104,7 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
                 border: 'none',
                 cursor: 'pointer',
                 boxShadow: '0 8px 32px rgba(0,240,255,0.25)',
+                clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
               }}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.98 }}
@@ -2105,7 +2117,8 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
               <motion.button
                 onClick={onComplete}
                 style={{
-                  padding: '10px 20px', borderRadius: '8px',
+                  minHeight: '46px',
+                  padding: '10px 20px',
                   background: 'linear-gradient(135deg, #ffd700, #ffaa00)',
                   color: '#000',
                   fontFamily: '"JetBrains Mono", monospace', fontWeight: 900,
@@ -2113,6 +2126,7 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
                   border: 'none',
                   cursor: 'pointer',
                   boxShadow: '0 4px 16px rgba(255,215,0,0.3)',
+                  clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
                 }}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.98 }}

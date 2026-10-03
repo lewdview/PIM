@@ -14,7 +14,9 @@
   min-height: 100dvh;
   position: relative;
   overflow-x: hidden;
-  padding-bottom: 6rem;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 6.5rem);
   --palette-dominant: #ff3800;
   --palette-secondary: #a855f7;
   --palette-accent: #00e5ff;
@@ -149,6 +151,7 @@
   justify-content: center;
   gap: 0.75rem;
   padding: 1rem 2.5rem;
+  min-height: 48px;
   font-family: 'Roboto Mono', monospace;
   font-weight: 800;
   font-size: 0.75rem;
@@ -157,7 +160,7 @@
   color: #000;
   background: var(--palette-dominant);
   border: 2px solid #000;
-  clip-path: polygon(12px 0%, 100% 0%, calc(100% - 12px) 100%, 0% 100%);
+  clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
   cursor: pointer;
   transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
   text-decoration: none;
@@ -175,6 +178,7 @@
   justify-content: center;
   gap: 0.65rem;
   padding: 0.85rem 1.85rem;
+  min-height: 48px;
   font-family: 'Roboto Mono', monospace;
   font-weight: 700;
   font-size: 0.7rem;
@@ -183,6 +187,7 @@
   background: rgba(15, 15, 24, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.12);
   color: rgba(255, 255, 255, 0.85);
+  clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
   cursor: pointer;
   transition: all 0.35s ease;
   text-decoration: none;
