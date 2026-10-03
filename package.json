@@ -12,7 +12,10 @@
     "lint": "eslint .",
     "tauri": "npx tauri",
     "tauri:dev": "npx tauri dev",
-    "tauri:build": "npx tauri build"
+    "tauri:build": "npx tauri build",
+    "bot:dev": "npm run dev --prefix discord-bot",
+    "bot:build": "npm run build --prefix discord-bot",
+    "bot:start": "npm run start --prefix discord-bot"
   },
   "dependencies": {
     "@coinbase/wallet-sdk": "^4.3.7",
