@@ -269,6 +269,36 @@ export function getHighestOwnedCard(
   return best;
 }
 
+// ── Award Play shard helpers ────────────────────────────────────────────────
+// Shards are earned per song from pack pulls (common 2 / uncommon 3 / rare 5 /
+// legendary+mythic 10) and recorded in the fragments map. 10 shards unlocks
+// Award Play for that song: high scores earn prize packs.
+
+export const AWARD_PLAY_SHARD_THRESHOLD = 10;
+
+/** Shard count for a 365 day, checking every known fragments key format. */
+export function getShardsForDay(
+  fragments: Record<string, number> | null | undefined,
+  day: number
+): number {
+  if (!fragments || !Number.isFinite(day)) return 0;
+  const keys = [`card-${day}`, `day-${String(day).padStart(3, '0')}`, `day-${day}`];
+  let best = 0;
+  for (const k of keys) {
+    const v = fragments[k];
+    if (typeof v === 'number' && v > best) best = v;
+  }
+  return best;
+}
+
+/** True when the song has enough shards to unlock Award Play prizes. */
+export function isAwardPlayUnlocked(
+  fragments: Record<string, number> | null | undefined,
+  day: number
+): boolean {
+  return getShardsForDay(fragments, day) >= AWARD_PLAY_SHARD_THRESHOLD;
+}
+
 async function syncUserFragmentToDb(userId: string, songId: string, count: number) {
   if (!userId || !songId) return;
   try {
