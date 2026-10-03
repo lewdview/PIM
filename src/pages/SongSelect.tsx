@@ -4,7 +4,7 @@ import { loadCatalog, isSongTimeLocked, getModifierForSong } from "@/game/api";
 import type { GameSong } from "@/game/api";
 import { audioManager } from "@/game/audio";
 import { getActiveTheme } from "@/lib/options";
-import { useVaultStore, ownsCardForDay } from "../store/useVaultStore";
+import { useVaultStore, ownsCardForDay, isAwardPlayUnlocked, getShardsForDay, AWARD_PLAY_SHARD_THRESHOLD } from "../store/useVaultStore";
 import { getCurrentDay, getMonthNumFromDay, getRelativeDay } from "../utils/dayCalc";
 import { CHAPTERS, type ChapterMeta } from "@/game/campaign";
 import { getMedalForSong, getHighScore, getScoreHistory } from "@/game/progress";
@@ -82,6 +82,7 @@ export default function SongSelect() {
   const isAvant = getActiveTheme() === 'avant-garde';
 
   const collection = useVaultStore((s) => s.collection);
+  const fragments = useVaultStore((s) => s.fragments);
   const loadVaultData = useVaultStore((s) => s.loadVaultData);
   const claimedRewards = useVaultStore((s) => s.claimedRewards);
   const equippedCardId = useVaultStore((s) => s.equippedCardId);
@@ -906,7 +907,28 @@ export default function SongSelect() {
                         Own this card to play — find it in packs or the vault
                       </div>
                     </div>
-                  ) : null}
+                  ) : selected && (() => {
+                    const shards = getShardsForDay(fragments, selected.day);
+                    const unlocked = isAwardPlayUnlocked(fragments, selected.day);
+                    return (
+                      <div className={`border p-4 rounded-xl text-center mb-4 ${unlocked ? 'border-[#FFD700]/40 bg-[#FFD700]/10' : 'border-white/10 bg-white/5'}`}>
+                        <div className={`font-mono text-xs font-black tracking-wider uppercase ${unlocked ? 'text-[#FFD700]' : 'text-white/70'}`}>
+                          {unlocked ? '🏆 Award play unlocked' : `◈ ${shards} / ${AWARD_PLAY_SHARD_THRESHOLD} shards`}
+                        </div>
+                        {!unlocked && (
+                          <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden mt-2 mb-1">
+                            <div className="h-full bg-gradient-to-r from-[#FFD700] to-[#FF7A33] rounded-full transition-all duration-500"
+                              style={{ width: `${Math.min(100, (shards / AWARD_PLAY_SHARD_THRESHOLD) * 100)}%` }} />
+                          </div>
+                        )}
+                        <div className="font-mono text-[9px] text-white/60 mt-1 uppercase">
+                          {unlocked
+                            ? 'High scores earn prize packs'
+                            : 'Pull this card to unlock award play prizes'}
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   <div className="flex gap-3">
                     <button
