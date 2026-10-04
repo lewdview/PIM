@@ -128,11 +128,16 @@ export function drawTrackLyrics(ctx: CanvasRenderingContext2D, opts: TrackLyricD
   // Project the lyric anchor through the ACTIVE track POV so the words sit
   // on the real track surface (perspective-correct in every mode).
   const proj = getArchetypeProjection(1, LYRIC_PROGRESS, W, H, archetype, stage, t, povMode);
-  const cx = proj.x + proj.w / 2;
-  const cy = proj.y;
-  const scale = Math.max(0.15, proj.scale);
+  // Defensive: exotic POV modes can return NaN/zero/offscreen projections.
+  // Fall back to a centered on-track position so lyrics survive every POV change.
+  const projOk =
+    Number.isFinite(proj.x) && Number.isFinite(proj.y) &&
+    Number.isFinite(proj.w) && Number.isFinite(proj.scale) && proj.scale > 0.01;
+  const cx = projOk ? proj.x + proj.w / 2 : W / 2;
+  const cy = projOk ? proj.y : H * 0.55;
+  const scale = projOk ? Math.max(0.15, proj.scale) : 0.9;
 
-  const fontSize = Math.max(9, 30 * scale);
+  const fontSize = Math.max(14, 52 * scale);
   ctx.save();
   ctx.font = `800 ${fontSize}px "JetBrains Mono", ui-monospace, monospace`;
   ctx.textBaseline = "middle";
