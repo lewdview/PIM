@@ -137,7 +137,9 @@ export function drawTrackLyrics(ctx: CanvasRenderingContext2D, opts: TrackLyricD
   const cy = projOk ? proj.y : H * 0.55;
   const scale = projOk ? Math.max(0.15, proj.scale) : 0.9;
 
-  const fontSize = Math.max(14, 52 * scale);
+  // Scale lyrics to canvas height so they stay readable: base 4.5% of
+  // screen height at full projection scale, never below 3%.
+  const fontSize = Math.max(H * 0.03, H * 0.045 * Math.max(0.5, scale));
   ctx.save();
   ctx.font = `800 ${fontSize}px "JetBrains Mono", ui-monospace, monospace`;
   ctx.textBaseline = "middle";
