@@ -31,7 +31,7 @@ import { refineAndBlendEdges, disposeCanvas, drawMovingGasAura } from './drawHel
 import JudgmentBadge, { getJudgmentBadgeSvgHtml, getJudgmentStreamItemHtml } from './JudgmentBadge';
 import GameplayVisualizer from './GameplayVisualizer';
 import TutorialOverlay, { type TutorialStepType } from './TutorialOverlay';
-import WordLyrics from "@/components/WordLyrics";
+import { loadLyricsForDay, drawTrackLyrics, type TimedLine } from './trackLyrics';
 
 // Use Vite's eager glob to grab files in /public/data/slideshow/
 const imageModules = import.meta.glob<string>('../../public/data/slideshow/**/*.{png,jpg,jpeg,gif,webp,svg}', { query: '?url', import: 'default', eager: true });
@@ -1269,6 +1269,7 @@ export default function Game() {
   const offscreenCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const noteTrailsRef = useRef<{ id: string; x: number; y: number; color: string; size: number; alpha: number; birthTime: number }[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const trackLyricsRef = useRef<{ day: number; lines: TimedLine[] }>({ day: 0, lines: [] });
   const audioObjectUrlRef = useRef<string | null>(null);
   const audioOffsetRef = useRef(0);
   const laneColorsRef = useRef<[string, string, string]>(["#FF1493", "#00E5FF", "#39FF14"]);
@@ -5719,6 +5720,19 @@ export default function Game() {
     }
     ctx.restore();
 
+    // ── 4b. ON-TRACK LYRICS (painted on the track surface; notes render over) ──
+    if (trackLyricsRef.current.lines.length > 0) {
+      drawTrackLyrics(ctx, {
+        W,
+        H,
+        t,
+        lines: trackLyricsRef.current.lines,
+        povMode: activePovModeRef.current,
+        archetype: activeArchetypeRef.current,
+        stage: calculatedStage,
+      });
+    }
+
     // ── 5. HIGH-PERFORMANCE NOTES RENDERING (Active Visible Slice) ──
     // Skip note rendering during intro stingers so the rolling highway remains completely clean
     if (phaseRef.current === "countdown") return;
@@ -8536,7 +8550,18 @@ export default function Game() {
           }
         }
       songRef.current = song;
-      
+
+      // Load on-track lyrics for this song's day (canvas-rendered, no gating).
+      if (song.day > 0 && trackLyricsRef.current.day !== song.day) {
+        trackLyricsRef.current = { day: song.day, lines: [] };
+        loadLyricsForDay(song.day).then((lines) => {
+          // Only keep if the song hasn't changed since the fetch started.
+          if (trackLyricsRef.current.day === song.day) {
+            trackLyricsRef.current.lines = lines;
+          }
+        });
+      }
+
       // Initialize GameSense on song load
       gameSenseService.init().then((status) => {
         if (status === 'connected') {
@@ -10707,13 +10732,6 @@ export default function Game() {
           className="relative w-full flex-1 min-h-0 overflow-hidden"
           style={{ touchAction: 'none' }}
         >
-
-          {/* Word-synced lyrics overlay — always on when the song has an LRC file */}
-          {song && song.day > 0 && (
-            <div className="absolute top-[5%] left-0 right-0 z-20 pointer-events-none px-4">
-              <WordLyrics day={song.day} audioRef={audioRef} />
-            </div>
-          )}
 
           {/* Circular Score Dial & Combo Overlays (PIM Style) */}
           {(() => {
