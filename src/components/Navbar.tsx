@@ -10,7 +10,7 @@ import {
   Home, Layers, Trophy, Wallet, LogOut, Zap, X, FileText,
   Flame, BookOpen, Monitor, Gift, Settings, Image, Map, Sparkles,
   User, ChevronDown, ChevronRight, Gamepad2, GraduationCap, LayoutGrid, Bell,
-  Search, Radio, Shield, CheckCircle2, CornerDownLeft, Volume2, Compass
+  Search, Radio, Shield, CheckCircle2, CornerDownLeft, Volume2, Compass, Gem, Bomb
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../store/useAuthStore';
@@ -85,6 +85,8 @@ const menuSections: MenuSection[] = [
       { to: '/hero', label: 'Hero Exhibit', icon: Image, desc: 'Museum-grade daily masterpiece showcase', badge: 'MUSEUM', badgeColor: '#FFAA00' },
       { to: '/vault/collection', label: 'Collection Binder', icon: Layers, desc: 'Your TH3SCR1B3 cards & proofs', badge: 'INVENTORY', badgeColor: '#FF5500' },
       { to: '/vault/reveal', label: 'Pack Reveal', icon: Sparkles, desc: 'Open earned booster packs', badge: 'UNBOX', badgeColor: '#FF1493' },
+      { to: '/vault/finds', label: 'Vault Collection', icon: Gem, desc: 'Hidden vault finds — odds, cards & pull simulator', badge: 'VAULT FINDS', badgeColor: '#FFD700' },
+      { to: '/bombshells', label: 'Bombshells', icon: Bomb, desc: 'Variant covers, month rewards & collection tracker', badge: 'VARIANTS', badgeColor: '#FF1493' },
       { to: '/vault/codex', label: 'Card Codex', icon: BookOpen, desc: 'Card catalog & set tracker', badge: 'REGISTRY', badgeColor: '#39FF14' },
     ],
   },
