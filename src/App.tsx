@@ -101,6 +101,8 @@ const BeatmapEditor = lazyWithRetry(() => import('./pages/BeatmapEditor'));
 const CardDesignShowcase = lazyWithRetry(() => import('./pages/CardDesignShowcase'));
 const PitchDeck = lazyWithRetry(() => import('./pages/PitchDeck'));
 const SlideshowPage = lazyWithRetry(() => import('./pages/SlideshowPage'));
+const VaultCollectionPage = lazyWithRetry(() => import('./pages/VaultCollectionPage'));
+const BombshellsPage = lazyWithRetry(() => import('./pages/BombshellsPage'));
 
 function OptionsRouteHandler() {
   const setOptionsModalOpen = useVaultStore((s) => s.setOptionsModalOpen);
@@ -376,6 +378,9 @@ export default function App() {
                 <Route path="/collection" component={CollectionPage} />
                 <Route path="/vault/reveal" component={PackRevealPage} />
                 <Route path="/reveal" component={PackRevealPage} />
+                <Route path="/vault/finds" component={VaultCollectionPage} />
+                <Route path="/vaultfinds" component={VaultCollectionPage} />
+                <Route path="/bombshells" component={BombshellsPage} />
                 <Route path="/vault/forge" component={ForgePage} />
                 <Route path="/forge" component={ForgePage} />
                 <Route path="/vault/leaderboard" component={LeaderboardPage} />
