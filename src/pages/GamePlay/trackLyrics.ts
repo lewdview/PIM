@@ -3,6 +3,7 @@
 // Words lie flat on the track (perspective-projected via the active POV's
 // projection math), and notes/bursts are drawn OVER them by the draw loop.
 // Always on when the song's day has an LRC file — no gating, no unlock flow.
+// Each line is word-wrapped into rows that stretch to fill the full track width.
 
 import { getArchetypeProjection, type PovMode } from "./projections";
 import type { TrackArchetype } from "./archetypes";
@@ -26,10 +27,15 @@ export type WordEffect = "pop" | "glow" | "rise" | "flash" | "bounce" | "fade";
 
 const EFFECTS: WordEffect[] = ["pop", "glow", "rise", "flash", "bounce", "fade"];
 
-// Track progress (0 = vanishing point, 1 = hit line) where the lyric line sits.
+// Track progress (0 = vanishing point, 1 = hit line) where the lyric block sits.
 const LYRIC_PROGRESS = 0.38;
 // Road-tilt foreshortening: text painted on the track is vertically compressed.
 const ROAD_TILT = 0.62;
+// Row upscale cap: a short row stretches to fill the track, but never beyond this
+// multiple of its natural size (keeps single-word rows from going absurd).
+const ROW_FILL_MAX = 2.0;
+// Vertical gap between wrapped rows, as a multiple of row height.
+const ROW_GAP = 1.15;
 
 // ── LRC parsing ──────────────────────────────────────────────────────────────
 
@@ -137,21 +143,53 @@ export function drawTrackLyrics(ctx: CanvasRenderingContext2D, opts: TrackLyricD
   const cy = projOk ? proj.y : H * 0.55;
   const scale = projOk ? Math.max(0.15, proj.scale) : 0.9;
 
-  // Scale lyrics to canvas height so they stay readable: base 4.5% of
-  // screen height at full projection scale, never below 3%.
-  const fontSize = Math.max(H * 0.03, H * 0.045 * Math.max(0.5, scale));
+  // BIG type: 9% of canvas height at full projection scale, never below 6%.
+  const fontSize = Math.max(H * 0.06, H * 0.09 * Math.max(0.5, scale));
   ctx.save();
   ctx.font = `800 ${fontSize}px "JetBrains Mono", ui-monospace, monospace`;
   ctx.textBaseline = "middle";
   ctx.textAlign = "left";
 
-  // Centered horizontal layout in unscaled font units.
-  const spacing = fontSize * 0.30;
+  // Full track width at the lyric plane: lane 0's left edge to lane 2's right
+  // edge through the same POV math, so wrapped rows truly fill the track.
+  let trackW = W * 0.94;
+  if (projOk) {
+    const p0 = getArchetypeProjection(0, LYRIC_PROGRESS, W, H, archetype, stage, t, povMode);
+    const p2 = getArchetypeProjection(2, LYRIC_PROGRESS, W, H, archetype, stage, t, povMode);
+    const span = p2.x + p2.w - p0.x;
+    if (Number.isFinite(span) && span > fontSize * 2) trackW = span;
+  }
+
+  const spacing = fontSize * 0.3;
   const widths = line.words.map((w) => ctx.measureText(w.text).width);
-  const totalW = widths.reduce((a, b) => a + b, 0) + spacing * (line.words.length - 1);
-  // Clamp the line to the projected track width so words never spill off-road.
-  const maxW = Math.max(fontSize * 2, proj.w * 1.6);
-  const fit = totalW > maxW ? maxW / totalW : 1;
+  // Row budget in font units: a row drawn at fill=1 exactly spans the track.
+  const budget = trackW / scale;
+
+  // Greedy word-wrap into rows that fit the track width.
+  const rows: number[][] = [];
+  let cur: number[] = [];
+  let curW = 0;
+  for (let i = 0; i < line.words.length; i++) {
+    const wW = widths[i];
+    if (cur.length > 0 && curW + spacing + wW > budget) {
+      rows.push(cur);
+      cur = [];
+      curW = 0;
+    }
+    if (cur.length > 0) curW += spacing;
+    cur.push(i);
+    curW += wW;
+  }
+  if (cur.length > 0) rows.push(cur);
+
+  // Per-row fill factor: stretch every row to fill the track width.
+  // Short rows upscale (capped); a lone over-wide word shrinks to fit.
+  const rowUnits = rows.map(
+    (r) => r.reduce((a, i) => a + widths[i], 0) + spacing * (r.length - 1)
+  );
+  const rowFit = rowUnits.map((u) => Math.min(ROW_FILL_MAX, budget / Math.max(1, u)));
+  const rowH = rowFit.map((f) => fontSize * scale * f * ROAD_TILT * ROW_GAP);
+  const totalH = rowH.reduce((a, b) => a + b, 0);
 
   let activeIdx = -1;
   for (let i = 0; i < line.words.length; i++) {
@@ -162,78 +200,87 @@ export function drawTrackLyrics(ctx: CanvasRenderingContext2D, opts: TrackLyricD
     }
   }
 
-  let x = cx - (totalW * fit) / 2;
-  for (let i = 0; i < line.words.length; i++) {
-    const w = line.words[i];
-    const wW = widths[i] * fit;
-    const isActive = i === activeIdx;
-    const isSung = activeIdx >= 0 ? i < activeIdx : t >= w.end;
-    const u = clamp01((t - w.start) / Math.max(0.001, w.end - w.start));
+  let rowY = cy - totalH / 2;
+  for (let r = 0; r < rows.length; r++) {
+    const idxs = rows[r];
+    const s = scale * rowFit[r]; // combined perspective + row-fill scale
+    const rowScreenW = rowUnits[r] * s;
+    let x = cx - rowScreenW / 2;
+    const yc = rowY + rowH[r] / 2;
 
-    ctx.save();
-    // Word center in screen space.
-    ctx.translate(x + wW / 2, cy);
+    for (const i of idxs) {
+      const w = line.words[i];
+      const wW = widths[i] * s;
+      const isActive = i === activeIdx;
+      const isSung = activeIdx >= 0 ? i < activeIdx : t >= w.end;
+      const u = clamp01((t - w.start) / Math.max(0.001, w.end - w.start));
 
-    // Perspective stretch: full horizontal scale (track widens toward player),
-    // vertical foreshortening (painted-on-road tilt).
-    let sx = scale * fit;
-    let sy = scale * fit * ROAD_TILT;
-    let dy = 0;
-    let alpha = 1;
-    let glow = false;
-    let flashHue = -1;
+      ctx.save();
+      // Word center in screen space.
+      ctx.translate(x + wW / 2, yc);
 
-    switch (w.effect) {
-      case "pop": {
-        if (isActive) {
-          const s = u < 0.55 ? 0.6 + 0.75 * (u / 0.55) : 1.35 - 0.23 * ((u - 0.55) / 0.45);
-          sx *= s;
-          sy *= s;
+      // Perspective stretch: full horizontal scale (track widens toward player),
+      // vertical foreshortening (painted-on-road tilt).
+      let sx = s;
+      let sy = s * ROAD_TILT;
+      let dy = 0;
+      let alpha = 1;
+      let glow = false;
+      let flashHue = -1;
+
+      switch (w.effect) {
+        case "pop": {
+          if (isActive) {
+            const k = u < 0.55 ? 0.6 + 0.75 * (u / 0.55) : 1.35 - 0.23 * ((u - 0.55) / 0.45);
+            sx *= k;
+            sy *= k;
+          }
+          break;
         }
-        break;
+        case "glow": {
+          glow = isActive;
+          break;
+        }
+        case "rise": {
+          if (isActive) dy = -11 * s * easeOutCubic(u);
+          break;
+        }
+        case "flash": {
+          if (isActive) flashHue = (u * 300) % 360;
+          break;
+        }
+        case "bounce": {
+          if (isActive) dy = -Math.abs(Math.sin(u * Math.PI * 2)) * 10 * s * (1 - u * 0.5);
+          break;
+        }
+        case "fade": {
+          if (isActive) alpha = 0.15 + 0.85 * u;
+          break;
+        }
       }
-      case "glow": {
-        glow = isActive;
-        break;
+
+      ctx.translate(0, dy);
+      ctx.scale(sx, sy);
+      ctx.globalAlpha = alpha * (isActive ? 1 : isSung ? 0.5 : 0.3);
+
+      ctx.fillStyle = flashHue >= 0 ? `hsl(${flashHue}, 100%, 72%)` : "#ffffff";
+      if (glow) {
+        ctx.shadowColor = "#ff1493";
+        ctx.shadowBlur = 26;
       }
-      case "rise": {
-        if (isActive) dy = -11 * scale * easeOutCubic(u);
-        break;
-      }
-      case "flash": {
-        if (isActive) flashHue = (u * 300) % 360;
-        break;
-      }
-      case "bounce": {
-        if (isActive) dy = -Math.abs(Math.sin(u * Math.PI * 2)) * 10 * scale * (1 - u * 0.5);
-        break;
-      }
-      case "fade": {
-        if (isActive) alpha = 0.15 + 0.85 * u;
-        break;
-      }
+      // Dark outline keeps words readable over bright track art (scales with type).
+      ctx.strokeStyle = "rgba(0,0,0,0.8)";
+      ctx.lineWidth = Math.max(3.2, fontSize * 0.045);
+
+      // Draw centered: text was measured in font units, scale handles perspective.
+      const drawX = -widths[i] / 2;
+      ctx.strokeText(w.text, drawX, 0);
+      ctx.fillText(w.text, drawX, 0);
+      ctx.restore();
+
+      x += wW + spacing * s;
     }
-
-    ctx.translate(0, dy);
-    ctx.scale(sx, sy);
-    ctx.globalAlpha = alpha * (isActive ? 1 : isSung ? 0.5 : 0.30);
-
-    ctx.fillStyle = flashHue >= 0 ? `hsl(${flashHue}, 100%, 72%)` : "#ffffff";
-    if (glow) {
-      ctx.shadowColor = "#ff1493";
-      ctx.shadowBlur = 26;
-    }
-    // Dark outline keeps words readable over bright track art.
-    ctx.strokeStyle = "rgba(0,0,0,0.8)";
-    ctx.lineWidth = 3.2;
-
-    // Draw centered: text was measured in font units, scale handles perspective.
-    const drawX = -widths[i] / 2;
-    ctx.strokeText(w.text, drawX, 0);
-    ctx.fillText(w.text, drawX, 0);
-    ctx.restore();
-
-    x += wW + spacing * fit;
+    rowY += rowH[r];
   }
   ctx.restore();
 }
