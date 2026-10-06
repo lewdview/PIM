@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNotificationStore, type AnnouncementCategory, type SystemAnnouncement } from '../store/useNotificationStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { useLocation } from 'wouter';
+import { farcasterService } from '../services/farcasterService';
 import {
   Bell,
   X,
@@ -48,6 +49,7 @@ export const NotificationModal: React.FC = () => {
   const user = useAuthStore((s) => s.user);
   const [, setLocation] = useLocation();
   const [activeFilter, setActiveFilter] = useState<'all' | 'unread' | 'drops' | 'rewards'>('all');
+  const [fcSubscribed, setFcSubscribed] = useState(() => farcasterService.isNotificationsEnabled());
 
   if (!isOpen) return null;
 
@@ -264,6 +266,46 @@ export const NotificationModal: React.FC = () => {
               {filter.label}
             </button>
           ))}
+        </div>
+
+        {/* Farcaster / Warpcast Daily Drop Alerts Frequency Strip */}
+        <div
+          style={{
+            padding: '10px 24px',
+            background: 'rgba(0, 229, 255, 0.05)',
+            borderBottom: '1px solid rgba(0, 229, 255, 0.15)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            fontFamily: '"JetBrains Mono", monospace',
+            fontSize: '11px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#00e5ff' }}>
+            <Radio size={14} className="animate-pulse" />
+            <span>FARCASTER 365 DROP FREQUENCY</span>
+          </div>
+          <button
+            onClick={async () => {
+              const ok = await farcasterService.promptEnableNotifications();
+              if (ok) setFcSubscribed(true);
+            }}
+            style={{
+              padding: '4px 10px',
+              minHeight: '28px',
+              background: fcSubscribed ? 'rgba(57, 255, 20, 0.15)' : 'rgba(0, 229, 255, 0.15)',
+              border: `1px solid ${fcSubscribed ? '#39ff14' : '#00e5ff'}`,
+              color: fcSubscribed ? '#39ff14' : '#00e5ff',
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSize: '10px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              textTransform: 'uppercase',
+              clipPath: 'polygon(4px 0, 100% 0, calc(100% - 4px) 100%, 0 100%)',
+            }}
+          >
+            {fcSubscribed ? '⚡ FREQUENCY LOCKED' : '🔔 SUBSCRIBE ALERTS'}
+          </button>
         </div>
 
         {/* Transmission Feed */}

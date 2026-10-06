@@ -19,10 +19,16 @@ export interface SafeAreaInsets {
   right: number;
 }
 
+export interface NotificationDetails {
+  url: string;
+  token: string;
+}
+
 export interface FarcasterClientContext {
   clientFid: number;
   added: boolean;
   safeAreaInsets?: SafeAreaInsets;
+  notificationDetails?: NotificationDetails;
 }
 
 export interface FarcasterContext {
@@ -75,6 +81,10 @@ class FarcasterService {
             this.context = rawContext as unknown as FarcasterContext;
             console.log('[Farcaster] Context loaded from SDK:', this.context);
             this.applySafeAreaInsets(this.context?.client?.safeAreaInsets);
+            if (this.context?.client?.notificationDetails && this.context?.user?.fid) {
+              this.registerNotificationToken(this.context.client.notificationDetails, this.context.user.fid)
+                .catch(err => console.warn('[Farcaster] Auto-token sync warn:', err));
+            }
           }
         }
       } catch (ctxErr) {
@@ -244,6 +254,73 @@ class FarcasterService {
       }
     } catch (err) {
       console.warn('[Farcaster] sdk.actions.addFrame failed:', err);
+    }
+    return false;
+  }
+
+  /**
+   * Checks whether the user has active Farcaster notifications
+   */
+  public isNotificationsEnabled(): boolean {
+    if (this.context?.client?.notificationDetails) return true;
+    if (typeof localStorage !== 'undefined' && localStorage.getItem('pim_fc_notifications_enabled') === 'true') {
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Registers a user notification token to the Supabase backend
+   */
+  public async registerNotificationToken(
+    details: NotificationDetails,
+    fid: number
+  ): Promise<boolean> {
+    try {
+      const endpoint = 'https://toemkhrfsbkfkutwcjkd.supabase.co/functions/v1/farcaster-webhook';
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'register',
+          fid,
+          notificationDetails: details
+        })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data?.success) {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('pim_fc_notifications_enabled', 'true');
+        }
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.warn('[Farcaster] Failed registering token:', err);
+      return false;
+    }
+  }
+
+  /**
+   * Prompts the user to enable Daily Drop notifications in Warpcast and auto-registers their token
+   */
+  public async promptEnableNotifications(): Promise<boolean> {
+    try {
+      if (sdk?.actions?.addFrame) {
+        const result: any = await sdk.actions.addFrame();
+        console.log('[Farcaster] sdk.actions.addFrame result:', result);
+        const details = result?.notificationDetails || (this.context?.client as any)?.notificationDetails;
+        const fid = this.context?.user?.fid;
+        if (details && fid) {
+          await this.registerNotificationToken(details, fid);
+        }
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('pim_fc_notifications_enabled', 'true');
+        }
+        return true;
+      }
+    } catch (err) {
+      console.warn('[Farcaster] promptEnableNotifications failed:', err);
     }
     return false;
   }

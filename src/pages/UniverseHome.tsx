@@ -15,8 +15,9 @@ import { motion } from 'framer-motion';
 import { Link, useLocation } from 'wouter';
 import {
   Play, Pause, Volume2, Sparkles, Compass, Disc, Clock,
-  ArrowRight, Flame, Layers, Shield, Shuffle, Zap, Gamepad2, Info, ChevronRight
+  ArrowRight, Flame, Layers, Shield, Shuffle, Zap, Gamepad2, Info, ChevronRight, Bell
 } from 'lucide-react';
+import { farcasterService } from '../services/farcasterService';
 import { getCurrentDay, getTimeUntilNextDay, formatDate, getDateFromDay } from '../utils/dayCalc';
 import { loadCatalog, type GameSong } from '../game/api';
 import { useGlobalPlayer } from '../store/useGlobalPlayer';
@@ -133,6 +134,27 @@ export default function UniverseHome() {
     const randomDay = Math.floor(Math.random() * today) + 1;
     setLocation(`/day/${randomDay}`);
   }, [today, setLocation]);
+
+  // Farcaster Daily Drop Notification Alert State
+  const [isAlertsEnabled, setIsAlertsEnabled] = useState(false);
+  const [alertSubmitting, setAlertSubmitting] = useState(false);
+
+  useEffect(() => {
+    setIsAlertsEnabled(farcasterService.isNotificationsEnabled());
+  }, []);
+
+  const handleToggleFarcasterAlerts = useCallback(async () => {
+    setAlertSubmitting(true);
+    try {
+      const ok = await farcasterService.promptEnableNotifications();
+      if (ok) {
+        setIsAlertsEnabled(true);
+        audioManager.playSfx('badge_unlock', 0.6);
+      }
+    } finally {
+      setAlertSubmitting(false);
+    }
+  }, []);
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -357,6 +379,30 @@ export default function UniverseHome() {
               >
                 <Sparkles size={14} className="text-purple-400 animate-pulse" />
                 <span>GIVE ME A SIGN (RANDOM DAY DISCOVERY)</span>
+              </button>
+
+              {/* 4. DAILY DROP ALERTS (WARPCAST / FARCASTER) */}
+              <button
+                onClick={handleToggleFarcasterAlerts}
+                disabled={alertSubmitting}
+                className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 transition-all hover:scale-[1.01] active:scale-[0.98] cursor-pointer font-mono text-xs font-bold uppercase tracking-widest ${
+                  isAlertsEnabled
+                    ? 'bg-[#39FF14]/15 border border-[#39FF14]/50 text-[#39FF14]'
+                    : 'bg-[#00E5FF]/10 hover:bg-[#00E5FF]/20 border border-[#00E5FF]/40 text-[#00E5FF]'
+                }`}
+                style={{
+                  minHeight: '44px',
+                  clipPath: 'polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%)',
+                }}
+              >
+                <Bell size={14} className={isAlertsEnabled ? 'text-[#39FF14]' : 'text-[#00E5FF] animate-pulse'} />
+                <span>
+                  {alertSubmitting
+                    ? 'CONNECTING TRANSMISSION FREQUENCY...'
+                    : isAlertsEnabled
+                    ? '⚡ DAILY DROP ALERTS: ACTIVE'
+                    : '🔔 GET DAILY DROP ALERTS (WARPCAST)'}
+                </span>
               </button>
             </div>
 
