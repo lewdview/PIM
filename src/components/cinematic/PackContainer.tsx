@@ -948,12 +948,14 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
   }
   const [fragmentRewards, setFragmentRewards] = useState<FragmentReward[]>([]);
 
-  // Grant shards for all cards in the pack. Called automatically on pack open;
+  // Grant shards for the current pack's cards. Called automatically on pack open;
   // the decrypter button is now just a visual reveal, not the grant trigger.
+  // Granted per pack (never over accumulatedCards) so "buy another" repurchases
+  // can't re-grant earlier packs' shards.
   const grantPackShards = useCallback(() => {
     const grouped: { [cardId: string]: { card: OwnedCard['card']; totalGain: number } } = {};
 
-    accumulatedCards.forEach((owned) => {
+    cards.forEach((owned) => {
       const card = owned.card;
       const rarity = card.rarity as Rarity;
       let gain = 2;
@@ -994,14 +996,15 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
     setFragmentRewards(rewards);
     setShardsGranted(true);
     return rewards;
-  }, [accumulatedCards]);
+  }, [cards]);
 
   // Auto-grant shards when the pack opens — no manual decrypter click required.
+  // Re-fires for each new pack (shardsGranted is cleared by the cards-change reset).
   useEffect(() => {
-    if (!shardsGranted && accumulatedCards.length > 0) {
+    if (!shardsGranted && cards.length > 0) {
       grantPackShards();
     }
-  }, [shardsGranted, accumulatedCards, grantPackShards]);
+  }, [shardsGranted, cards, grantPackShards]);
 
   const handleStartDecrypter = useCallback(() => {
     // Shards are already granted on pack open; this just reveals the visual tally.
@@ -1084,6 +1087,7 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
     setHasDecryptedFragments(false);
     setDecrypterPhase('idle');
     setFragmentRewards([]);
+    setShardsGranted(false);
 
     return () => {
       clearTimeout(resetTimer);
