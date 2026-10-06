@@ -1001,6 +1001,40 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         console.warn('[Migrate] Error migrating guest cards:', err);
       }
 
+      // ── Award Play shard self-heal ──────────────────────────────────────
+      // Shards grant at pack-open time, but pulls from before the Oct 3
+      // economy (or a failed sync) can leave a song short of the shards its
+      // owned cards earned. Recompute the floor from the owned collection and
+      // top up anything below it. Additive only, capped at 10 per song, never
+      // reduces an existing count. Echo cards are excluded: burns don't grant.
+      {
+        const SHARD_GAIN_BY_RARITY: Record<string, number> = {
+          common: 2, uncommon: 3, rare: 5, legendary: 10, mythic: 10
+        };
+        const ownedFloor: Record<string, number> = {};
+        for (const oc of validMappedCards) {
+          if (!oc?.card || oc.isEcho) continue;
+          const key = (oc.card as { id?: string }).id;
+          if (!key) continue;
+          const gain = SHARD_GAIN_BY_RARITY[String(oc.card.rarity || 'common').toLowerCase()] ?? 0;
+          if (gain > 0) ownedFloor[key] = Math.min(10, (ownedFloor[key] ?? 0) + gain);
+        }
+        const healWrites: Promise<void>[] = [];
+        for (const [songId, floor] of Object.entries(ownedFloor)) {
+          if (floor > (finalFragments[songId] ?? 0)) {
+            finalFragments[songId] = floor;
+            healWrites.push(syncUserFragmentToDb(userId, songId, floor));
+          }
+        }
+        if (healWrites.length > 0) {
+          console.log(`[ShardHeal] Topping up ${healWrites.length} song(s) from owned collection.`);
+          Promise.allSettled(healWrites).then((results) => {
+            const failed = results.filter(r => r.status === 'rejected').length;
+            if (failed > 0) console.warn(`[ShardHeal] ${failed} shard sync(s) failed; will retry next login.`);
+          });
+        }
+      }
+
       // Keep localStorage in sync with merged database state
       Object.entries(finalHighScores).forEach(([songId, score]) => {
         localStorage.setItem(`hs_${songId}`, String(score));
