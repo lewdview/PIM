@@ -62,6 +62,9 @@ export function parseLrc(text: string): TimedLine[] {
 
   rawLines.sort((a, b) => a.start - b.start);
 
+  // One random karaoke style for the whole song — every word shares it.
+  const songEffect = EFFECTS[Math.floor(Math.random() * EFFECTS.length)];
+
   return rawLines.map((rl, i) => {
     const nextStart = i + 1 < rawLines.length ? rawLines[i + 1].start : rl.start + 4;
     const end = Math.max(nextStart, rl.start + 0.5);
@@ -71,7 +74,7 @@ export function parseLrc(text: string): TimedLine[] {
       text: t,
       start: rl.start + (dur * wi) / tokens.length,
       end: rl.start + (dur * (wi + 1)) / tokens.length,
-      effect: EFFECTS[Math.floor(Math.random() * EFFECTS.length)],
+      effect: songEffect,
     }));
     return { start: rl.start, end, words };
   });
@@ -147,7 +150,7 @@ export function drawTrackLyrics(ctx: CanvasRenderingContext2D, opts: TrackLyricD
   // BIG type: 9% of canvas height at full projection scale, never below 6%.
   const fontSize = Math.max(H * 0.06, H * 0.09 * Math.max(0.5, scale));
   ctx.save();
-  ctx.font = `800 ${fontSize}px "JetBrains Mono", ui-monospace, monospace`;
+  ctx.font = `500 ${fontSize}px "JetBrains Mono", ui-monospace, monospace`;
   ctx.textBaseline = "middle";
   ctx.textAlign = "left";
 
@@ -271,7 +274,7 @@ export function drawTrackLyrics(ctx: CanvasRenderingContext2D, opts: TrackLyricD
       }
       // Dark outline keeps words readable over bright track art (scales with type).
       ctx.strokeStyle = "rgba(0,0,0,0.8)";
-      ctx.lineWidth = Math.max(3.2, fontSize * 0.045);
+      ctx.lineWidth = Math.max(2, fontSize * 0.032);
 
       // Draw centered: text was measured in font units, scale handles perspective.
       const drawX = -widths[i] / 2;
