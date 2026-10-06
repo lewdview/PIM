@@ -21,11 +21,22 @@ export interface TimedLine {
   start: number; // seconds
   end: number; // seconds
   words: TimedWord[];
+  /** Display font picked at random per song (shared by all its lines). */
+  font: string;
 }
 
 export type WordEffect = "pop" | "glow" | "rise" | "flash" | "bounce" | "fade";
 
 const EFFECTS: WordEffect[] = ["pop", "glow", "rise", "flash", "bounce", "fade"];
+
+// Display fonts — one is picked at random per song.
+const LYRIC_FONTS: string[] = [
+  `"JetBrains Mono", ui-monospace, monospace`,
+  `Anton, Impact, "Arial Black", sans-serif`,
+  `"Space Grotesk", system-ui, sans-serif`,
+  `Impact, "Arial Black", sans-serif`,
+  `Georgia, "Times New Roman", serif`,
+];
 
 // Track progress (0 = vanishing point, 1 = hit line) where the lyric block sits.
 const LYRIC_PROGRESS = 0.38;
@@ -62,8 +73,9 @@ export function parseLrc(text: string): TimedLine[] {
 
   rawLines.sort((a, b) => a.start - b.start);
 
-  // One random karaoke style for the whole song — every word shares it.
+  // One random karaoke style + one random font for the whole song.
   const songEffect = EFFECTS[Math.floor(Math.random() * EFFECTS.length)];
+  const songFont = LYRIC_FONTS[Math.floor(Math.random() * LYRIC_FONTS.length)];
 
   return rawLines.map((rl, i) => {
     const nextStart = i + 1 < rawLines.length ? rawLines[i + 1].start : rl.start + 4;
@@ -76,7 +88,7 @@ export function parseLrc(text: string): TimedLine[] {
       end: rl.start + (dur * (wi + 1)) / tokens.length,
       effect: songEffect,
     }));
-    return { start: rl.start, end, words };
+    return { start: rl.start, end, words, font: songFont };
   });
 }
 
@@ -111,6 +123,8 @@ export interface TrackLyricDrawOpts {
   povMode: PovMode;
   archetype: TrackArchetype;
   stage: number;
+  /** Active-word highlight, derived from the track's cover-art lane colors. */
+  highlightColor?: string;
 }
 
 function clamp01(v: number): number {
@@ -123,6 +137,7 @@ function easeOutCubic(u: number): number {
 
 export function drawTrackLyrics(ctx: CanvasRenderingContext2D, opts: TrackLyricDrawOpts): void {
   const { W, H, t, lines, povMode, archetype, stage } = opts;
+  const highlight = opts.highlightColor || "#ffffff";
   if (!lines.length || W <= 0 || H <= 0) return;
 
   // Find the active line for this song time.
@@ -150,7 +165,7 @@ export function drawTrackLyrics(ctx: CanvasRenderingContext2D, opts: TrackLyricD
   // BIG type: 9% of canvas height at full projection scale, never below 6%.
   const fontSize = Math.max(H * 0.06, H * 0.09 * Math.max(0.5, scale));
   ctx.save();
-  ctx.font = `500 ${fontSize}px "JetBrains Mono", ui-monospace, monospace`;
+  ctx.font = `500 ${fontSize}px ${line.font}`;
   ctx.textBaseline = "middle";
   ctx.textAlign = "left";
 
@@ -267,9 +282,10 @@ export function drawTrackLyrics(ctx: CanvasRenderingContext2D, opts: TrackLyricD
       ctx.scale(sx, sy);
       ctx.globalAlpha = alpha * (isActive ? 1 : isSung ? 0.5 : 0.3);
 
-      ctx.fillStyle = flashHue >= 0 ? `hsl(${flashHue}, 100%, 72%)` : "#ffffff";
+      ctx.fillStyle =
+      flashHue >= 0 ? `hsl(${flashHue}, 100%, 72%)` : isActive ? highlight : "#ffffff";
       if (glow) {
-        ctx.shadowColor = "#ff1493";
+        ctx.shadowColor = highlight;
         ctx.shadowBlur = 26;
       }
       // Dark outline keeps words readable over bright track art (scales with type).
