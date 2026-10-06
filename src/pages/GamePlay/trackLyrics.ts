@@ -30,7 +30,8 @@ const EFFECTS: WordEffect[] = ["pop", "glow", "rise", "flash", "bounce", "fade"]
 // Track progress (0 = vanishing point, 1 = hit line) where the lyric block sits.
 const LYRIC_PROGRESS = 0.38;
 // Road-tilt foreshortening: text painted on the track is vertically compressed.
-const ROAD_TILT = 0.62;
+// Elongated per Bryan (2026-10-06) — tall type reads better at speed.
+const ROAD_TILT = 0.9;
 // Row upscale cap: a short row stretches to fill the track, but never beyond this
 // multiple of its natural size (keeps single-word rows from going absurd).
 const ROW_FILL_MAX = 2.0;
