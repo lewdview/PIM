@@ -5730,6 +5730,8 @@ export default function Game() {
         povMode: activePovModeRef.current,
         archetype: activeArchetypeRef.current,
         stage: calculatedStage,
+        // Active-word highlight follows the track's cover-art lane colors.
+        highlightColor: laneColorsRef.current[1],
       });
     }
 
