@@ -198,9 +198,11 @@ export default function App() {
   const isCompletedLocally = typeof window !== 'undefined' ? localStorage.getItem('pim_tutorial_completed') === 'true' : false;
   const isTutorialDone = !isExplicitlyFalseQuery && (isCompletedLocally || tutorialCompleted);
 
-  // Active tutorial routes permitted without redirect (the tutorial page or active stage 1 gameplay)
+  // Active tutorial routes permitted without redirect (the tutorial page or active stage 1 gameplay).
+  // /pitch-deck is also exempt so the deck stays shareable via direct link.
   const isTutorialRoute =
     location === '/tutorial' ||
+    location === '/pitch-deck' ||
     (location.startsWith('/play/') &&
       (typeof window !== 'undefined' &&
         (window.location.search.includes('tutorial=true') || window.location.search.includes('tutorial=1'))));
