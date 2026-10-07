@@ -5721,7 +5721,7 @@ export default function Game() {
     ctx.restore();
 
     // ── 4b. ON-TRACK LYRICS (painted on the track surface; notes render over) ──
-    if (trackLyricsRef.current.lines.length > 0) {
+    if (optsRef.current.trackLyrics && trackLyricsRef.current.lines.length > 0) {
       drawTrackLyrics(ctx, {
         W,
         H,
