@@ -2,7 +2,7 @@
 //
 // Words lie flat on the track (perspective-projected via the active POV's
 // projection math), and notes/bursts are drawn OVER them by the draw loop.
-// Always on when the song's day has an LRC file — no gating, no unlock flow.
+// On when the song's day has an LRC file and the player's trackLyrics option is enabled.
 // Each line is word-wrapped into rows that stretch to fill the full track width.
 
 import { getArchetypeProjection, type PovMode } from "./projections";
