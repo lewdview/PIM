@@ -1006,7 +1006,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
   }, [remappingLane]);
 
   // Save specific settings helper
-  const toggleSetting = (k: "missSystem" | "hudMisses" | "comboDisplay" | "judgmentText" | "useLocalFiles" | "bgMusic" | "haptics" | "gameSenseEnabled" | "legacyGraphics" | "bloomGlow" | "bgAnimation" | "healingGauge") => {
+  const toggleSetting = (k: "missSystem" | "hudMisses" | "comboDisplay" | "judgmentText" | "useLocalFiles" | "bgMusic" | "haptics" | "gameSenseEnabled" | "legacyGraphics" | "bloomGlow" | "bgAnimation" | "healingGauge" | "trackLyrics") => {
     if (k === "missSystem" && localStorage.getItem("opt_unlocked_noclip") !== "true") {
       audioManager.playSfx('locked_out', 0.15);
       return;
@@ -1124,7 +1124,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
     audioManager.playSfx('tap_nav', 0.1);
   };
 
-  const renderToggle = (k: "missSystem" | "hudMisses" | "comboDisplay" | "judgmentText" | "useLocalFiles" | "bgMusic" | "haptics" | "gameSenseEnabled" | "legacyGraphics" | "bloomGlow" | "bgAnimation" | "healingGauge") => {
+  const renderToggle = (k: "missSystem" | "hudMisses" | "comboDisplay" | "judgmentText" | "useLocalFiles" | "bgMusic" | "haptics" | "gameSenseEnabled" | "legacyGraphics" | "bloomGlow" | "bgAnimation" | "healingGauge" | "trackLyrics") => {
     const isNoclipLocked = k === "missSystem" && localStorage.getItem("opt_unlocked_noclip") !== "true";
     if (isNoclipLocked) {
       return (
@@ -1225,6 +1225,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
         hudMisses: true,
         comboDisplay: true,
         judgmentText: true,
+        trackLyrics: true,
         bgMusic: false,
         sfxEnabled: true,
         sfxVolume: 0.8,
@@ -1460,6 +1461,14 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                         <span className="text-[8px] text-zinc-500 font-mono">Perfect, Great, and Late markers on note hit timings</span>
                       </div>
                       {renderToggle('judgmentText')}
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-white font-mono uppercase">Track Lyrics</span>
+                        <span className="text-[8px] text-zinc-500 font-mono">Words painted on the track surface during play</span>
+                      </div>
+                      {renderToggle('trackLyrics')}
                     </div>
                   </div>
 
