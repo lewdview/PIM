@@ -161,15 +161,15 @@ export default function SongSelect() {
     return activeMonthStages[clampedIndex] || null;
   }, [activeMonthStages, stageIndex]);
 
-  // Update calibration & score history when selected song changes
+  // Update calibration & score history when selected song changes.
+  // Always reset to the song's canonical difficulty. A saved override may have
+  // been written by the campaign page (Chapter.tsx), where the value is the
+  // chapter-scaled difficulty — restoring it here silently voids award
+  // eligibility ("AWARDS DISABLED // MODIFIER ACTIVE OR DIFF OVERRIDE") even
+  // though the player never touched the slider.
   useEffect(() => {
     if (selected) {
-      const savedOverride = sessionStorage.getItem(`diff_override_${selected.id}`);
-      if (savedOverride) {
-        setDiffOverride(parseInt(savedOverride, 10));
-      } else {
-        setDiffOverride(selected.difficultyLevel);
-      }
+      setDiffOverride(selected.difficultyLevel);
       setHistory(getScoreHistory(selected.id));
       cleanupPreview();
     }
