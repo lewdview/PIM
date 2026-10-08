@@ -103,6 +103,7 @@ const PitchDeck = lazyWithRetry(() => import('./pages/PitchDeck'));
 const SlideshowPage = lazyWithRetry(() => import('./pages/SlideshowPage'));
 const VaultCollectionPage = lazyWithRetry(() => import('./pages/VaultCollectionPage'));
 const BombshellsPage = lazyWithRetry(() => import('./pages/BombshellsPage'));
+const AdminDropAnimationsPage = lazyWithRetry(() => import('./pages/AdminDropAnimationsPage'));
 
 function OptionsRouteHandler() {
   const setOptionsModalOpen = useVaultStore((s) => s.setOptionsModalOpen);
@@ -318,6 +319,8 @@ export default function App() {
     location === '/tutorial' ||
     location === '/admin/editor' ||
     location === '/admin/card-designs' ||
+    location === '/admin/drop-animations' ||
+    location === '/admin/animations' ||
     location.startsWith('/hero');
 
   return (
@@ -421,6 +424,8 @@ export default function App() {
                 <Route path="/admin" component={AdminPage} />
                 <Route path="/admin/editor" component={BeatmapEditor} />
                 <Route path="/admin/card-designs" component={CardDesignShowcase} />
+                <Route path="/admin/drop-animations" component={AdminDropAnimationsPage} />
+                <Route path="/admin/animations" component={AdminDropAnimationsPage} />
 
                 {/* 404 Handler */}
                 <Route>
