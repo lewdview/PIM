@@ -58,6 +58,7 @@ export type GameOpts = {
   bloomGlow: boolean;
   bgAnimation: boolean;
   healingGauge: boolean;
+  trackLyrics: boolean;
 };
 
 export interface GameBackground {
@@ -133,6 +134,7 @@ export const DEFAULT_OPTS: GameOpts = {
   bloomGlow: true,
   bgAnimation: true,
   healingGauge: true,
+  trackLyrics: true,
 };
 
 export function getEffectiveDpr(res: RenderResolution = 'high'): number {
@@ -228,6 +230,7 @@ export function loadOpts(): GameOpts {
     bloomGlow: dbSettings?.bloomGlow ?? bool("opt_bloomGlow", true),
     bgAnimation: dbSettings?.bgAnimation ?? bool("opt_bgAnimation", true),
     healingGauge: bool("opt_healingGauge", true),
+    trackLyrics: dbSettings?.trackLyrics ?? bool("opt_trackLyrics", true),
   };
 }
 

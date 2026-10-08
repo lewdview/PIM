@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '../../../lib/supabase';
+import { isAllowedRedirectUri } from '../../../lib/redirect';
 import { Loader2, Fingerprint } from 'lucide-react';
 import styles from './page.module.css';
 
@@ -17,7 +18,13 @@ function AnonLoginContent() {
 
   useEffect(() => {
     const performAnonAuth = async () => {
-      const redirectUri = searchParams.get('redirect_uri') || 'http://localhost:5173/';
+      const requested = searchParams.get('redirect_uri');
+      const redirectUri = requested && isAllowedRedirectUri(requested)
+        ? requested
+        : 'http://localhost:5173/';
+      if (requested && !isAllowedRedirectUri(requested)) {
+        throw new Error('Invalid redirect_uri — must be a th3scr1b3.art URL.');
+      }
       addLog(`[SYSTEM] Target node detected: ${redirectUri}`);
 
       try {
