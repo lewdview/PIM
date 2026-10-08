@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { isAllowedRedirectUri } from '../lib/redirect';
 import WalletConnect from '../components/WalletConnect';
 import IdentityTerminal from '../components/IdentityTerminal';
 import {
@@ -97,18 +98,25 @@ export default function Home() {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const uri = params.get('redirect_uri');
-      if (uri) {
+      if (uri && isAllowedRedirectUri(uri)) {
         setRedirectUri(uri);
         sessionStorage.setItem('pim_redirect_uri', uri);
       } else {
         const saved = sessionStorage.getItem('pim_redirect_uri');
-        if (saved) setRedirectUri(saved);
+        if (saved && isAllowedRedirectUri(saved)) {
+          setRedirectUri(saved);
+        } else {
+          sessionStorage.removeItem('pim_redirect_uri');
+        }
       }
     }
 
     const getRedirectUri = (): string | null => {
       const params = new URLSearchParams(window.location.search);
-      return params.get('redirect_uri') || sessionStorage.getItem('pim_redirect_uri');
+      const fromParams = params.get('redirect_uri');
+      if (fromParams && isAllowedRedirectUri(fromParams)) return fromParams;
+      const saved = sessionStorage.getItem('pim_redirect_uri');
+      return saved && isAllowedRedirectUri(saved) ? saved : null;
     };
 
     const fetchUserAndProfile = async () => {
