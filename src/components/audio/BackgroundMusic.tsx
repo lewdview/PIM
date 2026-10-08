@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback, useState } from "react";
 import { useLocation } from "wouter";
 import { audioManager } from "../../game/audio";
 import { loadOpts } from "../../lib/options";
+import { isLaunchPath } from "../../utils/launchRoutes";
 
 /**
  * BackgroundMusic — persistent ambient music for menu screens.
@@ -48,7 +49,7 @@ export default function BackgroundMusic() {
     return () => window.removeEventListener("intro_finished", onIntroDone);
   }, []);
 
-  const isSilentRoute = location.startsWith("/play/") || location.startsWith("/results/") || location.startsWith("/tutorial") || (location === "/" && !introDone);
+  const isSilentRoute = isLaunchPath(location) || location.startsWith("/play/") || location.startsWith("/results/") || location.startsWith("/tutorial") || (location === "/" && !introDone);
 
   // Create (but don't play) the bg audio element once
   useEffect(() => {

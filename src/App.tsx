@@ -28,6 +28,7 @@ import { useNotificationStore } from './store/useNotificationStore';
 import { getCurrentDay } from './utils/dayCalc';
 import { farcasterService } from './services/farcasterService';
 import ArcadeSplashScreen from './components/ArcadeSplashScreen';
+import { isLaunchPath } from './utils/launchRoutes';
 
 // Helper to auto-retry and cache-bust lazy route chunk imports on version deployment updates
 function lazyWithRetry<T extends React.ComponentType<any>>(
@@ -104,6 +105,7 @@ const SlideshowPage = lazyWithRetry(() => import('./pages/SlideshowPage'));
 const VaultCollectionPage = lazyWithRetry(() => import('./pages/VaultCollectionPage'));
 const BombshellsPage = lazyWithRetry(() => import('./pages/BombshellsPage'));
 const AdminDropAnimationsPage = lazyWithRetry(() => import('./pages/AdminDropAnimationsPage'));
+const LaunchPage = lazyWithRetry(() => import('./pages/LaunchPage'));
 
 function OptionsRouteHandler() {
   const setOptionsModalOpen = useVaultStore((s) => s.setOptionsModalOpen);
@@ -201,9 +203,11 @@ export default function App() {
 
   // Active tutorial routes permitted without redirect (the tutorial page or active stage 1 gameplay).
   // /pitch-deck is also exempt so the deck stays shareable via direct link.
+  const isLaunchRoute = isLaunchPath(location);
   const isTutorialRoute =
     location === '/tutorial' ||
     location === '/pitch-deck' ||
+    isLaunchRoute ||
     (location.startsWith('/play/') &&
       (typeof window !== 'undefined' &&
         (window.location.search.includes('tutorial=true') || window.location.search.includes('tutorial=1'))));
@@ -273,7 +277,7 @@ export default function App() {
 
   // Priority 1: Arcade Splash / Attract Gateway Screen
   // Before any onboarding, any landing page, or any route gates, show the arcade splash
-  if (showArcadeSplash) {
+  if (showArcadeSplash && !isLaunchRoute) {
     return (
       <ErrorBoundary sectionName="SPLASH_GATEWAY">
         <AnimatePresence>
@@ -284,7 +288,7 @@ export default function App() {
   }
 
   // Priority 2: Neural link loading check (if still loading after splash dismiss)
-  if (!authTimedOut && (authStatus === 'idle' || authStatus === 'loading')) {
+  if (!isLaunchRoute && !authTimedOut && (authStatus === 'idle' || authStatus === 'loading')) {
     return (
       <div className="fixed inset-0 bg-[#050402] flex flex-col items-center justify-center">
         <div
@@ -311,7 +315,7 @@ export default function App() {
   // "connect identity to keep your cards" conversion screen at the end.
   const isGameplayRoute =
     location.startsWith('/play/') || location.startsWith('/results/') || location === '/tutorial';
-  if (user && hasOnboarded === false && !isGameplayRoute && isTutorialDone) {
+  if (user && hasOnboarded === false && !isGameplayRoute && !isLaunchRoute && isTutorialDone) {
     return <OnboardingFlow onComplete={completeOnboarding} />;
   }
 
@@ -323,7 +327,8 @@ export default function App() {
     location === '/admin/card-designs' ||
     location === '/admin/drop-animations' ||
     location === '/admin/animations' ||
-    location.startsWith('/hero');
+    location.startsWith('/hero') ||
+    isLaunchRoute;
 
   return (
     <ErrorBoundary sectionName="ROOT_APP">
@@ -359,6 +364,9 @@ export default function App() {
                 {/* 1. Primary Public Landing & PIM Rhythm Routes */}
                 <Route path="/" component={LandingPage} />
                 <Route path="/next-vault" component={NextGenLandingPage} />
+                <Route path="/launch" component={LaunchPage} />
+                <Route path="/launchpad" component={LaunchPage} />
+                <Route path="/play-pim" component={LaunchPage} />
                 <Route path="/hero" component={HeroLandingPage} />
                 <Route path="/hero/day-:dayParam" component={HeroLandingPage} />
                 <Route path="/hero/:dayParam" component={HeroLandingPage} />
