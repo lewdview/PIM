@@ -147,6 +147,7 @@ interface VaultState {
   setDailyCard: (card: VaultCard | null) => void;
   setHasClaimed: (claimed: boolean) => void;
   silentClaimDailyDrop: (day: number) => Promise<OwnedCard | null>;
+  grantCardShards: (card: OwnedCard | null | undefined) => Promise<void>;
   setCollection: (cards: OwnedCard[]) => void;
   addToCollection: (cards: OwnedCard[]) => void;
   removeFromCollection: (ownedId: string) => void;
@@ -275,6 +276,20 @@ export function getHighestOwnedCard(
 // Award Play for that song: high scores earn prize packs.
 
 export const AWARD_PLAY_SHARD_THRESHOLD = 10;
+
+/** Shard gain per card rarity — single source of truth for the shard economy. */
+export const SHARD_GAIN_BY_RARITY: Record<string, number> = {
+  common: 2,
+  uncommon: 3,
+  rare: 5,
+  legendary: 10,
+  mythic: 10,
+};
+
+/** Shards earned when a card of the given rarity is granted (pack pull or silent claim). */
+export function shardGainForRarity(rarity: string | undefined | null): number {
+  return SHARD_GAIN_BY_RARITY[String(rarity || 'common').toLowerCase()] ?? 2;
+}
 
 /** Shard count for a 365 day, checking every known fragments key format. */
 export function getShardsForDay(
@@ -465,6 +480,20 @@ export const useVaultStore = create<VaultState>((set, get) => ({
 
   setDailyCard: (card) => set({ dailyCard: card }),
   setHasClaimed: (claimed) => set({ hasClaimed: claimed }),
+  // Grant shards for a newly-granted card (silent claims, etc.) — same economy
+  // as pack pulls. Without this, a silently-claimed card leaves its song short
+  // of the 10-shard Award Play unlock and prizes silently never fire.
+  grantCardShards: async (card: OwnedCard | null | undefined) => {
+    const key = card?.card?.id;
+    if (!card || !key) return;
+    const gain = shardGainForRarity((card.card as { rarity?: string }).rarity);
+    const oldTotal = get().fragments[key] ?? 0;
+    const newTotal = Math.min(10, oldTotal + gain);
+    if (newTotal > oldTotal) {
+      await get().syncFragments(key, newTotal);
+    }
+  },
+
   silentClaimDailyDrop: async (day: number) => {
     const currentState = get();
 
@@ -501,6 +530,9 @@ export const useVaultStore = create<VaultState>((set, get) => ({
             echoPrestigeScore: newScore,
           };
         });
+        // Silent grants must carry shards too — otherwise the song sits under
+        // the 10-shard Award Play unlock and prizes never fire.
+        await get().grantCardShards(card);
       }
       return card;
     } else {
@@ -525,6 +557,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
             echoPrestigeScore: newScore,
           };
         });
+        await get().grantCardShards(card);
       }
       return card;
     }
