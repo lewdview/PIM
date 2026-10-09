@@ -239,14 +239,14 @@ export default function PitchDeck() {
           >
             
             {/* LEFT SIDE: Description and Details */}
-            <div className="space-y-6 flex flex-col justify-center">
+            <div className="space-y-6 flex flex-col justify-center min-w-0">
               {/* SLIDE 1: INTRO */}
               {currentSlide === 0 && (
                 <>
                   <div className="inline-block bg-[#ffb800] text-black px-2.5 py-1 text-[9px] font-mono font-black tracking-widest uppercase rotate-[-2deg] border border-black shadow-[2px_2px_0_#000] w-fit">
                     PRODUCT PITCH DECK
                   </div>
-                  <h1 className="text-5xl md:text-7xl font-black brutalist-xl leading-none" style={{ '--neon-accent': '#ff3800' } as any}>
+                  <h1 className="text-4xl md:text-6xl font-black brutalist-xl leading-none text-balance" style={{ '--neon-accent': '#ff3800' } as any}>
                     POETRY IN MOTION
                   </h1>
                   <p className="font-mono text-xs tracking-widest uppercase text-[#faf0d8]/60">
@@ -438,7 +438,7 @@ export default function PitchDeck() {
                     SMART AUTH PIPELINE
                   </h2>
                   <p className="text-xs text-[#faf0d8]/85 leading-relaxed">
-                    Cryptographically secure EVM signature flows. Supports standard browser extensions or Coinbase Smart Wallet accounts on the **Base Mainnet (Chain ID 8453)**.
+                    Cryptographically secure EVM signature flows. Supports standard browser extensions or Coinbase Smart Wallet accounts on the <strong className="text-white">Base Mainnet (Chain ID 8453)</strong>.
                   </p>
                   
                   <div className="space-y-2 text-[11px]">
@@ -510,7 +510,7 @@ export default function PitchDeck() {
                     SPLIT-BAND LANE MUTING
                   </h2>
                   <p className="text-xs text-[#faf0d8]/85 leading-relaxed">
-                    Master audio runs through a 3-way crossover utilizing Web Audio API nodes. Missing notes degrades audio quality itself—muting components in real time.
+                    Master audio runs through a 3-way crossover utilizing Web Audio API nodes. Missing notes degrade audio quality itself—muting components in real time.
                   </p>
                   
                   <div className="space-y-3 font-mono text-[11px]">
@@ -638,7 +638,7 @@ export default function PitchDeck() {
                     THE FOUNDER: TH3SCR1B3
                   </h2>
                   <p className="text-xs text-[#faf0d8]/85 leading-relaxed">
-                    PIM is architected, composed, and engineered by **TH3SCR1B3**, a multi-disciplinary music artist, software engineer, and digital creator.
+                    PIM is architected, composed, and engineered by <strong className="text-white">TH3SCR1B3</strong>, a multi-disciplinary music artist, software engineer, and digital creator.
                   </p>
 
                   <div className="space-y-3 text-[11px] font-mono leading-relaxed">
@@ -748,7 +748,7 @@ export default function PitchDeck() {
             </div>
 
             {/* RIGHT SIDE: Interactive Simulations and High-Fidelity Mockups */}
-            <div className="border-2 border-black bg-[#0f0d09] p-6 rounded-lg relative min-h-[360px] flex flex-col justify-center items-center overflow-hidden shadow-[4px_4px_0_#000]">
+            <div className="border-2 border-black bg-[#0f0d09] p-6 rounded-lg relative min-h-[360px] flex flex-col justify-center items-center overflow-hidden shadow-[4px_4px_0_#000] min-w-0">
               <div className="absolute inset-0 bg-[#faf0d8]/[0.01] pointer-events-none" />
               <div className="absolute top-2 right-3 font-mono text-[8px] opacity-40 uppercase tracking-widest">
                 Interactive Panel // Simulation
@@ -1183,25 +1183,39 @@ export default function PitchDeck() {
 
               {/* SLIDE 10 (Index 9) PREVIEW: Founder artist badge */}
               {currentSlide === 9 && (
-                <div className="flex flex-col items-center gap-4 w-full">
-                  <div className="w-40 h-40 relative flex items-center justify-center">
+                <div className="flex flex-col items-center justify-center gap-5 w-full h-full py-2">
+                  <div className="w-52 h-52 relative flex items-center justify-center shrink-0">
                     {/* Rotating vinyl disk pattern */}
                     <div className="absolute inset-0 rounded-full border border-dashed border-[#ffb800]/25 animate-[spin-slow_16s_linear_infinite]" />
-                    <div className="absolute inset-3 rounded-full border border-white/5 bg-[#050402] flex items-center justify-center">
-                      <div className="w-24 h-24 rounded-full border-4 border-[#ff3800] bg-black flex items-center justify-center relative overflow-hidden">
+                    <div className="absolute inset-4 rounded-full border border-white/5 bg-[#050402] flex items-center justify-center">
+                      <div className="w-32 h-32 rounded-full border-4 border-[#ff3800] bg-black flex items-center justify-center relative overflow-hidden">
                         {/* Audio wave simulation inside founder avatar */}
-                        <div className="absolute inset-0 flex items-center justify-center gap-0.5 opacity-20">
+                        <div className="absolute inset-0 flex items-center justify-center gap-1 opacity-20">
+                          <div className="w-1 h-16 bg-white rounded animate-pulse" />
+                          <div className="w-1 h-10 bg-white rounded animate-pulse" />
+                          <div className="w-1 h-20 bg-white rounded animate-pulse" />
                           <div className="w-1 h-12 bg-white rounded animate-pulse" />
-                          <div className="w-1 h-8 bg-white rounded animate-pulse" />
-                          <div className="w-1 h-14 bg-white rounded animate-pulse" />
                         </div>
-                        <span className="font-mono font-black text-[9px] tracking-widest text-[#ff3800] z-10">CREATOR</span>
+                        <span className="font-mono font-black text-[10px] tracking-widest text-[#ff3800] z-10">CREATOR</span>
                       </div>
                     </div>
                   </div>
 
                   <div className="sticker-gun-tag sticker-slits flex flex-row items-center gap-2 p-2 px-4 shadow-lg rotate-[1.5deg] border border-black" style={{ background: '#fff', color: '#000' }}>
                     <span className="text-[9px] font-black italic uppercase leading-none font-mono">TH3SCR1B3.ART // COMPOSER</span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 w-full max-w-[320px]">
+                    {[
+                      { k: '365', v: 'Songs / 365 days' },
+                      { k: '1,270+', v: 'Players' },
+                      { k: '69,900+', v: 'Game runs' },
+                    ].map((s) => (
+                      <div key={s.v} className="border border-white/10 bg-white/[0.03] px-2 py-2 text-center">
+                        <div className="font-mono font-black text-sm text-[#ffb800]">{s.k}</div>
+                        <div className="font-mono text-[7px] tracking-widest text-[#faf0d8]/50 uppercase mt-0.5">{s.v}</div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
