@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
+import { isLaunchPath } from '../../utils/launchRoutes';
 import { useGlobalPlayer } from '@/store/useGlobalPlayer';
 import { loadOpts } from '@/lib/options';
 import { CHAPTERS } from '@/game/campaign';
@@ -98,7 +99,10 @@ export function GlobalMenuBackground() {
   const hideBg =
     location.startsWith('/play/') ||
     location === '/tutorial' ||
-    location.startsWith('/results/');
+    location.startsWith('/results/') ||
+    // The launch page paints its own opaque background; keeping this blurred,
+    // blended fixed layer composited underneath it blanks the page on iOS Safari.
+    isLaunchPath(location);
 
   if (hideBg || isLegacy) return null;
 
