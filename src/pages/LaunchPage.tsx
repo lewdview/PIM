@@ -29,7 +29,6 @@ import {
   BOMBSHELL_LIGHT_PACK_COVERS,
   DEFAULT_BOMBSHELL_PACK_COVER,
   ALL_BOMBSHELL_PACK_COVERS,
-  getBombshellCoverCandidates,
 } from '../utils/bombshellCards';
 import { useGlobalPlayer } from '../store/useGlobalPlayer';
 import { useNotificationStore } from '../store/useNotificationStore';
@@ -45,18 +44,27 @@ const TOTAL_BOMBSHELL_VARIANTS = Object.values(BOMBSHELL_COVERS_MAP).reduce(
   0,
 );
 
-/** The 14 best-covered days, in calendar order — the gallery's cast. */
-const GALLERY_PICKS = Object.values(BOMBSHELL_COVERS_MAP)
-  .filter((d) => d.totalCovers > 0)
-  .sort((a, b) => b.totalCovers - a.totalCovers || a.day - b.day)
-  .slice(0, 14)
-  .sort((a, b) => a.day - b.day)
-  .map((d, i) => {
-    // Alternate full-frame and letterbox so the wall breathes
-    const preferLB = i % 3 === 1 && d.lbFiles.length > 0;
-    const file = preferLB ? d.lbFiles[0] : d.normalFiles[0] || d.lbFiles[0];
-    return { day: d.day, file, isLB: preferLB, total: d.totalCovers };
-  });
+/**
+ * The 14 best-covered days in calendar order: the gallery's cast. Each cover is bundled as a
+ * compressed copy in public/data/launch/bombshells/ (the file name with spaces as dashes).
+ * Every third card shows a letterbox variant so the wall breathes.
+ */
+const GALLERY_PICKS = [
+  { day: 1, file: 'day 001 - 01.jpg', isLB: false },
+  { day: 2, file: 'lb day 002 - 01.jpg', isLB: true },
+  { day: 3, file: 'day 003 - 01.jpg', isLB: false },
+  { day: 4, file: 'day 004 - 01.jpg', isLB: false },
+  { day: 31, file: 'lb day 031 - 01.jpg', isLB: true },
+  { day: 33, file: 'day 033 - 01.jpg', isLB: false },
+  { day: 40, file: 'day 040 - 01.jpg', isLB: false },
+  { day: 55, file: 'lb day 055 - 01.jpg', isLB: true },
+  { day: 85, file: 'day 085 - 01.jpg', isLB: false },
+  { day: 114, file: 'day 114 - 01.jpg', isLB: false },
+  { day: 133, file: 'lb day 133 - 01.jpg', isLB: true },
+  { day: 164, file: 'day 164 - 01.jpg', isLB: false },
+  { day: 213, file: 'day 213 - 01.jpg', isLB: false },
+  { day: 358, file: 'lb day 358 - 01.jpg', isLB: true },
+].map((p) => ({ ...p, total: BOMBSHELL_COVERS_MAP[String(p.day)]?.totalCovers ?? 0 }));
 
 const PACK_TIERS = [1, 2, 5, 10, 25, 50] as const;
 
@@ -106,16 +114,18 @@ function galleryFallback(i: number): string {
   return ALL_BOMBSHELL_PACK_COVERS[i % ALL_BOMBSHELL_PACK_COVERS.length];
 }
 
-/** Public CDN that serves the bombshell covers (same host the PIM MCP server's pim_get_cover_artwork returns). */
+/** Bundled, compressed copies of the gallery covers. */
+const BOMBSHELL_LOCAL = '/data/launch/bombshells/';
+/** Public CDN with the full-size originals (same host the PIM MCP server's pim_get_cover_artwork returns). */
 const BOMBSHELL_CDN = 'https://files.th3scr1b3.art/rare_covers/';
 
-/** CDN cover first, then the shared helper's candidates (sibling variants), then the bundled pack art. */
+/** Bundled copy first, then the CDN original, then the bundled pack art. */
 function galleryCandidates(day: number, file: string, i: number): string[] {
-  const cdn = `${BOMBSHELL_CDN}day%20${day}/${encodeURIComponent(file)}`;
-  const remote = getBombshellCoverCandidates(day, file).filter(
-    (u) => u !== cdn && u !== DEFAULT_BOMBSHELL_PACK_COVER,
-  );
-  return [cdn, ...remote.slice(0, 3), galleryFallback(i)];
+  return [
+    `${BOMBSHELL_LOCAL}${file.replace(/ - | /g, '-')}`,
+    `${BOMBSHELL_CDN}day%20${day}/${encodeURIComponent(file)}`,
+    galleryFallback(i),
+  ];
 }
 
 function pad(n: number, w = 2) {
