@@ -106,10 +106,16 @@ function galleryFallback(i: number): string {
   return ALL_BOMBSHELL_PACK_COVERS[i % ALL_BOMBSHELL_PACK_COVERS.length];
 }
 
-/** Remote variant art first (exact file, then two sibling variants), then the bundled pack art. */
+/** Public CDN that serves the bombshell covers (same host the PIM MCP server's pim_get_cover_artwork returns). */
+const BOMBSHELL_CDN = 'https://files.th3scr1b3.art/rare_covers/';
+
+/** CDN cover first, then the shared helper's candidates (sibling variants), then the bundled pack art. */
 function galleryCandidates(day: number, file: string, i: number): string[] {
-  const remote = getBombshellCoverCandidates(day, file).filter((u) => u !== DEFAULT_BOMBSHELL_PACK_COVER);
-  return [...remote.slice(0, 4), galleryFallback(i)];
+  const cdn = `${BOMBSHELL_CDN}day%20${day}/${encodeURIComponent(file)}`;
+  const remote = getBombshellCoverCandidates(day, file).filter(
+    (u) => u !== cdn && u !== DEFAULT_BOMBSHELL_PACK_COVER,
+  );
+  return [cdn, ...remote.slice(0, 3), galleryFallback(i)];
 }
 
 function pad(n: number, w = 2) {
