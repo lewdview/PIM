@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Script from 'next/script';
 import { Outfit, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 
@@ -28,6 +29,8 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${outfit.variable} ${jetbrainsMono.variable}`}>
         {children}
+        {/* th3scr1b3 ecosystem bar: shared layer switcher. Layers live in https://th3scr1b3.art/ecosystem.json */}
+        <Script src="https://th3scr1b3.art/ecosystem-bar.js" strategy="afterInteractive" />
       </body>
     </html>
   );
