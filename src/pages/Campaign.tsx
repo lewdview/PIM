@@ -11,6 +11,7 @@ import { CHAPTERS, type ChapterMeta } from "@/game/campaign";
 import { getActiveTheme } from "@/lib/options";
 import { audioManager } from "@/game/audio";
 import { useVaultStore } from "@/store/useVaultStore";
+import { useFitAboveDock } from "@/hooks/useFitAboveDock";
 import { Lock, Unlock, Play, Compass, CheckCircle2, ChevronRight, Activity } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -120,6 +121,8 @@ export default function Campaign() {
   const [scrollTop, setScrollTop] = useState(0);
   const [containerHeight, setContainerHeight] = useState(800);
   const containerRef = useRef<HTMLDivElement>(null);
+  const pageRef = useRef<HTMLDivElement>(null);
+  const fitHeight = useFitAboveDock(pageRef, !loading);
 
   const isAvant = getActiveTheme() === 'avant-garde';
 
@@ -192,11 +195,12 @@ export default function Campaign() {
       el.addEventListener('scroll', handleScroll, { passive: true });
       setContainerHeight(el.clientHeight);
     }
-    window.addEventListener('resize', handleResize);
+    const ro = new ResizeObserver(handleResize);
+    if (el) ro.observe(el);
 
     return () => {
       if (el) el.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('resize', handleResize);
+      ro.disconnect();
     };
   }, [loading]);
 
@@ -219,10 +223,11 @@ export default function Campaign() {
   }
 
   return (
-    <div className="min-h-dvh w-full flex flex-col overflow-hidden select-none"
+    <div ref={pageRef} className="w-full flex flex-col overflow-hidden select-none"
       style={{
         background: isAvant ? '#050505' : '#080808',
-        position: 'relative'
+        position: 'relative',
+        height: fitHeight ?? 'calc(100dvh - 60px)',
       }}>
 
       {/* Top Header */}
@@ -268,10 +273,10 @@ export default function Campaign() {
       </header>
 
       {/* Main Parallax Scrolling Container */}
-      <div className="flex-1 w-full overflow-hidden relative">
+      <div className="flex-1 min-h-0 w-full overflow-hidden relative">
 
         {/* Right Floating Dot Bullet Navigation */}
-        <div className="fixed right-6 top-1/2 -translate-y-1/2 flex flex-col gap-4.5 z-30">
+        <div className="fixed right-6 top-1/2 -translate-y-1/2 hidden sm:flex flex-col gap-4.5 z-30">
           {chapters.map((ch, idx) => {
             const active = Math.round(scrollTop / (containerHeight || 800)) === idx;
             return (
@@ -301,7 +306,7 @@ export default function Campaign() {
         <div
           ref={containerRef}
           id="campaign-scroll-container"
-          className="w-full h-[calc(100vh-60px)] overflow-y-auto snap-y snap-mandatory scroll-smooth relative z-10 scrollbar-none"
+          className="w-full h-full overflow-y-auto snap-y snap-mandatory scroll-smooth relative z-10 scrollbar-none"
           style={{ scrollbarWidth: 'none' }}
         >
           {chapters.map((ch, idx) => {
