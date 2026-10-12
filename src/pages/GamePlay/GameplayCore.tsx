@@ -6409,7 +6409,13 @@ export default function Game() {
       }
 
       // ─ Beatstar-style tile pop, light pillar, lens streak + 3D shards ─
-      drawHitPop3D(ctx, e, t01, dt, hitY);
+      // Anchor to the active POV's hit position (circle / drift / etc. move the lanes).
+      const popProj = getArchetypeProjection(e.lane, 1.0, W, H, activeArchetypeRef.current, calculatedStage, t, activePovModeRef.current);
+      if (Number.isFinite(popProj.x) && Number.isFinite(popProj.y) && popProj.w > 0) {
+        drawHitPop3D(ctx, { ...e, cx: popProj.x + popProj.w / 2, cy: popProj.y, laneW: popProj.w }, t01, dt, hitY);
+      } else {
+        drawHitPop3D(ctx, e, t01, dt, hitY);
+      }
 
       // ─ Expanding rings ─
       const rings = e.kind === "PERFECT+" ? 2 : 1;
