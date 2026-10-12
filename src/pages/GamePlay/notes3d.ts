@@ -175,6 +175,12 @@ export function drawTopFaceBevel(
   ctx.fillRect(-noteW / 2, -noteH / 2, noteW, noteH);
 
   if (quality === 'high') {
+    // Thin inner rim tinted with the lane colour. Stroke it while the face
+    // path is still current; the gloss below replaces the path.
+    ctx.strokeStyle = shade(rimColor, 1.25, 0.55);
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
     // Specular gloss hotspot on the upper half (glass-tile look).
     ctx.save();
     ctx.translate(-noteW * 0.12, -noteH * 0.3);
@@ -188,11 +194,6 @@ export function drawTopFaceBevel(
     ctx.arc(0, 0, gr, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
-
-    // Thin inner rim tinted with the lane colour.
-    ctx.strokeStyle = shade(rimColor, 1.25, 0.55);
-    ctx.lineWidth = 2;
-    ctx.stroke();
   }
   ctx.restore();
 }

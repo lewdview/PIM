@@ -12258,6 +12258,8 @@ function drawKey(
   // ── 2c. Top-face bevel + gloss so the tile reads as a solid block ──
   if (noteType !== 'ghost') {
     drawTopFaceBevel(ctx, noteW, noteH, wallColor);
+    // The gloss pass replaces the current path; restore the body outline for the border strokes.
+    buildBodyPath();
   }
 
   // ── 3. Edge Border Styling ──
