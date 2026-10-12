@@ -11,6 +11,7 @@ import { useVaultStore, ownsCardForDay } from "@/store/useVaultStore";
 import { purchasePack } from "@/services/vaultService";
 import { PACK_CONFIGS } from "@/utils/rarity";
 import { Lock, Play, Film } from "lucide-react";
+import { useFitAboveDock } from "@/hooks/useFitAboveDock";
 
 
 const MEDAL_COLOR: Record<string, string> = {
@@ -159,6 +160,8 @@ export default function Chapter() {
   const [scrollTop, setScrollTop] = useState(0);
   const [containerHeight, setContainerHeight] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const pageRef = useRef<HTMLDivElement>(null);
+  const fitHeight = useFitAboveDock(pageRef, !loading);
   const [currentPageIdx, setCurrentPageIdx] = useState(0);
   const PAGE_SIZE = 5;
 
@@ -194,11 +197,12 @@ export default function Chapter() {
       el.addEventListener('scroll', handleScroll, { passive: true });
       setContainerHeight(el.clientHeight);
     }
-    window.addEventListener('resize', handleResize);
+    const ro = new ResizeObserver(handleResize);
+    if (el) ro.observe(el);
 
     return () => {
       if (el) el.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('resize', handleResize);
+      ro.disconnect();
     };
   }, [loading, containerHeight]);
 
@@ -502,10 +506,11 @@ export default function Chapter() {
   };
 
   return (
-    <div className="min-h-dvh w-full flex flex-col overflow-hidden select-none"
+    <div ref={pageRef} className="w-full flex flex-col overflow-hidden select-none"
       style={{
         background: isAvant ? '#050505' : '#080808',
-        position: 'relative'
+        position: 'relative',
+        height: fitHeight ?? 'calc(100dvh - 60px)',
       }}>
       
       {/* Sticky top nav */}
@@ -566,11 +571,11 @@ export default function Chapter() {
       </div>
 
       {/* Main Parallax Scrolling Container */}
-      <div className="flex-1 w-full overflow-hidden relative">
+      <div className="flex-1 min-h-0 w-full overflow-hidden relative">
 
         {/* Right Floating Dot Bullet Navigation */}
         {pagesCount > 1 && (
-          <div className="fixed right-6 top-1/2 -translate-y-1/2 flex flex-col gap-4 z-30 animate-fade-in">
+          <div className="fixed right-6 top-1/2 -translate-y-1/2 hidden sm:flex flex-col gap-4 z-30 animate-fade-in">
             {songPages.map((_, pIdx) => {
               const active = currentPageIdx === pIdx;
               return (
@@ -601,7 +606,7 @@ export default function Chapter() {
         <div
           ref={containerRef}
           id="stages-scroll-container"
-          className="w-full h-[calc(100vh-60px)] overflow-y-auto snap-y snap-mandatory scroll-smooth relative z-10 scrollbar-none"
+          className="w-full h-full overflow-y-auto snap-y snap-mandatory scroll-smooth relative z-10 scrollbar-none"
           style={{ scrollbarWidth: 'none' }}
         >
           {songs.length === 0 ? (
@@ -1140,14 +1145,14 @@ export default function Chapter() {
 
       </div>
 
-      {/* MOBILE FLOATING BOTTOM PLAY PANEL (only on viewport size < lg) */}
+      {/* MOBILE BOTTOM PLAY PANEL (only on viewport size < lg). Kept in flow so it sits
+          above the phone dock instead of underneath it. */}
       {selectedSong && (
         <div
-          className="lg:hidden fixed z-30 p-3 border"
+          className="lg:hidden relative z-30 flex-shrink-0 border"
           style={{
-            bottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 1.25rem)',
-            left: '68px',
-            right: '12px',
+            margin: '8px 12px 0',
+            padding: '12px',
             borderColor: isAvant ? 'rgba(57,255,20,0.3)' : 'rgba(255,255,255,0.12)',
             background: isAvant ? 'rgba(5,5,5,0.94)' : 'rgba(8,8,12,0.92)',
             backdropFilter: 'blur(20px)',
