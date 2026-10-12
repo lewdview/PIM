@@ -33,7 +33,7 @@ import JudgmentBadge, { getJudgmentBadgeSvgHtml, getJudgmentStreamItemHtml } fro
 import GameplayVisualizer from './GameplayVisualizer';
 import TutorialOverlay, { type TutorialStepType } from './TutorialOverlay';
 import { loadLyricsForDay, drawTrackLyrics, type TimedLine } from './trackLyrics';
-import { drawSlabBody, drawTopFaceBevel, drawHitPop3D, makeHitShards, setNote3DQuality, type HitShard } from './notes3d';
+import { drawSlabBody, drawTopFaceBevel, drawHitPop3D, drawHitPillar3D, hitPillarReach, makeHitShards, setNote3DQuality, type HitShard } from './notes3d';
 
 // Use Vite's eager glob to grab files in /public/data/slideshow/
 const imageModules = import.meta.glob<string>('../../public/data/slideshow/**/*.{png,jpg,jpeg,gif,webp,svg}', { query: '?url', import: 'default', eager: true });
@@ -5790,6 +5790,22 @@ export default function Game() {
       });
     }
 
+    // ── 4z. HIT LIGHT PILLARS (under the notes) ──
+    // Additive light drawn over the tiles washes their dark faces out to grey, so the
+    // pillars go down before the notes and trace each lane's projected path.
+    for (const e of hitFxRef.current) {
+      const t01 = (nowMs - e.startMs) / 520;
+      if (t01 < 0 || t01 >= 0.55 || (e.kind !== 'PERFECT+' && e.kind !== 'PERFECT')) continue;
+      const reach = hitPillarReach(t01);
+      const path: { x: number; y: number; w: number }[] = [];
+      for (let k = 0; k <= 8; k++) {
+        const pp = getArchetypeProjection(e.lane, lerp(1, reach, k / 8), W, H, activeArchetypeRef.current, calculatedStage, t, curPovMode);
+        if (!Number.isFinite(pp.x) || !Number.isFinite(pp.y) || !Number.isFinite(pp.w)) break;
+        path.push({ x: pp.x + pp.w / 2, y: pp.y, w: pp.w });
+      }
+      drawHitPillar3D(ctx, e, t01, path);
+    }
+
     // ── 5. HIGH-PERFORMANCE NOTES RENDERING (Active Visible Slice) ──
     // Skip note rendering during intro stingers so the rolling highway remains completely clean
     if (phaseRef.current === "countdown") return;
@@ -6389,7 +6405,9 @@ export default function Game() {
     }
 
     // ── Horizon Fog Overlay (Fades notes into the background at the vanishing horizon across all stages) ──
-    if (activeArchetypeRef.current !== 'radial_orbit' && activeArchetypeRef.current !== 'horizontal_drift') {
+    // The fog is clipped to the classic highway trapezoid and drawn over the notes, so 3D POVs
+    // (whose lanes run elsewhere) would get a tinted wedge washing over their notes and scenery.
+    if (showClassicHighway && activeArchetypeRef.current !== 'radial_orbit' && activeArchetypeRef.current !== 'horizontal_drift') {
       const archMeta = ARCHETYPE_METAS[activeArchetypeRef.current] || ARCHETYPE_METAS['cyber_tunnel'];
       const primerColor_fog = laneColorsRef.current?.[0] || archMeta.primerColor || '#00E5FF';
       const stage5Color_fog = laneColorsRef.current?.[2] || laneColorsRef.current?.[1] || archMeta.stage5Color || '#FF007F';
@@ -6402,12 +6420,8 @@ export default function Game() {
       ctx.fillStyle = fogGrad;
       
       ctx.save();
-      const isCyberPOV_fog = (isCyberTunnelPov || activeArchetypeRef.current === 'cyber_tunnel') && (calculatedStage === 3 || calculatedStage === 5);
-      const topR_fog = isCyberPOV_fog ? 0.18 : HW_TOP;
-      const botR_fog = isCyberPOV_fog ? 0.86 : HW_BOT;
-      
-      const hwTop_fog = hwAtProgress(0, W, topR_fog, botR_fog, H);
-      const hwBot_fog = hwAtProgress(1, W, topR_fog, botR_fog, H);
+      const hwTop_fog = hwAtProgress(0, W, trackTopRatio, trackBotRatio, H);
+      const hwBot_fog = hwAtProgress(1, W, trackTopRatio, trackBotRatio, H);
       ctx.beginPath();
       ctx.moveTo(hwTop_fog.left, 0);
       ctx.quadraticCurveTo(W / 2, -hitY * 0.09, hwTop_fog.right, 0);
@@ -6435,7 +6449,8 @@ export default function Game() {
       const easeOut = 1 - t01;
 
       // ─ Lane flash: bright overlay on the key area fading fast ─
-      if (t01 < 0.18) {
+      // Sits on the classic highway's key row; 3D POVs light their own lane guides instead.
+      if (t01 < 0.18 && showClassicHighway) {
         const flashAlpha =
           (1 - t01 / 0.18) * (e.kind === "PERFECT+" ? 0.55 : 0.35);
         const { x: fx, w: fw } = laneAt(e.lane, 1, W, HW_TOP, HW_BOT, undefined, 1, 0, H);
@@ -6456,9 +6471,9 @@ export default function Game() {
       // Anchor to the active POV's hit position (circle / drift / etc. move the lanes).
       const popProj = getArchetypeProjection(e.lane, 1.0, W, H, activeArchetypeRef.current, calculatedStage, t, activePovModeRef.current);
       if (Number.isFinite(popProj.x) && Number.isFinite(popProj.y) && popProj.w > 0) {
-        drawHitPop3D(ctx, { ...e, cx: popProj.x + popProj.w / 2, cy: popProj.y, laneW: popProj.w }, t01, dt, hitY);
+        drawHitPop3D(ctx, { ...e, cx: popProj.x + popProj.w / 2, cy: popProj.y, laneW: popProj.w }, t01, dt);
       } else {
-        drawHitPop3D(ctx, e, t01, dt, hitY);
+        drawHitPop3D(ctx, e, t01, dt);
       }
 
       // ─ Expanding rings ─

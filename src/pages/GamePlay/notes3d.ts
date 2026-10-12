@@ -237,10 +237,88 @@ export interface HitFx3D {
   shards?: HitShard[];
 }
 
+/** A point on a lane's centre line, from the hit target back toward the horizon. */
+export interface LanePathPoint {
+  x: number;
+  y: number;
+  w: number;
+}
+
+/**
+ * Light pillar that shoots up the struck lane (PERFECT and up). It follows the
+ * lane's projected path, so it stays inside its own lane in every POV, and it
+ * must be drawn BEFORE the notes: additive light on top of the tiles washes
+ * their dark faces out to grey.
+ */
+export function drawHitPillar3D(
+  ctx: CanvasRenderingContext2D,
+  e: HitFx3D,
+  t01: number,
+  path: LanePathPoint[]
+) {
+  if (quality === 'off' || path.length < 2) return;
+  const isPerfect = e.kind === 'PERFECT+' || e.kind === 'PERFECT';
+  if (!isPerfect || t01 >= 0.55) return;
+  const strength = e.kind === 'PERFECT+' ? 1 : 0.8;
+  const pt = t01 / 0.55;
+  const a = (1 - pt) * 0.55 * strength;
+  const widthK = lerp(0.92, 0.35, pt);
+
+  const ribbon = (k: number) => {
+    const left: LanePathPoint[] = [];
+    const right: LanePathPoint[] = [];
+    for (let i = 0; i < path.length; i++) {
+      const prev = path[Math.max(0, i - 1)];
+      const next = path[Math.min(path.length - 1, i + 1)];
+      const tx = next.x - prev.x;
+      const ty = next.y - prev.y;
+      const len = Math.hypot(tx, ty) || 1;
+      const half = (path[i].w * k) / 2;
+      const nx = (-ty / len) * half;
+      const ny = (tx / len) * half;
+      left.push({ x: path[i].x + nx, y: path[i].y + ny, w: 0 });
+      right.push({ x: path[i].x - nx, y: path[i].y - ny, w: 0 });
+    }
+    ctx.beginPath();
+    ctx.moveTo(left[0].x, left[0].y);
+    for (let i = 1; i < left.length; i++) ctx.lineTo(left[i].x, left[i].y);
+    for (let i = right.length - 1; i >= 0; i--) ctx.lineTo(right[i].x, right[i].y);
+    ctx.closePath();
+  };
+
+  const p0 = path[0];
+  const pN = path[path.length - 1];
+  ctx.save();
+  ctx.shadowColor = 'transparent';
+  ctx.shadowBlur = 0;
+  ctx.globalCompositeOperation = 'lighter';
+  const g = ctx.createLinearGradient(p0.x, p0.y, pN.x, pN.y);
+  g.addColorStop(0, shade(e.color, 1.5, a));
+  g.addColorStop(0.35, shade(e.color, 1, a * 0.55));
+  g.addColorStop(1, shade(e.color, 1, 0));
+  ctx.fillStyle = g;
+  ribbon(widthK);
+  ctx.fill();
+  // White hot core.
+  const coreEnd = path[Math.max(1, Math.round((path.length - 1) * 0.7))];
+  const cg = ctx.createLinearGradient(p0.x, p0.y, coreEnd.x, coreEnd.y);
+  cg.addColorStop(0, `rgba(255,255,255,${a * 0.9})`);
+  cg.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = cg;
+  ribbon(widthK * 0.24);
+  ctx.fill();
+  ctx.restore();
+}
+
+/** How far up the lane (in approach progress) the pillar reaches at time t01. */
+export function hitPillarReach(t01: number): number {
+  const pt = Math.min(1, t01 / 0.55);
+  return lerp(0.8, 0.4, Math.min(1, pt * 2.2));
+}
+
 /**
  * Beatstar-style hit pop drawn on top of the existing ring/particle burst:
  *  - the tile itself flashes white and pops toward the camera,
- *  - a light pillar shoots up the lane (PERFECT and up),
  *  - a lens streak flares along the hit line,
  *  - shards of the tile tumble out with 3D shading.
  */
@@ -248,12 +326,10 @@ export function drawHitPop3D(
   ctx: CanvasRenderingContext2D,
   e: HitFx3D,
   t01: number,
-  dt: number,
-  hitY: number
+  dt: number
 ) {
   if (quality === 'off') return;
   const laneW = e.laneW && e.laneW > 0 ? e.laneW : 90;
-  const isPerfect = e.kind === 'PERFECT+' || e.kind === 'PERFECT';
   const strength = e.kind === 'PERFECT+' ? 1 : e.kind === 'PERFECT' ? 0.8 : e.kind === 'SHIELDED' ? 0.7 : 0.55;
 
   ctx.save();
@@ -261,27 +337,7 @@ export function drawHitPop3D(
   ctx.shadowBlur = 0;
   ctx.globalCompositeOperation = 'lighter';
 
-  // 1. Light pillar up the lane.
-  if (isPerfect && t01 < 0.55) {
-    const pt = t01 / 0.55;
-    const pillarH = hitY * (0.35 + 0.45 * Math.min(1, pt * 2.2));
-    const pw = laneW * lerp(0.92, 0.35, pt);
-    const a = (1 - pt) * 0.55 * strength;
-    const g = ctx.createLinearGradient(0, e.cy, 0, e.cy - pillarH);
-    g.addColorStop(0, shade(e.color, 1.5, a));
-    g.addColorStop(0.35, shade(e.color, 1, a * 0.55));
-    g.addColorStop(1, shade(e.color, 1, 0));
-    ctx.fillStyle = g;
-    ctx.fillRect(e.cx - pw / 2, e.cy - pillarH, pw, pillarH);
-    // White hot core.
-    const cg = ctx.createLinearGradient(0, e.cy, 0, e.cy - pillarH * 0.7);
-    cg.addColorStop(0, `rgba(255,255,255,${a * 0.9})`);
-    cg.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = cg;
-    ctx.fillRect(e.cx - pw * 0.12, e.cy - pillarH * 0.7, pw * 0.24, pillarH * 0.7);
-  }
-
-  // 2. Horizontal lens streak along the hit line.
+  // 1. Horizontal lens streak along the hit line.
   if (t01 < 0.32) {
     const st = t01 / 0.32;
     const len = laneW * lerp(0.8, 2.6, Math.sqrt(st)) * strength;
@@ -296,7 +352,7 @@ export function drawHitPop3D(
   }
   ctx.restore();
 
-  // 3. Tile pop: the struck note flashes white and lifts off toward the camera.
+  // 2. Tile pop: the struck note flashes white and lifts off toward the camera.
   if (t01 < 0.42 && e.kind !== 'SHIELDED') {
     const pt = t01 / 0.42;
     const ease = 1 - Math.pow(1 - pt, 3);
@@ -330,7 +386,7 @@ export function drawHitPop3D(
     ctx.restore();
   }
 
-  // 4. Tumbling 3D shards.
+  // 3. Tumbling 3D shards.
   if (e.shards && e.shards.length && t01 < 0.95) {
     const life = Math.max(0, 1 - t01 / 0.95);
     for (const s of e.shards) {
