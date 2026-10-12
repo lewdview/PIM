@@ -42,7 +42,7 @@ export interface ProfileSettings {
   visualizerTheme?: 'cyan_pink' | 'emerald_orange' | 'gold_purple' | 'rainbow';
   visualizerPlaylistMode?: 'all_catalog' | 'unlocked_only';
   visualizerRepeatMode?: 'all' | 'one' | 'shuffle' | 'off';
-  chartVariant?: 'v5_flagship' | 'v4_neural' | 'v3_master' | 'v1_gimmicks' | 'v2_minimal' | 'canonical';
+  chartVariant?: 'v6_master' | 'v5_flagship' | 'v4_neural' | 'v3_master' | 'v1_gimmicks' | 'v2_minimal' | 'canonical';
 }
 
 export interface ProfileProgression {

@@ -1,4 +1,5 @@
 import { useVaultStore } from '../store/useVaultStore';
+import { DEFAULT_CHART_VARIANT, resolveChartVariant, type ChartVariant } from './chartVariant';
 
 export type RenderResolution = 'native' | 'high' | 'medium' | 'low';
 export type GfxLevel = 'ultra' | 'high' | 'medium' | 'low';
@@ -23,7 +24,7 @@ export type PovMode =
   | 'mobius_loop'
   | 'dynamic_stage';
 
-export type ChartVariant = 'v5_flagship' | 'v4_neural' | 'v3_master' | 'v1_gimmicks' | 'v2_minimal' | 'canonical';
+export type { ChartVariant };
 
 export type GameOpts = {
   missSystem: boolean;
@@ -111,7 +112,7 @@ export const DEFAULT_OPTS: GameOpts = {
   laneColors: ["#FF1493", "#00E5FF", "#39FF14"],
   useLocalFiles: false,
   noteGenerationSource: "auto",
-  chartVariant: "v1_gimmicks",
+  chartVariant: DEFAULT_CHART_VARIANT,
   bgMusic: false,
   sfxEnabled: true,
   sfxVolume: 0.8,
@@ -203,11 +204,10 @@ export function loadOpts(): GameOpts {
       const v = dbProgression?.noteGenerationSource ?? localStorage.getItem("opt_noteGenerationSource");
       return (v === "lyrics" || v === "bpm" || v === "auto") ? v : "auto";
     })(),
-    chartVariant: (() => {
-      if (!isChartEditionsUnlocked) return "v1_gimmicks";
-      const v = (dbSettings?.chartVariant ?? (localStorage.getItem("opt_chartVariant") as any)) || "v1_gimmicks";
-      return v;
-    })(),
+    chartVariant: resolveChartVariant(
+      dbSettings?.chartVariant ?? localStorage.getItem("opt_chartVariant"),
+      isChartEditionsUnlocked
+    ),
     bgMusic: dbSettings?.bgMusic ?? bool("opt_bgMusic", false),
     sfxEnabled: dbSettings?.sfxEnabled ?? bool("opt_sfxEnabled", true),
     sfxVolume: dbSettings?.sfxVolume ?? (parseFloat(localStorage.getItem("opt_sfxVolume") ?? "0.8") ?? 0.8),

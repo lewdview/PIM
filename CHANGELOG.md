@@ -4,6 +4,31 @@ All notable advancements, architectural updates, features, and resolved trials &
 
 ---
 
+## [v2.5.0] - 2026-10-11
+
+### 🚀 Chart Master (v6) — audio-driven chart generation
+
+New default chart edition for all players (`songs_variants/v6_master`), generated from each song's actual audio by `src/game/chartMaster/`:
+
+- **Analysis** (`analysis.ts`): 3-band SuperFlux onset detection (low → lane 0, mid → lane 1, high → lane 2), spectral centroid for melodic contour, and a median-filtered harmonic layer so sustained vocals/chords read as holds even over busy drums.
+- **Beat tracking** (`beats.ts`): tempo estimated from the audio (catalog BPMs proved unreliable — often a few % off, which drifts a full beat over a song, and sometimes plain wrong), then a dynamic-programming beat tracker that follows small drifts.
+- **Structure** (`structure.ts`): bar-level novelty and repetition detection; the 5 stage boundaries are placed on real phrase starts, with **stage 3 and stage 5 (the POV switches) steered onto the biggest energy lifts** so the camera warp lands on the drop.
+- **Composer** (`compose.ts`): density and spacing in seconds by stage × difficulty × musical activity; ergonomic lane choice (no fast jacks / jumps); holds from real sustain, slides from pitch glides, hold-swipes on release accents; repeated sections replay the pattern learned the first time and get embellished in later stages; a clear runway + entrance accent around each POV warp.
+- **Validation** (`validate.ts`): every baked chart is checked (sorting, lanes, stage tags, hold collisions, clear POV runways) and scored for sync — share of notes on a strong onset.
+- **Results**: across all 365 songs, **92% of v6 notes land on a strong onset vs 40% for the previous v1 default and 36% for random placement** (v6 ahead on every song; lowest v6 score 67%). Zero same-lane jacks or hold collisions.
+
+### ⚙️ Engine
+- Stage progression (and therefore the stage-3/5 POV switch, stage stingers and HUD markers) now follows the chart's own `stages` times instead of a fixed 15/35/60/80% split; charts without a valid stage table keep the old split (`pages/GamePlay/stageTimeline.ts`).
+- Audio-duration sync no longer re-stageifies Chart Master charts (it only trims notes past the real audio end).
+- Runtime fallback for songs without a chart now runs Chart Master in the browser (replaces the energy-threshold Audio Forge).
+- Chart edition resolution centralised in `lib/chartVariant.ts`; v6 is the default, v1 remains available to everyone as "Classic"; stored `v1_gimmicks` values from the old forced default only count once a player picks an edition.
+- Direct links / refreshes into gameplay wait for the collection to load before the card-ownership gate, instead of locking owned cards.
+
+### 🧰 Tooling
+- `node scripts/bake_master_charts.ts [days…] [--force] [--jobs N] [--local <365-releases dir>] [--keep]` bakes v6 charts (Node 22.6+, ffmpeg). Downloads are deleted after decoding unless `--keep`. Writes a manifest with per-song tempo, POV times, note mix and sync scores.
+
+---
+
 ## [v2.4.0] - 2026-08-04
 
 ### 🚀 Major Advancements & Features
