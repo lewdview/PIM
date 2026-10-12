@@ -6405,9 +6405,7 @@ export default function Game() {
     }
 
     // ── Horizon Fog Overlay (Fades notes into the background at the vanishing horizon across all stages) ──
-    // The fog is clipped to the classic highway trapezoid and drawn over the notes, so 3D POVs
-    // (whose lanes run elsewhere) would get a tinted wedge washing over their notes and scenery.
-    if (showClassicHighway && activeArchetypeRef.current !== 'radial_orbit' && activeArchetypeRef.current !== 'horizontal_drift') {
+    if (activeArchetypeRef.current !== 'radial_orbit' && activeArchetypeRef.current !== 'horizontal_drift') {
       const archMeta = ARCHETYPE_METAS[activeArchetypeRef.current] || ARCHETYPE_METAS['cyber_tunnel'];
       const primerColor_fog = laneColorsRef.current?.[0] || archMeta.primerColor || '#00E5FF';
       const stage5Color_fog = laneColorsRef.current?.[2] || laneColorsRef.current?.[1] || archMeta.stage5Color || '#FF007F';
@@ -6420,8 +6418,12 @@ export default function Game() {
       ctx.fillStyle = fogGrad;
       
       ctx.save();
-      const hwTop_fog = hwAtProgress(0, W, trackTopRatio, trackBotRatio, H);
-      const hwBot_fog = hwAtProgress(1, W, trackTopRatio, trackBotRatio, H);
+      const isCyberPOV_fog = (isCyberTunnelPov || activeArchetypeRef.current === 'cyber_tunnel') && (calculatedStage === 3 || calculatedStage === 5);
+      const topR_fog = isCyberPOV_fog ? 0.18 : HW_TOP;
+      const botR_fog = isCyberPOV_fog ? 0.86 : HW_BOT;
+      
+      const hwTop_fog = hwAtProgress(0, W, topR_fog, botR_fog, H);
+      const hwBot_fog = hwAtProgress(1, W, topR_fog, botR_fog, H);
       ctx.beginPath();
       ctx.moveTo(hwTop_fog.left, 0);
       ctx.quadraticCurveTo(W / 2, -hitY * 0.09, hwTop_fog.right, 0);
