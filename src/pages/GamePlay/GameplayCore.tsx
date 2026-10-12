@@ -32,6 +32,7 @@ import JudgmentBadge, { getJudgmentBadgeSvgHtml, getJudgmentStreamItemHtml } fro
 import GameplayVisualizer from './GameplayVisualizer';
 import TutorialOverlay, { type TutorialStepType } from './TutorialOverlay';
 import { loadLyricsForDay, drawTrackLyrics, type TimedLine } from './trackLyrics';
+import { drawSlabBody, drawTopFaceBevel, drawHitPop3D, makeHitShards, setNote3DQuality, type HitShard } from './notes3d';
 
 // Use Vite's eager glob to grab files in /public/data/slideshow/
 const imageModules = import.meta.glob<string>('../../public/data/slideshow/**/*.{png,jpg,jpeg,gif,webp,svg}', { query: '?url', import: 'default', eager: true });
@@ -558,6 +559,8 @@ interface HitEffect {
   color: string;
   kind: "PERFECT+" | "PERFECT" | "GOOD" | "SHIELDED" | "MISS";
   particles: HitParticle[];
+  laneW?: number;
+  shards?: HitShard[];
 }
 interface AmbientParticle {
   x: number;
@@ -2329,6 +2332,8 @@ export default function Game() {
         color,
         kind,
         particles,
+        laneW: lw,
+        shards: particleDensity === 'minimal' ? undefined : makeHitShards(kind, particleDensity === 'half' ? 6 : 12),
       });
     },
     [],
@@ -3668,6 +3673,12 @@ export default function Game() {
       ctx.shadowBlur = 0;
       ctx.shadowColor = 'transparent';
     }
+    // 3D note slabs: full on high, lighter on medium, flat on low/legacy.
+    setNote3DQuality(
+      optsRef.current.legacyGraphics || optsRef.current.gfxLevel === 'low'
+        ? 'off'
+        : optsRef.current.gfxLevel === 'medium' ? 'low' : 'high'
+    );
     const song = songRef.current;
     // Task 4B: Adaptive BPM & note density lane breathing
     // During dense passages (bursts > 4 NPS), gently expand approach time to preserve readability
@@ -6396,6 +6407,9 @@ export default function Game() {
         ctx.fillStyle = flashGrad;
         ctx.fillRect(fx + 4, e.cy - 60, fw - 8, 100);
       }
+
+      // ─ Beatstar-style tile pop, light pillar, lens streak + 3D shards ─
+      drawHitPop3D(ctx, e, t01, dt, hitY);
 
       // ─ Expanding rings ─
       const rings = e.kind === "PERFECT+" ? 2 : 1;
@@ -12074,30 +12088,50 @@ function drawKey(
   const isHoldHead = noteType === 'hold' || noteType === 'hold-swipe' || noteType === 'slide' || noteType === 'zigzag';
   const m = (swipeDirection && !isHold && !isHoldHead && noteType !== 'lift') ? 1.0 : 0;
 
-  if (swipeDirection && m > 0) {
-    ctx.rotate(rotations[swipeDirection] || 0);
-  }
+  const swipeRot = swipeDirection && m > 0 ? (rotations[swipeDirection] || 0) : 0;
 
   // ── 1. Define Key Body Path ──
-  ctx.beginPath();
-  if (m > 0) {
-    const w = noteW / 2;
-    const h = noteH / 2;
-    const br = lerp(r, 8, m);
-    const pinchX = lerp(w, w * 0.2, m);
-    const indentX = lerp(-w, -w * 0.35, m);
+  const buildBodyPath = () => {
+    ctx.beginPath();
+    if (m > 0) {
+      const w = noteW / 2;
+      const h = noteH / 2;
+      const br = lerp(r, 8, m);
+      const pinchX = lerp(w, w * 0.2, m);
+      const indentX = lerp(-w, -w * 0.35, m);
 
-    ctx.moveTo(-w + br, -h);
-    ctx.arcTo(pinchX, -h, w, 0, br);
-    ctx.arcTo(w, 0, pinchX, h, br);
-    ctx.arcTo(pinchX, h, -w, h, br);
-    ctx.arcTo(-w, h, indentX, 0, br);
-    ctx.arcTo(indentX, 0, -w, -h, br);
-    ctx.arcTo(-w, -h, -w + br, -h, br);
-    ctx.closePath();
-  } else {
-    ctx.roundRect(-noteW / 2, -noteH / 2, noteW, noteH, r);
+      ctx.moveTo(-w + br, -h);
+      ctx.arcTo(pinchX, -h, w, 0, br);
+      ctx.arcTo(w, 0, pinchX, h, br);
+      ctx.arcTo(pinchX, h, -w, h, br);
+      ctx.arcTo(-w, h, indentX, 0, br);
+      ctx.arcTo(indentX, 0, -w, -h, br);
+      ctx.arcTo(-w, -h, -w + br, -h, br);
+      ctx.closePath();
+    } else {
+      ctx.roundRect(-noteW / 2, -noteH / 2, noteW, noteH, r);
+    }
+  };
+
+  // ── 1b. 3D Slab: contact shadow + side walls under the top face ──
+  const wallColor = isHold ? (lc || "#FFD700")
+                  : noteType === 'remix' ? '#00F5D4'
+                  : noteType === 'break' ? '#FF7B00'
+                  : noteType === 'accent' ? '#CCFF00'
+                  : noteType === 'lift' ? '#00FF88'
+                  : noteType === 'zigzag' ? '#A855F7'
+                  : noteType === 'burst' ? '#FF5500'
+                  : lc;
+  if (noteType !== 'ghost') {
+    drawSlabBody(ctx, () => {
+      if (swipeRot) ctx.rotate(swipeRot);
+      buildBodyPath();
+      if (swipeRot) ctx.rotate(-swipeRot);
+    }, noteW, noteH, prog, wallColor, { isHold });
   }
+
+  if (swipeRot) ctx.rotate(swipeRot);
+  buildBodyPath();
 
   // ── 2. Render Body Fill (Customized per note type) ──
   if (isHold) {
@@ -12220,6 +12254,11 @@ function drawKey(
   ctx.fillStyle = sheenGrad;
   ctx.fill();
   ctx.restore();
+
+  // ── 2c. Top-face bevel + gloss so the tile reads as a solid block ──
+  if (noteType !== 'ghost') {
+    drawTopFaceBevel(ctx, noteW, noteH, wallColor);
+  }
 
   // ── 3. Edge Border Styling ──
   ctx.shadowColor = "transparent";
