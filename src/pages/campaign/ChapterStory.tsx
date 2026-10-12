@@ -1,12 +1,14 @@
 // Chapter: one month told as a story through its tracks. A prologue line from
 // the lyrics opens it, the mood arc shows how the month moves, and the tracks
-// play out as three acts (plus bonus stages as an epilogue). Each track shows
-// its hook line with its highlight words lit. The sticky play bar always sits
+// play out as three acts (plus bonus stages as an epilogue). Each act opens
+// with its story in three lines (where it starts, where the mood turns, where
+// it lands); only the act you're in is expanded to its full track list. Each
+// track shows its hook line with its highlight words lit. The sticky play bar always sits
 // above the phone dock, so the next track is one tap away on any screen.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useParams } from 'wouter';
-import { ArrowLeft, ChevronLeft, ChevronRight, Lock, Pause, Play, Film, CheckCircle2, Gift } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Lock, Pause, Play, Film, CheckCircle2, Gift } from 'lucide-react';
 import { loadCatalog, isSongTimeLocked, getModifierForSong, type GameSong } from '@/game/api';
 import { getMedalForSong, getHighScore } from '@/game/progress';
 import { CHAPTERS, calculateCampaignDifficulty, levelToTier } from '@/game/campaign';
@@ -17,7 +19,7 @@ import { PACK_CONFIGS } from '@/utils/rarity';
 import { formatDate } from '@/utils/dayCalc';
 import {
   chapterProgress, getMonthStory, getTrackStory, hasClearedSong, isStageUnlocked, songsForMonth, MOOD_LABEL,
-  type ChapterAct,
+  type ChapterAct, type MonthStory,
 } from '@/game/chapterStory';
 import { Highlighted, WordChips } from './storyParts';
 import { hideBroken } from './hideBroken';
@@ -36,10 +38,12 @@ const MILESTONES = [
 const pad = (n: number) => String(n).padStart(2, '0');
 const sfx = (v = 0.12) => audioManager.playSfx('tap_nav', v);
 
+type ActStoryData = Omit<ChapterAct, 'act'>;
+
 interface ActGroup {
   key: string;
   label: string;
-  act?: ChapterAct;
+  act?: ActStoryData & { act?: string };
   songs: GameSong[];
   startIdx: number;
   bonus: boolean;
@@ -57,6 +61,8 @@ export default function ChapterStory() {
   const [songs, setSongs] = useState<GameSong[] | null>(null);
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [claimed, setClaimed] = useState<Record<number, boolean>>({});
+  // Acts the player opened or closed by hand; otherwise only the act holding the selected track is open.
+  const [actOpen, setActOpen] = useState<Record<string, boolean>>({});
 
   const collection = useVaultStore((s) => s.collection);
   const loadVaultData = useVaultStore((s) => s.loadVaultData);
@@ -96,6 +102,7 @@ export default function ChapterStory() {
   useEffect(() => {
     let alive = true;
     setSongs(null);
+    setActOpen({});
     stopPreview();
     loadCatalog().then((catalog) => {
       if (!alive) return;
@@ -131,7 +138,7 @@ export default function ChapterStory() {
       out.push({ key: 'all', label: 'Tracks', songs: progress.regular, startIdx: 0, bonus: false });
     }
     if (progress.bonus.length) {
-      out.push({ key: 'bonus', label: 'Epilogue', songs: progress.bonus, startIdx: progress.regular.length, bonus: true });
+      out.push({ key: 'bonus', label: 'Epilogue', act: story?.epilogue ?? undefined, songs: progress.bonus, startIdx: progress.regular.length, bonus: true });
     }
     return out;
   }, [songs, progress, story]);
@@ -185,6 +192,7 @@ export default function ChapterStory() {
 
   const select = useCallback((idx: number, scroll = false) => {
     setSelectedIdx(idx);
+    setActOpen({});
     stopPreview();
     sfx(0.15);
     if (scroll) {
@@ -202,6 +210,7 @@ export default function ChapterStory() {
       const n = Math.max(0, Math.min(count - 1, i + d));
       if (n !== i) {
         sfx(0.15);
+        setActOpen({});
         requestAnimationFrame(() => document.getElementById(`beat-${n}`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
       }
       return n;
@@ -319,8 +328,10 @@ export default function ChapterStory() {
         <h1 className="cs-display">{meta.name}</h1>
         {story && (
           <div>
-            <p className="cs-quote">“<Highlighted line={story.prologue.line} words={story.words} />”</p>
-            {prologueSong && <div className="cs-cite">— {prologueSong.title}, day {prologueSong.day}</div>}
+            {story.prologue.lyric
+              ? <p className="cs-quote">“<Highlighted line={story.prologue.line} words={story.words} />”</p>
+              : <p className="cs-quote" data-plain="true">{story.prologue.line}</p>}
+            {prologueSong && story.prologue.lyric && <div className="cs-cite">— {prologueSong.title}, day {prologueSong.day}</div>}
           </div>
         )}
         {story && <WordChips words={story.words} />}
@@ -354,8 +365,12 @@ export default function ChapterStory() {
 
       <MoodArc songs={songs} groups={groups} selectedIdx={selectedIdx} stateOf={stateOf} onSelect={(i) => select(i, true)} />
 
-      {groups.map((g) => (
-        <section key={g.key} className="cs-act" aria-labelledby={`act-${g.key}`}>
+      {groups.map((g) => {
+        const holdsSelected = selectedIdx >= g.startIdx && selectedIdx < g.startIdx + g.songs.length;
+        const open = actOpen[g.key] ?? holdsSelected;
+        const done = g.songs.filter(hasClearedSong).length;
+        return (
+        <section key={g.key} className="cs-act" data-open={open} aria-labelledby={`act-${g.key}`}>
           <div className="cs-act-head">
             <div className="cs-eyebrow">
               {g.label}
@@ -364,8 +379,20 @@ export default function ChapterStory() {
             </div>
             <h2 id={`act-${g.key}`} className="cs-display">{g.act ? g.act.word : g.bonus ? 'Afterword' : 'The tracks'}</h2>
             {g.act && g.act.themes.length > 0 && <div className="cs-muted" style={{ fontSize: 14 }}>{g.act.themes.join(' · ')}</div>}
+            {g.act && <ActStory act={g.act} songs={songs} story={story} onPick={(i) => select(i, true)} />}
+            <button
+              type="button"
+              className="cs-act-toggle"
+              aria-expanded={open}
+              aria-controls={`act-body-${g.key}`}
+              onClick={() => { sfx(0.1); setActOpen((o) => ({ ...o, [g.key]: !open })); }}
+            >
+              <span>{done}/{g.songs.length} cleared</span>
+              <span>{open ? 'Hide tracks' : `Show ${g.songs.length} tracks`} <ChevronDown size={14} /></span>
+            </button>
           </div>
-          <div className="cs-act-body">
+          {open && (
+          <div className="cs-act-body" id={`act-body-${g.key}`}>
           {g.bonus && !progress.bonusUnlocked && (
             <div className="cs-act-gate"><Lock size={16} /> Earn {meta.platNeeded} platinum medals in this chapter to open the epilogue ({progress.platinums} so far).</div>
           )}
@@ -449,8 +476,10 @@ export default function ChapterStory() {
             })}
           </ol>
           </div>
+          )}
         </section>
-      ))}
+        );
+      })}
 
       {songs.length === 0 && <div className="cs-empty">No tracks in this chapter yet.</div>}
 
@@ -469,6 +498,38 @@ export default function ChapterStory() {
         </div>
       )}
     </div>
+  );
+}
+
+/** An act's story in up to three beats: the line it opens on, where the mood turns, and where it lands. */
+function ActStory({ act, songs, story, onPick }: {
+  act: ActStoryData;
+  songs: GameSong[];
+  story?: MonthStory;
+  onPick: (i: number) => void;
+}) {
+  const beats = [
+    { key: 'open', label: 'Opens', beat: act.open },
+    act.turn && { key: 'turn', label: act.turn.dir === 'lifts' ? 'Lifts' : 'Drops', beat: act.turn },
+    act.close && { key: 'close', label: 'Lands', beat: act.close },
+  ].filter(Boolean) as { key: string; label: string; beat: { day: number; line: string | null } }[];
+  const words = [act.word, ...(story?.words ?? [])];
+  return (
+    <ol className="cs-synopsis" aria-label="Story of this act">
+      {beats.map(({ key, label, beat }) => {
+        const idx = songs.findIndex((s) => s.day === beat.day);
+        if (idx === -1) return null;
+        const song = songs[idx];
+        return (
+          <li key={key} data-beat={key}>
+            <button type="button" onClick={() => onPick(idx)}>
+              <small>{label} · day {song.day}</small>
+              {beat.line ? <span>“<Highlighted line={beat.line} words={words} />”</span> : <span className="cs-muted">{song.title}</span>}
+            </button>
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 
@@ -518,7 +579,7 @@ function MoodArc({ songs, groups, selectedIdx, stateOf, onSelect }: {
         </div>
       </div>
       <div className="cs-arc-acts" style={{ gridTemplateColumns: groups.map((g) => `${g.songs.length}fr`).join(' ') }}>
-        {groups.map((g) => <span key={g.key} title={g.label}>{g.act ? `${g.act.act} · ${g.act.word}` : g.bonus ? 'Bonus' : g.label}</span>)}
+        {groups.map((g) => <span key={g.key} title={g.label}>{g.act?.act ? `${g.act.act} · ${g.act.word}` : g.bonus ? `Bonus${g.act ? ` · ${g.act.word}` : ''}` : g.label}</span>)}
       </div>
     </section>
   );
