@@ -333,7 +333,7 @@ export default function App() {
   return (
     <ErrorBoundary sectionName="ROOT_APP">
       <div
-        className="min-h-screen bg-[#050402] text-white flex flex-col select-none relative"
+        className="pim-app-root min-h-screen bg-[#050402] text-white flex flex-col select-none relative"
         style={{
           paddingTop: 'calc(var(--fc-safe-area-top, 0px) + env(safe-area-inset-top, 0px))',
           paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px))',
