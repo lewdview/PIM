@@ -10,6 +10,7 @@ import { useVaultStore } from "../store/useVaultStore";
 import { X, Volume2, Key, Info, Palette, Sparkles, Sliders, Check, Lock, Flame, ShieldAlert, Monitor, Sparkle, Zap, Cpu, Gauge, Layers } from "lucide-react";
 import { VTokenCrestIcon, RemixDialIcon, HazardWarningIcon, StageCrestIcon } from "./icons/CustomVectorIcons";
 import type { VaultCard } from "../services/vaultService";
+import { CHART_VARIANT_CHOSEN_KEY, DEFAULT_CHART_VARIANT, resolveChartVariant } from "../lib/chartVariant";
 import {
   CardSkinContext,
   CardOriginal, CardGlitch, CardGlass, CardArcade, CardMtg, CardPoker, CardDuelist, CardMonster, CardChrome, CardFantasy, CardCyberpunk, CardAnime,
@@ -1232,7 +1233,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
         musicVolume: 0.5,
         haptics: true,
         missSystem: true,
-        chartVariant: "v1_gimmicks",
+        chartVariant: DEFAULT_CHART_VARIANT,
       });
       clearCatalogCache();
       updateProgression({ noteGenerationSource: "auto" });
@@ -1886,15 +1887,16 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                     </div>
                   )}
 
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-2">
                     {[
-                      { id: 'v1_gimmicks', label: 'V1 GIMMICKS', desc: 'Mines, Stems & Drops (Default)', locked: false },
+                      { id: 'v6_master', label: 'V6 CHART MASTER', desc: 'Audio-Synced Beats & Drops (Default)', locked: false },
+                      { id: 'v1_gimmicks', label: 'V1 CLASSIC', desc: 'Mines, Stems & Drops', locked: false },
                       { id: 'v5_flagship', label: 'V5 FLAGSHIP', desc: 'Kinesthetics & Motifs (All Notes)', locked: !isChartEditionsUnlocked },
                       { id: 'v4_neural', label: 'NEURAL AI', desc: 'Transformer Seq2Seq + OPARL RL', locked: !isChartEditionsUnlocked },
                       { id: 'v3_master', label: 'V3 MASTER', desc: '8-Way Swipes & Overdrive', locked: !isChartEditionsUnlocked },
                       { id: 'v2_minimal', label: 'V2 MINIMAL', desc: 'Casual Tap Flow', locked: !isChartEditionsUnlocked },
                     ].map(edition => {
-                      const curVariant = (typeof localStorage !== 'undefined' && localStorage.getItem('opt_chartVariant')) || 'v1_gimmicks';
+                      const curVariant = resolveChartVariant(typeof localStorage !== 'undefined' ? localStorage.getItem('opt_chartVariant') : null, isChartEditionsUnlocked);
                       const active = curVariant === edition.id && (!edition.locked || isChartEditionsUnlocked);
                       return (
                         <button
@@ -1903,6 +1905,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                           onClick={() => {
                             if (edition.locked) return;
                             localStorage.setItem("opt_chartVariant", edition.id);
+                            localStorage.setItem(CHART_VARIANT_CHOSEN_KEY, "1");
                             clearCatalogCache();
                             setOpts(o => ({ ...o, chartVariant: edition.id as any }));
                             logAnalyticsEvent('setting_change', { key: 'chartVariant', value: edition.id });

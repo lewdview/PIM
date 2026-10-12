@@ -1,4 +1,5 @@
 import type { ProfileSettings } from '../store/useVaultStore';
+import { DEFAULT_CHART_VARIANT, resolveChartVariant } from '../lib/chartVariant';
 
 const SETTINGS_KEY = 'pim_settings';
 
@@ -39,7 +40,7 @@ export const DEFAULT_PROFILE_SETTINGS: ProfileSettings = {
   visualizerTheme: 'cyan_pink',
   visualizerPlaylistMode: 'all_catalog',
   visualizerRepeatMode: 'all',
-  chartVariant: 'v1_gimmicks',
+  chartVariant: DEFAULT_CHART_VARIANT,
 };
 
 function readLegacyOpts(): Partial<ProfileSettings> {
@@ -127,16 +128,12 @@ export function hydrateSettings(defaults: ProfileSettings = DEFAULT_PROFILE_SETT
     const stored = localStorage.getItem(SETTINGS_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
-      if (!isChartEditionsUnlocked) {
-        parsed.chartVariant = 'v1_gimmicks';
-      }
+      parsed.chartVariant = resolveChartVariant(parsed.chartVariant, isChartEditionsUnlocked);
       return { ...defaults, ...parsed };
     }
     // First run migration from legacy individual keys
     const legacy = readLegacyOpts();
-    if (!isChartEditionsUnlocked) {
-      legacy.chartVariant = 'v1_gimmicks';
-    }
+    legacy.chartVariant = resolveChartVariant(legacy.chartVariant, isChartEditionsUnlocked);
     const migrated = { ...defaults, ...legacy };
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(migrated));
     return migrated;
