@@ -106,6 +106,7 @@ const VaultCollectionPage = lazyWithRetry(() => import('./pages/VaultCollectionP
 const BombshellsPage = lazyWithRetry(() => import('./pages/BombshellsPage'));
 const AdminDropAnimationsPage = lazyWithRetry(() => import('./pages/AdminDropAnimationsPage'));
 const LaunchPage = lazyWithRetry(() => import('./pages/LaunchPage'));
+const StageHome = lazyWithRetry(() => import('./pages/StageHome'));
 
 function OptionsRouteHandler() {
   const setOptionsModalOpen = useVaultStore((s) => s.setOptionsModalOpen);
@@ -370,6 +371,7 @@ export default function App() {
                 <Route path="/hero" component={HeroLandingPage} />
                 <Route path="/hero/day-:dayParam" component={HeroLandingPage} />
                 <Route path="/hero/:dayParam" component={HeroLandingPage} />
+                <Route path="/home" component={StageHome} />
                 <Route path="/pim" component={RhythmHome} />
                 <Route path="/play" component={RhythmHome} />
                 <Route path="/arcade" component={RhythmHome} />

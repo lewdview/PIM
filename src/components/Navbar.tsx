@@ -1,44 +1,39 @@
 // ════════════════════════════════════════════════════════════════════════════════
-// Navbar.tsx — PIM : th3v4ult "Console" shell
-// A persistent sidebar lists every destination (a drawer below 1024px), and the
-// sticky command bar on top is the entry point to super search.
-// Destinations live in nav/navConfig.ts so search and the sidebar stay in sync.
+// Navbar.tsx — PIM : th3v4ult "Stage" shell
+// Desktop: logo, four section tabs (Play, Collect, Compete, You) that open a
+// menu, a wide super-search pill, tokens, alerts and identity.
+// Phone: a slim top bar plus a bottom dock with a raised Play button; section
+// tabs open bottom sheets.
+// Destinations live in nav/navConfig.ts so search and the menus stay in sync.
 // ════════════════════════════════════════════════════════════════════════════════
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'wouter';
-import { Bell, LogOut, Menu, Wallet, X, Zap } from 'lucide-react';
+import { Bell, ChevronDown, Home, LogOut, MoreHorizontal, Play, Search, Wallet, Zap } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { useVaultStore } from '../store/useVaultStore';
 import { useDisplayMode } from '../store/useDisplayMode';
 import { useNotificationStore } from '../store/useNotificationStore';
+import { useGlobalPlayer } from '../store/useGlobalPlayer';
 import GuideModal from './GuideModal';
 import FloatingTicker from './FloatingTicker';
 import { haptics } from '../utils/haptics';
 import { farcasterService } from '../services/farcasterService';
 import { getIdenticon } from '../utils/identicon';
-import { getCurrentDay, getTimeUntilNextDay } from '../utils/dayCalc';
 import { audioManager } from '../game/audio';
 import {
+  HOME_PATH,
   NAV_SECTIONS,
   OPEN_GUIDE_EVENT,
   sectionForPath,
   visibleItems,
   type NavItem,
   type NavSection,
+  type NavSectionId,
 } from './nav/navConfig';
-import '../styles/consoleShell.css';
+import '../styles/stageShell.css';
 
-const pad2 = (n: number) => String(n).padStart(2, '0');
-
-function useNextDropCountdown() {
-  const [t, setT] = useState(getTimeUntilNextDay);
-  useEffect(() => {
-    const id = window.setInterval(() => setT(getTimeUntilNextDay()), 1000);
-    return () => window.clearInterval(id);
-  }, []);
-  return `${pad2(t.hours)}:${pad2(t.minutes)}:${pad2(t.seconds)}`;
-}
+const sectionById = (id: NavSectionId) => NAV_SECTIONS.find((s) => s.id === id)!;
 
 function isItemActive(item: NavItem, location: string) {
   if (!item.to) return false;
@@ -46,80 +41,121 @@ function isItemActive(item: NavItem, location: string) {
   return location === item.to || location.startsWith(item.to + '/');
 }
 
-// ── Identity block at the foot of the sidebar ────────────────────────────────
-function IdentityBlock({ onNavigate }: { onNavigate: () => void }) {
-  const { user, signOut, status, error: authError, setShowAuthModal } = useAuthStore();
-  const tokenBalance = useVaultStore((s) => s.tokenBalance);
+function useIdentity() {
+  const { user } = useAuthStore();
   const displayName = useVaultStore((s) => s.displayName);
   const avatarUrl = useVaultStore((s) => s.avatarUrl);
-
   const isAnonymous =
-    user?.is_anonymous ||
-    user?.app_metadata?.provider === 'anonymous' ||
-    (!user?.email && !user?.user_metadata?.wallet && !user?.user_metadata?.wallet_address);
+    !user ||
+    user.is_anonymous ||
+    user.app_metadata?.provider === 'anonymous' ||
+    (!user.email && !user.user_metadata?.wallet && !user.user_metadata?.wallet_address);
 
-  if (!user || isAnonymous) {
-    const guestLabel = farcasterService.getUser()?.username
-      ? `@${farcasterService.getUser()?.username}`
-      : farcasterService.isFarcaster()
-        ? 'Farcaster guest'
-        : user
-          ? 'Guest session'
-          : 'Not signed in';
-    return (
-      <div className="pim-who" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
-        <span style={{ fontFamily: 'var(--shell-mono)', fontSize: 10.5, color: 'var(--shell-text-3)', letterSpacing: '0.08em' }}>
-          {guestLabel.toUpperCase()} · <span style={{ color: 'var(--shell-gold)' }}>{tokenBalance} V</span>
-        </span>
-        <button
-          type="button"
-          className="pim-shear"
-          data-fill="true"
-          style={{ ['--c' as string]: authError ? '#ff3800' : 'var(--shell-gold)' }}
-          disabled={status === 'loading'}
-          onClick={() => {
-            haptics.lightTap();
-            setShowAuthModal(true);
-            onNavigate();
-          }}
-        >
-          <Wallet size={13} />
-          {status === 'loading' ? 'Connecting' : authError ? 'Retry connect' : 'Connect identity'}
-        </button>
-      </div>
-    );
-  }
+  const name = (() => {
+    if (!user) return null;
+    if (isAnonymous) {
+      const fc = farcasterService.getUser()?.username;
+      return fc ? `@${fc}` : farcasterService.isFarcaster() ? 'Farcaster guest' : 'Guest';
+    }
+    if (displayName) return displayName;
+    const cleaned = user.email?.split('@')[0];
+    if (cleaned?.startsWith('0x') && cleaned.length === 42) return `${cleaned.slice(0, 6)}…${cleaned.slice(-4)}`;
+    return cleaned || user.id.slice(0, 8);
+  })();
 
-  const ident = getIdenticon(user.id || '', displayName);
-  const name =
-    displayName ||
-    (() => {
-      const cleaned = user.email?.split('@')[0];
-      if (cleaned?.startsWith('0x') && cleaned.length === 42) return `${cleaned.slice(0, 6)}…${cleaned.slice(-4)}`;
-      return cleaned || user.id.slice(0, 8);
-    })();
+  const ident = getIdenticon(user?.id || '', displayName);
+  return { user, isAnonymous, name, avatarUrl, ident };
+}
+
+function Avatar({ size = 40 }: { size?: number }) {
+  const { avatarUrl, ident } = useIdentity();
+  const style = { width: size, height: size };
+  return avatarUrl ? (
+    <img className="pim-avatar" src={avatarUrl} alt="" style={style} />
+  ) : (
+    <span className="pim-avatar" style={{ ...style, background: ident.bgColor }}>{ident.initials}</span>
+  );
+}
+
+function ConnectButton({ onDone, size }: { onDone?: () => void; size?: 'sm' }) {
+  const { status, error: authError, setShowAuthModal } = useAuthStore();
+  return (
+    <button
+      type="button"
+      className="btn-3d"
+      data-tone="gold"
+      data-size={size}
+      disabled={status === 'loading'}
+      onClick={() => {
+        haptics.lightTap();
+        setShowAuthModal(true);
+        onDone?.();
+      }}
+    >
+      <Wallet size={15} />
+      {status === 'loading' ? 'Connecting…' : authError ? 'Retry connect' : 'Connect'}
+    </button>
+  );
+}
+
+// ── Section menu body, shared by the desktop flyout and the phone sheet ─────
+function SectionItems({
+  section,
+  location,
+  onRun,
+}: {
+  section: NavSection;
+  location: string;
+  onRun: (item: NavItem) => void;
+}) {
+  const { is4K } = useDisplayMode();
+  const unreadCount = useNotificationStore((s) => s.unreadCount);
 
   return (
-    <div className="pim-who">
-      {avatarUrl ? (
-        <img className="pim-avatar" src={avatarUrl} alt="" />
-      ) : (
-        <span className="pim-avatar" style={{ background: ident.bgColor }}>{ident.initials}</span>
-      )}
-      <Link to="/profile" className="pim-who-meta" onClick={onNavigate} title="Open your profile">
-        <b>{name}</b>
-        <span>{tokenBalance.toLocaleString()} V</span>
-      </Link>
-      <button
-        type="button"
-        className="pim-iconbtn"
-        style={{ width: 32, height: 32 }}
-        onClick={() => signOut()}
-        title="Sign out"
-        aria-label="Sign out"
-      >
-        <LogOut size={14} />
-      </button>
+    <div className="pim-menu-grid">
+      {visibleItems(section.items).map((item) => {
+        const Icon = item.icon;
+        const tag =
+          item.action === 'hdr' ? (
+            <span className="pim-menu-tag" data-on={is4K}>{is4K ? 'ON' : 'OFF'}</span>
+          ) : item.action === 'notifications' && unreadCount > 0 ? (
+            <span className="pim-menu-tag" data-on="true">{unreadCount > 9 ? '9+' : unreadCount} new</span>
+          ) : item.devOnly ? (
+            <span className="pim-menu-tag">DEV</span>
+          ) : null;
+        const body = (
+          <>
+            <span className="pim-menu-icon"><Icon size={18} /></span>
+            <span className="pim-menu-text">
+              <b>{item.label}</b>
+              <small>{item.desc}</small>
+            </span>
+            {tag}
+          </>
+        );
+        return item.to ? (
+          <Link
+            key={item.id}
+            to={item.to}
+            className="pim-menu-item"
+            aria-current={isItemActive(item, location) ? 'page' : undefined}
+            onClick={() => onRun(item)}
+          >
+            {body}
+          </Link>
+        ) : (
+          <button
+            key={item.id}
+            type="button"
+            className="pim-menu-item"
+            onClick={() => onRun(item)}
+            role={item.action === 'hdr' ? 'switch' : undefined}
+            aria-checked={item.action === 'hdr' ? is4K : undefined}
+          >
+            {body}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -131,36 +167,51 @@ export default function Navbar() {
   const setOptionsModalOpen = useVaultStore((s) => s.setOptionsModalOpen);
   const setCommandPaletteOpen = useVaultStore((s) => s.setCommandPaletteOpen);
   const unreadCount = useNotificationStore((s) => s.unreadCount);
-  const { is4K, toggle: toggle4K, detectCapability } = useDisplayMode();
+  const hasTrack = useGlobalPlayer((s) => Boolean(s.currentTrack));
+  const { toggle: toggle4K, detectCapability } = useDisplayMode();
+  const { signOut } = useAuthStore();
+  const identity = useIdentity();
 
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [menu, setMenu] = useState<NavSectionId | null>(null);
+  // Phone sheets: a single section, or 'more' for Compete + You together.
+  const [sheet, setSheet] = useState<NavSectionId | 'more' | null>(null);
   const [guideOpen, setGuideOpen] = useState(false);
-  const countdown = useNextDropCountdown();
-  const currentDay = getCurrentDay();
   const activeSection = sectionForPath(location);
 
   useEffect(() => {
     detectCapability();
   }, [detectCapability]);
 
-  // The sidebar is fixed, so the page needs an offset while the shell is mounted.
+  // The dock is fixed, so the page needs bottom room on phones while the shell is mounted.
   useEffect(() => {
-    document.body.classList.add('pim-has-sidebar');
-    return () => document.body.classList.remove('pim-has-sidebar');
+    document.body.classList.add('pim-has-dock');
+    return () => document.body.classList.remove('pim-has-dock');
   }, []);
 
+  // Lift the dock above the global player bar when a track is loaded.
   useEffect(() => {
-    setDrawerOpen(false);
+    document.body.style.setProperty('--pim-dock-lift', hasTrack ? '64px' : '0px');
+    return () => {
+      document.body.style.removeProperty('--pim-dock-lift');
+    };
+  }, [hasTrack]);
+
+  useEffect(() => {
+    setMenu(null);
+    setSheet(null);
   }, [location]);
 
   useEffect(() => {
-    if (!drawerOpen) return;
+    if (!menu && !sheet) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setDrawerOpen(false);
+      if (e.key === 'Escape') {
+        setMenu(null);
+        setSheet(null);
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [drawerOpen]);
+  }, [menu, sheet]);
 
   useEffect(() => {
     const open = () => setGuideOpen(true);
@@ -168,148 +219,241 @@ export default function Navbar() {
     return () => window.removeEventListener(OPEN_GUIDE_EVENT, open);
   }, []);
 
-  const openSearch = () => {
+  const tap = (volume = 0.25) => {
     haptics.lightTap();
-    audioManager.playSfx('tap_nav', 0.2);
-    setDrawerOpen(false);
+    audioManager.playSfx('tap_nav', volume);
+  };
+
+  const openSearch = () => {
+    tap(0.2);
+    setMenu(null);
+    setSheet(null);
     setCommandPaletteOpen(true);
   };
 
-  const runItem = (item: NavItem) => {
-    haptics.lightTap();
-    audioManager.playSfx('tap_nav', 0.3);
-    if (item.action === 'options') setOptionsModalOpen(true);
-    else if (item.action === 'guide') setGuideOpen(true);
-    else if (item.action === 'notifications') useNotificationStore.getState().setIsOpen(true);
-    else if (item.action === 'hdr') return toggle4K();
-    setDrawerOpen(false);
-  };
-
-  const renderSection = (section: NavSection) => (
-    <div key={section.id} style={{ ['--sec-accent' as string]: section.accent }}>
-      <h4>{section.label}</h4>
-      {visibleItems(section.items).map((item) => {
-        const Icon = item.icon;
-        const active = isItemActive(item, location);
-        const tag =
-          item.action === 'hdr' ? (
-            <span className="pim-navlink-tag" data-on={is4K}>{is4K ? 'ON' : 'OFF'}</span>
-          ) : item.action === 'notifications' && unreadCount > 0 ? (
-            <span className="pim-navlink-tag" data-on="true">{unreadCount > 9 ? '9+' : unreadCount}</span>
-          ) : item.devOnly ? (
-            <span className="pim-navlink-tag">DEV</span>
-          ) : null;
-
-        if (item.to) {
-          return (
-            <Link
-              key={item.id}
-              to={item.to}
-              className="pim-navlink"
-              aria-current={active ? 'page' : undefined}
-              onClick={() => runItem(item)}
-              title={item.desc}
-            >
-              <Icon size={16} />
-              {item.label}
-              {tag}
-            </Link>
-          );
-        }
-        return (
-          <button
-            key={item.id}
-            type="button"
-            className="pim-navlink"
-            onClick={() => runItem(item)}
-            title={item.desc}
-            role={item.action === 'hdr' ? 'switch' : undefined}
-            aria-checked={item.action === 'hdr' ? is4K : undefined}
-          >
-            <Icon size={16} />
-            {item.label}
-            {tag}
-          </button>
-        );
-      })}
-    </div>
+  const runItem = useCallback(
+    (item: NavItem) => {
+      tap(0.3);
+      if (item.action === 'options') setOptionsModalOpen(true);
+      else if (item.action === 'guide') setGuideOpen(true);
+      else if (item.action === 'notifications') useNotificationStore.getState().setIsOpen(true);
+      else if (item.action === 'hdr') return toggle4K();
+      setMenu(null);
+      setSheet(null);
+    },
+    [setOptionsModalOpen, toggle4K]
   );
+
+  const openSection = sectionById(menu ?? 'play');
+  const dockActive = (id: string) => {
+    if (id === 'home') return location === HOME_PATH;
+    if (id === 'more') return activeSection === 'compete' || activeSection === 'you';
+    return activeSection === id;
+  };
 
   return (
     <>
-      {/* ══ SIDEBAR (fixed on desktop, drawer below 1024px) ══════════════════ */}
-      {drawerOpen && <div className="pim-sidebar-scrim" onClick={() => setDrawerOpen(false)} />}
-      <aside className="pim-sidebar" data-open={drawerOpen} aria-label="Main navigation">
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-          <Link to="/" className="pim-brand" aria-label="PIM home">
-            <img src="/data/logos/top_left_site.png" alt="PIM th3v4ult" />
-            <small>365 days of dark and light</small>
+      {/* ══ TOP BAR ══════════════════════════════════════════════════════════ */}
+      <header className="pim-topbar">
+        <Link to={HOME_PATH} className="pim-logo" aria-label="PIM home" onClick={() => tap(0.2)}>
+          <img src="/data/logos/top_left_site.png" alt="PIM th3v4ult" />
+        </Link>
+
+        <nav className="pim-tabs pim-only-wide" aria-label="Sections">
+          {NAV_SECTIONS.map((section) => (
+            <button
+              key={section.id}
+              type="button"
+              className="pim-tab"
+              style={{ ['--sec-accent' as string]: section.accent }}
+              data-active={activeSection === section.id}
+              aria-expanded={menu === section.id}
+              aria-haspopup="menu"
+              onClick={() => {
+                tap();
+                setMenu(menu === section.id ? null : section.id);
+              }}
+            >
+              {section.label}
+              <ChevronDown size={14} className="pim-chev" />
+            </button>
+          ))}
+        </nav>
+
+        <button type="button" className="pim-searchpill" onClick={openSearch} aria-label="Open super search">
+          <Search size={17} />
+          <span className="pim-searchpill-text">Search songs, cards, modes</span>
+          <span className="pim-kbd">/</span>
+        </button>
+
+        <div className="pim-right">
+          <Link
+            to="/vault/earn"
+            className="pim-tokens pim-only-wide"
+            data-empty={tokenBalance <= 0}
+            title="Vault tokens"
+            onClick={() => tap(0.2)}
+          >
+            <Zap size={14} />
+            {tokenBalance.toLocaleString()}
           </Link>
           <button
             type="button"
-            className="pim-iconbtn pim-drawer-close"
-            style={{ width: 32, height: 32 }}
-            onClick={() => setDrawerOpen(false)}
-            aria-label="Close menu"
+            className="pim-iconbtn"
+            onClick={() => {
+              tap(0.2);
+              useNotificationStore.getState().setIsOpen(true);
+            }}
+            aria-label={unreadCount > 0 ? `Transmissions, ${unreadCount} unread` : 'Transmissions'}
+            title="Transmissions"
           >
-            <X size={16} />
+            <Bell size={17} />
+            {unreadCount > 0 && <span className="pim-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>}
           </button>
-        </div>
-        <nav className="pim-sidenav">{NAV_SECTIONS.map(renderSection)}</nav>
-        <IdentityBlock onNavigate={() => setDrawerOpen(false)} />
-      </aside>
-
-      {/* ══ COMMAND BAR ══════════════════════════════════════════════════════ */}
-      <header className="pim-cmdbar" data-section={activeSection ?? undefined}>
-        <button
-          type="button"
-          className="pim-iconbtn pim-only-narrow"
-          onClick={() => {
-            haptics.lightTap();
-            setDrawerOpen(true);
-          }}
-          aria-label="Open menu"
-          aria-expanded={drawerOpen}
-        >
-          <Menu size={18} />
-        </button>
-
-        <button type="button" className="pim-cmdbox" onClick={openSearch} aria-label="Open super search">
-          <span className="pim-caret">&gt;_</span>
-          <span className="pim-cmdbox-text">search 365 tracks, vault, modes, settings</span>
-          <span className="pim-kbd pim-only-wide">⌘K</span>
-        </button>
-
-        <div className="pim-readout pim-only-wide" aria-label="Vault status">
-          <span>DAY <b>{currentDay}</b>/365</span>
-          <span>NEXT DROP <b>{countdown}</b></span>
+          <span className="pim-only-wide" style={{ display: 'contents' }}>
+            {identity.user && !identity.isAnonymous ? (
+              <Link to="/profile" title={identity.name ?? 'Profile'} onClick={() => tap(0.2)} style={{ display: 'flex' }}>
+                <Avatar />
+              </Link>
+            ) : (
+              <ConnectButton size="sm" />
+            )}
+          </span>
         </div>
 
-        <Link
-          to="/vault/earn"
-          className="pim-tokens"
-          data-empty={tokenBalance <= 0}
-          title="Vault tokens"
-          onClick={() => audioManager.playSfx('tap_nav', 0.2)}
-        >
-          <Zap size={12} />
-          {tokenBalance.toLocaleString()}
-        </Link>
-
-        <button
-          type="button"
-          className="pim-iconbtn"
-          onClick={() => {
-            haptics.lightTap();
-            useNotificationStore.getState().setIsOpen(true);
-          }}
-          aria-label={unreadCount > 0 ? `Transmissions, ${unreadCount} unread` : 'Transmissions'}
-          title="Transmissions"
-        >
-          <Bell size={16} />
-          {unreadCount > 0 && <span className="pim-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>}
-        </button>
+        {/* Desktop section menu */}
+        {menu && (
+          <>
+            <div className="pim-menu-scrim" onClick={() => setMenu(null)} />
+            <div
+              className="pim-menu pim-only-wide"
+              role="menu"
+              aria-label={openSection.label}
+              style={{ ['--sec-accent' as string]: openSection.accent }}
+            >
+              <h3>{openSection.label}</h3>
+              <SectionItems section={openSection} location={location} onRun={runItem} />
+              {menu === 'you' && identity.user && !identity.isAnonymous && (
+                <div className="pim-sheet-account" style={{ margin: '12px 6px 2px' }}>
+                  <Avatar size={34} />
+                  <b style={{ flex: 1, fontSize: 14 }}>{identity.name}</b>
+                  <button type="button" className="btn-3d" data-tone="quiet" data-size="sm" onClick={() => signOut()}>
+                    <LogOut size={14} /> Sign out
+                  </button>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </header>
+
+      {/* ══ PHONE DOCK ═══════════════════════════════════════════════════════ */}
+      <nav className="pim-dock" aria-label="Main">
+        <Link to={HOME_PATH} data-active={dockActive('home')} onClick={() => tap(0.2)}>
+          <Home size={21} />
+          Home
+        </Link>
+        <button
+          type="button"
+          data-active={dockActive('play')}
+          style={{ ['--sec-accent' as string]: sectionById('play').accent }}
+          onClick={() => {
+            tap(0.2);
+            setSheet('play');
+          }}
+        >
+          {(() => {
+            const Icon = sectionById('play').icon;
+            return <Icon size={21} />;
+          })()}
+          Play
+        </button>
+        <Link to="/daily" aria-label="Play today's drop" onClick={() => tap(0.35)}>
+          <span className="pim-dock-play"><Play size={26} fill="currentColor" /></span>
+        </Link>
+        <button
+          type="button"
+          data-active={dockActive('collect')}
+          style={{ ['--sec-accent' as string]: sectionById('collect').accent }}
+          onClick={() => {
+            tap(0.2);
+            setSheet('collect');
+          }}
+        >
+          {(() => {
+            const Icon = sectionById('collect').icon;
+            return <Icon size={21} />;
+          })()}
+          Collect
+        </button>
+        <button
+          type="button"
+          data-active={dockActive('more')}
+          onClick={() => {
+            tap(0.2);
+            setSheet('more');
+          }}
+        >
+          <MoreHorizontal size={21} />
+          More
+        </button>
+      </nav>
+
+      {/* ══ PHONE SHEET ══════════════════════════════════════════════════════ */}
+      {sheet && (
+        <>
+          <div className="pim-sheet-scrim pim-only-narrow" onClick={() => setSheet(null)} />
+          <div
+            className="pim-sheet pim-only-narrow"
+            role="dialog"
+            aria-label={sheet === 'more' ? 'More' : sectionById(sheet).label}
+            style={{ ['--sec-accent' as string]: sheet === 'more' ? sectionById('compete').accent : sectionById(sheet).accent }}
+          >
+            <div className="pim-sheet-grip" />
+            {sheet === 'more' ? (
+              <>
+                <div className="pim-sheet-account" style={{ marginTop: 0, paddingTop: 0, borderTop: 0 }}>
+                  {identity.user && !identity.isAnonymous ? (
+                    <>
+                      <Avatar size={40} />
+                      <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                        <b style={{ fontSize: 15, color: '#fff' }}>{identity.name}</b>
+                        <span style={{ fontFamily: 'var(--shell-mono)', fontSize: 12, color: 'var(--shell-gold)' }}>
+                          {tokenBalance.toLocaleString()} tokens
+                        </span>
+                      </span>
+                      <button type="button" className="btn-3d" data-tone="quiet" data-size="sm" onClick={() => signOut()}>
+                        <LogOut size={14} />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span style={{ flex: 1, fontFamily: 'var(--shell-mono)', fontSize: 12, color: 'var(--shell-text-2)' }}>
+                        {identity.name ?? 'Not signed in'} · <span style={{ color: 'var(--shell-gold)' }}>{tokenBalance} tokens</span>
+                      </span>
+                      <ConnectButton size="sm" onDone={() => setSheet(null)} />
+                    </>
+                  )}
+                </div>
+                {(['compete', 'you'] as NavSectionId[]).map((id) => {
+                  const section = sectionById(id);
+                  return (
+                    <div key={id} style={{ ['--sec-accent' as string]: section.accent }}>
+                      <h4>{section.label}</h4>
+                      <SectionItems section={section} location={location} onRun={runItem} />
+                    </div>
+                  );
+                })}
+              </>
+            ) : (
+              <>
+                <h3>{sectionById(sheet).label}</h3>
+                <SectionItems section={sectionById(sheet)} location={location} onRun={runItem} />
+              </>
+            )}
+          </div>
+        </>
+      )}
 
       <GuideModal isOpen={guideOpen} onClose={() => setGuideOpen(false)} />
       <FloatingTicker />

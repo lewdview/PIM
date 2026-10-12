@@ -1,6 +1,6 @@
 // ════════════════════════════════════════════════════════════════════════════════
 // navConfig.ts — One source of truth for the app shell's destinations.
-// The top bar, the phone dock sheets and super search all read from here, so a
+// The top bar menus, the phone dock sheets and super search all read from here, so a
 // new page only needs adding once.
 // ════════════════════════════════════════════════════════════════════════════════
 
@@ -134,6 +134,9 @@ export function sectionForPath(path: string): NavSectionId | null {
   if (starts(['/vault', '/collection', '/reveal', '/vaultfinds', '/bombshells', '/forge', '/codex', '/next-vault', '/hero'])) return 'collect';
   return null;
 }
+
+/** The player's hub: today's song, claim, streak and recent songs. */
+export const HOME_PATH = '/home';
 
 /** Fired by anything that wants the shell to open the field guide. */
 export const OPEN_GUIDE_EVENT = 'pim:open-guide';

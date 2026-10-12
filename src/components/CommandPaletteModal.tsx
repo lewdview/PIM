@@ -8,7 +8,7 @@
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useLocation } from 'wouter';
-import { Clock, CornerDownLeft, Lock, Play, Sparkles, Unlock, Wallet } from 'lucide-react';
+import { Clock, CornerDownLeft, Home, Lock, Play, Search, Sparkles, Unlock, Wallet } from 'lucide-react';
 import { useVaultStore, ownsCardForDay } from '../store/useVaultStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { useNotificationStore } from '../store/useNotificationStore';
@@ -16,8 +16,8 @@ import { useDisplayMode } from '../store/useDisplayMode';
 import { getCurrentDay, formatDate } from '../utils/dayCalc';
 import staticSongCatalog from '../data/song_catalog.json';
 import { haptics } from '../utils/haptics';
-import { NAV_SECTIONS, OPEN_GUIDE_EVENT, visibleItems, type NavItem, type NavSectionId } from './nav/navConfig';
-import '../styles/consoleShell.css';
+import { HOME_PATH, NAV_SECTIONS, OPEN_GUIDE_EVENT, visibleItems, type NavItem, type NavSectionId } from './nav/navConfig';
+import '../styles/stageShell.css';
 
 type Scope = 'all' | 'songs' | NavSectionId;
 
@@ -61,6 +61,10 @@ const fmtDur = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s) % 60
 
 // Extra places that aren't sidebar destinations but people search for.
 const EXTRA_ITEMS: { section: NavSectionId; item: NavItem }[] = [
+  {
+    section: 'play',
+    item: { id: 'home', label: 'Home', to: HOME_PATH, icon: Home, desc: "Today's song, your streak and recent plays", keywords: ['home', 'hub', 'start', 'main'] },
+  },
   {
     section: 'you',
     item: { id: 'wallet', label: 'Connect wallet', action: undefined, icon: Wallet, desc: 'Sign in with a Base smart wallet or EVM key', keywords: ['wallet', 'connect', 'auth', 'base', 'coinbase', 'login', 'sign in'] },
@@ -269,7 +273,9 @@ export default function CommandPaletteModal() {
     });
     EXTRA_ITEMS.forEach(({ section: sid, item }) => {
       const section = NAV_SECTIONS.find((s) => s.id === sid)!;
-      out.push({ kind: 'place', key: `place-${item.id}`, item, section: { id: section.id, label: section.label, accent: section.accent } });
+      const hit = { kind: 'place' as const, key: `place-${item.id}`, item, section: { id: section.id, label: section.label, accent: section.accent } };
+      if (item.id === 'home') out.unshift(hit);
+      else out.push(hit);
     });
     return out;
   }, []);
@@ -538,7 +544,7 @@ export default function CommandPaletteModal() {
             )}
           </dl>
           <div className="pim-ss-acts">
-            <button type="button" className="pim-shear" data-fill="true" style={{ ['--c' as string]: selected.section.accent }} onClick={() => execute(selected)}>
+            <button type="button" className="btn-3d" data-size="sm" style={{ ['--c' as string]: selected.section.accent, ['--d' as string]: 'rgba(0,0,0,0.55)' }} onClick={() => execute(selected)}>
               Open
             </button>
           </div>
@@ -556,7 +562,7 @@ export default function CommandPaletteModal() {
             This song releases on <b>{formatDate(s.day)}</b>, {s.day - currentDay} days from now. A Prophecy card for day {s.day} unlocks it early.
           </div>
           <div className="pim-ss-acts">
-            <button type="button" className="pim-shear" style={{ ['--c' as string]: 'var(--shell-gold)' }} onClick={() => execute(s)}>
+            <button type="button" className="btn-3d" data-size="sm" data-tone="gold" onClick={() => execute(s)}>
               <Sparkles size={12} /> Pack shop
             </button>
           </div>
@@ -598,13 +604,13 @@ export default function CommandPaletteModal() {
           <dd>{owned ? 'In your vault' : 'Not collected yet'}</dd>
         </dl>
         <div className="pim-ss-acts">
-          <button type="button" className="pim-shear" data-fill="true" style={{ ['--c' as string]: '#ff1e8c' }} onClick={() => execute(s, 'play')}>
+          <button type="button" className="btn-3d" data-size="sm" onClick={() => execute(s, 'play')}>
             <Play size={12} /> Play
           </button>
-          <button type="button" className="pim-shear" style={{ ['--c' as string]: 'var(--shell-text-2)' }} onClick={() => execute(s, 'listen')}>
+          <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={() => execute(s, 'listen')}>
             Listen
           </button>
-          <button type="button" className="pim-shear" style={{ ['--c' as string]: 'var(--shell-text-2)' }} onClick={() => execute(s, 'page')}>
+          <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={() => execute(s, 'page')}>
             Song page
           </button>
         </div>
@@ -617,7 +623,7 @@ export default function CommandPaletteModal() {
     <div className="pim-ss-scrim" onMouseDown={(e) => e.target === e.currentTarget && setOpen(false)}>
       <div className="pim-ss" role="dialog" aria-modal="true" aria-label="Super search">
         <div className="pim-ss-in">
-          <span className="pim-caret">&gt;_</span>
+          <Search size={20} className="pim-ss-icon-search" aria-hidden="true" />
           <input
             ref={inputRef}
             type="text"
