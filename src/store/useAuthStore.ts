@@ -7,6 +7,7 @@ import { Wallet } from 'ethers';
 import { logAnalyticsEvent } from '../services/telemetryService';
 import { farcasterService } from '../services/farcasterService';
 import { transmission } from './useTransmissionStore';
+import { isLaunchPath } from '../utils/launchRoutes';
 import {
   stashGuestSessionForMigration,
   maybeMigrateGuestData,
@@ -137,6 +138,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const query = new URLSearchParams(window.location.search);
     if (query.get('skip_splash') === 'true' || query.get('splash') === 'false') return false;
     if (window.location.pathname.startsWith('/play/')) return false;
+    if (isLaunchPath(window.location.pathname)) return false;
     return true;
   })(),
   setShowArcadeSplash: (show: boolean) => set({ showArcadeSplash: show }),

@@ -27,6 +27,7 @@ import { colorWithAlpha, hslToHex, getDifficultyLaneColor } from './colorUtils';
 import { perfectPlusWindow, perfectWindow, goodWindow, missWindow } from './timing';
 import { type TrackArchetype, type ArchetypeMeta, ARCHETYPE_METAS, selectSongArchetype, isArchetypeDevModeEnabled } from './archetypes';
 import { type ProjectionResult, getCorkscrewSpiralPos, getWaveCoasterPos, getFlat2DPos, getRadialOrbitPos, getHorizontalDriftPos, getCockpitHudPos, getHyperPrismPos, getDnaHelixPos, getVertigoDropPos, getSingularityVoidPos, getGroundZeroPos, getOrbitalHaloPos, getMobiusLoopPos, getArchetypeProjection, getLaneFromCoords } from './projections';
+import { hasPovScene, usesFlatHighway, hasStraightHitLine, drawPovScene } from './povScenes';
 import { refineAndBlendEdges, disposeCanvas, drawMovingGasAura } from './drawHelpers';
 import JudgmentBadge, { getJudgmentBadgeSvgHtml, getJudgmentStreamItemHtml } from './JudgmentBadge';
 import GameplayVisualizer from './GameplayVisualizer';
@@ -34,6 +35,7 @@ import TutorialOverlay, { type TutorialStepType } from './TutorialOverlay';
 import { loadLyricsForDay, drawTrackLyrics, type TimedLine } from './trackLyrics';
 import { getStageStarts, stageAtTime } from './stageTimeline';
 import { generateMasterChart, ANALYSIS_SAMPLE_RATE, CHART_MASTER_VERSION } from '@/game/chartMaster';
+import { drawSlabBody, drawTopFaceBevel, drawHitPop3D, makeHitShards, setNote3DQuality, type HitShard } from './notes3d';
 
 // Use Vite's eager glob to grab files in /public/data/slideshow/
 const imageModules = import.meta.glob<string>('../../public/data/slideshow/**/*.{png,jpg,jpeg,gif,webp,svg}', { query: '?url', import: 'default', eager: true });
@@ -560,6 +562,8 @@ interface HitEffect {
   color: string;
   kind: "PERFECT+" | "PERFECT" | "GOOD" | "SHIELDED" | "MISS";
   particles: HitParticle[];
+  laneW?: number;
+  shards?: HitShard[];
 }
 interface AmbientParticle {
   x: number;
@@ -1573,6 +1577,8 @@ export default function Game() {
 
   // ── 6-Archetype Track Geometry & Stage Color Primer Engine ──
   const activeArchetypeRef = useRef<TrackArchetype>('cyber_tunnel');
+  // Song time of the last rendered frame, so hit effects can find the moving 3D strike targets.
+  const povFxClockRef = useRef(0);
   const [activeArchetype, setActiveArchetype] = useState<TrackArchetype>('cyber_tunnel');
 
   // ── POV Perspective Engine State ──
@@ -2125,9 +2131,15 @@ export default function Game() {
       const W = canvas.width / dpr;
       const H = canvas.height / dpr;
       const geom = getStageGeometry(W, H);
-      const hitY = geom.hitY;
       const { x: lx, w: lw } = laneAt(lane, 1, W, HW_TOP, HW_BOT, undefined, 1, 0, H);
-      const cx = lx + lw / 2;
+      // In 3D POVs the strike target is wherever the projection lands, not the classic lane foot.
+      const fxPov = activePovModeRef.current;
+      const fxStage = lastDetectedStageRef.current;
+      const fxTarget = fxPov !== 'classic' && !usesFlatHighway(fxPov) && (fxPov !== 'dynamic_stage' || fxStage >= 3)
+        ? getArchetypeProjection(Math.max(0, Math.min(2, Math.round(lane))), 1, W, H, activeArchetypeRef.current, fxStage, povFxClockRef.current, fxPov)
+        : null;
+      const hitY = fxTarget ? fxTarget.y : geom.hitY;
+      const cx = fxTarget ? fxTarget.x + fxTarget.w / 2 : lx + lw / 2;
       const color =
         kind === "SHIELDED"
           ? "#00FFDD"
@@ -2197,6 +2209,8 @@ export default function Game() {
         color,
         kind,
         particles,
+        laneW: lw,
+        shards: particleDensity === 'minimal' ? undefined : makeHitShards(kind, particleDensity === 'half' ? 6 : 12),
       });
     },
     [],
@@ -3536,6 +3550,12 @@ export default function Game() {
       ctx.shadowBlur = 0;
       ctx.shadowColor = 'transparent';
     }
+    // 3D note slabs: full on high, lighter on medium, flat on low/legacy.
+    setNote3DQuality(
+      optsRef.current.legacyGraphics || optsRef.current.gfxLevel === 'low'
+        ? 'off'
+        : optsRef.current.gfxLevel === 'medium' ? 'low' : 'high'
+    );
     const song = songRef.current;
     // Task 4B: Adaptive BPM & note density lane breathing
     // During dense passages (bursts > 4 NPS), gently expand approach time to preserve readability
@@ -3915,8 +3935,9 @@ export default function Game() {
     }
 
     // ── Dynamic Lane Hit Glows Sweep (Subtle Ambient Illumination) ──
+    // Drawn along the classic highway only; POV scenes light their own lane guides.
     const nowGlowMs = Date.now();
-    for (let i = 0; i < LANE_COUNT; i++) {
+    for (let i = 0; i < (is3DPOVActive ? 0 : LANE_COUNT); i++) {
       const latest = lastLaneHitRef.current[i];
       if (latest && nowGlowMs - latest.ts < 500) {
         const age = (nowGlowMs - latest.ts) / 500;
@@ -4397,6 +4418,7 @@ export default function Game() {
 
     // ── 3D POV PERSPECTIVE ENVIRONMENT & AMBIENT VISUALIZERS ──
     const curPovMode = activePovModeRef.current;
+    povFxClockRef.current = t;
     const isCyberTunnelPov = curPovMode === 'cyber_tunnel';
     const isCorkscrewPov = curPovMode === 'corkscrew';
     const isRollercoasterPov = curPovMode === 'rollercoaster';
@@ -4461,7 +4483,35 @@ export default function Game() {
       const swirlAngle = t * 0.9 * swirlSpeedMult; // Continuous rotational vortex swirl
       const isOverdrive = calculatedStage === 5 && swirlSpeedMult >= 2.0;
 
-      if (tunnelOpacity > 0) {
+      if (tunnelOpacity > 0 && hasPovScene(curPovMode)) {
+        // ── POV SIGNATURE SCENE: each camera has its own backdrop, palette and lane guides ──
+        const sceneHitMs: (number | undefined)[] = [];
+        const sceneHitType: (string | undefined)[] = [];
+        const scenePressed: boolean[] = [];
+        for (let i = 0; i < LANE_COUNT; i++) {
+          sceneHitMs.push(lastLaneHitRef.current[i]?.ts);
+          sceneHitType.push(lastLaneHitRef.current[i]?.type);
+          scenePressed.push(Boolean(laneRef.current[i]?.pressed));
+        }
+        drawPovScene(curPovMode, {
+          ctx,
+          W,
+          H,
+          t,
+          approachSec: AT,
+          bpm: bpmVal,
+          beat: beatPulseVal,
+          stage: calculatedStage,
+          archetype: activeArchetypeRef.current,
+          laneColors: laneColorsRef.current,
+          laneHitMs: sceneHitMs,
+          laneHitType: sceneHitType,
+          nowMs: Date.now(),
+          pressed: scenePressed,
+          energy: Math.min(1, gs.combo / 60),
+          lite: optsRef.current.gfxLevel === 'low' || optsRef.current.gfxLevel === 'medium' || optsRef.current.legacyGraphics,
+        });
+      } else if (tunnelOpacity > 0) {
         // ── ARCHETYPE 1: HORIZONTAL SIDE-SCROLLER (90° Canvas) ──
         if (currentArch === 'horizontal_drift') {
           // Dynamic Moving Gas Nebula Backdrop around Side-Scroller Track
@@ -5047,7 +5097,7 @@ export default function Game() {
       // ── 3. 3D Circular Judgment Target Strike Zones (Deep Drop Shadows & Neon Rim Glow) ──
       const hwBot = hwAtProgress(1, W, HW_TOP, HW_BOT, H);
       const laneW = hwBot.width / LANE_COUNT;
-      for (let lane = 0; lane < LANE_COUNT; lane++) {
+      for (let lane = 0; lane < (usesFlatHighway(curPovMode) ? 0 : LANE_COUNT); lane++) {
         const targetProj = getArchetypeProjection(lane, 1, W, H, activeArchetypeRef.current, calculatedStage, t, activePovModeRef.current);
         const laneCenterX = targetProj.x + targetProj.w / 2;
         const laneCenterY = targetProj.y;
@@ -5170,7 +5220,10 @@ export default function Game() {
     // outer wrapper — they cover the entire viewport uniformly so no column seam appears.
 
     const isCyberPOV = (isCyberTunnelPov || activeArchetypeRef.current === 'cyber_tunnel') && (calculatedStage === 3 || calculatedStage === 5);
-    const trackTopRatio = isCyberPOV ? 0.18 : HW_TOP;
+    const isFlatHighway = usesFlatHighway(curPovMode);
+    // Classic rails, speed lines and the hit beam trace the 2.5D highway; 3D POVs draw their own lane guides.
+    const showClassicHighway = !is3DEnvironment || isFlatHighway;
+    const trackTopRatio = isCyberPOV ? 0.18 : isFlatHighway ? HW_BOT : HW_TOP;
     const trackBotRatio = isCyberPOV ? 0.86 : HW_BOT;
     const hwTop = hwAtProgress(0, W, trackTopRatio, trackBotRatio, H);
     const hwBot = hwAtProgress(1, W, trackTopRatio, trackBotRatio, H);
@@ -5250,104 +5303,106 @@ export default function Game() {
       ctx.restore();
     }
 
-    // Draw dynamic speed lines (clipped to track guides)
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(hwTop.left, 0);
-    ctx.quadraticCurveTo(W / 2, -hitY * 0.09, hwTop.right, 0);
-    ctx.lineTo(hwBot.right, hitY);
-    ctx.lineTo(hwBot.left, hitY);
-    ctx.closePath();
-    ctx.clip();
-
-    const speedCycle = hitY * 0.18;
-    const speedOff = (t * 0.8 * hitY) % speedCycle;
-    for (let row = -1; row < 8; row++) {
-      const sy1 = speedOff + row * speedCycle;
-      const sy2 = sy1 + speedCycle * 0.35;
-      if (sy2 < 0 || sy1 > hitY) continue;
-      const sp1 = Math.max(0, Math.min(1, sy1 / hitY));
-      const sp2 = Math.max(0, Math.min(1, sy2 / hitY));
-      const { left: sl1, right: sr1 } = hwAtProgress(sp1, W, trackTopRatio, trackBotRatio, H);
-      const { left: sl2, right: sr2 } = hwAtProgress(sp2, W, trackTopRatio, trackBotRatio, H);
-      const speedAlpha = 0.012 + sp1 * 0.04;
-      ctx.fillStyle = `rgba(255,248,235,${speedAlpha})`;
+    if (showClassicHighway) {
+      // Draw dynamic speed lines (clipped to track guides)
+      ctx.save();
       ctx.beginPath();
-      ctx.moveTo(sl1, sy1);
-      ctx.lineTo(sr1, sy1);
-      ctx.lineTo(sr2, sy2);
-      ctx.lineTo(sl2, sy2);
+      ctx.moveTo(hwTop.left, 0);
+      ctx.quadraticCurveTo(W / 2, -hitY * 0.09, hwTop.right, 0);
+      ctx.lineTo(hwBot.right, hitY);
+      ctx.lineTo(hwBot.left, hitY);
       ctx.closePath();
-      ctx.fill();
+      ctx.clip();
+
+      const speedCycle = hitY * 0.18;
+      const speedOff = (t * 0.8 * hitY) % speedCycle;
+      for (let row = -1; row < 8; row++) {
+        const sy1 = speedOff + row * speedCycle;
+        const sy2 = sy1 + speedCycle * 0.35;
+        if (sy2 < 0 || sy1 > hitY) continue;
+        const sp1 = Math.max(0, Math.min(1, sy1 / hitY));
+        const sp2 = Math.max(0, Math.min(1, sy2 / hitY));
+        const { left: sl1, right: sr1 } = hwAtProgress(sp1, W, trackTopRatio, trackBotRatio, H);
+        const { left: sl2, right: sr2 } = hwAtProgress(sp2, W, trackTopRatio, trackBotRatio, H);
+        const speedAlpha = 0.012 + sp1 * 0.04;
+        ctx.fillStyle = `rgba(255,248,235,${speedAlpha})`;
+        ctx.beginPath();
+        ctx.moveTo(sl1, sy1);
+        ctx.lineTo(sr1, sy1);
+        ctx.lineTo(sr2, sy2);
+        ctx.lineTo(sl2, sy2);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // ── HIT LINE BEAM ── neon horizontal bar at the hit zone
+      const beamGrad = ctx.createLinearGradient(hwBot.left, 0, hwBot.right, 0);
+      const beamColor = puColor ?? "rgba(255,248,235,0.7)";
+      const beamPulse = 0.7 + 0.3 * Math.sin(t * 6);
+      beamGrad.addColorStop(0, "transparent");
+      beamGrad.addColorStop(0.15, beamColor);
+      beamGrad.addColorStop(0.5, "rgba(255,255,255,0.9)");
+      beamGrad.addColorStop(0.85, beamColor);
+      beamGrad.addColorStop(1, "transparent");
+      ctx.globalAlpha = beamPulse * 0.45;
+      ctx.fillStyle = beamGrad;
+      ctx.fillRect(hwBot.left, hitY - 2, hwBot.right - hwBot.left, 4);
+      // Bloom glow under the beam
+      ctx.globalAlpha = beamPulse * 0.12;
+      ctx.shadowColor = puColor ?? "#fff";
+      ctx.shadowBlur = 20;
+      ctx.fillRect(hwBot.left, hitY - 1, hwBot.right - hwBot.left, 2);
+      ctx.shadowBlur = 0; // reset shadow
+      ctx.globalAlpha = 1;
+      ctx.shadowBlur = 0;
+      ctx.shadowColor = "transparent";
+
+      ctx.restore();
+
+      // ── 3. TRACK EDGE RAILS ─────────────────────────────────────
+      // Neon rails with strong glow — unified with highway boundary
+      const railColor = puColor ?? "rgba(255,248,235,0.55)";
+      const railGlow = puColor ? colorWithAlpha(puColor, 0.8) : "rgba(255,248,235,0.25)";
+
+      // Outer glow pass (thicker, blurred)
+      ctx.save();
+      ctx.shadowColor = puColor ?? "rgba(255,248,235,0.4)";
+      ctx.shadowBlur = 16;
+      const railGlowGrad = ctx.createLinearGradient(0, 0, 0, hitY);
+      railGlowGrad.addColorStop(0, "rgba(255,255,255,0.0)");
+      railGlowGrad.addColorStop(0.3, railGlow);
+      railGlowGrad.addColorStop(1, railColor);
+      ctx.strokeStyle = railGlowGrad;
+      ctx.lineWidth = 3;
+      // Left rail
+      ctx.beginPath();
+      ctx.moveTo(hwTop.left, 0);
+      ctx.lineTo(hwBot.left, hitY);
+      ctx.stroke();
+      // Right rail
+      ctx.beginPath();
+      ctx.moveTo(hwTop.right, 0);
+      ctx.lineTo(hwBot.right, hitY);
+      ctx.stroke();
+      ctx.restore();
+
+      // Inner bright core
+      const railCoreGrad = ctx.createLinearGradient(0, 0, 0, hitY);
+      railCoreGrad.addColorStop(0, "rgba(255,255,255,0.0)");
+      railCoreGrad.addColorStop(0.5, "rgba(255,255,255,0.3)");
+      railCoreGrad.addColorStop(1, "rgba(255,255,255,0.6)");
+      ctx.strokeStyle = railCoreGrad;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(hwTop.left, 0);
+      ctx.lineTo(hwBot.left, hitY);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(hwTop.right, 0);
+      ctx.lineTo(hwBot.right, hitY);
+      ctx.stroke();
     }
-    ctx.restore();
-
-    // ── HIT LINE BEAM ── neon horizontal bar at the hit zone
-    const beamGrad = ctx.createLinearGradient(hwBot.left, 0, hwBot.right, 0);
-    const beamColor = puColor ?? "rgba(255,248,235,0.7)";
-    const beamPulse = 0.7 + 0.3 * Math.sin(t * 6);
-    beamGrad.addColorStop(0, "transparent");
-    beamGrad.addColorStop(0.15, beamColor);
-    beamGrad.addColorStop(0.5, "rgba(255,255,255,0.9)");
-    beamGrad.addColorStop(0.85, beamColor);
-    beamGrad.addColorStop(1, "transparent");
-    ctx.globalAlpha = beamPulse * 0.45;
-    ctx.fillStyle = beamGrad;
-    ctx.fillRect(hwBot.left, hitY - 2, hwBot.right - hwBot.left, 4);
-    // Bloom glow under the beam
-    ctx.globalAlpha = beamPulse * 0.12;
-    ctx.shadowColor = puColor ?? "#fff";
-    ctx.shadowBlur = 20;
-    ctx.fillRect(hwBot.left, hitY - 1, hwBot.right - hwBot.left, 2);
-    ctx.shadowBlur = 0; // reset shadow
-    ctx.globalAlpha = 1;
-    ctx.shadowBlur = 0;
-    ctx.shadowColor = "transparent";
-
-    ctx.restore();
-
-    // ── 3. TRACK EDGE RAILS ─────────────────────────────────────
-    // Neon rails with strong glow — unified with highway boundary
-    const railColor = puColor ?? "rgba(255,248,235,0.55)";
-    const railGlow = puColor ? colorWithAlpha(puColor, 0.8) : "rgba(255,248,235,0.25)";
-
-    // Outer glow pass (thicker, blurred)
-    ctx.save();
-    ctx.shadowColor = puColor ?? "rgba(255,248,235,0.4)";
-    ctx.shadowBlur = 16;
-    const railGlowGrad = ctx.createLinearGradient(0, 0, 0, hitY);
-    railGlowGrad.addColorStop(0, "rgba(255,255,255,0.0)");
-    railGlowGrad.addColorStop(0.3, railGlow);
-    railGlowGrad.addColorStop(1, railColor);
-    ctx.strokeStyle = railGlowGrad;
-    ctx.lineWidth = 3;
-    // Left rail
-    ctx.beginPath();
-    ctx.moveTo(hwTop.left, 0);
-    ctx.lineTo(hwBot.left, hitY);
-    ctx.stroke();
-    // Right rail
-    ctx.beginPath();
-    ctx.moveTo(hwTop.right, 0);
-    ctx.lineTo(hwBot.right, hitY);
-    ctx.stroke();
-    ctx.restore();
-
-    // Inner bright core
-    const railCoreGrad = ctx.createLinearGradient(0, 0, 0, hitY);
-    railCoreGrad.addColorStop(0, "rgba(255,255,255,0.0)");
-    railCoreGrad.addColorStop(0.5, "rgba(255,255,255,0.3)");
-    railCoreGrad.addColorStop(1, "rgba(255,255,255,0.6)");
-    ctx.strokeStyle = railCoreGrad;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(hwTop.left, 0);
-    ctx.lineTo(hwBot.left, hitY);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(hwTop.right, 0);
-    ctx.lineTo(hwBot.right, hitY);
-    ctx.stroke();
 
     // ── 4. POWER-UP SCREEN EDGE GLOW ───────────────────────────
     if (puActive && puColor) {
@@ -5367,7 +5422,7 @@ export default function Game() {
     }
 
     // ── 4.5. HIT ZONE BUTTONS (for 2.5D Classic POV mode) ──
-    const show3DCircularTargets = isCyberTunnelPov || isCorkscrewPov || isRollercoasterPov || isMatrixSplitPov || (isDynamicStagePov && calculatedStage >= 3);
+    const show3DCircularTargets = is3DEnvironment && !isFlatHighway;
     if (!show3DCircularTargets) {
       const btnH = geom.btnH;
       const btnY = geom.btnY;
@@ -6258,6 +6313,15 @@ export default function Game() {
         ctx.fillRect(fx + 4, e.cy - 60, fw - 8, 100);
       }
 
+      // ─ Beatstar-style tile pop, light pillar, lens streak + 3D shards ─
+      // Anchor to the active POV's hit position (circle / drift / etc. move the lanes).
+      const popProj = getArchetypeProjection(e.lane, 1.0, W, H, activeArchetypeRef.current, calculatedStage, t, activePovModeRef.current);
+      if (Number.isFinite(popProj.x) && Number.isFinite(popProj.y) && popProj.w > 0) {
+        drawHitPop3D(ctx, { ...e, cx: popProj.x + popProj.w / 2, cy: popProj.y, laneW: popProj.w }, t01, dt, hitY);
+      } else {
+        drawHitPop3D(ctx, e, t01, dt, hitY);
+      }
+
       // ─ Expanding rings ─
       const rings = e.kind === "PERFECT+" ? 2 : 1;
       for (let r = 0; r < rings; r++) {
@@ -6380,6 +6444,12 @@ export default function Game() {
           cx = hitProj.x;
           cy = hitProj.y;
           ringR = rt * 45;
+        } else if (is3DEnvironment && !isFlatHighway) {
+          // Ripple from the projected strike target so it lines up in every 3D POV
+          const hitProj = getArchetypeProjection(i, 1.0, W, H, activeArchetypeRef.current, calculatedStage, t, curPovMode);
+          cx = hitProj.x + hitProj.w / 2;
+          cy = hitProj.y;
+          ringR = rt * hitProj.w * 0.6;
         } else {
           cx = lx + lw / 2;
         }
@@ -6459,24 +6529,27 @@ export default function Game() {
     }
 
     // ── 6. HIT ZONE BASELINE ────────────────────────────────────
-    // Thick white glowing baseline — the stripe on the note must line up with this
-    ctx.shadowColor = "rgba(255,255,255,0.8)";
-    ctx.shadowBlur = 18;
-    ctx.strokeStyle = "rgba(255,255,255,0.95)";
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(hwBot.left, hitY);
-    ctx.lineTo(hwBot.right, hitY);
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-    ctx.shadowColor = "transparent";
-    // Subtle glow bloom below baseline — pulses with rhythm
-    const bloomH = 20 + pulse * 12;
-    const baseGlow = ctx.createLinearGradient(0, hitY, 0, hitY + bloomH);
-    baseGlow.addColorStop(0, `rgba(255,255,255,${0.08 + pulse * 0.06})`);
-    baseGlow.addColorStop(1, "rgba(255,255,255,0.0)");
-    ctx.fillStyle = baseGlow;
-    ctx.fillRect(hwBot.left, hitY, hwBot.width, bloomH);
+    // Thick white glowing baseline — the stripe on the note must line up with this.
+    // Skipped for POVs whose strike targets don't sit on one horizontal line.
+    if (hasStraightHitLine(curPovMode)) {
+      ctx.shadowColor = "rgba(255,255,255,0.8)";
+      ctx.shadowBlur = 18;
+      ctx.strokeStyle = "rgba(255,255,255,0.95)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(hwBot.left, hitY);
+      ctx.lineTo(hwBot.right, hitY);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.shadowColor = "transparent";
+      // Subtle glow bloom below baseline — pulses with rhythm
+      const bloomH = 20 + pulse * 12;
+      const baseGlow = ctx.createLinearGradient(0, hitY, 0, hitY + bloomH);
+      baseGlow.addColorStop(0, `rgba(255,255,255,${0.08 + pulse * 0.06})`);
+      baseGlow.addColorStop(1, "rgba(255,255,255,0.0)");
+      ctx.fillStyle = baseGlow;
+      ctx.fillRect(hwBot.left, hitY, hwBot.width, bloomH);
+    }
 
     // ── 6.5. MISSED SIGNAL RECLAIM TRAP (VOID TRAP / DATA LEAK COLLECTOR) ──
     const trapY = H - 55;
@@ -11958,30 +12031,50 @@ function drawKey(
   const isHoldHead = noteType === 'hold' || noteType === 'hold-swipe' || noteType === 'slide' || noteType === 'zigzag';
   const m = (swipeDirection && !isHold && !isHoldHead && noteType !== 'lift') ? 1.0 : 0;
 
-  if (swipeDirection && m > 0) {
-    ctx.rotate(rotations[swipeDirection] || 0);
-  }
+  const swipeRot = swipeDirection && m > 0 ? (rotations[swipeDirection] || 0) : 0;
 
   // ── 1. Define Key Body Path ──
-  ctx.beginPath();
-  if (m > 0) {
-    const w = noteW / 2;
-    const h = noteH / 2;
-    const br = lerp(r, 8, m);
-    const pinchX = lerp(w, w * 0.2, m);
-    const indentX = lerp(-w, -w * 0.35, m);
+  const buildBodyPath = () => {
+    ctx.beginPath();
+    if (m > 0) {
+      const w = noteW / 2;
+      const h = noteH / 2;
+      const br = lerp(r, 8, m);
+      const pinchX = lerp(w, w * 0.2, m);
+      const indentX = lerp(-w, -w * 0.35, m);
 
-    ctx.moveTo(-w + br, -h);
-    ctx.arcTo(pinchX, -h, w, 0, br);
-    ctx.arcTo(w, 0, pinchX, h, br);
-    ctx.arcTo(pinchX, h, -w, h, br);
-    ctx.arcTo(-w, h, indentX, 0, br);
-    ctx.arcTo(indentX, 0, -w, -h, br);
-    ctx.arcTo(-w, -h, -w + br, -h, br);
-    ctx.closePath();
-  } else {
-    ctx.roundRect(-noteW / 2, -noteH / 2, noteW, noteH, r);
+      ctx.moveTo(-w + br, -h);
+      ctx.arcTo(pinchX, -h, w, 0, br);
+      ctx.arcTo(w, 0, pinchX, h, br);
+      ctx.arcTo(pinchX, h, -w, h, br);
+      ctx.arcTo(-w, h, indentX, 0, br);
+      ctx.arcTo(indentX, 0, -w, -h, br);
+      ctx.arcTo(-w, -h, -w + br, -h, br);
+      ctx.closePath();
+    } else {
+      ctx.roundRect(-noteW / 2, -noteH / 2, noteW, noteH, r);
+    }
+  };
+
+  // ── 1b. 3D Slab: contact shadow + side walls under the top face ──
+  const wallColor = isHold ? (lc || "#FFD700")
+                  : noteType === 'remix' ? '#00F5D4'
+                  : noteType === 'break' ? '#FF7B00'
+                  : noteType === 'accent' ? '#CCFF00'
+                  : noteType === 'lift' ? '#00FF88'
+                  : noteType === 'zigzag' ? '#A855F7'
+                  : noteType === 'burst' ? '#FF5500'
+                  : lc;
+  if (noteType !== 'ghost') {
+    drawSlabBody(ctx, () => {
+      if (swipeRot) ctx.rotate(swipeRot);
+      buildBodyPath();
+      if (swipeRot) ctx.rotate(-swipeRot);
+    }, noteW, noteH, prog, wallColor, { isHold });
   }
+
+  if (swipeRot) ctx.rotate(swipeRot);
+  buildBodyPath();
 
   // ── 2. Render Body Fill (Customized per note type) ──
   if (isHold) {
@@ -12104,6 +12197,13 @@ function drawKey(
   ctx.fillStyle = sheenGrad;
   ctx.fill();
   ctx.restore();
+
+  // ── 2c. Top-face bevel + gloss so the tile reads as a solid block ──
+  if (noteType !== 'ghost') {
+    drawTopFaceBevel(ctx, noteW, noteH, wallColor);
+    // The gloss pass replaces the current path; restore the body outline for the border strokes.
+    buildBodyPath();
+  }
 
   // ── 3. Edge Border Styling ──
   ctx.shadowColor = "transparent";
