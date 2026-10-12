@@ -1,42 +1,153 @@
 // ════════════════════════════════════════════════════════════════════════════════
-// CommandPaletteModal.tsx — TH3SCR1B3 Global Command Matrix & Quick Jump HUD
-// Day-locked search: strictly releases ≤ currentDay unless unlocked via Prophecy Card
+// CommandPaletteModal.tsx — Super search
+// One box for every place in the app and every released song. Day-locked: songs
+// after today stay hidden unless a Prophecy card unlocks them; an exact "day N"
+// query for a locked day says when it opens instead of revealing it.
+// Filters: "day 12", "d12", "bpm>150", "bpm<100", "light", "dark".
 // ════════════════════════════════════════════════════════════════════════════════
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useLocation } from 'wouter';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Search, Gamepad2, Home, Flame, Zap, Shield, Sparkles,
-  Music, BookOpen, Layers, Trophy, Settings, FileText, Bell,
-  ChevronRight, History, X, Monitor, User,
-  CornerDownLeft, Compass, Lock, Unlock, Radio
-} from 'lucide-react';
+import { Clock, CornerDownLeft, Home, Lock, Play, Search, Sparkles, Unlock, Wallet } from 'lucide-react';
 import { useVaultStore, ownsCardForDay } from '../store/useVaultStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { useNotificationStore } from '../store/useNotificationStore';
 import { useDisplayMode } from '../store/useDisplayMode';
-import { getCurrentDay, formatDate, getMonthFromDay } from '../utils/dayCalc';
+import { getCurrentDay, formatDate } from '../utils/dayCalc';
 import staticSongCatalog from '../data/song_catalog.json';
 import { haptics } from '../utils/haptics';
+import { HOME_PATH, NAV_SECTIONS, OPEN_GUIDE_EVENT, visibleItems, type NavItem, type NavSectionId } from './nav/navConfig';
+import '../styles/stageShell.css';
 
-export interface CommandItem {
+type Scope = 'all' | 'songs' | NavSectionId;
+
+interface SongHit {
+  kind: 'song';
+  key: string;
+  day: number;
   id: string;
-  category: 'modes' | 'vault' | 'tracks' | 'system';
   title: string;
-  subtitle: string;
-  icon: any;
-  to?: string;
-  action?: () => void;
-  badge?: string;
-  badgeColor?: string;
-  accent?: string;
-  day?: number;
-  isProphecy?: boolean;
-  keywords?: string[];
+  mood: 'light' | 'dark';
+  bpm: number;
+  duration: number;
+  genre: string;
+  difficulty: number;
+  coverArt?: string;
+  locked: boolean;
+  prophecy: boolean;
+  score: number;
 }
 
+interface PlaceHit {
+  kind: 'place';
+  key: string;
+  item: NavItem;
+  section: { id: NavSectionId; label: string; accent: string };
+  score: number;
+}
+
+type Hit = SongHit | PlaceHit;
+
 const RECENT_SEARCHES_KEY = 'th3scr1b3_recent_searches_v1';
+const SCOPES: { id: Scope; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'songs', label: 'Songs' },
+  ...NAV_SECTIONS.map((s) => ({ id: s.id as Scope, label: s.label })),
+];
+const FILTER_HINTS = ['day 1', 'bpm>160', 'dark', 'light bpm<100', 'fusion'];
+
+const padDay = (d: number) => String(d).padStart(3, '0');
+const fmtDur = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s) % 60).padStart(2, '0')}`;
+
+// Extra places that aren't sidebar destinations but people search for.
+const EXTRA_ITEMS: { section: NavSectionId; item: NavItem }[] = [
+  {
+    section: 'play',
+    item: { id: 'home', label: 'Home', to: HOME_PATH, icon: Home, desc: "Today's song, your streak and recent plays", keywords: ['home', 'hub', 'start', 'main'] },
+  },
+  {
+    section: 'you',
+    item: { id: 'wallet', label: 'Connect wallet', action: undefined, icon: Wallet, desc: 'Sign in with a Base smart wallet or EVM key', keywords: ['wallet', 'connect', 'auth', 'base', 'coinbase', 'login', 'sign in'] },
+  },
+];
+
+interface Filters {
+  text: string[];
+  day: number | null;
+  bpmMin: number | null;
+  bpmMax: number | null;
+  mood: 'light' | 'dark' | null;
+}
+
+function parseQuery(q: string): Filters {
+  const f: Filters = { text: [], day: null, bpmMin: null, bpmMax: null, mood: null };
+  const tokens = q.toLowerCase().trim().split(/\s+/).filter(Boolean);
+  tokens.forEach((t, i) => {
+    let m: RegExpMatchArray | null;
+    if ((m = t.match(/^(?:day|d)[-:#]?(\d{1,3})$/))) f.day = Number(m[1]);
+    else if (t === 'day' && /^\d{1,3}$/.test(tokens[i + 1] || '')) return;
+    else if (/^\d{1,3}$/.test(t) && tokens[i - 1] === 'day') f.day = Number(t);
+    else if ((m = t.match(/^bpm([<>])=?(\d{2,3})$/))) {
+      if (m[1] === '>') f.bpmMin = Number(m[2]);
+      else f.bpmMax = Number(m[2]);
+    } else if (t === 'light' || t === 'dark') f.mood = t;
+    else f.text.push(t);
+  });
+  return f;
+}
+
+/** 0 = no match. Word-start matches outrank mid-word ones. */
+function matchScore(haystack: string, terms: string[]): number {
+  if (!terms.length) return 1;
+  const h = haystack.toLowerCase();
+  let score = 0;
+  for (const t of terms) {
+    const i = h.indexOf(t);
+    if (i < 0) return 0;
+    score += i === 0 ? 3 : /[\s\-(:/]/.test(h[i - 1]) ? 2 : 1;
+  }
+  return score;
+}
+
+function Highlight({ text, terms }: { text: string; terms: string[] }) {
+  const useful = terms.filter((t) => t.length > 1);
+  if (!useful.length) return <>{text}</>;
+  const re = new RegExp(`(${useful.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`, 'ig');
+  return (
+    <>
+      {text.split(re).map((part, i) => (i % 2 === 1 ? <mark key={i}>{part}</mark> : <React.Fragment key={i}>{part}</React.Fragment>))}
+    </>
+  );
+}
+
+function coverGradient(day: number, mood: 'light' | 'dark') {
+  const h = Math.abs(Math.sin(day * 12.9898) * 43758.5453) % 1;
+  const a = mood === 'light' ? `hsl(${330 + h * 50} 95% 55%)` : `hsl(${250 + h * 40} 80% 45%)`;
+  const b = mood === 'light' ? `hsl(${20 + h * 30} 100% 45%)` : `hsl(${200 + h * 60} 85% 20%)`;
+  return `radial-gradient(120% 90% at ${20 + h * 60}% 0%, ${a}, transparent 60%), linear-gradient(${Math.round(h * 360)}deg, ${b}, #0b0710)`;
+}
+
+function CoverArt({ song, className }: { song: SongHit; className: string }) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <span className={className} style={{ background: coverGradient(song.day, song.mood) }} aria-hidden="true">
+      <span className="pim-ss-daynum">{song.day}</span>
+      {song.coverArt && !failed && !song.locked && (
+        <img src={song.coverArt} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} />
+      )}
+    </span>
+  );
+}
+
+function Pips({ n }: { n: number }) {
+  return (
+    <span className="pim-pips" aria-label={`Difficulty ${n} of 10`}>
+      {Array.from({ length: 10 }, (_, i) => (
+        <i key={i} data-on={i < n} />
+      ))}
+    </span>
+  );
+}
 
 export default function CommandPaletteModal() {
   const isOpen = useVaultStore((s) => s.commandPaletteOpen);
@@ -49,46 +160,47 @@ export default function CommandPaletteModal() {
   const [, setLocation] = useLocation();
 
   const [query, setQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState<'all' | 'modes' | 'vault' | 'tracks' | 'system'>('all');
+  const [scope, setScope] = useState<Scope>('all');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
   const inputRef = useRef<HTMLInputElement | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
+  const currentDay = getCurrentDay();
 
-  // Load recent searches from localStorage
   useEffect(() => {
     try {
       const stored = localStorage.getItem(RECENT_SEARCHES_KEY);
-      if (stored) {
-        setRecentSearches(JSON.parse(stored).slice(0, 5));
-      }
+      if (stored) setRecentSearches(JSON.parse(stored).slice(0, 5));
     } catch {
       // Ignore
     }
   }, []);
 
   const saveRecentSearch = useCallback((term: string) => {
-    if (!term.trim()) return;
-    try {
-      const updated = [term.trim(), ...recentSearches.filter(s => s.toLowerCase() !== term.trim().toLowerCase())].slice(0, 5);
-      setRecentSearches(updated);
-      localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
-    } catch {
-      // Ignore
-    }
-  }, [recentSearches]);
+    const clean = term.trim();
+    if (!clean) return;
+    setRecentSearches((prev) => {
+      const updated = [clean, ...prev.filter((s) => s.toLowerCase() !== clean.toLowerCase())].slice(0, 5);
+      try {
+        localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
+      } catch {
+        // Ignore
+      }
+      return updated;
+    });
+  }, []);
 
-  // Global hotkeys to open/close
+  // Global hotkeys: ⌘K / Ctrl+K toggles, "/" opens when not typing, Esc closes.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Cmd+K or Ctrl+K or "/" when not typing in another input
       if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
         e.preventDefault();
         setOpen(!useVaultStore.getState().commandPaletteOpen);
         return;
       }
-      if (e.key === '/' && !['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (e.key === '/' && !['INPUT', 'TEXTAREA'].includes(tag)) {
         e.preventDefault();
         setOpen(true);
         return;
@@ -98,684 +210,516 @@ export default function CommandPaletteModal() {
         setOpen(false);
       }
     };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [setOpen]);
 
-  // Focus input when modal opens
   useEffect(() => {
     if (isOpen) {
       setQuery('');
+      setScope('all');
       setSelectedIndex(0);
-      setTimeout(() => inputRef.current?.focus(), 50);
+      setTimeout(() => inputRef.current?.focus(), 30);
     }
   }, [isOpen]);
 
-  // Build the complete Command Index with strict Day-locking & Prophecy Card support
-  const commandIndex: CommandItem[] = useMemo(() => {
-    const currentDay = getCurrentDay();
-
-    // Determine days unlocked via prophecy cards or owned cards
-    const prophecyDays = new Set<number>();
+  // Days unlocked early by owned cards or Prophecy rewards.
+  const prophecyDays = useMemo(() => {
+    const days = new Set<number>();
     collection.forEach((owned) => {
-      if (owned.card?.day) {
-        prophecyDays.add(owned.card.day);
-      }
+      if (owned.card?.day) days.add(owned.card.day);
     });
-
-    // Check claimedRewards or localStorage reward tiers for prophecy cards
     Object.entries(claimedRewards).forEach(([songId, tierList]) => {
       if (Array.isArray(tierList) && tierList.includes('prophecy')) {
         const match = songId.match(/(\d+)/);
-        if (match) prophecyDays.add(parseInt(match[1], 10));
+        if (match) days.add(parseInt(match[1], 10));
       }
     });
+    return days;
+  }, [collection, claimedRewards]);
 
-    const items: CommandItem[] = [
-      // ── Core Modes ──
-      {
-        id: 'mode-arcade',
-        category: 'modes',
-        title: 'PIM Arcade Engine',
-        subtitle: 'Quick-play 3-lane rhythm arcade & stage selector',
-        icon: Gamepad2,
-        to: '/arcade',
-        badge: 'QUICK PLAY',
-        badgeColor: '#FF1493',
-        accent: '#FF1493',
-        keywords: ['play', 'game', 'rhythm', 'engine', 'arcade', 'music'],
-      },
-      {
-        id: 'mode-campaign',
-        category: 'modes',
-        title: 'PIM Story Campaign',
-        subtitle: 'Monthly chapters & 365-day narrative roadmap',
-        icon: Compass,
-        to: '/campaign',
-        badge: '365 ROADMAP',
-        badgeColor: '#FF1493',
-        accent: '#FF1493',
-        keywords: ['campaign', 'story', 'chapters', 'roadmap', 'progress'],
-      },
-      {
-        id: 'mode-songs',
-        category: 'modes',
-        title: 'PIM Award Play',
-        subtitle: 'Curated song catalog & tier rankings',
-        icon: Trophy,
-        to: '/songs',
-        badge: 'AWARDS',
-        badgeColor: '#FF1493',
-        accent: '#FF1493',
-        keywords: ['songs', 'award', 'curated', 'select', 'leaderboard'],
-      },
-      {
-        id: 'mode-tutorial',
-        category: 'modes',
-        title: 'PIM Flight Academy',
-        subtitle: 'Master the 3-lane DSP controls, holds & swipes',
-        icon: Radio,
-        to: '/tutorial',
-        badge: 'GUIDE',
-        badgeColor: '#00E5FF',
-        accent: '#00E5FF',
-        keywords: ['tutorial', 'training', 'learn', 'controls', 'mechanics'],
-      },
-
-      // ── Vault & Economy Chambers ──
-      {
-        id: 'vault-home',
-        category: 'vault',
-        title: 'Vault Dashboard HQ',
-        subtitle: 'Daily card release, claims & vault telemetry',
-        icon: Home,
-        to: '/vault',
-        badge: 'DAILY DROP',
-        badgeColor: '#FF5500',
-        accent: '#FF5500',
-        keywords: ['vault', 'home', 'daily', 'card', 'claim'],
-      },
-      {
-        id: 'vault-next',
-        category: 'vault',
-        title: 'Next-Gen Vault Console',
-        subtitle: 'Robotic claw pack dispenser & token machines',
-        icon: Sparkles,
-        to: '/next-vault',
-        badge: 'INTERACTIVE',
-        badgeColor: '#FF5500',
-        accent: '#FF5500',
-        keywords: ['claw', 'gacha', 'machine', 'nextgen', 'packs'],
-      },
-      {
-        id: 'vault-hero',
-        category: 'vault',
-        title: 'Hero Exhibit & Museum',
-        subtitle: 'Museum-grade showcase of the daily masterpiece',
-        icon: Sparkles,
-        to: '/hero',
-        badge: 'EXHIBIT',
-        badgeColor: '#FF5500',
-        accent: '#FF5500',
-        keywords: ['hero', 'museum', 'showcase', 'exhibit', 'art'],
-      },
-      {
-        id: 'vault-collection',
-        category: 'vault',
-        title: 'Card Collection Binder',
-        subtitle: 'Your TH3SCR1B3 cards, holographic variants & proofs',
-        icon: Layers,
-        to: '/vault/collection',
-        badge: 'INVENTORY',
-        badgeColor: '#FF5500',
-        accent: '#FF5500',
-        keywords: ['collection', 'cards', 'inventory', 'binder', 'proofs'],
-      },
-      {
-        id: 'vault-reveal',
-        category: 'vault',
-        title: 'Pack Reveal Chamber',
-        subtitle: 'Unseal earned booster packs & discover rare foils',
-        icon: Sparkles,
-        to: '/vault/reveal',
-        badge: 'UNBOXING',
-        badgeColor: '#FF5500',
-        accent: '#FF5500',
-        keywords: ['reveal', 'pack', 'unboxing', 'rip', 'foil'],
-      },
-      {
-        id: 'vault-codex',
-        category: 'vault',
-        title: 'Codex & Card Catalog',
-        subtitle: 'Universal registry & full set completion tracker',
-        icon: BookOpen,
-        to: '/vault/codex',
-        badge: 'REGISTRY',
-        badgeColor: '#FF5500',
-        accent: '#FF5500',
-        keywords: ['codex', 'catalog', 'set', 'tracker', 'database'],
-      },
-      {
-        id: 'vault-forge',
-        category: 'vault',
-        title: 'Fusion Chamber Lab',
-        subtitle: 'Synthesize & upgrade duplicate cards into mythics',
-        icon: Flame,
-        to: '/vault/forge',
-        badge: 'FUSION BOOST',
-        badgeColor: '#39FF14',
-        accent: '#39FF14',
-        keywords: ['forge', 'fusion', 'upgrade', 'burn', 'catalyst'],
-      },
-      {
-        id: 'vault-leaderboard',
-        category: 'vault',
-        title: 'Global TH3SCR1B3 Leaderboard',
-        subtitle: 'Real-time accuracy & prestige rankings on Base',
-        icon: Trophy,
-        to: '/vault/leaderboard',
-        badge: 'COMPETITIVE',
-        badgeColor: '#39FF14',
-        accent: '#39FF14',
-        keywords: ['leaderboard', 'rank', 'top', 'scores', 'high score'],
-      },
-      {
-        id: 'earn-shop',
-        category: 'vault',
-        title: 'Vault Token Marketplace',
-        subtitle: 'Acquire token bundles, power-ups & cosmetics',
-        icon: Zap,
-        to: '/vault/earn',
-        badge: 'ECONOMY',
-        badgeColor: '#E5B800',
-        accent: '#E5B800',
-        keywords: ['earn', 'tokens', 'shop', 'buy', 'bundles'],
-      },
-      {
-        id: 'earn-claim',
-        category: 'vault',
-        title: 'Redeem Daily Rewards',
-        subtitle: 'Claim streak bonuses, token crates & prizes',
-        icon: Sparkles,
-        to: '/vault/claim',
-        badge: 'FREE CRATE',
-        badgeColor: '#E5B800',
-        accent: '#E5B800',
-        keywords: ['redeem', 'claim', 'daily', 'streak', 'rewards'],
-      },
-
-      // ── System & Actions ──
-      {
-        id: 'sys-profile',
-        category: 'system',
-        title: 'TH3SCR1B3 Identity',
-        subtitle: 'Manage profile, smart wallet, avatar & achievements',
-        icon: User,
-        to: '/profile',
-        badge: 'IDENTITY',
-        badgeColor: '#A855F7',
-        accent: '#A855F7',
-        keywords: ['profile', 'identity', 'scribe', 'user', 'avatar', 'th3scr1b3'],
-      },
-      {
-        id: 'sys-transmissions',
-        category: 'system',
-        title: 'Transmissions & Broadcasts',
-        subtitle: 'System notifications, game balance updates & logs',
-        icon: Bell,
-        action: () => useNotificationStore.getState().setIsOpen(true),
-        badge: 'ALERTS',
-        badgeColor: '#FF1493',
-        accent: '#FF1493',
-        keywords: ['notifications', 'transmissions', 'alerts', 'news', 'inbox'],
-      },
-      {
-        id: 'sys-options',
-        category: 'system',
-        title: 'Options & Calibration',
-        subtitle: 'Configure audio latency, 3-lane DSP filters & skins',
-        icon: Settings,
-        action: () => setOptionsModalOpen(true),
-        badge: 'DSP AUDIO',
-        badgeColor: '#A855F7',
-        accent: '#A855F7',
-        keywords: ['options', 'settings', 'audio', 'offset', 'volume', 'keys'],
-      },
-      {
-        id: 'sys-wallet',
-        category: 'system',
-        title: 'Connect Base Smart Wallet',
-        subtitle: 'Authorize with Coinbase Smart Wallet / EVM key',
-        icon: Shield,
-        action: () => setShowAuthModal(true),
-        badge: 'BASE EVM',
-        badgeColor: '#0052FF',
-        accent: '#0052FF',
-        keywords: ['wallet', 'connect', 'auth', 'base', 'coinbase', 'login'],
-      },
-      {
-        id: 'sys-4k',
-        category: 'system',
-        title: 'Toggle 4K HDR Display Mode',
-        subtitle: 'Switch high dynamic range visual shaders on/off',
-        icon: Monitor,
-        action: () => toggle4K(),
-        badge: 'SHADERS',
-        badgeColor: '#FFD700',
-        accent: '#FFD700',
-        keywords: ['4k', 'hdr', 'graphics', 'display', 'resolution'],
-      },
-      {
-        id: 'sys-legal',
-        category: 'system',
-        title: 'Terms of Protocol & Legal',
-        subtitle: 'Smart contract licenses, privacy & security policies',
-        icon: FileText,
-        to: '/vault/legal',
-        badge: 'LEGAL',
-        badgeColor: '#888888',
-        accent: '#888888',
-        keywords: ['legal', 'terms', 'privacy', 'policy', 'license'],
-      },
-    ];
-
-    // ── 365 Song Releases (Day-Locked & Prophecy Card Supported) ──
-    if (Array.isArray(staticSongCatalog)) {
-      staticSongCatalog.forEach((song: any) => {
-        if (!song || !song.day) return;
-        const dayNum = song.day;
-        const isFuture = dayNum > currentDay;
-        const hasProphecy = prophecyDays.has(dayNum);
-
-        // STRICT RULE: If it's a future day and the user DOES NOT own a prophecy/unlocked card, DO NOT include in search
-        if (isFuture && !hasProphecy) {
-          return;
-        }
-
-        const monthName = getMonthFromDay(dayNum);
-        const formattedDate = formatDate(dayNum);
-        const title = song.title || `Day ${dayNum}`;
-        const bpm = song.bpm ? `${song.bpm} BPM` : '100 BPM';
-        const mood = song.mood ? song.mood.toUpperCase() : 'ENERGY';
-
-        items.push({
-          id: `track-day-${dayNum}`,
-          category: 'tracks',
-          day: dayNum,
-          isProphecy: isFuture && hasProphecy,
-          title: `Day ${dayNum}: ${title}`,
-          subtitle: `${formattedDate} // ${bpm} • ${mood} • ${monthName.toUpperCase()}`,
-          icon: Music,
-          to: `/play/day-${String(dayNum).padStart(3, '0')}`,
-          badge: isFuture && hasProphecy ? '✦ PROPHECY' : `DAY ${dayNum}`,
-          badgeColor: isFuture && hasProphecy ? '#A855F7' : '#FF1493',
-          accent: isFuture && hasProphecy ? '#A855F7' : '#FF1493',
-          keywords: [
-            `day ${dayNum}`,
-            `day${dayNum}`,
-            title.toLowerCase(),
-            monthName.toLowerCase(),
-            song.artist ? song.artist.toLowerCase() : '',
-            ...(Array.isArray(song.genre) ? song.genre.map((g: string) => g.toLowerCase()) : []),
-          ],
-        });
+  const songIndex = useMemo(() => {
+    if (!Array.isArray(staticSongCatalog)) return [] as Omit<SongHit, 'score'>[];
+    return (staticSongCatalog as any[])
+      .filter((s) => s && s.day)
+      .map((s) => {
+        const day: number = s.day;
+        const isFuture = day > currentDay;
+        return {
+          kind: 'song' as const,
+          key: `song-${day}`,
+          day,
+          id: s.id || `day-${padDay(day)}`,
+          title: s.title || `Day ${day}`,
+          mood: (s.mood === 'dark' ? 'dark' : 'light') as 'light' | 'dark',
+          bpm: Number(s.bpm) || 0,
+          duration: Number(s.duration) || 0,
+          genre: Array.isArray(s.genre) ? s.genre[0] || '' : '',
+          difficulty: Number(s.difficultyLevel) || 0,
+          coverArt: s.coverArt,
+          locked: isFuture && !prophecyDays.has(day),
+          prophecy: isFuture && prophecyDays.has(day),
+          haystack: `${s.title || ''} ${s.artist || ''} ${(s.genre || []).join(' ')} ${(s.moodTags || []).join(' ')}`,
+        };
       });
-    }
+  }, [currentDay, prophecyDays]);
 
-    return items;
-  }, [collection, claimedRewards, setOptionsModalOpen, setShowAuthModal, toggle4K]);
-
-  // Filter items by query and active category
-  const filteredItems = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return commandIndex.filter((item) => {
-      if (activeCategory !== 'all' && item.category !== activeCategory) {
-        return false;
-      }
-      if (!q) return true;
-
-      const inTitle = item.title.toLowerCase().includes(q);
-      const inSubtitle = item.subtitle.toLowerCase().includes(q);
-      const inBadge = item.badge?.toLowerCase().includes(q);
-      const inKeywords = item.keywords?.some((k) => k.includes(q));
-
-      return inTitle || inSubtitle || inBadge || inKeywords;
+  const placeIndex = useMemo(() => {
+    const out: Omit<PlaceHit, 'score'>[] = [];
+    NAV_SECTIONS.forEach((section) => {
+      visibleItems(section.items).forEach((item) =>
+        out.push({ kind: 'place', key: `place-${item.id}`, item, section: { id: section.id, label: section.label, accent: section.accent } })
+      );
     });
-  }, [commandIndex, query, activeCategory]);
+    EXTRA_ITEMS.forEach(({ section: sid, item }) => {
+      const section = NAV_SECTIONS.find((s) => s.id === sid)!;
+      const hit = { kind: 'place' as const, key: `place-${item.id}`, item, section: { id: section.id, label: section.label, accent: section.accent } };
+      if (item.id === 'home') out.unshift(hit);
+      else out.push(hit);
+    });
+    return out;
+  }, []);
 
-  // Keep selected index within bounds
+  const runSearch = useCallback(
+    (q: string, sc: Scope) => {
+      const f = parseQuery(q);
+      const songFilter = f.day != null || f.bpmMin != null || f.bpmMax != null || f.mood != null;
+      let songs: SongHit[] = [];
+      let places: PlaceHit[] = [];
+
+      if (sc === 'all' || sc === 'songs') {
+        songs = songIndex
+          .map((s) => {
+            if (f.day != null && s.day !== f.day) return null;
+            // A locked day only surfaces for an exact "day N" query, and never by title.
+            if (s.locked && f.day == null) return null;
+            if (f.bpmMin != null && s.bpm <= f.bpmMin) return null;
+            if (f.bpmMax != null && s.bpm >= f.bpmMax) return null;
+            if (f.mood && s.mood !== f.mood) return null;
+            const sc0 = s.locked ? 1 : matchScore(s.haystack, f.text);
+            if (!sc0) return null;
+            const { haystack: _h, ...rest } = s;
+            return { ...rest, score: sc0 + (s.day === currentDay ? 2 : 0) } as SongHit;
+          })
+          .filter((x): x is SongHit => x !== null)
+          .sort((a, b) => b.score - a.score || Math.abs(a.day - currentDay) - Math.abs(b.day - currentDay));
+      }
+
+      if (!songFilter) {
+        places = placeIndex
+          .filter((p) => sc === 'all' || p.section.id === sc)
+          .map((p) => {
+            const base = matchScore(`${p.item.label} ${p.item.desc} ${(p.item.keywords || []).join(' ')}`, f.text);
+            if (!base) return null;
+            return { ...p, score: base + (matchScore(p.item.label, f.text) && f.text.length ? 3 : 0) };
+          })
+          .filter((x): x is PlaceHit => x !== null)
+          .sort((a, b) => b.score - a.score);
+      }
+      return { songs, places, filters: f };
+    },
+    [songIndex, placeIndex, currentDay]
+  );
+
+  const { songs, places, filters } = useMemo(() => runSearch(query, scope), [runSearch, query, scope]);
+
+  const scopeCounts = useMemo(() => {
+    const counts = {} as Record<Scope, number>;
+    SCOPES.forEach(({ id }) => {
+      const r = runSearch(query, id);
+      counts[id] = r.songs.length + r.places.length;
+    });
+    return counts;
+  }, [runSearch, query]);
+
+  // Flatten into rendered groups; `flat` order matches the visual order for arrow keys.
+  const { groups, flat, topHit } = useMemo(() => {
+    const out: { label: string; meta?: string; hits: Hit[] }[] = [];
+    let top: Hit | null = null;
+
+    if (!query.trim()) {
+      const today = songs.find((s) => s.day === currentDay);
+      if (today && (scope === 'all' || scope === 'songs')) out.push({ label: 'Today', hits: [today] });
+      if (scope === 'songs') out.push({ label: 'Recent releases', hits: songs.filter((s) => s.day < currentDay).sort((a, b) => b.day - a.day).slice(0, 12) });
+      else out.push({ label: scope === 'all' ? 'Jump to' : 'Places', hits: places.slice(0, scope === 'all' ? 8 : 20) });
+    } else {
+      const bestPlace = places[0];
+      const bestSong = songs.find((s) => !s.locked);
+      top = bestPlace && (!bestSong || bestPlace.score >= bestSong.score + 1) ? bestPlace : bestSong || null;
+      if (top) out.push({ label: 'Top hit', hits: [top] });
+      const restPlaces = places.filter((p) => p !== top).slice(0, 8);
+      const restSongs = songs.filter((s) => s !== top).slice(0, 60);
+      if (restPlaces.length) out.push({ label: 'Places', meta: String(restPlaces.length), hits: restPlaces });
+      if (restSongs.length) {
+        const lockedN = songs.filter((s) => s.locked).length;
+        out.push({ label: 'Songs', meta: `${songs.length}${lockedN ? ` · ${lockedN} locked` : ''}`, hits: restSongs });
+      }
+    }
+    return { groups: out, flat: out.flatMap((g) => g.hits), topHit: top };
+  }, [query, scope, songs, places, currentDay]);
+
   useEffect(() => {
     setSelectedIndex(0);
-  }, [query, activeCategory]);
+  }, [query, scope]);
 
-  // Keyboard navigation inside list
+  useEffect(() => {
+    listRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' });
+  }, [selectedIndex]);
+
+  const selected = flat[Math.min(selectedIndex, flat.length - 1)];
+
+  const runPlace = (item: NavItem) => {
+    if (item.to) return setLocation(item.to);
+    if (item.id === 'wallet') return setShowAuthModal(true);
+    switch (item.action) {
+      case 'options':
+        return setOptionsModalOpen(true);
+      case 'hdr':
+        return toggle4K();
+      case 'notifications':
+        return useNotificationStore.getState().setIsOpen(true);
+      case 'guide':
+        return window.dispatchEvent(new Event(OPEN_GUIDE_EVENT));
+    }
+  };
+
+  const execute = (hit: Hit | undefined, mode: 'play' | 'listen' | 'page' = 'play') => {
+    if (!hit) return;
+    haptics.mediumTap();
+    saveRecentSearch(query || (hit.kind === 'song' ? hit.title : hit.item.label));
+    setOpen(false);
+    if (hit.kind === 'place') return runPlace(hit.item);
+    if (hit.locked) return setLocation('/vault');
+    if (mode === 'listen') return setLocation(`/listen/${hit.id}`);
+    if (mode === 'page') return setLocation(`/song/${hit.id}`);
+    setLocation(`/play/day-${padDay(hit.day)}`);
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    const n = Math.max(1, flat.length);
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setSelectedIndex((prev) => (prev + 1) % Math.max(1, filteredItems.length));
+      setSelectedIndex((p) => (p + 1) % n);
       haptics.lightTap();
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      setSelectedIndex((prev) => (prev - 1 + filteredItems.length) % Math.max(1, filteredItems.length));
+      setSelectedIndex((p) => (p - 1 + n) % n);
       haptics.lightTap();
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      if (filteredItems[selectedIndex]) {
-        executeItem(filteredItems[selectedIndex]);
-      }
+      execute(selected);
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      const i = SCOPES.findIndex((s) => s.id === scope);
+      setScope(SCOPES[(i + (e.shiftKey ? SCOPES.length - 1 : 1)) % SCOPES.length].id);
     }
   };
 
-  const executeItem = (item: CommandItem) => {
-    haptics.mediumTap();
-    saveRecentSearch(query || item.title);
-    setOpen(false);
-
-    if (item.action) {
-      item.action();
-    } else if (item.to) {
-      setLocation(item.to);
-    }
-  };
-
-  // Gamepad / Controller Navigation inside Command Palette
+  // Gamepad: d-pad moves, A opens, B closes.
+  const executeRef = useRef(execute);
+  executeRef.current = execute;
   useEffect(() => {
     if (!isOpen) return;
-
     let animId: number;
     let lastNavTime = 0;
     let prevA = false;
     let prevB = false;
+    const n = Math.max(1, flat.length);
 
-    const pollGamepad = () => {
-      const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
-      const gp = Array.from(gamepads).find(g => g !== null && g.connected);
-
+    const poll = () => {
+      const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+      const gp = Array.from(pads).find((g) => g !== null && g.connected);
       if (gp) {
         const now = performance.now();
-        const dpadUp = gp.buttons[12]?.pressed || (gp.axes[1] !== undefined && gp.axes[1] < -0.5);
-        const dpadDown = gp.buttons[13]?.pressed || (gp.axes[1] !== undefined && gp.axes[1] > 0.5);
-        const btnA = gp.buttons[0]?.pressed || false;
-        const btnB = gp.buttons[1]?.pressed || false;
-
-        // Up / Down navigation with debounce
+        const up = gp.buttons[12]?.pressed || (gp.axes[1] !== undefined && gp.axes[1] < -0.5);
+        const down = gp.buttons[13]?.pressed || (gp.axes[1] !== undefined && gp.axes[1] > 0.5);
+        const a = gp.buttons[0]?.pressed || false;
+        const b = gp.buttons[1]?.pressed || false;
         if (now - lastNavTime > 180) {
-          if (dpadDown) {
-            setSelectedIndex((prev) => (prev + 1) % Math.max(1, filteredItems.length));
-            haptics.lightTap();
+          if (down) {
+            setSelectedIndex((p) => (p + 1) % n);
             lastNavTime = now;
-          } else if (dpadUp) {
-            setSelectedIndex((prev) => (prev - 1 + filteredItems.length) % Math.max(1, filteredItems.length));
-            haptics.lightTap();
+          } else if (up) {
+            setSelectedIndex((p) => (p - 1 + n) % n);
             lastNavTime = now;
           }
         }
-
-        // A button to select
-        if (btnA && !prevA) {
-          if (filteredItems[selectedIndex]) {
-            executeItem(filteredItems[selectedIndex]);
-          }
-        }
-
-        // B button to close
-        if (btnB && !prevB) {
-          setOpen(false);
-        }
-
-        prevA = btnA;
-        prevB = btnB;
+        if (a && !prevA) executeRef.current(flat[selectedIndex]);
+        if (b && !prevB) setOpen(false);
+        prevA = a;
+        prevB = b;
       }
-
-      animId = requestAnimationFrame(pollGamepad);
+      animId = requestAnimationFrame(poll);
     };
-
-    animId = requestAnimationFrame(pollGamepad);
+    animId = requestAnimationFrame(poll);
     return () => cancelAnimationFrame(animId);
-  }, [isOpen, filteredItems, selectedIndex, setOpen]);
+  }, [isOpen, flat, selectedIndex, setOpen]);
 
   if (!isOpen) return null;
 
-  return (
-    <AnimatePresence>
-      <div className="fixed inset-0 z-[200] flex items-start justify-center pt-16 sm:pt-24 px-3 sm:px-4">
-        {/* Backdrop */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
-          className="fixed inset-0 bg-black/80 backdrop-blur-md"
-          onClick={() => setOpen(false)}
-        />
+  const renderRow = (hit: Hit, idx: number, isTop: boolean) => {
+    const sel = idx === selectedIndex;
+    const key = hit.key + (isTop ? '-top' : '');
+    const common = {
+      role: 'option' as const,
+      'aria-selected': sel,
+      onMouseMove: () => selectedIndex !== idx && setSelectedIndex(idx),
+      onClick: () => execute(hit),
+    };
 
-        {/* Modal Dialog */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: -10 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.96, y: -8 }}
-          transition={{ type: 'spring', damping: 26, stiffness: 320 }}
-          className="relative w-full max-w-2xl bg-[#080706]/95 border border-[#ff3800]/30 shadow-[0_20px_70px_rgba(0,0,0,0.9),0_0_30px_rgba(255,56,0,0.2)] rounded-lg overflow-hidden flex flex-col max-h-[80vh] z-10"
-          style={{
-            clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
-          }}
-        >
-          {/* Header Strip */}
-          <div className="flex items-center justify-between px-4 py-2 bg-[#ff3800]/15 border-b border-[#ff3800]/30">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-[#ff3800] rounded-full animate-pulse shadow-[0_0_8px_#ff3800]" />
-              <span className="font-mono text-[10px] font-black uppercase tracking-widest text-[#ff7700]">
-                TH3SCR1B3 // COMMAND MATRIX & QUICK JUMP
-              </span>
-            </div>
-            <div className="flex items-center gap-2 font-mono text-[9px] text-white/50">
-              <span className="hidden sm:inline bg-black/60 px-1.5 py-0.5 rounded border border-white/10">
-                DAY LOCK ACTIVE
-              </span>
-              <button
-                onClick={() => setOpen(false)}
-                className="hover:text-white transition-colors cursor-pointer"
-                title="Close (Esc)"
-              >
-                <X size={14} />
-              </button>
-            </div>
-          </div>
+    if (hit.kind === 'place') {
+      const Icon = hit.item.icon;
+      return (
+        <div key={key} {...common} className={`pim-ss-row${isTop ? ' is-top' : ''}`} style={{ ['--row-accent' as string]: hit.section.accent }}>
+          <span className="pim-ss-icon">
+            <Icon size={isTop ? 22 : 18} />
+          </span>
+          <span className="pim-ss-main">
+            <b>
+              <Highlight text={hit.item.label} terms={filters.text} />
+            </b>
+            <small>{hit.item.desc}</small>
+          </span>
+          <span className="pim-ss-end">{sel ? <>open <CornerDownLeft size={11} /></> : hit.section.label}</span>
+        </div>
+      );
+    }
 
-          {/* Search Input Bar */}
-          <div className="relative flex items-center px-4 py-3.5 border-b border-white/10 bg-black/40">
-            <Search size={18} className="text-[#ff5500] shrink-0 mr-3" />
-            <input
-              ref={inputRef}
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Jump to any mode, 365 track, vault lab, or setting... (Type 'Day 1', 'Forge', etc.)"
-              className="w-full bg-transparent text-white font-mono text-sm sm:text-base outline-none placeholder:text-white/30"
-              autoFocus
-            />
-            {query && (
-              <button
-                onClick={() => setQuery('')}
-                className="text-white/40 hover:text-white p-1"
-                title="Clear query"
-              >
-                <X size={14} />
-              </button>
+    const owned = ownsCardForDay(collection, hit.day);
+    return (
+      <div key={key} {...common} className={`pim-ss-row${isTop ? ' is-top' : ''}${hit.locked ? ' is-locked' : ''}`}>
+        <CoverArt song={hit} className="pim-ss-thumb" />
+        <span className="pim-ss-main">
+          <b>{hit.locked ? `Locked until ${formatDate(hit.day)}` : <Highlight text={hit.title} terms={filters.text} />}</b>
+          <small>
+            <span style={{ fontFamily: 'var(--shell-mono)' }}>Day {hit.day}</span>
+            {hit.locked ? (
+              <span>Opens in {hit.day - currentDay} days</span>
+            ) : (
+              <>
+                <span className="pim-mood" data-mood={hit.mood}>{hit.mood}</span>
+                {hit.bpm > 0 && <span>{hit.bpm} BPM</span>}
+                {hit.genre && <span>{hit.genre}</span>}
+                {!owned && <span title="You don't own this day's card yet">no card</span>}
+              </>
             )}
-          </div>
-
-          {/* Category Filter Chips */}
-          <div className="flex items-center gap-1.5 px-4 py-2 border-b border-white/5 bg-black/30 overflow-x-auto no-scrollbar">
-            {(
-              [
-                { id: 'all', label: 'ALL COMMANDS', count: commandIndex.length },
-                { id: 'modes', label: 'EXPEDITIONS', count: commandIndex.filter(i => i.category === 'modes').length },
-                { id: 'vault', label: 'VAULT & FORGE', count: commandIndex.filter(i => i.category === 'vault').length },
-                { id: 'tracks', label: '365 TRACKS', count: commandIndex.filter(i => i.category === 'tracks').length },
-                { id: 'system', label: 'SYSTEM', count: commandIndex.filter(i => i.category === 'system').length },
-              ] as const
-            ).map((cat) => {
-              const active = activeCategory === cat.id;
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => {
-                    setActiveCategory(cat.id);
-                    haptics.lightTap();
-                  }}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[3px] font-mono text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap ${
-                    active
-                      ? 'bg-[#ff3800] text-black shadow-[0_0_10px_rgba(255,56,0,0.5)] font-black'
-                      : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white'
-                  }`}
-                >
-                  <span>{cat.label}</span>
-                  <span className={`text-[8px] opacity-70 ${active ? 'text-black' : 'text-white/40'}`}>
-                    ({cat.count})
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Recent Searches (when query is empty) */}
-          {!query && recentSearches.length > 0 && (
-            <div className="px-4 py-2 border-b border-white/5 bg-black/20 flex items-center gap-2 overflow-x-auto no-scrollbar">
-              <span className="font-mono text-[8px] text-white/40 uppercase tracking-widest shrink-0 flex items-center gap-1">
-                <History size={10} /> RECENT:
-              </span>
-              {recentSearches.map((term) => (
-                <button
-                  key={term}
-                  onClick={() => setQuery(term)}
-                  className="px-2 py-0.5 rounded bg-white/5 hover:bg-[#ff3800]/20 hover:text-[#ff7700] text-white/70 font-mono text-[9px] transition-colors whitespace-nowrap cursor-pointer"
-                >
-                  {term}
-                </button>
-              ))}
-            </div>
+          </small>
+        </span>
+        <span className="pim-ss-end">
+          {hit.locked ? (
+            <><Lock size={12} /> {formatDate(hit.day)}</>
+          ) : hit.prophecy ? (
+            <span style={{ color: 'var(--shell-gold)', display: 'inline-flex', gap: 5 }}><Unlock size={12} /> Prophecy</span>
+          ) : hit.day === currentDay ? (
+            <span style={{ color: 'var(--shell-accent)' }}>TODAY</span>
+          ) : sel || isTop ? (
+            <><Play size={11} /> play</>
+          ) : (
+            hit.duration > 0 && fmtDur(hit.duration)
           )}
+        </span>
+      </div>
+    );
+  };
 
-          {/* Results List */}
-          <div
-            ref={listRef}
-            className="flex-1 overflow-y-auto p-2 space-y-1 min-h-[220px] max-h-[360px] custom-scrollbar"
-          >
-            {filteredItems.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center text-white/40">
-                <Lock size={28} className="mb-2 text-[#ff3800]/60 animate-bounce" />
-                <span className="font-impact text-lg text-white/80 uppercase tracking-wider">
-                  No Accessible Transmissions Found
-                </span>
-                <span className="font-mono text-[10px] text-white/40 max-w-sm mt-1">
-                  Future 365 releases are locked to current calendar day unless unlocked via a Prophecy Card in your Vault.
-                </span>
+  const renderPane = () => {
+    if (!selected) return null;
+    if (selected.kind === 'place') {
+      const Icon = selected.item.icon;
+      return (
+        <>
+          <div className="pim-ss-art" style={{ aspectRatio: '16 / 10', background: `linear-gradient(135deg, ${selected.section.accent}55, #0b0710)` }}>
+            <Icon size={56} strokeWidth={1.5} color="#fff" />
+          </div>
+          <h4>{selected.item.label}</h4>
+          <p>{selected.item.desc}.</p>
+          <dl className="pim-ss-kv">
+            <dt>Section</dt>
+            <dd>{selected.section.label}</dd>
+            {selected.item.to && (
+              <>
+                <dt>Route</dt>
+                <dd style={{ fontFamily: 'var(--shell-mono)', fontSize: 12 }}>{selected.item.to}</dd>
+              </>
+            )}
+          </dl>
+          <div className="pim-ss-acts">
+            <button type="button" className="btn-3d" data-size="sm" style={{ ['--c' as string]: selected.section.accent, ['--d' as string]: 'rgba(0,0,0,0.55)' }} onClick={() => execute(selected)}>
+              Open
+            </button>
+          </div>
+        </>
+      );
+    }
+
+    const s = selected;
+    if (s.locked) {
+      return (
+        <>
+          <CoverArt song={s} className="pim-ss-art" />
+          <h4>Day {s.day}</h4>
+          <div className="pim-ss-lockmsg">
+            This song releases on <b>{formatDate(s.day)}</b>, {s.day - currentDay} days from now. A Prophecy card for day {s.day} unlocks it early.
+          </div>
+          <div className="pim-ss-acts">
+            <button type="button" className="btn-3d" data-size="sm" data-tone="gold" onClick={() => execute(s)}>
+              <Sparkles size={12} /> Pack shop
+            </button>
+          </div>
+        </>
+      );
+    }
+    const owned = ownsCardForDay(collection, s.day);
+    return (
+      <>
+        <CoverArt song={s} className="pim-ss-art" />
+        <h4>{s.title}</h4>
+        <dl className="pim-ss-kv">
+          <dt>Released</dt>
+          <dd>
+            Day {s.day} · {formatDate(s.day)}
+            {s.prophecy && <span style={{ color: 'var(--shell-gold)' }}> · Prophecy unlock</span>}
+          </dd>
+          <dt>Mood</dt>
+          <dd><span className="pim-mood" data-mood={s.mood}>{s.mood}</span></dd>
+          {s.bpm > 0 && (
+            <>
+              <dt>Tempo</dt>
+              <dd>{s.bpm} BPM{s.duration > 0 && ` · ${fmtDur(s.duration)}`}</dd>
+            </>
+          )}
+          {s.genre && (
+            <>
+              <dt>Genre</dt>
+              <dd>{s.genre}</dd>
+            </>
+          )}
+          {s.difficulty > 0 && (
+            <>
+              <dt>Difficulty</dt>
+              <dd><Pips n={s.difficulty} /></dd>
+            </>
+          )}
+          <dt>Card</dt>
+          <dd>{owned ? 'In your vault' : 'Not collected yet'}</dd>
+        </dl>
+        <div className="pim-ss-acts">
+          <button type="button" className="btn-3d" data-size="sm" onClick={() => execute(s, 'play')}>
+            <Play size={12} /> Play
+          </button>
+          <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={() => execute(s, 'listen')}>
+            Listen
+          </button>
+          <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={() => execute(s, 'page')}>
+            Song page
+          </button>
+        </div>
+      </>
+    );
+  };
+
+  let rowIdx = 0;
+  return (
+    <div className="pim-ss-scrim" onMouseDown={(e) => e.target === e.currentTarget && setOpen(false)}>
+      <div className="pim-ss" role="dialog" aria-modal="true" aria-label="Super search">
+        <div className="pim-ss-in">
+          <Search size={20} className="pim-ss-icon-search" aria-hidden="true" />
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Songs, days, cards, modes, settings"
+            aria-label="Search"
+            aria-controls="pim-ss-list"
+            autoComplete="off"
+            spellCheck={false}
+          />
+          <span className="pim-ss-lock" title="Songs after today stay locked unless a Prophecy card unlocks them">
+            <Lock size={11} /> DAY {currentDay}
+          </span>
+          <button type="button" className="pim-ss-close" onClick={() => setOpen(false)}>
+            Cancel
+          </button>
+        </div>
+
+        <div className="pim-ss-scopes" role="tablist" aria-label="Search scope">
+          {SCOPES.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              aria-pressed={scope === s.id}
+              onClick={() => {
+                setScope(s.id);
+                inputRef.current?.focus();
+              }}
+            >
+              {s.label}
+              <b>{scopeCounts[s.id]}</b>
+            </button>
+          ))}
+        </div>
+
+        <div className="pim-ss-body">
+          <div className="pim-ss-list" role="listbox" id="pim-ss-list" ref={listRef}>
+            {!query.trim() && recentSearches.length > 0 && (
+              <>
+                <div className="pim-ss-group"><span>Recent</span></div>
+                <div className="pim-ss-chips">
+                  {recentSearches.map((term) => (
+                    <button key={term} type="button" onClick={() => setQuery(term)}>
+                      <Clock size={11} /> {term}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {query.trim() && flat.length === 0 ? (
+              <div className="pim-ss-empty">
+                Nothing matches “{query}”.
+                <br />
+                Try a title word, <code>day 12</code>, <code>bpm&gt;150</code> or <code>dark</code>.
+                <br />
+                Songs after day {currentDay} stay locked until their release day.
               </div>
             ) : (
-              filteredItems.map((item, idx) => {
-                const ItemIcon = item.icon;
-                const isSelected = idx === selectedIndex;
-
-                return (
-                  <div
-                    key={item.id}
-                    onClick={() => executeItem(item)}
-                    onMouseEnter={() => setSelectedIndex(idx)}
-                    className={`flex items-center justify-between px-3 py-2.5 rounded transition-all cursor-pointer group ${
-                      isSelected
-                        ? 'bg-[#ff3800]/18 border-l-4 border-[#ff3800] pl-3 shadow-[inset_0_0_15px_rgba(255,56,0,0.15)]'
-                        : 'bg-transparent border-l-4 border-transparent hover:bg-white/5'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 min-w-0 pr-2">
-                      <div
-                        className="flex items-center justify-center w-8 h-8 rounded shrink-0 border"
-                        style={{
-                          background: isSelected ? `${item.accent || '#ff3800'}25` : 'rgba(255,255,255,0.03)',
-                          borderColor: isSelected ? `${item.accent || '#ff3800'}60` : 'rgba(255,255,255,0.08)',
-                        }}
-                      >
-                        <ItemIcon
-                          size={16}
-                          style={{ color: isSelected ? item.accent || '#ff3800' : 'rgba(255,255,255,0.6)' }}
-                        />
-                      </div>
-                      <div className="flex flex-col min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`font-impact text-sm sm:text-base uppercase tracking-tight truncate ${
-                              isSelected ? 'text-white' : 'text-white/85'
-                            }`}
-                          >
-                            {item.title}
-                          </span>
-                          {item.badge && (
-                            <span
-                              className="font-mono text-[8px] font-black uppercase px-1.5 py-0.5 rounded shrink-0"
-                              style={{
-                                background: `${item.badgeColor || '#ff3800'}22`,
-                                color: item.badgeColor || '#ff3800',
-                                border: `1px solid ${item.badgeColor || '#ff3800'}40`,
-                              }}
-                            >
-                              {item.badge}
-                            </span>
-                          )}
-                          {item.isProphecy && (
-                            <span className="font-mono text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 border border-purple-500/40 flex items-center gap-0.5">
-                              <Unlock size={8} /> PROPHECY UNLOCKED
-                            </span>
-                          )}
-                          {item.category === 'tracks' && typeof item.day === 'number' && !ownsCardForDay(collection, item.day) && (
-                            <span className="font-mono text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-[#FFD700]/15 text-[#FFD700] border border-[#FFD700]/40 flex items-center gap-0.5">
-                              <Lock size={8} /> CARD
-                            </span>
-                          )}
-                        </div>
-                        <span className="font-mono text-[9px] text-white/40 uppercase tracking-wide truncate">
-                          {item.subtitle}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      {isSelected ? (
-                        <span className="flex items-center gap-1 font-mono text-[9px] font-bold text-[#ff5500] uppercase tracking-wider">
-                          ENTER <CornerDownLeft size={10} />
-                        </span>
-                      ) : (
-                        <ChevronRight size={14} className="text-white/20 group-hover:text-white/60 transition-colors" />
-                      )}
-                    </div>
+              groups.map((g) => (
+                <React.Fragment key={g.label}>
+                  <div className="pim-ss-group">
+                    <span>{g.label}</span>
+                    {g.meta && <span>{g.meta}</span>}
                   </div>
-                );
-              })
+                  {g.hits.map((hit) => renderRow(hit, rowIdx++, g.label === 'Top hit' && hit === topHit))}
+                </React.Fragment>
+              ))
+            )}
+
+            {!query.trim() && (
+              <>
+                <div className="pim-ss-group"><span>Filters</span></div>
+                <div className="pim-ss-chips">
+                  {FILTER_HINTS.map((h) => (
+                    <button key={h} type="button" onClick={() => setQuery(h)}>
+                      {h}
+                    </button>
+                  ))}
+                </div>
+              </>
             )}
           </div>
+          <aside className="pim-ss-pane" aria-live="polite">{renderPane()}</aside>
+        </div>
 
-          {/* Footer Controls & Telemetry */}
-          <div className="flex items-center justify-between px-4 py-2.5 bg-black/60 border-t border-white/10 font-mono text-[9px] text-white/40">
-            <div className="flex items-center gap-3">
-              <span className="flex items-center gap-1">
-                <kbd className="px-1 py-0.5 bg-white/10 rounded text-white/80">↑</kbd>
-                <kbd className="px-1 py-0.5 bg-white/10 rounded text-white/80">↓</kbd> NAVIGATE
-              </span>
-              <span className="flex items-center gap-1">
-                <kbd className="px-1 py-0.5 bg-white/10 rounded text-white/80">↵</kbd> SELECT
-              </span>
-              <span className="flex items-center gap-1">
-                <kbd className="px-1 py-0.5 bg-white/10 rounded text-white/80">ESC</kbd> CLOSE
-              </span>
-            </div>
-            <div className="hidden sm:flex items-center gap-2 text-[#ff7700]">
-              <span>TH3SCR1B3 PROTOCOL v2.1</span>
-            </div>
-          </div>
-        </motion.div>
+        <div className="pim-ss-foot">
+          <span className="pim-ss-kb"><kbd className="pim-kbd">↑</kbd><kbd className="pim-kbd">↓</kbd> move</span>
+          <span className="pim-ss-kb"><kbd className="pim-kbd">↵</kbd> open</span>
+          <span className="pim-ss-kb"><kbd className="pim-kbd">tab</kbd> scope</span>
+          <span className="pim-ss-kb"><kbd className="pim-kbd">esc</kbd> close</span>
+          <span className="pim-ss-note">future days stay locked</span>
+        </div>
       </div>
-    </AnimatePresence>
+    </div>
   );
 }

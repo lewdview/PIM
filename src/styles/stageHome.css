@@ -1,0 +1,183 @@
+/* stageHome.css — layout for the Stage home hub (src/pages/StageHome.tsx). */
+
+.sh-page {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 20px 16px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  font-family: var(--shell-body);
+  color: var(--shell-text);
+}
+@media (min-width: 768px) { .sh-page { padding: 24px 24px 56px; } }
+
+.sh-cover { position: relative; overflow: hidden; isolation: isolate; }
+.sh-cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+.sh-cover-num {
+  position: absolute;
+  right: -0.04em;
+  bottom: -0.2em;
+  font-family: var(--shell-display);
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.18);
+  z-index: 0;
+}
+
+/* ── Hero ── */
+.sh-hero { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 960px) { .sh-hero { grid-template-columns: minmax(0, 1.4fr) minmax(300px, 1fr); gap: 18px; } }
+
+.sh-drop {
+  position: relative;
+  min-height: 340px;
+  border-radius: 26px;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  box-shadow: 0 16px 0 -8px rgba(0, 0, 0, 0.5), 0 30px 60px rgba(0, 0, 0, 0.45);
+}
+@media (min-width: 960px) { .sh-drop { min-height: 380px; } }
+.sh-drop-art { position: absolute; inset: 0; }
+.sh-drop::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(180deg, rgba(8, 6, 4, 0) 25%, rgba(8, 6, 4, 0.55) 60%, rgba(8, 6, 4, 0.92) 100%),
+    linear-gradient(90deg, rgba(8, 6, 4, 0.55), rgba(8, 6, 4, 0) 70%);
+}
+.sh-drop-body { position: relative; z-index: 2; padding: 24px; color: #fff; min-width: 0; }
+@media (min-width: 768px) { .sh-drop-body { padding: 30px; } }
+.sh-eyebrow { font: 600 11px/1.4 var(--shell-mono); letter-spacing: 0.16em; text-transform: uppercase; opacity: 0.85; }
+.sh-drop h1 {
+  margin: 8px 0 12px;
+  font: 400 clamp(44px, 7vw, 84px)/0.92 var(--shell-display);
+  text-transform: uppercase;
+  letter-spacing: 0.005em;
+  max-width: 11ch;
+  text-wrap: balance;
+  text-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+}
+.sh-meta { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; font: 500 12.5px/1 var(--shell-mono); color: rgba(255, 255, 255, 0.85); }
+.sh-cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
+
+/* The day card's own claim and buy, on the hero itself. */
+.sh-daycard {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
+  margin-top: 18px;
+  padding: 12px 14px;
+  max-width: 560px;
+  border-radius: 16px;
+  background: rgba(12, 9, 4, 0.62);
+  border: 1px solid rgba(255, 184, 0, 0.35);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.sh-daycard-text { min-width: 0; }
+.sh-daycard-text b { display: block; font-size: 15px; color: #fff; }
+.sh-daycard-text small { display: block; margin-top: 4px; font-size: 12.5px; color: rgba(255, 255, 255, 0.72); }
+.sh-daycard-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.sh-side { display: grid; gap: 12px; align-content: start; }
+.sh-card { padding: 16px; border-radius: 18px; background: var(--shell-panel); border: 1px solid var(--shell-line); }
+.sh-claim {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: linear-gradient(135deg, #2c2108, #191207);
+  border-color: rgba(255, 184, 0, 0.35);
+}
+.sh-claim > div { flex: 1; min-width: 0; }
+.sh-claim-icon { width: 42px; height: 42px; flex: none; display: grid; place-items: center; border-radius: 12px; color: var(--shell-gold); background: rgba(255, 184, 0, 0.14); }
+.sh-claim.is-done { background: var(--shell-panel); border-color: var(--shell-line); }
+.sh-claim.is-done .sh-claim-icon { color: var(--shell-text-3); background: var(--shell-raise); }
+.sh-claim b { display: block; font-size: 16px; color: #fff; }
+.sh-claim small { display: block; margin-top: 4px; font-size: 12.5px; color: var(--shell-text-2); }
+.sh-label { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.sh-label h2, .sh-label h3 { margin: 0; font-family: var(--shell-display); font-weight: 400; text-transform: uppercase; letter-spacing: 0.02em; color: #fff; }
+.sh-label h2 { font-size: 26px; }
+.sh-label h3 { font-size: 19px; }
+.sh-note { font: 500 11px/1 var(--shell-mono); color: var(--shell-text-3); }
+.sh-link { font-size: 13.5px; font-weight: 600; color: var(--shell-text-2); text-decoration: none; }
+.sh-link:hover { color: #fff; }
+.sh-streak { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin-top: 12px; }
+.sh-streak > span { display: grid; gap: 5px; justify-items: center; }
+.sh-streak i { width: 100%; height: 26px; border-radius: 9px; background: var(--shell-raise); }
+.sh-streak small { font: 600 10px/1 var(--shell-mono); color: var(--shell-text-3); font-variant-numeric: tabular-nums; }
+.sh-streak [data-state='on'] i { background: var(--shell-accent); box-shadow: 0 3px 0 var(--shell-accent-deep); }
+.sh-streak [data-state='on'] small { color: var(--shell-text-2); }
+.sh-streak [data-state='now'] i { outline: 2px dashed var(--shell-gold); outline-offset: -2px; }
+.sh-streak [data-state='now'] small { color: var(--shell-gold); }
+.sh-streak-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin-top: 14px; }
+.sh-vault { display: grid; gap: 9px; }
+.sh-row { display: flex; justify-content: space-between; font-size: 13.5px; color: var(--shell-text-2); }
+.sh-row b { font-family: var(--shell-mono); color: #fff; font-variant-numeric: tabular-nums; }
+.sh-bar { height: 6px; border-radius: 9px; background: var(--shell-raise); overflow: hidden; }
+.sh-bar i { display: block; height: 100%; border-radius: 9px; background: #ff5500; }
+
+/* ── Rows ── */
+.sh-section { display: grid; gap: 14px; min-width: 0; }
+.sh-tiles {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(150px, 180px);
+  gap: 14px;
+  overflow-x: auto;
+  padding: 2px 2px 12px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+  scrollbar-color: var(--shell-raise) transparent;
+}
+@media (max-width: 767px) { .sh-tiles { grid-auto-columns: 42%; } }
+.sh-tile {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  border-radius: 18px;
+  overflow: hidden;
+  scroll-snap-align: start;
+  text-decoration: none;
+  color: #fff;
+  box-shadow: 0 6px 0 -1px rgba(0, 0, 0, 0.55);
+  transition: transform 0.15s;
+}
+.sh-tile:hover { transform: translateY(-4px) rotate(-0.6deg); }
+.sh-tile .sh-cover { position: absolute; inset: 0; }
+.sh-tile-shade { position: absolute; inset: 0; z-index: 2; background: linear-gradient(180deg, transparent 45%, rgba(0, 0, 0, 0.85)); }
+.sh-stars { position: absolute; top: 10px; left: 12px; z-index: 3; color: var(--shell-gold); font-size: 13px; letter-spacing: 1px; text-shadow: 0 1px 4px #000; }
+.sh-stars span { opacity: 0.35; }
+.sh-tile-text { position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 3; display: flex; flex-direction: column; gap: 4px; }
+.sh-tile-text b { font-size: 14.5px; line-height: 1.15; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.sh-tile-text small { font: 500 10.5px/1 var(--shell-mono); opacity: 0.85; }
+.sh-tile:focus-visible, .sh-mode:focus-visible { outline: 2px solid var(--shell-gold); outline-offset: 3px; }
+
+.sh-modes { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (min-width: 960px) { .sh-modes { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.sh-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 18px;
+  background: var(--shell-panel);
+  border: 1px solid var(--shell-line);
+  box-shadow: 0 5px 0 rgba(0, 0, 0, 0.5);
+  color: var(--shell-text);
+  text-decoration: none;
+  transition: transform 0.1s, border-color 0.12s;
+}
+.sh-mode:hover { border-color: rgba(255, 30, 140, 0.45); }
+.sh-mode:active { transform: translateY(4px); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.5); }
+.sh-mode-icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 12px; color: var(--shell-accent); background: rgba(255, 30, 140, 0.16); }
+.sh-mode b { display: block; font-size: 15.5px; color: #fff; }
+.sh-mode small { display: block; margin-top: 4px; font-size: 12.5px; line-height: 1.35; color: var(--shell-text-2); }
+
+@media (prefers-reduced-motion: reduce) {
+  .sh-tile, .sh-mode { transition: none; }
+}
