@@ -6,6 +6,7 @@ import dayFileMap from './day_file_map.json';
 import staticSongCatalog from '../data/song_catalog.json';
 import { getHighScore as progGetHighScore, saveHighScore as progSaveHighScore } from './progress';
 import { resolveMediaUrls } from '../utils/resolveMediaUrls';
+import { resolveChartVariant } from '../lib/chartVariant';
 
 export interface LyricsWord {
   word: string;
@@ -39,6 +40,8 @@ export interface GameSong {
   coverArt: string | null;
   notes: Note[];
   stages?: Stage[];
+  /** Chart generator that produced notes/stages (e.g. 'v6_master'). */
+  chartVersion?: string;
   key: string;
   genre: string[];
   difficultyLevel: number;
@@ -328,8 +331,8 @@ export async function getSongById(id: string): Promise<GameSong | null> {
     }
 
     const isChartEditionsUnlocked = typeof localStorage !== 'undefined' && localStorage.getItem('opt_unlocked_chart_editions') === 'true';
-    const rawVariant = typeof localStorage !== 'undefined' ? (localStorage.getItem('opt_chartVariant') || 'v1_gimmicks') : 'v1_gimmicks';
-    const variant = isChartEditionsUnlocked ? rawVariant : 'v1_gimmicks';
+    const rawVariant = typeof localStorage !== 'undefined' ? localStorage.getItem('opt_chartVariant') : null;
+    const variant: string = resolveChartVariant(rawVariant, isChartEditionsUnlocked);
     const isDeluxeRequested = typeof localStorage !== 'undefined' && (localStorage.getItem('opt_deluxeChart') === 'true' || localStorage.getItem('opt_deluxeMode') === 'true');
     const isExplicitDeluxe = id.endsWith('_deluxe') || fetchId.endsWith('_deluxe');
     const shouldUseDeluxe = isExplicitDeluxe || (variant === 'v5_flagship' && isDeluxeRequested);
@@ -337,7 +340,9 @@ export async function getSongById(id: string): Promise<GameSong | null> {
     const cleanFetchId = fetchId.replace(/_deluxe$/, '');
     let fetchUrl = `/data/songs_variants/v1_gimmicks/${cleanFetchId}.json`;
 
-    if (variant === 'v4_neural') {
+    if (variant === 'v6_master') {
+      fetchUrl = `/data/songs_variants/v6_master/${cleanFetchId}.json`;
+    } else if (variant === 'v4_neural') {
       fetchUrl = `/data/songs_variants/v4_neural/${cleanFetchId}.json`;
     } else if (variant === 'v1_gimmicks') {
       fetchUrl = `/data/songs_variants/v1_gimmicks/${cleanFetchId}.json`;
