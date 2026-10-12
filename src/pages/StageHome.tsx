@@ -1,16 +1,18 @@
 // ════════════════════════════════════════════════════════════════════════════════
 // StageHome.tsx — The player's hub in the "Stage" shell.
-// Today's song as the hero (real cover art), the free card claim, streak, vault
-// progress, songs to keep playing and the play modes.
+// Today's song as the hero (real cover art) with its card claim and buy right on it,
+// then the free pack, the spark streak, vault progress, songs to keep playing and
+// the play modes.
 // ════════════════════════════════════════════════════════════════════════════════
 
 import { useMemo, useState } from 'react';
 import { Link } from 'wouter';
-import { Gift, Headphones, Play } from 'lucide-react';
+import { Flame, Gift, Headphones, Package, Play, Zap } from 'lucide-react';
 import { useVaultStore } from '../store/useVaultStore';
 import { getCurrentDay, formatDate, getTimeUntilNextDay } from '../utils/dayCalc';
 import staticSongCatalog from '../data/song_catalog.json';
 import { NAV_SECTIONS } from '../components/nav/navConfig';
+import { useDailyRewards, sparksForStreakDay } from '../hooks/useDailyRewards';
 import '../styles/stageShell.css';
 import '../styles/stageHome.css';
 
@@ -62,8 +64,6 @@ function Pips({ n }: { n: number }) {
 
 export default function StageHome() {
   const currentDay = getCurrentDay();
-  const hasClaimed = useVaultStore((s) => s.hasClaimed);
-  const streakCount = useVaultStore((s) => s.streakCount);
   const collection = useVaultStore((s) => s.collection);
   const medals = useVaultStore((s) => s.medals);
   const highScores = useVaultStore((s) => s.highScores);
@@ -71,6 +71,8 @@ export default function StageHome() {
   const today = catalog.find((s) => s.day === currentDay) ?? catalog[catalog.length - 1];
   const todayId = today ? songId(today) : `day-${currentDay}`;
   const t = getTimeUntilNextDay();
+  const nextIn = `${t.hours}h ${String(t.minutes).padStart(2, '0')}m`;
+  const daily = useDailyRewards(today?.day ?? currentDay);
 
   const uniqueDays = useMemo(() => new Set(collection.map((c) => c.card?.day).filter(Boolean)).size, [collection]);
 
@@ -83,7 +85,13 @@ export default function StageHome() {
   }, [currentDay, highScores, medals]);
 
   const modes = NAV_SECTIONS[0].items.filter((i) => ['arcade', 'campaign', 'timeline', 'awards'].includes(i.id));
-  const streakDays = Math.min(streakCount, 7);
+
+  // Spark streak: the dry run reports the streak today's check-in would make (or
+  // the banked one once collected). Show the 7-day stretch that contains today.
+  const sparkStreak = daily.streak;
+  const banked = sparkStreak ? (sparkStreak.canClaim ? sparkStreak.streak - 1 : sparkStreak.streak) : 0;
+  const todaySlot = sparkStreak?.canClaim ? banked + 1 : Math.max(banked, 1);
+  const weekStart = Math.floor((todaySlot - 1) / 7) * 7 + 1;
 
   if (!today) return null;
 
@@ -109,33 +117,85 @@ export default function StageHome() {
                 <Headphones size={17} /> Listen
               </Link>
             </div>
+
+            <div className="sh-daycard">
+              <div className="sh-daycard-text">
+                <b>{daily.hasClaimed ? `Day ${today.day} card is yours` : `Day ${today.day} card · free today`}</b>
+                <small>
+                  {daily.hasClaimed
+                    ? `Pull another copy for ${daily.buyCost} sparks · next drop in ${nextIn}`
+                    : `Rarity rolls when you claim · ${nextIn} left`}
+                </small>
+              </div>
+              <div className="sh-daycard-actions">
+                {!daily.hasClaimed && (
+                  <button type="button" className="btn-3d" data-tone="gold" data-size="sm" onClick={daily.claimCard} disabled={!!daily.busy}>
+                    <Gift size={15} /> Claim free
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="btn-3d"
+                  data-tone={daily.hasClaimed ? 'gold' : 'quiet'}
+                  data-size="sm"
+                  onClick={daily.buyCard}
+                  disabled={!!daily.busy}
+                  title={daily.canAffordBuy ? undefined : 'Not enough sparks yet'}
+                >
+                  <Zap size={15} /> {daily.signedIn && !daily.canAffordBuy ? 'Earn sparks' : `Buy · ${daily.buyCost}`}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
         <div className="sh-side">
-          <div className={`sh-card sh-claim${hasClaimed ? ' is-done' : ''}`}>
+          <div className={`sh-card sh-claim${daily.freePackClaimed ? ' is-done' : ''}`}>
+            <span className="sh-claim-icon"><Package size={20} /></span>
             <div>
-              <b>{hasClaimed ? "Today's card is yours" : 'Free card waiting'}</b>
-              <small>
-                {hasClaimed
-                  ? `Next drop in ${t.hours}h ${String(t.minutes).padStart(2, '0')}m`
-                  : `Rarity rolls on claim · ${t.hours}h ${String(t.minutes).padStart(2, '0')}m left`}
-              </small>
+              <b>{daily.freePackClaimed ? 'Free pack opened' : 'Free pack'}</b>
+              <small>{daily.freePackClaimed ? `A new one in ${nextIn}` : 'One on the house every day'}</small>
             </div>
-            <Link to={hasClaimed ? '/vault/collection' : '/vault'} className="btn-3d" data-tone={hasClaimed ? 'quiet' : 'gold'} data-size="sm">
-              <Gift size={15} /> {hasClaimed ? 'View' : 'Claim'}
-            </Link>
+            {daily.freePackClaimed ? (
+              <Link to="/vault/collection" className="btn-3d" data-tone="quiet" data-size="sm">View</Link>
+            ) : (
+              <button type="button" className="btn-3d" data-tone="gold" data-size="sm" onClick={daily.openFreePack} disabled={!!daily.busy}>
+                Open
+              </button>
+            )}
           </div>
 
           <div className="sh-card">
             <div className="sh-label">
-              <h3>{streakCount > 0 ? `${streakCount}-day streak` : 'Start a streak'}</h3>
-              <span className="sh-note">{streakCount > 0 ? 'keep it going daily' : 'claim daily to build it'}</span>
+              <h3>{banked > 0 ? `${banked}-day streak` : 'Start a streak'}</h3>
+              <span className="sh-note">sparks every day you check in</span>
             </div>
-            <div className="sh-streak" aria-label={`${streakCount} day streak`}>
-              {Array.from({ length: 7 }, (_, i) => (
-                <i key={i} data-state={i < streakDays ? 'on' : i === streakDays && !hasClaimed ? 'now' : 'off'} />
-              ))}
+            <div className="sh-streak" aria-label={`${banked} day spark streak`}>
+              {Array.from({ length: 7 }, (_, i) => {
+                const n = weekStart + i;
+                const state = n <= banked ? 'on' : n === todaySlot && sparkStreak?.canClaim ? 'now' : 'off';
+                return (
+                  <span key={n} data-state={state}>
+                    <i />
+                    <small>+{sparksForStreakDay(n)}</small>
+                  </span>
+                );
+              })}
+            </div>
+            <div className="sh-streak-foot">
+              {!daily.signedIn ? (
+                <button type="button" className="btn-3d" data-tone="quiet" data-size="sm" onClick={daily.claimStreak}>
+                  <Flame size={15} /> Sign in to start
+                </button>
+              ) : sparkStreak?.canClaim ? (
+                <button type="button" className="btn-3d" data-tone="gold" data-size="sm" onClick={daily.claimStreak} disabled={!!daily.busy}>
+                  <Zap size={15} /> Collect +{sparkStreak.reward}
+                </button>
+              ) : (
+                <span className="sh-note">{sparkStreak ? 'Collected today · come back tomorrow' : 'Streak unavailable right now'}</span>
+              )}
+              {sparkStreak && banked < 7 && <span className="sh-note">7 days: +100 bonus</span>}
+              {sparkStreak && banked >= 7 && banked < 30 && <span className="sh-note">30 days: +300 bonus</span>}
             </div>
           </div>
 
