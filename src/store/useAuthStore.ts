@@ -406,7 +406,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
 
     if (!subscribed) {
-      supabase.auth.onAuthStateChange(async (event, session) => {
+      // Must stay synchronous: supabase-js holds its auth lock while this
+      // callback runs, so awaiting any supabase call here deadlocks every
+      // later getSession()/invoke(). Follow-up work is deferred below.
+      supabase.auth.onAuthStateChange((event, session) => {
         console.log('[Auth] onAuthStateChange:', event, { hasSession: !!session, userId: session?.user?.id?.slice(0, 8) });
         const nextUser = session?.user ?? null;
         set({ session, user: nextUser });
@@ -431,16 +434,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
               localStorage.setItem('th3vault_ephemeral_wallet_pkey', userPkey);
             }
           }
-          await get().ensureProfileAndWallet(user);
-          useVaultStore.getState().loadVaultData();
-          if (isRealUser(user)) {
-            // Guest → account migration for in-page sign-ins (email/password,
-            // wallet, passkey) that create a fresh user instead of upgrading
-            // the anonymous one in place.
-            void maybeMigrateGuestData();
-          }
-          // Retry any guest card migration parked while the engine update deploys.
-          void maybeMigratePendingGuestCards();
+          setTimeout(async () => {
+            await get().ensureProfileAndWallet(user);
+            useVaultStore.getState().loadVaultData();
+            if (isRealUser(user)) {
+              // Guest → account migration for in-page sign-ins (email/password,
+              // wallet, passkey) that create a fresh user instead of upgrading
+              // the anonymous one in place.
+              void maybeMigrateGuestData();
+            }
+            // Retry any guest card migration parked while the engine update deploys.
+            void maybeMigratePendingGuestCards();
+          }, 0);
         }
       });
       subscribed = true;
