@@ -76,8 +76,11 @@ const RhythmHome = lazyWithRetry(() => import('./pages/RhythmHome'));
 const SongSelect = lazyWithRetry(() => import('./pages/SongSelect'));
 const GamePlay = lazyWithRetry(() => import('./pages/GamePlay'));
 const GameResults = lazyWithRetry(() => import('./pages/GameResults'));
-const Campaign = lazyWithRetry(() => import('./pages/Campaign'));
-const Chapter = lazyWithRetry(() => import('./pages/Chapter'));
+const Campaign = lazyWithRetry(() => import('./pages/campaign/CampaignStory'));
+const Chapter = lazyWithRetry(() => import('./pages/campaign/ChapterStory'));
+// Previous map-style campaign screens, kept reachable while the story screens settle in.
+const CampaignMap = lazyWithRetry(() => import('./pages/Campaign'));
+const ChapterMap = lazyWithRetry(() => import('./pages/Chapter'));
 const Tutorial = lazyWithRetry(() => import('./pages/Tutorial'));
 const HomePage = lazyWithRetry(() => import('./pages/HomePage'));
 const CollectionPage = lazyWithRetry(() => import('./pages/CollectionPage'));
@@ -384,7 +387,9 @@ export default function App() {
                 <Route path="/play/:songId" component={GamePlay} />
                 <Route path="/results/:songId" component={GameResults} />
                 <Route path="/campaign" component={Campaign} />
+                <Route path="/campaign/map" component={CampaignMap} />
                 <Route path="/chapter/:month" component={Chapter} />
+                <Route path="/chapter/:month/map" component={ChapterMap} />
                 <Route path="/tutorial" component={Tutorial} />
 
                 {/* 2. TH3VAULT & Collectible Routes */}
