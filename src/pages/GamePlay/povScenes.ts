@@ -91,75 +91,159 @@ function proj(s: PovSceneInput, pov: PovMode, lane: number, p: number) {
   return { cx: r.x + r.w / 2, cy: r.y, w: r.w, h: r.h };
 }
 
+interface LaneGuideOpts {
+  fill: number;
+  edge: number;
+  startP?: number;
+  /** Beat ticks that scroll down each lane at note speed. Default on. */
+  ticks?: boolean;
+  /** Dark glass under the tint so the ribbon reads as a surface over busy backdrops. */
+  base?: number;
+}
+
 /**
- * Translucent lane ribbons traced along the real note path, brightening when the
- * lane is pressed or just scored a hit.
+ * Lane ribbons traced along the real note path: a dark glass base, a colour tint
+ * that deepens toward the player, a bright core filament, beat ticks that ride
+ * the lane at note speed, and a receptor pool at the target. Everything
+ * brightens when the lane is pressed or just scored a hit.
  */
-function drawLaneGuides(s: PovSceneInput, pov: PovMode, opts: { fill: number; edge: number; startP?: number }) {
+function drawLaneGuides(s: PovSceneInput, pov: PovMode, opts: LaneGuideOpts) {
   const { ctx } = s;
-  const steps = s.lite ? 14 : 26;
+  const steps = s.lite ? 14 : 28;
   const p0 = opts.startP ?? 0.02;
+  const base = opts.base ?? 0.32;
+  const beatSec = 60 / Math.max(40, s.bpm || 120);
+
   for (let lane = 0; lane < LANE_COUNT; lane++) {
     const col = s.laneColors[lane] || '#00E5FF';
     const flash = hitFlash(s, lane);
     const press = s.pressed[lane] ? 1 : 0;
-    const pts: { x: number; y: number; half: number }[] = [];
+    const boost = Math.max(flash * 0.9, press * 0.35);
+
+    const pts: { x: number; y: number; w: number; h: number; half: number; nx: number; ny: number }[] = [];
     for (let i = 0; i <= steps; i++) {
-      const p = lerp(p0, 1, i / steps);
-      const a = proj(s, pov, lane, p);
-      pts.push({ x: a.cx, y: a.cy, half: 0 });
+      const a = proj(s, pov, lane, lerp(p0, 1, i / steps));
+      pts.push({ x: a.cx, y: a.cy, w: a.w, h: a.h, half: 0, nx: 0, ny: 0 });
     }
     // Cross-size follows the travel direction: note width when moving vertically, note height when moving sideways.
     for (let i = 0; i <= steps; i++) {
-      const p = lerp(p0, 1, i / steps);
-      const a = proj(s, pov, lane, p);
       const prev = pts[Math.max(0, i - 1)];
       const next = pts[Math.min(steps, i + 1)];
       const dx = next.x - prev.x;
       const dy = next.y - prev.y;
-      pts[i].half = (Math.abs(dy) >= Math.abs(dx) ? a.w : a.h * 0.9) * 0.46;
+      pts[i].half = (Math.abs(dy) >= Math.abs(dx) ? pts[i].w : pts[i].h * 0.9) * 0.46;
+      const len = Math.hypot(dx, dy) || 1;
+      pts[i].nx = -dy / len;
+      pts[i].ny = dx / len;
     }
-    const left: { x: number; y: number }[] = [];
-    const right: { x: number; y: number }[] = [];
-    for (let i = 0; i <= steps; i++) {
-      const prev = pts[Math.max(0, i - 1)];
-      const next = pts[Math.min(steps, i + 1)];
-      let nx = -(next.y - prev.y);
-      let ny = next.x - prev.x;
-      const len = Math.hypot(nx, ny) || 1;
-      nx /= len;
-      ny /= len;
-      left.push({ x: pts[i].x + nx * pts[i].half, y: pts[i].y + ny * pts[i].half });
-      right.push({ x: pts[i].x - nx * pts[i].half, y: pts[i].y - ny * pts[i].half });
-    }
+
+    const trace = (k: number) => {
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x + pts[0].nx * pts[0].half * k, pts[0].y + pts[0].ny * pts[0].half * k);
+      for (let i = 1; i <= steps; i++) ctx.lineTo(pts[i].x + pts[i].nx * pts[i].half * k, pts[i].y + pts[i].ny * pts[i].half * k);
+      for (let i = steps; i >= 0; i--) ctx.lineTo(pts[i].x - pts[i].nx * pts[i].half * k, pts[i].y - pts[i].ny * pts[i].half * k);
+      ctx.closePath();
+    };
 
     const head = pts[0];
     const tail = pts[steps];
+
+    // 1. Dark glass base keeps notes legible over bright scenery.
+    if (base > 0) {
+      const bg = ctx.createLinearGradient(head.x, head.y, tail.x, tail.y);
+      bg.addColorStop(0, 'rgba(4,6,14,0)');
+      bg.addColorStop(0.35, `rgba(4,6,14,${base * 0.6})`);
+      bg.addColorStop(1, `rgba(4,6,14,${base})`);
+      ctx.fillStyle = bg;
+      trace(1);
+      ctx.fill();
+    }
+
+    // 2. Colour tint, deepest at the target.
     const grad = ctx.createLinearGradient(head.x, head.y, tail.x, tail.y);
-    const boost = Math.max(flash * 0.9, press * 0.35);
     grad.addColorStop(0, colorWithAlpha(col, 0));
     grad.addColorStop(0.55, colorWithAlpha(col, opts.fill * 0.6 + boost * 0.12));
     grad.addColorStop(1, colorWithAlpha(col, Math.min(0.9, opts.fill + boost * 0.4)));
-
-    ctx.beginPath();
-    ctx.moveTo(left[0].x, left[0].y);
-    for (let i = 1; i <= steps; i++) ctx.lineTo(left[i].x, left[i].y);
-    for (let i = steps; i >= 0; i--) ctx.lineTo(right[i].x, right[i].y);
-    ctx.closePath();
     ctx.fillStyle = grad;
+    trace(1);
     ctx.fill();
 
+    // 3. Beat ticks: a tick for beat b sits exactly where a note on that beat would be.
+    if (opts.ticks !== false) {
+      const firstBeat = Math.floor(s.t / beatSec);
+      const beatsAhead = Math.ceil(s.approachSec / beatSec) + 1;
+      ctx.lineCap = 'round';
+      for (let k = 0; k <= beatsAhead; k++) {
+        const b = firstBeat + k;
+        const p = 1 - (b * beatSec - s.t) / s.approachSec;
+        if (p < p0 + 0.04 || p > 0.995) continue;
+        const f = (p - p0) * steps / (1 - p0);
+        const i0 = Math.min(steps - 1, Math.max(0, Math.floor(f)));
+        const u = f - i0;
+        const A = pts[i0];
+        const B = pts[i0 + 1];
+        const x = lerp(A.x, B.x, u);
+        const y = lerp(A.y, B.y, u);
+        const half = lerp(A.half, B.half, u) * 0.86;
+        // Lanes running mostly up the screen get level ticks, which read as lines at a
+        // constant depth; curving or sideways lanes tick across their own direction.
+        const steep = Math.abs(B.y - A.y) > Math.abs(B.x - A.x) * 2;
+        const nx = steep ? 1 : lerp(A.nx, B.nx, u);
+        const ny = steep ? 0 : lerp(A.ny, B.ny, u);
+        const tickHalf = steep ? lerp(A.w, B.w, u) * 0.42 : half;
+        const isBar = b % 4 === 0;
+        const a = (isBar ? 0.16 + p * 0.34 : 0.05 + p * 0.16) * (1 + boost * 0.6);
+        ctx.strokeStyle = isBar ? `rgba(235,245,255,${a})` : colorWithAlpha(col, a * 1.4);
+        ctx.lineWidth = (isBar ? 1.6 : 1) + p * (isBar ? 1.6 : 0.8);
+        ctx.beginPath();
+        ctx.moveTo(x + nx * tickHalf, y + ny * tickHalf);
+        ctx.lineTo(x - nx * tickHalf, y - ny * tickHalf);
+        ctx.stroke();
+      }
+      ctx.lineCap = 'butt';
+    }
+
+    // 4. Edges and core filament, added as light so they glow over the scene.
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
     const edgeGrad = ctx.createLinearGradient(head.x, head.y, tail.x, tail.y);
     edgeGrad.addColorStop(0, colorWithAlpha(col, 0));
+    edgeGrad.addColorStop(0.6, colorWithAlpha(col, opts.edge * 0.45));
     edgeGrad.addColorStop(1, colorWithAlpha(col, Math.min(1, opts.edge + boost * 0.5)));
     ctx.strokeStyle = edgeGrad;
     ctx.lineWidth = 1.4 + boost * 2;
     ctx.beginPath();
-    ctx.moveTo(left[0].x, left[0].y);
-    for (let i = 1; i <= steps; i++) ctx.lineTo(left[i].x, left[i].y);
-    ctx.moveTo(right[0].x, right[0].y);
-    for (let i = 1; i <= steps; i++) ctx.lineTo(right[i].x, right[i].y);
+    for (const side of [1, -1]) {
+      ctx.moveTo(pts[0].x + side * pts[0].nx * pts[0].half, pts[0].y + side * pts[0].ny * pts[0].half);
+      for (let i = 1; i <= steps; i++) ctx.lineTo(pts[i].x + side * pts[i].nx * pts[i].half, pts[i].y + side * pts[i].ny * pts[i].half);
+    }
     ctx.stroke();
+    if (!s.lite) {
+      // Soft outer bloom on the edges near the player.
+      ctx.strokeStyle = colorWithAlpha(col, 0.05 + boost * 0.1);
+      ctx.lineWidth = 6 + boost * 6;
+      ctx.stroke();
+    }
+    const coreGrad = ctx.createLinearGradient(head.x, head.y, tail.x, tail.y);
+    coreGrad.addColorStop(0, 'rgba(255,255,255,0)');
+    coreGrad.addColorStop(1, `rgba(255,255,255,${0.10 + boost * 0.35})`);
+    ctx.strokeStyle = coreGrad;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i <= steps; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.stroke();
+
+    // 5. Receptor pool: light spilling onto the surface around the target.
+    const pr = tail.half * (1.5 + boost * 0.6);
+    const pool = ctx.createRadialGradient(tail.x, tail.y, 0, tail.x, tail.y, pr);
+    pool.addColorStop(0, colorWithAlpha(col, 0.16 + s.beat * 0.06 + boost * 0.3));
+    pool.addColorStop(1, colorWithAlpha(col, 0));
+    ctx.fillStyle = pool;
+    ctx.beginPath();
+    ctx.arc(tail.x, tail.y, pr, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
   }
 }
 
@@ -260,6 +344,28 @@ function drawCircle(s: PovSceneInput) {
   }
   ctx.setLineDash([]);
 
+  // Bearing spokes
+  ctx.strokeStyle = 'rgba(120,220,255,0.07)';
+  ctx.beginPath();
+  for (let k = 0; k < 12; k++) {
+    const a = (k / 12) * Math.PI * 2;
+    ctx.moveTo(cx + Math.cos(a) * hitR * 1.1, cy + Math.sin(a) * hitR * 1.1);
+    ctx.lineTo(cx + Math.cos(a) * maxR, cy + Math.sin(a) * maxR);
+  }
+  ctx.stroke();
+  // Blips that light up as the sweep passes
+  for (let k = 0; k < (s.lite ? 6 : 14); k++) {
+    const a = hash(k * 3.9) * Math.PI * 2;
+    const r = lerp(hitR * 1.3, maxR * 0.95, hash(k * 7.7));
+    const since = (((t * 1.4 - a) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+    const glow = Math.max(0, 1 - since / 2.5);
+    if (glow <= 0) continue;
+    ctx.fillStyle = `rgba(120,255,220,${glow * 0.7})`;
+    ctx.beginPath();
+    ctx.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 2 + glow * 1.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
   // Radar sweep
   const sweep = t * 1.4;
   ctx.save();
@@ -304,6 +410,7 @@ function drawSideDrift(s: PovSceneInput) {
   const startY = (H - trackH) / 2;
 
   fillBackdrop(ctx, W, H, [[0, 'rgba(20,4,40,0.75)'], [0.55, 'rgba(60,10,70,0.55)'], [1, 'rgba(10,2,20,0.85)']]);
+  starfield(s, 31, s.lite ? 25 : 60, '255,200,255');
 
   // Sun sitting behind the strike column
   const hit = proj(s, 'horizontal_drift', 1, 1);
@@ -351,6 +458,14 @@ function drawSideDrift(s: PovSceneInput) {
     ctx.lineTo(x - (x - W / 2) * 0.4, H);
     ctx.stroke();
   }
+  for (let k = 1; k <= 5; k++) {
+    const y = gridY0 + (H - gridY0) * Math.pow(k / 5, 1.8);
+    ctx.strokeStyle = `rgba(255,42,133,${0.08 + k * 0.03})`;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(W, y);
+    ctx.stroke();
+  }
 
   drawLaneGuides(s, 'horizontal_drift', { fill: 0.20, edge: 0.6 });
 
@@ -376,6 +491,24 @@ function drawCockpit(s: PovSceneInput) {
   const hud = '108,255,176';
 
   fillBackdrop(ctx, W, H, [[0, 'rgba(2,8,14,0.85)'], [1, 'rgba(4,14,18,0.8)']]);
+
+  starfield(s, 23, s.lite ? 30 : 70, '200,240,255');
+  // Distant gas giant off to one side, drifting with the roll
+  const gpx = W * 0.82 + Math.sin(t * 0.1) * 8;
+  const gpy = H * 0.2;
+  const gpr = Math.min(W, H) * 0.09;
+  const gp = ctx.createRadialGradient(gpx - gpr * 0.4, gpy - gpr * 0.4, gpr * 0.1, gpx, gpy, gpr);
+  gp.addColorStop(0, 'rgba(120,200,190,0.55)');
+  gp.addColorStop(1, 'rgba(10,40,50,0.5)');
+  ctx.fillStyle = gp;
+  ctx.beginPath();
+  ctx.arc(gpx, gpy, gpr, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(160,230,220,0.25)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.ellipse(gpx, gpy, gpr * 1.7, gpr * 0.35, -0.3, 0, Math.PI * 2);
+  ctx.stroke();
 
   // Hyperspace streaks radiating from the vanishing point
   const n = s.lite ? 40 : 90;
@@ -427,6 +560,54 @@ function drawCockpit(s: PovSceneInput) {
     ctx.stroke();
   }
   ctx.restore();
+
+  // Heading tape across the top of the canopy
+  ctx.save();
+  ctx.font = '10px ui-monospace, monospace';
+  ctx.textAlign = 'center';
+  const tapeY = H * 0.11;
+  const tapeHalf = geom.stageW * 0.4;
+  const heading = (t * 12) % 360;
+  ctx.strokeStyle = `rgba(${hud},0.3)`;
+  ctx.lineWidth = 1;
+  for (let d = -40; d <= 40; d += 5) {
+    const deg = Math.round(heading / 5) * 5 + d;
+    const x = vx + ((deg - heading) / 40) * tapeHalf;
+    if (Math.abs(x - vx) > tapeHalf) continue;
+    const major = ((deg % 30) + 30) % 30 === 0;
+    ctx.beginPath();
+    ctx.moveTo(x, tapeY);
+    ctx.lineTo(x, tapeY + (major ? 8 : 4));
+    ctx.stroke();
+    if (major) {
+      ctx.fillStyle = `rgba(${hud},0.45)`;
+      ctx.fillText(String(((deg % 360) + 360) % 360).padStart(3, '0'), x, tapeY - 3);
+    }
+  }
+  ctx.fillStyle = `rgba(${hud},0.7)`;
+  ctx.beginPath();
+  ctx.moveTo(vx, tapeY + 10);
+  ctx.lineTo(vx - 4, tapeY + 16);
+  ctx.lineTo(vx + 4, tapeY + 16);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+
+  // Targeting brackets framing the playfield
+  const bx0 = (W - geom.stageW) / 2;
+  const bx1 = (W + geom.stageW) / 2;
+  const by0 = hitY * 0.3;
+  const by1 = hitY + 30;
+  const bl = 18;
+  ctx.strokeStyle = `rgba(${hud},${0.28 + s.beat * 0.15})`;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  for (const [x, y, dx, dy] of [[bx0, by0, 1, 1], [bx1, by0, -1, 1], [bx0, by1, 1, -1], [bx1, by1, -1, -1]] as const) {
+    ctx.moveTo(x, y + dy * bl);
+    ctx.lineTo(x, y);
+    ctx.lineTo(x + dx * bl, y);
+  }
+  ctx.stroke();
 
   // Reticle pulses on the beat and locks on hits
   const flash = anyHitFlash(s);
@@ -547,16 +728,38 @@ function drawPrism(s: PovSceneInput) {
   ctx.save();
   ctx.translate(vx, vy);
   ctx.rotate(Math.sin(t * 0.7) * 0.25);
-  ctx.strokeStyle = `rgba(255,255,255,${0.7 + flash * 0.3})`;
-  ctx.lineWidth = 1.6;
-  ctx.fillStyle = 'rgba(255,255,255,0.06)';
+  // Glow behind the crystal
+  const pg = ctx.createRadialGradient(0, 0, 0, 0, 0, ps * 3.2);
+  pg.addColorStop(0, `rgba(255,255,255,${0.25 + s.beat * 0.15 + flash * 0.3})`);
+  pg.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = pg;
   ctx.beginPath();
-  ctx.moveTo(0, -ps);
-  ctx.lineTo(ps * 0.9, ps * 0.6);
-  ctx.lineTo(-ps * 0.9, ps * 0.6);
-  ctx.closePath();
+  ctx.arc(0, 0, ps * 3.2, 0, Math.PI * 2);
   ctx.fill();
-  ctx.stroke();
+  // Three faces of a tetrahedral prism; the apex turns slowly so faces trade light
+  const spin = t * 0.9;
+  const verts = [0, 1, 2].map((k) => {
+    const a = spin + (k / 3) * Math.PI * 2;
+    return { x: Math.cos(a) * ps * 0.95, y: ps * 0.55 + Math.sin(a) * ps * 0.28, depth: Math.sin(a) };
+  });
+  const top = { x: 0, y: -ps * 1.05 };
+  const faces = [[0, 1], [1, 2], [2, 0]]
+    .map(([i, j]) => ({ i, j, depth: (verts[i].depth + verts[j].depth) / 2 }))
+    .sort((a, b) => a.depth - b.depth);
+  for (const f of faces) {
+    const hue = (hueBase + f.i * 120) % 360;
+    const lum = 30 + (f.depth + 1) * 22;
+    ctx.fillStyle = `hsla(${hue},80%,${lum}%,${0.35 + (f.depth + 1) * 0.15})`;
+    ctx.beginPath();
+    ctx.moveTo(top.x, top.y);
+    ctx.lineTo(verts[f.i].x, verts[f.i].y);
+    ctx.lineTo(verts[f.j].x, verts[f.j].y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = `rgba(255,255,255,${0.5 + flash * 0.4})`;
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+  }
   ctx.restore();
 }
 
@@ -594,33 +797,64 @@ function drawDna(s: PovSceneInput) {
     if (tx < -amp || tx > W + amp) continue;
     const phase0 = ti * Math.PI;
     // Rungs first so strands draw over them
+    const pairCols = ['#FFD166', '#4CC9F0', '#F72585', '#80FFDB'];
     for (let y = -((scroll) % 22); y < H; y += 22) {
       const ph = ((y + scroll) / pitch) * Math.PI * 2 + phase0;
       const x1 = tx + Math.sin(ph) * amp;
       const x2 = tx - Math.sin(ph) * amp;
-      const depth = Math.cos(ph);
-      ctx.strokeStyle = `rgba(200,240,255,${0.06 + Math.abs(depth) * 0.08})`;
-      ctx.lineWidth = 2;
+      const depth = Math.abs(Math.cos(ph));
+      const idx = Math.floor((y + scroll) / 22);
+      const pc = pairCols[((idx % 4) + 4) % 4];
+      // Each rung is two half base-pairs meeting in the middle
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = colorWithAlpha(pc, 0.10 + depth * 0.22);
       ctx.beginPath();
       ctx.moveTo(x1, y);
+      ctx.lineTo((x1 + x2) / 2, y);
+      ctx.stroke();
+      ctx.strokeStyle = colorWithAlpha(pairCols[((idx + 2) % 4 + 4) % 4], 0.10 + depth * 0.22);
+      ctx.beginPath();
+      ctx.moveTo((x1 + x2) / 2, y);
       ctx.lineTo(x2, y);
       ctx.stroke();
     }
+    // Strands: segment by segment so the half turning away dims and thins
     for (let strand = 0; strand < 2; strand++) {
-      ctx.strokeStyle = colorWithAlpha(strand ? colB : colA, 0.55);
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      for (let y = -10; y <= H + 10; y += 8) {
+      const sc = strand ? colB : colA;
+      let px = 0;
+      let py = 0;
+      for (let y = -10; y <= H + 10; y += 6) {
         const ph = ((y + scroll) / pitch) * Math.PI * 2 + phase0;
         const x = tx + (strand ? -1 : 1) * Math.sin(ph) * amp;
-        if (y === -10) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
+        const near = (strand ? -1 : 1) * Math.cos(ph); // +1 facing the camera
+        if (y > -10) {
+          ctx.strokeStyle = colorWithAlpha(sc, 0.25 + Math.max(0, near) * 0.55);
+          ctx.lineWidth = 2 + Math.max(0, near) * 2.5;
+          ctx.beginPath();
+          ctx.moveTo(px, py);
+          ctx.lineTo(x, y);
+          ctx.stroke();
+        }
+        px = x;
+        py = y;
       }
-      ctx.stroke();
+      // Glowing backbone nodes on the near side
+      if (!s.lite) {
+        for (let y = -((scroll) % 22); y < H; y += 22) {
+          const ph = ((y + scroll) / pitch) * Math.PI * 2 + phase0;
+          const near = (strand ? -1 : 1) * Math.cos(ph);
+          if (near < 0.2) continue;
+          const x = tx + (strand ? -1 : 1) * Math.sin(ph) * amp;
+          ctx.fillStyle = colorWithAlpha(sc, 0.35 + near * 0.5 + s.beat * 0.1);
+          ctx.beginPath();
+          ctx.arc(x, y, 2 + near * 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
     }
   }
 
-  drawLaneGuides(s, 'dna_helix', { fill: 0.13, edge: 0.45 });
+  drawLaneGuides(s, 'dna_helix', { fill: 0.11, edge: 0.45, base: 0.4 });
 
   // Hit bursts release a short-lived nucleotide spark ring at the target
   for (let lane = 0; lane < LANE_COUNT; lane++) {
@@ -653,6 +887,34 @@ function drawVertigo(s: PovSceneInput) {
   ctx.fillStyle = cg;
   ctx.fillRect(0, 0, W, H);
 
+  // Facade walls: dark glass sides of the shaft converging on the vanishing point
+  const farHw = geom.stageW * 0.05;
+  for (const side of [-1, 1]) {
+    const wg = ctx.createLinearGradient(vx, vy, vx + side * W * 0.5, vy);
+    wg.addColorStop(0, 'rgba(10,18,40,0.0)');
+    wg.addColorStop(0.3, 'rgba(12,22,48,0.55)');
+    wg.addColorStop(1, 'rgba(6,10,24,0.85)');
+    ctx.fillStyle = wg;
+    ctx.beginPath();
+    ctx.moveTo(vx + side * farHw, vy);
+    ctx.lineTo(vx + side * W, -H * 0.6);
+    ctx.lineTo(vx + side * W, H * 2);
+    ctx.closePath();
+    ctx.fill();
+    // Vertical mullions converging on the vanishing point
+    ctx.strokeStyle = 'rgba(120,160,255,0.06)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let m = 1; m <= 6; m++) {
+      const ex = vx + side * (farHw + (W * 0.75) * (m / 6));
+      ctx.moveTo(vx + side * farHw, vy);
+      ctx.lineTo(ex, H * 1.4);
+      ctx.moveTo(vx + side * farHw, vy);
+      ctx.lineTo(ex, -H * 0.4);
+    }
+    ctx.stroke();
+  }
+
   // Building floors rush past: each floor is a rectangle ring growing out of the vanishing point
   const floors = s.lite ? 10 : 18;
   const fall = t * (0.35 + s.energy * 0.25) * (s.stage >= 5 ? 1.7 : 1);
@@ -675,8 +937,16 @@ function drawVertigo(s: PovSceneInput) {
     ctx.lineTo(vx + hw, bot);
     ctx.stroke();
     // Lit windows on both facades
+    // Floor slab line across each wall
+    ctx.strokeStyle = `rgba(120,160,255,${0.08 * a})`;
+    ctx.beginPath();
+    ctx.moveTo(vx - hw, top);
+    ctx.lineTo(vx - W, top - (W - hw) * 0.8);
+    ctx.moveTo(vx + hw, top);
+    ctx.lineTo(vx + W, top - (W - hw) * 0.8);
+    ctx.stroke();
     const winW = Math.max(1.5, hw * 0.05);
-    const rows = 5;
+    const rows = s.lite ? 5 : 8;
     for (let r = 0; r < rows; r++) {
       const wy = lerp(top, bot, (r + 0.5) / rows);
       for (const side of [-1, 1]) {
@@ -713,10 +983,53 @@ function drawSingularity(s: PovSceneInput) {
   const vx = W / 2;
   const vy = hitY * 0.28;
   const flash = anyHitFlash(s);
-  const R = geom.stageW * 0.07;
+  const R = geom.stageW * 0.085;
 
   fillBackdrop(ctx, W, H, [[0, 'rgba(2,1,6,0.9)'], [1, 'rgba(6,2,10,0.88)']]);
   starfield(s, 41, s.lite ? 30 : 80, '255,236,210');
+
+  // Warm nebula wash around the hole
+  const neb = ctx.createRadialGradient(vx, vy, R, vx, vy, geom.stageW * 1.1);
+  neb.addColorStop(0, 'rgba(120,40,20,0.22)');
+  neb.addColorStop(0.5, 'rgba(60,14,40,0.12)');
+  neb.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = neb;
+  ctx.fillRect(0, 0, W, H);
+
+  // Gravity well: spacetime grid rings sinking toward the hole, flowing inward
+  ctx.lineWidth = 1;
+  const wells = s.lite ? 6 : 10;
+  for (let i = 0; i < wells; i++) {
+    const z = ((i / wells) + t * 0.12) % 1;
+    const rr = lerp(geom.stageW * 1.25, R * 1.6, Math.pow(z, 0.8));
+    const sink = Math.pow(z, 2) * H * 0.05;
+    ctx.strokeStyle = `rgba(255,170,110,${0.03 + (1 - z) * z * 0.22})`;
+    ctx.beginPath();
+    ctx.ellipse(vx, vy + sink + rr * 0.08, rr, rr * 0.28, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // Relativistic jets shooting from the poles
+  if (!s.lite) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const jl = H * 0.5;
+    for (const dir of [-1, 1]) {
+      const jg = ctx.createLinearGradient(vx, vy, vx, vy + dir * jl);
+      jg.addColorStop(0, `rgba(170,200,255,${0.35 + s.beat * 0.15 + flash * 0.2})`);
+      jg.addColorStop(1, 'rgba(120,160,255,0)');
+      ctx.fillStyle = jg;
+      const wob = Math.sin(t * 3 + dir) * R * 0.08;
+      ctx.beginPath();
+      ctx.moveTo(vx - R * 0.12, vy);
+      ctx.lineTo(vx + wob - R * 0.45, vy + dir * jl);
+      ctx.lineTo(vx + wob + R * 0.45, vy + dir * jl);
+      ctx.lineTo(vx + R * 0.12, vy);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+  }
 
   // Infalling debris spiralling in
   const n = s.lite ? 24 : 60;
@@ -776,6 +1089,22 @@ function drawSingularity(s: PovSceneInput) {
 
   drawDisk(1);
 
+  // Doppler beaming: the side spinning toward us glows hotter
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.translate(vx, vy);
+  ctx.scale(1, 0.2);
+  const dop = ctx.createLinearGradient(-R * 5, 0, R * 5, 0);
+  dop.addColorStop(0, `rgba(255,230,190,${0.32 * heat})`);
+  dop.addColorStop(0.5, 'rgba(255,200,140,0)');
+  dop.addColorStop(1, 'rgba(255,120,60,0)');
+  ctx.fillStyle = dop;
+  ctx.beginPath();
+  ctx.arc(0, 0, R * 4.6, 0, Math.PI * 2);
+  ctx.arc(0, 0, R * 1.1, 0, Math.PI * 2, true);
+  ctx.fill();
+  ctx.restore();
+
   // Event horizon and photon ring
   ctx.fillStyle = '#000';
   ctx.beginPath();
@@ -785,6 +1114,11 @@ function drawSingularity(s: PovSceneInput) {
   ctx.lineWidth = 1.5;
   ctx.beginPath();
   ctx.arc(vx, vy, R * 1.04, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.strokeStyle = `rgba(200,220,255,${0.10 + s.beat * 0.08})`;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(vx, vy, R * 1.55 + Math.sin(t * 2) * 1.5, 0, Math.PI * 2);
   ctx.stroke();
 
   // Near side of the disk passes in front of the hole
@@ -890,6 +1224,31 @@ function drawGroundZero(s: PovSceneInput) {
     }
   }
 
+  // Wet asphalt: lamp reflections smeared down the road
+  for (let k = 0; k < lamps; k++) {
+    const z = ((k / lamps) + drive) % 1;
+    const p = Math.pow(z, 1.6);
+    const y = lerp(horizon, H * 1.1, p);
+    const off = lerp(farHalf * 1.6, W * 0.75, p);
+    const a = Math.min(1, z * 3) * 0.18;
+    for (const side of [-1, 1]) {
+      const px = vx + side * off * 0.85;
+      const rg = ctx.createLinearGradient(0, y, 0, y + lerp(10, 160, p));
+      rg.addColorStop(0, `rgba(255,210,140,${a})`);
+      rg.addColorStop(1, 'rgba(255,210,140,0)');
+      ctx.fillStyle = rg;
+      ctx.fillRect(px - lerp(1, 8, p), y, lerp(2, 16, p), lerp(10, 160, p));
+    }
+  }
+  // Tail lights of traffic far ahead
+  for (let k = 0; k < 3; k++) {
+    const tx = vx + (k - 1) * farHalf * 0.6 + Math.sin(t * 0.5 + k) * 3;
+    const ty = horizon + 6 + k * 2;
+    ctx.fillStyle = `rgba(255,40,60,${0.55 + 0.25 * Math.sin(t * 3 + k)})`;
+    ctx.fillRect(tx - 3, ty, 2, 1.5);
+    ctx.fillRect(tx + 1, ty, 2, 1.5);
+  }
+
   drawLaneGuides(s, 'ground_zero', { fill: 0.16, edge: 0.55 });
 
   // Bumper shockwave on hit
@@ -923,6 +1282,23 @@ function drawHalo(s: PovSceneInput) {
   // Planet limb glowing at the bottom of the frame
   const pr = Math.max(W, H) * 1.1;
   const py = H + pr * 0.86;
+  // Night-side planet body with city lights
+  const body = ctx.createRadialGradient(gx, py - pr * 0.6, pr * 0.2, gx, py, pr);
+  body.addColorStop(0, 'rgba(14,30,60,0.95)');
+  body.addColorStop(1, 'rgba(4,10,24,0.95)');
+  ctx.fillStyle = body;
+  ctx.beginPath();
+  ctx.arc(gx, py, pr, 0, Math.PI * 2);
+  ctx.fill();
+  for (let k = 0; k < (s.lite ? 20 : 60); k++) {
+    const ang = -Math.PI / 2 + (hash(k * 2.3) - 0.5) * 0.9;
+    const rr = pr * (0.985 - hash(k * 5.1) * 0.03);
+    const lx = gx + Math.cos(ang + t * 0.004) * rr;
+    const ly = py + Math.sin(ang + t * 0.004) * rr;
+    if (ly > H || ly < 0) continue;
+    ctx.fillStyle = `rgba(255,200,120,${0.25 + hash(k) * 0.35})`;
+    ctx.fillRect(lx, ly, 1.5, 1.5);
+  }
   const atm = ctx.createRadialGradient(gx, py, pr * 0.96, gx, py, pr * 1.04);
   atm.addColorStop(0, 'rgba(60,140,255,0.0)');
   atm.addColorStop(0.5, 'rgba(90,170,255,0.28)');
@@ -942,14 +1318,39 @@ function drawHalo(s: PovSceneInput) {
   ctx.beginPath();
   ctx.arc(0, 0, rx, 0, Math.PI * 2);
   ctx.fill();
+  // Ripples flowing out of the gate on the beat
+  ctx.lineWidth = 1.2;
+  for (let k = 0; k < 4; k++) {
+    const z = ((k / 4) + t * 0.35) % 1;
+    ctx.strokeStyle = `rgba(170,215,255,${(1 - z) * (0.18 + flash * 0.2)})`;
+    ctx.beginPath();
+    ctx.arc(0, 0, rx * z, 0, Math.PI * 2);
+    ctx.stroke();
+  }
   ctx.restore();
 
-  // Ring body
-  ctx.strokeStyle = 'rgba(150,170,200,0.35)';
-  ctx.lineWidth = 10;
+  // Ring body: brushed metal, lit from above
+  const metal = ctx.createLinearGradient(0, gy - ry, 0, gy + ry);
+  metal.addColorStop(0, 'rgba(210,225,245,0.75)');
+  metal.addColorStop(0.5, 'rgba(90,105,130,0.6)');
+  metal.addColorStop(1, 'rgba(150,170,200,0.7)');
+  ctx.strokeStyle = metal;
+  ctx.lineWidth = 12;
   ctx.beginPath();
   ctx.ellipse(gx, gy, rx, ry, 0, 0, Math.PI * 2);
   ctx.stroke();
+  // Segment seams
+  ctx.strokeStyle = 'rgba(20,26,40,0.7)';
+  ctx.lineWidth = 2;
+  for (let k = 0; k < 18; k++) {
+    const a = (k / 18) * Math.PI * 2 + t * 0.05;
+    const c = Math.cos(a);
+    const sn = Math.sin(a);
+    ctx.beginPath();
+    ctx.moveTo(gx + c * (rx - 6), gy + sn * (ry - 6 * ry / rx));
+    ctx.lineTo(gx + c * (rx + 6), gy + sn * (ry + 6 * ry / rx));
+    ctx.stroke();
+  }
   ctx.strokeStyle = 'rgba(220,235,255,0.5)';
   ctx.lineWidth = 1.5;
   ctx.beginPath();
@@ -990,6 +1391,7 @@ function drawMobius(s: PovSceneInput) {
   const back = '#FF7BB0';
 
   fillBackdrop(ctx, W, H, [[0, 'rgba(10,4,24,0.85)'], [1, 'rgba(14,4,20,0.85)']]);
+  starfield(s, 59, s.lite ? 25 : 60, '220,200,255');
 
   // Infinity curve behind everything
   const cx = W / 2;
@@ -1013,6 +1415,15 @@ function drawMobius(s: PovSceneInput) {
     const d = 1 + Math.sin(u) * Math.sin(u);
     const x = cx + (a * Math.cos(u)) / d;
     const y = cy + (a * Math.sin(u) * Math.cos(u)) / d;
+    if (k === 0) {
+      const cg = ctx.createRadialGradient(x, y, 0, x, y, 22);
+      cg.addColorStop(0, 'rgba(220,200,255,0.5)');
+      cg.addColorStop(1, 'rgba(220,200,255,0)');
+      ctx.fillStyle = cg;
+      ctx.beginPath();
+      ctx.arc(x, y, 22, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.fillStyle = `rgba(255,255,255,${(1 - k / 14) * 0.8})`;
     ctx.beginPath();
     ctx.arc(x, y, 4 * (1 - k / 14) + 1, 0, Math.PI * 2);
@@ -1041,6 +1452,15 @@ function drawMobius(s: PovSceneInput) {
     ctx.lineTo(cx + sway1 - half1, y1);
     ctx.closePath();
     ctx.fill();
+    // Rim light on the band's edges, brightest where the band faces us
+    ctx.strokeStyle = colorWithAlpha(col, 0.08 + Math.abs(tw0) * 0.22);
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(cx + sway0 - half0, y0);
+    ctx.lineTo(cx + sway1 - half1, y1);
+    ctx.moveTo(cx + sway0 + half0, y0);
+    ctx.lineTo(cx + sway1 + half1, y1);
+    ctx.stroke();
   }
 
   drawLaneGuides(s, 'mobius_loop', { fill: 0.14, edge: 0.5 });
@@ -1067,5 +1487,16 @@ export function drawPovScene(pov: PovMode, s: PovSceneInput): void {
     case 'mobius_loop': drawMobius(s); break;
     default: break;
   }
+  ctx.restore();
+}
+
+/**
+ * Lane surfaces alone, for 3D POVs that keep the song archetype's environment
+ * (tunnel, corkscrew, coaster, split): notes ride a visible lane instead of floating.
+ */
+export function drawPovLanes(pov: PovMode, s: PovSceneInput): void {
+  const { ctx } = s;
+  ctx.save();
+  drawLaneGuides(s, pov, { fill: 0.09, edge: 0.4, base: 0.22, startP: 0.05 });
   ctx.restore();
 }

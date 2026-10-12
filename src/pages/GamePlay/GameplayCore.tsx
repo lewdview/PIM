@@ -27,7 +27,7 @@ import { colorWithAlpha, hslToHex, getDifficultyLaneColor } from './colorUtils';
 import { perfectPlusWindow, perfectWindow, goodWindow, missWindow } from './timing';
 import { type TrackArchetype, type ArchetypeMeta, ARCHETYPE_METAS, selectSongArchetype, selectSongPov, isArchetypeDevModeEnabled } from './archetypes';
 import { type ProjectionResult, getCorkscrewSpiralPos, getWaveCoasterPos, getFlat2DPos, getRadialOrbitPos, getHorizontalDriftPos, getCockpitHudPos, getHyperPrismPos, getDnaHelixPos, getVertigoDropPos, getSingularityVoidPos, getGroundZeroPos, getOrbitalHaloPos, getMobiusLoopPos, getArchetypeProjection, getLaneFromCoords } from './projections';
-import { hasPovScene, usesFlatHighway, hasStraightHitLine, drawPovScene } from './povScenes';
+import { hasPovScene, usesFlatHighway, hasStraightHitLine, drawPovScene, drawPovLanes, type PovSceneInput } from './povScenes';
 import { refineAndBlendEdges, disposeCanvas, drawMovingGasAura } from './drawHelpers';
 import JudgmentBadge, { getJudgmentBadgeSvgHtml, getJudgmentStreamItemHtml } from './JudgmentBadge';
 import GameplayVisualizer from './GameplayVisualizer';
@@ -4618,8 +4618,8 @@ export default function Game() {
       const swirlAngle = t * 0.9 * swirlSpeedMult; // Continuous rotational vortex swirl
       const isOverdrive = calculatedStage === 5 && swirlSpeedMult >= 2.0;
 
-      if (tunnelOpacity > 0 && hasPovScene(curPovMode)) {
-        // ── POV SIGNATURE SCENE: each camera has its own backdrop, palette and lane guides ──
+      // Scene input shared by POV signature scenes and the lane surfaces on archetype POVs.
+      const buildPovSceneInput = (): PovSceneInput => {
         const sceneHitMs: (number | undefined)[] = [];
         const sceneHitType: (string | undefined)[] = [];
         const scenePressed: boolean[] = [];
@@ -4628,7 +4628,7 @@ export default function Game() {
           sceneHitType.push(lastLaneHitRef.current[i]?.type);
           scenePressed.push(Boolean(laneRef.current[i]?.pressed));
         }
-        drawPovScene(curPovMode, {
+        return {
           ctx,
           W,
           H,
@@ -4645,7 +4645,12 @@ export default function Game() {
           pressed: scenePressed,
           energy: Math.min(1, gs.combo / 60),
           lite: optsRef.current.gfxLevel === 'low' || optsRef.current.gfxLevel === 'medium' || optsRef.current.legacyGraphics,
-        });
+        };
+      };
+
+      if (tunnelOpacity > 0 && hasPovScene(curPovMode)) {
+        // ── POV SIGNATURE SCENE: each camera has its own backdrop, palette and lane guides ──
+        drawPovScene(curPovMode, buildPovSceneInput());
       } else if (tunnelOpacity > 0) {
         // ── ARCHETYPE 1: HORIZONTAL SIDE-SCROLLER (90° Canvas) ──
         if (currentArch === 'horizontal_drift') {
@@ -5227,6 +5232,11 @@ export default function Game() {
            ctx.fillStyle = edgeGlow;
            ctx.fillRect(0, 0, W, H);
         }
+      }
+
+      // Archetype POVs (tunnel, corkscrew, coaster, split) get the same lane surfaces the scene POVs use.
+      if (tunnelOpacity > 0 && !hasPovScene(curPovMode) && is3DEnvironment) {
+        drawPovLanes(curPovMode, buildPovSceneInput());
       }
 
       // ── 3. 3D Circular Judgment Target Strike Zones (Deep Drop Shadows & Neon Rim Glow) ──
