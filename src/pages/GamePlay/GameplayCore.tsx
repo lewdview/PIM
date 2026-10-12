@@ -25,7 +25,7 @@ import { STAGE_BOUNDS, MEDAL_STOPS, MEDAL_COLOR_MAP, LANE_COUNT, HIT_RATIO, HW_T
 import { type StageGeometry, getStageGeometry, approachTime, hwAtProgress, laneAt, lerp, formatTimeSec, isDirectionMatch } from './geometry';
 import { colorWithAlpha, hslToHex, getDifficultyLaneColor } from './colorUtils';
 import { perfectPlusWindow, perfectWindow, goodWindow, missWindow } from './timing';
-import { type TrackArchetype, type ArchetypeMeta, ARCHETYPE_METAS, selectSongArchetype, isArchetypeDevModeEnabled } from './archetypes';
+import { type TrackArchetype, type ArchetypeMeta, ARCHETYPE_METAS, selectSongArchetype, selectSongPov, isArchetypeDevModeEnabled } from './archetypes';
 import { type ProjectionResult, getCorkscrewSpiralPos, getWaveCoasterPos, getFlat2DPos, getRadialOrbitPos, getHorizontalDriftPos, getCockpitHudPos, getHyperPrismPos, getDnaHelixPos, getVertigoDropPos, getSingularityVoidPos, getGroundZeroPos, getOrbitalHaloPos, getMobiusLoopPos, getArchetypeProjection, getLaneFromCoords } from './projections';
 import { hasPovScene, usesFlatHighway, hasStraightHitLine, drawPovScene } from './povScenes';
 import { refineAndBlendEdges, disposeCanvas, drawMovingGasAura } from './drawHelpers';
@@ -3928,11 +3928,7 @@ export default function Game() {
         // Stage-Integrated Dynamic POV Camera Auto-Switching (Untouched & automatic for all players)
         // Stage 1 & 2: Classic, Stage 3: Song 3D Archetype POV, Stage 4: Classic Void, Stage 5: Hyper Version of Stage 3
         if (!isPovLockedRef.current && optsRef.current.stagePovSwitch !== false && phaseRef.current === "playing" && prevStage > 0 && calculatedStage > prevStage) {
-          const archetypePov: PovMode = 
-            activeArchetypeRef.current === 'corkscrew_slide' ? 'corkscrew' :
-            activeArchetypeRef.current === 'wave_coaster' ? 'rollercoaster' :
-            activeArchetypeRef.current === 'matrix_split' ? 'matrix_split' :
-            'cyber_tunnel';
+          const archetypePov: PovMode = selectSongPov(songRef.current, activeArchetypeRef.current);
 
           let targetPov: PovMode = 'classic';
           if (calculatedStage === 1 || calculatedStage === 2) {
