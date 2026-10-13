@@ -1,0 +1,223 @@
+.panel {
+  background: rgba(10, 10, 16, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(40px);
+  padding: 2.25rem 2rem;
+  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.6);
+  display: grid;
+  gap: 2rem;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: 0.85rem;
+}
+
+.header h2 {
+  margin: 0;
+  font-family: var(--font-outfit), sans-serif;
+  font-weight: 800;
+  font-size: 1.1rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+.headerIcon {
+  color: var(--palette-dominant, #ff3800);
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+}
+
+.tile {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.tileLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-jetbrains), monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.tileValue {
+  font-family: var(--font-outfit), sans-serif;
+  font-weight: 800;
+  font-size: 1.6rem;
+  color: #fff;
+  line-height: 1.1;
+}
+
+.tileSub {
+  font-family: var(--font-jetbrains), monospace;
+  font-size: 0.7rem;
+  color: var(--palette-accent, #00e5ff);
+}
+
+.block h3 {
+  margin: 0 0 0.85rem;
+  font-family: var(--font-jetbrains), monospace;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 2rem;
+}
+
+/* Listening heatmap: 7 rows (Sun–Sat), one column per week. */
+.calendar {
+  display: grid;
+  grid-template-rows: repeat(7, 11px);
+  grid-auto-flow: column;
+  grid-auto-columns: 11px;
+  gap: 3px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.calendar span {
+  border-radius: 2px;
+}
+
+.cal0 { background: rgba(255, 255, 255, 0.05); }
+.cal1 { background: color-mix(in srgb, var(--palette-dominant, #ff3800) 30%, transparent); }
+.cal2 { background: color-mix(in srgb, var(--palette-dominant, #ff3800) 55%, transparent); }
+.cal3 { background: color-mix(in srgb, var(--palette-dominant, #ff3800) 80%, transparent); }
+.cal4 { background: var(--palette-dominant, #ff3800); }
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.list li span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.muted {
+  flex-shrink: 0;
+  font-family: var(--font-jetbrains), monospace;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.bars li {
+  display: grid;
+  grid-template-columns: 90px 1fr auto;
+  align-items: center;
+  gap: 0.75rem;
+  font-family: var(--font-jetbrains), monospace;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.barLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-transform: capitalize;
+}
+
+.barTrack {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.barFill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--palette-secondary, #a855f7), var(--palette-dominant, #ff3800));
+}
+
+.barValue {
+  color: #fff;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin: 0 0 1rem;
+}
+
+.facts div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.facts dt {
+  font-family: var(--font-jetbrains), monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.facts dd {
+  margin: 0;
+  font-family: var(--font-outfit), sans-serif;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #fff;
+}
+
+.empty {
+  margin: 0;
+  font-family: var(--font-jetbrains), monospace;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+@media (max-width: 600px) {
+  .panel {
+    padding: 1.5rem 1rem;
+  }
+  .bars li {
+    grid-template-columns: 70px 1fr auto;
+  }
+}
