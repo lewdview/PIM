@@ -213,7 +213,6 @@ export default function Home() {
         .upsert({
           id: activeUser.id,
           display_name: displayName,
-          updated_at: new Date().toISOString()
         });
 
       if (profileError) throw profileError;

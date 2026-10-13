@@ -156,6 +156,10 @@ interface VaultState {
   setLoading: (loading: boolean) => void;
   setTokenBalance: (balance: number) => void;
   addTokens: (amount: number) => Promise<void>;
+  /** Re-reads the server balance (the server is the only writer of profiles.tokens). */
+  refreshTokenBalance: () => Promise<void>;
+  /** One-time welcome bonus; granted server-side for signed-in (incl. guest) sessions. */
+  claimOnboardingBonus: () => Promise<void>;
   setEquippedCardId: (id: string | null) => void;
   setPreferredCardCover: (day: number, coverArtwork: string) => void;
   loadVaultData: (force?: boolean) => Promise<void>;
@@ -1324,27 +1328,22 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       return true;
     }
 
-    const nextSkins = [...state.unlockedSkins, skinId];
-    const nextTokens = state.tokenBalance - cost;
-
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        unlocked_skins: nextSkins,
-        tokens: nextTokens,
-      })
-      .eq('id', userId);
-
+    // Server-priced unlock: the price comes from skin_catalog, not from `cost`.
+    const { data, error } = await supabase.rpc('unlock_skin', { p_skin_id: skinId });
     if (error) {
-      console.error("Error unlocking skin in db:", error);
-      alert("Failed to unlock skin. Please try again.");
+      console.error('Error unlocking skin:', error);
+      alert(/insufficient/i.test(error.message)
+        ? `Insufficient Vault Tokens! ${error.message.replace(/^.*?:\s*/, '')}`
+        : 'Failed to unlock skin. Please try again.');
+      void get().refreshTokenBalance();
       return false;
     }
 
-    set({
-      unlockedSkins: nextSkins,
-      tokenBalance: nextTokens,
-    });
+    const result = (data || {}) as { tokens?: number; unlocked_skins?: string[] };
+    set((s) => ({
+      unlockedSkins: Array.isArray(result.unlocked_skins) ? result.unlocked_skins : [...s.unlockedSkins, skinId],
+      tokenBalance: typeof result.tokens === 'number' ? result.tokens : s.tokenBalance - cost,
+    }));
     return true;
   },
 
@@ -1359,14 +1358,44 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       localStorage.setItem('pim_token_balance', String(nextTokens));
     } catch {}
 
+    // Local display only. profiles.tokens is server-managed: for signed-in players the
+    // server has already credited the amount (e.g. vault-engine burnCard), so re-sync.
     if (userId) {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ tokens: nextTokens })
-        .eq('id', userId);
-      if (error) {
-        console.error('[Sync] Error adding tokens to Supabase:', error.message);
-      }
+      await get().refreshTokenBalance();
+    }
+  },
+
+  refreshTokenBalance: async () => {
+    const session = await supabase.auth.getSession();
+    const userId = session.data.session?.user.id;
+    if (!userId) return;
+    const { data, error } = await supabase.from('profiles').select('tokens').eq('id', userId).maybeSingle();
+    if (error || !data) return;
+    const tokens = Number((data as { tokens?: number }).tokens) || 0;
+    set({ tokenBalance: tokens });
+    try {
+      localStorage.setItem('pim_token_balance', String(tokens));
+    } catch {}
+  },
+
+  claimOnboardingBonus: async () => {
+    const session = await supabase.auth.getSession();
+    if (!session.data.session?.user.id) {
+      // No session at all: local-only welcome tokens, as before.
+      await get().addTokens(50);
+      return;
+    }
+    const { data, error } = await supabase.rpc('claim_onboarding_bonus');
+    if (error) {
+      console.error('[Onboarding] Bonus claim failed:', error.message);
+      return;
+    }
+    const tokens = Number((data as { tokens?: number } | null)?.tokens);
+    if (Number.isFinite(tokens)) {
+      set({ tokenBalance: tokens });
+      try {
+        localStorage.setItem('pim_token_balance', String(tokens));
+      } catch {}
     }
   },
 
