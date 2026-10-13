@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../services/supabaseClient';
+import { linkAnonymousActivity } from '../services/ecosystemActivity';
 import { useVaultStore } from './useVaultStore';
 import { CoinbaseWalletSDK } from '@coinbase/wallet-sdk';
 import { Wallet } from 'ethers';
@@ -413,6 +414,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         console.log('[Auth] onAuthStateChange:', event, { hasSession: !!session, userId: session?.user?.id?.slice(0, 8) });
         const nextUser = session?.user ?? null;
         set({ session, user: nextUser });
+        if (nextUser) linkAnonymousActivity(nextUser.id);
         // Pop the "logged in" confirmation on a real sign-in only — anonymous
         // sessions, token refreshes, and profile updates don't count, and the
         // lastConfirmedUserId guard keeps it to exactly one pop per sign-in.
