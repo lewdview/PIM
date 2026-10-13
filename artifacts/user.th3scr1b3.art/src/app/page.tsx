@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import { isAllowedRedirectUri } from '../lib/redirect';
 import WalletConnect from '../components/WalletConnect';
 import IdentityTerminal from '../components/IdentityTerminal';
+import ActivityDashboard from '../components/ActivityDashboard';
 import {
   User, Shield, Key, Fingerprint, RefreshCw, ArrowLeft, Compass, ExternalLink,
   Layers, Zap, Award
@@ -315,6 +316,9 @@ export default function Home() {
 
         {/* Dashboard Grid */}
         <div className={styles.dashboardGrid}>
+          {/* Everything the signed-in user has done across the ecosystem */}
+          {activeUser && <ActivityDashboard />}
+
           {/* Settings / Auth Card */}
           <section className={styles.panelCard}>
             <div className={styles.panelHeader}>
