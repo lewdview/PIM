@@ -261,16 +261,11 @@ export default function Tutorial() {
     const timeoutId = setTimeout(async () => {
       try {
         const clean = username.trim();
-        const { data } = await supabase
-          .from("profiles")
-          .select("id")
-          .ilike("username", clean)
-          .maybeSingle();
-
-        // A username is available if nobody holds it, or if the holder is
-        // the current user (their own existing alias).
-        const currentUserId = useAuthStore.getState().user?.id;
-        setIsAvailable(!data || data.id === currentUserId);
+        // is_username_taken ignores the caller's own profile, so a user's
+        // existing alias still counts as available to them.
+        const { data: taken, error } = await supabase.rpc("is_username_taken", { p_username: clean });
+        if (error) throw error;
+        setIsAvailable(!taken);
       } catch (err) {
         setIsAvailable(true); // default allowable if offline/guest
       } finally {

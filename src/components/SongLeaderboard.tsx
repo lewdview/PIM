@@ -82,12 +82,9 @@ export default function SongLeaderboard({
       const aliasIds = getSongAliases(songId);
 
       // 1. Fetch real gameplay records for this specific song across all aliases from Supabase (positive scores only)
+      // Personal bests per player via get_song_scores (other players' rows aren't readable directly).
       const { data: records, error: recordsErr } = await supabase
-        .from('gameplay_records')
-        .select('user_id, score, accuracy, max_combo, medal, timestamp')
-        .in('song_id', aliasIds)
-        .gt('score', 0)
-        .order('score', { ascending: false });
+        .rpc('get_song_scores', { p_song_ids: aliasIds });
 
       if (recordsErr) {
         console.warn('Failed to fetch song leaderboard:', recordsErr);
@@ -169,9 +166,7 @@ export default function SongLeaderboard({
 
       if (realUserIds.length > 0) {
         const { data: profs } = await supabase
-          .from('profiles')
-          .select('id, wallet_address, display_name, username, avatar_url')
-          .in('id', realUserIds);
+          .rpc('get_public_profiles', { p_ids: realUserIds });
 
         for (const p of profs || []) {
           let name = '';

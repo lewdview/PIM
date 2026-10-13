@@ -232,12 +232,9 @@ export default function FloatingTicker() {
   // Fetch initial telemetry snapshot from Supabase
   const fetchTelemetrySnapshot = useCallback(async () => {
     try {
+      // Everyone's raw telemetry isn't readable; get_recent_activity returns the ticker fields only.
       const { data: events, error: eventsErr } = await supabase
-        .from('telemetry_events')
-        .select('id, event_type, payload, created_at, user_id')
-        .in('event_type', VALID_EVENT_TYPES)
-        .order('created_at', { ascending: false })
-        .limit(20);
+        .rpc('get_recent_activity', { p_types: VALID_EVENT_TYPES, p_limit: 20 });
 
       if (eventsErr || !events) {
         return;
@@ -254,12 +251,10 @@ export default function FloatingTicker() {
 
       if (unknownUserIds.length > 0) {
         const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, display_name, wallet_address')
-          .in('id', unknownUserIds);
+          .rpc('get_public_profiles', { p_ids: unknownUserIds });
 
         if (profiles) {
-          profiles.forEach((p) => {
+          (profiles as { id: string; display_name: string | null; wallet_address: string | null }[]).forEach((p) => {
             profilesCacheRef.current[p.id] = {
               display_name: p.display_name,
               wallet_address: p.wallet_address,
@@ -269,13 +264,9 @@ export default function FloatingTicker() {
       }
 
       // Global network stats
-      const { count: totalCards } = await supabase
-        .from('vault_collections')
-        .select('*', { count: 'exact', head: true });
-
-      const { count: totalUsers } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true });
+      const { data: counts } = await supabase.rpc('get_public_counts');
+      const totalCards = Number((counts as { cards?: number } | null)?.cards) || 0;
+      const totalUsers = Number((counts as { players?: number } | null)?.players) || 0;
 
       const parsedItems = events.map((e) => parseTelemetryEvent(e));
 
