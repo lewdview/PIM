@@ -42,19 +42,10 @@ export default function IdentitySetup({ onComplete, compact }: IdentitySetupProp
     const timeoutId = setTimeout(async () => {
       try {
         const clean = username.trim();
-        const { data } = await supabase
-          .from('profiles')
-          .select('id')
-          .ilike('username', clean)
-          .maybeSingle();
-
-        if (!data) {
-          // not found = available
-          setIsAvailable(true);
-        } else {
-          // found = taken unless it's our own
-          setIsAvailable(data.id === user?.id);
-        }
+        // is_username_taken ignores the caller's own profile, so "not taken" = available.
+        const { data: taken, error } = await supabase.rpc('is_username_taken', { p_username: clean });
+        if (error) throw error;
+        setIsAvailable(!taken);
       } catch (err) {
         setIsAvailable(null);
       } finally {
