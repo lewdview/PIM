@@ -509,11 +509,11 @@ export default function Home() {
 
                 <div className={styles.apiItem}>
                   <div className={styles.apiPath}>
-                    <span className={styles.methodPost}>POST</span>
+                    <span className={styles.methodGet}>GET</span>
                     <code>/api/collection</code>
                   </div>
                   <p className={styles.apiDesc}>
-                    Allows syncing and saving card collection drops securely in the cloud, replacing localStorage caches.
+                    Lists the signed-in user&apos;s cards. Cards are granted only by the vault engine.
                   </p>
                 </div>
               </div>
