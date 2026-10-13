@@ -1,6 +1,6 @@
 // Campaign: the year as twelve monthly chapters. Each card shows the words
-// the month's tracks keep coming back to and the shape of its mood arc; the
-// top card picks up the chapter in progress. Phone first, normal page flow.
+// the month's tracks keep coming back to, its three acts and the shape of its
+// mood arc; the top card picks up the chapter (and act) in progress. Phone first, normal page flow.
 
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'wouter';
@@ -9,7 +9,7 @@ import { loadCatalog, type GameSong } from '@/game/api';
 import { CHAPTERS, type ChapterMeta } from '@/game/campaign';
 import { getTotalScore, getTotalPlatinums, getTotalCleared } from '@/game/progress';
 import { audioManager } from '@/game/audio';
-import { chapterProgress, getMonthStory, songsForMonth, type ChapterProgress } from '@/game/chapterStory';
+import { chapterProgress, getMonthStory, hasClearedSong, songsForMonth, type ChapterProgress } from '@/game/chapterStory';
 import { ArcSpark, Highlighted, WordChips } from './storyParts';
 import { hideBroken } from './hideBroken';
 import '@/styles/stageShell.css';
@@ -53,6 +53,9 @@ export default function CampaignStory() {
 
   const current = rows.find((r) => r.unlocked && !r.progress.complete) ?? rows[rows.length - 1];
   const story = getMonthStory(current.meta.month);
+  // The act the player is in: the one holding their next uncleared track.
+  const nextSong = current.progress.regular.find((s) => !hasClearedSong(s));
+  const nowAct = story && nextSong ? story.acts.find((a) => nextSong.day >= a.fromDay && nextSong.day <= a.toDay) : undefined;
   const pct = (p: ChapterProgress) => (p.regular.length ? Math.round((p.cleared / p.regular.length) * 100) : 0);
 
   return (
@@ -79,9 +82,17 @@ export default function CampaignStory() {
           </div>
           <h2 className="cs-display">{current.meta.name}</h2>
           {story && (
-            <p className="cs-quote">“<Highlighted line={story.prologue.line} words={story.words} />”</p>
+            story.prologue.lyric
+              ? <p className="cs-quote">“<Highlighted line={story.prologue.line} words={story.words} />”</p>
+              : <p className="cs-quote" data-plain="true">{story.prologue.line}</p>
           )}
           {story && <WordChips words={story.words.slice(0, 5)} />}
+          {nowAct && (
+            <div className="cs-now-act">
+              <small>Act {nowAct.act} · {nowAct.word}</small>
+              {nextSong && <span>Up next: {nextSong.title}</span>}
+            </div>
+          )}
           <div className="cs-ch-foot">
             <div><span>{current.progress.cleared} / {current.progress.regular.length} tracks</span><span>{pct(current.progress)}%</span></div>
             <div className="cs-bar"><span style={{ width: `${pct(current.progress)}%` }} /></div>
@@ -120,6 +131,11 @@ export default function CampaignStory() {
                 )}
               </div>
               {st && <WordChips words={st.words.slice(0, 4)} redacted={locked} small />}
+              {st && st.acts.length > 0 && (
+                <ol className="cs-ch-acts" aria-label="The chapter's acts">
+                  {st.acts.map((a) => <li key={a.act}><small>{a.act}</small>{locked ? a.word.replace(/./g, '•') : a.word}</li>)}
+                </ol>
+              )}
               <ArcSpark songs={row.songs} color={locked ? 'rgba(250,240,216,0.25)' : row.meta.dc} />
               <div className="cs-ch-foot">
                 {locked ? (

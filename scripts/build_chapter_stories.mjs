@@ -69,13 +69,33 @@ function collapseRepeats(line) {
   return kept.join(', ');
 }
 
+// Enhanced-LRC word timings ("<00:04.98>it"), music notes, emoji and
+// bracketed stage directions ("[Music]", "(I'm sorry)") never reach a hook.
+function scrubLine(raw) {
+  return raw
+    .replace(/<?\d{1,3}:\d{2}(?:[.:]\d{1,3})?>/g, '')
+    .replace(/\[[^\]]*\]?|\([^)]*\)?/g, '')
+    .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}♪♫]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Transcription filler and lines that aren't words at all.
+const JUNK = /thanks for watching|subscribe|wylio|fideo|like and share|^music$|^instrumental$/i;
+function isJunk(line) {
+  const letters = (line.match(/[a-z]/gi) || []).length;
+  return letters < 3 || letters / line.length < 0.5 || JUNK.test(line) || /[A-Z]-?[A-Z]?\d{2,}/.test(line);
+}
+
 function readLyricLines(day) {
   const file = path.join(lyricsDir, `day${String(day).padStart(3, '0')}.lrc`);
   if (!fs.existsSync(file)) return null;
   const lines = [];
   for (const raw of fs.readFileSync(file, 'utf8').split(/\r?\n/)) {
     const m = /^\[\d{1,3}:\d{2}(?:[.:]\d{1,3})?\]\s*(.*)$/.exec(raw.trim());
-    if (m && m[1].trim()) lines.push(m[1].trim());
+    if (!m) continue;
+    const line = scrubLine(m[1]);
+    if (line && !isJunk(line)) lines.push(line);
   }
   return lines.length ? lines : null;
 }
@@ -120,10 +140,9 @@ function trackStory(t) {
     const bareTitle = song.title.split(/\s+(?:feat\.?|ft\.?|by|with)\s+|\s*[([]/i)[0];
     const titleWords = bareTitle.split(/\s+/).map(norm).filter(isWord);
     const themeWords = themes.map((x) => x.split(/[\s-]/).pop()).map(norm).filter(isWord);
-    const moodWords = (song.moodTags || []).map(norm).filter(isWord);
     const weights = new Map();
     for (const w of titleWords) weights.set(w, 2);
-    for (const w of [...themeWords, ...moodWords]) weights.set(w, (weights.get(w) || 0) + 1);
+    for (const w of themeWords) weights.set(w, (weights.get(w) || 0) + 1);
     return {
       day: song.day,
       hasLyrics: false,
@@ -183,14 +202,25 @@ const topThemes = (list, n) => {
   return [...c.entries()].sort((a, b) => b[1] - a[1]).slice(0, n).map(([th]) => th);
 };
 
-function distinctiveWords(list, n, against = yearTotals) {
+// Common words that are fine inside a lyric but say nothing as a chapter or act headline.
+const GENERIC = new Set(`
+good bad left right another little away else will think sometimes around gone tried full next line used day days man
+ask known inside end check goes ready thing people life world wanna yeah body hand hands head eyes face mind night
+baby girl boy real true better best last first long hard soft old new big small part place times turn turned
+nah bout use along least twice seems maybe stand set coming chin rather saying round
+`.split(/\s+/).filter(Boolean));
+
+// "sittin", "tryin": dropped-g spellings make poor headlines.
+const droppedG = (w) => /in$/.test(w) && docFreq.has(`${w}g`);
+
+function distinctiveWords(list, n, against = yearTotals, { headline = true } = {}) {
   const local = sumWeights(list);
   const localSum = [...local.values()].reduce((a, b) => a + b, 0) || 1;
   const globalSum = [...against.values()].reduce((a, b) => a + b, 0) || 1;
   // A chapter word has to recur across tracks, not just one chorus.
   const minSpread = Math.min(list.length, list.length >= 15 ? 3 : 2);
   return [...local.entries()]
-    .filter(([w]) => isClean(w))
+    .filter(([w]) => isClean(w) && !(headline && (GENERIC.has(w) || w.includes("'") || droppedG(w))))
     .map(([w, v]) => {
       const spread = list.filter((s) => s.weights.has(w)).length;
       const lift = (v / localSum) / (((against.get(w) || 0) + 1) / globalSum);
@@ -211,6 +241,29 @@ function moodPhrase(list) {
 }
 
 const ACT_NAMES = ['I', 'II', 'III'];
+const BONUS_COUNT = 5;
+
+// Story beats for a run of tracks: where it opens, where the mood turns
+// hardest, and where it lands. Each beat is a track's hook line.
+function actBeats(slice) {
+  const beat = (s) => ({ day: s.day, line: s.hasLyrics ? s.hook : null });
+  let turn = null;
+  for (let i = 1; i < slice.length; i++) {
+    const d = (slice[i].song.valence ?? 0.5) - (slice[i - 1].song.valence ?? 0.5);
+    if (!turn || Math.abs(d) > Math.abs(turn.delta)) turn = { s: slice[i], delta: d };
+  }
+  // Open and close on the nearest track with lyrics, so the beat has a line to quote.
+  const sung = slice.filter((s) => s.hasLyrics);
+  const open = sung[0] || slice[0];
+  const close = sung.length > 1 ? sung[sung.length - 1] : slice[slice.length - 1];
+  return {
+    open: beat(open),
+    turn: turn && turn.s !== close && turn.s !== open && Math.abs(turn.delta) >= 0.12
+      ? { ...beat(turn.s), dir: turn.delta > 0 ? 'lifts' : 'drops' }
+      : null,
+    close: close !== open ? beat(close) : null,
+  };
+}
 
 const months = [];
 for (let m = 1; m <= 12; m++) {
@@ -218,24 +271,44 @@ for (let m = 1; m <= 12; m++) {
   if (!list.length) continue;
   const chapterWords = distinctiveWords(list, 8);
 
-  // Three acts in release order; each named after its own most distinctive word.
-  const size = Math.ceil(list.length / 3);
-  const used = new Set();
-  const acts = ACT_NAMES.map((name, i) => {
-    const slice = list.slice(i * size, (i + 1) * size);
-    if (!slice.length) return null;
-    const candidates = distinctiveWords(slice, 6, sumWeights(list));
-    const word = candidates.find((w) => !used.has(w)) || slice[0].words[0] || chapterWords[i] || 'signal';
+  // The last five tracks of a month are bonus stages (see src/game/chapterStory.ts),
+  // so the three acts split only the regular tracks; the bonus run is the epilogue.
+  const regular = list.length > BONUS_COUNT ? list.slice(0, -BONUS_COUNT) : list;
+  const bonus = list.length > BONUS_COUNT ? list.slice(-BONUS_COUNT) : [];
+  const size = Math.ceil(regular.length / 3);
+  // Act words add to the chapter's headline words rather than repeat them.
+  const used = new Set(chapterWords.slice(0, 4));
+  const pickWord = (slice, fallback) => {
+    const candidates = distinctiveWords(slice, 12);
+    const word = candidates.find((w) => !used.has(w))
+      || topThemes(slice, 3).map((th) => th.split('-').pop()).find((w) => !used.has(w))
+      || fallback;
     used.add(word);
+    return word;
+  };
+  const acts = ACT_NAMES.map((name, i) => {
+    const slice = regular.slice(i * size, (i + 1) * size);
+    if (!slice.length) return null;
     return {
       act: name,
-      word,
+      word: pickWord(slice, chapterWords[i] || 'signal'),
       fromDay: slice[0].day,
       toDay: slice[slice.length - 1].day,
       themes: topThemes(slice, 3),
       mood: moodPhrase(slice),
+      ...actBeats(slice),
     };
   }).filter(Boolean);
+  const epilogue = bonus.length
+    ? {
+        word: pickWord(bonus, 'encore'),
+        fromDay: bonus[0].day,
+        toDay: bonus[bonus.length - 1].day,
+        themes: topThemes(bonus, 3),
+        mood: moodPhrase(bonus),
+        ...actBeats(bonus),
+      }
+    : null;
 
   // Prologue: the hook from the track that best carries the chapter words.
   const anchor = [...list]
@@ -248,8 +321,9 @@ for (let m = 1; m <= 12; m++) {
     month: m,
     words: chapterWords,
     themes: topThemes(list, 4),
-    prologue: { day: anchor.day, line: anchor.hook },
+    prologue: { day: anchor.day, line: anchor.hook, lyric: anchor.hasLyrics },
     acts,
+    epilogue,
     lyricCoverage: list.filter((s) => s.hasLyrics).length,
     trackCount: list.length,
   });

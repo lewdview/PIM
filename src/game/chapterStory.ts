@@ -9,6 +9,12 @@ import { getMedalForSong, getHighScore, getChapterPlatinums } from './progress';
 import type { ChapterMeta } from './campaign';
 import { getMonthNumFromDay } from '@/utils/dayCalc';
 
+/** A track that marks a turn in an act; `line` is its hook when it has lyrics. */
+export interface StoryBeat {
+  day: number;
+  line: string | null;
+}
+
 export interface ChapterAct {
   act: string;
   word: string;
@@ -16,14 +22,18 @@ export interface ChapterAct {
   toDay: number;
   themes: string[];
   mood: 'bright' | 'rising' | 'restless' | 'heavy' | string;
+  open: StoryBeat;
+  turn: (StoryBeat & { dir: 'lifts' | 'drops' }) | null;
+  close: StoryBeat | null;
 }
 
 export interface MonthStory {
   month: number;
   words: string[];
   themes: string[];
-  prologue: { day: number; line: string };
+  prologue: { day: number; line: string; lyric: boolean };
   acts: ChapterAct[];
+  epilogue: Omit<ChapterAct, 'act'> | null;
   lyricCoverage: number;
   trackCount: number;
 }
@@ -35,7 +45,7 @@ export interface TrackStory {
   hasLyrics: boolean;
 }
 
-const MONTHS = new Map<number, MonthStory>((stories.months as MonthStory[]).map((m) => [m.month, m]));
+const MONTHS = new Map<number, MonthStory>((stories.months as unknown as MonthStory[]).map((m) => [m.month, m]));
 const TRACKS = stories.tracks as Record<string, TrackStory>;
 
 export function getMonthStory(month: number): MonthStory | undefined {
