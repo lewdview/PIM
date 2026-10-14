@@ -1,17 +1,60 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+// user.th3scr1b3.art — identity hub, styled after pim.th3scr1b3.art/launch:
+//   Hero (passport card) → manifesto marquee → 01 Access → 02 Activity → 03 Telemetry
+//   → 04 Layers → 05 Endpoints → final call.
+import { useState, useEffect, useRef, useCallback, useSyncExternalStore } from 'react';
+import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { isAllowedRedirectUri } from '../lib/redirect';
 import WalletConnect from '../components/WalletConnect';
 import IdentityTerminal from '../components/IdentityTerminal';
 import ActivityDashboard from '../components/ActivityDashboard';
-import {
-  User, Shield, Key, Fingerprint, RefreshCw, ArrowLeft, Compass, ExternalLink,
-  Layers, Zap, Award
-} from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowUpRight, RefreshCw } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import styles from './page.module.css';
+
+/** Key art and the bombshell cutout are served by PIM; the hub borrows them so both pages share a face. */
+const PIM_ORIGIN = 'https://pim.th3scr1b3.art';
+
+const MANIFESTO_A = ['ONE LOGIN', 'EVERY LAYER', 'YOUR SIGNAL'];
+const MANIFESTO_B = ['365 SONGS', 'ONE PASSPORT', 'ZERO PASSWORDS'];
+
+/** Day 1 = January 1 2026, same calendar as PIM's dayCalc. */
+function getCurrentDay(): number {
+  const diff = Date.now() - new Date('2026-01-01T00:00:00').getTime();
+  return Math.max(1, Math.min(365, Math.floor(diff / 86_400_000) + 1));
+}
+
+const pad = (n: number, w = 2) => String(n).padStart(w, '0');
+const noopSubscribe = () => () => {};
+
+function Reveal({ children, delay = 0, className }: { children: React.ReactNode; delay?: number; className?: string }) {
+  const reduce = useReducedMotion();
+  return (
+    <motion.div
+      className={className}
+      initial={reduce ? false : { opacity: 0, y: 40 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-10% 0px' }}
+      transition={{ duration: 0.8, delay, ease: [0.16, 1, 0.3, 1] }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function SectionHead({ index, kicker, title }: { index: string; kicker: React.ReactNode; title: React.ReactNode }) {
+  return (
+    <div className={styles.sectionHead}>
+      <span className={styles.index}>{index}</span>
+      <div>
+        <div className={styles.kicker}>{kicker}</div>
+        <h2 className={styles.h2}>{title}</h2>
+      </div>
+    </div>
+  );
+}
 
 export default function Home() {
   const [displayName, setDisplayName] = useState<string>('');
@@ -19,27 +62,53 @@ export default function Home() {
   const [updating, setUpdating] = useState<boolean>(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [redirectUri, setRedirectUri] = useState<string>('');
+  const [scrolled, setScrolled] = useState(false);
+  // Prerendered as day 1, then the client's real day takes over after hydration.
+  const today = useSyncExternalStore(noopSubscribe, getCurrentDay, () => 1);
+  const reduce = useReducedMotion() ?? false;
 
   // 3D Perspective Card Tilt
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const cardRef = useRef<HTMLDivElement>(null);
 
   const isAnonymousUser = !!activeUser && (
-    activeUser.is_anonymous || 
-    activeUser.app_metadata?.provider === 'anonymous' || 
+    activeUser.is_anonymous ||
+    activeUser.app_metadata?.provider === 'anonymous' ||
     (!activeUser.email && !activeUser.user_metadata?.wallet)
   );
+  const isSignedIn = !!activeUser && !isAnonymousUser;
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (!cardRef.current) return;
     const rect = cardRef.current.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width - 0.5;
     const y = (e.clientY - rect.top) / rect.height - 0.5;
-    setTilt({ x: y * 22, y: -x * 22 });
+    setTilt({ x: y * 16, y: -x * 16 });
   }, []);
 
   const handleMouseLeave = useCallback(() => {
     setTilt({ x: 0, y: 0 });
+  }, []);
+
+  // Hero scroll parallax
+  const heroRef = useRef<HTMLElement>(null);
+  const { scrollYProgress: heroP } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
+  const bgY = useTransform(heroP, [0, 1], ['0%', reduce ? '0%' : '30%']);
+  const bgScale = useTransform(heroP, [0, 1], [1.08, reduce ? 1.08 : 1.25]);
+  const wordY = useTransform(heroP, [0, 1], ['0%', reduce ? '0%' : '-50%']);
+  const heroFade = useTransform(heroP, [0, 0.85], [1, 0]);
+
+  // Manifesto marquees
+  const manifestoRef = useRef<HTMLElement>(null);
+  const { scrollYProgress: manP } = useScroll({ target: manifestoRef, offset: ['start end', 'end start'] });
+  const marqueeA = useTransform(manP, [0, 1], ['0%', '-35%']);
+  const marqueeB = useTransform(manP, [0, 1], ['-35%', '0%']);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
   const getAppName = (urlStr: string): string => {
@@ -94,6 +163,15 @@ export default function Home() {
   };
 
   const links = getEcosystemLinks();
+
+  const layers = [
+    { n: '01', verb: '365', name: 'th3scr1b3.art', body: 'The main broadcast. One song a day for a year, the warp, the archive and the mood map.', href: links.main, tag: 'MAIN' },
+    { n: '02', verb: 'PIM', name: 'PIM : th3v4ult', body: 'The rhythm game. Play each day’s level, rip packs, chase the Bombshell variants.', href: links.pim, tag: 'PLAY' },
+    { n: '03', verb: 'Base', name: 'Base mini-app', body: 'The Farcaster frame and on-chain side of the drop, right inside your feed.', href: links.base, tag: 'WEB3' },
+    { n: '04', verb: 'Poster', name: '365 Poster', body: 'Every daily release as a poster. The visual archive of the whole year.', href: links.video, tag: 'VISUAL' },
+    { n: '05', verb: 'Mood', name: 'Mood map', body: 'Every poem plotted by feeling. Wander light to dark and land on a song.', href: links.mood, tag: 'MOOD' },
+    { n: '06', verb: 'CE', name: 'Song analyzer', body: 'The creative engine: audio analysis, lyrics and spectral readouts.', href: links.ce, tag: 'TOOLS' },
+  ];
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -199,7 +277,7 @@ export default function Home() {
   const updateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeUser) return;
-    
+
     setUpdating(true);
     setMessage(null);
 
@@ -218,7 +296,7 @@ export default function Home() {
 
       if (profileError) throw profileError;
 
-      setMessage({ text: 'Identity updated successfully. Signal synchronized.', type: 'success' });
+      setMessage({ text: 'Alias saved. Every layer will show it.', type: 'success' });
     } catch (err: unknown) {
       console.error(err);
       const msg = err instanceof Error ? err.message : 'Error updating profile.';
@@ -229,307 +307,321 @@ export default function Home() {
   };
 
   const walletAddr = activeUser?.user_metadata?.wallet || activeUser?.email;
-  const aliasDisplay = displayName || (walletAddr ? walletAddr.slice(0, 10) + '…' : 'SOVEREIGN SCRIBE');
+  const aliasDisplay = displayName || (walletAddr ? walletAddr.slice(0, 10) + '…' : 'Unclaimed');
+  const provider = activeUser?.app_metadata?.provider || (isSignedIn ? 'web3' : 'none');
+  // Activity only renders with a session, so the sections after it renumber to stay sequential.
+  const sectionNo = (n: number) => pad(activeUser || n < 3 ? n : n - 1);
 
   return (
-    <main className={styles.mainContainer}>
-      {/* Noise Overlay */}
-      <div className={styles.noiseOverlay} />
+    <main className={styles.root}>
+      <div className={styles.grain} aria-hidden="true" />
 
-      {/* Glow Effects */}
-      <div className={styles.radialGlow1} />
-      <div className={styles.radialGlow2} />
-      <div className={styles.radialGlow3} />
-
-      <div className={styles.contentWrapper}>
-        {redirectUri && (
-          <div className={styles.returnBanner}>
-            <a href={redirectUri} className={styles.returnLink}>
-              <ArrowLeft size={16} className={styles.returnIcon} />
-              <span>RETURN TO {getAppName(redirectUri)}</span>
-            </a>
-          </div>
+      {/* ═════════ TOP BAR ═════════ */}
+      <header className={`${styles.topbar} ${scrolled ? styles.topbarScrolled : ''}`}>
+        <a href={links.main} className={styles.wordmark} aria-label="th3scr1b3.art home">
+          TH3SCR1B3<span>{'// ID'}</span>
+        </a>
+        <nav className={styles.topbarNav} aria-label="Sections">
+          <a href="#access">Access</a>
+          {isSignedIn && <a href="#activity">Activity</a>}
+          <a href="#layers">Layers</a>
+          <a href="#endpoints">API</a>
+        </nav>
+        {isSignedIn ? (
+          <a className={`${styles.btn} ${styles.btnSm}`} href={links.pim}>
+            Play PIM <ArrowUpRight size={14} />
+          </a>
+        ) : (
+          <a className={`${styles.btn} ${styles.btnSm}`} href="#access">
+            Sign in <ArrowUpRight size={14} />
+          </a>
         )}
+      </header>
 
-        {/* Title */}
-        <header className={styles.header}>
-          <Fingerprint size={48} className={styles.fingerprintIcon} />
-          <h1 className={styles.glitchTitle}>
-            user.th3scr1b3.art
-          </h1>
-          <p className={styles.subtitle}>
-            Ecosystem Identity Hub & Sovereign Passport
-          </p>
-        </header>
+      {redirectUri && (
+        <a href={redirectUri} className={styles.returnBanner}>
+          <ArrowLeft size={16} />
+          <span>Return to {getAppName(redirectUri)}</span>
+        </a>
+      )}
 
-        {/* 3D Passport Pedestal */}
-        <section className={styles.passportPedestal}>
-          <div
-            ref={cardRef}
-            className={styles.passport3dWrapper}
-            onMouseMove={handleMouseMove}
-            onMouseLeave={handleMouseLeave}
-            style={{ transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)` }}
-          >
-            <div className={styles.spinningVinylDisc}>
-              <div
-                className={styles.vinylCenterArt}
-                style={{
-                  backgroundImage: `radial-gradient(circle at center, rgba(255,56,0,0.8), #0d0006), url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80')`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                }}
-              />
+      {/* ═════════ HERO ═════════ */}
+      <section ref={heroRef} className={styles.hero}>
+        <motion.div className={styles.heroBg} style={{ y: bgY, scale: bgScale }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={`${PIM_ORIGIN}/seo/pim-key-art.jpg`} alt="" draggable={false} />
+        </motion.div>
+        <div className={styles.heroShade} aria-hidden="true" />
+
+        <motion.div className={styles.heroWord} style={{ y: wordY, opacity: heroFade }} aria-hidden="true">
+          <span className={styles.wordFill}>ID</span>
+          <span className={styles.wordGhost}>ID</span>
+        </motion.div>
+
+        <div className={styles.heroGrid}>
+          <motion.div className={styles.heroCopy} style={{ opacity: heroFade }}>
+            <div className={styles.kicker}>
+              <span className={`${styles.liveDot} ${isSignedIn ? styles.liveDotHot : ''}`} />
+              TH3SCR1B3 IDENTITY HUB · DAY {pad(today, 3)} / 365
             </div>
+            <h1 className={styles.heroTitle}>
+              One pass.
+              <br />
+              <em>Every layer.</em>
+            </h1>
+            <p className={styles.heroSub}>
+              {isSignedIn
+                ? 'You’re signed in everywhere. Your plays, runs, cards and sparks from every th3scr1b3 site land here.'
+                : 'Sign in once with a Base wallet, GitHub or email and you’re in on the game, the archive, the poster wall and every layer after.'}
+            </p>
+            <div className={styles.heroCtas}>
+              {isSignedIn ? (
+                <>
+                  <a className={styles.btn} href="#activity">
+                    See your activity <ArrowDown size={18} />
+                  </a>
+                  <a className={`${styles.btn} ${styles.btnGhost}`} href={links.pim}>
+                    Play today&rsquo;s drop
+                  </a>
+                </>
+              ) : (
+                <>
+                  <a className={styles.btn} href="#access">
+                    Claim your pass <ArrowDown size={18} />
+                  </a>
+                  <a className={`${styles.btn} ${styles.btnGhost}`} href="#layers">
+                    See the layers
+                  </a>
+                </>
+              )}
+            </div>
+          </motion.div>
 
-            <div className={styles.passport3dCard}>
-              <div className={styles.specularGlare} />
-
-              <div className={styles.avatarNeonFrame}>
-                <div className="w-full h-full rounded-full bg-[#0d0d14] flex items-center justify-center">
-                  <User size={36} className="text-white/40" />
+          {/* Passport */}
+          <div className={styles.passportStage}>
+            <div
+              ref={cardRef}
+              className={styles.passport}
+              onMouseMove={handleMouseMove}
+              onMouseLeave={handleMouseLeave}
+              style={{ transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)` }}
+            >
+              <span className={styles.passportHolo} aria-hidden="true" />
+              <div className={styles.passportTop}>
+                <span>PASSPORT</span>
+                <span>N° {pad(today, 3)}</span>
+              </div>
+              <div className={styles.passportArt}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={`${PIM_ORIGIN}/data/packs/bs_cover.png`} alt="" draggable={false} />
+              </div>
+              <div className={styles.passportBody}>
+                <span className={styles.passportLabel}>HOLDER</span>
+                <h2 className={styles.passportAlias}>{aliasDisplay}</h2>
+                <div className={styles.passportChips}>
+                  <span className={`${styles.chip} ${isSignedIn ? styles.chipPink : styles.chipPaper}`}>
+                    {isSignedIn ? 'VERIFIED' : isAnonymousUser ? 'GUEST' : 'NOT SIGNED IN'}
+                  </span>
+                  <span className={`${styles.chip} ${styles.chipAmber}`}>{provider.toUpperCase()}</span>
                 </div>
               </div>
-
-              <div>
-                <h2 className={styles.passportAliasHeadline}>{aliasDisplay}</h2>
-                <p className={styles.passportStatusSub}>
-                  {isAnonymousUser ? 'GUEST SESSION // EPHEMERAL' : 'SOVEREIGN IDENTITY // VERIFIED'}
-                </p>
-
-                <div className={styles.passportTagsRow}>
-                  <span className={styles.passportTagChip}>
-                    {activeUser?.app_metadata?.provider || 'Web3'}
-                  </span>
-                  <span className={styles.passportTagChip}>
-                    Day 213 Active
-                  </span>
-                </div>
-              </div>
-
-              <div className="font-mono text-[9px] text-white/30 tracking-widest uppercase">
-                user.th3scr1b3.art // PASSPORT MATRIX
+              <div className={styles.passportFoot}>
+                <span>USER.TH3SCR1B3.ART</span>
+                <span>{isSignedIn ? 'VALID ON ALL LAYERS' : 'AWAITING SIGNATURE'}</span>
               </div>
             </div>
           </div>
-        </section>
+        </div>
 
-        {/* Dashboard Grid */}
-        <div className={styles.dashboardGrid}>
-          {/* Everything the signed-in user has done across the ecosystem */}
-          {activeUser && <ActivityDashboard />}
+        <div className={styles.heroMeta} aria-hidden="true">
+          <span>N° {pad(today, 3)}</span>
+          <span>ONE SESSION · {layers.length} LAYERS</span>
+          <span>WALLET · GITHUB · EMAIL</span>
+        </div>
+      </section>
 
-          {/* Settings / Auth Card */}
-          <section className={styles.panelCard}>
-            <div className={styles.panelHeader}>
-              <Key size={16} className={styles.panelIcon} />
-              <h2>Authorization Matrix</h2>
-            </div>
-            
-            <div className={styles.panelBody}>
-              <p className={styles.panelDesc}>
-                Secure your cryptographic credentials. Connect your Base-compatible Web3 wallet to authenticate and synchronize assets across all th3scr1b3 endpoints.
+      {/* ═════════ MANIFESTO ═════════ */}
+      <section ref={manifestoRef} className={styles.manifesto} aria-hidden="true">
+        <motion.div className={styles.marqueeRow} style={{ x: marqueeA }}>
+          {[...MANIFESTO_A, ...MANIFESTO_A, ...MANIFESTO_A].map((t, i) => (
+            <span key={i} className={styles.marqueeItem}>{t}<span className={styles.marqueeStar}>✦</span></span>
+          ))}
+        </motion.div>
+        <motion.div className={`${styles.marqueeRow} ${styles.marqueeOutline}`} style={{ x: marqueeB }}>
+          {[...MANIFESTO_B, ...MANIFESTO_B, ...MANIFESTO_B].map((t, i) => (
+            <span key={i} className={styles.marqueeItem}>{t}<span className={styles.marqueeStar}>✦</span></span>
+          ))}
+        </motion.div>
+      </section>
+
+      {/* ═════════ 01. ACCESS ═════════ */}
+      <section id="access" className={styles.section}>
+        <SectionHead
+          index="01"
+          kicker={<><span className={`${styles.liveDot} ${isSignedIn ? styles.liveDotHot : ''}`} /> ACCESS · {isSignedIn ? 'SIGNED IN' : 'SIGN IN'}</>}
+          title={isSignedIn ? 'You’re in. Name yourself.' : 'Sign in once. Stay in everywhere.'}
+        />
+        <div className={styles.accessGrid}>
+          <Reveal className={styles.slab}>
+            <div className={styles.slabHead}>AUTHORIZATION</div>
+            <div className={styles.slabBody}>
+              <p className={styles.slabDesc}>
+                Connect a Base wallet, or use GitHub or an email link. The session follows you to every th3scr1b3.art site.
               </p>
-              
               <WalletConnect redirectUri={redirectUri} />
+            </div>
+          </Reveal>
 
-              {activeUser && !isAnonymousUser && (
+          <Reveal className={styles.slab} delay={0.1}>
+            <div className={styles.slabHead}>ALIAS</div>
+            <div className={styles.slabBody}>
+              {isSignedIn ? (
                 <form onSubmit={updateProfile} className={styles.profileForm}>
-                  <div className={styles.inputGroup}>
-                    <label htmlFor="displayName" className={styles.inputLabel}>
-                      Display Name / Scribe Alias
-                    </label>
-                    <div className={styles.inputWrapper}>
-                      <input
-                        type="text"
-                        id="displayName"
-                        value={displayName}
-                        onChange={(e) => setDisplayName(e.target.value)}
-                        placeholder="scribe_alias"
-                        required
-                        className={styles.textInput}
-                        maxLength={24}
-                      />
-                      <button type="submit" className={styles.saveBtn} disabled={updating}>
-                        {updating ? <RefreshCw className={styles.spin} size={14} /> : 'Sync'}
-                      </button>
-                    </div>
+                  <label htmlFor="displayName" className={styles.inputLabel}>
+                    Display name / scribe alias
+                  </label>
+                  <div className={styles.inputRow}>
+                    <input
+                      type="text"
+                      id="displayName"
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      placeholder="scribe_alias"
+                      required
+                      className={styles.textInput}
+                      maxLength={24}
+                    />
+                    <button type="submit" className={styles.btn} disabled={updating}>
+                      {updating ? <RefreshCw className={styles.spin} size={14} /> : 'Save'}
+                    </button>
                   </div>
+                  <p className={styles.slabDesc}>Shows on leaderboards, the passport and anywhere else you appear.</p>
                   {message && (
                     <div className={message.type === 'success' ? styles.successAlert : styles.errorAlert}>
                       {message.text}
                     </div>
                   )}
                 </form>
+              ) : (
+                <div className={styles.lockedNote}>
+                  <span className={styles.lockedBig}>?</span>
+                  <p>Sign in to pick the alias that shows on leaderboards and your passport.</p>
+                </div>
               )}
             </div>
-          </section>
-
-          {/* Telemetry Card */}
-          <section className={styles.panelCard}>
-            <div className={styles.panelHeader}>
-              <User size={16} className={styles.panelIcon} />
-              <h2>Integrated Telemetry</h2>
-            </div>
-            
-            <div className={styles.panelBody}>
-              <IdentityTerminal />
-            </div>
-          </section>
-
-          {/* Scribe Gateway Hub Card */}
-          <section className={`${styles.panelCard} ${styles.fullWidthCard}`}>
-            <div className={styles.panelHeader}>
-              <Compass size={16} className={styles.panelIcon} />
-              <h2>Scribe Gateway Hub</h2>
-            </div>
-            
-            <div className={styles.panelBody}>
-              <p className={styles.panelDesc}>
-                Traverse the sibling subdomains of the th3scr1b3 ecosystem. Access telemetry, interactive play, and cryptographic assets.
-              </p>
-              
-              <div className={styles.gatewayGrid}>
-                <a href={links.main} className={styles.gatewayCard}>
-                  <h3 className={styles.gatewayCardTitle}>
-                    th3scr1b3.art
-                    <ExternalLink size={14} className={styles.gatewayCardTitleIcon} />
-                  </h3>
-                  <p className={styles.gatewayCardDesc}>
-                    Main ecosystem hub, narrative engine, and 365 Warp portal.
-                  </p>
-                  <span className={styles.gatewayCardStatus}>
-                    <span className={styles.statusIndicator} />
-                    ONLINE / MAIN_NODE
-                  </span>
-                </a>
-
-                <a href={links.pim} className={styles.gatewayCard}>
-                  <h3 className={styles.gatewayCardTitle}>
-                    PIM : TH3V4ULT
-                    <ExternalLink size={14} className={styles.gatewayCardTitleIcon} />
-                  </h3>
-                  <p className={styles.gatewayCardDesc}>
-                    Arcade rhythm game and player cabinet. Synchronizes play telemetry.
-                  </p>
-                  <span className={styles.gatewayCardStatus}>
-                    <span className={styles.statusIndicator} />
-                    ONLINE / PLAY_NODE
-                  </span>
-                </a>
-
-                <a href={links.base} className={styles.gatewayCard}>
-                  <h3 className={styles.gatewayCardTitle}>
-                    BASE MINI-APP
-                    <ExternalLink size={14} className={styles.gatewayCardTitleIcon} />
-                  </h3>
-                  <p className={styles.gatewayCardDesc}>
-                    Farcaster Frame and on-chain mini-application integration.
-                  </p>
-                  <span className={styles.gatewayCardStatus}>
-                    <span className={styles.statusIndicator} />
-                    ONLINE / WEB3_NODE
-                  </span>
-                </a>
-
-                <a href={links.video} className={styles.gatewayCard}>
-                  <h3 className={styles.gatewayCardTitle}>
-                    365 POSTER
-                    <ExternalLink size={14} className={styles.gatewayCardTitleIcon} />
-                  </h3>
-                  <p className={styles.gatewayCardDesc}>
-                    Visual archive of the 365 daily release poster series.
-                  </p>
-                  <span className={styles.gatewayCardStatus}>
-                    <span className={styles.statusIndicator} />
-                    ONLINE / VISUAL_NODE
-                  </span>
-                </a>
-
-                <a href={links.mood} className={styles.gatewayCard}>
-                  <h3 className={styles.gatewayCardTitle}>
-                    MOOD MAP
-                    <ExternalLink size={14} className={styles.gatewayCardTitleIcon} />
-                  </h3>
-                  <p className={styles.gatewayCardDesc}>
-                    Interactive mood map and poem analyzer on th3scr1b3.art.
-                  </p>
-                  <span className={styles.gatewayCardStatus}>
-                    <span className={styles.statusIndicator} />
-                    ONLINE / MOOD_NODE
-                  </span>
-                </a>
-
-                <a href={links.ce} className={styles.gatewayCard}>
-                  <h3 className={styles.gatewayCardTitle}>
-                    SONG ANALYZER
-                    <ExternalLink size={14} className={styles.gatewayCardTitleIcon} />
-                  </h3>
-                  <p className={styles.gatewayCardDesc}>
-                    CE — audio analysis, lyrics, and spectral telemetry engine.
-                  </p>
-                  <span className={styles.gatewayCardStatus}>
-                    <span className={styles.statusIndicator} />
-                    ONLINE / CE_NODE
-                  </span>
-                </a>
-              </div>
-            </div>
-          </section>
-
-          {/* API Documentation Card */}
-          <section className={`${styles.panelCard} ${styles.fullWidthCard}`}>
-            <div className={styles.panelHeader}>
-              <Shield size={16} className={styles.panelIcon} />
-              <h2>Ecosystem Endpoint APIs</h2>
-            </div>
-            
-            <div className={styles.panelBody}>
-              <p className={styles.panelDesc}>
-                Cross-origin resource APIs available for integrating client subdomains (`th3scr1b3.art`, `base.th3scr1b3.art`, `pim.th3scr1b3.art`):
-              </p>
-              
-              <div className={styles.apiGrid}>
-                <div className={styles.apiItem}>
-                  <div className={styles.apiPath}>
-                    <span className={styles.methodGet}>GET</span>
-                    <code>/api/profile</code>
-                  </div>
-                  <p className={styles.apiDesc}>
-                    Returns connected wallet address, username/alias, and account metadata. Expects Bearer JWT verification.
-                  </p>
-                </div>
-
-                <div className={styles.apiItem}>
-                  <div className={styles.apiPath}>
-                    <span className={styles.methodGet}>GET</span>
-                    <code>/api/analytics</code>
-                  </div>
-                  <p className={styles.apiDesc}>
-                    Aggregates play counts from 365 Warp and high scores/accuracy metrics from the PIM rhythm game.
-                  </p>
-                </div>
-
-                <div className={styles.apiItem}>
-                  <div className={styles.apiPath}>
-                    <span className={styles.methodGet}>GET</span>
-                    <code>/api/collection</code>
-                  </div>
-                  <p className={styles.apiDesc}>
-                    Lists the signed-in user&apos;s cards. Cards are granted only by the vault engine.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </section>
+          </Reveal>
         </div>
+      </section>
 
-        {/* Footer */}
-        <footer className={styles.footer}>
-          <p>SYSTEM_ID: USER_IDENT_MATRIX.v365 // STATUS: SECURED</p>
-          <p>© 2026 th3scr1b3. All rights reserved.</p>
-        </footer>
-      </div>
+      {/* ═════════ 02. ACTIVITY ═════════ */}
+      {activeUser && (
+        <section id="activity" className={`${styles.section} ${styles.sectionTint}`}>
+          <SectionHead
+            index="02"
+            kicker="YOUR SIGNAL · EVERY LAYER"
+            title="Everything you’ve played, heard and pulled."
+          />
+          <Reveal className={styles.sectionBody}>
+            <ActivityDashboard />
+          </Reveal>
+        </section>
+      )}
+
+      {/* ═════════ 03. TELEMETRY ═════════ */}
+      <section className={styles.section}>
+        <SectionHead
+          index={sectionNo(3)}
+          kicker="TELEMETRY STREAM"
+          title="The raw feed."
+        />
+        <Reveal className={styles.sectionBody}>
+          <IdentityTerminal />
+        </Reveal>
+      </section>
+
+      {/* ═════════ 04. LAYERS ═════════ */}
+      <section id="layers" className={styles.section}>
+        <SectionHead
+          index={sectionNo(4)}
+          kicker="THE LAYERS · ONE LOGIN OPENS ALL OF THEM"
+          title="Where the pass works."
+        />
+        <div className={styles.layerGrid}>
+          {layers.map((l, i) => (
+            <Reveal key={l.n} delay={(i % 3) * 0.08} className={styles.layerCell}>
+              <a href={l.href} className={styles.layerCard}>
+                <span className={styles.layerN}>{l.n} · {l.tag}</span>
+                <span className={styles.layerVerb}>{l.verb}</span>
+                <h3>{l.name}</h3>
+                <p>{l.body}</p>
+                <span className={styles.layerGo}>
+                  Open <ArrowUpRight size={14} />
+                </span>
+              </a>
+            </Reveal>
+          ))}
+        </div>
+      </section>
+
+      {/* ═════════ 05. ENDPOINTS ═════════ */}
+      <section id="endpoints" className={styles.section}>
+        <SectionHead
+          index={sectionNo(5)}
+          kicker="FOR BUILDERS · BEARER JWT"
+          title="Endpoints."
+        />
+        <Reveal className={styles.sectionBody}>
+          <div className={styles.apiLog}>
+            <div className={styles.apiLogHead}>CROSS-ORIGIN APIS · th3scr1b3.art · base. · pim.</div>
+            <ul>
+              <li>
+                <span className={styles.apiMethod}>GET</span>
+                <code>/api/profile</code>
+                <span className={styles.apiDesc}>Connected wallet, alias and account metadata.</span>
+              </li>
+              <li>
+                <span className={styles.apiMethod}>GET</span>
+                <code>/api/analytics</code>
+                <span className={styles.apiDesc}>Play counts from 365 plus PIM high scores and accuracy.</span>
+              </li>
+              <li>
+                <span className={styles.apiMethod}>GET</span>
+                <code>/api/collection</code>
+                <span className={styles.apiDesc}>The signed-in user&apos;s cards. Only the vault engine grants cards.</span>
+              </li>
+            </ul>
+          </div>
+        </Reveal>
+      </section>
+
+      {/* ═════════ FINAL CALL ═════════ */}
+      <section className={styles.final} style={{ ['--final-art' as string]: `url('${PIM_ORIGIN}/data/packs/bombshell_dark_50cards.jpg')` }}>
+        <div className={styles.finalWord} aria-hidden="true">
+          TUNE
+          <br />
+          IN.
+        </div>
+        <Reveal className={styles.finalInner}>
+          <div className={styles.kicker}>DAY {pad(today, 3)} · {365 - today} DROPS REMAIN</div>
+          <h2 className={styles.finalTitle}>Today&rsquo;s drop won&rsquo;t wait.</h2>
+          <p className={styles.finalSub}>
+            {isSignedIn ? 'Your pass already works in the game. Go use it.' : 'Free to play. No download. Sign in whenever you’re ready.'}
+          </p>
+          <div className={`${styles.heroCtas} ${styles.center}`}>
+            <a className={`${styles.btn} ${styles.btnXl}`} href={links.pim}>
+              Play PIM now <ArrowUpRight size={20} />
+            </a>
+            <a className={`${styles.btn} ${styles.btnGhost}`} href={links.main}>
+              Back to th3scr1b3.art
+            </a>
+          </div>
+        </Reveal>
+      </section>
+
+      <footer className={styles.footer}>
+        <span>user.th3scr1b3.art — identity hub</span>
+        <span>© 2026 TH3SCR1B3</span>
+      </footer>
     </main>
   );
 }

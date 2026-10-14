@@ -1,230 +1,160 @@
+/* Telemetry terminal — launch-page "transmission log" slab. */
+
 .terminalContainer {
-  background: rgba(10, 10, 12, 0.9);
-  border: 1px solid rgba(0, 245, 255, 0.15);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6), 0 0 32px rgba(0, 245, 255, 0.03);
-  border-radius: 12px;
-  overflow: hidden;
-  width: 100%;
+  border: 2px solid var(--paper);
+  background: #000;
+  box-shadow: 8px 8px 0 var(--pink);
+  font-family: var(--mono);
 }
 
 .terminalHeader {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  background: rgba(20, 20, 25, 0.5);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  padding: 0.65rem 1rem;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--paper);
+  color: #000;
 }
 
-.terminalIcons {
-  display: flex;
-  gap: 0.35rem;
-}
-
-.dotRed, .dotYellow, .dotGreen {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  opacity: 0.6;
-}
-
-.dotRed { background-color: #ef4444; }
-.dotYellow { background-color: #f59e0b; }
-.dotGreen { background-color: #10b981; }
+.terminalIcons { display: flex; gap: 6px; }
+.dotRed,
+.dotYellow,
+.dotGreen { width: 10px; height: 10px; border: 1.5px solid #000; }
+.dotRed { background: var(--red); }
+.dotYellow { background: var(--amber); }
+.dotGreen { background: var(--green); }
 
 .terminalTitle {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.4);
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
 }
-
-.termIcon {
-  color: #00f5ff;
-}
+.termIcon { flex: none; }
 
 .glitchGlow {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.65rem;
-  font-weight: 800;
-  color: #00f5ff;
-  border: 1px solid rgba(0, 245, 255, 0.3);
-  padding: 0.15rem 0.4rem;
-  border-radius: 4px;
-  background: rgba(0, 245, 255, 0.05);
-  letter-spacing: 0.1em;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  background: #000;
+  color: var(--green);
 }
 
 .terminalScreen {
-  padding: 1.25rem;
+  padding: 18px;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  position: relative;
+  gap: 20px;
 }
 
 .logStream {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.55);
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
-  background: rgba(0, 0, 0, 0.2);
-  padding: 0.75rem 1rem;
-  border-radius: 6px;
-  max-height: 120px;
+  gap: 4px;
+  max-height: 180px;
   overflow-y: auto;
-  border-left: 2px solid rgba(0, 245, 255, 0.3);
+  font-size: 12px;
+  line-height: 1.6;
 }
-
-.logLine {
-  line-height: 1.4;
-  word-break: break-all;
-}
-
+.logLine { color: rgba(244, 236, 220, 0.72); animation: fadeIn 0.15s ease-out; }
+.logLine::before { content: '› '; color: var(--pink); }
 .loadingLine {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  color: #00f5ff;
+  gap: 8px;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  color: var(--cyan);
+  animation: flicker 1.4s infinite;
 }
-
-.spinner {
-  animation: spin 1s linear infinite;
-}
+.spinner { animation: spin 1s linear infinite; }
 
 .statsLayout {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border: 1px solid var(--line);
 }
-
-@media (min-width: 640px) {
-  .statsLayout {
-    grid-template-columns: 1fr 1fr;
-  }
-}
+@media (max-width: 720px) { .statsLayout { grid-template-columns: minmax(0, 1fr); } }
 
 .statsCard {
-  background: rgba(255, 255, 255, 0.01);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  border-radius: 8px;
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  padding: 16px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  min-width: 0;
 }
-
 .statsCardTitle {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  font-size: 0.85rem;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 11px;
   font-weight: 700;
-  color: #f5f5f7;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  color: var(--paper);
 }
+.cardIconTeal { color: var(--cyan); }
+.cardIconViolet { color: var(--pink); }
 
-.cardIconTeal { color: #00f5ff; }
-.cardIconViolet { color: #bd00ff; }
-
-.statsGrid {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
+.statsGrid { display: flex; flex-direction: column; gap: 8px; }
 .statItem {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  font-size: 0.75rem;
-  border-bottom: 1px dashed rgba(255, 255, 255, 0.03);
-  padding-bottom: 0.35rem;
+  align-items: baseline;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--line);
 }
-
-.statLabel {
-  color: rgba(255, 255, 255, 0.45);
-  font-family: 'JetBrains Mono', monospace;
-}
-
-.statValueTeal {
-  color: #00f5ff;
-  font-weight: 700;
-  font-family: 'JetBrains Mono', monospace;
-  text-shadow: 0 0 10px rgba(0, 245, 255, 0.3);
-}
-
+.statItem:last-child { border-bottom: 0; padding-bottom: 0; }
+.statLabel { font-size: 11px; letter-spacing: 0.06em; color: var(--dim); }
+.statValueTeal,
 .statValueViolet {
-  color: #bd00ff;
-  font-weight: 700;
-  font-family: 'JetBrains Mono', monospace;
-  text-shadow: 0 0 10px rgba(189, 0, 255, 0.3);
+  font-family: var(--display);
+  font-size: 20px;
+  text-align: right;
+  overflow-wrap: anywhere;
 }
+.statValueTeal { color: var(--cyan); }
+.statValueViolet { color: var(--pink); }
+/* The rarity breakdown sets an inline small size; keep it in mono so it stays legible. */
+.statValueViolet[style] { font-family: var(--mono); }
 
 .medalsRow {
   grid-column: 1 / -1;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  background: rgba(189, 0, 255, 0.03);
-  border: 1px solid rgba(189, 0, 255, 0.08);
-  border-radius: 8px;
-  padding: 0.75rem 1rem;
+  gap: 12px;
+  padding: 14px 16px;
 }
-
-.medalsLabel {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.5);
-  font-family: 'JetBrains Mono', monospace;
-}
-
-.medalsGroup {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.medalPlatinum, .medalGold, .medalSilver, .medalBronze {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.7rem;
-  font-weight: 700;
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
-  border: 1px solid;
-}
-
-.medalPlatinum {
-  background: rgba(226, 232, 240, 0.1);
-  border-color: rgba(226, 232, 240, 0.3);
-  color: #e2e8f0;
-}
-
-.medalGold {
-  background: rgba(245, 158, 11, 0.1);
-  border-color: rgba(245, 158, 11, 0.3);
-  color: #fbbf24;
-}
-
-.medalSilver {
-  background: rgba(156, 163, 175, 0.1);
-  border-color: rgba(156, 163, 175, 0.3);
-  color: #d1d5db;
-}
-
+.medalsLabel { font-size: 11px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--dim); }
+.medalsGroup { display: flex; flex-wrap: wrap; gap: 10px; }
+.medalPlatinum,
+.medalGold,
+.medalSilver,
 .medalBronze {
-  background: rgba(180, 83, 9, 0.1);
-  border-color: rgba(180, 83, 9, 0.3);
-  color: #f97316;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #000;
+  border: 1.5px solid #000;
+  box-shadow: 2px 2px 0 #000;
 }
+.medalPlatinum { background: var(--cyan); }
+.medalGold { background: var(--amber); }
+.medalSilver { background: var(--paper); }
+.medalBronze { background: #d07a3a; }
 
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes flicker { 50% { opacity: 0.4; } }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
 }
