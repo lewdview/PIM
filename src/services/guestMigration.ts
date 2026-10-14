@@ -273,32 +273,6 @@ async function migrateNotificationReads(guest: SupabaseClient, guestId: string, 
   }
 }
 
-async function migrateGameplayRecords(guest: SupabaseClient, guestId: string, userId: string): Promise<void> {
-  // Best-effort: gameplay_rows are server-authoritative (submit_score RPC), so
-  // direct inserts may be RLS-blocked. A failure here is non-fatal — the merged
-  // high scores still show from localStorage until the next real session.
-  const { data: guestRows, error: readErr } = await guest
-    .from('gameplay_records')
-    .select('*')
-    .eq('user_id', guestId)
-    .range(0, 4999);
-  if (readErr || !guestRows?.length) return;
-  let moved = 0;
-  for (const row of guestRows as any[]) {
-    try {
-      const copy: Record<string, unknown> = { ...row };
-      delete copy.id;
-      copy.user_id = userId;
-      const { error } = await supabase.from('gameplay_records').insert(copy);
-      if (!error) moved++;
-      else break; // RLS-blocked — stop trying, stay quiet
-    } catch {
-      break;
-    }
-  }
-  console.log(`[GuestMigration] Migrated ${moved}/${guestRows.length} gameplay records.`);
-}
-
 /**
  * Card migration goes through the vault-engine edge function (service role is
  * the only writer to vault_collections). The guest client refreshes the access
@@ -427,7 +401,8 @@ export async function maybeMigrateGuestData(): Promise<MigrationResult> {
     await migrateFragments(guest, stash.user_id, user.id);
     await migrateMilestoneClaims(guest, stash.user_id, user.id);
     await migrateNotificationReads(guest, stash.user_id, user.id);
-    await migrateGameplayRecords(guest, stash.user_id, user.id);
+    // Scores are not copied: gameplay_records only accepts rows through the
+    // submit_score RPC, and the guest's best scores stay in localStorage.
 
     // Cards need the edge function. Park the token if the engine isn't there
     // yet (or rate-limited) so a later boot can finish the job.
