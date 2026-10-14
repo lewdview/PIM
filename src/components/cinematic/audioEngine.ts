@@ -271,6 +271,97 @@ export function playBombshellShimmer(): void {
   } catch { /* AudioContext suppressed */ }
 }
 
+// ── Tiered reveal (common → mythic) ─────────────────────────────────
+
+function sfxMuted(): boolean {
+  return typeof localStorage !== 'undefined' && localStorage.getItem('opt_sfxEnabled') === 'false';
+}
+
+/** Rising riser under the pre-flip charge. Gets longer, lower and wider per tier. */
+export function playTierCharge(tier: number, seconds: number): void {
+  if (tier < 1 || seconds <= 0 || sfxMuted()) return;
+  try {
+    const c = getCtx();
+    const t0 = c.currentTime;
+    const end = t0 + seconds;
+
+    // Filtered noise sweep
+    const src = c.createBufferSource();
+    src.buffer = getSharedNoiseBuffer(c);
+    src.loop = true;
+    const bp = c.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.Q.value = 6;
+    bp.frequency.setValueAtTime(300, t0);
+    bp.frequency.exponentialRampToValueAtTime(2500 + tier * 900, end);
+    const ng = c.createGain();
+    ng.gain.setValueAtTime(0.001, t0);
+    ng.gain.exponentialRampToValueAtTime(0.05 + tier * 0.025, end);
+    src.connect(bp).connect(ng).connect(getDestination());
+    src.start(t0);
+    src.stop(end + 0.02);
+
+    // Pitch glide (detuned pair for rare+)
+    const voices = tier >= 2 ? [0, 7] : [0];
+    voices.forEach((cents) => {
+      const o = c.createOscillator();
+      o.type = tier >= 3 ? 'sawtooth' : 'triangle';
+      o.detune.value = cents;
+      o.frequency.setValueAtTime(70 + tier * 10, t0);
+      o.frequency.exponentialRampToValueAtTime(380 + tier * 140, end);
+      const lp = c.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.setValueAtTime(400, t0);
+      lp.frequency.exponentialRampToValueAtTime(2200, end);
+      const g = c.createGain();
+      g.gain.setValueAtTime(0.001, t0);
+      g.gain.exponentialRampToValueAtTime(0.025 + tier * 0.012, end);
+      o.connect(lp).connect(g).connect(getDestination());
+      o.start(t0);
+      o.stop(end + 0.02);
+    });
+
+    // Mythic: accelerating sub heartbeat under the riser
+    if (tier >= 4) {
+      const beats = 5;
+      for (let b = 0; b < beats; b++) {
+        const at = Math.pow(b / beats, 0.75) * seconds * 1000;
+        setTimeout(() => {
+          try {
+            tone(44, 0.22, 0.22, 'sine');
+            setTimeout(() => { try { tone(38, 0.26, 0.26, 'sine'); } catch { /* noop */ } }, 130);
+          } catch { /* noop */ }
+        }, at);
+      }
+    }
+  } catch { /* AudioContext suppressed */ }
+}
+
+/** The hit when the card turns. Each tier stacks on the one below. */
+export function playTierImpact(tier: number): void {
+  try {
+    if (tier <= 0) { playTick(); return; }
+    if (tier === 1) {
+      playTick();
+      tone(880, 0.25, 0.04, 'sine');
+      setTimeout(() => { try { tone(1318.5, 0.3, 0.035, 'sine'); } catch { /* noop */ } }, 70);
+      return;
+    }
+    playRareHit();
+    if (tier >= 3) {
+      tone(48, 1.2, 0.25, 'sine'); // boom
+      noise(0.5, 0.12, { type: 'lowpass', freq: 900 }); // body
+      const chord = [523.25, 659.25, 783.99, 987.77]; // Cmaj7 bloom
+      chord.forEach((f, k) => setTimeout(() => { try { tone(f, 1.1, 0.035, 'sine'); } catch { /* noop */ } }, 120 + k * 45));
+    }
+    if (tier >= 4) {
+      tone(32, 1.8, 0.3, 'sine'); // sub drop
+      setTimeout(() => { try { playUnlockChime(); } catch { /* noop */ } }, 380);
+      [2093, 2637, 3136].forEach((f, k) => setTimeout(() => { try { tone(f, 1.4, 0.018, 'sine'); } catch { /* noop */ } }, 600 + k * 90));
+    }
+  } catch { /* AudioContext suppressed */ }
+}
+
 export function disposeAudioContext(): void {
   if (ctx) {
     try { ctx.close(); } catch { /* noop */ }
