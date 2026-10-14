@@ -262,7 +262,7 @@ export default function DressUpPage() {
         {/* Stage */}
         <section className="order-1 lg:order-2 flex flex-col items-center gap-3">
           <div className="w-full max-w-[240px] sm:max-w-[340px] border-2 border-white/15 shadow-[0_0_40px_rgba(255,126,182,0.15)]">
-            <WaifuFigure outfit={outfit} className="block w-full h-auto" />
+            <WaifuFigure outfit={outfit} celebrate={score.grade === 'S'} eyeColor={brief.palette[1]} className="block w-full h-auto" />
           </div>
           <div className="w-full max-w-[340px] border border-white/10 bg-white/[0.03] p-3!">
             <div className="flex items-center justify-between">
