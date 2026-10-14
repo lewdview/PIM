@@ -157,6 +157,18 @@ const MOCK_BOMBSHELL_CARD: VaultCard = {
   maxSupply: 25,
 };
 
+// Bonus Bombshell rolled into a regular pack (the extra-card chance)
+const MOCK_BONUS_BOMBSHELL_CARD: VaultCard = {
+  ...MOCK_BOMBSHELL_CARD,
+  id: 'bombshell-33',
+  day: 33,
+  title: 'Day 033 Bombshell',
+  storageTitle: 'Day 033 Bombshell',
+  rarity: 'rare',
+  coverUrl: '/data/launch/bombshells/day-033-01.jpg',
+  coverArtwork: 'day 033 - 01.jpg',
+} as VaultCard;
+
 // ===== ANIMATION DEFINITIONS METADATA =====
 export interface DropAnimationMeta {
   id: string;
@@ -186,6 +198,20 @@ export const DROP_ANIMATION_CATALOG: DropAnimationMeta[] = [
     description:
       'The premier physical opening experience. Features 9 sequential physics phases: floating idle, tactile grip hold, pre-tear tension stretch, glowing fiber seam tearing, high-intensity tear snap with screen flash & zoom pulse, 3D card rise from envelope, individual card flip with near-miss fakeouts, and arc spread examination.',
     sourceFile: 'src/components/cinematic/PackContainer.tsx',
+  },
+  {
+    id: 'bombshell_bonus_pull',
+    name: 'Bombshell Bonus Card Interrupt',
+    tagline: 'Regular pack glitches out mid-reveal and drops an extra Bombshell',
+    category: 'pack',
+    badge: 'EXTRA CARD',
+    badgeColor: '#FF1493',
+    triggerLocation: 'Regular pack pull where the bonus Bombshell roll hits (extra card)',
+    audioStems: ['bonus_glitch', 'heartbeat', 'bonus_impact', 'bombshell_swell', 'bombshell_shimmer'],
+    techStack: ['Framer Motion Springs', '3D Card Flip', 'Clip-Path Radial Wipe', 'Web Audio Synthesizer'],
+    description:
+      'Plays when a regular pack returns a Bombshell alongside its normal cards. The regular cards reveal as usual, then the screen tears with an RGB glitch, two heartbeats pulse a pink vignette ("EXTRA CARD DETECTED"), a pink foil card back slams down over a giant BOMBSHELL wordmark with marquee bands and a shockwave, flips, and the cover art wipes in with a heart burst. The card then lands in the spread with a +1 BONUS stamp.',
+    sourceFile: 'src/components/cinematic/BombshellBonusReveal.tsx',
   },
   {
     id: 'arcade_pack_rip',
@@ -376,13 +402,41 @@ export default function AdminDropAnimationsSection() {
         echoGeneration: i === 2 ? 1 : undefined,
       });
     }
+    if (selectedAnimationId === 'bombshell_bonus_pull') {
+      cards.push({
+        id: `mock-owned-bonus-${Date.now()}`,
+        cardId: MOCK_BONUS_BOMBSHELL_CARD.id,
+        edition: 7,
+        claimedAt: new Date().toISOString(),
+        source: 'pack_bombshell_bonus',
+        cardSet: 'bombshell',
+        coverArtwork: 'day 033 - 01.jpg',
+        card: MOCK_BONUS_BOMBSHELL_CARD,
+      });
+    }
     return cards;
-  }, [selectedRarity, selectedPackCategory, selectedCardCount, isUltraActive, isProofOfFirstActive]);
+  }, [selectedRarity, selectedPackCategory, selectedCardCount, isUltraActive, isProofOfFirstActive, selectedAnimationId]);
 
   // Generate RevealPackMeta based on configuration
   const mockPackMeta = useMemo<RevealPackMeta>(() => {
     const isBombshell =
       selectedPackCategory === 'bombshell' || selectedPackCategory === 'bombshell_token';
+    if (selectedAnimationId === 'bombshell_bonus_pull' && isBombshell) {
+      // The bonus only exists in regular packs; preview it in a standard Vault pack
+      const vault = PACK_CONFIGS.taste;
+      return {
+        category: 'taste',
+        size: 'trio',
+        label: vault?.label || 'VAULT PACK',
+        icon: vault?.icon || '⚡',
+        accent: vault?.accent || '#00E5FF',
+        gradient: vault?.gradient || 'linear-gradient(160deg, #0a1020 0%, #152540 40%, #081018 100%)',
+        price: '$0.25',
+        cardCount: selectedCardCount,
+        revealType: 'cinematic',
+        showRipAnother: true,
+      } as RevealPackMeta;
+    }
     const cfg = PACK_CONFIGS[selectedPackCategory] || {
       category: selectedPackCategory,
       label: isBombshell ? 'BOMBSHELL PANIK PACK' : 'VAULT BOOSTER PACK',
@@ -788,7 +842,7 @@ export default function AdminDropAnimationsSection() {
             />
 
             {/* Stage Renderer Branching based on Animation ID */}
-            {selectedAnimationId === 'cinematic_pack' && (
+            {(selectedAnimationId === 'cinematic_pack' || selectedAnimationId === 'bombshell_bonus_pull') && (
               <div className="w-full h-full relative" style={{ minHeight: '580px' }}>
                 <PackContainer
                   key={`stage-cine-${stageKey}`}

@@ -415,6 +415,24 @@ export function getCinematicAudioContext(): AudioContext | null {
   try { return getCtx(); } catch { return null; }
 }
 
+/** Bonus Bombshell interrupt: a tape-stop glitch that cuts the regular pack's flow. */
+export function playBombshellBonusGlitch(): void {
+  try {
+    noise(0.18, 0.22, { type: 'bandpass', freq: 2400 });
+    const osc = tone(880, 0.45, 0.07, 'sawtooth');
+    osc.frequency.exponentialRampToValueAtTime(55, getCtx().currentTime + 0.42);
+  } catch { /* AudioContext suppressed */ }
+}
+
+/** Bonus Bombshell card slam: sub impact plus a bright crack. */
+export function playBombshellBonusImpact(): void {
+  try {
+    const osc = tone(110, 0.6, 0.3, 'sine');
+    osc.frequency.exponentialRampToValueAtTime(32, getCtx().currentTime + 0.5);
+    noise(0.09, 0.2, { type: 'highpass', freq: 3500 });
+  } catch { /* AudioContext suppressed */ }
+}
+
 export function disposeAudioContext(): void {
   if (ctx) {
     try { ctx.close(); } catch { /* noop */ }
