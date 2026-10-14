@@ -6,7 +6,7 @@ import { audioManager } from '../../game/audio';
 import { RARITY_CONFIG, type Rarity } from '../../utils/rarity';
 import { getCoverUrlForRarity, useSmartCoverArt, resolveSmartCoverUrl } from '../../utils/rarityArtwork';
 import { get365CardVariantStyle, getPackCoverFallback, getPackMultiCovers } from '../../utils/cardVariants';
-import { getFeaturedBombshellFoilCover, getRandomBombshellPackCover } from '../../utils/bombshellCards';
+import { getFeaturedBombshellFoilCover, getRandomBombshellPackCover, isBombshellBonusCard } from '../../utils/bombshellCards';
 import { farcasterService } from '../../services/farcasterService';
 import { Share2, Check, Sparkles } from 'lucide-react';
 import Card from '../Card';
@@ -20,6 +20,7 @@ import {
   playUnlockChime, playBombshellHeartbeat, playBombshellSwell,
   playBombshellShimmer, playTierCharge, playTierImpact, disposeAudioContext,
 } from './audioEngine';
+import BombshellBonusReveal from './BombshellBonusReveal';
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -757,8 +758,22 @@ const shimmerKeyframes = `
 
 // ── Main Component ───────────────────────────────────────────────────
 
-export default function PackContainer({ meta, cards, accumulatedCards = cards, onComplete, onBuyAnother, isRepurchasing, onCastPull, onSharePull }: Props) {
-  const isBombshell = meta.category === 'bombshell' || meta.category === 'bombshell_token' || meta.label?.toLowerCase().includes('bombshell') || cards.some(c => c.card?.cardSet === 'bombshell' || c.card?.coverUrl?.includes('girl-covers') || c.card?.coverUrl?.includes('rare_covers'));
+export default function PackContainer({ meta, cards: rawCards, accumulatedCards = rawCards, onComplete, onBuyAnother, isRepurchasing, onCastPull, onSharePull }: Props) {
+  const isBombshellCardLike = (c: OwnedCard) => c.card?.cardSet === 'bombshell' || c.card?.coverUrl?.includes('girl-covers') || c.card?.coverUrl?.includes('rare_covers');
+  const isBombshellPack = meta.category === 'bombshell' || meta.category === 'bombshell_token' || !!meta.label?.toLowerCase().includes('bombshell');
+  // A regular pack whose cards are ALL Bombshells is still themed as a Bombshell pack.
+  // A regular pack with only SOME Bombshells hit the bonus roll: keep the regular
+  // theme so the extra card lands as a surprise.
+  const isBombshell = isBombshellPack || (rawCards.length > 0 && rawCards.every(isBombshellCardLike));
+
+  // Bonus Bombshells are revealed last so they close out the pack.
+  const cards = useMemo(() => {
+    if (isBombshell) return rawCards;
+    const regular = rawCards.filter(c => !isBombshellBonusCard(c, false));
+    const bonus = rawCards.filter(c => isBombshellBonusCard(c, false));
+    return bonus.length ? [...regular, ...bonus] : rawCards;
+  }, [rawCards, isBombshell]);
+  const isBonusIndex = useCallback((i: number) => !isBombshell && !!cards[i] && isBombshellBonusCard(cards[i], false), [cards, isBombshell]);
 
   const stableCoverImage = useMemo(() => {
     if (meta.coverImage) return meta.coverImage;
@@ -793,6 +808,9 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
 
   const collection = useVaultStore(s => s.collection);
   const [firstUnlockCard, setFirstUnlockCard] = useState<OwnedCard | null>(null);
+  const [bonusRevealCard, setBonusRevealCard] = useState<OwnedCard | null>(null);
+  const bonusResolveRef = useRef<(() => void) | null>(null);
+  const bonusShownRef = useRef<Set<string>>(new Set());
   const unlockResolveRef = useRef<(() => void) | null>(null);
 
   const checkFirstUnlock = useCallback((cardId: string) => {
@@ -1077,6 +1095,9 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
   // ── Preloading Hook ────────────────────────────────────────────────
   useEffect(() => {
     let isCancelled = false;
+    bonusShownRef.current = new Set();
+    bonusResolveRef.current = null;
+    setBonusRevealCard(null);
 
     async function preloadAssets() {
       const urls = new Set<string>();
@@ -1124,7 +1145,17 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
     setUltraTriggered(false);
     sequenceRunning.current = false;
     audioManager.playSfx('open_chest', 0.8);
-  }, [cards]);
+    // Release a reveal-loop await if one is pending, then show any bonus not yet seen
+    bonusResolveRef.current?.();
+    bonusResolveRef.current = null;
+    const unseenBonus = cards.find((c, i) => isBonusIndex(i) && !bonusShownRef.current.has(c.id));
+    if (unseenBonus) {
+      bonusShownRef.current.add(unseenBonus.id);
+      setBonusRevealCard(unseenBonus);
+    } else {
+      setBonusRevealCard(null);
+    }
+  }, [cards, isBonusIndex]);
 
   // ── Timeline Controller (Post-Snap Reveal) ─────────────────────────
 
@@ -1187,6 +1218,19 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
       const card = cards[i];
       const rarity = card.card.rarity as Rarity;
 
+      if (isBonusIndex(i)) {
+        // Bonus Bombshell: cut away to its own reveal, then drop it into the spread
+        if (await abortableWait(450)) return;
+        bonusShownRef.current.add(card.id);
+        await new Promise<void>((resolve) => {
+          bonusResolveRef.current = resolve;
+          setBonusRevealCard(card);
+        });
+        setBonusRevealCard(null);
+        setFlippedCards(prev => new Set(prev).add(i));
+        playBombshellShimmer();
+        if (await abortableWait(700)) return;
+      } else {
       const baseProfile = getRevealProfile(rarity);
       const profile = reduceMotion ? reduceProfile(baseProfile) : baseProfile;
       const revealId = ++revealIdRef.current;
@@ -1231,6 +1275,7 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
 
       if (await abortableWait(profile.holdMs)) return;
       setTierReveal(null);
+      }
 
       // First-time card unlock overlay step (paused until resolved)
       if (checkFirstUnlock(card.card.id)) {
@@ -1249,7 +1294,7 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
     setPhase('layout');
     sequenceRunning.current = false;
     // We now pause here for the user to examine the cards and click continue.
-  }, [cards, isBombshell, reduceMotion]);
+  }, [cards, isBombshell, reduceMotion, isBonusIndex]);
 
   // ── Mobile tap-to-rip (fallback for when drag is difficult) ─────────
   const handlePackTap = useCallback(() => {
@@ -1838,6 +1883,32 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
                           </div>
                         )}
 
+                        {isBonusIndex(i) && isRevealed && (
+                          <motion.div
+                            initial={{ scale: 2, opacity: 0, rotate: -20 }}
+                            animate={{ scale: 1, opacity: 1, rotate: 10 }}
+                            transition={{ type: 'spring', stiffness: 500, damping: 18 }}
+                            style={{
+                              position: 'absolute', top: -12, right: -14, zIndex: 30,
+                              background: '#fff', color: '#FF1493', border: '2px solid #FF1493',
+                              fontFamily: 'Impact, "Arial Black", sans-serif', fontSize: 14, letterSpacing: '0.08em',
+                              padding: '2px 8px', boxShadow: '3px 3px 0 #FF1493', pointerEvents: 'none',
+                            }}
+                          >
+                            +1 BONUS
+                          </motion.div>
+                        )}
+                        {isBonusIndex(i) && isRevealed && (
+                          <motion.div
+                            animate={{ opacity: [0.45, 0.9, 0.45] }}
+                            transition={{ repeat: Infinity, duration: 1.8 }}
+                            style={{
+                              position: 'absolute', inset: '-10px', borderRadius: '18px', zIndex: -1,
+                              background: 'radial-gradient(ellipse, rgba(255,20,147,0.55), transparent 70%)',
+                              filter: 'blur(10px)', pointerEvents: 'none',
+                            }}
+                          />
+                        )}
                         <Card 
                             card={owned.card}
                             edition={owned.edition}
@@ -2102,6 +2173,24 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
               </motion.button>
             )}
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── BONUS BOMBSHELL OVERLAY ───────────────────────────────── */}
+      <AnimatePresence>
+        {bonusRevealCard && (
+          <BombshellBonusReveal
+            key={bonusRevealCard.id}
+            card={bonusRevealCard}
+            onDone={() => {
+              if (bonusResolveRef.current) {
+                bonusResolveRef.current();
+                bonusResolveRef.current = null;
+              } else {
+                setBonusRevealCard(null);
+              }
+            }}
+          />
         )}
       </AnimatePresence>
 
