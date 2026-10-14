@@ -123,18 +123,10 @@ const isBlankName = (n: unknown): boolean =>
 function mergeProfiles(guest: any, own: any): Record<string, unknown> {
   const g = guest || {};
   const o = own || {};
+  // Economy columns (tokens, pulls, streak, burns, last_claim_day, skins) are
+  // server-managed and merged by vault-engine's migrateGuestProfile instead.
   const merged: Record<string, unknown> = {
-    // Farm-safe: counters take the best of either side, never summed.
-    tokens: Math.max(num(g.tokens), num(o.tokens)),
-    streak_count: Math.max(num(g.streak_count), num(o.streak_count)),
-    total_pulls: Math.max(num(g.total_pulls), num(o.total_pulls)),
-    pulls_since_rare_plus: Math.max(num(g.pulls_since_rare_plus), num(o.pulls_since_rare_plus)),
-    total_burns: Math.max(num(g.total_burns), num(o.total_burns)),
-    // last_claim_day gates the free daily drop — MAX so a day the guest
-    // already claimed can't be claimed again on the account.
-    last_claim_day: Math.max(num(g.last_claim_day), num(o.last_claim_day)),
     has_onboarded: Boolean(g.has_onboarded || o.has_onboarded),
-    unlocked_skins: [...new Set([...(o.unlocked_skins || []), ...(g.unlocked_skins || [])])],
     // JSON blobs: account wins on conflicts, guest fills gaps. Tutorial
     // completion is monotonic — once done anywhere, it stays done.
     settings: { ...(g.settings || {}), ...(o.settings || {}) },
@@ -154,12 +146,32 @@ function mergeProfiles(guest: any, own: any): Record<string, unknown> {
   return merged;
 }
 
+async function migrateProfileEconomyViaEngine(guest: SupabaseClient): Promise<void> {
+  const { data: { session } } = await guest.auth.getSession();
+  const token = session?.access_token;
+  if (!token) throw new Error('Guest session has no access token');
+  const { data, error } = await supabase.functions.invoke('vault-engine', {
+    body: { action: 'migrateGuestProfile', payload: { guest_access_token: token } },
+  });
+  if (error) {
+    if ((error.message || '').toLowerCase().includes('unknown action')) {
+      console.warn('[GuestMigration] vault-engine predates migrateGuestProfile — economy not merged.');
+      return;
+    }
+    throw new Error(`profile economy: ${error.message}`);
+  }
+  if ((data as any)?.error) throw new Error(`profile economy: ${(data as any).error}`);
+}
+
 async function migrateProfiles(guest: SupabaseClient, guestId: string, userId: string): Promise<void> {
   const { data: guestProfile } = await guest.from('profiles').select('*').eq('id', guestId).maybeSingle();
   if (!guestProfile) {
     console.log('[GuestMigration] No guest profile row — skipping profile merge.');
     return;
   }
+  // Economy first, server-side (players can't write those columns).
+  await migrateProfileEconomyViaEngine(guest);
+
   const { data: ownProfile } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
   const merged = mergeProfiles(guestProfile, ownProfile);
   if (ownProfile) {
@@ -259,32 +271,6 @@ async function migrateNotificationReads(guest: SupabaseClient, guestId: string, 
   } catch (err) {
     console.warn('[GuestMigration] Notification reads migration skipped:', err);
   }
-}
-
-async function migrateGameplayRecords(guest: SupabaseClient, guestId: string, userId: string): Promise<void> {
-  // Best-effort: gameplay_rows are server-authoritative (submit_score RPC), so
-  // direct inserts may be RLS-blocked. A failure here is non-fatal — the merged
-  // high scores still show from localStorage until the next real session.
-  const { data: guestRows, error: readErr } = await guest
-    .from('gameplay_records')
-    .select('*')
-    .eq('user_id', guestId)
-    .range(0, 4999);
-  if (readErr || !guestRows?.length) return;
-  let moved = 0;
-  for (const row of guestRows as any[]) {
-    try {
-      const copy: Record<string, unknown> = { ...row };
-      delete copy.id;
-      copy.user_id = userId;
-      const { error } = await supabase.from('gameplay_records').insert(copy);
-      if (!error) moved++;
-      else break; // RLS-blocked — stop trying, stay quiet
-    } catch {
-      break;
-    }
-  }
-  console.log(`[GuestMigration] Migrated ${moved}/${guestRows.length} gameplay records.`);
 }
 
 /**
@@ -415,7 +401,8 @@ export async function maybeMigrateGuestData(): Promise<MigrationResult> {
     await migrateFragments(guest, stash.user_id, user.id);
     await migrateMilestoneClaims(guest, stash.user_id, user.id);
     await migrateNotificationReads(guest, stash.user_id, user.id);
-    await migrateGameplayRecords(guest, stash.user_id, user.id);
+    // Scores are not copied: gameplay_records only accepts rows through the
+    // submit_score RPC, and the guest's best scores stay in localStorage.
 
     // Cards need the edge function. Park the token if the engine isn't there
     // yet (or rate-limited) so a later boot can finish the job.

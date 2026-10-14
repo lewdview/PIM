@@ -21,7 +21,7 @@ import { TransmissionIcon } from "../../components/icons/CustomVectorIcons";
 import VideoExportModal from "@/components/ui/VideoExportModal";
 import { getRelativeDay, getCurrentDay } from "../../utils/dayCalc";
 import { getSmartCoverCandidates, isBombshellCoverPath } from "@/utils/rarityArtwork";
-import { STAGE_BOUNDS, MEDAL_STOPS, MEDAL_COLOR_MAP, LANE_COUNT, HIT_RATIO, HW_TOP, HW_BOT, MATRIX_CHARS, MATRIX_COLUMNS, POWER_UPS, type PUType } from './constants';
+import { MEDAL_STOPS, MEDAL_COLOR_MAP, LANE_COUNT, HIT_RATIO, HW_TOP, HW_BOT, MATRIX_CHARS, MATRIX_COLUMNS, POWER_UPS, type PUType } from './constants';
 import { type StageGeometry, getStageGeometry, approachTime, hwAtProgress, laneAt, lerp, formatTimeSec, isDirectionMatch } from './geometry';
 import { colorWithAlpha, hslToHex, getDifficultyLaneColor } from './colorUtils';
 import { perfectPlusWindow, perfectWindow, goodWindow, missWindow } from './timing';
@@ -33,6 +33,8 @@ import JudgmentBadge, { getJudgmentBadgeSvgHtml, getJudgmentStreamItemHtml } fro
 import GameplayVisualizer from './GameplayVisualizer';
 import TutorialOverlay, { type TutorialStepType } from './TutorialOverlay';
 import { loadLyricsForDay, drawTrackLyrics, type TimedLine } from './trackLyrics';
+import { getStageStarts, stageAtTime } from './stageTimeline';
+import { generateMasterChart, ANALYSIS_SAMPLE_RATE, CHART_MASTER_VERSION } from '@/game/chartMaster';
 import { drawSlabBody, drawTopFaceBevel, drawHitPop3D, drawHitPillar3D, hitPillarReach, makeHitShards, setNote3DQuality, type HitShard } from './notes3d';
 
 // Use Vite's eager glob to grab files in /public/data/slideshow/
@@ -995,20 +997,17 @@ function generateProceduralChart(song: any): Note[] {
   return stageified.notes;
 }
 
-// ── Audio Forge: Transient Onset Beatmap Generator ───────────────
+// ── Chart Master (v6): audio-driven chart generation at runtime ──
+// Used when a song has no baked chart. Same generator as
+// scripts/bake_master_charts.ts, so runtime and baked charts match.
 async function generateAudioForgeChart(song: any): Promise<Note[]> {
   const audioUrl = song.audioUrl;
   if (!audioUrl) {
     throw new Error("No audioUrl found for song");
   }
 
-  const bpm = song.bpm || 120;
-  const beatDuration = 60 / bpm;
-  const duration = Math.min(180, song.duration || 120);
-  const difficulty = song.difficultyLevel || 5;
+  console.log(`[Chart Master] Analysing audio: ${audioUrl}`);
 
-  console.log(`[Audio Forge] Running transient onset analysis on: ${audioUrl}`);
-  
   const candidates = getCandidateAudioUrls(audioUrl, song.day);
   let response: Response | null = null;
   for (const c of candidates) {
@@ -1025,168 +1024,35 @@ async function generateAudioForgeChart(song: any): Promise<Note[]> {
   }
   const arrayBuffer = await response.arrayBuffer();
 
-  const sampleRate = 22050;
+  // decodeAudioData resamples to the context rate; downmix to mono ourselves
   const offlineCtx = new (window.OfflineAudioContext || (window as any).webkitOfflineAudioContext)(
     1,
-    Math.floor(sampleRate * duration),
-    sampleRate
+    ANALYSIS_SAMPLE_RATE,
+    ANALYSIS_SAMPLE_RATE
   );
-
   const audioBuffer = await offlineCtx.decodeAudioData(arrayBuffer);
-  const channelData = audioBuffer.getChannelData(0);
-  const totalSamples = channelData.length;
-
-  const blockSize = 512;
-  const movingAvgWindow = 43;
-  const blockEnergies: number[] = [];
-
-  for (let i = 0; i < totalSamples; i += blockSize) {
-    let sum = 0;
-    const end = Math.min(totalSamples, i + blockSize);
-    for (let j = i; j < end; j++) {
-      sum += channelData[j] * channelData[j];
-    }
-    const rms = Math.sqrt(sum / (end - i));
-    blockEnergies.push(rms);
+  const pcm = new Float32Array(audioBuffer.length);
+  for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
+    const data = audioBuffer.getChannelData(ch);
+    for (let i = 0; i < data.length; i++) pcm[i] += data[i] / audioBuffer.numberOfChannels;
   }
 
-  // Detect active sound energy fade-out boundary to clip trailing silence
-  let lastActiveBlock = blockEnergies.length - 1;
-  while (lastActiveBlock > movingAvgWindow && blockEnergies[lastActiveBlock] < 0.008) {
-    lastActiveBlock--;
-  }
-  const activeEnergyEndTime = (lastActiveBlock * blockSize) / sampleRate;
-  const effectiveAudioDuration = Math.max(10, Math.min(duration, activeEnergyEndTime > 10 ? activeEnergyEndTime : duration));
-  console.log(`[Audio Forge] Track duration: ${duration}s, active sound energy until ${activeEnergyEndTime.toFixed(1)}s (effective: ${effectiveAudioDuration.toFixed(1)}s)`);
-
-  const thresholdRatio = 1.35 - (difficulty * 0.035);
-  const minCooldown = Math.max(0.12, 0.45 - (difficulty * 0.035));
-  let lastNoteTime = 0;
-  const noteTimes: number[] = [];
-
-  for (let b = movingAvgWindow; b < blockEnergies.length; b++) {
-    const instantEnergy = blockEnergies[b];
-
-    let windowSum = 0;
-    for (let w = b - movingAvgWindow; w < b; w++) {
-      windowSum += blockEnergies[w];
-    }
-    const localAvgEnergy = windowSum / movingAvgWindow;
-    const blockTime = (b * blockSize) / sampleRate;
-
-    if (instantEnergy > localAvgEnergy * thresholdRatio && instantEnergy > 0.015) {
-      if (blockTime - lastNoteTime >= minCooldown && blockTime >= 3.0 && blockTime < effectiveAudioDuration - 3.5) {
-        noteTimes.push(blockTime);
-        lastNoteTime = blockTime;
-      }
-    }
-  }
-
-  const notes: Note[] = [];
-  let lastLane = 1;
-  let secondLastLane = 0;
-
-  noteTimes.forEach((time, index) => {
-    const availableLanes = [0, 1, 2].filter(l => l !== lastLane && l !== secondLastLane);
-    const lane = availableLanes[Math.floor((time * 17) % availableLanes.length)];
-    secondLastLane = lastLane;
-    lastLane = lane;
-
-    let noteType: 'tap' | 'hold' = 'tap';
-    let holdDuration: number | undefined;
-    let targetLane: number | undefined;
-    let swipeDirection: 'up' | 'down' | 'left' | 'right' | undefined;
-
-    const blockIndex = Math.floor((time * sampleRate) / blockSize);
-    const energy = blockEnergies[blockIndex] || 0;
-    const isStage1 = time < effectiveAudioDuration * 0.15;
-
-    if (!isStage1 && difficulty >= 3 && energy > 0.12 && index % 4 === 1) {
-      noteType = 'hold';
-      holdDuration = beatDuration * (1.5 + (index % 2));
-      
-      const slideRoll = (index * 19) % 100;
-      if (difficulty >= 5 && slideRoll < 45) {
-        targetLane = (lane + 1 + (index % 2)) % 3;
-      }
-      
-      const swipeRoll = (index * 23) % 100;
-      if (difficulty >= 4 && swipeRoll < 60) {
-        swipeDirection = (index % 3 === 0) ? 'up' : (index % 3 === 1) ? 'left' : 'right';
-      }
-    } else if (difficulty >= 4 && (index * 23) % 100 < 22) {
-      noteType = 'swipe' as any;
-      swipeDirection = (index % 3 === 0) ? 'up' : (index % 3 === 1) ? 'left' : 'right';
-    }
-
-    notes.push({
-      id: index,
-      time: parseFloat(time.toFixed(3)),
-      lane,
-      type: noteType,
-      holdDuration: holdDuration ? parseFloat(holdDuration.toFixed(3)) : undefined,
-      targetLane,
-      swipeDirection
-    });
-
-    const canSpawnDual = difficulty >= 4;
-    if (canSpawnDual) {
-      const dualRoll = (time * 23 + index * 3) % 100;
-      const dualChance = difficulty >= 7 ? 35 : 20;
-      
-      if (dualRoll < dualChance && energy > 0.12) {
-        const comboIdx = (index + Math.floor(time)) % 3;
-        let laneA = 0;
-        let laneB = 2;
-        if (comboIdx === 1) {
-          laneA = 1;
-          laneB = 2;
-        } else if (comboIdx === 2) {
-          laneA = 0;
-          laneB = 1;
-        }
-
-        const lastNote = notes[notes.length - 1];
-        if (lastNote) {
-          lastNote.lane = laneA;
-        }
-
-        let secondType: 'tap' | 'hold' = 'tap';
-        let secondHoldDuration: number | undefined;
-        let secondSwipeDir: 'up' | 'down' | 'left' | 'right' | undefined;
-        let secondTargetLane: number | undefined;
-        
-        const typeRoll = (index * 13 + Math.floor(time)) % 100;
-        if (!isStage1 && difficulty >= 6 && typeRoll < 40) {
-          secondType = 'hold';
-          secondHoldDuration = beatDuration * 1.5;
-          if (index % 2 === 0) {
-            secondSwipeDir = 'up';
-          }
-        }
-        
-        notes.push({
-          id: 30000 + index,
-          time: parseFloat(time.toFixed(3)),
-          lane: laneB,
-          type: secondType,
-          holdDuration: secondHoldDuration ? parseFloat(secondHoldDuration.toFixed(3)) : undefined,
-          targetLane: secondTargetLane,
-          swipeDirection: secondSwipeDir
-        });
-      }
-    }
+  const result = generateMasterChart(pcm, audioBuffer.sampleRate, {
+    bpm: song.bpm || 120,
+    duration: audioBuffer.duration,
+    difficultyLevel: song.difficultyLevel || 5,
+    day: song.day,
   });
 
-  if (notes.length < 10) {
-    console.warn(`[Audio Forge] Only detected ${notes.length} peaks. Falling back to math generation.`);
+  if (result.notes.length < 10) {
+    console.warn(`[Chart Master] Only ${result.notes.length} notes generated. Falling back to math generation.`);
     return generateProceduralChart(song);
   }
 
-  const stageified = stageifyNotes(notes, effectiveAudioDuration, bpm, song.difficultyLevel || 5);
-  song.stages = stageified.stages;
-  console.log(`[Audio Forge] Success! Analyzed ${effectiveAudioDuration.toFixed(1)}s audio and forged ${stageified.notes.length} notes (stages applied).`);
-  return stageified.notes;
+  song.stages = result.stages;
+  song.chartVersion = CHART_MASTER_VERSION;
+  console.log(`[Chart Master] ${result.notes.length} notes · ${result.report.bpm} BPM · POV drops at ${result.report.povTimes.join('s, ')}s · ${result.report.ms}ms`);
+  return result.notes;
 }
 
 function createTutorialNotesForStep(step: TutorialStepType, bpm: number, startT: number, startId = 0): Note[] {
@@ -1380,6 +1246,8 @@ export default function Game() {
     }
   }, []);
   const songRef = useRef<GameSong | null>(null);
+  /** Stage start times for the loaded song (chart-defined, else the fixed split). */
+  const stageStartsRef = useRef<number[]>(getStageStarts(null));
   const modifierRef = useRef<'vocal_isolation' | 'bass_realm' | 'corrupted_signal' | 'none'>('none');
   const [activeModifier, setActiveModifier] = useState<'vocal_isolation' | 'bass_realm' | 'corrupted_signal' | 'none'>('none');
   const phaseRef = useRef<
@@ -3911,15 +3779,10 @@ export default function Game() {
       }
     }
 
-    // Stage transition tracking
-    // PERF: stageBounds moved to module scope (STAGE_BOUNDS) to avoid per-frame allocation
-    const stageBounds = STAGE_BOUNDS;
-    let calculatedStage = 1;
-    for (let i = 0; i < stageBounds.length; i++) {
-      if (gs.progress >= stageBounds[i].pct) {
-        calculatedStage = stageBounds[i].stage;
-      }
-    }
+    // Stage transition tracking — follows the chart's own stage times when it
+    // has them (Chart Master places stage 3 / 5 on the drops), so the POV
+    // switch lands on the music; otherwise the fixed 15/35/60/80% split.
+    const calculatedStage = stageAtTime(stageStartsRef.current, t);
       if (calculatedStage !== lastDetectedStageRef.current) {
         const prevStage = lastDetectedStageRef.current;
         lastDetectedStageRef.current = calculatedStage;
@@ -3971,9 +3834,7 @@ export default function Game() {
         }
       }
       
-      // PERF: Direct O(1) index lookup instead of .find() (H1)
-      const sb = stageBounds[calculatedStage - 1] ?? null;
-      if (sb && prevStage > 0 && calculatedStage > prevStage) {
+      if (prevStage > 0 && calculatedStage > prevStage) {
         if (calculatedStage === 5) {
           audioManager.playSfx("overdrive_activate", 0.85);
         } else {
@@ -8635,6 +8496,17 @@ export default function Game() {
         // ── Ownership gate: gameplay requires owning the card for this song ──
         // (Tutorial transmissions are exempt — they carry no card.)
         if (!isTutorial && song.day > 0) {
+          // On a direct link / refresh the collection may still be loading —
+          // wait for it rather than locking a card the player owns.
+          if (!useVaultStore.getState().hasLoadedData) {
+            await new Promise<void>((resolve) => {
+              const timer = setTimeout(() => { unsub(); resolve(); }, 8000);
+              const unsub = useVaultStore.subscribe((st) => {
+                if (st.hasLoadedData) { clearTimeout(timer); unsub(); resolve(); }
+              });
+            });
+            if (cancelled) return;
+          }
           const collection = useVaultStore.getState().collection;
           const isOwned = ownsCardForDay(collection, song.day);
           console.log("[GamePlay Init] Ownership gate:", isOwned ? "OWNED" : "LOCKED", "for song day:", song.day, "date:", song.date);
@@ -8648,6 +8520,7 @@ export default function Game() {
           }
         }
       songRef.current = song;
+      stageStartsRef.current = getStageStarts(song);
 
       // Load on-track lyrics for this song's day (canvas-rendered, no gating).
       if (song.day > 0 && trackLyricsRef.current.day !== song.day) {
@@ -8906,8 +8779,8 @@ export default function Game() {
         const diff = songRef.current?.difficultyLevel ?? 5;
 
         // Stage 1 restriction: strictly tap notes only (holds introduced in Stages 2-5)
-        const stage1EndTime = (song.duration || 180) * 0.15;
-        const isStage1 = note.stage === 1 || note.time < stage1EndTime;
+        const stage1EndTime = stageStartsRef.current[1];
+        const isStage1 = note.stage !== undefined ? note.stage === 1 : note.time < stage1EndTime;
         if (isStage1 && !activeTutorial) {
           if (isHoldNote(note) || (note.holdDuration && note.holdDuration > 0)) {
             note.type = 'tap';
@@ -9479,20 +9352,31 @@ export default function Game() {
           // Filter out notes exceeding real audio duration - 1.0s
           const filteredNotes = (songRef.current.notes || []).filter(n => n.time <= roundedAudioDuration - 1.0);
 
-          // Re-stageify notes using exact real audio duration
-          const { notes: restaged, stages } = stageifyNotes(
-            filteredNotes,
-            roundedAudioDuration,
-            songRef.current.bpm || 120,
-            songRef.current.difficultyLevel || 5
-          );
+          // Re-stageify notes using exact real audio duration. Chart Master
+          // charts are already placed against the real audio (stages on the
+          // song's sections), so they keep their stages and are only trimmed.
+          const isMasterChart = songRef.current.chartVersion === 'v6_master';
+          const { notes: restaged, stages } = isMasterChart
+            ? {
+                notes: filteredNotes,
+                stages: (songRef.current.stages || []).map(st =>
+                  st.stage === 5 ? { ...st, endTime: roundedAudioDuration } : st
+                ),
+              }
+            : stageifyNotes(
+                filteredNotes,
+                roundedAudioDuration,
+                songRef.current.bpm || 120,
+                songRef.current.difficultyLevel || 5
+              );
           songRef.current.notes = restaged;
           songRef.current.stages = stages;
+          stageStartsRef.current = getStageStarts(songRef.current);
 
           // Refresh active notesRef
           notesRef.current = restaged.map(n => {
             const note = { ...n, lane: Math.min(n.lane, LANE_COUNT - 1) };
-            if (note.stage === 1 || note.time < roundedAudioDuration * 0.15) {
+            if (note.stage !== undefined ? note.stage === 1 : note.time < stageStartsRef.current[1]) {
               if (isHoldNote(note) || (note.holdDuration && note.holdDuration > 0)) {
                 note.type = 'tap';
                 delete (note as any).holdDuration;
@@ -10710,8 +10594,8 @@ export default function Game() {
                 }}
               />
 
-              {/* Stage Boundary Markers (Stage 1->2: 15%, Stage 2->3: 35%, Stage 3->4: 60%, Stage 4->5: 80%) */}
-              {[0.15, 0.35, 0.60, 0.80].map((pct, idx) => (
+              {/* Stage Boundary Markers — chart-defined stage starts (default 15/35/60/80%) */}
+              {stageStartsRef.current.slice(1).map((st) => st / (songRef.current?.duration || 180)).map((pct, idx) => (
                 <div
                   key={idx}
                   className="absolute top-0 bottom-0 w-[1.5px] bg-white/40 shadow-[0_0_3px_rgba(255,255,255,0.7)] pointer-events-none"

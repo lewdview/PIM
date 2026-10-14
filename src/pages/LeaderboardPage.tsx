@@ -81,14 +81,14 @@ export default function LeaderboardPage() {
           tomorrowStart.setUTCDate(tomorrowStart.getUTCDate() + 1);
 
           // 1. Fetch gameplay_records for today (exclude zero/corrupted scores)
-          const { data: records, error: recordsError } = await supabase
-            .from('gameplay_records')
-            .select('user_id, song_id, score, timestamp')
-            .gte('timestamp', todayStart.toISOString())
-            .lt('timestamp', tomorrowStart.toISOString())
-            .gt('score', 0);
+          // Other players' rows aren't readable directly; get_daily_scores returns just these columns.
+          const { data: dailyRows, error: recordsError } = await supabase
+            .rpc('get_daily_scores', { p_since: todayStart.toISOString() });
 
           if (recordsError) throw recordsError;
+          const tomorrowIso = tomorrowStart.toISOString();
+          const records = ((dailyRows || []) as { user_id: string; song_id: string; score: number; timestamp: string }[])
+            .filter((r) => (r.score || 0) > 0 && (!r.timestamp || new Date(r.timestamp).toISOString() < tomorrowIso));
 
           // 2. Aggregate per-song personal bests per user (prevents multi-insert row inflation)
           const userSongBests: Record<string, Record<string, number>> = {};
@@ -118,9 +118,7 @@ export default function LeaderboardPage() {
           let profilesMap: Record<string, any> = {};
           if (userIds.length > 0) {
             const { data: profs, error: profsError } = await supabase
-              .from('profiles')
-              .select('id, wallet_address, display_name, username, avatar_url')
-              .in('id', userIds);
+              .rpc('get_public_profiles', { p_ids: userIds });
             
             if (!profsError && profs) {
               profilesMap = profs.reduce((acc, p) => ({...acc, [p.id]: p}), {});
@@ -236,9 +234,7 @@ export default function LeaderboardPage() {
 
           while (pHasMore) {
             const { data, error } = await supabase
-              .from('profiles')
-              .select('id, wallet_address, display_name, username, avatar_url, streak_count, total_pulls')
-              .range(pPage * P_PAGE_SIZE, (pPage + 1) * P_PAGE_SIZE - 1);
+              .rpc('get_public_profiles_page', { p_offset: pPage * P_PAGE_SIZE, p_limit: P_PAGE_SIZE });
             
             if (error) throw error;
             if (!data || data.length === 0) {

@@ -22,7 +22,7 @@ type FunnelStep = 'SAVE_RUN' | 'WELCOME_PACK' | 'PACK_OPENING' | 'CARD_REVEAL' |
 
 export default function OnboardingFlowModal({ isOpen, onClose, gameStats }: OnboardingFlowModalProps) {
   const { signInWithMagicLink, signInWithWallet, user, status } = useAuthStore();
-  const { addToCollection, tokenBalance, addTokens } = useVaultStore();
+  const { addToCollection, tokenBalance, claimOnboardingBonus } = useVaultStore();
 
   const [step, setStep] = useState<FunnelStep>('SAVE_RUN');
   const [email, setEmail] = useState('');
@@ -66,7 +66,7 @@ export default function OnboardingFlowModal({ isOpen, onClose, gameStats }: Onbo
     setStep('PACK_OPENING');
     setTimeout(() => {
       // Award Tokens
-      addTokens(50);
+      void claimOnboardingBonus();
       setStep('CARD_REVEAL');
     }, 1800);
   };
