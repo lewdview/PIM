@@ -25,9 +25,9 @@ import { MEDAL_STOPS, MEDAL_COLOR_MAP, LANE_COUNT, HIT_RATIO, HW_TOP, HW_BOT, MA
 import { type StageGeometry, getStageGeometry, approachTime, hwAtProgress, laneAt, lerp, formatTimeSec, isDirectionMatch } from './geometry';
 import { colorWithAlpha, hslToHex, getDifficultyLaneColor } from './colorUtils';
 import { perfectPlusWindow, perfectWindow, goodWindow, missWindow } from './timing';
-import { type TrackArchetype, type ArchetypeMeta, ARCHETYPE_METAS, selectSongArchetype, isArchetypeDevModeEnabled } from './archetypes';
+import { type TrackArchetype, type ArchetypeMeta, ARCHETYPE_METAS, selectSongArchetype, selectSongPov, isArchetypeDevModeEnabled } from './archetypes';
 import { type ProjectionResult, getCorkscrewSpiralPos, getWaveCoasterPos, getFlat2DPos, getRadialOrbitPos, getHorizontalDriftPos, getCockpitHudPos, getHyperPrismPos, getDnaHelixPos, getVertigoDropPos, getSingularityVoidPos, getGroundZeroPos, getOrbitalHaloPos, getMobiusLoopPos, getArchetypeProjection, getLaneFromCoords } from './projections';
-import { hasPovScene, usesFlatHighway, hasStraightHitLine, drawPovScene } from './povScenes';
+import { hasPovScene, usesFlatHighway, hasStraightHitLine, drawPovScene, drawPovLanes, type PovSceneInput } from './povScenes';
 import { refineAndBlendEdges, disposeCanvas, drawMovingGasAura } from './drawHelpers';
 import JudgmentBadge, { getJudgmentBadgeSvgHtml, getJudgmentStreamItemHtml } from './JudgmentBadge';
 import GameplayVisualizer from './GameplayVisualizer';
@@ -35,7 +35,7 @@ import TutorialOverlay, { type TutorialStepType } from './TutorialOverlay';
 import { loadLyricsForDay, drawTrackLyrics, type TimedLine } from './trackLyrics';
 import { getStageStarts, stageAtTime } from './stageTimeline';
 import { generateMasterChart, ANALYSIS_SAMPLE_RATE, CHART_MASTER_VERSION } from '@/game/chartMaster';
-import { drawSlabBody, drawTopFaceBevel, drawHitPop3D, makeHitShards, setNote3DQuality, type HitShard } from './notes3d';
+import { drawSlabBody, drawTopFaceBevel, drawHitPop3D, drawHitPillar3D, hitPillarReach, makeHitShards, setNote3DQuality, type HitShard } from './notes3d';
 
 // Use Vite's eager glob to grab files in /public/data/slideshow/
 const imageModules = import.meta.glob<string>('../../public/data/slideshow/**/*.{png,jpg,jpeg,gif,webp,svg}', { query: '?url', import: 'default', eager: true });
@@ -3791,11 +3791,7 @@ export default function Game() {
         // Stage-Integrated Dynamic POV Camera Auto-Switching (Untouched & automatic for all players)
         // Stage 1 & 2: Classic, Stage 3: Song 3D Archetype POV, Stage 4: Classic Void, Stage 5: Hyper Version of Stage 3
         if (!isPovLockedRef.current && optsRef.current.stagePovSwitch !== false && phaseRef.current === "playing" && prevStage > 0 && calculatedStage > prevStage) {
-          const archetypePov: PovMode = 
-            activeArchetypeRef.current === 'corkscrew_slide' ? 'corkscrew' :
-            activeArchetypeRef.current === 'wave_coaster' ? 'rollercoaster' :
-            activeArchetypeRef.current === 'matrix_split' ? 'matrix_split' :
-            'cyber_tunnel';
+          const archetypePov: PovMode = selectSongPov(songRef.current, activeArchetypeRef.current);
 
           let targetPov: PovMode = 'classic';
           if (calculatedStage === 1 || calculatedStage === 2) {
@@ -4483,8 +4479,8 @@ export default function Game() {
       const swirlAngle = t * 0.9 * swirlSpeedMult; // Continuous rotational vortex swirl
       const isOverdrive = calculatedStage === 5 && swirlSpeedMult >= 2.0;
 
-      if (tunnelOpacity > 0 && hasPovScene(curPovMode)) {
-        // ── POV SIGNATURE SCENE: each camera has its own backdrop, palette and lane guides ──
+      // Scene input shared by POV signature scenes and the lane surfaces on archetype POVs.
+      const buildPovSceneInput = (): PovSceneInput => {
         const sceneHitMs: (number | undefined)[] = [];
         const sceneHitType: (string | undefined)[] = [];
         const scenePressed: boolean[] = [];
@@ -4493,7 +4489,7 @@ export default function Game() {
           sceneHitType.push(lastLaneHitRef.current[i]?.type);
           scenePressed.push(Boolean(laneRef.current[i]?.pressed));
         }
-        drawPovScene(curPovMode, {
+        return {
           ctx,
           W,
           H,
@@ -4510,7 +4506,12 @@ export default function Game() {
           pressed: scenePressed,
           energy: Math.min(1, gs.combo / 60),
           lite: optsRef.current.gfxLevel === 'low' || optsRef.current.gfxLevel === 'medium' || optsRef.current.legacyGraphics,
-        });
+        };
+      };
+
+      if (tunnelOpacity > 0 && hasPovScene(curPovMode)) {
+        // ── POV SIGNATURE SCENE: each camera has its own backdrop, palette and lane guides ──
+        drawPovScene(curPovMode, buildPovSceneInput());
       } else if (tunnelOpacity > 0) {
         // ── ARCHETYPE 1: HORIZONTAL SIDE-SCROLLER (90° Canvas) ──
         if (currentArch === 'horizontal_drift') {
@@ -5094,6 +5095,11 @@ export default function Game() {
         }
       }
 
+      // Archetype POVs (tunnel, corkscrew, coaster, split) get the same lane surfaces the scene POVs use.
+      if (tunnelOpacity > 0 && !hasPovScene(curPovMode) && is3DEnvironment) {
+        drawPovLanes(curPovMode, buildPovSceneInput());
+      }
+
       // ── 3. 3D Circular Judgment Target Strike Zones (Deep Drop Shadows & Neon Rim Glow) ──
       const hwBot = hwAtProgress(1, W, HW_TOP, HW_BOT, H);
       const laneW = hwBot.width / LANE_COUNT;
@@ -5649,6 +5655,22 @@ export default function Game() {
         // Active-word highlight follows the track's cover-art lane colors.
         highlightColor: laneColorsRef.current[1],
       });
+    }
+
+    // ── 4z. HIT LIGHT PILLARS (under the notes) ──
+    // Additive light drawn over the tiles washes their dark faces out to grey, so the
+    // pillars go down before the notes and trace each lane's projected path.
+    for (const e of hitFxRef.current) {
+      const t01 = (nowMs - e.startMs) / 520;
+      if (t01 < 0 || t01 >= 0.55 || (e.kind !== 'PERFECT+' && e.kind !== 'PERFECT')) continue;
+      const reach = hitPillarReach(t01);
+      const path: { x: number; y: number; w: number }[] = [];
+      for (let k = 0; k <= 8; k++) {
+        const pp = getArchetypeProjection(e.lane, lerp(1, reach, k / 8), W, H, activeArchetypeRef.current, calculatedStage, t, curPovMode);
+        if (!Number.isFinite(pp.x) || !Number.isFinite(pp.y) || !Number.isFinite(pp.w)) break;
+        path.push({ x: pp.x + pp.w / 2, y: pp.y, w: pp.w });
+      }
+      drawHitPillar3D(ctx, e, t01, path);
     }
 
     // ── 5. HIGH-PERFORMANCE NOTES RENDERING (Active Visible Slice) ──
@@ -6296,7 +6318,8 @@ export default function Game() {
       const easeOut = 1 - t01;
 
       // ─ Lane flash: bright overlay on the key area fading fast ─
-      if (t01 < 0.18) {
+      // Sits on the classic highway's key row; 3D POVs light their own lane guides instead.
+      if (t01 < 0.18 && showClassicHighway) {
         const flashAlpha =
           (1 - t01 / 0.18) * (e.kind === "PERFECT+" ? 0.55 : 0.35);
         const { x: fx, w: fw } = laneAt(e.lane, 1, W, HW_TOP, HW_BOT, undefined, 1, 0, H);
@@ -6317,9 +6340,9 @@ export default function Game() {
       // Anchor to the active POV's hit position (circle / drift / etc. move the lanes).
       const popProj = getArchetypeProjection(e.lane, 1.0, W, H, activeArchetypeRef.current, calculatedStage, t, activePovModeRef.current);
       if (Number.isFinite(popProj.x) && Number.isFinite(popProj.y) && popProj.w > 0) {
-        drawHitPop3D(ctx, { ...e, cx: popProj.x + popProj.w / 2, cy: popProj.y, laneW: popProj.w }, t01, dt, hitY);
+        drawHitPop3D(ctx, { ...e, cx: popProj.x + popProj.w / 2, cy: popProj.y, laneW: popProj.w }, t01, dt);
       } else {
-        drawHitPop3D(ctx, e, t01, dt, hitY);
+        drawHitPop3D(ctx, e, t01, dt);
       }
 
       // ─ Expanding rings ─

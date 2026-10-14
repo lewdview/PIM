@@ -1,4 +1,5 @@
 import type { GameSong } from '@/game/api';
+import type { PovMode } from '@/lib/options';
 
 export type TrackArchetype =
   | 'cyber_tunnel'
@@ -108,6 +109,33 @@ export function selectSongArchetype(song?: GameSong | null): TrackArchetype {
   const dayNum = typeof song.day === 'number' && song.day > 0 ? song.day : 
                  parseInt((song.id || '').replace(/\D+/g, '') || '0', 10);
   return archetypes[(dayNum || 1) % archetypes.length];
+}
+
+
+/**
+ * Camera views each archetype can show at stages 3 and 5. The first entry is the
+ * archetype's original view; the rest are themed POVs so songs of the same style
+ * don't all look alike.
+ */
+export const ARCHETYPE_POV_POOLS: Record<TrackArchetype, PovMode[]> = {
+  cyber_tunnel: ['cyber_tunnel', 'hyper_prism', 'singularity_void'],
+  corkscrew_slide: ['corkscrew', 'dna_helix', 'mobius_loop', 'orbital_halo'],
+  wave_coaster: ['rollercoaster', 'horizontal_drift', 'ground_zero', 'circle'],
+  matrix_split: ['matrix_split', 'cockpit_hud', 'vertigo_drop'],
+  radial_orbit: ['circle', 'orbital_halo'],
+  horizontal_drift: ['horizontal_drift', 'ground_zero'],
+};
+
+/** Picks the song's stage 3/5 camera from its archetype's pool. Stable per song. */
+export function selectSongPov(song: GameSong | null | undefined, archetype: TrackArchetype): PovMode {
+  const pool = ARCHETYPE_POV_POOLS[archetype] || ARCHETYPE_POV_POOLS.cyber_tunnel;
+  const key = String(song?.id ?? song?.day ?? song?.title ?? '');
+  let h = 2166136261;
+  for (let i = 0; i < key.length; i++) {
+    h ^= key.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return pool[(h >>> 0) % pool.length];
 }
 
 
