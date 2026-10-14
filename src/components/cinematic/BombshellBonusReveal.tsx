@@ -253,7 +253,7 @@ export default function BombshellBonusReveal({ card, onDone }: Props) {
             </div>
           </motion.div>
 
-          {[{ top: '9%', rot: -4, dir: 1 }, { top: '84%', rot: 3, dir: -1 }].map((band, bi) => (
+          {[{ top: '5%', rot: -4, dir: 1 }, { top: '91%', rot: 3, dir: -1 }].map((band, bi) => (
             <motion.div
               key={bi}
               initial={{ x: band.dir * 600, opacity: 0 }}
