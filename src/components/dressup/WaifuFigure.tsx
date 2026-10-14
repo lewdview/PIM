@@ -250,8 +250,11 @@ const TORSO = 'M116 196 C130 189 170 189 184 196 C200 208 206 230 202 250 C198 2
 const ARM = 'M118 198 C98 200 88 212 85 230 L76 282 C72 304 68 324 66 342 L80 344 C82 326 86 306 90 288 L104 238 Z';
 const HAND = 'M65 340 C60 350 61 362 69 365 C76 366 81 356 80 342 Z';
 const LEG = 'M92 344 L150 344 L148 420 C146 450 146 470 144 500 C143 525 142 545 142 560 L128 560 C126 540 124 520 121 500 C116 470 110 450 104 420 C94 396 88 370 92 344 Z';
+// One rounded bust volume (left; mirrored for the right). It is drawn over the chest and
+// collarbones so the upper curve reads as sitting in front of them.
+const BUST = 'M150 246 C150 226 140 208 123 208 C105 208 95 222 95 238 C95 254 107 265 123 265 C138 265 150 258 150 246 Z';
 // Base layer: a plain, featureless strapless leotard so the figure is never undressed.
-const BODYSUIT = 'M98 238 Q116 214 138 220 Q146 224 150 232 Q154 224 162 220 Q184 214 202 238 C203 242 203 246 202 250 C198 264 182 270 177 278 C172 288 173 298 186 312 C202 326 212 340 210 352 L208 360 Q180 362 160 368 L140 368 Q120 362 92 360 L90 352 C88 340 98 326 114 312 C127 298 128 288 123 278 C118 270 102 264 98 250 Z';
+const BODYSUIT = 'M96 236 C100 222 112 216 124 218 C136 220 146 226 150 236 C154 226 164 220 176 218 C188 216 200 222 204 236 C204 242 203 246 202 250 C198 264 182 270 177 278 C172 288 173 298 186 312 C202 326 212 340 210 352 L208 360 Q180 362 160 368 L140 368 Q120 362 92 360 L90 352 C88 340 98 326 114 312 C127 298 128 288 123 278 C118 270 102 264 98 250 Z';
 const FOOT = 'M127 556 L143 556 C146 568 145 576 139 579 L125 579 C121 574 122 564 127 556 Z';
 
 /** Keyframes for the idle loop and outfit-change pop; disabled for reduced motion. */
@@ -538,6 +541,13 @@ function UpperBody({ skinId }: { skinId: string }) {
       <path d="M143 180 Q145 188 148 195 M157 180 Q155 188 152 195" fill="none" strokeOpacity="0.22" />
       <path d={TORSO} fill={skin} />
       <path d="M124 203 Q136 208 146 203 M154 203 Q164 208 176 203 M147 199 Q150 202 153 199" fill="none" strokeOpacity="0.45" />
+      {/* Bust volumes sit in front of the collarbones; the leotard neckline follows their curve. */}
+      {[0, 1].map((side) => (
+        <g key={side} transform={side ? MIRROR : undefined}>
+          <path d={BUST} fill={skin} />
+          <path d="M104 222 C110 213 122 211 132 214" fill="none" stroke="#ffffff" strokeOpacity="0.45" strokeWidth="3" strokeLinecap="round" />
+        </g>
+      ))}
       <path d={BODYSUIT} fill="#2b2140" />
       <BustShading />
     </g>
@@ -548,6 +558,9 @@ function UpperBody({ skinId }: { skinId: string }) {
 function BustShading({ opacity = 0.35 }: { opacity?: number }) {
   return (
     <g fill="none" stroke="#000" strokeOpacity={opacity} strokeWidth="1.4" strokeLinecap="round">
+      {/* Upper curves give tops the same rounded shape as the bust underneath. */}
+      <path d="M97 236 C99 220 110 211 123 211 C135 211 143 218 147 228" strokeOpacity={opacity * 0.6} />
+      <path d="M203 236 C201 220 190 211 177 211 C165 211 157 218 153 228" strokeOpacity={opacity * 0.6} />
       <path d="M101 250 Q124 272 148 254" />
       <path d="M199 250 Q176 272 152 254" />
       <path d="M150 230 L150 246" strokeOpacity={opacity * 0.8} />
