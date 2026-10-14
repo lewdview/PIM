@@ -36,6 +36,7 @@ import { loadLyricsForDay, drawTrackLyrics, type TimedLine } from './trackLyrics
 import { getStageStarts, stageAtTime } from './stageTimeline';
 import { generateMasterChart, ANALYSIS_SAMPLE_RATE, CHART_MASTER_VERSION } from '@/game/chartMaster';
 import { sendGameplayMessage, PLATFORM_PAUSE_EVENT } from '@/platform';
+import { MONTH_BOMBSHELL, PLAYGAMA_MONTH } from '@/platform/playgama/month';
 import { drawSlabBody, drawTopFaceBevel, drawHitPop3D, drawHitPillar3D, hitPillarReach, makeHitShards, setNote3DQuality, type HitShard } from './notes3d';
 
 // Use Vite's eager glob to grab files in /public/data/slideshow/
@@ -8495,8 +8496,9 @@ export default function Game() {
         setPaused(false);
 
         // ── Ownership gate: gameplay requires owning the card for this song ──
-        // (Tutorial transmissions are exempt — they carry no card.)
-        if (!isTutorial && song.day > 0) {
+        // (Tutorial transmissions are exempt — they carry no card, and so is a
+        // monthly Playgama build, which has no cards: its songs come with it.)
+        if (!isTutorial && song.day > 0 && !PLAYGAMA_MONTH) {
           // On a direct link / refresh the collection may still be loading —
           // wait for it rather than locking a card the player owns.
           if (!useVaultStore.getState().hasLoadedData) {
@@ -10414,8 +10416,9 @@ export default function Game() {
           );
         }
 
-        // Default: cover_blur
-        const blurValue = typeof opts.backgroundBlur === 'number' ? opts.backgroundBlur : 18;
+        // Default: cover_blur. Unlocked Bombshell art (monthly Playgama build) is shown, not hidden in blur.
+        const showcaseArt = MONTH_BOMBSHELL && sessionStorage.getItem(`active_cover_bombshell_${songId}`) === '1';
+        const blurValue = showcaseArt ? 0 : typeof opts.backgroundBlur === 'number' ? opts.backgroundBlur : 18;
         const blurScale = 1.0 + (blurValue / 40) * 0.08;
         return song?.coverArt ? (
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -10426,7 +10429,7 @@ export default function Game() {
                 width: "100%",
                 height: "100%",
                 objectFit: "cover",
-                filter: `blur(${blurValue}px) brightness(0.28) saturate(1.6)`,
+                filter: showcaseArt ? 'brightness(0.55)' : `blur(${blurValue}px) brightness(0.28) saturate(1.6)`,
                 transform: `scale(${blurScale})`,
               }}
             />

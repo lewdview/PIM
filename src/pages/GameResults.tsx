@@ -16,6 +16,11 @@ import SongLeaderboard from "@/components/SongLeaderboard";
 import { Film, Share2 } from "lucide-react";
 import { farcasterService } from "@/services/farcasterService";
 import { sfxUrl, showInterstitial, sendGameplayMessage } from "@/platform";
+import { PLAYGAMA_MONTH, MONTH_BOMBSHELL } from "@/platform/playgama/month";
+import { bombshellFileForDay } from "@/platform/playgama/monthMedia.mjs";
+import { BOMBSHELL_COVERS_MAP } from "@/utils/bombshellCards";
+
+const MONTH_BUILD = PLAYGAMA_MONTH > 0;
 
 interface LaneTelemetry {
   hits: number; perfectPlus: number; perfects: number; goods: number; misses: number;
@@ -1078,7 +1083,7 @@ export default function Results() {
                 onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}>
                 ← {fromFreePlayFail ? 'BACK TO AWARD PLAY' : 'BACK TO LEVEL PATH'}
               </button>
-              <QuickReturnGrid onNavigate={setLocation} />
+              {!MONTH_BUILD && <QuickReturnGrid onNavigate={setLocation} />}
             </div>
           </div>
           <style>{`
@@ -1191,7 +1196,7 @@ export default function Results() {
               onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.35)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}>
               ← {fromFreePlayFail ? 'BACK TO AWARD PLAY' : 'BACK TO LEVEL PATH'}
             </button>
-            <QuickReturnGrid onNavigate={setLocation} />
+            {!MONTH_BUILD && <QuickReturnGrid onNavigate={setLocation} />}
           </div>
         </div>
       </div>
@@ -1220,6 +1225,8 @@ export default function Results() {
 
   // Pre-calculate tiers to claim
   const isPlatinum = result ? (result.medal === 'PLATINUM' || accuracy >= 93) : false;
+  // Monthly Playgama build: a platinum ("perfect") run unlocks the track's Bombshell art.
+  const bombshellUnlockedNow = MONTH_BOMBSHELL && result?.medal === 'PLATINUM' && !!song && !!bombshellFileForDay(song.day, BOMBSHELL_COVERS_MAP);
   const tiersToClaim: ClaimableTier[] = [];
   if (result) {
     if (isPlatinum) {
@@ -1556,7 +1563,12 @@ export default function Results() {
           {/* Action buttons */}
           {phase === 'actions' && (
             <div className="w-full stats-slide-up flex flex-col gap-2.5" style={{ animationDelay: '0.15s' }}>
-              {result.medal !== 'NONE' && (
+              {MONTH_BUILD && bombshellUnlockedNow && (
+                <div className="w-full mb-2 p-3 border border-[#FF1493]/50 bg-[#FF1493]/10 text-center font-mono text-xs uppercase tracking-widest text-[#FF8AC8]">
+                  Perfect run · Bombshell art unlocked for this track
+                </div>
+              )}
+              {!MONTH_BUILD && result.medal !== 'NONE' && (
                 <div className="mb-2">
                   {isEligibleForReward ? (
                     <>
@@ -1686,7 +1698,7 @@ export default function Results() {
                   ← {fromFreePlay ? '[ RETURN TO AWARD PLAY ]' : '[ CONTINUE TO LEVEL PATH ]'}
                 </button>
               )}
-              {(!user || user.is_anonymous) ? (
+              {MONTH_BUILD ? null : (!user || user.is_anonymous) ? (
                 <div className="w-full my-3 p-4 border border-[#FF1493]/40 bg-black/80 backdrop-blur-md text-center space-y-2.5 shadow-[0_0_30px_rgba(255,20,147,0.15)]"
                   style={{ clipPath: 'polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%)' }}
                 >
@@ -1750,7 +1762,7 @@ export default function Results() {
               )}
 
               {/* Live Song Leaderboard */}
-              {songId && result && (
+              {!MONTH_BUILD && songId && result && (
                 <div className="w-full my-2">
                   <SongLeaderboard
                     songId={songId}
@@ -1778,6 +1790,7 @@ export default function Results() {
                 </button>
                 <button
                   data-testid="button-cast-score"
+                  hidden={MONTH_BUILD}
                   onClick={handleCastScore}
                   className="flex-1 py-3 font-mono font-black text-xs tracking-[0.2em] uppercase transition-all bg-[#8A63D2]/20 border border-[#8A63D2]/60 text-[#C4A7E7] hover:bg-[#8A63D2]/40 hover:border-[#8A63D2] flex items-center justify-center gap-1.5 shadow-[0_0_12px_rgba(138,99,210,0.25)] active:scale-95 cursor-pointer"
                   title="Share your score directly to Warpcast / Farcaster"
@@ -1800,11 +1813,11 @@ export default function Results() {
                     minHeight: 48,
                   }}
                   onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}>
-                  {fromFreePlay ? '⌂ AWARD PLAY' : '◈ CAMPAIGN'}
+                  {fromFreePlay ? '⌂ AWARD PLAY' : MONTH_BUILD ? '◈ CHAPTER' : '◈ CAMPAIGN'}
                 </button>
               </div>
 
-              <QuickReturnGrid onNavigate={setLocation} />
+              {!MONTH_BUILD && <QuickReturnGrid onNavigate={setLocation} />}
             </div>
           )}
         </div>
@@ -2102,7 +2115,12 @@ export default function Results() {
         {/* ── Action Buttons ── */}
         {phase === 'actions' && (
           <div className="w-full stats-slide-up" style={{ animationDelay: '0.15s' }}>
-            {result.medal !== 'NONE' && (
+            {MONTH_BUILD && bombshellUnlockedNow && (
+                <div className="w-full mb-2 p-3 border border-[#FF1493]/50 bg-[#FF1493]/10 text-center font-mono text-xs uppercase tracking-widest text-[#FF8AC8]">
+                  Perfect run · Bombshell art unlocked for this track
+                </div>
+              )}
+              {!MONTH_BUILD && result.medal !== 'NONE' && (
               <div className="mb-3">
                 {isEligibleForReward ? (
                   <>
@@ -2230,7 +2248,7 @@ export default function Results() {
             )}
 
             {/* Live Song Leaderboard */}
-            {songId && result && (
+            {!MONTH_BUILD && songId && result && (
               <div className="w-full my-3">
                 <SongLeaderboard
                   songId={songId}
@@ -2256,6 +2274,7 @@ export default function Results() {
               </button>
               <button
                 data-testid="button-cast-score-2"
+                hidden={MONTH_BUILD}
                 onClick={handleCastScore}
                 className="flex-1 py-3 font-mono font-black text-xs tracking-[0.2em] uppercase transition-all bg-[#8A63D2]/20 border border-[#8A63D2]/60 text-[#C4A7E7] hover:bg-[#8A63D2]/40 hover:border-[#8A63D2] flex items-center justify-center gap-1.5 shadow-[0_0_12px_rgba(138,99,210,0.25)] active:scale-95 cursor-pointer"
                 title="Share your score directly to Warpcast / Farcaster"
@@ -2293,11 +2312,11 @@ export default function Results() {
                 }}
                 onMouseEnter={e => { e.currentTarget.style.color = '#39FF14'; e.currentTarget.style.borderColor = '#39FF14'; }}
                 onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; }}>
-                {fromFreePlay ? '⌂ AWARD PLAY' : '◈ CAMPAIGN'}
+                {fromFreePlay ? '⌂ AWARD PLAY' : MONTH_BUILD ? '◈ CHAPTER' : '◈ CAMPAIGN'}
               </button>
             </div>
 
-            <QuickReturnGrid onNavigate={setLocation} />
+            {!MONTH_BUILD && <QuickReturnGrid onNavigate={setLocation} />}
           </div>
         )}
       </div>

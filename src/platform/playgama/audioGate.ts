@@ -2,9 +2,10 @@
  * Global audio gate for the Playgama build. The app makes sound through many
  * AudioContexts and <audio> elements, so instead of threading a mute flag
  * through every one we track them here and silence them all while any reason
- * is active (platform mute, platform pause, ad on screen, tab hidden).
+ * is active (platform mute, platform pause, ad on screen, tab hidden, the
+ * player's own mute button).
  */
-export type GateReason = 'platform_audio' | 'platform_pause' | 'ad' | 'hidden';
+export type GateReason = 'platform_audio' | 'platform_pause' | 'ad' | 'hidden' | 'user';
 
 const reasons = new Set<GateReason>();
 const contexts = new Set<BaseAudioContext>();

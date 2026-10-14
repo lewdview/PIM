@@ -2,8 +2,9 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import { Router } from 'wouter'
-import App from './App.tsx'
 import { initPlatform, APP_BASE } from './platform'
+// App.tsx, or MonthShell.tsx in a monthly Playgama build (alias set in vite.config.ts).
+import Root from '@pim-root'
 
 if (typeof window !== 'undefined') {
   // Global auto-recovery for stale dynamic module imports and MIME type mismatches
@@ -65,7 +66,7 @@ initPlatform().finally(() => {
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       <Router base={APP_BASE}>
-        <App />
+        <Root />
       </Router>
     </StrictMode>,
   )

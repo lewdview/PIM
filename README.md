@@ -120,6 +120,26 @@ rewritten for Playgama's sub-path hosting. Every other build ignores all of this
 To try it locally: `npx serve dist-playgama` (or any static server). Off-platform
 the SDK runs as its `mock` platform, so ads are reported as unsupported.
 
+#### Monthly builds ("PIM: January")
+
+`pnpm build:playgama -- --month=1` builds one campaign chapter as its own game:
+that month's tracks, charts and lyrics bundled into the zip, no vault, packs,
+shop or sign-in, and no calls to Supabase or the CDN. The five bonus songs open
+with the chapter's platinum target, one rewarded ad per song, or the month's
+bundle through Bridge payments (`pim_month_01_bonus`; the button only shows
+when the portal supports payments). A platinum run on a track shows that
+track's Bombshell artwork behind it during play.
+
+- `--media-dir=/Volumes/extremeUno/th3scr1b3-365-warp/365-releases` copies the
+  songs and art from a local mirror; without it they are downloaded from
+  `files.th3scr1b3.art`. Audio is re-encoded to 160 kbps MP3, art to 1280 px.
+- `--no-bombshell` leaves the Bombshell artwork out.
+- `--bonus-price=20` sets the bundle price in Gam (10 Gam = 1 USD).
+- `--placeholder-media` uses silent audio and blank art, to test the build
+  without the real files. Don't upload that zip.
+
+Output: `pim-playgama-<month>.zip`.
+
 ---
 
 ## 🔐 Environment Variables

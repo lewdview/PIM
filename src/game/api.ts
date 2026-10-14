@@ -203,7 +203,8 @@ export async function loadCatalog(): Promise<GameSong[]> {
       }
 
       // 1. Try Supabase first if configured and not forcing local
-      if (supabase && !useLocal) {
+      // A monthly Playgama build is offline: its songs ship in song_catalog.json.
+      if (supabase && !useLocal && !__PIM_MONTH__) {
         const { data, error } = await supabase
           .from('releases')
           .select('*')

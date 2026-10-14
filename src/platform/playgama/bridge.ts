@@ -8,6 +8,7 @@
  *   into localStorage, and wires pause/audio events. Awaited before first render.
  * - markGameReady(): tells the platform the player can interact.
  * - showInterstitial(): shows an interstitial at a natural break.
+ * - showRewarded(), purchase(): the monthly build's bonus-song unlocks.
  */
 import { installAudioGate, setGate } from './audioGate';
 import { installPathShim } from './paths';
@@ -112,6 +113,22 @@ function requestGameplayPause() {
   window.dispatchEvent(new Event(PLATFORM_PAUSE_EVENT));
 }
 
+let rewardedResolve: ((granted: boolean) => void) | null = null;
+let rewardedGranted = false;
+
+function onRewardedState(state: string) {
+  // 'rewarded' arrives while the ad is still on screen, so only closed/failed lift the gate.
+  const isOpen = state === 'loading' || state === 'opened' || state === 'rewarded';
+  setGate('ad', isOpen);
+  if (state === 'opened') requestGameplayPause();
+  if (state === 'rewarded') rewardedGranted = true;
+  if ((state === 'closed' || state === 'failed') && rewardedResolve) {
+    const resolve = rewardedResolve;
+    rewardedResolve = null;
+    resolve(rewardedGranted);
+  }
+}
+
 function onInterstitialState(state: string) {
   const isOpen = state === 'opened';
   setGate('ad', isOpen);
@@ -151,6 +168,7 @@ export async function initPlatform(): Promise<void> {
     if (isPaused) requestGameplayPause();
   });
   b.advertisement.on(EVENT_NAME.INTERSTITIAL_STATE_CHANGED, onInterstitialState);
+  b.advertisement.on(EVENT_NAME.REWARDED_STATE_CHANGED, onRewardedState);
   // A platform pre-roll may already be on screen when initialize() resolves.
   onInterstitialState(b.advertisement.interstitialState);
 }
@@ -174,4 +192,67 @@ export function showInterstitial(placement: string): void {
   const b = bridgeOrNull();
   if (!b || !b.advertisement.isInterstitialSupported) return;
   b.advertisement.showInterstitial(placement);
+}
+
+export function isRewardedSupported(): boolean {
+  return !!bridgeOrNull()?.advertisement.isRewardedSupported;
+}
+
+/**
+ * Shows a rewarded ad. Resolves true only if the platform reported the reward
+ * (state 'rewarded'); closing early or a failed ad resolves false.
+ */
+export function showRewarded(placement: string): Promise<boolean> {
+  const b = bridgeOrNull();
+  if (!b || !b.advertisement.isRewardedSupported || rewardedResolve) return Promise.resolve(false);
+  rewardedGranted = false;
+  return new Promise<boolean>((resolve) => {
+    rewardedResolve = resolve;
+    try {
+      b.advertisement.showRewarded(placement);
+    } catch {
+      rewardedResolve = null;
+      resolve(false);
+    }
+  });
+}
+
+/** True when the portal takes in-game payments (a new Playgama account usually doesn't yet). */
+export function isPaymentsSupported(): boolean {
+  return !!bridgeOrNull()?.payments.isSupported;
+}
+
+/** Price label for a product from the platform catalog, or null if it isn't listed. */
+export async function getProductPrice(id: string): Promise<string | null> {
+  const b = bridgeOrNull();
+  if (!b || !b.payments.isSupported) return null;
+  try {
+    const product = (await b.payments.getCatalog()).find((p) => p.id === id);
+    return product?.price != null ? String(product.price) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Buys a non-consumable product. Resolves true once the platform confirms the purchase. */
+export async function purchase(id: string): Promise<boolean> {
+  const b = bridgeOrNull();
+  if (!b || !b.payments.isSupported) return false;
+  try {
+    await b.payments.purchase(id);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Ids of products the player already owns (restores a bundle bought on another device). */
+export async function getPurchasedIds(): Promise<string[]> {
+  const b = bridgeOrNull();
+  if (!b || !b.payments.isSupported) return [];
+  try {
+    return (await b.payments.getPurchases()).map((p) => p.id);
+  } catch {
+    return [];
+  }
 }
