@@ -2371,3 +2371,12 @@ body.gamepad-cursor-active * {
     align-items: center;
   }
 }
+
+/* ── Song unlock reveal (cinematic/SongUnlockReveal.tsx) ── */
+.song-unlock-rays {
+  animation: song-unlock-spin 22s linear infinite;
+  will-change: transform;
+}
+@keyframes song-unlock-spin {
+  to { transform: rotate(360deg); }
+}

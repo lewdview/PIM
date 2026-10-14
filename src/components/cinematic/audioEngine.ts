@@ -362,6 +362,59 @@ export function playTierImpact(tier: number): void {
   } catch { /* AudioContext suppressed */ }
 }
 
+
+// ── Song unlock (first pull of a day) ──────────────────────────────
+
+/** Rising filtered-noise sweep that builds into the song unlock drop. */
+export function playSignalRiser(duration = 0.7): void {
+  if (typeof localStorage !== 'undefined' && localStorage.getItem("opt_sfxEnabled") === "false") return;
+  try {
+    const c = getCtx();
+    const src = c.createBufferSource();
+    src.buffer = getSharedNoiseBuffer(c);
+    src.loop = true;
+    const f = c.createBiquadFilter();
+    f.type = 'bandpass';
+    f.Q.value = 6;
+    f.frequency.setValueAtTime(300, c.currentTime);
+    f.frequency.exponentialRampToValueAtTime(6000, c.currentTime + duration);
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.001, c.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.18, c.currentTime + duration * 0.9);
+    g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + duration);
+    src.connect(f).connect(g).connect(getDestination());
+    src.start();
+    src.stop(c.currentTime + duration + 0.02);
+  } catch { /* AudioContext suppressed */ }
+}
+
+/** Sub-bass drop + air burst that lands the moment the song opens up. */
+export function playSongUnlockDrop(): void {
+  if (typeof localStorage !== 'undefined' && localStorage.getItem("opt_sfxEnabled") === "false") return;
+  try {
+    const c = getCtx();
+    const osc = c.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(110, c.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(38, c.currentTime + 0.5);
+    const g = c.createGain();
+    safeGainRamp(g, 0.32, 0.001, 0.9);
+    osc.connect(g).connect(getDestination());
+    osc.start();
+    osc.stop(c.currentTime + 0.9);
+    noise(0.35, 0.12, { type: 'highpass', freq: 5000 });
+    playUnlockChime();
+  } catch { /* AudioContext suppressed */ }
+}
+
+/**
+ * The cinematic AudioContext, which was created inside the user's pack tap and
+ * is therefore already unlocked on iOS. Lets callers route media through it.
+ */
+export function getCinematicAudioContext(): AudioContext | null {
+  try { return getCtx(); } catch { return null; }
+}
+
 export function disposeAudioContext(): void {
   if (ctx) {
     try { ctx.close(); } catch { /* noop */ }
