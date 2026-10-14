@@ -4,6 +4,7 @@
 // ════════════════════════════════════════════════════════════════════════════════
 
 import sdk from '@farcaster/miniapp-sdk';
+import { IS_PLAYGAMA } from '../platform';
 
 export interface FarcasterUser {
   fid: number;
@@ -53,6 +54,8 @@ class FarcasterService {
    */
   public isInsideFrame(): boolean {
     if (typeof window === 'undefined') return false;
+    // On Playgama the game is framed by the portal, not by a Farcaster client.
+    if (IS_PLAYGAMA) return false;
     try {
       return window.self !== window.top;
     } catch {

@@ -8,6 +8,8 @@
  *  - `preloadAll()` bulk-loads every game SFX so there's zero latency at play time.
  */
 
+import { sfxUrl } from '../platform/playgama/sfx';
+
 export type SfxName =
   | 'back'
   | 'rewind'
@@ -248,7 +250,7 @@ export class AudioManager {
     if (!this.ctx) await this.init();
 
     const promise = (async () => {
-      const url = `/audio/sfx/${encodeURIComponent(filename)}.wav`;
+      const url = sfxUrl(filename);
       try {
         const response = await fetch(url);
         if (!response.ok) {

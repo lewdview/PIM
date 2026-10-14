@@ -15,6 +15,7 @@ import OnboardingFlowModal from "@/components/OnboardingFlowModal";
 import SongLeaderboard from "@/components/SongLeaderboard";
 import { Film, Share2 } from "lucide-react";
 import { farcasterService } from "@/services/farcasterService";
+import { sfxUrl, showInterstitial, sendGameplayMessage } from "@/platform";
 
 interface LaneTelemetry {
   hits: number; perfectPlus: number; perfects: number; goods: number; misses: number;
@@ -338,6 +339,14 @@ export default function Results() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Playgama: the results screen is the natural break between songs, so the
+  // interstitial goes here, before any results buttons are on screen.
+  useEffect(() => {
+    sendGameplayMessage("gameplay_stopped");
+    const timer = setTimeout(() => showInterstitial("song_complete"), 300);
+    return () => clearTimeout(timer);
+  }, []);
+
   const sessionCover = typeof sessionStorage !== 'undefined'
     ? (sessionStorage.getItem(`active_cover_url_${songId}`) || sessionStorage.getItem('active_game_cover'))
     : null;
@@ -420,7 +429,7 @@ export default function Results() {
     // Random results ambient music
     const ambientTracks = ['results', 'results2'];
     const pick = ambientTracks[Math.floor(Math.random() * ambientTracks.length)];
-    const ambientAudio = new Audio(`/audio/sfx/${encodeURIComponent(pick)}.wav`);
+    const ambientAudio = new Audio(sfxUrl(pick));
     ambientAudio.loop = true;
     ambientAudio.volume = 0;
 

@@ -35,6 +35,7 @@ import TutorialOverlay, { type TutorialStepType } from './TutorialOverlay';
 import { loadLyricsForDay, drawTrackLyrics, type TimedLine } from './trackLyrics';
 import { getStageStarts, stageAtTime } from './stageTimeline';
 import { generateMasterChart, ANALYSIS_SAMPLE_RATE, CHART_MASTER_VERSION } from '@/game/chartMaster';
+import { sendGameplayMessage, PLATFORM_PAUSE_EVENT } from '@/platform';
 import { drawSlabBody, drawTopFaceBevel, drawHitPop3D, drawHitPillar3D, hitPillarReach, makeHitShards, setNote3DQuality, type HitShard } from './notes3d';
 
 // Use Vite's eager glob to grab files in /public/data/slideshow/
@@ -9912,8 +9913,17 @@ export default function Game() {
       resetAllLanes();
     };
     window.addEventListener('blur', onBlur);
-    return () => window.removeEventListener('blur', onBlur);
+    // Playgama: platform pause, ads and hidden tabs pause the run.
+    window.addEventListener(PLATFORM_PAUSE_EVENT, onBlur);
+    return () => {
+      window.removeEventListener('blur', onBlur);
+      window.removeEventListener(PLATFORM_PAUSE_EVENT, onBlur);
+    };
   }, [doPause, resetAllLanes]);
+
+  useEffect(() => {
+    if (phase === 'playing') sendGameplayMessage('gameplay_started');
+  }, [phase]);
 
   // Handle manual keyboard pause (Escape), POV switcher (V), and Continue (Enter)
   useEffect(() => {

@@ -104,7 +104,21 @@ pnpm tauri dev
 
 # Build cross-platform native desktop installer
 pnpm tauri build
+
+# Build the Playgama upload (needs ffmpeg + zip) -> pim-playgama.zip
+pnpm build:playgama
 ```
+
+### Playgama build
+
+`build:playgama` sets `VITE_PLATFORM=playgama`, which turns on `src/platform/`:
+the Playgama Bridge SDK (loaded from the Playgama CDN, with a bundled fallback),
+`game_ready`, an interstitial on the results screen, pause/mute on platform and ad
+events, and a mirror of local progress into `bridge.storage`. Asset URLs are
+rewritten for Playgama's sub-path hosting. Every other build ignores all of this.
+
+To try it locally: `npx serve dist-playgama` (or any static server). Off-platform
+the SDK runs as its `mock` platform, so ads are reported as unsupported.
 
 ---
 
