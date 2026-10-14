@@ -244,10 +244,11 @@ function Garment({ id, choice, paths = [], mirror = [], details }: {
 // ---------------------------------------------------------------------------
 const HEAD = 'M150 52 C183 52 202 78 202 110 C202 133 193 147 179 159 C167 169 158 174 150 174 C142 174 133 169 121 159 C107 147 98 133 98 110 C98 78 117 52 150 52 Z';
 const NECK = 'M139 158 L139 196 Q150 203 161 196 L161 158 Z';
-const TORSO = 'M114 198 C128 190 172 190 186 198 C192 214 190 236 184 252 C178 270 178 288 182 302 C192 316 196 330 194 344 L106 344 C104 330 108 316 118 302 C122 288 122 270 116 252 C110 236 108 214 114 198 Z';
-const ARM = 'M117 200 C103 202 97 214 96 232 L92 282 C90 304 90 326 93 344 L106 344 C106 326 106 306 106 288 L112 240 Z';
-const HAND = 'M92 342 C88 352 90 364 98 366 C105 366 108 356 106 342 Z';
-const LEG = 'M108 340 L150 340 L148 420 C146 450 146 470 144 500 C143 525 142 545 142 560 L128 560 C126 540 124 520 122 500 C118 470 116 448 114 420 C108 392 106 366 108 340 Z';
+const TORSO = 'M116 198 C130 191 170 191 184 198 C196 210 202 228 198 246 C194 260 180 266 176 274 C171 284 172 296 184 310 C198 324 206 338 204 350 L96 350 C94 338 102 324 116 310 C128 296 129 284 124 274 C120 266 106 260 102 246 C98 228 104 210 116 198 Z';
+const ARM = 'M117 200 C99 202 91 214 90 232 L86 282 C84 304 84 326 87 344 L100 344 C100 326 100 306 100 288 L108 240 Z';
+const HAND = 'M86 342 C82 352 84 364 92 366 C99 366 102 356 100 342 Z';
+const LEG = 'M98 344 L150 344 L148 420 C146 450 146 470 144 500 C143 525 142 545 142 560 L128 560 C126 540 124 520 121 500 C116 470 112 448 107 420 C98 396 94 370 98 344 Z';
+const BODYSUIT = 'M102 236 Q118 216 138 222 Q146 226 150 234 Q154 226 162 222 Q182 216 198 236 C198 240 198 243 198 246 C194 260 180 266 176 274 C171 284 172 296 184 310 C198 324 206 338 204 350 L96 350 C94 338 102 324 116 310 C128 296 129 284 124 274 C120 266 106 260 102 246 Z';
 const FOOT = 'M127 556 L143 556 C146 568 145 576 139 579 L125 579 C121 574 122 564 127 556 Z';
 
 /** Keyframes for the idle loop and outfit-change pop; disabled for reduced motion. */
@@ -466,28 +467,37 @@ function Face({ eyeColor }: { eyeColor: string }) {
           <stop offset="1" stopColor={mix(eyeColor, '#ffffff', 0.55)} />
         </linearGradient>
       </defs>
-      <g className="wf-blink">
-        {[0, 1].map((side) => (
-          <g key={side} transform={side ? MIRROR : undefined}>
-            <path d="M117 119 C121 106 139 104 145 116 C145 128 138 134 130 134 C122 134 117 128 117 119 Z" fill="#ffffff" />
-            <ellipse cx="132" cy="121" rx="8.5" ry="11.5" fill={`url(#${irisId})`} />
-            <ellipse cx="132" cy="122" rx="4" ry="6" fill="#0f0a1e" />
-            <circle cx="128.5" cy="116" r="3" fill="#ffffff" />
-            <circle cx="135" cy="127" r="1.4" fill="#ffffff" opacity="0.8" />
-            {/* Lash line with an outer flick. */}
-            <path d="M115 117 C121 104 139 101 147 113 L149 110 C141 98 119 98 112 114 Z" fill={LINE} />
-            <path d="M113 115 L107 111" stroke={LINE} strokeWidth="2" strokeLinecap="round" />
-          </g>
-        ))}
+      {/* Eyeshadow under the lid crease gives a more grown-up look. */}
+      {[0, 1].map((side) => (
+        <path key={side} d="M113 114 C119 100 141 97 149 110" fill="none" stroke="#c0267a" strokeOpacity="0.35" strokeWidth="5" strokeLinecap="round" transform={side ? MIRROR : undefined} />
+      ))}
+      {/* Slightly narrower, almond eyes; the blink lives on an inner group so its CSS transform doesn't fight this one. */}
+      <g transform="translate(0 121) scale(1 0.86) translate(0 -121)">
+        <g className="wf-blink">
+          {[0, 1].map((side) => (
+            <g key={side} transform={side ? MIRROR : undefined}>
+              <path d="M116 120 C121 106 140 104 146 116 C146 128 138 133 130 133 C121 133 116 128 116 120 Z" fill="#ffffff" />
+              <ellipse cx="132" cy="121" rx="8.5" ry="11.5" fill={`url(#${irisId})`} />
+              <ellipse cx="132" cy="122" rx="4" ry="6" fill="#0f0a1e" />
+              <circle cx="128.5" cy="116" r="3" fill="#ffffff" />
+              <circle cx="135" cy="127" r="1.4" fill="#ffffff" opacity="0.8" />
+              <path d="M114 118 C120 103 140 100 148 113 L150 109 C141 96 118 97 111 115 Z" fill={LINE} />
+              <path d="M112 116 L104 110 M113 112 L107 105" stroke={LINE} strokeWidth="2" strokeLinecap="round" />
+            </g>
+          ))}
+        </g>
       </g>
       {[0, 1].map((side) => (
         <g key={side} transform={side ? MIRROR : undefined}>
-          <path d="M121 97 Q131 92 142 96" fill="none" stroke={mix(LINE, '#ffffff', 0.2)} strokeWidth="2" strokeLinecap="round" />
-          <ellipse cx="124" cy="141" rx="8" ry="3.5" fill="#ff7eb6" opacity="0.35" />
+          <path d="M119 95 Q131 88 144 94" fill="none" stroke={mix(LINE, '#ffffff', 0.2)} strokeWidth="2" strokeLinecap="round" />
+          <ellipse cx="123" cy="141" rx="8" ry="3.5" fill="#ff7eb6" opacity="0.3" />
         </g>
       ))}
-      <path d="M150 136 L148.5 141" stroke={SKIN_SHADE} strokeWidth="1.6" strokeLinecap="round" />
-      <path d="M144 152 Q150 157 156 152" fill="none" stroke="#b4485a" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M150 135 L148.5 141" stroke={SKIN_SHADE} strokeWidth="1.6" strokeLinecap="round" />
+      {/* Full glossy lips. */}
+      <path d="M142 151 Q146 147 150 149.5 Q154 147 158 151 Q154 158 150 158 Q146 158 142 151 Z" fill="#d6336c" stroke="#9d174d" strokeWidth="0.8" />
+      <path d="M142.5 151 Q150 153 157.5 151" fill="none" stroke="#9d174d" strokeWidth="0.9" />
+      <ellipse cx="152.5" cy="154.5" rx="2.2" ry="1" fill="#ffffff" opacity="0.6" />
     </g>
   );
 }
@@ -498,11 +508,11 @@ function Body({ skinId }: { skinId: string }) {
     <g stroke={mix(SKIN_SHADE, '#000000', 0.35)} strokeWidth="1.3" strokeLinejoin="round">
       <path d={LEG} fill={skin} />
       <path d={LEG} fill={skin} transform={MIRROR} />
-      <path d="M124 448 Q130 452 136 448 M176 448 Q170 452 164 448" fill="none" strokeOpacity="0.5" />
+      <path d="M122 448 Q129 452 136 448 M178 448 Q171 452 164 448" fill="none" strokeOpacity="0.5" />
       <path d={FOOT} fill={skin} />
       <path d={FOOT} fill={skin} transform={MIRROR} />
       {/* Neutral base bodysuit so the figure is always dressed. */}
-      <path d="M108 336 L192 336 L190 360 Q150 370 110 360 Z" fill="#2b2140" />
+      <path d="M98 338 L202 338 L198 364 Q150 374 102 364 Z" fill="#2b2140" />
     </g>
   );
 }
@@ -517,8 +527,23 @@ function UpperBody({ skinId }: { skinId: string }) {
       <path d={HAND} fill={skin} transform={MIRROR} />
       <path d={NECK} fill={skin} />
       <path d="M139 168 Q150 180 161 168 L161 178 Q150 186 139 178 Z" fill={SKIN_SHADE} stroke="none" opacity="0.8" />
-      <path d={TORSO} fill="#2b2140" />
-      <path d="M128 202 Q150 210 172 202" fill="none" stroke="#ffffff" strokeOpacity="0.15" />
+      {/* Collarbones and décolletage above the bodysuit's sweetheart neckline. */}
+      <path d={TORSO} fill={skin} />
+      <path d="M126 204 Q138 208 146 204 M154 204 Q162 208 174 204" fill="none" strokeOpacity="0.45" />
+      <path d={BODYSUIT} fill="#2b2140" />
+      <BustShading />
+    </g>
+  );
+}
+
+/** Contour lines that sell the curves; reused on top of every top. */
+function BustShading({ opacity = 0.35 }: { opacity?: number }) {
+  return (
+    <g fill="none" stroke="#000" strokeOpacity={opacity} strokeWidth="1.4" strokeLinecap="round">
+      <path d="M108 246 Q126 266 148 250" />
+      <path d="M192 246 Q174 266 152 250" />
+      <path d="M150 226 L150 244" strokeOpacity={opacity * 0.8} />
+      <path d="M128 286 Q150 292 172 286" strokeOpacity={opacity * 0.5} />
     </g>
   );
 }
@@ -532,26 +557,28 @@ function Fishnet({ choice }: { choice: GarmentChoice }) {
           <path d="M0 0 L8 0 M0 0 L0 8" stroke={choice.color} strokeWidth="1.3" />
         </pattern>
       </defs>
-      <Garment id="legwear" choice={choice} mirror={['M112 380 L149 380 L149 392 L113 392 Z']} />
+      <Garment id="legwear" choice={choice} mirror={['M97 384 L149 384 L149 396 L99 396 Z']} />
       <path d={LEG} fill={`url(#${netId})`} />
       <path d={LEG} fill={`url(#${netId})`} transform={MIRROR} />
     </g>
   );
 }
 
+const THIGH_HIGH = 'M104 404 L149 404 L148 420 C146 450 146 470 144 500 C143 525 142 545 142 560 L128 560 C126 540 124 520 121 500 C116 470 112 448 107 420 Z';
+
 function Legwear({ choice }: { choice: GarmentChoice }) {
   const id = 'legwear';
   switch (choice.item) {
     case 'thighhighs':
-      return <Garment id={id} choice={choice} mirror={['M113 404 L149 404 L148 420 C146 450 146 470 144 500 C143 525 142 545 142 560 L128 560 C126 540 124 520 122 500 C118 470 116 448 114 420 Z']}
-        details={<g stroke="#000" strokeOpacity="0.35" strokeWidth="4"><path d="M113 408 L149 408" /><path d="M187 408 L151 408" /></g>} />;
+      return <Garment id={id} choice={choice} mirror={[THIGH_HIGH]}
+        details={<g stroke="#000" strokeOpacity="0.35" strokeWidth="4"><path d="M104 408 L149 408" /><path d="M196 408 L151 408" /></g>} />;
     case 'stockings':
       return <Garment id={id} choice={choice} mirror={[LEG]} />;
     case 'fishnet':
       return <Fishnet choice={choice} />;
     case 'warmers':
-      return <Garment id={id} choice={choice} mirror={['M119 468 L149 468 C149 500 148 530 148 552 L120 552 C116 524 116 496 119 468 Z']}
-        details={<g stroke="#000" strokeOpacity="0.25">{[480, 492, 504, 516, 528, 540].map((y) => <g key={y}><path d={`M120 ${y} L148 ${y}`} /><path d={`M180 ${y} L152 ${y}`} /></g>)}</g>} />;
+      return <Garment id={id} choice={choice} mirror={['M118 468 L149 468 C149 500 148 530 148 552 L120 552 C115 524 115 496 118 468 Z']}
+        details={<g stroke="#000" strokeOpacity="0.25">{[480, 492, 504, 516, 528, 540].map((y) => <g key={y}><path d={`M119 ${y} L148 ${y}`} /><path d={`M181 ${y} L152 ${y}`} /></g>)}</g>} />;
     default:
       return null;
   }
@@ -564,7 +591,7 @@ function Shoes({ choice }: { choice: GarmentChoice }) {
       return <Garment id={id} choice={choice} mirror={['M124 548 L146 548 C148 556 149 566 148 572 L148 590 L120 590 L120 572 C120 564 122 556 124 548 Z']}
         details={<g fill="#000" opacity="0.35"><rect x="120" y="582" width="28" height="8" /><rect x="152" y="582" width="28" height="8" /></g>} />;
     case 'boots':
-      return <Garment id={id} choice={choice} mirror={['M120 486 L148 486 L147 560 C152 572 151 582 148 588 L117 588 C113 574 116 562 122 554 Z']}
+      return <Garment id={id} choice={choice} mirror={['M119 486 L148 486 L147 560 C152 572 151 582 148 588 L117 588 C113 574 116 562 121 554 Z']}
         details={<g stroke="#000" strokeOpacity="0.45">{[500, 514, 528, 542].map((y) => <g key={y}><path d={`M126 ${y} L142 ${y + 6}`} /><path d={`M174 ${y} L158 ${y + 6}`} /></g>)}</g>} />;
     case 'sneakers':
       return <Garment id={id} choice={choice} mirror={['M122 550 L146 550 C151 562 151 574 148 582 L116 582 C114 566 116 558 122 550 Z']}
@@ -580,63 +607,80 @@ function Bottom({ choice }: { choice: GarmentChoice }) {
   const id = 'bottom';
   switch (choice.item) {
     case 'pleated':
-      return <Garment id={id} choice={choice} paths={['M116 294 L184 294 L206 382 Q150 390 94 382 Z']}
-        details={<g stroke="#000" strokeOpacity="0.28">{[106, 122, 138, 150, 162, 178, 194].map((x) => <path key={x} d={`M${150 + (x - 150) * 0.4} 298 L${x} 384`} />)}</g>} />;
+      return <Garment id={id} choice={choice} paths={['M122 298 L178 298 C196 312 206 334 214 390 Q150 400 86 390 C94 334 104 312 122 298 Z']}
+        details={<g stroke="#000" strokeOpacity="0.28">{[98, 114, 130, 150, 170, 186, 202].map((x) => <path key={x} d={`M${150 + (x - 150) * 0.45} 304 L${x} 390`} />)}</g>} />;
     case 'shorts':
-      return <Garment id={id} choice={choice} paths={['M110 298 L190 298 L194 358 L154 360 L150 346 L146 360 L106 358 Z']}
-        details={<path d="M150 302 L150 344" stroke="#000" strokeOpacity="0.3" />} />;
+      return <Garment id={id} choice={choice} paths={['M118 300 L182 300 C198 314 206 336 206 360 L156 364 L150 350 L144 364 L94 360 C94 336 102 314 118 300 Z']}
+        details={<path d="M150 304 L150 346" stroke="#000" strokeOpacity="0.3" />} />;
     case 'mini':
-      return <Garment id={id} choice={choice} paths={['M114 294 L186 294 L194 368 Q150 374 106 368 Z']}
-        details={<path d="M150 332 L150 370" stroke="#000" strokeOpacity="0.4" />} />;
+      return <Garment id={id} choice={choice} paths={['M120 296 L180 296 C196 312 206 334 204 356 L200 380 Q150 388 100 380 L96 356 C94 334 104 312 120 296 Z']}
+        details={<path d="M150 340 L150 384" stroke="#000" strokeOpacity="0.4" />} />;
     case 'gown':
-      return <Garment id={id} choice={choice} paths={['M116 290 L184 290 Q198 360 224 562 Q150 586 76 562 Q102 360 116 290 Z']}
-        details={<g fill="none" stroke="#000" strokeOpacity="0.18" strokeWidth="2"><path d="M132 320 Q120 450 108 566" /><path d="M168 320 Q180 450 192 566" /><path d="M150 300 Q146 430 160 576" stroke="#fff" strokeOpacity="0.22" strokeWidth="3" /></g>} />;
+      return <Garment id={id} choice={choice} paths={['M122 290 L178 290 C196 312 206 336 204 360 C200 420 188 470 194 520 Q206 554 228 568 Q150 590 72 568 Q94 554 106 520 C112 470 100 420 96 360 C94 336 104 312 122 290 Z']}
+        details={<g fill="none" stroke="#000" strokeOpacity="0.18" strokeWidth="2"><path d="M128 330 Q118 450 112 560" /><path d="M172 330 Q182 450 188 560" /><path d="M150 300 Q146 430 160 578" stroke="#fff" strokeOpacity="0.22" strokeWidth="3" /></g>} />;
     case 'pants':
-      return <Garment id={id} choice={choice} paths={['M108 296 L192 296 L194 342 L150 346 L106 342 Z']}
-        mirror={['M106 338 L150 338 L148 450 Q150 510 156 558 L118 558 Q120 500 116 450 Q104 395 106 338 Z']} />;
+      return <Garment id={id} choice={choice} paths={['M120 296 L180 296 C196 312 206 334 204 350 L150 354 L96 350 C94 334 104 312 120 296 Z']}
+        mirror={['M96 344 L150 344 L148 450 Q150 510 158 560 L116 560 Q118 500 112 450 Q96 396 96 344 Z']} />;
     default:
       return null;
   }
 }
 
+// Tops follow the hourglass: bust to ~y266, waist at ~y280.
+const SLEEVE_SHORT = 'M117 200 C99 202 91 214 90 232 L89 246 L105 249 L108 226 Z';
+const SLEEVE_LONG = 'M117 200 C99 202 91 214 90 232 L85 300 L101 302 L108 240 Z';
+
 function Top({ choice }: { choice: GarmentChoice }) {
   const id = 'top';
   switch (choice.item) {
     case 'crop':
-      return <Garment id={id} choice={choice} paths={['M114 198 C128 190 172 190 186 198 C190 214 189 234 186 252 Q150 262 114 252 C111 234 110 214 114 198 Z']}
-        mirror={['M117 200 C103 202 97 214 96 232 L95 246 L111 248 L113 226 Z']} />;
-    case 'bikini':
-      return <Garment id={id} choice={choice} mirror={['M120 218 Q134 210 148 222 L146 248 Q132 254 118 248 Z', 'M128 214 L138 192 L140 194 L131 216 Z']}
-        details={<path d="M146 232 L154 232" stroke={choice.color} strokeWidth="3" />} />;
-    case 'corset':
-      return <Garment id={id} choice={choice} paths={['M116 218 Q150 230 184 218 L182 252 Q176 278 180 304 Q150 314 120 304 Q124 278 118 252 Z']}
-        details={<g stroke="#ffffff" strokeOpacity="0.7" strokeWidth="1.2">{[236, 252, 268, 284, 296].map((y) => <path key={y} d={`M144 ${y} L156 ${y + 8} M156 ${y} L144 ${y + 8}`} />)}</g>} />;
-    case 'sailor':
       return <Garment id={id} choice={choice}
-        paths={['M114 198 C128 190 172 190 186 198 C192 214 190 236 184 252 C179 270 179 288 182 302 L118 302 C121 288 121 270 116 252 C110 236 108 214 114 198 Z']}
-        mirror={['M117 200 C103 202 97 214 96 232 L93 268 L108 272 L112 240 Z']}
+        paths={['M116 198 C130 191 170 191 184 198 C196 210 202 228 198 246 C195 256 188 262 180 266 Q150 272 120 266 C112 262 105 256 102 246 C98 228 104 210 116 198 Z']}
+        mirror={[SLEEVE_SHORT]} details={<BustShading opacity={0.3} />} />;
+    case 'bikini':
+      return <Garment id={id} choice={choice}
+        mirror={['M104 228 Q124 212 149 230 L148 254 Q128 268 104 250 Z', 'M126 218 L136 194 L139 196 L130 220 Z']}
+        details={<g><path d="M147 238 L153 238" stroke={choice.color} strokeWidth="3" /><BustShading opacity={0.25} /></g>} />;
+    case 'corset':
+      return <Garment id={id} choice={choice}
+        paths={['M102 238 Q124 254 150 244 Q176 254 198 238 C196 256 182 264 176 274 C171 284 172 296 184 312 Q150 320 116 312 C128 296 129 284 124 274 C118 264 104 256 102 238 Z']}
         details={<g>
-          <path d="M122 194 L150 236 L178 194 L192 218 L150 248 L108 218 Z" fill="#ffffff" stroke={LINE} />
-          <path d="M114 214 L150 240 L186 214" fill="none" stroke={choice.color} strokeWidth="2" />
-          <path d="M150 240 L137 266 L150 258 L163 266 Z" fill="#ef4444" stroke={LINE} />
+          <g stroke="#ffffff" strokeOpacity="0.7" strokeWidth="1.2">{[256, 270, 284, 298].map((y) => <path key={y} d={`M144 ${y} L156 ${y + 8} M156 ${y} L144 ${y + 8}`} />)}</g>
+          <BustShading opacity={0.3} />
+        </g>} />;
+    case 'sailor':
+      // Nautical pin-up halter: tied under the bust, bare midriff.
+      return <Garment id={id} choice={choice}
+        paths={['M116 198 C130 191 170 191 184 198 C196 210 202 228 198 246 C195 258 188 266 180 272 Q150 280 120 272 C112 266 105 258 102 246 C98 228 104 210 116 198 Z']}
+        mirror={[SLEEVE_SHORT]}
+        details={<g>
+          <path d="M122 194 L150 232 L178 194 L194 214 L150 244 L106 214 Z" fill="#ffffff" stroke={LINE} />
+          <path d="M112 212 L150 238 L188 212" fill="none" stroke={choice.color} strokeWidth="2" />
+          <path d="M150 268 L134 292 L150 282 L166 292 Z" fill="#ef4444" stroke={LINE} />
+          <BustShading opacity={0.3} />
         </g>} />;
     case 'kimono':
       return <Garment id={id} choice={choice}
-        paths={['M112 196 C128 188 172 188 188 196 L192 342 L108 342 Z']}
-        mirror={['M117 200 C92 208 76 250 70 290 L72 336 L106 326 L112 240 Z']}
+        paths={['M114 196 C130 188 170 188 186 196 C198 214 204 236 200 256 L198 350 L102 350 L100 256 C96 236 102 214 114 196 Z']}
+        mirror={['M117 200 C90 208 74 250 68 290 L70 336 L104 326 L110 240 Z']}
         details={<g>
-          <path d="M128 194 L150 262 L172 194" fill="none" stroke="#ffffff" strokeOpacity="0.8" strokeWidth="4" />
-          <rect x="110" y="272" width="80" height="26" fill="#1e1b4b" stroke={LINE} />
-          <path d="M150 272 L150 298" stroke="#fde68a" strokeWidth="3" />
+          <path d="M128 194 L150 254 L172 194" fill="none" stroke="#ffffff" strokeOpacity="0.8" strokeWidth="4" />
+          {/* Obi cinches the waist to keep the hourglass. */}
+          <path d="M120 266 Q150 274 180 266 L178 294 Q150 300 122 294 Z" fill="#1e1b4b" stroke={LINE} />
+          <path d="M150 270 L150 297" stroke="#fde68a" strokeWidth="3" />
+          <BustShading opacity={0.25} />
         </g>} />;
     case 'jacket':
       return <Garment id={id} choice={choice}
-        mirror={['M113 198 C128 190 140 190 147 192 L141 266 L115 262 C112 242 110 218 113 198 Z', 'M117 200 C103 202 97 214 96 232 L91 300 L106 302 L112 240 Z']}
+        mirror={['M115 197 C128 191 140 191 147 193 L140 262 L106 256 C100 236 104 214 115 197 Z', SLEEVE_LONG]}
         details={<g stroke="#000" strokeOpacity="0.4"><path d="M141 204 L129 232" /><path d="M159 204 L171 232" /></g>} />;
     default:
       return null;
   }
 }
+
+/** The head is drawn at 0.8 scale around the chin so the body reads ~7 heads tall. */
+const HEAD_SCALE = 'translate(150 184) scale(0.8) translate(-150 -184)';
 
 function Accessory({ item }: { item: string }) {
   switch (item) {
@@ -701,7 +745,7 @@ export default function WaifuFigure({ outfit, className, celebrate = false, eyeC
       </defs>
       <Scene category={outfit.scene} />
       <g className="wf-breathe">
-        <HairBack item={outfit.hair.item} color={outfit.hair.color} />
+        <g transform={HEAD_SCALE}><HairBack item={outfit.hair.item} color={outfit.hair.color} /></g>
       </g>
       <Body skinId={skinId} />
       <Pop k={key(outfit.legwear)}><Legwear choice={outfit.legwear} /></Pop>
@@ -710,10 +754,12 @@ export default function WaifuFigure({ outfit, className, celebrate = false, eyeC
       <g className="wf-breathe">
         <UpperBody skinId={skinId} />
         <Pop k={key(outfit.top)}><Top choice={outfit.top} /></Pop>
-        <path d={HEAD} fill={`url(#${skinId})`} stroke={mix(SKIN_SHADE, '#000000', 0.35)} strokeWidth="1.3" />
-        <Face eyeColor={eyeColor} />
-        <Pop k={`${outfit.hair.item}-${outfit.hair.color}`}><HairFront item={outfit.hair.item} color={outfit.hair.color} /></Pop>
-        <Pop k={outfit.accessory.item}><Accessory item={outfit.accessory.item} /></Pop>
+        <g transform={HEAD_SCALE}>
+          <path d={HEAD} fill={`url(#${skinId})`} stroke={mix(SKIN_SHADE, '#000000', 0.35)} strokeWidth="1.3" />
+          <Face eyeColor={eyeColor} />
+          <Pop k={`${outfit.hair.item}-${outfit.hair.color}`}><HairFront item={outfit.hair.item} color={outfit.hair.color} /></Pop>
+          <Pop k={outfit.accessory.item}><Accessory item={outfit.accessory.item} /></Pop>
+        </g>
       </g>
       {celebrate && <Sparkles />}
     </svg>

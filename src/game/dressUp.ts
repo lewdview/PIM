@@ -31,7 +31,7 @@ export const WARDROBE: Record<Slot, WardrobeItem[]> = {
     { id: 'crop', label: 'Crop Top' },
     { id: 'bikini', label: 'Bikini Top' },
     { id: 'corset', label: 'Corset' },
-    { id: 'sailor', label: 'Sailor Blouse' },
+    { id: 'sailor', label: 'Sailor Halter' },
     { id: 'kimono', label: 'Kimono Wrap' },
     { id: 'jacket', label: 'Cropped Jacket' },
   ],
