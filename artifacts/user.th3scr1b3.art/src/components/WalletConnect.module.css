@@ -1,325 +1,191 @@
+/* Sign-in controls — launch-page buttons (pink, clipped corners, hard black shadow). */
+
 .wrapper {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 14px;
   width: 100%;
+  font-family: var(--sans);
 }
 
-.connectBtn {
-  display: flex;
+/* Shared button shape */
+.connectBtn,
+.githubBtn,
+.magicLinkBtn,
+.disconnectBtn {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  background: linear-gradient(135deg, rgba(0, 245, 255, 0.15), rgba(0, 245, 255, 0.05));
-  border: 1px solid rgba(0, 245, 255, 0.4);
-  color: #00f5ff;
-  padding: 0.75rem 1.25rem;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.85rem;
+  gap: 10px;
+  font-family: var(--mono);
   font-weight: 700;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  letter-spacing: 0.15em;
-  border-radius: 8px;
+  border: 2px solid #000;
+  white-space: nowrap;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 0 15px rgba(0, 245, 255, 0.08);
+  transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease;
 }
+.connectBtn:hover:not(:disabled),
+.githubBtn:hover:not(:disabled),
+.magicLinkBtn:hover:not(:disabled),
+.disconnectBtn:hover:not(:disabled) { transform: translate(-2px, -2px); }
+.connectBtn:focus-visible,
+.githubBtn:focus-visible,
+.magicLinkBtn:focus-visible,
+.disconnectBtn:focus-visible,
+.tabBtn:focus-visible { outline: 3px solid var(--cyan); outline-offset: 3px; }
+.connectBtn:disabled,
+.githubBtn:disabled,
+.magicLinkBtn:disabled,
+.disconnectBtn:disabled { opacity: 0.55; cursor: not-allowed; }
 
-.connectBtn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  border-color: #00f5ff;
-  background: linear-gradient(135deg, rgba(0, 245, 255, 0.25), rgba(0, 245, 255, 0.08));
-  box-shadow: 0 0 25px rgba(0, 245, 255, 0.2);
+/* Tabs */
+.authContainer { display: flex; flex-direction: column; gap: 18px; }
+.tabs { display: flex; border: 2px solid var(--paper); }
+.tabBtn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 10px;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--dim);
+  transition: background 0.2s, color 0.2s;
 }
+.tabBtn + .tabBtn { border-left: 2px solid var(--paper); }
+.tabBtn:hover { color: var(--paper); }
+.tabActive,
+.tabActive:hover { background: var(--paper); color: #000; }
 
-.connectBtn:active:not(:disabled) {
-  transform: translateY(1px);
+.tabContent { display: flex; flex-direction: column; }
+.walletPanel,
+.identityPanel { display: flex; flex-direction: column; gap: 16px; }
+.descText { font-size: 14px; line-height: 1.6; color: var(--dim); }
+
+.connectBtn {
+  align-self: flex-start;
+  padding: 18px 30px;
+  font-size: 14px;
+  color: #000;
+  background: var(--pink);
+  clip-path: polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
+  box-shadow: 6px 6px 0 #000;
 }
+.connectBtn:hover:not(:disabled) { background: var(--amber); }
+.zapIcon { flex: none; }
 
-.connectBtn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+.githubBtn {
+  padding: 14px 20px;
+  font-size: 12px;
+  color: var(--paper);
+  background: transparent;
+  border-color: var(--paper);
+  box-shadow: 6px 6px 0 rgba(255, 20, 147, 0.55);
 }
+.githubBtn:hover:not(:disabled) { background: var(--paper); color: #000; }
 
+.separator { display: flex; align-items: center; gap: 12px; }
+.sepLine { flex: 1; height: 1px; background: var(--line); }
+.sepText { font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: 0.24em; color: var(--dim); }
+
+.magicLinkForm { width: 100%; }
+.inputGroup { display: flex; gap: 12px; flex-wrap: wrap; }
+.emailInput {
+  flex: 1;
+  min-width: 200px;
+  padding: 14px 16px;
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--paper);
+  background: #000;
+  border: 2px solid var(--line);
+  outline: none;
+  transition: border-color 0.2s;
+}
+.emailInput:focus { border-color: var(--pink); }
+.emailInput::placeholder { color: rgba(244, 236, 220, 0.3); }
+.magicLinkBtn {
+  padding: 14px 20px;
+  font-size: 12px;
+  color: #000;
+  background: var(--amber);
+  box-shadow: 5px 5px 0 #000;
+}
+.magicLinkBtn:hover:not(:disabled) { background: var(--pink); }
+
+.emailSentMsg {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.5;
+  color: #000;
+  background: var(--green);
+  border: 2px solid #000;
+  box-shadow: 4px 4px 0 #000;
+}
+.sentIcon { flex: none; margin-top: 2px; }
+
+/* Signed in */
 .connectedBox {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 0.65rem 1rem;
-  border-radius: 8px;
+  gap: 14px;
+  padding: 16px;
+  border: 2px solid var(--green);
+  background: rgba(57, 255, 20, 0.05);
 }
-
-.addressInfo {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
+.addressInfo { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .indicator {
-  width: 6px;
-  height: 6px;
-  background-color: #00f5ff;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
-  box-shadow: 0 0 8px #00f5ff;
-  animation: pulse 2s infinite ease-in-out;
+  background: var(--green);
+  box-shadow: 0 0 10px var(--green);
+  flex: none;
 }
-
+.connectedIconZap { color: var(--amber); flex: none; }
+.connectedIconUser { color: var(--cyan); flex: none; }
 .addressText {
-  color: #f5f5f7;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.8rem;
-  letter-spacing: 0.05em;
+  font-family: var(--display);
+  font-size: 24px;
+  letter-spacing: 0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-
 .disconnectBtn {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
+  padding: 10px 16px;
+  font-size: 11px;
+  color: var(--paper);
   background: transparent;
-  border: none;
-  color: rgba(255, 255, 255, 0.4);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  cursor: pointer;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  transition: all 0.2s ease;
+  border-color: var(--paper);
 }
-
-.disconnectBtn:hover {
-  color: #bd00ff;
-  background: rgba(189, 0, 255, 0.05);
-}
+.disconnectBtn:hover:not(:disabled) { background: var(--red); color: #000; border-color: #000; }
 
 .errorAlert {
   display: flex;
   align-items: flex-start;
-  gap: 0.5rem;
-  background: rgba(239, 68, 68, 0.06);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  color: #fca5a5;
-  font-size: 0.75rem;
-  padding: 0.65rem 0.75rem;
-  border-radius: 6px;
-  line-height: 1.4;
-}
-
-.zapIcon {
-  animation: shimmer 2s infinite ease-in-out;
-}
-
-.spinner {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 0.4; transform: scale(0.9); }
-  50% { opacity: 1; transform: scale(1.1); }
-}
-
-@keyframes shimmer {
-  0%, 100% { filter: drop-shadow(0 0 1px rgba(0, 245, 255, 0.3)); }
-  50% { filter: drop-shadow(0 0 4px rgba(0, 245, 255, 0.9)); }
-}
-
-.authContainer {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  background: rgba(0, 0, 0, 0.25);
-  border-radius: 12px;
-  overflow: hidden;
-}
-
-.tabs {
-  display: flex;
-  background: rgba(255, 255, 255, 0.02);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.tabBtn {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.75rem;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.4);
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid transparent;
-  cursor: pointer;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  transition: all 0.2s ease;
-}
-
-.tabBtn:hover {
-  color: rgba(255, 255, 255, 0.85);
-  background: rgba(255, 255, 255, 0.01);
-}
-
-.tabActive {
-  color: #00f5ff !important;
-  border-bottom-color: #00f5ff;
-  background: rgba(0, 245, 255, 0.03) !important;
-}
-
-.tabContent {
-  padding: 1.25rem;
-}
-
-.walletPanel, .identityPanel {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.descText {
-  color: rgba(255, 255, 255, 0.5);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.75rem;
+  gap: 10px;
+  padding: 12px 14px;
+  font-family: var(--mono);
+  font-size: 12px;
   line-height: 1.5;
-  margin: 0;
-}
-
-.githubBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  background: #24292e;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #fff;
-  padding: 0.75rem 1rem;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.8rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.githubBtn:hover:not(:disabled) {
-  background: #2b3137;
-  border-color: rgba(255, 255, 255, 0.3);
-  box-shadow: 0 0 15px rgba(255, 255, 255, 0.08);
-}
-
-.separator {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.75rem;
-  margin: 0.5rem 0;
-}
-
-.sepLine {
-  flex: 1;
-  height: 1px;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.sepText {
-  color: rgba(255, 255, 255, 0.25);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.15em;
-}
-
-.emailSentMsg {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  color: #00f5ff;
-  border: 1px solid rgba(0, 245, 255, 0.25);
-  background: rgba(0, 245, 255, 0.04);
-  padding: 0.75rem;
-  border-radius: 8px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.75rem;
-}
-
-.sentIcon {
-  color: #00f5ff;
-}
-
-.magicLinkForm {
-  width: 100%;
-}
-
-.inputGroup {
-  display: flex;
-  gap: 0.5rem;
-  width: 100%;
-}
-
-.emailInput {
-  flex: 1;
-  background: rgba(0, 0, 0, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #f5f5f7;
-  padding: 0.65rem 0.85rem;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.8rem;
-  border-radius: 8px;
-  transition: border-color 0.2s ease;
-  width: 100%;
-}
-
-.emailInput:focus {
-  outline: none;
-  border-color: #00f5ff;
-}
-
-.magicLinkBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.35rem;
-  background: #00f5ff;
-  border: none;
   color: #000;
-  padding: 0 1rem;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.75rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  background: var(--red);
+  border: 2px solid #000;
+  box-shadow: 4px 4px 0 #000;
 }
 
-.magicLinkBtn:hover:not(:disabled) {
-  background: #33f7ff;
-  box-shadow: 0 0 15px rgba(0, 245, 255, 0.25);
-}
-
-.connectedIconZap {
-  color: #00f5ff;
-}
-
-.connectedIconUser {
-  color: #bd00ff;
-}
-
+.spinner { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
