@@ -14,7 +14,8 @@ declare global {
   }
 }
 
-const SITE = 'pim.th3scr1b3.art';
+// Only the live sites log activity; localhost and preview deploys would skew everyone's stats.
+const LIVE_HOST = /(^|\.)th3scr1b3\.art$/;
 const startedAt = new Map<string, number>();
 let linkedForUser: string | null = null;
 
@@ -45,7 +46,8 @@ function dayFromSongId(songId: string): number | null {
 }
 
 function recordPlay(songId: string, event: 'start' | 'complete' | 'skip', listenedSeconds?: number) {
-  if (!songId || trackingDeclined()) return;
+  const site = typeof location === 'undefined' ? '' : location.hostname.toLowerCase();
+  if (!songId || !LIVE_HOST.test(site) || trackingDeclined()) return;
   void supabase
     .rpc('record_play_event', {
       p_release_id: songId,
@@ -53,7 +55,7 @@ function recordPlay(songId: string, event: 'start' | 'complete' | 'skip', listen
       p_source: 'pim_game',
       p_platform: 'pim',
       p_session_id: sessionId(),
-      p_site: SITE,
+      p_site: site,
       p_event: event,
       p_listened_seconds: listenedSeconds ?? null,
       p_referrer: typeof document === 'undefined' ? null : document.referrer || null,
