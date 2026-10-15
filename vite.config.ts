@@ -13,8 +13,11 @@ const isPlaygama = process.env.VITE_PLATFORM === "playgama";
 // campaign with its songs bundled. 0 means the full Playgama build.
 const playgamaMonth = isPlaygama ? Math.min(12, Math.max(0, Number(process.env.PIM_PLAYGAMA_MONTH) || 0)) : 0;
 const playgamaBombshell = playgamaMonth > 0 && process.env.PIM_PLAYGAMA_BOMBSHELL === "1";
-const bonusProductId = `pim_month_${String(playgamaMonth).padStart(2, "0")}_bonus`;
-const bonusPriceGam = Number(process.env.PIM_PLAYGAMA_BONUS_PRICE) || 20;
+const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+// Must match the productId in the Playgama dashboard's in-app purchase catalog.
+const bonusProductId = `PIM_${MONTH_NAMES[Math.max(0, playgamaMonth - 1)]}_Bonus`;
+// Bridge prices Playgama products in Gam: 10 Gam = 1 USD.
+const bonusPriceUsd = Number(process.env.PIM_PLAYGAMA_BONUS_PRICE_USD) || 2;
 
 // Playgama build: drop the third-party ecosystem bar and Google Fonts (only the
 // Bridge may load from a CDN; the fonts are bundled instead), keep the Stella slideshow photos out of the bundle (portal content rules),
@@ -49,8 +52,8 @@ function playgamaPackaging(): Plugin {
         fileName: "playgama-bridge-config.json",
         source: JSON.stringify({
           advertisement: { minimumDelayBetweenInterstitial: 60 },
-          // The month's five bonus songs, sold as one bundle (amount is in Gam, 10 Gam = 1 USD).
-          ...(playgamaMonth ? { payments: [{ id: bonusProductId, playgama: { amount: bonusPriceGam } }] } : {}),
+          // The month's five bonus songs, sold as one non-consumable bundle.
+          ...(playgamaMonth ? { payments: [{ id: bonusProductId, playgama: { amount: Math.round(bonusPriceUsd * 10) } }] } : {}),
         }, null, 2) + "\n",
       });
     },
@@ -65,6 +68,7 @@ export default defineConfig({
   define: {
     __PIM_MONTH__: JSON.stringify(playgamaMonth),
     __PIM_BOMBSHELL__: JSON.stringify(playgamaBombshell),
+    __PIM_BONUS_PRODUCT_ID__: JSON.stringify(bonusProductId),
   },
   esbuild: { drop: ['console', 'debugger'] },
   plugins: [

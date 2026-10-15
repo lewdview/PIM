@@ -11,14 +11,15 @@
  *
  * Monthly build, one campaign chapter as its own game ("PIM: January"):
  *
- *   npm run build:playgama -- --month=1 [--media-dir=PATH] [--no-bombshell] [--bonus-price=20]
+ *   npm run build:playgama -- --month=1 [--media-dir=PATH] [--no-bombshell] [--bonus-price=2]
  *
  *   - ships only that month's charts and lyrics, and bundles its songs, covers
  *     and (unless --no-bombshell) one Bombshell artwork per track, re-encoded
  *     to fit the 300 MB cap. Files come from --media-dir (a local copy laid out
  *     like files.th3scr1b3.art, e.g. /Volumes/extremeUno/th3scr1b3-365-warp/365-releases)
  *     when given, otherwise they are downloaded from the CDN.
- *   - --bonus-price is the bonus bundle's price in Gam (10 Gam = 1 USD).
+ *   - --bonus-price is the bonus bundle's price in USD (default 2). The bundle is
+ *     sold as PIM_<Month>_Bonus, which must also be in the Playgama dashboard.
  *   - --placeholder-media makes silent audio and blank art instead, to test the
  *     build without the real files. Never upload that zip.
  *   -> pim-playgama-<month>.zip
@@ -110,7 +111,7 @@ run('npx', ['vite', 'build', '--config', 'vite.config.ts'], {
     VITE_PLATFORM: 'playgama',
     PIM_PLAYGAMA_MONTH: String(month),
     PIM_PLAYGAMA_BOMBSHELL: withBombshell ? '1' : '0',
-    ...(args['bonus-price'] ? { PIM_PLAYGAMA_BONUS_PRICE: String(args['bonus-price']) } : {}),
+    ...(args['bonus-price'] ? { PIM_PLAYGAMA_BONUS_PRICE_USD: String(args['bonus-price']) } : {}),
   },
 });
 
