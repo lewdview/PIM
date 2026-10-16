@@ -429,3 +429,11 @@ export async function downloadBombshellHiResArtwork(day: number, fileName: strin
   return true;
 }
 
+
+/**
+ * True when a card pulled from a regular (non-Bombshell) pack is a Bombshell,
+ * i.e. the pack's extra-card bonus roll hit.
+ */
+export function isBombshellBonusCard(owned: OwnedCard, packIsBombshell: boolean): boolean {
+  return !packIsBombshell && isBombshellCard(owned);
+}

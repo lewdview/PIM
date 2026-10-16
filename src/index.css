@@ -192,22 +192,24 @@ body {
   color: #000000;
   box-shadow: 3px 3px 0 rgba(0,0,0,0.35), 1px 1px 0 rgba(0,0,0,0.15), inset 0 0 4px rgba(255,255,255,1);
   border: 1px solid rgba(0,0,0,0.15);
-  padding: 4px 12px;
-  min-width: 65px;
-  display: flex;
+  padding: 5px 14px;
+  min-width: 68px;
+  display: inline-flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   font-family: 'JetBrains Mono', monospace;
   font-weight: 900;
-  border-radius: 1px;
-  /* Scalloped edges effect */
-  -webkit-mask-image: radial-gradient(circle at 50% -3px, transparent 5px, black 6px), 
-                      radial-gradient(circle at 50% calc(100% + 3px), transparent 5px, black 6px);
+  white-space: nowrap;
+  flex-shrink: 0;
+  border-radius: 3px;
+  /* Shallow scalloped edge notches that never clip interior text */
+  -webkit-mask-image: radial-gradient(circle at 50% -4.5px, transparent 4px, black 4.6px), 
+                      radial-gradient(circle at 50% calc(100% + 4.5px), transparent 4px, black 4.6px);
   -webkit-mask-size: 14px 100%;
   -webkit-mask-repeat: repeat-x;
-  mask-image: radial-gradient(circle at 50% -3px, transparent 5px, black 6px), 
-              radial-gradient(circle at 50% calc(100% + 3px), transparent 5px, black 6px);
+  mask-image: radial-gradient(circle at 50% -4.5px, transparent 4px, black 4.6px), 
+              radial-gradient(circle at 50% calc(100% + 4.5px), transparent 4px, black 4.6px);
   mask-size: 14px 100%;
   mask-repeat: repeat-x;
 }
@@ -2370,4 +2372,13 @@ body.gamepad-cursor-active * {
     flex-direction: column;
     align-items: center;
   }
+}
+
+/* ── Song unlock reveal (cinematic/SongUnlockReveal.tsx) ── */
+.song-unlock-rays {
+  animation: song-unlock-spin 22s linear infinite;
+  will-change: transform;
+}
+@keyframes song-unlock-spin {
+  to { transform: rotate(360deg); }
 }

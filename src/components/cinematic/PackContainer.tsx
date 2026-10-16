@@ -1,22 +1,26 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useVaultStore, type RevealPackMeta } from '../../store/useVaultStore';
 import type { OwnedCard } from '../../services/vaultService';
 import { audioManager } from '../../game/audio';
 import { RARITY_CONFIG, type Rarity } from '../../utils/rarity';
 import { getCoverUrlForRarity, useSmartCoverArt, resolveSmartCoverUrl } from '../../utils/rarityArtwork';
 import { get365CardVariantStyle, getPackCoverFallback, getPackMultiCovers } from '../../utils/cardVariants';
-import { getFeaturedBombshellFoilCover, getRandomBombshellPackCover } from '../../utils/bombshellCards';
+import { getFeaturedBombshellFoilCover, getRandomBombshellPackCover, isBombshellBonusCard } from '../../utils/bombshellCards';
 import { farcasterService } from '../../services/farcasterService';
 import { Share2, Check, Sparkles } from 'lucide-react';
 import Card from '../Card';
+import SongUnlockReveal from './SongUnlockReveal';
 import RarityBadge from '../RarityBadge';
+import RarityRevealFX, { type TierRevealState } from './RarityRevealFX';
+import { getRevealProfile, reduceProfile } from './rarityRevealProfiles';
 import {
   playAmbient, playCrinkle, playTension, playTear,
-  playSnap, playShimmer, playTick, playNearMiss, playRareHit,
+  playSnap, playShimmer, playNearMiss,
   playUnlockChime, playBombshellHeartbeat, playBombshellSwell,
-  playBombshellShimmer, disposeAudioContext,
+  playBombshellShimmer, playTierCharge, playTierImpact, disposeAudioContext,
 } from './audioEngine';
+import BombshellBonusReveal from './BombshellBonusReveal';
 
 // ── Types ────────────────────────────────────────────────────────────
 
@@ -61,7 +65,7 @@ interface Props {
 // ── Helpers ──────────────────────────────────────────────────────────
 
 
-const isRareOrHigher = (r: Rarity) => ['rare', 'legendary', 'mythic'].includes(r);
+const isRareOrHigher = (r: Rarity) => getRevealProfile(r).highTier;
 
 function shouldFakeNearMiss(): boolean {
   return Math.random() < 0.6;
@@ -754,8 +758,22 @@ const shimmerKeyframes = `
 
 // ── Main Component ───────────────────────────────────────────────────
 
-export default function PackContainer({ meta, cards, accumulatedCards = cards, onComplete, onBuyAnother, isRepurchasing, onCastPull, onSharePull }: Props) {
-  const isBombshell = meta.category === 'bombshell' || meta.category === 'bombshell_token' || meta.label?.toLowerCase().includes('bombshell') || cards.some(c => c.card?.cardSet === 'bombshell' || c.card?.coverUrl?.includes('girl-covers') || c.card?.coverUrl?.includes('rare_covers'));
+export default function PackContainer({ meta, cards: rawCards, accumulatedCards = rawCards, onComplete, onBuyAnother, isRepurchasing, onCastPull, onSharePull }: Props) {
+  const isBombshellCardLike = (c: OwnedCard) => c.card?.cardSet === 'bombshell' || c.card?.coverUrl?.includes('girl-covers') || c.card?.coverUrl?.includes('rare_covers');
+  const isBombshellPack = meta.category === 'bombshell' || meta.category === 'bombshell_token' || !!meta.label?.toLowerCase().includes('bombshell');
+  // A regular pack whose cards are ALL Bombshells is still themed as a Bombshell pack.
+  // A regular pack with only SOME Bombshells hit the bonus roll: keep the regular
+  // theme so the extra card lands as a surprise.
+  const isBombshell = isBombshellPack || (rawCards.length > 0 && rawCards.every(isBombshellCardLike));
+
+  // Bonus Bombshells are revealed last so they close out the pack.
+  const cards = useMemo(() => {
+    if (isBombshell) return rawCards;
+    const regular = rawCards.filter(c => !isBombshellBonusCard(c, false));
+    const bonus = rawCards.filter(c => isBombshellBonusCard(c, false));
+    return bonus.length ? [...regular, ...bonus] : rawCards;
+  }, [rawCards, isBombshell]);
+  const isBonusIndex = useCallback((i: number) => !isBombshell && !!cards[i] && isBombshellBonusCard(cards[i], false), [cards, isBombshell]);
 
   const stableCoverImage = useMemo(() => {
     if (meta.coverImage) return meta.coverImage;
@@ -774,8 +792,9 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
   const [phase, setPhase] = useState<Phase>('preloading');
   const [flipIndex, setFlipIndex] = useState(-1); // current card being flipped
   const [flippedCards, setFlippedCards] = useState<Set<number>>(new Set());
-  const [rareRevealing, setRareRevealing] = useState(false);
-  const [mythicRevealing, setMythicRevealing] = useState(false);
+  const [tierReveal, setTierReveal] = useState<TierRevealState | null>(null);
+  const revealIdRef = useRef(0);
+  const reduceMotion = useReducedMotion();
   const [nearMissFlash, setNearMissFlash] = useState(false);
   const [ultraTriggered, setUltraTriggered] = useState(false);
   const [inspectIndex, setInspectIndex] = useState<number | null>(null);
@@ -789,8 +808,10 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
 
   const collection = useVaultStore(s => s.collection);
   const [firstUnlockCard, setFirstUnlockCard] = useState<OwnedCard | null>(null);
+  const [bonusRevealCard, setBonusRevealCard] = useState<OwnedCard | null>(null);
+  const bonusResolveRef = useRef<(() => void) | null>(null);
+  const bonusShownRef = useRef<Set<string>>(new Set());
   const unlockResolveRef = useRef<(() => void) | null>(null);
-  const unlockAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const checkFirstUnlock = useCallback((cardId: string) => {
     if (!collection || collection.length === 0) return true;
@@ -1022,39 +1043,6 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
     setDecrypterPhase('idle');
   }, [hasDecryptedFragments, shardsGranted, grantPackShards]);
 
-  useEffect(() => {
-    if (firstUnlockCard && firstUnlockCard.card.audioUrl) {
-      const audio = new Audio(firstUnlockCard.card.audioUrl);
-      audio.volume = 0.55;
-      audio.play().catch(e => {
-        if (e.name !== 'AbortError') {
-          console.warn("Audio snippet play failed:", e);
-        }
-      });
-      unlockAudioRef.current = audio;
-    } else {
-      if (unlockAudioRef.current) {
-        const audio = unlockAudioRef.current;
-        let vol = audio.volume;
-        const fade = setInterval(() => {
-          vol = Math.max(0, vol - 0.05);
-          audio.volume = vol;
-          if (vol <= 0) {
-            clearInterval(fade);
-            audio.pause();
-            audio.src = "";
-          }
-        }, 30);
-        unlockAudioRef.current = null;
-      }
-    }
-    return () => {
-      if (unlockAudioRef.current) {
-        unlockAudioRef.current.pause();
-        unlockAudioRef.current.src = "";
-      }
-    };
-  }, [firstUnlockCard]);
 
   // ── Manage Ambient Audio & State Reset ──────────────────────────
   useEffect(() => {
@@ -1074,7 +1062,6 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
     setPhase('preloading');
     setFlipIndex(-1);
     setFlippedCards(new Set());
-    setRareRevealing(false);
     setNearMissFlash(false);
     setUltraTriggered(false);
     setInspectIndex(null);
@@ -1108,6 +1095,9 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
   // ── Preloading Hook ────────────────────────────────────────────────
   useEffect(() => {
     let isCancelled = false;
+    bonusShownRef.current = new Set();
+    bonusResolveRef.current = null;
+    setBonusRevealCard(null);
 
     async function preloadAssets() {
       const urls = new Set<string>();
@@ -1150,12 +1140,22 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
     abortRef.current = true;
     setFlippedCards(new Set(cards.map((_, i) => i)));
     setPhase('layout');
-    setRareRevealing(false);
+    setTierReveal(null);
     setNearMissFlash(false);
     setUltraTriggered(false);
     sequenceRunning.current = false;
     audioManager.playSfx('open_chest', 0.8);
-  }, [cards]);
+    // Release a reveal-loop await if one is pending, then show any bonus not yet seen
+    bonusResolveRef.current?.();
+    bonusResolveRef.current = null;
+    const unseenBonus = cards.find((c, i) => isBonusIndex(i) && !bonusShownRef.current.has(c.id));
+    if (unseenBonus) {
+      bonusShownRef.current.add(unseenBonus.id);
+      setBonusRevealCard(unseenBonus);
+    } else {
+      setBonusRevealCard(null);
+    }
+  }, [cards, isBonusIndex]);
 
   // ── Timeline Controller (Post-Snap Reveal) ─────────────────────────
 
@@ -1218,65 +1218,68 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
       const card = cards[i];
       const rarity = card.card.rarity as Rarity;
 
-      if (isRareOrHigher(rarity) || isBombshell) {
-        // Near-miss system (60% fake higher tier)
-        if (shouldFakeNearMiss() && i > 0 && !isBombshell) {
-          setNearMissFlash(true);
-          playNearMiss();
-          if (await abortableWait(250)) return;
-          setNearMissFlash(false);
-        }
-
-        // Rare / Bombshell reveal sequence
-        setRareRevealing(true);
-
-        // Phase A: Silence — let the tension breathe
-        if (await abortableWait(350)) return;
-
-        // Phase B: Energy Build
+      if (isBonusIndex(i)) {
+        // Bonus Bombshell: cut away to its own reveal, then drop it into the spread
         if (await abortableWait(450)) return;
-
-        // Phase C: Slow flip — hold the moment
+        bonusShownRef.current.add(card.id);
+        await new Promise<void>((resolve) => {
+          bonusResolveRef.current = resolve;
+          setBonusRevealCard(card);
+        });
+        setBonusRevealCard(null);
         setFlippedCards(prev => new Set(prev).add(i));
-        if (rarity === 'mythic') {
-          setMythicRevealing(true);
-          playUnlockChime();
-          playRareHit();
-          audioManager.playSfx('hidden_secret_found', 1.0);
-        } else if (isBombshell) {
-          playBombshellShimmer();
-          playRareHit();
-        } else {
-          playRareHit();
-        }
-        if (await abortableWait(rarity === 'mythic' ? 1200 : 650)) return;
-        setMythicRevealing(false);
-
-        // Ultra trigger check (0.3%)
-        if (isUltraTrigger()) {
-          setUltraTriggered(true);
-          if (await abortableWait(1000)) return;
-          setUltraTriggered(false);
-        }
-
-        setRareRevealing(false);
-        if (await abortableWait(500)) return; // Linger on the card
-      } else if (rarity === 'uncommon') {
-        // Uncommon — let it sit a beat
-        setFlippedCards(prev => new Set(prev).add(i));
-        playTick();
-        if (await abortableWait(500)) return;
+        playBombshellShimmer();
+        if (await abortableWait(700)) return;
       } else {
-        // Common — still give it a moment
-        setFlippedCards(prev => new Set(prev).add(i));
-        playTick();
-        if (await abortableWait(450)) return;
+      const baseProfile = getRevealProfile(rarity);
+      const profile = reduceMotion ? reduceProfile(baseProfile) : baseProfile;
+      const revealId = ++revealIdRef.current;
+
+      // Near-miss tease (60% on rare+): flash a higher tier before the build
+      if (profile.highTier && shouldFakeNearMiss() && i > 0 && !isBombshell) {
+        setNearMissFlash(true);
+        playNearMiss();
+        if (await abortableWait(250)) return;
+        setNearMissFlash(false);
+      }
+
+      // CHARGE — the build-up already tells you the tier
+      if (profile.chargeMs > 0) {
+        setTierReveal({ id: revealId, stage: 'charge', profile });
+        playTierCharge(profile.tier, profile.chargeMs / 1000);
+        if (isBombshell && profile.highTier) playBombshellHeartbeat();
+        if (await abortableWait(profile.chargeMs)) return;
+      }
+
+      // IMPACT — the card turns
+      setFlippedCards(prev => new Set(prev).add(i));
+      setTierReveal({ id: revealId, stage: 'impact', profile });
+      playTierImpact(profile.tier);
+      if (rarity === 'mythic') {
+        audioManager.playSfx('hidden_secret_found', 1.0);
+      }
+      if (isBombshell && profile.highTier) {
+        playBombshellShimmer();
+      }
+      if (await abortableWait(profile.impactMs)) return;
+
+      // AFTERGLOW — linger on the card
+      setTierReveal({ id: revealId, stage: 'afterglow', profile });
+
+      // Ultra trigger check (0.3%, rare+)
+      if (profile.highTier && isUltraTrigger()) {
+        setUltraTriggered(true);
+        if (await abortableWait(1000)) return;
+        setUltraTriggered(false);
+      }
+
+      if (await abortableWait(profile.holdMs)) return;
+      setTierReveal(null);
       }
 
       // First-time card unlock overlay step (paused until resolved)
       if (checkFirstUnlock(card.card.id)) {
         setFirstUnlockCard(card);
-        audioManager.playSfx('hidden_secret_found', 1.0);
         await new Promise<void>((resolve) => {
           unlockResolveRef.current = resolve;
         });
@@ -1291,7 +1294,7 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
     setPhase('layout');
     sequenceRunning.current = false;
     // We now pause here for the user to examine the cards and click continue.
-  }, [cards, isBombshell]);
+  }, [cards, isBombshell, reduceMotion, isBonusIndex]);
 
   // ── Mobile tap-to-rip (fallback for when drag is difficult) ─────────
   const handlePackTap = useCallback(() => {
@@ -1674,6 +1677,9 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
         )}
       </AnimatePresence>
 
+      {/* ── TIER REVEAL FX (back: under cards) ─────────────────── */}
+      <RarityRevealFX reveal={phase === 'flipping' ? tierReveal : null} layer="back" zIndex={55} />
+
       {/* ── CARD STACK ──────────────────────────────────────────── */}
       <AnimatePresence>
         {showCards && (
@@ -1692,6 +1698,7 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
               gap: phase === 'layout' || phase === 'inspect' ? '0px' : '0px',
               perspective: '1200px',
               position: 'relative',
+              zIndex: 60, // above the FXLayer dim (50) + back reveal FX (55)
               minHeight: '340px',
               width: '100%',
             }}
@@ -1800,6 +1807,9 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
 
               // Inspection tilt
               const isInspecting = expandedIndex === i || inspectIndex === i;
+              const activeReveal = isCurrentFlip && phase === 'flipping' ? tierReveal : null;
+              const chargeJitter = activeReveal?.stage === 'charge' && activeReveal.profile.tier >= 2
+                ? activeReveal.profile.tier * 0.8 : 0;
               const tiltX = isInspecting ? mousePos.y * (isMobile ? 0 : 12) : 0;
               const tiltY = isInspecting ? mousePos.x * (isMobile ? 0 : 12) : 0;
 
@@ -1809,11 +1819,11 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
                   onClick={() => handleCardClick(i)}
                   animate={{
                     x: targetX,
-                    y: targetY,
+                    y: targetY + (activeReveal?.profile.levitate && activeReveal.stage !== 'afterglow' ? -18 : 0),
                     rotate: targetRotate,
                     rotateX: tiltX,
                     rotateY: tiltY,
-                    scale: rareRevealing && isCurrentFlip ? 1.08 : baseScale,
+                    scale: activeReveal ? activeReveal.profile.cardScale : baseScale,
                     opacity: (!isRevealed && phase === 'flipping' && i > flipIndex) ? 0.6 : 1,
                   }}
                   transition={{
@@ -1845,8 +1855,16 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
 
                   {/* Card shake during pause */}
                   <motion.div
-                    animate={phase === 'pause' ? { x: [-1, 1, -1] } : {}}
-                    transition={phase === 'pause' ? { repeat: Infinity, duration: 0.3 } : {}}
+                    animate={phase === 'pause'
+                      ? { x: [-1, 1, -1] }
+                      : chargeJitter > 0
+                        ? { x: [-chargeJitter, chargeJitter, -chargeJitter * 0.5, chargeJitter * 0.5, 0], rotate: [0, -0.6, 0.6, 0] }
+                        : { x: 0, rotate: 0 }}
+                    transition={phase === 'pause'
+                      ? { repeat: Infinity, duration: 0.3 }
+                      : chargeJitter > 0
+                        ? { repeat: Infinity, duration: Math.max(0.12, 0.3 - chargeJitter * 0.03) }
+                        : { duration: 0.15 }}
                   >
                         {/* Foil shimmer for rare+ */}
                         {isRare && isRevealed && (
@@ -1865,19 +1883,32 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
                           </div>
                         )}
 
-                        {/* Screen flash on rare impact */}
-                        {isRare && isCurrentFlip && isRevealed && (
+                        {isBonusIndex(i) && isRevealed && (
                           <motion.div
-                            initial={{ opacity: 0.8 }}
-                            animate={{ opacity: 0 }}
-                            transition={{ duration: 0.15 }}
+                            initial={{ scale: 2, opacity: 0, rotate: -20 }}
+                            animate={{ scale: 1, opacity: 1, rotate: 10 }}
+                            transition={{ type: 'spring', stiffness: 500, damping: 18 }}
                             style={{
-                              position: 'fixed', inset: 0,
-                              background: '#fff', zIndex: 300, pointerEvents: 'none',
+                              position: 'absolute', top: -12, right: -14, zIndex: 30,
+                              background: '#fff', color: '#FF1493', border: '2px solid #FF1493',
+                              fontFamily: 'Impact, "Arial Black", sans-serif', fontSize: 14, letterSpacing: '0.08em',
+                              padding: '2px 8px', boxShadow: '3px 3px 0 #FF1493', pointerEvents: 'none',
+                            }}
+                          >
+                            +1 BONUS
+                          </motion.div>
+                        )}
+                        {isBonusIndex(i) && isRevealed && (
+                          <motion.div
+                            animate={{ opacity: [0.45, 0.9, 0.45] }}
+                            transition={{ repeat: Infinity, duration: 1.8 }}
+                            style={{
+                              position: 'absolute', inset: '-10px', borderRadius: '18px', zIndex: -1,
+                              background: 'radial-gradient(ellipse, rgba(255,20,147,0.55), transparent 70%)',
+                              filter: 'blur(10px)', pointerEvents: 'none',
                             }}
                           />
                         )}
-
                         <Card 
                             card={owned.card}
                             edition={owned.edition}
@@ -1889,7 +1920,7 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
                             isEcho={owned.isEcho}
                             echoGeneration={owned.echoGeneration}
                         />
-                        {isRevealed && (
+                        {isRevealed && !activeReveal?.profile.title && (
                           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }} style={{ marginTop: '8px', textAlign: 'center' }}>
                             <RarityBadge rarity={rarity} size="sm" />
                           </motion.div>
@@ -1901,6 +1932,9 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ── TIER REVEAL FX (front: over cards) ─────────────────── */}
+      <RarityRevealFX reveal={phase === 'flipping' ? tierReveal : null} layer="front" zIndex={155} shakeTargetRef={containerRef} />
 
       {/* Ultra reward crackling overlay */}
       <AnimatePresence>
@@ -2142,158 +2176,37 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
         )}
       </AnimatePresence>
 
-      {/* ── FIRST-TIME UNLOCK OVERLAY ────────────────────────────── */}
+      {/* ── BONUS BOMBSHELL OVERLAY ───────────────────────────────── */}
+      <AnimatePresence>
+        {bonusRevealCard && (
+          <BombshellBonusReveal
+            key={bonusRevealCard.id}
+            card={bonusRevealCard}
+            onDone={() => {
+              if (bonusResolveRef.current) {
+                bonusResolveRef.current();
+                bonusResolveRef.current = null;
+              } else {
+                setBonusRevealCard(null);
+              }
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── FIRST-TIME SONG UNLOCK ─────────────────────────────────── */}
       <AnimatePresence>
         {firstUnlockCard && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            style={{
-              position: 'fixed',
-              inset: 0,
-              zIndex: 1000,
-              background: '#050402',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              overflow: 'hidden',
-              padding: '24px'
+          <SongUnlockReveal
+            key={firstUnlockCard.id}
+            owned={firstUnlockCard}
+            onContinue={() => {
+              if (unlockResolveRef.current) {
+                unlockResolveRef.current();
+                unlockResolveRef.current = null;
+              }
             }}
-          >
-            {/* Pulsing glow background in rarity color */}
-            <motion.div
-              animate={{ opacity: [0.3, 0.6, 0.3], scale: [1, 1.15, 1] }}
-              transition={{ repeat: Infinity, duration: 4, ease: 'easeInOut' }}
-              style={{
-                position: 'absolute',
-                width: '600px',
-                height: '600px',
-                borderRadius: '50%',
-                background: `radial-gradient(circle, ${RARITY_CONFIG[firstUnlockCard.card.rarity]?.color || '#ffd700'}30, transparent 75%)`,
-                filter: 'blur(80px)',
-                pointerEvents: 'none',
-              }}
-            />
-
-            {/* Scanning monitor scanlines */}
-            <div style={{
-              position: 'absolute',
-              inset: 0,
-              pointerEvents: 'none',
-              background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, 0.15) 2px, rgba(0, 0, 0, 0.15) 4px)'
-            }} />
-
-            {/* Underground header */}
-            <motion.div
-              initial={{ y: -20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              style={{ textAlign: 'center', zIndex: 10, marginBottom: '32px' }}
-            >
-              <div style={{
-                fontFamily: '"JetBrains Mono", monospace',
-                fontSize: '11px',
-                fontWeight: 900,
-                color: RARITY_CONFIG[firstUnlockCard.card.rarity]?.color || '#ffd700',
-                letterSpacing: '0.4em',
-                textTransform: 'uppercase',
-                textShadow: `0 0 10px ${RARITY_CONFIG[firstUnlockCard.card.rarity]?.color || '#ffd700'}50`
-              }}>
-                [ NEW SIGNAL UNLOCKED ]
-              </div>
-              <div style={{
-                fontFamily: '"JetBrains Mono", monospace',
-                fontSize: '8px',
-                color: 'rgba(255,255,255,0.4)',
-                letterSpacing: '0.2em',
-                marginTop: '6px',
-                textTransform: 'uppercase'
-              }}>
-                Neural Compatibility Confirmed // Minting Provenance
-              </div>
-            </motion.div>
-
-            {/* Rising card in the center */}
-            <motion.div
-              initial={{ scale: 0.3, rotateY: -180, y: 100, opacity: 0 }}
-              animate={{ scale: 1.15, rotateY: 0, y: 0, opacity: 1 }}
-              exit={{ scale: 0.5, opacity: 0, transition: { duration: 0.2 } }}
-              transition={{ type: 'spring', stiffness: 180, damping: 20, delay: 0.3 }}
-              style={{
-                perspective: '1000px',
-                zIndex: 10,
-                marginBottom: '40px',
-                filter: `drop-shadow(0 0 35px ${RARITY_CONFIG[firstUnlockCard.card.rarity]?.color || '#ffd700'}30)`
-              }}
-            >
-              <Card card={firstUnlockCard.card} interactive={false} showAudio={false} isRevealed={true} />
-            </motion.div>
-
-            {/* Title / Artist details */}
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.6 }}
-              style={{ textAlign: 'center', zIndex: 10, marginBottom: '36px', maxWidth: '300px' }}
-            >
-              <h2 style={{
-                fontFamily: 'Impact, sans-serif',
-                fontSize: '24px',
-                fontWeight: 900,
-                color: '#fff',
-                margin: 0,
-                letterSpacing: '0.05em',
-                textTransform: 'uppercase',
-                transform: 'scaleY(1.15)'
-              }}>
-                {firstUnlockCard.card.title}
-              </h2>
-              <p style={{
-                fontFamily: '"JetBrains Mono", monospace',
-                fontSize: '11px',
-                color: 'rgba(255,255,255,0.5)',
-                margin: '8px 0 0',
-                letterSpacing: '0.15em',
-                textTransform: 'uppercase'
-              }}>
-                by {(firstUnlockCard.card as any).artist || 'TH3SCR1B3'}
-              </p>
-            </motion.div>
-
-            {/* Continue / Integrate Button */}
-            <motion.button
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.8 }}
-              onClick={() => {
-                if (unlockResolveRef.current) {
-                  unlockResolveRef.current();
-                  unlockResolveRef.current = null;
-                }
-              }}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              style={{
-                zIndex: 10,
-                padding: '14px 32px',
-                background: RARITY_CONFIG[firstUnlockCard.card.rarity]?.color || '#ffd700',
-                color: '#000',
-                fontFamily: '"JetBrains Mono", monospace',
-                fontWeight: 900,
-                letterSpacing: '0.2em',
-                textTransform: 'uppercase',
-                fontSize: '12px',
-                border: 'none',
-                cursor: 'pointer',
-                boxShadow: `0 8px 32px ${RARITY_CONFIG[firstUnlockCard.card.rarity]?.color || '#ffd700'}30`,
-                borderRadius: '4px'
-              }}
-            >
-              [ INTEGRATE SIGNAL ]
-            </motion.button>
-          </motion.div>
+          />
         )}
       </AnimatePresence>
 
@@ -2762,41 +2675,6 @@ export default function PackContainer({ meta, cards, accumulatedCards = cards, o
         )}
       </AnimatePresence>
 
-      {/* Mythic 1 of 1 Supernova Reveal Celebration */}
-      <AnimatePresence>
-        {mythicRevealing && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 pointer-events-none z-[160] flex flex-col items-center justify-center"
-          >
-            {/* Golden Supernova Ring Blast */}
-            <div
-              className="w-96 h-96 rounded-full"
-              style={{
-                background: 'radial-gradient(circle, #ffffff 0%, #ffd700 45%, rgba(255,0,127,0.3) 70%, transparent 90%)',
-                animation: 'mythic-supernova-blast 1.2s cubic-bezier(0.1, 0.8, 0.3, 1) forwards',
-              }}
-            />
-            <motion.div
-              initial={{ scale: 0.6, opacity: 0, y: 30 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.8, opacity: 0, y: -20 }}
-              className="absolute bottom-20 px-8 py-3 rounded-2xl bg-black/95 border-2 border-[#ffd700] shadow-[0_0_50px_rgba(255,215,0,0.9)] flex items-center gap-3"
-            >
-              <span className="text-xl text-[#ffd700] animate-spin">✦</span>
-              <span
-                className="font-mono text-sm sm:text-base font-black text-[#ffd700] tracking-widest uppercase"
-                style={{ textShadow: '0 0 16px rgba(255,215,0,0.9)' }}
-              >
-                ✦ MYTHIC 1 OF 1 DISCOVERED ✦
-              </span>
-              <span className="text-xl text-[#ffd700] animate-spin" style={{ animationDirection: 'reverse' }}>✦</span>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

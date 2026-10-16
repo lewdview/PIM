@@ -101,13 +101,16 @@ export default function StageHome() {
         <div className="sh-drop">
           <Cover song={today} className="sh-drop-art" numberSize={320} />
           <div className="sh-drop-body">
-            <div className="sh-eyebrow">Today's drop · Day {today.day} of 365 · {formatDate(today.day)}</div>
+            <div className="sh-eyebrow">
+              <span className="hw-led" data-color="acid" />
+              <span>Today's drop · Day {today.day} of 365 · {formatDate(today.day)}</span>
+            </div>
             <h1>{today.title}</h1>
             <div className="sh-meta">
               <span className="pim-mood" data-mood={today.mood === 'dark' ? 'dark' : 'light'}>{today.mood === 'dark' ? 'Dark' : 'Light'}</span>
-              {today.bpm ? <span>{today.bpm} BPM</span> : null}
-              {today.duration ? <span>{fmtDur(today.duration)}</span> : null}
-              {today.difficultyLevel ? <Pips n={today.difficultyLevel} /> : null}
+              {today.bpm ? <span className="sh-meta-pill">{today.bpm} BPM</span> : null}
+              {today.duration ? <span className="sh-meta-pill">{fmtDur(today.duration)}</span> : null}
+              {today.difficultyLevel ? <span className="sh-meta-pill"><Pips n={today.difficultyLevel} /></span> : null}
             </div>
             <div className="sh-cta">
               <Link to={`/play/day-${String(today.day).padStart(3, '0')}`} className="btn-3d">
@@ -120,7 +123,10 @@ export default function StageHome() {
 
             <div className="sh-daycard">
               <div className="sh-daycard-text">
-                <b>{daily.hasClaimed ? `Day ${today.day} card is yours` : `Day ${today.day} card · free today`}</b>
+                <b>
+                  <span className="hw-led" data-color={daily.hasClaimed ? 'cyan' : 'gold'} />
+                  {daily.hasClaimed ? `Day ${today.day} card is yours` : `Day ${today.day} card · free today`}
+                </b>
                 <small>
                   {daily.hasClaimed
                     ? `Pull another copy for ${daily.buyCost} sparks · next drop in ${nextIn}`
@@ -204,9 +210,11 @@ export default function StageHome() {
               <h3>Vault</h3>
               <Link to="/vault" className="sh-link">Open</Link>
             </div>
-            <div className="sh-row"><span>Cards</span><b>{collection.length.toLocaleString()}</b></div>
-            <div className="sh-row"><span>Unique days</span><b>{uniqueDays} / 365</b></div>
-            <div className="sh-bar"><i style={{ width: `${(uniqueDays / 365) * 100}%` }} /></div>
+            <div className="sh-vault-well">
+              <div className="sh-row"><span>Cards</span><b>{collection.length.toLocaleString()}</b></div>
+              <div className="sh-row"><span>Unique days</span><b>{uniqueDays} / 365</b></div>
+            </div>
+            <div className="sh-bar"><i style={{ width: `${Math.max(2, (uniqueDays / 365) * 100)}%` }} /></div>
           </div>
         </div>
       </section>
@@ -228,6 +236,7 @@ export default function StageHome() {
                     {'★'.repeat(stars)}<span>{'★'.repeat(3 - stars)}</span>
                   </span>
                 )}
+                <span className="sh-tile-day">D{String(s.day).padStart(3, '0')}</span>
                 <span className="sh-tile-text">
                   <b>{s.title}</b>
                   <small>Day {s.day}{s.bpm ? ` · ${s.bpm} BPM` : ''}</small>
@@ -239,13 +248,19 @@ export default function StageHome() {
       </section>
 
       <section className="sh-section">
-        <div className="sh-label"><h2>Modes</h2></div>
+        <div className="sh-label">
+          <h2>Modes</h2>
+          <span className="sh-note">Select active console module</span>
+        </div>
         <div className="sh-modes">
           {modes.map((m) => {
             const Icon = m.icon;
             return (
               <Link key={m.id} to={m.to!} className="sh-mode">
-                <span className="sh-mode-icon"><Icon size={20} /></span>
+                <div className="sh-mode-head">
+                  <span className="sh-mode-icon"><Icon size={20} /></span>
+                  <span className="hw-badge">READY</span>
+                </div>
                 <span><b>{m.label}</b><small>{m.desc}</small></span>
               </Link>
             );
