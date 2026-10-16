@@ -12,3 +12,7 @@
 **Vulnerability:** A hardcoded plaintext admin passphrase (`th3scr1b3`) was being passed in the payload of a `supabase.functions.invoke` call in `src/utils/adminConfig.ts`.
 **Learning:** Hardcoded credentials should not be present in background sync functions or client bundles.
 **Prevention:** Always pull credentials dynamically from `sessionStorage` where the authenticated session stores it or handle authorization securely without exposing raw secrets in code.
+## 2025-02-28 - Hardcoded Supabase and Stripe keys
+**Vulnerability:** The codebase contains hardcoded Supabase URL, anon key, and Firebase API key in config files, and mentions Stripe API keys in AdminPage.
+**Learning:** Fallbacks to hardcoded values for environment variables can expose sensitive credentials in the client bundle.
+**Prevention:** Remove all hardcoded credentials from source files and use empty strings as fallbacks, enforcing environment variables at runtime.
