@@ -1,7 +1,8 @@
-// App shell for a monthly Playgama build ("PIM: January"): one campaign chapter,
-// its songs and results, nothing else. No vault, packs, sign-in or menus; any
-// other route the game links to lands back on the chapter. main.tsx renders this
-// instead of App.tsx when vite.config.ts sets __PIM_MONTH__.
+// App shell for a monthly Playgama build ("PIM: January"): an animated intro and
+// a press-start screen, then one campaign chapter, its songs and results,
+// nothing else. No vault, packs, sign-in or menus; any other route the game
+// links to lands back on the chapter. main.tsx renders this instead of App.tsx
+// when vite.config.ts sets __PIM_MONTH__.
 
 import { Suspense, lazy, useEffect, useState } from 'react';
 import { Redirect, Route, Switch, useLocation } from 'wouter';
@@ -13,6 +14,8 @@ import { useGlobalPlayer } from '@/store/useGlobalPlayer';
 import { markGameReady } from '@/platform';
 import { setGate } from '@/platform/playgama/audioGate';
 import { PLAYGAMA_MONTH, restoreBonusBundle } from '@/platform/playgama/month';
+import { submitMonthScore } from '@/platform/playgama/monthLeaderboard';
+import TitleScreens from './month/TitleScreens';
 import '@/styles/CardShowcaseStyles.css';
 
 const ChapterStory = lazy(() => import('./campaign/ChapterStory'));
@@ -60,7 +63,9 @@ function MuteButton({ inPlay }: { inPlay: boolean }) {
 }
 
 export default function MonthShell() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
+  // The intro and start screen show once per launch, then the chapter.
+  const [started, setStarted] = useState(false);
 
   useEffect(() => {
     markGameReady();
@@ -69,7 +74,17 @@ export default function MonthShell() {
 
   useEffect(() => {
     if (location.startsWith('/play/')) useGlobalPlayer.getState().stop();
-  }, [location]);
+    // Back from a run: post the month total to the Playgama leaderboard if it went up.
+    else if (started) void submitMonthScore().catch(() => {});
+  }, [location, started]);
+
+  if (!started) {
+    return (
+      <ErrorBoundary sectionName="ROOT_APP">
+        <TitleScreens onStart={() => { setLocation(HOME, { replace: true }); setStarted(true); }} />
+      </ErrorBoundary>
+    );
+  }
 
   return (
     <ErrorBoundary sectionName="ROOT_APP">

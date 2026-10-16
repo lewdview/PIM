@@ -1,0 +1,205 @@
+/* monthBoard.css — the monthly Playgama build's chapter screen. Unlike the web
+   chapter page it never scrolls: the header, the track grid and the selected
+   track's panel always fit one viewport, landscape or portrait. The track
+   grid's rows shrink to whatever height is left. --ch is the chapter colour. */
+
+.mb-page {
+  --ch: var(--shell-accent);
+  position: fixed;
+  inset: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+  padding: 12px 64px 12px 14px; /* right gutter keeps the mute button clear */
+  overflow: hidden;
+  font-family: var(--shell-body);
+  color: var(--shell-text);
+  background:
+    radial-gradient(120% 70% at 85% 0%, color-mix(in srgb, var(--ch) 16%, transparent), transparent 60%),
+    var(--shell-bg);
+  animation: mb-in 0.45s ease-out both;
+}
+@keyframes mb-in { from { opacity: 0; transform: scale(1.015); } to { opacity: 1; transform: none; } }
+
+/* ── Header ── */
+.mb-head {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px 18px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.mb-title h1 { font-size: clamp(30px, 6.2vh, 56px); }
+.mb-progress { flex: 1 1 220px; display: grid; gap: 6px; min-width: 0; padding-bottom: 4px; }
+.mb-progress .cs-stats { font-size: 11px; gap: 4px 14px; }
+.mb-lb-btn { margin-bottom: 4px; }
+
+/* ── Track grid + detail ── */
+.mb-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(280px, 1fr);
+  gap: 14px;
+  min-height: 0;
+}
+.mb-tracks {
+  --cols: 8;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 6px;
+  min-height: 0;
+  align-content: stretch;
+}
+.mb-tracks > li { min-width: 0; min-height: 0; display: flex; }
+
+.mb-tile {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 1px solid var(--shell-line-strong);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--shell-raise);
+  cursor: pointer;
+  transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+}
+.mb-tile img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.mb-tile::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 45%, rgba(0, 0, 0, 0.7));
+}
+.mb-tile[data-state='locked'] img { filter: grayscale(0.85) brightness(0.45); }
+.mb-tile[data-bonus] { border-color: color-mix(in srgb, var(--shell-gold) 55%, transparent); }
+.mb-tile:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--ch) 60%, transparent); }
+.mb-tile[data-selected='true'] {
+  border-color: var(--ch);
+  box-shadow: 0 0 0 2px var(--ch), 0 0 18px color-mix(in srgb, var(--ch) 55%, transparent);
+  z-index: 1;
+}
+.mb-tile[data-state='open']:not([data-selected='true']) { border-color: color-mix(in srgb, var(--ch) 45%, transparent); }
+.mb-tile-n {
+  position: absolute;
+  left: 6px;
+  bottom: 4px;
+  z-index: 1;
+  font: 700 clamp(10px, 1.6vh, 13px)/1 var(--shell-mono);
+  color: #fff;
+  text-shadow: 0 1px 3px #000;
+}
+.mb-tile[data-bonus] .mb-tile-n { color: var(--shell-gold); }
+.mb-tile-ico { position: absolute; inset: 0; z-index: 1; display: grid; place-items: center; color: rgba(255, 255, 255, 0.75); }
+.mb-tile-medal {
+  position: absolute;
+  right: 5px;
+  top: 5px;
+  z-index: 1;
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.55), 0 0 8px currentColor;
+}
+
+.mb-detail {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto auto auto;
+  gap: 10px;
+  min-height: 0;
+  padding: 14px;
+  border: 1px solid var(--shell-line);
+  border-radius: var(--shell-radius);
+  background: color-mix(in srgb, var(--shell-panel) 88%, transparent);
+  overflow: hidden;
+}
+.mb-detail-top { display: flex; gap: 12px; min-height: 0; overflow: hidden; }
+.mb-cover {
+  flex: 0 0 auto;
+  width: clamp(72px, 30vh, 240px);
+  aspect-ratio: 1;
+  height: auto;
+  align-self: flex-start;
+  border-radius: 12px;
+  object-fit: cover;
+  background: var(--shell-raise);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+.mb-detail-name { min-width: 0; display: grid; align-content: start; gap: 6px; }
+.mb-detail-name h2 { font-size: clamp(20px, 4vh, 34px); overflow-wrap: anywhere; }
+.mb-hook {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 13px;
+}
+.mb-detail .cs-detail-grid { margin: 0; }
+.mb-note { font-size: 12.5px; line-height: 1.35; min-height: 0; }
+.mb-note .cs-lock-note { display: block; margin: 0; }
+.mb-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; align-items: center; }
+.mb-play { min-width: 128px; }
+
+/* Portrait: grid on top, the selected track's panel under it. */
+@media (max-aspect-ratio: 1/1) {
+  .mb-page { padding: 10px 56px 12px 10px; gap: 8px; }
+  .mb-head { gap: 6px 12px; }
+  .mb-main { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; gap: 10px; }
+  .mb-tracks { --cols: 6; gap: 5px; }
+  .mb-detail { grid-template-rows: auto auto auto auto; padding: 12px; gap: 8px; }
+  .mb-cover { width: clamp(56px, 10vh, 96px); }
+  .mb-hook { -webkit-line-clamp: 2; }
+  .mb-actions .btn-3d { padding: 10px 14px; }
+}
+@media (max-aspect-ratio: 1/1) and (max-height: 700px) {
+  .mb-detail .cs-detail-grid { display: none; }
+}
+@media (min-aspect-ratio: 1/1) and (max-height: 480px) {
+  .mb-title h1 { font-size: 26px; }
+  .mb-hook { -webkit-line-clamp: 2; }
+  .mb-detail .cs-detail-grid { display: none; }
+}
+
+/* ── Leaderboard ── */
+.mb-lb {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(6px);
+}
+.mb-lb-card {
+  width: min(460px, 100%);
+  max-height: 100%;
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 1px solid var(--shell-line-strong);
+  border-radius: var(--shell-radius);
+  background: var(--shell-panel);
+  overflow: hidden;
+}
+.mb-lb-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.mb-lb-head h2 { font-size: 28px; }
+.mb-lb-rows { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.mb-lb-rows li {
+  display: grid;
+  grid-template-columns: 28px 26px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--shell-raise);
+  font-size: 14px;
+}
+.mb-lb-rows img, .mb-lb-ph { width: 26px; height: 26px; border-radius: 999px; object-fit: cover; background: var(--shell-well); }
+.mb-lb-rank { font: 700 13px/1 var(--shell-mono); color: var(--ch); text-align: center; }
+.mb-lb-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mb-lb-rows b { font-variant-numeric: tabular-nums; }

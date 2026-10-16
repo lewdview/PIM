@@ -256,3 +256,45 @@ export async function getPurchasedIds(): Promise<string[]> {
     return [];
   }
 }
+
+export type LeaderboardKind = 'not_available' | 'in_game' | 'native' | 'native_popup';
+export interface LeaderboardRow { id: string; name: string; score: number; rank: number; photo: string | null }
+
+/**
+ * How this portal offers leaderboards: 'in_game' (we draw the entries),
+ * 'native_popup' (the portal draws them on request), 'native' (the portal shows
+ * them on its own page) or 'not_available'.
+ */
+export function leaderboardKind(): LeaderboardKind {
+  return (bridgeOrNull()?.leaderboards.type as LeaderboardKind | undefined) ?? 'not_available';
+}
+
+export async function setLeaderboardScore(id: string, score: number): Promise<boolean> {
+  const b = bridgeOrNull();
+  if (!b || leaderboardKind() === 'not_available') return false;
+  try {
+    await b.leaderboards.setScore(id, score);
+    return true;
+  } catch (err) {
+    console.warn('[Playgama] Leaderboard score failed:', err);
+    return false;
+  }
+}
+
+export async function getLeaderboardEntries(id: string): Promise<LeaderboardRow[]> {
+  const b = bridgeOrNull();
+  if (!b || leaderboardKind() !== 'in_game') return [];
+  try {
+    return (await b.leaderboards.getEntries(id)) as LeaderboardRow[];
+  } catch {
+    return [];
+  }
+}
+
+export async function showLeaderboardPopup(id: string): Promise<void> {
+  const b = bridgeOrNull();
+  if (!b || leaderboardKind() !== 'native_popup') return;
+  try {
+    await b.leaderboards.showNativePopup(id);
+  } catch { /* closed or refused */ }
+}

@@ -18,6 +18,8 @@ const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "Ju
 const bonusProductId = `PIM_${MONTH_NAMES[Math.max(0, playgamaMonth - 1)]}_Bonus`;
 // Bridge prices Playgama products in Gam: 10 Gam = 1 USD.
 const bonusPriceUsd = Number(process.env.PIM_PLAYGAMA_BONUS_PRICE_USD) || 2;
+// The month's leaderboard: the sum of the player's best score on every track.
+const leaderboardId = `PIM_${MONTH_NAMES[Math.max(0, playgamaMonth - 1)]}_Score`;
 
 // Playgama build: drop the third-party ecosystem bar and Google Fonts (only the
 // Bridge may load from a CDN; the fonts are bundled instead), keep the Stella slideshow photos out of the bundle (portal content rules),
@@ -54,6 +56,7 @@ function playgamaPackaging(): Plugin {
           advertisement: { minimumDelayBetweenInterstitial: 60 },
           // The month's five bonus songs, sold as one non-consumable bundle.
           ...(playgamaMonth ? { payments: [{ id: bonusProductId, playgama: { amount: Math.round(bonusPriceUsd * 10) } }] } : {}),
+          ...(playgamaMonth ? { leaderboards: [{ id: leaderboardId, isMain: true }] } : {}),
         }, null, 2) + "\n",
       });
     },
@@ -69,6 +72,7 @@ export default defineConfig({
     __PIM_MONTH__: JSON.stringify(playgamaMonth),
     __PIM_BOMBSHELL__: JSON.stringify(playgamaBombshell),
     __PIM_BONUS_PRODUCT_ID__: JSON.stringify(bonusProductId),
+    __PIM_LEADERBOARD_ID__: JSON.stringify(leaderboardId),
   },
   esbuild: { drop: ['console', 'debugger'] },
   plugins: [

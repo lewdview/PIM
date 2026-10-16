@@ -131,6 +131,12 @@ add it to the Playgama dashboard's in-app purchase catalog with the same id and
 price; the button only shows when the portal supports payments). A platinum run on a track shows that
 track's Bombshell artwork behind it during play.
 
+The game opens on an animated intro and a press-start screen, then the chapter
+on one screen with no scrolling. Where the portal offers Bridge leaderboards,
+the month has one, `PIM_January_Score`: the total of the player's best score on
+every track. Bridge 2.3.1 reports leaderboards as unavailable on playgama.com
+itself, so the button only appears on portals that support them.
+
 - `--media-dir=/Volumes/extremeUno/th3scr1b3-365-warp/365-releases` copies the
   songs and art from a local mirror; without it they are downloaded from
   `files.th3scr1b3.art`. Audio is re-encoded to 160 kbps MP3, art to 1280 px.

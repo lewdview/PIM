@@ -13,7 +13,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useParams } from 'wouter';
-import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Lock, Pause, Play, Film, CheckCircle2, Gift } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Lock, Pause, Play, Film, CheckCircle2, Gift, Trophy, X } from 'lucide-react';
 import { loadCatalog, isSongTimeLocked, getModifierForSong, type GameSong } from '@/game/api';
 import { getMedalForSong, getHighScore } from '@/game/progress';
 import { CHAPTERS, calculateCampaignDifficulty, levelToTier } from '@/game/campaign';
@@ -35,8 +35,12 @@ import {
 import { getProductPrice } from '@/platform/playgama/bridge';
 import { bombshellFileForDay } from '@/platform/playgama/monthMedia.mjs';
 import { hideBroken } from './hideBroken';
+import {
+  getMonthEntries, monthLeaderboardKind, monthTotal, showMonthPopup, submitMonthScore, type LeaderboardRow,
+} from '@/platform/playgama/monthLeaderboard';
 import '@/styles/stageShell.css';
 import '@/styles/campaignStory.css';
+import '@/styles/monthBoard.css';
 
 const MEDAL_COLOR: Record<string, string> = {
   PLATINUM: '#39FF14', GOLD: '#E5B800', SILVER: '#A0AABB', BRONZE: '#C97A3A',
@@ -57,6 +61,11 @@ function bombshellArtFor(song: GameSong): string | null {
   return file ? getBombshellCoverUrl(song.day, file) : null;
 }
 const sfx = (v = 0.12) => audioManager.playSfx('tap_nav', v);
+/** Columns of the monthly build's track grid (set in monthBoard.css). */
+function gridCols(): number {
+  const grid = document.querySelector('.mb-tracks');
+  return (grid && parseInt(getComputedStyle(grid).getPropertyValue('--cols'), 10)) || 1;
+}
 
 type ActStoryData = Omit<ChapterAct, 'act'>;
 
@@ -87,6 +96,18 @@ export default function ChapterStory() {
   const [unlockRev, setUnlockRev] = useState(0);
   const [unlocking, setUnlocking] = useState(false);
   const [bundlePrice, setBundlePrice] = useState<string | null>(null);
+  // Monthly build: Playgama leaderboard (only where the portal offers one).
+  const lbKind = MONTH_BUILD ? monthLeaderboardKind() : 'not_available';
+  const [lbOpen, setLbOpen] = useState(false);
+  const [lbRows, setLbRows] = useState<LeaderboardRow[] | null>(null);
+  const openLeaderboard = async () => {
+    sfx(0.15);
+    if (lbKind === 'native_popup') { await showMonthPopup(); return; }
+    setLbOpen(true);
+    setLbRows(null);
+    await submitMonthScore();
+    setLbRows(await getMonthEntries());
+  };
 
   const collection = useVaultStore((s) => s.collection);
   const loadVaultData = useVaultStore((s) => s.loadVaultData);
@@ -305,8 +326,12 @@ export default function ChapterStory() {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
-      if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') { e.preventDefault(); move(-1); }
-      else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') { e.preventDefault(); move(1); }
+      // The monthly build's track grid moves a whole row on up/down.
+      const row = MONTH_BUILD ? gridCols() : 1;
+      if (e.key === 'ArrowUp') { e.preventDefault(); move(-row); }
+      else if (e.key === 'ArrowDown') { e.preventDefault(); move(row); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); move(-1); }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); move(1); }
       else if (e.key === 'Enter' && !(t && t.tagName === 'BUTTON') && !(t && t.tagName === 'A')) playRef.current();
     };
     window.addEventListener('keydown', onKey);
@@ -389,6 +414,152 @@ export default function ChapterStory() {
   const pct = progress.regular.length ? Math.round((progress.cleared / progress.regular.length) * 100) : 0;
   const stateOf = (s: GameSong, i: number) =>
     hasClearedSong(s) ? 'cleared' : stageOpen(i) && !timeLockedSong(s) ? 'open' : 'locked';
+
+  if (MONTH_BUILD) {
+    const leaderboard = (lbKind === 'in_game' || lbKind === 'native_popup') && (
+      <button type="button" className="btn-3d mb-lb-btn" data-size="sm" data-tone="quiet" onClick={openLeaderboard}>
+        <Trophy size={14} /> Leaderboard
+      </button>
+    );
+    const group = groups.find((g) => selectedIdx >= g.startIdx && selectedIdx < g.startIdx + g.songs.length);
+    const tr = selected ? getTrackStory(selected.day) : undefined;
+    const bonusGated = !progress.bonusUnlocked && progress.bonus.some((b) => !isBonusSongBought(b.id));
+    return (
+      <div className="mb-page" style={chStyle}>
+        <header className="mb-head">
+          <div className="mb-title">
+            <div className="cs-eyebrow" style={{ color: meta.dc }}>Chapter {pad(meta.month)} · {meta.sub}</div>
+            <h1 className="cs-display">{meta.name}</h1>
+          </div>
+          <div className="mb-progress">
+            <div className="cs-stats">
+              <span><b>{progress.cleared}/{progress.regular.length}</b> cleared</span>
+              <span><b>✦ {progress.platinums}/{meta.platNeeded}</b> platinum for bonus</span>
+              <span><b>{meta.diff.toLowerCase()}</b></span>
+            </div>
+            <div className="cs-bar" aria-label={`${pct}% cleared`}><span style={{ width: `${pct}%` }} /></div>
+          </div>
+          {leaderboard}
+        </header>
+
+        <div className="mb-main">
+          <ol className="mb-tracks" aria-label="Tracks">
+            {songs.map((s, idx) => {
+              const state = stateOf(s, idx);
+              const medal = getMedalForSong(s.id);
+              const isBonus = idx >= progress.regular.length;
+              const isActStart = groups.some((g) => g.startIdx === idx && idx > 0);
+              return (
+                <li key={s.id} id={`beat-${idx}`} data-act-start={isActStart || undefined}>
+                  <button
+                    type="button"
+                    className="mb-tile"
+                    data-state={state}
+                    data-selected={idx === selectedIdx}
+                    data-bonus={isBonus || undefined}
+                    aria-label={`${s.title}, ${isBonus ? 'bonus' : `track ${idx + 1}`}, ${state}`}
+                    aria-pressed={idx === selectedIdx}
+                    onClick={() => select(idx)}
+                    onDoubleClick={() => { if (idx === selectedIdx) handlePlay(); }}
+                  >
+                    {s.coverArt && <img src={s.coverArt} alt="" loading="lazy" onError={hideBroken} />}
+                    <span className="mb-tile-n">{isBonus ? '★' : idx + 1}</span>
+                    {state === 'locked' && <span className="mb-tile-ico"><Lock size={14} /></span>}
+                    {state === 'cleared' && (
+                      <span className="mb-tile-medal" style={{ background: MEDAL_COLOR[medal] ?? '#39ff14' }} title={medal} />
+                    )}
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+
+          {selected && status && (
+            <section className="mb-detail" aria-label="Selected track">
+              <div className="mb-detail-top">
+                {selected.coverArt ? <img className="mb-cover" src={selected.coverArt} alt="" onError={hideBroken} /> : <span className="mb-cover" />}
+                <div className="mb-detail-name">
+                  <div className="cs-eyebrow">
+                    {status.isBonus ? 'Bonus' : `Track ${selectedIdx + 1}/${progress.regular.length}`}
+                    {group?.act?.act && <> · Act {group.act.act} · {group.act.word}</>}
+                    {' · '}day {selected.day}
+                  </div>
+                  <h2 className="cs-display">{selected.title}</h2>
+                  {tr && (
+                    <p className="cs-hook mb-hook">
+                      {tr.hasLyrics ? <>“<Highlighted line={tr.hook} words={[...tr.words, ...(story?.words ?? [])]} />”</> : tr.hook}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="cs-detail-grid">
+                <div><small>Level · {levelToTier(status.level).toLowerCase()}</small><b>{status.level}</b></div>
+                <div><small>Best</small><b>{status.score ? status.score.toLocaleString() : '—'}</b></div>
+                <div><small>Medal</small><b style={{ color: MEDAL_COLOR[status.medal] ?? undefined }}>{status.medal && status.medal !== 'NONE' ? status.medal.toLowerCase() : '—'}</b></div>
+              </div>
+              <div className="mb-note">
+                {status.lockReason
+                  ? <span className="cs-lock-note">{status.lockReason}</span>
+                  : status.bombshell
+                    ? <span className="cs-muted">{status.bombshellUnlocked ? 'Bombshell art unlocked. It plays behind this track.' : 'Get a platinum medal to unlock this track’s Bombshell art.'}</span>
+                    : null}
+              </div>
+              <div className="mb-actions">
+                {status.bonusLocked && canUnlockWithAd() && (
+                  <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" disabled={unlocking} onClick={unlockByAd}>
+                    <Film size={14} /> Watch ad
+                  </button>
+                )}
+                {status.bonusLocked && bonusGated && canBuyBundle() && (
+                  <button type="button" className="btn-3d" data-size="sm" data-tone="gold" disabled={unlocking} onClick={buyBundle}>
+                    All 5 bonus{bundlePrice ? ` · ${bundlePrice}` : ''}
+                  </button>
+                )}
+                {!status.bonusLocked && (
+                  <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={togglePreview} aria-label={previewing ? 'Stop preview' : 'Preview'}>
+                    {previewing ? <Pause size={14} /> : <Play size={14} />} {previewing ? 'Stop' : 'Preview'}
+                  </button>
+                )}
+                <button type="button" className="btn-3d mb-play" disabled={status.locked} onClick={handlePlay} aria-label={status.locked ? `Locked: ${status.lockReason}` : `Play ${selected.title}`}>
+                  {status.locked ? <Lock size={16} /> : <Play size={16} fill="currentColor" />}
+                  {status.locked ? 'Locked' : status.cleared ? 'Replay' : 'Play'}
+                </button>
+              </div>
+            </section>
+          )}
+        </div>
+
+        {lbOpen && (
+          <div className="mb-lb" role="dialog" aria-modal="true" aria-label={`${meta.name} leaderboard`} onClick={() => setLbOpen(false)}>
+            <div className="mb-lb-card" onClick={(e) => e.stopPropagation()}>
+              <div className="mb-lb-head">
+                <div>
+                  <div className="cs-eyebrow">Total of your best scores</div>
+                  <h2 className="cs-display">{meta.name} leaderboard</h2>
+                </div>
+                <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={() => setLbOpen(false)} aria-label="Close leaderboard"><X size={16} /></button>
+              </div>
+              {lbRows === null ? <div className="cs-muted">Loading…</div>
+                : lbRows.length === 0 ? <div className="cs-muted">No scores yet. Clear a track to post yours.</div>
+                : (
+                  <ol className="mb-lb-rows">
+                    {lbRows.slice(0, 10).map((r) => (
+                      <li key={r.id ?? r.rank}>
+                        <span className="mb-lb-rank">{r.rank}</span>
+                        {r.photo ? <img src={r.photo} alt="" onError={hideBroken} /> : <span className="mb-lb-ph" />}
+                        <span className="mb-lb-name">{r.name || 'Player'}</span>
+                        <b>{Number(r.score).toLocaleString()}</b>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              <div className="cs-muted" style={{ fontSize: 12 }}>Your total: {monthTotal(songs).toLocaleString()}</div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="cs-page" style={chStyle}>
