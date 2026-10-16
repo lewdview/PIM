@@ -80,7 +80,7 @@ export default function Home() {
   const LANE_COLORS = liveOpts.laneColors;
   const LANE_KEYS   = liveOpts.laneKeys.map(k => keyLabel(k));
 
-  const [introType] = useState<'classic' | 'avant-garde'>(() => {
+  const [introType, setIntroType] = useState<'classic' | 'avant-garde'>(() => {
     if (sessionIntroType) {
       sessionStorage.setItem('pim_active_theme', sessionIntroType);
       return sessionIntroType;
@@ -92,6 +92,15 @@ export default function Home() {
     sessionStorage.setItem('pim_active_theme', sessionIntroType);
     return sessionIntroType;
   });
+
+  const handleToggleDeckMode = useCallback((mode: 'classic' | 'avant-garde') => {
+    sessionIntroType = mode;
+    sessionStorage.setItem('pim_active_theme', mode);
+    setIntroType(mode);
+    try {
+      audioManager.playSfx('tap_nav', 0.25);
+    } catch {}
+  }, []);
 
   const [showIntro, setShowIntro] = useState(() => !hasPlayedIntroThisSession);
   const [introPhase, setIntroPhase] = useState<'prompt'|'booting'|'presented'|'intro'|'intro_2'|'intro3'|'climax'|'done'>('prompt');
@@ -803,169 +812,210 @@ const DigitalClock = memo(() => {
         </>
       )}
 
-      {/* Top bar */}
-      <div className={`absolute top-0 left-0 right-0 flex items-center justify-between px-6 py-4 z-20 transition-all duration-1000 ${!showIntro ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(8,8,12,0.6)', backdropFilter: 'blur(16px)' }}>
-        <div className="font-mono text-[10px] font-bold tracking-[0.6em] uppercase" style={{ color: '#39FF14', textShadow: '0 0 15px rgba(57,255,20,0.5)' }}>
-          TH3SCR1B3 // PROTOCOL
+      {/* Top Hardware Telemetry Bar */}
+      <div
+        className={`absolute top-0 left-0 right-0 flex flex-wrap items-center justify-between gap-2 px-4 sm:px-6 py-2.5 z-20 transition-all duration-1000 ${!showIntro ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        style={{
+          borderBottom: '1px solid rgba(255,255,255,0.12)',
+          background: 'linear-gradient(180deg, rgba(22, 16, 34, 0.92), rgba(11, 8, 18, 0.95))',
+          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.12), 0 4px 16px rgba(0,0,0,0.45)',
+          backdropFilter: 'blur(16px)',
+        }}
+      >
+        <div className="flex items-center gap-2.5">
+          <span className="hw-led" data-color="acid" />
+          <span className="font-mono text-[10px] font-bold tracking-[0.45em] uppercase text-[#39FF14]" style={{ textShadow: '0 0 12px rgba(57,255,20,0.45)' }}>
+            TH3SCR1B3 // ARCADE DECK
+          </span>
         </div>
-        <div className="font-mono text-[9px] tracking-[0.4em] uppercase" style={{ color: 'rgba(255,255,255,0.3)' }}>
-          VERSION 2.4.0 — ACTIVE
+
+        {/* Tactile Deck Mode Selector Pill */}
+        <div className="flex items-center gap-2">
+          <div className="hw-well flex items-center p-1 gap-1" style={{ borderRadius: 999 }}>
+            <button
+              type="button"
+              onClick={() => handleToggleDeckMode('classic')}
+              className="px-2.5 py-1 rounded-full font-mono text-[9px] font-bold uppercase tracking-[0.18em] transition-all cursor-pointer"
+              style={{
+                background: introType === 'classic' ? 'linear-gradient(180deg, #ff389c, #FF1E8C)' : 'transparent',
+                color: introType === 'classic' ? '#fff' : 'rgba(255,255,255,0.5)',
+                boxShadow: introType === 'classic' ? 'inset 0 1px 0 rgba(255,255,255,0.35), 0 2px 0 #9e0b52' : 'none',
+              }}
+            >
+              STAGE DECK
+            </button>
+            <button
+              type="button"
+              onClick={() => handleToggleDeckMode('avant-garde')}
+              className="px-2.5 py-1 rounded-full font-mono text-[9px] font-bold uppercase tracking-[0.18em] transition-all cursor-pointer"
+              style={{
+                background: introType === 'avant-garde' ? 'linear-gradient(180deg, #4df0ff, #00E5FF)' : 'transparent',
+                color: introType === 'avant-garde' ? '#041418' : 'rgba(255,255,255,0.5)',
+                boxShadow: introType === 'avant-garde' ? 'inset 0 1px 0 rgba(255,255,255,0.6), 0 2px 0 #008899' : 'none',
+              }}
+            >
+              CYBER RACK
+            </button>
+          </div>
+          <span className="hidden md:inline-flex hw-badge">V2.4.0 · DSP ONLINE</span>
         </div>
       </div>
 
       {introType === 'classic' && !showIntro && (
-        <div className="relative z-10 flex flex-col items-center w-full max-w-lg px-6 slide-up">
-          {/* Hero Logo */}
-          <div className="relative w-full flex items-center justify-center my-4">
-            <MainBrandLogo size="lg" priority={true} />
-          </div>
-
-          {/* Sub label */}
-          <div className="w-full text-center py-2 mb-1">
-            <div className="font-mono text-[12px] font-bold tracking-[0.5em] uppercase" style={{ color: '#F2F0E8' }}>
-              POETRY IN MOTION
+        <div className="relative z-10 flex flex-col items-center w-full max-w-xl px-4 sm:px-6 pt-3 slide-up">
+          {/* Master Arcade Chassis Header */}
+          <div className="hw-panel w-full p-5 sm:p-6 mb-5 flex flex-col items-center relative overflow-hidden" data-accent="magenta">
+            <div className="w-full flex items-center justify-between mb-2">
+              <span className="hw-badge"><span className="hw-led" data-color="magenta" /> MASTER CONSOLE</span>
+              <span className="font-mono text-[9px] font-bold tracking-[0.25em] text-white/45 uppercase">3-LANE CROSSOVER ENGINE</span>
             </div>
-            <div className="font-mono text-[9px] font-bold tracking-[0.3em] uppercase mt-1" style={{ color: 'rgba(255,255,255,0.4)' }}>
-              BY <span style={{ color: '#FF1493' }}>TH3SCR1B3</span>
-            </div>
-          </div>
 
-          {/* Tagline - companion app */}
-          <div className="w-full text-center mb-6 opacity-0"
-            style={{
-              animation: !showIntro ? 'late-tagline 2.2s 1.2s cubic-bezier(0.25, 1, 0.5, 1) forwards' : 'none'
-            }}>
-            <div className="font-mono text-[9px] tracking-[0.35em] uppercase italic"
-              style={{
-                background: 'linear-gradient(90deg, rgba(255,255,255,0.3) 0%, #39FF14 50%, rgba(255,255,255,0.3) 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                textShadow: '0 0 15px rgba(57,255,20,0.4)',
-              }}>
-              a 365 days of light and dark companion app
+            {/* Hero Logo */}
+            <div className="relative w-full flex items-center justify-center my-2">
+              <MainBrandLogo size="lg" priority={true} />
             </div>
-          </div>
 
-          {/* Live stats — only if played */}
-          {stats.score > 0 && (
-            <div className="w-full grid grid-cols-3 mb-6 glass-card">
+            {/* Sub label */}
+            <div className="w-full text-center pt-1">
+              <div className="font-mono text-[13px] font-black tracking-[0.45em] uppercase text-[#F2F0E8]">
+                POETRY IN MOTION
+              </div>
+              <div className="font-mono text-[9.5px] font-bold tracking-[0.28em] uppercase mt-1 text-white/50">
+                BY <span className="text-[#FF1E8C]">TH3SCR1B3</span> · 365 DAYS OF LIGHT & DARK
+              </div>
+            </div>
+
+            {/* Recessed Telemetry Metrics Well */}
+            <div className="hw-well w-full grid grid-cols-3 gap-2 p-3 mt-5">
               {[
-                { label: 'SCORE',    value: stats.score.toLocaleString(), color: '#F2F0E8' },
-                { label: 'PLATINUM', value: stats.platinums,              color: '#39FF14' },
-                { label: 'CLEARED',  value: stats.cleared,                color: '#FFBD00' },
+                { label: 'TOTAL SCORE', value: stats.score.toLocaleString(), color: '#F2F0E8' },
+                { label: 'PLATINUM MEDALS', value: stats.platinums, color: '#39FF14' },
+                { label: 'STAGES CLEARED', value: stats.cleared, color: '#FFB800' },
               ].map((s, i) => (
-                <div key={s.label} className="py-4 text-center relative"
-                  style={{ borderRight: i < 2 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
-                  <div className="font-mono font-bold text-xl leading-tight" style={{ color: s.color, textShadow: `0 0 15px ${s.color}50` }}>{s.value}</div>
-                  <div className="font-mono font-bold" style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.2em' }}>{s.label}</div>
+                <div
+                  key={s.label}
+                  className="py-1.5 px-2 text-center relative"
+                  style={{ borderRight: i < 2 ? '1px solid rgba(255,255,255,0.08)' : 'none' }}
+                >
+                  <div
+                    className="font-mono font-black text-lg sm:text-xl leading-tight tabular-nums"
+                    style={{ color: s.color, textShadow: `0 0 14px ${s.color}40` }}
+                  >
+                    {s.value}
+                  </div>
+                  <div className="font-mono font-bold text-[8.5px] tracking-[0.16em] text-white/45 mt-1 uppercase">
+                    {s.label}
+                  </div>
                 </div>
               ))}
             </div>
-          )}
+          </div>
 
-          {/* CTA buttons */}
-          <div className="w-full mt-2 flex flex-col gap-3.5">
+          {/* Tactile 3D CTA Action Deck */}
+          <div className="w-full flex flex-col gap-3">
             <button
               data-testid="button-start"
               onClick={() => navigate('/campaign')}
-              className="w-full py-5 text-sm sm:text-base tracking-[0.4em] font-black uppercase text-black bg-[#39FF14] hover:bg-[#39FF14]/90 hover:shadow-[0_0_25px_rgba(57,255,20,0.4)] transition-all cursor-pointer active:scale-95 flex items-center justify-center"
-              style={{
-                clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
-                minHeight: 52,
-              }}
+              className="btn-3d w-full justify-center font-mono tracking-[0.22em] uppercase"
+              data-tone="acid"
+              data-size="lg"
             >
               ▶ INITIATE CAMPAIGN
             </button>
 
-            <button
-              onClick={() => navigate('/vault')}
-              className="w-full py-4 text-xs tracking-[0.35em] font-black uppercase text-white hover:scale-[1.01] active:scale-95 transition-all cursor-pointer flex items-center justify-center"
-              style={{
-                clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
-                background: 'linear-gradient(90deg, #ff3800, #ff8800)',
-                boxShadow: '0 0 20px rgba(255,56,0,0.35)',
-                minHeight: 48,
-              }}
-            >
-              ◈ DIGITAL VAULT
-            </button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button
+                onClick={() => navigate('/vault')}
+                className="btn-3d w-full justify-center font-mono tracking-[0.16em] uppercase"
+                data-tone="vermilion"
+              >
+                ◈ DIGITAL VAULT
+              </button>
 
-            <button
-              onClick={() => navigate('/songs')}
-              className="w-full py-4 text-xs tracking-[0.35em] font-black uppercase text-[#00E5FF] bg-zinc-950 border border-[#00E5FF]/60 hover:bg-[#00E5FF]/15 hover:border-[#00E5FF] hover:shadow-[0_0_20px_rgba(0,229,255,0.3)] active:scale-95 transition-all cursor-pointer flex items-center justify-center"
-              style={{
-                clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
-                minHeight: 48,
-              }}
-            >
-              ◈ ARCHIVE — ALL 365 TRACKS
-            </button>
+              <button
+                onClick={() => navigate('/songs')}
+                className="btn-3d w-full justify-center font-mono tracking-[0.16em] uppercase"
+                data-tone="cyan"
+              >
+                ◈ ALL 365 TRACKS
+              </button>
+            </div>
 
-            <div className="flex gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => navigate('/tutorial')}
-                className="flex-1 py-3.5 text-xs tracking-[0.25em] font-black uppercase text-zinc-300 bg-zinc-950 border border-white/20 hover:text-white hover:border-[#FF1493] hover:shadow-[0_0_15px_rgba(255,20,147,0.3)] active:scale-95 transition-all cursor-pointer flex items-center justify-center"
-                style={{
-                  clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
-                  minHeight: 48,
-                }}
+                className="btn-3d w-full justify-center font-mono tracking-[0.18em] uppercase"
+                data-tone="quiet"
               >
-                ? INTEL
+                ? INTEL & GUIDE
               </button>
 
               <button
                 onClick={() => { audioManager.playSfx('tap_nav', 0.1); setOptionsModalOpen(true); }}
-                className="flex-1 py-3.5 text-xs tracking-[0.25em] font-black uppercase text-zinc-300 bg-zinc-950 border border-white/20 hover:text-[#39FF14] hover:border-[#39FF14] hover:shadow-[0_0_15px_rgba(57,255,20,0.3)] active:scale-95 transition-all cursor-pointer flex items-center justify-center"
-                style={{
-                  clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
-                  minHeight: 48,
-                }}
+                className="btn-3d w-full justify-center font-mono tracking-[0.18em] uppercase"
+                data-tone="quiet"
               >
-                ⚙ CORE
+                ⚙ CORE OPTIONS
               </button>
             </div>
           </div>
 
-          {/* Blink prompt */}
-          <div className="mt-8 font-mono text-[10px] font-bold tracking-[0.4em] transition-opacity duration-300"
-            style={{ opacity: blink ? 0.6 : 0, color: 'rgba(255,255,255,0.5)' }}>
-            <span className="shimmer-text">[ STANDBY FOR TRANSMISSION ]</span>
-          </div>
+          {/* 3-Lane Mechanical Keycap Triggers & Flow State Deck */}
+          <div className="hw-panel w-full p-4 sm:p-5 mt-5 flex flex-col gap-4" data-accent="gold">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[10px] font-bold tracking-[0.24em] text-white/60 uppercase">
+                // 3-BAND CROSSOVER LANE TRIGGERS
+              </span>
+              <span className="font-mono text-[9px] font-bold tracking-[0.22em] transition-opacity duration-300" style={{ opacity: blink ? 0.9 : 0.35, color: '#39FF14' }}>
+                [ STANDBY ]
+              </span>
+            </div>
 
-          {/* Lane keys */}
-          <div className="mt-8 flex gap-5 w-full max-w-xs mx-auto justify-center">
-            {LANE_KEYS.map((key, i) => (
-              <div key={key} className="flex flex-col items-center gap-2">
-                <div className="flex items-center justify-center font-mono font-bold text-xl rounded-xl transition-transform hover:scale-110 cursor-default"
-                  style={{
-                    width: 48, height: 48,
-                    color: LANE_COLORS[i],
-                    background: `${LANE_COLORS[i]}10`,
-                    border: `1px solid ${LANE_COLORS[i]}40`,
-                    boxShadow: `0 0 20px ${LANE_COLORS[i]}20, inset 0 0 10px ${LANE_COLORS[i]}10`,
-                    textShadow: `0 0 12px ${LANE_COLORS[i]}`,
-                  }}>{key}</div>
-                <div className="font-mono font-bold" style={{ fontSize: 8, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.2em' }}>
-                  {['LEFT','MID','RIGHT'][i]}
+            <div className="grid grid-cols-3 gap-3">
+              {LANE_KEYS.map((key, i) => (
+                <div key={key} className="hw-well p-3 flex flex-col items-center gap-2">
+                  <div
+                    className="hw-keycap"
+                    style={{
+                      color: LANE_COLORS[i],
+                      borderColor: `${LANE_COLORS[i]}66`,
+                      boxShadow: `inset 0 1px 0 rgba(255,255,255,0.28), 0 4px 0 #050308, 0 0 18px ${LANE_COLORS[i]}28`,
+                      textShadow: `0 0 10px ${LANE_COLORS[i]}`,
+                    }}
+                  >
+                    {key}
+                  </div>
+                  <div className="font-mono font-bold text-[9px] tracking-[0.18em] text-white/75">
+                    {['LEFT · BASS', 'MID · SYNTH', 'RIGHT · HIGH'][i]}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
 
-          {/* Power-up row */}
-          <div className="mt-6 flex w-full max-w-sm mx-auto glass-card">
-            {[
-              { label: 'FEVER',       color: '#FFBD00', mult: 2, combo: 20 },
-              { label: 'SURGE',       color: '#FF1493', mult: 3, combo: 40 },
-              { label: 'OVERDRIVE',   color: '#39FF14', mult: 4, combo: 60 },
-            ].map((p, i) => (
-              <div key={p.label} className="flex-1 py-3 text-center relative"
-                style={{ borderRight: i < 2 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
-                <div className="font-mono font-bold uppercase" style={{ fontSize: 10, color: p.color, letterSpacing: '0.1em', textShadow: `0 0 10px ${p.color}40` }}>{p.label}</div>
-                <div className="font-mono" style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)' }}>×{p.mult} @ {p.combo}</div>
-              </div>
-            ))}
+            {/* Flow State Multiplier Strip */}
+            <div className="hw-well grid grid-cols-3 p-2.5">
+              {[
+                { label: 'FEVER', color: '#FFB800', mult: 2, combo: 20 },
+                { label: 'SURGE', color: '#FF1E8C', mult: 3, combo: 40 },
+                { label: 'OVERDRIVE', color: '#39FF14', mult: 4, combo: 60 },
+              ].map((p, i) => (
+                <div
+                  key={p.label}
+                  className="py-1.5 text-center relative"
+                  style={{ borderRight: i < 2 ? '1px solid rgba(255,255,255,0.08)' : 'none' }}
+                >
+                  <div
+                    className="font-mono font-black uppercase text-[10px] tracking-[0.14em]"
+                    style={{ color: p.color, textShadow: `0 0 10px ${p.color}40` }}
+                  >
+                    {p.label}
+                  </div>
+                  <div className="font-mono text-[9.5px] font-bold text-white/50 mt-0.5">
+                    ×{p.mult} @ {p.combo} STREAK
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
@@ -977,24 +1027,24 @@ const DigitalClock = memo(() => {
           <div className="hud-corner hud-corner-tr" />
           <div className="hud-corner hud-corner-bl" />
           <div className="hud-corner hud-corner-br" />
-            {/* Centered Dashboard Container */}
-          <div className={`relative z-10 w-full max-w-4xl px-6 flex flex-col items-center gap-8 ${
+          {/* Centered Dashboard Container */}
+          <div className={`relative z-10 w-full max-w-4xl px-4 sm:px-6 pt-3 flex flex-col items-center gap-6 ${
             isIntroTransition ? 'avant-fade-slow' : 'slide-up'
           }`}>
             
             {/* Top Row: Game Board & Navigation Menu */}
-            <div className="w-full max-w-2xl flex flex-col items-center gap-6">
+            <div className="w-full max-w-2xl flex flex-col items-center gap-5">
               
               {/* Technical Logo Boundary Box */}
-              <div className="relative w-full border border-dashed border-white/15 p-6 rounded-lg flex flex-col items-center select-none overflow-hidden">
+              <div className="hw-panel relative w-full p-6 flex flex-col items-center select-none overflow-hidden" data-accent="cyan">
                 {/* Crosshairs in corners */}
-                <div className="absolute top-2 left-2 text-[8px] text-white/30 font-bold">+ TL</div>
-                <div className="absolute top-2 right-2 text-[8px] text-white/30 font-bold">TR +</div>
-                <div className="absolute bottom-2 left-2 text-[8px] text-white/30 font-bold">+ BL</div>
-                <div className="absolute bottom-2 right-2 text-[8px] text-white/30 font-bold">BR +</div>
+                <div className="absolute top-3 left-3 font-mono text-[8px] text-cyan-400/50 font-bold">+ TL // 00</div>
+                <div className="absolute top-3 right-3 font-mono text-[8px] text-cyan-400/50 font-bold">01 // TR +</div>
+                <div className="absolute bottom-3 left-3 font-mono text-[8px] text-cyan-400/50 font-bold">+ BL // 10</div>
+                <div className="absolute bottom-3 right-3 font-mono text-[8px] text-cyan-400/50 font-bold">11 // BR +</div>
                 
                 {/* Official PIM th3v4ult Artwork Logo */}
-                <div className="relative w-full text-center py-2 flex items-center justify-center min-h-[140px]">
+                <div className="relative w-full text-center py-2 flex items-center justify-center min-h-[130px]">
                   <MainBrandLogo size="md" />
                 </div>
 
@@ -1003,16 +1053,16 @@ const DigitalClock = memo(() => {
                   <h2 className="font-mono text-xs font-bold tracking-[0.6em] text-white uppercase">
                     POETRY IN MOTION
                   </h2>
-                  <div className="font-mono text-[9px] font-bold tracking-[0.3em] uppercase mt-1 text-white/40">
-                    COMPANION FOR <span className="text-[#FF1493]">365 DAYS OF LIGHT & DARK</span>
+                  <div className="font-mono text-[9.5px] font-bold tracking-[0.28em] uppercase mt-1 text-white/50">
+                    COMPANION FOR <span className="text-[#FF1E8C]">365 DAYS OF LIGHT & DARK</span>
                   </div>
                 </div>
               </div>
 
               {/* Redesigned Menu Row Buttons */}
-              <div className="w-full flex flex-col gap-0 border border-white/10 rounded-lg overflow-hidden bg-black/20">
+              <div className="hw-panel w-full flex flex-col gap-0 overflow-hidden" data-accent="magenta">
                 {[
-                  { label: '▶ INITIATE CAMPAIGN', path: '/campaign', prefix: '01', tag: '[ HYPER_LANE ]' },
+                  { label: '▶ INITIATE CAMPAIGN', path: '/campaign', prefix: '01', tag: '[ HYPER_LANE ]', testId: 'button-start' },
                   { label: '◈ DIGITAL VAULT', path: '/vault', prefix: '02', tag: '[ VAULT_GATEWAY ]' },
                   { label: '◈ ARCHIVE — ALL 365 TRACKS', path: '/songs', prefix: '03', tag: '[ AUDIO_CORE ]' },
                   { label: '? INTEL & TUTORIAL', path: '/tutorial', prefix: '04', tag: '[ DOCUMENTATION ]' },
@@ -1020,6 +1070,7 @@ const DigitalClock = memo(() => {
                 ].map((item) => (
                   <button
                     key={item.path}
+                    data-testid={item.testId}
                     onClick={() => {
                       if (item.path === '/options') {
                         setOptionsModalOpen(true);
@@ -1034,7 +1085,7 @@ const DigitalClock = memo(() => {
                         console.warn(e);
                       }
                     }}
-                    className="avant-menu-row text-white hover:text-[#00E5FF] group relative z-10 w-full cursor-pointer focus:outline-none"
+                    className="avant-menu-row text-white hover:text-[#00E5FF] group relative z-10 w-full cursor-pointer focus:outline-none px-5"
                   >
                     {/* Index prefix */}
                     <span className="text-[10px] text-[#39FF14] font-bold tracking-widest w-12 shrink-0 select-none">
@@ -1042,12 +1093,12 @@ const DigitalClock = memo(() => {
                     </span>
                     
                     {/* Main label */}
-                    <span className="flex-1 text-xs sm:text-sm tracking-[0.25em] font-semibold uppercase transition-transform duration-300 group-hover:translate-x-1">
+                    <span className="flex-1 text-xs sm:text-sm tracking-[0.25em] font-bold uppercase transition-transform duration-300 group-hover:translate-x-1">
                       {item.label}
                     </span>
                     
                     {/* Right-aligned telemetry tags */}
-                    <span className="hidden sm:inline font-mono text-[8px] tracking-wider text-white/30 group-hover:text-cyan-400/60 transition-colors select-none">
+                    <span className="hidden sm:inline font-mono text-[9px] tracking-wider text-white/40 group-hover:text-cyan-400 transition-colors select-none">
                       {item.tag}
                     </span>
 
@@ -1058,29 +1109,36 @@ const DigitalClock = memo(() => {
               </div>
 
               {/* Lane Keys telemetry monitoring block */}
-              <div className="w-full flex flex-col gap-3 p-4 border border-white/10 bg-black/40 rounded-lg font-mono">
-                <div className="text-[9px] text-white/40 tracking-[0.2em] uppercase select-none">// LANE_TRIGGERS_ACTIVE</div>
+              <div className="hw-panel w-full flex flex-col gap-3 p-4 font-mono" data-accent="gold">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9.5px] text-white/55 font-bold tracking-[0.2em] uppercase select-none">
+                    // LANE_TRIGGERS_ACTIVE · 3-BAND CROSSOVER
+                  </span>
+                  <span className="hw-badge"><span className="hw-led" data-color="acid" /> ARMED</span>
+                </div>
                 
-                <div className="flex gap-4 justify-between items-center w-full">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full">
                   {LANE_KEYS.map((key, i) => (
-                    <div key={key} className="flex-1 flex items-center justify-between p-3 rounded-md bg-black/40 border border-white/5 relative group hover:border-cyan-500/30 transition-all select-none">
+                    <div key={key} className="hw-well flex items-center justify-between p-3 relative group transition-all select-none">
                       <div className="flex flex-col text-left">
-                        <span className="text-[8px] text-white/30 tracking-wider">
-                          {['LEFT', 'MID', 'RIGHT'][i]}
+                        <span className="text-[8.5px] text-white/45 font-bold tracking-wider">
+                          {['LEFT // BASS', 'MID // SYNTH', 'RIGHT // TREBLE'][i]}
                         </span>
-                        <span className="text-[10px] font-bold uppercase" style={{ color: LANE_COLORS[i] }}>
-                          {LANE_COLORS[i]}
+                        <span className="text-[10px] font-bold uppercase mt-0.5" style={{ color: LANE_COLORS[i] }}>
+                          {['< 250 HZ', '250 - 2.5K HZ', '> 2.5K HZ'][i]}
                         </span>
                       </div>
                       
                       <div
-                        className="w-10 h-10 flex items-center justify-center font-bold text-lg rounded-lg border transition-transform duration-300 group-hover:scale-105"
+                        className="hw-keycap"
                         style={{
+                          width: 44,
+                          height: 44,
+                          fontSize: 16,
                           color: LANE_COLORS[i],
-                          background: `${LANE_COLORS[i]}08`,
-                          borderColor: `${LANE_COLORS[i]}30`,
+                          borderColor: `${LANE_COLORS[i]}55`,
                           textShadow: `0 0 8px ${LANE_COLORS[i]}80`,
-                          boxShadow: `0 0 10px ${LANE_COLORS[i]}15`
+                          boxShadow: `inset 0 1px 0 rgba(255,255,255,0.25), 0 3px 0 #050308, 0 0 12px ${LANE_COLORS[i]}25`
                         }}
                       >
                         {key}
@@ -1093,22 +1151,21 @@ const DigitalClock = memo(() => {
             </div>
 
             {/* Bottom Row: Telemetry and Visualizer widgets */}
-            <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-6 font-mono text-left select-none">
+            <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-5 font-mono text-left select-none">
               
               {/* Telemetry panel */}
-              <div className="p-5 border border-white/10 bg-black/40 backdrop-blur-md rounded-lg relative overflow-hidden">
+              <div className="hw-panel p-5 relative overflow-hidden" data-accent="cyan">
                 {/* Small indicator light */}
-                <div className="absolute top-3 right-3 flex items-center gap-1.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#39FF14] animate-ping" />
-                  <div className="w-1.5 h-1.5 rounded-full bg-[#39FF14] absolute" />
-                  <span className="text-[8px] text-[#39FF14] tracking-widest uppercase">ONLINE</span>
+                <div className="absolute top-3.5 right-3.5 flex items-center gap-1.5">
+                  <span className="hw-led" data-color="acid" />
+                  <span className="text-[8.5px] font-bold text-[#39FF14] tracking-widest uppercase">ONLINE</span>
                 </div>
                 
-                <div className="text-[10px] text-cyan-400 font-bold tracking-[0.3em] mb-4">
-                  // TELEMETRY_STREAM_DATA
+                <div className="text-[10px] text-cyan-400 font-bold tracking-[0.26em] mb-3.5">
+                  // TELEMETRY_STREAM
                 </div>
 
-                <div className="flex flex-col gap-2.5 text-[9px] tracking-wider text-white/50">
+                <div className="hw-well p-3 flex flex-col gap-2 text-[9px] tracking-wider text-white/55">
                   <div className="flex justify-between border-b border-white/5 pb-1">
                     <span>HOST PROTOCOL</span>
                     <span className="text-[#F2F0E8] font-bold">PIM_V.2.4.0</span>
@@ -1126,19 +1183,19 @@ const DigitalClock = memo(() => {
                     <DigitalClock />
                   </div>
                   <div className="flex justify-between">
-                    <span>INTERFACE COMPILER</span>
+                    <span>COMPILER</span>
                     <span className="text-[#39FF14] font-bold">TH3SCR1B3_NODE</span>
                   </div>
                 </div>
               </div>
 
               {/* Animated Soundwave Visualizer Widget */}
-              <div className="p-5 border border-white/10 bg-black/40 backdrop-blur-md rounded-lg flex flex-col gap-4">
-                <div className="flex justify-between items-center text-[10px] text-white/40 tracking-[0.2em]">
+              <div className="hw-panel p-5 flex flex-col gap-3" data-accent="magenta">
+                <div className="flex justify-between items-center text-[10px] font-bold text-white/60 tracking-[0.2em]">
                   <span>SPECTRUM_ANALYSIS</span>
                   <span className="text-[#39FF14] font-mono">DBFS: -12.4</span>
                 </div>
-                <div className="h-20 flex items-end justify-between px-1">
+                <div className="hw-well h-24 p-3 flex items-end justify-between">
                   {Array.from({ length: 24 }).map((_, i) => {
                     const duration = 0.5 + (i % 7) * 0.15;
                     const delay = (i % 4) * -0.2;
@@ -1153,27 +1210,33 @@ const DigitalClock = memo(() => {
                     );
                   })}
                 </div>
-                <div className="text-[8px] text-white/30 tracking-[0.1em] text-center uppercase font-mono">
-                  Real-time DSP Monitoring Stream
+                <div className="text-[8.5px] text-white/40 tracking-[0.14em] text-center uppercase font-mono">
+                  Real-time 3-Band Crossover Monitor
                 </div>
               </div>
 
               {/* Telemetry Stats Display (SCORE, PLATINUM, CLEARED) */}
-              <div className="p-5 border border-white/10 bg-black/40 backdrop-blur-md rounded-lg flex flex-col gap-3">
-                <div className="text-[10px] text-white/40 tracking-[0.2em] uppercase">// COMPANION_DATA_METRICS</div>
-                <div className="grid grid-cols-3 gap-2">
+              <div className="hw-panel p-5 flex flex-col justify-between gap-3" data-accent="gold">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-white/60 tracking-[0.2em] uppercase">// COMPANION_METRICS</span>
+                  <span className="hw-led" data-color="gold" />
+                </div>
+                <div className="hw-well p-3.5 grid grid-cols-3 gap-2">
                   <div className="flex flex-col">
-                    <span className="text-[8px] text-white/40 tracking-wider">SCORE</span>
-                    <span className="text-sm font-bold text-[#F2F0E8] truncate">{stats.score > 0 ? stats.score.toLocaleString() : "0"}</span>
+                    <span className="text-[8px] font-bold text-white/45 tracking-wider">SCORE</span>
+                    <span className="text-base font-black text-[#F2F0E8] truncate mt-1 tabular-nums">{stats.score > 0 ? stats.score.toLocaleString() : "0"}</span>
                   </div>
-                  <div className="flex flex-col border-l border-white/10 pl-2">
-                    <span className="text-[8px] text-white/40 tracking-wider">PLATINUM</span>
-                    <span className="text-sm font-bold text-[#39FF14]">{stats.platinums}</span>
+                  <div className="flex flex-col border-l border-white/10 pl-2.5">
+                    <span className="text-[8px] font-bold text-white/45 tracking-wider">PLATINUM</span>
+                    <span className="text-base font-black text-[#39FF14] mt-1 tabular-nums">{stats.platinums}</span>
                   </div>
-                  <div className="flex flex-col border-l border-white/10 pl-2">
-                    <span className="text-[8px] text-white/40 tracking-wider">CLEARED</span>
-                    <span className="text-sm font-bold text-[#FFBD00]">{stats.cleared}</span>
+                  <div className="flex flex-col border-l border-white/10 pl-2.5">
+                    <span className="text-[8px] font-bold text-white/45 tracking-wider">CLEARED</span>
+                    <span className="text-base font-black text-[#FFB800] mt-1 tabular-nums">{stats.cleared}</span>
                   </div>
+                </div>
+                <div className="text-[8.5px] text-white/40 tracking-[0.14em] uppercase font-mono">
+                  SYNCED WITH VAULT ARCHIVE LEDGER
                 </div>
               </div>
 
@@ -1185,12 +1248,12 @@ const DigitalClock = memo(() => {
 
       {/* Footer */}
       <div className={`w-full mt-auto py-4 px-4 flex items-center justify-center transition-all duration-1000 ${!showIntro ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-        style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
         <span
           className="font-mono text-[10px] tracking-[0.3em] uppercase font-bold text-center"
-          style={{ color: 'rgba(255,255,255,0.3)' }}
+          style={{ color: 'rgba(255,255,255,0.4)' }}
         >
-          BEATSTAR VAULT // POETRY IN MOTION
+          BEATSTAR VAULT // POETRY IN MOTION · HARDWARE REV 2.4
         </span>
       </div>
     </div>

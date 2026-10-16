@@ -64,37 +64,42 @@ export function TitleSpacer({
 
   // Section Header Format (default)
   return (
-    <div className={`relative flex items-center gap-3.5 mb-6 mt-4 select-none ${className}`}>
-      {/* Accent Bar */}
-      <div 
-        className="w-1.5 h-7 rounded-sm shrink-0" 
-        style={{ 
-          background: accent, 
-          boxShadow: `0 0 10px ${accent}aa` 
-        }} 
-      />
-
-      {/* Label Text */}
+    <div className={`relative flex items-center gap-3 mb-5 mt-3 select-none ${className}`}>
+      {/* Tactile Hardware Section Pill */}
       {label && (
-        <div className="flex flex-col shrink-0">
-          <span className="text-[10px] sm:text-[11px] font-mono tracking-[0.35em] uppercase font-bold text-white/90">
-            {label}
-          </span>
-          {sublabel && (
-            <span className="text-[7.5px] font-mono tracking-widest uppercase text-zinc-400">
-              {sublabel}
+        <div
+          className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-lg shrink-0"
+          style={{
+            background: 'linear-gradient(180deg, rgba(26, 20, 38, 0.95), rgba(14, 10, 22, 0.98))',
+            border: '1px solid rgba(255, 255, 255, 0.14)',
+            borderLeft: `3px solid ${accent}`,
+            boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 3px 0 #050308',
+          }}
+        >
+          <span
+            className="w-2 h-2 rounded-full shrink-0"
+            style={{ background: accent, boxShadow: `0 0 8px ${accent}` }}
+          />
+          <div className="flex flex-col">
+            <span className="text-[10px] sm:text-[11px] font-mono tracking-[0.26em] uppercase font-bold text-white/95 whitespace-nowrap">
+              {label}
             </span>
-          )}
+            {sublabel && (
+              <span className="text-[7.5px] font-mono tracking-widest uppercase text-zinc-400 whitespace-nowrap">
+                {sublabel}
+              </span>
+            )}
+          </div>
         </div>
       )}
 
       {/* Center Integrated Logo Badge */}
       {showLogo && (
-        <div className="relative shrink-0 max-w-[130px] sm:max-w-[170px] hidden xs:block">
+        <div className="relative shrink-0 max-w-[120px] sm:max-w-[155px] hidden sm:block">
           <img
             src="/data/logos/top_left_site.png"
             alt="PIM th3v4ult"
-            className="w-full h-auto max-h-6 object-contain opacity-80 hover:opacity-100 transition-opacity"
+            className="w-full h-auto max-h-5 object-contain opacity-75 hover:opacity-100 transition-opacity"
             loading="lazy"
           />
         </div>
@@ -104,8 +109,8 @@ export function TitleSpacer({
       <div 
         className="flex-1 h-[1px] min-w-[20px]" 
         style={{ 
-          background: `linear-gradient(90deg, ${accent}80, ${accent}20 60%, transparent 100%)`,
-          boxShadow: `0 0 4px ${accent}40`
+          background: `linear-gradient(90deg, ${accent}90, ${accent}25 65%, transparent 100%)`,
+          boxShadow: `0 0 6px ${accent}40`
         }} 
       />
     </div>
