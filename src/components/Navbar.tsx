@@ -16,7 +16,7 @@ import { useDisplayMode } from '../store/useDisplayMode';
 import { useNotificationStore } from '../store/useNotificationStore';
 import { useGlobalPlayer } from '../store/useGlobalPlayer';
 import GuideModal from './GuideModal';
-import FloatingTicker from './FloatingTicker';
+import LiveActivity from './LiveActivity';
 import { haptics } from '../utils/haptics';
 import { farcasterService } from '../services/farcasterService';
 import { getIdenticon } from '../utils/identicon';
@@ -287,6 +287,7 @@ export default function Navbar() {
         </button>
 
         <div className="pim-right">
+          <LiveActivity />
           <Link
             to="/vault/earn"
             className="pim-tokens pim-only-wide"
@@ -456,7 +457,6 @@ export default function Navbar() {
       )}
 
       <GuideModal isOpen={guideOpen} onClose={() => setGuideOpen(false)} />
-      <FloatingTicker />
     </>
   );
 }
