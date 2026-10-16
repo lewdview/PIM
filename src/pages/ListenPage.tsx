@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useRoute, useLocation } from 'wouter';
 import { loadCatalog, getCandidateAudioUrls, sanitizeMediaUrl, type GameSong } from '../game/api';
 import { audioManager } from '../game/audio';
@@ -838,15 +838,20 @@ export default function ListenPage() {
 
   const coverArtSrc = song?.coverArt || '/data/covers/default.jpg';
 
-  const filteredPlaylist = playlist.filter(track => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      track.title.toLowerCase().includes(q) ||
-      (track.artist && track.artist.toLowerCase().includes(q)) ||
-      String(track.day).includes(q)
-    );
-  });
+  // ⚡ Bolt: Memoize filtered playlist to prevent O(n) array filter on every render.
+  // Impact: Reduces CPU load and prevents jank during frequent state updates (e.g., timeupdate events from audio playback).
+  // Measurement: Verify by checking React Profiler for reduced render duration of ListenPage during audio playback.
+  const filteredPlaylist = useMemo(() => {
+    return playlist.filter(track => {
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        track.title.toLowerCase().includes(q) ||
+        (track.artist && track.artist.toLowerCase().includes(q)) ||
+        String(track.day).includes(q)
+      );
+    });
+  }, [playlist, searchQuery]);
 
   return (
     <div className="relative min-h-screen bg-[#050403] text-white overflow-hidden flex items-center justify-center">
