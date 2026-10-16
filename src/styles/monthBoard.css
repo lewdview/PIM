@@ -32,7 +32,7 @@
 .mb-title h1 { font-size: clamp(30px, 6.2vh, 56px); }
 .mb-progress { flex: 1 1 220px; display: grid; gap: 6px; min-width: 0; padding-bottom: 4px; }
 .mb-progress .cs-stats { font-size: 11px; gap: 4px 14px; }
-.mb-lb-btn { margin-bottom: 4px; }
+.mb-head-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
 
 /* ── Track grid + detail ── */
 .mb-main {

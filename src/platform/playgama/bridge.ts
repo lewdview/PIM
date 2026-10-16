@@ -298,3 +298,8 @@ export async function showLeaderboardPopup(id: string): Promise<void> {
     await b.leaderboards.showNativePopup(id);
   } catch { /* closed or refused */ }
 }
+
+/** True only on portals that allow links out of the game (playgama.com does not). */
+export function externalLinksAllowed(): boolean {
+  return !!bridgeOrNull()?.platform.isExternalLinksAllowed;
+}

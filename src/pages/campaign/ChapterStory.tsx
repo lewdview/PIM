@@ -439,7 +439,14 @@ export default function ChapterStory() {
             </div>
             <div className="cs-bar" aria-label={`${pct}% cleared`}><span style={{ width: `${pct}%` }} /></div>
           </div>
-          {leaderboard}
+          <div className="mb-head-actions">
+            {bonusGated && canBuyBundle() && (
+              <button type="button" className="btn-3d" data-size="sm" data-tone="gold" disabled={unlocking} onClick={buyBundle}>
+                <Gift size={14} /> Unlock {progress.bonus.length} bonus songs{bundlePrice ? ` · ${bundlePrice}` : ''}
+              </button>
+            )}
+            {leaderboard}
+          </div>
         </header>
 
         <div className="mb-main">

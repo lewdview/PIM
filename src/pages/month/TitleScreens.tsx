@@ -9,6 +9,7 @@ import { CHAPTERS } from '@/game/campaign';
 import { songsForMonth } from '@/game/chapterStory';
 import { audioManager } from '@/game/audio';
 import { PLAYGAMA_MONTH } from '@/platform/playgama/month';
+import { externalLinksAllowed } from '@/platform/playgama/bridge';
 import '@/styles/stageShell.css';
 import '@/styles/monthTitle.css';
 
@@ -137,7 +138,12 @@ function PressStart({ style, covers, name, sub, count, onStart }: {
         </div>
         <div className="mt-press" role="button" aria-label="Start game">{touch ? 'Tap to start' : 'Press start'}</div>
       </div>
-      <div className="mt-start-foot">© th3scr1b3 · 365 days of light and dark</div>
+      <div className="mt-start-foot">
+        © th3scr1b3 · 365 days of light and dark
+        {externalLinksAllowed() && (
+          <> · <a href="https://th3scr1b3.art" target="_blank" rel="noopener" onPointerDown={(e) => e.stopPropagation()}>th3scr1b3.art</a></>
+        )}
+      </div>
     </div>
   );
 }
