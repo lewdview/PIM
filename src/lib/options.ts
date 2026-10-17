@@ -8,7 +8,8 @@ export type ParticleDensity = 'full' | 'half' | 'minimal';
 export type PovMode =
   | 'classic'
   | 'flat_2d'
-  | 'circle'
+  | 'canyon_run'
+  | 'aurora_bridge'
   | 'horizontal_drift'
   | 'cyber_tunnel'
   | 'corkscrew'
@@ -221,7 +222,8 @@ export function loadOpts(): GameOpts {
     gameSenseEnabled: bool("opt_gameSenseEnabled", false),
     legacyGraphics: dbSettings?.legacyGraphics ?? bool("opt_legacyGraphics", false),
     autoLatencyAdjust: dbSettings?.autoLatencyAdjust ?? bool("opt_autoLatencyAdjust", true),
-    povMode: dbSettings?.povMode ?? ((localStorage.getItem("opt_povMode") as any) ?? "classic"),
+    // 'circle' (360° Radial Orbit) was retired; anyone who had it picked goes back to classic.
+    povMode: ((p: string) => (p === 'circle' ? 'classic' : p))(dbSettings?.povMode ?? (localStorage.getItem("opt_povMode") ?? "classic")) as PovMode,
     stagePovSwitch: dbSettings?.stagePovSwitch ?? bool("opt_stagePovSwitch", true),
     renderResolution: validRes,
     gfxLevel: validGfx,

@@ -7,7 +7,7 @@
 
 import type { PovMode } from '@/lib/options';
 import type { TrackArchetype } from './archetypes';
-import { getArchetypeProjection } from './projections';
+import { getArchetypeProjection, canyonBend } from './projections';
 import { getStageGeometry, laneAt, lerp } from './geometry';
 import { LANE_COUNT } from './constants';
 import { colorWithAlpha } from './colorUtils';
@@ -37,7 +37,8 @@ export interface PovSceneInput {
 
 const SCENE_POVS: ReadonlySet<PovMode> = new Set<PovMode>([
   'flat_2d',
-  'circle',
+  'canyon_run',
+  'aurora_bridge',
   'horizontal_drift',
   'cockpit_hud',
   'hyper_prism',
@@ -59,9 +60,9 @@ export function usesFlatHighway(pov: PovMode): boolean {
   return pov === 'flat_2d';
 }
 
-/** False for POVs whose strike targets orbit or stack, so a horizontal baseline would mislead. */
+/** False for POVs whose strike targets stack, so a horizontal baseline would mislead. */
 export function hasStraightHitLine(pov: PovMode): boolean {
-  return pov !== 'circle' && pov !== 'horizontal_drift';
+  return pov !== 'horizontal_drift';
 }
 
 const HIT_FLASH_MS = 320;
@@ -313,94 +314,6 @@ function drawFlat2D(s: PovSceneInput) {
   ctx.fillStyle = 'rgba(255,255,255,0.22)';
   ctx.fillRect(x0 - 1, 0, 2, hitY);
   ctx.fillRect(x0 + trackW - 1, 0, 2, hitY);
-}
-
-// ── 360° ORBIT: radar dish with the judgment ring the notes actually converge on ──
-function drawCircle(s: PovSceneInput) {
-  const { ctx, W, H, t } = s;
-  const geom = getStageGeometry(W, H);
-  const cx = W / 2;
-  const cy = H * 0.5;
-  const maxR = Math.min(geom.stageW, H) * 0.44;
-  const hitR = Math.min(geom.stageW, H) * 0.16;
-
-  const neb = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxR * 1.6);
-  neb.addColorStop(0, 'rgba(10,40,70,0.55)');
-  neb.addColorStop(0.5, 'rgba(8,16,40,0.45)');
-  neb.addColorStop(1, 'rgba(2,4,12,0)');
-  ctx.fillStyle = neb;
-  ctx.fillRect(0, 0, W, H);
-  starfield(s, 11, s.lite ? 30 : 70, '170,230,255');
-
-  // Range rings
-  ctx.lineWidth = 1;
-  for (let i = 1; i <= 4; i++) {
-    const r = lerp(hitR, maxR, i / 4);
-    ctx.strokeStyle = `rgba(120,220,255,${0.08 + (i === 4 ? 0.08 : 0)})`;
-    ctx.setLineDash(i === 4 ? [6, 8] : []);
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.stroke();
-  }
-  ctx.setLineDash([]);
-
-  // Bearing spokes
-  ctx.strokeStyle = 'rgba(120,220,255,0.07)';
-  ctx.beginPath();
-  for (let k = 0; k < 12; k++) {
-    const a = (k / 12) * Math.PI * 2;
-    ctx.moveTo(cx + Math.cos(a) * hitR * 1.1, cy + Math.sin(a) * hitR * 1.1);
-    ctx.lineTo(cx + Math.cos(a) * maxR, cy + Math.sin(a) * maxR);
-  }
-  ctx.stroke();
-  // Blips that light up as the sweep passes
-  for (let k = 0; k < (s.lite ? 6 : 14); k++) {
-    const a = hash(k * 3.9) * Math.PI * 2;
-    const r = lerp(hitR * 1.3, maxR * 0.95, hash(k * 7.7));
-    const since = (((t * 1.4 - a) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-    const glow = Math.max(0, 1 - since / 2.5);
-    if (glow <= 0) continue;
-    ctx.fillStyle = `rgba(120,255,220,${glow * 0.7})`;
-    ctx.beginPath();
-    ctx.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 2 + glow * 1.5, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  // Radar sweep
-  const sweep = t * 1.4;
-  ctx.save();
-  ctx.translate(cx, cy);
-  ctx.rotate(sweep);
-  const sg = ctx.createLinearGradient(0, 0, maxR, 0);
-  sg.addColorStop(0, 'rgba(0,229,255,0.0)');
-  sg.addColorStop(1, 'rgba(0,229,255,0.16)');
-  ctx.fillStyle = sg;
-  ctx.beginPath();
-  ctx.moveTo(0, 0);
-  ctx.arc(0, 0, maxR, -0.45, 0);
-  ctx.closePath();
-  ctx.fill();
-  ctx.restore();
-
-  // Judgment ring
-  const flash = anyHitFlash(s);
-  ctx.strokeStyle = `rgba(255,255,255,${0.30 + s.beat * 0.2 + flash * 0.4})`;
-  ctx.lineWidth = 2 + flash * 3;
-  ctx.beginPath();
-  ctx.arc(cx, cy, hitR + s.beat * 3, 0, Math.PI * 2);
-  ctx.stroke();
-
-  // Core
-  const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, hitR * 0.6);
-  core.addColorStop(0, `rgba(255,255,255,${0.35 + s.beat * 0.3})`);
-  core.addColorStop(0.4, 'rgba(0,229,255,0.18)');
-  core.addColorStop(1, 'rgba(0,229,255,0)');
-  ctx.fillStyle = core;
-  ctx.beginPath();
-  ctx.arc(cx, cy, hitR * 0.6, 0, Math.PI * 2);
-  ctx.fill();
-
-  drawLaneGuides(s, 'circle', { fill: 0.16, edge: 0.45 });
 }
 
 // ── SIDE DRIFT: synthwave side-scroller with parallax ridges ──
@@ -1470,12 +1383,492 @@ function drawMobius(s: PovSceneInput) {
  * Draws the backdrop and lane guides for a POV that has a signature scene.
  * Call inside the 3D environment pass, before the hit targets and notes.
  */
+// Outer edges of the three-lane deck, traced from the real lane paths, from p0 to p1.
+function deckEdges(s: PovSceneInput, pov: PovMode, p0: number, p1: number, steps: number, pad: number) {
+  const left: { x: number; y: number; w: number }[] = [];
+  const right: { x: number; y: number; w: number }[] = [];
+  for (let i = 0; i <= steps; i++) {
+    const p = lerp(p0, p1, i / steps);
+    const a = proj(s, pov, 0, p);
+    const b = proj(s, pov, LANE_COUNT - 1, p);
+    left.push({ x: a.cx - a.w * (0.5 + pad), y: a.cy, w: a.w });
+    right.push({ x: b.cx + b.w * (0.5 + pad), y: b.cy, w: b.w });
+  }
+  return { left, right };
+}
+
+/** p for a world marker every `spacing` seconds, so roadside props move at note speed. */
+function markerPs(s: PovSceneInput, spacing: number, pMin: number, pMax: number): number[] {
+  const out: number[] = [];
+  const first = Math.floor((s.t - s.approachSec * (pMax - 1)) / spacing);
+  for (let k = first; ; k++) {
+    const p = 1 - (k * spacing - s.t) / s.approachSec;
+    if (p < pMin) break;
+    if (p <= pMax) out.push(p);
+  }
+  return out;
+}
+
+// ── CANYON RUN: desert road through red-rock S-bends at dusk ──
+function drawCanyon(s: PovSceneInput) {
+  const { ctx, W, H, t } = s;
+  const geom = getStageGeometry(W, H);
+  const hitY = geom.hitY;
+  const horizon = hitY * 0.30;
+  const bend = canyonBend(t) * (s.stage === 5 ? 1.5 : 1);
+  const drift = -bend * geom.stageW * 0.35;
+
+  // Dusk sky
+  const sky = ctx.createLinearGradient(0, 0, 0, horizon);
+  sky.addColorStop(0, 'rgba(28,10,48,0.92)');
+  sky.addColorStop(0.55, 'rgba(120,40,70,0.88)');
+  sky.addColorStop(1, 'rgba(255,140,70,0.9)');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, W, horizon + 1);
+  starfield(s, 41, s.lite ? 14 : 34, '255,220,200');
+
+  // Setting sun, slid by the bend so the road visibly turns
+  const sunX = W / 2 + drift * 0.6;
+  const sunR = geom.stageW * 0.11;
+  const halo = ctx.createRadialGradient(sunX, horizon, 0, sunX, horizon, sunR * 3.2);
+  halo.addColorStop(0, `rgba(255,190,110,${0.45 + s.beat * 0.1})`);
+  halo.addColorStop(1, 'rgba(255,120,60,0)');
+  ctx.fillStyle = halo;
+  ctx.fillRect(0, 0, W, horizon);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, 0, W, horizon);
+  ctx.clip();
+  const sun = ctx.createLinearGradient(0, horizon - sunR, 0, horizon);
+  sun.addColorStop(0, 'rgba(255,236,150,0.95)');
+  sun.addColorStop(1, 'rgba(255,90,70,0.95)');
+  ctx.fillStyle = sun;
+  ctx.beginPath();
+  ctx.arc(sunX, horizon, sunR, Math.PI, 0);
+  ctx.fill();
+  // Retro slats through the lower half of the sun
+  ctx.fillStyle = 'rgba(120,40,70,0.9)';
+  for (let k = 0; k < 4; k++) {
+    const y = horizon - sunR * (0.12 + k * 0.13);
+    ctx.fillRect(sunX - sunR, y, sunR * 2, 1.5 + k * 0.6);
+  }
+  ctx.restore();
+
+  // Distant mesas, two parallax layers
+  for (const [layer, col, hgt, par] of [[0, 'rgba(70,24,46,0.95)', 0.32, 0.35], [1, 'rgba(44,14,30,0.97)', 0.2, 0.7]] as const) {
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.moveTo(0, horizon + 1);
+    const span = W * 1.6;
+    const off = (((drift * par) % span) + span) % span - span * 0.3;
+    for (let k = 0; k < 9; k++) {
+      const x0 = off + (k / 8) * span - span * 0.2;
+      const w = span * (0.05 + hash(layer * 20 + k) * 0.07);
+      const h = horizon * hgt * (0.4 + hash(layer * 20 + k * 1.7) * 0.6);
+      ctx.lineTo(x0, horizon + 1);
+      ctx.lineTo(x0 + w * 0.15, horizon - h);
+      ctx.lineTo(x0 + w * 0.85, horizon - h);
+      ctx.lineTo(x0 + w, horizon + 1);
+    }
+    ctx.lineTo(W, horizon + 1);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Desert floor
+  const floor = ctx.createLinearGradient(0, horizon, 0, H);
+  floor.addColorStop(0, 'rgba(120,52,40,0.95)');
+  floor.addColorStop(1, 'rgba(48,18,20,0.97)');
+  ctx.fillStyle = floor;
+  ctx.fillRect(0, horizon, W, H - horizon);
+
+  const steps = s.lite ? 16 : 30;
+  const pEnd = 1.3;
+  const { left, right } = deckEdges(s, 'canyon_run', 0.0, pEnd, steps, 0.35);
+
+  // Canyon walls rise from the shoulders; strata lines follow the bend
+  const wallH = (i: number) => lerp(horizon * 0.45, H * 1.3, Math.pow(i / steps, 1.5));
+  const wallOut = (i: number) => lerp(geom.stageW * 0.03, W * 0.16, Math.pow(i / steps, 1.5));
+  for (const side of [-1, 1]) {
+    const edge = side < 0 ? left : right;
+    const wall = ctx.createLinearGradient(0, horizon - horizon * 0.3, 0, H);
+    wall.addColorStop(0, side < 0 ? 'rgba(170,70,48,0.97)' : 'rgba(130,50,40,0.97)');
+    wall.addColorStop(1, side < 0 ? 'rgba(90,30,28,0.98)' : 'rgba(70,22,24,0.98)');
+    ctx.fillStyle = wall;
+    ctx.beginPath();
+    ctx.moveTo(edge[0].x, edge[0].y);
+    for (let i = 1; i <= steps; i++) ctx.lineTo(edge[i].x, edge[i].y);
+    for (let i = steps; i >= 0; i--) ctx.lineTo(edge[i].x + side * wallOut(i), edge[i].y - wallH(i));
+    ctx.closePath();
+    ctx.fill();
+    // Strata
+    ctx.lineWidth = 1;
+    for (let f = 1; f <= 5; f++) {
+      const u = f / 6;
+      ctx.strokeStyle = `rgba(255,170,110,${0.07 + (f % 2) * 0.05})`;
+      ctx.beginPath();
+      for (let i = 0; i <= steps; i++) {
+        const x = edge[i].x + side * wallOut(i) * u;
+        const y = edge[i].y - wallH(i) * u;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    // Erosion grooves running up the cliff, passing at note speed
+    ctx.strokeStyle = 'rgba(40,10,14,0.35)';
+    for (const gp of markerPs(s, 0.27, 0.0, pEnd)) {
+      const fi = Math.min(steps, Math.max(0, (gp / pEnd) * steps));
+      const i0 = Math.min(steps - 1, Math.floor(fi));
+      const u = fi - i0;
+      const bx = lerp(edge[i0].x, edge[i0 + 1].x, u);
+      const by = lerp(edge[i0].y, edge[i0 + 1].y, u);
+      const ox = lerp(wallOut(i0), wallOut(i0 + 1), u);
+      const oh = lerp(wallH(i0), wallH(i0 + 1), u);
+      ctx.lineWidth = Math.max(1, lerp(edge[i0].w, edge[i0 + 1].w, u) * 0.05);
+      ctx.beginPath();
+      ctx.moveTo(bx, by);
+      ctx.lineTo(bx + side * ox, by - oh);
+      ctx.stroke();
+    }
+    // Rim light along the wall top
+    ctx.strokeStyle = 'rgba(255,200,130,0.35)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let i = 0; i <= steps; i++) {
+      const x = edge[i].x + side * wallOut(i);
+      const y = edge[i].y - wallH(i);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+
+  // Road surface
+  const road = ctx.createLinearGradient(0, horizon, 0, H);
+  road.addColorStop(0, 'rgba(40,22,30,0.96)');
+  road.addColorStop(1, 'rgba(18,10,16,0.97)');
+  ctx.fillStyle = road;
+  ctx.beginPath();
+  ctx.moveTo(left[0].x, left[0].y);
+  for (let i = 1; i <= steps; i++) ctx.lineTo(left[i].x, left[i].y);
+  for (let i = steps; i >= 0; i--) ctx.lineTo(right[i].x, right[i].y);
+  ctx.closePath();
+  ctx.fill();
+  // Shoulder lines
+  ctx.strokeStyle = 'rgba(255,220,170,0.55)';
+  ctx.lineWidth = 2;
+  for (const edge of [left, right]) {
+    ctx.beginPath();
+    for (let i = 0; i <= steps; i++) {
+      if (i === 0) ctx.moveTo(edge[i].x, edge[i].y); else ctx.lineTo(edge[i].x, edge[i].y);
+    }
+    ctx.stroke();
+  }
+
+  // Reflector posts on both shoulders, moving at note speed
+  for (const p of markerPs(s, 0.4, 0.04, pEnd)) {
+    for (const lane of [0, LANE_COUNT - 1]) {
+      const a = proj(s, 'canyon_run', lane, p);
+      const side = lane === 0 ? -1 : 1;
+      const x = a.cx + side * a.w * 0.95;
+      const ph = a.w * 0.35;
+      const al = Math.min(1, p * 2.5);
+      ctx.fillStyle = `rgba(230,220,210,${0.6 * al})`;
+      ctx.fillRect(x - a.w * 0.025, a.cy - ph, a.w * 0.05, ph);
+      ctx.fillStyle = lane === 0 ? `rgba(255,80,60,${0.9 * al})` : `rgba(255,190,60,${0.9 * al})`;
+      ctx.fillRect(x - a.w * 0.03, a.cy - ph, a.w * 0.06, ph * 0.22);
+    }
+  }
+
+  // Heat shimmer and dust motes drifting across the road
+  if (!s.lite) {
+    for (let k = 0; k < 26; k++) {
+      const x = ((hash(k * 4.1) * W + t * (30 + hash(k) * 50) * (k % 2 ? 1 : -1)) % W + W) % W;
+      const y = horizon + hash(k * 2.3) * (H - horizon);
+      ctx.fillStyle = `rgba(255,200,150,${0.08 + 0.08 * Math.sin(t * 2 + k)})`;
+      ctx.fillRect(x, y, 2, 2);
+    }
+  }
+
+  drawLaneGuides(s, 'canyon_run', { fill: 0.15, edge: 0.55, base: 0.28 });
+
+  // Dust kicked up on hit
+  for (let lane = 0; lane < LANE_COUNT; lane++) {
+    const f = hitFlash(s, lane);
+    if (f <= 0) continue;
+    const a = proj(s, 'canyon_run', lane, 1);
+    for (let k = 0; k < 7; k++) {
+      const ang = Math.PI + (k / 6) * Math.PI;
+      const r = a.w * (0.35 + (1 - f) * 0.9);
+      ctx.fillStyle = `rgba(255,190,130,${f * 0.5})`;
+      ctx.beginPath();
+      ctx.arc(a.cx + Math.cos(ang) * r, a.cy + Math.sin(ang) * r * 0.35, 2 + (1 - f) * 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+// ── AURORA BRIDGE: arched glass bridge over a frozen fjord under the northern lights ──
+function drawAurora(s: PovSceneInput) {
+  const { ctx, W, H, t } = s;
+  const geom = getStageGeometry(W, H);
+  const hitY = geom.hitY;
+  const horizon = hitY * 0.36;
+
+  // Polar night sky
+  const sky = ctx.createLinearGradient(0, 0, 0, horizon);
+  sky.addColorStop(0, 'rgba(2,6,20,0.94)');
+  sky.addColorStop(1, 'rgba(8,30,50,0.92)');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, W, horizon + 1);
+  starfield(s, 77, s.lite ? 30 : 80, '210,240,255');
+
+  // Aurora curtains: smooth ribbons with a bright lower hem and soft rays above it
+  const bands = s.lite ? 2 : 3;
+  const curtain = (mirror: boolean) => {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const N = s.lite ? 24 : 48;
+    for (let b = 0; b < bands; b++) {
+      const baseY = horizon * (0.42 + b * 0.14);
+      const amp = horizon * (0.07 + b * 0.025);
+      const hue = b === 1 ? '150,110,255' : '70,255,170';
+      const rayH = horizon * (0.38 - b * 0.07) * (1 + s.energy * 0.3);
+      const hemY = (x: number) => baseY + Math.sin(x * 0.006 + t * 0.35 + b * 2.1) * amp + Math.sin(x * 0.017 - t * 0.6 + b) * amp * 0.35;
+      const topY = (x: number) => hemY(x) - rayH * (0.7 + 0.3 * Math.sin(x * 0.03 + t * 0.9 + b));
+      const k = mirror ? -0.5 : 1;
+      const yOf = (y: number) => (mirror ? 2 * horizon - y : y);
+      const a = (0.22 + s.beat * 0.06) * (mirror ? 0.4 : 1);
+      const g = ctx.createLinearGradient(0, yOf(baseY + amp), 0, yOf(baseY - amp - rayH * k));
+      g.addColorStop(0, `rgba(${hue},0)`);
+      g.addColorStop(0.12, `rgba(${hue},${a})`);
+      g.addColorStop(0.4, `rgba(${hue},${a * 0.45})`);
+      g.addColorStop(1, `rgba(${hue},0)`);
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      for (let i = 0; i <= N; i++) {
+        const x = (i / N) * W;
+        const y = yOf(hemY(x) + amp * 0.15);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      for (let i = N; i >= 0; i--) {
+        const x = (i / N) * W;
+        ctx.lineTo(x, yOf(hemY(x) + (topY(x) - hemY(x)) * (mirror ? 0.5 : 1)));
+      }
+      ctx.closePath();
+      ctx.fill();
+      if (!s.lite && !mirror) {
+        // Faint rays rising out of the hem
+        for (let r = 0; r < 18; r++) {
+          const x = ((hash(b * 31 + r) * W + t * 8 * (b % 2 ? 1 : -1)) % W + W) % W;
+          const y0 = hemY(x);
+          const fl = 0.5 + 0.5 * Math.sin(t * 1.3 + r * 1.7 + b);
+          const rg = ctx.createLinearGradient(0, y0, 0, y0 - rayH);
+          rg.addColorStop(0, `rgba(${hue},${0.10 * fl})`);
+          rg.addColorStop(1, `rgba(${hue},0)`);
+          ctx.fillStyle = rg;
+          ctx.fillRect(x - 2, y0 - rayH, 4 + hash(r) * 6, rayH);
+        }
+      }
+    }
+    ctx.restore();
+  };
+  curtain(false);
+
+  // Snow-capped mountains on the far shore
+  ctx.fillStyle = 'rgba(12,26,42,0.97)';
+  ctx.beginPath();
+  ctx.moveTo(0, horizon + 1);
+  const peaks = 11;
+  const pk: { x: number; y: number }[] = [];
+  for (let k = 0; k <= peaks; k++) {
+    const x = (k / peaks) * W;
+    const y = horizon - horizon * (0.06 + hash(k * 3.3) * 0.22) * (k % 2 ? 1 : 0.45);
+    pk.push({ x, y });
+    ctx.lineTo(x, y);
+  }
+  ctx.lineTo(W, horizon + 1);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = 'rgba(200,230,255,0.32)';
+  for (let k = 1; k < peaks; k += 2) {
+    const p = pk[k];
+    const l = pk[k - 1];
+    const r = pk[k + 1];
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    ctx.lineTo(lerp(p.x, l.x, 0.25), lerp(p.y, l.y, 0.25));
+    ctx.lineTo(lerp(p.x, r.x, 0.25), lerp(p.y, r.y, 0.25));
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Frozen fjord with the aurora mirrored in the ice
+  const ice = ctx.createLinearGradient(0, horizon, 0, H);
+  ice.addColorStop(0, 'rgba(14,40,60,0.95)');
+  ice.addColorStop(1, 'rgba(4,10,20,0.97)');
+  ctx.fillStyle = ice;
+  ctx.fillRect(0, horizon, W, H - horizon);
+  curtain(true);
+  // Ice cracks
+  ctx.strokeStyle = 'rgba(170,220,255,0.08)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let k = 0; k < (s.lite ? 6 : 14); k++) {
+    let x = hash(k * 5.7) * W;
+    let y = lerp(horizon + 4, H, hash(k * 9.1));
+    ctx.moveTo(x, y);
+    for (let j = 0; j < 4; j++) {
+      x += (hash(k * 13 + j) - 0.5) * 80 * (y / H);
+      y += (hash(k * 17 + j) - 0.3) * 18;
+      ctx.lineTo(x, y);
+    }
+  }
+  ctx.stroke();
+
+  const steps = s.lite ? 16 : 30;
+  const pEnd = 1.3;
+  const { left, right } = deckEdges(s, 'aurora_bridge', 0.0, pEnd, steps, 0.3);
+
+  // Deck underside and glass deck
+  ctx.fillStyle = 'rgba(10,22,36,0.9)';
+  ctx.beginPath();
+  ctx.moveTo(left[0].x, left[0].y);
+  for (let i = 1; i <= steps; i++) ctx.lineTo(left[i].x, left[i].y + left[i].w * 0.18);
+  for (let i = steps; i >= 0; i--) ctx.lineTo(right[i].x, right[i].y + right[i].w * 0.18);
+  ctx.closePath();
+  ctx.fill();
+  const glass = ctx.createLinearGradient(0, horizon, 0, H);
+  glass.addColorStop(0, 'rgba(60,120,160,0.25)');
+  glass.addColorStop(1, 'rgba(20,50,80,0.55)');
+  ctx.fillStyle = glass;
+  ctx.beginPath();
+  ctx.moveTo(left[0].x, left[0].y);
+  for (let i = 1; i <= steps; i++) ctx.lineTo(left[i].x, left[i].y);
+  for (let i = steps; i >= 0; i--) ctx.lineTo(right[i].x, right[i].y);
+  ctx.closePath();
+  ctx.fill();
+
+  // Suspension towers and cables; towers arrive at note speed
+  const towers = markerPs(s, 1.2, -0.6, 1.6);
+  const tops: { l: { x: number; y: number }; r: { x: number; y: number }; d: { l: { x: number; y: number; w: number }; r: { x: number; y: number; w: number } } }[] = [];
+  for (const p of towers) {
+    const a = proj(s, 'aurora_bridge', 0, p);
+    const b = proj(s, 'aurora_bridge', LANE_COUNT - 1, p);
+    const lx = a.cx - a.w * 0.85;
+    const rx = b.cx + b.w * 0.85;
+    const th = Math.max(a.w, 4) * 1.9;
+    tops.push({ l: { x: lx, y: a.cy - th }, r: { x: rx, y: b.cy - th }, d: { l: { x: lx, y: a.cy, w: a.w }, r: { x: rx, y: b.cy, w: b.w } } });
+  }
+  ctx.lineCap = 'round';
+  // Main cables sag between towers, hangers drop to the deck
+  for (let k = 0; k + 1 < tops.length; k++) {
+    const A = tops[k];
+    const B = tops[k + 1];
+    for (const side of ['l', 'r'] as const) {
+      const ta = A[side];
+      const tb = B[side];
+      const da = A.d[side];
+      const db = B.d[side];
+      const midX = (da.x + db.x) / 2;
+      const midY = (da.y + db.y) / 2 - Math.max(da.w, db.w) * 0.3;
+      ctx.strokeStyle = 'rgba(160,220,255,0.5)';
+      ctx.lineWidth = Math.max(1, Math.max(da.w, db.w) * 0.03);
+      ctx.beginPath();
+      ctx.moveTo(ta.x, ta.y);
+      ctx.quadraticCurveTo(midX, midY, tb.x, tb.y);
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(160,220,255,0.18)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let h = 1; h < 8; h++) {
+        const u = h / 8;
+        const cx = (1 - u) * (1 - u) * ta.x + 2 * u * (1 - u) * midX + u * u * tb.x;
+        const cy = (1 - u) * (1 - u) * ta.y + 2 * u * (1 - u) * midY + u * u * tb.y;
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(lerp(da.x, db.x, u), lerp(da.y, db.y, u));
+      }
+      ctx.stroke();
+    }
+  }
+  // Tower legs with beacon lights
+  for (const T of tops) {
+    for (const side of ['l', 'r'] as const) {
+      const top = T[side];
+      const d = T.d[side];
+      if (d.y < horizon - 2 || top.y > H) continue;
+      ctx.strokeStyle = 'rgba(30,60,90,0.95)';
+      ctx.lineWidth = Math.max(1.5, d.w * 0.09);
+      ctx.beginPath();
+      ctx.moveTo(d.x, d.y);
+      ctx.lineTo(top.x, top.y);
+      ctx.stroke();
+      const blink = 0.5 + 0.5 * Math.sin(t * 3 + top.x * 0.01);
+      const br = Math.min(6, Math.max(1.5, d.w * 0.05));
+      const bg = ctx.createRadialGradient(top.x, top.y, 0, top.x, top.y, br * 3);
+      bg.addColorStop(0, `rgba(255,80,90,${0.35 + blink * 0.45})`);
+      bg.addColorStop(1, 'rgba(255,80,90,0)');
+      ctx.fillStyle = bg;
+      ctx.beginPath();
+      ctx.arc(top.x, top.y, br * 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.lineCap = 'butt';
+
+  // Glowing deck rails
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  for (const edge of [left, right]) {
+    ctx.strokeStyle = 'rgba(120,255,210,0.4)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i <= steps; i++) {
+      if (i === 0) ctx.moveTo(edge[i].x, edge[i].y); else ctx.lineTo(edge[i].x, edge[i].y);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // Drifting snow
+  if (!s.lite) {
+    for (let k = 0; k < 40; k++) {
+      const x = ((hash(k * 2.9) * W + Math.sin(t * 0.6 + k) * 20 - t * 12) % W + W) % W;
+      const y = ((hash(k * 6.1) * H + t * (18 + hash(k) * 30)) % H);
+      ctx.fillStyle = `rgba(230,245,255,${0.25 + hash(k * 1.3) * 0.35})`;
+      ctx.fillRect(x, y, 1.6, 1.6);
+    }
+  }
+
+  drawLaneGuides(s, 'aurora_bridge', { fill: 0.15, edge: 0.55, base: 0.3 });
+
+  // Frost bloom on hit
+  for (let lane = 0; lane < LANE_COUNT; lane++) {
+    const f = hitFlash(s, lane);
+    if (f <= 0) continue;
+    const a = proj(s, 'aurora_bridge', lane, 1);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.strokeStyle = `rgba(170,255,230,${f * 0.7})`;
+    ctx.lineWidth = 1.5;
+    const r = a.w * (0.4 + (1 - f) * 0.8);
+    ctx.beginPath();
+    for (let k = 0; k < 6; k++) {
+      const ang = (k / 6) * Math.PI * 2;
+      ctx.moveTo(a.cx, a.cy);
+      ctx.lineTo(a.cx + Math.cos(ang) * r, a.cy + Math.sin(ang) * r * 0.4);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
 export function drawPovScene(pov: PovMode, s: PovSceneInput): void {
   const { ctx } = s;
   ctx.save();
   switch (pov) {
     case 'flat_2d': drawFlat2D(s); break;
-    case 'circle': drawCircle(s); break;
+    case 'canyon_run': drawCanyon(s); break;
+    case 'aurora_bridge': drawAurora(s); break;
     case 'horizontal_drift': drawSideDrift(s); break;
     case 'cockpit_hud': drawCockpit(s); break;
     case 'hyper_prism': drawPrism(s); break;
