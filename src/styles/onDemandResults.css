@@ -1,0 +1,89 @@
+/* onDemandResults.css — additions on top of campaignResults.css for the
+   on-demand results screen (.cr-od): the avant-garde theme palette, the prize
+   card, lane meters, the broadcast card and the footer rows. */
+
+/* ── Avant-garde theme: acid terminal palette, magenta on a loss ───────── */
+.cr-od[data-theme='avant'] { --hot: #00e5ff; }
+.cr-od[data-theme='avant'][data-result='lose'] { --medal: #ff1493; --hot: #ff1493; }
+.cr-od[data-theme='avant'] .cr-bg { background: #020604; }
+.cr-od[data-theme='avant'] .cr-l {
+  background:
+    linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, 0.95) 50%, transparent 62%) -150% 0 / 250% 100% no-repeat,
+    linear-gradient(180deg, #f2ffe8 0%, #9dff7a 28%, #39ff14 52%, #00b894 78%, #00433a 100%);
+  -webkit-background-clip: text;
+          background-clip: text;
+}
+.cr-od[data-theme='avant'][data-result='lose'] .cr-l {
+  background: linear-gradient(180deg, #ffe3f3 0%, #ff6ec7 28%, #ff1493 55%, #8a0050 85%, #2e0019 100%);
+  -webkit-background-clip: text;
+          background-clip: text;
+}
+.cr-od[data-theme='avant'] .cr-dither {
+  background:
+    linear-gradient(rgba(57, 255, 20, 0.05) 1px, transparent 1px) 0 0 / 32px 32px,
+    linear-gradient(90deg, rgba(57, 255, 20, 0.05) 1px, transparent 1px) 0 0 / 32px 32px,
+    radial-gradient(ellipse at 50% 20%, transparent 30%, rgba(0, 0, 0, 0.8) 100%);
+}
+
+.cr-chip[data-tone='warn'] { color: var(--ink); background: #ff6b35; border-color: var(--ink); }
+
+/* ── Lane meters ───────────────────────────────────────────────────────── */
+.cr-lanes { display: grid; gap: 8px; padding-top: 14px; }
+.cr-lanes.is-on { animation: cr-row-in 0.3s steps(5) both; }
+.cr-lane {
+  display: grid; grid-template-columns: 64px 1fr auto; align-items: center; gap: 10px;
+  font: 400 8px/1 var(--pixel); text-transform: uppercase;
+}
+.cr-lane span { color: var(--lane); text-shadow: 2px 2px 0 var(--ink); }
+.cr-lane i {
+  display: block; height: 10px; max-width: 100%;
+  background: repeating-linear-gradient(90deg, var(--lane) 0 6px, transparent 6px 8px);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--lane) 50%, transparent);
+}
+.cr-lanes.is-on .cr-lane i { animation: cr-lane-fill 0.6s steps(12) both; }
+.cr-lane b { font-weight: 400; color: #fff; min-width: 4ch; text-align: right; }
+.cr-continues { display: block; margin-top: 6px; color: var(--shell-text-3); }
+
+/* ── Action cards ──────────────────────────────────────────────────────── */
+.cr-od .cr-actions.is-on > *:nth-child(3) { animation-delay: 0.2s; }
+.cr-od .cr-actions.is-on > *:nth-child(4) { animation-delay: 0.3s; }
+.cr-card[data-span='full'] { grid-column: 1 / -1; }
+.cr-card[data-tone='prize'] {
+  box-shadow: 0 0 0 3px #ffd23f, 0 0 0 6px var(--ink), 0 0 50px rgba(255, 210, 63, 0.3);
+}
+.cr-card[data-tone='prize'] .cr-card-tab { background: #ffd23f; }
+.cr-claim { width: 100%; white-space: normal; text-align: center; line-height: 1.2; }
+.cr-claim[data-tone='gold']:not(:disabled) { animation: cr-claim-glow 1.2s ease-in-out infinite; }
+.cr-bundle { display: flex; flex-wrap: wrap; gap: 6px; }
+.cr-bundle span {
+  padding: 6px 8px;
+  font: 400 8px/1.2 var(--pixel); text-transform: uppercase;
+  color: #fff;
+  background: color-mix(in srgb, var(--tier) 22%, #000);
+  border: 2px solid var(--tier);
+  box-shadow: 2px 2px 0 var(--ink);
+}
+.cr-spin {
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid currentColor; border-top-color: transparent;
+  animation: cr-spin 0.8s linear infinite;
+}
+.cr-live { display: flex; align-items: center; gap: 8px; font: 400 9px/1.4 var(--pixel); text-transform: uppercase; color: var(--shell-acid); }
+.cr-live i { width: 8px; height: 8px; background: var(--shell-acid); box-shadow: 0 0 8px var(--shell-acid); animation: cr-blink-hard 1s steps(1) infinite; }
+.cr-live b { font-weight: 400; color: #fff; }
+.cr-cast { --c: #8a63d2; --d: #4b2f87; --fg: #fff; }
+
+/* ── Footer rows ───────────────────────────────────────────────────────── */
+.cr-od .cr-foot { flex-wrap: wrap; gap: 12px; }
+.cr-quick { position: relative; z-index: 2; width: 100%; max-width: 560px; margin: 0 auto; }
+.cr-quick.is-on { animation: cr-rise 0.45s ease-out 0.3s both; }
+
+@keyframes cr-lane-fill { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes cr-claim-glow {
+  0%, 100% { filter: none; }
+  50% { filter: brightness(1.15) drop-shadow(0 0 14px rgba(255, 210, 63, 0.7)); }
+}
+
+.cr-od .cr-next { gap: 26px; }
+.cr-od { padding-bottom: calc(var(--shell-dock-h) + 40px + env(safe-area-inset-bottom, 0px)); }
+.cr-od .cs-hook b { color: #fff; font-weight: 700; }
