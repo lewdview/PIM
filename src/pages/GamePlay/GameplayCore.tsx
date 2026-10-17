@@ -2443,7 +2443,7 @@ export default function Game() {
       }
       checkPowerUps(gs.combo);
 
-      addJudgment({ type: j, lane, id: ++jCounter.current, ts: Date.now() });
+      addJudgment({ type: j, lane, id: ++jCounter.current, ts: Date.now(), partial: isHoldType });
 
       // ── Hit explosion effect ──
       triggerHitFx(lane, j, undefined, direction || ns.note.swipeDirection);
@@ -3417,6 +3417,9 @@ export default function Game() {
 
   const handleTutorialJudgment = useCallback((newJ: JudgmentDisplay) => {
     if (!activeTutorial || tutStage1ClearedRef.current) return;
+    // Hold-type note heads fire their own judgment before the hold resolves;
+    // only the resolving judgment counts, so one note = one success.
+    if (newJ.partial) return;
 
     const isHit = newJ.type === 'PERFECT+' || newJ.type === 'PERFECT' || newJ.type === 'GOOD';
     const isMiss = newJ.type === 'MISS';
