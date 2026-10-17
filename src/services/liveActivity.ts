@@ -15,7 +15,6 @@ export const ACTIVITY_EVENT_TYPES = [
   'targeted_pull',
   'rarity_upgrade',
   'duplicate_fusion',
-  'nft_mint',
   'bonus_code_redeem',
   'invite_redeem',
 ] as const;
@@ -247,19 +246,6 @@ export function toActivityItem(e: RawActivityEvent, ctx: ActivityContext): Activ
         href: '/vault/forge',
         accent: ACCENT.forge,
         groupKey: `duplicate_fusion:${e.id}`,
-      };
-    }
-    case 'nft_mint': {
-      const day = dayFrom(p.cardId, p.day);
-      return {
-        ...base,
-        verb: 'minted',
-        subject: songName(day),
-        meta: 'on Base',
-        day,
-        href: day ? `/play/card-${day}` : '/vault',
-        accent: ACCENT.chain,
-        groupKey: `nft_mint:${e.id}`,
       };
     }
     case 'bonus_code_redeem':
