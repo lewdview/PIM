@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, ExternalLink, Download, ShieldCheck, Share2, Info, Flame, Film, Play, Disc, Sparkles, Check, CheckCircle, Lock, Layers } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { useGlobalPlayer } from '../store/useGlobalPlayer';
-import { useVaultStore } from '../store/useVaultStore';
+import { useVaultStore, getShardsForDay } from '../store/useVaultStore';
 import type { OwnedCard } from '../services/vaultService';
 import { generateCardMetadata } from '../services/vaultService';
 import { RARITY_CONFIG, getSupplyCap, getMintableCap, type Rarity } from '../utils/rarity';
@@ -96,15 +96,10 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
   if (!card) return null;
 
   const getFragmentsForDay = (day: number) => {
-    const cardKey = `card-${day}`;
-    const dayKey = `day-${String(day).padStart(3, '0')}`;
-    const dayKeyRaw = `day-${day}`;
-    return (
-      fragments[cardKey] ??
-      fragments[dayKey] ??
-      fragments[dayKeyRaw] ??
-      0
-    );
+    // Single source of truth in useVaultStore — it includes the
+    // `bombshell-{day}` bucket, which this modal's old key chain never
+    // checked, so bombshell pulls showed 0/10 shards here.
+    return getShardsForDay(fragments, day);
   };
 
   const rc = RARITY_CONFIG[card.card.rarity];
