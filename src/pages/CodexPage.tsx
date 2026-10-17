@@ -7,7 +7,7 @@ import {
 import PrizeRibbonSvg from '../components/ui/PrizeRibbonSvg';
 import { useLocation } from 'wouter';
 import { fetchAllCards, type VaultCard, type OwnedCard } from '../services/vaultService';
-import { useVaultStore, getShardsForDay } from '../store/useVaultStore';
+import { useVaultStore, getGen0ShardsForDay } from '../store/useVaultStore';
 import { useGlobalPlayer } from '../store/useGlobalPlayer';
 import { RARITY_CONFIG, type Rarity } from '../utils/rarity';
 import { getCoverUrlForRarity, useSmartCoverArt } from '../utils/rarityArtwork';
@@ -1427,10 +1427,10 @@ export default function CodexPage() {
   const today = getCurrentDay();
 
   const getFragmentsForDay = useCallback((day: number) => {
-    // Single source of truth in useVaultStore — it includes the
-    // `bombshell-{day}` bucket, which this page's old key chain never
-    // checked, so bombshell pulls showed 0/10 shards here.
-    return getShardsForDay(fragments, day);
+    // The Codex is the gen-0 archive, so this is the gen-0 count only.
+    // Bombshell shards are a separate count (bombshell-{day}) and never
+    // add into gen-0 numbers.
+    return getGen0ShardsForDay(fragments, day);
   }, [fragments]);
 
   // Owned Gen-0 card IDs for quick lookup
