@@ -1309,7 +1309,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   unlockSkin: async (skinId, cost) => {
     const state = get();
     if (state.tokenBalance < cost) {
-      alert(`Insufficient Vault Tokens! Need ${cost} V⚡, but you only have ${state.tokenBalance} V⚡.`);
+      alert(`Not enough V⚡ sparks. You need ${cost} V⚡ and have ${state.tokenBalance}.`);
       return false;
     }
     const session = await supabase.auth.getSession();
@@ -1333,8 +1333,8 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     if (error) {
       console.error('Error unlocking skin:', error);
       alert(/insufficient/i.test(error.message)
-        ? `Insufficient Vault Tokens! ${error.message.replace(/^.*?:\s*/, '')}`
-        : 'Failed to unlock skin. Please try again.');
+        ? `Not enough V⚡ sparks. ${error.message.replace(/^.*?:\s*/, '')}`
+        : 'Couldn\'t unlock that skin. Try again.');
       void get().refreshTokenBalance();
       return false;
     }

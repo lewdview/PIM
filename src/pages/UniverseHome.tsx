@@ -240,7 +240,7 @@ export default function UniverseHome() {
             transition={{ delay: 0.2, duration: 0.5 }}
             className="font-mono text-xs sm:text-sm tracking-[0.3em] uppercase text-white/70 mt-3"
           >
-            A LIVING ARTISTIC UNIVERSE. 365 DAYS. 365 ARTIFACTS. ONE JOURNEY.
+            365 DAYS. 365 SONGS. ONE NEW DROP EVERY DAY.
           </motion.p>
         </div>
 
@@ -409,7 +409,7 @@ export default function UniverseHome() {
             {/* Quick Helper Text */}
             <div className="font-mono text-[10px] text-white/40 uppercase tracking-widest flex items-center gap-2">
               <Shield size={12} />
-              <span>100% Free Discovery • No Account or Wallet Required to Play</span>
+              <span>Free to Play • No Account or Wallet Needed</span>
             </div>
 
           </div>
@@ -452,7 +452,7 @@ export default function UniverseHome() {
                 </div>
                 <h4 className="font-bold text-lg text-white mb-2 uppercase">365 Archive</h4>
                 <p className="font-mono text-xs text-white/60 leading-relaxed">
-                  365 original songs and artifacts chronologically mapped. Explore by month, mood, or ritualistic discovery.
+                  365 original songs in release order. Browse by month or mood, or pull a random day.
                 </p>
               </div>
               <div className="flex items-center gap-1 font-mono text-[10px] text-[#00E5FF] uppercase font-bold tracking-wider mt-6">
@@ -475,7 +475,7 @@ export default function UniverseHome() {
                 </div>
                 <h4 className="font-bold text-lg text-white mb-2 uppercase">PIM Arcade</h4>
                 <p className="font-mono text-xs text-white/60 leading-relaxed">
-                  3-lane HTML5 canvas rhythm game. Master the beat, hit timing windows, and turn every song into an interactive challenge.
+                  A three-lane rhythm game built on every song in the archive. Play it in your browser.
                 </p>
               </div>
               <div className="flex items-center gap-1 font-mono text-[10px] text-[#FF1493] uppercase font-bold tracking-wider mt-6">
@@ -521,7 +521,7 @@ export default function UniverseHome() {
                 </div>
                 <h4 className="font-bold text-lg text-white mb-2 uppercase">YOUR 365</h4>
                 <p className="font-mono text-xs text-white/60 leading-relaxed">
-                  Your personal relationship with the project. Track days experienced, streak milestones, cards earned, and your sovereign passport.
+                  Your days played, streaks and cards, all in one place.
                 </p>
               </div>
               <div className="flex items-center gap-1 font-mono text-[10px] text-[#A855F7] uppercase font-bold tracking-wider mt-6">
@@ -656,7 +656,7 @@ export default function UniverseHome() {
             ENTER THE WARP ZONE
           </h3>
           <p className="font-mono text-xs sm:text-sm text-white/60 leading-relaxed mb-8">
-            Explore the Mood Map, cyber brutalist ASCII terminals, sacred geometry audio visualizers, and the complete lost-and-found hard drive lore archive.
+            The Mood Map, ASCII terminals, audio visualizers and the story of the lost hard drive.
           </p>
           <Link
             to="/warp"

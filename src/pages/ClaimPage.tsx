@@ -276,7 +276,7 @@ export default function ClaimPage() {
     setCodeError('');
     setRewardClaimed(null);
     setAnimationReward(null);
-    useLoadingToast.getState().show('Decrypting bonus code…');
+    useLoadingToast.getState().show('Checking code…');
 
     try {
       const res = await redeemBonusCode(bonusCode);
@@ -318,14 +318,14 @@ export default function ClaimPage() {
         window.dispatchEvent(new Event('vault:points_updated'));
       } else {
         audioManager.playSfx("locked_out", 0.8);
-        setCodeError(res.error || 'Failed to redeem bonus code. Please try again.');
+        setCodeError(res.error || 'Couldn\'t redeem that code. Try again.');
         setCodeState('error');
       }
     } catch (err: any) {
       audioManager.playSfx("error", 0.8);
       useLoadingToast.getState().hide();
       audioManager.playSfx('error', 0.6);
-      setCodeError(err.message || 'Verification link failed.');
+      setCodeError(err.message || 'Couldn\'t check that code. Try again.');
       setCodeState('error');
     }
   };
@@ -384,10 +384,10 @@ export default function ClaimPage() {
           </div>
           <div>
             <h1 className="text-2xl font-black uppercase mb-2 text-white" style={{ fontFamily: '"Impact", "Arial Black", sans-serif' }}>
-              Identity Required
+              Sign In Required
             </h1>
             <p className="text-xs font-mono leading-relaxed text-zinc-400">
-              You must connect your Web3 Identity or guest account before claiming promotional rewards or elite prizes.
+              Sign in or continue as a guest to claim rewards.
             </p>
           </div>
           <button
@@ -401,7 +401,7 @@ export default function ClaimPage() {
               clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
             }}
           >
-            Connect Identity
+            Sign In
           </button>
         </motion.div>
       </div>
@@ -490,7 +490,7 @@ export default function ClaimPage() {
           <h1 className="text-4xl font-black uppercase tracking-tight text-white" style={{ fontFamily: '"Impact", "Arial Black", sans-serif' }}>
             Redeem Rewards
           </h1>
-          <p className="text-xs font-mono text-zinc-400 uppercase tracking-widest">// DECRYPT TRANSMISSIONS & EXCLUSIVE CODES</p>
+          <p className="text-xs font-mono text-zinc-400 uppercase tracking-widest">// CODES, PRIZES & BONUSES</p>
         </div>
 
         {/* BIRTHDAY BONUS PROMO — code 10031981 → free bombshell 2x pack.
@@ -599,7 +599,7 @@ export default function ClaimPage() {
               >
                 <div className="flex items-center justify-center gap-1.5 text-xs font-mono font-bold text-[#39FF14] tracking-widest uppercase">
                   <Sparkles size={13} />
-                  <span>Reward Unlocked successfully</span>
+                  <span>Reward unlocked</span>
                 </div>
 
                 {/* Tokens display */}
@@ -609,7 +609,7 @@ export default function ClaimPage() {
                     <div className="text-3xl font-black font-mono text-[#ffb800] mt-2">
                       +{rewardClaimed.details?.tokensGranted?.toLocaleString()}
                     </div>
-                    <div className="text-[9px] font-mono text-white/50 tracking-wider mt-1 uppercase">VAULT TOKENS CREDITED</div>
+                    <div className="text-[9px] font-mono text-white/50 tracking-wider mt-1 uppercase">V⚡ SPARKS ADDED</div>
                   </div>
                 )}
 
@@ -648,7 +648,7 @@ export default function ClaimPage() {
                       {rewardClaimed.details?.skinUnlocked?.replace('_', ' ')}
                     </div>
                     <div className="text-[8px] font-mono text-white/40 mt-1.5 leading-relaxed max-w-xs mx-auto uppercase">
-                      Background theme is now permanently unlocked in options.
+                      Theme unlocked. Find it in Options.
                     </div>
                   </div>
                 )}
@@ -659,13 +659,13 @@ export default function ClaimPage() {
                       <span className="text-[18px]">🔞</span>
                     </div>
                     <div className="font-mono text-[9px] tracking-widest text-[#ffd700] uppercase">
-                      DECRYPTION COMPLETE
+                      CONTENT UNLOCKED
                     </div>
                     <div className="text-base font-black uppercase text-white mt-1">
                       {rewardClaimed.details?.skinUnlocked}
                     </div>
                     <div className="text-[8px] font-mono text-white/40 mt-1.5 leading-relaxed max-w-xs mx-auto uppercase">
-                      Stella Luxx content is now successfully decrypted in your database profile.
+                      Stella Luxx content is unlocked on your profile.
                     </div>
                   </div>
                 )}
@@ -691,7 +691,7 @@ export default function ClaimPage() {
               </div>
 
               <p className="text-[10px] font-mono text-zinc-500 leading-relaxed max-w-sm mx-auto uppercase">
-                Flip cards in your collection. If they have an Ultra reward hidden on the back, this section will unlock to claim your personalized track.
+                Flip your cards. Find an Ultra reward on a card back and this unlocks so you can claim a custom track.
               </p>
               <Link
                 to="/vault/collection"
@@ -724,7 +724,7 @@ export default function ClaimPage() {
                     <span>All Prizes Claimed</span>
                   </div>
                   <p className="text-[9px] font-mono text-zinc-400 leading-relaxed uppercase">
-                    You have successfully submitted claims for all secret prize cards in your collection. th3scr1b3 is preparing your custom tracks!
+                    You've claimed every secret prize in your collection. th3scr1b3 is working on your tracks.
                   </p>
                 </div>
               )}
@@ -832,11 +832,11 @@ export default function ClaimPage() {
 
               <div className="space-y-1.5">
                 <h2 className="text-base font-black font-mono tracking-wide uppercase text-white">
-                  Access Gated Content?
+                  View Age-Restricted Content?
                 </h2>
                 <p className="text-[10px] text-zinc-400 font-mono leading-relaxed uppercase">
                   The decryption key <span className="text-[#39FF14] font-bold">"{ageGateCode}"</span> contains adult-themed mature material (Stella Luxx Stunner Gallery).
-                  You must be 18 years or older to proceed and view this content.
+                  You must be 18 or older to view this content.
                 </p>
               </div>
 
@@ -847,11 +847,11 @@ export default function ClaimPage() {
                     let successMsg = "";
                     if (ageGateCode === 'stunnerofthemonthunlock') {
                       localStorage.setItem('opt_unlocked_stunner_section', 'true');
-                      successMsg = "Stunner of the Month Section Unlocked!";
+                      successMsg = "Stunner of the Month unlocked.";
                     } else if (ageGateCode === 'freebstella') {
                       localStorage.setItem('opt_free_stella_unlocked', 'true');
                       localStorage.setItem('opt_unlocked_stunner_section', 'true');
-                      successMsg = "Stella Luxx Fully Unlocked in Slideshows!";
+                      successMsg = "Stella Luxx unlocked in Slideshows.";
                     }
                     
                     audioManager.playSfx('song_completion', 0.85);
@@ -876,7 +876,7 @@ export default function ClaimPage() {
                 <button
                   onClick={() => {
                     audioManager.playSfx('error', 0.6);
-                    setCodeError('Decryption aborted: Age verification failed.');
+                    setCodeError('Age check declined. Code not redeemed.');
                     setCodeState('error');
                     setAgeGateCode(null);
                   }}

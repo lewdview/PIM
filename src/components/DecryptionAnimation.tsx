@@ -371,7 +371,7 @@ export default function DecryptionAnimation({ reward, onClose }: DecryptionAnima
                   <div className="text-4xl font-black font-mono text-[#ffb800] mt-4 tracking-tighter" style={{ textShadow: '0 0 15px rgba(255,184,0,0.4)' }}>
                     +{reward.details?.tokensGranted?.toLocaleString() || reward.value}
                   </div>
-                  <div className="text-[10px] font-mono text-zinc-400 tracking-wider mt-1 uppercase">VAULT TOKENS CREDITED</div>
+                  <div className="text-[10px] font-mono text-zinc-400 tracking-wider mt-1 uppercase">V⚡ SPARKS ADDED</div>
                 </motion.div>
               )}
 
@@ -482,8 +482,8 @@ export default function DecryptionAnimation({ reward, onClose }: DecryptionAnima
                   </div>
                   <div className="text-[10px] font-mono text-zinc-400 mt-2 max-w-[280px] leading-relaxed uppercase text-center">
                     {reward.value === 'iddqd' 
-                      ? "PROCEDURAL GENERATOR DECRYPTED. LYRIC & BPM ENGINE ENGAGED." 
-                      : "MISS SYSTEM SAFETY BYPASSED. CONFIGURATION SETTINGS UNLOCKED."}
+                      ? "LYRIC AND BPM CHART MODES UNLOCKED." 
+                      : "MISS SYSTEM SETTINGS UNLOCKED."}
                   </div>
                 </motion.div>
               )}

@@ -419,7 +419,7 @@ export default function OnboardingFlow({ onComplete }: Props) {
                     SIGN IN / CONNECT WALLET
                   </div>
                   <div className="text-[8.5px] font-bold text-zinc-300 normal-case tracking-normal">
-                    Base Web3 · Coinbase Smart Wallet · Passkey
+                    Email · Wallet · Passkey
                   </div>
                 </div>
               </div>
@@ -539,9 +539,9 @@ export default function OnboardingFlow({ onComplete }: Props) {
             color: 'rgba(255,255,255,0.55)', textAlign: 'center',
             maxWidth: 320, lineHeight: 1.7, marginBottom: 28,
           }}>
-            They live in this browser for now. Connect an identity — email,
-            wallet, or GitHub — to bind your cards, streaks, and progress to
-            your sovereign profile forever.
+            They live in this browser for now. Sign in with email, a wallet
+            or GitHub to keep your cards, streaks and progress on any
+            device.
           </p>
 
           <button
@@ -582,7 +582,7 @@ export default function OnboardingFlow({ onComplete }: Props) {
           style={{ borderTopColor: '#ff3800' }}
         />
         <p className="font-mono text-[10px] tracking-widest text-[#ff3800] uppercase">
-          Synchronizing Vault Profile...
+          Saving your profile…
         </p>
       </div>
     );
@@ -596,7 +596,7 @@ export default function OnboardingFlow({ onComplete }: Props) {
 const EXPLAINER_STEPS = [
   {
     title: 'YOU JUST RIPPED YOUR FIRST PACK',
-    body: 'Every pack contains cards with different rarities — from Common to Mythic. Rarer cards are harder to pull.',
+    body: 'Packs hold cards from Common to Mythic. The rarer the card, the harder the pull.',
     accent: '#ff3800',
   },
   {
@@ -616,7 +616,7 @@ const EXPLAINER_STEPS = [
   },
   {
     title: 'FORGE BUFFS & ULTRA REWARDS',
-    body: 'Explore the full list of dynamic drop modifiers you can unlock, and learn about the physical Ultra Rewards.',
+    body: 'See which drop buffs are live, and how physical Ultra Rewards work.',
     accent: '#b44dff',
     showList: true,
   },
@@ -780,7 +780,7 @@ function ExplainerOverlay({ cards, onDone }: { cards: OwnedCard[]; onDone: () =>
                 <div>
                   <span style={{ color: '#b44dff', fontFamily: '"JetBrains Mono", monospace', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Ultra Rewards</span>
                   <p style={{ margin: '4px 0 0', fontFamily: '"JetBrains Mono", monospace', fontSize: '9.5px', color: 'rgba(255,255,255,0.6)', lineHeight: 1.4 }}>
-                    0.3% chance per card to uncover a premium gold foil backing. Redeemable for physical 1-of-1s and custom prizes.
+                    Each card has a 0.3% chance of a gold foil back. Redeem it for physical 1-of-1s and custom prizes.
                   </p>
                 </div>
                 <div style={{ width: '100%', height: '1px', background: 'rgba(255,255,255,0.05)' }} />
@@ -794,7 +794,7 @@ function ExplainerOverlay({ cards, onDone }: { cards: OwnedCard[]; onDone: () =>
                       </div>
                     ))}
                     {getAdminConfig().modifiers.filter(m => m.enabled).length === 0 && (
-                      <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '9px', color: 'rgba(255,255,255,0.4)' }}>No active buffs right now.</div>
+                      <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '9px', color: 'rgba(255,255,255,0.4)' }}>No active buffs.</div>
                     )}
                   </div>
                 </div>

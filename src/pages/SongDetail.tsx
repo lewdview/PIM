@@ -378,7 +378,7 @@ export default function SongDetail() {
           {/* Best score banner */}
           {hs > 0 && (
             <div className="border border-[#39FF14]/15 bg-black/40 flex items-center justify-between px-4 py-3">
-              <div className="font-mono text-[8px] tracking-[0.25em] text-white/30">// HIGH INTEGRITY DISPATCH SCORE</div>
+              <div className="font-mono text-[8px] tracking-[0.25em] text-white/30">// BEST SCORE</div>
               <div className="font-mono font-black text-base text-[#39FF14]">{hs.toLocaleString()}</div>
             </div>
           )}

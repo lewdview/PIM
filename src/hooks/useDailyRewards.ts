@@ -94,7 +94,7 @@ export function useDailyRewards(day: number) {
 
   const claimCard = useCallback(() => {
     if (hasClaimed || needUser()) return;
-    void run('card', 'Claiming daily card…', async () => {
+    void run('card', 'Claiming today\'s drop…', async () => {
       const owned = await claimDailyCard(day);
       if (!owned) {
         alert("Couldn't claim today's card. It may already be claimed on this account.");

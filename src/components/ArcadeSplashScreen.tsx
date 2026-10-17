@@ -40,7 +40,7 @@ const LORE_SLIDES = [
     badge: 'RHYTHM ENGINE // HARDWARE ACCELERATED',
     tabLabel: 'PIM ENGINE',
     title: 'PIM : TH3V4ULT',
-    subtitle: 'POETRY IN MOTION // 3-LANE RHYTHMIC KINETICS',
+    subtitle: 'POETRY IN MOTION // 3-LANE RHYTHM',
     accentColor: '#39FF14',
     glowColor: 'rgba(57, 255, 20, 0.4)',
   },
@@ -591,7 +591,7 @@ export default function ArcadeSplashScreen({ onStart }: ArcadeSplashScreenProps)
                         <span>☀️ SOLAR SPECTRUM (LIGHT)</span>
                       </div>
                       <p className="text-[11px] sm:text-xs text-zinc-400 leading-relaxed">
-                        Euphoric synth arpeggios, crisp high-frequency transients, and golden card rarities designed for morning clarity and daytime velocity.
+                        Bright synths, crisp highs and gold-tier cards. Made for the daytime.
                       </p>
                     </div>
                     <div className="p-3 rounded-lg bg-indigo-500/5 border border-indigo-500/20">
@@ -599,7 +599,7 @@ export default function ArcadeSplashScreen({ onStart }: ArcadeSplashScreenProps)
                         <span>🌙 LUNAR SPECTRUM (DARK)</span>
                       </div>
                       <p className="text-[11px] sm:text-xs text-zinc-400 leading-relaxed">
-                        Deep 808 sub-bass resonance, glitch breakcore, and industrial overdrive tuned for night sessions and high-intensity reflex challenges.
+                        Heavy 808s, glitch breakcore and industrial grit. Made for late nights and hard charts.
                       </p>
                     </div>
                   </div>

@@ -58,7 +58,7 @@ export default function MobileCardActionSheet({
       }).catch(() => {});
     } else {
       navigator.clipboard?.writeText?.(window.location.origin + `/hero/day-${card.card.day}`);
-      alert('Card link copied to clipboard!');
+      alert('Card link copied.');
     }
   };
 

@@ -59,7 +59,7 @@ export default function PackRevealPage() {
 
       if (sessionId) {
         window.history.replaceState({}, '', '/vault/reveal');
-        useLoadingToast.getState().show('Verifying Stripe payment…');
+        useLoadingToast.getState().show('Confirming payment…');
         verifyStripeSessionDetailed(sessionId, category, size)
           .then(async (result) => {
             useLoadingToast.getState().hide();
@@ -102,7 +102,7 @@ export default function PackRevealPage() {
                 revealType: 'cinematic',
               });
             } else {
-              alert('Could not verify cards for this Stripe session.');
+              alert('Couldn\'t confirm the cards from this purchase. Refresh to try again.');
               setLocation('/vault');
             }
           })
@@ -177,7 +177,7 @@ export default function PackRevealPage() {
     // Client-side balance guard for token packs
     const reqCost = category === 'bombshell_token' ? getBombshellTokenPackCost(size as any) : getTokenPackCost();
     if ((category === 'vault_token' || category === 'bombshell_token') && tokenBalance < reqCost) {
-      alert(`Not enough V⚡ tokens. You need ${reqCost} V⚡ but only have ${tokenBalance}.`);
+      alert(`Not enough V⚡ sparks. You need ${reqCost} V⚡ and have ${tokenBalance}.`);
       return;
     }
 
@@ -190,7 +190,7 @@ export default function PackRevealPage() {
         : await purchasePack(category as any, size as any);
 
       if (cards === 'insufficient') {
-        alert(`Not enough V⚡ tokens. You need ${reqCost} V⚡ but only have ${tokenBalance}.`);
+        alert(`Not enough V⚡ sparks. You need ${reqCost} V⚡ and have ${tokenBalance}.`);
         setIsRepurchasing(false);
         isRepurchaseRef.current = false;
         return;
@@ -328,13 +328,13 @@ export default function PackRevealPage() {
 
           <div className="space-y-2">
             <span className="text-[10px] font-mono uppercase tracking-widest text-amber-400 font-bold px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/30">
-              Payment Cleared • Vault Wallet Credited
+              Payment Complete • Sparks Added
             </span>
             <h2 className="text-3xl font-black uppercase tracking-tight text-white">
               +{tokenReward.tokenAmount} V⚡ SPARKS
             </h2>
             <p className="text-xs font-mono text-zinc-400 leading-relaxed">
-              Your sparks have been delivered to your vault wallet. Use them to rip Vault Packs (3% Mythic drop chance), execute Targeted Pulls, or boost cards in the Forge!
+              Your sparks are in your vault. Spend them on Vault Packs (3% Mythic chance), Targeted Pulls or upgrades in the Forge.
             </p>
           </div>
 
@@ -378,7 +378,7 @@ export default function PackRevealPage() {
                 clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
               }}
             >
-              Return to Vault Dashboard
+              Back to Vault
             </button>
           </div>
         </motion.div>
@@ -540,7 +540,7 @@ export default function PackRevealPage() {
           animate={{ opacity: 1, y: 0 }}
           className="w-full max-w-2xl space-y-6"
         >
-          <h2 className="text-2xl font-bold text-center text-gradient">Pack Opened!</h2>
+          <h2 className="text-2xl font-bold text-center text-gradient">Pack Opened</h2>
 
           <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
             {revealCards.map((owned, i) => (
@@ -635,7 +635,7 @@ export default function PackRevealPage() {
                 color: '#C4A7E7',
                 clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
               }}
-              title="Cast pull to Warpcast / Farcaster"
+              title="Cast to Farcaster"
             >
               <Share2 size={16} />
               <span className="hidden sm:inline">Cast Pull</span>
@@ -650,7 +650,7 @@ export default function PackRevealPage() {
                 color: copiedShare ? '#10b981' : '#00f0ff',
                 clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
               }}
-              title="Share or copy pull link"
+              title="Share or copy link"
             >
               {copiedShare ? <Check size={16} /> : <Sparkles size={16} />}
               <span className="hidden sm:inline">{copiedShare ? 'Copied!' : 'Share Pull'}</span>

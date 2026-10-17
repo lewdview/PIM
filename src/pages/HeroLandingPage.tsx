@@ -85,12 +85,12 @@ const STORY_LINES = [
 
 const ECOSYSTEM_NODES: EcosystemPillar[] = [
   { id: '365', label: '365', desc: 'Daily releases', longDesc: '365 songs released one per day \u2014 new dailies and rescued archive freestyles, each with cover art, a light/dark tag, and a reading.', angle: 270, tag: 'TEMPORAL', stat: '365 TRACKS' },
-  { id: 'mood', label: 'Mood', desc: 'Emotional tagging', longDesc: 'High-dimensional valence & mood tagging categorizing tracks from hyper-dark to synth light.', angle: 315, tag: 'VALENCE', stat: '12 MOODS' },
-  { id: 'lyrics', label: 'Lyrics', desc: 'Every word', longDesc: 'Complete poetic manuscripts, verse annotations, and hand-crafted lyric sheets.', angle: 0, tag: 'POETRY', stat: 'FULL LYRICS' },
-  { id: 'ascii', label: 'ASCII', desc: 'Text art', longDesc: 'Cyber brutalist ASCII typography, retro terminal visuals, and console art.', angle: 45, tag: 'BRUTALIST', stat: 'CLI ART' },
+  { id: 'mood', label: 'Mood', desc: 'Emotional tagging', longDesc: 'Every track tagged by mood, from the darkest cuts to the brightest synth.', angle: 315, tag: 'VALENCE', stat: '12 MOODS' },
+  { id: 'lyrics', label: 'Lyrics', desc: 'Every word', longDesc: 'Full lyrics with verse notes for every song.', angle: 0, tag: 'POETRY', stat: 'FULL LYRICS' },
+  { id: 'ascii', label: 'ASCII', desc: 'Text art', longDesc: 'ASCII art and terminal visuals for each day.', angle: 45, tag: 'BRUTALIST', stat: 'CLI ART' },
   { id: 'poems', label: 'Poems', desc: 'Verse & flow', longDesc: 'Original spoken word, lyrical prose, and literary companion pieces.', angle: 90, tag: 'LITERARY', stat: 'PROSE' },
-  { id: 'lrc', label: 'LRC', desc: 'Synced lyrics', longDesc: 'Millisecond-accurate synced LRC timeline tracks for live karaoke & arcade HUDs.', angle: 135, tag: 'SYNCHRONIZED', stat: 'TIMELINES' },
-  { id: 'videos', label: 'Videos', desc: 'Visual stories', longDesc: 'Cinematic visualizers, AI music videos, and generative video backdrops.', angle: 180, tag: 'CINEMATIC', stat: '4K VISUALS' },
+  { id: 'lrc', label: 'LRC', desc: 'Synced lyrics', longDesc: 'Time-synced lyrics for sing-along and the in-game HUD.', angle: 135, tag: 'SYNCHRONIZED', stat: 'TIMELINES' },
+  { id: 'videos', label: 'Videos', desc: 'Visual stories', longDesc: 'Visualizers, music videos and video backdrops.', angle: 180, tag: 'CINEMATIC', stat: '4K VISUALS' },
   { id: 'base', label: 'Base', desc: 'Wallet sign-in', longDesc: 'Sign in with a Base wallet and carry your identity with you. Your cards live in your vault \u2014 no crypto needed to play.', angle: 225, tag: 'WALLET', stat: 'BASE APP' },
 ];
 

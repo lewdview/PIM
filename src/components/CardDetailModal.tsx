@@ -348,7 +348,7 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
                           </span>
                         </div>
                         <p className="text-[9px] font-mono opacity-50 uppercase leading-tight">
-                          Ultra-rare 1/1 verification stamp. This card represents a historical milestone in the vault archive.
+                          1-of-1 stamp. This card marks a milestone in the vault archive.
                         </p>
                       </div>
                     )}
