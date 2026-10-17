@@ -23,6 +23,8 @@ type Stage = 'glitch' | 'pulse' | 'slam' | 'unveil' | 'hold';
 
 const PINK = '#FF1493';
 const HOT = '#FF4FB8';
+const DISPLAY = 'Anton, Impact, "Arial Black", sans-serif';
+const MONO = '"JetBrains Mono", "Roboto Mono", monospace';
 
 // ms from start at which each stage begins
 const TIMELINE: Record<Stage, number> = {
@@ -179,7 +181,7 @@ export default function BombshellBonusReveal({ card, onDone }: Props) {
               transition={{ duration: 0.6, times: [0, 0.15, 0.3, 0.5, 1] }}
               style={{
                 position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontFamily: 'monospace', fontWeight: 900, letterSpacing: '0.4em', color: '#fff',
+                fontFamily: MONO, fontWeight: 900, letterSpacing: '0.4em', color: '#fff',
                 fontSize: 'clamp(14px, 3vw, 22px)', textShadow: `3px 0 ${PINK}, -3px 0 #00F0FF`,
               }}
             >
@@ -199,7 +201,7 @@ export default function BombshellBonusReveal({ card, onDone }: Props) {
           transition={stage === 'pulse' ? { duration: 1.05, times: [0, 0.15, 0.4, 0.62, 1] } : { duration: 0.6 }}
           style={{
             position: 'absolute', inset: 0, pointerEvents: 'none',
-            background: `radial-gradient(ellipse at center, transparent 25%, ${PINK}55 60%, ${PINK}cc 100%)`,
+            background: `radial-gradient(ellipse at center, transparent 28%, ${PINK}40 60%, ${PINK}b3 100%)`,
           }}
         />
       )}
@@ -222,7 +224,7 @@ export default function BombshellBonusReveal({ card, onDone }: Props) {
               <Heart size={84} color={PINK} />
             </motion.div>
             <div style={{
-              marginTop: 18, fontFamily: 'monospace', fontWeight: 800, color: '#fff',
+              marginTop: 18, fontFamily: MONO, fontWeight: 800, color: '#fff',
               letterSpacing: '0.35em', fontSize: 'clamp(11px, 2.4vw, 15px)', textShadow: `0 0 12px ${PINK}`,
             }}>
               EXTRA CARD DETECTED
@@ -244,9 +246,9 @@ export default function BombshellBonusReveal({ card, onDone }: Props) {
             }}
           >
             <div style={{
-              fontFamily: 'Impact, "Arial Black", sans-serif', fontSize: 'clamp(72px, 19vw, 260px)',
+              fontFamily: DISPLAY, fontSize: 'clamp(72px, 19vw, 260px)',
               lineHeight: 1, letterSpacing: '-0.02em', color: 'transparent',
-              WebkitTextStroke: `2px ${PINK}`, opacity: 0.55, transform: 'rotate(-8deg)',
+              WebkitTextStroke: `2px ${PINK}`, opacity: 0.5, transform: 'rotate(-8deg)',
               textShadow: `0 0 40px ${PINK}66`, whiteSpace: 'nowrap',
             }}>
               BOMBSHELL
@@ -267,7 +269,7 @@ export default function BombshellBonusReveal({ card, onDone }: Props) {
               }}
             >
               <div style={{
-                display: 'flex', whiteSpace: 'nowrap', fontFamily: 'Impact, "Arial Black", sans-serif',
+                display: 'flex', whiteSpace: 'nowrap', fontFamily: DISPLAY,
                 fontSize: 18, letterSpacing: '0.12em', color: bi ? PINK : '#fff',
                 animation: reduceMotion ? undefined : `bsb-marquee ${bi ? 7 : 5}s linear infinite`,
                 animationDirection: bi ? 'reverse' : 'normal',
@@ -311,6 +313,11 @@ export default function BombshellBonusReveal({ card, onDone }: Props) {
             style={{ width: '100%', height: '100%' }}
           >
             <motion.div
+              animate={stage === 'hold' && !reduceMotion ? { y: [0, -7, 0], rotateZ: [0, 0.6, 0] } : { y: 0, rotateZ: 0 }}
+              transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
+              style={{ width: '100%', height: '100%' }}
+            >
+            <motion.div
               animate={{ rotateY: flipped ? 180 : 0 }}
               transition={{ duration: reduceMotion ? 0 : 0.7, ease: [0.2, 0.9, 0.25, 1] }}
               style={{ position: 'relative', width: '100%', height: '100%', transformStyle: 'preserve-3d' }}
@@ -329,7 +336,7 @@ export default function BombshellBonusReveal({ card, onDone }: Props) {
                 />
                 <div style={{ position: 'relative', filter: `drop-shadow(0 0 16px ${PINK})` }}><Heart size={64} color="#fff" /></div>
                 <div style={{
-                  position: 'relative', fontFamily: 'Impact, "Arial Black", sans-serif', color: '#fff',
+                  position: 'relative', fontFamily: DISPLAY, color: '#fff',
                   fontSize: 26, letterSpacing: '0.08em', textShadow: `0 0 14px ${PINK}`,
                 }}>BOMBSHELL</div>
                 <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
@@ -364,6 +371,7 @@ export default function BombshellBonusReveal({ card, onDone }: Props) {
                 </div>
               </div>
             </motion.div>
+            </motion.div>
           </motion.div>
 
           {/* BONUS stamp */}
@@ -374,7 +382,7 @@ export default function BombshellBonusReveal({ card, onDone }: Props) {
             style={{
               position: 'absolute', top: -18, right: -22, zIndex: 20,
               background: '#fff', color: PINK, border: `3px solid ${PINK}`,
-              fontFamily: 'Impact, "Arial Black", sans-serif', fontSize: 20, letterSpacing: '0.1em',
+              fontFamily: DISPLAY, fontSize: 20, letterSpacing: '0.1em',
               padding: '4px 12px', boxShadow: `4px 4px 0 ${PINK}`,
             }}
           >
@@ -394,20 +402,26 @@ export default function BombshellBonusReveal({ card, onDone }: Props) {
                 }}
               >
                 <div style={{
-                  fontFamily: 'Impact, "Arial Black", sans-serif', color: '#fff', fontSize: 'clamp(20px, 4.5vw, 30px)',
-                  letterSpacing: '0.04em', textShadow: `0 0 18px ${PINK}, 3px 3px 0 #000`,
+                  fontFamily: DISPLAY, color: '#fff', fontSize: 'clamp(24px, 5.5vw, 34px)',
+                  letterSpacing: '0.06em', lineHeight: 1.05, textShadow: `0 0 18px ${PINK}, 3px 3px 0 #000`,
                 }}>
                   BOMBSHELL BONUS
                 </div>
                 <div style={{
-                  marginTop: 6, fontFamily: 'monospace', fontSize: 12, letterSpacing: '0.2em', color: '#ffd1ea',
+                  marginTop: 8, fontFamily: MONO, fontSize: 12, fontWeight: 700, letterSpacing: '0.2em', color: '#ffd1ea',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}>
-                  DAY {String(card.card.day).padStart(3, '0')} · <span style={{ color: rarityColor }}>{String(rarityLabel).toUpperCase()}</span>
+                  DAY {String(card.card.day).padStart(3, '0')}
+                  <span style={{
+                    marginLeft: 10, padding: '2px 8px', color: '#fff', background: 'rgba(0,0,0,0.55)',
+                    border: `1px solid ${rarityColor}`, boxShadow: `0 0 10px ${rarityColor}88`,
+                    textShadow: `0 0 8px ${rarityColor}`,
+                  }}>{String(rarityLabel).toUpperCase()}</span>
                 </div>
                 <motion.div
                   animate={{ opacity: [0.4, 1, 0.4] }}
                   transition={{ repeat: Infinity, duration: 1.6 }}
-                  style={{ marginTop: 14, fontFamily: 'monospace', fontSize: 10, letterSpacing: '0.3em', color: 'rgba(255,255,255,0.7)' }}
+                  style={{ marginTop: 14, fontFamily: MONO, fontSize: 10, letterSpacing: '0.3em', color: 'rgba(255,255,255,0.7)' }}
                 >
                   TAP TO ADD TO YOUR PULL
                 </motion.div>
@@ -427,12 +441,23 @@ export default function BombshellBonusReveal({ card, onDone }: Props) {
               transition={{ duration: 0.35, delay: 0.3 }}
               style={{ position: 'absolute', inset: 0, background: `radial-gradient(circle, #fff 0%, ${HOT} 40%, transparent 75%)` }}
             />
+            {!reduceMotion && (
+              <motion.div
+                initial={{ scale: 0.3, opacity: 0 }}
+                animate={{ scale: 3, opacity: [0, 0.95, 0] }}
+                transition={{ duration: 0.9, delay: 0.28, ease: [0.1, 0.8, 0.3, 1], times: [0, 0.15, 1] }}
+                style={{
+                  position: 'absolute', left: '50%', top: '50%', width: 280, height: 280, marginLeft: -140, marginTop: -140,
+                  borderRadius: '50%', border: '2px solid #fff', boxShadow: `0 0 30px ${HOT}, inset 0 0 24px ${PINK}88`,
+                }}
+              />
+            )}
             {!reduceMotion && hearts.map((h, i) => (
               <motion.div
                 key={i}
                 initial={{ x: 0, y: 0, scale: 0.2, opacity: 1, rotate: 0 }}
-                animate={{ x: h.x, y: h.y, scale: 1, opacity: 0, rotate: h.rot }}
-                transition={{ duration: 1.1, delay: 0.3 + h.delay, ease: 'easeOut' }}
+                animate={{ x: h.x, y: [0, h.y, h.y + 36], scale: [0.2, 1, 0.85], opacity: [1, 1, 0], rotate: h.rot }}
+                transition={{ duration: 1.25, delay: 0.3 + h.delay, ease: [0.16, 1, 0.3, 1], times: [0, 0.55, 1] }}
                 style={{ position: 'absolute', left: '50%', top: '50%', marginLeft: -h.size / 2, marginTop: -h.size / 2 }}
               >
                 <Heart size={h.size} color={h.color} />
