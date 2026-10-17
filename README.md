@@ -146,7 +146,18 @@ itself, so the button only appears on portals that support them.
 - `--placeholder-media` uses silent audio and blank art, to test the build
   without the real files. Don't upload that zip.
 
+- `--month=all` builds all twelve in turn (or a list, `--month=2,3`).
+
 Output: `pim-playgama-<month>.zip`.
+
+The same scaffold serves every month: the month number picks the chapter, its
+songs, colour and platinum target from `src/game/campaign.ts`, and names the
+bundle `PIM_<Month>_Bonus` and the leaderboard `PIM_<Month>_Score`.
+
+This branch is the Playgama game's own line and does not take merges from
+`main`. A change from the web game comes over only by cherry-pick, and only
+when it fits this format: campaign play with no sign-in, no gacha, packs or
+shop, and no network calls besides the Bridge.
 
 ---
 

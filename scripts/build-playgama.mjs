@@ -12,6 +12,7 @@
  * Monthly build, one campaign chapter as its own game ("PIM: January"):
  *
  *   npm run build:playgama -- --month=1 [--media-dir=PATH] [--no-bombshell] [--bonus-price=2]
+ *   npm run build:playgama -- --month=all ...    (all twelve, or a list: --month=2,3)
  *
  *   - ships only that month's charts and lyrics, and bundles its songs, covers
  *     and (unless --no-bombshell) one Bombshell artwork per track, re-encoded
@@ -45,6 +46,16 @@ const args = Object.fromEntries(
     return [k, v.length ? v.join('=') : true];
   }),
 );
+// --month=all (or a list such as --month=1,2,3) builds one zip per month in turn.
+if (typeof args.month === 'string' && (args.month === 'all' || args.month.includes(','))) {
+  const months = args.month === 'all' ? MONTH_NAMES.map((_, i) => i + 1) : args.month.split(',').map(Number);
+  const rest = process.argv.slice(2).filter((a) => !a.startsWith('--month'));
+  for (const m of months) {
+    console.log(`\n[build-playgama] ==== ${MONTH_NAMES[m - 1] ?? m} ====`);
+    execFileSync(process.execPath, [fileURLToPath(import.meta.url), `--month=${m}`, ...rest], { stdio: 'inherit', cwd: root });
+  }
+  process.exit(0);
+}
 const month = args.month ? Number(args.month) : 0;
 if (args.month && !(Number.isInteger(month) && month >= 1 && month <= 12)) {
   console.error('[build-playgama] --month must be 1-12.');
