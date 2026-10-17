@@ -303,13 +303,19 @@ export function getShardsForDay(
   day: number
 ): number {
   if (!fragments || !Number.isFinite(day)) return 0;
-  const keys = [`card-${day}`, `day-${String(day).padStart(3, '0')}`, `day-${day}`, `bombshell-${day}`];
-  let best = 0;
-  for (const k of keys) {
+  // Shards are stored per card set: gen-0 pulls land under `card-{day}` and
+  // bombshell pulls under `bombshell-{day}`. They are distinct pulls, so the
+  // day's total is the SUM of the buckets \u2014 taking the max (the old
+  // behavior) silently dropped every bombshell shard on any day that also
+  // held gen-0 shards. The `day-*` keys are legacy aliases of a single
+  // bucket, so they contribute their max, not their sum.
+  const bucket = (k: string) => {
     const v = fragments[k];
-    if (typeof v === 'number' && v > best) best = v;
-  }
-  return best;
+    return typeof v === 'number' && v > 0 ? v : 0;
+  };
+  const legacyDay = Math.max(bucket(`day-${String(day).padStart(3, '0')}`), bucket(`day-${day}`));
+  const total = bucket(`card-${day}`) + bucket(`bombshell-${day}`) + legacyDay;
+  return Math.min(total, AWARD_PLAY_SHARD_THRESHOLD);
 }
 
 /** True when the song has enough shards to unlock Award Play prizes. */
