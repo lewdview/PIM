@@ -20,6 +20,8 @@ import '@/styles/wordChain.css';
 interface ChainData {
   tracks: Record<string, [number, string][]>;
   index: Record<string, [number, number][]>;
+  /** Word forms folded onto an index word ('dreaming' -> 'dream'). */
+  alias?: Record<string, string>;
 }
 
 interface ChainLink {
@@ -41,6 +43,8 @@ const loadChain = () => {
 // Same normalisation as norm() in scripts/lyricText.mjs, so tokens match the index.
 const norm = (w: string) => w.toLowerCase().replace(/[’`]/g, "'").replace(/^[^a-z']+|[^a-z']+$/g, '').replace(/^'+|'+$/g, '')
   .replace(/^(\w{2,})in'$/, '$1ing');
+/** The index word a lyric token hooks on. */
+const hookOf = (d: ChainData, tok: string) => { const w = norm(tok); return d.alias?.[w] ?? w; };
 
 const pick = <T,>(list: T[]) => list[Math.floor(Math.random() * list.length)];
 const pad = (n: number) => String(n).padStart(3, '0');
@@ -71,7 +75,7 @@ export default function WordChain() {
 
   const linksIn = useCallback((d: ChainData, l: ChainLink) => {
     const text = d.tracks[l.day]?.[l.line]?.[1] ?? '';
-    return new Set(text.split(/\s+/).map(norm).filter((w) => d.index[w]?.some(([day]) => day !== l.day)));
+    return new Set(text.split(/\s+/).map((t) => hookOf(d, t)).filter((w) => d.index[w]?.some(([day]) => day !== l.day)));
   }, []);
 
   /** A line in this track that has somewhere to go, preferring the chorus-free middle of the song. */
@@ -236,7 +240,7 @@ export default function WordChain() {
         <p className="wc-line">
           {words.map((tok, i) => {
             if (/^\s+$/.test(tok)) return tok;
-            const w = norm(tok);
+            const w = hookOf(data, tok);
             const n = wi++;
             const style = { ['--i' as string]: n } as CSSProperties;
             if (w && lit.has(w)) {
@@ -284,7 +288,7 @@ export default function WordChain() {
                   <span className="wc-poem-day">{playing === i ? '▶▶' : pad(l.day)}</span>
                   <span className="wc-poem-line">
                     {lineText(l).split(/(\s+)/).map((tok, j) => {
-                      const w = norm(tok);
+                      const w = hookOf(data, tok);
                       const hot = w && (w === l.via || w === chain[i + 1]?.via);
                       return hot ? <mark key={j}>{tok}</mark> : <span key={j}>{tok}</span>;
                     })}
