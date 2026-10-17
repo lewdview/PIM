@@ -46,6 +46,18 @@ const norm = (w: string) => w.toLowerCase().replace(/[’`]/g, "'").replace(/^[^
 /** The index word a lyric token hooks on. */
 const hookOf = (d: ChainData, tok: string) => { const w = norm(tok); return d.alias?.[w] ?? w; };
 
+/** Keep only songs the loaded catalog has (live deploys list released days only), so every hop lands on a playable stage. */
+const onlyCatalog = (d: ChainData, days: Set<number>): ChainData => {
+  if (!days.size) return d;
+  const tracks = Object.fromEntries(Object.entries(d.tracks).filter(([day]) => days.has(Number(day))));
+  const index: ChainData['index'] = {};
+  for (const [w, hits] of Object.entries(d.index)) {
+    const kept = hits.filter(([day]) => days.has(day));
+    if (kept.length >= 2) index[w] = kept;
+  }
+  return { ...d, tracks, index };
+};
+
 const pick = <T,>(list: T[]) => list[Math.floor(Math.random() * list.length)];
 const pad = (n: number) => String(n).padStart(3, '0');
 const colorFor = (day: number) => CHAPTERS.find((c) => c.month === getMonthNumFromDay(day))?.dc ?? '#ff2fa0';
@@ -67,8 +79,9 @@ export default function WordChain() {
     let alive = true;
     Promise.all([loadChain(), loadCatalog()]).then(([d, catalog]) => {
       if (!alive) return;
-      setData(d);
-      setSongs(new Map(catalog.map((s) => [s.day, s])));
+      const byDay = new Map(catalog.map((s) => [s.day, s]));
+      setData(onlyCatalog(d, new Set(byDay.keys())));
+      setSongs(byDay);
     }).catch(() => alive && setFailed(true));
     return () => { alive = false; };
   }, []);
@@ -119,14 +132,19 @@ export default function WordChain() {
     const from = Math.max(0, lines[link.line][0] - 0.25);
     const next = lines[link.line + 1]?.[0];
     const length = Math.min(SNIPPET_MAX, Math.max(3.5, (next ?? from + 6) - from + 1.2));
-    const a = new Audio(song.audioUrl);
+    // The #t fragment starts loading at the line; play() is called inside the tap so mobile Safari allows it.
+    const a = new Audio(`${song.audioUrl}#t=${from}`);
     a.volume = 0;
     a.preload = 'auto';
     audioRef.current = a;
     setPlaying(idx);
+    a.play().catch(() => { if (audioRef.current === a) setPlaying(null); });
+    const seek = () => { if (Math.abs(a.currentTime - from) > 0.5) a.currentTime = from; };
+    if (a.readyState >= 1) seek();
+    else a.addEventListener('loadedmetadata', seek, { once: true });
+    // The snippet clock starts once sound does, so buffering doesn't eat into it.
     const begin = () => {
-      a.currentTime = from;
-      a.play().catch(() => setPlaying(null));
+      if (audioRef.current !== a) return;
       // Fade in, hold, fade out: a radio catching the line.
       const t0 = performance.now();
       const tick = () => {
@@ -139,8 +157,7 @@ export default function WordChain() {
       requestAnimationFrame(tick);
       stopTimer.current = window.setTimeout(() => { if (audioRef.current === a) stopAudio(); }, length * 1000);
     };
-    if (a.readyState >= 1) begin();
-    else a.addEventListener('loadedmetadata', begin, { once: true });
+    a.addEventListener('playing', begin, { once: true });
     a.addEventListener('error', () => { if (audioRef.current === a) setPlaying(null); }, { once: true });
   }, [data, songs, stopAudio]);
 
