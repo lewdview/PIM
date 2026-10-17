@@ -126,6 +126,9 @@ export default function Campaign() {
 
   const isAvant = getActiveTheme() === 'avant-garde';
 
+  // Signed-in clears hydrate from the DB in loadVaultData; recompute when it lands.
+  const vaultLoaded = useVaultStore((s) => s.hasLoadedData);
+
   useEffect(() => {
     setTotals({ score: getTotalScore(), platinums: getTotalPlatinums(), cleared: getTotalCleared() });
     
@@ -173,7 +176,7 @@ export default function Campaign() {
       setChapters(data);
       setLoading(false);
     });
-  }, []);
+  }, [vaultLoaded]);
 
   // Track scroll offsets for parallax vectors calculations
   useEffect(() => {

@@ -3016,13 +3016,13 @@ export default function Game() {
         saveMedal(songRef.current.id, medal);
         saveScoreHistory(songRef.current.id, gs.score);
       }
-      const campaignStage = campaignStageRef.current;
+      // Practice note generation never counts toward the campaign, so such a
+      // run gets the on-demand result instead of a "Stage passed" screen.
+      const campaignGenSource = loadOpts().noteGenerationSource;
+      const campaignStage = (campaignGenSource === 'auto' || !campaignGenSource) ? campaignStageRef.current : null;
       const campaignFirstClear = !!campaignStage && !failed && !campaignStage.cleared;
       if (campaignStage && songRef.current && !failed) {
-        const rewardOpts = loadOpts();
-        if (rewardOpts.noteGenerationSource === 'auto' || !rewardOpts.noteGenerationSource) {
-          saveCampaignClear(songRef.current.id, medal, gs.score);
-        }
+        saveCampaignClear(songRef.current.id, medal, gs.score);
       }
 
       // ── Aggregate per-lane accuracy from real telemetry ──
@@ -8479,6 +8479,18 @@ export default function Game() {
         const originRoute = origin === 'songs' ? '/songs' : origin ? `/${origin}` : '/campaign';
         campaignStageRef.current = null;
         if (songId && isCampaignRunSearch(window.location.search) && !isTutorial) {
+          // On a refresh, a signed-in player's synced clears arrive with
+          // loadVaultData; wait so earlier stages count before the unlock check.
+          const { data: { session: campaignSession } } = await supabase.auth.getSession();
+          if (campaignSession && !useVaultStore.getState().hasLoadedData) {
+            await new Promise<void>((resolve) => {
+              const timer = setTimeout(() => { unsub(); resolve(); }, 8000);
+              const unsub = useVaultStore.subscribe((st) => {
+                if (st.hasLoadedData) { clearTimeout(timer); unsub(); resolve(); }
+              });
+            });
+            if (cancelled) return;
+          }
           const stage = await getCampaignStage(songId);
           if (cancelled) return;
           // Only a stage the player has actually reached runs as campaign.
