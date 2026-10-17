@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import type { OwnedCard } from '../../services/vaultService';
 import { RARITY_CONFIG, type Rarity } from '../../utils/rarity';
 import { useSmartCoverArt } from '../../utils/rarityArtwork';
@@ -296,10 +296,14 @@ export default function SongUnlockReveal({ owned, onContinue }: Props) {
 
     const samples = new Uint8Array(1024);
     const start = performance.now();
+    let last = start;
     let raf = 0;
 
     const draw = (now: number) => {
       const t = now - start;
+      // Spark physics is tuned per 60fps frame; scale by real elapsed time.
+      const f = Math.min(3, (now - last) / (1000 / 60));
+      last = now;
       const cy = lineYRef.current;
       const cx = w / 2;
       ctx.clearRect(0, 0, w, h);
@@ -362,17 +366,26 @@ export default function SongUnlockReveal({ owned, onContinue }: Props) {
         ctx.strokeStyle = accent;
         for (let i = sparks.length - 1; i >= 0; i--) {
           const s = sparks[i];
-          s.x += s.vx;
-          s.y += s.vy;
-          s.vx *= 0.94;
-          s.vy *= 0.94;
-          s.life -= s.decay;
+          s.x += s.vx * f;
+          s.y += s.vy * f;
+          s.vx *= Math.pow(0.94, f);
+          s.vy *= Math.pow(0.94, f);
+          s.life -= s.decay * f;
           if (s.life <= 0) { sparks.splice(i, 1); continue; }
           ctx.globalAlpha = s.life;
           ctx.lineWidth = s.width;
+          ctx.strokeStyle = accent;
           ctx.beginPath();
           ctx.moveTo(s.x, s.y);
           ctx.lineTo(s.x - s.vx * 2.2, s.y - s.vy * 2.2);
+          ctx.stroke();
+          // White-hot head so the burst reads as light, not just colour.
+          ctx.globalAlpha = s.life * 0.9;
+          ctx.lineWidth = Math.max(0.6, s.width * 0.45);
+          ctx.strokeStyle = '#fff';
+          ctx.beginPath();
+          ctx.moveTo(s.x, s.y);
+          ctx.lineTo(s.x - s.vx * 0.7, s.y - s.vy * 0.7);
           ctx.stroke();
         }
         ctx.globalAlpha = 1;
@@ -466,8 +479,22 @@ export default function SongUnlockReveal({ owned, onContinue }: Props) {
             display: 'flex', alignItems: 'center', gap: '10px',
           }}
         >
-          <span style={{ width: 6, height: 6, background: accent, display: 'inline-block', boxShadow: `0 0 10px ${accent}` }} />
-          {isOpen ? `Day ${dayLabel} / 365 · First Pull` : 'Acquiring Signal'}
+          <motion.span
+            animate={isOpen || reduceMotion ? { opacity: 1 } : { opacity: [1, 0.25, 1] }}
+            transition={isOpen || reduceMotion ? { duration: 0.2 } : { duration: 0.6, repeat: Infinity }}
+            style={{ width: 6, height: 6, background: accent, display: 'inline-block', boxShadow: `0 0 10px ${accent}` }}
+          />
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.span
+              key={isOpen ? 'day' : 'acquiring'}
+              initial={{ opacity: 0, y: 4, filter: 'blur(3px)' }}
+              animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+              exit={{ opacity: 0, y: -4, filter: 'blur(3px)' }}
+              transition={{ duration: 0.18 }}
+            >
+              {isOpen ? `Day ${dayLabel} / 365 · First Pull` : 'Acquiring Signal'}
+            </motion.span>
+          </AnimatePresence>
         </motion.div>
 
         {/* Kicker — letters snap in */}
@@ -476,8 +503,8 @@ export default function SongUnlockReveal({ owned, onContinue }: Props) {
             <motion.span
               key={i}
               aria-hidden
-              initial={{ y: '60%', opacity: 0 }}
-              animate={showTitle ? { y: '0%', opacity: 1 } : { y: '60%', opacity: 0 }}
+              initial={{ y: '60%', opacity: 0, filter: 'blur(6px)' }}
+              animate={showTitle ? { y: '0%', opacity: 1, filter: 'blur(0px)' } : { y: '60%', opacity: 0, filter: 'blur(6px)' }}
               transition={{ delay: showTitle ? i * 0.028 : 0, type: 'spring', stiffness: 520, damping: 30 }}
               style={{
                 display: 'inline-block', whiteSpace: 'pre',
@@ -506,7 +533,8 @@ export default function SongUnlockReveal({ owned, onContinue }: Props) {
               className={reduceMotion ? undefined : 'song-unlock-rays'}
               style={{
                 width: '100%', height: '100%', borderRadius: '50%',
-                background: `repeating-conic-gradient(from 0deg, ${accent}38 0deg 5deg, transparent 5deg 18deg)`,
+                // Soft-edged rays: each one ramps in and out so the turning edges don't alias.
+                background: `repeating-conic-gradient(from 0deg, ${accent}00 0deg, ${accent}4d 4deg, ${accent}00 8deg, transparent 18deg)`,
                 WebkitMaskImage: 'radial-gradient(circle, #000 8%, transparent 62%)',
                 maskImage: 'radial-gradient(circle, #000 8%, transparent 62%)',
               }}
@@ -608,6 +636,11 @@ export default function SongUnlockReveal({ owned, onContinue }: Props) {
             type="button"
             onClick={(e) => { e.stopPropagation(); handleContinue(); }}
             whileTap={{ scale: 0.95 }}
+            animate={isReady && !reduceMotion
+              // Inset only: the button's clip-path would cut off an outer glow.
+              ? { boxShadow: [`inset 0 0 0px ${accent}00`, `inset 0 0 22px ${accent}66`, `inset 0 0 0px ${accent}00`] }
+              : {}}
+            transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut', delay: 0.4 }}
             style={{
               padding: '14px 34px', border: `2px solid ${accent}`, background: `${accent}1f`, color: '#fff',
               fontFamily: '"JetBrains Mono", monospace', fontWeight: 700, fontSize: 12,

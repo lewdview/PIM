@@ -125,13 +125,16 @@ export default function RarityRevealFX({ reveal, layer, zIndex, shakeTargetRef }
           transition={{ duration: p.tier >= 4 ? 0.9 : p.tier >= 3 ? 0.45 : 0.25, ease: 'easeOut' }}
           style={{
             position: 'absolute', inset: 0,
+            // White-hot at the card, tinted towards the edges: reads as light
+            // coming off the card rather than a flat screen fill.
             background: p.tier >= 2
-              ? p.flashColor
+              ? `radial-gradient(ellipse 85% 75% at 50% 50%, #fff 0%, ${p.flashColor} 32%, ${p.color}${p.tier >= 3 ? 'cc' : '88'} 100%)`
               : `radial-gradient(circle at center, ${p.flashColor}, transparent 60%)`,
             mixBlendMode: p.tier >= 2 ? 'normal' : 'screen',
           }}
         />
       )}
+      {!back && impacting && p.tier >= 2 && <LensFlare p={p} />}
       {!back && lit && p.title && <TitleSlam p={p} />}
     </div>
   );
@@ -165,11 +168,13 @@ function ChargeCore({ p }: { p: RevealProfile }) {
       />
     );
   }
+  // Swell, then a short inhale right before the flip so the impact lands harder.
+  const peak = 1 + p.tier * 0.35;
   return (
     <motion.div
       initial={{ scale: 0.3, opacity: 0 }}
-      animate={{ scale: 1 + p.tier * 0.35, opacity: 0.35 + p.tier * 0.15 }}
-      transition={{ duration: secs, ease: [0.5, 0, 0.9, 0.6] }}
+      animate={{ scale: [0.3, peak, peak * 0.78], opacity: [0, 0.35 + p.tier * 0.15, 0.5 + p.tier * 0.15] }}
+      transition={{ duration: secs, times: [0, 0.86, 1], ease: [[0.5, 0, 0.9, 0.6], [0.4, 0, 0.6, 1]] }}
       style={coreStyle(p, 300)}
     />
   );
@@ -236,41 +241,61 @@ function Streaks({ p }: { p: RevealProfile }) {
 }
 
 function jaggedPath(x0: number, y0: number, x1: number, y1: number, segs: number, jitter: number) {
-  let d = `M ${x0} ${y0}`;
+  let d = `M ${x0.toFixed(1)} ${y0.toFixed(1)}`;
   for (let s = 1; s < segs; s++) {
     const t = s / segs;
-    const x = x0 + (x1 - x0) * t + (Math.random() * 2 - 1) * jitter;
-    const y = y0 + (y1 - y0) * t + (Math.random() * 2 - 1) * jitter;
-    d += ` L ${x} ${y}`;
+    // Jitter peaks mid-bolt and tapers to the ends, like a real discharge.
+    const j = jitter * Math.sin(t * Math.PI);
+    const x = x0 + (x1 - x0) * t + (Math.random() * 2 - 1) * j;
+    const y = y0 + (y1 - y0) * t + (Math.random() * 2 - 1) * j;
+    d += ` L ${x.toFixed(1)} ${y.toFixed(1)}`;
   }
-  return `${d} L ${x1} ${y1}`;
+  return `${d} L ${x1.toFixed(1)} ${y1.toFixed(1)}`;
 }
 
 function Arcs({ p }: { p: RevealProfile }) {
   const [tick, setTick] = useState(0);
+  const [size] = useState(() => ({ w: window.innerWidth, h: window.innerHeight }));
   useEffect(() => {
     const t = setInterval(() => setTick(n => n + 1), 85);
     return () => clearInterval(t);
   }, []);
-  const paths = useMemo(() => {
-    const out: string[] = [];
+  const bolts = useMemo(() => {
+    const out: { main: string; branch: string | null; w: number }[] = [];
+    const cx = size.w / 2, cy = size.h / 2;
+    // The active card is ~220×293 before scale; bolts jump from a ring just
+    // outside it onto its edge so the energy reads as gathering on the card.
+    const edgeX = 128, edgeY = 168;
     for (let k = 0; k < p.arcs; k++) {
       // Arcs only fire some of the time — erratic, not a strobe.
       if (Math.random() < 0.45) continue;
       const a = Math.random() * Math.PI * 2;
-      const r0 = 70 + Math.random() * 20;
-      const r1 = 42;
-      out.push(jaggedPath(50 + Math.cos(a) * r0, 50 + Math.sin(a) * r0, 50 + Math.cos(a) * r1 * 0.3, 50 + Math.sin(a) * r1 * 0.3, 9, 3.2));
+      const ca = Math.cos(a), sa = Math.sin(a);
+      const r0 = 1.55 + Math.random() * 0.6;
+      const x0 = cx + ca * edgeX * r0, y0 = cy + sa * edgeY * r0;
+      const x1 = cx + ca * edgeX, y1 = cy + sa * edgeY;
+      const len = Math.hypot(x1 - x0, y1 - y0);
+      const main = jaggedPath(x0, y0, x1, y1, 8, len * 0.16);
+      let branch: string | null = null;
+      if (Math.random() < 0.5) {
+        const t = 0.35 + Math.random() * 0.3;
+        const bx = x0 + (x1 - x0) * t, by = y0 + (y1 - y0) * t;
+        const ba = a + (Math.random() < 0.5 ? 1 : -1) * (0.5 + Math.random() * 0.5);
+        branch = jaggedPath(bx, by, bx + Math.cos(ba) * len * 0.35, by + Math.sin(ba) * len * 0.35, 4, len * 0.06);
+      }
+      out.push({ main, branch, w: 1 + Math.random() * 0.8 });
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tick, p.arcs]);
+  }, [tick, p.arcs, size]);
   return (
-    <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
-      {paths.map((d, k) => (
-        <g key={k}>
-          <path d={d} stroke={p.color} strokeWidth={0.9} fill="none" opacity={0.5} style={{ filter: `blur(1.2px)` }} />
-          <path d={d} stroke="#fff" strokeWidth={0.22} fill="none" />
+    <svg viewBox={`0 0 ${size.w} ${size.h}`} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', mixBlendMode: 'screen' }}>
+      {bolts.map((b, k) => (
+        <g key={k} fill="none" strokeLinecap="round" strokeLinejoin="round">
+          <path d={b.main} stroke={p.color} strokeWidth={b.w * 6} opacity={0.35} style={{ filter: 'blur(3px)' }} />
+          <path d={b.main} stroke={p.accent} strokeWidth={b.w * 2} opacity={0.8} />
+          <path d={b.main} stroke="#fff" strokeWidth={b.w * 0.8} />
+          {b.branch && <path d={b.branch} stroke={p.accent} strokeWidth={b.w * 0.9} opacity={0.75} />}
         </g>
       ))}
     </svg>
@@ -317,13 +342,15 @@ function Rays({ p }: { p: RevealProfile }) {
     <motion.div
       initial={{ opacity: 0, scale: 0.6, rotate: 0 }}
       animate={{ opacity: 1, scale: 1, rotate: reverse ? -360 : 360 }}
-      transition={{ opacity: { duration: 0.3 }, scale: { duration: 0.6, ease: 'easeOut' }, rotate: { duration: dur, ease: 'linear', repeat: Infinity } }}
+      transition={{ opacity: { duration: 0.5, ease: 'easeOut' }, scale: { duration: 0.9, ease: [0.16, 1, 0.3, 1] }, rotate: { duration: dur, ease: 'linear', repeat: Infinity } }}
       style={{
         position: 'absolute', left: '50%', top: '50%',
         width: '160vmax', height: '160vmax', marginLeft: '-80vmax', marginTop: '-80vmax',
-        background: `repeating-conic-gradient(from 0deg, ${color}${alpha} 0deg ${slice}deg, transparent ${slice}deg ${slice * 3}deg)`,
-        WebkitMaskImage: 'radial-gradient(circle, #000 4%, rgba(0,0,0,0.6) 18%, transparent 42%)',
-        maskImage: 'radial-gradient(circle, #000 4%, rgba(0,0,0,0.6) 18%, transparent 42%)',
+        // Each ray ramps up and down instead of a hard-edged wedge, so the
+        // edges don't alias or strobe while the sunburst turns.
+        background: `repeating-conic-gradient(from 0deg, ${color}00 0deg, ${color}${alpha} ${slice}deg, ${color}00 ${slice * 2}deg, transparent ${slice * 3.2}deg)`,
+        WebkitMaskImage: 'radial-gradient(circle, #000 3%, rgba(0,0,0,0.55) 16%, transparent 40%)',
+        maskImage: 'radial-gradient(circle, #000 3%, rgba(0,0,0,0.55) 16%, transparent 40%)',
         mixBlendMode: 'screen',
         ...(p.rays === 2 ? { animation: 'cine-prism 3.2s linear infinite' } : {}),
       }}
@@ -332,9 +359,37 @@ function Rays({ p }: { p: RevealProfile }) {
   return (
     <>
       <style>{`@keyframes cine-prism { 0%{filter:hue-rotate(0deg)} 50%{filter:hue-rotate(-40deg)} 100%{filter:hue-rotate(0deg)} }`}</style>
-      {layer(false, p.rays === 2 ? 5 : 4, p.tier >= 3 ? '55' : '38', 26, p.color)}
-      {p.rays === 2 && layer(true, 3, '40', 18, p.accent)}
+      {layer(false, p.rays === 2 ? 4 : 3.5, p.tier >= 3 ? '66' : '48', 26, p.color)}
+      {p.rays === 2 && layer(true, 2.5, '4d', 18, p.accent)}
     </>
+  );
+}
+
+/** Anamorphic streak through the card at impact — the "camera" catching the light. */
+function LensFlare({ p }: { p: RevealProfile }) {
+  const big = p.tier >= 3;
+  return (
+    <div style={{ position: 'absolute', left: 0, right: 0, top: '50%', height: 0, mixBlendMode: 'screen' }}>
+      <motion.div
+        initial={{ scaleX: 0.05, opacity: 0 }}
+        animate={{ scaleX: [0.05, 1, 1.15], opacity: [0, 1, 0] }}
+        transition={{ duration: big ? 1.1 : 0.75, times: [0, 0.18, 1], ease: 'easeOut' }}
+        style={{
+          position: 'absolute', left: '-10%', right: '-10%', top: big ? -22 : -14, height: big ? 44 : 28,
+          background: `radial-gradient(ellipse 50% 50% at 50% 50%, ${p.color}aa 0%, ${p.color}33 45%, transparent 75%)`,
+        }}
+      />
+      <motion.div
+        initial={{ scaleX: 0, opacity: 0 }}
+        animate={{ scaleX: [0, 1, 1.05], opacity: [0, 1, 0] }}
+        transition={{ duration: big ? 0.9 : 0.6, times: [0, 0.15, 1], ease: 'easeOut' }}
+        style={{
+          position: 'absolute', left: 0, right: 0, top: -1, height: 2,
+          background: `linear-gradient(90deg, transparent, ${p.accent} 20%, #fff 50%, ${p.accent} 80%, transparent)`,
+          boxShadow: `0 0 12px ${p.color}`,
+        }}
+      />
+    </div>
   );
 }
 
@@ -368,17 +423,23 @@ function ParticleBurst({ p }: { p: RevealProfile }) {
       };
     });
     let raf = 0;
-    const step = () => {
+    let last = performance.now();
+    // Physics is tuned per 60fps frame; scale by real elapsed time so the burst
+    // has the same shape and length on 30Hz, 60Hz and 120Hz screens.
+    const step = (now: number) => {
+      const f = Math.min(3, (now - last) / (1000 / 60));
+      last = now;
+      const drag = Math.pow(0.965, f);
       g.clearRect(0, 0, w, h);
       g.globalCompositeOperation = 'lighter';
       let alive = 0;
       for (const s of sparks) {
         if (s.life <= 0) continue;
         alive++;
-        s.life--;
-        s.vx *= 0.965; s.vy = s.vy * 0.965 + 0.06;
-        s.x += s.vx; s.y += s.vy;
-        const t = s.life / s.max;
+        s.life -= f;
+        s.vx *= drag; s.vy = s.vy * drag + 0.06 * f;
+        s.x += s.vx * f; s.y += s.vy * f;
+        const t = Math.max(0, s.life / s.max);
         g.globalAlpha = Math.min(1, t * 1.6);
         g.fillStyle = s.color;
         if (s.star) {
@@ -386,8 +447,17 @@ function ParticleBurst({ p }: { p: RevealProfile }) {
           g.fillRect(s.x - r, s.y - 0.6, r * 2, 1.2);
           g.fillRect(s.x - 0.6, s.y - r, 1.2, r * 2);
         } else {
+          const r = s.size * (0.4 + t * 0.6);
+          // Soft halo under the bigger sparks (cheap: one faint, wider disc).
+          if (p.tier >= 2 && s.size > 2) {
+            g.globalAlpha = Math.min(1, t * 1.6) * 0.18;
+            g.beginPath();
+            g.arc(s.x, s.y, r * 3.2, 0, Math.PI * 2);
+            g.fill();
+            g.globalAlpha = Math.min(1, t * 1.6);
+          }
           g.beginPath();
-          g.arc(s.x, s.y, s.size * (0.4 + t * 0.6), 0, Math.PI * 2);
+          g.arc(s.x, s.y, r, 0, Math.PI * 2);
           g.fill();
         }
       }
@@ -402,6 +472,8 @@ function ParticleBurst({ p }: { p: RevealProfile }) {
 function TitleSlam({ p }: { p: RevealProfile }) {
   const big = p.tier >= 3;
   return (
+      <>
+      <style>{`@keyframes cine-glint { from { background-position: 100% 0 } to { background-position: 0% 0 } }`}</style>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -409,21 +481,28 @@ function TitleSlam({ p }: { p: RevealProfile }) {
           position: 'absolute', left: 0, right: 0,
           bottom: big ? 'calc(11vh + 14px)' : 'calc(env(safe-area-inset-bottom, 0px) + 6.5rem)',
           display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+          ...(p.rays === 2 ? { animation: 'cine-prism 2.4s linear infinite' } : {}),
         }}
       >
         <motion.div
-          initial={{ scale: big ? 2.6 : 1.6, opacity: 0, letterSpacing: '0.9em', filter: 'blur(8px)' }}
-          animate={{ scale: 1, opacity: 1, letterSpacing: big ? '0.32em' : '0.28em', filter: 'blur(0px)' }}
+          initial={{ scale: big ? 2.6 : 1.6, opacity: 0, letterSpacing: '0.9em', filter: `blur(8px) drop-shadow(0 0 10px ${p.color}) drop-shadow(0 0 28px ${p.color}aa)` }}
+          animate={{ scale: 1, opacity: 1, letterSpacing: big ? '0.32em' : '0.28em', filter: `blur(0px) drop-shadow(0 0 10px ${p.color}) drop-shadow(0 0 28px ${p.color}aa)` }}
           transition={{ duration: big ? 0.42 : 0.3, ease: [0.2, 0.9, 0.25, 1.15] }}
           style={{
-            fontFamily: '"Outfit", "Impact", "Arial Black", sans-serif',
-            fontWeight: 900,
-            fontSize: big ? 'clamp(30px, 6.5vw, 60px)' : 'clamp(20px, 4.5vw, 34px)',
+            fontFamily: 'Anton, Impact, "Arial Black", sans-serif',
+            fontWeight: 400,
+            fontSize: big ? 'clamp(34px, 7.5vw, 68px)' : 'clamp(24px, 5.2vw, 38px)',
+            lineHeight: 1,
+            position: 'relative',
+            // Light glint that rakes across the letters once they land.
+            backgroundImage: `linear-gradient(105deg, #fff 0%, #fff 42%, ${p.accent} 48%, #fff 50%, #fff 100%)`,
+            backgroundSize: '300% 100%',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            animation: `cine-glint 1.1s cubic-bezier(.4,0,.2,1) ${big ? 0.45 : 0.3}s both`,
             color: '#fff',
-            textShadow: `0 0 18px ${p.color}, 0 0 42px ${p.color}, 0 0 2px #fff`,
-            WebkitTextStroke: big ? `1px ${p.color}` : undefined,
             paddingLeft: '0.32em', // balance trailing letter-spacing
-            ...(p.rays === 2 ? { animation: 'cine-prism 2.4s linear infinite' } : {}),
           }}
         >
           {p.title}
@@ -447,5 +526,6 @@ function TitleSlam({ p }: { p: RevealProfile }) {
           </motion.div>
         )}
       </motion.div>
+      </>
   );
 }
