@@ -428,12 +428,10 @@ export default memo(function Card({
       setRealClaimed(card.claimedCount);
       return;
     }
-    import('../services/vaultService').then(({ getClaimedCountForRarity, getClaimedCountForDay }) => {
-      if (edition === undefined) {
-        getClaimedCountForDay(card.day || 0).then(setRealClaimed);
-      } else {
-        getClaimedCountForRarity(card.day || 0, card.rarity || 'common').then(setRealClaimed);
-      }
+    // Per-rarity count only: the supply cap this feeds is per-rarity, so a
+    // day-total across all rarities must never be compared against it.
+    import('../services/vaultService').then(({ getClaimedCountForRarity }) => {
+      getClaimedCountForRarity(card.day || 0, card.rarity || 'common').then(setRealClaimed);
     });
   }, [card.day, card.rarity, card.claimedCount, edition]);
 
@@ -478,7 +476,11 @@ export default memo(function Card({
   const hasArt   = !imgError && !imgFailed && coverUrl;
 
   // ── Overlay state classification ──────────────────────────────────────────
-  const isExcessEdition = edition !== undefined ? edition > supply : claimed > supply;
+  // Excess is a property of a specific copy (its edition number), never of
+  // aggregate claim counts — a filled print run makes its last copy a
+  // trophy, not an excess copy. Nothing in PIM is minted yet, so no state
+  // here is ever labelled "minted".
+  const isExcessEdition = edition !== undefined && edition > supply;
   const isOnlyOne       = supply === 1 && (edition === 1 || (edition === undefined && claimed <= 1));
   const isLastCopy      = !isExcessEdition && !isOnlyOne && edition !== undefined && edition === supply && supply > 1;
   const isBombshell     = Boolean(card.cardSet === 'bombshell' || (card.id && card.id.includes('bombshell')) || (coverUrl && (coverUrl.includes('girl-covers') || coverUrl.includes('rare_covers'))));
@@ -581,39 +583,55 @@ export default memo(function Card({
     </motion.div>
   );
 
-  // ── Last copy badge — subtle, not a penalty ──────────────────────────────
+  // ── Last copy — trophy treatment, never a penalty ───────────────────────
+  // This copy closed the print run: art stays full colour, framed in the
+  // rarity colour with a FINAL PRINT seal.
   const lastCopyBadge = isLastCopy && (
-    <motion.div
-      initial={{ opacity: 0, y: 4 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.3 }}
-      style={{
-        position: 'absolute', bottom: '38px', left: '50%', transform: 'translateX(-50%)',
-        zIndex: 41, pointerEvents: 'none',
-        visibility: frontVisibility,
-      }}
-    >
-      <div style={{
-        padding: '3px 10px',
-        border: `1.5px solid ${rc.color}88`,
-        color: rc.color,
-        fontFamily: '"JetBrains Mono", monospace',
-        fontSize: '7px',
-        fontWeight: 700,
-        textTransform: 'uppercase',
-        letterSpacing: '0.2em',
-        background: 'rgba(0,0,0,0.85)',
-        borderRadius: '3px',
-        boxShadow: `0 0 10px ${rc.color}30`,
-        whiteSpace: 'nowrap',
-      }}>
-        LAST COPY
-      </div>
-    </motion.div>
+    <>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2, duration: 0.4 }}
+        style={{
+          position: 'absolute', inset: 0, zIndex: 39, pointerEvents: 'none', borderRadius: '12px',
+          border: `1.5px solid ${rc.color}66`,
+          boxShadow: `inset 0 0 26px ${rc.color}26, 0 0 18px ${rc.color}33`,
+          visibility: frontVisibility,
+        }}
+      />
+      <motion.div
+        initial={{ opacity: 0, y: 4 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        style={{
+          position: 'absolute', bottom: '38px', left: '50%', transform: 'translateX(-50%)',
+          zIndex: 41, pointerEvents: 'none',
+          visibility: frontVisibility,
+        }}
+      >
+        <div style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
+          padding: '5px 12px',
+          border: `1.5px solid ${rc.color}`,
+          color: rc.color,
+          fontFamily: '"JetBrains Mono", monospace',
+          textTransform: 'uppercase',
+          background: 'rgba(0,0,0,0.88)',
+          borderRadius: '3px',
+          boxShadow: `0 0 16px ${rc.color}55`,
+          whiteSpace: 'nowrap',
+        }}>
+          <span style={{ fontSize: '8px', fontWeight: 900, letterSpacing: '0.22em' }}>✦ Final Print ✦</span>
+          <span style={{ fontSize: '6px', fontWeight: 700, letterSpacing: '0.16em', color: 'rgba(255,255,255,0.75)' }}>
+            Last copy {edition}/{supply} · Run closed · Never reissued
+          </span>
+        </div>
+      </motion.div>
+    </>
   );
 
-  // ── Minted out overlay — only for actual excess copies (edition > supply) ─
-  const mintedOutOverlay = isExcessEdition && (
+  // ── Excess copy overlay — only for actual excess copies (edition > supply) ─
+  const excessOverlay = isExcessEdition && (
     <motion.div
       style={{
         position: 'absolute', inset: 0, zIndex: 40, pointerEvents: 'none', borderRadius: '12px',
@@ -623,7 +641,7 @@ export default memo(function Card({
         visibility: frontVisibility,
       }}
     >
-      {/* MINTED OUT stamp */}
+      {/* EXCESS COPY stamp */}
       <div style={{
         padding: '6px 14px', border: '3px solid #ff3800', color: '#ff3800',
         fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '22px',
@@ -632,7 +650,7 @@ export default memo(function Card({
         boxShadow: '0 0 24px rgba(255,56,0,0.5)',
         textShadow: '0 0 12px rgba(255,56,0,0.8)',
       }}>
-        MINTED OUT
+        EXCESS COPY
       </div>
 
       {/* Burn button — always visible, permanent fixture */}
@@ -648,7 +666,7 @@ export default memo(function Card({
             boxShadow: '0 0 28px rgba(255,56,0,0.85), 0 0 8px rgba(255,56,0,0.4)',
             transition: 'transform 0.15s, box-shadow 0.15s',
           }}
-          title="Burn for V⚡ tokens"
+          title="Burn for V⚡ sparks"
           onMouseEnter={e => {
             e.currentTarget.style.transform = 'scale(1.12)';
             e.currentTarget.style.boxShadow = '0 0 38px rgba(255,56,0,1), 0 0 12px rgba(255,56,0,0.6)';
@@ -1458,7 +1476,7 @@ export default memo(function Card({
         {cornerMedallionsOverlay}
         {dailyOverlay}
         {cardBack}
-        {mintedOutOverlay}
+        {excessOverlay}
         {onlyOneOutline}
         {lastCopyBadge}
 
