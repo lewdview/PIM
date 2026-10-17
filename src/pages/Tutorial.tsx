@@ -679,7 +679,7 @@ export default function Tutorial() {
               • <strong className="text-white">Card Burning:</strong> Turn duplicates and unwanted cards into <strong className="text-yellow-400">$V⚡ tokens</strong>.
             </p>
             <p>
-              • <strong className="text-white">Targeted Pulls (500 $V⚡):</strong> Pull any card from the 365-day catalog.
+              • <strong className="text-white">Targeted Pulls (275 $V⚡):</strong> Pull any card from the 365-day catalog.
             </p>
             <p>
               • <strong className="text-white">Duplicate Fusion:</strong> Fuse 3 identical cards (same day and rarity) into 1 card of the next tier.
