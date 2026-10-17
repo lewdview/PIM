@@ -297,25 +297,58 @@ export function shardGainForRarity(rarity: string | undefined | null): number {
   return SHARD_GAIN_BY_RARITY[String(rarity || 'common').toLowerCase()] ?? 2;
 }
 
-/** Shard count for a 365 day, checking every known fragments key format. */
-export function getShardsForDay(
+/** Read one fragments bucket, treating missing/non-numeric as 0. */
+function shardBucket(
+  fragments: Record<string, number> | null | undefined,
+  key: string
+): number {
+  if (!fragments) return 0;
+  const v = fragments[key];
+  return typeof v === 'number' && v > 0 ? v : 0;
+}
+
+/**
+ * Gen-0 shard count for a 365 day: the `card-{day}` bucket, with the legacy
+ * `day-*` key spellings as aliases of that same gen-0 count.
+ */
+export function getGen0ShardsForDay(
   fragments: Record<string, number> | null | undefined,
   day: number
 ): number {
   if (!fragments || !Number.isFinite(day)) return 0;
-  // Shards are stored per card set: gen-0 pulls land under `card-{day}` and
-  // bombshell pulls under `bombshell-{day}`. They are distinct pulls, so the
-  // day's total is the SUM of the buckets — taking the max (the old
-  // behavior) silently dropped every bombshell shard on any day that also
-  // held gen-0 shards. The `day-*` keys are legacy aliases of a single
-  // bucket, so they contribute their max, not their sum.
-  const bucket = (k: string) => {
-    const v = fragments[k];
-    return typeof v === 'number' && v > 0 ? v : 0;
-  };
-  const legacyDay = Math.max(bucket(`day-${String(day).padStart(3, '0')}`), bucket(`day-${day}`));
-  const total = bucket(`card-${day}`) + bucket(`bombshell-${day}`) + legacyDay;
-  return Math.min(total, AWARD_PLAY_SHARD_THRESHOLD);
+  return Math.max(
+    shardBucket(fragments, `card-${day}`),
+    shardBucket(fragments, `day-${String(day).padStart(3, '0')}`),
+    shardBucket(fragments, `day-${day}`)
+  );
+}
+
+/**
+ * Bombshell shard count for a 365 day: the `bombshell-{day}` bucket.
+ * Bombshell shards are their own count, like bombshell supply — they
+ * never add into the gen-0 numbers.
+ */
+export function getBombshellShardsForDay(
+  fragments: Record<string, number> | null | undefined,
+  day: number
+): number {
+  if (!fragments || !Number.isFinite(day)) return 0;
+  return shardBucket(fragments, `bombshell-${day}`);
+}
+
+/**
+ * Award Play shard count for a 365 day: the higher of the day's two separate
+ * counts (gen-0 and bombshell). The buckets are never summed — either
+ * set's count reaching the threshold on its own unlocks Award Play.
+ */
+export function getShardsForDay(
+  fragments: Record<string, number> | null | undefined,
+  day: number
+): number {
+  return Math.max(
+    getGen0ShardsForDay(fragments, day),
+    getBombshellShardsForDay(fragments, day)
+  );
 }
 
 /** True when the song has enough shards to unlock Award Play prizes. */
