@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, ExternalLink, Download, ShieldCheck, Share2, Info, Flame, Film, Play, Disc, Sparkles, Check, CheckCircle, Lock, Layers } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { useGlobalPlayer } from '../store/useGlobalPlayer';
-import { useVaultStore, getShardsForDay } from '../store/useVaultStore';
+import { useVaultStore, getGen0ShardsForDay, getBombshellShardsForDay } from '../store/useVaultStore';
 import type { OwnedCard } from '../services/vaultService';
 import { generateCardMetadata } from '../services/vaultService';
 import { RARITY_CONFIG, getSupplyCap, getMintableCap, type Rarity } from '../utils/rarity';
@@ -96,10 +96,12 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
   if (!card) return null;
 
   const getFragmentsForDay = (day: number) => {
-    // Single source of truth in useVaultStore — it includes the
-    // `bombshell-{day}` bucket, which this modal's old key chain never
-    // checked, so bombshell pulls showed 0/10 shards here.
-    return getShardsForDay(fragments, day);
+    // Shard counts are per card set, like supply: a bombshell card shows
+    // its own bombshell-{day} count and a gen-0 card shows the gen-0
+    // count. The two never add into each other.
+    return isBombshellCard(card)
+      ? getBombshellShardsForDay(fragments, day)
+      : getGen0ShardsForDay(fragments, day);
   };
 
   const rc = RARITY_CONFIG[card.card.rarity];
