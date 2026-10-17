@@ -146,7 +146,7 @@ export function VaultSpotlight({ onClose }: { onClose?: () => void }) {
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-1.5 font-mono text-[9px] font-black uppercase tracking-widest text-[#ff5500]">
             <Layers size={12} />
-            <span>TH3SCR1B3 VAULT TELEMETRY</span>
+            <span>TH3SCR1B3 VAULT STATS</span>
           </div>
           <span className="font-mono text-[8px] font-black bg-[#ff5500]/20 text-[#ff8800] px-1.5 py-0.5 rounded border border-[#ff5500]/30">
             BASE EVM SYNC
@@ -240,9 +240,9 @@ export function ForgeSpotlight({ onClose }: { onClose?: () => void }) {
 
         {/* Fusion Status Banner */}
         <div className="p-3 bg-black/40 border border-white/10 rounded mb-3">
-          <span className="font-mono text-[8px] text-white/40 uppercase">UPGRADE ENGINE</span>
+          <span className="font-mono text-[8px] text-white/40 uppercase">FUSION</span>
           <p className="font-mono text-[10px] text-white/80 mt-1 leading-relaxed">
-            Synthesize duplicate session cards into permanent higher-tier holographic foils.
+            Fuse 3 identical cards (same day and rarity) into 1 card of the next tier.
           </p>
           <div className="flex items-center gap-2 mt-2 pt-2 border-t border-white/5 font-mono text-[9px] text-[#39FF14]">
             <CheckCircle2 size={11} />
@@ -318,7 +318,7 @@ export function EarnSpotlight({ onClose }: { onClose?: () => void }) {
         </div>
 
         <p className="font-mono text-[9px] text-white/50 leading-tight">
-          Complete daily 3-lane stages or redeem login bonuses to earn Vault Tokens for packs & cosmetics.
+          Clear daily stages or claim login bonuses to earn V⚡ sparks for packs and cosmetics.
         </p>
       </div>
 

@@ -317,7 +317,7 @@ export default function LaunchPage() {
         <Marquee items={MANIFESTO_B} progress={manP} direction={-1} outline />
         <Reveal className="lp-manifesto-copy">
           <p>
-            Not a playlist. Not a feed. <strong>A year-long broadcast</strong> you play with your hands —
+            <strong>A year-long broadcast</strong> you play with your hands —
             tap, hold, swipe and scratch across a three-lane highway that is literally wired to
             the bass, the mids and the treble. Hit the note and the band plays. Miss it and the room goes quiet.
           </p>

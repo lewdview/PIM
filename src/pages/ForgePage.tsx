@@ -329,7 +329,7 @@ function EchoStatusPanel({ refreshTrigger }: { refreshTrigger?: number }) {
             fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '18px',
             textTransform: 'uppercase',
           }}>Echo Pool</span>
-          <InfoTooltip text="Global echo pool — burned cards fracture into echoes that re-enter pack pools for all players." />
+          <InfoTooltip text="Burned cards become echoes that go back into everyone's pack pool." />
         </div>
         <div style={{
           fontFamily: '"Impact", sans-serif', fontSize: '28px', color: '#00d4aa',
@@ -606,20 +606,20 @@ export default function ForgePage() {
     const mult = size === 'fifty' ? 50 : size === 'twentyfive' ? 25 : size === 'ten' ? 10 : size === 'five' ? 5 : size === 'double' ? 2 : 1;
     const cost = isBombshell ? (100 * mult) : packCost;
     if (tokenBalance < cost) {
-      alert(`Insufficient V⚡ sparks. You need ${cost} V⚡.`);
+      alert(`Not enough V⚡ sparks. This costs ${cost} V⚡.`);
       return;
     }
     try {
-      useLoadingToast.getState().show('Purchasing pack…');
+      useLoadingToast.getState().show('Opening pack…');
       const cards = await buyTokenPack(packType, size);
       useLoadingToast.getState().hide();
       if (cards === 'insufficient') {
-        alert('Insufficient V⚡ sparks for this pack.');
+        alert('Not enough V⚡ sparks for this pack.');
         await loadVaultData();
         return;
       }
       if (cards.length === 0) {
-        alert('Pack purchase failed — please try again.');
+        alert('Purchase didn\'t go through. Try again.');
         await loadVaultData();
         return;
       }
@@ -646,7 +646,7 @@ export default function ForgePage() {
     } catch (e) {
       console.error('Token pack purchase error:', e);
       useLoadingToast.getState().hide();
-      alert('Pack purchase failed — please try again.');
+      alert('Purchase didn\'t go through. Try again.');
       await loadVaultData();
     }
   }, [tokenBalance, packCost, addToCollection, loadVaultData, startReveal, setLocation]);
@@ -656,12 +656,12 @@ export default function ForgePage() {
     const day = parseInt(targetDay, 10);
     if (!day || day < 1 || day > today || tokenBalance < 275) {
       if (day > today) {
-        alert(`Day ${day} is locked. Targeted Pull is restricted to released calendar days (Day 1 to ${today}). Future tracks require a Prophecy Pull.`);
+        alert(`Day ${day} hasn't dropped yet. Targeted Pull covers Day 1–${today}. Future days need a Prophecy Pull.`);
       }
       return;
     }
     setTargetLoading(true);
-    useLoadingToast.getState().show('Targeted pull…');
+    useLoadingToast.getState().show(`Pulling Day ${day}…`);
     const card = await targetedPull(day);
     useLoadingToast.getState().hide();
     if (card) {
@@ -786,7 +786,7 @@ export default function ForgePage() {
               textTransform: 'uppercase', letterSpacing: '0.15em',
               opacity: 0.45, marginTop: '8px', maxWidth: '420px',
             }}>
-              Burn cards for V⚡ sparks · Echoes fracture back into the pool · Upgrades unlock as you progress
+              Burn cards for V⚡ sparks. Echoes return to the pack pool.
             </p>
           </motion.div>
 
@@ -943,7 +943,7 @@ export default function ForgePage() {
                     background: 'rgba(255,255,255,0.01)',
                     fontFamily: '"JetBrains Mono", monospace', fontSize: '10px', opacity: 0.4,
                   }}>
-                    No modifiers enabled — configure in Admin Dashboard
+                    No upgrades active right now
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -1052,7 +1052,7 @@ export default function ForgePage() {
                     fontFamily: '"JetBrains Mono", monospace', fontSize: '10px',
                     color: 'rgba(255,255,255,0.4)', marginBottom: '12px', lineHeight: 1.5,
                   }}>
-                    Upgrade any card +1 rarity tier. Max: Legendary. Select a card below.
+                    Raise any card below Legendary by one rarity tier.
                   </p>
                   {upgradeCard ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -1140,7 +1140,7 @@ export default function ForgePage() {
                     fontFamily: '"JetBrains Mono", monospace', fontSize: '10px',
                     color: 'rgba(255,255,255,0.4)', marginBottom: '12px', lineHeight: 1.5,
                   }}>
-                    Combine 3 identical cards (same day + rarity) into 1 card of the next rarity tier.
+                    Fuse 3 identical cards (same day and rarity) into 1 card of the next tier.
                   </p>
                   {fusableGroups.length === 0 ? (
                     <div style={{
@@ -1149,7 +1149,7 @@ export default function ForgePage() {
                       fontFamily: '"JetBrains Mono", monospace', fontSize: '10px',
                       color: 'rgba(255,255,255,0.25)',
                     }}>
-                      No fusable duplicates found. You need 3 identical cards.
+                      No duplicates to fuse yet. You need 3 identical cards.
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -1259,7 +1259,7 @@ export default function ForgePage() {
                 }}>
                   Burn Cards for V⚡ Sparks
                 </span>
-                <InfoTooltip text="Earn base V⚡ value · 50% chance for Echo to re-enter pack pool" />
+                <InfoTooltip text="Earn the card's V⚡ value. 50% chance it returns to the pack pool as an echo." />
               </div>
               <span style={{
                 fontFamily: '"JetBrains Mono", monospace', fontSize: '9px',
@@ -1771,7 +1771,7 @@ export default function ForgePage() {
                       fontFamily: '"JetBrains Mono", monospace', fontSize: '9px',
                       color: '#ff9900', lineHeight: 1.5,
                     }}>
-                      ANTI-GRIND: Token yield decreases after 20+ burns per day. You may earn less than estimated.
+                      After 20 burns a day, each burn pays less. You may earn less than shown.
                     </div>
                   </div>
                 )}

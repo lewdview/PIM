@@ -235,12 +235,12 @@ export default function HomePage() {
   const handleTargetedPull = useCallback(async (dayNum: number) => {
     if (!dayNum || dayNum < 1 || dayNum > today || tokenBalance < 275) {
       if (dayNum > today) {
-        alert(`Day ${dayNum} is locked. Targeted Pull is restricted to released calendar days (Day 1 to ${today}). Future tracks require a Prophecy Pull.`);
+        alert(`Day ${dayNum} hasn't dropped yet. Targeted Pull covers Day 1–${today}. Future days need a Prophecy Pull.`);
       }
       return;
     }
     setTargetLoading(true);
-    useLoadingToast.getState().show('Targeted pull…');
+    useLoadingToast.getState().show(`Pulling Day ${dayNum}…`);
     try {
       const card = await targetedPull(dayNum);
       if (card) {
@@ -271,7 +271,7 @@ export default function HomePage() {
       const result = await upgradeRarity(cardOwnedId);
       if (result.success) {
         audioManager.playSfx('upgrade', 0.9);
-        alert(`Success! Card upgraded to ${result.newRarity?.toUpperCase()}`);
+        alert(`Card upgraded to ${result.newRarity?.toUpperCase()}.`);
       }
     } catch (err) {
       console.error(err);
@@ -337,11 +337,11 @@ export default function HomePage() {
     if (hasClaimed) return;
 
     if (!user) {
-      alert('Authentication required: Please connect your wallet first using the "Connect Wallet" button at the top right.');
+      alert('Connect your wallet to claim. Use Connect Wallet at the top right.');
       return;
     }
 
-    useLoadingToast.getState().show('Claiming daily card…');
+    useLoadingToast.getState().show('Claiming today\'s drop…');
     try {
       const owned = await claimDailyCard(today);
       useLoadingToast.getState().hide();
@@ -367,12 +367,12 @@ export default function HomePage() {
           setLocation('/vault/reveal');
         }, 800);
       } else {
-        alert('Failed to claim daily card. This can happen if the daily drop has already been claimed or if the server rejected the request. Please try reconnecting your wallet.');
+        alert("Couldn't claim today's drop. It may already be claimed on this account.");
       }
     } catch (err: any) {
       useLoadingToast.getState().hide();
       console.error('Claim daily card threw error:', err);
-      alert(`Error claiming daily drop: ${err?.message || err}`);
+      alert(`Couldn't claim today's drop: ${err?.message || err}`);
     }
   }, [today, hasClaimed, setHasClaimed, addToCollection, startReveal, setLocation, user]);
 
@@ -410,7 +410,7 @@ export default function HomePage() {
         : await purchasePack(category, size, sessionId);
       useLoadingToast.getState().hide();
       if (cards === 'insufficient') {
-        alert('Insufficient V⚡ sparks for this pack.');
+        alert('Not enough V⚡ sparks for this pack.');
         await loadVaultData();
         return;
       }
@@ -454,7 +454,7 @@ export default function HomePage() {
 
     if (method === 'crypto') {
       try {
-        useLoadingToast.getState().show('Waiting for wallet confirmation…');
+        useLoadingToast.getState().show('Confirm in your wallet…');
         
         const txHash = await payWithCrypto(priceValue);
         
@@ -481,19 +481,19 @@ export default function HomePage() {
     } else {
       // Live Stripe Checkout session redirect
       try {
-        useLoadingToast.getState().show('Connecting to Stripe checkout…');
+        useLoadingToast.getState().show('Opening checkout…');
         const res = await createStripeCheckoutSession(category, size);
         useLoadingToast.getState().hide();
 
         if (res.success && res.checkoutUrl) {
           await redirectToStripeCheckout(res.checkoutUrl);
         } else {
-          alert(`Checkout Error: ${res.error || 'Could not initialize Stripe Checkout'}`);
+          alert(`Checkout didn't open. ${res.error || 'Try again.'}`);
         }
       } catch (err: any) {
         console.error('Stripe redirect failed:', err);
         useLoadingToast.getState().hide();
-        alert(err.message || 'Failed to connect to Stripe checkout');
+        alert(err.message || 'Checkout didn\'t open. Try again.');
       }
     }
   }, [checkoutInfo, startReveal, setLocation, addToCollection, loadVaultData]);
@@ -607,7 +607,7 @@ export default function HomePage() {
                     <span className="hw-badge">V⚡ SPARKS</span>
                   </div>
                   <p className="text-[9.5px] font-mono text-white/50 mt-2.5 uppercase tracking-wider">
-                    Sell cards → earn sparks → buy Vault Packs
+                    Burn duplicates for V⚡ sparks. Spend them on Vault Packs.
                   </p>
                 </div>
               </div>
@@ -678,7 +678,7 @@ export default function HomePage() {
             <div>
               <div className="hw-badge mb-2">
                 <span className="hw-led" data-color="vermilion" />
-                <span>ECONOMY V2.1 · TRANSMUTATION ENGINE</span>
+                <span>BURN · FUSE · UPGRADE</span>
               </div>
               <h2 style={{
                 fontFamily: '"Impact", "Arial Black", sans-serif',
@@ -690,7 +690,7 @@ export default function HomePage() {
                 The Forge
               </h2>
               <p className="text-[9.5px] font-mono uppercase tracking-[0.2em] text-white/60 mt-1">
-                Burn cards · Earn V⚡ · Release echoes · Track upgrades
+                Burn cards for V⚡ sparks. Echoes return to the pack pool.
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -731,7 +731,7 @@ export default function HomePage() {
                 Redeem Center
               </h2>
               <p className="text-[9.5px] font-mono uppercase tracking-[0.2em] text-white/60 mt-1">
-                Enter promotional codes · Unlock V⚡ sparks · Claim exclusive background skins
+                Redeem a code for skins and bonus sparks
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -822,7 +822,7 @@ export default function HomePage() {
         >
           <div className="text-center space-y-4">
             <div className="text-6xl">🎉</div>
-            <p className="text-2xl brutalist-title" style={{ '--neon-accent': 'var(--color-neon-gold)' } as any}>Card Claimed!</p>
+            <p className="text-2xl brutalist-title" style={{ '--neon-accent': 'var(--color-neon-gold)' } as any}>Card Claimed</p>
             <p className="text-sm font-mono" style={{ color: 'var(--color-text-muted)' }}>Revealing…</p>
           </div>
         </motion.div>
@@ -858,7 +858,7 @@ export default function HomePage() {
                 fontSize: '10px', letterSpacing: '0.2em',
                 color: 'rgba(255,255,255,0.3)', marginTop: '6px',
                 textTransform: 'uppercase',
-              }}>Connecting to vault engine…</p>
+              }}>Adding to your vault…</p>
             </div>
           </div>
         </motion.div>
@@ -901,7 +901,7 @@ export default function HomePage() {
                 <div className="flex justify-between items-start">
                   <div>
                     <h3 className="text-2xl font-black uppercase text-[#ff9900]" style={{ fontFamily: '"Impact", sans-serif' }}>
-                      🎯 TARGETED PULL DECRYPTION
+                      🎯 TARGETED PULL
                     </h3>
                     <p className="text-[9px] font-mono uppercase tracking-widest opacity-40">VAULT PROTOCOL 0x5D3</p>
                   </div>
@@ -1003,9 +1003,9 @@ export default function HomePage() {
                 <div className="flex justify-between items-start">
                   <div>
                     <h3 className="text-2xl font-black uppercase text-[#00d2ff]" style={{ fontFamily: '"Impact", sans-serif' }}>
-                      ⚡ RARITY UPGRADE MODULE
+                      ⚡ RARITY UPGRADE
                     </h3>
-                    <p className="text-[9px] font-mono uppercase tracking-widest opacity-40">SELECT TARGET CARD TO UPGRADE TIER</p>
+                    <p className="text-[9px] font-mono uppercase tracking-widest opacity-40">PICK A CARD TO UPGRADE</p>
                   </div>
                   <button 
                     onClick={() => { audioManager.playSfx('tap_nav', 0.4); setShowUpgradeModal(false); }}

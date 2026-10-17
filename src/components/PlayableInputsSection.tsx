@@ -250,7 +250,7 @@ export default function PlayableInputsSection() {
       bgGlow: 'rgba(16,185,129,0.15)',
       icon: Smartphone,
       component: TouchInputSVG,
-      desc: 'Seamless multi-finger tap & directional swipe gestures tuned for iPhone, iPad, and Android mobile screens with tactile haptic feedback.',
+      desc: 'Multi-finger taps and swipes on iPhone, iPad and Android, with haptics.',
       features: ['Multi-touch lane strikes', 'Directional swipe notes', 'Zero-install mobile web', 'Native haptic vibration'],
     },
     {
@@ -262,8 +262,8 @@ export default function PlayableInputsSection() {
       bgGlow: 'rgba(168,85,247,0.15)',
       icon: Gamepad2,
       component: ControllerInputSVG,
-      desc: 'Plug and play arcade controller support! Full native gamepad compatibility for Xbox, PlayStation DualSense, and custom rhythm fightsticks.',
-      features: ['Instant gamepad auto-detect', 'Custom D-Pad & Trigger maps', 'Sub-millisecond polling', 'Tactile button glyphs'],
+      desc: 'Xbox, DualSense and arcade sticks work out of the box.',
+      features: ['Detected on connect', 'Custom D-Pad & trigger maps', 'Bluetooth or USB', 'On-screen button prompts'],
     },
     {
       id: 'mouse',
@@ -274,8 +274,8 @@ export default function PlayableInputsSection() {
       bgGlow: 'rgba(251,191,36,0.15)',
       icon: MousePointer,
       component: MouseInputSVG,
-      desc: 'High-precision cursor strikes for desktop & trackpad players. Fast click response and smooth trackpad drag gestures.',
-      features: ['High DPI cursor tracking', 'Click & drag note holds', 'Adjustable pointer speed', 'Trackpad gesture support'],
+      desc: 'Click to hit, drag to hold. Works on mouse or trackpad.',
+      features: ['Click to hit notes', 'Click & drag note holds', 'Mouse or trackpad', 'Trackpad gesture support'],
     },
     {
       id: 'keyboard',
@@ -286,8 +286,8 @@ export default function PlayableInputsSection() {
       bgGlow: 'rgba(56,189,248,0.15)',
       icon: Keyboard,
       component: KeyboardInputSVG,
-      desc: 'Ultra-low latency mechanical key input. Complete keybind customization ([D,F,J,K] or [1,2,3]) with audio offset latency calibration.',
-      features: ['Custom rebindable keys', 'N-key rollover anti-ghosting', 'Audio offset calibration (ms)', 'BPM note generation source'],
+      desc: 'Rebind every lane ([D,F,J,K] or [1,2,3]) and calibrate your audio offset.',
+      features: ['Custom rebindable keys', 'Multi-key chords', 'Audio offset calibration (ms)', 'Choose your chart style'],
     },
   ];
 
@@ -305,7 +305,7 @@ export default function PlayableInputsSection() {
           className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-950/80 border border-purple-500/40 text-purple-300 font-mono text-[10px] font-black uppercase tracking-[0.25em] mb-3 shadow-[0_0_15px_rgba(168,85,247,0.3)]"
         >
           <Sparkles size={12} className="text-amber-400" />
-          <span>PLAYABLE YOUR WAY • 100% CROSS-PLATFORM</span>
+          <span>PHONE • TABLET • DESKTOP</span>
         </motion.div>
 
         <motion.h2
@@ -315,7 +315,7 @@ export default function PlayableInputsSection() {
           transition={{ duration: 0.7, delay: 0.1 }}
           className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight font-sans"
         >
-          Every Way To Play PIM
+          Play It Your Way
         </motion.h2>
 
         <motion.p
@@ -325,7 +325,7 @@ export default function PlayableInputsSection() {
           transition={{ duration: 0.7, delay: 0.2 }}
           className="mt-3 text-slate-400 font-mono text-xs sm:text-sm max-w-2xl mx-auto uppercase tracking-wider"
         >
-          Touch on mobile, hit keybinds on keyboard, connect an arcade gamepad, or click with precision mouse. Zero downloads needed.
+          Touch, keyboard, gamepad or mouse. Runs in your browser, nothing to install.
         </motion.p>
 
         {/* Input Mode Selector Filter Tabs */}

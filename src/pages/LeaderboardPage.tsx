@@ -514,12 +514,12 @@ export default function LeaderboardPage() {
           <div>
             <div className="font-mono text-[10px] font-bold uppercase tracking-widest text-[#FFD700] flex items-center justify-center md:justify-start gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-[#FFD700] animate-ping" />
-              LEADERBOARD TRANSMISSION CLEARANCE
+              GET ON THE LEADERBOARD
             </div>
             <p className="font-sans text-xs text-white/70 mt-0.5">
               {!authUser || authUser.is_anonymous
-                ? "Connect your sovereign account to claim an official @username and broadcast your scores to global rankings."
-                : "You are connected! Register a pilot @username and avatar photo to broadcast your rank."}
+                ? "Sign in to pick a @username and post your scores to the global rankings."
+                : "You're signed in. Pick a @username and avatar to show up on the leaderboards."}
             </p>
           </div>
           <button

@@ -145,7 +145,7 @@ export const useGlobalPlayer = create<GlobalPlayerState>((set, get) => {
     }
 
     set({ isPlaying: false });
-    useLoadingToast.getState().show('Failed to stream audio file from Supabase.');
+    useLoadingToast.getState().show('Couldn\'t load this track. Try again.');
     setTimeout(() => {
       useLoadingToast.getState().hide();
     }, 4000);

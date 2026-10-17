@@ -169,7 +169,7 @@ export default function LandingPage() {
   const handleTargetedPull = useCallback(async (dayNum: number) => {
     if (!dayNum || dayNum < 1 || dayNum > today || tokenBalance < 275) {
       if (dayNum > today) {
-        alert(`Day ${dayNum} is locked. Targeted Pull is restricted to released calendar days (Day 1 to ${today}). Future tracks require a Prophecy Pull.`);
+        alert(`Day ${dayNum} hasn't dropped yet. Targeted Pull covers Day 1–${today}. Future days need a Prophecy Pull.`);
       }
       return;
     }
@@ -205,7 +205,7 @@ export default function LandingPage() {
       const result = await upgradeRarity(cardOwnedId);
       if (result.success) {
         audioManager.playSfx('upgrade', 0.9);
-        alert(`Success! Card upgraded to ${result.newRarity?.toUpperCase()}`);
+        alert(`Card upgraded to ${result.newRarity?.toUpperCase()}.`);
       }
     } catch (err) {
       console.error(err);
@@ -250,7 +250,7 @@ export default function LandingPage() {
     setCodeState('redeeming');
     setCodeError('');
     setRewardClaimed(null);
-    useLoadingToast.getState().show('Decrypting bonus code…');
+    useLoadingToast.getState().show('Checking code…');
 
     try {
       const res = await redeemBonusCode(bonusCode);
@@ -370,7 +370,7 @@ export default function LandingPage() {
     } catch (err: any) {
       useLoadingToast.getState().hide();
       audioManager.playSfx('error', 0.6);
-      setCodeError(err.message || 'Verification link failed.');
+      setCodeError(err.message || 'Couldn\'t check that code. Try again.');
       setCodeState('error');
     }
   }, [bonusCode, addToCollection, startReveal, setLocation, loadVaultData]);
@@ -435,7 +435,7 @@ export default function LandingPage() {
   const handleClaim = useCallback(async () => {
     if (hasClaimed) return;
 
-    useLoadingToast.getState().show('Claiming daily drop...');
+    useLoadingToast.getState().show('Claiming today\'s drop…');
     try {
       let owned: OwnedCard | null = null;
       if (user) {
@@ -469,12 +469,12 @@ export default function LandingPage() {
           setLocation('/vault/reveal');
         }, 800);
       } else {
-        alert('Daily drop already claimed today or unavailable.');
+        alert("Couldn't claim today's drop. It may already be claimed on this account.");
       }
     } catch (err: any) {
       useLoadingToast.getState().hide();
       console.error('Claim daily card threw error:', err);
-      alert(`Error claiming daily drop: ${err?.message || err}`);
+      alert(`Couldn't claim today's drop: ${err?.message || err}`);
     }
   }, [today, hasClaimed, setHasClaimed, addToCollection, startReveal, setLocation, user, incrementClaimedCount]);
 
@@ -523,13 +523,13 @@ export default function LandingPage() {
 
     setIsPurchasing(true);
     try {
-      useLoadingToast.getState().show('Decrypting pack data…');
+      useLoadingToast.getState().show('Opening pack…');
       const cards = (category === 'vault_token' || category === 'bombshell_token')
         ? await buyTokenPack(category, size)
         : await purchasePack(category, size, sessionId);
       useLoadingToast.getState().hide();
       if (cards === 'insufficient') {
-        alert('Insufficient V⚡ sparks for this pack.');
+        alert('Not enough V⚡ sparks for this pack.');
         await loadVaultData();
         return;
       }
@@ -573,7 +573,7 @@ export default function LandingPage() {
 
     if (method === 'crypto') {
       try {
-        useLoadingToast.getState().show('Waiting for wallet confirmation…');
+        useLoadingToast.getState().show('Confirm in your wallet…');
         const txHash = await payWithCrypto(priceValue);
         
         if (txHash) {
@@ -600,19 +600,19 @@ export default function LandingPage() {
     } else {
       // Live Stripe Checkout session redirect
       try {
-        useLoadingToast.getState().show('Connecting to Stripe checkout…');
+        useLoadingToast.getState().show('Opening checkout…');
         const res = await createStripeCheckoutSession(category, size);
         useLoadingToast.getState().hide();
 
         if (res.success && res.checkoutUrl) {
           await redirectToStripeCheckout(res.checkoutUrl);
         } else {
-          alert(`Checkout Error: ${res.error || 'Could not initialize Stripe Checkout'}`);
+          alert(`Checkout didn't open. ${res.error || 'Try again.'}`);
         }
       } catch (err: any) {
         console.error('Stripe redirect failed:', err);
         useLoadingToast.getState().hide();
-        alert(err.message || 'Failed to connect to Stripe checkout');
+        alert(err.message || 'Checkout didn\'t open. Try again.');
       }
     }
   }, [checkoutInfo, startReveal, setLocation, addToCollection, loadVaultData]);
@@ -810,7 +810,7 @@ export default function LandingPage() {
             ) : (
               <div className="hw-panel w-[330px] aspect-[3/4] flex flex-col items-center justify-center rounded-2xl relative" data-accent="vermilion">
                 <div className="w-8 h-8 border-2 border-white/10 rounded-full animate-spin mb-4" style={{ borderTopColor: '#ff3800' }} />
-                <span className="font-mono text-[9.5px] font-bold uppercase tracking-widest text-[#ff3800]">Syncing Vault Drop...</span>
+                <span className="font-mono text-[9.5px] font-bold uppercase tracking-widest text-[#ff3800]">Loading today's drop…</span>
               </div>
             )}
           </div>
@@ -839,7 +839,7 @@ export default function LandingPage() {
                   <div className="hw-well flex items-center gap-4 px-5 py-3.5">
                     <Zap size={24} className="animate-pulse shrink-0" style={{ color: '#ffb800' }} />
                     <div>
-                      <div className="text-[9px] font-mono font-bold uppercase text-white/50 tracking-[0.2em]">VAULT SPARKS LEDGER</div>
+                      <div className="text-[9px] font-mono font-bold uppercase text-white/50 tracking-[0.2em]">V⚡ SPARKS</div>
                       <div
                         className="font-black leading-none mt-1 tabular-nums"
                         style={{ fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '36px', color: '#ffb800', letterSpacing: '-1px', textShadow: '0 0 18px rgba(255,184,0,0.35)' }}
@@ -854,7 +854,7 @@ export default function LandingPage() {
                   </Link>
                 </div>
                 <p className="text-[10px] font-mono text-white/50 mt-3 uppercase tracking-wider">
-                  Burn duplicates in the Forge → earn V⚡ sparks → unlock rare Vault Packs
+                  Burn duplicates for V⚡ sparks. Spend them on Vault Packs.
                 </p>
               </div>
             </div>
@@ -931,10 +931,10 @@ export default function LandingPage() {
                       color: 'var(--color-neon-gold)',
                       textShadow: '0 0 10px rgba(255,215,0,0.3)'
                     }}>
-                      Decryption & Promo Code Console
+                      Promo Codes
                     </h2>
                     <p className="text-[9.5px] font-mono uppercase tracking-[0.2em] text-white/55 mt-1">
-                      Enter cryptographic code · Unlock exclusive skins & bonus tokens
+                      Redeem a code for skins and bonus sparks
                     </p>
                   </div>
                   <span className="hw-badge"><span className="hw-led" data-color="gold" /> CIPHER READY</span>
@@ -980,7 +980,7 @@ export default function LandingPage() {
                     >
                       <div className="flex items-center justify-center gap-1.5 text-xs font-mono font-bold text-[#39FF14] tracking-widest uppercase">
                         <Sparkles size={13} />
-                        <span>Reward Unlocked successfully</span>
+                        <span>Reward unlocked</span>
                       </div>
 
                       {/* Tokens display */}
@@ -990,7 +990,7 @@ export default function LandingPage() {
                           <div className="text-3xl font-black font-mono text-[#ffb800] mt-2">
                             +{rewardClaimed.details?.tokensGranted?.toLocaleString()}
                           </div>
-                          <div className="text-[9px] font-mono text-white/50 tracking-wider mt-1 uppercase">VAULT TOKENS CREDITED</div>
+                          <div className="text-[9px] font-mono text-white/50 tracking-wider mt-1 uppercase">V⚡ SPARKS ADDED</div>
                         </div>
                       )}
 
@@ -1015,8 +1015,8 @@ export default function LandingPage() {
                           <div className="text-[9px] font-mono text-[#39FF14] tracking-wider mt-1 uppercase">ACCESS DECRYPTED</div>
                           <div className="text-[10px] font-mono text-zinc-400 mt-2 max-w-[240px] leading-relaxed uppercase">
                             {rewardClaimed.value === 'iddqd' 
-                              ? "PROCEDURAL GENERATOR DECRYPTED. LYRIC & BPM ENGINE ENGAGED." 
-                              : "MISS SYSTEM SAFETY BYPASSED. CONFIGURATION SETTINGS UNLOCKED."}
+                              ? "LYRIC AND BPM CHART MODES UNLOCKED." 
+                              : "MISS SYSTEM SETTINGS UNLOCKED."}
                           </div>
                         </div>
                       )}
@@ -1028,7 +1028,7 @@ export default function LandingPage() {
                           <div className="text-xl font-bold font-mono text-white mt-2 uppercase tracking-wider">
                             {rewardClaimed.value}
                           </div>
-                          <div className="text-[9px] font-mono text-red-500 tracking-wider mt-1 uppercase">DECRYPTION COMPLETE</div>
+                          <div className="text-[9px] font-mono text-red-500 tracking-wider mt-1 uppercase">CONTENT UNLOCKED</div>
                           <div className="text-[10px] font-mono text-zinc-400 mt-2 max-w-[240px] leading-relaxed uppercase">
                             {rewardClaimed.details?.skinUnlocked}
                           </div>
@@ -1059,7 +1059,7 @@ export default function LandingPage() {
             <div>
               <div className="hw-badge mb-2">
                 <span className="hw-led" data-color="vermilion" />
-                <span>ECONOMY V2.1 · TRANSMUTATION ENGINE</span>
+                <span>BURN · FUSE · UPGRADE</span>
               </div>
               <h2 style={{
                 fontFamily: '"Impact", "Arial Black", sans-serif',
@@ -1071,7 +1071,7 @@ export default function LandingPage() {
                 The Forge
               </h2>
               <p className="text-[10.5px] font-mono uppercase tracking-[0.22em] text-white/60 mt-1.5">
-                Burn duplicates · Extract V⚡ sparks · Release echoes · Level up card rarity
+                Burn cards for V⚡ sparks. Echoes return to the pack pool.
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -1163,9 +1163,9 @@ export default function LandingPage() {
           <div className="text-center space-y-4">
             <div className="text-6xl animate-bounce">🎉</div>
             <p className="text-3xl brutalist-title" style={{ '--neon-accent': 'var(--color-neon-gold)' } as any}>
-              CARD CLAIMED!
+              CARD CLAIMED
             </p>
-            <p className="text-sm font-mono text-white/50 tracking-wider">INITIATING DECRYPTOR SEED...</p>
+            <p className="text-sm font-mono text-white/50 tracking-wider">OPENING YOUR CARD…</p>
           </div>
         </motion.div>
       )}
@@ -1193,13 +1193,13 @@ export default function LandingPage() {
                 fontFamily: '"Impact", "Arial Black", sans-serif',
                 fontSize: '20px', textTransform: 'uppercase',
                 letterSpacing: '0.15em', color: '#ff3800',
-              }}>DECRYPTING ARCHIVE FILE</p>
+              }}>DECRYPTING CARD</p>
               <p style={{
                 fontFamily: '"JetBrains Mono", monospace',
                 fontSize: '10px', letterSpacing: '0.2em',
                 color: 'rgba(255,255,255,0.3)', marginTop: '6px',
                 textTransform: 'uppercase',
-              }}>ESTABLISHING COGNITIVE SYNC...</p>
+              }}>ADDING TO YOUR VAULT…</p>
             </div>
           </div>
         </motion.div>
@@ -1230,7 +1230,7 @@ export default function LandingPage() {
                 <div className="flex justify-between items-start">
                   <div>
                     <h3 className="text-2xl font-black uppercase text-[#ff9900]" style={{ fontFamily: '"Impact", sans-serif' }}>
-                      🎯 TARGETED PULL DECRYPTION
+                      🎯 TARGETED PULL
                     </h3>
                     <p className="text-[9px] font-mono uppercase tracking-widest opacity-40">VAULT PROTOCOL 0x5D3</p>
                   </div>
@@ -1333,9 +1333,9 @@ export default function LandingPage() {
                 <div className="flex justify-between items-start">
                   <div>
                     <h3 className="text-2xl font-black uppercase text-[#00d2ff]" style={{ fontFamily: '"Impact", sans-serif' }}>
-                      ⚡ RARITY UPGRADE MODULE
+                      ⚡ RARITY UPGRADE
                     </h3>
-                    <p className="text-[9px] font-mono uppercase tracking-widest opacity-40">SELECT TARGET CARD TO UPGRADE TIER</p>
+                    <p className="text-[9px] font-mono uppercase tracking-widest opacity-40">PICK A CARD TO UPGRADE</p>
                   </div>
                   <button 
                     onClick={() => { audioManager.playSfx('tap_nav', 0.4); setShowUpgradeModal(false); }}
@@ -1444,11 +1444,11 @@ export default function LandingPage() {
 
               <div className="space-y-1.5">
                 <h2 className="text-base font-black font-mono tracking-wide uppercase text-white">
-                  Access Gated Content?
+                  View Age-Restricted Content?
                 </h2>
                 <p className="text-[10px] text-zinc-400 font-mono leading-relaxed uppercase">
                   The decryption key <span className="text-[#39FF14] font-bold">"{ageGateCode}"</span> contains adult-themed mature material (Stella Luxx Stunner Gallery).
-                  You must be 18 years or older to proceed and view this content.
+                  You must be 18 or older to view this content.
                 </p>
               </div>
 
@@ -1459,11 +1459,11 @@ export default function LandingPage() {
                     let successMsg = "";
                     if (ageGateCode === 'stunnerofthemonthunlock') {
                       localStorage.setItem('opt_unlocked_stunner_section', 'true');
-                      successMsg = "Stunner of the Month Section Unlocked!";
+                      successMsg = "Stunner of the Month unlocked.";
                     } else if (ageGateCode === 'freebstella') {
                       localStorage.setItem('opt_free_stella_unlocked', 'true');
                       localStorage.setItem('opt_unlocked_stunner_section', 'true');
-                      successMsg = "Stella Luxx Fully Unlocked in Slideshows!";
+                      successMsg = "Stella Luxx unlocked in Slideshows.";
                     }
                     
                     audioManager.playSfx('song_completion', 0.85);
@@ -1484,7 +1484,7 @@ export default function LandingPage() {
                 <button
                   onClick={() => {
                     audioManager.playSfx('error', 0.6);
-                    setCodeError('Decryption aborted: Age verification failed.');
+                    setCodeError('Age check declined. Code not redeemed.');
                     setCodeState('error');
                     setAgeGateCode(null);
                   }}

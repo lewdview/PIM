@@ -1114,7 +1114,7 @@ function BombshellDayModal({
                   {card.title}
                 </h2>
                 <p className="text-[10px] font-mono text-white/40 mt-1 uppercase">
-                  Click any picture for Full-Screen Master View & Hi-Res Download, or choose your active card cover.
+                  Tap a picture for full screen and hi-res download, or set it as this card's cover.
                 </p>
               </div>
 
