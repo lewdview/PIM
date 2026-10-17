@@ -276,7 +276,7 @@ export default function MobileCardActionSheet({
                   }}
                 >
                   <Flame size={15} />
-                  <span>BURN MINTED OUT COPY</span>
+                  <span>BURN EXCESS COPY</span>
                 </button>
               )}
 
