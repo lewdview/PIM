@@ -2,14 +2,14 @@
 // Navbar.tsx — PIM : th3v4ult "Stage" shell
 // Desktop: logo, four section tabs (Play, Collect, Compete, You) that open a
 // menu, a wide super-search pill, tokens, alerts and identity.
-// Phone: a slim top bar plus a bottom dock with a raised Play button; section
+// Phone: a slim top bar plus a bottom dock with a raised Word chain button; section
 // tabs open bottom sheets.
 // Destinations live in nav/navConfig.ts so search and the menus stay in sync.
 // ════════════════════════════════════════════════════════════════════════════════
 
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'wouter';
-import { Bell, ChevronDown, Home, LogOut, MoreHorizontal, Play, Search, Wallet, Zap } from 'lucide-react';
+import { Bell, ChevronDown, Home, LogOut, MoreHorizontal, Search, Waypoints, Wallet, Zap } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { useVaultStore } from '../store/useVaultStore';
 import { useDisplayMode } from '../store/useDisplayMode';
@@ -369,8 +369,8 @@ export default function Navbar() {
           })()}
           Play
         </button>
-        <Link to="/daily" aria-label="Play today's drop" onClick={() => tap(0.35)}>
-          <span className="pim-dock-play"><Play size={26} fill="currentColor" /></span>
+        <Link to="/chain" aria-label="Word chain: hop between songs by the words they share" onClick={() => tap(0.35)}>
+          <span className="pim-dock-play"><Waypoints size={26} strokeWidth={2.5} /></span>
         </Link>
         <button
           type="button"
