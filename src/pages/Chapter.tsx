@@ -3,8 +3,8 @@ import { useParams, useLocation } from "wouter";
 import { loadCatalog, isSongTimeLocked, getModifierForSong } from "@/game/api";
 import { getMonthNumFromDay } from "@/utils/dayCalc";
 import type { GameSong } from "@/game/api";
-import { getMedalForSong, getChapterPlatinums, getHighScore, getScoreHistory } from "@/game/progress";
-import { CHAPTERS, calculateCampaignDifficulty } from "@/game/campaign";
+import { getCampaignMedal, getCampaignPlatinums, getCampaignRecord, hasCampaignClear, getScoreHistory } from "@/game/progress";
+import { CHAPTERS, calculateCampaignDifficulty, campaignPlayPath, prepareCampaignRun } from "@/game/campaign";
 import { getActiveTheme } from "@/lib/options";
 import { audioManager } from "@/game/audio";
 import { useVaultStore, ownsCardForDay } from "@/store/useVaultStore";
@@ -97,14 +97,12 @@ export default function Chapter() {
       // Otherwise, default select to player's active level (first uncleared unlocked level)
       const regularSongsList = filtered.length > 5 ? filtered.slice(0, -5) : filtered;
       const bonusSongsList = filtered.length > 5 ? filtered.slice(-5) : [];
-      const plats = getChapterPlatinums(regularSongsList.map(s => s.id));
+      const plats = getCampaignPlatinums(regularSongsList.map(s => s.id));
       const bUnlocked = filtered.length > 5 ? (plats >= meta.platNeeded) : true;
       
       const hasClearedLocal = (song?: GameSong) => {
         if (!song) return false;
-        const medalVal = getMedalForSong(song.id);
-        const scoreVal = getHighScore(song.id);
-        return (medalVal && medalVal !== '') || scoreVal > 0;
+        return hasCampaignClear(song.id);
       };
 
       const isUnlockedLocal = (idx: number) => {
@@ -318,15 +316,13 @@ export default function Chapter() {
 
   const regularSongs  = songs.length > 5 ? songs.slice(0, -5) : songs;
   const bonusSongs    = songs.length > 5 ? songs.slice(-5) : [];
-  const platinums     = getChapterPlatinums(regularSongs.map(s => s.id));
+  const platinums     = getCampaignPlatinums(regularSongs.map(s => s.id));
   const bonusUnlocked = songs.length > 5 ? (platinums >= meta.platNeeded) : true;
 
   // Clear tracking
   const hasCleared = (song?: GameSong) => {
     if (!song) return false;
-    const medal = getMedalForSong(song.id);
-    const score = getHighScore(song.id);
-    return (medal && medal !== '') || score > 0;
+    return hasCampaignClear(song.id);
   };
 
   const clearsCount = regularSongs.filter(s => hasCleared(s)).length;
@@ -359,9 +355,9 @@ export default function Chapter() {
   const selectedSong = songs[activeIdx];
 
   // Selected song stats & locks
-  const medal = selectedSong ? getMedalForSong(selectedSong.id) : '';
+  const medal = selectedSong ? getCampaignMedal(selectedSong.id) : '';
   const mc = MEDAL_COLOR[medal] ?? '#1a1a1a';
-  const score = selectedSong ? getHighScore(selectedSong.id) : 0;
+  const score = selectedSong ? (getCampaignRecord(selectedSong.id)?.score ?? 0) : 0;
   const history = selectedSong ? getScoreHistory(selectedSong.id) : [];
   const modifierType = selectedSong ? getModifierForSong(selectedSong) : 'none';
 
@@ -420,20 +416,9 @@ export default function Chapter() {
     setPreviewing(false);
     
     audioManager.playSfx('tap_nav', 0.4);
-    sessionStorage.setItem(`campaign_last_song_id`, selectedSong.id);
-    sessionStorage.setItem(`game_origin_${selectedSong.id}`, `chapter/${monthNum}`);
-    sessionStorage.setItem(`diff_override_${selectedSong.id}`, String(difficultyLevel));
-
-    // Inject active card modifier if equipped
-    const isEquipped = equippedCardId === selectedSong.id;
-    if (isEquipped && modifierType !== 'none') {
-      sessionStorage.setItem(`active_modifier_type_${selectedSong.id}`, modifierType);
-    } else {
-      sessionStorage.removeItem(`active_modifier_type_${selectedSong.id}`);
-    }
-
+    prepareCampaignRun(selectedSong.id, monthNum, modifierType, equippedCardId === selectedSong.id);
     handlePlayRef.current = handlePlay;
-    setLocation(`/play/${selectedSong.id}`);
+    setLocation(campaignPlayPath(selectedSong.id));
   };
 
   // Claim milestones rewards function
@@ -765,7 +750,7 @@ export default function Chapter() {
                           const coords = getLocalNodeCoords(localIdx);
                           const unl = isUnlocked(globalIdx);
                           const cl = hasCleared(song);
-                          const nodeMedal = getMedalForSong(song.id);
+                          const nodeMedal = getCampaignMedal(song.id);
                           const isSel = selectedIdx === globalIdx;
                           const isBonus = globalIdx >= regularSongs.length;
                           const nodeAllClaimed = claimedRewards[song.id]?.includes('prophecy') || localStorage.getItem(`reward_tier_${song.id}`) === 'prophecy';

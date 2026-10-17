@@ -71,6 +71,8 @@ export interface JudgmentDisplay {
   lane: number;
   id: number;
   ts: number;
+  /** Head of a hold/slide/lift note — the note itself resolves with a later judgment. */
+  partial?: boolean;
 }
 
 export type MultiplierState = 'NORMAL' | 'FEVER' | 'SURGE' | 'SIGNAL_LOCK';

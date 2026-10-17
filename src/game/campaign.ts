@@ -69,3 +69,25 @@ export function tierToLevelRange(tier: DifficultyTier): [number, number] {
     case 'BRUTAL': return [8, 10];
   }
 }
+
+/**
+ * A campaign run is marked in the play URL, so a stale session key from an
+ * earlier campaign run can never turn an on-demand play (collection, codex,
+ * award play, search) into a campaign run, or leak campaign difficulty into it.
+ */
+export function campaignPlayPath(songId: string): string {
+  return `/play/${songId}?mode=campaign`;
+}
+
+export function isCampaignRunSearch(search: string): boolean {
+  return new URLSearchParams(search).get('mode') === 'campaign';
+}
+
+/** Session keys a campaign launch sets; the level itself comes from the stage, not storage. */
+export function prepareCampaignRun(songId: string, month: number, modifier: string, equipped: boolean): void {
+  sessionStorage.setItem('campaign_last_song_id', songId);
+  sessionStorage.setItem(`game_origin_${songId}`, `chapter/${month}`);
+  sessionStorage.removeItem(`diff_override_${songId}`);
+  if (equipped && modifier !== 'none') sessionStorage.setItem(`active_modifier_type_${songId}`, modifier);
+  else sessionStorage.removeItem(`active_modifier_type_${songId}`);
+}

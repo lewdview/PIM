@@ -2,7 +2,9 @@
 import React, { useEffect, useLayoutEffect, useRef, useState, useCallback, memo } from "react";
 import { useParams, useLocation } from "wouter";
 import { getSongById, saveHighScore, getModifierForSong, STAGEIFICATION_CONFIG, getCandidateAudioUrls } from "@/game/api";
-import { saveMedal, saveScoreHistory } from "@/game/progress";
+import { saveMedal, saveScoreHistory, saveCampaignClear } from "@/game/progress";
+import { isCampaignRunSearch } from "@/game/campaign";
+import { getCampaignStage, type CampaignStage } from "@/game/chapterStory";
 import type { GameSong } from "@/game/api";
 import type { Note, JudgmentDisplay, GameState, NoteType } from "@/game/types";
 import { loadOpts, keyLabel, getEffectiveDpr, type GameOpts, type PovMode, type RenderResolution, type GfxLevel, type FpsTarget, type ParticleDensity } from "@/lib/options";
@@ -1347,6 +1349,10 @@ export default function Game() {
   const isTutorialRef = useRef(new URLSearchParams(window.location.search).get("tutorial") === "true");
   const isTutorial = isTutorialRef.current;
   const activeTutorial = isTutorial;
+  // Set when this run was launched from a campaign chapter (?mode=campaign).
+  // Campaign runs play at the stage's campaign level and are the only runs
+  // that clear campaign stages.
+  const campaignStageRef = useRef<CampaignStage | null>(null);
 
   // ── Curriculum-Driven Tutorial State ──
   const TUTORIAL_STEPS: TutorialStepType[] = [
@@ -2443,7 +2449,7 @@ export default function Game() {
       }
       checkPowerUps(gs.combo);
 
-      addJudgment({ type: j, lane, id: ++jCounter.current, ts: Date.now() });
+      addJudgment({ type: j, lane, id: ++jCounter.current, ts: Date.now(), partial: isHoldType });
 
       // ── Hit explosion effect ──
       triggerHitFx(lane, j, undefined, direction || ns.note.swipeDirection);
@@ -3012,6 +3018,14 @@ export default function Game() {
         saveMedal(songRef.current.id, medal);
         saveScoreHistory(songRef.current.id, gs.score);
       }
+      // Practice note generation never counts toward the campaign, so such a
+      // run gets the on-demand result instead of a "Stage passed" screen.
+      const campaignGenSource = loadOpts().noteGenerationSource;
+      const campaignStage = (campaignGenSource === 'auto' || !campaignGenSource) ? campaignStageRef.current : null;
+      const campaignFirstClear = !!campaignStage && !failed && !campaignStage.cleared;
+      if (campaignStage && songRef.current && !failed) {
+        saveCampaignClear(songRef.current.id, medal, gs.score);
+      }
 
       // ── Aggregate per-lane accuracy from real telemetry ──
       const laneTelemetry: Record<number, { hits: number; perfectPlus: number; perfects: number; goods: number; misses: number }> = {};
@@ -3058,6 +3072,10 @@ export default function Game() {
           continuesUsed,
           laneTelemetry,
           coverUrl: finalCover,
+          mode: campaignStage ? 'campaign' : 'on_demand',
+          campaign: campaignStage
+            ? { month: campaignStage.month, idx: campaignStage.idx, level: campaignStage.level, firstClear: campaignFirstClear }
+            : undefined,
         }),
       );
     } catch (err) {
@@ -3409,6 +3427,9 @@ export default function Game() {
 
   const handleTutorialJudgment = useCallback((newJ: JudgmentDisplay) => {
     if (!activeTutorial || tutStage1ClearedRef.current) return;
+    // Hold-type note heads fire their own judgment before the hold resolves;
+    // only the resolving judgment counts, so one note = one success.
+    if (newJ.partial) return;
 
     const isHit = newJ.type === 'PERFECT+' || newJ.type === 'PERFECT' || newJ.type === 'GOOD';
     const isMiss = newJ.type === 'MISS';
@@ -3545,7 +3566,12 @@ export default function Game() {
 
     const ctx = canvas.getContext("2d");
     if (!ctx || !songRef.current) return;
-    
+
+    // Start every frame from a clean blend state. clearRect() doesn't reset it, so a
+    // draw that throws mid-`lighter` would otherwise wash out every later frame.
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+
     // GFX level & bloom glow shadow blur optimization
     const allowShadows = !optsRef.current.legacyGraphics && optsRef.current.bloomGlow && optsRef.current.gfxLevel !== 'low';
     if (!allowShadows) {
@@ -6315,8 +6341,12 @@ export default function Game() {
     }
     hitFxRef.current.length = hitFxWrite;
     for (const e of hitFxRef.current) {
-      const t01 = (nowMs - e.startMs) / FX_DURATION; // 0→1
-      const dt = (nowMs - e.startMs) / 1000; // seconds
+      // Hold completions fire triggerHitFx from inside this frame, after nowMs was taken,
+      // so their age can be slightly negative. Clamp it: sqrt() of a negative age gives NaN
+      // and the gradient calls in drawHitPop3D throw.
+      const ageMs = Math.max(0, nowMs - e.startMs);
+      const t01 = ageMs / FX_DURATION; // 0→1
+      const dt = ageMs / 1000; // seconds
       const easeOut = 1 - t01;
 
       // ─ Lane flash: bright overlay on the key area fading fast ─
@@ -8461,6 +8491,25 @@ export default function Game() {
 
         const origin = sessionStorage.getItem(`game_origin_${songId}`) ?? '';
         const originRoute = origin === 'songs' ? '/songs' : origin ? `/${origin}` : '/campaign';
+        campaignStageRef.current = null;
+        if (songId && isCampaignRunSearch(window.location.search) && !isTutorial) {
+          // On a refresh, a signed-in player's synced clears arrive with
+          // loadVaultData; wait so earlier stages count before the unlock check.
+          const { data: { session: campaignSession } } = await supabase.auth.getSession();
+          if (campaignSession && !useVaultStore.getState().hasLoadedData) {
+            await new Promise<void>((resolve) => {
+              const timer = setTimeout(() => { unsub(); resolve(); }, 8000);
+              const unsub = useVaultStore.subscribe((st) => {
+                if (st.hasLoadedData) { clearTimeout(timer); unsub(); resolve(); }
+              });
+            });
+            if (cancelled) return;
+          }
+          const stage = await getCampaignStage(songId);
+          if (cancelled) return;
+          // Only a stage the player has actually reached runs as campaign.
+          if (stage && stage.unlocked && !stage.timeLocked) campaignStageRef.current = stage;
+        }
         const modifier = (sessionStorage.getItem(`active_modifier_type_${songId}`) || 'none') as any;
         modifierRef.current = modifier;
         setActiveModifier(modifier);
@@ -8497,7 +8546,10 @@ export default function Game() {
 
         // ── Ownership gate: gameplay requires owning the card for this song ──
         // (Tutorial transmissions are exempt — they carry no card.)
-        if (!isTutorial && song.day > 0) {
+        // Campaign stages are played in order without the card; replaying a
+        // stage after clearing it needs the card like any other play.
+        const campaignFirstRun = !!campaignStageRef.current && !campaignStageRef.current.cleared;
+        if (!isTutorial && song.day > 0 && !campaignFirstRun) {
           // On a direct link / refresh the collection may still be loading —
           // wait for it rather than locking a card the player owns.
           if (!useVaultStore.getState().hasLoadedData) {
@@ -8564,7 +8616,9 @@ export default function Game() {
         );
       }
       // Apply difficulty override set by SongDetail page
-      const diffOverrideNum = parseInt(sessionStorage.getItem(`diff_override_${songId}`) ?? '', 10);
+      const diffOverrideNum = campaignStageRef.current
+        ? campaignStageRef.current.level
+        : parseInt(sessionStorage.getItem(`diff_override_${songId}`) ?? '', 10);
       if (!isNaN(diffOverrideNum) && diffOverrideNum >= 1 && diffOverrideNum <= 10 && !activeTutorial) {
         songRef.current.difficultyLevel = diffOverrideNum;
       }

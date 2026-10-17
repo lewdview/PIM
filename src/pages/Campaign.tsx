@@ -5,7 +5,7 @@ import type { GameSong } from "@/game/api";
 import { getMonthNumFromDay } from "@/utils/dayCalc";
 import {
   getTotalScore, getTotalPlatinums, getTotalCleared,
-  getChapterPlatinums, getChapterCleared,
+  getCampaignPlatinums, getCampaignCleared,
 } from "@/game/progress";
 import { CHAPTERS, type ChapterMeta } from "@/game/campaign";
 import { getActiveTheme } from "@/lib/options";
@@ -126,6 +126,9 @@ export default function Campaign() {
 
   const isAvant = getActiveTheme() === 'avant-garde';
 
+  // Signed-in clears hydrate from the DB in loadVaultData; recompute when it lands.
+  const vaultLoaded = useVaultStore((s) => s.hasLoadedData);
+
   useEffect(() => {
     setTotals({ score: getTotalScore(), platinums: getTotalPlatinums(), cleared: getTotalCleared() });
     
@@ -141,8 +144,8 @@ export default function Campaign() {
 
         const regularIds = songs.length > 5 ? songs.slice(0, -5).map(s => s.id) : songs.map(s => s.id);
         const bonusCount = songs.length > 5 ? 5 : 0;
-        const platinums  = getChapterPlatinums(regularIds);
-        const cleared    = getChapterCleared(regularIds);
+        const platinums  = getCampaignPlatinums(regularIds);
+        const cleared    = getCampaignCleared(regularIds);
         
         return {
           meta,
@@ -173,7 +176,7 @@ export default function Campaign() {
       setChapters(data);
       setLoading(false);
     });
-  }, []);
+  }, [vaultLoaded]);
 
   // Track scroll offsets for parallax vectors calculations
   useEffect(() => {
