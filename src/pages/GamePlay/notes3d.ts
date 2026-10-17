@@ -329,6 +329,10 @@ export function drawHitPop3D(
   dt: number
 ) {
   if (quality === 'off') return;
+  if (!Number.isFinite(e.cx) || !Number.isFinite(e.cy)) return;
+  // A negative age (FX spawned later in the same frame) would make sqrt() NaN below.
+  t01 = Math.max(0, t01);
+  dt = Math.max(0, dt);
   const laneW = e.laneW && e.laneW > 0 ? e.laneW : 90;
   const strength = e.kind === 'PERFECT+' ? 1 : e.kind === 'PERFECT' ? 0.8 : e.kind === 'SHIELDED' ? 0.7 : 0.55;
 

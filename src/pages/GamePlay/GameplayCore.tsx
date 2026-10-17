@@ -3564,7 +3564,12 @@ export default function Game() {
 
     const ctx = canvas.getContext("2d");
     if (!ctx || !songRef.current) return;
-    
+
+    // Start every frame from a clean blend state. clearRect() doesn't reset it, so a
+    // draw that throws mid-`lighter` would otherwise wash out every later frame.
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+
     // GFX level & bloom glow shadow blur optimization
     const allowShadows = !optsRef.current.legacyGraphics && optsRef.current.bloomGlow && optsRef.current.gfxLevel !== 'low';
     if (!allowShadows) {
@@ -6334,8 +6339,12 @@ export default function Game() {
     }
     hitFxRef.current.length = hitFxWrite;
     for (const e of hitFxRef.current) {
-      const t01 = (nowMs - e.startMs) / FX_DURATION; // 0→1
-      const dt = (nowMs - e.startMs) / 1000; // seconds
+      // Hold completions fire triggerHitFx from inside this frame, after nowMs was taken,
+      // so their age can be slightly negative. Clamp it: sqrt() of a negative age gives NaN
+      // and the gradient calls in drawHitPop3D throw.
+      const ageMs = Math.max(0, nowMs - e.startMs);
+      const t01 = ageMs / FX_DURATION; // 0→1
+      const dt = ageMs / 1000; // seconds
       const easeOut = 1 - t01;
 
       // ─ Lane flash: bright overlay on the key area fading fast ─
