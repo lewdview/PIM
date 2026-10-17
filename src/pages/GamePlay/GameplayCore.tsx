@@ -26,7 +26,7 @@ import { type StageGeometry, getStageGeometry, approachTime, hwAtProgress, laneA
 import { colorWithAlpha, hslToHex, getDifficultyLaneColor } from './colorUtils';
 import { perfectPlusWindow, perfectWindow, goodWindow, missWindow } from './timing';
 import { type TrackArchetype, type ArchetypeMeta, ARCHETYPE_METAS, selectSongArchetype, selectSongPov, isArchetypeDevModeEnabled } from './archetypes';
-import { type ProjectionResult, getCorkscrewSpiralPos, getWaveCoasterPos, getFlat2DPos, getRadialOrbitPos, getHorizontalDriftPos, getCockpitHudPos, getHyperPrismPos, getDnaHelixPos, getVertigoDropPos, getSingularityVoidPos, getGroundZeroPos, getOrbitalHaloPos, getMobiusLoopPos, getArchetypeProjection, getLaneFromCoords } from './projections';
+import { type ProjectionResult, getCorkscrewSpiralPos, getWaveCoasterPos, getFlat2DPos, getHorizontalDriftPos, getCockpitHudPos, getHyperPrismPos, getDnaHelixPos, getVertigoDropPos, getSingularityVoidPos, getGroundZeroPos, getOrbitalHaloPos, getMobiusLoopPos, getArchetypeProjection, getLaneFromCoords } from './projections';
 import { hasPovScene, usesFlatHighway, hasStraightHitLine, drawPovScene, drawPovLanes, type PovSceneInput } from './povScenes';
 import { refineAndBlendEdges, disposeCanvas, drawMovingGasAura } from './drawHelpers';
 import JudgmentBadge, { getJudgmentBadgeSvgHtml, getJudgmentStreamItemHtml } from './JudgmentBadge';
@@ -1639,7 +1639,8 @@ export default function Game() {
   const POV_CONFIGS: Record<PovMode, { icon: string; short: string; full: string }> = {
     classic: { icon: '📐', short: '2.5D CLASSIC', full: '2.5D CLASSIC HIGHWAY' },
     flat_2d: { icon: '🎹', short: 'ORTHO 2D', full: 'ORTHOGRAPHIC 2D HIGHWAY' },
-    circle: { icon: '🎯', short: '360° ORBIT', full: '360° RADIAL CYBER ORBIT' },
+    canyon_run: { icon: '🏜️', short: 'CANYON RUN', full: 'DESERT CANYON RUN' },
+    aurora_bridge: { icon: '🌉', short: 'AURORA BRIDGE', full: 'AURORA GLASS BRIDGE' },
     horizontal_drift: { icon: '⏩', short: 'SIDE DRIFT', full: 'HORIZONTAL SIDE-SCROLLER' },
     cyber_tunnel: { icon: '🌀', short: '3D TUNNEL', full: '3D CYBER TUNNEL VORTEX' },
     corkscrew: { icon: '🌪️', short: 'CORKSCREW', full: '3D CORKSCREW HELICAL SLIDE' },
@@ -1663,7 +1664,6 @@ export default function Game() {
     const modes: PovMode[] = [
       'classic',
       'flat_2d',
-      'circle',
       'horizontal_drift',
       'cyber_tunnel',
       'corkscrew',
@@ -1677,6 +1677,8 @@ export default function Game() {
       'ground_zero',
       'orbital_halo',
       'mobius_loop',
+      'canyon_run',
+      'aurora_bridge',
       'dynamic_stage'
     ];
     const currentIdx = modes.indexOf(activePovModeRef.current);

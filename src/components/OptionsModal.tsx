@@ -2534,7 +2534,6 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                           // Core & Retro Highways
                           { id: 'classic', name: '2.5D Classic', desc: 'Standard Beatstar highway perspective', icon: '📐', tag: 'CORE' },
                           { id: 'flat_2d', name: 'Orthographic 2D', desc: 'Equal-width top-down piano roll highway', icon: '🎹', tag: '2D' },
-                          { id: 'circle', name: '360° Radial Orbit', desc: 'Concentric radial spoke target orbit', icon: '🎯', tag: 'ARCADE' },
                           { id: 'horizontal_drift', name: 'Side-Scroller', desc: '90° horizontal side-scrolling precision highway', icon: '⏩', tag: 'RETRO' },
                           { id: 'dynamic_stage', name: 'Dynamic Stage', desc: 'Beatsync camera director & stage shifts', icon: '🎥', tag: 'DIRECTOR' },
 
@@ -2553,6 +2552,8 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                           { id: 'ground_zero', name: 'Ground Zero Bumper', desc: 'Ultra-low asphalt bumper camera with reflections', icon: '🚗', tag: 'LOW-RIDER' },
                           { id: 'orbital_halo', name: 'Stargate Halo', desc: 'Overhead celestial halo arc descending into hit zone', icon: '🌌', tag: 'HALO' },
                           { id: 'mobius_loop', name: 'Möbius Infinity', desc: 'Non-Euclidean topological figure-8 twist highway', icon: '♾️', tag: 'TOPOLOGY' },
+                          { id: 'canyon_run', name: 'Canyon Run', desc: 'Desert road sweeping through red-rock S-bends at dusk', icon: '🏜️', tag: 'ROAD TRIP' },
+                          { id: 'aurora_bridge', name: 'Aurora Bridge', desc: 'Arched glass bridge over a frozen fjord under the northern lights', icon: '🌉', tag: 'NORTHERN' },
                         ].map(pov => {
                           const active = (opts.povMode || 'classic') === pov.id;
                           return (

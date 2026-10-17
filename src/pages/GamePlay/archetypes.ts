@@ -119,11 +119,11 @@ export function selectSongArchetype(song?: GameSong | null): TrackArchetype {
  */
 export const ARCHETYPE_POV_POOLS: Record<TrackArchetype, PovMode[]> = {
   cyber_tunnel: ['cyber_tunnel', 'hyper_prism', 'singularity_void'],
-  corkscrew_slide: ['corkscrew', 'dna_helix', 'mobius_loop', 'orbital_halo'],
-  wave_coaster: ['rollercoaster', 'horizontal_drift', 'ground_zero', 'circle'],
+  corkscrew_slide: ['corkscrew', 'dna_helix', 'mobius_loop', 'orbital_halo', 'aurora_bridge'],
+  wave_coaster: ['rollercoaster', 'horizontal_drift', 'ground_zero', 'canyon_run'],
   matrix_split: ['matrix_split', 'cockpit_hud', 'vertigo_drop'],
-  radial_orbit: ['circle', 'orbital_halo'],
-  horizontal_drift: ['horizontal_drift', 'ground_zero'],
+  radial_orbit: ['aurora_bridge', 'orbital_halo'],
+  horizontal_drift: ['horizontal_drift', 'ground_zero', 'canyon_run'],
 };
 
 /** Picks the song's stage 3/5 camera from its archetype's pool. Stable per song. */
