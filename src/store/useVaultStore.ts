@@ -305,7 +305,7 @@ export function getShardsForDay(
   if (!fragments || !Number.isFinite(day)) return 0;
   // Shards are stored per card set: gen-0 pulls land under `card-{day}` and
   // bombshell pulls under `bombshell-{day}`. They are distinct pulls, so the
-  // day's total is the SUM of the buckets \u2014 taking the max (the old
+  // day's total is the SUM of the buckets — taking the max (the old
   // behavior) silently dropped every bombshell shard on any day that also
   // held gen-0 shards. The `day-*` keys are legacy aliases of a single
   // bucket, so they contribute their max, not their sum.
