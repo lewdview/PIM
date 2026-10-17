@@ -6,7 +6,7 @@
 
 import type { LucideIcon } from 'lucide-react';
 import {
-  Gamepad2, Play, Compass, CalendarDays, Trophy, GraduationCap,
+  Gamepad2, Play, Waypoints, Compass, CalendarDays, Trophy, GraduationCap,
   Home, Layers, Package, Gem, Bomb, BookOpen, Flame, Sparkles, Image,
   BarChart3, ShoppingBag, Gift,
   User, SlidersHorizontal, Monitor, Bell, LifeBuoy, FileText, PenTool,
@@ -52,6 +52,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { id: 'arcade', label: 'Arcade', to: '/arcade', icon: Gamepad2, desc: 'Jump straight into a song', keywords: ['play', 'game', 'rhythm', 'engine', 'quick', 'pim'] },
       { id: 'daily', label: "Today's drop", to: '/daily', icon: Play, desc: "Play today's song before it rotates", keywords: ['daily', 'drop', 'today', 'stage'] },
+      { id: 'chain', label: 'Word chain', to: '/chain', icon: Waypoints, desc: 'Hop between songs by the words they share', keywords: ['words', 'lyrics', 'poem', 'chain', 'radio', 'explore'] },
       { id: 'campaign', label: 'Campaign', to: '/campaign', icon: Compass, desc: 'Monthly chapters across the 365 roadmap', keywords: ['story', 'chapters', 'roadmap', 'progress'] },
       { id: 'timeline', label: '365 timeline', to: '/365', icon: CalendarDays, desc: 'Every daily release, day by day', keywords: ['archive', 'calendar', 'timeline', 'days'] },
       { id: 'awards', label: 'Award play', to: '/songs', icon: Trophy, desc: 'Hand-picked songs and medal tiers', keywords: ['awards', 'curated', 'select', 'songs'] },
@@ -130,7 +131,7 @@ export function sectionForPath(path: string): NavSectionId | null {
     prefixes.some((p) => path === p || path.startsWith(p + '/') || path.startsWith(p + '-'));
   if (starts(['/vault/leaderboard', '/leaderboard', '/vault/earn', '/earn', '/shop', '/store', '/vault/claim', '/claim'])) return 'compete';
   if (starts(['/profile', '/user', '/hub', '/options', '/vault/legal', '/legal', '/admin', '/pitch-deck'])) return 'you';
-  if (starts(['/arcade', '/pim', '/play', '/campaign', '/chapter', '/songs', '/song', '/listen', '/tutorial', '/365', '/day', '/daily', '/drop', '/today', '/results'])) return 'play';
+  if (starts(['/arcade', '/pim', '/play', '/campaign', '/chapter', '/songs', '/song', '/listen', '/tutorial', '/365', '/day', '/daily', '/drop', '/today', '/results', '/chain'])) return 'play';
   if (starts(['/vault', '/collection', '/reveal', '/vaultfinds', '/bombshells', '/forge', '/codex', '/next-vault', '/hero'])) return 'collect';
   return null;
 }

@@ -78,6 +78,7 @@ const GamePlay = lazyWithRetry(() => import('./pages/GamePlay'));
 const GameResults = lazyWithRetry(() => import('./pages/GameResults'));
 const Campaign = lazyWithRetry(() => import('./pages/campaign/CampaignStory'));
 const Chapter = lazyWithRetry(() => import('./pages/campaign/ChapterStory'));
+const WordChain = lazyWithRetry(() => import('./pages/WordChain'));
 // Previous map-style campaign screens, kept reachable while the story screens settle in.
 const CampaignMap = lazyWithRetry(() => import('./pages/Campaign'));
 const ChapterMap = lazyWithRetry(() => import('./pages/Chapter'));
@@ -386,6 +387,7 @@ export default function App() {
                 <Route path="/songs" component={SongSelect} />
                 <Route path="/play/:songId" component={GamePlay} />
                 <Route path="/results/:songId" component={GameResults} />
+                <Route path="/chain" component={WordChain} />
                 <Route path="/campaign" component={Campaign} />
                 <Route path="/campaign/map" component={CampaignMap} />
                 <Route path="/chapter/:month" component={Chapter} />
