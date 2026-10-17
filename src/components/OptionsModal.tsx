@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, type ReactNode, type CSSProperties } from "react";
 import { loadOpts, resetOpts, keyLabel, getActiveTheme, getEffectiveDpr, type GameOpts, type RenderResolution, type GfxLevel, type FpsTarget, type ParticleDensity, GAME_BACKGROUNDS, GAME_TRACKS } from "../lib/options";
 import { useLocation } from "wouter";
 import { clearCatalogCache } from "../game/api";
@@ -7,7 +7,8 @@ import { haptics } from "../utils/haptics";
 import { logAnalyticsEvent } from "../services/telemetryService";
 import { gameSenseService, type GameSenseStatus } from "../services/gameSenseService";
 import { useVaultStore } from "../store/useVaultStore";
-import { X, Volume2, Key, Info, Palette, Sparkles, Sliders, Check, Lock, Flame, ShieldAlert, Monitor, Sparkle, Zap, Cpu, Gauge, Layers } from "lucide-react";
+import { X, Sparkles, Check, Lock, Flame, Zap, Cpu, Layers } from "lucide-react";
+import "../styles/optionsMenu.css";
 import { VTokenCrestIcon, RemixDialIcon, HazardWarningIcon, StageCrestIcon } from "./icons/CustomVectorIcons";
 import type { VaultCard } from "../services/vaultService";
 import { CHART_VARIANT_CHOSEN_KEY, DEFAULT_CHART_VARIANT, resolveChartVariant } from "../lib/chartVariant";
@@ -227,10 +228,10 @@ function SvgBlurSlider({ value, onChange, isAvant }: { value: number; onChange: 
   const strokeColor = isAvant ? "#39FF14" : "#FF1493";
 
   return (
-    <div className="flex flex-col gap-2 mt-4 select-none animate-in fade-in slide-in-from-top-1 duration-200">
-      <div className="flex justify-between font-mono text-[9px] text-zinc-500 uppercase tracking-widest px-1">
-        <span>BLUR INTENSITY</span>
-        <span style={{ color: strokeColor, fontWeight: "bold" }}>{value}px</span>
+    <div className="opt-slider">
+      <div className="opt-slider-head">
+        <span>Background blur</span>
+        <span className="opt-readout">{value}px</span>
       </div>
 
       <div 
@@ -297,10 +298,10 @@ function SvgBlurSlider({ value, onChange, isAvant }: { value: number; onChange: 
         </div>
       </div>
       
-      <div className="flex justify-between font-mono text-[8px] text-zinc-600 tracking-wider px-1">
-        <span>0PX (SHARP)</span>
-        <span>20PX (BALANCED)</span>
-        <span>40PX (MAX BLUR)</span>
+      <div className="opt-slider-scale">
+        <span>Sharp</span>
+        <span>Balanced</span>
+        <span>Max blur</span>
       </div>
     </div>
   );
@@ -352,7 +353,7 @@ function SvgLatencySlider({ value, onChange, isAvant }: { value: number; onChang
   const strokeColor = isAvant ? "#39FF14" : "#FF1493";
 
   return (
-    <div className="flex flex-col gap-2 mt-4 select-none animate-in fade-in slide-in-from-top-1 duration-200">
+    <div className="opt-slider">
       <div 
         ref={containerRef}
         className="relative h-6 flex items-center cursor-pointer"
@@ -418,12 +419,12 @@ function SvgLatencySlider({ value, onChange, isAvant }: { value: number; onChang
         </div>
       </div>
       
-      <div className="flex justify-between font-mono text-[8px] text-zinc-600 tracking-wider px-1">
-        <span>−150ms (EARLY)</span>
-        <span style={{ color: value === 0 ? "rgba(255,255,255,0.4)" : strokeColor, fontWeight: "bold" }}>
-          {value === 0 ? "0ms (SYNCED)" : value > 0 ? `+${value}ms (LATE)` : `${value}ms (EARLY)`}
+      <div className="opt-slider-scale">
+        <span>−150 ms · early</span>
+        <span className="opt-readout">
+          {value === 0 ? "0 ms · synced" : value > 0 ? `+${value} ms · late` : `${value} ms · early`}
         </span>
-        <span>+150ms (LATE)</span>
+        <span>+150 ms · late</span>
       </div>
     </div>
   );
@@ -480,10 +481,10 @@ function SvgVolumeSlider({
   const strokeColor = isAvant ? "#39FF14" : "#FF1493";
 
   return (
-    <div className="flex flex-col gap-1.5 mt-2 select-none">
-      <div className="flex justify-between font-mono text-[9px] text-zinc-400 uppercase tracking-wider px-1">
+    <div className="opt-slider">
+      <div className="opt-slider-head">
         <span>{label}</span>
-        <span style={{ color: strokeColor, fontWeight: "bold" }}>{pct}%</span>
+        <span className="opt-readout">{pct}%</span>
       </div>
 
       <div 
@@ -556,24 +557,43 @@ function SvgVolumeSlider({
 // ── Custom SVG Icons for Options Categories ──
 function GameplayIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="w-5 h-5 md:w-4 md:h-4 stroke-current fill-none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg viewBox="0 0 24 24" className="stroke-current fill-none" strokeWidth="2.2" strokeLinecap="square" strokeLinejoin="miter">
       <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+    </svg>
+  );
+}
+
+function AudioIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="stroke-current fill-none" strokeWidth="2.2" strokeLinecap="square" strokeLinejoin="miter">
+      <path d="M11 5L6 9H2v6h4l5 4V5z" />
+      <path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14" />
     </svg>
   );
 }
 
 function ControlsIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="w-5 h-5 md:w-4 md:h-4 stroke-current fill-none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="2" y="4" width="20" height="16" rx="2" />
-      <path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M6 12h.01M18 12h.01M7 16h10" />
+    <svg viewBox="0 0 24 24" className="stroke-current fill-none" strokeWidth="2.2" strokeLinecap="square" strokeLinejoin="miter">
+      <rect x="2" y="5" width="20" height="14" />
+      <path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 13h.01M18 13h.01M8 16h8" />
+    </svg>
+  );
+}
+
+function GraphicsIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="stroke-current fill-none" strokeWidth="2.2" strokeLinecap="square" strokeLinejoin="miter">
+      <rect x="2" y="3" width="20" height="14" />
+      <path d="M8 21h8M12 17v4" />
+      <path d="M12 6.5l1.2 2.3 2.3 1.2-2.3 1.2L12 13.5l-1.2-2.3L8.5 10l2.3-1.2z" />
     </svg>
   );
 }
 
 function ThemesIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="w-5 h-5 md:w-4 md:h-4 stroke-current fill-none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg viewBox="0 0 24 24" className="stroke-current fill-none" strokeWidth="2.2" strokeLinecap="square" strokeLinejoin="miter">
       <path d="M9 18V5l12-2v13" />
       <circle cx="6" cy="18" r="3" />
       <circle cx="18" cy="16" r="3" />
@@ -581,31 +601,170 @@ function ThemesIcon() {
   );
 }
 
-function DisplayIcon() {
+function StageIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="w-5 h-5 md:w-4 md:h-4 stroke-current fill-none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="3" width="18" height="12" rx="2" />
-      <path d="M9 21h6M12 15v6M3 9h18M12 3v12" />
+    <svg viewBox="0 0 24 24" className="stroke-current fill-none" strokeWidth="2.2" strokeLinecap="square" strokeLinejoin="miter">
+      <path d="M2 20L9 4h6l7 16z" />
+      <path d="M12 4v16M5.5 12h13" />
     </svg>
   );
 }
 
 function FrontsIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="w-5 h-5 md:w-4 md:h-4 stroke-current fill-none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="4" y="3" width="16" height="18" rx="2" />
+    <svg viewBox="0 0 24 24" className="stroke-current fill-none" strokeWidth="2.2" strokeLinecap="square" strokeLinejoin="miter">
+      <rect x="4" y="3" width="16" height="18" />
       <path d="M12 8v8M8 12h8" />
-      <path d="M12 12l2-2m-4 4l-2 2" />
     </svg>
   );
 }
 
 function BacksIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="w-5 h-5 md:w-4 md:h-4 stroke-current fill-none" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="4" y="3" width="16" height="18" rx="2" />
-      <path d="M12 3v18M4 12h16M8 7l8 10" />
+    <svg viewBox="0 0 24 24" className="stroke-current fill-none" strokeWidth="2.2" strokeLinecap="square" strokeLinejoin="miter">
+      <rect x="4" y="3" width="16" height="18" />
+      <path d="M4 8l16 10M4 16L20 6" />
     </svg>
+  );
+}
+
+// ── Menu structure: three groups so players find things by intent (play / look / collect) ──
+type ToggleKey = "missSystem" | "hudMisses" | "comboDisplay" | "judgmentText" | "useLocalFiles" | "bgMusic" | "haptics" | "gameSenseEnabled" | "legacyGraphics" | "bloomGlow" | "bgAnimation" | "healingGauge" | "trackLyrics" | "sfxEnabled";
+
+type OptionsTab = 'gameplay' | 'audio' | 'controls' | 'graphics' | 'themes' | 'backgrounds' | 'fronts' | 'backs';
+
+const TAB_GROUPS: { id: string; label: string; tabs: { id: OptionsTab; label: string; desc: string; blurb: string; icon: ReactNode }[] }[] = [
+  {
+    id: 'play',
+    label: 'Play',
+    tabs: [
+      { id: 'gameplay', label: 'Gameplay', desc: 'HUD, fail rules, charts', blurb: 'What you see while you play, and how each song gets charted.', icon: <GameplayIcon /> },
+      { id: 'audio', label: 'Audio & Haptics', desc: 'Volume, vibration, LEDs', blurb: 'Sound effects, menu music, vibration and RGB device sync.', icon: <AudioIcon /> },
+      { id: 'controls', label: 'Controls & Sync', desc: 'Lane keys, latency', blurb: 'Rebind your lane keys and line the notes up with your audio.', icon: <ControlsIcon /> },
+    ],
+  },
+  {
+    id: 'look',
+    label: 'Look',
+    tabs: [
+      { id: 'graphics', label: 'Graphics', desc: 'Quality, resolution, FPS', blurb: 'Pick a preset, then fine-tune. Lower settings play smoother on older devices.', icon: <GraphicsIcon /> },
+      { id: 'themes', label: 'Note Colors', desc: 'Lane palettes', blurb: 'Choose a palette for the three lanes, or mix your own.', icon: <ThemesIcon /> },
+      { id: 'backgrounds', label: 'Stage & Camera', desc: 'Backdrops, track, POV', blurb: 'Backdrops, highway style and camera angle. Vault prestige unlocks more.', icon: <StageIcon /> },
+    ],
+  },
+  {
+    id: 'collect',
+    label: 'Collection',
+    tabs: [
+      { id: 'fronts', label: 'Card Fronts', desc: 'Frame skins', blurb: 'Frames for every card in your vault. Hover a skin to preview it.', icon: <FrontsIcon /> },
+      { id: 'backs', label: 'Card Backs', desc: 'Backs & pack style', blurb: 'Card backs, plus the pack your pulls arrive in.', icon: <BacksIcon /> },
+    ],
+  },
+];
+
+const ALL_TABS = TAB_GROUPS.flatMap(g => g.tabs.map(t => ({ ...t, group: g.label })));
+
+// ── Shared menu primitives (styled in styles/optionsMenu.css) ──
+function Panel({ title, hint, children, className }: { title?: ReactNode; hint?: ReactNode; children: ReactNode; className?: string }) {
+  return (
+    <section className={`opt-panel${className ? ` ${className}` : ''}`}>
+      {title && (
+        <header className="opt-panel-head">
+          <h3 className="opt-panel-title">{title}</h3>
+          {hint && <span className="opt-panel-hint">{hint}</span>}
+        </header>
+      )}
+      {children}
+    </section>
+  );
+}
+
+function SettingRow({ label, desc, tag, children }: { label: ReactNode; desc?: ReactNode; tag?: ReactNode; children?: ReactNode }) {
+  return (
+    <div className="opt-row">
+      <div className="opt-row-text">
+        <span className="opt-row-label">
+          {label}
+          {tag && <span className="opt-tag">{tag}</span>}
+        </span>
+        {desc && <span className="opt-row-desc">{desc}</span>}
+      </div>
+      {children && <div className="opt-row-control">{children}</div>}
+    </div>
+  );
+}
+
+function Switch({ checked, onToggle, label, locked }: { checked: boolean; onToggle: () => void; label: string; locked?: boolean }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={locked ? false : checked}
+      aria-label={locked ? `${label} (locked)` : label}
+      title={locked ? 'LOCKED — ???' : undefined}
+      className={`opt-switch${locked ? ' is-locked' : ''}`}
+      onClick={onToggle}
+    >
+      {locked ? <Lock size={11} /> : <span className="opt-switch-thumb" />}
+    </button>
+  );
+}
+
+function SegButton({ active, locked, label, sub, icon, onClick }: { active: boolean; locked?: boolean; label: ReactNode; sub?: ReactNode; icon?: ReactNode; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      className={`opt-seg-btn${locked ? ' is-locked' : ''}`}
+      onClick={onClick}
+      title={locked ? 'LOCKED — ???' : undefined}
+    >
+      <span className="opt-seg-label">
+        <span>{label}</span>
+        {locked ? <Lock size={11} /> : icon}
+      </span>
+      {sub && <span className="opt-seg-sub">{sub}</span>}
+    </button>
+  );
+}
+
+function CodeUnlock({ title, body, value, error, placeholder, onChange, onSubmit }: {
+  title: string;
+  body: string;
+  value: string;
+  error: string | null;
+  placeholder: string;
+  onChange: (v: string) => void;
+  onSubmit: () => void;
+}) {
+  return (
+    <div className="opt-unlock">
+      <div className="opt-unlock-head">
+        <Lock size={16} className="opt-unlock-icon" />
+        <div>
+          <div className="opt-unlock-title">{title} <span className="opt-tag opt-tag--muted">ENCRYPTED</span></div>
+          <p className="opt-unlock-body">{body}</p>
+        </div>
+      </div>
+      <form
+        className="opt-unlock-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSubmit();
+        }}
+      >
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="opt-input"
+          aria-label={`${title} access code`}
+        />
+        <button type="submit" className="opt-btn opt-btn--acid">Decrypt &amp; unlock</button>
+      </form>
+      {error && <span className="opt-error">⚠ {error}</span>}
+    </div>
   );
 }
 
@@ -613,10 +772,10 @@ function BacksIcon() {
 function AutoLatencyCalibrator({
   offsetMs,
   onCalibrated,
-  isAvant
 }: {
   offsetMs: number;
   onCalibrated: (offsetMs: number) => void;
+  // Accent now comes from the menu's CSS theme; prop kept for call-site compatibility.
   isAvant?: boolean;
 }) {
   const [phase, setPhase] = useState<'idle' | 'countdown' | 'calibrating' | 'done'>('idle');
@@ -785,86 +944,61 @@ function AutoLatencyCalibrator({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [phase, handleTap]);
 
+  const shownOffset = liveOffset !== null ? liveOffset : offsetMs;
+
   return (
-    <div className="bg-black/50 border border-white/10 rounded-lg p-4 space-y-4 text-center select-none">
-      <div className="flex items-center justify-between font-mono text-[9px] uppercase tracking-wider text-zinc-400">
-        <span>AUTO LATENCY CALIBRATOR</span>
-        <span style={{ color: isAvant ? '#39FF14' : '#FF1493', fontWeight: 'bold' }}>
-          {liveOffset !== null ? `${liveOffset > 0 ? `+${liveOffset}` : liveOffset}ms` : `${offsetMs > 0 ? `+${offsetMs}` : offsetMs}ms`}
-        </span>
+    <div className="opt-calib">
+      <div className="opt-calib-head">
+        <span>Tap test</span>
+        <span className="opt-readout">{shownOffset > 0 ? `+${shownOffset}` : shownOffset} ms</span>
       </div>
 
       {phase === 'idle' && (
-        <div className="space-y-3 py-2">
-          <p className="font-mono text-[10px] text-zinc-400 max-w-xs mx-auto leading-relaxed">
-            Tap along to 8 beats. We'll measure your audio delay and set the offset.
+        <div className="opt-calib-stage">
+          <p className="opt-calib-copy">
+            Tap any key, or this panel, on each of 8 beats. We'll measure your audio delay and set the offset for you.
           </p>
-          <button
-            onClick={startCalibration}
-            className={`font-mono text-[11px] font-bold py-2.5 px-6 rounded border cursor-pointer uppercase tracking-widest transition-all ${
-              isAvant 
-                ? 'bg-[#39FF14] text-black border-[#39FF14] hover:scale-105 shadow-[0_0_15px_rgba(57,255,20,0.4)]'
-                : 'bg-[#FF1493] text-white border-[#FF1493] hover:scale-105 shadow-[0_0_15px_rgba(255,20,147,0.4)]'
-            }`}
-          >
-            🎯 START AUTO-CALIBRATION
+          <button type="button" onClick={startCalibration} className="opt-btn opt-btn--solid">
+            Start tap test
           </button>
         </div>
       )}
 
       {phase === 'countdown' && (
-        <div className="py-4 space-y-2 animate-pulse">
-          <div className="font-mono font-black text-4xl text-white tracking-widest">{countdown}</div>
-          <div className="font-mono text-[9px] text-zinc-400 uppercase tracking-widest">GET READY TO TAP...</div>
+        <div className="opt-calib-stage">
+          <div className="opt-calib-count">{countdown}</div>
+          <div className="opt-calib-copy">Get ready to tap…</div>
         </div>
       )}
 
       {phase === 'calibrating' && (
-        <div 
-          onClick={handleTap}
-          className="py-4 border border-dashed border-white/20 rounded cursor-pointer active:scale-95 transition-transform space-y-3 bg-white/5"
-        >
-          <div className="flex justify-center gap-1.5">
+        <div onClick={handleTap} className="opt-calib-stage opt-calib-tapzone">
+          <div className="opt-calib-beats">
             {[0, 1, 2, 3, 4, 5, 6, 7].map(idx => (
-              <div 
+              <span
                 key={idx}
-                className={`w-3.5 h-3.5 rounded-full transition-all duration-150 ${
-                  idx === currentBeatIndex 
-                    ? (isAvant ? 'bg-[#39FF14] scale-125 shadow-[0_0_10px_#39FF14]' : 'bg-[#FF1493] scale-125 shadow-[0_0_10px_#FF1493]')
-                    : idx < currentBeatIndex 
-                      ? 'bg-white/40' 
-                      : 'bg-white/10'
-                }`}
+                className={`opt-calib-beat${idx === currentBeatIndex ? ' is-now' : idx < currentBeatIndex ? ' is-past' : ''}`}
               />
             ))}
           </div>
-          <div className="font-mono font-black text-xs text-white uppercase tracking-widest">
-            TAP ON THE BEAT! ({taps.length} TAPS RECORDED)
-          </div>
+          <div className="opt-calib-prompt">Tap on the beat · {taps.length} recorded</div>
           {taps.length > 0 && (
-            <div className="font-mono text-[9px] text-[#39FF14] tracking-wider">
-              LAST TAP: {taps[taps.length - 1].deltaMs > 0 ? `+${taps[taps.length - 1].deltaMs}` : taps[taps.length - 1].deltaMs}ms
+            <div className="opt-readout">
+              Last tap {taps[taps.length - 1].deltaMs > 0 ? `+${taps[taps.length - 1].deltaMs}` : taps[taps.length - 1].deltaMs} ms
             </div>
           )}
         </div>
       )}
 
       {phase === 'done' && (
-        <div className="py-2 space-y-3 animate-in fade-in duration-300">
-          <div className="font-mono font-black text-lg text-white tracking-widest uppercase">
-            ✅ CALIBRATION COMPLETE!
+        <div className="opt-calib-stage">
+          <div className="opt-calib-prompt">Calibrated</div>
+          <div className="opt-readout opt-readout--ok">
+            Offset {liveOffset !== null && liveOffset > 0 ? `+${liveOffset}` : liveOffset ?? 0} ms · {taps.length} valid taps
           </div>
-          <div className="font-mono text-[11px] text-[#39FF14] font-bold tracking-wider">
-            CALIBRATED LATENCY: {liveOffset !== null && liveOffset > 0 ? `+${liveOffset}` : liveOffset}ms ({taps.length} VALID TAPS)
-          </div>
-          <div className="flex gap-2 justify-center pt-1">
-            <button
-              onClick={startCalibration}
-              className="font-mono text-[9px] font-bold py-1.5 px-4 bg-white/10 border border-white/20 hover:bg-white/20 text-white rounded cursor-pointer uppercase"
-            >
-              🔄 RE-TEST
-            </button>
-          </div>
+          <button type="button" onClick={startCalibration} className="opt-btn opt-btn--ghost">
+            Run again
+          </button>
         </div>
       )}
     </div>
@@ -876,13 +1010,21 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
   const [, setLocation] = useLocation();
   const [opts, setOpts] = useState<GameOpts>(loadOpts());
   const [latencyMode, setLatencyMode] = useState<'auto' | 'manual'>('auto');
-  const [activeTab, setActiveTab] = useState<'gameplay' | 'controls' | 'themes' | 'backgrounds' | 'fronts' | 'backs'>('gameplay');
+  const [activeTab, setActiveTab] = useState<OptionsTab>('gameplay');
   const [remappingLane, setRemappingLane] = useState<number | null>(null);
   const [resetState, setResetState] = useState<"idle" | "confirm">("idle");
   const [gsStatus, setGsStatus] = useState<GameSenseStatus>("scanning");
   const resetTimer = useRef<NodeJS.Timeout | null>(null);
   const colorRefs = [useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null), useRef<HTMLInputElement>(null)];
   const [hapticsTestActive, setHapticsTestActive] = useState(false);
+  const navRef = useRef<HTMLElement>(null);
+
+  // Keep the active tab visible in the horizontally scrolling mobile nav
+  useEffect(() => {
+    if (!isOpen) return;
+    const el = navRef.current?.querySelector<HTMLElement>('[aria-selected="true"]');
+    el?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, [activeTab, isOpen]);
 
   // Sync state with useVaultStore
   const {
@@ -1007,7 +1149,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
   }, [remappingLane]);
 
   // Save specific settings helper
-  const toggleSetting = (k: "missSystem" | "hudMisses" | "comboDisplay" | "judgmentText" | "useLocalFiles" | "bgMusic" | "haptics" | "gameSenseEnabled" | "legacyGraphics" | "bloomGlow" | "bgAnimation" | "healingGauge" | "trackLyrics") => {
+  const toggleSetting = (k: ToggleKey) => {
     if (k === "missSystem" && localStorage.getItem("opt_unlocked_noclip") !== "true") {
       audioManager.playSfx('locked_out', 0.15);
       return;
@@ -1125,42 +1267,12 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
     audioManager.playSfx('tap_nav', 0.1);
   };
 
-  const renderToggle = (k: "missSystem" | "hudMisses" | "comboDisplay" | "judgmentText" | "useLocalFiles" | "bgMusic" | "haptics" | "gameSenseEnabled" | "legacyGraphics" | "bloomGlow" | "bgAnimation" | "healingGauge" | "trackLyrics") => {
+  const renderToggle = (k: ToggleKey, label: string) => {
     const isNoclipLocked = k === "missSystem" && localStorage.getItem("opt_unlocked_noclip") !== "true";
     if (isNoclipLocked) {
-      return (
-        <button 
-          onClick={() => audioManager.playSfx('locked_out', 0.15)}
-          className="w-11 h-5 rounded-full p-0.5 border border-red-500/20 bg-red-950/20 flex items-center justify-center cursor-not-allowed"
-          title="LOCKED — ???"
-        >
-          <Lock size={10} className="text-red-500 animate-pulse" />
-        </button>
-      );
+      return <Switch checked={false} locked label={label} onToggle={() => audioManager.playSfx('locked_out', 0.15)} />;
     }
-    const val = opts[k];
-    const activeColor = isAvant ? "#39FF14" : "#FF1493";
-    return (
-      <button 
-        onClick={() => toggleSetting(k)}
-        className={`w-11 h-5 rounded-full p-0.5 transition-all relative cursor-pointer border ${
-          val 
-            ? isAvant 
-              ? 'bg-[#39FF14]/15 border-[#39FF14] shadow-[0_0_8px_rgba(57,255,20,0.25)]' 
-              : 'bg-[#FF1493]/15 border-[#FF1493] shadow-[0_0_8px_rgba(255,20,147,0.25)]'
-            : 'bg-black/40 border-white/10 hover:border-white/20'
-        }`}
-      >
-        <span 
-          className={`w-3.5 h-3.5 rounded-full block transition-all ${
-            val 
-              ? 'translate-x-[22px]' 
-               : 'translate-x-0 bg-zinc-600'
-          }`}
-          style={{ background: val ? activeColor : undefined }}
-        />
-      </button>
-    );
+    return <Switch checked={!!opts[k]} label={label} onToggle={() => toggleSetting(k)} />;
   };
 
   const setNoteThemePreset = (themeId: string, colors: string[]) => {
@@ -1281,7 +1393,6 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
 
   const activeTheme = getActiveTheme(opts.noteTheme);
   const isAvant = activeTheme === 'avant-garde';
-  const themeColor = isAvant ? "#39FF14" : "#FF1493";
 
   const NOTE_THEME_PRESETS = [
     { id: 'artwork', name: 'Song Artwork', colors: ['#999999', '#999999', '#999999'] },
@@ -1303,758 +1414,348 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
     { id: 'th3scr1b3', name: 'th3scr1b3 Signature', desc: 'Abstract red splatters & gothic marks', style: { background: 'radial-gradient(circle, #4a002a, #0d0006)', border: '1px dashed #ff007f' } },
   ];
 
+  const currentTab = ALL_TABS.find(t => t.id === activeTab) ?? ALL_TABS[0];
+  const currentTabIndex = ALL_TABS.indexOf(currentTab);
+  const curChartVariant = resolveChartVariant(typeof localStorage !== 'undefined' ? localStorage.getItem('opt_chartVariant') : null, isChartEditionsUnlocked);
+  const fmtMs = (v: number) => (v > 0 ? `+${v}` : `${v}`) + ' ms';
+
+  const selectTab = (id: OptionsTab) => {
+    audioManager.playSfx('tap_nav', 0.1);
+    setActiveTab(id);
+  };
+
+  const renderSkinFooter = (isUnlocked: boolean, isSelected: boolean, cost: number, onUnlock: () => void, freeLabel = 'Owned') => (
+    <div className="opt-tile-foot">
+      {isUnlocked ? (
+        isSelected ? (
+          <span className="opt-status opt-status--on"><Check size={12} /> Equipped</span>
+        ) : (
+          <span className="opt-status">{freeLabel}</span>
+        )
+      ) : (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onUnlock();
+          }}
+          className="opt-btn opt-btn--gold opt-btn--block"
+        >
+          Unlock · {cost} V⚡
+        </button>
+      )}
+    </div>
+  );
+
   return (
-    <div 
-      className="fixed inset-0 z-[150] flex items-center justify-center p-0 md:p-4 bg-black/90 backdrop-blur-md animate-fade-in"
-      onClick={onClose}
-    >
-      <div 
-        className="w-full h-full md:h-[85vh] md:max-w-5xl bg-[#080808] border-0 md:border flex flex-col md:rounded-lg overflow-hidden shadow-2xl relative"
-        style={{ borderColor: isAvant ? "#39FF14" : "rgba(255, 20, 147, 0.4)" }}
+    <div className="opt-overlay" onClick={onClose}>
+      <div
+        className="opt-root"
+        data-theme={isAvant ? 'avant' : 'classic'}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="opt-title"
         onClick={e => e.stopPropagation()}
       >
-        {/* Top Header Bar */}
-        <div 
-          className="flex items-center justify-between px-4 md:px-6 py-3 md:py-4 border-b border-white/10 shrink-0"
-          style={{ background: isAvant ? "rgba(57, 255, 20, 0.04)" : "rgba(255, 20, 147, 0.04)" }}
-        >
-          <div className="flex items-center gap-2.5">
-            <Sliders size={18} className={isAvant ? "text-[#39FF14]" : "text-[#FF1493]"} />
-            <h1 className="text-sm md:text-base brutalist-menu-title italic tracking-wide" style={{ '--neon-accent': isAvant ? '#39FF14' : '#FF1493' } as any}>
-              SYSTEM CONFIG
-            </h1>
+        {/* ── Header ── */}
+        <header className="opt-head">
+          <div className="opt-head-id">
+            <span className="opt-brand">PIM // th3v4ult</span>
+            <h1 id="opt-title" className="opt-title">Settings</h1>
           </div>
-
-          <div className="flex items-center gap-3">
-            {/* Balance Ticker */}
-            <div className="flex items-center gap-1 font-mono text-[8.5px] md:text-[9.5px] font-black text-[#ffd700] tracking-wider bg-white/5 border border-white/10 px-2 py-1 rounded">
-              <span>BALANCE: {tokenBalance} V⚡</span>
-            </div>
-
-            <button 
-              onClick={onClose}
-              className="w-11 h-11 flex items-center justify-center hover:bg-white/10 rounded transition-colors text-white/50 hover:text-white active:scale-95 duration-150 cursor-pointer"
-            >
-              <X size={20} />
+          <div className="opt-head-actions">
+            <span className="opt-chip" title="V-token balance">
+              <VTokenCrestIcon size={13} color="#E5B800" />
+              {tokenBalance} V⚡
+            </span>
+            <button type="button" onClick={onClose} className="opt-close" aria-label="Close settings">
+              <kbd>ESC</kbd>
+              <X size={18} />
             </button>
           </div>
-        </div>
+        </header>
 
-        {/* Two-Pane Body Layout */}
-        <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-          
-          {/* Left Sidebar / Top Mobile Tab Selection */}
-          <div className="w-full md:w-[240px] shrink-0 bg-black/35 border-b md:border-b-0 md:border-r border-white/5 flex flex-col justify-between p-2 md:p-4">
-            <div 
-              className="flex overflow-x-auto md:flex-col gap-2 w-full pb-2 md:pb-0 scrollbar-none"
-              style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}
-            >
-              {[
-                { id: 'gameplay', label: 'Gameplay Core', short: 'Core', desc: 'Combos, HUD, local library', icon: <GameplayIcon /> },
-                { id: 'controls', label: 'Keys & Latency', short: 'Keys', desc: 'Remapping, visual sync', icon: <ControlsIcon /> },
-                { id: 'themes', label: 'Note Themes', short: 'Themes', desc: 'Lane colors & presets', icon: <ThemesIcon /> },
-                { id: 'backgrounds', label: 'Display & Blur', short: 'Display', desc: 'Background grid options', icon: <DisplayIcon /> },
-                { id: 'fronts', label: 'Card Fronts', short: 'Fronts', desc: 'Unlockable custom skins', icon: <FrontsIcon /> },
-                { id: 'backs', label: 'Card Backs', short: 'Backs', desc: 'Standard & unlockable backs', icon: <BacksIcon /> }
-              ].map(tab => {
-                const active = activeTab === tab.id;
-                return (
+        <div className="opt-body">
+          {/* ── Navigation ── */}
+          <nav ref={navRef} className="opt-nav" role="tablist" aria-label="Settings sections">
+            {TAB_GROUPS.map((group, gi) => (
+              <div key={group.id} className="opt-nav-group">
+                <div className="opt-nav-group-label">
+                  <span>0{gi + 1}</span> {group.label}
+                </div>
+                {group.tabs.map(tab => (
                   <button
                     key={tab.id}
-                    onClick={() => {
-                      audioManager.playSfx('tap_nav', 0.1);
-                      setActiveTab(tab.id as any);
-                    }}
-                    className={`shrink-0 md:shrink-1 text-center md:text-left p-1.5 md:p-2.5 rounded border transition-all flex flex-col items-center md:items-start gap-1 group cursor-pointer ${
-                      active
-                        ? isAvant 
-                          ? 'border-[#39FF14] bg-[#39FF14]/5 text-white shadow-[0_0_8px_rgba(57,255,20,0.05)]' 
-                          : 'border-[#FF1493] bg-[#FF1493]/5 text-white shadow-[0_0_8px_rgba(255,20,147,0.05)]'
-                        : 'border-transparent hover:bg-white/5 text-white/60 hover:text-white'
-                    }`}
+                    type="button"
+                    role="tab"
+                    aria-selected={activeTab === tab.id}
+                    className="opt-nav-item"
+                    onClick={() => selectTab(tab.id)}
                   >
-                    {/* SVG Icon */}
-                    <div 
-                      className={`transition-colors duration-200 ${
-                        active 
-                          ? isAvant ? 'text-[#39FF14]' : 'text-[#FF1493]' 
-                          : 'text-white/35 group-hover:text-white'
-                      }`}
-                    >
-                      {tab.icon}
-                    </div>
-
-                    <span className="font-mono text-[6.5px] sm:text-[7.5px] md:text-[10px] font-black uppercase tracking-wider whitespace-nowrap">
-                      <span className="md:hidden">{tab.short}</span>
-                      <span className="hidden md:inline">{tab.label}</span>
+                    <span className="opt-nav-icon">{tab.icon}</span>
+                    <span className="opt-nav-text">
+                      <span className="opt-nav-label">{tab.label}</span>
+                      <span className="opt-nav-desc">{tab.desc}</span>
                     </span>
-                    <span className="hidden md:inline text-[7.5px] opacity-60 font-mono font-medium">{tab.desc}</span>
                   </button>
-                );
-              })}
+                ))}
+              </div>
+            ))}
+          </nav>
+
+          {/* ── Content ── */}
+          <main className="opt-content" key={activeTab} role="tabpanel" aria-label={currentTab.label}>
+            <div className="opt-page-head">
+              <span className="opt-eyebrow">{currentTab.group} / {String(currentTabIndex + 1).padStart(2, '0')}</span>
+              <h2 className="opt-page-title">{currentTab.label}</h2>
+              <p className="opt-page-blurb">{currentTab.blurb}</p>
             </div>
 
-            {/* Bottom Reset (Desktop only) */}
-            <div className="hidden md:block space-y-3 pt-4 border-t border-white/5">
-              <button
-                onClick={handleReset}
-                className={`w-full text-center py-2 border rounded font-mono text-[8px] font-black uppercase tracking-widest transition-all cursor-pointer ${
-                  resetState === "confirm"
-                    ? "bg-red-600 border-red-600 text-white animate-pulse"
-                    : "border-white/10 text-white/40 hover:text-white hover:border-white/20"
-                }`}
-              >
-                {resetState === "confirm" ? "⚡ CONFIRM RESET" : "RESET CONFIG"}
-              </button>
-            </div>
-          </div>
-
-          {/* Right Panel Tab Content */}
-          <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-black/10">
-            
+            {/* ════ GAMEPLAY ════ */}
             {activeTab === 'gameplay' && (
-              <div className="space-y-6 animate-fade-in">
-                <div>
-                  <h2 className="text-base md:text-lg brutalist-menu-title italic mb-1" style={{ '--neon-accent': isAvant ? '#39FF14' : '#FF1493' } as any}>Gameplay Core Controls</h2>
-                  <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Fail rules, HUD and sound</p>
-                </div>
+              <div className="opt-stack">
+                <Panel title="HUD & scoring">
+                  <SettingRow label="Miss system" desc="Misses mute the lane and reset your multiplier.">
+                    {renderToggle('missSystem', 'Miss system')}
+                  </SettingRow>
+                  <SettingRow label="Miss counter" desc="Shows your miss count in the top bar.">
+                    {renderToggle('hudMisses', 'Miss counter')}
+                  </SettingRow>
+                  <SettingRow label="Healing hold meter" tag="108–162 Hz" desc="Holding long notes refills lost misses.">
+                    {renderToggle('healingGauge', 'Healing hold meter')}
+                  </SettingRow>
+                  <SettingRow label="Combo streak" desc="Combo count in the middle of the screen.">
+                    {renderToggle('comboDisplay', 'Combo streak')}
+                  </SettingRow>
+                  <SettingRow label="Judgment text" desc="Shows PERFECT, GOOD or MISS on each hit.">
+                    {renderToggle('judgmentText', 'Judgment text')}
+                  </SettingRow>
+                  <SettingRow label="Track lyrics" desc="Words painted on the track surface during play.">
+                    {renderToggle('trackLyrics', 'Track lyrics')}
+                  </SettingRow>
+                </Panel>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Combos & HUD Toggle */}
-                  <div className="bg-black/40 border border-white/5 p-4 rounded-lg space-y-4">
-                    <h3 className="font-mono text-[9px] font-black text-white/40 uppercase tracking-wider border-b border-white/5 pb-1">HUD & SCORING</h3>
-                    
-                    <div className="flex justify-between items-center">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-white font-mono uppercase">Miss System (Fails)</span>
-                        <span className="text-[8px] text-zinc-500 font-mono">Misses mute the lane and reset your multiplier</span>
-                      </div>
-                      {renderToggle('missSystem')}
-                    </div>
-
-                    <div className="flex justify-between items-center">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-white font-mono uppercase">HUD Miss Counters</span>
-                        <span className="text-[8px] text-zinc-500 font-mono">Miss count in the top bar</span>
-                      </div>
-                      {renderToggle('hudMisses')}
-                    </div>
-
-                    <div className="flex justify-between items-center">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-[#00E5FF] font-mono uppercase">Healing Hold Meter</span>
-                        <span className="text-[8px] text-zinc-500 font-mono">Fills during hold notes to restore lost misses (108-162Hz)</span>
-                      </div>
-                      {renderToggle('healingGauge')}
-                    </div>
-
-                    <div className="flex justify-between items-center">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-white font-mono uppercase">Combo Streak Display</span>
-                        <span className="text-[8px] text-zinc-500 font-mono">Combo count in the middle of the screen</span>
-                      </div>
-                      {renderToggle('comboDisplay')}
-                    </div>
-
-                    <div className="flex justify-between items-center">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-white font-mono uppercase">Judgment Text Indicators</span>
-                        <span className="text-[8px] text-zinc-500 font-mono">Shows PERFECT, GOOD or MISS on each hit</span>
-                      </div>
-                      {renderToggle('judgmentText')}
-                    </div>
-
-                    <div className="flex justify-between items-center">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-white font-mono uppercase">Track Lyrics</span>
-                        <span className="text-[8px] text-zinc-500 font-mono">Words painted on the track surface during play</span>
-                      </div>
-                      {renderToggle('trackLyrics')}
-                    </div>
-                  </div>
-
-                  {/* Audio & Network Files */}
-                  <div className="bg-black/40 border border-white/5 p-4 rounded-lg space-y-4">
-                    <h3 className="font-mono text-[9px] font-black text-white/40 uppercase tracking-wider border-b border-white/5 pb-1">BGM & LOCAL SYSTEM</h3>
-
-                    <div className="space-y-2 border-b border-white/5 pb-3">
-                      <div className="flex justify-between items-center">
-                        <div className="flex flex-col">
-                          <span className="text-[10px] font-bold text-white font-mono uppercase">Sound Effects (SFX)</span>
-                          <span className="text-[8px] text-zinc-500 font-mono">Menu clicks and hit sounds</span>
-                        </div>
-                        {renderToggle('sfxEnabled')}
-                      </div>
-                      {opts.sfxEnabled && (
-                        <SvgVolumeSlider
-                          label="SFX VOLUME"
-                          value={opts.sfxVolume}
-                          onChange={(v) => {
-                            localStorage.setItem("opt_sfxVolume", String(v));
-                            setOpts(o => ({ ...o, sfxVolume: v }));
-                            updateSettings({ sfxVolume: v });
-                            audioManager.playSfx('tap_nav', 0.1);
-                          }}
-                          isAvant={isAvant}
-                        />
-                      )}
-                    </div>
-
-                    <div className="space-y-2 border-b border-white/5 pb-3">
-                      <div className="flex justify-between items-center">
-                        <div className="flex flex-col">
-                          <span className="text-[10px] font-bold text-white font-mono uppercase">Ambient BGM</span>
-                          <span className="text-[8px] text-zinc-500 font-mono">Tape hiss and radio hum in vault menus</span>
-                        </div>
-                        {renderToggle('bgMusic')}
-                      </div>
-                      {opts.bgMusic && (
-                        <SvgVolumeSlider
-                          label="MUSIC VOLUME"
-                          value={opts.musicVolume}
-                          onChange={(v) => {
-                            localStorage.setItem("opt_musicVolume", String(v));
-                            setOpts(o => ({ ...o, musicVolume: v }));
-                            updateSettings({ musicVolume: v });
-                            window.dispatchEvent(new Event("bgmusic_volume_change"));
-                          }}
-                          isAvant={isAvant}
-                        />
-                      )}
-                    </div>
-
-                    <div className="flex justify-between items-center">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-white font-mono uppercase">Force Local Audio Files</span>
-                        <span className="text-[8px] text-zinc-500 font-mono">Use downloaded files instead of streaming</span>
-                      </div>
-                      {renderToggle('useLocalFiles')}
-                    </div>
-
-                    <div className="flex justify-between items-center">
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-bold text-white font-mono uppercase">System Haptic Vibrations</span>
-                          <span className="text-[8px] font-mono px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
-                            {haptics.getCapabilities().primaryDriver}
-                          </span>
-                        </div>
-                        <span className="text-[8px] text-zinc-500 font-mono">
-                          Vibrate on hits (phone, gamepad or supported devices)
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            haptics.mediumTap();
-                            setHapticsTestActive(true);
-                            setTimeout(() => setHapticsTestActive(false), 800);
-                          }}
-                          className={`text-[9px] font-mono px-2 py-1 rounded border transition-all cursor-pointer font-bold ${
-                            hapticsTestActive
-                              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.3)] scale-105'
-                              : 'bg-white/5 text-zinc-400 border-white/10 hover:border-white/30 hover:text-white hover:bg-white/10'
-                          }`}
-                          title="Test vibration"
-                        >
-                          {hapticsTestActive ? 'PULSED!' : 'TEST'}
-                        </button>
-                        {renderToggle('haptics')}
-                      </div>
-                    </div>
-
-                    <div className="flex justify-between items-center border-t border-white/5 pt-3">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-white font-mono uppercase">SteelSeries GameSense</span>
-                        <span className="text-[8px] text-zinc-500 font-mono">
-                          Sync device LEDs (Status: <span style={{ 
-                            color: gsStatus === 'connected' ? '#39FF14' : 
-                                   gsStatus === 'scanning' ? '#E5B800' : 
-                                   gsStatus === 'disconnected' ? 'rgba(255,255,255,0.4)' : '#FF1493'
-                          }}>
-                            {gsStatus.toUpperCase()}
-                          </span>)
-                        </span>
-                      </div>
-                      {renderToggle('gameSenseEnabled')}
-                    </div>
-                  </div>
-                </div>
-
-                {/* ── GRAPHICS, RESOLUTION & PERFORMANCE ENGINE ── */}
-                <div className="bg-black/40 border border-white/5 p-4 rounded-lg space-y-4">
-                  <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                    <div className="flex items-center gap-2">
-                      <Monitor size={14} style={{ color: isAvant ? '#39FF14' : '#FF1493' }} />
-                      <h3 className="font-mono text-[9px] font-black text-white uppercase tracking-wider">
-                        GRAPHICS & RENDER RESOLUTION ENGINE
-                      </h3>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-[7.5px] px-2 py-0.5 rounded border border-white/10 bg-white/5 text-zinc-300">
-                        DPR: {getEffectiveDpr(opts.renderResolution).toFixed(2)}x
-                      </span>
-                      <span className="font-mono text-[7.5px] px-2 py-0.5 rounded border border-white/10 bg-white/5 uppercase" style={{ color: isAvant ? '#39FF14' : '#FF1493' }}>
-                        GFX: {opts.gfxLevel.toUpperCase()}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* GFX Preset Cards */}
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between items-center">
-                      <span className="font-mono text-[8.5px] font-bold text-white/70 uppercase">Master Quality Preset</span>
-                      <span className="font-mono text-[7.5px] text-zinc-500">Sets resolution, bloom and particles at once</span>
-                    </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      {[
-                        { id: 'ultra', label: 'ULTRA', desc: 'Native Retina · Max FX', icon: Sparkles },
-                        { id: 'high', label: 'HIGH', desc: '1080p · Standard Glow', icon: Zap },
-                        { id: 'medium', label: 'BALANCED', desc: '720p · 50% Particles', icon: Layers },
-                        { id: 'low', label: 'PERF / POTATO', desc: '540p · Max Framerate', icon: Cpu },
-                      ].map((preset) => {
-                        const active = opts.gfxLevel === preset.id;
-                        const IconComponent = preset.icon;
-                        return (
-                          <button
-                            key={preset.id}
-                            onClick={() => setGfxLevelOption(preset.id as GfxLevel)}
-                            className={`p-2.5 rounded border text-left flex flex-col justify-between transition-all cursor-pointer ${
-                              active
-                                ? isAvant
-                                  ? 'border-[#39FF14] bg-[#39FF14]/15 shadow-[0_0_12px_rgba(57,255,20,0.2)]'
-                                  : 'border-[#FF1493] bg-[#FF1493]/15 shadow-[0_0_12px_rgba(255,20,147,0.2)]'
-                                : 'border-white/5 bg-black/40 hover:border-white/20 text-white/50 hover:text-white'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between w-full mb-1">
-                              <span className={`font-mono text-[9px] font-black tracking-wider uppercase ${active ? 'text-white' : 'text-zinc-400'}`}>
-                                {preset.label}
-                              </span>
-                              <IconComponent size={10} className={active ? (isAvant ? 'text-[#39FF14]' : 'text-[#FF1493]') : 'text-zinc-500'} />
-                            </div>
-                            <span className="font-mono text-[7px] text-zinc-400 leading-tight">
-                              {preset.desc}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Render Resolution Scale */}
-                  <div className="space-y-1.5 pt-1 border-t border-white/5">
-                    <div className="flex justify-between items-center">
-                      <span className="font-mono text-[8.5px] font-bold text-white/70 uppercase">Render Resolution (Canvas DPI Scale)</span>
-                      <span className="font-mono text-[7.5px] text-zinc-500">Lower it for smoother play on slow devices</span>
-                    </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      {[
-                        { id: 'native', label: 'NATIVE ULTRA', sub: 'Retina (DPR Max)' },
-                        { id: 'high', label: '1080P HIGH', sub: '1.50x Scale' },
-                        { id: 'medium', label: '720P BALANCED', sub: '1.00x Scale' },
-                        { id: 'low', label: '540P SAVER', sub: '0.67x Scale' },
-                      ].map((res) => {
-                        const active = opts.renderResolution === res.id;
-                        return (
-                          <button
-                            key={res.id}
-                            onClick={() => setResolutionOption(res.id as RenderResolution)}
-                            className={`py-2 px-2.5 rounded border text-center transition-all cursor-pointer flex flex-col items-center justify-center ${
-                              active
-                                ? isAvant
-                                  ? 'border-[#39FF14] bg-[#39FF14]/15 text-white shadow-[0_0_10px_rgba(57,255,20,0.2)]'
-                                  : 'border-[#FF1493] bg-[#FF1493]/15 text-white shadow-[0_0_10px_rgba(255,20,147,0.2)]'
-                                : 'border-white/5 bg-black/40 text-white/50 hover:border-white/20 hover:text-white'
-                            }`}
-                          >
-                            <span className="font-mono text-[8.5px] font-black uppercase tracking-wider">{res.label}</span>
-                            <span className="font-mono text-[7px] text-zinc-400">{res.sub}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Framerate Target */}
-                  <div className="space-y-1.5 pt-1 border-t border-white/5">
-                    <div className="flex justify-between items-center">
-                      <span className="font-mono text-[8.5px] font-bold text-white/70 uppercase">Framerate Target (FPS Cap)</span>
-                      <span className="font-mono text-[7.5px] text-zinc-500">Lower it to save battery</span>
-                    </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      {[
-                        { id: 'auto', label: 'AUTO NATIVE', sub: 'Display Refresh' },
-                        { id: '120', label: '120 FPS', sub: 'High Refresh' },
-                        { id: '60', label: '60 FPS', sub: 'Standard Locked' },
-                        { id: '30', label: '30 FPS', sub: 'Battery Saver' },
-                      ].map((fps) => {
-                        const active = opts.fpsTarget === fps.id;
-                        return (
-                          <button
-                            key={fps.id}
-                            onClick={() => setFpsTargetOption(fps.id as FpsTarget)}
-                            className={`py-2 px-2 rounded border text-center transition-all cursor-pointer flex flex-col items-center justify-center ${
-                              active
-                                ? isAvant
-                                  ? 'border-[#39FF14] bg-[#39FF14]/15 text-white shadow-[0_0_8px_rgba(57,255,20,0.2)]'
-                                  : 'border-[#FF1493] bg-[#FF1493]/15 text-white shadow-[0_0_8px_rgba(255,20,147,0.2)]'
-                                : 'border-white/5 bg-black/40 text-white/50 hover:border-white/20 hover:text-white'
-                            }`}
-                          >
-                            <span className="font-mono text-[8.5px] font-black uppercase tracking-wider">{fps.label}</span>
-                            <span className="font-mono text-[7px] text-zinc-400">{fps.sub}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Granular Visual Toggles */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t border-white/5">
-                    <div className="flex justify-between items-center">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-white font-mono uppercase">Neon Bloom & Glow</span>
-                        <span className="text-[8px] text-zinc-500 font-mono">Glow around notes and lanes</span>
-                      </div>
-                      {renderToggle('bloomGlow')}
-                    </div>
-
-                    <div className="flex justify-between items-center">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-white font-mono uppercase">Background Animations</span>
-                        <span className="text-[8px] text-zinc-500 font-mono">Backgrounds that move with the music</span>
-                      </div>
-                      {renderToggle('bgAnimation')}
-                    </div>
-
-                    <div className="flex justify-between items-center">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-white font-mono uppercase">Particle Burst Density</span>
-                        <span className="text-[8px] text-zinc-500 font-mono">Sparks and trails on hits</span>
-                      </div>
-                      <div className="flex gap-1">
-                        {(['full', 'half', 'minimal'] as const).map((d) => (
-                          <button
-                            key={d}
-                            onClick={() => setParticleDensityOption(d)}
-                            className={`px-2 py-0.5 rounded font-mono text-[7.5px] uppercase font-bold border transition-all cursor-pointer ${
-                              opts.particleDensity === d
-                                ? isAvant ? 'border-[#39FF14] bg-[#39FF14]/20 text-white' : 'border-[#FF1493] bg-[#FF1493]/20 text-white'
-                                : 'border-white/10 bg-black/40 text-zinc-500 hover:text-white'
-                            }`}
-                          >
-                            {d === 'full' ? '100%' : d === 'half' ? '50%' : '25%'}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="flex justify-between items-center">
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-white font-mono uppercase">Legacy Graphics Mode</span>
-                        <span className="text-[8px] text-zinc-500 font-mono">Flat visuals for older devices</span>
-                      </div>
-                      {renderToggle('legacyGraphics')}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Chart Generation Source Mode */}
-                <div className="bg-black/40 border border-white/5 p-4 rounded-lg space-y-3">
-                  <h3 className="font-mono text-[9px] font-black text-white/40 uppercase tracking-wider border-b border-white/5 pb-1">CHART GENERATION ENGINE SOURCE</h3>
-                  <div className="flex gap-2">
-                    {(["auto", "lyrics", "bpm"] as const).map(mode => {
-                      const active = opts.noteGenerationSource === mode;
-                      const isLocked = (mode === 'lyrics' || mode === 'bpm') && localStorage.getItem("opt_unlocked_iddqd") !== "true";
-                      if (isLocked) {
-                        return (
-                          <button
-                            key={mode}
-                            onClick={() => {
-                              audioManager.playSfx('locked_out', 0.15);
-                            }}
-                            className="flex-1 py-2 font-mono text-[9px] font-black uppercase rounded border border-red-500/10 bg-red-950/5 text-red-500/30 flex items-center justify-center gap-1 cursor-not-allowed opacity-50"
-                            title="LOCKED — ???"
-                          >
-                            <Lock size={8} className="text-red-500" />
-                            {mode === 'lyrics' ? 'LYRIC' : 'BPM'}
-                          </button>
-                        );
-                      }
+                <Panel title="Chart generation" hint="How notes are placed">
+                  <div className="opt-seg opt-seg--3">
+                    {([
+                      { id: 'auto', label: 'Autopilot', sub: 'Audio frequencies + beat grid' },
+                      { id: 'lyrics', label: 'Lyrical', sub: 'Follows the vocal phrasing' },
+                      { id: 'bpm', label: 'BPM beats', sub: 'Locked to the metronome' },
+                    ] as const).map(mode => {
+                      const isLocked = (mode.id === 'lyrics' || mode.id === 'bpm') && localStorage.getItem("opt_unlocked_iddqd") !== "true";
                       return (
-                        <button
-                          key={mode}
+                        <SegButton
+                          key={mode.id}
+                          active={!isLocked && opts.noteGenerationSource === mode.id}
+                          locked={isLocked}
+                          label={mode.label}
+                          sub={isLocked ? 'Locked' : mode.sub}
                           onClick={() => {
-                            localStorage.setItem("opt_noteGenerationSource", mode);
-                            setOpts(o => ({ ...o, noteGenerationSource: mode }));
-                            updateProgression({ noteGenerationSource: mode });
+                            if (isLocked) {
+                              audioManager.playSfx('locked_out', 0.15);
+                              return;
+                            }
+                            localStorage.setItem("opt_noteGenerationSource", mode.id);
+                            setOpts(o => ({ ...o, noteGenerationSource: mode.id }));
+                            updateProgression({ noteGenerationSource: mode.id });
                             clearCatalogCache();
-                            logAnalyticsEvent('setting_change', { key: 'noteGenerationSource', value: mode });
+                            logAnalyticsEvent('setting_change', { key: 'noteGenerationSource', value: mode.id });
                             audioManager.playSfx('tap_nav', 0.1);
                           }}
-                          className={`flex-1 py-2 font-mono text-[9px] font-black uppercase rounded border transition-all cursor-pointer ${
-                            active
-                              ? isAvant ? 'border-[#39FF14] bg-[#39FF14]/10 text-white' : 'border-[#FF1493] bg-[#FF1493]/10 text-white'
-                              : 'border-white/5 bg-black/40 text-white/40 hover:border-white/15'
-                          }`}
-                        >
-                          {mode === 'auto' ? 'AUTOPILOT' : mode === 'lyrics' ? 'LYRICAL DYNAMICS' : 'BPM BEATS'}
-                        </button>
+                        />
                       );
                     })}
                   </div>
-                  <p className="font-mono text-[7.5px] text-zinc-500 leading-normal uppercase">
-                    AUTOPILOT: COMBINES AUDIO FREQUENCY WITH BEAT TRANSLATIONS · LYRICAL DYNAMICS: SPEECH PATTERNS TRANSLATION · BPM BEATS: METRONOME STEP ALIGNMENTS
-                  </p>
-                </div>
+                </Panel>
 
-                {/* Chart Edition Archive Selector (Neural AI / Master / Gimmicks / Minimal) */}
-                <div className="bg-black/40 border border-white/5 p-4 rounded-lg space-y-3">
-                  <div className="flex items-center justify-between border-b border-white/5 pb-1">
-                    <h3 className="font-mono text-[9px] font-black text-white/40 uppercase tracking-wider flex items-center gap-1.5">
-                      <span>CHART EDITION ARCHIVE</span>
-                      {!isChartEditionsUnlocked && (
-                        <span className="text-[7px] px-1.5 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded font-mono font-bold tracking-wider">
-                          LOCKED // CODE REQUIRED
-                        </span>
-                      )}
-                    </h3>
-                    <span className="font-mono text-[7px] text-[#39FF14] uppercase tracking-widest">
-                      {isChartEditionsUnlocked ? 'AI / MASTER EDITIONS UNLOCKED' : 'ENTER CODE TO UNLOCK'}
-                    </span>
-                  </div>
-
+                <Panel
+                  title="Chart edition"
+                  hint={isChartEditionsUnlocked ? <span className="opt-ok">All editions unlocked</span> : '4 editions locked'}
+                >
                   {!isChartEditionsUnlocked && (
-                    <div className="p-3 border border-amber-500/25 rounded-lg bg-amber-950/15 backdrop-blur-md flex flex-col gap-2">
-                      <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0 text-base shadow-[0_0_12px_rgba(245,158,11,0.15)]">
-                          🔒
-                        </div>
-                        <div className="flex-1">
-                          <div className="font-mono text-[10px] font-black uppercase text-white tracking-wider flex items-center gap-2">
-                            <span>CLASSIFIED MASTER EDITIONS</span>
-                            <span className="text-[7px] px-1 py-0.5 bg-zinc-800 text-zinc-400 rounded font-mono">ENCRYPTED</span>
-                          </div>
-                          <p className="text-[8px] font-mono text-zinc-400 mt-0.5 leading-relaxed">
-                            V5 Flagship, Neural AI, V3 Master, and V2 Minimal are locked. The decrypt code is out there…
-                          </p>
-                        </div>
-                      </div>
-
-                      <form
-                        onSubmit={async (e) => {
-                          e.preventDefault();
-                          const code = masterInputCode.trim().toUpperCase();
-                          if (code === 'MASTERREDEEM' || code === 'CHARTREDEEM' || code === 'EDITIONREDEEM') {
-                            localStorage.setItem("opt_unlocked_chart_editions", "true");
-                            await updateCheats({ chartEditions: true });
-                            window.dispatchEvent(new Event('cheat_code_activated'));
-                            audioManager.playSfx('platinum_get', 0.8);
-                            setMasterInputError(null);
-                            setMasterSuccess(true);
-                            setMasterInputCode('');
-                          } else {
-                            setMasterInputError("INVALID ACCESS CODE — USE \"MASTERREDEEM\"");
-                            audioManager.playSfx('locked_out', 0.2);
-                          }
-                        }}
-                        className="flex flex-col sm:flex-row gap-2 mt-1"
-                      >
-                        <input
-                          type="text"
-                          value={masterInputCode}
-                          onChange={(e) => {
-                            setMasterInputCode(e.target.value);
-                            setMasterInputError(null);
-                          }}
-                          placeholder="ENTER CODE (MASTERREDEEM)"
-                          className="flex-1 bg-black/70 border border-white/15 focus:border-[#39FF14] rounded px-3 py-1.5 text-xs font-mono uppercase text-white placeholder:text-zinc-600 outline-none transition-colors"
-                        />
-                        <button
-                          type="submit"
-                          className="px-4 py-1.5 bg-[#39FF14] hover:bg-[#32e012] active:scale-95 text-black font-mono font-black text-xs uppercase tracking-wider rounded transition-all cursor-pointer shadow-[0_0_14px_rgba(57,255,20,0.3)] shrink-0"
-                        >
-                          DECRYPT & UNLOCK
-                        </button>
-                      </form>
-                      {masterInputError && (
-                        <span className="text-[8px] font-mono text-red-400 font-bold tracking-wider uppercase">
-                          ⚠ {masterInputError}
-                        </span>
-                      )}
-                    </div>
+                    <CodeUnlock
+                      title="Classified master editions"
+                      body="V5 Flagship, Neural AI, V3 Master and V2 Minimal are locked. The decrypt code is out there…"
+                      value={masterInputCode}
+                      error={masterInputError}
+                      placeholder="ENTER CODE (MASTERREDEEM)"
+                      onChange={(v) => {
+                        setMasterInputCode(v);
+                        setMasterInputError(null);
+                      }}
+                      onSubmit={async () => {
+                        const code = masterInputCode.trim().toUpperCase();
+                        if (code === 'MASTERREDEEM' || code === 'CHARTREDEEM' || code === 'EDITIONREDEEM') {
+                          localStorage.setItem("opt_unlocked_chart_editions", "true");
+                          await updateCheats({ chartEditions: true });
+                          window.dispatchEvent(new Event('cheat_code_activated'));
+                          audioManager.playSfx('platinum_get', 0.8);
+                          setMasterInputError(null);
+                          setMasterSuccess(true);
+                          setMasterInputCode('');
+                        } else {
+                          setMasterInputError("INVALID ACCESS CODE — USE \"MASTERREDEEM\"");
+                          audioManager.playSfx('locked_out', 0.2);
+                        }
+                      }}
+                    />
                   )}
 
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-2">
+                  <div className="opt-seg opt-seg--3">
                     {[
-                      { id: 'v6_master', label: 'V6 CHART MASTER', desc: 'Audio-Synced Beats & Drops (Default)', locked: false },
-                      { id: 'v1_gimmicks', label: 'V1 CLASSIC', desc: 'Mines, Stems & Drops', locked: false },
-                      { id: 'v5_flagship', label: 'V5 FLAGSHIP', desc: 'Kinesthetics & Motifs (All Notes)', locked: !isChartEditionsUnlocked },
-                      { id: 'v4_neural', label: 'NEURAL AI', desc: 'Transformer Seq2Seq + OPARL RL', locked: !isChartEditionsUnlocked },
-                      { id: 'v3_master', label: 'V3 MASTER', desc: '8-Way Swipes & Overdrive', locked: !isChartEditionsUnlocked },
-                      { id: 'v2_minimal', label: 'V2 MINIMAL', desc: 'Casual Tap Flow', locked: !isChartEditionsUnlocked },
-                    ].map(edition => {
-                      const curVariant = resolveChartVariant(typeof localStorage !== 'undefined' ? localStorage.getItem('opt_chartVariant') : null, isChartEditionsUnlocked);
-                      const active = curVariant === edition.id && (!edition.locked || isChartEditionsUnlocked);
-                      return (
-                        <button
-                          key={edition.id}
-                          disabled={edition.locked}
-                          onClick={() => {
-                            if (edition.locked) return;
-                            localStorage.setItem("opt_chartVariant", edition.id);
-                            localStorage.setItem(CHART_VARIANT_CHOSEN_KEY, "1");
-                            clearCatalogCache();
-                            setOpts(o => ({ ...o, chartVariant: edition.id as any }));
-                            logAnalyticsEvent('setting_change', { key: 'chartVariant', value: edition.id });
-                            audioManager.playSfx('tap_nav', 0.1);
-                          }}
-                          className={`p-2 font-mono text-left rounded border transition-all flex flex-col gap-1 ${
-                            edition.locked
-                              ? 'border-white/5 bg-black/20 text-white/20 opacity-60 cursor-not-allowed'
-                              : 'cursor-pointer ' + (
-                                  active
-                                    ? isAvant ? 'border-[#39FF14] bg-[#39FF14]/15 text-white shadow-[0_0_10px_rgba(57,255,20,0.2)]' : 'border-[#FF1493] bg-[#FF1493]/15 text-white shadow-[0_0_10px_rgba(255,20,147,0.2)]'
-                                    : 'border-white/5 bg-black/40 text-white/40 hover:border-white/15'
-                                )
-                          }`}
-                        >
-                          <span className={`text-[8.5px] font-black tracking-wider flex items-center justify-between ${
-                            edition.locked ? 'text-zinc-600' : (active ? (isAvant ? 'text-[#39FF14]' : 'text-[#FF1493]') : 'text-white/70')
-                          }`}>
-                            <span>{edition.label}</span>
-                            {edition.locked && <span className="text-[7px]">🔒</span>}
-                          </span>
-                          <span className="text-[6.5px] text-zinc-500 leading-tight">
-                            {edition.locked ? 'Locked (Code Required)' : edition.desc}
-                          </span>
-                        </button>
-                      );
-                    })}
+                      { id: 'v6_master', label: 'V6 Chart Master', desc: 'Audio-synced beats & drops (default)', locked: false },
+                      { id: 'v1_gimmicks', label: 'V1 Classic', desc: 'Mines, stems & drops', locked: false },
+                      { id: 'v5_flagship', label: 'V5 Flagship', desc: 'Two-thumb kinesthetics & motifs', locked: !isChartEditionsUnlocked },
+                      { id: 'v4_neural', label: 'Neural AI', desc: 'Seq2seq transformer charts', locked: !isChartEditionsUnlocked },
+                      { id: 'v3_master', label: 'V3 Master', desc: '8-way swipes & overdrive', locked: !isChartEditionsUnlocked },
+                      { id: 'v2_minimal', label: 'V2 Minimal', desc: 'Casual tap flow', locked: !isChartEditionsUnlocked },
+                    ].map(edition => (
+                      <SegButton
+                        key={edition.id}
+                        active={!edition.locked && curChartVariant === edition.id}
+                        locked={edition.locked}
+                        label={edition.label}
+                        sub={edition.locked ? 'Code required' : edition.desc}
+                        onClick={() => {
+                          if (edition.locked) {
+                            audioManager.playSfx('locked_out', 0.15);
+                            return;
+                          }
+                          localStorage.setItem("opt_chartVariant", edition.id);
+                          localStorage.setItem(CHART_VARIANT_CHOSEN_KEY, "1");
+                          clearCatalogCache();
+                          setOpts(o => ({ ...o, chartVariant: edition.id as any }));
+                          logAnalyticsEvent('setting_change', { key: 'chartVariant', value: edition.id });
+                          audioManager.playSfx('tap_nav', 0.1);
+                        }}
+                      />
+                    ))}
                   </div>
-                  <p className="font-mono text-[7.5px] text-zinc-500 leading-normal uppercase">
-                    V1 GIMMICKS: MINES, LIFTS, ACCENTS, DROPS & REMIX STEMS (DEFAULT) · V5 FLAGSHIP: TWO-THUMB KINESTHETICS & MOTIF MEMORY · NEURAL AI: SEQ2SEQ TRANSFORMER · V3 MASTER: 8-WAY SWIPE OVERDRIVE
-                  </p>
-                </div>
-
-                {/* Reset Config (Mobile Only Block) */}
-                <div className="pt-4 flex md:hidden justify-end border-t border-white/5">
-                  <button
-                    onClick={handleReset}
-                    className={`w-full text-center py-2.5 border rounded font-mono text-[9px] font-black uppercase tracking-widest transition-all cursor-pointer ${
-                      resetState === "confirm"
-                        ? "bg-red-600 border-red-600 text-white animate-pulse"
-                        : "border-white/10 text-white/40 hover:text-white"
-                    }`}
-                  >
-                    {resetState === "confirm" ? "⚡ CONFIRM RESET" : "RESET CONFIG"}
-                  </button>
-                </div>
-
+                </Panel>
               </div>
             )}
 
+            {/* ════ AUDIO & HAPTICS ════ */}
+            {activeTab === 'audio' && (
+              <div className="opt-stack">
+                <Panel title="Sound">
+                  <SettingRow label="Sound effects" desc="Menu clicks and hit sounds.">
+                    {renderToggle('sfxEnabled', 'Sound effects')}
+                  </SettingRow>
+                  {opts.sfxEnabled && (
+                    <SvgVolumeSlider
+                      label="SFX volume"
+                      value={opts.sfxVolume}
+                      onChange={(v) => {
+                        localStorage.setItem("opt_sfxVolume", String(v));
+                        setOpts(o => ({ ...o, sfxVolume: v }));
+                        updateSettings({ sfxVolume: v });
+                        audioManager.playSfx('tap_nav', 0.1);
+                      }}
+                      isAvant={isAvant}
+                    />
+                  )}
+                  <SettingRow label="Ambient menu music" desc="Tape hiss and radio hum in the vault menus.">
+                    {renderToggle('bgMusic', 'Ambient menu music')}
+                  </SettingRow>
+                  {opts.bgMusic && (
+                    <SvgVolumeSlider
+                      label="Music volume"
+                      value={opts.musicVolume}
+                      onChange={(v) => {
+                        localStorage.setItem("opt_musicVolume", String(v));
+                        setOpts(o => ({ ...o, musicVolume: v }));
+                        updateSettings({ musicVolume: v });
+                        window.dispatchEvent(new Event("bgmusic_volume_change"));
+                      }}
+                      isAvant={isAvant}
+                    />
+                  )}
+                  <SettingRow label="Use local audio files" desc="Play downloaded files instead of streaming.">
+                    {renderToggle('useLocalFiles', 'Use local audio files')}
+                  </SettingRow>
+                </Panel>
+
+                <Panel title="Devices">
+                  <SettingRow
+                    label="Haptic vibration"
+                    tag={haptics.getCapabilities().primaryDriver}
+                    desc="Vibrate on hits — phone, gamepad or supported devices."
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        haptics.mediumTap();
+                        setHapticsTestActive(true);
+                        setTimeout(() => setHapticsTestActive(false), 800);
+                      }}
+                      className={`opt-btn opt-btn--ghost opt-btn--sm${hapticsTestActive ? ' is-ok' : ''}`}
+                      title="Test vibration"
+                    >
+                      {hapticsTestActive ? 'Pulsed' : 'Test'}
+                    </button>
+                    {renderToggle('haptics', 'Haptic vibration')}
+                  </SettingRow>
+                  <SettingRow
+                    label="SteelSeries GameSense"
+                    tag={<span className={`opt-gs opt-gs--${gsStatus}`}>{gsStatus}</span>}
+                    desc="Sync keyboard and mouse LEDs with the music."
+                  >
+                    {renderToggle('gameSenseEnabled', 'SteelSeries GameSense')}
+                  </SettingRow>
+                </Panel>
+              </div>
+            )}
+
+            {/* ════ CONTROLS & SYNC ════ */}
             {activeTab === 'controls' && (
-              <div className="space-y-6 animate-fade-in">
-                <div>
-                  <h2 className="text-base md:text-lg brutalist-menu-title italic mb-1" style={{ '--neon-accent': isAvant ? '#39FF14' : '#FF1493' } as any}>Key remap & audio sync</h2>
-                  <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Lane keys and audio sync</p>
-                </div>
-
-                {/* Key Remappings for 3 lanes */}
-                <div className="grid grid-cols-3 gap-2">
-                  {([0, 1, 2] as const).map(lane => {
-                    const lc = opts.laneColors[lane];
-                    const listening = remappingLane === lane;
-                    return (
-                      <div 
-                        key={lane} 
-                        className={`border bg-black/40 flex flex-col relative transition-all rounded p-3 select-none ${
-                          listening 
-                            ? 'border-[#ff5500] bg-[#ff5500]/5 shadow-[0_0_12px_rgba(255,85,0,0.15)] animate-pulse'
-                            : 'border-white/5 hover:border-white/15'
-                        }`}
-                      >
-                        <div className="font-mono text-[8px] tracking-[0.25em] text-zinc-500 pb-1 mb-2 border-b border-white/5">
-                          {["LEFT LANE", "MID LANE", "RIGHT LANE"][lane]}
-                        </div>
-                        
-                        <div 
-                          className="h-0.5 mx-auto w-12 rounded-full mb-3"
-                          style={{ background: `linear-gradient(90deg, transparent, ${lc}, transparent)` }}
-                        />
-
+              <div className="opt-stack">
+                <Panel title="Lane keys" hint={remappingLane !== null ? 'Press a key · ESC to cancel' : 'Click a lane to rebind'}>
+                  <div className="opt-keys">
+                    {([0, 1, 2] as const).map(lane => {
+                      const listening = remappingLane === lane;
+                      return (
                         <button
+                          key={lane}
+                          type="button"
+                          aria-pressed={listening}
+                          className={`opt-key${listening ? ' is-listening' : ''}`}
+                          style={{ '--lane': opts.laneColors[lane] } as CSSProperties}
                           onClick={() => {
                             audioManager.playSfx('tap_nav', 0.12);
                             setRemappingLane(listening ? null : lane);
                           }}
-                          className="w-full bg-transparent border-0 cursor-pointer p-0 text-center focus:outline-none"
                         >
-                          <div className="font-mono font-black text-3xl tracking-tighter text-white select-none">
-                            {listening ? "…" : keyLabel(opts.laneKeys[lane])}
-                          </div>
-                          <div className="font-mono text-[7px] text-zinc-500 tracking-wider mt-1 uppercase">
-                            {listening ? "PRESS KEY" : "CLICK TO REMAP"}
-                          </div>
+                          <span className="opt-key-lane">{["Left", "Middle", "Right"][lane]} lane</span>
+                          <span className="opt-key-cap">{listening ? "…" : keyLabel(opts.laneKeys[lane])}</span>
+                          <span className="opt-key-hint">{listening ? "Press a key" : "Rebind"}</span>
                         </button>
-                      </div>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
 
-                {/* Keyboard Overlay key selector */}
-                {remappingLane !== null && (
-                  <div className="p-3 bg-black/60 border border-white/10 rounded-lg flex flex-col items-center gap-2.5 animate-in fade-in duration-200">
-                    <span className="font-mono text-[8px] text-[#ffaa00] uppercase font-bold tracking-widest animate-pulse">
-                      ⌨ PRESS ANY KEY ON KEYBOARD OR CHOOSE BELOW TO BIND LANE {remappingLane + 1}
-                    </span>
-                    <div className="flex flex-col gap-1 w-full">
+                  {remappingLane !== null && (
+                    <div className="opt-keyboard">
+                      <span className="opt-keyboard-title">
+                        Press any key, or pick one below, for the {["left", "middle", "right"][remappingLane]} lane
+                      </span>
                       {KEY_ROWS.map((row, rowIdx) => (
-                        <div key={rowIdx} className="flex gap-1 justify-center">
+                        <div key={rowIdx} className="opt-keyboard-row">
                           {row.map(k => (
-                            <button
-                              key={k}
-                              onClick={() => handleRemapKey(k)}
-                              className="font-mono text-[8.5px] font-bold py-1.5 px-2 bg-white/5 border border-white/10 hover:bg-white/15 text-white/90 rounded cursor-pointer min-w-[32px] text-center"
-                            >
+                            <button key={k} type="button" onClick={() => handleRemapKey(k)} className="opt-keyboard-key">
                               {keyLabel(k)}
                             </button>
                           ))}
                         </div>
                       ))}
                     </div>
-                  </div>
-                )}
+                  )}
+                </Panel>
 
-                {/* Calibration Section */}
-                <div className="bg-black/40 border border-white/5 p-4 rounded-lg space-y-4">
-                  <div className="flex items-center justify-between border-b border-white/5 pb-1">
-                    <h3 className="font-mono text-[9px] font-black text-white/40 uppercase tracking-wider">AUDIO SYNC LATENCY CALIBRATION</h3>
-                    <div className="flex gap-1">
-                      <button
-                        onClick={() => setLatencyMode('auto')}
-                        className={`font-mono text-[8px] font-bold py-1 px-2.5 rounded border cursor-pointer uppercase ${
-                          latencyMode === 'auto'
-                            ? isAvant ? 'border-[#39FF14] bg-[#39FF14]/10 text-white' : 'border-[#FF1493] bg-[#FF1493]/10 text-white'
-                            : 'border-white/5 bg-black/40 text-white/40'
-                        }`}
-                      >
-                        ⚡ AUTO-CALIBRATE
-                      </button>
-                      <button
-                        onClick={() => setLatencyMode('manual')}
-                        className={`font-mono text-[8px] font-bold py-1 px-2.5 rounded border cursor-pointer uppercase ${
-                          latencyMode === 'manual'
-                            ? isAvant ? 'border-[#39FF14] bg-[#39FF14]/10 text-white' : 'border-[#FF1493] bg-[#FF1493]/10 text-white'
-                            : 'border-white/5 bg-black/40 text-white/40'
-                        }`}
-                      >
-                        ⚙ MANUAL SLIDER
-                      </button>
-                    </div>
+                <Panel title="Audio sync" hint={<span className="opt-readout">Offset {fmtMs(opts.audioOffset)}</span>}>
+                  <div className="opt-seg opt-seg--2">
+                    <SegButton active={latencyMode === 'auto'} label="Tap test" sub="Recommended · 10 seconds" onClick={() => setLatencyMode('auto')} />
+                    <SegButton active={latencyMode === 'manual'} label="Manual" sub="Drag the offset yourself" onClick={() => setLatencyMode('manual')} />
                   </div>
 
                   <BeatVisualizer offsetMs={opts.audioOffset} isAvant={isAvant} />
@@ -2071,11 +1772,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                     />
                   ) : (
                     <>
-                      <div className="flex items-center justify-between font-mono">
-                        <span className="text-[9px] text-zinc-500 tracking-wider">LATENCY COMPENSATION</span>
-                      </div>
-
-                      <SvgLatencySlider 
+                      <SvgLatencySlider
                         value={opts.audioOffset}
                         onChange={v => {
                           localStorage.setItem("opt_audioOffset", String(v));
@@ -2084,267 +1781,242 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                         }}
                         isAvant={isAvant}
                       />
-                      
-                      <p className="font-mono text-[7.5px] text-zinc-500 leading-normal uppercase">
-                        DRAG LEFT IF NOTES SEEM TO PASS BEFORE THE BEAT SOUNDS · DRAG RIGHT IF BEAT SOUNDS BEFORE NOTES REACH TRIGGER BAR
+                      <p className="opt-note">
+                        Drag left if notes pass before the beat sounds. Drag right if the beat sounds before notes reach the hit line.
                       </p>
                     </>
                   )}
 
-                  {/* Dynamic In-Game Auto-Sync Toggle */}
-                  <div className="pt-2 border-t border-white/5 flex items-center justify-between">
-                    <div>
-                      <div className="font-mono text-[9.5px] font-bold text-white uppercase tracking-wider">DYNAMIC IN-GAME AUTO-SYNC</div>
-                      <div className="font-mono text-[8px] text-zinc-500 uppercase tracking-tight mt-0.5">Fine-tunes your audio offset during play based on your hits</div>
-                    </div>
-                    <button
-                      onClick={() => {
+                  <SettingRow label="In-game auto-sync" desc="Fine-tunes your offset during play based on your hits.">
+                    <Switch
+                      checked={!!opts.autoLatencyAdjust}
+                      label="In-game auto-sync"
+                      onToggle={() => {
                         const next = !opts.autoLatencyAdjust;
                         localStorage.setItem("opt_autoLatencyAdjust", String(next));
                         setOpts(o => ({ ...o, autoLatencyAdjust: next }));
                         updateSettings({ autoLatencyAdjust: next });
+                        audioManager.playSfx('tap_nav', 0.1);
                       }}
-                      className={`font-mono text-[9px] font-bold py-1.5 px-3 rounded border cursor-pointer uppercase ${
-                        opts.autoLatencyAdjust 
-                          ? isAvant ? 'bg-[#39FF14] text-black border-[#39FF14]' : 'bg-[#FF1493] text-white border-[#FF1493]'
-                          : 'bg-white/5 border-white/10 text-zinc-500'
-                      }`}
-                    >
-                      {opts.autoLatencyAdjust ? 'ENABLED' : 'DISABLED'}
-                    </button>
-                  </div>
-                </div>
+                    />
+                  </SettingRow>
+                </Panel>
 
-                {/* Gameplay note types guide */}
-                <div className="bg-black/40 border border-white/5 p-4 rounded-lg space-y-4">
-                  <h3 className="font-mono text-[9px] font-black text-white/40 uppercase tracking-wider border-b border-white/5 pb-1">GAMEPLAY NOTE TYPES & INPUT MANUAL</h3>
-                  <div className="grid gap-3.5 font-mono text-[10px] text-zinc-400">
-                    <div className="flex gap-2">
-                      <span className="text-[#39FF14] font-bold min-w-[130px] uppercase">■ TAPS:</span>
-                      <span>Press lane key (D F J), Controller (X Y B), or tap screen when note aligns with hit line.</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <span className="text-[#FFD700] font-bold min-w-[130px] uppercase">▬ HOLD RAILS:</span>
-                      <span>Hold lane key or button until the gold tail finishes crossing the trigger bar.</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <span className="text-[#FF1493] font-bold min-w-[130px] uppercase">➔ SWIPES:</span>
-                      <span>Flick Analog Stick, press Arrow Key / D-Pad, or swipe screen in arrow direction.</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[#00FF88] font-bold min-w-[130px] uppercase flex items-center gap-1.5"><span className="text-xs">▲</span> LIFT FLICKS:</span>
-                      <span>Release hold key with Arrow Up, flick Analog Stick UP, or swipe finger UPWARD.</span>
-                    </div>
-                    <div className="flex items-center gap-2 border-t border-white/5 pt-2">
-                      <span className="text-[#FF7B00] font-bold min-w-[130px] uppercase flex items-center gap-1.5"><VTokenCrestIcon size={14} color="#FF7B00" /> BREAK DROPS:</span>
-                      <span>Big bonus notes on the drop. Hit them clean for extra score.</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[#CCFF00] font-bold min-w-[130px] uppercase flex items-center gap-1.5"><StageCrestIcon size={14} color="#CCFF00" /> ACCENT STARS:</span>
-                      <span>Lime snare and accent notes. Hit them on beat for a score multiplier.</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[#00F5D4] font-bold min-w-[130px] uppercase flex items-center gap-1.5"><RemixDialIcon size={14} color="#00F5D4" /> REMIX STEMS:</span>
-                      <span>Remix the song live: solo the vocals, drop the drums or push the bass.</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[#FF003C] font-bold min-w-[130px] uppercase flex items-center gap-1.5"><HazardWarningIcon size={14} color="#FF003C" /> MINE HAZARDS:</span>
-                      <span>Don't hit these. A mine costs 500 points and breaks your combo.</span>
-                    </div>
-                  </div>
-                </div>
-
+                <Panel title="Note types" hint="Quick reference">
+                  <dl className="opt-guide">
+                    {[
+                      { color: '#39FF14', icon: <span>■</span>, name: 'Taps', text: 'Press the lane key, a controller face button, or tap the screen as the note hits the line.' },
+                      { color: '#FFD700', icon: <span>▬</span>, name: 'Hold rails', text: 'Hold the key or button until the gold tail crosses the hit line.' },
+                      { color: '#FF1493', icon: <span>➔</span>, name: 'Swipes', text: 'Flick the stick, press an arrow / D-pad, or swipe in the arrow direction.' },
+                      { color: '#00FF88', icon: <span>▲</span>, name: 'Lift flicks', text: 'Release a hold with Arrow Up, flick the stick up, or swipe upward.' },
+                      { color: '#FF7B00', icon: <VTokenCrestIcon size={14} color="#FF7B00" />, name: 'Break drops', text: 'Big bonus notes on the drop. Hit them clean for extra score.' },
+                      { color: '#CCFF00', icon: <StageCrestIcon size={14} color="#CCFF00" />, name: 'Accent stars', text: 'Snare and accent notes. Hit them on beat for a multiplier.' },
+                      { color: '#00F5D4', icon: <RemixDialIcon size={14} color="#00F5D4" />, name: 'Remix stems', text: 'Remix the song live: solo the vocals, drop the drums or push the bass.' },
+                      { color: '#FF003C', icon: <HazardWarningIcon size={14} color="#FF003C" />, name: 'Mines', text: "Don't hit these. A mine costs 500 points and breaks your combo." },
+                    ].map(n => (
+                      <div key={n.name} className="opt-guide-row">
+                        <dt style={{ color: n.color }}>{n.icon} {n.name}</dt>
+                        <dd>{n.text}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </Panel>
               </div>
             )}
 
-            {activeTab === 'themes' && (
-              <div className="space-y-6 animate-fade-in">
-                <div>
-                  <h2 className="text-base md:text-lg brutalist-menu-title italic mb-1" style={{ '--neon-accent': isAvant ? '#39FF14' : '#FF1493' } as any}>Note Themes & Lane Colors</h2>
-                  <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Note palettes and lane colors</p>
-                </div>
+            {/* ════ GRAPHICS ════ */}
+            {activeTab === 'graphics' && (
+              <div className="opt-stack">
+                <Panel
+                  title="Quality preset"
+                  hint={<span className="opt-readout">{getEffectiveDpr(opts.renderResolution).toFixed(2)}× DPR</span>}
+                >
+                  <p className="opt-note">Sets resolution, glow and particles in one go. Fine-tune below.</p>
+                  <div className="opt-seg opt-seg--4">
+                    {[
+                      { id: 'ultra', label: 'Ultra', desc: 'Native retina · max FX', icon: <Sparkles size={13} /> },
+                      { id: 'high', label: 'High', desc: '1080p · standard glow', icon: <Zap size={13} /> },
+                      { id: 'medium', label: 'Balanced', desc: '720p · 50% particles', icon: <Layers size={13} /> },
+                      { id: 'low', label: 'Performance', desc: '540p · max framerate', icon: <Cpu size={13} /> },
+                    ].map(preset => (
+                      <SegButton
+                        key={preset.id}
+                        active={opts.gfxLevel === preset.id}
+                        label={preset.label}
+                        sub={preset.desc}
+                        icon={preset.icon}
+                        onClick={() => setGfxLevelOption(preset.id as GfxLevel)}
+                      />
+                    ))}
+                  </div>
+                </Panel>
 
-                {/* Note themes grid selection */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  {NOTE_THEME_PRESETS.map(t => {
-                    const active = opts.noteTheme === t.id;
-                    return (
+                <Panel title="Render resolution" hint="Lower it for smoother play on slow devices">
+                  <div className="opt-seg opt-seg--4">
+                    {[
+                      { id: 'native', label: 'Native', sub: 'Retina · max DPR' },
+                      { id: 'high', label: '1080p', sub: '1.50× scale' },
+                      { id: 'medium', label: '720p', sub: '1.00× scale' },
+                      { id: 'low', label: '540p', sub: '0.67× scale' },
+                    ].map(res => (
+                      <SegButton
+                        key={res.id}
+                        active={opts.renderResolution === res.id}
+                        label={res.label}
+                        sub={res.sub}
+                        onClick={() => setResolutionOption(res.id as RenderResolution)}
+                      />
+                    ))}
+                  </div>
+                </Panel>
+
+                <Panel title="Frame rate" hint="Lower it to save battery">
+                  <div className="opt-seg opt-seg--4">
+                    {[
+                      { id: 'auto', label: 'Auto', sub: 'Match display' },
+                      { id: '120', label: '120 FPS', sub: 'High refresh' },
+                      { id: '60', label: '60 FPS', sub: 'Standard' },
+                      { id: '30', label: '30 FPS', sub: 'Battery saver' },
+                    ].map(fps => (
+                      <SegButton
+                        key={fps.id}
+                        active={opts.fpsTarget === fps.id}
+                        label={fps.label}
+                        sub={fps.sub}
+                        onClick={() => setFpsTargetOption(fps.id as FpsTarget)}
+                      />
+                    ))}
+                  </div>
+                </Panel>
+
+                <Panel title="Effects">
+                  <SettingRow label="Neon bloom & glow" desc="Glow around notes and lanes.">
+                    {renderToggle('bloomGlow', 'Neon bloom & glow')}
+                  </SettingRow>
+                  <SettingRow label="Background animation" desc="Backdrops that move with the music.">
+                    {renderToggle('bgAnimation', 'Background animation')}
+                  </SettingRow>
+                  <SettingRow label="Particle density" desc="Sparks and trails on hits.">
+                    <div className="opt-mini-seg" role="group" aria-label="Particle density">
+                      {(['full', 'half', 'minimal'] as const).map(d => (
+                        <button
+                          key={d}
+                          type="button"
+                          aria-pressed={opts.particleDensity === d}
+                          onClick={() => setParticleDensityOption(d)}
+                        >
+                          {d === 'full' ? '100%' : d === 'half' ? '50%' : '25%'}
+                        </button>
+                      ))}
+                    </div>
+                  </SettingRow>
+                  <SettingRow label="Legacy graphics" desc="Flat visuals for older devices.">
+                    {renderToggle('legacyGraphics', 'Legacy graphics')}
+                  </SettingRow>
+                </Panel>
+              </div>
+            )}
+
+            {/* ════ NOTE COLORS ════ */}
+            {activeTab === 'themes' && (
+              <div className="opt-stack">
+                <Panel title="Palettes">
+                  <div className="opt-grid opt-grid--4">
+                    {NOTE_THEME_PRESETS.map(t => (
                       <button
                         key={t.id}
+                        type="button"
+                        aria-pressed={opts.noteTheme === t.id}
+                        className="opt-tile opt-tile--compact"
                         onClick={() => setNoteThemePreset(t.id, t.colors)}
-                        className={`font-mono text-[9px] py-2 px-2.5 flex flex-col items-center justify-between border cursor-pointer transition-all rounded ${
-                          active 
-                            ? isAvant 
-                              ? 'border-[#39FF14] bg-[#39FF14]/5 text-white' 
-                              : 'border-[#FF1493] bg-[#FF1493]/5 text-white'
-                            : 'border-white/5 bg-black/40 text-white/50 hover:border-white/15'
-                        }`}
                       >
-                        <span className="font-black truncate w-full text-center uppercase tracking-wide mb-1.5">{t.name}</span>
-                        <div className="flex gap-1">
+                        <span className="opt-tile-title">{t.name}</span>
+                        <span className="opt-swatches">
                           {t.id === 'artwork' ? (
-                            <div className="w-[36px] h-2.5 rounded-full border border-black/40 shadow-sm" style={{ background: 'linear-gradient(90deg, #ff007f, #00f0ff, #39ff14)' }} />
+                            <span className="opt-swatch opt-swatch--wide" style={{ background: 'linear-gradient(90deg, #ff007f, #00f0ff, #39ff14)' }} />
                           ) : (
-                            t.colors.map((c, i) => (
-                              <div key={i} className="w-2.5 h-2.5 rounded-full border border-black/40 shadow-sm" style={{ background: c }} />
-                            ))
+                            t.colors.map((c, i) => <span key={i} className="opt-swatch" style={{ background: c }} />)
                           )}
-                        </div>
+                        </span>
                       </button>
-                    );
-                  })}
-                </div>
+                    ))}
+                  </div>
+                </Panel>
 
-                {/* Individual color pickers */}
-                <div className="bg-black/40 border border-white/5 p-4 rounded-lg space-y-4">
-                  <h3 className="font-mono text-[9px] font-black text-white/40 uppercase tracking-wider border-b border-white/5 pb-1">
-                    INDIVIDUAL LANE COLOR CUSTOMIZATION
-                  </h3>
-
-                  <div className="grid grid-cols-3 gap-3">
+                <Panel title="Custom lane colors" hint="Changing a lane switches to a custom palette">
+                  <div className="opt-lanes">
                     {([0, 1, 2] as const).map(lane => {
                       const lc = opts.laneColors[lane];
                       return (
-                        <div key={lane} className="border border-white/5 rounded p-2.5 bg-black/20 flex flex-col gap-2">
-                          <span className="font-mono text-[7.5px] text-zinc-500 uppercase tracking-wider">
-                            {["LEFT NOTE COLOR", "MID NOTE COLOR", "RIGHT NOTE COLOR"][lane]}
-                          </span>
-                          
-                          {/* Color stripe */}
-                          <div className="h-1 rounded" style={{ background: lc }} />
-
-                          {/* Swatches selector: 8 per lane */}
-                          <div className="grid grid-cols-4 gap-1 mt-1">
+                        <div key={lane} className="opt-lane">
+                          <span className="opt-lane-name">{["Left", "Middle", "Right"][lane]} lane</span>
+                          <span className="opt-lane-bar" style={{ background: lc, boxShadow: `0 0 12px ${lc}` }} />
+                          <div className="opt-lane-swatches">
                             {COLOR_PRESETS[lane].map(c => (
                               <button
                                 key={c}
+                                type="button"
+                                aria-label={`Set ${["left", "middle", "right"][lane]} lane to ${c}`}
+                                aria-pressed={opts.laneColors[lane] === c}
                                 onClick={() => setLaneColor(lane, c)}
-                                className="aspect-square w-full rounded border-0 cursor-pointer transition-all hover:scale-105"
-                                style={{
-                                  background: c,
-                                  outline: opts.laneColors[lane] === c
-                                    ? isAvant ? "1px solid #39FF14" : "1.5px solid #fff"
-                                    : "none",
-                                  outlineOffset: "1px"
-                                }}
+                                className="opt-lane-swatch"
+                                style={{ background: c }}
                               />
                             ))}
                           </div>
-
-                          {/* HTML Color Input Picker */}
-                          <label className="flex items-center gap-2 mt-1 cursor-pointer font-mono text-[7px] text-zinc-500 uppercase hover:text-white">
-                            <div 
-                              className="w-4 h-4 rounded border border-white/20 relative flex-shrink-0"
-                              style={{ background: lc }}
-                            >
+                          <label className="opt-lane-custom">
+                            <span className="opt-lane-custom-chip" style={{ background: lc }}>
                               <input
                                 ref={colorRefs[lane]}
                                 type="color"
                                 value={lc}
                                 onChange={e => setLaneColor(lane, e.target.value)}
-                                className="opacity-0 absolute inset-0 w-full h-full cursor-pointer p-0 border-0"
                               />
-                            </div>
-                            <span>CUSTOM PICKER</span>
+                            </span>
+                            <span>Custom · {lc.toUpperCase()}</span>
                           </label>
                         </div>
                       );
                     })}
                   </div>
-                </div>
-
+                </Panel>
               </div>
             )}
 
+            {/* ════ STAGE & CAMERA ════ */}
             {activeTab === 'backgrounds' && (
-              <div className="space-y-6 animate-fade-in">
-                <div>
-                  <h2 className="text-base md:text-lg brutalist-menu-title italic mb-1" style={{ '--neon-accent': isAvant ? '#39FF14' : '#FF1493' } as any}>Global Menu Background & Blur</h2>
-                  <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Backgrounds for vault and archive pages</p>
-                </div>
-
-                {/* Vault Prestige & Cosmetic Unlocks HUD */}
-                <div className="bg-black/60 border border-white/10 rounded-xl p-4 relative overflow-hidden backdrop-blur-md shadow-2xl">
-                  <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/10">
-                    <div className="flex items-center gap-2.5">
-                      <div
-                        className="w-9 h-9 rounded-lg flex items-center justify-center font-mono font-black text-sm"
-                        style={{
-                          background: isAvant ? 'rgba(57, 255, 20, 0.15)' : 'rgba(255, 20, 147, 0.15)',
-                          color: themeColor,
-                          border: `1px solid ${themeColor}40`,
-                        }}
-                      >
-                        ⚡
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs md:text-sm font-black tracking-wider text-white">
-                            VAULT PRESTIGE
-                          </span>
-                          <span className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-white/10 text-zinc-400 uppercase tracking-widest">
-                            Cosmetic Tier
-                          </span>
-                        </div>
-                        <div className="font-mono text-lg md:text-xl font-black" style={{ color: themeColor }}>
-                          {activePrestigeScore.toLocaleString()}{' '}
-                          <span className="text-[10px] font-medium text-zinc-400 tracking-normal">PTS</span>
-                        </div>
+              <div className="opt-stack">
+                <section className="opt-prestige">
+                  <div className="opt-prestige-top">
+                    <div>
+                      <span className="opt-eyebrow">Vault prestige</span>
+                      <div className="opt-prestige-score">
+                        {activePrestigeScore.toLocaleString()} <small>pts</small>
                       </div>
                     </div>
-
-                    {/* Metric Badges */}
-                    <div className="flex flex-wrap items-center gap-1.5 font-mono text-[9px]">
-                      <div className="px-2 py-1 rounded bg-black/40 border border-white/5 text-zinc-300 flex items-center gap-1">
-                        <span>🔥</span>
-                        <span>STREAK: <strong className="text-white">{streakCount || 0}d</strong></span>
-                      </div>
-                      <div className="px-2 py-1 rounded bg-black/40 border border-white/5 text-zinc-300 flex items-center gap-1">
-                        <span>📦</span>
-                        <span>PULLS: <strong className="text-white">{totalPulls || 0}</strong></span>
-                      </div>
-                      <div className="px-2 py-1 rounded bg-black/40 border border-amber-500/20 text-amber-300/90 flex items-center gap-1">
-                        <span>💥</span>
-                        <span>BURNS: <strong className="text-white">{totalBurns || 0}</strong> (+{((totalBurns || 0) * 150).toLocaleString()} pts)</span>
-                      </div>
-                      <div className="px-2 py-1 rounded bg-black/40 border border-emerald-500/20 text-emerald-300/90 flex items-center gap-1">
-                        <span>◎</span>
-                        <span>ECHO CARDS: <strong className="text-white">{echoCardsCount}</strong> (+{(echoCardsCount * 400).toLocaleString()} pts)</span>
-                      </div>
+                    <div className="opt-prestige-stats">
+                      <span className="opt-stat"><Flame size={12} /> Streak <strong>{streakCount || 0}d</strong></span>
+                      <span className="opt-stat">Pulls <strong>{totalPulls || 0}</strong></span>
+                      <span className="opt-stat">Burns <strong>{totalBurns || 0}</strong> <em>+{((totalBurns || 0) * 150).toLocaleString()}</em></span>
+                      <span className="opt-stat">Echo cards <strong>{echoCardsCount}</strong> <em>+{(echoCardsCount * 400).toLocaleString()}</em></span>
                     </div>
                   </div>
-
-                  {/* Progress Bar to Next Cosmetic */}
-                  <div className="pt-3">
-                    <div className="flex justify-between items-center text-[9px] font-mono mb-1.5">
-                      <span className="text-zinc-400">
-                        {nextLockedBg ? (
-                          <>
-                            NEXT UNLOCK: <strong className="text-white">{nextLockedBg.name.toUpperCase()}</strong> ({nextLockedBg.unlockScore.toLocaleString()} PTS)
-                          </>
-                        ) : (
-                          <strong className="text-emerald-400">ALL COSMETIC BACKGROUNDS UNLOCKED</strong>
-                        )}
-                      </span>
-                      <span className="font-black" style={{ color: themeColor }}>{bgProgressPct}%</span>
-                    </div>
-                    <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full transition-all duration-500 rounded-full"
-                        style={{ 
-                          width: `${bgProgressPct}%`,
-                          background: isAvant ? 'linear-gradient(90deg, #39FF14, #00E5FF)' : 'linear-gradient(90deg, #FF1493, #FFD700)'
-                        }}
-                      />
-                    </div>
+                  <div className="opt-progress-label">
+                    <span>
+                      {nextLockedBg ? (
+                        <>Next unlock: <strong>{nextLockedBg.name}</strong> at {nextLockedBg.unlockScore.toLocaleString()} pts</>
+                      ) : (
+                        <strong className="opt-ok">Every backdrop unlocked</strong>
+                      )}
+                    </span>
+                    <span className="opt-readout">{bgProgressPct}%</span>
                   </div>
-                </div>
+                  <div className="opt-progress"><span style={{ width: `${bgProgressPct}%` }} /></div>
+                </section>
 
-                {/* SvgBlurSlider */}
-                <div className="bg-black/40 border border-white/5 p-4 rounded-lg">
-                  <h3 className="font-mono text-[9px] font-black text-white/40 uppercase tracking-wider border-b border-white/5 pb-1">BACKGROUND BLUR INTENSITY</h3>
-                  <SvgBlurSlider 
-                    value={opts.backgroundBlur} 
+                <Panel title="Backdrop">
+                  <SvgBlurSlider
+                    value={opts.backgroundBlur}
                     onChange={(v) => {
                       localStorage.setItem("opt_backgroundBlur", String(v));
                       setOpts(o => ({ ...o, backgroundBlur: v }));
@@ -2352,198 +2024,124 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                     }}
                     isAvant={isAvant}
                   />
-                </div>
-
-                {/* Backgrounds Selection Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                  {GAME_BACKGROUNDS.map(bg => {
-                    const active = opts.gameBackground === bg.id;
-                    const canUnlock = activePrestigeScore >= bg.unlockScore;
-                    return (
-                      <button
-                        key={bg.id}
-                        disabled={!canUnlock}
-                        onClick={() => {
-                          localStorage.setItem("opt_gameBackground", bg.id);
-                          setOpts(o => ({ ...o, gameBackground: bg.id }));
-                          updateSettings({ gameBackground: bg.id });
-                          window.dispatchEvent(new Event("bgmusic_toggle"));
-                          audioManager.playSfx('menu_confirm', 0.1);
-                        }}
-                        className={`text-left border p-2.5 rounded flex flex-col justify-between min-h-[72px] transition-all relative ${
-                          !canUnlock 
-                            ? 'opacity-40 border-white/5 bg-black/10 cursor-not-allowed'
-                            : active
-                              ? isAvant ? 'border-[#39FF14] bg-[#39FF14]/5 text-white' : 'border-[#FF1493] bg-[#FF1493]/5 text-white'
-                              : 'border-white/5 bg-black/40 text-white hover:border-white/15 cursor-pointer'
-                        }`}
-                      >
-                        <div className="flex justify-between items-start gap-1">
-                          <span className="font-mono text-[10px] font-black uppercase truncate">{bg.name}</span>
-                          {!canUnlock && <Lock size={10} className="text-[#ffd700] shrink-0" />}
-                        </div>
-                        
-                        <div className="flex flex-col gap-0.5 mt-2">
-                          <span className="text-[7px] text-zinc-500 font-mono leading-tight truncate">{bg.desc.toUpperCase()}</span>
-                          <span className="text-[6.5px] font-black font-mono" style={{ color: canUnlock ? themeColor : '#ff9900' }}>
-                            {bg.unlockText.toUpperCase()}
+                  <div className="opt-grid opt-grid--3">
+                    {GAME_BACKGROUNDS.map(bg => {
+                      const canUnlock = activePrestigeScore >= bg.unlockScore;
+                      return (
+                        <button
+                          key={bg.id}
+                          type="button"
+                          disabled={!canUnlock}
+                          aria-pressed={opts.gameBackground === bg.id}
+                          className="opt-tile"
+                          onClick={() => {
+                            localStorage.setItem("opt_gameBackground", bg.id);
+                            setOpts(o => ({ ...o, gameBackground: bg.id }));
+                            updateSettings({ gameBackground: bg.id });
+                            window.dispatchEvent(new Event("bgmusic_toggle"));
+                            audioManager.playSfx('menu_confirm', 0.1);
+                          }}
+                        >
+                          <span className="opt-tile-top">
+                            <span className="opt-tile-title">{bg.name}</span>
+                            {!canUnlock && <Lock size={12} className="opt-gold" />}
                           </span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
+                          <span className="opt-tile-desc">{bg.desc}</span>
+                          <span className={`opt-tile-meta${canUnlock ? '' : ' is-locked'}`}>{bg.unlockText}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </Panel>
 
-                {/* Track Customization Grid */}
-                <div className="mt-8">
-                  <h3 className="font-mono text-[9px] font-black text-white/40 uppercase tracking-wider border-b border-white/5 pb-1 mb-3">
-                    GAMEPLAY TRACK LANE STYLE
-                  </h3>
-                  <div className="grid grid-cols-2 gap-2">
+                <Panel title="Track style">
+                  <div className="opt-grid opt-grid--2">
                     {GAME_TRACKS.map(track => {
-                      const active = opts.gameTrack === track.id;
                       const canUnlock = activePrestigeScore >= track.unlockScore;
                       return (
                         <button
                           key={track.id}
+                          type="button"
                           disabled={!canUnlock}
+                          aria-pressed={opts.gameTrack === track.id}
+                          className="opt-tile"
                           onClick={() => {
                             localStorage.setItem("opt_gameTrack", track.id);
                             setOpts(o => ({ ...o, gameTrack: track.id }));
                             updateSettings({ gameTrack: track.id });
                             audioManager.playSfx('menu_confirm', 0.1);
                           }}
-                          className={`text-left border p-2.5 rounded flex flex-col justify-between min-h-[72px] transition-all relative ${
-                            !canUnlock 
-                              ? 'opacity-40 border-white/5 bg-black/10 cursor-not-allowed'
-                              : active
-                                ? isAvant ? 'border-[#39FF14] bg-[#39FF14]/5 text-white' : 'border-[#FF1493] bg-[#FF1493]/5 text-white'
-                                : 'border-white/5 bg-black/40 text-white hover:border-white/15 cursor-pointer'
-                          }`}
                         >
-                          <div className="flex justify-between items-start gap-1">
-                            <span className="font-mono text-[10px] font-black uppercase truncate">{track.name}</span>
-                            {!canUnlock && <Lock size={10} className="text-[#ffd700] shrink-0" />}
-                          </div>
-                          
-                          <div className="flex flex-col gap-0.5 mt-2">
-                            <span className="text-[7px] text-zinc-500 font-mono leading-tight truncate">{track.desc.toUpperCase()}</span>
-                            <span className="text-[6.5px] font-black font-mono" style={{ color: canUnlock ? themeColor : '#ff9900' }}>
-                              {track.unlockText.toUpperCase()}
-                            </span>
-                          </div>
-
+                          <span className="opt-tile-top">
+                            <span className="opt-tile-title">{track.name}</span>
+                            {!canUnlock && <Lock size={12} className="opt-gold" />}
+                          </span>
+                          <span className="opt-tile-desc">{track.desc}</span>
+                          <span className={`opt-tile-meta${canUnlock ? '' : ' is-locked'}`}>{track.unlockText}</span>
                           {track.id === 'slideshow' && (
                             <span
+                              role="link"
+                              tabIndex={0}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 audioManager.playSfx('menu_confirm', 0.15);
                                 onClose();
                                 setLocation('/slideshow');
                               }}
-                              className="absolute bottom-2 right-2 text-[7.5px] font-black font-mono border border-white/20 hover:border-white/50 px-1.5 py-0.5 rounded text-white bg-black/55 hover:bg-black/90 transition-all cursor-pointer z-10"
+                              className="opt-tile-link"
                             >
-                              ⚙ CONFIG
+                              Configure →
                             </span>
                           )}
                         </button>
                       );
                     })}
                   </div>
-                </div>
+                </Panel>
 
-                {/* POV Perspective Camera Modes */}
-                <div className="mt-8">
-                  <h3 className="font-mono text-[9px] font-black text-white/40 uppercase tracking-wider border-b border-white/5 pb-1 mb-3 flex items-center justify-between">
-                    <span className="flex items-center gap-1.5">
-                      <span>CAMERA POV PERSPECTIVE ENGINE</span>
-                      {!isPovUnlocked && (
-                        <span className="text-[7px] px-1.5 py-0.5 bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded font-mono font-bold tracking-wider">
-                          LOCKED // CODE REQUIRED
-                        </span>
-                      )}
-                    </span>
-                    <span className="text-[7.5px] text-zinc-500">
-                      {isPovUnlocked ? 'HOTKEY: V / P IN GAME' : 'ENTER CODE TO UNLOCK'}
-                    </span>
-                  </h3>
-                  
+                <Panel
+                  title="Camera POV"
+                  hint={isPovUnlocked ? <span>Hotkey <kbd className="opt-kbd">V</kbd> / <kbd className="opt-kbd">P</kbd> in game</span> : 'Code required'}
+                >
                   {!isPovUnlocked ? (
-                    <div className="p-4 border border-amber-500/25 rounded-lg bg-amber-950/15 backdrop-blur-md flex flex-col gap-3">
-                      <div className="flex items-start gap-3">
-                        <div className="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0 text-lg shadow-[0_0_12px_rgba(245,158,11,0.15)]">
-                          🔒
-                        </div>
-                        <div className="flex-1">
-                          <div className="font-mono text-[11px] font-black uppercase text-white tracking-wider flex items-center gap-2">
-                            <span>CLASSIFIED PERSPECTIVE ENGINE</span>
-                            <span className="text-[7px] px-1 py-0.5 bg-zinc-800 text-zinc-400 rounded font-mono">ENCRYPTED</span>
-                          </div>
-                          <p className="text-[8px] font-mono text-zinc-400 mt-1 leading-relaxed">
-                            3D Cyber Tunnel, 3D Corkscrew, Wave Coaster, Split Matrix, and Realtime Stage POV Shifts are locked. The decrypt code is out there…
-                          </p>
-                        </div>
-                      </div>
-
-                      <form
-                        onSubmit={async (e) => {
-                          e.preventDefault();
-                          const code = povInputCode.trim();
-                          if (code.toUpperCase() === 'POVREDEEM') {
-                            localStorage.setItem("opt_unlocked_pov", "true");
-                            await updateCheats({ povChanger: true });
-                            window.dispatchEvent(new Event('cheat_code_activated'));
-                            audioManager.playSfx('platinum_get', 0.8);
-                            setPovInputError(null);
-                            setPovSuccess(true);
-                            setPovInputCode('');
-                          } else {
-                            setPovInputError("INVALID ACCESS CODE — USE \"POVREDEEM\"");
-                            audioManager.playSfx('locked_out', 0.2);
-                          }
-                        }}
-                        className="flex flex-col sm:flex-row gap-2 mt-1"
-                      >
-                        <input
-                          type="text"
-                          value={povInputCode}
-                          onChange={(e) => {
-                            setPovInputCode(e.target.value);
-                            setPovInputError(null);
-                          }}
-                          placeholder="ENTER CODE (POVREDEEM)"
-                          className="flex-1 bg-black/70 border border-white/15 focus:border-[#39FF14] rounded px-3 py-2 text-xs font-mono uppercase text-white placeholder:text-zinc-600 outline-none transition-colors"
-                        />
-                        <button
-                          type="submit"
-                          className="px-5 py-2 bg-[#39FF14] hover:bg-[#32e012] active:scale-95 text-black font-mono font-black text-xs uppercase tracking-wider rounded transition-all cursor-pointer shadow-[0_0_14px_rgba(57,255,20,0.3)] shrink-0"
-                        >
-                          DECRYPT & UNLOCK
-                        </button>
-                      </form>
-                      {povInputError && (
-                        <span className="text-[8px] font-mono text-red-400 font-bold tracking-wider uppercase">
-                          ⚠ {povInputError}
-                        </span>
-                      )}
-                    </div>
+                    <CodeUnlock
+                      title="Classified perspective engine"
+                      body="3D Cyber Tunnel, Corkscrew, Wave Coaster, Split Matrix and live stage POV shifts are locked. The decrypt code is out there…"
+                      value={povInputCode}
+                      error={povInputError}
+                      placeholder="ENTER CODE (POVREDEEM)"
+                      onChange={(v) => {
+                        setPovInputCode(v);
+                        setPovInputError(null);
+                      }}
+                      onSubmit={async () => {
+                        const code = povInputCode.trim();
+                        if (code.toUpperCase() === 'POVREDEEM') {
+                          localStorage.setItem("opt_unlocked_pov", "true");
+                          await updateCheats({ povChanger: true });
+                          window.dispatchEvent(new Event('cheat_code_activated'));
+                          audioManager.playSfx('platinum_get', 0.8);
+                          setPovInputError(null);
+                          setPovSuccess(true);
+                          setPovInputCode('');
+                        } else {
+                          setPovInputError("INVALID ACCESS CODE — USE \"POVREDEEM\"");
+                          audioManager.playSfx('locked_out', 0.2);
+                        }
+                      }}
+                    />
                   ) : (
                     <>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3 max-h-[380px] overflow-y-auto pr-1">
+                      <div className="opt-grid opt-grid--3 opt-grid--scroll">
                         {[
-                          // Core & Retro Highways
                           { id: 'classic', name: '2.5D Classic', desc: 'Standard Beatstar highway perspective', icon: '📐', tag: 'CORE' },
                           { id: 'flat_2d', name: 'Orthographic 2D', desc: 'Equal-width top-down piano roll highway', icon: '🎹', tag: '2D' },
                           { id: 'horizontal_drift', name: 'Side-Scroller', desc: '90° horizontal side-scrolling precision highway', icon: '⏩', tag: 'RETRO' },
                           { id: 'dynamic_stage', name: 'Dynamic Stage', desc: 'Beatsync camera director & stage shifts', icon: '🎥', tag: 'DIRECTOR' },
-
-                          // 3D Stage Archetypes
                           { id: 'cyber_tunnel', name: '3D Cyber Tunnel', desc: 'First-person tunnel vortex with concentric rings', icon: '🌀', tag: 'VORTEX' },
                           { id: 'corkscrew', name: '3D Corkscrew', desc: 'Helical spiral loop slide with 52% precision runway', icon: '🌪️', tag: 'HELIX' },
                           { id: 'rollercoaster', name: 'Wave Coaster', desc: 'Undulating 3D wave coaster with gravity plunge', icon: '🎢', tag: 'GRAVITY' },
                           { id: 'matrix_split', name: 'Split Matrix', desc: 'Detached 3-ribbon split horizon highway matrix', icon: '🔀', tag: 'POLY' },
-
-                          // Experimental Hyperspace Perspectives
                           { id: 'cockpit_hud', name: 'Starfighter Cockpit', desc: 'Curved canopy HUD around the highway', icon: '🏎️', tag: 'HUD' },
                           { id: 'hyper_prism', name: 'Prismatic Prism', desc: 'Refracted gemstone prism with faceted mirrors', icon: '🪞', tag: 'REFRACT' },
                           { id: 'dna_helix', name: 'DNA Double-Helix', desc: 'Intertwined quantum ribbon strands with base rungs', icon: '🧬', tag: 'QUANTUM' },
@@ -2554,394 +2152,240 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                           { id: 'mobius_loop', name: 'Möbius Infinity', desc: 'Non-Euclidean topological figure-8 twist highway', icon: '♾️', tag: 'TOPOLOGY' },
                           { id: 'canyon_run', name: 'Canyon Run', desc: 'Desert road sweeping through red-rock S-bends at dusk', icon: '🏜️', tag: 'ROAD TRIP' },
                           { id: 'aurora_bridge', name: 'Aurora Bridge', desc: 'Arched glass bridge over a frozen fjord under the northern lights', icon: '🌉', tag: 'NORTHERN' },
-                        ].map(pov => {
-                          const active = (opts.povMode || 'classic') === pov.id;
-                          return (
-                            <button
-                              key={pov.id}
-                              onClick={() => {
-                                localStorage.setItem("opt_povMode", pov.id);
-                                setOpts(o => ({ ...o, povMode: pov.id as any }));
-                                updateSettings({ povMode: pov.id as any });
-                                audioManager.playSfx('menu_confirm', 0.1);
-                              }}
-                              className={`text-left border p-2.5 rounded flex flex-col justify-between min-h-[76px] transition-all cursor-pointer relative ${
-                                active
-                                  ? isAvant ? 'border-[#39FF14] bg-[#39FF14]/10 text-white' : 'border-[#FF1493] bg-[#FF1493]/10 text-white'
-                                  : 'border-white/5 bg-black/40 text-white hover:border-white/15'
-                              }`}
-                            >
-                              <div className="flex justify-between items-center gap-1">
-                                <span className="font-mono text-[10px] font-black uppercase truncate">{pov.name}</span>
-                                <span className="text-xs">{pov.icon}</span>
-                              </div>
-                              <div className="flex items-end justify-between gap-1 mt-1">
-                                <span className="text-[7px] text-zinc-500 font-mono leading-tight">{pov.desc.toUpperCase()}</span>
-                                {pov.tag && (
-                                  <span className="text-[6.5px] px-1 py-0.2 bg-white/5 text-zinc-400 font-mono rounded shrink-0">{pov.tag}</span>
-                                )}
-                              </div>
-                            </button>
-                          );
-                        })}
+                        ].map(pov => (
+                          <button
+                            key={pov.id}
+                            type="button"
+                            aria-pressed={(opts.povMode || 'classic') === pov.id}
+                            className="opt-tile"
+                            onClick={() => {
+                              localStorage.setItem("opt_povMode", pov.id);
+                              setOpts(o => ({ ...o, povMode: pov.id as any }));
+                              updateSettings({ povMode: pov.id as any });
+                              audioManager.playSfx('menu_confirm', 0.1);
+                            }}
+                          >
+                            <span className="opt-tile-top">
+                              <span className="opt-tile-title">{pov.name}</span>
+                              <span aria-hidden="true">{pov.icon}</span>
+                            </span>
+                            <span className="opt-tile-desc">{pov.desc}</span>
+                            <span className="opt-tile-meta">{pov.tag}</span>
+                          </button>
+                        ))}
                       </div>
 
-                      {/* Stage POV Auto-Switch Toggle */}
-                      <div className="p-3 border border-white/5 rounded bg-black/30 flex items-center justify-between gap-3">
-                        <div>
-                          <div className="font-mono text-[10px] font-black uppercase text-white flex items-center gap-1.5">
-                            <span>STAGE POV DYNAMIC TRANSITIONS</span>
-                            <span className="text-[7px] px-1 py-0.2 bg-purple-500/20 text-purple-300 border border-purple-500/30 rounded">AUTO-WARP</span>
-                          </div>
-                          <div className="text-[7.5px] font-mono text-zinc-500 uppercase mt-0.5">
-                            Camera shifts into tunnel views as the song gets harder
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => {
+                      <SettingRow label="Dynamic stage transitions" tag="Auto-warp" desc="Camera shifts into tunnel views as the song gets harder.">
+                        <Switch
+                          checked={opts.stagePovSwitch !== false}
+                          label="Dynamic stage transitions"
+                          onToggle={() => {
                             const nextVal = !(opts.stagePovSwitch !== false);
                             localStorage.setItem("opt_stagePovSwitch", String(nextVal));
                             setOpts(o => ({ ...o, stagePovSwitch: nextVal }));
                             updateSettings({ stagePovSwitch: nextVal });
                             audioManager.playSfx('menu_confirm', 0.1);
                           }}
-                          className={`relative w-10 h-5 rounded-full transition-colors cursor-pointer shrink-0 ${
-                            opts.stagePovSwitch !== false ? (isAvant ? 'bg-[#39FF14]' : 'bg-[#FF1493]') : 'bg-zinc-800'
-                          }`}
-                        >
-                          <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
-                            opts.stagePovSwitch !== false ? 'translate-x-5' : 'translate-x-0'
-                          }`} />
-                        </button>
-                      </div>
+                        />
+                      </SettingRow>
                     </>
                   )}
-                </div>
+                </Panel>
               </div>
             )}
 
+            {/* ════ CARD FRONTS ════ */}
             {activeTab === 'fronts' && (
-              <div className="space-y-4 animate-fade-in">
-                <div>
-                  <h2 className="text-base md:text-lg brutalist-menu-title italic mb-1" style={{ '--neon-accent': isAvant ? '#39FF14' : '#FF1493' } as any}>Card Front Skins Catalog</h2>
-                  <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Frames for the cards in your collection</p>
-                </div>
-
-                <div className="flex flex-col lg:flex-row gap-6 items-center lg:items-start relative">
-                  
-                  {/* Visual Preview Side Column */}
-                  <div className="w-full lg:w-[220px] shrink-0 bg-black/95 lg:bg-black/45 border border-white/10 lg:border-white/5 p-3 lg:p-4 rounded-xl flex flex-row lg:flex-col items-center justify-center gap-4 lg:gap-3 sticky lg:relative top-[-16px] lg:top-0 z-20 lg:z-0 shadow-xl lg:shadow-none backdrop-blur-md lg:backdrop-blur-none">
-                    <span className="font-mono text-[9px] text-zinc-500 uppercase tracking-wider hidden lg:block">LIVE SKIN PREVIEW</span>
-                    <CardSkinContext.Provider value={{ staticFace: 'front', backSkin: activeCardBack }}>
-                      <div className="w-[115px] h-[162px] lg:w-[170px] lg:h-[240px] relative rounded-lg lg:rounded-xl overflow-hidden shadow-2xl bg-zinc-950/80 shrink-0">
-                        {(() => {
-                          const SkinComp = getSkinComponent(hoveredFrontSkin || activeCardSkin);
-                          return <SkinComp card={previewCard} />;
-                        })()}
-                      </div>
-                    </CardSkinContext.Provider>
-                    <div className="text-left lg:text-center font-mono">
-                      <span className="text-[11px] lg:text-[10px] text-white font-black block uppercase">
-                        {FRONT_SKINS.find(s => s.id === (hoveredFrontSkin || activeCardSkin))?.name}
-                      </span>
-                      <span className="text-[7.5px] text-zinc-400 lg:text-zinc-500 uppercase mt-0.5 block">
-                        {hoveredFrontSkin ? "PREVIEWING HOVERED" : "CURRENTLY SELECTED"}
-                      </span>
+              <div className="opt-split">
+                <aside className="opt-preview">
+                  <span className="opt-eyebrow">Live preview</span>
+                  <CardSkinContext.Provider value={{ staticFace: 'front', backSkin: activeCardBack }}>
+                    <div className="opt-preview-card">
+                      {(() => {
+                        const SkinComp = getSkinComponent(hoveredFrontSkin || activeCardSkin);
+                        return <SkinComp card={previewCard} />;
+                      })()}
                     </div>
+                  </CardSkinContext.Provider>
+                  <div className="opt-preview-caption">
+                    <strong>{FRONT_SKINS.find(s => s.id === (hoveredFrontSkin || activeCardSkin))?.name}</strong>
+                    <span>{hoveredFrontSkin ? 'Previewing' : 'Equipped'}</span>
                   </div>
+                </aside>
 
-                  {/* Grid Selector */}
-                  <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-2 gap-2.5 lg:mt-0 mt-4">
-                    {FRONT_SKINS.map(skin => {
-                      const isUnlocked = skin.cost === 0 || unlockedSkins.includes(skin.id);
-                      const isSelected = activeCardSkin === skin.id;
-
-                      return (
-                        <div 
-                          key={skin.id}
-                          className={`border rounded p-3 flex flex-col justify-between min-h-[96px] transition-all relative select-none ${
-                            isSelected 
-                              ? isAvant 
-                                ? 'border-[#39FF14] bg-[#39FF14]/5 shadow-[0_0_8px_rgba(57,255,20,0.1)]' 
-                                : 'border-[#FF1493] bg-[#FF1493]/5 shadow-[0_0_8px_rgba(255,20,147,0.1)]'
-                              : isUnlocked 
-                                ? 'border-white/5 bg-black/40 hover:border-white/15 cursor-pointer' 
-                                : 'border-white/5 bg-black/10 opacity-70'
-                          }`}
-                          onClick={() => isUnlocked && handleSelectFrontSkin(skin.id)}
-                          onMouseEnter={() => setHoveredFrontSkin(skin.id)}
-                          onMouseLeave={() => setHoveredFrontSkin(null)}
-                        >
-                          <div className="flex justify-between items-start gap-2">
-                            <div className="flex flex-col">
-                              <span className="text-[10px] font-black font-mono text-white uppercase flex items-center gap-1.5">
-                                {skin.name}
-                                {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />}
-                              </span>
-                              <span className="text-[7.5px] text-zinc-500 font-mono mt-1 leading-snug uppercase">{skin.desc}</span>
-                            </div>
-                            {!isUnlocked && <Lock size={11} className="text-[#ffd700]" />}
-                          </div>
-
-                          <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-2">
-                            {isUnlocked ? (
-                              isSelected ? (
-                                <span className="text-[7.5px] text-emerald-400 font-mono font-black uppercase tracking-wider flex items-center gap-1">
-                                  <Check size={10} /> ACTIVE SKIN
-                                </span>
-                              ) : (
-                                <span className="text-[7.5px] text-zinc-500 font-mono font-black uppercase tracking-wider">
-                                  UNLOCKED
-                                </span>
-                              )
-                            ) : (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleUnlockFrontSkin(skin.id, skin.cost);
-                                }}
-                                className="w-full text-center text-[8px] font-mono font-black uppercase tracking-wider bg-[#ffd700] hover:bg-[#ffe045] text-black py-1 px-2 rounded transition-all flex items-center justify-center gap-1 cursor-pointer"
-                              >
-                                UNLOCK FOR {skin.cost} V⚡
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                <div className="opt-grid opt-grid--2">
+                  {FRONT_SKINS.map(skin => {
+                    const isUnlocked = skin.cost === 0 || unlockedSkins.includes(skin.id);
+                    const isSelected = activeCardSkin === skin.id;
+                    return (
+                      <div
+                        key={skin.id}
+                        role="button"
+                        tabIndex={isUnlocked ? 0 : -1}
+                        aria-pressed={isSelected}
+                        aria-disabled={!isUnlocked}
+                        className={`opt-tile${isUnlocked ? '' : ' is-locked'}`}
+                        onClick={() => isUnlocked && handleSelectFrontSkin(skin.id)}
+                        onKeyDown={(e) => {
+                          if (isUnlocked && (e.key === 'Enter' || e.key === ' ')) {
+                            e.preventDefault();
+                            handleSelectFrontSkin(skin.id);
+                          }
+                        }}
+                        onMouseEnter={() => setHoveredFrontSkin(skin.id)}
+                        onMouseLeave={() => setHoveredFrontSkin(null)}
+                      >
+                        <span className="opt-tile-top">
+                          <span className="opt-tile-title">{skin.name}</span>
+                          {!isUnlocked && <Lock size={12} className="opt-gold" />}
+                        </span>
+                        <span className="opt-tile-desc">{skin.desc}</span>
+                        {renderSkinFooter(isUnlocked, isSelected, skin.cost, () => handleUnlockFrontSkin(skin.id, skin.cost), skin.cost === 0 ? 'Free' : 'Owned')}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
 
+            {/* ════ CARD BACKS ════ */}
             {activeTab === 'backs' && (
-              <div className="space-y-5 animate-fade-in">
-                <div>
-                  <h2 className="text-base md:text-lg brutalist-menu-title italic mb-1" style={{ '--neon-accent': isAvant ? '#39FF14' : '#FF1493' } as any}>Card Back Skins Catalog</h2>
-                  <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Standard and unlockable card backs</p>
-                </div>
-
-                <div className="flex flex-col lg:flex-row gap-6 items-center lg:items-start relative">
-                  
-                  {/* Visual Preview Side Column */}
-                  <div className="w-full lg:w-[220px] shrink-0 bg-black/95 lg:bg-black/45 border border-white/10 lg:border-white/5 p-3 lg:p-4 rounded-xl flex flex-row lg:flex-col items-center justify-center gap-4 lg:gap-3 sticky lg:relative top-[-16px] lg:top-0 z-20 lg:z-0 shadow-xl lg:shadow-none backdrop-blur-md lg:backdrop-blur-none">
-                    <span className="font-mono text-[9px] text-zinc-500 uppercase tracking-wider hidden lg:block">LIVE BACK PREVIEW</span>
-                    <CardSkinContext.Provider value={{ staticFace: 'back', backSkin: hoveredBackSkin || activeCardBack }}>
-                      <div className="w-[115px] h-[162px] lg:w-[170px] lg:h-[240px] relative rounded-lg lg:rounded-xl overflow-hidden shadow-2xl bg-zinc-950/80 shrink-0">
-                        {(() => {
-                          const SkinComp = getSkinComponent(activeCardSkin);
-                          const BackComp = getBackComponent(hoveredBackSkin || activeCardBack);
-                          return <SkinComp card={previewCard} backSide={<BackComp card={previewCard} />} />;
-                        })()}
-                      </div>
-                    </CardSkinContext.Provider>
-                    <div className="text-left lg:text-center font-mono">
-                      <span className="text-[11px] lg:text-[10px] text-white font-black block uppercase font-mono">
-                        {[...STANDARD_CARD_BACKS, ...BACK_SKINS.map(s => ({ id: s.id, name: s.name }))].find(b => b.id === (hoveredBackSkin || activeCardBack))?.name}
-                      </span>
-                      <span className="text-[7.5px] text-zinc-400 lg:text-zinc-500 uppercase mt-0.5 block">
-                        {hoveredBackSkin ? "PREVIEWING HOVERED" : "CURRENTLY SELECTED"}
-                      </span>
+              <div className="opt-split">
+                <aside className="opt-preview">
+                  <span className="opt-eyebrow">Live preview</span>
+                  <CardSkinContext.Provider value={{ staticFace: 'back', backSkin: hoveredBackSkin || activeCardBack }}>
+                    <div className="opt-preview-card">
+                      {(() => {
+                        const SkinComp = getSkinComponent(activeCardSkin);
+                        const BackComp = getBackComponent(hoveredBackSkin || activeCardBack);
+                        return <SkinComp card={previewCard} backSide={<BackComp card={previewCard} />} />;
+                      })()}
                     </div>
+                  </CardSkinContext.Provider>
+                  <div className="opt-preview-caption">
+                    <strong>{[...STANDARD_CARD_BACKS, ...BACK_SKINS.map(s => ({ id: s.id, name: s.name }))].find(b => b.id === (hoveredBackSkin || activeCardBack))?.name}</strong>
+                    <span>{hoveredBackSkin ? 'Previewing' : 'Equipped'}</span>
                   </div>
+                </aside>
 
-                  {/* Lists Container */}
-                  <div className="flex-1 w-full space-y-5 lg:mt-0 mt-4">
-                    {/* Section 1: Standard Card Backs */}
-                    <div className="space-y-3">
-                      <h3 className="font-mono text-[9px] font-black text-white/40 uppercase tracking-wider border-b border-white/5 pb-1">STANDARD CARD BACKS</h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                        {STANDARD_CARD_BACKS.map(skin => {
-                          const isSelected = activeCardBack === skin.id;
-                          return (
-                            <div 
-                              key={skin.id}
-                              className={`border rounded p-3 flex flex-col justify-between min-h-[96px] transition-all cursor-pointer select-none ${
-                                isSelected 
-                                  ? isAvant 
-                                    ? 'border-[#39FF14] bg-[#39FF14]/5 shadow-[0_0_8px_rgba(57,255,20,0.1)]' 
-                                    : 'border-[#FF1493] bg-[#FF1493]/5 shadow-[0_0_8px_rgba(255,20,147,0.1)]'
-                                  : 'border-white/5 bg-black/40 hover:border-white/15'
-                              }`}
-                              onClick={() => handleSelectBackSkin(skin.id)}
-                              onMouseEnter={() => setHoveredBackSkin(skin.id)}
-                              onMouseLeave={() => setHoveredBackSkin(null)}
-                            >
-                              <div className="flex flex-col">
-                                <span className="text-[10px] font-black font-mono text-white uppercase flex items-center gap-1.5">
-                                  {skin.name}
-                                  {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />}
-                                </span>
-                                <span className="text-[7.5px] text-zinc-500 font-mono mt-1 leading-snug uppercase">{skin.desc}</span>
-                              </div>
-
-                              <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-2">
-                                {isSelected ? (
-                                  <span className="text-[7.5px] text-emerald-400 font-mono font-black uppercase tracking-wider flex items-center gap-1">
-                                    <Check size={10} /> ACTIVE BACK
-                                  </span>
-                                ) : (
-                                  <span className="text-[7.5px] text-zinc-500 font-mono font-black uppercase tracking-wider">
-                                    UNLOCKED (FREE)
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
+                <div className="opt-stack">
+                  <Panel title="Standard backs" hint="Free">
+                    <div className="opt-grid opt-grid--2">
+                      {STANDARD_CARD_BACKS.map(skin => {
+                        const isSelected = activeCardBack === skin.id;
+                        return (
+                          <div
+                            key={skin.id}
+                            role="button"
+                            tabIndex={0}
+                            aria-pressed={isSelected}
+                            className="opt-tile"
+                            onClick={() => handleSelectBackSkin(skin.id)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                handleSelectBackSkin(skin.id);
+                              }
+                            }}
+                            onMouseEnter={() => setHoveredBackSkin(skin.id)}
+                            onMouseLeave={() => setHoveredBackSkin(null)}
+                          >
+                            <span className="opt-tile-top">
+                              <span className="opt-tile-title">{skin.name}</span>
+                              <span className="opt-tile-chip" style={skin.style} />
+                            </span>
+                            <span className="opt-tile-desc">{skin.desc}</span>
+                            {renderSkinFooter(true, isSelected, 0, () => {}, 'Free')}
+                          </div>
+                        );
+                      })}
                     </div>
+                  </Panel>
 
-                    {/* Section 2: Special Unlockable Card Backs */}
-                    <div className="space-y-3 pt-2">
-                      <h3 className="font-mono text-[9px] font-black text-white/40 uppercase tracking-wider border-b border-white/5 pb-1">MINT EDITOR UNLOCKABLE BACKS</h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                        {BACK_SKINS.map(skin => {
-                          const isUnlocked = unlockedSkins.includes('back_' + skin.id);
-                          const isSelected = activeCardBack === skin.id;
-
-                          return (
-                            <div 
-                              key={skin.id}
-                              className={`border rounded p-3 flex flex-col justify-between min-h-[96px] transition-all relative select-none ${
-                                isSelected 
-                                  ? isAvant 
-                                    ? 'border-[#39FF14] bg-[#39FF14]/5 shadow-[0_0_8px_rgba(57,255,20,0.1)]' 
-                                    : 'border-[#FF1493] bg-[#FF1493]/5 shadow-[0_0_8px_rgba(255,20,147,0.1)]'
-                                  : isUnlocked 
-                                    ? 'border-white/5 bg-black/40 hover:border-white/15 cursor-pointer' 
-                                    : 'border-white/5 bg-black/10 opacity-70'
-                              }`}
-                              onClick={() => isUnlocked && handleSelectBackSkin(skin.id)}
-                              onMouseEnter={() => setHoveredBackSkin(skin.id)}
-                              onMouseLeave={() => setHoveredBackSkin(null)}
-                            >
-                              <div className="flex justify-between items-start gap-2">
-                                <div className="flex flex-col">
-                                  <span className="text-[10px] font-black font-mono text-white uppercase flex items-center gap-1.5">
-                                    {skin.name}
-                                    {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />}
-                                  </span>
-                                  <span className="text-[7.5px] text-zinc-500 font-mono mt-1 leading-snug uppercase">{skin.desc}</span>
-                                </div>
-                                {!isUnlocked && <Lock size={11} className="text-[#ffd700]" />}
-                              </div>
-
-                              <div className="mt-4 flex items-center justify-between border-t border-white/5 pt-2">
-                                {isUnlocked ? (
-                                  isSelected ? (
-                                    <span className="text-[7.5px] text-emerald-400 font-mono font-black uppercase tracking-wider flex items-center gap-1">
-                                      <Check size={10} /> ACTIVE BACK
-                                    </span>
-                                  ) : (
-                                    <span className="text-[7.5px] text-zinc-500 font-mono font-black uppercase tracking-wider">
-                                      UNLOCKED
-                                    </span>
-                                  )
-                                ) : (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleUnlockBackSkin(skin.id, skin.cost);
-                                    }}
-                                    className="w-full text-center text-[8px] font-mono font-black uppercase tracking-wider bg-[#ffd700] hover:bg-[#ffe045] text-black py-1 px-2 rounded transition-all flex items-center justify-center gap-1 cursor-pointer"
-                                  >
-                                    UNLOCK FOR {skin.cost} V⚡
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
+                  <Panel title="Unlockable backs" hint={<span className="opt-gold">Spend V⚡</span>}>
+                    <div className="opt-grid opt-grid--2">
+                      {BACK_SKINS.map(skin => {
+                        const isUnlocked = unlockedSkins.includes('back_' + skin.id);
+                        const isSelected = activeCardBack === skin.id;
+                        return (
+                          <div
+                            key={skin.id}
+                            role="button"
+                            tabIndex={isUnlocked ? 0 : -1}
+                            aria-pressed={isSelected}
+                            aria-disabled={!isUnlocked}
+                            className={`opt-tile${isUnlocked ? '' : ' is-locked'}`}
+                            onClick={() => isUnlocked && handleSelectBackSkin(skin.id)}
+                            onKeyDown={(e) => {
+                              if (isUnlocked && (e.key === 'Enter' || e.key === ' ')) {
+                                e.preventDefault();
+                                handleSelectBackSkin(skin.id);
+                              }
+                            }}
+                            onMouseEnter={() => setHoveredBackSkin(skin.id)}
+                            onMouseLeave={() => setHoveredBackSkin(null)}
+                          >
+                            <span className="opt-tile-top">
+                              <span className="opt-tile-title">{skin.name}</span>
+                              {!isUnlocked && <Lock size={12} className="opt-gold" />}
+                            </span>
+                            <span className="opt-tile-desc">{skin.desc}</span>
+                            {renderSkinFooter(isUnlocked, isSelected, skin.cost, () => handleUnlockBackSkin(skin.id, skin.cost))}
+                          </div>
+                        );
+                      })}
                     </div>
+                  </Panel>
 
-                    {/* Section 3: Pack Chassis Architecture */}
-                    <div className="space-y-3 pt-2">
-                      <h3 className="font-mono text-[9px] font-black text-white/40 uppercase tracking-wider border-b border-white/5 pb-1">PACK CHASSIS ARCHITECTURE</h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                        {/* Classic Foil */}
-                        <div 
-                          className={`border rounded p-3 flex flex-col justify-between min-h-[90px] transition-all cursor-pointer ${
-                            packDesignStyle === 'classic_foil'
-                              ? 'border-amber-400 bg-amber-400/10 shadow-[0_0_12px_rgba(251,191,36,0.2)]'
-                              : 'border-white/5 bg-black/40 hover:border-white/15'
-                          }`}
-                          onClick={() => setPackDesignStyle('classic_foil')}
+                  <Panel title="Pack style" hint="How new pulls arrive">
+                    <div className="opt-grid opt-grid--2">
+                      {[
+                        { id: 'classic_foil' as const, name: 'Classic foil pouch', desc: 'Crimped foil wrapper with stickers', tone: '#E5B800' },
+                        { id: 'cyber_cartridge' as const, name: 'Cyber matrix core', desc: 'Hard-shell data capsule, opened by laser', tone: '#00E5FF' },
+                      ].map(pack => (
+                        <button
+                          key={pack.id}
+                          type="button"
+                          aria-pressed={packDesignStyle === pack.id}
+                          className="opt-tile"
+                          style={{ '--opt-accent': pack.tone } as CSSProperties}
+                          onClick={() => setPackDesignStyle(pack.id)}
                         >
-                          <div className="flex justify-between items-start gap-2">
-                            <div className="flex flex-col">
-                              <span className="text-[10px] font-black font-mono text-white uppercase flex items-center gap-1.5">
-                                🏷️ Classic Foil Pouch
-                                {packDesignStyle === 'classic_foil' && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />}
-                              </span>
-                              <span className="text-[7.5px] text-zinc-400 font-mono mt-1 leading-snug uppercase">
-                                Crimped foil wrapper with stickers
-                              </span>
-                            </div>
-                          </div>
-                          <div className="mt-3 flex items-center justify-between border-t border-white/5 pt-2">
-                            {packDesignStyle === 'classic_foil' ? (
-                              <span className="text-[7.5px] text-amber-400 font-mono font-black uppercase tracking-wider flex items-center gap-1">
-                                <Check size={10} /> ACTIVE CHASSIS
-                              </span>
-                            ) : (
-                              <span className="text-[7.5px] text-zinc-500 font-mono font-black uppercase tracking-wider">
-                                SELECT CHASSIS
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Cyber Matrix Cartridge */}
-                        <div 
-                          className={`border rounded p-3 flex flex-col justify-between min-h-[90px] transition-all cursor-pointer ${
-                            packDesignStyle === 'cyber_cartridge'
-                              ? 'border-cyan-400 bg-cyan-400/10 shadow-[0_0_12px_rgba(0,229,255,0.2)]'
-                              : 'border-white/5 bg-black/40 hover:border-white/15'
-                          }`}
-                          onClick={() => setPackDesignStyle('cyber_cartridge')}
-                        >
-                          <div className="flex justify-between items-start gap-2">
-                            <div className="flex flex-col">
-                              <span className="text-[10px] font-black font-mono text-white uppercase flex items-center gap-1.5">
-                                ⚡ Cyber Matrix Core
-                                {packDesignStyle === 'cyber_cartridge' && <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />}
-                              </span>
-                              <span className="text-[7.5px] text-zinc-400 font-mono mt-1 leading-snug uppercase">
-                                Hard-shell data capsule, opened by laser
-                              </span>
-                            </div>
-                          </div>
-                          <div className="mt-3 flex items-center justify-between border-t border-white/5 pt-2">
-                            {packDesignStyle === 'cyber_cartridge' ? (
-                              <span className="text-[7.5px] text-cyan-400 font-mono font-black uppercase tracking-wider flex items-center gap-1">
-                                <Check size={10} /> ACTIVE CHASSIS
-                              </span>
-                            ) : (
-                              <span className="text-[7.5px] text-zinc-500 font-mono font-black uppercase tracking-wider">
-                                SELECT CHASSIS
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
+                          <span className="opt-tile-title">{pack.name}</span>
+                          <span className="opt-tile-desc">{pack.desc}</span>
+                          <span className="opt-tile-foot">
+                            {packDesignStyle === pack.id
+                              ? <span className="opt-status opt-status--on"><Check size={12} /> Active</span>
+                              : <span className="opt-status">Select</span>}
+                          </span>
+                        </button>
+                      ))}
                     </div>
-                  </div>
-
+                  </Panel>
                 </div>
               </div>
             )}
+          </main>
+        </div>
 
+        {/* ── Footer ── */}
+        <footer className="opt-foot">
+          <span className="opt-saved">
+            <span className="opt-saved-dot" /> Changes save automatically
+          </span>
+          <div className="opt-foot-actions">
+            <button
+              type="button"
+              onClick={handleReset}
+              className={`opt-btn opt-btn--ghost${resetState === 'confirm' ? ' is-danger' : ''}`}
+            >
+              {resetState === 'confirm' ? 'Tap again to reset' : 'Reset defaults'}
+            </button>
+            <button type="button" onClick={onClose} className="opt-btn opt-btn--solid">
+              Done
+            </button>
           </div>
-
-        </div>
-
-        {/* Bottom Info Footer */}
-        <div className="px-6 py-3 border-t border-white/10 bg-black/60 flex items-center justify-between font-mono text-[7.5px] text-zinc-500 tracking-widest uppercase">
-          <span>COGNITIVE LINK: ONLINE // PROTOCOL BUILD_1.5.0</span>
-          <span>ESC key to close · click backdrop to return</span>
-        </div>
+        </footer>
       </div>
     </div>
   );
