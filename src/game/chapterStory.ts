@@ -4,9 +4,9 @@
 // the campaign list and the chapter screen agree on progress.
 
 import stories from '@/data/chapter_stories.json';
-import type { GameSong } from './api';
-import { getMedalForSong, getHighScore, getChapterPlatinums } from './progress';
-import type { ChapterMeta } from './campaign';
+import { loadCatalog, isSongTimeLocked, type GameSong } from './api';
+import { hasCampaignClear, getCampaignPlatinums } from './progress';
+import { CHAPTERS, calculateCampaignDifficulty, type ChapterMeta } from './campaign';
 import { getMonthNumFromDay } from '@/utils/dayCalc';
 
 /** A track that marks a turn in an act; `line` is its hook when it has lyrics. */
@@ -78,10 +78,9 @@ export function splitChapter(songs: GameSong[]) {
   };
 }
 
+/** Cleared in the campaign: a passed run launched from the chapter. On-demand plays don't count. */
 export function hasClearedSong(song?: GameSong): boolean {
-  if (!song) return false;
-  const medal = getMedalForSong(song.id);
-  return (!!medal && medal !== '') || getHighScore(song.id) > 0;
+  return !!song && hasCampaignClear(song.id);
 }
 
 export interface ChapterProgress {
@@ -96,7 +95,7 @@ export interface ChapterProgress {
 export function chapterProgress(songs: GameSong[], meta: ChapterMeta): ChapterProgress {
   const { regular, bonus } = splitChapter(songs);
   const cleared = regular.filter(hasClearedSong).length;
-  const platinums = getChapterPlatinums(regular.map((s) => s.id));
+  const platinums = getCampaignPlatinums(regular.map((s) => s.id));
   return {
     regular,
     bonus,
@@ -140,3 +139,62 @@ export const MOOD_LABEL: Record<string, string> = {
   restless: 'Restless',
   heavy: 'Heavy',
 };
+
+/** Campaign difficulty for stage `idx` of a chapter. */
+export function stageLevel(month: number, idx: number, p: ChapterProgress): number {
+  const isBonus = idx >= p.regular.length;
+  return calculateCampaignDifficulty(
+    month,
+    isBonus ? idx - p.regular.length : idx,
+    isBonus ? p.bonus.length : p.regular.length,
+    isBonus,
+  );
+}
+
+export interface CampaignStage {
+  song: GameSong;
+  month: number;
+  meta: ChapterMeta;
+  songs: GameSong[];
+  progress: ChapterProgress;
+  idx: number;
+  isBonus: boolean;
+  level: number;
+  unlocked: boolean;
+  timeLocked: boolean;
+  cleared: boolean;
+}
+
+/** Where a song sits in its chapter, with its campaign level and lock state. */
+export async function getCampaignStage(songId: string): Promise<CampaignStage | null> {
+  const catalog = await loadCatalog();
+  const song = catalog.find((s) => s.id === songId);
+  if (!song) return null;
+  const month = song.day !== undefined
+    ? getMonthNumFromDay(song.day)
+    : parseInt(song.date?.split('-')[1] ?? '', 10);
+  const meta = CHAPTERS.find((c) => c.month === month);
+  if (!meta) return null;
+  const songs = songsForMonth(catalog, month);
+  const idx = songs.findIndex((s) => s.id === songId);
+  if (idx === -1) return null;
+  return stageAt(songs, meta, idx);
+}
+
+export function stageAt(songs: GameSong[], meta: ChapterMeta, idx: number): CampaignStage {
+  const progress = chapterProgress(songs, meta);
+  const song = songs[idx];
+  return {
+    song,
+    month: meta.month,
+    meta,
+    songs,
+    progress,
+    idx,
+    isBonus: idx >= progress.regular.length,
+    level: stageLevel(meta.month, idx, progress),
+    unlocked: isStageUnlocked(idx, progress),
+    timeLocked: isSongTimeLocked(song),
+    cleared: hasClearedSong(song),
+  };
+}

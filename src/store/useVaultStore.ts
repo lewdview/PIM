@@ -134,6 +134,7 @@ interface VaultState {
   medals: Record<string, string>;
   fragments: Record<string, number>;
   milestoneClaims: Record<string, boolean>;
+  campaignClears: Record<string, { medal: string; score: number }>;
   claimedRewards: Record<string, string[]>;
 
   packDesignStyle: 'classic_foil' | 'cyber_cartridge';
@@ -184,6 +185,7 @@ interface VaultState {
   syncMedal: (songId: string, medal: string) => Promise<void>;
   syncFragments: (songId: string, count: number) => Promise<void>;
   syncMilestoneClaim: (monthNum: number, milestoneNum: number) => Promise<void>;
+  syncCampaignClear: (songId: string, medal: string, score: number) => Promise<void>;
   syncClaimedRewards: (songId: string, tiers: string[]) => void;
   resetToBlankSlate: () => void;
 }
@@ -356,6 +358,21 @@ async function syncUserFragmentToDb(userId: string, songId: string, count: numbe
   }
 }
 
+async function syncCampaignClearToDb(userId: string, songId: string, medal: string, score: number) {
+  if (!userId || !songId) return;
+  try {
+    // Server merges monotonically (best medal, highest score).
+    const { error } = await supabase.rpc('record_campaign_clear', {
+      p_song_id: songId,
+      p_medal: medal || 'NONE',
+      p_score: Math.max(0, Math.round(score || 0)),
+    });
+    if (error) console.warn('[VaultSync] Campaign clear DB sync failed (non-fatal):', error.message);
+  } catch (err) {
+    console.warn('[VaultSync] Campaign clear DB sync failed (non-fatal):', err);
+  }
+}
+
 async function syncMilestoneClaimToDb(userId: string, monthNum: number, milestoneNum: number) {
   if (!userId) return;
   try {
@@ -480,6 +497,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   medals: {},
   fragments: {},
   milestoneClaims: {},
+  campaignClears: {},
   claimedRewards: {},
 
   setDailyCard: (card) => set({ dailyCard: card }),
@@ -681,13 +699,15 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         supplyRes,
         gameplayRes,
         fragmentsRes,
-        milestonesRes
+        milestonesRes,
+        campaignClearsRes
       ] = await Promise.all([
         fetchAllVaultCards(userId),
         supabase.from('global_supply').select('*').range(0, 9999),
         supabase.from('gameplay_records').select('*').eq('user_id', userId).range(0, 9999),
         supabase.from('user_fragments').select('*').eq('user_id', userId).range(0, 9999),
         supabase.from('campaign_milestone_claims').select('*').eq('user_id', userId).range(0, 9999),
+        supabase.from('campaign_clears').select('song_id, medal, score').eq('user_id', userId).range(0, 9999),
       ]);
       
       const profile = profileRes.data;
@@ -886,6 +906,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       const dbFragments: Record<string, number> = {};
       const dbMilestoneClaims: Record<string, boolean> = {};
       const dbClaimedRewards: Record<string, string[]> = {};
+      const dbCampaignClears: Record<string, { medal: string; score: number }> = {};
 
       if (gameplayRes.data) {
         for (const row of gameplayRes.data) {
@@ -939,11 +960,35 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         }
       }
 
+      if (campaignClearsRes.data && Array.isArray(campaignClearsRes.data)) {
+        for (const row of campaignClearsRes.data) {
+          if (row.song_id) dbCampaignClears[row.song_id] = { medal: row.medal || 'NONE', score: row.score || 0 };
+        }
+      }
+
       const finalHighScores = { ...dbHighScores };
       const finalMedals = { ...dbMedals };
       const finalFragments = { ...dbFragments };
       const finalMilestoneClaims = { ...dbMilestoneClaims };
       const finalClaimedRewards = { ...dbClaimedRewards };
+      const finalCampaignClears = { ...dbCampaignClears };
+
+      // Local campaign keys belong to whichever account last loaded on this
+      // browser. If that was someone else (no sign-out in between), drop them
+      // so they aren't merged into this account. Unowned keys are guest
+      // progress and carry over to the account.
+      const CAMPAIGN_OWNER_KEY = 'campaign_progress_owner';
+      const campaignOwner = localStorage.getItem(CAMPAIGN_OWNER_KEY);
+      if (campaignOwner && campaignOwner !== userId) {
+        const stale: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k?.startsWith('campaign_clear_')) stale.push(k);
+        }
+        stale.forEach(k => localStorage.removeItem(k));
+        localStorage.removeItem('campaign_progress_seeded_v1');
+      }
+      localStorage.setItem(CAMPAIGN_OWNER_KEY, userId);
 
       // Scan local storage for migration to DB
       for (let i = 0; i < localStorage.length; i++) {
@@ -991,6 +1036,25 @@ export const useVaultStore = create<VaultState>((set, get) => ({
                   finalClaimedRewards[songId].push(t);
                 }
               }
+            }
+          }
+        } else if (key.startsWith('campaign_clear_')) {
+          // Local clears the DB lacks (or holds at a lower medal/score) are pushed up.
+          const songId = key.substring(15);
+          let local: { medal: string; score: number } | null = null;
+          try { local = JSON.parse(localStorage.getItem(key) || 'null'); } catch { /* ignore */ }
+          if (songId && local) {
+            const db = dbCampaignClears[songId];
+            const localMedal = local.medal || 'NONE';
+            const localScore = local.score || 0;
+            const medalBetter = !db || MEDAL_ORDER.indexOf(localMedal as any) > MEDAL_ORDER.indexOf(db.medal as any);
+            const scoreBetter = !db || localScore > db.score;
+            if (medalBetter || scoreBetter) {
+              finalCampaignClears[songId] = {
+                medal: medalBetter ? localMedal : db!.medal,
+                score: Math.max(localScore, db?.score ?? 0),
+              };
+              syncCampaignClearToDb(userId, songId, localMedal, localScore);
             }
           }
         } else if (key.startsWith('campaign_claimed_')) {
@@ -1085,12 +1149,21 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       Object.entries(finalMilestoneClaims).forEach(([k, val]) => {
         if (val) localStorage.setItem(k, 'true');
       });
+      Object.entries(finalCampaignClears).forEach(([songId, rec]) => {
+        localStorage.setItem(`campaign_clear_${songId}`, JSON.stringify(rec));
+      });
+      // Campaign progress already exists on the account, so the one-time
+      // carry-over from on-demand plays has happened on another device.
+      if (Object.keys(dbCampaignClears).length > 0) {
+        localStorage.setItem('campaign_progress_seeded_v1', '1');
+      }
 
       set({
         highScores: finalHighScores,
         medals: finalMedals,
         fragments: finalFragments,
         milestoneClaims: finalMilestoneClaims,
+        campaignClears: finalCampaignClears,
         claimedRewards: finalClaimedRewards,
       });
 
@@ -1296,6 +1369,18 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     }
   },
 
+  syncCampaignClear: async (songId, medal, score) => {
+    set((state) => ({
+      campaignClears: { ...state.campaignClears, [songId]: { medal, score } }
+    }));
+
+    const session = await supabase.auth.getSession();
+    const userId = session.data.session?.user.id;
+    if (userId) {
+      await syncCampaignClearToDb(userId, songId, medal, score);
+    }
+  },
+
   syncClaimedRewards: (songId, tiers) => {
     set((state) => {
       const current = state.claimedRewards[songId] || [];
@@ -1476,6 +1561,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     medals: {},
     fragments: {},
     milestoneClaims: {},
+  campaignClears: {},
     claimedRewards: {},
   }),
 }));

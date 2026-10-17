@@ -7,6 +7,7 @@ import { getActiveTheme, loadOpts } from "@/lib/options";
 import { audioManager } from "@/game/audio";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useVaultStore, ownsCardForDay, isAwardPlayUnlocked, getShardsForDay } from "@/store/useVaultStore";
+import CampaignResults from "./campaign/CampaignResults";
 import { supabase } from "@/services/supabaseClient";
 import { purchasePack, requestRunToken, submitGameplayRecord, type OwnedCard } from "@/services/vaultService";
 import { PACK_CONFIGS } from "@/utils/rarity";
@@ -27,6 +28,9 @@ interface ResultData {
   laneTelemetry?: Record<number, LaneTelemetry>;
   coverUrl?: string;
   coverVariant?: string;
+  /** 'campaign' when launched from a chapter; on-demand plays get the regular screen. */
+  mode?: 'campaign' | 'on_demand';
+  campaign?: { month: number; idx: number; level: number; firstClear: boolean };
 }
 
 const MEDALS: Record<string, { color: string; message: string }> = {
@@ -877,10 +881,23 @@ export default function Results() {
     );
   }
 
+  // ── CAMPAIGN path: passed/failed, replay availability, next stage ─────────
+  if (result.mode === 'campaign' && songId) {
+    return <CampaignResults songId={songId} song={song} result={result} accuracy={accuracy} coverUrl={activeCoverUrl} />;
+  }
+
+  // On-demand plays (collection, codex, award play, search) go back where they came from.
+  const onDemandBack = gameOrigin === 'songs' ? '/songs' : gameOrigin ? `/${gameOrigin}` : `/chapter/${chapterMonth}`;
+  const onDemandBackLabel = gameOrigin === 'songs' ? 'AWARD PLAY'
+    : gameOrigin.includes('collection') ? 'COLLECTION'
+    : gameOrigin.includes('codex') || gameOrigin.startsWith('song') ? 'CODEX'
+    : gameOrigin.startsWith('chapter/') ? 'CHAPTER'
+    : 'VAULT';
+
   // ── FAILED / TRANSMISSION NOT DECODED path ───────────────────────────────
   if (result.failed) {
     const fromFreePlayFail = gameOrigin === 'songs';
-    const backRouteFail = fromFreePlayFail ? '/songs' : `/chapter/${chapterMonth}`;
+    const backRouteFail = onDemandBack;
 
     if (isAvant) {
       return (
@@ -1067,7 +1084,7 @@ export default function Results() {
               }}
                 className="w-full py-3.5 font-mono font-bold text-xs tracking-[0.2em] transition-all bg-transparent border border-zinc-800 text-zinc-500 hover:text-zinc-300 hover:border-zinc-700"
                 onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}>
-                ← {fromFreePlayFail ? 'BACK TO AWARD PLAY' : 'BACK TO LEVEL PATH'}
+                ← BACK TO {onDemandBackLabel}
               </button>
               <QuickReturnGrid onNavigate={setLocation} />
             </div>
@@ -1180,7 +1197,7 @@ export default function Results() {
               style={{ border: '2px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.35)', background: 'transparent', minHeight: 48 }}
               onMouseEnter={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.6)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)'; }}
               onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.35)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}>
-              ← {fromFreePlayFail ? 'BACK TO AWARD PLAY' : 'BACK TO LEVEL PATH'}
+              ← BACK TO {onDemandBackLabel}
             </button>
             <QuickReturnGrid onNavigate={setLocation} />
           </div>
@@ -1193,7 +1210,7 @@ export default function Results() {
   const mc = medal.color;
   const acc = Math.round(accuracy);
   const fromFreePlay = gameOrigin === 'songs';
-  const backRoute = fromFreePlay ? '/songs' : `/chapter/${chapterMonth}`;
+  const backRoute = onDemandBack;
 
   // Card ownership check (centralized) + Award Play unlock (10 shards for this song)
   const ownsCard = song ? ownsCardForDay(collection, song.day) : false;
@@ -1674,7 +1691,7 @@ export default function Results() {
                     minHeight: 48,
                   }}
                   onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}>
-                  ← {fromFreePlay ? '[ RETURN TO AWARD PLAY ]' : '[ CONTINUE TO LEVEL PATH ]'}
+                  ← [ RETURN TO {onDemandBackLabel} ]
                 </button>
               )}
               {(!user || user.is_anonymous) ? (
@@ -1908,7 +1925,7 @@ export default function Results() {
         >
           <div className="font-mono font-bold text-xs px-3 py-1.5 tracking-[0.4em]"
             style={{ color: '#080808', background: '#F2F0E8' }}>
-            {fromFreePlay ? 'TRANSMISSION COMPLETE' : 'CAMPAIGN MISSION COMPLETED'}
+            TRANSMISSION COMPLETE
           </div>
           <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.1)' }} />
           {(() => {
@@ -2216,7 +2233,7 @@ export default function Results() {
                   minHeight: 48,
                 }}
                 onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}>
-                ← {fromFreePlay ? 'BACK TO AWARD PLAY' : 'CONTINUE TO LEVEL PATH'}
+                ← BACK TO {onDemandBackLabel}
               </button>
             )}
 

@@ -2,7 +2,9 @@
 import React, { useEffect, useLayoutEffect, useRef, useState, useCallback, memo } from "react";
 import { useParams, useLocation } from "wouter";
 import { getSongById, saveHighScore, getModifierForSong, STAGEIFICATION_CONFIG, getCandidateAudioUrls } from "@/game/api";
-import { saveMedal, saveScoreHistory } from "@/game/progress";
+import { saveMedal, saveScoreHistory, saveCampaignClear } from "@/game/progress";
+import { isCampaignRunSearch } from "@/game/campaign";
+import { getCampaignStage, type CampaignStage } from "@/game/chapterStory";
 import type { GameSong } from "@/game/api";
 import type { Note, JudgmentDisplay, GameState, NoteType } from "@/game/types";
 import { loadOpts, keyLabel, getEffectiveDpr, type GameOpts, type PovMode, type RenderResolution, type GfxLevel, type FpsTarget, type ParticleDensity } from "@/lib/options";
@@ -1347,6 +1349,10 @@ export default function Game() {
   const isTutorialRef = useRef(new URLSearchParams(window.location.search).get("tutorial") === "true");
   const isTutorial = isTutorialRef.current;
   const activeTutorial = isTutorial;
+  // Set when this run was launched from a campaign chapter (?mode=campaign).
+  // Campaign runs play at the stage's campaign level and are the only runs
+  // that clear campaign stages.
+  const campaignStageRef = useRef<CampaignStage | null>(null);
 
   // ── Curriculum-Driven Tutorial State ──
   const TUTORIAL_STEPS: TutorialStepType[] = [
@@ -3010,6 +3016,14 @@ export default function Game() {
         saveMedal(songRef.current.id, medal);
         saveScoreHistory(songRef.current.id, gs.score);
       }
+      const campaignStage = campaignStageRef.current;
+      const campaignFirstClear = !!campaignStage && !failed && !campaignStage.cleared;
+      if (campaignStage && songRef.current && !failed) {
+        const rewardOpts = loadOpts();
+        if (rewardOpts.noteGenerationSource === 'auto' || !rewardOpts.noteGenerationSource) {
+          saveCampaignClear(songRef.current.id, medal, gs.score);
+        }
+      }
 
       // ── Aggregate per-lane accuracy from real telemetry ──
       const laneTelemetry: Record<number, { hits: number; perfectPlus: number; perfects: number; goods: number; misses: number }> = {};
@@ -3056,6 +3070,10 @@ export default function Game() {
           continuesUsed,
           laneTelemetry,
           coverUrl: finalCover,
+          mode: campaignStage ? 'campaign' : 'on_demand',
+          campaign: campaignStage
+            ? { month: campaignStage.month, idx: campaignStage.idx, level: campaignStage.level, firstClear: campaignFirstClear }
+            : undefined,
         }),
       );
     } catch (err) {
@@ -8459,6 +8477,13 @@ export default function Game() {
 
         const origin = sessionStorage.getItem(`game_origin_${songId}`) ?? '';
         const originRoute = origin === 'songs' ? '/songs' : origin ? `/${origin}` : '/campaign';
+        campaignStageRef.current = null;
+        if (songId && isCampaignRunSearch(window.location.search) && !isTutorial) {
+          const stage = await getCampaignStage(songId);
+          if (cancelled) return;
+          // Only a stage the player has actually reached runs as campaign.
+          if (stage && stage.unlocked && !stage.timeLocked) campaignStageRef.current = stage;
+        }
         const modifier = (sessionStorage.getItem(`active_modifier_type_${songId}`) || 'none') as any;
         modifierRef.current = modifier;
         setActiveModifier(modifier);
@@ -8495,7 +8520,10 @@ export default function Game() {
 
         // ── Ownership gate: gameplay requires owning the card for this song ──
         // (Tutorial transmissions are exempt — they carry no card.)
-        if (!isTutorial && song.day > 0) {
+        // Campaign stages are played in order without the card; replaying a
+        // stage after clearing it needs the card like any other play.
+        const campaignFirstRun = !!campaignStageRef.current && !campaignStageRef.current.cleared;
+        if (!isTutorial && song.day > 0 && !campaignFirstRun) {
           // On a direct link / refresh the collection may still be loading —
           // wait for it rather than locking a card the player owns.
           if (!useVaultStore.getState().hasLoadedData) {
@@ -8562,7 +8590,9 @@ export default function Game() {
         );
       }
       // Apply difficulty override set by SongDetail page
-      const diffOverrideNum = parseInt(sessionStorage.getItem(`diff_override_${songId}`) ?? '', 10);
+      const diffOverrideNum = campaignStageRef.current
+        ? campaignStageRef.current.level
+        : parseInt(sessionStorage.getItem(`diff_override_${songId}`) ?? '', 10);
       if (!isNaN(diffOverrideNum) && diffOverrideNum >= 1 && diffOverrideNum <= 10 && !activeTutorial) {
         songRef.current.difficultyLevel = diffOverrideNum;
       }

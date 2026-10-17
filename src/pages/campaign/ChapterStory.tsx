@@ -10,8 +10,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useParams } from 'wouter';
 import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Lock, Pause, Play, Film, CheckCircle2, Gift } from 'lucide-react';
 import { loadCatalog, isSongTimeLocked, getModifierForSong, type GameSong } from '@/game/api';
-import { getMedalForSong, getHighScore } from '@/game/progress';
-import { CHAPTERS, calculateCampaignDifficulty, levelToTier } from '@/game/campaign';
+import { getCampaignRecord } from '@/game/progress';
+import { CHAPTERS, calculateCampaignDifficulty, levelToTier, campaignPlayPath, prepareCampaignRun } from '@/game/campaign';
 import { audioManager } from '@/game/audio';
 import { useVaultStore, ownsCardForDay } from '@/store/useVaultStore';
 import { purchasePack } from '@/services/vaultService';
@@ -70,6 +70,8 @@ export default function ChapterStory() {
   const setEquippedCardId = useVaultStore((s) => s.setEquippedCardId);
   const milestoneClaims = useVaultStore((s) => s.milestoneClaims);
   const claimedRewards = useVaultStore((s) => s.claimedRewards);
+  // Campaign progress is seeded from older saves once vault data loads.
+  const vaultLoaded = useVaultStore((s) => s.hasLoadedData);
 
   // Preview audio
   const previewRef = useRef<HTMLAudioElement | null>(null);
@@ -117,7 +119,8 @@ export default function ChapterStory() {
     return () => { alive = false; };
   }, [monthNum, meta, stopPreview]);
 
-  const progress = useMemo(() => (songs ? chapterProgress(songs, meta) : null), [songs, meta]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const progress = useMemo(() => (songs ? chapterProgress(songs, meta) : null), [songs, meta, vaultLoaded]);
 
   // Acts: the story file's three acts over the regular tracks, then an epilogue of bonus stages.
   const groups = useMemo<ActGroup[]>(() => {
@@ -169,8 +172,8 @@ export default function ChapterStory() {
       isBonus, cleared, ownsCard, level, lockReason,
       locked: timeLocked || bonusLocked || progLocked || cardLocked,
       modifier: getModifierForSong(selected),
-      medal: getMedalForSong(selected.id),
-      score: getHighScore(selected.id),
+      medal: getCampaignRecord(selected.id)?.medal ?? '',
+      score: getCampaignRecord(selected.id)?.score ?? 0,
       prophecy: claimedRewards[selected.id]?.includes('prophecy') || localStorage.getItem(`reward_tier_${selected.id}`) === 'prophecy',
     };
   }, [songs, progress, selected, selectedIdx, collection, monthNum, meta, claimedRewards]);
@@ -179,15 +182,8 @@ export default function ChapterStory() {
     if (!selected || !status || status.locked) return;
     stopPreview();
     audioManager.playSfx('tap_nav', 0.4);
-    sessionStorage.setItem('campaign_last_song_id', selected.id);
-    sessionStorage.setItem(`game_origin_${selected.id}`, `chapter/${monthNum}`);
-    sessionStorage.setItem(`diff_override_${selected.id}`, String(status.level));
-    if (equippedCardId === selected.id && status.modifier !== 'none') {
-      sessionStorage.setItem(`active_modifier_type_${selected.id}`, status.modifier);
-    } else {
-      sessionStorage.removeItem(`active_modifier_type_${selected.id}`);
-    }
-    setLocation(`/play/${selected.id}`);
+    prepareCampaignRun(selected.id, monthNum, status.modifier, equippedCardId === selected.id);
+    setLocation(campaignPlayPath(selected.id));
   }, [selected, status, stopPreview, monthNum, equippedCardId, setLocation]);
 
   const select = useCallback((idx: number, scroll = false) => {
@@ -402,7 +398,7 @@ export default function ChapterStory() {
               const tr = getTrackStory(s.day);
               const state = stateOf(s, idx);
               const isSel = idx === selectedIdx;
-              const medal = getMedalForSong(s.id);
+              const medal = getCampaignRecord(s.id)?.medal ?? '';
               return (
                 <li key={s.id} id={`beat-${idx}`} className="cs-beat" data-state={state} data-selected={isSel}>
                   <button type="button" className="cs-beat-main" aria-expanded={isSel} onClick={() => select(idx)}>
