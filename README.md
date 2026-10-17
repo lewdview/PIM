@@ -154,10 +154,19 @@ The same scaffold serves every month: the month number picks the chapter, its
 songs, colour and platinum target from `src/game/campaign.ts`, and names the
 bundle `PIM_<Month>_Bonus` and the leaderboard `PIM_<Month>_Score`.
 
+`pnpm check:playgama -- --media-dir=PATH` reports, for every month, whether
+its charts, chapter story, lyrics and media are all there; a month with a
+missing song or cover is BLOCKED until the file is uploaded.
+
 This branch is the Playgama game's own line and does not take merges from
-`main`. A change from the web game comes over only by cherry-pick, and only
-when it fits this format: campaign play with no sign-in, no gacha, packs or
-shop, and no network calls besides the Bridge.
+`main`. `pnpm sync:playgama-data` brings over the charts, lyrics, chapter
+stories and day maps from `main` with no code. Gameplay from the web game is
+ported by hand, one change at a time, and only if it works:
+
+- with no sign-in, wallet, vault, packs or shop;
+- with its media bundled in the zip and no network calls besides the Bridge;
+- with the Bridge's ads, purchases, storage and leaderboard;
+- inside a single chapter.
 
 ---
 

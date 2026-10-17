@@ -8,6 +8,8 @@
     "dev": "npx vite --config vite.config.ts --host 0.0.0.0",
     "build": "npx vite build --config vite.config.ts",
     "build:playgama": "node scripts/build-playgama.mjs",
+    "check:playgama": "node scripts/check-playgama.mjs",
+    "sync:playgama-data": "node scripts/sync-playgama-data.mjs",
     "preview": "npx vite preview --config vite.config.ts --host 0.0.0.0",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
