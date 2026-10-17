@@ -94,7 +94,7 @@ export default function ProfilePage() {
         setImportFeedback({ type: 'error', message: res.error });
       } else {
         audioManager.playSfx('gold_get', 0.6);
-        setImportFeedback({ type: 'success', message: '✨ Sovereign wallet and identity restored successfully!' });
+        setImportFeedback({ type: 'success', message: 'Wallet restored.' });
         setImportKeyInput('');
         setShowKeyImport(false);
       }
@@ -338,7 +338,7 @@ export default function ProfilePage() {
             </div>
             <p className="font-mono text-xs text-white/70 leading-relaxed mb-4">
               {isAnonymous
-                ? "You are currently playing as a Guest. Connect an Email or Web3 Smart Wallet to bind your earned daily cards, medals, and streaks permanently to your sovereign profile."
+                ? "You're playing as a guest. Sign in with email or a wallet to keep your cards, medals and streaks."
                 : "Choose your unique pilot @username and profile avatar to record and broadcast scores on competitive leaderboards."}
             </p>
             <IdentitySetup compact onComplete={() => { if (loadVaultData) loadVaultData(true); }} />
@@ -436,7 +436,7 @@ export default function ProfilePage() {
                       audioManager.playSfx('reward_claim', 0.5);
                       setPasskeyFeedback({
                         type: 'success',
-                        message: 'Passkey enrolled successfully! You can now log in with 1 touch.',
+                        message: 'Passkey added. Next time, sign in with one tap.',
                       });
                     }
                     setPasskeyLoading(false);
@@ -468,7 +468,7 @@ export default function ProfilePage() {
         <section className="profile-glass-panel border-l-4 border-[#00E5FF] mt-6">
           <div className="flex items-center justify-between profile-panel-header text-[#00E5FF]">
             <span className="flex items-center gap-2">
-              <KeyRound size={18} /> Sovereign Wallet Keys & Backup
+              <KeyRound size={18} /> Wallet Keys & Backup
             </span>
             <button
               onClick={() => {
@@ -488,10 +488,10 @@ export default function ProfilePage() {
             <div className="p-4 mb-4 bg-black/60 border border-[#00E5FF]/40 space-y-3">
               <div className="flex items-center gap-2 text-[#00E5FF] font-mono text-[11px] font-bold uppercase tracking-wider">
                 <Download size={14} />
-                <span>Load Sovereign Identity by Saved Key</span>
+                <span>Restore From a Saved Key</span>
               </div>
               <p className="font-mono text-[10px] text-zinc-400 leading-relaxed">
-                Paste your 64-character private key (with or without 0x) to restore your smart wallet, unlocked cards, tokens, and prestige score.
+                Paste your 64-character private key (with or without 0x) to restore your wallet and everything in it.
               </p>
               <div className="relative">
                 <input
@@ -604,7 +604,7 @@ export default function ProfilePage() {
           ) : (
             <div className="font-mono text-xs text-zinc-400 space-y-2 py-2">
               <p className="text-[11px] leading-relaxed">
-                No local ephemeral wallet key is active in this browser. If you previously saved or exported your private key, click <strong className="text-[#00E5FF]">"Load by Key"</strong> above to restore your session.
+                No temporary wallet in this browser. If you saved your private key, use <strong className="text-[#00E5FF]">"Load by Key"</strong> above to restore your session.
               </p>
             </div>
           )}

@@ -50,11 +50,11 @@ export const NAV_SECTIONS: NavSection[] = [
     icon: Gamepad2,
     home: '/arcade',
     items: [
-      { id: 'arcade', label: 'Arcade', to: '/arcade', icon: Gamepad2, desc: 'Quick-play the 3-lane rhythm engine', keywords: ['play', 'game', 'rhythm', 'engine', 'quick', 'pim'] },
+      { id: 'arcade', label: 'Arcade', to: '/arcade', icon: Gamepad2, desc: 'Jump straight into a song', keywords: ['play', 'game', 'rhythm', 'engine', 'quick', 'pim'] },
       { id: 'daily', label: "Today's drop", to: '/daily', icon: Play, desc: "Play today's song before it rotates", keywords: ['daily', 'drop', 'today', 'stage'] },
       { id: 'campaign', label: 'Campaign', to: '/campaign', icon: Compass, desc: 'Monthly chapters across the 365 roadmap', keywords: ['story', 'chapters', 'roadmap', 'progress'] },
       { id: 'timeline', label: '365 timeline', to: '/365', icon: CalendarDays, desc: 'Every daily release, day by day', keywords: ['archive', 'calendar', 'timeline', 'days'] },
-      { id: 'awards', label: 'Award play', to: '/songs', icon: Trophy, desc: 'Curated songs and score tiers', keywords: ['awards', 'curated', 'select', 'songs'] },
+      { id: 'awards', label: 'Award play', to: '/songs', icon: Trophy, desc: 'Hand-picked songs and medal tiers', keywords: ['awards', 'curated', 'select', 'songs'] },
       { id: 'academy', label: 'Flight academy', to: '/tutorial', icon: GraduationCap, desc: 'Learn taps, holds and swipes', keywords: ['tutorial', 'learn', 'training', 'controls', 'mechanics'] },
     ],
   },
@@ -73,8 +73,8 @@ export const NAV_SECTIONS: NavSection[] = [
       { id: 'bombshells', label: 'Bombshells', to: '/bombshells', icon: Bomb, desc: 'Variant covers and month rewards', keywords: ['variants', 'covers', 'month'] },
       { id: 'codex', label: 'Card codex', to: '/vault/codex', icon: BookOpen, desc: 'Full catalog and set completion', keywords: ['registry', 'catalog', 'set', 'tracker'] },
       { id: 'forge', label: 'Fusion lab', to: '/vault/forge', icon: Flame, desc: 'Fuse duplicates into higher rarities', keywords: ['forge', 'fusion', 'upgrade', 'burn', 'catalyst'] },
-      { id: 'next-vault', label: 'Claw machine', to: '/next-vault', icon: Sparkles, desc: 'Robotic claw pack dispenser and token machines', keywords: ['claw', 'gacha', 'machine', 'nextgen'] },
-      { id: 'hero', label: 'Hero exhibit', to: '/hero', icon: Image, desc: "Museum showcase of today's masterpiece", keywords: ['museum', 'showcase', 'exhibit', 'art'] },
+      { id: 'next-vault', label: 'Claw machine', to: '/next-vault', icon: Sparkles, desc: 'Win packs from the claw and vending machines', keywords: ['claw', 'gacha', 'machine', 'nextgen'] },
+      { id: 'hero', label: 'Hero exhibit', to: '/hero', icon: Image, desc: "Today's card, on display", keywords: ['museum', 'showcase', 'exhibit', 'art'] },
     ],
   },
   {
@@ -100,7 +100,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { id: 'profile', label: 'Profile', to: '/profile', icon: User, desc: 'Identity, wallet and achievements', keywords: ['identity', 'wallet', 'avatar', 'th3scr1b3', 'account'] },
       { id: 'options', label: 'Audio & calibration', action: 'options', icon: SlidersHorizontal, desc: 'Latency offset, volume, lanes and skins', keywords: ['settings', 'options', 'latency', 'audio', 'offset', 'volume', 'keys'] },
-      { id: 'hdr', label: '4K HDR display', action: 'hdr', icon: Monitor, desc: 'Turn the high dynamic range shaders on or off', keywords: ['4k', 'hdr', 'graphics', 'display', 'shaders'] },
+      { id: 'hdr', label: '4K HDR display', action: 'hdr', icon: Monitor, desc: 'Brighter highlights on HDR screens', keywords: ['4k', 'hdr', 'graphics', 'display', 'shaders'] },
       { id: 'notifications', label: 'Transmissions', action: 'notifications', icon: Bell, desc: 'Broadcasts and system alerts', keywords: ['notifications', 'alerts', 'news', 'inbox'] },
       { id: 'guide', label: 'Field guide', action: 'guide', icon: LifeBuoy, desc: 'Instruction booklet and mechanics', keywords: ['manual', 'help', 'how to'] },
       { id: 'legal', label: 'Terms & privacy', to: '/vault/legal', icon: FileText, desc: 'Terms, licenses and privacy policy', keywords: ['legal', 'terms', 'privacy', 'policy', 'license'] },

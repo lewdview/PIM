@@ -2089,7 +2089,7 @@ export default function PackContainer({ meta, cards: rawCards, accumulatedCards 
               }}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.98 }}
-              title="Cast pull to Warpcast / Farcaster"
+              title="Cast to Farcaster"
             >
               <Share2 size={13} />
               <span>CAST PULL</span>
@@ -2114,7 +2114,7 @@ export default function PackContainer({ meta, cards: rawCards, accumulatedCards 
               }}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.98 }}
-              title="Share or copy pull link"
+              title="Share or copy link"
             >
               {shareCopied ? (
                 <>
@@ -2596,7 +2596,7 @@ export default function PackContainer({ meta, cards: rawCards, accumulatedCards 
                     }}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    title="Cast pull to Warpcast / Farcaster"
+                    title="Cast to Farcaster"
                   >
                     <Share2 size={13} className="text-[#C4A7E7]" />
                     <span>CAST PULL</span>
@@ -2616,7 +2616,7 @@ export default function PackContainer({ meta, cards: rawCards, accumulatedCards 
                     }}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    title="Share or copy pull link"
+                    title="Share or copy link"
                   >
                     {shareCopied ? (
                       <>

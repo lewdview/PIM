@@ -32,7 +32,7 @@ const SAMPLE_PREVIEW_CARD: VaultCard = {
   tags: ["SYNTH", "NEON", "PREVIEW"],
   coverUrl: "/data/covers/day-190.jpg",
   audioUrl: "",
-  description: "A digital hologram synthesized inside the PIM Vault system to preview skins.",
+  description: "A sample card for previewing skins.",
   claimedCount: 42,
   maxSupply: 100,
 };
@@ -84,13 +84,13 @@ const KEY_ROWS = [
 const FRONT_SKINS = [
   { id: 'original', name: 'Original Front', cost: 0, desc: 'Standard editorial layout' },
   { id: 'glitch', name: 'Neon-Brutalist', cost: 0, desc: 'High-contrast cyberpunk glitched borders' },
-  { id: 'glass', name: 'Frosted Glass', cost: 0, desc: 'Sleek neon blur glassmorphism' },
+  { id: 'glass', name: 'Frosted Glass', cost: 0, desc: 'Neon-lit frosted glass' },
   { id: 'arcade', name: 'Retro-Arcade', cost: 50, desc: 'Vintage synthesizer control deck style' },
   { id: 'mtg', name: 'Magic Layout', cost: 100, desc: 'Gilded oval sigils & spellbook details' },
   { id: 'poker', name: 'Classic Poker', cost: 50, desc: 'Symmetrical playing card frame' },
   { id: 'duelist', name: 'Duelist Frame', cost: 75, desc: 'Sacred runic circle portals & orange gems' },
   { id: 'monster', name: 'Pocket Beats', cost: 75, desc: 'Retro pixel pocket battle card layout' },
-  { id: 'chrome', name: 'Sports Chrome', cost: 100, desc: 'Highly-polished metallic sports chrome frame' },
+  { id: 'chrome', name: 'Sports Chrome', cost: 100, desc: 'Polished chrome sports-card frame' },
   { id: 'fantasy', name: 'Runic Fantasy', cost: 120, desc: 'Enchanted elven runic stone carving' },
   { id: 'cyberpunk', name: 'Cyber Terminal', cost: 120, desc: 'Terminal matrix network circuit interface' },
   { id: 'anime', name: 'Anime Signature', cost: 150, desc: 'Weiss signature layout with stars' }
@@ -797,7 +797,7 @@ function AutoLatencyCalibrator({
       {phase === 'idle' && (
         <div className="space-y-3 py-2">
           <p className="font-mono text-[10px] text-zinc-400 max-w-xs mx-auto leading-relaxed">
-            Tap along to 8 audio beats. The engine will automatically measure your hardware output latency.
+            Tap along to 8 beats. We'll measure your audio delay and set the offset.
           </p>
           <button
             onClick={startCalibration}
@@ -1297,7 +1297,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
   const STANDARD_CARD_BACKS = [
     { id: 'classic', name: 'Classic Vault', desc: 'Standard rarity-colored core grid', style: { background: '#0c0a07', border: '1px solid rgba(255,255,255,0.1)' } },
     { id: 'holo', name: 'Holo Foil', desc: 'Shimmering rainbow overlay sheen', style: { background: 'linear-gradient(135deg, #0e1b29, #210e29)', border: '1px solid #00ffff' } },
-    { id: 'carbon', name: 'Carbon Tech', desc: 'High-tech composite carbon weave', style: { background: '#151619', border: '1.5px solid #00ffff', boxShadow: '0 0 8px #00ffff33' } },
+    { id: 'carbon', name: 'Carbon Tech', desc: 'Carbon fiber weave', style: { background: '#151619', border: '1.5px solid #00ffff', boxShadow: '0 0 8px #00ffff33' } },
     { id: 'gold_luxe', name: 'Royal Gold', desc: 'Gilded gold leaf frame & starry dust', style: { background: 'linear-gradient(135deg, #1f1a0f, #1c150c)', border: '1px solid #ffd700', boxShadow: '0 0 8px rgba(255,215,0,0.2)' } },
     { id: 'matrix', name: 'Matrix Code', desc: 'Binary rain & console grid lines', style: { background: '#030804', border: '1px solid #39ff14', boxShadow: '0 0 8px rgba(57,255,20,0.2)' } },
     { id: 'th3scr1b3', name: 'th3scr1b3 Signature', desc: 'Abstract red splatters & gothic marks', style: { background: 'radial-gradient(circle, #4a002a, #0d0006)', border: '1px dashed #ff007f' } },
@@ -1416,7 +1416,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
               <div className="space-y-6 animate-fade-in">
                 <div>
                   <h2 className="text-base md:text-lg brutalist-menu-title italic mb-1" style={{ '--neon-accent': isAvant ? '#39FF14' : '#FF1493' } as any}>Gameplay Core Controls</h2>
-                  <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Configure visual feedback, scoring mechanisms, and sound overlays</p>
+                  <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Fail rules, HUD and sound</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1427,7 +1427,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                     <div className="flex justify-between items-center">
                       <div className="flex flex-col">
                         <span className="text-[10px] font-bold text-white font-mono uppercase">Miss System (Fails)</span>
-                        <span className="text-[8px] text-zinc-500 font-mono">Quarantine note lanes and reset multipliers on misses</span>
+                        <span className="text-[8px] text-zinc-500 font-mono">Misses mute the lane and reset your multiplier</span>
                       </div>
                       {renderToggle('missSystem')}
                     </div>
@@ -1435,7 +1435,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                     <div className="flex justify-between items-center">
                       <div className="flex flex-col">
                         <span className="text-[10px] font-bold text-white font-mono uppercase">HUD Miss Counters</span>
-                        <span className="text-[8px] text-zinc-500 font-mono">Show live miss details at the top bar</span>
+                        <span className="text-[8px] text-zinc-500 font-mono">Miss count in the top bar</span>
                       </div>
                       {renderToggle('hudMisses')}
                     </div>
@@ -1451,7 +1451,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                     <div className="flex justify-between items-center">
                       <div className="flex flex-col">
                         <span className="text-[10px] font-bold text-white font-mono uppercase">Combo Streak Display</span>
-                        <span className="text-[8px] text-zinc-500 font-mono">Show combo streak counts overlay in mid panel</span>
+                        <span className="text-[8px] text-zinc-500 font-mono">Combo count in the middle of the screen</span>
                       </div>
                       {renderToggle('comboDisplay')}
                     </div>
@@ -1459,7 +1459,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                     <div className="flex justify-between items-center">
                       <div className="flex flex-col">
                         <span className="text-[10px] font-bold text-white font-mono uppercase">Judgment Text Indicators</span>
-                        <span className="text-[8px] text-zinc-500 font-mono">Perfect, Great, and Late markers on note hit timings</span>
+                        <span className="text-[8px] text-zinc-500 font-mono">Shows PERFECT, GOOD or MISS on each hit</span>
                       </div>
                       {renderToggle('judgmentText')}
                     </div>
@@ -1481,7 +1481,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                       <div className="flex justify-between items-center">
                         <div className="flex flex-col">
                           <span className="text-[10px] font-bold text-white font-mono uppercase">Sound Effects (SFX)</span>
-                          <span className="text-[8px] text-zinc-500 font-mono">UI clicks, navigation chimes, and hit audio feedback</span>
+                          <span className="text-[8px] text-zinc-500 font-mono">Menu clicks and hit sounds</span>
                         </div>
                         {renderToggle('sfxEnabled')}
                       </div>
@@ -1504,7 +1504,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                       <div className="flex justify-between items-center">
                         <div className="flex flex-col">
                           <span className="text-[10px] font-bold text-white font-mono uppercase">Ambient BGM</span>
-                          <span className="text-[8px] text-zinc-500 font-mono">Casette tape radio hum loops in vault directories</span>
+                          <span className="text-[8px] text-zinc-500 font-mono">Tape hiss and radio hum in vault menus</span>
                         </div>
                         {renderToggle('bgMusic')}
                       </div>
@@ -1526,7 +1526,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                     <div className="flex justify-between items-center">
                       <div className="flex flex-col">
                         <span className="text-[10px] font-bold text-white font-mono uppercase">Force Local Audio Files</span>
-                        <span className="text-[8px] text-zinc-500 font-mono">Read offline local files over slow public URLs</span>
+                        <span className="text-[8px] text-zinc-500 font-mono">Use downloaded files instead of streaming</span>
                       </div>
                       {renderToggle('useLocalFiles')}
                     </div>
@@ -1540,7 +1540,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                           </span>
                         </div>
                         <span className="text-[8px] text-zinc-500 font-mono">
-                          Native tactile feedback on note judgments (iOS Taptic, Mobile Vibration, Gamepad, or Tactile Acoustic)
+                          Vibrate on hits (phone, gamepad or supported devices)
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -1556,7 +1556,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                               ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50 shadow-[0_0_8px_rgba(16,185,129,0.3)] scale-105'
                               : 'bg-white/5 text-zinc-400 border-white/10 hover:border-white/30 hover:text-white hover:bg-white/10'
                           }`}
-                          title="Test current haptic feedback engine"
+                          title="Test vibration"
                         >
                           {hapticsTestActive ? 'PULSED!' : 'TEST'}
                         </button>
@@ -1605,7 +1605,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                   <div className="space-y-1.5">
                     <div className="flex justify-between items-center">
                       <span className="font-mono text-[8.5px] font-bold text-white/70 uppercase">Master Quality Preset</span>
-                      <span className="font-mono text-[7.5px] text-zinc-500">Auto-tunes resolution, bloom & particles</span>
+                      <span className="font-mono text-[7.5px] text-zinc-500">Sets resolution, bloom and particles at once</span>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       {[
@@ -1647,7 +1647,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                   <div className="space-y-1.5 pt-1 border-t border-white/5">
                     <div className="flex justify-between items-center">
                       <span className="font-mono text-[8.5px] font-bold text-white/70 uppercase">Render Resolution (Canvas DPI Scale)</span>
-                      <span className="font-mono text-[7.5px] text-zinc-500">Internal pixel rendering grid scale</span>
+                      <span className="font-mono text-[7.5px] text-zinc-500">Lower it for smoother play on slow devices</span>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       {[
@@ -1681,7 +1681,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                   <div className="space-y-1.5 pt-1 border-t border-white/5">
                     <div className="flex justify-between items-center">
                       <span className="font-mono text-[8.5px] font-bold text-white/70 uppercase">Framerate Target (FPS Cap)</span>
-                      <span className="font-mono text-[7.5px] text-zinc-500">Engine animation frame limiter</span>
+                      <span className="font-mono text-[7.5px] text-zinc-500">Lower it to save battery</span>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       {[
@@ -1716,7 +1716,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                     <div className="flex justify-between items-center">
                       <div className="flex flex-col">
                         <span className="text-[10px] font-bold text-white font-mono uppercase">Neon Bloom & Glow</span>
-                        <span className="text-[8px] text-zinc-500 font-mono">Dynamic multi-pass canvas shadow blur</span>
+                        <span className="text-[8px] text-zinc-500 font-mono">Glow around notes and lanes</span>
                       </div>
                       {renderToggle('bloomGlow')}
                     </div>
@@ -1724,7 +1724,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                     <div className="flex justify-between items-center">
                       <div className="flex flex-col">
                         <span className="text-[10px] font-bold text-white font-mono uppercase">Background Animations</span>
-                        <span className="text-[8px] text-zinc-500 font-mono">Audio-reactive shaders & starfield motion</span>
+                        <span className="text-[8px] text-zinc-500 font-mono">Backgrounds that move with the music</span>
                       </div>
                       {renderToggle('bgAnimation')}
                     </div>
@@ -1732,7 +1732,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                     <div className="flex justify-between items-center">
                       <div className="flex flex-col">
                         <span className="text-[10px] font-bold text-white font-mono uppercase">Particle Burst Density</span>
-                        <span className="text-[8px] text-zinc-500 font-mono">Note hit sparks and speed trail counts</span>
+                        <span className="text-[8px] text-zinc-500 font-mono">Sparks and trails on hits</span>
                       </div>
                       <div className="flex gap-1">
                         {(['full', 'half', 'minimal'] as const).map((d) => (
@@ -1754,7 +1754,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                     <div className="flex justify-between items-center">
                       <div className="flex flex-col">
                         <span className="text-[10px] font-bold text-white font-mono uppercase">Legacy Graphics Mode</span>
-                        <span className="text-[8px] text-zinc-500 font-mono">Ultra-flat canvas rendering for legacy devices</span>
+                        <span className="text-[8px] text-zinc-500 font-mono">Flat visuals for older devices</span>
                       </div>
                       {renderToggle('legacyGraphics')}
                     </div>
@@ -1960,7 +1960,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
               <div className="space-y-6 animate-fade-in">
                 <div>
                   <h2 className="text-base md:text-lg brutalist-menu-title italic mb-1" style={{ '--neon-accent': isAvant ? '#39FF14' : '#FF1493' } as any}>Key remap & audio sync</h2>
-                  <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Configure physical inputs for note lanes and calibrate latency sync</p>
+                  <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Lane keys and audio sync</p>
                 </div>
 
                 {/* Key Remappings for 3 lanes */}
@@ -2095,7 +2095,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                   <div className="pt-2 border-t border-white/5 flex items-center justify-between">
                     <div>
                       <div className="font-mono text-[9.5px] font-bold text-white uppercase tracking-wider">DYNAMIC IN-GAME AUTO-SYNC</div>
-                      <div className="font-mono text-[8px] text-zinc-500 uppercase tracking-tight mt-0.5">Micro-adjusts audio offset automatically during gameplay based on hit rhythm</div>
+                      <div className="font-mono text-[8px] text-zinc-500 uppercase tracking-tight mt-0.5">Fine-tunes your audio offset during play based on your hits</div>
                     </div>
                     <button
                       onClick={() => {
@@ -2137,19 +2137,19 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                     </div>
                     <div className="flex items-center gap-2 border-t border-white/5 pt-2">
                       <span className="text-[#FF7B00] font-bold min-w-[130px] uppercase flex items-center gap-1.5"><VTokenCrestIcon size={14} color="#FF7B00" /> BREAK DROPS:</span>
-                      <span>High-voltage drop notes — crisp hit timing awards massive bonus score & particle explosions.</span>
+                      <span>Big bonus notes on the drop. Hit them clean for extra score.</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-[#CCFF00] font-bold min-w-[130px] uppercase flex items-center gap-1.5"><StageCrestIcon size={14} color="#CCFF00" /> ACCENT STARS:</span>
-                      <span>Acid-lime snare/accent notes — hit on rhythm for starburst score multipliers.</span>
+                      <span>Lime snare and accent notes. Hit them on beat for a score multiplier.</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-[#00F5D4] font-bold min-w-[130px] uppercase flex items-center gap-1.5"><RemixDialIcon size={14} color="#00F5D4" /> REMIX STEMS:</span>
-                      <span>Holographic stem triggers — isolates vocals, muting drums or boosting bass in real-time.</span>
+                      <span>Remix the song live: solo the vocals, drop the drums or push the bass.</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-[#FF003C] font-bold min-w-[130px] uppercase flex items-center gap-1.5"><HazardWarningIcon size={14} color="#FF003C" /> MINE HAZARDS:</span>
-                      <span>DO NOT TAP OR PRESS MINE LANES! Avoid touching to prevent -500 score loss and combo breaks.</span>
+                      <span>Don't hit these. A mine costs 500 points and breaks your combo.</span>
                     </div>
                   </div>
                 </div>
@@ -2161,7 +2161,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
               <div className="space-y-6 animate-fade-in">
                 <div>
                   <h2 className="text-base md:text-lg brutalist-menu-title italic mb-1" style={{ '--neon-accent': isAvant ? '#39FF14' : '#FF1493' } as any}>Note Themes & Lane Colors</h2>
-                  <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Customize note palettes and individual colors for the three lanes</p>
+                  <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Note palettes and lane colors</p>
                 </div>
 
                 {/* Note themes grid selection */}
@@ -2260,7 +2260,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
               <div className="space-y-6 animate-fade-in">
                 <div>
                   <h2 className="text-base md:text-lg brutalist-menu-title italic mb-1" style={{ '--neon-accent': isAvant ? '#39FF14' : '#FF1493' } as any}>Global Menu Background & Blur</h2>
-                  <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Customize backgrounds rendering across dashboard and archive pages</p>
+                  <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Backgrounds for vault and archive pages</p>
                 </div>
 
                 {/* Vault Prestige & Cosmetic Unlocks HUD */}
@@ -2545,7 +2545,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                           { id: 'matrix_split', name: 'Split Matrix', desc: 'Detached 3-ribbon split horizon highway matrix', icon: '🔀', tag: 'POLY' },
 
                           // Experimental Hyperspace Perspectives
-                          { id: 'cockpit_hud', name: 'Starfighter Cockpit', desc: 'Curved canopy HUD vector highway with telemetry', icon: '🏎️', tag: 'HUD' },
+                          { id: 'cockpit_hud', name: 'Starfighter Cockpit', desc: 'Curved canopy HUD around the highway', icon: '🏎️', tag: 'HUD' },
                           { id: 'hyper_prism', name: 'Prismatic Prism', desc: 'Refracted gemstone prism with faceted mirrors', icon: '🪞', tag: 'REFRACT' },
                           { id: 'dna_helix', name: 'DNA Double-Helix', desc: 'Intertwined quantum ribbon strands with base rungs', icon: '🧬', tag: 'QUANTUM' },
                           { id: 'vertigo_drop', name: 'Skyscraper Vertigo', desc: '90° vertical terminal velocity skyscraper plunge', icon: '🏙️', tag: 'FREEFALL' },
@@ -2593,7 +2593,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                             <span className="text-[7px] px-1 py-0.2 bg-purple-500/20 text-purple-300 border border-purple-500/30 rounded">AUTO-WARP</span>
                           </div>
                           <div className="text-[7.5px] font-mono text-zinc-500 uppercase mt-0.5">
-                            Seamlessly transition POV into 3D Cyber Tunnel & Dynamic Camera as stage difficulty escalates
+                            Camera shifts into tunnel views as the song gets harder
                           </div>
                         </div>
                         <button
@@ -2623,7 +2623,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
               <div className="space-y-4 animate-fade-in">
                 <div>
                   <h2 className="text-base md:text-lg brutalist-menu-title italic mb-1" style={{ '--neon-accent': isAvant ? '#39FF14' : '#FF1493' } as any}>Card Front Skins Catalog</h2>
-                  <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Unlock and select custom card borders for cards in your collection</p>
+                  <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Frames for the cards in your collection</p>
                 </div>
 
                 <div className="flex flex-col lg:flex-row gap-6 items-center lg:items-start relative">
@@ -2717,7 +2717,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
               <div className="space-y-5 animate-fade-in">
                 <div>
                   <h2 className="text-base md:text-lg brutalist-menu-title italic mb-1" style={{ '--neon-accent': isAvant ? '#39FF14' : '#FF1493' } as any}>Card Back Skins Catalog</h2>
-                  <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Select standard visual backings or unlock special card backings</p>
+                  <p className="text-[9px] text-zinc-500 uppercase tracking-wider">Standard and unlockable card backs</p>
                 </div>
 
                 <div className="flex flex-col lg:flex-row gap-6 items-center lg:items-start relative">
@@ -2875,7 +2875,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                                 {packDesignStyle === 'classic_foil' && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />}
                               </span>
                               <span className="text-[7.5px] text-zinc-400 font-mono mt-1 leading-snug uppercase">
-                                Traditional 3D metallic crimped foil sleeve with vinyl stickers & marquee text
+                                Crimped foil wrapper with stickers
                               </span>
                             </div>
                           </div>
@@ -2908,7 +2908,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                                 {packDesignStyle === 'cyber_cartridge' && <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />}
                               </span>
                               <span className="text-[7.5px] text-zinc-400 font-mono mt-1 leading-snug uppercase">
-                                High-tech chamfered solid-state data capsule with 3-band audio spectrum & laser breach
+                                Hard-shell data capsule, opened by laser
                               </span>
                             </div>
                           </div>

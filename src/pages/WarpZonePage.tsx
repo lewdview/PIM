@@ -313,7 +313,7 @@ export default function WarpZonePage() {
                   </span>
                   <h3 className="font-black text-xl text-white uppercase mb-2">Hard Drive Lore</h3>
                   <p className="font-mono text-xs text-white/60 leading-relaxed">
-                    The origin story of the lost hard drive, recovered stems, and the journey to release 365 artifacts.
+                    How a dead hard drive and a pile of recovered stems became 365 releases.
                   </p>
                 </div>
                 <div className="flex items-center gap-1 font-mono text-xs text-yellow-400 font-bold uppercase tracking-wider mt-6 group-hover:text-yellow-300">

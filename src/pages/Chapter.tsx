@@ -1001,7 +1001,7 @@ export default function Chapter() {
                               </div>
                             ) : (
                               <div className="border border-dashed border-white/5 p-2 rounded text-center text-xs">
-                                <span className="font-mono text-[7px] text-white/20">// NO DISPATCH TELEMETRY ON RECORD</span>
+                                <span className="font-mono text-[7px] text-white/20">// NO SCORE YET</span>
                               </div>
                             )}
 
@@ -1053,7 +1053,7 @@ export default function Chapter() {
                               )}
                               {isProgLocked && !isTimeLocked && !isBonusLocked && (
                                 <div className="p-1.5 border border-[#FF3800]/30 bg-[#FF3800]/10 text-center rounded text-[8px] font-mono text-[#FF3800]">
-                                  🔒 TRANSMISSION LOCKED — CLEAR PREVIOUS LEVEL TO UNLOCK PATHWAY
+                                  🔒 LOCKED · CLEAR THE PREVIOUS LEVEL FIRST
                                 </div>
                               )}
                               {isUnlockReqLocked && !isTimeLocked && !isBonusLocked && !isProgLocked && (

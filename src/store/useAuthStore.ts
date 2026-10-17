@@ -483,7 +483,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
 
     if (!wallet) {
-      const msg = 'No wallet found. Install MetaMask or use a Coinbase Wallet compatible browser.';
+      const msg = 'No wallet found. Install MetaMask or open this in a Coinbase Wallet browser.';
       set({ error: msg });
       return { error: msg };
     }
@@ -543,7 +543,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             ? verifyChainId === 8453
             : typeof verifyChainId === 'string' && (verifyChainId.toLowerCase() === BASE_CHAIN_ID_HEX || verifyChainId === '8453' || verifyChainId.toLowerCase() === 'eip155:8453');
           if (!verifiedBase) {
-            throw new Error('Please switch to the Base network in your wallet to proceed.');
+            throw new Error('Switch your wallet to the Base network to continue.');
           }
         }
       }
@@ -699,7 +699,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signInWithPrivateKey: async (rawPrivateKey: string) => {
     let pkey = rawPrivateKey.trim();
     if (!pkey) {
-      return { error: 'Please enter a private key.' };
+      return { error: 'Enter your private key.' };
     }
     if (!pkey.startsWith('0x')) {
       pkey = '0x' + pkey;
@@ -1041,7 +1041,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         if (error) {
           const msg = error.message.toLowerCase();
           if (msg.includes('rate limit') || msg.includes('over_email_send_rate_limit')) {
-            const friendly = 'Email transmission limit reached for this hour. Connect via Web3 (instant) or GitHub for immediate access.';
+            const friendly = 'Too many emails sent this hour. Sign in with a wallet or GitHub instead.';
             set({ error: friendly, status: 'ready' });
             return { error: friendly };
           }
@@ -1057,7 +1057,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             if (otpError) {
               const otpMsg = otpError.message.toLowerCase();
               const friendly = otpMsg.includes('rate limit') || otpMsg.includes('over_email_send_rate_limit')
-                ? 'Email transmission limit reached for this hour. Connect via Web3 (instant) or GitHub for immediate access.'
+                ? 'Too many emails sent this hour. Sign in with a wallet or GitHub instead.'
                 : otpError.message;
               set({ error: friendly, status: 'ready' });
               return { error: friendly };
@@ -1079,7 +1079,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         if (error) {
           const msg = error.message.toLowerCase();
           const friendly = msg.includes('rate limit') || msg.includes('over_email_send_rate_limit')
-            ? 'Email transmission limit reached for this hour. Connect via Web3 (instant) or GitHub for immediate access.'
+            ? 'Too many emails sent this hour. Sign in with a wallet or GitHub instead.'
             : error.message;
           set({ error: friendly, status: 'ready' });
           return { error: friendly };
@@ -1093,7 +1093,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const msg = thrown?.message || String(thrown);
       let friendly = msg;
       if (msg.toLowerCase().includes('rate limit') || msg.toLowerCase().includes('over_email_send_rate_limit')) {
-        friendly = 'Email transmission limit reached for this hour. Connect via Web3 (instant) or GitHub for immediate access.';
+        friendly = 'Too many emails sent this hour. Sign in with a wallet or GitHub instead.';
       }
       set({ error: friendly, status: 'ready' });
       return { error: friendly };
@@ -1160,9 +1160,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const rawMsg = err?.message || String(err);
       let friendly = rawMsg;
       if (rawMsg.toLowerCase().includes('token has expired') || rawMsg.toLowerCase().includes('expired')) {
-        friendly = 'Clearance code has expired. Request a new one.';
+        friendly = 'That code expired. Request a new one.';
       } else if (rawMsg.toLowerCase().includes('invalid')) {
-        friendly = 'Invalid 6-digit clearance code. Please re-check the code.';
+        friendly = 'That code doesn\'t match. Check it and try again.';
       }
       set({ error: friendly, status: 'ready' });
       return { error: friendly };
@@ -1209,7 +1209,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (err: any) {
       console.error('[Auth] signInWithPasskey error:', err);
       const msg = err?.name === 'NotAllowedError' || err?.message?.includes('NotAllowedError') || err?.message?.includes('cancelled')
-        ? 'Passkey authentication was dismissed or timed out.'
+        ? 'Passkey sign-in was cancelled or timed out.'
         : err?.message || 'Passkey sign-in failed.';
       set({ error: msg, status: 'ready' });
       return { error: msg };
@@ -1232,10 +1232,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           if (updateErr) {
             const msg = updateErr.message.toLowerCase();
             if (msg.includes('rate limit') || msg.includes('over_email_send_rate_limit')) {
-              throw new Error('Email transmission limit reached for this hour. Connect via Web3 (instant) or GitHub.');
+              throw new Error('Too many emails sent this hour. Sign in with a wallet or GitHub instead.');
             }
             if (msg.includes('already') || msg.includes('registered') || msg.includes('exists')) {
-              throw new Error('This email is already registered. Please sign in with Passkey or Magic Link.');
+              throw new Error('That email already has an account. Sign in with a passkey or magic link.');
             }
             throw updateErr;
           }
@@ -1244,7 +1244,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             set({ user: currentUser });
           }
         } else {
-          const msg = 'Please provide an email address to bind your biometric passkey.';
+          const msg = 'Enter a valid email to set up your passkey.';
           set({ error: msg });
           return { error: msg };
         }
@@ -1253,7 +1253,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const { data, error } = await supabase.auth.registerPasskey();
       if (error) {
         if (error.message.toLowerCase().includes('anonymous')) {
-          const msg = 'Please enter your email to bind your biometric passkey.';
+          const msg = 'Enter a valid email to set up your passkey.';
           set({ error: msg });
           return { error: msg };
         }
@@ -1266,9 +1266,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       console.error('[Auth] registerPasskey error:', err);
       let msg = err?.message || 'Passkey registration failed.';
       if (err?.name === 'NotAllowedError' || msg.includes('NotAllowedError') || msg.includes('cancelled') || msg.includes('dismissed')) {
-        msg = 'Passkey registration prompt was dismissed.';
+        msg = 'Passkey setup was cancelled.';
       } else if (msg.toLowerCase().includes('anonymous')) {
-        msg = 'Please enter your email to bind your biometric passkey.';
+        msg = 'Enter a valid email to set up your passkey.';
       }
       set({ error: msg });
       return { error: msg };

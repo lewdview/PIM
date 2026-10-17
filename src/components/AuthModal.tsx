@@ -154,7 +154,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
     const targetEmail = (passkeyEmail || email).trim();
     if (isGuest && (!targetEmail || !targetEmail.includes('@'))) {
-      setLocalError('Please enter a valid email address to bind your biometric passkey.');
+      setLocalError('Enter a valid email to set up your passkey.');
       audioManager.playSfx('error', 0.4);
       return;
     }
@@ -167,7 +167,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         setLocalError(res.error);
         audioManager.playSfx('error', 0.5);
       } else {
-        setPasskeySuccess('✨ Biometric passkey registered successfully! You can now log in anytime with 1 touch.');
+        setPasskeySuccess('Passkey added. Next time, sign in with one tap.');
         audioManager.playSfx('reveal', 0.6);
       }
     } catch (err: any) {
@@ -203,7 +203,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     e.preventDefault();
     setLocalError(null);
     if (!email || !email.includes('@')) {
-      setLocalError('Please enter a valid email address.');
+      setLocalError('Enter a valid email address.');
       audioManager.playSfx('error', 0.4);
       return;
     }
@@ -232,7 +232,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     if (e) e.preventDefault();
     setLocalError(null);
     if (!otpCode || otpCode.trim().length < 6) {
-      setLocalError('Please enter the 6-digit clearance code.');
+      setLocalError('Enter the 6-digit code.');
       audioManager.playSfx('error', 0.4);
       return;
     }
@@ -260,7 +260,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
     e.preventDefault();
     setLocalError(null);
     if (!email || !email.includes('@')) {
-      setLocalError('Please enter a valid email address.');
+      setLocalError('Enter a valid email address.');
       audioManager.playSfx('error', 0.4);
       return;
     }
@@ -340,7 +340,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
         onClose();
       }
     } catch (err: any) {
-      setLocalError(err?.message || 'Ephemeral wallet authentication failed.');
+      setLocalError(err?.message || 'Couldn\'t sign in with a temporary wallet. Try again.');
       audioManager.playSfx('error', 0.5);
     } finally {
       setLoading(false);
@@ -350,7 +350,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const handleImportKeySubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!importKeyInput.trim()) {
-      setLocalError('Please enter your private key.');
+      setLocalError('Enter your private key.');
       return;
     }
     setLocalError(null);
@@ -423,14 +423,14 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
               <div className="flex items-center gap-2 mb-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#39FF14] animate-pulse" />
                 <span className="font-mono text-[9px] tracking-[0.3em] uppercase text-zinc-400">
-                  SYSTEM SECURITY // IDENTITY PORTAL
+                  VAULT // SIGN IN
                 </span>
               </div>
               <h2 className="text-xl md:text-2xl font-black uppercase tracking-tight text-white flex items-center gap-2.5 font-display">
-                Connect Sovereign Identity
+                Sign In
               </h2>
               <p className="font-mono text-[11px] text-zinc-400 mt-1 leading-relaxed">
-                Select your preferred authentication clearance protocol below.
+                Pick how you want to sign in.
               </p>
             </div>
 
@@ -439,7 +439,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
               <div className="px-6 py-2 bg-gradient-to-r from-[#00E5FF]/10 via-[#A855F7]/10 to-transparent border-b border-white/5 flex items-center gap-2 text-[10px] font-mono text-[#00E5FF]">
                 <Sparkles size={13} className="shrink-0 animate-spin" style={{ animationDuration: '6s' }} />
                 <span>
-                  <strong>GUEST PROGRESSION DETECTED:</strong> High scores, unlocked cards, and $V⚡ tokens will automatically link to your identity.
+                  <strong>PLAYING AS GUEST:</strong> Your scores, cards and V⚡ sparks carry over when you sign in.
                 </span>
               </div>
             )}
@@ -559,7 +559,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                         {loading || status === 'loading' ? (
                           <>
                             <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                            <span>Verifying Biometric Sensor...</span>
+                            <span>Waiting for passkey…</span>
                           </>
                         ) : (
                           <>
@@ -579,7 +579,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                         className="w-full py-2.5 px-4 flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/15 text-white/80 hover:text-white font-mono text-[11px] uppercase tracking-wider transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
                       >
                         <Sparkles size={14} className="text-[#00E5FF]" />
-                        <span>Register This Device's Passkey</span>
+                        <span>Set Up a Passkey on This Device</span>
                       </button>
 
                       {/* Key features callouts */}
@@ -603,7 +603,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                       {isGuest && (
                         <div className="space-y-1">
                           <label className="block text-[9px] font-mono uppercase text-zinc-400 tracking-wider">
-                            Email to Bind Passkey
+                            Email for Your Passkey
                           </label>
                           <div className="relative">
                             <Mail className="absolute left-3 top-3 text-zinc-500" size={14} />
@@ -636,7 +636,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                         {loading || status === 'loading' ? (
                           <>
                             <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                            <span>Registering Biometric Key...</span>
+                            <span>Setting up passkey…</span>
                           </>
                         ) : (
                           <>
@@ -671,10 +671,10 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                       OAuth 2.0 Clearance
                     </div>
                     <h3 className="text-lg font-black uppercase text-white tracking-wide">
-                      Developer Social Access
+                      Sign In with GitHub
                     </h3>
                     <p className="font-mono text-[11px] text-zinc-400 max-w-sm mx-auto leading-relaxed">
-                      Authorize in one click via your GitHub account. Synchronizes avatar and handles cross-device.
+                      Uses your GitHub avatar and handle, and works across devices.
                     </p>
                   </div>
 
@@ -690,7 +690,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                       {loading || status === 'loading' ? (
                         <>
                           <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          <span>Routing to GitHub...</span>
+                          <span>Opening GitHub…</span>
                         </>
                       ) : (
                         <>
@@ -702,7 +702,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                     </button>
 
                     <div className="p-3 bg-white/[0.02] border border-white/5 rounded text-left font-mono text-[10px] text-zinc-400 leading-relaxed">
-                      💡 <strong>Seamless Linking:</strong> If you are currently playing as a guest, your GitHub connection will bind your cards and save state to your developer handle.
+                      💡 <strong>Playing as a guest?</strong> Your cards and progress move to your GitHub account.
                     </div>
                   </div>
                 </div>
@@ -752,7 +752,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                       </div>
                       <div>
                         <h3 className="font-bold text-white text-sm tracking-wider uppercase font-mono">
-                          Transmission Dispatched
+                          Check Your Email
                         </h3>
                         <p className="font-mono text-zinc-300 text-[11px] leading-relaxed mt-1">
                           Clearance dispatched to <span className="text-[#00E5FF] font-bold">{email}</span>
@@ -763,7 +763,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                       <form onSubmit={handleVerifyOtp} className="space-y-3 pt-1">
                         <div className="space-y-1 text-left">
                           <label className="block text-[9px] font-mono uppercase text-zinc-400 tracking-wider">
-                            Enter 6-Digit Clearance Code
+                            Enter 6-Digit Code
                           </label>
                           <div className="relative">
                             <Key className="absolute left-3 top-3 text-zinc-500" size={14} />
@@ -790,7 +790,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                           }}
                         >
                           <Shield size={14} />
-                          {loading ? 'VERIFYING CLEARANCE...' : 'CONFIRM CLEARANCE CODE'}
+                          {loading ? 'VERIFYING…' : 'CONFIRM CODE'}
                         </button>
                       </form>
 
@@ -802,7 +802,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                       </div>
 
                       <p className="font-mono text-zinc-400 text-[10px] leading-relaxed">
-                        You can also click the direct activation link in your inbox.
+                        Or tap the sign-in link in the email.
                       </p>
                       
                       <div className="flex gap-2 pt-1">
@@ -857,12 +857,12 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                         {loading || status === 'loading' ? (
                           <>
                             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            <span>Dispatching Transmission...</span>
+                            <span>Sending…</span>
                           </>
                         ) : (
                           <>
                             <Mail size={16} />
-                            <span>Transmit Magic Link</span>
+                            <span>Send Magic Link</span>
                             <ArrowRight size={14} className="ml-auto" />
                           </>
                         )}
@@ -922,7 +922,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                         {loading || status === 'loading' ? (
                           <>
                             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            <span>Authenticating Credentials...</span>
+                            <span>Signing in…</span>
                           </>
                         ) : (
                           <>
@@ -946,10 +946,10 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                       Base Mainnet (Chain ID 8453)
                     </div>
                     <h3 className="text-lg font-black uppercase text-white tracking-wide">
-                      Universal EVM Smart Wallet
+                      Connect a Wallet
                     </h3>
                     <p className="font-mono text-[11px] text-zinc-400 max-w-sm mx-auto leading-relaxed">
-                      Connect via MetaMask, Rabby, Coinbase Smart Wallet, or generate a zero-friction ephemeral key.
+                      MetaMask, Rabby or Coinbase Smart Wallet. No wallet? Create a temporary key on this device.
                     </p>
                   </div>
 
@@ -966,7 +966,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                       {loading || status === 'loading' ? (
                         <>
                           <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                          <span>Establishing Base Connection...</span>
+                          <span>Connecting…</span>
                         </>
                       ) : (
                         <>
@@ -983,7 +983,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                       className="w-full py-2.5 px-4 flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/15 text-white/80 hover:text-white font-mono text-[11px] uppercase tracking-wider transition-all active:scale-[0.98] disabled:opacity-50 cursor-pointer"
                     >
                       <Layers size={14} className="text-[#E5B800]" />
-                      <span>Create Encrypted Ephemeral Key</span>
+                      <span>Create a Temporary Key</span>
                     </button>
 
                     {/* Load by Saved Private Key */}
@@ -1005,7 +1005,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                       <div className="p-3 bg-black/60 border border-[#00E5FF]/30 space-y-3 rounded-sm">
                         <div className="space-y-1">
                           <label className="block text-[9px] font-mono uppercase text-zinc-400 tracking-wider">
-                            Sovereign Private Key (Hex)
+                            Private Key (Hex)
                           </label>
                           <div className="relative">
                             <Key className="absolute left-3 top-3 text-zinc-500" size={14} />
@@ -1073,7 +1073,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                       </div>
                       {currentError.toLowerCase().includes('rate limit') && (
                         <div className="pt-1 text-[9px] text-[#00E5FF] flex flex-wrap items-center gap-1.5 font-bold">
-                          <span>💡 Instant Alternative:</span>
+                          <span>💡 Try instead:</span>
                           <button
                             type="button"
                             onClick={() => handleTabSwitch('web3')}

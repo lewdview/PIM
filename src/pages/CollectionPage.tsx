@@ -174,15 +174,15 @@ export default function CollectionPage() {
       const result = await sellCard(ownedCard);
       if (result.tokensEarned > 0) {
         removeFromCollection(ownedCard.id);
-        useLoadingToast.getState().show(`Burned! +${result.tokensEarned} V⚡`);
+        useLoadingToast.getState().show(`Burned. +${result.tokensEarned} V⚡`);
         setTimeout(() => useLoadingToast.getState().hide(), 2000);
       } else {
-        useLoadingToast.getState().show('Burn failed');
+        useLoadingToast.getState().show('Burn didn\'t go through');
         setTimeout(() => useLoadingToast.getState().hide(), 2000);
       }
     } catch (err) {
       console.error(err);
-      useLoadingToast.getState().show('Error burning card');
+      useLoadingToast.getState().show('Burn didn\'t go through');
       setTimeout(() => useLoadingToast.getState().hide(), 2000);
     } finally {
       await loadVaultData();

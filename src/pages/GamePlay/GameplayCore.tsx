@@ -1390,7 +1390,7 @@ export default function Game() {
   const [loadState, setLoadState] = useState<TransmissionLoadState>({
     step: 1,
     stepLabel: "FETCHING TRANSMISSION METADATA",
-    detailMsg: "Querying track catalog & JSON manifest...",
+    detailMsg: "Finding the track…",
     bytesLoaded: 0,
     bytesTotal: 0,
     speedBps: 0,
@@ -8330,7 +8330,7 @@ export default function Game() {
         setLoadState({
           step: 1,
           stepLabel: "INITIALIZING TRANSMISSION METADATA",
-          detailMsg: "Querying track catalog & JSON manifest...",
+          detailMsg: "Finding the track…",
           bytesLoaded: 0,
           bytesTotal: 0,
           speedBps: 0,
@@ -9005,7 +9005,7 @@ export default function Game() {
         ...prev,
         step: 4,
         stepLabel: "DOWNLOADING AUDIO TRANSMISSION",
-        detailMsg: "Establishing stream connection to audio file...",
+        detailMsg: "Connecting to audio…",
         pct: 55,
         logs: [...prev.logs.slice(-4), `[NET] Requesting audio stream: ${song.audioUrl}`]
       }));
@@ -9058,12 +9058,12 @@ export default function Game() {
             ...prev,
             step: 4,
             stepLabel: "STREAMING DIRECT AUDIO CHUNKS",
-            detailMsg: `Large file (${(headBytes / 1048576).toFixed(1)} MB) · HTML5 streaming active`,
+            detailMsg: `Large file (${(headBytes / 1048576).toFixed(1)} MB) · streaming`,
             bytesLoaded: headBytes,
             bytesTotal: headBytes,
             pct: 95,
             isStreaming: true,
-            logs: [...prev.logs.slice(-4), `[NET] Direct HTML5 media streaming engaged (${(headBytes / 1048576).toFixed(1)} MB)`]
+            logs: [...prev.logs.slice(-4), `[NET] Streaming large file (${(headBytes / 1048576).toFixed(1)} MB)`]
           }));
         } else if (response && response.ok) {
           const contentLength = response.headers.get("content-length");
@@ -9139,7 +9139,7 @@ export default function Game() {
             ...prev,
             step: 5,
             stepLabel: "SYNCHRONIZING AUDIO ENGINE",
-            detailMsg: "Aligning Web Audio Context & pre-rendering surface...",
+            detailMsg: "Syncing audio to the stage…",
             pct: 98,
             logs: [...prev.logs.slice(-3), `[ENGINE] Audio blob compiled & object URL generated`]
           }));
@@ -11438,7 +11438,7 @@ export default function Game() {
                       </div>
                     ))
                   ) : (
-                    <div className="text-white/30 italic">&gt; Initializing signal telemetry...</div>
+                    <div className="text-white/30 italic">&gt; Waiting for signal…</div>
                   )}
                 </div>
               </div>
@@ -11554,7 +11554,7 @@ export default function Game() {
                   LOADING FAILED
                 </h2>
                 <p className="font-mono text-xs text-white/50 mb-8 leading-relaxed">
-                  We couldn't download the track audio. Please verify your connection and try again.
+                  Couldn't download the track. Check your connection and try again.
                 </p>
                 
                 <div className="flex flex-col gap-4">

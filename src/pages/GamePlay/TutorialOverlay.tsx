@@ -52,7 +52,7 @@ const STEP_METADATA: Record<TutorialStepType, { title: string; subtitle: string;
   },
   'remix': {
     title: 'STEM REMIX NOTE',
-    subtitle: 'Strike to trigger real-time DSP stem isolation (solo vocals, mute drums)',
+    subtitle: 'Hit it to remix the song live (solo vocals, mute drums)',
     icon: '⚡',
     accent: '#00F5D4',
   },
@@ -225,7 +225,7 @@ export default function TutorialOverlay({
                   </div>
                   <div>
                     <span className="text-white font-bold block">SONIC PUNISHMENT:</span>
-                    Missing notes mutes the audio track's physical frequency bands (Bass, Mids, Treble).
+                    Each miss mutes that lane's slice of the mix (bass, mids or treble).
                   </div>
                 </div>
 
@@ -287,17 +287,17 @@ export default function TutorialOverlay({
 
               <div className="space-y-3.5 font-mono text-[11px] text-zinc-300 leading-relaxed border-t border-b border-white/10 py-4 mb-5">
                 <div className="bg-[#FF1493]/10 border border-[#FF1493]/40 p-2.5 rounded text-white text-[10px]">
-                  ⚡ <strong className="text-[#FF1493]">YOU MISSED 3 TIMES!</strong> The engine automatically executed an emergency rewind.
+                  ⚡ <strong className="text-[#FF1493]">3 MISSES.</strong> The song rewinds so you can try again.
                 </div>
 
                 <p>
-                  In PIM, accumulating 3 misses triggers the <strong className="text-white">Rewind Mechanism</strong> instead of an abrupt game over.
+                  In PIM, 3 misses trigger a <strong className="text-white">Rewind</strong> instead of a game over.
                 </p>
 
                 <div className="space-y-2 text-[10px] text-zinc-400">
                   <div className="flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#00E5FF]" />
-                    <span><strong>Highway Rolls Back 2.5 Seconds:</strong> Canvas scrolls in reverse.</span>
+                    <span><strong>Highway Rolls Back 2.5 Seconds:</strong> The track scrolls in reverse.</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#39FF14]" />
@@ -305,7 +305,7 @@ export default function TutorialOverlay({
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#FFD700]" />
-                    <span><strong>Chances Reset:</strong> You have 3 fresh attempts to nail the pattern!</span>
+                    <span><strong>Chances Reset:</strong> You get 3 more tries at the pattern.</span>
                   </div>
                 </div>
               </div>

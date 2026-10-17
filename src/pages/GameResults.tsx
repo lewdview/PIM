@@ -36,11 +36,11 @@ interface ResultData {
 }
 
 const MEDALS: Record<string, { color: string; message: string }> = {
-  PLATINUM: { color: '#39FF14', message: 'PERFECT SIGNAL — ALL TRANSMISSIONS LOCKED' },
-  GOLD:     { color: '#E5B800', message: 'STRONG SIGNAL — MINIMAL INTERFERENCE' },
-  SILVER:   { color: '#A0AABB', message: 'SIGNAL STABLE — SOME STATIC DETECTED' },
-  BRONZE:   { color: '#C97A3A', message: 'WEAK SIGNAL — SIGNIFICANT NOISE' },
-  NONE:     { color: '#555',    message: 'SIGNAL LOST — RECONNECT AND RETRY' },
+  PLATINUM: { color: '#39FF14', message: 'PERFECT SIGNAL' },
+  GOLD:     { color: '#E5B800', message: 'STRONG SIGNAL' },
+  SILVER:   { color: '#A0AABB', message: 'SIGNAL STABLE · SOME STATIC' },
+  BRONZE:   { color: '#C97A3A', message: 'WEAK SIGNAL · HEAVY NOISE' },
+  NONE:     { color: '#555',    message: 'SIGNAL LOST · TRY AGAIN' },
 };
 
 const MEDAL_ORDER = ['NONE','BRONZE','SILVER','GOLD','PLATINUM'];
@@ -924,7 +924,7 @@ export default function Results() {
             CODE: 0x800F02
           </div>
           <div className="absolute bottom-5 left-5 pointer-events-none font-mono text-[9px] text-[#FF1493]/35" style={{ letterSpacing: '0.15em' }}>
-            AUTH_FAIL // DATA_CORRUPT
+            RUN FAILED
           </div>
           <div className="absolute bottom-5 right-5 pointer-events-none font-mono text-[9px] text-[#FF1493]/35" style={{ letterSpacing: '0.15em' }}>
             SIGNAL // TIMEOUT
@@ -1029,7 +1029,7 @@ export default function Results() {
               {/* Lane Accuracy Heatmap */}
               <div className="w-full my-1 select-none">
                 <div className="flex justify-between items-center mb-1.5 px-0.5">
-                  <span className="font-mono text-[9px] tracking-[0.2em] text-zinc-400 font-bold uppercase">LANE SENSOR HEATMAP</span>
+                  <span className="font-mono text-[9px] tracking-[0.2em] text-zinc-400 font-bold uppercase">HITS BY LANE</span>
                   <span className="font-mono text-[8px] text-emerald-400 tracking-wider">L1-L3 ACTIVE</span>
                 </div>
                 <div className="grid grid-cols-3 gap-2">
@@ -1073,7 +1073,7 @@ export default function Results() {
               }}
                 className="w-full py-4 font-mono font-bold text-sm tracking-[0.3em] transition-all bg-zinc-950 border border-[#FF1493] text-[#FF1493] hover:bg-[#FF1493]/12 hover:shadow-[0_0_20px_rgba(255,20,147,0.3)]"
                 onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}>
-                [ RE-RUN CALIBRATION ]
+                [ RECALIBRATE ]
               </button>
               <button onClick={() => {
                 audioManager.playSfx('tap_nav', 0.15);
@@ -1146,10 +1146,10 @@ export default function Results() {
               NO MEDAL AWARDED
             </div>
             <div className="font-mono text-xs" style={{ color: 'rgba(255,255,255,0.25)', letterSpacing: '0.18em' }}>
-              ALL 3 CONTINUES EXHAUSTED
+              OUT OF CONTINUES
             </div>
             <div className="font-mono text-xs" style={{ color: 'rgba(255,255,255,0.2)', letterSpacing: '0.15em', marginTop: 4 }}>
-              COMPLETE THE FULL TRANSMISSION TO EARN A MEDAL
+              FINISH THE SONG TO EARN A MEDAL
             </div>
           </div>
 
@@ -1311,7 +1311,7 @@ export default function Results() {
           className="absolute bottom-5 left-5 pointer-events-none font-mono text-[9px] text-[#39FF14]/30 transition-opacity duration-1000" 
           style={{ letterSpacing: '0.15em', opacity: phase === 'ring' ? 0 : 0.3 }}
         >
-          SYS_SEC_VERIFICATION // STABLE
+          RUN VERIFIED
         </div>
         <div 
           className="absolute bottom-5 right-5 pointer-events-none font-mono text-[9px] text-[#39FF14]/30 transition-opacity duration-1000" 
@@ -1348,7 +1348,7 @@ export default function Results() {
                 textShadow: `0 0 4px ${currentRingColor}`,
               }}
             >
-              [ DECODING RUN DATA ]   ★★★   [ PROCESSING TELEMETRY SECTORS ]   ★★★   [ AUTHENTICATING MEDAL TIERS ]   ★★★   [ INJECTING CORES ]   ★★★   
+              [ TALLYING RUN ]   ★★★   [ SCORING LANES ]   ★★★   [ AWARDING MEDAL ]   ★★★   [ PAYING OUT ]   ★★★   
             </span>
             <span 
               className="font-mono text-[9px] font-black tracking-[0.35em] pr-4 uppercase"
@@ -1357,7 +1357,7 @@ export default function Results() {
                 textShadow: `0 0 4px ${currentRingColor}`,
               }}
             >
-              [ DECODING RUN DATA ]   ★★★   [ PROCESSING TELEMETRY SECTORS ]   ★★★   [ AUTHENTICATING MEDAL TIERS ]   ★★★   [ INJECTING CORES ]   ★★★   
+              [ TALLYING RUN ]   ★★★   [ SCORING LANES ]   ★★★   [ AWARDING MEDAL ]   ★★★   [ PAYING OUT ]   ★★★   
             </span>
           </div>
         </div>
@@ -1625,7 +1625,7 @@ export default function Results() {
                           }}
                         >
                           <div className="w-4 h-4 border-2 border-zinc-500 border-t-transparent rounded-full animate-spin" />
-                          AUTHENTICATING REWARD...
+                          CLAIMING REWARD…
                         </button>
                       )}
                       {claimStatus === 'claimed' && (
@@ -1650,17 +1650,17 @@ export default function Results() {
                           }}
                           onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}
                         >
-                          ⚠️ CLAIM FAILED - RETRY?
+                          ⚠️ CLAIM FAILED · TAP TO RETRY
                         </button>
                       )}
                     </>
                   ) : (
                     <div className="border border-yellow-500/30 bg-yellow-500/5 p-3 text-center rounded text-[10px] font-mono text-yellow-500 uppercase tracking-wider mb-2">
                       {!ownsCard
-                        ? "⚠️ AWARDS DISABLED // NON-OWNED PLAY"
+                        ? "⚠️ NO AWARDS // YOU DON'T OWN THIS CARD"
                         : !awardUnlocked
                         ? `⚠️ AWARDS DISABLED // AWARD PLAY NOT UNLOCKED — ${shardCount}/10 SHARDS`
-                        : "⚠️ AWARDS DISABLED // MODIFIER ACTIVE OR DIFF OVERRIDE"
+                        : "⚠️ NO AWARDS // MODIFIER OR DIFFICULTY OVERRIDE ON"
                       }
                     </div>
                   )}
@@ -1706,10 +1706,10 @@ export default function Results() {
                     // BROADCAST RESTRICTED //
                   </div>
                   <h3 className="font-mono text-base font-bold text-white uppercase tracking-wider">
-                    CONNECT TO SAVE & TRANSMIT SCORE
+                    SIGN IN TO SAVE THIS SCORE
                   </h3>
                   <p className="font-sans text-[11px] text-white/70">
-                    Connect your sovereign identity to lock in this run and broadcast your score to global transmission rankings.
+                    Sign in to keep this run and post it to the global rankings.
                   </p>
                   <button
                     onClick={() => setShowAuthModal(true)}
@@ -1733,10 +1733,10 @@ export default function Results() {
                     // PILOT IDENTITY REQUIRED //
                   </div>
                   <h3 className="font-mono text-base font-bold text-white uppercase tracking-wider">
-                    CLAIM @USERNAME TO BROADCAST SCORE
+                    PICK A @USERNAME TO POST SCORES
                   </h3>
                   <p className="font-sans text-[11px] text-white/70">
-                    Your account is connected, but you must register an official pilot @username and avatar to appear on competitive leaderboards.
+                    You're signed in. Pick a @username and avatar to show up on the leaderboards.
                   </p>
                   <button
                     onClick={() => setShowIdentityModal(true)}
@@ -1793,7 +1793,7 @@ export default function Results() {
                   hidden={MONTH_BUILD}
                   onClick={handleCastScore}
                   className="flex-1 py-3 font-mono font-black text-xs tracking-[0.2em] uppercase transition-all bg-[#8A63D2]/20 border border-[#8A63D2]/60 text-[#C4A7E7] hover:bg-[#8A63D2]/40 hover:border-[#8A63D2] flex items-center justify-center gap-1.5 shadow-[0_0_12px_rgba(138,99,210,0.25)] active:scale-95 cursor-pointer"
-                  title="Share your score directly to Warpcast / Farcaster"
+                  title="Cast to Farcaster"
                   style={{
                     clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
                     minHeight: 48,
@@ -1904,7 +1904,7 @@ export default function Results() {
               textShadow: `0 0 4px ${currentRingColor}`,
             }}
           >
-            [ DECODING RUN DATA ]   ★★★   [ PROCESSING TELEMETRY SECTORS ]   ★★★   [ AUTHENTICATING MEDAL TIERS ]   ★★★   [ INJECTING CORES ]   ★★★   
+            [ TALLYING RUN ]   ★★★   [ SCORING LANES ]   ★★★   [ AWARDING MEDAL ]   ★★★   [ PAYING OUT ]   ★★★   
           </span>
           <span 
             className="font-mono text-[9px] font-black tracking-[0.35em] pr-4 uppercase"
@@ -1913,7 +1913,7 @@ export default function Results() {
               textShadow: `0 0 4px ${currentRingColor}`,
             }}
           >
-            [ DECODING RUN DATA ]   ★★★   [ PROCESSING TELEMETRY SECTORS ]   ★★★   [ AUTHENTICATING MEDAL TIERS ]   ★★★   [ INJECTING CORES ]   ★★★   
+            [ TALLYING RUN ]   ★★★   [ SCORING LANES ]   ★★★   [ AWARDING MEDAL ]   ★★★   [ PAYING OUT ]   ★★★   
           </span>
         </div>
       </div>
@@ -2177,7 +2177,7 @@ export default function Results() {
                         }}
                       >
                         <div className="w-4 h-4 border-2 border-zinc-500 border-t-transparent rounded-full animate-spin" />
-                        AUTHENTICATING REWARD...
+                        CLAIMING REWARD…
                       </button>
                     )}
                     {claimStatus === 'claimed' && (
@@ -2202,15 +2202,15 @@ export default function Results() {
                         }}
                         onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}
                       >
-                        ⚠️ CLAIM FAILED - RETRY?
+                        ⚠️ CLAIM FAILED · TAP TO RETRY
                       </button>
                     )}
                   </>
                 ) : (
                   <div className="glass-panel border border-yellow-500/30 bg-yellow-500/10 p-3.5 text-center text-xs font-mono text-yellow-500 uppercase rounded-xl mb-3">
                     {!ownsCard 
-                      ? "⚠️ AWARDS DISABLED // NON-OWNED PLAY" 
-                      : "⚠️ AWARDS DISABLED // MODIFIER ACTIVE OR DIFF OVERRIDE"
+                      ? "⚠️ NO AWARDS // YOU DON'T OWN THIS CARD" 
+                      : "⚠️ NO AWARDS // MODIFIER OR DIFFICULTY OVERRIDE ON"
                     }
                   </div>
                 )}
@@ -2277,7 +2277,7 @@ export default function Results() {
                 hidden={MONTH_BUILD}
                 onClick={handleCastScore}
                 className="flex-1 py-3 font-mono font-black text-xs tracking-[0.2em] uppercase transition-all bg-[#8A63D2]/20 border border-[#8A63D2]/60 text-[#C4A7E7] hover:bg-[#8A63D2]/40 hover:border-[#8A63D2] flex items-center justify-center gap-1.5 shadow-[0_0_12px_rgba(138,99,210,0.25)] active:scale-95 cursor-pointer"
-                title="Share your score directly to Warpcast / Farcaster"
+                title="Cast to Farcaster"
                 style={{
                   clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
                   minHeight: 48,

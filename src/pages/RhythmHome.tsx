@@ -554,7 +554,7 @@ const DigitalClock = memo(() => {
               
               <div className="flex flex-col items-center justify-center flex-1 gap-2">
                 <div className="text-3xl font-black tracking-[0.6em] text-[#F2F0E8] animate-pulse">BOOTING</div>
-                <div className="text-[10px] tracking-[0.3em] text-[#FF1493] opacity-80">[ QUANTUM AUDIO STEM COMPILATION ]</div>
+                <div className="text-[10px] tracking-[0.3em] text-[#FF1493] opacity-80">[ LOADING STEMS ]</div>
               </div>
               
               <div className="flex justify-between text-[8px] tracking-[0.2em] text-[#39FF14] opacity-50">

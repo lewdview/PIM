@@ -497,7 +497,7 @@ export default function TokenShop({ onPackOpened }: TokenShopProps) {
                   );
                 })()}
 
-                <p className="text-[10px] font-mono opacity-40">This action cannot be undone. The card will be permanently removed from your collection.</p>
+                <p className="text-[10px] font-mono opacity-40">This can't be undone. The card leaves your collection for good.</p>
               </div>
               <div className="px-6 pb-5 flex gap-3">
                 <button

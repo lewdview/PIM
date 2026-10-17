@@ -162,7 +162,7 @@ export default function EarnPage() {
                 Identity Required
               </h1>
               <p className="text-xs font-mono leading-relaxed text-zinc-400">
-                Connect your Web3 Identity or guest account to start your daily spark streak.
+                Sign in or continue as a guest to start your daily spark streak.
               </p>
             </div>
             <button
@@ -264,7 +264,7 @@ export default function EarnPage() {
               Streak engine syncing
             </p>
             <p className="font-mono text-[10px] text-white/40 leading-relaxed">
-              The daily streak contract is deploying. Check back shortly — your future check-ins will count from day one.
+              Daily streaks go live soon. Check-ins will count from day one.
             </p>
           </div>
         ) : streak && (
@@ -379,7 +379,7 @@ export default function EarnPage() {
               {claiming ? 'Claiming…' : streak.canClaim ? `Claim +${streak.reward} sparks` : 'Claimed for today'}
             </button>
             <p className="text-center font-mono text-[8px] text-white/30 uppercase tracking-widest leading-relaxed">
-              One claim per day · UTC midnight reset · server-verified
+              One claim per day · Resets at midnight UTC
             </p>
           </div>
         )}

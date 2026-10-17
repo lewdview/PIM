@@ -170,7 +170,7 @@ export default function GuideModal({ isOpen, onClose }: Props) {
                 PIM : th3v4ult - POETRY IN MOTION
               </h1>
               <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#555' }}>
-                OFFICIAL OPERATING MANUAL & INSTRUCTION BOOKLET // ALL GAME SYSTEMS & EVENT MECHANICS
+                HOW TO PLAY // NOTES, SCORING & REWARDS
               </p>
             </div>
 
@@ -183,7 +183,7 @@ export default function GuideModal({ isOpen, onClose }: Props) {
                     <span>3-Lane Highway Quick Start</span>
                   </h3>
                   <p className="text-white/80 text-[11px] m-0 mb-4">
-                    PIM (Poetry In Motion) projects descending rhythm note rails down a perspective 3D highway. Press the matching key or swipe your touchscreen as target notes pass the glowing hit line.
+                    Notes run down a three-lane highway. Hit the matching key, or tap and swipe on touch, as each note crosses the hit line.
                   </p>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -210,7 +210,7 @@ export default function GuideModal({ isOpen, onClose }: Props) {
                     Audio Latency & Calibration
                   </h3>
                   <p className="text-[11px] text-white/70 m-0">
-                    Bluetooth headphones or TV speakers introduce millisecond audio delays. Navigate to <strong className="text-white">⚙ Options</strong> in the menu bar to adjust your <strong className="text-[#ffb800]">AUDIO OFFSET (ms)</strong>. Set negative values if hits feel late, or positive values if hits feel early.
+                    Bluetooth headphones and TV speakers add audio delay. Open <strong className="text-white">⚙ Options</strong> in the menu bar to adjust your <strong className="text-[#ffb800]">AUDIO OFFSET (ms)</strong>. Set negative values if hits feel late, or positive values if hits feel early.
                   </p>
                 </section>
               </div>
@@ -248,7 +248,7 @@ export default function GuideModal({ isOpen, onClose }: Props) {
                       <span className="text-[9px] bg-[#ffb800]/20 text-[#ffb800] px-1.5 py-0.5 rounded font-mono">PIM SIGNATURE</span>
                     </h4>
                     <p className="text-[11px] text-white/70 m-0">
-                      Striking a glowing Remix Note with PERFECT timing triggers real-time stem arrangement mutations (vocal isolation, bass drops), flips the visual canvas theme, and awards +1000 bonus points!
+                      Hit a Remix Note with PERFECT timing to remix the song live (vocal solos, bass drops), flip the stage colors and earn +1000 points.
                     </p>
                   </div>
                 </div>
@@ -261,7 +261,7 @@ export default function GuideModal({ isOpen, onClose }: Props) {
                 <section className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 space-y-3">
                   <h3 className="font-['Impact'] text-lg text-red-400 uppercase tracking-wide m-0 flex items-center gap-2">
                     <Volume2 size={18} />
-                    <span>Real-Time Multi-Band Audio Degradation</span>
+                    <span>Misses Cut the Mix</span>
                   </h3>
                   <p className="text-[11px] text-white/80 m-0">
                     Unlike ordinary games that only decrease points when you miss, PIM physically mutes the audio stem assigned to that lane:
@@ -299,7 +299,7 @@ export default function GuideModal({ isOpen, onClose }: Props) {
                     <div className="text-[#39ff14] font-['Impact'] text-base uppercase">SIGNAL LOCK (60+ COMBO)</div>
                     <div className="text-xs font-bold text-white">4x Multiplier</div>
                     <p className="text-[10px] text-white/70 m-0">
-                      Lasts 14 seconds. Peak matrix visual flow state with bright green glow overlay.
+                      Lasts 14 seconds. Green glow, peak visuals.
                     </p>
                   </div>
                 </div>
@@ -349,17 +349,17 @@ export default function GuideModal({ isOpen, onClose }: Props) {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px]">
                     <div className="p-3 rounded-lg bg-black/40 border border-white/10">
                       <div className="text-[#ffb800] font-bold uppercase mb-1">TARGETED PULL (275 V⚡)</div>
-                      <p className="text-white/60 m-0">Directly acquire any specific card from the 365 daily release catalog.</p>
+                      <p className="text-white/60 m-0">Pick any released day and pull that card.</p>
                     </div>
 
                     <div className="p-3 rounded-lg bg-black/40 border border-white/10">
                       <div className="text-[#39ff14] font-bold uppercase mb-1">RARITY UPGRADE (150 V⚡)</div>
-                      <p className="text-white/60 m-0">Upgrade an owned card to the next higher rarity tier.</p>
+                      <p className="text-white/60 m-0">Raise any card below Legendary by one rarity tier.</p>
                     </div>
 
                     <div className="p-3 rounded-lg bg-black/40 border border-white/10">
                       <div className="text-[#a855f7] font-bold uppercase mb-1">DUPLICATE FUSION</div>
-                      <p className="text-white/60 m-0">Fuse 3 identical cards (same day & rarity) to create 1 card of the next tier.</p>
+                      <p className="text-white/60 m-0">Fuse 3 identical cards (same day and rarity) into 1 card of the next tier.</p>
                     </div>
 
                     <div className="p-3 rounded-lg bg-black/40 border border-white/10">
@@ -376,7 +376,7 @@ export default function GuideModal({ isOpen, onClose }: Props) {
               <div className="space-y-4">
                 <div className="p-4 rounded-xl bg-white/[0.02] border border-white/10">
                   <h3 className="font-['Impact'] text-lg text-[#39ff14] uppercase tracking-wide m-0 mb-3">
-                    Complete Dynamic Events Matrix
+                    Scoring & Events
                   </h3>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse print-table">
@@ -406,7 +406,7 @@ export default function GuideModal({ isOpen, onClose }: Props) {
                         <tr>
                           <td className="py-2 px-3 text-[#a855f7] font-bold">Remix Note ⚡ Hit</td>
                           <td className="py-2 px-3">Hit Remix note with PERFECT timing</td>
-                          <td className="py-2 px-3">Triggers Web Audio stem mutation, +1000 pts</td>
+                          <td className="py-2 px-3">Remixes the song live, +1000 pts</td>
                         </tr>
                         <tr>
                           <td className="py-2 px-3 text-red-500 font-bold">Signal Lost (Failure)</td>
@@ -456,7 +456,7 @@ export default function GuideModal({ isOpen, onClose }: Props) {
 
                   {modifiers.length === 0 ? (
                     <div className="text-center p-4 border border-white/5 bg-white/[0.02] rounded-lg">
-                      <span className="font-mono text-[10px] text-white/30 uppercase">No active buffs right now.</span>
+                      <span className="font-mono text-[10px] text-white/30 uppercase">No active buffs.</span>
                     </div>
                   ) : (
                     <div className="grid gap-2.5">
