@@ -166,7 +166,7 @@ export default function CollectionPage() {
   // Burn handler
   const handleBurn = useCallback(async (ownedCard: OwnedCard) => {
     if (fusionLoading) return;
-    const confirm = window.confirm(`Burn this minted-out card for V⚡ sparks?`);
+    const confirm = window.confirm(`Burn this excess copy for V⚡ sparks?`);
     if (!confirm) return;
 
     useLoadingToast.getState().show('Burning card…');
@@ -444,7 +444,7 @@ export default function CollectionPage() {
                       const cap = getSupplyCap(mainCard.card.rarity as Rarity, mainCard.card.day);
                       if (ed > cap) return (
                         <div className="absolute bottom-1 right-1 z-30 pointer-events-none px-1.5 py-0.5 bg-black/80 border border-[#ff3800]/60 text-[7px] font-black uppercase tracking-tighter text-[#ff3800]">
-                          MINTED OUT
+                          EXCESS COPY
                         </div>
                       );
                       if (cap === 1 && ed === 1) return (
@@ -453,8 +453,8 @@ export default function CollectionPage() {
                         </div>
                       );
                       if (ed === cap && cap > 1) return (
-                        <div className="absolute bottom-1 right-1 z-30 pointer-events-none px-1.5 py-0.5 bg-black/80 border border-white/30 text-[7px] font-black uppercase tracking-tighter text-white/70">
-                          LAST COPY
+                        <div className="absolute bottom-1 right-1 z-30 pointer-events-none px-1.5 py-0.5 bg-black/85 border border-yellow-400/60 text-[7px] font-black uppercase tracking-tighter text-yellow-400" style={{ textShadow: '0 0 6px rgba(255,215,0,0.6)' }}>
+                          FINAL PRINT · LAST COPY
                         </div>
                       );
                       return (
