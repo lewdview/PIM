@@ -222,7 +222,7 @@ export default function PackRevealPage() {
   };
 
   const handleBurn = async (owned: any) => {
-    const confirm = window.confirm('Burn this minted-out card immediately?');
+    const confirm = window.confirm('Burn this excess copy immediately?');
     if (!confirm) return;
     
     const res = await sellCard(owned);
