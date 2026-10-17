@@ -29,6 +29,7 @@ import { getCurrentDay } from './utils/dayCalc';
 import { farcasterService } from './services/farcasterService';
 import ArcadeSplashScreen from './components/ArcadeSplashScreen';
 import { isLaunchPath } from './utils/launchRoutes';
+import { IS_PLAYGAMA, markGameReady, appUrl } from './platform';
 
 // Helper to auto-retry and cache-bust lazy route chunk imports on version deployment updates
 function lazyWithRetry<T extends React.ComponentType<any>>(
@@ -235,9 +236,14 @@ export default function App() {
   const subscribeNotifications = useNotificationStore((s) => s.subscribeRealtime);
 
   useEffect(() => {
-    farcasterService.init();
+    if (!IS_PLAYGAMA) farcasterService.init();
     initializeAuth();
   }, [initializeAuth]);
+
+  // The splash (or a launch route) is interactive on first render.
+  useEffect(() => {
+    markGameReady();
+  }, []);
 
   useEffect(() => {
     const unsubscribe = subscribeNotifications(user?.id);
@@ -465,7 +471,7 @@ export default function App() {
                       </a>
                       <button
                         onClick={() => {
-                          window.location.href = '/';
+                          window.location.href = appUrl('/');
                         }}
                         className="px-6 py-3 border-2 border-[#ff3800] bg-transparent text-[#ff3800] font-black uppercase text-xs tracking-wider shadow-[4px_4px_0_#ff3800] hover:scale-105 active:scale-95 transition-all cursor-pointer"
                       >

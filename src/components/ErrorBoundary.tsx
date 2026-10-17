@@ -1,5 +1,6 @@
 import React, { Component, type ErrorInfo, type ReactNode } from "react";
 import { AlertTriangle, RefreshCw, Home } from "lucide-react";
+import { appUrl } from '../platform';
 
 interface Props {
   children: ReactNode;
@@ -42,7 +43,7 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   public handleGoHome = () => {
-    window.location.href = "/";
+    window.location.href = appUrl("/");
   };
 
   public render() {

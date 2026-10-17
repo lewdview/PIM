@@ -5,10 +5,15 @@
 // it lands); only the act you're in is expanded to its full track list. Each
 // track shows its hook line with its highlight words lit. The sticky play bar always sits
 // above the phone dock, so the next track is one tap away on any screen.
+//
+// In a monthly Playgama build (PLAYGAMA_MONTH) this is the whole game: no
+// campaign/vault links, card locks or pack rewards; bonus songs also open by
+// rewarded ad or the month's bundle, and a platinum run shows the song's
+// Bombshell artwork during play.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useParams } from 'wouter';
-import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Lock, Pause, Play, Film, CheckCircle2, Gift } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Lock, Pause, Play, Film, CheckCircle2, Gift, Trophy, X } from 'lucide-react';
 import { loadCatalog, isSongTimeLocked, getModifierForSong, type GameSong } from '@/game/api';
 import { getMedalForSong, getHighScore } from '@/game/progress';
 import { CHAPTERS, calculateCampaignDifficulty, levelToTier } from '@/game/campaign';
@@ -22,9 +27,20 @@ import {
   type ChapterAct, type MonthStory,
 } from '@/game/chapterStory';
 import { Highlighted, WordChips } from './storyParts';
+import { getBombshellCoverUrl, BOMBSHELL_COVERS_MAP } from '@/utils/bombshellCards';
+import {
+  PLAYGAMA_MONTH, MONTH_BOMBSHELL, BONUS_PRODUCT_ID, BONUS_UNLOCK_EVENT,
+  isBonusSongBought, canUnlockWithAd, canBuyBundle, unlockSongWithAd, buyBonusBundle,
+} from '@/platform/playgama/month';
+import { getProductPrice } from '@/platform/playgama/bridge';
+import { bombshellFileForDay } from '@/platform/playgama/monthMedia.mjs';
 import { hideBroken } from './hideBroken';
+import {
+  getMonthEntries, monthLeaderboardKind, monthTotal, showMonthPopup, submitMonthScore, type LeaderboardRow,
+} from '@/platform/playgama/monthLeaderboard';
 import '@/styles/stageShell.css';
 import '@/styles/campaignStory.css';
+import '@/styles/monthBoard.css';
 
 const MEDAL_COLOR: Record<string, string> = {
   PLATINUM: '#39FF14', GOLD: '#E5B800', SILVER: '#A0AABB', BRONZE: '#C97A3A',
@@ -36,7 +52,20 @@ const MILESTONES = [
 ];
 
 const pad = (n: number) => String(n).padStart(2, '0');
+const MONTH_BUILD = PLAYGAMA_MONTH > 0;
+
+/** Monthly build: the Bombshell art a platinum run on this song unlocks, or null. */
+function bombshellArtFor(song: GameSong): string | null {
+  if (!MONTH_BOMBSHELL) return null;
+  const file = bombshellFileForDay(song.day, BOMBSHELL_COVERS_MAP);
+  return file ? getBombshellCoverUrl(song.day, file) : null;
+}
 const sfx = (v = 0.12) => audioManager.playSfx('tap_nav', v);
+/** Columns of the monthly build's track grid (set in monthBoard.css). */
+function gridCols(): number {
+  const grid = document.querySelector('.mb-tracks');
+  return (grid && parseInt(getComputedStyle(grid).getPropertyValue('--cols'), 10)) || 1;
+}
 
 type ActStoryData = Omit<ChapterAct, 'act'>;
 
@@ -52,7 +81,7 @@ interface ActGroup {
 export default function ChapterStory() {
   const { month } = useParams<{ month: string }>();
   const [, setLocation] = useLocation();
-  const monthNum = Math.min(12, Math.max(1, parseInt(month ?? '1', 10) || 1));
+  const monthNum = MONTH_BUILD ? PLAYGAMA_MONTH : Math.min(12, Math.max(1, parseInt(month ?? '1', 10) || 1));
   const meta = CHAPTERS.find((c) => c.month === monthNum) ?? CHAPTERS[0];
   const prev = CHAPTERS.find((c) => c.month === monthNum - 1);
   const next = CHAPTERS.find((c) => c.month === monthNum + 1);
@@ -63,6 +92,22 @@ export default function ChapterStory() {
   const [claimed, setClaimed] = useState<Record<number, boolean>>({});
   // Acts the player opened or closed by hand; otherwise only the act holding the selected track is open.
   const [actOpen, setActOpen] = useState<Record<string, boolean>>({});
+  // Monthly build: bumped when a bonus song is bought or unlocked by ad, to re-read unlocks.
+  const [unlockRev, setUnlockRev] = useState(0);
+  const [unlocking, setUnlocking] = useState(false);
+  const [bundlePrice, setBundlePrice] = useState<string | null>(null);
+  // Monthly build: Playgama leaderboard (only where the portal offers one).
+  const lbKind = MONTH_BUILD ? monthLeaderboardKind() : 'not_available';
+  const [lbOpen, setLbOpen] = useState(false);
+  const [lbRows, setLbRows] = useState<LeaderboardRow[] | null>(null);
+  const openLeaderboard = async () => {
+    sfx(0.15);
+    if (lbKind === 'native_popup') { await showMonthPopup(); return; }
+    setLbOpen(true);
+    setLbRows(null);
+    await submitMonthScore();
+    setLbRows(await getMonthEntries());
+  };
 
   const collection = useVaultStore((s) => s.collection);
   const loadVaultData = useVaultStore((s) => s.loadVaultData);
@@ -87,8 +132,17 @@ export default function ChapterStory() {
   useEffect(() => stopPreview, [stopPreview]);
 
   useEffect(() => {
+    if (MONTH_BUILD) return;
     loadVaultData().catch((err) => console.warn('Failed to load vault data', err));
   }, [loadVaultData]);
+
+  useEffect(() => {
+    if (!MONTH_BUILD) return;
+    const bump = () => setUnlockRev((r) => r + 1);
+    window.addEventListener(BONUS_UNLOCK_EVENT, bump);
+    if (canBuyBundle()) getProductPrice(BONUS_PRODUCT_ID).then(setBundlePrice);
+    return () => window.removeEventListener(BONUS_UNLOCK_EVENT, bump);
+  }, []);
 
   useEffect(() => {
     const next: Record<number, boolean> = {};
@@ -118,6 +172,17 @@ export default function ChapterStory() {
   }, [monthNum, meta, stopPreview]);
 
   const progress = useMemo(() => (songs ? chapterProgress(songs, meta) : null), [songs, meta]);
+
+  // Stage unlocks, plus the monthly build's bought/ad-unlocked bonus songs (open in any order).
+  const stageOpen = useCallback((idx: number) => {
+    if (!songs || !progress) return false;
+    if (isStageUnlocked(idx, progress)) return true;
+    return MONTH_BUILD && idx >= progress.regular.length && !!songs[idx] && isBonusSongBought(songs[idx].id);
+    // unlockRev: re-evaluate after a purchase or rewarded ad.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [songs, progress, unlockRev]);
+  // Every song in a monthly build ships with it, so release dates don't apply.
+  const timeLockedSong = (s: GameSong) => !MONTH_BUILD && isSongTimeLocked(s);
 
   // Acts: the story file's three acts over the regular tracks, then an epilogue of bonus stages.
   const groups = useMemo<ActGroup[]>(() => {
@@ -150,10 +215,12 @@ export default function ChapterStory() {
     const isBonus = selectedIdx >= progress.regular.length;
     const cleared = hasClearedSong(selected);
     const ownsCard = ownsCardForDay(collection, selected.day);
-    const timeLocked = isSongTimeLocked(selected);
-    const bonusLocked = isBonus && !progress.bonusUnlocked;
-    const progLocked = !isStageUnlocked(selectedIdx, progress);
-    const cardLocked = cleared && !ownsCard;
+    const timeLocked = timeLockedSong(selected);
+    const bought = MONTH_BUILD && isBonusSongBought(selected.id);
+    const bonusLocked = isBonus && !progress.bonusUnlocked && !bought;
+    const progLocked = !stageOpen(selectedIdx);
+    // Replays need the song's card in the vault; the monthly build has no vault.
+    const cardLocked = !MONTH_BUILD && cleared && !ownsCard;
     const level = calculateCampaignDifficulty(
       monthNum,
       isBonus ? selectedIdx - progress.regular.length : selectedIdx,
@@ -162,18 +229,22 @@ export default function ChapterStory() {
     );
     let lockReason = '';
     if (timeLocked) lockReason = `Releases ${formatDate(selected.day)}.`;
+    else if (bonusLocked && MONTH_BUILD) lockReason = `Bonus song. Earn ${meta.platNeeded} platinum medals in this chapter to open the bonus songs (you have ${progress.platinums}), or unlock it now.`;
     else if (bonusLocked) lockReason = `Bonus stages open at ${meta.platNeeded} platinum medals in this chapter (you have ${progress.platinums}).`;
     else if (progLocked) lockReason = 'Clear the previous track to continue the story.';
     else if (cardLocked) lockReason = 'Replaying a cleared track needs its card. Find it in packs or the vault.';
+    const bombshell = bombshellArtFor(selected);
     return {
-      isBonus, cleared, ownsCard, level, lockReason,
+      isBonus, cleared, ownsCard, level, lockReason, bonusLocked,
+      bombshell,
+      bombshellUnlocked: !!bombshell && getMedalForSong(selected.id) === 'PLATINUM',
       locked: timeLocked || bonusLocked || progLocked || cardLocked,
       modifier: getModifierForSong(selected),
       medal: getMedalForSong(selected.id),
       score: getHighScore(selected.id),
       prophecy: claimedRewards[selected.id]?.includes('prophecy') || localStorage.getItem(`reward_tier_${selected.id}`) === 'prophecy',
     };
-  }, [songs, progress, selected, selectedIdx, collection, monthNum, meta, claimedRewards]);
+  }, [songs, progress, selected, selectedIdx, collection, monthNum, meta, claimedRewards, stageOpen]);
 
   const handlePlay = useCallback(() => {
     if (!selected || !status || status.locked) return;
@@ -182,13 +253,50 @@ export default function ChapterStory() {
     sessionStorage.setItem('campaign_last_song_id', selected.id);
     sessionStorage.setItem(`game_origin_${selected.id}`, `chapter/${monthNum}`);
     sessionStorage.setItem(`diff_override_${selected.id}`, String(status.level));
+    if (MONTH_BUILD) {
+      // A platinum run unlocks the song's Bombshell art as its backdrop in play.
+      if (status.bombshellUnlocked && status.bombshell) {
+        sessionStorage.setItem(`active_cover_url_${selected.id}`, status.bombshell);
+        sessionStorage.setItem(`active_cover_bombshell_${selected.id}`, '1');
+      } else {
+        sessionStorage.removeItem(`active_cover_url_${selected.id}`);
+        sessionStorage.removeItem(`active_cover_bombshell_${selected.id}`);
+      }
+      // First run of the game teaches the controls on the opening track.
+      if (selectedIdx === 0 && !status.cleared && localStorage.getItem('pim_tutorial_completed') !== 'true') {
+        setLocation(`/play/${selected.id}?tutorial=true`);
+        return;
+      }
+    }
     if (equippedCardId === selected.id && status.modifier !== 'none') {
       sessionStorage.setItem(`active_modifier_type_${selected.id}`, status.modifier);
     } else {
       sessionStorage.removeItem(`active_modifier_type_${selected.id}`);
     }
     setLocation(`/play/${selected.id}`);
-  }, [selected, status, stopPreview, monthNum, equippedCardId, setLocation]);
+  }, [selected, status, selectedIdx, stopPreview, monthNum, equippedCardId, setLocation]);
+
+  const unlockByAd = async () => {
+    if (!selected || unlocking) return;
+    stopPreview();
+    setUnlocking(true);
+    try {
+      await unlockSongWithAd(selected.id);
+    } finally {
+      setUnlocking(false);
+    }
+  };
+
+  const buyBundle = async () => {
+    if (unlocking) return;
+    stopPreview();
+    setUnlocking(true);
+    try {
+      await buyBonusBundle();
+    } finally {
+      setUnlocking(false);
+    }
+  };
 
   const select = useCallback((idx: number, scroll = false) => {
     setSelectedIdx(idx);
@@ -218,8 +326,12 @@ export default function ChapterStory() {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
-      if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') { e.preventDefault(); move(-1); }
-      else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') { e.preventDefault(); move(1); }
+      // The monthly build's track grid moves a whole row on up/down.
+      const row = MONTH_BUILD ? gridCols() : 1;
+      if (e.key === 'ArrowUp') { e.preventDefault(); move(-row); }
+      else if (e.key === 'ArrowDown') { e.preventDefault(); move(row); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); move(-1); }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); move(1); }
       else if (e.key === 'Enter' && !(t && t.tagName === 'BUTTON') && !(t && t.tagName === 'A')) playRef.current();
     };
     window.addEventListener('keydown', onKey);
@@ -301,11 +413,164 @@ export default function ChapterStory() {
   const prologueSong = story ? songs.find((s) => s.day === story.prologue.day) : undefined;
   const pct = progress.regular.length ? Math.round((progress.cleared / progress.regular.length) * 100) : 0;
   const stateOf = (s: GameSong, i: number) =>
-    hasClearedSong(s) ? 'cleared' : isStageUnlocked(i, progress) && !isSongTimeLocked(s) ? 'open' : 'locked';
+    hasClearedSong(s) ? 'cleared' : stageOpen(i) && !timeLockedSong(s) ? 'open' : 'locked';
+
+  if (MONTH_BUILD) {
+    const leaderboard = (lbKind === 'in_game' || lbKind === 'native_popup') && (
+      <button type="button" className="btn-3d mb-lb-btn" data-size="sm" data-tone="quiet" onClick={openLeaderboard}>
+        <Trophy size={14} /> Leaderboard
+      </button>
+    );
+    const group = groups.find((g) => selectedIdx >= g.startIdx && selectedIdx < g.startIdx + g.songs.length);
+    const tr = selected ? getTrackStory(selected.day) : undefined;
+    const bonusGated = !progress.bonusUnlocked && progress.bonus.some((b) => !isBonusSongBought(b.id));
+    return (
+      <div className="mb-page" style={chStyle}>
+        <header className="mb-head">
+          <div className="mb-title">
+            <div className="cs-eyebrow" style={{ color: meta.dc }}>Chapter {pad(meta.month)} · {meta.sub}</div>
+            <h1 className="cs-display">{meta.name}</h1>
+          </div>
+          <div className="mb-progress">
+            <div className="cs-stats">
+              <span><b>{progress.cleared}/{progress.regular.length}</b> cleared</span>
+              <span><b>✦ {progress.platinums}/{meta.platNeeded}</b> platinum for bonus</span>
+              <span><b>{meta.diff.toLowerCase()}</b></span>
+            </div>
+            <div className="cs-bar" aria-label={`${pct}% cleared`}><span style={{ width: `${pct}%` }} /></div>
+          </div>
+          <div className="mb-head-actions">
+            {bonusGated && canBuyBundle() && (
+              <button type="button" className="btn-3d" data-size="sm" data-tone="gold" disabled={unlocking} onClick={buyBundle}>
+                <Gift size={14} /> Unlock {progress.bonus.length} bonus songs{bundlePrice ? ` · ${bundlePrice}` : ''}
+              </button>
+            )}
+            {leaderboard}
+          </div>
+        </header>
+
+        <div className="mb-main">
+          <ol className="mb-tracks" aria-label="Tracks">
+            {songs.map((s, idx) => {
+              const state = stateOf(s, idx);
+              const medal = getMedalForSong(s.id);
+              const isBonus = idx >= progress.regular.length;
+              const isActStart = groups.some((g) => g.startIdx === idx && idx > 0);
+              return (
+                <li key={s.id} id={`beat-${idx}`} data-act-start={isActStart || undefined}>
+                  <button
+                    type="button"
+                    className="mb-tile"
+                    data-state={state}
+                    data-selected={idx === selectedIdx}
+                    data-bonus={isBonus || undefined}
+                    aria-label={`${s.title}, ${isBonus ? 'bonus' : `track ${idx + 1}`}, ${state}`}
+                    aria-pressed={idx === selectedIdx}
+                    onClick={() => select(idx)}
+                    onDoubleClick={() => { if (idx === selectedIdx) handlePlay(); }}
+                  >
+                    {s.coverArt && <img src={s.coverArt} alt="" loading="lazy" onError={hideBroken} />}
+                    <span className="mb-tile-n">{isBonus ? '★' : idx + 1}</span>
+                    {state === 'locked' && <span className="mb-tile-ico"><Lock size={14} /></span>}
+                    {state === 'cleared' && (
+                      <span className="mb-tile-medal" style={{ background: MEDAL_COLOR[medal] ?? '#39ff14' }} title={medal} />
+                    )}
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+
+          {selected && status && (
+            <section className="mb-detail" aria-label="Selected track">
+              <div className="mb-detail-top">
+                {selected.coverArt ? <img className="mb-cover" src={selected.coverArt} alt="" onError={hideBroken} /> : <span className="mb-cover" />}
+                <div className="mb-detail-name">
+                  <div className="cs-eyebrow">
+                    {status.isBonus ? 'Bonus' : `Track ${selectedIdx + 1}/${progress.regular.length}`}
+                    {group?.act?.act && <> · Act {group.act.act} · {group.act.word}</>}
+                    {' · '}day {selected.day}
+                  </div>
+                  <h2 className="cs-display">{selected.title}</h2>
+                  {tr && (
+                    <p className="cs-hook mb-hook">
+                      {tr.hasLyrics ? <>“<Highlighted line={tr.hook} words={[...tr.words, ...(story?.words ?? [])]} />”</> : tr.hook}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="cs-detail-grid">
+                <div><small>Level · {levelToTier(status.level).toLowerCase()}</small><b>{status.level}</b></div>
+                <div><small>Best</small><b>{status.score ? status.score.toLocaleString() : '—'}</b></div>
+                <div><small>Medal</small><b style={{ color: MEDAL_COLOR[status.medal] ?? undefined }}>{status.medal && status.medal !== 'NONE' ? status.medal.toLowerCase() : '—'}</b></div>
+              </div>
+              <div className="mb-note">
+                {status.lockReason
+                  ? <span className="cs-lock-note">{status.lockReason}</span>
+                  : status.bombshell
+                    ? <span className="cs-muted">{status.bombshellUnlocked ? 'Bombshell art unlocked. It plays behind this track.' : 'Get a platinum medal to unlock this track’s Bombshell art.'}</span>
+                    : null}
+              </div>
+              <div className="mb-actions">
+                {status.bonusLocked && canUnlockWithAd() && (
+                  <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" disabled={unlocking} onClick={unlockByAd}>
+                    <Film size={14} /> Watch ad
+                  </button>
+                )}
+                {status.bonusLocked && bonusGated && canBuyBundle() && (
+                  <button type="button" className="btn-3d" data-size="sm" data-tone="gold" disabled={unlocking} onClick={buyBundle}>
+                    All 5 bonus{bundlePrice ? ` · ${bundlePrice}` : ''}
+                  </button>
+                )}
+                {!status.bonusLocked && (
+                  <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={togglePreview} aria-label={previewing ? 'Stop preview' : 'Preview'}>
+                    {previewing ? <Pause size={14} /> : <Play size={14} />} {previewing ? 'Stop' : 'Preview'}
+                  </button>
+                )}
+                <button type="button" className="btn-3d mb-play" disabled={status.locked} onClick={handlePlay} aria-label={status.locked ? `Locked: ${status.lockReason}` : `Play ${selected.title}`}>
+                  {status.locked ? <Lock size={16} /> : <Play size={16} fill="currentColor" />}
+                  {status.locked ? 'Locked' : status.cleared ? 'Replay' : 'Play'}
+                </button>
+              </div>
+            </section>
+          )}
+        </div>
+
+        {lbOpen && (
+          <div className="mb-lb" role="dialog" aria-modal="true" aria-label={`${meta.name} leaderboard`} onClick={() => setLbOpen(false)}>
+            <div className="mb-lb-card" onClick={(e) => e.stopPropagation()}>
+              <div className="mb-lb-head">
+                <div>
+                  <div className="cs-eyebrow">Total of your best scores</div>
+                  <h2 className="cs-display">{meta.name} leaderboard</h2>
+                </div>
+                <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={() => setLbOpen(false)} aria-label="Close leaderboard"><X size={16} /></button>
+              </div>
+              {lbRows === null ? <div className="cs-muted">Loading…</div>
+                : lbRows.length === 0 ? <div className="cs-muted">No scores yet. Clear a track to post yours.</div>
+                : (
+                  <ol className="mb-lb-rows">
+                    {lbRows.slice(0, 10).map((r) => (
+                      <li key={r.id ?? r.rank}>
+                        <span className="mb-lb-rank">{r.rank}</span>
+                        {r.photo ? <img src={r.photo} alt="" onError={hideBroken} /> : <span className="mb-lb-ph" />}
+                        <span className="mb-lb-name">{r.name || 'Player'}</span>
+                        <b>{Number(r.score).toLocaleString()}</b>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              <div className="cs-muted" style={{ fontSize: 12 }}>Your total: {monthTotal(songs).toLocaleString()}</div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="cs-page" style={chStyle}>
-      <nav className="cs-topbar" aria-label="Chapter navigation">
+      {!MONTH_BUILD && <nav className="cs-topbar" aria-label="Chapter navigation">
         <Link href="/campaign" className="cs-chip-btn" onClick={() => sfx()}>
           <ArrowLeft size={16} /> Campaign
         </Link>
@@ -318,7 +583,7 @@ export default function ChapterStory() {
             <ChevronRight size={18} />
           </Link>
         </div>
-      </nav>
+      </nav>}
 
       <header className="cs-hero">
         <div className="cs-hero-art" aria-hidden="true">
@@ -341,7 +606,7 @@ export default function ChapterStory() {
           <span><b>{meta.diff.toLowerCase()}</b> difficulty</span>
         </div>
         <div className="cs-bar" aria-label={`${pct}% cleared`}><span style={{ width: `${pct}%` }} /></div>
-        <div className="cs-milestones">
+        {!MONTH_BUILD && <div className="cs-milestones">
           {MILESTONES.map(({ n, label, need }) => {
             const goal = need(progress.regular.length);
             const state = claimed[n] ? 'claimed' : progress.cleared >= goal ? 'ready' : 'pending';
@@ -360,7 +625,7 @@ export default function ChapterStory() {
               </button>
             );
           })}
-        </div>
+        </div>}
       </header>
 
       <MoodArc songs={songs} groups={groups} selectedIdx={selectedIdx} stateOf={stateOf} onSelect={(i) => select(i, true)} />
@@ -395,6 +660,11 @@ export default function ChapterStory() {
           <div className="cs-act-body" id={`act-body-${g.key}`}>
           {g.bonus && !progress.bonusUnlocked && (
             <div className="cs-act-gate"><Lock size={16} /> Earn {meta.platNeeded} platinum medals in this chapter to open the epilogue ({progress.platinums} so far).</div>
+          )}
+          {MONTH_BUILD && g.bonus && !progress.bonusUnlocked && canBuyBundle() && g.songs.some((b) => !isBonusSongBought(b.id)) && (
+            <button type="button" className="btn-3d" data-size="sm" data-tone="gold" disabled={unlocking} onClick={buyBundle} style={{ margin: '0 0 12px' }}>
+              Unlock all {g.songs.length} bonus songs{bundlePrice ? ` · ${bundlePrice}` : ''}
+            </button>
           )}
           <ol className="cs-beats">
             {g.songs.map((s, j) => {
@@ -434,6 +704,27 @@ export default function ChapterStory() {
                       </div>
                       {s.description && tr?.hasLyrics && <p className="cs-hook">{s.description}</p>}
                       {status.lockReason && <div className="cs-lock-note">{status.lockReason}</div>}
+                      {MONTH_BUILD && status.bonusLocked && (canUnlockWithAd() || canBuyBundle()) && (
+                        <div className="cs-detail-actions">
+                          {canUnlockWithAd() && (
+                            <button type="button" className="btn-3d" data-size="sm" disabled={unlocking} onClick={unlockByAd}>
+                              <Film size={14} /> Watch an ad to unlock
+                            </button>
+                          )}
+                          {canBuyBundle() && (
+                            <button type="button" className="btn-3d" data-size="sm" data-tone="gold" disabled={unlocking} onClick={buyBundle}>
+                              Unlock all bonus songs{bundlePrice ? ` · ${bundlePrice}` : ''}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                      {status.bombshell && !status.locked && (
+                        <div className="cs-muted" style={{ fontSize: 13 }}>
+                          {status.bombshellUnlocked
+                            ? 'Bombshell art unlocked. It plays behind this track.'
+                            : 'Get a platinum medal on this track to unlock its Bombshell art.'}
+                        </div>
+                      )}
                       {!status.locked && status.ownsCard && status.modifier !== 'none' && (
                         <div className="cs-mod">
                           <span>Card modifier · {status.modifier.replace('_', ' ')}</span>
@@ -452,7 +743,7 @@ export default function ChapterStory() {
                         <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={togglePreview}>
                           {previewing ? <Pause size={14} /> : <Play size={14} />} {previewing ? 'Stop preview' : 'Preview'}
                         </button>
-                        {state !== 'locked' && (
+                        {state !== 'locked' && !MONTH_BUILD && (
                           <Link href={`/song/${s.id}?from=chapter/${monthNum}`} className="btn-3d" data-size="sm" data-tone="quiet">Codex</Link>
                         )}
                         {import.meta.env.DEV && (

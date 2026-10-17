@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { audioManager } from "../../game/audio";
 import { loadOpts } from "../../lib/options";
 import { isLaunchPath } from "../../utils/launchRoutes";
+import { sfxUrl } from "../../platform/playgama/sfx";
 
 /**
  * BackgroundMusic — persistent ambient music for menu screens.
@@ -56,7 +57,7 @@ export default function BackgroundMusic() {
     const BG_TRACKS = ['bg1', 'bg2', 'bg3', 'bg5', 'bg8', 'bg9', 'bg_4'];
     let nextBgIdx = Math.floor(Math.random() * BG_TRACKS.length);
     
-    const audio = new Audio(`/audio/sfx/${BG_TRACKS[nextBgIdx]}.wav`);
+    const audio = new Audio(sfxUrl(BG_TRACKS[nextBgIdx]));
     audio.loop = false;
     audio.volume = 0;
     audio.preload = "none"; // don't download until user clicks
@@ -64,7 +65,7 @@ export default function BackgroundMusic() {
     
     const onEnded = () => {
       nextBgIdx = (nextBgIdx + 1) % BG_TRACKS.length;
-      audio.src = `/audio/sfx/${BG_TRACKS[nextBgIdx]}.wav`;
+      audio.src = sfxUrl(BG_TRACKS[nextBgIdx]);
       audio.load();
       audio.play().catch(() => {});
     };

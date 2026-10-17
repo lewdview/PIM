@@ -104,7 +104,49 @@ pnpm tauri dev
 
 # Build cross-platform native desktop installer
 pnpm tauri build
+
+# Build the Playgama upload (needs ffmpeg + zip) -> pim-playgama.zip
+pnpm build:playgama
 ```
+
+### Playgama build
+
+`build:playgama` sets `VITE_PLATFORM=playgama`, which turns on `src/platform/`:
+the Playgama Bridge SDK (loaded from the Playgama CDN, with a bundled fallback),
+`game_ready`, an interstitial on the results screen, pause/mute on platform and ad
+events, and a mirror of local progress into `bridge.storage`. Asset URLs are
+rewritten for Playgama's sub-path hosting. Every other build ignores all of this.
+
+To try it locally: `npx serve dist-playgama` (or any static server). Off-platform
+the SDK runs as its `mock` platform, so ads are reported as unsupported.
+
+#### Monthly builds ("PIM: January")
+
+`pnpm build:playgama -- --month=1` builds one campaign chapter as its own game:
+that month's tracks, charts and lyrics bundled into the zip, no vault, packs,
+shop or sign-in, and no calls to Supabase or the CDN. The five bonus songs open
+with the chapter's platinum target, one rewarded ad per song, or the month's
+bundle through Bridge payments (product `PIM_January_Bonus`, non-consumable;
+add it to the Playgama dashboard's in-app purchase catalog with the same id and
+price; the button only shows when the portal supports payments). A platinum run on a track shows that
+track's Bombshell artwork behind it during play.
+
+The game opens on an animated intro and a press-start screen, then the chapter
+on one screen with no scrolling. Where the portal offers Bridge leaderboards,
+the month has one, `PIM_January_Score`: the total of the player's best score on
+every track. Bridge 2.3.1 reports leaderboards as unavailable on playgama.com
+itself, so the button only appears on portals that support them.
+
+- `--media-dir=/Volumes/extremeUno/th3scr1b3-365-warp/365-releases` copies the
+  songs and art from a local mirror; without it they are downloaded from
+  `files.th3scr1b3.art`. Audio is re-encoded to 160 kbps MP3, art to 1280 px.
+- `--no-bombshell` leaves the Bombshell artwork out.
+- `--bonus-price=2` sets the bundle price in USD (default 2). Keep it equal
+  to the price in the dashboard catalog.
+- `--placeholder-media` uses silent audio and blank art, to test the build
+  without the real files. Don't upload that zip.
+
+Output: `pim-playgama-<month>.zip`.
 
 ---
 

@@ -1,0 +1,209 @@
+/* monthTitle.css — intro and press-start screens of a monthly Playgama build
+   (TitleScreens.tsx). The intro is one 5.2 s CSS timeline: presenter card
+   (0–1.5 s), the PIM logo (1.4–3 s), then a flash and the month slamming in
+   over a wall of its cover art. --ch is the chapter colour. */
+
+.mt-screen {
+  --ch: var(--shell-accent);
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  overflow: hidden;
+  background: #050402;
+  color: #fff;
+  font-family: var(--shell-body);
+  user-select: none;
+  cursor: pointer;
+}
+
+/* ── Intro ── */
+.mt-present {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 6px;
+  opacity: 0;
+  animation: mt-present 1.5s ease-in-out 0.15s both;
+}
+.mt-present span {
+  font: 400 clamp(28px, 7vmin, 64px)/1 var(--shell-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.mt-present small {
+  font: 600 clamp(11px, 2vmin, 15px)/1 var(--shell-mono);
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--shell-text-2);
+}
+@keyframes mt-present {
+  0% { opacity: 0; letter-spacing: 0.3em; filter: blur(8px); }
+  30% { opacity: 1; letter-spacing: 0.08em; filter: none; }
+  75% { opacity: 1; }
+  100% { opacity: 0; transform: scale(0.96); }
+}
+
+.mt-intro-logo {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(78vw, 92vh, 720px);
+  translate: -50% -50%;
+  opacity: 0;
+  filter: drop-shadow(0 0 40px color-mix(in srgb, var(--ch) 60%, transparent));
+  animation: mt-logo 1.7s cubic-bezier(0.2, 0.9, 0.2, 1) 1.35s both;
+}
+@keyframes mt-logo {
+  0% { opacity: 0; transform: scale(1.6); filter: blur(14px); }
+  35% { opacity: 1; transform: scale(1); filter: blur(0) drop-shadow(0 0 40px var(--ch)); }
+  80% { opacity: 1; transform: scale(1.04); }
+  100% { opacity: 0; transform: scale(0.7) translateY(-8%); }
+}
+
+.mt-intro-wall, .mt-start-wall {
+  position: absolute;
+  inset: -6%;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 6px;
+  transform: rotate(-8deg) scale(1.15);
+}
+.mt-intro-wall img, .mt-start-wall img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; }
+.mt-intro-wall img {
+  opacity: 0;
+  animation: mt-tile 0.6s ease-out calc(3s + var(--d, 0ms)) both;
+}
+.mt-intro-wall { animation: mt-wall-drift 2.4s linear 3s both; }
+@keyframes mt-tile { from { opacity: 0; transform: scale(0.6); } to { opacity: 0.38; transform: none; } }
+@keyframes mt-wall-drift { from { translate: 0 0; } to { translate: -3% -2%; } }
+
+.mt-intro-month {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  gap: 14px;
+  place-content: center;
+  justify-items: center;
+  text-align: center;
+  opacity: 0;
+  animation: mt-slam 0.55s cubic-bezier(0.3, 1.4, 0.4, 1) 3.05s both;
+}
+.mt-intro-month small {
+  font: 600 clamp(12px, 2.2vmin, 16px)/1 var(--shell-mono);
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--ch);
+}
+.mt-intro-month b {
+  font: 400 clamp(64px, 19vmin, 200px)/0.9 var(--shell-display);
+  text-transform: uppercase;
+  text-shadow: 0 0 40px color-mix(in srgb, var(--ch) 70%, transparent), 0 6px 0 rgba(0, 0, 0, 0.6);
+}
+@keyframes mt-slam {
+  from { opacity: 0; transform: scale(2.4); filter: blur(6px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+
+.mt-flash {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+  animation: mt-flash 0.5s ease-out 2.95s both;
+}
+@keyframes mt-flash { 0% { opacity: 0; } 15% { opacity: 0.85; } 100% { opacity: 0; } }
+
+.mt-skip {
+  position: absolute;
+  right: 18px;
+  bottom: 14px;
+  font: 600 11px/1 var(--shell-mono);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--shell-text-3);
+  animation: mt-fade-in 0.6s ease 0.8s both;
+}
+@keyframes mt-fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* ── Press start ── */
+.mt-start { animation: mt-fade-in 0.5s ease both; }
+.mt-start[data-leaving] { animation: mt-leave 0.38s ease-in both; }
+@keyframes mt-leave { to { opacity: 0; transform: scale(1.06); filter: brightness(1.8); } }
+.mt-start-wall { animation: mt-wall-pan 40s linear infinite alternate; }
+.mt-start-wall img { opacity: 0.28; }
+@keyframes mt-wall-pan { from { translate: 0 0; } to { translate: -6% -10%; } }
+.mt-start::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    radial-gradient(60% 55% at 50% 45%, rgba(5, 4, 2, 0.35), rgba(5, 4, 2, 0.92) 75%),
+    linear-gradient(180deg, transparent 60%, rgba(5, 4, 2, 0.9));
+}
+.mt-start-body {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: clamp(10px, 3vh, 28px);
+  padding: 16px;
+  text-align: center;
+}
+.mt-start-logo {
+  width: min(70vw, 52vh, 560px);
+  filter: drop-shadow(0 0 30px color-mix(in srgb, var(--ch) 45%, transparent));
+  animation: mt-float 4s ease-in-out infinite;
+}
+@keyframes mt-float { 50% { transform: translateY(-6px); } }
+.mt-start-month { display: grid; gap: 6px; }
+.mt-start-month b {
+  font: 400 clamp(40px, 10vmin, 96px)/0.9 var(--shell-display);
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 0 0 30px color-mix(in srgb, var(--ch) 60%, transparent);
+}
+.mt-start-month small {
+  font: 600 clamp(11px, 1.8vmin, 14px)/1.3 var(--shell-mono);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--shell-text-2);
+}
+.mt-press {
+  margin-top: clamp(4px, 2vh, 20px);
+  padding: 12px 26px;
+  border: 1px solid color-mix(in srgb, var(--ch) 60%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ch) 14%, transparent);
+  font: 700 clamp(14px, 2.4vmin, 20px)/1 var(--shell-mono);
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: #fff;
+  animation: mt-blink 1.3s ease-in-out infinite;
+}
+@keyframes mt-blink {
+  0%, 100% { opacity: 1; box-shadow: 0 0 24px color-mix(in srgb, var(--ch) 50%, transparent); }
+  50% { opacity: 0.35; box-shadow: none; }
+}
+.mt-start-foot {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  right: 0;
+  bottom: 12px;
+  text-align: center;
+  font: 500 10.5px/1 var(--shell-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--shell-text-3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mt-screen *, .mt-screen { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+}
+.mt-start-foot a { color: var(--ch); text-decoration: none; }

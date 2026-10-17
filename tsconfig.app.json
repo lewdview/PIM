@@ -19,7 +19,8 @@
     /* Paths */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@pim-root": ["./src/App.tsx"]
     },
 
     /* Linting */
