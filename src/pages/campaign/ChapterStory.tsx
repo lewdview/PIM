@@ -5,8 +5,11 @@
 // it lands); only the act you're in is expanded to its full track list. Each
 // track shows its hook line with its highlight words lit. The sticky play bar always sits
 // above the phone dock, so the next track is one tap away on any screen.
+// Dressed in the results screens' arcade style (campaignArcade.css): the
+// chapter name slams in, the mood arc scans across, and each act sweeps in as
+// it scrolls into view.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Link, useLocation, useParams } from 'wouter';
 import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Lock, Pause, Play, Film, CheckCircle2, Gift } from 'lucide-react';
 import { loadCatalog, isSongTimeLocked, getModifierForSong, type GameSong } from '@/game/api';
@@ -23,8 +26,10 @@ import {
 } from '@/game/chapterStory';
 import { Highlighted, WordChips } from './storyParts';
 import { hideBroken } from './hideBroken';
+import { ArcadeBackdrop, RevealSection, SlamTitle, StageWipe } from './arcade';
 import '@/styles/stageShell.css';
 import '@/styles/campaignStory.css';
+import '@/styles/campaignArcade.css';
 
 const MEDAL_COLOR: Record<string, string> = {
   PLATINUM: '#39FF14', GOLD: '#E5B800', SILVER: '#A0AABB', BRONZE: '#C97A3A',
@@ -291,7 +296,7 @@ export default function ChapterStory() {
   const chStyle = { ['--ch' as string]: meta.dc };
 
   if (!songs || !progress) {
-    return <div className="cs-page" style={chStyle}><div className="cs-empty">Loading chapter…</div></div>;
+    return <div className="cs-page ca-root" style={chStyle}><div className="cs-empty ca-loading">Loading chapter…</div></div>;
   }
 
   const prologueSong = story ? songs.find((s) => s.day === story.prologue.day) : undefined;
@@ -300,7 +305,8 @@ export default function ChapterStory() {
     hasClearedSong(s) ? 'cleared' : isStageUnlocked(i, progress) && !isSongTimeLocked(s) ? 'open' : 'locked';
 
   return (
-    <div className="cs-page" style={chStyle}>
+    <div className="cs-page ca-root" style={chStyle}>
+      <StageWipe />
       <nav className="cs-topbar" aria-label="Chapter navigation">
         <Link href="/campaign" className="cs-chip-btn" onClick={() => sfx()}>
           <ArrowLeft size={16} /> Campaign
@@ -309,19 +315,23 @@ export default function ChapterStory() {
           <Link href={prev ? `/chapter/${prev.month}` : '/campaign'} className="cs-chip-btn" aria-disabled={!prev} aria-label="Previous chapter" onClick={() => sfx()}>
             <ChevronLeft size={18} />
           </Link>
-          <span className="cs-eyebrow">{pad(meta.month)} / 12</span>
+          <span className="ca-chip">{pad(meta.month)} / 12</span>
           <Link href={next ? `/chapter/${next.month}` : '/campaign'} className="cs-chip-btn" aria-disabled={!next} aria-label="Next chapter" onClick={() => sfx()}>
             <ChevronRight size={18} />
           </Link>
         </div>
       </nav>
 
-      <header className="cs-hero">
+      <header className="cs-hero ca-hero">
         <div className="cs-hero-art" aria-hidden="true">
           {songs.filter((s) => s.coverArt).slice(0, 6).map((s) => <img key={s.id} src={s.coverArt!} alt="" loading="lazy" onError={hideBroken} />)}
         </div>
-        <div className="cs-eyebrow" style={{ color: meta.dc }}>Chapter {pad(meta.month)} · {meta.sub}</div>
-        <h1 className="cs-display">{meta.name}</h1>
+        <ArcadeBackdrop />
+        <div className="ca-hud">
+          <span className="ca-chip" data-tone="hot">Chapter {pad(meta.month)}</span>
+          <span className="ca-chip">{meta.sub}</span>
+        </div>
+        <SlamTitle text={meta.name} className="ca-title--ch" delay={250} />
         {story && (
           <div>
             {story.prologue.lyric
@@ -331,12 +341,12 @@ export default function ChapterStory() {
           </div>
         )}
         {story && <WordChips words={story.words} />}
-        <div className="cs-stats">
+        <div className="cs-stats ca-stats">
           <span><b>{progress.cleared}/{progress.regular.length}</b> cleared</span>
           <span><b>✦ {progress.platinums}/{meta.platNeeded}</b> platinum for bonus</span>
           <span><b>{meta.diff.toLowerCase()}</b> difficulty</span>
         </div>
-        <div className="cs-bar" aria-label={`${pct}% cleared`}><span style={{ width: `${pct}%` }} /></div>
+        <div className="cs-bar ca-bar" aria-label={`${pct}% cleared`}><span style={{ width: `${pct}%` }} /></div>
         <div className="cs-milestones">
           {MILESTONES.map(({ n, label, need }) => {
             const goal = need(progress.regular.length);
@@ -366,11 +376,11 @@ export default function ChapterStory() {
         const open = actOpen[g.key] ?? holdsSelected;
         const done = g.songs.filter(hasClearedSong).length;
         return (
-        <section key={g.key} className="cs-act" data-open={open} aria-labelledby={`act-${g.key}`}>
+        <RevealSection key={g.key} className="cs-act" data-open={open} aria-labelledby={`act-${g.key}`}>
           <div className="cs-act-head">
             <div className="cs-eyebrow">
-              {g.label}
-              {g.act && <> · {MOOD_LABEL[g.act.mood] ?? g.act.mood}</>}
+              <span className="ca-act-tag">{g.label}</span>
+              {g.act && <>{MOOD_LABEL[g.act.mood] ?? g.act.mood}</>}
               {g.bonus && <> · Bonus stages</>}
             </div>
             <h2 id={`act-${g.key}`} className="cs-display">{g.act ? g.act.word : g.bonus ? 'Afterword' : 'The tracks'}</h2>
@@ -402,6 +412,7 @@ export default function ChapterStory() {
               return (
                 <li key={s.id} id={`beat-${idx}`} className="cs-beat" data-state={state} data-selected={isSel}>
                   <button type="button" className="cs-beat-main" aria-expanded={isSel} onClick={() => select(idx)}>
+                    {isSel && <span className="ca-cursor ca-beat-cursor" aria-hidden="true">▶</span>}
                     <span className="cs-beat-cover">
                       {s.coverArt && <img src={s.coverArt} alt="" loading="lazy" onError={hideBroken} />}
                       <span className="cs-beat-day">{s.day}</span>
@@ -473,14 +484,14 @@ export default function ChapterStory() {
           </ol>
           </div>
           )}
-        </section>
+        </RevealSection>
         );
       })}
 
       {songs.length === 0 && <div className="cs-empty">No tracks in this chapter yet.</div>}
 
       {selected && status && (
-        <div className="cs-playbar" role="region" aria-label="Selected track">
+        <div className="cs-playbar ca-playbar" role="region" aria-label="Selected track">
           {selected.coverArt ? <img src={selected.coverArt} alt="" onError={hideBroken} /> : <span className="cs-pb-ph" />}
           <button type="button" className="cs-pb-text" style={{ background: 'none', border: 0, padding: 0, textAlign: 'left', color: 'inherit', cursor: 'pointer' }}
             onClick={() => document.getElementById(`beat-${selectedIdx}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' })}>
@@ -548,7 +559,7 @@ function MoodArc({ songs, groups, selectedIdx, stateOf, onSelect }: {
   const pts = songs.map((s, i) => `${x(i).toFixed(2)},${y(s).toFixed(1)}`).join(' ');
   const seps = groups.slice(1).map((g) => x(g.startIdx - 0.5));
   return (
-    <section className="cs-arc" aria-label="Mood across the chapter">
+    <RevealSection className="cs-arc" aria-label="Mood across the chapter">
       <div className="cs-arc-head">
         <div className="cs-eyebrow">Mood arc</div>
         <div className="cs-eyebrow">brighter ↑ · heavier ↓</div>
@@ -567,7 +578,7 @@ function MoodArc({ songs, groups, selectedIdx, stateOf, onSelect }: {
               className="cs-arc-dot"
               data-state={stateOf(s, i)}
               data-selected={i === selectedIdx}
-              style={{ left: `${x(i)}%`, top: `${(y(s) / H) * 100}%` }}
+              style={{ left: `${x(i)}%`, top: `${(y(s) / H) * 100}%`, ['--x' as string]: x(i) / 100 } as CSSProperties}
               aria-label={`${s.title}, day ${s.day}`}
               onClick={() => onSelect(i)}
             />
@@ -577,6 +588,6 @@ function MoodArc({ songs, groups, selectedIdx, stateOf, onSelect }: {
       <div className="cs-arc-acts" style={{ gridTemplateColumns: groups.map((g) => `${g.songs.length}fr`).join(' ') }}>
         {groups.map((g) => <span key={g.key} title={g.label}>{g.act?.act ? `${g.act.act} · ${g.act.word}` : g.bonus ? `Bonus${g.act ? ` · ${g.act.word}` : ''}` : g.label}</span>)}
       </div>
-    </section>
+    </RevealSection>
   );
 }

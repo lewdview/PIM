@@ -1,8 +1,11 @@
 // Campaign: the year as twelve monthly chapters. Each card shows the words
 // the month's tracks keep coming back to, its three acts and the shape of its
 // mood arc; the top card picks up the chapter (and act) in progress. Phone first, normal page flow.
+// Dressed as an arcade chapter select in the results screens' style
+// (campaignArcade.css): the title slams in, the counters roll up and the
+// chapter tiles drop into the grid one after another.
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { Link } from 'wouter';
 import { Lock, CheckCircle2, Play } from 'lucide-react';
 import { loadCatalog, type GameSong } from '@/game/api';
@@ -12,8 +15,10 @@ import { audioManager } from '@/game/audio';
 import { chapterProgress, getMonthStory, hasClearedSong, songsForMonth, type ChapterProgress } from '@/game/chapterStory';
 import { ArcSpark, Highlighted, WordChips } from './storyParts';
 import { hideBroken } from './hideBroken';
+import { ArcadeBackdrop, CountUp, SlamTitle, StageWipe } from './arcade';
 import '@/styles/stageShell.css';
 import '@/styles/campaignStory.css';
+import '@/styles/campaignArcade.css';
 
 interface ChapterRow {
   meta: ChapterMeta;
@@ -48,7 +53,7 @@ export default function CampaignStory() {
   }, []);
 
   if (!rows) {
-    return <div className="cs-page"><div className="cs-empty">Loading campaign…</div></div>;
+    return <div className="cs-page ca-root"><div className="cs-empty ca-loading">Loading campaign…</div></div>;
   }
 
   const current = rows.find((r) => r.unlocked && !r.progress.complete) ?? rows[rows.length - 1];
@@ -59,23 +64,31 @@ export default function CampaignStory() {
   const pct = (p: ChapterProgress) => (p.regular.length ? Math.round((p.cleared / p.regular.length) * 100) : 0);
 
   return (
-    <div className="cs-page">
-      <header className="cs-head">
-        <div className="cs-eyebrow">Campaign · 365 tracks · 12 chapters</div>
-        <h1 className="cs-display">The year, told in tracks</h1>
-        <div className="cs-stats">
-          <span><b>{totals.cleared}</b> cleared</span>
-          <span><b>✦ {totals.platinums}</b> platinum</span>
-          <span><b>{totals.score.toLocaleString()}</b> score</span>
+    <div className="cs-page ca-root" style={{ ['--ch' as string]: current.meta.dc }}>
+      <StageWipe />
+      <header className="cs-head ca-head">
+        <ArcadeBackdrop />
+        <div className="ca-hud">
+          <span className="ca-chip" data-tone="hot">1P</span>
+          <span className="ca-chip">365 tracks</span>
+          <span className="ca-chip">12 chapters</span>
+        </div>
+        <SlamTitle text="Campaign" className="ca-title--gold" />
+        <div className="ca-sub">The year, told in tracks</div>
+        <div className="ca-scores" aria-label="Your campaign totals">
+          <div><small>Cleared</small><b><CountUp to={totals.cleared} delay={500} /></b></div>
+          <div><small>Platinum</small><b>✦ <CountUp to={totals.platinums} delay={650} /></b></div>
+          <div><small>Score</small><b><CountUp to={totals.score} delay={800} ms={1200} /></b></div>
         </div>
       </header>
 
       <Link
         href={`/chapter/${current.meta.month}`}
         onClick={tap}
-        className="cs-now"
+        className="cs-now ca-now"
         style={{ ['--ch' as string]: current.meta.dc }}
       >
+        <span className="ca-tab">{current.progress.cleared > 0 ? 'Continue' : 'Player 1 start'}</span>
         <div className="cs-now-body">
           <div className="cs-eyebrow" style={{ color: current.meta.dc }}>
             {current.progress.cleared > 0 ? 'Continue' : 'Start'} · Chapter {pad(current.meta.month)} · {current.meta.sub}
@@ -97,21 +110,26 @@ export default function CampaignStory() {
             <div><span>{current.progress.cleared} / {current.progress.regular.length} tracks</span><span>{pct(current.progress)}%</span></div>
             <div className="cs-bar"><span style={{ width: `${pct(current.progress)}%` }} /></div>
           </div>
-          <span className="btn-3d" style={{ justifySelf: 'start' }}>
-            <Play size={16} fill="currentColor" /> {current.progress.cleared > 0 ? 'Continue chapter' : 'Begin chapter'}
-          </span>
+          <div className="ca-start">
+            <span className="btn-3d">
+              <Play size={16} fill="currentColor" /> {current.progress.cleared > 0 ? 'Continue chapter' : 'Begin chapter'}
+            </span>
+            <span className="ca-blink" aria-hidden="true">Press start</span>
+          </div>
         </div>
         <div className="cs-mosaic" aria-hidden="true">
           {current.songs.slice(0, 9).map((s) => (s.coverArt ? <img key={s.id} src={s.coverArt} alt="" loading="lazy" onError={hideBroken} /> : <span key={s.id} />))}
         </div>
       </Link>
 
-      <section aria-label="Chapters" className="cs-grid">
-        {rows.map((row) => {
+      <div className="ca-section-tab" aria-hidden="true">Select chapter</div>
+      <section aria-label="Chapters" className="cs-grid ca-grid">
+        {rows.map((row, i) => {
           const st = getMonthStory(row.meta.month);
           const { progress: p } = row;
           const locked = !row.unlocked;
           const prevName = CHAPTERS[row.meta.month - 2]?.name;
+          const tileStyle = { ['--ch' as string]: row.meta.dc, ['--i' as string]: i } as CSSProperties;
           const body = (
             <>
               <div className="cs-ch-top">
@@ -125,7 +143,7 @@ export default function CampaignStory() {
                 ) : p.complete ? (
                   <span className="cs-badge" data-tone="done"><CheckCircle2 size={11} /> Done</span>
                 ) : row === current ? (
-                  <span className="cs-badge" data-tone="live">Now</span>
+                  <span className="cs-badge" data-tone="live"><span className="ca-cursor" aria-hidden="true">▶</span>Now</span>
                 ) : (
                   <span className="cs-badge">{row.meta.diff.toLowerCase()}</span>
                 )}
@@ -150,7 +168,7 @@ export default function CampaignStory() {
             </>
           );
           return locked ? (
-            <div key={row.meta.month} className="cs-ch" data-locked="true" style={{ ['--ch' as string]: row.meta.dc }} aria-disabled="true">
+            <div key={row.meta.month} className="cs-ch" data-locked="true" style={tileStyle} aria-disabled="true">
               {body}
             </div>
           ) : (
@@ -159,7 +177,8 @@ export default function CampaignStory() {
               href={`/chapter/${row.meta.month}`}
               onClick={tap}
               className="cs-ch"
-              style={{ ['--ch' as string]: row.meta.dc }}
+              data-now={row === current || undefined}
+              style={tileStyle}
               aria-label={`Chapter ${row.meta.month}, ${row.meta.name}`}
             >
               {body}
