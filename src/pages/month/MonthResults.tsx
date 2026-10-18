@@ -385,11 +385,11 @@ function RunResults({ songId }: { songId: string }) {
   return (
     <div
       ref={rootRef}
-      className="cs-page cr-root"
+      className="cs-page cr-root mr-fit"
       data-result={passed ? 'win' : 'lose'}
       data-skipped={skipped ? 'true' : undefined}
       onPointerDown={step > 0 && step < FINAL ? skip : undefined}
-      style={{ ['--ch' as string]: passed ? meta.dc : '#ff2a4f', ['--medal' as string]: medalColor, maxWidth: 980 } as CSSProperties}
+      style={{ ['--ch' as string]: passed ? meta.dc : '#ff2a4f', ['--medal' as string]: medalColor } as CSSProperties}
     >
       <div className="cr-bg" aria-hidden="true">
         {coverUrl && <img className="cr-bg-art" src={coverUrl} alt="" onError={hideBroken} />}
@@ -484,13 +484,17 @@ function RunResults({ songId }: { songId: string }) {
         </div>
       </section>
 
-      {banners.map((b) => (
-        <div key={b.head} className={`cr-banner cr-in${on(S.banner)}`} role="note"
-          style={b.tone === 'bombshell' ? ({ ['--ch' as string]: '#FF1493' } as CSSProperties) : undefined}>
-          <div className="cr-banner-head">{b.head}</div>
-          <div className="cr-banner-sub">{b.sub}</div>
+      {banners.length > 0 && (
+        <div className="mr-banners">
+          {banners.map((b) => (
+            <div key={b.head} className={`cr-banner cr-in${on(S.banner)}`} role="note"
+              style={b.tone === 'bombshell' ? ({ ['--ch' as string]: '#FF1493' } as CSSProperties) : undefined}>
+              <div className="cr-banner-head">{b.head}</div>
+              <div className="cr-banner-sub">{b.sub}</div>
+            </div>
+          ))}
         </div>
-      ))}
+      )}
 
       <section className={`cr-actions cr-in${on(S.actions)}`} aria-label="What's next">
         {!passed && (
