@@ -11,6 +11,7 @@ export {
   markGameReady,
   sendGameplayMessage,
   showInterstitial,
+  showInterstitialAndWait,
 } from './playgama/bridge';
 export { appUrl, APP_BASE } from './playgama/paths';
 export { sfxUrl } from './playgama/sfx';

@@ -2,7 +2,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState, useCallback, memo } from "react";
 import { useParams, useLocation } from "wouter";
 import { getSongById, saveHighScore, getModifierForSong, STAGEIFICATION_CONFIG, getCandidateAudioUrls } from "@/game/api";
-import { saveMedal, saveScoreHistory } from "@/game/progress";
+import { saveMedal, saveScoreHistory, getMedalForSong, getHighScore } from "@/game/progress";
 import type { GameSong } from "@/game/api";
 import type { Note, JudgmentDisplay, GameState, NoteType } from "@/game/types";
 import { loadOpts, keyLabel, getEffectiveDpr, type GameOpts, type PovMode, type RenderResolution, type GfxLevel, type FpsTarget, type ParticleDensity } from "@/lib/options";
@@ -2986,6 +2986,13 @@ export default function Game() {
       haptics.error();
     }
 
+    // Monthly build: whether this run is the stage's first clear, read before
+    // the save below so the results screen can call it out.
+    const wasCleared = !!songRef.current && (
+      (getMedalForSong(songRef.current.id) || '') !== '' || getHighScore(songRef.current.id) > 0
+    );
+    const wasPlatinum = !!songRef.current && getMedalForSong(songRef.current.id) === 'PLATINUM';
+
     // Save progress with error handling
     try {
       if (songRef.current && !failed) {
@@ -3058,6 +3065,7 @@ export default function Game() {
           continuesUsed,
           laneTelemetry,
           coverUrl: finalCover,
+          ...(PLAYGAMA_MONTH > 0 ? { firstClear: !failed && !wasCleared, firstPlatinum: medal === 'PLATINUM' && !wasPlatinum } : {}),
         }),
       );
     } catch (err) {

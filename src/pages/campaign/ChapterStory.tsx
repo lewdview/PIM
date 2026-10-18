@@ -27,19 +27,20 @@ import {
   type ChapterAct, type MonthStory,
 } from '@/game/chapterStory';
 import { Highlighted, WordChips } from './storyParts';
-import { getBombshellCoverUrl, BOMBSHELL_COVERS_MAP } from '@/utils/bombshellCards';
 import {
-  PLAYGAMA_MONTH, MONTH_BOMBSHELL, BONUS_PRODUCT_ID, BONUS_UNLOCK_EVENT,
+  PLAYGAMA_MONTH, BONUS_PRODUCT_ID, BONUS_UNLOCK_EVENT,
   isBonusSongBought, canUnlockWithAd, canBuyBundle, unlockSongWithAd, buyBonusBundle,
 } from '@/platform/playgama/month';
 import { getProductPrice } from '@/platform/playgama/bridge';
-import { bombshellFileForDay } from '@/platform/playgama/monthMedia.mjs';
+import { bombshellArtFor, prepareMonthRun } from '@/pages/month/startRun';
 import { hideBroken } from './hideBroken';
+import { ArcadeBackdrop, SlamTitle, StageWipe } from './arcade';
 import {
   getMonthEntries, monthLeaderboardKind, monthTotal, showMonthPopup, submitMonthScore, type LeaderboardRow,
 } from '@/platform/playgama/monthLeaderboard';
 import '@/styles/stageShell.css';
 import '@/styles/campaignStory.css';
+import '@/styles/campaignArcade.css';
 import '@/styles/monthBoard.css';
 
 const MEDAL_COLOR: Record<string, string> = {
@@ -54,12 +55,6 @@ const MILESTONES = [
 const pad = (n: number) => String(n).padStart(2, '0');
 const MONTH_BUILD = PLAYGAMA_MONTH > 0;
 
-/** Monthly build: the Bombshell art a platinum run on this song unlocks, or null. */
-function bombshellArtFor(song: GameSong): string | null {
-  if (!MONTH_BOMBSHELL) return null;
-  const file = bombshellFileForDay(song.day, BOMBSHELL_COVERS_MAP);
-  return file ? getBombshellCoverUrl(song.day, file) : null;
-}
 const sfx = (v = 0.12) => audioManager.playSfx('tap_nav', v);
 /** Columns of the monthly build's track grid (set in monthBoard.css). */
 function gridCols(): number {
@@ -250,24 +245,13 @@ export default function ChapterStory() {
     if (!selected || !status || status.locked) return;
     stopPreview();
     audioManager.playSfx('tap_nav', 0.4);
+    if (MONTH_BUILD) {
+      setLocation(prepareMonthRun(selected, { month: monthNum, level: status.level, idx: selectedIdx, cleared: status.cleared }));
+      return;
+    }
     sessionStorage.setItem('campaign_last_song_id', selected.id);
     sessionStorage.setItem(`game_origin_${selected.id}`, `chapter/${monthNum}`);
     sessionStorage.setItem(`diff_override_${selected.id}`, String(status.level));
-    if (MONTH_BUILD) {
-      // A platinum run unlocks the song's Bombshell art as its backdrop in play.
-      if (status.bombshellUnlocked && status.bombshell) {
-        sessionStorage.setItem(`active_cover_url_${selected.id}`, status.bombshell);
-        sessionStorage.setItem(`active_cover_bombshell_${selected.id}`, '1');
-      } else {
-        sessionStorage.removeItem(`active_cover_url_${selected.id}`);
-        sessionStorage.removeItem(`active_cover_bombshell_${selected.id}`);
-      }
-      // First run of the game teaches the controls on the opening track.
-      if (selectedIdx === 0 && !status.cleared && localStorage.getItem('pim_tutorial_completed') !== 'true') {
-        setLocation(`/play/${selected.id}?tutorial=true`);
-        return;
-      }
-    }
     if (equippedCardId === selected.id && status.modifier !== 'none') {
       sessionStorage.setItem(`active_modifier_type_${selected.id}`, status.modifier);
     } else {
@@ -425,14 +409,19 @@ export default function ChapterStory() {
     const tr = selected ? getTrackStory(selected.day) : undefined;
     const bonusGated = !progress.bonusUnlocked && progress.bonus.some((b) => !isBonusSongBought(b.id));
     return (
-      <div className="mb-page" style={chStyle}>
-        <header className="mb-head">
+      <div className="mb-page ca-root" style={chStyle}>
+        <StageWipe />
+        <header className="mb-head ca-hero">
+          <ArcadeBackdrop />
           <div className="mb-title">
-            <div className="cs-eyebrow" style={{ color: meta.dc }}>Chapter {pad(meta.month)} · {meta.sub}</div>
-            <h1 className="cs-display">{meta.name}</h1>
+            <div className="ca-hud">
+              <span className="ca-chip" data-tone="hot">Chapter {pad(meta.month)}</span>
+              <span className="ca-chip">{meta.sub}</span>
+            </div>
+            <SlamTitle text={meta.name} className="ca-title--ch" delay={250} />
           </div>
           <div className="mb-progress">
-            <div className="cs-stats">
+            <div className="cs-stats ca-stats">
               <span><b>{progress.cleared}/{progress.regular.length}</b> cleared</span>
               <span><b>✦ {progress.platinums}/{meta.platNeeded}</b> platinum for bonus</span>
               <span><b>{meta.diff.toLowerCase()}</b></span>
@@ -470,6 +459,7 @@ export default function ChapterStory() {
                     onDoubleClick={() => { if (idx === selectedIdx) handlePlay(); }}
                   >
                     {s.coverArt && <img src={s.coverArt} alt="" loading="lazy" onError={hideBroken} />}
+                    {idx === selectedIdx && <span className="ca-cursor mb-tile-cursor" aria-hidden="true">▶</span>}
                     <span className="mb-tile-n">{isBonus ? '★' : idx + 1}</span>
                     {state === 'locked' && <span className="mb-tile-ico"><Lock size={14} /></span>}
                     {state === 'cleared' && (
@@ -482,7 +472,7 @@ export default function ChapterStory() {
           </ol>
 
           {selected && status && (
-            <section className="mb-detail" aria-label="Selected track">
+            <section key={selected.id} className="mb-detail ca-panel" aria-label="Selected track">
               <div className="mb-detail-top">
                 {selected.coverArt ? <img className="mb-cover" src={selected.coverArt} alt="" onError={hideBroken} /> : <span className="mb-cover" />}
                 <div className="mb-detail-name">

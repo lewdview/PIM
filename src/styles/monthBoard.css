@@ -203,3 +203,47 @@
 .mb-lb-rank { font: 700 13px/1 var(--shell-mono); color: var(--ch); text-align: center; }
 .mb-lb-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mb-lb-rows b { font-variant-numeric: tabular-nums; }
+
+/* ── Arcade dress (campaignArcade.css) on the one-screen chapter ──
+   The arcade sheet assumes a scrolling page; the monthly chapter stays a
+   fixed single screen, so its root keeps its own positioning and the hero
+   backdrop is clipped to the header. */
+.mb-page.ca-root { position: fixed; overflow: hidden; }
+.mb-page .mb-head.ca-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  margin: 0;
+  padding: 10px 12px;
+  background: rgba(8, 4, 14, 0.72);
+}
+.mb-page .mb-title { display: grid; gap: 8px; min-width: 0; }
+.mb-page .mb-title .ca-title { font-size: clamp(30px, 6.6vh, 60px); }
+.mb-page .mb-progress .ca-stats { font-size: 8px; }
+.mb-page .mb-tile { border-radius: 0; }
+.mb-page .mb-tile[data-selected='true'] {
+  border: 2px solid var(--ink);
+  box-shadow: 0 0 0 2px var(--ch), 0 0 0 4px var(--ink), 0 0 22px color-mix(in srgb, var(--ch) 60%, transparent);
+}
+.mb-tile-cursor {
+  position: absolute;
+  right: 5px;
+  top: 4px;
+  z-index: 2;
+  margin: 0;
+  font-size: 11px;
+  text-shadow: 1px 1px 0 var(--ink);
+}
+.mb-page .mb-detail.ca-panel {
+  border-radius: 0;
+  border: 3px solid var(--ink);
+  box-shadow: var(--ring), 0 14px 30px rgba(0, 0, 0, 0.5);
+  animation: mb-panel-in 0.28s steps(4) both;
+}
+@keyframes mb-panel-in {
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mb-page .mb-detail.ca-panel { animation: none; }
+}

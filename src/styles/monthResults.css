@@ -1,0 +1,5 @@
+/* Monthly build tweaks on top of campaignResults.css (kept identical to main's
+   copy so later ports diff cleanly). */
+
+/* The shell's mute button sits in the top-right corner: keep the HUD chips clear of it. */
+.cr-root .cr-hud { padding-right: 52px; }

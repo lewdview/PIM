@@ -129,10 +129,13 @@ function onRewardedState(state: string) {
   }
 }
 
+const interstitialListeners = new Set<(state: string) => void>();
+
 function onInterstitialState(state: string) {
   const isOpen = state === 'opened';
   setGate('ad', isOpen);
   if (isOpen) requestGameplayPause();
+  interstitialListeners.forEach((fn) => fn(state));
 }
 
 /** Initializes the Bridge SDK and restores progress. Resolves even if the SDK is missing. */
@@ -192,6 +195,34 @@ export function showInterstitial(placement: string): void {
   const b = bridgeOrNull();
   if (!b || !b.advertisement.isInterstitialSupported) return;
   b.advertisement.showInterstitial(placement);
+}
+
+/**
+ * Shows an interstitial and resolves once it's gone, so a screen can hold its
+ * entrance until the player can see it. Resolves at once when there's no ad,
+ * and after `waitMs` when the SDK skips this one (minimum delay not reached).
+ */
+export function showInterstitialAndWait(placement: string, waitMs = 600): Promise<void> {
+  const b = bridgeOrNull();
+  if (!b || !b.advertisement.isInterstitialSupported) return Promise.resolve();
+  return new Promise((resolve) => {
+    let started = false;
+    const done = () => {
+      interstitialListeners.delete(listen);
+      clearTimeout(skip);
+      clearTimeout(cap);
+      resolve();
+    };
+    const listen = (state: string) => {
+      if (state === 'loading' || state === 'opened') started = true;
+      if (state === 'closed' || state === 'failed') done();
+    };
+    const skip = setTimeout(() => { if (!started) done(); }, waitMs);
+    // Never hold the screen forever if the SDK loses a state event.
+    const cap = setTimeout(done, 90_000);
+    interstitialListeners.add(listen);
+    b.advertisement.showInterstitial(placement);
+  });
 }
 
 export function isRewardedSupported(): boolean {
