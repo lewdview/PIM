@@ -20,7 +20,7 @@ import '@/styles/CardShowcaseStyles.css';
 
 const ChapterStory = lazy(() => import('./campaign/ChapterStory'));
 const GamePlay = lazy(() => import('./GamePlay'));
-const GameResults = lazy(() => import('./GameResults'));
+const MonthResults = lazy(() => import('./month/MonthResults').then((m) => ({ default: m.MonthResultsRoute })));
 
 const HOME = `/chapter/${PLAYGAMA_MONTH}`;
 const MUTE_KEY = 'pg_muted';
@@ -114,7 +114,7 @@ export default function MonthShell() {
               <Switch>
                 <Route path={HOME} component={ChapterStory} />
                 <Route path="/play/:songId" component={GamePlay} />
-                <Route path="/results/:songId" component={GameResults} />
+                <Route path="/results/:songId" component={MonthResults} />
                 <Route path="/tutorial" component={TutorialDone} />
                 <Route>
                   <Redirect to={HOME} replace />

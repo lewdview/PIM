@@ -26,12 +26,13 @@ const leaderboardId = `PIM_${MONTH_NAMES[Math.max(0, playgamaMonth - 1)]}_Score`
 // and ship the Bridge config next to index.html.
 const SLIDESHOW_GLOB = "'../../public/data/slideshow/**/*.{png,jpg,jpeg,gif,webp,svg}'";
 const GOOGLE_FONTS_IMPORT =
-  "@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=JetBrains+Mono:wght@400;700&family=Anton&display=swap');";
+  "@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300..700&family=JetBrains+Mono:wght@400;700&family=Anton&family=Press+Start+2P&display=swap');";
 const BUNDLED_FONTS = [
   ...[300, 400, 500, 600, 700].map((w) => `@fontsource/space-grotesk/latin-${w}.css`),
   "@fontsource/jetbrains-mono/latin-400.css",
   "@fontsource/jetbrains-mono/latin-700.css",
   "@fontsource/anton/latin-400.css",
+  "@fontsource/press-start-2p/latin-400.css",
 ].map((f) => `@import '${f}';`).join("\n");
 function playgamaPackaging(): Plugin {
   return {

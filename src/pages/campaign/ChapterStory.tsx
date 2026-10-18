@@ -11,7 +11,7 @@
 // rewarded ad or the month's bundle, and a platinum run shows the song's
 // Bombshell artwork during play.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Link, useLocation, useParams } from 'wouter';
 import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Lock, Pause, Play, Film, CheckCircle2, Gift, Trophy, X } from 'lucide-react';
 import { loadCatalog, isSongTimeLocked, getModifierForSong, type GameSong } from '@/game/api';
@@ -27,20 +27,21 @@ import {
   type ChapterAct, type MonthStory,
 } from '@/game/chapterStory';
 import { Highlighted, WordChips } from './storyParts';
-import { getBombshellCoverUrl, BOMBSHELL_COVERS_MAP } from '@/utils/bombshellCards';
 import {
-  PLAYGAMA_MONTH, MONTH_BOMBSHELL, BONUS_PRODUCT_ID, BONUS_UNLOCK_EVENT,
+  PLAYGAMA_MONTH, BONUS_PRODUCT_ID, BONUS_UNLOCK_EVENT,
   isBonusSongBought, canUnlockWithAd, canBuyBundle, unlockSongWithAd, buyBonusBundle,
 } from '@/platform/playgama/month';
 import { getProductPrice } from '@/platform/playgama/bridge';
-import { bombshellFileForDay } from '@/platform/playgama/monthMedia.mjs';
 import { hideBroken } from './hideBroken';
+import { ArcadeBackdrop, CountUp, SlamTitle, StageWipe } from './arcade';
+import { bombshellArtFor, startMonthRun } from '../month/monthRun';
 import {
   getMonthEntries, monthLeaderboardKind, monthTotal, showMonthPopup, submitMonthScore, type LeaderboardRow,
 } from '@/platform/playgama/monthLeaderboard';
 import '@/styles/stageShell.css';
 import '@/styles/campaignStory.css';
 import '@/styles/monthBoard.css';
+import '@/styles/campaignArcade.css';
 
 const MEDAL_COLOR: Record<string, string> = {
   PLATINUM: '#39FF14', GOLD: '#E5B800', SILVER: '#A0AABB', BRONZE: '#C97A3A',
@@ -54,12 +55,6 @@ const MILESTONES = [
 const pad = (n: number) => String(n).padStart(2, '0');
 const MONTH_BUILD = PLAYGAMA_MONTH > 0;
 
-/** Monthly build: the Bombshell art a platinum run on this song unlocks, or null. */
-function bombshellArtFor(song: GameSong): string | null {
-  if (!MONTH_BOMBSHELL) return null;
-  const file = bombshellFileForDay(song.day, BOMBSHELL_COVERS_MAP);
-  return file ? getBombshellCoverUrl(song.day, file) : null;
-}
 const sfx = (v = 0.12) => audioManager.playSfx('tap_nav', v);
 /** Columns of the monthly build's track grid (set in monthBoard.css). */
 function gridCols(): number {
@@ -254,19 +249,8 @@ export default function ChapterStory() {
     sessionStorage.setItem(`game_origin_${selected.id}`, `chapter/${monthNum}`);
     sessionStorage.setItem(`diff_override_${selected.id}`, String(status.level));
     if (MONTH_BUILD) {
-      // A platinum run unlocks the song's Bombshell art as its backdrop in play.
-      if (status.bombshellUnlocked && status.bombshell) {
-        sessionStorage.setItem(`active_cover_url_${selected.id}`, status.bombshell);
-        sessionStorage.setItem(`active_cover_bombshell_${selected.id}`, '1');
-      } else {
-        sessionStorage.removeItem(`active_cover_url_${selected.id}`);
-        sessionStorage.removeItem(`active_cover_bombshell_${selected.id}`);
-      }
-      // First run of the game teaches the controls on the opening track.
-      if (selectedIdx === 0 && !status.cleared && localStorage.getItem('pim_tutorial_completed') !== 'true') {
-        setLocation(`/play/${selected.id}?tutorial=true`);
-        return;
-      }
+      startMonthRun(selected, selectedIdx, status.level, monthNum, setLocation);
+      return;
     }
     if (equippedCardId === selected.id && status.modifier !== 'none') {
       sessionStorage.setItem(`active_modifier_type_${selected.id}`, status.modifier);
@@ -425,16 +409,21 @@ export default function ChapterStory() {
     const tr = selected ? getTrackStory(selected.day) : undefined;
     const bonusGated = !progress.bonusUnlocked && progress.bonus.some((b) => !isBonusSongBought(b.id));
     return (
-      <div className="mb-page" style={chStyle}>
+      <div className="mb-page ca-root" style={chStyle}>
+        <StageWipe />
+        <ArcadeBackdrop />
         <header className="mb-head">
           <div className="mb-title">
-            <div className="cs-eyebrow" style={{ color: meta.dc }}>Chapter {pad(meta.month)} · {meta.sub}</div>
-            <h1 className="cs-display">{meta.name}</h1>
+            <div className="ca-hud">
+              <span className="ca-chip" data-tone="hot">Chapter {pad(meta.month)}</span>
+              <span className="ca-chip">{meta.sub}</span>
+            </div>
+            <SlamTitle text={meta.name} className="ca-title--ch" delay={250} />
           </div>
           <div className="mb-progress">
-            <div className="cs-stats">
-              <span><b>{progress.cleared}/{progress.regular.length}</b> cleared</span>
-              <span><b>✦ {progress.platinums}/{meta.platNeeded}</b> platinum for bonus</span>
+            <div className="cs-stats ca-stats">
+              <span><b><CountUp to={progress.cleared} ms={700} delay={600} />/{progress.regular.length}</b> cleared</span>
+              <span><b>✦ <CountUp to={progress.platinums} ms={700} delay={750} />/{meta.platNeeded}</b> platinum for bonus</span>
               <span><b>{meta.diff.toLowerCase()}</b></span>
             </div>
             <div className="cs-bar" aria-label={`${pct}% cleared`}><span style={{ width: `${pct}%` }} /></div>
@@ -457,7 +446,7 @@ export default function ChapterStory() {
               const isBonus = idx >= progress.regular.length;
               const isActStart = groups.some((g) => g.startIdx === idx && idx > 0);
               return (
-                <li key={s.id} id={`beat-${idx}`} data-act-start={isActStart || undefined}>
+                <li key={s.id} id={`beat-${idx}`} data-act-start={isActStart || undefined} style={{ ['--i' as string]: idx } as CSSProperties}>
                   <button
                     type="button"
                     className="mb-tile"
@@ -470,6 +459,7 @@ export default function ChapterStory() {
                     onDoubleClick={() => { if (idx === selectedIdx) handlePlay(); }}
                   >
                     {s.coverArt && <img src={s.coverArt} alt="" loading="lazy" onError={hideBroken} />}
+                    {idx === selectedIdx && <span className="ca-cursor mb-tile-cursor" aria-hidden="true">▶</span>}
                     <span className="mb-tile-n">{isBonus ? '★' : idx + 1}</span>
                     {state === 'locked' && <span className="mb-tile-ico"><Lock size={14} /></span>}
                     {state === 'cleared' && (
@@ -482,7 +472,8 @@ export default function ChapterStory() {
           </ol>
 
           {selected && status && (
-            <section className="mb-detail" aria-label="Selected track">
+            <section key={selected.id} className="mb-detail" aria-label="Selected track">
+              <div className="ca-tab">{status.isBonus ? 'Bonus stage' : 'Stage select'}</div>
               <div className="mb-detail-top">
                 {selected.coverArt ? <img className="mb-cover" src={selected.coverArt} alt="" onError={hideBroken} /> : <span className="mb-cover" />}
                 <div className="mb-detail-name">
@@ -491,7 +482,7 @@ export default function ChapterStory() {
                     {group?.act?.act && <> · Act {group.act.act} · {group.act.word}</>}
                     {' · '}day {selected.day}
                   </div>
-                  <h2 className="cs-display">{selected.title}</h2>
+                  <h2 className="cs-display mb-detail-title">{selected.title}</h2>
                   {tr && (
                     <p className="cs-hook mb-hook">
                       {tr.hasLyrics ? <>“<Highlighted line={tr.hook} words={[...tr.words, ...(story?.words ?? [])]} />”</> : tr.hook}
@@ -501,7 +492,7 @@ export default function ChapterStory() {
               </div>
               <div className="cs-detail-grid">
                 <div><small>Level · {levelToTier(status.level).toLowerCase()}</small><b>{status.level}</b></div>
-                <div><small>Best</small><b>{status.score ? status.score.toLocaleString() : '—'}</b></div>
+                <div><small>Best</small><b>{status.score ? <CountUp to={status.score} ms={600} /> : '—'}</b></div>
                 <div><small>Medal</small><b style={{ color: MEDAL_COLOR[status.medal] ?? undefined }}>{status.medal && status.medal !== 'NONE' ? status.medal.toLowerCase() : '—'}</b></div>
               </div>
               <div className="mb-note">
