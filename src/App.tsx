@@ -112,6 +112,7 @@ const BombshellsPage = lazyWithRetry(() => import('./pages/BombshellsPage'));
 const AdminDropAnimationsPage = lazyWithRetry(() => import('./pages/AdminDropAnimationsPage'));
 const LaunchPage = lazyWithRetry(() => import('./pages/LaunchPage'));
 const StageHome = lazyWithRetry(() => import('./pages/StageHome'));
+const DressUpPage = lazyWithRetry(() => import('./pages/DressUpPage'));
 
 function OptionsRouteHandler() {
   const setOptionsModalOpen = useVaultStore((s) => s.setOptionsModalOpen);
@@ -434,6 +435,9 @@ export default function App() {
                 <Route path="/day-:day" component={DayArtifactPage} />
                 <Route path="/sign" component={SignDiscoveryRoute} />
                 <Route path="/random" component={SignDiscoveryRoute} />
+                <Route path="/dress-up" component={DressUpPage} />
+                <Route path="/dress-up/:day" component={DressUpPage} />
+                <Route path="/waifu" component={DressUpPage} />
                 <Route path="/warp" component={WarpZonePage} />
                 <Route path="/warp/:sub" component={WarpZonePage} />
                 <Route path="/secret/:level" component={SecretLevel} />
