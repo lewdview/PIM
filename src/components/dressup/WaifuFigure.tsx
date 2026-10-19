@@ -289,7 +289,7 @@ const HEAD = 'M150 51 C184 51 203 77 203 108 C203 124 200.5 136 194.5 146 C186.5
 // Longer, tapered neck that flares into the trapezius.
 const NECK = 'M141 160 C141 174 140.5 184 137 195 Q150 201 163 195 C159.5 184 159 174 159 160 Z';
 // Exaggerated pin-up hourglass: bust ~x96–204, waist ~x124–176, hips ~x90–210.
-const TORSO = 'M116 196 C130 189 170 189 184 196 C200 208 206 230 202 250 C198 264 182 270 177 278 C172 288 173 298 186 312 C202 326 212 340 210 352 L90 352 C88 340 98 326 114 312 C127 298 128 288 123 278 C118 270 102 264 98 250 C94 230 100 208 116 196 Z';
+const TORSO = 'M116 196 C126 193 133 191 138 190 Q150 199 162 190 C167 191 174 193 184 196 C200 208 206 230 202 250 C198 264 182 270 177 278 C172 288 173 298 186 312 C202 326 212 340 210 352 L90 352 C88 340 98 326 114 312 C127 298 128 288 123 278 C118 270 102 264 98 250 C94 230 100 208 116 196 Z';
 // Arms sit in a slight A-pose so they frame the curves instead of hiding them.
 // The arm runs into the back of the hand in one contour, so there is no seam at the wrist. The
 // outer forearm swells just below the elbow (brachioradialis) and the inner edge narrows to the wrist.
@@ -510,8 +510,10 @@ function HairFront({ item, color }: { item: string; color: string }) {
       </>}
       <Cel d={cap} fill={p.fill} line={p.stroke} />
       {/* Angel-ring highlight and fringe strands. */}
-      <path d="M114 78 Q150 62 186 78" fill="none" stroke="#ffffff" strokeOpacity="0.4" strokeWidth="5" strokeLinecap="round" />
+      <path d="M110 86 C122 72 138 66 156 65 L154 69.5 L150 73 L146.5 69.6 L141 76 L136.4 72 L130.6 79.6 L125.4 75.6 L118.6 85 L114.6 81.4 Z" fill="#ffffff" fillOpacity="0.42" />
+      <path d="M162 66 C172 67.4 181 72 188 79 L184 81 L180 78 L176.4 82.6 L172 77.6 L167 73.6 Z" fill="#ffffff" fillOpacity="0.24" />
       <path d="M134 64 Q128 80 133 90 M150 58 Q150 88 150 108 M166 64 Q172 80 163 90" fill="none" stroke={dark} strokeOpacity="0.45" />
+      <path d="M122 112 C119 96 123 80 133 68 M178 112 C181 96 177 80 167 68 M110 94 C108 84 112 74 121 65 M190 94 C192 84 188 74 179 65" fill="none" stroke={dark} strokeOpacity="0.28" strokeWidth="0.9" strokeLinecap="round" />
       {item === 'twintails' && [false, true].map((right) => (
         <g key={String(right)} transform={right ? MIRROR : undefined}>
           <circle cx="107" cy="90" r="7" fill="#ff007f" stroke={LINE} />
@@ -693,6 +695,14 @@ function UpperBody() {
       <path d="M141 168 Q150 182 159 168 L159 178 Q150 188 141 178 Z" fill={SKIN_SHADE} stroke="none" opacity="0.85" />
       <path d="M143 180 Q145 188 148 195 M157 180 Q155 188 152 195" fill="none" strokeOpacity="0.22" />
       <Skin d={TORSO} />
+      {/* Trapezius: the slope from the neck down to each shoulder, over the torso's top edge. */}
+      {[false, true].map((m) => (
+        <g key={String(m)} transform={m ? MIRROR : undefined}>
+          <path d="M141.4 170 C140.4 183 131 191 111 197.6 L122 201 L139 196 Z" fill={SKIN} stroke="none" />
+          {m && <path d="M141.4 170 C140.4 183 131 191 111 197.6 L118 199.6 C130 195 137.6 189 140 180 Z" fill="#d9826e" fillOpacity="0.4" stroke="none" />}
+          <path d="M141.4 170 C140.4 183 131 191 111 197.6" fill="none" strokeWidth={m ? 1.8 : 1.1} />
+        </g>
+      ))}
       <path d="M130 200 Q138 203 145 200 M155 200 Q162 203 170 200 M147.5 198 Q150 200 152.5 198" fill="none" strokeOpacity="0.4" />
       {/* Bust volumes sit in front of the collarbones; the leotard neckline follows their curve. */}
       {[0, 1].map((side) => (
@@ -701,7 +711,13 @@ function UpperBody() {
           <path d="M104 216 Q107 211 112 209" fill="none" stroke="#ffffff" strokeOpacity="0.55" strokeWidth="2.2" strokeLinecap="round" />
         </g>
       ))}
-      <path d={BODYSUIT} fill="#2b2140" />
+      <Cel d={BODYSUIT} fill="#2b2140" shade="#0d0716" shadeOpacity={0.55} line="#150e22" />
+      <g fill="none" stroke="#7b67a6" strokeLinecap="round">
+        <path d="M103 238 C103 227 109 219 119 216.5" strokeWidth="3" strokeOpacity="0.75" />
+        <path d="M157 233 C159 225 165 220 173 218.5" strokeWidth="2.2" strokeOpacity="0.45" />
+        <path d="M99 336 C103 325 109 318 116 313" strokeWidth="2.6" strokeOpacity="0.55" />
+        <path d="M129 284 C128 292 128 298 131 304" strokeWidth="1.6" strokeOpacity="0.35" />
+      </g>
       <BustShading upper={false} />
     </g>
   );
