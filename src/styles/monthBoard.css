@@ -116,11 +116,13 @@
   border-radius: var(--shell-radius);
   background: color-mix(in srgb, var(--shell-panel) 88%, transparent);
   overflow: hidden;
+  /* The panel narrows when a banner rail takes the right of the screen. */
+  container-type: inline-size;
 }
 .mb-detail-top { display: flex; gap: 12px; min-height: 0; overflow: hidden; }
 .mb-cover {
   flex: 0 0 auto;
-  width: clamp(72px, 30vh, 240px);
+  width: clamp(72px, min(30vh, 42cqi), 240px);
   aspect-ratio: 1;
   height: auto;
   align-self: flex-start;
@@ -167,7 +169,7 @@
 /* ── Leaderboard ── */
 .mb-lb {
   position: fixed;
-  inset: 0;
+  inset: 0 var(--pg-ad-right, 0px) var(--pg-ad-bottom, 0px) 0;
   z-index: 50;
   display: grid;
   place-items: center;

@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import playgamaBridge from "@playgama/bridge/vite";
 import path from "path";
+import { MENU_BANNERS } from "./src/platform/playgama/bannerLayout";
 import type { Plugin } from "vite";
 
 const port = Number(process.env.PORT || 5173);
@@ -59,15 +60,8 @@ function playgamaPackaging(): Plugin {
         source: JSON.stringify({
           advertisement: {
             minimumDelayBetweenInterstitial: 60,
-            // Banner slots for the chapter and results screens (never during play):
-            // a rail down the right of a wide screen, a strip along the bottom of a
-            // tall portrait one, none on small or sideways phones. Sizes are % of the window.
-            advancedBanners: {
-              menu: {
-                "landscape:w>=1000:h>=560": [{ width: "16%", height: "100%", top: "0", right: "0" }],
-                "portrait:h>=700": [{ width: "100%", height: "9%", bottom: "0", left: "0" }],
-              },
-            },
+            // Banner slots for the chapter and results screens (never during play).
+            advancedBanners: { menu: MENU_BANNERS },
           },
           // The month's five bonus songs, sold as one non-consumable bundle.
           ...(playgamaMonth ? { payments: [{ id: bonusProductId, playgama: { amount: Math.round(bonusPriceUsd * 10) } }] } : {}),

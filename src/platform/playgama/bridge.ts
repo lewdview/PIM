@@ -12,6 +12,7 @@
  */
 import { installAudioGate, setGate } from './audioGate';
 import { installPathShim } from './paths';
+import { menuBannerSpace } from './bannerLayout';
 
 const IS_PLAYGAMA = import.meta.env.VITE_PLATFORM === 'playgama';
 
@@ -382,6 +383,8 @@ function reserveBannerSpace() {
       if (r.right >= innerWidth - 1 && r.height > r.width) right = Math.max(right, innerWidth - r.left);
       else if (r.bottom >= innerHeight - 1) bottom = Math.max(bottom, innerHeight - r.top);
     }
+    // Portals draw the slots outside our page, so fall back to the configured layout.
+    if (!right && !bottom) ({ right, bottom } = menuBannerSpace(innerWidth, innerHeight));
   }
   root.setProperty('--pg-ad-right', `${Math.round(right)}px`);
   root.setProperty('--pg-ad-bottom', `${Math.round(bottom)}px`);
