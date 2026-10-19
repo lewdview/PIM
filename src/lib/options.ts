@@ -73,6 +73,7 @@ export interface GameBackground {
 
 export const GAME_BACKGROUNDS: GameBackground[] = [
   { id: 'cover_blur', name: 'Song Artwork', desc: 'Ambient cover art blurring', unlockText: 'Unlocked', unlockScore: 0 },
+  { id: 'lyric_cinema', name: 'Lyric Cinema', desc: 'Kinetic lyrics across the sky, synced to the song', unlockText: 'Unlocked', unlockScore: 0 },
   { id: 'neon_grid', name: 'Neon Grid', desc: 'Synthwave neon network grid', unlockText: 'Requires 1,000 Prestige Score', unlockScore: 1000 },
   { id: 'cyber_streets', name: 'Matrix Cyber', desc: 'Green binary rain frequency', unlockText: 'Requires 5,000 Prestige Score', unlockScore: 5000 },
   { id: 'space_nebula', name: 'Void Space', desc: 'Moving nebula & stardust', unlockText: 'Requires 10,000 Prestige Score', unlockScore: 10000 },
