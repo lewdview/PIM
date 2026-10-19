@@ -194,8 +194,60 @@ function materialPaint(id: string, material: OutfitStyle, color: string): Paint 
   }
 }
 
+// ---------------------------------------------------------------------------
+// Marker-comic hand (the anidoodle "koi" recipe): flat cel fills, ONE light from the upper
+// left, a hard-edged shadow shape on the side away from it, and a contour that thickens on the
+// shadow side and thins where the light hits. Shadows are hue-shifted toward violet, not grey.
+// ---------------------------------------------------------------------------
+const LIGHT: [number, number] = [-6, -5];
+const SHADOW_INK = '#3b1d5e';
+const MASK_BOX = { maskUnits: 'userSpaceOnUse' as const, x: -320, y: -120, width: 940, height: 840 };
+
+/** One shape drawn in the marker-comic hand. `mirrored` keeps the light on the same side. */
+function Cel({ d, fill, fillOpacity = 1, texture, shade = SHADOW_INK, shadeOpacity = 0.3, line, depth = 1, weight = 1, mirrored = false }: {
+  d: string;
+  fill: string;
+  fillOpacity?: number;
+  texture?: string;
+  shade?: string;
+  shadeOpacity?: number;
+  line: string;
+  depth?: number;
+  weight?: number;
+  mirrored?: boolean;
+}) {
+  const id = useSvgId('cel');
+  const dx = (mirrored ? -LIGHT[0] : LIGHT[0]) * depth;
+  const dy = LIGHT[1] * depth;
+  return (
+    <g>
+      <defs>
+        <mask id={`${id}-s`} {...MASK_BOX}>
+          <path d={d} fill="#fff" />
+          <path d={d} fill="#000" transform={`translate(${dx} ${dy})`} />
+        </mask>
+        <mask id={`${id}-l`} {...MASK_BOX}>
+          <rect x="-320" y="-120" width="940" height="840" fill="#fff" />
+          <path d={d} fill="#000" transform={`translate(${dx * 0.4} ${dy * 0.4})`} />
+        </mask>
+      </defs>
+      <path d={d} fill={fill} fillOpacity={fillOpacity} stroke="none" />
+      {texture && <path d={d} fill={texture} stroke="none" />}
+      <path d={d} fill={shade} fillOpacity={shadeOpacity} stroke="none" mask={`url(#${id}-s)`} />
+      <path d={d} fill="none" stroke={line} strokeWidth={0.9 * weight} strokeLinejoin="round" />
+      <path d={d} fill="none" stroke={line} strokeWidth={2.4 * weight} strokeLinejoin="round" mask={`url(#${id}-l)`} />
+    </g>
+  );
+}
+
+const SKIN_LINE = mix(SKIN_SHADE, '#000000', 0.45);
+/** Skin in the marker hand: a flat fill with a warm cel shadow. */
+function Skin({ d, mirrored, depth = 1 }: { d: string; mirrored?: boolean; depth?: number }) {
+  return <Cel d={d} fill={SKIN} shade="#d9826e" shadeOpacity={0.55} line={SKIN_LINE} depth={depth} mirrored={mirrored} />;
+}
+
 /**
- * Draws a list of paths in a garment's paint with a soft volume shade on top.
+ * Draws a list of paths in a garment's paint with a hard cel shadow on top.
  * `mirror` paths are drawn on both sides of the body.
  */
 function Garment({ id, choice, paths = [], mirror = [], details }: {
@@ -209,22 +261,13 @@ function Garment({ id, choice, paths = [], mirror = [], details }: {
   const paint = materialPaint(uid, choice.material, choice.color);
   const layer = (d: string, key: string, transform?: string) => (
     <g key={key} transform={transform}>
-      <path d={d} fill={paint.base} fillOpacity={paint.baseOpacity} />
-      {paint.texture && <path d={d} fill={paint.texture} />}
-      <path d={d} fill={`url(#${uid}-shade)`} />
-      <path d={d} fill="none" stroke={paint.stroke} strokeWidth="1.4" strokeLinejoin="round" />
+      <Cel d={d} fill={paint.base} fillOpacity={paint.baseOpacity} texture={paint.texture} line={paint.stroke} mirrored={!!transform} />
     </g>
   );
   return (
     <g>
       <defs>
         {paint.defs}
-        <linearGradient id={`${uid}-shade`} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0" stopColor="#000" stopOpacity="0.28" />
-          <stop offset="0.22" stopColor="#000" stopOpacity="0" />
-          <stop offset="0.7" stopColor="#000" stopOpacity="0" />
-          <stop offset="1" stopColor="#000" stopOpacity="0.32" />
-        </linearGradient>
       </defs>
       {paths.map((d, i) => layer(d, `p${i}`))}
       {mirror.map((d, i) => (
@@ -248,13 +291,24 @@ const NECK = 'M141 160 C141 174 140.5 184 137 195 Q150 201 163 195 C159.5 184 15
 const TORSO = 'M116 196 C130 189 170 189 184 196 C200 208 206 230 202 250 C198 264 182 270 177 278 C172 288 173 298 186 312 C202 326 212 340 210 352 L90 352 C88 340 98 326 114 312 C127 298 128 288 123 278 C118 270 102 264 98 250 C94 230 100 208 116 196 Z';
 // Arms sit in a slight A-pose so they frame the curves instead of hiding them.
 const ARM = 'M118 198 C98 200 88 212 85 230 L76 282 C72 304 68 324 66 342 L80 344 C82 326 86 306 90 288 L104 238 Z';
-const HAND = 'M65 340 C60 350 61 362 69 365 C76 366 81 356 80 342 Z';
+// Relaxed hanging hand (her right; mirrored for the left), seen from the front with the palm to
+// the thigh: the back of the hand, four fingers in length order (middle > ring >= index > little,
+// little finger on the outside), knuckles on an arc, and the thumb in front on the inner side.
+const PALM = 'M65.5 339 C62 345 61.5 351 62.5 356 Q71 358.5 80.5 355.5 C81 350 80.5 344 79.5 340 Z';
+const FINGERS = [
+  'M62.4 355 C61.6 359 61.8 362.6 63.6 363.4 C65.2 363.6 66.4 361 66.6 356.4 Z', // little
+  'M66.4 356.4 C66 361 66.4 365.4 68.6 366.2 C70.6 366.4 71.4 362.6 71 357 Z', // ring
+  'M70.9 357 C70.8 362 71.4 366.8 73.6 367.4 C75.6 367.4 76.2 363 75.6 356.8 Z', // middle
+  'M75.5 356.8 C75.6 361.4 76.3 364.6 78.2 364.8 C80 364.6 80.6 361 80.4 355.6 Z', // index
+];
+const THUMB = 'M79.6 345 C82.4 348 83.2 353 81.6 357.6 C80.6 360 78.2 359.6 78 357.4 C78.4 353.6 78.2 350 77 347 Z';
 const LEG = 'M92 344 L150 344 L148 420 C146 450 146 470 144 500 C143 525 142 545 142 560 L128 560 C126 540 124 520 121 500 C116 470 110 450 104 420 C94 396 88 370 92 344 Z';
 // One rounded bust volume (left; mirrored for the right). It is drawn over the chest and
 // collarbones so the upper curve reads as sitting in front of them.
 const BUST = 'M150 246 C150 222 140 202 123 202 C105 202 95 218 95 236 C95 254 107 265 123 265 C138 265 150 258 150 246 Z';
 // Base layer: a plain, featureless strapless leotard so the figure is never undressed.
 const BODYSUIT = 'M96 232 C100 216 112 210 124 212 C136 214 146 220 150 232 C154 220 164 214 176 212 C188 210 200 216 204 232 C204 242 203 246 202 250 C198 264 182 270 177 278 C172 288 173 298 186 312 C202 326 212 340 210 352 L208 360 Q180 362 160 368 L140 368 Q120 362 92 360 L90 352 C88 340 98 326 114 312 C127 298 128 288 123 278 C118 270 102 264 98 250 Z';
+const TOES = 'M129.5 573.5 L129 578.6 M133.5 574.5 L133.4 579 M137.4 574.5 L137.6 578.8';
 const FOOT = 'M127 556 L143 556 C146 568 145 576 139 579 L125 579 C121 574 122 564 127 556 Z';
 
 /** Keyframes for the idle loop and outfit-change pop; disabled for reduced motion. */
@@ -402,24 +456,24 @@ function HairBack({ item, color }: { item: string; color: string }) {
     <g>
       <defs>{defs}</defs>
       {item === 'long' && <>
-        <path d={LONG_BACK} {...p} />
+        <Cel d={LONG_BACK} fill={p.fill} line={p.stroke} />
         {strands('M118 190 C114 250 116 300 120 340 M150 190 L150 350 M182 190 C186 250 184 300 180 340')}
       </>}
       {item === 'twintails' && [false, true].map((right) => (
         <g key={String(right)} transform={right ? MIRROR : undefined}>
           <g className="wf-sway" style={{ transformOrigin: '108px 92px', animationDelay: right ? '-2.2s' : '0s' }}>
-            <path d={TWIN_TAIL} {...p} />
+            <Cel d={TWIN_TAIL} fill={p.fill} line={p.stroke} mirrored={right} />
             {strands('M98 120 C80 170 76 240 84 320 M104 112 C92 170 92 230 94 280')}
           </g>
         </g>
       ))}
       {item === 'ponytail' && (
         <g className="wf-sway" style={{ transformOrigin: '170px 66px' }}>
-          <path d={PONYTAIL} {...p} />
+          <Cel d={PONYTAIL} fill={p.fill} line={p.stroke} />
           {strands('M190 90 C220 130 214 200 228 280 M180 86 C206 140 204 210 214 260')}
         </g>
       )}
-      <path d={HAIR_MASS} {...p} />
+      <Cel d={HAIR_MASS} fill={p.fill} line={p.stroke} />
     </g>
   );
 }
@@ -435,19 +489,21 @@ function HairFront({ item, color }: { item: string; color: string }) {
       <defs>{defs}</defs>
       {item === 'buns' && [false, true].map((right) => (
         <g key={String(right)} transform={right ? MIRROR : undefined}>
-          <circle cx="110" cy="58" r="22" {...p} />
+          <Cel d="M88 58 A22 22 0 1 0 132 58 A22 22 0 1 0 88 58 Z" fill={p.fill} line={p.stroke} mirrored={right} depth={0.7} />
           <path d="M96 52 C102 44 116 42 124 50" fill="none" stroke="#fff" strokeOpacity="0.35" strokeWidth="3" strokeLinecap="round" />
           <path d="M98 70 C106 78 118 78 126 72" fill="none" stroke={dark} strokeOpacity="0.5" />
         </g>
       ))}
       {item === 'bob' && [false, true].map((right) => (
-        <path key={String(right)} d="M95 112 C88 150 92 176 106 190 C112 184 112 170 110 160 C106 140 106 126 110 116 Z" {...p} transform={right ? MIRROR : undefined} />
+        <g key={String(right)} transform={right ? MIRROR : undefined}>
+          <Cel d="M95 112 C88 150 92 176 106 190 C112 184 112 170 110 160 C106 140 106 126 110 116 Z" fill={p.fill} line={p.stroke} mirrored={right} depth={0.6} />
+        </g>
       ))}
       {item !== 'bob' && <>
-        <path d={side} {...p} />
-        <path d={side} {...p} transform={MIRROR} />
+        <Cel d={side} fill={p.fill} line={p.stroke} depth={0.6} />
+        <g transform={MIRROR}><Cel d={side} fill={p.fill} line={p.stroke} depth={0.6} mirrored /></g>
       </>}
-      <path d={cap} {...p} />
+      <Cel d={cap} fill={p.fill} line={p.stroke} />
       {/* Angel-ring highlight and fringe strands. */}
       <path d="M114 78 Q150 62 186 78" fill="none" stroke="#ffffff" strokeOpacity="0.4" strokeWidth="5" strokeLinecap="round" />
       <path d="M134 64 Q128 80 133 90 M150 58 Q150 88 150 108 M166 64 Q172 80 163 90" fill="none" stroke={dark} strokeOpacity="0.45" />
@@ -514,37 +570,60 @@ function Face({ eyeColor }: { eyeColor: string }) {
   );
 }
 
-function Body({ skinId }: { skinId: string }) {
-  const skin = `url(#${skinId})`;
+function Hand() {
   return (
-    <g stroke={mix(SKIN_SHADE, '#000000', 0.35)} strokeWidth="1.3" strokeLinejoin="round">
-      <path d={LEG} fill={skin} />
-      <path d={LEG} fill={skin} transform={MIRROR} />
-      <path d="M122 448 Q129 452 136 448 M178 448 Q171 452 164 448" fill="none" strokeOpacity="0.5" />
-      <path d={FOOT} fill={skin} />
-      <path d={FOOT} fill={skin} transform={MIRROR} />
+    <g>
+      <Skin d={PALM} depth={0.5} />
+      {FINGERS.map((d) => <Skin key={d} d={d} depth={0.35} />)}
+      <Skin d={THUMB} depth={0.35} />
+      {/* Knuckle arc across the back of the hand. */}
+      <path d="M64 352.5 Q71 355.5 79 352.5" fill="none" stroke={SKIN_LINE} strokeOpacity="0.4" strokeWidth="0.7" />
     </g>
   );
 }
 
-function UpperBody({ skinId }: { skinId: string }) {
-  const skin = `url(#${skinId})`;
+function Body() {
   return (
-    <g stroke={mix(SKIN_SHADE, '#000000', 0.35)} strokeWidth="1.3" strokeLinejoin="round">
-      <path d={ARM} fill={skin} />
-      <path d={ARM} fill={skin} transform={MIRROR} />
-      <path d={HAND} fill={skin} />
-      <path d={HAND} fill={skin} transform={MIRROR} />
-      <path d={NECK} fill={skin} />
+    <g>
+      {[false, true].map((m) => (
+        <g key={String(m)} transform={m ? MIRROR : undefined}>
+          <Skin d={LEG} mirrored={m} />
+          {/* Knee: the kneecap's lower edge and the dimple above it. */}
+          <path d="M122 448 Q129 452 136 448 M126 438 Q129 436 133 438" fill="none" stroke={SKIN_LINE} strokeOpacity="0.45" strokeWidth="0.9" />
+          <Skin d={FOOT} mirrored={m} depth={0.5} />
+          <path d={TOES} fill="none" stroke={SKIN_LINE} strokeOpacity="0.6" strokeWidth="0.8" strokeLinecap="round" />
+          {/* Inner ankle bone. */}
+          <path d="M141 552 Q143.5 555 142 558" fill="none" stroke={SKIN_LINE} strokeOpacity="0.45" strokeWidth="0.8" />
+        </g>
+      ))}
+      {/* Contact shadows where the feet meet the floor. */}
+      <ellipse cx="133" cy="580" rx="12" ry="2.2" fill="#000" opacity="0.3" />
+      <ellipse cx="167" cy="580" rx="12" ry="2.2" fill="#000" opacity="0.3" />
+    </g>
+  );
+}
+
+function UpperBody() {
+  return (
+    <g stroke={SKIN_LINE} strokeWidth="1.1" strokeLinejoin="round">
+      {[false, true].map((m) => (
+        <g key={String(m)} transform={m ? MIRROR : undefined}>
+          <Skin d={ARM} mirrored={m} />
+          {/* Elbow crease at the waistline. */}
+          <path d="M80 283 Q83.5 285.5 87.5 284" fill="none" strokeOpacity="0.45" strokeWidth="0.8" />
+          <Hand />
+        </g>
+      ))}
+      <Skin d={NECK} depth={0.5} />
       {/* Chin shadow, neck tendons and the notch between the collarbones. */}
       <path d="M141 168 Q150 182 159 168 L159 178 Q150 188 141 178 Z" fill={SKIN_SHADE} stroke="none" opacity="0.85" />
       <path d="M143 180 Q145 188 148 195 M157 180 Q155 188 152 195" fill="none" strokeOpacity="0.22" />
-      <path d={TORSO} fill={skin} />
+      <Skin d={TORSO} />
       <path d="M130 200 Q138 203 145 200 M155 200 Q162 203 170 200 M147.5 198 Q150 200 152.5 198" fill="none" strokeOpacity="0.4" />
       {/* Bust volumes sit in front of the collarbones; the leotard neckline follows their curve. */}
       {[0, 1].map((side) => (
         <g key={side} transform={side ? MIRROR : undefined}>
-          <path d={BUST} fill={skin} />
+          <Skin d={BUST} mirrored={!!side} depth={0.8} />
           <path d="M104 216 C110 207 122 205 132 208" fill="none" stroke="#ffffff" strokeOpacity="0.45" strokeWidth="3" strokeLinecap="round" />
         </g>
       ))}
@@ -762,34 +841,25 @@ export default function WaifuFigure({ outfit, className, celebrate = false, eyeC
   celebrate?: boolean;
   eyeColor?: string;
 }) {
-  const skinId = useSvgId('skin');
   const key = (g: GarmentChoice) => `${g.item}-${g.material}-${g.color}`;
   return (
     <svg viewBox="0 0 300 600" className={`wf-root ${className ?? ''}`} role="img" aria-label="Dress-up character">
       <style>{ANIM_CSS}</style>
-      <defs>
-        <linearGradient id={skinId} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0" stopColor={SKIN_SHADE} />
-          <stop offset="0.3" stopColor={SKIN} />
-          <stop offset="0.75" stopColor={SKIN} />
-          <stop offset="1" stopColor={SKIN_SHADE} />
-        </linearGradient>
-      </defs>
       <Scene category={outfit.scene} />
       <g className="wf-breathe">
         <g transform={HEAD_SCALE}><HairBack item={outfit.hair.item} color={outfit.hair.color} /></g>
       </g>
-      <Body skinId={skinId} />
+      <Body />
       <Pop k={key(outfit.legwear)}><Legwear choice={outfit.legwear} /></Pop>
       <Pop k={key(outfit.shoes)}><Shoes choice={outfit.shoes} /></Pop>
       {/* Layers, back to front: torso and base leotard, bottom, top, choker, head. */}
       <g className="wf-breathe">
-        <UpperBody skinId={skinId} />
+        <UpperBody />
         <Pop k={key(outfit.bottom)}><Bottom choice={outfit.bottom} /></Pop>
         <Pop k={key(outfit.top)}><Top choice={outfit.top} /></Pop>
         {outfit.accessory.item === 'choker' && <Pop k="choker"><Choker /></Pop>}
         <g transform={HEAD_SCALE}>
-          <path d={HEAD} fill={`url(#${skinId})`} stroke={mix(SKIN_SHADE, '#000000', 0.35)} strokeWidth="1.3" />
+          <Skin d={HEAD} depth={0.8} />
           <Face eyeColor={eyeColor} />
           <Pop k={`${outfit.hair.item}-${outfit.hair.color}`}><HairFront item={outfit.hair.item} color={outfit.hair.color} /></Pop>
           <Pop k={outfit.accessory.item}><Accessory item={outfit.accessory.item} /></Pop>
