@@ -585,6 +585,9 @@ export interface LyricBackdropOpts {
   lines: TimedLine[];
   /** Cover-art lane colors: [accent A, accent B, accent C]. */
   colors: [string, string, string];
+  /** Player's "Background animation" setting. Off = static layout: lyrics still
+   *  advance and highlight, but nothing drifts, pulses, slams or sparkles. */
+  animate: boolean;
 }
 
 // Append a 2-digit hex alpha; non-#rrggbb colors fall back to white.
@@ -617,14 +620,14 @@ function layoutLineCentered(
 }
 
 export function drawLyricBackdrop(ctx: CanvasRenderingContext2D, o: LyricBackdropOpts): void {
-  const { W, H, t, lines, colors } = o;
+  const { W, H, t, lines, colors, animate } = o;
   if (W <= 0 || H <= 0) return;
   const [cA, cB, cC] = colors;
 
   ctx.save();
 
   // ── Breathing color wash.
-  const breathe = 0.5 + 0.5 * Math.sin(t * 0.6);
+  const breathe = animate ? 0.5 + 0.5 * Math.sin(t * 0.6) : 0.5;
   const wash = ctx.createRadialGradient(W * (0.3 + 0.4 * breathe), H * 0.18, 0, W / 2, H * 0.3, Math.max(W, H) * 0.9);
   wash.addColorStop(0, hexA(cA, "38"));
   wash.addColorStop(0.45, hexA(cB, "18"));
@@ -634,7 +637,7 @@ export function drawLyricBackdrop(ctx: CanvasRenderingContext2D, o: LyricBackdro
 
   // ── Drifting light motes (stateless: positions are a function of time).
   ctx.globalCompositeOperation = "lighter";
-  for (let i = 0; i < MOTE_COUNT; i++) {
+  for (let i = 0; animate && i < MOTE_COUNT; i++) {
     const seed = i * 12.9898;
     const rx = (Math.sin(seed) * 43758.5453) % 1;
     const ry = (Math.sin(seed * 1.7) * 24634.6345) % 1;
@@ -672,12 +675,13 @@ export function drawLyricBackdrop(ctx: CanvasRenderingContext2D, o: LyricBackdro
     const size = Math.min(H * 0.62, (100 * W * 0.92) / natW);
     ctx.save();
     ctx.translate(W / 2, H * 0.42);
-    ctx.rotate(-0.06 + 0.03 * Math.sin(t * 0.5));
-    ctx.scale(1 + 0.12 * easeOutCubic(u), 1 + 0.12 * easeOutCubic(u));
+    ctx.rotate(animate ? -0.06 + 0.03 * Math.sin(t * 0.5) : -0.06);
+    const grow = animate ? 1 + 0.12 * easeOutCubic(u) : 1;
+    ctx.scale(grow, grow);
     ctx.font = `400 ${size}px ${BACKDROP_FONT}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.globalAlpha = 0.16 * (1 - u * 0.6);
+    ctx.globalAlpha = animate ? 0.16 * (1 - u * 0.6) : 0.12;
     ctx.lineWidth = Math.max(1.5, size * 0.012);
     ctx.strokeStyle = cB;
     ctx.strokeText(txt, 0, 0);
@@ -685,7 +689,7 @@ export function drawLyricBackdrop(ctx: CanvasRenderingContext2D, o: LyricBackdro
   }
 
   // ── Previous line drifts up and dissolves during the first 0.45s of a new line.
-  if (li > 0 && lineAge < 0.45) {
+  if (animate && li > 0 && lineAge < 0.45) {
     const prev = lines[li - 1];
     const k = easeOutCubic(lineAge / 0.45);
     const L = layoutLineCentered(ctx, prev, maxW, H * 0.11);
@@ -703,7 +707,7 @@ export function drawLyricBackdrop(ctx: CanvasRenderingContext2D, o: LyricBackdro
   }
 
   // ── Current line: big, set across the sky, revealed as it's sung.
-  const intro = easeOutCubic(clamp01(lineAge / 0.35));
+  const intro = animate ? easeOutCubic(clamp01(lineAge / 0.35)) : 1;
   const L = layoutLineCentered(ctx, line, maxW, H * 0.11);
   ctx.textBaseline = "middle";
   ctx.textAlign = "center";
@@ -724,17 +728,19 @@ export function drawLyricBackdrop(ctx: CanvasRenderingContext2D, o: LyricBackdro
     ctx.globalAlpha = intro;
     if (isActive) {
       // Slam-in: overshoot then settle.
-      const slam = u < 0.2 ? 1.45 - 0.5 * (u / 0.2) : 0.95 + 0.05 * clamp01((u - 0.2) / 0.3);
-      ctx.scale(slam, slam);
-      // Chromatic split ghosts.
-      const split = L.size * 0.035 * (1 - u);
-      ctx.globalCompositeOperation = "lighter";
-      ctx.globalAlpha = 0.55 * intro;
-      ctx.fillStyle = cA;
-      ctx.fillText(txt, -split, 0);
-      ctx.fillStyle = cB;
-      ctx.fillText(txt, split, 0);
-      ctx.globalCompositeOperation = "source-over";
+      if (animate) {
+        const slam = u < 0.2 ? 1.45 - 0.5 * (u / 0.2) : 0.95 + 0.05 * clamp01((u - 0.2) / 0.3);
+        ctx.scale(slam, slam);
+        // Chromatic split ghosts.
+        const split = L.size * 0.035 * (1 - u);
+        ctx.globalCompositeOperation = "lighter";
+        ctx.globalAlpha = 0.55 * intro;
+        ctx.fillStyle = cA;
+        ctx.fillText(txt, -split, 0);
+        ctx.fillStyle = cB;
+        ctx.fillText(txt, split, 0);
+        ctx.globalCompositeOperation = "source-over";
+      }
       // Gradient-filled hero word with glow.
       const g = ctx.createLinearGradient(0, -L.size / 2, 0, L.size / 2);
       g.addColorStop(0, "#ffffff");
