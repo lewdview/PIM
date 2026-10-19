@@ -284,7 +284,8 @@ function Garment({ id, choice, paths = [], mirror = [], details }: {
 // ---------------------------------------------------------------------------
 // Body geometry (viewBox 0 0 300 600). Left-side limbs are mirrored.
 // ---------------------------------------------------------------------------
-const HEAD = 'M150 52 C183 52 202 78 202 110 C202 132 194 146 182 158 C170 169 158 176 150 176 C142 176 130 169 118 158 C106 146 98 132 98 110 C98 78 117 52 150 52 Z';
+// Loomis head: cranium ball, cheekbones at the eye line, then a long soft jaw to a small, slightly squared chin.
+const HEAD = 'M150 51 C184 51 203 77 203 108 C203 124 200.5 136 194.5 146 C186.5 158.5 168 172.5 154.5 176.8 Q150 178 145.5 176.8 C132 172.5 113.5 158.5 105.5 146 C99.5 136 97 124 97 108 C97 77 116 51 150 51 Z';
 // Longer, tapered neck that flares into the trapezius.
 const NECK = 'M141 160 C141 174 140.5 184 137 195 Q150 201 163 195 C159.5 184 159 174 159 160 Z';
 // Exaggerated pin-up hourglass: bust ~x96–204, waist ~x124–176, hips ~x90–210.
@@ -305,7 +306,9 @@ const THUMB = 'M79.6 345 C82.4 348 83.2 353 81.6 357.6 C80.6 360 78.2 359.6 78 3
 const LEG = 'M92 344 L150 344 L148 420 C146 450 146 470 144 500 C143 525 142 545 142 560 L128 560 C126 540 124 520 121 500 C116 470 110 450 104 420 C94 396 88 370 92 344 Z';
 // One rounded bust volume (left; mirrored for the right). It is drawn over the chest and
 // collarbones so the upper curve reads as sitting in front of them.
-const BUST = 'M150 246 C150 222 140 202 123 202 C105 202 95 218 95 236 C95 254 107 265 123 265 C138 265 150 258 150 246 Z';
+// A gravity teardrop, not a circle: the upper pole slopes off the chest wall below the collarbone,
+// the fullness sits low and outside, then the fold turns under and rises to the sternum.
+const BUST = 'M150 238 C149 226 144 214 134 208 C126 203.5 116 203 108 207 C99 212 94.5 224 94.5 238 C94.5 254 104 266 120 267.5 C134 268.5 146 261 149.5 250 C150.3 246 150.4 242 150 238 Z';
 // Base layer: a plain, featureless strapless leotard so the figure is never undressed.
 const BODYSUIT = 'M96 232 C100 216 112 210 124 212 C136 214 146 220 150 232 C154 220 164 214 176 212 C188 210 200 216 204 232 C204 242 203 246 202 250 C198 264 182 270 177 278 C172 288 173 298 186 312 C202 326 212 340 210 352 L208 360 Q180 362 160 368 L140 368 Q120 362 92 360 L90 352 C88 340 98 326 114 312 C127 298 128 288 123 278 C118 270 102 264 98 250 Z';
 const TOES = 'M129.5 573.5 L129 578.6 M133.5 574.5 L133.4 579 M137.4 574.5 L137.6 578.8';
@@ -518,54 +521,120 @@ function HairFront({ item, color }: { item: string; color: string }) {
   );
 }
 
+// Face, redrawn on a Loomis head: brow line at y≈96, eye line at y≈120 (just below half the head,
+// the anime convention), nose base at y≈141, mouth at y≈153, chin at y≈177. Adult proportions:
+// eyes about one eye-width apart, upturned outer corners, the iris tucked under the upper lid.
+// Every shape is a hand-placed path (left side; mirrored for the right), shaded toward the same
+// upper-left light as the body.
+const EYE_WHITE = 'M116 118 C120 109.5 136 107.5 145 120.5 C141.5 128 133 131.5 125 130.5 C119.5 129.5 117 125 116 118 Z';
+const UPPER_LASH = 'M112.5 119.6 C117.5 106.5 135.5 103.8 146.6 118.8 L145.6 120.4 C136 110 121 110.2 116.8 120.2 Z';
+const LASH_WING = 'M116.2 116.8 L105.8 111.6 C107.4 114.6 110.4 117.6 114.8 120 Z';
+const LID_CREASE = 'M117.5 107.5 C124 101.5 137.5 101 145 109.5';
+const LID_SHADOW = 'M116 118.5 C121 110 135 108.5 145 121 C135 113.5 123 113.5 117.5 121.5 Z';
+const LOWER_LASH = 'M116.8 121.5 C119.2 128 125.2 131 132.5 130.8';
+const BROW = 'M146.5 101 C140 95.2 131 92.2 122 93.4 C118 94 115 95.4 112.6 97.8 C116.8 96.4 120.8 95.8 124.8 95.9 C132.8 96.2 140.2 98.2 146.5 101 Z';
+const EYESHADOW = 'M116.5 117 C118 106 136 100.5 146 112 C146.5 106 136 98 124 100 C117.5 101.2 113.5 108 116.5 117 Z';
+const UPPER_LIP = 'M142 152.6 C144.4 150.4 146.6 148.4 148.7 149.3 Q150 150.1 151.3 149.3 C153.4 148.4 155.6 150.4 158 152.6 Q150 154 142 152.6 Z';
+const LOWER_LIP = 'M142.9 153.1 Q150 154.6 157.1 153.1 C156 157.6 153.4 159.8 150 159.8 C146.6 159.8 144 157.6 142.9 153.1 Z';
+// The fringe's cast shadow on the forehead: the bang zigzag pushed down and away from the light.
+const BANG_SHADOW = 'M97 134 C100 122 105 110 110 100 C114 102 118 108 122 118 C126 112 130 106 133 96 C140 100 145 106 150 116 C156 112 160 106 163 96 C170 100 175 108 178 118 C184 114 188 108 190 100 C196 108 200 118 203 134 L203 60 L97 60 Z';
+
+/** Brows are drawn over the fringe, the anime convention, so the expression always reads. */
+function Brows() {
+  return (
+    <g opacity="0.9">
+      {[0, 1].map((side) => (
+        <path key={side} d={BROW} fill={mix(LINE, '#7a4a3a', 0.35)} transform={side ? MIRROR : undefined} />
+      ))}
+    </g>
+  );
+}
+
 function Face({ eyeColor }: { eyeColor: string }) {
   const irisId = useSvgId('iris');
+  const eyeClip = useSvgId('eyeclip');
+  const headClip = useSvgId('headclip');
+  const lipId = useSvgId('lip');
   return (
     <g>
       <defs>
         <linearGradient id={irisId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#1e1b4b" />
-          <stop offset="0.55" stopColor={eyeColor} />
-          <stop offset="1" stopColor={mix(eyeColor, '#ffffff', 0.55)} />
+          <stop offset="0" stopColor={mix(eyeColor, '#000000', 0.7)} />
+          <stop offset="0.45" stopColor={mix(eyeColor, '#000000', 0.15)} />
+          <stop offset="1" stopColor={mix(eyeColor, '#ffffff', 0.5)} />
         </linearGradient>
+        <linearGradient id={lipId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#e0446f" />
+          <stop offset="1" stopColor="#b8255c" />
+        </linearGradient>
+        <clipPath id={eyeClip}><path d={EYE_WHITE} /><path d={EYE_WHITE} transform={MIRROR} /></clipPath>
+        <clipPath id={headClip}><path d={HEAD} /></clipPath>
       </defs>
-      {/* Eyeshadow under the lid crease gives a more grown-up look. */}
+
+      {/* Fringe shadow across the forehead. */}
+      <path d={BANG_SHADOW} fill="#d9826e" opacity="0.45" clipPath={`url(#${headClip})`} transform="translate(2 5)" />
       {[0, 1].map((side) => (
-        <path key={side} d="M113 114 C119 100 141 97 149 110" fill="none" stroke="#c0267a" strokeOpacity="0.35" strokeWidth="5" strokeLinecap="round" transform={side ? MIRROR : undefined} />
+        <g key={side} transform={side ? MIRROR : undefined}>
+          <path d={EYESHADOW} fill="#b4467e" opacity="0.28" />
+        </g>
       ))}
-      {/* Slightly narrower, almond eyes; the blink lives on an inner group so its CSS transform doesn't fight this one. */}
-      <g transform="translate(0 121) scale(1 0.86) translate(0 -121)">
-        <g className="wf-blink">
+
+      {/* Eyes. The blink scales an inner group so its CSS transform doesn't fight the mirror. */}
+      <g className="wf-blink">
+        {[0, 1].map((side) => (
+          <g key={side} transform={side ? MIRROR : undefined}>
+            <path d={EYE_WHITE} fill="#fbf7ff" />
+          </g>
+        ))}
+        <g clipPath={`url(#${eyeClip})`}>
           {[0, 1].map((side) => (
             <g key={side} transform={side ? MIRROR : undefined}>
-              <path d="M116 120 C121 106 140 104 146 116 C146 128 138 133 130 133 C121 133 116 128 116 120 Z" fill="#ffffff" />
-              <ellipse cx="132" cy="121" rx="8.5" ry="11.5" fill={`url(#${irisId})`} />
-              <ellipse cx="132" cy="122" rx="4" ry="6" fill="#0f0a1e" />
-              <circle cx="128.5" cy="116" r="3" fill="#ffffff" />
-              <circle cx="135" cy="127" r="1.4" fill="#ffffff" opacity="0.8" />
-              <path d="M114 118 C120 103 140 100 148 113 L150 109 C141 96 118 97 111 115 Z" fill={LINE} />
-              <path d="M112 116 L104 110 M113 112 L107 105" stroke={LINE} strokeWidth="2" strokeLinecap="round" />
-              <path d="M121 131 Q132 136 143 129" fill="none" stroke={LINE} strokeOpacity="0.55" strokeWidth="0.9" strokeLinecap="round" />
+              {/* Iris tucked under the upper lid, pupil, the lid's shadow on the white. */}
+              <ellipse cx="131.5" cy="121.5" rx="8.2" ry="10.4" fill={`url(#${irisId})`} />
+              <ellipse cx="131.5" cy="121" rx="8.2" ry="10.4" fill="none" stroke={mix(eyeColor, '#000000', 0.6)} strokeWidth="1" />
+              <ellipse cx="131.5" cy="121.5" rx="3.6" ry="5.4" fill="#120a20" />
+              <path d={LID_SHADOW} fill="#3b1d5e" opacity="0.35" />
             </g>
           ))}
         </g>
+        {[0, 1].map((side) => (
+          <g key={side} transform={side ? MIRROR : undefined}>
+            {/* Catchlights toward the upper-left light (same screen side on both eyes). */}
+            <ellipse cx={side ? 134.5 : 127.5} cy="115.5" rx="2.6" ry="2.2" fill="#ffffff" />
+            <circle cx={side ? 128.5 : 135} cy="126.2" r="1.2" fill="#ffffff" opacity="0.85" />
+            <path d={UPPER_LASH} fill={LINE} />
+            <path d={LASH_WING} fill={LINE} />
+            <path d="M119 111.5 L113.5 106.2 M123.5 108.8 L119.6 103.6" stroke={LINE} strokeWidth="1.3" strokeLinecap="round" />
+            <path d={LOWER_LASH} fill="none" stroke={LINE} strokeOpacity="0.7" strokeWidth="0.9" strokeLinecap="round" />
+            <path d={LID_CREASE} fill="none" stroke={LINE} strokeOpacity="0.45" strokeWidth="0.9" strokeLinecap="round" />
+            {/* Inner corner of the eye. */}
+            <path d="M145.6 121.6 Q147.6 122.6 146 124.2" fill="none" stroke="#c97a7a" strokeWidth="1" strokeLinecap="round" />
+          </g>
+        ))}
       </g>
+
+      {/* Blush: a soft wash with three quick hatch strokes on each cheek. */}
       {[0, 1].map((side) => (
         <g key={side} transform={side ? MIRROR : undefined}>
-          <path d="M119 95 Q131 88 144 94" fill="none" stroke={mix(LINE, '#ffffff', 0.2)} strokeWidth="2" strokeLinecap="round" />
-          <ellipse cx="123" cy="141" rx="8" ry="3.5" fill="#ff7eb6" opacity="0.3" />
+          <path d="M113 140 C116 135.5 128 135 132 139.5 C128 143.5 117 144 113 140 Z" fill="#ff7eb6" opacity="0.28" />
+          <path d="M118 137.5 L116 141.5 M122 137.5 L120 141.5 M126 137.5 L124 141.5" stroke="#f0609a" strokeOpacity="0.55" strokeWidth="0.9" strokeLinecap="round" />
         </g>
       ))}
-      {/* Small button nose: a shadow line plus a highlight on the bridge. */}
-      <path d="M151.5 132 Q153 139 149 142.5" fill="none" stroke={mix(SKIN_SHADE, '#000000', 0.15)} strokeWidth="1.3" strokeLinecap="round" />
-      <path d="M148.5 128 L148.5 135" stroke="#ffffff" strokeOpacity="0.6" strokeWidth="1.2" strokeLinecap="round" />
-      {/* Full glossy lips: a defined cupid's bow over a fuller lower lip. */}
-      <path d="M142 152 Q145.5 147.5 150 150 Q154.5 147.5 158 152 Q150 154.2 142 152 Z" fill="#b8255c" stroke="#7a1240" strokeWidth="0.7" />
-      <path d="M142.4 152.4 Q150 154.8 157.6 152.4 Q155.5 159.5 150 159.5 Q144.5 159.5 142.4 152.4 Z" fill="#d6336c" stroke="#7a1240" strokeWidth="0.7" />
-      <ellipse cx="152.6" cy="156" rx="2.4" ry="1" fill="#ffffff" opacity="0.65" />
-      {/* Pin-up beauty mark and a soft shadow under the chin line. */}
-      <circle cx="163" cy="150" r="1.1" fill={LINE} />
-      <path d="M128 164 Q150 180 172 164" fill="none" stroke={SKIN_SHADE} strokeWidth="2" strokeOpacity="0.5" />
+
+      {/* Nose: the tip, and its cel shadow on the side away from the light. */}
+      <path d="M151.4 130 C153 134.6 154.6 138.2 153.8 141.2 C152.8 140.2 152 139.8 151 139.8 Z" fill="#d9826e" opacity="0.55" />
+      <path d="M150.6 140.4 Q153.4 141.4 151.8 143" fill="none" stroke={SKIN_LINE} strokeWidth="1.1" strokeLinecap="round" />
+
+      {/* Lips: a defined cupid's bow over a fuller lower lip, the mouth line darkest at the corners. */}
+      <path d={UPPER_LIP} fill="#a61e52" />
+      <path d={LOWER_LIP} fill={`url(#${lipId})`} />
+      <path d="M141.6 152.4 Q146 153.8 150 153.5 Q154 153.8 158.4 152.4" fill="none" stroke="#5c0f30" strokeWidth="1" strokeLinecap="round" />
+      <path d="M140.8 151.8 L142.2 152.8 M159.2 151.8 L157.8 152.8" stroke="#5c0f30" strokeOpacity="0.6" strokeWidth="0.8" strokeLinecap="round" />
+      <path d="M145.6 155.6 Q148 154.9 150.2 155.5" fill="none" stroke="#ffffff" strokeOpacity="0.75" strokeWidth="1.2" strokeLinecap="round" />
+      <path d="M147 161.8 Q150 162.8 153 161.8" fill="none" stroke="#d9826e" strokeOpacity="0.6" strokeWidth="0.9" strokeLinecap="round" />
+
+      {/* Pin-up beauty mark. */}
+      <circle cx="163" cy="149.5" r="1.1" fill={LINE} />
     </g>
   );
 }
@@ -624,7 +693,7 @@ function UpperBody() {
       {[0, 1].map((side) => (
         <g key={side} transform={side ? MIRROR : undefined}>
           <Skin d={BUST} mirrored={!!side} depth={0.8} />
-          <path d="M104 216 C110 207 122 205 132 208" fill="none" stroke="#ffffff" strokeOpacity="0.45" strokeWidth="3" strokeLinecap="round" />
+          <path d="M102.5 215 C107.5 208.8 115.5 206.5 124 207.2" fill="none" stroke="#ffffff" strokeOpacity="0.5" strokeWidth="2.6" strokeLinecap="round" />
         </g>
       ))}
       <path d={BODYSUIT} fill="#2b2140" />
@@ -638,10 +707,10 @@ function BustShading({ opacity = 0.35 }: { opacity?: number }) {
   return (
     <g fill="none" stroke="#000" strokeOpacity={opacity} strokeWidth="1.4" strokeLinecap="round">
       {/* Upper curves give tops the same rounded shape as the bust underneath. */}
-      <path d="M97 232 C99 214 110 205 123 205 C135 205 143 213 147 224" strokeOpacity={opacity * 0.6} />
-      <path d="M203 232 C201 214 190 205 177 205 C165 205 157 213 153 224" strokeOpacity={opacity * 0.6} />
-      <path d="M101 250 Q124 272 148 254" />
-      <path d="M199 250 Q176 272 152 254" />
+      <path d="M96 236 C96 220 104 208 116 206 C128 204.5 140 210 147 222" strokeOpacity={opacity * 0.6} />
+      <path d="M204 236 C204 220 196 208 184 206 C172 204.5 160 210 153 222" strokeOpacity={opacity * 0.6} />
+      <path d="M98 252 Q110 268 124 268 Q140 268 148 256" />
+      <path d="M202 252 Q190 268 176 268 Q160 268 152 256" />
       <path d="M150 230 L150 246" strokeOpacity={opacity * 0.8} />
       <path d="M126 290 Q150 296 174 290" strokeOpacity={opacity * 0.5} />
     </g>
@@ -739,7 +808,7 @@ function Top({ choice }: { choice: GarmentChoice }) {
         mirror={[SLEEVE_SHORT]} details={<BustShading opacity={0.3} />} />;
     case 'bikini':
       return <Garment id={id} choice={choice}
-        mirror={['M99 230 Q122 208 149 230 L148 256 Q126 274 100 254 Z', 'M124 214 L137 190 L140 192 L128 216 Z']}
+        mirror={['M98 232 C104 216 124 210 136 214 Q145 220 149 234 L149 252 C145 263 134 269 121 268 C107 267 99 258 97 246 Z', 'M124 214 L137 190 L140 192 L128 216 Z']}
         details={<g><path d="M147 238 L153 238" stroke={choice.color} strokeWidth="3" /><BustShading opacity={0.25} /></g>} />;
     case 'corset':
       return <Garment id={id} choice={choice}
@@ -862,6 +931,7 @@ export default function WaifuFigure({ outfit, className, celebrate = false, eyeC
           <Skin d={HEAD} depth={0.8} />
           <Face eyeColor={eyeColor} />
           <Pop k={`${outfit.hair.item}-${outfit.hair.color}`}><HairFront item={outfit.hair.item} color={outfit.hair.color} /></Pop>
+          <Brows />
           <Pop k={outfit.accessory.item}><Accessory item={outfit.accessory.item} /></Pop>
         </g>
       </g>
