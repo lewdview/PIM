@@ -342,7 +342,9 @@ export async function getSongById(id: string): Promise<GameSong | null> {
     let fetchUrl = `/data/songs_variants/v1_gimmicks/${cleanFetchId}.json`;
 
     if (variant === 'v6_master') {
-      fetchUrl = `/data/songs_variants/v6_master/${cleanFetchId}.json`;
+      fetchUrl = shouldUseDeluxe
+        ? `/data/songs_variants/v6_master/${cleanFetchId}_deluxe.json`
+        : `/data/songs_variants/v6_master/${cleanFetchId}.json`;
     } else if (variant === 'v4_neural') {
       fetchUrl = `/data/songs_variants/v4_neural/${cleanFetchId}.json`;
     } else if (variant === 'v1_gimmicks') {
@@ -360,6 +362,16 @@ export async function getSongById(id: string): Promise<GameSong | null> {
     }
 
     let res = await fetch(fetchUrl);
+    // Chart Master Deluxe not baked for this day yet: load the standard v6
+    // chart; gameplay sees `deluxe` without a v6_deluxe chartVersion and
+    // generates the Deluxe chart from the audio at runtime.
+    let deluxeAtRuntime = false;
+    // A missing file can come back as the SPA's index.html with a 200
+    const isHtml = (r: Response) => (r.headers.get('content-type') || '').includes('text/html');
+    if (shouldUseDeluxe && variant === 'v6_master' && (!res.ok || isHtml(res))) {
+      res = await fetch(`/data/songs_variants/v6_master/${cleanFetchId}.json`);
+      deluxeAtRuntime = res.ok;
+    }
     if (!res.ok && shouldUseDeluxe) {
       // Fallback to standard v5_flagship if deluxe not found
       res = await fetch(`/data/songs_variants/v5_flagship/${cleanFetchId}.json`);
@@ -370,6 +382,11 @@ export async function getSongById(id: string): Promise<GameSong | null> {
     }
     if (!res.ok) throw new Error(`Failed to fetch song detail for ${cleanFetchId}`);
     const fullDetail = await res.json();
+    if (deluxeAtRuntime) {
+      fullDetail.deluxe = true;
+      fullDetail.timingProfile = 'elite';
+      fullDetail.difficultyLevel = Math.min(10, (fullDetail.difficultyLevel || basicSong.difficultyLevel || 5) + 2);
+    }
 
     return resolveSongUrls({
       ...basicSong,

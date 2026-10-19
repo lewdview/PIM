@@ -16,12 +16,15 @@ import { composeChart } from './compose.ts';
 export { ANALYSIS_SAMPLE_RATE, analyzeAudio };
 export type { AudioAnalysis };
 export const CHART_MASTER_VERSION = 'v6_master';
+/** Chart Master Deluxe: the harder edition, stored as day-XXX_deluxe.json next to v6. */
+export const CHART_MASTER_DELUXE_VERSION = 'v6_deluxe';
 
 export interface ChartMasterInput {
   bpm: number;
   duration?: number;
   difficultyLevel?: number;
   day?: number;
+  deluxe?: boolean;
 }
 
 export interface ChartStage {
@@ -75,6 +78,7 @@ export function generateMasterChart(
     difficulty: meta.difficultyLevel || 5,
     seed: (meta.day || 1) * 7919 + Math.round(grid.bpm * 100),
     duration,
+    deluxe: meta.deluxe,
   });
 
   const r3 = (x: number) => Math.round(x * 1000) / 1000;
@@ -95,7 +99,7 @@ export function generateMasterChart(
     notes,
     stages,
     report: {
-      version: CHART_MASTER_VERSION,
+      version: meta.deluxe ? CHART_MASTER_DELUXE_VERSION : CHART_MASTER_VERSION,
       bpm: Math.round(grid.bpm * 100) / 100,
       catalogBpm: grid.catalogBpm,
       tempoConfidence: Math.round(grid.confidence * 100) / 100,
