@@ -8,8 +8,8 @@
 //  a REMIX note glitches away in RGB-split blocks.
 // ═══════════════════════════════════════════════════════════════
 
-export type CelebrationKind = 'confetti' | 'ribbons' | 'hearts' | 'bubbles' | 'stars' | 'explosion' | 'glitch';
-export type CelebrationNote = 'break' | 'accent' | 'mine' | 'remix';
+export type CelebrationKind = 'confetti' | 'ribbons' | 'hearts' | 'bubbles' | 'stars' | 'explosion' | 'glitch' | 'vortex';
+export type CelebrationNote = 'break' | 'accent' | 'mine' | 'remix' | 'warp' | 'warp-clear';
 
 interface Bit {
   x: number;
@@ -48,6 +48,7 @@ const LIFE_MS: Record<CelebrationKind, number> = {
   stars: 1200,
   explosion: 1300,
   glitch: 750,
+  vortex: 1600,
 };
 
 const CONFETTI_COLORS = ['#FF3B6B', '#FFD23F', '#3BCEAC', '#00B4FF', '#B967FF', '#FF7B00', '#FFFFFF', '#CCFF00'];
@@ -65,6 +66,7 @@ function pick<T>(list: T[], rand: () => number): T {
 export function chooseCelebration(note: CelebrationNote, rand: () => number = Math.random): CelebrationKind {
   if (note === 'mine') return 'explosion';
   if (note === 'remix') return 'glitch';
+  if (note === 'warp' || note === 'warp-clear') return 'vortex';
   if (rand() < ODDITY_CHANCE) return pick(ODDITIES, rand);
   return note === 'break' ? 'confetti' : 'ribbons';
 }
@@ -163,6 +165,16 @@ export function spawnCelebration(
         color: 'smoke',
       }));
     }
+  } else if (kind === 'vortex') {
+    // Rainbow sparks that orbit the hit point and get pulled into it
+    for (let i = 0, c = n(48); i < c; i++) {
+      bits.push(bit({
+        vx: 60 + rand() * 140,         // orbit radius
+        vy: 4 + rand() * 5,            // angular speed (rad/s)
+        size: 2 + rand() * 3.5,
+        color: `hsl(${Math.floor(rand() * 360)}, 100%, 65%)`,
+      }));
+    }
   } else if (kind === 'glitch') {
     // Blocks the note breaks into: wide, thin slices that tear sideways
     for (let i = 0, c = n(22); i < c; i++) {
@@ -226,6 +238,14 @@ function step(c: Celebration, dt: number) {
       }
     } else if (c.kind === 'glitch') {
       b.vx *= Math.pow(0.15, dt);
+    } else if (c.kind === 'vortex') {
+      // Spiral in: radius shrinks while the spin speeds up
+      b.vx *= Math.pow(0.35, dt);
+      b.vy *= Math.pow(1.6, dt);
+      b.x = c.originX + Math.cos(b.phase) * b.vx;
+      b.y = c.originY + Math.sin(b.phase) * b.vx * 0.6;
+      b.phase += b.vy * dt;
+      continue;
     } else {
       const drag = Math.pow(0.25, dt);
       b.vx *= drag;
@@ -334,6 +354,16 @@ export function drawCelebrations(ctx: CanvasRenderingContext2D, list: Celebratio
       drawFireball(ctx, c.originX, c.originY, t01);
     } else if (c.kind === 'glitch') {
       drawGlitchTears(ctx, c.originX, c.originY, t01);
+    } else if (c.kind === 'vortex' && t01 < 0.6) {
+      const p = t01 / 0.6;
+      ctx.lineWidth = 3;
+      for (let k = 0; k < 3; k++) {
+        ctx.globalAlpha = (1 - p) * 0.8;
+        ctx.strokeStyle = `hsl(${(nowMs / 3 + k * 120) % 360}, 100%, 65%)`;
+        ctx.beginPath();
+        ctx.ellipse(c.originX, c.originY, (40 + k * 40) * (1 + p * 2), (24 + k * 24) * (1 + p * 2), 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
     }
 
     if (c.kind === 'confetti' && t01 < 0.25) {
@@ -443,6 +473,14 @@ export function drawCelebrations(ctx: CanvasRenderingContext2D, list: Celebratio
         ctx.globalCompositeOperation = 'source-over';
         ctx.fillStyle = b.color;
         ctx.fillRect(b.x - w / 2 + jitter, b.y - h / 2, w, h * 0.5);
+      } else if (c.kind === 'vortex') {
+        ctx.fillStyle = b.color;
+        ctx.shadowColor = b.color;
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, b.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
       } else if (c.kind === 'stars') {
         ctx.save();
         ctx.translate(b.x, b.y);

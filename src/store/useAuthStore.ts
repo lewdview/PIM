@@ -139,6 +139,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const query = new URLSearchParams(window.location.search);
     if (query.get('skip_splash') === 'true' || query.get('splash') === 'false') return false;
     if (window.location.pathname.startsWith('/play/')) return false;
+    if (window.location.pathname.startsWith('/secret/')) return false;
     if (isLaunchPath(window.location.pathname)) return false;
     return true;
   })(),

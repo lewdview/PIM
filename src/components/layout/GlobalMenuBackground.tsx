@@ -99,6 +99,7 @@ export function GlobalMenuBackground() {
 
   const hideBg =
     location.startsWith('/play/') ||
+    location.startsWith('/secret/') ||
     location === '/tutorial' ||
     location.startsWith('/results/');
 
