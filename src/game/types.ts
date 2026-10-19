@@ -20,7 +20,9 @@ export type NoteType =
   | 'stream'
   | 'spiral'
   | 'pulse'
-  | 'shift';
+  | 'shift'
+  | 'warp'
+  | 'warp-clear';
 
 export interface Note {
   id: number;

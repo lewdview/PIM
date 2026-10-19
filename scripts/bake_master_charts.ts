@@ -12,6 +12,7 @@
  *   node scripts/bake_master_charts.ts --force         # rebuild everything
  *   node scripts/bake_master_charts.ts --jobs 6
  *   node scripts/bake_master_charts.ts --local /Volumes/extremeUno/th3scr1b3-365-warp/365-releases
+ *   node scripts/bake_master_charts.ts --deluxe        # Chart Master Deluxe → day-XXX_deluxe.json
  *
  * Audio source per day: --local base + src/game/day_file_map.json path when
  * that file exists, else a file already in --cache, else a download from the
@@ -26,7 +27,9 @@ import { homedir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
-import { analyzeAudio, generateMasterChart, ANALYSIS_SAMPLE_RATE, CHART_MASTER_VERSION, type ChartMasterReport } from '../src/game/chartMaster/index.ts';
+import {
+  analyzeAudio, generateMasterChart, ANALYSIS_SAMPLE_RATE, CHART_MASTER_VERSION, CHART_MASTER_DELUXE_VERSION, type ChartMasterReport,
+} from '../src/game/chartMaster/index.ts';
 import { measureSync, validateChart } from '../src/game/chartMaster/validate.ts';
 
 const run = promisify(execFile);
@@ -44,6 +47,8 @@ const opt = (name: string, def: string) => {
 };
 const force = flag('--force');
 const keep = flag('--keep');
+/** Deluxe edition: written next to the v6 charts as day-XXX_deluxe.json. */
+const deluxe = flag('--deluxe');
 const localBase = opt('--local', '');
 const dayFileMap: Record<string, { audio: string }> = JSON.parse(
   readFileSync(path.join(ROOT, 'src/game/day_file_map.json'), 'utf8'),
@@ -93,7 +98,7 @@ interface ManifestEntry {
   sync: { v6: number; v1: number | null; random: number };
 }
 
-const manifestPath = path.join(OUT_DIR, 'manifest.json');
+const manifestPath = path.join(OUT_DIR, deluxe ? 'manifest_deluxe.json' : 'manifest.json');
 const manifest: Record<string, ManifestEntry> = existsSync(manifestPath)
   ? JSON.parse(readFileSync(manifestPath, 'utf8')).songs ?? {}
   : {};
@@ -104,7 +109,7 @@ const failed: string[] = [];
 
 async function bake(file: string) {
   const id = file.replace('.json', '');
-  const outPath = path.join(OUT_DIR, file);
+  const outPath = path.join(OUT_DIR, deluxe ? file.replace('.json', '_deluxe.json') : file);
   if (!force && existsSync(outPath)) { skipped++; return; }
   const meta = JSON.parse(readFileSync(path.join(SONGS_DIR, file), 'utf8'));
   if (!meta.audioUrl) { failed.push(`${id} (no audioUrl)`); return; }
@@ -133,6 +138,7 @@ async function bake(file: string) {
       duration: meta.duration,
       difficultyLevel: meta.difficultyLevel,
       day: meta.day,
+      deluxe,
     }, an);
     const v6Sync = measureSync(an, result.notes);
     const legacyPath = path.join(LEGACY_DIR, file);
@@ -141,14 +147,15 @@ async function bake(file: string) {
       : null;
     const pct = (x: number) => Math.round(x * 100);
     const report: ChartMasterReport = result.report;
-    const issues = validateChart(result.notes, result.stages, pcm.length / ANALYSIS_SAMPLE_RATE);
+    const issues = validateChart(result.notes, result.stages, pcm.length / ANALYSIS_SAMPLE_RATE, { deluxe });
     if (issues.length) throw new Error(`invalid chart: ${issues.slice(0, 4).join('; ')}${issues.length > 4 ? ` (+${issues.length - 4} more)` : ''}`);
     const out = {
       ...meta,
       notes: result.notes,
       stages: result.stages,
-      chartVersion: CHART_MASTER_VERSION,
+      chartVersion: deluxe ? CHART_MASTER_DELUXE_VERSION : CHART_MASTER_VERSION,
       chartReport: report,
+      ...(deluxe ? { deluxe: true, timingProfile: 'elite', difficultyLevel: Math.min(10, (meta.difficultyLevel || 5) + 2) } : {}),
     };
     writeFileSync(outPath, JSON.stringify(out));
     manifest[id] = {
@@ -181,7 +188,7 @@ await Promise.all(
 
 writeFileSync(
   manifestPath,
-  JSON.stringify({ version: CHART_MASTER_VERSION, generatedAt: new Date().toISOString(), songs: manifest }, null, 1),
+  JSON.stringify({ version: deluxe ? CHART_MASTER_DELUXE_VERSION : CHART_MASTER_VERSION, generatedAt: new Date().toISOString(), songs: manifest }, null, 1),
 );
 const scored = Object.values(manifest).filter((m) => m.sync);
 if (scored.length) {

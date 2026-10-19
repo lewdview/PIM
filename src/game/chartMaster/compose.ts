@@ -10,6 +10,11 @@
  *  - repeated sections replay the pattern learned the first time, and are
  *    embellished when they return in a harder stage
  *  - stage 3 / stage 5 (POV switches) get a clear runway and an entrance hit
+ *
+ * Deluxe mode (`deluxe: true`) is the same composer pushed harder: +2
+ * difficulty, denser and tighter spacing, every note type from earlier
+ * stages, and extra passes for lifts, zigzags, mines, breaks and remixes
+ * that stay tied to the music.
  */
 
 import type { Note, NoteType } from '../types.ts';
@@ -21,6 +26,8 @@ export interface ComposeInput {
   difficulty: number; // 1..10
   seed: number;
   duration: number;
+  /** Chart Master Deluxe: harder, and uses every note type. */
+  deluxe?: boolean;
 }
 
 type SwipeDir = NonNullable<Note['swipeDirection']>;
@@ -44,12 +51,28 @@ const STAGE_TYPES: Record<number, Set<NoteType>> = {
   5: new Set<NoteType>(['tap', 'hold', 'slide', 'swipe', 'accent', 'hold-swipe']),
 };
 
+const DELUXE_STAGE_TYPES: Record<number, Set<NoteType>> = {
+  1: new Set<NoteType>(['tap', 'hold', 'swipe']),
+  2: new Set<NoteType>(['tap', 'hold', 'swipe', 'slide', 'accent', 'hold-swipe', 'lift']),
+  3: new Set<NoteType>(['tap', 'hold', 'swipe', 'slide', 'accent', 'hold-swipe', 'lift', 'zigzag', 'mine']),
+  4: new Set<NoteType>(['tap', 'hold', 'swipe', 'slide', 'accent', 'hold-swipe', 'lift', 'zigzag', 'mine', 'remix', 'break']),
+  5: new Set<NoteType>(['tap', 'hold', 'swipe', 'slide', 'accent', 'hold-swipe', 'lift', 'zigzag', 'mine', 'remix', 'break']),
+};
+
 /** Downgrade a note type to what a stage allows. */
-function gateType(type: NoteType, stage: number): NoteType {
-  const ok = STAGE_TYPES[stage];
+function gateType(type: NoteType, stage: number, types: Record<number, Set<NoteType>>): NoteType {
+  const ok = types[stage];
   if (ok.has(type)) return type;
-  if ((type === 'slide' || type === 'hold-swipe') && ok.has('hold')) return 'hold';
+  if ((type === 'slide' || type === 'hold-swipe' || type === 'zigzag') && ok.has('hold')) return 'hold';
   return 'tap';
+}
+
+/** 8-way swipe direction: the lane gives left/right, the melody gives up/down. */
+function swipeDirFor(lane: number, contour: number): SwipeDir {
+  const h = lane === 0 ? 'left' : lane === 2 ? 'right' : '';
+  const v = contour > 0.15 ? 'up' : contour < -0.15 ? 'down' : '';
+  if (h && v) return `${v}-${h}` as SwipeDir;
+  return (h || v || 'up') as SwipeDir;
 }
 
 const METRIC = [1.0, 0.3, 0.5, 0.3, 0.75, 0.3, 0.5, 0.3, 0.85, 0.3, 0.5, 0.3, 0.75, 0.3, 0.5, 0.3];
@@ -64,7 +87,9 @@ function createPrng(seed: number) {
 }
 
 export function composeChart(an: AudioAnalysis, grid: BeatGrid, st: Structure, input: ComposeInput): Note[] {
-  const d = Math.max(1, Math.min(10, Math.round(input.difficulty || 5)));
+  const deluxe = !!input.deluxe;
+  const types = deluxe ? DELUXE_STAGE_TYPES : STAGE_TYPES;
+  const d = Math.max(1, Math.min(10, Math.round(input.difficulty || 5) + (deluxe ? 2 : 0)));
   const rand = createPrng(input.seed);
   const fr = an.frameRate;
   const beatDur = 60 / grid.bpm;
@@ -74,7 +99,7 @@ export function composeChart(an: AudioAnalysis, grid: BeatGrid, st: Structure, i
   // whether the tracker settled on half- or double-time.
   const diffScale = 0.6 + 0.08 * d;            // density: d1 0.68× … d10 1.4×
   const spacingScale = 1.5 - 0.1 * d;          // spacing: d1 1.4× … d10 0.5×
-  const STAGE_GAP_S = [0.6, 0.4, 0.3, 0.22, 0.2];
+  const STAGE_GAP_S = deluxe ? [0.45, 0.3, 0.22, 0.16, 0.13] : [0.6, 0.4, 0.3, 0.22, 0.2];
   const minGapFor = (stage: number) => Math.max(0.1, STAGE_GAP_S[stage - 1] * spacingScale * 0.9);
   const slotDur = beatDur / 4;
   /** Coarsest grid step (in 16ths) that still respects the stage's spacing. */
@@ -83,7 +108,7 @@ export function composeChart(an: AudioAnalysis, grid: BeatGrid, st: Structure, i
     return 8;
   };
   /** Notes per second at full activity, by stage (d = 5). */
-  const PER_SEC = [0.9, 1.4, 1.9, 2.4, 2.7];
+  const PER_SEC = [0.9, 1.4, 1.9, 2.4, 2.7].map((x) => x * (deluxe ? 1.35 : 1));
   const allowOverlapHolds = (stage: number) => stage >= 4 || (stage === 3 && d >= 5);
 
   // ── Stage lookup + gap zones around boundaries ──
@@ -156,7 +181,11 @@ export function composeChart(an: AudioAnalysis, grid: BeatGrid, st: Structure, i
     type: {} as Record<string, number[]>,
   };
   /** Per-stage quota for each special mechanic, as a share of the stage's notes. */
-  const QUOTA: Partial<Record<NoteType, number>> = { slide: 0.07, 'hold-swipe': 0.04, swipe: 0.08, accent: 0.05, double: 0.07 };
+  const QUOTA: Partial<Record<NoteType, number>> = deluxe
+    ? { slide: 0.08, 'hold-swipe': 0.05, swipe: 0.1, accent: 0.05, double: 0.1, lift: 0.05, zigzag: 0.04 }
+    : { slide: 0.07, 'hold-swipe': 0.04, swipe: 0.08, accent: 0.05, double: 0.07 };
+  /** Deluxe: short same-lane repeats (jacks, trills) are fair game late in the song. */
+  const jacksOk = (stage: number) => deluxe && stage >= 4;
   const room = (type: NoteType, stage: number) =>
     ((counts.type[type] ?? [])[stage] ?? 0) < (QUOTA[type] ?? 0) * Math.max(12, counts.notes[stage]);
   const bump = (type: string, stage: number) => {
@@ -185,7 +214,7 @@ export function composeChart(an: AudioAnalysis, grid: BeatGrid, st: Structure, i
       const n = notes[i];
       if (t - n.time > 1.5) break;
       const dt = Math.abs(t - n.time);
-      if (n.lane === lane && dt < 0.21) return false;
+      if (n.lane === lane && dt < (jacksOk(stage) ? 0.15 : 0.21)) return false;
       if (dt < 0.01) { if (!simultaneousOk) return false; continue; }
       if (dt < minGap) return false;
     }
@@ -210,8 +239,8 @@ export function composeChart(an: AudioAnalysis, grid: BeatGrid, st: Structure, i
         if (contour < -0.15 && L < prev.lane) score += 0.4;
         if (Math.abs(contour) <= 0.15 && Math.abs(L - prev.lane) === 1) score += 0.1;
         if (L === prev.lane) {
-          score -= dt < 0.3 ? 0.7 : dt < 0.6 ? 0.25 : 0;
-          if (prev2 && prev2.lane === L && t - prev2.time < 1.2) score -= 1.5;
+          score -= (dt < 0.3 ? 0.7 : dt < 0.6 ? 0.25 : 0) * (jacksOk(stage) ? 0.4 : 1);
+          if (prev2 && prev2.lane === L && t - prev2.time < 1.2) score -= jacksOk(stage) ? 0.6 : 1.5;
         }
         if (Math.abs(L - prev.lane) === 2 && dt < 0.25) score -= 0.35;
       }
@@ -239,6 +268,11 @@ export function composeChart(an: AudioAnalysis, grid: BeatGrid, st: Structure, i
     return f / fr - t;
   };
 
+  /** No other note anywhere on the highway while a zigzag would be held. */
+  const zigzagClear = (t: number, len: number) =>
+    !notes.some((n) => n.time > t - 0.2 && n.time < t + len + 0.25) &&
+    !holds.some((h) => h.end > t - 0.2 && h.start < t + len + 0.25);
+
   const pushNote = (n: Omit<Note, 'id'>) => {
     const stage = n.stage ?? stageOf(n.time);
     notes.push({ ...n, id: 0, stage });
@@ -253,7 +287,7 @@ export function composeChart(an: AudioAnalysis, grid: BeatGrid, st: Structure, i
 
   /** Decide hold length (beats, quantised) for a note, or 0. */
   const holdFor = (t: number, lane: number, stage: number, barNotes: number[]): number => {
-    if (stage < 2) return 0;
+    if (!types[stage].has('hold')) return 0;
     if (counts.hold[stage] > 0.35 * Math.max(4, counts.notes[stage])) return 0;
     const sustain = sustainAt(t);
     const q = stage >= 4 ? 0.25 : 0.5;
@@ -314,7 +348,8 @@ export function composeChart(an: AudioAnalysis, grid: BeatGrid, st: Structure, i
         chosen.push({ slot: c.slot, t: c.t, sal: c.sal, tpl: tn });
       }
     }
-    const embellish = !template || stage > templateStage;
+    // Deluxe embellishes every return of a section, not only harder ones
+    const embellish = !template || stage > templateStage || deluxe;
     if (embellish) {
       const ranked = candidates
         .filter((c) => !chosen.some((x) => x.slot === c.slot))
@@ -344,9 +379,10 @@ export function composeChart(an: AudioAnalysis, grid: BeatGrid, st: Structure, i
       let swipeDirection: SwipeDir | undefined;
 
       if (c.tpl) {
-        type = gateType(c.tpl.type, stage);
-        holdBeats = type === 'hold' || type === 'slide' || type === 'hold-swipe' ? (c.tpl.holdBeats ?? 0) : 0;
-        if (type === 'slide') targetLane = c.tpl.targetLane;
+        type = gateType(c.tpl.type, stage, types);
+        holdBeats = type === 'hold' || type === 'slide' || type === 'hold-swipe' || type === 'zigzag' ? (c.tpl.holdBeats ?? 0) : 0;
+        if (type === 'slide' || type === 'zigzag') targetLane = c.tpl.targetLane;
+        if (type === 'zigzag' && !zigzagClear(c.t, holdBeats * beatDur)) { type = 'hold'; targetLane = undefined; }
         if (type === 'swipe' || type === 'hold-swipe') swipeDirection = c.tpl.swipeDirection;
         // Re-validate the template hold against the current context
         if (holdBeats > 0) {
@@ -358,7 +394,7 @@ export function composeChart(an: AudioAnalysis, grid: BeatGrid, st: Structure, i
         holdBeats = holdFor(c.t, lane, stage, barTimes);
         if (holdBeats > 0) {
           type = 'hold';
-          const ok = STAGE_TYPES[stage];
+          const ok = types[stage];
           const endT = c.t + holdBeats * beatDur;
           // Pitch glide → slide toward the direction the melody moves
           const glide = Math.log2((centroidAt(endT - 0.05) || 1) / (centroidAt(c.t + 0.05) || 1));
@@ -366,15 +402,27 @@ export function composeChart(an: AudioAnalysis, grid: BeatGrid, st: Structure, i
             const tl = lane + (glide > 0 ? 1 : -1);
             if (tl >= 0 && tl <= 2 && canPlace(c.t, tl, stage)) { type = 'slide'; targetLane = tl; }
           }
+          // Deluxe: a long outer-lane hold over a wobbling melody → zigzag across the highway
+          if (
+            type === 'hold' && ok.has('zigzag') && room('zigzag', stage) && lane !== 1 &&
+            holdBeats >= 2 && Math.abs(glide) <= 0.4 && zigzagClear(c.t, holdBeats * beatDur)
+          ) {
+            type = 'zigzag';
+            targetLane = 2 - lane;
+          }
           // Hold released on a hit → hold-swipe (flick out on the accent)
           if (type === 'hold' && ok.has('hold-swipe') && room('hold-swipe', stage)) {
             const release = combined(salience(endT));
-            if (release > 1.0) { type = 'hold-swipe'; swipeDirection = LANE_DIR[lane]; }
+            if (release > 1.0) {
+              type = 'hold-swipe';
+              swipeDirection = deluxe ? swipeDirFor(lane, Math.log2((centroidAt(endT + 0.05) || 1) / (centroidAt(endT - 0.1) || 1))) : LANE_DIR[lane];
+            }
           }
         } else {
-          const ok = STAGE_TYPES[stage];
+          const ok = types[stage];
           const sc = combined(c.sal);
           const prev = lastNoteBefore(c.t);
+          const contour = prev ? Math.log2((centroidAt(c.t) || 1) / (centroidAt(prev.time) || 1)) : 0;
           if (ok.has('accent') && room('accent', stage) && (c.slot === 0 || c.slot === 8) && sc >= accentThreshold) {
             type = 'accent';
           } else if (
@@ -383,8 +431,11 @@ export function composeChart(an: AudioAnalysis, grid: BeatGrid, st: Structure, i
              (c.slot >= 12 && (bar.index % 4) === 3 && c === chosen[chosen.length - 1]))
           ) {
             type = 'swipe';
-            swipeDirection = LANE_DIR[lane];
+            swipeDirection = deluxe ? swipeDirFor(lane, contour) : LANE_DIR[lane];
             lastSwipe = c.t;
+          } else if (ok.has('lift') && room('lift', stage) && contour > 0.35 && sc > 0.6) {
+            // Deluxe: the melody jumps up → flick the note up and away
+            type = 'lift';
           }
         }
       }
@@ -397,13 +448,19 @@ export function composeChart(an: AudioAnalysis, grid: BeatGrid, st: Structure, i
         ...(holdDuration ? { holdDuration } : {}),
         ...(targetLane !== undefined ? { targetLane } : {}),
         ...(swipeDirection ? { swipeDirection } : {}),
+        ...(type === 'zigzag' ? { zigzagAmplitude: 1.2 } : {}),
+        ...(type === 'lift' ? { releaseWindowBonusMs: 20 } : {}),
         stage,
       });
+      if (type === 'zigzag' && holdDuration) {
+        // A zigzag sweeps the whole highway, so it blocks every lane while held
+        for (const L of [0, 1, 2]) if (L !== lane) holds.push({ lane: L, start: c.t, end: c.t + holdDuration });
+      }
       placed.push({ slot: c.slot, lane, type, holdBeats: holdBeats || undefined, targetLane, swipeDirection });
 
-      // Doubles: strong kick + strong top on a main beat in stages 4–5
+      // Doubles: strong kick + strong top on a main beat in stages 4–5 (3–5 in Deluxe)
       if (
-        stage >= 4 && d >= 3 && type === 'tap' && (c.slot === 0 || c.slot === 8) &&
+        stage >= (deluxe ? 3 : 4) && d >= 3 && type === 'tap' && (c.slot === 0 || c.slot === 8) &&
         c.sal[0] >= 0.7 && c.sal[2] >= 0.6 && room('double', stage)
       ) {
         const partner = lane === 0 ? 2 : lane === 2 ? 0 : (c.sal[0] >= c.sal[2] ? 0 : 2);
@@ -429,8 +486,90 @@ export function composeChart(an: AudioAnalysis, grid: BeatGrid, st: Structure, i
     if (canPlace(t, 1, g.stage)) pushNote({ time: t, lane: 1, type: 'accent', stage: g.stage });
   }
 
+  if (deluxe) addDeluxeSpecials();
+
   notes.sort((a, b) => a.time - b.time || a.lane - b.lane);
   return notes.map((n, i) => ({ ...n, id: i }));
+
+  // ── Deluxe passes: breaks on the drops, remixes on section starts, mines ──
+  function addDeluxeSpecials() {
+    const taps = (from: number, to: number) => notes.filter((n) => n.time >= from && n.time < to && n.type === 'tap');
+    const dropBars = st.bars
+      .map((bar, i) => ({ bar, jump: i > 0 ? bar.energy - st.bars[i - 1].energy : 0 }))
+      .filter((x) => x.jump > 0);
+
+    for (let stage = 3; stage <= 5; stage++) {
+      const from = stageTimes[stage - 1];
+      const to = stageTimes[stage];
+
+      // Break: a two-lane hit on the downbeat of the stage's biggest drop
+      if (types[stage].has('break')) {
+        const drops = dropBars.filter((x) => x.bar.start >= from && x.bar.start < to).sort((p, q) => q.jump - p.jump);
+        for (const { bar } of drops) {
+          const head = notes.find((n) => n.type === 'tap' && Math.abs(n.time - bar.start) < 0.01);
+          if (!head || head.lane === 1) continue;
+          const partner = 2 - head.lane;
+          const twin = notes.find((n) => Math.abs(n.time - head.time) < 0.01 && n.lane === partner);
+          if (twin && twin.type !== 'tap') continue;
+          head.type = 'break';
+          if (twin) twin.type = 'break';
+          else if (canPlace(head.time, partner, stage, true)) pushNote({ time: head.time, lane: partner, type: 'break', stage });
+          break;
+        }
+      }
+
+      // Remix: one per stage from 4, where a repeated section starts
+      if (types[stage].has('remix')) {
+        const starts = st.bars.filter((bar, i) =>
+          bar.start >= from && bar.start < to - 6 && bar.repeatOf >= 0 && (i === 0 || st.bars[i - 1].repeatOf < 0));
+        const bar = starts[0] ?? st.bars.find((x) => x.start >= from + 2 && x.start < to - 6 && x.activity > 0.3);
+        // A lone tap, so the remix never shares its moment with another note
+        const head = bar && taps(bar.start - 0.01, bar.end)
+          .find((n) => !notes.some((m) => m !== n && Math.abs(m.time - n.time) < 0.01));
+        if (head) {
+          head.type = 'remix';
+          head.remixEffect = remixEffectAt(head.time);
+        }
+      }
+
+      // Mines: on a lane the music isn't using, clear of every note in that lane
+      if (types[stage].has('mine')) {
+        const share = stage === 3 ? 0.04 : 0.06;
+        const stageNotes = notes.filter((n) => n.stage === stage && n.type !== 'mine');
+        const want = Math.round(share * stageNotes.length);
+        const every = Math.max(2, Math.floor(stageNotes.length / Math.max(1, want)));
+        let placedMines = 0;
+        for (let i = Math.floor(every / 2); i < stageNotes.length && placedMines < want; i += every) {
+          const t = stageNotes[i].time;
+          if (inGap(t) || t < tStart || t > tEnd) continue;
+          const sal = salience(t);
+          const lanes = [0, 1, 2]
+            .filter((L) => mineClear(t, L))
+            .sort((p, q) => sal[p] - sal[q]);
+          if (!lanes.length) continue;
+          pushNote({ time: +t.toFixed(3), lane: lanes[0], type: 'mine', stage });
+          placedMines++;
+        }
+      }
+    }
+  }
+
+  function mineClear(t: number, lane: number) {
+    if (notes.some((n) => n.lane === lane && Math.abs(n.time - t) < 0.25)) return false;
+    return !holds.some((h) => h.lane === lane && t >= h.start - 0.25 && t <= h.end + 0.25);
+  }
+
+  function remixEffectAt(t: number): NonNullable<Note['remixEffect']> {
+    const f = Math.round(t * fr);
+    const e = an.harmonicEnergy;
+    let below = 0;
+    for (let j = 0; j < an.nFrames; j += 8) if (e[j] < e[f]) below++;
+    // Mostly drums with little harmony → mute the drums for a moment
+    if (below / Math.max(1, Math.ceil(an.nFrames / 8)) < 0.25) return 'drums_mute';
+    const sal = salience(t);
+    const top = sal.indexOf(Math.max(...sal));
+    return top === 0 ? 'bass_boost' : top === 1 ? 'vocals_isolate' : 'lead_solo';
+  }
 }
 
 /** Time of 16th-note slot s (0..15) inside a bar, following the tracked beats. */
