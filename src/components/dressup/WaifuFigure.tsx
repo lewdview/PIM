@@ -526,13 +526,14 @@ function HairFront({ item, color }: { item: string; color: string }) {
 // eyes about one eye-width apart, upturned outer corners, the iris tucked under the upper lid.
 // Every shape is a hand-placed path (left side; mirrored for the right), shaded toward the same
 // upper-left light as the body.
-const EYE_WHITE = 'M116 118 C120 109.5 136 107.5 145 120.5 C141.5 128 133 131.5 125 130.5 C119.5 129.5 117 125 116 118 Z';
-const UPPER_LASH = 'M112.5 119.6 C117.5 106.5 135.5 103.8 146.6 118.8 L145.6 120.4 C136 110 121 110.2 116.8 120.2 Z';
-const LASH_WING = 'M116.2 116.8 L105.8 111.6 C107.4 114.6 110.4 117.6 114.8 120 Z';
+const EYE_WHITE = 'M116.5 119 C120 109.5 136 107 145 119.5 C142.5 127.5 134 132 125.5 131 C120 130 117.5 125.5 116.5 119 Z';
+const UPPER_LASH = 'M113.5 120 C118 107 135.5 104 146 118 L145.2 119.4 C136 109.5 121.5 110.2 117 120.4 Z';
+const LASH_WING = 'M116.8 117.6 L109 114 C110.4 116.4 112.8 118.6 115.6 120.2 Z';
 const LID_CREASE = 'M117.5 107.5 C124 101.5 137.5 101 145 109.5';
 const LID_SHADOW = 'M116 118.5 C121 110 135 108.5 145 121 C135 113.5 123 113.5 117.5 121.5 Z';
 const LOWER_LASH = 'M116.8 121.5 C119.2 128 125.2 131 132.5 130.8';
-const BROW = 'M146.5 101 C140 95.2 131 92.2 122 93.4 C118 94 115 95.4 112.6 97.8 C116.8 96.4 120.8 95.8 124.8 95.9 C132.8 96.2 140.2 98.2 146.5 101 Z';
+// Brows sit high with a gentle arch and the inner end lifted, which reads soft rather than stern.
+const BROW = 'M145.5 96.5 C140 92 131 90 122.5 91 C118.5 91.5 115.5 92.8 113.5 95 C117.5 93.8 121 93.2 125 93.3 C132.8 93.6 139.6 94.6 145.5 96.5 Z';
 const EYESHADOW = 'M116.5 117 C118 106 136 100.5 146 112 C146.5 106 136 98 124 100 C117.5 101.2 113.5 108 116.5 117 Z';
 const UPPER_LIP = 'M142 152.6 C144.4 150.4 146.6 148.4 148.7 149.3 Q150 150.1 151.3 149.3 C153.4 148.4 155.6 150.4 158 152.6 Q150 154 142 152.6 Z';
 const LOWER_LIP = 'M142.9 153.1 Q150 154.6 157.1 153.1 C156 157.6 153.4 159.8 150 159.8 C146.6 159.8 144 157.6 142.9 153.1 Z';
@@ -590,17 +591,17 @@ function Face({ eyeColor }: { eyeColor: string }) {
           {[0, 1].map((side) => (
             <g key={side} transform={side ? MIRROR : undefined}>
               {/* Iris tucked under the upper lid, pupil, the lid's shadow on the white. */}
-              <ellipse cx="131.5" cy="121.5" rx="8.2" ry="10.4" fill={`url(#${irisId})`} />
-              <ellipse cx="131.5" cy="121" rx="8.2" ry="10.4" fill="none" stroke={mix(eyeColor, '#000000', 0.6)} strokeWidth="1" />
-              <ellipse cx="131.5" cy="121.5" rx="3.6" ry="5.4" fill="#120a20" />
-              <path d={LID_SHADOW} fill="#3b1d5e" opacity="0.35" />
+              <ellipse cx="131" cy="121.5" rx="8.6" ry="10.8" fill={`url(#${irisId})`} />
+              <ellipse cx="131" cy="121.5" rx="8.6" ry="10.8" fill="none" stroke={mix(eyeColor, '#000000', 0.6)} strokeWidth="1" />
+              <ellipse cx="131" cy="122" rx="3.4" ry="5" fill="#120a20" />
+              <path d={LID_SHADOW} fill="#3b1d5e" opacity="0.22" />
             </g>
           ))}
         </g>
         {[0, 1].map((side) => (
           <g key={side} transform={side ? MIRROR : undefined}>
             {/* Catchlights toward the upper-left light (same screen side on both eyes). */}
-            <ellipse cx={side ? 134.5 : 127.5} cy="115.5" rx="2.6" ry="2.2" fill="#ffffff" />
+            <ellipse cx={side ? 134.5 : 127.5} cy="115.8" rx="3.1" ry="2.7" fill="#ffffff" />
             <circle cx={side ? 128.5 : 135} cy="126.2" r="1.2" fill="#ffffff" opacity="0.85" />
             <path d={UPPER_LASH} fill={LINE} />
             <path d={LASH_WING} fill={LINE} />
