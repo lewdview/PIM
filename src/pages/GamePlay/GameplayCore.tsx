@@ -38,6 +38,7 @@ import { loadLyricsForDay, drawTrackLyrics, drawLyricBackdrop, type TimedLine } 
 import { getStageStarts, stageAtTime } from './stageTimeline';
 import { generateMasterChart, ANALYSIS_SAMPLE_RATE, CHART_MASTER_VERSION } from '@/game/chartMaster';
 import { drawSlabBody, drawTopFaceBevel, drawHitPop3D, drawHitPillar3D, hitPillarReach, makeHitShards, setNote3DQuality, type HitShard } from './notes3d';
+import { spawnCelebration, drawCelebrations, type Celebration } from './noteCelebrations';
 
 // Use Vite's eager glob to grab files in /public/data/slideshow/
 const imageModules = import.meta.glob<string>('../../public/data/slideshow/**/*.{png,jpg,jpeg,gif,webp,svg}', { query: '?url', import: 'default', eager: true });
@@ -1277,6 +1278,7 @@ export default function Game() {
     cycle: 0,
   });
   const hitFxRef = useRef<HitEffect[]>([]);
+  const celebrationsRef = useRef<Celebration[]>([]);
   const shieldChargesRef = useRef<number>(0);
   const lastMissTimeRef = useRef<number>(0);
   const lastMissLaneTimeRef = useRef<number[]>([0, 0, 0]);
@@ -2132,7 +2134,7 @@ export default function Game() {
   );
 
   const triggerHitFx = useCallback(
-    (lane: number, kind: "PERFECT+" | "PERFECT" | "GOOD" | "SHIELDED" | "MISS", customY?: number, swipeDir?: Note['swipeDirection']) => {
+    (lane: number, kind: "PERFECT+" | "PERFECT" | "GOOD" | "SHIELDED" | "MISS", customY?: number, swipeDir?: Note['swipeDirection'], noteType?: Note['type']) => {
       const canvas = canvasRef.current;
       if (!canvas || kind === "MISS") return;
       const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
@@ -2220,6 +2222,11 @@ export default function Game() {
         laneW: lw,
         shards: particleDensity === 'minimal' ? undefined : makeHitShards(kind, particleDensity === 'half' ? 6 : 12),
       });
+
+      // Break (drop) and accent (beat) notes get their own celebration on top
+      if ((noteType === 'break' || noteType === 'accent') && kind !== 'SHIELDED' && particleDensity !== 'minimal') {
+        spawnCelebration(celebrationsRef.current, noteType, cx, customY !== undefined ? customY : hitY, Date.now(), particleDensity === 'half' ? 0.5 : 1);
+      }
     },
     [],
   );
@@ -2452,7 +2459,7 @@ export default function Game() {
       addJudgment({ type: j, lane, id: ++jCounter.current, ts: Date.now(), partial: isHoldType });
 
       // ── Hit explosion effect ──
-      triggerHitFx(lane, j, undefined, direction || ns.note.swipeDirection);
+      triggerHitFx(lane, j, undefined, direction || ns.note.swipeDirection, ns.note.type);
 
       syncDisplay();
     },
@@ -6494,6 +6501,9 @@ export default function Game() {
       ctx.restore();
       void easeOut; // suppress unused warning
     }
+
+    // ── 5c. BREAK / ACCENT CELEBRATIONS (confetti, ribbons, oddities) ──
+    if (celebrationsRef.current.length) drawCelebrations(ctx, celebrationsRef.current, nowMs);
 
     // ── 5d. KEY PRESS SHOCKWAVE RIPPLES ───────────────────────────
     for (let i = 0; i < LANE_COUNT; i++) {
