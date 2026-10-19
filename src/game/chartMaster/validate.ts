@@ -8,7 +8,9 @@ import type { Note } from '../types.ts';
 import type { AudioAnalysis } from './analysis.ts';
 import type { ChartStage } from './index.ts';
 
-export function validateChart(notes: Note[], stages: ChartStage[], duration: number): string[] {
+const DELUXE_STAGE1 = new Set(['tap', 'hold', 'swipe']);
+
+export function validateChart(notes: Note[], stages: ChartStage[], duration: number, opts: { deluxe?: boolean } = {}): string[] {
   const issues: string[] = [];
   if (stages.length !== 5) issues.push(`expected 5 stages, got ${stages.length}`);
   for (let i = 1; i < stages.length; i++) {
@@ -31,9 +33,15 @@ export function validateChart(notes: Note[], stages: ChartStage[], duration: num
       if (end > duration) issues.push(`#${i} hold runs past song end`);
       for (let j = i + 1; j < notes.length && notes[j].time <= end; j++) {
         if (notes[j].lane === n.lane) issues.push(`#${j} lands inside hold #${i} on lane ${n.lane}`);
+        if (n.type === 'zigzag') issues.push(`#${j} lands inside zigzag #${i}`);
       }
     }
-    if (n.stage === 1 && n.type !== 'tap') issues.push(`#${i} ${n.type} in stage 1`);
+    if (n.stage === 1 && !(opts.deluxe ? DELUXE_STAGE1.has(n.type) : n.type === 'tap')) issues.push(`#${i} ${n.type} in stage 1`);
+    if (n.type === 'mine') {
+      for (let j = Math.max(0, i - 12); j < Math.min(notes.length, i + 12); j++) {
+        if (j !== i && notes[j].lane === n.lane && Math.abs(notes[j].time - n.time) < 0.25) issues.push(`mine #${i} crowds #${j} on lane ${n.lane}`);
+      }
+    }
   }
 
   // POV runways (stage 3 and 5 starts) must be clear

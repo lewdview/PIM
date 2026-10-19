@@ -36,7 +36,7 @@ import GameplayVisualizer from './GameplayVisualizer';
 import TutorialOverlay, { type TutorialStepType } from './TutorialOverlay';
 import { loadLyricsForDay, drawTrackLyrics, drawLyricBackdrop, type TimedLine } from './trackLyrics';
 import { getStageStarts, stageAtTime } from './stageTimeline';
-import { generateMasterChart, ANALYSIS_SAMPLE_RATE, CHART_MASTER_VERSION } from '@/game/chartMaster';
+import { generateMasterChart, ANALYSIS_SAMPLE_RATE, CHART_MASTER_VERSION, CHART_MASTER_DELUXE_VERSION } from '@/game/chartMaster';
 import { drawSlabBody, drawTopFaceBevel, drawHitPop3D, drawHitPillar3D, hitPillarReach, makeHitShards, setNote3DQuality, type HitShard } from './notes3d';
 import { spawnCelebration, drawCelebrations, type Celebration } from './noteCelebrations';
 import { chooseWarpNote, isWarpNote, parseWarpOverride, secretLevelPath, INSTANT_WARP_DELAY_MS, WARP_SCORE_BONUS, type WarpType } from '@/game/secret/warp';
@@ -1002,9 +1002,9 @@ function generateProceduralChart(song: any): Note[] {
 }
 
 // ── Chart Master (v6): audio-driven chart generation at runtime ──
-// Used when a song has no baked chart. Same generator as
-// scripts/bake_master_charts.ts, so runtime and baked charts match.
-async function generateAudioForgeChart(song: any): Promise<Note[]> {
+// Used when a song has no baked chart (or no baked Deluxe chart). Same
+// generator as scripts/bake_master_charts.ts, so runtime and baked charts match.
+async function generateAudioForgeChart(song: any, opts: { deluxe?: boolean } = {}): Promise<Note[]> {
   const audioUrl = song.audioUrl;
   if (!audioUrl) {
     throw new Error("No audioUrl found for song");
@@ -1044,17 +1044,20 @@ async function generateAudioForgeChart(song: any): Promise<Note[]> {
   const result = generateMasterChart(pcm, audioBuffer.sampleRate, {
     bpm: song.bpm || 120,
     duration: audioBuffer.duration,
-    difficultyLevel: song.difficultyLevel || 5,
+    // Deluxe songs already carry the +2 difficulty; the generator adds its own
+    difficultyLevel: opts.deluxe ? Math.max(1, (song.difficultyLevel || 7) - 2) : (song.difficultyLevel || 5),
     day: song.day,
+    deluxe: opts.deluxe,
   });
 
   if (result.notes.length < 10) {
+    if (opts.deluxe) throw new Error(`Deluxe chart too sparse (${result.notes.length} notes)`);
     console.warn(`[Chart Master] Only ${result.notes.length} notes generated. Falling back to math generation.`);
     return generateProceduralChart(song);
   }
 
   song.stages = result.stages;
-  song.chartVersion = CHART_MASTER_VERSION;
+  song.chartVersion = opts.deluxe ? CHART_MASTER_DELUXE_VERSION : CHART_MASTER_VERSION;
   console.log(`[Chart Master] ${result.notes.length} notes · ${result.report.bpm} BPM · POV drops at ${result.report.povTimes.join('s, ')}s · ${result.report.ms}ms`);
   return result.notes;
 }
@@ -8501,6 +8504,19 @@ export default function Game() {
               }
             }
 
+            // Chart Master Deluxe with no baked chart yet: forge it from the audio
+            if (genMode === 'auto' && song.deluxe && song.chartVersion === CHART_MASTER_VERSION) {
+              setLoadMsg("FORGING DELUXE BEATMAP...");
+              const standard = { notes: song.notes, stages: song.stages };
+              try {
+                song.notes = await generateAudioForgeChart(song, { deluxe: true });
+              } catch (err) {
+                console.warn("[GamePlay Init] Deluxe forge failed, playing the standard v6 chart:", err);
+                song.notes = standard.notes;
+                song.stages = standard.stages;
+              }
+            }
+
             // Runtime stageification toggle: re-partition pre-baked notes through the stage density engine
             if (STAGEIFICATION_CONFIG.USE_RUNTIME_STAGEIFICATION && genMode === 'auto' && song.notes.length > 0) {
               console.log(`[GamePlay Init] Runtime stageification enabled — re-partitioning ${song.notes.length} pre-baked notes`);
@@ -9516,7 +9532,7 @@ export default function Game() {
           // Re-stageify notes using exact real audio duration. Chart Master
           // charts are already placed against the real audio (stages on the
           // song's sections), so they keep their stages and are only trimmed.
-          const isMasterChart = songRef.current.chartVersion === 'v6_master';
+          const isMasterChart = songRef.current.chartVersion === CHART_MASTER_VERSION || songRef.current.chartVersion === CHART_MASTER_DELUXE_VERSION;
           const { notes: restaged, stages } = isMasterChart
             ? {
                 notes: filteredNotes,
