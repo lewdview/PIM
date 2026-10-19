@@ -100,6 +100,7 @@ const UniverseHome = lazyWithRetry(() => import('./pages/UniverseHome'));
 const Archive365Page = lazyWithRetry(() => import('./pages/Archive365Page'));
 const DayArtifactPage = lazyWithRetry(() => import('./pages/DayArtifactPage'));
 const WarpZonePage = lazyWithRetry(() => import('./pages/WarpZonePage'));
+const SecretLevel = lazyWithRetry(() => import('./pages/SecretLevel'));
 const AboutPage = lazyWithRetry(() => import('./pages/AboutPage'));
 const AdminPage = lazyWithRetry(() => import('./pages/AdminPage'));
 const BeatmapEditor = lazyWithRetry(() => import('./pages/BeatmapEditor'));
@@ -271,7 +272,7 @@ export default function App() {
 
   // Stop global preview player on gameplay routes to prevent dual-audio
   useEffect(() => {
-    if (location.startsWith('/play/') || location === '/tutorial') {
+    if (location.startsWith('/play/') || location.startsWith('/secret/') || location === '/tutorial') {
       useGlobalPlayer.getState().stop();
     }
   }, [location]);
@@ -324,7 +325,7 @@ export default function App() {
   // guests — that hasn't completed it yet. Guests get the full walkthrough and a
   // "connect identity to keep your cards" conversion screen at the end.
   const isGameplayRoute =
-    location.startsWith('/play/') || location.startsWith('/results/') || location === '/tutorial';
+    location.startsWith('/play/') || location.startsWith('/results/') || location.startsWith('/secret/') || location === '/tutorial';
   if (user && hasOnboarded === false && !isGameplayRoute && !isLaunchRoute && isTutorialDone) {
     return <OnboardingFlow onComplete={completeOnboarding} />;
   }
@@ -332,6 +333,7 @@ export default function App() {
   // Hide the global navigation bar only in active gameplay, tutorial, editor, or hero landing pages
   const hideNavbar =
     location.startsWith('/play/') ||
+    location.startsWith('/secret/') ||
     location === '/tutorial' ||
     location === '/admin/editor' ||
     location === '/admin/card-designs' ||
@@ -438,6 +440,7 @@ export default function App() {
                 <Route path="/random" component={SignDiscoveryRoute} />
                 <Route path="/warp" component={WarpZonePage} />
                 <Route path="/warp/:sub" component={WarpZonePage} />
+                <Route path="/secret/:level" component={SecretLevel} />
                 <Route path="/about" component={AboutPage} />
                 <Route path="/manifesto" component={AboutPage} />
                 <Route path="/hub" component={ProfilePage} />

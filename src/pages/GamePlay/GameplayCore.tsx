@@ -39,6 +39,7 @@ import { sendGameplayMessage, PLATFORM_PAUSE_EVENT } from '@/platform';
 import { MONTH_BOMBSHELL, PLAYGAMA_MONTH } from '@/platform/playgama/month';
 import { drawSlabBody, drawTopFaceBevel, drawHitPop3D, drawHitPillar3D, hitPillarReach, makeHitShards, setNote3DQuality, type HitShard } from './notes3d';
 import { spawnCelebration, drawCelebrations, type Celebration } from './noteCelebrations';
+import { chooseWarpNote, isWarpNote, parseWarpOverride, secretLevelPath, INSTANT_WARP_DELAY_MS, WARP_SCORE_BONUS, type WarpType } from '@/game/secret/warp';
 
 // Use Vite's eager glob to grab files in /public/data/slideshow/
 const imageModules = import.meta.glob<string>('../../public/data/slideshow/**/*.{png,jpg,jpeg,gif,webp,svg}', { query: '?url', import: 'default', eager: true });
@@ -1294,6 +1295,10 @@ export default function Game() {
   const tunnelComboFlashRef = useRef<{ lastCombo: number; flashStartMs: number }>({ lastCombo: 0, flashStartMs: 0 });
   const milestoneFxRef = useRef<MilestoneEffect[]>([]);
   const remixFlashUntilRef = useRef<number>(0);
+  // Secret warp notes: banner shown on hit, and whether clearing the song opens the runner level
+  const warpBannerRef = useRef<{ text: string; until: number; instant: boolean } | null>(null);
+  const warpClearUnlockedRef = useRef(false);
+  const activateWarpRef = useRef<(type: WarpType) => void>(() => {});
   const remixEffectNameRef = useRef<string | null>(null);
 
   const continueUsedRef = useRef<number>(0); // how many continues the player has used (max 3)
@@ -2228,7 +2233,7 @@ export default function Game() {
       });
 
       // Break (drop), accent (beat) and remix notes get their own celebration on top
-      if ((noteType === 'break' || noteType === 'accent' || noteType === 'remix') && kind !== 'SHIELDED' && particleDensity !== 'minimal') {
+      if ((noteType === 'break' || noteType === 'accent' || noteType === 'remix' || noteType === 'warp' || noteType === 'warp-clear') && kind !== 'SHIELDED' && particleDensity !== 'minimal') {
         spawnCelebration(celebrationsRef.current, noteType, cx, customY !== undefined ? customY : hitY, Date.now(), particleDensity === 'half' ? 0.5 : 1);
       }
     },
@@ -2428,6 +2433,9 @@ export default function Game() {
         gs.score += 1200;
       } else if (ns.note.type === "accent") {
         gs.score += 800;
+      } else if (ns.note.type === "warp" || ns.note.type === "warp-clear") {
+        gs.score += WARP_SCORE_BONUS;
+        activateWarpRef.current(ns.note.type);
       }
 
       gs.combo++;
@@ -3103,6 +3111,9 @@ export default function Game() {
           if (phaseRef.current === "unmounted") return;
           if (isTutorial) {
             setLocation(`/tutorial?phase=results&score=${gs.score}`);
+          } else if (warpClearUnlockedRef.current && songId) {
+            // Cleared a song with an unlocked warp: the secret runner level comes first
+            setLocation(secretLevelPath('runner', songId, 'warp-clear'));
           } else {
             setLocation(`/results/${songId}`);
           }
@@ -3119,6 +3130,26 @@ export default function Game() {
       }
     }
   }, [songId, setLocation, isTutorial]);
+
+  // Secret warp hit: 'warp' leaves for the shooter level right away,
+  // 'warp-clear' unlocks the runner level for when the song is cleared.
+  activateWarpRef.current = (type: WarpType) => {
+    audioManager.playSfx("hidden_secret_found", 0.9);
+    haptics.fusionSuccess();
+    if (type === 'warp') {
+      warpBannerRef.current = { text: 'WARP!', until: Date.now() + INSTANT_WARP_DELAY_MS + 400, instant: true };
+      setTimeout(() => {
+        if (phaseRef.current === "unmounted" || phaseRef.current === "finished" || !songId) return;
+        phaseRef.current = "finished";
+        cancelAnimationFrame(rafRef.current);
+        audioRef.current?.pause();
+        setLocation(secretLevelPath('shooter', songId, 'warp'));
+      }, INSTANT_WARP_DELAY_MS);
+    } else {
+      warpClearUnlockedRef.current = true;
+      warpBannerRef.current = { text: 'WARP UNLOCKED · CLEAR THE SONG', until: Date.now() + 3500, instant: false };
+    }
+  };
 
   // Ownership-gate claim funnel: claim today's free card, then re-run init to play.
   const handleClaimAndPlay = useCallback(async () => {
@@ -3706,7 +3737,7 @@ export default function Game() {
         }
       }
       notesRef.current.forEach((ns) => {
-        if (ns.note.type === "mine" || ns.note.type === "ghost") return; // Skip hazard mines / ghost obstacles
+        if (ns.note.type === "mine" || ns.note.type === "ghost" || isWarpNote(ns.note)) return; // Skip hazard mines / ghost obstacles / secret warps
         if (!ns.hit && !ns.missed) {
           const isHold = isHoldNote(ns.note);
 
@@ -5856,6 +5887,13 @@ export default function Game() {
         // 40ms safety margin to accommodate frame rate jitter and prevent edge-tap race misses
         const isPastStrike = t > note.time + MW + 0.040;
 
+        // A missed warp note just slips away: no miss, no combo break
+        if (isWarpNote(note) && isPastStrike) {
+          ns.hit = true;
+          unresolvedNotesCountRef.current--;
+          continue;
+        }
+
         if (inRewindGrace && isPastStrike) {
           // 1-second post-rewind grace window: notes in the past or immediately following the rewind
           // pass safely without counting as misses, preventing cascading failure after continue.
@@ -6695,6 +6733,30 @@ export default function Game() {
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
         ctx.fillText("DATA LEAK!", x_center, trapY + 8);
+    // ── 6.55 SECRET WARP BANNER ──
+    const warpBanner = warpBannerRef.current;
+    if (warpBanner && warpBanner.until > Date.now()) {
+      const left = warpBanner.until - Date.now();
+      const fadeIn = Math.min(1, (Date.now() - (warpBanner.until - (warpBanner.instant ? INSTANT_WARP_DELAY_MS + 400 : 3500))) / 200);
+      const alpha = Math.min(fadeIn, left / 400, 1);
+      ctx.save();
+      const hue = (Date.now() / 4) % 360;
+      if (warpBanner.instant) {
+        // Instant warp: the whole stage tints and swirls toward the exit
+        ctx.fillStyle = `hsla(${hue}, 100%, 55%, ${0.18 * alpha})`;
+        ctx.fillRect(0, 0, W, H);
+      }
+      ctx.globalAlpha = alpha;
+      ctx.font = `900 ${warpBanner.instant ? 44 : 20}px "Space Mono", monospace`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.shadowColor = `hsl(${hue}, 100%, 60%)`;
+      ctx.shadowBlur = 24;
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillText(warpBanner.text, W / 2, H * 0.32);
+      ctx.restore();
+    }
+
     // ── 6.6 REMIX STEM EFFECT HUD BANNER & PALETTE FLASH ──
     if (remixFlashUntilRef.current > Date.now()) {
       ctx.save();
@@ -8957,6 +9019,18 @@ export default function Game() {
           return true;
         });
       }
+      // ── Secret warp (rare): turn one lone final-stage tap into a warp note ──
+      warpClearUnlockedRef.current = false;
+      if (!activeTutorial) {
+        const warpPick = chooseWarpNote(
+          notesRef.current.map(ns => ns.note),
+          stageStartsRef.current[4] ?? Infinity,
+          Math.random,
+          parseWarpOverride(window.location.search),
+        );
+        if (warpPick) notesRef.current[warpPick.index].note.type = warpPick.type;
+      }
+
       unresolvedNotesCountRef.current = notesRef.current.length;
       lastNoteTimeRef.current = notesRef.current.length > 0
         ? Math.max(...notesRef.current.map(ns => ns.note.time))
@@ -8975,8 +9049,8 @@ export default function Game() {
       }
       const scoreEvents: ScoreEvent[] = [];
       notesRef.current.forEach(ns => {
-        if (ns.note.type === "mine") {
-          return; // mines are not hit in a perfect run
+        if (ns.note.type === "mine" || isWarpNote(ns.note)) {
+          return; // mines are not hit in a perfect run; warps are a rare bonus
         }
         if (isHoldNote(ns.note)) {
           scoreEvents.push({ time: ns.note.time, type: ns.note.type });
@@ -12146,7 +12220,10 @@ function drawKey(
   };
 
   // ── 1b. 3D Slab: contact shadow + side walls under the top face ──
+  const warpHue = (Date.now() / 5) % 360;
+  const isWarp = noteType === 'warp' || noteType === 'warp-clear';
   const wallColor = isHold ? (lc || "#FFD700")
+                  : isWarp ? `hsl(${warpHue}, 100%, 60%)`
                   : noteType === 'remix' ? '#00F5D4'
                   : noteType === 'break' ? '#FF7B00'
                   : noteType === 'accent' ? '#CCFF00'
@@ -12176,6 +12253,14 @@ function drawKey(
     ctx.fillStyle = goldGrad;
     ctx.shadowColor = stageColor;
     ctx.shadowBlur = lerp(4, 12, prog);
+    ctx.shadowOffsetY = 0;
+  } else if (isWarp) {
+    // Secret warp: a rainbow body whose colours keep cycling
+    const warpGrad = ctx.createLinearGradient(-noteW / 2, 0, noteW / 2, 0);
+    for (let k = 0; k <= 4; k++) warpGrad.addColorStop(k / 4, `hsl(${(warpHue + k * 70) % 360}, 100%, 60%)`);
+    ctx.fillStyle = warpGrad;
+    ctx.shadowColor = `hsl(${warpHue}, 100%, 70%)`;
+    ctx.shadowBlur = lerp(10, 22, prog);
     ctx.shadowOffsetY = 0;
   } else if (noteType === 'remix') {
     // Cyberpunk Prismatic Body — Electric Cyan to Deep Magenta
@@ -12302,6 +12387,8 @@ function drawKey(
     ctx.strokeStyle = "rgba(255, 255, 255, 0.95)"; ctx.lineWidth = 3.5; ctx.stroke();
     ctx.strokeStyle = "#D4AF37"; ctx.lineWidth = 2.0; ctx.stroke();
     ctx.strokeStyle = "rgba(255, 255, 255, 0.95)"; ctx.lineWidth = 0.8; ctx.stroke();
+  } else if (isWarp) {
+    ctx.strokeStyle = "#FFFFFF"; ctx.lineWidth = 3.0; ctx.stroke();
   } else if (noteType === 'remix') {
     ctx.strokeStyle = "#FFFFFF"; ctx.lineWidth = 3.0; ctx.stroke();
     ctx.strokeStyle = "#00F5D4"; ctx.lineWidth = 1.5; ctx.stroke();
@@ -12575,6 +12662,31 @@ function drawKey(
     ctx.beginPath();
     ctx.arc(0, 0, (noteW / 2 + 4) * pulse, 0, Math.PI * 2);
     ctx.stroke();
+    ctx.restore();
+
+  } else if (isWarp) {
+    // 🌀 WARP NOTE: spinning vortex rings behind a label. The instant warp
+    // spins faster and reads WARP; the on-clear warp reads WARP ★.
+    ctx.save();
+    const spin = (nowMs / (noteType === 'warp' ? 120 : 260)) % (Math.PI * 2);
+    ctx.lineWidth = 2;
+    for (let k = 0; k < 3; k++) {
+      ctx.strokeStyle = `hsl(${(warpHue + k * 120) % 360}, 100%, 70%)`;
+      ctx.beginPath();
+      ctx.arc(0, 0, noteW / 2 + 4 + k * 4, spin + k, spin + k + Math.PI * 1.2);
+      ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(10, 0, 30, 0.8)';
+    ctx.beginPath();
+    ctx.roundRect(-24, -10, 48, 20, 10);
+    ctx.fill();
+    ctx.fillStyle = '#FFFFFF';
+    ctx.shadowColor = `hsl(${warpHue}, 100%, 60%)`;
+    ctx.shadowBlur = 12;
+    ctx.font = '900 10px "Space Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(noteType === 'warp' ? 'WARP' : 'WARP ★', 0, 0);
     ctx.restore();
 
   } else if (noteType === 'accent') {
