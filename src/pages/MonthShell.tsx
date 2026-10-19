@@ -21,6 +21,7 @@ import '@/styles/CardShowcaseStyles.css';
 const ChapterStory = lazy(() => import('./campaign/ChapterStory'));
 const GamePlay = lazy(() => import('./GamePlay'));
 const MonthResults = lazy(() => import('./month/MonthResults'));
+const SecretLevel = lazy(() => import('./SecretLevel'));
 
 const HOME = `/chapter/${PLAYGAMA_MONTH}`;
 const MUTE_KEY = 'pg_muted';
@@ -115,6 +116,7 @@ export default function MonthShell() {
                 <Route path={HOME} component={ChapterStory} />
                 <Route path="/play/:songId" component={GamePlay} />
                 <Route path="/results/:songId" component={MonthResults} />
+                <Route path="/secret/:level" component={SecretLevel} />
                 <Route path="/tutorial" component={TutorialDone} />
                 <Route>
                   <Redirect to={HOME} replace />
