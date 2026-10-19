@@ -13,7 +13,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useParams } from 'wouter';
-import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Lock, Pause, Play, Film, CheckCircle2, Gift, Sparkles, Trophy, X } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Lock, Pause, Play, Film, CheckCircle2, Gift, Sparkles, Trophy, X, Settings, Info } from 'lucide-react';
 import { loadCatalog, isSongTimeLocked, getModifierForSong, type GameSong } from '@/game/api';
 import { getMedalForSong, getHighScore } from '@/game/progress';
 import { CHAPTERS, calculateCampaignDifficulty, levelToTier } from '@/game/campaign';
@@ -35,6 +35,8 @@ import { getProductPrice } from '@/platform/playgama/bridge';
 import { bombshellArtFor, prepareMonthRun } from '@/pages/month/startRun';
 import { hideBroken } from './hideBroken';
 import { ArcadeBackdrop, SlamTitle, StageWipe } from './arcade';
+import MonthOptions from '@/pages/month/MonthOptions';
+import MonthAbout from '@/pages/month/MonthAbout';
 import {
   getMonthEntries, monthLeaderboardKind, monthTotal, showMonthPopup, submitMonthScore, type LeaderboardRow,
 } from '@/platform/playgama/monthLeaderboard';
@@ -94,6 +96,7 @@ export default function ChapterStory() {
   // Monthly build: Playgama leaderboard (only where the portal offers one).
   const lbKind = MONTH_BUILD ? monthLeaderboardKind() : 'not_available';
   const [lbOpen, setLbOpen] = useState(false);
+  const [panel, setPanel] = useState<'options' | 'about' | null>(null);
   const [lbRows, setLbRows] = useState<LeaderboardRow[] | null>(null);
   const openLeaderboard = async () => {
     sfx(0.15);
@@ -295,6 +298,9 @@ export default function ChapterStory() {
   // Keyboard and gamepad: up/down or left/right moves through the story, Enter/A/Start plays.
   const playRef = useRef(handlePlay);
   playRef.current = handlePlay;
+  // An open panel (options, about, leaderboard) takes the input; Escape closes it.
+  const overlayRef = useRef(false);
+  overlayRef.current = panel !== null || lbOpen;
   const count = songs?.length ?? 0;
   useEffect(() => {
     if (!count) return;
@@ -309,6 +315,10 @@ export default function ChapterStory() {
     });
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement | null;
+      if (overlayRef.current) {
+        if (e.key === 'Escape') { setPanel(null); setLbOpen(false); }
+        return;
+      }
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
       // The monthly build's track grid moves a whole row on up/down.
       const row = MONTH_BUILD ? gridCols() : 1;
@@ -324,7 +334,7 @@ export default function ChapterStory() {
     const prevBtn: Record<string, boolean> = {};
     const poll = () => {
       const gp = navigator.getGamepads ? Array.from(navigator.getGamepads()).find(Boolean) : null;
-      if (gp) {
+      if (gp && !overlayRef.current) {
         const btn = {
           play: !!(gp.buttons[0]?.pressed || gp.buttons[9]?.pressed),
           up: !!(gp.buttons[12]?.pressed || gp.buttons[14]?.pressed || (gp.axes[1] ?? 0) < -0.5 || (gp.axes[0] ?? 0) < -0.5),
@@ -435,6 +445,12 @@ export default function ChapterStory() {
               </button>
             )}
             {leaderboard}
+            <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={() => { sfx(); setPanel('options'); }}>
+              <Settings size={14} /> Options
+            </button>
+            <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={() => { sfx(); setPanel('about'); }}>
+              <Info size={14} /> Who is th3scr1b3?
+            </button>
           </div>
         </header>
 
@@ -531,6 +547,14 @@ export default function ChapterStory() {
             </section>
           )}
         </div>
+
+        {panel === 'options' && <MonthOptions onClose={() => setPanel(null)} />}
+        {panel === 'about' && (
+          <MonthAbout
+            onClose={() => setPanel(null)}
+            onBuyBundle={bonusGated ? () => { setPanel(null); void buyBundle(); } : undefined}
+          />
+        )}
 
         {lbOpen && (
           <div className="mb-lb" role="dialog" aria-modal="true" aria-label={`${meta.name} leaderboard`} onClick={() => setLbOpen(false)}>

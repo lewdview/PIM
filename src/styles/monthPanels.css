@@ -1,0 +1,109 @@
+/* Options and "Who is th3scr1b3?" panels of a monthly Playgama build. They sit
+   in the leaderboard overlay (.mb-lb in monthBoard.css) and, like the chapter,
+   never scroll: options split into tabs, the about text stays short. */
+
+.mb-lb-card.mo-card { width: min(520px, 100%); grid-template-rows: auto auto minmax(0, 1fr) auto; }
+.mb-lb-card.ma-card { width: min(760px, 100%); grid-template-rows: auto minmax(0, 1fr); }
+
+.mo-tabs { display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: var(--shell-well); }
+.mo-tabs button {
+  flex: 1;
+  padding: 8px 6px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--shell-text-2);
+  font: 700 13px/1 var(--shell-body);
+  cursor: pointer;
+}
+.mo-tabs button[aria-selected='true'] { background: var(--ch, var(--shell-accent)); color: var(--ink, #111); }
+
+.mo-body { display: grid; align-content: start; gap: 6px; min-height: 0; }
+.mo-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 44px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: var(--shell-raise);
+}
+.mo-label { display: grid; gap: 2px; font: 600 14px/1.2 var(--shell-body); color: var(--shell-text); }
+.mo-label small { font: 500 12px/1.2 var(--shell-body); color: var(--shell-text-3); }
+.mo-hint { margin: 0; padding: 0 4px; font-size: 12px; line-height: 1.4; color: var(--shell-text-2); }
+
+.mo-switch {
+  position: relative;
+  flex: none;
+  width: 44px;
+  height: 26px;
+  border: 1px solid var(--shell-line-strong);
+  border-radius: 999px;
+  background: var(--shell-well);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.mo-switch span {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--shell-text-2);
+  transition: transform 0.15s, background 0.15s;
+}
+.mo-switch[aria-checked='true'] { background: var(--ch, var(--shell-accent)); }
+.mo-switch[aria-checked='true'] span { transform: translateX(18px); background: #fff; }
+
+.mo-range { flex: 0 1 200px; min-width: 110px; accent-color: var(--ch, var(--shell-accent)); }
+
+.mo-cycle { display: inline-flex; align-items: center; gap: 6px; }
+.mo-cycle b { min-width: 104px; text-align: center; font: 700 13px/1 var(--shell-body); }
+.mo-cycle button {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--shell-line-strong);
+  border-radius: 8px;
+  background: var(--shell-well);
+  color: var(--shell-text);
+  cursor: pointer;
+}
+
+.mo-foot { display: flex; justify-content: flex-end; }
+
+.ma-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 16px;
+  min-height: 0;
+}
+.ma-body section { display: grid; align-content: start; gap: 6px; }
+.ma-body h3 { margin: 0; font: 700 12px/1 var(--shell-mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ch, var(--shell-accent)); }
+.ma-body p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--shell-text-2); }
+.ma-body b { color: var(--shell-text); }
+.ma-help { grid-column: 1 / -1; padding-top: 10px; border-top: 1px solid var(--shell-line); }
+.ma-actions { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 4px; }
+
+/* Phones: one column, tighter type, so nothing scrolls. */
+@media (max-width: 620px) {
+  .ma-body { grid-template-columns: 1fr; gap: 8px; }
+  .ma-body p { font-size: 13px; line-height: 1.42; }
+  .ma-actions .btn-3d { flex: 1 1 auto; }
+}
+@media (max-height: 560px) {
+  .mb-lb-card.mo-card, .mb-lb-card.ma-card { gap: 8px; padding: 12px 14px; }
+  .mb-lb-card.mo-card .mb-lb-head h2, .mb-lb-card.ma-card .mb-lb-head h2 { font-size: 22px; }
+  .mo-row { min-height: 38px; padding: 4px 10px; }
+  .ma-body p { font-size: 12.5px; line-height: 1.38; }
+}
+/* Sideways phones: options rows in two columns. */
+@media (max-height: 560px) and (min-aspect-ratio: 4/3) {
+  .mb-lb-card.mo-card { width: min(760px, 100%); }
+  .mo-body { grid-template-columns: 1fr 1fr; }
+  .mo-hint { grid-column: 1 / -1; }
+  .mo-cycle b { min-width: 84px; }
+}

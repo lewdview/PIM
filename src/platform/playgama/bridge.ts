@@ -335,6 +335,31 @@ export function externalLinksAllowed(): boolean {
   return !!bridgeOrNull()?.platform.isExternalLinksAllowed;
 }
 
+/** Portal-native ways to help the game (no outside links needed). */
+export type SocialAction = 'rate' | 'share' | 'favorite' | 'community';
+
+export function socialActions(): SocialAction[] {
+  const s = bridgeOrNull()?.social;
+  if (!s) return [];
+  const out: SocialAction[] = [];
+  if (s.isRateSupported) out.push('rate');
+  if (s.isAddToFavoritesSupported) out.push('favorite');
+  if (s.isShareSupported) out.push('share');
+  if (s.isJoinCommunitySupported) out.push('community');
+  return out;
+}
+
+export async function runSocialAction(action: SocialAction): Promise<void> {
+  const s = bridgeOrNull()?.social;
+  if (!s) return;
+  try {
+    if (action === 'rate') await s.rate();
+    else if (action === 'favorite') await s.addToFavorites();
+    else if (action === 'share') await s.share();
+    else await s.joinCommunity();
+  } catch { /* closed or refused */ }
+}
+
 /**
  * Advanced banners (the `menu` placement in playgama-bridge-config.json): a rail
  * on wide screens or a strip on portrait ones, shown on the chapter and results
