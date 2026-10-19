@@ -3946,6 +3946,7 @@ export default function Game() {
         t,
         lines: trackLyricsRef.current.lines,
         colors: laneColorsRef.current,
+        animate: optsRef.current.bgAnimation,
       });
     }
 
