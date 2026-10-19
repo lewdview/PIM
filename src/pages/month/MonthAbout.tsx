@@ -1,17 +1,19 @@
 // "Who is th3scr1b3?" for a monthly Playgama build: the artist, the 365 Days of
 // Light and Dark project, how this chapter fits, and ways to help. Playgama does
 // not allow links out of the game, so there the help section only offers the
-// portal's own actions (rate, favorite, share) and the bonus bundle; the site
-// and support links show only where the portal allows outside links.
+// portal's own actions (rate, favorite, share) and the bonus bundle; the site,
+// Discord and support links show only where the portal allows outside links.
 
 import { useEffect, useState } from 'react';
-import { ExternalLink, Gift, Heart, Share2, Star, Users, X } from 'lucide-react';
+import { ExternalLink, Gift, Heart, MessageCircle, Share2, Star, Users, X } from 'lucide-react';
 import { CHAPTERS } from '@/game/campaign';
 import { PLAYGAMA_MONTH, canBuyBundle, ownsBonusBundle } from '@/platform/playgama/month';
 import { externalLinksAllowed, runSocialAction, socialActions, type SocialAction } from '@/platform/playgama/bridge';
 import '@/styles/monthPanels.css';
 
 const SITE_URL = 'https://th3scr1b3.art';
+/** Permanent (never-expiring) invite to the th3scr1b3 Discord server; the button hides while empty. */
+const DISCORD_INVITE = 'https://discord.gg/x3wSdrpJeV';
 
 const SOCIAL: Record<SocialAction, { label: string; icon: typeof Star }> = {
   rate: { label: 'Rate the game', icon: Star },
@@ -74,6 +76,11 @@ export default function MonthAbout({ onClose, onBuyBundle }: { onClose: () => vo
                   </button>
                 );
               })}
+              {links && DISCORD_INVITE && (
+                <a className="btn-3d" data-size="sm" data-tone="quiet" href={DISCORD_INVITE} target="_blank" rel="noopener">
+                  <MessageCircle size={14} /> Join the Discord
+                </a>
+              )}
               {links && (
                 <a className="btn-3d" data-size="sm" data-tone="quiet" href={SITE_URL} target="_blank" rel="noopener">
                   <ExternalLink size={14} /> Hear all 365 songs and support th3scr1b3
