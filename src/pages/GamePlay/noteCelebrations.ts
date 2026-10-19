@@ -4,11 +4,12 @@
 //  a BREAK (drop) fires a confetti cannon, an ACCENT (beat) throws
 //  curling pink ribbons. Now and then either one swaps for an oddity
 //  — floating hearts, popping bubbles or spinning stars — so the
-//  drops never feel the same twice.
+//  drops never feel the same twice. Touching a MINE blows it up, and
+//  a REMIX note glitches away in RGB-split blocks.
 // ═══════════════════════════════════════════════════════════════
 
-export type CelebrationKind = 'confetti' | 'ribbons' | 'hearts' | 'bubbles' | 'stars';
-export type CelebrationNote = 'break' | 'accent';
+export type CelebrationKind = 'confetti' | 'ribbons' | 'hearts' | 'bubbles' | 'stars' | 'explosion' | 'glitch';
+export type CelebrationNote = 'break' | 'accent' | 'mine' | 'remix';
 
 interface Bit {
   x: number;
@@ -45,12 +46,16 @@ const LIFE_MS: Record<CelebrationKind, number> = {
   hearts: 1800,
   bubbles: 1800,
   stars: 1200,
+  explosion: 1300,
+  glitch: 750,
 };
 
 const CONFETTI_COLORS = ['#FF3B6B', '#FFD23F', '#3BCEAC', '#00B4FF', '#B967FF', '#FF7B00', '#FFFFFF', '#CCFF00'];
 const RIBBON_COLORS = ['#FF4FD8', '#FF8AD8', '#FF1F8F', '#FFB3E6', '#FF5CA8'];
 const HEART_COLORS = ['#FF2E63', '#FF6B9A', '#FF9EC4', '#E0115F'];
 const STAR_COLORS = ['#FFD700', '#FFF6B0', '#FFFFFF', '#FFB300'];
+const EXPLOSION_COLORS = ['#FFF3B0', '#FFC300', '#FF7B00', '#FF3B1F', '#B91C1C', '#3A0A06'];
+const GLITCH_COLORS = ['#00F5D4', '#FF007F', '#FFFFFF', '#7B61FF'];
 
 function pick<T>(list: T[], rand: () => number): T {
   return list[Math.floor(rand() * list.length) % list.length];
@@ -58,6 +63,8 @@ function pick<T>(list: T[], rand: () => number): T {
 
 /** The effect a hit on this note type plays. */
 export function chooseCelebration(note: CelebrationNote, rand: () => number = Math.random): CelebrationKind {
+  if (note === 'mine') return 'explosion';
+  if (note === 'remix') return 'glitch';
   if (rand() < ODDITY_CHANCE) return pick(ODDITIES, rand);
   return note === 'break' ? 'confetti' : 'ribbons';
 }
@@ -134,6 +141,41 @@ export function spawnCelebration(
         color: '#FFFFFF',
       }));
     }
+  } else if (kind === 'explosion') {
+    // Debris chunks; smoke puffs ride along as slow, large bits (vr = 0)
+    for (let i = 0, c = n(36); i < c; i++) {
+      const angle = rand() * Math.PI * 2;
+      const speed = 300 + rand() * 700;
+      bits.push(bit({
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 200,
+        vr: (rand() - 0.5) * 20,
+        size: 3 + rand() * 6,
+        color: pick(EXPLOSION_COLORS, rand),
+      }));
+    }
+    for (let i = 0, c = n(10); i < c; i++) {
+      const angle = rand() * Math.PI * 2;
+      bits.push(bit({
+        vx: Math.cos(angle) * (40 + rand() * 90),
+        vy: Math.sin(angle) * 60 - 60,
+        size: 18 + rand() * 22,
+        color: 'smoke',
+      }));
+    }
+  } else if (kind === 'glitch') {
+    // Blocks the note breaks into: wide, thin slices that tear sideways
+    for (let i = 0, c = n(22); i < c; i++) {
+      bits.push(bit({
+        x: x + (rand() - 0.5) * 90,
+        y: y + (rand() - 0.5) * 40,
+        vx: (rand() < 0.5 ? -1 : 1) * (120 + rand() * 420),
+        vy: (rand() - 0.5) * 60,
+        size: 10 + rand() * 60, // slice width
+        phase: 3 + rand() * 9,  // slice height
+        color: pick(GLITCH_COLORS, rand),
+      }));
+    }
   } else {
     for (let i = 0, c = n(18); i < c; i++) {
       const angle = (i / c) * Math.PI * 2 + (rand() - 0.5) * 0.4;
@@ -171,6 +213,19 @@ function step(c: Celebration, dt: number) {
       const drag = Math.pow(0.6, dt);
       b.vx = b.vx * drag + Math.sin(b.phase) * 90 * dt;
       b.vy = b.vy * drag - 30 * dt; // keep rising
+    } else if (c.kind === 'explosion') {
+      if (b.color === 'smoke') {
+        const drag = Math.pow(0.4, dt);
+        b.vx *= drag;
+        b.vy = b.vy * drag - 40 * dt;
+        b.size += 30 * dt;
+      } else {
+        const drag = Math.pow(0.2, dt);
+        b.vx *= drag;
+        b.vy = b.vy * drag + 1300 * dt;
+      }
+    } else if (c.kind === 'glitch') {
+      b.vx *= Math.pow(0.15, dt);
     } else {
       const drag = Math.pow(0.25, dt);
       b.vx *= drag;
@@ -207,6 +262,55 @@ function starPath(ctx: CanvasRenderingContext2D, s: number) {
   ctx.closePath();
 }
 
+function drawFireball(ctx: CanvasRenderingContext2D, x: number, y: number, t01: number) {
+  if (t01 < 0.35) {
+    // Core fireball: swells fast, then collapses into the smoke
+    const p = t01 / 0.35;
+    const r = 30 + 140 * Math.sqrt(p);
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, `rgba(255,250,220,${1 - p})`);
+    g.addColorStop(0.3, `rgba(255,195,0,${0.9 * (1 - p)})`);
+    g.addColorStop(0.65, `rgba(255,59,31,${0.7 * (1 - p)})`);
+    g.addColorStop(1, 'rgba(60,0,0,0)');
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  if (t01 < 0.5) {
+    const p = t01 / 0.5;
+    ctx.globalAlpha = (1 - p) * 0.8;
+    ctx.strokeStyle = '#FFE8C2';
+    ctx.lineWidth = 8 * (1 - p) + 1;
+    ctx.beginPath();
+    ctx.arc(x, y, 30 + p * 260, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+}
+
+function drawGlitchTears(ctx: CanvasRenderingContext2D, x: number, y: number, t01: number) {
+  if (t01 > 0.6) return;
+  // A few full-width scanline tears that jump each frame
+  const k = 1 - t01 / 0.6;
+  ctx.globalAlpha = 0.55 * k;
+  for (let i = 0; i < 4; i++) {
+    const ty = y + (Math.random() - 0.5) * 120;
+    const w = 160 + Math.random() * 220;
+    const off = (Math.random() - 0.5) * 60;
+    ctx.fillStyle = i % 2 ? '#FF007F' : '#00F5D4';
+    ctx.fillRect(x - w / 2 + off, ty, w, 2 + Math.random() * 3);
+  }
+  if (t01 < 0.15) {
+    ctx.globalAlpha = (1 - t01 / 0.15) * 0.9;
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 18px monospace';
+    ctx.textAlign = 'center';
+    const j = (Math.random() - 0.5) * 8;
+    ctx.fillText('R3M!X', x + j, y - 40);
+  }
+}
+
 /** Advance and draw every live celebration, dropping finished ones. */
 export function drawCelebrations(ctx: CanvasRenderingContext2D, list: Celebration[], nowMs: number) {
   let write = 0;
@@ -225,6 +329,12 @@ export function drawCelebrations(ctx: CanvasRenderingContext2D, list: Celebratio
     const fade = t01 < 0.7 ? 1 : Math.max(0, 1 - (t01 - 0.7) / 0.3);
 
     ctx.save();
+
+    if (c.kind === 'explosion') {
+      drawFireball(ctx, c.originX, c.originY, t01);
+    } else if (c.kind === 'glitch') {
+      drawGlitchTears(ctx, c.originX, c.originY, t01);
+    }
 
     if (c.kind === 'confetti' && t01 < 0.25) {
       // Cannon flash at the strike point
@@ -301,6 +411,38 @@ export function drawCelebrations(ctx: CanvasRenderingContext2D, list: Celebratio
             ctx.stroke();
           }
         }
+      } else if (c.kind === 'explosion') {
+        if (b.color === 'smoke') {
+          // Smoke rolls in once the fireball has burnt out
+          ctx.globalAlpha = 0.35 * fade * Math.max(0, Math.min(1, (t01 - 0.2) * 4));
+          ctx.fillStyle = '#2A2025';
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, b.size, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.save();
+          ctx.translate(b.x, b.y);
+          ctx.rotate(b.rot);
+          ctx.fillStyle = b.color;
+          ctx.shadowColor = '#FF7B00';
+          ctx.shadowBlur = t01 < 0.4 ? 10 : 0;
+          ctx.fillRect(-b.size / 2, -b.size / 2, b.size, b.size * 0.7);
+          ctx.restore();
+        }
+      } else if (c.kind === 'glitch') {
+        // Blocks flicker out unevenly: each frame a block may skip drawing
+        if (Math.random() < t01 * 1.1) continue;
+        const jitter = (Math.random() - 0.5) * 14 * (1 - t01);
+        const w = b.size * (1 - t01 * 0.5);
+        const h = b.phase;
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.fillStyle = '#00F5D4';
+        ctx.fillRect(b.x - w / 2 + jitter - 3, b.y - h / 2, w, h);
+        ctx.fillStyle = '#FF007F';
+        ctx.fillRect(b.x - w / 2 - jitter + 3, b.y - h / 2, w, h);
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.fillStyle = b.color;
+        ctx.fillRect(b.x - w / 2 + jitter, b.y - h / 2, w, h * 0.5);
       } else if (c.kind === 'stars') {
         ctx.save();
         ctx.translate(b.x, b.y);
