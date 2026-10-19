@@ -2132,7 +2132,7 @@ export default function Game() {
   const triggerHitFx = useCallback(
     (lane: number, kind: "PERFECT+" | "PERFECT" | "GOOD" | "SHIELDED" | "MISS", customY?: number, swipeDir?: Note['swipeDirection'], noteType?: Note['type']) => {
       const canvas = canvasRef.current;
-      if (!canvas || kind === "MISS") return;
+      if (!canvas || (kind === "MISS" && noteType !== 'mine')) return;
       const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
       const W = canvas.width / dpr;
       const H = canvas.height / dpr;
@@ -2169,6 +2169,14 @@ export default function Game() {
         : particleDensity === 'half'
           ? Math.ceil(rawCount * 0.5)
           : rawCount;
+
+      // A touched mine gets only its explosion, not a hit pop
+      if (noteType === 'mine') {
+        if (particleDensity !== 'minimal') {
+          spawnCelebration(celebrationsRef.current, 'mine', cx, customY !== undefined ? customY : hitY, Date.now(), particleDensity === 'half' ? 0.5 : 1);
+        }
+        return;
+      }
 
       let swipeAngle: number | null = null;
       if (swipeDir) {
@@ -2219,8 +2227,8 @@ export default function Game() {
         shards: particleDensity === 'minimal' ? undefined : makeHitShards(kind, particleDensity === 'half' ? 6 : 12),
       });
 
-      // Break (drop) and accent (beat) notes get their own celebration on top
-      if ((noteType === 'break' || noteType === 'accent') && kind !== 'SHIELDED' && particleDensity !== 'minimal') {
+      // Break (drop), accent (beat) and remix notes get their own celebration on top
+      if ((noteType === 'break' || noteType === 'accent' || noteType === 'remix') && kind !== 'SHIELDED' && particleDensity !== 'minimal') {
         spawnCelebration(celebrationsRef.current, noteType, cx, customY !== undefined ? customY : hitY, Date.now(), particleDensity === 'half' ? 0.5 : 1);
       }
     },
@@ -2347,6 +2355,7 @@ export default function Game() {
         audioManager.playSfx("mine_explosion", 0.85);
         haptics.judgment('MINE', lane);
         addJudgment({ type: "MISS", lane, id: ++jCounter.current, ts: Date.now() });
+        triggerHitFx(lane, "MISS", undefined, undefined, 'mine');
         syncDisplay();
         return;
       }
