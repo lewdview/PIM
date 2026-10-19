@@ -7,6 +7,7 @@
 
 import { getArchetypeProjection, type PovMode } from "./projections";
 import type { TrackArchetype } from "./archetypes";
+import { supabase } from "@/services/supabaseClient";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -54,6 +55,14 @@ const ROW_GAP = 1.15;
 const LRC_TAG_RE = /^\[(ti|ar|al|by|offset|length|re|ve):/i;
 const LRC_LINE_RE = /^\[(\d{1,3}):(\d{2})(?:[.:](\d{1,3}))?\]\s*(.*)$/;
 
+// One random karaoke style + one random font for the whole song.
+function pickSongStyle(): { effect: WordEffect; font: string } {
+  return {
+    effect: EFFECTS[Math.floor(Math.random() * EFFECTS.length)],
+    font: LYRIC_FONTS[Math.floor(Math.random() * LYRIC_FONTS.length)],
+  };
+}
+
 export function parseLrc(text: string): TimedLine[] {
   const rawLines: { start: number; text: string }[] = [];
 
@@ -73,9 +82,7 @@ export function parseLrc(text: string): TimedLine[] {
 
   rawLines.sort((a, b) => a.start - b.start);
 
-  // One random karaoke style + one random font for the whole song.
-  const songEffect = EFFECTS[Math.floor(Math.random() * EFFECTS.length)];
-  const songFont = LYRIC_FONTS[Math.floor(Math.random() * LYRIC_FONTS.length)];
+  const { effect: songEffect, font: songFont } = pickSongStyle();
 
   return rawLines.map((rl, i) => {
     const nextStart = i + 1 < rawLines.length ? rawLines[i + 1].start : rl.start + 4;
@@ -92,22 +99,108 @@ export function parseLrc(text: string): TimedLine[] {
   });
 }
 
-// ── Loading (cached per day) ─────────────────────────────────────────────────
+// ── Published timings (LRC layer → public.lyric_timings) ─────────────────────
 
-const lyricsCache = new Map<number, Promise<TimedLine[]>>();
+interface PublishedWord {
+  word: string;
+  start: number;
+  end: number;
+}
 
-export function loadLyricsForDay(day: number): Promise<TimedLine[]> {
-  if (!Number.isFinite(day) || day < 1 || day > 365) return Promise.resolve([]);
-  const cached = lyricsCache.get(day);
-  if (cached) return cached;
+interface PublishedSegment {
+  text: string;
+  start: number;
+  end: number;
+}
+
+const num = (v: unknown): number => (typeof v === "number" && Number.isFinite(v) ? v : NaN);
+
+/**
+ * Build lines from a published row: each segment is a line, and its words keep
+ * their real karaoke timings. A segment with no timed words falls back to an even
+ * split of its text. Returns [] when the row has nothing usable.
+ */
+export function linesFromPublished(rawWords: unknown, rawSegments: unknown): TimedLine[] {
+  const segments: PublishedSegment[] = (Array.isArray(rawSegments) ? rawSegments : [])
+    .map((s) => ({ text: String(s?.text ?? "").trim(), start: num(s?.start), end: num(s?.end) }))
+    .filter((s) => s.text && Number.isFinite(s.start))
+    .sort((a, b) => a.start - b.start);
+  if (!segments.length) return [];
+  const words: PublishedWord[] = (Array.isArray(rawWords) ? rawWords : [])
+    .map((w) => ({ word: String(w?.word ?? "").trim(), start: num(w?.start), end: num(w?.end) }))
+    .filter((w) => w.word && Number.isFinite(w.start))
+    .sort((a, b) => a.start - b.start);
+
+  const { effect, font } = pickSongStyle();
+  let wi = 0;
+  return segments.map((seg, i) => {
+    const nextStart = i + 1 < segments.length ? segments[i + 1].start : NaN;
+    // Like parseLrc, a line stays up until the next one starts.
+    const end = Math.max(
+      Number.isFinite(nextStart) ? nextStart : Number.isFinite(seg.end) ? seg.end : seg.start + 4,
+      seg.start + 0.5
+    );
+    // Words before the next line's start belong to this line (early words go to line 1).
+    const lineWords: TimedWord[] = [];
+    while (wi < words.length && (!Number.isFinite(nextStart) || words[wi].start < nextStart)) {
+      const w = words[wi++];
+      const wEnd = Number.isFinite(w.end) && w.end > w.start ? w.end : w.start + 0.3;
+      lineWords.push({ text: w.word, start: w.start, end: Math.min(wEnd, end), effect });
+    }
+    if (!lineWords.length) {
+      const tokens = seg.text.split(/\s+/).filter(Boolean);
+      const dur = end - seg.start;
+      tokens.forEach((t, k) =>
+        lineWords.push({
+          text: t,
+          start: seg.start + (dur * k) / tokens.length,
+          end: seg.start + (dur * (k + 1)) / tokens.length,
+          effect,
+        })
+      );
+    }
+    return { start: seg.start, end, words: lineWords, font };
+  });
+}
+
+async function loadPublishedLyrics(day: number): Promise<TimedLine[]> {
+  try {
+    const { data, error } = await supabase
+      .from("lyric_timings")
+      .select("words, segments")
+      .eq("day", day)
+      .maybeSingle();
+    if (error || !data) return [];
+    return linesFromPublished(data.words, data.segments);
+  } catch {
+    return [];
+  }
+}
+
+function loadBundledLyrics(day: number): Promise<TimedLine[]> {
   const name = `day${String(day).padStart(3, "0")}.lrc`;
-  const p = fetch(`/lyrics/${name}`)
+  return fetch(`/lyrics/${name}`)
     .then((res) => {
       if (!res.ok) throw new Error(`no lyrics for day ${day}`);
       return res.text();
     })
     .then(parseLrc)
     .catch(() => [] as TimedLine[]);
+}
+
+// ── Loading (cached per day) ─────────────────────────────────────────────────
+
+const lyricsCache = new Map<number, Promise<TimedLine[]>>();
+
+/**
+ * Lyrics published from the LRC layer win, so edits show up without a redeploy;
+ * the .lrc files bundled in public/lyrics cover days that were never published.
+ */
+export function loadLyricsForDay(day: number): Promise<TimedLine[]> {
+  if (!Number.isFinite(day) || day < 1 || day > 366) return Promise.resolve([]);
+  const cached = lyricsCache.get(day);
+  if (cached) return cached;
+  const p = loadPublishedLyrics(day).then((lines) => (lines.length ? lines : loadBundledLyrics(day)));
   lyricsCache.set(day, p);
   return p;
 }
