@@ -34,7 +34,7 @@ import { refineAndBlendEdges, disposeCanvas, drawMovingGasAura } from './drawHel
 import JudgmentBadge, { getJudgmentBadgeSvgHtml, getJudgmentStreamItemHtml } from './JudgmentBadge';
 import GameplayVisualizer from './GameplayVisualizer';
 import TutorialOverlay, { type TutorialStepType } from './TutorialOverlay';
-import { loadLyricsForDay, drawTrackLyrics, type TimedLine } from './trackLyrics';
+import { loadLyricsForDay, drawTrackLyrics, drawLyricBackdrop, type TimedLine } from './trackLyrics';
 import { getStageStarts, stageAtTime } from './stageTimeline';
 import { generateMasterChart, ANALYSIS_SAMPLE_RATE, CHART_MASTER_VERSION } from '@/game/chartMaster';
 import { drawSlabBody, drawTopFaceBevel, drawHitPop3D, drawHitPillar3D, hitPillarReach, makeHitShards, setNote3DQuality, type HitShard } from './notes3d';
@@ -3936,6 +3936,17 @@ export default function Game() {
       bgGrad.addColorStop(1, "rgba(5, 4, 2, 0.98)");
       ctx.fillStyle = bgGrad;
       ctx.fillRect(0, 0, W, H);
+    }
+
+    // Lyric Cinema background: kinetic lyrics painted on the canvas beneath the track.
+    if (optsRef.current.gameBackground === 'lyric_cinema') {
+      drawLyricBackdrop(ctx, {
+        W,
+        H,
+        t,
+        lines: trackLyricsRef.current.lines,
+        colors: laneColorsRef.current,
+      });
     }
 
     // Draw pre-rendered static tracks (Double-buffering optimization)
