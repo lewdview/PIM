@@ -291,19 +291,22 @@ const NECK = 'M141 160 C141 174 140.5 184 137 195 Q150 201 163 195 C159.5 184 15
 // Exaggerated pin-up hourglass: bust ~x96–204, waist ~x124–176, hips ~x90–210.
 const TORSO = 'M116 196 C130 189 170 189 184 196 C200 208 206 230 202 250 C198 264 182 270 177 278 C172 288 173 298 186 312 C202 326 212 340 210 352 L90 352 C88 340 98 326 114 312 C127 298 128 288 123 278 C118 270 102 264 98 250 C94 230 100 208 116 196 Z';
 // Arms sit in a slight A-pose so they frame the curves instead of hiding them.
-const ARM = 'M118 198 C98 200 88 212 85 230 L76 282 C72 304 68 324 66 342 L80 344 C82 326 86 306 90 288 L104 238 Z';
+// The arm runs into the back of the hand in one contour, so there is no seam at the wrist. The
+// outer forearm swells just below the elbow (brachioradialis) and the inner edge narrows to the wrist.
+const ARM = 'M118 198 C98 200 88 212 85 230 C82 248 79 266 77.5 280 C76 290 74 297 72 306 C70 318 67.6 330 66.2 338 C63 344 61.8 350 62.4 356 Q71 358.6 80.6 355.6 C81 350 80.6 345 79.8 341 C81.5 330 84 316 86 304 C87.6 296 89 292 90 288 C93 270 98 252 104 238 Z';
 // Relaxed hanging hand (her right; mirrored for the left), seen from the front with the palm to
 // the thigh: the back of the hand, four fingers in length order (middle > ring >= index > little,
 // little finger on the outside), knuckles on an arc, and the thumb in front on the inner side.
-const PALM = 'M65.5 339 C62 345 61.5 351 62.5 356 Q71 358.5 80.5 355.5 C81 350 80.5 344 79.5 340 Z';
 const FINGERS = [
-  'M62.4 355 C61.6 359 61.8 362.6 63.6 363.4 C65.2 363.6 66.4 361 66.6 356.4 Z', // little
-  'M66.4 356.4 C66 361 66.4 365.4 68.6 366.2 C70.6 366.4 71.4 362.6 71 357 Z', // ring
-  'M70.9 357 C70.8 362 71.4 366.8 73.6 367.4 C75.6 367.4 76.2 363 75.6 356.8 Z', // middle
-  'M75.5 356.8 C75.6 361.4 76.3 364.6 78.2 364.8 C80 364.6 80.6 361 80.4 355.6 Z', // index
+  'M62.6 352.6 C62 357 62 361.6 63.2 364.2 C64.4 365.6 66 364.8 66.4 362 C66.8 359 66.8 356 66.6 353 C65.6 351.2 63.4 351.2 62.6 352.6 Z', // little
+  'M66.6 353 C66 359 66.2 364.6 67.6 367.8 C68.8 369.4 70.6 368.8 71 366 C71.4 362 71.2 357 71 353.4 C70 351.4 67.6 351.4 66.6 353 Z', // ring
+  'M71 353.4 C70.6 359 71 365 72.4 368.8 C73.6 370.6 75.4 370 75.8 367 C76 362.6 75.8 357.6 75.6 353.2 C74.6 351.4 72 351.4 71 353.4 Z', // middle
+  'M75.6 353 C75.6 358.4 76 363 77.2 366 C78.4 367.6 80 367 80.4 364.4 C80.8 360.6 80.6 356 80.4 352.6 C79.4 350.8 76.6 350.8 75.6 353 Z', // index
 ];
 const THUMB = 'M79.6 345 C82.4 348 83.2 353 81.6 357.6 C80.6 360 78.2 359.6 78 357.4 C78.4 353.6 78.2 350 77 347 Z';
-const LEG = 'M92 344 L150 344 L148 420 C146 450 146 470 144 500 C143 525 142 545 142 560 L128 560 C126 540 124 520 121 500 C116 470 110 450 104 420 C94 396 88 370 92 344 Z';
+// Leg and foot in one contour, front view. Outer calf swells high, inner calf low; the knee is the
+// narrow point; the ankle tapers to the malleoli; the foot flares to five toes, big toe inside.
+const LEG = 'M92 344 L150 344 C150.5 372 148.5 404 146 432 C147.6 440 148 448 146.4 456 C145.4 462 145.6 468 146.4 478 C147 492 145 512 142.6 530 C141.6 540 141 548 141.6 554 C143.6 561 147.2 567 148 573 C148.6 577.4 147 581.2 143.6 581.4 C142.2 581.4 141.4 580.8 141 580 C140 581.6 137.6 581.8 136.8 580.2 C135.8 581.4 133.4 581.4 132.6 579.8 C131.6 580.8 129.4 580.6 128.8 579.2 C127.4 579.8 125 579.2 124.8 577.4 C124.4 574.4 125.4 570.4 126 567 C126.8 562 127.8 558 127.4 552 C126.4 534 121.5 516 117 498 C114 486 113.4 474 115 464 C116 458 116.6 454 116 448 C113 436 106 424 100 408 C92 390 89 366 92 344 Z';
 // One rounded bust volume (left; mirrored for the right). It is drawn over the chest and
 // collarbones so the upper curve reads as sitting in front of them.
 // A gravity teardrop, not a circle: the upper pole slopes off the chest wall below the collarbone,
@@ -311,8 +314,7 @@ const LEG = 'M92 344 L150 344 L148 420 C146 450 146 470 144 500 C143 525 142 545
 const BUST = 'M150 238 C149 226 144 214 134 208 C126 203.5 116 203 108 207 C99 212 94.5 224 94.5 238 C94.5 254 104 266 120 267.5 C134 268.5 146 261 149.5 250 C150.3 246 150.4 242 150 238 Z';
 // Base layer: a plain, featureless strapless leotard so the figure is never undressed.
 const BODYSUIT = 'M96 232 C100 216 112 210 124 212 C136 214 146 220 150 232 C154 220 164 214 176 212 C188 210 200 216 204 232 C204 242 203 246 202 250 C198 264 182 270 177 278 C172 288 173 298 186 312 C202 326 212 340 210 352 L208 360 Q180 362 160 368 L140 368 Q120 362 92 360 L90 352 C88 340 98 326 114 312 C127 298 128 288 123 278 C118 270 102 264 98 250 Z';
-const TOES = 'M129.5 573.5 L129 578.6 M133.5 574.5 L133.4 579 M137.4 574.5 L137.6 578.8';
-const FOOT = 'M127 556 L143 556 C146 568 145 576 139 579 L125 579 C121 574 122 564 127 556 Z';
+const TOES = 'M141 580 L141.3 576.8 M136.8 580.2 L136.9 577.4 M132.6 579.8 L132.5 577.2 M128.8 579.2 L128.5 576.8';
 
 /** Keyframes for the idle loop and outfit-change pop; disabled for reduced motion. */
 const ANIM_CSS = `
@@ -643,11 +645,9 @@ function Face({ eyeColor }: { eyeColor: string }) {
 function Hand() {
   return (
     <g>
-      <Skin d={PALM} depth={0.5} />
       {FINGERS.map((d) => <Skin key={d} d={d} depth={0.35} />)}
-      <Skin d={THUMB} depth={0.35} />
-      {/* Knuckle arc across the back of the hand. */}
-      <path d="M64 352.5 Q71 355.5 79 352.5" fill="none" stroke={SKIN_LINE} strokeOpacity="0.4" strokeWidth="0.7" />
+      {/* Nails on the fingertips that turn toward us. */}
+      <path d="M67.9 366.6 Q69 367.8 70.2 366.8 M72.4 368.4 Q73.6 369.6 74.8 368.6 M77.4 365.4 Q78.6 366.4 79.6 365.4" fill="none" stroke={SKIN_LINE} strokeOpacity="0.45" strokeWidth="0.6" strokeLinecap="round" />
     </g>
   );
 }
@@ -659,16 +659,17 @@ function Body() {
         <g key={String(m)} transform={m ? MIRROR : undefined}>
           <Skin d={LEG} mirrored={m} />
           {/* Knee: the kneecap's lower edge and the dimple above it. */}
-          <path d="M122 448 Q129 452 136 448 M126 438 Q129 436 133 438" fill="none" stroke={SKIN_LINE} strokeOpacity="0.45" strokeWidth="0.9" />
-          <Skin d={FOOT} mirrored={m} depth={0.5} />
+          <path d="M124 460 Q131 464 138 460 M127.5 449 Q131 447 135 449" fill="none" stroke={SKIN_LINE} strokeOpacity="0.45" strokeWidth="0.9" />
           <path d={TOES} fill="none" stroke={SKIN_LINE} strokeOpacity="0.6" strokeWidth="0.8" strokeLinecap="round" />
-          {/* Inner ankle bone. */}
-          <path d="M141 552 Q143.5 555 142 558" fill="none" stroke={SKIN_LINE} strokeOpacity="0.45" strokeWidth="0.8" />
+          {/* Big-toe nail, the tendon down the instep, and the ankle bones (inner one higher). */}
+          <path d="M143 578 Q144.6 577 146 578" fill="none" stroke={SKIN_LINE} strokeOpacity="0.5" strokeWidth="0.6" />
+          <path d="M138.5 560 Q141.6 566 143.6 573" fill="none" stroke={SKIN_LINE} strokeOpacity="0.25" strokeWidth="0.7" />
+          <path d="M140 548 Q142 551 141 554.5 M128.6 551 Q127.6 554 128.8 557" fill="none" stroke={SKIN_LINE} strokeOpacity="0.4" strokeWidth="0.7" />
         </g>
       ))}
       {/* Contact shadows where the feet meet the floor. */}
-      <ellipse cx="133" cy="580" rx="12" ry="2.2" fill="#000" opacity="0.3" />
-      <ellipse cx="167" cy="580" rx="12" ry="2.2" fill="#000" opacity="0.3" />
+      <ellipse cx="136" cy="581.4" rx="13" ry="2.2" fill="#000" opacity="0.3" />
+      <ellipse cx="164" cy="581.4" rx="13" ry="2.2" fill="#000" opacity="0.3" />
     </g>
   );
 }
@@ -679,9 +680,12 @@ function UpperBody() {
       {[false, true].map((m) => (
         <g key={String(m)} transform={m ? MIRROR : undefined}>
           <Skin d={ARM} mirrored={m} />
-          {/* Elbow crease at the waistline. */}
-          <path d="M80 283 Q83.5 285.5 87.5 284" fill="none" strokeOpacity="0.45" strokeWidth="0.8" />
           <Hand />
+          {/* Deltoid edge, elbow crease at the waistline, tendons on the back of the hand. */}
+          <path d="M86.5 250 Q90 240 97 233" fill="none" strokeOpacity="0.3" strokeWidth="0.8" />
+          <path d="M80 283 Q83.5 285.5 87.5 284" fill="none" strokeOpacity="0.45" strokeWidth="0.8" />
+          <path d="M68 346 L67 354 M72 347 L71.6 355.4 M76 346.4 L76.2 355" fill="none" strokeOpacity="0.18" strokeWidth="0.6" strokeLinecap="round" />
+          <Skin d={THUMB} depth={0.35} mirrored={m} />
         </g>
       ))}
       <Skin d={NECK} depth={0.5} />
@@ -694,22 +698,22 @@ function UpperBody() {
       {[0, 1].map((side) => (
         <g key={side} transform={side ? MIRROR : undefined}>
           <Skin d={BUST} mirrored={!!side} depth={0.8} />
-          <path d="M102.5 215 C107.5 208.8 115.5 206.5 124 207.2" fill="none" stroke="#ffffff" strokeOpacity="0.5" strokeWidth="2.6" strokeLinecap="round" />
+          <path d="M104 216 Q107 211 112 209" fill="none" stroke="#ffffff" strokeOpacity="0.55" strokeWidth="2.2" strokeLinecap="round" />
         </g>
       ))}
       <path d={BODYSUIT} fill="#2b2140" />
-      <BustShading />
+      <BustShading upper={false} />
     </g>
   );
 }
 
 /** Contour lines that sell the curves; reused on top of every top. */
-function BustShading({ opacity = 0.35 }: { opacity?: number }) {
+function BustShading({ opacity = 0.35, upper = true }: { opacity?: number; upper?: boolean }) {
   return (
     <g fill="none" stroke="#000" strokeOpacity={opacity} strokeWidth="1.4" strokeLinecap="round">
       {/* Upper curves give tops the same rounded shape as the bust underneath. */}
-      <path d="M96 236 C96 220 104 208 116 206 C128 204.5 140 210 147 222" strokeOpacity={opacity * 0.6} />
-      <path d="M204 236 C204 220 196 208 184 206 C172 204.5 160 210 153 222" strokeOpacity={opacity * 0.6} />
+      {upper && <path d="M96 236 C96 220 104 208 116 206 C128 204.5 140 210 147 222" strokeOpacity={opacity * 0.6} />}
+      {upper && <path d="M204 236 C204 220 196 208 184 206 C172 204.5 160 210 153 222" strokeOpacity={opacity * 0.6} />}
       <path d="M98 252 Q110 268 124 268 Q140 268 148 256" />
       <path d="M202 252 Q190 268 176 268 Q160 268 152 256" />
       <path d="M150 230 L150 246" strokeOpacity={opacity * 0.8} />
@@ -734,7 +738,7 @@ function Fishnet({ choice }: { choice: GarmentChoice }) {
   );
 }
 
-const THIGH_HIGH = 'M100 404 L149 404 L148 420 C146 450 146 470 144 500 C143 525 142 545 142 560 L128 560 C126 540 124 520 121 500 C116 470 110 450 104 420 Z';
+const THIGH_HIGH = 'M98.6 404 L148.4 404 C147.6 416 146.8 425 146 432 C147.6 440 148 448 146.4 456 C145.4 462 145.6 468 146.4 478 C147 492 145 512 142.6 530 C141.6 540 141 548 141.6 554 C143.6 561 147.2 567 148 573 C148.6 577.4 147 581.2 143.6 581.4 L128 580.2 C125 579.2 124.4 574.4 126 567 C126.8 562 127.8 558 127.4 552 C126.4 534 121.5 516 117 498 C114 486 113.4 474 115 464 C116 458 116.6 454 116 448 C113 436 106 424 100 408 Z';
 
 function Legwear({ choice }: { choice: GarmentChoice }) {
   const id = 'legwear';
@@ -747,7 +751,7 @@ function Legwear({ choice }: { choice: GarmentChoice }) {
     case 'fishnet':
       return <Fishnet choice={choice} />;
     case 'warmers':
-      return <Garment id={id} choice={choice} mirror={['M118 468 L149 468 C149 500 148 530 148 552 L120 552 C115 524 115 496 118 468 Z']}
+      return <Garment id={id} choice={choice} mirror={['M113.6 468 L146.6 468 C147.6 490 145.4 516 142.4 552 L126.8 552 C125.6 534 121 516 116.6 498 C113.8 486 113.2 476 113.6 468 Z']}
         details={<g stroke="#000" strokeOpacity="0.25">{[480, 492, 504, 516, 528, 540].map((y) => <g key={y}><path d={`M119 ${y} L148 ${y}`} /><path d={`M181 ${y} L152 ${y}`} /></g>)}</g>} />;
     default:
       return null;
@@ -761,7 +765,7 @@ function Shoes({ choice }: { choice: GarmentChoice }) {
       return <Garment id={id} choice={choice} mirror={['M124 548 L146 548 C148 556 149 566 148 572 L148 590 L120 590 L120 572 C120 564 122 556 124 548 Z']}
         details={<g fill="#000" opacity="0.35"><rect x="120" y="582" width="28" height="8" /><rect x="152" y="582" width="28" height="8" /></g>} />;
     case 'boots':
-      return <Garment id={id} choice={choice} mirror={['M119 486 L148 486 L147 560 C152 572 151 582 148 588 L117 588 C113 574 116 562 121 554 Z']}
+      return <Garment id={id} choice={choice} mirror={['M112.6 486 L147.4 486 C147.4 510 144 538 143 558 C152 572 151 582 148 588 L117 588 C113 574 116 562 121 554 C120 530 115 506 112.6 486 Z']}
         details={<g stroke="#000" strokeOpacity="0.45">{[500, 514, 528, 542].map((y) => <g key={y}><path d={`M126 ${y} L142 ${y + 6}`} /><path d={`M174 ${y} L158 ${y + 6}`} /></g>)}</g>} />;
     case 'sneakers':
       return <Garment id={id} choice={choice} mirror={['M122 550 L146 550 C151 562 151 574 148 582 L116 582 C114 566 116 558 122 550 Z']}
