@@ -32,7 +32,7 @@ import {
 import { getProductPrice } from '@/platform/playgama/bridge';
 import { monthTotal } from '@/platform/playgama/monthLeaderboard';
 import { hideBroken } from '@/pages/campaign/hideBroken';
-import { bombshellArtFor, monthStageLevel, prepareMonthRun } from './startRun';
+import { baseSongId, bombshellArtFor, isDeluxeRun, monthStageLevel, prepareMonthRun } from './startRun';
 import '@/styles/stageShell.css';
 import '@/styles/campaignStory.css';
 import '@/styles/campaignResults.css';
@@ -102,6 +102,9 @@ export default function MonthResults() {
 }
 
 function RunResults({ songId }: { songId: string }) {
+  // A Deluxe run plays a track's Chart Master Deluxe chart; its stage and best are the track's.
+  const deluxe = isDeluxeRun(songId);
+  const trackId = baseSongId(songId);
   const [, setLocation] = useLocation();
   const [result] = useState<MonthResultData | null>(() => {
     try {
@@ -133,13 +136,13 @@ function RunResults({ songId }: { songId: string }) {
       if (s && cover) s.coverArt = cover;
       setSong(s);
       const songs = songsForMonth(catalog, PLAYGAMA_MONTH);
-      const idx = songs.findIndex((x) => x.id === songId);
+      const idx = songs.findIndex((x) => x.id === trackId);
       if (idx === -1) return;
       const progress = chapterProgress(songs, meta);
       setStage({ songs, progress, idx, isBonus: idx >= progress.regular.length, level: monthStageLevel(meta.month, idx, progress) });
     }).catch(() => {});
     return () => { alive = false; };
-  }, [songId, result, unlockRev]);
+  }, [songId, trackId, result, unlockRev]);
 
   useEffect(() => {
     const onUnlock = () => setUnlockRev((n) => n + 1);
@@ -154,7 +157,7 @@ function RunResults({ songId }: { songId: string }) {
     ? (((result.perfectPlus ?? 0) * 1.0 + (result.perfects ?? 0) * 0.9 + (result.goods ?? 0) * 0.5) / total) * 100
     : 0;
   const firstClear = passed && !!result?.firstClear;
-  const best = getHighScore(songId);
+  const best = getHighScore(trackId);
   // The best is saved before this screen mounts, so a matching score means this run set it.
   const newRecord = passed && !firstClear && !!result && result.score > 0 && best === result.score;
   const fullCombo = passed && result?.goods === 0 && result?.misses === 0;
@@ -349,10 +352,10 @@ function RunResults({ songId }: { songId: string }) {
     return () => clearTimeout(t);
   }, [passed, step, count]);
 
-  const launch = (target: GameSong, idx: number, level: number) => {
+  const launch = (target: GameSong, idx: number, level: number, deluxeRun = false) => {
     audioManager.playSfx('tap_nav', 0.4);
     sessionStorage.removeItem(`result_${songId}`);
-    setLocation(prepareMonthRun(target, { month: meta.month, level, idx, cleared: hasClearedSong(target) }));
+    setLocation(prepareMonthRun(target, { month: meta.month, level, idx, cleared: hasClearedSong(target), deluxe: deluxeRun }));
   };
   const go = (path: string) => { audioManager.playSfx('tap_nav', 0.15); setLocation(path); };
 
@@ -412,7 +415,9 @@ function RunResults({ songId }: { songId: string }) {
         </button>
         <div className="cr-hud-right">
           <span className="cr-chip">{stageLabel}</span>
-          <span className="cr-chip" data-tone="hot">Lv {level} · {levelToTier(level)}</span>
+          {deluxe
+            ? <span className="cr-chip" data-tone="hot">Deluxe</span>
+            : <span className="cr-chip" data-tone="hot">Lv {level} · {levelToTier(level)}</span>}
         </div>
       </nav>
 
@@ -508,7 +513,7 @@ function RunResults({ songId }: { songId: string }) {
             <p className="cs-hook">The next track stays locked until you pass this one. Retry as many times as you need.</p>
             {song && stage && (
               <div className="cs-detail-actions">
-                <button type="button" className="btn-3d" onClick={() => launch(song, stage.idx, stage.level)}>
+                <button type="button" className="btn-3d" onClick={() => launch(song, stage.idx, stage.level, deluxe)}>
                   <RotateCcw size={16} /> Retry stage
                 </button>
                 <span className="cr-blink">Insert coin</span>
@@ -569,8 +574,8 @@ function RunResults({ songId }: { songId: string }) {
 
       <div className={`cr-foot cr-in${on(S.actions)}`}>
         {passed && song && stage && (
-          <button type="button" className="btn-3d" data-tone="quiet" onClick={() => launch(song, stage.idx, stage.level)}>
-            <RotateCcw size={16} /> Replay
+          <button type="button" className="btn-3d" data-tone="quiet" onClick={() => launch(song, stage.idx, stage.level, deluxe)}>
+            <RotateCcw size={16} /> {deluxe ? 'Replay Deluxe' : 'Replay'}
           </button>
         )}
         <button type="button" className="btn-3d" data-tone="ghost" onClick={() => go(HOME)}>

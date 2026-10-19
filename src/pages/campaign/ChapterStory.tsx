@@ -13,7 +13,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useParams } from 'wouter';
-import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Lock, Pause, Play, Film, CheckCircle2, Gift, Trophy, X } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Lock, Pause, Play, Film, CheckCircle2, Gift, Sparkles, Trophy, X } from 'lucide-react';
 import { loadCatalog, isSongTimeLocked, getModifierForSong, type GameSong } from '@/game/api';
 import { getMedalForSong, getHighScore } from '@/game/progress';
 import { CHAPTERS, calculateCampaignDifficulty, levelToTier } from '@/game/campaign';
@@ -241,12 +241,12 @@ export default function ChapterStory() {
     };
   }, [songs, progress, selected, selectedIdx, collection, monthNum, meta, claimedRewards, stageOpen]);
 
-  const handlePlay = useCallback(() => {
+  const handlePlay = useCallback((deluxe = false) => {
     if (!selected || !status || status.locked) return;
     stopPreview();
     audioManager.playSfx('tap_nav', 0.4);
     if (MONTH_BUILD) {
-      setLocation(prepareMonthRun(selected, { month: monthNum, level: status.level, idx: selectedIdx, cleared: status.cleared }));
+      setLocation(prepareMonthRun(selected, { month: monthNum, level: status.level, idx: selectedIdx, cleared: status.cleared, deluxe }));
       return;
     }
     sessionStorage.setItem('campaign_last_song_id', selected.id);
@@ -517,7 +517,13 @@ export default function ChapterStory() {
                     {previewing ? <Pause size={14} /> : <Play size={14} />} {previewing ? 'Stop' : 'Preview'}
                   </button>
                 )}
-                <button type="button" className="btn-3d mb-play" disabled={status.locked} onClick={handlePlay} aria-label={status.locked ? `Locked: ${status.lockReason}` : `Play ${selected.title}`}>
+                {status.cleared && !status.locked && (
+                  <button type="button" className="btn-3d mb-deluxe" data-size="sm" data-tone="gold" onClick={() => handlePlay(true)}
+                    title="Chart Master Deluxe: denser, harder chart with every note type">
+                    <Sparkles size={14} /> Deluxe
+                  </button>
+                )}
+                <button type="button" className="btn-3d mb-play" disabled={status.locked} onClick={() => handlePlay()} aria-label={status.locked ? `Locked: ${status.lockReason}` : `Play ${selected.title}`}>
                   {status.locked ? <Lock size={16} /> : <Play size={16} fill="currentColor" />}
                   {status.locked ? 'Locked' : status.cleared ? 'Replay' : 'Play'}
                 </button>
@@ -772,7 +778,7 @@ export default function ChapterStory() {
             <small>{status.isBonus ? 'Bonus' : `Track ${selectedIdx + 1} of ${progress.regular.length}`} · Lv {status.level}</small>
             <b>{selected.title}</b>
           </button>
-          <button type="button" className="btn-3d" disabled={status.locked} onClick={handlePlay} aria-label={status.locked ? `Locked: ${status.lockReason}` : `Play ${selected.title}`}>
+          <button type="button" className="btn-3d" disabled={status.locked} onClick={() => handlePlay()} aria-label={status.locked ? `Locked: ${status.lockReason}` : `Play ${selected.title}`}>
             {status.locked ? <Lock size={16} /> : <Play size={16} fill="currentColor" />}
             {status.locked ? 'Locked' : status.cleared ? 'Replay' : 'Play'}
           </button>

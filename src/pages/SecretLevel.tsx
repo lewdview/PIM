@@ -15,6 +15,8 @@ import { ShooterLevel } from '../game/secret/shooter';
 import { RunnerLevel } from '../game/secret/runner';
 import { markSecretLevelCleared, type SecretLevelId } from '../game/secret/warp';
 import type { SecretGame, SecretInput } from '../game/secret/types';
+import { sendGameplayMessage } from '@/platform';
+import { PLAYGAMA_MONTH } from '@/platform/playgama/month';
 
 type Phase = 'intro' | 'playing' | 'over';
 
@@ -52,6 +54,7 @@ export default function SecretLevel() {
     const clock = new BeatClock(SECRET_TRACKS[levelId]);
     clockRef.current = clock;
     await clock.start();
+    sendGameplayMessage('gameplay_started');
     setPhase('playing');
   }, [levelId]);
 
@@ -82,6 +85,7 @@ export default function SecretLevel() {
 
       if (game.done) {
         clockRef.current?.stop();
+        sendGameplayMessage('gameplay_stopped');
         if (game.won) markSecretLevelCleared(levelId, game.score);
         setResult({ won: game.won, score: game.score });
         setPhase('over');
@@ -130,7 +134,8 @@ export default function SecretLevel() {
   const leave = () => {
     clockRef.current?.stop();
     if (via === 'warp-clear' && fromSong) setLocation(`/results/${fromSong}`);
-    else setLocation('/songs');
+    // The monthly Playgama build has no song list: an instant warp returns to the chapter.
+    else setLocation(PLAYGAMA_MONTH > 0 ? `/chapter/${PLAYGAMA_MONTH}` : '/songs');
   };
 
   const game = gameRef.current;
