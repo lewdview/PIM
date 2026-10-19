@@ -20,6 +20,9 @@ const bonusProductId = `PIM_${MONTH_NAMES[Math.max(0, playgamaMonth - 1)]}_Bonus
 const bonusPriceUsd = Number(process.env.PIM_PLAYGAMA_BONUS_PRICE_USD) || 2;
 // The month's leaderboard: the sum of the player's best score on every track.
 const leaderboardId = `PIM_${MONTH_NAMES[Math.max(0, playgamaMonth - 1)]}_Score`;
+// The game's public token from the Playgama dashboard. With it, Bridge hosts the
+// leaderboards itself (drawn in game) on playgama.com, where it has none otherwise.
+const publicToken = process.env.PIM_PLAYGAMA_PUBLIC_TOKEN || "";
 
 // Playgama build: drop the third-party ecosystem bar and Google Fonts (only the
 // Bridge may load from a CDN; the fonts are bundled instead), keep the Stella slideshow photos out of the bundle (portal content rules),
@@ -58,6 +61,7 @@ function playgamaPackaging(): Plugin {
           // The month's five bonus songs, sold as one non-consumable bundle.
           ...(playgamaMonth ? { payments: [{ id: bonusProductId, playgama: { amount: Math.round(bonusPriceUsd * 10) } }] } : {}),
           ...(playgamaMonth ? { leaderboards: [{ id: leaderboardId, isMain: true }] } : {}),
+          ...(publicToken ? { saas: { publicToken } } : {}),
         }, null, 2) + "\n",
       });
     },

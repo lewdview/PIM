@@ -11,7 +11,7 @@
  *
  * Monthly build, one campaign chapter as its own game ("PIM: January"):
  *
- *   npm run build:playgama -- --month=1 [--media-dir=PATH] [--no-bombshell] [--bonus-price=2]
+ *   npm run build:playgama -- --month=1 [--media-dir=PATH] [--no-bombshell] [--bonus-price=2] [--public-token=TOKEN]
  *   npm run build:playgama -- --month=all ...    (all twelve, or a list: --month=2,3)
  *
  *   - ships only that month's charts and lyrics, and bundles its songs, covers
@@ -21,6 +21,8 @@
  *     when given, otherwise they are downloaded from the CDN.
  *   - --bonus-price is the bonus bundle's price in USD (default 2). The bundle is
  *     sold as PIM_<Month>_Bonus, which must also be in the Playgama dashboard.
+ *   - --public-token (or PIM_PLAYGAMA_PUBLIC_TOKEN) is the game's public token from
+ *     the Playgama dashboard; it turns on the in-game leaderboard on playgama.com.
  *   - --placeholder-media makes silent audio and blank art instead, to test the
  *     build without the real files. Never upload that zip.
  *   -> pim-playgama-<month>.zip
@@ -123,6 +125,7 @@ run('npx', ['vite', 'build', '--config', 'vite.config.ts'], {
     PIM_PLAYGAMA_MONTH: String(month),
     PIM_PLAYGAMA_BOMBSHELL: withBombshell ? '1' : '0',
     ...(args['bonus-price'] ? { PIM_PLAYGAMA_BONUS_PRICE_USD: String(args['bonus-price']) } : {}),
+    ...(args['public-token'] ? { PIM_PLAYGAMA_PUBLIC_TOKEN: String(args['public-token']) } : {}),
   },
 });
 
