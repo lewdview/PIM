@@ -1301,6 +1301,8 @@ export default function Game() {
   // Secret warp notes: banner shown on hit, and whether clearing the song opens the runner level
   const warpBannerRef = useRef<{ text: string; until: number; instant: boolean } | null>(null);
   const warpClearUnlockedRef = useRef(false);
+  /** An instant warp was hit; if the song ends before it fires, finishGame takes the warp instead. */
+  const instantWarpPendingRef = useRef(false);
   const activateWarpRef = useRef<(type: WarpType) => void>(() => {});
   const remixEffectNameRef = useRef<string | null>(null);
 
@@ -3122,6 +3124,8 @@ export default function Game() {
           if (phaseRef.current === "unmounted") return;
           if (isTutorial) {
             setLocation(`/tutorial?phase=results&score=${gs.score}`);
+          } else if (instantWarpPendingRef.current && songId) {
+            setLocation(secretLevelPath('shooter', songId, 'warp'));
           } else if (warpClearUnlockedRef.current && songId) {
             // Cleared a song with an unlocked warp: the secret runner level comes first
             setLocation(secretLevelPath('runner', songId, 'warp-clear'));
@@ -3134,6 +3138,8 @@ export default function Game() {
           if (phaseRef.current === "unmounted") return;
           if (isTutorial) {
             setLocation(`/tutorial?phase=results&score=${gs.score}`);
+          } else if (instantWarpPendingRef.current && songId) {
+            setLocation(secretLevelPath('shooter', songId, 'warp'));
           } else {
             setLocation(`/results/${songId}`);
           }
@@ -3149,7 +3155,9 @@ export default function Game() {
     haptics.fusionSuccess();
     if (type === 'warp') {
       warpBannerRef.current = { text: 'WARP!', until: Date.now() + INSTANT_WARP_DELAY_MS + 400, instant: true };
+      instantWarpPendingRef.current = true;
       setTimeout(() => {
+        // If the song already finished, finishGame routes to the warp instead
         if (phaseRef.current === "unmounted" || phaseRef.current === "finished" || !songId) return;
         phaseRef.current = "finished";
         cancelAnimationFrame(rafRef.current);
@@ -6744,6 +6752,17 @@ export default function Game() {
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
         ctx.fillText("DATA LEAK!", x_center, trapY + 8);
+      } else {
+        ctx.fillStyle = "rgba(255, 56, 0, 0.35)";
+        ctx.shadowBlur = 0;
+        ctx.font = `900 8px "Space Mono", monospace`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.fillText("VOID TRAP", x_center, trapY + 8);
+      }
+      ctx.restore();
+    }
+
     // ── 6.55 SECRET WARP BANNER ──
     const warpBanner = warpBannerRef.current;
     if (warpBanner && warpBanner.until > Date.now()) {
@@ -6818,15 +6837,6 @@ export default function Game() {
       ctx.fillStyle = overlayColor;
       ctx.fillRect(0, 0, W, H);
 
-      ctx.restore();
-    }
-        ctx.fillStyle = "rgba(255, 56, 0, 0.35)";
-        ctx.shadowBlur = 0;
-        ctx.font = `900 8px "Space Mono", monospace`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "top";
-        ctx.fillText("VOID TRAP", x_center, trapY + 8);
-      }
       ctx.restore();
     }
 
@@ -9068,6 +9078,7 @@ export default function Game() {
       }
       // ── Secret warp (rare): turn one lone final-stage tap into a warp note ──
       warpClearUnlockedRef.current = false;
+      instantWarpPendingRef.current = false;
       if (!activeTutorial) {
         const warpPick = chooseWarpNote(
           notesRef.current.map(ns => ns.note),
