@@ -12,7 +12,8 @@
 
 .cr-root.mr-fit {
   position: fixed;
-  inset: 0;
+  inset: 0 var(--pg-ad-right, 0px) var(--pg-ad-bottom, 0px) 0; /* room for banner slots */
+  width: auto;
   max-width: none;
   margin: 0;
   padding: 1.6vh 64px 2.4vh 2.4vw; /* right gutter keeps the mute button clear */
@@ -166,3 +167,7 @@
   .mr-fit .cr-actions .cr-card { padding-right: 12px; }
   .mr-fit .cr-actions .cr-card[data-tone='lose'] .cs-detail-actions { justify-content: flex-start; }
 }
+
+/* A banner strip along the bottom takes ~9% of the height: drop the extras. */
+[data-pg-ad='bottom'] .mr-fit .cr-subtitle,
+[data-pg-ad='bottom'] .mr-fit .cr-card .cs-muted { display: none; }

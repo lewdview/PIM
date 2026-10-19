@@ -10,6 +10,7 @@ export {
   PLATFORM_PAUSE_EVENT,
   markGameReady,
   sendGameplayMessage,
+  setMenuBanners,
   showInterstitial,
   showInterstitialAndWait,
 } from './playgama/bridge';

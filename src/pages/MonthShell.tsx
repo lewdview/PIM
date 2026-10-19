@@ -11,7 +11,7 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import BackgroundMusic from '@/components/audio/BackgroundMusic';
 import GamepadCursor from '@/components/ui/GamepadCursor';
 import { useGlobalPlayer } from '@/store/useGlobalPlayer';
-import { markGameReady } from '@/platform';
+import { markGameReady, setMenuBanners } from '@/platform';
 import { setGate } from '@/platform/playgama/audioGate';
 import { PLAYGAMA_MONTH, restoreBonusBundle } from '@/platform/playgama/month';
 import { submitMonthScore } from '@/platform/playgama/monthLeaderboard';
@@ -79,6 +79,11 @@ export default function MonthShell() {
     else if (started) void submitMonthScore().catch(() => {});
   }, [location, started]);
 
+  // Banner slots on the chapter and results screens only, never in play.
+  useEffect(() => {
+    setMenuBanners(started && (location === HOME || location.startsWith('/results/')));
+  }, [location, started]);
+
   if (!started) {
     return (
       <ErrorBoundary sectionName="ROOT_APP">
@@ -92,7 +97,7 @@ export default function MonthShell() {
       <div className="pim-app-root min-h-screen bg-[#050402] text-white flex flex-col select-none relative">
         <style>{`
           .pg-mute {
-            position: fixed; z-index: 9999; right: 12px; top: 12px;
+            position: fixed; z-index: 9999; right: calc(12px + var(--pg-ad-right, 0px)); top: 12px;
             width: 40px; height: 40px; border-radius: 999px; display: grid; place-items: center;
             background: rgba(10, 8, 6, 0.72); color: #fff; border: 1px solid rgba(255, 255, 255, 0.18);
             cursor: pointer; backdrop-filter: blur(6px);
@@ -102,7 +107,7 @@ export default function MonthShell() {
         `}</style>
         <BackgroundMusic />
         <GamepadCursor />
-        <MuteButton inPlay={location.startsWith('/play/')} />
+        <MuteButton inPlay={location.startsWith('/play/') || location.startsWith('/secret/')} />
         <main className="flex-1 flex flex-col relative">
           <ErrorBoundary sectionName="PAGE_ROUTER">
             <Suspense

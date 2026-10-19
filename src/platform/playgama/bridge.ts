@@ -334,3 +334,46 @@ export async function showLeaderboardPopup(id: string): Promise<void> {
 export function externalLinksAllowed(): boolean {
   return !!bridgeOrNull()?.platform.isExternalLinksAllowed;
 }
+
+/**
+ * Advanced banners (the `menu` placement in playgama-bridge-config.json): a rail
+ * on wide screens or a strip on portrait ones, shown on the chapter and results
+ * screens only. Bridge lays the slots over the page and hides them during
+ * interstitials and rewarded ads; we measure them and publish the space they take
+ * as --pg-ad-right / --pg-ad-bottom so those screens shrink to make room.
+ */
+let bannersWanted = false;
+let bannersWired = false;
+
+function reserveBannerSpace() {
+  const root = document.documentElement.style;
+  let right = 0;
+  let bottom = 0;
+  const shown = bannersWanted && bridgeOrNull()?.advertisement.advancedBannersState === 'shown';
+  if (shown) {
+    for (const el of document.querySelectorAll<HTMLElement>('[id^="advanced-banner-"]')) {
+      const r = el.getBoundingClientRect();
+      if (!r.width || !r.height) continue;
+      if (r.right >= innerWidth - 1 && r.height > r.width) right = Math.max(right, innerWidth - r.left);
+      else if (r.bottom >= innerHeight - 1) bottom = Math.max(bottom, innerHeight - r.top);
+    }
+  }
+  root.setProperty('--pg-ad-right', `${Math.round(right)}px`);
+  root.setProperty('--pg-ad-bottom', `${Math.round(bottom)}px`);
+  document.documentElement.dataset.pgAd = right ? 'right' : bottom ? 'bottom' : '';
+}
+
+export function setMenuBanners(on: boolean): void {
+  const b = bridgeOrNull();
+  if (!b || !b.advertisement.isAdvancedBannersSupported || on === bannersWanted) return;
+  bannersWanted = on;
+  if (!bannersWired) {
+    bannersWired = true;
+    // Bridge re-lays the slots ~200 ms after a resize or rotation.
+    b.advertisement.on(b.EVENT_NAME.ADVANCED_BANNERS_STATE_CHANGED, () => requestAnimationFrame(reserveBannerSpace));
+    addEventListener('resize', () => setTimeout(reserveBannerSpace, 350));
+  }
+  if (on) b.advertisement.showAdvancedBanners('menu');
+  else b.advertisement.hideAdvancedBanners();
+  reserveBannerSpace();
+}

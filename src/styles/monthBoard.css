@@ -6,7 +6,7 @@
 .mb-page {
   --ch: var(--shell-accent);
   position: fixed;
-  inset: 0;
+  inset: 0 var(--pg-ad-right, 0px) var(--pg-ad-bottom, 0px) 0; /* room for banner slots */
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   gap: 12px;

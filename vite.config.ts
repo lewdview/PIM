@@ -57,7 +57,18 @@ function playgamaPackaging(): Plugin {
         type: "asset",
         fileName: "playgama-bridge-config.json",
         source: JSON.stringify({
-          advertisement: { minimumDelayBetweenInterstitial: 60 },
+          advertisement: {
+            minimumDelayBetweenInterstitial: 60,
+            // Banner slots for the chapter and results screens (never during play):
+            // a rail down the right of a wide screen, a strip along the bottom of a
+            // tall portrait one, none on small or sideways phones. Sizes are % of the window.
+            advancedBanners: {
+              menu: {
+                "landscape:w>=1000:h>=560": [{ width: "16%", height: "100%", top: "0", right: "0" }],
+                "portrait:h>=700": [{ width: "100%", height: "9%", bottom: "0", left: "0" }],
+              },
+            },
+          },
           // The month's five bonus songs, sold as one non-consumable bundle.
           ...(playgamaMonth ? { payments: [{ id: bonusProductId, playgama: { amount: Math.round(bonusPriceUsd * 10) } }] } : {}),
           ...(playgamaMonth ? { leaderboards: [{ id: leaderboardId, isMain: true }] } : {}),
