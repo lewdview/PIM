@@ -13,7 +13,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useParams } from 'wouter';
-import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Lock, Pause, Play, Film, CheckCircle2, Gift, Sparkles, Trophy, X, Settings, Info, Flag } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Lock, Pause, Play, Film, CheckCircle2, Gift, Sparkles, Trophy, X, Settings, Info, Flag, Headphones } from 'lucide-react';
 import { loadCatalog, isSongTimeLocked, getModifierForSong, type GameSong } from '@/game/api';
 import { getMedalForSong, getHighScore } from '@/game/progress';
 import { CHAPTERS, calculateCampaignDifficulty, levelToTier } from '@/game/campaign';
@@ -504,6 +504,11 @@ export default function ChapterStory() {
               </button>
             )}
             {leaderboard}
+            {endings.find((e) => e.id === 'true')?.earned && (
+              <button type="button" className="btn-3d" data-size="sm" data-tone="gold" onClick={() => { sfx(); setLocation('/listen'); }}>
+                <Headphones size={14} /> Listen
+              </button>
+            )}
             <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={() => { sfx(); setPanel('endings'); }}>
               <Flag size={14} /> Endings{endings.some((e) => e.earned && !e.seen) && <span className="mb-ending-dot" aria-label="New ending" />}
             </button>

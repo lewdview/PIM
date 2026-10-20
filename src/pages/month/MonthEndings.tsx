@@ -30,7 +30,7 @@ export default function MonthEndings({ endings, onWatch, onClose }: {
                 <span className="mend-n">{i + 1}</span>
                 <div className="mend-text">
                   <b>{hidden ? '???' : info.title}</b>
-                  <small>{info.condition}</small>
+                  <small>{info.condition}{info.reward ? ` · ${info.reward}` : ''}</small>
                   {!e.earned && (
                     <div className="mend-bar" aria-label={`${e.have} of ${e.need}`}>
                       <span style={{ width: `${e.need ? Math.round((e.have / e.need) * 100) : 0}%` }} />

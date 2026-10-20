@@ -18,10 +18,10 @@ import { PLAYGAMA_MONTH } from './month';
 export type EndingId = 'clear' | 'epilogue' | 'true' | 'bombshell';
 export const ENDING_ORDER: EndingId[] = ['clear', 'epilogue', 'true', 'bombshell'];
 
-export const ENDING_INFO: Record<EndingId, { title: string; condition: string }> = {
+export const ENDING_INFO: Record<EndingId, { title: string; condition: string; reward?: string }> = {
   clear: { title: 'Chapter Clear', condition: 'Clear every track' },
   epilogue: { title: 'Epilogue', condition: 'Clear the bonus tracks' },
-  true: { title: 'True Ending', condition: 'Platinum on every track' },
+  true: { title: 'True Ending', condition: 'Platinum on every track', reward: 'Unlocks listening mode' },
   bombshell: { title: 'Bombshell Ending', condition: 'Platinum on every track and every Deluxe chart' },
 };
 

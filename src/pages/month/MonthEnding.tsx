@@ -290,6 +290,7 @@ function buildScenes(ending: EndingId, { songs, progress, story }: Data): Scene[
           <>
             <SlamTitle text={`Chapter ${pad(meta.month)} complete`} className="ca-title--ch me-word" />
             <p className="me-line">{meta.month < 12 ? `${12 - meta.month} to go.` : 'The year is complete.'}</p>
+            <p className="me-hint">Listening mode unlocked: every song of {meta.name.toLowerCase()} with its lyrics, on the chapter screen.</p>
             <p className="me-hint">One more ending is hidden here: platinum every Deluxe chart.</p>
           </>
         ),
