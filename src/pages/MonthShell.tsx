@@ -4,24 +4,51 @@
 // links to lands back on the chapter. main.tsx renders this instead of App.tsx
 // when vite.config.ts sets __PIM_MONTH__.
 
-import { Suspense, lazy, useEffect, useState } from 'react';
+import { Suspense, lazy, useEffect, useState, type ComponentType } from 'react';
 import { Redirect, Route, Switch, useLocation } from 'wouter';
 import { Volume2, VolumeX } from 'lucide-react';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import BackgroundMusic from '@/components/audio/BackgroundMusic';
 import GamepadCursor from '@/components/ui/GamepadCursor';
 import { useGlobalPlayer } from '@/store/useGlobalPlayer';
-import { markGameReady, setMenuBanners } from '@/platform';
+import { APP_BASE, markGameReady, setMenuBanners } from '@/platform';
 import { setGate } from '@/platform/playgama/audioGate';
 import { PLAYGAMA_MONTH, restoreBonusBundle } from '@/platform/playgama/month';
 import { submitMonthScore } from '@/platform/playgama/monthLeaderboard';
 import TitleScreens from './month/TitleScreens';
 import '@/styles/CardShowcaseStyles.css';
 
-const ChapterStory = lazy(() => import('./campaign/ChapterStory'));
-const GamePlay = lazy(() => import('./GamePlay'));
-const MonthResults = lazy(() => import('./month/MonthResults'));
-const SecretLevel = lazy(() => import('./SecretLevel'));
+/**
+ * lazy() that survives a redeploy: if a screen's chunk is gone (the page was
+ * opened on an older build, e.g. on the hosted test site), reload the game's
+ * launch address once instead of crashing. Deep paths aren't reloaded, since
+ * the archive folder is read from the address the game was opened at.
+ */
+function lazyScreen<T extends ComponentType<any>>(factory: () => Promise<{ default: T }>) {
+  return lazy(async () => {
+    try {
+      return await factory();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      const stale = /Importing a module script failed|dynamically imported module|MIME type|text\/html/.test(msg);
+      const last = Number(sessionStorage.getItem('chunk_retry_timestamp') || 0);
+      if (stale && Date.now() - last > 8000) {
+        sessionStorage.setItem('chunk_retry_timestamp', String(Date.now()));
+        const url = new URL(`${APP_BASE}/`, window.location.origin);
+        url.search = window.location.search;
+        url.searchParams.set('_cb', String(Date.now()));
+        window.location.replace(url.toString());
+        return new Promise<{ default: T }>(() => {});
+      }
+      throw err;
+    }
+  });
+}
+
+const ChapterStory = lazyScreen(() => import('./campaign/ChapterStory'));
+const GamePlay = lazyScreen(() => import('./GamePlay'));
+const MonthResults = lazyScreen(() => import('./month/MonthResults'));
+const SecretLevel = lazyScreen(() => import('./SecretLevel'));
 
 const HOME = `/chapter/${PLAYGAMA_MONTH}`;
 const MUTE_KEY = 'pg_muted';
