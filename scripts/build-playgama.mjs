@@ -23,6 +23,10 @@
  *     sold as PIM_<Month>_Bonus, which must also be in the Playgama dashboard.
  *   - --public-token (or PIM_PLAYGAMA_PUBLIC_TOKEN) is the game's public token from
  *     the Playgama dashboard; it turns on the in-game leaderboard on playgama.com.
+ *   - lyrics: lrc.th3scr1b3.art is the official source. Each published day's
+ *     timings (public.lyric_timings) are baked into lyrics/dayNNN.json and win
+ *     over the bundled .lrc; the build lists which days are official. It stops
+ *     if Supabase can't be reached, unless --allow-stale-lyrics.
  *   - --placeholder-media makes silent audio and blank art instead, to test the
  *     build without the real files. Never upload that zip.
  *   -> pim-playgama-<month>.zip
@@ -216,6 +220,48 @@ function writePlaceholder(entry, dest) {
   }
 }
 
+/**
+ * lrc.th3scr1b3.art is the official source of lyrics and word timings: it
+ * publishes each day to public.lyric_timings. A portal build can't call
+ * Supabase at runtime, so the month's published days are baked into
+ * lyrics/dayNNN.json, which the game reads before any bundled .lrc.
+ * Pass --allow-stale-lyrics to build anyway when Supabase can't be reached.
+ */
+async function bakeOfficialLyrics(days, dayId) {
+  const url = (process.env.VITE_SUPABASE_URL || 'https://toemkhrfsbkfkutwcjkd.supabase.co').replace(/\/$/, '');
+  const key = process.env.VITE_SUPABASE_ANON_KEY
+    || (fs.readFileSync(path.join(root, 'src/services/supabaseClient.ts'), 'utf8').match(/'(eyJ[^']+)'/) || [])[1];
+  const list = [...days].sort((a, b) => a - b);
+  let rows;
+  try {
+    const res = await fetch(`${url}/rest/v1/lyric_timings?select=day,words,segments&day=in.(${list.join(',')})`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    rows = await res.json();
+  } catch (err) {
+    const msg = `[build-playgama] Could not read the official lyrics (lyric_timings): ${err.message}`;
+    if (args['allow-stale-lyrics']) { console.warn(`${msg}; using the bundled .lrc files only.`); return; }
+    console.error(`${msg}\n  Rerun with --allow-stale-lyrics to build with the bundled .lrc files only.`);
+    process.exit(1);
+  }
+  const lyricsDir = path.join(out, 'lyrics');
+  fs.mkdirSync(lyricsDir, { recursive: true });
+  const official = new Set();
+  for (const row of rows) {
+    const words = Array.isArray(row.words) ? row.words : [];
+    const segments = Array.isArray(row.segments) ? row.segments : [];
+    if (!segments.length) continue;
+    fs.writeFileSync(path.join(lyricsDir, `day${String(row.day).padStart(3, '0')}.json`), JSON.stringify({ words, segments }));
+    official.add(row.day);
+  }
+  const fallback = list.filter((d) => !official.has(d) && fs.existsSync(path.join(lyricsDir, `day${String(d).padStart(3, '0')}.lrc`)));
+  const none = list.filter((d) => !official.has(d) && !fallback.includes(d));
+  console.log(`[build-playgama] lyrics: ${official.size}/${list.length} days from lrc.th3scr1b3.art (official)` +
+    (fallback.length ? `; older bundled .lrc for days ${fallback.join(', ')}` : '') +
+    (none.length ? `; no lyrics for days ${none.join(', ')}` : ''));
+}
+
 async function buildMonth() {
   const dayFileMap = JSON.parse(fs.readFileSync(path.join(root, 'src/game/day_file_map.json'), 'utf8'));
   const bombshellMap = JSON.parse(fs.readFileSync(path.join(root, 'src/game/bombshell_covers_map.json'), 'utf8'));
@@ -237,6 +283,8 @@ async function buildMonth() {
     const m = name.match(/^day(\d{3})\./);
     return !!m && days.has(Number(m[1]));
   });
+  await bakeOfficialLyrics(days, dayId);
+
   // Pack, crate and launch-page art belong to the vault and shop, which this build doesn't have.
   for (const rel of ['data/packs', 'data/crates', 'data/launch', 'data/slideshow']) {
     fs.rmSync(path.join(out, rel), { recursive: true, force: true });

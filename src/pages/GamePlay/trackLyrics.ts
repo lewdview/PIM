@@ -92,22 +92,105 @@ export function parseLrc(text: string): TimedLine[] {
   });
 }
 
+// ── Official timings (LRC layer → public.lyric_timings) ───────────────────────
+// lrc.th3scr1b3.art is the official source of lyrics and word timings. A portal
+// build can't call Supabase, so scripts/build-playgama.mjs bakes each published
+// day into lyrics/dayNNN.json ({ words, segments }) and the game reads that first.
+
+interface PublishedWord {
+  word: string;
+  start: number;
+  end: number;
+}
+
+interface PublishedSegment {
+  text: string;
+  start: number;
+  end: number;
+}
+
+const num = (v: unknown): number => (typeof v === "number" && Number.isFinite(v) ? v : NaN);
+
+/**
+ * Build lines from a published row: each segment is a line, and its words keep
+ * their real karaoke timings. A segment with no timed words falls back to an even
+ * split of its text. Returns [] when the row has nothing usable.
+ */
+export function linesFromPublished(rawWords: unknown, rawSegments: unknown): TimedLine[] {
+  const segments: PublishedSegment[] = (Array.isArray(rawSegments) ? rawSegments : [])
+    .map((s) => ({ text: String(s?.text ?? "").trim(), start: num(s?.start), end: num(s?.end) }))
+    .filter((s) => s.text && Number.isFinite(s.start))
+    .sort((a, b) => a.start - b.start);
+  if (!segments.length) return [];
+  const words: PublishedWord[] = (Array.isArray(rawWords) ? rawWords : [])
+    .map((w) => ({ word: String(w?.word ?? "").trim(), start: num(w?.start), end: num(w?.end) }))
+    .filter((w) => w.word && Number.isFinite(w.start))
+    .sort((a, b) => a.start - b.start);
+
+  const { effect, font } = pickSongStyle();
+  let wi = 0;
+  return segments.map((seg, i) => {
+    const nextStart = i + 1 < segments.length ? segments[i + 1].start : NaN;
+    // Like parseLrc, a line stays up until the next one starts.
+    const end = Math.max(
+      Number.isFinite(nextStart) ? nextStart : Number.isFinite(seg.end) ? seg.end : seg.start + 4,
+      seg.start + 0.5
+    );
+    // Words before the next line's start belong to this line (early words go to line 1).
+    const lineWords: TimedWord[] = [];
+    while (wi < words.length && (!Number.isFinite(nextStart) || words[wi].start < nextStart)) {
+      const w = words[wi++];
+      const wEnd = Number.isFinite(w.end) && w.end > w.start ? w.end : w.start + 0.3;
+      lineWords.push({ text: w.word, start: w.start, end: Math.min(wEnd, end), effect });
+    }
+    if (!lineWords.length) {
+      const tokens = seg.text.split(/\s+/).filter(Boolean);
+      const dur = end - seg.start;
+      tokens.forEach((t, k) =>
+        lineWords.push({
+          text: t,
+          start: seg.start + (dur * k) / tokens.length,
+          end: seg.start + (dur * (k + 1)) / tokens.length,
+          effect,
+        })
+      );
+    }
+    return { start: seg.start, end, words: lineWords, font };
+  });
+}
+
 // ── Loading (cached per day) ─────────────────────────────────────────────────
 
 const lyricsCache = new Map<number, Promise<TimedLine[]>>();
 
-export function loadLyricsForDay(day: number): Promise<TimedLine[]> {
-  if (!Number.isFinite(day) || day < 1 || day > 365) return Promise.resolve([]);
-  const cached = lyricsCache.get(day);
-  if (cached) return cached;
-  const name = `day${String(day).padStart(3, "0")}.lrc`;
-  const p = fetch(`/lyrics/${name}`)
+function loadOfficialLyrics(name: string): Promise<TimedLine[]> {
+  return fetch(`/lyrics/${name}.json`)
     .then((res) => {
-      if (!res.ok) throw new Error(`no lyrics for day ${day}`);
+      const type = res.headers.get("content-type") || "";
+      if (!res.ok || type.includes("text/html")) throw new Error("not published");
+      return res.json();
+    })
+    .then((row) => linesFromPublished(row?.words, row?.segments))
+    .catch(() => [] as TimedLine[]);
+}
+
+function loadBundledLrc(name: string): Promise<TimedLine[]> {
+  return fetch(`/lyrics/${name}.lrc`)
+    .then((res) => {
+      if (!res.ok) throw new Error("no lyrics");
       return res.text();
     })
     .then(parseLrc)
     .catch(() => [] as TimedLine[]);
+}
+
+/** Official LRC-layer timings first; the older bundled .lrc covers days never published. */
+export function loadLyricsForDay(day: number): Promise<TimedLine[]> {
+  if (!Number.isFinite(day) || day < 1 || day > 366) return Promise.resolve([]);
+  const cached = lyricsCache.get(day);
+  if (cached) return cached;
+  const name = `day${String(day).padStart(3, "0")}`;
+  const p = loadOfficialLyrics(name).then((lines) => (lines.length ? lines : loadBundledLrc(name)));
   lyricsCache.set(day, p);
   return p;
 }
