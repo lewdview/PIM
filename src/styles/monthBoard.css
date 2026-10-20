@@ -269,6 +269,7 @@
   .mb-cover { display: none; } /* the selected cover is already big in the week above */
   .mb-week { padding: 8px; gap: 6px; }
   .mb-week-keys { display: none; }
+  .mb-btn-label { display: none; }
   .mb-hook { -webkit-line-clamp: 2; }
   .mb-actions .btn-3d { padding: 10px 14px; }
 }
@@ -381,3 +382,6 @@
 @media (prefers-reduced-motion: reduce) {
   .mb-page .mb-detail.ca-panel { animation: none; }
 }
+
+/* The detail panel's cover opens the track's song page. */
+.mb-cover-btn { flex: 0 0 auto; align-self: flex-start; padding: 0; border: 0; background: none; cursor: zoom-in; }

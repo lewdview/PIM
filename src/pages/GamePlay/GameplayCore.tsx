@@ -3017,12 +3017,14 @@ export default function Game() {
       haptics.error();
     }
 
+    // A Chart Master Deluxe run keeps its own best and medal, apart from the track's.
+    const saveId = songRef.current ? (songRef.current.deluxe ? `${songRef.current.id}_deluxe` : songRef.current.id) : '';
     // Monthly build: whether this run is the stage's first clear, read before
     // the save below so the results screen can call it out.
-    const wasCleared = !!songRef.current && (
-      (getMedalForSong(songRef.current.id) || '') !== '' || getHighScore(songRef.current.id) > 0
+    const wasCleared = !!saveId && (
+      (getMedalForSong(saveId) || '') !== '' || getHighScore(saveId) > 0
     );
-    const wasPlatinum = !!songRef.current && getMedalForSong(songRef.current.id) === 'PLATINUM';
+    const wasPlatinum = !!saveId && getMedalForSong(saveId) === 'PLATINUM';
 
     // Save progress with error handling
     try {
@@ -3033,7 +3035,7 @@ export default function Game() {
         const isRewardEligible = rewardOpts.noteGenerationSource === 'auto' || !rewardOpts.noteGenerationSource;
         if (isRewardEligible) {
           saveHighScore(
-            songRef.current.id,
+            saveId,
             gs.score,
             parseFloat(accuracy.toFixed(2)),
             gs.maxCombo,
@@ -3044,11 +3046,11 @@ export default function Game() {
           console.log(`[GamePlay] Score not saved — playing in ${rewardOpts.noteGenerationSource} mode (practice)`);
           // Save locally for personal tracking only
           try {
-            localStorage.setItem(`practice_score_${songRef.current.id}_${rewardOpts.noteGenerationSource}`, JSON.stringify({ score: gs.score, accuracy: parseFloat(accuracy.toFixed(2)), maxCombo: gs.maxCombo, medal }));
+            localStorage.setItem(`practice_score_${saveId}_${rewardOpts.noteGenerationSource}`, JSON.stringify({ score: gs.score, accuracy: parseFloat(accuracy.toFixed(2)), maxCombo: gs.maxCombo, medal }));
           } catch (e) { /* ignore storage errors */ }
         }
-        saveMedal(songRef.current.id, medal);
-        saveScoreHistory(songRef.current.id, gs.score);
+        saveMedal(saveId, medal);
+        saveScoreHistory(saveId, gs.score);
       }
 
       // ── Aggregate per-lane accuracy from real telemetry ──

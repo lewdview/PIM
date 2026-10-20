@@ -37,6 +37,7 @@ import { hideBroken } from './hideBroken';
 import { ArcadeBackdrop, SlamTitle, StageWipe } from './arcade';
 import MonthOptions from '@/pages/month/MonthOptions';
 import MonthAbout from '@/pages/month/MonthAbout';
+import MonthSong from '@/pages/month/MonthSong';
 import {
   getMonthEntries, monthLeaderboardKind, monthTotal, showMonthPopup, submitMonthScore, type LeaderboardRow,
 } from '@/platform/playgama/monthLeaderboard';
@@ -116,7 +117,7 @@ export default function ChapterStory() {
   // Monthly build: Playgama leaderboard (only where the portal offers one).
   const lbKind = MONTH_BUILD ? monthLeaderboardKind() : 'not_available';
   const [lbOpen, setLbOpen] = useState(false);
-  const [panel, setPanel] = useState<'options' | 'about' | null>(null);
+  const [panel, setPanel] = useState<'options' | 'about' | 'song' | null>(null);
   const [lbRows, setLbRows] = useState<LeaderboardRow[] | null>(null);
   const openLeaderboard = async () => {
     sfx(0.15);
@@ -346,6 +347,7 @@ export default function ChapterStory() {
       else if (e.key === 'ArrowDown') { e.preventDefault(); move(row); }
       else if (e.key === 'ArrowLeft') { e.preventDefault(); move(-1); }
       else if (e.key === 'ArrowRight') { e.preventDefault(); move(1); }
+      else if (MONTH_BUILD && (e.key === 'i' || e.key === 'I')) { e.preventDefault(); setPanel('song'); }
       else if (MONTH_BUILD && (e.key === 'PageUp' || e.key === 'q' || e.key === 'Q')) { e.preventDefault(); goWeekRef.current(weekRef.current - 1); }
       else if (MONTH_BUILD && (e.key === 'PageDown' || e.key === 'e' || e.key === 'E')) { e.preventDefault(); goWeekRef.current(weekRef.current + 1); }
       else if (e.key === 'Enter' && !(t && t.tagName === 'BUTTON') && !(t && t.tagName === 'A')) playRef.current();
@@ -601,7 +603,9 @@ export default function ChapterStory() {
           {selected && status && (
             <section key={selected.id} className="mb-detail ca-panel" aria-label="Selected track">
               <div className="mb-detail-top">
-                {selected.coverArt ? <img className="mb-cover" src={selected.coverArt} alt="" onError={hideBroken} /> : <span className="mb-cover" />}
+                <button type="button" className="mb-cover-btn" onClick={() => { sfx(); setPanel('song'); }} aria-label={`Open ${selected.title}`}>
+                  {selected.coverArt ? <img className="mb-cover" src={selected.coverArt} alt="" onError={hideBroken} /> : <span className="mb-cover" />}
+                </button>
                 <div className="mb-detail-name">
                   <div className="cs-eyebrow">
                     {status.isBonus ? 'Bonus' : `Track ${selectedIdx + 1}/${progress.regular.length}`}
@@ -639,6 +643,9 @@ export default function ChapterStory() {
                     All 5 bonus{bundlePrice ? ` · ${bundlePrice}` : ''}
                   </button>
                 )}
+                <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={() => { sfx(); setPanel('song'); }}>
+                  <Info size={14} /><span className="mb-btn-label"> Song page</span>
+                </button>
                 {!status.bonusLocked && (
                   <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={togglePreview} aria-label={previewing ? 'Stop preview' : 'Preview'}>
                     {previewing ? <Pause size={14} /> : <Play size={14} />} {previewing ? 'Stop' : 'Preview'}
@@ -659,6 +666,25 @@ export default function ChapterStory() {
           )}
         </div>
 
+        {panel === 'song' && selected && status && (
+          <MonthSong
+            song={selected}
+            idx={selectedIdx}
+            regularCount={progress.regular.length}
+            act={group?.act}
+            track={tr}
+            words={[...(tr?.words ?? []), ...(story?.words ?? [])]}
+            status={status}
+            previewing={previewing}
+            hasPrev={selectedIdx > 0}
+            hasNext={selectedIdx < songs.length - 1}
+            onPrev={() => select(selectedIdx - 1)}
+            onNext={() => select(selectedIdx + 1)}
+            onPreview={togglePreview}
+            onPlay={(deluxe) => handlePlay(deluxe)}
+            onClose={() => setPanel(null)}
+          />
+        )}
         {panel === 'options' && <MonthOptions onClose={() => setPanel(null)} />}
         {panel === 'about' && (
           <MonthAbout

@@ -102,7 +102,7 @@ export default function MonthResults() {
 }
 
 function RunResults({ songId }: { songId: string }) {
-  // A Deluxe run plays a track's Chart Master Deluxe chart; its stage and best are the track's.
+  // A Deluxe run plays a track's Chart Master Deluxe chart; its stage is the track's.
   const deluxe = isDeluxeRun(songId);
   const trackId = baseSongId(songId);
   const [, setLocation] = useLocation();
@@ -157,14 +157,15 @@ function RunResults({ songId }: { songId: string }) {
     ? (((result.perfectPlus ?? 0) * 1.0 + (result.perfects ?? 0) * 0.9 + (result.goods ?? 0) * 0.5) / total) * 100
     : 0;
   const firstClear = passed && !!result?.firstClear;
-  const best = getHighScore(trackId);
+  // A Deluxe run's best is kept apart from the track's (saved under the run id).
+  const best = getHighScore(songId);
   // The best is saved before this screen mounts, so a matching score means this run set it.
   const newRecord = passed && !firstClear && !!result && result.score > 0 && best === result.score;
   const fullCombo = passed && result?.goods === 0 && result?.misses === 0;
   const medal = result?.medal && result.medal !== 'NONE' ? result.medal : '';
   const medalColor = MEDAL_COLOR[medal] ?? meta.dc;
   const rank = rankFor(accuracy);
-  const bombshellNow = passed && !!result?.firstPlatinum && !!song && !!bombshellArtFor(song);
+  const bombshellNow = passed && !deluxe && !!result?.firstPlatinum && !!song && !!bombshellArtFor(song);
 
   const next = useMemo<NextStep | null>(() => {
     if (!stage || !passed) return null;

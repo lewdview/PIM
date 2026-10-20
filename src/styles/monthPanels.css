@@ -107,3 +107,115 @@
   .mo-hint { grid-column: 1 / -1; }
   .mo-cycle b { min-width: 84px; }
 }
+
+/* ── Song page (MonthSong.tsx) ── */
+.mb-lb-card.ms-card {
+  position: relative;
+  width: min(1000px, 100%);
+  height: min(620px, 100%);
+  padding: 20px 56px;
+  grid-template-rows: minmax(0, 1fr);
+}
+.ms-body {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 22px;
+  min-height: 0;
+  align-items: center;
+  animation: ms-in 0.32s cubic-bezier(0.2, 0.9, 0.3, 1.1) both;
+}
+@keyframes ms-in { from { opacity: 0; transform: translateY(10px) scale(0.98); } }
+.ms-art {
+  position: relative;
+  margin: 0;
+  width: min(48vh, 40vw, 440px);
+  aspect-ratio: 1;
+  border: 3px solid var(--ink, #000);
+  box-shadow: 0 0 0 2px var(--ch, var(--shell-accent)), 0 18px 40px rgba(0, 0, 0, 0.55);
+  background: var(--shell-raise);
+  overflow: hidden;
+}
+.ms-art img, .ms-art-empty { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.ms-art img { animation: ms-art-in 0.4s ease-out both; }
+@keyframes ms-art-in { from { opacity: 0; transform: scale(1.06); } }
+.ms-art-lock { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(0, 0, 0, 0.5); color: rgba(255, 255, 255, 0.8); }
+.ms-art-toggle, .ms-art-hint {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--shell-gold);
+  background: rgba(0, 0, 0, 0.7);
+  color: var(--shell-gold);
+  font: 700 12px/1.2 var(--shell-body);
+  text-align: center;
+}
+.ms-art-toggle { cursor: pointer; }
+.ms-art-hint { border-color: var(--shell-line-strong); color: var(--shell-text-2); }
+
+.ms-info { display: grid; align-content: center; gap: 10px; min-width: 0; min-height: 0; }
+.ms-title { margin: 0; font-size: clamp(26px, 5vh, 46px); overflow-wrap: anywhere; }
+.ms-act { margin: 0; font-size: 13px; color: var(--shell-text-2); }
+.ms-act b { color: var(--ch, var(--shell-accent)); text-transform: capitalize; }
+.ms-hook mark { background: none; color: var(--ch, var(--shell-accent)); font-weight: 700; }
+.ms-hook { margin: 0; padding-left: 12px; border-left: 3px solid var(--ch, var(--shell-accent)); font-size: 15px; line-height: 1.45; color: var(--shell-text); }
+.ms-themes { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
+.ms-themes li { padding: 3px 8px; border: 1px solid var(--shell-line-strong); font: 600 11px/1.2 var(--shell-mono); color: var(--shell-text-2); }
+.ms-records { margin: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.ms-records div { padding: 6px 8px; background: var(--shell-raise); min-width: 0; }
+.ms-records div[data-deluxe] { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--shell-gold) 45%, transparent); }
+.ms-records dt { font: 600 10px/1.2 var(--shell-mono); color: var(--shell-text-3); text-transform: uppercase; }
+.ms-records dd { margin: 2px 0 0; font: 700 16px/1.2 var(--shell-mono); text-transform: capitalize; }
+.ms-lock { margin: 0; }
+.ms-actions { justify-content: flex-start; }
+
+.ms-nav {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 64px;
+  transform: translateY(-50%);
+  border: 1px solid var(--shell-line-strong);
+  background: rgba(0, 0, 0, 0.5);
+  color: var(--shell-text);
+  cursor: pointer;
+}
+.ms-nav[data-side='prev'] { left: 8px; }
+.ms-nav[data-side='next'] { right: 8px; }
+.ms-nav:disabled { opacity: 0.25; cursor: default; }
+.ms-close { position: absolute; top: 10px; left: 10px; z-index: 3; } /* top-left: the mute button owns the top-right corner */
+
+/* Narrow or portrait: art on top, details under it. */
+@media (max-aspect-ratio: 1/1), (max-width: 720px) {
+  .mb-lb-card.ms-card { height: 100%; padding: 14px 44px; }
+  .ms-body { grid-template-columns: minmax(0, 1fr); justify-items: center; align-content: center; gap: 12px; }
+  .ms-art { width: min(34vh, 100%); }
+  .ms-info { justify-self: stretch; }
+  .ms-records { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .ms-actions { justify-content: center; }
+  .ms-nav { width: 32px; height: 52px; }
+  .ms-nav[data-side='prev'] { left: 4px; }
+  .ms-nav[data-side='next'] { right: 4px; }
+  /* Beside the cover, clear of the text; the close button sits top-left, away from the mute button. */
+  .ms-nav { top: calc(14px + min(17vh, 50%)); }
+  .ms-close { left: 8px; top: 8px; }
+}
+@media (max-aspect-ratio: 1/1) and (max-height: 760px) {
+  .ms-art { width: min(26vh, 100%); }
+  .ms-nav { top: calc(14px + 13vh); }
+  .ms-themes { display: none; }
+  .ms-hook { font-size: 13px; }
+}
+/* Sideways phones */
+@media (max-height: 520px) and (min-aspect-ratio: 1/1) {
+  .mb-lb-card.ms-card { height: 100%; padding: 10px 48px; }
+  .ms-art { width: min(70vh, 38vw); }
+  .ms-title { font-size: 24px; }
+  .ms-themes, .ms-act { display: none; }
+  .ms-records dd { font-size: 13px; }
+  .ms-info { gap: 6px; }
+}
