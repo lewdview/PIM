@@ -33,6 +33,7 @@ import { getProductPrice } from '@/platform/playgama/bridge';
 import { monthTotal } from '@/platform/playgama/monthLeaderboard';
 import { hideBroken } from '@/pages/campaign/hideBroken';
 import { baseSongId, bombshellArtFor, isDeluxeRun, monthStageLevel, prepareMonthRun } from './startRun';
+import { ENDING_INFO, pendingEnding, type EndingId } from '@/platform/playgama/endings';
 import '@/styles/stageShell.css';
 import '@/styles/campaignStory.css';
 import '@/styles/campaignResults.css';
@@ -341,6 +342,22 @@ function RunResults({ songId }: { songId: string }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [step, skip]);
 
+  // An ending this run earned plays on its own a moment after the results are in.
+  const [endingSoon, setEndingSoon] = useState<EndingId | null>(null);
+  const watchEnding = useCallback((id: EndingId) => {
+    sessionStorage.removeItem(`result_${songId}`);
+    setLocation(`/ending/${id}`);
+  }, [songId, setLocation]);
+  useEffect(() => {
+    if (!passed || step < FINAL || !stage) return;
+    const id = pendingEnding(stage.songs, stage.progress);
+    if (!id) return;
+    setEndingSoon(id);
+    audioManager.playSfx('new_modes_available', 0.6);
+    const t = window.setTimeout(() => watchEnding(id), 4000);
+    return () => clearTimeout(t);
+  }, [passed, step, stage, watchEnding]);
+
   // ── Failed: CONTINUE? 9 → 0 ─────────────────────────────────────────────
   const [count, setCount] = useState(9);
   useEffect(() => {
@@ -583,6 +600,13 @@ function RunResults({ songId }: { songId: string }) {
           Back to chapter
         </button>
       </div>
+
+      {endingSoon && (
+        <div className="mr-ending" role="status">
+          <span>Ending unlocked · {ENDING_INFO[endingSoon].title}</span>
+          <button type="button" className="btn-3d" data-size="sm" data-tone="gold" onClick={() => watchEnding(endingSoon)}>Watch now</button>
+        </div>
+      )}
 
       {step > 0 && step < FINAL && (
         <button type="button" className="cr-skip" onClick={skip}>Tap to skip ▸▸</button>

@@ -13,7 +13,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useParams } from 'wouter';
-import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Lock, Pause, Play, Film, CheckCircle2, Gift, Sparkles, Trophy, X, Settings, Info } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Lock, Pause, Play, Film, CheckCircle2, Gift, Sparkles, Trophy, X, Settings, Info, Flag } from 'lucide-react';
 import { loadCatalog, isSongTimeLocked, getModifierForSong, type GameSong } from '@/game/api';
 import { getMedalForSong, getHighScore } from '@/game/progress';
 import { CHAPTERS, calculateCampaignDifficulty, levelToTier } from '@/game/campaign';
@@ -38,6 +38,8 @@ import { ArcadeBackdrop, SlamTitle, StageWipe } from './arcade';
 import MonthOptions from '@/pages/month/MonthOptions';
 import MonthAbout from '@/pages/month/MonthAbout';
 import MonthSong from '@/pages/month/MonthSong';
+import MonthEndings from '@/pages/month/MonthEndings';
+import { endingStates } from '@/platform/playgama/endings';
 import {
   getMonthEntries, monthLeaderboardKind, monthTotal, showMonthPopup, submitMonthScore, type LeaderboardRow,
 } from '@/platform/playgama/monthLeaderboard';
@@ -117,7 +119,7 @@ export default function ChapterStory() {
   // Monthly build: Playgama leaderboard (only where the portal offers one).
   const lbKind = MONTH_BUILD ? monthLeaderboardKind() : 'not_available';
   const [lbOpen, setLbOpen] = useState(false);
-  const [panel, setPanel] = useState<'options' | 'about' | 'song' | null>(null);
+  const [panel, setPanel] = useState<'options' | 'about' | 'song' | 'endings' | null>(null);
   const [lbRows, setLbRows] = useState<LeaderboardRow[] | null>(null);
   const openLeaderboard = async () => {
     sfx(0.15);
@@ -466,6 +468,7 @@ export default function ChapterStory() {
     hasClearedSong(s) ? 'cleared' : stageOpen(i) && !timeLockedSong(s) ? 'open' : 'locked';
 
   if (MONTH_BUILD) {
+    const endings = endingStates(songs, progress);
     const leaderboard = (lbKind === 'in_game' || lbKind === 'native_popup') && (
       <button type="button" className="btn-3d mb-lb-btn" data-size="sm" data-tone="quiet" onClick={openLeaderboard}>
         <Trophy size={14} /> Leaderboard
@@ -501,6 +504,9 @@ export default function ChapterStory() {
               </button>
             )}
             {leaderboard}
+            <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={() => { sfx(); setPanel('endings'); }}>
+              <Flag size={14} /> Endings{endings.some((e) => e.earned && !e.seen) && <span className="mb-ending-dot" aria-label="New ending" />}
+            </button>
             <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={() => { sfx(); setPanel('options'); }}>
               <Settings size={14} /> Options
             </button>
@@ -686,6 +692,13 @@ export default function ChapterStory() {
           />
         )}
         {panel === 'options' && <MonthOptions onClose={() => setPanel(null)} />}
+        {panel === 'endings' && (
+          <MonthEndings
+            endings={endings}
+            onWatch={(e) => { sfx(); setLocation(`/ending/${e.id}`); }}
+            onClose={() => setPanel(null)}
+          />
+        )}
         {panel === 'about' && (
           <MonthAbout
             onClose={() => setPanel(null)}

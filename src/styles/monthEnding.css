@@ -1,0 +1,220 @@
+/* Endings of the monthly Playgama build (MonthEnding.tsx). One fixed screen;
+   each scene fades up in the middle, arcade type from campaignArcade.css. */
+
+.me-root {
+  --ink: #12040a;
+  --hot: #ffd23f;
+  --pixel: 'Press Start 2P', var(--shell-mono);
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  background: #050308;
+  color: #fff;
+  overflow: hidden;
+  cursor: pointer;
+  user-select: none;
+}
+.me-bg {
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(ellipse at 50% 40%, color-mix(in srgb, var(--ch) 28%, transparent), transparent 60%),
+    repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--ch) 10%, transparent) 0deg 4deg, transparent 4deg 12deg);
+  animation: me-spin 90s linear infinite;
+  pointer-events: none;
+}
+.me-root[data-ending='true'] .me-bg { animation-duration: 60s; }
+
+.me-scene {
+  position: relative;
+  align-self: center;
+  justify-self: center;
+  width: min(1100px, 92vw);
+  max-height: 100%;
+  display: grid;
+  justify-items: center;
+  gap: 2.2vh;
+  padding: 4vh 0 1vh;
+  text-align: center;
+  animation: me-in 0.7s ease-out both;
+}
+.me-hud { justify-content: center; }
+.me-title { font-size: clamp(44px, 12vh, 132px); justify-content: center; }
+.me-word { font-size: clamp(40px, 11vh, 120px); justify-content: center; }
+
+.me-lyric {
+  margin: 0;
+  max-width: 34ch;
+  font: 600 clamp(18px, 3.4vh, 34px) / 1.35 var(--shell-display, inherit);
+  color: #fff;
+  text-shadow: 0 2px 0 var(--ink), 0 0 24px color-mix(in srgb, var(--ch) 45%, transparent);
+  animation: me-type 1.4s steps(28) 0.5s both;
+}
+.me-cite, .me-hint {
+  margin: 0;
+  font: 400 clamp(8px, 1.3vh, 11px) / 1.8 var(--pixel);
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.62);
+  animation: me-in 0.5s ease-out 1.6s both;
+}
+.me-hint { color: var(--hot); max-width: 60ch; }
+.me-line {
+  margin: 0;
+  font: 600 clamp(16px, 2.8vh, 26px) / 1.4 var(--shell-display, inherit);
+  animation: me-in 0.6s ease-out 0.4s both;
+}
+.me-kicker {
+  margin: 0;
+  font: 400 clamp(9px, 1.6vh, 13px) / 1 var(--pixel);
+  text-transform: uppercase;
+  color: var(--hot);
+}
+
+/* Cover grid / mosaic: tiles deal in one after another */
+.me-grid {
+  --cols: 8;
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  gap: 6px;
+  width: min(100%, 78vh);
+}
+.me-grid > span {
+  position: relative;
+  aspect-ratio: 1;
+  background: #111;
+  border: 2px solid var(--ink);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ch) 40%, transparent);
+  animation: me-deal 0.35s cubic-bezier(0.2, 1.4, 0.4, 1) calc(var(--i) * 70ms + 0.2s) both;
+}
+.me-grid img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.me-grid i {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--ink);
+}
+
+/* Cliffhanger: the locked bonus slots and the blacked-out word */
+.me-locked { display: flex; gap: 10px; }
+.me-locked > span {
+  width: clamp(44px, 9vh, 80px);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border: 2px dashed color-mix(in srgb, var(--hot) 60%, transparent);
+  color: var(--hot);
+  animation: me-flicker 1.6s steps(2) infinite;
+}
+.me-locked > span:nth-child(2n) { animation-delay: 0.4s; }
+.me-redacted {
+  margin: 0;
+  font: 400 clamp(14px, 3vh, 28px) / 1.4 var(--pixel);
+  text-transform: uppercase;
+}
+.me-redacted span { color: #000; background: #000; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3); }
+
+/* Epilogue reveal: the bar wipes away, the word slams in */
+.me-reveal { position: relative; display: grid; place-items: center; font-size: clamp(28px, 9vh, 96px); }
+.me-reveal > * { grid-area: 1 / 1; }
+.me-reveal .me-bar { animation: me-wipe 0.6s steps(6) 1.2s both; }
+.me-reveal .me-word-in {
+  color: #fff;
+  background: none;
+  box-shadow: none;
+  text-shadow: 0 4px 0 var(--ink), 0 0 30px var(--ch);
+  animation: me-slam 0.5s cubic-bezier(0.2, 1.5, 0.4, 1) 1.7s both;
+}
+
+/* Credits roll */
+.me-credits {
+  height: 72vh;
+  width: 100%;
+  overflow: hidden;
+  -webkit-mask: linear-gradient(180deg, transparent, #000 15%, #000 85%, transparent);
+          mask: linear-gradient(180deg, transparent, #000 15%, #000 85%, transparent);
+}
+.me-credits-roll {
+  display: grid;
+  gap: 0.6em;
+  font: 600 clamp(14px, 2.2vh, 20px) / 1.3 var(--shell-display, inherit);
+  color: rgba(255, 255, 255, 0.85);
+  animation: me-roll 25s linear both;
+}
+.me-credits-roll p, .me-credit-card p { margin: 0; }
+.me-credit-card { display: grid; gap: 0.7em; font: 600 clamp(14px, 2.4vh, 22px) / 1.3 var(--shell-display, inherit); animation: me-in 0.8s ease-out both; }
+.me-credit-head { font: 400 clamp(12px, 2.4vh, 22px) / 1.4 var(--pixel); color: var(--hot); text-transform: uppercase; }
+.me-credit-gap { margin-top: 1.6em !important; font: 400 clamp(8px, 1.3vh, 11px) / 1.4 var(--pixel); text-transform: uppercase; color: rgba(255, 255, 255, 0.55); }
+.me-credit-big { font-size: clamp(18px, 3.2vh, 30px); font-weight: 700; color: #fff; }
+
+/* Bombshell gallery and the final piece */
+.me-gallery {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 6px;
+  width: min(100%, 92vh);
+}
+.me-gallery img {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  border: 2px solid var(--ink);
+  box-shadow: 0 0 0 1px #ff1493, 0 0 18px rgba(255, 20, 147, 0.35);
+  animation: me-deal 0.4s cubic-bezier(0.2, 1.4, 0.4, 1) calc(var(--i) * 200ms + 0.3s) both;
+}
+.me-final img {
+  max-width: 100%;
+  max-height: 76vh;
+  border: 3px solid var(--ink);
+  box-shadow: 0 0 0 3px #ff1493, 0 0 80px rgba(255, 20, 147, 0.5);
+  animation: me-final 2.4s ease-out both;
+}
+
+/* Footer: progress dots + Skip / Continue */
+.me-foot {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 1.4vh 64px 2.4vh 2.4vw; /* right gutter keeps the mute button clear */
+  cursor: default;
+}
+.me-dots { display: flex; gap: 6px; }
+.me-dots span { width: 8px; height: 8px; background: rgba(255, 255, 255, 0.18); }
+.me-dots span[data-on] { background: var(--ch); }
+.me-skip {
+  border: 0;
+  background: none;
+  color: rgba(255, 255, 255, 0.7);
+  font: 400 10px/1 var(--pixel);
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 10px 4px;
+}
+.me-skip:hover { color: #fff; }
+
+@media (max-aspect-ratio: 1/1) {
+  .me-grid, .me-gallery { --cols: 6; grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+
+@keyframes me-spin { to { transform: rotate(360deg); } }
+@keyframes me-in { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes me-type { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes me-deal { from { opacity: 0; transform: translateY(-30px) rotate(-8deg) scale(0.6); } to { opacity: 1; transform: none; } }
+@keyframes me-flicker { 0% { opacity: 1; } 50% { opacity: 0.45; } }
+@keyframes me-wipe { to { clip-path: inset(0 0 0 100%); } }
+@keyframes me-slam { from { opacity: 0; transform: scale(2.4); } to { opacity: 1; transform: none; } }
+@keyframes me-roll { from { transform: translateY(40vh); } to { transform: translateY(-100%); } }
+@keyframes me-final { from { opacity: 0; transform: scale(1.08); filter: brightness(2.4) blur(8px); } to { opacity: 1; transform: none; filter: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .me-bg, .me-scene, .me-lyric, .me-cite, .me-hint, .me-line, .me-grid > span, .me-locked > span,
+  .me-reveal .me-bar, .me-reveal .me-word-in, .me-gallery img, .me-final img { animation: none; }
+  .me-reveal .me-bar { display: none; }
+  .me-credits-roll { animation-duration: 60s; }
+}

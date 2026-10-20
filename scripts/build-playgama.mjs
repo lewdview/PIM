@@ -242,6 +242,24 @@ async function buildMonth() {
     fs.rmSync(path.join(out, rel), { recursive: true, force: true });
   }
 
+  // The Bombshell ending's one-off piece: public/endings/mMM-final.(jpg|jpeg|png|webp).
+  // Only this month's ships, as the mMM-final.jpg the game asks for.
+  const endingsDir = path.join(out, 'endings');
+  const finalStem = `m${String(month).padStart(2, '0')}-final`;
+  pruneDir(endingsDir, (name) => name.startsWith(`${finalStem}.`));
+  if (fs.existsSync(endingsDir)) {
+    const src = fs.readdirSync(endingsDir).find((n) => /\.(jpe?g|png|webp)$/i.test(n));
+    if (src) {
+      const tmpOut = path.join(endingsDir, `${finalStem}.tmp.jpg`);
+      run('ffmpeg', ['-loglevel', 'error', '-y', '-i', path.join(endingsDir, src), '-vf', "scale='min(1600,iw)':-2", '-q:v', '3', tmpOut]);
+      pruneDir(endingsDir, (name) => name === path.basename(tmpOut));
+      fs.renameSync(tmpOut, path.join(endingsDir, `${finalStem}.jpg`));
+      console.log(`[build-playgama] final Bombshell piece: endings/${finalStem}.jpg`);
+    } else {
+      console.log(`[build-playgama] no final Bombshell piece for this month (public/endings/${finalStem}.jpg); the ending shows the gallery`);
+    }
+  }
+
   const entries = monthMediaEntries(month, dayFileMap, bombshellMap, withBombshell);
   const tmp = fs.mkdtempSync(path.join(out, '.media-src-'));
   const missing = [];
