@@ -37,12 +37,12 @@
 /* ── Track grid + detail ── */
 .mb-main {
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(280px, 1fr);
+  grid-template-columns: minmax(0, 1.9fr) minmax(280px, 1fr);
   gap: 14px;
   min-height: 0;
 }
 .mb-tracks {
-  --cols: 8;
+  --cols: 4;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -54,6 +54,119 @@
   align-content: stretch;
 }
 .mb-tracks > li { min-width: 0; min-height: 0; display: flex; }
+/* A week's covers stay square: the biggest tile that fits both the stage's
+   width and height (container units of .mb-week-stage). */
+.mb-week-stage .mb-tracks {
+  --rows: 2;
+  --tile: min((100cqw - (var(--cols) - 1) * 8px) / var(--cols), (100cqh - (var(--rows) - 1) * 8px) / var(--rows));
+  grid-template-columns: repeat(var(--cols), var(--tile));
+  grid-auto-rows: var(--tile);
+  gap: 8px;
+  justify-content: center;
+  align-content: center;
+}
+.mb-tracks[data-count='1'] { --cols: 1; --rows: 1; }
+.mb-tracks[data-count='2'] { --cols: 2; --rows: 1; }
+.mb-tracks[data-count='3'] { --cols: 3; --rows: 1; }
+.mb-tracks[data-count='4'] { --cols: 4; --rows: 1; }
+.mb-tracks[data-count='5'], .mb-tracks[data-count='6'] { --cols: 3; }
+
+/* ── One week at a time ──
+   The week's covers fill the left of the screen; switching weeks slides the
+   old covers out and deals the new ones in, in the direction you moved. */
+.mb-week {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 8px;
+  min-height: 0;
+  min-width: 0;
+  padding: 10px;
+  overflow: hidden;
+  border: 1px solid var(--shell-line);
+  background: rgba(8, 4, 14, 0.6);
+}
+.mb-week-backdrop {
+  position: absolute;
+  inset: -40px;
+  z-index: -1;
+  background: center / cover no-repeat;
+  filter: blur(28px) saturate(1.3) brightness(0.45);
+  animation: mb-backdrop-in 0.6s ease-out both;
+}
+@keyframes mb-backdrop-in { from { opacity: 0; transform: scale(1.08); } to { opacity: 1; transform: none; } }
+.mb-week-nav { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.mb-week-tabs { flex: 1; display: flex; gap: 4px; min-width: 0; }
+.mb-week-tab {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 5px 2px;
+  border: 1px solid var(--shell-line-strong);
+  background: rgba(0, 0, 0, 0.45);
+  color: var(--shell-text-2);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, transform 0.15s;
+}
+.mb-week-tab b { font: 700 12px/1 var(--shell-mono); }
+.mb-week-tab small { font: 600 10px/1 var(--shell-mono); opacity: 0.75; }
+.mb-week-tab:hover { color: var(--shell-text); transform: translateY(-1px); }
+.mb-week-tab[aria-selected='true'] { background: var(--ch); border-color: var(--ch); color: var(--ink, #111); }
+.mb-week-tab[data-done]:not([aria-selected='true']) small { color: #39ff14; opacity: 1; }
+.mb-week-tab[data-bonus] b { color: var(--shell-gold); }
+.mb-week-tab[data-bonus][aria-selected='true'] { background: var(--shell-gold); border-color: var(--shell-gold); }
+.mb-week-tab[data-bonus][aria-selected='true'] b { color: var(--ink, #111); }
+.mb-week-arrow {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--shell-line-strong);
+  background: rgba(0, 0, 0, 0.45);
+  color: var(--shell-text);
+  cursor: pointer;
+}
+.mb-week-arrow:disabled { opacity: 0.3; cursor: default; }
+.mb-week-title { display: flex; align-items: center; gap: 10px; min-width: 0; font-size: 12px; white-space: nowrap; }
+.mb-week-keys { margin-left: auto; font-size: 11px; }
+@media (pointer: coarse) { .mb-week-keys { display: none; } }
+
+.mb-week-stage { grid-row: 3; display: grid; min-height: 0; perspective: 1200px; container-type: size; }
+.mb-week-stage > .mb-tracks { grid-area: 1 / 1; }
+.mb-tracks > li { animation: mb-deal-pop 0.42s cubic-bezier(0.2, 0.9, 0.3, 1.15) both; animation-delay: calc(var(--i, 0) * 45ms); }
+.mb-week-stage[data-dir='1'] .mb-tracks:not([data-leaving]) > li { animation-name: mb-deal-in-right; }
+.mb-week-stage[data-dir='-1'] .mb-tracks:not([data-leaving]) > li { animation-name: mb-deal-in-left; }
+.mb-tracks[data-leaving] { pointer-events: none; }
+.mb-tracks[data-leaving] > li { animation: mb-deal-out-left 0.3s ease-in both; animation-delay: calc(var(--i, 0) * 20ms); }
+.mb-week-stage[data-dir='-1'] .mb-tracks[data-leaving] > li { animation-name: mb-deal-out-right; }
+@keyframes mb-deal-pop { from { opacity: 0; transform: scale(0.82) translateY(14px); } }
+@keyframes mb-deal-in-right { from { opacity: 0; transform: translateX(70%) rotateY(-50deg) scale(0.9); } }
+@keyframes mb-deal-in-left { from { opacity: 0; transform: translateX(-70%) rotateY(50deg) scale(0.9); } }
+@keyframes mb-deal-out-left { to { opacity: 0; transform: translateX(-70%) rotateY(50deg) scale(0.9); } }
+@keyframes mb-deal-out-right { to { opacity: 0; transform: translateX(70%) rotateY(-50deg) scale(0.9); } }
+@media (prefers-reduced-motion: reduce) {
+  .mb-tracks > li, .mb-week-backdrop { animation: none !important; }
+  .mb-tracks[data-leaving] { display: none; }
+}
+.mb-tile-title {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 6px;
+  z-index: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+  font: 700 clamp(11px, 1.7vh, 15px)/1.15 var(--shell-body);
+  color: #fff;
+  text-shadow: 0 1px 4px #000;
+}
+.mb-tile[data-state='locked'] .mb-tile-title { color: rgba(255, 255, 255, 0.55); }
 
 .mb-tile {
   position: relative;
@@ -86,8 +199,8 @@
 .mb-tile[data-state='open']:not([data-selected='true']) { border-color: color-mix(in srgb, var(--ch) 45%, transparent); }
 .mb-tile-n {
   position: absolute;
-  left: 6px;
-  bottom: 4px;
+  left: 7px;
+  top: 6px;
   z-index: 1;
   font: 700 clamp(10px, 1.6vh, 13px)/1 var(--shell-mono);
   color: #fff;
@@ -151,17 +264,36 @@
   .mb-page { padding: 10px 56px 12px 10px; gap: 8px; }
   .mb-head { gap: 6px 12px; }
   .mb-main { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; gap: 10px; }
-  .mb-tracks { --cols: 6; gap: 5px; }
+  .mb-tracks { gap: 5px; }
   .mb-detail { grid-template-rows: auto auto auto auto; padding: 12px; gap: 8px; }
-  .mb-cover { width: clamp(56px, 10vh, 96px); }
+  .mb-cover { display: none; } /* the selected cover is already big in the week above */
+  .mb-week { padding: 8px; gap: 6px; }
+  .mb-week-keys { display: none; }
   .mb-hook { -webkit-line-clamp: 2; }
   .mb-actions .btn-3d { padding: 10px 14px; }
 }
-@media (max-aspect-ratio: 1/1) and (max-height: 700px) {
+/* Phones: the week of covers gets the room; the header and the track panel shrink. */
+@media (max-aspect-ratio: 1/1) {
+  .mb-page { padding: 10px; }
+  .mb-page .mb-head.ca-hero { margin-right: 46px; } /* clear of the mute button */
+  .mb-page .mb-title .ca-title { font-size: clamp(26px, 5vh, 44px); }
+  .mb-detail-name h2 { font-size: clamp(18px, 3.2vh, 28px); }
+}
+@media (max-aspect-ratio: 1/1) and (max-height: 900px) {
   .mb-detail .cs-detail-grid { display: none; }
+}
+@media (max-aspect-ratio: 1/1) and (max-height: 760px) {
+  .mb-week-title, .mb-hook, .mb-page .mb-progress .cs-bar { display: none; }
+  .mb-page .mb-head.ca-hero { padding: 8px 10px; }
 }
 @media (min-aspect-ratio: 1/1) and (max-height: 480px) {
   .mb-title h1 { font-size: 26px; }
+  .mb-page { gap: 8px; padding-top: 8px; padding-bottom: 8px; }
+  .mb-page .mb-head.ca-hero { padding: 6px 10px; }
+  .mb-page .mb-title .ca-title { font-size: 26px; }
+  .mb-page .mb-title .ca-hud, .mb-week-title { display: none; }
+  .mb-week { padding: 6px; gap: 6px; }
+  .mb-week-tab { padding: 3px 2px; }
   .mb-hook { -webkit-line-clamp: 2; }
   .mb-detail .cs-detail-grid { display: none; }
 }
@@ -229,7 +361,7 @@
 }
 .mb-tile-cursor {
   position: absolute;
-  right: 5px;
+  right: 20px;
   top: 4px;
   z-index: 2;
   margin: 0;

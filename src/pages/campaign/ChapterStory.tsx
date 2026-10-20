@@ -64,6 +64,26 @@ function gridCols(): number {
   return (grid && parseInt(getComputedStyle(grid).getPropertyValue('--cols'), 10)) || 1;
 }
 
+interface WeekPage {
+  label: string;
+  /** Index range into the chapter's songs (regular, then bonus). */
+  start: number;
+  end: number;
+  bonus?: boolean;
+}
+
+const WEEK_LEN = 7;
+
+/** Weeks of seven tracks (the last one shorter), then one page for the bonus songs. */
+function weekPages(regular: GameSong[], bonus: GameSong[]): WeekPage[] {
+  const pages: WeekPage[] = [];
+  for (let start = 0; start < regular.length; start += WEEK_LEN) {
+    pages.push({ label: `Week ${pages.length + 1}`, start, end: Math.min(regular.length, start + WEEK_LEN) });
+  }
+  if (bonus.length) pages.push({ label: 'Bonus', start: regular.length, end: regular.length + bonus.length, bonus: true });
+  return pages;
+}
+
 type ActStoryData = Omit<ChapterAct, 'act'>;
 
 interface ActGroup {
@@ -326,6 +346,8 @@ export default function ChapterStory() {
       else if (e.key === 'ArrowDown') { e.preventDefault(); move(row); }
       else if (e.key === 'ArrowLeft') { e.preventDefault(); move(-1); }
       else if (e.key === 'ArrowRight') { e.preventDefault(); move(1); }
+      else if (MONTH_BUILD && (e.key === 'PageUp' || e.key === 'q' || e.key === 'Q')) { e.preventDefault(); goWeekRef.current(weekRef.current - 1); }
+      else if (MONTH_BUILD && (e.key === 'PageDown' || e.key === 'e' || e.key === 'E')) { e.preventDefault(); goWeekRef.current(weekRef.current + 1); }
       else if (e.key === 'Enter' && !(t && t.tagName === 'BUTTON') && !(t && t.tagName === 'A')) playRef.current();
     };
     window.addEventListener('keydown', onKey);
@@ -339,7 +361,11 @@ export default function ChapterStory() {
           play: !!(gp.buttons[0]?.pressed || gp.buttons[9]?.pressed),
           up: !!(gp.buttons[12]?.pressed || gp.buttons[14]?.pressed || (gp.axes[1] ?? 0) < -0.5 || (gp.axes[0] ?? 0) < -0.5),
           down: !!(gp.buttons[13]?.pressed || gp.buttons[15]?.pressed || (gp.axes[1] ?? 0) > 0.5 || (gp.axes[0] ?? 0) > 0.5),
+          prevWeek: !!gp.buttons[4]?.pressed,
+          nextWeek: !!gp.buttons[5]?.pressed,
         };
+        if (MONTH_BUILD && btn.prevWeek && !prevBtn.prevWeek) goWeekRef.current(weekRef.current - 1);
+        if (MONTH_BUILD && btn.nextWeek && !prevBtn.nextWeek) goWeekRef.current(weekRef.current + 1);
         if (btn.play && !prevBtn.play) playRef.current();
         if (btn.up && !prevBtn.up) move(-1);
         if (btn.down && !prevBtn.down) move(1);
@@ -398,6 +424,34 @@ export default function ChapterStory() {
     setLocation('/vault/reveal');
   };
 
+  // The monthly build shows one week of tracks at a time so the art can be big;
+  // the bonus songs get a page of their own.
+  const weeks = useMemo<WeekPage[]>(() => (MONTH_BUILD && progress ? weekPages(progress.regular, progress.bonus) : []), [progress]);
+  const weekIdx = Math.max(0, weeks.findIndex((w) => selectedIdx >= w.start && selectedIdx < w.end));
+  const prevWeek = useRef(weekIdx);
+  const [weekAnim, setWeekAnim] = useState<{ from: number; dir: 1 | -1 } | null>(null);
+  useEffect(() => {
+    if (prevWeek.current === weekIdx) return;
+    setWeekAnim({ from: prevWeek.current, dir: weekIdx > prevWeek.current ? 1 : -1 });
+    prevWeek.current = weekIdx;
+    const t = window.setTimeout(() => setWeekAnim(null), 420);
+    return () => window.clearTimeout(t);
+  }, [weekIdx]);
+  const goWeek = useCallback((w: number) => {
+    const page = weeks[w];
+    if (!page || w === weekIdx || !songs) return;
+    // Land on the first playable track of that week, else its first track.
+    let idx = page.start;
+    for (let i = page.start; i < page.end; i++) {
+      if (!hasClearedSong(songs[i]) && stageOpen(i) && !timeLockedSong(songs[i])) { idx = i; break; }
+    }
+    select(idx);
+  }, [weeks, weekIdx, songs, stageOpen, select]);
+  const goWeekRef = useRef(goWeek);
+  goWeekRef.current = goWeek;
+  const weekRef = useRef(weekIdx);
+  weekRef.current = weekIdx;
+
   const chStyle = { ['--ch' as string]: meta.dc };
 
   if (!songs || !progress) {
@@ -455,37 +509,94 @@ export default function ChapterStory() {
         </header>
 
         <div className="mb-main">
-          <ol className="mb-tracks" aria-label="Tracks">
-            {songs.map((s, idx) => {
-              const state = stateOf(s, idx);
-              const medal = getMedalForSong(s.id);
-              const isBonus = idx >= progress.regular.length;
-              const isActStart = groups.some((g) => g.startIdx === idx && idx > 0);
-              return (
-                <li key={s.id} id={`beat-${idx}`} data-act-start={isActStart || undefined}>
-                  <button
-                    type="button"
-                    className="mb-tile"
-                    data-state={state}
-                    data-selected={idx === selectedIdx}
-                    data-bonus={isBonus || undefined}
-                    aria-label={`${s.title}, ${isBonus ? 'bonus' : `track ${idx + 1}`}, ${state}`}
-                    aria-pressed={idx === selectedIdx}
-                    onClick={() => select(idx)}
-                    onDoubleClick={() => { if (idx === selectedIdx) handlePlay(); }}
-                  >
-                    {s.coverArt && <img src={s.coverArt} alt="" loading="lazy" onError={hideBroken} />}
-                    {idx === selectedIdx && <span className="ca-cursor mb-tile-cursor" aria-hidden="true">▶</span>}
-                    <span className="mb-tile-n">{isBonus ? '★' : idx + 1}</span>
-                    {state === 'locked' && <span className="mb-tile-ico"><Lock size={14} /></span>}
-                    {state === 'cleared' && (
-                      <span className="mb-tile-medal" style={{ background: MEDAL_COLOR[medal] ?? '#39ff14' }} title={medal} />
-                    )}
-                  </button>
-                </li>
-              );
-            })}
-          </ol>
+          <section className="mb-week" aria-label="Tracks by week">
+            {selected?.coverArt && (
+              <div key={selected.id} className="mb-week-backdrop" aria-hidden="true"
+                style={{ backgroundImage: `url("${selected.coverArt}")` }} />
+            )}
+            <nav className="mb-week-nav" aria-label="Weeks">
+              <button type="button" className="mb-week-arrow" aria-label="Previous week" disabled={weekIdx === 0}
+                onClick={() => goWeek(weekIdx - 1)}><ChevronLeft size={18} /></button>
+              <div className="mb-week-tabs" role="tablist">
+                {weeks.map((w, i) => {
+                  const done = songs.slice(w.start, w.end).filter((s) => hasClearedSong(s)).length;
+                  return (
+                    <button key={w.label} type="button" role="tab" className="mb-week-tab" aria-selected={i === weekIdx}
+                      data-bonus={w.bonus || undefined} data-done={done === w.end - w.start || undefined}
+                      onClick={() => goWeek(i)}>
+                      <b>{w.bonus ? '★' : `W${i + 1}`}</b>
+                      <small>{done}/{w.end - w.start}</small>
+                    </button>
+                  );
+                })}
+              </div>
+              <button type="button" className="mb-week-arrow" aria-label="Next week" disabled={weekIdx === weeks.length - 1}
+                onClick={() => goWeek(weekIdx + 1)}><ChevronRight size={18} /></button>
+            </nav>
+            {weeks[weekIdx] && (
+              <div className="mb-week-title">
+                <span className="ca-chip" data-tone="hot">{weeks[weekIdx].label}</span>
+                {!weeks[weekIdx].bonus && (
+                  <span className="cs-muted">
+                    {formatDate(songs[weeks[weekIdx].start].day)} – {formatDate(songs[weeks[weekIdx].end - 1].day)}
+                  </span>
+                )}
+                <span className="mb-week-keys cs-muted">Q / E to switch weeks</span>
+              </div>
+            )}
+            <div className="mb-week-stage" data-dir={weekAnim?.dir}>
+              {weekAnim && weeks[weekAnim.from] && (
+                <ol className="mb-tracks" data-leaving aria-hidden="true" key={`out-${weekAnim.from}`}
+                  data-count={weeks[weekAnim.from].end - weeks[weekAnim.from].start}>
+                  {songs.slice(weeks[weekAnim.from].start, weeks[weekAnim.from].end).map((s, k) => {
+                    const idx = weeks[weekAnim.from].start + k;
+                    return (
+                      <li key={s.id} style={{ ['--i' as string]: k }}>
+                        <span className="mb-tile" data-state={stateOf(s, idx)}>
+                          {s.coverArt && <img src={s.coverArt} alt="" onError={hideBroken} />}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ol>
+              )}
+              {weeks[weekIdx] && (
+                <ol className="mb-tracks" aria-label={weeks[weekIdx].label} key={`in-${weekIdx}`} data-entering={weekAnim ? '' : undefined}
+                  data-count={weeks[weekIdx].end - weeks[weekIdx].start}>
+                  {songs.slice(weeks[weekIdx].start, weeks[weekIdx].end).map((s, k) => {
+                    const idx = weeks[weekIdx].start + k;
+                    const state = stateOf(s, idx);
+                    const medal = getMedalForSong(s.id);
+                    const isBonus = idx >= progress.regular.length;
+                    return (
+                      <li key={s.id} id={`beat-${idx}`} style={{ ['--i' as string]: k }}>
+                        <button
+                          type="button"
+                          className="mb-tile"
+                          data-state={state}
+                          data-selected={idx === selectedIdx}
+                          data-bonus={isBonus || undefined}
+                          aria-label={`${s.title}, ${isBonus ? 'bonus' : `track ${idx + 1}`}, ${state}`}
+                          aria-pressed={idx === selectedIdx}
+                          onClick={() => select(idx)}
+                          onDoubleClick={() => { if (idx === selectedIdx) handlePlay(); }}
+                        >
+                          {s.coverArt && <img src={s.coverArt} alt="" onError={hideBroken} />}
+                          {idx === selectedIdx && <span className="ca-cursor mb-tile-cursor" aria-hidden="true">▶</span>}
+                          <span className="mb-tile-n">{isBonus ? '★' : idx + 1}</span>
+                          <span className="mb-tile-title">{s.title}</span>
+                          {state === 'locked' && <span className="mb-tile-ico"><Lock size={18} /></span>}
+                          {state === 'cleared' && (
+                            <span className="mb-tile-medal" style={{ background: MEDAL_COLOR[medal] ?? '#39ff14' }} title={medal} />
+                          )}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ol>
+              )}
+            </div>
+          </section>
 
           {selected && status && (
             <section key={selected.id} className="mb-detail ca-panel" aria-label="Selected track">
