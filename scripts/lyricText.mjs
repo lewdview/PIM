@@ -65,7 +65,51 @@ export function isJunk(line) {
   return letters < 3 || letters / line.length < 0.5 || JUNK.test(line) || /[A-Z]-?[A-Z]?\d{2,}/.test(line);
 }
 
+// ── Official lyrics (lrc.th3scr1b3.art → public.lyric_timings) ────────────────
+// The LRC layer is the official source of lyrics and timings. Build scripts
+// call loadOfficialLyrics() once; published days then win over public/lyrics.
+let official = null; // Map<day, [{ start, text }]>
+
+export async function loadOfficialLyrics(root) {
+  const url = (process.env.VITE_SUPABASE_URL || 'https://toemkhrfsbkfkutwcjkd.supabase.co').replace(/\/$/, '');
+  const key = process.env.VITE_SUPABASE_ANON_KEY
+    || (fs.readFileSync(path.join(root, 'src/services/supabaseClient.ts'), 'utf8').match(/'(eyJ[^']+)'/) || [])[1];
+  try {
+    const res = await fetch(`${url}/rest/v1/lyric_timings?select=day,segments&order=day`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    official = new Map();
+    for (const row of await res.json()) {
+      const lines = (Array.isArray(row.segments) ? row.segments : [])
+        .filter((s) => s && typeof s.text === 'string' && s.text.trim() && Number.isFinite(s.start))
+        .sort((a, b) => a.start - b.start)
+        .map((s) => ({ start: s.start, text: s.text.trim() }));
+      if (lines.length) official.set(row.day, lines);
+    }
+    console.log(`[lyrics] official lyrics from lrc.th3scr1b3.art for ${official.size} days; public/lyrics covers the rest`);
+  } catch (err) {
+    if (process.env.ALLOW_STALE_LYRICS === '1') {
+      console.warn(`[lyrics] official lyrics not reachable (${err.message}); using public/lyrics only`);
+      official = new Map();
+      return;
+    }
+    console.error(`[lyrics] official lyrics not reachable (${err.message}). Set ALLOW_STALE_LYRICS=1 to build from public/lyrics only.`);
+    process.exit(1);
+  }
+}
+
+/** The day's official lines ({ start, text }), or null when it isn't published. */
+export function officialLines(day) {
+  return official?.get(day) ?? null;
+}
+
 export function readLyricLines(lyricsDir, day) {
+  const published = officialLines(day);
+  if (published) {
+    const lines = published.map((l) => scrubLine(l.text)).filter((l) => l && !isJunk(l));
+    if (lines.length) return lines;
+  }
   const file = path.join(lyricsDir, `day${String(day).padStart(3, '0')}.lrc`);
   if (!fs.existsSync(file)) return null;
   const lines = [];

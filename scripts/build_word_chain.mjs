@@ -8,7 +8,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { collapseRepeats, hasBlocked, isClean, isJunk, isWord, norm, scrubLine } from './lyricText.mjs';
+import { collapseRepeats, hasBlocked, isClean, isJunk, isWord, loadOfficialLyrics, norm, officialLines, scrubLine } from './lyricText.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const catalog = JSON.parse(fs.readFileSync(path.join(root, 'src/data/song_catalog.json'), 'utf8'));
@@ -30,24 +30,36 @@ const toSeconds = (stamp) => {
   return Math.round((parseInt(m, 10) * 60 + parseFloat(s.replace(':', '.'))) * 100) / 100;
 };
 
-function readTimedLines(day) {
+// Official lines (lrc.th3scr1b3.art) when the day is published, else public/lyrics.
+function rawTimedLines(day) {
+  const published = officialLines(day);
+  if (published) return published.map((l) => [Math.round(l.start * 100) / 100, l.text]);
   const file = path.join(lyricsDir, `day${String(day).padStart(3, '0')}.lrc`);
   if (!fs.existsSync(file)) return [];
   const out = [];
-  const seen = new Set();
   for (const raw of fs.readFileSync(file, 'utf8').split(/\r?\n/)) {
     const m = /^\[(\d{1,3}:\d{2}(?:[.:]\d{1,3})?)\]\s*(.*)$/.exec(raw.trim());
-    if (!m) continue;
-    const text = collapseRepeats(scrubLine(m[2]).replace(/^[^\w"'(]+/, ''));
+    if (m) out.push([toSeconds(m[1]), m[2]]);
+  }
+  return out;
+}
+
+function readTimedLines(day) {
+  const out = [];
+  const seen = new Set();
+  for (const [start, rawText] of rawTimedLines(day)) {
+    const text = collapseRepeats(scrubLine(rawText).replace(/^[^\w"'(]+/, ''));
     if (!text || isJunk(text) || hasBlocked(text) || text.length > MAX_LINE) continue;
     // Each distinct line once, at its first appearance.
     const key = text.toLowerCase().replace(/[^a-z' ]/g, '').trim();
     if (key.split(' ').length < 3 || seen.has(key)) continue;
     seen.add(key);
-    out.push([toSeconds(m[1]), text.charAt(0).toUpperCase() + text.slice(1)]);
+    out.push([start, text.charAt(0).toUpperCase() + text.slice(1)]);
   }
   return out;
 }
+
+await loadOfficialLyrics(root);
 
 const tracks = {};
 for (const song of catalog.filter((s) => s && s.day)) {
