@@ -13,7 +13,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useParams } from 'wouter';
-import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Lock, Pause, Play, Film, CheckCircle2, Gift, Sparkles, Trophy, X, Settings, Info, Flag, Headphones } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Lock, Pause, Play, Film, CheckCircle2, Gift, Sparkles, Trophy, X, Settings, Info, Flag, Headphones, BookOpen } from 'lucide-react';
 import { loadCatalog, isSongTimeLocked, getModifierForSong, type GameSong } from '@/game/api';
 import { getMedalForSong, getHighScore } from '@/game/progress';
 import { CHAPTERS, calculateCampaignDifficulty, levelToTier } from '@/game/campaign';
@@ -26,7 +26,7 @@ import {
   chapterProgress, getMonthStory, getTrackStory, hasClearedSong, isStageUnlocked, songsForMonth, MOOD_LABEL,
   type ChapterAct, type MonthStory,
 } from '@/game/chapterStory';
-import { Highlighted, WordChips } from './storyParts';
+import { Highlighted, MoodArc, WordChips } from './storyParts';
 import {
   PLAYGAMA_MONTH, BONUS_PRODUCT_ID, BONUS_UNLOCK_EVENT,
   isBonusSongBought, canUnlockWithAd, canBuyBundle, unlockSongWithAd, buyBonusBundle,
@@ -39,6 +39,8 @@ import MonthOptions from '@/pages/month/MonthOptions';
 import MonthAbout from '@/pages/month/MonthAbout';
 import MonthSong from '@/pages/month/MonthSong';
 import MonthEndings from '@/pages/month/MonthEndings';
+import MonthStoryPanel from '@/pages/month/MonthStoryPanel';
+import { isStorySeen, routeThroughStory } from '@/platform/playgama/storyScenes';
 import { endingStates } from '@/platform/playgama/endings';
 import {
   getMonthEntries, monthLeaderboardKind, monthTotal, showMonthPopup, submitMonthScore, type LeaderboardRow,
@@ -119,7 +121,7 @@ export default function ChapterStory() {
   // Monthly build: Playgama leaderboard (only where the portal offers one).
   const lbKind = MONTH_BUILD ? monthLeaderboardKind() : 'not_available';
   const [lbOpen, setLbOpen] = useState(false);
-  const [panel, setPanel] = useState<'options' | 'about' | 'song' | 'endings' | null>(null);
+  const [panel, setPanel] = useState<'options' | 'about' | 'song' | 'endings' | 'story' | null>(null);
   const [lbRows, setLbRows] = useState<LeaderboardRow[] | null>(null);
   const openLeaderboard = async () => {
     sfx(0.15);
@@ -193,6 +195,11 @@ export default function ChapterStory() {
   }, [monthNum, meta, stopPreview]);
 
   const progress = useMemo(() => (songs ? chapterProgress(songs, meta) : null), [songs, meta]);
+
+  // Monthly build: the first time the chapter opens, its prologue plays first.
+  useEffect(() => {
+    if (MONTH_BUILD && songs?.length && story && !isStorySeen('prologue')) setLocation('/story/prologue');
+  }, [songs, story, setLocation]);
 
   // Stage unlocks, plus the monthly build's bought/ad-unlocked bonus songs (open in any order).
   const stageOpen = useCallback((idx: number) => {
@@ -272,7 +279,9 @@ export default function ChapterStory() {
     stopPreview();
     audioManager.playSfx('tap_nav', 0.4);
     if (MONTH_BUILD) {
-      setLocation(prepareMonthRun(selected, { month: monthNum, level: status.level, idx: selectedIdx, cleared: status.cleared, deluxe }));
+      const run = prepareMonthRun(selected, { month: monthNum, level: status.level, idx: selectedIdx, cleared: status.cleared, deluxe });
+      // The first run of an act's opening track plays that act's scene first.
+      setLocation(progress ? routeThroughStory(selected, run, progress.regular, deluxe) : run);
       return;
     }
     sessionStorage.setItem('campaign_last_song_id', selected.id);
@@ -284,7 +293,7 @@ export default function ChapterStory() {
       sessionStorage.removeItem(`active_modifier_type_${selected.id}`);
     }
     setLocation(`/play/${selected.id}`);
-  }, [selected, status, selectedIdx, stopPreview, monthNum, equippedCardId, setLocation]);
+  }, [selected, status, selectedIdx, stopPreview, monthNum, equippedCardId, setLocation, progress]);
 
   const unlockByAd = async () => {
     if (!selected || unlocking) return;
@@ -509,6 +518,11 @@ export default function ChapterStory() {
                 <Headphones size={14} /> Listen
               </button>
             )}
+            {story && (
+              <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={() => { sfx(); setPanel('story'); }}>
+                <BookOpen size={14} /> Story
+              </button>
+            )}
             <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={() => { sfx(); setPanel('endings'); }}>
               <Flag size={14} /> Endings{endings.some((e) => e.earned && !e.seen) && <span className="mb-ending-dot" aria-label="New ending" />}
             </button>
@@ -701,6 +715,20 @@ export default function ChapterStory() {
           <MonthEndings
             endings={endings}
             onWatch={(e) => { sfx(); setLocation(`/ending/${e.id}`); }}
+            onClose={() => setPanel(null)}
+          />
+        )}
+        {panel === 'story' && story && (
+          <MonthStoryPanel
+            story={story}
+            songs={songs}
+            groups={groups}
+            selectedIdx={selectedIdx}
+            stateOf={stateOf}
+            reached={(g) => stageOpen(g.startIdx) || hasClearedSong(songs[g.startIdx])}
+            epilogueOpen={!!endings.find((e) => e.id === 'epilogue')?.earned}
+            onSelect={(i) => { setPanel(null); select(i); }}
+            onWatch={(path) => { sfx(); setLocation(path); }}
             onClose={() => setPanel(null)}
           />
         )}
@@ -996,57 +1024,5 @@ function ActStory({ act, songs, story, onPick }: {
         );
       })}
     </ol>
-  );
-}
-
-/** The month's mood (track valence) as a line, with a tappable dot per track. */
-function MoodArc({ songs, groups, selectedIdx, stateOf, onSelect }: {
-  songs: GameSong[];
-  groups: ActGroup[];
-  selectedIdx: number;
-  stateOf: (s: GameSong, i: number) => string;
-  onSelect: (i: number) => void;
-}) {
-  if (songs.length < 2) return null;
-  const H = 132;
-  // Scale to this month's own range so its swings read clearly.
-  const vals = songs.map((s) => s.valence ?? 0.5);
-  const lo = Math.min(...vals);
-  const span = Math.max(0.15, Math.max(...vals) - lo);
-  const x = (i: number) => (i / (songs.length - 1)) * 100;
-  const y = (s: GameSong) => 14 + (1 - ((s.valence ?? 0.5) - lo) / span) * (H - 28);
-  const pts = songs.map((s, i) => `${x(i).toFixed(2)},${y(s).toFixed(1)}`).join(' ');
-  const seps = groups.slice(1).map((g) => x(g.startIdx - 0.5));
-  return (
-    <section className="cs-arc" aria-label="Mood across the chapter">
-      <div className="cs-arc-head">
-        <div className="cs-eyebrow">Mood arc</div>
-        <div className="cs-eyebrow">brighter ↑ · heavier ↓</div>
-      </div>
-      <div style={{ position: 'relative' }}>
-        <svg viewBox={`0 0 100 ${H}`} preserveAspectRatio="none" aria-hidden="true">
-          <polygon className="arc-fill" points={`0,${H} ${pts} 100,${H}`} />
-          {seps.map((sx, i) => <line key={i} className="arc-sep" x1={sx} x2={sx} y1={0} y2={H} />)}
-          <polyline className="arc-line" points={pts} />
-        </svg>
-        <div className="cs-arc-dots" style={{ position: 'absolute', inset: 0, height: '100%' }}>
-          {songs.map((s, i) => (
-            <button
-              key={s.id}
-              type="button"
-              className="cs-arc-dot"
-              data-state={stateOf(s, i)}
-              data-selected={i === selectedIdx}
-              style={{ left: `${x(i)}%`, top: `${(y(s) / H) * 100}%` }}
-              aria-label={`${s.title}, day ${s.day}`}
-              onClick={() => onSelect(i)}
-            />
-          ))}
-        </div>
-      </div>
-      <div className="cs-arc-acts" style={{ gridTemplateColumns: groups.map((g) => `${g.songs.length}fr`).join(' ') }}>
-        {groups.map((g) => <span key={g.key} title={g.label}>{g.act?.act ? `${g.act.act} · ${g.act.word}` : g.bonus ? `Bonus${g.act ? ` · ${g.act.word}` : ''}` : g.label}</span>)}
-      </div>
-    </section>
   );
 }

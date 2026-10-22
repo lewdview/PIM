@@ -34,6 +34,7 @@ import { monthTotal } from '@/platform/playgama/monthLeaderboard';
 import { hideBroken } from '@/pages/campaign/hideBroken';
 import { baseSongId, bombshellArtFor, isDeluxeRun, monthStageLevel, prepareMonthRun } from './startRun';
 import { ENDING_INFO, pendingEnding, type EndingId } from '@/platform/playgama/endings';
+import { routeThroughStory } from '@/platform/playgama/storyScenes';
 import '@/styles/stageShell.css';
 import '@/styles/campaignStory.css';
 import '@/styles/campaignResults.css';
@@ -373,7 +374,9 @@ function RunResults({ songId }: { songId: string }) {
   const launch = (target: GameSong, idx: number, level: number, deluxeRun = false) => {
     audioManager.playSfx('tap_nav', 0.4);
     sessionStorage.removeItem(`result_${songId}`);
-    setLocation(prepareMonthRun(target, { month: meta.month, level, idx, cleared: hasClearedSong(target), deluxe: deluxeRun }));
+    const run = prepareMonthRun(target, { month: meta.month, level, idx, cleared: hasClearedSong(target), deluxe: deluxeRun });
+    // "Play next" into a new act plays that act's scene first.
+    setLocation(stage ? routeThroughStory(target, run, stage.progress.regular, deluxeRun) : run);
   };
   const go = (path: string) => { audioManager.playSfx('tap_nav', 0.15); setLocation(path); };
 

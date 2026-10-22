@@ -31,7 +31,7 @@ const MEDAL_COLOR: Record<string, string> = {
 const pad = (n: number) => String(n).padStart(2, '0');
 const meta = CHAPTERS.find((c) => c.month === PLAYGAMA_MONTH) ?? CHAPTERS[0];
 
-interface Scene {
+export interface Scene {
   key: string;
   /** Milliseconds before moving on; the last scene waits for the player. */
   ms: number;
@@ -74,15 +74,35 @@ export default function MonthEnding() {
 
 function EndingPlayer({ ending, data, onDone }: { ending: EndingId; data: Data; onDone: () => void }) {
   const scenes = useMemo(() => buildScenes(ending, data), [ending, data]);
+  return (
+    <ScenePlayer scenes={scenes} music={musicFor(ending, data)} kind={ending}
+      tone={ending === 'bombshell' ? '#ff1493' : meta.dc} onDone={onDone} />
+  );
+}
+
+/**
+ * Full-screen scenes over one of the month's songs: each advances on its own
+ * or with a tap, Skip leaves at any time, and the last waits for the player.
+ * The endings and the story scenes (MonthStoryScene.tsx) both play through it.
+ */
+export function ScenePlayer({ scenes, music, kind, tone, doneLabel = 'Continue', onDone }: {
+  scenes: Scene[];
+  music: GameSong | undefined;
+  /** data-ending on the root, for per-sequence styling. */
+  kind: string;
+  tone: string;
+  doneLabel?: string;
+  onDone: () => void;
+}) {
   const [idx, setIdx] = useState(0);
   const last = idx >= scenes.length - 1;
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const musicUrl = music?.audioUrl;
 
   // The month's music under the sequence, faded in and out.
   useEffect(() => {
-    const song = musicFor(ending, data);
-    if (!song?.audioUrl) return;
-    const a = new Audio(song.audioUrl);
+    if (!musicUrl) return;
+    const a = new Audio(musicUrl);
     a.volume = 0;
     a.loop = true;
     audioRef.current = a;
@@ -97,7 +117,7 @@ function EndingPlayer({ ending, data, onDone }: { ending: EndingId; data: Data; 
       a.removeAttribute('src');
       try { a.load(); } catch { /* ignore */ }
     };
-  }, [ending, data]);
+  }, [musicUrl]);
 
   useEffect(() => {
     if (last) return;
@@ -120,7 +140,7 @@ function EndingPlayer({ ending, data, onDone }: { ending: EndingId; data: Data; 
 
   const scene = scenes[idx];
   return (
-    <div className="me-root" data-ending={ending} style={{ ['--ch' as string]: ending === 'bombshell' ? '#ff1493' : meta.dc } as CSSProperties} onClick={next}>
+    <div className="me-root" data-ending={kind} style={{ ['--ch' as string]: tone } as CSSProperties} onClick={next}>
       <div className="me-bg" aria-hidden="true" />
       <div key={scene.key} className="me-scene">{scene.body}</div>
       <div className="me-foot" onClick={(e) => e.stopPropagation()}>
@@ -128,7 +148,7 @@ function EndingPlayer({ ending, data, onDone }: { ending: EndingId; data: Data; 
           {scenes.map((s, i) => <span key={s.key} data-on={i <= idx || undefined} />)}
         </div>
         {last
-          ? <button type="button" className="btn-3d" onClick={onDone}>Continue</button>
+          ? <button type="button" className="btn-3d" onClick={onDone}>{doneLabel}</button>
           : <button type="button" className="me-skip" onClick={onDone}>Skip ▸▸</button>}
       </div>
     </div>
@@ -342,11 +362,11 @@ function buildScenes(ending: EndingId, { songs, progress, story }: Data): Scene[
   ];
 }
 
-function Line({ text }: { text: string }) {
+export function Line({ text }: { text: string }) {
   return <p className="me-lyric">“{text}”</p>;
 }
 
-function Cite({ day, title }: { day: number; title?: string }) {
+export function Cite({ day, title }: { day: number; title?: string }) {
   return <p className="me-cite">Day {day}{title ? ` · ${title}` : ''}</p>;
 }
 

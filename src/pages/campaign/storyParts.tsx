@@ -37,3 +37,65 @@ export function ArcSpark({ songs, color }: { songs: GameSong[]; color: string })
     </svg>
   );
 }
+
+/** The slice of a chapter's act grouping the mood arc needs. */
+export interface ArcGroup {
+  key: string;
+  label: string;
+  act?: { act?: string; word: string };
+  songs: GameSong[];
+  startIdx: number;
+  bonus: boolean;
+}
+
+/** The month's mood (track valence) as a line, with a tappable dot per track. */
+export function MoodArc({ songs, groups, selectedIdx, stateOf, onSelect }: {
+  songs: GameSong[];
+  groups: ArcGroup[];
+  selectedIdx: number;
+  stateOf: (s: GameSong, i: number) => string;
+  onSelect: (i: number) => void;
+}) {
+  if (songs.length < 2) return null;
+  const H = 132;
+  // Scale to this month's own range so its swings read clearly.
+  const vals = songs.map((s) => s.valence ?? 0.5);
+  const lo = Math.min(...vals);
+  const span = Math.max(0.15, Math.max(...vals) - lo);
+  const x = (i: number) => (i / (songs.length - 1)) * 100;
+  const y = (s: GameSong) => 14 + (1 - ((s.valence ?? 0.5) - lo) / span) * (H - 28);
+  const pts = songs.map((s, i) => `${x(i).toFixed(2)},${y(s).toFixed(1)}`).join(' ');
+  const seps = groups.slice(1).map((g) => x(g.startIdx - 0.5));
+  return (
+    <section className="cs-arc" aria-label="Mood across the chapter">
+      <div className="cs-arc-head">
+        <div className="cs-eyebrow">Mood arc</div>
+        <div className="cs-eyebrow">brighter ↑ · heavier ↓</div>
+      </div>
+      <div style={{ position: 'relative' }}>
+        <svg viewBox={`0 0 100 ${H}`} preserveAspectRatio="none" aria-hidden="true">
+          <polygon className="arc-fill" points={`0,${H} ${pts} 100,${H}`} />
+          {seps.map((sx, i) => <line key={i} className="arc-sep" x1={sx} x2={sx} y1={0} y2={H} />)}
+          <polyline className="arc-line" points={pts} />
+        </svg>
+        <div className="cs-arc-dots" style={{ position: 'absolute', inset: 0, height: '100%' }}>
+          {songs.map((s, i) => (
+            <button
+              key={s.id}
+              type="button"
+              className="cs-arc-dot"
+              data-state={stateOf(s, i)}
+              data-selected={i === selectedIdx}
+              style={{ left: `${x(i)}%`, top: `${(y(s) / H) * 100}%` }}
+              aria-label={`${s.title}, day ${s.day}`}
+              onClick={() => onSelect(i)}
+            />
+          ))}
+        </div>
+      </div>
+      <div className="cs-arc-acts" style={{ gridTemplateColumns: groups.map((g) => `${g.songs.length}fr`).join(' ') }}>
+        {groups.map((g) => <span key={g.key} title={g.label}>{g.act?.act ? `${g.act.act} · ${g.act.word}` : g.bonus ? `Bonus${g.act ? ` · ${g.act.word}` : ''}` : g.label}</span>)}
+      </div>
+    </section>
+  );
+}

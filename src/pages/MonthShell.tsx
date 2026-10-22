@@ -51,6 +51,7 @@ const MonthResults = lazyScreen(() => import('./month/MonthResults'));
 const SecretLevel = lazyScreen(() => import('./SecretLevel'));
 const MonthEnding = lazyScreen(() => import('./month/MonthEnding'));
 const MonthListen = lazyScreen(() => import('./month/MonthListen'));
+const MonthStoryScene = lazyScreen(() => import('./month/MonthStoryScene'));
 
 const HOME = `/chapter/${PLAYGAMA_MONTH}`;
 const MUTE_KEY = 'pg_muted';
@@ -103,7 +104,7 @@ export default function MonthShell() {
   }, []);
 
   useEffect(() => {
-    if (location.startsWith('/play/') || location.startsWith('/ending/') || location === '/listen') useGlobalPlayer.getState().stop();
+    if (location.startsWith('/play/') || location.startsWith('/ending/') || location.startsWith('/story/') || location === '/listen') useGlobalPlayer.getState().stop();
     // Back from a run: post the month total to the Playgama leaderboard if it went up.
     else if (started) void submitMonthScore().catch(() => {});
   }, [location, started]);
@@ -152,6 +153,7 @@ export default function MonthShell() {
                 <Route path="/results/:songId" component={MonthResults} />
                 <Route path="/secret/:level" component={SecretLevel} />
                 <Route path="/ending/:id" component={MonthEnding} />
+                <Route path="/story/:id" component={MonthStoryScene} />
                 <Route path="/listen" component={MonthListen} />
                 <Route path="/tutorial" component={TutorialDone} />
                 <Route>
