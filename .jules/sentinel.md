@@ -12,3 +12,7 @@
 **Vulnerability:** A hardcoded plaintext admin passphrase (`th3scr1b3`) was being passed in the payload of a `supabase.functions.invoke` call in `src/utils/adminConfig.ts`.
 **Learning:** Hardcoded credentials should not be present in background sync functions or client bundles.
 **Prevention:** Always pull credentials dynamically from `sessionStorage` where the authenticated session stores it or handle authorization securely without exposing raw secrets in code.
+## 2023-11-09 - Remove Hardcoded Supabase Secrets
+**Vulnerability:** A critical vulnerability where a hardcoded Supabase URL and Anon Key were embedded in the client-side frontend bundle within `src/services/supabaseClient.ts` and Next.js artifacts.
+**Learning:** Hardcoding active Supabase credentials in the client code directly exposes the backend database configuration to anyone who examines the frontend bundle. This can lead to unauthorized data access or manipulation if Row Level Security (RLS) is misconfigured or bypassed, and gives attackers the keys to the kingdom.
+**Prevention:** Always rely strictly on environment variables for API keys and URLs without providing a functional production fallback string in the source code. Use empty strings `""` as fallbacks to fail-fast during development if the `.env` variables are missing, instead of using real or dummy credentials.
