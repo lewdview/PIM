@@ -66,20 +66,30 @@ function AudioPreviewTime({
   audioUrl,
   day,
   durationLabel,
+  isFullSong,
+  isThisTrack,
+  maxDuration,
   isPlaying
 }: {
   audioUrl: string;
   day: number;
   durationLabel: string;
+  isFullSong: boolean;
+  isThisTrack: boolean;
+  maxDuration: number;
   isPlaying: boolean;
 }) {
+  const duration = useGlobalPlayer(s => (s.currentTrack?.audioUrl === audioUrl && s.currentTrack?.day === day) ? s.duration : 0);
+  const resolvedDurationLabel = isFullSong
+    ? (isThisTrack && duration > 0 ? formatTime(duration) : durationLabel)
+    : formatTime(maxDuration);
   const currentTime = useGlobalPlayer(s =>
     (s.currentTrack?.audioUrl === audioUrl && s.currentTrack?.day === day) ? s.currentTime : 0
   );
 
   return (
     <>
-      {isPlaying ? formatTime(currentTime) : durationLabel}
+      {isPlaying ? formatTime(currentTime) : resolvedDurationLabel}
     </>
   );
 }
@@ -106,7 +116,7 @@ export default function AudioPreview({
   const isThisTrack = currentTrack?.audioUrl === audioUrl && currentTrack?.day === day;
   // Evaluate the condition directly inside the selector function
   const globalPlaying = useGlobalPlayer(s => (s.currentTrack?.audioUrl === audioUrl && s.currentTrack?.day === day) ? s.isPlaying : false);
-  const duration = useGlobalPlayer(s => (s.currentTrack?.audioUrl === audioUrl && s.currentTrack?.day === day) ? s.duration : 0);
+
 
   const globalToggle = useGlobalPlayer(s => s.toggle);
   const globalPlay = useGlobalPlayer(s => s.play);
@@ -131,9 +141,7 @@ export default function AudioPreview({
   }, [isThisTrack, globalToggle, globalPlay, title, audioUrl, coverUrl, day, rarity, isDailyClaim, maxDuration]);
 
   // Display duration label
-  const durationLabel = isFullSong
-    ? (isThisTrack && duration > 0 ? formatTime(duration) : 'FULL')
-    : formatTime(maxDuration);
+  const durationLabel = isFullSong ? 'FULL' : formatTime(maxDuration);
 
   const tierLabel = isFullSong ? null : (
     maxDuration === 15 ? '15s preview' : '1m preview'
@@ -209,6 +217,9 @@ export default function AudioPreview({
             day={day}
             durationLabel={durationLabel}
             isPlaying={isPlaying}
+            isFullSong={isFullSong}
+            isThisTrack={isThisTrack}
+            maxDuration={maxDuration}
           />
         </span>
       </div>
