@@ -22,6 +22,7 @@ import {
   getCustomBombshellCover,
   getBombshellCoverUrl,
 } from '../utils/bombshellCards';
+import { primeGameCover } from '../utils/gameCover';
 import PrizeProgressMenu from './PrizeProgressMenu';
 
 interface CardDetailModalProps {
@@ -87,10 +88,7 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
     setActivePreviewArtwork(fileName);
     setPreferredCardCover(day, fileName);
     const resolvedUrl = getBombshellCoverUrl(day, fileName);
-    if (typeof sessionStorage !== 'undefined') {
-      sessionStorage.setItem(`active_cover_url_card-${day}`, resolvedUrl);
-      sessionStorage.setItem('active_game_cover', resolvedUrl);
-    }
+    primeGameCover(day, resolvedUrl);
   };
 
   if (!card) return null;
@@ -377,6 +375,7 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
                         <button
                           onClick={() => {
                             stop();
+                            primeGameCover(card.card.day, effectiveCoverUrl);
                             setLocation(`/play/card-${card.card.day}`);
                           }}
                           className="lg:hidden flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[rgba(0,240,255,0.15)] border border-[#00f0ff] text-[#00f0ff] text-[11px] font-mono font-black uppercase tracking-wider active:scale-95 shadow-[0_0_12px_rgba(0,240,255,0.25)]"
@@ -631,6 +630,7 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
                         <button
                           onClick={() => {
                             stop();
+                            primeGameCover(card.card.day, effectiveCoverUrl);
                             setLocation(`/play/card-${card.card.day}`);
                           }}
                           className="flex items-center gap-2 px-5 py-3 bg-[rgba(0,240,255,0.1)] border border-neon-cyan text-neon-cyan rounded-xl text-[11px] font-mono font-bold uppercase tracking-widest transition-all hover:bg-[rgba(0,240,255,0.2)] hover:scale-[1.02] active:scale-95 shadow-[0_0_15px_rgba(0,240,255,0.15)]"
@@ -646,6 +646,7 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
                             onClick={() => {
                               stop();
                               sessionStorage.setItem(`export_video_card-${card.card.day}`, 'true');
+                              primeGameCover(card.card.day, effectiveCoverUrl);
                               setLocation(`/play/card-${card.card.day}`);
                             }}
                             title="Export frame-perfect 100% PERFECT+ run video (DEV ONLY)"
@@ -719,6 +720,7 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
                   <button
                     onClick={() => {
                       stop();
+                      primeGameCover(card.card.day, effectiveCoverUrl);
                       setLocation(`/play/card-${card.card.day}`);
                     }}
                     className="flex-1 py-3.5 px-4 rounded-xl font-mono font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 text-black transition-all active:scale-[0.98] shadow-lg cursor-pointer"

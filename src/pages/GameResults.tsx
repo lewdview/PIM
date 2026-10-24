@@ -169,8 +169,10 @@ export default function Results() {
   // or if minting failed (GameResults mints a fallback before submit).
   const runTokenRef = useRef<string | null>(null);
 
+  // The run's own cover, written by GameplayCore when the run ended. No global
+  // "last cover" fallback: that key belongs to whatever song was launched last.
   const sessionCover = typeof sessionStorage !== 'undefined'
-    ? (sessionStorage.getItem(`active_cover_url_${songId}`) || sessionStorage.getItem('active_game_cover'))
+    ? sessionStorage.getItem(`active_cover_url_${songId}`)
     : null;
   const activeCoverUrl = result?.coverUrl || sessionCover || song?.coverArt || '/data/covers/default.jpg';
 
@@ -208,11 +210,10 @@ export default function Results() {
     });
 
     Promise.all([getSongById(songId), loadCatalog()])
-      .then(([s, catalog]) => {
-        if (s) {
-          const effectiveCover = data.coverUrl || sessionCover;
-          if (effectiveCover) s.coverArt = effectiveCover;
-        }
+      .then(([fetched, catalog]) => {
+        // Copy before overriding coverArt: getSongById can hand back the cached catalog entry.
+        const effectiveCover = data.coverUrl || sessionCover;
+        const s = fetched && effectiveCover ? { ...fetched, coverArt: effectiveCover } : fetched;
         setSong(s);
         if (s && s.date) {
           const month = parseInt(s.date.split('-')[1], 10);

@@ -24,6 +24,7 @@ import { useVaultStore, ownsCardForDay } from '@/store/useVaultStore';
 import { formatDate } from '@/utils/dayCalc';
 import { hideBroken } from './hideBroken';
 import '@/styles/stageShell.css';
+import { primeGameCover, resolvePreferredCover } from '@/utils/gameCover';
 import '@/styles/campaignStory.css';
 import '@/styles/campaignResults.css';
 
@@ -248,6 +249,8 @@ export default function CampaignResults({ songId, song, result, accuracy, coverU
     audioManager.playSfx('tap_nav', 0.4);
     sessionStorage.removeItem(`result_${songId}`);
     prepareCampaignRun(target.id, month, getModifierForSong(target), equippedCardId === target.id);
+    // A retry keeps this run's art; the next stage uses the player's saved cover.
+    if (target.day === song?.day) primeGameCover(target.day, coverUrl);
     setLocation(campaignPlayPath(target.id));
   };
   const go = (path: string) => { audioManager.playSfx('tap_nav', 0.15); setLocation(path); };
@@ -535,7 +538,7 @@ function NextTrack({ stage }: { stage: CampaignStage }) {
   return (
     <div className="cr-next">
       <div className="cr-next-art">
-        {song.coverArt && <img src={song.coverArt} alt="" onError={hideBroken} />}
+        {resolvePreferredCover(song) && <img src={resolvePreferredCover(song)!} alt="" onError={hideBroken} />}
         <span className="cr-vs">VS</span>
       </div>
       <div style={{ minWidth: 0 }}>
