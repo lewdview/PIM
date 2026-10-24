@@ -30,6 +30,7 @@ const ON_BEAT = 0.12;
 export class RunnerLevel implements SecretGame {
   readonly title = 'ROOFTOP RUN';
   readonly hint = 'SPACE / ↑ / tap top half to jump · ↓ / tap bottom half to duck · jump on the beat';
+  readonly padHint = 'Controller: Ⓐ or ↑ to jump · Ⓑ or ↓ to duck';
   readonly totalBeats = 72;
   score = 0;
   lives = 4;

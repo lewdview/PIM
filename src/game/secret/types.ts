@@ -7,6 +7,8 @@ export type SecretInput =
 export interface SecretGame {
   readonly title: string;
   readonly hint: string;
+  /** Controls line shown under the hint when a gamepad is connected. */
+  readonly padHint: string;
   /** Level ends (and is won if lives remain) at this beat. */
   readonly totalBeats: number;
   score: number;

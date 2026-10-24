@@ -4,8 +4,8 @@
  *   /secret/shooter?from=<songId>&via=warp        SIGNAL SIEGE (instant warp)
  *   /secret/runner?from=<songId>&via=warp-clear   ROOFTOP RUN  (warp on clear)
  *
- * Owns the canvas loop, input and music; the levels themselves live in
- * src/game/secret/.
+ * Owns the canvas loop, input (keyboard, touch and gamepad) and music; the
+ * levels themselves live in src/game/secret/.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -21,6 +21,30 @@ import { PLAYGAMA_MONTH } from '@/platform/playgama/month';
 type Phase = 'intro' | 'playing' | 'over';
 
 const COUNT_IN = 4; // beats of countdown before the level starts
+const STICK = 0.5; // stick deflection that counts as a press
+
+type PadAction = SecretInput['kind'] | 'start' | 'back' | 'retry';
+
+/** Which actions the first connected gamepad is holding right now (standard mapping). */
+function readPad(): Set<PadAction> | null {
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  let gp: Gamepad | null = null;
+  for (const g of pads) if (g) { gp = g; break; }
+  if (!gp) return null;
+  const b = (i: number) => !!gp!.buttons[i]?.pressed;
+  const ax = gp.axes[0] ?? 0;
+  const ay = gp.axes[1] ?? 0;
+  const held = new Set<PadAction>();
+  if (b(14) || ax < -STICK) held.add('left');
+  if (b(15) || ax > STICK) held.add('right');
+  if (b(12) || b(3) || ay < -STICK) held.add('jump');
+  if (b(13) || b(1) || ay > STICK) held.add('duck');
+  if (b(0) || b(2) || b(5) || b(7)) held.add('fire');
+  if (b(0) || b(9)) held.add('start');
+  if (b(1) || b(8)) held.add('back');
+  if (b(3)) held.add('retry');
+  return held;
+}
 
 function makeLevel(id: SecretLevelId): SecretGame {
   return id === 'runner' ? new RunnerLevel(SECRET_TRACKS.runner.bpm) : new ShooterLevel();
@@ -40,6 +64,7 @@ export default function SecretLevel() {
   const rafRef = useRef(0);
   const [phase, setPhase] = useState<Phase>('intro');
   const [result, setResult] = useState<{ won: boolean; score: number } | null>(null);
+  const [padConnected, setPadConnected] = useState(false);
 
   const send = useCallback((a: SecretInput) => {
     const clock = clockRef.current;
@@ -120,6 +145,44 @@ export default function SecretLevel() {
     return () => window.removeEventListener('keydown', onKey);
   }, [phase, send, start]);
 
+  // Gamepad: d-pad or left stick moves / jumps / ducks, A / X / RB / RT fires.
+  // On the menus A or Start starts and continues, Y retries, B or Select skips.
+  const leaveRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    let raf = 0;
+    let prev = new Set<PadAction>();
+    let connected = false;
+    const poll = () => {
+      const held = readPad();
+      if (!!held !== connected) {
+        connected = !!held;
+        setPadConnected(connected);
+      }
+      if (held) {
+        const pressed = (a: PadAction) => held.has(a) && !prev.has(a);
+        if (phase === 'playing') {
+          (['left', 'right', 'jump', 'duck', 'fire'] as const).forEach((a) => {
+            if (pressed(a)) send({ kind: a });
+          });
+        } else if (phase === 'intro') {
+          if (pressed('start')) void start();
+          else if (pressed('back')) leaveRef.current();
+        } else if (phase === 'over') {
+          if (pressed('retry')) void start();
+          else if (pressed('start')) leaveRef.current();
+        }
+        prev = held;
+      } else {
+        prev = new Set();
+      }
+      raf = requestAnimationFrame(poll);
+    };
+    // Buttons held while the menu changes phase must be let go before they count again.
+    prev = readPad() ?? new Set();
+    raf = requestAnimationFrame(poll);
+    return () => cancelAnimationFrame(raf);
+  }, [phase, send, start]);
+
   useEffect(() => () => {
     cancelAnimationFrame(rafRef.current);
     clockRef.current?.stop();
@@ -137,6 +200,7 @@ export default function SecretLevel() {
     // The monthly Playgama build has no song list: an instant warp returns to the chapter.
     else setLocation(PLAYGAMA_MONTH > 0 ? `/chapter/${PLAYGAMA_MONTH}` : '/songs');
   };
+  leaveRef.current = leave;
 
   const game = gameRef.current;
 
@@ -155,6 +219,7 @@ export default function SecretLevel() {
             {game.title}
           </h1>
           <p className="max-w-md text-sm text-zinc-300 font-mono">{game.hint}</p>
+          {padConnected && <p className="max-w-md text-xs text-fuchsia-200 font-mono">{game.padHint}</p>}
           <button
             onClick={() => void start()}
             className="mt-2 px-8 py-3 rounded-full bg-fuchsia-500 hover:bg-fuchsia-400 font-black font-mono tracking-widest"
@@ -162,6 +227,7 @@ export default function SecretLevel() {
             START
           </button>
           <button onClick={leave} className="text-xs text-zinc-500 font-mono underline">skip</button>
+          {padConnected && <div className="text-xs text-zinc-400 font-mono">Ⓐ start · Ⓑ skip</div>}
         </div>
       )}
 
@@ -186,6 +252,7 @@ export default function SecretLevel() {
               CONTINUE
             </button>
           </div>
+          {padConnected && <div className="text-xs text-zinc-400 font-mono">Ⓨ retry · Ⓐ continue</div>}
         </div>
       )}
     </div>

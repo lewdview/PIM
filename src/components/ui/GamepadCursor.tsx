@@ -17,8 +17,9 @@ export default function GamepadCursor() {
   const lastHoveredElRef = useRef<Element | null>(null);
   const lastOverlayOrResultsTimeRef = useRef<number | null>(null);
 
-  // Disable gamepad cursor completely on gameplay pages unless overlays are active
-  const isPlaying = location.startsWith("/play/");
+  // Disable gamepad cursor completely on gameplay pages unless overlays are active.
+  // Secret levels read the pad themselves, menus included.
+  const isPlaying = location.startsWith("/play/") || location.startsWith("/secret/");
   const [isOverlayActive, setIsOverlayActive] = useState(false);
 
   useEffect(() => {

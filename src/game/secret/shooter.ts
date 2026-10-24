@@ -37,6 +37,7 @@ const smooth = (t: number) => t * t * (3 - 2 * t);
 export class ShooterLevel implements SecretGame {
   readonly title = 'SIGNAL SIEGE';
   readonly hint = '← → or tap a lane to move · SPACE or tap to fire · shoot on the beat for a laser';
+  readonly padHint = 'Controller: d-pad or stick ← → to move · Ⓐ or RT to fire';
   readonly totalBeats = 72;
   score = 0;
   lives = 5;
