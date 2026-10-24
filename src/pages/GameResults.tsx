@@ -15,6 +15,7 @@ import { logAnalyticsEvent } from "@/services/telemetryService";
 import OnboardingFlowModal from "@/components/OnboardingFlowModal";
 import OnDemandResults from "./results/OnDemandResults";
 import { farcasterService } from "@/services/farcasterService";
+import { runShareUrl, shareRun, type ShareableRun } from '@/lib/shareLink';
 
 interface LaneTelemetry {
   hits: number; perfectPlus: number; perfects: number; goods: number; misses: number;
@@ -307,13 +308,28 @@ export default function Results() {
   const [alreadyClaimedTiers, setAlreadyClaimedTiers] = useState<Set<string>>(new Set());
   const [isOnboardingModalOpen, setIsOnboardingModalOpen] = useState(false);
 
+  const shareable = (): ShareableRun => ({
+    songId: songId!,
+    title: song?.title || `Day ${song?.day || songId}`,
+    score: result!.score,
+    medal: result!.medal,
+    accuracy,
+    maxCombo: result!.maxCombo,
+    fullCombo: !result!.failed && result!.goods === 0 && result!.misses === 0,
+  });
+  const handleShareRun = () => {
+    audioManager.playSfx('tap_nav', 0.15);
+    return shareRun(shareable());
+  };
+
   const handleCastScore = async () => {
     audioManager.playSfx('tap_nav', 0.15);
     if (!result) return;
     const acc = result.total > 0 ? Math.round(((result.perfectPlus + result.perfects + result.goods * 0.5) / result.total) * 100) : 0;
     const songTitle = song?.title || `Day ${song?.day || songId}`;
     const shareText = `⚡ Locked in ${result.medal} medal on "${songTitle}" in PIM : th3v4ult!\n\nScore: ${result.score.toLocaleString()} | Acc: ${acc}% | Max Combo: ${result.maxCombo}x\n\nCan you beat my signal? 🎛️`;
-    const embedUrl = `https://pim.th3scr1b3.art/play/${songId}`;
+    // The share link opens the song and gives the cast a card of this run.
+    const embedUrl = runShareUrl(shareable());
     await farcasterService.composeCast({
       text: shareText,
       embeds: [embedUrl],
@@ -658,6 +674,7 @@ export default function Results() {
           onClaimUsername: () => setShowIdentityModal(true),
         }}
         onCast={handleCastScore}
+        onShare={handleShareRun}
         onNavigate={setLocation}
         quickReturn={<QuickReturnGrid onNavigate={setLocation} />}
       />

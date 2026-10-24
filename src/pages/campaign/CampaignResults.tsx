@@ -14,7 +14,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useLocation } from 'wouter';
-import { ArrowLeft, Lock, Play, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Lock, Play, RotateCcw, Share2 } from 'lucide-react';
 import { getModifierForSong, type GameSong } from '@/game/api';
 import { CHAPTERS, campaignPlayPath, levelToTier, prepareCampaignRun } from '@/game/campaign';
 import { getCampaignRecord } from '@/game/progress';
@@ -23,6 +23,7 @@ import { audioManager, type SfxName } from '@/game/audio';
 import { useVaultStore, ownsCardForDay } from '@/store/useVaultStore';
 import { formatDate } from '@/utils/dayCalc';
 import { hideBroken } from './hideBroken';
+import { shareRun } from '@/lib/shareLink';
 import '@/styles/stageShell.css';
 import { primeGameCover, resolvePreferredCover } from '@/utils/gameCover';
 import '@/styles/campaignStory.css';
@@ -101,6 +102,7 @@ export default function CampaignResults({ songId, song, result, accuracy, coverU
   // this run set it.
   const newRecord = passed && !firstClear && !!record && record.score === result.score;
   const fullCombo = passed && result.goods === 0 && result.misses === 0;
+  const [shareNote, setShareNote] = useState('');
   const medal = result.medal && result.medal !== 'NONE' ? result.medal : '';
   const medalColor = MEDAL_COLOR[medal] ?? meta.dc;
   const rank = rankFor(accuracy);
@@ -471,6 +473,15 @@ export default function CampaignResults({ songId, song, result, accuracy, coverU
       </section>
 
       <div className={`cr-foot cr-in${on(S.actions)}`}>
+        {passed && (
+          <button type="button" className="btn-3d" data-tone="quiet" onClick={() => {
+            audioManager.playSfx('tap_nav', 0.15);
+            void shareRun({ songId, title: song?.title ?? `Day ${song?.day ?? ''}`, score: result.score, medal: result.medal, accuracy, maxCombo: result.maxCombo, fullCombo })
+              .then((r) => setShareNote(r === 'copied' ? 'Link copied' : ''));
+          }}>
+            <Share2 size={16} /> {shareNote || 'Share'}
+          </button>
+        )}
         <button type="button" className="btn-3d" data-tone="ghost" onClick={() => go(`/chapter/${month}`)}>
           Back to chapter
         </button>
