@@ -1,9 +1,13 @@
-// Campaign story layer: what each month's chapter "says", distilled from the
-// track lyrics by scripts/build_chapter_stories.mjs into chapter_stories.json.
+// Campaign story layer: what each month's chapter "says". The act structure
+// (day ranges, moods, themes) comes from scripts/build_chapter_stories.mjs via
+// chapter_stories.json; the words (prologue, act names, synopses) come from the
+// hand-written chapter_script.json, because the auto-transcribed lyrics the
+// generator quotes are often misheard.
 // Also the shared chapter rules (regular vs bonus split, clears, unlocks) so
 // the campaign list and the chapter screen agree on progress.
 
 import stories from '@/data/chapter_stories.json';
+import script from '@/data/chapter_script.json';
 import { loadCatalog, isSongTimeLocked, type GameSong } from './api';
 import { hasCampaignClear, getCampaignPlatinums } from './progress';
 import { CHAPTERS, calculateCampaignDifficulty, type ChapterMeta } from './campaign';
@@ -25,6 +29,8 @@ export interface ChapterAct {
   open: StoryBeat;
   turn: (StoryBeat & { dir: 'lifts' | 'drops' }) | null;
   close: StoryBeat | null;
+  /** Hand-written summary of the act, from chapter_script.json. */
+  synopsis?: string;
 }
 
 export interface MonthStory {
@@ -45,8 +51,37 @@ export interface TrackStory {
   hasLyrics: boolean;
 }
 
-const MONTHS = new Map<number, MonthStory>((stories.months as unknown as MonthStory[]).map((m) => [m.month, m]));
-const TRACKS = stories.tracks as Record<string, TrackStory>;
+interface ScriptAct { word: string; synopsis: string }
+interface MonthScript { prologue: string; words: string[]; acts: Record<string, ScriptAct> }
+const SCRIPT = script.months as Record<string, MonthScript>;
+
+// Beats keep their days (so they still point at tracks) but drop the transcribed lines.
+const untranscribed = <T extends StoryBeat | null>(b: T): T => (b ? { ...b, line: null } : b);
+
+function withScript(m: MonthStory): MonthStory {
+  const sc = SCRIPT[String(m.month)];
+  if (!sc) return m;
+  const rewrite = <A extends Omit<ChapterAct, 'act'>>(a: A, key: string): A => {
+    const s = sc.acts[key];
+    return { ...a, word: s?.word ?? a.word, synopsis: s?.synopsis, open: untranscribed(a.open), turn: untranscribed(a.turn), close: untranscribed(a.close) };
+  };
+  return {
+    ...m,
+    words: sc.words,
+    prologue: { ...m.prologue, line: sc.prologue, lyric: false },
+    acts: m.acts.map((a) => rewrite(a, a.act)),
+    epilogue: m.epilogue ? rewrite(m.epilogue, 'epilogue') : null,
+  };
+}
+
+const MONTHS = new Map<number, MonthStory>((stories.months as unknown as MonthStory[]).map((m) => [m.month, withScript(m)]));
+// Track hooks fall back to the catalog's themes rather than transcribed lyric lines.
+const TRACKS = Object.fromEntries(
+  Object.entries(stories.tracks as Record<string, TrackStory>).map(([day, t]) => [
+    day,
+    { ...t, hook: '', hasLyrics: false, words: [...new Set(t.themes.map((x) => x.split(/[\s-]/).pop() as string).filter(Boolean))].slice(0, 3) },
+  ]),
+) as Record<string, TrackStory>;
 
 export function getMonthStory(month: number): MonthStory | undefined {
   return MONTHS.get(month);

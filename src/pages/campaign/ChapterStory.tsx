@@ -1,9 +1,9 @@
-// Chapter: one month told as a story through its tracks. A prologue line from
-// the lyrics opens it, the mood arc shows how the month moves, and the tracks
+// Chapter: one month told as a story through its tracks. A hand-written
+// prologue opens it, the mood arc shows how the month moves, and the tracks
 // play out as three acts (plus bonus stages as an epilogue). Each act opens
-// with its story in three lines (where it starts, where the mood turns, where
-// it lands); only the act you're in is expanded to its full track list. Each
-// track shows its hook line with its highlight words lit. The sticky play bar always sits
+// with its synopsis and three tracks (where it starts, where the mood turns,
+// where it lands); only the act you're in is expanded to its full track list.
+// Each track shows what it explores. The sticky play bar always sits
 // above the phone dock, so the next track is one tap away on any screen.
 // Dressed in the results screens' arcade style (campaignArcade.css): the
 // chapter name slams in, the mood arc scans across, and each act sweeps in as
@@ -422,7 +422,7 @@ export default function ChapterStory() {
                       <span className="cs-beat-title">{s.title}</span>
                       {tr && (
                         <span className="cs-hook">
-                          {tr.hasLyrics ? <>“<Highlighted line={tr.hook} words={[...tr.words, ...(story?.words ?? [])]} />”</> : tr.hook}
+                          {tr.hasLyrics ? <>“<Highlighted line={tr.hook} words={[...tr.words, ...(story?.words ?? [])]} />”</> : (s.description || tr.hook)}
                         </span>
                       )}
                     </span>
@@ -523,6 +523,8 @@ function ActStory({ act, songs, story, onPick }: {
   ].filter(Boolean) as { key: string; label: string; beat: { day: number; line: string | null } }[];
   const words = [act.word, ...(story?.words ?? [])];
   return (
+    <>
+    {act.synopsis && <p className="cs-act-synopsis">{act.synopsis}</p>}
     <ol className="cs-synopsis" aria-label="Story of this act">
       {beats.map(({ key, label, beat }) => {
         const idx = songs.findIndex((s) => s.day === beat.day);
@@ -538,6 +540,7 @@ function ActStory({ act, songs, story, onPick }: {
         );
       })}
     </ol>
+    </>
   );
 }
 

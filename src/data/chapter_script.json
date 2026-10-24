@@ -1,0 +1,125 @@
+{
+ "about": "Hand-written chapter story. Each month's prologue, act names and act synopses, written from the track titles, moods and catalog themes. It replaces the lines build_chapter_stories.mjs pulls from the auto-transcribed lyrics, which are often misheard. Edit freely; act day ranges still come from chapter_stories.json.",
+ "months": {
+  "1": {
+   "prologue": "A crazy world, a quiet promise: one song a day, whatever the day holds.",
+   "words": ["survival", "support", "balance", "nerve", "release"],
+   "acts": {
+    "I": { "word": "Static", "synopsis": "It starts in a world going crazy. Silent Suffocation, Devour, Without You: eight dark songs, and one Swoop Coupe joyride to prove the light still works." },
+    "II": { "word": "Long Haul", "synopsis": "Long Haul sets the terms: nobody said this would be easy. Getting Better and Dashboard of Life take stock, and by Prevail the month is back on its feet." },
+    "III": { "word": "Tightrope", "synopsis": "Through The Ringer, then High-UP and Tight Rope. A week of balancing tips into Come on Dance before Brave closes the act on a dare." },
+    "epilogue": { "word": "Scars", "synopsis": "Talkin' Body and Smoothie on the dance floor, then To Be A Man and Scars In My Mind remember what the dancing was covering." }
+   }
+  },
+  "2": {
+   "prologue": "February goes looking for a better version of itself and keeps running into the past.",
+   "words": ["conversation", "storm", "memory", "belonging", "reality"],
+   "acts": {
+    "I": { "word": "Conversation", "synopsis": "What U Want, Conversation, Came Back Around. The month talks things through and stays Up All Night doing it." },
+    "II": { "word": "Storm", "synopsis": "Weathering the storm. Not Good Enough sits in the middle, A Way Out answers it, and Filthy ends the act grinning." },
+    "III": { "word": "Perception", "synopsis": "Unforgettable, Dreams Again, Belong, Change Perception. The month reframes what it remembers, then The End lands it hard." },
+    "epilogue": { "word": "Reality", "synopsis": "Tried and True, Can't Go Back, Awaits. Then Reality knocks on the door." }
+   }
+  },
+  "3": {
+   "prologue": "March keeps the light on in a house that keeps losing things.",
+   "words": ["luck", "loss", "hiding", "flicker", "choice"],
+   "acts": {
+    "I": { "word": "Let Go", "synopsis": "Kept the Keep, Friendzone, Mythical, Luckyland. Wins and losses trade places until Let It Go and From the Earth to the Sea carry it all out." },
+    "II": { "word": "Rabbit Hole", "synopsis": "Save Tonight, Nowhere to Hide, Low Life. Nine songs, one of them light (fml, of all things), all the way down the Rabbit Hole." },
+    "III": { "word": "Lightburst", "synopsis": "The heaviest stretch so far. Lightburst and Light Goes In flicker between Monetary, Get Ghost and Overdosed." },
+    "epilogue": { "word": "Choices", "synopsis": "Your Choice, Never Stop Thinking About You, Cheat Code: three bright tries before Peacefully Peace and Killing Me." }
+   }
+  },
+  "4": {
+   "prologue": "April learns to let it flow, even when the flow runs cold.",
+   "words": ["cold", "release", "faith", "rain", "home"],
+   "acts": {
+    "I": { "word": "Cold", "synopsis": "My Light, Pixels on My Phone, Cold As Ice. Love Carries, but mostly this act is Problems." },
+    "II": { "word": "Breakaway", "synopsis": "Here I Go Again, Demon Soul, Get the Fuck Out of My Life. Then Dance Floor and Gasp break the spell, and Let It Flow is the exhale." },
+    "III": { "word": "Rain", "synopsis": "Wish I Was Dead opens the darkest act of spring. Hope and Faith and One Bye One hold the line through Double Agent and Rain." },
+    "epilogue": { "word": "Home", "synopsis": "Quite the Lie, then Finding HOME, then Sinister Nation. Home is found and tested in the same breath." }
+   }
+  },
+  "5": {
+   "prologue": "May stands at the crossroads and asks what it can't escape.",
+   "words": ["crossroads", "softness", "together", "breath", "yesterday"],
+   "acts": {
+    "I": { "word": "Crossroads", "synopsis": "Burn It to the Ground, Why U Lie. Te Amo and Crossroads are two doors out, and Cant Escape says neither one opens yet." },
+    "II": { "word": "Softer Side", "synopsis": "Goldenside of You, Softer Side, Chill Out. The month lowers its voice and finds a Little Light before One Last Breath." },
+    "III": { "word": "Come Together", "synopsis": "Believing in Just, then Come Together and First Impressions. The act lands on Best Thing, the warmest landing yet." },
+    "epilogue": { "word": "Yesterday", "synopsis": "Get It In, Breaking M E, Burning It Down, and Seems Like Yesterday, looking back at a month that went by fast." }
+   }
+  },
+  "6": {
+   "prologue": "June can't look in the mirror, so it looks out the window instead.",
+   "words": ["mirror", "wishes", "holding on", "escape", "cost"],
+   "acts": {
+    "I": { "word": "Mirror", "synopsis": "Aborted, cant look in the mirror, Promised Land. Then Wake Up and Starshining, a run of light in the middle, before On Sight and Miracle." },
+    "II": { "word": "Wishing Well", "synopsis": "Wishing Well and World Ending meet This Holiday and Bright Day. A Natural Disaster, then the echoes of the abyss." },
+    "III": { "word": "Addicted", "synopsis": "i used my lover, Addicted, Left on Red. An act about what holds on too tight, with Dirt Road as the way out." },
+    "epilogue": { "word": "Fly Away", "synopsis": "Leave Me Dead, Rookie Year, Fly Away Again, Malibu, Loss. Half the year done, and it ends on what it cost." }
+   }
+  },
+  "7": {
+   "prologue": "July is the longest night of the year, held in the middle of summer.",
+   "words": ["fire", "isolation", "empty", "exits", "healing"],
+   "acts": {
+    "I": { "word": "Last Breath", "synopsis": "ONE LAST Breath, Against the Grain, A Fine Sin. Nine dark songs in a row, burning like Flicker Like Fire." },
+    "II": { "word": "Isolated", "synopsis": "Isolated, Spaces, To Myself, Standing on E. The act runs on empty and talks to itself to keep going." },
+    "III": { "word": "Backroads", "synopsis": "Backroads, Take Me Away, Missing You. The month goes looking for exits and finds True Lies and a Find Her Demo." },
+    "epilogue": { "word": "Healing", "synopsis": "Away Goes, Emotional Healing, Feel It. The first time the year says the word healing out loud." }
+   }
+  },
+  "8": {
+   "prologue": "August asks whether any of it is real, and keeps dancing while it waits for an answer.",
+   "words": ["trouble", "hope", "ghosts", "drift", "real"],
+   "acts": {
+    "I": { "word": "Trouble", "synopsis": "Trouble, Wasted by What, What Is God Without Me. Ocean Clear and Flowers of Us are pretty, but the act walks off in Footsteps." },
+    "II": { "word": "House of Hope", "synopsis": "Who You Love, Slowly, house of hope. The light songs come back in pairs, in between Unloved and Faint." },
+    "III": { "word": "Ghosted", "synopsis": "sexy in the air turns into Never Gonna Be The One and Dreams Shattered. A Stop in Time, Dont Ghost Me, then a midknight vibe to close." },
+    "epilogue": { "word": "Adrift", "synopsis": "Path, Sicko, Adrift, Dark Thoughts, Mystery. Summer ends without a map." }
+   }
+  },
+  "9": {
+   "prologue": "September is afraid and says so, which turns out to be the first brave thing.",
+   "words": ["fear", "sirens", "farewell", "alien", "awe"],
+   "acts": {
+    "I": { "word": "Sirens", "synopsis": "Message2Me, Blackout, Sirens. Vice is the only light song here, and the act keeps Running." },
+    "II": { "word": "Purple Sky", "synopsis": "Get Over You, Only Time Will Tell, Midnight Piano. Nine dark songs that end on a Sunset, a Purple Sky and a Farewell." },
+    "III": { "word": "Alien", "synopsis": "Alien, Purpose, Grave Robber, Too Late. The year at its most cut off, wrapped in a Sweater against the cold." },
+    "epilogue": { "word": "Awe", "synopsis": "What You Know, Falling Apart, PULSE. Then Say IT and Awe Of u, the light finally coming back." }
+   }
+  },
+  "10": {
+   "prologue": "October outlasts the dark and starts saying yes.",
+   "words": ["outlast", "starlight", "sacrifice", "attention", "positive"],
+   "acts": {
+    "I": { "word": "Outlast", "synopsis": "Outlast, CocoMo, Starlight, Fallin. Eight light songs out of nine: the brightest run of the year, all the way to Exhale." },
+    "II": { "word": "Sacrifice", "synopsis": "rude timing, My Sacrifices, never coming down. Light Goes In comes back as a reprise, answering March." },
+    "III": { "word": "Positive Note", "synopsis": "attention, You Know You, Sing to Me, Open All Night. The act ends On a Positive Note, and means it." },
+    "epilogue": { "word": "Frozen", "synopsis": "controlW, eros, Sweet You, frozen, Locked Up. Even a bright month keeps one cold room." }
+   }
+  },
+  "11": {
+   "prologue": "November throws the party it didn't think it would get to.",
+   "words": ["alright", "odds", "fortress", "today", "chin up"],
+   "acts": {
+    "I": { "word": "Alright", "synopsis": "Never gonna Stop Loving You, dont go, then Open Wide and Its Gonna Be Alright. Feel Good isn't a joke anymore." },
+    "II": { "word": "Odds", "synopsis": "stopping the spin, Entropy, Odds, Go Get It. A Quiet Fortress in the middle, and Dont Blame U to let someone off the hook." },
+    "III": { "word": "From Today", "synopsis": "break up and Advice, then from today. Summers Ending, the moment at hand, and an 80s Stack to dance it off." },
+    "epilogue": { "word": "Chin Up", "synopsis": "chin up karl, So Done, My Past, You Got Me. The month makes peace with what it carried in." }
+   }
+  },
+  "12": {
+   "prologue": "December climbs back to the beginning and finds it was within reach the whole time.",
+   "words": ["climb", "childhood", "two lanes", "better days", "after"],
+   "acts": {
+    "I": { "word": "The Climb", "synopsis": "Beauty, The Climb, When I Say Forever, Childhood, ONLY SON. The year goes home." },
+    "II": { "word": "Two Lanes", "synopsis": "Climbing 2u, Luckyland Reprise, Two Lanes, Stuck_w_u. Then Butterfly, and something sweeter on the way out." },
+    "III": { "word": "Better Days", "synopsis": "Better Days, Forget ABout Me, We're Gonna Be Fine. A Thousand Pieces of Blue, and Memories Run Deep." },
+    "epilogue": { "word": "Dead Wait", "synopsis": "You Like Steve Earle comes back from day 3. Just a Dream, Take My Wheel, and a Dead Wait for whatever comes after 365." }
+   }
+  }
+ }
+}
