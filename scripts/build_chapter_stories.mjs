@@ -12,12 +12,13 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { collapseRepeats, hasBlocked, isClean, isWord, norm, profanity, readLyricLines as readLrc } from './lyricText.mjs';
+import { collapseRepeats, hasBlocked, isClean, isWord, norm, profanity, readLyricLines as readLrc, loadOfficialLyrics } from './lyricText.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const catalog = JSON.parse(fs.readFileSync(path.join(root, 'src/data/song_catalog.json'), 'utf8'));
 const lyricsDir = path.join(root, 'public/lyrics');
 const readLyricLines = (day) => readLrc(lyricsDir, day);
+await loadOfficialLyrics(root);
 const outFile = path.join(root, 'src/data/chapter_stories.json');
 
 // Same month boundaries as getMonthNumFromDay in src/utils/dayCalc.ts.
