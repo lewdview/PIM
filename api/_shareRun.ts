@@ -6,7 +6,10 @@
  * plain numbers. Files starting with _ are not deployed as functions.
  */
 export interface SharedRun {
+  /** The catalog song (Deluxe suffix dropped). */
   id: string;
+  /** The id as shared, so a Deluxe link opens the Deluxe chart. */
+  playId: string;
   title: string;
   day: number;
   date: string;
@@ -45,6 +48,7 @@ export async function readRun(url: URL): Promise<SharedRun | null> {
   const medal = (url.searchParams.get('m') ?? '').toUpperCase();
   return {
     id: baseId,
+    playId: id,
     title: song.title,
     day: song.day,
     date: song.date,

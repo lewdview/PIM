@@ -12,8 +12,13 @@ export interface ShareableRun {
   fullCombo: boolean;
 }
 
+/** The deployed site; the desktop app and local dev serve from origins nobody else can open. */
+const PUBLIC_ORIGIN = 'https://pim.th3scr1b3.art';
+const shareOrigin = () =>
+  window.location.protocol === 'https:' && !window.location.hostname.endsWith('localhost') ? window.location.origin : PUBLIC_ORIGIN;
+
 export function runShareUrl(r: ShareableRun): string {
-  const url = new URL(`/s/${r.songId}`, window.location.origin);
+  const url = new URL(`/s/${r.songId}`, shareOrigin());
   url.searchParams.set('s', String(Math.round(r.score)));
   url.searchParams.set('m', (r.medal || 'NONE').toUpperCase());
   url.searchParams.set('a', r.accuracy.toFixed(1));

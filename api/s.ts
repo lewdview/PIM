@@ -14,7 +14,7 @@ export default async function handler(req: Request): Promise<Response> {
   const run = await readRun(url);
   if (!run) return Response.redirect(new URL('/', url.origin), 302);
 
-  const play = new URL(`/play/${run.id}`, url.origin).toString();
+  const play = new URL(`/play/${run.playId}`, url.origin).toString();
   // req.url is the rewritten /api/s?id=...; previews should name the /s/ link.
   const link = new URL(`/s/${url.searchParams.get('id')}`, url.origin);
   const image = new URL('/api/share-image', url.origin);
