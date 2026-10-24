@@ -87,6 +87,7 @@ export interface OnDemandResultsProps {
     onClaimUsername: () => void;
   };
   onCast: () => void;
+  onShare: () => Promise<'shared' | 'copied' | 'failed'>;
   onNavigate: (path: string) => void;
   quickReturn: ReactNode;
 }
@@ -94,6 +95,7 @@ export interface OnDemandResultsProps {
 export default function OnDemandResults(p: OnDemandResultsProps) {
   const { songId, song, result, accuracy, coverUrl, theme, reward, account } = p;
   const passed = !result.failed;
+  const [shareNote, setShareNote] = useState('');
   const medal = result.medal && result.medal !== 'NONE' ? result.medal : '';
   const accent = theme === 'avant'
     ? (passed ? '#39FF14' : '#FF1493')
@@ -477,6 +479,11 @@ export default function OnDemandResults(p: OnDemandResultsProps) {
             <button type="button" className="btn-3d cr-cast" data-tone="quiet" data-testid="button-cast-score" onClick={p.onCast}>
               <Share2 size={15} /> Cast score
             </button>
+            {passed && (
+              <button type="button" className="btn-3d" data-tone="quiet" onClick={() => { void p.onShare().then((r) => setShareNote(r === 'copied' ? 'Link copied' : '')); }}>
+                <Share2 size={15} /> {shareNote || 'Share link'}
+              </button>
+            )}
           </div>
         </div>
 
