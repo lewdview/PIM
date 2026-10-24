@@ -15,6 +15,7 @@ import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Lock, Pause, Play, F
 import { loadCatalog, isSongTimeLocked, getModifierForSong, type GameSong } from '@/game/api';
 import { getCampaignRecord } from '@/game/progress';
 import { CHAPTERS, calculateCampaignDifficulty, levelToTier, campaignPlayPath, prepareCampaignRun } from '@/game/campaign';
+import { resolvePreferredCover } from '@/utils/gameCover';
 import { audioManager } from '@/game/audio';
 import { useVaultStore, ownsCardForDay } from '@/store/useVaultStore';
 import { purchasePack } from '@/services/vaultService';
@@ -492,7 +493,7 @@ export default function ChapterStory() {
 
       {selected && status && (
         <div className="cs-playbar ca-playbar" role="region" aria-label="Selected track">
-          {selected.coverArt ? <img src={selected.coverArt} alt="" onError={hideBroken} /> : <span className="cs-pb-ph" />}
+          {resolvePreferredCover(selected) ? <img src={resolvePreferredCover(selected)!} alt="" onError={hideBroken} /> : <span className="cs-pb-ph" />}
           <button type="button" className="cs-pb-text" style={{ background: 'none', border: 0, padding: 0, textAlign: 'left', color: 'inherit', cursor: 'pointer' }}
             onClick={() => document.getElementById(`beat-${selectedIdx}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' })}>
             <small>{status.isBonus ? 'Bonus' : `Track ${selectedIdx + 1} of ${progress.regular.length}`} · Lv {status.level}</small>

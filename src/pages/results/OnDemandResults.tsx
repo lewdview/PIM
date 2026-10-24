@@ -16,6 +16,7 @@ import SongLeaderboard from '@/components/SongLeaderboard';
 import { hideBroken } from '../campaign/hideBroken';
 import '@/styles/stageShell.css';
 import '@/styles/campaignStory.css';
+import { primeGameCover, resolvePreferredCover } from '@/utils/gameCover';
 import '@/styles/campaignResults.css';
 import '@/styles/onDemandResults.css';
 
@@ -219,7 +220,8 @@ export default function OnDemandResults(p: OnDemandResultsProps) {
   }, [passed, step, count]);
 
   const go = (path: string) => { audioManager.playSfx('tap_nav', 0.15); p.onNavigate(path); };
-  const retry = () => go(`/play/${songId}`);
+  // Replays keep the art this run was played with; "up next" uses the player's saved cover.
+  const retry = () => { primeGameCover(song?.day, coverUrl); go(`/play/${songId}`); };
 
   const on = (s: number) => (step >= s ? ' is-on' : '');
   const locked = (s: number) => (step > s ? ' is-locked' : '');
@@ -427,7 +429,7 @@ export default function OnDemandResults(p: OnDemandResultsProps) {
               <>
                 <div className="cr-next">
                   <div className="cr-next-art">
-                    {p.nextSong.coverArt && <img src={p.nextSong.coverArt} alt="" onError={hideBroken} />}
+                    {resolvePreferredCover(p.nextSong) && <img src={resolvePreferredCover(p.nextSong)!} alt="" onError={hideBroken} />}
                     <span className="cr-vs">VS</span>
                   </div>
                   <div style={{ minWidth: 0 }}>

@@ -10,6 +10,7 @@ import { CHAPTERS, type ChapterMeta } from "@/game/campaign";
 import { getMedalForSong, getHighScore, getScoreHistory } from "@/game/progress";
 import PrizeProgressMenu from "../components/PrizeProgressMenu";
 import { getBombshellDayCovers, getBombshellCoverUrl, getCustomBombshellCover, setCustomBombshellCover } from "../utils/bombshellCards";
+import { clearPrimedGameCover, primeGameCover, resolvePreferredCover } from "../utils/gameCover";
 import { getCoverUrlForRarity } from "../utils/rarityArtwork";
 import { Lock, Unlock, Play, Sliders, Music, Volume2, VolumeX, Activity, Award, Trophy, ChevronLeft, ChevronRight, Film, Layers } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -375,9 +376,8 @@ export default function SongSelect() {
     audioManager.playSfx('tap_nav', 0.4);
     sessionStorage.setItem(`game_origin_${s.id}`, 'songs');
     sessionStorage.setItem(`diff_override_${s.id}`, String(diffOverride));
-    sessionStorage.setItem(`active_cover_url_${s.id}`, activeCoverUrl);
-    sessionStorage.setItem(`active_cover_url_card-${s.day}`, activeCoverUrl);
-    sessionStorage.setItem('active_game_cover', activeCoverUrl);
+    // Hand the variant on screen to PIM: it drives the artwork lane colors and the results art.
+    primeGameCover(s.day, s.id === selected?.id ? activeCoverUrl : resolvePreferredCover(s));
     
     const modifierType = getModifierForSong(s);
     const isEquipped = equippedCardId === s.id;
@@ -758,6 +758,7 @@ export default function SongSelect() {
                           const nextVar = availableVariants[nextIdx];
                           if (nextVar?.fileName && selected) {
                             setCustomBombshellCover(selected.day, nextVar.fileName);
+                            clearPrimedGameCover(selected.day);
                             try { localStorage.setItem(`preferred_cover_${selected.id}`, nextVar.fileName); } catch {}
                           }
                         }}

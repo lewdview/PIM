@@ -23,6 +23,7 @@ import { TransmissionIcon } from "../../components/icons/CustomVectorIcons";
 import VideoExportModal from "@/components/ui/VideoExportModal";
 import { getRelativeDay, getCurrentDay } from "../../utils/dayCalc";
 import { getSmartCoverCandidates, isBombshellCoverPath } from "@/utils/rarityArtwork";
+import { resolveGameCover } from "@/utils/gameCover";
 import { MEDAL_STOPS, MEDAL_COLOR_MAP, LANE_COUNT, HIT_RATIO, HW_TOP, HW_BOT, MATRIX_CHARS, MATRIX_COLUMNS, POWER_UPS, type PUType } from './constants';
 import { type StageGeometry, getStageGeometry, approachTime, hwAtProgress, laneAt, lerp, formatTimeSec, isDirectionMatch } from './geometry';
 import { colorWithAlpha, hslToHex, getDifficultyLaneColor } from './colorUtils';
@@ -3078,10 +3079,7 @@ export default function Game() {
         }
       }
 
-      const sessionCover = typeof sessionStorage !== 'undefined'
-        ? (sessionStorage.getItem(`active_cover_url_${songId}`) || sessionStorage.getItem('active_game_cover'))
-        : null;
-      const finalCover = songRef.current?.coverArt || sessionCover || (songRef.current as any)?.coverUrl;
+      const finalCover = songRef.current?.coverArt || (songRef.current as any)?.coverUrl;
       if (finalCover && typeof sessionStorage !== 'undefined') {
         sessionStorage.setItem(`active_cover_url_${songId}`, finalCover);
       }
@@ -8477,13 +8475,8 @@ export default function Game() {
         });
         let song = await getSongById(songId);
         if (song) {
-          const sessionCover = typeof sessionStorage !== 'undefined'
-            ? (sessionStorage.getItem(`active_cover_url_${songId}`) || sessionStorage.getItem('active_game_cover'))
-            : null;
-          if (sessionCover) {
-            song.coverArt = sessionCover;
-          }
-          song = { ...song, notes: [...(song.notes || [])] };
+          // Copy before touching coverArt: getSongById can hand back the cached catalog entry.
+          song = { ...song, coverArt: resolveGameCover(song) ?? song.coverArt, notes: [...(song.notes || [])] };
           if (!activeTutorial) {
             const gameOpts = loadOpts();
             const genMode = gameOpts.noteGenerationSource || 'auto';

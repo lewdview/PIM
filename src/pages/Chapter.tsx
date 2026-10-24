@@ -5,6 +5,7 @@ import { getMonthNumFromDay } from "@/utils/dayCalc";
 import type { GameSong } from "@/game/api";
 import { getCampaignMedal, getCampaignPlatinums, getCampaignRecord, hasCampaignClear, getScoreHistory } from "@/game/progress";
 import { CHAPTERS, calculateCampaignDifficulty, campaignPlayPath, prepareCampaignRun } from "@/game/campaign";
+import { resolvePreferredCover } from "@/utils/gameCover";
 import { getActiveTheme } from "@/lib/options";
 import { audioManager } from "@/game/audio";
 import { useVaultStore, ownsCardForDay } from "@/store/useVaultStore";
@@ -912,8 +913,8 @@ export default function Chapter() {
                             {/* Title block with cover art */}
                             <div className="flex gap-4 items-start">
                               <div className="relative flex-shrink-0">
-                                {selectedSong.coverArt ? (
-                                  <img src={selectedSong.coverArt} alt={selectedSong.title}
+                                {resolvePreferredCover(selectedSong) ? (
+                                  <img src={resolvePreferredCover(selectedSong)!} alt={selectedSong.title}
                                     className="object-cover rounded w-16 h-16 border border-white/10"
                                     style={{ filter: isPlayLocked ? 'grayscale(100%) brightness(0.3)' : 'none' }} />
                                 ) : (
