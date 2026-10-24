@@ -15,6 +15,7 @@ import { useLoadingToast } from '../store/useLoadingToast';
 import { RARITIES, RARITY_CONFIG, getSupplyCap, type Rarity } from '../utils/rarity';
 import { getCoverUrlForRarity } from '../utils/rarityArtwork';
 import { isBombshellCard } from '../utils/bombshellCards';
+import { primeGameCover } from '../utils/gameCover';
 
 type SortBy = 'day' | 'rarity' | 'recent';
 type FilterRarity = Rarity | 'all';
@@ -491,8 +492,7 @@ export default function CollectionPage() {
                         onClick={(e) => {
                           e.stopPropagation();
                           const cover = mainCard.card.coverUrl;
-                          sessionStorage.setItem(`active_cover_url_card-${mainCard.card.day}`, cover);
-                          sessionStorage.setItem('active_game_cover', cover);
+                          primeGameCover(mainCard.card.day, cover);
                           stop();
                           setLocation(`/play/card-${mainCard.card.day}`);
                         }}
@@ -523,8 +523,7 @@ export default function CollectionPage() {
                         onClick={(e) => {
                           e.stopPropagation();
                           const cover = mainCard.card.coverUrl;
-                          sessionStorage.setItem(`active_cover_url_card-${mainCard.card.day}`, cover);
-                          sessionStorage.setItem('active_game_cover', cover);
+                          primeGameCover(mainCard.card.day, cover);
                           stop();
                           setLocation(`/play/card-${mainCard.card.day}`);
                         }}
@@ -681,8 +680,7 @@ export default function CollectionPage() {
                       onClick={(e) => {
                         e.stopPropagation();
                         const cover = mainCard.card.coverUrl;
-                        sessionStorage.setItem(`active_cover_url_card-${mainCard.card.day}`, cover);
-                        sessionStorage.setItem('active_game_cover', cover);
+                        primeGameCover(mainCard.card.day, cover);
                         stop();
                         setLocation(`/play/card-${mainCard.card.day}`);
                       }}
@@ -797,8 +795,7 @@ export default function CollectionPage() {
         onPlayPim={() => {
           if (actionSheetCard) {
             const cover = actionSheetCard.group[0].card.coverUrl;
-            sessionStorage.setItem(`active_cover_url_card-${actionSheetCard.group[0].card.day}`, cover);
-            sessionStorage.setItem('active_game_cover', cover);
+            primeGameCover(actionSheetCard.group[0].card.day, cover);
             stop();
             setLocation(`/play/card-${actionSheetCard.group[0].card.day}`);
           }

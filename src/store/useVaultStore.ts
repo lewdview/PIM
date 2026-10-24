@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { submitGameplayRecord, type VaultCard, type OwnedCard } from '../services/vaultService';
 import { supabase } from '../services/supabaseClient';
 import { getBombshellCoverUrl } from '../utils/bombshellCards';
+import { clearPrimedGameCover } from '../utils/gameCover';
 import { hydrateSettings, persistSettings } from '../utils/settingsStorage';
 
 
@@ -661,6 +662,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   setPreferredCardCover: (day, coverArtwork) => {
     try {
       localStorage.setItem(`preferred_bombshell_cover_${day}`, coverArtwork);
+      clearPrimedGameCover(day);
       window.dispatchEvent(new CustomEvent('bombshell_cover_changed', { detail: { day, coverArtwork } }));
     } catch {}
 

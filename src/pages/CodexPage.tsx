@@ -12,6 +12,7 @@ import { useGlobalPlayer } from '../store/useGlobalPlayer';
 import { RARITY_CONFIG, type Rarity } from '../utils/rarity';
 import { getCoverUrlForRarity, useSmartCoverArt } from '../utils/rarityArtwork';
 import { getCurrentDay } from '../utils/dayCalc';
+import { primeGameCover } from '../utils/gameCover';
 import {
   getBombshellDayCovers,
   getBombshellCoverUrl,
@@ -401,8 +402,7 @@ function CodexGridCardItem({
               onClick={(e) => {
                 e.stopPropagation();
                 const cover = card.coverUrl;
-                sessionStorage.setItem(`active_cover_url_card-${card.day}`, cover);
-                sessionStorage.setItem('active_game_cover', cover);
+                primeGameCover(card.day, cover);
                 stop();
                 setLocation(`/play/card-${card.day}`);
               }}
@@ -730,8 +730,7 @@ function BombshellGridCardItem({
         <button
           onClick={(e) => {
             e.stopPropagation();
-            sessionStorage.setItem(`active_cover_url_card-${card.day}`, coverUrl);
-            sessionStorage.setItem('active_game_cover', coverUrl);
+            primeGameCover(card.day, coverUrl);
             stop();
             setLocation(`/play/card-${card.day}`);
           }}
