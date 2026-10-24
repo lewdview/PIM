@@ -6,6 +6,7 @@ import { getHighScore, getChapterPlatinums } from "@/game/progress";
 import { getActiveTheme, loadOpts } from "@/lib/options";
 import { audioManager } from "@/game/audio";
 import { useAuthStore } from "@/store/useAuthStore";
+import { DELUXE_UNLOCK_ACCURACY, deluxeSongId, hasEarnedDeluxe, isDeluxeSongId, isDeluxeUnlocked, markDeluxeEarned } from "@/lib/deluxe";
 import { useVaultStore, ownsCardForDay, isAwardPlayUnlocked, getShardsForDay } from "@/store/useVaultStore";
 import CampaignResults from "./campaign/CampaignResults";
 import { supabase } from "@/services/supabaseClient";
@@ -294,6 +295,17 @@ export default function Results() {
   const accuracy = result
     ? ((result.perfectPlus * 1.0 + result.perfects * 0.9 + result.goods * 0.5) / total) * 100
     : 0;
+
+  // A top-tier clear of the standard chart unlocks the song's Deluxe chart
+  const deluxeDay = song?.day && song.day >= 1 && song.day <= 365 ? song.day : null;
+  const deluxeHadUnlock = useRef<boolean | null>(null);
+  if (deluxeHadUnlock.current === null && deluxeDay) deluxeHadUnlock.current = hasEarnedDeluxe(deluxeDay);
+  const earnsDeluxe = !!result && !result.failed && !!deluxeDay && !isDeluxeSongId(songId) &&
+    accuracy >= DELUXE_UNLOCK_ACCURACY &&
+    (!loadOpts().noteGenerationSource || loadOpts().noteGenerationSource === 'auto');
+  useEffect(() => {
+    if (earnsDeluxe && deluxeDay) markDeluxeEarned(deluxeDay);
+  }, [earnsDeluxe, deluxeDay]);
 
   const user = useAuthStore(s => s.user);
   const setShowAuthModal = useAuthStore(s => s.setShowAuthModal);
@@ -643,6 +655,12 @@ export default function Results() {
         backRoute={backRoute}
         backLabel={onDemandBackLabel}
         nextSong={nextSong}
+        deluxe={deluxeDay && !isDeluxeSongId(songId) ? {
+          unlockAccuracy: DELUXE_UNLOCK_ACCURACY,
+          justUnlocked: earnsDeluxe && !deluxeHadUnlock.current,
+          unlocked: earnsDeluxe || isDeluxeUnlocked(collection, deluxeDay),
+          playPath: `/play/${deluxeSongId(deluxeDay)}`,
+        } : undefined}
         reward={{
           eligible: isEligibleForReward,
           blockedReason,

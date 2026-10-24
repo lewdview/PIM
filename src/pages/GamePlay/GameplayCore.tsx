@@ -18,6 +18,7 @@ import { logAnalyticsEvent } from "../../services/telemetryService";
 import { gameSenseService } from "@/services/gameSenseService";
 import { supabase } from "@/services/supabaseClient";
 import { useAuthStore } from "@/store/useAuthStore";
+import { DELUXE_UNLOCK_ACCURACY, isDeluxeSongId, isDeluxeUnlocked, loadEarnedDeluxeDays } from "@/lib/deluxe";
 import { purchasePack, requestRunToken, type OwnedCard } from "@/services/vaultService";
 import { TransmissionIcon } from "../../components/icons/CustomVectorIcons";
 import VideoExportModal from "@/components/ui/VideoExportModal";
@@ -1398,6 +1399,8 @@ export default function Game() {
   // Ownership gate: the song that failed the card-ownership check + where to send the user back
   const [lockedSong, setLockedSong] = useState<GameSong | null>(null);
   const [lockedOrigin, setLockedOrigin] = useState("/songs");
+  /** Why the song is locked: no card for the day, or no Deluxe unlock for a Deluxe chart. */
+  const [lockedReason, setLockedReason] = useState<"card" | "deluxe">("card");
   const [claimingCard, setClaimingCard] = useState(false);
   const [phase, setPhase] = useState<typeof phaseRef.current>("loading");
   const [countdown, setCountdown] = useState(3);
@@ -8679,10 +8682,24 @@ export default function Game() {
           if (!isOwned) {
             console.warn("[GamePlay Init] Card not owned — showing locked state for day:", song.day);
             setLockedSong(song);
+            setLockedReason("card");
             setLockedOrigin(originRoute);
             phaseRef.current = "locked";
             setPhase("locked");
             return;
+          }
+          // Deluxe charts need the Deluxe card or a top-tier run of the standard chart
+          if (isDeluxeSongId(songId)) {
+            await loadEarnedDeluxeDays(useAuthStore.getState().user?.id);
+            if (cancelled) return;
+            if (!isDeluxeUnlocked(useVaultStore.getState().collection, song.day)) {
+              setLockedSong(song);
+              setLockedReason("deluxe");
+              setLockedOrigin(originRoute);
+              phaseRef.current = "locked";
+              setPhase("locked");
+              return;
+            }
           }
         }
       songRef.current = song;
@@ -11752,17 +11769,26 @@ export default function Game() {
             <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
               <div className="glass-panel p-8 max-w-sm w-full mx-4 text-center border-t-2 border-[#FFD700]/40 shadow-2xl">
                 <div className="font-mono font-bold text-xs tracking-[0.4em] text-[#FFD700] mb-6 uppercase">
-                  🔒 Card required
+                  {lockedReason === "deluxe" ? "🔒 Deluxe locked" : "🔒 Card required"}
                 </div>
                 <h2 className="font-mono font-bold text-2xl text-white mb-2 tracking-tight">
                   {lockedSong.title}
                 </h2>
                 <p className="font-mono text-[10px] text-white/50 mb-8 leading-relaxed uppercase tracking-widest">
-                  Day {lockedSong.day} · own the card to play this transmission
+                  {lockedReason === "deluxe"
+                    ? `Day ${lockedSong.day} · hit ${DELUXE_UNLOCK_ACCURACY}% on the standard chart or open a Deluxe pack`
+                    : `Day ${lockedSong.day} · own the card to play this transmission`}
                 </p>
 
                 <div className="flex flex-col gap-4">
-                  {lockedSong.day === getCurrentDay() ? (
+                  {lockedReason === "deluxe" ? (
+                    <button
+                      onClick={() => setLocation(`/play/${songId?.replace(/_deluxe$/, "")}`)}
+                      className="w-full py-4 font-mono font-bold text-sm tracking-[0.3em] bg-gradient-to-r from-[#FFD700] to-[#FF7A33] text-black rounded-lg hover:scale-[1.02] active:scale-95 transition-all shadow-lg cursor-pointer uppercase"
+                    >
+                      Play standard chart
+                    </button>
+                  ) : lockedSong.day === getCurrentDay() ? (
                     <button
                       onClick={handleClaimAndPlay}
                       disabled={claimingCard}

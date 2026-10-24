@@ -71,6 +71,13 @@ export interface OnDemandResultsProps {
   backRoute: string;
   backLabel: string;
   nextSong: GameSong | null;
+  /** Deluxe chart status for this song (standard-chart runs only). */
+  deluxe?: {
+    unlockAccuracy: number;
+    justUnlocked: boolean;
+    unlocked: boolean;
+    playPath: string;
+  };
   reward: {
     eligible: boolean;
     /** Why the prize is disabled, when not eligible. */
@@ -418,6 +425,26 @@ export default function OnDemandResults(p: OnDemandResultsProps) {
               </button>
             ) : (
               <p className="cs-hook">Checking your prize…</p>
+            )}
+          </div>
+        )}
+
+        {passed && p.deluxe && !p.isPractice && (
+          <div className="cr-card" data-tone={p.deluxe.justUnlocked ? 'prize' : 'quiet'}>
+            <div className="cr-card-tab">Deluxe</div>
+            {p.deluxe.unlocked ? (
+              <>
+                {p.deluxe.justUnlocked && <p className="cs-hook">Deluxe chart unlocked!</p>}
+                <div className="cs-detail-actions">
+                  <button type="button" className="btn-3d" onClick={() => go(p.deluxe!.playPath)}>
+                    <Play size={16} fill="currentColor" /> Play Deluxe
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="cs-lock-note">
+                <Lock size={14} style={{ verticalAlign: '-2px' }} /> Hit {p.deluxe.unlockAccuracy}% to unlock the Deluxe chart
+              </div>
             )}
           </div>
         )}
