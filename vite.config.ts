@@ -4,6 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 import playgamaBridge from "@playgama/bridge/vite";
 import path from "path";
 import { MENU_BANNERS } from "./src/platform/playgama/bannerLayout";
+import { ACHIEVEMENTS } from "./src/platform/playgama/achievementList";
 import type { Plugin } from "vite";
 
 const port = Number(process.env.PORT || 5173);
@@ -66,6 +67,8 @@ function playgamaPackaging(): Plugin {
           // The month's five bonus songs, sold as one non-consumable bundle.
           ...(playgamaMonth ? { payments: [{ id: bonusProductId, playgama: { amount: Math.round(bonusPriceUsd * 10) } }] } : {}),
           ...(playgamaMonth ? { leaderboards: [{ id: leaderboardId, isMain: true }] } : {}),
+          // Medals, platinums and endings (src/platform/playgama/achievements.ts).
+          ...(playgamaMonth ? { achievements: ACHIEVEMENTS } : {}),
           ...(publicToken ? { saas: { publicToken } } : {}),
         }, null, 2) + "\n",
       });

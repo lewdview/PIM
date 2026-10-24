@@ -319,3 +319,62 @@
   .mst-arc { display: none; }
   .mst-beats li { padding: 4px 8px; }
 }
+
+/* Share panel (MonthShare.tsx): the card on the left, text and buttons on the
+   right; one column on phones. Like the other panels it never scrolls. */
+.mb-lb-card.msh-card { width: min(860px, 100%); max-height: min(680px, 100%); grid-template-rows: auto auto minmax(0, 1fr); }
+.mb-lb-card.msh-card:not(:has(.mo-tabs)) { grid-template-rows: auto minmax(0, 1fr); }
+.msh-body { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 18px; min-height: 0; align-items: center; }
+.msh-preview { height: min(500px, 62vh); aspect-ratio: 4 / 5; min-height: 0; }
+.msh-preview img, .msh-wait {
+  display: block; width: 100%; height: 100%; object-fit: contain;
+  border: 2px solid var(--shell-line-strong); background: var(--shell-well);
+}
+.msh-wait { animation: msh-pulse 1.1s ease-in-out infinite alternate; }
+@keyframes msh-pulse { from { opacity: 0.4; } to { opacity: 0.9; } }
+.msh-side { display: grid; gap: 10px; align-content: center; min-width: 0; }
+.msh-text {
+  margin: 0; padding: 10px 12px; max-height: 210px; overflow: hidden;
+  white-space: pre-wrap; word-break: break-word; user-select: text; -webkit-user-select: text;
+  font: 500 13px/1.45 var(--shell-mono); color: var(--shell-text);
+  background: var(--shell-well); border-radius: 10px;
+}
+.msh-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.msh-status { margin: 0; min-height: 1.4em; font-size: 12px; line-height: 1.4; color: var(--shell-text-2); }
+.msh-trophies {
+  margin: 0; padding: 0; list-style: none; min-height: 0;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px; align-content: start;
+}
+.msh-trophies li {
+  display: flex; align-items: center; gap: 10px; padding: 7px 10px;
+  background: rgba(0, 0, 0, 0.4); border: 2px solid rgba(255, 255, 255, 0.08);
+  color: var(--shell-text-3);
+}
+.msh-trophies li[data-earned] { border-color: color-mix(in srgb, var(--ch, #ffd23f) 60%, transparent); color: var(--shell-text); }
+.msh-trophy-icon { flex: none; display: grid; place-items: center; width: 26px; color: rgba(255, 255, 255, 0.35); }
+li[data-earned] .msh-trophy-icon { color: #ffd23f; }
+.msh-trophy-text { display: grid; gap: 2px; min-width: 0; }
+.msh-trophy-text b { font-size: 14px; }
+.msh-trophy-text small { font-size: 11.5px; color: var(--shell-text-2, rgba(255, 255, 255, 0.6)); }
+
+@media (max-width: 620px) {
+  .msh-body { grid-template-columns: 1fr; gap: 10px; justify-items: center; }
+  .msh-preview { height: min(300px, 36vh); }
+  .msh-side { width: 100%; }
+  .msh-text { max-height: 160px; font-size: 11.5px; }
+  .msh-actions .btn-3d { flex: 1 1 auto; }
+  .msh-trophies { gap: 4px; }
+  .msh-trophies li { gap: 6px; padding: 5px 6px; }
+  .msh-trophy-icon { width: 18px; }
+  .msh-trophy-text b { font-size: 12.5px; }
+  .msh-trophy-text small { font-size: 10.5px; line-height: 1.25; }
+}
+@media (max-height: 560px) {
+  .mb-lb-card.msh-card { gap: 8px; padding: 12px 14px; }
+  .mb-lb-card.msh-card .mb-lb-head h2 { font-size: 22px; }
+  .msh-preview { height: calc(100vh - 130px); }
+  .msh-card:has(.mo-tabs) .msh-preview { height: calc(100vh - 176px); }
+  .msh-text { max-height: 120px; }
+  .msh-trophies { grid-template-columns: 1fr 1fr 1fr; }
+  .msh-trophy-text small { display: none; }
+}

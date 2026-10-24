@@ -192,3 +192,30 @@
   animation: mr-ending-in 0.4s cubic-bezier(0.2, 1.4, 0.4, 1) both;
 }
 @keyframes mr-ending-in { from { opacity: 0; transform: translate(-50%, 30px); } to { opacity: 1; transform: translateX(-50%); } }
+
+/* Trophies this run earned (achievements.ts): a notice under the HUD that fades after a few seconds. */
+.mr-trophy {
+  position: fixed;
+  left: 50%;
+  top: 64px;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100vw - 32px - var(--pg-ad-right, 0px));
+  padding: 10px 16px;
+  background: rgba(10, 6, 16, 0.94);
+  border: 3px solid #12040a;
+  box-shadow: 0 0 0 3px #ffd23f, 0 0 30px rgba(255, 210, 63, 0.4);
+  font: 400 10px/1.4 'Press Start 2P', var(--shell-mono);
+  text-transform: uppercase;
+  color: #ffd23f;
+  pointer-events: none;
+  animation: mr-trophy-in 0.4s cubic-bezier(0.2, 1.4, 0.4, 1) both, mr-trophy-out 0.4s ease-in 5s forwards;
+}
+@keyframes mr-trophy-in { from { opacity: 0; transform: translate(-50%, -20px); } to { opacity: 1; transform: translateX(-50%); } }
+@keyframes mr-trophy-out { to { opacity: 0; transform: translate(-50%, -20px); } }
+/* Phones: Share drops its label so the footer stays on one row. */
+@media (max-width: 620px) { .mr-fit .cr-foot .mr-share-label { display: none; } }
+@media (max-width: 380px) { .mr-fit .cr-foot { gap: 8px; } .mr-fit .cr-foot .btn-3d { padding-left: 12px; padding-right: 12px; } }

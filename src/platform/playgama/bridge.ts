@@ -356,9 +356,83 @@ export async function runSocialAction(action: SocialAction): Promise<void> {
   try {
     if (action === 'rate') await s.rate();
     else if (action === 'favorite') await s.addToFavorites();
-    else if (action === 'share') await s.share();
+    else if (action === 'share') await s.share({ text: DEFAULT_SHARE_TEXT });
     else await s.joinCommunity();
   } catch { /* closed or refused */ }
+}
+
+const DEFAULT_SHARE_TEXT = 'PIM: a rhythm game made from 365 days of songs by th3scr1b3.';
+
+/** Ways this portal lets a player post an accomplishment (Discord, Reddit, VK, OK, Facebook...). */
+export type ShareKind = 'share' | 'post' | 'invite';
+
+export function shareKinds(): ShareKind[] {
+  const s = bridgeOrNull()?.social;
+  if (!s) return [];
+  const out: ShareKind[] = [];
+  if (s.isShareSupported) out.push('share');
+  if (s.isCreatePostSupported) out.push('post');
+  if (s.isInviteFriendsSupported) out.push('invite');
+  return out;
+}
+
+/**
+ * Posts an accomplishment through the portal. `image` is a data URL of the
+ * result card; portals that only take a hosted image skip it. Resolves false
+ * when the player closed the dialog or the portal refused.
+ */
+export async function shareThroughPortal(kind: ShareKind, text: string, image?: string): Promise<boolean> {
+  const s = bridgeOrNull()?.social;
+  if (!s) return false;
+  const options = image ? { text, image } : { text };
+  try {
+    if (kind === 'share') await s.share(options);
+    else if (kind === 'post') await s.createPost(options);
+    else await s.inviteFriends(options);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Unlocks an achievement on the portal (native on Y8/Lagged, tracked by the SDK elsewhere). */
+export async function unlockPortalAchievement(id: string): Promise<boolean> {
+  const a = bridgeOrNull()?.achievements;
+  if (!a) return false;
+  try {
+    await a.unlock(id);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Copies text, through the Bridge where the portal wraps the clipboard. */
+export async function copyText(text: string): Promise<boolean> {
+  const c = bridgeOrNull()?.clipboard;
+  if (c?.isSupported) {
+    try {
+      await c.write(text);
+      return true;
+    } catch { /* fall through to the browser */ }
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch { /* blocked inside some portal frames */ }
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    ta.remove();
+    return ok;
+  } catch {
+    return false;
+  }
 }
 
 /**

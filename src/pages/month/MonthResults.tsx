@@ -16,7 +16,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useLocation, useParams } from 'wouter';
-import { ArrowLeft, Film, Gift, Lock, Play, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Film, Gift, Lock, Play, RotateCcw, Share2, Trophy } from 'lucide-react';
 import { getSongById, loadCatalog, type GameSong } from '@/game/api';
 import { CHAPTERS, levelToTier } from '@/game/campaign';
 import { getHighScore } from '@/game/progress';
@@ -35,6 +35,10 @@ import { hideBroken } from '@/pages/campaign/hideBroken';
 import { baseSongId, bombshellArtFor, isDeluxeRun, monthStageLevel, prepareMonthRun } from './startRun';
 import { ENDING_INFO, pendingEnding, type EndingId } from '@/platform/playgama/endings';
 import { routeThroughStory } from '@/platform/playgama/storyScenes';
+import { recordFullCombo, syncAchievements, type AchievementState } from '@/platform/playgama/achievements';
+import { drawRunCard, runText, type RunSummary } from '@/platform/playgama/shareCard';
+import MonthShare from './MonthShare';
+import { shareFileName } from './shareSummary';
 import '@/styles/stageShell.css';
 import '@/styles/campaignStory.css';
 import '@/styles/campaignResults.css';
@@ -145,6 +149,15 @@ function RunResults({ songId }: { songId: string }) {
     }).catch(() => {});
     return () => { alive = false; };
   }, [songId, trackId, result, unlockRev]);
+
+  // Trophies this run earned, called out once the tally is done.
+  const [trophies, setTrophies] = useState<AchievementState[]>([]);
+  const [sharing, setSharing] = useState(false);
+  useEffect(() => {
+    if (!stage || !result) return;
+    if (!result.failed && result.goods === 0 && result.misses === 0) recordFullCombo(songId);
+    syncAchievements(stage.songs, stage.progress).then((fresh) => { if (fresh.length) setTrophies(fresh); }).catch(() => {});
+  }, [stage, result, songId]);
 
   useEffect(() => {
     const onUnlock = () => setUnlockRev((n) => n + 1);
@@ -393,6 +406,23 @@ function RunResults({ songId }: { songId: string }) {
 
   if (!result) return null;
 
+  const shareRun = (): RunSummary => ({
+    monthName: meta.name,
+    color: meta.dc,
+    title: song?.title ?? 'Transmission',
+    day: song?.day ?? null,
+    coverArt: song?.coverArt ?? result.coverUrl ?? null,
+    score: result.score,
+    accuracy,
+    maxCombo: result.maxCombo,
+    medal,
+    rank,
+    fullCombo,
+    deluxe,
+    stageLabel,
+    record: firstClear ? 'first' : newRecord ? 'new' : null,
+  });
+
   const stageLabel = stage
     ? stage.isBonus
       ? `Bonus ${stage.idx - stage.progress.regular.length + 1}/${stage.progress.bonus.length}`
@@ -599,10 +629,33 @@ function RunResults({ songId }: { songId: string }) {
             <RotateCcw size={16} /> {deluxe ? 'Replay Deluxe' : 'Replay'}
           </button>
         )}
+        {passed && (
+          <button type="button" className="btn-3d" data-tone="quiet" aria-label="Share" onClick={() => { audioManager.playSfx('tap_nav', 0.15); setSharing(true); }}>
+            <Share2 size={16} /> <span className="mr-share-label">Share</span>
+          </button>
+        )}
         <button type="button" className="btn-3d" data-tone="ghost" onClick={() => go(HOME)}>
           Back to chapter
         </button>
       </div>
+
+      {step >= FINAL && trophies.length > 0 && !endingSoon && (
+        <div className="mr-trophy" role="status">
+          <Trophy size={16} /> {trophies.length === 1 ? `Trophy · ${trophies[0].name}` : `${trophies.length} trophies · ${trophies.map((t) => t.name).join(', ')}`}
+        </div>
+      )}
+
+      {sharing && (
+        <MonthShare
+          eyebrow={deluxe ? 'Deluxe run' : stageLabel}
+          title="Share this run"
+          text={runText(shareRun())}
+          copyLabel="Copy result"
+          fileName={shareFileName(`${song?.title ?? 'run'}${deluxe ? '-deluxe' : ''}`)}
+          draw={() => drawRunCard(shareRun())}
+          onClose={() => setSharing(false)}
+        />
+      )}
 
       {endingSoon && (
         <div className="mr-ending" role="status">

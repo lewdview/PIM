@@ -13,7 +13,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useParams } from 'wouter';
-import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Lock, Pause, Play, Film, CheckCircle2, Gift, Sparkles, Trophy, X, Settings, Info, Flag, Headphones, BookOpen } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Lock, Pause, Play, Film, CheckCircle2, Gift, Sparkles, Trophy, X, Settings, Info, Flag, Headphones, BookOpen, Share2 } from 'lucide-react';
 import { loadCatalog, isSongTimeLocked, getModifierForSong, type GameSong } from '@/game/api';
 import { getMedalForSong, getHighScore } from '@/game/progress';
 import { CHAPTERS, calculateCampaignDifficulty, levelToTier } from '@/game/campaign';
@@ -40,6 +40,10 @@ import MonthAbout from '@/pages/month/MonthAbout';
 import MonthSong from '@/pages/month/MonthSong';
 import MonthEndings from '@/pages/month/MonthEndings';
 import MonthStoryPanel from '@/pages/month/MonthStoryPanel';
+import MonthShare from '@/pages/month/MonthShare';
+import { monthSummary, shareFileName } from '@/pages/month/shareSummary';
+import { achievementStates, syncAchievements } from '@/platform/playgama/achievements';
+import { drawProgressCard, progressText } from '@/platform/playgama/shareCard';
 import { isStorySeen, routeThroughStory } from '@/platform/playgama/storyScenes';
 import { endingStates } from '@/platform/playgama/endings';
 import {
@@ -121,7 +125,7 @@ export default function ChapterStory() {
   // Monthly build: Playgama leaderboard (only where the portal offers one).
   const lbKind = MONTH_BUILD ? monthLeaderboardKind() : 'not_available';
   const [lbOpen, setLbOpen] = useState(false);
-  const [panel, setPanel] = useState<'options' | 'about' | 'song' | 'endings' | 'story' | null>(null);
+  const [panel, setPanel] = useState<'options' | 'about' | 'song' | 'endings' | 'story' | 'share' | null>(null);
   const [lbRows, setLbRows] = useState<LeaderboardRow[] | null>(null);
   const openLeaderboard = async () => {
     sfx(0.15);
@@ -200,6 +204,11 @@ export default function ChapterStory() {
   useEffect(() => {
     if (MONTH_BUILD && songs?.length && story && !isStorySeen('prologue')) setLocation('/story/prologue');
   }, [songs, story, setLocation]);
+
+  // Monthly build: send any trophies earned so far to the portal (old saves included).
+  useEffect(() => {
+    if (MONTH_BUILD && songs?.length && progress) void syncAchievements(songs, progress);
+  }, [songs, progress]);
 
   // Stage unlocks, plus the monthly build's bought/ad-unlocked bonus songs (open in any order).
   const stageOpen = useCallback((idx: number) => {
@@ -526,6 +535,9 @@ export default function ChapterStory() {
             <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={() => { sfx(); setPanel('endings'); }}>
               <Flag size={14} /> Endings{endings.some((e) => e.earned && !e.seen) && <span className="mb-ending-dot" aria-label="New ending" />}
             </button>
+            <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={() => { sfx(); setPanel('share'); }}>
+              <Share2 size={14} /> Share
+            </button>
             <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={() => { sfx(); setPanel('options'); }}>
               <Settings size={14} /> Options
             </button>
@@ -711,6 +723,21 @@ export default function ChapterStory() {
           />
         )}
         {panel === 'options' && <MonthOptions onClose={() => setPanel(null)} />}
+        {panel === 'share' && (() => {
+          const summary = monthSummary(songs, progress);
+          return (
+            <MonthShare
+              eyebrow="Your month so far"
+              title={`Share ${meta.name.toLowerCase()}`}
+              text={progressText(summary)}
+              copyLabel="Copy my month"
+              fileName={shareFileName('progress')}
+              draw={() => drawProgressCard(summary)}
+              trophies={achievementStates(songs, progress)}
+              onClose={() => setPanel(null)}
+            />
+          );
+        })()}
         {panel === 'endings' && (
           <MonthEndings
             endings={endings}
