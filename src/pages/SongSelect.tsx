@@ -14,6 +14,8 @@ import { clearPrimedGameCover, primeGameCover, resolvePreferredCover } from "../
 import { getCoverUrlForRarity } from "../utils/rarityArtwork";
 import { Lock, Unlock, Play, Sliders, Music, Volume2, VolumeX, Activity, Award, Trophy, ChevronLeft, ChevronRight, Film, Layers } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuthStore } from "@/store/useAuthStore";
+import { DELUXE_UNLOCK_ACCURACY, deluxeSongId, isDeluxeUnlocked, loadEarnedDeluxeDays } from "@/lib/deluxe";
 
 const LANE_COLORS = ['#FF1493', '#39FF14', '#E5B800', '#8B48E5'];
 const MEDAL_COLOR: Record<string, string> = {
@@ -87,6 +89,14 @@ export default function SongSelect() {
   const loadVaultData = useVaultStore((s) => s.loadVaultData);
   const claimedRewards = useVaultStore((s) => s.claimedRewards);
   const equippedCardId = useVaultStore((s) => s.equippedCardId);
+  const userId = useAuthStore((s) => s.user?.id);
+  // Bumped once earned Deluxe unlocks have loaded, so the Deluxe button re-checks
+  const [, setDeluxeLoaded] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    loadEarnedDeluxeDays(userId).then(() => { if (alive) setDeluxeLoaded((n) => n + 1); });
+    return () => { alive = false; };
+  }, [userId]);
 
   useEffect(() => {
     if (collection.length === 0) {
@@ -360,9 +370,10 @@ export default function SongSelect() {
 
   const activeCoverUrl = availableVariants[selectedVariantIdx]?.url || selected?.coverArt || '/data/covers/default.jpg';
 
-  const handlePlaySong = async (songToPlay?: GameSong) => {
+  const handlePlaySong = async (songToPlay?: GameSong, deluxe = false) => {
     const s = songToPlay || selected;
     if (!s || !isSongUnlocked(s)) return;
+    const playId = deluxe ? deluxeSongId(s.day) : s.id;
     // Claim-first funnel: today's free card is claimed silently before entering play,
     // so the destination ownership gate always sees it.
     if (s.day === today && !ownsCardForDay(collection, s.day)) {
@@ -374,20 +385,20 @@ export default function SongSelect() {
     }
     cleanupPreview();
     audioManager.playSfx('tap_nav', 0.4);
-    sessionStorage.setItem(`game_origin_${s.id}`, 'songs');
-    sessionStorage.setItem(`diff_override_${s.id}`, String(diffOverride));
+    sessionStorage.setItem(`game_origin_${playId}`, 'songs');
+    sessionStorage.setItem(`diff_override_${playId}`, String(diffOverride));
     // Hand the variant on screen to PIM: it drives the artwork lane colors and the results art.
     primeGameCover(s.day, s.id === selected?.id ? activeCoverUrl : resolvePreferredCover(s));
     
     const modifierType = getModifierForSong(s);
     const isEquipped = equippedCardId === s.id;
     if (isEquipped && modifierType !== 'none') {
-      sessionStorage.setItem(`active_modifier_type_${s.id}`, modifierType);
+      sessionStorage.setItem(`active_modifier_type_${playId}`, modifierType);
     } else {
-      sessionStorage.removeItem(`active_modifier_type_${s.id}`);
+      sessionStorage.removeItem(`active_modifier_type_${playId}`);
     }
 
-    setLocation(`/play/${s.id}`);
+    setLocation(`/play/${playId}`);
   };
 
   const activeMoodColor = selected ? (selected.mood === 'light' ? '#39FF14' : '#FF1493') : '#39FF14';
@@ -972,6 +983,24 @@ export default function SongSelect() {
                       <Play size={18} fill="currentColor" />
                       <span>START TRANSMISSION</span>
                     </button>
+
+                    {selectedUnlocked && selected && ownsCardForDay(collection, selected.day) && (() => {
+                      const deluxeOpen = isDeluxeUnlocked(collection, selected.day);
+                      return (
+                        <button
+                          data-testid="button-play-deluxe"
+                          disabled={!deluxeOpen}
+                          onClick={() => handlePlaySong(undefined, true)}
+                          title={deluxeOpen ? 'Play the Deluxe chart' : `Hit ${DELUXE_UNLOCK_ACCURACY}% on this song or open a Deluxe pack`}
+                          className="btn-3d justify-center font-mono tracking-[0.18em] uppercase"
+                          data-tone={deluxeOpen ? 'gold' : 'quiet'}
+                          data-size="lg"
+                        >
+                          {deluxeOpen ? <Play size={18} fill="currentColor" /> : <Lock size={16} />}
+                          <span>{deluxeOpen ? 'DELUXE' : `DELUXE · ${DELUXE_UNLOCK_ACCURACY}%`}</span>
+                        </button>
+                      );
+                    })()}
 
                     {import.meta.env.DEV && (
                       <button
