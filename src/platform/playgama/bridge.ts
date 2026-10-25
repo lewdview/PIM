@@ -28,6 +28,7 @@ let ready = false;
 let lastSnapshot = '';
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 let writing = false;
+let dirty = false;
 
 function bridgeOrNull(): typeof window.bridge | null {
   return IS_PLAYGAMA && typeof window !== 'undefined' && window.bridge?.isInitialized ? window.bridge : null;
@@ -47,7 +48,8 @@ function snapshot(): string {
 async function flush(): Promise<void> {
   flushTimer = null;
   const b = bridgeOrNull();
-  if (!b || writing) return;
+  if (!b) return;
+  if (writing) { dirty = true; return; }
   const next = snapshot();
   if (next === lastSnapshot) return;
   writing = true;
@@ -58,12 +60,44 @@ async function flush(): Promise<void> {
     console.warn('[Playgama] Save failed:', err);
   } finally {
     writing = false;
+    // A change that landed while this save was in flight gets its own save.
+    if (dirty) { dirty = false; scheduleFlush(); }
   }
 }
 
 function scheduleFlush() {
-  if (writing || flushTimer) return;
+  if (writing) { dirty = true; return; }
+  if (flushTimer) return;
   flushTimer = setTimeout(() => void flush(), 1500);
+}
+
+/**
+ * Some portals load the game in an iframe with site storage blocked, so
+ * localStorage throws. Progress then lives in memory for the session and is
+ * saved only through bridge.storage, which still works there.
+ */
+function ensureLocalStorage() {
+  try {
+    const t = '__pg_probe';
+    window.localStorage.setItem(t, t);
+    window.localStorage.removeItem(t);
+    return;
+  } catch { /* blocked: fall through */ }
+  const data = new Map<string, string>();
+  const mem = {
+    get length() { return data.size; },
+    key: (i: number) => [...data.keys()][i] ?? null,
+    getItem: (k: string) => (data.has(String(k)) ? data.get(String(k))! : null),
+    setItem: (k: string, v: string) => { data.set(String(k), String(v)); if (!EXCLUDED_KEY.test(String(k))) scheduleFlush(); },
+    removeItem: (k: string) => { data.delete(String(k)); if (!EXCLUDED_KEY.test(String(k))) scheduleFlush(); },
+    clear: () => { data.clear(); scheduleFlush(); },
+  };
+  try {
+    Object.defineProperty(window, 'localStorage', { value: mem, configurable: true });
+    console.warn('[Playgama] localStorage is blocked; saving through bridge.storage only.');
+  } catch (err) {
+    console.warn('[Playgama] localStorage is blocked and could not be replaced:', err);
+  }
 }
 
 async function restoreSave(b: typeof window.bridge) {
@@ -160,6 +194,7 @@ export async function initPlatform(): Promise<void> {
     return;
   }
 
+  ensureLocalStorage();
   await restoreSave(b);
   installSaveMirror();
 

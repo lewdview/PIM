@@ -54,6 +54,14 @@ const ROW_GAP = 1.15;
 const LRC_TAG_RE = /^\[(ti|ar|al|by|offset|length|re|ve):/i;
 const LRC_LINE_RE = /^\[(\d{1,3}):(\d{2})(?:[.:](\d{1,3}))?\]\s*(.*)$/;
 
+/** One random karaoke style + one random font for the whole song. */
+function pickSongStyle(): { effect: WordEffect; font: string } {
+  return {
+    effect: EFFECTS[Math.floor(Math.random() * EFFECTS.length)],
+    font: LYRIC_FONTS[Math.floor(Math.random() * LYRIC_FONTS.length)],
+  };
+}
+
 export function parseLrc(text: string): TimedLine[] {
   const rawLines: { start: number; text: string }[] = [];
 
@@ -73,13 +81,13 @@ export function parseLrc(text: string): TimedLine[] {
 
   rawLines.sort((a, b) => a.start - b.start);
 
-  // One random karaoke style + one random font for the whole song.
-  const songEffect = EFFECTS[Math.floor(Math.random() * EFFECTS.length)];
-  const songFont = LYRIC_FONTS[Math.floor(Math.random() * LYRIC_FONTS.length)];
+  const { effect: songEffect, font: songFont } = pickSongStyle();
 
   return rawLines.map((rl, i) => {
     const nextStart = i + 1 < rawLines.length ? rawLines[i + 1].start : rl.start + 4;
     const end = Math.max(nextStart, rl.start + 0.5);
+    const timed = enhancedWords(rl.text, end, songEffect);
+    if (timed.length) return { start: rl.start, end, words: timed, font: songFont };
     const tokens = rl.text.split(/\s+/).filter(Boolean);
     const dur = end - rl.start;
     const words: TimedWord[] = tokens.map((t, wi) => ({
@@ -90,6 +98,25 @@ export function parseLrc(text: string): TimedLine[] {
     }));
     return { start: rl.start, end, words, font: songFont };
   });
+}
+
+// Enhanced LRC ("[00:04.20] <00:04.20>I <00:04.61>walk"), as lrc.th3scr1b3.art
+// exports it: each word keeps its own start, and ends where the next one starts.
+const WORD_TAG_RE = /<(\d{1,3}):(\d{2})(?:[.:](\d{1,3}))?>\s*([^<]*)/g;
+
+function enhancedWords(text: string, lineEnd: number, effect: WordEffect): TimedWord[] {
+  const out: { text: string; start: number }[] = [];
+  for (const m of text.matchAll(WORD_TAG_RE)) {
+    const frac = m[3] ? (m[3].length >= 3 ? parseInt(m[3], 10) / 1000 : parseInt(m[3], 10) / 100) : 0;
+    const start = parseInt(m[1], 10) * 60 + parseInt(m[2], 10) + frac;
+    for (const t of m[4].trim().split(/\s+/).filter(Boolean)) out.push({ text: t, start });
+  }
+  return out.map((w, i) => ({
+    text: w.text,
+    start: w.start,
+    end: Math.max(w.start + 0.05, Math.min(i + 1 < out.length ? out[i + 1].start : w.start + 0.6, lineEnd)),
+    effect,
+  }));
 }
 
 // ── Official timings (LRC layer → public.lyric_timings) ───────────────────────
