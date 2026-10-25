@@ -204,11 +204,12 @@ const SHADOW_INK = '#3b1d5e';
 const MASK_BOX = { maskUnits: 'userSpaceOnUse' as const, x: -320, y: -120, width: 940, height: 840 };
 
 /** One shape drawn in the marker-comic hand. `mirrored` keeps the light on the same side. */
-function Cel({ d, fill, fillOpacity = 1, texture, shade = SHADOW_INK, shadeOpacity = 0.3, line, depth = 1, weight = 1, mirrored = false }: {
+function Cel({ d, fill, fillOpacity = 1, texture, textureFilter, shade = SHADOW_INK, shadeOpacity = 0.3, line, depth = 1, weight = 1, mirrored = false }: {
   d: string;
   fill: string;
   fillOpacity?: number;
   texture?: string;
+  textureFilter?: string;
   shade?: string;
   shadeOpacity?: number;
   line: string;
@@ -232,7 +233,7 @@ function Cel({ d, fill, fillOpacity = 1, texture, shade = SHADOW_INK, shadeOpaci
         </mask>
       </defs>
       <path d={d} fill={fill} fillOpacity={fillOpacity} stroke="none" />
-      {texture && <path d={d} fill={texture} stroke="none" />}
+      {texture && <path d={d} fill={texture} stroke="none" filter={textureFilter} />}
       <path d={d} fill={shade} fillOpacity={shadeOpacity} stroke="none" mask={`url(#${id}-s)`} />
       <path d={d} fill="none" stroke={line} strokeWidth={0.9 * weight} strokeLinejoin="round" />
       <path d={d} fill="none" stroke={line} strokeWidth={2.4 * weight} strokeLinejoin="round" mask={`url(#${id}-l)`} />
@@ -244,6 +245,31 @@ const SKIN_LINE = mix(SKIN_SHADE, '#000000', 0.45);
 /** Skin in the marker hand: a flat fill with a warm cel shadow. */
 function Skin({ d, mirrored, depth = 1 }: { d: string; mirrored?: boolean; depth?: number }) {
   return <Cel d={d} fill={SKIN} shade="#d9826e" shadeOpacity={0.55} line={SKIN_LINE} depth={depth} mirrored={mirrored} />;
+}
+
+type Wrap = 'bust' | 'hips';
+const neutral = 'rgb(128,128,128)';
+const WRAP_MAPS: Record<Wrap, string> = {
+  bust: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 600" width="300" height="600"><defs>
+<linearGradient id="a" gradientUnits="userSpaceOnUse" x1="92" x2="150"><stop offset="0" stop-color="rgb(214,128,128)"/><stop offset=".5" stop-color="${neutral}"/><stop offset="1" stop-color="rgb(42,128,128)"/></linearGradient>
+<linearGradient id="b" gradientUnits="userSpaceOnUse" x1="150" x2="208"><stop offset="0" stop-color="rgb(214,128,128)"/><stop offset=".5" stop-color="${neutral}"/><stop offset="1" stop-color="rgb(42,128,128)"/></linearGradient>
+<radialGradient id="f"><stop offset="0" stop-color="#fff"/><stop offset=".55" stop-color="#fff"/><stop offset="1" stop-color="#000"/></radialGradient>
+<mask id="ma"><ellipse cx="121" cy="238" rx="31" ry="34" fill="url(#f)"/></mask><mask id="mb"><ellipse cx="179" cy="238" rx="31" ry="34" fill="url(#f)"/></mask></defs>
+<rect width="300" height="600" fill="${neutral}"/><rect x="90" y="204" width="60" height="68" fill="url(#a)" mask="url(#ma)"/><rect x="150" y="204" width="60" height="68" fill="url(#b)" mask="url(#mb)"/></svg>`,
+  hips: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 600" width="300" height="600"><defs>
+<linearGradient id="c" gradientUnits="userSpaceOnUse" x1="80" x2="220"><stop offset="0" stop-color="rgb(64,128,128)"/><stop offset=".2" stop-color="rgb(110,128,128)"/><stop offset=".5" stop-color="${neutral}"/><stop offset=".8" stop-color="rgb(146,128,128)"/><stop offset="1" stop-color="rgb(192,128,128)"/></linearGradient>
+<linearGradient id="v" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#000"/><stop offset=".25" stop-color="#fff"/><stop offset=".75" stop-color="#fff"/><stop offset="1" stop-color="#000"/></linearGradient>
+<mask id="m"><rect x="80" y="284" width="140" height="120" fill="url(#v)"/></mask></defs>
+<rect width="300" height="600" fill="${neutral}"/><rect x="80" y="284" width="140" height="120" fill="url(#c)" mask="url(#m)"/></svg>`,
+};
+
+function WrapFilter({ id, wrap }: { id: string; wrap: Wrap }) {
+  return (
+    <filter id={id} filterUnits="userSpaceOnUse" x="0" y="0" width="300" height="600" colorInterpolationFilters="sRGB">
+      <feImage href={`data:image/svg+xml,${encodeURIComponent(WRAP_MAPS[wrap])}`} x="0" y="0" width="300" height="600" preserveAspectRatio="none" result="map" />
+      <feDisplacementMap in="SourceGraphic" in2="map" scale={wrap === 'bust' ? 16 : 12} xChannelSelector="R" yChannelSelector="G" />
+    </filter>
+  );
 }
 
 /**
@@ -259,15 +285,19 @@ function Garment({ id, choice, paths = [], mirror = [], details }: {
 }) {
   const uid = useSvgId(id);
   const paint = materialPaint(uid, choice.material, choice.color);
+  // Tops wrap their pattern over the bust, bottoms around the hips.
+  const wrap: Wrap | undefined = id === 'top' ? 'bust' : id === 'bottom' ? 'hips' : undefined;
+  const wrapId = `${uid}-wrap`;
   const layer = (d: string, key: string, transform?: string) => (
     <g key={key} transform={transform}>
-      <Cel d={d} fill={paint.base} fillOpacity={paint.baseOpacity} texture={paint.texture} line={paint.stroke} mirrored={!!transform} />
+      <Cel d={d} fill={paint.base} fillOpacity={paint.baseOpacity} texture={paint.texture} textureFilter={wrap && paint.texture ? `url(#${wrapId})` : undefined} line={paint.stroke} mirrored={!!transform} />
     </g>
   );
   return (
     <g>
       <defs>
         {paint.defs}
+        {wrap && paint.texture && <WrapFilter id={wrapId} wrap={wrap} />}
       </defs>
       {paths.map((d, i) => layer(d, `p${i}`))}
       {mirror.map((d, i) => (
@@ -730,6 +760,8 @@ function BustShading({ opacity = 0.35, upper = true }: { opacity?: number; upper
       {/* Upper curves give tops the same rounded shape as the bust underneath. */}
       {upper && <path d="M96 236 C96 220 104 208 116 206 C128 204.5 140 210 147 222" strokeOpacity={opacity * 0.6} />}
       {upper && <path d="M204 236 C204 220 196 208 184 206 C172 204.5 160 210 153 222" strokeOpacity={opacity * 0.6} />}
+      {upper && <path d="M104 238 C104 227 110 219 120 216.5" stroke="#ffffff" strokeOpacity="0.5" strokeWidth="3" />}
+      {upper && <path d="M158 233 C160 225 166 220 174 218.5" stroke="#ffffff" strokeOpacity="0.3" strokeWidth="2.2" />}
       <path d="M98 252 Q110 268 124 268 Q140 268 148 256" />
       <path d="M202 252 Q190 268 176 268 Q160 268 152 256" />
       <path d="M150 230 L150 246" strokeOpacity={opacity * 0.8} />
