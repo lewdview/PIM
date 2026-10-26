@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, memo } from 'react';
+import { useState, useCallback, useEffect, useRef, memo } from 'react';
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
 import type { VaultCard } from '../services/vaultService';
 import { RARITY_CONFIG, getSupplyCap, type UltraReward, type ProofType } from '../utils/rarity';
@@ -8,6 +8,8 @@ import AudioPreview from './AudioPreview';
 import { formatDate } from '../utils/dayCalc';
 import { Gift, Flame, ShieldCheck } from 'lucide-react';
 import OneOfOneOutline from './OneOfOneOutline';
+import HoloSheen, { type HoloVariant } from './HoloSheen';
+import { useHoloTilt } from '../hooks/useHoloTilt';
 import MythicCardEffects, { MythicGodRays, MythicPrismFoil, MythicEmberParticles, MythicCrownBadge } from './MythicCardEffects';
 import {
   CardSkinContext,
@@ -418,6 +420,11 @@ export default memo(function Card({
     window.addEventListener('card_skins_changed', reloadSkins);
     return () => window.removeEventListener('card_skins_changed', reloadSkins);
   }, []);
+
+  // Holographic sheen: pointer / phone-tilt driven light + gentle 3D tilt.
+  const tiltRef = useRef<HTMLDivElement>(null);
+  const sheenRef = useRef<HTMLDivElement>(null);
+  useHoloTilt(tiltRef, sheenRef, { maxTilt: interactive ? 9 : 0, gyro: interactive });
 
   const rotateY = useMotionValue(!isRevealed ? 180 : 0);
   const frontVisibility = useTransform(rotateY, v => (Math.abs(v % 360) < 90 || Math.abs(v % 360) > 270 ? 'visible' : 'hidden'));
@@ -1073,6 +1080,12 @@ export default memo(function Card({
   // FRONT FACES
   // ════════════════════════════════════════════════════════════════════════
 
+  const holoVariant: HoloVariant =
+    card.rarity === 'mythic' ? 'cosmic' :
+    card.rarity === 'legendary' ? 'prism' :
+    card.rarity === 'rare' ? 'holo' : 'gloss';
+  const holoLayer = <HoloSheen ref={sheenRef} variant={holoVariant} tint={rc.color} />;
+
   const sharedFrontStyle = {
     position: 'absolute' as const, inset: 0, borderRadius: '12px', overflow: 'hidden',
     backfaceVisibility: 'hidden' as const, WebkitBackfaceVisibility: 'hidden' as const,
@@ -1135,6 +1148,7 @@ export default memo(function Card({
         {claimBtn}
         {proof && <ProofSeal type={proof} />}
       </div>
+      {holoLayer}
     </motion.div>
   );
 
@@ -1148,8 +1162,6 @@ export default memo(function Card({
       display: 'flex',
       flexDirection: 'column',
     }}>
-      {/* Gloss sheen */}
-      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(115deg, transparent 25%, rgba(255,255,255,0.07) 40%, rgba(255,255,255,0.14) 50%, transparent 58%)', pointerEvents: 'none', zIndex: 10 }} />
 
       {/* Art — larger crop with clean top header bar */}
       <div style={{ position: 'relative', height: '60%', overflow: 'hidden', borderBottom: `1.5px solid ${rc.color}55`, flexShrink: 0 }}>
@@ -1182,6 +1194,7 @@ export default memo(function Card({
         {claimBtn}
         {proof && <ProofSeal type={proof} />}
       </div>
+      {holoLayer}
     </motion.div>
   );
 
@@ -1234,6 +1247,7 @@ export default memo(function Card({
         {claimBtn}
       </div>
       {proof && <ProofSeal type={proof} />}
+      {holoLayer}
     </motion.div>
   );
 
@@ -1246,12 +1260,6 @@ export default memo(function Card({
     }}>
       {/* Art */}
       <div style={{ position: 'absolute', inset: 0 }}>{renderArt('w-full h-full', true)}</div>
-
-      {/* Foil wash — diagonal rainbow, seamless loop */}
-      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(125deg, rgba(255,215,0,0.14) 0%, rgba(255,0,180,0.12) 25%, rgba(0,200,255,0.12) 50%, rgba(160,0,255,0.14) 75%, rgba(255,215,0,0.14) 100%)', backgroundSize: '300% 100%', animation: 'foil-sweep 4s linear infinite', opacity: 0.9 }} />
-
-      {/* Gloss band */}
-      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(105deg, transparent 28%, rgba(255,255,255,0.18) 42%, rgba(255,255,255,0.04) 52%, transparent 62%)', pointerEvents: 'none' }} />
 
       {/* Gradient overlay */}
       <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.58) 0%, transparent 24%, transparent 48%, rgba(12,4,22,0.78) 74%, rgba(6,2,12,0.97) 100%)' }} />
@@ -1290,6 +1298,7 @@ export default memo(function Card({
         )}
       </div>
       {proof && <ProofSeal type={proof} />}
+      {holoLayer}
     </motion.div>
   );
 
@@ -1428,6 +1437,7 @@ export default memo(function Card({
         )}
       </div>
       {proof && <ProofSeal type={proof} />}
+      {holoLayer}
     </motion.div>
   );
 
@@ -1461,6 +1471,7 @@ export default memo(function Card({
       className="relative group"
       style={{ perspective: '900px' }}
     >
+      <div ref={tiltRef} className="holo-tilt" style={{ borderRadius: '12px' }}>
       <motion.div
         onClick={handleClick}
         style={{
@@ -1527,6 +1538,7 @@ export default memo(function Card({
           </motion.div>
         )}
       </motion.div>
+      </div>
 
       {/* Hover glow — legendary/mythic/daily */}
       {(['legendary','mythic'].includes(card.rarity) || isDailyClaim) && interactive && (

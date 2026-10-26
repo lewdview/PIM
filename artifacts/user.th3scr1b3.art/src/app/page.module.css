@@ -376,22 +376,10 @@
   border: 2px solid var(--paper);
   box-shadow: 14px 14px 0 var(--pink), 0 40px 80px rgba(0, 0, 0, 0.7);
   transform-style: preserve-3d;
-  transition: transform 0.25s ease-out;
   overflow: hidden;
   rotate: 2deg;
 }
-.passportHolo {
-  position: absolute;
-  inset: 0;
-  z-index: 3;
-  pointer-events: none;
-  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.28) 45%, rgba(0, 229, 255, 0.2) 50%, rgba(255, 20, 147, 0.2) 55%, transparent 70%);
-  background-size: 250% 100%;
-  background-position: 120% 0;
-  mix-blend-mode: overlay;
-  transition: background-position 1s ease;
-}
-.passport:hover .passportHolo { background-position: -20% 0; }
+/* Holographic sheen: <HoloSheen> + useHoloTilt (see app/holo.css). */
 .passportTop,
 .passportFoot {
   display: flex;

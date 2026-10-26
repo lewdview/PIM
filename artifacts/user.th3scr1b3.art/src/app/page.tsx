@@ -3,7 +3,7 @@
 // user.th3scr1b3.art — identity hub, styled after pim.th3scr1b3.art/launch:
 //   Hero (passport card) → manifesto marquee → 01 Access → 02 Activity → 03 Telemetry
 //   → 04 Layers → 05 Endpoints → final call.
-import { useState, useEffect, useRef, useCallback, useSyncExternalStore } from 'react';
+import { useState, useEffect, useRef, useSyncExternalStore } from 'react';
 import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { isAllowedRedirectUri } from '../lib/redirect';
@@ -13,6 +13,8 @@ import ActivityDashboard from '../components/ActivityDashboard';
 import { ArrowDown, ArrowLeft, ArrowUpRight, RefreshCw } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import styles from './page.module.css';
+import HoloSheen from '../components/HoloSheen';
+import { useHoloTilt } from '../lib/useHoloTilt';
 
 /** Key art and the bombshell cutout are served by PIM; the hub borrows them so both pages share a face. */
 const PIM_ORIGIN = 'https://pim.th3scr1b3.art';
@@ -67,9 +69,10 @@ export default function Home() {
   const today = useSyncExternalStore(noopSubscribe, getCurrentDay, () => 1);
   const reduce = useReducedMotion() ?? false;
 
-  // 3D Perspective Card Tilt
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+  // 3D passport tilt + holographic sheen (pointer, phone tilt, idle drift)
   const cardRef = useRef<HTMLDivElement>(null);
+  const sheenRef = useRef<HTMLDivElement>(null);
+  useHoloTilt(cardRef, sheenRef, { maxTilt: 12, idle: true, hit: 'self' });
 
   const isAnonymousUser = !!activeUser && (
     activeUser.is_anonymous ||
@@ -77,18 +80,6 @@ export default function Home() {
     (!activeUser.email && !activeUser.user_metadata?.wallet)
   );
   const isSignedIn = !!activeUser && !isAnonymousUser;
-
-  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!cardRef.current) return;
-    const rect = cardRef.current.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width - 0.5;
-    const y = (e.clientY - rect.top) / rect.height - 0.5;
-    setTilt({ x: y * 16, y: -x * 16 });
-  }, []);
-
-  const handleMouseLeave = useCallback(() => {
-    setTilt({ x: 0, y: 0 });
-  }, []);
 
   // Hero scroll parallax
   const heroRef = useRef<HTMLElement>(null);
@@ -402,11 +393,8 @@ export default function Home() {
             <div
               ref={cardRef}
               className={styles.passport}
-              onMouseMove={handleMouseMove}
-              onMouseLeave={handleMouseLeave}
-              style={{ transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)` }}
             >
-              <span className={styles.passportHolo} aria-hidden="true" />
+              <HoloSheen ref={sheenRef} variant="prism" tint="#ff1493" foilZ={3} glareZ={4} />
               <div className={styles.passportTop}>
                 <span>PASSPORT</span>
                 <span>N° {pad(today, 3)}</span>
