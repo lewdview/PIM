@@ -148,11 +148,8 @@ export function useHoloTilt(
       schedule();
     };
     const onDown = (e: PointerEvent) => {
-      if (gyro && touchFirst && !reduce && gyroNeedsPermission()) {
-        requestGyroPermission().then((ok) => {
-          if (ok && visible) startGyro();
-        });
-      }
+      // Granting permission wakes every subscribed card at once (see holoGyro).
+      if (gyro && touchFirst && !reduce && gyroNeedsPermission()) void requestGyroPermission();
       onMove(e);
     };
 
@@ -166,7 +163,7 @@ export function useHoloTilt(
       io = new IntersectionObserver(([entry]) => {
         visible = entry.isIntersecting;
         if (visible) {
-          if (!gyroNeedsPermission()) startGyro();
+          startGyro();
           schedule();
         } else {
           stopGyro();
@@ -175,7 +172,7 @@ export function useHoloTilt(
         }
       });
       io.observe(hitEl);
-    } else if (!gyroNeedsPermission()) {
+    } else {
       startGyro();
     }
 

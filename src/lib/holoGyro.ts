@@ -95,6 +95,10 @@ function stopListening() {
   baseline = null;
 }
 
+/**
+ * Subscribing before iOS permission is granted is fine: readings start for
+ * every subscriber as soon as requestGyroPermission() succeeds.
+ */
 export function subscribeGyro(fn: GyroListener): () => void {
   listeners.add(fn);
   ensureListening();
