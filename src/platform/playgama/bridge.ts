@@ -22,7 +22,20 @@ const SAVE_KEY = 'pim_save';
 export const PLATFORM_PAUSE_EVENT = 'pim:platform-pause';
 
 // Session tokens, wallet SDK state and bulky per-run telemetry stay device-local.
-const EXCLUDED_KEY = /^(sb-|supabase\.|wagmi|-walletlink|walletlink|WCM_|wc@|telemetry_|chunk_)|pim_save/i;
+// The Bridge's own keys (guest id, remote config cache, its local copy of pim_save) are its business.
+const EXCLUDED_KEY = /^(sb-|supabase\.|wagmi|-walletlink|walletlink|WCM_|wc@|telemetry_|pim_telemetry|chunk_|bridge[-_])|pim_save|pg_local_at/i;
+/** In the snapshot: when it was taken. In localStorage: when local progress last went out to be saved. */
+const SAVED_AT = '__pg_saved_at';
+const LOCAL_AT = 'pg_local_at';
+/** A platform call that never answers must not hold up every later save. */
+const STORAGE_TIMEOUT_MS = 5000;
+
+function withTimeout<T>(p: Promise<T>): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error('storage call timed out')), STORAGE_TIMEOUT_MS);
+    p.then((v) => { clearTimeout(t); resolve(v); }, (e) => { clearTimeout(t); reject(e); });
+  });
+}
 
 let ready = false;
 let lastSnapshot = '';
@@ -45,6 +58,12 @@ function snapshot(): string {
   return JSON.stringify(data);
 }
 
+function stamp(json: string): string {
+  const at = Date.now();
+  try { localStorage.setItem(LOCAL_AT, String(at)); } catch { /* storage blocked */ }
+  return json.slice(0, -1) + (json.length > 2 ? ',' : '') + `${JSON.stringify(SAVED_AT)}:${JSON.stringify(String(at))}}`;
+}
+
 async function flush(): Promise<void> {
   flushTimer = null;
   const b = bridgeOrNull();
@@ -54,7 +73,7 @@ async function flush(): Promise<void> {
   if (next === lastSnapshot) return;
   writing = true;
   try {
-    await b.storage.set(SAVE_KEY, next);
+    await withTimeout(b.storage.set(SAVE_KEY, stamp(next)));
     lastSnapshot = next;
   } catch (err) {
     console.warn('[Playgama] Save failed:', err);
@@ -102,13 +121,27 @@ function ensureLocalStorage() {
 
 async function restoreSave(b: typeof window.bridge) {
   try {
-    const raw = await b.storage.get(SAVE_KEY, false);
-    if (typeof raw !== 'string' || !raw) return;
+    const got = await withTimeout(b.storage.get(SAVE_KEY, false));
+    // Some platforms hand back the saved JSON already parsed.
+    const raw = typeof got === 'string' ? got : got && typeof got === 'object' ? JSON.stringify(got) : '';
+    if (!raw) return;
     const data = JSON.parse(raw) as Record<string, string>;
+    // Local progress wins unless the saved copy is newer (another device, or
+    // storage cleared); otherwise the save only fills in what's missing here.
+    // An older copy must never roll progress back.
+    const savedAt = Number(data[SAVED_AT]) || 0;
+    const localAt = Number(localStorage.getItem(LOCAL_AT)) || 0;
+    const cloudWins = savedAt > localAt;
+    delete data[SAVED_AT];
     for (const [key, value] of Object.entries(data)) {
-      if (typeof value === 'string' && !EXCLUDED_KEY.test(key)) localStorage.setItem(key, value);
+      if (typeof value !== 'string' || EXCLUDED_KEY.test(key)) continue;
+      if (cloudWins || localStorage.getItem(key) === null) localStorage.setItem(key, value);
     }
-    lastSnapshot = raw;
+    if (cloudWins) {
+      try { localStorage.setItem(LOCAL_AT, String(savedAt)); } catch { /* storage blocked */ }
+    }
+    // Anything local the save lacks goes out on the next flush.
+    lastSnapshot = cloudWins ? JSON.stringify(data) : '';
   } catch (err) {
     console.warn('[Playgama] Could not restore save:', err);
   }
@@ -197,6 +230,8 @@ export async function initPlatform(): Promise<void> {
   ensureLocalStorage();
   await restoreSave(b);
   installSaveMirror();
+  // Pushes local progress the platform copy doesn't have yet.
+  scheduleFlush();
 
   const { EVENT_NAME } = b;
   setGate('platform_audio', !b.platform.isAudioEnabled);
