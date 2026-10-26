@@ -16,11 +16,20 @@
   cursor: pointer;
   user-select: none;
 }
+/* A square well past the screen's corners, faded out from the middle like the
+   main game's rays, so the spinning layer never shows an edge. */
 .me-bg {
   position: absolute;
-  inset: -20%;
+  left: 50%;
+  top: 40%;
+  width: 220vmax;
+  height: 220vmax;
+  margin: -110vmax 0 0 -110vmax;
+  -webkit-mask: radial-gradient(circle, #000 0, rgba(0, 0, 0, 0.5) 18%, transparent 42%);
+          mask: radial-gradient(circle, #000 0, rgba(0, 0, 0, 0.5) 18%, transparent 42%);
+  will-change: transform;
   background:
-    radial-gradient(ellipse at 50% 40%, color-mix(in srgb, var(--ch) 28%, transparent), transparent 60%),
+    radial-gradient(circle, color-mix(in srgb, var(--ch) 28%, transparent), transparent 30%),
     repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--ch) 10%, transparent) 0deg 4deg, transparent 4deg 12deg);
   animation: me-spin 90s linear infinite;
   pointer-events: none;
