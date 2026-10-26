@@ -14,7 +14,7 @@
  * - Centralized audioManager sound FX triggers.
  */
 
-import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { Link, useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -31,6 +31,8 @@ import { extractPalette, getFallbackPalette, type ExtractedPalette } from '../ut
 import { audioManager } from '../game/audio';
 import '../styles/ProfilePage.css';
 import '../styles/HeroLandingPage.css';
+import HoloSheen from '../components/HoloSheen';
+import { useHoloTilt } from '../hooks/useHoloTilt';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Constants
@@ -143,8 +145,9 @@ export default function ProfilePage() {
   };
 
   // 3D Perspective Card Tilt
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const cardRef = useRef<HTMLDivElement>(null);
+  const sheenRef = useRef<HTMLDivElement>(null);
+  useHoloTilt(cardRef, sheenRef, { maxTilt: 14, idle: true, lift: 18 });
 
   // Fetch today's song artwork for dynamic palette
   useEffect(() => {
@@ -200,18 +203,6 @@ export default function ProfilePage() {
     [palette]
   );
 
-  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!cardRef.current) return;
-    const rect = cardRef.current.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width - 0.5;
-    const y = (e.clientY - rect.top) / rect.height - 0.5;
-    setTilt({ x: y * 20, y: -x * 20 });
-  }, []);
-
-  const handleMouseLeave = useCallback(() => {
-    setTilt({ x: 0, y: 0 });
-  }, []);
-
   return (
     <div className="profile-page" style={rootStyle}>
       {/* Noise Texture & Shader Beams */}
@@ -227,15 +218,12 @@ export default function ProfilePage() {
         {/* ═══════════ SECTION 1 : HERO IDENTITY PEDESTAL ═══════════ */}
         <section className="profile-hero-pedestal">
           <motion.div
-            ref={cardRef}
             className="profile-card-3d-wrap"
-            onMouseMove={handleMouseMove}
-            onMouseLeave={handleMouseLeave}
-            style={{ transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)` }}
             initial={{ opacity: 0, y: 35 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, ease: EASE_OUT }}
           >
+            <div ref={cardRef} className="profile-card-3d-tilt holo-tilt">
             <div className="hero-drop-glow" />
 
             {/* Spinning Holographic Vinyl Disc */}
@@ -248,6 +236,7 @@ export default function ProfilePage() {
 
             {/* Front Card */}
             <div className="profile-card-3d-card">
+              <HoloSheen ref={sheenRef} variant="prism" tint="var(--palette-accent)" foilZ={1} glareZ={5} />
               <div className="hero-specular-glare" />
 
               <div className="profile-avatar-frame">
@@ -282,6 +271,7 @@ export default function ProfilePage() {
               <div className="font-mono text-[9px] text-white/30 tracking-widest uppercase">
                 YOUR 365 // SOVEREIGN PASSPORT
               </div>
+            </div>
             </div>
           </motion.div>
 

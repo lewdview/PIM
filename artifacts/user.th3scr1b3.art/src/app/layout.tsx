@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Script from 'next/script';
 import { Anton, Space_Grotesk, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
+import './holo.css';
 
 // Same type stack as pim.th3scr1b3.art/launch: Anton display, Space Grotesk body, JetBrains Mono labels.
 const anton = Anton({
