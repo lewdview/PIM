@@ -11,6 +11,7 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import BackgroundMusic from '@/components/audio/BackgroundMusic';
 import GamepadCursor from '@/components/ui/GamepadCursor';
 import { useGlobalPlayer } from '@/store/useGlobalPlayer';
+import { useVaultStore } from '@/store/useVaultStore';
 import { APP_BASE, markGameReady, setMenuBanners } from '@/platform';
 import { setGate } from '@/platform/playgama/audioGate';
 import { PLAYGAMA_MONTH, restoreBonusBundle } from '@/platform/playgama/month';
@@ -53,6 +54,7 @@ const SecretLevel = lazyScreen(() => import('./SecretLevel'));
 const MonthEnding = lazyScreen(() => import('./month/MonthEnding'));
 const MonthListen = lazyScreen(() => import('./month/MonthListen'));
 const MonthStoryScene = lazyScreen(() => import('./month/MonthStoryScene'));
+const MonthOptions = lazyScreen(() => import('./month/MonthOptions'));
 
 const HOME = `/chapter/${PLAYGAMA_MONTH}`;
 const MUTE_KEY = 'pg_muted';
@@ -97,6 +99,8 @@ export default function MonthShell() {
   const [location, setLocation] = useLocation();
   // The intro and start screen show once per launch, then the chapter.
   const [started, setStarted] = useState(false);
+  // Gameplay's pause menu and gear button ask for options through the vault store's flag.
+  const optionsOpen = useVaultStore((s) => s.optionsModalOpen);
 
   useEffect(() => {
     markGameReady();
@@ -134,6 +138,7 @@ export default function MonthShell() {
           }
           .pg-mute:hover { border-color: rgba(255, 255, 255, 0.45); }
           .pg-mute[data-play] { top: 30px; width: 34px; height: 34px; }
+          .pg-options-layer { position: fixed; inset: 0; z-index: 10000; }
         `}</style>
         <BackgroundMusic />
         <GamepadCursor />
@@ -163,6 +168,13 @@ export default function MonthShell() {
             </Suspense>
           </ErrorBoundary>
         </main>
+        {optionsOpen && (
+          <div className="pg-options-layer">
+            <Suspense fallback={null}>
+              <MonthOptions onClose={() => useVaultStore.getState().setOptionsModalOpen(false)} />
+            </Suspense>
+          </div>
+        )}
       </div>
     </ErrorBoundary>
   );

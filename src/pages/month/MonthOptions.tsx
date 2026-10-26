@@ -7,6 +7,10 @@ import { useState } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { DEFAULT_OPTS, loadOpts, type GameOpts, type GfxLevel, type ParticleDensity, type PovMode } from '@/lib/options';
 import { audioManager } from '@/game/audio';
+// The panel also opens over gameplay (pause menu), where the chapter screen's styles may not be loaded yet.
+import '@/styles/stageShell.css';
+import '@/styles/campaignStory.css';
+import '@/styles/monthBoard.css';
 import '@/styles/monthPanels.css';
 
 type Tab = 'audio' | 'timing' | 'display' | 'play';

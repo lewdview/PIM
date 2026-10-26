@@ -14,7 +14,9 @@ export const TUTORIAL_DONE_KEY = 'pim_tutorial_completed';
 const BPM = 100;
 // Longer than any tutorial takes: gameplay ends a run when its audio runs out.
 const DURATION = 330;
-const RATE = 16000;
+// Low enough that the WAV stays under gameplay's 10 MB limit for loading audio
+// into memory (bigger files are streamed by URL, which a blob URL can't do).
+const RATE = 12000;
 
 export function isTutorialDone(): boolean {
   try {
