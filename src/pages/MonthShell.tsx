@@ -15,6 +15,7 @@ import { APP_BASE, markGameReady, setMenuBanners } from '@/platform';
 import { setGate } from '@/platform/playgama/audioGate';
 import { PLAYGAMA_MONTH, restoreBonusBundle } from '@/platform/playgama/month';
 import { submitMonthScore } from '@/platform/playgama/monthLeaderboard';
+import { TUTORIAL_DONE_KEY } from '@/platform/playgama/tutorialTrack';
 import TitleScreens from './month/TitleScreens';
 import '@/styles/CardShowcaseStyles.css';
 
@@ -56,13 +57,12 @@ const MonthStoryScene = lazyScreen(() => import('./month/MonthStoryScene'));
 const HOME = `/chapter/${PLAYGAMA_MONTH}`;
 const MUTE_KEY = 'pg_muted';
 
-/** The gameplay tutorial ends on /tutorial; record it and show that run's results. */
+/** The tutorial node's run ends on /tutorial; record it and go back to the chapter, on track 1. */
 function TutorialDone() {
   try {
-    localStorage.setItem('pim_tutorial_completed', 'true');
+    localStorage.setItem(TUTORIAL_DONE_KEY, 'true');
   } catch { /* storage blocked */ }
-  const last = sessionStorage.getItem('campaign_last_song_id');
-  return <Redirect to={last ? `/results/${last}` : HOME} replace />;
+  return <Redirect to={HOME} replace />;
 }
 
 function MuteButton({ inPlay }: { inPlay: boolean }) {

@@ -13,7 +13,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useParams } from 'wouter';
-import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Lock, Pause, Play, Film, CheckCircle2, Gift, Sparkles, Trophy, X, Settings, Info, Flag, Headphones, BookOpen, Share2 } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, Lock, Pause, Play, Film, CheckCircle2, Gift, Sparkles, Trophy, X, Settings, Info, Flag, Headphones, BookOpen, Share2, Cpu } from 'lucide-react';
 import { loadCatalog, isSongTimeLocked, getModifierForSong, type GameSong } from '@/game/api';
 import { getMedalForSong, getHighScore } from '@/game/progress';
 import { CHAPTERS, calculateCampaignDifficulty, levelToTier } from '@/game/campaign';
@@ -32,7 +32,8 @@ import {
   isBonusSongBought, canUnlockWithAd, canBuyBundle, unlockSongWithAd, buyBonusBundle,
 } from '@/platform/playgama/month';
 import { getProductPrice } from '@/platform/playgama/bridge';
-import { bombshellArtFor, prepareMonthRun } from '@/pages/month/startRun';
+import { bombshellArtFor, prepareMonthRun, prepareTutorialRun } from '@/pages/month/startRun';
+import { PG_TUTORIAL_ID, isTutorialDone } from '@/platform/playgama/tutorialTrack';
 import { hideBroken } from './hideBroken';
 import { ArcadeBackdrop, SlamTitle, StageWipe } from './arcade';
 import MonthOptions from '@/pages/month/MonthOptions';
@@ -65,6 +66,8 @@ const MILESTONES = [
 
 const pad = (n: number) => String(n).padStart(2, '0');
 const MONTH_BUILD = PLAYGAMA_MONTH > 0;
+/** selectedIdx of the monthly build's tutorial node, the first tile of week 1 before track 1. */
+const TUTORIAL_IDX = -1;
 
 const sfx = (v = 0.12) => audioManager.playSfx('tap_nav', v);
 /** Columns of the monthly build's track grid (set in monthBoard.css). */
@@ -193,7 +196,9 @@ export default function ChapterStory() {
       const lastId = sessionStorage.getItem('campaign_last_song_id');
       const lastIdx = lastId ? list.findIndex((s) => s.id === lastId) : -1;
       const firstOpen = list.findIndex((s, i) => isStageUnlocked(i, p) && !hasClearedSong(s));
-      setSelectedIdx(lastIdx !== -1 ? lastIdx : firstOpen !== -1 ? firstOpen : 0);
+      // Monthly build: a new player starts on the tutorial node; finishing it lands on track 1.
+      const onTutorial = MONTH_BUILD && !isTutorialDone() && (lastId === PG_TUTORIAL_ID || (lastIdx === -1 && firstOpen === 0));
+      setSelectedIdx(onTutorial ? TUTORIAL_IDX : lastIdx !== -1 ? lastIdx : firstOpen !== -1 ? firstOpen : 0);
     });
     return () => { alive = false; };
   }, [monthNum, meta, stopPreview]);
@@ -284,6 +289,12 @@ export default function ChapterStory() {
   }, [songs, progress, selected, selectedIdx, collection, monthNum, meta, claimedRewards, stageOpen]);
 
   const handlePlay = useCallback((deluxe = false) => {
+    if (MONTH_BUILD && selectedIdx === TUTORIAL_IDX) {
+      stopPreview();
+      audioManager.playSfx('tap_nav', 0.4);
+      setLocation(prepareTutorialRun(monthNum));
+      return;
+    }
     if (!selected || !status || status.locked) return;
     stopPreview();
     audioManager.playSfx('tap_nav', 0.4);
@@ -346,7 +357,7 @@ export default function ChapterStory() {
   useEffect(() => {
     if (!count) return;
     const move = (d: number) => setSelectedIdx((i) => {
-      const n = Math.max(0, Math.min(count - 1, i + d));
+      const n = Math.max(MONTH_BUILD ? TUTORIAL_IDX : 0, Math.min(count - 1, i + d));
       if (n !== i) {
         sfx(0.15);
         setActOpen({});
@@ -495,6 +506,7 @@ export default function ChapterStory() {
     const group = groups.find((g) => selectedIdx >= g.startIdx && selectedIdx < g.startIdx + g.songs.length);
     const tr = selected ? getTrackStory(selected.day) : undefined;
     const bonusGated = !progress.bonusUnlocked && progress.bonus.some((b) => !isBonusSongBought(b.id));
+    const tutorialDone = isTutorialDone();
     return (
       <div className="mb-page ca-root" style={chStyle}>
         <StageWipe />
@@ -586,11 +598,14 @@ export default function ChapterStory() {
             <div className="mb-week-stage" data-dir={weekAnim?.dir}>
               {weekAnim && weeks[weekAnim.from] && (
                 <ol className="mb-tracks" data-leaving aria-hidden="true" key={`out-${weekAnim.from}`}
-                  data-count={weeks[weekAnim.from].end - weeks[weekAnim.from].start}>
+                  data-count={weeks[weekAnim.from].end - weeks[weekAnim.from].start + (weekAnim.from === 0 ? 1 : 0)}>
+                  {weekAnim.from === 0 && (
+                    <li style={{ ['--i' as string]: 0 }}><span className="mb-tile mb-tile--tutorial" data-state="open" /></li>
+                  )}
                   {songs.slice(weeks[weekAnim.from].start, weeks[weekAnim.from].end).map((s, k) => {
                     const idx = weeks[weekAnim.from].start + k;
                     return (
-                      <li key={s.id} style={{ ['--i' as string]: k }}>
+                      <li key={s.id} style={{ ['--i' as string]: k + (weekAnim.from === 0 ? 1 : 0) }}>
                         <span className="mb-tile" data-state={stateOf(s, idx)}>
                           {s.coverArt && <img src={s.coverArt} alt="" onError={hideBroken} />}
                         </span>
@@ -601,14 +616,35 @@ export default function ChapterStory() {
               )}
               {weeks[weekIdx] && (
                 <ol className="mb-tracks" aria-label={weeks[weekIdx].label} key={`in-${weekIdx}`} data-entering={weekAnim ? '' : undefined}
-                  data-count={weeks[weekIdx].end - weeks[weekIdx].start}>
+                  data-count={weeks[weekIdx].end - weeks[weekIdx].start + (weekIdx === 0 ? 1 : 0)}>
+                  {/* Week 1 opens on the tutorial node, before track 1. */}
+                  {weekIdx === 0 && (
+                    <li id={`beat-${TUTORIAL_IDX}`} style={{ ['--i' as string]: 0 }}>
+                      <button
+                        type="button"
+                        className="mb-tile mb-tile--tutorial"
+                        data-state={tutorialDone ? 'cleared' : 'open'}
+                        data-selected={selectedIdx === TUTORIAL_IDX}
+                        aria-label={`Tutorial, before track 1, ${tutorialDone ? 'done' : 'open'}`}
+                        aria-pressed={selectedIdx === TUTORIAL_IDX}
+                        onClick={() => select(TUTORIAL_IDX)}
+                        onDoubleClick={() => { if (selectedIdx === TUTORIAL_IDX) handlePlay(); }}
+                      >
+                        <span className="mb-tile-ico"><Cpu size={34} /></span>
+                        {selectedIdx === TUTORIAL_IDX && <span className="ca-cursor mb-tile-cursor" aria-hidden="true">▶</span>}
+                        <span className="mb-tile-n">0</span>
+                        <span className="mb-tile-title">Tutorial</span>
+                        {tutorialDone && <span className="mb-tile-medal" style={{ background: '#39ff14' }} title="Done" />}
+                      </button>
+                    </li>
+                  )}
                   {songs.slice(weeks[weekIdx].start, weeks[weekIdx].end).map((s, k) => {
                     const idx = weeks[weekIdx].start + k;
                     const state = stateOf(s, idx);
                     const medal = getMedalForSong(s.id);
                     const isBonus = idx >= progress.regular.length;
                     return (
-                      <li key={s.id} id={`beat-${idx}`} style={{ ['--i' as string]: k }}>
+                      <li key={s.id} id={`beat-${idx}`} style={{ ['--i' as string]: k + (weekIdx === 0 ? 1 : 0) }}>
                         <button
                           type="button"
                           className="mb-tile"
@@ -637,6 +673,29 @@ export default function ChapterStory() {
             </div>
           </section>
 
+          {selectedIdx === TUTORIAL_IDX && (
+            <section key={PG_TUTORIAL_ID} className="mb-detail ca-panel" aria-label="Tutorial">
+              <div className="mb-detail-top">
+                <span className="mb-cover mb-cover--tutorial" aria-hidden="true"><Cpu size={56} /></span>
+                <div className="mb-detail-name">
+                  <div className="cs-eyebrow">Before track 1 · {tutorialDone ? 'done' : 'start here'}</div>
+                  <h2 className="cs-display">Tutorial</h2>
+                  <p className="cs-hook mb-hook">
+                    Learn taps, holds, swipes and slides over a little computer music, then {meta.name} starts for real.
+                  </p>
+                </div>
+              </div>
+              <div className="mb-note">
+                <span className="cs-muted">No score and no medal here. Miss three notes and it rewinds so you can try again.</span>
+              </div>
+              <div className="mb-actions">
+                <button type="button" className="btn-3d mb-play" onClick={() => handlePlay()} aria-label="Play the tutorial">
+                  <Play size={16} fill="currentColor" />
+                  {tutorialDone ? 'Replay' : 'Play'}
+                </button>
+              </div>
+            </section>
+          )}
           {selected && status && (
             <section key={selected.id} className="mb-detail ca-panel" aria-label="Selected track">
               <div className="mb-detail-top">

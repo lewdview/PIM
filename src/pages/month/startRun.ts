@@ -1,7 +1,8 @@
 // Starts a stage of the monthly Playgama build. Shared by the chapter screen
 // and the results screen so "Play", "Retry" and "Play next" set up the run the
 // same way: the campaign level for that stage, its Bombshell backdrop when a
-// platinum run has unlocked it, and the controls tutorial on the very first run.
+// platinum run has unlocked it. The controls tutorial is a node of its own
+// before track 1 (prepareTutorialRun), so the opening song is always a real run.
 
 import type { GameSong } from '@/game/api';
 import { getMedalForSong } from '@/game/progress';
@@ -10,6 +11,7 @@ import { bombshellFileForDay } from '@/platform/playgama/monthMedia.mjs';
 import { MONTH_BOMBSHELL } from '@/platform/playgama/month';
 import { getBombshellCoverUrl, BOMBSHELL_COVERS_MAP } from '@/utils/bombshellCards';
 import type { ChapterProgress } from '@/game/chapterStory';
+import { PG_TUTORIAL_ID } from '@/platform/playgama/tutorialTrack';
 
 /** The Bombshell art a platinum run on this song unlocks, or null. */
 export function bombshellArtFor(song: GameSong): string | null {
@@ -38,7 +40,7 @@ export const baseSongId = (runId: string) => runId.replace(/_deluxe$/, '');
 export function prepareMonthRun(song: GameSong, opts: {
   month: number;
   level: number;
-  /** Index of the stage in the chapter; stage 0 can open the tutorial. */
+  /** Index of the stage in the chapter. */
   idx: number;
   cleared: boolean;
   /** Play the Chart Master Deluxe chart (opens once the track is cleared). */
@@ -60,9 +62,12 @@ export function prepareMonthRun(song: GameSong, opts: {
     sessionStorage.removeItem(`active_cover_url_${runId}`);
     sessionStorage.removeItem(`active_cover_bombshell_${runId}`);
   }
-  // First run of the game teaches the controls on the opening track.
-  if (!opts.deluxe && opts.idx === 0 && !opts.cleared && localStorage.getItem('pim_tutorial_completed') !== 'true') {
-    return `/play/${runId}?tutorial=true`;
-  }
   return `/play/${runId}`;
+}
+
+/** Sets the session keys for the tutorial node and returns its play path. */
+export function prepareTutorialRun(month: number): string {
+  sessionStorage.setItem('campaign_last_song_id', PG_TUTORIAL_ID);
+  sessionStorage.setItem(`game_origin_${PG_TUTORIAL_ID}`, `chapter/${month}`);
+  return `/play/${PG_TUTORIAL_ID}?tutorial=true`;
 }

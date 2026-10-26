@@ -3026,9 +3026,9 @@ export default function Game() {
     );
     const wasPlatinum = !!saveId && getMedalForSong(saveId) === 'PLATINUM';
 
-    // Save progress with error handling
+    // Save progress with error handling (the monthly build's tutorial node keeps no score)
     try {
-      if (songRef.current && !failed) {
+      if (songRef.current && !failed && !(PLAYGAMA_MONTH && isTutorial)) {
         const totalNotes = gs.perfectPlus + gs.perfects + gs.goods + gs.misses;
         const accuracy = totalNotes > 0 ? ((gs.perfectPlus + gs.perfects) / totalNotes) * 100 : 0;
         const rewardOpts = loadOpts();

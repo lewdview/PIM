@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
+import { PLAYGAMA_MONTH } from '@/platform/playgama/month';
 import { RotateCcw, Heart, Shield, Zap, Volume2, ArrowUp, ArrowRight, CheckCircle2, AlertTriangle, Play } from 'lucide-react';
 
 export type TutorialStepType = 'tap' | 'hold' | 'swipe' | 'hold-swipe' | 'slide' | 'remix' | 'lift';
@@ -347,7 +348,7 @@ export default function TutorialOverlay({
                 </span>
               </h1>
               <p className="font-mono text-xs text-zinc-400 mt-3 tracking-widest uppercase">
-                Synchronizing decrypted rewards & welcome pack...
+                {PLAYGAMA_MONTH ? 'Track 1 is up next...' : 'Synchronizing decrypted rewards & welcome pack...'}
               </p>
             </motion.div>
           </div>

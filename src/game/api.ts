@@ -7,6 +7,7 @@ import staticSongCatalog from '../data/song_catalog.json';
 import { getHighScore as progGetHighScore, saveHighScore as progSaveHighScore } from './progress';
 import { resolveMediaUrls } from '../utils/resolveMediaUrls';
 import { resolveChartVariant } from '../lib/chartVariant';
+import { PG_TUTORIAL_ID, tutorialSong } from '../platform/playgama/tutorialTrack';
 
 export interface LyricsWord {
   word: string;
@@ -275,6 +276,8 @@ export async function loadCatalog(): Promise<GameSong[]> {
 }
 
 export async function getSongById(id: string): Promise<GameSong | null> {
+  // The monthly build's tutorial node plays over synthesized audio, not a catalog song.
+  if (__PIM_MONTH__ && id === PG_TUTORIAL_ID) return tutorialSong();
   const catalog = await loadCatalog();
   let basicSong = catalog.find((s) => s.id === id || (s as any).uuid === id);
 

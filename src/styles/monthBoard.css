@@ -208,6 +208,14 @@
 }
 .mb-tile[data-bonus] .mb-tile-n { color: var(--shell-gold); }
 .mb-tile-ico { position: absolute; inset: 0; z-index: 1; display: grid; place-items: center; color: rgba(255, 255, 255, 0.75); }
+/* The tutorial node before track 1 has no cover: a little terminal screen instead. */
+.mb-tile--tutorial, .mb-cover--tutorial {
+  background:
+    repeating-linear-gradient(0deg, rgba(57, 255, 20, 0.07) 0 2px, transparent 2px 4px),
+    radial-gradient(90% 90% at 50% 40%, color-mix(in srgb, var(--ch) 30%, #06140a), #030805);
+}
+.mb-tile--tutorial .mb-tile-ico { color: #39ff14; filter: drop-shadow(0 0 8px rgba(57, 255, 20, 0.6)); }
+.mb-cover--tutorial { display: grid; place-items: center; color: #39ff14; }
 .mb-tile-medal {
   position: absolute;
   right: 5px;
