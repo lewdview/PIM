@@ -10,7 +10,8 @@ import { isAllowedRedirectUri } from '../lib/redirect';
 import WalletConnect from '../components/WalletConnect';
 import IdentityTerminal from '../components/IdentityTerminal';
 import ActivityDashboard from '../components/ActivityDashboard';
-import { ArrowDown, ArrowLeft, ArrowUpRight, RefreshCw } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowUpRight, Camera, Loader2, RefreshCw } from 'lucide-react';
+import { saveAvatar, validateAvatarFile } from '../lib/avatar';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import styles from './page.module.css';
 
@@ -58,6 +59,10 @@ function SectionHead({ index, kicker, title }: { index: string; kicker: React.Re
 
 export default function Home() {
   const [displayName, setDisplayName] = useState<string>('');
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const [activeUser, setActiveUser] = useState<SupabaseUser | null>(null);
   const [updating, setUpdating] = useState<boolean>(false);
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
@@ -219,13 +224,14 @@ export default function Home() {
         try {
           const { data: profile } = await supabase
             .from('profiles')
-            .select('display_name')
+            .select('display_name, avatar_url')
             .eq('id', session.user.id)
             .maybeSingle();
 
           if (profile?.display_name) {
             setDisplayName(profile.display_name);
           }
+          setAvatarUrl(profile?.avatar_url || session.user.user_metadata?.avatar_url || null);
         } catch {
           // Graceful fallback if profile record does not exist yet
         }
@@ -254,18 +260,20 @@ export default function Home() {
         try {
           const { data: profile } = await supabase
             .from('profiles')
-            .select('display_name')
+            .select('display_name, avatar_url')
             .eq('id', session.user.id)
             .maybeSingle();
           if (profile?.display_name) {
             setDisplayName(profile.display_name);
           }
+          setAvatarUrl(profile?.avatar_url || session.user.user_metadata?.avatar_url || null);
         } catch {
           // Graceful fallback
         }
       } else {
         setActiveUser(null);
         setDisplayName('');
+        setAvatarUrl(null);
       }
     });
 
@@ -303,6 +311,29 @@ export default function Home() {
       setMessage({ text: msg, type: 'error' });
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !activeUser) return;
+
+    const invalid = validateAvatarFile(file);
+    if (invalid) {
+      setAvatarError(invalid);
+      return;
+    }
+
+    setAvatarUploading(true);
+    setAvatarError(null);
+    try {
+      setAvatarUrl(await saveAvatar(activeUser.id, file));
+    } catch (err: unknown) {
+      console.error(err);
+      setAvatarError(err instanceof Error ? err.message : 'Upload failed. Try again.');
+    } finally {
+      setAvatarUploading(false);
     }
   };
 
@@ -411,9 +442,39 @@ export default function Home() {
                 <span>PASSPORT</span>
                 <span>N° {pad(today, 3)}</span>
               </div>
-              <div className={styles.passportArt}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={`${PIM_ORIGIN}/data/packs/bs_cover.png`} alt="" draggable={false} />
+              <div className={`${styles.passportArt} ${avatarUrl ? styles.passportArtPhoto : ''}`}>
+                {avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={avatarUrl}
+                    alt={`${aliasDisplay} passport photo`}
+                    draggable={false}
+                    onError={() => setAvatarUrl(null)}
+                  />
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={`${PIM_ORIGIN}/data/packs/bs_cover.png`} alt="" draggable={false} />
+                )}
+                {activeUser && (
+                  <>
+                    <input
+                      ref={avatarInputRef}
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.webp"
+                      hidden
+                      onChange={handleAvatarChange}
+                    />
+                    <button
+                      type="button"
+                      className={styles.passportPhotoBtn}
+                      onClick={() => avatarInputRef.current?.click()}
+                      disabled={avatarUploading}
+                    >
+                      {avatarUploading ? <Loader2 size={14} className={styles.spin} /> : <Camera size={14} />}
+                      {avatarUploading ? 'Uploading' : avatarUrl ? 'Change photo' : 'Add photo'}
+                    </button>
+                  </>
+                )}
               </div>
               <div className={styles.passportBody}>
                 <span className={styles.passportLabel}>HOLDER</span>
@@ -424,6 +485,7 @@ export default function Home() {
                   </span>
                   <span className={`${styles.chip} ${styles.chipAmber}`}>{provider.toUpperCase()}</span>
                 </div>
+                {avatarError && <p className={styles.passportError} role="alert">{avatarError}</p>}
               </div>
               <div className={styles.passportFoot}>
                 <span>USER.TH3SCR1B3.ART</span>
