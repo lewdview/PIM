@@ -336,14 +336,15 @@ const FINGERS = [
 const THUMB = 'M79.6 345 C82.4 348 83.2 353 81.6 357.6 C80.6 360 78.2 359.6 78 357.4 C78.4 353.6 78.2 350 77 347 Z';
 // Leg and foot in one contour, front view. Outer calf swells high, inner calf low; the knee is the
 // narrow point; the ankle tapers to the malleoli; the foot flares to five toes, big toe inside.
-const LEG = 'M92 344 L150 344 C150.5 372 148.5 404 146 432 C147.6 440 148 448 146.4 456 C145.4 462 145.6 468 146.4 478 C147 492 145 512 142.6 530 C141.6 540 141 548 141.6 554 C143.6 561 147.2 567 148 573 C148.6 577.4 147 581.2 143.6 581.4 C142.2 581.4 141.4 580.8 141 580 C140 581.6 137.6 581.8 136.8 580.2 C135.8 581.4 133.4 581.4 132.6 579.8 C131.6 580.8 129.4 580.6 128.8 579.2 C127.4 579.8 125 579.2 124.8 577.4 C124.4 574.4 125.4 570.4 126 567 C126.8 562 127.8 558 127.4 552 C126.4 534 121.5 516 117 498 C114 486 113.4 474 115 464 C116 458 116.6 454 116 448 C113 436 106 424 100 408 C92 390 89 366 92 344 Z';
+const LEG = 'M89.4 344 L150 344 C150.5 372 148.5 404 146 432 C147.6 440 148 448 146.4 456 C145.4 462 145.6 468 146.4 478 C147 492 145 512 142.6 530 C141.6 540 141 548 141.6 554 C143.6 561 147.2 567 148 573 C148.6 577.4 147 581.2 143.6 581.4 C142.2 581.4 141.4 580.8 141 580 C140 581.6 137.6 581.8 136.8 580.2 C135.8 581.4 133.4 581.4 132.6 579.8 C131.6 580.8 129.4 580.6 128.8 579.2 C127.4 579.8 125 579.2 124.8 577.4 C124.4 574.4 125.4 570.4 126 567 C126.8 562 127.8 558 127.4 552 C126.4 534 121.5 516 117 498 C114 486 113.4 474 115 464 C116 458 116.6 454 116 448 C112 436 103 422 97.6 404 C92.4 386 88.8 366 89.4 344 Z';
 // One rounded bust volume (left; mirrored for the right). It is drawn over the chest and
 // collarbones so the upper curve reads as sitting in front of them.
 // A gravity teardrop, not a circle: the upper pole slopes off the chest wall below the collarbone,
 // the fullness sits low and outside, then the fold turns under and rises to the sternum.
 const BUST = 'M150 238 C149 226 144 214 134 208 C126 203.5 116 203 108 207 C99 212 94.5 224 94.5 238 C94.5 254 104 266 120 267.5 C134 268.5 146 261 149.5 250 C150.3 246 150.4 242 150 238 Z';
 // Base layer: a plain, featureless strapless leotard so the figure is never undressed.
-const BODYSUIT = 'M96 232 C100 216 112 210 124 212 C136 214 146 220 150 232 C154 220 164 214 176 212 C188 210 200 216 204 232 C204 242 203 246 202 250 C198 264 182 270 177 278 C172 288 173 298 186 312 C202 326 212 340 210 352 L208 360 Q180 362 160 368 L140 368 Q120 362 92 360 L90 352 C88 340 98 326 114 312 C127 298 128 288 123 278 C118 270 102 264 98 250 Z';
+// One-piece leotard: the leg openings rise from the crotch up to the hip bones.
+const BODYSUIT = 'M96 232 C100 216 112 210 124 212 C136 214 146 220 150 232 C154 220 164 214 176 212 C188 210 200 216 204 232 C204 242 203 246 202 250 C198 264 182 270 177 278 C172 288 173 298 186 312 C202 326 211 336 210.6 343 C198 348 176 358 159 371 L141 371 C124 358 102 348 89.4 343 C89 336 98 326 114 312 C127 298 128 288 123 278 C118 270 102 264 98 250 Z';
 const TOES = 'M141 580 L141.3 576.8 M136.8 580.2 L136.9 577.4 M132.6 579.8 L132.5 577.2 M128.8 579.2 L128.5 576.8';
 
 /** Keyframes for the idle loop and outfit-change pop; disabled for reduced motion. */
@@ -886,12 +887,21 @@ function UpperBody() {
           <path d="M104 216 Q107 211 112 209" fill="none" stroke="#ffffff" strokeOpacity="0.55" strokeWidth="2.2" strokeLinecap="round" />
         </g>
       ))}
+      {[false, true].map((m) => (
+        <g key={String(m)} transform={m ? MIRROR : undefined}>
+          {/* Skin patch over the hip where the torso and leg shapes meet, so the high leg cut shows no seam. */}
+          <path d="M93.4 334 C90.4 340 89.6 346 89.6 352 C89.6 358 90 362 90.6 366 L150 378 L150 334 Z" fill={SKIN} stroke="none" />
+          <path d="M89.2 343 C88.8 350 88.7 358 89.2 368" fill="none" strokeWidth={m ? 1.8 : 1.1} />
+          <path d="M90 345 C102 350 124 360 141 373" fill="none" stroke={SKIN_SHADE} strokeWidth="4" strokeLinecap="round" />
+        </g>
+      ))}
       <Cel d={BODYSUIT} fill="#2b2140" shade="#0d0716" shadeOpacity={0.55} line="#150e22" />
       <g fill="none" stroke="#7b67a6" strokeLinecap="round">
         <path d="M103 238 C103 227 109 219 119 216.5" strokeWidth="3" strokeOpacity="0.75" />
         <path d="M157 233 C159 225 165 220 173 218.5" strokeWidth="2.2" strokeOpacity="0.45" />
         <path d="M99 336 C103 325 109 318 116 313" strokeWidth="2.6" strokeOpacity="0.55" />
         <path d="M129 284 C128 292 128 298 131 304" strokeWidth="1.6" strokeOpacity="0.35" />
+        <path d="M96 340 C108 345 122 353 134 362" strokeWidth="2" strokeOpacity="0.45" />
       </g>
       <BustShading upper={false} />
     </g>
