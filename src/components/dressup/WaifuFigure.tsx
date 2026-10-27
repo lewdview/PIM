@@ -479,10 +479,11 @@ function useHairPaint(color: string): { defs: ReactNode; p: HairPaint; dark: str
   };
 }
 
-const HAIR_MASS = 'M92 120 C86 46 214 46 208 120 C210 150 204 172 196 186 Q150 198 104 186 C96 172 90 150 92 120 Z';
-const TWIN_TAIL = 'M106 88 C70 98 54 156 60 226 C64 276 74 312 86 340 C88 302 92 262 96 222 C100 172 106 130 114 100 Z';
-const PONYTAIL = 'M166 62 C214 52 240 98 232 168 C228 218 236 262 248 300 C214 282 204 232 202 182 C200 132 194 96 172 80 Z';
-const LONG_BACK = 'M92 118 C86 176 84 262 92 344 C118 356 182 356 208 344 C216 262 214 176 208 118 Z';
+// Hair ends are clumps that taper to points, not a cut edge: each lock bulges, then narrows to its tip.
+const HAIR_MASS = 'M92 120 C86 46 214 46 208 120 C210 150 204 172 196 186 C189.9 187.8 183.7 191.0 180.7 192.0 C178.4 189.0 175.3 187.0 173.0 185.0 C174.5 188.7 168.4 194.0 165.3 195.0 C163.0 192.0 160.0 187.0 157.7 185.0 C159.2 187.5 153.1 190.0 150.0 191.0 C147.7 188.0 144.6 187.0 142.3 185.0 C143.9 188.4 137.7 193.0 134.7 194.0 C132.4 191.0 129.3 187.0 127.0 185.0 C128.5 187.8 122.4 191.0 119.3 192.0 C113.2 188.0 107.1 188.0 104.0 186.0 C96 172 90 150 92 120 Z';
+const TWIN_TAIL = 'M106 88 C70 98 54 156 60 226 C64 276 72 310 80 336 C81.5 331 83 327 84.5 325 C85.5 332 87.5 340 90 347 C89.6 338 90.6 330 91.6 324 C92.6 328 93.4 332 94 335 C93 300 93.6 262 96 222 C100 172 106 130 114 100 Z';
+const PONYTAIL = 'M166 62 C214 52 240 98 232 168 C228 218 234 260 246 296 C240 292 236 290 233 288 C235 294 237 300 238 306 C232 298 226 292 222 286 C222 291 222 297 220 302 C208 276 204 232 202 182 C200 132 194 96 172 80 Z';
+const LONG_BACK = 'M92 118 C86 176 84 262 92 344 C97.8 349.0 103.6 355.0 106.5 356.0 C108.7 353.0 111.6 346.0 113.8 344.0 C112.3 350.8 118.1 361.0 121.0 362.0 C123.2 359.0 126.1 346.0 128.2 344.0 C126.8 348.7 132.6 354.0 135.5 355.0 C137.7 352.0 140.6 346.0 142.8 344.0 C141.3 350.2 147.1 359.0 150.0 360.0 C152.2 357.0 155.1 346.0 157.2 344.0 C155.8 348.4 161.6 353.0 164.5 354.0 C166.7 351.0 169.6 346.0 171.8 344.0 C170.3 350.5 176.1 360.0 179.0 361.0 C181.2 358.0 184.1 346.0 186.2 344.0 C184.8 349.3 190.6 356.0 193.5 357.0 C199.3 353.0 205.1 348.0 208.0 346.0 C216 262 214 176 208 118 Z';
 
 function HairBack({ item, color }: { item: string; color: string }) {
   const { defs, p, dark } = useHairPaint(color);
@@ -492,20 +493,20 @@ function HairBack({ item, color }: { item: string; color: string }) {
       <defs>{defs}</defs>
       {item === 'long' && <>
         <Cel d={LONG_BACK} fill={p.fill} line={p.stroke} />
-        {strands('M118 190 C114 250 116 300 120 340 M150 190 L150 350 M182 190 C186 250 184 300 180 340')}
+        {strands('M114 190 C110 250 112 300 113.8 344 M128 186 C126 260 127 310 128.2 344 M147 190 C148 260 143 310 142.8 344 M172 186 C174 260 173 310 171.8 344 M186 190 C190 250 188 300 186.2 344')}
       </>}
       {item === 'twintails' && [false, true].map((right) => (
         <g key={String(right)} transform={right ? MIRROR : undefined}>
           <g className="wf-sway" style={{ transformOrigin: '108px 92px', animationDelay: right ? '-2.2s' : '0s' }}>
             <Cel d={TWIN_TAIL} fill={p.fill} line={p.stroke} mirrored={right} />
-            {strands('M98 120 C80 170 76 240 84 320 M104 112 C92 170 92 230 94 280')}
+            {strands('M98 120 C80 170 78 260 84.5 325 M104 112 C92 170 90 260 91.6 324')}
           </g>
         </g>
       ))}
       {item === 'ponytail' && (
         <g className="wf-sway" style={{ transformOrigin: '170px 66px' }}>
           <Cel d={PONYTAIL} fill={p.fill} line={p.stroke} />
-          {strands('M190 90 C220 130 214 200 228 280 M180 86 C206 140 204 210 214 260')}
+          {strands('M190 90 C220 130 220 220 233 288 M180 86 C206 140 210 230 222 286')}
         </g>
       )}
       <Cel d={HAIR_MASS} fill={p.fill} line={p.stroke} />
@@ -518,7 +519,7 @@ function HairFront({ item, color }: { item: string; color: string }) {
   // Crown cap peaks above the head (y≈47) and ends in a fringe of bangs.
   const cap = 'M97 128 C88 22 212 22 203 128 C200 112 196 102 190 94 C188 102 184 108 178 112 C175 102 170 94 163 90 C160 100 156 106 150 110 C145 100 140 94 133 90 C130 100 126 106 122 112 C118 102 114 96 110 94 C105 104 100 116 97 128 Z';
   const sideLength = item === 'long' ? 250 : item === 'bob' ? 186 : 200;
-  const side = `M97 118 C92 150 94 ${sideLength - 30} 103 ${sideLength} C106 ${sideLength - 26} 108 ${sideLength - 60} 111 132 Z`;
+  const side = `M97 118 C92 150 92.5 ${sideLength - 36} 99 ${sideLength - 4} C100 ${sideLength - 10} 101.5 ${sideLength - 14} 102.5 ${sideLength - 16} C103.5 ${sideLength - 10} 104.8 ${sideLength - 5} 106 ${sideLength} C107.5 ${sideLength - 26} 109 ${sideLength - 60} 111 132 Z`;
   return (
     <g>
       <defs>{defs}</defs>
@@ -531,7 +532,8 @@ function HairFront({ item, color }: { item: string; color: string }) {
       ))}
       {item === 'bob' && [false, true].map((right) => (
         <g key={String(right)} transform={right ? MIRROR : undefined}>
-          <Cel d="M95 112 C88 150 92 176 106 190 C112 184 112 170 110 160 C106 140 106 126 110 116 Z" fill={p.fill} line={p.stroke} mirrored={right} depth={0.6} />
+          <Cel d="M95 112 C88 150 89 172 98 186 C100 184.5 102 183.4 103.6 183 C104.6 186.4 106 189.4 108.4 191.6 C111.6 182 112 170 110 160 C106 140 106 126 110 116 Z" fill={p.fill} line={p.stroke} mirrored={right} depth={0.6} />
+          <path d="M100 130 C97 152 98 168 103 182" fill="none" stroke={dark} strokeOpacity="0.4" strokeWidth="0.9" strokeLinecap="round" />
         </g>
       ))}
       {item !== 'bob' && <>
