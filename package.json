@@ -15,7 +15,8 @@
     "tauri:build": "npx tauri build",
     "bot:dev": "npm run dev --prefix discord-bot",
     "bot:build": "npm run build --prefix discord-bot",
-    "bot:start": "npm run start --prefix discord-bot"
+    "bot:start": "npm run start --prefix discord-bot",
+    "covers:bombshell": "node scripts/bombshell_covers.mjs"
   },
   "dependencies": {
     "@coinbase/wallet-sdk": "^4.3.7",
@@ -38,6 +39,7 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@aws-sdk/client-s3": "^3.1157.0",
     "@eslint/js": "^9.21.0",
     "@tailwindcss/vite": "^4.1.14",
     "@tauri-apps/cli": "^2.2.0",

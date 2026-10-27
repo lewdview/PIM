@@ -14,7 +14,7 @@ Last audited: 2026-10-24.
 | `src/data/card_catalog.json` / `public/data/card_catalog.json` | `coverUrl` | Same URL as the song's `coverArt`. Cards then pass it through `getCoverUrlForRarity` (`services/vaultService.ts`). |
 | `src/game/day_file_map.json` | `cover` | Used by `utils/resolveMediaUrls.ts` to map a day to its local or storage path. |
 | Rarity art (`utils/rarityArtwork.ts`) | `RARITY_ARTWORK_CONFIG` | uncommon / rare / legendary swap to `alternate-covers/*.jpg`; common and mythic keep `covers/`. `getSmartCoverCandidates` / `useSmartCoverArt` fall back to the original if the alternate is missing. |
-| Bombshell art (`utils/bombshellCards.ts`) | `src/game/bombshell_covers_map.json` | Per-day `lbFiles` / `normalFiles` under `rare_covers/day N/`, with a legacy `girl-covers/days/` fallback. |
+| Bombshell art (`utils/bombshellCards.ts`) | `src/game/bombshell_covers_map.json` | Per-day `lbFiles` / `normalFiles` under `rare_covers/day N/`, with a legacy `girl-covers/days/` fallback. Adding covers: see [bombshell-covers.md](bombshell-covers.md). |
 | Player preference | `localStorage.preferred_bombshell_cover_<day>` | Written by `useVaultStore.setPreferredCardCover` (card modal, codex) and `setCustomBombshellCover` (song-select variant pill). |
 | Player preference (song select only) | `localStorage.preferred_cover_<songId>` | Written alongside the above by the song-select variant pill. |
 | Echo cards | `cover_url` / `coverUrl` | `utils/echoSystem.ts`. |
@@ -53,7 +53,7 @@ Last audited: 2026-10-24.
 
 | Item | Status |
 |---|---|
-| `public/data/bombshell_covers_map.json` | Not read at runtime. The app imports `src/game/bombshell_covers_map.json` (the two are identical). |
+| `public/data/bombshell_covers_map.json` | Not read at runtime. The app imports `src/game/bombshell_covers_map.json`; `scripts/bombshell_covers.mjs map` keeps both identical. |
 | `/data/covers/day-190.jpg` (`OptionsModal.tsx` skin preview card) | File does not exist; `public/data/covers/` holds only `default.jpg`. The preview falls back to a broken image. |
 | `setRarityArtworkConfig`, `getBombshellPackCovers` (export), `getBombshellHiResCandidates` (export), `generateHarmonicPaletteFromUrl` (export), `isUseLocalFiles` (export) | Exported but never imported outside their own file. Only `setRarityArtworkConfig` is used nowhere at all. |
 | `girls-cover/` folder | Only mentioned in comments; `rare` now maps to `alternate-covers/`. |

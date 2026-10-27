@@ -311,13 +311,12 @@ export function getBombshellUnlockedCoversForDay(collection: OwnedCard[], day: n
       continue;
     }
 
-    // Check by matching coverUrl filename
+    // Check by matching the coverUrl's file name exactly. A substring match would let
+    // "lb day 001 - 01.jpg" also unlock "day 001 - 01.jpg".
     const coverUrl = c.card.coverUrl || '';
-    for (const f of allDayFiles) {
-      if (coverUrl.includes(encodeURIComponent(f)) || coverUrl.includes(f)) {
-        unlocked.add(f);
-      }
-    }
+    let urlFile = coverUrl.split(/[?#]/)[0].split('/').pop() || '';
+    try { urlFile = decodeURIComponent(urlFile); } catch {}
+    if (allDayFiles.has(urlFile)) unlocked.add(urlFile);
   }
 
   return unlocked;
