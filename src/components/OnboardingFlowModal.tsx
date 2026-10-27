@@ -22,7 +22,7 @@ type FunnelStep = 'SAVE_RUN' | 'WELCOME_PACK' | 'PACK_OPENING' | 'CARD_REVEAL' |
 
 export default function OnboardingFlowModal({ isOpen, onClose, gameStats }: OnboardingFlowModalProps) {
   const { signInWithMagicLink, signInWithWallet, user, status } = useAuthStore();
-  const { addToCollection, tokenBalance, addTokens } = useVaultStore();
+  const { addToCollection, tokenBalance, claimOnboardingBonus } = useVaultStore();
 
   const [step, setStep] = useState<FunnelStep>('SAVE_RUN');
   const [email, setEmail] = useState('');
@@ -38,7 +38,7 @@ export default function OnboardingFlowModal({ isOpen, onClose, gameStats }: Onbo
     e.preventDefault();
     setErrorMsg(null);
     if (!email || !email.includes('@')) {
-      setErrorMsg('Please enter a valid email address.');
+      setErrorMsg('Enter a valid email address.');
       return;
     }
 
@@ -66,7 +66,7 @@ export default function OnboardingFlowModal({ isOpen, onClose, gameStats }: Onbo
     setStep('PACK_OPENING');
     setTimeout(() => {
       // Award Tokens
-      addTokens(50);
+      void claimOnboardingBonus();
       setStep('CARD_REVEAL');
     }, 1800);
   };
@@ -133,7 +133,7 @@ export default function OnboardingFlowModal({ isOpen, onClose, gameStats }: Onbo
             <div className="flex flex-col items-center text-center space-y-4">
               <div className="font-mono text-[9px] uppercase tracking-[0.25em] text-[#00E5FF] border border-[#00E5FF]/30 bg-[#00E5FF]/5 px-3 py-1 rounded inline-flex items-center gap-1.5">
                 <Globe size={11} />
-                <span>USER.TH3SCR1B3.ART // IDENTITY PASSPORT HUB</span>
+                <span>USER.TH3SCR1B3.ART // ACCOUNT</span>
               </div>
 
               <div className="font-mono text-[10px] tracking-[0.3em] uppercase text-[#FF1493] font-bold">
@@ -315,7 +315,7 @@ export default function OnboardingFlowModal({ isOpen, onClose, gameStats }: Onbo
                   YOUR PIM ACCOUNT IS READY
                 </h2>
                 <p className="font-sans text-xs text-white/70 leading-relaxed px-2">
-                  Your collection is saved. Want to take ownership to the next level?
+                  Your collection is saved. Want to own it on-chain?
                 </p>
               </div>
 

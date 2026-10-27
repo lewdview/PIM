@@ -1,0 +1,356 @@
+/* campaignStory.css — campaign list (/campaign) and monthly chapter story
+   (/chapter/:month). Phone first, normal page flow (no inner scroll
+   containers or 100vh panels), and every bottom-anchored control sits above
+   the phone dock and the global player bar. --ch is the chapter colour. */
+
+.cs-page {
+  --ch: var(--shell-accent);
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 16px 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  font-family: var(--shell-body);
+  color: var(--shell-text);
+}
+@media (min-width: 768px) { .cs-page { padding: 24px 24px 40px; gap: 28px; } }
+
+.cs-eyebrow {
+  font: 600 11px/1.4 var(--shell-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--shell-text-3);
+}
+.cs-display {
+  margin: 0;
+  font-family: var(--shell-display);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  line-height: 0.92;
+  color: #fff;
+}
+.cs-muted { color: var(--shell-text-2); }
+
+/* ── Highlighted lyric quote ── */
+.cs-quote {
+  margin: 0;
+  font-family: var(--shell-display);
+  font-weight: 400;
+  text-transform: uppercase;
+  line-height: 1.02;
+  color: var(--shell-text-2);
+  overflow-wrap: anywhere;
+}
+.cs-quote mark {
+  background: none;
+  color: var(--ch);
+  text-shadow: 0 0 18px color-mix(in srgb, var(--ch) 45%, transparent);
+}
+.cs-hook { margin: 0; font-size: 14px; line-height: 1.4; color: var(--shell-text-2); overflow-wrap: anywhere; }
+.cs-hook mark { background: none; color: var(--ch); font-weight: 700; }
+
+/* ── Word chips ── */
+.cs-words { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.cs-word {
+  padding: 5px 9px;
+  border: 1px solid color-mix(in srgb, var(--ch) 40%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ch) 10%, transparent);
+  color: #fff;
+  font: 600 11.5px/1 var(--shell-mono);
+  text-transform: lowercase;
+}
+.cs-word[data-redacted='true'] {
+  color: transparent;
+  background: repeating-linear-gradient(90deg, var(--shell-raise) 0 6px, var(--shell-panel) 6px 8px);
+  border-color: var(--shell-line);
+  user-select: none;
+}
+.cs-words--sm .cs-word { padding: 3px 7px; font-size: 10.5px; }
+
+/* ── Progress bar ── */
+.cs-bar { height: 6px; border-radius: 999px; background: var(--shell-raise); overflow: hidden; }
+.cs-bar > span { display: block; height: 100%; border-radius: inherit; background: var(--ch); box-shadow: 0 0 12px var(--ch); }
+
+.cs-stats { display: flex; flex-wrap: wrap; gap: 8px 18px; font: 500 12px/1.2 var(--shell-mono); color: var(--shell-text-2); }
+.cs-stats b { color: #fff; font-variant-numeric: tabular-nums; }
+
+/* ═════════ Campaign list ═════════ */
+.cs-head { display: grid; gap: 10px; }
+.cs-head h1 { font-size: clamp(38px, 9vw, 72px); }
+
+.cs-now {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  display: grid;
+  gap: 16px;
+  padding: 20px 16px;
+  border: 1px solid color-mix(in srgb, var(--ch) 45%, transparent);
+  border-radius: var(--shell-radius);
+  background:
+    radial-gradient(120% 90% at 0% 0%, color-mix(in srgb, var(--ch) 22%, transparent), transparent 60%),
+    var(--shell-panel);
+  color: inherit;
+  text-decoration: none;
+}
+@media (min-width: 860px) { .cs-now { grid-template-columns: minmax(0, 1.5fr) minmax(240px, 1fr); padding: 28px; align-items: center; } }
+.cs-now h2 { font-size: clamp(48px, 13vw, 96px); }
+.cs-now .cs-quote { font-size: clamp(22px, 5.4vw, 34px); }
+.cs-now-body { display: grid; gap: 14px; min-width: 0; }
+
+.cs-mosaic { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.cs-mosaic img, .cs-mosaic span { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; background: var(--shell-raise); display: block; }
+@media (max-width: 859px) { .cs-now .cs-mosaic { display: none; } }
+
+.cs-grid { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 620px) { .cs-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 980px) { .cs-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+.cs-ch {
+  position: relative;
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  min-height: 44px;
+  border: 1px solid var(--shell-line);
+  border-radius: var(--shell-radius);
+  background: var(--shell-panel);
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.15s, transform 0.15s;
+}
+.cs-ch:hover { border-color: color-mix(in srgb, var(--ch) 55%, transparent); }
+.cs-ch:active { transform: translateY(1px); }
+.cs-ch:focus-visible { outline: 2px solid var(--ch); outline-offset: 2px; }
+.cs-ch[data-locked='true'] { background: var(--shell-bg); }
+.cs-ch[data-locked='true'] .cs-ch-name { color: var(--shell-text-3); }
+.cs-ch-top { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 12px; }
+.cs-ch-title { min-width: 0; }
+.cs-ch-num { font: 400 44px/0.85 var(--shell-display); color: var(--ch); }
+.cs-ch[data-locked='true'] .cs-ch-num { color: var(--shell-text-3); }
+.cs-ch-name { font: 400 28px/1 var(--shell-display); text-transform: uppercase; color: #fff; }
+.cs-ch-sub { font: 600 10.5px/1.3 var(--shell-mono); letter-spacing: 0.14em; color: var(--shell-text-3); text-transform: uppercase; }
+.cs-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 8px; border-radius: 999px;
+  font: 700 10.5px/1 var(--shell-mono); letter-spacing: 0.06em; text-transform: uppercase;
+  background: var(--shell-raise); color: var(--shell-text-2); white-space: nowrap;
+}
+.cs-badge[data-tone='done'] { background: color-mix(in srgb, #39ff14 16%, transparent); color: #39ff14; }
+.cs-badge[data-tone='live'] { background: color-mix(in srgb, var(--ch) 20%, transparent); color: #fff; }
+.cs-ch-foot { display: grid; gap: 6px; font: 500 11.5px/1 var(--shell-mono); color: var(--shell-text-2); }
+.cs-ch-foot > div:first-child { display: flex; justify-content: space-between; }
+.cs-spark { width: 100%; height: 34px; display: block; }
+
+/* ═════════ Chapter story ═════════ */
+.cs-topbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.cs-chip-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 44px; min-width: 44px; padding: 0 14px;
+  border: 1px solid var(--shell-line-strong); border-radius: 12px;
+  background: var(--shell-panel); color: var(--shell-text);
+  font: 600 13px/1 var(--shell-body); text-decoration: none; cursor: pointer;
+}
+.cs-chip-btn:hover { border-color: var(--ch); }
+.cs-chip-btn[aria-disabled='true'] { opacity: 0.35; pointer-events: none; }
+.cs-topbar-nav { display: flex; gap: 8px; align-items: center; }
+
+.cs-hero {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  display: grid;
+  gap: 16px;
+  padding: 22px 16px;
+  border-radius: var(--shell-radius);
+  border: 1px solid color-mix(in srgb, var(--ch) 35%, transparent);
+  background: var(--shell-panel);
+}
+@media (min-width: 768px) { .cs-hero { padding: 36px 32px; } }
+.cs-hero-art { position: absolute; inset: 0; z-index: -1; display: grid; grid-template-columns: repeat(6, 1fr); opacity: 0.22; filter: grayscale(0.4) blur(1px); }
+.cs-hero-art img { width: 100%; height: 100%; object-fit: cover; }
+.cs-hero::before {
+  content: ''; position: absolute; inset: 0; z-index: -1;
+  background:
+    linear-gradient(180deg, rgba(8, 6, 4, 0.55) 0%, rgba(8, 6, 4, 0.92) 70%),
+    radial-gradient(100% 80% at 0% 0%, color-mix(in srgb, var(--ch) 30%, transparent), transparent 70%);
+}
+.cs-hero h1 { font-size: clamp(56px, 17vw, 132px); }
+.cs-hero .cs-quote { font-size: clamp(26px, 7vw, 52px); max-width: 22ch; }
+.cs-cite { font: 500 12px/1.4 var(--shell-mono); color: var(--shell-text-3); }
+
+.cs-milestones { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.cs-ms {
+  display: grid; gap: 6px; padding: 10px; min-height: 44px;
+  border: 1px solid var(--shell-line); border-radius: 12px; background: var(--shell-bg);
+  font: 500 11px/1.2 var(--shell-mono); color: var(--shell-text-3); text-align: left;
+}
+.cs-ms b { font: 400 18px/1 var(--shell-display); color: var(--shell-text-2); }
+.cs-ms[data-state='ready'] { border-color: var(--shell-gold); color: var(--shell-gold); cursor: pointer; }
+.cs-ms[data-state='ready'] b { color: var(--shell-gold); }
+.cs-ms[data-state='claimed'] { color: #39ff14; }
+.cs-ms[data-state='claimed'] b { color: #39ff14; }
+
+/* Emotional arc */
+.cs-arc { display: grid; gap: 8px; }
+.cs-arc-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.cs-arc svg { width: 100%; height: 132px; display: block; overflow: visible; touch-action: pan-y; }
+.cs-arc .arc-line { fill: none; stroke: var(--ch); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.cs-arc .arc-fill { fill: color-mix(in srgb, var(--ch) 12%, transparent); }
+.cs-arc .arc-sep { stroke: var(--shell-line-strong); stroke-dasharray: 3 4; vector-effect: non-scaling-stroke; }
+.cs-arc-dots { position: relative; height: 0; }
+.cs-arc-dot {
+  position: absolute; width: 28px; height: 28px; margin: -14px 0 0 -14px; padding: 0;
+  border: 0; background: none; cursor: pointer; display: grid; place-items: center;
+}
+.cs-arc-dot::after {
+  content: ''; width: 9px; height: 9px; border-radius: 50%;
+  background: var(--shell-bg); border: 2px solid var(--shell-text-3);
+}
+.cs-arc-dot[data-state='cleared']::after { background: var(--ch); border-color: var(--ch); }
+.cs-arc-dot[data-state='open']::after { border-color: #fff; }
+.cs-arc-dot[data-selected='true']::after { width: 14px; height: 14px; border-color: #fff; box-shadow: 0 0 0 4px color-mix(in srgb, var(--ch) 40%, transparent); }
+.cs-arc-acts { display: grid; font: 600 10.5px/1.2 var(--shell-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--shell-text-3); }
+.cs-arc-acts span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 6px; }
+
+/* Acts and beats */
+.cs-act { display: grid; gap: 10px; scroll-margin-top: 80px; }
+.cs-act-head { display: grid; gap: 4px; padding-top: 6px; border-top: 1px solid var(--shell-line); }
+.cs-act-head h2 { font-size: clamp(34px, 9vw, 56px); color: var(--ch); }
+
+/* Act story: opens / turns / lands, each a tappable lyric line */
+.cs-synopsis { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.cs-synopsis button {
+  display: grid; gap: 4px; width: 100%; text-align: left; cursor: pointer;
+  padding: 10px 12px; border-radius: 12px;
+  background: color-mix(in srgb, var(--ch) 7%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ch) 18%, transparent);
+  color: var(--shell-text-2); font: 500 14px/1.35 var(--shell-body);
+  overflow-wrap: anywhere;
+}
+.cs-synopsis button:hover, .cs-synopsis button:focus-visible { border-color: var(--ch); color: #fff; outline: none; }
+.cs-synopsis small { font: 600 10px/1 var(--shell-mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--shell-text-3); }
+.cs-synopsis li[data-beat='turn'] small { color: var(--ch); }
+.cs-synopsis mark { background: none; color: var(--ch); }
+.cs-act-toggle {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  margin-top: 8px; padding: 10px 12px; min-height: 44px; border-radius: 12px; cursor: pointer;
+  background: var(--shell-raise); border: 1px solid var(--shell-line); color: var(--shell-text-2);
+  font: 600 11px/1 var(--shell-mono); letter-spacing: 0.1em; text-transform: uppercase;
+}
+.cs-act-toggle > span:last-child { display: inline-flex; align-items: center; gap: 6px; color: #fff; }
+.cs-act-toggle svg { transition: transform 0.2s; }
+.cs-act-toggle[aria-expanded='true'] svg { transform: rotate(180deg); }
+.cs-quote[data-plain='true'] { text-transform: none; font-family: var(--shell-body); font-weight: 500; font-size: clamp(20px, 5vw, 32px) !important; line-height: 1.25; max-width: 30ch; text-wrap: balance; }
+.cs-act-synopsis { margin: 6px 0 0; max-width: 62ch; color: var(--shell-text-2); font: 400 15px/1.5 var(--shell-body); text-wrap: pretty; }
+
+.cs-act-gate {
+  display: flex; gap: 10px; align-items: center;
+  padding: 12px 14px; border-radius: 12px;
+  border: 1px dashed var(--shell-line-strong); color: var(--shell-text-2); font-size: 13px;
+}
+
+.cs-beats { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.cs-beat {
+  border: 1px solid var(--shell-line);
+  border-radius: 14px;
+  background: var(--shell-panel);
+  scroll-margin: 80px 0 calc(var(--shell-dock-h) + 120px);
+}
+.cs-beat[data-selected='true'] { border-color: color-mix(in srgb, var(--ch) 70%, transparent); background: color-mix(in srgb, var(--ch) 7%, var(--shell-panel)); }
+.cs-beat[data-state='locked'] { background: var(--shell-bg); }
+.cs-beat-main {
+  width: 100%; display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 12px; align-items: center;
+  padding: 10px; min-height: 64px; border: 0; background: none; color: inherit; text-align: left; cursor: pointer;
+  font: inherit;
+}
+.cs-beat-main:focus-visible { outline: 2px solid var(--ch); outline-offset: -2px; border-radius: 14px; }
+.cs-beat-cover { position: relative; width: 52px; height: 52px; border-radius: 10px; overflow: hidden; background: var(--shell-raise); }
+.cs-beat-cover img { width: 100%; height: 100%; object-fit: cover; }
+.cs-beat[data-state='locked'] .cs-beat-cover img { filter: grayscale(1) brightness(0.45); }
+.cs-beat-day {
+  position: absolute; left: 3px; bottom: 3px; padding: 2px 4px; border-radius: 5px;
+  background: rgba(0, 0, 0, 0.75); font: 700 9.5px/1 var(--shell-mono); color: #fff;
+}
+.cs-beat-body { display: grid; gap: 4px; min-width: 0; }
+.cs-beat-title { font: 700 15px/1.2 var(--shell-body); color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cs-beat[data-state='locked'] .cs-beat-title { color: var(--shell-text-2); }
+.cs-beat-body .cs-hook { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 13px; }
+.cs-beat[data-selected='true'] .cs-beat-body .cs-hook { -webkit-line-clamp: unset; }
+.cs-beat-status { display: grid; justify-items: end; gap: 4px; font: 700 10.5px/1 var(--shell-mono); color: var(--shell-text-3); }
+.cs-medal { font: 700 10.5px/1 var(--shell-mono); letter-spacing: 0.06em; }
+
+.cs-beat-detail { display: grid; gap: 12px; padding: 0 12px 14px; }
+.cs-detail-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.cs-detail-grid > div { padding: 8px; border-radius: 10px; background: var(--shell-bg); display: grid; gap: 4px; }
+.cs-detail-grid small { font: 600 9.5px/1 var(--shell-mono); letter-spacing: 0.1em; color: var(--shell-text-3); text-transform: uppercase; }
+.cs-detail-grid b { font: 700 15px/1 var(--shell-mono); color: #fff; font-variant-numeric: tabular-nums; }
+.cs-detail-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.cs-lock-note {
+  padding: 10px 12px; border-radius: 10px; font-size: 13px; line-height: 1.4;
+  background: color-mix(in srgb, #ff5500 10%, transparent); color: #ffb48a; border: 1px solid color-mix(in srgb, #ff5500 30%, transparent);
+}
+.cs-mod {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 10px 12px; border-radius: 10px; border: 1px solid color-mix(in srgb, #39ff14 30%, transparent);
+  font: 600 12px/1.3 var(--shell-mono); color: var(--shell-text-2); text-transform: uppercase;
+}
+
+/* Sticky play bar: always above the phone dock (and the player bar when a track is loaded). */
+.cs-playbar {
+  position: sticky;
+  z-index: 40;
+  bottom: calc(12px + var(--pim-dock-lift, 0px) + var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px));
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 8px 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--ch) 45%, transparent);
+  border-radius: 18px;
+  background: rgba(21, 17, 12, 0.96);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
+}
+@media (max-width: 767px) {
+  body.pim-has-dock .cs-playbar { bottom: calc(var(--shell-dock-h) + 22px + var(--pim-dock-lift, 0px) + var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px)); }
+}
+.cs-playbar img, .cs-playbar .cs-pb-ph { width: 44px; height: 44px; border-radius: 10px; object-fit: cover; background: var(--shell-raise); }
+.cs-pb-text { display: grid; gap: 3px; min-width: 0; }
+.cs-pb-text small { font: 600 10px/1 var(--shell-mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ch); }
+.cs-pb-text b { font: 700 14px/1.15 var(--shell-body); color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cs-playbar .btn-3d { padding: 13px 18px; min-height: 48px; }
+.cs-playbar .btn-3d[disabled] { --c: var(--shell-raise); --d: #000; --fg: var(--shell-text-3); cursor: not-allowed; }
+
+.cs-empty { padding: 40px 16px; text-align: center; font: 600 12px/1.4 var(--shell-mono); color: var(--shell-text-3); letter-spacing: 0.12em; }
+
+/* Wide screens read like a book: act title in the margin, tracks beside it. */
+@media (min-width: 1024px) {
+  .cs-act { grid-template-columns: 300px minmax(0, 1fr); gap: 28px; align-items: start; }
+  /* A closed act spans the page, its story beats side by side. */
+  .cs-act[data-open='false'] { grid-template-columns: minmax(0, 1fr); }
+  .cs-act[data-open='false'] .cs-act-head { position: static; border-top: 1px solid var(--shell-line); padding-top: 6px; }
+  .cs-act[data-open='false'] .cs-synopsis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .cs-act[data-open='false'] .cs-act-toggle { justify-self: start; min-width: 320px; }
+  .cs-act-head { position: sticky; top: 84px; border-top: 0; padding-top: 0; }
+  .cs-act-body { display: grid; gap: 10px; padding-top: 6px; border-top: 1px solid var(--shell-line); }
+  .cs-arc svg { height: 160px; }
+}
+.cs-act-body { display: grid; gap: 10px; min-width: 0; }
+
+/* Campaign cards: the chapter's three acts as a path */
+.cs-ch-acts { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.cs-ch-acts li {
+  display: grid; gap: 3px; min-width: 0; padding: 6px 8px; border-radius: 8px;
+  background: var(--shell-raise); font: 600 12px/1.2 var(--shell-body); color: var(--shell-text-2);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.cs-ch-acts small { font: 600 9.5px/1 var(--shell-mono); letter-spacing: 0.1em; color: var(--ch); }
+.cs-ch[data-locked='true'] .cs-ch-acts small { color: var(--shell-text-3); }
+.cs-now-act { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: baseline; font-size: 14px; color: var(--shell-text-2); }
+.cs-now-act small { font: 600 11px/1 var(--shell-mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ch); }

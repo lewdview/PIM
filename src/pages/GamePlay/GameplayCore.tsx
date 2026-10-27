@@ -1,13 +1,15 @@
 // PIM : beatstar-vault gameplay engine
 import React, { useEffect, useLayoutEffect, useRef, useState, useCallback, memo } from "react";
 import { useParams, useLocation } from "wouter";
-import { getSongById, saveHighScore, isSongTimeLocked, getModifierForSong, STAGEIFICATION_CONFIG, getCandidateAudioUrls } from "@/game/api";
-import { saveMedal, saveScoreHistory } from "@/game/progress";
+import { getSongById, saveHighScore, getModifierForSong, STAGEIFICATION_CONFIG, getCandidateAudioUrls } from "@/game/api";
+import { saveMedal, saveScoreHistory, saveCampaignClear } from "@/game/progress";
+import { isCampaignRunSearch } from "@/game/campaign";
+import { getCampaignStage, type CampaignStage } from "@/game/chapterStory";
 import type { GameSong } from "@/game/api";
 import type { Note, JudgmentDisplay, GameState, NoteType } from "@/game/types";
 import { loadOpts, keyLabel, getEffectiveDpr, type GameOpts, type PovMode, type RenderResolution, type GfxLevel, type FpsTarget, type ParticleDensity } from "@/lib/options";
 import { audioManager, AudioManager, HEALING_LANE_FREQUENCIES } from "@/game/audio";
-import { useVaultStore } from "@/store/useVaultStore";
+import { useVaultStore, ownsCardForDay } from "@/store/useVaultStore";
 import { useGlobalPlayer } from "@/store/useGlobalPlayer";
 import { haptics } from "../../utils/haptics";
 import { motion, AnimatePresence } from "framer-motion";
@@ -16,21 +18,30 @@ import { logAnalyticsEvent } from "../../services/telemetryService";
 import { gameSenseService } from "@/services/gameSenseService";
 import { supabase } from "@/services/supabaseClient";
 import { useAuthStore } from "@/store/useAuthStore";
+import { DELUXE_UNLOCK_ACCURACY, isDeluxeSongId, isDeluxeUnlocked, loadEarnedDeluxeDays } from "@/lib/deluxe";
 import { purchasePack, requestRunToken, type OwnedCard } from "@/services/vaultService";
 import { TransmissionIcon } from "../../components/icons/CustomVectorIcons";
 import VideoExportModal from "@/components/ui/VideoExportModal";
-import { getRelativeDay } from "../../utils/dayCalc";
+import { getRelativeDay, getCurrentDay } from "../../utils/dayCalc";
 import { getSmartCoverCandidates, isBombshellCoverPath } from "@/utils/rarityArtwork";
-import { STAGE_BOUNDS, MEDAL_STOPS, MEDAL_COLOR_MAP, LANE_COUNT, HIT_RATIO, HW_TOP, HW_BOT, MATRIX_CHARS, MATRIX_COLUMNS, POWER_UPS, type PUType } from './constants';
+import { resolveGameCover } from "@/utils/gameCover";
+import { MEDAL_STOPS, MEDAL_COLOR_MAP, LANE_COUNT, HIT_RATIO, HW_TOP, HW_BOT, MATRIX_CHARS, MATRIX_COLUMNS, POWER_UPS, type PUType } from './constants';
 import { type StageGeometry, getStageGeometry, approachTime, hwAtProgress, laneAt, lerp, formatTimeSec, isDirectionMatch } from './geometry';
 import { colorWithAlpha, hslToHex, getDifficultyLaneColor } from './colorUtils';
 import { perfectPlusWindow, perfectWindow, goodWindow, missWindow } from './timing';
-import { type TrackArchetype, type ArchetypeMeta, ARCHETYPE_METAS, selectSongArchetype, isArchetypeDevModeEnabled } from './archetypes';
-import { type ProjectionResult, getCorkscrewSpiralPos, getWaveCoasterPos, getFlat2DPos, getRadialOrbitPos, getHorizontalDriftPos, getCockpitHudPos, getHyperPrismPos, getDnaHelixPos, getVertigoDropPos, getSingularityVoidPos, getGroundZeroPos, getOrbitalHaloPos, getMobiusLoopPos, getArchetypeProjection, getLaneFromCoords } from './projections';
+import { type TrackArchetype, type ArchetypeMeta, ARCHETYPE_METAS, selectSongArchetype, selectSongPov, isArchetypeDevModeEnabled } from './archetypes';
+import { type ProjectionResult, getCorkscrewSpiralPos, getWaveCoasterPos, getFlat2DPos, getHorizontalDriftPos, getCockpitHudPos, getHyperPrismPos, getDnaHelixPos, getVertigoDropPos, getSingularityVoidPos, getGroundZeroPos, getOrbitalHaloPos, getMobiusLoopPos, getArchetypeProjection, getLaneFromCoords } from './projections';
+import { hasPovScene, usesFlatHighway, hasStraightHitLine, drawPovScene, drawPovLanes, type PovSceneInput } from './povScenes';
 import { refineAndBlendEdges, disposeCanvas, drawMovingGasAura } from './drawHelpers';
 import JudgmentBadge, { getJudgmentBadgeSvgHtml, getJudgmentStreamItemHtml } from './JudgmentBadge';
 import GameplayVisualizer from './GameplayVisualizer';
 import TutorialOverlay, { type TutorialStepType } from './TutorialOverlay';
+import { loadLyricsForDay, drawTrackLyrics, drawLyricBackdrop, type TimedLine } from './trackLyrics';
+import { getStageStarts, stageAtTime } from './stageTimeline';
+import { generateMasterChart, ANALYSIS_SAMPLE_RATE, CHART_MASTER_VERSION, CHART_MASTER_DELUXE_VERSION } from '@/game/chartMaster';
+import { drawSlabBody, drawTopFaceBevel, drawHitPop3D, drawHitPillar3D, hitPillarReach, makeHitShards, setNote3DQuality, type HitShard } from './notes3d';
+import { spawnCelebration, drawCelebrations, type Celebration } from './noteCelebrations';
+import { chooseWarpNote, isWarpNote, parseWarpOverride, secretLevelPath, INSTANT_WARP_DELAY_MS, WARP_SCORE_BONUS, type WarpType } from '@/game/secret/warp';
 
 // Use Vite's eager glob to grab files in /public/data/slideshow/
 const imageModules = import.meta.glob<string>('../../public/data/slideshow/**/*.{png,jpg,jpeg,gif,webp,svg}', { query: '?url', import: 'default', eager: true });
@@ -557,6 +568,8 @@ interface HitEffect {
   color: string;
   kind: "PERFECT+" | "PERFECT" | "GOOD" | "SHIELDED" | "MISS";
   particles: HitParticle[];
+  laneW?: number;
+  shards?: HitShard[];
 }
 interface AmbientParticle {
   x: number;
@@ -990,20 +1003,17 @@ function generateProceduralChart(song: any): Note[] {
   return stageified.notes;
 }
 
-// ── Audio Forge: Transient Onset Beatmap Generator ───────────────
-async function generateAudioForgeChart(song: any): Promise<Note[]> {
+// ── Chart Master (v6): audio-driven chart generation at runtime ──
+// Used when a song has no baked chart (or no baked Deluxe chart). Same
+// generator as scripts/bake_master_charts.ts, so runtime and baked charts match.
+async function generateAudioForgeChart(song: any, opts: { deluxe?: boolean } = {}): Promise<Note[]> {
   const audioUrl = song.audioUrl;
   if (!audioUrl) {
     throw new Error("No audioUrl found for song");
   }
 
-  const bpm = song.bpm || 120;
-  const beatDuration = 60 / bpm;
-  const duration = Math.min(180, song.duration || 120);
-  const difficulty = song.difficultyLevel || 5;
+  console.log(`[Chart Master] Analysing audio: ${audioUrl}`);
 
-  console.log(`[Audio Forge] Running transient onset analysis on: ${audioUrl}`);
-  
   const candidates = getCandidateAudioUrls(audioUrl, song.day);
   let response: Response | null = null;
   for (const c of candidates) {
@@ -1020,168 +1030,38 @@ async function generateAudioForgeChart(song: any): Promise<Note[]> {
   }
   const arrayBuffer = await response.arrayBuffer();
 
-  const sampleRate = 22050;
+  // decodeAudioData resamples to the context rate; downmix to mono ourselves
   const offlineCtx = new (window.OfflineAudioContext || (window as any).webkitOfflineAudioContext)(
     1,
-    Math.floor(sampleRate * duration),
-    sampleRate
+    ANALYSIS_SAMPLE_RATE,
+    ANALYSIS_SAMPLE_RATE
   );
-
   const audioBuffer = await offlineCtx.decodeAudioData(arrayBuffer);
-  const channelData = audioBuffer.getChannelData(0);
-  const totalSamples = channelData.length;
-
-  const blockSize = 512;
-  const movingAvgWindow = 43;
-  const blockEnergies: number[] = [];
-
-  for (let i = 0; i < totalSamples; i += blockSize) {
-    let sum = 0;
-    const end = Math.min(totalSamples, i + blockSize);
-    for (let j = i; j < end; j++) {
-      sum += channelData[j] * channelData[j];
-    }
-    const rms = Math.sqrt(sum / (end - i));
-    blockEnergies.push(rms);
+  const pcm = new Float32Array(audioBuffer.length);
+  for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
+    const data = audioBuffer.getChannelData(ch);
+    for (let i = 0; i < data.length; i++) pcm[i] += data[i] / audioBuffer.numberOfChannels;
   }
 
-  // Detect active sound energy fade-out boundary to clip trailing silence
-  let lastActiveBlock = blockEnergies.length - 1;
-  while (lastActiveBlock > movingAvgWindow && blockEnergies[lastActiveBlock] < 0.008) {
-    lastActiveBlock--;
-  }
-  const activeEnergyEndTime = (lastActiveBlock * blockSize) / sampleRate;
-  const effectiveAudioDuration = Math.max(10, Math.min(duration, activeEnergyEndTime > 10 ? activeEnergyEndTime : duration));
-  console.log(`[Audio Forge] Track duration: ${duration}s, active sound energy until ${activeEnergyEndTime.toFixed(1)}s (effective: ${effectiveAudioDuration.toFixed(1)}s)`);
-
-  const thresholdRatio = 1.35 - (difficulty * 0.035);
-  const minCooldown = Math.max(0.12, 0.45 - (difficulty * 0.035));
-  let lastNoteTime = 0;
-  const noteTimes: number[] = [];
-
-  for (let b = movingAvgWindow; b < blockEnergies.length; b++) {
-    const instantEnergy = blockEnergies[b];
-
-    let windowSum = 0;
-    for (let w = b - movingAvgWindow; w < b; w++) {
-      windowSum += blockEnergies[w];
-    }
-    const localAvgEnergy = windowSum / movingAvgWindow;
-    const blockTime = (b * blockSize) / sampleRate;
-
-    if (instantEnergy > localAvgEnergy * thresholdRatio && instantEnergy > 0.015) {
-      if (blockTime - lastNoteTime >= minCooldown && blockTime >= 3.0 && blockTime < effectiveAudioDuration - 3.5) {
-        noteTimes.push(blockTime);
-        lastNoteTime = blockTime;
-      }
-    }
-  }
-
-  const notes: Note[] = [];
-  let lastLane = 1;
-  let secondLastLane = 0;
-
-  noteTimes.forEach((time, index) => {
-    const availableLanes = [0, 1, 2].filter(l => l !== lastLane && l !== secondLastLane);
-    const lane = availableLanes[Math.floor((time * 17) % availableLanes.length)];
-    secondLastLane = lastLane;
-    lastLane = lane;
-
-    let noteType: 'tap' | 'hold' = 'tap';
-    let holdDuration: number | undefined;
-    let targetLane: number | undefined;
-    let swipeDirection: 'up' | 'down' | 'left' | 'right' | undefined;
-
-    const blockIndex = Math.floor((time * sampleRate) / blockSize);
-    const energy = blockEnergies[blockIndex] || 0;
-    const isStage1 = time < effectiveAudioDuration * 0.15;
-
-    if (!isStage1 && difficulty >= 3 && energy > 0.12 && index % 4 === 1) {
-      noteType = 'hold';
-      holdDuration = beatDuration * (1.5 + (index % 2));
-      
-      const slideRoll = (index * 19) % 100;
-      if (difficulty >= 5 && slideRoll < 45) {
-        targetLane = (lane + 1 + (index % 2)) % 3;
-      }
-      
-      const swipeRoll = (index * 23) % 100;
-      if (difficulty >= 4 && swipeRoll < 60) {
-        swipeDirection = (index % 3 === 0) ? 'up' : (index % 3 === 1) ? 'left' : 'right';
-      }
-    } else if (difficulty >= 4 && (index * 23) % 100 < 22) {
-      noteType = 'swipe' as any;
-      swipeDirection = (index % 3 === 0) ? 'up' : (index % 3 === 1) ? 'left' : 'right';
-    }
-
-    notes.push({
-      id: index,
-      time: parseFloat(time.toFixed(3)),
-      lane,
-      type: noteType,
-      holdDuration: holdDuration ? parseFloat(holdDuration.toFixed(3)) : undefined,
-      targetLane,
-      swipeDirection
-    });
-
-    const canSpawnDual = difficulty >= 4;
-    if (canSpawnDual) {
-      const dualRoll = (time * 23 + index * 3) % 100;
-      const dualChance = difficulty >= 7 ? 35 : 20;
-      
-      if (dualRoll < dualChance && energy > 0.12) {
-        const comboIdx = (index + Math.floor(time)) % 3;
-        let laneA = 0;
-        let laneB = 2;
-        if (comboIdx === 1) {
-          laneA = 1;
-          laneB = 2;
-        } else if (comboIdx === 2) {
-          laneA = 0;
-          laneB = 1;
-        }
-
-        const lastNote = notes[notes.length - 1];
-        if (lastNote) {
-          lastNote.lane = laneA;
-        }
-
-        let secondType: 'tap' | 'hold' = 'tap';
-        let secondHoldDuration: number | undefined;
-        let secondSwipeDir: 'up' | 'down' | 'left' | 'right' | undefined;
-        let secondTargetLane: number | undefined;
-        
-        const typeRoll = (index * 13 + Math.floor(time)) % 100;
-        if (!isStage1 && difficulty >= 6 && typeRoll < 40) {
-          secondType = 'hold';
-          secondHoldDuration = beatDuration * 1.5;
-          if (index % 2 === 0) {
-            secondSwipeDir = 'up';
-          }
-        }
-        
-        notes.push({
-          id: 30000 + index,
-          time: parseFloat(time.toFixed(3)),
-          lane: laneB,
-          type: secondType,
-          holdDuration: secondHoldDuration ? parseFloat(secondHoldDuration.toFixed(3)) : undefined,
-          targetLane: secondTargetLane,
-          swipeDirection: secondSwipeDir
-        });
-      }
-    }
+  const result = generateMasterChart(pcm, audioBuffer.sampleRate, {
+    bpm: song.bpm || 120,
+    duration: audioBuffer.duration,
+    // Deluxe songs already carry the +2 difficulty; the generator adds its own
+    difficultyLevel: opts.deluxe ? Math.max(1, (song.difficultyLevel || 7) - 2) : (song.difficultyLevel || 5),
+    day: song.day,
+    deluxe: opts.deluxe,
   });
 
-  if (notes.length < 10) {
-    console.warn(`[Audio Forge] Only detected ${notes.length} peaks. Falling back to math generation.`);
+  if (result.notes.length < 10) {
+    if (opts.deluxe) throw new Error(`Deluxe chart too sparse (${result.notes.length} notes)`);
+    console.warn(`[Chart Master] Only ${result.notes.length} notes generated. Falling back to math generation.`);
     return generateProceduralChart(song);
   }
 
-  const stageified = stageifyNotes(notes, effectiveAudioDuration, bpm, song.difficultyLevel || 5);
-  song.stages = stageified.stages;
-  console.log(`[Audio Forge] Success! Analyzed ${effectiveAudioDuration.toFixed(1)}s audio and forged ${stageified.notes.length} notes (stages applied).`);
-  return stageified.notes;
+  song.stages = result.stages;
+  song.chartVersion = opts.deluxe ? CHART_MASTER_DELUXE_VERSION : CHART_MASTER_VERSION;
+  console.log(`[Chart Master] ${result.notes.length} notes · ${result.report.bpm} BPM · POV drops at ${result.report.povTimes.join('s, ')}s · ${result.report.ms}ms`);
+  return result.notes;
 }
 
 function createTutorialNotesForStep(step: TutorialStepType, bpm: number, startT: number, startId = 0): Note[] {
@@ -1268,6 +1148,7 @@ export default function Game() {
   const offscreenCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const noteTrailsRef = useRef<{ id: string; x: number; y: number; color: string; size: number; alpha: number; birthTime: number }[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const trackLyricsRef = useRef<{ day: number; lines: TimedLine[] }>({ day: 0, lines: [] });
   const audioObjectUrlRef = useRef<string | null>(null);
   const audioOffsetRef = useRef(0);
   const laneColorsRef = useRef<[string, string, string]>(["#FF1493", "#00E5FF", "#39FF14"]);
@@ -1374,6 +1255,8 @@ export default function Game() {
     }
   }, []);
   const songRef = useRef<GameSong | null>(null);
+  /** Stage start times for the loaded song (chart-defined, else the fixed split). */
+  const stageStartsRef = useRef<number[]>(getStageStarts(null));
   const modifierRef = useRef<'vocal_isolation' | 'bass_realm' | 'corrupted_signal' | 'none'>('none');
   const [activeModifier, setActiveModifier] = useState<'vocal_isolation' | 'bass_realm' | 'corrupted_signal' | 'none'>('none');
   const phaseRef = useRef<
@@ -1386,6 +1269,7 @@ export default function Game() {
     | "rewinding"
     | "audioError"
     | "loadError"
+    | "locked"
     | "unmounted"
   >("loading");
   const puRef = useRef<PUState>({
@@ -1400,6 +1284,7 @@ export default function Game() {
     cycle: 0,
   });
   const hitFxRef = useRef<HitEffect[]>([]);
+  const celebrationsRef = useRef<Celebration[]>([]);
   const shieldChargesRef = useRef<number>(0);
   const lastMissTimeRef = useRef<number>(0);
   const lastMissLaneTimeRef = useRef<number[]>([0, 0, 0]);
@@ -1415,6 +1300,12 @@ export default function Game() {
   const tunnelComboFlashRef = useRef<{ lastCombo: number; flashStartMs: number }>({ lastCombo: 0, flashStartMs: 0 });
   const milestoneFxRef = useRef<MilestoneEffect[]>([]);
   const remixFlashUntilRef = useRef<number>(0);
+  // Secret warp notes: banner shown on hit, and whether clearing the song opens the runner level
+  const warpBannerRef = useRef<{ text: string; until: number; instant: boolean } | null>(null);
+  const warpClearUnlockedRef = useRef(false);
+  /** An instant warp was hit; if the song ends before it fires, finishGame takes the warp instead. */
+  const instantWarpPendingRef = useRef(false);
+  const activateWarpRef = useRef<(type: WarpType) => void>(() => {});
   const remixEffectNameRef = useRef<string | null>(null);
 
   const continueUsedRef = useRef<number>(0); // how many continues the player has used (max 3)
@@ -1472,6 +1363,10 @@ export default function Game() {
   const isTutorialRef = useRef(new URLSearchParams(window.location.search).get("tutorial") === "true");
   const isTutorial = isTutorialRef.current;
   const activeTutorial = isTutorial;
+  // Set when this run was launched from a campaign chapter (?mode=campaign).
+  // Campaign runs play at the stage's campaign level and are the only runs
+  // that clear campaign stages.
+  const campaignStageRef = useRef<CampaignStage | null>(null);
 
   // ── Curriculum-Driven Tutorial State ──
   const TUTORIAL_STEPS: TutorialStepType[] = [
@@ -1501,6 +1396,12 @@ export default function Game() {
   const isTutorialHelpOpenRef = useRef(false);
 
   const [retryCount, setRetryCount] = useState(0);
+  // Ownership gate: the song that failed the card-ownership check + where to send the user back
+  const [lockedSong, setLockedSong] = useState<GameSong | null>(null);
+  const [lockedOrigin, setLockedOrigin] = useState("/songs");
+  /** Why the song is locked: no card for the day, or no Deluxe unlock for a Deluxe chart. */
+  const [lockedReason, setLockedReason] = useState<"card" | "deluxe">("card");
+  const [claimingCard, setClaimingCard] = useState(false);
   const [phase, setPhase] = useState<typeof phaseRef.current>("loading");
   const [countdown, setCountdown] = useState(3);
   const [displayGs, setDisplayGs] = useState<GameState>(gsRef.current);
@@ -1509,7 +1410,7 @@ export default function Game() {
   const [loadState, setLoadState] = useState<TransmissionLoadState>({
     step: 1,
     stepLabel: "FETCHING TRANSMISSION METADATA",
-    detailMsg: "Querying track catalog & JSON manifest...",
+    detailMsg: "Finding the track…",
     bytesLoaded: 0,
     bytesTotal: 0,
     speedBps: 0,
@@ -1698,6 +1599,8 @@ export default function Game() {
 
   // ── 6-Archetype Track Geometry & Stage Color Primer Engine ──
   const activeArchetypeRef = useRef<TrackArchetype>('cyber_tunnel');
+  // Song time of the last rendered frame, so hit effects can find the moving 3D strike targets.
+  const povFxClockRef = useRef(0);
   const [activeArchetype, setActiveArchetype] = useState<TrackArchetype>('cyber_tunnel');
 
   // ── POV Perspective Engine State ──
@@ -1758,7 +1661,8 @@ export default function Game() {
   const POV_CONFIGS: Record<PovMode, { icon: string; short: string; full: string }> = {
     classic: { icon: '📐', short: '2.5D CLASSIC', full: '2.5D CLASSIC HIGHWAY' },
     flat_2d: { icon: '🎹', short: 'ORTHO 2D', full: 'ORTHOGRAPHIC 2D HIGHWAY' },
-    circle: { icon: '🎯', short: '360° ORBIT', full: '360° RADIAL CYBER ORBIT' },
+    canyon_run: { icon: '🏜️', short: 'CANYON RUN', full: 'DESERT CANYON RUN' },
+    aurora_bridge: { icon: '🌉', short: 'AURORA BRIDGE', full: 'AURORA GLASS BRIDGE' },
     horizontal_drift: { icon: '⏩', short: 'SIDE DRIFT', full: 'HORIZONTAL SIDE-SCROLLER' },
     cyber_tunnel: { icon: '🌀', short: '3D TUNNEL', full: '3D CYBER TUNNEL VORTEX' },
     corkscrew: { icon: '🌪️', short: 'CORKSCREW', full: '3D CORKSCREW HELICAL SLIDE' },
@@ -1782,7 +1686,6 @@ export default function Game() {
     const modes: PovMode[] = [
       'classic',
       'flat_2d',
-      'circle',
       'horizontal_drift',
       'cyber_tunnel',
       'corkscrew',
@@ -1796,6 +1699,8 @@ export default function Game() {
       'ground_zero',
       'orbital_halo',
       'mobius_loop',
+      'canyon_run',
+      'aurora_bridge',
       'dynamic_stage'
     ];
     const currentIdx = modes.indexOf(activePovModeRef.current);
@@ -2243,16 +2148,22 @@ export default function Game() {
   );
 
   const triggerHitFx = useCallback(
-    (lane: number, kind: "PERFECT+" | "PERFECT" | "GOOD" | "SHIELDED" | "MISS", customY?: number, swipeDir?: Note['swipeDirection']) => {
+    (lane: number, kind: "PERFECT+" | "PERFECT" | "GOOD" | "SHIELDED" | "MISS", customY?: number, swipeDir?: Note['swipeDirection'], noteType?: Note['type']) => {
       const canvas = canvasRef.current;
-      if (!canvas || kind === "MISS") return;
+      if (!canvas || (kind === "MISS" && noteType !== 'mine')) return;
       const dpr = getEffectiveDpr(optsRef.current?.renderResolution);
       const W = canvas.width / dpr;
       const H = canvas.height / dpr;
       const geom = getStageGeometry(W, H);
-      const hitY = geom.hitY;
       const { x: lx, w: lw } = laneAt(lane, 1, W, HW_TOP, HW_BOT, undefined, 1, 0, H);
-      const cx = lx + lw / 2;
+      // In 3D POVs the strike target is wherever the projection lands, not the classic lane foot.
+      const fxPov = activePovModeRef.current;
+      const fxStage = lastDetectedStageRef.current;
+      const fxTarget = fxPov !== 'classic' && !usesFlatHighway(fxPov) && (fxPov !== 'dynamic_stage' || fxStage >= 3)
+        ? getArchetypeProjection(Math.max(0, Math.min(2, Math.round(lane))), 1, W, H, activeArchetypeRef.current, fxStage, povFxClockRef.current, fxPov)
+        : null;
+      const hitY = fxTarget ? fxTarget.y : geom.hitY;
+      const cx = fxTarget ? fxTarget.x + fxTarget.w / 2 : lx + lw / 2;
       const color =
         kind === "SHIELDED"
           ? "#00FFDD"
@@ -2276,6 +2187,14 @@ export default function Game() {
         : particleDensity === 'half'
           ? Math.ceil(rawCount * 0.5)
           : rawCount;
+
+      // A touched mine gets only its explosion, not a hit pop
+      if (noteType === 'mine') {
+        if (particleDensity !== 'minimal') {
+          spawnCelebration(celebrationsRef.current, 'mine', cx, customY !== undefined ? customY : hitY, Date.now(), particleDensity === 'half' ? 0.5 : 1);
+        }
+        return;
+      }
 
       let swipeAngle: number | null = null;
       if (swipeDir) {
@@ -2322,7 +2241,14 @@ export default function Game() {
         color,
         kind,
         particles,
+        laneW: lw,
+        shards: particleDensity === 'minimal' ? undefined : makeHitShards(kind, particleDensity === 'half' ? 6 : 12),
       });
+
+      // Break (drop), accent (beat) and remix notes get their own celebration on top
+      if ((noteType === 'break' || noteType === 'accent' || noteType === 'remix' || noteType === 'warp' || noteType === 'warp-clear') && kind !== 'SHIELDED' && particleDensity !== 'minimal') {
+        spawnCelebration(celebrationsRef.current, noteType, cx, customY !== undefined ? customY : hitY, Date.now(), particleDensity === 'half' ? 0.5 : 1);
+      }
     },
     [],
   );
@@ -2447,6 +2373,7 @@ export default function Game() {
         audioManager.playSfx("mine_explosion", 0.85);
         haptics.judgment('MINE', lane);
         addJudgment({ type: "MISS", lane, id: ++jCounter.current, ts: Date.now() });
+        triggerHitFx(lane, "MISS", undefined, undefined, 'mine');
         syncDisplay();
         return;
       }
@@ -2519,6 +2446,9 @@ export default function Game() {
         gs.score += 1200;
       } else if (ns.note.type === "accent") {
         gs.score += 800;
+      } else if (ns.note.type === "warp" || ns.note.type === "warp-clear") {
+        gs.score += WARP_SCORE_BONUS;
+        activateWarpRef.current(ns.note.type);
       }
 
       gs.combo++;
@@ -2552,10 +2482,10 @@ export default function Game() {
       }
       checkPowerUps(gs.combo);
 
-      addJudgment({ type: j, lane, id: ++jCounter.current, ts: Date.now() });
+      addJudgment({ type: j, lane, id: ++jCounter.current, ts: Date.now(), partial: isHoldType });
 
       // ── Hit explosion effect ──
-      triggerHitFx(lane, j, undefined, direction || ns.note.swipeDirection);
+      triggerHitFx(lane, j, undefined, direction || ns.note.swipeDirection, ns.note.type);
 
       syncDisplay();
     },
@@ -3121,6 +3051,14 @@ export default function Game() {
         saveMedal(songRef.current.id, medal);
         saveScoreHistory(songRef.current.id, gs.score);
       }
+      // Practice note generation never counts toward the campaign, so such a
+      // run gets the on-demand result instead of a "Stage passed" screen.
+      const campaignGenSource = loadOpts().noteGenerationSource;
+      const campaignStage = (campaignGenSource === 'auto' || !campaignGenSource) ? campaignStageRef.current : null;
+      const campaignFirstClear = !!campaignStage && !failed && !campaignStage.cleared;
+      if (campaignStage && songRef.current && !failed) {
+        saveCampaignClear(songRef.current.id, medal, gs.score);
+      }
 
       // ── Aggregate per-lane accuracy from real telemetry ──
       const laneTelemetry: Record<number, { hits: number; perfectPlus: number; perfects: number; goods: number; misses: number }> = {};
@@ -3144,10 +3082,7 @@ export default function Game() {
         }
       }
 
-      const sessionCover = typeof sessionStorage !== 'undefined'
-        ? (sessionStorage.getItem(`active_cover_url_${songId}`) || sessionStorage.getItem('active_game_cover'))
-        : null;
-      const finalCover = songRef.current?.coverArt || sessionCover || (songRef.current as any)?.coverUrl;
+      const finalCover = songRef.current?.coverArt || (songRef.current as any)?.coverUrl;
       if (finalCover && typeof sessionStorage !== 'undefined') {
         sessionStorage.setItem(`active_cover_url_${songId}`, finalCover);
       }
@@ -3167,6 +3102,10 @@ export default function Game() {
           continuesUsed,
           laneTelemetry,
           coverUrl: finalCover,
+          mode: campaignStage ? 'campaign' : 'on_demand',
+          campaign: campaignStage
+            ? { month: campaignStage.month, idx: campaignStage.idx, level: campaignStage.level, firstClear: campaignFirstClear }
+            : undefined,
         }),
       );
     } catch (err) {
@@ -3186,6 +3125,11 @@ export default function Game() {
           if (phaseRef.current === "unmounted") return;
           if (isTutorial) {
             setLocation(`/tutorial?phase=results&score=${gs.score}`);
+          } else if (instantWarpPendingRef.current && songId) {
+            setLocation(secretLevelPath('shooter', songId, 'warp'));
+          } else if (warpClearUnlockedRef.current && songId) {
+            // Cleared a song with an unlocked warp: the secret runner level comes first
+            setLocation(secretLevelPath('runner', songId, 'warp-clear'));
           } else {
             setLocation(`/results/${songId}`);
           }
@@ -3195,6 +3139,8 @@ export default function Game() {
           if (phaseRef.current === "unmounted") return;
           if (isTutorial) {
             setLocation(`/tutorial?phase=results&score=${gs.score}`);
+          } else if (instantWarpPendingRef.current && songId) {
+            setLocation(secretLevelPath('shooter', songId, 'warp'));
           } else {
             setLocation(`/results/${songId}`);
           }
@@ -3202,6 +3148,47 @@ export default function Game() {
       }
     }
   }, [songId, setLocation, isTutorial]);
+
+  // Secret warp hit: 'warp' leaves for the shooter level right away,
+  // 'warp-clear' unlocks the runner level for when the song is cleared.
+  activateWarpRef.current = (type: WarpType) => {
+    audioManager.playSfx("hidden_secret_found", 0.9);
+    haptics.fusionSuccess();
+    if (type === 'warp') {
+      warpBannerRef.current = { text: 'WARP!', until: Date.now() + INSTANT_WARP_DELAY_MS + 400, instant: true };
+      instantWarpPendingRef.current = true;
+      setTimeout(() => {
+        // If the song already finished, finishGame routes to the warp instead
+        if (phaseRef.current === "unmounted" || phaseRef.current === "finished" || !songId) return;
+        phaseRef.current = "finished";
+        cancelAnimationFrame(rafRef.current);
+        audioRef.current?.pause();
+        setLocation(secretLevelPath('shooter', songId, 'warp'));
+      }, INSTANT_WARP_DELAY_MS);
+    } else {
+      warpClearUnlockedRef.current = true;
+      warpBannerRef.current = { text: 'WARP UNLOCKED · CLEAR THE SONG', until: Date.now() + 3500, instant: false };
+    }
+  };
+
+  // Ownership-gate claim funnel: claim today's free card, then re-run init to play.
+  const handleClaimAndPlay = useCallback(async () => {
+    if (!lockedSong || claimingCard) return;
+    setClaimingCard(true);
+    try {
+      const card = await useVaultStore.getState().silentClaimDailyDrop(lockedSong.day);
+      if (card || ownsCardForDay(useVaultStore.getState().collection, lockedSong.day)) {
+        setLockedSong(null);
+        phaseRef.current = "loading";
+        setPhase("loading");
+        setRetryCount((c) => c + 1); // re-trigger init
+      }
+    } catch (err) {
+      console.error("[GamePlay] Claim-and-play failed:", err);
+    } finally {
+      setClaimingCard(false);
+    }
+  }, [lockedSong, claimingCard]);
 
   const doAbandon = useCallback(() => {
     if (phaseRef.current === "finished") return;
@@ -3499,6 +3486,9 @@ export default function Game() {
 
   const handleTutorialJudgment = useCallback((newJ: JudgmentDisplay) => {
     if (!activeTutorial || tutStage1ClearedRef.current) return;
+    // Hold-type note heads fire their own judgment before the hold resolves;
+    // only the resolving judgment counts, so one note = one success.
+    if (newJ.partial) return;
 
     const isHit = newJ.type === 'PERFECT+' || newJ.type === 'PERFECT' || newJ.type === 'GOOD';
     const isMiss = newJ.type === 'MISS';
@@ -3635,13 +3625,24 @@ export default function Game() {
 
     const ctx = canvas.getContext("2d");
     if (!ctx || !songRef.current) return;
-    
+
+    // Start every frame from a clean blend state. clearRect() doesn't reset it, so a
+    // draw that throws mid-`lighter` would otherwise wash out every later frame.
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+
     // GFX level & bloom glow shadow blur optimization
     const allowShadows = !optsRef.current.legacyGraphics && optsRef.current.bloomGlow && optsRef.current.gfxLevel !== 'low';
     if (!allowShadows) {
       ctx.shadowBlur = 0;
       ctx.shadowColor = 'transparent';
     }
+    // 3D note slabs: full on high, lighter on medium, flat on low/legacy.
+    setNote3DQuality(
+      optsRef.current.legacyGraphics || optsRef.current.gfxLevel === 'low'
+        ? 'off'
+        : optsRef.current.gfxLevel === 'medium' ? 'low' : 'high'
+    );
     const song = songRef.current;
     // Task 4B: Adaptive BPM & note density lane breathing
     // During dense passages (bursts > 4 NPS), gently expand approach time to preserve readability
@@ -3756,7 +3757,7 @@ export default function Game() {
         }
       }
       notesRef.current.forEach((ns) => {
-        if (ns.note.type === "mine" || ns.note.type === "ghost") return; // Skip hazard mines / ghost obstacles
+        if (ns.note.type === "mine" || ns.note.type === "ghost" || isWarpNote(ns.note)) return; // Skip hazard mines / ghost obstacles / secret warps
         if (!ns.hit && !ns.missed) {
           const isHold = isHoldNote(ns.note);
 
@@ -3865,15 +3866,10 @@ export default function Game() {
       }
     }
 
-    // Stage transition tracking
-    // PERF: stageBounds moved to module scope (STAGE_BOUNDS) to avoid per-frame allocation
-    const stageBounds = STAGE_BOUNDS;
-    let calculatedStage = 1;
-    for (let i = 0; i < stageBounds.length; i++) {
-      if (gs.progress >= stageBounds[i].pct) {
-        calculatedStage = stageBounds[i].stage;
-      }
-    }
+    // Stage transition tracking — follows the chart's own stage times when it
+    // has them (Chart Master places stage 3 / 5 on the drops), so the POV
+    // switch lands on the music; otherwise the fixed 15/35/60/80% split.
+    const calculatedStage = stageAtTime(stageStartsRef.current, t);
       if (calculatedStage !== lastDetectedStageRef.current) {
         const prevStage = lastDetectedStageRef.current;
         lastDetectedStageRef.current = calculatedStage;
@@ -3882,11 +3878,7 @@ export default function Game() {
         // Stage-Integrated Dynamic POV Camera Auto-Switching (Untouched & automatic for all players)
         // Stage 1 & 2: Classic, Stage 3: Song 3D Archetype POV, Stage 4: Classic Void, Stage 5: Hyper Version of Stage 3
         if (!isPovLockedRef.current && optsRef.current.stagePovSwitch !== false && phaseRef.current === "playing" && prevStage > 0 && calculatedStage > prevStage) {
-          const archetypePov: PovMode = 
-            activeArchetypeRef.current === 'corkscrew_slide' ? 'corkscrew' :
-            activeArchetypeRef.current === 'wave_coaster' ? 'rollercoaster' :
-            activeArchetypeRef.current === 'matrix_split' ? 'matrix_split' :
-            'cyber_tunnel';
+          const archetypePov: PovMode = selectSongPov(songRef.current, activeArchetypeRef.current);
 
           let targetPov: PovMode = 'classic';
           if (calculatedStage === 1 || calculatedStage === 2) {
@@ -3929,9 +3921,7 @@ export default function Game() {
         }
       }
       
-      // PERF: Direct O(1) index lookup instead of .find() (H1)
-      const sb = stageBounds[calculatedStage - 1] ?? null;
-      if (sb && prevStage > 0 && calculatedStage > prevStage) {
+      if (prevStage > 0 && calculatedStage > prevStage) {
         if (calculatedStage === 5) {
           audioManager.playSfx("overdrive_activate", 0.85);
         } else {
@@ -4007,6 +3997,18 @@ export default function Game() {
       ctx.fillRect(0, 0, W, H);
     }
 
+    // Lyric Cinema background: kinetic lyrics painted on the canvas beneath the track.
+    if (optsRef.current.gameBackground === 'lyric_cinema') {
+      drawLyricBackdrop(ctx, {
+        W,
+        H,
+        t,
+        lines: trackLyricsRef.current.lines,
+        colors: laneColorsRef.current,
+        animate: optsRef.current.bgAnimation,
+      });
+    }
+
     // Draw pre-rendered static tracks (Double-buffering optimization)
     if (!offscreenCanvasRef.current && W > 0 && H > 0) {
       const diffLevel = songRef.current?.difficultyLevel ?? 5;
@@ -4028,8 +4030,9 @@ export default function Game() {
     }
 
     // ── Dynamic Lane Hit Glows Sweep (Subtle Ambient Illumination) ──
+    // Drawn along the classic highway only; POV scenes light their own lane guides.
     const nowGlowMs = Date.now();
-    for (let i = 0; i < LANE_COUNT; i++) {
+    for (let i = 0; i < (is3DPOVActive ? 0 : LANE_COUNT); i++) {
       const latest = lastLaneHitRef.current[i];
       if (latest && nowGlowMs - latest.ts < 500) {
         const age = (nowGlowMs - latest.ts) / 500;
@@ -4510,6 +4513,7 @@ export default function Game() {
 
     // ── 3D POV PERSPECTIVE ENVIRONMENT & AMBIENT VISUALIZERS ──
     const curPovMode = activePovModeRef.current;
+    povFxClockRef.current = t;
     const isCyberTunnelPov = curPovMode === 'cyber_tunnel';
     const isCorkscrewPov = curPovMode === 'corkscrew';
     const isRollercoasterPov = curPovMode === 'rollercoaster';
@@ -4574,7 +4578,40 @@ export default function Game() {
       const swirlAngle = t * 0.9 * swirlSpeedMult; // Continuous rotational vortex swirl
       const isOverdrive = calculatedStage === 5 && swirlSpeedMult >= 2.0;
 
-      if (tunnelOpacity > 0) {
+      // Scene input shared by POV signature scenes and the lane surfaces on archetype POVs.
+      const buildPovSceneInput = (): PovSceneInput => {
+        const sceneHitMs: (number | undefined)[] = [];
+        const sceneHitType: (string | undefined)[] = [];
+        const scenePressed: boolean[] = [];
+        for (let i = 0; i < LANE_COUNT; i++) {
+          sceneHitMs.push(lastLaneHitRef.current[i]?.ts);
+          sceneHitType.push(lastLaneHitRef.current[i]?.type);
+          scenePressed.push(Boolean(laneRef.current[i]?.pressed));
+        }
+        return {
+          ctx,
+          W,
+          H,
+          t,
+          approachSec: AT,
+          bpm: bpmVal,
+          beat: beatPulseVal,
+          stage: calculatedStage,
+          archetype: activeArchetypeRef.current,
+          laneColors: laneColorsRef.current,
+          laneHitMs: sceneHitMs,
+          laneHitType: sceneHitType,
+          nowMs: Date.now(),
+          pressed: scenePressed,
+          energy: Math.min(1, gs.combo / 60),
+          lite: optsRef.current.gfxLevel === 'low' || optsRef.current.gfxLevel === 'medium' || optsRef.current.legacyGraphics,
+        };
+      };
+
+      if (tunnelOpacity > 0 && hasPovScene(curPovMode)) {
+        // ── POV SIGNATURE SCENE: each camera has its own backdrop, palette and lane guides ──
+        drawPovScene(curPovMode, buildPovSceneInput());
+      } else if (tunnelOpacity > 0) {
         // ── ARCHETYPE 1: HORIZONTAL SIDE-SCROLLER (90° Canvas) ──
         if (currentArch === 'horizontal_drift') {
           // Dynamic Moving Gas Nebula Backdrop around Side-Scroller Track
@@ -5157,10 +5194,15 @@ export default function Game() {
         }
       }
 
+      // Archetype POVs (tunnel, corkscrew, coaster, split) get the same lane surfaces the scene POVs use.
+      if (tunnelOpacity > 0 && !hasPovScene(curPovMode) && is3DEnvironment) {
+        drawPovLanes(curPovMode, buildPovSceneInput());
+      }
+
       // ── 3. 3D Circular Judgment Target Strike Zones (Deep Drop Shadows & Neon Rim Glow) ──
       const hwBot = hwAtProgress(1, W, HW_TOP, HW_BOT, H);
       const laneW = hwBot.width / LANE_COUNT;
-      for (let lane = 0; lane < LANE_COUNT; lane++) {
+      for (let lane = 0; lane < (usesFlatHighway(curPovMode) ? 0 : LANE_COUNT); lane++) {
         const targetProj = getArchetypeProjection(lane, 1, W, H, activeArchetypeRef.current, calculatedStage, t, activePovModeRef.current);
         const laneCenterX = targetProj.x + targetProj.w / 2;
         const laneCenterY = targetProj.y;
@@ -5283,7 +5325,10 @@ export default function Game() {
     // outer wrapper — they cover the entire viewport uniformly so no column seam appears.
 
     const isCyberPOV = (isCyberTunnelPov || activeArchetypeRef.current === 'cyber_tunnel') && (calculatedStage === 3 || calculatedStage === 5);
-    const trackTopRatio = isCyberPOV ? 0.18 : HW_TOP;
+    const isFlatHighway = usesFlatHighway(curPovMode);
+    // Classic rails, speed lines and the hit beam trace the 2.5D highway; 3D POVs draw their own lane guides.
+    const showClassicHighway = !is3DEnvironment || isFlatHighway;
+    const trackTopRatio = isCyberPOV ? 0.18 : isFlatHighway ? HW_BOT : HW_TOP;
     const trackBotRatio = isCyberPOV ? 0.86 : HW_BOT;
     const hwTop = hwAtProgress(0, W, trackTopRatio, trackBotRatio, H);
     const hwBot = hwAtProgress(1, W, trackTopRatio, trackBotRatio, H);
@@ -5363,104 +5408,106 @@ export default function Game() {
       ctx.restore();
     }
 
-    // Draw dynamic speed lines (clipped to track guides)
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(hwTop.left, 0);
-    ctx.quadraticCurveTo(W / 2, -hitY * 0.09, hwTop.right, 0);
-    ctx.lineTo(hwBot.right, hitY);
-    ctx.lineTo(hwBot.left, hitY);
-    ctx.closePath();
-    ctx.clip();
-
-    const speedCycle = hitY * 0.18;
-    const speedOff = (t * 0.8 * hitY) % speedCycle;
-    for (let row = -1; row < 8; row++) {
-      const sy1 = speedOff + row * speedCycle;
-      const sy2 = sy1 + speedCycle * 0.35;
-      if (sy2 < 0 || sy1 > hitY) continue;
-      const sp1 = Math.max(0, Math.min(1, sy1 / hitY));
-      const sp2 = Math.max(0, Math.min(1, sy2 / hitY));
-      const { left: sl1, right: sr1 } = hwAtProgress(sp1, W, trackTopRatio, trackBotRatio, H);
-      const { left: sl2, right: sr2 } = hwAtProgress(sp2, W, trackTopRatio, trackBotRatio, H);
-      const speedAlpha = 0.012 + sp1 * 0.04;
-      ctx.fillStyle = `rgba(255,248,235,${speedAlpha})`;
+    if (showClassicHighway) {
+      // Draw dynamic speed lines (clipped to track guides)
+      ctx.save();
       ctx.beginPath();
-      ctx.moveTo(sl1, sy1);
-      ctx.lineTo(sr1, sy1);
-      ctx.lineTo(sr2, sy2);
-      ctx.lineTo(sl2, sy2);
+      ctx.moveTo(hwTop.left, 0);
+      ctx.quadraticCurveTo(W / 2, -hitY * 0.09, hwTop.right, 0);
+      ctx.lineTo(hwBot.right, hitY);
+      ctx.lineTo(hwBot.left, hitY);
       ctx.closePath();
-      ctx.fill();
+      ctx.clip();
+
+      const speedCycle = hitY * 0.18;
+      const speedOff = (t * 0.8 * hitY) % speedCycle;
+      for (let row = -1; row < 8; row++) {
+        const sy1 = speedOff + row * speedCycle;
+        const sy2 = sy1 + speedCycle * 0.35;
+        if (sy2 < 0 || sy1 > hitY) continue;
+        const sp1 = Math.max(0, Math.min(1, sy1 / hitY));
+        const sp2 = Math.max(0, Math.min(1, sy2 / hitY));
+        const { left: sl1, right: sr1 } = hwAtProgress(sp1, W, trackTopRatio, trackBotRatio, H);
+        const { left: sl2, right: sr2 } = hwAtProgress(sp2, W, trackTopRatio, trackBotRatio, H);
+        const speedAlpha = 0.012 + sp1 * 0.04;
+        ctx.fillStyle = `rgba(255,248,235,${speedAlpha})`;
+        ctx.beginPath();
+        ctx.moveTo(sl1, sy1);
+        ctx.lineTo(sr1, sy1);
+        ctx.lineTo(sr2, sy2);
+        ctx.lineTo(sl2, sy2);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+
+      // ── HIT LINE BEAM ── neon horizontal bar at the hit zone
+      const beamGrad = ctx.createLinearGradient(hwBot.left, 0, hwBot.right, 0);
+      const beamColor = puColor ?? "rgba(255,248,235,0.7)";
+      const beamPulse = 0.7 + 0.3 * Math.sin(t * 6);
+      beamGrad.addColorStop(0, "transparent");
+      beamGrad.addColorStop(0.15, beamColor);
+      beamGrad.addColorStop(0.5, "rgba(255,255,255,0.9)");
+      beamGrad.addColorStop(0.85, beamColor);
+      beamGrad.addColorStop(1, "transparent");
+      ctx.globalAlpha = beamPulse * 0.45;
+      ctx.fillStyle = beamGrad;
+      ctx.fillRect(hwBot.left, hitY - 2, hwBot.right - hwBot.left, 4);
+      // Bloom glow under the beam
+      ctx.globalAlpha = beamPulse * 0.12;
+      ctx.shadowColor = puColor ?? "#fff";
+      ctx.shadowBlur = 20;
+      ctx.fillRect(hwBot.left, hitY - 1, hwBot.right - hwBot.left, 2);
+      ctx.shadowBlur = 0; // reset shadow
+      ctx.globalAlpha = 1;
+      ctx.shadowBlur = 0;
+      ctx.shadowColor = "transparent";
+
+      ctx.restore();
+
+      // ── 3. TRACK EDGE RAILS ─────────────────────────────────────
+      // Neon rails with strong glow — unified with highway boundary
+      const railColor = puColor ?? "rgba(255,248,235,0.55)";
+      const railGlow = puColor ? colorWithAlpha(puColor, 0.8) : "rgba(255,248,235,0.25)";
+
+      // Outer glow pass (thicker, blurred)
+      ctx.save();
+      ctx.shadowColor = puColor ?? "rgba(255,248,235,0.4)";
+      ctx.shadowBlur = 16;
+      const railGlowGrad = ctx.createLinearGradient(0, 0, 0, hitY);
+      railGlowGrad.addColorStop(0, "rgba(255,255,255,0.0)");
+      railGlowGrad.addColorStop(0.3, railGlow);
+      railGlowGrad.addColorStop(1, railColor);
+      ctx.strokeStyle = railGlowGrad;
+      ctx.lineWidth = 3;
+      // Left rail
+      ctx.beginPath();
+      ctx.moveTo(hwTop.left, 0);
+      ctx.lineTo(hwBot.left, hitY);
+      ctx.stroke();
+      // Right rail
+      ctx.beginPath();
+      ctx.moveTo(hwTop.right, 0);
+      ctx.lineTo(hwBot.right, hitY);
+      ctx.stroke();
+      ctx.restore();
+
+      // Inner bright core
+      const railCoreGrad = ctx.createLinearGradient(0, 0, 0, hitY);
+      railCoreGrad.addColorStop(0, "rgba(255,255,255,0.0)");
+      railCoreGrad.addColorStop(0.5, "rgba(255,255,255,0.3)");
+      railCoreGrad.addColorStop(1, "rgba(255,255,255,0.6)");
+      ctx.strokeStyle = railCoreGrad;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(hwTop.left, 0);
+      ctx.lineTo(hwBot.left, hitY);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(hwTop.right, 0);
+      ctx.lineTo(hwBot.right, hitY);
+      ctx.stroke();
     }
-    ctx.restore();
-
-    // ── HIT LINE BEAM ── neon horizontal bar at the hit zone
-    const beamGrad = ctx.createLinearGradient(hwBot.left, 0, hwBot.right, 0);
-    const beamColor = puColor ?? "rgba(255,248,235,0.7)";
-    const beamPulse = 0.7 + 0.3 * Math.sin(t * 6);
-    beamGrad.addColorStop(0, "transparent");
-    beamGrad.addColorStop(0.15, beamColor);
-    beamGrad.addColorStop(0.5, "rgba(255,255,255,0.9)");
-    beamGrad.addColorStop(0.85, beamColor);
-    beamGrad.addColorStop(1, "transparent");
-    ctx.globalAlpha = beamPulse * 0.45;
-    ctx.fillStyle = beamGrad;
-    ctx.fillRect(hwBot.left, hitY - 2, hwBot.right - hwBot.left, 4);
-    // Bloom glow under the beam
-    ctx.globalAlpha = beamPulse * 0.12;
-    ctx.shadowColor = puColor ?? "#fff";
-    ctx.shadowBlur = 20;
-    ctx.fillRect(hwBot.left, hitY - 1, hwBot.right - hwBot.left, 2);
-    ctx.shadowBlur = 0; // reset shadow
-    ctx.globalAlpha = 1;
-    ctx.shadowBlur = 0;
-    ctx.shadowColor = "transparent";
-
-    ctx.restore();
-
-    // ── 3. TRACK EDGE RAILS ─────────────────────────────────────
-    // Neon rails with strong glow — unified with highway boundary
-    const railColor = puColor ?? "rgba(255,248,235,0.55)";
-    const railGlow = puColor ? colorWithAlpha(puColor, 0.8) : "rgba(255,248,235,0.25)";
-
-    // Outer glow pass (thicker, blurred)
-    ctx.save();
-    ctx.shadowColor = puColor ?? "rgba(255,248,235,0.4)";
-    ctx.shadowBlur = 16;
-    const railGlowGrad = ctx.createLinearGradient(0, 0, 0, hitY);
-    railGlowGrad.addColorStop(0, "rgba(255,255,255,0.0)");
-    railGlowGrad.addColorStop(0.3, railGlow);
-    railGlowGrad.addColorStop(1, railColor);
-    ctx.strokeStyle = railGlowGrad;
-    ctx.lineWidth = 3;
-    // Left rail
-    ctx.beginPath();
-    ctx.moveTo(hwTop.left, 0);
-    ctx.lineTo(hwBot.left, hitY);
-    ctx.stroke();
-    // Right rail
-    ctx.beginPath();
-    ctx.moveTo(hwTop.right, 0);
-    ctx.lineTo(hwBot.right, hitY);
-    ctx.stroke();
-    ctx.restore();
-
-    // Inner bright core
-    const railCoreGrad = ctx.createLinearGradient(0, 0, 0, hitY);
-    railCoreGrad.addColorStop(0, "rgba(255,255,255,0.0)");
-    railCoreGrad.addColorStop(0.5, "rgba(255,255,255,0.3)");
-    railCoreGrad.addColorStop(1, "rgba(255,255,255,0.6)");
-    ctx.strokeStyle = railCoreGrad;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(hwTop.left, 0);
-    ctx.lineTo(hwBot.left, hitY);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(hwTop.right, 0);
-    ctx.lineTo(hwBot.right, hitY);
-    ctx.stroke();
 
     // ── 4. POWER-UP SCREEN EDGE GLOW ───────────────────────────
     if (puActive && puColor) {
@@ -5480,7 +5527,7 @@ export default function Game() {
     }
 
     // ── 4.5. HIT ZONE BUTTONS (for 2.5D Classic POV mode) ──
-    const show3DCircularTargets = isCyberTunnelPov || isCorkscrewPov || isRollercoasterPov || isMatrixSplitPov || (isDynamicStagePov && calculatedStage >= 3);
+    const show3DCircularTargets = is3DEnvironment && !isFlatHighway;
     if (!show3DCircularTargets) {
       const btnH = geom.btnH;
       const btnY = geom.btnY;
@@ -5694,6 +5741,37 @@ export default function Game() {
     }
     ctx.restore();
 
+    // ── 4b. ON-TRACK LYRICS (painted on the track surface; notes render over) ──
+    if (optsRef.current.trackLyrics && trackLyricsRef.current.lines.length > 0) {
+      drawTrackLyrics(ctx, {
+        W,
+        H,
+        t,
+        lines: trackLyricsRef.current.lines,
+        povMode: activePovModeRef.current,
+        archetype: activeArchetypeRef.current,
+        stage: calculatedStage,
+        // Active-word highlight follows the track's cover-art lane colors.
+        highlightColor: laneColorsRef.current[1],
+      });
+    }
+
+    // ── 4z. HIT LIGHT PILLARS (under the notes) ──
+    // Additive light drawn over the tiles washes their dark faces out to grey, so the
+    // pillars go down before the notes and trace each lane's projected path.
+    for (const e of hitFxRef.current) {
+      const t01 = (nowMs - e.startMs) / 520;
+      if (t01 < 0 || t01 >= 0.55 || (e.kind !== 'PERFECT+' && e.kind !== 'PERFECT')) continue;
+      const reach = hitPillarReach(t01);
+      const path: { x: number; y: number; w: number }[] = [];
+      for (let k = 0; k <= 8; k++) {
+        const pp = getArchetypeProjection(e.lane, lerp(1, reach, k / 8), W, H, activeArchetypeRef.current, calculatedStage, t, curPovMode);
+        if (!Number.isFinite(pp.x) || !Number.isFinite(pp.y) || !Number.isFinite(pp.w)) break;
+        path.push({ x: pp.x + pp.w / 2, y: pp.y, w: pp.w });
+      }
+      drawHitPillar3D(ctx, e, t01, path);
+    }
+
     // ── 5. HIGH-PERFORMANCE NOTES RENDERING (Active Visible Slice) ──
     // Skip note rendering during intro stingers so the rolling highway remains completely clean
     if (phaseRef.current === "countdown") return;
@@ -5828,6 +5906,13 @@ export default function Game() {
         const inRewindGrace = performance.now() < rewindGraceUntilWallRef.current || (rewindGraceUntilSongTimeRef.current > 0 && t < rewindGraceUntilSongTimeRef.current);
         // 40ms safety margin to accommodate frame rate jitter and prevent edge-tap race misses
         const isPastStrike = t > note.time + MW + 0.040;
+
+        // A missed warp note just slips away: no miss, no combo break
+        if (isWarpNote(note) && isPastStrike) {
+          ns.hit = true;
+          unresolvedNotesCountRef.current--;
+          continue;
+        }
 
         if (inRewindGrace && isPastStrike) {
           // 1-second post-rewind grace window: notes in the past or immediately following the rewind
@@ -6334,12 +6419,17 @@ export default function Game() {
     }
     hitFxRef.current.length = hitFxWrite;
     for (const e of hitFxRef.current) {
-      const t01 = (nowMs - e.startMs) / FX_DURATION; // 0→1
-      const dt = (nowMs - e.startMs) / 1000; // seconds
+      // Hold completions fire triggerHitFx from inside this frame, after nowMs was taken,
+      // so their age can be slightly negative. Clamp it: sqrt() of a negative age gives NaN
+      // and the gradient calls in drawHitPop3D throw.
+      const ageMs = Math.max(0, nowMs - e.startMs);
+      const t01 = ageMs / FX_DURATION; // 0→1
+      const dt = ageMs / 1000; // seconds
       const easeOut = 1 - t01;
 
       // ─ Lane flash: bright overlay on the key area fading fast ─
-      if (t01 < 0.18) {
+      // Sits on the classic highway's key row; 3D POVs light their own lane guides instead.
+      if (t01 < 0.18 && showClassicHighway) {
         const flashAlpha =
           (1 - t01 / 0.18) * (e.kind === "PERFECT+" ? 0.55 : 0.35);
         const { x: fx, w: fw } = laneAt(e.lane, 1, W, HW_TOP, HW_BOT, undefined, 1, 0, H);
@@ -6354,6 +6444,15 @@ export default function Game() {
         flashGrad.addColorStop(1, colorWithAlpha(e.color, flashAlpha * 0.5));
         ctx.fillStyle = flashGrad;
         ctx.fillRect(fx + 4, e.cy - 60, fw - 8, 100);
+      }
+
+      // ─ Beatstar-style tile pop, light pillar, lens streak + 3D shards ─
+      // Anchor to the active POV's hit position (circle / drift / etc. move the lanes).
+      const popProj = getArchetypeProjection(e.lane, 1.0, W, H, activeArchetypeRef.current, calculatedStage, t, activePovModeRef.current);
+      if (Number.isFinite(popProj.x) && Number.isFinite(popProj.y) && popProj.w > 0) {
+        drawHitPop3D(ctx, { ...e, cx: popProj.x + popProj.w / 2, cy: popProj.y, laneW: popProj.w }, t01, dt);
+      } else {
+        drawHitPop3D(ctx, e, t01, dt);
       }
 
       // ─ Expanding rings ─
@@ -6462,6 +6561,9 @@ export default function Game() {
       void easeOut; // suppress unused warning
     }
 
+    // ── 5c. BREAK / ACCENT CELEBRATIONS (confetti, ribbons, oddities) ──
+    if (celebrationsRef.current.length) drawCelebrations(ctx, celebrationsRef.current, nowMs);
+
     // ── 5d. KEY PRESS SHOCKWAVE RIPPLES ───────────────────────────
     for (let i = 0; i < LANE_COUNT; i++) {
       const tapAge = nowMs - lastTapTimeRef.current[i];
@@ -6478,6 +6580,12 @@ export default function Game() {
           cx = hitProj.x;
           cy = hitProj.y;
           ringR = rt * 45;
+        } else if (is3DEnvironment && !isFlatHighway) {
+          // Ripple from the projected strike target so it lines up in every 3D POV
+          const hitProj = getArchetypeProjection(i, 1.0, W, H, activeArchetypeRef.current, calculatedStage, t, curPovMode);
+          cx = hitProj.x + hitProj.w / 2;
+          cy = hitProj.y;
+          ringR = rt * hitProj.w * 0.6;
         } else {
           cx = lx + lw / 2;
         }
@@ -6557,24 +6665,27 @@ export default function Game() {
     }
 
     // ── 6. HIT ZONE BASELINE ────────────────────────────────────
-    // Thick white glowing baseline — the stripe on the note must line up with this
-    ctx.shadowColor = "rgba(255,255,255,0.8)";
-    ctx.shadowBlur = 18;
-    ctx.strokeStyle = "rgba(255,255,255,0.95)";
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(hwBot.left, hitY);
-    ctx.lineTo(hwBot.right, hitY);
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-    ctx.shadowColor = "transparent";
-    // Subtle glow bloom below baseline — pulses with rhythm
-    const bloomH = 20 + pulse * 12;
-    const baseGlow = ctx.createLinearGradient(0, hitY, 0, hitY + bloomH);
-    baseGlow.addColorStop(0, `rgba(255,255,255,${0.08 + pulse * 0.06})`);
-    baseGlow.addColorStop(1, "rgba(255,255,255,0.0)");
-    ctx.fillStyle = baseGlow;
-    ctx.fillRect(hwBot.left, hitY, hwBot.width, bloomH);
+    // Thick white glowing baseline — the stripe on the note must line up with this.
+    // Skipped for POVs whose strike targets don't sit on one horizontal line.
+    if (hasStraightHitLine(curPovMode)) {
+      ctx.shadowColor = "rgba(255,255,255,0.8)";
+      ctx.shadowBlur = 18;
+      ctx.strokeStyle = "rgba(255,255,255,0.95)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(hwBot.left, hitY);
+      ctx.lineTo(hwBot.right, hitY);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.shadowColor = "transparent";
+      // Subtle glow bloom below baseline — pulses with rhythm
+      const bloomH = 20 + pulse * 12;
+      const baseGlow = ctx.createLinearGradient(0, hitY, 0, hitY + bloomH);
+      baseGlow.addColorStop(0, `rgba(255,255,255,${0.08 + pulse * 0.06})`);
+      baseGlow.addColorStop(1, "rgba(255,255,255,0.0)");
+      ctx.fillStyle = baseGlow;
+      ctx.fillRect(hwBot.left, hitY, hwBot.width, bloomH);
+    }
 
     // ── 6.5. MISSED SIGNAL RECLAIM TRAP (VOID TRAP / DATA LEAK COLLECTOR) ──
     const trapY = H - 55;
@@ -6642,6 +6753,41 @@ export default function Game() {
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
         ctx.fillText("DATA LEAK!", x_center, trapY + 8);
+      } else {
+        ctx.fillStyle = "rgba(255, 56, 0, 0.35)";
+        ctx.shadowBlur = 0;
+        ctx.font = `900 8px "Space Mono", monospace`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.fillText("VOID TRAP", x_center, trapY + 8);
+      }
+      ctx.restore();
+    }
+
+    // ── 6.55 SECRET WARP BANNER ──
+    const warpBanner = warpBannerRef.current;
+    if (warpBanner && warpBanner.until > Date.now()) {
+      const left = warpBanner.until - Date.now();
+      const fadeIn = Math.min(1, (Date.now() - (warpBanner.until - (warpBanner.instant ? INSTANT_WARP_DELAY_MS + 400 : 3500))) / 200);
+      const alpha = Math.min(fadeIn, left / 400, 1);
+      ctx.save();
+      const hue = (Date.now() / 4) % 360;
+      if (warpBanner.instant) {
+        // Instant warp: the whole stage tints and swirls toward the exit
+        ctx.fillStyle = `hsla(${hue}, 100%, 55%, ${0.18 * alpha})`;
+        ctx.fillRect(0, 0, W, H);
+      }
+      ctx.globalAlpha = alpha;
+      ctx.font = `900 ${warpBanner.instant ? 44 : 20}px "Space Mono", monospace`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.shadowColor = `hsl(${hue}, 100%, 60%)`;
+      ctx.shadowBlur = 24;
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillText(warpBanner.text, W / 2, H * 0.32);
+      ctx.restore();
+    }
+
     // ── 6.6 REMIX STEM EFFECT HUD BANNER & PALETTE FLASH ──
     if (remixFlashUntilRef.current > Date.now()) {
       ctx.save();
@@ -6692,15 +6838,6 @@ export default function Game() {
       ctx.fillStyle = overlayColor;
       ctx.fillRect(0, 0, W, H);
 
-      ctx.restore();
-    }
-        ctx.fillStyle = "rgba(255, 56, 0, 0.35)";
-        ctx.shadowBlur = 0;
-        ctx.font = `900 8px "Space Mono", monospace`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "top";
-        ctx.fillText("VOID TRAP", x_center, trapY + 8);
-      }
       ctx.restore();
     }
 
@@ -8232,10 +8369,16 @@ export default function Game() {
     } else {
       document.body.classList.remove("gameplay-load-error");
     }
+    if (phase === "locked") {
+      document.body.classList.add("gameplay-locked");
+    } else {
+      document.body.classList.remove("gameplay-locked");
+    }
     return () => {
       document.body.classList.remove("gameplay-continue");
       document.body.classList.remove("gameplay-audio-error");
       document.body.classList.remove("gameplay-load-error");
+      document.body.classList.remove("gameplay-locked");
     };
   }, [phase]);
 
@@ -8324,7 +8467,7 @@ export default function Game() {
         setLoadState({
           step: 1,
           stepLabel: "INITIALIZING TRANSMISSION METADATA",
-          detailMsg: "Querying track catalog & JSON manifest...",
+          detailMsg: "Finding the track…",
           bytesLoaded: 0,
           bytesTotal: 0,
           speedBps: 0,
@@ -8335,13 +8478,8 @@ export default function Game() {
         });
         let song = await getSongById(songId);
         if (song) {
-          const sessionCover = typeof sessionStorage !== 'undefined'
-            ? (sessionStorage.getItem(`active_cover_url_${songId}`) || sessionStorage.getItem('active_game_cover'))
-            : null;
-          if (sessionCover) {
-            song.coverArt = sessionCover;
-          }
-          song = { ...song, notes: [...(song.notes || [])] };
+          // Copy before touching coverArt: getSongById can hand back the cached catalog entry.
+          song = { ...song, coverArt: resolveGameCover(song) ?? song.coverArt, notes: [...(song.notes || [])] };
           if (!activeTutorial) {
             const gameOpts = loadOpts();
             const genMode = gameOpts.noteGenerationSource || 'auto';
@@ -8369,6 +8507,19 @@ export default function Game() {
                   console.warn("[GamePlay Init] Audio Forge failed, falling back to procedural grid:", err);
                   song.notes = generateProceduralChart(song);
                 }
+              }
+            }
+
+            // Chart Master Deluxe with no baked chart yet: forge it from the audio
+            if (genMode === 'auto' && song.deluxe && song.chartVersion === CHART_MASTER_VERSION) {
+              setLoadMsg("FORGING DELUXE BEATMAP...");
+              const standard = { notes: song.notes, stages: song.stages };
+              try {
+                song.notes = await generateAudioForgeChart(song, { deluxe: true });
+              } catch (err) {
+                console.warn("[GamePlay Init] Deluxe forge failed, playing the standard v6 chart:", err);
+                song.notes = standard.notes;
+                song.stages = standard.stages;
               }
             }
 
@@ -8455,6 +8606,25 @@ export default function Game() {
 
         const origin = sessionStorage.getItem(`game_origin_${songId}`) ?? '';
         const originRoute = origin === 'songs' ? '/songs' : origin ? `/${origin}` : '/campaign';
+        campaignStageRef.current = null;
+        if (songId && isCampaignRunSearch(window.location.search) && !isTutorial) {
+          // On a refresh, a signed-in player's synced clears arrive with
+          // loadVaultData; wait so earlier stages count before the unlock check.
+          const { data: { session: campaignSession } } = await supabase.auth.getSession();
+          if (campaignSession && !useVaultStore.getState().hasLoadedData) {
+            await new Promise<void>((resolve) => {
+              const timer = setTimeout(() => { unsub(); resolve(); }, 8000);
+              const unsub = useVaultStore.subscribe((st) => {
+                if (st.hasLoadedData) { clearTimeout(timer); unsub(); resolve(); }
+              });
+            });
+            if (cancelled) return;
+          }
+          const stage = await getCampaignStage(songId);
+          if (cancelled) return;
+          // Only a stage the player has actually reached runs as campaign.
+          if (stage && stage.unlocked && !stage.timeLocked) campaignStageRef.current = stage;
+        }
         const modifier = (sessionStorage.getItem(`active_modifier_type_${songId}`) || 'none') as any;
         modifierRef.current = modifier;
         setActiveModifier(modifier);
@@ -8489,17 +8659,63 @@ export default function Game() {
         pausedRef.current = false;
         setPaused(false);
 
-        const collection = useVaultStore.getState().collection;
-        const isOwned = Array.isArray(collection) ? collection.some(c => c && (c.cardId === songId || `card-${c.card?.day}` === songId)) : false;
-        const isLocked = !isOwned && isSongTimeLocked(song);
-        console.log("[GamePlay Init] isSongTimeLocked evaluated:", isLocked, "for song day:", song.day, "date:", song.date, "isOwned:", isOwned);
-        if (isLocked) {
-          console.warn("[GamePlay Init] Song is time-locked! Redirecting to:", originRoute);
-          setLocation(originRoute);
-          return;
+        // ── Ownership gate: gameplay requires owning the card for this song ──
+        // (Tutorial transmissions are exempt — they carry no card.)
+        // Campaign stages are played in order without the card; replaying a
+        // stage after clearing it needs the card like any other play.
+        const campaignFirstRun = !!campaignStageRef.current && !campaignStageRef.current.cleared;
+        if (!isTutorial && song.day > 0 && !campaignFirstRun) {
+          // On a direct link / refresh the collection may still be loading —
+          // wait for it rather than locking a card the player owns.
+          if (!useVaultStore.getState().hasLoadedData) {
+            await new Promise<void>((resolve) => {
+              const timer = setTimeout(() => { unsub(); resolve(); }, 8000);
+              const unsub = useVaultStore.subscribe((st) => {
+                if (st.hasLoadedData) { clearTimeout(timer); unsub(); resolve(); }
+              });
+            });
+            if (cancelled) return;
+          }
+          const collection = useVaultStore.getState().collection;
+          const isOwned = ownsCardForDay(collection, song.day);
+          console.log("[GamePlay Init] Ownership gate:", isOwned ? "OWNED" : "LOCKED", "for song day:", song.day, "date:", song.date);
+          if (!isOwned) {
+            console.warn("[GamePlay Init] Card not owned — showing locked state for day:", song.day);
+            setLockedSong(song);
+            setLockedReason("card");
+            setLockedOrigin(originRoute);
+            phaseRef.current = "locked";
+            setPhase("locked");
+            return;
+          }
+          // Deluxe charts need the Deluxe card or a top-tier run of the standard chart
+          if (isDeluxeSongId(songId)) {
+            await loadEarnedDeluxeDays(useAuthStore.getState().user?.id);
+            if (cancelled) return;
+            if (!isDeluxeUnlocked(useVaultStore.getState().collection, song.day)) {
+              setLockedSong(song);
+              setLockedReason("deluxe");
+              setLockedOrigin(originRoute);
+              phaseRef.current = "locked";
+              setPhase("locked");
+              return;
+            }
+          }
         }
       songRef.current = song;
-      
+      stageStartsRef.current = getStageStarts(song);
+
+      // Load on-track lyrics for this song's day (canvas-rendered, no gating).
+      if (song.day > 0 && trackLyricsRef.current.day !== song.day) {
+        trackLyricsRef.current = { day: song.day, lines: [] };
+        loadLyricsForDay(song.day).then((lines) => {
+          // Only keep if the song hasn't changed since the fetch started.
+          if (trackLyricsRef.current.day === song.day) {
+            trackLyricsRef.current.lines = lines;
+          }
+        });
+      }
+
       // Initialize GameSense on song load
       gameSenseService.init().then((status) => {
         if (status === 'connected') {
@@ -8529,7 +8745,9 @@ export default function Game() {
         );
       }
       // Apply difficulty override set by SongDetail page
-      const diffOverrideNum = parseInt(sessionStorage.getItem(`diff_override_${songId}`) ?? '', 10);
+      const diffOverrideNum = campaignStageRef.current
+        ? campaignStageRef.current.level
+        : parseInt(sessionStorage.getItem(`diff_override_${songId}`) ?? '', 10);
       if (!isNaN(diffOverrideNum) && diffOverrideNum >= 1 && diffOverrideNum <= 10 && !activeTutorial) {
         songRef.current.difficultyLevel = diffOverrideNum;
       }
@@ -8746,8 +8964,8 @@ export default function Game() {
         const diff = songRef.current?.difficultyLevel ?? 5;
 
         // Stage 1 restriction: strictly tap notes only (holds introduced in Stages 2-5)
-        const stage1EndTime = (song.duration || 180) * 0.15;
-        const isStage1 = note.stage === 1 || note.time < stage1EndTime;
+        const stage1EndTime = stageStartsRef.current[1];
+        const isStage1 = note.stage !== undefined ? note.stage === 1 : note.time < stage1EndTime;
         if (isStage1 && !activeTutorial) {
           if (isHoldNote(note) || (note.holdDuration && note.holdDuration > 0)) {
             note.type = 'tap';
@@ -8868,6 +9086,19 @@ export default function Game() {
           return true;
         });
       }
+      // ── Secret warp (rare): turn one lone final-stage tap into a warp note ──
+      warpClearUnlockedRef.current = false;
+      instantWarpPendingRef.current = false;
+      if (!activeTutorial) {
+        const warpPick = chooseWarpNote(
+          notesRef.current.map(ns => ns.note),
+          stageStartsRef.current[4] ?? Infinity,
+          Math.random,
+          parseWarpOverride(window.location.search),
+        );
+        if (warpPick) notesRef.current[warpPick.index].note.type = warpPick.type;
+      }
+
       unresolvedNotesCountRef.current = notesRef.current.length;
       lastNoteTimeRef.current = notesRef.current.length > 0
         ? Math.max(...notesRef.current.map(ns => ns.note.time))
@@ -8886,8 +9117,8 @@ export default function Game() {
       }
       const scoreEvents: ScoreEvent[] = [];
       notesRef.current.forEach(ns => {
-        if (ns.note.type === "mine") {
-          return; // mines are not hit in a perfect run
+        if (ns.note.type === "mine" || isWarpNote(ns.note)) {
+          return; // mines are not hit in a perfect run; warps are a rare bonus
         }
         if (isHoldNote(ns.note)) {
           scoreEvents.push({ time: ns.note.time, type: ns.note.type });
@@ -8969,7 +9200,7 @@ export default function Game() {
         ...prev,
         step: 4,
         stepLabel: "DOWNLOADING AUDIO TRANSMISSION",
-        detailMsg: "Establishing stream connection to audio file...",
+        detailMsg: "Connecting to audio…",
         pct: 55,
         logs: [...prev.logs.slice(-4), `[NET] Requesting audio stream: ${song.audioUrl}`]
       }));
@@ -9022,12 +9253,12 @@ export default function Game() {
             ...prev,
             step: 4,
             stepLabel: "STREAMING DIRECT AUDIO CHUNKS",
-            detailMsg: `Large file (${(headBytes / 1048576).toFixed(1)} MB) · HTML5 streaming active`,
+            detailMsg: `Large file (${(headBytes / 1048576).toFixed(1)} MB) · streaming`,
             bytesLoaded: headBytes,
             bytesTotal: headBytes,
             pct: 95,
             isStreaming: true,
-            logs: [...prev.logs.slice(-4), `[NET] Direct HTML5 media streaming engaged (${(headBytes / 1048576).toFixed(1)} MB)`]
+            logs: [...prev.logs.slice(-4), `[NET] Streaming large file (${(headBytes / 1048576).toFixed(1)} MB)`]
           }));
         } else if (response && response.ok) {
           const contentLength = response.headers.get("content-length");
@@ -9103,7 +9334,7 @@ export default function Game() {
             ...prev,
             step: 5,
             stepLabel: "SYNCHRONIZING AUDIO ENGINE",
-            detailMsg: "Aligning Web Audio Context & pre-rendering surface...",
+            detailMsg: "Syncing audio to the stage…",
             pct: 98,
             logs: [...prev.logs.slice(-3), `[ENGINE] Audio blob compiled & object URL generated`]
           }));
@@ -9319,20 +9550,31 @@ export default function Game() {
           // Filter out notes exceeding real audio duration - 1.0s
           const filteredNotes = (songRef.current.notes || []).filter(n => n.time <= roundedAudioDuration - 1.0);
 
-          // Re-stageify notes using exact real audio duration
-          const { notes: restaged, stages } = stageifyNotes(
-            filteredNotes,
-            roundedAudioDuration,
-            songRef.current.bpm || 120,
-            songRef.current.difficultyLevel || 5
-          );
+          // Re-stageify notes using exact real audio duration. Chart Master
+          // charts are already placed against the real audio (stages on the
+          // song's sections), so they keep their stages and are only trimmed.
+          const isMasterChart = songRef.current.chartVersion === CHART_MASTER_VERSION || songRef.current.chartVersion === CHART_MASTER_DELUXE_VERSION;
+          const { notes: restaged, stages } = isMasterChart
+            ? {
+                notes: filteredNotes,
+                stages: (songRef.current.stages || []).map(st =>
+                  st.stage === 5 ? { ...st, endTime: roundedAudioDuration } : st
+                ),
+              }
+            : stageifyNotes(
+                filteredNotes,
+                roundedAudioDuration,
+                songRef.current.bpm || 120,
+                songRef.current.difficultyLevel || 5
+              );
           songRef.current.notes = restaged;
           songRef.current.stages = stages;
+          stageStartsRef.current = getStageStarts(songRef.current);
 
           // Refresh active notesRef
           notesRef.current = restaged.map(n => {
             const note = { ...n, lane: Math.min(n.lane, LANE_COUNT - 1) };
-            if (note.stage === 1 || note.time < roundedAudioDuration * 0.15) {
+            if (note.stage !== undefined ? note.stage === 1 : note.time < stageStartsRef.current[1]) {
               if (isHoldNote(note) || (note.holdDuration && note.holdDuration > 0)) {
                 note.type = 'tap';
                 delete (note as any).holdDuration;
@@ -10550,8 +10792,8 @@ export default function Game() {
                 }}
               />
 
-              {/* Stage Boundary Markers (Stage 1->2: 15%, Stage 2->3: 35%, Stage 3->4: 60%, Stage 4->5: 80%) */}
-              {[0.15, 0.35, 0.60, 0.80].map((pct, idx) => (
+              {/* Stage Boundary Markers — chart-defined stage starts (default 15/35/60/80%) */}
+              {stageStartsRef.current.slice(1).map((st) => st / (songRef.current?.duration || 180)).map((pct, idx) => (
                 <div
                   key={idx}
                   className="absolute top-0 bottom-0 w-[1.5px] bg-white/40 shadow-[0_0_3px_rgba(255,255,255,0.7)] pointer-events-none"
@@ -11381,7 +11623,7 @@ export default function Game() {
                       </div>
                     ))
                   ) : (
-                    <div className="text-white/30 italic">&gt; Initializing signal telemetry...</div>
+                    <div className="text-white/30 italic">&gt; Waiting for signal…</div>
                   )}
                 </div>
               </div>
@@ -11497,7 +11739,7 @@ export default function Game() {
                   LOADING FAILED
                 </h2>
                 <p className="font-mono text-xs text-white/50 mb-8 leading-relaxed">
-                  We couldn't download the track audio. Please verify your connection and try again.
+                  Couldn't download the track. Check your connection and try again.
                 </p>
                 
                 <div className="flex flex-col gap-4">
@@ -11516,6 +11758,58 @@ export default function Game() {
                     className="w-full py-4 font-mono font-bold text-xs tracking-[0.2em] bg-white/5 text-white/60 border border-white/10 rounded-lg hover:bg-white/10 hover:text-white transition-all cursor-pointer"
                   >
                     ABORT MISSION
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Ownership lock — card required to play this transmission */}
+          {phase === "locked" && lockedSong && (
+            <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
+              <div className="glass-panel p-8 max-w-sm w-full mx-4 text-center border-t-2 border-[#FFD700]/40 shadow-2xl">
+                <div className="font-mono font-bold text-xs tracking-[0.4em] text-[#FFD700] mb-6 uppercase">
+                  {lockedReason === "deluxe" ? "🔒 Deluxe locked" : "🔒 Card required"}
+                </div>
+                <h2 className="font-mono font-bold text-2xl text-white mb-2 tracking-tight">
+                  {lockedSong.title}
+                </h2>
+                <p className="font-mono text-[10px] text-white/50 mb-8 leading-relaxed uppercase tracking-widest">
+                  {lockedReason === "deluxe"
+                    ? `Day ${lockedSong.day} · hit ${DELUXE_UNLOCK_ACCURACY}% on the standard chart or open a Deluxe pack`
+                    : `Day ${lockedSong.day} · own the card to play this transmission`}
+                </p>
+
+                <div className="flex flex-col gap-4">
+                  {lockedReason === "deluxe" ? (
+                    <button
+                      onClick={() => setLocation(`/play/${songId?.replace(/_deluxe$/, "")}`)}
+                      className="w-full py-4 font-mono font-bold text-sm tracking-[0.3em] bg-gradient-to-r from-[#FFD700] to-[#FF7A33] text-black rounded-lg hover:scale-[1.02] active:scale-95 transition-all shadow-lg cursor-pointer uppercase"
+                    >
+                      Play standard chart
+                    </button>
+                  ) : lockedSong.day === getCurrentDay() ? (
+                    <button
+                      onClick={handleClaimAndPlay}
+                      disabled={claimingCard}
+                      className="w-full py-4 font-mono font-bold text-sm tracking-[0.3em] bg-gradient-to-r from-[#FFD700] to-[#FF7A33] text-black rounded-lg hover:scale-[1.02] active:scale-95 transition-all shadow-lg cursor-pointer disabled:opacity-50 uppercase"
+                    >
+                      {claimingCard ? "CLAIMING…" : "Claim free card & play"}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setLocation("/vault")}
+                      className="w-full py-4 font-mono font-bold text-sm tracking-[0.3em] bg-gradient-to-r from-[#FFD700] to-[#FF7A33] text-black rounded-lg hover:scale-[1.02] active:scale-95 transition-all shadow-lg cursor-pointer uppercase"
+                    >
+                      Get this card
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => setLocation(lockedOrigin)}
+                    className="w-full py-4 font-mono font-bold text-xs tracking-[0.2em] bg-white/5 text-white/60 border border-white/10 rounded-lg hover:bg-white/10 hover:text-white transition-all cursor-pointer uppercase"
+                  >
+                    Back
                   </button>
                 </div>
               </div>
@@ -11967,30 +12261,53 @@ function drawKey(
   const isHoldHead = noteType === 'hold' || noteType === 'hold-swipe' || noteType === 'slide' || noteType === 'zigzag';
   const m = (swipeDirection && !isHold && !isHoldHead && noteType !== 'lift') ? 1.0 : 0;
 
-  if (swipeDirection && m > 0) {
-    ctx.rotate(rotations[swipeDirection] || 0);
-  }
+  const swipeRot = swipeDirection && m > 0 ? (rotations[swipeDirection] || 0) : 0;
 
   // ── 1. Define Key Body Path ──
-  ctx.beginPath();
-  if (m > 0) {
-    const w = noteW / 2;
-    const h = noteH / 2;
-    const br = lerp(r, 8, m);
-    const pinchX = lerp(w, w * 0.2, m);
-    const indentX = lerp(-w, -w * 0.35, m);
+  const buildBodyPath = () => {
+    ctx.beginPath();
+    if (m > 0) {
+      const w = noteW / 2;
+      const h = noteH / 2;
+      const br = lerp(r, 8, m);
+      const pinchX = lerp(w, w * 0.2, m);
+      const indentX = lerp(-w, -w * 0.35, m);
 
-    ctx.moveTo(-w + br, -h);
-    ctx.arcTo(pinchX, -h, w, 0, br);
-    ctx.arcTo(w, 0, pinchX, h, br);
-    ctx.arcTo(pinchX, h, -w, h, br);
-    ctx.arcTo(-w, h, indentX, 0, br);
-    ctx.arcTo(indentX, 0, -w, -h, br);
-    ctx.arcTo(-w, -h, -w + br, -h, br);
-    ctx.closePath();
-  } else {
-    ctx.roundRect(-noteW / 2, -noteH / 2, noteW, noteH, r);
+      ctx.moveTo(-w + br, -h);
+      ctx.arcTo(pinchX, -h, w, 0, br);
+      ctx.arcTo(w, 0, pinchX, h, br);
+      ctx.arcTo(pinchX, h, -w, h, br);
+      ctx.arcTo(-w, h, indentX, 0, br);
+      ctx.arcTo(indentX, 0, -w, -h, br);
+      ctx.arcTo(-w, -h, -w + br, -h, br);
+      ctx.closePath();
+    } else {
+      ctx.roundRect(-noteW / 2, -noteH / 2, noteW, noteH, r);
+    }
+  };
+
+  // ── 1b. 3D Slab: contact shadow + side walls under the top face ──
+  const warpHue = (Date.now() / 5) % 360;
+  const isWarp = noteType === 'warp' || noteType === 'warp-clear';
+  const wallColor = isHold ? (lc || "#FFD700")
+                  : isWarp ? `hsl(${warpHue}, 100%, 60%)`
+                  : noteType === 'remix' ? '#00F5D4'
+                  : noteType === 'break' ? '#FF7B00'
+                  : noteType === 'accent' ? '#CCFF00'
+                  : noteType === 'lift' ? '#00FF88'
+                  : noteType === 'zigzag' ? '#A855F7'
+                  : noteType === 'burst' ? '#FF5500'
+                  : lc;
+  if (noteType !== 'ghost') {
+    drawSlabBody(ctx, () => {
+      if (swipeRot) ctx.rotate(swipeRot);
+      buildBodyPath();
+      if (swipeRot) ctx.rotate(-swipeRot);
+    }, noteW, noteH, prog, wallColor, { isHold });
   }
+
+  if (swipeRot) ctx.rotate(swipeRot);
+  buildBodyPath();
 
   // ── 2. Render Body Fill (Customized per note type) ──
   if (isHold) {
@@ -12003,6 +12320,14 @@ function drawKey(
     ctx.fillStyle = goldGrad;
     ctx.shadowColor = stageColor;
     ctx.shadowBlur = lerp(4, 12, prog);
+    ctx.shadowOffsetY = 0;
+  } else if (isWarp) {
+    // Secret warp: a rainbow body whose colours keep cycling
+    const warpGrad = ctx.createLinearGradient(-noteW / 2, 0, noteW / 2, 0);
+    for (let k = 0; k <= 4; k++) warpGrad.addColorStop(k / 4, `hsl(${(warpHue + k * 70) % 360}, 100%, 60%)`);
+    ctx.fillStyle = warpGrad;
+    ctx.shadowColor = `hsl(${warpHue}, 100%, 70%)`;
+    ctx.shadowBlur = lerp(10, 22, prog);
     ctx.shadowOffsetY = 0;
   } else if (noteType === 'remix') {
     // Cyberpunk Prismatic Body — Electric Cyan to Deep Magenta
@@ -12114,6 +12439,13 @@ function drawKey(
   ctx.fill();
   ctx.restore();
 
+  // ── 2c. Top-face bevel + gloss so the tile reads as a solid block ──
+  if (noteType !== 'ghost') {
+    drawTopFaceBevel(ctx, noteW, noteH, wallColor);
+    // The gloss pass replaces the current path; restore the body outline for the border strokes.
+    buildBodyPath();
+  }
+
   // ── 3. Edge Border Styling ──
   ctx.shadowColor = "transparent";
   ctx.shadowBlur = 0;
@@ -12122,6 +12454,8 @@ function drawKey(
     ctx.strokeStyle = "rgba(255, 255, 255, 0.95)"; ctx.lineWidth = 3.5; ctx.stroke();
     ctx.strokeStyle = "#D4AF37"; ctx.lineWidth = 2.0; ctx.stroke();
     ctx.strokeStyle = "rgba(255, 255, 255, 0.95)"; ctx.lineWidth = 0.8; ctx.stroke();
+  } else if (isWarp) {
+    ctx.strokeStyle = "#FFFFFF"; ctx.lineWidth = 3.0; ctx.stroke();
   } else if (noteType === 'remix') {
     ctx.strokeStyle = "#FFFFFF"; ctx.lineWidth = 3.0; ctx.stroke();
     ctx.strokeStyle = "#00F5D4"; ctx.lineWidth = 1.5; ctx.stroke();
@@ -12395,6 +12729,31 @@ function drawKey(
     ctx.beginPath();
     ctx.arc(0, 0, (noteW / 2 + 4) * pulse, 0, Math.PI * 2);
     ctx.stroke();
+    ctx.restore();
+
+  } else if (isWarp) {
+    // 🌀 WARP NOTE: spinning vortex rings behind a label. The instant warp
+    // spins faster and reads WARP; the on-clear warp reads WARP ★.
+    ctx.save();
+    const spin = (nowMs / (noteType === 'warp' ? 120 : 260)) % (Math.PI * 2);
+    ctx.lineWidth = 2;
+    for (let k = 0; k < 3; k++) {
+      ctx.strokeStyle = `hsl(${(warpHue + k * 120) % 360}, 100%, 70%)`;
+      ctx.beginPath();
+      ctx.arc(0, 0, noteW / 2 + 4 + k * 4, spin + k, spin + k + Math.PI * 1.2);
+      ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(10, 0, 30, 0.8)';
+    ctx.beginPath();
+    ctx.roundRect(-24, -10, 48, 20, 10);
+    ctx.fill();
+    ctx.fillStyle = '#FFFFFF';
+    ctx.shadowColor = `hsl(${warpHue}, 100%, 60%)`;
+    ctx.shadowBlur = 12;
+    ctx.font = '900 10px "Space Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(noteType === 'warp' ? 'WARP' : 'WARP ★', 0, 0);
     ctx.restore();
 
   } else if (noteType === 'accent') {

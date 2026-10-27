@@ -81,14 +81,14 @@ export default function LeaderboardPage() {
           tomorrowStart.setUTCDate(tomorrowStart.getUTCDate() + 1);
 
           // 1. Fetch gameplay_records for today (exclude zero/corrupted scores)
-          const { data: records, error: recordsError } = await supabase
-            .from('gameplay_records')
-            .select('user_id, song_id, score, timestamp')
-            .gte('timestamp', todayStart.toISOString())
-            .lt('timestamp', tomorrowStart.toISOString())
-            .gt('score', 0);
+          // Other players' rows aren't readable directly; get_daily_scores returns just these columns.
+          const { data: dailyRows, error: recordsError } = await supabase
+            .rpc('get_daily_scores', { p_since: todayStart.toISOString() });
 
           if (recordsError) throw recordsError;
+          const tomorrowIso = tomorrowStart.toISOString();
+          const records = ((dailyRows || []) as { user_id: string; song_id: string; score: number; timestamp: string }[])
+            .filter((r) => (r.score || 0) > 0 && (!r.timestamp || new Date(r.timestamp).toISOString() < tomorrowIso));
 
           // 2. Aggregate per-song personal bests per user (prevents multi-insert row inflation)
           const userSongBests: Record<string, Record<string, number>> = {};
@@ -118,9 +118,7 @@ export default function LeaderboardPage() {
           let profilesMap: Record<string, any> = {};
           if (userIds.length > 0) {
             const { data: profs, error: profsError } = await supabase
-              .from('profiles')
-              .select('id, wallet_address, display_name, username, avatar_url')
-              .in('id', userIds);
+              .rpc('get_public_profiles', { p_ids: userIds });
             
             if (!profsError && profs) {
               profilesMap = profs.reduce((acc, p) => ({...acc, [p.id]: p}), {});
@@ -236,9 +234,7 @@ export default function LeaderboardPage() {
 
           while (pHasMore) {
             const { data, error } = await supabase
-              .from('profiles')
-              .select('id, wallet_address, display_name, username, avatar_url, streak_count, total_pulls')
-              .range(pPage * P_PAGE_SIZE, (pPage + 1) * P_PAGE_SIZE - 1);
+              .rpc('get_public_profiles_page', { p_offset: pPage * P_PAGE_SIZE, p_limit: P_PAGE_SIZE });
             
             if (error) throw error;
             if (!data || data.length === 0) {
@@ -401,7 +397,15 @@ export default function LeaderboardPage() {
   const yourEntry = entries.find(e => e.isYou);
 
   return (
-    <div className="flex-1 px-4 md:px-8 pt-2 pb-36 md:pb-10 max-w-4xl mx-auto w-full space-y-8 etching-bg">
+    <div
+      className="flex-1 px-4 md:px-8 pt-2 max-w-4xl mx-auto w-full space-y-8 etching-bg"
+      style={{
+        minHeight: '100dvh',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 6.5rem)'
+      }}
+    >
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
@@ -419,8 +423,9 @@ export default function LeaderboardPage() {
       {/* Tabs */}
       <div className="flex justify-center mb-6 border-b border-white/10 relative leaderboard-tabs">
         <button
-          className={`px-8 py-4 font-black uppercase text-lg tracking-wider transition-colors relative ${activeTab === 'today' ? 'text-neon-gold active' : 'text-white/40 hover:text-white/80'}`}
+          className={`px-8 py-4 font-black uppercase text-lg tracking-wider transition-colors relative cursor-pointer ${activeTab === 'today' ? 'text-neon-gold active' : 'text-white/40 hover:text-white/80'}`}
           onClick={() => setActiveTab('today')}
+          style={{ minHeight: '48px' }}
         >
           PERFORMANCE
           <div className="text-[10px] opacity-60 font-mono tracking-normal text-white">How well you play today</div>
@@ -432,8 +437,9 @@ export default function LeaderboardPage() {
           )}
         </button>
         <button
-          className={`px-8 py-4 font-black uppercase text-lg tracking-wider transition-colors relative ${activeTab === 'alltime' ? 'text-neon-gold active' : 'text-white/40 hover:text-white/80'}`}
+          className={`px-8 py-4 font-black uppercase text-lg tracking-wider transition-colors relative cursor-pointer ${activeTab === 'alltime' ? 'text-neon-gold active' : 'text-white/40 hover:text-white/80'}`}
           onClick={() => setActiveTab('alltime')}
+          style={{ minHeight: '48px' }}
         >
           PRESTIGE
           <div className="text-[10px] opacity-60 font-mono tracking-normal text-white">How deep your collection goes</div>
@@ -508,12 +514,12 @@ export default function LeaderboardPage() {
           <div>
             <div className="font-mono text-[10px] font-bold uppercase tracking-widest text-[#FFD700] flex items-center justify-center md:justify-start gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-[#FFD700] animate-ping" />
-              LEADERBOARD TRANSMISSION CLEARANCE
+              GET ON THE LEADERBOARD
             </div>
             <p className="font-sans text-xs text-white/70 mt-0.5">
               {!authUser || authUser.is_anonymous
-                ? "Connect your sovereign account to claim an official @username and broadcast your scores to global rankings."
-                : "You are connected! Register a pilot @username and avatar photo to broadcast your rank."}
+                ? "Sign in to pick a @username and post your scores to the global rankings."
+                : "You're signed in. Pick a @username and avatar to show up on the leaderboards."}
             </p>
           </div>
           <button
@@ -524,7 +530,11 @@ export default function LeaderboardPage() {
                 setShowIdentityModal(true);
               }
             }}
-            className="px-5 py-2.5 bg-[#FFD700] text-black font-black uppercase text-xs tracking-wider rounded shadow-[0_0_15px_rgba(255,215,0,0.3)] hover:bg-white transition-colors cursor-pointer shrink-0"
+            className="px-5 py-2.5 bg-[#FFD700] text-black font-black uppercase text-xs tracking-wider shadow-[0_0_15px_rgba(255,215,0,0.3)] hover:bg-white transition-colors cursor-pointer shrink-0 flex items-center justify-center"
+            style={{
+              minHeight: '44px',
+              clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+            }}
           >
             {!authUser || authUser.is_anonymous ? "CONNECT ACCOUNT" : "CLAIM @USERNAME"}
           </button>

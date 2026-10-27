@@ -3,14 +3,16 @@ import { useParams, useLocation } from "wouter";
 import { loadCatalog, isSongTimeLocked, getModifierForSong } from "@/game/api";
 import { getMonthNumFromDay } from "@/utils/dayCalc";
 import type { GameSong } from "@/game/api";
-import { getMedalForSong, getChapterPlatinums, getHighScore, getScoreHistory } from "@/game/progress";
-import { CHAPTERS, calculateCampaignDifficulty } from "@/game/campaign";
+import { getCampaignMedal, getCampaignPlatinums, getCampaignRecord, hasCampaignClear, getScoreHistory } from "@/game/progress";
+import { CHAPTERS, calculateCampaignDifficulty, campaignPlayPath, prepareCampaignRun } from "@/game/campaign";
+import { resolvePreferredCover } from "@/utils/gameCover";
 import { getActiveTheme } from "@/lib/options";
 import { audioManager } from "@/game/audio";
-import { useVaultStore } from "@/store/useVaultStore";
+import { useVaultStore, ownsCardForDay } from "@/store/useVaultStore";
 import { purchasePack } from "@/services/vaultService";
 import { PACK_CONFIGS } from "@/utils/rarity";
 import { Lock, Play, Film } from "lucide-react";
+import { useFitAboveDock } from "@/hooks/useFitAboveDock";
 
 
 const MEDAL_COLOR: Record<string, string> = {
@@ -39,7 +41,6 @@ export default function Chapter() {
 
   // Vault integration
   const collection = useVaultStore((s) => s.collection);
-  const fragments = useVaultStore((s) => s.fragments);
   const loadVaultData = useVaultStore((s) => s.loadVaultData);
   const equippedCardId = useVaultStore((s) => s.equippedCardId);
   const setEquippedCardId = useVaultStore((s) => s.setEquippedCardId);
@@ -97,14 +98,12 @@ export default function Chapter() {
       // Otherwise, default select to player's active level (first uncleared unlocked level)
       const regularSongsList = filtered.length > 5 ? filtered.slice(0, -5) : filtered;
       const bonusSongsList = filtered.length > 5 ? filtered.slice(-5) : [];
-      const plats = getChapterPlatinums(regularSongsList.map(s => s.id));
+      const plats = getCampaignPlatinums(regularSongsList.map(s => s.id));
       const bUnlocked = filtered.length > 5 ? (plats >= meta.platNeeded) : true;
       
       const hasClearedLocal = (song?: GameSong) => {
         if (!song) return false;
-        const medalVal = getMedalForSong(song.id);
-        const scoreVal = getHighScore(song.id);
-        return (medalVal && medalVal !== '') || scoreVal > 0;
+        return hasCampaignClear(song.id);
       };
 
       const isUnlockedLocal = (idx: number) => {
@@ -160,6 +159,8 @@ export default function Chapter() {
   const [scrollTop, setScrollTop] = useState(0);
   const [containerHeight, setContainerHeight] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+  const pageRef = useRef<HTMLDivElement>(null);
+  const fitHeight = useFitAboveDock(pageRef, !loading);
   const [currentPageIdx, setCurrentPageIdx] = useState(0);
   const PAGE_SIZE = 5;
 
@@ -195,11 +196,12 @@ export default function Chapter() {
       el.addEventListener('scroll', handleScroll, { passive: true });
       setContainerHeight(el.clientHeight);
     }
-    window.addEventListener('resize', handleResize);
+    const ro = new ResizeObserver(handleResize);
+    if (el) ro.observe(el);
 
     return () => {
       if (el) el.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('resize', handleResize);
+      ro.disconnect();
     };
   }, [loading, containerHeight]);
 
@@ -315,15 +317,13 @@ export default function Chapter() {
 
   const regularSongs  = songs.length > 5 ? songs.slice(0, -5) : songs;
   const bonusSongs    = songs.length > 5 ? songs.slice(-5) : [];
-  const platinums     = getChapterPlatinums(regularSongs.map(s => s.id));
+  const platinums     = getCampaignPlatinums(regularSongs.map(s => s.id));
   const bonusUnlocked = songs.length > 5 ? (platinums >= meta.platNeeded) : true;
 
   // Clear tracking
   const hasCleared = (song?: GameSong) => {
     if (!song) return false;
-    const medal = getMedalForSong(song.id);
-    const score = getHighScore(song.id);
-    return (medal && medal !== '') || score > 0;
+    return hasCampaignClear(song.id);
   };
 
   const clearsCount = regularSongs.filter(s => hasCleared(s)).length;
@@ -356,27 +356,24 @@ export default function Chapter() {
   const selectedSong = songs[activeIdx];
 
   // Selected song stats & locks
-  const medal = selectedSong ? getMedalForSong(selectedSong.id) : '';
+  const medal = selectedSong ? getCampaignMedal(selectedSong.id) : '';
   const mc = MEDAL_COLOR[medal] ?? '#1a1a1a';
-  const score = selectedSong ? getHighScore(selectedSong.id) : 0;
+  const score = selectedSong ? (getCampaignRecord(selectedSong.id)?.score ?? 0) : 0;
   const history = selectedSong ? getScoreHistory(selectedSong.id) : [];
   const modifierType = selectedSong ? getModifierForSong(selectedSong) : 'none';
 
-  // Card ownership
-  const ownsCard = selectedSong && Array.isArray(collection) ? collection.some(c => c && (c.cardId === selectedSong.id || c.card?.day === selectedSong.day)) : false;
+  // Card ownership (strict: replay requires owning the card)
+  const ownsCard = selectedSong ? ownsCardForDay(collection, selectedSong.day) : false;
   const isCleared = selectedSong ? hasCleared(selectedSong) : false;
   const isAllPrizesClaimed = selectedSong ? (claimedRewards[selectedSong.id]?.includes('prophecy') || localStorage.getItem(`reward_tier_${selectedSong.id}`) === 'prophecy') : false;
-
-  const fragmentCount = selectedSong ? (fragments[selectedSong.id] ?? 0) : 0;
-  const isCardUnlocked = ownsCard || fragmentCount >= 10;
 
   // Check locks
   const isTimeLocked = selectedSong ? isSongTimeLocked(selectedSong) : false;
   const isBonusLocked = selectedSong && (songs.indexOf(selectedSong) >= regularSongs.length) && !bonusUnlocked;
   const isProgLocked = selectedSong && !isUnlocked(songs.indexOf(selectedSong));
-  
-  // A song is locked if it is a replay (already cleared) AND they have less than 10 fragments AND they do NOT own the card
-  const isUnlockReqLocked = isCleared ? (!ownsCard && fragmentCount < 10) : false;
+
+  // A song is locked if it is a replay (already cleared) AND they do NOT own the card
+  const isUnlockReqLocked = isCleared ? !ownsCard : false;
   const isPlayLocked = isTimeLocked || isBonusLocked || isProgLocked || isUnlockReqLocked;
 
   const difficultyLevel = selectedSong
@@ -420,20 +417,9 @@ export default function Chapter() {
     setPreviewing(false);
     
     audioManager.playSfx('tap_nav', 0.4);
-    sessionStorage.setItem(`campaign_last_song_id`, selectedSong.id);
-    sessionStorage.setItem(`game_origin_${selectedSong.id}`, `chapter/${monthNum}`);
-    sessionStorage.setItem(`diff_override_${selectedSong.id}`, String(difficultyLevel));
-
-    // Inject active card modifier if equipped
-    const isEquipped = equippedCardId === selectedSong.id;
-    if (isEquipped && modifierType !== 'none') {
-      sessionStorage.setItem(`active_modifier_type_${selectedSong.id}`, modifierType);
-    } else {
-      sessionStorage.removeItem(`active_modifier_type_${selectedSong.id}`);
-    }
-
+    prepareCampaignRun(selectedSong.id, monthNum, modifierType, equippedCardId === selectedSong.id);
     handlePlayRef.current = handlePlay;
-    setLocation(`/play/${selectedSong.id}`);
+    setLocation(campaignPlayPath(selectedSong.id));
   };
 
   // Claim milestones rewards function
@@ -506,10 +492,11 @@ export default function Chapter() {
   };
 
   return (
-    <div className="min-h-dvh w-full flex flex-col overflow-hidden select-none"
+    <div ref={pageRef} className="w-full flex flex-col overflow-hidden select-none"
       style={{
         background: isAvant ? '#050505' : '#080808',
-        position: 'relative'
+        position: 'relative',
+        height: fitHeight ?? 'calc(100dvh - 60px)',
       }}>
       
       {/* Sticky top nav */}
@@ -524,13 +511,17 @@ export default function Chapter() {
           style={isAvant ? {
             color: '#39FF14',
             border: '1px solid rgba(57,255,20,0.3)',
-            padding: '4px 10px',
+            padding: '6px 14px',
+            minHeight: '38px',
+            clipPath: 'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)',
             background: 'none',
             cursor: 'pointer'
           } : {
-            color: 'rgba(255,255,255,0.35)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            padding: '4px 10px',
+            color: 'rgba(255,255,255,0.7)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            padding: '6px 14px',
+            minHeight: '38px',
+            clipPath: 'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)',
             boxShadow: '2px 2px 0 rgba(255,255,255,0.06)',
             background: 'none',
             cursor: 'pointer'
@@ -548,8 +539,8 @@ export default function Chapter() {
           onMouseLeave={e => {
             if (isAvant) return;
             const el = e.currentTarget as HTMLElement;
-            el.style.color = 'rgba(255,255,255,0.35)';
-            el.style.borderColor = 'rgba(255,255,255,0.1)';
+            el.style.color = 'rgba(255,255,255,0.7)';
+            el.style.borderColor = 'rgba(255,255,255,0.2)';
             el.style.boxShadow = '2px 2px 0 rgba(255,255,255,0.06)';
           }}>
           ← CAMPAIGN MAP
@@ -560,17 +551,17 @@ export default function Chapter() {
         </div>
         
         <div className="flex gap-2">
-          {prev && <button onClick={() => { if (isAvant) audioManager.playSfx('tap_nav', 0.12); setLocation(`/chapter/${prev.month}`); }} className="font-mono text-xs px-3 py-1 cursor-pointer" style={{ color: isAvant ? '#39FF14' : 'rgba(255,255,255,0.25)', border: isAvant ? '1px solid rgba(57,255,20,0.3)' : '1px solid rgba(255,255,255,0.08)', background: 'none' }} onMouseEnter={() => { if (isAvant) audioManager.playSfx('tap_nav', 0.08); }} >‹</button>}
-          {next && <button onClick={() => { if (isAvant) audioManager.playSfx('tap_nav', 0.12); setLocation(`/chapter/${next.month}`); }} className="font-mono text-xs px-3 py-1 cursor-pointer" style={{ color: isAvant ? '#39FF14' : 'rgba(255,255,255,0.25)', border: isAvant ? '1px solid rgba(57,255,20,0.3)' : '1px solid rgba(255,255,255,0.08)', background: 'none' }} onMouseEnter={() => { if (isAvant) audioManager.playSfx('tap_nav', 0.08); }} >›</button>}
+          {prev && <button onClick={() => { if (isAvant) audioManager.playSfx('tap_nav', 0.12); setLocation(`/chapter/${prev.month}`); }} className="font-mono text-xs px-3.5 py-1.5 cursor-pointer flex items-center justify-center" style={{ minHeight: '38px', minWidth: '38px', clipPath: 'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)', color: isAvant ? '#39FF14' : 'rgba(255,255,255,0.6)', border: isAvant ? '1px solid rgba(57,255,20,0.3)' : '1px solid rgba(255,255,255,0.15)', background: 'none' }} onMouseEnter={() => { if (isAvant) audioManager.playSfx('tap_nav', 0.08); }} >‹</button>}
+          {next && <button onClick={() => { if (isAvant) audioManager.playSfx('tap_nav', 0.12); setLocation(`/chapter/${next.month}`); }} className="font-mono text-xs px-3.5 py-1.5 cursor-pointer flex items-center justify-center" style={{ minHeight: '38px', minWidth: '38px', clipPath: 'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)', color: isAvant ? '#39FF14' : 'rgba(255,255,255,0.6)', border: isAvant ? '1px solid rgba(57,255,20,0.3)' : '1px solid rgba(255,255,255,0.15)', background: 'none' }} onMouseEnter={() => { if (isAvant) audioManager.playSfx('tap_nav', 0.08); }} >›</button>}
         </div>
       </div>
 
       {/* Main Parallax Scrolling Container */}
-      <div className="flex-1 w-full overflow-hidden relative">
+      <div className="flex-1 min-h-0 w-full overflow-hidden relative">
 
         {/* Right Floating Dot Bullet Navigation */}
         {pagesCount > 1 && (
-          <div className="fixed right-6 top-1/2 -translate-y-1/2 flex flex-col gap-4 z-30 animate-fade-in">
+          <div className="fixed right-6 top-1/2 -translate-y-1/2 hidden sm:flex flex-col gap-4 z-30 animate-fade-in">
             {songPages.map((_, pIdx) => {
               const active = currentPageIdx === pIdx;
               return (
@@ -601,7 +592,7 @@ export default function Chapter() {
         <div
           ref={containerRef}
           id="stages-scroll-container"
-          className="w-full h-[calc(100vh-60px)] overflow-y-auto snap-y snap-mandatory scroll-smooth relative z-10 scrollbar-none"
+          className="w-full h-full overflow-y-auto snap-y snap-mandatory scroll-smooth relative z-10 scrollbar-none"
           style={{ scrollbarWidth: 'none' }}
         >
           {songs.length === 0 ? (
@@ -760,7 +751,7 @@ export default function Chapter() {
                           const coords = getLocalNodeCoords(localIdx);
                           const unl = isUnlocked(globalIdx);
                           const cl = hasCleared(song);
-                          const nodeMedal = getMedalForSong(song.id);
+                          const nodeMedal = getCampaignMedal(song.id);
                           const isSel = selectedIdx === globalIdx;
                           const isBonus = globalIdx >= regularSongs.length;
                           const nodeAllClaimed = claimedRewards[song.id]?.includes('prophecy') || localStorage.getItem(`reward_tier_${song.id}`) === 'prophecy';
@@ -922,8 +913,8 @@ export default function Chapter() {
                             {/* Title block with cover art */}
                             <div className="flex gap-4 items-start">
                               <div className="relative flex-shrink-0">
-                                {selectedSong.coverArt ? (
-                                  <img src={selectedSong.coverArt} alt={selectedSong.title}
+                                {resolvePreferredCover(selectedSong) ? (
+                                  <img src={resolvePreferredCover(selectedSong)!} alt={selectedSong.title}
                                     className="object-cover rounded w-16 h-16 border border-white/10"
                                     style={{ filter: isPlayLocked ? 'grayscale(100%) brightness(0.3)' : 'none' }} />
                                 ) : (
@@ -996,7 +987,7 @@ export default function Chapter() {
                               </div>
                             ) : (
                               <div className="border border-dashed border-white/5 p-2 rounded text-center text-xs">
-                                <span className="font-mono text-[7px] text-white/20">// NO DISPATCH TELEMETRY ON RECORD</span>
+                                <span className="font-mono text-[7px] text-white/20">// NO SCORE YET</span>
                               </div>
                             )}
 
@@ -1048,21 +1039,17 @@ export default function Chapter() {
                               )}
                               {isProgLocked && !isTimeLocked && !isBonusLocked && (
                                 <div className="p-1.5 border border-[#FF3800]/30 bg-[#FF3800]/10 text-center rounded text-[8px] font-mono text-[#FF3800]">
-                                  🔒 TRANSMISSION LOCKED — CLEAR PREVIOUS LEVEL TO UNLOCK PATHWAY
+                                  🔒 LOCKED · CLEAR THE PREVIOUS LEVEL FIRST
                                 </div>
                               )}
                               {isUnlockReqLocked && !isTimeLocked && !isBonusLocked && !isProgLocked && (
                                 <div className="p-2 border border-yellow-500/20 bg-yellow-500/5 rounded space-y-1.5">
                                   <div className="flex justify-between items-baseline">
-                                    <span className="font-mono text-[7px] text-yellow-500 font-bold uppercase tracking-wider">// SONG REPLAY REQUISITE</span>
-                                    <span className="font-mono text-[8px] text-white/90 font-black">{fragmentCount} / 10 FRAGS</span>
-                                  </div>
-                                  <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden relative border border-white/5">
-                                    <div className="h-full bg-gradient-to-r from-yellow-600 to-yellow-400 rounded-full transition-all duration-300"
-                                      style={{ width: `${Math.min(100, (fragmentCount / 10) * 100)}%` }} />
+                                    <span className="font-mono text-[7px] text-yellow-500 font-bold uppercase tracking-wider">// Song replay requisite</span>
+                                    <span className="font-mono text-[8px] text-white/90 font-black">🔒 CARD</span>
                                   </div>
                                   <div className="font-mono text-[7px] text-white/40 leading-normal uppercase">
-                                    Unlock requires 10 fragments. Decrypt in shop or claim daily drops to unlock.
+                                    Replay requires owning this card. Find it in packs or the vault.
                                   </div>
                                 </div>
                               )}
@@ -1082,12 +1069,16 @@ export default function Chapter() {
                         <div className="pt-6 flex gap-2">
                           <button onClick={handlePlay}
                             disabled={isPlayLocked}
-                            className={`flex-1 py-3 text-xs tracking-[0.3em] font-black border uppercase transition-all rounded cursor-pointer ${
+                            className={`flex-1 py-3 text-xs tracking-[0.3em] font-black border uppercase transition-all cursor-pointer ${
                               !isPlayLocked 
                                 ? (isAvant ? 'border-[#39FF14] bg-[#39FF14] text-black hover:bg-[#39FF14]/90' : 'border-[#fff] bg-[#fff] text-black hover:bg-white/90')
                                 : 'border-white/10 bg-white/5 text-white/20 cursor-not-allowed'
                             }`}
-                            style={!isPlayLocked ? { boxShadow: `0 4px 12px ${isAvant ? '#39FF14' : meta.dc}30` } : {}}
+                            style={{
+                              minHeight: '48px',
+                              clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+                              ...(!isPlayLocked ? { boxShadow: `0 4px 12px ${isAvant ? '#39FF14' : meta.dc}30` } : {})
+                            }}
                           >
                             {isUnlockReqLocked ? '🔒 DECODE REQUIRED' : isCleared ? 'REPLAY TRANSMISSION' : '▶ START TRANSMISSION'}
                           </button>
@@ -1101,11 +1092,15 @@ export default function Chapter() {
                                 handlePlay();
                               }}
                               title="Export frame-perfect 100% PERFECT+ run video (DEV ONLY)"
-                              className={`px-4 py-3 text-xs font-mono border rounded uppercase transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                              className={`px-4 py-3 text-xs font-mono border uppercase transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
                                 !isPlayLocked
                                   ? 'border-[#FF1493] bg-[#FF1493]/15 text-[#FF1493] hover:bg-[#FF1493] hover:text-black shadow-[0_0_12px_rgba(255,20,147,0.3)]'
                                   : 'border-white/10 bg-white/5 text-white/20 cursor-not-allowed'
                               }`}
+                              style={{
+                                minHeight: '48px',
+                                clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+                              }}
                             >
                               <Film size={14} />
                               <span className="hidden sm:inline">EXPORT VIDEO</span>
@@ -1114,7 +1109,11 @@ export default function Chapter() {
 
                           {isUnlocked(songs.indexOf(selectedSong)) && (
                             <button onClick={() => setLocation(`/song/${selectedSong.id}?from=chapter/${monthNum}`)}
-                              className="py-3 px-4 text-xs font-mono border border-white/10 hover:border-white/30 text-white/60 hover:text-white rounded cursor-pointer bg-transparent">
+                              className="py-3 px-4 text-xs font-mono border border-white/10 hover:border-white/30 text-white/60 hover:text-white cursor-pointer bg-transparent"
+                              style={{
+                                minHeight: '48px',
+                                clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+                              }}>
                               CODEX
                             </button>
                           )}
@@ -1132,19 +1131,20 @@ export default function Chapter() {
 
       </div>
 
-      {/* MOBILE FLOATING BOTTOM PLAY PANEL (only on viewport size < lg) */}
+      {/* MOBILE BOTTOM PLAY PANEL (only on viewport size < lg). Kept in flow so it sits
+          above the phone dock instead of underneath it. */}
       {selectedSong && (
         <div
-          className="lg:hidden fixed z-30 p-3 border rounded-2xl"
+          className="lg:hidden relative z-30 flex-shrink-0 border"
           style={{
-            bottom: 'max(14px, env(safe-area-inset-bottom, 14px))',
-            left: '68px',
-            right: '12px',
+            margin: '8px 12px 0',
+            padding: '12px',
             borderColor: isAvant ? 'rgba(57,255,20,0.3)' : 'rgba(255,255,255,0.12)',
             background: isAvant ? 'rgba(5,5,5,0.94)' : 'rgba(8,8,12,0.92)',
             backdropFilter: 'blur(20px)',
             WebkitBackdropFilter: 'blur(20px)',
             boxShadow: '0 8px 32px rgba(0,0,0,0.8), 2px 2px 0 #000',
+            clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%)',
           }}
         >
           <div className="flex flex-col gap-2">
@@ -1166,13 +1166,13 @@ export default function Chapter() {
 
             {/* Warnings inside overlay if locked */}
             {isPlayLocked && (
-              <div className="p-1.5 border border-[#FF3800]/30 bg-[#FF3800]/10 text-center rounded text-[8px] font-mono text-[#FF3800] uppercase mb-1">
+              <div className="p-1.5 border border-[#FF3800]/30 bg-[#FF3800]/10 text-center text-[8px] font-mono text-[#FF3800] uppercase mb-1">
                 {isTimeLocked 
                   ? '🔒 CHRONO TIME LOCK ACTIVE' 
                   : isBonusLocked 
                     ? `🔒 NEED ${meta.platNeeded} PLATINUMS (HAVE ${platinums})` 
                     : isUnlockReqLocked
-                      ? `🔒 DECODE REQUIRED: ${fragmentCount}/10 FRAGMENTS`
+                      ? `🔒 CARD REQUIRED — OWN THIS CARD TO REPLAY`
                       : '🔒 TRANSMISSION LOCKED'}
               </div>
             )}
@@ -1181,12 +1181,16 @@ export default function Chapter() {
               <button
                 onClick={handlePlay}
                 disabled={isPlayLocked}
-                className={`flex-1 py-3 text-xs tracking-[0.3em] font-black border uppercase transition-all rounded cursor-pointer ${
+                className={`flex-1 py-3 text-xs tracking-[0.3em] font-black border uppercase transition-all cursor-pointer ${
                   !isPlayLocked
                     ? (isAvant ? 'border-[#39FF14] bg-[#39FF14] text-black hover:bg-[#39FF14]/90' : 'border-[#fff] bg-[#fff] text-black hover:bg-white/90')
                     : 'border-white/10 bg-white/5 text-white/20 cursor-not-allowed'
                 }`}
-                style={!isPlayLocked ? { boxShadow: `0 4px 12px ${isAvant ? '#39FF14' : meta.dc}30` } : {}}
+                style={{
+                  minHeight: '48px',
+                  clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+                  ...(!isPlayLocked ? { boxShadow: `0 4px 12px ${isAvant ? '#39FF14' : meta.dc}30` } : {})
+                }}
               >
                 {isUnlockReqLocked ? '🔒 DECODE' : isCleared ? 'REPLAY' : '▶ START'}
               </button>
@@ -1194,7 +1198,11 @@ export default function Chapter() {
               {isUnlocked(songs.indexOf(selectedSong)) && (
                 <button
                   onClick={() => setLocation(`/song/${selectedSong.id}?from=chapter/${monthNum}`)}
-                  className="py-3 px-3 text-xs font-mono border border-white/10 hover:border-white/30 text-white/60 hover:text-white rounded cursor-pointer bg-transparent"
+                  className="py-3 px-4 text-xs font-mono border border-white/10 hover:border-white/30 text-white/60 hover:text-white cursor-pointer bg-transparent"
+                  style={{
+                    minHeight: '48px',
+                    clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+                  }}
                 >
                   CODEX
                 </button>

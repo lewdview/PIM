@@ -88,12 +88,12 @@ export default function ShopConsole({ onPurchasePack, className = '' }: ShopCons
   const handleTargetedPull = useCallback(async (dayNum: number) => {
     if (!dayNum || dayNum < 1 || dayNum > currentDay || tokenBalance < 500) {
       if (dayNum > currentDay) {
-        alert(`Day ${dayNum} is locked. Targeted Pull is restricted to released calendar days (Day 1 to ${currentDay}). Future tracks require a Prophecy Pull.`);
+        alert(`Day ${dayNum} hasn't dropped yet. Targeted Pull covers Day 1–${currentDay}. Future days need a Prophecy Pull.`);
       }
       return;
     }
     setTargetLoading(true);
-    useLoadingToast.getState().show(`Targeting Day ${dayNum} pool…`);
+    useLoadingToast.getState().show(`Pulling Day ${dayNum}…`);
     try {
       const card = await targetedPull(dayNum);
       if (card) {
@@ -125,12 +125,12 @@ export default function ShopConsole({ onPurchasePack, className = '' }: ShopCons
   const handleUpgrade = useCallback(async (cardOwnedId: string) => {
     if (!cardOwnedId || tokenBalance < 150) return;
     setUpgradeLoading(true);
-    useLoadingToast.getState().show('Overclocking card tier…');
+    useLoadingToast.getState().show('Upgrading rarity…');
     try {
       const result = await upgradeRarity(cardOwnedId);
       if (result.success) {
         audioManager.playSfx('upgrade', 0.9);
-        alert(`⚡ Overclock Successful! Card upgraded to ${result.newRarity?.toUpperCase()}`);
+        alert(`Card upgraded to ${result.newRarity?.toUpperCase()}.`);
       }
     } catch (err) {
       console.error('Upgrade error:', err);
@@ -146,7 +146,7 @@ export default function ShopConsole({ onPurchasePack, className = '' }: ShopCons
   const handleFusion = useCallback(async (cardsToFuse: OwnedCard[]) => {
     if (cardsToFuse.length !== 3) return;
     setFusionLoading(true);
-    useLoadingToast.getState().show('Igniting fusion matrix…');
+    useLoadingToast.getState().show('Fusing cards…');
     try {
       const card = await fuseDuplicates(cardsToFuse.map(c => c.id));
       if (card) {
@@ -207,7 +207,7 @@ export default function ShopConsole({ onPurchasePack, className = '' }: ShopCons
               <div className="flex items-center gap-2 mb-1">
                 <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
                 <span className="text-[10px] font-mono font-black uppercase tracking-[0.25em] text-amber-400">
-                  HARDWARE CONSOLE // V2.1 NOMINAL
+                  VAULT SHOP // ONLINE
                 </span>
               </div>
               <h2
@@ -224,7 +224,7 @@ export default function ShopConsole({ onPurchasePack, className = '' }: ShopCons
                 V⚡ Shop Console
               </h2>
               <p className="text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-400 mt-1">
-                Targeted pulls • Instant overclocks • Plasma fusion • Real-time decryption
+                Targeted pulls • Upgrades • Fusion
               </p>
             </div>
 
@@ -284,7 +284,7 @@ export default function ShopConsole({ onPurchasePack, className = '' }: ShopCons
                 </div>
 
                 <p className="text-[10px] font-mono text-zinc-300 mb-3.5 leading-relaxed">
-                  Premium archive release. High-yield 3.0% Mythic drop chance!
+                  Three cards from the archive. 3% Mythic chance.
                 </p>
 
                 <div className="p-2.5 rounded-lg bg-black/60 border border-amber-500/20 mb-4 text-[9.5px] font-mono space-y-1">
@@ -352,7 +352,7 @@ export default function ShopConsole({ onPurchasePack, className = '' }: ShopCons
                 </div>
 
                 <p className="text-[10px] font-mono text-zinc-300 mb-3 leading-relaxed">
-                  Collector-grade artwork rip. High aesthetic variance.
+                  One Bombshell artwork card. 100 V⚡.
                 </p>
 
                 {/* Multi-Tier Quantity Selector */}
@@ -534,12 +534,12 @@ export default function ShopConsole({ onPurchasePack, className = '' }: ShopCons
                   </div>
                   <div>
                     <h3 className="font-black text-sm uppercase tracking-wider text-green-400">Rarity Upgrade</h3>
-                    <span className="text-[9px] font-mono text-zinc-400">+1 Tier Overclock</span>
+                    <span className="text-[9px] font-mono text-zinc-400">+1 Rarity Tier</span>
                   </div>
                 </div>
 
                 <p className="text-[10px] font-mono text-zinc-300 mb-2 leading-relaxed">
-                  Elevate any owned card below Legendary by +1 tier instant prestige.
+                  Raise any card below Legendary by one rarity tier.
                 </p>
 
                 <div className="mb-3">
@@ -549,7 +549,7 @@ export default function ShopConsole({ onPurchasePack, className = '' }: ShopCons
                     className="w-full bg-black/80 border border-green-500/30 text-white font-mono text-[10px] p-2 rounded-lg focus:border-green-400 outline-none"
                     style={{ colorScheme: 'dark' }}
                   >
-                    <option value="">-- Choose Card to Boost --</option>
+                    <option value="">Select a card</option>
                     {upgradeableCards.map((c) => (
                       <option key={c.id} value={c.id}>
                         Day {c.card.day}: {c.card.title.slice(0, 14)} ({c.card.rarity.toUpperCase()})
@@ -561,7 +561,7 @@ export default function ShopConsole({ onPurchasePack, className = '' }: ShopCons
 
               <div>
                 <div className="flex justify-between items-center text-[9.5px] font-mono uppercase tracking-widest text-zinc-400 mb-2">
-                  <span>Overclock Cost</span>
+                  <span>Upgrade Cost</span>
                   <span className="text-green-400 font-bold">150 V⚡</span>
                 </div>
 
@@ -598,14 +598,14 @@ export default function ShopConsole({ onPurchasePack, className = '' }: ShopCons
                 </div>
 
                 <p className="text-[10px] font-mono text-zinc-300 mb-2 leading-relaxed">
-                  Combine 3 identical cards to ignite 1 upgraded tier copy.
+                  Fuse 3 identical cards (same day and rarity) into 1 card of the next tier.
                 </p>
 
                 {/* Fusable scroll area */}
                 <div className="space-y-1.5 max-h-[100px] overflow-y-auto pr-1 mb-3" style={{ scrollbarWidth: 'thin' }}>
                   {fusableGroups.length === 0 ? (
                     <div className="text-[9.5px] font-mono text-zinc-500 text-center py-3 bg-black/40 rounded-lg border border-white/5">
-                      No fusable triplets yet
+                      No duplicates to fuse yet
                     </div>
                   ) : (
                     fusableGroups.map(([key, cards]) => {
@@ -632,7 +632,7 @@ export default function ShopConsole({ onPurchasePack, className = '' }: ShopCons
 
               <div>
                 <div className="flex justify-between items-center text-[9.5px] font-mono uppercase tracking-widest text-zinc-400 mb-2">
-                  <span>Energy Cost</span>
+                  <span>Fusion Cost</span>
                   <span className="text-red-400 font-bold">FREE (0 V⚡)</span>
                 </div>
 

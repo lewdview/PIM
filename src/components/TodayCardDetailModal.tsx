@@ -65,14 +65,14 @@ const VARIANTS: {
   {
     rarity: 'legendary',
     label: 'Gold Inscription',
-    desc: 'Gold leaf inlay, uncompressed master studio stem.',
+    desc: 'Gold leaf finish and the uncompressed studio master.',
     badge: 'GOLD FOIL',
     perk: '2.0x Multiplier + Golden Sparkle Aura',
   },
   {
     rarity: 'mythic',
     label: 'Genesis 1-of-1 Arcane',
-    desc: 'Cosmic particle emission & full multi-track DAW stem package.',
+    desc: 'Particle effects and the full multitrack stems.',
     badge: '1 OF 1 GENESIS',
     perk: '3.0x Ultra Multiplier + Cosmic Stems Access',
   },

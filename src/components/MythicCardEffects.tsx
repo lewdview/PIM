@@ -195,14 +195,16 @@ export function MythicCrownBadge() {
   return (
     <div
       style={{
-        padding: '3px 10px',
-        background: 'linear-gradient(135deg, rgba(255,215,0,0.3) 0%, rgba(20,15,5,0.9) 100%)',
+        padding: '4px 12px',
+        background: 'linear-gradient(135deg, rgba(255,215,0,0.32) 0%, rgba(20,15,5,0.92) 100%)',
         border: '1.5px solid #ffd700',
-        borderRadius: '4px',
-        boxShadow: '0 0 16px rgba(255,215,0,0.6), inset 0 0 8px rgba(255,215,0,0.3)',
-        display: 'flex',
+        borderRadius: '6px',
+        boxShadow: '0 0 16px rgba(255,215,0,0.6), inset 0 1px 0 rgba(255,255,255,0.35), inset 0 0 8px rgba(255,215,0,0.3)',
+        display: 'inline-flex',
         alignItems: 'center',
-        gap: '4px',
+        gap: '5px',
+        whiteSpace: 'nowrap',
+        flexShrink: 0,
       }}
     >
       <span style={{ fontSize: '9px', color: '#ffd700', animation: 'spin-slow 6s linear infinite' }}>✦</span>
@@ -211,10 +213,11 @@ export function MythicCrownBadge() {
           fontFamily: '"Impact", "Arial Black", "JetBrains Mono", sans-serif',
           fontSize: '8.5px',
           fontWeight: 900,
-          letterSpacing: '0.18em',
+          letterSpacing: '0.16em',
           color: '#ffd700',
           textShadow: '0 0 10px rgba(255,215,0,0.9)',
           textTransform: 'uppercase',
+          lineHeight: 1,
         }}
       >
         MYTHIC

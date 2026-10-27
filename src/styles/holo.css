@@ -1,0 +1,209 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   holo.css — holographic card sheen (HoloSheen + useHoloTilt)
+
+   useHoloTilt writes these onto .holo-sheen every frame while active:
+     --holo-px / --holo-py   light position (%)
+     --holo-dx / --holo-dy   light offset from centre (-1..1)
+     --holo-hyp              distance from centre (0..1)
+     --holo-on               interaction strength (0 at rest, 1 under a finger)
+     --holo-bgx / --holo-bgy foil band offset (%)
+     --holo-angle            direction of the light, for the rim
+   Variant classes only tune strengths, so every card shares one engine.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.holo-sheen {
+  /* Deliberately no z-index / isolation: layers must blend with the card art. */
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+
+  --holo-px: 50%;
+  --holo-py: 50%;
+  --holo-dx: 0;
+  --holo-dy: 0;
+  --holo-hyp: 0;
+  --holo-on: 0;
+  --holo-bgx: 50%;
+  --holo-bgy: 50%;
+  --holo-angle: 135deg;
+
+  --holo-tint: #ffffff;
+  --holo-glitter: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' fill='white'%3E%3Cpath d='M121.8 162.1L122.5 165.6L126.0 166.3L122.5 167.1L121.8 170.5L121.0 167.1L117.6 166.3L121.0 165.6Z' fill-opacity='0.53'/%3E%3Ccircle cx='109.6' cy='91.4' r='1.0' fill-opacity='0.66'/%3E%3Cpath d='M99.5 1.2L100.2 4.6L103.6 5.4L100.2 6.1L99.5 9.5L98.7 6.1L95.3 5.4L98.7 4.6Z' fill-opacity='0.50'/%3E%3Ccircle cx='2.8' cy='156.9' r='0.7' fill-opacity='0.52'/%3E%3Ccircle cx='60.0' cy='7.1' r='0.6' fill-opacity='0.57'/%3E%3Cpath d='M116.9 147.2L117.7 150.6L121.1 151.4L117.7 152.1L116.9 155.6L116.2 152.1L112.7 151.4L116.2 150.6Z' fill-opacity='0.99'/%3E%3Cpath d='M94.9 -0.8L95.5 1.8L98.0 2.3L95.5 2.9L94.9 5.5L94.4 2.9L91.8 2.3L94.4 1.8Z' fill-opacity='0.63'/%3E%3Cpath d='M96.4 38.8L97.2 42.2L100.6 43.0L97.2 43.7L96.4 47.2L95.7 43.7L92.3 43.0L95.7 42.2Z' fill-opacity='0.88'/%3E%3Cpath d='M132.4 157.4L132.9 159.9L135.5 160.5L132.9 161.1L132.4 163.6L131.8 161.1L129.2 160.5L131.8 159.9Z' fill-opacity='0.87'/%3E%3Ccircle cx='26.6' cy='1.0' r='0.7' fill-opacity='0.98'/%3E%3Cpath d='M71.8 23.0L72.6 26.4L76.0 27.1L72.6 27.9L71.8 31.3L71.1 27.9L67.7 27.1L71.1 26.4Z' fill-opacity='0.72'/%3E%3Ccircle cx='173.1' cy='64.5' r='0.7' fill-opacity='0.55'/%3E%3Ccircle cx='73.3' cy='10.6' r='0.8' fill-opacity='0.63'/%3E%3Ccircle cx='7.7' cy='60.5' r='0.8' fill-opacity='0.96'/%3E%3Cpath d='M70.7 39.8L71.4 43.2L74.9 43.9L71.4 44.7L70.7 48.1L69.9 44.7L66.5 43.9L69.9 43.2Z' fill-opacity='0.50'/%3E%3Ccircle cx='102.7' cy='65.0' r='0.6' fill-opacity='0.95'/%3E%3Cpath d='M25.4 82.4L26.2 85.8L29.6 86.5L26.2 87.3L25.4 90.7L24.7 87.3L21.3 86.5L24.7 85.8Z' fill-opacity='0.60'/%3E%3Ccircle cx='27.7' cy='129.9' r='0.6' fill-opacity='0.85'/%3E%3Ccircle cx='83.2' cy='60.4' r='0.8' fill-opacity='0.74'/%3E%3Ccircle cx='108.3' cy='84.5' r='0.6' fill-opacity='0.83'/%3E%3Ccircle cx='109.1' cy='64.7' r='0.7' fill-opacity='0.51'/%3E%3Ccircle cx='84.6' cy='56.9' r='0.7' fill-opacity='0.79'/%3E%3Cpath d='M37.6 19.9L38.2 22.4L40.7 23.0L38.2 23.6L37.6 26.1L37.1 23.6L34.5 23.0L37.1 22.4Z' fill-opacity='0.93'/%3E%3Cpath d='M2.8 71.9L3.6 75.3L7.0 76.1L3.6 76.8L2.8 80.2L2.1 76.8L-1.3 76.1L2.1 75.3Z' fill-opacity='0.50'/%3E%3Ccircle cx='128.7' cy='127.9' r='0.7' fill-opacity='0.99'/%3E%3Cpath d='M86.1 115.3L86.7 117.8L89.3 118.4L86.7 119.0L86.1 121.5L85.6 119.0L83.0 118.4L85.6 117.8Z' fill-opacity='0.94'/%3E%3Cpath d='M58.2 149.7L58.8 152.3L61.3 152.8L58.8 153.4L58.2 155.9L57.7 153.4L55.1 152.8L57.7 152.3Z' fill-opacity='0.51'/%3E%3Cpath d='M119.8 16.2L120.5 19.6L123.9 20.4L120.5 21.1L119.8 24.5L119.0 21.1L115.6 20.4L119.0 19.6Z' fill-opacity='0.97'/%3E%3Ccircle cx='65.7' cy='69.6' r='0.8' fill-opacity='0.65'/%3E%3Cpath d='M81.6 34.4L82.4 37.8L85.8 38.5L82.4 39.3L81.6 42.7L80.9 39.3L77.5 38.5L80.9 37.8Z' fill-opacity='0.71'/%3E%3Cpath d='M67.4 87.6L67.9 90.2L70.5 90.7L67.9 91.3L67.4 93.8L66.8 91.3L64.3 90.7L66.8 90.2Z' fill-opacity='0.59'/%3E%3Cpath d='M61.8 54.4L62.6 57.8L66.0 58.6L62.6 59.3L61.8 62.8L61.1 59.3L57.7 58.6L61.1 57.8Z' fill-opacity='0.92'/%3E%3Ccircle cx='163.7' cy='68.4' r='0.5' fill-opacity='0.74'/%3E%3Cpath d='M165.4 66.1L165.9 68.7L168.5 69.2L165.9 69.8L165.4 72.3L164.8 69.8L162.2 69.2L164.8 68.7Z' fill-opacity='0.58'/%3E%3Ccircle cx='149.1' cy='118.4' r='1.0' fill-opacity='0.61'/%3E%3Cpath d='M106.1 89.4L106.9 92.9L110.3 93.6L106.9 94.4L106.1 97.8L105.4 94.4L101.9 93.6L105.4 92.9Z' fill-opacity='0.52'/%3E%3Ccircle cx='143.1' cy='64.4' r='0.7' fill-opacity='0.55'/%3E%3Ccircle cx='11.1' cy='84.5' r='0.7' fill-opacity='0.82'/%3E%3Ccircle cx='27.9' cy='102.3' r='0.6' fill-opacity='0.82'/%3E%3Ccircle cx='79.8' cy='41.2' r='1.0' fill-opacity='0.68'/%3E%3Ccircle cx='147.2' cy='51.5' r='0.5' fill-opacity='0.83'/%3E%3Ccircle cx='77.0' cy='17.8' r='0.7' fill-opacity='0.48'/%3E%3Cpath d='M170.2 171.4L170.8 174.0L173.3 174.6L170.8 175.1L170.2 177.7L169.6 175.1L167.1 174.6L169.6 174.0Z' fill-opacity='0.62'/%3E%3Cpath d='M143.6 52.2L144.4 55.7L147.8 56.4L144.4 57.2L143.6 60.6L142.9 57.2L139.5 56.4L142.9 55.7Z' fill-opacity='0.95'/%3E%3Ccircle cx='8.6' cy='81.2' r='1.0' fill-opacity='0.73'/%3E%3Ccircle cx='70.0' cy='83.6' r='0.8' fill-opacity='0.54'/%3E%3Cpath d='M91.0 125.9L91.6 128.5L94.1 129.0L91.6 129.6L91.0 132.1L90.4 129.6L87.9 129.0L90.4 128.5Z' fill-opacity='0.72'/%3E%3Ccircle cx='92.1' cy='164.2' r='0.7' fill-opacity='0.95'/%3E%3Ccircle cx='64.0' cy='121.8' r='0.5' fill-opacity='0.81'/%3E%3Ccircle cx='33.9' cy='122.0' r='1.0' fill-opacity='0.48'/%3E%3Ccircle cx='1.1' cy='72.1' r='0.8' fill-opacity='0.56'/%3E%3Cpath d='M47.3 111.3L48.1 114.8L51.5 115.5L48.1 116.3L47.3 119.7L46.6 116.3L43.2 115.5L46.6 114.8Z' fill-opacity='0.96'/%3E%3Ccircle cx='46.5' cy='124.5' r='0.8' fill-opacity='0.48'/%3E%3Ccircle cx='132.2' cy='102.1' r='1.0' fill-opacity='0.62'/%3E%3Ccircle cx='95.5' cy='13.7' r='0.6' fill-opacity='0.90'/%3E%3Ccircle cx='92.4' cy='108.9' r='1.0' fill-opacity='0.54'/%3E%3Ccircle cx='176.9' cy='53.2' r='0.8' fill-opacity='0.68'/%3E%3Ccircle cx='71.5' cy='54.0' r='0.6' fill-opacity='0.96'/%3E%3Cpath d='M165.0 51.0L165.6 53.5L168.1 54.1L165.6 54.7L165.0 57.2L164.5 54.7L161.9 54.1L164.5 53.5Z' fill-opacity='0.81'/%3E%3Ccircle cx='171.1' cy='36.5' r='1.0' fill-opacity='0.98'/%3E%3Ccircle cx='99.7' cy='155.2' r='0.5' fill-opacity='0.85'/%3E%3Cpath d='M25.1 41.0L25.9 44.4L29.3 45.1L25.9 45.9L25.1 49.3L24.4 45.9L21.0 45.1L24.4 44.4Z' fill-opacity='0.79'/%3E%3Cpath d='M163.1 166.5L163.6 169.0L166.2 169.6L163.6 170.2L163.1 172.7L162.5 170.2L160.0 169.6L162.5 169.0Z' fill-opacity='0.72'/%3E%3Ccircle cx='157.8' cy='77.9' r='1.0' fill-opacity='0.78'/%3E%3Ccircle cx='176.7' cy='77.3' r='0.8' fill-opacity='0.46'/%3E%3Ccircle cx='58.8' cy='97.4' r='0.5' fill-opacity='0.67'/%3E%3Cpath d='M56.6 164.6L57.4 168.0L60.8 168.7L57.4 169.5L56.6 172.9L55.9 169.5L52.4 168.7L55.9 168.0Z' fill-opacity='0.57'/%3E%3Ccircle cx='90.8' cy='6.6' r='0.7' fill-opacity='0.82'/%3E%3Ccircle cx='72.6' cy='18.2' r='0.7' fill-opacity='0.88'/%3E%3Cpath d='M120.2 39.5L120.8 42.1L123.3 42.6L120.8 43.2L120.2 45.7L119.6 43.2L117.1 42.6L119.6 42.1Z' fill-opacity='0.87'/%3E%3C/svg%3E");
+  --holo-foil-z: 12;
+  --holo-glare-z: 40;
+
+  /* strengths, tuned per variant below */
+  --holo-foil: 0.6;
+  --holo-sparkle: 0;
+  --holo-glare: 0.7;
+  --holo-grain: 0.12;
+  --holo-edge: 0.6;
+  --holo-band: 5%;
+}
+
+.holo-layer {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* ── Foil: rainbow bands × diagonal etching × light falloff ────────────── */
+.holo-foil {
+  z-index: var(--holo-foil-z);
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      hsl(2 100% 73%) calc(var(--holo-band) * 1),
+      hsl(53 100% 69%) calc(var(--holo-band) * 2),
+      hsl(93 100% 69%) calc(var(--holo-band) * 3),
+      hsl(176 100% 76%) calc(var(--holo-band) * 4),
+      hsl(228 100% 74%) calc(var(--holo-band) * 5),
+      hsl(283 100% 73%) calc(var(--holo-band) * 6),
+      hsl(2 100% 73%) calc(var(--holo-band) * 7)
+    ),
+    repeating-linear-gradient(
+      133deg,
+      #0e152e 0%,
+      hsl(180 10% 60%) 3.8%,
+      hsl(180 29% 66%) 4.5%,
+      hsl(180 10% 60%) 5.2%,
+      #0e152e 10%,
+      #0e152e 12%
+    ),
+    radial-gradient(
+      farthest-corner circle at var(--holo-px) var(--holo-py),
+      rgba(0, 0, 0, 0.1) 12%,
+      rgba(0, 0, 0, 0.15) 20%,
+      rgba(0, 0, 0, 0.25) 120%
+    );
+  background-blend-mode: exclusion, hue, hard-light;
+  background-size: 200% 700%, 300% 100%, 200% 100%;
+  background-position:
+    0% var(--holo-bgy),
+    var(--holo-bgx) var(--holo-bgy),
+    var(--holo-bgx) var(--holo-bgy);
+  mix-blend-mode: color-dodge;
+  /* Brightest where the light is, but always a little alive at rest. */
+  opacity: calc(var(--holo-foil) * (0.4 + var(--holo-on) * 0.6) * (0.75 + var(--holo-hyp) * 0.25));
+  -webkit-mask-image: radial-gradient(
+    farthest-corner circle at var(--holo-px) var(--holo-py),
+    #000 10%,
+    rgba(0, 0, 0, 0.55) 60%,
+    rgba(0, 0, 0, 0.25) 100%
+  );
+  mask-image: radial-gradient(
+    farthest-corner circle at var(--holo-px) var(--holo-py),
+    #000 10%,
+    rgba(0, 0, 0, 0.55) 60%,
+    rgba(0, 0, 0, 0.25) 100%
+  );
+}
+
+/* ── Sparkle: glitter that catches only near the light ─────────────────── */
+.holo-sparkle {
+  z-index: var(--holo-foil-z);
+  background-image: var(--holo-glitter), var(--holo-glitter);
+  background-size: 180px 180px, 113px 113px;
+  background-position:
+    calc(var(--holo-dx) * -14px) calc(var(--holo-dy) * -14px),
+    calc(57px + var(--holo-dx) * 22px) calc(31px + var(--holo-dy) * 22px);
+  mix-blend-mode: color-dodge;
+  opacity: calc(var(--holo-sparkle) * (0.35 + var(--holo-on) * 0.65));
+  -webkit-mask-image: radial-gradient(circle at var(--holo-px) var(--holo-py), #000 0%, rgba(0, 0, 0, 0.45) 22%, transparent 52%);
+  mask-image: radial-gradient(circle at var(--holo-px) var(--holo-py), #000 0%, rgba(0, 0, 0, 0.45) 22%, transparent 52%);
+  animation: holo-twinkle 2.6s ease-in-out infinite alternate;
+}
+
+@keyframes holo-twinkle {
+  0% { filter: brightness(0.8); }
+  50% { filter: brightness(1.5); }
+  100% { filter: brightness(1); }
+}
+
+/* ── Grain: printed-surface texture ────────────────────────────────────── */
+.holo-grain {
+  z-index: var(--holo-foil-z);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 0 0.5  0 0 0 1.4 -0.2'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+  mix-blend-mode: overlay;
+  opacity: var(--holo-grain);
+}
+
+/* ── Glare: the light itself ───────────────────────────────────────────── */
+.holo-glare {
+  z-index: var(--holo-glare-z);
+  background: radial-gradient(
+    farthest-corner circle at var(--holo-px) var(--holo-py),
+    rgba(255, 255, 255, 0.85) 0%,
+    rgba(255, 255, 255, 0.45) 14%,
+    color-mix(in srgb, var(--holo-tint) 18%, transparent) 38%,
+    rgba(0, 0, 0, 0.45) 100%
+  );
+  mix-blend-mode: overlay;
+  opacity: calc(var(--holo-glare) * (0.3 + var(--holo-on) * 0.7));
+}
+
+/* ── Edge: rim catching the light ──────────────────────────────────────── */
+.holo-edge {
+  z-index: var(--holo-glare-z);
+  padding: 1.5px;
+  background: conic-gradient(
+    from var(--holo-angle),
+    transparent 0deg,
+    color-mix(in srgb, var(--holo-tint) 60%, #fff) 40deg,
+    #fff 60deg,
+    color-mix(in srgb, var(--holo-tint) 60%, #fff) 80deg,
+    transparent 120deg 240deg,
+    color-mix(in srgb, var(--holo-tint) 40%, transparent) 300deg,
+    transparent 360deg
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  mix-blend-mode: screen;
+  opacity: calc(var(--holo-edge) * (0.35 + var(--holo-on) * 0.65));
+}
+
+/* ── Variants ──────────────────────────────────────────────────────────── */
+.holo-sheen--gloss {
+  --holo-glare: 0.55;
+  --holo-grain: 0.08;
+  --holo-edge: 0.4;
+}
+
+.holo-sheen--holo {
+  --holo-foil: 0.5;
+  --holo-glare: 0.7;
+  --holo-grain: 0.12;
+  --holo-edge: 0.55;
+}
+
+.holo-sheen--prism {
+  --holo-foil: 0.75;
+  --holo-sparkle: 0.8;
+  --holo-glare: 0.8;
+  --holo-grain: 0.14;
+  --holo-edge: 0.75;
+  --holo-band: 4%;
+}
+
+.holo-sheen--cosmic {
+  --holo-foil: 0.9;
+  --holo-sparkle: 1;
+  --holo-glare: 0.9;
+  --holo-grain: 0.16;
+  --holo-edge: 0.95;
+  --holo-band: 3.2%;
+}
+
+/* Tilt targets: the hook writes transform; this keeps 3D children in 3D. */
+.holo-tilt {
+  transform-style: preserve-3d;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .holo-sparkle { animation: none; }
+}

@@ -177,34 +177,6 @@ export function getFlat2DPos(lane: number, prog: number, W: number, H: number): 
 }
 
 
-export function getRadialOrbitPos(lane: number, prog: number, W: number, H: number, t: number, stage: number): ProjectionResult {
-  const geom = getStageGeometry(W, H);
-  const cx = W / 2;
-  const cy = H * 0.50;
-  const maxR = Math.min(geom.stageW, H) * 0.44;
-  const targetR = Math.min(geom.stageW, H) * 0.16;
-  const safeP = Math.max(0, prog);
-  const curR = lerp(maxR, targetR, safeP);
-
-  const rotOffset = t * 0.35 + (stage === 5 ? t * 0.6 : 0);
-  const laneAngle = ((lane * 2 * Math.PI) / 3) + rotOffset - Math.PI / 2;
-
-  const noteX = cx + Math.cos(laneAngle) * curR;
-  const noteY = cy + Math.sin(laneAngle) * curR;
-  const noteW = lerp(geom.laneW * 0.32, geom.laneW * 0.70, safeP);
-  const noteH = lerp(geom.targetNoteH * 0.35, geom.targetNoteH, safeP);
-
-  return {
-    x: noteX - noteW / 2,
-    y: noteY - noteH / 2,
-    w: noteW,
-    h: noteH,
-    rot: laneAngle + Math.PI / 2,
-    scale: lerp(0.35, 1.0, safeP),
-  };
-}
-
-
 export function getHorizontalDriftPos(lane: number, prog: number, W: number, H: number, t: number, stage: number): ProjectionResult {
   const geom = getStageGeometry(W, H);
   const trackW = Math.min(W * 0.84, Math.max(geom.stageW, 600));
@@ -464,6 +436,67 @@ export function getMobiusLoopPos(lane: number, prog: number, W: number, H: numbe
 }
 
 
+
+/** Smooth, slowly wandering road bend for Canyon Run (-1..1). Shared with its scene. */
+export function canyonBend(t: number): number {
+  return Math.sin(t * 0.42) * 0.75 + Math.sin(t * 0.157 + 1.3) * 0.35;
+}
+
+/**
+ * Canyon Run: a desert road that sweeps through S-bends. The bend grows with
+ * distance (z²), so far notes swing wide while the hit line never moves.
+ */
+export function getCanyonRunPos(lane: number, prog: number, W: number, H: number, t: number, stage: number): ProjectionResult {
+  const geom = getStageGeometry(W, H);
+  const hitY = geom.hitY;
+  const vanishingY = hitY * 0.30;
+  const safeP = Math.max(0, prog);
+  const persP = Math.pow(safeP, 1.35);
+  const z = 1 - persP;
+  const mult = stage === 5 ? 1.5 : 1.0;
+  const bend = canyonBend(t) * mult;
+
+  const { x: hitX, w: hitW } = laneAt(lane, 1, W, 0.2, 0.9, undefined, 1, 0, H);
+  const farX = W / 2 + (lane - 1) * (geom.stageW * 0.055);
+  const curve = bend * z * z * geom.stageW * 0.42;
+  const noteY = lerp(vanishingY, hitY, persP);
+  const noteW = lerp(geom.stageW * 0.05, hitW, persP);
+  const noteH = lerp(geom.targetNoteH * 0.55, geom.targetNoteH, persP);
+  const noteX = lerp(farX - noteW / 2, hitX, persP) + curve;
+  // Tilt with the road's heading at this depth (d curve / d z).
+  const rot = -bend * z * 0.32;
+
+  return { x: noteX, y: noteY, w: noteW, h: noteH, rot, scale: lerp(0.3, 1.0, persP) };
+}
+
+/**
+ * Aurora Bridge: an arched glass bridge. Notes rise over the crown of the arch
+ * and the deck rolls gently in the wind; both fade out at the hit line.
+ */
+export function getAuroraBridgePos(lane: number, prog: number, W: number, H: number, t: number, stage: number): ProjectionResult {
+  const geom = getStageGeometry(W, H);
+  const hitY = geom.hitY;
+  const vanishingY = hitY * 0.30;
+  const safeP = Math.max(0, prog);
+  const persP = Math.pow(safeP, 1.35);
+  const z = 1 - persP;
+  const laneOffset = lane - 1;
+  const mult = stage === 5 ? 1.6 : 1.0;
+
+  const { x: hitX, w: hitW } = laneAt(lane, 1, W, 0.18, 0.86, undefined, 1, 0, H);
+  const farX = W / 2 + laneOffset * (geom.stageW * 0.06);
+  const noteW = lerp(geom.stageW * 0.05, hitW, persP);
+  const noteH = lerp(geom.targetNoteH * 0.55, geom.targetNoteH, persP);
+  const arch = Math.sin(Math.PI * z) * hitY * 0.07 * (0.8 + 0.2 * Math.sin(t * 0.5));
+  const roll = Math.sin(t * 0.6 * mult) * 0.16 * mult * z;
+  const noteX = lerp(farX - noteW / 2, hitX, persP);
+  // The deck rolls about the road's centre line, so outer lanes lift and dip.
+  const fromCentre = noteX + noteW / 2 - W / 2;
+  const noteY = lerp(vanishingY, hitY, persP) - arch - Math.sin(roll) * fromCentre;
+
+  return { x: noteX, y: noteY, w: noteW, h: noteH, rot: roll, scale: lerp(0.3, 1.0, persP) };
+}
+
 export function getArchetypeProjection(
   lane: number,
   prog: number,
@@ -481,8 +514,11 @@ export function getArchetypeProjection(
   if (povMode === 'flat_2d') {
     return getFlat2DPos(lane, prog, W, H);
   }
-  if (povMode === 'circle') {
-    return getRadialOrbitPos(lane, prog, W, H, t, stage);
+  if (povMode === 'canyon_run') {
+    return getCanyonRunPos(lane, prog, W, H, t, stage);
+  }
+  if (povMode === 'aurora_bridge') {
+    return getAuroraBridgePos(lane, prog, W, H, t, stage);
   }
   if (povMode === 'horizontal_drift') {
     return getHorizontalDriftPos(lane, prog, W, H, t, stage);
@@ -580,7 +616,7 @@ export function getArchetypeProjection(
         return getWaveCoasterPos(lane, prog, W, H, t, stage);
       }
       if (archetype === 'radial_orbit') {
-        return getRadialOrbitPos(lane, prog, W, H, t, stage);
+        return getAuroraBridgePos(lane, prog, W, H, t, stage);
       }
       if (archetype === 'horizontal_drift') {
         return getHorizontalDriftPos(lane, prog, W, H, t, stage);
@@ -697,7 +733,7 @@ export function getLaneFromCoords(
   }
 
   const effectivePov = (povMode === 'dynamic_stage' && (stage === 3 || stage === 5))
-    ? (archetype === 'horizontal_drift' ? 'horizontal_drift' : archetype === 'radial_orbit' ? 'circle' : povMode)
+    ? (archetype === 'horizontal_drift' ? 'horizontal_drift' : povMode)
     : povMode;
 
   // 1. Horizontal Drift: Lanes stacked vertically as horizontal rows
@@ -708,29 +744,6 @@ export function getLaneFromCoords(
     if (clickY < startY + laneH) return 2;
     if (clickY < startY + 2 * laneH) return 1;
     return 0;
-  }
-
-  // 2. Radial Orbit (Circle): 3 radial spokes at 120° angles rotating around center
-  if (effectivePov === 'circle') {
-    const cx = W / 2;
-    const cy = H * 0.50;
-    const rotOffset = t * 0.35 + (stage === 5 ? t * 0.6 : 0);
-    const clickAngle = Math.atan2(clickY - cy, clickX - cx);
-
-    let bestLane = 1;
-    let minDiff = Infinity;
-    for (let l = 0; l < 3; l++) {
-      const laneAngle = ((l * 2 * Math.PI) / 3) + rotOffset - Math.PI / 2;
-      let diff = (clickAngle - laneAngle) % (Math.PI * 2);
-      if (diff < -Math.PI) diff += Math.PI * 2;
-      if (diff > Math.PI) diff -= Math.PI * 2;
-      const absDiff = Math.abs(diff);
-      if (absDiff < minDiff) {
-        minDiff = absDiff;
-        bestLane = l;
-      }
-    }
-    return bestLane;
   }
 
   // 3. Flat 2D: Track is centered with distinct boundaries

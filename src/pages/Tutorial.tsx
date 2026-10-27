@@ -261,16 +261,11 @@ export default function Tutorial() {
     const timeoutId = setTimeout(async () => {
       try {
         const clean = username.trim();
-        const { data } = await supabase
-          .from("profiles")
-          .select("id")
-          .ilike("username", clean)
-          .maybeSingle();
-
-        // A username is available if nobody holds it, or if the holder is
-        // the current user (their own existing alias).
-        const currentUserId = useAuthStore.getState().user?.id;
-        setIsAvailable(!data || data.id === currentUserId);
+        // is_username_taken ignores the caller's own profile, so a user's
+        // existing alias still counts as available to them.
+        const { data: taken, error } = await supabase.rpc("is_username_taken", { p_username: clean });
+        if (error) throw error;
+        setIsAvailable(!taken);
       } catch (err) {
         setIsAvailable(true); // default allowable if offline/guest
       } finally {
@@ -551,17 +546,17 @@ export default function Tutorial() {
       content: (
         <div className="space-y-3 font-mono text-[11px] text-zinc-300 leading-relaxed text-left">
           <p className="text-white font-bold">
-            In PIM, music is not just streamed — it is <span className="text-[#FF1493]">owned and mastered</span>.
+            In PIM, you don't just stream a song. You <span className="text-[#FF1493]">own it and master it</span>.
           </p>
           <div className="space-y-2 border-t border-white/10 pt-3 text-[10.5px]">
             <p>
               • <strong className="text-white">Full Playback & Stems:</strong> Owning a song card unlocks the full master track and isolated stem mixing (Bass, Vocals, Drums).
             </p>
             <p>
-              • <strong className="text-white">Deck Building:</strong> Equipped card collections boost score multipliers and unlock custom stage visualizer skins.
+              • <strong className="text-white">Deck Building:</strong> Equipped cards boost your score multiplier and unlock stage skins.
             </p>
             <p>
-              • <strong className="text-white">Preview Limits:</strong> Unowned cards have limited preview timers; unlocking cards removes all barriers permanently.
+              • <strong className="text-white">Preview Limits:</strong> Cards you don't own play a short preview. Own the card to hear all of it.
             </p>
           </div>
         </div>
@@ -611,14 +606,14 @@ export default function Tutorial() {
       content: (
         <div className="space-y-3 font-mono text-[11px] text-zinc-300 leading-relaxed text-left">
           <p className="text-white font-bold">
-            A brand-new song drops every single calendar day of the year.
+            A new song drops every day of the year.
           </p>
           <div className="space-y-2 border-t border-white/10 pt-3 text-[10.5px]">
             <p>
-              • <strong className="text-white">12 Monthly Chapters:</strong> Travel across constellation roadmap stages and unlock milestone reward chests.
+              • <strong className="text-white">12 Monthly Chapters:</strong> Work through each month's stages and open milestone chests.
             </p>
             <p>
-              • <strong className="text-white">Daily Drops:</strong> Every 24 hours brings a fresh daily card claim and competitive daily leaderboard stage.
+              • <strong className="text-white">Daily Drops:</strong> A free card to claim and a new leaderboard stage every 24 hours.
             </p>
             <p>
               • <strong className="text-white">Time-Locked Archival:</strong> Unclaimed drops rotate into the vault archive, accessible via the Forge.
@@ -636,7 +631,7 @@ export default function Tutorial() {
       content: (
         <div className="space-y-3 font-mono text-[11px] text-zinc-300 leading-relaxed text-left">
           <p className="text-white font-bold">
-            Velocity-balanced hard supply caps protect rarity and value.
+            Hard supply caps keep rare cards rare.
           </p>
           <div className="space-y-1.5 border-t border-white/10 pt-2.5 text-[10px]">
             <div className="flex justify-between border-b border-white/5 pb-1">
@@ -677,17 +672,17 @@ export default function Tutorial() {
       content: (
         <div className="space-y-3 font-mono text-[11px] text-zinc-300 leading-relaxed text-left">
           <p className="text-white font-bold">
-            The Forge is the master synthesis laboratory for card tokenomics.
+            The Forge is where you burn, fuse and upgrade cards.
           </p>
           <div className="space-y-2 border-t border-white/10 pt-3 text-[10.5px]">
             <p>
-              • <strong className="text-white">Card Burning:</strong> Deconstruct unwanted or duplicate cards into <strong className="text-yellow-400">$V⚡ tokens</strong>.
+              • <strong className="text-white">Card Burning:</strong> Turn duplicates and unwanted cards into <strong className="text-yellow-400">$V⚡ tokens</strong>.
             </p>
             <p>
-              • <strong className="text-white">Targeted Pulls (500 $V⚡):</strong> Forge any specific card from the entire 365-day catalog on demand.
+              • <strong className="text-white">Targeted Pulls (275 $V⚡):</strong> Pull any card from the 365-day catalog.
             </p>
             <p>
-              • <strong className="text-white">Duplicate Fusion:</strong> Combine 3 identical cards of the same day and tier to forge 1 card of the next tier!
+              • <strong className="text-white">Duplicate Fusion:</strong> Fuse 3 identical cards (same day and rarity) into 1 card of the next tier.
             </p>
           </div>
         </div>
@@ -1088,7 +1083,7 @@ export default function Tutorial() {
                 THE PIM ECOSYSTEM
               </h2>
               <p className="font-mono text-[10.5px] text-zinc-400 mt-1">
-                Explore the five pillars of the rhythm economy before locking your pilot identity.
+                Here's how the game works before you pick a pilot name.
               </p>
             </div>
 
@@ -1194,7 +1189,7 @@ export default function Tutorial() {
               </h2>
               <p className="font-mono text-[10px] text-zinc-400 mt-1">
                 {isFarcaster
-                  ? "Verified Warpcast profile detected. Confirm identity to write card provenance."
+                  ? "Farcaster profile found. Confirm it to sign your cards."
                   : "Choose your unique pilot @username and profile avatar to record scores on leaderboards."}
               </p>
             </div>
@@ -1233,7 +1228,7 @@ export default function Tutorial() {
                 </div>
 
                 <div className="font-mono text-[10.5px] text-zinc-400 leading-relaxed border-t border-white/10 pt-3">
-                  Your Farcaster username and profile image will be bound to your card collection and global leaderboard telemetry.
+                  Your Farcaster name and picture show on your cards and the leaderboard.
                 </div>
               </div>
             ) : (
@@ -1547,7 +1542,7 @@ export default function Tutorial() {
                 /* Unlinked State: Offer Primary Web3 and Guest Ephemeral */
                 <div className="space-y-3">
                   <p className="font-mono text-[10.5px] text-zinc-300 leading-relaxed">
-                    Connecting your Base Smart Wallet securely signs ownership of your cards and ensures your progress is never lost across browsers.
+                    Connecting a Base wallet signs your cards to you and keeps your progress across browsers.
                   </p>
 
                   <div className="space-y-2 pt-1">
@@ -1587,12 +1582,12 @@ export default function Tutorial() {
                       ) : (
                         <Key size={12} className="text-amber-400" />
                       )}
-                      GUEST PILOT // GENERATE EPHEMERAL SMART WALLET
+                      GUEST PILOT // CREATE TEMPORARY WALLET
                     </button>
                   </div>
 
                   <p className="font-mono text-[9px] text-zinc-500 text-center">
-                    Instant zero-friction generation. Ephemeral keys are saved locally on this device.
+                    Created instantly. The key is stored on this device only.
                   </p>
                 </div>
               )}

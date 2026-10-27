@@ -7,11 +7,12 @@ import {
 import PrizeRibbonSvg from '../components/ui/PrizeRibbonSvg';
 import { useLocation } from 'wouter';
 import { fetchAllCards, type VaultCard, type OwnedCard } from '../services/vaultService';
-import { useVaultStore } from '../store/useVaultStore';
+import { useVaultStore, getGen0ShardsForDay } from '../store/useVaultStore';
 import { useGlobalPlayer } from '../store/useGlobalPlayer';
 import { RARITY_CONFIG, type Rarity } from '../utils/rarity';
 import { getCoverUrlForRarity, useSmartCoverArt } from '../utils/rarityArtwork';
 import { getCurrentDay } from '../utils/dayCalc';
+import { primeGameCover } from '../utils/gameCover';
 import {
   getBombshellDayCovers,
   getBombshellCoverUrl,
@@ -401,8 +402,7 @@ function CodexGridCardItem({
               onClick={(e) => {
                 e.stopPropagation();
                 const cover = card.coverUrl;
-                sessionStorage.setItem(`active_cover_url_card-${card.day}`, cover);
-                sessionStorage.setItem('active_game_cover', cover);
+                primeGameCover(card.day, cover);
                 stop();
                 setLocation(`/play/card-${card.day}`);
               }}
@@ -730,8 +730,7 @@ function BombshellGridCardItem({
         <button
           onClick={(e) => {
             e.stopPropagation();
-            sessionStorage.setItem(`active_cover_url_card-${card.day}`, coverUrl);
-            sessionStorage.setItem('active_game_cover', coverUrl);
+            primeGameCover(card.day, coverUrl);
             stop();
             setLocation(`/play/card-${card.day}`);
           }}
@@ -1114,7 +1113,7 @@ function BombshellDayModal({
                   {card.title}
                 </h2>
                 <p className="text-[10px] font-mono text-white/40 mt-1 uppercase">
-                  Click any picture for Full-Screen Master View & Hi-Res Download, or choose your active card cover.
+                  Tap a picture for full screen and hi-res download, or set it as this card's cover.
                 </p>
               </div>
 
@@ -1427,15 +1426,10 @@ export default function CodexPage() {
   const today = getCurrentDay();
 
   const getFragmentsForDay = useCallback((day: number) => {
-    const cardKey = `card-${day}`;
-    const dayKey = `day-${String(day).padStart(3, '0')}`;
-    const dayKeyRaw = `day-${day}`;
-    return (
-      fragments[cardKey] ??
-      fragments[dayKey] ??
-      fragments[dayKeyRaw] ??
-      0
-    );
+    // The Codex is the gen-0 archive, so this is the gen-0 count only.
+    // Bombshell shards are a separate count (bombshell-{day}) and never
+    // add into gen-0 numbers.
+    return getGen0ShardsForDay(fragments, day);
   }, [fragments]);
 
   // Owned Gen-0 card IDs for quick lookup
@@ -1652,7 +1646,15 @@ export default function CodexPage() {
   const selectedUnlockedCovers = selectedBombshellDay ? (bombshellDataByDay.get(selectedBombshellDay)?.unlockedCovers || new Set<string>()) : new Set<string>();
 
   return (
-    <div className="flex-1 w-full min-h-screen">
+    <div
+      className="flex-1 w-full min-h-screen"
+      style={{
+        minHeight: '100dvh',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 6.5rem)',
+      }}
+    >
       {/* ═══ HEADER ═══ */}
       <section style={{
         padding: '32px 16px 24px',
@@ -1719,17 +1721,19 @@ export default function CodexPage() {
                 }}
                 style={{
                   padding: '10px 18px',
+                  minHeight: '44px',
                   fontFamily: '"JetBrains Mono", monospace',
                   fontSize: '10px',
                   fontWeight: 800,
                   textTransform: 'uppercase',
                   letterSpacing: '0.08em',
                   cursor: 'pointer',
-                  borderRadius: '4px',
+                  clipPath: 'polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%)',
                   transition: 'all 0.2s ease',
                   background: activeDeck === 'gen-0' ? '#ff3800' : 'transparent',
                   color: activeDeck === 'gen-0' ? '#000' : 'rgba(255,255,255,0.5)',
                   boxShadow: activeDeck === 'gen-0' ? '0 0 16px rgba(255,56,0,0.5)' : 'none',
+                  border: 'none',
                 }}
               >
                 01 // GEN-0 DECK ({gen0Stats.owned}/{gen0Stats.total})
@@ -1742,17 +1746,19 @@ export default function CodexPage() {
                 }}
                 style={{
                   padding: '10px 18px',
+                  minHeight: '44px',
                   fontFamily: '"JetBrains Mono", monospace',
                   fontSize: '10px',
                   fontWeight: 800,
                   textTransform: 'uppercase',
                   letterSpacing: '0.08em',
                   cursor: 'pointer',
-                  borderRadius: '4px',
+                  clipPath: 'polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%)',
                   transition: 'all 0.2s ease',
                   background: activeDeck === 'bombshell' ? '#FF1493' : 'transparent',
                   color: activeDeck === 'bombshell' ? '#fff' : 'rgba(255,255,255,0.5)',
                   boxShadow: activeDeck === 'bombshell' ? '0 0 16px rgba(255,20,147,0.6)' : 'none',
+                  border: 'none',
                 }}
               >
                 🔥 02 // BOMBSHELLS ({bombshellStats.totalUnlockedCovers}/{bombshellStats.totalAvailableCovers})
@@ -2217,11 +2223,14 @@ export default function CodexPage() {
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={page === 1}
               style={{
-                padding: '6px 14px',
+                padding: '8px 16px',
+                minHeight: '38px',
+                minWidth: '72px',
                 fontFamily: '"JetBrains Mono", monospace',
                 fontSize: '10px',
                 fontWeight: 700,
                 textTransform: 'uppercase',
+                clipPath: 'polygon(4px 0, 100% 0, calc(100% - 4px) 100%, 0 100%)',
                 background: page === 1 ? 'rgba(255,255,255,0.02)' : (activeDeck === 'bombshell' ? 'rgba(255,20,147,0.15)' : 'rgba(255,56,0,0.1)'),
                 border: `1px solid ${page === 1 ? 'rgba(255,255,255,0.04)' : (activeDeck === 'bombshell' ? 'rgba(255,20,147,0.4)' : 'rgba(255,56,0,0.3)')}`,
                 color: page === 1 ? 'rgba(255,255,255,0.15)' : (activeDeck === 'bombshell' ? '#FF1493' : '#ff3800'),
@@ -2244,11 +2253,14 @@ export default function CodexPage() {
               onClick={() => setPage(p => Math.min(totalPages, p + 1))}
               disabled={page === totalPages}
               style={{
-                padding: '6px 14px',
+                padding: '8px 16px',
+                minHeight: '38px',
+                minWidth: '72px',
                 fontFamily: '"JetBrains Mono", monospace',
                 fontSize: '10px',
                 fontWeight: 700,
                 textTransform: 'uppercase',
+                clipPath: 'polygon(4px 0, 100% 0, calc(100% - 4px) 100%, 0 100%)',
                 background: page === totalPages ? 'rgba(255,255,255,0.02)' : (activeDeck === 'bombshell' ? 'rgba(255,20,147,0.15)' : 'rgba(255,56,0,0.1)'),
                 border: `1px solid ${page === totalPages ? 'rgba(255,255,255,0.04)' : (activeDeck === 'bombshell' ? 'rgba(255,20,147,0.4)' : 'rgba(255,56,0,0.3)')}`,
                 color: page === totalPages ? 'rgba(255,255,255,0.15)' : (activeDeck === 'bombshell' ? '#FF1493' : '#ff3800'),

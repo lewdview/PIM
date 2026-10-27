@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { submitGameplayRecord, type VaultCard, type OwnedCard } from '../services/vaultService';
 import { supabase } from '../services/supabaseClient';
 import { getBombshellCoverUrl } from '../utils/bombshellCards';
+import { clearPrimedGameCover } from '../utils/gameCover';
 import { hydrateSettings, persistSettings } from '../utils/settingsStorage';
 
 
@@ -42,7 +43,7 @@ export interface ProfileSettings {
   visualizerTheme?: 'cyan_pink' | 'emerald_orange' | 'gold_purple' | 'rainbow';
   visualizerPlaylistMode?: 'all_catalog' | 'unlocked_only';
   visualizerRepeatMode?: 'all' | 'one' | 'shuffle' | 'off';
-  chartVariant?: 'v5_flagship' | 'v4_neural' | 'v3_master' | 'v1_gimmicks' | 'v2_minimal' | 'canonical';
+  chartVariant?: 'v6_master' | 'v5_flagship' | 'v4_neural' | 'v3_master' | 'v1_gimmicks' | 'v2_minimal' | 'canonical';
 }
 
 export interface ProfileProgression {
@@ -134,6 +135,7 @@ interface VaultState {
   medals: Record<string, string>;
   fragments: Record<string, number>;
   milestoneClaims: Record<string, boolean>;
+  campaignClears: Record<string, { medal: string; score: number }>;
   claimedRewards: Record<string, string[]>;
 
   packDesignStyle: 'classic_foil' | 'cyber_cartridge';
@@ -147,6 +149,7 @@ interface VaultState {
   setDailyCard: (card: VaultCard | null) => void;
   setHasClaimed: (claimed: boolean) => void;
   silentClaimDailyDrop: (day: number) => Promise<OwnedCard | null>;
+  grantCardShards: (card: OwnedCard | null | undefined) => Promise<void>;
   setCollection: (cards: OwnedCard[]) => void;
   addToCollection: (cards: OwnedCard[]) => void;
   removeFromCollection: (ownedId: string) => void;
@@ -155,6 +158,10 @@ interface VaultState {
   setLoading: (loading: boolean) => void;
   setTokenBalance: (balance: number) => void;
   addTokens: (amount: number) => Promise<void>;
+  /** Re-reads the server balance (the server is the only writer of profiles.tokens). */
+  refreshTokenBalance: () => Promise<void>;
+  /** One-time welcome bonus; granted server-side for signed-in (incl. guest) sessions. */
+  claimOnboardingBonus: () => Promise<void>;
   setEquippedCardId: (id: string | null) => void;
   setPreferredCardCover: (day: number, coverArtwork: string) => void;
   loadVaultData: (force?: boolean) => Promise<void>;
@@ -179,6 +186,7 @@ interface VaultState {
   syncMedal: (songId: string, medal: string) => Promise<void>;
   syncFragments: (songId: string, count: number) => Promise<void>;
   syncMilestoneClaim: (monthNum: number, milestoneNum: number) => Promise<void>;
+  syncCampaignClear: (songId: string, medal: string, score: number) => Promise<void>;
   syncClaimedRewards: (songId: string, tiers: string[]) => void;
   resetToBlankSlate: () => void;
 }
@@ -212,6 +220,145 @@ export function calculatePrestigeScore(
 
 // Backward-compatible alias
 export const calculateEchoPrestigeScore = calculatePrestigeScore;
+
+// ── Centralized card-ownership helpers ──────────────────────────────────────
+// Single source of truth for "does this collection contain a card for day N".
+// Card identity has drifted across three key schemes (card.day, `day_N`,
+// `card-N`, `day-N` incl. zero-padded variants) — match all of them here so
+// call sites never hand-roll their own variant again.
+
+const RARITY_RANK: Record<string, number> = {
+  common: 0,
+  uncommon: 1,
+  rare: 2,
+  legendary: 3,
+  mythic: 4,
+};
+
+export function cardMatchesDay(
+  c: OwnedCard | null | undefined,
+  day: number
+): boolean {
+  if (!c || !Number.isFinite(day)) return false;
+  if (c.card && c.card.day === day) return true;
+  for (const v of [c.cardId, c.id]) {
+    if (!v || typeof v !== 'string') continue;
+    if (v === `day_${day}` || v === `card-${day}` || v === `day-${day}`) return true;
+    const m = v.match(/^(?:day[_-]|card-)0*(\d+)$/);
+    if (m && parseInt(m[1], 10) === day) return true;
+  }
+  return false;
+}
+
+/** True when the collection holds at least one card for the given 365 day. */
+export function ownsCardForDay(
+  collection: OwnedCard[] | null | undefined,
+  day: number
+): boolean {
+  return Array.isArray(collection) && collection.some((c) => cardMatchesDay(c, day));
+}
+
+/** Highest-rarity owned card for the day (for variant artwork / modifiers). */
+export function getHighestOwnedCard(
+  collection: OwnedCard[] | null | undefined,
+  day: number
+): OwnedCard | null {
+  if (!Array.isArray(collection)) return null;
+  let best: OwnedCard | null = null;
+  let bestRank = -1;
+  for (const c of collection) {
+    if (!cardMatchesDay(c, day)) continue;
+    const rank = RARITY_RANK[String(c?.card?.rarity || 'common').toLowerCase()] ?? 0;
+    if (rank > bestRank) {
+      best = c;
+      bestRank = rank;
+    }
+  }
+  return best;
+}
+
+// ── Award Play shard helpers ────────────────────────────────────────────────
+// Shards are earned per song from pack pulls (common 2 / uncommon 3 / rare 5 /
+// legendary+mythic 10) and recorded in the fragments map. 10 shards unlocks
+// Award Play for that song: high scores earn prize packs.
+
+export const AWARD_PLAY_SHARD_THRESHOLD = 10;
+
+/** Shard gain per card rarity — single source of truth for the shard economy. */
+export const SHARD_GAIN_BY_RARITY: Record<string, number> = {
+  common: 2,
+  uncommon: 3,
+  rare: 5,
+  legendary: 10,
+  mythic: 10,
+};
+
+/** Shards earned when a card of the given rarity is granted (pack pull or silent claim). */
+export function shardGainForRarity(rarity: string | undefined | null): number {
+  return SHARD_GAIN_BY_RARITY[String(rarity || 'common').toLowerCase()] ?? 2;
+}
+
+/** Read one fragments bucket, treating missing/non-numeric as 0. */
+function shardBucket(
+  fragments: Record<string, number> | null | undefined,
+  key: string
+): number {
+  if (!fragments) return 0;
+  const v = fragments[key];
+  return typeof v === 'number' && v > 0 ? v : 0;
+}
+
+/**
+ * Gen-0 shard count for a 365 day: the `card-{day}` bucket, with the legacy
+ * `day-*` key spellings as aliases of that same gen-0 count.
+ */
+export function getGen0ShardsForDay(
+  fragments: Record<string, number> | null | undefined,
+  day: number
+): number {
+  if (!fragments || !Number.isFinite(day)) return 0;
+  return Math.max(
+    shardBucket(fragments, `card-${day}`),
+    shardBucket(fragments, `day-${String(day).padStart(3, '0')}`),
+    shardBucket(fragments, `day-${day}`)
+  );
+}
+
+/**
+ * Bombshell shard count for a 365 day: the `bombshell-{day}` bucket.
+ * Bombshell shards are their own count, like bombshell supply — they
+ * never add into the gen-0 numbers.
+ */
+export function getBombshellShardsForDay(
+  fragments: Record<string, number> | null | undefined,
+  day: number
+): number {
+  if (!fragments || !Number.isFinite(day)) return 0;
+  return shardBucket(fragments, `bombshell-${day}`);
+}
+
+/**
+ * Award Play shard count for a 365 day: the higher of the day's two separate
+ * counts (gen-0 and bombshell). The buckets are never summed — either
+ * set's count reaching the threshold on its own unlocks Award Play.
+ */
+export function getShardsForDay(
+  fragments: Record<string, number> | null | undefined,
+  day: number
+): number {
+  return Math.max(
+    getGen0ShardsForDay(fragments, day),
+    getBombshellShardsForDay(fragments, day)
+  );
+}
+
+/** True when the song has enough shards to unlock Award Play prizes. */
+export function isAwardPlayUnlocked(
+  fragments: Record<string, number> | null | undefined,
+  day: number
+): boolean {
+  return getShardsForDay(fragments, day) >= AWARD_PLAY_SHARD_THRESHOLD;
+}
 
 async function syncUserFragmentToDb(userId: string, songId: string, count: number) {
   if (!userId || !songId) return;
@@ -248,6 +395,21 @@ async function syncUserFragmentToDb(userId: string, songId: string, count: numbe
     }
   } catch (err) {
     console.warn('[VaultSync] Fragment DB sync failed (non-fatal):', err);
+  }
+}
+
+async function syncCampaignClearToDb(userId: string, songId: string, medal: string, score: number) {
+  if (!userId || !songId) return;
+  try {
+    // Server merges monotonically (best medal, highest score).
+    const { error } = await supabase.rpc('record_campaign_clear', {
+      p_song_id: songId,
+      p_medal: medal || 'NONE',
+      p_score: Math.max(0, Math.round(score || 0)),
+    });
+    if (error) console.warn('[VaultSync] Campaign clear DB sync failed (non-fatal):', error.message);
+  } catch (err) {
+    console.warn('[VaultSync] Campaign clear DB sync failed (non-fatal):', err);
   }
 }
 
@@ -375,17 +537,30 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   medals: {},
   fragments: {},
   milestoneClaims: {},
+  campaignClears: {},
   claimedRewards: {},
 
   setDailyCard: (card) => set({ dailyCard: card }),
   setHasClaimed: (claimed) => set({ hasClaimed: claimed }),
+  // Grant shards for a newly-granted card (silent claims, etc.) — same economy
+  // as pack pulls. Without this, a silently-claimed card leaves its song short
+  // of the 10-shard Award Play unlock and prizes silently never fire.
+  grantCardShards: async (card: OwnedCard | null | undefined) => {
+    const key = card?.card?.id;
+    if (!card || !key) return;
+    const gain = shardGainForRarity((card.card as { rarity?: string }).rarity);
+    const oldTotal = get().fragments[key] ?? 0;
+    const newTotal = Math.min(10, oldTotal + gain);
+    if (newTotal > oldTotal) {
+      await get().syncFragments(key, newTotal);
+    }
+  },
+
   silentClaimDailyDrop: async (day: number) => {
     const currentState = get();
 
     // 1. Strict check: If user already owns the card for this day in collection, do not re-claim
-    const alreadyOwnsCard = currentState.collection.some(c => 
-      c && (c.cardId === `day_${day}` || (c.card && c.card.day === day) || c.id.includes(`day_${day}`))
-    );
+    const alreadyOwnsCard = ownsCardForDay(currentState.collection, day);
 
     if (alreadyOwnsCard) {
       console.log(`[Silent Claim] User already owns card for Day ${day}. Skipping duplicate claim.`);
@@ -417,6 +592,9 @@ export const useVaultStore = create<VaultState>((set, get) => ({
             echoPrestigeScore: newScore,
           };
         });
+        // Silent grants must carry shards too — otherwise the song sits under
+        // the 10-shard Award Play unlock and prizes never fire.
+        await get().grantCardShards(card);
       }
       return card;
     } else {
@@ -441,6 +619,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
             echoPrestigeScore: newScore,
           };
         });
+        await get().grantCardShards(card);
       }
       return card;
     }
@@ -483,6 +662,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   setPreferredCardCover: (day, coverArtwork) => {
     try {
       localStorage.setItem(`preferred_bombshell_cover_${day}`, coverArtwork);
+      clearPrimedGameCover(day);
       window.dispatchEvent(new CustomEvent('bombshell_cover_changed', { detail: { day, coverArtwork } }));
     } catch {}
 
@@ -560,13 +740,15 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         supplyRes,
         gameplayRes,
         fragmentsRes,
-        milestonesRes
+        milestonesRes,
+        campaignClearsRes
       ] = await Promise.all([
         fetchAllVaultCards(userId),
         supabase.from('global_supply').select('*').range(0, 9999),
         supabase.from('gameplay_records').select('*').eq('user_id', userId).range(0, 9999),
         supabase.from('user_fragments').select('*').eq('user_id', userId).range(0, 9999),
         supabase.from('campaign_milestone_claims').select('*').eq('user_id', userId).range(0, 9999),
+        supabase.from('campaign_clears').select('song_id, medal, score').eq('user_id', userId).range(0, 9999),
       ]);
       
       const profile = profileRes.data;
@@ -765,6 +947,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       const dbFragments: Record<string, number> = {};
       const dbMilestoneClaims: Record<string, boolean> = {};
       const dbClaimedRewards: Record<string, string[]> = {};
+      const dbCampaignClears: Record<string, { medal: string; score: number }> = {};
 
       if (gameplayRes.data) {
         for (const row of gameplayRes.data) {
@@ -818,11 +1001,35 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         }
       }
 
+      if (campaignClearsRes.data && Array.isArray(campaignClearsRes.data)) {
+        for (const row of campaignClearsRes.data) {
+          if (row.song_id) dbCampaignClears[row.song_id] = { medal: row.medal || 'NONE', score: row.score || 0 };
+        }
+      }
+
       const finalHighScores = { ...dbHighScores };
       const finalMedals = { ...dbMedals };
       const finalFragments = { ...dbFragments };
       const finalMilestoneClaims = { ...dbMilestoneClaims };
       const finalClaimedRewards = { ...dbClaimedRewards };
+      const finalCampaignClears = { ...dbCampaignClears };
+
+      // Local campaign keys belong to whichever account last loaded on this
+      // browser. If that was someone else (no sign-out in between), drop them
+      // so they aren't merged into this account. Unowned keys are guest
+      // progress and carry over to the account.
+      const CAMPAIGN_OWNER_KEY = 'campaign_progress_owner';
+      const campaignOwner = localStorage.getItem(CAMPAIGN_OWNER_KEY);
+      if (campaignOwner && campaignOwner !== userId) {
+        const stale: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k?.startsWith('campaign_clear_')) stale.push(k);
+        }
+        stale.forEach(k => localStorage.removeItem(k));
+        localStorage.removeItem('campaign_progress_seeded_v1');
+      }
+      localStorage.setItem(CAMPAIGN_OWNER_KEY, userId);
 
       // Scan local storage for migration to DB
       for (let i = 0; i < localStorage.length; i++) {
@@ -872,6 +1079,25 @@ export const useVaultStore = create<VaultState>((set, get) => ({
               }
             }
           }
+        } else if (key.startsWith('campaign_clear_')) {
+          // Local clears the DB lacks (or holds at a lower medal/score) are pushed up.
+          const songId = key.substring(15);
+          let local: { medal: string; score: number } | null = null;
+          try { local = JSON.parse(localStorage.getItem(key) || 'null'); } catch { /* ignore */ }
+          if (songId && local) {
+            const db = dbCampaignClears[songId];
+            const localMedal = local.medal || 'NONE';
+            const localScore = local.score || 0;
+            const medalBetter = !db || MEDAL_ORDER.indexOf(localMedal as any) > MEDAL_ORDER.indexOf(db.medal as any);
+            const scoreBetter = !db || localScore > db.score;
+            if (medalBetter || scoreBetter) {
+              finalCampaignClears[songId] = {
+                medal: medalBetter ? localMedal : db!.medal,
+                score: Math.max(localScore, db?.score ?? 0),
+              };
+              syncCampaignClearToDb(userId, songId, localMedal, localScore);
+            }
+          }
         } else if (key.startsWith('campaign_claimed_')) {
           const parts = key.split('_');
           if (parts.length === 4) {
@@ -917,6 +1143,40 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         console.warn('[Migrate] Error migrating guest cards:', err);
       }
 
+      // ── Award Play shard self-heal ──────────────────────────────────────
+      // Shards grant at pack-open time, but pulls from before the Oct 3
+      // economy (or a failed sync) can leave a song short of the shards its
+      // owned cards earned. Recompute the floor from the owned collection and
+      // top up anything below it. Additive only, capped at 10 per song, never
+      // reduces an existing count. Echo cards are excluded: burns don't grant.
+      {
+        const SHARD_GAIN_BY_RARITY: Record<string, number> = {
+          common: 2, uncommon: 3, rare: 5, legendary: 10, mythic: 10
+        };
+        const ownedFloor: Record<string, number> = {};
+        for (const oc of validMappedCards) {
+          if (!oc?.card || oc.isEcho) continue;
+          const key = (oc.card as { id?: string }).id;
+          if (!key) continue;
+          const gain = SHARD_GAIN_BY_RARITY[String(oc.card.rarity || 'common').toLowerCase()] ?? 0;
+          if (gain > 0) ownedFloor[key] = Math.min(10, (ownedFloor[key] ?? 0) + gain);
+        }
+        const healWrites: Promise<void>[] = [];
+        for (const [songId, floor] of Object.entries(ownedFloor)) {
+          if (floor > (finalFragments[songId] ?? 0)) {
+            finalFragments[songId] = floor;
+            healWrites.push(syncUserFragmentToDb(userId, songId, floor));
+          }
+        }
+        if (healWrites.length > 0) {
+          console.log(`[ShardHeal] Topping up ${healWrites.length} song(s) from owned collection.`);
+          Promise.allSettled(healWrites).then((results) => {
+            const failed = results.filter(r => r.status === 'rejected').length;
+            if (failed > 0) console.warn(`[ShardHeal] ${failed} shard sync(s) failed; will retry next login.`);
+          });
+        }
+      }
+
       // Keep localStorage in sync with merged database state
       Object.entries(finalHighScores).forEach(([songId, score]) => {
         localStorage.setItem(`hs_${songId}`, String(score));
@@ -930,12 +1190,21 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       Object.entries(finalMilestoneClaims).forEach(([k, val]) => {
         if (val) localStorage.setItem(k, 'true');
       });
+      Object.entries(finalCampaignClears).forEach(([songId, rec]) => {
+        localStorage.setItem(`campaign_clear_${songId}`, JSON.stringify(rec));
+      });
+      // Campaign progress already exists on the account, so the one-time
+      // carry-over from on-demand plays has happened on another device.
+      if (Object.keys(dbCampaignClears).length > 0) {
+        localStorage.setItem('campaign_progress_seeded_v1', '1');
+      }
 
       set({
         highScores: finalHighScores,
         medals: finalMedals,
         fragments: finalFragments,
         milestoneClaims: finalMilestoneClaims,
+        campaignClears: finalCampaignClears,
         claimedRewards: finalClaimedRewards,
       });
 
@@ -1141,6 +1410,18 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     }
   },
 
+  syncCampaignClear: async (songId, medal, score) => {
+    set((state) => ({
+      campaignClears: { ...state.campaignClears, [songId]: { medal, score } }
+    }));
+
+    const session = await supabase.auth.getSession();
+    const userId = session.data.session?.user.id;
+    if (userId) {
+      await syncCampaignClearToDb(userId, songId, medal, score);
+    }
+  },
+
   syncClaimedRewards: (songId, tiers) => {
     set((state) => {
       const current = state.claimedRewards[songId] || [];
@@ -1154,7 +1435,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   unlockSkin: async (skinId, cost) => {
     const state = get();
     if (state.tokenBalance < cost) {
-      alert(`Insufficient Vault Tokens! Need ${cost} V⚡, but you only have ${state.tokenBalance} V⚡.`);
+      alert(`Not enough V⚡ sparks. You need ${cost} V⚡ and have ${state.tokenBalance}.`);
       return false;
     }
     const session = await supabase.auth.getSession();
@@ -1173,27 +1454,22 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       return true;
     }
 
-    const nextSkins = [...state.unlockedSkins, skinId];
-    const nextTokens = state.tokenBalance - cost;
-
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        unlocked_skins: nextSkins,
-        tokens: nextTokens,
-      })
-      .eq('id', userId);
-
+    // Server-priced unlock: the price comes from skin_catalog, not from `cost`.
+    const { data, error } = await supabase.rpc('unlock_skin', { p_skin_id: skinId });
     if (error) {
-      console.error("Error unlocking skin in db:", error);
-      alert("Failed to unlock skin. Please try again.");
+      console.error('Error unlocking skin:', error);
+      alert(/insufficient/i.test(error.message)
+        ? `Not enough V⚡ sparks. ${error.message.replace(/^.*?:\s*/, '')}`
+        : 'Couldn\'t unlock that skin. Try again.');
+      void get().refreshTokenBalance();
       return false;
     }
 
-    set({
-      unlockedSkins: nextSkins,
-      tokenBalance: nextTokens,
-    });
+    const result = (data || {}) as { tokens?: number; unlocked_skins?: string[] };
+    set((s) => ({
+      unlockedSkins: Array.isArray(result.unlocked_skins) ? result.unlocked_skins : [...s.unlockedSkins, skinId],
+      tokenBalance: typeof result.tokens === 'number' ? result.tokens : s.tokenBalance - cost,
+    }));
     return true;
   },
 
@@ -1208,14 +1484,44 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       localStorage.setItem('pim_token_balance', String(nextTokens));
     } catch {}
 
+    // Local display only. profiles.tokens is server-managed: for signed-in players the
+    // server has already credited the amount (e.g. vault-engine burnCard), so re-sync.
     if (userId) {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ tokens: nextTokens })
-        .eq('id', userId);
-      if (error) {
-        console.error('[Sync] Error adding tokens to Supabase:', error.message);
-      }
+      await get().refreshTokenBalance();
+    }
+  },
+
+  refreshTokenBalance: async () => {
+    const session = await supabase.auth.getSession();
+    const userId = session.data.session?.user.id;
+    if (!userId) return;
+    const { data, error } = await supabase.from('profiles').select('tokens').eq('id', userId).maybeSingle();
+    if (error || !data) return;
+    const tokens = Number((data as { tokens?: number }).tokens) || 0;
+    set({ tokenBalance: tokens });
+    try {
+      localStorage.setItem('pim_token_balance', String(tokens));
+    } catch {}
+  },
+
+  claimOnboardingBonus: async () => {
+    const session = await supabase.auth.getSession();
+    if (!session.data.session?.user.id) {
+      // No session at all: local-only welcome tokens, as before.
+      await get().addTokens(50);
+      return;
+    }
+    const { data, error } = await supabase.rpc('claim_onboarding_bonus');
+    if (error) {
+      console.error('[Onboarding] Bonus claim failed:', error.message);
+      return;
+    }
+    const tokens = Number((data as { tokens?: number } | null)?.tokens);
+    if (Number.isFinite(tokens)) {
+      set({ tokenBalance: tokens });
+      try {
+        localStorage.setItem('pim_token_balance', String(tokens));
+      } catch {}
     }
   },
 
@@ -1296,6 +1602,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
     medals: {},
     fragments: {},
     milestoneClaims: {},
+  campaignClears: {},
     claimedRewards: {},
   }),
 }));

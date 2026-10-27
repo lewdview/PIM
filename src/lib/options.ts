@@ -1,4 +1,5 @@
 import { useVaultStore } from '../store/useVaultStore';
+import { DEFAULT_CHART_VARIANT, resolveChartVariant, type ChartVariant } from './chartVariant';
 
 export type RenderResolution = 'native' | 'high' | 'medium' | 'low';
 export type GfxLevel = 'ultra' | 'high' | 'medium' | 'low';
@@ -7,7 +8,8 @@ export type ParticleDensity = 'full' | 'half' | 'minimal';
 export type PovMode =
   | 'classic'
   | 'flat_2d'
-  | 'circle'
+  | 'canyon_run'
+  | 'aurora_bridge'
   | 'horizontal_drift'
   | 'cyber_tunnel'
   | 'corkscrew'
@@ -23,7 +25,7 @@ export type PovMode =
   | 'mobius_loop'
   | 'dynamic_stage';
 
-export type ChartVariant = 'v5_flagship' | 'v4_neural' | 'v3_master' | 'v1_gimmicks' | 'v2_minimal' | 'canonical';
+export type { ChartVariant };
 
 export type GameOpts = {
   missSystem: boolean;
@@ -58,6 +60,7 @@ export type GameOpts = {
   bloomGlow: boolean;
   bgAnimation: boolean;
   healingGauge: boolean;
+  trackLyrics: boolean;
 };
 
 export interface GameBackground {
@@ -70,6 +73,7 @@ export interface GameBackground {
 
 export const GAME_BACKGROUNDS: GameBackground[] = [
   { id: 'cover_blur', name: 'Song Artwork', desc: 'Ambient cover art blurring', unlockText: 'Unlocked', unlockScore: 0 },
+  { id: 'lyric_cinema', name: 'Lyric Cinema', desc: 'Kinetic lyrics across the sky, synced to the song', unlockText: 'Unlocked', unlockScore: 0 },
   { id: 'neon_grid', name: 'Neon Grid', desc: 'Synthwave neon network grid', unlockText: 'Requires 1,000 Prestige Score', unlockScore: 1000 },
   { id: 'cyber_streets', name: 'Matrix Cyber', desc: 'Green binary rain frequency', unlockText: 'Requires 5,000 Prestige Score', unlockScore: 5000 },
   { id: 'space_nebula', name: 'Void Space', desc: 'Moving nebula & stardust', unlockText: 'Requires 10,000 Prestige Score', unlockScore: 10000 },
@@ -110,7 +114,7 @@ export const DEFAULT_OPTS: GameOpts = {
   laneColors: ["#FF1493", "#00E5FF", "#39FF14"],
   useLocalFiles: false,
   noteGenerationSource: "auto",
-  chartVariant: "v1_gimmicks",
+  chartVariant: DEFAULT_CHART_VARIANT,
   bgMusic: false,
   sfxEnabled: true,
   sfxVolume: 0.8,
@@ -133,6 +137,7 @@ export const DEFAULT_OPTS: GameOpts = {
   bloomGlow: true,
   bgAnimation: true,
   healingGauge: true,
+  trackLyrics: true,
 };
 
 export function getEffectiveDpr(res: RenderResolution = 'high'): number {
@@ -201,11 +206,10 @@ export function loadOpts(): GameOpts {
       const v = dbProgression?.noteGenerationSource ?? localStorage.getItem("opt_noteGenerationSource");
       return (v === "lyrics" || v === "bpm" || v === "auto") ? v : "auto";
     })(),
-    chartVariant: (() => {
-      if (!isChartEditionsUnlocked) return "v1_gimmicks";
-      const v = (dbSettings?.chartVariant ?? (localStorage.getItem("opt_chartVariant") as any)) || "v1_gimmicks";
-      return v;
-    })(),
+    chartVariant: resolveChartVariant(
+      dbSettings?.chartVariant ?? localStorage.getItem("opt_chartVariant"),
+      isChartEditionsUnlocked
+    ),
     bgMusic: dbSettings?.bgMusic ?? bool("opt_bgMusic", false),
     sfxEnabled: dbSettings?.sfxEnabled ?? bool("opt_sfxEnabled", true),
     sfxVolume: dbSettings?.sfxVolume ?? (parseFloat(localStorage.getItem("opt_sfxVolume") ?? "0.8") ?? 0.8),
@@ -219,7 +223,8 @@ export function loadOpts(): GameOpts {
     gameSenseEnabled: bool("opt_gameSenseEnabled", false),
     legacyGraphics: dbSettings?.legacyGraphics ?? bool("opt_legacyGraphics", false),
     autoLatencyAdjust: dbSettings?.autoLatencyAdjust ?? bool("opt_autoLatencyAdjust", true),
-    povMode: dbSettings?.povMode ?? ((localStorage.getItem("opt_povMode") as any) ?? "classic"),
+    // 'circle' (360° Radial Orbit) was retired; anyone who had it picked goes back to classic.
+    povMode: ((p: string) => (p === 'circle' ? 'classic' : p))(dbSettings?.povMode ?? (localStorage.getItem("opt_povMode") ?? "classic")) as PovMode,
     stagePovSwitch: dbSettings?.stagePovSwitch ?? bool("opt_stagePovSwitch", true),
     renderResolution: validRes,
     gfxLevel: validGfx,
@@ -228,6 +233,7 @@ export function loadOpts(): GameOpts {
     bloomGlow: dbSettings?.bloomGlow ?? bool("opt_bloomGlow", true),
     bgAnimation: dbSettings?.bgAnimation ?? bool("opt_bgAnimation", true),
     healingGauge: bool("opt_healingGauge", true),
+    trackLyrics: dbSettings?.trackLyrics ?? bool("opt_trackLyrics", true),
   };
 }
 

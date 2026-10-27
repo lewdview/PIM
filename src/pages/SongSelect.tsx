@@ -4,15 +4,18 @@ import { loadCatalog, isSongTimeLocked, getModifierForSong } from "@/game/api";
 import type { GameSong } from "@/game/api";
 import { audioManager } from "@/game/audio";
 import { getActiveTheme } from "@/lib/options";
-import { useVaultStore } from "../store/useVaultStore";
+import { useVaultStore, ownsCardForDay, isAwardPlayUnlocked, getShardsForDay, AWARD_PLAY_SHARD_THRESHOLD } from "../store/useVaultStore";
 import { getCurrentDay, getMonthNumFromDay, getRelativeDay } from "../utils/dayCalc";
 import { CHAPTERS, type ChapterMeta } from "@/game/campaign";
 import { getMedalForSong, getHighScore, getScoreHistory } from "@/game/progress";
 import PrizeProgressMenu from "../components/PrizeProgressMenu";
 import { getBombshellDayCovers, getBombshellCoverUrl, getCustomBombshellCover, setCustomBombshellCover } from "../utils/bombshellCards";
+import { clearPrimedGameCover, primeGameCover, resolvePreferredCover } from "../utils/gameCover";
 import { getCoverUrlForRarity } from "../utils/rarityArtwork";
 import { Lock, Unlock, Play, Sliders, Music, Volume2, VolumeX, Activity, Award, Trophy, ChevronLeft, ChevronRight, Film, Layers } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuthStore } from "@/store/useAuthStore";
+import { DELUXE_UNLOCK_ACCURACY, deluxeSongId, isDeluxeUnlocked, loadEarnedDeluxeDays } from "@/lib/deluxe";
 
 const LANE_COLORS = ['#FF1493', '#39FF14', '#E5B800', '#8B48E5'];
 const MEDAL_COLOR: Record<string, string> = {
@@ -86,6 +89,14 @@ export default function SongSelect() {
   const loadVaultData = useVaultStore((s) => s.loadVaultData);
   const claimedRewards = useVaultStore((s) => s.claimedRewards);
   const equippedCardId = useVaultStore((s) => s.equippedCardId);
+  const userId = useAuthStore((s) => s.user?.id);
+  // Bumped once earned Deluxe unlocks have loaded, so the Deluxe button re-checks
+  const [, setDeluxeLoaded] = useState(0);
+  useEffect(() => {
+    let alive = true;
+    loadEarnedDeluxeDays(userId).then(() => { if (alive) setDeluxeLoaded((n) => n + 1); });
+    return () => { alive = false; };
+  }, [userId]);
 
   useEffect(() => {
     if (collection.length === 0) {
@@ -161,15 +172,15 @@ export default function SongSelect() {
     return activeMonthStages[clampedIndex] || null;
   }, [activeMonthStages, stageIndex]);
 
-  // Update calibration & score history when selected song changes
+  // Update calibration & score history when selected song changes.
+  // Always reset to the song's canonical difficulty. A saved override may have
+  // been written by the campaign page (Chapter.tsx), where the value is the
+  // chapter-scaled difficulty — restoring it here silently voids award
+  // eligibility ("AWARDS DISABLED // MODIFIER ACTIVE OR DIFF OVERRIDE") even
+  // though the player never touched the slider.
   useEffect(() => {
     if (selected) {
-      const savedOverride = sessionStorage.getItem(`diff_override_${selected.id}`);
-      if (savedOverride) {
-        setDiffOverride(parseInt(savedOverride, 10));
-      } else {
-        setDiffOverride(selected.difficultyLevel);
-      }
+      setDiffOverride(selected.difficultyLevel);
       setHistory(getScoreHistory(selected.id));
       cleanupPreview();
     }
@@ -234,18 +245,12 @@ export default function SongSelect() {
   };
 
   const today = getCurrentDay();
-  const getFragmentsForDay = (day: number) => {
-    const cardKey = `card-${day}`;
-    const dayKey = `day-${String(day).padStart(3, '0')}`;
-    const dayKeyRaw = `day-${day}`;
-    return fragments[cardKey] ?? fragments[dayKey] ?? fragments[dayKeyRaw] ?? 0;
-  };
 
+  // Playback requires card ownership. Today's track is free via the
+  // claim-first funnel (silent-claim runs in handlePlaySong before routing).
   const isSongUnlocked = (song: GameSong) => {
     if (song.day === today) return true;
-    const ownsCard = Array.isArray(collection) ? collection.some(c => c && (c.cardId === song.id || c.card?.day === song.day)) : false;
-    const fragmentCount = getFragmentsForDay(song.day);
-    return ownsCard || fragmentCount >= 10;
+    return ownsCardForDay(collection, song.day);
   };
 
   const selectedUnlocked = selected ? isSongUnlocked(selected) : false;
@@ -365,26 +370,35 @@ export default function SongSelect() {
 
   const activeCoverUrl = availableVariants[selectedVariantIdx]?.url || selected?.coverArt || '/data/covers/default.jpg';
 
-  const handlePlaySong = (songToPlay?: GameSong) => {
+  const handlePlaySong = async (songToPlay?: GameSong, deluxe = false) => {
     const s = songToPlay || selected;
     if (!s || !isSongUnlocked(s)) return;
+    const playId = deluxe ? deluxeSongId(s.day) : s.id;
+    // Claim-first funnel: today's free card is claimed silently before entering play,
+    // so the destination ownership gate always sees it.
+    if (s.day === today && !ownsCardForDay(collection, s.day)) {
+      try {
+        await useVaultStore.getState().silentClaimDailyDrop(s.day);
+      } catch (err) {
+        console.error("[SongSelect] Claim-first failed:", err);
+      }
+    }
     cleanupPreview();
     audioManager.playSfx('tap_nav', 0.4);
-    sessionStorage.setItem(`game_origin_${s.id}`, 'songs');
-    sessionStorage.setItem(`diff_override_${s.id}`, String(diffOverride));
-    sessionStorage.setItem(`active_cover_url_${s.id}`, activeCoverUrl);
-    sessionStorage.setItem(`active_cover_url_card-${s.day}`, activeCoverUrl);
-    sessionStorage.setItem('active_game_cover', activeCoverUrl);
+    sessionStorage.setItem(`game_origin_${playId}`, 'songs');
+    sessionStorage.setItem(`diff_override_${playId}`, String(diffOverride));
+    // Hand the variant on screen to PIM: it drives the artwork lane colors and the results art.
+    primeGameCover(s.day, s.id === selected?.id ? activeCoverUrl : resolvePreferredCover(s));
     
     const modifierType = getModifierForSong(s);
     const isEquipped = equippedCardId === s.id;
     if (isEquipped && modifierType !== 'none') {
-      sessionStorage.setItem(`active_modifier_type_${s.id}`, modifierType);
+      sessionStorage.setItem(`active_modifier_type_${playId}`, modifierType);
     } else {
-      sessionStorage.removeItem(`active_modifier_type_${s.id}`);
+      sessionStorage.removeItem(`active_modifier_type_${playId}`);
     }
 
-    setLocation(`/play/${s.id}`);
+    setLocation(`/play/${playId}`);
   };
 
   const activeMoodColor = selected ? (selected.mood === 'light' ? '#39FF14' : '#FF1493') : '#39FF14';
@@ -445,14 +459,15 @@ export default function SongSelect() {
 
       {/* Header Bar */}
       <header
-        className="relative z-20 flex items-center justify-between px-5 py-3.5 flex-shrink-0"
+        className="relative z-20 flex items-center justify-between px-4 sm:px-6 py-3 flex-shrink-0"
         style={{
-          background: isAvant ? 'rgba(5,5,5,0.92)' : 'rgba(8,8,12,0.85)',
+          background: 'linear-gradient(180deg, rgba(22, 16, 34, 0.94), rgba(11, 8, 18, 0.96))',
           backdropFilter: 'blur(16px)',
-          borderBottom: isAvant ? '1px solid rgba(57,255,20,0.2)' : '1px solid rgba(255,255,255,0.08)',
+          borderBottom: '1px solid rgba(255,255,255,0.14)',
+          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.12), 0 4px 18px rgba(0,0,0,0.5)',
         }}
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <button
             data-testid="button-back"
             onClick={() => {
@@ -460,9 +475,9 @@ export default function SongSelect() {
               setLocation("/arcade");
             }}
             onMouseEnter={() => audioManager.playSfx("tap_nav", 0.08)}
-            className={isAvant
-              ? "font-mono text-xs px-4 py-1.5 tracking-widest border border-[#39FF14]/30 text-[#39FF14] bg-transparent hover:bg-[#39FF14]/10 transition-colors cursor-pointer"
-              : "neon-btn-outline text-xs px-4 py-1.5 tracking-widest cursor-pointer"}
+            className="btn-3d font-mono text-xs tracking-wider uppercase"
+            data-tone="acid"
+            data-size="sm"
           >
             ← ARCADE
           </button>
@@ -472,71 +487,83 @@ export default function SongSelect() {
               setLocation("/campaign");
             }}
             onMouseEnter={() => audioManager.playSfx("tap_nav", 0.08)}
-            className="hidden sm:block font-mono text-xs px-3 py-1.5 tracking-widest border border-white/10 text-white/60 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+            className="hidden sm:inline-flex btn-3d font-mono text-xs tracking-wider uppercase"
+            data-tone="quiet"
+            data-size="sm"
           >
             SECTOR MAP →
           </button>
         </div>
 
-        <div className="font-mono text-xs tracking-[0.3em] font-bold text-center" style={{ color: isAvant ? '#39FF14' : 'rgba(255,255,255,0.8)' }}>
-          AWARD PLAY ARCHIVE // {songs.length} SIGNALS
+        <div className="hw-badge">
+          <span className="hw-led" data-color="acid" />
+          <span>AWARD PLAY ARCHIVE // {songs.length} SIGNALS</span>
         </div>
 
-        <div className="font-mono text-xs text-white/40 tracking-widest hidden sm:block uppercase">
+        <div className="font-mono text-[10px] font-bold text-white/45 tracking-[0.22em] hidden md:block uppercase">
           PIM // STAGE SHOWCASE
         </div>
       </header>
 
       {/* Main Split Layout: Left (Month Selection 01-12) & Right (Full-Space Active Stage Showcase) */}
       <div className="relative z-10 flex-1 flex flex-col md:flex-row overflow-hidden">
-        {/* LEFT COLUMN: Month Selection List (Month 01 - 12) */}
-        <div className="w-full md:w-64 lg:w-72 flex-shrink-0 border-r border-white/10 flex flex-col bg-black/70 backdrop-blur-md overflow-hidden">
-          <div className="p-4 border-b border-white/10 flex items-center justify-between">
-            <div className="font-mono text-[10px] font-bold tracking-[0.25em] text-[#39FF14] uppercase">
-              // MONTH SELECTION
+        {/* LEFT COLUMN: Month Selection Rack (Month 01 - 12) */}
+        <div
+          className="w-full md:w-68 lg:w-76 flex-shrink-0 border-r border-white/12 flex flex-col backdrop-blur-xl overflow-hidden"
+          style={{
+            background: 'linear-gradient(180deg, rgba(16, 12, 24, 0.92), rgba(9, 7, 15, 0.96))',
+            boxShadow: 'inset -1px 0 0 rgba(255,255,255,0.06)',
+          }}
+        >
+          <div className="p-3.5 border-b border-white/10 flex items-center justify-between bg-black/30">
+            <div className="font-mono text-[10px] font-bold tracking-[0.22em] text-[#39FF14] uppercase flex items-center gap-2">
+              <span className="hw-led" data-color="acid" />
+              <span>// SECTOR RACK</span>
             </div>
-            <div className="font-mono text-[9px] text-white/40">
-              12 SECTORS
-            </div>
+            <span className="hw-badge">12 MONTHS</span>
           </div>
 
           <div className="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-none" style={{ scrollbarWidth: 'none' }}>
             {monthGroups.map((group) => {
               const isActive = selectedMonth === group.meta.month;
+              const pct = group.songs.length > 0 ? Math.round((group.clearedCount / group.songs.length) * 100) : 0;
               return (
                 <button
                   key={group.meta.month}
                   onClick={() => handleSelectMonth(group.meta.month)}
                   onMouseEnter={() => audioManager.playSfx('tap_nav', 0.04)}
-                  className={`w-full text-left p-3 rounded-xl border transition-all duration-200 cursor-pointer relative group overflow-hidden ${
-                    isActive
-                      ? 'bg-white/10 border-l-4 shadow-lg'
-                      : 'bg-black/40 hover:bg-white/5 border-white/5 hover:border-white/20'
-                  }`}
+                  className="w-full text-left p-3 rounded-xl border transition-all duration-150 cursor-pointer relative group overflow-hidden"
                   style={{
-                    borderLeftColor: isActive ? group.meta.dc : 'transparent',
-                    boxShadow: isActive ? `0 0 16px ${group.meta.dc}30` : 'none',
+                    background: isActive
+                      ? 'linear-gradient(135deg, rgba(38, 29, 56, 0.95), rgba(22, 17, 34, 0.98))'
+                      : 'rgba(9, 7, 15, 0.65)',
+                    borderColor: isActive ? group.meta.dc : 'rgba(255,255,255,0.09)',
+                    borderLeftWidth: isActive ? 4 : 1,
+                    borderLeftColor: isActive ? group.meta.dc : 'rgba(255,255,255,0.09)',
+                    boxShadow: isActive
+                      ? `inset 0 1px 0 rgba(255,255,255,0.2), 0 3px 0 #050308, 0 0 18px ${group.meta.dc}28`
+                      : 'inset 0 1px 0 rgba(255,255,255,0.05), 0 2px 0 #050308',
                   }}
                 >
-                  <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-2">
                       <span
-                        className="font-mono text-[9px] font-black px-1.5 py-[1px] rounded uppercase"
+                        className="font-mono text-[9px] font-black px-1.5 py-0.5 rounded uppercase"
                         style={{
-                          color: isActive ? '#000' : group.meta.dc,
-                          background: isActive ? group.meta.dc : `${group.meta.dc}15`,
-                          border: `1px solid ${group.meta.dc}40`,
+                          color: isActive ? '#050308' : group.meta.dc,
+                          background: isActive ? group.meta.dc : `${group.meta.dc}18`,
+                          border: `1px solid ${group.meta.dc}50`,
                         }}
                       >
                         M{String(group.meta.month).padStart(2, '0')}
                       </span>
-                      <span className="font-mono text-[9px] font-bold text-white/40 uppercase">
+                      <span className="font-mono text-[9px] font-bold text-white/50 uppercase">
                         {group.meta.diff}
                       </span>
                     </div>
 
-                    <span className="font-mono text-[9px] text-white/50">
-                      <strong className="text-[#39FF14]">{group.clearedCount}</strong>/{group.songs.length} STAGES
+                    <span className="font-mono text-[9.5px] text-white/60 tabular-nums">
+                      <strong className="text-[#39FF14]">{group.clearedCount}</strong>/{group.songs.length}
                     </span>
                   </div>
 
@@ -545,8 +572,15 @@ export default function SongSelect() {
                     <ChevronRight size={14} className={`transition-transform ${isActive ? 'translate-x-1 text-[#39FF14]' : 'opacity-30'}`} />
                   </div>
 
-                  <div className="font-mono text-[9px] text-white/40 uppercase mt-0.5 truncate">
+                  <div className="font-mono text-[9px] text-white/45 uppercase mt-0.5 truncate">
                     {group.meta.sub}
+                  </div>
+
+                  <div className="mt-2 h-1 w-full rounded-full bg-black/60 overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-300"
+                      style={{ width: `${pct}%`, background: group.meta.dc }}
+                    />
                   </div>
                 </button>
               );
@@ -557,7 +591,11 @@ export default function SongSelect() {
         {/* MAIN VIEW: FULL-SPACE STAGE SHOWCASE WITH ALBUM ARTWORK BACKGROUND */}
         <div
           ref={mainScrollRef}
-          className="flex-1 overflow-y-auto bg-black/30 backdrop-blur-xl flex flex-col p-4 lg:p-8 pb-36 md:pb-8 relative"
+          className="flex-1 overflow-y-auto bg-black/30 backdrop-blur-xl flex flex-col p-4 lg:p-8 relative"
+          style={{
+            WebkitOverflowScrolling: 'touch',
+            paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 6rem)',
+          }}
         >
           {/* Parallax Background Month & Stage Text */}
           {activeMonthGroup && (
@@ -574,37 +612,36 @@ export default function SongSelect() {
           )}
 
           {/* TOP CONTROLS & STAGE STEPPER BAR */}
-          <div className="relative z-20 space-y-4 max-w-4xl mx-auto w-full mb-6">
+          <div className="relative z-20 space-y-3.5 max-w-4xl mx-auto w-full mb-5">
             {/* Sector Header & Controls */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-black/70 border border-white/10 p-4 rounded-2xl backdrop-blur-xl">
+            <div className="hw-panel flex flex-col sm:flex-row items-center justify-between gap-4 p-4 sm:p-5" data-accent="acid">
               <div>
-                <div className="font-mono text-[9px] font-bold tracking-[0.25em] text-[#39FF14] uppercase">
-                  SECTOR {String(activeMonthGroup?.meta.month).padStart(2, '0')} // STAGE SHOWCASE
+                <div className="font-mono text-[9.5px] font-bold tracking-[0.24em] text-[#39FF14] uppercase flex items-center gap-2">
+                  <span className="hw-led" data-color="acid" />
+                  <span>SECTOR {String(activeMonthGroup?.meta.month).padStart(2, '0')} // STAGE SHOWCASE</span>
                 </div>
-                <h2 className="font-mono font-black text-xl uppercase tracking-tight text-white flex items-center gap-2">
+                <h2 className="font-mono font-black text-xl uppercase tracking-tight text-white flex items-center gap-2 mt-1">
                   <span>{activeMonthGroup?.meta.name}</span>
-                  <span className="text-xs text-white/40 font-mono font-normal">({activeMonthStages.length} STAGES)</span>
+                  <span className="text-xs text-white/45 font-mono font-normal">({activeMonthStages.length} STAGES)</span>
                 </h2>
               </div>
 
               {/* Stage Counter & Prev/Next Buttons */}
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5">
                 <button
                   onClick={handlePrevStage}
                   disabled={stageIndex <= 0}
-                  className={`px-4 py-2 rounded-xl font-mono text-xs font-bold tracking-wider flex items-center gap-1.5 transition-all uppercase cursor-pointer ${
-                    stageIndex > 0
-                      ? 'border border-white/20 bg-white/10 text-white hover:bg-white/20 hover:border-[#39FF14]'
-                      : 'border border-white/5 bg-white/5 text-white/20 cursor-not-allowed'
-                  }`}
+                  className="btn-3d font-mono text-xs uppercase"
+                  data-tone="quiet"
+                  data-size="sm"
                 >
-                  <ChevronLeft size={16} />
-                  <span>← STAGE {stageIndex > 0 ? getRelativeDay(activeMonthStages[stageIndex - 1]?.day || 1) : 1}</span>
+                  <ChevronLeft size={15} />
+                  <span>STAGE {stageIndex > 0 ? getRelativeDay(activeMonthStages[stageIndex - 1]?.day || 1) : 1}</span>
                 </button>
 
-                <div className="font-mono text-center px-4 py-2 bg-black/90 border border-[#39FF14]/40 rounded-xl shadow-lg">
-                  <div className="text-[8px] text-white/40 uppercase font-bold tracking-widest">ACTIVE STAGE</div>
-                  <div className="text-base font-black text-[#39FF14]">
+                <div className="hw-well font-mono text-center px-4 py-1.5">
+                  <div className="text-[8px] text-white/45 uppercase font-bold tracking-widest">ACTIVE STAGE</div>
+                  <div className="text-base font-black text-[#39FF14] tabular-nums">
                     {currentStageNumber} <span className="text-xs text-white/40">/ {activeMonthStages.length}</span>
                   </div>
                 </div>
@@ -612,21 +649,21 @@ export default function SongSelect() {
                 <button
                   onClick={handleNextStage}
                   disabled={stageIndex >= activeMonthStages.length - 1}
-                  className={`px-4 py-2 rounded-xl font-mono text-xs font-bold tracking-wider flex items-center gap-1.5 transition-all uppercase cursor-pointer ${
-                    stageIndex < activeMonthStages.length - 1
-                      ? 'border border-white/20 bg-white/10 text-white hover:bg-white/20 hover:border-[#39FF14]'
-                      : 'border border-white/5 bg-white/5 text-white/20 cursor-not-allowed'
-                  }`}
+                  className="btn-3d font-mono text-xs uppercase"
+                  data-tone="quiet"
+                  data-size="sm"
                 >
-                  <span>STAGE {stageIndex < activeMonthStages.length - 1 ? getRelativeDay(activeMonthStages[stageIndex + 1]?.day || 1) : activeMonthStages.length} →</span>
-                  <ChevronRight size={16} />
+                  <span>STAGE {stageIndex < activeMonthStages.length - 1 ? getRelativeDay(activeMonthStages[stageIndex + 1]?.day || 1) : activeMonthStages.length}</span>
+                  <ChevronRight size={15} />
                 </button>
               </div>
             </div>
 
-            {/* Quick Stage Jump Pill Strip (1..31) */}
-            <div className="flex items-center gap-1.5 overflow-x-auto p-2 bg-black/60 border border-white/10 rounded-xl scrollbar-none backdrop-blur-xl" style={{ scrollbarWidth: 'none' }}>
-              <span className="font-mono text-[8px] text-white/40 tracking-widest px-2 uppercase font-bold flex-shrink-0">JUMP TO STAGE:</span>
+            {/* Quick Stage Jump Sequencer Strip (1..31) */}
+            <div className="hw-well flex items-center gap-1.5 overflow-x-auto p-2.5 scrollbar-none" style={{ scrollbarWidth: 'none' }}>
+              <span className="font-mono text-[8.5px] text-white/50 tracking-widest px-2 uppercase font-bold flex-shrink-0">
+                STEP PAD:
+              </span>
               {activeMonthStages.map((s, idx) => {
                 const sNum = getRelativeDay(s.day);
                 const isSelected = idx === stageIndex;
@@ -638,13 +675,8 @@ export default function SongSelect() {
                       audioManager.playSfx('tap_nav', 0.08);
                       setStageIndex(idx);
                     }}
-                    className={`font-mono text-[9px] font-black w-8 h-7 flex items-center justify-center rounded transition-all flex-shrink-0 cursor-pointer ${
-                      isSelected
-                        ? 'bg-[#39FF14] text-black shadow-[0_0_10px_rgba(57,255,20,0.5)] scale-105'
-                        : unlocked
-                        ? 'bg-white/5 text-white/70 hover:bg-white/20 hover:text-white border border-white/10'
-                        : 'bg-black/60 text-[#FF3800]/50 border border-[#FF3800]/20'
-                    }`}
+                    className="hw-step-pad w-8 h-8 flex-shrink-0"
+                    data-state={isSelected ? 'active' : unlocked ? 'ready' : 'locked'}
                   >
                     {sNum}
                   </button>
@@ -654,42 +686,45 @@ export default function SongSelect() {
           </div>
 
           {/* STAGE FULL SPACE CONTENT CARD */}
-          <div className="relative z-10 max-w-4xl mx-auto w-full flex-1 space-y-6 bg-black/75 border border-white/15 p-6 lg:p-10 rounded-3xl backdrop-blur-2xl shadow-2xl">
+          <div
+            className="hw-panel relative z-10 max-w-4xl mx-auto w-full flex-1 space-y-6 p-6 lg:p-8"
+            data-accent={selected?.mood === 'light' ? 'acid' : 'magenta'}
+          >
             {selected ? (
               <div className="space-y-6">
                 {/* Header Title Bar */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-white/10 pb-4 gap-3">
                   <div>
-                    <div className="font-mono text-[9px] tracking-[0.25em] text-[#39FF14] uppercase mb-1 flex items-center gap-2">
-                      <Activity size={12} className="animate-pulse" />
+                    <div className="font-mono text-[9.5px] font-bold tracking-[0.24em] text-[#39FF14] uppercase mb-1 flex items-center gap-2">
+                      <Activity size={13} className="animate-pulse" />
                       <span>STAGE {currentStageNumber} // FULL CALIBRATION SHOWCASE</span>
                     </div>
-                    <div className="font-mono text-xs text-white/30 uppercase">
+                    <div className="font-mono text-xs text-white/40 uppercase">
                       SIGNAL REF: {selected.id.toUpperCase().substring(0, 16)}
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2">
                     <span
-                      className="font-mono text-[9px] font-bold px-3 py-1 border uppercase rounded"
-                      style={{ color: activeMoodColor, borderColor: `${activeMoodColor}40`, background: `${activeMoodColor}10` }}
+                      className="font-mono text-[9.5px] font-bold px-3 py-1 border uppercase rounded-full"
+                      style={{ color: activeMoodColor, borderColor: `${activeMoodColor}50`, background: `${activeMoodColor}15` }}
                     >
                       MOOD: {selected.mood.toUpperCase()}
                     </span>
-                    <span className="font-mono text-[9px] font-bold px-3 py-1 border border-white/20 uppercase rounded text-white/50 bg-white/5">
+                    <span className="hw-badge">
                       LVL {selected.difficultyLevel}
                     </span>
                   </div>
                 </div>
 
                 {/* Hero Stage Artwork & Details */}
-                <div className="flex flex-col md:flex-row gap-8 items-center bg-white/[0.03] border border-white/10 p-6 rounded-2xl backdrop-blur-md">
+                <div className="hw-well flex flex-col md:flex-row gap-7 items-center p-5 sm:p-6">
                   {/* Stage Cover Art */}
                   <div className="relative flex-shrink-0 group">
-                    <div className="absolute -top-2.5 -left-2.5 w-5 h-5 border-t-2 border-l-2 border-[#39FF14]" />
-                    <div className="absolute -top-2.5 -right-2.5 w-5 h-5 border-t-2 border-r-2 border-[#39FF14]" />
-                    <div className="absolute -bottom-2.5 -left-2.5 w-5 h-5 border-b-2 border-l-2 border-[#39FF14]" />
-                    <div className="absolute -bottom-2.5 -right-2.5 w-5 h-5 border-b-2 border-r-2 border-[#39FF14]" />
+                    <div className="absolute -top-2 -left-2 w-4 h-4 border-t-2 border-l-2 border-[#39FF14]" />
+                    <div className="absolute -top-2 -right-2 w-4 h-4 border-t-2 border-r-2 border-[#39FF14]" />
+                    <div className="absolute -bottom-2 -left-2 w-4 h-4 border-b-2 border-l-2 border-[#39FF14]" />
+                    <div className="absolute -bottom-2 -right-2 w-4 h-4 border-b-2 border-r-2 border-[#39FF14]" />
 
                     {selected.coverArt ? (
                       <img
@@ -698,7 +733,8 @@ export default function SongSelect() {
                         crossOrigin="anonymous"
                         className="w-48 h-48 md:w-56 md:h-56 object-cover rounded-2xl shadow-2xl transition-transform duration-500 group-hover:scale-[1.02]"
                         style={{
-                          border: '1px solid rgba(57,255,20,0.3)',
+                          border: '1px solid rgba(255,255,255,0.22)',
+                          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.25), 0 6px 0 #050308, 0 18px 36px rgba(0,0,0,0.6)',
                           filter: selectedUnlocked ? 'none' : 'grayscale(100%) brightness(0.4)',
                         }}
                       />
@@ -712,9 +748,12 @@ export default function SongSelect() {
                     {selectedUnlocked && (
                       <button
                         onClick={() => togglePreview(selected)}
-                        className="absolute inset-0 rounded-2xl flex items-center justify-center transition-all bg-black/40 hover:bg-black/60 text-white cursor-pointer"
+                        className="absolute inset-0 rounded-2xl flex items-center justify-center transition-all bg-black/35 hover:bg-black/55 text-white cursor-pointer"
                       >
-                        <div className="w-14 h-14 rounded-full border border-white/30 bg-black/70 flex items-center justify-center shadow-xl">
+                        <div
+                          className="w-14 h-14 rounded-full border border-white/35 bg-black/80 flex items-center justify-center"
+                          style={{ boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.3), 0 4px 0 #050308, 0 10px 24px rgba(0,0,0,0.6)' }}
+                        >
                           {previewing ? <VolumeX size={24} className="text-[#39FF14]" /> : <Volume2 size={24} className="text-white" />}
                         </div>
                       </button>
@@ -730,10 +769,11 @@ export default function SongSelect() {
                           const nextVar = availableVariants[nextIdx];
                           if (nextVar?.fileName && selected) {
                             setCustomBombshellCover(selected.day, nextVar.fileName);
+                            clearPrimedGameCover(selected.day);
                             try { localStorage.setItem(`preferred_cover_${selected.id}`, nextVar.fileName); } catch {}
                           }
                         }}
-                        className="absolute bottom-2.5 left-2.5 z-20 px-2.5 py-1 rounded-md bg-black/85 hover:bg-black border border-[#39FF14]/50 text-[10px] font-mono font-bold tracking-wider text-[#39FF14] flex items-center gap-1.5 backdrop-blur-md shadow-xl transition-transform active:scale-95 cursor-pointer"
+                        className="absolute bottom-2.5 left-2.5 z-20 px-2.5 py-1 rounded-md bg-black/90 hover:bg-black border border-[#39FF14]/60 text-[10px] font-mono font-bold tracking-wider text-[#39FF14] flex items-center gap-1.5 backdrop-blur-md shadow-xl transition-transform active:scale-95 cursor-pointer"
                         title="Click to cycle cover variant"
                       >
                         <Layers size={11} className="text-[#39FF14]" />
@@ -743,38 +783,38 @@ export default function SongSelect() {
                   </div>
 
                   {/* Stage Meta info */}
-                  <div className="flex-1 min-w-0 text-center md:text-left space-y-2">
+                  <div className="flex-1 min-w-0 text-center md:text-left space-y-2.5">
                     <div className="flex items-center gap-2 justify-center md:justify-start flex-wrap">
-                      <span className="font-mono text-[10px] px-2.5 py-0.5 border font-bold uppercase rounded text-white/50 border-white/20 bg-white/5">
-                        STAGE #{currentStageNumber} (DAY {selected.day})
+                      <span className="hw-badge">
+                        STAGE #{currentStageNumber} · DAY {selected.day}
                       </span>
                       {medal && medal !== '' && (
                         <span
-                          className="font-mono text-[10px] px-2.5 py-0.5 border font-bold uppercase rounded"
-                          style={{ color: medalColor, borderColor: `${medalColor}40`, background: `${medalColor}10` }}
+                          className="font-mono text-[10px] px-2.5 py-0.5 border font-bold uppercase rounded-full"
+                          style={{ color: medalColor, borderColor: `${medalColor}50`, background: `${medalColor}18` }}
                         >
-                          {medal}
+                          ★ {medal}
                         </span>
                       )}
                       {isAllPrizesClaimed && (
-                        <span className="font-mono text-[10px] px-2.5 py-0.5 border border-yellow-400 text-yellow-400 bg-yellow-400/10 font-bold uppercase flex items-center gap-1 rounded">
+                        <span className="font-mono text-[10px] px-2.5 py-0.5 border border-yellow-400 text-yellow-400 bg-yellow-400/10 font-bold uppercase flex items-center gap-1 rounded-full">
                           <Trophy size={12} /> ALL PRIZES CLAIMED
                         </span>
                       )}
                     </div>
 
-                    <h1 className="font-mono font-black text-3xl md:text-4xl uppercase leading-tight tracking-tight text-white">
+                    <h1 className="font-mono font-black text-3xl md:text-4xl uppercase leading-tight tracking-tight text-white" style={{ textShadow: '0 3px 0 rgba(0,0,0,0.6)' }}>
                       {selected.title}
                     </h1>
-                    <div className="font-mono text-base text-white/70 font-bold uppercase">
+                    <div className="font-mono text-base text-white/75 font-bold uppercase">
                       {selected.artist}
                     </div>
-                    <div className="font-mono text-xs text-white/40 uppercase">
+                    <div className="font-mono text-xs text-white/45 uppercase">
                       RELEASE DATE: {selected.date} {selected.key ? `// KEY: ${selected.key}` : ''}
                     </div>
 
                     {selected.description && (
-                      <p className="font-mono text-xs italic text-white/50 leading-relaxed border-l-2 border-[#39FF14]/40 pl-3 py-1 mt-2 text-left">
+                      <p className="font-mono text-xs italic text-white/60 leading-relaxed border-l-2 border-[#39FF14]/50 pl-3 py-1 mt-2 text-left">
                         "{selected.description.toUpperCase()}"
                       </p>
                     )}
@@ -783,9 +823,9 @@ export default function SongSelect() {
 
                 {/* Audio Preview Waveform Bar */}
                 {previewing && selectedUnlocked && (
-                  <div className="border border-[#39FF14]/30 bg-black/80 p-4 rounded-xl flex items-center gap-4">
+                  <div className="hw-well p-4 flex items-center gap-4 border border-[#39FF14]/35">
                     <WaveformBars playing={previewing} />
-                    <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+                    <div className="flex-1 h-2.5 bg-black/60 rounded-full overflow-hidden border border-white/10">
                       <div
                         className="h-full transition-all duration-150"
                         style={{ width: `${previewProg * 100}%`, background: activeMoodColor, boxShadow: `0 0 10px ${activeMoodColor}` }}
@@ -793,36 +833,38 @@ export default function SongSelect() {
                     </div>
                     <button
                       onClick={() => togglePreview()}
-                      className="font-mono text-xs text-white/40 hover:text-white cursor-pointer px-2"
+                      className="btn-3d font-mono text-[10px]"
+                      data-tone="quiet"
+                      data-size="sm"
                     >
-                      ✕ CLOSE
+                      ✕ STOP
                     </button>
                   </div>
                 )}
 
                 {/* Calibration Coefficient Override Controller */}
                 {selectedUnlocked && (
-                  <div className="border border-[#39FF14]/30 bg-black/50 p-5 rounded-2xl space-y-3">
+                  <div className="hw-well p-5 space-y-3">
                     <div className="flex items-center justify-between">
-                      <div className="font-mono text-[10px] uppercase tracking-wider text-white/50 flex items-center gap-2 font-bold">
+                      <div className="font-mono text-[10px] uppercase tracking-wider text-white/60 flex items-center gap-2 font-bold">
                         <Sliders size={14} className="text-[#39FF14]" />
                         <span>// CALIBRATION COEFFICIENT OVERRIDE</span>
                       </div>
-                      <div className="font-mono font-black text-base" style={{ color: diffColor }}>
+                      <div className="font-mono font-black text-base px-2.5 py-0.5 rounded bg-black/50 border border-white/10" style={{ color: diffColor }}>
                         LVL {diffOverride}
                       </div>
                     </div>
 
-                    <div className="flex gap-1.5 items-end h-5">
+                    <div className="flex gap-1.5 items-end h-6 p-1 rounded-lg bg-black/40 border border-white/5">
                       {Array.from({ length: 10 }).map((_, i) => (
                         <div
                           key={i}
                           className="flex-1 rounded-xs transition-all"
                           style={{
-                            height: `${30 + i * 7}%`,
-                            background: i < diffOverride ? diffColor : 'rgba(255,255,255,0.05)',
-                            border: '1px solid rgba(255,255,255,0.05)',
-                            boxShadow: i < diffOverride ? `0 0 8px ${diffColor}50` : 'none',
+                            height: `${32 + i * 7.5}%`,
+                            background: i < diffOverride ? diffColor : 'rgba(255,255,255,0.06)',
+                            border: '1px solid rgba(255,255,255,0.08)',
+                            boxShadow: i < diffOverride ? `0 0 10px ${diffColor}60` : 'none',
                           }}
                         />
                       ))}
@@ -840,35 +882,36 @@ export default function SongSelect() {
                       className="w-full cursor-pointer accent-[#39FF14]"
                     />
 
-                    <div className="flex justify-between font-mono text-[9px] tracking-widest text-white/40 font-bold">
+                    <div className="flex justify-between font-mono text-[9px] tracking-widest text-white/45 font-bold">
                       <span className="text-[#39FF14]">MIN COEFFICIENT (LVL 1)</span>
-                      <span className="text-[#FF1493]">MAX COEFFICIENT (LVL 10)</span>
+                      <span className="text-[#FF1E8C]">MAX COEFFICIENT (LVL 10)</span>
                     </div>
                   </div>
                 )}
 
                 {/* Telemetry Stats Grid */}
-                <div className="grid grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   {[
-                    { label: 'BPM', value: selected.bpm },
-                    { label: 'NODES', value: (selected.notes || []).length },
-                    { label: 'LENGTH', value: `${Math.floor(selected.duration / 60)}:${String(Math.round(selected.duration % 60)).padStart(2, '0')}` },
-                    { label: 'CALIB', value: diffOverride },
-                  ].map(({ label, value }) => (
-                    <div key={label} className="border border-white/10 bg-black/40 p-3.5 rounded-xl text-center">
-                      <div className="font-mono text-[9px] font-bold text-white/30 uppercase mb-1">{label}</div>
-                      <div className="font-mono font-black text-lg text-[#39FF14]">{value}</div>
+                    { label: 'BPM TEMPO', value: selected.bpm, color: '#39FF14' },
+                    { label: 'CHART NODES', value: (selected.notes || []).length, color: '#00E5FF' },
+                    { label: 'DURATION', value: `${Math.floor(selected.duration / 60)}:${String(Math.round(selected.duration % 60)).padStart(2, '0')}`, color: '#F2F0E8' },
+                    { label: 'CALIBRATION', value: `LVL ${diffOverride}`, color: diffColor },
+                  ].map(({ label, value, color }) => (
+                    <div key={label} className="hw-well p-3.5 text-center">
+                      <div className="font-mono text-[9px] font-bold text-white/45 tracking-wider uppercase mb-1">{label}</div>
+                      <div className="font-mono font-black text-lg tabular-nums" style={{ color }}>{value}</div>
                     </div>
                   ))}
                 </div>
 
                 {/* Highest Integrity Dispatch Score */}
                 {getHighScore(selected.id) > 0 && (
-                  <div className="border border-[#39FF14]/20 bg-black/40 p-4 rounded-xl flex items-center justify-between">
-                    <div className="font-mono text-[10px] tracking-widest text-white/40 uppercase font-bold">
-                      // MAX DISPATCH SCORE
+                  <div className="hw-well p-4 flex items-center justify-between border border-[#39FF14]/30">
+                    <div className="font-mono text-[10px] tracking-widest text-white/55 uppercase font-bold flex items-center gap-2">
+                      <span className="hw-led" data-color="acid" />
+                      <span>// MAX DISPATCH SCORE</span>
                     </div>
-                    <div className="font-mono font-black text-xl text-[#39FF14]">
+                    <div className="font-mono font-black text-xl text-[#39FF14] tabular-nums">
                       {getHighScore(selected.id).toLocaleString()}
                     </div>
                   </div>
@@ -879,13 +922,13 @@ export default function SongSelect() {
 
                 {/* Telemetry History */}
                 {history.length > 0 && (
-                  <div className="border border-white/10 bg-black/30 p-4 rounded-xl space-y-2">
-                    <div className="font-mono text-[9px] text-white/40 tracking-widest uppercase font-bold">
+                  <div className="hw-well p-4 space-y-2">
+                    <div className="font-mono text-[9px] text-white/45 tracking-widest uppercase font-bold">
                       // TELEMETRY HISTORY LOG ({history.length} TRANSMISSIONS)
                     </div>
                     <div className="flex gap-2.5 overflow-x-auto pb-1 font-mono text-xs">
                       {history.slice(-6).map((sc, idx) => (
-                        <div key={idx} className="border border-white/10 bg-white/5 px-3 py-1.5 rounded text-[#39FF14] font-bold">
+                        <div key={idx} className="border border-white/12 bg-white/5 px-3 py-1.5 rounded-lg text-[#39FF14] font-bold tabular-nums">
                           {sc.toLocaleString()}
                         </div>
                       ))}
@@ -894,33 +937,70 @@ export default function SongSelect() {
                 )}
 
                 {/* Transmission Trigger / Play Action */}
-                <div className="pt-4">
+                <div className="pt-2">
                   {!selectedUnlocked ? (
-                    <div className="border border-[#FF3800]/40 bg-[#FF3800]/10 p-4 rounded-xl text-center mb-4">
+                    <div className="hw-well border border-[#FF3800]/45 bg-[#FF3800]/10 p-4 text-center mb-4">
                       <div className="font-mono text-xs font-black text-[#FF3800] tracking-wider uppercase">
-                        AWARD PLAY LOCKED // 10 FRAGMENTS REQUIRED
+                        🔒 Play locked // card required
                       </div>
-                      <div className="font-mono text-[9px] text-white/60 mt-1 uppercase">
-                        COLLECT 10 FRAGMENTS FOR THIS SONG OR EQUIP CARD FROM VAULT COLLECTION
+                      <div className="font-mono text-[9.5px] text-white/65 mt-1 uppercase">
+                        Own this card to play — find it in packs or the vault
                       </div>
                     </div>
-                  ) : null}
+                  ) : selected && (() => {
+                    const shards = getShardsForDay(fragments, selected.day);
+                    const unlocked = isAwardPlayUnlocked(fragments, selected.day);
+                    return (
+                      <div className={`hw-well p-4 text-center mb-4 ${unlocked ? 'border-[#FFB800]/45' : ''}`}>
+                        <div className={`font-mono text-xs font-black tracking-wider uppercase ${unlocked ? 'text-[#FFB800]' : 'text-white/75'}`}>
+                          {unlocked ? '🏆 Award play unlocked' : `◈ ${shards} / ${AWARD_PLAY_SHARD_THRESHOLD} shards`}
+                        </div>
+                        {!unlocked && (
+                          <div className="h-2 w-full bg-black/60 rounded-full overflow-hidden mt-2 mb-1 border border-white/10">
+                            <div className="h-full bg-gradient-to-r from-[#FFB800] to-[#FF3800] rounded-full transition-all duration-500"
+                              style={{ width: `${Math.min(100, (shards / AWARD_PLAY_SHARD_THRESHOLD) * 100)}%` }} />
+                          </div>
+                        )}
+                        <div className="font-mono text-[9.5px] text-white/60 mt-1 uppercase">
+                          {unlocked
+                            ? 'High scores earn prize packs'
+                            : 'Pull this card to unlock award play prizes'}
+                        </div>
+                      </div>
+                    );
+                  })()}
 
-                  <div className="flex gap-3">
+                  <div className="flex flex-col sm:flex-row gap-3">
                     <button
                       data-testid="button-play"
                       disabled={!selectedUnlocked}
                       onClick={() => handlePlaySong()}
                       onMouseEnter={() => { if (selectedUnlocked) audioManager.playSfx('tap_nav', 0.08); }}
-                      className={`flex-1 py-5 text-sm tracking-[0.5em] font-black uppercase rounded-2xl transition-all flex items-center justify-center gap-3 cursor-pointer ${
-                        selectedUnlocked
-                          ? "border border-[#39FF14] bg-[#39FF14] text-black hover:bg-[#39FF14]/90 shadow-[0_0_24px_rgba(57,255,20,0.5)] hover:scale-[1.01]"
-                          : "border border-white/10 bg-white/5 text-white/20 cursor-not-allowed"
-                      }`}
+                      className="btn-3d flex-1 justify-center font-mono tracking-[0.22em] uppercase"
+                      data-tone={selectedUnlocked ? 'acid' : 'quiet'}
+                      data-size="lg"
                     >
                       <Play size={18} fill="currentColor" />
                       <span>START TRANSMISSION</span>
                     </button>
+
+                    {selectedUnlocked && selected && ownsCardForDay(collection, selected.day) && (() => {
+                      const deluxeOpen = isDeluxeUnlocked(collection, selected.day);
+                      return (
+                        <button
+                          data-testid="button-play-deluxe"
+                          disabled={!deluxeOpen}
+                          onClick={() => handlePlaySong(undefined, true)}
+                          title={deluxeOpen ? 'Play the Deluxe chart' : `Hit ${DELUXE_UNLOCK_ACCURACY}% on this song or open a Deluxe pack`}
+                          className="btn-3d justify-center font-mono tracking-[0.18em] uppercase"
+                          data-tone={deluxeOpen ? 'gold' : 'quiet'}
+                          data-size="lg"
+                        >
+                          {deluxeOpen ? <Play size={18} fill="currentColor" /> : <Lock size={16} />}
+                          <span>{deluxeOpen ? 'DELUXE' : `DELUXE · ${DELUXE_UNLOCK_ACCURACY}%`}</span>
+                        </button>
+                      );
+                    })()}
 
                     {import.meta.env.DEV && (
                       <button
@@ -932,11 +1012,9 @@ export default function SongSelect() {
                         }}
                         onMouseEnter={() => { if (selectedUnlocked) audioManager.playSfx('tap_nav', 0.08); }}
                         title="Export frame-perfect 100% PERFECT+ run video (DEV SERVER ONLY)"
-                        className={`px-6 py-5 text-xs tracking-[0.25em] font-mono font-bold uppercase rounded-2xl transition-all flex items-center justify-center gap-2.5 cursor-pointer border ${
-                          selectedUnlocked
-                            ? "border-[#FF1493] bg-[#FF1493]/15 text-[#FF1493] hover:bg-[#FF1493] hover:text-black shadow-[0_0_20px_rgba(255,20,147,0.3)] hover:scale-[1.01]"
-                            : "border-white/10 bg-white/5 text-white/20 cursor-not-allowed"
-                        }`}
+                        className="btn-3d justify-center font-mono text-xs tracking-[0.16em] uppercase"
+                        data-tone="default"
+                        data-size="lg"
                       >
                         <Film size={18} />
                         <span className="hidden sm:inline">EXPORT PERFECT VIDEO</span>
@@ -946,7 +1024,7 @@ export default function SongSelect() {
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center h-full gap-4 text-center py-24 opacity-30">
+              <div className="flex flex-col items-center justify-center h-full gap-4 text-center py-24 opacity-40">
                 <div className="w-14 h-14 border-2 border-dashed border-[#39FF14] rounded-full animate-spin" />
                 <div className="font-mono text-xs font-bold tracking-[0.3em] uppercase text-[#39FF14]">
                   SELECT A STAGE TO INITIATE CALIBRATION...

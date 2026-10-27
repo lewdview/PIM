@@ -328,13 +328,20 @@
   background: #080808;
   padding: 8px;
 }
+.theme-glitch .brutalist-badge {
+  font-size: 0.65rem;
+  font-weight: 900;
+  padding: 2.5px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
+  letter-spacing: 0.05em;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
 .theme-glitch.rarity-common .brutalist-badge {
   background: #fff;
   color: #000;
-  font-size: 0.65rem;
-  font-weight: 900;
-  padding: 1px 4px;
-  text-transform: uppercase;
 }
 .theme-glitch.rarity-common .brutalist-title {
   border-bottom: 2px solid #fff !important;
@@ -347,8 +354,9 @@
 }
 .theme-glitch.rarity-common .stat-box {
   border: 1px solid #fff;
-  padding: 2px 4px;
+  padding: 2px 5px;
   font-size: 0.65rem;
+  border-radius: 2px;
 }
 
 /* Uncommon (Stencil-Slits Border + Green Glow) */
@@ -368,9 +376,6 @@
 .theme-glitch.rarity-uncommon .brutalist-badge {
   background: #00d4aa;
   color: #000;
-  font-size: 0.65rem;
-  font-weight: 900;
-  padding: 1px 4px;
 }
 
 /* Rare (Sapphire-Cyan Terminal Frame + Glowing Scanlines) */
@@ -398,9 +403,6 @@
 .theme-glitch.rarity-rare .brutalist-badge {
   background: #00bcff;
   color: #000;
-  font-weight: 900;
-  font-size: 0.65rem;
-  padding: 1px 4px;
 }
 
 /* Legendary (Chrome Hazard-Strip + Magenta Halo) */
@@ -424,9 +426,6 @@
 .theme-glitch.rarity-legendary .brutalist-badge {
   background: #ff007f;
   color: #fff;
-  font-size: 0.65rem;
-  font-weight: 900;
-  padding: 1px 4px;
   text-shadow: 0 0 4px #fff;
 }
 
@@ -477,9 +476,6 @@
 .theme-glitch.rarity-mythic .brutalist-badge {
   background: #ffd700;
   color: #000;
-  font-weight: 900;
-  font-size: 0.65rem;
-  padding: 1px 4px;
 }
 
 /* White Stroke Outline readability styling for all card titles in Neon-Brutalist (Glitch) theme */
@@ -548,6 +544,22 @@
   box-shadow: 0 8px 32px 0 rgba(0, 212, 170, 0.15), inset 0 1px 1px rgba(0, 212, 170, 0.2);
 }
 
+/* Shared Glass Stat Pill across Rare / Legendary / Mythic */
+.theme-glass .glass-stat-pill {
+  background: rgba(59, 130, 246, 0.24);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #fff;
+  white-space: nowrap;
+  flex-shrink: 0;
+  backdrop-filter: blur(6px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
 /* Rare Glass (Cobalt Blue + Stat Pills) */
 .theme-glass.rarity-rare .card-face-front {
   background: transparent;
@@ -556,13 +568,8 @@
   padding: 12px;
 }
 .theme-glass.rarity-rare .glass-stat-pill {
-  background: rgba(59, 130, 246, 0.25);
-  border: 1px solid rgba(59, 130, 246, 0.4);
-  border-radius: 20px;
-  padding: 2px 8px;
-  font-size: 0.65rem;
-  color: #fff;
-  backdrop-filter: blur(4px);
+  background: rgba(59, 130, 246, 0.28);
+  border-color: rgba(59, 130, 246, 0.5);
 }
 
 /* Legendary Glass (Amethyst + Spinning Mesh) */
@@ -726,14 +733,18 @@
   height: 8px;
   width: 100%;
 }
-.theme-arcade.rarity-rare .pixel-badge {
+.theme-arcade .pixel-badge {
   background: #00f0ff;
   color: #000;
-  font-weight: bold;
+  font-weight: 900;
   font-size: 0.6rem;
-  padding: 1px 4px;
+  padding: 2.5px 8px;
+  border-radius: 3px;
   border: 1px solid #000;
-  box-shadow: 1px 1px 0 #000;
+  box-shadow: 2px 2px 0 #000, inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  white-space: nowrap;
+  flex-shrink: 0;
+  letter-spacing: 0.04em;
 }
 
 /* Legendary Arcade (Golden Sunburst + wireframe grid) */
@@ -857,10 +868,11 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 6px;
   border: 1px solid rgba(255, 255, 255, 0.15);
   background: rgba(22, 18, 28, 0.94);
-  padding: 3px 6px;
-  border-radius: 4px;
+  padding: 4px 7px;
+  border-radius: 5px;
   margin-bottom: 5px;
 }
 
@@ -869,7 +881,7 @@
   font-weight: 900;
   font-size: 0.85rem;
   color: #fff;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
   text-transform: uppercase;
   text-shadow: 0 0 6px rgba(255, 255, 255, 0.2);
 }
@@ -877,26 +889,29 @@
 /* Mana circles representation */
 .theme-mtg .mtg-mana-cost {
   display: flex;
-  gap: 2.5px;
+  gap: 3px;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .theme-mtg .mtg-mana-bubble {
-  width: 15px;
-  height: 15px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 8px;
-  font-weight: bold;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  font-weight: 900;
+  line-height: 1;
+  flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.35);
 }
 
-.theme-mtg .mtg-mana-nrg { background: rgba(0, 212, 170, 0.85); color: #000; }
-.theme-mtg .mtg-mana-val { background: rgba(59, 130, 246, 0.85); color: #fff; }
-.theme-mtg .mtg-mana-bpm { background: rgba(255, 56, 0, 0.9); color: #fff; }
+.theme-mtg .mtg-mana-nrg { background: radial-gradient(circle at 35% 35%, #2af5c8, #00a884); color: #000; }
+.theme-mtg .mtg-mana-val { background: radial-gradient(circle at 35% 35%, #60a5fa, #1d4ed8); color: #fff; }
+.theme-mtg .mtg-mana-bpm { background: radial-gradient(circle at 35% 35%, #ff6a33, #cc2900); color: #fff; }
 
 /* Artwork Frame */
 .theme-mtg .mtg-art-frame {
@@ -1371,21 +1386,22 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 6px;
   border-bottom: 2px solid #000;
-  padding: 2px 4px;
-  background: rgba(255,255,255,0.06);
-  border-radius: 3px;
+  padding: 3px 6px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 4px;
   margin-bottom: 4px;
 }
 .theme-duelist.rarity-rare .duelist-header {
-  background: rgba(0,0,0,0.05);
+  background: rgba(0,0,0,0.06);
   border-color: #475569;
 }
 
 .theme-duelist .duelist-title {
   font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
   color: #fff;
   text-shadow: 1px 1px 0 #000;
 }
@@ -1396,16 +1412,20 @@
 
 /* Attribute symbol bubble */
 .theme-duelist .duelist-attr {
-  width: 16px;
-  height: 16px;
+  width: 19px;
+  height: 19px;
   border-radius: 50%;
-  border: 1px solid #fff;
-  background: #991b1b;
+  border: 1.5px solid #fff;
+  background: radial-gradient(circle at 35% 35%, #ef4444, #7f1d1d);
   color: #fff;
-  font-size: 8px;
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.35);
 }
 .theme-duelist.rarity-rare .duelist-attr {
   border-color: #0f172a;
@@ -1531,22 +1551,26 @@
 .theme-monster .monster-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
-  padding: 0 2px;
-  margin-bottom: 2px;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 3px;
+  margin-bottom: 3px;
 }
 
 .theme-monster .monster-title-block {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-width: 0;
 }
 
 .theme-monster .monster-stage {
-  font-size: 5px;
+  font-size: 5.5px;
   color: #ffd700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.6px;
   line-height: 1;
+  margin-bottom: 1px;
 }
 
 .theme-monster .monster-title {
@@ -1561,6 +1585,7 @@
   display: flex;
   align-items: center;
   gap: 3px;
+  flex-shrink: 0;
 }
 
 .theme-monster .monster-hp {
@@ -1569,20 +1594,25 @@
   font-weight: 900;
 }
 .theme-monster .monster-hp-label {
-  font-size: 5px;
+  font-size: 5.5px;
   color: #a1a1aa;
 }
 
 .theme-monster .monster-energy-badge {
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
-  background: #f59e0b;
+  background: radial-gradient(circle at 35% 35%, #fcd34d, #d97706);
+  border: 1px solid rgba(255,255,255,0.45);
   color: #000;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 8px;
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1;
+  flex-shrink: 0;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.55), inset 0 1px 1px rgba(255,255,255,0.45);
 }
 
 /* Art Box */
@@ -2041,37 +2071,41 @@
 /* Chrome Shared Elements */
 .theme-chrome .chrome-rookie-badge {
   position: absolute;
-  top: 7px;
-  left: 7px;
+  top: 28px;
+  left: 10px;
   background: linear-gradient(135deg, #dc2626 0%, #ea580c 50%, #f97316 100%);
   border: 1px solid #000;
   border-bottom: 2px solid #7f1d1d;
   color: #fff;
-  font-size: 5.5px;
+  font-size: 6px;
   font-weight: 900;
-  padding: 2px 5px;
-  transform: rotate(-6deg);
-  box-shadow: 2px 2px 0 #000, 0 0 6px rgba(220,38,38,0.4);
-  z-index: 10;
-  letter-spacing: 0.8px;
-  clip-path: polygon(0 0, 100% 0, 95% 100%, 5% 100%);
+  padding: 2.5px 8px;
+  border-radius: 3px;
+  transform: rotate(-4deg);
+  box-shadow: 2px 2px 0 #000, 0 0 8px rgba(220,38,38,0.55), inset 0 1px 0 rgba(255,255,255,0.35);
+  z-index: 14;
+  letter-spacing: 0.9px;
+  white-space: nowrap;
 }
 .theme-chrome .chrome-header {
   margin-bottom: 4px;
-  padding: 0 4px;
+  padding: 1px 4px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 6px;
   line-height: 1;
   z-index: 5;
 }
 .theme-chrome .chrome-brand {
   font-size: 6.5px;
   color: #fbbf24;
-  letter-spacing: 1.5px;
+  letter-spacing: 1.4px;
   text-transform: uppercase;
   text-shadow: 0 0 6px rgba(251,191,36,0.5);
   font-style: italic;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .theme-chrome .chrome-art-frame {
   background: #000;
@@ -2329,24 +2363,27 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 6px;
   margin-bottom: 4px;
-  padding: 0 2px;
+  padding: 1px 3px;
   z-index: 5;
   position: relative;
 }
 .theme-fantasy .fantasy-mana-gem {
-  width: 15px;
-  height: 15px;
-  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
   background: radial-gradient(circle at 35% 35%, #60a5fa, #1d4ed8);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 8px;
-  font-weight: bold;
-  box-shadow: 0 0 8px rgba(37,99,235,0.8), 0 2px 4px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.3);
-  border: 1px solid rgba(255,255,255,0.2);
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1;
+  flex-shrink: 0;
+  box-shadow: 0 0 8px rgba(37,99,235,0.8), 0 2px 4px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.35);
+  border: 1.5px solid rgba(255,255,255,0.35);
   animation: fantasy-float 3.5s ease-in-out infinite;
 }
 .theme-fantasy .fantasy-title {
@@ -2614,16 +2651,19 @@
 .theme-cyberpunk .cyber-header {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  gap: 6px;
   font-size: 7px;
   margin-bottom: 4px;
   border-bottom: 1px solid currentColor;
-  padding: 0 2px 3px;
+  padding: 2px 5px 3px;
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   position: relative;
   z-index: 5;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0,0,0,0.65);
+  border-radius: 2px;
 }
 .theme-cyberpunk .cyber-header::after {
   content: '█';
@@ -2875,24 +2915,26 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2px;
+  gap: 6px;
+  margin-bottom: 3px;
   z-index: 5;
   position: relative;
-  padding: 0 1px;
+  padding: 1px 2px;
 }
 .theme-anime .anime-level-badge {
   background: radial-gradient(circle at 35% 35%, #ff4da6, #cc005c);
   color: #fff;
   border-radius: 50%;
-  width: 14px;
-  height: 14px;
+  width: 19px;
+  height: 19px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 900;
-  border: 1px solid rgba(255,255,255,0.35);
-  box-shadow: 0 0 6px rgba(255,0,127,0.6), inset 0 1px 1px rgba(255,255,255,0.3);
+  line-height: 1;
+  border: 1.5px solid rgba(255,255,255,0.45);
+  box-shadow: 0 0 8px rgba(255,0,127,0.65), inset 0 1px 1px rgba(255,255,255,0.35);
   flex-shrink: 0;
 }
 .theme-anime .anime-title {

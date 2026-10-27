@@ -15,12 +15,13 @@ import { motion } from 'framer-motion';
 import { Link, useLocation } from 'wouter';
 import {
   Play, Pause, Volume2, Sparkles, Compass, Disc, Clock,
-  ArrowRight, Flame, Layers, Shield, Shuffle, Zap, Gamepad2, Info, ChevronRight
+  ArrowRight, Flame, Layers, Shield, Shuffle, Zap, Gamepad2, Info, ChevronRight, Bell
 } from 'lucide-react';
+import { farcasterService } from '../services/farcasterService';
 import { getCurrentDay, getTimeUntilNextDay, formatDate, getDateFromDay } from '../utils/dayCalc';
 import { loadCatalog, type GameSong } from '../game/api';
 import { useGlobalPlayer } from '../store/useGlobalPlayer';
-import { useVaultStore } from '../store/useVaultStore';
+import { useVaultStore, ownsCardForDay } from '../store/useVaultStore';
 import { audioManager } from '../game/audio';
 import { getCardByDay, type VaultCard } from '../services/vaultService';
 import Card from '../components/Card';
@@ -45,6 +46,9 @@ export default function UniverseHome() {
   const isPlaying = useGlobalPlayer(s => s.isPlaying);
   const playGlobal = useGlobalPlayer(s => s.play);
   const pauseGlobal = useGlobalPlayer(s => s.pause);
+
+  // Card ownership gates full-track playback (unowned → 30s preview)
+  const collection = useVaultStore(s => s.collection);
 
   const isTodayPlaying = Boolean(
     isPlaying && currentTrack && currentTrack.day === today
@@ -87,12 +91,19 @@ export default function UniverseHome() {
   }, [today]);
 
   // Handle direct audio toggle
-  const handleToggleAudio = useCallback(() => {
+  const handleToggleAudio = useCallback(async () => {
     if (!todaySong) return;
     if (isTodayPlaying) {
       pauseGlobal();
       audioManager.playSfx('pause', 0.3);
     } else {
+      // Claim-first funnel: today's card is free — claim silently so full playback is owned.
+      const songDay = todaySong.day || today;
+      if (!ownsCardForDay(collection, songDay)) {
+        try { await useVaultStore.getState().silentClaimDailyDrop(songDay); } catch (err) {
+          console.error("[UniverseHome] Claim-first failed:", err);
+        }
+      }
       audioManager.playSfx('select_start_song', 0.4);
       playGlobal({
         title: todaySong.title,
@@ -105,7 +116,7 @@ export default function UniverseHome() {
         maxDuration: 0,
       });
     }
-  }, [todaySong, todayCard, isTodayPlaying, playGlobal, pauseGlobal, today]);
+  }, [todaySong, todayCard, isTodayPlaying, playGlobal, pauseGlobal, today, collection]);
 
   // Primary Action: Play Today's Drop
   const handlePlayDrop = useCallback(() => {
@@ -123,6 +134,27 @@ export default function UniverseHome() {
     const randomDay = Math.floor(Math.random() * today) + 1;
     setLocation(`/day/${randomDay}`);
   }, [today, setLocation]);
+
+  // Farcaster Daily Drop Notification Alert State
+  const [isAlertsEnabled, setIsAlertsEnabled] = useState(false);
+  const [alertSubmitting, setAlertSubmitting] = useState(false);
+
+  useEffect(() => {
+    setIsAlertsEnabled(farcasterService.isNotificationsEnabled());
+  }, []);
+
+  const handleToggleFarcasterAlerts = useCallback(async () => {
+    setAlertSubmitting(true);
+    try {
+      const ok = await farcasterService.promptEnableNotifications();
+      if (ok) {
+        setIsAlertsEnabled(true);
+        audioManager.playSfx('badge_unlock', 0.6);
+      }
+    } finally {
+      setAlertSubmitting(false);
+    }
+  }, []);
 
   const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -143,7 +175,15 @@ export default function UniverseHome() {
   const moodAccent = todaySong?.mood === 'light' ? '#39FF14' : '#FF1493';
 
   return (
-    <div className="flex-1 w-full min-h-screen bg-[#050402] text-white select-none relative overflow-x-hidden">
+    <div
+      className="flex-1 w-full min-h-screen bg-[#050402] text-white select-none relative overflow-x-hidden"
+      style={{
+        minHeight: '100dvh',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 6rem)'
+      }}
+    >
       {/* Ambient background glow */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
         <div
@@ -200,7 +240,7 @@ export default function UniverseHome() {
             transition={{ delay: 0.2, duration: 0.5 }}
             className="font-mono text-xs sm:text-sm tracking-[0.3em] uppercase text-white/70 mt-3"
           >
-            A LIVING ARTISTIC UNIVERSE. 365 DAYS. 365 ARTIFACTS. ONE JOURNEY.
+            365 DAYS. 365 SONGS. ONE NEW DROP EVERY DAY.
           </motion.p>
         </div>
 
@@ -281,8 +321,12 @@ export default function UniverseHome() {
               {/* 1. PLAY TODAY'S DROP (Hero Primary CTA) */}
               <button
                 onClick={handlePlayDrop}
-                className="w-full flex items-center justify-center gap-3 px-6 py-4 rounded bg-gradient-to-r from-[#FF1493] via-[#FF5500] to-[#E5B800] text-black font-black uppercase tracking-wider text-base hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_0_30px_rgba(255,20,147,0.4)] cursor-pointer"
-                style={{ fontFamily: '"Impact", "Arial Black", sans-serif' }}
+                className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-[#FF1493] via-[#FF5500] to-[#E5B800] text-black font-black uppercase tracking-wider text-base hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_0_30px_rgba(255,20,147,0.4)] cursor-pointer"
+                style={{
+                  fontFamily: '"Impact", "Arial Black", sans-serif',
+                  minHeight: '52px',
+                  clipPath: 'polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%)',
+                }}
               >
                 <Play size={22} className="fill-black" />
                 <span>PLAY TODAY'S DROP (~90s GAME)</span>
@@ -293,6 +337,10 @@ export default function UniverseHome() {
                 <button
                   onClick={handleToggleAudio}
                   className="flex items-center justify-center gap-2 px-4 py-3 bg-black/60 hover:bg-white/10 border border-white/25 text-white font-mono text-xs font-bold uppercase tracking-wider transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                  style={{
+                    minHeight: '44px',
+                    clipPath: 'polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%)',
+                  }}
                 >
                   {isTodayPlaying ? (
                     <>
@@ -310,6 +358,10 @@ export default function UniverseHome() {
                 <Link
                   to={`/day/${today}`}
                   className="flex items-center justify-center gap-2 px-4 py-3 bg-black/60 hover:bg-white/10 border border-white/25 text-white font-mono text-xs font-bold uppercase tracking-wider transition-all hover:scale-[1.02] active:scale-[0.98] no-underline"
+                  style={{
+                    minHeight: '44px',
+                    clipPath: 'polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%)',
+                  }}
                 >
                   <Info size={16} className="text-[#E5B800]" />
                   <span>VIEW FULL ARTIFACT</span>
@@ -320,16 +372,44 @@ export default function UniverseHome() {
               <button
                 onClick={handleGiveMeASign}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-purple-950/30 hover:bg-purple-900/40 border border-purple-500/40 text-purple-300 font-mono text-xs font-bold uppercase tracking-widest transition-all hover:scale-[1.01] active:scale-[0.98] cursor-pointer"
+                style={{
+                  minHeight: '44px',
+                  clipPath: 'polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%)',
+                }}
               >
                 <Sparkles size={14} className="text-purple-400 animate-pulse" />
                 <span>GIVE ME A SIGN (RANDOM DAY DISCOVERY)</span>
+              </button>
+
+              {/* 4. DAILY DROP ALERTS (WARPCAST / FARCASTER) */}
+              <button
+                onClick={handleToggleFarcasterAlerts}
+                disabled={alertSubmitting}
+                className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 transition-all hover:scale-[1.01] active:scale-[0.98] cursor-pointer font-mono text-xs font-bold uppercase tracking-widest ${
+                  isAlertsEnabled
+                    ? 'bg-[#39FF14]/15 border border-[#39FF14]/50 text-[#39FF14]'
+                    : 'bg-[#00E5FF]/10 hover:bg-[#00E5FF]/20 border border-[#00E5FF]/40 text-[#00E5FF]'
+                }`}
+                style={{
+                  minHeight: '44px',
+                  clipPath: 'polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%)',
+                }}
+              >
+                <Bell size={14} className={isAlertsEnabled ? 'text-[#39FF14]' : 'text-[#00E5FF] animate-pulse'} />
+                <span>
+                  {alertSubmitting
+                    ? 'CONNECTING TRANSMISSION FREQUENCY...'
+                    : isAlertsEnabled
+                    ? '⚡ DAILY DROP ALERTS: ACTIVE'
+                    : '🔔 GET DAILY DROP ALERTS (WARPCAST)'}
+                </span>
               </button>
             </div>
 
             {/* Quick Helper Text */}
             <div className="font-mono text-[10px] text-white/40 uppercase tracking-widest flex items-center gap-2">
               <Shield size={12} />
-              <span>100% Free Discovery • No Account or Wallet Required to Play</span>
+              <span>Free to Play • No Account or Wallet Needed</span>
             </div>
 
           </div>
@@ -372,7 +452,7 @@ export default function UniverseHome() {
                 </div>
                 <h4 className="font-bold text-lg text-white mb-2 uppercase">365 Archive</h4>
                 <p className="font-mono text-xs text-white/60 leading-relaxed">
-                  365 original songs and artifacts chronologically mapped. Explore by month, mood, or ritualistic discovery.
+                  365 original songs in release order. Browse by month or mood, or pull a random day.
                 </p>
               </div>
               <div className="flex items-center gap-1 font-mono text-[10px] text-[#00E5FF] uppercase font-bold tracking-wider mt-6">
@@ -395,7 +475,7 @@ export default function UniverseHome() {
                 </div>
                 <h4 className="font-bold text-lg text-white mb-2 uppercase">PIM Arcade</h4>
                 <p className="font-mono text-xs text-white/60 leading-relaxed">
-                  3-lane HTML5 canvas rhythm game. Master the beat, hit timing windows, and turn every song into an interactive challenge.
+                  A three-lane rhythm game built on every song in the archive. Play it in your browser.
                 </p>
               </div>
               <div className="flex items-center gap-1 font-mono text-[10px] text-[#FF1493] uppercase font-bold tracking-wider mt-6">
@@ -441,7 +521,7 @@ export default function UniverseHome() {
                 </div>
                 <h4 className="font-bold text-lg text-white mb-2 uppercase">YOUR 365</h4>
                 <p className="font-mono text-xs text-white/60 leading-relaxed">
-                  Your personal relationship with the project. Track days experienced, streak milestones, cards earned, and your sovereign passport.
+                  Your days played, streaks and cards, all in one place.
                 </p>
               </div>
               <div className="flex items-center gap-1 font-mono text-[10px] text-[#A855F7] uppercase font-bold tracking-wider mt-6">
@@ -512,7 +592,8 @@ export default function UniverseHome() {
                         day: s.day,
                         rarity: 'common',
                         isDailyClaim: true,
-                        maxDuration: 0,
+                        // Ownership gate: full track requires the card; unowned gets a 30s preview
+                        maxDuration: ownsCardForDay(collection, s.day) ? 0 : 30,
                       });
                       audioManager.playSfx('select_start_song', 0.3);
                     }}
@@ -575,11 +656,15 @@ export default function UniverseHome() {
             ENTER THE WARP ZONE
           </h3>
           <p className="font-mono text-xs sm:text-sm text-white/60 leading-relaxed mb-8">
-            Explore the Mood Map, cyber brutalist ASCII terminals, sacred geometry audio visualizers, and the complete lost-and-found hard drive lore archive.
+            The Mood Map, ASCII terminals, audio visualizers and the story of the lost hard drive.
           </p>
           <Link
             to="/warp"
-            className="inline-flex items-center gap-2 px-8 py-4 bg-purple-600 hover:bg-purple-500 text-white font-mono text-xs uppercase font-black tracking-widest rounded shadow-[0_0_25px_rgba(168,85,247,0.4)] transition-all hover:scale-105 no-underline"
+            className="inline-flex items-center gap-2 px-8 py-4 bg-purple-600 hover:bg-purple-500 text-white font-mono text-xs uppercase font-black tracking-widest shadow-[0_0_25px_rgba(168,85,247,0.4)] transition-all hover:scale-105 no-underline"
+            style={{
+              minHeight: '48px',
+              clipPath: 'polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%)',
+            }}
           >
             <Sparkles size={16} />
             <span>EXPLORE WARP EXPERIENCES</span>

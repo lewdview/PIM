@@ -213,7 +213,7 @@ export default function NextGenLandingPage() {
   const handleTargetedPull = useCallback(async (dayNum: number) => {
     if (!dayNum || dayNum < 1 || dayNum > today || tokenBalance < 275) {
       if (dayNum > today) {
-        alert(`Day ${dayNum} is locked. Targeted Pull is restricted to released calendar days (Day 1 to ${today}). Future tracks require a Prophecy Pull.`);
+        alert(`Day ${dayNum} hasn't dropped yet. Targeted Pull covers Day 1–${today}. Future days need a Prophecy Pull.`);
       }
       return;
     }
@@ -251,7 +251,7 @@ export default function NextGenLandingPage() {
       if (result.success) {
         audioManager.playSfx('upgrade', 0.9);
         setShowUpgradeModal(false);
-        alert(`Success! Card upgraded to ${result.newRarity?.toUpperCase()}`);
+        alert(`Card upgraded to ${result.newRarity?.toUpperCase()}.`);
       }
     } catch (err) {
       console.error(err);
@@ -296,7 +296,7 @@ export default function NextGenLandingPage() {
     setCodeState('redeeming');
     setCodeError('');
     setRewardClaimed(null);
-    useLoadingToast.getState().show('Decrypting bonus code…');
+    useLoadingToast.getState().show('Checking code…');
 
     try {
       const res = await redeemBonusCode(bonusCode);
@@ -412,7 +412,7 @@ export default function NextGenLandingPage() {
     } catch (err: any) {
       useLoadingToast.getState().hide();
       audioManager.playSfx('error', 0.6);
-      setCodeError(err.message || 'Verification link failed.');
+      setCodeError(err.message || 'Couldn\'t check that code. Try again.');
       setCodeState('error');
     }
   }, [bonusCode, addToCollection, startReveal, setLocation, loadVaultData]);
@@ -420,17 +420,17 @@ export default function NextGenLandingPage() {
   const handleAgeVerificationConfirm = useCallback(() => {
     if (!ageGateCode) return;
     setAgeVerifying(true);
-    useLoadingToast.getState().show('Verifying age protocol…');
+    useLoadingToast.getState().show('Confirming age…');
     try {
       localStorage.setItem('opt_18_confirmed', 'true');
       let successMsg = "";
       if (ageGateCode === 'stunnerofthemonthunlock') {
         localStorage.setItem('opt_unlocked_stunner_section', 'true');
-        successMsg = "Stunner of the Month Section Unlocked!";
+        successMsg = "Stunner of the Month unlocked.";
       } else if (ageGateCode === 'freebstella') {
         localStorage.setItem('opt_free_stella_unlocked', 'true');
         localStorage.setItem('opt_unlocked_stunner_section', 'true');
-        successMsg = "Stella Luxx Fully Unlocked in Slideshows!";
+        successMsg = "Stella Luxx unlocked in Slideshows.";
       }
       
       audioManager.playSfx('song_completion', 0.85);
@@ -443,7 +443,7 @@ export default function NextGenLandingPage() {
       setAgeGateCode(null);
       window.dispatchEvent(new Event('cheat_code_activated'));
     } catch (err: any) {
-      alert('Verification error: ' + err.message);
+      alert('Age check failed: ' + err.message);
     } finally {
       useLoadingToast.getState().hide();
       setAgeVerifying(false);
@@ -504,7 +504,7 @@ export default function NextGenLandingPage() {
   const handleClaim = useCallback(async () => {
     if (hasClaimed) return;
 
-    useLoadingToast.getState().show('Claiming daily drop...');
+    useLoadingToast.getState().show('Claiming today\'s drop…');
     try {
       let owned: OwnedCard | null = null;
       if (user) {
@@ -538,12 +538,12 @@ export default function NextGenLandingPage() {
           setLocation('/vault/reveal');
         }, 800);
       } else {
-        alert('Daily drop already claimed today or unavailable.');
+        alert("Couldn't claim today's drop. It may already be claimed on this account.");
       }
     } catch (err: any) {
       useLoadingToast.getState().hide();
       console.error('Claim daily card threw error:', err);
-      alert(`Error claiming daily drop: ${err?.message || err}`);
+      alert(`Couldn't claim today's drop: ${err?.message || err}`);
     }
   }, [today, hasClaimed, setHasClaimed, addToCollection, startReveal, setLocation, user, incrementClaimedCount]);
 
@@ -614,13 +614,13 @@ export default function NextGenLandingPage() {
 
     setIsPurchasing(true);
     try {
-      useLoadingToast.getState().show('Vending pack from machine…');
+      useLoadingToast.getState().show('Opening pack…');
       const cards = (category === 'vault_token' || category === 'bombshell_token')
         ? await buyTokenPack(category, size)
         : await purchasePack(category, size, sessionId);
       useLoadingToast.getState().hide();
       if (cards === 'insufficient') {
-        alert('Insufficient V⚡ sparks for this pack.');
+        alert('Not enough V⚡ sparks for this pack.');
         await loadVaultData();
         return;
       }
@@ -647,7 +647,7 @@ export default function NextGenLandingPage() {
 
     if (method === 'crypto') {
       try {
-        useLoadingToast.getState().show('Waiting for wallet confirmation…');
+        useLoadingToast.getState().show('Confirm in your wallet…');
         const txHash = await payWithCrypto(priceValue);
         
         if (txHash) {
@@ -667,19 +667,19 @@ export default function NextGenLandingPage() {
     } else {
       // Live Stripe Checkout session redirect
       try {
-        useLoadingToast.getState().show('Connecting to Stripe checkout…');
+        useLoadingToast.getState().show('Opening checkout…');
         const res = await createStripeCheckoutSession(category, size);
         useLoadingToast.getState().hide();
 
         if (res.success && res.checkoutUrl) {
           await redirectToStripeCheckout(res.checkoutUrl);
         } else {
-          alert(`Checkout Error: ${res.error || 'Could not initialize Stripe Checkout'}`);
+          alert(`Checkout didn't open. ${res.error || 'Try again.'}`);
         }
       } catch (err: any) {
         console.error('Stripe redirect failed:', err);
         useLoadingToast.getState().hide();
-        alert(err.message || 'Failed to connect to Stripe checkout');
+        alert(err.message || 'Checkout didn\'t open. Try again.');
       }
     }
   }, [checkoutInfo, triggerVendDrop, addToCollection, loadVaultData]);
@@ -759,7 +759,15 @@ export default function NextGenLandingPage() {
   };
 
   return (
-    <div className="flex-1 w-full relative bg-[#070a12] text-slate-100 overflow-hidden font-sans min-h-screen pb-24">
+    <div
+      className="flex-1 w-full relative bg-[#070a12] text-slate-100 font-sans min-h-screen"
+      style={{
+        minHeight: '100dvh',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 6.5rem)',
+      }}
+    >
       
       {/* Premium Ambient Background Spheres */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
@@ -794,7 +802,7 @@ export default function NextGenLandingPage() {
             transition={{ duration: 0.8, delay: 0.2 }}
             className="text-sm font-semibold tracking-wider text-slate-400 mt-3 uppercase"
           >
-            Playable music · your collection · exclusive daily drops
+            Playable music · your collection · a new drop every day
           </motion.p>
         </div>
 
@@ -897,7 +905,7 @@ export default function NextGenLandingPage() {
             ) : (
               <div className="w-[360px] aspect-[3/4] border border-white/10 bg-white/5 backdrop-blur-md flex flex-col items-center justify-center rounded-2xl shadow-xl">
                 <div className="w-8 h-8 border-2 border-white/10 rounded-full animate-spin mb-4" style={{ borderTopColor: '#3b82f6' }} />
-                <span className="font-semibold text-xs tracking-widest text-blue-400 uppercase">Syncing Vault Card...</span>
+                <span className="font-semibold text-xs tracking-widest text-blue-400 uppercase">Loading today's drop…</span>
               </div>
             )}
           </div>
@@ -1397,7 +1405,7 @@ export default function NextGenLandingPage() {
             <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4 relative z-10">
               <div>
                 <h2 className="text-3xl font-extrabold text-white tracking-tight mb-1">Vault Shop Console</h2>
-                <p className="text-sm text-slate-400">Targeted pulls, quick upgrades, and duplicate fusion</p>
+                <p className="text-sm text-slate-400">Targeted pulls, upgrades and fusion</p>
               </div>
               <div className="px-4 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 font-extrabold text-sm self-start md:self-auto">
                 {tokenBalance} V⚡ Available
@@ -1417,7 +1425,7 @@ export default function NextGenLandingPage() {
                   <h3 className="font-bold text-lg text-amber-400">Vault Pack</h3>
                 </div>
                 <p className="text-xs text-slate-300 mb-4 flex-1">
-                  Premium 3-card archive pack with a 3% Mythic card drop chance!
+                  Three cards from the archive. 3% Mythic chance.
                 </p>
                 <div className="p-3 rounded-xl bg-black/40 border border-amber-500/20 mb-4 text-xs font-mono">
                   <div className="flex justify-between mb-1">
@@ -1454,7 +1462,7 @@ export default function NextGenLandingPage() {
                   <h3 className="font-bold text-lg text-pink-400">Bombshell Pull</h3>
                 </div>
                 <p className="text-xs text-slate-300 mb-4 flex-1">
-                  Collector series 1-card artwork pull. 100 V⚡ single rip!
+                  One Bombshell artwork card. 100 V⚡.
                 </p>
                 <div className="p-3 rounded-xl bg-black/40 border border-pink-500/20 mb-4 text-xs font-mono">
                   <div className="flex justify-between mb-1">
@@ -1528,13 +1536,13 @@ export default function NextGenLandingPage() {
                   <h3 className="font-bold text-lg text-white">Tier Upgrade</h3>
                 </div>
                 <p className="text-xs text-slate-400 mb-6 flex-1">
-                  Instantly upgrade any card you own below Legendary tier by +1 rarity level.
+                  Raise any card below Legendary by one rarity tier.
                 </p>
                 <select 
                   value={upgradeCardId} onChange={(e) => setUpgradeCardId(e.target.value)}
                   className="w-full bg-black/50 border border-white/10 rounded-xl text-white text-sm p-3.5 focus:border-amber-500 outline-none mb-4 transition-colors"
                 >
-                  <option value="">Select Card</option>
+                  <option value="">Select a card</option>
                   {upgradeableCards.map(c => (
                     <option key={c.id} value={c.id}>
                       Day {c.card.day}: {c.card.title} ({c.card.rarity})
@@ -1557,12 +1565,12 @@ export default function NextGenLandingPage() {
                   <h3 className="font-bold text-lg text-white">Duplicate Fusion</h3>
                 </div>
                 <p className="text-xs text-slate-400 mb-4 flex-1">
-                  Combine 3 identical cards (same day + rarity) into 1 upgraded card.
+                  Fuse 3 identical cards (same day and rarity) into 1 card of the next tier.
                 </p>
                 
                 <div className="flex-1 space-y-2 max-h-[120px] overflow-y-auto pr-2 mb-4 custom-scrollbar">
                   {fusableGroups.length === 0 ? (
-                    <div className="text-xs text-slate-500 text-center py-4 bg-black/30 rounded-xl border border-white/5">No fusable triplets found.</div>
+                    <div className="text-xs text-slate-500 text-center py-4 bg-black/30 rounded-xl border border-white/5">No duplicates to fuse yet.</div>
                   ) : (
                     fusableGroups.map(([key, cards]) => {
                       const first = cards[0];
@@ -1609,7 +1617,7 @@ export default function NextGenLandingPage() {
             <div>
               <SectionLabel label="Card Incinerator" accent="#ef4444" />
               <h2 className="text-4xl font-extrabold text-white tracking-tight mb-2">The Forge</h2>
-              <p className="text-sm text-slate-400">Burn duplicate cards to earn V⚡ sparks & raise your Vault Prestige score.</p>
+              <p className="text-sm text-slate-400">Burn cards for V⚡ sparks. Echoes return to the pack pool.</p>
             </div>
             <div className="flex items-center justify-between">
               <span className="px-5 py-2.5 rounded-full bg-white/5 border border-white/10 text-white font-bold text-xs uppercase tracking-wider">
@@ -1627,7 +1635,7 @@ export default function NextGenLandingPage() {
           <div className="p-8 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-2xl shadow-2xl">
             <SectionLabel label="Decryption Terminal" accent="#3b82f6" />
             <h2 className="text-2xl font-bold text-white tracking-tight mb-2">Promo Codes</h2>
-            <p className="text-sm text-slate-400 mb-6">Enter cryptographic keys to unlock exclusive rewards.</p>
+            <p className="text-sm text-slate-400 mb-6">Redeem a code for skins and bonus sparks.</p>
             
             <form onSubmit={handleBonusRedeem} className="flex gap-3 mb-4">
               <input
@@ -1670,7 +1678,7 @@ export default function NextGenLandingPage() {
                         <Zap size={24} className="text-amber-400" />
                       </motion.div>
                       <div>
-                        <div className="text-[10px] font-bold text-amber-300 uppercase tracking-widest">VAULT TOKENS CREDITED</div>
+                        <div className="text-[10px] font-bold text-amber-300 uppercase tracking-widest">V⚡ SPARKS ADDED</div>
                         <div className="text-2xl font-extrabold text-amber-400">+{rewardClaimed.details?.tokensGranted || rewardClaimed.value} V⚡</div>
                       </div>
                     </div>
@@ -1700,7 +1708,7 @@ export default function NextGenLandingPage() {
                       <div>
                         <div className="text-[10px] font-bold text-purple-300 uppercase tracking-widest">ACCESS DECRYPTED</div>
                         <div className="text-lg font-bold text-purple-400">
-                          {rewardClaimed.value === 'iddqd' ? 'PROCEDURAL GENERATOR DECRYPTED' : 'MISS SYSTEM SAFETY BYPASSED'}
+                          {rewardClaimed.value === 'iddqd' ? 'LYRIC AND BPM CHART MODES UNLOCKED.' : 'MISS SYSTEM SETTINGS UNLOCKED.'}
                         </div>
                       </div>
                     </div>
@@ -1710,7 +1718,7 @@ export default function NextGenLandingPage() {
                     <div className="flex items-center gap-4 p-4 rounded-xl bg-red-500/10 border border-red-500/30">
                       <div className="text-3xl">🔞</div>
                       <div>
-                        <div className="text-[10px] font-bold text-red-300 uppercase tracking-widest">DECRYPTION COMPLETE</div>
+                        <div className="text-[10px] font-bold text-red-300 uppercase tracking-widest">CONTENT UNLOCKED</div>
                         <div className="text-lg font-bold text-red-400">{rewardClaimed.details?.skinUnlocked || "Content Unlocked"}</div>
                       </div>
                     </div>
@@ -1730,7 +1738,7 @@ export default function NextGenLandingPage() {
             <div>
               <SectionLabel label="Authentication Protocol" accent="#fbbf24" />
               <h2 className="text-2xl font-bold text-white tracking-tight mb-2">Connect Wallet</h2>
-              <p className="text-sm text-slate-400">Unlock your personal shop console, daily drops, and promo codes.</p>
+              <p className="text-sm text-slate-400">Sign in for the shop, daily drops and promo codes.</p>
             </div>
             <button 
               onClick={() => useAuthStore.getState().setShowAuthModal(true)}
@@ -1757,7 +1765,7 @@ export default function NextGenLandingPage() {
               </div>
               <h3 className="text-2xl font-bold text-white mb-2">Restricted Vault Content</h3>
               <p className="text-xs text-slate-400 mb-6">
-                This promo reward contains age-restricted audio/artwork. You must verify that you are 18+ to claim.
+                This reward has age-restricted audio and art. Confirm you're 18+ to claim it.
               </p>
               <div className="flex gap-3">
                 <button
@@ -1786,7 +1794,7 @@ export default function NextGenLandingPage() {
             <Shield size={14} /> PIM Vault Protocol v2.0
           </div>
           <p className="text-xs text-slate-600 uppercase tracking-wide">
-            Signed in. Your vault is synced and your collection is yours.
+            Signed in. Your collection is saved.
           </p>
         </div>
       </footer>
@@ -1795,7 +1803,7 @@ export default function NextGenLandingPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md">
           <div className="text-center space-y-4">
             <div className="text-6xl animate-bounce">✨</div>
-            <h2 className="text-4xl font-extrabold text-white tracking-tight">Drop Claimed!</h2>
+            <h2 className="text-4xl font-extrabold text-white tracking-tight">Card Claimed</h2>
           </div>
         </div>
       )}

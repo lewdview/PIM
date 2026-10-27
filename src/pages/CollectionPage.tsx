@@ -15,6 +15,7 @@ import { useLoadingToast } from '../store/useLoadingToast';
 import { RARITIES, RARITY_CONFIG, getSupplyCap, type Rarity } from '../utils/rarity';
 import { getCoverUrlForRarity } from '../utils/rarityArtwork';
 import { isBombshellCard } from '../utils/bombshellCards';
+import { primeGameCover } from '../utils/gameCover';
 
 type SortBy = 'day' | 'rarity' | 'recent';
 type FilterRarity = Rarity | 'all';
@@ -166,7 +167,7 @@ export default function CollectionPage() {
   // Burn handler
   const handleBurn = useCallback(async (ownedCard: OwnedCard) => {
     if (fusionLoading) return;
-    const confirm = window.confirm(`Burn this minted-out card for V⚡ sparks?`);
+    const confirm = window.confirm(`Burn this excess copy for V⚡ sparks?`);
     if (!confirm) return;
 
     useLoadingToast.getState().show('Burning card…');
@@ -174,15 +175,15 @@ export default function CollectionPage() {
       const result = await sellCard(ownedCard);
       if (result.tokensEarned > 0) {
         removeFromCollection(ownedCard.id);
-        useLoadingToast.getState().show(`Burned! +${result.tokensEarned} V⚡`);
+        useLoadingToast.getState().show(`Burned. +${result.tokensEarned} V⚡`);
         setTimeout(() => useLoadingToast.getState().hide(), 2000);
       } else {
-        useLoadingToast.getState().show('Burn failed');
+        useLoadingToast.getState().show('Burn didn\'t go through');
         setTimeout(() => useLoadingToast.getState().hide(), 2000);
       }
     } catch (err) {
       console.error(err);
-      useLoadingToast.getState().show('Error burning card');
+      useLoadingToast.getState().show('Burn didn\'t go through');
       setTimeout(() => useLoadingToast.getState().hide(), 2000);
     } finally {
       await loadVaultData();
@@ -190,7 +191,12 @@ export default function CollectionPage() {
   }, [fusionLoading, removeFromCollection, loadVaultData]);
 
   return (
-    <div className="flex-1 px-4 md:px-8 pt-2 pb-36 md:pb-10 max-w-7xl mx-auto w-full space-y-10 etching-bg bg-opacity-50">
+    <div
+      className="flex-1 px-4 md:px-8 pt-2 max-w-7xl mx-auto w-full space-y-10 etching-bg bg-opacity-50"
+      style={{
+        paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 6.5rem)',
+      }}
+    >
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
@@ -439,7 +445,7 @@ export default function CollectionPage() {
                       const cap = getSupplyCap(mainCard.card.rarity as Rarity, mainCard.card.day);
                       if (ed > cap) return (
                         <div className="absolute bottom-1 right-1 z-30 pointer-events-none px-1.5 py-0.5 bg-black/80 border border-[#ff3800]/60 text-[7px] font-black uppercase tracking-tighter text-[#ff3800]">
-                          MINTED OUT
+                          EXCESS COPY
                         </div>
                       );
                       if (cap === 1 && ed === 1) return (
@@ -448,8 +454,8 @@ export default function CollectionPage() {
                         </div>
                       );
                       if (ed === cap && cap > 1) return (
-                        <div className="absolute bottom-1 right-1 z-30 pointer-events-none px-1.5 py-0.5 bg-black/80 border border-white/30 text-[7px] font-black uppercase tracking-tighter text-white/70">
-                          LAST COPY
+                        <div className="absolute bottom-1 right-1 z-30 pointer-events-none px-1.5 py-0.5 bg-black/85 border border-yellow-400/60 text-[7px] font-black uppercase tracking-tighter text-yellow-400" style={{ textShadow: '0 0 6px rgba(255,215,0,0.6)' }}>
+                          FINAL PRINT · LAST COPY
                         </div>
                       );
                       return (
@@ -486,8 +492,7 @@ export default function CollectionPage() {
                         onClick={(e) => {
                           e.stopPropagation();
                           const cover = mainCard.card.coverUrl;
-                          sessionStorage.setItem(`active_cover_url_card-${mainCard.card.day}`, cover);
-                          sessionStorage.setItem('active_game_cover', cover);
+                          primeGameCover(mainCard.card.day, cover);
                           stop();
                           setLocation(`/play/card-${mainCard.card.day}`);
                         }}
@@ -518,8 +523,7 @@ export default function CollectionPage() {
                         onClick={(e) => {
                           e.stopPropagation();
                           const cover = mainCard.card.coverUrl;
-                          sessionStorage.setItem(`active_cover_url_card-${mainCard.card.day}`, cover);
-                          sessionStorage.setItem('active_game_cover', cover);
+                          primeGameCover(mainCard.card.day, cover);
                           stop();
                           setLocation(`/play/card-${mainCard.card.day}`);
                         }}
@@ -676,8 +680,7 @@ export default function CollectionPage() {
                       onClick={(e) => {
                         e.stopPropagation();
                         const cover = mainCard.card.coverUrl;
-                        sessionStorage.setItem(`active_cover_url_card-${mainCard.card.day}`, cover);
-                        sessionStorage.setItem('active_game_cover', cover);
+                        primeGameCover(mainCard.card.day, cover);
                         stop();
                         setLocation(`/play/card-${mainCard.card.day}`);
                       }}
@@ -792,8 +795,7 @@ export default function CollectionPage() {
         onPlayPim={() => {
           if (actionSheetCard) {
             const cover = actionSheetCard.group[0].card.coverUrl;
-            sessionStorage.setItem(`active_cover_url_card-${actionSheetCard.group[0].card.day}`, cover);
-            sessionStorage.setItem('active_game_cover', cover);
+            primeGameCover(actionSheetCard.group[0].card.day, cover);
             stop();
             setLocation(`/play/card-${actionSheetCard.group[0].card.day}`);
           }

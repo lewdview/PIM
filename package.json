@@ -12,7 +12,10 @@
     "lint": "eslint .",
     "tauri": "npx tauri",
     "tauri:dev": "npx tauri dev",
-    "tauri:build": "npx tauri build"
+    "tauri:build": "npx tauri build",
+    "bot:dev": "npm run dev --prefix discord-bot",
+    "bot:build": "npm run build --prefix discord-bot",
+    "bot:start": "npm run start --prefix discord-bot"
   },
   "dependencies": {
     "@coinbase/wallet-sdk": "^4.3.7",
@@ -20,6 +23,7 @@
     "@supabase/supabase-js": "^2.105.3",
     "@tanstack/react-query": "^5.90.21",
     "@tauri-apps/api": "^2.2.0",
+    "@vercel/og": "^0.11.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "ethers": "^6.16.0",

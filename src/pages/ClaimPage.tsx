@@ -276,7 +276,7 @@ export default function ClaimPage() {
     setCodeError('');
     setRewardClaimed(null);
     setAnimationReward(null);
-    useLoadingToast.getState().show('Decrypting bonus code…');
+    useLoadingToast.getState().show('Checking code…');
 
     try {
       const res = await redeemBonusCode(bonusCode);
@@ -318,14 +318,14 @@ export default function ClaimPage() {
         window.dispatchEvent(new Event('vault:points_updated'));
       } else {
         audioManager.playSfx("locked_out", 0.8);
-        setCodeError(res.error || 'Failed to redeem bonus code. Please try again.');
+        setCodeError(res.error || 'Couldn\'t redeem that code. Try again.');
         setCodeState('error');
       }
     } catch (err: any) {
       audioManager.playSfx("error", 0.8);
       useLoadingToast.getState().hide();
       audioManager.playSfx('error', 0.6);
-      setCodeError(err.message || 'Verification link failed.');
+      setCodeError(err.message || 'Couldn\'t check that code. Try again.');
       setCodeState('error');
     }
   };
@@ -357,11 +357,22 @@ export default function ClaimPage() {
   // ── 1. Unauthenticated Wall ────────────────────────────────────────────────
   if (!user) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center px-4 py-16 min-h-[70vh]">
+      <div
+        className="flex-1 flex flex-col items-center justify-center px-4 py-16"
+        style={{
+          minHeight: '100dvh',
+          overflowY: 'auto',
+          WebkitOverflowScrolling: 'touch',
+          paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 6rem)',
+        }}
+      >
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           className="flex flex-col items-center gap-6 text-center max-w-sm glass-panel p-8 border border-white/10"
+          style={{
+            clipPath: 'polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%)',
+          }}
         >
           <div style={{
             width: '64px', height: '64px', borderRadius: '50%',
@@ -373,10 +384,10 @@ export default function ClaimPage() {
           </div>
           <div>
             <h1 className="text-2xl font-black uppercase mb-2 text-white" style={{ fontFamily: '"Impact", "Arial Black", sans-serif' }}>
-              Identity Required
+              Sign In Required
             </h1>
             <p className="text-xs font-mono leading-relaxed text-zinc-400">
-              You must connect your Web3 Identity or guest account before claiming promotional rewards or elite prizes.
+              Sign in or continue as a guest to claim rewards.
             </p>
           </div>
           <button
@@ -384,9 +395,13 @@ export default function ClaimPage() {
               audioManager.playSfx('tap_nav', 0.4);
               setShowAuthModal(true);
             }}
-            className="px-6 py-3 font-mono font-bold text-xs uppercase tracking-wider text-black bg-[#ff3800] border-2 border-black rounded shadow-[3px_3px_0_#000] hover:scale-105 active:scale-95 transition-all cursor-pointer"
+            className="px-6 py-3 font-mono font-bold text-xs uppercase tracking-wider text-black bg-[#ff3800] border-2 border-black shadow-[3px_3px_0_#000] hover:scale-105 active:scale-95 transition-all cursor-pointer"
+            style={{
+              minHeight: '48px',
+              clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+            }}
           >
-            Connect Identity
+            Sign In
           </button>
         </motion.div>
       </div>
@@ -396,11 +411,22 @@ export default function ClaimPage() {
   // ── 2. Claim Done State ────────────────────────────────────────────────────
   if (state === 'done') {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center px-4 py-16 min-h-[70vh]">
+      <div
+        className="flex-1 flex flex-col items-center justify-center px-4 py-16"
+        style={{
+          minHeight: '100dvh',
+          overflowY: 'auto',
+          WebkitOverflowScrolling: 'touch',
+          paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 6rem)',
+        }}
+      >
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           className="flex flex-col items-center gap-6 text-center max-w-sm glass-panel p-8 border border-[#ffd700]/30 shadow-2xl"
+          style={{
+            clipPath: 'polygon(10px 0%, 100% 0%, calc(100% - 10px) 100%, 0% 100%)',
+          }}
         >
           <motion.div
             animate={{ scale: [1, 1.06, 1] }}
@@ -430,7 +456,11 @@ export default function ClaimPage() {
           <Link
             to="/vault"
             onClick={() => audioManager.playSfx('tap_nav', 0.2)}
-            className="px-6 py-2.5 bg-white/5 border border-white/10 rounded font-mono font-bold text-xs uppercase tracking-wider text-white hover:bg-white/10"
+            className="px-6 py-2.5 bg-white/5 border border-white/10 font-mono font-bold text-xs uppercase tracking-wider text-white hover:bg-white/10 inline-flex items-center justify-center"
+            style={{
+              minHeight: '46px',
+              clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+            }}
           >
             Return to Vault
           </Link>
@@ -441,7 +471,15 @@ export default function ClaimPage() {
 
   // ── 3. Unified Claim & Redeem View ─────────────────────────────────────────
   return (
-    <div className="flex-1 px-4 pt-2 pb-36 md:pb-12 max-w-xl mx-auto w-full space-y-12">
+    <div
+      className="flex-1 px-4 pt-2 max-w-xl mx-auto w-full space-y-12"
+      style={{
+        minHeight: '100dvh',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 6.5rem)',
+      }}
+    >
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -452,8 +490,45 @@ export default function ClaimPage() {
           <h1 className="text-4xl font-black uppercase tracking-tight text-white" style={{ fontFamily: '"Impact", "Arial Black", sans-serif' }}>
             Redeem Rewards
           </h1>
-          <p className="text-xs font-mono text-zinc-400 uppercase tracking-widest">// DECRYPT TRANSMISSIONS & EXCLUSIVE CODES</p>
+          <p className="text-xs font-mono text-zinc-400 uppercase tracking-widest">// CODES, PRIZES & BONUSES</p>
         </div>
+
+        {/* BIRTHDAY BONUS PROMO — code 10031981 → free bombshell 2x pack.
+            Explicitly named per Bryan 2026-10-01 (bonus codes are otherwise easter eggs). */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="relative overflow-hidden rounded-2xl border-2 border-[#ffd700]/50 p-5"
+          style={{
+            background: 'linear-gradient(135deg, #1a1300 0%, #0d0d0d 60%, #1a0a2e 100%)',
+            boxShadow: '4px 4px 0 #000, 0 0 32px rgba(255,215,0,0.12)',
+          }}
+        >
+          <div className="scanlines absolute inset-0 opacity-10 pointer-events-none" />
+          <div className="relative z-10 flex items-center gap-4 flex-wrap">
+            <div className="p-3 rounded-xl border border-[#ffd700]/30 bg-[#ffd700]/10 text-[#ffd700] shrink-0">
+              <Gift size={22} />
+            </div>
+            <div className="flex-1 min-w-[200px]">
+              <div className="font-mono text-[8px] font-black uppercase tracking-[0.3em] text-[#ffd700]/70">
+                Birthday bonus · th3scr1b3
+              </div>
+              <div className="font-mono text-sm font-black uppercase tracking-wider text-white mt-1">
+                Free bombshell 2x pack
+              </div>
+              <p className="font-mono text-[10px] text-zinc-400 mt-1 leading-relaxed">
+                Enter code <span className="text-[#ffd700] font-black tracking-widest">10031981</span> below to decrypt your birthday pack. One per player.
+              </p>
+            </div>
+            <div
+              className="px-4 py-2 font-mono text-sm font-black tracking-[0.2em] text-black bg-[#ffd700] rounded-lg border-2 border-black shadow-[3px_3px_0_#000] shrink-0 select-all"
+              style={{ transform: 'rotate(1.5deg)' }}
+            >
+              10031981
+            </div>
+          </div>
+        </motion.div>
 
         {/* SECTION A: BONUS CODE DECRYPTOR */}
         <div className="glass-panel p-6 border-t-2 border-white/20 shadow-xl space-y-6 relative overflow-hidden">
@@ -478,7 +553,13 @@ export default function ClaimPage() {
               <button
                 type="submit"
                 disabled={codeState === 'redeeming' || !bonusCode.trim()}
-                className="px-6 py-3 font-mono font-bold text-xs uppercase tracking-wider text-black bg-[#ffd700] rounded hover:scale-102 active:scale-98 transition-all disabled:opacity-40"
+                className="px-6 py-3 font-mono font-bold text-xs uppercase tracking-wider text-black bg-[#ffd700] hover:scale-102 active:scale-98 transition-all disabled:opacity-40 cursor-pointer"
+                style={{
+                  minHeight: '48px',
+                  clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+                  border: '2px solid #000',
+                  boxShadow: '3px 3px 0 #000',
+                }}
               >
                 {codeState === 'redeeming' ? 'Decrypting...' : 'Redeem Code'}
               </button>
@@ -518,7 +599,7 @@ export default function ClaimPage() {
               >
                 <div className="flex items-center justify-center gap-1.5 text-xs font-mono font-bold text-[#39FF14] tracking-widest uppercase">
                   <Sparkles size={13} />
-                  <span>Reward Unlocked successfully</span>
+                  <span>Reward unlocked</span>
                 </div>
 
                 {/* Tokens display */}
@@ -528,7 +609,7 @@ export default function ClaimPage() {
                     <div className="text-3xl font-black font-mono text-[#ffb800] mt-2">
                       +{rewardClaimed.details?.tokensGranted?.toLocaleString()}
                     </div>
-                    <div className="text-[9px] font-mono text-white/50 tracking-wider mt-1 uppercase">VAULT TOKENS CREDITED</div>
+                    <div className="text-[9px] font-mono text-white/50 tracking-wider mt-1 uppercase">V⚡ SPARKS ADDED</div>
                   </div>
                 )}
 
@@ -567,7 +648,7 @@ export default function ClaimPage() {
                       {rewardClaimed.details?.skinUnlocked?.replace('_', ' ')}
                     </div>
                     <div className="text-[8px] font-mono text-white/40 mt-1.5 leading-relaxed max-w-xs mx-auto uppercase">
-                      Background theme is now permanently unlocked in options.
+                      Theme unlocked. Find it in Options.
                     </div>
                   </div>
                 )}
@@ -578,13 +659,13 @@ export default function ClaimPage() {
                       <span className="text-[18px]">🔞</span>
                     </div>
                     <div className="font-mono text-[9px] tracking-widest text-[#ffd700] uppercase">
-                      DECRYPTION COMPLETE
+                      CONTENT UNLOCKED
                     </div>
                     <div className="text-base font-black uppercase text-white mt-1">
                       {rewardClaimed.details?.skinUnlocked}
                     </div>
                     <div className="text-[8px] font-mono text-white/40 mt-1.5 leading-relaxed max-w-xs mx-auto uppercase">
-                      Stella Luxx content is now successfully decrypted in your database profile.
+                      Stella Luxx content is unlocked on your profile.
                     </div>
                   </div>
                 )}
@@ -610,7 +691,7 @@ export default function ClaimPage() {
               </div>
 
               <p className="text-[10px] font-mono text-zinc-500 leading-relaxed max-w-sm mx-auto uppercase">
-                Flip cards in your collection. If they have an Ultra reward hidden on the back, this section will unlock to claim your personalized track.
+                Flip your cards. Find an Ultra reward on a card back and this unlocks so you can claim a custom track.
               </p>
               <Link
                 to="/vault/collection"
@@ -643,7 +724,7 @@ export default function ClaimPage() {
                     <span>All Prizes Claimed</span>
                   </div>
                   <p className="text-[9px] font-mono text-zinc-400 leading-relaxed uppercase">
-                    You have successfully submitted claims for all secret prize cards in your collection. th3scr1b3 is preparing your custom tracks!
+                    You've claimed every secret prize in your collection. th3scr1b3 is working on your tracks.
                   </p>
                 </div>
               )}
@@ -715,7 +796,13 @@ export default function ClaimPage() {
                   <button
                     type="submit"
                     disabled={!form.name || !form.email || state === 'submitting'}
-                    className="w-full py-3.5 font-mono font-bold text-xs uppercase tracking-widest text-black bg-[#ffd700] rounded hover:scale-101 active:scale-98 transition-all disabled:opacity-40"
+                    className="w-full py-3.5 font-mono font-bold text-xs uppercase tracking-widest text-black bg-[#ffd700] hover:scale-101 active:scale-98 transition-all disabled:opacity-40 cursor-pointer"
+                    style={{
+                      minHeight: '50px',
+                      clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                      border: '2px solid #000',
+                      boxShadow: '4px 4px 0 #000',
+                    }}
                   >
                     {state === 'submitting' ? 'Submitting...' : '✦ Submit Creative Claim'}
                   </button>
@@ -745,11 +832,11 @@ export default function ClaimPage() {
 
               <div className="space-y-1.5">
                 <h2 className="text-base font-black font-mono tracking-wide uppercase text-white">
-                  Access Gated Content?
+                  View Age-Restricted Content?
                 </h2>
                 <p className="text-[10px] text-zinc-400 font-mono leading-relaxed uppercase">
                   The decryption key <span className="text-[#39FF14] font-bold">"{ageGateCode}"</span> contains adult-themed mature material (Stella Luxx Stunner Gallery).
-                  You must be 18 years or older to proceed and view this content.
+                  You must be 18 or older to view this content.
                 </p>
               </div>
 
@@ -760,11 +847,11 @@ export default function ClaimPage() {
                     let successMsg = "";
                     if (ageGateCode === 'stunnerofthemonthunlock') {
                       localStorage.setItem('opt_unlocked_stunner_section', 'true');
-                      successMsg = "Stunner of the Month Section Unlocked!";
+                      successMsg = "Stunner of the Month unlocked.";
                     } else if (ageGateCode === 'freebstella') {
                       localStorage.setItem('opt_free_stella_unlocked', 'true');
                       localStorage.setItem('opt_unlocked_stunner_section', 'true');
-                      successMsg = "Stella Luxx Fully Unlocked in Slideshows!";
+                      successMsg = "Stella Luxx unlocked in Slideshows.";
                     }
                     
                     audioManager.playSfx('song_completion', 0.85);
@@ -777,7 +864,11 @@ export default function ClaimPage() {
                     setAgeGateCode(null);
                     window.dispatchEvent(new Event('cheat_code_activated'));
                   }}
-                  className="py-2.5 bg-red-600 hover:bg-red-500 border border-red-500 rounded-lg text-white font-mono text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer text-center"
+                  className="py-2.5 bg-red-600 hover:bg-red-500 border border-red-500 text-white font-mono text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer text-center"
+                  style={{
+                    minHeight: '44px',
+                    clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+                  }}
                 >
                   Yes, I am 18+
                 </button>
@@ -785,11 +876,15 @@ export default function ClaimPage() {
                 <button
                   onClick={() => {
                     audioManager.playSfx('error', 0.6);
-                    setCodeError('Decryption aborted: Age verification failed.');
+                    setCodeError('Age check declined. Code not redeemed.');
                     setCodeState('error');
                     setAgeGateCode(null);
                   }}
-                  className="py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-white/10 rounded-lg text-white/60 hover:text-white font-mono text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer text-center"
+                  className="py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-white/60 hover:text-white font-mono text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer text-center"
+                  style={{
+                    minHeight: '44px',
+                    clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+                  }}
                 >
                   Cancel & Exit
                 </button>

@@ -149,26 +149,30 @@ function PimLogo({ color, cardId }: { color?: string; cardId?: string }) {
 function DayNumberBadge({ day, color }: { day: number; color: string }) {
   const formattedDay = `#${String(day).padStart(3, '0')}`;
   return (
-    <svg width="68" height="24" viewBox="0 0 100 34" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
+    <svg width="74" height="24" viewBox="0 0 112 34" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block', flexShrink: 0 }}>
       <path 
-        d="M 12 2 L 88 2 L 98 12 L 98 22 L 88 32 L 12 32 L 2 22 L 2 12 Z" 
-        fill={`${color}08`} 
-        stroke={`${color}33`} 
+        d="M 10 2 L 102 2 L 110 10 L 110 24 L 102 32 L 10 32 L 2 24 L 2 10 Z" 
+        fill="rgba(8, 6, 4, 0.84)" 
+        stroke={`${color}75`} 
         strokeWidth="1.5" 
       />
-      <line x1="10" y1="17" x2="16" y2="17" stroke={`${color}55`} strokeWidth="1.5" />
-      <line x1="84" y1="17" x2="90" y2="17" stroke={`${color}55`} strokeWidth="1.5" />
+      <path 
+        d="M 11 4 L 101 4 L 108 11 L 108 23 L 101 30 L 11 30 L 4 23 L 4 11 Z" 
+        fill={`${color}18`} 
+      />
+      <line x1="9" y1="17" x2="17" y2="17" stroke={`${color}80`} strokeWidth="1.5" strokeLinecap="round" />
+      <line x1="95" y1="17" x2="103" y2="17" stroke={`${color}80`} strokeWidth="1.5" strokeLinecap="round" />
       <text
-        x="50"
-        y="18.5"
+        x="56"
+        y="18"
         textAnchor="middle"
         dominantBaseline="middle"
         fill={color}
         fontFamily="'JetBrains Mono', 'Courier New', monospace"
-        fontSize="12"
-        fontWeight="bold"
+        fontSize="12.5"
+        fontWeight="800"
         letterSpacing="1"
-        style={{ filter: `drop-shadow(0 0 3px ${color}50)` }}
+        style={{ filter: `drop-shadow(0 0 4px ${color}60)` }}
       >
         {formattedDay}
       </text>
@@ -954,7 +958,7 @@ export function CardOriginal({ card, backSide }: { card: VaultCard; backSide?: R
         <div>
           <div className="flex justify-between items-start mb-1">
             <h3 className="font-sans font-black text-xs uppercase text-[#faf0d8] truncate flex-1">{card.title}</h3>
-            <span className="font-mono text-[7px] font-bold text-[#4ade80] uppercase tracking-wider ml-1 bg-[#4ade80]/10 border border-[#4ade80]/30 px-1 rounded">UNCOMMON</span>
+            <span className="font-mono text-[7px] font-bold text-[#4ade80] uppercase tracking-wider ml-1.5 bg-[#4ade80]/10 border border-[#4ade80]/30 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">UNCOMMON</span>
           </div>
           <div className="flex gap-2 text-[8px] font-mono text-[#4ade80]">
             <span>{Math.round(card.energy * 100)}% NRG</span>
@@ -1272,7 +1276,7 @@ export function CardGlass({ card, backSide }: { card: VaultCard; backSide?: Reac
           <span className={`text-[7px] text-white/40 tracking-wider font-sans ${isFullBleed ? 'text-stroke-outline' : ''}`}>ENTRY</span>
           <span className={`text-[9px] font-bold font-sans ${isFullBleed ? 'text-stroke-outline' : ''}`}>#00{card.day}</span>
         </div>
-        <span className="text-[7px] px-2 py-0.5 rounded-full border bg-black/40 text-white/80" style={{ borderColor: rarityGlows[card.rarity] }}>
+        <span className="text-[7px] px-3 py-1 rounded-full border bg-black/40 text-white/80 whitespace-nowrap shrink-0" style={{ borderColor: rarityGlows[card.rarity] }}>
           {card.rarity.toUpperCase()}
         </span>
       </div>
@@ -1487,7 +1491,7 @@ export function CardMtg({ card, backSide }: { card: VaultCard; backSide?: React.
     <div className="mtg-glass-frame">
       {/* Title block */}
       <div className="mtg-title-bar">
-        <span className="mtg-title-text truncate max-w-[130px]">{card.title}</span>
+        <span className="mtg-title-text truncate min-w-0 flex-1">{card.title}</span>
         <div className="mtg-mana-cost">
           <div className="mtg-mana-bubble mtg-mana-nrg" title="Energy">{Math.round(card.energy * 10)}</div>
           <div className="mtg-mana-bubble mtg-mana-val" title="Valence">{Math.round(card.valence * 10)}</div>
@@ -1543,7 +1547,7 @@ export function CardMtg({ card, backSide }: { card: VaultCard; backSide?: React.
       <div className="mtg-borderless-frame">
         {/* Floating glass title bar */}
         <div className="mtg-floating-title">
-          <span className="mtg-title-text truncate max-w-[130px]">{card.title}</span>
+          <span className="mtg-title-text truncate min-w-0 flex-1">{card.title}</span>
           <div className="mtg-mana-cost">
             <div className="mtg-mana-bubble mtg-mana-nrg">{Math.round(card.energy * 10)}</div>
             <div className="mtg-mana-bubble mtg-mana-val">{Math.round(card.valence * 10)}</div>
@@ -1718,7 +1722,7 @@ export function CardDuelist({ card, backSide }: { card: VaultCard; backSide?: Re
     <>
       {/* Header */}
       <div className="duelist-header">
-        <span className="duelist-title truncate max-w-[130px]">{card.title}</span>
+        <span className="duelist-title truncate min-w-0 flex-1">{card.title}</span>
         <div className="duelist-attr" style={{ background: attrColor }}>
           {attrText}
         </div>
@@ -1765,7 +1769,7 @@ export function CardDuelist({ card, backSide }: { card: VaultCard; backSide?: Re
         <div>
           {/* Header */}
           <div className="duelist-header bg-black/80 border-[#ffd700]/40">
-            <span className="duelist-title text-[#ffd700] truncate max-w-[130px]">{card.title}</span>
+            <span className="duelist-title text-[#ffd700] truncate min-w-0 flex-1">{card.title}</span>
             <div className="duelist-attr" style={{ background: attrColor, borderColor: '#ffd700' }}>
               {attrText}
             </div>
@@ -1871,7 +1875,7 @@ export function CardMonster({ card, backSide }: { card: VaultCard; backSide?: Re
       <div className="monster-header">
         <div className="monster-title-block">
           <span className="monster-stage">Basic Song</span>
-          <span className="monster-title truncate max-w-[110px]">{card.title}</span>
+          <span className="monster-title truncate min-w-0 flex-1">{card.title}</span>
         </div>
         <div className="monster-hp-block">
           <span className="monster-hp-label">HP</span>
@@ -1959,7 +1963,7 @@ export function CardMonster({ card, backSide }: { card: VaultCard; backSide?: Re
         <div className="monster-header bg-black/60 p-1 rounded border border-white/10">
           <div className="monster-title-block">
             <span className="monster-stage text-[#ffd700]">Legendary Song</span>
-            <span className="monster-title truncate max-w-[110px]">{card.title}</span>
+            <span className="monster-title truncate min-w-0 flex-1">{card.title}</span>
           </div>
           <div className="monster-hp-block">
             <span className="monster-hp-label">HP</span>
@@ -2052,7 +2056,7 @@ export function CardChrome({ card, backSide }: { card: VaultCard; backSide?: Rea
       </div>
 
       <div className="chrome-signature-box">
-        <div className="chrome-signature-line truncate max-w-[130px]">th3scr1b3</div>
+        <div className="chrome-signature-line truncate min-w-0 flex-1">th3scr1b3</div>
         <div className="text-[4.5px] font-mono opacity-40 uppercase tracking-widest mt-0.5">certified audio autograph</div>
       </div>
     </>
@@ -2124,7 +2128,7 @@ export function CardFantasy({ card, backSide }: { card: VaultCard; backSide?: Re
   const traditionalFace = (
     <>
       <div className="fantasy-header">
-        <span className="fantasy-title truncate max-w-[105px]">{card.title}</span>
+        <span className="fantasy-title truncate min-w-0 flex-1">{card.title}</span>
         <div className="fantasy-mana-gem">★</div>
       </div>
 
@@ -2158,7 +2162,7 @@ export function CardFantasy({ card, backSide }: { card: VaultCard; backSide?: Re
       {card.rarity === 'mythic' && <div className="mythic-foil-wash" />}
 
       <div className="absolute inset-x-2 top-2 z-10 flex justify-between items-center bg-black/70 p-1 rounded border border-white/10">
-        <span className="fantasy-title text-[#fbbf24] truncate max-w-[100px]">{card.title}</span>
+        <span className="fantasy-title text-[#fbbf24] truncate min-w-0 flex-1">{card.title}</span>
         <div className="fantasy-mana-gem bg-amber-500 shadow-md">★</div>
       </div>
 
@@ -2197,7 +2201,7 @@ export function CardCyberpunk({ card, backSide }: { card: VaultCard; backSide?: 
   const traditionalFace = (
     <>
       <div className="cyber-header">
-        <span className="truncate max-w-[95px]">{card.title}</span>
+        <span className="truncate min-w-0 flex-1">{card.title}</span>
         <span>MU_{card.day}</span>
       </div>
 
@@ -2232,7 +2236,7 @@ export function CardCyberpunk({ card, backSide }: { card: VaultCard; backSide?: 
       {card.rarity === 'mythic' && <div className="mythic-foil-wash" />}
 
       <div className="absolute inset-x-2 top-2 z-10 flex justify-between items-center bg-black/80 p-1.5 rounded border border-current">
-        <span className="font-bold tracking-wider truncate max-w-[100px]">{card.title}</span>
+        <span className="font-bold tracking-wider truncate min-w-0 flex-1">{card.title}</span>
         <span>SYS.LVL_9</span>
       </div>
 
@@ -2275,7 +2279,7 @@ export function CardAnime({ card, backSide }: { card: VaultCard; backSide?: Reac
     <>
       <div className="anime-header">
         <div className="anime-level-badge">1</div>
-        <span className="anime-title truncate max-w-[100px]">{card.title}</span>
+        <span className="anime-title truncate min-w-0 flex-1">{card.title}</span>
       </div>
 
       <div className={`anime-art-frame ${heightClass}`}>
@@ -2307,7 +2311,7 @@ export function CardAnime({ card, backSide }: { card: VaultCard; backSide?: Reac
 
       <div className="absolute inset-x-2 top-2 z-10 flex justify-between items-center bg-black/60 p-1 rounded border border-white/15">
         <div className="anime-level-badge bg-yellow-400 text-black border-yellow-400 font-black">2</div>
-        <span className="anime-title text-yellow-300 truncate max-w-[100px]">{card.title}</span>
+        <span className="anime-title text-yellow-300 truncate min-w-0 flex-1">{card.title}</span>
       </div>
 
       <div className="absolute inset-x-2 bottom-2 z-10 flex flex-col bg-black/80 p-2 rounded border border-white/15">

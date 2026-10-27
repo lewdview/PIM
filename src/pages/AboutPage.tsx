@@ -56,10 +56,10 @@ export default function AboutPage() {
 
           <div className="p-6 sm:p-8 bg-[#0a0805] border border-white/15 rounded-2xl space-y-4">
             <h2 className="text-xl font-bold uppercase text-[#FF1493] font-mono">
-              02 // MUSIC AS AN EXPERIENCE, NOT A STREAM
+              02 // MUSIC YOU PLAY
             </h2>
             <p>
-              Modern streaming platforms have flattened music into passive background noise. We believe music should demand your focus, reward your reflexes, and feel like an event.
+              Streaming turned music into background noise. Here, a song asks for your attention and pays you back for it.
             </p>
             <p>
               <strong>PIM (Poetry in Motion)</strong> turns every song into a playable 3-lane rhythm game. When you play a track, your timing controls the mix: hit notes cleanly to keep the audio pristine; miss notes, and the audio filter degrades.

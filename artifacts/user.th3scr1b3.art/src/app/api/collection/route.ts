@@ -10,7 +10,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || DEFAULT_SUP
 function getCorsHeaders(origin: string | null) {
   return {
     'Access-Control-Allow-Origin': origin || '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Allow-Credentials': 'true',
   };
@@ -65,57 +65,5 @@ export async function GET(request: Request) {
   }, { headers: corsHeaders });
 }
 
-export async function POST(request: Request) {
-  const origin = request.headers.get('origin');
-  const corsHeaders = getCorsHeaders(origin);
-
-  const authHeader = request.headers.get('Authorization');
-  let token = '';
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    token = authHeader.substring(7);
-  }
-
-  if (!token) {
-    return NextResponse.json({ authenticated: false, error: 'No authorization token provided' }, { status: 401, headers: corsHeaders });
-  }
-
-  const client = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: { persistSession: false },
-    global: { headers: { Authorization: `Bearer ${token}` } },
-  });
-
-  const { data: { user }, error: authError } = await client.auth.getUser();
-
-  if (authError || !user) {
-    return NextResponse.json({ authenticated: false, error: 'Invalid session or token' }, { status: 401, headers: corsHeaders });
-  }
-
-  try {
-    const { cardId, rarity, source, proof } = await request.json();
-
-    if (!cardId || !rarity) {
-      return NextResponse.json({ error: 'cardId and rarity are required' }, { status: 400, headers: corsHeaders });
-    }
-
-    const { data: newCard, error: insertError } = await client
-      .from('vault_collections')
-      .insert({
-        owner_id: user.id,
-        card_id: cardId,
-        rarity,
-        source: source || 'api',
-        proof: proof || {},
-      })
-      .select()
-      .single();
-
-    if (insertError) {
-      return NextResponse.json({ error: insertError.message }, { status: 500, headers: corsHeaders });
-    }
-
-    return NextResponse.json({ success: true, card: newCard }, { headers: corsHeaders });
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: message }, { status: 500, headers: corsHeaders });
-  }
-}
+// No POST: cards are granted only by the vault-engine / stripe-webhook Edge Functions.
+// A client-facing insert let any signed-in (or guest) account mint any card at any rarity.
