@@ -368,10 +368,35 @@ const ANIM_CSS = `
 @media (prefers-reduced-motion: reduce) { .wf-root * { animation: none !important; } }
 `;
 
+/** A spur gear outline: square teeth around a rim, for the foundry backdrop. */
+function gearPath(cx: number, cy: number, r: number, teeth: number): string {
+  const pts: string[] = [];
+  for (let i = 0; i < teeth * 4; i++) {
+    const ang = (i / (teeth * 4)) * Math.PI * 2;
+    const rr = i % 4 < 2 ? r + 6 : r;
+    pts.push(`${(cx + Math.cos(ang) * rr).toFixed(1)} ${(cy + Math.sin(ang) * rr).toFixed(1)}`);
+  }
+  return `M${pts.join(' L')} Z`;
+}
+
+/** Three-tier pine silhouette standing on the floor line. */
+function pinePath(x: number, top: number, w: number): string {
+  return `M${x} ${top} L${x + w * 0.5} ${top + 40} L${x + w * 0.25} ${top + 40} L${x + w * 0.8} ${top + 95} L${x + w * 0.4} ${top + 95} L${x + w} 600 `
+    + `L${x - w} 600 L${x - w * 0.4} ${top + 95} L${x - w * 0.8} ${top + 95} L${x - w * 0.25} ${top + 40} L${x - w * 0.5} ${top + 40} Z`;
+}
+
+/** Four-point sparkle star centred on the origin. */
+const SPARKLE = 'M0 -7 L1.4 -1.4 L7 0 L1.4 1.4 L0 7 L-1.4 1.4 L-7 0 L-1.4 -1.4 Z';
+
 function Scene({ category }: { category: string }) {
   const scene = SCENES.find((s) => s.category === category) ?? SCENES[6];
   const [a, b, c] = scene.colors;
   const bgId = useSvgId('scene');
+  const glowId = `${bgId}-glow`;
+  const floorId = `${bgId}-floor`;
+  const orbId = `${bgId}-orb`;
+  const moonId = `${bgId}-moon`;
+  const voidScene = category === 'Minimalist & Surrealism';
   return (
     <g>
       <defs>
@@ -379,27 +404,82 @@ function Scene({ category }: { category: string }) {
           <stop offset="0" stopColor={a} />
           <stop offset="1" stopColor={b} />
         </linearGradient>
+        <radialGradient id={glowId}>
+          <stop offset="0" stopColor={c} stopOpacity="0.5" />
+          <stop offset="1" stopColor={c} stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id={floorId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#000" stopOpacity="0" />
+          <stop offset="1" stopColor="#000" stopOpacity={voidScene ? 0.12 : 0.4} />
+        </linearGradient>
+        <radialGradient id={orbId} cx="0.38" cy="0.35" r="0.7">
+          <stop offset="0" stopColor="#ffffff" />
+          <stop offset="0.7" stopColor="#e2e8f0" />
+          <stop offset="1" stopColor="#94a3b8" />
+        </radialGradient>
+        <mask id={moonId} {...MASK_BOX}>
+          <circle cx="236" cy="96" r="24" fill="#fff" />
+          <circle cx="246" cy="88" r="21" fill="#000" />
+        </mask>
       </defs>
       <rect width="300" height="600" fill={`url(#${bgId})`} />
-      {category === 'Cyberpunk & Sci-Fi' && [20, 70, 200, 250].map((x, i) => (
-        <g key={i}>
-          <rect x={x} y={180 + i * 25} width="34" height={420} fill="#0b0b1a" stroke={c} strokeOpacity="0.5" />
-          {[0, 1, 2, 3, 4, 5].map((r) => (
-            <rect key={r} x={x + 6} y={200 + i * 25 + r * 40} width="8" height="5" fill={r % 2 ? c : '#ff007f'}
-              className="wf-flicker" style={{ animationDelay: `${(i * 6 + r) * 0.37}s` }} />
+      {/* A soft key-light bloom behind the figure separates her from every backdrop. */}
+      {!voidScene && <ellipse cx="150" cy="270" rx="150" ry="240" fill={`url(#${glowId})`} opacity="0.45" />}
+
+      {category === 'Cyberpunk & Sci-Fi' && (
+        <g>
+          {/* Far skyline in haze, then lit towers in front. */}
+          <path d="M0 470 L0 300 L18 300 L18 262 L40 262 L40 320 L58 320 L58 232 L70 232 L70 214 L74 214 L74 232 L84 232 L84 290 L110 290 L110 252 L130 252 L130 470 Z M170 470 L170 272 L196 272 L196 222 L204 222 L204 200 L207 200 L207 222 L214 222 L214 300 L240 300 L240 242 L262 242 L262 312 L282 312 L282 272 L300 272 L300 470 Z" fill={b} opacity="0.85" />
+          {[20, 70, 200, 250].map((x, i) => (
+            <g key={i}>
+              <rect x={x} y={180 + i * 25} width="34" height={420} fill="#0b0b1a" stroke={c} strokeOpacity="0.5" />
+              <path d={`M${x + 17} ${180 + i * 25} L${x + 17} ${160 + i * 25}`} stroke={c} strokeOpacity="0.6" />
+              <circle cx={x + 17} cy={158 + i * 25} r="1.6" fill="#ff007f" className="wf-flicker" />
+              {[0, 1, 2, 3, 4, 5].map((r) => (
+                <rect key={r} x={x + 6} y={200 + i * 25 + r * 40} width="8" height="5" fill={r % 2 ? c : '#ff007f'}
+                  className="wf-flicker" style={{ animationDelay: `${(i * 6 + r) * 0.37}s` }} />
+              ))}
+              {[0, 1, 2, 3, 4].map((r) => (
+                <rect key={`w${r}`} x={x + 20} y={210 + i * 25 + r * 40} width="8" height="3" fill={c} opacity="0.35" />
+              ))}
+            </g>
           ))}
+          {/* Wet street: neon edges reflected on the floor. */}
+          <path d="M0 520 L300 520" stroke={c} strokeOpacity="0.35" />
+          {[37, 87, 217, 267].map((x) => <path key={x} d={`M${x} 524 L${x} 560`} stroke={x % 2 ? '#ff007f' : c} strokeOpacity="0.25" strokeWidth="4" />)}
         </g>
-      ))}
+      )}
       {category === 'Dark Fantasy & Gothic' && (
-        <g fill="none" stroke={c} strokeOpacity="0.6" strokeWidth="3">
-          <path d="M40 600 L40 160 Q150 20 260 160 L260 600" />
-          <circle cx="150" cy="150" r="46" />
-          <path d="M150 104 L150 196 M104 150 L196 150 M118 118 L182 182 M182 118 L118 182" strokeWidth="1.5" />
-          {[60, 240].map((x) => <circle key={x} cx={x} cy="420" r="5" fill="#fbbf24" stroke="none" className="wf-flicker" />)}
+        <g>
+          {/* Lancet windows of stained glass, with light falling from them. */}
+          {[18, 240].map((x) => (
+            <g key={x}>
+              <path d={`M${x + 21} 300 L${x - 10} 520 L${x + 52} 520 Z`} fill={c} opacity="0.07" />
+              <path d={`M${x} 300 L${x} 220 Q${x + 21} 176 ${x + 42} 220 L${x + 42} 300 Z`} fill={c} fillOpacity="0.22" stroke={c} strokeOpacity="0.6" strokeWidth="2" />
+              <path d={`M${x + 21} 196 L${x + 21} 300 M${x} 250 L${x + 42} 250 M${x} 275 L${x + 42} 275`} stroke="#000" strokeOpacity="0.55" strokeWidth="1.5" />
+              <rect x={x + 4} y="226" width="12" height="20" fill="#7c3aed" opacity="0.35" />
+              <rect x={x + 26} y="254" width="12" height="18" fill="#fbbf24" opacity="0.3" />
+            </g>
+          ))}
+          <g fill="none" stroke={c} strokeOpacity="0.6" strokeWidth="3">
+            <path d="M40 600 L40 160 Q150 20 260 160 L260 600" />
+            <circle cx="150" cy="150" r="46" fill={c} fillOpacity="0.12" />
+            <path d="M150 104 L150 196 M104 150 L196 150 M118 118 L182 182 M182 118 L118 182" strokeWidth="1.5" />
+            <circle cx="150" cy="150" r="14" strokeWidth="2" />
+          </g>
+          {/* Candles with a warm bloom. */}
+          {[60, 240].map((x) => (
+            <g key={x}>
+              <circle cx={x} cy="420" r="14" fill="#fbbf24" opacity="0.12" />
+              <rect x={x - 3} y="424" width="6" height="22" fill="#e7e5e4" opacity="0.8" />
+              <path d={`M${x} 412 Q${x + 4} 419 ${x} 424 Q${x - 4} 419 ${x} 412 Z`} fill="#fbbf24" className="wf-flicker" />
+            </g>
+          ))}
         </g>
       )}
       {category === 'Neon Retro & Synthwave' && (
         <g>
+          <circle cx="150" cy="300" r="120" fill={`url(#${glowId})`} />
           <circle cx="150" cy="300" r="90" fill={c} opacity="0.85" />
           {[0, 1, 2, 3, 4].map((i) => <rect key={i} x="50" y={300 + i * 14} width="200" height={5 + i} fill={a} />)}
           {[...Array(9)].map((_, i) => <line key={i} x1={150} y1={380} x2={-150 + i * 75} y2={600} stroke="#ff007f" strokeOpacity="0.7" />)}
@@ -408,34 +488,81 @@ function Scene({ category }: { category: string }) {
       )}
       {category === 'High-Fashion & Vogue' && (
         <g>
+          {/* Runway strip in perspective, the crowd as camera flashes along its sides. */}
+          <path d="M126 440 L174 440 L270 600 L30 600 Z" fill={c} opacity="0.06" />
+          <path d="M126 440 L30 600 M174 440 L270 600" stroke={c} strokeOpacity="0.25" />
+          {[...Array(14)].map((_, i) => (
+            <circle key={i} cx={i < 7 ? 8 + i * 14 : 180 + (i - 7) * 16} cy={420 + (i % 3) * 10} r={i % 4 === 0 ? 3 : 1.6} fill="#ffffff"
+              opacity="0.6" className="wf-twinkle" style={{ animationDelay: `${i * 0.33}s` }} />
+          ))}
           <ellipse cx="150" cy="585" rx="130" ry="18" fill={c} opacity="0.15" />
           <path d="M150 0 L60 600 L240 600 Z" fill={c} opacity="0.07" className="wf-twinkle" style={{ animationDuration: '5s' }} />
         </g>
       )}
-      {category === 'Impressionist & Fine Art' && [...Array(28)].map((_, i) => (
-        <circle key={i} cx={(i * 53) % 300} cy={360 + ((i * 37) % 240)} r={10 + (i % 4) * 5} fill={i % 3 ? c : '#e76f51'} opacity="0.55" />
-      ))}
-      {category === 'Anime & Celestial' && [...Array(30)].map((_, i) => (
-        <circle key={i} cx={(i * 71) % 300} cy={(i * 43) % 600} r={i % 5 === 0 ? 2.4 : 1.2} fill={c}
-          className="wf-twinkle" style={{ animationDelay: `${(i % 7) * 0.4}s` }} />
-      ))}
-      {category === 'Minimalist & Surrealism' && (
+      {category === 'Impressionist & Fine Art' && (
         <g>
-          <circle cx="232" cy="92" r="34" fill={c} opacity="0.85" className="wf-float" />
+          {/* Rolling hills in two values, dabs of colour over them. */}
+          <path d="M0 410 Q70 370 150 400 T300 390 L300 600 L0 600 Z" fill={a} opacity="0.55" />
+          <path d="M0 470 Q90 440 170 466 T300 456 L300 600 L0 600 Z" fill="#2a9d8f" opacity="0.45" />
+          {[...Array(28)].map((_, i) => (
+            <circle key={i} cx={(i * 53) % 300} cy={360 + ((i * 37) % 240)} r={10 + (i % 4) * 5} fill={i % 3 ? c : '#e76f51'} opacity="0.55" />
+          ))}
+          {[...Array(16)].map((_, i) => (
+            <path key={`s${i}`} d={`M${(i * 41) % 300} ${60 + ((i * 59) % 260)} q8 -4 16 0`} fill="none" stroke="#ffffff"
+              strokeOpacity="0.18" strokeWidth="4" strokeLinecap="round" />
+          ))}
+        </g>
+      )}
+      {category === 'Anime & Celestial' && (
+        <g>
+          <ellipse cx="150" cy="240" rx="260" ry="40" transform="rotate(-28 150 240)" fill={c} opacity="0.06" />
+          <circle cx="236" cy="96" r="40" fill={`url(#${glowId})`} />
+          <circle cx="236" cy="96" r="24" fill={c} mask={`url(#${moonId})`} />
+          {[...Array(30)].map((_, i) => (
+            <circle key={i} cx={(i * 71) % 300} cy={(i * 43) % 600} r={i % 5 === 0 ? 2.4 : 1.2} fill={c}
+              className="wf-twinkle" style={{ animationDelay: `${(i % 7) * 0.4}s` }} />
+          ))}
+          {[[48, 70, 1], [270, 260, 0.7], [30, 330, 0.8], [200, 40, 0.6]].map(([x, y, s], i) => (
+            <path key={`k${i}`} d={SPARKLE} transform={`translate(${x} ${y}) scale(${s})`} fill="#ffffff"
+              className="wf-twinkle" style={{ animationDelay: `${i * 0.7}s` }} />
+          ))}
+        </g>
+      )}
+      {voidScene && (
+        <g>
+          {/* Surreal still life: a floating pearl and a door onto a daytime sky, both casting shadows on the horizon. */}
+          <ellipse cx="232" cy="478" rx="26" ry="4" fill={c} opacity="0.12" />
+          <g className="wf-float">
+            <circle cx="232" cy="92" r="30" fill={`url(#${orbId})`} stroke={c} strokeOpacity="0.35" strokeWidth="1.2" />
+            <path d="M212 104 Q226 122 252 108" fill="none" stroke={c} strokeOpacity="0.12" strokeWidth="6" strokeLinecap="round" />
+          </g>
+          <path d="M36 470 L70 470 L92 482 L58 482 Z" fill={c} opacity="0.1" />
+          <rect x="30" y="372" width="40" height="98" fill="#bfdbfe" stroke={c} strokeOpacity="0.55" strokeWidth="1.5" />
+          <path d="M36 404 q5 -7 12 -3 q6 -6 12 1 q6 1 4 6 l-30 0 q-3 -4 2 -4 Z" fill="#ffffff" opacity="0.9" />
+          <path d="M70 372 L80 378 L80 470 L70 470 Z" fill="#94a3b8" stroke={c} strokeOpacity="0.55" strokeWidth="1" />
           <line x1="0" y1="470" x2="300" y2="470" stroke={c} strokeOpacity="0.3" />
         </g>
       )}
       {category === 'Streetwear & Graffiti' && (
         <g>
-          {[...Array(12)].map((_, i) => <rect key={i} x={(i % 4) * 75} y={Math.floor(i / 4) * 40 + 380} width="74" height="39" fill={b} stroke={a} />)}
+          {[...Array(12)].map((_, i) => <rect key={i} x={(i % 4) * 75 + (Math.floor(i / 4) % 2) * 37} y={Math.floor(i / 4) * 40 + 380} width="74" height="39" fill={b} stroke={a} />)}
           <path d="M20 200 Q60 140 100 210 T190 190 T280 220" fill="none" stroke={c} strokeWidth="10" strokeLinecap="round" opacity="0.8" />
           <path d="M30 260 Q90 230 150 270 T280 250" fill="none" stroke="#ff007f" strokeWidth="7" strokeLinecap="round" opacity="0.7" />
+          {/* Paint drips under each stroke. */}
+          {[[46, 172, 18], [100, 210, 26], [236, 204, 14], [262, 214, 22]].map(([x, y, l]) => (
+            <path key={x} d={`M${x} ${y} L${x} ${y + l}`} stroke={c} strokeWidth="2.4" strokeLinecap="round" opacity="0.75" />
+          ))}
+          {[[60, 250, 16], [150, 270, 20], [222, 258, 12]].map(([x, y, l]) => (
+            <path key={x} d={`M${x} ${y} L${x} ${y + l}`} stroke="#ff007f" strokeWidth="2" strokeLinecap="round" opacity="0.65" />
+          ))}
         </g>
       )}
       {category === 'Organic & Nature Noir' && (
         <g>
+          {[...Array(7)].map((_, i) => <path key={`b${i}`} d={pinePath(i * 50 + 10, 180 + (i % 2) * 30, 20)} fill={b} opacity="0.5" />)}
+          <rect x="0" y="430" width="300" height="70" fill={c} opacity="0.06" />
           {[...Array(8)].map((_, i) => (
-            <path key={i} d={`M${i * 40 + 5} 600 L${i * 40 + 25} ${220 + (i % 3) * 40} L${i * 40 + 45} 600 Z`} fill={b} stroke={c} strokeOpacity="0.4" />
+            <path key={i} d={pinePath(i * 40 + 25, 230 + (i % 3) * 40, 26)} fill="#021a0c" stroke={c} strokeOpacity="0.35" />
           ))}
           {[...Array(10)].map((_, i) => (
             <circle key={`f${i}`} cx={(i * 67 + 20) % 300} cy={160 + ((i * 89) % 300)} r="2" fill="#d9f99d"
@@ -444,13 +571,29 @@ function Scene({ category }: { category: string }) {
         </g>
       )}
       {category === 'Industrial & Mechanical' && (
-        <g stroke={c} strokeOpacity="0.5" fill="none" strokeWidth="2">
-          <circle cx="60" cy="120" r="40" strokeDasharray="10 6" />
-          <circle cx="250" cy="200" r="30" strokeDasharray="8 5" />
-          <path d="M0 500 L300 500 M0 520 L300 520" />
-          {[0, 1, 2, 3, 4, 5].map((i) => <path key={i} d={`M${i * 60} 500 L${i * 60 + 30} 520`} />)}
+        <g>
+          {/* Pipes along the wall, interlocking gears, a floor grate and sparks. */}
+          <rect x="0" y="136" width="300" height="12" fill={b} stroke="#000" strokeOpacity="0.5" />
+          <rect x="0" y="160" width="300" height="6" fill={b} opacity="0.8" />
+          {[30, 130, 230].map((x) => <rect key={x} x={x} y="132" width="10" height="20" fill="#52525b" stroke="#000" strokeOpacity="0.5" />)}
+          <g fill={b} stroke={c} strokeOpacity="0.55" strokeWidth="1.5">
+            <path d={gearPath(56, 250, 34, 10)} />
+            <path d={gearPath(252, 300, 24, 8)} />
+          </g>
+          <circle cx="56" cy="250" r="10" fill={a} stroke={c} strokeOpacity="0.55" />
+          <circle cx="252" cy="300" r="7" fill={a} stroke={c} strokeOpacity="0.55" />
+          <g stroke={c} strokeOpacity="0.5" fill="none" strokeWidth="2">
+            <path d="M0 500 L300 500 M0 520 L300 520" />
+            {[0, 1, 2, 3, 4, 5].map((i) => <path key={i} d={`M${i * 60} 500 L${i * 60 + 30} 520`} />)}
+          </g>
+          {[[236, 470, -12, -18], [240, 474, 10, -14], [232, 476, -4, -24]].map(([x, y, dx, dy], i) => (
+            <path key={i} d={`M${x} ${y} l${dx} ${dy}`} stroke="#fbbf24" strokeWidth="1.4" strokeLinecap="round"
+              className="wf-flicker" style={{ animationDelay: `${i * 0.4}s` }} />
+          ))}
         </g>
       )}
+      {/* Floor plane darkens toward the viewer so the feet sit on something. */}
+      <rect x="0" y="470" width="300" height="130" fill={`url(#${floorId})`} />
       {/* Floor shadow grounds the character in every scene. */}
       <ellipse cx="150" cy="582" rx="56" ry="9" fill="#000" opacity="0.35" />
     </g>
@@ -1018,6 +1161,7 @@ function Top({ choice }: { choice: GarmentChoice }) {
 const HEAD_SCALE = 'translate(150 180) scale(0.8) translate(-150 -184)';
 
 function Accessory({ item }: { item: string }) {
+  const visorId = useSvgId('visor');
   switch (item) {
     case 'catears':
       return <g fill="#1a1a2e" stroke={LINE} strokeWidth="1.5">
@@ -1030,9 +1174,36 @@ function Accessory({ item }: { item: string }) {
         ))}
       </g>;
     case 'halo':
-      return <g className="wf-float"><ellipse cx="150" cy="32" rx="40" ry="10" fill="none" stroke="#fde68a" strokeWidth="5" opacity="0.95" /><ellipse cx="150" cy="32" rx="40" ry="10" fill="none" stroke="#fff" strokeWidth="1.5" opacity="0.8" /></g>;
+      // A gold torus: soft glow, inked edge, lit top rim and a shaded underside.
+      return <g className="wf-float" fill="none" strokeLinecap="round">
+        <ellipse cx="150" cy="32" rx="42" ry="11.5" stroke="#fde68a" strokeOpacity="0.25" strokeWidth="13" />
+        <ellipse cx="150" cy="32" rx="40" ry="10" stroke={LINE} strokeWidth="7" />
+        <ellipse cx="150" cy="32" rx="40" ry="10" stroke="#fde68a" strokeWidth="5" />
+        <path d="M113 37.6 Q150 46 187 37.6" stroke="#d4a017" strokeWidth="2.2" />
+        <path d="M116 25.6 Q150 18.6 184 25.6" stroke="#ffffff" strokeWidth="1.6" strokeOpacity="0.9" />
+        <path d="M124 41 L128 41.6" stroke="#ffffff" strokeWidth="1.6" />
+      </g>;
     case 'visor':
-      return <g><rect x="104" y="108" width="92" height="24" rx="11" fill="#00f0ff" opacity="0.5" stroke="#0f172a" strokeWidth="2" /><path d="M112 114 L188 114" stroke="#ffffff" strokeOpacity="0.8" className="wf-twinkle" /></g>;
+      // Wraparound visor that follows the face, a tinted lens with glare streaks and LED earpieces.
+      return <g>
+        <defs>
+          <linearGradient id={visorId} x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stopColor="#00f0ff" stopOpacity="0.7" />
+            <stop offset="1" stopColor="#ff007f" stopOpacity="0.55" />
+          </linearGradient>
+        </defs>
+        <path d="M100 112 Q150 100 200 112 L198 127 Q174 137 150 131 Q126 137 102 127 Z" fill={`url(#${visorId})`} stroke="#0f172a" strokeWidth="2" />
+        <path d="M100 112 Q150 100 200 112" fill="none" stroke="#1e293b" strokeWidth="4" strokeLinecap="round" />
+        <path d="M122 108.6 L113 128.4 M131 107.4 L123.4 129.6" stroke="#ffffff" strokeOpacity="0.55" strokeWidth="2.6" strokeLinecap="round" />
+        <path d="M170 107.4 L166 116" stroke="#ffffff" strokeOpacity="0.4" strokeWidth="1.6" strokeLinecap="round" />
+        <path d="M106 121 Q150 112 194 121" fill="none" stroke="#ffffff" strokeOpacity="0.7" className="wf-twinkle" />
+        {[false, true].map((m) => (
+          <g key={String(m)} transform={m ? MIRROR : undefined}>
+            <rect x="94" y="108" width="8" height="16" rx="2.4" fill="#1e293b" stroke={LINE} strokeWidth="1" />
+            <circle cx="98" cy="119" r="1.4" fill="#00f0ff" className="wf-flicker" />
+          </g>
+        ))}
+      </g>;
     case 'headphones':
       return <g>
         <path d="M98 118 C94 40 206 40 202 118" fill="none" stroke="#111" strokeWidth="7" />
