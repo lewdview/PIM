@@ -85,3 +85,79 @@ export function getScoreHistory(songId: string): number[] {
   catch { return []; }
 }
 
+
+// ── campaign progress ────────────────────────────────────────────
+// Campaign clears are kept apart from on-demand plays (collection, codex,
+// award play, search): only a passed run launched from a chapter, at the
+// campaign's own difficulty, unlocks the next stage. Any saved key means the
+// stage is cleared (a pass with medal NONE still counts).
+interface CampaignRecord { medal: string; score: number }
+
+const campaignKey = (songId: string) => `campaign_clear_${songId}`;
+const CAMPAIGN_SEEDED_KEY = 'campaign_progress_seeded_v1';
+
+export function getCampaignRecord(songId: string): CampaignRecord | null {
+  seedCampaignProgressOnce();
+  try {
+    const raw = localStorage.getItem(campaignKey(songId));
+    return raw ? (JSON.parse(raw) as CampaignRecord) : null;
+  } catch { return null; }
+}
+
+export function hasCampaignClear(songId: string): boolean {
+  return getCampaignRecord(songId) !== null;
+}
+
+export function getCampaignMedal(songId: string): string {
+  return getCampaignRecord(songId)?.medal ?? '';
+}
+
+export function saveCampaignClear(songId: string, medal: string, score: number): void {
+  const cur = getCampaignRecord(songId);
+  const better = !cur || MEDAL_ORDER.indexOf(medal as any) > MEDAL_ORDER.indexOf(cur.medal as any);
+  const next: CampaignRecord = {
+    medal: better ? medal : cur!.medal,
+    score: Math.max(score, cur?.score ?? 0),
+  };
+  if (cur && cur.medal === next.medal && cur.score === next.score) return;
+  try { localStorage.setItem(campaignKey(songId), JSON.stringify(next)); } catch { /* ignore */ }
+  // Signed-in players also persist to Supabase (no-op for guests).
+  useVaultStore.getState().syncCampaignClear(songId, next.medal, next.score);
+}
+
+export function getCampaignPlatinums(songIds: string[]): number {
+  return songIds.filter(id => getCampaignMedal(id) === 'PLATINUM').length;
+}
+
+export function getCampaignCleared(songIds: string[]): number {
+  return songIds.filter(hasCampaignClear).length;
+}
+
+/**
+ * One-time carry-over from before campaign progress was tracked separately,
+ * so returning players keep the stages they had already opened. Runs on the
+ * first campaign read after vault data has loaded.
+ */
+let seeding = false;
+export function seedCampaignProgressOnce(): void {
+  if (seeding) return;
+  try {
+    if (localStorage.getItem(CAMPAIGN_SEEDED_KEY)) return;
+    if (!useVaultStore.getState().hasLoadedData) return;
+    seeding = true;
+    const { medals = {}, highScores = {} } = useVaultStore.getState();
+    const ids = new Set<string>([...Object.keys(medals), ...Object.keys(highScores)]);
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k?.startsWith('medal_')) ids.add(k.slice(6));
+    }
+    ids.forEach(id => {
+      const medal = getMedalForSong(id);
+      const score = getHighScore(id);
+      if (!hasCampaignClear(id) && ((medal && medal !== '') || score > 0)) {
+        saveCampaignClear(id, medal || 'NONE', score);
+      }
+    });
+    localStorage.setItem(CAMPAIGN_SEEDED_KEY, '1');
+  } catch { /* ignore */ } finally { seeding = false; }
+}

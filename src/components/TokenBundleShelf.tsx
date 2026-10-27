@@ -133,18 +133,18 @@ export default function TokenBundleShelf({ onPurchased, className = '' }: TokenB
     setIsProcessing(true);
 
     if (method === 'crypto') {
-      useLoadingToast.getState().show(`Waiting for Base wallet confirmation…`);
+      useLoadingToast.getState().show(`Confirm in your wallet…`);
       try {
         const txHash = await payWithCrypto(tier.priceValue);
         if (txHash) {
-          useLoadingToast.getState().show(`Crediting ${tier.tokenAmount} V⚡ Sparks…`);
+          useLoadingToast.getState().show(`Adding ${tier.tokenAmount} V⚡ sparks…`);
           const res = await buyTokenBundleWithCrypto(tier.size, tier.tokenAmount, txHash);
           useLoadingToast.getState().hide();
           setIsProcessing(false);
           if (res.success) {
             await loadVaultData();
             if (onPurchased) onPurchased();
-            alert(`⚡ Success! +${tier.tokenAmount.toLocaleString()} V⚡ Sparks credited to your vault wallet.`);
+            alert(`+${tier.tokenAmount.toLocaleString()} V⚡ sparks added to your vault.`);
           }
         } else {
           useLoadingToast.getState().hide();
@@ -156,7 +156,7 @@ export default function TokenBundleShelf({ onPurchased, className = '' }: TokenB
         alert(err.message || 'Crypto transaction failed');
       }
     } else {
-      useLoadingToast.getState().show(`Redirecting to Stripe checkout…`);
+      useLoadingToast.getState().show(`Opening checkout…`);
       try {
         const res = await createStripeCheckoutSession('token_bundle', tier.size);
         useLoadingToast.getState().hide();
@@ -164,12 +164,12 @@ export default function TokenBundleShelf({ onPurchased, className = '' }: TokenB
         if (res.success && res.checkoutUrl) {
           await redirectToStripeCheckout(res.checkoutUrl);
         } else {
-          alert(res.error || 'Could not initiate Stripe checkout');
+          alert(res.error || 'Checkout didn\'t open. Try again.');
         }
       } catch (err: any) {
         useLoadingToast.getState().hide();
         setIsProcessing(false);
-        alert(err.message || 'Could not initiate Stripe checkout');
+        alert(err.message || 'Checkout didn\'t open. Try again.');
       }
     }
   };
@@ -189,13 +189,13 @@ export default function TokenBundleShelf({ onPurchased, className = '' }: TokenB
             </span>
           </div>
           <p className="text-xs font-mono text-zinc-400 mt-1">
-            Fuel your card collection: unlock <span className="text-amber-400 font-bold">⚡ Vault Packs (275 V⚡ • 3% Mythic)</span>, execute <span className="text-pink-400 font-bold">💖 Bombshell Pulls (100 V⚡)</span>, or overclock in the Forge.
+            Spend sparks on <span className="text-amber-400 font-bold">⚡ Vault Packs (275 V⚡ • 3% Mythic)</span>, <span className="text-pink-400 font-bold">💖 Bombshell Pulls (100 V⚡)</span> or upgrades in the Forge.
           </p>
         </div>
 
         <div className="text-[10px] font-mono text-zinc-300 bg-zinc-900/90 px-3.5 py-2 rounded-xl border border-zinc-800 flex items-center gap-2 shadow-inner">
           <ShieldCheck size={14} className="text-amber-400" />
-          <span>Zero-Latency Clearance • Stripe & Coinbase Smart Wallet</span>
+          <span>Pay with Stripe or Coinbase Smart Wallet</span>
         </div>
       </div>
 

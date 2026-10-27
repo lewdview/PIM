@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useRoute, useLocation } from 'wouter';
 import { loadCatalog, getCandidateAudioUrls, sanitizeMediaUrl, type GameSong } from '../game/api';
 import { audioManager } from '../game/audio';
-import { useVaultStore } from '../store/useVaultStore';
+import { useVaultStore, ownsCardForDay } from '../store/useVaultStore';
 import { Play, Pause, SkipForward, SkipBack, X, Music, Shuffle, Repeat, Repeat1, Volume2, Sparkles, Layers } from 'lucide-react';
 
 // Types for particles in the visualizer
@@ -28,7 +28,7 @@ export default function ListenPage() {
   const songId = (params as any)?.songId || '';
   const [location, setLocation] = useLocation();
 
-  const { settings, updateSettings, collection, fragments } = useVaultStore();
+  const { settings, updateSettings, collection } = useVaultStore();
 
   const [allCatalogSongs, setAllCatalogSongs] = useState<GameSong[]>([]);
   const [playlist, setPlaylist] = useState<GameSong[]>([]);
@@ -78,24 +78,10 @@ export default function ListenPage() {
   // Track page history to go back to the correct origin page
   const [backRoute, setBackRoute] = useState('/songs');
 
-  const getFragmentsForDay = useCallback((day: number) => {
-    const cardKey = `card-${day}`;
-    const dayKey = `day-${String(day).padStart(3, '0')}`;
-    const dayKeyRaw = `day-${day}`;
-    return (
-      fragments[cardKey] ??
-      fragments[dayKey] ??
-      fragments[dayKeyRaw] ??
-      0
-    );
-  }, [fragments]);
-
+  // Strict card ownership (fragments no longer unlock playback — they feed Award Play)
   const isSongUnlocked = useCallback((s: GameSong) => {
-    const isOwned = Array.isArray(collection) 
-      ? collection.some(c => c && (c.cardId === s.id || `card-${c.card?.day}` === s.id || c.cardId === `card-${s.day}`)) 
-      : false;
-    return isOwned || getFragmentsForDay(s.day) >= 10;
-  }, [collection, getFragmentsForDay]);
+    return ownsCardForDay(collection, s.day);
+  }, [collection]);
 
   const cleanupAudio = () => {
     if (animationFrameRef.current) {
@@ -871,10 +857,19 @@ export default function ListenPage() {
       <div className="absolute inset-0 z-10 pointer-events-none bg-scanlines opacity-[0.03]" />
 
       {/* Floating Header back button */}
-      <div className="absolute top-6 left-6 z-20 flex items-center gap-3">
+      <div
+        className="absolute left-6 z-20 flex items-center gap-3"
+        style={{
+          top: 'calc(var(--fc-safe-area-top, 0px) + env(safe-area-inset-top, 0px) + 1.25rem)',
+        }}
+      >
         <button
           onClick={handleBack}
-          className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 rounded-full hover:bg-white/10 transition-colors uppercase font-mono text-[9px] tracking-widest text-white/70 cursor-pointer"
+          className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/20 hover:bg-white/10 transition-colors uppercase font-mono text-[9px] tracking-widest text-white/80 cursor-pointer"
+          style={{
+            minHeight: '38px',
+            clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+          }}
         >
           <span>←</span> EXIT VISUALIZER
         </button>
@@ -905,7 +900,13 @@ export default function ListenPage() {
       </div>
 
       {/* GLASSMORPHIC PANEL DASHBOARD */}
-      <div className="absolute bottom-6 left-4 right-4 md:left-auto md:right-10 md:w-[440px] z-20 backdrop-blur-[24px] bg-[#0c0c0e]/75 border border-white/15 rounded-3xl p-5 md:p-6 shadow-[0_12px_40px_rgba(0,0,0,0.6)] flex flex-col gap-4 transition-all duration-300">
+      <div
+        className="absolute left-4 right-4 md:left-auto md:right-10 md:w-[440px] z-20 backdrop-blur-[24px] bg-[#0c0c0e]/85 border border-white/15 p-5 md:p-6 shadow-[0_12px_40px_rgba(0,0,0,0.7)] flex flex-col gap-4 transition-all duration-300"
+        style={{
+          bottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 1.5rem)',
+          clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%)',
+        }}
+      >
         {/* Glowing Accent Indicator */}
         <div className="absolute -top-1 left-8 right-8 h-[2px] bg-gradient-to-r from-transparent via-[#39FF14] to-transparent opacity-80" />
 
@@ -988,11 +989,18 @@ export default function ListenPage() {
           
           <button
             onClick={handleTogglePlay}
-            className={`flex items-center justify-center w-12 h-12 rounded-full transition-all shadow-md cursor-pointer ${
+            className={`flex items-center justify-center transition-all shadow-md cursor-pointer ${
               playing
                 ? 'bg-transparent border border-red-500/50 text-red-400 hover:bg-red-500/10'
                 : 'bg-[#39FF14] border border-[#39FF14] text-black hover:bg-[#39FF14]/90'
             }`}
+            style={{
+              width: '48px',
+              height: '48px',
+              minWidth: '48px',
+              minHeight: '48px',
+              clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+            }}
             title={playing ? 'Pause' : 'Play'}
           >
             {playing ? <Pause size={18} /> : <Play size={18} className="ml-0.5" />}

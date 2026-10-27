@@ -28,6 +28,7 @@ import { useNotificationStore } from './store/useNotificationStore';
 import { getCurrentDay } from './utils/dayCalc';
 import { farcasterService } from './services/farcasterService';
 import ArcadeSplashScreen from './components/ArcadeSplashScreen';
+import { isLaunchPath } from './utils/launchRoutes';
 
 // Helper to auto-retry and cache-bust lazy route chunk imports on version deployment updates
 function lazyWithRetry<T extends React.ComponentType<any>>(
@@ -75,8 +76,12 @@ const RhythmHome = lazyWithRetry(() => import('./pages/RhythmHome'));
 const SongSelect = lazyWithRetry(() => import('./pages/SongSelect'));
 const GamePlay = lazyWithRetry(() => import('./pages/GamePlay'));
 const GameResults = lazyWithRetry(() => import('./pages/GameResults'));
-const Campaign = lazyWithRetry(() => import('./pages/Campaign'));
-const Chapter = lazyWithRetry(() => import('./pages/Chapter'));
+const Campaign = lazyWithRetry(() => import('./pages/campaign/CampaignStory'));
+const Chapter = lazyWithRetry(() => import('./pages/campaign/ChapterStory'));
+const WordChain = lazyWithRetry(() => import('./pages/WordChain'));
+// Previous map-style campaign screens, kept reachable while the story screens settle in.
+const CampaignMap = lazyWithRetry(() => import('./pages/Campaign'));
+const ChapterMap = lazyWithRetry(() => import('./pages/Chapter'));
 const Tutorial = lazyWithRetry(() => import('./pages/Tutorial'));
 const HomePage = lazyWithRetry(() => import('./pages/HomePage'));
 const CollectionPage = lazyWithRetry(() => import('./pages/CollectionPage'));
@@ -95,12 +100,18 @@ const UniverseHome = lazyWithRetry(() => import('./pages/UniverseHome'));
 const Archive365Page = lazyWithRetry(() => import('./pages/Archive365Page'));
 const DayArtifactPage = lazyWithRetry(() => import('./pages/DayArtifactPage'));
 const WarpZonePage = lazyWithRetry(() => import('./pages/WarpZonePage'));
+const SecretLevel = lazyWithRetry(() => import('./pages/SecretLevel'));
 const AboutPage = lazyWithRetry(() => import('./pages/AboutPage'));
 const AdminPage = lazyWithRetry(() => import('./pages/AdminPage'));
 const BeatmapEditor = lazyWithRetry(() => import('./pages/BeatmapEditor'));
 const CardDesignShowcase = lazyWithRetry(() => import('./pages/CardDesignShowcase'));
 const PitchDeck = lazyWithRetry(() => import('./pages/PitchDeck'));
 const SlideshowPage = lazyWithRetry(() => import('./pages/SlideshowPage'));
+const VaultCollectionPage = lazyWithRetry(() => import('./pages/VaultCollectionPage'));
+const BombshellsPage = lazyWithRetry(() => import('./pages/BombshellsPage'));
+const AdminDropAnimationsPage = lazyWithRetry(() => import('./pages/AdminDropAnimationsPage'));
+const LaunchPage = lazyWithRetry(() => import('./pages/LaunchPage'));
+const StageHome = lazyWithRetry(() => import('./pages/StageHome'));
 
 function OptionsRouteHandler() {
   const setOptionsModalOpen = useVaultStore((s) => s.setOptionsModalOpen);
@@ -196,9 +207,13 @@ export default function App() {
   const isCompletedLocally = typeof window !== 'undefined' ? localStorage.getItem('pim_tutorial_completed') === 'true' : false;
   const isTutorialDone = !isExplicitlyFalseQuery && (isCompletedLocally || tutorialCompleted);
 
-  // Active tutorial routes permitted without redirect (the tutorial page or active stage 1 gameplay)
+  // Active tutorial routes permitted without redirect (the tutorial page or active stage 1 gameplay).
+  // /pitch-deck is also exempt so the deck stays shareable via direct link.
+  const isLaunchRoute = isLaunchPath(location);
   const isTutorialRoute =
     location === '/tutorial' ||
+    location === '/pitch-deck' ||
+    isLaunchRoute ||
     (location.startsWith('/play/') &&
       (typeof window !== 'undefined' &&
         (window.location.search.includes('tutorial=true') || window.location.search.includes('tutorial=1'))));
@@ -252,7 +267,7 @@ export default function App() {
 
   // Stop global preview player on gameplay routes to prevent dual-audio
   useEffect(() => {
-    if (location.startsWith('/play/') || location === '/tutorial') {
+    if (location.startsWith('/play/') || location.startsWith('/secret/') || location === '/tutorial') {
       useGlobalPlayer.getState().stop();
     }
   }, [location]);
@@ -268,7 +283,7 @@ export default function App() {
 
   // Priority 1: Arcade Splash / Attract Gateway Screen
   // Before any onboarding, any landing page, or any route gates, show the arcade splash
-  if (showArcadeSplash) {
+  if (showArcadeSplash && !isLaunchRoute) {
     return (
       <ErrorBoundary sectionName="SPLASH_GATEWAY">
         <AnimatePresence>
@@ -279,7 +294,7 @@ export default function App() {
   }
 
   // Priority 2: Neural link loading check (if still loading after splash dismiss)
-  if (!authTimedOut && (authStatus === 'idle' || authStatus === 'loading')) {
+  if (!isLaunchRoute && !authTimedOut && (authStatus === 'idle' || authStatus === 'loading')) {
     return (
       <div className="fixed inset-0 bg-[#050402] flex flex-col items-center justify-center">
         <div
@@ -305,28 +320,32 @@ export default function App() {
   // guests — that hasn't completed it yet. Guests get the full walkthrough and a
   // "connect identity to keep your cards" conversion screen at the end.
   const isGameplayRoute =
-    location.startsWith('/play/') || location.startsWith('/results/') || location === '/tutorial';
-  if (user && hasOnboarded === false && !isGameplayRoute && isTutorialDone) {
+    location.startsWith('/play/') || location.startsWith('/results/') || location.startsWith('/secret/') || location === '/tutorial';
+  if (user && hasOnboarded === false && !isGameplayRoute && !isLaunchRoute && isTutorialDone) {
     return <OnboardingFlow onComplete={completeOnboarding} />;
   }
 
   // Hide the global navigation bar only in active gameplay, tutorial, editor, or hero landing pages
   const hideNavbar =
     location.startsWith('/play/') ||
+    location.startsWith('/secret/') ||
     location === '/tutorial' ||
     location === '/admin/editor' ||
     location === '/admin/card-designs' ||
-    location.startsWith('/hero');
+    location === '/admin/drop-animations' ||
+    location === '/admin/animations' ||
+    location.startsWith('/hero') ||
+    isLaunchRoute;
 
   return (
     <ErrorBoundary sectionName="ROOT_APP">
       <div
-        className="min-h-screen bg-[#050402] text-white flex flex-col select-none relative"
+        className="pim-app-root min-h-screen bg-[#050402] text-white flex flex-col select-none relative"
         style={{
-          paddingTop: 'var(--fc-safe-area-top, 0px)',
-          paddingBottom: 'var(--fc-safe-area-bottom, 0px)',
-          paddingLeft: 'var(--fc-safe-area-left, 0px)',
-          paddingRight: 'var(--fc-safe-area-right, 0px)',
+          paddingTop: 'calc(var(--fc-safe-area-top, 0px) + env(safe-area-inset-top, 0px))',
+          paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px))',
+          paddingLeft: 'calc(var(--fc-safe-area-left, 0px) + env(safe-area-inset-left, 0px))',
+          paddingRight: 'calc(var(--fc-safe-area-right, 0px) + env(safe-area-inset-right, 0px))',
         }}
       >
         <GlobalMenuBackground />
@@ -352,9 +371,13 @@ export default function App() {
                 {/* 1. Primary Public Landing & PIM Rhythm Routes */}
                 <Route path="/" component={LandingPage} />
                 <Route path="/next-vault" component={NextGenLandingPage} />
+                <Route path="/launch" component={LaunchPage} />
+                <Route path="/launchpad" component={LaunchPage} />
+                <Route path="/play-pim" component={LaunchPage} />
                 <Route path="/hero" component={HeroLandingPage} />
                 <Route path="/hero/day-:dayParam" component={HeroLandingPage} />
                 <Route path="/hero/:dayParam" component={HeroLandingPage} />
+                <Route path="/home" component={StageHome} />
                 <Route path="/pim" component={RhythmHome} />
                 <Route path="/play" component={RhythmHome} />
                 <Route path="/arcade" component={RhythmHome} />
@@ -366,8 +389,11 @@ export default function App() {
                 <Route path="/songs" component={SongSelect} />
                 <Route path="/play/:songId" component={GamePlay} />
                 <Route path="/results/:songId" component={GameResults} />
+                <Route path="/chain" component={WordChain} />
                 <Route path="/campaign" component={Campaign} />
+                <Route path="/campaign/map" component={CampaignMap} />
                 <Route path="/chapter/:month" component={Chapter} />
+                <Route path="/chapter/:month/map" component={ChapterMap} />
                 <Route path="/tutorial" component={Tutorial} />
 
                 {/* 2. TH3VAULT & Collectible Routes */}
@@ -376,6 +402,9 @@ export default function App() {
                 <Route path="/collection" component={CollectionPage} />
                 <Route path="/vault/reveal" component={PackRevealPage} />
                 <Route path="/reveal" component={PackRevealPage} />
+                <Route path="/vault/finds" component={VaultCollectionPage} />
+                <Route path="/vaultfinds" component={VaultCollectionPage} />
+                <Route path="/bombshells" component={BombshellsPage} />
                 <Route path="/vault/forge" component={ForgePage} />
                 <Route path="/forge" component={ForgePage} />
                 <Route path="/vault/leaderboard" component={LeaderboardPage} />
@@ -407,6 +436,7 @@ export default function App() {
                 <Route path="/random" component={SignDiscoveryRoute} />
                 <Route path="/warp" component={WarpZonePage} />
                 <Route path="/warp/:sub" component={WarpZonePage} />
+                <Route path="/secret/:level" component={SecretLevel} />
                 <Route path="/about" component={AboutPage} />
                 <Route path="/manifesto" component={AboutPage} />
                 <Route path="/hub" component={ProfilePage} />
@@ -416,6 +446,8 @@ export default function App() {
                 <Route path="/admin" component={AdminPage} />
                 <Route path="/admin/editor" component={BeatmapEditor} />
                 <Route path="/admin/card-designs" component={CardDesignShowcase} />
+                <Route path="/admin/drop-animations" component={AdminDropAnimationsPage} />
+                <Route path="/admin/animations" component={AdminDropAnimationsPage} />
 
                 {/* 404 Handler */}
                 <Route>

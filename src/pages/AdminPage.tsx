@@ -21,6 +21,7 @@ import { fetchAllCards, createStripeCheckoutSession, redirectToStripeCheckout, t
 import { Users, BarChart3, RefreshCw, Filter, Calendar, Zap, Flame, ShieldCheck, Database, Trash2, Copy, Check, AlertTriangle, Sparkles, Layers, Megaphone, Radio, Send, Bell, Eye, EyeOff, CreditCard, DollarSign, ExternalLink } from 'lucide-react';
 import { GEN0_RESET_SQL, purgeClientGen0State, getClientGen0Health } from '../utils/gen0Reset';
 import type { AnnouncementCategory, AnnouncementPriority, SystemAnnouncement } from '../store/useNotificationStore';
+import AdminDropAnimationsSection from '../components/admin/AdminDropAnimationsSection';
 
 // ===== RARITY DISPLAY HELPERS =====
 const RARITIES: Rarity[] = ['common', 'uncommon', 'rare', 'legendary', 'mythic'];
@@ -399,7 +400,17 @@ export default function AdminPage() {
   const [showImport, setShowImport] = useState(false);
   const [saveFlash, setSaveFlash] = useState(false);
   const [pushStatus, setPushStatus] = useState<'idle' | 'pushing' | 'success' | 'error'>('idle');
-  const [activeSection, setActiveSection] = useState<'rates' | 'modifiers' | 'economy' | 'echo' | 'simulation' | 'config' | 'analytics' | 'gen0_reset' | 'broadcast' | 'stripe'>('rates');
+  const [activeSection, setActiveSection] = useState<'rates' | 'modifiers' | 'economy' | 'echo' | 'simulation' | 'config' | 'analytics' | 'gen0_reset' | 'broadcast' | 'stripe' | 'drop_animations'>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const s = params.get('section');
+      if (s === 'drop_animations' || s === 'animations' || s === 'drops') return 'drop_animations';
+      if (s && ['rates', 'modifiers', 'economy', 'echo', 'simulation', 'config', 'analytics', 'gen0_reset', 'broadcast', 'stripe', 'drop_animations'].includes(s)) {
+        return s as any;
+      }
+    }
+    return 'rates';
+  });
 
   // Live Echo Pool State
   const [liveEchoPool, setLiveEchoPool] = useState<EchoCard[]>([]);
@@ -1065,17 +1076,78 @@ export default function AdminPage() {
           </span>
         </div>
         <div style={{
-          fontFamily: '"JetBrains Mono", monospace',
-          fontSize: '9px',
-          opacity: 0.4,
           display: 'flex',
-          gap: '16px',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px',
+          marginTop: '6px',
         }}>
-          <span>Config v{config.version}</span>
-          <span>·</span>
-          <span>Last modified: {new Date(config.lastModified).toLocaleString()}</span>
-          <span>·</span>
-          <span>Streak: {streak} days</span>
+          <div style={{
+            fontFamily: '"JetBrains Mono", monospace',
+            fontSize: '9px',
+            opacity: 0.5,
+            display: 'flex',
+            gap: '16px',
+          }}>
+            <span>Config v{config.version}</span>
+            <span>·</span>
+            <span>Last modified: {new Date(config.lastModified).toLocaleString()}</span>
+            <span>·</span>
+            <span>Streak: {streak} days</span>
+          </div>
+
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={() => setActiveSection('drop_animations')}
+              style={{
+                background: 'rgba(255,0,127,0.15)',
+                border: '1px solid rgba(255,0,127,0.4)',
+                color: '#ff007f',
+                padding: '4px 10px',
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '9px',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em',
+                cursor: 'pointer',
+              }}
+            >
+              🎬 DROP ANIMATIONS LAB
+            </button>
+            <a
+              href="/admin/card-designs"
+              style={{
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.15)',
+                color: '#ccc',
+                padding: '4px 10px',
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '9px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em',
+                textDecoration: 'none',
+              }}
+            >
+              🃏 CARD DESIGNS
+            </a>
+            <a
+              href="/admin/editor"
+              style={{
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.15)',
+                color: '#ccc',
+                padding: '4px 10px',
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '9px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em',
+                textDecoration: 'none',
+              }}
+            >
+              🎛️ BEATMAP EDITOR
+            </a>
+          </div>
         </div>
       </div>
 
@@ -1092,6 +1164,7 @@ export default function AdminPage() {
           { key: 'stripe', label: '💳 STRIPE LEDGER', color: '#635bff' },
           { key: 'gen0_reset', label: '🚀 GEN 0 RESET', color: '#ff1493' },
           { key: 'broadcast', label: '📢 BROADCAST STATION', color: '#00e5ff' },
+          { key: 'drop_animations', label: '🎬 DROP ANIMATIONS', color: '#ff007f' },
         ] as const).map(tab => (
           <button
             key={tab.key}
@@ -3840,6 +3913,11 @@ export default function AdminPage() {
             </table>
           </div>
         </div>
+      )}
+
+      {/* ===== SECTION: DROP ANIMATIONS LAB ===== */}
+      {activeSection === 'drop_animations' && (
+        <AdminDropAnimationsSection />
       )}
 
       {/* ===== FLOATING SAVE BAR ===== */}

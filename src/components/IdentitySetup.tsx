@@ -5,6 +5,7 @@ import { supabase } from '../services/supabaseClient';
 import { useVaultStore } from '../store/useVaultStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { getIdenticon } from '../utils/identicon';
+import { uploadAvatar, validateAvatarFile } from '../utils/avatarUpload';
 
 interface IdentitySetupProps {
   onComplete?: () => void;
@@ -42,19 +43,10 @@ export default function IdentitySetup({ onComplete, compact }: IdentitySetupProp
     const timeoutId = setTimeout(async () => {
       try {
         const clean = username.trim();
-        const { data } = await supabase
-          .from('profiles')
-          .select('id')
-          .ilike('username', clean)
-          .maybeSingle();
-
-        if (!data) {
-          // not found = available
-          setIsAvailable(true);
-        } else {
-          // found = taken unless it's our own
-          setIsAvailable(data.id === user?.id);
-        }
+        // is_username_taken ignores the caller's own profile, so "not taken" = available.
+        const { data: taken, error } = await supabase.rpc('is_username_taken', { p_username: clean });
+        if (error) throw error;
+        setIsAvailable(!taken);
       } catch (err) {
         setIsAvailable(null);
       } finally {
@@ -69,8 +61,7 @@ export default function IdentitySetup({ onComplete, compact }: IdentitySetupProp
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) return;
-    if (file.size > 2 * 1024 * 1024) return;
+    if (validateAvatarFile(file)) return;
 
     setAvatarFile(file);
     const reader = new FileReader();
@@ -78,31 +69,6 @@ export default function IdentitySetup({ onComplete, compact }: IdentitySetupProp
       setAvatarPreview(event.target?.result as string);
     };
     reader.readAsDataURL(file);
-  };
-
-  const processAvatar = async (file: File): Promise<Blob> => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = 256;
-        canvas.height = 256;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return reject('No context');
-
-        const size = Math.min(img.width, img.height);
-        const sx = (img.width - size) / 2;
-        const sy = (img.height - size) / 2;
-        ctx.drawImage(img, sx, sy, size, size, 0, 0, 256, 256);
-
-        canvas.toBlob((blob) => {
-          if (blob) resolve(blob);
-          else reject('Blob failed');
-        }, 'image/webp', 0.9);
-      };
-      img.onerror = reject;
-      img.src = URL.createObjectURL(file);
-    });
   };
 
   const handleSave = async () => {
@@ -114,19 +80,10 @@ export default function IdentitySetup({ onComplete, compact }: IdentitySetupProp
       let finalAvatarUrl = user.user_metadata?.avatar_url;
 
       if (avatarFile) {
-        const blob = await processAvatar(avatarFile);
-        const filePath = `${user.id}/${user.id}.webp`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('avatars')
-          .upload(filePath, blob, { upsert: true, contentType: 'image/webp' });
-
-        if (!uploadError) {
-          const { data: publicUrlData } = supabase.storage
-            .from('avatars')
-            .getPublicUrl(filePath);
-
-          finalAvatarUrl = publicUrlData.publicUrl;
+        try {
+          finalAvatarUrl = await uploadAvatar(user.id, avatarFile);
+        } catch (err) {
+          console.error('Avatar upload failed', err);
         }
       }
 

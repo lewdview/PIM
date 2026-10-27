@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, ExternalLink, Download, ShieldCheck, Share2, Info, Flame, Film, Play, Disc, Sparkles, Check, CheckCircle, Lock, Layers } from 'lucide-react';
 import { useLocation } from 'wouter';
 import { useGlobalPlayer } from '../store/useGlobalPlayer';
-import { useVaultStore } from '../store/useVaultStore';
+import { useVaultStore, getGen0ShardsForDay, getBombshellShardsForDay } from '../store/useVaultStore';
 import type { OwnedCard } from '../services/vaultService';
 import { generateCardMetadata } from '../services/vaultService';
 import { RARITY_CONFIG, getSupplyCap, getMintableCap, type Rarity } from '../utils/rarity';
@@ -22,6 +22,7 @@ import {
   getCustomBombshellCover,
   getBombshellCoverUrl,
 } from '../utils/bombshellCards';
+import { primeGameCover } from '../utils/gameCover';
 import PrizeProgressMenu from './PrizeProgressMenu';
 
 interface CardDetailModalProps {
@@ -87,24 +88,18 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
     setActivePreviewArtwork(fileName);
     setPreferredCardCover(day, fileName);
     const resolvedUrl = getBombshellCoverUrl(day, fileName);
-    if (typeof sessionStorage !== 'undefined') {
-      sessionStorage.setItem(`active_cover_url_card-${day}`, resolvedUrl);
-      sessionStorage.setItem('active_game_cover', resolvedUrl);
-    }
+    primeGameCover(day, resolvedUrl);
   };
 
   if (!card) return null;
 
   const getFragmentsForDay = (day: number) => {
-    const cardKey = `card-${day}`;
-    const dayKey = `day-${String(day).padStart(3, '0')}`;
-    const dayKeyRaw = `day-${day}`;
-    return (
-      fragments[cardKey] ??
-      fragments[dayKey] ??
-      fragments[dayKeyRaw] ??
-      0
-    );
+    // Shard counts are per card set, like supply: a bombshell card shows
+    // its own bombshell-{day} count and a gen-0 card shows the gen-0
+    // count. The two never add into each other.
+    return isBombshellCard(card)
+      ? getBombshellShardsForDay(fragments, day)
+      : getGen0ShardsForDay(fragments, day);
   };
 
   const rc = RARITY_CONFIG[card.card.rarity];
@@ -348,7 +343,7 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
                           </span>
                         </div>
                         <p className="text-[9px] font-mono opacity-50 uppercase leading-tight">
-                          Ultra-rare 1/1 verification stamp. This card represents a historical milestone in the vault archive.
+                          1-of-1 stamp. This card marks a milestone in the vault archive.
                         </p>
                       </div>
                     )}
@@ -380,6 +375,7 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
                         <button
                           onClick={() => {
                             stop();
+                            primeGameCover(card.card.day, effectiveCoverUrl);
                             setLocation(`/play/card-${card.card.day}`);
                           }}
                           className="lg:hidden flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[rgba(0,240,255,0.15)] border border-[#00f0ff] text-[#00f0ff] text-[11px] font-mono font-black uppercase tracking-wider active:scale-95 shadow-[0_0_12px_rgba(0,240,255,0.25)]"
@@ -634,6 +630,7 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
                         <button
                           onClick={() => {
                             stop();
+                            primeGameCover(card.card.day, effectiveCoverUrl);
                             setLocation(`/play/card-${card.card.day}`);
                           }}
                           className="flex items-center gap-2 px-5 py-3 bg-[rgba(0,240,255,0.1)] border border-neon-cyan text-neon-cyan rounded-xl text-[11px] font-mono font-bold uppercase tracking-widest transition-all hover:bg-[rgba(0,240,255,0.2)] hover:scale-[1.02] active:scale-95 shadow-[0_0_15px_rgba(0,240,255,0.15)]"
@@ -649,6 +646,7 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
                             onClick={() => {
                               stop();
                               sessionStorage.setItem(`export_video_card-${card.card.day}`, 'true');
+                              primeGameCover(card.card.day, effectiveCoverUrl);
                               setLocation(`/play/card-${card.card.day}`);
                             }}
                             title="Export frame-perfect 100% PERFECT+ run video (DEV ONLY)"
@@ -709,7 +707,7 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
                         className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-red-500/10 border border-red-500/30 text-red-500 rounded-xl text-xs font-mono font-black uppercase tracking-[0.2em] transition-all hover:bg-red-500/20 active:scale-[0.98] mt-4"
                       >
                         <Flame size={16} />
-                         Burn Minted Out Card
+                         Burn Excess Copy
                       </button>
                     )}
                   </div>
@@ -722,6 +720,7 @@ export default function CardDetailModal({ card, isOpen, onClose, onBurn }: CardD
                   <button
                     onClick={() => {
                       stop();
+                      primeGameCover(card.card.day, effectiveCoverUrl);
                       setLocation(`/play/card-${card.card.day}`);
                     }}
                     className="flex-1 py-3.5 px-4 rounded-xl font-mono font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 text-black transition-all active:scale-[0.98] shadow-lg cursor-pointer"

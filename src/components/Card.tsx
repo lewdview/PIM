@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, memo } from 'react';
+import { useState, useCallback, useEffect, useRef, memo } from 'react';
 import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
 import type { VaultCard } from '../services/vaultService';
 import { RARITY_CONFIG, getSupplyCap, type UltraReward, type ProofType } from '../utils/rarity';
@@ -8,6 +8,8 @@ import AudioPreview from './AudioPreview';
 import { formatDate } from '../utils/dayCalc';
 import { Gift, Flame, ShieldCheck } from 'lucide-react';
 import OneOfOneOutline from './OneOfOneOutline';
+import HoloSheen, { type HoloVariant } from './HoloSheen';
+import { useHoloTilt } from '../hooks/useHoloTilt';
 import MythicCardEffects, { MythicGodRays, MythicPrismFoil, MythicEmberParticles, MythicCrownBadge } from './MythicCardEffects';
 import {
   CardSkinContext,
@@ -82,18 +84,24 @@ function PimLogo({ color, cardId }: { color?: string; cardId?: string }) {
 function DayNumberBadge({ day, color }: { day: number; color: string }) {
   const formattedDay = `#${String(day).padStart(3, '0')}`;
   return (
-    <svg width="68" height="24" viewBox="0 0 100 34" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
+    <svg width="74" height="24" viewBox="0 0 112 34" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block', flexShrink: 0 }}>
       <path 
-        d="M 12 2 L 88 2 L 98 12 L 98 22 L 88 32 L 12 32 L 2 22 L 2 12 Z" 
-        fill={`${color}08`} 
-        stroke={`${color}33`} 
+        d="M 10 2 L 102 2 L 110 10 L 110 24 L 102 32 L 10 32 L 2 24 L 2 10 Z" 
+        fill="rgba(8, 6, 4, 0.84)" 
+        stroke={`${color}55`} 
         strokeWidth="1.5" 
       />
-      <line x1="10" y1="17" x2="16" y2="17" stroke={`${color}55`} strokeWidth="1.5" />
-      <line x1="84" y1="17" x2="90" y2="17" stroke={`${color}55`} strokeWidth="1.5" />
+      <path 
+        d="M 12 4.5 L 100 4.5 L 107.5 11.5 L 107.5 22.5 L 100 29.5 L 12 29.5 L 4.5 22.5 L 4.5 11.5 Z" 
+        fill={`${color}10`} 
+        stroke={`${color}22`} 
+        strokeWidth="0.75" 
+      />
+      <line x1="7" y1="17" x2="12" y2="17" stroke={`${color}70`} strokeWidth="1.5" strokeLinecap="round" />
+      <line x1="100" y1="17" x2="105" y2="17" stroke={`${color}70`} strokeWidth="1.5" strokeLinecap="round" />
       <text
-        x="50"
-        y="18.5"
+        x="56"
+        y="18"
         textAnchor="middle"
         dominantBaseline="middle"
         fill={color}
@@ -101,7 +109,7 @@ function DayNumberBadge({ day, color }: { day: number; color: string }) {
         fontSize="12"
         fontWeight="bold"
         letterSpacing="1"
-        style={{ filter: `drop-shadow(0 0 3px ${color}50)` }}
+        style={{ filter: `drop-shadow(0 0 4px ${color}60)` }}
       >
         {formattedDay}
       </text>
@@ -109,20 +117,226 @@ function DayNumberBadge({ day, color }: { day: number; color: string }) {
   );
 }
 
-// Shared stat box primitive
+// Shared recessed hardware LED stat well primitive
 function StatBox({ label, value, color }: { label: string; value: string | number; color: string }) {
   return (
     <div style={{
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      padding: '4px 2px',
-      background: 'rgba(0,0,0,0.35)',
-      border: '1px solid rgba(255,255,255,0.05)',
-      borderRadius: '3px',
+      justifyContent: 'center',
+      padding: '4px 3px',
+      background: 'linear-gradient(180deg, rgba(6, 5, 3, 0.84) 0%, rgba(16, 13, 9, 0.92) 100%)',
+      border: '1px solid rgba(255,255,255,0.08)',
+      borderBottomColor: 'rgba(255,255,255,0.14)',
+      borderRadius: '5px',
+      boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.85)',
     }}>
-      <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '7px', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{label}</span>
-      <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '11px', fontWeight: 700, color, lineHeight: 1.1 }}>{value}</span>
+      <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '6.5px', color: 'rgba(250,240,216,0.42)', textTransform: 'uppercase', letterSpacing: '0.1em', lineHeight: 1, marginBottom: '2px' }}>{label}</span>
+      <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '10.5px', fontWeight: 800, color, lineHeight: 1, fontVariantNumeric: 'tabular-nums', textShadow: `0 0 8px ${color}35` }}>{value}</span>
+    </div>
+  );
+}
+
+/**
+ * CardCornerMedallions
+ * Non-overlapping circular corner hardware seals for Bombshell, Daily Drop, and Echo Re-Entry.
+ * Docked in the upper-right artwork corner below the card header bar so they never collide
+ * with DayNumberBadge or RarityBadge.
+ */
+export function CardCornerMedallions({
+  isBombshell = false,
+  isDaily = false,
+  isEcho = false,
+  echoGeneration = 0,
+}: {
+  isBombshell?: boolean;
+  isDaily?: boolean;
+  isEcho?: boolean;
+  echoGeneration?: number;
+}) {
+  if (!isBombshell && !isDaily && !isEcho) return null;
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        top: '42px',
+        right: '8px',
+        zIndex: 36,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '6px',
+        alignItems: 'flex-end',
+        pointerEvents: 'none',
+      }}
+    >
+      {/* 1. BOMBSHELL CIRCULAR MEDALLION SEAL */}
+      {isBombshell && (
+        <div
+          title="Bombshell Edition"
+          style={{
+            width: '34px',
+            height: '34px',
+            borderRadius: '50%',
+            background: 'radial-gradient(circle at 35% 28%, #ff3d9e 0%, #8a0047 62%, #280015 100%)',
+            border: '1.5px solid #ff85c2',
+            boxShadow: '0 3px 8px rgba(0,0,0,0.85), 0 0 14px rgba(255,20,147,0.7), inset 0 1px 2px rgba(255,255,255,0.45)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          <svg width="32" height="32" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="18" cy="18" r="14.5" stroke="#ffd700" strokeOpacity="0.55" strokeWidth="0.8" strokeDasharray="2.5 1.5" />
+            <circle cx="18" cy="18" r="12.5" stroke="#ff99cc" strokeOpacity="0.3" strokeWidth="0.6" />
+            {/* Bombshell Heart + Starburst Crest */}
+            <path
+              d="M18 16.2C18 16.2 13.2 13.1 13.2 10.3C13.2 8.8 14.4 7.7 15.8 7.7C16.7 7.7 17.5 8.2 18 8.9C18.5 8.2 19.3 7.7 20.2 7.7C21.6 7.7 22.8 8.8 22.8 10.3C22.8 13.1 18 16.2 18 16.2Z"
+              fill="#ffffff"
+              stroke="#ffd700"
+              strokeWidth="0.7"
+            />
+            <polygon points="24,6.5 24.6,8 26.2,8.2 25,9.2 25.3,10.7 24,9.9 22.7,10.7 23,9.2 21.8,8.2 23.4,8" fill="#ffd700" />
+            <text
+              x="18"
+              y="21.5"
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fill="#ffffff"
+              fontFamily="'JetBrains Mono', 'Impact', sans-serif"
+              fontSize="5.1"
+              fontWeight="900"
+              letterSpacing="0.4"
+            >
+              BOMB
+            </text>
+            <text
+              x="18"
+              y="26.4"
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fill="#ffd700"
+              fontFamily="'JetBrains Mono', monospace"
+              fontSize="4.5"
+              fontWeight="800"
+              letterSpacing="0.3"
+            >
+              SHELL
+            </text>
+          </svg>
+        </div>
+      )}
+
+      {/* 2. DAILY DROP CIRCULAR MEDALLION SEAL */}
+      {isDaily && (
+        <div
+          title="Daily Drop Claim"
+          style={{
+            width: '34px',
+            height: '34px',
+            borderRadius: '50%',
+            background: 'radial-gradient(circle at 35% 28%, #573d00 0%, #241800 65%, #0e0900 100%)',
+            border: '1.5px solid #ffd700',
+            boxShadow: '0 3px 8px rgba(0,0,0,0.85), 0 0 14px rgba(255,215,0,0.55), inset 0 1px 2px rgba(255,255,255,0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          <svg width="32" height="32" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="18" cy="18" r="14.5" stroke="#ffd700" strokeOpacity="0.55" strokeWidth="0.8" strokeDasharray="2 1.5" />
+            {/* Crown / Gift Sunburst Icon */}
+            <rect x="13.5" y="10.5" width="9" height="6" rx="1" stroke="#ffd700" strokeWidth="1.1" fill="rgba(255,215,0,0.18)" />
+            <line x1="18" y1="9.5" x2="18" y2="16.5" stroke="#ffd700" strokeWidth="1.1" />
+            <line x1="13.5" y1="13" x2="22.5" y2="13" stroke="#ffd700" strokeWidth="1" />
+            <path d="M18 10.5C16.5 10.5 15.5 9.6 15.5 8.7C15.5 8 16.1 7.5 16.8 7.5C17.5 7.5 18 8.4 18 10.5Z" stroke="#fff" strokeWidth="0.9" />
+            <path d="M18 10.5C19.5 10.5 20.5 9.6 20.5 8.7C20.5 8 19.9 7.5 19.2 7.5C18.5 7.5 18 8.4 18 10.5Z" stroke="#fff" strokeWidth="0.9" />
+            <text
+              x="18"
+              y="22.2"
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fill="#ffffff"
+              fontFamily="'JetBrains Mono', monospace"
+              fontSize="5"
+              fontWeight="900"
+              letterSpacing="0.4"
+            >
+              DAILY
+            </text>
+            <text
+              x="18"
+              y="26.8"
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fill="#ffd700"
+              fontFamily="'JetBrains Mono', monospace"
+              fontSize="4.4"
+              fontWeight="800"
+              letterSpacing="0.4"
+            >
+              DROP
+            </text>
+          </svg>
+        </div>
+      )}
+
+      {/* 3. ECHO RE-ENTRY CIRCULAR MEDALLION SEAL */}
+      {isEcho && (
+        <div
+          title={`Echo Re-Entry Gen ${echoGeneration || 1}`}
+          style={{
+            width: '34px',
+            height: '34px',
+            borderRadius: '50%',
+            background: 'radial-gradient(circle at 35% 28%, #004d3d 0%, #001f19 65%, #020c0a 100%)',
+            border: '1.5px solid #00d4aa',
+            boxShadow: '0 3px 8px rgba(0,0,0,0.85), 0 0 14px rgba(0,212,170,0.55), inset 0 1px 2px rgba(255,255,255,0.35)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          <svg width="32" height="32" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="18" cy="18" r="14.5" stroke="#00d4aa" strokeOpacity="0.5" strokeWidth="0.8" strokeDasharray="3 1.5" />
+            {/* Radar Pulse Waves */}
+            <circle cx="18" cy="12" r="4.5" stroke="#00d4aa" strokeOpacity="0.55" strokeWidth="0.9" />
+            <circle cx="18" cy="12" r="2" fill="#00ffcc" />
+            <line x1="11.5" y1="12" x2="13" y2="12" stroke="#00ffcc" strokeWidth="0.9" />
+            <line x1="23" y1="12" x2="24.5" y2="12" stroke="#00ffcc" strokeWidth="0.9" />
+            <text
+              x="18"
+              y="21.8"
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fill="#00ffcc"
+              fontFamily="'JetBrains Mono', monospace"
+              fontSize="5"
+              fontWeight="900"
+              letterSpacing="0.4"
+            >
+              ECHO
+            </text>
+            <text
+              x="18"
+              y="26.6"
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fill="#ffffff"
+              fontFamily="'JetBrains Mono', monospace"
+              fontSize="4.6"
+              fontWeight="800"
+              letterSpacing="0.3"
+            >
+              {`G·0${echoGeneration || 1}`}
+            </text>
+          </svg>
+        </div>
+      )}
     </div>
   );
 }
@@ -136,29 +350,30 @@ function ProofSeal({ type }: { type: ProofType }) {
   
   return (
     <div style={{
-      position: 'absolute', top: '35%', right: '-8px',
-      transform: 'rotate(12deg) translateY(-50%)',
+      position: 'absolute', top: '42px', left: '8px',
+      transform: 'rotate(-6deg)',
       zIndex: 45,
       pointerEvents: 'none',
     }}>
       <div style={{
-        background: '#fff', border: `2.5px solid ${color}`,
-        padding: '5px 10px', boxShadow: `3px 3px 0 #000, 0 0 20px ${color}40`,
+        background: '#fff', border: `2px solid ${color}`,
+        padding: '4px 9px', boxShadow: `3px 3px 0 #000, 0 0 16px ${color}40`,
         display: 'flex', flexDirection: 'column', alignItems: 'center',
-        borderRadius: '2px',
+        borderRadius: '4px',
+        whiteSpace: 'nowrap',
       }}>
-        <span style={{ fontSize: '12px' }}>{icon}</span>
+        <span style={{ fontSize: '11px', lineHeight: 1 }}>{icon}</span>
         <span style={{ 
-          fontFamily: '"Impact", sans-serif', fontSize: '9px', 
+          fontFamily: '"Impact", sans-serif', fontSize: '8.5px', 
           color: '#000', textTransform: 'uppercase', lineHeight: 1,
-          marginTop: '1px', letterSpacing: '-0.2px'
+          marginTop: '2px', letterSpacing: '0.02em'
         }}>{label}</span>
         <div style={{ 
-          width: '100%', height: '1.5px', background: color, 
-          margin: '3px 0', opacity: 0.2 
+          width: '100%', height: '1px', background: color, 
+          margin: '2px 0', opacity: 0.25 
         }} />
         <span style={{ 
-          fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', 
+          fontFamily: '"JetBrains Mono", monospace', fontSize: '7.5px', 
           fontWeight: 900, color: '#000', lineHeight: 1
         }}>1 / 1</span>
       </div>
@@ -206,6 +421,11 @@ export default memo(function Card({
     return () => window.removeEventListener('card_skins_changed', reloadSkins);
   }, []);
 
+  // Holographic sheen: pointer / phone-tilt driven light + gentle 3D tilt.
+  const tiltRef = useRef<HTMLDivElement>(null);
+  const sheenRef = useRef<HTMLDivElement>(null);
+  useHoloTilt(tiltRef, sheenRef, { maxTilt: interactive ? 9 : 0, gyro: interactive });
+
   const rotateY = useMotionValue(!isRevealed ? 180 : 0);
   const frontVisibility = useTransform(rotateY, v => (Math.abs(v % 360) < 90 || Math.abs(v % 360) > 270 ? 'visible' : 'hidden'));
   const backVisibility  = useTransform(rotateY, v => (Math.abs(v % 360) >= 90 && Math.abs(v % 360) <= 270 ? 'visible' : 'hidden'));
@@ -215,12 +435,10 @@ export default memo(function Card({
       setRealClaimed(card.claimedCount);
       return;
     }
-    import('../services/vaultService').then(({ getClaimedCountForRarity, getClaimedCountForDay }) => {
-      if (edition === undefined) {
-        getClaimedCountForDay(card.day || 0).then(setRealClaimed);
-      } else {
-        getClaimedCountForRarity(card.day || 0, card.rarity || 'common').then(setRealClaimed);
-      }
+    // Per-rarity count only: the supply cap this feeds is per-rarity, so a
+    // day-total across all rarities must never be compared against it.
+    import('../services/vaultService').then(({ getClaimedCountForRarity }) => {
+      getClaimedCountForRarity(card.day || 0, card.rarity || 'common').then(setRealClaimed);
     });
   }, [card.day, card.rarity, card.claimedCount, edition]);
 
@@ -265,43 +483,16 @@ export default memo(function Card({
   const hasArt   = !imgError && !imgFailed && coverUrl;
 
   // ── Overlay state classification ──────────────────────────────────────────
-  // isMintedOut  : this specific copy EXCEEDS the supply (true excess, burnable)
-  // isOnlyOne    : supply is 1 and this copy is edition 1 — trophy pull, celebrate!
-  // isLastCopy   : this copy IS the last valid edition (edition === supply, supply > 1)
-  // Fallback when edition prop not passed: use claimed count, but strictly > not >=
-  const isExcessEdition = edition !== undefined ? edition > supply : claimed > supply;
+  // Excess is a property of a specific copy (its edition number), never of
+  // aggregate claim counts — a filled print run makes its last copy a
+  // trophy, not an excess copy. Nothing in PIM is minted yet, so no state
+  // here is ever labelled "minted".
+  const isExcessEdition = edition !== undefined && edition > supply;
   const isOnlyOne       = supply === 1 && (edition === 1 || (edition === undefined && claimed <= 1));
   const isLastCopy      = !isExcessEdition && !isOnlyOne && edition !== undefined && edition === supply && supply > 1;
-  const isBombshell     = card.cardSet === 'bombshell' || (card.id && card.id.includes('bombshell')) || (coverUrl && (coverUrl.includes('girl-covers') || coverUrl.includes('rare_covers')));
+  const isBombshell     = Boolean(card.cardSet === 'bombshell' || (card.id && card.id.includes('bombshell')) || (coverUrl && (coverUrl.includes('girl-covers') || coverUrl.includes('rare_covers'))));
 
   const mintPct = supply > 0 ? (Math.min(claimed, supply) / supply) * 100 : 0;
-
-  const bombshellBadge = isBombshell && (
-    <div style={{
-      position: 'absolute', top: '8px', left: '50%', transform: 'translateX(-50%)',
-      zIndex: 35, pointerEvents: 'none',
-      background: 'linear-gradient(135deg, rgba(255,20,147,0.92), rgba(139,0,139,0.92))',
-      border: '1.5px solid #ff69b4',
-      borderRadius: '20px',
-      padding: '2px 8px',
-      boxShadow: '0 0 14px rgba(255,20,147,0.7), inset 0 0 6px rgba(255,255,255,0.4)',
-      display: 'flex', alignItems: 'center', gap: '3px',
-      whiteSpace: 'nowrap',
-    }}>
-      <span style={{ fontSize: '8px' }}>💖</span>
-      <span style={{
-        fontFamily: '"Impact", "Arial Black", sans-serif',
-        fontSize: '8px',
-        fontWeight: 900,
-        color: '#ffffff',
-        letterSpacing: '0.1em',
-        textTransform: 'uppercase',
-        textShadow: '0 1px 2px rgba(0,0,0,0.8)',
-      }}>
-        BOMBSHELL
-      </span>
-    </div>
-  );
 
   const renderArt = (className = 'w-full h-full', rotated = false) => {
     const shouldRotate = rotated && !isSquare;
@@ -344,12 +535,12 @@ export default memo(function Card({
 
   // ── Mint bar shared ──────────────────────────────────────────────────────
   const mintBar = (
-    <div style={{ height: '2px', background: 'rgba(255,255,255,0.08)', borderRadius: '1px', overflow: 'hidden' }}>
-      <div style={{ height: '100%', width: `${mintPct}%`, background: rc.color, borderRadius: '1px', boxShadow: `0 0 6px ${rc.color}88` }} />
+    <div style={{ height: '3px', background: 'rgba(255,255,255,0.09)', borderRadius: '999px', overflow: 'hidden', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.7)' }}>
+      <div style={{ height: '100%', width: `${mintPct}%`, background: `linear-gradient(90deg, ${rc.color}cc, ${rc.color})`, borderRadius: '999px', boxShadow: `0 0 8px ${rc.color}99` }} />
     </div>
   );
 
-  // ── Daily overlay — gated to front face only ────────────────────────────
+  // ── Daily perimeter aura — badge is now rendered in CardCornerMedallions ─
   const dailyOverlay = (isDailyClaim || isDailyOrigin) && (
     <motion.div
       style={{
@@ -358,16 +549,25 @@ export default memo(function Card({
         rotateY: 0, visibility: frontVisibility,
       }}
     >
-      <div style={{
-        position: 'absolute', top: 0, left: 0, right: 0, padding: '6px 10px',
-        background: 'linear-gradient(180deg, rgba(0,0,0,0.85), transparent)',
-        borderTop: '2px solid rgba(255,215,0,0.45)',
-        display: 'flex', alignItems: 'center', gap: '5px',
-      }}>
-        <Gift size={11} style={{ color: '#ffd700' }} />
-        <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#ffd700', textShadow: '0 0 10px rgba(255,215,0,0.6)' }}>Daily Drop</span>
-      </div>
-      <div style={{ position: 'absolute', inset: 0, border: '1px solid rgba(255,215,0,0.25)', borderRadius: '12px', boxShadow: 'inset 0 0 20px rgba(255,215,0,0.06)' }} />
+      <div style={{ position: 'absolute', inset: 0, border: '1.5px solid rgba(255,215,0,0.32)', borderRadius: '12px', boxShadow: 'inset 0 0 22px rgba(255,215,0,0.08)' }} />
+    </motion.div>
+  );
+
+  // ── Non-overlapping Corner Circle Medallions (Bombshell / Daily / Echo) ──
+  const cornerMedallionsOverlay = (isBombshell || isDailyClaim || isDailyOrigin || isEcho) && (
+    <motion.div
+      style={{
+        position: 'absolute', inset: 0, zIndex: 36, pointerEvents: 'none', borderRadius: '12px', overflow: 'hidden',
+        backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
+        rotateY: 0, visibility: frontVisibility,
+      }}
+    >
+      <CardCornerMedallions
+        isBombshell={isBombshell}
+        isDaily={Boolean(isDailyClaim || isDailyOrigin)}
+        isEcho={isEcho}
+        echoGeneration={echoGeneration}
+      />
     </motion.div>
   );
 
@@ -390,39 +590,55 @@ export default memo(function Card({
     </motion.div>
   );
 
-  // ── Last copy badge — subtle, not a penalty ──────────────────────────────
+  // ── Last copy — trophy treatment, never a penalty ───────────────────────
+  // This copy closed the print run: art stays full colour, framed in the
+  // rarity colour with a FINAL PRINT seal.
   const lastCopyBadge = isLastCopy && (
-    <motion.div
-      initial={{ opacity: 0, y: 4 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.3 }}
-      style={{
-        position: 'absolute', bottom: '38px', left: '50%', transform: 'translateX(-50%)',
-        zIndex: 41, pointerEvents: 'none',
-        visibility: frontVisibility,
-      }}
-    >
-      <div style={{
-        padding: '3px 10px',
-        border: `1.5px solid ${rc.color}88`,
-        color: rc.color,
-        fontFamily: '"JetBrains Mono", monospace',
-        fontSize: '7px',
-        fontWeight: 700,
-        textTransform: 'uppercase',
-        letterSpacing: '0.2em',
-        background: 'rgba(0,0,0,0.85)',
-        borderRadius: '3px',
-        boxShadow: `0 0 10px ${rc.color}30`,
-        whiteSpace: 'nowrap',
-      }}>
-        LAST COPY
-      </div>
-    </motion.div>
+    <>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2, duration: 0.4 }}
+        style={{
+          position: 'absolute', inset: 0, zIndex: 39, pointerEvents: 'none', borderRadius: '12px',
+          border: `1.5px solid ${rc.color}66`,
+          boxShadow: `inset 0 0 26px ${rc.color}26, 0 0 18px ${rc.color}33`,
+          visibility: frontVisibility,
+        }}
+      />
+      <motion.div
+        initial={{ opacity: 0, y: 4 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        style={{
+          position: 'absolute', bottom: '38px', left: '50%', transform: 'translateX(-50%)',
+          zIndex: 41, pointerEvents: 'none',
+          visibility: frontVisibility,
+        }}
+      >
+        <div style={{
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
+          padding: '5px 12px',
+          border: `1.5px solid ${rc.color}`,
+          color: rc.color,
+          fontFamily: '"JetBrains Mono", monospace',
+          textTransform: 'uppercase',
+          background: 'rgba(0,0,0,0.88)',
+          borderRadius: '3px',
+          boxShadow: `0 0 16px ${rc.color}55`,
+          whiteSpace: 'nowrap',
+        }}>
+          <span style={{ fontSize: '8px', fontWeight: 900, letterSpacing: '0.22em' }}>✦ Final Print ✦</span>
+          <span style={{ fontSize: '6px', fontWeight: 700, letterSpacing: '0.16em', color: 'rgba(255,255,255,0.75)' }}>
+            Last copy {edition}/{supply} · Run closed · Never reissued
+          </span>
+        </div>
+      </motion.div>
+    </>
   );
 
-  // ── Minted out overlay — only for actual excess copies (edition > supply) ─
-  const mintedOutOverlay = isExcessEdition && (
+  // ── Excess copy overlay — only for actual excess copies (edition > supply) ─
+  const excessOverlay = isExcessEdition && (
     <motion.div
       style={{
         position: 'absolute', inset: 0, zIndex: 40, pointerEvents: 'none', borderRadius: '12px',
@@ -432,7 +648,7 @@ export default memo(function Card({
         visibility: frontVisibility,
       }}
     >
-      {/* MINTED OUT stamp */}
+      {/* EXCESS COPY stamp */}
       <div style={{
         padding: '6px 14px', border: '3px solid #ff3800', color: '#ff3800',
         fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '22px',
@@ -441,7 +657,7 @@ export default memo(function Card({
         boxShadow: '0 0 24px rgba(255,56,0,0.5)',
         textShadow: '0 0 12px rgba(255,56,0,0.8)',
       }}>
-        MINTED OUT
+        EXCESS COPY
       </div>
 
       {/* Burn button — always visible, permanent fixture */}
@@ -457,7 +673,7 @@ export default memo(function Card({
             boxShadow: '0 0 28px rgba(255,56,0,0.85), 0 0 8px rgba(255,56,0,0.4)',
             transition: 'transform 0.15s, box-shadow 0.15s',
           }}
-          title="Burn for V⚡ tokens"
+          title="Burn for V⚡ sparks"
           onMouseEnter={e => {
             e.currentTarget.style.transform = 'scale(1.12)';
             e.currentTarget.style.boxShadow = '0 0 38px rgba(255,56,0,1), 0 0 12px rgba(255,56,0,0.6)';
@@ -864,6 +1080,12 @@ export default memo(function Card({
   // FRONT FACES
   // ════════════════════════════════════════════════════════════════════════
 
+  const holoVariant: HoloVariant =
+    card.rarity === 'mythic' ? 'cosmic' :
+    card.rarity === 'legendary' ? 'prism' :
+    card.rarity === 'rare' ? 'holo' : 'gloss';
+  const holoLayer = <HoloSheen ref={sheenRef} variant={holoVariant} tint={rc.color} />;
+
   const sharedFrontStyle = {
     position: 'absolute' as const, inset: 0, borderRadius: '12px', overflow: 'hidden',
     backfaceVisibility: 'hidden' as const, WebkitBackfaceVisibility: 'hidden' as const,
@@ -872,29 +1094,43 @@ export default memo(function Card({
     willChange: 'transform' as const,
   };
 
-  // ── COMMON: Bold editorial / press-stamp ─────────────────────────────
+  // ── COMMON: Bold editorial / press-stamp hardware chassis ─────────────
   const commonFront = (
-    <motion.div style={{ ...sharedFrontStyle, background: '#0c0a07', border: `1.5px solid ${rc.color}50` }}>
-      {/* Top strip */}
-      <div style={{ padding: '4px 10px', borderBottom: `1px solid ${rc.color}20`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: `${rc.color}08`, flexShrink: 0 }}>
-        <div style={{ transform: 'scale(0.85)', transformOrigin: 'left center' }}>
+    <motion.div style={{
+      ...sharedFrontStyle,
+      background: 'linear-gradient(180deg, #120f0b 0%, #090806 100%)',
+      border: `1.5px solid ${rc.color}65`,
+      boxShadow: `inset 0 1px 0 rgba(255,255,255,0.12), inset 0 0 18px rgba(0,0,0,0.8)`,
+      display: 'flex',
+      flexDirection: 'column',
+    }}>
+      {/* Top hardware strip */}
+      <div style={{
+        padding: '5px 8px',
+        borderBottom: `1px solid ${rc.color}28`,
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        background: `linear-gradient(90deg, ${rc.color}16 0%, rgba(0,0,0,0.5) 100%)`,
+        flexShrink: 0,
+      }}>
+        <div style={{ transform: 'scale(0.86)', transformOrigin: 'left center' }}>
           <DayNumberBadge day={day} color={rc.color} />
         </div>
         <RarityBadge rarity={card.rarity} size="sm" />
       </div>
-      {bombshellBadge}
 
       {/* Art — 46% keeps info breathing room */}
-      <div style={{ position: 'relative', height: '46%', flexShrink: 0, borderBottom: `1px solid ${rc.color}20`, overflow: 'hidden' }}>
+      <div style={{ position: 'relative', height: '46%', flexShrink: 0, borderBottom: `1px solid ${rc.color}30`, overflow: 'hidden' }}>
         {renderArt('w-full h-full')}
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, transparent 60%, rgba(0,0,0,0.5) 100%)' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.18) 0%, transparent 55%, rgba(0,0,0,0.65) 100%)' }} />
       </div>
 
       {/* Info */}
-      <div style={{ padding: '6px 10px 8px', display: 'flex', flexDirection: 'column', gap: '3px', flex: 1, overflow: 'hidden' }}>
+      <div style={{ padding: '7px 10px 8px', display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, overflow: 'hidden' }}>
         {/* Rule */}
-        <div style={{ height: '1.5px', background: `linear-gradient(90deg, ${rc.color}60, transparent)`, flexShrink: 0 }} />
-        <h3 style={{ margin: 0, fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '15px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.3px', color: '#faf0d8', lineHeight: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0 }}>{title}</h3>
+        <div style={{ height: '1.5px', background: `linear-gradient(90deg, ${rc.color}80, transparent)`, flexShrink: 0 }} />
+        <h3 style={{ margin: 0, fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '15px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.2px', color: '#faf0d8', lineHeight: 1.05, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0, textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>{title}</h3>
         <div style={{ display: 'flex', gap: '3px', flexShrink: 0 }}>
           {[
             {label:'NRG', value: Math.round(energy * 100)},
@@ -904,118 +1140,154 @@ export default memo(function Card({
           ].map(s => <div key={s.label} style={{ flex: 1 }}><StatBox label={s.label} value={s.value} color={rc.color} /></div>)}
         </div>
         <div style={{ flexShrink: 0 }}>{mintBar}</div>
-        <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '7px', color: 'rgba(255,255,255,0.2)', textTransform: 'uppercase', flexShrink: 0, lineHeight: 1 }}>{claimed} PULLED · {day > 0 ? formatDate(day) : ''}</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '7.5px', fontWeight: 700, color: 'rgba(255,255,255,0.38)', textTransform: 'uppercase', lineHeight: 1 }}>{claimed} PULLED</span>
+          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '7.5px', color: 'rgba(255,255,255,0.28)', textTransform: 'uppercase', lineHeight: 1 }}>{day > 0 ? formatDate(day) : ''}</span>
+        </div>
         {showAudio && audioUrl && <div style={{ flexShrink: 0 }}><AudioPreview audioUrl={audioUrl} title={title} rarity={card.rarity} /></div>}
         {claimBtn}
         {proof && <ProofSeal type={proof} />}
       </div>
+      {holoLayer}
     </motion.div>
   );
 
   // ── UNCOMMON: Glossy laminate frame ──────────────────────────────────
   const uncommonFront = (
-    <motion.div style={{ ...sharedFrontStyle, background: '#0c0a07', border: `2px solid ${rc.color}60` }}>
-      {/* Gloss sheen */}
-      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(115deg, transparent 25%, rgba(255,255,255,0.07) 40%, rgba(255,255,255,0.13) 50%, transparent 58%)', pointerEvents: 'none', zIndex: 10 }} />
-      {bombshellBadge}
+    <motion.div style={{
+      ...sharedFrontStyle,
+      background: 'linear-gradient(180deg, #0d140f 0%, #070b08 100%)',
+      border: `2px solid ${rc.color}75`,
+      boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18), 0 0 18px ${rc.color}20`,
+      display: 'flex',
+      flexDirection: 'column',
+    }}>
 
-      {/* Art — larger crop */}
-      <div style={{ position: 'relative', height: '62%', overflow: 'hidden', borderBottom: `1.5px solid ${rc.color}40` }}>
+      {/* Art — larger crop with clean top header bar */}
+      <div style={{ position: 'relative', height: '60%', overflow: 'hidden', borderBottom: `1.5px solid ${rc.color}55`, flexShrink: 0 }}>
         {renderArt('w-full h-full')}
-        {/* Day badge */}
-        <div style={{ position: 'absolute', top: '8px', left: '8px', transform: 'scale(0.85)', transformOrigin: 'top left' }}>
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.45) 0%, transparent 28%, transparent 58%, rgba(0,0,0,0.72) 100%)' }} />
+        {/* Top Day + Rarity badges on artwork header so title gets 100% width below */}
+        <div style={{ position: 'absolute', top: '8px', left: '8px', transform: 'scale(0.86)', transformOrigin: 'top left', zIndex: 12 }}>
           <DayNumberBadge day={day} color={rc.color} />
         </div>
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, transparent 55%, rgba(0,0,0,0.55) 100%)' }} />
+        <div style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 12 }}>
+          <RarityBadge rarity={card.rarity} size="sm" />
+        </div>
       </div>
 
       {/* Info strip */}
       <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: '5px', flex: 1 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <h3 style={{ margin: 0, fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '16px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.3px', color: '#faf0d8', lineHeight: 1.05, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</h3>
-          <div style={{ marginLeft: '6px', flexShrink: 0 }}><RarityBadge rarity={card.rarity} size="sm" /></div>
-        </div>
-        <div style={{ display: 'flex', gap: '8px', fontSize: '9px', fontFamily: '"JetBrains Mono", monospace', color: rc.color, alignItems: 'center' }}>
+        <h3 style={{ margin: 0, fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '16px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.2px', color: '#faf0d8', lineHeight: 1.05, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textShadow: '0 1px 6px rgba(0,0,0,0.85)' }}>{title}</h3>
+        <div style={{ display: 'flex', gap: '6px', fontSize: '8.5px', fontFamily: '"JetBrains Mono", monospace', fontWeight: 700, color: rc.color, alignItems: 'center', background: 'rgba(0,0,0,0.4)', padding: '3px 7px', borderRadius: '4px', border: `1px solid ${rc.color}28` }}>
           <span>{Math.round(energy * 100)} NRG</span>
-          <span style={{ opacity: 0.3 }}>·</span>
+          <span style={{ opacity: 0.35 }}>·</span>
           <span>{tempo} BPM</span>
-          <span style={{ opacity: 0.3 }}>·</span>
-          <span style={{ color: 'rgba(255,255,255,0.3)' }}>{mood === 'light' ? '☀ Light' : '🌙 Dark'}</span>
+          <span style={{ opacity: 0.35 }}>·</span>
+          <span style={{ color: 'rgba(255,255,255,0.65)', marginLeft: 'auto' }}>{mood === 'light' ? '☀ LIGHT' : '🌙 DARK'}</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '7px', color: 'rgba(255,255,255,0.2)', minWidth: '60px' }}>{claimed} PULLED</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: 'auto' }}>
+          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '7.5px', fontWeight: 700, color: 'rgba(255,255,255,0.38)', whiteSpace: 'nowrap' }}>{claimed} PULLED</span>
           <div style={{ flex: 1 }}>{mintBar}</div>
         </div>
         {showAudio && audioUrl && <AudioPreview audioUrl={audioUrl} title={title} rarity={card.rarity} />}
         {claimBtn}
         {proof && <ProofSeal type={proof} />}
       </div>
+      {holoLayer}
     </motion.div>
   );
 
   // ── RARE: Full-bleed glassmorphism ────────────────────────────────────
   const rareFront = (
-    <motion.div style={{ ...sharedFrontStyle, border: `1.5px solid ${rc.color}70` }}>
+    <motion.div style={{
+      ...sharedFrontStyle,
+      border: `1.5px solid ${rc.color}85`,
+      boxShadow: `inset 0 1px 0 rgba(255,255,255,0.22), 0 0 22px ${rc.color}28`,
+    }}>
       {/* Full bleed art */}
       <div style={{ position: 'absolute', inset: 0 }}>{renderArt('w-full h-full')}</div>
       {/* Tinted overlay */}
-      <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, rgba(0,0,0,0.15) 0%, transparent 35%, rgba(0,0,0,0.55) 65%, rgba(0,0,0,0.92) 100%)` }} />
-      {/* Blue tint */}
-      <div style={{ position: 'absolute', inset: 0, background: `${rc.color}08`, pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, rgba(0,0,0,0.42) 0%, transparent 32%, rgba(0,0,0,0.55) 64%, rgba(4,10,20,0.94) 100%)` }} />
+      {/* Sapphire tint */}
+      <div style={{ position: 'absolute', inset: 0, background: `${rc.color}0a`, pointerEvents: 'none' }} />
 
-      {/* Day */}
-      <div style={{ position: 'absolute', top: '10px', left: '10px', transform: 'scale(0.9)', transformOrigin: 'top left' }}>
+      {/* Top Header: Day left, Rarity right */}
+      <div style={{ position: 'absolute', top: '8px', left: '8px', transform: 'scale(0.88)', transformOrigin: 'top left', zIndex: 15 }}>
         <DayNumberBadge day={day} color={rc.color} />
       </div>
-      {bombshellBadge}
-      <div style={{ position: 'absolute', top: '10px', right: '10px' }}><RarityBadge rarity={card.rarity} size="sm" /></div>
+      <div style={{ position: 'absolute', top: '8px', right: '8px', zIndex: 15 }}>
+        <RarityBadge rarity={card.rarity} size="sm" />
+      </div>
 
       {/* Glass info drawer */}
-      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '14px', background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)', borderTop: `1px solid rgba(255,255,255,0.12)` }}>
-        <h3 style={{ margin: '0 0 4px', fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '19px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.3px', color: '#faf0d8', lineHeight: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textShadow: '0 2px 8px rgba(0,0,0,0.7)' }}>{title}</h3>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase' }}>{claimed} PULLED · {mood === 'light' ? '☀' : '🌙'} {mood}</span>
-          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', color: rc.color }}>{tempo} BPM</span>
+      <div style={{
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        padding: '11px 12px 12px',
+        background: 'linear-gradient(180deg, rgba(8,16,32,0.68) 0%, rgba(4,8,18,0.88) 100%)',
+        backdropFilter: 'blur(18px)',
+        WebkitBackdropFilter: 'blur(18px)',
+        borderTop: `1px solid ${rc.color}55`,
+        boxShadow: '0 -6px 20px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.18)',
+        zIndex: 15,
+      }}>
+        <h3 style={{ margin: '0 0 5px', fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '18px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.2px', color: '#faf0d8', lineHeight: 1.05, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textShadow: '0 2px 8px rgba(0,0,0,0.85)' }}>{title}</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', gap: '4px' }}>
+          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', fontWeight: 700, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{claimed} PULLED · {mood === 'light' ? '☀' : '🌙'} {mood}</span>
+          <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', fontWeight: 700, color: '#e0f2fe', background: `${rc.color}30`, border: `1px solid ${rc.color}65`, padding: '1px 6px', borderRadius: '999px', whiteSpace: 'nowrap' }}>{Math.round(energy * 100)} NRG</span>
+            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', fontWeight: 700, color: rc.color, background: 'rgba(0,0,0,0.45)', border: `1px solid ${rc.color}45`, padding: '1px 6px', borderRadius: '999px', whiteSpace: 'nowrap' }}>{tempo} BPM</span>
+          </div>
         </div>
         {mintBar}
         {showAudio && audioUrl && <div style={{ marginTop: '6px' }}><AudioPreview audioUrl={audioUrl} title={title} rarity={card.rarity} /></div>}
         {claimBtn}
-        {proof && <ProofSeal type={proof} />}
       </div>
+      {proof && <ProofSeal type={proof} />}
+      {holoLayer}
     </motion.div>
   );
 
   // ── LEGENDARY: Foil + gradient ────────────────────────────────────────
   const legendaryFront = (
-    <motion.div style={{ ...sharedFrontStyle, border: `2px solid ${rc.color}80` }}>
+    <motion.div style={{
+      ...sharedFrontStyle,
+      border: `2px solid ${rc.color}95`,
+      boxShadow: `inset 0 0 18px ${rc.color}35, 0 0 24px ${rc.color}30`,
+    }}>
       {/* Art */}
       <div style={{ position: 'absolute', inset: 0 }}>{renderArt('w-full h-full', true)}</div>
 
-      {/* Foil wash — diagonal rainbow, seamless loop */}
-      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'linear-gradient(125deg, rgba(255,215,0,0.12) 0%, rgba(255,0,180,0.1) 25%, rgba(0,200,255,0.1) 50%, rgba(160,0,255,0.12) 75%, rgba(255,215,0,0.12) 100%)', backgroundSize: '300% 100%', animation: 'foil-sweep 4s linear infinite', opacity: 0.9 }} />
-
-      {/* Gloss band */}
-      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(105deg, transparent 28%, rgba(255,255,255,0.18) 42%, rgba(255,255,255,0.04) 52%, transparent 62%)', pointerEvents: 'none' }} />
-
       {/* Gradient overlay */}
-      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.55) 0%, transparent 22%, transparent 50%, rgba(0,0,0,0.72) 75%, rgba(0,0,0,0.96) 100%)' }} />
+      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.58) 0%, transparent 24%, transparent 48%, rgba(12,4,22,0.78) 74%, rgba(6,2,12,0.97) 100%)' }} />
 
-      {/* Top badges */}
-      <div style={{ position: 'absolute', top: '10px', left: '10px', right: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ padding: '3px 9px', background: `${rc.color}30`, border: `1px solid ${rc.color}70`, borderRadius: '3px' }}>
-          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', fontWeight: 700, color: rc.color, letterSpacing: '0.1em', textTransform: 'uppercase' }}>★ LEGENDARY</span>
-        </div>
-        {bombshellBadge}
-        <div style={{ transform: 'scale(0.85)', transformOrigin: 'right center' }}>
+      {/* Top badges: DayNumberBadge on Left, Legendary Crown Pill on Right */}
+      <div style={{ position: 'absolute', top: '8px', left: '8px', right: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 18 }}>
+        <div style={{ transform: 'scale(0.86)', transformOrigin: 'left center' }}>
           <DayNumberBadge day={day} color={rc.color} />
+        </div>
+        <div style={{
+          padding: '4px 11px',
+          background: `linear-gradient(135deg, rgba(20,8,36,0.9) 0%, ${rc.color}40 100%)`,
+          border: `1px solid ${rc.color}95`,
+          borderRadius: '6px',
+          boxShadow: `0 2px 10px rgba(0,0,0,0.6), 0 0 12px ${rc.color}45, inset 0 1px 0 rgba(255,255,255,0.22)`,
+          backdropFilter: 'blur(6px)',
+          whiteSpace: 'nowrap',
+        }}>
+          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8.5px', fontWeight: 800, color: '#f3e8ff', letterSpacing: '0.1em', textTransform: 'uppercase', textShadow: `0 0 8px ${rc.color}` }}>★ LEGENDARY</span>
         </div>
       </div>
 
       {/* Bottom info */}
-      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '12px' }}>
-        <h3 style={{ margin: '0 0 3px', fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '18px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.3px', color: '#faf0d8', textShadow: '0 2px 8px rgba(0,0,0,0.9)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</h3>
-        <div style={{ display: 'flex', gap: '6px', marginBottom: '6px', alignItems: 'center' }}>
-          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase' }}>Day {day} · {claimed} PULLED</span>
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '12px', zIndex: 18 }}>
+        <h3 style={{ margin: '0 0 4px', fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '18px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.2px', color: '#faf0d8', textShadow: '0 2px 8px rgba(0,0,0,0.95)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', fontWeight: 700, color: 'rgba(255,255,255,0.52)', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>DAY {day} · {claimed} PULLED</span>
+          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', fontWeight: 700, color: '#e9d5ff', background: `${rc.color}28`, border: `1px solid ${rc.color}60`, padding: '1px 7px', borderRadius: '999px', whiteSpace: 'nowrap' }}>{tempo} BPM · {Math.round(energy * 100)} NRG</span>
         </div>
         {mintBar}
         {showAudio && audioUrl && <div style={{ marginTop: '6px' }}><AudioPreview audioUrl={audioUrl} title={title} rarity={card.rarity} /></div>}
@@ -1024,8 +1296,9 @@ export default memo(function Card({
             ★ Claim Legendary
           </button>
         )}
-        {proof && <ProofSeal type={proof} />}
       </div>
+      {proof && <ProofSeal type={proof} />}
+      {holoLayer}
     </motion.div>
   );
 
@@ -1067,19 +1340,18 @@ export default memo(function Card({
       <div
         style={{
           position: 'absolute',
-          top: '10px',
-          left: '10px',
-          right: '10px',
+          top: '8px',
+          left: '8px',
+          right: '8px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           zIndex: 20,
         }}
       >
-        <div style={{ transform: 'scale(0.85)', transformOrigin: 'left center' }}>
+        <div style={{ transform: 'scale(0.86)', transformOrigin: 'left center' }}>
           <DayNumberBadge day={day} color={rc.color} />
         </div>
-        {bombshellBadge}
         <MythicCrownBadge />
       </div>
 
@@ -1113,12 +1385,17 @@ export default memo(function Card({
         >
           {title}
         </h3>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '9px', fontWeight: 700, color: rc.color }}>
-            DAY {day}
-          </span>
-          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', color: 'rgba(255,215,0,0.6)', fontWeight: 700 }}>
-            • 1 OF 1 GENESIS
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px' }}>
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8.5px', fontWeight: 800, color: rc.color, whiteSpace: 'nowrap' }}>
+              DAY {day}
+            </span>
+            <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', color: 'rgba(255,215,0,0.75)', fontWeight: 700, whiteSpace: 'nowrap' }}>
+              • 1 OF 1 GENESIS
+            </span>
+          </div>
+          <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', fontWeight: 800, color: '#0a0800', background: 'linear-gradient(90deg, #ffd700, #ffaa00)', padding: '1px 7px', borderRadius: '999px', whiteSpace: 'nowrap' }}>
+            {tempo} BPM
           </span>
         </div>
         <div style={{ height: '2.5px', background: 'rgba(255,255,255,0.12)', borderRadius: '1px', overflow: 'hidden' }}>
@@ -1158,8 +1435,9 @@ export default memo(function Card({
             ✦ Claim Mythic 1/1
           </button>
         )}
-        {proof && <ProofSeal type={proof} />}
       </div>
+      {proof && <ProofSeal type={proof} />}
+      {holoLayer}
     </motion.div>
   );
 
@@ -1193,6 +1471,7 @@ export default memo(function Card({
       className="relative group"
       style={{ perspective: '900px' }}
     >
+      <div ref={tiltRef} className="holo-tilt" style={{ borderRadius: '12px' }}>
       <motion.div
         onClick={handleClick}
         style={{
@@ -1205,13 +1484,14 @@ export default memo(function Card({
         }}
       >
         {frontFace}
+        {cornerMedallionsOverlay}
         {dailyOverlay}
         {cardBack}
-        {mintedOutOverlay}
+        {excessOverlay}
         {onlyOneOutline}
         {lastCopyBadge}
 
-        {/* ===== ECHO GLITCH OVERLAY ===== */}
+        {/* ===== ECHO GLITCH OVERLAY (CRT Scanline & Watermark; badge lives in CardCornerMedallions) ===== */}
         {isEcho && (
           <motion.div
             style={{
@@ -1223,7 +1503,7 @@ export default memo(function Card({
             {/* Chromatic aberration border — RGB split */}
             <div style={{
               position: 'absolute', inset: 0, borderRadius: '12px',
-              boxShadow: `inset 2px 0 0 rgba(255,0,0,0.15), inset -2px 0 0 rgba(0,255,255,0.15), inset 0 2px 0 rgba(0,255,0,0.08)`,
+              boxShadow: `inset 2px 0 0 rgba(255,0,0,0.16), inset -2px 0 0 rgba(0,255,255,0.16), inset 0 2px 0 rgba(0,255,0,0.08)`,
             }} />
 
             {/* Heavier scanlines */}
@@ -1255,29 +1535,10 @@ export default memo(function Card({
             }}>
               {echoGeneration >= 3 ? 'ENTROPY' : `RE-ENTRY 00${echoGeneration}`}
             </div>
-
-            {/* Generation badge — top right */}
-            <div style={{
-              position: 'absolute', top: '8px', right: '8px',
-              padding: '2px 7px',
-              background: 'rgba(0,0,0,0.75)',
-              border: '1px solid rgba(0,212,170,0.4)',
-              borderRadius: '3px',
-              backdropFilter: 'blur(4px)',
-            }}>
-              <span style={{
-                fontFamily: '"JetBrains Mono", monospace',
-                fontSize: '8px', fontWeight: 700,
-                letterSpacing: '0.1em',
-                color: echoGeneration >= 3 ? 'rgba(255,255,255,0.3)' : '#00d4aa',
-                textTransform: 'uppercase',
-              }}>
-                ◎ RE-ENTRY {echoGeneration}
-              </span>
-            </div>
           </motion.div>
         )}
       </motion.div>
+      </div>
 
       {/* Hover glow — legendary/mythic/daily */}
       {(['legendary','mythic'].includes(card.rarity) || isDailyClaim) && interactive && (

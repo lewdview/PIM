@@ -103,7 +103,7 @@ export default function PaymentSelectModal({
           {/* Selector options */}
           <div className="p-6 space-y-4">
             <p className="text-center font-mono text-[10px] text-white/40 leading-relaxed max-w-xs mx-auto">
-              Decrypting assets requires network fee confirmation. Select your preferred gateway below.
+              Choose how you want to pay.
             </p>
 
             {/* Pay with Crypto Option */}
@@ -204,7 +204,7 @@ export default function PaymentSelectModal({
                 <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-amber-500/10 border border-amber-500/20 text-amber-300 font-mono text-[8.5px] leading-tight">
                   <AlertCircle size={11} className="flex-shrink-0 text-amber-400" />
                   <span>
-                    Card transactions must be $0.50 minimum. Use Crypto above or select a multi-card pack.
+                    Card payments start at $0.50. Pay with crypto or pick a bigger pack.
                   </span>
                 </div>
               )}
@@ -214,7 +214,7 @@ export default function PaymentSelectModal({
             <div className="pt-4 border-t border-white/5 flex gap-2.5 items-start font-mono text-[8px] text-white/35 leading-normal">
               <ShieldAlert className="flex-shrink-0 text-white/40 mt-0.5" size={12} />
               <span>
-                Clearance protocols encrypt your details end-to-end. Decrypted items are automatically minted to your connected profile wallet upon approval.
+                Payment is handled by Stripe or your wallet. Your cards go to your connected profile once it clears.
               </span>
             </div>
           </div>

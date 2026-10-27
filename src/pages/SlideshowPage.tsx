@@ -1040,7 +1040,7 @@ export default function SlideshowPage() {
                             const balance = useVaultStore.getState().tokenBalance;
                             if (balance < item.cost) {
                               audioManager.playSfx('locked_out', 0.25);
-                              alert("INSUFFICIENT TOKEN BALANCE!");
+                              alert("NOT ENOUGH SPARKS.");
                               return;
                             }
                             // Deduct and unlock via Supabase profile cheats

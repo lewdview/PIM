@@ -970,7 +970,7 @@ export async function buyTokenBundleWithCrypto(
 export async function targetedPull(day: number): Promise<OwnedCard | null> {
   const currentWorldDay = getCurrentDay();
   if (day > currentWorldDay) {
-    alert(`Day ${day} is locked. Targeted Pull is restricted to released calendar days (Day 1 to ${currentWorldDay}). Future tracks require a Prophecy Pull.`);
+    alert(`Day ${day} hasn't dropped yet. Targeted Pull covers Day 1–${currentWorldDay}. Future days need a Prophecy Pull.`);
     return null;
   }
   try {
@@ -1056,7 +1056,7 @@ export async function redeemBonusCode(code: string): Promise<{ success: boolean;
     return {
       success: true,
       rewardType: 'cheat_code',
-      rewardValue: 'CAMERA POV PERSPECTIVE ENGINE UNLOCKED!',
+      rewardValue: 'CAMERA VIEWS UNLOCKED',
       result: { success: true }
     };
   }
@@ -1071,7 +1071,7 @@ export async function redeemBonusCode(code: string): Promise<{ success: boolean;
     return {
       success: true,
       rewardType: 'cheat_code',
-      rewardValue: 'MASTER CHART EDITIONS UNLOCKED!',
+      rewardValue: 'MASTER CHART EDITIONS UNLOCKED',
       result: { success: true }
     };
   }

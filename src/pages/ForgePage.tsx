@@ -329,7 +329,7 @@ function EchoStatusPanel({ refreshTrigger }: { refreshTrigger?: number }) {
             fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '18px',
             textTransform: 'uppercase',
           }}>Echo Pool</span>
-          <InfoTooltip text="Global echo pool — burned cards fracture into echoes that re-enter pack pools for all players." />
+          <InfoTooltip text="Burned cards become echoes that go back into everyone's pack pool." />
         </div>
         <div style={{
           fontFamily: '"Impact", sans-serif', fontSize: '28px', color: '#00d4aa',
@@ -606,20 +606,20 @@ export default function ForgePage() {
     const mult = size === 'fifty' ? 50 : size === 'twentyfive' ? 25 : size === 'ten' ? 10 : size === 'five' ? 5 : size === 'double' ? 2 : 1;
     const cost = isBombshell ? (100 * mult) : packCost;
     if (tokenBalance < cost) {
-      alert(`Insufficient V⚡ sparks. You need ${cost} V⚡.`);
+      alert(`Not enough V⚡ sparks. This costs ${cost} V⚡.`);
       return;
     }
     try {
-      useLoadingToast.getState().show('Purchasing pack…');
+      useLoadingToast.getState().show('Opening pack…');
       const cards = await buyTokenPack(packType, size);
       useLoadingToast.getState().hide();
       if (cards === 'insufficient') {
-        alert('Insufficient V⚡ sparks for this pack.');
+        alert('Not enough V⚡ sparks for this pack.');
         await loadVaultData();
         return;
       }
       if (cards.length === 0) {
-        alert('Pack purchase failed — please try again.');
+        alert('Purchase didn\'t go through. Try again.');
         await loadVaultData();
         return;
       }
@@ -646,7 +646,7 @@ export default function ForgePage() {
     } catch (e) {
       console.error('Token pack purchase error:', e);
       useLoadingToast.getState().hide();
-      alert('Pack purchase failed — please try again.');
+      alert('Purchase didn\'t go through. Try again.');
       await loadVaultData();
     }
   }, [tokenBalance, packCost, addToCollection, loadVaultData, startReveal, setLocation]);
@@ -656,12 +656,12 @@ export default function ForgePage() {
     const day = parseInt(targetDay, 10);
     if (!day || day < 1 || day > today || tokenBalance < 275) {
       if (day > today) {
-        alert(`Day ${day} is locked. Targeted Pull is restricted to released calendar days (Day 1 to ${today}). Future tracks require a Prophecy Pull.`);
+        alert(`Day ${day} hasn't dropped yet. Targeted Pull covers Day 1–${today}. Future days need a Prophecy Pull.`);
       }
       return;
     }
     setTargetLoading(true);
-    useLoadingToast.getState().show('Targeted pull…');
+    useLoadingToast.getState().show(`Pulling Day ${day}…`);
     const card = await targetedPull(day);
     useLoadingToast.getState().hide();
     if (card) {
@@ -731,7 +731,15 @@ export default function ForgePage() {
   );
 
   return (
-    <div className="flex-1 w-full pb-36 md:pb-8" style={{ minHeight: '100vh' }}>
+    <div
+      className="flex-1 w-full"
+      style={{
+        minHeight: '100dvh',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 6.5rem)',
+      }}
+    >
       {/* ═══ HERO HEADER ═══ */}
       <section style={{
         position: 'relative', padding: '16px 16px 32px',
@@ -778,7 +786,7 @@ export default function ForgePage() {
               textTransform: 'uppercase', letterSpacing: '0.15em',
               opacity: 0.45, marginTop: '8px', maxWidth: '420px',
             }}>
-              Burn cards for V⚡ sparks · Echoes fracture back into the pool · Upgrades unlock as you progress
+              Burn cards for V⚡ sparks. Echoes return to the pack pool.
             </p>
           </motion.div>
 
@@ -796,6 +804,7 @@ export default function ForgePage() {
               display: 'flex', alignItems: 'center', gap: '12px',
               padding: '12px 20px', border: '2px solid #000',
               background: '#0d0d0d', boxShadow: '4px 4px 0 #000',
+              clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
             }}>
               <Zap size={22} style={{ color: '#ff9900' }} />
               <div>
@@ -817,19 +826,21 @@ export default function ForgePage() {
               onClick={() => handleBuyTokenPack('vault_token')}
               disabled={!canAfford}
               style={{
-                padding: '12px 20px',
+                padding: '12px 24px',
+                minHeight: '48px',
                 background: canAfford ? 'linear-gradient(135deg, #ff9900, #ffb800)' : 'rgba(255,255,255,0.04)',
                 color: canAfford ? '#000' : 'rgba(255,255,255,0.2)',
                 border: '2px solid #000',
                 fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '16px',
-                textTransform: 'uppercase', letterSpacing: '0.02em',
+                textTransform: 'uppercase', letterSpacing: '0.04em',
                 cursor: canAfford ? 'pointer' : 'not-allowed',
                 boxShadow: canAfford ? '4px 4px 0 #000, 0 0 20px rgba(255,153,0,0.3)' : '2px 2px 0 #000',
+                clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
                 display: 'flex', alignItems: 'center', gap: '8px',
                 transition: 'all 0.2s',
               }}
             >
-              <Zap size={15} />
+              <Zap size={16} />
               Vault Pack ({packCost} V⚡)
             </motion.button>
 
@@ -840,14 +851,16 @@ export default function ForgePage() {
               onClick={() => handleBuyTokenPack('bombshell_token')}
               disabled={tokenBalance < 100}
               style={{
-                padding: '12px 20px',
+                padding: '12px 24px',
+                minHeight: '48px',
                 background: tokenBalance >= 100 ? 'linear-gradient(135deg, #ff1493, #ff69b4)' : 'rgba(255,255,255,0.04)',
                 color: tokenBalance >= 100 ? '#fff' : 'rgba(255,255,255,0.2)',
                 border: '2px solid #000',
                 fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '16px',
-                textTransform: 'uppercase', letterSpacing: '0.02em',
+                textTransform: 'uppercase', letterSpacing: '0.04em',
                 cursor: tokenBalance >= 100 ? 'pointer' : 'not-allowed',
                 boxShadow: tokenBalance >= 100 ? '4px 4px 0 #000, 0 0 20px rgba(255,20,147,0.3)' : '2px 2px 0 #000',
+                clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
                 display: 'flex', alignItems: 'center', gap: '8px',
                 transition: 'all 0.2s',
               }}
@@ -930,7 +943,7 @@ export default function ForgePage() {
                     background: 'rgba(255,255,255,0.01)',
                     fontFamily: '"JetBrains Mono", monospace', fontSize: '10px', opacity: 0.4,
                   }}>
-                    No modifiers enabled — configure in Admin Dashboard
+                    No upgrades active right now
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -1003,11 +1016,12 @@ export default function ForgePage() {
                       onClick={handleTargetedPull}
                       disabled={targetLoading || !targetDay || parseInt(targetDay, 10) < 1 || parseInt(targetDay, 10) > today || tokenBalance < 275}
                       style={{
-                        flex: 1, padding: '8px 16px',
+                        flex: 1, minHeight: '44px', padding: '8px 16px',
                         background: parseInt(targetDay, 10) > today ? 'rgba(180,77,255,0.2)' : tokenBalance >= 275 && targetDay ? '#ff9900' : 'rgba(255,153,0,0.15)',
                         border: parseInt(targetDay, 10) > today ? '1px solid rgba(180,77,255,0.4)' : '1px solid rgba(255,153,0,0.4)',
-                        fontFamily: '"JetBrains Mono", monospace', fontSize: '10px',
-                        fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase',
+                        fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '13px',
+                        letterSpacing: '0.05em', textTransform: 'uppercase',
+                        clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
                         color: parseInt(targetDay, 10) > today ? '#c084fc' : tokenBalance >= 275 && targetDay ? '#000' : 'rgba(255,255,255,0.3)',
                         cursor: parseInt(targetDay, 10) > today || tokenBalance < 275 || !targetDay ? 'default' : 'pointer',
                       }}
@@ -1038,7 +1052,7 @@ export default function ForgePage() {
                     fontFamily: '"JetBrains Mono", monospace', fontSize: '10px',
                     color: 'rgba(255,255,255,0.4)', marginBottom: '12px', lineHeight: 1.5,
                   }}>
-                    Upgrade any card +1 rarity tier. Max: Legendary. Select a card below.
+                    Raise any card below Legendary by one rarity tier.
                   </p>
                   {upgradeCard ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -1053,13 +1067,14 @@ export default function ForgePage() {
                         onClick={handleUpgrade}
                         disabled={upgradeLoading || tokenBalance < 150}
                         style={{
-                          padding: '6px 16px',
+                          minHeight: '42px', padding: '6px 16px',
                           background: tokenBalance >= 150 ? '#b44dff' : 'rgba(180,77,255,0.15)',
                           border: '1px solid rgba(180,77,255,0.4)',
-                          fontFamily: '"JetBrains Mono", monospace', fontSize: '10px',
-                          fontWeight: 700, color: tokenBalance >= 150 ? '#fff' : 'rgba(255,255,255,0.3)',
+                          fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '13px',
+                          color: tokenBalance >= 150 ? '#fff' : 'rgba(255,255,255,0.3)',
                           cursor: tokenBalance >= 150 ? 'pointer' : 'default',
-                          textTransform: 'uppercase', letterSpacing: '0.1em',
+                          textTransform: 'uppercase', letterSpacing: '0.05em',
+                          clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
                         }}
                       >
                         {upgradeLoading ? 'UPGRADING...' : '⬆ UPGRADE'}
@@ -1125,7 +1140,7 @@ export default function ForgePage() {
                     fontFamily: '"JetBrains Mono", monospace', fontSize: '10px',
                     color: 'rgba(255,255,255,0.4)', marginBottom: '12px', lineHeight: 1.5,
                   }}>
-                    Combine 3 identical cards (same day + rarity) into 1 card of the next rarity tier.
+                    Fuse 3 identical cards (same day and rarity) into 1 card of the next tier.
                   </p>
                   {fusableGroups.length === 0 ? (
                     <div style={{
@@ -1134,7 +1149,7 @@ export default function ForgePage() {
                       fontFamily: '"JetBrains Mono", monospace', fontSize: '10px',
                       color: 'rgba(255,255,255,0.25)',
                     }}>
-                      No fusable duplicates found. You need 3 identical cards.
+                      No duplicates to fuse yet. You need 3 identical cards.
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -1170,12 +1185,13 @@ export default function ForgePage() {
                               }}
                               disabled={fusionLoading}
                               style={{
-                                padding: '6px 14px',
+                                minHeight: '42px', padding: '6px 16px',
                                 background: '#ff3800',
                                 border: '1px solid rgba(255,56,0,0.6)',
-                                fontFamily: '"JetBrains Mono", monospace', fontSize: '10px',
-                                fontWeight: 700, color: '#fff', cursor: 'pointer',
-                                textTransform: 'uppercase', letterSpacing: '0.1em',
+                                fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '13px',
+                                color: '#fff', cursor: 'pointer',
+                                textTransform: 'uppercase', letterSpacing: '0.05em',
+                                clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
                               }}
                             >
                               {fusionLoading ? 'FUSING...' : '🔥 FUSE'}
@@ -1243,7 +1259,7 @@ export default function ForgePage() {
                 }}>
                   Burn Cards for V⚡ Sparks
                 </span>
-                <InfoTooltip text="Earn base V⚡ value · 50% chance for Echo to re-enter pack pool" />
+                <InfoTooltip text="Earn the card's V⚡ value. 50% chance it returns to the pack pool as an echo." />
               </div>
               <span style={{
                 fontFamily: '"JetBrains Mono", monospace', fontSize: '9px',
@@ -1310,22 +1326,23 @@ export default function ForgePage() {
                 onClick={toggleSelectAll}
                 style={{
                   display: 'flex', alignItems: 'center', gap: '6px',
-                  padding: '5px 10px',
+                  minHeight: '38px', padding: '6px 12px',
                   background: burnFiltered.length > 0 && burnFiltered.every(c => burnSelected.has(c.id))
-                    ? 'rgba(255,153,0,0.12)' : 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  fontFamily: '"JetBrains Mono", monospace', fontSize: '9px',
-                  fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
-                  color: 'rgba(255,255,255,0.6)', cursor: 'pointer',
+                    ? 'rgba(255,153,0,0.15)' : 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '11px',
+                  letterSpacing: '0.05em', textTransform: 'uppercase',
+                  clipPath: 'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)',
+                  color: 'rgba(255,255,255,0.7)', cursor: 'pointer',
                 }}
               >
                 <div style={{
-                  width: '12px', height: '12px',
-                  border: '2px solid rgba(255,255,255,0.3)',
+                  width: '14px', height: '14px',
+                  border: '2px solid rgba(255,255,255,0.4)',
                   background: burnFiltered.length > 0 && burnFiltered.every(c => burnSelected.has(c.id))
                     ? '#ff9900' : 'transparent',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: '8px', color: '#000',
+                  fontSize: '9px', color: '#000', fontWeight: 900,
                 }}>
                   {burnFiltered.length > 0 && burnFiltered.every(c => burnSelected.has(c.id)) ? '✓' : ''}
                 </div>
@@ -1338,18 +1355,19 @@ export default function ForgePage() {
                 onClick={handleBurnSelected}
                 disabled={burnSelected.size === 0}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: '4px',
-                  padding: '5px 12px',
-                  background: burnSelected.size > 0 ? 'rgba(255,153,0,0.15)' : 'rgba(255,255,255,0.02)',
-                  border: `1px solid ${burnSelected.size > 0 ? 'rgba(255,153,0,0.4)' : 'rgba(255,255,255,0.06)'}`,
-                  fontFamily: '"JetBrains Mono", monospace', fontSize: '9px',
-                  fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  minHeight: '38px', padding: '6px 14px',
+                  background: burnSelected.size > 0 ? 'rgba(255,153,0,0.2)' : 'rgba(255,255,255,0.02)',
+                  border: `1px solid ${burnSelected.size > 0 ? 'rgba(255,153,0,0.5)' : 'rgba(255,255,255,0.06)'}`,
+                  fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '12px',
+                  letterSpacing: '0.05em', textTransform: 'uppercase',
+                  clipPath: 'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)',
                   color: burnSelected.size > 0 ? '#ff9900' : 'rgba(255,255,255,0.2)',
                   cursor: burnSelected.size > 0 ? 'pointer' : 'default',
                   opacity: burnSelected.size > 0 ? 1 : 0.5,
                 }}
               >
-                <Flame size={10} />
+                <Flame size={12} />
                 Burn {burnSelected.size > 0 ? `(${burnSelected.size})` : ''}
               </button>
 
@@ -1357,18 +1375,19 @@ export default function ForgePage() {
                 onClick={handleBurnAll}
                 disabled={burnFiltered.length === 0}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: '4px',
-                  padding: '5px 12px',
-                  background: burnFiltered.length > 0 ? 'rgba(255,56,0,0.12)' : 'rgba(255,255,255,0.02)',
-                  border: `1px solid ${burnFiltered.length > 0 ? 'rgba(255,56,0,0.3)' : 'rgba(255,255,255,0.06)'}`,
-                  fontFamily: '"JetBrains Mono", monospace', fontSize: '9px',
-                  fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  minHeight: '38px', padding: '6px 14px',
+                  background: burnFiltered.length > 0 ? 'rgba(255,56,0,0.18)' : 'rgba(255,255,255,0.02)',
+                  border: `1px solid ${burnFiltered.length > 0 ? 'rgba(255,56,0,0.5)' : 'rgba(255,255,255,0.06)'}`,
+                  fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '12px',
+                  letterSpacing: '0.05em', textTransform: 'uppercase',
+                  clipPath: 'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)',
                   color: burnFiltered.length > 0 ? '#ff3800' : 'rgba(255,255,255,0.2)',
                   cursor: burnFiltered.length > 0 ? 'pointer' : 'default',
                   opacity: burnFiltered.length > 0 ? 1 : 0.5,
                 }}
               >
-                <Flame size={10} />
+                <Flame size={12} />
                 Burn All
               </button>
             </div>
@@ -1452,10 +1471,12 @@ export default function ForgePage() {
                           onClick={(e) => { e.stopPropagation(); handleSell(card); }}
                           style={{
                             display: 'flex', alignItems: 'center', gap: '4px',
-                            padding: '4px 12px', border: '1px solid rgba(255,255,255,0.1)',
+                            minHeight: '32px',
+                            padding: '4px 12px', border: '1px solid rgba(255,255,255,0.15)',
                             background: 'transparent', cursor: 'pointer',
-                            fontFamily: '"JetBrains Mono", monospace', fontSize: '9px',
-                            fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
+                            fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '11px',
+                            letterSpacing: '0.05em', textTransform: 'uppercase',
+                            clipPath: 'polygon(4px 0%, 100% 0%, calc(100% - 4px) 100%, 0% 100%)',
                             color: '#ff9900',
                             transition: 'all 0.15s',
                           }}
@@ -1613,11 +1634,12 @@ export default function ForgePage() {
                 <button
                   onClick={() => setConfirmSell(null)}
                   style={{
-                    flex: 1, padding: '12px',
-                    border: '2px solid rgba(255,255,255,0.15)', background: 'transparent',
-                    fontFamily: '"JetBrains Mono", monospace', fontSize: '10px',
-                    fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em',
-                    color: 'rgba(255,255,255,0.6)', cursor: 'pointer',
+                    flex: 1, minHeight: '48px', padding: '12px',
+                    border: '2px solid rgba(255,255,255,0.2)', background: 'transparent',
+                    fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '13px',
+                    textTransform: 'uppercase', letterSpacing: '0.05em',
+                    clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+                    color: 'rgba(255,255,255,0.7)', cursor: 'pointer',
                   }}
                 >
                   Cancel
@@ -1625,11 +1647,12 @@ export default function ForgePage() {
                 <button
                   onClick={confirmSellAction}
                   style={{
-                    flex: 1, padding: '12px',
+                    flex: 1, minHeight: '48px', padding: '12px',
                     border: '2px solid #000',
                     background: '#ff9900', color: '#000',
-                    fontFamily: '"JetBrains Mono", monospace', fontSize: '10px',
-                    fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em',
+                    fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '14px',
+                    textTransform: 'uppercase', letterSpacing: '0.05em',
+                    clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
                     cursor: 'pointer',
                     boxShadow: '3px 3px 0 #000',
                   }}
@@ -1748,7 +1771,7 @@ export default function ForgePage() {
                       fontFamily: '"JetBrains Mono", monospace', fontSize: '9px',
                       color: '#ff9900', lineHeight: 1.5,
                     }}>
-                      ANTI-GRIND: Token yield decreases after 20+ burns per day. You may earn less than estimated.
+                      After 20 burns a day, each burn pays less. You may earn less than shown.
                     </div>
                   </div>
                 )}
@@ -1777,11 +1800,12 @@ export default function ForgePage() {
                 <button
                   onClick={() => setConfirmBatch(null)}
                   style={{
-                    flex: 1, padding: '12px',
-                    border: '2px solid rgba(255,255,255,0.15)', background: 'transparent',
-                    fontFamily: '"JetBrains Mono", monospace', fontSize: '10px',
-                    fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em',
-                    color: 'rgba(255,255,255,0.6)', cursor: 'pointer',
+                    flex: 1, minHeight: '48px', padding: '12px',
+                    border: '2px solid rgba(255,255,255,0.2)', background: 'transparent',
+                    fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '13px',
+                    textTransform: 'uppercase', letterSpacing: '0.05em',
+                    clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
+                    color: 'rgba(255,255,255,0.7)', cursor: 'pointer',
                   }}
                 >
                   Cancel
@@ -1789,11 +1813,12 @@ export default function ForgePage() {
                 <button
                   onClick={executeBatchBurn}
                   style={{
-                    flex: 1, padding: '12px',
+                    flex: 1, minHeight: '48px', padding: '12px',
                     border: '2px solid #000',
                     background: '#ff3800', color: '#fff',
                     fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '14px',
-                    textTransform: 'uppercase',
+                    textTransform: 'uppercase', letterSpacing: '0.05em',
+                    clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)',
                     cursor: 'pointer',
                     boxShadow: '3px 3px 0 #000',
                   }}
@@ -1889,12 +1914,16 @@ export default function ForgePage() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 30 }}
             style={{
-              position: 'fixed', bottom: '80px', left: '50%', transform: 'translateX(-50%)',
+              position: 'fixed',
+              bottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 5.5rem)',
+              left: '50%',
+              transform: 'translateX(-50%)',
               zIndex: 150,
               padding: '16px 24px',
               border: '2px solid #000',
               background: '#0d0d0d',
               boxShadow: '4px 4px 0 #000, 0 0 20px rgba(255,56,0,0.3)',
+              clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
               display: 'flex', alignItems: 'center', gap: '16px',
               maxWidth: '90vw',
             }}

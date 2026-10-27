@@ -14,12 +14,12 @@
  * - Centralized audioManager sound FX triggers.
  */
 
-import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { Link, useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Fingerprint, RefreshCw, LogOut, Layers, ArrowUpRight,
-  Shield, Zap, User, ExternalLink, Sparkles, Award, Play, Disc, Lock, KeyRound, Copy, Eye, EyeOff, AlertTriangle, Check, Download
+  Shield, Zap, User, ExternalLink, Sparkles, Award, Play, Disc, Lock, KeyRound, Copy, Eye, EyeOff, AlertTriangle, Check, Download, Camera, Loader2
 } from 'lucide-react';
 import IdentitySetup from '../components/IdentitySetup';
 import { useAuthStore } from '../store/useAuthStore';
@@ -29,8 +29,12 @@ import { Wallet as EthersWallet } from 'ethers';
 import { getCurrentDay, formatDate } from '../utils/dayCalc';
 import { extractPalette, getFallbackPalette, type ExtractedPalette } from '../utils/extractPalette';
 import { audioManager } from '../game/audio';
+import { getIdenticon } from '../utils/identicon';
+import { uploadAvatar, validateAvatarFile } from '../utils/avatarUpload';
 import '../styles/ProfilePage.css';
 import '../styles/HeroLandingPage.css';
+import HoloSheen from '../components/HoloSheen';
+import { useHoloTilt } from '../hooks/useHoloTilt';
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Constants
@@ -60,12 +64,16 @@ const EASE_OUT: [number, number, number, number] = [0.22, 1, 0.36, 1];
 export default function ProfilePage() {
   const { user, signOut, registerPasskey, ensureProfileAndWallet, isPasskeySupported, signInWithPrivateKey } = useAuthStore();
   const isAnonymous = user?.is_anonymous ?? false;
-  const { collection, tokenBalance, totalPulls, streakCount, loadVaultData, username } = useVaultStore();
+  const { collection, tokenBalance, totalPulls, streakCount, loadVaultData, username, avatarUrl: vaultAvatarUrl } = useVaultStore();
   const [, navigate] = useLocation();
 
   const currentDay = getCurrentDay();
   const [displayName, setDisplayName] = useState('');
   const [loadingProfile, setLoadingProfile] = useState(true);
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const [palette, setPalette] = useState<ExtractedPalette>(getFallbackPalette());
   const [topCoverArt, setTopCoverArt] = useState<string>('/screenshots/06_rhythm_gameplay.png');
   const [passkeyLoading, setPasskeyLoading] = useState(false);
@@ -94,7 +102,7 @@ export default function ProfilePage() {
         setImportFeedback({ type: 'error', message: res.error });
       } else {
         audioManager.playSfx('gold_get', 0.6);
-        setImportFeedback({ type: 'success', message: '✨ Sovereign wallet and identity restored successfully!' });
+        setImportFeedback({ type: 'success', message: 'Wallet restored.' });
         setImportKeyInput('');
         setShowKeyImport(false);
       }
@@ -143,8 +151,9 @@ export default function ProfilePage() {
   };
 
   // 3D Perspective Card Tilt
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const cardRef = useRef<HTMLDivElement>(null);
+  const sheenRef = useRef<HTMLDivElement>(null);
+  useHoloTilt(cardRef, sheenRef, { maxTilt: 14, idle: true, lift: 18 });
 
   // Fetch today's song artwork for dynamic palette
   useEffect(() => {
@@ -168,18 +177,58 @@ export default function ProfilePage() {
     }
     supabase
       .from('profiles')
-      .select('display_name')
+      .select('display_name, avatar_url')
       .eq('id', user.id)
       .single()
       .then(({ data }) => {
         if (data?.display_name) setDisplayName(data.display_name);
+        setProfileAvatarUrl(data?.avatar_url || null);
         setLoadingProfile(false);
       });
   }, [user]);
 
   const provider = user?.app_metadata?.provider as string | undefined;
   const walletAddr = user?.user_metadata?.wallet as string | undefined;
-  const avatarUrl = user?.user_metadata?.avatar_url as string | undefined;
+  // The profile row is the source of truth; auth metadata covers OAuth photos
+  // for players who never uploaded their own.
+  const avatarUrl =
+    profileAvatarUrl ||
+    vaultAvatarUrl ||
+    (user?.user_metadata?.avatar_url as string | undefined) ||
+    null;
+  const identicon = getIdenticon(user?.id || 'anon', displayName || username || null);
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !user) return;
+
+    const invalid = validateAvatarFile(file);
+    if (invalid) {
+      setAvatarError(invalid);
+      return;
+    }
+
+    setAvatarUploading(true);
+    setAvatarError(null);
+    try {
+      const url = await uploadAvatar(user.id, file);
+      const { error } = await supabase
+        .from('profiles')
+        .update({ avatar_url: url })
+        .eq('id', user.id);
+      if (error) throw error;
+      await supabase.auth.updateUser({ data: { avatar_url: url } }).catch(() => {});
+      setProfileAvatarUrl(url);
+      useVaultStore.setState({ avatarUrl: url });
+      audioManager.playSfx('gold_get', 0.5);
+    } catch (err: any) {
+      console.error('[Profile] Avatar upload failed', err);
+      setAvatarError(err?.message || 'Upload failed. Try again.');
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
 
   const identityDisplay =
     displayName ||
@@ -200,18 +249,6 @@ export default function ProfilePage() {
     [palette]
   );
 
-  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!cardRef.current) return;
-    const rect = cardRef.current.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width - 0.5;
-    const y = (e.clientY - rect.top) / rect.height - 0.5;
-    setTilt({ x: y * 20, y: -x * 20 });
-  }, []);
-
-  const handleMouseLeave = useCallback(() => {
-    setTilt({ x: 0, y: 0 });
-  }, []);
-
   return (
     <div className="profile-page" style={rootStyle}>
       {/* Noise Texture & Shader Beams */}
@@ -227,15 +264,12 @@ export default function ProfilePage() {
         {/* ═══════════ SECTION 1 : HERO IDENTITY PEDESTAL ═══════════ */}
         <section className="profile-hero-pedestal">
           <motion.div
-            ref={cardRef}
             className="profile-card-3d-wrap"
-            onMouseMove={handleMouseMove}
-            onMouseLeave={handleMouseLeave}
-            style={{ transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)` }}
             initial={{ opacity: 0, y: 35 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, ease: EASE_OUT }}
           >
+            <div ref={cardRef} className="profile-card-3d-tilt holo-tilt">
             <div className="hero-drop-glow" />
 
             {/* Spinning Holographic Vinyl Disc */}
@@ -248,16 +282,48 @@ export default function ProfilePage() {
 
             {/* Front Card */}
             <div className="profile-card-3d-card">
+              <HoloSheen ref={sheenRef} variant="prism" tint="var(--palette-accent)" foilZ={1} glareZ={5} />
               <div className="hero-specular-glare" />
 
               <div className="profile-avatar-frame">
-                {/* @TODO: Wrap with a label that triggers a file input when the user already has an identity. */}
                 {avatarUrl ? (
-                  <img src={avatarUrl} alt="Avatar" className="profile-avatar-img" />
+                  <img src={avatarUrl} alt="Passport photo" className="profile-avatar-img" />
                 ) : (
-                  <div className="w-full h-full rounded-full bg-[#0d0d14] flex items-center justify-center">
-                    <User size={32} className="text-white/40" />
+                  <div
+                    className="w-full h-full rounded-full flex items-center justify-center"
+                    style={{ background: user ? identicon.bgColor : '#0d0d14' }}
+                  >
+                    {user ? (
+                      <span className="profile-avatar-initials">{identicon.initials}</span>
+                    ) : (
+                      <User size={32} className="text-white/40" />
+                    )}
                   </div>
+                )}
+
+                {user && (
+                  <>
+                    <input
+                      ref={avatarInputRef}
+                      type="file"
+                      className="hidden"
+                      accept=".jpg,.jpeg,.png,.webp"
+                      onChange={handleAvatarChange}
+                    />
+                    <button
+                      type="button"
+                      className={`profile-avatar-edit${avatarUploading ? ' is-busy' : ''}`}
+                      onClick={() => {
+                        audioManager.playSfx('tap_nav', 0.3);
+                        avatarInputRef.current?.click();
+                      }}
+                      disabled={avatarUploading}
+                      title={avatarUrl ? 'Change passport photo' : 'Add passport photo'}
+                      aria-label={avatarUrl ? 'Change passport photo' : 'Add passport photo'}
+                    >
+                      {avatarUploading ? <Loader2 size={22} className="animate-spin" /> : <Camera size={22} />}
+                    </button>
+                  </>
                 )}
               </div>
 
@@ -277,11 +343,15 @@ export default function ProfilePage() {
                   {walletAddr && <span className="profile-badge-tag">{shortenAddress(walletAddr)}</span>}
                   <span className="profile-badge-tag text-[#39FF14]">Day {currentDay} Active</span>
                 </div>
+                {avatarError && (
+                  <p className="font-mono text-[10px] text-[#ff3800] mt-2">{avatarError}</p>
+                )}
               </div>
 
               <div className="font-mono text-[9px] text-white/30 tracking-widest uppercase">
                 YOUR 365 // SOVEREIGN PASSPORT
               </div>
+            </div>
             </div>
           </motion.div>
 
@@ -338,7 +408,7 @@ export default function ProfilePage() {
             </div>
             <p className="font-mono text-xs text-white/70 leading-relaxed mb-4">
               {isAnonymous
-                ? "You are currently playing as a Guest. Connect an Email or Web3 Smart Wallet to bind your earned daily cards, medals, and streaks permanently to your sovereign profile."
+                ? "You're playing as a guest. Sign in with email or a wallet to keep your cards, medals and streaks."
                 : "Choose your unique pilot @username and profile avatar to record and broadcast scores on competitive leaderboards."}
             </p>
             <IdentitySetup compact onComplete={() => { if (loadVaultData) loadVaultData(true); }} />
@@ -436,7 +506,7 @@ export default function ProfilePage() {
                       audioManager.playSfx('reward_claim', 0.5);
                       setPasskeyFeedback({
                         type: 'success',
-                        message: 'Passkey enrolled successfully! You can now log in with 1 touch.',
+                        message: 'Passkey added. Next time, sign in with one tap.',
                       });
                     }
                     setPasskeyLoading(false);
@@ -468,7 +538,7 @@ export default function ProfilePage() {
         <section className="profile-glass-panel border-l-4 border-[#00E5FF] mt-6">
           <div className="flex items-center justify-between profile-panel-header text-[#00E5FF]">
             <span className="flex items-center gap-2">
-              <KeyRound size={18} /> Sovereign Wallet Keys & Backup
+              <KeyRound size={18} /> Wallet Keys & Backup
             </span>
             <button
               onClick={() => {
@@ -488,10 +558,10 @@ export default function ProfilePage() {
             <div className="p-4 mb-4 bg-black/60 border border-[#00E5FF]/40 space-y-3">
               <div className="flex items-center gap-2 text-[#00E5FF] font-mono text-[11px] font-bold uppercase tracking-wider">
                 <Download size={14} />
-                <span>Load Sovereign Identity by Saved Key</span>
+                <span>Restore From a Saved Key</span>
               </div>
               <p className="font-mono text-[10px] text-zinc-400 leading-relaxed">
-                Paste your 64-character private key (with or without 0x) to restore your smart wallet, unlocked cards, tokens, and prestige score.
+                Paste your 64-character private key (with or without 0x) to restore your wallet and everything in it.
               </p>
               <div className="relative">
                 <input
@@ -604,7 +674,7 @@ export default function ProfilePage() {
           ) : (
             <div className="font-mono text-xs text-zinc-400 space-y-2 py-2">
               <p className="text-[11px] leading-relaxed">
-                No local ephemeral wallet key is active in this browser. If you previously saved or exported your private key, click <strong className="text-[#00E5FF]">"Load by Key"</strong> above to restore your session.
+                No temporary wallet in this browser. If you saved your private key, use <strong className="text-[#00E5FF]">"Load by Key"</strong> above to restore your session.
               </p>
             </div>
           )}

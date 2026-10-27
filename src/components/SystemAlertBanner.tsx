@@ -13,6 +13,7 @@ export const SystemAlertBanner: React.FC = () => {
     !activeBanner ||
     location.startsWith('/hero') ||
     location.startsWith('/play/') ||
+    location.startsWith('/secret/') ||
     location === '/tutorial'
   ) return null;
 

@@ -168,7 +168,7 @@ export default function SignedInConfirmModal() {
               )}
 
               <p className="font-mono text-[11px] text-white/50 leading-relaxed mb-6 max-w-xs">
-                Your cards, streaks, unlocked audio, and leaderboard rank are now bound to this device.
+                Your cards, streaks, unlocked audio and leaderboard rank are saved to this account.
               </p>
 
               <button

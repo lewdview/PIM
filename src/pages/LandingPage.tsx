@@ -4,7 +4,7 @@ import { Link, useLocation } from 'wouter';
 import { Layers, Flame, Star, Calendar, Zap, Monitor, Clock, Play, Gift, Shield, Sparkles, AlertTriangle, Image as ImageIcon, Terminal, X } from 'lucide-react';
 import Card from '../components/Card';
 import PackShop from '../components/PackShop';
-import { useVaultStore } from '../store/useVaultStore';
+import { useVaultStore, ownsCardForDay } from '../store/useVaultStore';
 import { useLoadingToast } from '../store/useLoadingToast';
 import { useAuthStore } from '../store/useAuthStore';
 import {
@@ -34,8 +34,14 @@ const TICKER_TEXT = 'PIM : TH3V4ULT — 365 DAYS OF RETENTION — COLLECT. SELL.
 function BrutalistTicker() {
   return (
     <div
-      className="w-full overflow-hidden border-y-2 border-black relative"
-      style={{ background: '#ffb800', height: '36px' }}
+      className="w-full overflow-hidden relative"
+      style={{
+        background: 'linear-gradient(180deg, #ffcb38 0%, #ffb800 100%)',
+        height: '36px',
+        borderTop: '1px solid rgba(255, 255, 255, 0.45)',
+        borderBottom: '3px solid #050308',
+        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.45)',
+      }}
     >
       <div
         className="absolute inset-0 flex items-center whitespace-nowrap"
@@ -49,9 +55,9 @@ function BrutalistTicker() {
               fontFamily: '"Impact", "Arial Black", sans-serif',
               fontSize: '14px',
               fontWeight: 900,
-              letterSpacing: '0.08em',
+              letterSpacing: '0.09em',
               textTransform: 'uppercase',
-              color: '#000',
+              color: '#09060e',
             }}
           >
             {TICKER_TEXT}
@@ -76,18 +82,19 @@ function StatSticker({ icon: Icon, label, value, color, rot }: {
       className="sticker-gun-tag sticker-slits hover:scale-105 transition-transform cursor-default"
       style={{
         transform: `rotate(${rot}deg)`,
-        padding: '10px 18px',
-        '--slit-color': `${color}35`,
+        padding: '11px 18px',
+        '--slit-color': `${color}40`,
         minWidth: '155px',
-        boxShadow: `4px 4px 0 rgba(0,0,0,0.5)`,
+        borderTop: `3px solid ${color}`,
+        boxShadow: `inset 0 1px 0 rgba(255,255,255,0.65), 5px 5px 0 #050308, 0 8px 18px rgba(0,0,0,0.4)`,
       } as any}
     >
       <div className="flex flex-col items-center gap-0.5">
-        <span className="text-[7px] font-black tracking-widest opacity-45 mb-0.5 flex items-center gap-1 uppercase">
-          <Icon size={9} /> {label}
+        <span className="text-[7.5px] font-black tracking-widest opacity-55 mb-0.5 flex items-center gap-1 uppercase">
+          <Icon size={10} /> {label}
         </span>
         <span
-          className="font-black italic tracking-tighter leading-none"
+          className="font-black italic tracking-tighter leading-none tabular-nums"
           style={{
             fontFamily: '"Impact", "Arial Black", sans-serif',
             fontSize: '28px',
@@ -162,7 +169,7 @@ export default function LandingPage() {
   const handleTargetedPull = useCallback(async (dayNum: number) => {
     if (!dayNum || dayNum < 1 || dayNum > today || tokenBalance < 275) {
       if (dayNum > today) {
-        alert(`Day ${dayNum} is locked. Targeted Pull is restricted to released calendar days (Day 1 to ${today}). Future tracks require a Prophecy Pull.`);
+        alert(`Day ${dayNum} hasn't dropped yet. Targeted Pull covers Day 1–${today}. Future days need a Prophecy Pull.`);
       }
       return;
     }
@@ -198,7 +205,7 @@ export default function LandingPage() {
       const result = await upgradeRarity(cardOwnedId);
       if (result.success) {
         audioManager.playSfx('upgrade', 0.9);
-        alert(`Success! Card upgraded to ${result.newRarity?.toUpperCase()}`);
+        alert(`Card upgraded to ${result.newRarity?.toUpperCase()}.`);
       }
     } catch (err) {
       console.error(err);
@@ -243,7 +250,7 @@ export default function LandingPage() {
     setCodeState('redeeming');
     setCodeError('');
     setRewardClaimed(null);
-    useLoadingToast.getState().show('Decrypting bonus code…');
+    useLoadingToast.getState().show('Checking code…');
 
     try {
       const res = await redeemBonusCode(bonusCode);
@@ -363,7 +370,7 @@ export default function LandingPage() {
     } catch (err: any) {
       useLoadingToast.getState().hide();
       audioManager.playSfx('error', 0.6);
-      setCodeError(err.message || 'Verification link failed.');
+      setCodeError(err.message || 'Couldn\'t check that code. Try again.');
       setCodeState('error');
     }
   }, [bonusCode, addToCollection, startReveal, setLocation, loadVaultData]);
@@ -428,7 +435,7 @@ export default function LandingPage() {
   const handleClaim = useCallback(async () => {
     if (hasClaimed) return;
 
-    useLoadingToast.getState().show('Claiming daily drop...');
+    useLoadingToast.getState().show('Claiming today\'s drop…');
     try {
       let owned: OwnedCard | null = null;
       if (user) {
@@ -462,23 +469,30 @@ export default function LandingPage() {
           setLocation('/vault/reveal');
         }, 800);
       } else {
-        alert('Daily drop already claimed today or unavailable.');
+        alert("Couldn't claim today's drop. It may already be claimed on this account.");
       }
     } catch (err: any) {
       useLoadingToast.getState().hide();
       console.error('Claim daily card threw error:', err);
-      alert(`Error claiming daily drop: ${err?.message || err}`);
+      alert(`Couldn't claim today's drop: ${err?.message || err}`);
     }
   }, [today, hasClaimed, setHasClaimed, addToCollection, startReveal, setLocation, user, incrementClaimedCount]);
 
-  // Direct play launcher
-  const handlePlayNow = useCallback(() => {
+  // Direct play launcher (claim-first: today's free card is claimed silently before entering play)
+  const handlePlayNow = useCallback(async () => {
     if (songId) {
+      if (!ownsCardForDay(collection, today)) {
+        try {
+          await useVaultStore.getState().silentClaimDailyDrop(today);
+        } catch (err) {
+          console.error("[LandingPage] Claim-first failed:", err);
+        }
+      }
       setLocation(`/play/${songId}`);
     } else {
       setLocation('/arcade');
     }
-  }, [songId, setLocation]);
+  }, [songId, setLocation, collection, today]);
 
   // Purchase pack handler
   const handlePurchasePack = useCallback(async (category: PackCategory, size: PackSize, sessionId?: string) => {
@@ -509,13 +523,13 @@ export default function LandingPage() {
 
     setIsPurchasing(true);
     try {
-      useLoadingToast.getState().show('Decrypting pack data…');
+      useLoadingToast.getState().show('Opening pack…');
       const cards = (category === 'vault_token' || category === 'bombshell_token')
         ? await buyTokenPack(category, size)
         : await purchasePack(category, size, sessionId);
       useLoadingToast.getState().hide();
       if (cards === 'insufficient') {
-        alert('Insufficient V⚡ sparks for this pack.');
+        alert('Not enough V⚡ sparks for this pack.');
         await loadVaultData();
         return;
       }
@@ -559,7 +573,7 @@ export default function LandingPage() {
 
     if (method === 'crypto') {
       try {
-        useLoadingToast.getState().show('Waiting for wallet confirmation…');
+        useLoadingToast.getState().show('Confirm in your wallet…');
         const txHash = await payWithCrypto(priceValue);
         
         if (txHash) {
@@ -586,19 +600,19 @@ export default function LandingPage() {
     } else {
       // Live Stripe Checkout session redirect
       try {
-        useLoadingToast.getState().show('Connecting to Stripe checkout…');
+        useLoadingToast.getState().show('Opening checkout…');
         const res = await createStripeCheckoutSession(category, size);
         useLoadingToast.getState().hide();
 
         if (res.success && res.checkoutUrl) {
           await redirectToStripeCheckout(res.checkoutUrl);
         } else {
-          alert(`Checkout Error: ${res.error || 'Could not initialize Stripe Checkout'}`);
+          alert(`Checkout didn't open. ${res.error || 'Try again.'}`);
         }
       } catch (err: any) {
         console.error('Stripe redirect failed:', err);
         useLoadingToast.getState().hide();
-        alert(err.message || 'Failed to connect to Stripe checkout');
+        alert(err.message || 'Checkout didn\'t open. Try again.');
       }
     }
   }, [checkoutInfo, startReveal, setLocation, addToCollection, loadVaultData]);
@@ -609,7 +623,15 @@ export default function LandingPage() {
   const proofs = collection.filter(c => c.proof).length;
 
   return (
-    <div className="flex-1 w-full relative bg-[#050402] overflow-hidden">
+    <div
+      className="flex-1 w-full relative bg-[#050402]"
+      style={{
+        minHeight: '100dvh',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 6.5rem)',
+      }}
+    >
       {/* SCANLINES & CYBERPUNK STATIC EFFECTS */}
       <div className="scanlines absolute inset-0 opacity-10 pointer-events-none z-10" />
       
@@ -625,18 +647,23 @@ export default function LandingPage() {
       <BrutalistTicker />
 
       {/* ===== HERO ONBOARDING HEADER ===== */}
-      <section className="relative z-10 pt-16 pb-6 text-center flex flex-col items-center">
+      <section className="relative z-10 pt-14 pb-6 px-4 text-center flex flex-col items-center">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
+          className="inline-flex items-center gap-2.5"
           style={{
-            background: '#fff', border: '3.5px solid #000',
-            color: '#000', padding: '6px 14px', marginBottom: '32px',
-            boxShadow: '4px 4px 0 #000, 0 0 24px rgba(255,56,0,0.4)',
-            transform: 'rotate(-3deg)'
+            background: '#fff',
+            border: '3px solid #050308',
+            color: '#050308',
+            padding: '7px 16px',
+            marginBottom: '28px',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.9), 5px 5px 0 #050308, 0 0 28px rgba(255,56,0,0.4)',
+            transform: 'rotate(-2.5deg)',
           } as any}
         >
-          <span className="text-[11px] font-black tracking-[0.2em] uppercase font-mono">
+          <span className="hw-led" data-color="vermilion" />
+          <span className="text-[11px] font-black tracking-[0.22em] uppercase font-mono">
             PIM : th3v4ult // NEURAL GATEWAY
           </span>
         </motion.div>
@@ -653,11 +680,11 @@ export default function LandingPage() {
 
         <motion.p
           initial={{ opacity: 0 }}
-          animate={{ opacity: 0.75 }}
+          animate={{ opacity: 0.85 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="font-mono text-[11px] sm:text-xs tracking-[0.3em] uppercase max-w-xl text-center text-[#faf0d8] mb-8 leading-relaxed"
+          className="hw-well px-5 py-2.5 font-mono text-[10.5px] sm:text-xs tracking-[0.26em] uppercase max-w-2xl text-center text-[#faf0d8] mb-6 leading-relaxed"
         >
-          AN EXPERIMENTAL PLAYABLE MUSIC PLATFORM BY <span className="text-[#ffb800] font-black">TH3SCR1B3</span>. MUSIC UNLOCKS GAMEPLAY · GAMEPLAY UNLOCKS CARDS · CARDS UNLOCK STATUS.
+          AN EXPERIMENTAL PLAYABLE MUSIC PLATFORM BY <span className="text-[#ffb800] font-black">TH3SCR1B3</span> · MUSIC UNLOCKS GAMEPLAY · GAMEPLAY UNLOCKS CARDS
         </motion.p>
       </section>
 
@@ -705,20 +732,21 @@ export default function LandingPage() {
                   className="relative z-20"
                 >
                   {/* Glowing outer halo */}
-                  <div className="absolute inset-[-12px] rounded-2xl filter blur-xl opacity-20 group-hover:opacity-30 transition-all duration-300"
+                  <div className="absolute inset-[-12px] rounded-2xl filter blur-xl opacity-25 group-hover:opacity-35 transition-all duration-300"
                     style={{ background: `radial-gradient(circle, ${RARITY_CONFIG[dailyCard.rarity]?.color || '#ff9900'} 0%, transparent 70%)` }} />
 
                   {/* Card Shadow */}
-                  <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-4/5 h-8 rounded-full blur-2xl opacity-40"
+                  <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 w-4/5 h-8 rounded-full blur-2xl opacity-45"
                     style={{ background: `${RARITY_CONFIG[dailyCard.rarity]?.color || '#ff9900'}40` }} />
                   
                   {/* actual Card element */}
                   <div className="relative w-full h-full rounded-2xl overflow-hidden" style={{
-                    border: `2px solid rgba(255,215,0,0.35)`,
+                    border: `2px solid rgba(255,215,0,0.42)`,
                     boxShadow: `
-                      0 25px 50px rgba(0,0,0,0.6),
-                      0 0 30px ${RARITY_CONFIG[dailyCard.rarity]?.color || '#ff9900'}15,
-                      inset 0 0 30px rgba(0,0,0,0.2)
+                      inset 0 1px 0 rgba(255,255,255,0.3),
+                      0 8px 0 #050308,
+                      0 28px 54px rgba(0,0,0,0.65),
+                      0 0 34px ${RARITY_CONFIG[dailyCard.rarity]?.color || '#ff9900'}20
                     `,
                   }}>
                     <Card
@@ -731,20 +759,16 @@ export default function LandingPage() {
                 </motion.div>
 
                 {/* Countdown & Action Buttons */}
-                <div className="mt-8 flex flex-col items-center gap-4 w-full max-w-[330px] z-30">
+                <div className="mt-8 flex flex-col items-center gap-3.5 w-full max-w-[340px] z-30">
                   
-                  {/* Digital Countdown Timer */}
-                  <div className="sticker-gun-tag sticker-slits drop-shadow-xl w-full" style={{
-                    background: '#ffffff',
-                    '--slit-color': 'var(--color-neon-gold)',
-                    transform: 'rotate(0.5deg)',
-                    padding: '8px 16px',
-                  } as any}>
-                    <div className="flex justify-between items-center px-2">
-                      <span className="text-[9px] font-black tracking-wider opacity-60 uppercase flex items-center gap-1.5 text-black">
-                        <Clock size={11} className="text-black" /> NEXT RESET
+                  {/* Digital Countdown Hardware Dock */}
+                  <div className="hw-panel w-full p-3" data-accent="gold">
+                    <div className="hw-well flex justify-between items-center px-3.5 py-2">
+                      <span className="text-[9.5px] font-mono font-bold tracking-[0.16em] text-white/60 uppercase flex items-center gap-2">
+                        <span className="hw-led" data-color="gold" />
+                        <Clock size={12} className="text-[#ffb800]" /> NEXT RESET
                       </span>
-                      <span className="text-xl font-black italic tracking-tighter text-black font-mono">
+                      <span className="text-xl font-black tracking-wider text-[#ffb800] font-mono tabular-nums" style={{ textShadow: '0 0 12px rgba(255,184,0,0.35)' }}>
                         {String(countdown.hours).padStart(2, '0')}:{String(countdown.minutes).padStart(2, '0')}:{String(countdown.seconds).padStart(2, '0')}
                       </span>
                     </div>
@@ -752,58 +776,41 @@ export default function LandingPage() {
 
                   {/* Main Funnel CTA */}
                   {!hasClaimed ? (
-                    <motion.button
-                      whileHover={{ scale: 1.04, rotate: -0.5 }}
-                      whileTap={{ scale: 0.97 }}
+                    <button
+                      type="button"
                       onClick={handleClaim}
-                      className="w-full sticker-gun-tag sticker-slits text-sm uppercase py-4 transition-all drop-shadow-[0_0_25px_rgba(255,184,0,0.4)] cursor-pointer"
-                      style={{
-                        background: 'linear-gradient(135deg, var(--color-neon-gold), #ff8800)',
-                        color: '#000',
-                        '--slit-color': 'rgba(0,0,0,0.25)',
-                        transform: 'rotate(-1.5deg)',
-                      } as any}
+                      className="btn-3d w-full justify-center font-mono tracking-[0.14em] uppercase"
+                      data-tone="gold"
+                      data-size="lg"
                     >
-                      <div className="flex flex-col items-center justify-center leading-none">
-                        <Gift size={20} className="mb-1" />
-                        <span className="font-black text-lg italic uppercase tracking-tighter" style={{ transform: 'scaleY(1.2)' }}>
-                          CLAIM CARD & LAUNCH LEVEL
-                        </span>
-                      </div>
-                    </motion.button>
+                      <Gift size={19} />
+                      <span>CLAIM CARD & LAUNCH LEVEL</span>
+                    </button>
                   ) : (
-                    <motion.button
-                      whileHover={{ scale: 1.04, rotate: 1 }}
-                      whileTap={{ scale: 0.97 }}
+                    <button
+                      type="button"
                       onClick={handlePlayNow}
-                      className="w-full sticker-gun-tag sticker-slits text-sm py-4 transition-all drop-shadow-[0_0_25px_rgba(0,240,255,0.4)] cursor-pointer"
-                      style={{
-                        background: 'linear-gradient(135deg, var(--color-neon-cyan), #0088ff)',
-                        color: '#000',
-                        '--slit-color': 'rgba(0,0,0,0.25)',
-                        transform: 'rotate(1.5deg)',
-                      } as any}
+                      className="btn-3d w-full justify-center font-mono tracking-[0.18em] uppercase"
+                      data-tone="cyan"
+                      data-size="lg"
                     >
-                      <div className="flex flex-col items-center justify-center leading-none">
-                        <Play size={20} className="mb-1 fill-black" />
-                        <span className="font-black text-lg italic uppercase tracking-tighter" style={{ transform: 'scaleY(1.2)' }}>
-                          PLAY LEVEL NOW
-                        </span>
-                      </div>
-                    </motion.button>
+                      <Play size={19} fill="currentColor" />
+                      <span>PLAY LEVEL NOW</span>
+                    </button>
                   )}
                   
                   {/* Claim count */}
-                  <div className="text-[10px] font-mono text-[#faf0d8]/40 text-center uppercase tracking-widest mt-1">
-                    {realClaimedCount}/100 claimed today • Mythic chance active
+                  <div className="hw-badge">
+                    <span className="hw-led" data-color="acid" />
+                    <span>{realClaimedCount}/100 CLAIMED TODAY · MYTHIC CHANCE ACTIVE</span>
                   </div>
                 </div>
 
               </div>
             ) : (
-              <div className="w-[330px] aspect-[3/4] border-2 border-white/5 bg-[#0f0d09] flex flex-col items-center justify-center rounded-2xl relative">
+              <div className="hw-panel w-[330px] aspect-[3/4] flex flex-col items-center justify-center rounded-2xl relative" data-accent="vermilion">
                 <div className="w-8 h-8 border-2 border-white/10 rounded-full animate-spin mb-4" style={{ borderTopColor: '#ff3800' }} />
-                <span className="font-mono text-[9px] uppercase tracking-widest text-[#ff3800]">Syncing Vault Drop...</span>
+                <span className="font-mono text-[9.5px] font-bold uppercase tracking-widest text-[#ff3800]">Loading today's drop…</span>
               </div>
             )}
           </div>
@@ -824,54 +831,60 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Token Balance widget */}
+            {/* Token Balance Hardware Module */}
             <div>
               <SectionLabel label="Token Balance" accent="#ff9900" />
-              <div
-                className="flex items-center gap-4 border-2 border-black px-5 py-4 w-fit relative overflow-hidden"
-                style={{ background: '#0d0d0d', boxShadow: '5px 5px 0 #000' }}
-              >
-                <div className="scanlines absolute inset-0 opacity-5 pointer-events-none" />
-                <Zap size={24} className="animate-pulse" style={{ color: '#ff9900' }} />
-                <div>
-                  <div className="text-[8px] font-mono uppercase opacity-40 tracking-wider">VAULT TOKENS</div>
-                  <div
-                    className="font-black leading-none"
-                    style={{ fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '38px', color: '#ff9900', letterSpacing: '-1.5px' }}
-                  >
-                    {tokenBalance.toLocaleString()}
+              <div className="hw-panel p-5 relative overflow-hidden" data-accent="gold">
+                <div className="flex items-center justify-between gap-4 flex-wrap">
+                  <div className="hw-well flex items-center gap-4 px-5 py-3.5">
+                    <Zap size={24} className="animate-pulse shrink-0" style={{ color: '#ffb800' }} />
+                    <div>
+                      <div className="text-[9px] font-mono font-bold uppercase text-white/50 tracking-[0.2em]">V⚡ SPARKS</div>
+                      <div
+                        className="font-black leading-none mt-1 tabular-nums"
+                        style={{ fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '36px', color: '#ffb800', letterSpacing: '-1px', textShadow: '0 0 18px rgba(255,184,0,0.35)' }}
+                      >
+                        {tokenBalance.toLocaleString()}
+                      </div>
+                    </div>
+                    <div className="text-xs font-mono text-[#ffb800]/60 ml-2 font-black">V⚡</div>
                   </div>
+                  <Link to="/vault/forge" className="btn-3d font-mono text-xs uppercase" data-tone="quiet" data-size="sm">
+                    Open Forge →
+                  </Link>
                 </div>
-                <div className="text-xs font-mono opacity-30 ml-4 font-black">V⚡</div>
+                <p className="text-[10px] font-mono text-white/50 mt-3 uppercase tracking-wider">
+                  Burn duplicates for V⚡ sparks. Spend them on Vault Packs.
+                </p>
               </div>
-              <p className="text-[10px] font-mono opacity-40 mt-3 uppercase tracking-wider">
-                Burn duplicates in the Forge → earn V⚡ sparks → unlock rare Vault Packs
-              </p>
             </div>
 
             {/* Day counter / archive progress */}
-            <div
-              className="border-l-4 pl-4 py-3 relative bg-white/[0.01] rounded-r-lg p-4"
-              style={{
-                borderTop: '1px solid rgba(255,255,255,0.03)',
-                borderRight: '1px solid rgba(255,255,255,0.03)',
-                borderBottom: '1px solid rgba(255,255,255,0.03)',
-                borderLeft: '4px solid var(--color-neon-gold)'
-              }}
-            >
-              <div className="text-[8px] font-mono uppercase tracking-widest opacity-40 mb-1.5">Archive progress parameters</div>
-              <div className="text-2xl font-black" style={{ fontFamily: '"Impact", "Arial Black", sans-serif' }}>
-                Day {today} <span className="opacity-45 text-base">/ 365</span>
+            <div className="hw-panel p-5" data-accent="cyan">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[9.5px] font-mono font-bold uppercase tracking-[0.2em] text-white/55 flex items-center gap-2">
+                  <span className="hw-led" data-color="cyan" />
+                  ARCHIVE PROGRESS PARAMETERS
+                </span>
+                <span className="hw-badge">{Math.round((today / 365) * 100)}% COMPLETE</span>
               </div>
-              <div className="mt-3 h-2 w-full bg-[#111] border border-white/5 rounded-full overflow-hidden">
-                <div
-                  className="h-full rounded-full"
-                  style={{
-                    width: `${(today / 365) * 100}%`,
-                    background: 'linear-gradient(90deg, var(--color-neon-gold), #ff8800)',
-                    boxShadow: '0 0 12px #ffd70055',
-                  }}
-                />
+              <div className="hw-well p-3.5">
+                <div className="flex items-baseline justify-between">
+                  <div className="text-2xl font-black tabular-nums" style={{ fontFamily: '"Impact", "Arial Black", sans-serif' }}>
+                    Day {today} <span className="opacity-45 text-base">/ 365</span>
+                  </div>
+                  <span className="font-mono text-[10px] text-[#00E5FF] font-bold uppercase">{formatDate(today)}</span>
+                </div>
+                <div className="mt-3 h-2.5 w-full bg-black/70 border border-white/10 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${(today / 365) * 100}%`,
+                      background: 'linear-gradient(90deg, #ff3800, #ffb800, #00E5FF)',
+                      boxShadow: '0 0 12px rgba(255, 184, 0, 0.5)',
+                    }}
+                  />
+                </div>
               </div>
             </div>
 
@@ -880,7 +893,7 @@ export default function LandingPage() {
       </section>
 
       {/* Hard divider */}
-      <div className="h-px mx-4 md:mx-8 bg-white/5" />
+      <div className="h-px mx-4 md:mx-8 bg-white/10" />
 
       {/* ===== PACK SHOP ===== */}
       <section className="py-12">
@@ -901,23 +914,15 @@ export default function LandingPage() {
             <ShopConsole onPurchasePack={handlePurchasePack} className="mt-4" />
           </section>
 
-          <div className="h-px mx-4 md:mx-8 bg-white/5" />
+          <div className="h-px mx-4 md:mx-8 bg-white/10" />
 
           {/* ===== V⚡ DECRYPTION CONSOLE ===== */}
           <section className="py-12 px-4 md:px-8">
             <SectionLabel label="Decryption Deck" accent="var(--color-neon-gold)" />
-            <div 
-              className="relative overflow-hidden"
-              style={{
-                padding: '24px',
-                border: '3px solid #000',
-                background: 'linear-gradient(135deg, #0d0d0d, #1a1300)',
-                boxShadow: '6px 6px 0 #000, 0 0 40px rgba(255,215,0,0.08)',
-              }}
-            >
+            <div className="hw-panel p-6 sm:p-7 relative overflow-hidden" data-accent="gold">
               <div className="scanlines absolute inset-0 opacity-10" />
               <div className="relative z-10">
-                <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
+                <div className="flex items-center justify-between flex-wrap gap-4 mb-5">
                   <div>
                     <h2 style={{
                       fontFamily: '"Impact", "Arial Black", sans-serif',
@@ -926,12 +931,13 @@ export default function LandingPage() {
                       color: 'var(--color-neon-gold)',
                       textShadow: '0 0 10px rgba(255,215,0,0.3)'
                     }}>
-                      Decryption & Promo Code Console
+                      Promo Codes
                     </h2>
-                    <p className="text-[9px] font-mono uppercase tracking-[0.2em] opacity-45 mt-1">
-                      Enter cryptographic code · Unlock exclusive skins & bonus tokens
+                    <p className="text-[9.5px] font-mono uppercase tracking-[0.2em] text-white/55 mt-1">
+                      Redeem a code for skins and bonus sparks
                     </p>
                   </div>
+                  <span className="hw-badge"><span className="hw-led" data-color="gold" /> CIPHER READY</span>
                 </div>
 
                 <form onSubmit={handleBonusRedeem} className="space-y-4">
@@ -942,13 +948,13 @@ export default function LandingPage() {
                       onChange={e => setBonusCode(e.target.value)}
                       placeholder="e.g. BETA2026"
                       disabled={codeState === 'redeeming'}
-                      className="flex-1 bg-black border-2 border-zinc-800 text-white font-mono text-sm p-3 focus:border-amber-500 outline-none uppercase tracking-wider"
+                      className="hw-well flex-1 text-white font-mono text-sm px-4 py-3.5 focus:border-amber-400 outline-none uppercase tracking-wider"
                     />
                     <button
                       type="submit"
                       disabled={codeState === 'redeeming' || !bonusCode.trim()}
-                      className="px-8 py-3.5 bg-[#ffd700] hover:bg-[#e6c300] text-black font-black uppercase text-sm tracking-wider transition-all disabled:opacity-30 disabled:hover:bg-[#ffd700] active:scale-[0.98] duration-150 cursor-pointer"
-                      style={{ border: '2px solid #000', boxShadow: '2px 2px 0 #000' }}
+                      className="btn-3d font-mono text-xs tracking-[0.16em] uppercase px-7"
+                      data-tone="gold"
                     >
                       {codeState === 'redeeming' ? 'DECRYPTING...' : 'REDEEM CODE'}
                     </button>
@@ -956,7 +962,7 @@ export default function LandingPage() {
 
                   {/* Error Message */}
                   {codeState === 'error' && (
-                    <div className="flex items-center gap-2 text-xs font-mono text-[#ff3800] bg-[#ff3800]/5 border border-[#ff3800]/20 p-3 rounded">
+                    <div className="flex items-center gap-2 text-xs font-mono text-[#ff3800] bg-[#ff3800]/10 border border-[#ff3800]/30 p-3 rounded-lg">
                       <AlertTriangle size={14} className="shrink-0" />
                       <span>{codeError}</span>
                     </div>
@@ -970,11 +976,11 @@ export default function LandingPage() {
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.95 }}
-                      className="mt-6 border border-[#39FF14]/30 bg-[#39FF14]/5 p-5 rounded-lg space-y-4 text-center"
+                      className="mt-6 hw-well border border-[#39FF14]/40 p-5 space-y-4 text-center"
                     >
                       <div className="flex items-center justify-center gap-1.5 text-xs font-mono font-bold text-[#39FF14] tracking-widest uppercase">
                         <Sparkles size={13} />
-                        <span>Reward Unlocked successfully</span>
+                        <span>Reward unlocked</span>
                       </div>
 
                       {/* Tokens display */}
@@ -984,7 +990,7 @@ export default function LandingPage() {
                           <div className="text-3xl font-black font-mono text-[#ffb800] mt-2">
                             +{rewardClaimed.details?.tokensGranted?.toLocaleString()}
                           </div>
-                          <div className="text-[9px] font-mono text-white/50 tracking-wider mt-1 uppercase">VAULT TOKENS CREDITED</div>
+                          <div className="text-[9px] font-mono text-white/50 tracking-wider mt-1 uppercase">V⚡ SPARKS ADDED</div>
                         </div>
                       )}
 
@@ -1009,8 +1015,8 @@ export default function LandingPage() {
                           <div className="text-[9px] font-mono text-[#39FF14] tracking-wider mt-1 uppercase">ACCESS DECRYPTED</div>
                           <div className="text-[10px] font-mono text-zinc-400 mt-2 max-w-[240px] leading-relaxed uppercase">
                             {rewardClaimed.value === 'iddqd' 
-                              ? "PROCEDURAL GENERATOR DECRYPTED. LYRIC & BPM ENGINE ENGAGED." 
-                              : "MISS SYSTEM SAFETY BYPASSED. CONFIGURATION SETTINGS UNLOCKED."}
+                              ? "LYRIC AND BPM CHART MODES UNLOCKED." 
+                              : "MISS SYSTEM SETTINGS UNLOCKED."}
                           </div>
                         </div>
                       )}
@@ -1022,7 +1028,7 @@ export default function LandingPage() {
                           <div className="text-xl font-bold font-mono text-white mt-2 uppercase tracking-wider">
                             {rewardClaimed.value}
                           </div>
-                          <div className="text-[9px] font-mono text-red-500 tracking-wider mt-1 uppercase">DECRYPTION COMPLETE</div>
+                          <div className="text-[9px] font-mono text-red-500 tracking-wider mt-1 uppercase">CONTENT UNLOCKED</div>
                           <div className="text-[10px] font-mono text-zinc-400 mt-2 max-w-[240px] leading-relaxed uppercase">
                             {rewardClaimed.details?.skinUnlocked}
                           </div>
@@ -1035,7 +1041,7 @@ export default function LandingPage() {
             </div>
           </section>
 
-          <div className="h-px mx-4 md:mx-8 bg-white/5" />
+          <div className="h-px mx-4 md:mx-8 bg-white/10" />
         </>
       )}
 
@@ -1043,38 +1049,38 @@ export default function LandingPage() {
       <section className="py-12 px-4 md:px-8">
         <SectionLabel label="The Forge" accent="#ff3800" />
         <motion.div
-          whileHover={{ scale: 1.01 }}
+          whileHover={{ scale: 1.008 }}
           onClick={() => setLocation('/vault/forge')}
-          className="relative overflow-hidden cursor-pointer rounded-lg border-2 border-black"
-          style={{
-            padding: '28px 36px',
-            background: 'linear-gradient(135deg, #0d0d0d, #1a0a00)',
-            boxShadow: '6px 6px 0 #000, 0 0 45px rgba(255,56,0,0.08)',
-          }}
+          className="hw-panel relative overflow-hidden cursor-pointer p-7 sm:p-9"
+          data-accent="vermilion"
         >
           <div className="scanlines absolute inset-0 opacity-10" />
           <div className="relative z-10 flex items-center justify-between flex-wrap gap-6">
             <div>
+              <div className="hw-badge mb-2">
+                <span className="hw-led" data-color="vermilion" />
+                <span>BURN · FUSE · UPGRADE</span>
+              </div>
               <h2 style={{
                 fontFamily: '"Impact", "Arial Black", sans-serif',
                 fontSize: '36px', textTransform: 'uppercase',
                 letterSpacing: '-0.02em', margin: 0,
-                background: 'linear-gradient(135deg, #ff3800, #ff9900)',
+                background: 'linear-gradient(135deg, #ff3800, #ffb800)',
                 WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
               }}>
                 The Forge
               </h2>
-              <p className="text-[10px] font-mono uppercase tracking-[0.25em] opacity-50 mt-1.5">
-                Burn duplicates · Extract V⚡ sparks · Release echoes · Level up card rarity
+              <p className="text-[10.5px] font-mono uppercase tracking-[0.22em] text-white/60 mt-1.5">
+                Burn cards for V⚡ sparks. Echoes return to the pack pool.
               </p>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="sticker-gun-tag sticker-slits" style={{ background: '#ff9900', color: '#000', padding: '10px 20px', transform: 'rotate(-1deg)', '--slit-color': 'rgba(0,0,0,0.15)' } as any}>
-                <span className="text-xs font-black tracking-tight uppercase flex items-center gap-1.5">
-                  <Zap size={13} fill="black" /> {tokenBalance} V⚡
-                </span>
+            <div className="flex items-center gap-3">
+              <div className="hw-well px-4 py-2.5 flex items-center gap-2 font-mono text-xs font-black text-[#ffb800]">
+                <Zap size={14} fill="currentColor" /> {tokenBalance.toLocaleString()} V⚡
               </div>
-              <span className="text-2xl opacity-40 group-hover:translate-x-1.5 transition-transform">→</span>
+              <span className="btn-3d font-mono text-xs uppercase" data-tone="vermilion">
+                ENTER FORGE →
+              </span>
             </div>
           </div>
         </motion.div>
@@ -1101,7 +1107,7 @@ export default function LandingPage() {
                   minWidth: '120px',
                   background: '#ffffff',
                   '--slit-color': 'rgba(0,0,0,0.08)',
-                  boxShadow: '3px 3px 0 rgba(0,0,0,0.4)',
+                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.8), 4px 4px 0 #050308',
                 } as any}
               >
                 <div className="flex flex-col items-center">
@@ -1127,22 +1133,19 @@ export default function LandingPage() {
         className="px-4 md:px-8 py-10 mb-8"
       >
         <div
-          className="sticker-gun-tag sticker-slits p-10 overflow-hidden text-center rounded-lg"
-          style={{
-            background: 'linear-gradient(135deg, #0d0d0d, #050505)',
-            border: '3px solid var(--color-neon-gold)',
-            '--slit-color': 'rgba(255,215,0,0.08)',
-            transform: 'rotate(-0.5deg)',
-            boxShadow: '6px 6px 0 rgba(0,0,0,0.8), 0 0 60px rgba(255,215,0,0.12)',
-          } as any}
+          className="hw-panel p-9 sm:p-11 overflow-hidden text-center relative"
+          data-accent="gold"
         >
           <div className="scanlines absolute inset-0 opacity-15" />
-          <div className="relative z-10 space-y-3">
-            <div className="text-[8px] font-mono tracking-[0.5em] uppercase opacity-45">EARLY ACCESS PROTOCOL</div>
-            <h3 className="text-6xl brutalist-xl" style={{ '--neon-accent': 'var(--color-neon-gold)' } as any}>
+          <div className="relative z-10 space-y-3.5 flex flex-col items-center">
+            <div className="hw-badge">
+              <span className="hw-led" data-color="gold" />
+              <span>EARLY ACCESS PROTOCOL · IMMUTABLE MINT</span>
+            </div>
+            <h3 className="text-5xl sm:text-6xl brutalist-xl" style={{ '--neon-accent': 'var(--color-neon-gold)' } as any}>
               Generation Zero
             </h3>
-            <p className="text-[10px] font-mono uppercase tracking-[0.25em] opacity-60 leading-relaxed max-w-sm mx-auto">
+            <p className="hw-well px-5 py-3 text-[10.5px] font-mono uppercase tracking-[0.22em] text-white/75 leading-relaxed max-w-md mx-auto">
               First 100 collectors only.<br />
               <span style={{ color: 'var(--color-neon-gold)', fontWeight: 900 }}>Gen 0 cards are never reissued.</span>
             </p>
@@ -1160,9 +1163,9 @@ export default function LandingPage() {
           <div className="text-center space-y-4">
             <div className="text-6xl animate-bounce">🎉</div>
             <p className="text-3xl brutalist-title" style={{ '--neon-accent': 'var(--color-neon-gold)' } as any}>
-              CARD CLAIMED!
+              CARD CLAIMED
             </p>
-            <p className="text-sm font-mono text-white/50 tracking-wider">INITIATING DECRYPTOR SEED...</p>
+            <p className="text-sm font-mono text-white/50 tracking-wider">OPENING YOUR CARD…</p>
           </div>
         </motion.div>
       )}
@@ -1190,13 +1193,13 @@ export default function LandingPage() {
                 fontFamily: '"Impact", "Arial Black", sans-serif',
                 fontSize: '20px', textTransform: 'uppercase',
                 letterSpacing: '0.15em', color: '#ff3800',
-              }}>DECRYPTING ARCHIVE FILE</p>
+              }}>DECRYPTING CARD</p>
               <p style={{
                 fontFamily: '"JetBrains Mono", monospace',
                 fontSize: '10px', letterSpacing: '0.2em',
                 color: 'rgba(255,255,255,0.3)', marginTop: '6px',
                 textTransform: 'uppercase',
-              }}>ESTABLISHING COGNITIVE SYNC...</p>
+              }}>ADDING TO YOUR VAULT…</p>
             </div>
           </div>
         </motion.div>
@@ -1227,7 +1230,7 @@ export default function LandingPage() {
                 <div className="flex justify-between items-start">
                   <div>
                     <h3 className="text-2xl font-black uppercase text-[#ff9900]" style={{ fontFamily: '"Impact", sans-serif' }}>
-                      🎯 TARGETED PULL DECRYPTION
+                      🎯 TARGETED PULL
                     </h3>
                     <p className="text-[9px] font-mono uppercase tracking-widest opacity-40">VAULT PROTOCOL 0x5D3</p>
                   </div>
@@ -1330,9 +1333,9 @@ export default function LandingPage() {
                 <div className="flex justify-between items-start">
                   <div>
                     <h3 className="text-2xl font-black uppercase text-[#00d2ff]" style={{ fontFamily: '"Impact", sans-serif' }}>
-                      ⚡ RARITY UPGRADE MODULE
+                      ⚡ RARITY UPGRADE
                     </h3>
-                    <p className="text-[9px] font-mono uppercase tracking-widest opacity-40">SELECT TARGET CARD TO UPGRADE TIER</p>
+                    <p className="text-[9px] font-mono uppercase tracking-widest opacity-40">PICK A CARD TO UPGRADE</p>
                   </div>
                   <button 
                     onClick={() => { audioManager.playSfx('tap_nav', 0.4); setShowUpgradeModal(false); }}
@@ -1441,11 +1444,11 @@ export default function LandingPage() {
 
               <div className="space-y-1.5">
                 <h2 className="text-base font-black font-mono tracking-wide uppercase text-white">
-                  Access Gated Content?
+                  View Age-Restricted Content?
                 </h2>
                 <p className="text-[10px] text-zinc-400 font-mono leading-relaxed uppercase">
                   The decryption key <span className="text-[#39FF14] font-bold">"{ageGateCode}"</span> contains adult-themed mature material (Stella Luxx Stunner Gallery).
-                  You must be 18 years or older to proceed and view this content.
+                  You must be 18 or older to view this content.
                 </p>
               </div>
 
@@ -1456,11 +1459,11 @@ export default function LandingPage() {
                     let successMsg = "";
                     if (ageGateCode === 'stunnerofthemonthunlock') {
                       localStorage.setItem('opt_unlocked_stunner_section', 'true');
-                      successMsg = "Stunner of the Month Section Unlocked!";
+                      successMsg = "Stunner of the Month unlocked.";
                     } else if (ageGateCode === 'freebstella') {
                       localStorage.setItem('opt_free_stella_unlocked', 'true');
                       localStorage.setItem('opt_unlocked_stunner_section', 'true');
-                      successMsg = "Stella Luxx Fully Unlocked in Slideshows!";
+                      successMsg = "Stella Luxx unlocked in Slideshows.";
                     }
                     
                     audioManager.playSfx('song_completion', 0.85);
@@ -1481,7 +1484,7 @@ export default function LandingPage() {
                 <button
                   onClick={() => {
                     audioManager.playSfx('error', 0.6);
-                    setCodeError('Decryption aborted: Age verification failed.');
+                    setCodeError('Age check declined. Code not redeemed.');
                     setCodeState('error');
                     setAgeGateCode(null);
                   }}

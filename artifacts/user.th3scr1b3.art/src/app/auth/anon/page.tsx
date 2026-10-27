@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '../../../lib/supabase';
+import { isAllowedRedirectUri } from '../../../lib/redirect';
 import { Loader2, Fingerprint } from 'lucide-react';
 import styles from './page.module.css';
 
@@ -17,10 +18,17 @@ function AnonLoginContent() {
 
   useEffect(() => {
     const performAnonAuth = async () => {
-      const redirectUri = searchParams.get('redirect_uri') || 'http://localhost:5173/';
-      addLog(`[SYSTEM] Target node detected: ${redirectUri}`);
+      const requested = searchParams.get('redirect_uri');
+      // No redirect_uri → send people to the main hub, never to a dev server.
+      const redirectUri = requested ?? 'https://th3scr1b3.art/';
 
       try {
+        // Inside the try so a bad redirect_uri shows as an error instead of hanging the terminal.
+        if (!isAllowedRedirectUri(redirectUri)) {
+          throw new Error('Invalid redirect_uri — must be a th3scr1b3.art URL.');
+        }
+        addLog(`[SYSTEM] Target node detected: ${redirectUri}`);
+
         // 1. Check existing session
         addLog('[SYSTEM] Checking active authorization matrix...');
         const { data: { session } } = await supabase.auth.getSession();

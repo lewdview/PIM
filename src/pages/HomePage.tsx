@@ -32,8 +32,14 @@ const TICKER_TEXT = 'PIM : TH3V4ULT — 365 DAYS OF DARK AND LIGHT — GEN 0 ARC
 function BrutalistTicker() {
   return (
     <div
-      className="w-full overflow-hidden border-y-2 border-black relative"
-      style={{ background: '#ffb800', height: '36px' }}
+      className="w-full overflow-hidden relative"
+      style={{
+        background: 'linear-gradient(180deg, #ffcb38 0%, #ffb800 100%)',
+        height: '36px',
+        borderTop: '1px solid rgba(255, 255, 255, 0.45)',
+        borderBottom: '3px solid #050308',
+        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.45)',
+      }}
     >
       <div
         className="absolute inset-0 flex items-center whitespace-nowrap"
@@ -47,9 +53,9 @@ function BrutalistTicker() {
               fontFamily: '"Impact", "Arial Black", sans-serif',
               fontSize: '14px',
               fontWeight: 900,
-              letterSpacing: '0.08em',
+              letterSpacing: '0.09em',
               textTransform: 'uppercase',
-              color: '#000',
+              color: '#09060e',
             }}
           >
             {TICKER_TEXT}
@@ -74,18 +80,19 @@ function StatSticker({ icon: Icon, label, value, color, rot }: {
       className="sticker-gun-tag sticker-slits hover:scale-105 transition-transform cursor-default"
       style={{
         transform: `rotate(${rot}deg)`,
-        padding: '10px 18px',
-        '--slit-color': `${color}35`,
+        padding: '11px 18px',
+        '--slit-color': `${color}40`,
         minWidth: '155px',
-        boxShadow: `4px 4px 0 rgba(0,0,0,0.5)`,
+        borderTop: `3px solid ${color}`,
+        boxShadow: `inset 0 1px 0 rgba(255,255,255,0.65), 5px 5px 0 #050308, 0 8px 18px rgba(0,0,0,0.4)`,
       } as any}
     >
       <div className="flex flex-col items-center gap-0.5">
-        <span className="text-[7px] font-black tracking-widest opacity-45 mb-0.5 flex items-center gap-1 uppercase">
-          <Icon size={9} /> {label}
+        <span className="text-[7.5px] font-black tracking-widest opacity-55 mb-0.5 flex items-center gap-1 uppercase">
+          <Icon size={10} /> {label}
         </span>
         <span
-          className="font-black italic tracking-tighter leading-none"
+          className="font-black italic tracking-tighter leading-none tabular-nums"
           style={{
             fontFamily: '"Impact", "Arial Black", sans-serif',
             fontSize: '28px',
@@ -228,12 +235,12 @@ export default function HomePage() {
   const handleTargetedPull = useCallback(async (dayNum: number) => {
     if (!dayNum || dayNum < 1 || dayNum > today || tokenBalance < 275) {
       if (dayNum > today) {
-        alert(`Day ${dayNum} is locked. Targeted Pull is restricted to released calendar days (Day 1 to ${today}). Future tracks require a Prophecy Pull.`);
+        alert(`Day ${dayNum} hasn't dropped yet. Targeted Pull covers Day 1–${today}. Future days need a Prophecy Pull.`);
       }
       return;
     }
     setTargetLoading(true);
-    useLoadingToast.getState().show('Targeted pull…');
+    useLoadingToast.getState().show(`Pulling Day ${dayNum}…`);
     try {
       const card = await targetedPull(dayNum);
       if (card) {
@@ -264,7 +271,7 @@ export default function HomePage() {
       const result = await upgradeRarity(cardOwnedId);
       if (result.success) {
         audioManager.playSfx('upgrade', 0.9);
-        alert(`Success! Card upgraded to ${result.newRarity?.toUpperCase()}`);
+        alert(`Card upgraded to ${result.newRarity?.toUpperCase()}.`);
       }
     } catch (err) {
       console.error(err);
@@ -330,11 +337,11 @@ export default function HomePage() {
     if (hasClaimed) return;
 
     if (!user) {
-      alert('Authentication required: Please connect your wallet first using the "Connect Wallet" button at the top right.');
+      alert('Connect your wallet to claim. Use Connect Wallet at the top right.');
       return;
     }
 
-    useLoadingToast.getState().show('Claiming daily card…');
+    useLoadingToast.getState().show('Claiming today\'s drop…');
     try {
       const owned = await claimDailyCard(today);
       useLoadingToast.getState().hide();
@@ -360,12 +367,12 @@ export default function HomePage() {
           setLocation('/vault/reveal');
         }, 800);
       } else {
-        alert('Failed to claim daily card. This can happen if the daily drop has already been claimed or if the server rejected the request. Please try reconnecting your wallet.');
+        alert("Couldn't claim today's drop. It may already be claimed on this account.");
       }
     } catch (err: any) {
       useLoadingToast.getState().hide();
       console.error('Claim daily card threw error:', err);
-      alert(`Error claiming daily drop: ${err?.message || err}`);
+      alert(`Couldn't claim today's drop: ${err?.message || err}`);
     }
   }, [today, hasClaimed, setHasClaimed, addToCollection, startReveal, setLocation, user]);
 
@@ -403,7 +410,7 @@ export default function HomePage() {
         : await purchasePack(category, size, sessionId);
       useLoadingToast.getState().hide();
       if (cards === 'insufficient') {
-        alert('Insufficient V⚡ sparks for this pack.');
+        alert('Not enough V⚡ sparks for this pack.');
         await loadVaultData();
         return;
       }
@@ -447,7 +454,7 @@ export default function HomePage() {
 
     if (method === 'crypto') {
       try {
-        useLoadingToast.getState().show('Waiting for wallet confirmation…');
+        useLoadingToast.getState().show('Confirm in your wallet…');
         
         const txHash = await payWithCrypto(priceValue);
         
@@ -474,19 +481,19 @@ export default function HomePage() {
     } else {
       // Live Stripe Checkout session redirect
       try {
-        useLoadingToast.getState().show('Connecting to Stripe checkout…');
+        useLoadingToast.getState().show('Opening checkout…');
         const res = await createStripeCheckoutSession(category, size);
         useLoadingToast.getState().hide();
 
         if (res.success && res.checkoutUrl) {
           await redirectToStripeCheckout(res.checkoutUrl);
         } else {
-          alert(`Checkout Error: ${res.error || 'Could not initialize Stripe Checkout'}`);
+          alert(`Checkout didn't open. ${res.error || 'Try again.'}`);
         }
       } catch (err: any) {
         console.error('Stripe redirect failed:', err);
         useLoadingToast.getState().hide();
-        alert(err.message || 'Failed to connect to Stripe checkout');
+        alert(err.message || 'Checkout didn\'t open. Try again.');
       }
     }
   }, [checkoutInfo, startReveal, setLocation, addToCollection, loadVaultData]);
@@ -496,7 +503,12 @@ export default function HomePage() {
   const proofs = collection.filter(c => c.proof).length;
 
   return (
-    <div className="flex-1 w-full pb-36 md:pb-8">
+    <div
+      className="flex-1 w-full"
+      style={{
+        paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 6.5rem)',
+      }}
+    >
       {/* ===== TICKER ===== */}
       <BrutalistTicker />
 
@@ -556,74 +568,73 @@ export default function HomePage() {
                   {proofs > 0 && (
                     <StatSticker icon={Star} label="Proofs" value={proofs} color="var(--color-neon-purple)" rot={2.5} />
                   )}
-                  <div
+                  <button
+                    type="button"
                     onClick={() => { audioManager.playSfx('tap_nav', 0.1); setOptionsModalOpen(true); }}
-                    className="sticker-gun-tag sticker-slits hover:scale-105 transition-all cursor-pointer flex flex-col items-center justify-center border"
-                    style={{
-                      transform: 'rotate(-3deg)',
-                      padding: '10px 18px',
-                      '--slit-color': 'rgba(255, 56, 0, 0.15)',
-                      minWidth: '155px',
-                      boxShadow: `4px 4px 0 rgba(0,0,0,0.5)`,
-                      background: '#120502',
-                      borderColor: '#ff380066',
-                    } as any}
+                    className="btn-3d font-mono text-xs uppercase"
+                    data-tone="quiet"
                   >
-                    <span className="text-[7px] font-black tracking-widest opacity-80 mb-0.5 flex items-center gap-1 uppercase text-[#ff3800]">
-                      ⚙ CONFIG
-                    </span>
-                    <span className="font-mono text-[10px] font-black uppercase tracking-wider text-white">
-                      VAULT OPTIONS
-                    </span>
-                  </div>
+                    ⚙ VAULT OPTIONS
+                  </button>
                 </div>
               </div>
 
-              {/* Token Balance widget */}
+              {/* Token Balance widget (Click triggers Solitaire Easter Egg) */}
               <div>
                 <SectionLabel label="Token Balance" accent="#ff9900" />
                 <div
-                  className="flex items-center gap-3 border-2 border-black px-4 py-3 w-fit cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all"
-                  style={{ background: '#0d0d0d', boxShadow: '4px 4px 0 #000' }}
+                  className="hw-panel p-4 cursor-pointer hover:scale-[1.01] active:scale-[0.99] transition-all"
+                  data-accent="gold"
                   onClick={() => {
                     audioManager.playSfx('open_chest', 0.85);
                     setShowSolitaire(true);
                   }}
                   title="Click to trigger Solitaire Easter Egg!"
                 >
-                  <Zap size={20} style={{ color: '#ff9900' }} />
-                  <div>
-                    <div className="text-[8px] font-mono uppercase opacity-40 tracking-wider">VAULT TOKENS</div>
-                    <div
-                      className="font-black leading-none"
-                      style={{ fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '32px', color: '#ff9900', letterSpacing: '-1px' }}
-                    >
-                      {tokenBalance.toLocaleString()}
+                  <div className="hw-well flex items-center justify-between gap-4 px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <Zap size={22} className="animate-pulse" style={{ color: '#ffb800' }} />
+                      <div>
+                        <div className="text-[8.5px] font-mono font-bold uppercase text-white/50 tracking-[0.2em]">VAULT TOKENS</div>
+                        <div
+                          className="font-black leading-none mt-0.5 tabular-nums"
+                          style={{ fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '34px', color: '#ffb800', letterSpacing: '-1px' }}
+                        >
+                          {tokenBalance.toLocaleString()}
+                        </div>
+                      </div>
                     </div>
+                    <span className="hw-badge">V⚡ SPARKS</span>
                   </div>
-                  <div className="text-[10px] font-mono opacity-30 ml-2">V⚡</div>
+                  <p className="text-[9.5px] font-mono text-white/50 mt-2.5 uppercase tracking-wider">
+                    Burn duplicates for V⚡ sparks. Spend them on Vault Packs.
+                  </p>
                 </div>
-                <p className="text-[9px] font-mono opacity-35 mt-2">Sell cards → earn sparks → buy Vault Packs</p>
               </div>
 
               {/* Day counter / archive info */}
-              <div
-                className="border-l-4 pl-4 py-2"
-                style={{ borderColor: 'var(--color-neon-gold)' }}
-              >
-                <div className="text-[8px] font-mono uppercase tracking-widest opacity-40 mb-1">Archive Progress</div>
-                <div className="text-xl font-black" style={{ fontFamily: '"Impact", "Arial Black", sans-serif' }}>
-                  Day {today} <span className="opacity-40 text-base">/ 365</span>
+              <div className="hw-panel p-4" data-accent="cyan">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[9px] font-mono font-bold uppercase tracking-[0.2em] text-white/55 flex items-center gap-2">
+                    <span className="hw-led" data-color="cyan" />
+                    ARCHIVE PROGRESS
+                  </span>
+                  <span className="hw-badge">{Math.round((today / 365) * 100)}%</span>
                 </div>
-                <div className="mt-2 h-1.5 w-full" style={{ background: '#111', border: '1px solid rgba(255,255,255,0.06)' }}>
-                  <div
-                    className="h-full"
-                    style={{
-                      width: `${(today / 365) * 100}%`,
-                      background: 'linear-gradient(90deg, var(--color-neon-gold), #ffaa00)',
-                      boxShadow: '0 0 8px #ffd70055',
-                    }}
-                  />
+                <div className="hw-well p-3">
+                  <div className="text-xl font-black tabular-nums" style={{ fontFamily: '"Impact", "Arial Black", sans-serif' }}>
+                    Day {today} <span className="opacity-45 text-base">/ 365</span>
+                  </div>
+                  <div className="mt-2 h-2 w-full rounded-full overflow-hidden bg-black/70 border border-white/10">
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${(today / 365) * 100}%`,
+                        background: 'linear-gradient(90deg, #ff3800, #ffb800, #00E5FF)',
+                        boxShadow: '0 0 10px rgba(255, 184, 0, 0.5)',
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -632,7 +643,7 @@ export default function HomePage() {
       </section>
 
       {/* Hard divider */}
-      <div className="h-px mx-4 md:mx-8" style={{ background: 'rgba(255,255,255,0.06)' }} />
+      <div className="h-px mx-4 md:mx-8 bg-white/10" />
 
       {/* ===== PACK SHOP ===== */}
       <section className="py-6">
@@ -651,45 +662,44 @@ export default function HomePage() {
         <ShopConsole onPurchasePack={handlePurchasePack} className="mt-4" />
       </section>
 
-      <div className="h-px mx-4 md:mx-8" style={{ background: 'rgba(255,255,255,0.06)' }} />
+      <div className="h-px mx-4 md:mx-8 bg-white/10" />
 
       {/* ===== THE FORGE CTA ===== */}
       <section className="py-8 px-4 md:px-8">
         <SectionLabel label="The Forge" accent="#ff3800" />
         <motion.div
-          whileHover={{ scale: 1.01 }}
+          whileHover={{ scale: 1.008 }}
           onClick={() => setLocation('/vault/forge')}
-          className="relative overflow-hidden cursor-pointer"
-          style={{
-            padding: '24px 32px',
-            border: '3px solid #000',
-            background: 'linear-gradient(135deg, #0d0d0d, #1a0a00)',
-            boxShadow: '6px 6px 0 #000, 0 0 40px rgba(255,56,0,0.08)',
-          }}
+          className="hw-panel relative overflow-hidden cursor-pointer p-6 sm:p-8"
+          data-accent="vermilion"
         >
           <div className="scanlines absolute inset-0 opacity-10" />
           <div className="relative z-10 flex items-center justify-between flex-wrap gap-4">
             <div>
+              <div className="hw-badge mb-2">
+                <span className="hw-led" data-color="vermilion" />
+                <span>BURN · FUSE · UPGRADE</span>
+              </div>
               <h2 style={{
                 fontFamily: '"Impact", "Arial Black", sans-serif',
                 fontSize: '32px', textTransform: 'uppercase',
                 letterSpacing: '-0.02em', margin: 0,
-                background: 'linear-gradient(135deg, #ff3800, #ff9900)',
+                background: 'linear-gradient(135deg, #ff3800, #ffb800)',
                 WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
               }}>
                 The Forge
               </h2>
-              <p className="text-[9px] font-mono uppercase tracking-[0.2em] opacity-45 mt-1">
-                Burn cards · Earn V⚡ · Release echoes · Track upgrades
+              <p className="text-[9.5px] font-mono uppercase tracking-[0.2em] text-white/60 mt-1">
+                Burn cards for V⚡ sparks. Echoes return to the pack pool.
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <div className="sticker-gun-tag sticker-slits" style={{ background: '#ff9900', color: '#000', padding: '8px 16px', transform: 'rotate(-1deg)', '--slit-color': 'rgba(0,0,0,0.15)' } as any}>
-                <span className="text-[10px] font-black tracking-tighter uppercase flex items-center gap-1">
-                  <Zap size={11} /> {tokenBalance} V⚡
-                </span>
+              <div className="hw-well px-3.5 py-2 flex items-center gap-1.5 font-mono text-xs font-black text-[#ffb800]">
+                <Zap size={13} fill="currentColor" /> {tokenBalance.toLocaleString()} V⚡
               </div>
-              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '20px', opacity: 0.3 }}>→</span>
+              <span className="btn-3d font-mono text-xs uppercase" data-tone="vermilion" data-size="sm">
+                ENTER FORGE →
+              </span>
             </div>
           </div>
         </motion.div>
@@ -699,19 +709,18 @@ export default function HomePage() {
       <section className="py-8 px-4 md:px-8">
         <SectionLabel label="Promotions & Decryption" accent="var(--color-neon-gold)" />
         <motion.div
-          whileHover={{ scale: 1.01 }}
+          whileHover={{ scale: 1.008 }}
           onClick={() => setLocation('/vault/claim')}
-          className="relative overflow-hidden cursor-pointer"
-          style={{
-            padding: '24px 32px',
-            border: '3px solid #000',
-            background: 'linear-gradient(135deg, #0d0d0d, #1a1300)',
-            boxShadow: '6px 6px 0 #000, 0 0 40px rgba(255,215,0,0.08)',
-          }}
+          className="hw-panel relative overflow-hidden cursor-pointer p-6 sm:p-8"
+          data-accent="gold"
         >
           <div className="scanlines absolute inset-0 opacity-10" />
           <div className="relative z-10 flex items-center justify-between flex-wrap gap-4">
             <div>
+              <div className="hw-badge mb-2">
+                <span className="hw-led" data-color="gold" />
+                <span>CIPHER CONSOLE · BONUS REWARDS</span>
+              </div>
               <h2 style={{
                 fontFamily: '"Impact", "Arial Black", sans-serif',
                 fontSize: '32px', textTransform: 'uppercase',
@@ -721,17 +730,14 @@ export default function HomePage() {
               }}>
                 Redeem Center
               </h2>
-              <p className="text-[9px] font-mono uppercase tracking-[0.2em] opacity-45 mt-1">
-                Enter promotional codes · Unlock V⚡ sparks · Claim exclusive background skins
+              <p className="text-[9.5px] font-mono uppercase tracking-[0.2em] text-white/60 mt-1">
+                Redeem a code for skins and bonus sparks
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <div className="sticker-gun-tag sticker-slits" style={{ background: '#ffd700', color: '#000', padding: '8px 16px', transform: 'rotate(1.5deg)', '--slit-color': 'rgba(0,0,0,0.15)' } as any}>
-                <span className="text-[10px] font-black tracking-tighter uppercase flex items-center gap-1">
-                  <Gift size={11} /> Decrypt Code
-                </span>
-              </div>
-              <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '20px', opacity: 0.3 }}>→</span>
+              <span className="btn-3d font-mono text-xs uppercase" data-tone="gold" data-size="sm">
+                <Gift size={14} /> DECRYPT CODE →
+              </span>
             </div>
           </div>
         </motion.div>
@@ -758,7 +764,7 @@ export default function HomePage() {
                   minWidth: '110px',
                   background: '#ffffff',
                   '--slit-color': 'rgba(0,0,0,0.08)',
-                  boxShadow: '3px 3px 0 rgba(0,0,0,0.4)',
+                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.8), 4px 4px 0 #050308',
                 } as any}
               >
                 <div className="flex flex-col items-center">
@@ -776,7 +782,7 @@ export default function HomePage() {
         </section>
       )}
 
-      <div className="h-px mx-4 md:mx-8" style={{ background: 'rgba(255,255,255,0.06)' }} />
+      <div className="h-px mx-4 md:mx-8 bg-white/10" />
 
       {/* ===== GEN 0 BANNER ===== */}
       <motion.section
@@ -786,22 +792,19 @@ export default function HomePage() {
         className="px-4 md:px-8 py-8 mb-4"
       >
         <div
-          className="sticker-gun-tag sticker-slits p-10 overflow-hidden text-center"
-          style={{
-            background: 'linear-gradient(135deg, #0d0d0d, #050505)',
-            border: '3px solid var(--color-neon-gold)',
-            '--slit-color': 'rgba(255,215,0,0.08)',
-            transform: 'rotate(-0.5deg)',
-            boxShadow: '6px 6px 0 rgba(0,0,0,0.8), 0 0 60px rgba(255,215,0,0.12)',
-          } as any}
+          className="hw-panel p-9 sm:p-11 overflow-hidden text-center relative"
+          data-accent="gold"
         >
           <div className="scanlines absolute inset-0 opacity-15" />
-          <div className="relative z-10 space-y-3">
-            <div className="text-[8px] font-mono tracking-[0.5em] uppercase opacity-40">Early Access</div>
-            <h3 className="text-6xl brutalist-xl" style={{ '--neon-accent': 'var(--color-neon-gold)' } as any}>
+          <div className="relative z-10 space-y-3.5 flex flex-col items-center">
+            <div className="hw-badge">
+              <span className="hw-led" data-color="gold" />
+              <span>EARLY ACCESS PROTOCOL · IMMUTABLE MINT</span>
+            </div>
+            <h3 className="text-5xl sm:text-6xl brutalist-xl" style={{ '--neon-accent': 'var(--color-neon-gold)' } as any}>
               Generation Zero
             </h3>
-            <p className="text-[10px] font-mono uppercase tracking-[0.25em] opacity-50 leading-relaxed max-w-sm mx-auto">
+            <p className="hw-well px-5 py-3 text-[10.5px] font-mono uppercase tracking-[0.22em] text-white/75 leading-relaxed max-w-md mx-auto">
               First 100 collectors only.<br />
               <span style={{ color: 'var(--color-neon-gold)', fontWeight: 900 }}>Gen 0 cards never reissued.</span>
             </p>
@@ -819,7 +822,7 @@ export default function HomePage() {
         >
           <div className="text-center space-y-4">
             <div className="text-6xl">🎉</div>
-            <p className="text-2xl brutalist-title" style={{ '--neon-accent': 'var(--color-neon-gold)' } as any}>Card Claimed!</p>
+            <p className="text-2xl brutalist-title" style={{ '--neon-accent': 'var(--color-neon-gold)' } as any}>Card Claimed</p>
             <p className="text-sm font-mono" style={{ color: 'var(--color-text-muted)' }}>Revealing…</p>
           </div>
         </motion.div>
@@ -855,7 +858,7 @@ export default function HomePage() {
                 fontSize: '10px', letterSpacing: '0.2em',
                 color: 'rgba(255,255,255,0.3)', marginTop: '6px',
                 textTransform: 'uppercase',
-              }}>Connecting to vault engine…</p>
+              }}>Adding to your vault…</p>
             </div>
           </div>
         </motion.div>
@@ -898,7 +901,7 @@ export default function HomePage() {
                 <div className="flex justify-between items-start">
                   <div>
                     <h3 className="text-2xl font-black uppercase text-[#ff9900]" style={{ fontFamily: '"Impact", sans-serif' }}>
-                      🎯 TARGETED PULL DECRYPTION
+                      🎯 TARGETED PULL
                     </h3>
                     <p className="text-[9px] font-mono uppercase tracking-widest opacity-40">VAULT PROTOCOL 0x5D3</p>
                   </div>
@@ -1000,9 +1003,9 @@ export default function HomePage() {
                 <div className="flex justify-between items-start">
                   <div>
                     <h3 className="text-2xl font-black uppercase text-[#00d2ff]" style={{ fontFamily: '"Impact", sans-serif' }}>
-                      ⚡ RARITY UPGRADE MODULE
+                      ⚡ RARITY UPGRADE
                     </h3>
-                    <p className="text-[9px] font-mono uppercase tracking-widest opacity-40">SELECT TARGET CARD TO UPGRADE TIER</p>
+                    <p className="text-[9px] font-mono uppercase tracking-widest opacity-40">PICK A CARD TO UPGRADE</p>
                   </div>
                   <button 
                     onClick={() => { audioManager.playSfx('tap_nav', 0.4); setShowUpgradeModal(false); }}

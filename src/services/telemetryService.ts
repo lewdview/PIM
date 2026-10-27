@@ -1,4 +1,5 @@
 import { telemetryQueue } from './telemetryQueue';
+import { mirrorGameEvent } from './ecosystemActivity';
 
 export interface TelemetryOptions {
   immediate?: boolean;
@@ -19,6 +20,8 @@ export async function logAnalyticsEvent(
   } catch (err) {
     console.warn('[Analytics] Failed to enqueue event:', eventType, err);
   }
+  // Game starts/ends also count as plays in the ecosystem-wide play log.
+  mirrorGameEvent(eventType, payload);
 }
 
 /**

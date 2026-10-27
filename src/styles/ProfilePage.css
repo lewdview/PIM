@@ -14,7 +14,9 @@
   min-height: 100dvh;
   position: relative;
   overflow-x: hidden;
-  padding-bottom: 6rem;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 6.5rem);
   --palette-dominant: #ff3800;
   --palette-secondary: #a855f7;
   --palette-accent: #00e5ff;
@@ -52,8 +54,18 @@
   width: min(380px, 82vw);
   aspect-ratio: 1;
   transform-style: preserve-3d;
-  transition: transform 0.25s ease-out;
   cursor: pointer;
+}
+
+/* Tilt is written by useHoloTilt; the HoloSheen inside replaces the old static glare. */
+.profile-card-3d-tilt {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.profile-card-3d-card .hero-specular-glare {
+  display: none;
 }
 
 .profile-card-3d-card {
@@ -149,6 +161,7 @@
   justify-content: center;
   gap: 0.75rem;
   padding: 1rem 2.5rem;
+  min-height: 48px;
   font-family: 'Roboto Mono', monospace;
   font-weight: 800;
   font-size: 0.75rem;
@@ -157,7 +170,7 @@
   color: #000;
   background: var(--palette-dominant);
   border: 2px solid #000;
-  clip-path: polygon(12px 0%, 100% 0%, calc(100% - 12px) 100%, 0% 100%);
+  clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
   cursor: pointer;
   transition: all 0.35s cubic-bezier(0.22, 1, 0.36, 1);
   text-decoration: none;
@@ -175,6 +188,7 @@
   justify-content: center;
   gap: 0.65rem;
   padding: 0.85rem 1.85rem;
+  min-height: 48px;
   font-family: 'Roboto Mono', monospace;
   font-weight: 700;
   font-size: 0.7rem;
@@ -183,6 +197,7 @@
   background: rgba(15, 15, 24, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.12);
   color: rgba(255, 255, 255, 0.85);
+  clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
   cursor: pointer;
   transition: all 0.35s ease;
   text-decoration: none;
@@ -298,4 +313,47 @@
 .profile-eco-link:hover {
   text-shadow: 0 0 10px var(--palette-dominant);
   transform: translateX(3px);
+}
+
+/* Passport photo: hover/tap to change */
+.profile-avatar-initials {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 26px;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.profile-avatar-edit {
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.profile-avatar-edit:hover,
+.profile-avatar-edit:focus-visible,
+.profile-avatar-edit.is-busy {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .profile-avatar-edit {
+    inset: auto -2px -2px auto;
+    width: 30px;
+    height: 30px;
+    opacity: 1;
+    background: #0a0a0f;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+  }
+  .profile-avatar-edit svg {
+    width: 15px;
+    height: 15px;
+  }
 }

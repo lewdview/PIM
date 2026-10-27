@@ -5,7 +5,7 @@ import type { GameSong } from "@/game/api";
 import { getMedalForSong, getHighScore, getScoreHistory } from "@/game/progress";
 import { audioManager } from "@/game/audio";
 import { getActiveTheme } from "@/lib/options";
-import { useVaultStore } from "../store/useVaultStore";
+import { useVaultStore, ownsCardForDay } from "../store/useVaultStore";
 import { getCurrentDay } from "../utils/dayCalc";
 import PrizeProgressMenu from "../components/PrizeProgressMenu";
 import SongLeaderboard from "../components/SongLeaderboard";
@@ -76,7 +76,6 @@ export default function SongDetail() {
 
   // Collection checking for locking
   const collection = useVaultStore((s) => s.collection);
-  const fragments = useVaultStore((s) => s.fragments);
   const loadVaultData = useVaultStore((s) => s.loadVaultData);
   const equippedCardId = useVaultStore((s) => s.equippedCardId);
   const setEquippedCardId = useVaultStore((s) => s.setEquippedCardId);
@@ -97,12 +96,11 @@ export default function SongDetail() {
       .then(s => {
         if (!s) { setLocation(backRoute); return; }
         setSong(s);
-        const savedOverride = sessionStorage.getItem(`diff_override_${songId}`);
-        if (savedOverride) {
-          setDiffOverride(parseInt(savedOverride, 10));
-        } else {
-          setDiffOverride(s.difficultyLevel);
-        }
+        // Always start from the song's canonical difficulty — never restore a
+        // saved override here. Chapter.tsx writes campaign-scaled difficulties
+        // under the same session key, and restoring one silently voids award
+        // eligibility on the results screen.
+        setDiffOverride(s.difficultyLevel);
         setHistory(getScoreHistory(songId));
         setLoading(false);
       })
@@ -211,31 +209,18 @@ export default function SongDetail() {
   if (!song) return null;
 
   const today = getCurrentDay();
-  const hasCard = song && Array.isArray(collection) ? collection.some(c => c && (c.cardId === song.id || c.card?.day === song.day)) : false;
+  const hasCard = song ? ownsCardForDay(collection, song.day) : false;
   const bestScore = history.length > 0 ? Math.max(...history) : 0;
   const isCleared = bestScore > 0 || (medal && medal !== '');
-  const getFragmentsForDay = (day: number) => {
-    const cardKey = `card-${day}`;
-    const dayKey = `day-${String(day).padStart(3, '0')}`;
-    const dayKeyRaw = `day-${day}`;
-    return (
-      fragments[cardKey] ??
-      fragments[dayKey] ??
-      fragments[dayKeyRaw] ??
-      0
-    );
-  };
-
-  const fragmentCount = song ? getFragmentsForDay(song.day) : 0;
   const isAllPrizesClaimed = song ? (claimedRewards[song.id]?.includes('prophecy') || localStorage.getItem(`reward_tier_${song.id}`) === 'prophecy') : false;
 
   let unlocked = false;
   if (from === 'songs') {
-    // Award Play / Archive Play: requires 10 fragments decrypted OR owning the card
-    unlocked = hasCard || fragmentCount >= 10;
+    // Award Play / Archive Play: requires owning the card
+    unlocked = hasCard;
   } else if (from.startsWith('chapter')) {
-    // Campaign Play: first play is free, replay requires 10 fragments decrypted OR owning the card
-    unlocked = !isCleared || hasCard || fragmentCount >= 10;
+    // Campaign Play: first play is free, replay requires owning the card
+    unlocked = !isCleared || hasCard;
   } else {
     // Other (Playable in PIM by owning the card, even common)
     unlocked = hasCard || song.day === today;
@@ -246,7 +231,16 @@ export default function SongDetail() {
 
   if (isAvant) {
     return (
-      <div className="min-h-screen w-full relative overflow-hidden" style={{ background: '#050505' }}>
+      <div
+        className="min-h-screen w-full relative select-none"
+        style={{
+          background: '#050505',
+          overflowX: 'hidden',
+          overflowY: 'auto',
+          WebkitOverflowScrolling: 'touch',
+          paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 5.5rem)',
+        }}
+      >
         {/* Green scanning grids */}
         <div className="absolute inset-0 pointer-events-none z-0"
           style={{
@@ -384,7 +378,7 @@ export default function SongDetail() {
           {/* Best score banner */}
           {hs > 0 && (
             <div className="border border-[#39FF14]/15 bg-black/40 flex items-center justify-between px-4 py-3">
-              <div className="font-mono text-[8px] tracking-[0.25em] text-white/30">// HIGH INTEGRITY DISPATCH SCORE</div>
+              <div className="font-mono text-[8px] tracking-[0.25em] text-white/30">// BEST SCORE</div>
               <div className="font-mono font-black text-base text-[#39FF14]">{hs.toLocaleString()}</div>
             </div>
           )}
@@ -553,24 +547,39 @@ export default function SongDetail() {
             <button onClick={handlePlay}
               disabled={!unlocked}
               onMouseEnter={() => { if (unlocked) audioManager.playSfx('tap_nav', 0.08); }}
-              className={`w-full py-4 text-xs tracking-[0.4em] font-black border uppercase transition-colors ${
+              className={`w-full py-4 text-xs tracking-[0.4em] font-black uppercase transition-all cursor-pointer active:scale-95 flex items-center justify-center ${
                 unlocked 
-                  ? 'border-[#39FF14] bg-[#39FF14] text-black hover:bg-[#39FF14]/90' 
-                  : 'border-white/10 bg-white/5 text-white/20 cursor-not-allowed'
-              }`}>
+                  ? 'border-2 border-[#39FF14] bg-[#39FF14] text-black hover:bg-[#39FF14]/90 shadow-[0_0_20px_rgba(57,255,20,0.4)]' 
+                  : 'border border-white/10 bg-white/5 text-white/20 cursor-not-allowed'
+              }`}
+              style={{
+                clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                minHeight: 50,
+              }}
+            >
               ▶ START TRANSMISSION{isFromFreePlay ? ` · LVL ${diffOverride}` : ''}
             </button>
             {song.audioUrl && !previewing && unlocked && (
               <button onClick={togglePreview}
                 onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}
-                className="w-full py-3 text-[9px] font-bold tracking-[0.3em] border border-[#39FF14]/30 text-[#39FF14] hover:bg-[#39FF14]/10 transition-colors uppercase bg-transparent">
+                className="w-full py-3.5 text-[10px] font-black tracking-[0.3em] border border-[#39FF14]/40 text-[#39FF14] hover:bg-[#39FF14]/15 hover:border-[#39FF14] transition-all uppercase bg-transparent cursor-pointer active:scale-95 flex items-center justify-center gap-2"
+                style={{
+                  clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                  minHeight: 46,
+                }}
+              >
                 <span>♪</span> PREVIEW TRACK
               </button>
             )}
             {song.audioUrl && unlocked && (
               <button onClick={() => { cleanupPreview(); setPreviewing(false); audioManager.playSfx('tap_nav', 0.12); setLocation(`/listen/${songId}`); }}
                 onMouseEnter={() => audioManager.playSfx('tap_nav', 0.08)}
-                className="w-full py-3 text-[9px] font-bold tracking-[0.3em] border border-[#39FF14]/30 text-[#39FF14] hover:bg-[#39FF14]/10 transition-colors uppercase bg-transparent">
+                className="w-full py-3.5 text-[10px] font-black tracking-[0.3em] border border-white/20 text-white/80 hover:text-white hover:border-[#00E5FF] hover:bg-[#00E5FF]/10 transition-all uppercase bg-transparent cursor-pointer active:scale-95 flex items-center justify-center gap-2"
+                style={{
+                  clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                  minHeight: 46,
+                }}
+              >
                 <span>🎧</span> JUST LISTEN (VISUALIZER)
               </button>
             )}
@@ -581,7 +590,16 @@ export default function SongDetail() {
   }
 
   return (
-    <div className="min-h-screen w-full" style={{ background: 'radial-gradient(ellipse 80% 50% at 50% 20%, #0e1028 0%, #080808 60%)' }}>
+    <div
+      className="min-h-screen w-full select-none"
+      style={{
+        background: 'radial-gradient(ellipse 80% 50% at 50% 20%, #0e1028 0%, #080808 60%)',
+        overflowX: 'hidden',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        paddingBottom: 'calc(var(--fc-safe-area-bottom, 0px) + env(safe-area-inset-bottom, 0px) + 5.5rem)',
+      }}
+    >
       {/* Blurred cover art background */}
       {song.coverArt && (
         <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 0 }}>
@@ -593,7 +611,9 @@ export default function SongDetail() {
       <div className="sticky top-0 z-20 flex items-center justify-between px-5 py-3"
         style={{ background: 'rgba(8,8,12,0.7)', backdropFilter: 'blur(16px)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <button onClick={handleBack}
-          className="neon-btn-outline text-xs px-3 py-1.5 tracking-widest">
+          className="neon-btn-outline text-xs px-3.5 py-1.5 font-black tracking-widest uppercase cursor-pointer"
+          style={{ clipPath: 'polygon(6px 0%, 100% 0%, calc(100% - 6px) 100%, 0% 100%)' }}
+        >
           ← {isFromFreePlay ? 'AWARD PLAY' : from.startsWith('chapter') ? 'CHAPTER' : 'CAMPAIGN'}
         </button>
         <div className="font-mono font-bold text-xs tracking-[0.4em]" style={{ color: 'rgba(255,255,255,0.2)' }}>
@@ -880,11 +900,16 @@ export default function SongDetail() {
           <div className="flex gap-2">
             <button onClick={handlePlay}
               disabled={!unlocked}
-              className={`flex-1 py-5 text-sm tracking-[0.4em] uppercase rounded-xl transition-all ${
+              className={`flex-1 py-5 text-sm tracking-[0.4em] uppercase font-black transition-all flex items-center justify-center cursor-pointer active:scale-95 ${
                 unlocked 
-                  ? "neon-btn" 
+                  ? "border-2 border-[#39FF14] bg-[#39FF14] text-black hover:bg-[#39FF14]/90 shadow-[0_0_24px_rgba(57,255,20,0.4)]" 
                   : "border border-white/10 bg-white/5 text-white/20 cursor-not-allowed shadow-none"
-              }`}>
+              }`}
+              style={{
+                clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                minHeight: 52,
+              }}
+            >
               ▶ START TRANSMISSION{isFromFreePlay ? ` · LVL ${diffOverride}` : ''}
             </button>
 
@@ -897,11 +922,15 @@ export default function SongDetail() {
                   handlePlay();
                 }}
                 title="Export frame-perfect 100% PERFECT+ run video (DEV ONLY)"
-                className={`px-5 py-5 text-xs font-mono font-bold uppercase rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer border ${
+                className={`px-5 py-5 text-xs font-mono font-bold uppercase transition-all flex items-center justify-center gap-2 cursor-pointer border active:scale-95 ${
                   unlocked
                     ? 'border-[#FF1493] bg-[#FF1493]/15 text-[#FF1493] hover:bg-[#FF1493] hover:text-black shadow-[0_0_16px_rgba(255,20,147,0.3)]'
                     : 'border-white/10 bg-white/5 text-white/20 cursor-not-allowed'
                 }`}
+                style={{
+                  clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                  minHeight: 52,
+                }}
               >
                 <Film size={18} />
                 <span className="hidden sm:inline">EXPORT VIDEO</span>
@@ -911,13 +940,23 @@ export default function SongDetail() {
           {/* Preview button */}
           {song.audioUrl && !previewing && unlocked && (
             <button onClick={togglePreview}
-              className="neon-btn-outline w-full py-3 text-[10px] tracking-[0.3em] uppercase flex items-center justify-center gap-2">
+              className="w-full py-3.5 text-[10px] tracking-[0.3em] uppercase font-black border border-[#39FF14]/40 text-[#39FF14] hover:bg-[#39FF14]/15 hover:border-[#39FF14] transition-all bg-transparent flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+              style={{
+                clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                minHeight: 46,
+              }}
+            >
               <span>♪</span> PREVIEW TRACK
             </button>
           )}
           {song.audioUrl && unlocked && (
             <button onClick={() => { cleanupPreview(); setPreviewing(false); audioManager.playSfx('tap_nav', 0.12); setLocation(`/listen/${songId}`); }}
-              className="neon-btn-outline w-full py-3 text-[10px] tracking-[0.3em] uppercase flex items-center justify-center gap-2">
+              className="w-full py-3.5 text-[10px] tracking-[0.3em] uppercase font-black border border-white/20 text-white/80 hover:text-white hover:border-[#00E5FF] hover:bg-[#00E5FF]/10 transition-all bg-transparent flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+              style={{
+                clipPath: 'polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%)',
+                minHeight: 46,
+              }}
+            >
               <span>🎧</span> JUST LISTEN (VISUALIZER)
             </button>
           )}

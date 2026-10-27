@@ -239,14 +239,14 @@ export default function PitchDeck() {
           >
             
             {/* LEFT SIDE: Description and Details */}
-            <div className="space-y-6 flex flex-col justify-center">
+            <div className="space-y-6 flex flex-col justify-center min-w-0">
               {/* SLIDE 1: INTRO */}
               {currentSlide === 0 && (
                 <>
                   <div className="inline-block bg-[#ffb800] text-black px-2.5 py-1 text-[9px] font-mono font-black tracking-widest uppercase rotate-[-2deg] border border-black shadow-[2px_2px_0_#000] w-fit">
                     PRODUCT PITCH DECK
                   </div>
-                  <h1 className="text-5xl md:text-7xl font-black brutalist-xl leading-none" style={{ '--neon-accent': '#ff3800' } as any}>
+                  <h1 className="text-4xl md:text-6xl font-black brutalist-xl leading-none text-balance" style={{ '--neon-accent': '#ff3800' } as any}>
                     POETRY IN MOTION
                   </h1>
                   <p className="font-mono text-xs tracking-widest uppercase text-[#faf0d8]/60">
@@ -269,7 +269,7 @@ export default function PitchDeck() {
                     </div>
                     <div className="flex flex-col border-l-2 border-[#c44dff] pl-3">
                       <span className="text-lg font-black font-mono leading-none">V⚡</span>
-                      <span className="text-[8px] font-mono uppercase opacity-50 tracking-wider">TOKEN ECONOMY</span>
+                      <span className="text-[8px] font-mono uppercase opacity-50 tracking-wider">SPARK ECONOMY</span>
                     </div>
                   </div>
                 </>
@@ -290,7 +290,7 @@ export default function PitchDeck() {
                       },
                       {
                         title: "2. Gameplay Unlocks Ownership",
-                        desc: "High accuracy runs (>70% Bronze, >85% Silver, >95% Gold, 100% Platinum) earn collectible Gacha packs containing card stems, audio registry proofs, and card burn assets."
+                        desc: "Accuracy runs (Bronze 40%, Silver 60%, Gold 80%, Platinum 93%) earn prize packs by tier — and every pack fires a bonus Vault Finds roll against hard print caps."
                       },
                       {
                         title: "3. Ownership Unlocks Status",
@@ -438,7 +438,7 @@ export default function PitchDeck() {
                     SMART AUTH PIPELINE
                   </h2>
                   <p className="text-xs text-[#faf0d8]/85 leading-relaxed">
-                    Cryptographically secure EVM signature flows. Supports standard browser extensions or Coinbase Smart Wallet accounts on the **Base Mainnet (Chain ID 8453)**.
+                    Cryptographically secure EVM signature flows. Supports standard browser extensions or Coinbase Smart Wallet accounts on the <strong className="text-white">Base Mainnet (Chain ID 8453)</strong>.
                   </p>
                   
                   <div className="space-y-2 text-[11px]">
@@ -487,7 +487,7 @@ export default function PitchDeck() {
                     </div>
                     <div className="flex justify-between items-center text-xs font-mono">
                       <span className="opacity-50">Overdrive Modes:</span>
-                      <span className="text-[#ff007f] font-bold">FEVER (20x) · SURGE (40x Auto-Assist) · SIGNAL LOCK (60x)</span>
+                      <span className="text-[#ff007f] font-bold">FEVER 2× @ 20 COMBO · SURGE 3× @ 40 · SIGNAL LOCK 4× @ 60</span>
                     </div>
                   </div>
 
@@ -510,7 +510,7 @@ export default function PitchDeck() {
                     SPLIT-BAND LANE MUTING
                   </h2>
                   <p className="text-xs text-[#faf0d8]/85 leading-relaxed">
-                    Master audio runs through a 3-way crossover utilizing Web Audio API nodes. Missing notes degrades audio quality itself—muting components in real time.
+                    Master audio runs through a 3-way crossover utilizing Web Audio API nodes. Missing notes degrade audio quality itself—muting components in real time.
                   </p>
                   
                   <div className="space-y-3 font-mono text-[11px]">
@@ -565,14 +565,14 @@ export default function PitchDeck() {
                 <>
                   <DeckSectionLabel label="07 // Tokenomics & Forge" accent="#00f0ff" />
                   <h2 className="text-3xl md:text-5xl font-black font-mono tracking-tighter uppercase leading-tight">
-                    VELOCITY TOKENOMICS
+                    SPARK VELOCITY
                   </h2>
                   <p className="text-xs text-[#faf0d8]/85 leading-relaxed">
                     Balances daily farming loops with long-term scarcity preservation. PIM keeps separate caps for cards in play vs. the future onchain release.
                   </p>
 
                   <div className="p-3 border border-white/5 bg-[#0d0d0d] rounded">
-                    <span className="text-[9px] font-mono uppercase text-[#00f0ff] font-bold block mb-2">V⚡ TOKEN SINKS</span>
+                    <span className="text-[9px] font-mono uppercase text-[#00f0ff] font-bold block mb-2">V⚡ SPARK SINKS</span>
                     <div className="grid grid-cols-3 gap-2 font-mono text-[9px] text-white">
                       <div className="p-2 border border-white/10 rounded">
                         <span className="block font-black text-xs text-[#ffb800]">275 V⚡</span>
@@ -590,7 +590,7 @@ export default function PitchDeck() {
                   </div>
 
                   <p className="text-[10px] opacity-40 leading-relaxed font-mono uppercase">
-                    Echo variations split burn yields (50% tokens / 50% prestige). Recursive token generation is balanced via a 3-gen entropy decay cap.
+                    Echo variations split burn yields (50% sparks / 50% prestige). Recursive spark generation is balanced via a 3-gen entropy decay cap.
                   </p>
                 </>
               )}
@@ -609,11 +609,11 @@ export default function PitchDeck() {
                   <div className="grid grid-cols-2 gap-3 font-mono text-[11px]">
                     <div className="p-3 border border-white/5 bg-[#faf0d8]/5 flex flex-col justify-between">
                       <span className="opacity-50 text-[8px] uppercase">Registered Profiles</span>
-                      <span className="text-base font-black text-[#ffb800]">900+ PLAYERS</span>
+                      <span className="text-base font-black text-[#ffb800]">1,270+ PLAYERS</span>
                     </div>
                     <div className="p-3 border border-white/5 bg-[#faf0d8]/5 flex flex-col justify-between">
                       <span className="opacity-50 text-[8px] uppercase">Gameplay Records</span>
-                      <span className="text-base font-black text-white">10,764+ RUNS</span>
+                      <span className="text-base font-black text-white">69,900+ RUNS</span>
                     </div>
                     <div className="p-3 border border-white/5 bg-[#faf0d8]/5 flex flex-col justify-between">
                       <span className="opacity-50 text-[8px] uppercase">Vault Collectibles</span>
@@ -638,7 +638,7 @@ export default function PitchDeck() {
                     THE FOUNDER: TH3SCR1B3
                   </h2>
                   <p className="text-xs text-[#faf0d8]/85 leading-relaxed">
-                    PIM is architected, composed, and engineered by **TH3SCR1B3**, a multi-disciplinary music artist, software engineer, and digital creator.
+                    PIM is architected, composed, and engineered by <strong className="text-white">TH3SCR1B3</strong>, a multi-disciplinary music artist, software engineer, and digital creator.
                   </p>
 
                   <div className="space-y-3 text-[11px] font-mono leading-relaxed">
@@ -725,9 +725,21 @@ export default function PitchDeck() {
                     </div>
 
                     <div className="relative">
+                      <div className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-[#00f0ff] border-2 border-black" />
+                      <div className="font-bold text-white uppercase">PHASE 4: TAURI DESKTOP + ITCH.IO — IN PROGRESS</div>
+                      <span className="text-[9px] text-[#faf0d8]/60">Native Windows/macOS/Linux builds via Tauri 2.0. Free base game plus the $99 365 Complete Edition box set: all 365 songs and 365 1-of-1 bombshell cards.</span>
+                    </div>
+
+                    <div className="relative">
                       <div className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-[#ffb800] border-2 border-black" />
-                      <div className="font-bold text-white uppercase">PHASE 4: THE LIVING VAULT & TAURI DESKTOP</div>
-                      <span className="text-[9px] text-[#faf0d8]/60">Interactive 3D card fragment synthesis, Steam Deck/Tauri native releases, and living vault galleries.</span>
+                      <div className="font-bold text-white uppercase">PHASE 5: THE LIVING VAULT</div>
+                      <span className="text-[9px] text-[#faf0d8]/60">Interactive 3D card fragment synthesis, Steam Deck support, and living vault galleries.</span>
+                    </div>
+
+                    <div className="relative">
+                      <div className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-[#4ade80] border-2 border-black" />
+                      <div className="font-bold text-white uppercase">SHIPPED OCT 2026: VAULT FINDS</div>
+                      <span className="text-[9px] text-[#faf0d8]/60">Every pack fires a bonus vault roll after it resolves — Standard 75%, Recovered 20%, Chase 5%. Hard print caps; when a cap fills, no reprints.</span>
                     </div>
                   </div>
                 </>
@@ -736,7 +748,7 @@ export default function PitchDeck() {
             </div>
 
             {/* RIGHT SIDE: Interactive Simulations and High-Fidelity Mockups */}
-            <div className="border-2 border-black bg-[#0f0d09] p-6 rounded-lg relative min-h-[360px] flex flex-col justify-center items-center overflow-hidden shadow-[4px_4px_0_#000]">
+            <div className="border-2 border-black bg-[#0f0d09] p-6 rounded-lg relative min-h-[360px] flex flex-col justify-center items-center overflow-hidden shadow-[4px_4px_0_#000] min-w-0">
               <div className="absolute inset-0 bg-[#faf0d8]/[0.01] pointer-events-none" />
               <div className="absolute top-2 right-3 font-mono text-[8px] opacity-40 uppercase tracking-widest">
                 Interactive Panel // Simulation
@@ -1171,25 +1183,39 @@ export default function PitchDeck() {
 
               {/* SLIDE 10 (Index 9) PREVIEW: Founder artist badge */}
               {currentSlide === 9 && (
-                <div className="flex flex-col items-center gap-4 w-full">
-                  <div className="w-40 h-40 relative flex items-center justify-center">
+                <div className="flex flex-col items-center justify-center gap-5 w-full h-full py-2">
+                  <div className="w-52 h-52 relative flex items-center justify-center shrink-0">
                     {/* Rotating vinyl disk pattern */}
                     <div className="absolute inset-0 rounded-full border border-dashed border-[#ffb800]/25 animate-[spin-slow_16s_linear_infinite]" />
-                    <div className="absolute inset-3 rounded-full border border-white/5 bg-[#050402] flex items-center justify-center">
-                      <div className="w-24 h-24 rounded-full border-4 border-[#ff3800] bg-black flex items-center justify-center relative overflow-hidden">
+                    <div className="absolute inset-4 rounded-full border border-white/5 bg-[#050402] flex items-center justify-center">
+                      <div className="w-32 h-32 rounded-full border-4 border-[#ff3800] bg-black flex items-center justify-center relative overflow-hidden">
                         {/* Audio wave simulation inside founder avatar */}
-                        <div className="absolute inset-0 flex items-center justify-center gap-0.5 opacity-20">
+                        <div className="absolute inset-0 flex items-center justify-center gap-1 opacity-20">
+                          <div className="w-1 h-16 bg-white rounded animate-pulse" />
+                          <div className="w-1 h-10 bg-white rounded animate-pulse" />
+                          <div className="w-1 h-20 bg-white rounded animate-pulse" />
                           <div className="w-1 h-12 bg-white rounded animate-pulse" />
-                          <div className="w-1 h-8 bg-white rounded animate-pulse" />
-                          <div className="w-1 h-14 bg-white rounded animate-pulse" />
                         </div>
-                        <span className="font-mono font-black text-[9px] tracking-widest text-[#ff3800] z-10">CREATOR</span>
+                        <span className="font-mono font-black text-[10px] tracking-widest text-[#ff3800] z-10">CREATOR</span>
                       </div>
                     </div>
                   </div>
 
                   <div className="sticker-gun-tag sticker-slits flex flex-row items-center gap-2 p-2 px-4 shadow-lg rotate-[1.5deg] border border-black" style={{ background: '#fff', color: '#000' }}>
                     <span className="text-[9px] font-black italic uppercase leading-none font-mono">TH3SCR1B3.ART // COMPOSER</span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 w-full max-w-[320px]">
+                    {[
+                      { k: '365', v: 'Songs / 365 days' },
+                      { k: '1,270+', v: 'Players' },
+                      { k: '69,900+', v: 'Game runs' },
+                    ].map((s) => (
+                      <div key={s.v} className="border border-white/10 bg-white/[0.03] px-2 py-2 text-center">
+                        <div className="font-mono font-black text-sm text-[#ffb800]">{s.k}</div>
+                        <div className="font-mono text-[7px] tracking-widest text-[#faf0d8]/50 uppercase mt-0.5">{s.v}</div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}

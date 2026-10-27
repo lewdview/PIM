@@ -37,7 +37,9 @@ export function GlobalMenuBackground() {
   useEffect(() => {
     try {
       const opts = loadOpts();
-      setBg(opts.gameBackground || 'cover_blur');
+      // Lyric Cinema needs a playing song; menus show the artwork backdrop instead.
+      const gameBg = opts.gameBackground || 'cover_blur';
+      setBg(gameBg === 'lyric_cinema' ? 'cover_blur' : gameBg);
       setIsLegacy(opts.legacyGraphics || false);
     } catch {
       // ignore options parse errors
@@ -97,6 +99,7 @@ export function GlobalMenuBackground() {
 
   const hideBg =
     location.startsWith('/play/') ||
+    location.startsWith('/secret/') ||
     location === '/tutorial' ||
     location.startsWith('/results/');
 
