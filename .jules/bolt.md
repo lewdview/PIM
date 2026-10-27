@@ -8,3 +8,7 @@
 ## 2024-05-24 - AudioPreview Re-render Optimization
 **Learning:** Found that `AudioPreview` was subscribing to `duration` from the Zustand global player store. Since duration can update asynchronously (e.g. metadata loading), this caused the parent component to re-render.
 **Action:** Extracted the `duration` subscription into the smaller, dedicated `AudioPreviewTime` subcomponent along with the formatting logic.
+
+## 2026-10-27 - Playback Progress Render Optimization
+**Learning:** Attaching a `timeupdate` event listener inside a large React component (e.g. `ListenPage`) that includes `canvas` logic and list rendering causes the entire component to re-render constantly while audio is playing, degrading performance.
+**Action:** Extract the specific progress slider (UI element dependant on `currentTime`) into a smaller child component (`PlaybackProgress`). This limits the rapid re-renders to only the progress bar, keeping the parent component performant.
