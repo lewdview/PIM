@@ -164,9 +164,9 @@ export default function Home() {
     { n: '01', verb: '365', name: 'th3scr1b3.art', body: 'The main broadcast. One song a day for a year, the warp, the archive and the mood map.', href: links.main, tag: 'MAIN' },
     { n: '02', verb: 'PIM', name: 'PIM : th3v4ult', body: 'The rhythm game. Play each day’s level, rip packs, chase the Bombshell variants.', href: links.pim, tag: 'PLAY' },
     { n: '03', verb: 'Base', name: 'Base mini-app', body: 'The Farcaster frame and on-chain side of the drop, right inside your feed.', href: links.base, tag: 'WEB3' },
-    { n: '04', verb: 'Poster', name: '365 Poster', body: 'Every daily release as a poster. The visual archive of the whole year.', href: links.video, tag: 'VISUAL' },
-    { n: '05', verb: 'Mood', name: 'Mood map', body: 'Every poem plotted by feeling. Wander light to dark and land on a song.', href: links.mood, tag: 'MOOD' },
-    { n: '06', verb: 'CE', name: 'Song analyzer', body: 'The creative engine: audio analysis, lyrics and spectral readouts.', href: links.ce, tag: 'TOOLS' },
+    { n: '04', verb: 'Mood', name: 'Mood map', body: 'Every poem plotted by feeling. Wander light to dark and land on a song.', href: links.mood, tag: 'MOOD' },
+    { n: '05', verb: 'Lyrics', name: 'Lyrical Archive', body: 'Every lyric from all 365 days, with notes on what each song is about.', href: 'https://lyrics.th3scr1b3.art', tag: 'READ' },
+    { n: '06', verb: 'CE', name: 'Creative Engine', body: 'Every tool in one place: song and poem analyzers, LRC sync, video posters, MIDI Chaos, Winamp and ASCII Magic.', href: links.ce, tag: 'TOOLS' },
   ];
 
   useEffect(() => {
