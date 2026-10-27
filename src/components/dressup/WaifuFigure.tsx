@@ -1016,8 +1016,20 @@ function Bottom({ choice }: { choice: GarmentChoice }) {
           ))}
         </g>} />;
     case 'shorts':
-      return <Garment id={id} choice={choice} paths={['M118 298 L182 298 C202 314 212 336 212 364 Q182 372 158 374 L142 374 Q118 372 88 364 C88 336 98 314 118 298 Z']}
-        details={<path d="M150 302 L150 360" stroke="#000" strokeOpacity="0.3" />} />;
+      // Real shorts: two leg openings around the thighs, a waistband with a button, fly stitching and pockets.
+      return <Garment id={id} choice={choice} paths={['M118 298 L182 298 C202 314 212 336 212 364 Q190 373 166 372 Q156 370 150 380 Q144 370 134 372 Q110 373 88 364 C88 336 98 314 118 298 Z']}
+        details={<g fill="none" strokeLinecap="round">
+          <path d="M118 298 L182 298 L185.6 306 Q150 311 114.4 306 Z" fill="#000" fillOpacity="0.18" stroke="#000" strokeOpacity="0.35" />
+          <circle cx="150" cy="303.6" r="2" fill="#fde68a" stroke={LINE} strokeWidth="0.6" />
+          <path d="M150 309 L150 346 Q152 354 158 358 M155 309 L155 346" stroke="#000" strokeOpacity="0.3" strokeDasharray="2 1.6" />
+          {[false, true].map((m) => (
+            <g key={String(m)} transform={m ? MIRROR : undefined} stroke="#000">
+              <path d="M116 308 Q122 322 103 332" strokeOpacity="0.32" />
+              <path d="M89 360 Q111 368.6 134 367.6 Q145 366 149.4 374" strokeOpacity="0.3" strokeWidth="1.6" />
+              <path d="M138 352 Q144 360 148 372" strokeOpacity="0.18" />
+            </g>
+          ))}
+        </g>} />;
     case 'mini':
       return <Garment id={id} choice={choice} paths={['M118 294 L182 294 C200 312 212 336 210 358 L207 384 Q150 398 93 384 L90 358 C88 336 100 312 118 294 Z']}
         details={<g fill="none" stroke="#000" strokeLinecap="round">
@@ -1093,14 +1105,46 @@ function Top({ choice }: { choice: GarmentChoice }) {
         mirror={[SLEEVE_SHORT]} details={<g><SleeveFolds /><BustShading opacity={0.3} /></g>} />;
     case 'bikini':
       return <Garment id={id} choice={choice}
-        mirror={['M98 232 C104 216 124 210 136 214 Q145 220 149 234 L149 252 C145 263 134 269 121 268 C107 267 99 258 97 246 Z', 'M124 214 L137 190 L140 192 L128 216 Z']}
-        details={<g><path d="M147 238 L153 238" stroke={choice.color} strokeWidth="3" /><BustShading opacity={0.25} /></g>} />;
+        // Triangle cups on thin halter strings that taper up to the neck, joined by a ring at the centre.
+        mirror={['M98 232 C104 216 124 210 136 214 Q145 220 149 234 L149 252 C145 263 134 269 121 268 C107 267 99 258 97 246 Z', 'M125 215 Q130.6 200.6 139 188.4 L141.4 190 Q133.6 201.6 128.4 216.6 Z']}
+        details={<g>
+          <g fill="none" stroke="#000" strokeLinecap="round">
+            {[false, true].map((m) => (
+              <g key={String(m)} transform={m ? MIRROR : undefined}>
+                {/* Gather seam from the strap down the cup, and the cup's lower band. */}
+                <path d="M127 216 Q125 240 123 266" strokeOpacity="0.22" />
+                <path d="M100 252 Q110 264 124 266 Q138 266 147.6 256" strokeOpacity="0.3" strokeWidth="1.6" />
+              </g>
+            ))}
+          </g>
+          <circle cx="150" cy="239" r="3.4" fill="none" stroke="#fde68a" strokeWidth="1.8" />
+          <circle cx="150" cy="239" r="3.4" fill="none" stroke={LINE} strokeWidth="0.6" />
+          <BustShading opacity={0.25} />
+        </g>} />;
     case 'corset':
       return <Garment id={id} choice={choice}
-        paths={['M98 240 Q124 258 150 246 Q176 258 202 240 C202 258 184 270 177 278 C172 288 173 298 186 314 Q150 322 114 314 C127 298 128 288 123 278 C116 270 98 258 98 240 Z']}
-        details={<g>
-          <g stroke="#ffffff" strokeOpacity="0.7" strokeWidth="1.2">{[258, 272, 286, 300].map((y) => <path key={y} d={`M144 ${y} L156 ${y + 8} M156 ${y} L144 ${y + 8}`} />)}</g>
-          <BustShading opacity={0.3} />
+        // Overbust-free waist cincher: lace trim on top, boning that follows the curve, a pointed busk at the front.
+        paths={['M98 240 Q124 258 150 246 Q176 258 202 240 C202 258 184 270 177 278 C172 288 173 298 186 314 Q168 316 150 326 Q132 316 114 314 C127 298 128 288 123 278 C116 270 98 258 98 240 Z']}
+        details={<g fill="none" strokeLinecap="round">
+          {[false, true].map((m) => (
+            <g key={String(m)} transform={m ? MIRROR : undefined} stroke="#000">
+              <path d="M112 254 C124 268 126 284 121 300" strokeOpacity="0.25" />
+              <path d="M126 256 C134 272 134 292 128 314" strokeOpacity="0.25" />
+              <path d="M139 252 C142 272 142 296 140 318" strokeOpacity="0.2" />
+            </g>
+          ))}
+          {/* Lace edge along the neckline. */}
+          <path d="M98 240 Q124 258 150 246 Q176 258 202 240" stroke="#ffffff" strokeOpacity="0.85" strokeWidth="2.6" strokeDasharray="1.4 2.2" />
+          {/* Modesty panel showing between the laced edges, then grommets and the criss-cross lace. */}
+          <path d="M145 252 L155 252 L155 318 L150 322 L145 318 Z" fill="#000" fillOpacity="0.28" stroke="none" />
+          <path d={[256, 266, 276, 286, 296, 306].map((y) => `M145 ${y} L155 ${y + 10} M155 ${y} L145 ${y + 10}`).join(' ')} stroke="#ffffff" strokeOpacity="0.85" strokeWidth="1.1" />
+          {[256, 266, 276, 286, 296, 306].map((y) => (
+            <g key={y}>
+              <circle cx="145" cy={y} r="1.3" fill="#e5e7eb" stroke={LINE} strokeWidth="0.5" />
+              <circle cx="155" cy={y} r="1.3" fill="#e5e7eb" stroke={LINE} strokeWidth="0.5" />
+            </g>
+          ))}
+          <BustShading opacity={0.3} upper={false} />
         </g>} />;
     case 'sailor':
       // Nautical pin-up halter: tied under the bust, bare midriff.
