@@ -812,16 +812,40 @@ function Shoes({ choice }: { choice: GarmentChoice }) {
   const id = 'shoes';
   switch (choice.item) {
     case 'platforms':
-      return <Garment id={id} choice={choice} mirror={['M124 548 L146 548 C148 556 149 566 148 572 L148 590 L120 590 L120 572 C120 564 122 556 124 548 Z']}
-        details={<g fill="#000" opacity="0.35"><rect x="120" y="582" width="28" height="8" /><rect x="152" y="582" width="28" height="8" /></g>} />;
+      return <Garment id={id} choice={choice} mirror={[
+        'M126 566 C127 562 131 560 136 560 C141 560 145.5 562 147.6 567 C149.4 573 149 579 147.5 582 L125.6 582 C124 578 124.4 571 126 566 Z',
+        'M124.4 581 L148.8 581 C149.6 584 149.4 588 148.6 590 L124.8 590 C124 588 123.8 584 124.4 581 Z']}
+        details={<g fill="none" strokeLinecap="round">
+          <path d="M129 566 Q133 563.4 138 563.6 M171 566 Q167 563.4 162 563.6" stroke="#ffffff" strokeOpacity="0.55" strokeWidth="1.6" />
+          <path d="M124.6 585.4 L148.8 585.4 M175.4 585.4 L151.2 585.4" stroke="#000" strokeOpacity="0.35" strokeWidth="1" />
+        </g>} />;
     case 'boots':
-      return <Garment id={id} choice={choice} mirror={['M112.6 486 L147.4 486 C147.4 510 144 538 143 558 C152 572 151 582 148 588 L117 588 C113 574 116 562 121 554 C120 530 115 506 112.6 486 Z']}
+      return <Garment id={id} choice={choice} mirror={['M112.6 486 L147.4 486 C147.4 510 144 538 143 558 C147 564 150.6 572 150.4 580 C150.2 584 149.4 586.6 148 588 L124 588 C122.4 584 122.4 576 123.6 570 C124.4 564 123.4 560 121 554 C120 530 115 506 112.6 486 Z', 'M122.8 582 L150.6 582 C150.6 585 149.6 587.4 148 588.4 L124 588.4 C123 586.8 122.6 584.6 122.8 582 Z']}
         details={<g stroke="#000" strokeOpacity="0.45">{[500, 514, 528, 542].map((y) => <g key={y}><path d={`M126 ${y} L142 ${y + 6}`} /><path d={`M174 ${y} L158 ${y + 6}`} /></g>)}</g>} />;
     case 'sneakers':
-      return <Garment id={id} choice={choice} mirror={['M122 550 L146 550 C151 562 151 574 148 582 L116 582 C114 566 116 558 122 550 Z']}
-        details={<g fill="#ffffff"><rect x="114" y="578" width="36" height="6" rx="2" /><rect x="150" y="578" width="36" height="6" rx="2" /></g>} />;
+      return <Garment id={id} choice={choice} mirror={['M125.4 562 C127 556 132 553 136 553.5 C141 553.6 145.2 556 147.4 562 C149.6 568 150 575 149 581 L124.4 581 C123.6 574 123.8 567 125.4 562 Z']}
+        details={<g>
+          {[false, true].map((m) => (
+            <g key={String(m)} transform={m ? MIRROR : undefined} strokeLinecap="round">
+              <path d="M123.6 579 L150 579 C150.8 581 150.6 584 149.6 585.4 L124 585.4 C123 584 122.8 581 123.6 579 Z" fill="#ffffff" stroke={LINE} strokeWidth="0.9" />
+              <path d="M131 560.4 L141.4 562.4 M130.6 564.4 L141.8 566.4 M130.4 568.4 L142 570.4" stroke="#ffffff" strokeWidth="1.3" />
+              <path d="M125 574.4 C130 571.8 143 571.8 149.2 574.4" fill="none" stroke="#000" strokeOpacity="0.3" />
+            </g>
+          ))}
+        </g>} />;
     case 'maryjanes':
-      return <Garment id={id} choice={choice} mirror={['M123 560 L146 560 C149 570 147 578 143 582 L120 582 C117 572 118 566 123 560 Z', 'M124 556 L146 552 L146 556 L124 560 Z']} />;
+      return <Garment id={id} choice={choice} mirror={[
+        'M125.2 567 C127.4 563.4 131.6 562 136.4 562 C141.4 562 145.6 564 147.8 568 C149.6 573 149.2 579 147.6 582 L125.2 582 C123.8 578 124 571.6 125.2 567 Z',
+        'M127.6 557.4 C132 559 137.4 559.6 142 558.6 L142.4 561.4 C137.6 562.4 132 561.8 127.2 560.2 Z']}
+        details={<g>
+          {[false, true].map((m) => (
+            <g key={String(m)} transform={m ? MIRROR : undefined}>
+              <circle cx="141" cy="560" r="1.4" fill="#fde68a" stroke={LINE} strokeWidth="0.6" />
+              <path d="M124.8 580.6 L148.2 580.6 L147.8 583.6 L125.2 583.6 Z" fill="#000" fillOpacity="0.4" />
+              <path d="M129 568 Q133 565.2 138 565.4" fill="none" stroke="#ffffff" strokeOpacity="0.55" strokeWidth="1.4" strokeLinecap="round" />
+            </g>
+          ))}
+        </g>} />;
     default:
       return null;
   }
@@ -910,18 +934,31 @@ function Accessory({ item }: { item: string }) {
   switch (item) {
     case 'catears':
       return <g fill="#1a1a2e" stroke={LINE} strokeWidth="1.5">
-        <path d="M106 74 L108 30 L138 58 Z" /><path d="M194 74 L192 30 L162 58 Z" />
-        <path d="M112 64 L113 42 L130 58 Z" fill="#ff7eb6" /><path d="M188 64 L187 42 L170 58 Z" fill="#ff7eb6" />
+        {[false, true].map((m) => (
+          <g key={String(m)} transform={m ? MIRROR : undefined}>
+            <path d="M105 75 C102.6 60 103.4 42 108 30 C119 37 130 47 139 58 Z" />
+            <path d="M112 65 C110.8 56 111 48 113.4 42 C120 46.6 126 52.6 130.6 58 Z" fill="#ff7eb6" />
+            <path d="M107 50 C107 42 108 36 109.4 33" fill="none" stroke="#ffffff" strokeOpacity="0.4" strokeWidth="1.4" />
+          </g>
+        ))}
       </g>;
     case 'halo':
       return <g className="wf-float"><ellipse cx="150" cy="32" rx="40" ry="10" fill="none" stroke="#fde68a" strokeWidth="5" opacity="0.95" /><ellipse cx="150" cy="32" rx="40" ry="10" fill="none" stroke="#fff" strokeWidth="1.5" opacity="0.8" /></g>;
     case 'visor':
       return <g><rect x="104" y="108" width="92" height="24" rx="11" fill="#00f0ff" opacity="0.5" stroke="#0f172a" strokeWidth="2" /><path d="M112 114 L188 114" stroke="#ffffff" strokeOpacity="0.8" className="wf-twinkle" /></g>;
     case 'headphones':
-      return <g stroke={LINE} strokeWidth="1.5">
+      return <g>
         <path d="M98 118 C94 40 206 40 202 118" fill="none" stroke="#111" strokeWidth="7" />
-        <rect x="88" y="106" width="17" height="34" rx="7" fill="#ff007f" />
-        <rect x="195" y="106" width="17" height="34" rx="7" fill="#ff007f" />
+        <path d="M112 66 C126 50 148 46 166 50" fill="none" stroke="#ffffff" strokeOpacity="0.35" strokeWidth="2" strokeLinecap="round" />
+        {[false, true].map((m) => (
+          <g key={String(m)} transform={m ? MIRROR : undefined}>
+            <path d="M96 112 L97 100 L102 100 L102.6 112 Z" fill="#2a2a33" stroke={LINE} strokeWidth="1" />
+            <Cel d="M90.6 106 C86.6 111 85.6 133 90.6 140 L101 140 C104.6 133 104.6 112 101 106 Z" fill="#ff007f" line={LINE} mirrored={m} depth={0.6} />
+            <path d="M101 107.6 C104.6 113 104.8 132 101.4 138.6 L105.6 138 C108.2 132 108.2 113 105.4 108 Z" fill="#2a2a33" stroke={LINE} strokeWidth="0.9" />
+            <ellipse cx="95" cy="123" rx="4" ry="9" fill="none" stroke="#ffffff" strokeOpacity="0.45" strokeWidth="1.2" />
+            <path d="M89.6 114 C89 120 89 126 89.6 131" fill="none" stroke="#ffffff" strokeOpacity="0.6" strokeWidth="1.6" strokeLinecap="round" />
+          </g>
+        ))}
       </g>;
     default:
       return null;
