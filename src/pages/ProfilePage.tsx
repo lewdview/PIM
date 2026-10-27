@@ -19,7 +19,7 @@ import { Link, useLocation } from 'wouter';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Fingerprint, RefreshCw, LogOut, Layers, ArrowUpRight,
-  Shield, Zap, User, ExternalLink, Sparkles, Award, Play, Disc, Lock, KeyRound, Copy, Eye, EyeOff, AlertTriangle, Check, Download
+  Shield, Zap, User, ExternalLink, Sparkles, Award, Play, Disc, Lock, KeyRound, Copy, Eye, EyeOff, AlertTriangle, Check, Download, Camera, Loader2
 } from 'lucide-react';
 import IdentitySetup from '../components/IdentitySetup';
 import { useAuthStore } from '../store/useAuthStore';
@@ -29,6 +29,8 @@ import { Wallet as EthersWallet } from 'ethers';
 import { getCurrentDay, formatDate } from '../utils/dayCalc';
 import { extractPalette, getFallbackPalette, type ExtractedPalette } from '../utils/extractPalette';
 import { audioManager } from '../game/audio';
+import { getIdenticon } from '../utils/identicon';
+import { uploadAvatar, validateAvatarFile } from '../utils/avatarUpload';
 import '../styles/ProfilePage.css';
 import '../styles/HeroLandingPage.css';
 import HoloSheen from '../components/HoloSheen';
@@ -62,12 +64,16 @@ const EASE_OUT: [number, number, number, number] = [0.22, 1, 0.36, 1];
 export default function ProfilePage() {
   const { user, signOut, registerPasskey, ensureProfileAndWallet, isPasskeySupported, signInWithPrivateKey } = useAuthStore();
   const isAnonymous = user?.is_anonymous ?? false;
-  const { collection, tokenBalance, totalPulls, streakCount, loadVaultData, username } = useVaultStore();
+  const { collection, tokenBalance, totalPulls, streakCount, loadVaultData, username, avatarUrl: vaultAvatarUrl } = useVaultStore();
   const [, navigate] = useLocation();
 
   const currentDay = getCurrentDay();
   const [displayName, setDisplayName] = useState('');
   const [loadingProfile, setLoadingProfile] = useState(true);
+  const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const [palette, setPalette] = useState<ExtractedPalette>(getFallbackPalette());
   const [topCoverArt, setTopCoverArt] = useState<string>('/screenshots/06_rhythm_gameplay.png');
   const [passkeyLoading, setPasskeyLoading] = useState(false);
@@ -171,18 +177,58 @@ export default function ProfilePage() {
     }
     supabase
       .from('profiles')
-      .select('display_name')
+      .select('display_name, avatar_url')
       .eq('id', user.id)
       .single()
       .then(({ data }) => {
         if (data?.display_name) setDisplayName(data.display_name);
+        setProfileAvatarUrl(data?.avatar_url || null);
         setLoadingProfile(false);
       });
   }, [user]);
 
   const provider = user?.app_metadata?.provider as string | undefined;
   const walletAddr = user?.user_metadata?.wallet as string | undefined;
-  const avatarUrl = user?.user_metadata?.avatar_url as string | undefined;
+  // The profile row is the source of truth; auth metadata covers OAuth photos
+  // for players who never uploaded their own.
+  const avatarUrl =
+    profileAvatarUrl ||
+    vaultAvatarUrl ||
+    (user?.user_metadata?.avatar_url as string | undefined) ||
+    null;
+  const identicon = getIdenticon(user?.id || 'anon', displayName || username || null);
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !user) return;
+
+    const invalid = validateAvatarFile(file);
+    if (invalid) {
+      setAvatarError(invalid);
+      return;
+    }
+
+    setAvatarUploading(true);
+    setAvatarError(null);
+    try {
+      const url = await uploadAvatar(user.id, file);
+      const { error } = await supabase
+        .from('profiles')
+        .update({ avatar_url: url })
+        .eq('id', user.id);
+      if (error) throw error;
+      await supabase.auth.updateUser({ data: { avatar_url: url } }).catch(() => {});
+      setProfileAvatarUrl(url);
+      useVaultStore.setState({ avatarUrl: url });
+      audioManager.playSfx('gold_get', 0.5);
+    } catch (err: any) {
+      console.error('[Profile] Avatar upload failed', err);
+      setAvatarError(err?.message || 'Upload failed. Try again.');
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
 
   const identityDisplay =
     displayName ||
@@ -240,13 +286,44 @@ export default function ProfilePage() {
               <div className="hero-specular-glare" />
 
               <div className="profile-avatar-frame">
-                {/* @TODO: Wrap with a label that triggers a file input when the user already has an identity. */}
                 {avatarUrl ? (
-                  <img src={avatarUrl} alt="Avatar" className="profile-avatar-img" />
+                  <img src={avatarUrl} alt="Passport photo" className="profile-avatar-img" />
                 ) : (
-                  <div className="w-full h-full rounded-full bg-[#0d0d14] flex items-center justify-center">
-                    <User size={32} className="text-white/40" />
+                  <div
+                    className="w-full h-full rounded-full flex items-center justify-center"
+                    style={{ background: user ? identicon.bgColor : '#0d0d14' }}
+                  >
+                    {user ? (
+                      <span className="profile-avatar-initials">{identicon.initials}</span>
+                    ) : (
+                      <User size={32} className="text-white/40" />
+                    )}
                   </div>
+                )}
+
+                {user && (
+                  <>
+                    <input
+                      ref={avatarInputRef}
+                      type="file"
+                      className="hidden"
+                      accept=".jpg,.jpeg,.png,.webp"
+                      onChange={handleAvatarChange}
+                    />
+                    <button
+                      type="button"
+                      className={`profile-avatar-edit${avatarUploading ? ' is-busy' : ''}`}
+                      onClick={() => {
+                        audioManager.playSfx('tap_nav', 0.3);
+                        avatarInputRef.current?.click();
+                      }}
+                      disabled={avatarUploading}
+                      title={avatarUrl ? 'Change passport photo' : 'Add passport photo'}
+                      aria-label={avatarUrl ? 'Change passport photo' : 'Add passport photo'}
+                    >
+                      {avatarUploading ? <Loader2 size={22} className="animate-spin" /> : <Camera size={22} />}
+                    </button>
+                  </>
                 )}
               </div>
 
@@ -266,6 +343,9 @@ export default function ProfilePage() {
                   {walletAddr && <span className="profile-badge-tag">{shortenAddress(walletAddr)}</span>}
                   <span className="profile-badge-tag text-[#39FF14]">Day {currentDay} Active</span>
                 </div>
+                {avatarError && (
+                  <p className="font-mono text-[10px] text-[#ff3800] mt-2">{avatarError}</p>
+                )}
               </div>
 
               <div className="font-mono text-[9px] text-white/30 tracking-widest uppercase">
