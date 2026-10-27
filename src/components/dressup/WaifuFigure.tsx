@@ -931,6 +931,28 @@ function Fishnet({ choice }: { choice: GarmentChoice }) {
   );
 }
 
+/** Hosiery reads as stretched knit: sheen down the shin, a lit kneecap, a reinforced toe, and an optional lace-topped welt. */
+function HosieryDetails({ welt }: { welt?: number }) {
+  return (
+    <g fill="none" strokeLinecap="round">
+      {[false, true].map((m) => (
+        <g key={String(m)} transform={m ? MIRROR : undefined}>
+          <path d="M124 372 C127 404 129 432 131.4 458 C133.4 496 133.6 528 134.4 556" stroke="#ffffff" strokeOpacity="0.22" strokeWidth="5" />
+          <path d="M127 450 Q131.6 446.6 136.4 450" stroke="#ffffff" strokeOpacity="0.32" strokeWidth="3" />
+          <path d="M126 570 Q136 566 147.4 572" stroke="#000" strokeOpacity="0.25" strokeWidth="1.2" />
+          {welt !== undefined && (
+            <g>
+              <path d={`M${99} ${welt} L148.4 ${welt} L147.8 ${welt + 10} Q124 ${welt + 12} 101.6 ${welt + 9} Z`} fill="#000" fillOpacity="0.16" stroke="none" />
+              <path d={`M101.6 ${welt + 9} Q124 ${welt + 12} 147.8 ${welt + 10}`} stroke="#000" strokeOpacity="0.35" />
+              <path d={`M99.6 ${welt + 1} L148 ${welt + 1}`} stroke="#ffffff" strokeOpacity="0.9" strokeWidth="2.8" strokeDasharray="1.6 1.8" />
+            </g>
+          )}
+        </g>
+      ))}
+    </g>
+  );
+}
+
 const THIGH_HIGH = 'M98.6 404 L148.4 404 C147.6 416 146.8 425 146 432 C147.6 440 148 448 146.4 456 C145.4 462 145.6 468 146.4 478 C147 492 145 512 142.6 530 C141.6 540 141 548 141.6 554 C143.6 561 147.2 567 148 573 C148.6 577.4 147 581.2 143.6 581.4 L128 580.2 C125 579.2 124.4 574.4 126 567 C126.8 562 127.8 558 127.4 552 C126.4 534 121.5 516 117 498 C114 486 113.4 474 115 464 C116 458 116.6 454 116 448 C113 436 106 424 100 408 Z';
 
 function Legwear({ choice }: { choice: GarmentChoice }) {
@@ -938,9 +960,9 @@ function Legwear({ choice }: { choice: GarmentChoice }) {
   switch (choice.item) {
     case 'thighhighs':
       return <Garment id={id} choice={choice} mirror={[THIGH_HIGH]}
-        details={<g stroke="#000" strokeOpacity="0.35" strokeWidth="4"><path d="M100 408 L149 408" /><path d="M200 408 L151 408" /></g>} />;
+        details={<HosieryDetails welt={404} />} />;
     case 'stockings':
-      return <Garment id={id} choice={choice} mirror={[LEG]} />;
+      return <Garment id={id} choice={choice} mirror={[LEG]} details={<HosieryDetails />} />;
     case 'fishnet':
       return <Fishnet choice={choice} />;
     case 'warmers':
@@ -1152,9 +1174,16 @@ function Top({ choice }: { choice: GarmentChoice }) {
         paths={['M116 196 C130 189 170 189 184 196 C200 208 206 230 202 250 C199 262 190 270 182 276 Q150 284 118 276 C110 270 101 262 98 250 C94 230 100 208 116 196 Z']}
         mirror={[SLEEVE_SHORT]}
         details={<g>
-          <path d="M122 194 L150 232 L178 194 L194 214 L150 244 L106 214 Z" fill="#ffffff" stroke={LINE} />
-          <path d="M112 212 L150 238 L188 212" fill="none" stroke={choice.color} strokeWidth="2" />
-          <path d="M150 272 L134 296 L150 286 L166 296 Z" fill="#ef4444" stroke={LINE} />
+          {/* Pin-up nautical halter (not a school collar): navy piping on a plunging neckline and a gold anchor. */}
+          <path d="M124 193 Q136 214 150 236 Q164 214 176 193" fill="none" stroke="#1e3a5f" strokeWidth="3.2" />
+          <path d="M124 193 Q136 214 150 236 Q164 214 176 193" fill="none" stroke="#ffffff" strokeWidth="0.9" />
+          <g transform="translate(150 252)" fill="none" stroke="#fde68a" strokeWidth="1.6" strokeLinecap="round">
+            <path d="M0 -6 L0 6 M-3.4 -3 L3.4 -3 M-5 2 Q-4 7 0 7 Q4 7 5 2" />
+            <circle cx="0" cy="-7.6" r="1.6" />
+          </g>
+          {/* The halter ties in a knot under the bust. */}
+          <path d="M150 278 Q143 284 139 294 L144 293 Q147 286 150 282 Q153 286 156 293 L161 294 Q157 284 150 278 Z" fill={choice.color} stroke={LINE} strokeWidth="0.9" />
+          <ellipse cx="150" cy="278.6" rx="4.4" ry="3.4" fill={choice.color} stroke={LINE} strokeWidth="0.9" />
           <SleeveFolds />
           <BustShading opacity={0.3} />
         </g>} />;
