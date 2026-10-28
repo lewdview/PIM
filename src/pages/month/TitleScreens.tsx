@@ -8,7 +8,7 @@ import { loadCatalog } from '@/game/api';
 import { CHAPTERS } from '@/game/campaign';
 import { songsForMonth } from '@/game/chapterStory';
 import { audioManager } from '@/game/audio';
-import { PLAYGAMA_MONTH } from '@/platform/playgama/month';
+import { BUILD_VERSION, PLAYGAMA_MONTH } from '@/platform/playgama/month';
 import { externalLinksAllowed } from '@/platform/playgama/bridge';
 import '@/styles/stageShell.css';
 import '@/styles/monthTitle.css';
@@ -143,6 +143,7 @@ function PressStart({ style, covers, name, sub, count, onStart }: {
         {externalLinksAllowed() && (
           <> · <a href="https://th3scr1b3.art" target="_blank" rel="noopener" onPointerDown={(e) => e.stopPropagation()}>th3scr1b3.art</a></>
         )}
+        {' · '}<span className="mt-version">v {BUILD_VERSION}</span>
       </div>
     </div>
   );

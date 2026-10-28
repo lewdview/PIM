@@ -121,13 +121,27 @@ function walk(dir) {
 requireTool('ffmpeg');
 requireTool('zip');
 
-console.log(`[build-playgama] vite build (VITE_PLATFORM=playgama${month ? `, month ${month}` : ''})`);
+// Build version shown in game (title screen, Options) and written to version.json,
+// so an upload on Playgama can be matched to its build: m02-20261028.1745-cc926a6
+// (month, local build time, commit; "-dirty" when the tree had uncommitted changes).
+const buildVersion = (() => {
+  const d = new Date();
+  const p2 = (n) => String(n).padStart(2, '0');
+  const stamp = `${d.getFullYear()}${p2(d.getMonth() + 1)}${p2(d.getDate())}.${p2(d.getHours())}${p2(d.getMinutes())}`;
+  const git = (...a) => { try { return execFileSync('git', a, { cwd: root }).toString().trim(); } catch { return ''; } };
+  const sha = git('rev-parse', '--short=7', 'HEAD') || 'nogit';
+  const dirty = git('status', '--porcelain', '--untracked-files=no') ? '-dirty' : '';
+  return `${month ? `m${p2(month)}` : 'all'}-${stamp}-${sha}${dirty}`;
+})();
+
+console.log(`[build-playgama] vite build (VITE_PLATFORM=playgama${month ? `, month ${month}` : ''}, version ${buildVersion})`);
 run('npx', ['vite', 'build', '--config', 'vite.config.ts'], {
   env: {
     ...process.env,
     VITE_PLATFORM: 'playgama',
     PIM_PLAYGAMA_MONTH: String(month),
     PIM_PLAYGAMA_BOMBSHELL: withBombshell ? '1' : '0',
+    PIM_BUILD_VERSION: buildVersion,
     ...(args['bonus-price'] ? { PIM_PLAYGAMA_BONUS_PRICE_USD: String(args['bonus-price']) } : {}),
     ...(args['public-token'] ? { PIM_PLAYGAMA_PUBLIC_TOKEN: String(args['public-token']) } : {}),
   },
@@ -159,12 +173,14 @@ if (badNames.length) {
   process.exit(1);
 }
 
+fs.writeFileSync(path.join(out, 'version.json'), JSON.stringify({ version: buildVersion, month, builtAt: new Date().toISOString() }, null, 2) + '\n');
+
 fs.rmSync(zipPath, { force: true });
 run('zip', ['-qr', '-9', zipPath, '.'], { cwd: out });
 
 const size = fs.statSync(zipPath).size;
 const mb = (size / 1024 / 1024).toFixed(1);
-console.log(`[build-playgama] ${path.relative(root, zipPath)}: ${mb} MB`);
+console.log(`[build-playgama] ${path.relative(root, zipPath)}: ${mb} MB, version ${buildVersion}`);
 if (size > MAX_ARCHIVE_BYTES) {
   console.error('[build-playgama] Archive is over the 300 MB Playgama limit.');
   process.exit(1);

@@ -25,6 +25,8 @@ const leaderboardId = `PIM_${MONTH_NAMES[Math.max(0, playgamaMonth - 1)]}_Score`
 // The game's public token from the Playgama dashboard. With it, Bridge hosts the
 // leaderboards itself (drawn in game) on playgama.com, where it has none otherwise.
 const publicToken = process.env.PIM_PLAYGAMA_PUBLIC_TOKEN || "";
+// Set by scripts/build-playgama.mjs, e.g. m02-20261028.1745-cc926a6.
+const buildVersion = process.env.PIM_BUILD_VERSION || "dev";
 
 // Playgama build: drop the third-party ecosystem bar and Google Fonts (only the
 // Bridge may load from a CDN; the fonts are bundled instead), keep the Stella slideshow photos out of the bundle (portal content rules),
@@ -52,7 +54,9 @@ function playgamaPackaging(): Plugin {
       return code.replace(SLIDESHOW_GLOB, `[${SLIDESHOW_GLOB}, '!../../public/data/slideshow/stella/**']`);
     },
     transformIndexHtml(html) {
-      return html.replace(/\s*<!-- th3scr1b3 ecosystem bar[\s\S]*?<\/script>/, "");
+      return html
+        .replace(/\s*<!-- th3scr1b3 ecosystem bar[\s\S]*?<\/script>/, "")
+        .replace("</head>", `  <meta name="pim-build" content="${buildVersion}">\n  </head>`);
     },
     generateBundle() {
       this.emitFile({
@@ -86,6 +90,7 @@ export default defineConfig({
     __PIM_BOMBSHELL__: JSON.stringify(playgamaBombshell),
     __PIM_BONUS_PRODUCT_ID__: JSON.stringify(bonusProductId),
     __PIM_LEADERBOARD_ID__: JSON.stringify(leaderboardId),
+    __PIM_BUILD_VERSION__: JSON.stringify(buildVersion),
   },
   esbuild: { drop: ['console', 'debugger'] },
   plugins: [

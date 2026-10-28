@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { DEFAULT_OPTS, loadOpts, type GameOpts, type GfxLevel, type ParticleDensity, type PovMode } from '@/lib/options';
 import { audioManager } from '@/game/audio';
+import { BUILD_VERSION } from '@/platform/playgama/month';
 // The panel also opens over gameplay (pause menu), where the chapter screen's styles may not be loaded yet.
 import '@/styles/stageShell.css';
 import '@/styles/campaignStory.css';
@@ -158,6 +159,7 @@ export default function MonthOptions({ onClose }: { onClose: () => void }) {
           </>}
         </div>
         <div className="mo-foot">
+          <span className="mo-version">Build {BUILD_VERSION}</span>
           <button type="button" className="btn-3d" data-size="sm" data-tone="quiet" onClick={reset}>Reset to defaults</button>
         </div>
       </div>

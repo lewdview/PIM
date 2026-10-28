@@ -7,3 +7,5 @@ declare const __PIM_BOMBSHELL__: boolean;
 declare const __PIM_BONUS_PRODUCT_ID__: string;
 /** Id of the monthly build's leaderboard (total of best scores), e.g. PIM_January_Score. */
 declare const __PIM_LEADERBOARD_ID__: string;
+/** Build version from scripts/build-playgama.mjs, e.g. m02-20261028.1745-cc926a6; "dev" otherwise. */
+declare const __PIM_BUILD_VERSION__: string;

@@ -13,6 +13,9 @@ export const PLAYGAMA_MONTH: number = __PIM_MONTH__;
 /** Perfect runs (a platinum medal) unlock the song's Bombshell artwork during play. */
 export const MONTH_BOMBSHELL: boolean = __PIM_MONTH__ > 0 && __PIM_BOMBSHELL__;
 
+/** Shown on the title screen and in Options so a Playgama upload can be matched to its build. */
+export const BUILD_VERSION: string = __PIM_BUILD_VERSION__;
+
 /** The bundle's productId in the Playgama dashboard, e.g. PIM_January_Bonus (set in vite.config.ts). */
 export const BONUS_PRODUCT_ID: string = __PIM_BONUS_PRODUCT_ID__;
 const BUNDLE_KEY = `pg_bonus_bundle_m${PLAYGAMA_MONTH}`;
