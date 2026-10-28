@@ -143,8 +143,13 @@ class FarcasterService {
    * Retrieves the embedded Base EVM wallet provider from Farcaster
    */
   public async getEthereumProvider(): Promise<any | null> {
+    // Only ask the Mini App SDK when a Farcaster host can actually answer.
+    // In a normal browser tab the SDK posts to its own window, reads its own
+    // request back as the reply, and hands out a provider whose every call
+    // fails with "Cannot read properties of undefined (reading 'error')".
+    const hasMiniAppHost = this.isInsideFrame() || !!(window as any)?.ReactNativeWebView;
     try {
-      if (sdk?.wallet?.getEthereumProvider) {
+      if (hasMiniAppHost && sdk?.wallet?.getEthereumProvider) {
         const provider = await sdk.wallet.getEthereumProvider();
         if (provider) return provider;
       }

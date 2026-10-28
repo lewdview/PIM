@@ -27,13 +27,14 @@ const BASE_CHAIN_CONFIG = {
 /**
  * Normalize errors thrown by wallet providers into actionable messages.
  * Some providers throw malformed internal TypeErrors (e.g. "undefined is not
- * an object (evaluating 'n.error')") that are not actionable — surface a
+ * an object (evaluating 'n.error')", or Chrome's "Cannot read properties of
+ * undefined (reading 'error')") that are not actionable — surface a
  * useful message instead of the raw provider internals.
  */
 const describeWalletError = (err: any): string => {
   if (err?.code === 4001) return 'Request rejected in your wallet.';
   const raw = typeof err?.message === 'string' ? err.message.trim() : '';
-  if (!raw || /undefined is not an object|evaluating '[^']*'\s*\)?$/.test(raw)) {
+  if (!raw || /undefined is not an object|cannot read properties of (undefined|null)|evaluating '[^']*'\s*\)?$/i.test(raw)) {
     return 'The wallet returned an unexpected error. Reconnect your wallet and try again.';
   }
   return raw;
