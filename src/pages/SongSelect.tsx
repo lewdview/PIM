@@ -327,15 +327,12 @@ export default function SongSelect() {
       list.push({ label: 'ORIGINAL', url: selected.coverArt });
     }
     const dayCovers = getBombshellDayCovers(selected.day);
-    const allFiles = [...(dayCovers?.lbFiles || []), ...(dayCovers?.normalFiles || [])];
-    allFiles.forEach((file, idx) => {
-      const url = getBombshellCoverUrl(selected.day, file);
-      const isLB = file.toLowerCase().startsWith('lb');
-      list.push({
-        label: isLB ? `LB #${idx + 1}` : `VAR #${idx + 1}`,
-        url,
-        fileName: file,
-      });
+    // Number each kind on its own (LB #1-n, VAR #1-n) so adding covers never renumbers the other kind.
+    (dayCovers?.lbFiles || []).forEach((file, idx) => {
+      list.push({ label: `LB #${idx + 1}`, url: getBombshellCoverUrl(selected.day, file), fileName: file });
+    });
+    (dayCovers?.normalFiles || []).forEach((file, idx) => {
+      list.push({ label: `VAR #${idx + 1}`, url: getBombshellCoverUrl(selected.day, file), fileName: file });
     });
     if (selected.coverArt) {
       const altUrl = getCoverUrlForRarity(selected.coverArt, 'uncommon');
