@@ -1,6 +1,6 @@
 import { useState, createContext, useContext } from 'react';
 import type { VaultCard } from '../services/vaultService';
-import type { Rarity } from '../utils/rarity';
+import { RARITY_CONFIG, getSupplyCap, type Rarity } from '../utils/rarity';
 import { Volume2, Play, ChevronLeft, Layers, Zap, Flame, RotateCcw, Search, Copy, Check, Sparkles as SparklesIcon, Download } from 'lucide-react';
 import {
   getArtTypeForDay,
@@ -114,21 +114,12 @@ const mockCards: VaultCard[] = [
 ];
 
 // Helper to format supply info
-const getRarityMaxSupply = (r: Rarity) => {
-  if (r === 'mythic') return 1;
-  if (r === 'legendary') return 5;
-  if (r === 'rare') return 50;
-  if (r === 'uncommon') return 500;
-  return 1000;
-};
+// Same per-rarity print run the vault enforces (mythic is always a 1/1).
+const getRarityMaxSupply = (r: Rarity, day?: number) => getSupplyCap(r, day);
 
-const RARITY_COLORS: Record<Rarity, string> = {
-  common: '#8a8ea0',
-  uncommon: '#4ade80',
-  rare: '#3b82f6',
-  legendary: '#b44dff',
-  mythic: '#ffd700',
-};
+const RARITY_COLORS = Object.fromEntries(
+  Object.entries(RARITY_CONFIG).map(([r, cfg]) => [r, cfg.color])
+) as Record<Rarity, string>;
 
 // --------------------------------------------------------------------------
 // PRODUCTION-MATCHING STANDARD VAULT CARD BACK COMPONENT
@@ -223,7 +214,7 @@ function StandardVaultCardBack({ card }: { card: VaultCard }) {
         ? 'rgba(57,255,20,0.25)'
         : isScribe
           ? 'rgba(255,20,147,0.25)'
-          : `${rcColor}22`;
+          : `${rcColor}44`;
 
   const borderInnerCol = isCarbon
     ? '#00ffff15'
@@ -233,7 +224,7 @@ function StandardVaultCardBack({ card }: { card: VaultCard }) {
         ? 'rgba(57,255,20,0.1)'
         : isScribe
           ? 'rgba(255,20,147,0.1)'
-          : `${rcColor}10`;
+          : `${rcColor}20`;
 
   const emblemBorder = isCarbon
     ? '2px solid #00ffff55'
@@ -369,13 +360,17 @@ function StandardVaultCardBack({ card }: { card: VaultCard }) {
                 th3v4ult
               </span>
               <div className="w-10 h-[1px]" style={{ background: isCarbon || isGold || isMatrix || isScribe ? `${logoColor}40` : `${rcColor}30` }} />
-              <span className="text-[7.5px] uppercase tracking-wider text-[#fff0d8]/40">
+              <span className="text-[7.5px] uppercase tracking-wider text-[#fff0d8]/60">
                 GEN 0 · {card.rarity.toUpperCase()}
               </span>
             </div>
 
             <DayNumberBadge day={card.day} color={logoColor} />
 
+          </div>
+
+          <div className="absolute inset-x-5 bottom-2.5 text-center font-mono text-[6.5px] uppercase tracking-[0.28em] text-[#fff0d8]/40">
+            365 · Light &amp; Dark Archive
           </div>
 
           {/* Corner borders */}
@@ -417,7 +412,7 @@ function Card3DWrapper({ rarity, themeClass, children, backSide }: CardWrapperPr
   if (staticFace === 'front') {
     return (
       <div 
-        className={`card-face-front select-none theme-${themeClass} rarity-${rarity}`}
+        className={`pim-skin card-face-front select-none theme-${themeClass} rarity-${rarity}`}
         style={{
           position: 'absolute',
           inset: 0,
@@ -439,7 +434,7 @@ function Card3DWrapper({ rarity, themeClass, children, backSide }: CardWrapperPr
   if (staticFace === 'back') {
     return (
       <div 
-        className={`card-face-back select-none theme-${themeClass} rarity-${rarity}`}
+        className={`pim-skin card-face-back select-none theme-${themeClass} rarity-${rarity}`}
         style={{
           position: 'absolute',
           inset: 0,
@@ -459,12 +454,12 @@ function Card3DWrapper({ rarity, themeClass, children, backSide }: CardWrapperPr
     <div className="card-wrapper-3d relative" onClick={() => setIsFlipped(!isFlipped)}>
       {isMythic && <MythicGodRays />}
       <div className={`card-inner-3d ${isFlipped ? 'flipped' : ''}`}>
-        <div className={`card-face-front theme-${themeClass} rarity-${rarity} relative`}>
+        <div className={`pim-skin card-face-front theme-${themeClass} rarity-${rarity} relative`}>
           {children}
           {isMythic && <MythicEmberParticles count={12} />}
           {isMythic && <OneOfOneOutline color="#ffd700" speedSec={14} />}
         </div>
-        <div className={`card-face-back theme-${themeClass} rarity-${rarity}`}>
+        <div className={`pim-skin card-face-back theme-${themeClass} rarity-${rarity}`}>
           {backSide}
         </div>
       </div>
@@ -625,7 +620,7 @@ function ChromeMedal({ cardId }: { cardId: string }) {
           <stop offset="100%" stopColor="#111827" />
         </linearGradient>
       </defs>
-      <circle cx="24" cy="24" r="22" stroke="url(#chromeBadge-${cardId})" strokeWidth="2.5" fill="rgba(0,0,0,0.8)" />
+      <circle cx="24" cy="24" r="22" stroke={`url(#chromeBadge-${cardId})`} strokeWidth="2.5" fill="rgba(0,0,0,0.8)" />
       <circle cx="24" cy="24" r="18" stroke="#374151" strokeWidth="1" />
       <path d="M16 24l5 5 11-11" stroke="#fbbf24" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
       <polygon points="24,6 27,13 35,13 29,18 31,25 24,21 17,25 19,18 13,13 21,13" fill="#fbbf24" opacity="0.3" />
@@ -703,7 +698,7 @@ export function BackChrome({ card }: { card: VaultCard }) {
       <div className="chrome-inner-grid">
         <div className="flex justify-between items-start">
           <span className="text-[7px] text-white/90 font-bold italic tracking-tighter">CHROME BASE</span>
-          <span className="text-[5.5px] font-mono text-amber-400">#001/365</span>
+          <span className="text-[5.5px] font-mono text-amber-400">#{String(card.day).padStart(3, '0')}/365</span>
         </div>
         <div className="self-center z-10">
           <ChromeMedal cardId={card.id} />
@@ -889,7 +884,7 @@ export function BackDuelist({ card }: { card: VaultCard }) {
 // --------------------------------------------------------------------------
 export function CardOriginal({ card, backSide }: { card: VaultCard; backSide?: React.ReactNode }) {
   const activeColor = RARITY_COLORS[card.rarity];
-  const maxSupply = getRarityMaxSupply(card.rarity);
+  const maxSupply = getRarityMaxSupply(card.rarity, card.day);
   const mintPct = Math.min((card.claimedCount / maxSupply) * 100, 100);
   const finalBack = backSide || <StandardVaultCardBack card={card} />;
 
@@ -1094,7 +1089,7 @@ export function CardGlitch({ card, backSide }: { card: VaultCard; backSide?: Rea
 
       {/* Tags */}
       <div className="flex gap-1 mb-1.5 overflow-hidden whitespace-nowrap">
-        {card.tags.map(tag => (
+        {(card.tags ?? []).map(tag => (
           <span key={tag} className="text-[8px] px-1 bg-white/10 text-white/70 border border-white/20 uppercase">
             {tag}
           </span>
@@ -1125,13 +1120,13 @@ export function CardGlitch({ card, backSide }: { card: VaultCard; backSide?: Rea
       <div className="mt-auto">
         <div className="flex justify-between text-[7px] opacity-40 mb-0.5">
           <span>SUPPLY CAP</span>
-          <span>{card.claimedCount} / {getRarityMaxSupply(card.rarity)}</span>
+          <span>{card.claimedCount} / {getRarityMaxSupply(card.rarity, card.day)}</span>
         </div>
         <div className="h-1 w-full bg-white/10 border border-black overflow-hidden">
           <div 
             className="h-full" 
             style={{ 
-              width: `${(card.claimedCount / getRarityMaxSupply(card.rarity)) * 100}%`,
+              width: `${Math.min(100, (card.claimedCount / getRarityMaxSupply(card.rarity, card.day)) * 100)}%`,
               background: activeColor 
             }} 
           />
@@ -1239,13 +1234,13 @@ export function CardGlass({ card, backSide }: { card: VaultCard; backSide?: Reac
       <div className="mt-auto pt-1">
         <div className="flex justify-between text-[7px] text-white/30 mb-0.5">
           <span>RELEASE MINT INDEX</span>
-          <span>{card.claimedCount} / {getRarityMaxSupply(card.rarity)}</span>
+          <span>{card.claimedCount} / {getRarityMaxSupply(card.rarity, card.day)}</span>
         </div>
         <div className="h-[2px] w-full bg-white/5 rounded-full overflow-hidden">
           <div 
             className="h-full rounded-full" 
             style={{ 
-              width: `${(card.claimedCount / getRarityMaxSupply(card.rarity)) * 100}%`,
+              width: `${Math.min(100, (card.claimedCount / getRarityMaxSupply(card.rarity, card.day)) * 100)}%`,
               background: rarityGlows[card.rarity] 
             }} 
           />
@@ -1274,7 +1269,7 @@ export function CardGlass({ card, backSide }: { card: VaultCard; backSide?: Reac
       <div className="flex justify-between items-center mb-1.5 z-20 p-2 pb-0">
         <div className="flex flex-col">
           <span className={`text-[7px] text-white/40 tracking-wider font-sans ${isFullBleed ? 'text-stroke-outline' : ''}`}>ENTRY</span>
-          <span className={`text-[9px] font-bold font-sans ${isFullBleed ? 'text-stroke-outline' : ''}`}>#00{card.day}</span>
+          <span className={`text-[9px] font-bold font-sans ${isFullBleed ? 'text-stroke-outline' : ''}`}>#{String(card.day).padStart(3, '0')}</span>
         </div>
         <span className="text-[7px] px-3 py-1 rounded-full border bg-black/40 text-white/80 whitespace-nowrap shrink-0" style={{ borderColor: rarityGlows[card.rarity] }}>
           {card.rarity.toUpperCase()}
@@ -1378,12 +1373,12 @@ export function CardArcade({ card, backSide }: { card: VaultCard; backSide?: Rea
       <div className="mt-auto">
         <div className="flex justify-between text-[7px] opacity-40 mb-1">
           <span>UNITS CLAIMED</span>
-          <span>{card.claimedCount} / {getRarityMaxSupply(card.rarity)}</span>
+          <span>{card.claimedCount} / {getRarityMaxSupply(card.rarity, card.day)}</span>
         </div>
         {/* LED Bar */}
         <div className="flex gap-0.5 h-1.5">
           {Array.from({ length: 8 }).map((_, idx) => {
-            const active = idx < Math.round((card.claimedCount / getRarityMaxSupply(card.rarity)) * 8);
+            const active = idx < Math.round((card.claimedCount / getRarityMaxSupply(card.rarity, card.day)) * 8);
             return (
               <div 
                 key={idx} 
@@ -1507,7 +1502,7 @@ export function CardMtg({ card, backSide }: { card: VaultCard; backSide?: React.
 
       {/* Type line bar */}
       <div className="mtg-type-bar truncate text-[8px] font-sans">
-        Song — {card.genre[0] || 'Unknown'} {card.genre[1] ? `/ ${card.genre[1]}` : ''}
+        Song — {card.genre?.[0] || 'Unknown'} {card.genre?.[1] ? `/ ${card.genre?.[1]}` : ''}
       </div>
 
       {/* Text Box / Ability Card details */}
@@ -1518,7 +1513,7 @@ export function CardMtg({ card, backSide }: { card: VaultCard; backSide?: React.
         </div>
         {card.rarity !== 'rare' && (
           <div className="mtg-flavor-text">
-            "{card.tags.map(t => `#${t}`).join(' ')} · {card.mood.toUpperCase()} TIME"
+            "{(card.tags ?? []).map(t => `#${t}`).join(' ')} · {card.mood.toUpperCase()} TIME"
           </div>
         )}
         <div className="mtg-pt-box">
@@ -1815,7 +1810,7 @@ export function CardMonster({ card, backSide }: { card: VaultCard; backSide?: Re
   const hp = card.tempo;
   
   // Element badge helper
-  const mainGenre = card.genre[0] || 'Alternative';
+  const mainGenre = card.genre?.[0] || 'Alternative';
   const renderMonsterEnergyBadge = (genre: string, className = "w-2.5 h-2.5 text-current") => {
     if (genre.includes('Synth') || genre.includes('Outrun') || genre === '🌌') {
       return (
@@ -2138,7 +2133,7 @@ export function CardFantasy({ card, backSide }: { card: VaultCard; backSide?: Re
 
       <div className="fantasy-textbox">
         <div className="fantasy-desc">
-          <span className="font-bold text-[#b45309] block uppercase text-[5px] mb-0.5">{card.genre[0] || 'Spells'} Spell</span>
+          <span className="font-bold text-[#b45309] block uppercase text-[5px] mb-0.5">{card.genre?.[0] || 'Spells'} Spell</span>
           "{card.description}"
         </div>
       </div>
@@ -2168,7 +2163,7 @@ export function CardFantasy({ card, backSide }: { card: VaultCard; backSide?: Re
 
       <div className="absolute inset-x-2 bottom-2 z-10 flex flex-col gap-1.5 bg-black/85 p-2 rounded border border-white/15">
         <div className="fantasy-desc text-[5.5px] text-gray-300 text-center leading-tight">
-          <span className="font-bold text-[#f59e0b] block uppercase text-[4.5px] mb-0.5">Mythic Spell / {card.genre[0] || 'Harmony'}</span>
+          <span className="font-bold text-[#f59e0b] block uppercase text-[4.5px] mb-0.5">Mythic Spell / {card.genre?.[0] || 'Harmony'}</span>
           "{card.description}"
         </div>
         <div className="fantasy-bottom-combat border-t border-white/10 pt-1 mt-1">
@@ -2217,7 +2212,7 @@ export function CardCyberpunk({ card, backSide }: { card: VaultCard; backSide?: 
       </div>
 
       <div className="cyber-footer">
-        <span>SECTOR: {card.genre[0]?.slice(0, 8).toUpperCase() || 'NET'}</span>
+        <span>SECTOR: {card.genre?.[0]?.slice(0, 8).toUpperCase() || 'NET'}</span>
         <span>G0_ACT</span>
       </div>
     </>
@@ -2247,7 +2242,7 @@ export function CardCyberpunk({ card, backSide }: { card: VaultCard; backSide?: 
           <div className="cyber-log-line opacity-55">DESC: {card.description}</div>
         </div>
         <div className="cyber-footer border-t border-current/30 pt-1 mt-1">
-          <span>PORT: {card.genre[0]?.toUpperCase() || 'CORE'}</span>
+          <span>PORT: {card.genre?.[0]?.toUpperCase() || 'CORE'}</span>
           <span>SYSTEM_ONLINE</span>
         </div>
       </div>
