@@ -7214,10 +7214,12 @@ export default function Game() {
       const key = e.key;
       keysDownRef.current.add(normalizeLaneKey(key));
 
-      // Lane bound to this key (primary or alternate binding). Arrow keys bound to a
-      // lane act as that lane's button: a held arrow lane never combines into a
-      // diagonal, and a swipe from it only counts on its own lane.
+      // Lane bound to this key (primary or alternate binding). An arrow key bound to a
+      // lane acts as that lane's button, but still swipes: on its own it gives its own
+      // direction, and with a perpendicular arrow held it gives the diagonal, so Deluxe
+      // diagonal swipes stay playable with the arrow preset.
       const boundLane = laneForKey(key, laneKeysRef.current, laneAltKeysRef.current);
+      const boundArrow = boundLane >= 0 && key.startsWith("Arrow");
       const isLaneBound = (k: string) => laneForKey(k, laneKeysRef.current, laneAltKeysRef.current) >= 0;
 
       // ── Diagonal detection from arrow keys ──
@@ -7227,10 +7229,15 @@ export default function Game() {
       const isRight = keysDownRef.current.has("ArrowRight") && !isLaneBound("ArrowRight");
 
       let swipeDir: Note['swipeDirection'] | undefined;
-      if (boundLane >= 0 && key === "ArrowUp") swipeDir = 'up';
-      else if (boundLane >= 0 && key === "ArrowDown") swipeDir = 'down';
-      else if (boundLane >= 0 && key === "ArrowLeft") swipeDir = 'left';
-      else if (boundLane >= 0 && key === "ArrowRight") swipeDir = 'right';
+      if (boundArrow) {
+        const held = (k: string) => keysDownRef.current.has(k);
+        const isVertical = key === "ArrowUp" || key === "ArrowDown";
+        const vert = isVertical ? key : held("ArrowUp") ? "ArrowUp" : held("ArrowDown") ? "ArrowDown" : null;
+        const horiz = !isVertical ? key : held("ArrowLeft") ? "ArrowLeft" : held("ArrowRight") ? "ArrowRight" : null;
+        const v = vert === "ArrowUp" ? "up" : vert === "ArrowDown" ? "down" : null;
+        const h = horiz === "ArrowLeft" ? "left" : horiz === "ArrowRight" ? "right" : null;
+        swipeDir = (v && h ? `${v}-${h}` : v ?? h ?? undefined) as Note['swipeDirection'];
+      }
       else if (isUp && isLeft) swipeDir = 'up-left';
       else if (isUp && isRight) swipeDir = 'up-right';
       else if (isDown && isLeft) swipeDir = 'down-left';
@@ -7254,6 +7261,28 @@ export default function Game() {
         const t = getTRef.current ? getTRef.current() : 0;
         const allNotes = notesRef.current;
         const mw = missWindow(songRef.current?.difficultyLevel ?? 5);
+
+        // A lane-bound arrow first looks across every lane for a swipe that needs exactly
+        // this direction (e.g. a down-left diagonal in the right lane), then falls back to
+        // swipes on its own lane only.
+        if (boundArrow) {
+          for (let i = noteWindowStartRef.current; i < allNotes.length; i++) {
+            const ns = allNotes[i];
+            if (ns.note.time - t > mw) break;
+            const reqDir = ns.note.swipeDirection || (ns.note.type === "lift" ? "up" : undefined);
+            if (
+              !ns.hit &&
+              !ns.missed &&
+              !isHoldNote(ns.note) &&
+              reqDir === swipeDir &&
+              Math.abs(ns.note.time - t) < mw
+            ) {
+              hitLaneRef.current?.(ns.note.lane, swipeDir);
+              return;
+            }
+          }
+        }
+
         for (let l = 0; l < LANE_COUNT; l++) {
           if (boundLane >= 0 && l !== boundLane) continue;
           let swipeCandidate: NoteState | undefined;
