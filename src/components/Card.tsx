@@ -611,7 +611,8 @@ export default memo(function Card({
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
         style={{
-          position: 'absolute', bottom: '38px', left: '50%', transform: 'translateX(-50%)',
+          position: 'absolute', top: '40px', left: '12px', right: '12px',
+          display: 'flex', justifyContent: 'center',
           zIndex: 41, pointerEvents: 'none',
           visibility: frontVisibility,
         }}
@@ -626,7 +627,8 @@ export default memo(function Card({
           background: 'rgba(0,0,0,0.88)',
           borderRadius: '3px',
           boxShadow: `0 0 16px ${rc.color}55`,
-          whiteSpace: 'nowrap',
+          maxWidth: '100%',
+          textAlign: 'center',
         }}>
           <span style={{ fontSize: '8px', fontWeight: 900, letterSpacing: '0.22em' }}>✦ Final Print ✦</span>
           <span style={{ fontSize: '6px', fontWeight: 700, letterSpacing: '0.16em', color: 'rgba(255,255,255,0.75)' }}>
@@ -746,7 +748,7 @@ export default memo(function Card({
             </div>
             
             <div style={{ textAlign: 'center' }}>
-                <p style={{ margin: 0, fontFamily: '"JetBrains Mono", monospace', fontSize: '7px', fontWeight: 900, letterSpacing: '0.3em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: '4px' }}>ENCRYPTED</p>
+                <p style={{ margin: 0, fontFamily: '"JetBrains Mono", monospace', fontSize: '7px', fontWeight: 900, letterSpacing: '0.3em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.55)', marginBottom: '4px' }}>SEALED</p>
                 <div style={{ width: '40px', height: '1px', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)', margin: '0 auto' }} />
             </div>
           </div>
@@ -836,6 +838,7 @@ export default memo(function Card({
     if (!['classic', 'holo', 'carbon', 'gold_luxe', 'matrix', 'th3scr1b3'].includes(activeCardBack)) {
       return (
         <motion.div
+          className="pim-skin"
           style={{
             position: 'absolute', inset: 0, borderRadius: '12px', overflow: 'hidden',
             backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
@@ -889,7 +892,7 @@ export default memo(function Card({
           ? 'rgba(57,255,20,0.25)'
           : isScribe
             ? 'rgba(255,20,147,0.25)'
-            : `${rc.color}22`;
+            : `${rc.color}44`;
 
     const borderInnerCol = isCarbon
       ? '#00ffff15'
@@ -899,7 +902,7 @@ export default memo(function Card({
           ? 'rgba(57,255,20,0.1)'
           : isScribe
             ? 'rgba(255,20,147,0.1)'
-            : `${rc.color}10`;
+            : `${rc.color}20`;
 
     const emblemBorder = isCarbon
       ? '2px solid #00ffff55'
@@ -1021,7 +1024,7 @@ export default memo(function Card({
                   th3v4ult
                 </span>
                 <div style={{ width: '40px', height: '1px', background: isGold ? 'rgba(255,215,0,0.3)' : isCarbon ? 'rgba(0,255,255,0.3)' : `${rc.color}30` }} />
-                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,240,216,0.35)' }}>
+                <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,240,216,0.58)' }}>
                   GEN 0 {isEcho ? `· RE-ENTRY 00${echoGeneration}` : ''} · {card.rarity.toUpperCase()}
                 </span>
               </div>
@@ -1044,6 +1047,11 @@ export default memo(function Card({
                 </a>
               )}
             </div>
+
+            {/* Archive footer — ties the back to the 365 archive */}
+            {!(card.rarity === 'mythic' && interactive) && <div style={{ position: 'absolute', left: '22px', right: '22px', bottom: '10px', textAlign: 'center', fontFamily: '"JetBrains Mono", monospace', fontSize: '6.5px', letterSpacing: '0.28em', textTransform: 'uppercase', color: 'rgba(255,240,216,0.4)' }}>
+              365 · Light &amp; Dark Archive
+            </div>}
 
             {/* Corner marks */}
             {[{t:true,l:true},{t:true,l:false},{t:false,l:true},{t:false,l:false}].map(({t,l},i) => (
@@ -1121,7 +1129,7 @@ export default memo(function Card({
       </div>
 
       {/* Art — 46% keeps info breathing room */}
-      <div style={{ position: 'relative', height: '46%', flexShrink: 0, borderBottom: `1px solid ${rc.color}30`, overflow: 'hidden' }}>
+      <div style={{ position: 'relative', height: '52%', flexShrink: 0, borderBottom: `1px solid ${rc.color}30`, overflow: 'hidden' }}>
         {renderArt('w-full h-full')}
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.18) 0%, transparent 55%, rgba(0,0,0,0.65) 100%)' }} />
       </div>
@@ -1164,7 +1172,7 @@ export default memo(function Card({
     }}>
 
       {/* Art — larger crop with clean top header bar */}
-      <div style={{ position: 'relative', height: '60%', overflow: 'hidden', borderBottom: `1.5px solid ${rc.color}55`, flexShrink: 0 }}>
+      <div style={{ position: 'relative', height: '64%', overflow: 'hidden', borderBottom: `1.5px solid ${rc.color}55`, flexShrink: 0 }}>
         {renderArt('w-full h-full')}
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.45) 0%, transparent 28%, transparent 58%, rgba(0,0,0,0.72) 100%)' }} />
         {/* Top Day + Rarity badges on artwork header so title gets 100% width below */}
@@ -1442,7 +1450,7 @@ export default memo(function Card({
   );
 
   const frontFace = showBackOnly
-    ? renderCardBack(card, activeCardBack)
+    ? <div className="pim-skin" style={{ position: 'absolute', inset: 0, borderRadius: '12px', overflow: 'hidden' }}>{renderCardBack(card, activeCardBack)}</div>
     : activeCardSkin !== 'original' && !ultraReward
     ? (() => {
         const SkinComponent = getSkinComponent(activeCardSkin);

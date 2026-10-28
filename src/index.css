@@ -69,6 +69,14 @@
 /* ===== BASE STYLES ===== */
 *, *::before, *::after {
   box-sizing: border-box;
+}
+
+/* Unlayered, so it beats Tailwind's layered p-* / m-* utilities. Card skins
+   (.pim-skin) are laid out with those utilities, so they are left to
+   Tailwind's own preflight reset instead. */
+:where(*:not(.pim-skin, .pim-skin *)),
+:where(*:not(.pim-skin, .pim-skin *))::before,
+:where(*:not(.pim-skin, .pim-skin *))::after {
   margin: 0;
   padding: 0;
 }

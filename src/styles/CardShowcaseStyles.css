@@ -323,7 +323,7 @@
 }
 
 /* Common (Monochrome Newspaper Press-stamp) */
-.theme-glitch.rarity-common .card-face-front {
+.card-face-front.theme-glitch.rarity-common {
   border: 4px solid #fff;
   background: #080808;
   padding: 8px;
@@ -360,7 +360,7 @@
 }
 
 /* Uncommon (Stencil-Slits Border + Green Glow) */
-.theme-glitch.rarity-uncommon .card-face-front {
+.card-face-front.theme-glitch.rarity-uncommon {
   border: 4px solid #00d4aa;
   background: #05100a;
   padding: 8px;
@@ -379,7 +379,7 @@
 }
 
 /* Rare (Sapphire-Cyan Terminal Frame + Glowing Scanlines) */
-.theme-glitch.rarity-rare .card-face-front {
+.card-face-front.theme-glitch.rarity-rare {
   border: 4px solid #00bcff;
   background: #000b14;
   padding: 8px;
@@ -406,7 +406,7 @@
 }
 
 /* Legendary (Chrome Hazard-Strip + Magenta Halo) */
-.theme-glitch.rarity-legendary .card-face-front {
+.card-face-front.theme-glitch.rarity-legendary {
   border: 4px solid #ff007f;
   background: black;
   padding: 0;
@@ -433,7 +433,7 @@
 /* NOTE: glitch-shake is intentionally NOT on .card-face-front because
    filter+transform on the face element breaks backface-visibility.
    The animation lives on .mythic-foil-wash instead. */
-.theme-glitch.rarity-mythic .card-face-front {
+.card-face-front.theme-glitch.rarity-mythic {
   border: 4px solid #ffd700;
   background: black;
   padding: 0;
@@ -516,7 +516,7 @@
   font-family: 'Outfit', 'Inter', sans-serif;
 }
 
-.theme-glass .card-face-front {
+.card-face-front.theme-glass {
   background: rgba(10, 8, 12, 0.45);
   backdrop-filter: blur(20px) saturate(160%);
   -webkit-backdrop-filter: blur(20px) saturate(160%);
@@ -527,7 +527,7 @@
 }
 
 /* Common Glass */
-.theme-glass.rarity-common .card-face-front {
+.card-face-front.theme-glass.rarity-common {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.15);
 }
@@ -538,7 +538,7 @@
 }
 
 /* Uncommon Glass (Teal + Green Glow) */
-.theme-glass.rarity-uncommon .card-face-front {
+.card-face-front.theme-glass.rarity-uncommon {
   background: rgba(0, 212, 170, 0.05);
   border: 1px solid rgba(0, 212, 170, 0.25);
   box-shadow: 0 8px 32px 0 rgba(0, 212, 170, 0.15), inset 0 1px 1px rgba(0, 212, 170, 0.2);
@@ -561,7 +561,7 @@
 }
 
 /* Rare Glass (Cobalt Blue + Stat Pills) */
-.theme-glass.rarity-rare .card-face-front {
+.card-face-front.theme-glass.rarity-rare {
   background: transparent;
   border: 1px solid rgba(59, 130, 246, 0.35);
   box-shadow: 0 8px 32px 0 rgba(59, 130, 246, 0.25);
@@ -573,7 +573,7 @@
 }
 
 /* Legendary Glass (Amethyst + Spinning Mesh) */
-.theme-glass.rarity-legendary .card-face-front {
+.card-face-front.theme-glass.rarity-legendary {
   background: transparent;
   border: 1px solid rgba(180, 77, 255, 0.45);
   box-shadow: 0 8px 32px 0 rgba(180, 77, 255, 0.35);
@@ -604,7 +604,7 @@
 }
 
 /* Mythic Glass (Gold Lined + Iridescent border sweeps) */
-.theme-glass.rarity-mythic .card-face-front {
+.card-face-front.theme-glass.rarity-mythic {
   background: transparent;
   border: 1px solid rgba(255, 215, 0, 0.3);
   box-shadow: 0 12px 40px 0 rgba(255, 215, 0, 0.25), 0 0 20px rgba(255, 56, 0, 0.1);
@@ -650,7 +650,7 @@
   font-family: 'Courier New', Courier, monospace;
 }
 
-.theme-arcade .card-face-front {
+.card-face-front.theme-arcade {
   background: #141416;
   border: 4px solid #1a1a1f;
   color: #e2e8f0;
@@ -661,7 +661,7 @@
 }
 
 /* Common Arcade (Dark plastic + red/white stripes) */
-.theme-arcade.rarity-common .card-face-front {
+.card-face-front.theme-arcade.rarity-common {
   border: 4px solid #2d2d30;
   background: #19191b;
 }
@@ -675,7 +675,7 @@
 .theme-arcade.rarity-common .retro-stripe-white { flex: 1; background: #ffffff; }
 
 /* Uncommon Arcade (Yellow grid + synth dials) */
-.theme-arcade.rarity-uncommon .card-face-front {
+.card-face-front.theme-arcade.rarity-uncommon {
   border: 4px solid #ffcc00;
   background: #1e1b12;
 }
@@ -717,7 +717,7 @@
 }
 
 /* Rare Arcade (Red/Cyan Racing Stripes + Pixel Badges) */
-.theme-arcade.rarity-rare .card-face-front {
+.card-face-front.theme-arcade.rarity-rare {
   border: 4px solid #00f0ff;
   background: #0f1c24;
   padding: 10px;
@@ -748,7 +748,7 @@
 }
 
 /* Legendary Arcade (Golden Sunburst + wireframe grid) */
-.theme-arcade.rarity-legendary .card-face-front {
+.card-face-front.theme-arcade.rarity-legendary {
   border: 4px solid #ff007f;
   background: #1b0512;
   padding: 0;
@@ -785,7 +785,7 @@
 }
 
 /* Mythic Arcade (Iridescent Laserdisc Sheen + scrolling grid) */
-.theme-arcade.rarity-mythic .card-face-front {
+.card-face-front.theme-arcade.rarity-mythic {
   border: 4px solid #ffd700;
   background: #181600;
   padding: 0;
@@ -839,7 +839,7 @@
   font-family: 'JetBrains Mono', monospace;
 }
 
-.theme-mtg .card-face-front {
+.card-face-front.theme-mtg {
   border: 5px solid rgba(255, 255, 255, 0.08);
   background: #080605;
   color: #fff;
@@ -996,12 +996,12 @@
 /* --- MTG Rarity Variants --- */
 
 /* Common MTG */
-.theme-mtg.rarity-common .card-face-front {
+.card-face-front.theme-mtg.rarity-common {
   border-color: rgba(255, 255, 255, 0.08);
 }
 
 /* Uncommon MTG: Neon Green Glow accents */
-.theme-mtg.rarity-uncommon .card-face-front {
+.card-face-front.theme-mtg.rarity-uncommon {
   border-color: #00d4aa;
   box-shadow: 0 0 15px rgba(0, 212, 170, 0.25), inset 0 0 10px rgba(0, 212, 170, 0.15);
 }
@@ -1015,7 +1015,7 @@
 }
 
 /* Rare MTG: Full-bleed vertical art, Gold Inner frame, Blue tint glows */
-.theme-mtg.rarity-rare .card-face-front {
+.card-face-front.theme-mtg.rarity-rare {
   border-color: #3b82f6;
   box-shadow: 0 0 20px rgba(59, 130, 246, 0.35);
   padding: 8px;
@@ -1030,7 +1030,7 @@
 }
 
 /* Legendary MTG: Borderless Full-art layout, rotated/zoomed art, Magenta-Pink glow */
-.theme-mtg.rarity-legendary .card-face-front {
+.card-face-front.theme-mtg.rarity-legendary {
   border: 4px solid #ff007f;
   padding: 0;
   box-shadow: 0 0 25px rgba(255, 0, 127, 0.5);
@@ -1073,7 +1073,7 @@
 }
 
 /* Mythic MTG: Borderless Full-art, rotated/zoomed art, Rainbow border sweep, Iridescent text box */
-.theme-mtg.rarity-mythic .card-face-front {
+.card-face-front.theme-mtg.rarity-mythic {
   border: 4px solid #ffd700;
   padding: 0;
   box-shadow: 0 0 30px rgba(255,215,0,0.5);
@@ -1211,7 +1211,7 @@
   font-family: 'Times New Roman', Times, Georgia, serif;
 }
 
-.theme-poker .card-face-front {
+.card-face-front.theme-poker {
   border: 4px double #b89c66;
   box-shadow: inset 0 0 15px rgba(184, 156, 102, 0.2), 0 8px 24px rgba(0,0,0,0.85);
   box-sizing: border-box;
@@ -1224,28 +1224,28 @@
 }
 
 /* Rarity Backgrounds */
-.theme-poker.rarity-common .card-face-front,
-.theme-poker.rarity-uncommon .card-face-front {
+.card-face-front.theme-poker.rarity-common,
+.card-face-front.theme-poker.rarity-uncommon {
   background: #f7eed8;
   color: #1f1b14;
   border-color: #7c6846;
 }
 
-.theme-poker.rarity-rare .card-face-front {
+.card-face-front.theme-poker.rarity-rare {
   background: #500d17;
   color: #f7eed8;
   border-color: #d1b887;
   box-shadow: inset 0 0 20px rgba(0,0,0,0.6), 0 0 20px rgba(209, 184, 135, 0.25);
 }
 
-.theme-poker.rarity-legendary .card-face-front {
+.card-face-front.theme-poker.rarity-legendary {
   background: linear-gradient(135deg, #0e0d0b 0%, #221c15 50%, #0e0d0b 100%);
   color: #ffd700;
   border-color: #ffd700;
   box-shadow: inset 0 0 25px rgba(255, 215, 0, 0.15), 0 0 25px rgba(255, 215, 0, 0.25);
 }
 
-.theme-poker.rarity-mythic .card-face-front {
+.card-face-front.theme-poker.rarity-mythic {
   background: linear-gradient(135deg, #120e0b 0%, #302418 50%, #120e0b 100%);
   color: #ffd700;
   border-color: #ffd700;
@@ -1353,7 +1353,7 @@
   font-weight: bold;
 }
 
-.theme-duelist .card-face-front {
+.card-face-front.theme-duelist {
   border: 5px solid #000;
   box-shadow: 0 8px 24px rgba(0,0,0,0.85);
   padding: 6px;
@@ -1363,21 +1363,21 @@
 }
 
 /* Frame Colors based on Rarity */
-.theme-duelist.rarity-common .card-face-front {
+.card-face-front.theme-duelist.rarity-common {
   background: linear-gradient(135deg, #a88158 0%, #5f3e20 100%); /* Normal Monster */
 }
-.theme-duelist.rarity-uncommon .card-face-front {
+.card-face-front.theme-duelist.rarity-uncommon {
   background: linear-gradient(135deg, #d36a38 0%, #852e0f 100%); /* Effect Monster */
 }
-.theme-duelist.rarity-rare .card-face-front {
+.card-face-front.theme-duelist.rarity-rare {
   background: linear-gradient(135deg, #f1f5f9 0%, #cbd5e1 100%); /* Synchro Monster */
   color: #000;
 }
-.theme-duelist.rarity-legendary .card-face-front {
+.card-face-front.theme-duelist.rarity-legendary {
   background: linear-gradient(135deg, #27272a 0%, #09090b 100%); /* Xyz Monster */
   border-color: #18181b;
 }
-.theme-duelist.rarity-mythic .card-face-front {
+.card-face-front.theme-duelist.rarity-mythic {
   background: linear-gradient(135deg, #8b5cf6 0%, #4c1d95 100%); /* Fusion Monster */
 }
 
@@ -1522,7 +1522,7 @@
   font-weight: bold;
 }
 
-.theme-monster .card-face-front {
+.card-face-front.theme-monster {
   border: 6px solid #eab308; /* Classic TCG Yellow Border */
   background: linear-gradient(135deg, #2d2a25 0%, #171513 100%);
   color: #fff;
@@ -1532,17 +1532,17 @@
   flex-direction: column;
 }
 
-.theme-monster.rarity-rare .card-face-front {
+.card-face-front.theme-monster.rarity-rare {
   border-color: #94a3b8; /* Holographic silver border */
   box-shadow: 0 0 15px rgba(255,255,255,0.25);
 }
 
-.theme-monster.rarity-legendary .card-face-front {
+.card-face-front.theme-monster.rarity-legendary {
   border-color: #ffd700;
   background: linear-gradient(135deg, #1e1b18 0%, #0d0c0a 100%);
 }
 
-.theme-monster.rarity-mythic .card-face-front {
+.card-face-front.theme-monster.rarity-mythic {
   border-color: #ffd700;
   box-shadow: 0 0 25px rgba(255, 215, 0, 0.4);
 }
@@ -1918,7 +1918,7 @@
 }
 
 /* Common Chrome – brushed steel plate */
-.theme-chrome.rarity-common .card-face-front {
+.card-face-front.theme-chrome.rarity-common {
   border: 4px solid #6b7280;
   background:
     repeating-linear-gradient(
@@ -1938,7 +1938,7 @@
 }
 
 /* Uncommon Chrome – holographic silver */
-.theme-chrome.rarity-uncommon .card-face-front {
+.card-face-front.theme-chrome.rarity-uncommon {
   border: 4px solid #9ca3af;
   background:
     repeating-linear-gradient(
@@ -1957,7 +1957,7 @@
   height: 100%;
   overflow: hidden;
 }
-.theme-chrome.rarity-uncommon .card-face-front::before {
+.card-face-front.theme-chrome.rarity-uncommon::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -1975,7 +1975,7 @@
 }
 
 /* Rare Chrome – gold prizm */
-.theme-chrome.rarity-rare .card-face-front {
+.card-face-front.theme-chrome.rarity-rare {
   border: 5px solid #b8a03e;
   background:
     repeating-linear-gradient(
@@ -1994,7 +1994,7 @@
   height: 100%;
   overflow: hidden;
 }
-.theme-chrome.rarity-rare .card-face-front::after {
+.card-face-front.theme-chrome.rarity-rare::after {
   content: '';
   position: absolute;
   left: 0; right: 0;
@@ -2006,7 +2006,7 @@
 }
 
 /* Legendary Chrome – hypercolor refractor */
-.theme-chrome.rarity-legendary .card-face-front {
+.card-face-front.theme-chrome.rarity-legendary {
   border: 5px solid #fbbf24;
   background: linear-gradient(148deg, #1a1200 0%, #261800 50%, #0d0800 100%);
   color: #fbbf24;
@@ -2019,7 +2019,7 @@
   height: 100%;
   overflow: hidden;
 }
-.theme-chrome.rarity-legendary .card-face-front::before {
+.card-face-front.theme-chrome.rarity-legendary::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -2038,7 +2038,7 @@
 /* Mythic Chrome – prismatic aurora refractor */
 /* NOTE: chrome-prism uses filter:hue-rotate which breaks backface-visibility.
    It is moved to ::before (the spinning conic overlay) instead. */
-.theme-chrome.rarity-mythic .card-face-front {
+.card-face-front.theme-chrome.rarity-mythic {
   border: 5px solid #a855f7;
   background: linear-gradient(148deg, #0d0014 0%, #1a002a 50%, #080010 100%);
   color: #e879f9;
@@ -2051,7 +2051,7 @@
   height: 100%;
   overflow: hidden;
 }
-.theme-chrome.rarity-mythic .card-face-front::before {
+.card-face-front.theme-chrome.rarity-mythic::before {
   content: '';
   position: absolute;
   inset: -50%;
@@ -2223,7 +2223,7 @@
 }
 
 /* Common Fantasy – rough stone slab */
-.theme-fantasy.rarity-common .card-face-front {
+.card-face-front.theme-fantasy.rarity-common {
   border: 6px solid #44332a;
   background:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='%231c1510'/%3E%3Crect x='0' y='2' width='1' height='1' fill='rgba(80,60,40,0.3)'/%3E%3Crect x='2' y='0' width='1' height='1' fill='rgba(60,45,30,0.2)'/%3E%3C/svg%3E"),
@@ -2237,7 +2237,7 @@
   position: relative;
   height: 100%;
 }
-.theme-fantasy.rarity-common .card-face-front::before {
+.card-face-front.theme-fantasy.rarity-common::before {
   content: '';
   position: absolute;
   inset: 3px;
@@ -2247,7 +2247,7 @@
 }
 
 /* Uncommon Fantasy – polished wood frame */
-.theme-fantasy.rarity-uncommon .card-face-front {
+.card-face-front.theme-fantasy.rarity-uncommon {
   border: 6px solid #5c3d1e;
   background:
     repeating-linear-gradient(
@@ -2265,7 +2265,7 @@
   position: relative;
   height: 100%;
 }
-.theme-fantasy.rarity-uncommon .card-face-front::before {
+.card-face-front.theme-fantasy.rarity-uncommon::before {
   content: '';
   position: absolute;
   inset: 3px;
@@ -2275,7 +2275,7 @@
 }
 
 /* Rare Fantasy – silver enchanted runic stone */
-.theme-fantasy.rarity-rare .card-face-front {
+.card-face-front.theme-fantasy.rarity-rare {
   border: 6px solid #7c6c88;
   background:
     radial-gradient(ellipse at 30% 30%, rgba(140,100,180,0.08) 0%, transparent 60%),
@@ -2289,7 +2289,7 @@
   position: relative;
   height: 100%;
 }
-.theme-fantasy.rarity-rare .card-face-front::before {
+.card-face-front.theme-fantasy.rarity-rare::before {
   content: '';
   position: absolute;
   inset: 3px;
@@ -2299,7 +2299,7 @@
 }
 
 /* Legendary Fantasy – golden tome illuminated */
-.theme-fantasy.rarity-legendary .card-face-front {
+.card-face-front.theme-fantasy.rarity-legendary {
   border: 7px solid #b45309;
   background:
     radial-gradient(ellipse at 50% 10%, rgba(251,191,36,0.12) 0%, transparent 55%),
@@ -2315,7 +2315,7 @@
   height: 100%;
   overflow: hidden;
 }
-.theme-fantasy.rarity-legendary .card-face-front::before {
+.card-face-front.theme-fantasy.rarity-legendary::before {
   content: '';
   position: absolute;
   inset: 4px;
@@ -2326,7 +2326,7 @@
 }
 
 /* Mythic Fantasy – arcane void crystal */
-.theme-fantasy.rarity-mythic .card-face-front {
+.card-face-front.theme-fantasy.rarity-mythic {
   border: 7px solid #7e22ce;
   background:
     radial-gradient(ellipse at 50% 0%, rgba(167,139,250,0.15) 0%, transparent 50%),
@@ -2343,7 +2343,7 @@
   height: 100%;
   overflow: hidden;
 }
-.theme-fantasy.rarity-mythic .card-face-front::before {
+.card-face-front.theme-fantasy.rarity-mythic::before {
   content: '';
   position: absolute;
   inset: -50%;
@@ -2515,7 +2515,7 @@
 }
 
 /* Common Cyberpunk – cyan terminal */
-.theme-cyberpunk.rarity-common .card-face-front {
+.card-face-front.theme-cyberpunk.rarity-common {
   border: 3px solid #0e8a99;
   background: #07090c;
   color: #00f0ff;
@@ -2528,7 +2528,7 @@
   /* cyber-flicker removed from here — opacity anim on card face breaks backface-visibility */
 }
 /* Flicker effect lives on ::before (child context), not the face itself */
-.theme-cyberpunk.rarity-common .card-face-front::before {
+.card-face-front.theme-cyberpunk.rarity-common::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -2542,7 +2542,7 @@
 }
 
 /* Uncommon Cyberpunk – magenta wire */
-.theme-cyberpunk.rarity-uncommon .card-face-front {
+.card-face-front.theme-cyberpunk.rarity-uncommon {
   border: 3px solid #be185d;
   background: linear-gradient(145deg, #0c0008 0%, #0e0010 100%);
   color: #f472b6;
@@ -2554,7 +2554,7 @@
   box-shadow: inset 0 0 14px rgba(244,114,182,0.06), 0 0 10px rgba(190,24,93,0.2);
   /* cyber-flicker removed — opacity anim on face breaks backface-visibility */
 }
-.theme-cyberpunk.rarity-uncommon .card-face-front::before {
+.card-face-front.theme-cyberpunk.rarity-uncommon::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -2568,7 +2568,7 @@
 
 /* Rare Cyberpunk – cyber pink breach */
 /* box-shadow-only cyber-border-pulse is safe; cyber-flicker (opacity) is moved to ::after */
-.theme-cyberpunk.rarity-rare .card-face-front {
+.card-face-front.theme-cyberpunk.rarity-rare {
   border: 4px solid #f43f5e;
   background: linear-gradient(145deg, #0c0005 0%, #100008 50%, #0a0004 100%);
   color: #f43f5e;
@@ -2582,7 +2582,7 @@
   overflow: hidden;
   position: relative;
 }
-.theme-cyberpunk.rarity-rare .card-face-front::after {
+.card-face-front.theme-cyberpunk.rarity-rare::after {
   content: '';
   position: absolute;
   left: 0; right: 0;
@@ -2594,7 +2594,7 @@
 }
 
 /* Legendary Cyberpunk – neo gold uplink */
-.theme-cyberpunk.rarity-legendary .card-face-front {
+.card-face-front.theme-cyberpunk.rarity-legendary {
   border: 4px solid #ca8a04;
   background: linear-gradient(145deg, #0e0c00 0%, #1a1400 50%, #0a0800 100%);
   color: #fbbf24;
@@ -2607,7 +2607,7 @@
   overflow: hidden;
   position: relative;
 }
-.theme-cyberpunk.rarity-legendary .card-face-front::before {
+.card-face-front.theme-cyberpunk.rarity-legendary::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -2620,7 +2620,7 @@
 }
 
 /* Mythic Cyberpunk – viral purple takeover */
-.theme-cyberpunk.rarity-mythic .card-face-front {
+.card-face-front.theme-cyberpunk.rarity-mythic {
   border: 4px solid #9333ea;
   background: linear-gradient(145deg, #07000e 0%, #0e0018 50%, #060010 100%);
   color: #c084fc;
@@ -2634,7 +2634,7 @@
   overflow: hidden;
   position: relative;
 }
-.theme-cyberpunk.rarity-mythic .card-face-front::before {
+.card-face-front.theme-cyberpunk.rarity-mythic::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -2762,7 +2762,7 @@
 }
 
 /* Common Anime – Weiss base white-stock */
-.theme-anime.rarity-common .card-face-front {
+.card-face-front.theme-anime.rarity-common {
   border: 3px solid #ff007f;
   background:
     radial-gradient(ellipse at 30% 20%, rgba(255,0,127,0.06) 0%, transparent 50%),
@@ -2776,7 +2776,7 @@
   height: 100%;
   overflow: hidden;
 }
-.theme-anime.rarity-common .card-face-front::before {
+.card-face-front.theme-anime.rarity-common::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -2788,7 +2788,7 @@
 }
 
 /* Uncommon Anime – teal climax trigger */
-.theme-anime.rarity-uncommon .card-face-front {
+.card-face-front.theme-anime.rarity-uncommon {
   border: 3px solid #00d4aa;
   background:
     radial-gradient(ellipse at 70% 20%, rgba(0,212,170,0.08) 0%, transparent 50%),
@@ -2805,7 +2805,7 @@
 }
 
 /* Rare Anime – SR holo cyan shimmer */
-.theme-anime.rarity-rare .card-face-front {
+.card-face-front.theme-anime.rarity-rare {
   border: 3px solid #00f0ff;
   background:
     radial-gradient(ellipse at 50% 0%, rgba(0,240,255,0.1) 0%, transparent 55%),
@@ -2821,7 +2821,7 @@
   overflow: hidden;
   box-shadow: inset 0 0 15px rgba(0,240,255,0.08), 0 0 10px rgba(0,240,255,0.15);
 }
-.theme-anime.rarity-rare .card-face-front::before {
+.card-face-front.theme-anime.rarity-rare::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -2840,7 +2840,7 @@
 }
 
 /* Legendary Anime – gold foil SSP */
-.theme-anime.rarity-legendary .card-face-front {
+.card-face-front.theme-anime.rarity-legendary {
   border: 4px solid #d97706;
   background:
     radial-gradient(ellipse at 50% 0%, rgba(251,191,36,0.14) 0%, transparent 50%),
@@ -2856,7 +2856,7 @@
   overflow: hidden;
   box-shadow: inset 0 0 20px rgba(217,119,6,0.15), 0 0 18px rgba(217,119,6,0.2);
 }
-.theme-anime.rarity-legendary .card-face-front::before {
+.card-face-front.theme-anime.rarity-legendary::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -2875,7 +2875,7 @@
 }
 
 /* Mythic Anime – rainbow prismatic SP */
-.theme-anime.rarity-mythic .card-face-front {
+.card-face-front.theme-anime.rarity-mythic {
   border: 4px solid #ffd700;
   background:
     radial-gradient(ellipse at 50% 0%, rgba(255,215,0,0.18) 0%, transparent 50%),
@@ -2892,7 +2892,7 @@
   overflow: hidden;
   box-shadow: inset 0 0 25px rgba(255,215,0,0.2), 0 0 25px rgba(255,56,0,0.35);
 }
-.theme-anime.rarity-mythic .card-face-front::before {
+.card-face-front.theme-anime.rarity-mythic::before {
   content: '';
   position: absolute;
   inset: 0;
