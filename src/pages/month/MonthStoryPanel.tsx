@@ -107,22 +107,24 @@ export default function MonthStoryPanel(p: {
                     </button>
                   )}
                 </div>
-                {g.act.synopsis && <p className="mst-synopsis">{g.act.synopsis}</p>}
-                <ol className="mst-beats">
-                  {beatsOf(g.act).map(({ key, label, beat }) => (
-                    <li key={key}>
-                      <small>{label}</small>
-                      {beat.line
-                        ? <span>“<Highlighted line={beat.line} words={[g.act!.word, ...story.words]} />”</span>
-                        : <span className="cs-muted">{titleOf(beat.day)}</span>}
-                      {idxOf(beat.day) !== -1 && (
-                        <button type="button" className="mst-track" onClick={() => p.onSelect(idxOf(beat.day))}>
-                          Day {beat.day}{titleOf(beat.day) ? ` · ${titleOf(beat.day)}` : ''}
-                        </button>
-                      )}
-                    </li>
-                  ))}
-                </ol>
+                <div className="mst-act-body">
+                  {g.act.synopsis && <p className="mst-synopsis">{g.act.synopsis}</p>}
+                  <ol className="mst-beats">
+                    {beatsOf(g.act).map(({ key, label, beat }) => (
+                      <li key={key}>
+                        <small>{label}</small>
+                        {beat.line
+                          ? <span>“<Highlighted line={beat.line} words={[g.act!.word, ...story.words]} />”</span>
+                          : <span className="cs-muted">{titleOf(beat.day)}</span>}
+                        {idxOf(beat.day) !== -1 && (
+                          <button type="button" className="mst-track" onClick={() => p.onSelect(idxOf(beat.day))}>
+                            Day {beat.day}{titleOf(beat.day) ? ` · ${titleOf(beat.day)}` : ''}
+                          </button>
+                        )}
+                      </li>
+                    ))}
+                  </ol>
+                </div>
               </>
             ) : (
               <div className="mst-locked">
