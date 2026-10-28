@@ -6,6 +6,7 @@ const SETTINGS_KEY = 'pim_settings';
 export const DEFAULT_PROFILE_SETTINGS: ProfileSettings = {
   audioOffset: 0,
   laneKeys: ['a', 's', 'd'],
+  laneAltKeys: ['', '', ''],
   laneColors: ['#FF1493', '#00E5FF', '#39FF14'],
   noteTheme: 'artwork',
   cardSkin: 'original',
@@ -89,6 +90,13 @@ function readLegacyOpts(): Partial<ProfileSettings> {
   const k2 = localStorage.getItem('opt_laneKey_2');
   if (k0 || k1 || k2) {
     result.laneKeys = [k0 ?? 'a', k1 ?? 's', k2 ?? 'd'];
+  }
+
+  const a0 = localStorage.getItem('opt_laneAltKey_0');
+  const a1 = localStorage.getItem('opt_laneAltKey_1');
+  const a2 = localStorage.getItem('opt_laneAltKey_2');
+  if (a0 !== null || a1 !== null || a2 !== null) {
+    result.laneAltKeys = [a0 ?? '', a1 ?? '', a2 ?? ''];
   }
 
   const c0 = localStorage.getItem('opt_laneColor_0');

@@ -7,7 +7,7 @@ import { isCampaignRunSearch } from "@/game/campaign";
 import { getCampaignStage, type CampaignStage } from "@/game/chapterStory";
 import type { GameSong } from "@/game/api";
 import type { Note, JudgmentDisplay, GameState, NoteType } from "@/game/types";
-import { loadOpts, keyLabel, getEffectiveDpr, type GameOpts, type PovMode, type RenderResolution, type GfxLevel, type FpsTarget, type ParticleDensity } from "@/lib/options";
+import { loadOpts, keyLabel, laneForKey, getEffectiveDpr, type GameOpts, type PovMode, type RenderResolution, type GfxLevel, type FpsTarget, type ParticleDensity } from "@/lib/options";
 import { audioManager, AudioManager, HEALING_LANE_FREQUENCIES } from "@/game/audio";
 import { useVaultStore, ownsCardForDay } from "@/store/useVaultStore";
 import { useGlobalPlayer } from "@/store/useGlobalPlayer";
@@ -1154,6 +1154,7 @@ export default function Game() {
   const audioOffsetRef = useRef(0);
   const laneColorsRef = useRef<[string, string, string]>(["#FF1493", "#00E5FF", "#39FF14"]);
   const laneKeysRef = useRef<[string, string, string]>(["a", "s", "d"]);
+  const laneAltKeysRef = useRef<[string, string, string]>(["", "", ""]);
   const rafRef = useRef<number>(0);
   const notesRef = useRef<NoteState[]>([]);
   const laneRef = useRef<LanePress[]>([
@@ -1917,6 +1918,7 @@ export default function Game() {
     laneColorsRef.current = opts.laneColors;
   }
   laneKeysRef.current = opts.laneKeys;
+  laneAltKeysRef.current = opts.laneAltKeys;
   const [showOptions, setShowOptions] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [maxPossibleScore, setMaxPossibleScore] = useState(1);
@@ -5693,7 +5695,9 @@ export default function Game() {
       const GAMEPAD_LANE_GLYPHS: [string, string, string] = ['\u25A1', '\u25B3', '\u25CB']; // □ △ ○  (X, Y, B)
       const rawLabel = gamepadConnectedRef.current
         ? GAMEPAD_LANE_GLYPHS[i as 0 | 1 | 2]
-        : keyLabel(laneKeysRef.current[i]);
+        : laneAltKeysRef.current[i]
+          ? `${keyLabel(laneKeysRef.current[i])} ${keyLabel(laneAltKeysRef.current[i])}`
+          : keyLabel(laneKeysRef.current[i]);
       const fs = Math.max(12, Math.floor(btnH * (gamepadConnectedRef.current ? 0.17 : 0.13)));
       ctx.fillStyle = pressed ? "rgba(50,45,40,0.7)" : "rgba(42,37,32,0.45)";
       ctx.font = `bold ${fs}px "Space Mono", monospace`;
@@ -7210,14 +7214,24 @@ export default function Game() {
       const key = e.key;
       keysDownRef.current.add(key);
 
+      // Lane bound to this key (primary or alternate binding). Arrow keys bound to a
+      // lane act as that lane's button: a held arrow lane never combines into a
+      // diagonal, and a swipe from it only counts on its own lane.
+      const boundLane = laneForKey(key, laneKeysRef.current, laneAltKeysRef.current);
+      const isLaneBound = (k: string) => laneForKey(k, laneKeysRef.current, laneAltKeysRef.current) >= 0;
+
       // ── Diagonal detection from arrow keys ──
-      const isUp = keysDownRef.current.has("ArrowUp");
-      const isDown = keysDownRef.current.has("ArrowDown");
-      const isLeft = keysDownRef.current.has("ArrowLeft");
-      const isRight = keysDownRef.current.has("ArrowRight");
+      const isUp = keysDownRef.current.has("ArrowUp") && !isLaneBound("ArrowUp");
+      const isDown = keysDownRef.current.has("ArrowDown") && !isLaneBound("ArrowDown");
+      const isLeft = keysDownRef.current.has("ArrowLeft") && !isLaneBound("ArrowLeft");
+      const isRight = keysDownRef.current.has("ArrowRight") && !isLaneBound("ArrowRight");
 
       let swipeDir: Note['swipeDirection'] | undefined;
-      if (isUp && isLeft) swipeDir = 'up-left';
+      if (boundLane >= 0 && key === "ArrowUp") swipeDir = 'up';
+      else if (boundLane >= 0 && key === "ArrowDown") swipeDir = 'down';
+      else if (boundLane >= 0 && key === "ArrowLeft") swipeDir = 'left';
+      else if (boundLane >= 0 && key === "ArrowRight") swipeDir = 'right';
+      else if (isUp && isLeft) swipeDir = 'up-left';
       else if (isUp && isRight) swipeDir = 'up-right';
       else if (isDown && isLeft) swipeDir = 'down-left';
       else if (isDown && isRight) swipeDir = 'down-right';
@@ -7241,6 +7255,7 @@ export default function Game() {
         const allNotes = notesRef.current;
         const mw = missWindow(songRef.current?.difficultyLevel ?? 5);
         for (let l = 0; l < LANE_COUNT; l++) {
+          if (boundLane >= 0 && l !== boundLane) continue;
           let swipeCandidate: NoteState | undefined;
           for (let i = noteWindowStartRef.current; i < allNotes.length; i++) {
             const ns = allNotes[i];
@@ -7280,7 +7295,7 @@ export default function Game() {
         }
 
         // If it's an arrow-only press (left/right) and we are holding a slide, move it
-        if (key === "ArrowLeft" || key === "ArrowRight") {
+        if ((key === "ArrowLeft" || key === "ArrowRight") && boundLane < 0) {
           const pressedLanes = laneRef.current.map(l => l.pressed);
           for (let i = 0; i < LANE_COUNT; i++) {
             if (pressedLanes[i]) {
@@ -7316,7 +7331,7 @@ export default function Game() {
         }
       }
 
-      const lane = laneKeysRef.current.indexOf(key === " " ? " " : key.toLowerCase());
+      const lane = boundLane;
       if (lane < 0) return;
 
       // ── Check if there is an active hold/slide note that needs to transition to this lane ──
@@ -7355,7 +7370,8 @@ export default function Game() {
     };
     const onUp = (e: KeyboardEvent) => {
       keysDownRef.current.delete(e.key);
-      if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+      const lane = laneForKey(e.key, laneKeysRef.current, laneAltKeysRef.current);
+      if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && lane < 0) {
         for (let i = 0; i < LANE_COUNT; i++) {
           if (laneRef.current[i].isArrow === e.key) {
             laneRef.current[i].pressed = false;
@@ -7366,7 +7382,6 @@ export default function Game() {
         return;
       }
 
-      const lane = laneKeysRef.current.indexOf(e.key === " " ? " " : e.key.toLowerCase());
       if (lane < 0) return;
       laneRef.current[lane].pressed = false;
       releaseLaneRef.current?.(lane);

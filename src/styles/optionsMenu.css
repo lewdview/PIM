@@ -922,6 +922,17 @@
 }
 .opt-key.is-listening .opt-key-hint { color: #FF5500; }
 
+.opt-keyset { display: flex; flex-direction: column; gap: 6px; }
+.opt-keyset + .opt-keyset { margin-top: 12px; }
+.opt-keyset-title {
+  font-family: var(--opt-mono);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--opt-text-3);
+}
+.opt-keyset-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
 .opt-keyboard {
   display: flex;
   flex-direction: column;

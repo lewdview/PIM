@@ -9,6 +9,7 @@ import { hydrateSettings, persistSettings } from '../utils/settingsStorage';
 export interface ProfileSettings {
   audioOffset: number;
   laneKeys: [string, string, string];
+  laneAltKeys?: [string, string, string];
   laneColors: [string, string, string];
   noteTheme: string;
   cardSkin: string;
@@ -820,6 +821,9 @@ export const useVaultStore = create<VaultState>((set, get) => ({
         localStorage.setItem("opt_laneKey_0", mergedSettings.laneKeys[0]);
         localStorage.setItem("opt_laneKey_1", mergedSettings.laneKeys[1]);
         localStorage.setItem("opt_laneKey_2", mergedSettings.laneKeys[2]);
+        if (mergedSettings.laneAltKeys) {
+          mergedSettings.laneAltKeys.forEach((k, i) => localStorage.setItem(`opt_laneAltKey_${i}`, k));
+        }
         localStorage.setItem("opt_laneColor_0", mergedSettings.laneColors[0]);
         localStorage.setItem("opt_laneColor_1", mergedSettings.laneColors[1]);
         localStorage.setItem("opt_laneColor_2", mergedSettings.laneColors[2]);
@@ -1248,6 +1252,9 @@ export const useVaultStore = create<VaultState>((set, get) => ({
       localStorage.setItem("opt_laneKey_0", merged.laneKeys[0]);
       localStorage.setItem("opt_laneKey_1", merged.laneKeys[1]);
       localStorage.setItem("opt_laneKey_2", merged.laneKeys[2]);
+    }
+    if (newSettings.laneAltKeys !== undefined && merged.laneAltKeys) {
+      merged.laneAltKeys.forEach((k, i) => localStorage.setItem(`opt_laneAltKey_${i}`, k));
     }
     if (newSettings.laneColors !== undefined) {
       localStorage.setItem("opt_laneColor_0", merged.laneColors[0]);
