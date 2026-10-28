@@ -42,6 +42,7 @@ import { generateMasterChart, ANALYSIS_SAMPLE_RATE, CHART_MASTER_VERSION, CHART_
 import { drawSlabBody, drawTopFaceBevel, drawHitPop3D, drawHitPillar3D, hitPillarReach, makeHitShards, setNote3DQuality, type HitShard } from './notes3d';
 import { spawnCelebration, drawCelebrations, type Celebration } from './noteCelebrations';
 import { chooseWarpNote, isWarpNote, parseWarpOverride, secretLevelPath, INSTANT_WARP_DELAY_MS, WARP_SCORE_BONUS, type WarpType } from '@/game/secret/warp';
+import { saveWarpResume, takeWarpResume, WARP_RESUME_LEAD_IN, type WarpResumeSnapshot } from '@/game/secret/warpResume';
 
 // Use Vite's eager glob to grab files in /public/data/slideshow/
 const imageModules = import.meta.glob<string>('../../public/data/slideshow/**/*.{png,jpg,jpeg,gif,webp,svg}', { query: '?url', import: 'default', eager: true });
@@ -1306,6 +1307,10 @@ export default function Game() {
   /** An instant warp was hit; if the song ends before it fires, finishGame takes the warp instead. */
   const instantWarpPendingRef = useRef(false);
   const activateWarpRef = useRef<(type: WarpType) => void>(() => {});
+  /** Snapshot to pick the song back up from after SIGNAL SIEGE (undefined = not read yet). */
+  const warpResumeRef = useRef<WarpResumeSnapshot | null | undefined>(undefined);
+  /** Song time playback starts from: 0, or the lead-in before a warp resume point. */
+  const playbackStartRef = useRef(0);
   const remixEffectNameRef = useRef<string | null>(null);
 
   const continueUsedRef = useRef<number>(0); // how many continues the player has used (max 3)
@@ -3163,6 +3168,16 @@ export default function Game() {
         phaseRef.current = "finished";
         cancelAnimationFrame(rafRef.current);
         audioRef.current?.pause();
+        // Remember where the transmission stopped so it resumes there after the level
+        saveWarpResume({
+          songId,
+          time: audioRef.current?.currentTime ?? getT(),
+          search: window.location.search,
+          gs: { ...gsRef.current },
+          missCount: missCountRef.current,
+          continuesUsed: continueUsedRef.current,
+          shieldCharges: shieldChargesRef.current,
+        });
         setLocation(secretLevelPath('shooter', songId, 'warp'));
       }, INSTANT_WARP_DELAY_MS);
     } else {
@@ -8445,6 +8460,9 @@ export default function Game() {
       setLocation("/songs");
       return;
     }
+    if (warpResumeRef.current === undefined) {
+      warpResumeRef.current = takeWarpResume(songId, window.location.search);
+    }
     let cancelled = false;
     let audio: HTMLAudioElement | null = null;
     let onProgress: (() => void) | null = null;
@@ -9089,7 +9107,8 @@ export default function Game() {
       // ── Secret warp (rare): turn one lone final-stage tap into a warp note ──
       warpClearUnlockedRef.current = false;
       instantWarpPendingRef.current = false;
-      if (!activeTutorial) {
+      // A run resumed after SIGNAL SIEGE already had its warp
+      if (!activeTutorial && !warpResumeRef.current) {
         const warpPick = chooseWarpNote(
           notesRef.current.map(ns => ns.note),
           stageStartsRef.current[4] ?? Infinity,
@@ -9691,6 +9710,32 @@ export default function Game() {
       }
       if (cancelled) return;
 
+      // ── Back from SIGNAL SIEGE: pick the transmission up where it stopped ──
+      playbackStartRef.current = 0;
+      const resume = warpResumeRef.current;
+      if (resume && resume.time < (audio.duration || Infinity)) {
+        gsRef.current = { ...resume.gs };
+        setDisplayGs({ ...resume.gs });
+        missCountRef.current = resume.missCount;
+        setMissCount(resume.missCount);
+        continueUsedRef.current = resume.continuesUsed;
+        shieldChargesRef.current = resume.shieldCharges;
+        // Everything before the stop point was already played
+        let resolved = 0;
+        for (const ns of notesRef.current) {
+          if (ns.note.time < resume.time) {
+            ns.hit = true;
+            resolved++;
+          }
+        }
+        unresolvedNotesCountRef.current = Math.max(0, notesRef.current.length - resolved);
+        noteWindowStartRef.current = 0;
+        playbackStartRef.current = Math.max(0, resume.time - WARP_RESUME_LEAD_IN);
+        try {
+          audio.currentTime = playbackStartRef.current;
+        } catch { /* seek applied again before play */ }
+      }
+
       resetPuDisplayDOM();
       if (stingerTimeout1Ref.current) clearTimeout(stingerTimeout1Ref.current);
       if (stingerTimeout2Ref.current) clearTimeout(stingerTimeout2Ref.current);
@@ -9844,6 +9889,9 @@ export default function Game() {
         }
       }
 
+      if (playbackStartRef.current > 0 && Math.abs(audio.currentTime - playbackStartRef.current) > 0.25) {
+        audio.currentTime = playbackStartRef.current;
+      }
       await audio.play();
 
       // Check if AudioContext is suspended after play, indicating it got blocked during countdown
@@ -11655,7 +11703,7 @@ export default function Game() {
                 const audio = audioRef.current;
                 if (!audio) return;
                 try {
-                  audio.currentTime = 0;
+                  audio.currentTime = playbackStartRef.current;
                   // Canvas safety net on recovery too
                   const c = canvasRef.current;
                   const w = canvasWrapperRef.current;
