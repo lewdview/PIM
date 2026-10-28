@@ -1334,8 +1334,14 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
   };
 
   const setAltPreset = (preset: [string, string, string]) => {
-    // Arrows already used as primary keys can't double up; drop them from the primaries' lanes back to A/S/D.
-    const nextKeys = opts.laneKeys.map((k, i) => (preset.includes(k) ? ["a", "s", "d"][i] : k)) as [string, string, string];
+    // Arrows already used as primary keys can't double up: give those lanes the first
+    // free key, trying A/S/D before the rest of the keyboard, so no two lanes share one.
+    const nextKeys = [...opts.laneKeys] as [string, string, string];
+    const fallbacks = ["a", "s", "d", ...KEY_ROWS.flat()];
+    nextKeys.forEach((k, i) => {
+      if (!preset.includes(k)) return;
+      nextKeys[i] = fallbacks.find(f => !preset.includes(f) && !nextKeys.includes(f)) ?? k;
+    });
     saveLaneBindings(nextKeys, [...preset] as [string, string, string]);
     setRemappingLane(null);
     logAnalyticsEvent('setting_change', { key: 'laneAltKeys', value: preset.join(',') || 'none' });
