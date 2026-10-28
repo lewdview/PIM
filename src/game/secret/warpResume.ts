@@ -20,8 +20,17 @@ export interface WarpResumeSnapshot {
   missCount: number;
   continuesUsed: number;
   shieldCharges: number;
+  /** Active power-up and consumed combo thresholds (`triggered` as an array). */
+  powerUp: Record<string, unknown> & { triggered: number[] };
+  /** `time:lane` keys of every note already judged (hit early, hit, or missed). */
+  resolvedNotes: string[];
+  /** Per-hit telemetry so far, for the ghost replay and lane stats. */
+  telemetry: unknown[];
   savedAt: number;
 }
+
+/** Stable key for a note across chart rebuilds. */
+export const noteKey = (n: { time: number; lane: number }) => `${n.time.toFixed(3)}:${n.lane}`;
 
 /** Seconds of music replayed before the stop point so the return isn't abrupt. */
 export const WARP_RESUME_LEAD_IN = 1.5;

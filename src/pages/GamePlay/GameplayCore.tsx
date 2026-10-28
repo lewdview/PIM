@@ -42,7 +42,7 @@ import { generateMasterChart, ANALYSIS_SAMPLE_RATE, CHART_MASTER_VERSION, CHART_
 import { drawSlabBody, drawTopFaceBevel, drawHitPop3D, drawHitPillar3D, hitPillarReach, makeHitShards, setNote3DQuality, type HitShard } from './notes3d';
 import { spawnCelebration, drawCelebrations, type Celebration } from './noteCelebrations';
 import { chooseWarpNote, isWarpNote, parseWarpOverride, secretLevelPath, INSTANT_WARP_DELAY_MS, WARP_SCORE_BONUS, type WarpType } from '@/game/secret/warp';
-import { saveWarpResume, takeWarpResume, WARP_RESUME_LEAD_IN, type WarpResumeSnapshot } from '@/game/secret/warpResume';
+import { noteKey, saveWarpResume, takeWarpResume, WARP_RESUME_LEAD_IN, type WarpResumeSnapshot } from '@/game/secret/warpResume';
 
 // Use Vite's eager glob to grab files in /public/data/slideshow/
 const imageModules = import.meta.glob<string>('../../public/data/slideshow/**/*.{png,jpg,jpeg,gif,webp,svg}', { query: '?url', import: 'default', eager: true });
@@ -3177,6 +3177,9 @@ export default function Game() {
           missCount: missCountRef.current,
           continuesUsed: continueUsedRef.current,
           shieldCharges: shieldChargesRef.current,
+          powerUp: { ...puRef.current, triggered: [...puRef.current.triggered] },
+          resolvedNotes: notesRef.current.filter(ns => ns.hit || ns.missed).map(ns => noteKey(ns.note)),
+          telemetry: [...recordedTelemetryRef.current],
         });
         setLocation(secretLevelPath('shooter', songId, 'warp'));
       }, INSTANT_WARP_DELAY_MS);
@@ -9720,17 +9723,26 @@ export default function Game() {
         setMissCount(resume.missCount);
         continueUsedRef.current = resume.continuesUsed;
         shieldChargesRef.current = resume.shieldCharges;
-        // Everything before the stop point was already played
+        if (resume.powerUp) {
+          puRef.current = { ...(resume.powerUp as unknown as PUState), triggered: new Set(resume.powerUp.triggered) };
+        }
+        if (Array.isArray(resume.telemetry)) {
+          recordedTelemetryRef.current = resume.telemetry as typeof recordedTelemetryRef.current;
+        }
+        playbackStartRef.current = Math.max(0, resume.time - WARP_RESUME_LEAD_IN);
+        // Notes judged before the warp stay judged. Unjudged notes inside the
+        // lead-in (a hold or late window the warp cut off) come back playable;
+        // anything older than that is dropped.
+        const judged = new Set(resume.resolvedNotes ?? []);
         let resolved = 0;
         for (const ns of notesRef.current) {
-          if (ns.note.time < resume.time) {
+          if (judged.has(noteKey(ns.note)) || ns.note.time < playbackStartRef.current) {
             ns.hit = true;
             resolved++;
           }
         }
         unresolvedNotesCountRef.current = Math.max(0, notesRef.current.length - resolved);
         noteWindowStartRef.current = 0;
-        playbackStartRef.current = Math.max(0, resume.time - WARP_RESUME_LEAD_IN);
         try {
           audio.currentTime = playbackStartRef.current;
         } catch { /* seek applied again before play */ }
