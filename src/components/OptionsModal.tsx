@@ -2340,7 +2340,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                   <Panel title="Pack style" hint="How new pulls arrive">
                     <div className="opt-grid opt-grid--2">
                       {[
-                        { id: 'classic_foil' as const, name: 'Classic foil pouch', desc: 'Crimped foil wrapper with stickers', tone: '#E5B800' },
+                        { id: 'classic_foil' as const, name: 'Holo foil pack', desc: 'Holographic foil wrapper that catches the light, torn open along the strip', tone: '#E5B800' },
                         { id: 'cyber_cartridge' as const, name: 'Cyber matrix core', desc: 'Hard-shell data capsule, opened by laser', tone: '#00E5FF' },
                       ].map(pack => (
                         <button

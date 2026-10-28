@@ -10,6 +10,8 @@ import { getFeaturedBombshellFoilCover, getRandomBombshellPackCover, isBombshell
 import { farcasterService } from '../../services/farcasterService';
 import { Share2, Check, Sparkles } from 'lucide-react';
 import Card from '../Card';
+import FoilPackFace from '../foil/FoilPackFace';
+import { FOIL_TEAR_Y, FOIL_STRIP_CLIP, FOIL_BODY_CLIP, FOIL_CONFETTI } from '../foil/foilTear';
 import SongUnlockReveal from './SongUnlockReveal';
 import RarityBadge from '../RarityBadge';
 import RarityRevealFX, { type TierRevealState } from './RarityRevealFX';
@@ -271,310 +273,136 @@ function CyberPackBagContents({ meta, sampleCard }: { meta: RevealPackMeta; samp
   );
 }
 
-function ClassicFoilPackBagContents({ meta, sampleCard }: { meta: RevealPackMeta; sampleCard?: OwnedCard['card'] }) {
+function PackBagContents({ meta, sampleCard }: { meta: RevealPackMeta; sampleCard?: OwnedCard['card'] }) {
+  return <CyberPackBagContents meta={meta} sampleCard={sampleCard} />;
+}
+
+// ── Foil pack shell: the tear runs along the printed tear strip ───────
+
+function FoilPackShell({ meta, phase }: { meta: RevealPackMeta; phase: Phase }) {
   const isBombshell = meta.category === 'bombshell' || meta.category === 'bombshell_token' || meta.label?.toLowerCase().includes('bombshell');
   const variant = get365CardVariantStyle(meta.category || meta.label);
+  const countNum = meta.cardCount >= 50 ? 50 : meta.cardCount >= 25 ? 25 : meta.cardCount >= 10 ? 10 : meta.cardCount >= 5 ? 5 : meta.cardCount >= 2 ? 2 : 1;
+  // Pick the cover once so the strip and the body show the same art
+  const coverUrl = useMemo(
+    () => meta.coverImage || (isBombshell ? getRandomBombshellPackCover(countNum) : getPackCoverFallback(meta.category)),
+    [meta.coverImage, meta.category, isBombshell, countNum],
+  );
+  const isTearing = phase === 'tearing';
+  const isTorn = ['snap', 'pause', 'rise', 'flipping', 'layout', 'inspect'].includes(phase);
+  const tension = phase === 'grip' || phase === 'tension';
 
-  const countNum = (meta.cardCount && meta.cardCount >= 50) ? 50 : (meta.cardCount && meta.cardCount >= 25) ? 25 : (meta.cardCount && meta.cardCount >= 10) ? 10 : (meta.cardCount && meta.cardCount >= 5) ? 5 : (meta.cardCount && meta.cardCount >= 2) ? 2 : 1;
-  const plural = countNum === 1 ? 'card' : 'cards';
-
-  const foilCoverUrl = meta.coverImage || (isBombshell ? getRandomBombshellPackCover(countNum) : undefined);
+  const face = (
+    <FoilPackFace
+      accent={meta.accent}
+      label={meta.label || (isBombshell ? 'BOMBSHELL' : 'VAULT PACK')}
+      coverUrl={coverUrl}
+      fallbackCoverUrl={isBombshell ? '/data/packs/bs_cover.png' : undefined}
+      fullArt={isBombshell}
+      price={meta.price}
+      cardCount={meta.cardCount || 1}
+      tagline={isBombshell ? 'Bombshell anime graffiti cards' : variant.tagline}
+      active={!isTorn}
+    />
+  );
 
   return (
     <>
-      {/* 1. CLEAN 3D METALLIC FOIL PACK BASE WITH EMBEDDED CLOSE-UP ARTWORK */}
-      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isBombshell ? 'linear-gradient(165deg, #13010b 0%, #2d031c 40%, #0d0108 100%)' : '#08060f', zIndex: 0 }}>
-        {/* Panik Cyber Ambient Neon Halo for Bombshell */}
-        {isBombshell && (
-          <div 
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background: 'radial-gradient(circle at 50% 44%, rgba(255, 20, 147, 0.65) 0%, rgba(255, 0, 128, 0.35) 45%, rgba(255, 20, 147, 0.1) 60%, transparent 75%)',
-              mixBlendMode: 'screen',
-              zIndex: 1,
-            }}
-          />
-        )}
-
-        {/* EMBEDDED CLOSE-UP COVER ARTWORK IN FOIL */}
-        {foilCoverUrl && (
-          <div className="absolute inset-0 overflow-hidden pointer-events-none flex items-center justify-center" style={{ zIndex: 1 }}>
-            <motion.img
-              src={foilCoverUrl}
-              alt="Foil Artwork"
-              className="w-full h-full object-cover"
-              animate={isBombshell ? { scale: [1, 1.02, 1] } : { scale: [1.48, 1.55, 1.48], rotate: [-0.6, 0.6, -0.6] }}
-              transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
-              style={{
-                filter: isBombshell 
-                  ? 'contrast(1.2) saturate(1.35) brightness(1.05) drop-shadow(0 0 24px rgba(255,20,147,0.75))' 
-                  : 'contrast(1.15) brightness(0.75) saturate(1.2)',
-                mixBlendMode: isBombshell ? 'normal' : 'luminosity',
-                opacity: isBombshell ? 1 : 0.4,
-              }}
-              onError={(e) => {
-                (e.currentTarget as HTMLImageElement).src = isBombshell ? '/data/packs/bs_cover.png' : `/data/packs/bombshell_top_${countNum}${plural}.jpg`;
-              }}
-            />
-            {/* Holographic foil iridescent duotone color overlay */}
-            {!isBombshell && (
-              <div
-                className="absolute inset-0 pointer-events-none"
-                style={{
-                  background: 'linear-gradient(160deg, rgba(0, 229, 255, 0.35) 0%, rgba(10, 16, 32, 0.75) 100%)',
-                  mixBlendMode: 'color',
-                  opacity: 0.9,
-                }}
-              />
-            )}
-            {/* Metallic specular sheen overlay */}
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                background: isBombshell 
-                  ? 'radial-gradient(ellipse at 50% 25%, rgba(255, 255, 255, 0.3) 0%, transparent 60%)'
-                  : 'radial-gradient(ellipse at 50% 30%, rgba(255, 255, 255, 0.25) 0%, transparent 65%)',
-                mixBlendMode: 'screen',
-                opacity: 0.7,
-              }}
-            />
-          </div>
-        )}
-
-        {/* Animated Iridescent Panik Foil Shimmer for Bombshell */}
-        {isBombshell && (
-          <div
-            className="absolute inset-0 pointer-events-none foil-holo-prism"
-            style={{
-              background: 'linear-gradient(115deg, transparent 20%, rgba(255, 20, 147, 0.4) 40%, rgba(255, 255, 255, 0.75) 50%, rgba(0, 229, 255, 0.4) 60%, transparent 80%)',
-              mixBlendMode: 'color-dodge',
-              opacity: 0.65,
-              zIndex: 3,
-            }}
-          />
-        )}
-
-        {/* VIBRANT POPPING PACK ACCENT COLOR TINT */}
-        {!isBombshell && (
-          <>
-            <div
-              className="absolute inset-0 pointer-events-none transition-all"
-              style={{
-                position: 'absolute', inset: 0,
-                background: `linear-gradient(160deg, ${meta.accent}ee 0%, ${meta.accent}aa 45%, rgba(6,3,14,0.96) 100%)`,
-                mixBlendMode: 'hard-light',
-                opacity: 0.95,
-                zIndex: 2,
-              }}
-            />
-            <div
-              className="absolute inset-0 pointer-events-none transition-all"
-              style={{
-                position: 'absolute', inset: 0,
-                background: meta.accent,
-                mixBlendMode: 'color',
-                opacity: 0.85,
-                zIndex: 3,
-              }}
-            />
-            <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 25%, rgba(255,255,255,0.2) 0%, transparent 60%)', zIndex: 4 }} />
-          </>
-        )}
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 50%, rgba(0,0,0,0.05) 0%, rgba(0,0,0,0.7) 90%)', zIndex: 4 }} />
-      </div>
-
-      {/* 2. REALISTIC SERRATED JAGGED CRIMP TEETH */}
-      <div className="absolute top-0 inset-x-0 h-[10px] pointer-events-none z-20 overflow-hidden">
-        <div className="w-full h-full foil-crimped-edge-top opacity-90" />
-      </div>
-      <div className="absolute bottom-0 inset-x-0 h-[10px] pointer-events-none z-20 overflow-hidden">
-        <div className="w-full h-full foil-crimped-edge-bottom opacity-90" />
-      </div>
-
-      {/* 3. HORIZONTAL CRIMP TEXTURE BANDS */}
-      <div className="absolute top-0 inset-x-0 h-[16px] pointer-events-none z-10 opacity-70" style={{
-        background: 'repeating-linear-gradient(90deg, rgba(255,255,255,0.18) 0px, rgba(255,255,255,0.18) 1.5px, transparent 1.5px, transparent 3.5px)',
-        borderBottom: '1px solid rgba(255,255,255,0.25)',
-      }} />
-      <div className="absolute bottom-0 inset-x-0 h-[16px] pointer-events-none z-10 opacity-70" style={{
-        background: 'repeating-linear-gradient(90deg, rgba(255,255,255,0.18) 0px, rgba(255,255,255,0.18) 1.5px, transparent 1.5px, transparent 3.5px)',
-        borderTop: '1px solid rgba(255,255,255,0.25)',
-      }} />
-
-      {/* 4. VERTICAL FOIL PILLOW CRUSH SHADOWS */}
-      <div className="absolute inset-y-0 left-0 w-8 pointer-events-none z-10" style={{
-        background: 'linear-gradient(90deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.15) 50%, transparent 100%)',
-      }} />
-      <div className="absolute inset-y-0 right-0 w-8 pointer-events-none z-10" style={{
-        background: 'linear-gradient(270deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.15) 50%, transparent 100%)',
-      }} />
-
-      {/* 5. CENTER VERTICAL SPECULAR SPINE */}
-      <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-16 pointer-events-none z-10" style={{
-        background: 'radial-gradient(ellipse at 50% 50%, rgba(255,255,255,0.18) 0%, transparent 80%)',
-        mixBlendMode: 'screen',
-      }} />
-
-      {/* 6. CORNER LIGHT FLARES */}
-      <div className="absolute top-2 left-2 w-12 h-12 pointer-events-none z-10 rounded-full" style={{
-        background: 'radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%)',
-        mixBlendMode: 'screen',
-      }} />
-      <div className="absolute bottom-4 right-2 w-16 h-16 pointer-events-none z-10 rounded-full" style={{
-        background: `radial-gradient(circle, ${isBombshell ? '#FF1493' : meta.accent}40 0%, transparent 70%)`,
-        mixBlendMode: 'screen',
-      }} />
-
-      {/* 7. LIVE METALLIC SHEEN SWEEP ANIMATION */}
-      <div className="foil-metallic-sheen" style={{ zIndex: 5 }} />
-
-      {/* 8. REALISTIC METALLIC FOIL CRINKLE NOISE TEXTURE */}
-      <div className="absolute inset-0 pointer-events-none mix-blend-overlay" style={{
-        background: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='foilNoise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.035 0.08' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23foilNoise)'/%3E%3C/svg%3E")`,
-        opacity: 0.25,
-        zIndex: 9,
-      }} />
-
-      {/* 9. VERTICAL TH3SCR1B3 / BOMBSHELL SIDE BANNER */}
-      <div className="absolute left-1 top-24 w-8 flex items-center justify-center pointer-events-none" style={{ zIndex: 22 }}>
-        <div className="font-black leading-none uppercase whitespace-nowrap" style={{
-          transform: 'rotate(-90deg) scaleY(1.3) scaleX(0.9)',
-          color: 'rgba(255,255,255,0.8)',
-          WebkitTextFillColor: 'rgba(255,255,255,0.8)',
-          fontFamily: '"Impact", "Arial Black", sans-serif',
-          fontSize: '16px',
-          letterSpacing: '-0.5px',
-          WebkitTextStroke: `1px ${meta.accent}`,
-          textShadow: `0 0 12px ${meta.accent}99`,
-        }}>
-          {isBombshell ? 'PANIK // BOMBSHELL' : 'TH3SCR1B3'}
-        </div>
-      </div>
-
-      {/* 10. Middle-Left: Price Sticker */}
-      <div className="absolute left-0 top-20 pointer-events-none" style={{ zIndex: 30 }}>
-        <div className="sticker-gun-tag sticker-slits drop-shadow-lg" style={{ 
-          transform: 'rotate(-90deg) translateX(-50%)',
-          transformOrigin: 'left center',
-          background: '#ffffff',
-          '--slit-color': `${meta.accent}30`,
-          border: isBombshell ? `1.5px solid ${meta.accent}` : undefined,
-          padding: '4px 10px',
-          alignItems: 'center'
-        } as any}>
-          <span className="text-[6px] font-black tracking-tighter opacity-70 mb-0.5 leading-none" style={{ fontFamily: 'Impact, sans-serif', color: isBombshell ? '#FF1493' : '#000', WebkitTextFillColor: isBombshell ? '#FF1493' : '#000' }}>
-            {isBombshell ? 'BOMBSHELL' : 'TH3SCR1B3 VAULT'}
-          </span>
-          <div className="flex items-baseline leading-none py-0.5">
-            <span className="text-[15px] font-black mr-0.5" style={{ transform: 'scaleY(1.3)', letterSpacing: '-0.8px', color: '#000', WebkitTextFillColor: '#000' }}>
-              {meta.price || '$0.25'}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* 11. CENTER BAG GRAPHICS */}
-      <div 
-        className="absolute inset-0 flex flex-col items-center justify-between pt-6 pb-8 px-4 pointer-events-none"
-        style={{ zIndex: 20 }}
+      {/* Pack body below the tear line */}
+      <motion.div
+        initial={false}
+        animate={isTorn ? { y: 34, opacity: 0.5, scale: 0.97 } : { y: 0, opacity: 1, scale: 1 }}
+        transition={isTorn ? { duration: 0.45, ease: [0.22, 1, 0.36, 1] } : { duration: 0.2 }}
+        style={{ position: 'absolute', inset: 0, clipPath: FOIL_BODY_CLIP }}
       >
-        <div className="w-full h-4 mt-2" style={{
-          background: 'linear-gradient(180deg, rgba(255,255,255,0.15), transparent)',
-          borderBottom: `2px dashed rgba(255,255,255,0.35)`,
-        }} />
+        {face}
+      </motion.div>
 
-        <div className="flex flex-col items-center justify-center my-auto w-full px-2">
-          <h3 
-            className={`leading-[0.92] uppercase font-black text-center max-w-[240px] ${
-              (meta.label || '').length > 18
-                ? 'text-[19px] sm:text-[21px]'
-                : (meta.label || '').length > 12
-                  ? 'text-[23px] sm:text-[25px]'
-                  : 'text-[27px] sm:text-[30px]'
-            }`} 
+      {/* Tear strip: lifts while tearing, then flies off */}
+      <motion.div
+        initial={false}
+        animate={
+          isTorn
+            ? { x: 70, y: -110, rotate: 38, opacity: 0 }
+            : isTearing
+            ? { x: 0, y: -12, rotate: -9, opacity: 1 }
+            : tension
+            ? { y: -2, rotate: -1.5, opacity: 1 }
+            : { x: 0, y: 0, rotate: 0, opacity: 1 }
+        }
+        transition={isTorn ? { duration: 0.55, ease: [0.3, 0.6, 0.4, 1] } : { duration: 0.25, ease: 'easeOut' }}
+        style={{ position: 'absolute', inset: 0, clipPath: FOIL_STRIP_CLIP, transformOrigin: '100% 12%', zIndex: 2 }}
+      >
+        {face}
+      </motion.div>
+
+      {/* Hot seam along the tear while it opens */}
+      <AnimatePresence>
+        {isTearing && (
+          <motion.div
+            key="foil-seam"
+            initial={{ scaleX: 0, opacity: 0 }}
+            animate={{ scaleX: 1, opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.38, ease: 'easeIn' }}
             style={{
-              color: '#ffffff',
-              WebkitTextFillColor: '#ffffff',
-              fontFamily: '"Impact", "Arial Black", sans-serif',
-              letterSpacing: '-0.3px',
-              transform: 'scaleY(1.06)',
-              transformOrigin: 'center',
-              WebkitTextStroke: '1.5px #000000',
-              textShadow: `
-                0 0 15px ${meta.accent}, 
-                0 0 30px ${meta.accent}99, 
-                2px 3px 0 #000000, 
-                3px 6px 12px rgba(0,0,0,0.95)
-              `,
-              margin: '4px 0 6px 0',
+              position: 'absolute', left: 0, right: 0, top: `${FOIL_TEAR_Y}%`, height: 3, marginTop: -1.5,
+              transformOrigin: '0% 50%', borderRadius: 2,
+              background: '#fff', boxShadow: `0 0 10px #fff, 0 0 22px ${meta.accent}, 0 0 40px ${meta.accent}`,
+              pointerEvents: 'none', zIndex: 3,
             }}
-          >
-            {meta.label || (isBombshell ? 'BOMBSHELL' : 'VAULT PACK')}
-          </h3>
-          
-          <PackEmblem accent={meta.accent} size={62} isBombshell={isBombshell} />
-          
-          <div className="text-center mt-2 w-full">
-            <div className="inline-block">
-              <div className="sticker-gun-tag sticker-slits drop-shadow-md" style={{
-                background: '#ffffff',
-                border: `1.5px solid ${meta.accent}40`,
-                '--slit-color': `${meta.accent}20`,
-                padding: '3px 10px',
-                transform: 'rotate(0.5deg)',
-                minWidth: '150px'
-              } as any}>
-                <span 
-                  className="text-[7.5px] font-black tracking-tighter uppercase italic opacity-95 whitespace-nowrap" 
-                  style={{ 
-                    color: '#000000',
-                    WebkitTextFillColor: '#000000',
-                    fontFamily: '"JetBrains Mono", monospace'
-                  }}
-                >
-                  {isBombshell ? '💖 BOMBSHELL ANIME INSPIRED GRAFFITI CARDS 💖' : variant.tagline}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
+          />
+        )}
+      </AnimatePresence>
 
-        <div className="h-4" />
-      </div>
+      {/* Light spilling out of the opening */}
+      <AnimatePresence>
+        {(isTearing || isTorn) && (
+          <motion.div
+            key="foil-light"
+            initial={{ opacity: 0, scaleY: 0.2 }}
+            animate={isTorn ? { opacity: [0.9, 0.55, 0], scaleY: [1, 1.8, 2.2] } : { opacity: 0.85, scaleY: 1 }}
+            exit={{ opacity: 0 }}
+            transition={isTorn ? { duration: 1.1, ease: 'easeOut' } : { duration: 0.3 }}
+            style={{
+              position: 'absolute', left: '-10%', right: '-10%', top: `calc(${FOIL_TEAR_Y}% - 70px)`, height: '90px',
+              transformOrigin: '50% 100%',
+              background: `radial-gradient(60% 100% at 50% 100%, #fff 0%, ${meta.accent} 35%, transparent 75%)`,
+              filter: 'blur(6px)', mixBlendMode: 'screen', pointerEvents: 'none', zIndex: 3,
+            }}
+          />
+        )}
+      </AnimatePresence>
 
-      {/* 12. Bottom Center: Card Count Sticker */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 pointer-events-none" style={{ zIndex: 30 }}>
-        <div className="sticker-gun-tag sticker-slits drop-shadow-sm" style={{ 
-          background: '#ffffff',
-          '--slit-color': `${meta.accent}20`,
-          border: isBombshell ? `1.5px solid ${meta.accent}` : undefined,
-          transform: 'rotate(2deg)',
-          padding: '2px 10px',
-          alignItems: 'center'
-        } as any}>
-          <span className="text-[7px] font-black tracking-tighter uppercase mb-0.5 opacity-70" style={{ color: isBombshell ? '#FF1493' : '#000', WebkitTextFillColor: isBombshell ? '#FF1493' : '#000' }}>CARDS</span>
-          <span className="text-[14px] font-black leading-none" style={{ transform: 'scaleY(1.2)', color: '#000', WebkitTextFillColor: '#000' }}>
-            {meta.cardCount || 1}
-          </span>
-        </div>
-      </div>
-
-      <div style={{ position: 'absolute', inset: 0, border: '1.5px solid rgba(255,255,255,0.08)', borderRadius: '8px', pointerEvents: 'none', zIndex: 30 }} />
+      {/* Foil confetti off the tear */}
+      {isTorn && phase === 'snap' && FOIL_CONFETTI.map((c, i) => (
+        <motion.div
+          key={i}
+          initial={{ x: 0, y: 0, rotate: 0, opacity: 1 }}
+          animate={{ x: c.dx, y: [0, c.dy, c.dy + 140], rotate: c.rot, opacity: [1, 1, 0] }}
+          transition={{ duration: 1.1, delay: c.delay, ease: 'easeOut' }}
+          style={{
+            position: 'absolute', left: `${c.x}%`, top: `${FOIL_TEAR_Y}%`,
+            width: c.w, height: c.h, borderRadius: 1,
+            background: `linear-gradient(135deg, hsl(${c.hue} 100% 80%), ${meta.accent}, hsl(${(c.hue + 120) % 360} 100% 70%))`,
+            boxShadow: `0 0 6px ${meta.accent}`,
+            pointerEvents: 'none', zIndex: 4,
+          }}
+        />
+      ))}
     </>
   );
-}
-
-function PackBagContents({ meta, sampleCard }: { meta: RevealPackMeta; sampleCard?: OwnedCard['card'] }) {
-  const packDesignStyle = useVaultStore((s) => s.packDesignStyle);
-  if (packDesignStyle === 'cyber_cartridge') {
-    return <CyberPackBagContents meta={meta} sampleCard={sampleCard} />;
-  }
-  return <ClassicFoilPackBagContents meta={meta} sampleCard={sampleCard} />;
 }
 
 // ── Pack Shell (the bag visual) ──────────────────────────────────────
 
 function PackShell({ meta, phase, sampleCard }: { meta: RevealPackMeta; phase: Phase; sampleCard?: OwnedCard['card'] }) {
+  const packDesignStyle = useVaultStore((s) => s.packDesignStyle);
+  if (packDesignStyle !== 'cyber_cartridge') return <FoilPackShell meta={meta} phase={phase} />;
+  return <CyberPackShell meta={meta} phase={phase} sampleCard={sampleCard} />;
+}
+
+function CyberPackShell({ meta, phase, sampleCard }: { meta: RevealPackMeta; phase: Phase; sampleCard?: OwnedCard['card'] }) {
   const isTorn = ['snap', 'pause', 'rise', 'flipping', 'layout', 'inspect'].includes(phase);
   const isTearing = phase === 'tearing';
   const isBombshell = meta.category === 'bombshell' || meta.category === 'bombshell_token' || meta.label?.toLowerCase().includes('bombshell');

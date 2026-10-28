@@ -1,6 +1,9 @@
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useVaultStore, type RevealPackMeta } from '../store/useVaultStore';
+import FoilPackFace from './foil/FoilPackFace';
+import { FOIL_TEAR_Y, FOIL_STRIP_CLIP, FOIL_BODY_CLIP, FOIL_CONFETTI } from './foil/foilTear';
+import { get365CardVariantStyle, getPackCoverFallback } from '../utils/cardVariants';
 
 interface Props {
   meta: RevealPackMeta;
@@ -78,147 +81,82 @@ function CyberPackBagArt({ meta }: { meta: RevealPackMeta }) {
   );
 }
 
-/** Renders the classic foil pack bag artwork */
-function ClassicFoilPackBagArt({ meta }: { meta: RevealPackMeta }) {
+/** Holo foil pack: the strip tears off along the printed tear line */
+function FoilRipPack({ meta, phase }: { meta: RevealPackMeta; phase: Phase }) {
+  const isRipping = phase === 'ripping' || phase === 'flashing';
+  const isBombshell = meta.category === 'bombshell' || meta.category === 'bombshell_token' || meta.label?.toLowerCase().includes('bombshell');
+  const face = (
+    <FoilPackFace
+      accent={meta.accent}
+      label={meta.label}
+      coverUrl={meta.coverImage || (isBombshell ? undefined : getPackCoverFallback(meta.category))}
+      fullArt={isBombshell && !!meta.coverImage}
+      price={meta.price}
+      cardCount={meta.cardCount}
+      tagline={get365CardVariantStyle(meta.category || meta.label).tagline}
+      active={!isRipping}
+      interactive={phase === 'idle'}
+    />
+  );
+
   return (
-    <div style={{ position: 'absolute', inset: 0, background: meta.gradient, overflow: 'hidden' }}>
-      {meta.coverImage && (
-        <img
-          src={meta.coverImage}
-          alt={meta.label}
-          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+    <>
+      <motion.div
+        initial={false}
+        animate={isRipping ? { y: 240, rotate: 6, opacity: 0 } : { y: 0, rotate: 0, opacity: 1 }}
+        transition={isRipping ? { duration: 0.55, delay: 0.08, ease: [0.5, 0, 0.75, 0] } : { duration: 0.2 }}
+        style={{ position: 'absolute', inset: 0, clipPath: FOIL_BODY_CLIP }}
+      >
+        {face}
+      </motion.div>
+      <motion.div
+        initial={false}
+        animate={
+          isRipping
+            ? { x: 90, y: -170, rotate: 42, opacity: 0 }
+            : phase === 'shaking'
+            ? { y: [0, -3, -8], rotate: [0, -3, -8] }
+            : { x: 0, y: 0, rotate: 0, opacity: 1 }
+        }
+        transition={isRipping ? { duration: 0.5, ease: [0.3, 0.6, 0.4, 1] } : { duration: 0.5 }}
+        style={{ position: 'absolute', inset: 0, clipPath: FOIL_STRIP_CLIP, transformOrigin: '100% 12%', zIndex: 2 }}
+      >
+        {face}
+      </motion.div>
+
+      {/* Light bursting from the opening */}
+      <AnimatePresence>
+        {isRipping && (
+          <motion.div
+            key="foil-burst"
+            initial={{ opacity: 0, scale: 0.3 }}
+            animate={{ opacity: [0, 1, 0], scale: [0.3, 1.6, 2.4] }}
+            transition={{ duration: 0.8, ease: 'easeOut' }}
+            style={{
+              position: 'absolute', left: '-30%', right: '-30%', top: `calc(${FOIL_TEAR_Y}% - 80px)`, height: 160,
+              background: `radial-gradient(50% 50% at 50% 50%, #fff 0%, ${meta.accent} 35%, transparent 70%)`,
+              filter: 'blur(8px)', mixBlendMode: 'screen', pointerEvents: 'none', zIndex: 3,
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      {isRipping && FOIL_CONFETTI.map((c, i) => (
+        <motion.div
+          key={i}
+          initial={{ x: 0, y: 0, rotate: 0, opacity: 1 }}
+          animate={{ x: c.dx * 1.6, y: [0, c.dy * 1.4, c.dy * 1.4 + 200], rotate: c.rot, opacity: [1, 1, 0] }}
+          transition={{ duration: 1, delay: c.delay, ease: 'easeOut' }}
+          style={{
+            position: 'absolute', left: `${c.x}%`, top: `${FOIL_TEAR_Y}%`,
+            width: c.w + 1, height: c.h + 1, borderRadius: 1,
+            background: `linear-gradient(135deg, hsl(${c.hue} 100% 80%), ${meta.accent}, hsl(${(c.hue + 120) % 360} 100% 70%))`,
+            boxShadow: `0 0 6px ${meta.accent}`,
+            pointerEvents: 'none', zIndex: 4,
+          }}
         />
-      )}
-      {/* Base glow */}
-      <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 50% 30%, ${meta.accent}50, transparent 60%)` }} />
-      <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(ellipse at 50% 85%, ${meta.accent}30, transparent 50%)` }} />
-
-      {/* Diagonal stripe texture */}
-      <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.04 }} xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <pattern id="rip-stripe" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-            <rect x="0" y="0" width="10" height="20" fill="white" />
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#rip-stripe)" />
-      </svg>
-
-      {/* Notch bar */}
-      <div style={{
-        position: 'absolute', top: 0, left: 0, right: 0, height: '32px',
-        background: 'rgba(0,0,0,0.65)',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 16px',
-        borderBottom: `1px solid ${meta.accent}20`,
-      }}>
-        {[0, 1, 2, 3, 4].map(i => (
-          <div key={i} style={{
-            width: '8px', height: '8px', borderRadius: '50%',
-            background: 'rgba(0,0,0,0.9)',
-            border: '1.5px solid rgba(255,255,255,0.15)',
-            boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.8)',
-          }} />
-        ))}
-      </div>
-
-      {/* Center: icon + label */}
-      <div style={{
-        position: 'absolute', inset: '40px 0 70px',
-        display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center', gap: '10px',
-      }}>
-        <div style={{ fontSize: '52px', lineHeight: 1, filter: `drop-shadow(0 0 16px ${meta.accent}90)` }}>
-          {meta.icon}
-        </div>
-        <div style={{
-          fontFamily: '"Impact", "Arial Black", sans-serif',
-          fontSize: '20px', fontWeight: 900,
-          textTransform: 'uppercase', letterSpacing: '-0.5px',
-          color: '#fff',
-          textShadow: `0 0 24px ${meta.accent}99, 2px 2px 0 rgba(0,0,0,0.9)`,
-          textAlign: 'center', padding: '0 12px',
-        }}>
-          {meta.label}
-        </div>
-        <div style={{
-          width: '60px', height: '1.5px',
-          background: `linear-gradient(90deg, transparent, ${meta.accent}, transparent)`,
-          opacity: 0.6,
-        }} />
-        <div style={{
-          fontFamily: '"JetBrains Mono", monospace',
-          fontSize: '8px', fontWeight: 700,
-          letterSpacing: '0.2em',
-          color: 'rgba(255,255,255,0.35)',
-        }}>
-          PIM : th3v4ult · GEN 0
-        </div>
-      </div>
-
-      {/* Price stamp — top left */}
-      <div style={{
-        position: 'absolute', top: '44px', left: '12px',
-        transform: 'rotate(-2.5deg)',
-        background: '#faf5e8', border: '2px solid #000',
-        padding: '4px 10px',
-        boxShadow: '3px 3px 0 #000',
-      }}>
-        <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '6px', fontWeight: 900, textTransform: 'uppercase', opacity: 0.5, lineHeight: 1 }}>PRICE</div>
-        <div style={{ fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '22px', fontWeight: 900, letterSpacing: '-1.5px', lineHeight: 1 }}>
-          {meta.price === 'FREE' ? 'FREE' : meta.price}
-        </div>
-        <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '6px', opacity: 0.4, textTransform: 'uppercase', lineHeight: 1, marginTop: '2px' }}>
-          {meta.price === 'FREE' ? 'no cost' : 'per pack'}
-        </div>
-      </div>
-
-      {/* Card count stamp — bottom right */}
-      <div style={{
-        position: 'absolute', bottom: '74px', right: '12px',
-        transform: 'rotate(1.5deg)',
-        background: '#faf5e8', border: '2px solid #000',
-        padding: '3px 10px',
-        boxShadow: '3px 3px 0 #000',
-        minWidth: '54px', textAlign: 'center',
-      }}>
-        <div style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '6px', fontWeight: 900, textTransform: 'uppercase', opacity: 0.5, lineHeight: 1 }}>CARDS</div>
-        <div style={{ fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '18px', fontWeight: 900, letterSpacing: '-1px', lineHeight: 1 }}>
-          {meta.cardCount}{meta.cardCount > 1 ? '×' : ''}
-        </div>
-      </div>
-
-      {/* Barcode strip */}
-      <div style={{
-        position: 'absolute', bottom: 0, left: 0, right: 0, height: '64px',
-        background: 'rgba(0,0,0,0.75)',
-        borderTop: `1.5px solid ${meta.accent}35`,
-        display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center', gap: '5px',
-        padding: '8px 16px',
-      }}>
-        {/* Barcode lines */}
-        <div style={{ display: 'flex', gap: '1.5px', height: '22px', alignItems: 'stretch' }}>
-          {Array.from({ length: 28 }, (_, i) => (
-            <div key={i} style={{
-              width: `${[2, 1, 1, 3, 1, 2, 1, 1, 2, 3, 1, 1, 2, 1][i % 14] ?? 1}px`,
-              background: i % 5 === 0 ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.45)',
-              flexShrink: 0,
-            }} />
-          ))}
-        </div>
-        <div style={{
-          fontFamily: '"JetBrains Mono", monospace',
-          fontSize: '7px', fontWeight: 700,
-          letterSpacing: '0.3em', textTransform: 'uppercase',
-          color: `${meta.accent}`, opacity: 0.45,
-        }}>
-          {meta.category.toUpperCase().replace('_', '-')}
-        </div>
-      </div>
-
-      {/* Border overlay */}
-      <div style={{ position: 'absolute', inset: 0, border: `1.5px solid rgba(255,255,255,0.07)`, borderRadius: '4px', pointerEvents: 'none' }} />
-    </div>
+      ))}
+    </>
   );
 }
 
@@ -229,7 +167,6 @@ export default function PackRipAnimation({ meta, onComplete }: Props) {
   const [phase, setPhase] = useState<Phase>('idle');
   const packDesignStyle = useVaultStore((s) => s.packDesignStyle);
   const isCyber = packDesignStyle === 'cyber_cartridge';
-  const PackArt = isCyber ? CyberPackBagArt : ClassicFoilPackBagArt;
 
   const handleTap = useCallback(() => {
     if (phase !== 'idle') return;
@@ -290,9 +227,24 @@ export default function PackRipAnimation({ meta, onComplete }: Props) {
           }}
         />
 
-        {/* ── INTACT PACK (idle / shaking) ── */}
+        {!isCyber && (
+          <motion.div
+            initial={{ scale: 0.85, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1, y: isRipping ? 0 : [0, -7, 0] }}
+            transition={{
+              scale: { duration: 0.5, ease: [0.22, 1, 0.36, 1] },
+              opacity: { duration: 0.4 },
+              y: isRipping ? { duration: 0.1 } : { repeat: Infinity, duration: 3.2, ease: 'easeInOut' },
+            }}
+            style={{ position: 'absolute', inset: 0 }}
+          >
+            <FoilRipPack meta={meta} phase={phase} />
+          </motion.div>
+        )}
+
+        {/* ── INTACT CARTRIDGE (idle / shaking) ── */}
         <AnimatePresence>
-          {!isRipping && (
+          {isCyber && !isRipping && (
             <motion.div
               key="intact"
               initial={{ scale: 0.85, opacity: 0 }}
@@ -310,14 +262,14 @@ export default function PackRipAnimation({ meta, onComplete }: Props) {
                 border: '2px solid rgba(255,255,255,0.07)',
               }}
             >
-              <PackArt meta={meta} />
+              <CyberPackBagArt meta={meta} />
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* ── RIPPED HALVES ── */}
+        {/* ── RIPPED CARTRIDGE HALVES ── */}
         <AnimatePresence>
-          {isRipping && (
+          {isCyber && isRipping && (
             <>
               {/* Top half */}
               <motion.div
@@ -333,7 +285,7 @@ export default function PackRipAnimation({ meta, onComplete }: Props) {
                   border: '2px solid rgba(255,255,255,0.07)',
                 }}
               >
-                <PackArt meta={meta} />
+                <CyberPackBagArt meta={meta} />
               </motion.div>
 
               {/* Bottom half */}
@@ -350,7 +302,7 @@ export default function PackRipAnimation({ meta, onComplete }: Props) {
                   border: '2px solid rgba(255,255,255,0.07)',
                 }}
               >
-                <PackArt meta={meta} />
+                <CyberPackBagArt meta={meta} />
               </motion.div>
             </>
           )}
@@ -402,7 +354,7 @@ export default function PackRipAnimation({ meta, onComplete }: Props) {
             transition={{ duration: 0.35 }}
             style={{
               position: 'fixed', inset: 0,
-              background: '#ffffff',
+              background: isCyber ? '#ffffff' : `radial-gradient(circle at 50% 45%, #ffffff 0%, ${meta.accent} 55%, #050402 100%)`,
               zIndex: 200, pointerEvents: 'none',
             }}
           />

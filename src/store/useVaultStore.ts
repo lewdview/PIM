@@ -486,7 +486,7 @@ export const useVaultStore = create<VaultState>((set, get) => ({
   setCommandPaletteOpen: (open) => set({ commandPaletteOpen: open }),
   toggleCommandPalette: () => set((state) => ({ commandPaletteOpen: !state.commandPaletteOpen })),
 
-  packDesignStyle: ((localStorage.getItem('pim_pack_design_style') as any) || 'cyber_cartridge'),
+  packDesignStyle: ((localStorage.getItem('pim_pack_design_style') as any) || 'classic_foil'),
   setPackDesignStyle: (style) => {
     localStorage.setItem('pim_pack_design_style', style);
     localStorage.setItem('opt_packDesignStyle', style);

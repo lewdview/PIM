@@ -14,6 +14,7 @@ import { getAdminConfig } from '../utils/adminConfig';
 import { get365CardVariantStyle, getPackCoverFallback, getPackMultiCovers } from '../utils/cardVariants';
 import { getFeaturedBombshellFoilCover, getRandomBombshellPackCover } from '../utils/bombshellCards';
 import CyberPackBag from './CyberPackBag';
+import FoilPackFace from './foil/FoilPackFace';
 
 interface PackShopProps {
   onPurchase: (category: PackCategory, size: PackSize) => void;
@@ -24,39 +25,6 @@ const GAP = 16;
 const SLIDE = CARD_W + GAP;
 
 type RipPhase = 'idle' | 'spotlight' | 'tearing' | 'cards_fly' | 'done';
-
-// ===== PACK EMBLEM (Custom Icon) =====
-function PackEmblem({ accent, size = 80, isBombshell = false }: { accent: string; size?: number; isBombshell?: boolean }) {
-  return (
-    <div className="relative flex justify-center items-center my-2 rounded-full mx-auto" style={{ width: size, height: size, boxShadow: `0 0 30px ${accent}40` }}>
-      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full" style={{ animation: 'spin-slow 16s linear infinite', transformOrigin: 'center', willChange: 'transform' }}>
-        <path id="circlePath" d="M 50, 50 m -35, 0 a 35,35 0 1,1 70,0 a 35,35 0 1,1 -70,0" fill="transparent" />
-        <text fill={accent} fontWeight="900" style={{ textTransform: 'uppercase', fontSize: isBombshell ? '7.5px' : '8.5px', textShadow: `0 0 10px ${accent}`, letterSpacing: '1px' }}>
-          <textPath href="#circlePath" startOffset="0%">
-            {isBombshell ? '💖 BOMBSHELL • PANIK ED. •' : 'TH3SCR1B3 •  GEN 0  •'}
-          </textPath>
-          <textPath href="#circlePath" startOffset="50%">
-            {isBombshell ? '💖 BOMBSHELL • PANIK ED. •' : 'TH3SCR1B3 •  GEN 0  •'}
-          </textPath>
-        </text>
-        <circle cx="50" cy="50" r="23" fill="none" stroke={accent} strokeWidth="1.5" strokeDasharray="3 3" opacity="0.8" />
-      </svg>
-      <div className="absolute inset-0 flex items-center justify-center">
-        <span className="font-black" style={{ 
-          fontSize: size * 0.45, 
-          color: '#fff', 
-          fontFamily: '"Impact", "Arial Black", sans-serif',
-          letterSpacing: '-1.5px',
-          transform: 'scaleY(1.2) scaleX(0.9)',
-          WebkitTextStroke: '1px #000',
-          textShadow: `0 0 15px ${accent}, 2px 2px 0 #000`,
-        }}>
-          365
-        </span>
-      </div>
-    </div>
-  );
-}
 
 // ===== RIP TAB =====
 function RipTab({ onRip, accent, disabled, labelOverride }: { onRip: () => void; accent: string; disabled?: boolean; labelOverride?: string }) {
@@ -215,8 +183,6 @@ export function ClassicFoilPackBag({
   else if (isOverLimit) dynamicLabelOverride = limitLabel;
   else if (isTokenBased && !hasEnoughTokens) dynamicLabelOverride = `NEED ${requiredTokens} V⚡`;
 
-  const repeatedText = Array(5).fill(0).map(() => `365 DAYS OF LIGHT AND DARK \u2022 ${cfg.label}`).join(' \u2022 ');
-
   const variant = get365CardVariantStyle(cfg.category);
   const isBombshell = cfg.category === 'bombshell' || cfg.category === 'bombshell_token' || cfg.label?.toLowerCase().includes('bombshell');
   const countNum = tier.cardCount >= 50 ? 50 : tier.cardCount >= 25 ? 25 : tier.cardCount >= 10 ? 10 : tier.cardCount >= 5 ? 5 : tier.cardCount >= 2 ? 2 : 1;
@@ -303,346 +269,59 @@ export function ClassicFoilPackBag({
           pointer-events: none;
         }
       `}</style>
-      <div className="relative w-full overflow-hidden" style={{
+      <div className="relative w-full" style={{
         aspectRatio: '3 / 4.5',
-        borderRadius: '8px 8px 12px 12px',
-        WebkitMaskImage: '-webkit-radial-gradient(white, black)',
-        background: isBombshell ? '#000000' : cfg.gradient,
-        boxShadow: isActive ? `0 20px 60px rgba(0,0,0,0.6), 0 0 30px ${accent}40, inset 0 0 25px rgba(255,255,255,0.3)` : '0 10px 30px rgba(0,0,0,0.3)',
+        borderRadius: '8px',
         transform: isActive ? 'scale(1)' : 'scale(0.85)',
         opacity: isActive ? 1 : 0.4,
-        transition: 'transform 0.35s cubic-bezier(.22,1,.36,1), opacity 0.35s ease, box-shadow 0.35s ease',
+        transition: 'transform 0.35s cubic-bezier(.22,1,.36,1), opacity 0.35s ease',
       }}>
-        {(() => {
-          if (isBombshell) {
-            return (
-              <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none flex items-center justify-center" style={{ background: 'linear-gradient(165deg, #13010b 0%, #2d031c 40%, #0d0108 100%)' }}>
-                {/* Panik Cyber Ambient Neon Halo */}
-                <div 
-                  className="absolute inset-0 pointer-events-none"
-                  style={{
-                    background: 'radial-gradient(circle at 50% 44%, rgba(255, 20, 147, 0.65) 0%, rgba(255, 0, 128, 0.35) 45%, rgba(255, 20, 147, 0.1) 60%, transparent 75%)',
-                    mixBlendMode: 'screen',
-                    zIndex: 1,
-                  }}
-                />
-
-                {/* Subtle Cyber Matrix Grid */}
-                <div 
-                  className="absolute inset-0 pointer-events-none opacity-20"
-                  style={{
-                    backgroundImage: 'linear-gradient(rgba(255,20,147,0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(255,20,147,0.3) 1px, transparent 1px)',
-                    backgroundSize: '20px 20px',
-                    zIndex: 1,
-                  }}
-                />
-
-                {/* Sliced Cutout Artwork Plate */}
-                {foilCoverUrl && (
-                  <div className="absolute inset-0 overflow-hidden pointer-events-none flex items-center justify-center" style={{ zIndex: 2 }}>
-                    <img
-                      src={foilCoverUrl}
-                      alt={`Bombshell Pack ${tier.cardCount} Cards`}
-                      className="w-full h-full object-cover pointer-events-none select-none transition-transform duration-300"
-                      style={{
-                        transform: isActive ? 'scale(1.03)' : 'scale(1)',
-                        filter: 'contrast(1.2) saturate(1.35) brightness(1.05) drop-shadow(0 0 24px rgba(255,20,147,0.75))',
-                      }}
-                      onError={(e) => {
-                        (e.currentTarget as HTMLImageElement).src = '/data/packs/bs_cover.png';
-                      }}
-                    />
-                  </div>
-                )}
-
-                {/* Animated Iridescent Panik Foil Shimmer */}
-                <div
-                  className="absolute inset-0 pointer-events-none foil-holo-prism"
-                  style={{
-                    background: 'linear-gradient(115deg, transparent 20%, rgba(255, 20, 147, 0.4) 40%, rgba(255, 255, 255, 0.75) 50%, rgba(0, 229, 255, 0.4) 60%, transparent 80%)',
-                    mixBlendMode: 'color-dodge',
-                    opacity: isActive ? 0.65 : 0.35,
-                    zIndex: 3,
-                  }}
-                />
-
-                {/* Top/Bot Lighting Vignette */}
-                <div
-                  className="absolute inset-0 pointer-events-none"
-                  style={{
-                    background: 'linear-gradient(180deg, rgba(255,20,147,0.15) 0%, transparent 20%, transparent 80%, rgba(0,0,0,0.85) 100%)',
-                    zIndex: 4,
-                  }}
-                />
-              </div>
-            );
-          }
-
-          return (
-            <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none flex items-center justify-center" style={{ background: 'rgba(6,3,14,0.96)' }}>
-              {foilCoverUrl && (
-                <div className="absolute inset-0 overflow-hidden pointer-events-none" style={{ zIndex: 1 }}>
-                  <img
-                    src={foilCoverUrl}
-                    alt="Foil Artwork"
-                    className="w-full h-full object-cover"
-                    style={{
-                      transform: 'scale(1.15)',
-                      objectPosition: 'center 25%',
-                      filter: 'contrast(1.15) brightness(0.7) saturate(1.2)',
-                      mixBlendMode: 'normal',
-                      opacity: isActive ? 0.45 : 0.25,
-                    }}
-                  />
-                  <div
-                    className="absolute inset-0 pointer-events-none"
-                    style={{
-                      background: 'linear-gradient(160deg, rgba(0, 229, 255, 0.35) 0%, rgba(10, 16, 32, 0.75) 100%)',
-                      mixBlendMode: 'color',
-                      opacity: 0.9,
-                    }}
-                  />
-                  <div
-                    className="absolute inset-0 pointer-events-none"
-                    style={{
-                      background: 'radial-gradient(ellipse at 50% 30%, rgba(255, 255, 255, 0.25) 0%, transparent 65%)',
-                      mixBlendMode: 'screen',
-                      opacity: 0.7,
-                    }}
-                  />
-                </div>
-              )}
-
-              <div
-                className="absolute inset-0 pointer-events-none transition-all"
-                style={{
-                  position: 'absolute', inset: 0,
-                  background: `linear-gradient(160deg, ${accent}ee 0%, ${accent}aa 45%, rgba(6,3,14,0.96) 100%)`,
-                  mixBlendMode: 'hard-light',
-                  opacity: 0.88,
-                  zIndex: 2,
-                }}
-              />
-              <div
-                className="absolute inset-0 pointer-events-none transition-all"
-                style={{
-                  position: 'absolute', inset: 0,
-                  background: accent,
-                  mixBlendMode: 'color',
-                  opacity: 0.85,
-                  zIndex: 3,
-                }}
-              />
-            </div>
-          );
-        })()}
-        
-        <div className="absolute inset-x-0 top-0 h-[22px] foil-crimp-serrated-top z-20" />
-        <div className="absolute inset-x-0 bottom-0 h-[22px] foil-crimp-serrated-bottom z-20" />
-        <div className="foil-tear-notch-left" />
-        <div className="foil-tear-notch-right" />
-        <div className="foil-fin-seal" />
-        <div className="foil-holo-prism" style={{ opacity: isActive ? 0.45 : 0.2 }} />
-        <div className="foil-card-bulge" />
-        <div className="foil-wrinkles-overlay" />
-        <div className="foil-metallic-sheen" />
-        <div className="absolute inset-0 pointer-events-none mix-blend-overlay" style={{
-          background: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='foilNoise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.035 0.08' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23foilNoise)'/%3E%3C/svg%3E")`,
-          opacity: 0.32,
-          zIndex: 4,
-        }} />
-
-        {/* BRUTALIST & PANIK STAMPS & BADGING (For all packs including Bombshell) */}
-        <>
-          <div className="absolute left-0 bottom-12 w-8 flex items-center justify-center pointer-events-none z-20 mix-blend-overlay">
-            <div className="font-black leading-none uppercase whitespace-nowrap" style={{
-              transform: 'rotate(-90deg) scaleY(1.3) scaleX(0.9)',
-              color: 'rgba(255,255,255,0.7)',
-              fontFamily: '"Impact", "Arial Black", sans-serif',
-              fontSize: '18px',
-              letterSpacing: '-1.5px',
-              WebkitTextStroke: `1px ${accent}`,
-              textShadow: `0 0 14px ${accent}`,
-            }}>
-              {isBombshell ? 'PANIK // BOMBSHELL' : 'TH3SCR1B3'}
-            </div>
-          </div>
-
-          <div className="absolute left-3 top-3 z-30 pointer-events-none">
-            <div
-              className="pack-price-stamp"
-              style={{
-                '--stamp-stripe': `${accent}20`,
-                borderColor: isBombshell ? '#FF1493' : '#000',
-                boxShadow: isBombshell ? '3px 3px 0 #FF1493, 0 0 14px rgba(255,20,147,0.5)' : '4px 4px 0 #000',
-                transform: 'rotate(-2.5deg)',
-              } as any}
-            >
-              <span style={{ fontSize: '7px', fontFamily: '"JetBrains Mono", monospace', fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase', opacity: 0.7, lineHeight: 1, marginBottom: 2, color: isBombshell ? '#FF1493' : '#000' }}>
-                PRICE
-              </span>
-              <span style={{ fontSize: '28px', lineHeight: 1, letterSpacing: '-1.5px', fontFamily: '"Impact", "Arial Black", sans-serif', transform: 'scaleY(1.18)', transformOrigin: 'center', display: 'block', fontWeight: 900, color: isBombshell ? '#000' : '#000' }}>
-                {tier.price === 'FREE' ? 'FREE' : tier.price}
-              </span>
-              <span style={{ fontSize: '7px', fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.08em', opacity: 0.6, marginTop: 1, textTransform: 'uppercase', color: isBombshell ? '#FF1493' : '#000' }}>
-                {tier.price === 'FREE' ? 'no cost' : 'per pack'}
-              </span>
-            </div>
-          </div>
-
-          <div className="absolute right-3 bottom-16 z-30 pointer-events-none">
-            <div
-              className="pack-price-stamp"
-              style={{
-                '--stamp-stripe': `${accent}20`,
-                borderColor: isBombshell ? '#FF1493' : '#000',
-                boxShadow: isBombshell ? '3px 3px 0 #FF1493, 0 0 14px rgba(255,20,147,0.5)' : '3px 3px 0 #000',
-                transform: 'rotate(1.5deg)',
-                padding: '3px 10px',
-                minWidth: '60px',
-              } as any}
-            >
-              <span style={{ fontSize: '6px', fontFamily: '"JetBrains Mono", monospace', fontWeight: 900, letterSpacing: '0.12em', textTransform: 'uppercase', opacity: 0.7, lineHeight: 1, marginBottom: 1, color: isBombshell ? '#FF1493' : '#000' }}>
-                CONTENTS
-              </span>
-              <span style={{ fontSize: '18px', lineHeight: 1, letterSpacing: '-1px', fontFamily: '"Impact", "Arial Black", sans-serif', transform: 'scaleY(1.18)', transformOrigin: 'center', display: 'block', fontWeight: 900, color: '#000' }}>
-                {tier.cardCount}{tier.cardCount === 1 ? '' : '×'}
-              </span>
-              <span style={{ fontSize: '6px', fontFamily: '"JetBrains Mono", monospace', letterSpacing: '0.08em', opacity: 0.6, marginTop: 1, textTransform: 'uppercase', color: isBombshell ? '#FF1493' : '#000' }}>
-                {tier.cardCount === 1 ? 'pack' : 'cards'}
-              </span>
-            </div>
-          </div>
-
-          {/* Light / Dark Side Switcher Toggle for Bombshell */}
-          {isBombshell && !forcedTheme && (
-            <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-30 pointer-events-auto">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setBombshellSide(prev => prev === 'top' ? 'bot' : 'top');
-                }}
-                className="px-2.5 py-1 rounded-full text-[8px] font-mono font-black uppercase tracking-wider flex items-center gap-1.5 transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-lg"
-                style={{
-                  background: 'rgba(0, 0, 0, 0.85)',
-                  border: '1.5px solid #FF1493',
-                  color: '#FF1493',
-                  boxShadow: '0 0 14px rgba(255,20,147,0.6)',
-                }}
-              >
-                <span>{bombshellSide === 'top' ? '🌙 DARK' : '☀️ LIGHT'}</span>
-                <span className="text-[7px] opacity-70">⟲ FLIP</span>
-              </button>
-            </div>
-          )}
-
-          <div className="absolute inset-0 opacity-60 mix-blend-screen pointer-events-none" style={{
-            background: `radial-gradient(ellipse at 50% 15%, ${accent}40, transparent 50%), radial-gradient(ellipse at 50% 85%, ${accent}30, transparent 50%)`,
-            zIndex: 0,
-          }} />
-
-          <div className="absolute inset-0 overflow-hidden pointer-events-none mix-blend-overlay" style={{ zIndex: 1 }}>
-            <div className="absolute top-10 left-0 right-0 whitespace-nowrap" style={{ 
-              width: '200%', display: 'flex',
-              animation: isActive ? 'breathe-opacity 6s ease-in-out infinite' : 'none',
-              opacity: isBombshell ? 0.35 : 0.2,
-            }}>
-              <div className="pack-marquee-text" style={{ animation: isActive ? 'scroll-left 40s linear infinite' : 'none', fontSize: '6rem', lineHeight: 1, '--neon-accent': accent } as any}>
-                {repeatedText}
-              </div>
-            </div>
-            <div className="absolute bottom-10 right-0 whitespace-nowrap flex justify-end" style={{ 
-              width: '200%',
-              animation: isActive ? 'breathe-opacity 6s ease-in-out infinite' : 'none',
-              animationDelay: isActive ? '-2s' : '0s',
-              opacity: isBombshell ? 0.35 : 0.2,
-            }}>
-              <div className="pack-marquee-text" style={{ animation: isActive ? 'scroll-left 30s linear infinite reverse' : 'none', fontSize: '4.5rem', lineHeight: 1, '--neon-accent': accent } as any}>
-                {repeatedText}
-              </div>
-            </div>
-          </div>
-        </>
-
-            <div className="relative flex flex-col items-center justify-between h-full pt-[20px] pb-[32px] px-5 z-10">
-              <div className="h-6" />
-
-              <div className="text-center space-y-1.5 my-auto flex flex-col items-center w-full">
-                <h3 
-                  className={`leading-[0.92] pack-label-neon uppercase font-black text-center max-w-[240px] ${
-                    cfg.label.length > 18 
-                      ? 'text-[20px] sm:text-[22px]' 
-                      : cfg.label.length > 12 
-                        ? 'text-[24px] sm:text-[28px]' 
-                        : 'text-[30px] sm:text-[34px]'
-                  }`} 
-                  style={{
-                    '--neon-accent': accent,
-                    color: '#ffffff',
-                    fontFamily: '"Impact", "Arial Black", sans-serif',
-                    letterSpacing: '-0.01em',
-                    transform: 'scaleY(1.06)',
-                    transformOrigin: 'center',
-                    WebkitTextStroke: '1.5px #000000',
-                    textShadow: `
-                      0 0 18px ${accent}, 
-                      0 0 36px ${accent}80, 
-                      2px 3px 0 #000000, 
-                      3px 6px 16px rgba(0,0,0,0.95)
-                    `,
-                    margin: '4px 0 6px 0',
-                  } as React.CSSProperties}
-                >
-                  {cfg.label}
-                </h3>
-                
-                <div className="flex justify-center">
-                  <PackEmblem accent={accent} size={74} isBombshell={isBombshell} />
-                </div>
-
-                <div className="text-center mt-2">
-                  <div className="inline-block">
-                    <div className="sticker-gun-tag sticker-slits drop-shadow-md" style={{
-                      background: '#ffffff',
-                      border: `1.5px solid ${accent}40`,
-                      '--slit-color': `${accent}22`,
-                      padding: '3px 10px',
-                      transform: 'rotate(0.5deg)',
-                      minWidth: '150px'
-                    } as any}>
-                      <span className="text-[8.5px] font-black tracking-tighter uppercase italic opacity-90" style={{ color: '#000' }}>
-                        {variant.tagline}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {cfg.description && (
-                  <p className="text-[9.5px] font-mono mt-2 line-clamp-1" style={{ color: 'var(--color-text-muted)' }}>
-                    {cfg.description}
-                  </p>
-                )}
-              </div>
-
+        <FoilPackFace
+          accent={accent}
+          label={cfg.label}
+          coverUrl={foilCoverUrl}
+          fallbackCoverUrl={isBombshell ? '/data/packs/bs_cover.png' : undefined}
+          fullArt={isBombshell}
+          price={tier.price}
+          cardCount={tier.cardCount}
+          tagline={isBombshell ? 'Bombshell anime graffiti cards' : variant.tagline}
+          footer={
+            <>
               {isSpecial && (
-                <div className="px-3 py-1 rounded-lg my-1" style={{ background: `${accent}15`, border: `1px solid ${accent}30` }}>
-                  <span className="text-[8.5px] font-mono font-bold" style={{ color: accent }}>
-                    {category === 'prophecy' ? '🔮 3% PROOF OF FIRST (1/1)' : '🎲 8% FIRST HEARD PROOF'}
-                  </span>
+                <div style={{ color: accent, marginBottom: '1.6cqw', letterSpacing: '0.08em' }}>
+                  {category === 'prophecy' ? '🔮 3% proof of first (1/1)' : '🎲 8% first heard proof'}
                 </div>
               )}
+              <Users size={9} className="inline mr-1" style={{ verticalAlign: '-1px' }} />
+              {rippedCount.toLocaleString()} ripped
+            </>
+          }
+          active={isActive}
+          interactive
+        />
 
-              <div className="flex items-center gap-1.5 mt-1">
-                <span className="text-[8.5px] font-mono" style={{ color: 'var(--color-text-muted)' }}>
-                  <Users size={9} className="inline mr-0.5" />
-                  {rippedCount.toLocaleString()} ripped
-                </span>
-              </div>
-            </div>
-
-        <div className="absolute inset-y-0 left-0 w-3" style={{ background: 'linear-gradient(90deg, rgba(255,255,255,0.03), transparent)' }} />
-        <div className="absolute inset-y-0 right-0 w-3" style={{ background: 'linear-gradient(270deg, rgba(255,255,255,0.03), transparent)' }} />
+        {/* Light / Dark Side Switcher Toggle for Bombshell */}
+        {isBombshell && !forcedTheme && (
+          <div className="absolute left-1/2 -translate-x-1/2 z-30 pointer-events-auto" style={{ top: '57%' }}>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setBombshellSide(prev => prev === 'top' ? 'bot' : 'top');
+              }}
+              className="px-2.5 py-1 rounded-full text-[8px] font-mono font-black uppercase tracking-wider flex items-center gap-1.5 transition-all hover:scale-105 active:scale-95 cursor-pointer shadow-lg"
+              style={{
+                background: 'rgba(0, 0, 0, 0.85)',
+                border: '1.5px solid #FF1493',
+                color: '#FF1493',
+                boxShadow: '0 0 14px rgba(255,20,147,0.6)',
+              }}
+            >
+              <span>{bombshellSide === 'top' ? '🌙 DARK' : '☀️ LIGHT'}</span>
+              <span className="text-[7px] opacity-70">⟲ FLIP</span>
+            </button>
+          </div>
+        )}
 
         {/* Info Toggle Button */}
         <div className="absolute right-3 top-3 z-30">
@@ -667,7 +346,7 @@ export function ClassicFoilPackBag({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 z-40 flex flex-col items-center justify-center p-6 backdrop-blur-md"
+              className="absolute inset-0 z-40 flex flex-col items-center justify-center p-6 backdrop-blur-md rounded-lg"
               style={{ background: 'rgba(0,0,0,0.88)' }}
             >
               <h4 className="text-xl font-bold pack-label-neon mb-4 uppercase text-center" style={{ '--neon-accent': accent } as any}>
@@ -784,7 +463,7 @@ export function ClassicFoilPackBag({
 // ===== PACK BAG WRAPPER (SUPPORTS CLASSIC FOIL & CYBER CARTRIDGE) =====
 export function PackBag(props: PackBagProps) {
   const packDesignStyle = useVaultStore((s) => s.packDesignStyle);
-  const activeStyle = props.styleOverride || packDesignStyle || 'cyber_cartridge';
+  const activeStyle = props.styleOverride || packDesignStyle || 'classic_foil';
 
   if (activeStyle === 'cyber_cartridge') {
     return (
@@ -866,7 +545,7 @@ export default function PackShop({ onPurchase }: PackShopProps) {
                 : 'text-slate-400 hover:text-white hover:bg-white/5'
             }`}
           >
-            <span>🏷️</span> CLASSIC FOIL
+            <span>✨</span> HOLO FOIL
           </button>
           <button
             onClick={() => setPackDesignStyle('cyber_cartridge')}

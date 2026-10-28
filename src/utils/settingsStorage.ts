@@ -35,7 +35,7 @@ export const DEFAULT_PROFILE_SETTINGS: ProfileSettings = {
   bloomGlow: true,
   bgAnimation: true,
   legacyGraphics: false,
-  packDesignStyle: 'cyber_cartridge',
+  packDesignStyle: 'classic_foil',
   visualizerShape: 'flower_of_life',
   visualizerTheme: 'cyan_pink',
   visualizerPlaylistMode: 'all_catalog',
