@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react';
-import { subscribeGyro, gyroAvailable } from '../../lib/holoGyro';
+import { subscribeGyro, gyroAvailable, gyroNeedsPermission, requestGyroPermission } from '../../lib/holoGyro';
 import '../../styles/foilPack.css';
 
 export interface FoilPackFaceProps {
@@ -112,7 +112,13 @@ export default function FoilPackFace({
       className={`fp-tilt${tracking ? ' is-tracking' : ''}${active ? '' : ' is-dim'}${className ? ` ${className}` : ''}`}
       style={{ '--fp-accent': accent, ...style } as CSSProperties}
       onPointerMove={onPointerMove}
-      onPointerLeave={interactive ? reset : undefined}
+      onPointerDown={interactive && active
+        ? (e) => {
+            // iOS only delivers tilt after a permission prompt raised from a tap
+            if (e.pointerType === 'touch' && gyroNeedsPermission()) void requestGyroPermission();
+          }
+        : undefined}
+      onPointerLeave={interactive ? (e) => { if (e.pointerType !== 'touch') reset(); } : undefined}
     >
       <div ref={faceRef} className={`foilpack${active && !tracking ? ' is-idle' : ''}`}>
         <div className="fp-metal" />
