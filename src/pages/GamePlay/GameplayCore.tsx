@@ -7,7 +7,7 @@ import { isCampaignRunSearch } from "@/game/campaign";
 import { getCampaignStage, type CampaignStage } from "@/game/chapterStory";
 import type { GameSong } from "@/game/api";
 import type { Note, JudgmentDisplay, GameState, NoteType } from "@/game/types";
-import { loadOpts, keyLabel, laneForKey, getEffectiveDpr, type GameOpts, type PovMode, type RenderResolution, type GfxLevel, type FpsTarget, type ParticleDensity } from "@/lib/options";
+import { loadOpts, keyLabel, laneForKey, normalizeLaneKey, getEffectiveDpr, type GameOpts, type PovMode, type RenderResolution, type GfxLevel, type FpsTarget, type ParticleDensity } from "@/lib/options";
 import { audioManager, AudioManager, HEALING_LANE_FREQUENCIES } from "@/game/audio";
 import { useVaultStore, ownsCardForDay } from "@/store/useVaultStore";
 import { useGlobalPlayer } from "@/store/useGlobalPlayer";
@@ -7212,7 +7212,7 @@ export default function Game() {
       lastInputModalityRef.current = 'key';
       if (e.repeat) return;
       const key = e.key;
-      keysDownRef.current.add(key);
+      keysDownRef.current.add(normalizeLaneKey(key));
 
       // Lane bound to this key (primary or alternate binding). Arrow keys bound to a
       // lane act as that lane's button: a held arrow lane never combines into a
@@ -7369,7 +7369,7 @@ export default function Game() {
       hitLaneRef.current?.(lane);
     };
     const onUp = (e: KeyboardEvent) => {
-      keysDownRef.current.delete(e.key);
+      keysDownRef.current.delete(normalizeLaneKey(e.key));
       const lane = laneForKey(e.key, laneKeysRef.current, laneAltKeysRef.current);
       if ((e.key === "ArrowLeft" || e.key === "ArrowRight") && lane < 0) {
         for (let i = 0; i < LANE_COUNT; i++) {
@@ -7383,6 +7383,10 @@ export default function Game() {
       }
 
       if (lane < 0) return;
+      // The lane's other binding (main or alternate) is still held — keep the lane down.
+      for (const held of keysDownRef.current) {
+        if (laneForKey(held, laneKeysRef.current, laneAltKeysRef.current) === lane) return;
+      }
       laneRef.current[lane].pressed = false;
       releaseLaneRef.current?.(lane);
     };
