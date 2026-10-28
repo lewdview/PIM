@@ -71,14 +71,13 @@
   box-sizing: border-box;
 }
 
-/* Unlayered, so it beats Tailwind's layered p-* / m-* utilities. Card skins
-   (.pim-skin) are laid out with those utilities, so they are left to
-   Tailwind's own preflight reset instead. */
-:where(*:not(.pim-skin, .pim-skin *)),
-:where(*:not(.pim-skin, .pim-skin *))::before,
-:where(*:not(.pim-skin, .pim-skin *))::after {
-  margin: 0;
-  padding: 0;
+/* Layered so Tailwind's p-* / m-* utilities can override it. Unlayered, this
+   reset outranked every spacing utility in the app. */
+@layer base {
+  *, *::before, *::after {
+    margin: 0;
+    padding: 0;
+  }
 }
 
 html {

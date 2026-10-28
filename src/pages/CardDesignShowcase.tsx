@@ -412,7 +412,7 @@ function Card3DWrapper({ rarity, themeClass, children, backSide }: CardWrapperPr
   if (staticFace === 'front') {
     return (
       <div 
-        className={`pim-skin card-face-front select-none theme-${themeClass} rarity-${rarity}`}
+        className={`card-face-front select-none theme-${themeClass} rarity-${rarity}`}
         style={{
           position: 'absolute',
           inset: 0,
@@ -434,7 +434,7 @@ function Card3DWrapper({ rarity, themeClass, children, backSide }: CardWrapperPr
   if (staticFace === 'back') {
     return (
       <div 
-        className={`pim-skin card-face-back select-none theme-${themeClass} rarity-${rarity}`}
+        className={`card-face-back select-none theme-${themeClass} rarity-${rarity}`}
         style={{
           position: 'absolute',
           inset: 0,
@@ -454,12 +454,12 @@ function Card3DWrapper({ rarity, themeClass, children, backSide }: CardWrapperPr
     <div className="card-wrapper-3d relative" onClick={() => setIsFlipped(!isFlipped)}>
       {isMythic && <MythicGodRays />}
       <div className={`card-inner-3d ${isFlipped ? 'flipped' : ''}`}>
-        <div className={`pim-skin card-face-front theme-${themeClass} rarity-${rarity} relative`}>
+        <div className={`card-face-front theme-${themeClass} rarity-${rarity} relative`}>
           {children}
           {isMythic && <MythicEmberParticles count={12} />}
           {isMythic && <OneOfOneOutline color="#ffd700" speedSec={14} />}
         </div>
-        <div className={`pim-skin card-face-back theme-${themeClass} rarity-${rarity}`}>
+        <div className={`card-face-back theme-${themeClass} rarity-${rarity}`}>
           {backSide}
         </div>
       </div>

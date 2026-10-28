@@ -838,7 +838,6 @@ export default memo(function Card({
     if (!['classic', 'holo', 'carbon', 'gold_luxe', 'matrix', 'th3scr1b3'].includes(activeCardBack)) {
       return (
         <motion.div
-          className="pim-skin"
           style={{
             position: 'absolute', inset: 0, borderRadius: '12px', overflow: 'hidden',
             backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
@@ -1450,7 +1449,7 @@ export default memo(function Card({
   );
 
   const frontFace = showBackOnly
-    ? <div className="pim-skin" style={{ position: 'absolute', inset: 0, borderRadius: '12px', overflow: 'hidden' }}>{renderCardBack(card, activeCardBack)}</div>
+    ? <div style={{ position: 'absolute', inset: 0, borderRadius: '12px', overflow: 'hidden' }}>{renderCardBack(card, activeCardBack)}</div>
     : activeCardSkin !== 'original' && !ultraReward
     ? (() => {
         const SkinComponent = getSkinComponent(activeCardSkin);
