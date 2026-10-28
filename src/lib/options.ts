@@ -34,6 +34,8 @@ export type GameOpts = {
   judgmentText: boolean;
   audioOffset: number;
   laneKeys: [string, string, string];
+  /** Second binding per lane ("" = unbound), e.g. arrow keys alongside A/S/D. */
+  laneAltKeys: [string, string, string];
   laneColors: [string, string, string];
   useLocalFiles: boolean;
   noteGenerationSource: 'auto' | 'lyrics' | 'bpm';
@@ -111,6 +113,7 @@ export const DEFAULT_OPTS: GameOpts = {
   judgmentText: true,
   audioOffset: 0,
   laneKeys: ["a", "s", "d"],
+  laneAltKeys: ["", "", ""],
   laneColors: ["#FF1493", "#00E5FF", "#39FF14"],
   useLocalFiles: false,
   noteGenerationSource: "auto",
@@ -195,6 +198,11 @@ export function loadOpts(): GameOpts {
       dbSettings?.laneKeys?.[1] ?? (localStorage.getItem("opt_laneKey_1") ?? DEFAULT_OPTS.laneKeys[1]),
       dbSettings?.laneKeys?.[2] ?? (localStorage.getItem("opt_laneKey_2") ?? DEFAULT_OPTS.laneKeys[2]),
     ],
+    laneAltKeys: [
+      dbSettings?.laneAltKeys?.[0] ?? (localStorage.getItem("opt_laneAltKey_0") ?? DEFAULT_OPTS.laneAltKeys[0]),
+      dbSettings?.laneAltKeys?.[1] ?? (localStorage.getItem("opt_laneAltKey_1") ?? DEFAULT_OPTS.laneAltKeys[1]),
+      dbSettings?.laneAltKeys?.[2] ?? (localStorage.getItem("opt_laneAltKey_2") ?? DEFAULT_OPTS.laneAltKeys[2]),
+    ],
     laneColors: [
       dbSettings?.laneColors?.[0] ?? (localStorage.getItem("opt_laneColor_0") ?? DEFAULT_OPTS.laneColors[0]),
       dbSettings?.laneColors?.[1] ?? (localStorage.getItem("opt_laneColor_1") ?? DEFAULT_OPTS.laneColors[1]),
@@ -251,7 +259,23 @@ export function resetOpts() {
     .forEach(k => localStorage.removeItem(k));
 }
 
+/** Arrow-key preset for the alternate lane bindings: ← left, ↓ middle, → right. */
+export const ARROW_LANE_KEYS: [string, string, string] = ["ArrowLeft", "ArrowDown", "ArrowRight"];
+
+/** Stored form of a KeyboardEvent.key: letters lowercased, named keys (ArrowLeft…) kept as-is. */
+export function normalizeLaneKey(key: string): string {
+  return key.length === 1 ? key.toLowerCase() : key;
+}
+
+/** Lane bound to `key` through either the primary or the alternate binding, or -1. */
+export function laneForKey(key: string, laneKeys: readonly string[], laneAltKeys: readonly string[]): number {
+  const k = normalizeLaneKey(key);
+  const lane = laneKeys.indexOf(k);
+  return lane >= 0 ? lane : laneAltKeys.indexOf(k);
+}
+
 export function keyLabel(rawKey: string): string {
+  if (!rawKey) return "—";
   const arrows: Record<string, string> = {
     ArrowLeft: "←", ArrowRight: "→", ArrowUp: "↑", ArrowDown: "↓",
     " ": "SPC",

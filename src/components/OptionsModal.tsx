@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo, type ReactNode, type CSSProperties } from "react";
-import { loadOpts, resetOpts, keyLabel, getActiveTheme, getEffectiveDpr, type GameOpts, type RenderResolution, type GfxLevel, type FpsTarget, type ParticleDensity, GAME_BACKGROUNDS, GAME_TRACKS } from "../lib/options";
+import { loadOpts, resetOpts, keyLabel, normalizeLaneKey, ARROW_LANE_KEYS, getActiveTheme, getEffectiveDpr, type GameOpts, type RenderResolution, type GfxLevel, type FpsTarget, type ParticleDensity, GAME_BACKGROUNDS, GAME_TRACKS } from "../lib/options";
 import { useLocation } from "wouter";
 import { clearCatalogCache } from "../game/api";
 import { audioManager } from "../game/audio";
@@ -1012,6 +1012,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
   const [latencyMode, setLatencyMode] = useState<'auto' | 'manual'>('auto');
   const [activeTab, setActiveTab] = useState<OptionsTab>('gameplay');
   const [remappingLane, setRemappingLane] = useState<number | null>(null);
+  const [remapSlot, setRemapSlot] = useState<'primary' | 'alt'>('primary');
   const [resetState, setResetState] = useState<"idle" | "confirm">("idle");
   const [gsStatus, setGsStatus] = useState<GameSenseStatus>("scanning");
   const resetTimer = useRef<NodeJS.Timeout | null>(null);
@@ -1146,7 +1147,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [remappingLane]);
+  }, [remappingLane, remapSlot]);
 
   // Save specific settings helper
   const toggleSetting = (k: ToggleKey) => {
@@ -1289,16 +1290,61 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
     audioManager.playSfx('tap_nav', 0.1);
   };
 
+  const saveLaneBindings = (laneKeys: [string, string, string], laneAltKeys: [string, string, string]) => {
+    laneKeys.forEach((k, i) => localStorage.setItem(`opt_laneKey_${i}`, k));
+    laneAltKeys.forEach((k, i) => localStorage.setItem(`opt_laneAltKey_${i}`, k));
+    setOpts(o => ({ ...o, laneKeys, laneAltKeys }));
+    updateSettings({ laneKeys, laneAltKeys });
+  };
+
+  // Binds `key` to the lane/slot being remapped. A key can only drive one lane:
+  // a clash with another primary key swaps the two, a clash with an alternate clears it.
   const handleRemapKey = (key: string) => {
     if (remappingLane === null) return;
-    const k = key === " " ? " " : key.length === 1 ? key.toLowerCase() : key;
+    const k = normalizeLaneKey(key);
     const nextKeys = [...opts.laneKeys] as [string, string, string];
-    nextKeys[remappingLane] = k;
-    localStorage.setItem(`opt_laneKey_${remappingLane}`, k);
-    setOpts(o => ({ ...o, laneKeys: nextKeys }));
-    updateSettings({ laneKeys: nextKeys });
+    const nextAlt = [...opts.laneAltKeys] as [string, string, string];
+    if (remapSlot === 'primary') {
+      const clash = nextKeys.indexOf(k);
+      if (clash >= 0 && clash !== remappingLane) nextKeys[clash] = nextKeys[remappingLane];
+      nextKeys[remappingLane] = k;
+    } else {
+      if (nextKeys.includes(k)) {
+        audioManager.playSfx('locked_out', 0.15);
+        return;
+      }
+      nextAlt[remappingLane] = k;
+    }
+    nextAlt.forEach((ak, i) => {
+      if (ak === k && !(remapSlot === 'alt' && i === remappingLane)) nextAlt[i] = "";
+    });
+    saveLaneBindings(nextKeys, nextAlt);
     setRemappingLane(null);
-    logAnalyticsEvent('setting_change', { key: `laneKey_${remappingLane}`, value: k });
+    logAnalyticsEvent('setting_change', { key: `${remapSlot === 'alt' ? 'laneAltKey' : 'laneKey'}_${remappingLane}`, value: k });
+    audioManager.playSfx('menu_confirm', 0.15);
+  };
+
+  const clearAltKey = () => {
+    if (remappingLane === null) return;
+    const nextAlt = [...opts.laneAltKeys] as [string, string, string];
+    nextAlt[remappingLane] = "";
+    saveLaneBindings(opts.laneKeys, nextAlt);
+    setRemappingLane(null);
+    audioManager.playSfx('tap_nav', 0.12);
+  };
+
+  const setAltPreset = (preset: [string, string, string]) => {
+    // Arrows already used as primary keys can't double up: give those lanes the first
+    // free key, trying A/S/D before the rest of the keyboard, so no two lanes share one.
+    const nextKeys = [...opts.laneKeys] as [string, string, string];
+    const fallbacks = ["a", "s", "d", ...KEY_ROWS.flat()];
+    nextKeys.forEach((k, i) => {
+      if (!preset.includes(k)) return;
+      nextKeys[i] = fallbacks.find(f => !preset.includes(f) && !nextKeys.includes(f)) ?? k;
+    });
+    saveLaneBindings(nextKeys, [...preset] as [string, string, string]);
+    setRemappingLane(null);
+    logAnalyticsEvent('setting_change', { key: 'laneAltKeys', value: preset.join(',') || 'none' });
     audioManager.playSfx('menu_confirm', 0.15);
   };
 
@@ -1328,6 +1374,7 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
       updateSettings({
         audioOffset: 0,
         laneKeys: ["a", "s", "d"],
+        laneAltKeys: ["", "", ""],
         laneColors: ["#FF1493", "#00E5FF", "#39FF14"],
         noteTheme: "artwork",
         cardSkin: "original",
@@ -1711,33 +1758,51 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
             {activeTab === 'controls' && (
               <div className="opt-stack">
                 <Panel title="Lane keys" hint={remappingLane !== null ? 'Press a key · ESC to cancel' : 'Click a lane to rebind'}>
-                  <div className="opt-keys">
-                    {([0, 1, 2] as const).map(lane => {
-                      const listening = remappingLane === lane;
-                      return (
-                        <button
-                          key={lane}
-                          type="button"
-                          aria-pressed={listening}
-                          className={`opt-key${listening ? ' is-listening' : ''}`}
-                          style={{ '--lane': opts.laneColors[lane] } as CSSProperties}
-                          onClick={() => {
-                            audioManager.playSfx('tap_nav', 0.12);
-                            setRemappingLane(listening ? null : lane);
-                          }}
-                        >
-                          <span className="opt-key-lane">{["Left", "Middle", "Right"][lane]} lane</span>
-                          <span className="opt-key-cap">{listening ? "…" : keyLabel(opts.laneKeys[lane])}</span>
-                          <span className="opt-key-hint">{listening ? "Press a key" : "Rebind"}</span>
-                        </button>
-                      );
-                    })}
+                  {(['primary', 'alt'] as const).map(slot => (
+                    <div key={slot} className="opt-keyset">
+                      <span className="opt-keyset-title">{slot === 'primary' ? 'Main keys' : 'Alternate keys'}</span>
+                      <div className="opt-keys">
+                        {([0, 1, 2] as const).map(lane => {
+                          const listening = remappingLane === lane && remapSlot === slot;
+                          const bound = slot === 'primary' ? opts.laneKeys[lane] : opts.laneAltKeys[lane];
+                          return (
+                            <button
+                              key={lane}
+                              type="button"
+                              aria-pressed={listening}
+                              className={`opt-key${listening ? ' is-listening' : ''}`}
+                              style={{ '--lane': opts.laneColors[lane] } as CSSProperties}
+                              onClick={() => {
+                                audioManager.playSfx('tap_nav', 0.12);
+                                setRemapSlot(slot);
+                                setRemappingLane(listening ? null : lane);
+                              }}
+                            >
+                              <span className="opt-key-lane">{["Left", "Middle", "Right"][lane]} lane</span>
+                              <span className="opt-key-cap">{listening ? "…" : keyLabel(bound)}</span>
+                              <span className="opt-key-hint">{listening ? "Press a key" : bound ? "Rebind" : "Bind"}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+
+                  <div className="opt-keyset-actions">
+                    <button type="button" className="opt-btn opt-btn--ghost opt-btn--sm" onClick={() => setAltPreset(ARROW_LANE_KEYS)}>
+                      Use arrow keys ← ↓ →
+                    </button>
+                    {opts.laneAltKeys.some(Boolean) && (
+                      <button type="button" className="opt-btn opt-btn--ghost opt-btn--sm" onClick={() => setAltPreset(["", "", ""])}>
+                        Clear alternates
+                      </button>
+                    )}
                   </div>
 
                   {remappingLane !== null && (
                     <div className="opt-keyboard">
                       <span className="opt-keyboard-title">
-                        Press any key, or pick one below, for the {["left", "middle", "right"][remappingLane]} lane
+                        Press any key, or pick one below, for the {["left", "middle", "right"][remappingLane]} lane{remapSlot === 'alt' ? ' (alternate)' : ''}
                       </span>
                       {KEY_ROWS.map((row, rowIdx) => (
                         <div key={rowIdx} className="opt-keyboard-row">
@@ -1748,6 +1813,11 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                           ))}
                         </div>
                       ))}
+                      {remapSlot === 'alt' && opts.laneAltKeys[remappingLane] && (
+                        <button type="button" onClick={clearAltKey} className="opt-btn opt-btn--ghost opt-btn--sm">
+                          Unbind alternate
+                        </button>
+                      )}
                     </div>
                   )}
                 </Panel>
