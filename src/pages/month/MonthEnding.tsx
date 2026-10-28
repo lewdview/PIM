@@ -265,7 +265,14 @@ function buildScenes(ending: EndingId, { songs, progress, story }: Data): Scene[
       ...(story ? [{
         key: 'prologue',
         ms: 6000,
-        body: <><div className="ca-hud me-hud"><span className="ca-chip">Prologue</span></div><Line text={story.prologue.line} /><Cite day={story.prologue.day} title={titleOf(story.prologue.day)} /></>,
+        body: (
+          <>
+            <div className="ca-hud me-hud"><span className="ca-chip">Prologue</span></div>
+            {story.prologue.lyric
+              ? <><Line text={story.prologue.line} /><Cite day={story.prologue.day} title={titleOf(story.prologue.day)} /></>
+              : <p className="me-line">{story.prologue.line}</p>}
+          </>
+        ),
       }] : []),
       ...acts.map((a): Scene => ({
         key: `act-${a.act}`,
@@ -274,7 +281,7 @@ function buildScenes(ending: EndingId, { songs, progress, story }: Data): Scene[
           <>
             <div className="ca-hud me-hud"><span className="ca-chip" data-tone="hot">Act {a.act}</span></div>
             <SlamTitle text={a.word} className="ca-title--ch me-word" />
-            <Line text={a.open.line} />
+            {a.synopsis ? <p className="me-line">{a.synopsis}</p> : <Line text={a.open.line} />}
           </>
         ),
       })),

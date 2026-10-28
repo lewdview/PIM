@@ -132,16 +132,27 @@ function buildScenes(id: string, story: MonthStory, songs: GameSong[], toRun: bo
   const scenes: Scene[] = [
     {
       key: 'title',
-      ms: beats.length ? 4200 : 0,
+      ms: beats.length || act.synopsis ? 4200 : 0,
       body: (
         <>
           {chapterChip(<><span className="ca-chip">Act {act.act}</span>{MOOD_LABEL[act.mood] && <span className="ca-chip">{MOOD_LABEL[act.mood]}</span>}</>)}
           <SlamTitle text={act.word} className="ca-title--ch me-word" />
           {act.themes.length > 0 && <p className="me-cite">{act.themes.join(' · ')}</p>}
-          {!beats.length && where}
+          {!beats.length && !act.synopsis && where}
         </>
       ),
     },
+    ...(act.synopsis ? [{
+      key: 'synopsis',
+      ms: beats.length ? 7000 : 0,
+      body: (
+        <>
+          <div className="ca-hud me-hud"><span className="ca-chip">Act {act.act}</span></div>
+          <p className="me-line">{act.synopsis}</p>
+          {!beats.length && where}
+        </>
+      ),
+    }] : []),
     ...beats.map(({ key, label, beat }, i): Scene => ({
       key,
       ms: i === beats.length - 1 ? 0 : 6000,

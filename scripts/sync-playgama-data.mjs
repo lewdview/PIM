@@ -6,6 +6,10 @@
  * This branch doesn't merge main. Charts, lyrics, chapter stories and the day
  * maps are data the monthly games read as-is, so they come over with this,
  * and the changes are left staged for review and commit.
+ *
+ * chapter_stories.json isn't synced: this branch builds it from the official
+ * lyrics (scripts/build_chapter_stories.mjs), and main's copy quotes the old
+ * transcribed lines.
  */
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
@@ -18,7 +22,7 @@ const DATA = [
   'public/data/songs_variants/v6_master',
   'public/data/songs_variants/v1_gimmicks',
   'public/lyrics',
-  'src/data/chapter_stories.json',
+  'src/data/chapter_script.json',
   'src/game/day_file_map.json',
   'src/game/bombshell_covers_map.json',
 ];

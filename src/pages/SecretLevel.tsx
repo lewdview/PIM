@@ -1,7 +1,8 @@
 /**
  * SecretLevel — the hidden levels opened by warp notes.
  *
- *   /secret/shooter?from=<songId>&via=warp        SIGNAL SIEGE (instant warp)
+ *   /secret/shooter?from=<songId>&via=warp        SIGNAL SIEGE (instant warp;
+ *                                                  the song resumes afterwards)
  *   /secret/runner?from=<songId>&via=warp-clear   ROOFTOP RUN  (warp on clear)
  *
  * Owns the canvas loop, input (keyboard, touch and gamepad) and music; the
@@ -14,6 +15,7 @@ import { BeatClock, SECRET_TRACKS } from '../game/secret/chiptune';
 import { ShooterLevel } from '../game/secret/shooter';
 import { RunnerLevel } from '../game/secret/runner';
 import { markSecretLevelCleared, type SecretLevelId } from '../game/secret/warp';
+import { warpResumePath } from '../game/secret/warpResume';
 import type { SecretGame, SecretInput } from '../game/secret/types';
 import { sendGameplayMessage } from '@/platform';
 import { PLAYGAMA_MONTH } from '@/platform/playgama/month';
@@ -57,6 +59,8 @@ export default function SecretLevel() {
   const query = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
   const fromSong = query.get('from');
   const via = query.get('via');
+  // An instant warp left the song mid-transmission: send the player back into it
+  const [resumePath] = useState(() => (via === 'warp' && fromSong ? warpResumePath(fromSong) : null));
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<SecretGame>(makeLevel(levelId));
@@ -196,8 +200,9 @@ export default function SecretLevel() {
 
   const leave = () => {
     clockRef.current?.stop();
-    if (via === 'warp-clear' && fromSong) setLocation(`/results/${fromSong}`);
-    // The monthly Playgama build has no song list: an instant warp returns to the chapter.
+    if (resumePath) setLocation(resumePath);
+    else if (via && fromSong && hasResult(fromSong)) setLocation(`/results/${fromSong}`);
+    // The monthly Playgama build has no song list: otherwise return to the chapter.
     else setLocation(PLAYGAMA_MONTH > 0 ? `/chapter/${PLAYGAMA_MONTH}` : '/songs');
   };
   leaveRef.current = leave;
@@ -226,7 +231,9 @@ export default function SecretLevel() {
           >
             START
           </button>
-          <button onClick={leave} className="text-xs text-zinc-500 font-mono underline">skip</button>
+          <button onClick={leave} className="text-xs text-zinc-500 font-mono underline">
+            {resumePath ? 'skip · back to the song' : 'skip'}
+          </button>
           {padConnected && <div className="text-xs text-zinc-400 font-mono">Ⓐ start · Ⓑ skip</div>}
         </div>
       )}
@@ -249,7 +256,7 @@ export default function SecretLevel() {
               onClick={leave}
               className="px-6 py-3 rounded-full bg-fuchsia-500 hover:bg-fuchsia-400 font-black font-mono tracking-widest"
             >
-              CONTINUE
+              {resumePath ? 'RESUME SONG' : 'CONTINUE'}
             </button>
           </div>
           {padConnected && <div className="text-xs text-zinc-400 font-mono">Ⓨ retry · Ⓐ continue</div>}
@@ -257,6 +264,14 @@ export default function SecretLevel() {
       )}
     </div>
   );
+}
+
+function hasResult(songId: string): boolean {
+  try {
+    return sessionStorage.getItem(`result_${songId}`) !== null;
+  } catch {
+    return false;
+  }
 }
 
 function drawHud(ctx: CanvasRenderingContext2D, w: number, _h: number, game: SecretGame, beat: number) {

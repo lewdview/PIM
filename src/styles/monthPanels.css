@@ -272,6 +272,7 @@
 .mst-act-head { display: grid; gap: 6px; justify-items: start; }
 .mst-act-head h3, .mst-locked h3 { margin: 0; font-size: clamp(30px, 6vh, 52px); line-height: 1; color: var(--ch, var(--shell-accent)); text-transform: lowercase; }
 .mst-act-head p { margin: 0; font-size: 13px; text-transform: capitalize; }
+.mst-synopsis { margin: 0 0 8px; max-width: 62ch; color: var(--shell-text-2); font: 400 15px/1.5 var(--shell-body); text-wrap: pretty; }
 .mst-beats { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
 .mst-beats li { display: grid; gap: 3px; padding: 8px 10px; background: var(--shell-raise); }
 .mst-beats small { font: 700 10px/1 var(--shell-mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ch, var(--shell-accent)); }
@@ -301,6 +302,7 @@
   .mst-act-head h3, .mst-locked h3 { font-size: 30px; }
   .mst-quote { font-size: 14px; }
   .mst-beats { gap: 6px; }
+  .mst-synopsis { font-size: 13px; line-height: 1.4; margin-bottom: 6px; }
   .mst-beats li { padding: 6px 8px; }
   .mst-beats span { font-size: 13px; line-height: 1.35; }
   .mst-tabs button { padding: 7px 4px; font-size: 12px; }

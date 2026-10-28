@@ -107,6 +107,7 @@ export default function MonthStoryPanel(p: {
                     </button>
                   )}
                 </div>
+                {g.act.synopsis && <p className="mst-synopsis">{g.act.synopsis}</p>}
                 <ol className="mst-beats">
                   {beatsOf(g.act).map(({ key, label, beat }) => (
                     <li key={key}>
