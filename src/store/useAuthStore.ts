@@ -80,6 +80,10 @@ const invokeAuthSmartWallet = (body: { address: string; message: string; signatu
     headers: { Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
   });
 
+// Placeholder emails auth-smart-wallet assigns to wallet users. The legacy
+// domain stays so accounts created before the switch are still recognised.
+const SMART_WALLET_EMAIL_DOMAINS = ['@smartwallet.th3scr1b3.art', '@smartwallet.th3vault.art'];
+
 type WalletRequest = {
   request: (args: { method: string; params?: unknown }) => Promise<unknown>;
 };
@@ -1356,7 +1360,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const isExternalWallet = !isEphemeralSession && (
       user.user_metadata?.is_smart_wallet || 
       !user.email || 
-      user.email.endsWith('@smartwallet.th3vault.art')
+      SMART_WALLET_EMAIL_DOMAINS.some((domain) => user.email!.endsWith(domain))
     );
 
     if (isExternalWallet) {
