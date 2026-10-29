@@ -40,6 +40,33 @@ const describeWalletError = (err: any): string => {
   return raw;
 };
 
+/**
+ * supabase.functions.invoke() collapses every non-2xx reply into the generic
+ * "Edge Function returned a non-2xx status code". Read the response body so
+ * the server's actual reason (bad signature, expired nonce, ...) is shown.
+ */
+const describeEdgeFunctionError = async (error: any): Promise<string | null> => {
+  if (!error) return null;
+  const res = error.context as Response | undefined;
+  if (res && typeof res.text === 'function') {
+    try {
+      const text = await res.clone().text();
+      let detail = text.trim();
+      try {
+        const body = JSON.parse(text);
+        detail = body?.error || body?.message || detail;
+      } catch {
+        // Not JSON — use the raw text.
+      }
+      if (detail) return `${detail} (HTTP ${res.status})`;
+      return `${error.message} (HTTP ${res.status})`;
+    } catch {
+      // Body already consumed or unreadable — fall through.
+    }
+  }
+  return error.message ?? null;
+};
+
 type WalletRequest = {
   request: (args: { method: string; params?: unknown }) => Promise<unknown>;
 };
@@ -590,7 +617,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
 
       if (error || !data?.success) {
-        throw new Error(data?.error || error?.message || 'Verification failed');
+        throw new Error(data?.error || (await describeEdgeFunctionError(error)) || 'Verification failed');
       }
 
       // 5. Establish Session
@@ -659,7 +686,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
       
       if (error || !data?.success) {
-        throw new Error(data?.error || error?.message || 'Verification failed');
+        throw new Error(data?.error || (await describeEdgeFunctionError(error)) || 'Verification failed');
       }
       
       const { error: sessionError } = await supabase.auth.setSession({
@@ -737,7 +764,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
 
       if (error || !data?.success) {
-        throw new Error(data?.error || error?.message || 'Verification failed');
+        throw new Error(data?.error || (await describeEdgeFunctionError(error)) || 'Verification failed');
       }
 
       const { error: sessionError } = await supabase.auth.setSession({
