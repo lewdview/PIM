@@ -323,7 +323,7 @@ const TORSO = 'M116 196 C126 193 133 191 138 190 Q150 199 162 190 C167 191 174 1
 // Arms sit in a slight A-pose so they frame the curves instead of hiding them.
 // The arm runs into the back of the hand in one contour, so there is no seam at the wrist. The
 // outer forearm swells just below the elbow (brachioradialis) and the inner edge narrows to the wrist.
-const ARM = 'M118 198 C98 200 88 212 85 230 C82 248 79 266 77.5 280 C76 290 74 297 72 306 C70 318 67.6 330 66.2 338 C63 344 61.8 350 62.4 356 Q71 358.6 80.6 355.6 C81 350 80.6 345 79.8 341 C81.5 330 84 316 86 304 C87.6 296 89 292 90 288 C93 270 98 252 104 238 Z';
+const ARM = 'M118 198 C98 200 88 212 85 230 C82.6 246 80.4 262 78.6 278 C77.4 286 75 292 72.6 302 C70.6 314 69.2 326 68 336 C64.6 342 62 349 62.4 356 Q71 358.6 80.6 355.6 C80.6 350 79.6 345 78.2 340.6 C79.4 330 82.6 316 85.6 304 C87.4 296 89.4 291 90.6 287 C93.4 270 98 252 104 238 Z';
 // Relaxed hanging hand (her right; mirrored for the left), seen from the front with the palm to
 // the thigh: the back of the hand, four fingers in length order (middle > ring >= index > little,
 // little finger on the outside), knuckles on an arc, and the thumb in front on the inner side.
@@ -336,7 +336,7 @@ const FINGERS = [
 const THUMB = 'M79.6 345 C82.4 348 83.2 353 81.6 357.6 C80.6 360 78.2 359.6 78 357.4 C78.4 353.6 78.2 350 77 347 Z';
 // Leg and foot in one contour, front view. Outer calf swells high, inner calf low; the knee is the
 // narrow point; the ankle tapers to the malleoli; the foot flares to five toes, big toe inside.
-const LEG = 'M89.4 344 L150 344 C150.5 372 148.5 404 146 432 C147.6 440 148 448 146.4 456 C145.4 462 145.6 468 146.4 478 C147 492 145 512 142.6 530 C141.6 540 141 548 141.6 554 C143.6 561 147.2 567 148 573 C148.6 577.4 147 581.2 143.6 581.4 C142.2 581.4 141.4 580.8 141 580 C140 581.6 137.6 581.8 136.8 580.2 C135.8 581.4 133.4 581.4 132.6 579.8 C131.6 580.8 129.4 580.6 128.8 579.2 C127.4 579.8 125 579.2 124.8 577.4 C124.4 574.4 125.4 570.4 126 567 C126.8 562 127.8 558 127.4 552 C126.4 534 121.5 516 117 498 C114 486 113.4 474 115 464 C116 458 116.6 454 116 448 C112 436 103 422 97.6 404 C92.4 386 88.8 366 89.4 344 Z';
+const LEG = 'M89.4 344 L150 344 C150.5 372 148.5 404 146 432 C147.6 440 148 448 146.4 456 C145.4 462 145.6 468 146.4 478 C147 492 145 512 142.6 530 C141 540 140 548 140.8 554 C143.6 561 147.2 567 148 573 C148.6 577.4 147 581.2 143.6 581.4 C142.2 581.4 141.4 580.8 141 580 C140 581.6 137.6 581.8 136.8 580.2 C135.8 581.4 133.4 581.4 132.6 579.8 C131.6 580.8 129.4 580.6 128.8 579.2 C127.4 579.8 125 579.2 124.8 577.4 C124.4 574.4 125.4 570.4 126 567 C126.8 562 127.8 558 127.4 552 C127 536 120.4 516 114.6 500 C110.8 488 110.6 474 113 464 C114.6 458 117.4 453 117.4 448 C112 436 103 422 97.6 404 C92.4 386 88.8 366 89.4 344 Z';
 // One rounded bust volume (left; mirrored for the right). It is drawn over the chest and
 // collarbones so the upper curve reads as sitting in front of them.
 // A gravity teardrop, not a circle: the upper pole slopes off the chest wall below the collarbone,
@@ -861,7 +861,9 @@ function UpperBody() {
           <Hand />
           {/* Deltoid edge, elbow crease at the waistline, tendons on the back of the hand. */}
           <path d="M86.5 250 Q90 240 97 233" fill="none" strokeOpacity="0.3" strokeWidth="0.8" />
-          <path d="M80 283 Q83.5 285.5 87.5 284" fill="none" strokeOpacity="0.45" strokeWidth="0.8" />
+          <path d="M79.4 281.6 Q83.4 284.4 87.8 283" fill="none" strokeOpacity="0.45" strokeWidth="0.8" />
+          {/* Forearm muscle: the brachioradialis swell turning toward the slimmer wrist. */}
+          <path d="M77.6 290 C75.4 302 73.6 314 72.6 324" fill="none" strokeOpacity="0.18" strokeWidth="0.7" />
           <path d="M68 346 L67 354 M72 347 L71.6 355.4 M76 346.4 L76.2 355" fill="none" strokeOpacity="0.18" strokeWidth="0.6" strokeLinecap="round" />
           <Skin d={THUMB} depth={0.35} mirrored={m} />
         </g>
@@ -869,8 +871,12 @@ function UpperBody() {
       <Skin d={NECK} depth={0.5} />
       {/* Chin shadow, neck tendons and the notch between the collarbones. */}
       <path d="M141 168 Q150 182 159 168 L159 178 Q150 188 141 178 Z" fill={SKIN_SHADE} stroke="none" opacity="0.85" />
-      <path d="M143 180 Q145 188 148 195 M157 180 Q155 188 152 195" fill="none" strokeOpacity="0.22" />
       <Skin d={TORSO} />
+      {/* Soft neck base: hide the torso's top contour so the neck flows into the chest, then the
+          tendons converge into the notch between the collarbones. */}
+      <path d="M137.6 187.6 Q150 197.4 162.4 187.6 L164 199.6 Q150 205 136 199.6 Z" fill={SKIN} stroke="none" />
+      <path d="M143.4 180 Q145.6 189 148.6 197 M156.6 180 Q154.4 189 151.4 197" fill="none" strokeOpacity="0.16" />
+      <path d="M137 194 Q141 197.6 146 198.4 M163 194 Q159 197.6 154 198.4" fill="none" stroke={SKIN_SHADE} strokeWidth="2.4" strokeLinecap="round" />
       {/* Trapezius: the slope from the neck down to each shoulder, over the torso's top edge. */}
       {[false, true].map((m) => (
         <g key={String(m)} transform={m ? MIRROR : undefined}>
@@ -963,7 +969,7 @@ function HosieryDetails({ welt }: { welt?: number }) {
   );
 }
 
-const THIGH_HIGH = 'M98.6 404 L148.4 404 C147.6 416 146.8 425 146 432 C147.6 440 148 448 146.4 456 C145.4 462 145.6 468 146.4 478 C147 492 145 512 142.6 530 C141.6 540 141 548 141.6 554 C143.6 561 147.2 567 148 573 C148.6 577.4 147 581.2 143.6 581.4 L128 580.2 C125 579.2 124.4 574.4 126 567 C126.8 562 127.8 558 127.4 552 C126.4 534 121.5 516 117 498 C114 486 113.4 474 115 464 C116 458 116.6 454 116 448 C113 436 106 424 100 408 Z';
+const THIGH_HIGH = 'M98.6 404 L148.4 404 C147.6 416 146.8 425 146 432 C147.6 440 148 448 146.4 456 C145.4 462 145.6 468 146.4 478 C147 492 145 512 142.6 530 C141 540 140 548 140.8 554 C143.6 561 147.2 567 148 573 C148.6 577.4 147 581.2 143.6 581.4 L128 580.2 C125 579.2 124.4 574.4 126 567 C126.8 562 127.8 558 127.4 552 C127 536 120.4 516 114.6 500 C110.8 488 110.6 474 113 464 C114.6 458 117.4 453 117.4 448 C113 436 106 424 100 408 Z';
 
 function Legwear({ choice }: { choice: GarmentChoice }) {
   const id = 'legwear';
@@ -995,7 +1001,7 @@ function Shoes({ choice }: { choice: GarmentChoice }) {
           <path d="M124.6 585.4 L148.8 585.4 M175.4 585.4 L151.2 585.4" stroke="#000" strokeOpacity="0.35" strokeWidth="1" />
         </g>} />;
     case 'boots':
-      return <Garment id={id} choice={choice} mirror={['M112.6 486 L147.4 486 C147.4 510 144 538 143 558 C147 564 150.6 572 150.4 580 C150.2 584 149.4 586.6 148 588 L124 588 C122.4 584 122.4 576 123.6 570 C124.4 564 123.4 560 121 554 C120 530 115 506 112.6 486 Z', 'M122.8 582 L150.6 582 C150.6 585 149.6 587.4 148 588.4 L124 588.4 C123 586.8 122.6 584.6 122.8 582 Z']}
+      return <Garment id={id} choice={choice} mirror={['M110.4 486 L147.4 486 C147.4 510 144 538 143 558 C147 564 150.6 572 150.4 580 C150.2 584 149.4 586.6 148 588 L124 588 C122.4 584 122.4 576 123.6 570 C124.4 564 123.4 560 121 554 C120 530 113.6 506 110.4 486 Z', 'M122.8 582 L150.6 582 C150.6 585 149.6 587.4 148 588.4 L124 588.4 C123 586.8 122.6 584.6 122.8 582 Z']}
         details={<g stroke="#000" strokeOpacity="0.45">{[500, 514, 528, 542].map((y) => <g key={y}><path d={`M126 ${y} L142 ${y + 6}`} /><path d={`M174 ${y} L158 ${y + 6}`} /></g>)}</g>} />;
     case 'sneakers':
       return <Garment id={id} choice={choice} mirror={['M125.4 562 C127 556 132 553 136 553.5 C141 553.6 145.2 556 147.4 562 C149.6 568 150 575 149 581 L124.4 581 C123.6 574 123.8 567 125.4 562 Z']}
@@ -1034,7 +1040,7 @@ const PLEAT_HEM: [number, number][] = [...Array(13)].map((_, i) => {
 });
 const PLEATED = `M120 296 L180 296 C200 312 212 336 218 392 ${PLEAT_HEM.map(([x, y]) => `L${x.toFixed(1)} ${y.toFixed(1)}`).join(' ')} C88 336 100 312 120 296 Z`;
 // Separate legs that split below the crotch and break over the foot.
-const PANT_LEG = 'M89 344 L150 344 L150 372 C149 410 148 450 147.8 480 C147.6 510 148 540 149.4 566 Q136 570.4 121.2 566 C120 540 116 510 112 480 C108.6 444 96 404 90 372 Z';
+const PANT_LEG = 'M89 344 L150 344 L150 372 C149 410 148 450 147.8 480 C147.6 510 148 540 149.4 566 Q136 570.4 121.2 566 C120 540 114 510 109.4 480 C106.8 444 96 404 90 372 Z';
 
 function Bottom({ choice }: { choice: GarmentChoice }) {
   const id = 'bottom';
