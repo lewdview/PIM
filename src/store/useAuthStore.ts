@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { Session, User } from '@supabase/supabase-js';
-import { supabase } from '../services/supabaseClient';
+import { supabase, SUPABASE_ANON_KEY } from '../services/supabaseClient';
 import { linkAnonymousActivity } from '../services/ecosystemActivity';
 import { useVaultStore } from './useVaultStore';
 import { CoinbaseWalletSDK } from '@coinbase/wallet-sdk';
@@ -66,6 +66,19 @@ const describeEdgeFunctionError = async (error: any): Promise<string | null> => 
   }
   return error.message ?? null;
 };
+
+/**
+ * Call auth-smart-wallet with the anon key, never the guest's JWT. Given a
+ * guest JWT the function tries to upgrade that anonymous user in place, which
+ * fails with "Error updating user" when the wallet already has an account.
+ * Wallet sign-in instead always lands on the wallet's own user, and
+ * maybeMigrateGuestData() carries the guest's progress over afterwards.
+ */
+const invokeAuthSmartWallet = (body: { address: string; message: string; signature: unknown; nonce: unknown }) =>
+  supabase.functions.invoke('auth-smart-wallet', {
+    body,
+    headers: { Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+  });
 
 type WalletRequest = {
   request: (args: { method: string; params?: unknown }) => Promise<unknown>;
@@ -612,9 +625,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
 
       // 5. Verify via Edge Function (pass nonce for server-side validation)
-      const { data, error } = await supabase.functions.invoke('auth-smart-wallet', {
-        body: { address, message, signature, nonce }
-      });
+      const { data, error } = await invokeAuthSmartWallet({ address, message, signature, nonce });
 
       if (error || !data?.success) {
         throw new Error(data?.error || (await describeEdgeFunctionError(error)) || 'Verification failed');
@@ -657,6 +668,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
   signInWithEphemeralWallet: async () => {
     console.log('[Auth] Starting Ephemeral Wallet fallback...');
+    // Key sign-in lands on the wallet's own user — stash the guest session first.
+    await stashGuestSessionForMigration();
     try {
       let pkey = localStorage.getItem('th3vault_ephemeral_wallet_pkey');
       if (!pkey) {
@@ -681,9 +694,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       console.log('[Auth] Signing with Ephemeral Wallet:', address);
       const signature = await wallet.signMessage(message);
       
-      const { data, error } = await supabase.functions.invoke('auth-smart-wallet', {
-        body: { address, message, signature, nonce }
-      });
+      const { data, error } = await invokeAuthSmartWallet({ address, message, signature, nonce });
       
       if (error || !data?.success) {
         throw new Error(data?.error || (await describeEdgeFunctionError(error)) || 'Verification failed');
@@ -743,6 +754,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     const address = wallet.address;
     set({ status: 'loading', error: null });
+    // Key sign-in lands on the wallet's own user — stash the guest session first.
+    await stashGuestSessionForMigration();
 
     try {
       // Request server-generated nonce for replay protection (C2 audit fix)
@@ -759,9 +772,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       console.log('[Auth] Signing with imported private key:', address);
       const signature = await wallet.signMessage(message);
 
-      const { data, error } = await supabase.functions.invoke('auth-smart-wallet', {
-        body: { address, message, signature, nonce }
-      });
+      const { data, error } = await invokeAuthSmartWallet({ address, message, signature, nonce });
 
       if (error || !data?.success) {
         throw new Error(data?.error || (await describeEdgeFunctionError(error)) || 'Verification failed');
