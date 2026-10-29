@@ -157,6 +157,27 @@ function Reveal({ children, delay = 0, className }: { children: React.ReactNode;
   );
 }
 
+
+// ⚡ Bolt: Extracted progress bar into a dedicated component to prevent the large TransmissionSection from re-rendering on every audio tick.
+function LaunchPageTransportProgress({ isThisTrack }: { isThisTrack: boolean }) {
+  const progress = useGlobalPlayer(s => s.progress);
+  return (
+    <div className="lp-tx-progress" aria-hidden="true">
+      <div className="lp-tx-progress-fill" style={{ width: `${isThisTrack ? progress * 100 : 0}%` }} />
+    </div>
+  );
+}
+
+// ⚡ Bolt: Extracted time display into a dedicated component to prevent parent re-renders at 60fps during playback.
+function LaunchPageTransportTime({ isThisTrack, duration, fmt }: { isThisTrack: boolean, duration: number, fmt: (s: number) => string }) {
+  const currentTime = useGlobalPlayer(s => s.currentTime);
+  return (
+    <span className="lp-tx-time">
+      {fmt(isThisTrack ? currentTime : 0)} / {duration ? fmt(duration) : '—'}
+    </span>
+  );
+}
+
 function Marquee({ items, progress, direction, outline }: {
   items: string[];
   progress: MotionValue<number>;
@@ -416,8 +437,6 @@ function TransmissionSection({
   // Live player wiring — the global singleton, so playback survives navigating into the game.
   const currentTrack = useGlobalPlayer((s) => s.currentTrack);
   const isPlaying = useGlobalPlayer((s) => s.isPlaying);
-  const progress = useGlobalPlayer((s) => s.progress);
-  const currentTime = useGlobalPlayer((s) => s.currentTime);
   const play = useGlobalPlayer((s) => s.play);
   const pause = useGlobalPlayer((s) => s.pause);
 
@@ -553,12 +572,8 @@ function TransmissionSection({
                   {live ? <Pause size={18} /> : <Play size={18} />}
                   {live ? 'Pause' : isThisTrack ? 'Resume' : 'Listen now'}
                 </button>
-                <div className="lp-tx-progress" aria-hidden="true">
-                  <div className="lp-tx-progress-fill" style={{ width: `${isThisTrack ? progress * 100 : 0}%` }} />
-                </div>
-                <span className="lp-tx-time">
-                  {fmt(isThisTrack ? currentTime : 0)} / {duration ? fmt(duration) : '—'}
-                </span>
+                <LaunchPageTransportProgress isThisTrack={isThisTrack} />
+                <LaunchPageTransportTime isThisTrack={isThisTrack} duration={duration} fmt={fmt} />
               </div>
 
               <div className="lp-tx-actions">
