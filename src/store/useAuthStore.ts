@@ -668,6 +668,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
   signInWithEphemeralWallet: async () => {
     console.log('[Auth] Starting Ephemeral Wallet fallback...');
+    // Key sign-in lands on the wallet's own user — stash the guest session first.
+    await stashGuestSessionForMigration();
     try {
       let pkey = localStorage.getItem('th3vault_ephemeral_wallet_pkey');
       if (!pkey) {
@@ -752,6 +754,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     const address = wallet.address;
     set({ status: 'loading', error: null });
+    // Key sign-in lands on the wallet's own user — stash the guest session first.
+    await stashGuestSessionForMigration();
 
     try {
       // Request server-generated nonce for replay protection (C2 audit fix)
