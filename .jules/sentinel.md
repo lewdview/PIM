@@ -12,3 +12,7 @@
 **Vulnerability:** A hardcoded plaintext admin passphrase (`th3scr1b3`) was being passed in the payload of a `supabase.functions.invoke` call in `src/utils/adminConfig.ts`.
 **Learning:** Hardcoded credentials should not be present in background sync functions or client bundles.
 **Prevention:** Always pull credentials dynamically from `sessionStorage` where the authenticated session stores it or handle authorization securely without exposing raw secrets in code.
+## 2023-10-29 - Hardcoded Supabase Anon Key Leak
+**Vulnerability:** A hardcoded Supabase Anon Key (JWT) was present in multiple files across the repository, including `src/services/supabaseClient.ts`, `.env.production`, `discord-bot/src/config.ts`, and `artifacts/user.th3scr1b3.art` files.
+**Learning:** Hardcoded fallback values for environment variables in client-side code bundles get compiled into the output and are exposed to users. Dummy API keys should not use real formats.
+**Prevention:** Always use empty strings `""` for fallback environment variables for secrets, rather than hardcoded tokens or real-looking dummy data.
