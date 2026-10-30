@@ -1128,14 +1128,14 @@ export default memo(function Card({
         <RarityBadge rarity={card.rarity} size="sm" />
       </div>
 
-      {/* Art — 46% keeps info breathing room */}
-      <div style={{ position: 'relative', height: '52%', flexShrink: 0, borderBottom: `1px solid ${rc.color}30`, overflow: 'hidden' }}>
+      {/* Art — 52% by default; shrinks on narrow cards so the info below is never clipped */}
+      <div style={{ position: 'relative', height: '52%', flexShrink: 1, minHeight: 0, borderBottom: `1px solid ${rc.color}30`, overflow: 'hidden' }}>
         {renderArt('w-full h-full')}
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.18) 0%, transparent 55%, rgba(0,0,0,0.65) 100%)' }} />
       </div>
 
       {/* Info */}
-      <div style={{ padding: '7px 10px 8px', display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, overflow: 'hidden' }}>
+      <div style={{ padding: '7px 10px 8px', display: 'flex', flexDirection: 'column', gap: '4px', flex: '1 0 auto', overflow: 'hidden' }}>
         {/* Rule */}
         <div style={{ height: '1.5px', background: `linear-gradient(90deg, ${rc.color}80, transparent)`, flexShrink: 0 }} />
         <h3 style={{ margin: 0, fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '15px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.2px', color: '#faf0d8', lineHeight: 1.05, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flexShrink: 0, textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>{title}</h3>
@@ -1152,7 +1152,7 @@ export default memo(function Card({
           <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '7.5px', fontWeight: 700, color: 'rgba(255,255,255,0.38)', textTransform: 'uppercase', lineHeight: 1 }}>{claimed} PULLED</span>
           <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '7.5px', color: 'rgba(255,255,255,0.28)', textTransform: 'uppercase', lineHeight: 1 }}>{day > 0 ? formatDate(day) : ''}</span>
         </div>
-        {showAudio && audioUrl && <div style={{ flexShrink: 0 }}><AudioPreview audioUrl={audioUrl} title={title} rarity={card.rarity} /></div>}
+        {showAudio && audioUrl && <div style={{ flexShrink: 0 }}><AudioPreview audioUrl={audioUrl} title={title} rarity={card.rarity} dense /></div>}
         {claimBtn}
         {proof && <ProofSeal type={proof} />}
       </div>
@@ -1171,8 +1171,8 @@ export default memo(function Card({
       flexDirection: 'column',
     }}>
 
-      {/* Art — larger crop with clean top header bar */}
-      <div style={{ position: 'relative', height: '64%', overflow: 'hidden', borderBottom: `1.5px solid ${rc.color}55`, flexShrink: 0 }}>
+      {/* Art — larger crop with clean top header bar; shrinks on narrow cards so the info strip fits */}
+      <div style={{ position: 'relative', height: '64%', overflow: 'hidden', borderBottom: `1.5px solid ${rc.color}55`, flexShrink: 1, minHeight: 0 }}>
         {renderArt('w-full h-full')}
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(0,0,0,0.45) 0%, transparent 28%, transparent 58%, rgba(0,0,0,0.72) 100%)' }} />
         {/* Top Day + Rarity badges on artwork header so title gets 100% width below */}
@@ -1185,7 +1185,7 @@ export default memo(function Card({
       </div>
 
       {/* Info strip */}
-      <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: '5px', flex: 1 }}>
+      <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: '5px', flex: '1 0 auto' }}>
         <h3 style={{ margin: 0, fontFamily: '"Impact", "Arial Black", sans-serif', fontSize: '16px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '-0.2px', color: '#faf0d8', lineHeight: 1.05, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textShadow: '0 1px 6px rgba(0,0,0,0.85)' }}>{title}</h3>
         <div style={{ display: 'flex', gap: '6px', fontSize: '8.5px', fontFamily: '"JetBrains Mono", monospace', fontWeight: 700, color: rc.color, alignItems: 'center', background: 'rgba(0,0,0,0.4)', padding: '3px 7px', borderRadius: '4px', border: `1px solid ${rc.color}28` }}>
           <span>{Math.round(energy * 100)} NRG</span>
@@ -1198,7 +1198,7 @@ export default memo(function Card({
           <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '7.5px', fontWeight: 700, color: 'rgba(255,255,255,0.38)', whiteSpace: 'nowrap' }}>{claimed} PULLED</span>
           <div style={{ flex: 1 }}>{mintBar}</div>
         </div>
-        {showAudio && audioUrl && <AudioPreview audioUrl={audioUrl} title={title} rarity={card.rarity} />}
+        {showAudio && audioUrl && <AudioPreview audioUrl={audioUrl} title={title} rarity={card.rarity} dense />}
         {claimBtn}
         {proof && <ProofSeal type={proof} />}
       </div>
@@ -1251,7 +1251,7 @@ export default memo(function Card({
           </div>
         </div>
         {mintBar}
-        {showAudio && audioUrl && <div style={{ marginTop: '6px' }}><AudioPreview audioUrl={audioUrl} title={title} rarity={card.rarity} /></div>}
+        {showAudio && audioUrl && <div style={{ marginTop: '6px' }}><AudioPreview audioUrl={audioUrl} title={title} rarity={card.rarity} dense /></div>}
         {claimBtn}
       </div>
       {proof && <ProofSeal type={proof} />}
@@ -1298,7 +1298,7 @@ export default memo(function Card({
           <span style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '8px', fontWeight: 700, color: '#e9d5ff', background: `${rc.color}28`, border: `1px solid ${rc.color}60`, padding: '1px 7px', borderRadius: '999px', whiteSpace: 'nowrap' }}>{tempo} BPM · {Math.round(energy * 100)} NRG</span>
         </div>
         {mintBar}
-        {showAudio && audioUrl && <div style={{ marginTop: '6px' }}><AudioPreview audioUrl={audioUrl} title={title} rarity={card.rarity} /></div>}
+        {showAudio && audioUrl && <div style={{ marginTop: '6px' }}><AudioPreview audioUrl={audioUrl} title={title} rarity={card.rarity} dense /></div>}
         {showClaim && onClaim && (
           <button onClick={e => { e.stopPropagation(); onClaim(); }} style={{ width: '100%', marginTop: '8px', padding: '10px', background: `linear-gradient(135deg, ${rc.color}, ${rc.color}bb)`, color: '#fff', fontWeight: 900, fontSize: '11px', letterSpacing: '0.12em', textTransform: 'uppercase', border: 0, borderRadius: '6px', cursor: 'pointer', boxShadow: `0 4px 24px ${rc.color}55` }}>
             ★ Claim Legendary
@@ -1418,7 +1418,7 @@ export default memo(function Card({
             }}
           />
         </div>
-        {showAudio && audioUrl && <AudioPreview audioUrl={audioUrl} title={title} rarity={card.rarity} />}
+        {showAudio && audioUrl && <AudioPreview audioUrl={audioUrl} title={title} rarity={card.rarity} dense />}
         {showClaim && onClaim && (
           <button
             onClick={(e) => {
