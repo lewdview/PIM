@@ -851,13 +851,27 @@ function Body() {
   );
 }
 
+
 function UpperBody() {
+  const hipClip = useSvgId('hip');
+  const armClip = useSvgId('arm');
   return (
     <g stroke={SKIN_LINE} strokeWidth="1.1" strokeLinejoin="round">
+      {/* Below the knuckles the arm fades to a finer cel and contour drawn underneath it: at the arm's full depth
+          the shadow and the heavy shadow-side line fray in the narrow gaps between the fingers. */}
+      <defs>
+        <clipPath id={hipClip} clipPathUnits="userSpaceOnUse"><rect x="60" y="344.8" width="90" height="40" /></clipPath>
+        <linearGradient id={`${armClip}-g`} gradientUnits="userSpaceOnUse" x1="0" y1="351" x2="0" y2="361">
+          <stop offset="0" stopColor="#fff" />
+          <stop offset="1" stopColor="#000" />
+        </linearGradient>
+        <mask id={`${armClip}-a`} {...MASK_BOX}><rect x="-320" y="-120" width="940" height="840" fill={`url(#${armClip}-g)`} /></mask>
+      </defs>
       {[false, true].map((m) => (
         <g key={String(m)} transform={m ? MIRROR : undefined}>
           <Skin d={THUMB} depth={0.35} mirrored={m} />
-          <Skin d={ARM} mirrored={m} />
+          <Cel d={ARM} fill={SKIN} shade="#d9826e" shadeOpacity={0.55} line={SKIN_LINE} depth={0.3} weight={0.8} mirrored={m} />
+          <g mask={`url(#${armClip}-a)`}><Skin d={ARM} mirrored={m} /></g>
           <Hand />
           {/* Deltoid edge, elbow crease at the waistline, tendons on the back of the hand. */}
           <path d="M86.5 250 Q90 240 97 233" fill="none" strokeOpacity="0.3" strokeWidth="0.8" />
@@ -896,7 +910,9 @@ function UpperBody() {
         <g key={String(m)} transform={m ? MIRROR : undefined}>
           {/* Skin patch over the hip where the torso and leg shapes meet, so the high leg cut shows no seam. */}
           <path d="M93.4 334 C90.4 340 89.6 346 89.6 352 C89.6 358 90 362 90.6 366 L150 378 L150 334 Z" fill={SKIN} stroke="none" />
-          <path d="M89.2 343 C88.8 350 88.7 358 89.2 368" fill="none" strokeWidth={m ? 1.8 : 1.1} />
+          {/* Redraw the top of the leg over the patch so its contour and cel shadow run unbroken up to the leg cut. */}
+          <g clipPath={`url(#${hipClip})`}><Skin d={LEG} mirrored={m} /></g>
+          <path d="M89.2 343 L89.4 345.4" fill="none" strokeWidth={m ? 1.8 : 1.1} />
           <path d="M90 345 C102 350 124 360 141 373" fill="none" stroke={SKIN_SHADE} strokeWidth="4" strokeLinecap="round" />
         </g>
       ))}
