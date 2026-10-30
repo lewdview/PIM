@@ -41,6 +41,7 @@ import { getStageStarts, stageAtTime } from './stageTimeline';
 import { generateMasterChart, ANALYSIS_SAMPLE_RATE, CHART_MASTER_VERSION, CHART_MASTER_DELUXE_VERSION } from '@/game/chartMaster';
 import { drawSlabBody, drawTopFaceBevel, drawHitPop3D, drawHitPillar3D, hitPillarReach, makeHitShards, setNote3DQuality, type HitShard } from './notes3d';
 import { spawnCelebration, drawCelebrations, type Celebration } from './noteCelebrations';
+import '../../styles/gameplayHud.css';
 import { chooseWarpNote, isWarpNote, parseWarpOverride, secretLevelPath, INSTANT_WARP_DELAY_MS, WARP_SCORE_BONUS, type WarpType } from '@/game/secret/warp';
 import { noteKey, saveWarpResume, takeWarpResume, WARP_RESUME_LEAD_IN, type WarpResumeSnapshot } from '@/game/secret/warpResume';
 
@@ -609,6 +610,11 @@ const AnimatedScore = memo(({ score }: { score: number }) => {
   const animatedVal = useAnimatedCount(score);
   return <>{animatedVal.toLocaleString()}</>;
 });
+
+// In-song HUD palette: stage colors follow the stage rail, multiplier colors step up ×1 → ×5.
+const HUD_STAGE_COLORS = ['#00E5FF', '#39FF14', '#FFD700', '#FF1493', '#FF3800'];
+const HUD_MULT_COLORS = ['#71717a', '#00E5FF', '#39FF14', '#FFD700', '#FF1493', '#FF3800'];
+const HUD_MULT_STEPS = [25, 50, 75, 100];
 
 // ── procedural chart generator for empty beatmaps ────────────────
 export function isHoldNote(note: { type?: NoteType | string; holdDuration?: number } | null | undefined): boolean {
@@ -1479,7 +1485,7 @@ export default function Game() {
     visible: false,
   });
 
-  const puCircleRef = useRef<SVGCircleElement | null>(null);
+  const puTimerBarRef = useRef<HTMLDivElement | null>(null);
   const puPillRef = useRef<HTMLDivElement | null>(null);
   const puPillTextRef = useRef<HTMLSpanElement | null>(null);
   const puPillDotRef = useRef<HTMLSpanElement | null>(null);
@@ -1563,18 +1569,16 @@ export default function Game() {
   ) => {
     // PERF: Direct DOM mutation instead of React setState to eliminate 60fps re-renders during special moves
     if (!displayData) {
-      if (puCircleRef.current) puCircleRef.current.style.display = "none";
+      if (puTimerBarRef.current) puTimerBarRef.current.style.display = "none";
       if (puPillRef.current) puPillRef.current.style.display = "none";
       return;
     }
 
-    if (puCircleRef.current) {
-      puCircleRef.current.style.display = "block";
-      puCircleRef.current.style.stroke = displayData.color;
-      puCircleRef.current.style.strokeDashoffset = String(
-        2 * Math.PI * 60 * (1 - Math.max(0, Math.min(1, displayData.progress ?? 0)))
-      );
-      puCircleRef.current.style.filter = `drop-shadow(0 0 12px ${displayData.color})`;
+    if (puTimerBarRef.current) {
+      puTimerBarRef.current.style.display = "block";
+      puTimerBarRef.current.style.background = displayData.color;
+      puTimerBarRef.current.style.transform = `scaleX(${Math.max(0, Math.min(1, displayData.progress ?? 0))})`;
+      puTimerBarRef.current.style.boxShadow = `0 0 10px ${displayData.color}`;
     }
 
     if (puPillRef.current) {
@@ -6943,144 +6947,7 @@ export default function Game() {
 
     if (dirty) syncDisplay();
 
-    // ── lives indicator ──────────────────────────────────────────
-    {
-      const dotSize = 11;
-      const dotGap = 6;
-      const totalW = 3 * dotSize + 2 * dotGap;
-      const startX = W - totalW - 18;
-      const dotY = hitY - 32;
-      for (let i = 0; i < 3; i++) {
-        const active = i < missCountRef.current; // filled = miss accumulated
-        ctx.save();
-        ctx.globalAlpha = active ? 0.88 : 0.15;
-        ctx.fillStyle = "#FF1493";
-        ctx.shadowBlur = active ? 14 : 0;
-        ctx.shadowColor = "#FF1493";
-        ctx.fillRect(
-          startX + i * (dotSize + dotGap),
-          dotY - dotSize / 2,
-          dotSize,
-          dotSize,
-        );
-        ctx.restore();
-      }
-    }
-
-    // ── HEALING HOLD METER (TOP-LEFT CORNER ON MOBILE ONLY; ON DESKTOP MOUNTED UNDER LEFT CIRCLE) ──
-    if ((optsRef.current.healingGauge ?? true) && !geom.isLandscape) {
-      const gX = 22;
-      const gY = Math.max(85, Math.min(130, hitY * 0.20));
-      const gW = 10;
-      const gH = 84;
-      const gaugeVal = Math.max(0, Math.min(1, healingGaugeRef.current));
-      const fillH = gaugeVal * gH;
-      const isFull = gaugeVal >= 1.0;
-      const isHolding = healingActiveHoldLaneRef.current !== null;
-      const holdLane = healingActiveHoldLaneRef.current ?? 1;
-
-      ctx.save();
-
-      // Label above vertical gauge
-      ctx.font = `900 8px "Roboto Mono", "JetBrains Mono", monospace`;
-      ctx.textAlign = "center";
-      ctx.textBaseline = "bottom";
-
-      const healingFreq = HEALING_LANE_FREQUENCIES[holdLane] ?? 132.0;
-      const labelColor = isFull ? "#39FF14" : isHolding ? "#00E5FF" : "rgba(255,255,255,0.40)";
-
-      ctx.fillStyle = labelColor;
-      if (isFull) {
-        ctx.shadowColor = "#39FF14";
-        ctx.shadowBlur = 8;
-      }
-      ctx.fillText(isFull ? "HEAL 100%" : isHolding ? `${Math.round(healingFreq)}Hz` : "HEAL", gX + gW / 2, gY - 5);
-      ctx.shadowBlur = 0;
-
-      // Outer bezel / container
-      ctx.fillStyle = "rgba(10, 10, 16, 0.85)";
-      ctx.strokeStyle = isFull
-        ? "#39FF14"
-        : isHolding
-          ? "rgba(0, 229, 255, 0.65)"
-          : "rgba(255, 255, 255, 0.16)";
-      ctx.lineWidth = isFull ? 2 : 1.5;
-
-      if (isFull) {
-        ctx.shadowColor = "#39FF14";
-        ctx.shadowBlur = 10 + 4 * Math.sin(t * 8);
-      }
-
-      ctx.beginPath();
-      ctx.roundRect(gX, gY, gW, gH, 4);
-      ctx.fill();
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-
-      // Inner gauge fill (Bottom to Top)
-      if (fillH > 0) {
-        ctx.save();
-        ctx.beginPath();
-        ctx.roundRect(gX + 1.5, gY + 1.5, gW - 3, gH - 3, 3);
-        ctx.clip();
-
-        const fillY = gY + gH - fillH;
-        const fillGrad = ctx.createLinearGradient(gX, gY + gH, gX, gY);
-        fillGrad.addColorStop(0, "#00E5FF");
-        fillGrad.addColorStop(0.65, "#39FF14");
-        fillGrad.addColorStop(1, isFull ? "#E5B800" : "#39FF14");
-
-        ctx.fillStyle = fillGrad;
-        if (isHolding || isFull) {
-          ctx.shadowColor = isFull ? "#39FF14" : "#00E5FF";
-          ctx.shadowBlur = 8;
-        }
-        ctx.fillRect(gX + 1.5, fillY, gW - 3, fillH);
-
-        // Subtle frequency pulse scanlines inside fill while holding
-        if (isHolding) {
-          const scanPhase = (t * 6) % 1;
-          const scanY = gY + gH - (scanPhase * fillH);
-          ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
-          ctx.fillRect(gX + 1.5, scanY, gW - 3, 2);
-        }
-
-        ctx.restore();
-      }
-
-      // Notches (25%, 50%, 75%)
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.22)";
-      ctx.lineWidth = 1;
-      [0.25, 0.5, 0.75].forEach(ratio => {
-        const notchY = gY + gH * (1 - ratio);
-        ctx.beginPath();
-        ctx.moveTo(gX + 2, notchY);
-        ctx.lineTo(gX + gW - 2, notchY);
-        ctx.stroke();
-      });
-
-      // Floating restore alert banner when a miss was restored
-      const healedAge = Date.now() - healingHealedFlashMsRef.current;
-      if (healedAge < 1500) {
-        const hProg = healedAge / 1500;
-        const alpha = Math.max(0, 1 - hProg);
-        const floatY = gY + 32 - (hProg * 35);
-        ctx.save();
-        ctx.globalAlpha = alpha;
-        ctx.font = `900 11px "Roboto Mono", monospace`;
-        ctx.textAlign = "left";
-        ctx.fillStyle = "#39FF14";
-        ctx.shadowColor = "#39FF14";
-        ctx.shadowBlur = 12;
-        ctx.fillText("+1 MISS RESTORED", gX + gW + 10, floatY);
-        ctx.font = `bold 8px "Roboto Mono", monospace`;
-        ctx.fillStyle = "#00E5FF";
-        ctx.fillText("♥ FREQUENCY HEAL", gX + gW + 10, floatY + 11);
-        ctx.restore();
-      }
-
-      ctx.restore();
-    }
+    // Lives and the healing meter are drawn by the DOM HUD (shield block in the top strip).
 
     // ── Red vignette flash on miss ──
     {
@@ -10759,158 +10626,198 @@ export default function Game() {
       <div
         className="relative w-full h-full flex flex-col overflow-hidden"
       >
-        {/* ── UNIFIED CYBER HUD & CENTERED STAGE TIMELINE ── */}
-        <div
-          className="flex flex-col items-center flex-shrink-0 w-full z-30"
-          style={{
-            borderBottom: "1px solid rgba(255,255,255,0.06)",
-            background: "rgba(12,12,20,0.70)",
-            backdropFilter: "blur(20px) saturate(1.4)",
-            WebkitBackdropFilter: "blur(20px) saturate(1.4)",
-            boxShadow: "0 4px 28px rgba(0,0,0,0.5), inset 0 -1px 0 rgba(255,255,255,0.05)",
-          }}
-        >
-          {/* Top Row: Symmetrical 3-Column Grid (Left: Controls, Center: Stage Tracker, Right: Miss Pips) */}
-          <div className="grid grid-cols-[1fr_auto_1fr] items-center px-4 py-2 w-full max-w-5xl mx-auto self-center">
-            {/* Left Column: QUIT + OPTIONS + Fullscreen */}
-            <div className="flex items-center gap-3 justify-start">
-              <button
-                data-testid="button-quit"
-                onClick={() => {
-                  audioRef.current?.pause();
-                  const origin = sessionStorage.getItem(`game_origin_${songId}`) ?? '';
-                  setLocation(origin === 'songs' ? '/songs' : origin ? `/${origin}` : '/campaign');
-                }}
-                className="font-mono text-xs tracking-widest transition-colors cursor-pointer"
-                style={{ color: "hsl(30 15% 30%)" }}
-                onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "#FF1493")}
-                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "hsl(30 15% 30%)")}
+        {/* ── GAMEPLAY HUD · console rail (styles: src/styles/gameplayHud.css) ── */}
+        {(() => {
+          const c = gs.combo;
+          const baseMult = c >= 100 ? 5 : c >= 75 ? 4 : c >= 50 ? 3 : c >= 25 ? 2 : 1;
+          let m = baseMult;
+          if (puRef.current.active) {
+            m = m * (puRef.current.active === "SIGNAL_LOCK" ? 4 : puRef.current.active === "SURGE" ? 3 : 2);
+          }
+          const nextAt = HUD_MULT_STEPS.find((step) => step > c);
+          const comboColor = c >= 100 ? '#39FF14' : c >= 50 ? '#FF1493' : c > 0 ? '#00E5FF' : '#f4f4f5';
+          const duration = songRef.current?.duration || 0;
+          const railDuration = duration || 180;
+          const elapsed = (gs.progress || 0) * railDuration;
+          const starts = stageStartsRef.current;
+          const segments = starts.map((start, i) => {
+            const end = starts[i + 1] ?? railDuration;
+            const span = Math.max(0.001, end - start);
+            return { span, fill: Math.max(0, Math.min(1, (elapsed - start) / span)) };
+          });
+          const stageColor = HUD_STAGE_COLORS[Math.max(0, Math.min(4, currentStage - 1))];
+          const shieldLeft = Math.max(0, 3 - missCount);
+
+          return (
+            <div className="pim-hud-strip">
+              <div className="pim-hud-strip-row">
+                <div className="pim-hud-controls">
+                  <button
+                    data-testid="button-quit"
+                    className="pim-hud-btn"
+                    aria-label="Quit"
+                    onClick={() => {
+                      audioRef.current?.pause();
+                      const origin = sessionStorage.getItem(`game_origin_${songId}`) ?? '';
+                      setLocation(origin === 'songs' ? '/songs' : origin ? `/${origin}` : '/campaign');
+                    }}
+                  >
+                    ✕<span className="pim-hud-btn-label">QUIT</span>
+                  </button>
+                  <button
+                    className="pim-hud-btn"
+                    aria-label="Options"
+                    onClick={() => {
+                      audioManager.playSfx('menu_confirm', 0.15);
+                      if (phase === 'playing' && !paused) {
+                        doPause();
+                      }
+                      useVaultStore.getState().setOptionsModalOpen(true);
+                    }}
+                  >
+                    ⚙<span className="pim-hud-btn-label">OPTIONS</span>
+                  </button>
+                  <button
+                    className="pim-hud-btn"
+                    onClick={toggleFullscreen}
+                    title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+                    aria-label={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+                    data-on={isFullscreen}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor" aria-hidden="true">
+                      {isFullscreen ? (
+                        <>
+                          <path d="M4 0H0v4h1.5V1.5H4V0z" opacity=".35" />
+                          <path d="M8 0h4v4h-1.5V1.5H8V0z" opacity=".35" />
+                          <path d="M0 8h1.5v2.5H4V12H0V8z" opacity=".35" />
+                          <path d="M12 8h-1.5v2.5H8V12h4V8z" opacity=".35" />
+                          <rect x="3.5" y="3.5" width="5" height="5" rx="0.5" />
+                        </>
+                      ) : (
+                        <>
+                          <path d="M0 0h4v1.5H1.5V4H0V0z" />
+                          <path d="M12 0H8v1.5h2.5V4H12V0z" />
+                          <path d="M0 12h4v-1.5H1.5V8H0v4z" />
+                          <path d="M12 12H8v-1.5h2.5V8H12v4z" />
+                        </>
+                      )}
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Stage + time over a rail with one segment per chart stage */}
+                <div className="pim-hud-progress">
+                  <div className="pim-hud-progress-meta">
+                    <span className="pim-hud-stage" style={{ '--stage-c': stageColor } as React.CSSProperties}>
+                      {currentStage === 5 ? <>STAGE <i>FINAL</i></> : <>STAGE <i>{currentStage}</i> / 5</>}
+                    </span>
+                    <span className="pim-hud-time">
+                      {Math.round((gs.progress || 0) * 100)}% · <b>{formatTimeSec(getT())}</b> / {formatTimeSec(duration)}
+                    </span>
+                  </div>
+                  <div
+                    className="pim-hud-rail"
+                    style={{ gridTemplateColumns: segments.map((s) => `${s.span}fr`).join(' ') }}
+                  >
+                    {segments.map((s, i) => (
+                      <i
+                        key={i}
+                        className="pim-hud-seg"
+                        style={{ '--f': s.fill.toFixed(3), '--seg-c': HUD_STAGE_COLORS[Math.min(4, i)] } as React.CSSProperties}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pim-hud-song">
+                  <b>{song?.title}</b>
+                  {song?.artist}
+                </div>
+              </div>
+
+              {/* Stat panels: one band under the rail on portrait, side panels beside the highway on wide screens */}
+              <div
+                className="pim-hud-stats"
+                style={{ opacity: activePovMode === 'cyber_tunnel' ? 0.18 : 1 }}
               >
-                ✕ QUIT
-              </button>
-              <button
-                onClick={() => {
-                  audioManager.playSfx('menu_confirm', 0.15);
-                  if (phase === 'playing' && !paused) {
-                    doPause();
-                  }
-                  useVaultStore.getState().setOptionsModalOpen(true);
-                }}
-                className="font-mono text-xs tracking-widest transition-colors cursor-pointer"
-                style={{ color: "hsl(30 15% 28%)", letterSpacing: '0.1em' }}
-                onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "#E5B800")}
-                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "hsl(30 15% 28%)")}
-              >
-                ⚙
-              </button>
-              <button
-                onClick={toggleFullscreen}
-                title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
-                style={{ color: isFullscreen ? "#39FF14" : "hsl(30 15% 28%)", lineHeight: 1, padding: "2px 3px", transition: "color 0.15s" }}
-                onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "#39FF14")}
-                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = isFullscreen ? "#39FF14" : "hsl(30 15% 28%)")}
-              >
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
-                  {isFullscreen ? (
+                <div className="pim-hud-panel pim-hud-score" style={{ '--medal': medalStyle.main } as React.CSSProperties}>
+                  <div className="pim-hud-panel-head">
+                    <span className="pim-hud-label">Score</span>
+                    {curMedal !== "NONE" && <span className="pim-hud-medal">{curMedal}</span>}
+                    <span className="pim-hud-acc">ACC <span ref={accuracyTextRef}>{acc.toFixed(1)}%</span></span>
+                  </div>
+                  <div className="pim-hud-score-row">
+                    <span className="pim-hud-score-value"><AnimatedScore score={gs.score} /></span>
+                    <span className="pim-hud-mult" style={{ '--mult-c': HUD_MULT_COLORS[Math.min(5, baseMult)] } as React.CSSProperties}>
+                      <span className="pim-hud-x">×</span>{m}
+                    </span>
+                  </div>
+
+                  {(opts.hudMisses || (opts.healingGauge ?? true)) && (
+                    <div className="pim-hud-shield" data-low={shieldLeft <= 1} data-testid="healing-hold-gauge">
+                      <div className="pim-hud-shield-head">
+                        <span>SHIELD</span>
+                        {(opts.healingGauge ?? true) && (
+                          <span>
+                            <span ref={healingGaugeLabelRef} data-heal-label>HEAL</span>{' '}
+                            <span ref={healingGaugeHzRef}>0%</span>
+                          </span>
+                        )}
+                      </div>
+                      {opts.hudMisses && (
+                        <div className="pim-hud-pips" aria-label={`${shieldLeft} of 3 misses left`}>
+                          {[0, 1, 2].map((i) => (
+                            <i key={i} className="pim-hud-pip" data-on={i < shieldLeft} />
+                          ))}
+                        </div>
+                      )}
+                      {(opts.healingGauge ?? true) && (
+                        <>
+                          <div ref={healingGaugeBoxRef} className="pim-hud-heal">
+                            <div ref={healingGaugeFillRef} className="pim-hud-heal-fill" />
+                          </div>
+                          <div ref={healingBannerRef} className="pim-hud-heal-banner">+1 MISS RESTORED</div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div
+                  className="pim-hud-panel pim-hud-combo"
+                  data-combo={opts.comboDisplay}
+                  style={{ '--combo-c': comboColor } as React.CSSProperties}
+                >
+                  {opts.comboDisplay && (
                     <>
-                      <path d="M4 0H0v4h1.5V1.5H4V0z" opacity=".35" />
-                      <path d="M8 0h4v4h-1.5V1.5H8V0z" opacity=".35" />
-                      <path d="M0 8h1.5v2.5H4V12H0V8z" opacity=".35" />
-                      <path d="M12 8h-1.5v2.5H8V12h4V8z" opacity=".35" />
-                      <rect x="3.5" y="3.5" width="5" height="5" rx="0.5" />
-                    </>
-                  ) : (
-                    <>
-                      <path d="M0 0h4v1.5H1.5V4H0V0z" />
-                      <path d="M12 0H8v1.5h2.5V4H12V0z" />
-                      <path d="M0 12h4v-1.5H1.5V8H0v4z" />
-                      <path d="M12 12H8v-1.5h2.5V8H12v4z" />
+                      <span className="pim-hud-label">Combo</span>
+                      <span key={c} ref={comboTextRef} className={`pim-hud-combo-value${c > 0 ? ' pim-hud-bump' : ''}`}>
+                        {c}
+                      </span>
+                      <span className="pim-hud-next">
+                        {nextAt ? <>NEXT ×{baseMult + 1} IN {nextAt - c}</> : <>MAX MULTIPLIER</>}
+                      </span>
+                      <div className="pim-hud-meter" aria-hidden="true">
+                        {HUD_MULT_STEPS.map((step) => (
+                          <i key={step} data-on={c >= step} />
+                        ))}
+                      </div>
                     </>
                   )}
-                </svg>
-              </button>
-            </div>
-
-            {/* Center Column: Stage Pill + Completion % + Time Elapsed / Total (Guaranteed Math Center) */}
-            <div className="flex items-center justify-center gap-2.5 font-mono text-[9px] font-black uppercase tracking-wider text-white/70 select-none">
-              <span 
-                className="px-2 py-0.5 rounded text-[8px] font-black tracking-widest transition-all duration-300 shadow-sm"
-                style={{
-                  backgroundColor: currentStage === 5 ? 'rgba(255,0,85,0.25)' : currentStage === 4 ? 'rgba(255,20,147,0.25)' : currentStage === 3 ? 'rgba(255,215,0,0.25)' : currentStage === 2 ? 'rgba(57,255,20,0.2)' : 'rgba(0,229,255,0.2)',
-                  color: currentStage === 5 ? '#FF3800' : currentStage === 4 ? '#FF1493' : currentStage === 3 ? '#FFD700' : currentStage === 2 ? '#39FF14' : '#00E5FF',
-                  border: `1px solid ${currentStage === 5 ? '#FF3800' : currentStage === 4 ? '#FF1493' : currentStage === 3 ? '#FFD700' : currentStage === 2 ? '#39FF14' : '#00E5FF'}60`,
-                  boxShadow: `0 0 10px ${currentStage === 5 ? '#FF3800' : currentStage === 4 ? '#FF1493' : currentStage === 3 ? '#FFD700' : currentStage === 2 ? '#39FF14' : '#00E5FF'}30`,
-                }}
-              >
-                {currentStage === 5 ? '⚡ FINAL' : currentStage === 4 ? 'STAGE 4' : currentStage === 3 ? 'STAGE 3' : currentStage === 2 ? 'STAGE 2' : 'STAGE 1'}
-              </span>
-              <span className="text-white/80 font-bold tracking-widest text-[9px]">
-                {Math.round((gs.progress || 0) * 100)}%
-              </span>
-              <span className="text-white/30">•</span>
-              <span className="text-white/50 text-[8.5px] font-mono">
-                {formatTimeSec(getT())} / {formatTimeSec(songRef.current?.duration || 0)}
-              </span>
-            </div>
-
-            {/* Right Column: Miss Pips */}
-            <div className="flex items-center justify-end">
-              {opts.hudMisses && (
-                <div className="flex gap-1.5">
-                  {[0, 1, 2].map((i) => (
-                    <div
-                      key={i}
-                      style={{
-                        width: 7, height: 7,
-                        background: i < missCount ? "#FF1493" : "rgba(255,255,255,0.1)",
-                        boxShadow: i < missCount ? "0 0 6px rgba(255,20,147,0.9)" : "none",
-                        transition: "background 0.15s, box-shadow 0.15s",
-                      }}
-                    />
-                  ))}
+                  {/* Power-up timer + label (direct DOM updates in updatePuDisplayDOM, zero React re-renders) */}
+                  <div ref={puTimerBarRef} className="pim-hud-pu-bar" />
+                  <div ref={puPillRef} className="pim-hud-pu-pill">
+                    <span className="pim-hud-pu-dot">
+                      <span ref={puPillPingRef} className="animate-ping opacity-75" />
+                      <span ref={puPillDotRef} />
+                    </span>
+                    <span ref={puPillTextRef} />
+                  </div>
                 </div>
-              )}
+              </div>
             </div>
-          </div>
-
-          {/* Bottom Sub-Row: Centered Continuous Progress Track Directly Over Highway */}
-          <div 
-            className="w-full max-w-[680px] self-center mx-auto px-4 pb-2"
-            style={{ marginLeft: "auto", marginRight: "auto", alignSelf: "center" }}
-          >
-            <div className="relative w-full h-[5px] rounded-full overflow-hidden p-[1px] bg-black/60 border border-white/15 backdrop-blur-sm shadow-[inset_0_1px_3px_rgba(0,0,0,0.8)]">
-              <div
-                className="h-full rounded-full transition-all duration-150 ease-out"
-                style={{
-                  width: `${Math.min(100, Math.max(0, (gs.progress || 0) * 100))}%`,
-                  background: currentStage === 5
-                    ? "linear-gradient(90deg, #FF1493, #FFD700, #FF0055)"
-                    : currentStage === 4
-                      ? "linear-gradient(90deg, #00E5FF, #FFD700, #FF1493)"
-                      : currentStage === 3
-                        ? "linear-gradient(90deg, #00E5FF, #39FF14, #FFD700)"
-                        : currentStage === 2
-                          ? "linear-gradient(90deg, #00E5FF, #39FF14)"
-                          : "#00E5FF",
-                  boxShadow: (gs.progress || 0) > 0
-                    ? currentStage === 5
-                      ? "0 0 10px rgba(255,0,85,0.7), 0 0 20px rgba(255,215,0,0.4)"
-                      : "0 0 8px rgba(0,229,255,0.6), 0 0 16px rgba(57,255,20,0.3)"
-                    : "none",
-                }}
-              />
-
-              {/* Stage Boundary Markers — chart-defined stage starts (default 15/35/60/80%) */}
-              {stageStartsRef.current.slice(1).map((st) => st / (songRef.current?.duration || 180)).map((pct, idx) => (
-                <div
-                  key={idx}
-                  className="absolute top-0 bottom-0 w-[1.5px] bg-white/40 shadow-[0_0_3px_rgba(255,255,255,0.7)] pointer-events-none"
-                  style={{ left: `${pct * 100}%`, transform: "translateX(-50%)" }}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
+          );
+        })()}
 
         {/* Options panel */}
         {showOptions && (
@@ -11020,287 +10927,6 @@ export default function Game() {
           className="relative w-full flex-1 min-h-0 overflow-hidden"
           style={{ touchAction: 'none' }}
         >
-
-          {/* Circular Score Dial & Combo Overlays (PIM Style) */}
-          {(() => {
-            // Calculate active combo multiplier matching the game settings
-            const c = gs.combo;
-            let m = 1;
-            if (c >= 100) m = 5;
-            else if (c >= 75) m = 4;
-            else if (c >= 50) m = 3;
-            else if (c >= 25) m = 2;
-            if (puRef.current.active) {
-              m = m * (puRef.current.active === "SIGNAL_LOCK" ? 4 : puRef.current.active === "SURGE" ? 3 : 2);
-            }
-
-
-            return (
-              <div
-                className="gameplay-hud-container"
-                style={{
-                  opacity: activePovMode === 'cyber_tunnel' ? 0.18 : 1,
-                  transition: 'opacity 0.5s ease-in-out',
-                }}
-              >
-                <style dangerouslySetInnerHTML={{ __html: `
-                  @keyframes marquee-behind {
-                    0% {
-                      transform: translateX(110%);
-                      opacity: 0;
-                    }
-                    12% {
-                      opacity: 0.85;
-                    }
-                    88% {
-                      opacity: 0.85;
-                    }
-                    100% {
-                      transform: translateX(-110%);
-                      opacity: 0;
-                    }
-                  }
-                  .animate-marquee-behind {
-                    animation: marquee-behind 4.5s linear infinite;
-                  }
-                `}} />
-
-                {/* Main responsive HUD row: centered in portrait, flanked across wings on desktop / landscape */}
-                <div className="gameplay-hud-inner">
-                  {/* Left Wing / Left HUD: Score Dial + Stage Info + Medal marquee */}
-                  <div className="gameplay-hud-left-wing relative">
-                    {/* Scrolling Medal Name behind the dial */}
-                    {curMedal !== "NONE" && (
-                      <div className="absolute top-[40px] left-1/2 -translate-x-1/2 w-[340px] h-12 overflow-hidden flex items-center justify-center z-[-1] pointer-events-none">
-                        <span 
-                          key={curMedal}
-                          className="absolute font-mono text-[2.8rem] font-black uppercase tracking-[0.25em] text-transparent select-none whitespace-nowrap animate-marquee-behind"
-                          style={{
-                            WebkitTextStroke: `1px ${medalStyle.main}60`,
-                            textShadow: `0 0 12px ${medalStyle.glow}`,
-                          }}
-                        >
-                          {curMedal}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Circular Score Ring */}
-                    <div className="relative w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 lg:w-48 lg:h-48 xl:w-52 xl:h-52 rounded-full flex flex-col items-center justify-center shrink-0" style={{
-                      background: "rgba(10, 10, 18, 0.94)",
-                      border: `2px solid ${medalStyle.main}`,
-                      boxShadow: `0 0 35px ${medalStyle.glow}, inset 0 0 15px rgba(255,255,255,0.03)`,
-                      transition: "all 0.4s ease-in-out",
-                    }}>
-                      {/* SVG Stage Progress Ring */}
-                      <svg viewBox="0 0 128 128" className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none z-0">
-                        <circle
-                          cx="64"
-                          cy="64"
-                          r="56"
-                          fill="none"
-                          stroke="rgba(255, 255, 255, 0.06)"
-                          strokeWidth="4"
-                        />
-                        <circle
-                          cx="64"
-                          cy="64"
-                          r="56"
-                          fill="none"
-                          stroke={medalStyle.main}
-                          strokeWidth="4"
-                          strokeDasharray={2 * Math.PI * 56}
-                          strokeDashoffset={2 * Math.PI * 56 * (1 - (gs.progress || 0))}
-                          strokeLinecap="round"
-                          style={{ 
-                            transition: "stroke-dashoffset 0.15s linear, stroke 0.4s ease-in-out",
-                            filter: `drop-shadow(0 0 8px ${medalStyle.main})`
-                          }}
-                        />
-                        {/* Dynamic Powerup Decaying Outer Ring (Direct DOM ref updated, zero React re-renders) */}
-                        <circle
-                          ref={puCircleRef}
-                          cx="64"
-                          cy="64"
-                          r="60"
-                          fill="none"
-                          stroke="#FF1493"
-                          strokeWidth="4"
-                          strokeDasharray={2 * Math.PI * 60}
-                          strokeDashoffset={2 * Math.PI * 60}
-                          strokeLinecap="round"
-                          style={{
-                            display: "none",
-                            transition: "stroke-dashoffset 0.08s linear",
-                          }}
-                        />
-                      </svg>
-
-                      <span className="relative z-10 font-mono text-[8px] sm:text-[8.5px] md:text-[9.5px] lg:text-[11px] xl:text-[12px] tracking-[0.25em] text-zinc-400 font-black mb-1">
-                        {currentStage === 5 ? "STAGE FINAL" : `STAGE ${currentStage}`}
-                      </span>
-                      <span
-                        className="relative z-20 font-mono text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-black text-white tracking-tight"
-                        style={{
-                          WebkitTextStroke: "1.5px #000000",
-                          paintOrder: "stroke fill",
-                          textShadow: "-1.5px -1.5px 0 #000, 1.5px -1.5px 0 #000, -1.5px 1.5px 0 #000, 1.5px 1.5px 0 #000, 0 0 10px rgba(0,0,0,0.95), 0 2px 6px rgba(0,0,0,0.9)",
-                        }}
-                      >
-                        <AnimatedScore score={gs.score} />
-                      </span>
-                      <span className={`relative z-10 font-mono text-[9.5px] sm:text-[10.5px] md:text-[11.5px] lg:text-[13px] xl:text-[14px] font-black mt-1 tracking-widest ${medalStyle.text}`} style={{ transition: "color 0.4s ease-in-out" }}>
-                        ×{m}
-                      </span>
-                    </div>
-
-                    {/* Desktop Mode: Sleek Healing Meter mounted directly under the left circle */}
-                    {(opts.healingGauge ?? true) && (
-                      <div
-                        className="mt-3 hidden md:flex flex-col items-center pointer-events-none select-none"
-                        data-testid="healing-hold-gauge"
-                      >
-                        {/* Header Label / Status */}
-                        <div className="flex items-center justify-between w-full px-1 mb-1 font-mono text-[9px] font-black tracking-wider">
-                          <div className="flex items-center gap-1">
-                            <span className="text-[10px]">💚</span>
-                            <span
-                              ref={healingGaugeLabelRef}
-                              className="text-white/70"
-                              style={{ textShadow: '0 0 8px rgba(0, 229, 255, 0.4)' }}
-                            >
-                              HEAL
-                            </span>
-                          </div>
-                          <span
-                            ref={healingGaugeHzRef}
-                            className="text-white/40 tracking-tight font-bold"
-                          >
-                            0%
-                          </span>
-                        </div>
-
-                        {/* Horizontal Gauge Bezel Under Left Circle */}
-                        <div
-                          ref={healingGaugeBoxRef}
-                          className="relative w-36 lg:w-44 h-3.5 rounded-full overflow-hidden p-[2px] transition-all duration-200"
-                          style={{
-                            background: 'rgba(8, 8, 16, 0.88)',
-                            border: '1.5px solid rgba(255, 255, 255, 0.18)',
-                            backdropFilter: 'blur(8px)',
-                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.6), inset 0 0 6px rgba(0,0,0,0.8)',
-                          }}
-                        >
-                          {/* Fill Tube (Grows horizontally) */}
-                          <div
-                            ref={healingGaugeFillRef}
-                            className="absolute top-0 bottom-0 left-0 rounded-full transition-all duration-75"
-                            style={{
-                              width: '0%',
-                              height: '100%',
-                              background: 'linear-gradient(90deg, #00E5FF 0%, #39FF14 100%)',
-                            }}
-                          />
-                        </div>
-
-                        {/* +1 Miss Restored Floating Banner */}
-                        <div
-                          ref={healingBannerRef}
-                          style={{ display: 'none' }}
-                          className="mt-1.5 flex-col items-center whitespace-nowrap bg-black/90 border border-[#39FF14] px-2.5 py-0.5 rounded shadow-[0_0_16px_rgba(57,255,20,0.6)] pointer-events-none transition-all duration-300"
-                        >
-                          <span className="font-mono text-[9px] font-black text-[#39FF14] tracking-wider">
-                            +1 MISS RESTORED
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Right Wing / Right HUD: Combo Ring + Power-Up Pill */}
-                  <div className="gameplay-hud-right-wing relative flex flex-col items-center">
-                    {/* Dedicated Side Circular Combo HUD Ring */}
-                    {opts.comboDisplay && (
-                      <motion.div
-                        key={gs.combo > 0 ? "active-combo" : "zero-combo"}
-                        initial={{ scale: 0.8, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        className="relative w-18 h-18 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-36 lg:h-36 xl:w-40 xl:h-40 rounded-full flex flex-col items-center justify-center shrink-0"
-                        style={{
-                          background: "rgba(10, 10, 18, 0.94)",
-                          border: `2px solid ${gs.combo >= 100 ? '#39FF14' : gs.combo >= 50 ? '#FF1493' : gs.combo > 0 ? '#00E5FF' : 'rgba(255,255,255,0.18)'}`,
-                          boxShadow: gs.combo > 0 
-                            ? `0 0 25px ${gs.combo >= 100 ? 'rgba(57, 255, 20, 0.5)' : gs.combo >= 50 ? 'rgba(255, 20, 147, 0.5)' : 'rgba(0, 229, 255, 0.4)'}, inset 0 0 10px rgba(255,255,255,0.03)`
-                            : '0 0 15px rgba(0,0,0,0.5)',
-                          transition: "all 0.3s ease-in-out",
-                        }}
-                      >
-                        {/* SVG Combo Circular Decay/Progress Ring */}
-                        <svg viewBox="0 0 96 96" className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none z-0">
-                          <circle
-                            cx="48"
-                            cy="48"
-                            r="42"
-                            fill="none"
-                            stroke="rgba(255, 255, 255, 0.08)"
-                            strokeWidth="3.5"
-                          />
-                          {gs.combo > 0 && (
-                            <circle
-                              cx="48"
-                              cy="48"
-                              r="42"
-                              fill="none"
-                              stroke={gs.combo >= 100 ? '#39FF14' : gs.combo >= 50 ? '#FF1493' : '#00E5FF'}
-                              strokeWidth="3.5"
-                              strokeDasharray={2 * Math.PI * 42}
-                              strokeDashoffset={2 * Math.PI * 42 * (1 - Math.min(1, (gs.combo % 50) / 50))}
-                              strokeLinecap="round"
-                              style={{
-                                transition: "stroke-dashoffset 0.1s linear, stroke 0.3s ease-in-out",
-                                filter: `drop-shadow(0 0 6px ${gs.combo >= 100 ? '#39FF14' : gs.combo >= 50 ? '#FF1493' : '#00E5FF'})`
-                              }}
-                            />
-                          )}
-                        </svg>
-
-                        <span className="relative z-10 font-mono text-[7px] sm:text-[7.5px] md:text-[8.5px] lg:text-[10px] xl:text-[11px] tracking-[0.2em] text-zinc-400 font-bold mb-0.5 uppercase">
-                          COMBO
-                        </span>
-                        <motion.span
-                          animate={{ scale: [1.35, 1.0] }}
-                          transition={{ type: "spring", stiffness: 450, damping: 25 }}
-                          className="relative z-20 font-mono text-base sm:text-lg md:text-xl lg:text-3xl xl:text-4xl font-black text-white tracking-tight"
-                          style={{
-                            textShadow: gs.combo > 0 ? `0 0 10px ${gs.combo >= 100 ? '#39FF14' : gs.combo >= 50 ? '#FF1493' : '#00E5FF'}` : 'none'
-                          }}
-                          ref={comboTextRef}
-                        >
-                          {gs.combo}
-                        </motion.span>
-                      </motion.div>
-                    )}
-
-                    {/* Active Power-up dynamic tech pill (Direct DOM ref updated, zero React re-renders) */}
-                    <div
-                      ref={puPillRef}
-                      className="mt-2 text-center font-mono text-[8.5px] sm:text-[9px] md:text-[10px] lg:text-[11px] font-black px-3.5 sm:px-4.5 py-0.5 rounded-full tracking-[0.18em] uppercase items-center justify-center gap-1.5 shadow-lg border"
-                      style={{
-                        display: "none",
-                        background: "rgba(10, 10, 18, 0.96)",
-                      }}
-                    >
-                      <span className="relative flex h-1.5 w-1.5">
-                        <span ref={puPillPingRef} className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" />
-                        <span ref={puPillDotRef} className="relative inline-flex rounded-full h-1.5 w-1.5" />
-                      </span>
-                      <span ref={puPillTextRef} />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
 
           {/* Stage Transition Alert Banner */}
           <AnimatePresence>
@@ -11563,7 +11189,7 @@ export default function Game() {
           {/* Right-Side Vertical Judgment Stream (Last 20 Judgments, Bottom-to-Top, Upper-Right Quadrant 3/4 from Bottom) */}
           {opts.judgmentText && (
             <div
-              className="absolute right-2 sm:right-3.5 bottom-[52%] sm:bottom-[48%] z-35 flex flex-col justify-end items-end gap-1 pointer-events-none select-none overflow-hidden max-h-[190px] sm:max-h-[260px]"
+              className="absolute right-2 sm:right-3.5 bottom-[52%] sm:bottom-[48%] z-35 hidden sm:flex flex-col justify-end items-end gap-1 pointer-events-none select-none overflow-hidden max-h-[190px] sm:max-h-[260px]"
               style={{
                 maskImage: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 60%, rgba(0,0,0,0) 100%)',
                 WebkitMaskImage: 'linear-gradient(to top, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 60%, rgba(0,0,0,0) 100%)',
