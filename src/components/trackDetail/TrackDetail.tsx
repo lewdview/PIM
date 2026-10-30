@@ -12,7 +12,8 @@ import { useLocation } from 'wouter';
 import { Check, Disc, Film, Gamepad2, Lock, Pause, Play, Share2, Volume2, X, CheckCircle } from 'lucide-react';
 import { getModifierForSong } from '@/game/api';
 import { audioManager } from '@/game/audio';
-import { DELUXE_UNLOCK_ACCURACY, deluxeSongId, isDeluxeUnlocked } from '@/lib/deluxe';
+import { DELUXE_UNLOCK_ACCURACY, deluxeSongId, isDeluxeUnlocked, loadEarnedDeluxeDays } from '@/lib/deluxe';
+import { useAuthStore } from '@/store/useAuthStore';
 import type { OwnedCard } from '../../services/vaultService';
 import { useGlobalPlayer } from '../../store/useGlobalPlayer';
 import { useVaultStore } from '../../store/useVaultStore';
@@ -82,6 +83,14 @@ export default function TrackDetail({
   const [focusedId, setFocusedId] = useState<string | null>(ownedCard?.id ?? null);
   const [diff, setDiff] = useState<number>(5);
   const [claiming, setClaiming] = useState(false);
+  const [deluxeLoaded, setDeluxeLoaded] = useState(0);
+  const userId = useAuthStore((s) => s.user?.id);
+
+  useEffect(() => {
+    let alive = true;
+    loadEarnedDeluxeDays(userId).then(() => { if (alive) setDeluxeLoaded((n) => n + 1); });
+    return () => { alive = false; };
+  }, [userId]);
 
   useEffect(() => { setTab(initialTab); }, [day, initialTab]);
   useEffect(() => { setFocusedId(ownedCard?.id ?? null); setPreviewRarity(null); }, [day, ownedCard?.id]);
@@ -127,8 +136,11 @@ export default function TrackDetail({
   const isChapter = origin.startsWith('chapter');
   // A caller-supplied onPlay (the daily drop) runs its own claim flow, so it's never locked here.
   const canPlay = !data.isFuture && (Boolean(onPlay) || (isChapter ? !stats.isCleared || isOwned : isOwned || day === today));
-  const deluxeOpen = isOwned && isDeluxeUnlocked(collection, day);
-  const showDiff = canPlay && !isChapter && !onPlay;
+  // deluxeLoaded re-renders once earned Deluxe unlocks are hydrated from gameplay records
+  const deluxeOpen = deluxeLoaded >= 0 && isOwned && isDeluxeUnlocked(collection, day);
+  // Only Award play offers a difficulty override: it's the only origin whose results
+  // screen voids prizes for a changed difficulty.
+  const showDiff = canPlay && origin === 'songs' && !onPlay;
   const lockedReason = data.isFuture
     ? `Day ${day} hasn't been released yet.`
     : isChapter
@@ -351,7 +363,7 @@ export default function TrackDetail({
               </div>
               <input type="range" min={1} max={10} value={diff} onChange={(e) => setDiff(parseInt(e.target.value, 10))}
                 className="w-full cursor-pointer" style={{ accentColor: DIFF_COLORS[Math.min(diff - 1, 9)] }} aria-label="Difficulty" />
-              {diff !== song.difficultyLevel && origin === 'songs' && (
+              {diff !== song.difficultyLevel && (
                 <p className="font-mono text-[9px] text-[#FF8A00] mt-1 uppercase">Changed difficulty: no award prizes this run</p>
               )}
             </div>
