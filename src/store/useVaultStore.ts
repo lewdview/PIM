@@ -16,6 +16,10 @@ export interface ProfileSettings {
   cardBack: string;
   gameBackground: string;
   gameTrack?: string;
+  hudStyle?: 'beta' | 'console' | 'stanza';
+  lyricsMode?: 'off' | 'track' | 'poetic';
+  /** Old on/off lyrics toggle, read once to seed lyricsMode. */
+  trackLyrics?: boolean;
   backgroundBlur: number;
   hudMisses: boolean;
   comboDisplay: boolean;

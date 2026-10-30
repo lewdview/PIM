@@ -1,0 +1,390 @@
+/* ════════════════════════════════════════════════════════════════════════════════
+   gameplayHud.css — in-song HUD (GamePlay/GameplayCore.tsx, logic in GamePlay/verseHud.ts).
+   "Stanza + Oracle": the lyric line being sung is the centrepiece, inked letter by
+   letter by the notes you hit (combo tier = ink colour, a miss strikes letters
+   through, the shield is the ellipsis, the multiplier is the superscript, song
+   progress is the underline). One coaching whisper and a timing tick per lane
+   sit under it. Controls + meta flank it on the left, time + score on the right.
+   Layout: one band above the highway, in flow, so nothing covers the notes.
+   Phones stack controls/score over the verse; wide screens put all three side
+   by side.
+   Spacing lives here rather than in Tailwind utilities because the global
+   `*` reset in index.css is unlayered and wins over utility padding/margin.
+   ════════════════════════════════════════════════════════════════════════════════ */
+
+.pim-hud-strip {
+  --hud-accent: #FF1493;
+  --hud-text: #f4f4f5;
+  --hud-text-2: #a1a1aa;
+  --hud-text-3: #71717a;
+  --hud-line: rgba(255, 255, 255, 0.08);
+  --hud-line-strong: rgba(255, 255, 255, 0.18);
+  --hud-acid: #39FF14;
+  --hud-cyan: #00E5FF;
+  --hud-ink: #0a0a0f;
+  --hud-display: 'Anton', 'Impact', 'Arial Narrow', sans-serif;
+  --hud-mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+  --hud-verse: 'Instrument Serif', 'Iowan Old Style', Georgia, serif;
+
+  position: relative;
+  z-index: 30;
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'left right'
+    'verse verse';
+  align-items: start;
+  column-gap: 12px;
+  width: 100%;
+  padding: 8px 12px 6px;
+  color: var(--hud-text);
+  font-family: var(--hud-mono);
+  font-variant-numeric: tabular-nums;
+  background: linear-gradient(180deg, rgba(5, 5, 8, 0.82) 0%, rgba(5, 5, 8, 0.55) 70%, rgba(5, 5, 8, 0) 100%);
+}
+
+/* ── flanks ── */
+.pim-hud-side { display: grid; gap: 6px; min-width: 0; }
+.pim-hud-left { grid-area: left; justify-items: start; }
+.pim-hud-right { grid-area: right; justify-items: end; text-align: right; }
+
+.pim-hud-controls { display: flex; align-items: center; gap: 6px; }
+
+.pim-hud-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 34px;
+  height: 30px;
+  padding: 0 10px;
+  font: 700 12px/1 var(--hud-mono);
+  letter-spacing: 0.14em;
+  color: var(--hud-text-2);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--hud-line-strong);
+  clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.pim-hud-btn:hover,
+.pim-hud-btn:focus-visible {
+  color: var(--hud-text);
+  border-color: var(--hud-accent);
+  background: color-mix(in srgb, var(--hud-accent) 14%, transparent);
+  outline: none;
+}
+.pim-hud-btn[data-on='true'] { color: var(--hud-acid); }
+.pim-hud-btn-label { display: none; }
+
+/* day · title · stage · accuracy · medal (wide screens only) */
+.pim-hud-meta {
+  position: relative;
+  display: none;
+  gap: 2px;
+  font: 700 10px/1.6 var(--hud-mono);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--hud-text-3);
+}
+.pim-hud-meta b {
+  max-width: 22ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--hud-text-2);
+  font-weight: 700;
+}
+.pim-hud-meta i { font-style: normal; color: var(--hud-text-2); }
+.pim-hud-medal {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  padding: 3px 5px;
+  font: 700 9px/1 var(--hud-mono);
+  letter-spacing: 0.18em;
+  color: var(--hud-ink);
+  background: var(--medal, #a855f7);
+  clip-path: polygon(3px 0, 100% 0, calc(100% - 3px) 100%, 0 100%);
+}
+
+.pim-hud-time {
+  font: 700 11px/1 var(--hud-mono);
+  letter-spacing: 0.12em;
+  color: var(--hud-text-3);
+  white-space: nowrap;
+}
+.pim-hud-time b { color: var(--hud-text-2); font-weight: 700; }
+.pim-hud-total { display: none; }
+
+/* score: unearned leading digits stay hollow */
+.pim-hud-score {
+  font: 400 26px/0.9 var(--hud-display);
+  letter-spacing: 0.02em;
+  color: var(--hud-text);
+  white-space: nowrap;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+}
+.pim-hud-score-ghost {
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(255, 255, 255, 0.28);
+  text-shadow: none;
+}
+.pim-hud-chain {
+  font: 700 10px/1 var(--hud-mono);
+  letter-spacing: 0.2em;
+  color: var(--hud-text-3);
+}
+.pim-hud-chain span { display: inline-block; color: var(--ink, var(--hud-text)); transition: color 0.25s; }
+.pim-hud-bump { animation: pim-hud-bump 0.22s cubic-bezier(0.2, 1.6, 0.4, 1); }
+@keyframes pim-hud-bump {
+  from { transform: scale(1.3); }
+  to { transform: scale(1); }
+}
+
+/* power-up: label pill with a draining timer under it */
+/* out of flow, so the pill appearing never changes the band's height */
+.pim-hud-pu { position: absolute; top: 100%; right: 0; display: grid; justify-items: end; gap: 3px; margin-top: 4px; }
+.pim-hud-right { position: relative; }
+.pim-hud-pu-pill {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  font: 700 10px/1 var(--hud-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  background: rgba(10, 10, 18, 0.96);
+  border: 1px solid transparent;
+  clip-path: polygon(4px 0, 100% 0, calc(100% - 4px) 100%, 0 100%);
+  white-space: nowrap;
+}
+.pim-hud-pu-dot { position: relative; display: flex; width: 6px; height: 6px; }
+.pim-hud-pu-dot span { position: absolute; inset: 0; border-radius: 50%; }
+.pim-hud-pu-bar { display: none; width: 100%; height: 2px; transform-origin: left center; }
+
+/* ═════════ the verse ═════════ */
+.pim-verse {
+  --ink: #f4f4f5;
+  grid-area: verse;
+  container-type: inline-size;
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  min-width: 0;
+  padding-top: 6px;
+  text-align: center;
+  pointer-events: none;
+}
+.pim-verse-prev {
+  height: 15px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: italic 400 13px/1.1 var(--hud-verse);
+  color: rgba(255, 255, 255, 0.3);
+}
+.pim-verse-line {
+  /* fixed height: a new line must never change the band's height, or the game
+     canvas below resizes (and re-renders its track) at every line change */
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 36px;
+  max-width: 100%;
+  white-space: nowrap;
+  /* the line shrinks to fit its length (--len = characters + room for the ellipsis) */
+  font: italic 400 clamp(17px, calc(100cqw / (var(--len, 24) * 0.43)), 34px)/1.05 var(--hud-verse);
+  letter-spacing: -0.005em;
+}
+.pim-verse-text span {
+  color: rgba(255, 255, 255, 0.2);
+  transition: color 0.12s, text-shadow 0.12s;
+}
+.pim-verse-text span.sung { color: rgba(255, 255, 255, 0.62); }
+.pim-verse-text span.in {
+  color: var(--ink);
+  text-shadow: 0 0 14px color-mix(in srgb, var(--ink) 55%, transparent), 0 1px 6px rgba(0, 0, 0, 0.9);
+}
+.pim-verse-text span.x {
+  color: rgba(255, 20, 147, 0.62);
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+}
+.pim-verse[data-filler='true'] .pim-verse-line { letter-spacing: 0.04em; }
+.pim-verse-enter { animation: pim-verse-enter 0.35s ease-out; }
+@keyframes pim-verse-enter {
+  from { opacity: 0; filter: blur(3px); transform: translateY(4px); }
+  to { opacity: 1; }
+}
+
+/* shield = the line's ellipsis, one dot per miss left */
+.pim-verse-ell { display: inline-flex; gap: 0.12em; margin-left: 0.08em; }
+.pim-verse-ell i {
+  display: inline-block;
+  width: 0.14em;
+  height: 0.14em;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.pim-verse-ell i[data-on='true'] { background: var(--hud-text); box-shadow: 0 0 6px rgba(255, 255, 255, 0.6); }
+.pim-verse-ell[data-low='true'] i[data-on='true'] { background: var(--hud-accent); box-shadow: 0 0 8px var(--hud-accent); }
+
+.pim-verse-mult {
+  margin-left: 0.2em;
+  font: 400 0.42em/1 var(--hud-display);
+  font-style: normal;
+  letter-spacing: 0.06em;
+  vertical-align: 0.9em;
+  color: var(--mult-c, var(--hud-cyan));
+  text-shadow: 0 0 10px var(--mult-c, var(--hud-cyan));
+}
+
+/* progress underline, one segment per stage */
+.pim-verse-under {
+  display: grid;
+  gap: 3px;
+  width: min(100%, 440px);
+}
+.pim-verse-under i {
+  position: relative;
+  height: 2px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.1);
+}
+.pim-verse-under i::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  transform: scaleX(var(--f, 0));
+  background: var(--seg-c, var(--hud-cyan));
+  box-shadow: 0 0 6px var(--seg-c, var(--hud-cyan));
+  transition: transform 0.15s linear;
+}
+
+/* ═════════ the oracle ═════════ */
+.pim-orc-whisper {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  height: 30px;
+  margin-top: 3px;
+  white-space: nowrap;
+  opacity: 1;
+  transition: opacity 0.6s;
+}
+.pim-orc-whisper[data-on='false'] { opacity: 0; }
+.pim-orc-whisper b {
+  font: 700 11px/1 var(--hud-mono);
+  letter-spacing: 0.26em;
+  color: var(--wc, var(--hud-text));
+  text-shadow: 0 0 12px color-mix(in srgb, var(--wc, #fff) 50%, transparent), 0 1px 4px rgba(0, 0, 0, 0.9);
+}
+.pim-orc-whisper span {
+  font: italic 400 14px/1 var(--hud-verse);
+  color: rgba(255, 255, 255, 0.55);
+}
+.pim-orc-in { animation: pim-orc-in 0.45s ease-out; }
+@keyframes pim-orc-in {
+  from { opacity: 0; letter-spacing: 0.5em; filter: blur(3px); }
+  to { opacity: 1; }
+}
+
+/* timing ticks: one per lane, the dot sits early (left) or late (right) of centre */
+.pim-orc-ticks {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  width: min(100%, 300px);
+  transition: opacity 0.8s;
+}
+.pim-orc-tick { position: relative; height: 18px; opacity: 0.35; transition: opacity 0.4s; }
+.pim-orc-tick[data-on='true'] { opacity: 0.8; }
+.pim-orc-tick[data-drift='true'] { opacity: 1; }
+.pim-orc-tick::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 5px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.18);
+}
+.pim-orc-tick::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 1px;
+  width: 1px;
+  height: 9px;
+  background: rgba(255, 255, 255, 0.45);
+}
+.pim-orc-tick i {
+  position: absolute;
+  top: 5px;
+  left: calc(50% + var(--o, 0) * 50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  translate: -50% -50%;
+  background: var(--lc, #fff);
+  box-shadow: 0 0 6px var(--lc, #fff);
+  transition: left 0.3s;
+}
+.pim-orc-tick span {
+  position: absolute;
+  top: 11px;
+  left: 50%;
+  translate: -50% 0;
+  font: 700 7px/1 var(--hud-mono);
+  letter-spacing: 0.14em;
+  color: rgba(255, 255, 255, 0.5);
+  white-space: nowrap;
+}
+/* in flow (nothing to say) the ticks fade back too */
+.pim-verse[data-calm='true'] .pim-orc-ticks { opacity: 0.45; }
+
+/* small phones: keep the elapsed time, tighten the controls */
+@media (max-width: 379px) {
+  .pim-hud-strip { column-gap: 8px; padding-inline: 8px; }
+  .pim-hud-controls { gap: 4px; }
+  .pim-hud-btn { min-width: 30px; padding: 0 8px; }
+  .pim-hud-score { font-size: 22px; }
+}
+
+@media (min-width: 640px) {
+  .pim-hud-strip { padding: 10px 20px 8px; column-gap: 20px; }
+  .pim-hud-btn-label { display: inline; }
+  .pim-hud-total { display: inline; }
+  .pim-hud-score { font-size: 30px; }
+  .pim-verse-prev { font-size: 15px; height: 17px; }
+  .pim-verse-line { font-size: clamp(20px, calc(100cqw / (var(--len, 24) * 0.43)), 42px); height: 45px; }
+  .pim-orc-whisper { height: 34px; }
+  .pim-orc-whisper b { font-size: 12px; }
+  .pim-orc-whisper span { font-size: 16px; }
+  .pim-orc-tick span { font-size: 8px; }
+}
+
+/* wide screens: controls + meta | verse | time + score, all on one band */
+@media (min-width: 900px) and (min-aspect-ratio: 1.15) {
+  .pim-hud-strip {
+    grid-template-columns: minmax(170px, 1fr) minmax(0, 2.6fr) minmax(170px, 1fr);
+    grid-template-areas: 'left verse right';
+    padding: 12px 24px 10px;
+  }
+  .pim-hud-meta { display: grid; }
+  .pim-verse { padding-top: 0; gap: 6px; }
+  .pim-verse-line { font-size: clamp(24px, calc(100cqw / (var(--len, 24) * 0.43)), 52px); height: 56px; }
+  .pim-hud-score { font-size: clamp(34px, 3.2vw, 46px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pim-hud-bump, .pim-verse-enter, .pim-orc-in { animation: none; }
+  .pim-verse-under i::after, .pim-orc-tick i { transition: none; }
+}

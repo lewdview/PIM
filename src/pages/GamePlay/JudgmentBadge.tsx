@@ -183,7 +183,54 @@ export const JudgmentBadge: React.FC<{ type: JudgmentDisplay['type']; scale?: nu
   );
 };
 
-export function getJudgmentBadgeSvgHtml(type: JudgmentDisplay['type'], scale = 1, idSuffix: number | string = ''): string {
+type HudStyle = 'beta' | 'console' | 'stanza';
+
+const JUDGE = {
+  'PERFECT+': { c: '#FFD700', label: 'PERFECT+', word: 'perfect+', chip: 'P+' },
+  PERFECT: { c: '#39FF14', label: 'PERFECT', word: 'perfect', chip: 'PF' },
+  GOOD: { c: '#00E5FF', label: 'GOOD', word: 'good', chip: 'GD' },
+  SHIELDED: { c: '#E879F9', label: 'SHIELDED', word: 'shielded', chip: 'SH' },
+  MISS: { c: '#FF1493', label: 'MISS', word: 'miss', chip: 'MS' },
+} as const;
+
+/**
+ * Console Rail judgment: a sheared plate with a neon edge and Anton label,
+ * like the rail's controls and panels.
+ */
+function railBadgeSvg(type: JudgmentDisplay['type'], scale: number): string {
+  const j = JUDGE[type] ?? JUDGE.MISS;
+  const w = 26 + j.label.length * 11;
+  const h = 30;
+  const solid = type === 'PERFECT+';
+  return `<svg width="${w * scale}" height="${h * scale}" viewBox="0 0 ${w} ${h}" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 10px ${j.c}99);">
+      <path d="M 8 1 L ${w - 1} 1 L ${w - 8} ${h - 1} L 1 ${h - 1} Z" fill="${solid ? j.c : 'rgba(8,8,12,0.88)'}" stroke="${j.c}" stroke-width="1.5" />
+      <path d="M 1 ${h - 9} L 1 ${h - 1} L 9 ${h - 1}" stroke="${j.c}" stroke-width="2" />
+      <path d="M ${w - 9} 1 L ${w - 1} 1 L ${w - 1} 9" stroke="${j.c}" stroke-width="2" />
+      <text x="${w / 2}" y="21" text-anchor="middle" fill="${solid ? '#0a0a0f' : j.c}" font-family="Anton, Impact, 'Arial Narrow', sans-serif" font-size="17" letter-spacing="0.08em"${type === 'MISS' ? ' opacity="0.95"' : ''}>${j.label}</text>
+    </svg>`;
+}
+
+/**
+ * Poetic GUI judgment: the word itself, set in the verse face. A miss is
+ * struck through, like the missed letters in the lyric line.
+ */
+function poeticBadgeSvg(type: JudgmentDisplay['type'], scale: number): string {
+  const j = JUDGE[type] ?? JUDGE.MISS;
+  const w = 24 + j.word.length * 12;
+  const h = 34;
+  const strike = type === 'MISS' ? `<line x1="10" y1="19" x2="${w - 10}" y2="19" stroke="${j.c}" stroke-width="2" />` : '';
+  const flourish = type === 'PERFECT+' || type === 'PERFECT'
+    ? `<path d="M ${w * 0.22} 29 Q ${w / 2} 33 ${w * 0.78} 29" stroke="${j.c}" stroke-width="1.2" stroke-linecap="round" opacity="0.8" />`
+    : '';
+  return `<svg width="${w * scale}" height="${h * scale}" viewBox="0 0 ${w} ${h}" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 9px ${j.c}aa) drop-shadow(0 1px 3px rgba(0,0,0,0.9));">
+      <text x="${w / 2}" y="24" text-anchor="middle" fill="${type === 'MISS' ? 'rgba(255,20,147,0.75)' : j.c}" font-family="'Instrument Serif', Georgia, serif" font-style="italic" font-size="25">${j.word}</text>
+      ${strike}${flourish}
+    </svg>`;
+}
+
+export function getJudgmentBadgeSvgHtml(type: JudgmentDisplay['type'], scale = 1, idSuffix: number | string = '', hudStyle: HudStyle = 'beta'): string {
+  if (hudStyle === 'console') return railBadgeSvg(type, scale);
+  if (hudStyle === 'stanza') return poeticBadgeSvg(type, scale);
   if (type === "PERFECT+") {
     return `<svg width="${145 * scale}" height="${36 * scale}" viewBox="0 0 145 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 14px rgba(255,215,0,0.9));">
       <defs>
@@ -244,7 +291,18 @@ export function getJudgmentBadgeSvgHtml(type: JudgmentDisplay['type'], scale = 1
   </svg>`;
 }
 
-export function getJudgmentStreamItemHtml(type: JudgmentDisplay['type'], _lane: number): string {
+export function getJudgmentStreamItemHtml(type: JudgmentDisplay['type'], _lane: number, hudStyle: HudStyle = 'beta'): string {
+  if (hudStyle !== 'beta') {
+    const j = JUDGE[type] ?? JUDGE.MISS;
+    if (hudStyle === 'console') {
+      // sheared chip, like the rail's pips
+      return `<div class="flex items-center justify-center select-none" style="width:28px;height:16px;transform:skewX(-20deg);background:${type === 'PERFECT+' ? j.c : 'rgba(8,8,12,0.85)'};border:1px solid ${j.c};box-shadow:0 0 6px ${j.c}66;">
+    <span style="transform:skewX(20deg);font:400 10px/1 Anton, Impact, sans-serif;letter-spacing:0.06em;color:${type === 'PERFECT+' ? '#0a0a0f' : j.c};">${j.chip}</span>
+  </div>`;
+    }
+    // a word from the margin of the verse
+    return `<div class="select-none" style="font:italic 400 14px/1 'Instrument Serif', Georgia, serif;color:${type === 'MISS' ? 'rgba(255,20,147,0.75)' : j.c};text-shadow:0 0 6px ${j.c}88;${type === 'MISS' ? 'text-decoration:line-through;' : ''}">${j.word}</div>`;
+  }
   let color = '#39FF14';
   let label = 'PF';
   let bg = 'rgba(57,255,20,0.22)';

@@ -27,6 +27,27 @@ export type PovMode =
 
 export type { ChartVariant };
 
+/** 'stanza' is shown to players as "Poetic GUI". */
+export type HudStyle = 'beta' | 'console' | 'stanza';
+/** How lyrics show during play: none, painted on the track, or Poetic Lines (kinetic lyrics across the sky). */
+export type LyricsMode = 'off' | 'track' | 'poetic';
+export const LYRICS_MODES: readonly LyricsMode[] = ['off', 'track', 'poetic'];
+/** Phones read lyrics best on the track; desktop and tablet get Poetic Lines. */
+export function defaultLyricsMode(): LyricsMode {
+  return typeof window !== 'undefined' && window.innerWidth < 640 ? 'track' : 'poetic';
+}
+/**
+ * The lyric mode actually drawn in a song. The Poetic GUI shows the lyric line
+ * itself, so it turns the other modes off.
+ */
+export function activeLyricsMode(o: { hudStyle?: HudStyle; lyricsMode: LyricsMode }): LyricsMode {
+  return (o.hudStyle ?? 'stanza') === 'stanza' ? 'off' : o.lyricsMode;
+}
+export const HUD_STYLES: readonly HudStyle[] = ['beta', 'console', 'stanza'];
+export function toHudStyle(v: unknown): HudStyle {
+  return HUD_STYLES.includes(v as HudStyle) ? (v as HudStyle) : 'stanza';
+}
+
 export type GameOpts = {
   missSystem: boolean;
   hudMisses: boolean;
@@ -46,6 +67,8 @@ export type GameOpts = {
   musicVolume: number;
   gameBackground: string;
   gameTrack: string;
+  /** In-song HUD: the original beta HUD, the console rail, or Stanza + Oracle. */
+  hudStyle: HudStyle;
   backgroundBlur: number;
   cardBack: string;
   haptics: boolean;
@@ -63,6 +86,7 @@ export type GameOpts = {
   bgAnimation: boolean;
   healingGauge: boolean;
   trackLyrics: boolean;
+  lyricsMode: LyricsMode;
 };
 
 export interface GameBackground {
@@ -75,7 +99,6 @@ export interface GameBackground {
 
 export const GAME_BACKGROUNDS: GameBackground[] = [
   { id: 'cover_blur', name: 'Song Artwork', desc: 'Ambient cover art blurring', unlockText: 'Unlocked', unlockScore: 0 },
-  { id: 'lyric_cinema', name: 'Lyric Cinema', desc: 'Kinetic lyrics across the sky, synced to the song', unlockText: 'Unlocked', unlockScore: 0 },
   { id: 'neon_grid', name: 'Neon Grid', desc: 'Synthwave neon network grid', unlockText: 'Requires 1,000 Prestige Score', unlockScore: 1000 },
   { id: 'cyber_streets', name: 'Matrix Cyber', desc: 'Green binary rain frequency', unlockText: 'Requires 5,000 Prestige Score', unlockScore: 5000 },
   { id: 'space_nebula', name: 'Void Space', desc: 'Moving nebula & stardust', unlockText: 'Requires 10,000 Prestige Score', unlockScore: 10000 },
@@ -124,6 +147,7 @@ export const DEFAULT_OPTS: GameOpts = {
   musicVolume: 0.5,
   gameBackground: "cover_blur",
   gameTrack: "transparent",
+  hudStyle: "stanza",
   backgroundBlur: 10,
   cardBack: "classic",
   haptics: true,
@@ -141,6 +165,7 @@ export const DEFAULT_OPTS: GameOpts = {
   bgAnimation: true,
   healingGauge: true,
   trackLyrics: true,
+  lyricsMode: "poetic",
 };
 
 export function getEffectiveDpr(res: RenderResolution = 'high'): number {
@@ -222,8 +247,10 @@ export function loadOpts(): GameOpts {
     sfxEnabled: dbSettings?.sfxEnabled ?? bool("opt_sfxEnabled", true),
     sfxVolume: dbSettings?.sfxVolume ?? (parseFloat(localStorage.getItem("opt_sfxVolume") ?? "0.8") ?? 0.8),
     musicVolume: dbSettings?.musicVolume ?? (parseFloat(localStorage.getItem("opt_musicVolume") ?? "0.5") ?? 0.5),
-    gameBackground: dbSettings?.gameBackground ?? (localStorage.getItem("opt_gameBackground") ?? "cover_blur"),
+    // Lyric Cinema moved out of the backgrounds into the lyrics picker (as Poetic Lines).
+    gameBackground: ((b: string) => (b === 'lyric_cinema' ? 'cover_blur' : b))(dbSettings?.gameBackground ?? (localStorage.getItem("opt_gameBackground") ?? "cover_blur")),
     gameTrack: dbSettings?.gameTrack ?? (localStorage.getItem("opt_gameTrack") ?? "transparent"),
+    hudStyle: toHudStyle(dbSettings?.hudStyle ?? localStorage.getItem("opt_hudStyle")),
     backgroundBlur: dbSettings?.backgroundBlur ?? (parseFloat(localStorage.getItem("opt_backgroundBlur") ?? "10") || 10),
     cardBack: dbSettings?.cardBack ?? (localStorage.getItem("opt_cardBack") ?? "classic"),
     haptics: dbSettings?.haptics ?? bool("opt_haptics", true),
@@ -242,7 +269,17 @@ export function loadOpts(): GameOpts {
     bgAnimation: dbSettings?.bgAnimation ?? bool("opt_bgAnimation", true),
     healingGauge: bool("opt_healingGauge", true),
     trackLyrics: dbSettings?.trackLyrics ?? bool("opt_trackLyrics", true),
+    lyricsMode: loadLyricsMode(dbSettings?.lyricsMode, dbSettings?.gameBackground ?? localStorage.getItem("opt_gameBackground"), dbSettings?.trackLyrics ?? bool("opt_trackLyrics", true)),
   };
+}
+
+/** Saved lyric mode, or one carried over from the old settings (Lyric Cinema background, Track lyrics toggle). */
+function loadLyricsMode(saved: unknown, background: string | null | undefined, trackLyrics: boolean): LyricsMode {
+  const v = saved ?? (typeof localStorage !== 'undefined' ? localStorage.getItem('opt_lyricsMode') : null);
+  if (LYRICS_MODES.includes(v as LyricsMode)) return v as LyricsMode;
+  if (background === 'lyric_cinema') return 'poetic';
+  if (!trackLyrics) return 'off';
+  return defaultLyricsMode();
 }
 
 export function saveLaneKey(lane: 0 | 1 | 2, key: string) {
