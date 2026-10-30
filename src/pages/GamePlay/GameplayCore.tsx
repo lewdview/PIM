@@ -10712,7 +10712,9 @@ export default function Game() {
                       {currentStage === 5 ? <>STAGE <i>FINAL</i></> : <>STAGE <i>{currentStage}</i> / 5</>}
                     </span>
                     <span className="pim-hud-time">
-                      {Math.round((gs.progress || 0) * 100)}% · <b>{formatTimeSec(getT())}</b> / {formatTimeSec(duration)}
+                      <span className="pim-hud-pct">{Math.round((gs.progress || 0) * 100)}% · </span>
+                      <b>{formatTimeSec(getT())}</b>
+                      <span className="pim-hud-total"> / {formatTimeSec(duration)}</span>
                     </span>
                   </div>
                   <div
