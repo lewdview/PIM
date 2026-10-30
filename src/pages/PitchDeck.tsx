@@ -1208,8 +1208,8 @@ export default function PitchDeck() {
                   <div className="grid grid-cols-3 gap-2 w-full max-w-[320px]">
                     {[
                       { k: '365', v: 'Songs / 365 days' },
-                      { k: '1,270+', v: 'Players' },
-                      { k: '69,900+', v: 'Game runs' },
+                      { k: '1,335', v: 'Players' },
+                      { k: '70,007', v: 'Game runs' },
                     ].map((s) => (
                       <div key={s.v} className="border border-white/10 bg-white/[0.03] px-2 py-2 text-center">
                         <div className="font-mono font-black text-sm text-[#ffb800]">{s.k}</div>
