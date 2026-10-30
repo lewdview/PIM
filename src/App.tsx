@@ -93,12 +93,11 @@ const ClaimPage = lazyWithRetry(() => import('./pages/ClaimPage'));
 const LegalPage = lazyWithRetry(() => import('./pages/LegalPage'));
 const VoyeurPage = lazyWithRetry(() => import('./pages/VoyeurPage'));
 const ProfilePage = lazyWithRetry(() => import('./pages/ProfilePage'));
-const SongDetail = lazyWithRetry(() => import('./pages/SongDetail'));
+const TrackDetailPage = lazyWithRetry(() => import('./pages/TrackDetailPage'));
 const ListenPage = lazyWithRetry(() => import('./pages/ListenPage'));
 const EarnPage = lazyWithRetry(() => import('./pages/EarnPage'));
 const UniverseHome = lazyWithRetry(() => import('./pages/UniverseHome'));
 const Archive365Page = lazyWithRetry(() => import('./pages/Archive365Page'));
-const DayArtifactPage = lazyWithRetry(() => import('./pages/DayArtifactPage'));
 const WarpZonePage = lazyWithRetry(() => import('./pages/WarpZonePage'));
 const SecretLevel = lazyWithRetry(() => import('./pages/SecretLevel'));
 const AboutPage = lazyWithRetry(() => import('./pages/AboutPage'));
@@ -425,13 +424,13 @@ export default function App() {
                 <Route path="/profile" component={ProfilePage} />
                 <Route path="/user" component={ProfilePage} />
                 <Route path="/options" component={OptionsRouteHandler} />
-                <Route path="/song/:songId" component={SongDetail} />
+                <Route path="/song/:songId" component={TrackDetailPage} />
                 <Route path="/listen/:songId" component={ListenPage} />
                 <Route path="/slideshow" component={SlideshowPage} />
                 <Route path="/universe" component={UniverseHome} />
                 <Route path="/365" component={Archive365Page} />
-                <Route path="/day/:day" component={DayArtifactPage} />
-                <Route path="/day-:day" component={DayArtifactPage} />
+                <Route path="/day/:day" component={TrackDetailPage} />
+                <Route path="/day-:day" component={TrackDetailPage} />
                 <Route path="/sign" component={SignDiscoveryRoute} />
                 <Route path="/random" component={SignDiscoveryRoute} />
                 <Route path="/warp" component={WarpZonePage} />

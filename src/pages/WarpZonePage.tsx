@@ -350,7 +350,7 @@ export default function WarpZonePage() {
                       <span>LISTEN: {selectedSong.title}</span>
                     </button>
                     <Link
-                      to={`/day/${selectedSong.day}`}
+                      to={`/day/${selectedSong.day}?from=warp`}
                       className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white font-mono text-xs font-bold uppercase tracking-wider rounded no-underline"
                     >
                       View Artifact →

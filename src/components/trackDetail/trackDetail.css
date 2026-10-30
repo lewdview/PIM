@@ -1,0 +1,145 @@
+/* Universal track / card detail view (modal + page). Builds on stageShell.css tokens. */
+
+.td-root {
+  color: var(--shell-text);
+  font-family: var(--shell-body);
+}
+
+.td-h {
+  font-family: var(--shell-mono);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--shell-text);
+  margin: 0;
+}
+
+.td-label {
+  display: block;
+  font-family: var(--shell-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--shell-text-3);
+}
+
+.td-muted {
+  font-family: var(--shell-mono);
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--shell-text-3);
+  margin: 0;
+}
+
+.td-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--shell-line);
+}
+
+.td-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--shell-line-strong);
+  background: rgba(255, 255, 255, 0.03);
+  font-family: var(--shell-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--shell-text-2);
+  white-space: nowrap;
+}
+
+.td-title {
+  font-family: var(--shell-display);
+  font-size: clamp(30px, 5vw, 52px);
+  line-height: 0.95;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Tabs */
+.td-tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border-bottom: 1px solid var(--shell-line);
+  margin-bottom: 20px;
+}
+.td-tabs::-webkit-scrollbar { display: none; }
+
+.td-tab {
+  position: relative;
+  flex-shrink: 0;
+  padding: 12px 14px;
+  min-height: 44px;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font-family: var(--shell-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--shell-text-3);
+  transition: color 0.15s ease;
+}
+.td-tab:hover { color: var(--shell-text-2); }
+.td-tab[aria-selected='true'] { color: var(--shell-text); }
+.td-tab[aria-selected='true']::after {
+  content: '';
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--td-accent, var(--shell-accent));
+  box-shadow: 0 0 10px var(--td-accent, var(--shell-accent));
+}
+.td-tab .td-tab-count {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 9px;
+}
+
+/* Left column sticks on wide screens so the art and Play stay in view */
+@media (min-width: 1024px) {
+  .td-aside { position: sticky; top: 16px; align-self: start; }
+}
+
+/* Phone: Play dock pinned to the bottom of the modal */
+.td-dock {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+  background: rgba(8, 6, 4, 0.94);
+  backdrop-filter: blur(14px);
+  border-top: 1px solid var(--shell-line-strong);
+}
+@media (min-width: 1024px) {
+  .td-dock { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .td-root * { animation: none !important; transition: none !important; }
+}

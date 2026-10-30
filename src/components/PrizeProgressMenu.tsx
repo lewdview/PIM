@@ -4,13 +4,14 @@ import PrizeRibbonSvg from './ui/PrizeRibbonSvg';
 
 interface PrizeProgressMenuProps {
   songId: string;
+  /** Other ids the same song's prizes may be stored under (e.g. card-5 for day-005) */
+  aliasIds?: string[];
 }
 
-export default function PrizeProgressMenu({ songId }: PrizeProgressMenuProps) {
+export default function PrizeProgressMenu({ songId, aliasIds }: PrizeProgressMenuProps) {
   const claimedRewards = useVaultStore((s) => s.claimedRewards);
   const progression = useVaultStore((s) => s.progression);
   const rewardTiers = progression?.rewardTiers || {};
-  const songClaimed = claimedRewards[songId] || [];
   const [expanded, setExpanded] = useState(false);
 
   const REWARD_TIERS = [
@@ -21,14 +22,17 @@ export default function PrizeProgressMenu({ songId }: PrizeProgressMenuProps) {
     { id: 'prophecy', label: 'Prophecy Pack', desc: 'Emerald Reward Tier' },
   ];
 
+  const ids = Array.from(new Set([songId, ...(aliasIds || [])]));
+
   const checkIsClaimed = (tierId: string) => {
     return (
-      songClaimed.includes(tierId) ||
-      rewardTiers[songId] === tierId ||
       rewardTiers[tierId] === tierId ||
       localStorage.getItem(`reward_tier_${tierId}`) === tierId ||
-      localStorage.getItem(`reward_tier_${songId}`) === tierId ||
-      (tierId === 'prophecy' && (rewardTiers[songId] === 'prophecy' || localStorage.getItem(`reward_tier_${songId}`) === 'prophecy'))
+      ids.some((id) =>
+        (claimedRewards[id] || []).includes(tierId) ||
+        rewardTiers[id] === tierId ||
+        localStorage.getItem(`reward_tier_${id}`) === tierId
+      )
     );
   };
 

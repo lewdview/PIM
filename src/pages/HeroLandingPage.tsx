@@ -32,7 +32,7 @@ import { getClaimedCountForDay } from '../services/vaultService';
 import { useLiveClaimCount } from '../hooks/useLiveClaimCount';
 import { supabase } from '@/services/supabaseClient';
 import DailyClaimTransitionModal from '../components/DailyClaimTransitionModal';
-import TodayCardDetailModal from '../components/TodayCardDetailModal';
+import TrackDetailModal from '../components/trackDetail/TrackDetailModal';
 import MainBrandLogo from '../components/MainBrandLogo';
 import '../styles/HeroLandingPage.css';
 
@@ -1586,16 +1586,18 @@ export default function HeroLandingPage() {
       />
 
       {/* ═══════════ TODAY'S CARD DETAIL & VARIANTS MODAL ═══════════ */}
-      <TodayCardDetailModal
+      <TrackDetailModal
         isOpen={isCardDetailModalOpen}
         onClose={() => setIsCardDetailModalOpen(false)}
         day={activeDay}
-        song={song}
+        songIdHint={song?.id}
+        origin={`hero/day-${activeDay}`}
         onPlay={() => {
           setIsCardDetailModalOpen(false);
           handlePlayDrop(activeDay);
         }}
       />
+
     </div>
   );
 }

@@ -1,8 +1,8 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { 
-  Music, Lock, CheckCircle, Check, Filter, Play, Pause, Search, Sparkles, 
-  X, Eye, Flame, Disc, Layers, Download, Maximize2, ChevronLeft, ChevronRight, ExternalLink, Loader2 
+  Music, Lock, CheckCircle, Filter, Play, Pause, Search, Sparkles, 
+  Eye, Flame, Disc, Layers, Info
 } from 'lucide-react';
 import PrizeRibbonSvg from '../components/ui/PrizeRibbonSvg';
 import { useLocation } from 'wouter';
@@ -13,11 +13,10 @@ import { RARITY_CONFIG, type Rarity } from '../utils/rarity';
 import { getCoverUrlForRarity, useSmartCoverArt } from '../utils/rarityArtwork';
 import { getCurrentDay } from '../utils/dayCalc';
 import { primeGameCover } from '../utils/gameCover';
+import TrackDetailModal from '../components/trackDetail/TrackDetailModal';
+import type { TrackDetailTab } from '../components/trackDetail/TrackDetail';
 import {
   getBombshellDayCovers,
-  getBombshellCoverUrl,
-  getBombshellHiResPngUrl,
-  downloadBombshellHiResArtwork,
   getBombshellUnlockedCoversForDay,
   getBombshellCollectionStats,
   isBombshellCard,
@@ -80,6 +79,7 @@ interface CodexGridCardItemProps {
   getFragmentsForDay: (day: number) => number;
   stop: () => void;
   setLocation: (url: string) => void;
+  onOpenDetails: (day: number) => void;
 }
 
 function CodexGridCardItem({
@@ -95,6 +95,7 @@ function CodexGridCardItem({
   getFragmentsForDay,
   stop,
   setLocation,
+  onOpenDetails,
 }: CodexGridCardItemProps) {
   const isOwned = !!owned;
   const isBeyondOwned = isFuture && isOwned;
@@ -379,6 +380,19 @@ function CodexGridCardItem({
           zIndex: 40,
           pointerEvents: 'none',
         }} />
+      )}
+
+      {/* Card details (universal detail view) */}
+      {!isFuture && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onOpenDetails(card.day); }}
+          title="Card details"
+          aria-label={`Details for day ${card.day}`}
+          className="absolute bottom-2 right-2 z-[35] w-8 h-8 rounded-full bg-black/75 border border-white/25 text-white/80 hover:text-white hover:bg-black flex items-center justify-center cursor-pointer"
+        >
+          <Info size={14} />
+        </button>
       )}
 
       {/* Hover Play Menu for Owned Cards */}
@@ -758,641 +772,6 @@ function BombshellGridCardItem({
   );
 }
 
-// ── BOMBSHELL FULLSCREEN LIGHTBOX MODAL ──────────────────────────────────────
-interface BombshellLightboxModalProps {
-  day: number;
-  card: VaultCard;
-  covers: string[];
-  initialIndex: number;
-  unlockedCovers: Set<string>;
-  collection: OwnedCard[];
-  activeCoverName?: string;
-  onSelectCover?: (fileName: string) => void;
-  onClose: () => void;
-  onPlayTrack: (card: VaultCard, coverUrl: string) => void;
-}
-
-function BombshellLightboxModal({
-  day,
-  card,
-  covers,
-  initialIndex,
-  unlockedCovers,
-  collection,
-  activeCoverName,
-  onSelectCover,
-  onClose,
-  onPlayTrack,
-}: BombshellLightboxModalProps) {
-  const [index, setIndex] = useState(initialIndex);
-  const [isDownloading, setIsDownloading] = useState(false);
-  const [downloadSuccess, setDownloadSuccess] = useState(false);
-
-  const currentFileName = covers[index] || covers[0];
-  const isUnlocked = unlockedCovers.has(currentFileName);
-  const isLB = currentFileName.toLowerCase().startsWith('lb');
-  const isActiveCover = activeCoverName === currentFileName;
-
-  // Find owned card details for active filename
-  const ownedMatch = collection.find(c => {
-    if (!c || !c.card || c.card.day !== day) return false;
-    const art = (c as any).coverArtwork || (c.card as any).coverArtwork;
-    if (art === currentFileName) return true;
-    const url = c.card.coverUrl || '';
-    return url.includes(encodeURIComponent(currentFileName)) || url.includes(currentFileName);
-  });
-
-  const rarity = ownedMatch?.card?.rarity || (isLB ? 'common' : 'rare');
-  const rc = RARITY_CONFIG[rarity as Rarity] || RARITY_CONFIG.common;
-
-  const previewCoverUrl = getBombshellCoverUrl(day, currentFileName);
-  const hiResPngUrl = getBombshellHiResPngUrl(day, currentFileName);
-  const hiResPngFileName = currentFileName.replace(/\.jpe?g$/i, '.png');
-
-  const handlePrev = useCallback(() => {
-    setIndex((prev) => (prev > 0 ? prev - 1 : covers.length - 1));
-  }, [covers.length]);
-
-  const handleNext = useCallback(() => {
-    setIndex((prev) => (prev < covers.length - 1 ? prev + 1 : 0));
-  }, [covers.length]);
-
-  // Keyboard navigation (Arrows + ESC)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') handlePrev();
-      if (e.key === 'ArrowRight') handleNext();
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handlePrev, handleNext, onClose]);
-
-  const handleDownload = async () => {
-    setIsDownloading(true);
-    try {
-      await downloadBombshellHiResArtwork(day, currentFileName);
-      setDownloadSuccess(true);
-      setTimeout(() => setDownloadSuccess(false), 2500);
-    } catch (e) {
-      console.error('Hi-res download failed:', e);
-      window.open(hiResPngUrl, '_blank');
-    } finally {
-      setIsDownloading(false);
-    }
-  };
-
-  return (
-    <div 
-      className="fixed inset-0 z-[70] flex flex-col items-center justify-between bg-black/95 backdrop-blur-2xl p-4 md:p-6 select-none"
-      onClick={onClose}
-    >
-      {/* Top Header Bar */}
-      <div 
-        className="w-full max-w-6xl flex items-center justify-between z-20"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center gap-3">
-          <span className="px-2.5 py-1 bg-[#FF1493]/20 border border-[#FF1493]/60 text-[#FF1493] text-[10px] font-mono font-bold uppercase tracking-wider">
-            DAY #{String(day).padStart(3, '0')} • FULLSCREEN MASTER
-          </span>
-          <span className="text-white font-mono font-bold text-xs uppercase hidden sm:inline">
-            {card.title}
-          </span>
-          <span className="px-2 py-0.5 rounded bg-white/10 text-white/70 font-mono text-[9px] uppercase">
-            {index + 1} / {covers.length}
-          </span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => window.open(hiResPngUrl, '_blank')}
-            title="Open direct file in new browser window"
-            className="p-2 rounded bg-white/5 hover:bg-white/15 border border-white/10 text-white/80 transition-all flex items-center gap-1 text-[10px] font-mono cursor-pointer"
-          >
-            <ExternalLink size={14} />
-          </button>
-          <button
-            onClick={onClose}
-            title="Close Fullscreen View"
-            className="p-2 rounded-full bg-white/10 hover:bg-[#FF1493] hover:text-white border border-white/20 text-white transition-all cursor-pointer"
-          >
-            <X size={18} />
-          </button>
-        </div>
-      </div>
-
-      {/* Main Center Image Stage */}
-      <div 
-        className="relative flex-1 w-full max-w-5xl flex items-center justify-center my-3 overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Prev Button */}
-        {covers.length > 1 && (
-          <button
-            onClick={handlePrev}
-            className="absolute left-2 md:left-4 z-20 p-3 rounded-full bg-black/60 hover:bg-[#FF1493] hover:scale-110 text-white border border-white/20 transition-all shadow-[0_0_15px_rgba(0,0,0,0.8)] cursor-pointer"
-          >
-            <ChevronLeft size={24} />
-          </button>
-        )}
-
-        {/* Master Image Frame */}
-        <div className={`relative max-h-[72vh] max-w-[85vw] aspect-[3/4] rounded-lg overflow-hidden border-2 shadow-[0_0_50px_rgba(255,20,147,0.35)] bg-black/90 ${
-          isActiveCover ? 'border-emerald-500 ring-2 ring-emerald-400/50' : 'border-[#FF1493]/40'
-        }`}>
-          <img
-            src={previewCoverUrl}
-            alt={currentFileName}
-            className={`w-full h-full object-contain ${isUnlocked ? '' : 'brightness-90'}`}
-          />
-
-          {isActiveCover && (
-            <div className="absolute top-4 left-4 flex items-center gap-1.5 px-3 py-1 bg-emerald-500/90 text-black font-mono text-[10px] font-black uppercase tracking-wider rounded shadow-[0_0_15px_rgba(16,185,129,0.8)]">
-              <Check size={12} strokeWidth={3} /> ACTIVE CARD COVER
-            </div>
-          )}
-
-          {!isUnlocked && !isActiveCover && (
-            <div className="absolute top-4 left-4 flex items-center gap-1.5 px-3 py-1 bg-black/80 border border-white/20 rounded font-mono text-[10px] text-white/70">
-              <Lock size={12} className="text-white/50" /> Locked Cover (Pull from Bombshell Pack)
-            </div>
-          )}
-        </div>
-
-        {/* Next Button */}
-        {covers.length > 1 && (
-          <button
-            onClick={handleNext}
-            className="absolute right-2 md:right-4 z-20 p-3 rounded-full bg-black/60 hover:bg-[#FF1493] hover:scale-110 text-white border border-white/20 transition-all shadow-[0_0_15px_rgba(0,0,0,0.8)] cursor-pointer"
-          >
-            <ChevronRight size={24} />
-          </button>
-        )}
-      </div>
-
-      {/* Bottom Command Bar */}
-      <div 
-        className="w-full max-w-4xl bg-[#0e0712] border border-[#FF1493]/40 rounded-xl p-4 shadow-[0_0_30px_rgba(255,20,147,0.25)] flex flex-col md:flex-row items-center justify-between gap-4 z-20"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex flex-col gap-1 text-center md:text-left">
-          <div className="flex items-center justify-center md:justify-start gap-2 flex-wrap">
-            <span className="text-[12px] font-mono font-black text-white">
-              {hiResPngFileName}
-            </span>
-            <span 
-              className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded uppercase"
-              style={{
-                background: isLB ? 'rgba(0, 229, 255, 0.2)' : 'rgba(255, 20, 147, 0.2)',
-                color: isLB ? '#00E5FF' : '#FF1493',
-                border: isLB ? '1px solid rgba(0, 229, 255, 0.4)' : '1px solid rgba(255, 20, 147, 0.4)',
-              }}
-            >
-              {isLB ? '✧ Letterbox (LB)' : '★ Full Frame (Standard)'}
-            </span>
-            {isActiveCover && (
-              <span className="text-[9px] font-mono font-black px-1.5 py-0.5 rounded uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center gap-1">
-                <Check size={9} strokeWidth={3} /> ACTIVE
-              </span>
-            )}
-          </div>
-          <div className="text-[9px] font-mono text-white/50 uppercase">
-            Vault Asset: rare_covers/day {day}/hi res/{hiResPngFileName}
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2.5 w-full md:w-auto justify-center flex-wrap">
-          {onSelectCover && (
-            isUnlocked || isActiveCover ? (
-              <button
-                onClick={() => onSelectCover(currentFileName)}
-                className={`px-4 py-2.5 rounded font-mono text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer ${
-                  isActiveCover
-                    ? 'bg-emerald-500/25 text-emerald-300 border border-emerald-500/60 shadow-[0_0_16px_rgba(16,185,129,0.35)]'
-                    : 'bg-[#FF1493]/20 hover:bg-[#FF1493]/35 text-white border border-[#FF1493]/50 active:scale-95'
-                }`}
-              >
-                {isActiveCover ? (
-                  <>
-                    <CheckCircle size={13} className="text-emerald-300" /> ACTIVE CARD COVER
-                  </>
-                ) : (
-                  <>
-                    <Sparkles size={13} className="text-[#FF1493]" /> SET AS ACTIVE COVER
-                  </>
-                )}
-              </button>
-            ) : (
-              <div className="px-3.5 py-2 rounded bg-black/60 border border-white/10 text-white/40 font-mono text-[9px] uppercase flex items-center gap-1.5">
-                <Lock size={12} className="text-white/40" /> Locked Cover (Pull to Unlock)
-              </div>
-            )
-          )}
-
-          <button
-            onClick={() => onPlayTrack(card, previewCoverUrl)}
-            className="px-3.5 py-2.5 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-mono text-[10px] font-bold uppercase tracking-wider rounded transition-all flex items-center gap-1.5 cursor-pointer"
-          >
-            <Play size={12} /> Play Audio
-          </button>
-
-          <button
-            onClick={handleDownload}
-            disabled={isDownloading}
-            className="px-5 py-2.5 bg-gradient-to-r from-[#FF1493] to-[#ff4081] hover:from-[#ff2b9e] hover:to-[#ff5c97] text-white font-mono text-[10px] font-black uppercase tracking-wider rounded transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(255,20,147,0.5)] active:scale-95 cursor-pointer"
-          >
-            {isDownloading ? (
-              <>
-                <Loader2 size={13} className="animate-spin" /> DOWNLOADING...
-              </>
-            ) : downloadSuccess ? (
-              <>
-                <CheckCircle size={13} /> DOWNLOAD COMPLETE!
-              </>
-            ) : (
-              <>
-                <Download size={13} /> DOWNLOAD HI-RES PNG
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── BOMBSHELL DAY COVERS GALLERY MODAL ─────────────────────────────────────
-interface BombshellDayModalProps {
-  day: number | null;
-  card: VaultCard | null;
-  dayCovers: BombshellDayCovers | null;
-  unlockedCovers: Set<string>;
-  collection: OwnedCard[];
-  onClose: () => void;
-  onPlayTrack: (card: VaultCard, coverUrl: string) => void;
-}
-
-function BombshellDayModal({
-  day,
-  card,
-  dayCovers,
-  unlockedCovers,
-  collection,
-  onClose,
-  onPlayTrack,
-}: BombshellDayModalProps) {
-  const [fullscreenIndex, setFullscreenIndex] = useState<number | null>(null);
-  const setPreferredCardCover = useVaultStore(s => s.setPreferredCardCover);
-
-  if (!day || !card || !dayCovers) return null;
-
-  const totalCovers = dayCovers.totalCovers;
-  const unlockedCount = unlockedCovers.size;
-  const percentUnlocked = totalCovers > 0 ? Math.round((unlockedCount / totalCovers) * 100) : 0;
-
-  // Master list of all cover filenames for lightbox navigation
-  const allDayCoverFiles = [...dayCovers.lbFiles, ...dayCovers.normalFiles];
-  const activeCoverInfo = getActiveBombshellCover(day, unlockedCovers);
-  const activeCoverName = activeCoverInfo.fileName;
-
-  // Find owned card details for each unlocked filename
-  const getCoverDetails = (fileName: string) => {
-    const isUnlocked = unlockedCovers.has(fileName);
-    const ownedMatch = collection.find(c => {
-      if (!c || !c.card || c.card.day !== day) return false;
-      const art = (c as any).coverArtwork || (c.card as any).coverArtwork;
-      if (art === fileName) return true;
-      const url = c.card.coverUrl || '';
-      return url.includes(encodeURIComponent(fileName)) || url.includes(fileName);
-    });
-
-    return {
-      isUnlocked,
-      rarity: ownedMatch?.card?.rarity || 'common',
-      claimedAt: ownedMatch?.claimedAt || null,
-      source: ownedMatch?.source || 'Bombshell Pack',
-    };
-  };
-
-  return (
-    <>
-      <AnimatePresence>
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md overflow-y-auto"
-          onClick={onClose}
-        >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 10 }}
-            onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-4xl bg-[#0d0710] border border-[#FF1493]/40 rounded-lg p-6 shadow-[0_0_40px_rgba(255,20,147,0.25)] my-8"
-          >
-            {/* Close button */}
-            <button
-              onClick={onClose}
-              className="absolute top-4 right-4 p-2 rounded-full bg-white/5 border border-white/10 text-white/60 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-            >
-              <X size={18} />
-            </button>
-
-            {/* Header */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-white/10 pr-10">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="px-2.5 py-0.5 bg-[#FF1493]/20 border border-[#FF1493]/50 text-[#FF1493] text-[10px] font-mono font-bold uppercase tracking-wider">
-                    DAY #{String(day).padStart(3, '0')} BOMBSHELL GALLERY
-                  </span>
-                  <span className="text-[10px] font-mono text-white/40 uppercase">
-                    {card.mood} Mood
-                  </span>
-                </div>
-                <h2 className="text-2xl md:text-3xl font-black font-['Impact'] uppercase tracking-tight text-white m-0">
-                  {card.title}
-                </h2>
-                <p className="text-[10px] font-mono text-white/40 mt-1 uppercase">
-                  Tap a picture for full screen and hi-res download, or set it as this card's cover.
-                </p>
-              </div>
-
-              {/* Stats Badge */}
-              <div className="flex items-center gap-4 bg-black/60 border border-white/10 p-3 rounded">
-                <div>
-                  <div className="text-[9px] font-mono text-white/40 uppercase">Cover Progress</div>
-                  <div className="text-xl font-mono font-black text-[#FF1493]">
-                    {unlockedCount} / {totalCovers} <span className="text-xs text-white/50">({percentUnlocked}%)</span>
-                  </div>
-                </div>
-                <div className="w-24 h-2 bg-white/10 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-[#FF1493] to-[#ff85c0] shadow-[0_0_8px_#FF1493]"
-                    style={{ width: `${percentUnlocked}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Cover Category Sections */}
-            <div className="space-y-8 mt-6">
-              {/* 1. LB (Letterbox) Covers */}
-              {dayCovers.lbFiles.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-xs font-mono font-bold uppercase text-[#00E5FF] tracking-wider">
-                      ✧ Letterbox (LB) Covers ({dayCovers.lbFiles.length})
-                    </span>
-                    <span className="text-[10px] font-mono text-white/40">
-                      — 16:9 / Letterboxed Art Variants
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                    {dayCovers.lbFiles.map((fileName, idx) => {
-                      const { isUnlocked, rarity } = getCoverDetails(fileName);
-                      const coverUrl = getBombshellCoverUrl(day, fileName);
-                      const rc = RARITY_CONFIG[rarity as Rarity] || RARITY_CONFIG.common;
-                      const globalIdx = idx;
-                      const isActive = fileName === activeCoverName;
-
-                      return (
-                        <div
-                          key={fileName}
-                          onClick={() => setFullscreenIndex(globalIdx)}
-                          className={`group relative rounded border overflow-hidden transition-all cursor-pointer hover:scale-105 ${
-                            isActive
-                              ? 'border-emerald-400 bg-black/70 shadow-[0_0_16px_rgba(16,185,129,0.35)] ring-1 ring-emerald-400'
-                              : isUnlocked
-                                ? 'border-[#00E5FF]/40 bg-black/60 shadow-[0_0_12px_rgba(0,229,255,0.15)] hover:border-[#00E5FF]'
-                                : 'border-white/5 bg-black/40 opacity-50 hover:opacity-75'
-                          }`}
-                        >
-                          <div className="aspect-[3/4] relative">
-                            <img
-                              src={coverUrl}
-                              alt={fileName}
-                              loading="lazy"
-                              className={`w-full h-full object-cover transition-transform group-hover:scale-105 ${isUnlocked ? '' : 'grayscale brightness-60'}`}
-                            />
-                            
-                            {/* Active Badge */}
-                            {isActive && (
-                              <div className="absolute top-1.5 left-1.5 px-2 py-0.5 rounded bg-emerald-500 text-black font-mono text-[8px] font-black uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(16,185,129,0.8)] z-10">
-                                <Check size={9} strokeWidth={3} /> ACTIVE
-                              </div>
-                            )}
-
-                            {/* Hover Fullscreen Overlay */}
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5">
-                              <span className="px-2 py-1 bg-black/80 border border-white/20 rounded text-[8.5px] font-mono text-white flex items-center gap-1">
-                                <Maximize2 size={10} /> Fullscreen
-                              </span>
-                            </div>
-
-                            {!isUnlocked && !isActive && (
-                              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 p-2 text-center pointer-events-none">
-                                <Lock size={16} className="text-white/40 mb-1" />
-                                <span className="text-[8px] font-mono text-white/40 uppercase">Locked</span>
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="p-2 border-t border-white/5 bg-black/80">
-                            <div className="text-[9px] font-mono font-bold text-white truncate">
-                              LB Variant #{idx + 1}
-                            </div>
-                            <div className="flex justify-between items-center mt-1.5 gap-1">
-                              {isUnlocked ? (
-                                <span className="text-[8px] font-mono font-bold uppercase shrink-0" style={{ color: rc.color }}>
-                                  {rarity}
-                                </span>
-                              ) : (
-                                <span className="text-[7.5px] font-mono text-white/30 uppercase truncate">Bombshell</span>
-                              )}
-
-                              <div className="flex items-center gap-1">
-                                {isUnlocked ? (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setPreferredCardCover(day, fileName);
-                                    }}
-                                    title="Set this cover as active artwork for this day's card"
-                                    className={`px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase transition-all flex items-center gap-0.5 cursor-pointer ${
-                                      isActive
-                                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-                                        : 'bg-white/10 text-white/70 hover:bg-[#00E5FF]/30 hover:text-[#00E5FF] border border-white/10'
-                                    }`}
-                                  >
-                                    {isActive ? '✓ Active' : 'Use'}
-                                  </button>
-                                ) : (
-                                  <span className="text-[7px] font-mono text-white/30 flex items-center gap-0.5">
-                                    <Lock size={7} /> Locked
-                                  </span>
-                                )}
-                                {isUnlocked && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      onPlayTrack(card, coverUrl);
-                                    }}
-                                    className="p-1 rounded bg-[#00E5FF]/20 text-[#00E5FF] hover:bg-[#00E5FF]/40 text-[8px] font-mono flex items-center gap-0.5 cursor-pointer"
-                                  >
-                                    <Play size={8} />
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* 2. Normal Covers - Full Frame Tier */}
-              {dayCovers.normalFiles.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-xs font-mono font-bold uppercase text-[#FF1493] tracking-wider">
-                      ★ Full Frame (Standard) Covers ({dayCovers.normalFiles.length})
-                    </span>
-                    <span className="text-[10px] font-mono text-white/40">
-                      — Full-Frame Art Variants
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                    {dayCovers.normalFiles.map((fileName, idx) => {
-                      const { isUnlocked, rarity } = getCoverDetails(fileName);
-                      const coverUrl = getBombshellCoverUrl(day, fileName);
-                      const rc = RARITY_CONFIG[rarity as Rarity] || RARITY_CONFIG.rare;
-                      const globalIdx = dayCovers.lbFiles.length + idx;
-                      const isActive = fileName === activeCoverName;
-
-                      return (
-                        <div
-                          key={fileName}
-                          onClick={() => setFullscreenIndex(globalIdx)}
-                          className={`group relative rounded border overflow-hidden transition-all cursor-pointer hover:scale-105 ${
-                            isActive
-                              ? 'border-emerald-400 bg-black/70 shadow-[0_0_16px_rgba(16,185,129,0.35)] ring-1 ring-emerald-400'
-                              : isUnlocked
-                                ? 'border-[#FF1493]/50 bg-black/60 shadow-[0_0_14px_rgba(255,20,147,0.2)] hover:border-[#FF1493]'
-                                : 'border-white/5 bg-black/40 opacity-50 hover:opacity-75'
-                          }`}
-                        >
-                          <div className="aspect-[3/4] relative">
-                            <img
-                              src={coverUrl}
-                              alt={fileName}
-                              loading="lazy"
-                              className={`w-full h-full object-cover transition-transform group-hover:scale-105 ${isUnlocked ? '' : 'grayscale brightness-60'}`}
-                            />
-
-                            {/* Active Badge */}
-                            {isActive && (
-                              <div className="absolute top-1.5 left-1.5 px-2 py-0.5 rounded bg-emerald-500 text-black font-mono text-[8px] font-black uppercase tracking-wider flex items-center gap-1 shadow-[0_0_10px_rgba(16,185,129,0.8)] z-10">
-                                <Check size={9} strokeWidth={3} /> ACTIVE
-                              </div>
-                            )}
-
-                            {/* Hover Fullscreen Overlay */}
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5">
-                              <span className="px-2 py-1 bg-black/80 border border-white/20 rounded text-[8.5px] font-mono text-white flex items-center gap-1">
-                                <Maximize2 size={10} /> Fullscreen
-                              </span>
-                            </div>
-
-                            {!isUnlocked && !isActive && (
-                              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 p-2 text-center pointer-events-none">
-                                <Lock size={16} className="text-white/40 mb-1" />
-                                <span className="text-[8px] font-mono text-white/40 uppercase">Locked</span>
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="p-2 border-t border-white/5 bg-black/80">
-                            <div className="text-[9px] font-mono font-bold text-white truncate">
-                              Cover #{idx + 1}
-                            </div>
-                            <div className="flex justify-between items-center mt-1.5 gap-1">
-                              {isUnlocked ? (
-                                <span className="text-[8px] font-mono font-bold uppercase shrink-0" style={{ color: rc.color }}>
-                                  {rarity}
-                                </span>
-                              ) : (
-                                <span className="text-[7.5px] font-mono text-white/30 uppercase truncate">Bombshell</span>
-                              )}
-
-                              <div className="flex items-center gap-1">
-                                {isUnlocked ? (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setPreferredCardCover(day, fileName);
-                                    }}
-                                    title="Set this cover as active artwork for this day's card"
-                                    className={`px-1.5 py-0.5 rounded text-[8px] font-mono font-bold uppercase transition-all flex items-center gap-0.5 cursor-pointer ${
-                                      isActive
-                                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-                                        : 'bg-white/10 text-white/70 hover:bg-[#FF1493]/30 hover:text-[#FF1493] border border-white/10'
-                                    }`}
-                                  >
-                                    {isActive ? '✓ Active' : 'Use'}
-                                  </button>
-                                ) : (
-                                  <span className="text-[7px] font-mono text-white/30 flex items-center gap-0.5">
-                                    <Lock size={7} /> Locked
-                                  </span>
-                                )}
-                                {isUnlocked && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      onPlayTrack(card, coverUrl);
-                                    }}
-                                    className="p-1 rounded bg-[#FF1493]/20 text-[#FF1493] hover:bg-[#FF1493]/40 text-[8px] font-mono flex items-center gap-0.5 cursor-pointer"
-                                  >
-                                    <Play size={8} />
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-          </motion.div>
-        </div>
-      </AnimatePresence>
-
-      {/* Interactive Fullscreen Master Lightbox */}
-      {fullscreenIndex !== null && (
-        <BombshellLightboxModal
-          day={day}
-          card={card}
-          covers={allDayCoverFiles}
-          initialIndex={fullscreenIndex}
-          unlockedCovers={unlockedCovers}
-          collection={collection}
-          activeCoverName={activeCoverName}
-          onSelectCover={(fName) => setPreferredCardCover(day, fName)}
-          onClose={() => setFullscreenIndex(null)}
-          onPlayTrack={onPlayTrack}
-        />
-      )}
-    </>
-  );
-}
-
 // ── MAIN CODEX PAGE ────────────────────────────────────────────────────────
 export default function CodexPage() {
   const [, setLocation] = useLocation();
@@ -1404,7 +783,7 @@ export default function CodexPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [selectedBombshellDay, setSelectedBombshellDay] = useState<number | null>(null);
+  const [selectedDetail, setSelectedDetail] = useState<{ day: number; tab: TrackDetailTab } | null>(null);
 
   const [useAltArtwork, setUseAltArtwork] = useState<boolean>(() => {
     if (typeof localStorage !== 'undefined') {
@@ -1641,9 +1020,6 @@ export default function CodexPage() {
     );
   }
 
-  const selectedBombshellCard = selectedBombshellDay ? allCards.find(c => c.day === selectedBombshellDay) || null : null;
-  const selectedDayCovers = selectedBombshellDay ? getBombshellDayCovers(selectedBombshellDay) : null;
-  const selectedUnlockedCovers = selectedBombshellDay ? (bombshellDataByDay.get(selectedBombshellDay)?.unlockedCovers || new Set<string>()) : new Set<string>();
 
   return (
     <div
@@ -2165,6 +1541,7 @@ export default function CodexPage() {
                 getFragmentsForDay={getFragmentsForDay}
                 stop={stop}
                 setLocation={setLocation}
+                onOpenDetails={(day) => setSelectedDetail({ day, tab: 'overview' })}
               />
             ))
           ) : (
@@ -2182,7 +1559,7 @@ export default function CodexPage() {
                   latestUnlockedCard={bData?.latestCard}
                   currentTrack={currentTrack}
                   isPlaying={isPlaying}
-                  onInspectCovers={(day) => setSelectedBombshellDay(day)}
+                  onInspectCovers={(day) => setSelectedDetail({ day, tab: 'artwork' })}
                   handlePlay={handlePlay}
                   stop={stop}
                   setLocation={setLocation}
@@ -2273,21 +1650,13 @@ export default function CodexPage() {
         )}
       </section>
 
-      {/* ═══ BOMBSHELL DAY COVERS GALLERY MODAL ═══ */}
-      <BombshellDayModal
-        day={selectedBombshellDay}
-        card={selectedBombshellCard}
-        dayCovers={selectedDayCovers}
-        unlockedCovers={selectedUnlockedCovers}
-        collection={collection}
-        onClose={() => setSelectedBombshellDay(null)}
-        onPlayTrack={(c, cUrl) => {
-          handlePlay({
-            ...c,
-            coverUrl: cUrl,
-            cardSet: 'bombshell',
-          });
-        }}
+      {/* ═══ CARD DETAIL (universal) ═══ */}
+      <TrackDetailModal
+        day={selectedDetail?.day ?? null}
+        origin="codex"
+        initialTab={selectedDetail?.tab}
+        isOpen={selectedDetail !== null}
+        onClose={() => setSelectedDetail(null)}
       />
     </div>
   );
