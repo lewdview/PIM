@@ -6,7 +6,7 @@ import { useGlobalPlayer } from '../store/useGlobalPlayer';
 import Card from '../components/Card';
 import RarityBadge from '../components/RarityBadge';
 import UltraRewardModal from '../components/UltraRewardModal';
-import CardDetailModal from '../components/CardDetailModal';
+import TrackDetailModal from '../components/trackDetail/TrackDetailModal';
 import MobileCardActionSheet from '../components/MobileCardActionSheet';
 import FusionAnimation from '../components/FusionAnimation';
 import { type OwnedCard, fuseDuplicates, sellCard } from '../services/vaultService';
@@ -776,8 +776,11 @@ export default function CollectionPage() {
         onClose={() => setUltraModalOpen(false)}
       />
 
-      <CardDetailModal 
-        card={selectedCard}
+      <TrackDetailModal
+        day={selectedCard?.card.day ?? null}
+        ownedCard={selectedCard}
+        origin="vault/collection"
+        initialTab="card"
         isOpen={selectedCard !== null}
         onClose={() => setSelectedCard(null)}
         onBurn={handleBurn}

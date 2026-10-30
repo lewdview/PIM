@@ -12,7 +12,7 @@ import PrizeProgressMenu from "../components/PrizeProgressMenu";
 import { getBombshellDayCovers, getBombshellCoverUrl, getCustomBombshellCover, setCustomBombshellCover } from "../utils/bombshellCards";
 import { clearPrimedGameCover, primeGameCover, resolvePreferredCover } from "../utils/gameCover";
 import { getCoverUrlForRarity } from "../utils/rarityArtwork";
-import { Lock, Unlock, Play, Sliders, Music, Volume2, VolumeX, Activity, Award, Trophy, ChevronLeft, ChevronRight, Film, Layers } from "lucide-react";
+import { Lock, Unlock, Play, Sliders, Music, Volume2, VolumeX, Activity, Award, Trophy, ChevronLeft, ChevronRight, Film, Layers, Info } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuthStore } from "@/store/useAuthStore";
 import { DELUXE_UNLOCK_ACCURACY, deluxeSongId, isDeluxeUnlocked, loadEarnedDeluxeDays } from "@/lib/deluxe";
@@ -711,6 +711,16 @@ export default function SongSelect() {
                     <span className="hw-badge">
                       LVL {selected.difficultyLevel}
                     </span>
+                    <button
+                      type="button"
+                      onClick={() => { cleanupPreview(); audioManager.playSfx('tap_nav', 0.2); setLocation(`/song/${selected.id}?from=songs`); }}
+                      className="btn-3d"
+                      data-size="sm"
+                      data-tone="ghost"
+                      title="Leaderboard, your stats, artwork and card details"
+                    >
+                      <Info size={12} /> Details
+                    </button>
                   </div>
                 </div>
 

@@ -8911,7 +8911,7 @@ export default function Game() {
           optsRef.current.gameTrack
         );
       }
-      // Apply difficulty override set by SongDetail page
+      // Apply difficulty override set by the track detail page
       const diffOverrideNum = campaignStageRef.current
         ? campaignStageRef.current.level
         : parseInt(sessionStorage.getItem(`diff_override_${songId}`) ?? '', 10);

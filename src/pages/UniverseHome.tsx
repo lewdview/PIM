@@ -356,7 +356,7 @@ export default function UniverseHome() {
                 </button>
 
                 <Link
-                  to={`/day/${today}`}
+                  to={`/day/${today}?from=universe`}
                   className="flex items-center justify-center gap-2 px-4 py-3 bg-black/60 hover:bg-white/10 border border-white/25 text-white font-mono text-xs font-bold uppercase tracking-wider transition-all hover:scale-[1.02] active:scale-[0.98] no-underline"
                   style={{
                     minHeight: '44px',
@@ -621,7 +621,7 @@ export default function UniverseHome() {
 
                   <div className="mt-3 pt-2 border-t border-white/10 flex items-center justify-between">
                     <Link
-                      to={`/day/${s.day}`}
+                      to={`/day/${s.day}?from=universe`}
                       className="font-mono text-[9px] text-white/70 hover:text-white uppercase font-bold no-underline"
                     >
                       Artifact →
