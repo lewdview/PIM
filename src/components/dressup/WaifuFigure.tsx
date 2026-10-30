@@ -282,15 +282,22 @@ function WrapFilter({ id, wrap }: { id: string; wrap: Wrap }) {
  * Draws a list of paths in a garment's paint with a hard cel shadow on top.
  * `mirror` paths are drawn on both sides of the body.
  */
-function Garment({ id, choice, paths = [], mirror = [], details }: {
+function Garment({ id, choice, paths: frontPaths = [], mirror: frontMirror = [], details, back: backDetails, backPaths, backMirror }: {
   id: string;
   choice: GarmentChoice;
   paths?: string[];
   mirror?: string[];
   details?: ReactNode;
+  /** Seams, ties and zips seen from behind; symmetric pieces just pass their `details` again. */
+  back?: ReactNode;
+  /** Outlines that differ from behind, such as a higher neckline or a closed jacket. */
+  backPaths?: string[];
+  backMirror?: string[];
 }) {
   const uid = useSvgId(id);
   const back = useBack();
+  const paths = (back && backPaths) || frontPaths;
+  const mirror = (back && backMirror) || frontMirror;
   const paint = materialPaint(uid, choice.material, choice.color);
   // Tops wrap their pattern over the bust, bottoms around the hips.
   const wrap: Wrap | undefined = id === 'top' ? 'bust' : id === 'bottom' ? 'hips' : undefined;
@@ -313,8 +320,7 @@ function Garment({ id, choice, paths = [], mirror = [], details }: {
           {layer(d, `mr${i}`, MIRROR)}
         </g>
       ))}
-      {/* Trims, buttons and laces are front details; from behind only the shape shows. */}
-      {!back && details}
+      {back ? backDetails : details}
     </g>
   );
 }
@@ -1091,14 +1097,16 @@ function Fishnet({ choice }: { choice: GarmentChoice }) {
 }
 
 /** Hosiery reads as stretched knit: sheen down the shin, a lit kneecap, a reinforced toe, and an optional lace-topped welt. */
-function HosieryDetails({ welt }: { welt?: number }) {
+function HosieryDetails({ welt, seam = false }: { welt?: number; seam?: boolean }) {
   return (
     <g fill="none" strokeLinecap="round">
       {[false, true].map((m) => (
         <g key={String(m)} transform={m ? MIRROR : undefined}>
           <path d="M124 372 C127 404 129 432 131.4 458 C133.4 496 133.6 528 134.4 556" stroke="#ffffff" strokeOpacity="0.22" strokeWidth="5" />
           <path d="M127 450 Q131.6 446.6 136.4 450" stroke="#ffffff" strokeOpacity="0.32" strokeWidth="3" />
-          <path d="M126 570 Q136 566 147.4 572" stroke="#000" strokeOpacity="0.25" strokeWidth="1.2" />
+          {seam
+            ? <path d={`M${welt === undefined ? 119 : 121} ${(welt ?? 330) + 10} C${welt === undefined ? 124 : 125} 440 133 500 135.6 572`} stroke="#000" strokeOpacity="0.4" strokeWidth="1.1" />
+            : <path d="M126 570 Q136 566 147.4 572" stroke="#000" strokeOpacity="0.25" strokeWidth="1.2" />}
           {welt !== undefined && (
             <g>
               <path d={`M${99} ${welt} L148.4 ${welt} L147.8 ${welt + 10} Q124 ${welt + 12} 101.6 ${welt + 9} Z`} fill="#000" fillOpacity="0.16" stroke="none" />
@@ -1120,16 +1128,18 @@ function Sock({ choice, top }: { choice: GarmentChoice; top: number }) {
   const cuff = top < 500
     ? 'M113.2 466 L147 466 L146.8 474 L114.4 474 Z'
     : 'M127 548 L141.2 548 L140.8 554 L127.4 554 Z';
+  const ribs = (
+    <g stroke="#000" strokeOpacity="0.22">{[0, 1].map((m) => (
+      <g key={m} transform={m ? MIRROR : undefined}>
+        {(top < 500 ? [118, 124, 130, 136, 142] : [130, 134, 138]).map((x) => <path key={x} d={`M${x} ${top + 1} L${x} ${top + (top < 500 ? 7 : 5)}`} />)}
+      </g>
+    ))}</g>
+  );
   return (
     <g>
       <defs><clipPath id={clipId}><rect x="0" y={top} width="300" height={600 - top} /></clipPath></defs>
       <g clipPath={`url(#${clipId})`}><Garment id="legwear" choice={choice} mirror={[LEG]} /></g>
-      <Garment id="legwear-cuff" choice={choice} mirror={[cuff]}
-        details={<g stroke="#000" strokeOpacity="0.22">{[0, 1].map((m) => (
-          <g key={m} transform={m ? MIRROR : undefined}>
-            {(top < 500 ? [118, 124, 130, 136, 142] : [130, 134, 138]).map((x) => <path key={x} d={`M${x} ${top + 1} L${x} ${top + (top < 500 ? 7 : 5)}`} />)}
-          </g>
-        ))}</g>} />
+      <Garment id="legwear-cuff" choice={choice} mirror={[cuff]} details={ribs} back={ribs} />
     </g>
   );
 }
@@ -1139,18 +1149,20 @@ function Legwear({ choice }: { choice: GarmentChoice }) {
   switch (choice.item) {
     case 'thighhighs':
       return <Garment id={id} choice={choice} mirror={[THIGH_HIGH]}
-        details={<HosieryDetails welt={404} />} />;
+        details={<HosieryDetails welt={404} />} back={<HosieryDetails welt={404} seam />} />;
     case 'stockings':
-      return <Garment id={id} choice={choice} mirror={[LEG]} details={<HosieryDetails />} />;
+      return <Garment id={id} choice={choice} mirror={[LEG]} details={<HosieryDetails />} back={<HosieryDetails seam />} />;
     case 'fishnet':
       return <Fishnet choice={choice} />;
     case 'kneesocks':
       return <Sock choice={choice} top={466} />;
     case 'anklesocks':
       return <Sock choice={choice} top={548} />;
-    case 'warmers':
-      return <Garment id={id} choice={choice} mirror={['M113.6 468 L146.6 468 C147.6 490 145.4 516 142.4 552 L126.8 552 C125.6 534 121 516 116.6 498 C113.8 486 113.2 476 113.6 468 Z']}
-        details={<g stroke="#000" strokeOpacity="0.25">{[480, 492, 504, 516, 528, 540].map((y) => <g key={y}><path d={`M119 ${y} L148 ${y}`} /><path d={`M181 ${y} L152 ${y}`} /></g>)}</g>} />;
+    case 'warmers': {
+      const ribs = <g stroke="#000" strokeOpacity="0.25">{[480, 492, 504, 516, 528, 540].map((y) => <g key={y}><path d={`M119 ${y} L148 ${y}`} /><path d={`M181 ${y} L152 ${y}`} /></g>)}</g>;
+      return <Garment id={id} choice={choice} details={ribs} back={ribs} mirror={['M113.6 468 L146.6 468 C147.6 490 145.4 516 142.4 552 L126.8 552 C125.6 534 121 516 116.6 498 C113.8 486 113.2 476 113.6 468 Z']}
+        />;
+    }
     default:
       return null;
   }
@@ -1166,10 +1178,18 @@ function Shoes({ choice }: { choice: GarmentChoice }) {
         details={<g fill="none" strokeLinecap="round">
           <path d="M129 566 Q133 563.4 138 563.6 M171 566 Q167 563.4 162 563.6" stroke="#ffffff" strokeOpacity="0.55" strokeWidth="1.6" />
           <path d="M124.6 585.4 L148.8 585.4 M175.4 585.4 L151.2 585.4" stroke="#000" strokeOpacity="0.35" strokeWidth="1" />
-        </g>} />;
+        </g>}
+        back={<path d="M124.6 585.4 L148.8 585.4 M175.4 585.4 L151.2 585.4" fill="none" stroke="#000" strokeOpacity="0.35" strokeWidth="1" />} />;
     case 'boots':
       return <Garment id={id} choice={choice} mirror={['M110.4 486 L147.4 486 C147.4 510 144 538 143 558 C147 564 150.6 572 150.4 580 C150.2 584 149.4 586.6 148 588 L124 588 C122.4 584 122.4 576 123.6 570 C124.4 564 123.4 560 121 554 C120 530 113.6 506 110.4 486 Z', 'M122.8 582 L150.6 582 C150.6 585 149.6 587.4 148 588.4 L124 588.4 C123 586.8 122.6 584.6 122.8 582 Z']}
-        details={<g stroke="#000" strokeOpacity="0.45">{[500, 514, 528, 542].map((y) => <g key={y}><path d={`M126 ${y} L142 ${y + 6}`} /><path d={`M174 ${y} L158 ${y + 6}`} /></g>)}</g>} />;
+        details={<g stroke="#000" strokeOpacity="0.45">{[500, 514, 528, 542].map((y) => <g key={y}><path d={`M126 ${y} L142 ${y + 6}`} /><path d={`M174 ${y} L158 ${y + 6}`} /></g>)}</g>}
+        back={<g>{[false, true].map((m) => (
+          <g key={String(m)} transform={m ? MIRROR : undefined}>
+            <path d="M129 488 C131 520 133 550 136 586" fill="none" stroke="#000" strokeOpacity="0.4" strokeDasharray="2 1.6" />
+            <path d="M125.6 480 L132 480 L132.4 489 L125.8 489 Z" fill="#000" fillOpacity="0.35" stroke={LINE} strokeWidth="0.7" />
+            <path d="M122.8 582 L150.6 582" fill="none" stroke="#000" strokeOpacity="0.35" />
+          </g>
+        ))}</g>} />;
     case 'sneakers':
       return <Garment id={id} choice={choice} mirror={['M125.4 562 C127 556 132 553 136 553.5 C141 553.6 145.2 556 147.4 562 C149.6 568 150 575 149 581 L124.4 581 C123.6 574 123.8 567 125.4 562 Z']}
         details={<g>
@@ -1180,7 +1200,14 @@ function Shoes({ choice }: { choice: GarmentChoice }) {
               <path d="M125 574.4 C130 571.8 143 571.8 149.2 574.4" fill="none" stroke="#000" strokeOpacity="0.3" />
             </g>
           ))}
-        </g>} />;
+        </g>}
+        back={<g>{[false, true].map((m) => (
+          <g key={String(m)} transform={m ? MIRROR : undefined}>
+            <path d="M123.6 579 L150 579 C150.8 581 150.6 584 149.6 585.4 L124 585.4 C123 584 122.8 581 123.6 579 Z" fill="#ffffff" stroke={LINE} strokeWidth="0.9" />
+            <path d="M132.6 551.6 L139.4 551.6 L139 561 L133 561 Z" fill="#ffffff" stroke={LINE} strokeWidth="0.8" />
+            <path d="M126 572 Q136.4 569 148.4 572" fill="none" stroke="#000" strokeOpacity="0.3" />
+          </g>
+        ))}</g>} />;
     case 'sandals':
       // Thin sole, an ankle strap, a T-strap down the instep and a strap across the toes.
       return <Garment id={id} choice={choice} mirror={[
@@ -1190,6 +1217,9 @@ function Shoes({ choice }: { choice: GarmentChoice }) {
         'M125.4 569 Q137 565.6 148.2 569.8 L148.4 573.6 Q137 569.8 125.2 573 Z']}
         details={<g>{[false, true].map((m) => (
           <circle key={String(m)} cx="140" cy="554.5" r="1.1" fill="#fde68a" stroke={LINE} strokeWidth="0.5" transform={m ? MIRROR : undefined} />
+        ))}</g>}
+        back={<g>{[false, true].map((m) => (
+          <path key={String(m)} d="M131 556.4 L137.6 556.4 L136.6 580 L132 580 Z" fill="#000" fillOpacity="0.25" stroke={LINE} strokeWidth="0.6" transform={m ? MIRROR : undefined} />
         ))}</g>} />;
     case 'flats':
       return <Garment id={id} choice={choice} mirror={[
@@ -1200,6 +1230,9 @@ function Shoes({ choice }: { choice: GarmentChoice }) {
             <path d="M136 567 L132.4 565 L132.4 569 Z M136 567 L139.6 565 L139.6 569 Z" fill="#000" fillOpacity="0.3" />
             <path d="M126.6 571 Q130 567.4 135 567" fill="none" stroke="#ffffff" strokeOpacity="0.5" strokeWidth="1.3" strokeLinecap="round" />
           </g>
+        ))}</g>}
+        back={<g fill="none">{[false, true].map((m) => (
+          <path key={String(m)} d="M127 579.4 L146.6 579.4 M136.4 566 L136.6 579" stroke="#000" strokeOpacity="0.3" transform={m ? MIRROR : undefined} />
         ))}</g>} />;
     case 'maryjanes':
       return <Garment id={id} choice={choice} mirror={[
@@ -1213,7 +1246,10 @@ function Shoes({ choice }: { choice: GarmentChoice }) {
               <path d="M129 568 Q133 565.2 138 565.4" fill="none" stroke="#ffffff" strokeOpacity="0.55" strokeWidth="1.4" strokeLinecap="round" />
             </g>
           ))}
-        </g>} />;
+        </g>}
+        back={<g>{[false, true].map((m) => (
+          <path key={String(m)} d="M124.8 580.6 L148.2 580.6 L147.8 583.6 L125.2 583.6 Z" fill="#000" fillOpacity="0.4" transform={m ? MIRROR : undefined} />
+        ))}</g>} />;
     default:
       return null;
   }
@@ -1229,17 +1265,48 @@ const PLEATED = `M120 296 L180 296 C200 312 212 336 218 392 ${PLEAT_HEM.map(([x,
 // Separate legs that split below the crotch and break over the foot.
 const PANT_LEG = 'M89 344 L150 344 L150 372 C149 410 148 450 147.8 480 C147.6 510 148 540 149.4 566 Q136 570.4 121.2 566 C120 540 114 510 109.4 480 C106.8 444 96 404 90 372 Z';
 
+/** Back of jeans or shorts: waistband with belt loops, a pointed yoke seam and two patch pockets. */
+function BackPockets({ top, hem }: { top: number; hem: number }) {
+  return (
+    <g fill="none" strokeLinecap="round">
+      <path d={`M${120 - 2} ${top} L${180 + 2} ${top} L185.6 ${top + 8} Q150 ${top + 13} 114.4 ${top + 8} Z`} fill="#000" fillOpacity="0.18" stroke="#000" strokeOpacity="0.35" />
+      <path d={`M150 ${top + 12} L150 ${hem + 6}`} stroke="#000" strokeOpacity="0.35" />
+      {[false, true].map((m) => (
+        <g key={String(m)} transform={m ? MIRROR : undefined} stroke="#000">
+          <path d={`M106 ${top + 2} L106 ${top + 10} M132 ${top + 3} L132 ${top + 11}`} strokeOpacity="0.4" strokeWidth="1.6" />
+          <path d={`M102 ${top + 18} Q126 ${top + 24} 150 ${top + 30}`} strokeOpacity="0.3" strokeDasharray="2 1.6" />
+          <path d={`M110 ${top + 28} L140 ${top + 33} L139 ${top + 52} L126 ${top + 59} L112 ${top + 50} Z`} fill="#000" fillOpacity="0.08" strokeOpacity="0.32" />
+          <path d={`M111.4 ${top + 31} L139.6 ${top + 36}`} strokeOpacity="0.25" strokeDasharray="1.6 1.4" />
+        </g>
+      ))}
+    </g>
+  );
+}
+
+/** A centre-back zip from `top` to `bottom`, with an optional kick slit at the hem. */
+function BackZip({ top, bottom, slit }: { top: number; bottom: number; slit?: [number, number] }) {
+  return (
+    <g fill="none" strokeLinecap="round">
+      <path d={`M150 ${top} L150 ${bottom}`} stroke="#000" strokeOpacity="0.4" strokeWidth="1.6" />
+      <path d={`M150 ${top} L150 ${bottom}`} stroke="#ffffff" strokeOpacity="0.4" strokeWidth="0.6" strokeDasharray="1 1.2" />
+      <path d={`M148.4 ${top + 2} L151.6 ${top + 2} L151.2 ${top + 8} L148.8 ${top + 8} Z`} fill="#e5e7eb" stroke={LINE} strokeWidth="0.6" />
+      {slit && <path d={`M146.6 ${slit[1]} L150 ${slit[0]} L153.4 ${slit[1]}`} fill="#000" fillOpacity="0.25" stroke="#000" strokeOpacity="0.4" />}
+    </g>
+  );
+}
+
 function Bottom({ choice }: { choice: GarmentChoice }) {
   const id = 'bottom';
   switch (choice.item) {
-    case 'pleated':
-      return <Garment id={id} choice={choice} paths={[PLEATED]}
-        details={<g fill="none" strokeLinecap="round">
+    case 'pleated': {
+      const pleats = (<g fill="none" strokeLinecap="round">
           {PLEAT_HEM.slice(1, -1).map(([x, y], i) => (
             <path key={x} d={`M${(150 + (x - 150) * 0.45).toFixed(1)} 300 L${x.toFixed(1)} ${y.toFixed(1)}`}
               stroke={i % 2 ? '#ffffff' : '#000'} strokeOpacity={i % 2 ? 0.3 : 0.3} strokeWidth={i % 2 ? 1.4 : 1} />
           ))}
-        </g>} />;
+        </g>);
+      return <Garment id={id} choice={choice} paths={[PLEATED]} details={pleats} back={pleats} />;
+    }
     case 'shorts':
       // Real shorts: two leg openings around the thighs, a waistband with a button, fly stitching and pockets.
       return <Garment id={id} choice={choice} paths={['M118 298 L182 298 C202 314 212 336 212 364 Q190 373 166 372 Q156 370 150 380 Q144 370 134 372 Q110 373 88 364 C88 336 98 314 118 298 Z']}
@@ -1254,7 +1321,8 @@ function Bottom({ choice }: { choice: GarmentChoice }) {
               <path d="M138 352 Q144 360 148 372" strokeOpacity="0.18" />
             </g>
           ))}
-        </g>} />;
+        </g>}
+        back={<BackPockets top={298} hem={364} />} />;
     case 'mini':
       return <Garment id={id} choice={choice} paths={['M118 294 L182 294 C200 312 212 336 210 358 L207 384 Q150 398 93 384 L90 358 C88 336 100 312 118 294 Z']}
         details={<g fill="none" stroke="#000" strokeLinecap="round">
@@ -1266,7 +1334,8 @@ function Bottom({ choice }: { choice: GarmentChoice }) {
               <path d="M94 384 Q120 392 146 391.4" strokeOpacity="0.25" strokeWidth="1.8" />
             </g>
           ))}
-        </g>} />;
+        </g>}
+        back={<BackZip top={294} bottom={336} slit={[372, 393]} />} />;
     case 'gown':
       return <Garment id={id} choice={choice} paths={['M120 288 L180 288 C200 312 212 336 210 362 C206 420 190 470 196 520 Q208 554 230 568 Q214 577 198 572 Q184 583 166 577 Q150 587 134 577 Q116 583 102 572 Q86 577 70 568 Q92 554 104 520 C110 470 94 420 90 362 C88 336 100 312 120 288 Z']}
         details={<g fill="none" stroke="#000" strokeOpacity="0.18" strokeWidth="2" strokeLinecap="round">
@@ -1274,17 +1343,25 @@ function Bottom({ choice }: { choice: GarmentChoice }) {
           <path d="M128 330 Q118 450 102 571" /><path d="M172 330 Q182 450 198 571" />
           <path d="M140 420 Q136 500 134 576" strokeWidth="1.4" /><path d="M160 420 Q164 500 166 576" strokeWidth="1.4" />
           <path d="M150 300 Q146 430 150 584" stroke="#fff" strokeOpacity="0.22" strokeWidth="3" />
+        </g>}
+        back={<g>
+          <g fill="none" stroke="#000" strokeOpacity="0.18" strokeWidth="2" strokeLinecap="round">
+            <path d="M128 330 Q118 450 102 571" /><path d="M172 330 Q182 450 198 571" />
+          </g>
+          <BackZip top={288} bottom={350} />
         </g>} />;
-    case 'tutu':
+    case 'tutu': {
       // Two tiers of tulle flaring from the waistband, each with a scalloped hem.
+      const tulle = (<g fill="none" stroke="#000" strokeOpacity="0.16" strokeLinecap="round">
+        {[96, 116, 136, 164, 184, 204].map((x) => <path key={x} d={`M${150 + (x - 150) * 0.4} 306 L${x} ${358 + Math.abs(x - 150) * 0.05}`} />)}
+        <path d="M80 350 Q150 344 220 350" stroke="#ffffff" strokeOpacity="0.3" strokeWidth="2" />
+      </g>);
       return <Garment id={id} choice={choice} paths={[
         'M120 300 L180 300 C206 314 226 336 238 366 Q226 375 213 369 Q199 380 184 372 Q167 382 150 374 Q133 382 116 372 Q101 380 87 369 Q74 375 62 366 C74 336 94 314 120 300 Z',
         'M120 300 L180 300 C200 312 214 330 222 352 Q210 360 198 354 Q184 364 168 357 Q150 366 132 357 Q116 364 102 354 Q90 360 78 352 C86 330 100 312 120 300 Z',
         'M118 294 L182 294 L183.6 303 Q150 307 116.4 303 Z']}
-        details={<g fill="none" stroke="#000" strokeOpacity="0.16" strokeLinecap="round">
-          {[96, 116, 136, 164, 184, 204].map((x) => <path key={x} d={`M${150 + (x - 150) * 0.4} 306 L${x} ${358 + Math.abs(x - 150) * 0.05}`} />)}
-          <path d="M80 350 Q150 344 220 350" stroke="#ffffff" strokeOpacity="0.3" strokeWidth="2" />
-        </g>} />;
+        details={tulle} back={tulle} />;
+    }
     case 'aline':
       return <Garment id={id} choice={choice} paths={['M118 294 L182 294 C200 312 212 336 212 358 C216 390 222 420 228 452 Q150 468 72 452 C78 420 84 390 88 358 C88 336 100 312 118 294 Z']}
         details={<g fill="none" stroke="#000" strokeLinecap="round">
@@ -1292,6 +1369,11 @@ function Bottom({ choice }: { choice: GarmentChoice }) {
           <path d="M108 362 Q98 410 90 455 M192 362 Q202 410 210 455 M132 372 Q126 420 122 460 M168 372 Q174 420 178 460" strokeOpacity="0.18" strokeWidth="1.4" />
           <path d="M150 300 Q148 380 150 462" stroke="#ffffff" strokeOpacity="0.25" strokeWidth="3" />
           <path d="M118 294 L182 294 L184 302 Q150 306 116 302 Z" fill="#000" fillOpacity="0.15" strokeOpacity="0.3" />
+        </g>}
+        back={<g>
+          <path d="M108 362 Q98 410 90 455 M192 362 Q202 410 210 455" fill="none" stroke="#000" strokeOpacity="0.18" strokeWidth="1.4" />
+          <path d="M118 294 L182 294 L184 302 Q150 306 116 302 Z" fill="#000" fillOpacity="0.15" stroke="#000" strokeOpacity="0.3" />
+          <BackZip top={302} bottom={344} />
         </g>} />;
     case 'pants':
       return <Garment id={id} choice={choice} paths={['M118 294 L182 294 C200 312 212 336 210 352 L150 356 L90 352 C88 336 100 312 118 294 Z']}
@@ -1305,6 +1387,15 @@ function Bottom({ choice }: { choice: GarmentChoice }) {
               <path d="M124 556 Q134 552 146 557" strokeOpacity="0.25" />
             </g>
           ))}
+        </g>}
+        back={<g>
+          <BackPockets top={294} hem={352} />
+          <g fill="none" stroke="#000" strokeLinecap="round">{[false, true].map((m) => (
+            <g key={String(m)} transform={m ? MIRROR : undefined}>
+              <path d="M128 372 Q129 470 135 566" strokeOpacity="0.18" strokeWidth="1.2" />
+              <path d="M118 470 Q130 476 145 470" strokeOpacity="0.22" />
+            </g>
+          ))}</g>
         </g>} />;
     default:
       return null;
@@ -1339,6 +1430,33 @@ function SleeveFolds({ long = false }: { long?: boolean }) {
   );
 }
 
+/** Back lacing: boning, a modesty panel and laces criss-crossing through grommets. */
+function CorsetLacing() {
+  const rows = [252, 262, 272, 282, 292, 302];
+  return (
+    <g fill="none" strokeLinecap="round">
+      {[false, true].map((m) => (
+        <g key={String(m)} transform={m ? MIRROR : undefined} stroke="#000">
+          <path d="M112 254 C124 268 126 284 121 300" strokeOpacity="0.25" />
+          <path d="M128 250 C134 270 134 292 130 312" strokeOpacity="0.25" />
+        </g>
+      ))}
+      <path d="M98 240 Q150 250 202 240" stroke="#ffffff" strokeOpacity="0.85" strokeWidth="2.6" strokeDasharray="1.4 2.2" />
+      <path d="M143 246 L157 246 L156 316 L144 316 Z" fill="#000" fillOpacity="0.28" stroke="none" />
+      <path d={rows.map((y) => `M143.4 ${y} L156.6 ${y + 10} M156.6 ${y} L143.4 ${y + 10}`).join(' ')} stroke="#ffffff" strokeOpacity="0.85" strokeWidth="1.1" />
+      {rows.map((y) => (
+        <g key={y}>
+          <circle cx="143.4" cy={y} r="1.3" fill="#e5e7eb" stroke={LINE} strokeWidth="0.5" />
+          <circle cx="156.6" cy={y} r="1.3" fill="#e5e7eb" stroke={LINE} strokeWidth="0.5" />
+        </g>
+      ))}
+      {/* Lace tails tied in a bow at the waist. */}
+      <path d="M150 312 C144 306 139 309 141 313 C143 317 147 315 150 312 Z M150 312 C156 306 161 309 159 313 C157 317 153 315 150 312 Z" fill="#ffffff" fillOpacity="0.9" stroke={LINE} strokeWidth="0.5" />
+      <path d="M149 313 L146 326 M151 313 L154 326" stroke="#ffffff" strokeOpacity="0.9" strokeWidth="1.1" />
+    </g>
+  );
+}
+
 function Top({ choice }: { choice: GarmentChoice }) {
   const id = 'top';
   switch (choice.item) {
@@ -1350,6 +1468,12 @@ function Top({ choice }: { choice: GarmentChoice }) {
           <path d="M124 296.6 Q150 303 176 296.6 L174.6 301 Q150 307 125.4 301 Z" fill="#000" fillOpacity="0.25" stroke="none" />
           <path d="M125 197.6 Q150 236 175 197.6" stroke={LINE} strokeWidth="2.4" />
           <path d="M104 238 C104 227 110 219 120 216.5" stroke="#ffffff" strokeOpacity="0.45" strokeWidth="3" />
+        </g>}
+        backPaths={['M116 199 L125 197.6 Q150 222 175 197.6 L184 199 C200 210 206 230 202 250 C198 264 184 272 178 280 C175 287 175 292 176.6 296 Q150 302 123.4 296 C125 292 125 287 122 280 C116 272 102 264 98 250 C94 230 100 210 116 199 Z']}
+        back={<g fill="none" strokeLinecap="round">
+          <path d="M124 296.6 Q150 303 176 296.6 L174.6 301 Q150 307 125.4 301 Z" fill="#000" fillOpacity="0.25" stroke="none" />
+          <path d="M125 197.6 Q150 222 175 197.6" stroke={LINE} strokeWidth="2.4" />
+          <path d="M150 226 L150 294" stroke="#000" strokeOpacity="0.12" strokeWidth="2" />
         </g>} />;
     case 'tube':
       return <Garment id={id} choice={choice}
@@ -1357,7 +1481,9 @@ function Top({ choice }: { choice: GarmentChoice }) {
         details={<g fill="none" strokeLinecap="round">
           <path d="M98 236 Q150 230 202 236 M98.6 246 Q150 240 201.4 246 M100 256 Q150 250 200 256" stroke="#000" strokeOpacity="0.14" />
           <path d="M104 236 C104 226 110 219 120 216" stroke="#ffffff" strokeOpacity="0.5" strokeWidth="3" />
-        </g>} />;
+        </g>}
+        backPaths={['M95.6 231 Q150 218 204.4 231 C204.4 242 203 247 202 252 C198 264 186 270 178 274 Q150 280 122 274 C114 270 102 264 98 252 C97 247 95.6 242 95.6 231 Z']}
+        back={<path d="M98 240 Q150 232 202 240 M98.6 250 Q150 242 201.4 250 M100 260 Q150 252 200 260" fill="none" stroke="#000" strokeOpacity="0.14" />} />;
     case 'crop':
       return <Garment id={id} choice={choice}
         // Scoop-neck tee: ribbed neckband, fabric bridging between the bust, and a hem that casts a shadow on the waist.
@@ -1376,6 +1502,15 @@ function Top({ choice }: { choice: GarmentChoice }) {
           <path d="M140 250 Q150 247.6 160 250 M142 258 Q150 256 158 258" stroke="#000" strokeOpacity="0.18" />
           <SleeveFolds />
           <BustShading opacity={0.3} />
+        </g>}
+        backPaths={['M116 196 C124 193 130 192 134 192 Q150 204 166 192 C170 192 176 193 184 196 C200 208 206 230 202 250 C199 260 190 266 182 270 Q150 276 118 270 C110 266 101 260 98 250 C94 230 100 208 116 196 Z']}
+        back={<g fill="none" strokeLinecap="round">
+          <path d="M120 271 Q150 278 180 271 L178 276.6 Q150 283.6 122 276.6 Z" fill="#000" fillOpacity="0.3" stroke="none" />
+          <path d="M134 192 Q150 204 166 192" stroke={LINE} strokeWidth="3.4" />
+          <path d="M134 192 Q150 204 166 192" stroke="#ffffff" strokeOpacity="0.55" strokeWidth="1.6" strokeDasharray="0.8 1.4" />
+          {/* Fabric drapes into the small of the back between the shoulder blades. */}
+          <path d="M126 214 Q136 236 140 262 M174 214 Q164 236 160 262" stroke="#000" strokeOpacity="0.14" />
+          <SleeveFolds />
         </g>} />;
     case 'bikini':
       return <Garment id={id} choice={choice}
@@ -1394,6 +1529,19 @@ function Top({ choice }: { choice: GarmentChoice }) {
           <circle cx="150" cy="239" r="3.4" fill="none" stroke="#fde68a" strokeWidth="1.8" />
           <circle cx="150" cy="239" r="3.4" fill="none" stroke={LINE} strokeWidth="0.6" />
           <BustShading opacity={0.25} />
+        </g>}
+        backPaths={['M98 244 Q150 252 202 244 L202.6 251 Q150 259 97.4 251 Z']}
+        backMirror={['M131 196 Q138 191 146 188 L147 190.6 Q139.6 193.6 132.8 198.4 Z']}
+        back={<g stroke={LINE} strokeWidth="0.9" strokeLinejoin="round">
+          {[false, true].map((m) => (
+            <g key={String(m)} transform={m ? MIRROR : undefined}>
+              <path d="M150 251 C143 244 136 245 137 251 C138 257 144 256 150 251 Z" fill={choice.color} />
+              <path d="M149 252 Q146 260 141.6 266 L144.6 266.6 Q148 260 150 253 Z" fill={choice.color} />
+              <path d="M150 188.6 C145 184 140.6 186 141.6 189.6 C142.6 193 147 192 150 188.6 Z" fill={choice.color} />
+            </g>
+          ))}
+          <ellipse cx="150" cy="251" rx="2.6" ry="3" fill={choice.color} />
+          <ellipse cx="150" cy="188.8" rx="2" ry="2.2" fill={choice.color} />
         </g>} />;
     case 'corset':
       return <Garment id={id} choice={choice}
@@ -1419,7 +1567,9 @@ function Top({ choice }: { choice: GarmentChoice }) {
             </g>
           ))}
           <BustShading opacity={0.3} upper={false} />
-        </g>} />;
+        </g>}
+        backPaths={['M98 240 Q150 250 202 240 C202 258 184 270 177 278 C172 288 173 298 186 314 Q168 314 150 318 Q132 314 114 314 C127 298 128 288 123 278 C116 270 98 258 98 240 Z']}
+        back={<CorsetLacing />} />;
     case 'sailor':
       // Nautical pin-up halter: tied under the bust, bare midriff.
       return <Garment id={id} choice={choice}
@@ -1438,6 +1588,13 @@ function Top({ choice }: { choice: GarmentChoice }) {
           <ellipse cx="150" cy="278.6" rx="4.4" ry="3.4" fill={choice.color} stroke={LINE} strokeWidth="0.9" />
           <SleeveFolds />
           <BustShading opacity={0.3} />
+        </g>}
+        back={<g fill="none">
+          <path d="M124 193 Q150 210 176 193" stroke="#1e3a5f" strokeWidth="3.2" />
+          <path d="M124 193 Q150 210 176 193" stroke="#ffffff" strokeWidth="0.9" />
+          <path d="M119 276 Q150 283 181 276" stroke="#1e3a5f" strokeWidth="2.4" />
+          <path d="M126 214 Q136 236 140 262 M174 214 Q164 236 160 262" stroke="#000" strokeOpacity="0.14" />
+          <SleeveFolds />
         </g>} />;
     case 'kimono':
       return <Garment id={id} choice={choice}
@@ -1469,10 +1626,41 @@ function Top({ choice }: { choice: GarmentChoice }) {
           <path d="M119.6 287.4 Q150 294 180.4 287.4" fill="none" stroke="#fde68a" strokeWidth="1.6" />
           <circle cx="150" cy="290.6" r="2.4" fill="#fde68a" stroke={LINE} strokeWidth="0.7" />
           <BustShading opacity={0.25} />
+        </g>}
+        back={<g>
+          <g fill="none" stroke="#000" strokeLinecap="round">
+            {[false, true].map((m) => (
+              <g key={String(m)} transform={m ? MIRROR : undefined}>
+                <path d="M92 254 Q87 292 89 334 M99.6 262 Q97.6 304 100.4 348" strokeOpacity="0.22" strokeWidth="1.1" />
+                <path d="M110 320 Q100 334 96 356" strokeOpacity="0.16" strokeWidth="1.1" />
+              </g>
+            ))}
+            <path d="M150 230 L150 272 M150 306 L150 362" strokeOpacity="0.3" />
+          </g>
+          {/* Collar pulled back off the nape in a white curve. */}
+          <path d="M126 192 Q150 212 174 192" fill="none" stroke={LINE} strokeOpacity="0.55" strokeWidth="4.6" />
+          <path d="M126 192 Q150 212 174 192" fill="none" stroke="#ffffff" strokeWidth="3" />
+          <path d="M120 272 Q150 280 180 272 L181 300 Q150 307 119 300 Z" fill="#1e1b4b" stroke={LINE} />
+          <path d="M119.6 287.4 Q150 294 180.4 287.4" fill="none" stroke="#fde68a" strokeWidth="1.6" />
+          {/* Taiko knot: a padded drum of obi folded over the cord, hanging below the band. */}
+          <path d="M130 266 Q150 260 170 266 L172 304 Q150 310 128 304 Z" fill="#1e1b4b" stroke={LINE} strokeWidth="1.2" />
+          <path d="M132 270 Q150 265 168 270" fill="none" stroke="#ffffff" strokeOpacity="0.2" strokeWidth="2" />
+          <path d="M128.6 290 Q150 295 171.4 290" fill="none" stroke="#fde68a" strokeWidth="1.8" />
+          <path d="M130 302 Q150 308 170 302 L168 318 Q150 323 132 318 Z" fill="#312e81" stroke={LINE} strokeWidth="1" />
         </g>} />;
     case 'jacket':
       return <Garment id={id} choice={choice}
         mirror={['M115 195 C128 189 140 189 147 191 L142 268 Q121 269 102 258 C94 236 100 210 115 195 Z', SLEEVE_LONG]}
+        backPaths={['M115 195 C130 188 170 188 185 195 C200 210 206 236 198 258 Q150 272 102 258 C94 236 100 210 115 195 Z']}
+        backMirror={[SLEEVE_LONG]}
+        back={<g fill="none" strokeLinecap="round">
+          <path d="M126 191 Q150 200 174 191 L176 196 Q150 205 124 196 Z" fill="#000" fillOpacity="0.2" stroke={LINE} strokeWidth="0.9" />
+          <path d="M150 201 L150 266" stroke="#000" strokeOpacity="0.32" />
+          <path d="M120 214 Q126 240 124 262 M180 214 Q174 240 176 262" stroke="#000" strokeOpacity="0.2" />
+          <path d="M103 256 Q150 270 197 256" stroke="#000" strokeOpacity="0.3" strokeWidth="1.6" />
+          <path d="M112 205 Q126 199 140 199" stroke="#ffffff" strokeOpacity="0.35" strokeWidth="2" />
+          <SleeveFolds long />
+        </g>}
         details={<g>
           {/* Notched lapels folded back over each front panel, rolling to a point at the front edge. */}
           {[false, true].map((m) => (
