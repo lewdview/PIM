@@ -1,0 +1,11 @@
+💡 What:
+Extracted the transport controls from `TransmissionSection` in `src/pages/LaunchPage.tsx` into a new isolated `TransmissionTransport` component. The `progress` and `currentTime` Zustand store subscriptions were moved into this new child component and conditionally evaluated using the `isThisTrack` check.
+
+🎯 Why:
+The `TransmissionSection` component in `LaunchPage` was subscribing to `progress` and `currentTime` from the `useGlobalPlayer` Zustand store. Since these variables update rapidly during active playback (up to 60fps), it forced the large `TransmissionSection` component to continuously re-render. Extracting these subscriptions into a smaller subcomponent prevents the parent component from unnecessarily re-rendering, avoiding CPU bottlenecks and improving application responsiveness.
+
+📊 Impact:
+Significantly reduces re-renders in `LaunchPage` during playback. Only the specific progress bar and time display elements will re-render, completely isolating the volatile 60fps state updates.
+
+🔬 Measurement:
+Start playback from the Launch page and use React Developer Tools (Profiler) to observe the re-renders. Before this change, the entire `TransmissionSection` would flash. Now, only the `TransmissionTransport` component updates during playback.
