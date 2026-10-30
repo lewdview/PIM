@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo, type ReactNode, type CSSProperties } from "react";
-import { loadOpts, resetOpts, keyLabel, normalizeLaneKey, ARROW_LANE_KEYS, getActiveTheme, getEffectiveDpr, type GameOpts, type RenderResolution, type GfxLevel, type FpsTarget, type ParticleDensity, GAME_BACKGROUNDS, GAME_TRACKS } from "../lib/options";
+import { loadOpts, resetOpts, keyLabel, normalizeLaneKey, ARROW_LANE_KEYS, getActiveTheme, getEffectiveDpr, type GameOpts, type RenderResolution, type GfxLevel, type FpsTarget, type ParticleDensity, GAME_BACKGROUNDS, GAME_TRACKS, defaultLyricsMode } from "../lib/options";
 import { useLocation } from "wouter";
 import { clearCatalogCache } from "../game/api";
 import { audioManager } from "../game/audio";
@@ -1381,11 +1381,13 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
         cardBack: "classic",
         gameBackground: "cover_blur",
         gameTrack: "transparent",
+        hudStyle: "stanza",
         backgroundBlur: 18,
         hudMisses: true,
         comboDisplay: true,
         judgmentText: true,
         trackLyrics: true,
+        lyricsMode: defaultLyricsMode(),
         bgMusic: false,
         sfxEnabled: true,
         sfxVolume: 0.8,
@@ -1561,6 +1563,57 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
             {/* ════ GAMEPLAY ════ */}
             {activeTab === 'gameplay' && (
               <div className="opt-stack">
+                <Panel title="HUD style" hint="How score, combo and shield are shown in a song">
+                  <div className="opt-seg opt-seg--3">
+                    {([
+                      { id: 'stanza', label: 'Poetic GUI', sub: 'The lyric inks as you play' },
+                      { id: 'console', label: 'Console Rail', sub: 'Score and shield panels' },
+                      { id: 'beta', label: 'Beta', sub: 'The original dials' },
+                    ] as const).map(style => (
+                      <SegButton
+                        key={style.id}
+                        active={opts.hudStyle === style.id}
+                        label={style.label}
+                        sub={style.sub}
+                        onClick={() => {
+                          localStorage.setItem("opt_hudStyle", style.id);
+                          setOpts(o => ({ ...o, hudStyle: style.id }));
+                          updateSettings({ hudStyle: style.id });
+                        }}
+                      />
+                    ))}
+                  </div>
+                </Panel>
+
+                <Panel title="Lyrics" hint="How the words show during a song">
+                  <div className="opt-seg opt-seg--3">
+                    {([
+                      { id: 'off', label: 'Off', sub: 'No lyrics' },
+                      { id: 'track', label: 'Track lyrics', sub: 'Painted on the track' },
+                      { id: 'poetic', label: 'Poetic Lines', sub: 'Kinetic lyrics across the sky' },
+                    ] as const).map(mode => (
+                      <SegButton
+                        key={mode.id}
+                        active={opts.hudStyle !== 'stanza' && opts.lyricsMode === mode.id}
+                        locked={opts.hudStyle === 'stanza'}
+                        label={mode.label}
+                        sub={mode.sub}
+                        onClick={() => {
+                          if (opts.hudStyle === 'stanza') return;
+                          localStorage.setItem("opt_lyricsMode", mode.id);
+                          setOpts(o => ({ ...o, lyricsMode: mode.id }));
+                          updateSettings({ lyricsMode: mode.id });
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <p className="opt-note">
+                    {opts.hudStyle === 'stanza'
+                      ? 'Poetic GUI shows the lyric line itself, so these modes are off while it is selected.'
+                      : 'Phones default to Track lyrics; desktop and tablet default to Poetic Lines.'}
+                  </p>
+                </Panel>
+
                 <Panel title="HUD & scoring">
                   <SettingRow label="Miss system" desc="Misses mute the lane and reset your multiplier.">
                     {renderToggle('missSystem', 'Miss system')}
@@ -1576,9 +1629,6 @@ export default function OptionsModal({ isOpen, onClose }: OptionsModalProps) {
                   </SettingRow>
                   <SettingRow label="Judgment text" desc="Shows PERFECT, GOOD or MISS on each hit.">
                     {renderToggle('judgmentText', 'Judgment text')}
-                  </SettingRow>
-                  <SettingRow label="Track lyrics" desc="Words painted on the track surface during play.">
-                    {renderToggle('trackLyrics', 'Track lyrics')}
                   </SettingRow>
                 </Panel>
 
