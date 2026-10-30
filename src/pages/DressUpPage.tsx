@@ -10,7 +10,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useRoute } from 'wouter';
 import { ChevronLeft, ChevronRight, Calendar, Copy, Check, Eye, RotateCcw, Shuffle, Sparkles, Star } from 'lucide-react';
-import WaifuFigure from '../components/dressup/WaifuFigure';
+import WaifuFigure, { type FigureView } from '../components/dressup/WaifuFigure';
 import {
   ACCENT_COLOR, ALL_SLOTS, BASE_COLOR, EYE_COLORS, FREE_COLORS, GARMENT_SLOTS, HAIR_COLORS, MATERIAL_KEYS, SCENES, WARDROBE,
   defaultOutfit, getDayBrief, scoreOutfit, type GarmentSlot, type Outfit, type Slot,
@@ -100,6 +100,7 @@ export default function DressUpPage() {
   const [slot, setSlot] = useState<Tab>('top');
   const [revealed, setRevealed] = useState(() => !!saved.revealed?.[day]);
   const [copied, setCopied] = useState(false);
+  const [view, setView] = useState<FigureView>('front');
   const [showPrompt, setShowPrompt] = useState(false);
 
   // Load the saved outfit for the newly picked day.
@@ -303,7 +304,15 @@ export default function DressUpPage() {
         {/* Stage */}
         <section className="order-1 lg:order-2 flex flex-col items-center gap-3">
           <div className="w-full max-w-[240px] sm:max-w-[340px] border-2 border-white/15 shadow-[0_0_40px_rgba(255,126,182,0.15)]">
-            <WaifuFigure outfit={outfit} celebrate={score.grade === 'S'} eyeColor={eyeColor} className="block w-full h-auto" />
+            <WaifuFigure outfit={outfit} celebrate={score.grade === 'S'} eyeColor={eyeColor} view={view} className="block w-full h-auto" />
+          </div>
+          <div className="flex border border-white/15" role="group" aria-label="View">
+            {(['front', 'back'] as const).map((v) => (
+              <button key={v} onClick={() => setView(v)} aria-pressed={view === v}
+                className={`px-3! py-1! font-mono text-[10px] uppercase font-bold ${view === v ? 'bg-[#ff7eb6] text-black' : 'text-white/70 hover:bg-white/5'}`}>
+                {v}
+              </button>
+            ))}
           </div>
           <div className="w-full max-w-[340px] border border-white/10 bg-white/[0.03] p-3!">
             <div className="flex items-center justify-between">

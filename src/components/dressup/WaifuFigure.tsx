@@ -6,13 +6,19 @@
  * so "Liquid Chrome" and "Acid Denim" read differently in the same colour.
  */
 
-import { useId, type ReactNode } from 'react';
+import { createContext, useContext, useId, type ReactNode } from 'react';
 import type { OutfitStyle } from '../../utils/artTypes';
 import { ACCENT_COLOR, BASE_COLOR, SCENES, type Outfit, type GarmentChoice } from '../../game/dressUp';
 
 const SKIN = '#ffe3d3';
 const SKIN_SHADE = '#f4c4ae';
 const LINE = '#2a1a2e';
+
+/** Which side of the doll is drawn. The silhouette is symmetric, so the back view reuses it and
+ * swaps the front-only details (face, bust, toes, garment trims) for back ones. */
+export type FigureView = 'front' | 'back';
+const ViewContext = createContext<FigureView>('front');
+const useBack = () => useContext(ViewContext) === 'back';
 const MIRROR = 'translate(300,0) scale(-1,1)';
 
 /** SVG-safe unique id so several figures can share a page without def clashes. */
@@ -284,6 +290,7 @@ function Garment({ id, choice, paths = [], mirror = [], details }: {
   details?: ReactNode;
 }) {
   const uid = useSvgId(id);
+  const back = useBack();
   const paint = materialPaint(uid, choice.material, choice.color);
   // Tops wrap their pattern over the bust, bottoms around the hips.
   const wrap: Wrap | undefined = id === 'top' ? 'bust' : id === 'bottom' ? 'hips' : undefined;
@@ -306,7 +313,8 @@ function Garment({ id, choice, paths = [], mirror = [], details }: {
           {layer(d, `mr${i}`, MIRROR)}
         </g>
       ))}
-      {details}
+      {/* Trims, buttons and laces are front details; from behind only the shape shows. */}
+      {!back && details}
     </g>
   );
 }
@@ -342,6 +350,10 @@ const BUST = 'M150 238 C149 226 144 214 134 208 C126 203.5 116 203 108 207 C99 2
 // The bra follows the bust tops with a scooped front and a wide band under the bust.
 const SPORTS_BRA = 'M96 232 C100 216 112 210 124 212 C136 214 146 220 150 232 C154 220 164 214 176 212 C188 210 200 216 204 232 C204 242 203 246 202 250 C199 262 188 268 179 276 Q150 282 121 276 C112 268 101 262 98 250 Z';
 // Wide straps from the cups up over the shoulder slope (left; mirrored for the right).
+// Back of the sports bra: a racerback strap from each shoulder into the centre, and a wide band
+// that follows the ribcage under the shoulder blades.
+const BRA_RACER = 'M116 199 L126 197.6 C132 214 140 230 150 242 L150 254 L143 254 C138 236 126 216 116 199 Z';
+const BRA_BACK_BAND = 'M98 248 Q150 256 202 248 C202 252 201 256 200 258 C197 266 187 272 179 276 Q150 282 121 276 C113 272 103 266 100 258 C99 256 98 252 98 248 Z';
 const BRA_STRAP = 'M112 214 C114 207 118 201 122 197 L131 196 C128 201 126 207 125.4 213 Z';
 // Mid-thigh bike shorts: waistband at the navel line, snug over the hips, hems curving round each thigh.
 const SHORTS = 'M108 318 Q150 324 192 318 C201 328 211.6 338 211.8 352 C212.2 372 207.6 390 201.6 406 Q178 412 154 408 L150 392 L146 408 Q122 412 98.4 406 C92.4 390 87.8 372 88.2 352 C88.4 338 99 328 108 318 Z';
@@ -629,7 +641,10 @@ const TWIN_TAIL = 'M106 88 C70 98 54 156 60 226 C64 276 72 310 80 336 C81.5 331 
 const PONYTAIL = 'M166 62 C214 52 240 98 232 168 C228 218 234 260 246 296 C240 292 236 290 233 288 C235 294 237 300 238 306 C232 298 226 292 222 286 C222 291 222 297 220 302 C208 276 204 232 202 182 C200 132 194 96 172 80 Z';
 const LONG_BACK = 'M92 118 C86 176 84 262 92 344 C97.8 349.0 103.6 355.0 106.5 356.0 C108.7 353.0 111.6 346.0 113.8 344.0 C112.3 350.8 118.1 361.0 121.0 362.0 C123.2 359.0 126.1 346.0 128.2 344.0 C126.8 348.7 132.6 354.0 135.5 355.0 C137.7 352.0 140.6 346.0 142.8 344.0 C141.3 350.2 147.1 359.0 150.0 360.0 C152.2 357.0 155.1 346.0 157.2 344.0 C155.8 348.4 161.6 353.0 164.5 354.0 C166.7 351.0 169.6 346.0 171.8 344.0 C170.3 350.5 176.1 360.0 179.0 361.0 C181.2 358.0 184.1 346.0 186.2 344.0 C184.8 349.3 190.6 356.0 193.5 357.0 C199.3 353.0 205.1 348.0 208.0 346.0 C216 262 214 176 208 118 Z';
 
-function HairBack({ item, color }: { item: string; color: string }) {
+// Seen from behind, the back mass rises to cover the crown as well.
+const HAIR_MASS_BEHIND = HAIR_MASS.replace('C86 46 214 46', 'C86 26 214 26');
+
+function HairBack({ item, color, behind = false }: { item: string; color: string; behind?: boolean }) {
   const { defs, p, dark } = useHairPaint(color);
   const strands = (d: string) => <path d={d} fill="none" stroke={dark} strokeOpacity="0.45" strokeWidth="1" />;
   return (
@@ -653,7 +668,26 @@ function HairBack({ item, color }: { item: string; color: string }) {
           {strands('M190 90 C220 130 220 220 233 288 M180 86 C206 140 210 230 222 286')}
         </g>
       )}
-      <Cel d={HAIR_MASS} fill={p.fill} line={p.stroke} />
+      <Cel d={behind ? HAIR_MASS_BEHIND : HAIR_MASS} fill={p.fill} line={p.stroke} />
+      {behind && <>
+        {/* Back of the head: strands fanning from the crown, an angel ring across the curve, and the
+            ties or buns of the style. */}
+        <path d="M150 50 C138 90 128 140 124 186 M150 50 C150 100 150 150 150 190 M150 50 C162 90 172 140 176 186 M150 50 C124 80 108 120 102 176 M150 50 C176 80 192 120 198 176"
+          fill="none" stroke={dark} strokeOpacity="0.35" strokeWidth="1" />
+        <path d="M108 84 C124 70 140 64 158 64 C174 65 186 72 194 82 L188 86 C180 78 170 73 158 72 C142 72 126 78 114 90 Z" fill="#ffffff" fillOpacity="0.32" />
+        {item === 'twintails' && [false, true].map((right) => (
+          <g key={String(right)} transform={right ? MIRROR : undefined}>
+            <circle cx="107" cy="90" r="7" fill="#ff007f" stroke={LINE} />
+          </g>
+        ))}
+        {item === 'ponytail' && <path d="M164 62 L178 74" stroke="#ff007f" strokeWidth="6" strokeLinecap="round" />}
+        {item === 'buns' && [false, true].map((right) => (
+          <g key={String(right)} transform={right ? MIRROR : undefined}>
+            <Cel d="M88 58 A22 22 0 1 0 132 58 A22 22 0 1 0 88 58 Z" fill={p.fill} line={p.stroke} mirrored={right} depth={0.7} />
+            <path d="M96 52 C102 44 116 42 124 50" fill="none" stroke="#fff" strokeOpacity="0.35" strokeWidth="3" strokeLinecap="round" />
+          </g>
+        ))}
+      </>}
     </g>
   );
 }
@@ -826,41 +860,50 @@ function Face({ eyeColor }: { eyeColor: string }) {
 }
 
 function Hand() {
+  const back = useBack();
   return (
     <g fill="none" stroke={SKIN_LINE} strokeLinecap="round">
       {/* The fingers are part of the arm's contour; thin lines part them up to the knuckles. */}
       <path d="M66.9 360.4 Q66.8 358.4 66.4 356.8 M71.3 361 Q71.3 359 71 357.4 M76 361 Q76.1 359 75.9 357.2" strokeOpacity="0.5" strokeWidth="0.6" />
       {/* Knuckles: small highlights across the back of the hand. */}
       <path d="M64.4 354.6 Q65.6 353.6 66.8 354.4 M68.8 355.4 Q70.2 354.4 71.6 355.2 M73.6 355.4 Q75 354.4 76.4 355.2" stroke="#ffffff" strokeOpacity="0.4" strokeWidth="0.8" />
-      {/* Nails on the fingertips that turn toward us. */}
-      <path d="M68.4 368.4 Q69.6 369.6 70.8 368.6 M72.6 370.4 Q73.8 371.6 75 370.4 M77.4 368.4 Q78.6 369.4 79.6 368" strokeOpacity="0.45" strokeWidth="0.6" />
+      {/* Nails on the fingertips that turn toward us (hidden from behind). */}
+      {!back && <path d="M68.4 368.4 Q69.6 369.6 70.8 368.6 M72.6 370.4 Q73.8 371.6 75 370.4 M77.4 368.4 Q78.6 369.4 79.6 368" strokeOpacity="0.45" strokeWidth="0.6" />}
     </g>
   );
 }
 
 function Body() {
+  const back = useBack();
   return (
     <g>
       {[false, true].map((m) => (
         <g key={String(m)} transform={m ? MIRROR : undefined}>
           <Skin d={LEG} mirrored={m} />
-          {/* Knee: the kneecap's lower edge and the dimple above it. */}
-          <path d="M124 460 Q131 464 138 460 M127.5 449 Q131 447 135 449" fill="none" stroke={SKIN_LINE} strokeOpacity="0.45" strokeWidth="0.9" />
           {/* Form shading: inner-thigh shadow where the thighs meet, a shade under the kneecap, and a
               shin highlight on the lit leg (dimmer on the far one). */}
           <path d="M150 400 C147 412 145.4 428 146.6 444 C148 438 149.4 424 150 410 Z" fill={SKIN_SHADE} stroke="none" />
-          <path d="M125 461.6 Q131 467 137.4 461.6 Q131 470 125 461.6 Z" fill={SKIN_SHADE} stroke="none" opacity="0.8" />
-          <path d="M134 472 C135 490 134.6 508 132.6 526" fill="none" stroke="#ffffff" strokeOpacity={m ? 0.25 : 0.55} strokeWidth="2.2" strokeLinecap="round" />
           <path d="M108 420 C112 432 118 442 124 448" fill="none" stroke="#ffffff" strokeOpacity={m ? 0.2 : 0.45} strokeWidth="2" strokeLinecap="round" />
-          <path d={TOES} fill="none" stroke={SKIN_LINE} strokeOpacity="0.6" strokeWidth="0.8" strokeLinecap="round" />
-          {/* Big-toe nail, the tendon down the instep, and the ankle bones (inner one higher). */}
-          {/* Toenails on every toe (big toe largest), a crease where the toes meet the ball of the foot,
-              and a highlight down the instep. */}
-          <path d="M142.6 578.6 Q144.6 576.2 146.6 578.6 Q144.6 579.8 142.6 578.6 Z M138 578.8 Q139 577.2 140 578.8 Q139 579.6 138 578.8 Z M133.8 578.6 Q134.7 577.1 135.6 578.6 Q134.7 579.4 133.8 578.6 Z M129.9 578.1 Q130.7 576.7 131.5 578.1 Q130.7 578.9 129.9 578.1 Z M126.2 577.2 Q126.9 576 127.6 577.2 Q126.9 577.9 126.2 577.2 Z"
-            fill="#ffd9d0" stroke={SKIN_LINE} strokeOpacity="0.4" strokeWidth="0.4" />
-          <path d="M126.4 574.4 Q136 572 147.4 574.6" fill="none" stroke={SKIN_SHADE} strokeWidth="1.6" strokeLinecap="round" />
-          <path d="M131 562 Q135 566 138.6 571" fill="none" stroke="#ffffff" strokeOpacity={m ? 0.18 : 0.35} strokeWidth="1.4" strokeLinecap="round" />
-          <path d="M138.5 560 Q141.6 566 143.6 573" fill="none" stroke={SKIN_LINE} strokeOpacity="0.25" strokeWidth="0.7" />
+          {back ? <>
+            {/* From behind: the crease behind the knee, a lit calf and the heel. */}
+            <path d="M124.6 454 Q131 457.6 137.6 454" fill="none" stroke={SKIN_LINE} strokeOpacity="0.4" strokeWidth="0.9" />
+            <path d="M118 476 C117.6 488 119.6 498 123 506" fill="none" stroke="#ffffff" strokeOpacity={m ? 0.25 : 0.5} strokeWidth="2.2" strokeLinecap="round" />
+            <path d="M128.6 566 C129.6 573.6 134 578 139.6 578 C143 578 145.6 575 146.4 571" fill="none" stroke={SKIN_LINE} strokeOpacity="0.45" strokeWidth="0.9" />
+            <path d="M130.4 574 Q136 578.6 142 576" fill="none" stroke={SKIN_SHADE} strokeWidth="1.6" strokeLinecap="round" />
+          </> : <>
+            {/* Knee: the kneecap's lower edge and the dimple above it. */}
+            <path d="M124 460 Q131 464 138 460 M127.5 449 Q131 447 135 449" fill="none" stroke={SKIN_LINE} strokeOpacity="0.45" strokeWidth="0.9" />
+            <path d="M125 461.6 Q131 467 137.4 461.6 Q131 470 125 461.6 Z" fill={SKIN_SHADE} stroke="none" opacity="0.8" />
+            <path d="M134 472 C135 490 134.6 508 132.6 526" fill="none" stroke="#ffffff" strokeOpacity={m ? 0.25 : 0.55} strokeWidth="2.2" strokeLinecap="round" />
+            <path d={TOES} fill="none" stroke={SKIN_LINE} strokeOpacity="0.6" strokeWidth="0.8" strokeLinecap="round" />
+            {/* Toenails on every toe (big toe largest), a crease where the toes meet the ball of the foot,
+                and a highlight down the instep. */}
+            <path d="M142.6 578.6 Q144.6 576.2 146.6 578.6 Q144.6 579.8 142.6 578.6 Z M138 578.8 Q139 577.2 140 578.8 Q139 579.6 138 578.8 Z M133.8 578.6 Q134.7 577.1 135.6 578.6 Q134.7 579.4 133.8 578.6 Z M129.9 578.1 Q130.7 576.7 131.5 578.1 Q130.7 578.9 129.9 578.1 Z M126.2 577.2 Q126.9 576 127.6 577.2 Q126.9 577.9 126.2 577.2 Z"
+              fill="#ffd9d0" stroke={SKIN_LINE} strokeOpacity="0.4" strokeWidth="0.4" />
+            <path d="M126.4 574.4 Q136 572 147.4 574.6" fill="none" stroke={SKIN_SHADE} strokeWidth="1.6" strokeLinecap="round" />
+            <path d="M131 562 Q135 566 138.6 571" fill="none" stroke="#ffffff" strokeOpacity={m ? 0.18 : 0.35} strokeWidth="1.4" strokeLinecap="round" />
+            <path d="M138.5 560 Q141.6 566 143.6 573" fill="none" stroke={SKIN_LINE} strokeOpacity="0.25" strokeWidth="0.7" />
+          </>}
           <path d="M140 548 Q142 551 141 554.5 M128.6 551 Q127.6 554 128.8 557" fill="none" stroke={SKIN_LINE} strokeOpacity="0.4" strokeWidth="0.7" />
         </g>
       ))}
@@ -884,6 +927,7 @@ function UpperBody({ base }: { base: string }) {
   const BASE_LINE = mix(base, '#2a0a1e', 0.62);
   const hipClip = useSvgId('hip');
   const armClip = useSvgId('arm');
+  const back = useBack();
   return (
     <g stroke={SKIN_LINE} strokeWidth="1.1" strokeLinejoin="round">
       {/* Below the knuckles the arm fades to a finer cel and contour drawn underneath it: at the arm's full depth
@@ -914,13 +958,15 @@ function UpperBody({ base }: { base: string }) {
       ))}
       <Skin d={NECK} depth={0.5} />
       {/* Chin shadow, neck tendons and the notch between the collarbones. */}
-      <path d="M141 168 Q150 182 159 168 L159 178 Q150 188 141 178 Z" fill={SKIN_SHADE} stroke="none" opacity="0.85" />
+      {!back && <path d="M141 168 Q150 182 159 168 L159 178 Q150 188 141 178 Z" fill={SKIN_SHADE} stroke="none" opacity="0.85" />}
       <Skin d={TORSO} />
       {/* Soft neck base: hide the torso's top contour so the neck flows into the chest, then the
           tendons converge into the notch between the collarbones. */}
       <path d="M137.6 187.6 Q150 197.4 162.4 187.6 L164 199.6 Q150 205 136 199.6 Z" fill={SKIN} stroke="none" />
-      <path d="M143.4 180 Q145.6 189 148.6 197 M156.6 180 Q154.4 189 151.4 197" fill="none" strokeOpacity="0.16" />
-      <path d="M137 194 Q141 197.6 146 198.4 M163 194 Q159 197.6 154 198.4" fill="none" stroke={SKIN_SHADE} strokeWidth="2.4" strokeLinecap="round" />
+      {!back && <>
+        <path d="M143.4 180 Q145.6 189 148.6 197 M156.6 180 Q154.4 189 151.4 197" fill="none" strokeOpacity="0.16" />
+        <path d="M137 194 Q141 197.6 146 198.4 M163 194 Q159 197.6 154 198.4" fill="none" stroke={SKIN_SHADE} strokeWidth="2.4" strokeLinecap="round" />
+      </>}
       {/* Trapezius: the slope from the neck down to each shoulder, over the torso's top edge. */}
       {[false, true].map((m) => (
         <g key={String(m)} transform={m ? MIRROR : undefined}>
@@ -929,9 +975,20 @@ function UpperBody({ base }: { base: string }) {
           <path d="M141.4 170 C140.4 183 131 191 111 197.6" fill="none" strokeWidth={m ? 1.8 : 1.1} />
         </g>
       ))}
-      <path d="M130 200 Q138 203 145 200 M155 200 Q162 203 170 200 M147.5 198 Q150 200 152.5 198" fill="none" strokeOpacity="0.4" />
+      {back ? (
+        // From behind: the nape, the spine running down the back, and the shoulder blades.
+        <g fill="none" strokeLinecap="round">
+          <path d="M150 178 L150 196" strokeOpacity="0.22" />
+          <path d="M150 204 C149.4 240 149.4 280 150 318" strokeOpacity="0.2" strokeWidth="1" />
+          <path d="M146 258 C147.6 280 147.6 300 146.4 316 M154 258 C152.4 280 152.4 300 153.6 316" stroke={SKIN_SHADE} strokeWidth="2" />
+          {[false, true].map((m) => (
+            <path key={String(m)} transform={m ? MIRROR : undefined} d="M118 212 C110 222 110 238 120 246 C128 250 136 244 139 236" strokeOpacity="0.22" strokeWidth="1" />
+          ))}
+          <path d="M106 216 C104 226 106 236 112 242" stroke="#ffffff" strokeOpacity="0.45" strokeWidth="2" />
+        </g>
+      ) : <path d="M130 200 Q138 203 145 200 M155 200 Q162 203 170 200 M147.5 198 Q150 200 152.5 198" fill="none" strokeOpacity="0.4" />}
       {/* Bust volumes sit in front of the collarbones; the sports bra neckline follows their curve. */}
-      {[0, 1].map((side) => (
+      {!back && [0, 1].map((side) => (
         <g key={side} transform={side ? MIRROR : undefined}>
           <Skin d={BUST} mirrored={!!side} depth={0.8} />
           <path d="M104 216 Q107 211 112 209" fill="none" stroke="#ffffff" strokeOpacity="0.55" strokeWidth="2.2" strokeLinecap="round" />
@@ -952,9 +1009,9 @@ function UpperBody({ base }: { base: string }) {
       <path d="M121 276 Q150 282 179 276 L176.4 282 Q150 289 123.6 282 Z" fill={SKIN_SHADE} stroke="none" />
       <path d="M177 278 C172 288 173 298 186 312 L192 318 L183 318 C174 308 168 296 171.4 283 Z" fill={SKIN_SHADE} stroke="none" />
       <path d="M123 278 C128 288 127 298 114 312 L111 315 C120 304 124 294 121.6 284 Z" fill={SKIN_SHADE} stroke="none" opacity="0.6" />
-      <path d="M150 284 L150 293" fill="none" strokeOpacity="0.18" strokeWidth="0.9" strokeLinecap="round" />
+      {!back && <path d="M150 284 L150 293" fill="none" strokeOpacity="0.18" strokeWidth="0.9" strokeLinecap="round" />}
       <path d="M126.4 286 C127.6 294 125 302 118 310" fill="none" stroke="#ffffff" strokeOpacity="0.5" strokeWidth="2" strokeLinecap="round" />
-      <path d="M150 296 Q148.6 300 150 304" fill="none" strokeOpacity="0.35" strokeWidth="1" strokeLinecap="round" />
+      {!back && <path d="M150 296 Q148.6 300 150 304" fill="none" strokeOpacity="0.35" strokeWidth="1" strokeLinecap="round" />}
       {/* Cool rim light on the shadow side: outer upper arm, forearm and waist. */}
       <g transform={MIRROR} fill="none" stroke="#dbeafe" strokeOpacity="0.7" strokeWidth="1.3" strokeLinecap="round">
         <path d="M87.2 228 C85.8 242 84.2 256 82.6 268 M74.2 300 C72.8 310 71.6 320 70.6 330" />
@@ -972,17 +1029,28 @@ function UpperBody({ base }: { base: string }) {
         <path d="M94 352 C94 366 96 380 100 392" strokeWidth="2.6" strokeOpacity="0.6" />
         <path d="M112 330 C108 336 104 342 102 348" strokeWidth="2" strokeOpacity="0.45" />
       </g>
-      {[false, true].map((m) => (
-        <g key={String(m)} transform={m ? MIRROR : undefined}>
-          <Cel d={BRA_STRAP} fill={BASE_FILL} shade={BASE_SHADE} shadeOpacity={0.6} line={BASE_LINE} mirrored={m} weight={0.8} />
+      {back ? <>
+        {/* Racerback: the straps run from the shoulders into a centre panel down to a wide band. */}
+        {[false, true].map((m) => (
+          <g key={String(m)} transform={m ? MIRROR : undefined}>
+            <Cel d={BRA_RACER} fill={BASE_FILL} shade={BASE_SHADE} shadeOpacity={0.6} line={BASE_LINE} mirrored={m} weight={0.8} />
+          </g>
+        ))}
+        <Cel d={BRA_BACK_BAND} fill={BASE_FILL} shade={BASE_SHADE} shadeOpacity={0.6} line={BASE_LINE} />
+        <path d="M100 258 Q150 264 200 258" fill="none" stroke={BASE_LINE} strokeOpacity="0.35" strokeLinecap="round" />
+      </> : <>
+        {[false, true].map((m) => (
+          <g key={String(m)} transform={m ? MIRROR : undefined}>
+            <Cel d={BRA_STRAP} fill={BASE_FILL} shade={BASE_SHADE} shadeOpacity={0.6} line={BASE_LINE} mirrored={m} weight={0.8} />
+          </g>
+        ))}
+        <Cel d={SPORTS_BRA} fill={BASE_FILL} shade={BASE_SHADE} shadeOpacity={0.6} line={BASE_LINE} />
+        <path d="M119 268 Q150 275 181 268" fill="none" stroke={BASE_LINE} strokeOpacity="0.45" strokeLinecap="round" />
+        <g fill="none" stroke="#ffffff" strokeLinecap="round">
+          <path d="M103 238 C103 227 109 219 119 216.5" strokeWidth="3" strokeOpacity="0.75" />
+          <path d="M157 233 C159 225 165 220 173 218.5" strokeWidth="2.2" strokeOpacity="0.45" />
         </g>
-      ))}
-      <Cel d={SPORTS_BRA} fill={BASE_FILL} shade={BASE_SHADE} shadeOpacity={0.6} line={BASE_LINE} />
-      <path d="M119 268 Q150 275 181 268" fill="none" stroke={BASE_LINE} strokeOpacity="0.45" strokeLinecap="round" />
-      <g fill="none" stroke="#ffffff" strokeLinecap="round">
-        <path d="M103 238 C103 227 109 219 119 216.5" strokeWidth="3" strokeOpacity="0.75" />
-        <path d="M157 233 C159 225 165 220 173 218.5" strokeWidth="2.2" strokeOpacity="0.45" />
-      </g>
+      </>}
       <BustShading upper={false} />
     </g>
   );
@@ -990,6 +1058,7 @@ function UpperBody({ base }: { base: string }) {
 
 /** Contour lines that sell the curves; reused on top of every top. */
 function BustShading({ opacity = 0.35, upper = true }: { opacity?: number; upper?: boolean }) {
+  if (useBack()) return null;
   return (
     <g fill="none" stroke="#000" strokeOpacity={opacity} strokeWidth="1.4" strokeLinecap="round">
       {/* Upper curves give tops the same rounded shape as the bust underneath. */}
@@ -1528,13 +1597,16 @@ function Accessory({ item, color }: { item: string; color: string }) {
 
 /** Drawn in body space (not head space) so it wraps the middle of the neck. */
 function Choker({ color }: { color: string }) {
+  const back = useBack();
   return (
     <g stroke={LINE} strokeWidth="1">
       <path d="M139.6 181 Q150 185.5 160.4 181 L160.8 188 Q150 192.5 139.2 188 Z" fill="#111" />
       <path d="M141 183 Q150 187 159 183" fill="none" stroke="#ffffff" strokeOpacity="0.25" />
-      <path d="M150 190 L150 193" />
-      <circle cx="150" cy="195.5" r="3.2" fill={color} />
-      <circle cx="149" cy="194.5" r="1" fill="#ffffff" stroke="none" opacity="0.8" />
+      {back ? <rect x="147.6" y="182.6" width="4.8" height="6" rx="1" fill={color} /> : <>
+        <path d="M150 190 L150 193" />
+        <circle cx="150" cy="195.5" r="3.2" fill={color} />
+        <circle cx="149" cy="194.5" r="1" fill="#ffffff" stroke="none" opacity="0.8" />
+      </>}
     </g>
   );
 }
@@ -1558,6 +1630,7 @@ function Wings({ color }: { color: string }) {
 /** Extras worn over the outfit (wings are drawn separately, behind the body). */
 function Extra({ item, color }: { item: string; color: string }) {
   const dark = mix(color, '#000000', 0.55);
+  const back = useBack();
   switch (item) {
     case 'bag':
       // Cross-body strap from her right shoulder down to a small bag on the opposite hip.
@@ -1571,9 +1644,9 @@ function Extra({ item, color }: { item: string; color: string }) {
       </g>;
     case 'scarf':
       return <g stroke={LINE} strokeWidth="1.1" strokeLinejoin="round">
-        <Cel d="M136 192 L124 256 L141 258 L147 200 Z" fill={color} line={LINE} depth={0.6} />
+        {!back && <Cel d="M136 192 L124 256 L141 258 L147 200 Z" fill={color} line={LINE} depth={0.6} />}
         <Cel d="M136 182 Q150 192 164 182 L169 197 Q150 211 131 197 Z" fill={color} line={LINE} depth={0.6} />
-        <path d="M125 257 L124 264 M129 257.6 L128.4 265 M133 258 L132.6 265.6 M137 258.4 L136.8 266 M140.6 258.6 L140.6 266" fill="none" stroke={color} strokeWidth="1.6" strokeLinecap="round" />
+        {!back && <path d="M125 257 L124 264 M129 257.6 L128.4 265 M133 258 L132.6 265.6 M137 258.4 L136.8 266 M140.6 258.6 L140.6 266" fill="none" stroke={color} strokeWidth="1.6" strokeLinecap="round" />}
         <path d="M134 190 Q150 200 166 190 M140 214 L133 250" fill="none" stroke="#000" strokeOpacity="0.2" />
         <path d="M134 186 Q141 192 148 194" fill="none" stroke="#ffffff" strokeOpacity="0.5" strokeWidth="1.6" strokeLinecap="round" />
       </g>;
@@ -1623,15 +1696,17 @@ function Sparkles() {
   );
 }
 
-export default function WaifuFigure({ outfit, className, celebrate = false, eyeColor = '#7c3aed' }: {
+export default function WaifuFigure({ outfit, className, celebrate = false, eyeColor = '#7c3aed', view = 'front' }: {
   outfit: Outfit;
   className?: string;
   celebrate?: boolean;
   eyeColor?: string;
+  view?: FigureView;
 }) {
   const key = (g: GarmentChoice) => `${g.item}-${g.material}-${g.color}`;
   const accentColor = outfit.accessory.color ?? ACCENT_COLOR;
   const extra = outfit.extra ?? { item: 'none', color: ACCENT_COLOR };
+  if (view === 'back') return <BackFigure outfit={outfit} className={className} celebrate={celebrate} />;
   return (
     <svg viewBox="0 0 300 600" className={`wf-root ${className ?? ''}`} role="img" aria-label="Dress-up character">
       <style>{ANIM_CSS}</style>
@@ -1664,5 +1739,45 @@ export default function WaifuFigure({ outfit, className, celebrate = false, eyeC
       </g>
       {celebrate && <Sparkles />}
     </svg>
+  );
+}
+
+/**
+ * The doll from behind. Her left and right swap, so asymmetric pieces (side ponytail, bag, wand,
+ * bow) are mirrored; the hair and wings now sit in front of the body; face pieces are hidden.
+ */
+function BackFigure({ outfit, className, celebrate }: { outfit: Outfit; className?: string; celebrate: boolean }) {
+  const key = (g: GarmentChoice) => `${g.item}-${g.material}-${g.color}`;
+  const accentColor = outfit.accessory.color ?? ACCENT_COLOR;
+  const extra = outfit.extra ?? { item: 'none', color: ACCENT_COLOR };
+  const faceOnly = outfit.accessory.item === 'glasses' || outfit.accessory.item === 'visor';
+  return (
+    <ViewContext.Provider value="back">
+      <svg viewBox="0 0 300 600" className={`wf-root ${className ?? ''}`} role="img" aria-label="Dress-up character, back view">
+        <style>{ANIM_CSS}</style>
+        <Scene category={outfit.scene} />
+        <Body />
+        <Pop k={key(outfit.legwear)}><Legwear choice={outfit.legwear} /></Pop>
+        <Pop k={key(outfit.shoes)}><Shoes choice={outfit.shoes} /></Pop>
+        <g className="wf-breathe">
+          <UpperBody base={outfit.base ?? BASE_COLOR} />
+          <Pop k={key(outfit.bottom)}><Bottom choice={outfit.bottom} /></Pop>
+          <Pop k={key(outfit.top)}><Top choice={outfit.top} /></Pop>
+          {outfit.accessory.item === 'choker' && <Pop k="choker"><Choker color={accentColor} /></Pop>}
+          {extra.item !== 'wings' && (
+            <g transform={MIRROR}><Pop k={`${extra.item}-${extra.color}`}><Extra item={extra.item} color={extra.color} /></Pop></g>
+          )}
+          <g transform={HEAD_SCALE}>
+            <Skin d={HEAD} depth={0.8} />
+            <g transform={MIRROR}>
+              <Pop k={`${outfit.hair.item}-${outfit.hair.color}`}><HairBack item={outfit.hair.item} color={outfit.hair.color} behind /></Pop>
+              {!faceOnly && <Pop k={`${outfit.accessory.item}-${accentColor}`}><Accessory item={outfit.accessory.item} color={accentColor} /></Pop>}
+            </g>
+          </g>
+        </g>
+        {extra.item === 'wings' && <Pop k={`wings-${extra.color}`}><Wings color={extra.color} /></Pop>}
+        {celebrate && <Sparkles />}
+      </svg>
+    </ViewContext.Provider>
   );
 }
