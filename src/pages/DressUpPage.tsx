@@ -29,6 +29,8 @@ const STORE_KEY = 'pim_dressup_v1';
 interface SavedState {
   best: Record<number, number>;
   outfits: Record<number, Outfit>;
+  /** Days whose saved outfit started from Reveal look; they can't set a best until a fresh attempt. */
+  revealed?: Record<number, boolean>;
 }
 
 function loadSaved(): SavedState {
@@ -91,27 +93,33 @@ export default function DressUpPage() {
   const [saved, setSaved] = useState<SavedState>(loadSaved);
   const [outfit, setOutfit] = useState<Outfit>(() => saved.outfits[day] ?? defaultOutfit());
   const [slot, setSlot] = useState<Slot>('top');
-  const [revealed, setRevealed] = useState(false);
+  const [revealed, setRevealed] = useState(() => !!saved.revealed?.[day]);
   const [copied, setCopied] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
 
   // Load the saved outfit for the newly picked day.
   useEffect(() => {
-    setOutfit(loadSaved().outfits[day] ?? defaultOutfit());
-    setRevealed(false);
+    const stored = loadSaved();
+    setOutfit(stored.outfits[day] ?? defaultOutfit());
+    setRevealed(!!stored.revealed?.[day]);
   }, [day]);
 
   const score = useMemo(() => scoreOutfit(outfit, brief), [outfit, brief]);
   const best = saved.best[day] ?? 0;
 
-  const update = (next: Outfit) => {
+  // A fresh attempt (shuffle or reset) starts over from nothing revealed; any other change keeps
+  // building on the current look, so a revealed look stays revealed across edits and reloads.
+  const update = (next: Outfit, fresh = false) => {
+    const wasRevealed = revealed && !fresh;
     setOutfit(next);
+    if (fresh) setRevealed(false);
     const s = scoreOutfit(next, brief);
     setSaved((prev) => {
       const state: SavedState = {
         outfits: { ...prev.outfits, [day]: next },
         // Revealing the answer doesn't count toward a best score.
-        best: revealed ? prev.best : { ...prev.best, [day]: Math.max(prev.best[day] ?? 0, s.total) },
+        best: wasRevealed ? prev.best : { ...prev.best, [day]: Math.max(prev.best[day] ?? 0, s.total) },
+        revealed: { ...prev.revealed, [day]: wasRevealed },
       };
       persist(state);
       return state;
@@ -141,6 +149,15 @@ export default function DressUpPage() {
   const reveal = () => {
     setRevealed(true);
     setOutfit(brief.target);
+    setSaved((prev) => {
+      const state: SavedState = {
+        ...prev,
+        outfits: { ...prev.outfits, [day]: brief.target },
+        revealed: { ...prev.revealed, [day]: true },
+      };
+      persist(state);
+      return state;
+    });
   };
 
   const randomize = () => {
@@ -151,7 +168,7 @@ export default function DressUpPage() {
       top: garment('top'), bottom: garment('bottom'), legwear: garment('legwear'), shoes: garment('shoes'),
       accessory: { item: r(WARDROBE.accessory).id },
       scene: r(SCENES).category,
-    });
+    }, true);
   };
 
   const copyPrompt = () => {
@@ -298,7 +315,7 @@ export default function DressUpPage() {
             <button onClick={randomize} className="flex items-center gap-1.5 px-3! py-1.5! border border-white/20 font-mono text-[11px] uppercase hover:border-[#ff7eb6]">
               <Shuffle className="w-3.5 h-3.5" /> Random
             </button>
-            <button onClick={() => update(defaultOutfit())} className="flex items-center gap-1.5 px-3! py-1.5! border border-white/20 font-mono text-[11px] uppercase hover:border-white">
+            <button onClick={() => update(defaultOutfit(), true)} className="flex items-center gap-1.5 px-3! py-1.5! border border-white/20 font-mono text-[11px] uppercase hover:border-white">
               <RotateCcw className="w-3.5 h-3.5" /> Reset
             </button>
           </div>
