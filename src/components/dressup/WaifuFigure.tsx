@@ -338,9 +338,16 @@ const LEG = 'M89.4 344 L150 344 C150.5 372 148.5 404 146 432 C147.6 440 148 448 
 // A gravity teardrop, not a circle: the upper pole slopes off the chest wall below the collarbone,
 // the fullness sits low and outside, then the fold turns under and rises to the sternum.
 const BUST = 'M150 238 C149 226 144 214 134 208 C126 203.5 116 203 108 207 C99 212 94.5 224 94.5 238 C94.5 254 104 266 120 267.5 C134 268.5 146 261 149.5 250 C150.3 246 150.4 242 150 238 Z';
-// Base layer: a plain, featureless strapless leotard so the figure is never undressed.
-// One-piece leotard: the leg openings rise from the crotch up to the hip bones.
-const BODYSUIT = 'M96 232 C100 216 112 210 124 212 C136 214 146 220 150 232 C154 220 164 214 176 212 C188 210 200 216 204 232 C204 242 203 246 202 250 C198 264 182 270 177 278 C172 288 173 298 186 312 C202 326 211 336 210.6 343 C198 348 176 358 159 371 L141 371 C124 358 102 348 89.4 343 C89 336 98 326 114 312 C127 298 128 288 123 278 C118 270 102 264 98 250 Z';
+// Base layer: a pastel sports bra and bike shorts so the figure is never undressed.
+// The bra follows the bust tops with a scooped front and a wide band under the bust.
+const BASE_PINK = '#f7bfd2';
+const BASE_PINK_SHADE = '#d9789c';
+const BASE_PINK_LINE = '#8c3d5c';
+const SPORTS_BRA = 'M96 232 C100 216 112 210 124 212 C136 214 146 220 150 232 C154 220 164 214 176 212 C188 210 200 216 204 232 C204 242 203 246 202 250 C199 262 188 268 179 276 Q150 282 121 276 C112 268 101 262 98 250 Z';
+// Wide straps from the cups up over the shoulder slope (left; mirrored for the right).
+const BRA_STRAP = 'M112 214 C114 207 118 201 122 197 L131 196 C128 201 126 207 125.4 213 Z';
+// Mid-thigh bike shorts: waistband at the navel line, snug over the hips, hems curving round each thigh.
+const SHORTS = 'M108 318 Q150 324 192 318 C201 328 211.6 338 211.8 352 C212.2 372 207.6 390 201.6 406 Q178 412 154 408 L150 392 L146 408 Q122 412 98.4 406 C92.4 390 87.8 372 88.2 352 C88.4 338 99 328 108 318 Z';
 const TOES = 'M141 580 L141.3 576.8 M136.8 580.2 L136.9 577.4 M132.6 579.8 L132.5 577.2 M128.8 579.2 L128.5 576.8';
 
 /** Keyframes for the idle loop and outfit-change pop; disabled for reduced motion. */
@@ -899,7 +906,7 @@ function UpperBody() {
         </g>
       ))}
       <path d="M130 200 Q138 203 145 200 M155 200 Q162 203 170 200 M147.5 198 Q150 200 152.5 198" fill="none" strokeOpacity="0.4" />
-      {/* Bust volumes sit in front of the collarbones; the leotard neckline follows their curve. */}
+      {/* Bust volumes sit in front of the collarbones; the sports bra neckline follows their curve. */}
       {[0, 1].map((side) => (
         <g key={side} transform={side ? MIRROR : undefined}>
           <Skin d={BUST} mirrored={!!side} depth={0.8} />
@@ -916,13 +923,27 @@ function UpperBody() {
           <path d="M90 345 C102 350 124 360 141 373" fill="none" stroke={SKIN_SHADE} strokeWidth="4" strokeLinecap="round" />
         </g>
       ))}
-      <Cel d={BODYSUIT} fill="#2b2140" shade="#0d0716" shadeOpacity={0.55} line="#150e22" />
-      <g fill="none" stroke="#7b67a6" strokeLinecap="round">
+      <path d="M150 296 Q148.6 300 150 304" fill="none" strokeOpacity="0.35" strokeWidth="1" strokeLinecap="round" />
+      <Cel d={SHORTS} fill={BASE_PINK} shade={BASE_PINK_SHADE} shadeOpacity={0.6} line={BASE_PINK_LINE} />
+      <g fill="none" stroke={BASE_PINK_LINE} strokeLinecap="round">
+        <path d="M108.6 325 Q150 331 191.4 325" strokeOpacity="0.45" />
+        <path d="M150 352 L150 392" strokeOpacity="0.35" />
+        <path d="M99.6 399 Q122 405 145 401.6 M155 401.6 Q178 405 200.4 399" strokeOpacity="0.4" />
+      </g>
+      <g fill="none" stroke="#ffffff" strokeLinecap="round">
+        <path d="M94 352 C94 366 96 380 100 392" strokeWidth="2.6" strokeOpacity="0.6" />
+        <path d="M112 330 C108 336 104 342 102 348" strokeWidth="2" strokeOpacity="0.45" />
+      </g>
+      {[false, true].map((m) => (
+        <g key={String(m)} transform={m ? MIRROR : undefined}>
+          <Cel d={BRA_STRAP} fill={BASE_PINK} shade={BASE_PINK_SHADE} shadeOpacity={0.6} line={BASE_PINK_LINE} mirrored={m} weight={0.8} />
+        </g>
+      ))}
+      <Cel d={SPORTS_BRA} fill={BASE_PINK} shade={BASE_PINK_SHADE} shadeOpacity={0.6} line={BASE_PINK_LINE} />
+      <path d="M119 268 Q150 275 181 268" fill="none" stroke={BASE_PINK_LINE} strokeOpacity="0.45" strokeLinecap="round" />
+      <g fill="none" stroke="#ffffff" strokeLinecap="round">
         <path d="M103 238 C103 227 109 219 119 216.5" strokeWidth="3" strokeOpacity="0.75" />
         <path d="M157 233 C159 225 165 220 173 218.5" strokeWidth="2.2" strokeOpacity="0.45" />
-        <path d="M99 336 C103 325 109 318 116 313" strokeWidth="2.6" strokeOpacity="0.55" />
-        <path d="M129 284 C128 292 128 298 131 304" strokeWidth="1.6" strokeOpacity="0.35" />
-        <path d="M96 340 C108 345 122 353 134 362" strokeWidth="2" strokeOpacity="0.45" />
       </g>
       <BustShading upper={false} />
     </g>
@@ -1397,7 +1418,7 @@ export default function WaifuFigure({ outfit, className, celebrate = false, eyeC
       <Body />
       <Pop k={key(outfit.legwear)}><Legwear choice={outfit.legwear} /></Pop>
       <Pop k={key(outfit.shoes)}><Shoes choice={outfit.shoes} /></Pop>
-      {/* Layers, back to front: torso and base leotard, bottom, top, choker, head. */}
+      {/* Layers, back to front: torso and base sports bra and shorts, bottom, top, choker, head. */}
       <g className="wf-breathe">
         <UpperBody />
         <Pop k={key(outfit.bottom)}><Bottom choice={outfit.bottom} /></Pop>
