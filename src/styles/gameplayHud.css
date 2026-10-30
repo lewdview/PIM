@@ -1,11 +1,13 @@
 /* ════════════════════════════════════════════════════════════════════════════════
-   gameplayHud.css — in-song HUD (GamePlay/GameplayCore.tsx).
-   "Console rail" direction, sharing parts with the settings menu (optionsMenu.css):
-   void-black glass, sheared controls, neon corner marks, Anton numbers and
-   JetBrains Mono labels.
-   Layout: the strip sits above the highway. The stat panels live inside it —
-   in flow on portrait / narrow screens (one band, nothing over the notes), and
-   floated beside the highway on wide screens.
+   gameplayHud.css — in-song HUD (GamePlay/GameplayCore.tsx, logic in GamePlay/verseHud.ts).
+   "Stanza + Oracle": the lyric line being sung is the centrepiece, inked letter by
+   letter by the notes you hit (combo tier = ink colour, a miss strikes letters
+   through, the shield is the ellipsis, the multiplier is the superscript, song
+   progress is the underline). One coaching whisper and a timing tick per lane
+   sit under it. Controls + meta flank it on the left, time + score on the right.
+   Layout: one band above the highway, in flow, so nothing covers the notes.
+   Phones stack controls/score over the verse; wide screens put all three side
+   by side.
    Spacing lives here rather than in Tailwind utilities because the global
    `*` reset in index.css is unlayered and wins over utility padding/margin.
    ════════════════════════════════════════════════════════════════════════════════ */
@@ -22,38 +24,32 @@
   --hud-ink: #0a0a0f;
   --hud-display: 'Anton', 'Impact', 'Arial Narrow', sans-serif;
   --hud-mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+  --hud-verse: 'Instrument Serif', 'Iowan Old Style', Georgia, serif;
 
   position: relative;
   z-index: 30;
   flex-shrink: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'left right'
+    'verse verse';
+  align-items: start;
+  column-gap: 12px;
   width: 100%;
+  padding: 8px 12px 6px;
   color: var(--hud-text);
   font-family: var(--hud-mono);
   font-variant-numeric: tabular-nums;
-  background: rgba(8, 8, 12, 0.8);
-  border-bottom: 1px solid var(--hud-line);
-  -webkit-backdrop-filter: blur(16px) saturate(1.3);
-  backdrop-filter: blur(16px) saturate(1.3);
-  box-shadow: 0 4px 28px rgba(0, 0, 0, 0.5);
+  background: linear-gradient(180deg, rgba(5, 5, 8, 0.82) 0%, rgba(5, 5, 8, 0.55) 70%, rgba(5, 5, 8, 0) 100%);
 }
 
-/* ── top row: controls · progress rail · song ── */
-.pim-hud-strip-row {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 8px 12px 6px;
-}
+/* ── flanks ── */
+.pim-hud-side { display: grid; gap: 6px; min-width: 0; }
+.pim-hud-left { grid-area: left; justify-items: start; }
+.pim-hud-right { grid-area: right; justify-items: end; text-align: right; }
 
-.pim-hud-controls {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
+.pim-hud-controls { display: flex; align-items: center; gap: 6px; }
 
 .pim-hud-btn {
   display: inline-flex;
@@ -70,6 +66,7 @@
   border: 1px solid var(--hud-line-strong);
   clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
   cursor: pointer;
+  pointer-events: auto;
   transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
 .pim-hud-btn:hover,
@@ -82,271 +79,75 @@
 .pim-hud-btn[data-on='true'] { color: var(--hud-acid); }
 .pim-hud-btn-label { display: none; }
 
-.pim-hud-progress {
-  display: grid;
-  gap: 6px;
-  min-width: 0;
-}
-.pim-hud-progress-meta {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 8px;
-  font: 700 11px/1 var(--hud-mono);
-  letter-spacing: 0.12em;
-  color: var(--hud-text-2);
-  white-space: nowrap;
-}
-.pim-hud-stage {
-  font: 400 15px/1 var(--hud-display);
-  letter-spacing: 0.08em;
-  color: var(--hud-text);
-}
-.pim-hud-stage i {
-  font-style: normal;
-  color: var(--stage-c, var(--hud-cyan));
-  text-shadow: 0 0 10px var(--stage-c, var(--hud-cyan));
-}
-.pim-hud-time b { color: var(--hud-text); font-weight: 700; }
-/* small phones: keep the elapsed time, drop percent and total so nothing clips */
-@media (max-width: 379px) {
-  .pim-hud-strip-row { gap: 8px; padding-inline: 8px; }
-  .pim-hud-controls { gap: 4px; }
-  .pim-hud-btn { min-width: 30px; padding: 0 8px; }
-  .pim-hud-pct, .pim-hud-total { display: none; }
-}
-
-.pim-hud-rail {
-  display: grid;
-  gap: 3px;
-}
-.pim-hud-seg {
-  position: relative;
-  height: 5px;
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.09);
-  transform: skewX(-24deg);
-}
-.pim-hud-seg::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  transform-origin: left center;
-  transform: scaleX(var(--f, 0));
-  background: var(--seg-c, var(--hud-cyan));
-  box-shadow: 0 0 8px var(--seg-c, var(--hud-cyan));
-  transition: transform 0.15s linear;
-}
-
-.pim-hud-song {
+/* day · title · stage · accuracy · medal (wide screens only) */
+.pim-hud-meta {
   display: none;
-  min-width: 0;
-  text-align: right;
-  font: 700 11px/1.35 var(--hud-mono);
-  letter-spacing: 0.14em;
-  color: var(--hud-text-3);
+  gap: 2px;
+  font: 700 10px/1.6 var(--hud-mono);
+  letter-spacing: 0.2em;
   text-transform: uppercase;
+  color: var(--hud-text-3);
 }
-.pim-hud-song b {
-  display: block;
+.pim-hud-meta b {
+  max-width: 22ch;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--hud-text-2);
   font-weight: 700;
 }
-
-/* ── stat panels ── */
-.pim-hud-stats {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
-  gap: 12px;
-  width: 100%;
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 2px 12px 8px;
-  pointer-events: none;
-  transition: opacity 0.5s ease-in-out;
-}
-
-.pim-hud-panel { position: relative; min-width: 0; }
-
-.pim-hud-label {
-  font: 700 10px/1 var(--hud-mono);
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--hud-text-3);
-}
-
-.pim-hud-score {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  grid-template-areas:
-    'head head'
-    'value shield';
-  align-items: end;
-  column-gap: 14px;
-  row-gap: 4px;
-}
-.pim-hud-panel-head {
-  grid-area: head;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
+.pim-hud-meta i { font-style: normal; color: var(--hud-text-2); }
 .pim-hud-medal {
+  justify-self: start;
+  margin-top: 2px;
+  padding: 3px 5px;
   font: 700 9px/1 var(--hud-mono);
   letter-spacing: 0.18em;
-  padding: 3px 5px;
   color: var(--hud-ink);
   background: var(--medal, #a855f7);
   clip-path: polygon(3px 0, 100% 0, calc(100% - 3px) 100%, 0 100%);
 }
-.pim-hud-acc {
-  display: none;
-  margin-left: auto;
-  font: 700 10px/1 var(--hud-mono);
-  letter-spacing: 0.14em;
-  color: var(--hud-text-3);
-}
-.pim-hud-acc span { color: var(--hud-text-2); }
-.pim-hud-x { font-family: var(--hud-mono); font-weight: 700; margin-right: 1px; }
 
-.pim-hud-score-row {
-  grid-area: value;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.pim-hud-time {
+  font: 700 11px/1 var(--hud-mono);
+  letter-spacing: 0.12em;
+  color: var(--hud-text-3);
+  white-space: nowrap;
 }
-.pim-hud-score-value {
-  font: 400 30px/0.95 var(--hud-display);
-  letter-spacing: 0.01em;
+.pim-hud-time b { color: var(--hud-text-2); font-weight: 700; }
+.pim-hud-total { display: none; }
+
+/* score: unearned leading digits stay hollow */
+.pim-hud-score {
+  font: 400 26px/0.9 var(--hud-display);
+  letter-spacing: 0.02em;
   color: var(--hud-text);
+  white-space: nowrap;
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
 }
-.pim-hud-mult {
-  font: 400 14px/1 var(--hud-display);
-  letter-spacing: 0.06em;
-  padding: 4px 9px;
-  color: var(--hud-ink);
-  background: var(--mult-c, var(--hud-cyan));
-  box-shadow: 0 0 12px color-mix(in srgb, var(--mult-c, #00E5FF) 45%, transparent);
-  clip-path: polygon(4px 0, 100% 0, calc(100% - 4px) 100%, 0 100%);
-  transition: background 0.25s;
+.pim-hud-score-ghost {
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(255, 255, 255, 0.28);
+  text-shadow: none;
 }
-
-/* shield = miss pips + heal meter, one block so a heal visibly refills a pip */
-.pim-hud-shield {
-  grid-area: shield;
-  justify-self: end;
-  position: relative;
-  display: grid;
-  gap: 5px;
-  width: 92px;
-}
-.pim-hud-shield-head {
-  display: none;
-  justify-content: space-between;
-  gap: 6px;
-  font: 700 9px/1 var(--hud-mono);
-  letter-spacing: 0.16em;
+.pim-hud-chain {
+  font: 700 10px/1 var(--hud-mono);
+  letter-spacing: 0.2em;
   color: var(--hud-text-3);
-  white-space: nowrap;
 }
-.pim-hud-shield-head [data-heal-label] { color: var(--hud-text-2); }
-.pim-hud-pips { display: flex; gap: 4px; }
-.pim-hud-pip {
-  flex: 1;
-  height: 8px;
-  background: rgba(255, 255, 255, 0.08);
-  transform: skewX(-24deg);
-  transition: background 0.15s, box-shadow 0.15s;
-}
-.pim-hud-pip[data-on='true'] {
-  background: var(--hud-acid);
-  box-shadow: 0 0 8px var(--hud-acid);
-}
-.pim-hud-shield[data-low='true'] .pim-hud-pip[data-on='true'] {
-  background: var(--hud-accent);
-  box-shadow: 0 0 8px var(--hud-accent);
-}
-.pim-hud-heal {
-  position: relative;
-  height: 4px;
-  overflow: hidden;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid transparent;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-.pim-hud-heal-fill {
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 0%;
-  background: linear-gradient(90deg, #00E5FF, #39FF14);
-}
-.pim-hud-heal-banner {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  display: none;
-  align-items: center;
-  white-space: nowrap;
-  padding: 3px 8px;
-  font: 700 9px/1 var(--hud-mono);
-  letter-spacing: 0.14em;
-  color: var(--hud-acid);
-  background: rgba(0, 0, 0, 0.9);
-  border: 1px solid var(--hud-acid);
-  box-shadow: 0 0 16px rgba(57, 255, 20, 0.5);
-}
-
-.pim-hud-combo {
-  display: grid;
-  justify-items: end;
-  gap: 3px;
-  text-align: right;
-  --combo-c: var(--hud-text);
-}
-.pim-hud-combo-value {
-  display: inline-block;
-  font: 400 30px/0.95 var(--hud-display);
-  letter-spacing: 0.01em;
-  color: var(--combo-c);
-  text-shadow: 0 0 16px color-mix(in srgb, var(--combo-c) 45%, transparent), 0 2px 10px rgba(0, 0, 0, 0.8);
-  transform-origin: right center;
-  transition: color 0.25s;
-}
+.pim-hud-chain span { display: inline-block; color: var(--ink, var(--hud-text)); transition: color 0.25s; }
 .pim-hud-bump { animation: pim-hud-bump 0.22s cubic-bezier(0.2, 1.6, 0.4, 1); }
 @keyframes pim-hud-bump {
-  from { transform: scale(1.22); }
+  from { transform: scale(1.3); }
   to { transform: scale(1); }
 }
-.pim-hud-next { display: none; font: 700 10px/1 var(--hud-mono); letter-spacing: 0.14em; color: var(--hud-text-2); }
-.pim-hud-meter { display: none; grid-template-columns: repeat(4, 1fr); gap: 3px; width: 100%; }
-.pim-hud-meter i {
-  height: 4px;
-  background: rgba(255, 255, 255, 0.08);
-  transform: skewX(-24deg);
-}
-.pim-hud-meter i[data-on='true'] { background: var(--combo-c); box-shadow: 0 0 6px var(--combo-c); }
 
-/* power-up timer: a draining bar on the combo panel's bottom edge */
-.pim-hud-pu-bar {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -5px;
-  height: 2px;
-  display: none;
-  transform-origin: left center;
-}
+/* power-up: label pill with a draining timer under it */
+.pim-hud-pu { position: relative; display: grid; justify-items: end; gap: 3px; }
 .pim-hud-pu-pill {
   display: none;
   align-items: center;
   gap: 6px;
-  margin-top: 4px;
   padding: 3px 9px;
   font: 700 10px/1 var(--hud-mono);
   letter-spacing: 0.16em;
@@ -358,84 +159,220 @@
 }
 .pim-hud-pu-dot { position: relative; display: flex; width: 6px; height: 6px; }
 .pim-hud-pu-dot span { position: absolute; inset: 0; border-radius: 50%; }
+.pim-hud-pu-bar { display: none; width: 100%; height: 2px; transform-origin: left center; }
 
-/* ── wide screens: labelled buttons, song column, panels flank the highway ── */
-@media (min-width: 640px) {
-  .pim-hud-strip-row { grid-template-columns: auto minmax(0, 1.6fr) minmax(0, 0.7fr); gap: 20px; padding: 10px 20px 8px; }
-  .pim-hud-btn-label { display: inline; }
-  .pim-hud-song { display: block; }
-  .pim-hud-stage { font-size: 17px; }
-  .pim-hud-seg { height: 6px; }
-  .pim-hud-stats { padding: 2px 20px 10px; }
-  .pim-hud-score-value, .pim-hud-combo-value { font-size: 36px; }
-  .pim-hud-shield { width: 120px; }
-  .pim-hud-shield-head { display: flex; }
-  .pim-hud-acc { display: inline; }
+/* ═════════ the verse ═════════ */
+.pim-verse {
+  --ink: #f4f4f5;
+  grid-area: verse;
+  container-type: inline-size;
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  min-width: 0;
+  padding-top: 6px;
+  text-align: center;
+  pointer-events: none;
+}
+.pim-verse-prev {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: italic 400 13px/1.1 var(--hud-verse);
+  color: rgba(255, 255, 255, 0.3);
+}
+.pim-verse-line {
+  max-width: 100%;
+  white-space: nowrap;
+  /* the line shrinks to fit its length (--len = characters + room for the ellipsis) */
+  font: italic 400 clamp(17px, calc(100cqw / (var(--len, 24) * 0.43)), 34px)/1.05 var(--hud-verse);
+  letter-spacing: -0.005em;
+}
+.pim-verse-text span {
+  color: rgba(255, 255, 255, 0.2);
+  transition: color 0.12s, text-shadow 0.12s;
+}
+.pim-verse-text span.sung { color: rgba(255, 255, 255, 0.62); }
+.pim-verse-text span.in {
+  color: var(--ink);
+  text-shadow: 0 0 14px color-mix(in srgb, var(--ink) 55%, transparent), 0 1px 6px rgba(0, 0, 0, 0.9);
+}
+.pim-verse-text span.x {
+  color: rgba(255, 20, 147, 0.62);
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+}
+.pim-verse[data-filler='true'] .pim-verse-line { letter-spacing: 0.04em; }
+.pim-verse-enter { animation: pim-verse-enter 0.35s ease-out; }
+@keyframes pim-verse-enter {
+  from { opacity: 0; filter: blur(3px); transform: translateY(4px); }
+  to { opacity: 1; }
 }
 
+/* shield = the line's ellipsis, one dot per miss left */
+.pim-verse-ell { display: inline-flex; gap: 0.12em; margin-left: 0.08em; }
+.pim-verse-ell i {
+  display: inline-block;
+  width: 0.14em;
+  height: 0.14em;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.pim-verse-ell i[data-on='true'] { background: var(--hud-text); box-shadow: 0 0 6px rgba(255, 255, 255, 0.6); }
+.pim-verse-ell[data-low='true'] i[data-on='true'] { background: var(--hud-accent); box-shadow: 0 0 8px var(--hud-accent); }
+
+.pim-verse-mult {
+  margin-left: 0.2em;
+  font: 400 0.42em/1 var(--hud-display);
+  font-style: normal;
+  letter-spacing: 0.06em;
+  vertical-align: 0.9em;
+  color: var(--mult-c, var(--hud-cyan));
+  text-shadow: 0 0 10px var(--mult-c, var(--hud-cyan));
+}
+
+/* progress underline, one segment per stage */
+.pim-verse-under {
+  display: grid;
+  gap: 3px;
+  width: min(100%, 440px);
+}
+.pim-verse-under i {
+  position: relative;
+  height: 2px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.1);
+}
+.pim-verse-under i::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  transform: scaleX(var(--f, 0));
+  background: var(--seg-c, var(--hud-cyan));
+  box-shadow: 0 0 6px var(--seg-c, var(--hud-cyan));
+  transition: transform 0.15s linear;
+}
+
+/* ═════════ the oracle ═════════ */
+.pim-orc-whisper {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  min-height: 30px;
+  margin-top: 3px;
+  white-space: nowrap;
+  opacity: 1;
+  transition: opacity 0.6s;
+}
+.pim-orc-whisper[data-on='false'] { opacity: 0; }
+.pim-orc-whisper b {
+  font: 700 11px/1 var(--hud-mono);
+  letter-spacing: 0.26em;
+  color: var(--wc, var(--hud-text));
+  text-shadow: 0 0 12px color-mix(in srgb, var(--wc, #fff) 50%, transparent), 0 1px 4px rgba(0, 0, 0, 0.9);
+}
+.pim-orc-whisper span {
+  font: italic 400 14px/1 var(--hud-verse);
+  color: rgba(255, 255, 255, 0.55);
+}
+.pim-orc-in { animation: pim-orc-in 0.45s ease-out; }
+@keyframes pim-orc-in {
+  from { opacity: 0; letter-spacing: 0.5em; filter: blur(3px); }
+  to { opacity: 1; }
+}
+
+/* timing ticks: one per lane, the dot sits early (left) or late (right) of centre */
+.pim-orc-ticks {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  width: min(100%, 300px);
+  transition: opacity 0.8s;
+}
+.pim-orc-tick { position: relative; height: 18px; opacity: 0.35; transition: opacity 0.4s; }
+.pim-orc-tick[data-on='true'] { opacity: 0.8; }
+.pim-orc-tick[data-drift='true'] { opacity: 1; }
+.pim-orc-tick::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 5px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.18);
+}
+.pim-orc-tick::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 1px;
+  width: 1px;
+  height: 9px;
+  background: rgba(255, 255, 255, 0.45);
+}
+.pim-orc-tick i {
+  position: absolute;
+  top: 5px;
+  left: calc(50% + var(--o, 0) * 50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  translate: -50% -50%;
+  background: var(--lc, #fff);
+  box-shadow: 0 0 6px var(--lc, #fff);
+  transition: left 0.3s;
+}
+.pim-orc-tick span {
+  position: absolute;
+  top: 11px;
+  left: 50%;
+  translate: -50% 0;
+  font: 700 7px/1 var(--hud-mono);
+  letter-spacing: 0.14em;
+  color: rgba(255, 255, 255, 0.5);
+  white-space: nowrap;
+}
+/* in flow (nothing to say) the ticks fade back too */
+.pim-verse[data-calm='true'] .pim-orc-ticks { opacity: 0.45; }
+
+/* small phones: keep the elapsed time, tighten the controls */
+@media (max-width: 379px) {
+  .pim-hud-strip { column-gap: 8px; padding-inline: 8px; }
+  .pim-hud-controls { gap: 4px; }
+  .pim-hud-btn { min-width: 30px; padding: 0 8px; }
+  .pim-hud-score { font-size: 22px; }
+}
+
+@media (min-width: 640px) {
+  .pim-hud-strip { padding: 10px 20px 8px; column-gap: 20px; }
+  .pim-hud-btn-label { display: inline; }
+  .pim-hud-total { display: inline; }
+  .pim-hud-score { font-size: 30px; }
+  .pim-verse-prev { font-size: 15px; }
+  .pim-verse-line { font-size: clamp(20px, calc(100cqw / (var(--len, 24) * 0.43)), 42px); }
+  .pim-orc-whisper b { font-size: 12px; }
+  .pim-orc-whisper span { font-size: 16px; }
+  .pim-orc-tick span { font-size: 8px; }
+}
+
+/* wide screens: controls + meta | verse | time + score, all on one band */
 @media (min-width: 900px) and (min-aspect-ratio: 1.15) {
-  .pim-hud-stats {
-    position: absolute;
-    top: calc(100% + 18px);
-    left: 0;
-    right: 0;
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    max-width: clamp(760px, calc(68vh + 360px), 980px);
-    padding: 0 24px;
+  .pim-hud-strip {
+    grid-template-columns: minmax(170px, 1fr) minmax(0, 2.6fr) minmax(170px, 1fr);
+    grid-template-areas: 'left verse right';
+    padding: 12px 24px 10px;
   }
-  .pim-hud-panel {
-    padding: 14px 16px;
-    background: rgba(8, 8, 12, 0.66);
-    border: 1px solid var(--hud-line);
-    -webkit-backdrop-filter: blur(6px);
-    backdrop-filter: blur(6px);
-  }
-  .pim-hud-panel::before,
-  .pim-hud-panel::after {
-    content: '';
-    position: absolute;
-    width: 12px;
-    height: 12px;
-    border: 2px solid var(--hud-accent);
-    pointer-events: none;
-  }
-  .pim-hud-panel::before { top: -2px; left: -2px; border-right: 0; border-bottom: 0; }
-  .pim-hud-panel::after { bottom: -2px; right: -2px; border-left: 0; border-top: 0; }
-
-  .pim-hud-score {
-    width: clamp(200px, 19vw, 240px);
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: 'head' 'value' 'shield';
-    row-gap: 8px;
-  }
-  .pim-hud-score-row { flex-wrap: wrap; }
-  .pim-hud-score-value { font-size: clamp(38px, 3.6vw, 52px); }
-  .pim-hud-shield {
-    justify-self: stretch;
-    width: auto;
-    margin-top: 4px;
-    padding-top: 10px;
-    border-top: 1px solid var(--hud-line);
-    gap: 6px;
-  }
-  .pim-hud-pip { height: 10px; }
-
-  .pim-hud-combo { width: clamp(180px, 17vw, 220px); gap: 6px; }
-  .pim-hud-combo-value { font-size: clamp(52px, 5vw, 72px); }
-  .pim-hud-next { display: block; }
-  .pim-hud-meter { display: grid; }
-  .pim-hud-pu-bar { left: -1px; right: -1px; bottom: -1px; height: 3px; }
-  .pim-hud-heal-banner { right: auto; left: 0; }
+  .pim-hud-meta { display: grid; }
+  .pim-verse { padding-top: 0; gap: 6px; }
+  .pim-verse-line { font-size: clamp(24px, calc(100cqw / (var(--len, 24) * 0.43)), 52px); }
+  .pim-hud-score { font-size: clamp(34px, 3.2vw, 46px); }
+  .pim-hud-pu-pill { margin-top: 4px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pim-hud-bump { animation: none; }
-  .pim-hud-seg::after { transition: none; }
+  .pim-hud-bump, .pim-verse-enter, .pim-orc-in { animation: none; }
+  .pim-verse-under i::after, .pim-orc-tick i { transition: none; }
 }
-
-/* combo counter switched off in settings: the panel only carries the power-up pill */
-.pim-hud-combo[data-combo='false'] { background: none; border-color: transparent; }
-.pim-hud-combo[data-combo='false']::before,
-.pim-hud-combo[data-combo='false']::after { display: none; }

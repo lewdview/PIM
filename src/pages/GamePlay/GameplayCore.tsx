@@ -38,6 +38,7 @@ import GameplayVisualizer from './GameplayVisualizer';
 import TutorialOverlay, { type TutorialStepType } from './TutorialOverlay';
 import { loadLyricsForDay, drawTrackLyrics, drawLyricBackdrop, type TimedLine } from './trackLyrics';
 import { getStageStarts, stageAtTime } from './stageTimeline';
+import { VerseHud, comboInk } from './verseHud';
 import { generateMasterChart, ANALYSIS_SAMPLE_RATE, CHART_MASTER_VERSION, CHART_MASTER_DELUXE_VERSION } from '@/game/chartMaster';
 import { drawSlabBody, drawTopFaceBevel, drawHitPop3D, drawHitPillar3D, hitPillarReach, makeHitShards, setNote3DQuality, type HitShard } from './notes3d';
 import { spawnCelebration, drawCelebrations, type Celebration } from './noteCelebrations';
@@ -614,7 +615,6 @@ const AnimatedScore = memo(({ score }: { score: number }) => {
 // In-song HUD palette: stage colors follow the stage rail, multiplier colors step up ×1 → ×5.
 const HUD_STAGE_COLORS = ['#00E5FF', '#39FF14', '#FFD700', '#FF1493', '#FF3800'];
 const HUD_MULT_COLORS = ['#71717a', '#00E5FF', '#39FF14', '#FFD700', '#FF1493', '#FF3800'];
-const HUD_MULT_STEPS = [25, 50, 75, 100];
 
 // ── procedural chart generator for empty beatmaps ────────────────
 export function isHoldNote(note: { type?: NoteType | string; holdDuration?: number } | null | undefined): boolean {
@@ -1156,6 +1156,9 @@ export default function Game() {
   const noteTrailsRef = useRef<{ id: string; x: number; y: number; color: string; size: number; alpha: number; birthTime: number }[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const trackLyricsRef = useRef<{ day: number; lines: TimedLine[] }>({ day: 0, lines: [] });
+  // Stanza + Oracle HUD: inks the lyric line and picks the coaching whisper (see ./verseHud.ts).
+  const verseHudRef = useRef<VerseHud>(null as unknown as VerseHud);
+  if (!verseHudRef.current) verseHudRef.current = new VerseHud();
   const audioObjectUrlRef = useRef<string | null>(null);
   const audioOffsetRef = useRef(0);
   const laneColorsRef = useRef<[string, string, string]>(["#FF1493", "#00E5FF", "#39FF14"]);
@@ -3894,6 +3897,35 @@ export default function Game() {
     // has them (Chart Master places stage 3 / 5 on the drops), so the POV
     // switch lands on the music; otherwise the fixed 15/35/60/80% split.
     const calculatedStage = stageAtTime(stageStartsRef.current, t);
+
+    // Stanza + Oracle HUD (throttled to ~30Hz inside VerseHud).
+    {
+      const song = songRef.current;
+      const verse = verseHudRef.current;
+      const gsNow = gsRef.current;
+      verse.setSource(
+        optsRef.current.trackLyrics ? trackLyricsRef.current.lines : [],
+        notesRef.current,
+        song?.title ?? '',
+        stageStartsRef.current,
+        song?.duration ?? 0,
+      );
+      const combo = gsNow.combo;
+      verse.update({
+        t,
+        combo,
+        baseMult: combo >= 100 ? 5 : combo >= 75 ? 4 : combo >= 50 ? 3 : combo >= 25 ? 2 : 1,
+        shieldLeft: Math.max(0, 3 - missCountRef.current),
+        heal: healingGaugeRef.current,
+        healing: healingActiveHoldLaneRef.current !== null,
+        misses: gsNow.misses,
+        stage: calculatedStage,
+        stageStarts: stageStartsRef.current,
+        bpm: song?.bpm ?? 0,
+        telemetry: recordedTelemetryRef.current,
+        oracle: true,
+      });
+    }
       if (calculatedStage !== lastDetectedStageRef.current) {
         const prevStage = lastDetectedStageRef.current;
         lastDetectedStageRef.current = calculatedStage;
@@ -10626,7 +10658,9 @@ export default function Game() {
       <div
         className="relative w-full h-full flex flex-col overflow-hidden"
       >
-        {/* ── GAMEPLAY HUD · console rail (styles: src/styles/gameplayHud.css) ── */}
+        {/* ── GAMEPLAY HUD · Stanza + Oracle (logic: ./verseHud.ts, styles: src/styles/gameplayHud.css) ──
+            The lyric line is inked letter by letter by the notes you hit (direct DOM updates from the draw
+            loop); the oracle whisper and lane ticks sit under it. Score, chain and time flank it. */}
         {(() => {
           const c = gs.combo;
           const baseMult = c >= 100 ? 5 : c >= 75 ? 4 : c >= 50 ? 3 : c >= 25 ? 2 : 1;
@@ -10634,8 +10668,6 @@ export default function Game() {
           if (puRef.current.active) {
             m = m * (puRef.current.active === "SIGNAL_LOCK" ? 4 : puRef.current.active === "SURGE" ? 3 : 2);
           }
-          const nextAt = HUD_MULT_STEPS.find((step) => step > c);
-          const comboColor = c >= 100 ? '#39FF14' : c >= 50 ? '#FF1493' : c > 0 ? '#00E5FF' : '#f4f4f5';
           const duration = songRef.current?.duration || 0;
           const railDuration = duration || 180;
           const elapsed = (gs.progress || 0) * railDuration;
@@ -10645,12 +10677,13 @@ export default function Game() {
             const span = Math.max(0.001, end - start);
             return { span, fill: Math.max(0, Math.min(1, (elapsed - start) / span)) };
           });
-          const stageColor = HUD_STAGE_COLORS[Math.max(0, Math.min(4, currentStage - 1))];
           const shieldLeft = Math.max(0, 3 - missCount);
+          const scoreDigits = String(Math.max(0, Math.round(gs.score))).length;
+          const day = (song as { day?: number } | null)?.day;
 
           return (
-            <div className="pim-hud-strip">
-              <div className="pim-hud-strip-row">
+            <div className="pim-hud-strip" style={{ '--ink': comboInk(c) } as React.CSSProperties}>
+              <div className="pim-hud-side pim-hud-left">
                 <div className="pim-hud-controls">
                   <button
                     data-testid="button-quit"
@@ -10704,110 +10737,76 @@ export default function Game() {
                     </svg>
                   </button>
                 </div>
-
-                {/* Stage + time over a rail with one segment per chart stage */}
-                <div className="pim-hud-progress">
-                  <div className="pim-hud-progress-meta">
-                    <span className="pim-hud-stage" style={{ '--stage-c': stageColor } as React.CSSProperties}>
-                      {currentStage === 5 ? <>STAGE <i>FINAL</i></> : <>STAGE <i>{currentStage}</i> / 5</>}
-                    </span>
-                    <span className="pim-hud-time">
-                      <span className="pim-hud-pct">{Math.round((gs.progress || 0) * 100)}% · </span>
-                      <b>{formatTimeSec(getT())}</b>
-                      <span className="pim-hud-total"> / {formatTimeSec(duration)}</span>
-                    </span>
-                  </div>
-                  <div
-                    className="pim-hud-rail"
-                    style={{ gridTemplateColumns: segments.map((s) => `${s.span}fr`).join(' ') }}
-                  >
-                    {segments.map((s, i) => (
-                      <i
-                        key={i}
-                        className="pim-hud-seg"
-                        style={{ '--f': s.fill.toFixed(3), '--seg-c': HUD_STAGE_COLORS[Math.min(4, i)] } as React.CSSProperties}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                <div className="pim-hud-song">
+                <div className="pim-hud-meta">
+                  {day ? <span>DAY {String(day).padStart(3, '0')}</span> : null}
                   <b>{song?.title}</b>
-                  {song?.artist}
+                  <span>STAGE <i style={{ color: HUD_STAGE_COLORS[Math.max(0, Math.min(4, currentStage - 1))] }}>{currentStage === 5 ? 'FINAL' : `${currentStage} / 5`}</i></span>
+                  <span>ACC <i ref={accuracyTextRef}>{acc.toFixed(1)}%</i></span>
+                  {curMedal !== "NONE" && <span className="pim-hud-medal" style={{ '--medal': medalStyle.main } as React.CSSProperties}>{curMedal}</span>}
                 </div>
               </div>
 
-              {/* Stat panels: one band under the rail on portrait, side panels beside the highway on wide screens */}
-              <div
-                className="pim-hud-stats"
-                style={{ opacity: activePovMode === 'cyber_tunnel' ? 0.18 : 1 }}
-              >
-                <div className="pim-hud-panel pim-hud-score" style={{ '--medal': medalStyle.main } as React.CSSProperties}>
-                  <div className="pim-hud-panel-head">
-                    <span className="pim-hud-label">Score</span>
-                    {curMedal !== "NONE" && <span className="pim-hud-medal">{curMedal}</span>}
-                    <span className="pim-hud-acc">ACC <span ref={accuracyTextRef}>{acc.toFixed(1)}%</span></span>
-                  </div>
-                  <div className="pim-hud-score-row">
-                    <span className="pim-hud-score-value"><AnimatedScore score={gs.score} /></span>
-                    <span className="pim-hud-mult" style={{ '--mult-c': HUD_MULT_COLORS[Math.min(5, baseMult)] } as React.CSSProperties}>
-                      <span className="pim-hud-x">×</span>{m}
+              {/* The verse: previous line, the line being inked, shield ellipsis, multiplier, progress underline */}
+              <div ref={(el) => { verseHudRef.current.els.root = el; }} className="pim-verse" data-calm="true">
+                <div ref={(el) => { verseHudRef.current.els.prev = el; }} className="pim-verse-prev">&nbsp;</div>
+                <div className="pim-verse-line">
+                  <span ref={(el) => { verseHudRef.current.els.text = el; }} className="pim-verse-text">{song?.title}</span>
+                  {opts.hudMisses && (
+                    <span className="pim-verse-ell" data-low={shieldLeft <= 1} data-testid="healing-hold-gauge" aria-label={`${shieldLeft} of 3 misses left`}>
+                      {[0, 1, 2].map((i) => (
+                        <i key={i} data-on={i < shieldLeft} />
+                      ))}
                     </span>
-                  </div>
-
-                  {(opts.hudMisses || (opts.healingGauge ?? true)) && (
-                    <div className="pim-hud-shield" data-low={shieldLeft <= 1} data-testid="healing-hold-gauge">
-                      <div className="pim-hud-shield-head">
-                        <span>SHIELD</span>
-                        {(opts.healingGauge ?? true) && (
-                          <span>
-                            <span ref={healingGaugeLabelRef} data-heal-label>HEAL</span>{' '}
-                            <span ref={healingGaugeHzRef}>0%</span>
-                          </span>
-                        )}
-                      </div>
-                      {opts.hudMisses && (
-                        <div className="pim-hud-pips" aria-label={`${shieldLeft} of 3 misses left`}>
-                          {[0, 1, 2].map((i) => (
-                            <i key={i} className="pim-hud-pip" data-on={i < shieldLeft} />
-                          ))}
-                        </div>
-                      )}
-                      {(opts.healingGauge ?? true) && (
-                        <>
-                          <div ref={healingGaugeBoxRef} className="pim-hud-heal">
-                            <div ref={healingGaugeFillRef} className="pim-hud-heal-fill" />
-                          </div>
-                          <div ref={healingBannerRef} className="pim-hud-heal-banner">+1 MISS RESTORED</div>
-                        </>
-                      )}
-                    </div>
                   )}
+                  {m > 1 && <sup className="pim-verse-mult" style={{ '--mult-c': HUD_MULT_COLORS[Math.min(5, baseMult)] } as React.CSSProperties}>×{m}</sup>}
                 </div>
-
                 <div
-                  className="pim-hud-panel pim-hud-combo"
-                  data-combo={opts.comboDisplay}
-                  style={{ '--combo-c': comboColor } as React.CSSProperties}
+                  className="pim-verse-under"
+                  style={{ gridTemplateColumns: segments.map((s) => `${s.span}fr`).join(' ') }}
+                  aria-hidden="true"
                 >
-                  {opts.comboDisplay && (
-                    <>
-                      <span className="pim-hud-label">Combo</span>
-                      <span key={c} ref={comboTextRef} className={`pim-hud-combo-value${c > 0 ? ' pim-hud-bump' : ''}`}>
-                        {c}
-                      </span>
-                      <span className="pim-hud-next">
-                        {nextAt ? <>NEXT ×{baseMult + 1} IN {nextAt - c}</> : <>MAX MULTIPLIER</>}
-                      </span>
-                      <div className="pim-hud-meter" aria-hidden="true">
-                        {HUD_MULT_STEPS.map((step) => (
-                          <i key={step} data-on={c >= step} />
-                        ))}
-                      </div>
-                    </>
-                  )}
-                  {/* Power-up timer + label (direct DOM updates in updatePuDisplayDOM, zero React re-renders) */}
-                  <div ref={puTimerBarRef} className="pim-hud-pu-bar" />
+                  {segments.map((s, i) => (
+                    <i key={i} style={{ '--f': s.fill.toFixed(3), '--seg-c': HUD_STAGE_COLORS[Math.min(4, i)] } as React.CSSProperties} />
+                  ))}
+                </div>
+                <>
+                    <div ref={(el) => { verseHudRef.current.els.whisper = el; }} className="pim-orc-whisper" data-on="false" aria-live="polite">
+                      <b ref={(el) => { verseHudRef.current.els.whisperMain = el; }} />
+                      <span ref={(el) => { verseHudRef.current.els.whisperSub = el; }} />
+                    </div>
+                    <div className="pim-orc-ticks" aria-hidden="true">
+                      {[0, 1, 2].map((lane) => (
+                        <div
+                          key={lane}
+                          ref={(el) => { verseHudRef.current.els.ticks[lane] = el; }}
+                          className="pim-orc-tick"
+                          data-on="false"
+                          style={{ '--lc': laneColorsRef.current[lane] } as React.CSSProperties}
+                        >
+                          <i />
+                          <span />
+                        </div>
+                      ))}
+                    </div>
+                </>
+              </div>
+
+              <div className="pim-hud-side pim-hud-right">
+                <span className="pim-hud-time">
+                  <b>{formatTimeSec(getT())}</b>
+                  <span className="pim-hud-total"> / {formatTimeSec(duration)}</span>
+                </span>
+                <span className="pim-hud-score" aria-label={`Score ${gs.score}`}>
+                  <span className="pim-hud-score-ghost">{'0'.repeat(Math.max(0, 7 - scoreDigits))}</span>
+                  <AnimatedScore score={gs.score} />
+                </span>
+                {opts.comboDisplay && (
+                  <span className="pim-hud-chain">
+                    CHAIN <span key={c} ref={comboTextRef} className={c > 0 ? 'pim-hud-bump' : undefined}>{c}</span>
+                  </span>
+                )}
+                {/* Power-up timer + label (direct DOM updates in updatePuDisplayDOM, zero React re-renders) */}
+                <div className="pim-hud-pu">
                   <div ref={puPillRef} className="pim-hud-pu-pill">
                     <span className="pim-hud-pu-dot">
                       <span ref={puPillPingRef} className="animate-ping opacity-75" />
@@ -10815,6 +10814,7 @@ export default function Game() {
                     </span>
                     <span ref={puPillTextRef} />
                   </div>
+                  <div ref={puTimerBarRef} className="pim-hud-pu-bar" />
                 </div>
               </div>
             </div>
