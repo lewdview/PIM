@@ -26,9 +26,13 @@
   --hud-mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
   --hud-verse: 'Instrument Serif', 'Iowan Old Style', Georgia, serif;
 
-  position: relative;
+  /* Floats over the full-size game canvas so the track and POV changes run under it. */
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
   z-index: 30;
-  flex-shrink: 0;
+  pointer-events: none;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-areas:
@@ -41,7 +45,7 @@
   color: var(--hud-text);
   font-family: var(--hud-mono);
   font-variant-numeric: tabular-nums;
-  background: linear-gradient(180deg, rgba(5, 5, 8, 0.82) 0%, rgba(5, 5, 8, 0.55) 70%, rgba(5, 5, 8, 0) 100%);
+  background: linear-gradient(180deg, rgba(5, 5, 8, 0.55) 0%, rgba(5, 5, 8, 0.25) 60%, rgba(5, 5, 8, 0) 100%);
 }
 
 /* ── flanks ── */

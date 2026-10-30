@@ -1155,6 +1155,17 @@ export default function Game() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   // Poetic Lines words sit on their own see-through canvas above the track and HUD.
   const lyricOverlayRef = useRef<HTMLCanvasElement>(null);
+  // The Beta top bar floats over the canvas; its dials sit just below it.
+  const [betaBarH, setBetaBarH] = useState(0);
+  const betaBarObserver = useRef<ResizeObserver | null>(null);
+  const betaBarRef = useCallback((el: HTMLDivElement | null) => {
+    betaBarObserver.current?.disconnect();
+    betaBarObserver.current = null;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setBetaBarH(el.offsetHeight));
+    ro.observe(el);
+    betaBarObserver.current = ro;
+  }, []);
   const canvasWrapperRef = useRef<HTMLDivElement>(null);
   const offscreenCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const noteTrailsRef = useRef<{ id: string; x: number; y: number; color: string; size: number; alpha: number; birthTime: number }[]>([]);
@@ -10856,13 +10867,11 @@ export default function Game() {
         {/* ── GAMEPLAY HUD · Beta (the original HUD, kept as a selectable style) ── */}
         {opts.hudStyle === 'beta' && (
           <div
-            className="flex flex-col items-center flex-shrink-0 w-full z-30"
+            ref={betaBarRef}
+            className="absolute top-0 left-0 right-0 flex flex-col items-center w-full z-30 pointer-events-none [&_button]:pointer-events-auto"
             style={{
-              borderBottom: "1px solid rgba(255,255,255,0.06)",
-              background: "rgba(12,12,20,0.70)",
-              backdropFilter: "blur(20px) saturate(1.4)",
-              WebkitBackdropFilter: "blur(20px) saturate(1.4)",
-              boxShadow: "0 4px 28px rgba(0,0,0,0.5), inset 0 -1px 0 rgba(255,255,255,0.05)",
+              // Floats over the full-size game canvas so the track and POV changes run under it.
+              background: "linear-gradient(180deg, rgba(12,12,20,0.6) 0%, rgba(12,12,20,0.3) 60%, rgba(12,12,20,0) 100%)",
             }}
           >
             {/* Top Row: Symmetrical 3-Column Grid (Left: Controls, Center: Stage Tracker, Right: Miss Pips) */}
@@ -11493,6 +11502,7 @@ export default function Game() {
               <div
                 className="gameplay-hud-container"
                 style={{
+                  marginTop: betaBarH,
                   opacity: activePovMode === 'cyber_tunnel' ? 0.18 : 1,
                   transition: 'opacity 0.5s ease-in-out',
                 }}
