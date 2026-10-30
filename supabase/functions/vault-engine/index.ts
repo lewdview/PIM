@@ -1,0 +1,2392 @@
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
+import Stripe from "https://esm.sh/stripe@17.5.0?target=deno";
+import {
+  getCurrentDay, getRarityRoll, drawCardDays, RARITY_CONFIG, rollDailyClaimRarity,
+  degradeRarity, upgradeRarity, getEchoSpawnChance, getEffectiveBurnYield,
+  getPityFloor, TOKEN_PACK_COST, TARGETED_PULL_COST, RARITY_UPGRADE_COST,
+  RC1_DAILY_STANDARD_LIMIT, RC1_DAILY_PREMIUM_LIMIT, DEFAULT_DAILY_TOKEN_LIMIT,
+  MINTABLE_CAPS, NFT_MINT_COSTS, getCardMood,
+  type Rarity, type ModifierContext
+} from "./gameLogic.ts";
+import bombshellCoversMap from "./bombshell_covers_map.json" with { type: "json" };
+
+const ALLOWED_ORIGINS = [
+  'https://pim.th3scr1b3.art',
+  'https://beatstar-vault.vercel.app',
+];
+
+function isAllowedOrigin(origin: string): boolean {
+  if (!origin) return false;
+  if (ALLOWED_ORIGINS.includes(origin)) return true;
+  // Local development
+  if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return true;
+  if (/^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin)) return true;
+  return false;
+}
+
+function getCorsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get('Origin') ?? '';
+  const allowed = isAllowedOrigin(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    'Access-Control-Allow-Origin': allowed,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Vary': 'Origin',
+  };
+}
+
+const ALLOWED_ADMINS = [
+  '5393bcd0-df3a-4d2c-a81d-8fb1433df7fb', // lewd.view@gmail.com
+  'fa1d9176-b55e-4301-bda1-057cd66201a0'  // bmeason@gmail.com
+];
+
+function assertAdmin(user: any, payload: any): void {
+  const envPassphrase = Deno.env.get('ADMIN_PASSPHRASE');
+  const isPassphraseValid = !!(envPassphrase && payload?.passphrase === envPassphrase);
+  const isUserAllowed = !!(user && ALLOWED_ADMINS.includes(user.id));
+  if (!isPassphraseValid && !isUserAllowed) {
+    throw new Error("Unauthorized: Invalid admin credentials.");
+  }
+}
+
+function getStripeClient(): Stripe {
+  const secretKey = Deno.env.get('STRIPE_SECRET_KEY') || Deno.env.get('STRIPE_SECRET_KEY_TEST');
+  if (!secretKey) {
+    throw new Error('Missing STRIPE_SECRET_KEY or STRIPE_SECRET_KEY_TEST in Supabase environment secrets');
+  }
+  return new Stripe(secretKey, {
+    apiVersion: '2025-03-31.basil' as any,
+    httpClient: Stripe.createFetchHttpClient(),
+  });
+}
+
+const STRIPE_PACK_CONFIG: Record<string, { label: string; tiers: Record<string, { cardCount: number; priceCents: number; tokenAmount?: number; label?: string }> }> = {
+  taste: {
+    label: 'Taste Pack',
+    tiers: {
+      single: { cardCount: 2, priceCents: 25 },
+      triple: { cardCount: 5, priceCents: 100 },
+      bulk:   { cardCount: 15, priceCents: 250 }
+    }
+  },
+  light: {
+    label: 'Light Pack',
+    tiers: {
+      single: { cardCount: 2, priceCents: 25 },
+      triple: { cardCount: 5, priceCents: 100 },
+      bulk:   { cardCount: 15, priceCents: 250 }
+    }
+  },
+  dark: {
+    label: 'Dark Pack',
+    tiers: {
+      single: { cardCount: 2, priceCents: 25 },
+      triple: { cardCount: 5, priceCents: 100 },
+      bulk:   { cardCount: 15, priceCents: 250 }
+    }
+  },
+  bombshell: {
+    label: 'Bombshell Pack',
+    tiers: {
+      single:     { cardCount: 1, priceCents: 25 },
+      double:     { cardCount: 2, priceCents: 50 },
+      five:       { cardCount: 5, priceCents: 100 },
+      triple:     { cardCount: 5, priceCents: 100 },
+      ten:        { cardCount: 10, priceCents: 200 },
+      twentyfive: { cardCount: 25, priceCents: 500 },
+      fifty:      { cardCount: 50, priceCents: 1000 }
+    }
+  },
+  month: {
+    label: 'Month Pack',
+    tiers: {
+      single: { cardCount: 2, priceCents: 50 },
+      triple: { cardCount: 5, priceCents: 100 }
+    }
+  },
+  miss_out: {
+    label: 'Miss Out Pack',
+    tiers: {
+      single: { cardCount: 2, priceCents: 100 },
+      triple: { cardCount: 5, priceCents: 200 }
+    }
+  },
+  special_picks: {
+    label: 'Special Picks Pack',
+    tiers: {
+      single: { cardCount: 2, priceCents: 25 },
+      triple: { cardCount: 5, priceCents: 100 }
+    }
+  },
+  prophecy: {
+    label: 'Prophecy Pack',
+    tiers: {
+      single: { cardCount: 1, priceCents: 500 }
+    }
+  },
+  alpha: {
+    label: 'Alpha Pack',
+    tiers: {
+      single: { cardCount: 1, priceCents: 100 }
+    }
+  },
+  token_bundle: {
+    label: 'Vault Tokens',
+    tiers: {
+      pouch: { tokenAmount: 200, priceCents: 99, cardCount: 0, label: 'Pouch of Sparks' },
+      crate: { tokenAmount: 1150, priceCents: 499, cardCount: 0, label: 'Cipher Crate' },
+      stash: { tokenAmount: 2500, priceCents: 999, cardCount: 0, label: 'Vault Stash' },
+      hoard: { tokenAmount: 7000, priceCents: 2499, cardCount: 0, label: 'Archon Hoard' }
+    }
+  }
+};
+
+function getSupplyCap(rarity: string, cardDay: number, currentDay: number): number {
+  if (rarity === 'mythic') return 1;
+
+  const age = Math.max(0, currentDay - cardDay);
+
+  if (age >= 180) {
+    const caps: Record<string, number> = {
+      mythic: 1,
+      legendary: 5,
+      rare: 50,
+      uncommon: 500,
+      common: 1000
+    };
+    return caps[rarity] || 1000;
+  } else if (age >= 30) {
+    const caps: Record<string, number> = {
+      mythic: 1,
+      legendary: 3,
+      rare: 35,
+      uncommon: 250,
+      common: 500
+    };
+    return caps[rarity] || 250;
+  } else {
+    // Launch Week
+    const caps: Record<string, number> = {
+      mythic: 1,
+      legendary: 2,
+      rare: 15,
+      uncommon: 100,
+      common: 250
+    };
+    return caps[rarity] || 250;
+  }
+}
+
+/** Log a telemetry event (fire-and-forget). */
+async function logTelemetry(svc: any, type: string, userId: string | null, payload: any) {
+  try {
+    await svc.rpc('log_telemetry_event', { p_event_type: type, p_user_id: userId, p_payload: payload });
+  } catch { /* non-blocking */ }
+}
+
+/**
+ * increment_supply returns -1 once an edition cap is reached (and null on RPC failure).
+ * Never persist -1 as an edition number: clamp sold-out overflow to the cap instead.
+ */
+function resolveEdition(data: number | null | undefined, maxSupply: number): number {
+  if (data === -1) return maxSupply;
+  return data || 1;
+}
+
+// Best-effort per-IP throttle for the unauthenticated guest claim (per edge instance).
+const GUEST_CLAIM_WINDOW_MS = 60 * 60 * 1000;
+const GUEST_CLAIM_MAX_PER_WINDOW = 5;
+const guestClaimLog = new Map<string, number[]>();
+function guestClaimAllowed(ip: string): boolean {
+  const now = Date.now();
+  const recent = (guestClaimLog.get(ip) || []).filter((t) => now - t < GUEST_CLAIM_WINDOW_MS);
+  if (recent.length >= GUEST_CLAIM_MAX_PER_WINDOW) {
+    guestClaimLog.set(ip, recent);
+    return false;
+  }
+  recent.push(now);
+  guestClaimLog.set(ip, recent);
+  if (guestClaimLog.size > 5000) {
+    for (const [k, v] of guestClaimLog) {
+      if (!v.some((t) => now - t < GUEST_CLAIM_WINDOW_MS)) guestClaimLog.delete(k);
+    }
+  }
+  return true;
+}
+
+// ── Crypto payment verification (USDC on Base) ──────────────────────────
+// Must match the client's payWithCrypto() in coinbaseService.ts. If the client is built with a
+// different VITE_VAULT_COLLECTOR_ADDRESS, set the same value as the VAULT_COLLECTOR_ADDRESS secret.
+const BASE_USDC_CONTRACT = '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913';
+const ERC20_TRANSFER_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
+const VAULT_COLLECTOR_ADDRESS = (Deno.env.get('VAULT_COLLECTOR_ADDRESS')
+  || '0x985606faaad78887df96002a3555ccf2c8640a08').toLowerCase();
+// The client computes Math.floor(usd * 1e6), which can land 1 micro-USDC low; allow $0.001 of slack.
+const USDC_TOLERANCE_MICRO = 1000n;
+
+/**
+ * Verifies that `txHash` is a successful Base transaction containing USDC Transfer(s) to the
+ * vault collector totalling at least `minCents` — and, when `payerWallet` is known, sent from it
+ * (tx hashes are public, so without this anyone could redeem someone else's payment).
+ */
+async function verifyUsdcPayment(txHash: string, minCents: number, payerWallet: string | null): Promise<void> {
+  if (!/^0x[0-9a-fA-F]{64}$/.test(txHash)) throw new Error('Missing or invalid transaction hash');
+
+  const { createPublicClient, http } = await import('npm:viem@2.7.6');
+  const { base } = await import('npm:viem@2.7.6/chains');
+  const publicClient = createPublicClient({ chain: base, transport: http('https://mainnet.base.org') });
+
+  let receipt: any;
+  try {
+    receipt = await publicClient.getTransactionReceipt({ hash: txHash as `0x${string}` });
+  } catch (e: any) {
+    throw new Error(`On-chain verification failed: ${e.message}`);
+  }
+  if (!receipt || receipt.status !== 'success') throw new Error('Transaction not found or failed on-chain');
+
+  const collectorTopic = '0x' + VAULT_COLLECTOR_ADDRESS.replace(/^0x/, '').padStart(64, '0');
+  let paidMicro = 0n;
+  for (const log of receipt.logs || []) {
+    if (String(log.address).toLowerCase() !== BASE_USDC_CONTRACT) continue;
+    const topics: string[] = log.topics || [];
+    if (topics.length < 3 || topics[0].toLowerCase() !== ERC20_TRANSFER_TOPIC) continue;
+    if (topics[2].toLowerCase() !== collectorTopic) continue;
+    if (payerWallet) {
+      const fromAddress = '0x' + topics[1].slice(26).toLowerCase();
+      if (fromAddress !== payerWallet.toLowerCase()) continue;
+    }
+    paidMicro += BigInt(log.data);
+  }
+
+  const requiredMicro = BigInt(minCents) * 10000n - USDC_TOLERANCE_MICRO; // 1 cent = 10,000 micro-USDC
+  if (paidMicro < requiredMicro) {
+    throw new Error(
+      `No matching USDC payment found in this transaction (need $${(minCents / 100).toFixed(2)} to the vault`
+      + `${payerWallet ? ' from your connected wallet' : ''}).`,
+    );
+  }
+}
+
+/**
+ * Atomically claims a payment txHash so it can only ever be redeemed once.
+ * Inserts a 'pending' stripe_orders row (stripe_session_id is unique); a concurrent or repeat
+ * redemption hits the unique constraint. Returns the ledger key for later completion/release.
+ */
+async function claimCryptoPayment(
+  svc: any, userId: string, txHash: string, category: string, size: string, amountCents: number,
+): Promise<string> {
+  const key = `crypto_${txHash.toLowerCase()}`;
+  const legacyKey = `crypto_${txHash}`; // rows written before hashes were normalised
+  const { data: prior } = await svc.from('stripe_orders').select('stripe_session_id').in('stripe_session_id', [key, legacyKey]);
+  if (prior && prior.length > 0) throw new Error('This transaction has already been used');
+
+  const { error } = await svc.from('stripe_orders').insert({
+    user_id: userId,
+    stripe_session_id: key,
+    pack_category: category,
+    pack_size: size,
+    amount_cents: amountCents,
+    currency: 'usdc',
+    status: 'pending',
+  });
+  if (error) {
+    if ((error as any).code === '23505') throw new Error('This transaction has already been used');
+    throw new Error(`Could not record payment: ${error.message}`);
+  }
+  return key;
+}
+
+/** Releases a claimed-but-unfulfilled payment so the player can retry with the same txHash. */
+async function releaseCryptoPayment(svc: any, key: string): Promise<void> {
+  try {
+    await svc.from('stripe_orders').delete().eq('stripe_session_id', key).eq('status', 'pending');
+  } catch { /* best effort */ }
+}
+
+/**
+ * Find an eligible day that still has supply for the rolled rarity.
+ * Prioritizes preserving the rolled rarity horizontally across released days
+ * before allowing vertical degradation down to lower tiers.
+ */
+async function findDayWithRaritySupply(
+  svc: any,
+  rarity: Rarity,
+  initialDay: number,
+  packType: string,
+  today: number,
+  missedDays: number[],
+  supplyMap?: Map<string, number>
+): Promise<number | null> {
+  const maxCap = getSupplyCap(rarity, initialDay, today);
+  const initialKey = `${initialDay}-${rarity}`;
+
+  // 1. Check initial day first — use pre-fetched map when available (avoids per-card DB read)
+  let initSupply: number;
+  if (supplyMap) {
+    initSupply = supplyMap.get(initialKey) ?? 0;
+  } else {
+    const { data: initRow } = await svc
+      .from('global_supply')
+      .select('supply')
+      .eq('card_id_rarity', initialKey)
+      .maybeSingle();
+    initSupply = initRow?.supply || 0;
+  }
+
+  if (initSupply < maxCap) {
+    return initialDay;
+  }
+
+  // 2. Initial day is capped out! Build eligible candidate pool for this packType
+  let candidateDays: number[] = [];
+  if (packType === 'prophecy') {
+    const futureDays = 365 - today;
+    if (futureDays > 0) {
+      candidateDays = Array.from({ length: futureDays }, (_, i) => today + 1 + i);
+    } else {
+      candidateDays = [today];
+    }
+  } else if (packType === 'miss_out') {
+    candidateDays = missedDays.length > 0 ? missedDays : Array.from({ length: Math.max(1, today) }, (_, i) => i + 1);
+  } else if (packType === 'light') {
+    candidateDays = Array.from({ length: Math.max(1, today) }, (_, i) => i + 1).filter(d => getCardMood(d) === 'light');
+  } else if (packType === 'dark') {
+    candidateDays = Array.from({ length: Math.max(1, today) }, (_, i) => i + 1).filter(d => getCardMood(d) === 'dark');
+  } else {
+    // Standard pool: 1..today
+    candidateDays = Array.from({ length: Math.max(1, today) }, (_, i) => i + 1);
+  }
+
+  // 3. Determine sold-out days — use pre-fetched map when available
+  const soldOutDays = new Set<number>();
+  if (supplyMap) {
+    // Resolve entirely from the in-memory snapshot
+    for (const d of candidateDays) {
+      const key = `${d}-${rarity}`;
+      const cap = getSupplyCap(rarity, d, today);
+      if ((supplyMap.get(key) ?? 0) >= cap) {
+        soldOutDays.add(d);
+      }
+    }
+  } else {
+    const { data: cappedRows } = await svc
+      .from('global_supply')
+      .select('card_id_rarity, supply')
+      .like('card_id_rarity', `%-${rarity}`);
+
+    if (cappedRows) {
+      for (const row of cappedRows) {
+        const parts = row.card_id_rarity.split('-');
+        const d = parseInt(parts[0], 10);
+        if (!isNaN(d)) {
+          const cap = getSupplyCap(rarity, d, today);
+          if (row.supply >= cap) {
+            soldOutDays.add(d);
+          }
+        }
+      }
+    }
+  }
+
+  const availableDays = candidateDays.filter(d => !soldOutDays.has(d));
+  if (availableDays.length > 0) {
+    return availableDays[Math.floor(Math.random() * availableDays.length)];
+  }
+
+  // Entire eligible pool is sold out for this rarity tier
+  return null;
+}
+
+// Pack types that can roll the bonus Bombshell (an extra card on top of the pack).
+// Free, Bombshell and single-target pulls are excluded.
+const BOMBSHELL_BONUS_EXCLUDED = new Set([
+  'free', 'bombshell', 'bombshell_token', 'targeted_pull', 'rarity_upgrade', 'token_bundle',
+]);
+const DEFAULT_BOMBSHELL_BONUS_CHANCE = 0.05;
+
+interface GenerateCardsOptions {
+  /** Set on the recursive call that mints the bonus Bombshell itself. */
+  bonusFor?: string;
+}
+
+async function generateCards(svc: any, userId: string, packType: string, count: number, today: number, ctx: ModifierContext, opts: GenerateCardsOptions = {}) {
+  const source = opts.bonusFor ? `pack_${opts.bonusFor}_bombshell_bonus` : `pack_${packType}`;
+  let missedDays: number[] = [];
+  if (packType === 'miss_out') {
+    let claims: any[] = [];
+    let from = 0;
+    const pageSize = 1000;
+    while (true) {
+      const { data } = await svc.from('vault_collections').select('card_id').eq('owner_id', userId).like('card_id', 'card-%').range(from, from + pageSize - 1);
+      if (!data || data.length === 0) break;
+      claims.push(...data);
+      if (data.length < pageSize) break;
+      from += pageSize;
+    }
+    const ownedDays = new Set(claims.map((c: any) => parseInt(c.card_id.replace('card-', ''), 10)));
+    for (let i = 1; i <= today; i++) { if (!ownedDays.has(i)) missedDays.push(i); }
+  }
+
+  let echoChance = 15;
+  let ultraRewardChance = 0.003;
+  let bombshellBonusChance = DEFAULT_BOMBSHELL_BONUS_CHANCE;
+  let adminConfig = null;
+  try {
+    const { data: config } = await svc.from('admin_config').select('config').eq('id', 1).maybeSingle();
+    if (config?.config) {
+      adminConfig = config.config;
+    } else {
+      const { data: keyRow } = await svc.from('admin_config').select('value').eq('key', 'global').maybeSingle();
+      if (keyRow?.value) adminConfig = keyRow.value;
+    }
+    if (adminConfig) {
+      if (adminConfig.echoSystem?.echoChance !== undefined) echoChance = adminConfig.echoSystem.echoChance;
+      if (adminConfig.ultraRewardChance !== undefined) ultraRewardChance = adminConfig.ultraRewardChance;
+      if (typeof adminConfig.bombshellBonusChance === 'number') bombshellBonusChance = adminConfig.bombshellBonusChance;
+    }
+  } catch { /* use default */ }
+
+  const days = drawCardDays(packType, count, today, missedDays);
+  const cards = [];
+
+  // Pre-fetch all supply data for the candidate day range in one query
+  // (avoids N+1 queries during the generation loop)
+  const RARITIES_ALL = ['common', 'uncommon', 'rare', 'legendary', 'mythic'];
+  // Build all possible supply keys for days 1..today
+  const candidateDayRange = Array.from({ length: Math.min(today, 365) }, (_, i) => i + 1);
+  const candidateKeys = candidateDayRange.flatMap(d => RARITIES_ALL.map(r => `${d}-${r}`));
+  const { data: supplySnapshot } = await svc
+    .from('global_supply')
+    .select('card_id_rarity, supply')
+    .in('card_id_rarity', candidateKeys);
+  const supplyMap = new Map<string, number>(
+    (supplySnapshot ?? []).map((r: any) => [r.card_id_rarity, r.supply])
+  );
+
+  for (let cIdx = 0; cIdx < count; cIdx++) {
+    let day = days[cIdx];
+
+    // Echo pool draw
+    if (packType !== 'free' && !opts.bonusFor && echoChance > 0 && Math.random() * 100 < echoChance) {
+      const { data: echoPool } = await svc.from('echo_pool').select('*').limit(50);
+      if (echoPool && echoPool.length > 0) {
+        const echo = echoPool[Math.floor(Math.random() * echoPool.length)];
+        await svc.from('echo_pool').delete().eq('id', echo.id);
+        const echoRarity = echo.echo_rarity || echo.rarity || 'common';
+        const echoGen = echo.echo_generation || echo.generation || 1;
+        const echoSourceDay = echo.source_day || (parseInt(String(echo.card_id || '').replace(/^card-/, ''), 10) || 1);
+        const card_id_rarity = `${echoSourceDay}-${echoRarity}`;
+        const echoMaxSupply = getSupplyCap(echoRarity, echoSourceDay, today);
+        const { data: supplyData } = await svc.rpc('increment_supply', { p_card_id_rarity: card_id_rarity, p_max_supply: echoMaxSupply });
+        cards.push({
+          owner_id: userId, card_id: `card-${echoSourceDay}`, rarity: echoRarity,
+          source: `pack_${packType}`, is_echo: true, echo_generation: echoGen,
+          echo_source_day: echoSourceDay, edition: resolveEdition(supplyData, echoMaxSupply),
+          max_supply: echoMaxSupply, proof: null, claimed_at: new Date().toISOString()
+        });
+        // Track echo pull
+        await svc.from('profiles').update({
+          echo_pulls_received: svc.rpc ? undefined : 0 // increment handled below
+        }).eq('id', userId);
+        await svc.rpc('increment_tokens', { user_uuid: userId, amount: 0 }); // no-op to ensure profile exists
+        continue;
+      }
+    }
+
+    // Normal roll with retry for fully minted-out days
+    let rolledCard: any = null;
+    let rollAttempts = 0;
+
+    while (rollAttempts < 5) {
+      let { rarity, proof } = getRarityRoll(packType, ctx, adminConfig);
+      let targetDay = day;
+      let edition = 1;
+      let max_supply = 1;
+      let downgradeAttempts = 0;
+      let isSoldOut = false;
+
+      while (downgradeAttempts < 5) {
+        // Horizontal Scarcity: Preserve rolled rarity by searching available inventory across released days
+        let candidateDay: number | null = targetDay;
+        if (packType !== 'targeted_pull') {
+          candidateDay = await findDayWithRaritySupply(svc, rarity as Rarity, targetDay, packType, today, missedDays, supplyMap);
+        }
+
+        if (candidateDay !== null) {
+          targetDay = candidateDay;
+          max_supply = getSupplyCap(rarity, targetDay, today);
+          const card_id_rarity = `${targetDay}-${rarity}`;
+
+          // Atomic increment supply with cap enforcement
+          const { data } = await svc.rpc('increment_supply', { p_card_id_rarity: card_id_rarity, p_max_supply: max_supply });
+          if (data !== -1 && data !== null) {
+            edition = data || 1;
+            day = targetDay;
+            break;
+          }
+        }
+
+        // Entire horizontal pool for this rarity is exhausted! Degrade vertically to next lower tier
+        const nextRarity = degradeRarity(rarity as Rarity, 1);
+        if (nextRarity === rarity) {
+          isSoldOut = true;
+          break;
+        }
+        rarity = nextRarity;
+        downgradeAttempts++;
+      }
+
+      if (!isSoldOut) {
+        let ultra_reward = null;
+        if (Math.random() < ultraRewardChance) {
+          ultra_reward = { type: 'custom_song', label: 'Custom Theme', description: 'You unlocked an ultra-rare secret theme!' };
+        }
+        rolledCard = {
+          owner_id: userId, card_id: (packType === 'bombshell' || packType === 'bombshell_token') ? `bombshell-${day}` : `card-${day}`, rarity, source,
+          is_echo: false, echo_generation: 0, echo_source_day: null,
+          edition, max_supply, proof, ultra_reward, claimed_at: new Date().toISOString()
+        };
+
+        if (packType === 'bombshell' || packType === 'bombshell_token') {
+          const dayEntry = (bombshellCoversMap as any)[String(day)];
+          let selectedFile = '';
+          if (dayEntry) {
+            const isLB = rarity === 'common' || rarity === 'uncommon';
+            let pool = isLB ? dayEntry.lbFiles : dayEntry.normalFiles;
+            if (!pool || pool.length === 0) {
+              pool = isLB ? dayEntry.normalFiles : dayEntry.lbFiles;
+            }
+            if (pool && pool.length > 0) {
+              selectedFile = pool[Math.floor(Math.random() * pool.length)];
+            }
+          }
+          if (!selectedFile) {
+            const padDay = String(day).padStart(3, '0');
+            selectedFile = (rarity === 'common' || rarity === 'uncommon')
+              ? `lb day ${padDay} - 01.jpg`
+              : `day ${padDay} - 01.jpg`;
+          }
+          rolledCard.fingerprint = selectedFile;
+        }
+        break;
+      }
+
+      // If fully sold out for this day, draw a new random day and retry the roll
+      day = drawCardDays(packType, 1, today, missedDays)[0];
+      rollAttempts++;
+    }
+
+    // Fallback safety net
+    if (!rolledCard) {
+      const rarity: Rarity = 'common';
+      const max_supply = getSupplyCap(rarity, day, today);
+      const card_id_rarity = `${day}-${rarity}`;
+      const { data } = await svc.rpc('increment_supply', { p_card_id_rarity: card_id_rarity, p_max_supply: max_supply });
+      const edition = resolveEdition(data, max_supply);
+      rolledCard = {
+        owner_id: userId, card_id: (packType === 'bombshell' || packType === 'bombshell_token') ? `bombshell-${day}` : `card-${day}`, rarity, source,
+        is_echo: false, echo_generation: 0, echo_source_day: null,
+        edition, max_supply, proof: null, ultra_reward: null, claimed_at: new Date().toISOString()
+      };
+      if (packType === 'bombshell' || packType === 'bombshell_token') {
+        const padDay = String(day).padStart(3, '0');
+        const selectedFile = `lb day ${padDay} - 01.jpg`;
+        rolledCard.fingerprint = selectedFile;
+      }
+    }
+
+    cards.push(rolledCard);
+  }
+
+  const { data: insertedCards, error } = await svc.from('vault_collections')
+    .insert(cards)
+    .select('*');
+  if (error) throw new Error(`Database Insert Failed: ${error.message} - details: ${error.details}`);
+
+  const result = insertedCards || cards;
+
+  // Bonus Bombshell: a regular pack sometimes drops one extra Bombshell card.
+  // A failure here must never fail the pack the player already paid for.
+  if (!opts.bonusFor && !BOMBSHELL_BONUS_EXCLUDED.has(packType) && Math.random() < bombshellBonusChance) {
+    try {
+      const bonus = await generateCards(svc, userId, 'bombshell', 1, today, ctx, { bonusFor: packType });
+      return [...result, ...bonus];
+    } catch (bonusErr) {
+      console.warn('[generateCards] Bonus Bombshell roll failed:', bonusErr);
+    }
+  }
+
+  return result;
+}
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: getCorsHeaders(req) });
+
+  try {
+    const { action, payload } = await req.json();
+    const authHeader = req.headers.get('Authorization');
+    const token = authHeader ? authHeader.replace('Bearer ', '') : undefined;
+
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (!serviceKey) throw new Error('Edge Function Error: SUPABASE_SERVICE_ROLE_KEY is missing');
+    const svc = createClient(Deno.env.get('SUPABASE_URL') || '', serviceKey);
+
+    const isServiceRole = !!(serviceKey && token === serviceKey);
+
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') || '', Deno.env.get('SUPABASE_ANON_KEY') || '',
+      { global: { headers: { Authorization: authHeader || '' } } }
+    );
+    let user: any = null;
+    let authErr: any = null;
+
+    if (!isServiceRole && token) {
+      const userRes = await supabaseClient.auth.getUser(token);
+      user = userRes.data?.user;
+      authErr = userRes.error;
+    }
+
+    // Allow invite code redemption without full auth (user may be mid-signup)
+    if (action === 'redeemInviteCode') {
+      const { code } = payload;
+      const { data: valid } = await svc.rpc('redeem_invite_code', {
+        p_code: (code || '').toUpperCase().trim(),
+        p_user_id: user?.id || '00000000-0000-0000-0000-000000000000'
+      });
+      await logTelemetry(svc, 'invite_redeem', user?.id || null, { code, valid });
+      return new Response(JSON.stringify({ success: !!valid, valid: !!valid }),
+        { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+    }
+
+    // Allow telemetry logging without full auth (e.g. for guest funnel tracking)
+    if (action === 'logClientTelemetry') {
+      const { eventType, payload: eventPayload } = payload;
+      if (!eventType) throw new Error('Missing event type');
+      await logTelemetry(svc, eventType, user?.id || null, eventPayload || {});
+      return new Response(JSON.stringify({ success: true }),
+        { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+    }
+
+    if (action === 'batchLogClientTelemetry') {
+      const { events } = payload;
+      if (Array.isArray(events)) {
+        for (const ev of events) {
+          if (ev && ev.eventType) {
+            await logTelemetry(svc, ev.eventType, user?.id || null, ev.payload || {});
+          }
+        }
+      }
+      return new Response(JSON.stringify({ success: true, count: events?.length || 0 }),
+        { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+    }
+
+    // Public / unauthenticated or custom-auth actions
+    const PUBLIC_ACTIONS = [
+      'verifyStripeSession',
+      'claimGuestDailyDrop',
+      'broadcastAnnouncement',
+      'getAdminAnnouncements',
+      'toggleAnnouncement',
+      'deleteAnnouncement',
+      'getAnalyticsSummary',
+    ];
+    if (!PUBLIC_ACTIONS.includes(action) && !isServiceRole) {
+      if (!user || authErr) {
+        if (!authHeader) throw new Error('Not authenticated: Missing Authorization Header');
+        throw new Error(`Not authenticated: ${authErr?.message || 'Invalid or Expired Token'}`);
+      }
+    }
+
+    // Ensure profile exists without throwing duplicate key errors in Postgres logs
+    if (user?.id) {
+      const { error: profileErr } = await svc.from('profiles')
+        .upsert(
+          { id: user.id, wallet_address: user.user_metadata?.wallet_address || null },
+          { onConflict: 'id', ignoreDuplicates: true }
+        );
+      if (profileErr) {
+        console.error('Profile guard failed:', profileErr.message);
+      }
+    }
+
+    const today = getCurrentDay();
+    let adminConfig: any = null;
+    try {
+      const { data: cfgRow } = await svc.from('admin_config').select('config').eq('id', 1).maybeSingle();
+      if (cfgRow?.config) adminConfig = cfgRow.config;
+      else {
+        const { data: keyRow } = await svc.from('admin_config').select('value').eq('key', 'global').maybeSingle();
+        if (keyRow?.value) adminConfig = keyRow.value;
+      }
+    } catch {}
+
+    switch (action) {
+
+      // ═══════════════════════════════════════════════════════════
+      // BURN CARD (V2: echo decay, anti-grind, bonus yield, telemetry)
+      // ═══════════════════════════════════════════════════════════
+      case 'burnCard': {
+        const { cardOwnedId, sourceTitle, sourceMood, coverUrl, audioUrl, energy, valence, tempo } = payload;
+        // C3 FIX: Atomic delete-and-return to prevent double-spend race condition.
+        // Previously: separate SELECT to check ownership, then DELETE later.
+        // Now: single DELETE ... RETURNING * that fails if card doesn't exist or isn't owned.
+        const { data: ownedCard, error: fetchErr } = await svc
+          .from('vault_collections').delete().eq('id', cardOwnedId).eq('owner_id', user.id).select('*').single();
+        if (fetchErr || !ownedCard) throw new Error('Card not found, not owned, or already burned');
+
+        // Get profile for anti-grind tracking
+        const { data: prof } = await svc.from('profiles').select('*').eq('id', user.id).single();
+        let dailyBurns = (prof?.last_burn_day === today) ? (prof?.daily_burns || 0) : 0;
+
+        // Calculate effective yield with echo bonus + anti-grind
+        const tokensEarned = getEffectiveBurnYield(
+          ownedCard.rarity as Rarity, !!ownedCard.is_echo, dailyBurns, adminConfig
+        );
+
+        await svc.rpc('increment_tokens', { user_uuid: user.id, amount: tokensEarned });
+
+        // Echo spawn with generational decay
+        const gen = ownedCard.echo_generation || 0;
+        const isEchoEnabled = adminConfig?.echoSystem?.enabled !== false;
+        const spawnChance = isEchoEnabled ? getEchoSpawnChance(gen, adminConfig) : 0;
+        const willEcho = isEchoEnabled && spawnChance > 0 && (Math.random() * 100 < spawnChance);
+
+        let createdEcho = null;
+        const parsedDay = parseInt(String(ownedCard.card_id || '').replace(/^card-|^day-/, ''), 10) || ownedCard.day || 1;
+        const echoCoverUrl = coverUrl || `https://files.th3scr1b3.art/covers/day-${parsedDay}.jpg`;
+        const echoAudioUrl = audioUrl || `https://files.th3scr1b3.art/audio/day-${parsedDay}.mp3`;
+
+        if (willEcho) {
+          const echoDegradedRarity = degradeRarity(ownedCard.rarity as Rarity, 1);
+          const echoPayload = {
+            card_id: ownedCard.card_id || `card-${parsedDay}`,
+            source_card_id: ownedCard.card_id || `card-${parsedDay}`,
+            rarity: echoDegradedRarity,
+            echo_rarity: echoDegradedRarity,
+            echo_generation: gen + 1,
+            generation: gen + 1,
+            source_title: sourceTitle || `Day ${parsedDay}`,
+            source_day: parsedDay,
+            source_mood: sourceMood || 'dark',
+            source_rarity: ownedCard.rarity,
+            cover_url: echoCoverUrl,
+            audio_url: echoAudioUrl,
+            energy: Number(energy ?? 0.5),
+            valence: Number(valence ?? 0.5),
+            tempo: Number(tempo ?? 120),
+          };
+          const { data: insEcho, error: insErr } = await svc.from('echo_pool').insert(echoPayload).select('*').maybeSingle();
+          if (insErr) {
+            console.error('[burnCard] Failed to insert into echo_pool:', insErr);
+          } else {
+            console.log('[burnCard] Successfully inserted into echo_pool:', insEcho?.id);
+          }
+          createdEcho = insEcho || echoPayload;
+        }
+
+        // Card already atomically deleted above via DELETE ... RETURNING *
+        dailyBurns += 1;
+        const newTotalBurns = (prof?.total_burns || 0) + 1;
+        await svc.from('profiles').update({
+          daily_burns: dailyBurns,
+          last_burn_day: today,
+          total_burns: newTotalBurns,
+          tokens_earned_total: (prof?.tokens_earned_total || 0) + tokensEarned,
+        }).eq('id', user.id);
+
+        // Telemetry
+        await logTelemetry(svc, 'card_burn', user.id, {
+          rarity: ownedCard.rarity, isEcho: !!ownedCard.is_echo, gen,
+          tokensEarned, willEcho, dailyBurns, spawnChance
+        });
+
+        return new Response(JSON.stringify({
+          success: true, tokensEarned, willEcho, echoGen: gen + 1,
+          echoCard: createdEcho,
+          dailyBurns, spawnChance, totalBurns: newTotalBurns
+        }), { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+      }
+
+      // ═══════════════════════════════════════════════════════════
+      // DAILY DROP
+      // ═══════════════════════════════════════════════════════════
+      case 'claimDailyDrop': {
+        const { day } = payload;
+        if (Math.abs(day - today) > 1) throw new Error(`Day ${day} is too far from server day ${today}`);
+        const claimDay = day;
+        const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', user.id).single();
+        if (profile?.last_claim_day >= claimDay) throw new Error('Already claimed today');
+
+        let rarityRoll = rollDailyClaimRarity(adminConfig);
+        let max_supply = getSupplyCap(rarityRoll, claimDay, today);
+        let card_id_rarity = `${claimDay}-${rarityRoll}`;
+        let edition = 1;
+        let downgradeAttempts = 0;
+
+        while (downgradeAttempts < 5) {
+          // Check current supply first
+          const { data: supplyRow } = await svc.from('global_supply').select('supply').eq('card_id_rarity', card_id_rarity).maybeSingle();
+          const currentSupply = supplyRow?.supply || 0;
+
+          if (currentSupply < max_supply) {
+            const { data } = await svc.rpc('increment_supply', { p_card_id_rarity: card_id_rarity, p_max_supply: max_supply });
+            if (data !== -1 && data !== null) {
+              edition = data || 1;
+              break;
+            }
+            // Lost the race for the last copy — fall through and degrade a tier.
+          }
+
+          const nextRarity = degradeRarity(rarityRoll as Rarity, 1);
+          if (nextRarity === rarityRoll) {
+            // common floor and still sold out, increment anyway
+            const { data } = await svc.rpc('increment_supply', { p_card_id_rarity: card_id_rarity, p_max_supply: max_supply });
+            edition = resolveEdition(data, max_supply);
+            break;
+          }
+
+          rarityRoll = nextRarity;
+          max_supply = getSupplyCap(rarityRoll, claimDay, today);
+          card_id_rarity = `${claimDay}-${rarityRoll}`;
+          downgradeAttempts++;
+        }
+
+        const newCard = {
+          owner_id: user.id, card_id: `card-${claimDay}`, rarity: rarityRoll,
+          source: 'daily_claim', is_echo: false, edition,
+          max_supply, claimed_at: new Date().toISOString()
+        };
+        const { data: insertedCard, error: insErr } = await svc.from('vault_collections')
+          .insert(newCard)
+          .select('*')
+          .single();
+        if (insErr) throw new Error(`Failed to insert daily record: ${insErr.message}`);
+
+        let newStreak = (profile?.streak_count || 0) + 1;
+        if ((profile?.last_claim_day || 0) < claimDay - 1) newStreak = 1;
+        await svc.from('profiles').update({ last_claim_day: claimDay, streak_count: newStreak }).eq('id', user.id);
+
+        await logTelemetry(svc, 'daily_claim', user.id, { day: claimDay, rarity: rarityRoll });
+
+        return new Response(JSON.stringify({ success: true, card: insertedCard || newCard }),
+          { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+      }
+
+      // ═══════════════════════════════════════════════════════════
+      // GUEST DAILY DROP (Increments global supply & assigns real edition)
+      // ═══════════════════════════════════════════════════════════
+      case 'claimGuestDailyDrop': {
+        const { day, guestAddress } = payload;
+        const claimDay = Number(day) || today;
+        if (Math.abs(claimDay - today) > 1) throw new Error(`Day ${claimDay} is too far from server day ${today}`);
+        if (guestAddress !== undefined && !/^0x[0-9a-fA-F]{40}$/.test(String(guestAddress))) {
+          throw new Error('Invalid guest address');
+        }
+
+        // This endpoint is unauthenticated and consumes real global supply, so throttle it per client IP.
+        const clientIp = (req.headers.get('cf-connecting-ip')
+          || req.headers.get('x-forwarded-for')?.split(',')[0]
+          || 'unknown').trim();
+        if (!guestClaimAllowed(clientIp)) {
+          throw new Error('Too many guest claims from this network. Sign in to keep claiming.');
+        }
+
+        let rarityRoll = rollDailyClaimRarity(adminConfig);
+        let max_supply = getSupplyCap(rarityRoll, claimDay, today);
+        let card_id_rarity = `${claimDay}-${rarityRoll}`;
+        let edition = 1;
+        let downgradeAttempts = 0;
+
+        while (downgradeAttempts < 5) {
+          const { data: supplyRow } = await svc.from('global_supply').select('supply').eq('card_id_rarity', card_id_rarity).maybeSingle();
+          const currentSupply = supplyRow?.supply || 0;
+
+          if (currentSupply < max_supply) {
+            const { data } = await svc.rpc('increment_supply', { p_card_id_rarity: card_id_rarity, p_max_supply: max_supply });
+            if (data !== -1 && data !== null) {
+              edition = data || 1;
+              break;
+            }
+            // Lost the race for the last copy — fall through and degrade a tier.
+          }
+
+          const nextRarity = degradeRarity(rarityRoll as Rarity, 1);
+          if (nextRarity === rarityRoll) {
+            const { data } = await svc.rpc('increment_supply', { p_card_id_rarity: card_id_rarity, p_max_supply: max_supply });
+            edition = resolveEdition(data, max_supply);
+            break;
+          }
+
+          rarityRoll = nextRarity;
+          max_supply = getSupplyCap(rarityRoll, claimDay, today);
+          card_id_rarity = `${claimDay}-${rarityRoll}`;
+          downgradeAttempts++;
+        }
+
+        await logTelemetry(svc, 'guest_claim', null, { day: claimDay, rarity: rarityRoll, guestAddress: guestAddress || 'anonymous' });
+
+        return new Response(JSON.stringify({
+          success: true,
+          card: {
+            card_id: `card-${claimDay}`,
+            rarity: rarityRoll,
+            edition,
+            max_supply,
+          }
+        }), { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+      }
+
+      // ═══════════════════════════════════════════════════════════
+      // PURCHASE PACK (V2: updated costs, limits, free pack = 1 card)
+      // ═══════════════════════════════════════════════════════════
+      case 'purchasePack': {
+        const { packType, size, isGameplayReward } = payload;
+
+        const TIER_COUNTS: Record<string, Record<string, number>> = {
+          free:          { single: 1 },  // V2: reduced from 2 → 1
+          taste:         { single: 2, triple: 5, bulk: 15 },
+          light:         { single: 2, triple: 5, bulk: 15 },
+          dark:          { single: 2, triple: 5, bulk: 15 },
+          month:         { single: 2, triple: 5 },
+          miss_out:      { single: 2, triple: 5 },
+          special_picks: { single: 2, triple: 5 },
+          prophecy:      { single: 1 },
+          alpha:         { single: 1 },
+          vault_token:   { single: 3 },
+          bombshell_token: { single: 1, double: 2, five: 5, triple: 5, ten: 10, twentyfive: 25, fifty: 50 },
+          bombshell:     { single: 1, double: 2, five: 5, triple: 5, ten: 10, twentyfive: 25, fifty: 50 },
+        };
+
+        const tierMap = TIER_COUNTS[packType] || { single: 1 };
+        let count = tierMap[size || 'single'] || tierMap['single'] || 1;
+        let cost = 0;
+
+        if (packType === 'vault_token') {
+          cost = adminConfig?.tokenPackCost || TOKEN_PACK_COST;
+          count = 3;
+        } else if (packType === 'bombshell_token') {
+          cost = 100 * count;
+        } else if (packType === 'bombshell' && !payload.sessionId && !payload.txHash && !isGameplayReward) {
+          cost = 100 * count;
+        }
+
+        const isTokenPack = (packType === 'vault_token' || packType === 'bombshell_token');
+        const tokenLimit = adminConfig?.dailyTokenLimit || DEFAULT_DAILY_TOKEN_LIMIT;
+
+        const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', user.id).single();
+
+        // ── PAYMENT / ENTITLEMENT GATE ──────────────────────────
+        // Every pack must be paid for, earned, or free-by-design. Previously only spark
+        // packs were priced server-side, so any cash pack could be requested for free
+        // and any sessionId/txHash string was accepted without verification.
+        const GAMEPLAY_REWARD_PACKS = ['free', 'taste', 'light', 'dark', 'special_picks', 'alpha', 'prophecy'];
+        const requestedSize = size || 'single';
+        let cryptoPaymentKey: string | null = null;
+
+        if (isGameplayReward) {
+          if (!GAMEPLAY_REWARD_PACKS.includes(packType) || requestedSize !== 'single') {
+            throw new Error(`"${packType}" (${requestedSize}) cannot be claimed as a gameplay reward`);
+          }
+        } else if (packType === 'free' || isTokenPack || cost > 0) {
+          // free: once-per-day limit enforced below · spark packs: charged atomically below
+        } else if (payload.sessionId) {
+          // Stripe purchase: fulfilment happens in verifyStripeSession / the webhook, which
+          // check payment with Stripe. Here we only hand back what that order already minted.
+          const { data: paidOrder } = await svc.from('stripe_orders')
+            .select('status, pack_category, pack_size, cards_minted')
+            .eq('stripe_session_id', payload.sessionId)
+            .eq('user_id', user.id)
+            .maybeSingle();
+          if (!paidOrder || paidOrder.status !== 'completed'
+              || paidOrder.pack_category !== packType || paidOrder.pack_size !== requestedSize) {
+            throw new Error('Payment not confirmed yet. If you completed checkout, wait a moment and refresh your vault.');
+          }
+          return new Response(JSON.stringify({
+            success: true,
+            cards: Array.isArray(paidOrder.cards_minted) ? paidOrder.cards_minted : [],
+            alreadyMinted: true,
+          }), { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+        } else if (payload.txHash) {
+          const priceCents = STRIPE_PACK_CONFIG[packType]?.tiers[requestedSize]?.priceCents;
+          if (!priceCents) throw new Error(`Invalid pack: ${packType} / ${requestedSize}`);
+          const payerWallet = profile?.wallet_address || user.user_metadata?.wallet_address || null;
+          cryptoPaymentKey = await claimCryptoPayment(svc, user.id, String(payload.txHash), packType, requestedSize, priceCents);
+          try {
+            await verifyUsdcPayment(String(payload.txHash), priceCents, payerWallet);
+          } catch (e) {
+            await releaseCryptoPayment(svc, cryptoPaymentKey);
+            throw e;
+          }
+        } else if (packType === 'taste' && requestedSize === 'single' && (profile?.total_pulls || 0) === 0) {
+          // One-time welcome pack for brand-new accounts (onboarding flow).
+        } else {
+          throw new Error(`Payment required for ${packType} pack`);
+        }
+
+        if (isTokenPack && !isGameplayReward && cost > 0) {
+          // Authoritative ledger-backed atomic velocity check & token deduction (00:00 UTC boundary)
+          const { data: claimResult, error: claimRpcErr } = await svc.rpc('claim_token_pack_atomic', {
+            p_user_id: user.id,
+            p_pack_type: packType,
+            p_pack_size: size || 'single',
+            p_cost_tokens: cost,
+            p_max_daily_limit: tokenLimit
+          });
+
+          if (claimRpcErr || !claimResult?.success) {
+            if (claimResult?.error === 'DAILY_TOKEN_LIMIT_REACHED') {
+              throw new Error(`Daily Vault Pack limit reached (${tokenLimit}/day). Resets at 00:00 UTC.`);
+            }
+            if (claimResult?.error === 'INSUFFICIENT_TOKENS') {
+              throw new Error("Insufficient V⚡");
+            }
+            throw new Error(claimResult?.error || claimRpcErr?.message || "Failed to purchase token pack");
+          }
+        } else if (cost > 0) {
+          if (!profile || (profile.tokens || 0) < cost) {
+            throw new Error("Insufficient V⚡");
+          }
+          const { error: decErr } = await svc.rpc('decrement_tokens', { user_uuid: user.id, amount: cost });
+          if (decErr) throw new Error("Insufficient V⚡: " + decErr.message);
+        }
+
+        // vault_token and bombshell_token are gated atomically above
+        const PREMIUM_PACKS = ['prophecy', 'alpha', 'special_picks'];
+        const isPremium = PREMIUM_PACKS.includes(packType);
+
+        // Free pack: enforce one per day (only for shop claims, not gameplay rewards)
+        if (packType === 'free' && !isGameplayReward) {
+          const lastFreeDay = profile?.last_free_pack_day || 0;
+          if (lastFreeDay >= today) {
+            throw new Error('Free pack already claimed today. Come back tomorrow!');
+          }
+        }
+
+        // Reset daily counters if new day
+        let dailyStandard = (profile?.last_purchase_day === today) ? (profile?.daily_standard_purchased || 0) : 0;
+        let dailyPremium  = (profile?.last_purchase_day === today) ? (profile?.daily_premium_purchased || 0) : 0;
+
+        const stdLimit = adminConfig?.dailyStandardLimit || RC1_DAILY_STANDARD_LIMIT;
+        const preLimit = adminConfig?.dailyPremiumLimit  || RC1_DAILY_PREMIUM_LIMIT;
+
+        if (!cryptoPaymentKey) {
+          if (isPremium) {
+            if (dailyPremium >= preLimit) {
+              // Refund tokens if already charged
+              if (cost > 0) {
+                await svc.rpc('increment_tokens', { user_uuid: user.id, amount: cost });
+              }
+              throw new Error(`Daily premium limit reached (${preLimit}/day). Come back tomorrow.`);
+            }
+            dailyPremium += 1;
+          } else if (packType !== 'free' && !isTokenPack) {
+            if (dailyStandard >= stdLimit) {
+              // Refund sparks if already charged (spark-bought Bombshell packs)
+              if (cost > 0) {
+                await svc.rpc('increment_tokens', { user_uuid: user.id, amount: cost });
+              }
+              throw new Error(`Daily standard limit reached (${stdLimit}/day). Come back tomorrow.`);
+            }
+            dailyStandard += 1;
+          }
+        }
+
+        const { count: collSize } = await supabaseClient.from('vault_collections').select('*', { count: 'exact', head: true }).eq('owner_id', user.id);
+
+        const now = new Date();
+        const ctx: ModifierContext = {
+          streak: profile?.streak_count || 0, collectionSize: collSize || 0,
+          totalPulls: profile?.total_pulls || 0,
+          pullsSinceRarePlus: profile?.pulls_since_rare_plus || 0,
+          isFirstPack: (profile?.total_pulls || 0) === 0,
+          currentHour: now.getUTCHours(), currentMinute: now.getUTCMinutes(),
+          currentDayOfWeek: now.getUTCDay(), currentVaultDay: today,
+        };
+
+        let generatedCards: any[];
+        try {
+          generatedCards = await generateCards(svc, user.id, packType, count, today, ctx);
+        } catch (genErr) {
+          // Don't let a mint failure swallow the player's payment.
+          if (cryptoPaymentKey) await releaseCryptoPayment(svc, cryptoPaymentKey);
+          if (cost > 0 && !isTokenPack) {
+            await svc.rpc('increment_tokens', { user_uuid: user.id, amount: cost });
+          }
+          throw genErr;
+        }
+
+        let newTotalPulls = (profile?.total_pulls || 0) + count;
+        let newPullsSinceRarePlus = profile?.pulls_since_rare_plus || 0;
+        let newPityCounter = profile?.pity_counter || 0;
+
+        for (const card of generatedCards) {
+          if (['rare', 'legendary', 'mythic'].includes(card.rarity)) {
+            newPullsSinceRarePlus = 0;
+            newPityCounter = 0;
+          } else {
+            newPullsSinceRarePlus++;
+            newPityCounter++;
+          }
+        }
+
+        const profileUpdate: Record<string, any> = {
+          total_pulls: newTotalPulls, pulls_since_rare_plus: newPullsSinceRarePlus,
+          pity_counter: newPityCounter,
+          tokens_spent_total: (cost > 0 && !isTokenPack) ? (profile?.tokens_spent_total || 0) + cost : (profile?.tokens_spent_total || 0),
+          daily_standard_purchased: dailyStandard,
+          daily_premium_purchased: dailyPremium,
+          last_purchase_day: today,
+        };
+        if (isGameplayReward) {
+          profileUpdate.daily_standard_claims = profile?.daily_standard_claims || 0;
+          profileUpdate.daily_premium_claims = profile?.daily_premium_claims || 0;
+        }
+        // Track free pack claim day (only for shop claims, not gameplay rewards)
+        if (packType === 'free' && !isGameplayReward) {
+          profileUpdate.last_free_pack_day = today;
+        }
+        await svc.from('profiles').update(profileUpdate).eq('id', user.id);
+
+        if (cryptoPaymentKey) {
+          await svc.from('stripe_orders').update({
+            status: 'completed',
+            cards_minted: generatedCards,
+            completed_at: new Date().toISOString(),
+          }).eq('stripe_session_id', cryptoPaymentKey);
+        }
+
+        await logTelemetry(svc, 'pack_purchase', user.id, {
+          packType, size, count, cost, rarities: generatedCards.map((c: any) => c.rarity)
+        });
+
+        const { data: refreshedProfile } = await svc.from('profiles').select('tokens').eq('id', user.id).single();
+
+        return new Response(JSON.stringify({
+          success: true,
+          cards: generatedCards,
+          tokenCost: cost,
+          remainingTokens: refreshedProfile?.tokens ?? ((profile?.tokens || 0) - cost)
+        }), { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+      }
+
+      // ═══════════════════════════════════════════════════════════
+      // TARGETED PULL (500 V⚡ — choose a specific day)
+      // ═══════════════════════════════════════════════════════════
+      case 'targetedPull': {
+        const { day } = payload;
+        if (!day || day < 1 || day > 365) throw new Error('Invalid day');
+        if (day > today) {
+          throw new Error(`Cannot target future releases (Day ${day} > Today ${today}). Future tracks require a Prophecy pull.`);
+        }
+        const cost = adminConfig?.targetedPullCost || TARGETED_PULL_COST;
+
+        const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', user.id).single();
+        if (!profile || (profile.tokens || 0) < cost) {
+          throw new Error("Insufficient V⚡");
+        }
+        const { error: decErr } = await svc.rpc('decrement_tokens', { user_uuid: user.id, amount: cost });
+        if (decErr) throw new Error("Insufficient V⚡: " + decErr.message);
+        const now = new Date();
+        const ctx: ModifierContext = {
+          streak: profile?.streak_count || 0, collectionSize: 0,
+          totalPulls: profile?.total_pulls || 0,
+          pullsSinceRarePlus: profile?.pulls_since_rare_plus || 0,
+          isFirstPack: false, currentHour: now.getUTCHours(), currentMinute: now.getUTCMinutes(),
+          currentDayOfWeek: now.getUTCDay(), currentVaultDay: today,
+        };
+
+        let { rarity, proof } = getRarityRoll('targeted_pull', ctx, adminConfig);
+        let max_supply = getSupplyCap(rarity, day, today);
+        let card_id_rarity = `${day}-${rarity}`;
+        let edition = 1;
+        let downgradeAttempts = 0;
+
+        while (downgradeAttempts < 5) {
+          // Check current supply first
+          const { data: supplyRow } = await svc.from('global_supply').select('supply').eq('card_id_rarity', card_id_rarity).maybeSingle();
+          const currentSupply = supplyRow?.supply || 0;
+
+          if (currentSupply < max_supply) {
+            const { data } = await svc.rpc('increment_supply', { p_card_id_rarity: card_id_rarity, p_max_supply: max_supply });
+            if (data !== -1 && data !== null) {
+              edition = data || 1;
+              break;
+            }
+          }
+
+          const nextRarity = degradeRarity(rarity as Rarity, 1);
+          if (nextRarity === rarity) {
+            // common floor and still sold out, increment anyway
+            const { data } = await svc.rpc('increment_supply', { p_card_id_rarity: card_id_rarity, p_max_supply: max_supply });
+            edition = resolveEdition(data, max_supply);
+            break;
+          }
+
+          rarity = nextRarity;
+          max_supply = getSupplyCap(rarity, day, today);
+          card_id_rarity = `${day}-${rarity}`;
+          downgradeAttempts++;
+        }
+
+        const card = {
+          owner_id: user.id, card_id: `card-${day}`, rarity, source: 'targeted_pull',
+          is_echo: false, echo_generation: 0, echo_source_day: null,
+          edition, max_supply, proof,
+          claimed_at: new Date().toISOString()
+        };
+        const { data: insertedCard, error: insErr } = await svc.from('vault_collections')
+          .insert(card)
+          .select('*')
+          .single();
+        if (insErr) throw new Error(`Failed to insert targeted pull record: ${insErr.message}`);
+        await logTelemetry(svc, 'targeted_pull', user.id, { day, rarity, cost });
+
+        return new Response(JSON.stringify({ success: true, card: insertedCard || card }),
+          { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+      }
+
+      // ═══════════════════════════════════════════════════════════
+      // RARITY UPGRADE (150 V⚡ — upgrade +1 tier, max legendary)
+      // ═══════════════════════════════════════════════════════════
+      case 'rarityUpgrade': {
+        const { cardOwnedId } = payload;
+        const { data: card, error: fetchErr } = await supabaseClient
+          .from('vault_collections').select('*').eq('id', cardOwnedId).eq('owner_id', user.id).single();
+        if (fetchErr || !card) throw new Error('Card not found or not owned');
+        if (card.rarity === 'legendary' || card.rarity === 'mythic') throw new Error('Card already at max upgradeable tier');
+
+        const cost = adminConfig?.rarityUpgradeCost || RARITY_UPGRADE_COST;
+        const { data: profile } = await supabaseClient.from('profiles').select('tokens').eq('id', user.id).single();
+        if (!profile || (profile.tokens || 0) < cost) {
+          throw new Error("Insufficient V⚡");
+        }
+        const { error: decErr } = await svc.rpc('decrement_tokens', { user_uuid: user.id, amount: cost });
+        if (decErr) throw new Error("Insufficient V⚡: " + decErr.message);
+
+        const newRarity = upgradeRarity(card.rarity as Rarity);
+        const day = parseInt(card.card_id.replace(/^(card|bombshell)-/, '')) || today;
+        const card_id_rarity = `${day}-${newRarity}`;
+        const upgradeMaxSupply = getSupplyCap(newRarity, day, today);
+        const { data: supplyData } = await svc.rpc('increment_supply', { p_card_id_rarity: card_id_rarity, p_max_supply: upgradeMaxSupply });
+        if (supplyData === -1) {
+          // Target tier is sold out for this day - refund sparks
+          await svc.rpc('increment_tokens', { user_uuid: user.id, amount: cost });
+          throw new Error(`Upgrade unavailable: ${newRarity} edition for this card is sold out`);
+        }
+
+        const newEdition = supplyData || 1;
+        const { data: updatedCard, error: updateErr } = await svc.from('vault_collections')
+          .update({
+            rarity: newRarity,
+            edition: newEdition,
+            max_supply: upgradeMaxSupply,
+          })
+          .eq('id', cardOwnedId)
+          .select('*')
+          .single();
+        if (updateErr) throw new Error(`Failed to update card rarity: ${updateErr.message}`);
+
+        await logTelemetry(svc, 'rarity_upgrade', user.id, { cardId: card.card_id, from: card.rarity, to: newRarity, edition: newEdition, cost });
+
+        return new Response(JSON.stringify({ success: true, oldRarity: card.rarity, newRarity, card: updatedCard || card }),
+          { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+      }
+
+      // ═══════════════════════════════════════════════════════════
+      // DUPLICATE FUSION (3 identical → 1 upgraded)
+      // ═══════════════════════════════════════════════════════════
+      case 'duplicateFusion': {
+        const { cardIds } = payload;
+        if (!cardIds || cardIds.length !== 3) throw new Error('Must provide exactly 3 card IDs');
+
+        // C3 FIX: Atomic delete-and-return to prevent double-spend race condition.
+        const { data: cards, error: fetchErr } = await svc
+          .from('vault_collections').delete().in('id', cardIds).eq('owner_id', user.id).select('*');
+        if (fetchErr || !cards || cards.length !== 3) throw new Error('Cards not found, not owned, or already consumed');
+
+        // Verify all same card_id and rarity
+        const baseCardId = cards[0].card_id;
+        const baseRarity = cards[0].rarity;
+        if (!cards.every((c: any) => c.card_id === baseCardId && c.rarity === baseRarity)) {
+          // Cards already deleted but don't match — re-insert them to roll back
+          await svc.from('vault_collections').insert(cards);
+          throw new Error('All 3 cards must be identical (same day + rarity)');
+        }
+
+        // Create 1 upgraded card
+        const newRarity = upgradeRarity(baseRarity as Rarity);
+        const day = parseInt(baseCardId.replace(/^(card|bombshell)-/, '')) || today;
+        const card_id_rarity = `${day}-${newRarity}`;
+        const fusionMaxSupply = getSupplyCap(newRarity, day, today);
+        const { data: supplyData } = await svc.rpc('increment_supply', { p_card_id_rarity: card_id_rarity, p_max_supply: fusionMaxSupply });
+        if (supplyData === -1) {
+          // Target tier is sold out for this day — give the 3 cards back rather than destroying them.
+          await svc.from('vault_collections').insert(cards);
+          throw new Error(`Fusion unavailable: ${newRarity} edition for this day is sold out`);
+        }
+
+        const fusedCard = {
+          owner_id: user.id, card_id: baseCardId, rarity: newRarity, source: 'fusion',
+          is_echo: false, echo_generation: 0, echo_source_day: null,
+          edition: supplyData || 1, max_supply: fusionMaxSupply,
+          claimed_at: new Date().toISOString()
+        };
+        const { data: insertedCard, error: insErr } = await svc.from('vault_collections')
+          .insert(fusedCard)
+          .select('*')
+          .single();
+        if (insErr) throw new Error(`Failed to insert fused card record: ${insErr.message}`);
+        await logTelemetry(svc, 'duplicate_fusion', user.id, { baseCardId, from: baseRarity, to: newRarity });
+
+        return new Response(JSON.stringify({ success: true, fusedCard: insertedCard || fusedCard }),
+          { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+      }
+
+      // ═══════════════════════════════════════════════════════════
+      // GUEST → ACCOUNT CARD MIGRATION
+      // Moves a guest's vault_collections rows into the caller's collection.
+      // The caller proves guest ownership by presenting the guest's access
+      // token, verified server-side. Only anonymous guests can migrate out,
+      // and only into a real (non-anonymous) account. Every guest row is
+      // reassigned via UPDATE — preserving edition, claimed_at, and row id —
+      // so migration never creates or destroys cards (global supply is
+      // untouched: these cards were already minted). Anti-farming: at most one
+      // card migration per destination account per 24h, tracked in
+      // profiles.settings (no schema change).
+      // ═══════════════════════════════════════════════════════════
+      case 'migrateGuestCollection': {
+        const { guest_access_token } = payload;
+        if (!user?.id) throw new Error('Sign-in required');
+        if (user.is_anonymous) throw new Error('Cannot migrate into a guest account');
+        if (!guest_access_token) throw new Error('Missing guest session');
+
+        // Verify the guest token server-side: the caller must actually own the
+        // guest session, and the source must be an anonymous guest.
+        const guestClient = createClient(
+          Deno.env.get('SUPABASE_URL') || '', Deno.env.get('SUPABASE_ANON_KEY') || ''
+        );
+        const { data: guestRes, error: guestErr } = await guestClient.auth.getUser(guest_access_token);
+        const guest = guestRes?.user;
+        if (guestErr || !guest?.id) throw new Error('Invalid or expired guest session');
+        if (guest.id === user.id) {
+          return new Response(JSON.stringify({ success: true, migrated: 0, skipped: 0, note: 'same user' }),
+            { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+        }
+        if (!guest.is_anonymous) throw new Error('Source account is not a guest');
+
+        // Anti-farming: one guest card migration per destination per 24h.
+        const { data: destProfile } = await svc.from('profiles')
+          .select('settings').eq('id', user.id).maybeSingle();
+        const destSettings = (destProfile?.settings as any) || {};
+        const lastMig = Number(destSettings.guestCardMigrationAt || 0);
+        if (Date.now() - lastMig < 24 * 3600 * 1000) {
+          return new Response(JSON.stringify({ success: true, migrated: 0, skipped: 0, rateLimited: true }),
+            { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+        }
+
+        // Page the guest's collection (service role bypasses RLS).
+        const guestCardIds: string[] = [];
+        let from = 0;
+        while (true) {
+          const { data, error } = await svc.from('vault_collections')
+            .select('id').eq('owner_id', guest.id).range(from, from + 999);
+          if (error) throw new Error(`Failed to read guest collection: ${error.message}`);
+          if (!data || !data.length) break;
+          for (const c of data) guestCardIds.push(c.id);
+          if (data.length < 1000) break;
+          from += 1000;
+        }
+
+        let migrated = 0;
+        let skipped = 0;
+        for (const cardId of guestCardIds) {
+          // Reassign the row itself rather than delete+insert: preserves
+          // edition, claimed_at, and row id (safer for FK references).
+          // Per-row tolerance: a conflict on one card never blocks the rest.
+          const { error } = await svc.from('vault_collections')
+            .update({ owner_id: user.id })
+            .eq('id', cardId)
+            .eq('owner_id', guest.id);
+          if (error) {
+            console.warn(`[migrateGuestCollection] failed to move card ${cardId}: ${error.message}`);
+            skipped++;
+          } else {
+            migrated++;
+          }
+        }
+
+        if (migrated > 0) {
+          await svc.from('profiles').update({
+            settings: { ...destSettings, guestCardMigrationAt: Date.now() },
+          }).eq('id', user.id);
+        }
+
+        await logTelemetry(svc, 'guest_collection_migrated', user.id, {
+          guest_id: guest.id, migrated, skipped,
+        });
+
+        return new Response(JSON.stringify({ success: true, migrated, skipped }),
+          { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+      }
+
+      case 'migrateGuestProfile': {
+        // Economy half of the guest → account merge. Players can't write these profile
+        // columns (protect_profiles_server_managed_columns), so the merge runs here.
+        const { guest_access_token } = payload;
+        if (!user?.id) throw new Error('Sign-in required');
+        if (user.is_anonymous) throw new Error('Cannot migrate into a guest account');
+        if (!guest_access_token) throw new Error('Missing guest session');
+
+        // Same guest verification as migrateGuestCollection.
+        const guestClient = createClient(
+          Deno.env.get('SUPABASE_URL') || '', Deno.env.get('SUPABASE_ANON_KEY') || ''
+        );
+        const { data: guestRes, error: guestErr } = await guestClient.auth.getUser(guest_access_token);
+        const guest = guestRes?.user;
+        if (guestErr || !guest?.id) throw new Error('Invalid or expired guest session');
+        if (guest.id === user.id) {
+          return new Response(JSON.stringify({ success: true, merged: false, note: 'same user' }),
+            { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+        }
+        if (!guest.is_anonymous) throw new Error('Source account is not a guest');
+
+        const ECON = 'tokens, streak_count, total_pulls, pulls_since_rare_plus, total_burns, last_claim_day, unlocked_skins';
+        const { data: g } = await svc.from('profiles').select(ECON).eq('id', guest.id).maybeSingle();
+        if (!g) {
+          return new Response(JSON.stringify({ success: true, merged: false, note: 'no guest profile' }),
+            { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+        }
+        const { data: o } = await svc.from('profiles').select(ECON).eq('id', user.id).maybeSingle();
+
+        const n = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+        const best = (k: string) => Math.max(n((g as any)[k]), n((o as any)?.[k]));
+        // Farm-safe: take the best of either side, never sum (same rules the client used).
+        const merged = {
+          tokens: best('tokens'),
+          streak_count: best('streak_count'),
+          total_pulls: best('total_pulls'),
+          pulls_since_rare_plus: best('pulls_since_rare_plus'),
+          total_burns: best('total_burns'),
+          // last_claim_day gates the free daily drop; MAX so a day the guest already
+          // claimed can't be claimed again on the account.
+          last_claim_day: best('last_claim_day'),
+          unlocked_skins: [...new Set([...((o as any)?.unlocked_skins || []), ...((g as any).unlocked_skins || [])])],
+        };
+
+        const { error: writeErr } = o
+          ? await svc.from('profiles').update(merged).eq('id', user.id)
+          : await svc.from('profiles').insert({ id: user.id, ...merged });
+        if (writeErr) throw new Error(`Failed to merge guest profile: ${writeErr.message}`);
+
+        // Spend the guest's balance so the same guest can't be merged into a second account.
+        await svc.from('profiles').update({ tokens: 0 }).eq('id', guest.id);
+
+        // Listening history and visits logged under the guest account follow the player.
+        const { count: playsMoved } = await svc.from('play_events')
+          .update({ user_id: user.id }, { count: 'exact' }).eq('user_id', guest.id);
+        const { count: visitsMoved } = await svc.from('site_visits')
+          .update({ user_id: user.id }, { count: 'exact' }).eq('user_id', guest.id);
+
+        await logTelemetry(svc, 'guest_profile_migrated', user.id, {
+          guest_id: guest.id, guest_tokens: n((g as any).tokens), merged_tokens: merged.tokens,
+          plays_moved: playsMoved ?? 0, visits_moved: visitsMoved ?? 0,
+        });
+
+        return new Response(JSON.stringify({ success: true, merged: true, tokens: merged.tokens }),
+          { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+      }
+
+      // ═══════════════════════════════════════════════════════════
+      // NFT MINT (RC1 production simulation)
+      // ═══════════════════════════════════════════════════════════
+      case 'requestNftMint': {
+        const { cardOwnedId } = payload;
+        if (!cardOwnedId) throw new Error('Card ID is required');
+
+        // 1. Fetch card and verify ownership
+        const { data: card, error: cardErr } = await supabaseClient
+          .from('vault_collections')
+          .select('*')
+          .eq('id', cardOwnedId)
+          .eq('owner_id', user.id)
+          .single();
+        if (cardErr || !card) throw new Error('Card not found or not owned');
+
+        // 2. Verify blockchain status
+        if (card.blockchain_status === 'minted' || card.blockchain_status === 'pending') {
+          throw new Error('Card is already minted or pending');
+        }
+
+        const rarity = card.rarity as Rarity;
+
+        // 3. Verify card is mintable
+        const maxMintable = MINTABLE_CAPS[rarity] ?? 0;
+        if (maxMintable <= 0) {
+          throw new Error(`${rarity.toUpperCase()} cards are not mintable`);
+        }
+
+        // 4. Verify global mint limit has not been exceeded
+        const { count: mintedCount, error: countErr } = await svc
+          .from('vault_collections')
+          .select('*', { count: 'exact', head: true })
+          .eq('card_id', card.card_id)
+          .eq('rarity', card.rarity)
+          .in('blockchain_status', ['minted', 'pending']);
+        if (countErr) throw new Error(`Verification error: ${countErr.message}`);
+        
+        if (mintedCount !== null && mintedCount >= maxMintable) {
+          throw new Error(`Max mint limit of ${maxMintable} copies reached for this card`);
+        }
+
+        // 5. Check user tokens
+        const mintCost = NFT_MINT_COSTS[rarity] ?? 0;
+        const { data: profile } = await svc.from('profiles').select('tokens').eq('id', user.id).single();
+        if (!profile || (profile.tokens ?? 0) < mintCost) {
+          throw new Error('Insufficient V⚡');
+        }
+
+        // 6. Deduct tokens
+        if (mintCost > 0) {
+          const { error: decErr } = await svc.rpc('decrement_tokens', { user_uuid: user.id, amount: mintCost });
+          if (decErr) throw new Error("Insufficient V⚡: " + decErr.message);
+        }
+
+        // 7. Generate mock Base mainnet TX hash
+        const txHash = '0x' + Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+
+        // 8. Update database record
+        const { error: updateErr } = await svc
+          .from('vault_collections')
+          .update({
+            blockchain_status: 'minted',
+            fingerprint: txHash
+          })
+          .eq('id', cardOwnedId);
+        if (updateErr) {
+          // Refund tokens on failure
+          if (mintCost > 0) {
+            await svc.rpc('increment_tokens', { user_uuid: user.id, amount: mintCost });
+          }
+          throw new Error(`Minting failed: ${updateErr.message}`);
+        }
+
+        // 9. Telemetry
+        await logTelemetry(svc, 'nft_mint', user.id, {
+          cardId: card.card_id,
+          rarity: card.rarity,
+          cost: mintCost,
+          txHash
+        });
+
+        return new Response(JSON.stringify({ success: true, txHash }),
+          { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+      }
+
+      // ═══════════════════════════════════════════════════════════
+      // PLAYER DEBUG STATS (RC1)
+      // ═══════════════════════════════════════════════════════════
+      case 'getDebugStats': {
+        const { data: profile } = await supabaseClient.from('profiles').select('*').eq('id', user.id).single();
+        let cards: any[] = [];
+        let from = 0;
+        const pageSize = 1000;
+        while (true) {
+          const { data } = await supabaseClient.from('vault_collections').select('rarity, is_echo, echo_generation').eq('owner_id', user.id).range(from, from + pageSize - 1);
+          if (!data || data.length === 0) break;
+          cards.push(...data);
+          if (data.length < pageSize) break;
+          from += pageSize;
+        }
+
+        const rarityDist: Record<string, number> = {};
+        let echoCount = 0;
+        for (const c of (cards || [])) {
+          rarityDist[c.rarity] = (rarityDist[c.rarity] || 0) + 1;
+          if (c.is_echo) echoCount++;
+        }
+
+        return new Response(JSON.stringify({
+          success: true,
+          stats: {
+            cardsOwned: cards?.length || 0, rarityDist, echoCount,
+            tokens: profile?.tokens || 0,
+            tokensEarned: profile?.tokens_earned_total || 0,
+            tokensSpent: profile?.tokens_spent_total || 0,
+            totalBurns: profile?.total_burns || 0,
+            echoPullsReceived: profile?.echo_pulls_received || 0,
+            dailyBurns: profile?.daily_burns || 0,
+            pityCounter: profile?.pity_counter || 0,
+            streak: profile?.streak_count || 0,
+            totalPulls: profile?.total_pulls || 0,
+          }
+        }), { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+      }
+
+      case 'updateAdminConfig': {
+        const { config, passphrase } = payload;
+        assertAdmin(user, payload);
+
+        let saveError = null;
+        try {
+          const { error } = await svc.from('admin_config').upsert({ id: 1, config, updated_at: new Date().toISOString() });
+          if (error) saveError = error;
+        } catch (e: any) {
+          saveError = e;
+        }
+
+        if (saveError) {
+          try {
+            const { error: keyErr } = await svc.from('admin_config').upsert({ key: 'global', value: config, updated_at: new Date().toISOString() });
+            if (!keyErr) saveError = null;
+          } catch {}
+        }
+
+        if (saveError) throw new Error(saveError.message || String(saveError));
+        return new Response(JSON.stringify({ success: true }),
+          { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+      }
+
+      case 'getAdminConfig': {
+        assertAdmin(user, payload);
+        let configData = null;
+        try {
+          const { data: byId } = await svc.from('admin_config').select('config').eq('id', 1).maybeSingle();
+          if (byId?.config) configData = byId.config;
+        } catch {}
+
+        if (!configData) {
+          try {
+            const { data: byKey } = await svc.from('admin_config').select('value').eq('key', 'global').maybeSingle();
+            if (byKey?.value) configData = byKey.value;
+          } catch {}
+        }
+
+        return new Response(JSON.stringify({ success: true, config: configData }),
+          { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+      }
+
+      case 'broadcastAnnouncement': {
+        const { announcement, passphrase } = payload;
+        assertAdmin(user, payload);
+        if (!announcement?.title || !announcement?.message) {
+          throw new Error("Title and message are required.");
+        }
+
+        const { data, error } = await svc
+          .from('system_announcements')
+          .insert({
+            title: announcement.title.trim(),
+            message: announcement.message.trim(),
+            category: announcement.category || 'system',
+            priority: announcement.priority || 'normal',
+            action_url: announcement.action_url ? String(announcement.action_url).trim() : null,
+            action_label: announcement.action_label ? String(announcement.action_label).trim() : null,
+            reward_type: announcement.reward_type || 'none',
+            reward_amount: Number(announcement.reward_amount) || 0,
+            is_active: announcement.is_active !== false,
+            expires_at: announcement.expires_at || null,
+          })
+          .select('*')
+          .single();
+
+        if (error) throw error;
+        return new Response(JSON.stringify({ success: true, announcement: data }), {
+          headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
+        });
+      }
+
+      case 'getAdminAnnouncements': {
+        const { passphrase } = payload || {};
+        assertAdmin(user, payload);
+
+        const { data, error } = await svc
+          .from('system_announcements')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(100);
+
+        if (error) throw error;
+        return new Response(JSON.stringify({ success: true, announcements: data || [] }), {
+          headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
+        });
+      }
+
+      case 'toggleAnnouncement': {
+        const { id, is_active, passphrase } = payload;
+        assertAdmin(user, payload);
+
+        const { data, error } = await svc
+          .from('system_announcements')
+          .update({ is_active: !!is_active })
+          .eq('id', id)
+          .select('*')
+          .single();
+
+        if (error) throw error;
+        return new Response(JSON.stringify({ success: true, announcement: data }), {
+          headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
+        });
+      }
+
+      case 'deleteAnnouncement': {
+        const { id, passphrase } = payload;
+        assertAdmin(user, payload);
+
+        const { error } = await svc
+          .from('system_announcements')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
+        });
+      }
+
+      case 'getAnalyticsSummary': {
+        const { passphrase } = payload || {};
+        assertAdmin(user, payload);
+
+        const { data: rpcStats, error: rpcErr } = await svc.rpc('get_user_card_stats');
+        if (rpcErr) throw rpcErr;
+
+        return new Response(JSON.stringify({
+          success: true,
+          stats: rpcStats,
+        }), {
+          headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
+        });
+      }
+
+      case 'getEchoPool': {
+        try {
+          const { data: echoRows, error: echoErr } = await svc
+            .from('echo_pool')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(100);
+
+          if (echoErr) {
+            return new Response(JSON.stringify({ success: false, error: echoErr.message, echoes: [], total: 0 }),
+              { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+          }
+
+          const byRarity: Record<string, number> = {};
+          const byGeneration: Record<number, number> = {};
+          for (const row of (echoRows || [])) {
+            const r = String(row.echo_rarity || row.rarity || 'common').toLowerCase();
+            const g = Number(row.generation || row.echo_generation || 1);
+            byRarity[r] = (byRarity[r] || 0) + 1;
+            byGeneration[g] = (byGeneration[g] || 0) + 1;
+          }
+
+          return new Response(JSON.stringify({
+            success: true,
+            total: echoRows?.length || 0,
+            echoes: echoRows || [],
+            byRarity,
+            byGeneration
+          }), { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+        } catch (e: any) {
+          return new Response(JSON.stringify({ success: false, error: e.message, echoes: [], total: 0 }),
+            { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+        }
+      }
+
+      case 'flushEchoPool': {
+        const { passphrase } = payload || {};
+        if (!isServiceRole) {
+          assertAdmin(user, payload);
+        }
+
+        const { error: delErr } = await svc
+          .from('echo_pool')
+          .delete()
+          .neq('id', '00000000-0000-0000-0000-000000000000');
+
+        if (delErr) throw delErr;
+        return new Response(JSON.stringify({ success: true, message: 'Echo pool flushed.' }), {
+          headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
+        });
+      }
+
+      case 'addEchoToPool': {
+        const { echoCard } = payload || {};
+        if (!echoCard) throw new Error('Missing echoCard');
+        const parsedDay = Number(echoCard.sourceDay || echoCard.source_day || 1);
+        const echoRarity = echoCard.echoRarity || echoCard.echo_rarity || echoCard.rarity || 'common';
+        const gen = Number(echoCard.generation || echoCard.echo_generation || 1);
+        const echoPayload = {
+          card_id: echoCard.sourceCardId || echoCard.source_card_id || `card-${parsedDay}`,
+          source_card_id: echoCard.sourceCardId || echoCard.source_card_id || `card-${parsedDay}`,
+          rarity: echoRarity,
+          echo_rarity: echoRarity,
+          echo_generation: gen,
+          generation: gen,
+          source_title: echoCard.sourceTitle || echoCard.source_title || `Day ${parsedDay}`,
+          source_day: parsedDay,
+          source_mood: echoCard.sourceMood || echoCard.source_mood || 'dark',
+          source_rarity: echoCard.sourceRarity || echoCard.source_rarity || 'common',
+          cover_url: echoCard.coverUrl || echoCard.cover_url || `https://files.th3scr1b3.art/covers/day-${parsedDay}.jpg`,
+          audio_url: echoCard.audioUrl || echoCard.audio_url || `https://files.th3scr1b3.art/audio/day-${parsedDay}.mp3`,
+          energy: Number(echoCard.energy ?? 0.5),
+          valence: Number(echoCard.valence ?? 0.5),
+          tempo: Number(echoCard.tempo ?? 120),
+        };
+
+        const { data: insEcho, error: insErr } = await svc.from('echo_pool').insert(echoPayload).select('*').maybeSingle();
+        if (insErr) {
+          console.error('[addEchoToPool] insert failed:', insErr);
+          throw insErr;
+        }
+        return new Response(JSON.stringify({ success: true, echo: insEcho }), {
+          headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
+        });
+      }
+
+      case 'redeemBonusCode': {
+        const { code } = payload;
+        if (!code) throw new Error('Missing code');
+        let cleanCode = code.toUpperCase().trim();
+
+        // Codes must be pre-seeded in the bonus_codes table via admin tools or migrations.
+        // No auto-provisioning — all codes are database-managed with finite max_uses.
+
+        // 1. Fetch promo/bonus code
+        const { data: promo, error: promoErr } = await svc
+          .from('bonus_codes')
+          .select('*')
+          .eq('code', cleanCode)
+          .single();
+
+        if (promoErr || !promo) {
+          throw new Error('Invalid bonus code');
+        }
+
+        if (promo.use_count >= promo.max_uses) {
+          throw new Error('Code has reached maximum usage limit');
+        }
+
+        if (promo.expires_at && new Date(promo.expires_at) < new Date()) {
+          throw new Error('Code has expired');
+        }
+
+        // 2. Check if user already redeemed
+        const { data: existing } = await svc
+          .from('bonus_code_redemptions')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('code', promo.code)
+          .maybeSingle();
+
+        if (existing) {
+          throw new Error('You have already redeemed this code');
+        }
+
+        // 3. Process Reward
+        let rewardResult: any = null;
+
+        if (promo.reward_type === 'tokens') {
+          const { data: profile } = await svc.from('profiles').select('tokens, tokens_earned_total').eq('id', user.id).single();
+          const tokenAmt = parseInt(promo.reward_value, 10) || 0;
+          const currentTokens = profile?.tokens || 0;
+          const currentTotal = profile?.tokens_earned_total || 0;
+          const nextTokens = currentTokens + tokenAmt;
+          await svc.from('profiles').update({
+            tokens: nextTokens,
+            tokens_earned_total: currentTotal + tokenAmt
+          }).eq('id', user.id);
+          rewardResult = { tokensGranted: tokenAmt, remainingTokens: nextTokens };
+        } 
+        else if (promo.reward_type === 'card') {
+          const parts = promo.reward_value.split('-');
+          const claimDay = parseInt(parts[1], 10) || 1;
+          const rarityRoll = parts[2] || 'common';
+          const max_supply = getSupplyCap(rarityRoll as any, claimDay, today);
+          const card_id_rarity = `${claimDay}-${rarityRoll}`;
+
+          const { data: editionData } = await svc.rpc('increment_supply', { p_card_id_rarity: card_id_rarity, p_max_supply: max_supply });
+          // increment_supply returns -1 once the edition cap is hit — never mint edition -1.
+          if (editionData === -1) throw new Error('This reward card is sold out');
+          const edition = editionData || 1;
+
+          const newCard = {
+            owner_id: user.id,
+            card_id: `card-${claimDay}`,
+            rarity: rarityRoll,
+            source: 'promo_code',
+            is_echo: false,
+            edition,
+            max_supply,
+            claimed_at: new Date().toISOString()
+          };
+          const { data: insertedCard, error: insErr } = await svc.from('vault_collections')
+            .insert(newCard)
+            .select('*')
+            .single();
+          if (insErr) throw new Error(`Failed to claim card reward: ${insErr.message}`);
+          rewardResult = { card: insertedCard || newCard };
+        } 
+        else if (promo.reward_type === 'background_skin') {
+          const { data: profile } = await svc.from('profiles').select('unlocked_skins').eq('id', user.id).single();
+          const oldSkins = profile?.unlocked_skins || [];
+          if (!oldSkins.includes(promo.reward_value)) {
+            const newSkins = [...oldSkins, promo.reward_value];
+            await svc.from('profiles').update({ unlocked_skins: newSkins }).eq('id', user.id);
+          }
+          rewardResult = { skinUnlocked: promo.reward_value };
+        } 
+        else if (promo.reward_type === 'pack') {
+          const packType = promo.reward_value;
+          const count = packType === 'vault_token' ? 3 : 2;
+
+          const { data: profile } = await svc.from('profiles').select('*').eq('id', user.id).single();
+          const { count: collSize } = await svc.from('vault_collections').select('*', { count: 'exact', head: true }).eq('owner_id', user.id);
+
+          const now = new Date();
+          const ctx: ModifierContext = {
+            streak: profile?.streak_count || 0,
+            collectionSize: collSize || 0,
+            totalPulls: profile?.total_pulls || 0,
+            pullsSinceRarePlus: profile?.pulls_since_rare_plus || 0,
+            isFirstPack: (profile?.total_pulls || 0) === 0,
+            currentHour: now.getUTCHours(),
+            currentMinute: now.getUTCMinutes(),
+            currentDayOfWeek: now.getUTCDay(),
+            currentVaultDay: today,
+          };
+
+          const generatedCards = await generateCards(svc, user.id, packType, count, today, ctx);
+
+          let newTotalPulls = (profile?.total_pulls || 0) + count;
+          let newPullsSinceRarePlus = profile?.pulls_since_rare_plus || 0;
+          let newPityCounter = profile?.pity_counter || 0;
+
+          for (const card of generatedCards) {
+            if (['rare', 'legendary', 'mythic'].includes(card.rarity)) {
+              newPullsSinceRarePlus = 0;
+              newPityCounter = 0;
+            } else {
+              newPullsSinceRarePlus++;
+              newPityCounter++;
+            }
+          }
+
+          await svc.from('profiles').update({
+            total_pulls: newTotalPulls,
+            pulls_since_rare_plus: newPullsSinceRarePlus,
+            pity_counter: newPityCounter,
+          }).eq('id', user.id);
+
+          rewardResult = { cards: generatedCards };
+        }
+        else {
+          throw new Error('Unsupported reward type');
+        }
+
+        // 4. Log redemption in mapping & increment global count
+        await svc.from('bonus_code_redemptions').insert({ user_id: user.id, code: promo.code });
+        await svc.from('bonus_codes').update({ use_count: (promo.use_count || 0) + 1 }).eq('code', promo.code);
+
+        // 5. Telemetry
+        await logTelemetry(svc, 'bonus_code_redeem', user.id, {
+          code: promo.code,
+          rewardType: promo.reward_type,
+          rewardValue: promo.reward_value
+        });
+
+        return new Response(JSON.stringify({ 
+          success: true, 
+          rewardType: promo.reward_type,
+          rewardValue: promo.reward_value,
+          result: rewardResult
+        }), { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+      }
+
+      case 'payVoyeurFee': {
+        const { amount } = payload;
+        if (!amount || amount <= 0) throw new Error("Invalid amount");
+        
+        const { data: profile } = await svc.from('profiles').select('tokens').eq('id', user.id).single();
+        if (!profile || (profile.tokens || 0) < amount) {
+          throw new Error("Insufficient V⚡");
+        }
+        
+        const { error: decErr } = await svc.rpc('decrement_tokens', { user_uuid: user.id, amount });
+        if (decErr) throw new Error("Insufficient V⚡: " + decErr.message);
+
+        return new Response(JSON.stringify({ success: true }),
+          { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+      }
+
+      // ═══════════════════════════════════════════════════════════
+      // CREDIT CRYPTO TOKEN BUNDLE (Base EVM / Coinbase Smart Wallet)
+      // Server-validated: tier lookup, txHash dedup, on-chain receipt check
+      // ═══════════════════════════════════════════════════════════
+      case 'creditCryptoTokenBundle': {
+        const { size, txHash } = payload;
+        if (!txHash || typeof txHash !== 'string' || !txHash.startsWith('0x')) {
+          throw new Error('Missing or invalid transaction hash');
+        }
+        if (!size) throw new Error('Missing bundle size');
+
+        // Server-side tier lookup — NEVER trust client-supplied tokenAmount
+        const CRYPTO_TOKEN_TIERS: Record<string, number> = {
+          pouch: 200,
+          crate: 1150,
+          stash: 2500,
+          hoard: 7000,
+        };
+        const grantTokens = CRYPTO_TOKEN_TIERS[size];
+        if (!grantTokens) {
+          throw new Error(`Invalid token bundle size: ${size}`);
+        }
+
+        // Payment proof: the tx must be a successful USDC transfer to the vault
+        // collector for at least the bundle price, sent from the caller's wallet.
+        // The txHash is claimed atomically first, so it can only be redeemed once
+        // (tx hashes are public — without a claim anyone could replay someone else's).
+        const bundlePriceCents = STRIPE_PACK_CONFIG.token_bundle.tiers[size]?.priceCents;
+        if (!bundlePriceCents) throw new Error(`Invalid token bundle size: ${size}`);
+
+        const { data: walletProfile } = await svc
+          .from('profiles').select('wallet_address').eq('id', user.id).maybeSingle();
+        const bundlePayerWallet = walletProfile?.wallet_address || user.user_metadata?.wallet_address || null;
+
+        const bundlePaymentKey = await claimCryptoPayment(svc, user.id, txHash, 'token_bundle', size, bundlePriceCents);
+        try {
+          await verifyUsdcPayment(txHash, bundlePriceCents, bundlePayerWallet);
+        } catch (e) {
+          await releaseCryptoPayment(svc, bundlePaymentKey);
+          throw e;
+        }
+
+        // Credit tokens
+        const { data: profile } = await svc
+          .from('profiles')
+          .select('tokens, tokens_earned_total')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        const currentTokens = profile?.tokens || 0;
+        const currentTotal = profile?.tokens_earned_total || 0;
+        const newTokens = currentTokens + grantTokens;
+
+        await svc.from('profiles').upsert({
+          id: user.id,
+          tokens: newTokens,
+          tokens_earned_total: currentTotal + grantTokens,
+          last_purchase_day: today,
+        }).eq('id', user.id);
+
+        // Mark the claimed order fulfilled (stripe_orders doubles as the payment dedup ledger)
+        await svc.from('stripe_orders').upsert({
+          user_id: user.id,
+          stripe_session_id: bundlePaymentKey,
+          pack_category: 'token_bundle',
+          pack_size: size,
+          amount_cents: bundlePriceCents,
+          currency: 'usdc',
+          status: 'completed',
+          cards_minted: [],
+          completed_at: new Date().toISOString(),
+        }, { onConflict: 'stripe_session_id' });
+
+        await logTelemetry(svc, 'crypto_token_bundle_purchase', user.id, {
+          size,
+          tokenAmount: grantTokens,
+          txHash,
+        });
+
+        return new Response(JSON.stringify({
+          success: true,
+          tokenAmount: grantTokens,
+          newBalance: newTokens,
+        }), { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+      }
+
+      // ═══════════════════════════════════════════════════════════
+      // SUBMIT GAMEPLAY SCORE — RETIRED (2026-09-24)
+      // Score submission now goes through the server-authoritative
+      // `submit_score` Postgres RPC, which binds rows to auth.uid(),
+      // enforces per-song score caps, medal/accuracy plausibility, reward-tier
+      // normalization, and single-use run tokens. Direct writes to
+      // gameplay_records are revoked at the RLS layer, and the
+      // validate_gameplay_score trigger enforces caps for every writer
+      // (including service_role). This edge action bypassed all of that.
+      // ═══════════════════════════════════════════════════════════
+      case 'submitGameplayScore': {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'submitGameplayScore is retired. Submit scores via the submit_score RPC.',
+          code: 'ACTION_RETIRED',
+        }), {
+          status: 410,
+          headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
+        });
+      }
+
+      // ═══════════════════════════════════════════════════════════
+      // CREATE STRIPE CHECKOUT SESSION (Hosted Checkout)
+      // ═══════════════════════════════════════════════════════════
+      case 'createStripeCheckoutSession': {
+        const { category, size, origin } = payload;
+        if (!category) throw new Error('Missing pack category');
+        const pack = STRIPE_PACK_CONFIG[category];
+        if (!pack) throw new Error(`Invalid pack category: ${category}`);
+        const tier = pack.tiers[size || 'single'];
+        if (!tier || tier.priceCents <= 0) throw new Error(`Invalid pack tier: ${category} / ${size}`);
+
+        const stripe = getStripeClient();
+        const returnOrigin = origin || 'https://pim.th3scr1b3.art';
+
+        const session = await stripe.checkout.sessions.create({
+          mode: 'payment',
+          client_reference_id: user.id,
+          customer_email: user.email || undefined,
+          metadata: {
+            userId: user.id,
+            packCategory: category,
+            packSize: size || 'single',
+            cardCount: String(tier.cardCount || 0),
+            tokenAmount: String((tier as any).tokenAmount || 0),
+          },
+          line_items: [
+            {
+              price_data: {
+                currency: 'usd',
+                unit_amount: tier.priceCents,
+                product_data: {
+                  name: category === 'token_bundle' 
+                    ? `PIM Vault Tokens - ${(tier as any).label || (size || 'pouch').toUpperCase()} (${(tier as any).tokenAmount} V⚡)`
+                    : `${pack.label} (${(size || 'single').toUpperCase()})`,
+                  description: category === 'token_bundle'
+                    ? `${(tier as any).tokenAmount} V⚡ Sparks for Vault Packs (3% Mythic rate), Targeted Pulls, and Tier Upgrades`
+                    : `${tier.cardCount} Digital Rhythm & Card Pack for PIM : th3v4ult`,
+                  tax_code: 'txcd_10000000', // General Digital Content / Electronically Supplied Services
+                },
+              },
+              quantity: 1,
+            },
+          ],
+          success_url: `${returnOrigin}/vault/reveal?session_id={CHECKOUT_SESSION_ID}&category=${category}&size=${size || 'single'}`,
+          cancel_url: `${returnOrigin}/?canceled=true`,
+        });
+
+        // Pre-record order in stripe_orders
+        try {
+          await svc.from('stripe_orders').upsert({
+            user_id: user.id,
+            stripe_session_id: session.id,
+            pack_category: category,
+            pack_size: size || 'single',
+            amount_cents: tier.priceCents,
+            currency: 'usd',
+            status: 'pending',
+          }, { onConflict: 'stripe_session_id' });
+        } catch (orderErr) {
+          console.warn('Could not pre-insert stripe order:', orderErr);
+        }
+
+        return new Response(JSON.stringify({
+          success: true,
+          checkoutUrl: session.url,
+          sessionId: session.id
+        }), { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+      }
+
+      // ═══════════════════════════════════════════════════════════
+      // VERIFY STRIPE SESSION & MINT CARDS (Instant Return Fallback)
+      // ═══════════════════════════════════════════════════════════
+      case 'verifyStripeSession': {
+        const { sessionId } = payload;
+        if (!sessionId) throw new Error('Missing sessionId');
+
+        // Check if already fulfilled by webhook or previous call
+        const { data: existingOrder } = await svc
+          .from('stripe_orders')
+          .select('*')
+          .eq('stripe_session_id', sessionId)
+          .single();
+
+        if (existingOrder && existingOrder.status === 'completed') {
+          if (existingOrder.pack_category === 'token_bundle') {
+            return new Response(JSON.stringify({
+              success: true,
+              isTokenBundle: true,
+              tokenAmount: (existingOrder as any).amount_cents,
+              alreadyCredited: true,
+            }), { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+          }
+          if (Array.isArray(existingOrder.cards_minted) && existingOrder.cards_minted.length > 0) {
+            return new Response(JSON.stringify({
+              success: true,
+              cards: existingOrder.cards_minted,
+              alreadyMinted: true,
+            }), { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+          }
+        }
+
+        // Verify with Stripe API
+        const stripe = getStripeClient();
+        const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+        if (session.payment_status !== 'paid') {
+          throw new Error(`Payment not completed. Status: ${session.payment_status}`);
+        }
+
+        const targetUserId = user?.id || session.client_reference_id || session.metadata?.userId || payload.userId;
+        if (!targetUserId) {
+          throw new Error('No user ID associated with this Stripe checkout session');
+        }
+
+        const packCategory = session.metadata?.packCategory || payload.category || 'taste';
+        const packSize = session.metadata?.packSize || payload.size || 'single';
+        const pack = STRIPE_PACK_CONFIG[packCategory];
+        const tier = pack?.tiers[packSize] || { cardCount: 1 };
+
+        // ── HANDLE TOKEN BUNDLE FULFILLMENT ─────────────────────
+        if (packCategory === 'token_bundle') {
+          const tokenAmount = Number(session.metadata?.tokenAmount) || (tier as any).tokenAmount || 200;
+          const { data: profile } = await svc
+            .from('profiles')
+            .select('tokens, tokens_earned_total')
+            .eq('id', targetUserId)
+            .maybeSingle();
+
+          const currentTokens = profile?.tokens || 0;
+          const currentTotal = profile?.tokens_earned_total || 0;
+          const newTokens = currentTokens + tokenAmount;
+
+          await svc.from('profiles').upsert({
+            id: targetUserId,
+            tokens: newTokens,
+            tokens_earned_total: currentTotal + tokenAmount,
+            last_purchase_day: today,
+          }).eq('id', targetUserId);
+
+          await svc.from('stripe_orders').upsert({
+            user_id: targetUserId,
+            stripe_session_id: session.id,
+            pack_category: packCategory,
+            pack_size: packSize,
+            amount_cents: session.amount_total || 0,
+            currency: session.currency || 'usd',
+            status: 'completed',
+            cards_minted: [],
+            completed_at: new Date().toISOString(),
+          }, { onConflict: 'stripe_session_id' });
+
+          await logTelemetry(svc, 'stripe_token_bundle_purchase', targetUserId, {
+            sessionId,
+            tokenAmount,
+            packSize,
+            amountCents: session.amount_total,
+          });
+
+          return new Response(JSON.stringify({
+            success: true,
+            isTokenBundle: true,
+            tokenAmount,
+            newBalance: newTokens,
+          }), { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+        }
+
+        const cardCount = tier.cardCount;
+
+        const { count: collSize } = await svc
+          .from('vault_collections')
+          .select('*', { count: 'exact', head: true })
+          .eq('owner_id', targetUserId);
+
+        const { data: profile } = await svc
+          .from('profiles')
+          .select('*')
+          .eq('id', targetUserId)
+          .maybeSingle();
+
+        const now = new Date();
+        const ctx: ModifierContext = {
+          streak: profile?.streak_count || 0,
+          collectionSize: collSize || 0,
+          totalPulls: profile?.total_pulls || 0,
+          pullsSinceRarePlus: profile?.pulls_since_rare_plus || 0,
+          isFirstPack: (profile?.total_pulls || 0) === 0,
+          currentHour: now.getUTCHours(),
+          currentMinute: now.getUTCMinutes(),
+          currentDayOfWeek: now.getUTCDay(),
+          currentVaultDay: today,
+        };
+
+        const generatedCards = await generateCards(svc, targetUserId, packCategory, cardCount, today, ctx);
+
+        let newTotalPulls = (profile?.total_pulls || 0) + cardCount;
+        let newPullsSinceRarePlus = profile?.pulls_since_rare_plus || 0;
+        let newPityCounter = profile?.pity_counter || 0;
+
+        for (const card of generatedCards) {
+          if (['rare', 'legendary', 'mythic'].includes(card.rarity)) {
+            newPullsSinceRarePlus = 0;
+            newPityCounter = 0;
+          } else {
+            newPullsSinceRarePlus++;
+            newPityCounter++;
+          }
+        }
+
+        await svc.from('profiles').upsert({
+          id: targetUserId,
+          total_pulls: newTotalPulls,
+          pulls_since_rare_plus: newPullsSinceRarePlus,
+          pity_counter: newPityCounter,
+          last_purchase_day: today,
+        }).eq('id', targetUserId);
+
+        // Record completed order in stripe_orders
+        await svc.from('stripe_orders').upsert({
+          user_id: targetUserId,
+          stripe_session_id: session.id,
+          pack_category: packCategory,
+          pack_size: packSize,
+          amount_cents: session.amount_total || 0,
+          currency: session.currency || 'usd',
+          status: 'completed',
+          cards_minted: generatedCards,
+          completed_at: new Date().toISOString(),
+        }, { onConflict: 'stripe_session_id' });
+
+        await logTelemetry(svc, 'stripe_pack_purchase', targetUserId, {
+          sessionId,
+          packCategory,
+          packSize,
+          count: cardCount,
+          amountCents: session.amount_total,
+          rarities: generatedCards.map((c: any) => c.rarity),
+        });
+
+        return new Response(JSON.stringify({
+          success: true,
+          cards: generatedCards,
+        }), { headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } });
+      }
+
+      default:
+        throw new Error('Unknown action');
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    let status = 400;
+    if (message.includes('Not authenticated') || message.includes('Missing Authorization Header')) {
+      status = 401;
+    } else if (message.includes('Unauthorized') || message.includes('Invalid admin credentials')) {
+      status = 403;
+    } else if (message.includes('not found') || message.includes('Unknown action')) {
+      status = 404;
+    } else if (message.includes('Database Insert Failed') || message.includes('Edge Function Error') || message.includes('missing in Supabase environment')) {
+      status = 500;
+    }
+    return new Response(JSON.stringify({ success: false, error: message }), {
+      status, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' },
+    });
+  }
+});
