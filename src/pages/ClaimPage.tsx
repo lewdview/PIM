@@ -171,6 +171,27 @@ export default function ClaimPage() {
     if (user) fetchClaimedUltraIds().then(ids => { if (live) setServerClaimedIds(ids); });
     return () => { live = false; };
   }, [user, state]);
+
+  // Claims submitted before the server recorded them (older build, or the call failed) only
+  // live in localStorage. Once we know the server's list, record those so they count.
+  const [reconciled, setReconciled] = useState(false);
+  useEffect(() => {
+    if (!user || reconciled || ultraCards.length === 0) return;
+    let live = true;
+    fetchClaimedUltraIds().then(async (ids) => {
+      const pending = ultraCards
+        .filter(c => !ids.has(c.id) && localStorage.getItem(`ultra_claimed_${c.id}`) === 'true')
+        .map(c => c.id);
+      const recorded = pending.length ? await claimUltraRewards(pending) : [];
+      if (!live) return;
+      setReconciled(true);
+      if (recorded && recorded.length) {
+        setServerClaimedIds(prev => new Set([...prev, ...ids, ...recorded]));
+        getUltraRewardStats().then(s => { if (live) setRewardStats(s); });
+      }
+    });
+    return () => { live = false; };
+  }, [user, ultraCards, reconciled]);
   const rewardMax = rewardStats?.max ?? 5;
 
   // Mythic cards: each one unlocks that day's session stems.
@@ -183,7 +204,7 @@ export default function ClaimPage() {
   const [stemsState, setStemsState] = useState<Record<string, { busy?: boolean; error?: string; url?: string }>>({});
   const handleClaimStems = async (collectionId: string) => {
     audioManager.playSfx('tap_nav', 0.3);
-    setStemsState(s => ({ ...s, [collectionId]: { busy: true } }));
+    setStemsState(s => ({ ...s, [collectionId]: { ...s[collectionId], busy: true, error: undefined } }));
     const res = await claimMythicStems(collectionId);
     if (res.ok) {
       audioManager.playSfx('hidden_secret_found', 0.9);
@@ -191,7 +212,7 @@ export default function ClaimPage() {
       window.open(res.url, '_blank', 'noopener');
     } else {
       audioManager.playSfx('locked_out', 0.8);
-      setStemsState(s => ({ ...s, [collectionId]: { error: res.error } }));
+      setStemsState(s => ({ ...s, [collectionId]: { url: s[collectionId]?.url, error: res.error } }));
     }
   };
 
@@ -375,8 +396,10 @@ export default function ClaimPage() {
     audioManager.playSfx('tap_nav', 0.3);
 
     // Record the claim server-side so it counts toward the global claimed total.
-    const unclaimedIds = ultraCards.filter(c => !ultraClaims.claimsMap[c.id]).map(c => c.id);
-    await claimUltraRewards(unclaimedIds);
+    // Send every card without a server record, including ones only flagged in this browser.
+    const unrecordedIds = ultraCards.filter(c => !serverClaimedIds.has(c.id)).map(c => c.id);
+    const recorded = await claimUltraRewards(unrecordedIds);
+    if (recorded) setServerClaimedIds(prev => new Set([...prev, ...recorded]));
 
     // Keep the local flag too, for browsers on an older server without the claims table
     ultraCards.forEach(c => {
@@ -900,15 +923,16 @@ export default function ClaimPage() {
                         <div className="text-[9px] font-mono text-zinc-400">Day #{c.card.day}</div>
                         <div className="text-xs font-bold text-white truncate leading-tight">{c.card.title}</div>
                       </div>
+                      {/* Download again asks for a fresh link: signed links expire */}
                       {st.url ? (
-                        <a
-                          href={st.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-3 py-2 rounded font-mono font-bold text-[9px] uppercase tracking-wider shrink-0 border bg-[#39FF14]/10 border-[#39FF14]/30 text-[#39FF14] inline-flex items-center gap-1.5"
+                        <button
+                          type="button"
+                          onClick={() => handleClaimStems(c.id)}
+                          disabled={st.busy}
+                          className="px-3 py-2 rounded font-mono font-bold text-[9px] uppercase tracking-wider shrink-0 border bg-[#39FF14]/10 border-[#39FF14]/30 text-[#39FF14] inline-flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
                         >
-                          <Download size={11} /> Download again
-                        </a>
+                          <Download size={11} /> {st.busy ? 'Unlocking…' : 'Download again'}
+                        </button>
                       ) : (
                         <button
                           type="button"
