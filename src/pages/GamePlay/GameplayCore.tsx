@@ -10849,7 +10849,7 @@ export default function Game() {
           ref={lyricOverlayRef}
           aria-hidden="true"
           className="absolute inset-0 w-full h-full pointer-events-none z-[45]"
-          style={{ opacity: 0.55, mixBlendMode: 'screen' }}
+          style={{ opacity: 0.85 }}
         />
         {/* ── GAMEPLAY HUD · Beta (the original HUD, kept as a selectable style) ── */}
         {opts.hudStyle === 'beta' && (
