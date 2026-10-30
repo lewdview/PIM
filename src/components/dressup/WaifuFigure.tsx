@@ -684,7 +684,12 @@ function HairFront({ item, color }: { item: string; color: string }) {
         <Cel d={side} fill={p.fill} line={p.stroke} depth={0.6} />
         <g transform={MIRROR}><Cel d={side} fill={p.fill} line={p.stroke} depth={0.6} mirrored /></g>
       </>}
+      {/* Darker under-layer of hair seen through the gaps between the bangs, for depth. */}
+      <path d="M100 122 C103 110 107 102 113 98 L118 111 L125.6 100 L130.6 112 L139.4 102 L145.6 113 L151.6 103 L157.6 113 L165.6 102 L170 112 L176 100 L183 111 L188 98 C194 102 198 111 200 122 L200 88 L100 88 Z"
+        fill={mix(color, '#000000', 0.18)} stroke={p.stroke} strokeWidth="0.9" />
       <Cel d={cap} fill={p.fill} line={p.stroke} />
+      {/* Loose wisps falling forward from the parting. */}
+      <path d="M150 72 C146.4 86 143 98 138.6 115 C142.6 104 147.6 92 150 72 Z M151 76 C155 90 158.6 100 160.6 113 C160.4 102 156 88 151 76 Z" fill={p.fill} stroke={p.stroke} strokeWidth="0.9" strokeLinejoin="round" />
       {/* Angel-ring highlight and fringe strands. */}
       <path d="M110 86 C122 72 138 66 156 65 L154 69.5 L150 73 L146.5 69.6 L141 76 L136.4 72 L130.6 79.6 L125.4 75.6 L118.6 85 L114.6 81.4 Z" fill="#ffffff" fillOpacity="0.42" />
       <path d="M162 66 C172 67.4 181 72 188 79 L184 81 L180 78 L176.4 82.6 L172 77.6 L167 73.6 Z" fill="#ffffff" fillOpacity="0.24" />
@@ -854,6 +859,11 @@ function Body() {
           <path d="M140 548 Q142 551 141 554.5 M128.6 551 Q127.6 554 128.8 557" fill="none" stroke={SKIN_LINE} strokeOpacity="0.4" strokeWidth="0.7" />
         </g>
       ))}
+      {/* Cool rim light along the shadow-side calf and outer thigh. */}
+      <g transform={MIRROR} fill="none" stroke="#dbeafe" strokeOpacity="0.7" strokeWidth="1.3" strokeLinecap="round">
+        <path d="M115.8 470 C113.8 480 114.2 490 117.2 500" />
+        <path d="M100.6 412 C104 420 108 428 112 434" />
+      </g>
       {/* Contact shadows where the feet meet the floor. */}
       <ellipse cx="136" cy="581.4" rx="13" ry="2.2" fill="#000" opacity="0.3" />
       <ellipse cx="164" cy="581.4" rx="13" ry="2.2" fill="#000" opacity="0.3" />
@@ -940,6 +950,11 @@ function UpperBody({ base }: { base: string }) {
       <path d="M150 284 L150 293" fill="none" strokeOpacity="0.18" strokeWidth="0.9" strokeLinecap="round" />
       <path d="M126.4 286 C127.6 294 125 302 118 310" fill="none" stroke="#ffffff" strokeOpacity="0.5" strokeWidth="2" strokeLinecap="round" />
       <path d="M150 296 Q148.6 300 150 304" fill="none" strokeOpacity="0.35" strokeWidth="1" strokeLinecap="round" />
+      {/* Cool rim light on the shadow side: outer upper arm, forearm and waist. */}
+      <g transform={MIRROR} fill="none" stroke="#dbeafe" strokeOpacity="0.7" strokeWidth="1.3" strokeLinecap="round">
+        <path d="M87.2 228 C85.8 242 84.2 256 82.6 268 M74.2 300 C72.8 310 71.6 320 70.6 330" />
+        <path d="M125.4 283 C128.6 291 128 299 119 309" />
+      </g>
       <Cel d={SHORTS} fill={BASE_FILL} shade={BASE_SHADE} shadeOpacity={0.6} line={BASE_LINE} />
       <g fill="none" stroke={BASE_LINE} strokeLinecap="round">
         <path d="M108.6 325 Q150 331 191.4 325" strokeOpacity="0.45" />
@@ -1632,6 +1647,10 @@ export default function WaifuFigure({ outfit, className, celebrate = false, eyeC
         {extra.item !== 'wings' && <Pop k={`${extra.item}-${extra.color}`}><Extra item={extra.item} color={extra.color} /></Pop>}
         <g transform={HEAD_SCALE}>
           <Skin d={HEAD} depth={0.8} />
+          {/* Face form: the jaw turning away from the light, and the side locks' cast shadow on each cheek. */}
+          <path d="M197 128 C195 146 185 160 168 171 C180 160 188 148 191 132 Z" fill="#d9826e" opacity="0.32" />
+          <path d="M111 134 C108 150 108.4 164 112.4 175 L117 171 C114 160 113.6 147 115.6 136 Z" fill="#d9826e" opacity="0.22" />
+          <path d="M189 134 C192 150 191.6 164 187.6 175 L183 171 C186 160 186.4 147 184.4 136 Z" fill="#d9826e" opacity="0.32" />
           <Face eyeColor={eyeColor} />
           <Pop k={`${outfit.hair.item}-${outfit.hair.color}`}><HairFront item={outfit.hair.item} color={outfit.hair.color} /></Pop>
           <Brows />
