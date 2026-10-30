@@ -103,6 +103,10 @@ export const FREE_COLORS = [
 
 export const MATERIAL_KEYS = Object.keys(OUTFIT_STYLES) as OutfitStyle[];
 
+export const EYE_COLORS = [
+  '#7c3aed', '#2563eb', '#0ea5e9', '#14b8a6', '#16a34a', '#a16207', '#78350f', '#dc2626', '#db2777', '#94a3b8',
+];
+
 export const HAIR_COLORS = [
   '#1a1a2e', '#f5e6c8', '#ff7eb6', '#7dd3fc', '#c084fc', '#ef4444', '#f8fafc', '#fbbf24', '#34d399', '#6b4226',
 ];
@@ -138,6 +142,8 @@ export interface Outfit {
   extra?: { item: string; color: string };
   /** Colour of the base sports bra and bike shorts. */
   base?: string;
+  /** Eye colour; falls back to the day's palette when unset. */
+  eyes?: string;
   scene: string; // art category
 }
 

@@ -12,7 +12,7 @@ import { Link, useLocation, useRoute } from 'wouter';
 import { ChevronLeft, ChevronRight, Calendar, Copy, Check, Eye, RotateCcw, Shuffle, Sparkles, Star } from 'lucide-react';
 import WaifuFigure from '../components/dressup/WaifuFigure';
 import {
-  ACCENT_COLOR, ALL_SLOTS, BASE_COLOR, FREE_COLORS, GARMENT_SLOTS, HAIR_COLORS, MATERIAL_KEYS, SCENES, WARDROBE,
+  ACCENT_COLOR, ALL_SLOTS, BASE_COLOR, EYE_COLORS, FREE_COLORS, GARMENT_SLOTS, HAIR_COLORS, MATERIAL_KEYS, SCENES, WARDROBE,
   defaultOutfit, getDayBrief, scoreOutfit, type GarmentSlot, type Outfit, type Slot,
 } from '../game/dressUp';
 import { OUTFIT_STYLES, generateArtPromptForDay, getSongMetaForDay } from '../utils/artTypes';
@@ -161,8 +161,8 @@ export default function DressUpPage() {
   };
 
   const reveal = () => {
-    // The day's look doesn't cover the free-play base colour, head colour or extras, so keep the player's.
-    const target: Outfit = { ...brief.target, base: outfit.base, extra: outfit.extra, accessory: { ...brief.target.accessory, color: outfit.accessory.color } };
+    // The day's look doesn't cover the free-play base, eye and head colours or extras, so keep the player's.
+    const target: Outfit = { ...brief.target, base: outfit.base, eyes: outfit.eyes, extra: outfit.extra, accessory: { ...brief.target.accessory, color: outfit.accessory.color } };
     setRevealed(true);
     setOutfit(target);
     setSaved((prev) => {
@@ -185,6 +185,7 @@ export default function DressUpPage() {
       accessory: { item: r(WARDROBE.accessory).id, color: r(FREE_COLORS) },
       extra: { item: r(WARDROBE.extra).id, color: r(FREE_COLORS) },
       base: outfit.base,
+      eyes: outfit.eyes,
       scene: r(SCENES).category,
     }, true);
   };
@@ -202,6 +203,7 @@ export default function DressUpPage() {
     : slot === 'accessory' ? outfit.accessory.color ?? ACCENT_COLOR
     : slot === 'extra' ? extra.color
     : outfit[slot].color;
+  const eyeColor = outfit.eyes ?? brief.palette[1];
   const colorChoices = slot === 'hair' ? HAIR_COLORS : isGarment(slot) ? brief.swatches : FREE_COLORS;
 
   return (
@@ -301,7 +303,7 @@ export default function DressUpPage() {
         {/* Stage */}
         <section className="order-1 lg:order-2 flex flex-col items-center gap-3">
           <div className="w-full max-w-[240px] sm:max-w-[340px] border-2 border-white/15 shadow-[0_0_40px_rgba(255,126,182,0.15)]">
-            <WaifuFigure outfit={outfit} celebrate={score.grade === 'S'} eyeColor={brief.palette[1]} className="block w-full h-auto" />
+            <WaifuFigure outfit={outfit} celebrate={score.grade === 'S'} eyeColor={eyeColor} className="block w-full h-auto" />
           </div>
           <div className="w-full max-w-[340px] border border-white/10 bg-white/[0.03] p-3!">
             <div className="flex items-center justify-between">
@@ -395,6 +397,25 @@ export default function DressUpPage() {
               )}
             </div>
           ) : null}
+
+          {slot === 'hair' && (
+            <div>
+              <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-white/50 mb-2!">Eyes</div>
+              <div className="flex flex-wrap gap-2 items-center">
+                {EYE_COLORS.map((c) => (
+                  <button key={c} onClick={() => update({ ...outfit, eyes: c })} aria-label={`Eye colour ${c}`}
+                    className={`w-8 h-8 rounded-full border-2 ${eyeColor.toLowerCase() === c.toLowerCase() ? 'border-white scale-110' : 'border-white/20'}`}
+                    style={{ background: c }} />
+                ))}
+                <label className="relative w-8 h-8 rounded-full border-2 border-dashed border-white/40 grid place-items-center cursor-pointer hover:border-white"
+                  title="Pick any eye colour" style={{ background: EYE_COLORS.some((c) => c.toLowerCase() === eyeColor.toLowerCase()) ? undefined : eyeColor }}>
+                  <span className="text-sm leading-none text-white mix-blend-difference">+</span>
+                  <input type="color" value={eyeColor} onChange={(e) => update({ ...outfit, eyes: e.target.value })} aria-label="Pick any eye colour"
+                    className="absolute inset-0 opacity-0 cursor-pointer" />
+                </label>
+              </div>
+            </div>
+          )}
 
           {isGarment(slot) && (
             <div>
