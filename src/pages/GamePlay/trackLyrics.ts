@@ -681,6 +681,8 @@ export interface LyricBackdropOpts {
   /** Player's "Background animation" setting. Off = static layout: lyrics still
    *  advance and highlight, but nothing drifts, pulses, slams or sparkles. */
   animate: boolean;
+  /** Which part to paint: the wash + motes ("backdrop"), the words ("text"), or both. */
+  layer?: "all" | "backdrop" | "text";
 }
 
 // Append a 2-digit hex alpha; non-#rrggbb colors fall back to white.
@@ -713,39 +715,45 @@ function layoutLineCentered(
 }
 
 export function drawLyricBackdrop(ctx: CanvasRenderingContext2D, o: LyricBackdropOpts): void {
-  const { W, H, t, lines, colors, animate } = o;
+  const { W, H, t, lines, colors, animate, layer = "all" } = o;
   if (W <= 0 || H <= 0) return;
   const [cA, cB, cC] = colors;
 
   ctx.save();
 
-  // ── Breathing color wash.
-  const breathe = animate ? 0.5 + 0.5 * Math.sin(t * 0.6) : 0.5;
-  const wash = ctx.createRadialGradient(W * (0.3 + 0.4 * breathe), H * 0.18, 0, W / 2, H * 0.3, Math.max(W, H) * 0.9);
-  wash.addColorStop(0, hexA(cA, "38"));
-  wash.addColorStop(0.45, hexA(cB, "18"));
-  wash.addColorStop(1, "#00000000");
-  ctx.fillStyle = wash;
-  ctx.fillRect(0, 0, W, H);
+  if (layer !== "text") {
+    // ── Breathing color wash.
+    const breathe = animate ? 0.5 + 0.5 * Math.sin(t * 0.6) : 0.5;
+    const wash = ctx.createRadialGradient(W * (0.3 + 0.4 * breathe), H * 0.18, 0, W / 2, H * 0.3, Math.max(W, H) * 0.9);
+    wash.addColorStop(0, hexA(cA, "38"));
+    wash.addColorStop(0.45, hexA(cB, "18"));
+    wash.addColorStop(1, "#00000000");
+    ctx.fillStyle = wash;
+    ctx.fillRect(0, 0, W, H);
 
-  // ── Drifting light motes (stateless: positions are a function of time).
-  ctx.globalCompositeOperation = "lighter";
-  for (let i = 0; animate && i < MOTE_COUNT; i++) {
-    const seed = i * 12.9898;
-    const rx = (Math.sin(seed) * 43758.5453) % 1;
-    const ry = (Math.sin(seed * 1.7) * 24634.6345) % 1;
-    const speed = 0.012 + Math.abs(rx) * 0.02;
-    const x = (Math.abs(rx) * W + Math.sin(t * 0.4 + i) * 24) % W;
-    const y = H - ((((Math.abs(ry) + t * speed) % 1) + 1) % 1) * H;
-    const tw = 0.35 + 0.65 * Math.abs(Math.sin(t * 1.3 + i * 2.1));
-    const r = 1 + (i % 3);
-    ctx.globalAlpha = 0.35 * tw;
-    ctx.fillStyle = i % 3 === 0 ? cA : i % 3 === 1 ? cB : cC;
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
+    // ── Drifting light motes (stateless: positions are a function of time).
+    ctx.globalCompositeOperation = "lighter";
+    for (let i = 0; animate && i < MOTE_COUNT; i++) {
+      const seed = i * 12.9898;
+      const rx = (Math.sin(seed) * 43758.5453) % 1;
+      const ry = (Math.sin(seed * 1.7) * 24634.6345) % 1;
+      const speed = 0.012 + Math.abs(rx) * 0.02;
+      const x = (Math.abs(rx) * W + Math.sin(t * 0.4 + i) * 24) % W;
+      const y = H - ((((Math.abs(ry) + t * speed) % 1) + 1) % 1) * H;
+      const tw = 0.35 + 0.65 * Math.abs(Math.sin(t * 1.3 + i * 2.1));
+      const r = 1 + (i % 3);
+      ctx.globalAlpha = 0.35 * tw;
+      ctx.fillStyle = i % 3 === 0 ? cA : i % 3 === 1 ? cB : cC;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalCompositeOperation = "source-over";
   }
-  ctx.globalCompositeOperation = "source-over";
+  if (layer === "backdrop") {
+    ctx.restore();
+    return;
+  }
 
   const li = findActiveLineIdx(lines, t);
   if (li < 0) {

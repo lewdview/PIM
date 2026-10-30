@@ -1153,6 +1153,8 @@ export default function Game() {
   const [, setLocation] = useLocation();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  // Poetic Lines words sit on their own see-through canvas above the track and HUD.
+  const lyricOverlayRef = useRef<HTMLCanvasElement>(null);
   const canvasWrapperRef = useRef<HTMLDivElement>(null);
   const offscreenCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const noteTrailsRef = useRef<{ id: string; x: number; y: number; color: string; size: number; alpha: number; birthTime: number }[]>([]);
@@ -4065,8 +4067,10 @@ export default function Game() {
       ctx.fillRect(0, 0, W, H);
     }
 
-    // Poetic Lines (formerly the Lyric Cinema background): kinetic lyrics painted beneath the track.
-    if (activeLyricsMode(optsRef.current) === 'poetic') {
+    // Poetic Lines (formerly the Lyric Cinema background): the colour wash stays beneath the
+    // track; the words go on the overlay canvas so the POV changes and the HUD sit behind them.
+    const poeticOn = activeLyricsMode(optsRef.current) === 'poetic';
+    if (poeticOn) {
       drawLyricBackdrop(ctx, {
         W,
         H,
@@ -4074,7 +4078,37 @@ export default function Game() {
         lines: trackLyricsRef.current.lines,
         colors: laneColorsRef.current,
         animate: optsRef.current.bgAnimation,
+        layer: 'backdrop',
       });
+    }
+    const lyricOverlay = lyricOverlayRef.current;
+    if (lyricOverlay) {
+      const octx = lyricOverlay.getContext('2d');
+      const oW = lyricOverlay.clientWidth;
+      const oH = lyricOverlay.clientHeight;
+      const pw = Math.round(oW * dpr);
+      const ph = Math.round(oH * dpr);
+      // The overlay is absolutely positioned, so resizing it never moves the layout.
+      if (lyricOverlay.width !== pw || lyricOverlay.height !== ph) {
+        lyricOverlay.width = pw;
+        lyricOverlay.height = ph;
+      }
+      if (octx) {
+        octx.setTransform(1, 0, 0, 1, 0, 0);
+        octx.clearRect(0, 0, pw, ph);
+        if (poeticOn) {
+          octx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          drawLyricBackdrop(octx, {
+            W: oW,
+            H: oH,
+            t,
+            lines: trackLyricsRef.current.lines,
+            colors: laneColorsRef.current,
+            animate: optsRef.current.bgAnimation,
+            layer: 'text',
+          });
+        }
+      }
     }
 
     // Draw pre-rendered static tracks (Double-buffering optimization)
@@ -10810,6 +10844,13 @@ export default function Game() {
       <div
         className="relative w-full h-full flex flex-col overflow-hidden"
       >
+        {/* Poetic Lines overlay: see-through words above the track, POV changes and HUD. */}
+        <canvas
+          ref={lyricOverlayRef}
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full pointer-events-none z-[45]"
+          style={{ opacity: 0.55, mixBlendMode: 'screen' }}
+        />
         {/* ── GAMEPLAY HUD · Beta (the original HUD, kept as a selectable style) ── */}
         {opts.hudStyle === 'beta' && (
           <div
