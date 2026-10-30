@@ -11,11 +11,13 @@
 import { getArtTypeForDay, OUTFIT_STYLES, type OutfitStyle, type ArtTypeData } from '../utils/artTypes';
 
 export type GarmentSlot = 'top' | 'bottom' | 'legwear' | 'shoes';
-export type Slot = GarmentSlot | 'hair' | 'accessory';
+export type Slot = GarmentSlot | 'hair' | 'accessory' | 'extra';
 
 export interface WardrobeItem {
   id: string;
   label: string;
+  /** Free-play pieces that aren't part of the 365 matrix: never picked for a day's look. */
+  bonus?: boolean;
 }
 
 export const WARDROBE: Record<Slot, WardrobeItem[]> = {
@@ -27,21 +29,25 @@ export const WARDROBE: Record<Slot, WardrobeItem[]> = {
     { id: 'buns', label: 'Space Buns' },
   ],
   top: [
-    { id: 'none', label: 'Bodysuit Only' },
+    { id: 'none', label: 'Base Only' },
     { id: 'crop', label: 'Crop Top' },
     { id: 'bikini', label: 'Bikini Top' },
     { id: 'corset', label: 'Corset' },
     { id: 'sailor', label: 'Sailor Halter' },
     { id: 'kimono', label: 'Kimono Wrap' },
     { id: 'jacket', label: 'Cropped Jacket' },
+    { id: 'tank', label: 'Tank Top', bonus: true },
+    { id: 'tube', label: 'Tube Top', bonus: true },
   ],
   bottom: [
-    { id: 'none', label: 'Bodysuit Only' },
+    { id: 'none', label: 'Base Only' },
     { id: 'pleated', label: 'Pleated Skirt' },
     { id: 'shorts', label: 'Booty Shorts' },
     { id: 'mini', label: 'Pencil Mini' },
     { id: 'gown', label: 'Floor Gown' },
     { id: 'pants', label: 'Flare Pants' },
+    { id: 'tutu', label: 'Tulle Tutu', bonus: true },
+    { id: 'aline', label: 'A-Line Midi', bonus: true },
   ],
   legwear: [
     { id: 'none', label: 'Bare' },
@@ -49,6 +55,8 @@ export const WARDROBE: Record<Slot, WardrobeItem[]> = {
     { id: 'stockings', label: 'Sheer Stockings' },
     { id: 'fishnet', label: 'Fishnets' },
     { id: 'warmers', label: 'Leg Warmers' },
+    { id: 'kneesocks', label: 'Knee Socks', bonus: true },
+    { id: 'anklesocks', label: 'Ankle Socks', bonus: true },
   ],
   shoes: [
     { id: 'none', label: 'Barefoot' },
@@ -56,6 +64,8 @@ export const WARDROBE: Record<Slot, WardrobeItem[]> = {
     { id: 'boots', label: 'Combat Boots' },
     { id: 'sneakers', label: 'Sneakers' },
     { id: 'maryjanes', label: 'Mary Janes' },
+    { id: 'sandals', label: 'Strappy Sandals', bonus: true },
+    { id: 'flats', label: 'Ballet Flats', bonus: true },
   ],
   accessory: [
     { id: 'none', label: 'None' },
@@ -64,11 +74,32 @@ export const WARDROBE: Record<Slot, WardrobeItem[]> = {
     { id: 'halo', label: 'Halo' },
     { id: 'visor', label: 'Cyber Visor' },
     { id: 'headphones', label: 'Headphones' },
+    { id: 'bow', label: 'Hair Bow', bonus: true },
+    { id: 'tiara', label: 'Tiara', bonus: true },
+    { id: 'glasses', label: 'Round Glasses', bonus: true },
+    { id: 'flowers', label: 'Flower Crown', bonus: true },
+  ],
+  extra: [
+    { id: 'none', label: 'None', bonus: true },
+    { id: 'wings', label: 'Fairy Wings', bonus: true },
+    { id: 'bag', label: 'Shoulder Bag', bonus: true },
+    { id: 'scarf', label: 'Scarf', bonus: true },
+    { id: 'bangles', label: 'Bangles', bonus: true },
+    { id: 'wand', label: 'Star Wand', bonus: true },
   ],
 };
 
 export const GARMENT_SLOTS: GarmentSlot[] = ['top', 'bottom', 'legwear', 'shoes'];
-export const ALL_SLOTS: Slot[] = ['hair', 'top', 'bottom', 'legwear', 'shoes', 'accessory'];
+export const ALL_SLOTS: Slot[] = ['hair', 'top', 'bottom', 'legwear', 'shoes', 'accessory', 'extra'];
+
+/** Default colour of the base sports bra and bike shorts. */
+export const BASE_COLOR = '#f7bfd2';
+/** Default colour for head pieces and extras that haven't been given one. */
+export const ACCENT_COLOR = '#ff4fa0';
+/** Free-play colours offered for the base layer, head pieces and extras (they aren't scored). */
+export const FREE_COLORS = [
+  BASE_COLOR, ACCENT_COLOR, '#ffffff', '#111827', '#fde68a', '#7dd3fc', '#c084fc', '#34d399', '#ef4444', '#fb923c',
+];
 
 export const MATERIAL_KEYS = Object.keys(OUTFIT_STYLES) as OutfitStyle[];
 
@@ -102,7 +133,11 @@ export interface Outfit {
   bottom: GarmentChoice;
   legwear: GarmentChoice;
   shoes: GarmentChoice;
-  accessory: { item: string };
+  accessory: { item: string; color?: string };
+  /** Free-play extras (not scored); missing on outfits saved before extras existed. */
+  extra?: { item: string; color: string };
+  /** Colour of the base sports bra and bike shorts. */
+  base?: string;
   scene: string; // art category
 }
 
@@ -155,7 +190,8 @@ export function getDayBrief(day: number): DayBrief {
   const swatches = [...palette, ...chosen].sort(() => rand() - 0.5);
 
   const signatureSlot = pick(rand, GARMENT_SLOTS);
-  const wearable = (slot: GarmentSlot) => WARDROBE[slot].filter((i) => i.id !== 'none');
+  // Bonus pieces stay out of the day's look so every brief matches the 365 matrix.
+  const wearable = (slot: GarmentSlot) => WARDROBE[slot].filter((i) => i.id !== 'none' && !i.bonus);
   const signatureItem = pick(rand, wearable(signatureSlot));
 
   const itemFor = (slot: GarmentSlot) => (slot === signatureSlot ? signatureItem.id : pick(rand, wearable(slot)).id);
@@ -165,7 +201,7 @@ export function getDayBrief(day: number): DayBrief {
     bottom: { item: itemFor('bottom'), material: art.outfitStyle, color: palette[1] },
     legwear: { item: itemFor('legwear'), material: art.outfitStyle, color: palette[2] },
     shoes: { item: itemFor('shoes'), material: art.outfitStyle, color: palette[0] },
-    accessory: { item: pick(rand, WARDROBE.accessory.filter((i) => i.id !== 'none')).id },
+    accessory: { item: pick(rand, WARDROBE.accessory.filter((i) => i.id !== 'none' && !i.bonus)).id },
     scene: art.artCategory,
   };
   // The gown already covers the legs, so keep the reveal readable.
@@ -191,6 +227,8 @@ export function defaultOutfit(): Outfit {
     legwear: { item: 'none', material: 'knit', color: '#f8fafc' },
     shoes: { item: 'none', material: 'knit', color: '#f8fafc' },
     accessory: { item: 'none' },
+    extra: { item: 'none', color: ACCENT_COLOR },
+    base: BASE_COLOR,
     scene: SCENES[6].category,
   };
 }

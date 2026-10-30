@@ -8,7 +8,7 @@
 
 import { useId, type ReactNode } from 'react';
 import type { OutfitStyle } from '../../utils/artTypes';
-import { SCENES, type Outfit, type GarmentChoice } from '../../game/dressUp';
+import { ACCENT_COLOR, BASE_COLOR, SCENES, type Outfit, type GarmentChoice } from '../../game/dressUp';
 
 const SKIN = '#ffe3d3';
 const SKIN_SHADE = '#f4c4ae';
@@ -340,9 +340,6 @@ const LEG = 'M89.4 344 L150 344 C150.5 372 148.5 404 146 432 C147.6 440 148 448 
 const BUST = 'M150 238 C149 226 144 214 134 208 C126 203.5 116 203 108 207 C99 212 94.5 224 94.5 238 C94.5 254 104 266 120 267.5 C134 268.5 146 261 149.5 250 C150.3 246 150.4 242 150 238 Z';
 // Base layer: a pastel sports bra and bike shorts so the figure is never undressed.
 // The bra follows the bust tops with a scooped front and a wide band under the bust.
-const BASE_PINK = '#f7bfd2';
-const BASE_PINK_SHADE = '#d9789c';
-const BASE_PINK_LINE = '#8c3d5c';
 const SPORTS_BRA = 'M96 232 C100 216 112 210 124 212 C136 214 146 220 150 232 C154 220 164 214 176 212 C188 210 200 216 204 232 C204 242 203 246 202 250 C199 262 188 268 179 276 Q150 282 121 276 C112 268 101 262 98 250 Z';
 // Wide straps from the cups up over the shoulder slope (left; mirrored for the right).
 const BRA_STRAP = 'M112 214 C114 207 118 201 122 197 L131 196 C128 201 126 207 125.4 213 Z';
@@ -865,7 +862,11 @@ function Body() {
 }
 
 
-function UpperBody() {
+/** Torso, arms and the base layer; `base` colours the sports bra and bike shorts. */
+function UpperBody({ base }: { base: string }) {
+  const BASE_FILL = base;
+  const BASE_SHADE = mix(base, '#7a1f52', 0.35);
+  const BASE_LINE = mix(base, '#2a0a1e', 0.62);
   const hipClip = useSvgId('hip');
   const armClip = useSvgId('arm');
   return (
@@ -939,8 +940,8 @@ function UpperBody() {
       <path d="M150 284 L150 293" fill="none" strokeOpacity="0.18" strokeWidth="0.9" strokeLinecap="round" />
       <path d="M126.4 286 C127.6 294 125 302 118 310" fill="none" stroke="#ffffff" strokeOpacity="0.5" strokeWidth="2" strokeLinecap="round" />
       <path d="M150 296 Q148.6 300 150 304" fill="none" strokeOpacity="0.35" strokeWidth="1" strokeLinecap="round" />
-      <Cel d={SHORTS} fill={BASE_PINK} shade={BASE_PINK_SHADE} shadeOpacity={0.6} line={BASE_PINK_LINE} />
-      <g fill="none" stroke={BASE_PINK_LINE} strokeLinecap="round">
+      <Cel d={SHORTS} fill={BASE_FILL} shade={BASE_SHADE} shadeOpacity={0.6} line={BASE_LINE} />
+      <g fill="none" stroke={BASE_LINE} strokeLinecap="round">
         <path d="M108.6 325 Q150 331 191.4 325" strokeOpacity="0.45" />
         <path d="M150 352 L150 392" strokeOpacity="0.35" />
         <path d="M99.6 399 Q122 405 145 401.6 M155 401.6 Q178 405 200.4 399" strokeOpacity="0.4" />
@@ -953,11 +954,11 @@ function UpperBody() {
       </g>
       {[false, true].map((m) => (
         <g key={String(m)} transform={m ? MIRROR : undefined}>
-          <Cel d={BRA_STRAP} fill={BASE_PINK} shade={BASE_PINK_SHADE} shadeOpacity={0.6} line={BASE_PINK_LINE} mirrored={m} weight={0.8} />
+          <Cel d={BRA_STRAP} fill={BASE_FILL} shade={BASE_SHADE} shadeOpacity={0.6} line={BASE_LINE} mirrored={m} weight={0.8} />
         </g>
       ))}
-      <Cel d={SPORTS_BRA} fill={BASE_PINK} shade={BASE_PINK_SHADE} shadeOpacity={0.6} line={BASE_PINK_LINE} />
-      <path d="M119 268 Q150 275 181 268" fill="none" stroke={BASE_PINK_LINE} strokeOpacity="0.45" strokeLinecap="round" />
+      <Cel d={SPORTS_BRA} fill={BASE_FILL} shade={BASE_SHADE} shadeOpacity={0.6} line={BASE_LINE} />
+      <path d="M119 268 Q150 275 181 268" fill="none" stroke={BASE_LINE} strokeOpacity="0.45" strokeLinecap="round" />
       <g fill="none" stroke="#ffffff" strokeLinecap="round">
         <path d="M103 238 C103 227 109 219 119 216.5" strokeWidth="3" strokeOpacity="0.75" />
         <path d="M157 233 C159 225 165 220 173 218.5" strokeWidth="2.2" strokeOpacity="0.45" />
@@ -1024,6 +1025,26 @@ function HosieryDetails({ welt }: { welt?: number }) {
 
 const THIGH_HIGH = 'M98.6 404 L148.4 404 C147.6 416 146.8 425 146 432 C147.6 440 148 448 146.4 456 C145.4 462 145.6 468 146.4 478 C147 492 145 512 142.6 530 C141 540 140 548 140.8 554 C143.6 561 147.2 567 148 573 C148.6 577.4 147 581.2 143.6 581.4 L128 580.2 C125 579.2 124.4 574.4 126 567 C126.8 562 127.8 558 127.4 552 C127 536 120.4 516 114.6 500 C110.8 488 110.6 474 113 464 C114.6 458 117.4 453 117.4 448 C113 436 106 424 100 408 Z';
 
+/** A sock: the stocking cut off at `top`, with a ribbed cuff band across the cut. */
+function Sock({ choice, top }: { choice: GarmentChoice; top: number }) {
+  const clipId = useSvgId('sock');
+  const cuff = top < 500
+    ? 'M113.2 466 L147 466 L146.8 474 L114.4 474 Z'
+    : 'M127 548 L141.2 548 L140.8 554 L127.4 554 Z';
+  return (
+    <g>
+      <defs><clipPath id={clipId}><rect x="0" y={top} width="300" height={600 - top} /></clipPath></defs>
+      <g clipPath={`url(#${clipId})`}><Garment id="legwear" choice={choice} mirror={[LEG]} /></g>
+      <Garment id="legwear-cuff" choice={choice} mirror={[cuff]}
+        details={<g stroke="#000" strokeOpacity="0.22">{[0, 1].map((m) => (
+          <g key={m} transform={m ? MIRROR : undefined}>
+            {(top < 500 ? [118, 124, 130, 136, 142] : [130, 134, 138]).map((x) => <path key={x} d={`M${x} ${top + 1} L${x} ${top + (top < 500 ? 7 : 5)}`} />)}
+          </g>
+        ))}</g>} />
+    </g>
+  );
+}
+
 function Legwear({ choice }: { choice: GarmentChoice }) {
   const id = 'legwear';
   switch (choice.item) {
@@ -1034,6 +1055,10 @@ function Legwear({ choice }: { choice: GarmentChoice }) {
       return <Garment id={id} choice={choice} mirror={[LEG]} details={<HosieryDetails />} />;
     case 'fishnet':
       return <Fishnet choice={choice} />;
+    case 'kneesocks':
+      return <Sock choice={choice} top={466} />;
+    case 'anklesocks':
+      return <Sock choice={choice} top={548} />;
     case 'warmers':
       return <Garment id={id} choice={choice} mirror={['M113.6 468 L146.6 468 C147.6 490 145.4 516 142.4 552 L126.8 552 C125.6 534 121 516 116.6 498 C113.8 486 113.2 476 113.6 468 Z']}
         details={<g stroke="#000" strokeOpacity="0.25">{[480, 492, 504, 516, 528, 540].map((y) => <g key={y}><path d={`M119 ${y} L148 ${y}`} /><path d={`M181 ${y} L152 ${y}`} /></g>)}</g>} />;
@@ -1067,6 +1092,26 @@ function Shoes({ choice }: { choice: GarmentChoice }) {
             </g>
           ))}
         </g>} />;
+    case 'sandals':
+      // Thin sole, an ankle strap, a T-strap down the instep and a strap across the toes.
+      return <Garment id={id} choice={choice} mirror={[
+        'M124.2 579.4 L149 579.4 C149.8 581.4 149.6 584 148.8 585.4 L124.6 585.4 C123.8 583.8 123.6 581.4 124.2 579.4 Z',
+        'M127 552.6 L141.2 552.6 L141.4 556.4 L126.8 556.4 Z',
+        'M133.2 556 L136.4 556 L138.2 569 L135 569.4 Z',
+        'M125.4 569 Q137 565.6 148.2 569.8 L148.4 573.6 Q137 569.8 125.2 573 Z']}
+        details={<g>{[false, true].map((m) => (
+          <circle key={String(m)} cx="140" cy="554.5" r="1.1" fill="#fde68a" stroke={LINE} strokeWidth="0.5" transform={m ? MIRROR : undefined} />
+        ))}</g>} />;
+    case 'flats':
+      return <Garment id={id} choice={choice} mirror={[
+        'M125.2 568 C127.6 565.4 131.8 564.6 136.6 564.6 C141.6 564.6 145.6 566 147.8 569 C149.6 574 149.2 579 147.6 582 L125.2 582 C123.8 578 124 572 125.2 568 Z']}
+        details={<g>{[false, true].map((m) => (
+          <g key={String(m)} transform={m ? MIRROR : undefined} stroke={LINE} strokeWidth="0.6">
+            {/* Little bow at the toe line and a lit edge along the vamp. */}
+            <path d="M136 567 L132.4 565 L132.4 569 Z M136 567 L139.6 565 L139.6 569 Z" fill="#000" fillOpacity="0.3" />
+            <path d="M126.6 571 Q130 567.4 135 567" fill="none" stroke="#ffffff" strokeOpacity="0.5" strokeWidth="1.3" strokeLinecap="round" />
+          </g>
+        ))}</g>} />;
     case 'maryjanes':
       return <Garment id={id} choice={choice} mirror={[
         'M125.2 567 C127.4 563.4 131.6 562 136.4 562 C141.4 562 145.6 564 147.8 568 C149.6 573 149.2 579 147.6 582 L125.2 582 C123.8 578 124 571.6 125.2 567 Z',
@@ -1141,6 +1186,24 @@ function Bottom({ choice }: { choice: GarmentChoice }) {
           <path d="M140 420 Q136 500 134 576" strokeWidth="1.4" /><path d="M160 420 Q164 500 166 576" strokeWidth="1.4" />
           <path d="M150 300 Q146 430 150 584" stroke="#fff" strokeOpacity="0.22" strokeWidth="3" />
         </g>} />;
+    case 'tutu':
+      // Two tiers of tulle flaring from the waistband, each with a scalloped hem.
+      return <Garment id={id} choice={choice} paths={[
+        'M120 300 L180 300 C206 314 226 336 238 366 Q226 375 213 369 Q199 380 184 372 Q167 382 150 374 Q133 382 116 372 Q101 380 87 369 Q74 375 62 366 C74 336 94 314 120 300 Z',
+        'M120 300 L180 300 C200 312 214 330 222 352 Q210 360 198 354 Q184 364 168 357 Q150 366 132 357 Q116 364 102 354 Q90 360 78 352 C86 330 100 312 120 300 Z',
+        'M118 294 L182 294 L183.6 303 Q150 307 116.4 303 Z']}
+        details={<g fill="none" stroke="#000" strokeOpacity="0.16" strokeLinecap="round">
+          {[96, 116, 136, 164, 184, 204].map((x) => <path key={x} d={`M${150 + (x - 150) * 0.4} 306 L${x} ${358 + Math.abs(x - 150) * 0.05}`} />)}
+          <path d="M80 350 Q150 344 220 350" stroke="#ffffff" strokeOpacity="0.3" strokeWidth="2" />
+        </g>} />;
+    case 'aline':
+      return <Garment id={id} choice={choice} paths={['M118 294 L182 294 C200 312 212 336 212 358 C216 390 222 420 228 452 Q150 468 72 452 C78 420 84 390 88 358 C88 336 100 312 118 294 Z']}
+        details={<g fill="none" stroke="#000" strokeLinecap="round">
+          {/* Soft folds fan out from the hips toward the hem. */}
+          <path d="M108 362 Q98 410 90 455 M192 362 Q202 410 210 455 M132 372 Q126 420 122 460 M168 372 Q174 420 178 460" strokeOpacity="0.18" strokeWidth="1.4" />
+          <path d="M150 300 Q148 380 150 462" stroke="#ffffff" strokeOpacity="0.25" strokeWidth="3" />
+          <path d="M118 294 L182 294 L184 302 Q150 306 116 302 Z" fill="#000" fillOpacity="0.15" strokeOpacity="0.3" />
+        </g>} />;
     case 'pants':
       return <Garment id={id} choice={choice} paths={['M118 294 L182 294 C200 312 212 336 210 352 L150 356 L90 352 C88 336 100 312 118 294 Z']}
         mirror={[PANT_LEG]}
@@ -1190,6 +1253,22 @@ function SleeveFolds({ long = false }: { long?: boolean }) {
 function Top({ choice }: { choice: GarmentChoice }) {
   const id = 'top';
   switch (choice.item) {
+    case 'tank':
+      // Narrow straps, a scooped front and a hem that stops just above the navel.
+      return <Garment id={id} choice={choice}
+        paths={['M116 199 L125 197.6 Q150 236 175 197.6 L184 199 C200 210 206 230 202 250 C198 264 184 272 178 280 C175 287 175 292 176.6 296 Q150 302 123.4 296 C125 292 125 287 122 280 C116 272 102 264 98 250 C94 230 100 210 116 199 Z']}
+        details={<g fill="none" strokeLinecap="round">
+          <path d="M124 296.6 Q150 303 176 296.6 L174.6 301 Q150 307 125.4 301 Z" fill="#000" fillOpacity="0.25" stroke="none" />
+          <path d="M125 197.6 Q150 236 175 197.6" stroke={LINE} strokeWidth="2.4" />
+          <path d="M104 238 C104 227 110 219 120 216.5" stroke="#ffffff" strokeOpacity="0.45" strokeWidth="3" />
+        </g>} />;
+    case 'tube':
+      return <Garment id={id} choice={choice}
+        paths={['M95.6 231 C99.6 214 112 208 124 210 C136 212 146 218 150 230 C154 218 164 212 176 210 C188 208 200.4 214 204.4 231 C204.4 242 203 247 202 252 C198 264 186 270 178 274 Q150 280 122 274 C114 270 102 264 98 252 C97 247 95.6 242 95.6 231 Z']}
+        details={<g fill="none" strokeLinecap="round">
+          <path d="M98 236 Q150 230 202 236 M98.6 246 Q150 240 201.4 246 M100 256 Q150 250 200 256" stroke="#000" strokeOpacity="0.14" />
+          <path d="M104 236 C104 226 110 219 120 216" stroke="#ffffff" strokeOpacity="0.5" strokeWidth="3" />
+        </g>} />;
     case 'crop':
       return <Garment id={id} choice={choice}
         // Scoop-neck tee: ribbed neckband, fabric bridging between the bust, and a hem that casts a shadow on the waist.
@@ -1324,15 +1403,55 @@ function Top({ choice }: { choice: GarmentChoice }) {
 /** The head is drawn at 0.8 scale around the chin so the body reads ~7 heads tall. */
 const HEAD_SCALE = 'translate(150 180) scale(0.8) translate(-150 -184)';
 
-function Accessory({ item }: { item: string }) {
+function Accessory({ item, color }: { item: string; color: string }) {
   const visorId = useSvgId('visor');
   switch (item) {
+    case 'bow':
+      return <g>
+        <Cel d="M118 62 C104 46 90 50 93 63 C96 75 110 71 118 62 Z" fill={color} line={LINE} depth={0.5} />
+        <Cel d="M118 62 C130 46 145 49 142 62 C139 74 126 71 118 62 Z" fill={color} line={LINE} depth={0.5} />
+        <path d="M116 64 L109 82 L114.6 79 L117 85 L119.6 66 Z M120 64 L127 82 L121.6 79.6 L119 85 Z" fill={color} stroke={LINE} strokeWidth="1" />
+        <circle cx="118" cy="62.4" r="4.4" fill={mix(color, '#000000', 0.18)} stroke={LINE} strokeWidth="1.1" />
+        <path d="M97 58 Q101 52 107 52 M131 52 Q137 52 139.6 57" fill="none" stroke="#ffffff" strokeOpacity="0.55" strokeWidth="1.6" strokeLinecap="round" />
+      </g>;
+    case 'tiara':
+      return <g stroke={LINE} strokeWidth="1" strokeLinejoin="round">
+        <path d="M114 70 Q150 56 186 70 L183 75 Q150 63 117 75 Z" fill="#fde68a" />
+        <path d="M128 66.4 L133 50 L138.4 62.6 L144 58 L150 38 L156 58 L161.6 62.6 L167 50 L172 66.4 Q150 59 128 66.4 Z" fill="#fde68a" />
+        <circle cx="150" cy="56" r="3.8" fill={color} />
+        <circle cx="133" cy="60.6" r="2" fill={color} />
+        <circle cx="167" cy="60.6" r="2" fill={color} />
+        <path d="M148.6 54.6 L149.6 53.8 M131 66 Q150 59.6 169 66" fill="none" stroke="#ffffff" strokeOpacity="0.75" strokeWidth="1.2" strokeLinecap="round" />
+      </g>;
+    case 'glasses':
+      return <g fill="none" strokeLinecap="round">
+        {[false, true].map((m) => (
+          <g key={String(m)} transform={m ? MIRROR : undefined}>
+            <circle cx="131" cy="121" r="17" fill="#ffffff" fillOpacity="0.12" stroke={color} strokeWidth="3" />
+            <circle cx="131" cy="121" r="18.6" stroke={LINE} strokeWidth="0.9" />
+            <path d="M114 117 L100 113" stroke={color} strokeWidth="2.6" />
+            <path d="M121 109 Q126 106 131 106" stroke="#ffffff" strokeOpacity="0.6" strokeWidth="1.6" />
+          </g>
+        ))}
+        <path d="M147.6 118 Q150 114.6 152.4 118" stroke={color} strokeWidth="2.6" />
+      </g>;
+    case 'flowers':
+      // Daisies along a leafy band over the crown, small at the sides and largest at the top.
+      return <g stroke={LINE} strokeWidth="0.9">
+        <path d="M104 80 Q150 50 196 80" fill="none" stroke="#4d7c0f" strokeWidth="3" />
+        {[[106, 78, 5], [120, 66, 6.4], [135, 59, 7.2], [150, 57, 8], [165, 59, 7.2], [180, 66, 6.4], [194, 78, 5]].map(([x, y, r]) => (
+          <g key={x} transform={`translate(${x} ${y})`}>
+            {[0, 72, 144, 216, 288].map((a) => <ellipse key={a} cx="0" cy={-r * 0.6} rx={r * 0.42} ry={r * 0.62} fill={color} transform={`rotate(${a})`} />)}
+            <circle r={r * 0.36} fill="#fde68a" />
+          </g>
+        ))}
+      </g>;
     case 'catears':
       return <g fill="#1a1a2e" stroke={LINE} strokeWidth="1.5">
         {[false, true].map((m) => (
           <g key={String(m)} transform={m ? MIRROR : undefined}>
             <path d="M105 75 C102.6 60 103.4 42 108 30 C119 37 130 47 139 58 Z" />
-            <path d="M112 65 C110.8 56 111 48 113.4 42 C120 46.6 126 52.6 130.6 58 Z" fill="#ff7eb6" />
+            <path d="M112 65 C110.8 56 111 48 113.4 42 C120 46.6 126 52.6 130.6 58 Z" fill={color} />
             <path d="M107 50 C107 42 108 36 109.4 33" fill="none" stroke="#ffffff" strokeOpacity="0.4" strokeWidth="1.4" />
           </g>
         ))}
@@ -1375,7 +1494,7 @@ function Accessory({ item }: { item: string }) {
         {[false, true].map((m) => (
           <g key={String(m)} transform={m ? MIRROR : undefined}>
             <path d="M96 112 L97 100 L102 100 L102.6 112 Z" fill="#2a2a33" stroke={LINE} strokeWidth="1" />
-            <Cel d="M90.6 106 C86.6 111 85.6 133 90.6 140 L101 140 C104.6 133 104.6 112 101 106 Z" fill="#ff007f" line={LINE} mirrored={m} depth={0.6} />
+            <Cel d="M90.6 106 C86.6 111 85.6 133 90.6 140 L101 140 C104.6 133 104.6 112 101 106 Z" fill={color} line={LINE} mirrored={m} depth={0.6} />
             <path d="M101 107.6 C104.6 113 104.8 132 101.4 138.6 L105.6 138 C108.2 132 108.2 113 105.4 108 Z" fill="#2a2a33" stroke={LINE} strokeWidth="0.9" />
             <ellipse cx="95" cy="123" rx="4" ry="9" fill="none" stroke="#ffffff" strokeOpacity="0.45" strokeWidth="1.2" />
             <path d="M89.6 114 C89 120 89 126 89.6 131" fill="none" stroke="#ffffff" strokeOpacity="0.6" strokeWidth="1.6" strokeLinecap="round" />
@@ -1388,16 +1507,82 @@ function Accessory({ item }: { item: string }) {
 }
 
 /** Drawn in body space (not head space) so it wraps the middle of the neck. */
-function Choker() {
+function Choker({ color }: { color: string }) {
   return (
     <g stroke={LINE} strokeWidth="1">
       <path d="M139.6 181 Q150 185.5 160.4 181 L160.8 188 Q150 192.5 139.2 188 Z" fill="#111" />
       <path d="M141 183 Q150 187 159 183" fill="none" stroke="#ffffff" strokeOpacity="0.25" />
       <path d="M150 190 L150 193" />
-      <circle cx="150" cy="195.5" r="3.2" fill="#ff007f" />
+      <circle cx="150" cy="195.5" r="3.2" fill={color} />
       <circle cx="149" cy="194.5" r="1" fill="#ffffff" stroke="none" opacity="0.8" />
     </g>
   );
+}
+
+/** Fairy wings sit behind the whole figure, translucent so the scene shows through. */
+function Wings({ color }: { color: string }) {
+  return (
+    <g className="wf-sway" style={{ transformOrigin: '150px 250px' }} stroke={mix(color, '#000000', 0.55)} strokeWidth="1.4" strokeLinejoin="round">
+      {[false, true].map((m) => (
+        <g key={String(m)} transform={m ? MIRROR : undefined}>
+          <path d="M146 236 C118 168 52 140 30 168 C14 192 50 236 128 252 Z" fill={color} fillOpacity="0.5" />
+          <path d="M146 258 C108 262 58 290 64 326 C70 352 118 330 144 274 Z" fill={color} fillOpacity="0.42" />
+          <path d="M140 240 C110 210 74 184 44 176 M138 246 C104 236 70 224 46 204 M140 266 C114 280 90 300 74 322" fill="none" strokeOpacity="0.45" strokeWidth="0.9" />
+          <path d="M40 170 C52 160 72 162 90 172" fill="none" stroke="#ffffff" strokeOpacity="0.6" strokeWidth="2" strokeLinecap="round" />
+        </g>
+      ))}
+    </g>
+  );
+}
+
+/** Extras worn over the outfit (wings are drawn separately, behind the body). */
+function Extra({ item, color }: { item: string; color: string }) {
+  const dark = mix(color, '#000000', 0.55);
+  switch (item) {
+    case 'bag':
+      // Cross-body strap from her right shoulder down to a small bag on the opposite hip.
+      return <g strokeLinejoin="round">
+        <path d="M122 198 C140 236 166 282 190 322" fill="none" stroke={LINE} strokeWidth="5.4" strokeLinecap="round" />
+        <path d="M122 198 C140 236 166 282 190 322" fill="none" stroke={dark} strokeWidth="3.4" strokeLinecap="round" />
+        <Cel d="M178 320 C178 316 181 314 185 314 L207 314 C211 314 214 316 214 320 L215 346 C215 350 212 352 208 352 L184 352 C180 352 177 350 177 346 Z" fill={color} line={LINE} depth={0.6} />
+        <path d="M177.6 322 Q196 334 214.4 322 L214.4 318 Q196 330 177.6 318 Z" fill="#000" fillOpacity="0.2" />
+        <circle cx="196" cy="329.4" r="2.2" fill="#fde68a" stroke={LINE} strokeWidth="0.7" />
+        <path d="M181 340 L181 347" stroke="#ffffff" strokeOpacity="0.5" strokeWidth="1.6" strokeLinecap="round" />
+      </g>;
+    case 'scarf':
+      return <g stroke={LINE} strokeWidth="1.1" strokeLinejoin="round">
+        <Cel d="M136 192 L124 256 L141 258 L147 200 Z" fill={color} line={LINE} depth={0.6} />
+        <Cel d="M136 182 Q150 192 164 182 L169 197 Q150 211 131 197 Z" fill={color} line={LINE} depth={0.6} />
+        <path d="M125 257 L124 264 M129 257.6 L128.4 265 M133 258 L132.6 265.6 M137 258.4 L136.8 266 M140.6 258.6 L140.6 266" fill="none" stroke={color} strokeWidth="1.6" strokeLinecap="round" />
+        <path d="M134 190 Q150 200 166 190 M140 214 L133 250" fill="none" stroke="#000" strokeOpacity="0.2" />
+        <path d="M134 186 Q141 192 148 194" fill="none" stroke="#ffffff" strokeOpacity="0.5" strokeWidth="1.6" strokeLinecap="round" />
+      </g>;
+    case 'bangles':
+      return <g fill="none" strokeLinecap="round">
+        {[false, true].map((m) => (
+          <g key={String(m)} transform={m ? MIRROR : undefined}>
+            {[330, 335.4].map((y) => (
+              <g key={y}>
+                <ellipse cx="74.4" cy={y} rx="7.4" ry="2.4" stroke={LINE} strokeWidth="3.4" />
+                <ellipse cx="74.4" cy={y} rx="7.4" ry="2.4" stroke={color} strokeWidth="2" />
+              </g>
+            ))}
+            <path d="M68 330.4 Q70 332 73 332.4" stroke="#ffffff" strokeOpacity="0.7" strokeWidth="1" />
+          </g>
+        ))}
+      </g>;
+    case 'wand':
+      // Held in her left hand: a slim stick angled up and out to a star.
+      return <g strokeLinejoin="round">
+        <path d="M226 366 L246 296" stroke={LINE} strokeWidth="4.4" strokeLinecap="round" />
+        <path d="M226 366 L246 296" stroke="#fde68a" strokeWidth="2.4" strokeLinecap="round" />
+        <path d="M247 276 L251.4 287.6 L263.6 288 L254 295.6 L257.4 307.4 L247 300.4 L236.6 307.4 L240 295.6 L230.4 288 L242.6 287.6 Z" fill={color} stroke={LINE} strokeWidth="1.3" />
+        <path d="M241 289.6 L246 285" stroke="#ffffff" strokeOpacity="0.7" strokeWidth="1.6" strokeLinecap="round" />
+        <g className="wf-twinkle" fill="#fde68a"><path d={SPARKLE} transform="translate(266 276) scale(0.6)" /><path d={SPARKLE} transform="translate(230 280) scale(0.45)" /></g>
+      </g>;
+    default:
+      return null;
+  }
 }
 
 /** Re-mounts its children whenever `k` changes so the pop animation replays. */
@@ -1425,6 +1610,8 @@ export default function WaifuFigure({ outfit, className, celebrate = false, eyeC
   eyeColor?: string;
 }) {
   const key = (g: GarmentChoice) => `${g.item}-${g.material}-${g.color}`;
+  const accentColor = outfit.accessory.color ?? ACCENT_COLOR;
+  const extra = outfit.extra ?? { item: 'none', color: ACCENT_COLOR };
   return (
     <svg viewBox="0 0 300 600" className={`wf-root ${className ?? ''}`} role="img" aria-label="Dress-up character">
       <style>{ANIM_CSS}</style>
@@ -1432,21 +1619,23 @@ export default function WaifuFigure({ outfit, className, celebrate = false, eyeC
       <g className="wf-breathe">
         <g transform={HEAD_SCALE}><HairBack item={outfit.hair.item} color={outfit.hair.color} /></g>
       </g>
+      {extra.item === 'wings' && <Pop k={`wings-${extra.color}`}><Wings color={extra.color} /></Pop>}
       <Body />
       <Pop k={key(outfit.legwear)}><Legwear choice={outfit.legwear} /></Pop>
       <Pop k={key(outfit.shoes)}><Shoes choice={outfit.shoes} /></Pop>
-      {/* Layers, back to front: torso and base sports bra and shorts, bottom, top, choker, head. */}
+      {/* Layers, back to front: wings, body, torso and base sports bra and shorts, bottom, top, choker, extras, head. */}
       <g className="wf-breathe">
-        <UpperBody />
+        <UpperBody base={outfit.base ?? BASE_COLOR} />
         <Pop k={key(outfit.bottom)}><Bottom choice={outfit.bottom} /></Pop>
         <Pop k={key(outfit.top)}><Top choice={outfit.top} /></Pop>
-        {outfit.accessory.item === 'choker' && <Pop k="choker"><Choker /></Pop>}
+        {outfit.accessory.item === 'choker' && <Pop k="choker"><Choker color={accentColor} /></Pop>}
+        {extra.item !== 'wings' && <Pop k={`${extra.item}-${extra.color}`}><Extra item={extra.item} color={extra.color} /></Pop>}
         <g transform={HEAD_SCALE}>
           <Skin d={HEAD} depth={0.8} />
           <Face eyeColor={eyeColor} />
           <Pop k={`${outfit.hair.item}-${outfit.hair.color}`}><HairFront item={outfit.hair.item} color={outfit.hair.color} /></Pop>
           <Brows />
-          <Pop k={outfit.accessory.item}><Accessory item={outfit.accessory.item} /></Pop>
+          <Pop k={`${outfit.accessory.item}-${accentColor}`}><Accessory item={outfit.accessory.item} color={accentColor} /></Pop>
         </g>
       </g>
       {celebrate && <Sparkles />}

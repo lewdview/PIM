@@ -12,7 +12,7 @@ import { Link, useLocation, useRoute } from 'wouter';
 import { ChevronLeft, ChevronRight, Calendar, Copy, Check, Eye, RotateCcw, Shuffle, Sparkles, Star } from 'lucide-react';
 import WaifuFigure from '../components/dressup/WaifuFigure';
 import {
-  ALL_SLOTS, GARMENT_SLOTS, HAIR_COLORS, MATERIAL_KEYS, SCENES, WARDROBE,
+  ACCENT_COLOR, ALL_SLOTS, BASE_COLOR, FREE_COLORS, GARMENT_SLOTS, HAIR_COLORS, MATERIAL_KEYS, SCENES, WARDROBE,
   defaultOutfit, getDayBrief, scoreOutfit, type GarmentSlot, type Outfit, type Slot,
 } from '../game/dressUp';
 import { OUTFIT_STYLES, generateArtPromptForDay, getSongMetaForDay } from '../utils/artTypes';
@@ -21,8 +21,13 @@ import { getBombshellDayCovers, getBombshellCoverUrl } from '../utils/bombshellC
 import cardCatalog from '../data/card_catalog.json';
 
 const SLOT_LABELS: Record<Slot, string> = {
-  hair: 'Hair', top: 'Top', bottom: 'Bottom', legwear: 'Legs', shoes: 'Shoes', accessory: 'Extra',
+  hair: 'Hair', top: 'Top', bottom: 'Bottom', legwear: 'Legs', shoes: 'Shoes', accessory: 'Head', extra: 'Extras',
 };
+
+/** Wardrobe tabs: every slot plus the base layer, which only takes a colour. */
+type Tab = Slot | 'base';
+const TABS: Tab[] = ['base', ...ALL_SLOTS];
+const TAB_LABEL = (t: Tab) => (t === 'base' ? 'Base' : SLOT_LABELS[t]);
 
 const STORE_KEY = 'pim_dressup_v1';
 
@@ -92,7 +97,7 @@ export default function DressUpPage() {
 
   const [saved, setSaved] = useState<SavedState>(loadSaved);
   const [outfit, setOutfit] = useState<Outfit>(() => saved.outfits[day] ?? defaultOutfit());
-  const [slot, setSlot] = useState<Slot>('top');
+  const [slot, setSlot] = useState<Tab>('top');
   const [revealed, setRevealed] = useState(() => !!saved.revealed?.[day]);
   const [copied, setCopied] = useState(false);
   const [showPrompt, setShowPrompt] = useState(false);
@@ -128,18 +133,27 @@ export default function DressUpPage() {
 
   const goTo = (d: number) => setLocation(`/dress-up/${clampDay(d)}`);
 
-  const isGarment = (s: Slot): s is GarmentSlot => (GARMENT_SLOTS as Slot[]).includes(s);
-  const currentItem = slot === 'hair' ? outfit.hair.item : slot === 'accessory' ? outfit.accessory.item : outfit[slot].item;
+  const isGarment = (s: Tab): s is GarmentSlot => (GARMENT_SLOTS as Tab[]).includes(s);
+  const extra = outfit.extra ?? { item: 'none', color: ACCENT_COLOR };
+  const currentItem = slot === 'base' ? null
+    : slot === 'hair' ? outfit.hair.item
+    : slot === 'accessory' ? outfit.accessory.item
+    : slot === 'extra' ? extra.item
+    : outfit[slot].item;
 
   const chooseItem = (id: string) => {
     if (slot === 'hair') update({ ...outfit, hair: { ...outfit.hair, item: id } });
-    else if (slot === 'accessory') update({ ...outfit, accessory: { item: id } });
-    else update({ ...outfit, [slot]: { ...outfit[slot], item: id } });
+    else if (slot === 'accessory') update({ ...outfit, accessory: { ...outfit.accessory, item: id } });
+    else if (slot === 'extra') update({ ...outfit, extra: { ...extra, item: id } });
+    else if (isGarment(slot)) update({ ...outfit, [slot]: { ...outfit[slot], item: id } });
   };
 
   const chooseColor = (color: string) => {
     if (slot === 'hair') update({ ...outfit, hair: { ...outfit.hair, color } });
-    else if (isGarment(slot)) update({ ...outfit, [slot]: { ...outfit[slot], color } });
+    else if (slot === 'base') update({ ...outfit, base: color });
+    else if (slot === 'accessory') update({ ...outfit, accessory: { ...outfit.accessory, color } });
+    else if (slot === 'extra') update({ ...outfit, extra: { ...extra, color } });
+    else update({ ...outfit, [slot]: { ...outfit[slot], color } });
   };
 
   const chooseMaterial = (material: (typeof MATERIAL_KEYS)[number]) => {
@@ -147,12 +161,14 @@ export default function DressUpPage() {
   };
 
   const reveal = () => {
+    // The day's look doesn't cover the free-play base colour, head colour or extras, so keep the player's.
+    const target: Outfit = { ...brief.target, base: outfit.base, extra: outfit.extra, accessory: { ...brief.target.accessory, color: outfit.accessory.color } };
     setRevealed(true);
-    setOutfit(brief.target);
+    setOutfit(target);
     setSaved((prev) => {
       const state: SavedState = {
         ...prev,
-        outfits: { ...prev.outfits, [day]: brief.target },
+        outfits: { ...prev.outfits, [day]: target },
         revealed: { ...prev.revealed, [day]: true },
       };
       persist(state);
@@ -166,7 +182,9 @@ export default function DressUpPage() {
     update({
       hair: { item: r(WARDROBE.hair).id, color: r(HAIR_COLORS) },
       top: garment('top'), bottom: garment('bottom'), legwear: garment('legwear'), shoes: garment('shoes'),
-      accessory: { item: r(WARDROBE.accessory).id },
+      accessory: { item: r(WARDROBE.accessory).id, color: r(FREE_COLORS) },
+      extra: { item: r(WARDROBE.extra).id, color: r(FREE_COLORS) },
+      base: outfit.base,
       scene: r(SCENES).category,
     }, true);
   };
@@ -179,8 +197,12 @@ export default function DressUpPage() {
 
   const material = OUTFIT_STYLES[brief.material];
   const sceneLabel = SCENES.find((s) => s.category === brief.scene)?.label ?? brief.scene;
-  const activeColor = slot === 'hair' ? outfit.hair.color : isGarment(slot) ? outfit[slot].color : null;
-  const colorChoices = slot === 'hair' ? HAIR_COLORS : brief.swatches;
+  const activeColor = slot === 'hair' ? outfit.hair.color
+    : slot === 'base' ? outfit.base ?? BASE_COLOR
+    : slot === 'accessory' ? outfit.accessory.color ?? ACCENT_COLOR
+    : slot === 'extra' ? extra.color
+    : outfit[slot].color;
+  const colorChoices = slot === 'hair' ? HAIR_COLORS : isGarment(slot) ? brief.swatches : FREE_COLORS;
 
   return (
     <div className="flex-1 w-full min-h-screen bg-[#07040c] text-white pb-24!">
@@ -323,39 +345,56 @@ export default function DressUpPage() {
 
         {/* Wardrobe */}
         <aside className="order-3 flex flex-col gap-4">
-          <div className="grid grid-cols-6 border border-white/10">
-            {ALL_SLOTS.map((s) => (
+          <div className="grid grid-cols-4 border border-white/10">
+            {TABS.map((s) => (
               <button key={s} onClick={() => setSlot(s)}
                 className={`py-2! font-mono text-[10px] uppercase font-bold ${slot === s ? 'bg-[#ff7eb6] text-black' : 'text-white/70 hover:bg-white/5'}`}>
-                {SLOT_LABELS[s]}
+                {TAB_LABEL(s)}
               </button>
             ))}
           </div>
 
-          <div>
-            <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-white/50 mb-2!">Piece</div>
-            <div className="grid grid-cols-2 gap-2">
-              {WARDROBE[slot].map((item) => (
-                <button key={item.id} onClick={() => chooseItem(item.id)}
-                  className={`px-2! py-2! text-left text-xs border ${currentItem === item.id ? 'border-[#ff7eb6] bg-[#ff7eb6]/10' : 'border-white/15 hover:border-white/40'}`}>
-                  {item.label}
-                </button>
-              ))}
+          {slot === 'base' ? (
+            <p className="text-xs text-white/60">Sports bra and bike shorts, worn under everything. Pick any colour.</p>
+          ) : (
+            <div>
+              <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-white/50 mb-2!">Piece</div>
+              <div className="grid grid-cols-2 gap-2">
+                {WARDROBE[slot].map((item) => (
+                  <button key={item.id} onClick={() => chooseItem(item.id)}
+                    className={`px-2! py-2! text-left text-xs border flex items-center justify-between gap-1 ${currentItem === item.id ? 'border-[#ff7eb6] bg-[#ff7eb6]/10' : 'border-white/15 hover:border-white/40'}`}>
+                    {item.label}
+                    {item.bonus && item.id !== 'none' && slot !== 'extra' && (
+                      <span className="font-mono text-[8px] uppercase text-[#7dd3fc]" title="Free play: not part of any day's look">new</span>
+                    )}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
-          {activeColor && (
+          {slot !== 'accessory' || outfit.accessory.item !== 'none' ? (
             <div>
               <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-white/50 mb-2!">Colour</div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 items-center">
                 {colorChoices.map((c) => (
                   <button key={c} onClick={() => chooseColor(c)} aria-label={`Colour ${c}`}
                     className={`w-8 h-8 border-2 ${activeColor.toLowerCase() === c.toLowerCase() ? 'border-white scale-110' : 'border-white/20'}`}
                     style={{ background: c }} />
                 ))}
+                {/* Any colour at all; off-palette colours just don't score on a garment. */}
+                <label className="relative w-8 h-8 border-2 border-dashed border-white/40 grid place-items-center cursor-pointer hover:border-white"
+                  title="Pick any colour" style={{ background: colorChoices.some((c) => c.toLowerCase() === activeColor.toLowerCase()) ? undefined : activeColor }}>
+                  <span className="text-sm leading-none text-white mix-blend-difference">+</span>
+                  <input type="color" value={activeColor} onChange={(e) => chooseColor(e.target.value)} aria-label="Pick any colour"
+                    className="absolute inset-0 opacity-0 cursor-pointer" />
+                </label>
               </div>
+              {isGarment(slot) && (
+                <p className="mt-1.5! text-[10px] text-white/40">Only today's palette colours score. The + picks any colour.</p>
+              )}
             </div>
-          )}
+          ) : null}
 
           {isGarment(slot) && (
             <div>
