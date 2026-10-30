@@ -1636,8 +1636,10 @@ export default function Game() {
 
   const [activePovMode, setActivePovMode] = useState<PovMode>(opts.povMode || 'classic');
   const activePovModeRef = useRef(activePovMode);
+  // The lock only counts while the POV changer is unlocked: otherwise its button is
+  // hidden, and a lock saved earlier would freeze the stage camera with no way to undo it.
   const [isPovLocked, setIsPovLocked] = useState<boolean>(() => {
-    return typeof localStorage !== 'undefined' && localStorage.getItem('opt_povLocked') === 'true';
+    return isPovUnlocked && typeof localStorage !== 'undefined' && localStorage.getItem('opt_povLocked') === 'true';
   });
   const isPovLockedRef = useRef(isPovLocked);
   const [povToast, setPovToast] = useState<{ mode: string; time: number } | null>(null);
