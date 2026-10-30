@@ -429,6 +429,7 @@ async function generateCards(svc: any, userId: string, packType: string, count: 
 
   let echoChance = 15;
   let ultraRewardChance = 0.003;
+  let ultraRewardMax = 5;
   let bombshellBonusChance = DEFAULT_BOMBSHELL_BONUS_CHANCE;
   let adminConfig = null;
   try {
@@ -442,6 +443,7 @@ async function generateCards(svc: any, userId: string, packType: string, count: 
     if (adminConfig) {
       if (adminConfig.echoSystem?.echoChance !== undefined) echoChance = adminConfig.echoSystem.echoChance;
       if (adminConfig.ultraRewardChance !== undefined) ultraRewardChance = adminConfig.ultraRewardChance;
+      if (typeof adminConfig.ultraRewardMax === 'number') ultraRewardMax = adminConfig.ultraRewardMax;
       if (typeof adminConfig.bombshellBonusChance === 'number') bombshellBonusChance = adminConfig.bombshellBonusChance;
     }
   } catch { /* use default */ }
@@ -462,6 +464,16 @@ async function generateCards(svc: any, userId: string, packType: string, count: 
   const supplyMap = new Map<string, number>(
     (supplySnapshot ?? []).map((r: any) => [r.card_id_rarity, r.supply])
   );
+
+  // Custom song awards are capped at ultraRewardMax across every vault. A roll that hits
+  // (0.3%) must also win a slot from reserve_ultra_reward, which hands slots out one at a
+  // time under a row lock, so simultaneous packs can't push past the cap.
+  const canAwardUltra = async (): Promise<boolean> => {
+    const { data, error } = await svc.rpc('reserve_ultra_reward', { p_max: ultraRewardMax });
+    // If the reservation fails, don't award: an extra custom song is worse than a missed one.
+    if (error) console.warn('[generateCards] reserve_ultra_reward failed:', error.message);
+    return !error && data === true;
+  };
 
   for (let cIdx = 0; cIdx < count; cIdx++) {
     let day = days[cIdx];
@@ -538,8 +550,8 @@ async function generateCards(svc: any, userId: string, packType: string, count: 
 
       if (!isSoldOut) {
         let ultra_reward = null;
-        if (Math.random() < ultraRewardChance) {
-          ultra_reward = { type: 'custom_song', label: 'Custom Theme', description: 'You unlocked an ultra-rare secret theme!' };
+        if (Math.random() < ultraRewardChance && await canAwardUltra()) {
+          ultra_reward = { type: 'custom_song', label: 'Custom Song', description: 'A custom song written and recorded for you by th3scr1b3. Claim it on the Rewards page.' };
         }
         rolledCard = {
           owner_id: userId, card_id: (packType === 'bombshell' || packType === 'bombshell_token') ? `bombshell-${day}` : `card-${day}`, rarity, source,
