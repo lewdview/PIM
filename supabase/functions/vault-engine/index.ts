@@ -1115,11 +1115,30 @@ serve(async (req) => {
           currentDayOfWeek: now.getUTCDay(), currentVaultDay: today,
         };
 
+        // Gameplay rewards: the client's flag proves nothing, so the server checks its own
+        // records (best score for the song, or campaign clears for the month) and grants
+        // each reward once. Claimed here, after every limit check that could still refuse.
+        let rewardKey: string | null = null;
+        if (isGameplayReward) {
+          const reward = payload.reward || {};
+          const songId = typeof reward.songId === 'string' ? reward.songId : null;
+          const month = Number.isInteger(reward.month) ? reward.month : null;
+          const milestone = Number.isInteger(reward.milestone) ? reward.milestone : null;
+          const { data: granted, error: grantErr } = await svc.rpc('claim_gameplay_reward', {
+            p_user_id: user.id, p_pack: packType, p_song_id: songId, p_month: month, p_milestone: milestone,
+          });
+          if (grantErr || granted !== true) {
+            throw new Error('This reward has already been claimed or has not been earned yet.');
+          }
+          rewardKey = songId ? `song:${songId.slice(0, 100)}:${packType}` : `campaign:${month}:${milestone}`;
+        }
+
         let generatedCards: any[];
         try {
           generatedCards = await generateCards(svc, user.id, packType, count, today, ctx);
         } catch (genErr) {
           // Don't let a mint failure swallow the player's payment.
+          if (rewardKey) await svc.rpc('release_gameplay_reward', { p_user_id: user.id, p_reward_key: rewardKey });
           if (cryptoPaymentKey) await releaseCryptoPayment(svc, cryptoPaymentKey);
           if (cost > 0 && !isTokenPack) {
             await svc.rpc('increment_tokens', { user_uuid: user.id, amount: cost });
@@ -2247,9 +2266,18 @@ serve(async (req) => {
           throw new Error(`Payment not completed. Status: ${session.payment_status}`);
         }
 
-        const targetUserId = user?.id || session.client_reference_id || session.metadata?.userId || payload.userId;
+        // The purchaser recorded on the Stripe session gets the order, not whoever calls
+        // this: an admin retrying a customer's pending order must not receive their cards.
+        const targetUserId = session.client_reference_id || session.metadata?.userId || user?.id || payload.userId;
         if (!targetUserId) {
           throw new Error('No user ID associated with this Stripe checkout session');
+        }
+
+        // One request fulfils a session at a time. Without this, two calls for the same paid
+        // session both passed the completed-order check above and each minted a pack.
+        const { data: gotLock, error: lockErr } = await svc.rpc('claim_stripe_fulfillment', { p_session_id: session.id });
+        if (lockErr || gotLock !== true) {
+          throw new Error('This order is already being fulfilled. Refresh in a moment to see your cards.');
         }
 
         const packCategory = session.metadata?.packCategory || payload.category || 'taste';
@@ -2330,7 +2358,14 @@ serve(async (req) => {
           currentVaultDay: today,
         };
 
-        const generatedCards = await generateCards(svc, targetUserId, packCategory, cardCount, today, ctx);
+        let generatedCards: any[];
+        try {
+          generatedCards = await generateCards(svc, targetUserId, packCategory, cardCount, today, ctx);
+        } catch (genErr) {
+          // Let a retry fulfil the order now instead of after the lock goes stale.
+          await svc.rpc('release_stripe_fulfillment', { p_session_id: session.id });
+          throw genErr;
+        }
 
         let newTotalPulls = (profile?.total_pulls || 0) + cardCount;
         let newPullsSinceRarePlus = profile?.pulls_since_rare_plus || 0;
