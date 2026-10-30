@@ -609,15 +609,15 @@ export default function PitchDeck() {
                   <div className="grid grid-cols-2 gap-3 font-mono text-[11px]">
                     <div className="p-3 border border-white/5 bg-[#faf0d8]/5 flex flex-col justify-between">
                       <span className="opacity-50 text-[8px] uppercase">Registered Profiles</span>
-                      <span className="text-base font-black text-[#ffb800]">1,270+ PLAYERS</span>
+                      <span className="text-base font-black text-[#ffb800]">1,335 PLAYERS</span>
                     </div>
                     <div className="p-3 border border-white/5 bg-[#faf0d8]/5 flex flex-col justify-between">
                       <span className="opacity-50 text-[8px] uppercase">Gameplay Records</span>
-                      <span className="text-base font-black text-white">69,900+ RUNS</span>
+                      <span className="text-base font-black text-white">70,007 RUNS</span>
                     </div>
                     <div className="p-3 border border-white/5 bg-[#faf0d8]/5 flex flex-col justify-between">
                       <span className="opacity-50 text-[8px] uppercase">Vault Collectibles</span>
-                      <span className="text-base font-black text-[#c44dff]">630+ CARDS</span>
+                      <span className="text-base font-black text-[#c44dff]">2,011 CLAIMED</span>
                     </div>
                     <div className="p-3 border border-white/5 bg-[#faf0d8]/5 flex flex-col justify-between">
                       <span className="opacity-50 text-[8px] uppercase">365 Catalog Status</span>
@@ -625,7 +625,7 @@ export default function PitchDeck() {
                     </div>
                   </div>
                   <p className="text-[9.5px] opacity-40 leading-relaxed font-mono uppercase">
-                    Verification: 416+ global supply counters recorded, 320k+ V⚡ sparks earned in-game. Contracts hardened, not yet deployed.
+                    Verification: counts checked against the production database — players and collectibles on October 14, 2026; runs on October 10, 2026. Contracts hardened, not yet deployed.
                   </p>
                 </>
               )}
