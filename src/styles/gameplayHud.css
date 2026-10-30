@@ -108,6 +108,13 @@
   text-shadow: 0 0 10px var(--stage-c, var(--hud-cyan));
 }
 .pim-hud-time b { color: var(--hud-text); font-weight: 700; }
+/* small phones: keep the elapsed time, drop percent and total so nothing clips */
+@media (max-width: 379px) {
+  .pim-hud-strip-row { gap: 8px; padding-inline: 8px; }
+  .pim-hud-controls { gap: 4px; }
+  .pim-hud-btn { min-width: 30px; padding: 0 8px; }
+  .pim-hud-pct, .pim-hud-total { display: none; }
+}
 
 .pim-hud-rail {
   display: grid;
