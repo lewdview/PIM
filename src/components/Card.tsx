@@ -5,6 +5,7 @@ import { RARITY_CONFIG, getSupplyCap, type UltraReward, type ProofType } from '.
 import { getCoverUrlForRarity, useSmartCoverArt } from '../utils/rarityArtwork';
 import RarityBadge from './RarityBadge';
 import AudioPreview from './AudioPreview';
+import { Link } from 'wouter';
 import { formatDate } from '../utils/dayCalc';
 import { Gift, Flame, ShieldCheck } from 'lucide-react';
 import OneOfOneOutline from './OneOfOneOutline';
@@ -1033,7 +1034,7 @@ export default memo(function Card({
 
               {/* Mythic CTA */}
               {card.rarity === 'mythic' && interactive && (
-                <a href={`https://files.th3scr1b3.art/stems/${day}`} target="_blank" rel="noreferrer"
+                <Link href="/claim#stems"
                   onClick={e => e.stopPropagation()}
                   style={{
                     padding: '7px 18px', borderRadius: '6px',
@@ -1042,8 +1043,8 @@ export default memo(function Card({
                     textDecoration: 'none', boxShadow: '0 0 20px rgba(255,215,0,0.4)',
                   }}
                 >
-                  ⬇ Download Stems
-                </a>
+                  ⬇ Claim Stems
+                </Link>
               )}
             </div>
 

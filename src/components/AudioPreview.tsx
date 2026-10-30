@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Play, Pause, Volume2, Download, ExternalLink } from 'lucide-react';
 import { useGlobalPlayer, type GlobalTrack } from '../store/useGlobalPlayer';
+import { Link } from 'wouter';
 
 // Duration limits by rarity tier (in seconds, 0 = unlimited/full song)
 const DURATION_LIMITS: Record<string, number> = {
@@ -19,7 +20,7 @@ interface AudioPreviewProps {
   rarity?: string;
   /** Daily claim cards get full song regardless of rarity */
   isDailyClaim?: boolean;
-  /** Mythic cards show stems download link */
+  /** Mythic cards link to the stems claim (defaults to /claim#stems) */
   stemsUrl?: string;
   /** Cover URL for global player */
   coverUrl?: string;
@@ -226,10 +227,8 @@ export default function AudioPreview({
 
       {/* Mythic: stems download link */}
       {isMythic && (
-        <a
-          href={stemsUrl || '#'}
-          target="_blank"
-          rel="noopener noreferrer"
+        <Link
+          href={stemsUrl || '/claim#stems'}
           className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-mono font-bold uppercase tracking-wider transition-all hover:scale-[1.02]"
           style={{
             background: 'linear-gradient(135deg, rgba(255,215,0,0.1), rgba(255,170,0,0.05))',
@@ -241,7 +240,7 @@ export default function AudioPreview({
           <Download size={10} />
           session stems for remix
           <ExternalLink size={10} className="ml-auto" />
-        </a>
+        </Link>
       )}
     </div>
   );

@@ -6,7 +6,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { useLoadingToast } from '../store/useLoadingToast';
 import { 
   Gift, Music, CheckCircle, AlertTriangle, ExternalLink, 
-  Zap, Award, Image as ImageIcon, Sparkles, KeyRound 
+  Zap, Award, Image as ImageIcon, Sparkles, KeyRound, Download 
 } from 'lucide-react';
 import { 
   redeemBonusCode, fetchAllCards, findCardWithFallback, 
@@ -15,6 +15,10 @@ import {
 import { getCoverUrlForRarity } from '../utils/rarityArtwork';
 import { audioManager } from '../game/audio';
 import DecryptionAnimation from '../components/DecryptionAnimation';
+import {
+  getUltraRewardStats, claimUltraRewards, fetchClaimedUltraIds, claimMythicStems,
+  type UltraRewardStats,
+} from '../services/rewardClaims';
 
 type FormState = 'idle' | 'submitting' | 'done' | 'error';
 type CodeState = 'idle' | 'redeeming' | 'success' | 'error';
@@ -158,17 +162,71 @@ export default function ClaimPage() {
 
   const hasReward = ultraCards.length > 0;
 
-  // Check claimed status for Ultra Cards
+  // Global custom song counts (every vault) and this player's claims on record.
+  const [rewardStats, setRewardStats] = useState<UltraRewardStats | null>(null);
+  const [serverClaimedIds, setServerClaimedIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    let live = true;
+    getUltraRewardStats().then(s => { if (live) setRewardStats(s); });
+    if (user) fetchClaimedUltraIds().then(ids => { if (live) setServerClaimedIds(ids); });
+    return () => { live = false; };
+  }, [user, state]);
+
+  // Claims submitted before the server recorded them (older build, or the call failed) only
+  // live in localStorage. Once we know the server's list, record those so they count.
+  const [reconciled, setReconciled] = useState(false);
+  useEffect(() => {
+    if (!user || reconciled || ultraCards.length === 0) return;
+    let live = true;
+    fetchClaimedUltraIds().then(async (ids) => {
+      const pending = ultraCards
+        .filter(c => !ids.has(c.id) && localStorage.getItem(`ultra_claimed_${c.id}`) === 'true')
+        .map(c => c.id);
+      const recorded = pending.length ? await claimUltraRewards(pending) : [];
+      if (!live) return;
+      setReconciled(true);
+      if (recorded && recorded.length) {
+        setServerClaimedIds(prev => new Set([...prev, ...ids, ...recorded]));
+        getUltraRewardStats().then(s => { if (live) setRewardStats(s); });
+      }
+    });
+    return () => { live = false; };
+  }, [user, ultraCards, reconciled]);
+  const rewardMax = rewardStats?.max ?? 5;
+
+  // Mythic cards: each one unlocks that day's session stems.
+  const mythicCards = useMemo(() => collection.filter(c => c.card.rarity === 'mythic'), [collection]);
+  useEffect(() => {
+    if (window.location.hash !== '#stems' || !user) return;
+    const t = setTimeout(() => document.getElementById('stems')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+    return () => clearTimeout(t);
+  }, [user]);
+  const [stemsState, setStemsState] = useState<Record<string, { busy?: boolean; error?: string; url?: string }>>({});
+  const handleClaimStems = async (collectionId: string) => {
+    audioManager.playSfx('tap_nav', 0.3);
+    setStemsState(s => ({ ...s, [collectionId]: { ...s[collectionId], busy: true, error: undefined } }));
+    const res = await claimMythicStems(collectionId);
+    if (res.ok) {
+      audioManager.playSfx('hidden_secret_found', 0.9);
+      setStemsState(s => ({ ...s, [collectionId]: { url: res.url } }));
+      window.open(res.url, '_blank', 'noopener');
+    } else {
+      audioManager.playSfx('locked_out', 0.8);
+      setStemsState(s => ({ ...s, [collectionId]: { url: s[collectionId]?.url, error: res.error } }));
+    }
+  };
+
+  // Check claimed status for Ultra Cards (server record, or this browser's older local flag)
   const ultraClaims = useMemo(() => {
     const claimsMap: Record<string, boolean> = {};
     let count = 0;
     for (const c of ultraCards) {
-      const isClaimed = localStorage.getItem(`ultra_claimed_${c.id}`) === 'true';
+      const isClaimed = serverClaimedIds.has(c.id) || localStorage.getItem(`ultra_claimed_${c.id}`) === 'true';
       claimsMap[c.id] = isClaimed;
       if (isClaimed) count++;
     }
     return { claimsMap, claimedCount: count };
-  }, [ultraCards]);
+  }, [ultraCards, serverClaimedIds]);
 
   const allPrizesClaimed = ultraCards.length > 0 && ultraClaims.claimedCount === ultraCards.length;
 
@@ -337,10 +395,13 @@ export default function ClaimPage() {
     setState('submitting');
     audioManager.playSfx('tap_nav', 0.3);
 
-    // Simulate submission (mailto fallback)
-    await new Promise(r => setTimeout(r, 1400));
+    // Record the claim server-side so it counts toward the global claimed total.
+    // Send every card without a server record, including ones only flagged in this browser.
+    const unrecordedIds = ultraCards.filter(c => !serverClaimedIds.has(c.id)).map(c => c.id);
+    const recorded = await claimUltraRewards(unrecordedIds);
+    if (recorded) setServerClaimedIds(prev => new Set([...prev, ...recorded]));
 
-    // Save claim status in localStorage for all Ultra cards currently being claimed
+    // Keep the local flag too, for browsers on an older server without the claims table
     ultraCards.forEach(c => {
       localStorage.setItem(`ultra_claimed_${c.id}`, 'true');
     });
@@ -681,13 +742,31 @@ export default function ClaimPage() {
             <h2 className="text-lg font-mono font-bold uppercase text-white mt-1">Elite Custom Song Claim</h2>
           </div>
 
+          {/* Global custom song counts: every vault, not just this player's */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="p-3 bg-white/5 border border-white/10 rounded-lg text-center">
+              <div className="text-[8px] font-mono text-zinc-400 uppercase tracking-wider">Found worldwide</div>
+              <div className="text-xl font-black font-mono text-white mt-1">
+                {rewardStats ? rewardStats.found : '–'} / {rewardMax}
+              </div>
+            </div>
+            <div className="p-3 bg-white/5 border border-white/10 rounded-lg text-center">
+              <div className="text-[8px] font-mono text-zinc-400 uppercase tracking-wider">Claimed worldwide</div>
+              <div className="text-xl font-black font-mono text-[#ffd700] mt-1">
+                {rewardStats ? rewardStats.claimed : '–'} / {rewardStats ? rewardStats.found : '–'}
+              </div>
+            </div>
+          </div>
+
           {!hasReward ? (
             <div className="border border-white/5 bg-white/[0.01] p-6 rounded-lg text-center space-y-3">
               <AlertTriangle size={24} className="mx-auto text-white/20" />
               <div className="text-xs font-mono font-bold text-white/40 uppercase tracking-widest">Locked — No Ultra Card Found</div>
               
               <div className="inline-block px-3 py-1 bg-white/5 border border-white/10 rounded font-mono text-[9px] text-[#ff3800] uppercase tracking-wider">
-                No Secret Prizes Claimed (0 / 5 Found)
+                {rewardStats && rewardStats.found >= rewardMax
+                  ? `All ${rewardMax} custom songs have been found`
+                  : `${rewardStats ? Math.max(rewardMax - rewardStats.found, 0) : '?'} of ${rewardMax} custom songs still hidden`}
               </div>
 
               <p className="text-[10px] font-mono text-zinc-500 leading-relaxed max-w-sm mx-auto uppercase">
@@ -706,11 +785,11 @@ export default function ClaimPage() {
               {/* Prize Count Statistics Banner */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-3 bg-white/5 border border-white/10 rounded-lg text-center">
-                  <div className="text-[8px] font-mono text-zinc-400 uppercase tracking-wider">Prizes Found</div>
-                  <div className="text-xl font-black font-mono text-white mt-1">{ultraCards.length} / 5</div>
+                  <div className="text-[8px] font-mono text-zinc-400 uppercase tracking-wider">You Found</div>
+                  <div className="text-xl font-black font-mono text-white mt-1">{ultraCards.length} / {rewardMax}</div>
                 </div>
                 <div className="p-3 bg-white/5 border border-white/10 rounded-lg text-center">
-                  <div className="text-[8px] font-mono text-zinc-400 uppercase tracking-wider">Prizes Claimed</div>
+                  <div className="text-[8px] font-mono text-zinc-400 uppercase tracking-wider">You Claimed</div>
                   <div className="text-xl font-black font-mono text-[#ffd700] mt-1">
                     {ultraClaims.claimedCount} / {ultraCards.length}
                   </div>
@@ -808,6 +887,73 @@ export default function ClaimPage() {
                   </button>
                 </form>
               )}
+            </div>
+          )}
+        </div>
+
+        {/* SECTION C: MYTHIC STEMS (SESSION STEMS FOR MYTHIC CARD OWNERS) */}
+        <div id="stems" className="glass-panel p-6 border border-white/10 shadow-xl space-y-5 relative scroll-mt-20">
+          <div>
+            <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-[0.3em]">// MYTHIC_STEM_VAULT</span>
+            <h2 className="text-lg font-mono font-bold uppercase text-white mt-1">Mythic Stem Download</h2>
+            <p className="text-[10px] font-mono text-zinc-500 leading-relaxed uppercase mt-1">
+              Every Mythic card unlocks the session stems for its song. Claim them to download and remix.
+            </p>
+          </div>
+
+          {mythicCards.length === 0 ? (
+            <div className="border border-white/5 bg-white/[0.01] p-6 rounded-lg text-center space-y-3">
+              <AlertTriangle size={24} className="mx-auto text-white/20" />
+              <div className="text-xs font-mono font-bold text-white/40 uppercase tracking-widest">Locked — No Mythic Card Found</div>
+              <p className="text-[10px] font-mono text-zinc-500 leading-relaxed max-w-sm mx-auto uppercase">
+                Pull a Mythic from any pack and its stems show up here.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-2">
+              {mythicCards.map((c) => {
+                const st = stemsState[c.id] || {};
+                return (
+                  <div key={c.id} className="p-2 bg-black/40 border border-[#ffd700]/15 rounded-lg space-y-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded overflow-hidden border border-[#ffd700]/30 shrink-0">
+                        <img src={getCoverUrlForRarity(c.card.coverUrl, c.card.rarity)} alt="" className="w-full h-full object-cover" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[9px] font-mono text-zinc-400">Day #{c.card.day}</div>
+                        <div className="text-xs font-bold text-white truncate leading-tight">{c.card.title}</div>
+                      </div>
+                      {/* Download again asks for a fresh link: signed links expire */}
+                      {st.url ? (
+                        <button
+                          type="button"
+                          onClick={() => handleClaimStems(c.id)}
+                          disabled={st.busy}
+                          className="px-3 py-2 rounded font-mono font-bold text-[9px] uppercase tracking-wider shrink-0 border bg-[#39FF14]/10 border-[#39FF14]/30 text-[#39FF14] inline-flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                        >
+                          <Download size={11} /> {st.busy ? 'Unlocking…' : 'Download again'}
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleClaimStems(c.id)}
+                          disabled={st.busy}
+                          className="px-3 py-2 font-mono font-bold text-[9px] uppercase tracking-wider text-black bg-[#ffd700] shrink-0 inline-flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                          style={{ border: '2px solid #000', boxShadow: '2px 2px 0 #000', minHeight: '36px' }}
+                        >
+                          <Download size={11} /> {st.busy ? 'Unlocking…' : 'Claim stems'}
+                        </button>
+                      )}
+                    </div>
+                    {st.error && (
+                      <div className="flex items-center gap-2 text-[10px] font-mono text-[#ff3800]">
+                        <AlertTriangle size={12} className="shrink-0" />
+                        <span>{st.error}</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
