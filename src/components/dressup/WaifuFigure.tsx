@@ -323,17 +323,11 @@ const TORSO = 'M116 196 C126 193 133 191 138 190 Q150 199 162 190 C167 191 174 1
 // Arms sit in a slight A-pose so they frame the curves instead of hiding them.
 // The arm runs into the back of the hand in one contour, so there is no seam at the wrist. The
 // outer forearm swells just below the elbow (brachioradialis) and the inner edge narrows to the wrist.
-const ARM = 'M118 198 C98 200 88 212 85 230 C82.6 246 80.4 262 78.6 278 C77.4 286 75 292 72.6 302 C70.6 314 69.2 326 68 336 C64.6 342 62 349 62.4 356 Q71 358.6 80.6 355.6 C80.6 350 79.6 345 78.2 340.6 C79.4 330 82.6 316 85.6 304 C87.4 296 89.4 291 90.6 287 C93.4 270 98 252 104 238 Z';
+const ARM = 'M118 198 C98 200 88 212 85 230 C82.6 246 80.4 262 78.6 278 C77.4 286 75 292 72.6 302 C70.6 314 69.2 326 68 336 C64.6 342 62.4 348 62.4 353.6 C62.2 357.4 62.6 361.4 63.6 364 C64.4 366 66.2 366 66.6 363.8 C66.8 362.6 66.8 361.4 66.9 360.4 C67 363.4 67.4 367.6 68.6 369.2 C69.8 370.6 71.1 369.6 71.2 367.6 C71.3 365 71.3 362.6 71.3 361 C71.5 364.6 72 369.6 73.4 371 C74.8 372.2 75.9 370.8 75.9 368.4 C75.9 365.6 75.9 363 76 361 C76.3 364 76.8 368.2 78 369.2 C79.4 370.2 80.3 367.8 80.4 364.6 C80.6 361 80.7 358 80.6 355.6 C80.6 350 79.6 345 78.2 340.6 C79.4 330 82.6 316 85.6 304 C87.4 296 89.4 291 90.6 287 C93.4 270 98 252 104 238 Z';
 // Relaxed hanging hand (her right; mirrored for the left), seen from the front with the palm to
 // the thigh: the back of the hand, four fingers in length order (middle > ring >= index > little,
 // little finger on the outside), knuckles on an arc, and the thumb in front on the inner side.
-const FINGERS = [
-  'M62.6 352.6 C62 357 62 361.6 63.2 364.2 C64.4 365.6 66 364.8 66.4 362 C66.8 359 66.8 356 66.6 353 C65.6 351.2 63.4 351.2 62.6 352.6 Z', // little
-  'M66.6 353 C66 359 66.2 364.6 67.6 367.8 C68.8 369.4 70.6 368.8 71 366 C71.4 362 71.2 357 71 353.4 C70 351.4 67.6 351.4 66.6 353 Z', // ring
-  'M71 353.4 C70.6 359 71 365 72.4 368.8 C73.6 370.6 75.4 370 75.8 367 C76 362.6 75.8 357.6 75.6 353.2 C74.6 351.4 72 351.4 71 353.4 Z', // middle
-  'M75.6 353 C75.6 358.4 76 363 77.2 366 C78.4 367.6 80 367 80.4 364.4 C80.8 360.6 80.6 356 80.4 352.6 C79.4 350.8 76.6 350.8 75.6 353 Z', // index
-];
-const THUMB = 'M79.6 345 C82.4 348 83.2 353 81.6 357.6 C80.6 360 78.2 359.6 78 357.4 C78.4 353.6 78.2 350 77 347 Z';
+const THUMB = 'M78.4 343.4 C81.4 346 82.6 350.4 82.2 355 C82 358.4 80.8 360.6 79.4 360.6 C78.2 360.6 77.6 359.4 77.8 357.6 C78.2 354 78 350.4 76.8 347.4 Z';
 // Leg and foot in one contour, front view. Outer calf swells high, inner calf low; the knee is the
 // narrow point; the ankle tapers to the malleoli; the foot flares to five toes, big toe inside.
 const LEG = 'M89.4 344 L150 344 C150.5 372 148.5 404 146 432 C147.6 440 148 448 146.4 456 C145.4 462 145.6 468 146.4 478 C147 492 145 512 142.6 530 C141 540 140 548 140.8 554 C143.6 561 147.2 567 148 573 C148.6 577.4 147 581.2 143.6 581.4 C142.2 581.4 141.4 580.8 141 580 C140 581.6 137.6 581.8 136.8 580.2 C135.8 581.4 133.4 581.4 132.6 579.8 C131.6 580.8 129.4 580.6 128.8 579.2 C127.4 579.8 125 579.2 124.8 577.4 C124.4 574.4 125.4 570.4 126 567 C126.8 562 127.8 558 127.4 552 C127 536 120.4 516 114.6 500 C110.8 488 110.6 474 113 464 C114.6 458 117.4 453 117.4 448 C112 436 103 422 97.6 404 C92.4 386 88.8 366 89.4 344 Z';
@@ -822,10 +816,13 @@ function Face({ eyeColor }: { eyeColor: string }) {
 
 function Hand() {
   return (
-    <g>
-      {FINGERS.map((d) => <Skin key={d} d={d} depth={0.35} />)}
+    <g fill="none" stroke={SKIN_LINE} strokeLinecap="round">
+      {/* The fingers are part of the arm's contour; thin lines part them up to the knuckles. */}
+      <path d="M66.9 360.4 Q66.8 358.4 66.4 356.8 M71.3 361 Q71.3 359 71 357.4 M76 361 Q76.1 359 75.9 357.2" strokeOpacity="0.5" strokeWidth="0.6" />
+      {/* Knuckles: small highlights across the back of the hand. */}
+      <path d="M64.4 354.6 Q65.6 353.6 66.8 354.4 M68.8 355.4 Q70.2 354.4 71.6 355.2 M73.6 355.4 Q75 354.4 76.4 355.2" stroke="#ffffff" strokeOpacity="0.4" strokeWidth="0.8" />
       {/* Nails on the fingertips that turn toward us. */}
-      <path d="M67.9 366.6 Q69 367.8 70.2 366.8 M72.4 368.4 Q73.6 369.6 74.8 368.6 M77.4 365.4 Q78.6 366.4 79.6 365.4" fill="none" stroke={SKIN_LINE} strokeOpacity="0.45" strokeWidth="0.6" strokeLinecap="round" />
+      <path d="M68.4 368.4 Q69.6 369.6 70.8 368.6 M72.6 370.4 Q73.8 371.6 75 370.4 M77.4 368.4 Q78.6 369.4 79.6 368" strokeOpacity="0.45" strokeWidth="0.6" />
     </g>
   );
 }
@@ -864,7 +861,7 @@ function UpperBody() {
           <path d="M79.4 281.6 Q83.4 284.4 87.8 283" fill="none" strokeOpacity="0.45" strokeWidth="0.8" />
           {/* Forearm muscle: the brachioradialis swell turning toward the slimmer wrist. */}
           <path d="M77.6 290 C75.4 302 73.6 314 72.6 324" fill="none" strokeOpacity="0.18" strokeWidth="0.7" />
-          <path d="M68 346 L67 354 M72 347 L71.6 355.4 M76 346.4 L76.2 355" fill="none" strokeOpacity="0.18" strokeWidth="0.6" strokeLinecap="round" />
+          <path d="M68.4 343 L67.6 351 M72 344 L71.6 352 M75.6 343.6 L75.8 351.6" fill="none" strokeOpacity="0.16" strokeWidth="0.6" strokeLinecap="round" />
           <Skin d={THUMB} depth={0.35} mirrored={m} />
         </g>
       ))}
