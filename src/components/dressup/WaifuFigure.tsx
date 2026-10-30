@@ -345,7 +345,7 @@ const SPORTS_BRA = 'M96 232 C100 216 112 210 124 212 C136 214 146 220 150 232 C1
 const BRA_STRAP = 'M112 214 C114 207 118 201 122 197 L131 196 C128 201 126 207 125.4 213 Z';
 // Mid-thigh bike shorts: waistband at the navel line, snug over the hips, hems curving round each thigh.
 const SHORTS = 'M108 318 Q150 324 192 318 C201 328 211.6 338 211.8 352 C212.2 372 207.6 390 201.6 406 Q178 412 154 408 L150 392 L146 408 Q122 412 98.4 406 C92.4 390 87.8 372 88.2 352 C88.4 338 99 328 108 318 Z';
-const TOES = 'M141 580 L141.3 576.8 M136.8 580.2 L136.9 577.4 M132.6 579.8 L132.5 577.2 M128.8 579.2 L128.5 576.8';
+const TOES = 'M141 580 L141.4 575.4 M136.8 580.2 L137 575.8 M132.6 579.8 L132.6 575.6 M128.8 579.2 L128.4 575.4';
 
 /** Keyframes for the idle loop and outfit-change pop; disabled for reduced motion. */
 const ANIM_CSS = `
@@ -854,7 +854,12 @@ function Body() {
           <path d="M108 420 C112 432 118 442 124 448" fill="none" stroke="#ffffff" strokeOpacity={m ? 0.2 : 0.45} strokeWidth="2" strokeLinecap="round" />
           <path d={TOES} fill="none" stroke={SKIN_LINE} strokeOpacity="0.6" strokeWidth="0.8" strokeLinecap="round" />
           {/* Big-toe nail, the tendon down the instep, and the ankle bones (inner one higher). */}
-          <path d="M143 578 Q144.6 577 146 578" fill="none" stroke={SKIN_LINE} strokeOpacity="0.5" strokeWidth="0.6" />
+          {/* Toenails on every toe (big toe largest), a crease where the toes meet the ball of the foot,
+              and a highlight down the instep. */}
+          <path d="M142.6 578.6 Q144.6 576.2 146.6 578.6 Q144.6 579.8 142.6 578.6 Z M138 578.8 Q139 577.2 140 578.8 Q139 579.6 138 578.8 Z M133.8 578.6 Q134.7 577.1 135.6 578.6 Q134.7 579.4 133.8 578.6 Z M129.9 578.1 Q130.7 576.7 131.5 578.1 Q130.7 578.9 129.9 578.1 Z M126.2 577.2 Q126.9 576 127.6 577.2 Q126.9 577.9 126.2 577.2 Z"
+            fill="#ffd9d0" stroke={SKIN_LINE} strokeOpacity="0.4" strokeWidth="0.4" />
+          <path d="M126.4 574.4 Q136 572 147.4 574.6" fill="none" stroke={SKIN_SHADE} strokeWidth="1.6" strokeLinecap="round" />
+          <path d="M131 562 Q135 566 138.6 571" fill="none" stroke="#ffffff" strokeOpacity={m ? 0.18 : 0.35} strokeWidth="1.4" strokeLinecap="round" />
           <path d="M138.5 560 Q141.6 566 143.6 573" fill="none" stroke={SKIN_LINE} strokeOpacity="0.25" strokeWidth="0.7" />
           <path d="M140 548 Q142 551 141 554.5 M128.6 551 Q127.6 554 128.8 557" fill="none" stroke={SKIN_LINE} strokeOpacity="0.4" strokeWidth="0.7" />
         </g>
