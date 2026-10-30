@@ -372,6 +372,36 @@ export default function LaunchPage() {
 
 // ── 3. Today's Transmission (live) ──────────────────────────────────────────
 
+
+// ── Extracted Transport Component to prevent 60fps re-renders of the entire LaunchPage ──
+
+function TransmissionTransport({ song, toggle, live, isThisTrack, duration, fmt }: {
+  song: GameSong | null,
+  toggle: () => void,
+  live: boolean,
+  isThisTrack: boolean,
+  duration: number,
+  fmt: (sec: number) => string
+}) {
+  const progress = useGlobalPlayer(s => isThisTrack && (s.currentTrack?.day === song?.day) ? s.progress : 0);
+  const currentTime = useGlobalPlayer(s => isThisTrack && (s.currentTrack?.day === song?.day) ? s.currentTime : 0);
+
+  return (
+    <div className="lp-tx-transport">
+      <button className="lp-tx-playbtn" onClick={() => toggle()}>
+        {live ? <Pause size={18} /> : <Play size={18} />}
+        {live ? 'Pause' : isThisTrack ? 'Resume' : 'Listen now'}
+      </button>
+      <div className="lp-tx-progress" aria-hidden="true">
+        <div className="lp-tx-progress-fill" style={{ width: `${isThisTrack ? progress * 100 : 0}%` }} />
+      </div>
+      <span className="lp-tx-time">
+        {fmt(isThisTrack ? currentTime : 0)} / {duration ? fmt(duration) : '—'}
+      </span>
+    </div>
+  );
+}
+
 function TransmissionSection({
   today,
   countdown,
@@ -416,9 +446,7 @@ function TransmissionSection({
   // Live player wiring — the global singleton, so playback survives navigating into the game.
   const currentTrack = useGlobalPlayer((s) => s.currentTrack);
   const isPlaying = useGlobalPlayer((s) => s.isPlaying);
-  const progress = useGlobalPlayer((s) => s.progress);
-  const currentTime = useGlobalPlayer((s) => s.currentTime);
-  const play = useGlobalPlayer((s) => s.play);
+    const play = useGlobalPlayer((s) => s.play);
   const pause = useGlobalPlayer((s) => s.pause);
 
   const isThisTrack = !!song && currentTrack?.day === song.day;
@@ -548,18 +576,7 @@ function TransmissionSection({
               </dl>
 
               {/* Transport */}
-              <div className="lp-tx-transport">
-                <button className="lp-tx-playbtn" onClick={() => toggle()}>
-                  {live ? <Pause size={18} /> : <Play size={18} />}
-                  {live ? 'Pause' : isThisTrack ? 'Resume' : 'Listen now'}
-                </button>
-                <div className="lp-tx-progress" aria-hidden="true">
-                  <div className="lp-tx-progress-fill" style={{ width: `${isThisTrack ? progress * 100 : 0}%` }} />
-                </div>
-                <span className="lp-tx-time">
-                  {fmt(isThisTrack ? currentTime : 0)} / {duration ? fmt(duration) : '—'}
-                </span>
-              </div>
+              <TransmissionTransport song={song} toggle={toggle} live={live} isThisTrack={isThisTrack} duration={duration} fmt={fmt} />
 
               <div className="lp-tx-actions">
                 <button className="lp-btn" onClick={() => onPlayLevel(`/play/${song.id}`, 'tx_play_level')}>
