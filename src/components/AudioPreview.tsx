@@ -17,6 +17,8 @@ interface AudioPreviewProps {
   audioUrl: string;
   title: string;
   compact?: boolean;
+  /** Tighter row for use inside a card face, where height is fixed */
+  dense?: boolean;
   rarity?: string;
   /** Daily claim cards get full song regardless of rarity */
   isDailyClaim?: boolean;
@@ -99,6 +101,7 @@ export default function AudioPreview({
   audioUrl,
   title,
   compact = false,
+  dense = false,
   rarity = 'common',
   isDailyClaim = false,
   stemsUrl,
@@ -169,7 +172,7 @@ export default function AudioPreview({
   return (
     <div className="space-y-1" onClick={(e) => e.stopPropagation()}>
       <div
-        className="flex items-center gap-3 px-3 py-2 rounded-lg"
+        className={`flex items-center rounded-lg ${dense ? 'gap-2 px-2 py-1' : 'gap-3 px-3 py-2'}`}
         style={{
           background: 'rgba(0,0,0,0.3)',
           border: `1px solid ${isFullSong ? 'rgba(0,240,255,0.15)' : 'rgba(255,255,255,0.06)'}`,
@@ -177,7 +180,7 @@ export default function AudioPreview({
       >
         <button
           onClick={toggle}
-          className="flex items-center justify-center w-8 h-8 rounded-full transition-all hover:scale-110 flex-shrink-0 audio-preview-btn"
+          className={`flex items-center justify-center rounded-full transition-all hover:scale-110 flex-shrink-0 audio-preview-btn ${dense ? 'w-7 h-7' : 'w-8 h-8'}`}
           style={{
             background: isPlaying ? 'var(--color-neon-cyan)' : 'rgba(255,255,255,0.1)',
             color: isPlaying ? 'var(--color-void-black)' : 'var(--color-text-primary)',
