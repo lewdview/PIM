@@ -81,6 +81,7 @@
 
 /* day · title · stage · accuracy · medal (wide screens only) */
 .pim-hud-meta {
+  position: relative;
   display: none;
   gap: 2px;
   font: 700 10px/1.6 var(--hud-mono);
@@ -98,8 +99,10 @@
 }
 .pim-hud-meta i { font-style: normal; color: var(--hud-text-2); }
 .pim-hud-medal {
-  justify-self: start;
-  margin-top: 2px;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
   padding: 3px 5px;
   font: 700 9px/1 var(--hud-mono);
   letter-spacing: 0.18em;
@@ -143,7 +146,9 @@
 }
 
 /* power-up: label pill with a draining timer under it */
-.pim-hud-pu { position: relative; display: grid; justify-items: end; gap: 3px; }
+/* out of flow, so the pill appearing never changes the band's height */
+.pim-hud-pu { position: absolute; top: 100%; right: 0; display: grid; justify-items: end; gap: 3px; margin-top: 4px; }
+.pim-hud-right { position: relative; }
 .pim-hud-pu-pill {
   display: none;
   align-items: center;
@@ -175,6 +180,7 @@
   pointer-events: none;
 }
 .pim-verse-prev {
+  height: 15px;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -183,6 +189,12 @@
   color: rgba(255, 255, 255, 0.3);
 }
 .pim-verse-line {
+  /* fixed height: a new line must never change the band's height, or the game
+     canvas below resizes (and re-renders its track) at every line change */
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 36px;
   max-width: 100%;
   white-space: nowrap;
   /* the line shrinks to fit its length (--len = characters + room for the ellipsis) */
@@ -261,7 +273,7 @@
   display: grid;
   justify-items: center;
   gap: 3px;
-  min-height: 30px;
+  height: 30px;
   margin-top: 3px;
   white-space: nowrap;
   opacity: 1;
@@ -351,8 +363,9 @@
   .pim-hud-btn-label { display: inline; }
   .pim-hud-total { display: inline; }
   .pim-hud-score { font-size: 30px; }
-  .pim-verse-prev { font-size: 15px; }
-  .pim-verse-line { font-size: clamp(20px, calc(100cqw / (var(--len, 24) * 0.43)), 42px); }
+  .pim-verse-prev { font-size: 15px; height: 17px; }
+  .pim-verse-line { font-size: clamp(20px, calc(100cqw / (var(--len, 24) * 0.43)), 42px); height: 45px; }
+  .pim-orc-whisper { height: 34px; }
   .pim-orc-whisper b { font-size: 12px; }
   .pim-orc-whisper span { font-size: 16px; }
   .pim-orc-tick span { font-size: 8px; }
@@ -367,9 +380,8 @@
   }
   .pim-hud-meta { display: grid; }
   .pim-verse { padding-top: 0; gap: 6px; }
-  .pim-verse-line { font-size: clamp(24px, calc(100cqw / (var(--len, 24) * 0.43)), 52px); }
+  .pim-verse-line { font-size: clamp(24px, calc(100cqw / (var(--len, 24) * 0.43)), 52px); height: 56px; }
   .pim-hud-score { font-size: clamp(34px, 3.2vw, 46px); }
-  .pim-hud-pu-pill { margin-top: 4px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

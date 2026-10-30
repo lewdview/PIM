@@ -1,0 +1,441 @@
+/* ════════════════════════════════════════════════════════════════════════════════
+   gameplayHudRail.css — "Console Rail" in-song HUD style (GamePlay/GameplayCore.tsx).
+   "Console rail" direction, sharing parts with the settings menu (optionsMenu.css):
+   void-black glass, sheared controls, neon corner marks, Anton numbers and
+   JetBrains Mono labels.
+   Layout: the strip sits above the highway. The stat panels live inside it —
+   in flow on portrait / narrow screens (one band, nothing over the notes), and
+   floated beside the highway on wide screens.
+   Spacing lives here rather than in Tailwind utilities because the global
+   `*` reset in index.css is unlayered and wins over utility padding/margin.
+   ════════════════════════════════════════════════════════════════════════════════ */
+
+.pim-rail-strip {
+  --hud-accent: #FF1493;
+  --hud-text: #f4f4f5;
+  --hud-text-2: #a1a1aa;
+  --hud-text-3: #71717a;
+  --hud-line: rgba(255, 255, 255, 0.08);
+  --hud-line-strong: rgba(255, 255, 255, 0.18);
+  --hud-acid: #39FF14;
+  --hud-cyan: #00E5FF;
+  --hud-ink: #0a0a0f;
+  --hud-display: 'Anton', 'Impact', 'Arial Narrow', sans-serif;
+  --hud-mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+
+  position: relative;
+  z-index: 30;
+  flex-shrink: 0;
+  width: 100%;
+  color: var(--hud-text);
+  font-family: var(--hud-mono);
+  font-variant-numeric: tabular-nums;
+  background: rgba(8, 8, 12, 0.8);
+  border-bottom: 1px solid var(--hud-line);
+  -webkit-backdrop-filter: blur(16px) saturate(1.3);
+  backdrop-filter: blur(16px) saturate(1.3);
+  box-shadow: 0 4px 28px rgba(0, 0, 0, 0.5);
+}
+
+/* ── top row: controls · progress rail · song ── */
+.pim-rail-strip-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 8px 12px 6px;
+}
+
+.pim-rail-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pim-rail-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 34px;
+  height: 30px;
+  padding: 0 10px;
+  font: 700 12px/1 var(--hud-mono);
+  letter-spacing: 0.14em;
+  color: var(--hud-text-2);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--hud-line-strong);
+  clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.pim-rail-btn:hover,
+.pim-rail-btn:focus-visible {
+  color: var(--hud-text);
+  border-color: var(--hud-accent);
+  background: color-mix(in srgb, var(--hud-accent) 14%, transparent);
+  outline: none;
+}
+.pim-rail-btn[data-on='true'] { color: var(--hud-acid); }
+.pim-rail-btn-label { display: none; }
+
+.pim-rail-progress {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.pim-rail-progress-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font: 700 11px/1 var(--hud-mono);
+  letter-spacing: 0.12em;
+  color: var(--hud-text-2);
+  white-space: nowrap;
+}
+.pim-rail-stage {
+  font: 400 15px/1 var(--hud-display);
+  letter-spacing: 0.08em;
+  color: var(--hud-text);
+}
+.pim-rail-stage i {
+  font-style: normal;
+  color: var(--stage-c, var(--hud-cyan));
+  text-shadow: 0 0 10px var(--stage-c, var(--hud-cyan));
+}
+.pim-rail-time b { color: var(--hud-text); font-weight: 700; }
+/* small phones: keep the elapsed time, drop percent and total so nothing clips */
+@media (max-width: 379px) {
+  .pim-rail-strip-row { gap: 8px; padding-inline: 8px; }
+  .pim-rail-controls { gap: 4px; }
+  .pim-rail-btn { min-width: 30px; padding: 0 8px; }
+  .pim-rail-pct, .pim-rail-total { display: none; }
+}
+
+.pim-rail-rail {
+  display: grid;
+  gap: 3px;
+}
+.pim-rail-seg {
+  position: relative;
+  height: 5px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.09);
+  transform: skewX(-24deg);
+}
+.pim-rail-seg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  transform: scaleX(var(--f, 0));
+  background: var(--seg-c, var(--hud-cyan));
+  box-shadow: 0 0 8px var(--seg-c, var(--hud-cyan));
+  transition: transform 0.15s linear;
+}
+
+.pim-rail-song {
+  display: none;
+  min-width: 0;
+  text-align: right;
+  font: 700 11px/1.35 var(--hud-mono);
+  letter-spacing: 0.14em;
+  color: var(--hud-text-3);
+  text-transform: uppercase;
+}
+.pim-rail-song b {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--hud-text-2);
+  font-weight: 700;
+}
+
+/* ── stat panels ── */
+.pim-rail-stats {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2px 12px 8px;
+  pointer-events: none;
+  transition: opacity 0.5s ease-in-out;
+}
+
+.pim-rail-panel { position: relative; min-width: 0; }
+
+.pim-rail-label {
+  font: 700 10px/1 var(--hud-mono);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--hud-text-3);
+}
+
+.pim-rail-score {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    'head head'
+    'value shield';
+  align-items: end;
+  column-gap: 14px;
+  row-gap: 4px;
+}
+.pim-rail-panel-head {
+  grid-area: head;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.pim-rail-medal {
+  font: 700 9px/1 var(--hud-mono);
+  letter-spacing: 0.18em;
+  padding: 3px 5px;
+  color: var(--hud-ink);
+  background: var(--medal, #a855f7);
+  clip-path: polygon(3px 0, 100% 0, calc(100% - 3px) 100%, 0 100%);
+}
+.pim-rail-acc {
+  display: none;
+  margin-left: auto;
+  font: 700 10px/1 var(--hud-mono);
+  letter-spacing: 0.14em;
+  color: var(--hud-text-3);
+}
+.pim-rail-acc span { color: var(--hud-text-2); }
+.pim-rail-x { font-family: var(--hud-mono); font-weight: 700; margin-right: 1px; }
+
+.pim-rail-score-row {
+  grid-area: value;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pim-rail-score-value {
+  font: 400 30px/0.95 var(--hud-display);
+  letter-spacing: 0.01em;
+  color: var(--hud-text);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+}
+.pim-rail-mult {
+  font: 400 14px/1 var(--hud-display);
+  letter-spacing: 0.06em;
+  padding: 4px 9px;
+  color: var(--hud-ink);
+  background: var(--mult-c, var(--hud-cyan));
+  box-shadow: 0 0 12px color-mix(in srgb, var(--mult-c, #00E5FF) 45%, transparent);
+  clip-path: polygon(4px 0, 100% 0, calc(100% - 4px) 100%, 0 100%);
+  transition: background 0.25s;
+}
+
+/* shield = miss pips + heal meter, one block so a heal visibly refills a pip */
+.pim-rail-shield {
+  grid-area: shield;
+  justify-self: end;
+  position: relative;
+  display: grid;
+  gap: 5px;
+  width: 92px;
+}
+.pim-rail-shield-head {
+  display: none;
+  justify-content: space-between;
+  gap: 6px;
+  font: 700 9px/1 var(--hud-mono);
+  letter-spacing: 0.16em;
+  color: var(--hud-text-3);
+  white-space: nowrap;
+}
+.pim-rail-shield-head [data-heal-label] { color: var(--hud-text-2); }
+.pim-rail-pips { display: flex; gap: 4px; }
+.pim-rail-pip {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  transform: skewX(-24deg);
+  transition: background 0.15s, box-shadow 0.15s;
+}
+.pim-rail-pip[data-on='true'] {
+  background: var(--hud-acid);
+  box-shadow: 0 0 8px var(--hud-acid);
+}
+.pim-rail-shield[data-low='true'] .pim-rail-pip[data-on='true'] {
+  background: var(--hud-accent);
+  box-shadow: 0 0 8px var(--hud-accent);
+}
+.pim-rail-heal {
+  position: relative;
+  height: 4px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid transparent;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.pim-rail-heal-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0%;
+  background: linear-gradient(90deg, #00E5FF, #39FF14);
+}
+.pim-rail-heal-banner {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  display: none;
+  align-items: center;
+  white-space: nowrap;
+  padding: 3px 8px;
+  font: 700 9px/1 var(--hud-mono);
+  letter-spacing: 0.14em;
+  color: var(--hud-acid);
+  background: rgba(0, 0, 0, 0.9);
+  border: 1px solid var(--hud-acid);
+  box-shadow: 0 0 16px rgba(57, 255, 20, 0.5);
+}
+
+.pim-rail-combo {
+  display: grid;
+  justify-items: end;
+  gap: 3px;
+  text-align: right;
+  --combo-c: var(--hud-text);
+}
+.pim-rail-combo-value {
+  display: inline-block;
+  font: 400 30px/0.95 var(--hud-display);
+  letter-spacing: 0.01em;
+  color: var(--combo-c);
+  text-shadow: 0 0 16px color-mix(in srgb, var(--combo-c) 45%, transparent), 0 2px 10px rgba(0, 0, 0, 0.8);
+  transform-origin: right center;
+  transition: color 0.25s;
+}
+.pim-rail-bump { animation: pim-rail-bump 0.22s cubic-bezier(0.2, 1.6, 0.4, 1); }
+@keyframes pim-rail-bump {
+  from { transform: scale(1.22); }
+  to { transform: scale(1); }
+}
+.pim-rail-next { display: none; font: 700 10px/1 var(--hud-mono); letter-spacing: 0.14em; color: var(--hud-text-2); }
+.pim-rail-meter { display: none; grid-template-columns: repeat(4, 1fr); gap: 3px; width: 100%; }
+.pim-rail-meter i {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  transform: skewX(-24deg);
+}
+.pim-rail-meter i[data-on='true'] { background: var(--combo-c); box-shadow: 0 0 6px var(--combo-c); }
+
+/* power-up timer: a draining bar on the combo panel's bottom edge */
+.pim-rail-pu-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -5px;
+  height: 2px;
+  display: none;
+  transform-origin: left center;
+}
+.pim-rail-pu-pill {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 3px 9px;
+  font: 700 10px/1 var(--hud-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  background: rgba(10, 10, 18, 0.96);
+  border: 1px solid transparent;
+  clip-path: polygon(4px 0, 100% 0, calc(100% - 4px) 100%, 0 100%);
+  white-space: nowrap;
+}
+.pim-rail-pu-dot { position: relative; display: flex; width: 6px; height: 6px; }
+.pim-rail-pu-dot span { position: absolute; inset: 0; border-radius: 50%; }
+
+/* ── wide screens: labelled buttons, song column, panels flank the highway ── */
+@media (min-width: 640px) {
+  .pim-rail-strip-row { grid-template-columns: auto minmax(0, 1.6fr) minmax(0, 0.7fr); gap: 20px; padding: 10px 20px 8px; }
+  .pim-rail-btn-label { display: inline; }
+  .pim-rail-song { display: block; }
+  .pim-rail-stage { font-size: 17px; }
+  .pim-rail-seg { height: 6px; }
+  .pim-rail-stats { padding: 2px 20px 10px; }
+  .pim-rail-score-value, .pim-rail-combo-value { font-size: 36px; }
+  .pim-rail-shield { width: 120px; }
+  .pim-rail-shield-head { display: flex; }
+  .pim-rail-acc { display: inline; }
+}
+
+@media (min-width: 900px) and (min-aspect-ratio: 1.15) {
+  .pim-rail-stats {
+    position: absolute;
+    top: calc(100% + 18px);
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    max-width: clamp(760px, calc(68vh + 360px), 980px);
+    padding: 0 24px;
+  }
+  .pim-rail-panel {
+    padding: 14px 16px;
+    background: rgba(8, 8, 12, 0.66);
+    border: 1px solid var(--hud-line);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+  }
+  .pim-rail-panel::before,
+  .pim-rail-panel::after {
+    content: '';
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--hud-accent);
+    pointer-events: none;
+  }
+  .pim-rail-panel::before { top: -2px; left: -2px; border-right: 0; border-bottom: 0; }
+  .pim-rail-panel::after { bottom: -2px; right: -2px; border-left: 0; border-top: 0; }
+
+  .pim-rail-score {
+    width: clamp(200px, 19vw, 240px);
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'head' 'value' 'shield';
+    row-gap: 8px;
+  }
+  .pim-rail-score-row { flex-wrap: wrap; }
+  .pim-rail-score-value { font-size: clamp(38px, 3.6vw, 52px); }
+  .pim-rail-shield {
+    justify-self: stretch;
+    width: auto;
+    margin-top: 4px;
+    padding-top: 10px;
+    border-top: 1px solid var(--hud-line);
+    gap: 6px;
+  }
+  .pim-rail-pip { height: 10px; }
+
+  .pim-rail-combo { width: clamp(180px, 17vw, 220px); gap: 6px; }
+  .pim-rail-combo-value { font-size: clamp(52px, 5vw, 72px); }
+  .pim-rail-next { display: block; }
+  .pim-rail-meter { display: grid; }
+  .pim-rail-pu-bar { left: -1px; right: -1px; bottom: -1px; height: 3px; }
+  .pim-rail-heal-banner { right: auto; left: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pim-rail-bump { animation: none; }
+  .pim-rail-seg::after { transition: none; }
+}
+
+/* combo counter switched off in settings: the panel only carries the power-up pill */
+.pim-rail-combo[data-combo='false'] { background: none; border-color: transparent; }
+.pim-rail-combo[data-combo='false']::before,
+.pim-rail-combo[data-combo='false']::after { display: none; }
