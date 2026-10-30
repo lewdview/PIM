@@ -844,6 +844,12 @@ function Body() {
           <Skin d={LEG} mirrored={m} />
           {/* Knee: the kneecap's lower edge and the dimple above it. */}
           <path d="M124 460 Q131 464 138 460 M127.5 449 Q131 447 135 449" fill="none" stroke={SKIN_LINE} strokeOpacity="0.45" strokeWidth="0.9" />
+          {/* Form shading: inner-thigh shadow where the thighs meet, a shade under the kneecap, and a
+              shin highlight on the lit leg (dimmer on the far one). */}
+          <path d="M150 400 C147 412 145.4 428 146.6 444 C148 438 149.4 424 150 410 Z" fill={SKIN_SHADE} stroke="none" />
+          <path d="M125 461.6 Q131 467 137.4 461.6 Q131 470 125 461.6 Z" fill={SKIN_SHADE} stroke="none" opacity="0.8" />
+          <path d="M134 472 C135 490 134.6 508 132.6 526" fill="none" stroke="#ffffff" strokeOpacity={m ? 0.25 : 0.55} strokeWidth="2.2" strokeLinecap="round" />
+          <path d="M108 420 C112 432 118 442 124 448" fill="none" stroke="#ffffff" strokeOpacity={m ? 0.2 : 0.45} strokeWidth="2" strokeLinecap="round" />
           <path d={TOES} fill="none" stroke={SKIN_LINE} strokeOpacity="0.6" strokeWidth="0.8" strokeLinecap="round" />
           {/* Big-toe nail, the tendon down the instep, and the ankle bones (inner one higher). */}
           <path d="M143 578 Q144.6 577 146 578" fill="none" stroke={SKIN_LINE} strokeOpacity="0.5" strokeWidth="0.6" />
@@ -886,6 +892,8 @@ function UpperBody() {
           {/* Forearm muscle: the brachioradialis swell turning toward the slimmer wrist. */}
           <path d="M77.6 290 C75.4 302 73.6 314 72.6 324" fill="none" strokeOpacity="0.18" strokeWidth="0.7" />
           <path d="M68.4 343 L67.6 351 M72 344 L71.6 352 M75.6 343.6 L75.8 351.6" fill="none" strokeOpacity="0.16" strokeWidth="0.6" strokeLinecap="round" />
+          {/* Highlights down the outer edge of the upper arm and forearm, brighter on the lit arm. */}
+          <path d="M97 204 C91 212 88.4 224 87.6 238 M80.6 290 C78.8 300 77 310 75.6 320" fill="none" stroke="#ffffff" strokeOpacity={m ? 0.2 : 0.5} strokeWidth="2" strokeLinecap="round" />
         </g>
       ))}
       <Skin d={NECK} depth={0.5} />
@@ -923,6 +931,13 @@ function UpperBody() {
           <path d="M90 345 C102 350 124 360 141 373" fill="none" stroke={SKIN_SHADE} strokeWidth="4" strokeLinecap="round" />
         </g>
       ))}
+      {/* Midriff form: the bra band's cast shadow, the waist turning away on the shadow side, a soft
+          line down the centre and a highlight along the lit side of the waist. */}
+      <path d="M121 276 Q150 282 179 276 L176.4 282 Q150 289 123.6 282 Z" fill={SKIN_SHADE} stroke="none" />
+      <path d="M177 278 C172 288 173 298 186 312 L192 318 L183 318 C174 308 168 296 171.4 283 Z" fill={SKIN_SHADE} stroke="none" />
+      <path d="M123 278 C128 288 127 298 114 312 L111 315 C120 304 124 294 121.6 284 Z" fill={SKIN_SHADE} stroke="none" opacity="0.6" />
+      <path d="M150 284 L150 293" fill="none" strokeOpacity="0.18" strokeWidth="0.9" strokeLinecap="round" />
+      <path d="M126.4 286 C127.6 294 125 302 118 310" fill="none" stroke="#ffffff" strokeOpacity="0.5" strokeWidth="2" strokeLinecap="round" />
       <path d="M150 296 Q148.6 300 150 304" fill="none" strokeOpacity="0.35" strokeWidth="1" strokeLinecap="round" />
       <Cel d={SHORTS} fill={BASE_PINK} shade={BASE_PINK_SHADE} shadeOpacity={0.6} line={BASE_PINK_LINE} />
       <g fill="none" stroke={BASE_PINK_LINE} strokeLinecap="round">
@@ -930,6 +945,8 @@ function UpperBody() {
         <path d="M150 352 L150 392" strokeOpacity="0.35" />
         <path d="M99.6 399 Q122 405 145 401.6 M155 401.6 Q178 405 200.4 399" strokeOpacity="0.4" />
       </g>
+      {/* The shorts' hems cast a thin shadow round each thigh. */}
+      <path d="M98.4 406 Q122 412 146 408 L146.4 412.4 Q123 416.6 100 411 Z M201.6 406 Q178 412 154 408 L153.6 412.4 Q177 416.6 200 411 Z" fill={SKIN_SHADE} stroke="none" />
       <g fill="none" stroke="#ffffff" strokeLinecap="round">
         <path d="M94 352 C94 366 96 380 100 392" strokeWidth="2.6" strokeOpacity="0.6" />
         <path d="M112 330 C108 336 104 342 102 348" strokeWidth="2" strokeOpacity="0.45" />
