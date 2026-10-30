@@ -529,14 +529,17 @@ export async function silentClaimGuestDailyCard(day: number): Promise<OwnedCard 
 }
 
 // ===== PACK PURCHASE =====
-export async function purchasePack(category: PackCategory, size: PackSize = 'single', sessionId?: string, txHash?: string, isGameplayReward?: boolean): Promise<OwnedCard[]> {
+/** What a gameplay reward was earned for; vault-engine checks it against server records. */
+export type GameplayReward = { songId: string } | { month: number; milestone: number };
+
+export async function purchasePack(category: PackCategory, size: PackSize = 'single', sessionId?: string, txHash?: string, isGameplayReward?: boolean, reward?: GameplayReward): Promise<OwnedCard[]> {
   try {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) throw new Error('Not authenticated');
 
     const edgePackType = (category as string) === 'bombshell_token' ? 'bombshell' : category;
     const { data: result, error } = await supabase.functions.invoke('vault-engine', {
-      body: { action: 'purchasePack', payload: { packType: edgePackType, size, sessionId, txHash, isGameplayReward } },
+      body: { action: 'purchasePack', payload: { packType: edgePackType, size, sessionId, txHash, isGameplayReward, reward } },
     });
 
     if (error || !result?.success) {
