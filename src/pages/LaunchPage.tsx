@@ -372,6 +372,36 @@ export default function LaunchPage() {
 
 // ── 3. Today's Transmission (live) ──────────────────────────────────────────
 
+// ⚡ Bolt: Extract progress UI to prevent the heavy LaunchPage from re-rendering
+// at 60fps during live audio playback due to `timeupdate` events.
+// Impact: Significantly reduces CPU usage and jank. Measurement: Profile render duration.
+function TransmissionProgress({
+  song,
+  duration,
+  fmt
+}: {
+  song: GameSong | null;
+  duration: number;
+  fmt: (sec: number) => string;
+}) {
+  const currentTrack = useGlobalPlayer((s) => s.currentTrack);
+  const isThisTrack = !!song && currentTrack?.day === song.day;
+
+  const progress = useGlobalPlayer((s) => isThisTrack ? s.progress : 0);
+  const currentTime = useGlobalPlayer((s) => isThisTrack ? s.currentTime : 0);
+
+  return (
+    <>
+      <div className="lp-tx-progress" aria-hidden="true">
+        <div className="lp-tx-progress-fill" style={{ width: `${isThisTrack ? progress * 100 : 0}%` }} />
+      </div>
+      <span className="lp-tx-time">
+        {fmt(isThisTrack ? currentTime : 0)} / {duration ? fmt(duration) : '—'}
+      </span>
+    </>
+  );
+}
+
 function TransmissionSection({
   today,
   countdown,
@@ -416,8 +446,6 @@ function TransmissionSection({
   // Live player wiring — the global singleton, so playback survives navigating into the game.
   const currentTrack = useGlobalPlayer((s) => s.currentTrack);
   const isPlaying = useGlobalPlayer((s) => s.isPlaying);
-  const progress = useGlobalPlayer((s) => s.progress);
-  const currentTime = useGlobalPlayer((s) => s.currentTime);
   const play = useGlobalPlayer((s) => s.play);
   const pause = useGlobalPlayer((s) => s.pause);
 
@@ -553,12 +581,7 @@ function TransmissionSection({
                   {live ? <Pause size={18} /> : <Play size={18} />}
                   {live ? 'Pause' : isThisTrack ? 'Resume' : 'Listen now'}
                 </button>
-                <div className="lp-tx-progress" aria-hidden="true">
-                  <div className="lp-tx-progress-fill" style={{ width: `${isThisTrack ? progress * 100 : 0}%` }} />
-                </div>
-                <span className="lp-tx-time">
-                  {fmt(isThisTrack ? currentTime : 0)} / {duration ? fmt(duration) : '—'}
-                </span>
+                <TransmissionProgress song={song} duration={duration} fmt={fmt} />
               </div>
 
               <div className="lp-tx-actions">
