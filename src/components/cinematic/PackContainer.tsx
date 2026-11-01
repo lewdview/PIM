@@ -14,7 +14,7 @@ import FoilPackFace from '../foil/FoilPackFace';
 import { FOIL_TEAR_Y, FOIL_STRIP_CLIP, FOIL_BODY_CLIP, FOIL_CONFETTI } from '../foil/foilTear';
 import SongUnlockReveal from './SongUnlockReveal';
 import RarityBadge from '../RarityBadge';
-import RarityRevealFX, { type TierRevealState } from './RarityRevealFX';
+import RarityRevealFX, { CardRimLight, type TierRevealState } from './RarityRevealFX';
 import { getRevealProfile, reduceProfile } from './rarityRevealProfiles';
 import {
   playAmbient, playCrinkle, playTension, playTear,
@@ -1597,9 +1597,11 @@ export default function PackContainer({ meta, cards: rawCards, accumulatedCards 
                 const verticalCenterOffset = (totalRows - 1) / 2;
 
                 // Optimal scaling for large packs
-                baseScale = isMobile 
-                  ? (cards.length > 6 ? 0.35 : 0.45) 
-                  : (cards.length > 5 ? 0.5 : 0.7);
+                baseScale = cards.length === 1
+                  ? (isMobile ? 0.95 : 1) // a single pull stays hero-sized instead of shrinking away
+                  : isMobile
+                    ? (cards.length > 6 ? 0.35 : 0.45)
+                    : (cards.length > 5 ? 0.5 : 0.7);
 
                 const stepX = isMobile 
                   ? (cards.length > 6 ? 85 : 120)
@@ -1638,6 +1640,16 @@ export default function PackContainer({ meta, cards: rawCards, accumulatedCards 
               const activeReveal = isCurrentFlip && phase === 'flipping' ? tierReveal : null;
               const chargeJitter = activeReveal?.stage === 'charge' && activeReveal.profile.tier >= 2
                 ? activeReveal.profile.tier * 0.8 : 0;
+              // Camera push: a slow dolly-in through the charge, a short inhale
+              // right before the turn, then an overshoot pop on impact.
+              const cs = activeReveal?.profile.cardScale ?? 1;
+              const revealScale = !activeReveal
+                ? null
+                : activeReveal.stage === 'charge'
+                  ? { scale: [1, cs, cs * 0.95], t: { duration: activeReveal.profile.chargeMs / 1000, times: [0, 0.86, 1], ease: [[0.45, 0, 0.8, 0.5], [0.4, 0, 0.6, 1]] } }
+                  : activeReveal.stage === 'impact'
+                    ? { scale: [cs * 0.95, cs * (1.04 + activeReveal.profile.tier * 0.012), cs], t: { duration: 0.55, times: [0, 0.3, 1], ease: [[0.2, 0.9, 0.3, 1], [0.4, 0, 0.3, 1]] } }
+                    : null;
               const tiltX = isInspecting ? mousePos.y * (isMobile ? 0 : 12) : 0;
               const tiltY = isInspecting ? mousePos.x * (isMobile ? 0 : 12) : 0;
 
@@ -1651,12 +1663,13 @@ export default function PackContainer({ meta, cards: rawCards, accumulatedCards 
                     rotate: targetRotate,
                     rotateX: tiltX,
                     rotateY: tiltY,
-                    scale: activeReveal ? activeReveal.profile.cardScale : baseScale,
+                    scale: revealScale ? revealScale.scale : activeReveal ? cs : baseScale,
                     opacity: (!isRevealed && phase === 'flipping' && i > flipIndex) ? 0.6 : 1,
                   }}
                   transition={{
                     type: 'spring', stiffness: 300, damping: 25,
                     ...(isInLayout ? { delay: i * 0.06 } : {}),
+                    ...(revealScale ? { scale: { type: 'tween', ...revealScale.t } } : {}),
                   }}
                   style={{
                     position: 'absolute',
@@ -1736,6 +1749,9 @@ export default function PackContainer({ meta, cards: rawCards, accumulatedCards 
                               filter: 'blur(10px)', pointerEvents: 'none',
                             }}
                           />
+                        )}
+                        {activeReveal && activeReveal.profile.tier >= 1 && (
+                          <CardRimLight key={`rim-${activeReveal.id}`} stage={activeReveal.stage} profile={activeReveal.profile} />
                         )}
                         <Card 
                             card={owned.card}

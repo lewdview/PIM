@@ -121,8 +121,9 @@ export default function RarityRevealFX({ reveal, layer, zIndex, shakeTargetRef }
       {!back && impacting && p.flash > 0 && (
         <motion.div
           initial={{ opacity: p.flash }}
-          animate={{ opacity: 0 }}
-          transition={{ duration: p.tier >= 4 ? 0.9 : p.tier >= 3 ? 0.45 : 0.25, ease: 'easeOut' }}
+          // Peak, then clear fast so the card turning is seen, not buried in the wash.
+          animate={{ opacity: [p.flash, p.flash * 0.3, 0] }}
+          transition={{ duration: p.tier >= 4 ? 0.75 : p.tier >= 3 ? 0.45 : 0.25, times: [0, 0.22, 1], ease: 'easeOut' }}
           style={{
             position: 'absolute', inset: 0,
             // White-hot at the card, tinted towards the edges: reads as light
@@ -409,12 +410,23 @@ function ParticleBurst({ p }: { p: RevealProfile }) {
     const cx = w / 2, cy = h / 2;
     const palette = [p.color, p.accent, '#ffffff'];
     const power = 3 + p.tier * 2.2;
+    // Half-size of the active card (220×293 at its reveal scale). Sparks are
+    // thrown off its edges so the art stays clear the moment it turns.
+    const hw = 110 * p.cardScale, hh = 147 * p.cardScale;
     const sparks: Spark[] = Array.from({ length: p.particles }, () => {
-      const a = Math.random() * Math.PI * 2;
-      const v = (0.3 + Math.random()) * power;
+      // Pick a point on the card's outline, weighted by edge length.
+      const u = Math.random() * 2 * (hw + hh);
+      let ex: number, ey: number, nx: number, ny: number;
+      if (u < hw) { ex = -hw + u * 2; ey = -hh; nx = 0; ny = -1; }
+      else if (u < hw + hh) { ex = hw; ey = -hh + (u - hw) * 2; nx = 1; ny = 0; }
+      else if (u < 2 * hw + hh) { ex = hw - (u - hw - hh) * 2; ey = hh; nx = 0; ny = 1; }
+      else { ex = -hw; ey = hh - (u - 2 * hw - hh) * 2; nx = -1; ny = 0; }
+      // Outward from the edge, fanned toward the corner it's nearest.
+      const a = Math.atan2(ny + (ey / hh) * 0.6 * Math.abs(nx) + (Math.random() - 0.5) * 0.9, nx + (ex / hw) * 0.6 * Math.abs(ny) + (Math.random() - 0.5) * 0.9);
+      const v = (0.3 + Math.random() * 1.4) * power;
       const max = 40 + Math.random() * (30 + p.tier * 25);
       return {
-        x: cx + Math.cos(a) * 30, y: cy + Math.sin(a) * 40,
+        x: cx + ex, y: cy + ey,
         vx: Math.cos(a) * v, vy: Math.sin(a) * v - (p.tier === 0 ? 0.6 : 1.2),
         life: max, max,
         size: p.tier === 0 ? 1 + Math.random() * 2 : 1.2 + Math.random() * (1.5 + p.tier * 0.6),
@@ -527,5 +539,76 @@ function TitleSlam({ p }: { p: RevealProfile }) {
         )}
       </motion.div>
       </>
+  );
+}
+
+/**
+ * Light gathering on the active card itself: an outer glow that builds through
+ * the charge, a hot highlight racing round the border (rare+), a white flare
+ * at impact, then a soft tier-coloured halo while the card lingers.
+ */
+export function CardRimLight({ stage, profile: p }: { stage: RevealStage; profile: RevealProfile }) {
+  const secs = Math.max(0.2, p.chargeMs / 1000);
+  const glow = (k: number, c: string) => `0 0 ${8 + k * 10}px ${c}, 0 0 ${24 + k * 30}px ${c}aa, 0 0 ${60 + k * 50}px ${c}55`;
+  let animate: Record<string, unknown>;
+  let transition: Record<string, unknown>;
+  if (stage === 'charge') {
+    if (p.heartbeat) {
+      // Pulses in step with the heartbeat core, each beat brighter.
+      const beats = 5, op: number[] = [0], times: number[] = [0];
+      for (let b = 0; b < beats; b++) {
+        const t0 = Math.pow(b / beats, 0.75);
+        op.push(0.35 + b * 0.13, 0.15 + b * 0.12); times.push(Math.min(1, t0 + 0.03), Math.min(1, t0 + 0.12));
+      }
+      op.push(1); times.push(1);
+      animate = { opacity: op, boxShadow: glow(p.tier * 0.5, p.color) };
+      transition = { opacity: { duration: secs, times, ease: 'easeOut' }, boxShadow: { duration: secs, ease: 'easeIn' } };
+    } else {
+      animate = { opacity: [0, 0.55 + p.tier * 0.12], boxShadow: [glow(0, p.color), glow(p.tier * 0.45, p.color)] };
+      transition = { duration: secs, ease: [0.5, 0, 0.9, 0.5] };
+    }
+  } else if (stage === 'impact') {
+    animate = { opacity: [1, 0.85, 0.45], boxShadow: [glow(p.tier * 0.8 + 1, '#ffffff'), glow(p.tier * 0.6, p.color), glow(p.tier * 0.3, p.color)] };
+    transition = { duration: 0.7, times: [0, 0.25, 1], ease: 'easeOut' };
+  } else {
+    animate = { opacity: [0.45, 0.3, 0.45], boxShadow: glow(p.tier * 0.3, p.color) };
+    transition = { opacity: { duration: 2.2, repeat: Infinity, ease: 'easeInOut' }, boxShadow: { duration: 0.4 } };
+  }
+  const sweep = p.tier >= 2 && stage !== 'afterglow';
+  return (
+    <>
+      <style>{`@keyframes cine-rim-spin { to { transform: rotate(1turn) } }`}</style>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={animate}
+        transition={transition}
+        style={{
+          position: 'absolute', left: 0, top: 0, width: '100%', aspectRatio: '3 / 4',
+          borderRadius: 12, pointerEvents: 'none', zIndex: -1,
+        }}
+      />
+      {sweep && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: stage === 'charge' ? [0, 1] : [1, 0] }}
+          transition={{ duration: stage === 'charge' ? Math.min(0.5, secs / 2) : 0.5, ease: 'easeOut' }}
+          style={{
+            position: 'absolute', left: -2, top: -2, width: 'calc(100% + 4px)', aspectRatio: '3 / 4',
+            borderRadius: 14, padding: 2, overflow: 'hidden', pointerEvents: 'none', zIndex: 21,
+            WebkitMask: 'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
+            WebkitMaskComposite: 'xor',
+            mask: 'linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0)',
+          }}
+        >
+          <div
+            style={{
+              position: 'absolute', left: '50%', top: '50%', width: '200%', aspectRatio: '1', marginLeft: '-100%', marginTop: '-100%',
+              background: `conic-gradient(from 0deg, transparent 0deg, ${p.color} 40deg, #fff 58deg, ${p.accent} 70deg, transparent 110deg, transparent 180deg, ${p.color} 220deg, #fff 238deg, transparent 290deg)`,
+              animation: `cine-rim-spin ${p.tier >= 4 ? 0.9 : p.tier >= 3 ? 1.1 : 1.4}s linear infinite`,
+            }}
+          />
+        </motion.div>
+      )}
+    </>
   );
 }
