@@ -179,6 +179,40 @@ function Marquee({ items, progress, direction, outline }: {
 
 // ── Page ────────────────────────────────────────────────────────────────────
 
+function TransportControls({
+  songDay,
+  songDuration,
+  toggle,
+}: {
+  songDay: number;
+  songDuration: number;
+  toggle: () => void;
+}) {
+  const currentTrack = useGlobalPlayer((s) => s.currentTrack);
+  const isPlaying = useGlobalPlayer((s) => s.isPlaying);
+
+  const isThisTrack = currentTrack?.day === songDay;
+  const live = isThisTrack && isPlaying;
+
+  const progress = useGlobalPlayer((s) => (s.currentTrack?.day === songDay ? s.progress : 0));
+  const currentTime = useGlobalPlayer((s) => (s.currentTrack?.day === songDay ? s.currentTime : 0));
+
+  return (
+    <div className="lp-tx-transport">
+      <button className="lp-tx-playbtn" onClick={() => toggle()}>
+        {live ? <Pause size={18} /> : <Play size={18} />}
+        {live ? 'Pause' : isThisTrack ? 'Resume' : 'Listen now'}
+      </button>
+      <div className="lp-tx-progress" aria-hidden="true">
+        <div className="lp-tx-progress-fill" style={{ width: `${isThisTrack ? progress * 100 : 0}%` }} />
+      </div>
+      <span className="lp-tx-time">
+        {fmt(isThisTrack ? currentTime : 0)} / {songDuration ? fmt(songDuration) : '—'}
+      </span>
+    </div>
+  );
+}
+
 export default function LaunchPage() {
   const [, setLocation] = useLocation();
   const reduce = useReducedMotion() ?? false;
@@ -416,13 +450,8 @@ function TransmissionSection({
   // Live player wiring — the global singleton, so playback survives navigating into the game.
   const currentTrack = useGlobalPlayer((s) => s.currentTrack);
   const isPlaying = useGlobalPlayer((s) => s.isPlaying);
-  const progress = useGlobalPlayer((s) => s.progress);
-  const currentTime = useGlobalPlayer((s) => s.currentTime);
   const play = useGlobalPlayer((s) => s.play);
   const pause = useGlobalPlayer((s) => s.pause);
-
-  const isThisTrack = !!song && currentTrack?.day === song.day;
-  const live = isThisTrack && isPlaying;
 
   const toggle = useCallback(
     (s: GameSong | null = song) => {
@@ -548,18 +577,7 @@ function TransmissionSection({
               </dl>
 
               {/* Transport */}
-              <div className="lp-tx-transport">
-                <button className="lp-tx-playbtn" onClick={() => toggle()}>
-                  {live ? <Pause size={18} /> : <Play size={18} />}
-                  {live ? 'Pause' : isThisTrack ? 'Resume' : 'Listen now'}
-                </button>
-                <div className="lp-tx-progress" aria-hidden="true">
-                  <div className="lp-tx-progress-fill" style={{ width: `${isThisTrack ? progress * 100 : 0}%` }} />
-                </div>
-                <span className="lp-tx-time">
-                  {fmt(isThisTrack ? currentTime : 0)} / {duration ? fmt(duration) : '—'}
-                </span>
-              </div>
+              <TransportControls songDay={song.day} songDuration={duration} toggle={() => toggle()} />
 
               <div className="lp-tx-actions">
                 <button className="lp-btn" onClick={() => onPlayLevel(`/play/${song.id}`, 'tx_play_level')}>
