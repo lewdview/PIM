@@ -819,6 +819,23 @@ export default function ListenPage() {
     };
   }, [loading, geometryType, neonTheme, playing]);
 
+  // Must stay above the loading early return: hooks after a conditional return
+  // change the hook count between renders (React error #310).
+  // ⚡ Bolt: Memoize filtered playlist to prevent O(n) array filter on every render.
+  // Impact: Reduces CPU load and prevents jank during frequent state updates (e.g., timeupdate events from audio playback).
+  // Measurement: Verify by checking React Profiler for reduced render duration of ListenPage during audio playback.
+  const filteredPlaylist = useMemo(() => {
+    return playlist.filter(track => {
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        track.title.toLowerCase().includes(q) ||
+        (track.artist && track.artist.toLowerCase().includes(q)) ||
+        String(track.day).includes(q)
+      );
+    });
+  }, [playlist, searchQuery]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#070604] text-white">
@@ -838,20 +855,6 @@ export default function ListenPage() {
 
   const coverArtSrc = song?.coverArt || '/data/covers/default.jpg';
 
-  // ⚡ Bolt: Memoize filtered playlist to prevent O(n) array filter on every render.
-  // Impact: Reduces CPU load and prevents jank during frequent state updates (e.g., timeupdate events from audio playback).
-  // Measurement: Verify by checking React Profiler for reduced render duration of ListenPage during audio playback.
-  const filteredPlaylist = useMemo(() => {
-    return playlist.filter(track => {
-      if (!searchQuery.trim()) return true;
-      const q = searchQuery.toLowerCase();
-      return (
-        track.title.toLowerCase().includes(q) ||
-        (track.artist && track.artist.toLowerCase().includes(q)) ||
-        String(track.day).includes(q)
-      );
-    });
-  }, [playlist, searchQuery]);
 
   return (
     <div className="relative min-h-screen bg-[#050403] text-white overflow-hidden flex items-center justify-center">
